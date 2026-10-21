@@ -10,7 +10,7 @@
         "title": "Nikolaus-Turnier",
         "sport": "football",
         "tournament_type": "classic",
-        "date": "2026-10-20",
+        "date": "2026-10-21",
         "start_time": "09:00",
         "location_name": "",
         "location_street": null,
@@ -79,7 +79,7 @@
             1,
             2
           ],
-          "publishedAt": "2026-10-20T21:37:20.220Z"
+          "publishedAt": "2026-10-21T00:44:01.347Z"
         },
         "deleted_at": null,
         "completed_at": null,
@@ -173,7 +173,7 @@
       ],
       "matches": [
         {
-          "id": "4dd3259c-2436-4466-9f6a-f543b8f960e0",
+          "id": "1a10f20a-46c3-4d6b-a755-56515f86b618",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 1,
           "field": 1,
@@ -200,7 +200,7 @@
           "is_public": true
         },
         {
-          "id": "d359d298-4207-4a7c-840f-1360b817de51",
+          "id": "e8de80ff-1b13-4dd0-b10d-24836a9d05fd",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 2,
           "field": 1,
@@ -227,7 +227,7 @@
           "is_public": true
         },
         {
-          "id": "2ad15e29-4d20-48f2-a608-85e8b84b1dbb",
+          "id": "b8941583-2bed-4971-96cb-39791de7ea45",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 3,
           "field": 1,
@@ -254,7 +254,7 @@
           "is_public": true
         },
         {
-          "id": "40531e9e-5f78-4b5a-bf31-d169c992336a",
+          "id": "b46d6c6e-8cd2-4df7-ad84-91038636d309",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 4,
           "field": 1,
@@ -281,7 +281,7 @@
           "is_public": true
         },
         {
-          "id": "67733e14-b922-4022-b304-101bc3ffd6ef",
+          "id": "835522fa-c49f-4144-a828-805b64e5b9a9",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 5,
           "field": 1,
@@ -308,7 +308,7 @@
           "is_public": true
         },
         {
-          "id": "275497cd-6275-414d-8a8b-890424e40e80",
+          "id": "3b0a687a-5916-4658-935f-79d0700c8852",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 6,
           "field": 1,
@@ -335,7 +335,7 @@
           "is_public": true
         },
         {
-          "id": "f3ca73ae-9d9d-4514-af5b-3825cbb298e9",
+          "id": "5d539f3c-3b27-46c1-b1b8-0a9323753ad1",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 7,
           "field": 1,
@@ -362,7 +362,7 @@
           "is_public": true
         },
         {
-          "id": "13211e2c-b67e-497e-9c2f-e52e3c1a1c2f",
+          "id": "e8fe396f-6026-442d-8e1c-f79d726080f2",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 8,
           "field": 1,
@@ -389,7 +389,7 @@
           "is_public": true
         },
         {
-          "id": "d88cefd0-9f95-48b7-a36a-86e9585dc123",
+          "id": "7870ab74-7c55-43c1-8537-d8cf8172efad",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 9,
           "field": 1,
@@ -416,7 +416,7 @@
           "is_public": true
         },
         {
-          "id": "3cddaeb8-53b4-474a-ad9c-0562ed73134c",
+          "id": "115cfa25-5eb2-4ef9-9759-610b3519985a",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 10,
           "field": 1,
@@ -443,7 +443,7 @@
           "is_public": true
         },
         {
-          "id": "3d632ace-1bb4-46a5-8a87-8205e5842317",
+          "id": "81908542-c9c1-452e-aac3-e5cf363b37b6",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 11,
           "field": 1,
@@ -470,7 +470,7 @@
           "is_public": true
         },
         {
-          "id": "d1d77fff-fa2f-4bf1-a6a0-69971ce62f35",
+          "id": "432f3170-f040-4b3b-807f-19e94ac7e452",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 12,
           "field": 1,
@@ -497,7 +497,7 @@
           "is_public": true
         },
         {
-          "id": "b2e95f60-b6ec-4783-8fdb-6a1a96555a92",
+          "id": "d1a8f5a1-4dbe-4680-85dc-c4823ef2c19a",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 13,
           "field": 1,
@@ -524,7 +524,7 @@
           "is_public": true
         },
         {
-          "id": "0770e580-51bd-4a12-b617-7046955c8f22",
+          "id": "778619f3-8a03-488e-bd57-1a73fefd1651",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 14,
           "field": 1,
@@ -551,7 +551,7 @@
           "is_public": true
         },
         {
-          "id": "d428e02e-68f8-4b0a-b2ef-744150b8f83a",
+          "id": "5b0adc42-41b4-48e4-aba2-a4f03451f29c",
           "tournament_id": "00000000-0000-4000-8000-000000000901",
           "round": 15,
           "field": 1,
@@ -587,7 +587,7 @@
         "title": "Hallencup Nord",
         "sport": "football",
         "tournament_type": "classic",
-        "date": "2026-10-20",
+        "date": "2026-10-21",
         "start_time": "09:00",
         "location_name": "",
         "location_street": null,
@@ -655,7 +655,7 @@
           "placementsToPlayOut": [
             1
           ],
-          "publishedAt": "2026-10-20T21:37:20.398Z"
+          "publishedAt": "2026-10-21T00:44:01.364Z"
         },
         "deleted_at": null,
         "completed_at": null,
@@ -777,7 +777,7 @@
       ],
       "matches": [
         {
-          "id": "94173fe4-102f-4ea7-a21f-8d94ed7188f4",
+          "id": "24b77815-8952-48ae-8b0f-17389be3f418",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 1,
           "field": 1,
@@ -804,7 +804,7 @@
           "is_public": true
         },
         {
-          "id": "7eead205-cb01-4b42-b6eb-f1a0ca25bbe9",
+          "id": "090984dc-9abc-45ce-adf3-e129be52ede1",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 1,
           "field": 2,
@@ -831,7 +831,7 @@
           "is_public": true
         },
         {
-          "id": "bd888d1d-97b6-4102-bd94-2b7699445c95",
+          "id": "4fd2cd8d-d273-4b1d-b4dc-ee56e9a6cd99",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 2,
           "field": 1,
@@ -858,7 +858,7 @@
           "is_public": true
         },
         {
-          "id": "2c3b5818-50cd-4272-9e12-30c7be855029",
+          "id": "f7d5caae-ca58-467e-80d6-45c5b51f34ec",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 2,
           "field": 2,
@@ -885,7 +885,7 @@
           "is_public": true
         },
         {
-          "id": "ba7e7853-f483-4f7c-83ce-96b0bba6232b",
+          "id": "5e9c4e87-3b88-4868-bdee-c259db610a69",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 3,
           "field": 1,
@@ -912,7 +912,7 @@
           "is_public": true
         },
         {
-          "id": "e805daea-1a01-4821-8671-7ca08b238cc4",
+          "id": "ab68454b-9315-4753-b864-ad7163f9ca58",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 3,
           "field": 2,
@@ -939,7 +939,7 @@
           "is_public": true
         },
         {
-          "id": "1dd21d80-3f4b-4707-9a06-1161e23ce2b0",
+          "id": "4d810a8b-6a80-45e5-99dd-7ebc63900cb6",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 4,
           "field": 1,
@@ -966,7 +966,7 @@
           "is_public": true
         },
         {
-          "id": "870dea44-b448-4e48-bea5-0cca38767a53",
+          "id": "31b1a7bb-52a0-410b-96b8-787694354067",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 4,
           "field": 2,
@@ -993,7 +993,7 @@
           "is_public": true
         },
         {
-          "id": "331ad70f-b9c8-4d49-b9a4-d90a68e07ead",
+          "id": "53be2179-47eb-4a93-b051-38d3bd6ecbc9",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 5,
           "field": 1,
@@ -1020,7 +1020,7 @@
           "is_public": true
         },
         {
-          "id": "c47d090a-b934-429c-b0b6-2b2ddea11244",
+          "id": "309e2193-f563-4bdd-becb-25247c7e5dd1",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 5,
           "field": 2,
@@ -1047,7 +1047,7 @@
           "is_public": true
         },
         {
-          "id": "c8b688af-48a4-44e4-bcb6-d3c129f25f75",
+          "id": "ac94d5e1-2850-4a49-bcf3-679e781a80bf",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 6,
           "field": 1,
@@ -1074,7 +1074,7 @@
           "is_public": true
         },
         {
-          "id": "d50bbbb8-c878-40ee-8967-c92fdcfa2274",
+          "id": "f76a8f9d-a37b-44a8-b118-d7cae0cd8b60",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 6,
           "field": 2,
@@ -1101,7 +1101,7 @@
           "is_public": true
         },
         {
-          "id": "d0f58f47-5d64-4642-a046-aadc99ce6b99",
+          "id": "629bb57d-1d1d-405c-8d8c-260d6765e5b7",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 7,
           "field": 1,
@@ -1138,7 +1138,7 @@
           "label": "1. Halbfinale",
           "scheduled_start": "10:15:00",
           "match_number": 13,
-          "phase": "final",
+          "phase": "semifinal",
           "referee_number": null,
           "match_status": "scheduled",
           "timer_elapsed_seconds": 0,
@@ -1146,7 +1146,7 @@
           "is_public": true
         },
         {
-          "id": "e9a57dd0-e3d4-4a7d-9879-3d1aad005429",
+          "id": "d87c722d-27b1-44d4-b354-7db25b80c1b1",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 7,
           "field": 2,
@@ -1183,7 +1183,7 @@
           "label": "2. Halbfinale",
           "scheduled_start": "10:15:00",
           "match_number": 14,
-          "phase": "final",
+          "phase": "semifinal",
           "referee_number": null,
           "match_status": "scheduled",
           "timer_elapsed_seconds": 0,
@@ -1191,7 +1191,7 @@
           "is_public": true
         },
         {
-          "id": "44ce8189-aca4-45d7-887c-6c99cf0dbdc5",
+          "id": "6b307264-4abe-4f7b-ab24-c689bcbbd45e",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 8,
           "field": 1,
@@ -1200,22 +1200,22 @@
           "team_b_id": null,
           "slot_a_source": {
             "kind": "matchResult",
-            "matchId": "d0f58f47-5d64-4642-a046-aadc99ce6b99",
+            "matchId": "629bb57d-1d1d-405c-8d8c-260d6765e5b7",
             "role": "loser"
           },
           "slot_b_source": {
             "kind": "matchResult",
-            "matchId": "e9a57dd0-e3d4-4a7d-9879-3d1aad005429",
+            "matchId": "d87c722d-27b1-44d4-b354-7db25b80c1b1",
             "role": "loser"
           },
           "origin_a": {
             "kind": "matchResult",
-            "matchId": "d0f58f47-5d64-4642-a046-aadc99ce6b99",
+            "matchId": "629bb57d-1d1d-405c-8d8c-260d6765e5b7",
             "role": "loser"
           },
           "origin_b": {
             "kind": "matchResult",
-            "matchId": "e9a57dd0-e3d4-4a7d-9879-3d1aad005429",
+            "matchId": "d87c722d-27b1-44d4-b354-7db25b80c1b1",
             "role": "loser"
           },
           "team_a_placeholder": null,
@@ -1236,7 +1236,7 @@
           "is_public": true
         },
         {
-          "id": "10f9646a-bcc8-491a-b933-2cdc3ed24697",
+          "id": "32685a29-e1cf-4e98-9a98-a3cbc734133e",
           "tournament_id": "00000000-0000-4000-8000-000000000902",
           "round": 8,
           "field": 1,
@@ -1245,22 +1245,22 @@
           "team_b_id": null,
           "slot_a_source": {
             "kind": "matchResult",
-            "matchId": "d0f58f47-5d64-4642-a046-aadc99ce6b99",
+            "matchId": "629bb57d-1d1d-405c-8d8c-260d6765e5b7",
             "role": "winner"
           },
           "slot_b_source": {
             "kind": "matchResult",
-            "matchId": "e9a57dd0-e3d4-4a7d-9879-3d1aad005429",
+            "matchId": "d87c722d-27b1-44d4-b354-7db25b80c1b1",
             "role": "winner"
           },
           "origin_a": {
             "kind": "matchResult",
-            "matchId": "d0f58f47-5d64-4642-a046-aadc99ce6b99",
+            "matchId": "629bb57d-1d1d-405c-8d8c-260d6765e5b7",
             "role": "winner"
           },
           "origin_b": {
             "kind": "matchResult",
-            "matchId": "e9a57dd0-e3d4-4a7d-9879-3d1aad005429",
+            "matchId": "d87c722d-27b1-44d4-b354-7db25b80c1b1",
             "role": "winner"
           },
           "team_a_placeholder": null,
@@ -1286,7 +1286,7 @@
   "updates": [
     {
       "tournament": "nikolaus",
-      "id": "b2e95f60-b6ec-4783-8fdb-6a1a96555a92",
+      "id": "d1a8f5a1-4dbe-4680-85dc-c4823ef2c19a",
       "score_a": 1,
       "score_b": 2,
       "match_status": "finished",
@@ -1295,7 +1295,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "3cddaeb8-53b4-474a-ad9c-0562ed73134c",
+      "id": "115cfa25-5eb2-4ef9-9759-610b3519985a",
       "score_a": 2,
       "score_b": 2,
       "match_status": "finished",
@@ -1304,7 +1304,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "f3ca73ae-9d9d-4514-af5b-3825cbb298e9",
+      "id": "5d539f3c-3b27-46c1-b1b8-0a9323753ad1",
       "score_a": 2,
       "score_b": 1,
       "match_status": "finished",
@@ -1313,7 +1313,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "40531e9e-5f78-4b5a-bf31-d169c992336a",
+      "id": "b46d6c6e-8cd2-4df7-ad84-91038636d309",
       "score_a": 0,
       "score_b": 2,
       "match_status": "finished",
@@ -1322,7 +1322,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "4dd3259c-2436-4466-9f6a-f543b8f960e0",
+      "id": "1a10f20a-46c3-4d6b-a755-56515f86b618",
       "score_a": 3,
       "score_b": 0,
       "match_status": "finished",
@@ -1331,7 +1331,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "3d632ace-1bb4-46a5-8a87-8205e5842317",
+      "id": "81908542-c9c1-452e-aac3-e5cf363b37b6",
       "score_a": 2,
       "score_b": 2,
       "match_status": "finished",
@@ -1340,7 +1340,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "275497cd-6275-414d-8a8b-890424e40e80",
+      "id": "3b0a687a-5916-4658-935f-79d0700c8852",
       "score_a": 4,
       "score_b": 0,
       "match_status": "finished",
@@ -1349,7 +1349,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "d359d298-4207-4a7c-840f-1360b817de51",
+      "id": "e8de80ff-1b13-4dd0-b10d-24836a9d05fd",
       "score_a": 3,
       "score_b": 0,
       "match_status": "finished",
@@ -1358,7 +1358,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "d88cefd0-9f95-48b7-a36a-86e9585dc123",
+      "id": "7870ab74-7c55-43c1-8537-d8cf8172efad",
       "score_a": 0,
       "score_b": 3,
       "match_status": "finished",
@@ -1367,7 +1367,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "2ad15e29-4d20-48f2-a608-85e8b84b1dbb",
+      "id": "b8941583-2bed-4971-96cb-39791de7ea45",
       "score_a": 1,
       "score_b": 1,
       "match_status": "finished",
@@ -1376,7 +1376,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "13211e2c-b67e-497e-9c2f-e52e3c1a1c2f",
+      "id": "e8fe396f-6026-442d-8e1c-f79d726080f2",
       "score_a": 3,
       "score_b": 1,
       "match_status": "finished",
@@ -1385,7 +1385,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "0770e580-51bd-4a12-b617-7046955c8f22",
+      "id": "778619f3-8a03-488e-bd57-1a73fefd1651",
       "score_a": 3,
       "score_b": 1,
       "match_status": "finished",
@@ -1394,7 +1394,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "67733e14-b922-4022-b304-101bc3ffd6ef",
+      "id": "835522fa-c49f-4144-a828-805b64e5b9a9",
       "score_a": 1,
       "score_b": 3,
       "match_status": "finished",
@@ -1403,7 +1403,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "d428e02e-68f8-4b0a-b2ef-744150b8f83a",
+      "id": "5b0adc42-41b4-48e4-aba2-a4f03451f29c",
       "score_a": 4,
       "score_b": 1,
       "match_status": "finished",
@@ -1412,7 +1412,7 @@
     },
     {
       "tournament": "nikolaus",
-      "id": "d1d77fff-fa2f-4bf1-a6a0-69971ce62f35",
+      "id": "432f3170-f040-4b3b-807f-19e94ac7e452",
       "score_a": 1,
       "score_b": 1,
       "match_status": "finished",
@@ -1421,7 +1421,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "c47d090a-b934-429c-b0b6-2b2ddea11244",
+      "id": "309e2193-f563-4bdd-becb-25247c7e5dd1",
       "score_a": 2,
       "score_b": 1,
       "match_status": "finished",
@@ -1430,7 +1430,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "e805daea-1a01-4821-8671-7ca08b238cc4",
+      "id": "ab68454b-9315-4753-b864-ad7163f9ca58",
       "score_a": 2,
       "score_b": 1,
       "match_status": "finished",
@@ -1439,7 +1439,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "94173fe4-102f-4ea7-a21f-8d94ed7188f4",
+      "id": "24b77815-8952-48ae-8b0f-17389be3f418",
       "score_a": 0,
       "score_b": 0,
       "match_status": "finished",
@@ -1448,7 +1448,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "7eead205-cb01-4b42-b6eb-f1a0ca25bbe9",
+      "id": "090984dc-9abc-45ce-adf3-e129be52ede1",
       "score_a": 1,
       "score_b": 1,
       "match_status": "finished",
@@ -1457,7 +1457,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "ba7e7853-f483-4f7c-83ce-96b0bba6232b",
+      "id": "5e9c4e87-3b88-4868-bdee-c259db610a69",
       "score_a": 0,
       "score_b": 2,
       "match_status": "finished",
@@ -1466,7 +1466,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "331ad70f-b9c8-4d49-b9a4-d90a68e07ead",
+      "id": "53be2179-47eb-4a93-b051-38d3bd6ecbc9",
       "score_a": 2,
       "score_b": 0,
       "match_status": "finished",
@@ -1475,7 +1475,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "d50bbbb8-c878-40ee-8967-c92fdcfa2274",
+      "id": "f76a8f9d-a37b-44a8-b118-d7cae0cd8b60",
       "score_a": 2,
       "score_b": 0,
       "match_status": "finished",
@@ -1484,7 +1484,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "bd888d1d-97b6-4102-bd94-2b7699445c95",
+      "id": "4fd2cd8d-d273-4b1d-b4dc-ee56e9a6cd99",
       "score_a": 0,
       "score_b": 2,
       "match_status": "finished",
@@ -1493,7 +1493,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "c8b688af-48a4-44e4-bcb6-d3c129f25f75",
+      "id": "ac94d5e1-2850-4a49-bcf3-679e781a80bf",
       "score_a": null,
       "score_b": null,
       "match_status": "skipped",
@@ -1502,7 +1502,7 @@
     },
     {
       "tournament": "hallencup",
-      "id": "2c3b5818-50cd-4272-9e12-30c7be855029",
+      "id": "f7d5caae-ca58-467e-80d6-45c5b51f34ec",
       "score_a": 1,
       "score_b": 0,
       "match_status": "running",
@@ -1517,39 +1517,7 @@
       "note": "Jeder gegen jeden: alle 15 Spiele (group_letter all)",
       "expected": [
         {
-          "id": "0770e580-51bd-4a12-b617-7046955c8f22",
-          "ta": "00000000-0000-4000-8000-000000000912",
-          "tb": "00000000-0000-4000-8000-000000000915",
-          "a": 3,
-          "b": 1,
-          "s": "finished"
-        },
-        {
-          "id": "13211e2c-b67e-497e-9c2f-e52e3c1a1c2f",
-          "ta": "00000000-0000-4000-8000-000000000912",
-          "tb": "00000000-0000-4000-8000-000000000914",
-          "a": 3,
-          "b": 1,
-          "s": "finished"
-        },
-        {
-          "id": "275497cd-6275-414d-8a8b-890424e40e80",
-          "ta": "00000000-0000-4000-8000-000000000911",
-          "tb": "00000000-0000-4000-8000-000000000912",
-          "a": 4,
-          "b": 0,
-          "s": "finished"
-        },
-        {
-          "id": "2ad15e29-4d20-48f2-a608-85e8b84b1dbb",
-          "ta": "00000000-0000-4000-8000-000000000912",
-          "tb": "00000000-0000-4000-8000-000000000913",
-          "a": 1,
-          "b": 1,
-          "s": "finished"
-        },
-        {
-          "id": "3cddaeb8-53b4-474a-ad9c-0562ed73134c",
+          "id": "115cfa25-5eb2-4ef9-9759-610b3519985a",
           "ta": "00000000-0000-4000-8000-000000000910",
           "tb": "00000000-0000-4000-8000-000000000912",
           "a": 2,
@@ -1557,23 +1525,7 @@
           "s": "finished"
         },
         {
-          "id": "3d632ace-1bb4-46a5-8a87-8205e5842317",
-          "ta": "00000000-0000-4000-8000-000000000913",
-          "tb": "00000000-0000-4000-8000-000000000911",
-          "a": 2,
-          "b": 2,
-          "s": "finished"
-        },
-        {
-          "id": "40531e9e-5f78-4b5a-bf31-d169c992336a",
-          "ta": "00000000-0000-4000-8000-000000000914",
-          "tb": "00000000-0000-4000-8000-000000000910",
-          "a": 0,
-          "b": 2,
-          "s": "finished"
-        },
-        {
-          "id": "4dd3259c-2436-4466-9f6a-f543b8f960e0",
+          "id": "1a10f20a-46c3-4d6b-a755-56515f86b618",
           "ta": "00000000-0000-4000-8000-000000000910",
           "tb": "00000000-0000-4000-8000-000000000915",
           "a": 3,
@@ -1581,23 +1533,15 @@
           "s": "finished"
         },
         {
-          "id": "67733e14-b922-4022-b304-101bc3ffd6ef",
-          "ta": "00000000-0000-4000-8000-000000000915",
-          "tb": "00000000-0000-4000-8000-000000000913",
-          "a": 1,
-          "b": 3,
-          "s": "finished"
-        },
-        {
-          "id": "b2e95f60-b6ec-4783-8fdb-6a1a96555a92",
+          "id": "3b0a687a-5916-4658-935f-79d0700c8852",
           "ta": "00000000-0000-4000-8000-000000000911",
-          "tb": "00000000-0000-4000-8000-000000000910",
-          "a": 1,
-          "b": 2,
+          "tb": "00000000-0000-4000-8000-000000000912",
+          "a": 4,
+          "b": 0,
           "s": "finished"
         },
         {
-          "id": "d1d77fff-fa2f-4bf1-a6a0-69971ce62f35",
+          "id": "432f3170-f040-4b3b-807f-19e94ac7e452",
           "ta": "00000000-0000-4000-8000-000000000914",
           "tb": "00000000-0000-4000-8000-000000000915",
           "a": 1,
@@ -1605,15 +1549,7 @@
           "s": "finished"
         },
         {
-          "id": "d359d298-4207-4a7c-840f-1360b817de51",
-          "ta": "00000000-0000-4000-8000-000000000911",
-          "tb": "00000000-0000-4000-8000-000000000914",
-          "a": 3,
-          "b": 0,
-          "s": "finished"
-        },
-        {
-          "id": "d428e02e-68f8-4b0a-b2ef-744150b8f83a",
+          "id": "5b0adc42-41b4-48e4-aba2-a4f03451f29c",
           "ta": "00000000-0000-4000-8000-000000000914",
           "tb": "00000000-0000-4000-8000-000000000913",
           "a": 4,
@@ -1621,7 +1557,23 @@
           "s": "finished"
         },
         {
-          "id": "d88cefd0-9f95-48b7-a36a-86e9585dc123",
+          "id": "5d539f3c-3b27-46c1-b1b8-0a9323753ad1",
+          "ta": "00000000-0000-4000-8000-000000000913",
+          "tb": "00000000-0000-4000-8000-000000000910",
+          "a": 2,
+          "b": 1,
+          "s": "finished"
+        },
+        {
+          "id": "778619f3-8a03-488e-bd57-1a73fefd1651",
+          "ta": "00000000-0000-4000-8000-000000000912",
+          "tb": "00000000-0000-4000-8000-000000000915",
+          "a": 3,
+          "b": 1,
+          "s": "finished"
+        },
+        {
+          "id": "7870ab74-7c55-43c1-8537-d8cf8172efad",
           "ta": "00000000-0000-4000-8000-000000000915",
           "tb": "00000000-0000-4000-8000-000000000911",
           "a": 0,
@@ -1629,10 +1581,58 @@
           "s": "finished"
         },
         {
-          "id": "f3ca73ae-9d9d-4514-af5b-3825cbb298e9",
+          "id": "81908542-c9c1-452e-aac3-e5cf363b37b6",
           "ta": "00000000-0000-4000-8000-000000000913",
-          "tb": "00000000-0000-4000-8000-000000000910",
+          "tb": "00000000-0000-4000-8000-000000000911",
           "a": 2,
+          "b": 2,
+          "s": "finished"
+        },
+        {
+          "id": "835522fa-c49f-4144-a828-805b64e5b9a9",
+          "ta": "00000000-0000-4000-8000-000000000915",
+          "tb": "00000000-0000-4000-8000-000000000913",
+          "a": 1,
+          "b": 3,
+          "s": "finished"
+        },
+        {
+          "id": "b46d6c6e-8cd2-4df7-ad84-91038636d309",
+          "ta": "00000000-0000-4000-8000-000000000914",
+          "tb": "00000000-0000-4000-8000-000000000910",
+          "a": 0,
+          "b": 2,
+          "s": "finished"
+        },
+        {
+          "id": "b8941583-2bed-4971-96cb-39791de7ea45",
+          "ta": "00000000-0000-4000-8000-000000000912",
+          "tb": "00000000-0000-4000-8000-000000000913",
+          "a": 1,
+          "b": 1,
+          "s": "finished"
+        },
+        {
+          "id": "d1a8f5a1-4dbe-4680-85dc-c4823ef2c19a",
+          "ta": "00000000-0000-4000-8000-000000000911",
+          "tb": "00000000-0000-4000-8000-000000000910",
+          "a": 1,
+          "b": 2,
+          "s": "finished"
+        },
+        {
+          "id": "e8de80ff-1b13-4dd0-b10d-24836a9d05fd",
+          "ta": "00000000-0000-4000-8000-000000000911",
+          "tb": "00000000-0000-4000-8000-000000000914",
+          "a": 3,
+          "b": 0,
+          "s": "finished"
+        },
+        {
+          "id": "e8fe396f-6026-442d-8e1c-f79d726080f2",
+          "ta": "00000000-0000-4000-8000-000000000912",
+          "tb": "00000000-0000-4000-8000-000000000914",
+          "a": 3,
           "b": 1,
           "s": "finished"
         }
@@ -1656,15 +1656,7 @@
       "note": "@W2A-048 Gruppe A, 6 Spiele beendet",
       "expected": [
         {
-          "id": "331ad70f-b9c8-4d49-b9a4-d90a68e07ead",
-          "ta": "00000000-0000-4000-8000-000000000922",
-          "tb": "00000000-0000-4000-8000-000000000923",
-          "a": 2,
-          "b": 0,
-          "s": "finished"
-        },
-        {
-          "id": "7eead205-cb01-4b42-b6eb-f1a0ca25bbe9",
+          "id": "090984dc-9abc-45ce-adf3-e129be52ede1",
           "ta": "00000000-0000-4000-8000-000000000921",
           "tb": "00000000-0000-4000-8000-000000000922",
           "a": 1,
@@ -1672,7 +1664,7 @@
           "s": "finished"
         },
         {
-          "id": "94173fe4-102f-4ea7-a21f-8d94ed7188f4",
+          "id": "24b77815-8952-48ae-8b0f-17389be3f418",
           "ta": "00000000-0000-4000-8000-000000000923",
           "tb": "00000000-0000-4000-8000-000000000920",
           "a": 0,
@@ -1680,15 +1672,7 @@
           "s": "finished"
         },
         {
-          "id": "ba7e7853-f483-4f7c-83ce-96b0bba6232b",
-          "ta": "00000000-0000-4000-8000-000000000923",
-          "tb": "00000000-0000-4000-8000-000000000921",
-          "a": 0,
-          "b": 2,
-          "s": "finished"
-        },
-        {
-          "id": "c47d090a-b934-429c-b0b6-2b2ddea11244",
+          "id": "309e2193-f563-4bdd-becb-25247c7e5dd1",
           "ta": "00000000-0000-4000-8000-000000000920",
           "tb": "00000000-0000-4000-8000-000000000921",
           "a": 2,
@@ -1696,7 +1680,23 @@
           "s": "finished"
         },
         {
-          "id": "e805daea-1a01-4821-8671-7ca08b238cc4",
+          "id": "53be2179-47eb-4a93-b051-38d3bd6ecbc9",
+          "ta": "00000000-0000-4000-8000-000000000922",
+          "tb": "00000000-0000-4000-8000-000000000923",
+          "a": 2,
+          "b": 0,
+          "s": "finished"
+        },
+        {
+          "id": "5e9c4e87-3b88-4868-bdee-c259db610a69",
+          "ta": "00000000-0000-4000-8000-000000000923",
+          "tb": "00000000-0000-4000-8000-000000000921",
+          "a": 0,
+          "b": 2,
+          "s": "finished"
+        },
+        {
+          "id": "ab68454b-9315-4753-b864-ad7163f9ca58",
           "ta": "00000000-0000-4000-8000-000000000920",
           "tb": "00000000-0000-4000-8000-000000000922",
           "a": 2,
@@ -1711,27 +1711,19 @@
       "note": "beendet, gewertet, nicht ausgetragen, laufend, offen",
       "expected": [
         {
-          "id": "1dd21d80-3f4b-4707-9a06-1161e23ce2b0",
-          "ta": "00000000-0000-4000-8000-000000000927",
-          "tb": "00000000-0000-4000-8000-000000000925",
-          "s": "scheduled"
-        },
-        {
-          "id": "2c3b5818-50cd-4272-9e12-30c7be855029",
-          "ta": "00000000-0000-4000-8000-000000000925",
-          "tb": "00000000-0000-4000-8000-000000000926",
-          "a": 1,
-          "b": 0,
-          "s": "running"
-        },
-        {
-          "id": "870dea44-b448-4e48-bea5-0cca38767a53",
+          "id": "31b1a7bb-52a0-410b-96b8-787694354067",
           "ta": "00000000-0000-4000-8000-000000000924",
           "tb": "00000000-0000-4000-8000-000000000926",
           "s": "scheduled"
         },
         {
-          "id": "bd888d1d-97b6-4102-bd94-2b7699445c95",
+          "id": "4d810a8b-6a80-45e5-99dd-7ebc63900cb6",
+          "ta": "00000000-0000-4000-8000-000000000927",
+          "tb": "00000000-0000-4000-8000-000000000925",
+          "s": "scheduled"
+        },
+        {
+          "id": "4fd2cd8d-d273-4b1d-b4dc-ee56e9a6cd99",
           "ta": "00000000-0000-4000-8000-000000000927",
           "tb": "00000000-0000-4000-8000-000000000924",
           "a": 0,
@@ -1740,18 +1732,26 @@
           "f": "A"
         },
         {
-          "id": "c8b688af-48a4-44e4-bcb6-d3c129f25f75",
+          "id": "ac94d5e1-2850-4a49-bcf3-679e781a80bf",
           "ta": "00000000-0000-4000-8000-000000000926",
           "tb": "00000000-0000-4000-8000-000000000927",
           "s": "skipped"
         },
         {
-          "id": "d50bbbb8-c878-40ee-8967-c92fdcfa2274",
+          "id": "f76a8f9d-a37b-44a8-b118-d7cae0cd8b60",
           "ta": "00000000-0000-4000-8000-000000000924",
           "tb": "00000000-0000-4000-8000-000000000925",
           "a": 2,
           "b": 0,
           "s": "finished"
+        },
+        {
+          "id": "f7d5caae-ca58-467e-80d6-45c5b51f34ec",
+          "ta": "00000000-0000-4000-8000-000000000925",
+          "tb": "00000000-0000-4000-8000-000000000926",
+          "a": 1,
+          "b": 0,
+          "s": "running"
         }
       ]
     },

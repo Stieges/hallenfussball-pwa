@@ -17,7 +17,7 @@
 import { cacheColumns, type CacheDecidedBy, type CacheMatchStatus } from './cacheColumns';
 import { kitFromEvents } from './matchKitFromEvents';
 import type { MatchKit } from '../../models/kit';
-import type { MatchContext } from '../types';
+import type { ForfeitAbsent, MatchContext } from '../types';
 import type { MatchEngineView } from './MatchEngine';
 
 export interface EngineOverlayFields {
@@ -29,6 +29,12 @@ export interface EngineOverlayFields {
   penaltyScoreB: number | undefined;
   matchStatus: 'scheduled' | 'running' | 'finished' | 'skipped';
   decidedBy: CacheDecidedBy | undefined;
+  /**
+   * A-25n (Review A-25c, @W2A-024/@TM-063): wer bei einer Wertung fehlte (`forfeit_absent`). Ohne das Feld zählte die
+   * Tabelle eine Wertung beider (0:0) als Remis, solange der lokale Eintrag vor der Server-Zeile gilt; `undefined`
+   * räumt ein altes Merkmal nach Rücknahme oder Korrektur ab.
+   */
+  forfeitAbsent: ForfeitAbsent | undefined;
   /** A-30a: getragene Farben aus dem eigenen MATCH_START (TS-Gegenstück zum Server-Trigger, `kitFromEvents`). */
   kit: MatchKit | undefined;
 }
@@ -53,6 +59,7 @@ export function engineOverlayFields(view: MatchEngineView, ctx: MatchContext): E
     penaltyScoreB: nullToUndefined(columns.penalty_score_b),
     matchStatus: mapMatchStatus(columns.match_status),
     decidedBy: nullToUndefined(columns.decided_by),
+    forfeitAbsent: nullToUndefined(columns.forfeit_absent),
     kit: kitFromEvents(view.log),
   };
 }
@@ -69,6 +76,7 @@ export interface OverlayableMatch {
   penaltyScoreB?: number;
   matchStatus?: string;
   decidedBy?: string;
+  forfeitAbsent?: string;
   kit?: MatchKit;
 }
 
@@ -91,6 +99,7 @@ function fieldsEqual(match: OverlayableMatch, fields: EngineOverlayFields): bool
     match.penaltyScoreB === fields.penaltyScoreB &&
     match.matchStatus === fields.matchStatus &&
     match.decidedBy === fields.decidedBy &&
+    match.forfeitAbsent === fields.forfeitAbsent &&
     kitEqual(match.kit, fields.kit)
   );
 }

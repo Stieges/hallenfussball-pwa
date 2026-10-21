@@ -13,7 +13,7 @@
 import { findTransition, isActorAllowed } from './transitions';
 import { applyCorrection, applyResultEntry } from './handlers/correction';
 import { EMPTY_UNDO_INFO, applyClockAdjust, resumeClock, startClock, stopClock } from './handlers/clock';
-import { applyReopen } from './handlers/reopen';
+import { acceptedReopenCount, applyReopen } from './handlers/reopen';
 import { applyAmend } from './handlers/amend';
 import { AMENDABLE_EVENT_TYPES, detailsFromPayload } from './details';
 import { applyCard, applyFoul, applyGoal, applySubstitution, applyTimePenalty } from './handlers/records';
@@ -116,7 +116,12 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
           sectionStartMs: clock.elapsedMs,
           breakStartedAt: null,
           // ZA-3 (@SL-066): was vor dem Anpfiff schon im Log stand; Korrekturen gelten je Anpfiff.
-          undo: { acceptedBeforeStart: Object.keys(state.accepted).length, clockAdjusts: [] },
+          // A-25n (Review M1, @SL-074/@SL-075): „Spiel fortsetzen“ ebenso je Anpfiff (REOPEN davor zählen nicht).
+          undo: {
+            acceptedBeforeStart: Object.keys(state.accepted).length,
+            reopensBeforeStart: acceptedReopenCount(state),
+            clockAdjusts: [],
+          },
         },
       };
     }

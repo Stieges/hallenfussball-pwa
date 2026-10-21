@@ -10,7 +10,11 @@
  *  - @W2A-026 „Wenn die Turnierleitung die Wertung zurücknimmt, dann ist das Spiel wieder offen“.
  * Gegenbeispiele und Mutationen aus dem Plan (task-GA4-plan-v2.md A-25n = v1 A-25a): falscher Sieger, `both` nicht 0:0,
  * REOPEN nach einem gespielten 1:0 bleibt `running`, Helfer nimmt keine Wertung zurück, Korrektur nach der Wertung.
- * Der SQL-Zwilling läuft über die Fixtures 69a–69l (match-engine-parity.sh, append-match-events-check.sh, forfeit-check.sh).
+ *  - @SL-074 / @SL-075 (Review A-25 M1) „Ein zu früh von selbst beendetes Spiel setzt Tom einmal fort … 20 Sekunden nach dem
+ *    Abpfiff … Restzeit auf 0:40“ / „ein zweites Mal setzt Toms Gerät das Spiel nicht fort“
+ *    (docs/anforderungen/2026-10-02_spiel-leiten.md): die Rücknahme einer Wertung vor dem Anpfiff verbraucht das einmalige
+ *    Fortsetzen nicht.
+ * Der SQL-Zwilling läuft über die Fixtures 69a–69n (match-engine-parity.sh, append-match-events-check.sh, forfeit-check.sh).
  */
 import { describe, expect, it } from 'vitest';
 import { isPayloadValid } from '../payloadValidation';
@@ -34,6 +38,11 @@ function wertung(absent: string, scores: Record<string, number>, extra: Record<s
   return ev('RESULT_ENTRY', { scores, forfeit: { absent }, ...extra });
 }
 const cFehlt = () => wertung('A', { [C]: 0, [D]: 2 });
+/** Ein Abschnitt zu 10 Minuten (Ende durch Ablauf bei Spielzeit 10:00). */
+const REGELN_10_MIN = {
+  sections: 1, sectionSeconds: 600, breakSeconds: 0, knockout: false, tiebreak: null, overtimeSeconds: 0,
+  shootersPerTeam: 0, suddenDeathAfter: 0, penaltySeconds: 0,
+};
 
 describe('@W2A-022 Nichtantritt wird gewertet', () => {
   it('@W2A-022 „nicht angetreten“ für Team C: Spiel beendet 0:2, gewertet für Team D, als Wertung gekennzeichnet', () => {
@@ -152,6 +161,21 @@ describe('@W2A-026 Nichtantritt zurücknehmen', () => {
     expect(cacheColumns(state, ctx)).toMatchObject({ match_status: 'finished', score_a: 1, score_b: 0, decided_by: 'regular', forfeit_absent: null });
   });
 
+  it('@W2A-026 die Tabelle wird neu berechnet: die Rücknahme ändert den Stand, lastScoreEventId zeigt auf das REOPEN (Review S1)', () => {
+    const w = cFehlt();
+    const zurueck = ev('REOPEN');
+    const { state } = reduceMatch([w, zurueck], ctx);
+    expect(toServerState(state).lastScoreEventId).toBe(zurueck.id);
+  });
+
+  it('@W2A-026 Gegenbeispiel zu S1: ein normales REOPEN nach einem gespielten 1:0 lässt lastScoreEventId beim Tor', () => {
+    const start = ev('MATCH_START', { rules: REGELN_10_MIN }, { section: 1, clockMs: 0 });
+    const tor = ev('GOAL', {}, { section: 1, clockMs: 1000, teamId: C });
+    const ende = ev('MATCH_END', {}, { section: 1, clockMs: 600000 });
+    const { state } = reduceMatch([start, tor, ende, ev('REOPEN')], ctx);
+    expect(toServerState(state).lastScoreEventId).toBe(tor.id);
+  });
+
   it('@W2A-026 Gegenbeispiel: ein Helfer nimmt keine Wertung zurück (FORBIDDEN_ACTOR, Wertung bleibt)', () => {
     const { state, results } = reduceMatch([cFehlt(), { ...ev('REOPEN'), actor: 'helper' }], ctx);
     expect(results[1]).toMatchObject({ status: 'rejected', code: 'FORBIDDEN_ACTOR' });
@@ -183,5 +207,50 @@ describe('@W2A-022 Korrektur nach der Wertung', () => {
     expect(results[1].status).toBe('accepted');
     expect(toServerState(state).decidedBy).toBe('correction');
     expect(cacheColumns(state, ctx)).toMatchObject({ score_a: 1, score_b: 3, decided_by: 'regular', forfeit_absent: null });
+  });
+});
+
+describe('@SL-074 @SL-075 „Spiel fortsetzen“ nach zurückgenommener Wertung (Review A-25 M1)', () => {
+  /** Wertung → Rücknahme → Tom pfeift an → von selbst beendet bei Spielzeit 10:00 (Ende durch Ablauf). */
+  function gespieltNachRuecknahme(): EngineEvent[] {
+    return [
+      cFehlt(),
+      ev('REOPEN'),
+      ev('MATCH_START', { rules: REGELN_10_MIN }, { actor: 'helper', section: 1, clockMs: 0 }),
+      ev('MATCH_END', {}, { actor: 'helper', section: 1, clockMs: 600000 }),
+    ];
+  }
+  /** Tom wählt „Spiel fortsetzen“ 20 Sekunden nach dem Abpfiff und stellt die Restzeit auf 0:40. */
+  function fortsetzen(ende: EngineEvent, restzeitMs: number): EngineEvent {
+    return ev('REOPEN', {}, { actor: 'helper', at: ende.at + 20_000, section: 1, clockMs: 600000 - restzeitMs });
+  }
+
+  it('@SL-074 die Rücknahme der Wertung verbraucht das Fortsetzen nicht: Tom setzt einmal fort, das Spiel läuft weiter', () => {
+    const log = gespieltNachRuecknahme();
+    const weiter = fortsetzen(log[3], 40_000);
+    const { state, results } = reduceMatch([...log, weiter], ctx);
+    expect(results.map((r) => r.status)).toEqual(['accepted', 'accepted', 'accepted', 'accepted', 'accepted']);
+    expect(toServerState(state)).toMatchObject({ status: 'running', clock: { elapsedMs: 560000, running: true } });
+  });
+
+  it('@SL-075 Gegenbeispiel: ein zweites Mal setzt Tom nicht fort (ALREADY_CONTINUED, Spiel bleibt beendet)', () => {
+    const log = gespieltNachRuecknahme();
+    const weiter = fortsetzen(log[3], 40_000);
+    const wiederEnde = { ...ev('MATCH_END', {}, { actor: 'helper', section: 1, clockMs: 600000 }), at: weiter.at + 40_000 };
+    const nochmal = fortsetzen(wiederEnde, 10_000);
+    const { state, results } = reduceMatch([...log, weiter, wiederEnde, nochmal], ctx);
+    expect(results[6]).toMatchObject({ status: 'rejected', code: 'FORBIDDEN_ACTOR', detail: { reason: 'ALREADY_CONTINUED' } });
+    expect(state.status).toBe('finished');
+  });
+
+  it('@SL-075 Gegenbeispiel: hat die Turnierleitung das Spiel nach dem Anpfiff schon wieder geöffnet, setzt Tom nicht mehr fort', () => {
+    const log = gespieltNachRuecknahme();
+    const leitungOeffnet = ev('REOPEN', {}, { section: 1, clockMs: 590000 });
+    const wiederEnde = ev('MATCH_END', {}, { actor: 'helper', section: 1, clockMs: 600000 });
+    const tom = fortsetzen(wiederEnde, 40_000);
+    const { state, results } = reduceMatch([...log, leitungOeffnet, wiederEnde, tom], ctx);
+    expect(results.slice(0, 6).every((r) => r.status === 'accepted')).toBe(true);
+    expect(results[6]).toMatchObject({ status: 'rejected', code: 'FORBIDDEN_ACTOR', detail: { reason: 'ALREADY_CONTINUED' } });
+    expect(state.status).toBe('finished');
   });
 });

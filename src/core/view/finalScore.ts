@@ -11,6 +11,7 @@
  * (`MatchView.score`) lesen den Endstand nur hier; der Wächter-Test hält das fest.
  */
 import type { Match } from '../../types/tournament';
+import { isDoubleForfeit } from '../models/forfeit';
 
 export type FinalDecision = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
 
@@ -31,7 +32,7 @@ export interface FinalScore {
 
 /** Was der Endstand vom Spiel liest; `matchStatus` auch als Cache-Wert 'paused'. */
 export type FinalScoreSource = Partial<
-  Pick<Match, 'scoreA' | 'scoreB' | 'overtimeScoreA' | 'overtimeScoreB' | 'penaltyScoreA' | 'penaltyScoreB' | 'decidedBy'>
+  Pick<Match, 'scoreA' | 'scoreB' | 'overtimeScoreA' | 'overtimeScoreB' | 'penaltyScoreA' | 'penaltyScoreB' | 'decidedBy' | 'forfeitAbsent'>
 > & { matchStatus?: Match['matchStatus'] | 'paused' };
 
 export type Pair = { a: number; b: number };
@@ -49,6 +50,10 @@ function leader(pair: Pair): 'a' | 'b' | null {
 }
 
 function decide(m: FinalScoreSource, goals: Pair, penalty: Pair | undefined, hasOvertime: boolean): Pick<FinalScore, 'decidedBy' | 'winner'> {
+  if (isDoubleForfeit(m)) {
+    // Beide nicht angetreten: kein Sieger, gleich welcher Stand gespeichert ist (@TM-062, A-14b-Hinweis an A-25c).
+    return { decidedBy: null, winner: null };
+  }
   if (m.decidedBy === 'penalty') {
     // Ohne Strafstoß-Stand kein Sieger – ein Datenfehler, keine Ausnahme (Brief A-36b Schritt 3).
     return { decidedBy: 'penalty', winner: penalty === undefined ? null : leader(penalty) };

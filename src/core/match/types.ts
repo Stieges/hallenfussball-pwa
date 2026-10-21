@@ -10,6 +10,7 @@
 import { z } from 'zod';
 import type { EventDetails } from './details';
 import type { UndoInfo } from './handlers/clock';
+import type { ForfeitAbsent } from '../../types/tournament';
 
 // ============================================
 // Zustände, Phasen, Akteure, Ereignistypen
@@ -221,8 +222,11 @@ export interface OverrideRecord {
   seq: number;
 }
 
-/** A-25n (@W2A-022/@W2A-024): Seite, die nicht angetreten ist. */
-export type ForfeitAbsent = 'A' | 'B' | 'both';
+/**
+ * A-25n (@W2A-022/@W2A-024): Seite, die nicht angetreten ist. Eine Definition für Engine und Turnierkopie
+ * (`types/tournament.ts`, Review A-25c „ForfeitAbsent nur einmal“); hier nur weitergereicht.
+ */
+export type { ForfeitAbsent };
 
 /** Ruling K5 (Fixrunde 1, I7): Tore merken sich ihre Phase, damit RETRACT in derselben Phase abzieht. */
 export interface GoalRecord {

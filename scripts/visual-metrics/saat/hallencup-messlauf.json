@@ -453,7 +453,7 @@
                 "scoreA": 1,
                 "scoreB": 1,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T09:15:00.000Z",
                 "matchNumber": 13,
@@ -500,7 +500,7 @@
                 "scoreA": 0,
                 "scoreB": 0,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T09:15:00.000Z",
                 "matchNumber": 14,
@@ -1161,7 +1161,7 @@
                 "scoreA": 1,
                 "scoreB": 0,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
                 "matchNumber": 3,
@@ -1224,7 +1224,7 @@
                   "rank": 2
                 },
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T08:42:00.000Z",
                 "matchNumber": 4
@@ -1559,7 +1559,7 @@
                 "scoreA": 1,
                 "scoreB": 1,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
                 "matchNumber": 3,
@@ -1624,7 +1624,7 @@
                   "rank": 2
                 },
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T08:42:00.000Z",
                 "matchNumber": 4
@@ -1959,7 +1959,7 @@
                 "scoreA": 0,
                 "scoreB": 0,
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "1. Halbfinale",
                 "scheduledTime": "2026-11-14T08:29:00.000Z",
                 "matchNumber": 3,
@@ -2024,7 +2024,7 @@
                   "rank": 2
                 },
                 "isFinal": true,
-                "phase": "final",
+                "phase": "semifinal",
                 "label": "2. Halbfinale",
                 "scheduledTime": "2026-11-14T08:42:00.000Z",
                 "matchNumber": 4
