@@ -79,6 +79,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Rolle entscheidet useCan (Gedächtnis, sonst L7: Spielbetrieb offen) -- „ohne Mitgliedszeile erlaubt“ entfällt.
   const canChangeRules = useCan('tournamentSettings', tournament.id);
   const canPlay = useCan('writeMatchData', tournament.id);
+  // Turnierleitung (@SL-159): nur sie bekommt „Korrigieren“, der Helfer den Hinweis „Korrektur über die Turnierleitung“ (@SL-045)
+  const istLeitung = useCan('leadMatches', tournament.id);
   const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes } = useFieldMatchSelection({
     numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed,
   });
@@ -186,6 +188,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             tournamentId={tournament.id}
             cockpitSettings={tournament.matchCockpitSettings}
             kannSteuern={canPlay}
+            istLeitung={istLeitung}
             currentMatch={currentMatch}
             sperrHinweise={sperrHinweise}
             lastFinishedMatch={lastFinishedMatch}
