@@ -89,6 +89,8 @@
     "title": "Teilnehmer"
   },
   "correctionDialog": {
+    "titleMatch": "Ergebnis von Spiel {{number}} korrigieren",
+    "next": "Weiter",
     "title": "Ergebnis korrigieren",
     "currentResult": "Aktuelles Ergebnis",
     "correctedResult": "Korrigiertes Ergebnis",
@@ -101,6 +103,7 @@
     "cancel": "Abbrechen",
     "confirm": "Korrektur speichern",
     "validation": {
+      "missing": "Bitte beide Ergebnisse als ganze Zahl eintragen.",
       "mustDiffer": "Das neue Ergebnis muss sich vom ursprünglichen unterscheiden."
     }
   },

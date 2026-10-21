@@ -36,9 +36,10 @@ const rechte = vi.hoisted(() => ({ aktiv: new Set<string>() }));
 vi.mock('../../auth/hooks/useCan', () => ({ useCan: (recht: string) => rechte.aktiv.has(recht) }));
 
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: (props: { currentMatch?: { id: string } | null; upcomingMatches?: { id: string }[]; onLoadNextMatch?: () => void; istLeitung?: boolean }) => (
-    <div data-testid="cockpit-stub" data-zeigt={props.currentMatch?.id ?? ''} data-naechstes={props.upcomingMatches?.[0]?.id ?? ''} data-leitung={String(props.istLeitung ?? false)}>
+  LiveCockpit: (props: { currentMatch?: { id: string } | null; upcomingMatches?: { id: string }[]; onLoadNextMatch?: () => void; istLeitung?: boolean; onKorrigieren?: (matchId: string) => void }) => (
+    <div data-testid="cockpit-stub" data-zeigt={props.currentMatch?.id ?? ''} data-naechstes={props.upcomingMatches?.[0]?.id ?? ''} data-leitung={String(props.istLeitung ?? false)} data-korrigieren={String(props.onKorrigieren !== undefined)}>
       <button type="button" data-testid="weiter" onClick={() => { props.onLoadNextMatch?.(); }}>Weiter</button>
+      <button type="button" data-testid="korrigieren" onClick={() => { props.onKorrigieren?.(props.currentMatch?.id ?? ''); }}>Korrigieren</button>
     </div>
   ),
 }));
@@ -129,7 +130,7 @@ describe('ManagementTab – Endstand nach dem Abpfiff von selbst (B-10a)', () =>
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
     vi.setSystemTime(T0);
     mockLiveMatches = new Map<string, LiveMatch>([
-      ['m11', { id: 'm11', status: 'FINISHED' } as unknown as LiveMatch],
+      ['m11', { id: 'm11', number: 11, status: 'FINISHED', homeTeam: HOME, awayTeam: AWAY, homeScore: 2, awayScore: 1 } as unknown as LiveMatch],
       ['m12', { id: 'm12', status: 'NOT_STARTED' } as unknown as LiveMatch],
     ]);
   });
@@ -167,5 +168,22 @@ describe('ManagementTab – Endstand nach dem Abpfiff von selbst (B-10a)', () =>
     rechte.aktiv = new Set(['writeMatchData']);
     zeige(5_000);
     expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-leitung', 'false');
+  });
+
+  it('@SL-159 die Turnierleitung bekommt den Weg „Korrigieren“; er öffnet die Korrektur von Spiel 11 mit dem Endstand 2:1', () => {
+    zeige(5_000);
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-korrigieren', 'true');
+    act(() => { fireEvent.click(screen.getByTestId('korrigieren')); });
+    expect(screen.getByTestId('cockpit-korrektur-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('cockpit-korrektur-home')).toHaveValue(2);
+    expect(screen.getByTestId('cockpit-korrektur-away')).toHaveValue(1);
+  });
+
+  it('@HE-043 Gegenbeispiel: ein Helfer bekommt keinen Weg „Korrigieren“, und auch der Aufruf öffnet nichts', () => {
+    rechte.aktiv = new Set(['writeMatchData']);
+    zeige(5_000);
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-korrigieren', 'false');
+    act(() => { fireEvent.click(screen.getByTestId('korrigieren')); });
+    expect(screen.queryByTestId('cockpit-korrektur-dialog')).toBeNull();
   });
 });

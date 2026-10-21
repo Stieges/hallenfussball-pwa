@@ -24,6 +24,7 @@ import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext } from '../../components/schedule/matchSides';
 import { useFieldMatchSelection } from './hooks/useFieldMatchSelection';
 import { useEngineMatchInit } from './hooks/useEngineMatchInit';
+import { useCockpitKorrektur } from './hooks/useCockpitKorrektur';
 import { toMatchSummary } from './model/toMatchSummary';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
 import { StorageWarningBanner } from '../../components/StorageWarningBanner';
@@ -81,6 +82,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const canPlay = useCan('writeMatchData', tournament.id);
   // Turnierleitung (@SL-159): nur sie bekommt „Korrigieren“, der Helfer den Hinweis „Korrektur über die Turnierleitung“ (@SL-045)
   const istLeitung = useCan('leadMatches', tournament.id);
+  // „Korrigieren“ nach dem Abpfiff (@SL-159): nur die Turnierleitung bekommt den Weg, derselbe wie die Korrektur im Spielplan
+  const korrektur = useCockpitKorrektur(tournament, liveMatches, istLeitung);
   const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes } = useFieldMatchSelection({
     numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed,
   });
@@ -161,7 +164,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Kein Spiel im Cockpit: die Tafel nennt den Grund (@SL-052, @SL-054); Sperr-Hinweise nach Rot (@SL-089)
   const { leer, sperrHinweise, leerProps } = useCockpitLeerGrund({
     tournament, allMatches: schedule.allMatches, currentMatchData, awaitingTeams, isOnline, sides, selectedFieldNumber: feld,
-    upcomingMatches, onLoadNextMatch: ladeNaechstes,
+    upcomingMatches, onLoadNextMatch: ladeNaechstes, istLeitung,
   });
 
   // A1/K6: schmaler Kopf, sobald das Feld ein Spiel hat oder auf Teams wartet – auch beim Laden und Vorbereiten (der Kopf springt nicht)
@@ -189,6 +192,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             cockpitSettings={tournament.matchCockpitSettings}
             kannSteuern={canPlay}
             istLeitung={istLeitung}
+            onKorrigieren={korrektur.onKorrigieren}
             currentMatch={currentMatch}
             sperrHinweise={sperrHinweise}
             lastFinishedMatch={lastFinishedMatch}
@@ -239,7 +243,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         </div>
       )}
 
-      {/* CONFIRM DIALOGS */}
+      {/* Korrektur nach dem Abpfiff: Ergebnis, dann Grund (@SL-159) */}
+      {korrektur.dialoge}
     </div>
   );
 };

@@ -32,6 +32,8 @@ export function legacyPhaseViewOf(match: LegacyPhaseMatch, elapsedSeconds: numbe
     reopenCount: 0,
     isLastRegularSection: true,
     breakRemainingMs: null,
+    playedMs: Math.max(0, elapsedSeconds) * 1000,
+    plannedMs: match.durationSeconds * 1000,
     quittungRestMs: null, // ohne Engine-Kopie kennt der `LiveMatch` den Abpfiff-Zeitpunkt nicht (@SL-152)
     earliestAdjustMs: 0,
     earliestAdjustIsGoal: false,
