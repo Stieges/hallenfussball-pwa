@@ -700,4 +700,12 @@ SELECT 'heartbeats-select-manage-screens',
                                      AND position('owner_id' IN coalesce(p.qual, '')) = 0)
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
+
+-- 20261110_007_ci_schema_reader_grants.sql (Werkzeugkette): die Drift-Check-Rolle darf field_control lesen. Ohne diesen
+-- GRANT scheitert pg_dump --schema-only (scripts/db-drift-check.sh, Live-Dump als ci_schema_reader) mit "permission
+-- denied for table field_control" (seit A-34 live). Keine Policy fuer ci_schema_reader -- RLS liefert weiter 0 Zeilen.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-field-control',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.field_control'), 'SELECT'), false)
 ;

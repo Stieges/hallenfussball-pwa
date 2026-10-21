@@ -159,6 +159,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_007_ci_schema_reader_grants.sql)
+      echo "positive-ci-schema-reader-select-field-control"
+      ;;
     *)
       return 1
       ;;
@@ -518,6 +521,7 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  "positive-ci-schema-reader-select-field-control"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
