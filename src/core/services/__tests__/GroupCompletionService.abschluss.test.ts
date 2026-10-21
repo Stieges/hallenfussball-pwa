@@ -193,6 +193,8 @@ describe('A-13a @TM-145 erneuter Abschluss nach Korrektur: offene Plätze mit Fo
     const t = await abgeschlossen();
     expect(prepareRecompletion(t, 'A')).toEqual(prepareGroupCompletion(t, 'A'));
 
+    // ANNAHME, kein Szenario: offener Pflicht-Block nur aus der Einstellung (ohne Folgespiel) wird beim Neu-Abschluss
+    // nicht nach openRanks gelegt – Befund C-NEUABSCHLUSS-PFLICHTBLOCK-STILL (Review #326 M1), Entscheidung vor A-15b.
     const ohneFolgespiel = { ...lage060([1, 2, 3], false), groupCompletions: [completion('A', [id('N'), id('S'), id('W'), id('O')], { stale: true })] };
     expect(prepareRecompletion(ohneFolgespiel, 'A')).toMatchObject({ code: 'READY', openRanks: [] });
     const mitFolgespiel = { ...lage060([1, 2], true), groupCompletions: [completion('A', [id('N'), id('S'), id('W'), id('O')], { stale: true })] };
