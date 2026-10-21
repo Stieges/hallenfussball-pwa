@@ -24,8 +24,9 @@ import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../featur
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
 import { TabellenTab } from '../features/tournament-management/TabellenTab';
+import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
-import { SettingsTab } from '../features/tournament-management/SettingsTab';
+import { SettingsTabConnected } from '../features/tournament-management/SettingsTabConnected';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
 import { MonitorsConfigTab } from '../features/tournament-management/MonitorsConfigTab';
 import { MonitorEditor } from '../features/tournament-management/MonitorEditor';
@@ -94,8 +95,13 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     loadingError,
     handleTournamentUpdate,
     applyRemote,
+    reload,
     scheduleService,
   } = useTournamentManager(tournamentId);
+
+  // Paket TB-B: nach dem Eintragen oder Zurücknehmen einer Gleichstands-Entscheidung frisch aus der Cloud lesen
+  const reloadFresh = useCallback(() => { void reload({ fresh: true }); }, [reload]);
+
 
   // A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): result entry in
   // the schedule persists ONLY the touched matches (targeted update) instead of a full tournament
@@ -236,12 +242,14 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           />
         )}
         {activeTab === 'tabellen' && (
-          <TabellenTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
-            overallStandings={overallStandings}
-          />
+          <StandingTieProvider tournamentId={tournamentId} onChanged={reloadFresh}>
+            <TabellenTab
+              tournament={tournament}
+              schedule={schedule}
+              currentStandings={currentStandings}
+              overallStandings={overallStandings}
+            />
+          </StandingTieProvider>
         )}
         {activeTab === 'management' && (
           <ManagementTab
@@ -260,11 +268,13 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           />
         )}
         {activeTab === 'settings' && (
-          <SettingsTab
+          <SettingsTabConnected
             tournament={tournament}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
             onDirtyChange={setIsSettingsDirty}
             onEditInWizard={onEditInWizard}
+            focusSection={searchParams.get('abschnitt') ?? undefined}
+            onPlacesSaved={reloadFresh}
           />
         )}
         {activeTab === 'monitor' && (

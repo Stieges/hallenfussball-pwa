@@ -27,6 +27,7 @@ import {
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
+import { useTieRenderers } from './standings/useTieRenderers';
 
 interface TabellenTabProps {
   tournament: Tournament;
@@ -38,6 +39,14 @@ interface TabellenTabProps {
 }
 
 type ViewMode = 'groups' | 'ranking';
+
+/** Volle Zeile unter einer Tabellenzeile für die Marke (Handy); ohne Marke keine Zeile. */
+const tieMarkerRow = (marker: React.ReactNode, columns: number): React.ReactNode =>
+  marker === null ? null : (
+    <tr data-testid="tie-marker-row">
+      <td colSpan={columns} style={{ padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}`, borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` }}>{marker}</td>
+    </tr>
+  );
 
 export const TabellenTab: React.FC<TabellenTabProps> = ({
   tournament,
@@ -52,6 +61,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  const tieUi = useTieRenderers(tournament); // Paket TB-B: Hinweis und Marke bei Gleichstand (nur App-Ansicht)
   const hasGroups = tournament.teams.some(t => t.group);
   const hasPlayoffs = hasFinalRound(tournament); // Nachzug F1 A-36b: aus dem Turniermodell, nicht finals.enabled
 
@@ -119,6 +129,9 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         standings={currentStandings}
         teams={schedule.teams}
         tournament={tournament}
+        tieDisplay="app"
+        renderTieHint={tieUi.hint}
+        renderTieMarker={tieUi.marker}
       />
     );
   };
@@ -346,6 +359,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const renderRankingView = () => {
     return (
       <div style={{ padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
+        {/* Gleichstand bei Jeder gegen jeden (eine Tabelle ohne Gruppen), Paket TB-B: ganz oben, die Taste bleibt ohne Scrollen erreichbar */}
+        {!hasGroups && tieUi.hint('')}
         <h2 style={titleStyle}>{t('ranking.title')}</h2>
 
         {/* Platzierungslogik Anzeige */}
@@ -448,6 +463,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                       {placement.team.name}
+                      {!hasGroups && tieUi.marker(placement.team.id, '')}
                     </td>
                     {hasPlayoffs && (
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
@@ -591,6 +607,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                         </span>
                       </td>
                     </tr>
+                    {/* Paket TB-B: auf dem Handy steht die Marke als eigene Zeile über die volle Breite, nie in der schmalen Teamspalte */}
+                    {!hasGroups && tieMarkerRow(tieUi.marker(placement.team.id, ''), 5)}
                     {isExpanded && standing && (
                       <tr key={`${teamKey}-details`}>
                         <td colSpan={5} style={{

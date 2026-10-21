@@ -7,24 +7,28 @@
  */
 import type { Match, MatchStatus, Tournament } from '../../types/tournament';
 import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
+import type { SlotSource } from '../models/schemas/MatchSlotSchema';
 import { slotSource } from '../models/matchSlot';
 
-const STARTED: readonly MatchStatus[] = ['running', 'finished'];
+/** Noch nicht angepfiffen. Alles andere (auch der Laufzeitwert `paused`, den der Typ nicht kennt) gilt als angepfiffen. */
+const NOT_STARTED: readonly MatchStatus[] = ['scheduled', 'waiting', 'skipped'];
 
-const fromGroup = (slot: MatchSlot | undefined, groupId: string): boolean => {
-  const source = slot === undefined ? undefined : slotSource(slot);
-  return source?.kind === 'groupRank' && source.group === groupId;
-};
+const fromGroup = (source: SlotSource | undefined, groupId: string): boolean =>
+  source?.kind === 'groupRank' && source.group === groupId;
 
-const isFromGroup = (match: Match, groupId: string): boolean =>
-  [match.originA, match.originB].some((o) => o?.kind === 'groupRank' && o.group === groupId)
-  || fromGroup(match.slotA, groupId) || fromGroup(match.slotB, groupId);
+/** Herkunft des Platzes: die unveränderliche `originX`, sonst die der Seite (offen: `source`, aufgelöst: `resolvedFrom`). */
+const placeOrigin = (origin: SlotSource | undefined, slot: MatchSlot): SlotSource | undefined => origin ?? slotSource(slot);
 
-const occupiedFromGroup = (slot: MatchSlot, groupId: string): boolean => slot.kind === 'team' && fromGroup(slot, groupId);
+/** Seite besetzt (Team gesetzt, auch von Hand) und der Platz stammt aus `groupId`. */
+const sideOccupiedFromGroup = (origin: SlotSource | undefined, slot: MatchSlot, groupId: string): boolean =>
+  slot.kind === 'team' && fromGroup(placeOrigin(origin, slot), groupId);
+
+const startedWithGroupSide = (m: Match, groupId: string): boolean =>
+  m.matchStatus !== undefined && !NOT_STARTED.includes(m.matchStatus)
+  && (fromGroup(placeOrigin(m.originA, m.slotA), groupId) || fromGroup(placeOrigin(m.originB, m.slotB), groupId));
 
 /** Ist ein Spiel mit Herkunft aus `groupId` besetzt (Seite aus dieser Gruppe) oder angepfiffen? */
 export function groupClosedByFollowUp(tournament: Pick<Tournament, 'matches'>, groupId: string): boolean {
-  return tournament.matches.some((m) => isFromGroup(m, groupId)
-    && (occupiedFromGroup(m.slotA, groupId) || occupiedFromGroup(m.slotB, groupId)
-      || (m.matchStatus !== undefined && STARTED.includes(m.matchStatus))));
+  return tournament.matches.some((m) => startedWithGroupSide(m, groupId)
+    || sideOccupiedFromGroup(m.originA, m.slotA, groupId) || sideOccupiedFromGroup(m.originB, m.slotB, groupId));
 }

@@ -42,6 +42,13 @@ export interface ITournamentRepository {
     updateStandingDecisions?(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void>;
 
     /**
+     * Fixrunde TB-6: schreibt NUR die Einstellung `placementsToPlayOut` (Plätze, die bei Gleichstand ausgespielt werden müssen),
+     * mit Versionsprüfung wie `updateStandingDecisions`; `standingDecisions` und alles andere bleiben unberührt. Konflikt →
+     * `OptimisticLockError`; ohne Netz (Cloud) → `NetworkError` mit `isOffline`.
+     */
+    updatePlacementsToPlayOut?(tournamentId: string, places: number[], expectedVersion: number): Promise<void>;
+
+    /**
      * Delete a tournament.
      */
     delete(id: string): Promise<void>;

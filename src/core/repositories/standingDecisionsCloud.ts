@@ -9,38 +9,63 @@ import type { StandingDecision } from '../../types/tournament';
 import type { Json } from '../../types/supabase';
 import { OptimisticLockError, RepositoryError } from '../errors';
 import { parseStandingDecisions } from '../models/schemas/StandingDecisionSchema';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 
 type Client = NonNullable<typeof supabase>;
 
 const CONFLICT = 'Turnier-Daten wurden zwischenzeitlich verändert.';
 
-export async function writeStandingDecisionsToCloud(
+/** Schreibt EIN Feld des `config` mit Versionsprüfung; das übrige `config` bleibt, wie es in der Cloud steht. */
+async function writeConfigField(
   client: Client,
   tournamentId: string,
-  decisions: StandingDecision[],
+  context: 'updateStandingDecisions' | 'updatePlacementsToPlayOut',
+  field: string,
+  value: unknown,
   expectedVersion: number,
 ): Promise<void> {
   const { data: row, error: readError } = await client
     .from('tournaments').select('config, version').eq('id', tournamentId).single();
   if (readError !== null) {
-    throw new RepositoryError('updateStandingDecisions', readError.message, readError);
+    throw new RepositoryError(context, readError.message, readError);
   }
   if ((row.version ?? 0) !== expectedVersion) {
     throw new OptimisticLockError(CONFLICT);
   }
   const current = row.config !== null && typeof row.config === 'object' && !Array.isArray(row.config) ? row.config : {};
-  // Nur, was das Schema kennt: Altwerte mit Person, Zeit und Grund aus einer lokalen Kopie kommen nie ins config (@W2A-072).
-  const config = { ...current, standingDecisions: parseStandingDecisions(decisions) ?? [] } as unknown as Json;
-  const { data: updated, error: writeError } = await client
-    .from('tournaments')
+  const config = { ...current, [field]: value } as unknown as Json;
+  // Eine Zeile ohne Version (`version IS NULL`, etwa vom Seed des Durchstichs) gilt als Version 0; `.eq('version', 0)` träfe sie nie.
+  const target = client.from('tournaments')
     .update({ config, version: expectedVersion + 1, updated_at: new Date().toISOString() })
-    .eq('id', tournamentId)
-    .eq('version', expectedVersion)
-    .select('id');
+    .eq('id', tournamentId);
+  const { data: updated, error: writeError } = await (row.version === null ? target.is('version', null) : target.eq('version', expectedVersion)).select('id');
   if (writeError !== null) {
-    throw new RepositoryError('updateStandingDecisions', writeError.message, writeError);
+    throw new RepositoryError(context, writeError.message, writeError);
   }
   if (updated.length === 0) {
     throw new OptimisticLockError(CONFLICT);
   }
+}
+
+export function writeStandingDecisionsToCloud(
+  client: Client,
+  tournamentId: string,
+  decisions: StandingDecision[],
+  expectedVersion: number,
+): Promise<void> {
+  // Nur, was das Schema kennt: Altwerte mit Person, Zeit und Grund aus einer lokalen Kopie kommen nie ins config (@W2A-072).
+  return writeConfigField(client, tournamentId, 'updateStandingDecisions', 'standingDecisions', parseStandingDecisions(decisions) ?? [], expectedVersion);
+}
+
+/**
+ * Fixrunde TB-6: schreibt NUR `config.placementsToPlayOut` (Einstellung „Plätze ausspielen“), mit Versionsprüfung. Entscheidungen
+ * im `config` (etwa die einer anderen Person) bleiben unberührt – kein Voll-Speichern aus einem veralteten lokalen Stand.
+ */
+export function writePlacementsToPlayOutToCloud(
+  client: Client,
+  tournamentId: string,
+  places: number[],
+  expectedVersion: number,
+): Promise<void> {
+  return writeConfigField(client, tournamentId, 'updatePlacementsToPlayOut', 'placementsToPlayOut', parsePlacementsToPlayOut(places), expectedVersion);
 }
