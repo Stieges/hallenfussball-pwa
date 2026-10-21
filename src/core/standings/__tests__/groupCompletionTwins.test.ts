@@ -43,7 +43,7 @@ describe('A-13b-S Gleichlauf placements-to-play-out.json (parsePlacementsToPlayO
   for (const row of placementsFixture.rows) {
     const config = row.config as { placementsToPlayOut?: unknown };
     if ('tsHeute' in row) {
-      it.fails(`${row.name} – TS heute ${JSON.stringify(row.tsHeute)} (bis A-13b-S Punkt 7)`, () => {
+      it.fails(`${row.name} – TS heute ${JSON.stringify(row.tsHeute)} (bis A-13b-S Punkt 7, C-ENTSCHEIDUNG-TS-GRENZEN)`, () => {
         expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.expected);
       });
       it(`${row.name} – heutiger TS-Wert ist festgehalten`, () => {
@@ -60,7 +60,7 @@ describe('A-13b-S Gleichlauf placements-to-play-out.json (parsePlacementsToPlayO
 describe('A-13b-S Gleichlauf standing-decision-shapes.json (StandingDecisionSchema + checkDraftFields == standing_decision_valid)', () => {
   for (const row of shapesFixture.rows) {
     if ('tsHeute' in row && row.tsHeute !== row.ts) {
-      it.fails(`${row.name} – TS heute ${String(row.tsHeute)} (bis A-13b-S Punkt 7)`, () => {
+      it.fails(`${row.name} – TS heute ${String(row.tsHeute)} (bis A-13b-S Punkt 7, C-ENTSCHEIDUNG-TS-GRENZEN)`, () => {
         expect(tsValid(row.decision)).toBe(row.ts);
       });
     } else {
