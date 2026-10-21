@@ -9,12 +9,15 @@
 -- Bestand: Zeilen bleiben erhalten (monitor_id wird Text). Laut C-HEARTBEAT kam nie ein Lebenszeichen an.
 -- Idempotent bis auf die Signatur-Umstellung (DROP der alten Signatur, IF EXISTS).
 -- Lesen unveraendert: heartbeats_select_v2 aus 20261110_004_coadmin_einsatz.sql (manageScreens).
+-- lock_timeout 5 s wie alle Fenster-Dateien (Review B-48b F1): ALTER COLUMN TYPE/PK nehmen ACCESS EXCLUSIVE; bei
+--   55P03 genau einmal wiederholen.
 -- RUECKBAU: eigene Datei (Anhang B von B-48b-sql-freigabe.md, erzeugt mit
 --   `bash scripts/monitor-heartbeat-check.sh --print-rueckweg`): neue Funktion droppen, alte Funktion woertlich aus der
 --   Baseline, Spalte wake_lock und Pruefregeln droppen, Zeilen ohne passenden monitors-Eintrag loeschen (mit Daniels
 --   Freigabe), monitor_id zurueck auf uuid, PK (monitor_id) und FK auf monitors wiederherstellen.
 
 BEGIN;
+SET LOCAL lock_timeout = '5s';
 
 DO $$
 BEGIN
