@@ -700,4 +700,40 @@ SELECT 'heartbeats-select-manage-screens',
                                      AND position('owner_id' IN coalesce(p.qual, '')) = 0)
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
+
+-- B-48b (20261113_101_monitor_heartbeat_wake_lock.sql, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): genau
+-- eine record_monitor_heartbeat mit Kennung als Text und p_wake_lock, SECURITY DEFINER mit search_path, EXECUTE nur
+-- anon/authenticated (nicht PUBLIC), prueft gegen config -> 'monitors', den Papierkorb und tournamentSettings (Rumpf am
+-- Text, sonst blieben M1/M2-Mutanten der Matrix im Katalog unsichtbar); monitor_heartbeats mit Kennung als Text,
+-- Schluessel (tournament_id, monitor_id), ohne FK auf die unbenutzte Tabelle monitors, Pruefregel wake_lock aktiv.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'monitor-heartbeat-rpc-checks-config-monitors',
+       coalesce((SELECT count(*) = 1
+                        AND bool_and(pg_get_function_identity_arguments(p.oid) = 'p_monitor_key text, p_tournament_id uuid, p_slide_index integer, p_cache_status text, p_user_agent text, p_wake_lock text'
+                                     AND p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0)
+                                     AND position('t.config -> ''monitors''' IN p.prosrc) > 0
+                                     AND position('m.item ->> ''id'' = p_monitor_key' IN p.prosrc) > 0
+                                     AND position('t.deleted_at IS NULL' IN p.prosrc) > 0
+                                     AND position('public.has_tournament_permission(t.id, ''tournamentSettings'')' IN p.prosrc) > 0)
+                   FROM pg_proc p
+                  WHERE p.pronamespace = 'public'::regnamespace AND p.proname = 'record_monitor_heartbeat'), false)
+UNION ALL
+SELECT 'monitor-heartbeat-key-per-tournament-wake-lock',
+       coalesce((SELECT format_type(a.atttypid, a.atttypmod) = 'text'
+                   FROM pg_attribute a
+                  WHERE a.attrelid = to_regclass('public.monitor_heartbeats') AND a.attname = 'monitor_id' AND NOT a.attisdropped), false)
+       AND coalesce((SELECT pg_get_constraintdef(c.oid) = 'PRIMARY KEY (tournament_id, monitor_id)'
+                       FROM pg_constraint c WHERE c.conrelid = to_regclass('public.monitor_heartbeats') AND c.contype = 'p'), false)
+       AND NOT EXISTS (SELECT 1 FROM pg_constraint c
+                        WHERE c.conrelid = to_regclass('public.monitor_heartbeats') AND c.contype = 'f'
+                          AND c.confrelid = to_regclass('public.monitors'))
+       AND EXISTS (SELECT 1 FROM pg_constraint c
+                    WHERE c.conrelid = to_regclass('public.monitor_heartbeats') AND c.contype = 'c' AND c.convalidated
+                      AND c.conname = 'monitor_heartbeats_wake_lock_check'
+                      AND position('''not_applicable''' IN pg_get_constraintdef(c.oid)) > 0)
 ;

@@ -159,6 +159,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261113_101_monitor_heartbeat_wake_lock.sql)
+      echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
+      ;;
     *)
       return 1
       ;;
@@ -518,6 +521,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  # B-48b (20261113_101_monitor_heartbeat_wake_lock.sql): Lebenszeichen mit Kennung als Text, Pruefung gegen config.monitors.
+  "monitor-heartbeat-rpc-checks-config-monitors"
+  "monitor-heartbeat-key-per-tournament-wake-lock"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

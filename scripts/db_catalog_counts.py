@@ -21,6 +21,9 @@ vorher: die drei Client-Schreib-Policies auf match_events sind entfernt (Contain
 51 -> 48). Die Baseline-Zaehlung (44) bleibt, weil die Baseline-Datei unveraendert ist.
 Nach UR (20261028_006, Befund C-EREIGNIS-OHNE-URHEBER) gibt es in `public` genau eine Funktion mehr
 (match_event_author_names); alle anderen Dimensionen bleiben gleich (scripts/event-author-names-check.sh, Kategorie S).
+Nach B-48b (20261113_101, Befund C-HEARTBEAT) gibt es in `public` genau eine Spalte mehr (monitor_heartbeats.wake_lock);
+die Funktion record_monitor_heartbeat wechselt nur die Signatur, alle anderen Dimensionen bleiben gleich
+(scripts/monitor-heartbeat-check.sh, Kategorie S).
 
 Wichtig zu Triggern: pg_dump exportiert NIE interne/System-Trigger (z.B. für Fremdschlüssel-
 Constraints) — jedes "CREATE TRIGGER"/"CREATE OR REPLACE TRIGGER" im Dump-Text ist bereits ein
