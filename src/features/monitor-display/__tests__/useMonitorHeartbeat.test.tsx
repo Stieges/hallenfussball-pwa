@@ -151,7 +151,8 @@ describe('useMonitorHeartbeat', () => {
     expect(letzteMeldung()).toBe('not_applicable');
   });
 
-  it('Gegenbeispiel C-MON-HEARTBEAT-TAKT: ein Folienwechsel sendet nicht und startet den Takt nicht neu', async () => {
+  // Befund C-MON-HEARTBEAT-TAKT (Lebenszeichen je Folienwechsel), steht nicht in tests/meta/befund-kennungen.json
+  it('Gegenbeispiel: ein Folienwechsel sendet nicht und startet den 30-s-Takt nicht neu', async () => {
     const { rerender } = renderMonitor({ status: 'granted', folie: 0 });
     await vorspulen(10_000);
     rerender({ status: 'granted', folie: 1 });
