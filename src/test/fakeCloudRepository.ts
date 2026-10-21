@@ -37,6 +37,11 @@ const SCHEDULE_FIELDS = ['slotA', 'slotB', 'round', 'field', 'slot', 'group', 'i
 export interface FakeCloudOptions {
   /** A-10: `updateMatches` zählt `changeRevision` je Spiel mit geänderter Spielplan-Spalte (wie der Server nach F2b). */
   countsChangeRevision?: boolean;
+  /**
+   * C-VERSION-MEHRDEUTIG: `updateTournamentMetadata` wie der Server – mit `version` nur bei gleicher Version (sonst
+   * OptimisticLockError), dann +1; die Felder werden übernommen. Ohne Angabe protokolliert der Fake nur (wie bisher).
+   */
+  writesMetadata?: boolean;
 }
 
 export function createFakeCloud(initial: FakeCloudState, options: FakeCloudOptions = {}) {
@@ -58,6 +63,7 @@ export function createFakeCloud(initial: FakeCloudState, options: FakeCloudOptio
       const expected = state.tournament.version ?? 0;
       if ((t.version ?? 0) !== expected) { throw new OptimisticLockError(t.id, expected, t.version ?? 0); }
       state = { ...state, tournament: { ...structuredClone(t), version: expected + 1 } };
+      return expected + 1; // wie SupabaseRepository.save: erreichte Version
     }),
     updateMatches: vi.fn(async (_id: string, updates: MatchUpdate[]) => {
       const byId = new Map(updates.map((u) => [u.id, u]));
@@ -76,7 +82,13 @@ export function createFakeCloud(initial: FakeCloudState, options: FakeCloudOptio
         },
       };
     }),
-    updateTournamentMetadata: vi.fn(async () => undefined),
+    updateTournamentMetadata: vi.fn(async (id: string, metadata: Partial<Tournament>) => {
+      if (!options.writesMetadata) { return; }
+      const expected = state.tournament.version ?? 0;
+      if (metadata.version !== undefined && metadata.version !== expected) { throw new OptimisticLockError(id, expected, metadata.version); }
+      const { version, ...fields } = metadata;
+      state = { ...state, tournament: { ...state.tournament, ...structuredClone(fields), version: version === undefined ? expected : expected + 1 } };
+    }),
     listForCurrentUser: vi.fn(async () => [] as Tournament[]),
     listWithMemberships: vi.fn(ownerOnlyList(async () => [])),
     getByShareCode: vi.fn(async () => null),
