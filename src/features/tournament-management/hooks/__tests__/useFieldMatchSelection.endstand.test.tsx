@@ -173,6 +173,14 @@ describe('Spiel aus dem Spielplan geöffnet (?matchId=) endet von selbst', () =>
     expect(aktuell(r)).toBe('m12');
   });
 
+  it('Gegenbeispiel: die Kopie eines lange beendeten Spiels springt beim Laden von „läuft“ auf „beendet“ (Nachholen vom Server): das geöffnete Spiel bleibt stehen', () => {
+    const lange = engineMit({ m11: T0 - 600_000 });
+    const r = render({ engine: lange, schedule: schedule(true), live: karte(['m11', 'RUNNING']), initialMatchId: 'm11' });
+    expect(aktuell(r)).toBe('m11');
+    r.rerender({ engine: lange, schedule: schedule(true), live: karte(['m11', 'FINISHED']), initialMatchId: undefined });
+    expect(aktuell(r)).toBe('m11');
+  });
+
   it('Gegenbeispiel: ein schon lange beendetes Spiel, das Tom bewusst aus dem Spielplan öffnet, bleibt stehen', () => {
     const r = render({ engine: engineMit({ m11: T0 - 600_000 }), schedule: schedule(true), live: karte(['m11', 'FINISHED']), initialMatchId: 'm11' });
     expect(aktuell(r)).toBe('m11');

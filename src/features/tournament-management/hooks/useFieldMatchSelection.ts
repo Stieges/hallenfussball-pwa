@@ -74,16 +74,21 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
   const { gehalten, quittiere } = useEndstandHalten(fieldMatches, liveMatches);
 
   // Ein gewähltes Spiel (Spielplan, „Weiter“) gilt nur bis zu seinem Ende: Endet es von selbst oder von Hand, übernimmt der Endstand
-  // (30 Sekunden), dann das nächste Spiel (@SL-152, @SL-049). Ein schon beendet geöffnetes Spiel bleibt stehen.
+  // (30 Sekunden), dann das nächste Spiel (@SL-152, @SL-049). Nur ein Ende, das jetzt gerade geschah (der Endstand wird gehalten),
+  // gibt frei: Ein schon lange beendet geöffnetes Spiel bleibt stehen, auch wenn seine Kopie erst beim Laden auf „beendet“ springt.
   const warNochNichtBeendet = useRef<string | null>(null);
   // Jeder Wechsel der Auswahl beginnt neu: ein früher gemerktes Spiel gibt später nicht ein bewusst geöffnetes frei
   useEffect(() => { warNochNichtBeendet.current = null; }, [selectedMatchId]);
+  const gehaltenId = gehalten.id;
   useEffect(() => {
     const status = selectedMatchId ? liveMatches.get(selectedMatchId)?.status : undefined;
     if (status === undefined) { return; }
     if (status !== 'FINISHED') { warNochNichtBeendet.current = selectedMatchId; return; }
-    if (warNochNichtBeendet.current === selectedMatchId) { warNochNichtBeendet.current = null; setSelectedMatchId(null); }
-  }, [selectedMatchId, liveMatches]);
+    if (warNochNichtBeendet.current === selectedMatchId) {
+      warNochNichtBeendet.current = null;
+      if (gehaltenId === selectedMatchId) { setSelectedMatchId(null); }
+    }
+  }, [selectedMatchId, liveMatches, gehaltenId]);
 
   // Gewählt, sonst läuft ein Spiel, sonst der Endstand des eben abgepfiffenen Spiels, sonst das laufende/geladene, sonst das erste ohne Ergebnis
   const currentMatchData = useMemo((): ScheduledMatch | undefined => {
