@@ -24,6 +24,7 @@ const MATCH_CLEARED = {
   penaltyScoreA: undefined,
   penaltyScoreB: undefined,
   decidedBy: undefined,
+  forfeitAbsent: undefined, // A-25c: Merkmal einer Wertung ist ein Ergebnisfeld (C-KOPIE-ERGEBNISSE)
   skippedReason: undefined,
   skippedAt: undefined,
   liveState: undefined,

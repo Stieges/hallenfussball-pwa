@@ -12,7 +12,8 @@ import { effectiveScoreFor, type EngineEvent, type MatchContext, type MatchState
 import { enteredShootoutStatus } from '../shootoutStatus';
 
 export type CacheMatchStatus = Exclude<MatchStatus, 'section_break' | 'decision_pending' | 'shootout'>;
-export type CacheDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
+// 'forfeit' (Nichtantritts-Wertung): Wert der Spalte ab `20261110_005`; die Engine erzeugt ihn erst mit A-25n.
+export type CacheDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty' | 'forfeit';
 
 export interface CacheLiveState {
   engine: true;

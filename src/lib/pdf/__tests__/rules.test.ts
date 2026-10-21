@@ -10,6 +10,7 @@ import { buildPdfTexts } from '../translations';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { translatorFor } from './pdfText';
 import { testUuid } from '../../../test/testIds';
+import { storedSchedule } from './storedSchedule';
 
 const de = buildPdfTexts(translatorFor('de'), 'de');
 const en = buildPdfTexts(translatorFor('en'), 'en');
@@ -171,7 +172,8 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
       placementLogic: PLACEMENT,
       finalsConfig: { preset: 'top-16', tiebreaker: 'goldenGoal', tiebreakerByRound: { semifinal: 'shootout' } },
     });
-    const rules = { ...pdfRulesFrom(tournament, hallencupSchedule(tournament)), rulebook: undefined };
+    // 4 Gruppen: seit A-12a nur noch als gespeichertes Turnier (Lesepfad), der Generator legt es nicht mehr an
+    const rules = { ...pdfRulesFrom(tournament, storedSchedule(tournament)), rulebook: undefined };
     expect(koLines(rules, de)).toEqual([
       'Viertelfinale, Platzierungsspiele und Finale: bei Gleichstand Golden Goal',
       'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',

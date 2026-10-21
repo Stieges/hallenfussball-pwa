@@ -63,6 +63,12 @@ describe('copyTeamsAndMatches (V14)', () => {
     expect(gruppe).toMatchObject({ matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined, events: [] });
     expect('teamA' in semi || 'teamB' in semi).toBe(false); // A-36a: kein Übergangsfeld mehr
   });
+
+  it('A-25c: die Kopie eines gewerteten Spiels trägt kein Merkmal der Wertung (Ergebnisfeld)', () => {
+    const awarded = { ...matches[0], scoreA: 0, scoreB: 0, decidedBy: 'forfeit', forfeitAbsent: 'both' } as Match;
+    const [kopie] = copyTeamsAndMatches({ teams, matches: [awarded] }, makeId).matches;
+    expect(kopie).toMatchObject({ matchStatus: 'scheduled', decidedBy: undefined, forfeitAbsent: undefined });
+  });
 });
 
 describe('buildCopiedTournament (Verdrahtung „Turnier kopieren“ in App.tsx)', () => {

@@ -4,6 +4,7 @@
  */
 import i18next from 'i18next';
 import { MATCH_BADGE_WORD_KEY } from './badge';
+import { isForfeitMatch } from '../models/forfeit';
 import type { EngineStatus, ViewLocale, ViewMatchStatus, ViewStatusSource } from './types';
 
 const FROM_ENGINE: Record<EngineStatus, ViewMatchStatus> = {
@@ -34,7 +35,7 @@ function fromCache(status: ViewStatusSource['matchStatus']): ViewMatchStatus {
 
 export function viewStatus(match: ViewStatusSource, engine?: EngineStatus): ViewMatchStatus {
   const status = engine === undefined ? fromCache(match.matchStatus) : FROM_ENGINE[engine];
-  return status === 'finished' && match.decidedBy === 'forfeit' ? 'awarded' : status;
+  return status === 'finished' && isForfeitMatch(match) ? 'awarded' : status; // Kennzeichen „Wertung“ (A-25c)
 }
 
 /** Live = läuft oder ist unterbrochen (Halbzeit, Entscheidung, Strafstoßschießen, angehaltene Uhr), @ZM-039/@ZM-040. */

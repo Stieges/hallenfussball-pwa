@@ -39,6 +39,7 @@ import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
 import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
 import { effectivePlacementLogic } from '../standings/placementDefaults';
 import { standingDecisionsFromConfig, standingDecisionsToConfig } from './standingDecisionsConfig';
+import { forfeitFromRow, forfeitScoreFromConfig, forfeitScoreToConfig, type MatchForfeitColumns } from './matchForfeitRow';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -47,7 +48,7 @@ type TournamentUpdate = Database['public']['Tables']['tournaments']['Update'];
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 type TeamInsert = Database['public']['Tables']['teams']['Insert'];
 // A-36a: `origin_a/origin_b` (20261026_001_match_origin.sql) bis zur Neuerzeugung von supabase.ts von Hand ergänzt.
-type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchOriginColumns;
+type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchOriginColumns & MatchForfeitColumns;
 type MatchInsert = Database['public']['Tables']['matches']['Insert'] & MatchOriginColumns;
 type MatchUpdate = Database['public']['Tables']['matches']['Update'];
 type CollaboratorInsert = Database['public']['Tables']['tournament_collaborators']['Insert'];
@@ -214,6 +215,7 @@ export function mapMatchFromSupabase(row: MatchRow, tournamentDate: string): Mat
     penaltyScoreA: row.penalty_score_a ?? undefined,
     penaltyScoreB: row.penalty_score_b ?? undefined,
     decidedBy: row.decided_by as MatchDecidedBy | undefined,
+    ...forfeitFromRow(row), // A-25c: wer bei einer Wertung fehlte (nur aus select('*'), ab 20261110_005)
     skippedReason: row.skipped_reason ?? undefined,
     skippedAt: row.skipped_at ?? undefined,
   };
@@ -506,6 +508,8 @@ interface TournamentConfig {
   // Paket TB: Gleichstands-Entscheidungen der Turnierleitung, auszuspielende Plätze (standingDecisionsConfig.ts)
   standingDecisions?: unknown[];
   placementsToPlayOut?: unknown;
+  // A-25c: Wertung bei Nichtantritt (matchForfeitRow.ts)
+  forfeitScore?: unknown;
 
   // Wizard state
   lastVisitedStep?: number;
@@ -636,6 +640,7 @@ export function mapTournamentFromSupabase(
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
     dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), ...standingDecisionsFromConfig(config), // @W4-034/@W4-044, Paket TB
+    ...forfeitScoreFromConfig(config), // A-25c @W2A-025: Wertung bei Nichtantritt
     monitors: config.monitors as Tournament['monitors'],
     sponsors: config.sponsors as Tournament['sponsors'],
     version: row.version ?? undefined, ...changeRevisionFromRow(row), // A-10: Änderungszählung (@TM-027)
@@ -723,6 +728,7 @@ export function mapTournamentToSupabase(
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
     dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), ...standingDecisionsToConfig(tournament), // @W4-034/@W4-044, Paket TB
+    ...forfeitScoreToConfig(tournament), // A-25c @W2A-025
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
     publishedAt: tournament.publishedAt,

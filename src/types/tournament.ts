@@ -208,6 +208,11 @@ export interface FinalsConfig {
   tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden (Vorgabe je Runde)
   tiebreakerDuration?: number;       // Dauer in Minuten (für Verlängerung/Golden Goal)
   tiebreakerByRound?: Partial<Record<TiebreakerRoundKey, TiebreakerMode>>; // Entscheidung je Runde (überschreibt `tiebreaker`); `placement` = Platzierungsspiele (@W2A-039)
+  /**
+   * A-12a (@TM-004): ausgespielte Plätze außer dem Finale, je Platz wählbar (3, 5, 7). Fehlt der Wert, belegt die Vorlage
+   * vor (`defaultPlacements`: „Top 4“ → [3], „Alle Plätze“ → [3, 5, 7]); `[]` = kein Platzierungsspiel.
+   */
+  placements?: number[];
 }
 
 /**
@@ -276,9 +281,22 @@ export interface PlayoffConfig {
 export type MatchStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
 /**
- * How a finals match was decided (for display purposes)
+ * How a finals match was decided (for display purposes). 'forfeit' = Nichtantritts-Wertung (A-25, E-A4; in der Spalte
+ * `decided_by` ab Migration `20261110_005`), wer fehlte steht in `Match.forfeitAbsent`.
  */
-export type MatchDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
+export type MatchDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty' | 'forfeit';
+
+/** Nichtantritts-Wertung: welche Seite nicht angetreten ist (`matches.forfeit_absent`, ab Migration `20261110_005`). */
+export type ForfeitAbsent = 'A' | 'B' | 'both';
+
+/**
+ * Wertung bei Nichtantritt (@W2A-022, @W2A-025): Tore der angetretenen (`winner`) und der fehlenden Seite (`loser`),
+ * im `tournaments.config`-JSONB; ohne Einstellung 2:0 (`DEFAULT_FORFEIT_SCORE`, `core/models/forfeit.ts`).
+ */
+export interface ForfeitScore {
+  winner: number;
+  loser: number;
+}
 
 export interface Match {
   id: string;
@@ -321,6 +339,7 @@ export interface Match {
   penaltyScoreA?: number;        // Strafstoß-Ergebnis (Heim, z.B. 4)
   penaltyScoreB?: number;        // Strafstoß-Ergebnis (Gast, z.B. 3)
   decidedBy?: MatchDecidedBy;    // Wie wurde das Spiel entschieden
+  forfeitAbsent?: ForfeitAbsent; // A-25c: wer bei einer Wertung fehlte (nur lesen, gilt nur mit decidedBy 'forfeit')
 
   // US-SCHEDULE-EDITOR: Skipped match support
   skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
@@ -466,6 +485,8 @@ export interface Tournament {
    * gilt nur Platz 1 (Daniel K10); `[]` = kein Platz.
    */
   placementsToPlayOut?: number[];
+  /** A-25c (@W2A-025): Wertung bei Nichtantritt, im `config`-JSONB; fehlt sie oder ist sie unbrauchbar, gilt 2:0. */
+  forfeitScore?: ForfeitScore;
   /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
   openingMode?: OpeningMode;
 
