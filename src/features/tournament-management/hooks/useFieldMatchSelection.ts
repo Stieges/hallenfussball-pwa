@@ -30,6 +30,8 @@ export interface FieldMatchSelection {
   waehleSpiel: (id: string | null) => void;
   /** „Weiter“ (@SL-162): das nächste ungespielte Spiel des Felds, sonst das erste ungespielte irgendeines Felds. */
   ladeNaechstes: () => void;
+  /** Korrektur in den 30 Sekunden (@SL-163, @SL-164): Frist des Endstands anhalten und danach mit Restzeit (mind. 10 s) fortsetzen. */
+  endstandPause: { pausiere: (matchId: string) => void; setzeFort: () => void };
 }
 
 const FELD_PARAM = 'f';
@@ -71,7 +73,8 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
 
   const fieldMatches = useMemo(() => matchesOfFieldInPlayOrder(schedule.allMatches, feld), [schedule.allMatches, feld]);
 
-  const { gehalten, quittiere } = useEndstandHalten(fieldMatches, liveMatches);
+  const { gehalten, quittiere, pausiere, setzeFort } = useEndstandHalten(fieldMatches, liveMatches);
+  const endstandPause = useMemo(() => ({ pausiere, setzeFort }), [pausiere, setzeFort]);
 
   // Ein gewähltes Spiel (Spielplan, „Weiter“) gilt nur bis zu seinem Ende: Endet es von selbst oder von Hand, übernimmt der Endstand
   // (30 Sekunden), dann das nächste Spiel (@SL-152, @SL-049). Nur ein Ende, das jetzt gerade geschah (der Endstand wird gehalten),
@@ -119,5 +122,5 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
     }
   }, [fieldMatches, currentMatchData, schedule.allMatches, feld, schreibeFeld, quittiere]);
 
-  return { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel: setSelectedMatchId, ladeNaechstes };
+  return { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel: setSelectedMatchId, ladeNaechstes, endstandPause };
 }
