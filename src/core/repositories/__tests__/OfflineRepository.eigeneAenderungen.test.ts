@@ -9,6 +9,8 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Tournament } from '../../models/types';
+import type { StandingDecision } from '../../../types/tournament';
+import { OptimisticLockError } from '../../errors';
 import { MAX_RETRIES } from '../../services/MutationQueue';
 
 const session = vi.hoisted(() => ({ userId: null as string | null }));
@@ -187,6 +189,74 @@ describe('@FU-110 Zwei Änderungen kurz nacheinander am selben Gerät kommen bei
 
       expect(await cloud.fake.get('T')).toMatchObject({ title: 'Marias Titel', version: 9 });
       expect(olli.mutationQueue.getFailedCount()).toBe(1);
+    });
+  });
+
+  describe('@FU-106 Untergrenze der Kette: ein Stand von vor ihrem Beginn bleibt ein Konflikt (Review Version-Fix R2, Befund C-ZWEITES-SPEICHERN-EIGENE-VORVERSION)', () => {
+    async function olliSpeichertTitel(cloud: Cloud): Promise<void> {
+      const current = (await cloud.fake.get('T'))!;
+      await cloud.fake.save({ ...current, title: 'Marias Titel' }); // anderes Gerät
+    }
+
+    it('@FU-106 K6: Formular vom Stand 7, Maria speichert 7→8, Übernahme, eigener Upload 8→9 (Kette 8..9), dann das alte Formular → Konflikt, Marias Titel bleibt', async () => {
+      const { cloud, olli, geoeffnet } = await olliMitLiveCup();
+      const formular = { ...geoeffnet, date: '2027-01-01' }; // Stand 7, ohne Marias Titel
+      await olliSpeichertTitel(cloud); // v8
+      const frisch = (await olli.get('T', { fresh: true }))!; // Übernahme v8
+      await olli.save({ ...frisch, location: { ...frisch.location, name: 'Halle C' } });
+      await flush(); // eigener Upload 8→9
+      expect(stored()).toMatchObject({ serverVersion: 9, ownUploadsFrom: 8 });
+
+      await olli.save(formular);
+      await wiederholungenDurch();
+
+      const c = await cloud.fake.get('T');
+      expect(c).toMatchObject({ title: 'Marias Titel', version: 9 });
+      expect(c?.date).not.toBe('2027-01-01');
+      expect(olli.mutationQueue.getFailedMutations()[0]).toMatchObject({ type: 'SAVE_TOURNAMENT', conflict: true });
+    });
+
+    it('@FU-106 K3: eigener Upload 7→8, Maria 8→9, Übernahme (Kette endet), eigener Upload 9→10, dann Ansicht vom Stand 8 → Konflikt, Marias Titel bleibt', async () => {
+      const { cloud, olli, geoeffnet } = await olliMitLiveCup();
+      await olli.save({ ...geoeffnet, location: { ...geoeffnet.location, name: 'Halle A' } });
+      await flush(); // 7→8
+      const ansicht8 = stored();
+      await olliSpeichertTitel(cloud); // v9
+      const frisch = (await olli.get('T', { fresh: true }))!; // Übernahme v9
+      await olli.save({ ...frisch, location: { ...frisch.location, name: 'Halle C' } });
+      await flush(); // 9→10, Kette 9..10
+
+      await olli.save({ ...ansicht8, date: '2027-01-01' });
+      await wiederholungenDurch();
+
+      const c = await cloud.fake.get('T');
+      expect(c).toMatchObject({ title: 'Marias Titel', version: 10 });
+      expect(c?.date).not.toBe('2027-01-01');
+      expect(olli.mutationQueue.getFailedCount()).toBe(1);
+    });
+
+    it('@FU-110 Gegenbeispiel MK5: eine Tabellen-Entscheidung beendet die Kette – ein Speichern aus der Ansicht davor nimmt die Entscheidung nicht still zurück', async () => {
+      const { cloud, olli, geoeffnet } = await olliMitLiveCup();
+      const entscheidung: StandingDecision[] = [{ groupId: 'A', order: ['x', 'y'] } as unknown as StandingDecision];
+      Object.assign(cloud.fake, {
+        updateStandingDecisions: vi.fn(async (_id: string, standingDecisions: StandingDecision[], expectedVersion: number) => {
+          const current = (await cloud.fake.get('T'))!;
+          if ((current.version ?? 0) !== expectedVersion) { throw new OptimisticLockError('T', current.version ?? 0, expectedVersion); }
+          cloud.setState({ tournament: { ...current, standingDecisions, version: expectedVersion + 1 }, revisions: revisions() });
+        }),
+      });
+      const ansicht = { ...geoeffnet, location: { ...geoeffnet.location, name: 'Halle A' } };
+      await olli.save(ansicht);
+      await flush(); // 7→8, Kette 7..8
+      await olli.updateStandingDecisions('T', entscheidung, 8); // 8→9
+
+      await olli.save({ ...ansicht, date: '2027-01-01' }); // Ansicht vor der Entscheidung (ohne sie)
+      await wiederholungenDurch();
+
+      const c = await cloud.fake.get('T');
+      expect(c?.standingDecisions).toEqual(entscheidung);
+      expect(c?.date).not.toBe('2027-01-01');
+      expect(olli.mutationQueue.getFailedCount()).toBe(1); // sichtbar statt still
     });
   });
 

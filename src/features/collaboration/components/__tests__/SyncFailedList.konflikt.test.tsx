@@ -97,20 +97,20 @@ describe('@FU-108 Liste gestörter Übertragungen bei einem Konflikt (Befund C-W
     expect(screen.getByTestId('sync-failed-reason-dl-1').textContent).toBe('Not sent: this change is based on a discarded state. The state of the server will load once the connection is back.');
   });
 
-  it('@FU-107 Rückfrage für ein Turnier, das noch nie beim Server war: es bleibt mit allen Teams und Spielen auf dem Gerät', async () => {
-    await renderWithI18n(<SyncFailedList items={[eintrag({ payload: { id: 'T' }, lastError: 'new row violates row-level security policy' })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />);
-
-    fireEvent.click(screen.getByTestId('sync-discard-dl-1'));
-
-    expect(screen.getByText('Diese gestörte Übertragung wird entfernt. Das Turnier war noch nie beim Server und bleibt mit allen Teams und Spielen auf diesem Gerät.')).toBeInTheDocument();
-    expect(screen.queryByText(/Stand des Servers/)).toBeNull();
-  });
-
-  it('@FU-106 die Rückfrage vor dem Verwerfen sagt, dass danach der Stand des Servers gilt – auch ohne Verbindung', async () => {
+  it('@FU-106 @FU-107 die Rückfrage stimmt für beide Fälle: kennt der Server das Turnier, gilt danach sein Stand (auch ohne Verbindung); ein nie übertragenes Turnier bleibt auf dem Gerät', async () => {
     await renderWithI18n(<SyncFailedList items={[eintrag({ conflict: true })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByTestId('sync-discard-dl-1'));
 
-    expect(screen.getByText(/Das Gerät zeigt danach den aktuellen Stand des Servers – ohne Verbindung, sobald sie wieder besteht/)).toBeInTheDocument();
+    expect(screen.getByText(/Kennt der Server das Turnier, zeigt das Gerät danach seinen Stand – ohne Verbindung, sobald sie wieder besteht\./)).toBeInTheDocument();
+    expect(screen.getByText(/Ein Turnier, das noch nie beim Server war, bleibt mit allen Teams und Spielen auf diesem Gerät\./)).toBeInTheDocument();
+  });
+
+  it('@FU-107 dieselbe Rückfrage auf Englisch', async () => {
+    await renderWithI18n(<SyncFailedList items={[eintrag({ payload: { id: 'T' } })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />, 'en');
+
+    fireEvent.click(screen.getByTestId('sync-discard-dl-1'));
+
+    expect(screen.getByText(/A tournament that has never been on the server stays on this device with all teams and matches\./)).toBeInTheDocument();
   });
 });

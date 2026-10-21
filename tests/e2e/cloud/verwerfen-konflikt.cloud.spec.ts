@@ -49,6 +49,27 @@ async function expectInsideViewport(page: Page, locator: Locator): Promise<{ x: 
   return box;
 }
 
+/**
+ * Review Version-Fix R1: die Statuszeile verdeckt keinen Inhalt. Geprüft wird die erste sichtbare Überschrift außerhalb des
+ * Kopfs (ohne Überschrift: das Element direkt nach der Zeile) – `elementFromPoint` in ihrer Mitte liefert sie selbst.
+ */
+async function expectNothingCovered(line: Locator): Promise<void> {
+  const result = await line.evaluate((el) => {
+    const visible = (node: Element): boolean => {
+      const r = node.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight;
+    };
+    const headings = [...document.querySelectorAll('h1, h2, h3, [role="heading"]')]
+      .filter((h) => visible(h) && !el.contains(h) && !h.closest('header'));
+    const target = headings[0] ?? el.nextElementSibling;
+    if (!target || !visible(target)) { return { checked: 'nichts', covered: false }; }
+    const r = target.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { checked: (target.textContent ?? '').trim().slice(0, 40), covered: !(hit === target || (hit !== null && target.contains(hit))) };
+  });
+  expect(result.covered, `nicht verdeckt: „${result.checked}“`).toBe(false);
+}
+
 async function bild(page: Page, name: string): Promise<void> {
   const dir = process.env.E2E_BILDER_DIR;
   if (!dir) { return; }
@@ -153,7 +174,7 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
     }
   });
 
-  test('@FU-109 ohne Verbindung verworfen: nichts gelöscht, Hinweis im Kopf; mit Verbindung kommt der Stand des Servers', async ({ browser }) => {
+  test('@FU-109 ohne Verbindung verworfen: nichts gelöscht, Statuszeile unter dem Kopf (Admin Center, Cockpit) verdeckt nichts; mit Verbindung kommt der Stand des Servers', async ({ browser }) => {
     test.setTimeout(180_000);
     const cup = await cloneReleaseCup('verwerfen-offline', { withCoAdmin: false });
     const olli = await newRoleContext(browser, 'owner');
@@ -170,6 +191,11 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       await openAdmin(olli.page, cup);
       await olli.page.reload();
       await olli.page.waitForLoadState('networkidle');
+      // Cockpit einmal mit Verbindung öffnen (ohne Neuladen danach): sein Code-Teil wird verzögert geladen und fehlte
+      // später ohne Netz („Lade…“)
+      await olli.page.goto(`/#/tournament/${cup.id}/live?matchId=${cup.matchId}`);
+      await expect(olli.page.getByTestId('live-cockpit')).toBeVisible({ timeout: 20000 });
+      await openAdmin(olli.page, cup);
 
       await olli.context.setOffline(true); // Hallen-WLAN weg
       const syncStatus = olli.page.locator('[data-testid="sync-status"]');
@@ -182,13 +208,14 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       const hinweis = olli.page.getByTestId('sync-awaiting-server-copy');
       await expect(hinweis).toHaveText(WARTE_HINWEIS, { timeout: 10000 });
       expect((await localCopy(olli.page, cup.id))?.locationName, 'nichts gelöscht').toBe('Verworfene Halle');
-      await bild(olli.page, 'warte-hinweis-desktop-v2');
+      // Admin Center, Desktop: Zeile unter dem Kopf, Inhalt rückt nach (R1)
+      await expectNothingCovered(hinweis);
+      await bild(olli.page, 'warte-hinweis-admin-desktop-v3');
+      // Handy 360: volle Breite, im Bild, deckend, unter dem Kopf, über dem Offline-Banner, nichts verdeckt
       await olli.page.setViewportSize({ width: 360, height: 780 });
       await expect.poll(async () => (await hinweis.boundingBox())?.width ?? 0, { message: 'Statuszeile über die volle Breite', timeout: 5000 }).toBeGreaterThanOrEqual(359);
-      // Bildbefund: der Hinweis lief rechts aus dem Bild – auf dem Handy eine Statuszeile über die volle Breite unter dem Kopf
       const zeile = await expectInsideViewport(olli.page, hinweis);
-      expect(zeile.width, 'volle Breite').toBeGreaterThanOrEqual(359);
-      expect(await hinweis.evaluate((el) => getComputedStyle(el).backgroundColor), 'deckend (Inhalt scheint nicht durch)').toMatch(/^rgb\(/);
+      expect(await hinweis.evaluate((el) => getComputedStyle(el).backgroundColor), 'deckend').toMatch(/^rgb\(/);
       const kopf = await olli.page.locator('header').first().boundingBox();
       if (kopf) { expect(zeile.y, 'unter dem Kopf').toBeGreaterThanOrEqual(kopf.y + kopf.height - 1); }
       const banner = olli.page.getByTestId('offline-banner');
@@ -196,8 +223,20 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
         const unten = await banner.boundingBox();
         expect(unten && zeile.y + zeile.height <= unten.y, 'verdeckt das Offline-Banner nicht').toBe(true);
       }
-      await bild(olli.page, 'warte-hinweis-handy-360-v2');
+      await expectNothingCovered(hinweis);
+      await bild(olli.page, 'warte-hinweis-admin-handy-360-v3');
+
+      // Cockpit (weiter ohne Verbindung): Zeile unter der Anzeigetafel, im Bild, nichts verdeckt
+      await olli.page.goto(`/#/tournament/${cup.id}/live?matchId=${cup.matchId}`);
+      await expect(olli.page.getByTestId('live-cockpit')).toBeVisible({ timeout: 20000 });
+      await expect(hinweis).toHaveText(WARTE_HINWEIS, { timeout: 10000 });
+      await expectInsideViewport(olli.page, hinweis);
+      await expectNothingCovered(hinweis);
+      await bild(olli.page, 'warte-hinweis-cockpit-handy-360-v3');
       await olli.page.setViewportSize({ width: 1280, height: 800 });
+      await expect(hinweis).toBeVisible();
+      await expectNothingCovered(hinweis);
+      await bild(olli.page, 'warte-hinweis-cockpit-desktop-v3');
 
       await olli.context.setOffline(false);
       await expect.poll(async () => (await localCopy(olli.page, cup.id))?.locationName, { message: '@FU-109: Stand des Servers spätestens 10 s nach Rückkehr der Verbindung', timeout: 10000 }).toBe(serverOrt);

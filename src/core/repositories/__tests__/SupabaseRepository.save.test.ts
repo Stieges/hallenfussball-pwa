@@ -825,6 +825,14 @@ describe('SupabaseRepository.save() — erreichte Version (@FU-110, Befund C-VER
     expect(tournamentsInsertMock.mock.calls[0][0]).toMatchObject({ version: 1 });
   });
 
+  it('Upsert ohne Version (neues Turnier aus dem Assistenten): save() schreibt Version 1 und liefert genau 1', async () => {
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBe(1);
+    expect(tournamentsUpsertMock.mock.calls[0][0]).toMatchObject({ version: 1 });
+    expect(tournamentsUpdateMock).not.toHaveBeenCalled();
+  });
+
   it('Gegenbeispiel: die Zeile trägt inzwischen eine andere Version – save() wirft OptimisticLockError, keine Version', async () => {
     tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
     tournamentsExistingSingleMock.mockResolvedValue({ data: { id: 't' }, error: null });

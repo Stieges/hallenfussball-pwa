@@ -134,16 +134,9 @@ function reasonKey(item: FailedMutationItem): 'syncStatus.discardedCopyReason' |
     return item.conflict ? 'syncStatus.conflictReason' : null;
 }
 
-/** @FU-107: ein Turnier, das nie beim Server war (keine Änderungszählung der Cloud), bleibt beim Verwerfen auf dem Gerät. */
-function isLocalOnly(item: FailedMutationItem | undefined): boolean {
-    if (item?.type !== 'SAVE_TOURNAMENT') { return false; }
-    return (item.payload as { changeRevision?: number } | null)?.changeRevision === undefined;
-}
-
 export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFailedListProps) {
     const { t } = useTranslation('common');
     const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
-    const pendingDiscard = items.find((item) => item.id === pendingDiscardId);
     // Schmaler Bildschirm: die Anzeige sitzt mitten im Kopf, ein rechtsbündiges Popover liefe links aus dem Bild – dort
     // feste Lage über die Breite mit Seitenrand, oben direkt unter der Anzeige (Elternelement).
     const narrow = useIsMobile();
@@ -216,7 +209,7 @@ export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFaile
             {pendingDiscardId && (
                 <ConfirmDialog
                     title={t('syncStatus.discardConfirmTitle')}
-                    message={t(isLocalOnly(pendingDiscard) ? 'syncStatus.discardConfirmMessageLocalOnly' : 'syncStatus.discardConfirmMessage')}
+                    message={t('syncStatus.discardConfirmMessage')} // @FU-106/@FU-107: ein Text für beide Fälle (Review Nachprüfung)
                     variant="danger"
                     confirmText={t('syncStatus.discard')}
                     onConfirm={() => {

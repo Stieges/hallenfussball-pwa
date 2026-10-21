@@ -17,7 +17,7 @@ import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks
 import { breakpointValues } from '../../design-tokens';
 import { useFoulCounts } from '../../hooks/useFoulCounts';
 import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
-import { SyncStatusIndicator } from '../../features/collaboration';
+import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
 import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
@@ -205,6 +205,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           kopf={(
             <>
               {tafel}
+              {/* @FU-109: Statuszeile im normalen Fluss unter der Anzeigetafel (Review Version-Fix R1) */}
+              <AwaitingServerCopyLine tournamentId={tournamentId} />
               {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
               {readOnly && (
                 <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
