@@ -205,7 +205,12 @@ A11_DECIDE="UPDATE public.tournaments SET config = config || '{\"standingDecisio
 A11_DECIDE_NOW="SELECT coalesce(config->'standingDecisions'->0->'shootout'->>'winner', 'keine') FROM public.tournaments WHERE id = '$T_MAIN'"
 r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
 a11_mark "@W2A-050 tom-traegt-strafstossschiessen-ein-abgelehnt          " "$(a11_denied_verdict "$r" "keine")" "abgelehnt"
+# A-13b-S (20261110_006, Soll 12): danach schreibt der REST-Weg keine Entscheidung mehr (Trigger
+# tournaments_keep_standing_decisions behaelt den Serverwert, das Speichern selbst gelingt); eingetragen wird ueber
+# record_standing_decision (Zeilen in rls-matrix.d/spur-gruppe-a13b.sh).
+A11_DECIDE_EXPECTED="4"
+[[ "${WITH_A13BS:-0}" -eq 1 ]] && A11_DECIDE_EXPECTED="keine"
 r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 gegen-maria-traegt-strafstossschiessen-ein            " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"
+a11_mark "@W2A-050 gegen-maria-traegt-strafstossschiessen-ein            " "$(a11_allowed_verdict "$r" 1 "$A11_DECIDE_EXPECTED")" "gelingt"
 r="$(a11_probe authenticated "$U_OWNER" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 gegen-olli-traegt-strafstossschiessen-ein             " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"
+a11_mark "@W2A-050 gegen-olli-traegt-strafstossschiessen-ein             " "$(a11_allowed_verdict "$r" 1 "$A11_DECIDE_EXPECTED")" "gelingt"
