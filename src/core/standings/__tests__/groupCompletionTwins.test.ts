@@ -115,7 +115,7 @@ describe('A-13b-S group-state.json: Zeilen echt erzeugt (Review-Auflage 1, R-GA4
     });
   }
 
-  it('@TM-057 Nikolaus: alle 15 Spiele tragen group_letter „all“, die Teams keine Gruppe (C-GRUPPE-ALL-UNEINHEITLICH)', () => {
+  it('@TM-057 Nikolaus: alle 15 Spiele tragen group_letter „all“, die Teams keine Gruppe (drei Schreibweisen derselben Gruppe)', () => {
     const { matches, teams } = fixtureRows.nikolaus;
     expect(matches).toHaveLength(15);
     expect(new Set(matches.map((m) => m.group_letter))).toEqual(new Set(['all']));

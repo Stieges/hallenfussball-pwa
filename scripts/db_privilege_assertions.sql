@@ -746,12 +746,14 @@ SELECT 'group-completion-rpcs-definer-authenticated-only',
                                   to_regprocedure('public.resolve_bracket_notice(bigint)'),
                                   to_regprocedure('public.resolve_clarification(bigint)'),
                                   to_regprocedure('public.bracket_log_read(uuid)'))), false)
---  (3) Die Hilfen in match_engine sind nur aus den Server-Funktionen erreichbar (kein EXECUTE fuer Client-Rollen).
+--  (3) Die Hilfen in match_engine sind nur aus den Server-Funktionen erreichbar (kein EXECUTE fuer Client-Rollen) und
+--      haben einen festen search_path (Review A-13b-S, Soll).
 UNION ALL
 SELECT 'group-completion-helpers-no-client-execute',
        coalesce((SELECT count(*) = 10
                         AND bool_and(NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
-                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND p.proconfig = ARRAY['search_path=public, pg_temp'])
                    FROM pg_proc p
                   WHERE p.oid IN (to_regprocedure('match_engine.group_key(text)'),
                                   to_regprocedure('match_engine.group_state(uuid,text)'),
