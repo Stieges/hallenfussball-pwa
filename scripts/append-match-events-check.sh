@@ -179,6 +179,10 @@ while IFS= read -r line; do
     A25B_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
   fi
+  # A-13b-S: 20261110_006 setzt 20261110_005 voraus (Fail-fast) -- ohne SW (und damit ohne _005) faellt sie ebenfalls weg.
+  if [[ "$(basename "$line")" == "20261110_006_group_completion.sql" && "$MODE" == "without-sw" ]]; then
+    continue
+  fi
   if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
     SW_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
