@@ -1,0 +1,40 @@
+{
+  "$comment": "Gleichlauf R-GA4v2-7 (A-13b-S Punkt 3, Review-Auflage 1): Gruppe eines Spiels bzw. Teams. NULL, '' und 'all' (Jeder gegen jeden) -> ''; sonst der Buchstabe unverändert (Groß/Klein zählt). Zwillinge: match_engine.group_key (scripts/group-completion-check.sh, Kategorie G) und groupKeyOf aus A-13a (src/core/models/standingsGroups.ts).",
+  "rows": [
+    {
+      "name": "fehlend (NULL)",
+      "in": null,
+      "out": ""
+    },
+    {
+      "name": "leer",
+      "in": "",
+      "out": ""
+    },
+    {
+      "name": "Jeder gegen jeden (Spiele 'all')",
+      "in": "all",
+      "out": ""
+    },
+    {
+      "name": "Gruppe A",
+      "in": "A",
+      "out": "A"
+    },
+    {
+      "name": "Gruppe B",
+      "in": "B",
+      "out": "B"
+    },
+    {
+      "name": "'ALL' ist ein Buchstabe, keine Sonderform",
+      "in": "ALL",
+      "out": "ALL"
+    },
+    {
+      "name": "Leerzeichen bleibt",
+      "in": " ",
+      "out": " "
+    }
+  ]
+}
