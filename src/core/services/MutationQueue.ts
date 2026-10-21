@@ -239,7 +239,9 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                 return type === 'UPDATE_TOURNAMENT_METADATA' ? `UPDATE_METADATA:${id}` : null;
             },
             scopeOf: tournamentIdOf, // A-08f3c2 (Regel Q): Zähler und Dead-Letter je Turnier
-            wholeCopyTypes: ['SAVE_TOURNAMENT'], // @FU-106 (Auflage A1): nie aus einer verworfenen Kopie senden
+            // @FU-106 (Auflage A1), @FU-109: bis zum Laden des Server-Stands warten nur Voll-Speicherungen (Einstellungen, Teams,
+            // Spielplan); Spielergebnisse und -ereignisse gehen weiter zum Server (eigene Wege, Record präzisiert 21.10.)
+            wholeCopyTypes: ['SAVE_TOURNAMENT'],
             /**
              * Befund C-ZWEITES-SPEICHERN-EIGENE-VORVERSION (@FU-110): nach einem bestätigten Upload `base → reached` beruhen
              * wartende SAVE_TOURNAMENT desselben Turniers mit Basis `base` auf dem eigenen Stand – sie prüfen gegen `reached`.

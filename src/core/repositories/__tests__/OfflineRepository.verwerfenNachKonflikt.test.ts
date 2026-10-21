@@ -318,7 +318,7 @@ describe('Verwerfen einer abgelehnten Änderung nach einem Konflikt', () => {
       expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false);
     });
 
-    it('@FU-109 nach dem Verwerfen ohne erreichbaren Server weiter gespeichert: geht nicht zum Server, liegt mit eigenem Grund (nicht „Konflikt“) sichtbar ab (Befund C-VERWORFEN-FALSCHER-GRUND)', async () => {
+    it('@FU-109 nach dem Verwerfen ohne erreichbaren Server weiter Einstellungen gespeichert (Voll-Speichern): geht nicht zum Server, liegt mit eigenem Grund (nicht „Konflikt“) sichtbar ab (Befund C-VERWORFEN-FALSCHER-GRUND)', async () => {
       const { cloud, olli, savesVorher } = await ohneKonfliktImDeadLetter();
       cloud.fake.getWithMatchRevisions.mockRejectedValue(new Error('Failed to fetch')); // Hallen-WLAN ohne Internet
       cloud.fake.get.mockRejectedValue(new Error('Failed to fetch'));

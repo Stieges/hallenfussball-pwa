@@ -19,6 +19,7 @@ import { useOutboxStatus } from '../outbox/useOutboxStatus';
 import { SyncStatusBar } from './SyncStatusBar';
 import { SyncFailedList } from './SyncFailedList';
 import { SyncWaitDetails } from './SyncWaitDetails';
+import { AwaitingServerCopyHint } from './AwaitingServerCopyHint';
 import { deriveWaitReason } from './syncStatusDisplay';
 
 export interface SyncStatusIndicatorProps {
@@ -176,11 +177,7 @@ export function SyncStatusIndicator({
             )}
 
             {/* @FU-109: nach „Verwerfen“ ohne Verbindung bleibt der Inhalt sichtbar stehen, bis der Stand des Servers geladen ist */}
-            {awaitingServerCopy && (
-                <span style={realtimeHintStyle} role="status" data-testid="sync-awaiting-server-copy">
-                    {t('syncStatus.awaitingServerCopy')}
-                </span>
-            )}
+            {awaitingServerCopy && <AwaitingServerCopyHint anchorRef={containerRef} />}
 
             {compact && showWaitDetails && failedChanges === 0 && waitingCount > 0 && (
                 <SyncWaitDetails pendingCount={waitingCount} waitReason={waitReason} detail={outbox.lastError ?? undefined} />

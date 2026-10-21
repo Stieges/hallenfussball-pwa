@@ -15,7 +15,7 @@
  * Bildschirmfotos (Handy 360, Desktop) nur, wenn `E2E_BILDER_DIR` gesetzt ist (Skill visuelle-pruefung), nie in der CI.
  */
 import path from 'node:path';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { fetchUserIdByEmail, newRoleContext } from './engineHelpers';
 import { fetchQueuedMutationTypes, queueKeys, safeCleanup } from './helpers';
@@ -26,6 +26,28 @@ import { cloneReleaseCup, cupRow, deleteCup, localCopy, type ClonedCup } from '.
 const KONFLIKT_TEXT = 'Turnier wurde inzwischen auf einem anderen Gerät geändert';
 const VERWERFEN_UND_LADEN = 'Verwerfen und aktuellen Stand laden';
 const WARTE_HINWEIS = 'Verworfen – der Stand des Servers wird geladen, sobald die Verbindung steht';
+
+/**
+ * Bildbefund Fixrunde (Handy 360): das Element liegt ganz im Bild, nichts darin ragt seitlich heraus, die Seite scrollt nicht
+ * waagerecht. Liefert das Rechteck für weitere Prüfungen.
+ */
+async function expectInsideViewport(page: Page, locator: Locator): Promise<{ x: number; y: number; width: number; height: number }> {
+  const box = await locator.boundingBox();
+  if (!box) { throw new Error('Element ohne Rechteck'); }
+  const width = page.viewportSize()?.width ?? 0;
+  expect(box.x, 'linker Rand im Bild').toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width, 'rechter Rand im Bild').toBeLessThanOrEqual(width);
+  const inner = await locator.evaluate((el) => {
+    const outer = el.getBoundingClientRect();
+    const outside = [...el.querySelectorAll('*')].filter((child) => {
+      const r = child.getBoundingClientRect();
+      return r.width > 0 && (r.left < outer.left - 0.5 || r.right > outer.right + 0.5);
+    }).length;
+    return { outside, clipped: el.scrollWidth > el.clientWidth + 1, pageScroll: document.documentElement.scrollWidth > window.innerWidth };
+  });
+  expect(inner, 'kein Überlauf').toEqual({ outside: 0, clipped: false, pageScroll: false });
+  return box;
+}
 
 async function bild(page: Page, name: string): Promise<void> {
   const dir = process.env.E2E_BILDER_DIR;
@@ -106,7 +128,7 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       await expect(list.getByText('Erneut versuchen')).toHaveCount(0);
       const discard = maria.page.getByTestId(`sync-discard-${entryId}`);
       await expect(discard).toHaveText(VERWERFEN_UND_LADEN);
-      await bild(maria.page, 'konflikt-liste-desktop');
+      await bild(maria.page, 'konflikt-liste-desktop-v2');
       // Handy: der Kopf baut sich beim Größenwechsel neu auf (Liste zu) – dort erneut öffnen, prüfen und verwerfen
       await maria.page.setViewportSize({ width: 360, height: 780 });
       await expect(list).toHaveCount(0, { timeout: 5000 });
@@ -115,7 +137,9 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       await expect(maria.page.getByTestId(`sync-failed-reason-${entryId}`)).toHaveText(KONFLIKT_TEXT);
       await expect(maria.page.getByTestId(`sync-retry-${entryId}`)).toHaveCount(0);
       await expect(discard).toHaveText(VERWERFEN_UND_LADEN);
-      await bild(maria.page, 'konflikt-liste-handy-360');
+      await expectInsideViewport(maria.page, list); // Bildbefund: das Popover lief links aus dem Bild
+      await expectInsideViewport(maria.page, maria.page.getByTestId(`sync-failed-reason-${entryId}`));
+      await bild(maria.page, 'konflikt-liste-handy-360-v2');
 
       await discard.click();
       await maria.page.locator('[data-testid="confirm-dialog-confirm"]').click();
@@ -158,10 +182,21 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       const hinweis = olli.page.getByTestId('sync-awaiting-server-copy');
       await expect(hinweis).toHaveText(WARTE_HINWEIS, { timeout: 10000 });
       expect((await localCopy(olli.page, cup.id))?.locationName, 'nichts gelöscht').toBe('Verworfene Halle');
-      await bild(olli.page, 'warte-hinweis-desktop');
+      await bild(olli.page, 'warte-hinweis-desktop-v2');
       await olli.page.setViewportSize({ width: 360, height: 780 });
-      await expect(hinweis).toBeVisible();
-      await bild(olli.page, 'warte-hinweis-handy-360');
+      await expect.poll(async () => (await hinweis.boundingBox())?.width ?? 0, { message: 'Statuszeile über die volle Breite', timeout: 5000 }).toBeGreaterThanOrEqual(359);
+      // Bildbefund: der Hinweis lief rechts aus dem Bild – auf dem Handy eine Statuszeile über die volle Breite unter dem Kopf
+      const zeile = await expectInsideViewport(olli.page, hinweis);
+      expect(zeile.width, 'volle Breite').toBeGreaterThanOrEqual(359);
+      expect(await hinweis.evaluate((el) => getComputedStyle(el).backgroundColor), 'deckend (Inhalt scheint nicht durch)').toMatch(/^rgb\(/);
+      const kopf = await olli.page.locator('header').first().boundingBox();
+      if (kopf) { expect(zeile.y, 'unter dem Kopf').toBeGreaterThanOrEqual(kopf.y + kopf.height - 1); }
+      const banner = olli.page.getByTestId('offline-banner');
+      if (await banner.isVisible()) {
+        const unten = await banner.boundingBox();
+        expect(unten && zeile.y + zeile.height <= unten.y, 'verdeckt das Offline-Banner nicht').toBe(true);
+      }
+      await bild(olli.page, 'warte-hinweis-handy-360-v2');
       await olli.page.setViewportSize({ width: 1280, height: 800 });
 
       await olli.context.setOffline(false);

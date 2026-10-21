@@ -10,11 +10,12 @@
  * @see .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A4-brief.md (Teil 1, C-SYNC)
  */
 
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { FailedMutationItem, MutationType } from '../../../core/services/MutationQueue';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { useIsMobile } from '../../../hooks/useIsMobile';
 
 export interface SyncFailedListProps {
     /** Failed mutations to show, newest last (dead-letter queue order) */
@@ -42,6 +43,14 @@ const styles = {
         borderRadius: cssVars.borderRadius.md,
         boxShadow: cssVars.shadows.lg,
         padding: cssVars.spacing.sm,
+    } as CSSProperties,
+    /** Schmaler Bildschirm: feste Lage mit Seitenrand statt rechtsbündig an der Anzeige. */
+    narrow: {
+        position: 'fixed',
+        left: cssVars.spacing.md,
+        right: cssVars.spacing.md,
+        width: 'auto',
+        maxWidth: 'none',
     } as CSSProperties,
     header: {
         display: 'flex',
@@ -135,6 +144,18 @@ export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFaile
     const { t } = useTranslation('common');
     const [pendingDiscardId, setPendingDiscardId] = useState<string | null>(null);
     const pendingDiscard = items.find((item) => item.id === pendingDiscardId);
+    // Schmaler Bildschirm: die Anzeige sitzt mitten im Kopf, ein rechtsbündiges Popover liefe links aus dem Bild – dort
+    // feste Lage über die Breite mit Seitenrand, oben direkt unter der Anzeige (Elternelement).
+    const narrow = useIsMobile();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [narrowTop, setNarrowTop] = useState<number | null>(null);
+    useLayoutEffect(() => {
+        if (!narrow) { return; }
+        setNarrowTop(containerRef.current?.parentElement?.getBoundingClientRect().bottom ?? 0);
+    }, [narrow]);
+    const containerStyle: CSSProperties = narrow
+        ? { ...styles.container, ...styles.narrow, top: `calc(${narrowTop ?? 0}px + ${cssVars.spacing.sm})` }
+        : styles.container;
     const reasonText = (item: FailedMutationItem): string => {
         const key = reasonKey(item);
         return key ? t(key) : (item.lastError ?? t('syncStatus.failedReasonUnknown'));
@@ -144,7 +165,7 @@ export function SyncFailedList({ items, onRetry, onDiscard, onClose }: SyncFaile
         t(`syncStatus.mutationTypes.${type}`, { defaultValue: type });
 
     return (
-        <div style={styles.container} data-testid="sync-failed-list" role="dialog" aria-label={t('syncStatus.failedListTitle')}>
+        <div ref={containerRef} style={containerStyle} data-testid="sync-failed-list" role="dialog" aria-label={t('syncStatus.failedListTitle')}>
             <div style={styles.header}>
                 <span style={styles.title}>{t('syncStatus.failedListTitle')}</span>
                 <button
