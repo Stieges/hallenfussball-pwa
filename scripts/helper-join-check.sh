@@ -20,7 +20,7 @@
 # Aufrufoptionen:
 #   bash scripts/helper-join-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/helper-join-check.sh --without-migration  Gegenprobe: ohne 20261110_008 -> P und R muessen ROT sein
-#   bash scripts/helper-join-check.sh --gegenprobe         je Lauf eine Mutation einer KOPIE der Migration (M1-M16);
+#   bash scripts/helper-join-check.sh --gegenprobe         je Lauf eine Mutation einer KOPIE der Migration (M1-M20);
 #                                                          Exit 0 nur, wenn JEDE Mutation mindestens eine Pruefung rot
 #                                                          faerbt. Die Datei im Repo wird nie veraendert.
 #   bash scripts/helper-join-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
@@ -49,7 +49,7 @@ TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
 PCR_SOURCE_FILE="$MIGRATIONS_DIR/20260924_003_declined_and_expired.sql"
 POLICY_SOURCE_FILE="$MIGRATIONS_DIR/20260924_002_central_role_permissions.sql"
 MD5_PCR_LIVE="4e0f2b4d408477ec8681090ad1e42342"   # protect_collaborator_row aus 20260924_003 (live, vom Controller gelesen)
-MD5_PCR_A16="a5706467af5fab5cc92160fe68b3dfe1"    # protect_collaborator_row nach A-16 (Abschnitt 11a)
+MD5_PCR_A16="378a7e1ed6b72381c9b6924e0e664bc3"    # protect_collaborator_row nach A-16 (Abschnitt 11a, Durchgang mit Schalter)
 CONTAINER_PREFIX="helper-join-check-$$"
 CURRENT_CONTAINER=""
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/helper-join-check.XXXXXX")"
@@ -75,8 +75,12 @@ BEGIN   -- M4(c): nur zuruecknehmen, wenn noch die A-16-Fassung live ist
     RAISE EXCEPTION 'Rueckweg A-16: protect_collaborator_row bzw. collaborators_delete_v4 nicht in der A-16-Fassung -- gemeinsamer Rueckweg (I-3)';
   END IF;
 END \$\$;
+-- Der Durchgang in protect_collaborator_row gilt nur mit dem Schalter (Review M-1); ohne ihn lehnt der Trigger dieses
+-- UPDATE ab. SET LOCAL gilt nur in diesem Block, RESET nimmt ihn direkt danach zurueck.
+SET LOCAL hallenfussball.helper_access_write = 'on';
 UPDATE public.tournament_collaborators c SET declined_at = coalesce(c.declined_at, now())   -- Zugaenge sperren, Zeilen bleiben (Verlauf)
  WHERE c.id IN (SELECT member_id FROM public.tournament_join_requests WHERE member_id IS NOT NULL);
+RESET hallenfussball.helper_access_write;
 DROP TRIGGER IF EXISTS protect_helper_access_row ON public.tournament_collaborators;
 DROP POLICY IF EXISTS collaborators_delete_v4 ON public.tournament_collaborators;
 DROP FUNCTION IF EXISTS public.protect_helper_access_row(), public.match_event_author_devices(uuid),
@@ -448,6 +452,8 @@ INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accep
   # --- Clara: zugelassen ohne Feld, dann nur zusehen (@HE-055 Z.2, K-2, K-3) ---
   als "$U_CLARA" "SELECT public.request_helper_access('$code', 'Clara', 'Tablet');" >/dev/null
   r_clara="$(req_id "$T_LIVE" "$U_CLARA")"
+  check R "L-5 Entscheidung ohne Wahl (p_accept NULL, auch mit Pruefzahl) -> INVALID_OPTION (22023), Anfrage bleibt offen" "ERR:INVALID_OPTION|ERR:INVALID_OPTION|pending" \
+    "$(decide "$U_OLLI" "$r_clara" NULL)|$(decide "$U_OLLI" "$r_clara" NULL NULL "$(check_no "$r_clara")")|$(q "SELECT status FROM public.tournament_join_requests WHERE id = '$r_clara';")"
   decide "$U_OLLI" "$r_clara" true NULL "$(check_no "$r_clara")" >/dev/null
   m_clara="$(member_of "$T_LIVE" "$U_CLARA")"
   q "INSERT INTO public.field_control (tournament_id, field, epoch, holder_user_id, holder_device_id, holder_device_label) VALUES ('$T_LIVE', 1, 3, '$U_CLARA', '$(uuid_for device:clara)', 'Tablet');" >/dev/null
@@ -477,6 +483,20 @@ INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accep
     "$(q "SELECT coalesce(holder_user_id::text, 'frei') || '|' || epoch FROM public.field_control WHERE tournament_id = '$T_LIVE' AND field = 2;")"
   check R "Entzogenes Handy hebt den eigenen Entzug auf -> Fehler, bleibt entzogen" "1|t" \
     "$(res="$(als "$U_TOM" "UPDATE public.tournament_collaborators SET declined_at = NULL WHERE id = '$m_tom' RETURNING 'r';")"; [[ "$res" == ERR:* || -z "$res" ]] && echo 1 || echo 0)|$(q "SELECT declined_at IS NOT NULL FROM public.tournament_collaborators WHERE id = '$m_tom';")"
+  # --- Review M-1: Durchgang in protect_collaborator_row nur mit Schalter UND ausserhalb der Client-Rollen ---
+  check R "M-1 Betreiber-UPDATE im SQL-Editor (postgres) ohne Schalter -> abgelehnt wie vor A-16, Zeile unveraendert" "1|Tom" \
+    "$(q "BEGIN; UPDATE public.tournament_collaborators SET label = 'Editor' WHERE id = '$m_tom'; ROLLBACK;" | grep -c 'nur der Turnier-Eigentuemer')|$(q "SELECT label FROM public.tournament_collaborators WHERE id = '$m_tom';")"
+  check R "M-1 Gegenbeispiel: mit Schalter (wie Rueckweg) laesst der Trigger das Betreiber-UPDATE durch" "Editor" \
+    "$(q "BEGIN; SET LOCAL hallenfussball.helper_access_write = 'on'; UPDATE public.tournament_collaborators SET label = 'Editor' WHERE id = '$m_tom' RETURNING label; ROLLBACK;")"
+  check R "M-1 Entzogenes Handy setzt den Schalter selbst und hebt den Entzug auf -> abgelehnt (Client-Rolle), bleibt entzogen" "1|t" \
+    "$([[ "$(als_mit "" "$U_TOM" "SET LOCAL hallenfussball.helper_access_write = 'on'; UPDATE public.tournament_collaborators SET declined_at = NULL WHERE id = '$m_tom' RETURNING 'r';")" == ERR:* ]] && echo 1 || echo 0)|$(q "SELECT declined_at IS NOT NULL FROM public.tournament_collaborators WHERE id = '$m_tom';")"
+  res="$(q "BEGIN; SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub = '$U_OLLI'; SET LOCAL request.jwt.claims = '{\"sub\":\"$U_OLLI\",\"role\":\"authenticated\",\"is_anonymous\":false}';
+SELECT public.change_helper_access('$(member_of "$T_LIVE" "$U_TOM_TABLET")', 'revoke') ->> 'result';
+RESET ROLE; SET LOCAL request.jwt.claim.sub = ''; SET LOCAL request.jwt.claims = '';
+UPDATE public.tournament_collaborators SET label = 'Editor' WHERE id = '$m_tom';
+ROLLBACK;")"
+  check R "M-1 nach change_helper_access ist der Schalter in derselben Transaktion wieder aus (Betreiber-UPDATE danach abgelehnt)" "1|1" \
+    "$(grep -cx 'OK' <<<"$res")|$(grep -c 'nur der Turnier-Eigentuemer' <<<"$res")"
 
   # --- @HE-101 / M3: Pruefzahl eindeutig; BUSY; S-3 ---
   local vcode
@@ -610,13 +630,27 @@ EOF
     "$(j "$res" '.result')|$(q "SELECT count(*) FROM public.tournament_join_requests WHERE device_user_id = '$u';")"
 }
 code_of_as() { als "$1" "SELECT public.ensure_helper_code('$2') ->> 'code';"; }
+# probe_writers <PL/pgSQL-Anweisung> -- legt in einer nie committeten Transaktion einen weiteren Definer in einem eigenen
+# Schema an und liefert t/f der Assertion helper-join-definer-writers-tournament-collaborators (Review L-1).
+probe_writers() {
+  local sql
+  sql="BEGIN; CREATE SCHEMA a16_probe;
+CREATE FUNCTION a16_probe.w() RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS \$x\$ BEGIN $1; END \$x\$;
+$(cat "$REPO_ROOT/scripts/db_privilege_assertions.sql")
+ROLLBACK;"
+  q "$sql" | grep -E '^helper-join-definer-writers-tournament-collaborators\|' | cut -d'|' -f2
+}
 
 # Katalog (nach dem Einspielen)
 run_catalog() {
   check S "11 Client-Funktionen SECURITY DEFINER, Eigentuemer postgres, search_path public, pg_temp" "11" \
     "$(q "SELECT count(*) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('join_code_info','request_helper_access','helper_access_status','ensure_helper_code','rotate_helper_code','list_helper_access','helper_request_count','decide_join_request','change_helper_access','match_event_author_devices','is_device_membership') AND p.prosecdef AND pg_get_userbyid(p.proowner) = 'postgres' AND p.proconfig @> ARRAY['search_path=public, pg_temp'];")"
   check S "M4a Positivliste: Definer-Schreiber auf tournament_collaborators = change_helper_access, decide_join_request" "change_helper_access,decide_join_request" \
-    "$(q "SELECT string_agg(p.proname, ',' ORDER BY p.proname) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef AND p.prosrc ~* '(insert\s+into|update|delete\s+from)\s+(public\.)?\"?tournament_collaborators';")"
+    "$(q "SELECT string_agg(p.proname, ',' ORDER BY p.proname) FROM pg_proc p WHERE p.pronamespace NOT IN ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) AND p.prosecdef AND p.prosrc ~* '(insert\s+into|update(\s+only)?|delete\s+from(\s+only)?)\s+(\"?public\"?\s*\.\s*)?\"?tournament_collaborators';")"
+  # Review L-1: die Assertion erkennt einen weiteren Definer-Schreiber auch in gequoteter Schreibweise, mit ONLY und
+  # ausserhalb von public (je eine Probe -> Zeile |f); Gegenbeispiel: ein Definer, der nur liest, bleibt |t.
+  check S "L-1 Positivliste erkennt UPDATE \"public\".\"tournament_collaborators\" / UPDATE ONLY / DELETE FROM ONLY, Lesen nicht" "f|f|f|t" \
+    "$(probe_writers 'UPDATE "public"."tournament_collaborators" SET label = label WHERE false')|$(probe_writers 'UPDATE ONLY public.tournament_collaborators SET label = label WHERE false')|$(probe_writers 'DELETE FROM ONLY "tournament_collaborators" WHERE false')|$(probe_writers 'PERFORM 1 FROM "public"."tournament_collaborators" WHERE false FOR UPDATE')"
   check S "anon: EXECUTE nur join_code_info (keine andere neue Funktion)" "join_code_info" \
     "$(q "SELECT string_agg(p.proname, ',' ORDER BY p.proname) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('helper_code_cutoff','tournament_closed_for_helpers','generate_helper_code','join_code_info','request_helper_access','helper_access_status','ensure_helper_code','rotate_helper_code','list_helper_access','helper_request_count','decide_join_request','change_helper_access','match_event_author_devices','is_device_membership','protect_helper_access_row') AND has_function_privilege('anon', p.oid, 'EXECUTE');")"
   check S "authenticated: kein EXECUTE auf die internen Funktionen; PUBLIC auf keiner" "0|0" \
@@ -655,7 +689,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   RED_LIST=""

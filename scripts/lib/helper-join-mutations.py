@@ -32,7 +32,8 @@ M = {
     "M4": [("  SELECT * INTO v_req FROM public.tournament_join_requests WHERE id = p_request_id FOR UPDATE;\n",
             "  SELECT * INTO v_req FROM public.tournament_join_requests WHERE id = p_request_id;\n")],
     # M5 (Plan): Definer-Durchgang in protect_collaborator_row weg (Maria entzieht/stuft herab)
-    "M5": [("  IF current_user NOT IN ('authenticated', 'anon') THEN RETURN NEW; END IF;  -- A-16 Definer-Durchgang\n", "")],
+    "M5": [("  IF current_user NOT IN ('authenticated', 'anon')                      -- A-16 Definer-Durchgang, nur mit Schalter\n"
+            "     AND coalesce(current_setting('hallenfussball.helper_access_write', true), '') = 'on' THEN RETURN NEW; END IF;\n", "")],
     # M6 (Plan, M2): is_device_membership aus der Loesch-Policy weg
     "M6": [("  USING (NOT public.is_device_membership(id, role)\n", "  USING (true\n")],
     # M7 (Plan, M3/@HE-101): Pruefzahl-Index weg
@@ -59,6 +60,16 @@ M = {
     # M16 (K-4): FOR SHARE auf den Code vor dem Anlegen weg (Rotations-Restfenster)
     "M16": [("  PERFORM 1 FROM public.tournament_join_codes WHERE code = v_code AND revoked_at IS NULL FOR SHARE;\n"
              "  IF NOT FOUND THEN RETURN jsonb_build_object('result', 'ROTATED'); END IF;\n", "")],
+    # M17 (Review M-1): Schalter ignoriert -- Durchgang wieder fuer jedes Betreiber-UPDATE (SQL-Editor)
+    "M17": [("     AND coalesce(current_setting('hallenfussball.helper_access_write', true), '') = 'on' THEN RETURN NEW; END IF;\n",
+             "     THEN RETURN NEW; END IF;\n")],
+    # M18 (Review M-1): Rollenbedingung weg -- ein Client, der den Schalter selbst setzt, kaeme durch
+    "M18": [("  IF current_user NOT IN ('authenticated', 'anon')                      -- A-16 Definer-Durchgang, nur mit Schalter\n",
+             "  IF true                                                               -- A-16 Definer-Durchgang, nur mit Schalter\n")],
+    # M19 (Review M-1): change_helper_access setzt den Schalter nach den UPDATEs nicht zurueck
+    "M19": [("  PERFORM set_config('hallenfussball.helper_access_write', '', true);\n", "")],
+    # M20 (Review M-1): change_helper_access setzt den Schalter nicht -- Co-Admin kann nicht mehr entziehen/herabstufen
+    "M20": [("  PERFORM set_config('hallenfussball.helper_access_write', 'on', true);\n", "")],
 }
 
 key = os.environ.get("MUT_KEY", "")

@@ -706,7 +706,8 @@ SELECT 'heartbeats-select-manage-screens',
 -- BYPASSRLS); zehn Client-Funktionen SECURITY DEFINER mit search_path und Eigentuemer postgres, EXECUTE nur authenticated
 -- (join_code_info zusaetzlich anon, Scan ohne Sitzung); interne Funktionen fuer keinen Client; Positivliste der
 -- Definer-Schreiber auf tournament_collaborators (M4a, B-20 erweitert sie ausdruecklich); Loesch-Policy schuetzt
--- Geraete-Zeilen (M2); protect_collaborator_row in der A-16-Fassung (md5, M4); Pruefzahl am Server (S-1); Rollen-Schutz
+-- Geraete-Zeilen (M2); protect_collaborator_row in der A-16-Fassung (md5, M4; Durchgang nur mit dem Schalter, den
+-- change_helper_access nur um seine UPDATEs setzt, Review M-1); Pruefzahl am Server (S-1); Rollen-Schutz
 -- der Geraete-Zeilen (K-3); keine verborgenen Zeichen in Namen (S-4). Vor dem Live-Einspielen: "f".
 UNION ALL
 SELECT 'helper-join-tables-no-client-access',
@@ -777,8 +778,8 @@ UNION ALL
 SELECT 'helper-join-definer-writers-tournament-collaborators',
        coalesce((SELECT string_agg(p.proname, ',' ORDER BY p.proname)
                    FROM pg_proc p
-                  WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
-                    AND p.prosrc ~* '(insert\s+into|update|delete\s+from)\s+(public\.)?"?tournament_collaborators'),
+                  WHERE p.pronamespace NOT IN ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) AND p.prosecdef
+                    AND p.prosrc ~* '(insert\s+into|update(\s+only)?|delete\s+from(\s+only)?)\s+("?public"?\s*\.\s*)?"?tournament_collaborators'),
                 '') = 'change_helper_access,decide_join_request'
 UNION ALL
 SELECT 'helper-join-collaborators-delete-no-device-rows',
@@ -789,8 +790,11 @@ SELECT 'helper-join-collaborators-delete-no-device-rows',
                   WHERE p.schemaname = 'public' AND p.tablename = 'tournament_collaborators' AND p.cmd = 'DELETE'), false)
 UNION ALL
 SELECT 'helper-join-protect-collaborator-row-a16',
-       coalesce((SELECT md5(p.prosrc) = 'a5706467af5fab5cc92160fe68b3dfe1'
+       coalesce((SELECT md5(p.prosrc) = '378a7e1ed6b72381c9b6924e0e664bc3'
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.protect_collaborator_row()')), false)
+       AND coalesce((SELECT position('set_config(''hallenfussball.helper_access_write'', ''on'', true)' IN p.prosrc) > 0
+                            AND position('set_config(''hallenfussball.helper_access_write'', '''', true)' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.change_helper_access(uuid,text)')), false)
 UNION ALL
 SELECT 'helper-join-decide-checks-check-number',
        coalesce((SELECT position('p_check_number IS DISTINCT FROM v_req.check_number' IN p.prosrc) > 0

@@ -19,7 +19,11 @@
 --   K-4  request_helper_access liest den Code vor dem Anlegen FOR SHARE (Rotations-Restfenster -> ROTATED).
 --
 -- md5(prosrc) protect_collaborator_row: vorher (20260924_003, live) 4e0f2b4d408477ec8681090ad1e42342, danach (11a)
--- a5706467af5fab5cc92160fe68b3dfe1. Fail-fast bricht bei jeder anderen Fassung ohne Aenderung ab (M4b).
+-- 378a7e1ed6b72381c9b6924e0e664bc3. Fail-fast bricht bei jeder anderen Fassung ohne Aenderung ab (M4b).
+-- Review A-16 M-1: der Definer-Durchgang im Trigger gilt nur mit dem Schalter hallenfussball.helper_access_write = 'on'
+-- UND ausserhalb der Client-Rollen. Den Schalter setzt allein change_helper_access, transaktionslokal und nur um seine zwei
+-- UPDATEs (danach zurueck auf ''); ohne Schalter lehnt der Trigger wie bisher ab, auch im SQL-Editor. decide_join_request
+-- braucht ihn nicht (nur INSERT, Trigger nur BEFORE UPDATE).
 -- Idempotent: CREATE ... IF NOT EXISTS, CREATE OR REPLACE, DROP POLICY/TRIGGER IF EXISTS vor CREATE, REVOKE/GRANT.
 -- Typen-PR noetig (neue Funktionen/Tabellen); bis dahin ruft der Client ohne Typbindung (helperAccessRpc.ts).
 --
@@ -51,7 +55,7 @@ BEGIN
   END IF;
   -- M4(b): nie still eine spaetere Fassung des Triggers ueberschreiben (erlaubt: 20260924_003 oder diese Datei)
   SELECT md5(prosrc) INTO v_pcr FROM pg_proc WHERE oid = 'public.protect_collaborator_row()'::regprocedure;
-  IF v_pcr NOT IN ('4e0f2b4d408477ec8681090ad1e42342', 'a5706467af5fab5cc92160fe68b3dfe1') THEN
+  IF v_pcr NOT IN ('4e0f2b4d408477ec8681090ad1e42342', '378a7e1ed6b72381c9b6924e0e664bc3') THEN
     RAISE EXCEPTION '20261110_008_helper_join: protect_collaborator_row hat eine unbekannte Fassung (md5 %) -- erst klaeren', v_pcr;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tournament_collaborators'
@@ -370,6 +374,9 @@ BEGIN
   IF NOT FOUND OR NOT (public.is_real_account() AND public.has_tournament_permission(v_req.tournament_id, 'manageHelpers')) THEN
     RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';                        -- kein Existenz-Orakel
   END IF;
+  IF p_accept IS NULL THEN                                                           -- L-5: nie still ablehnen
+    RAISE EXCEPTION 'INVALID_OPTION' USING ERRCODE = '22023';
+  END IF;
   SELECT * INTO v_t FROM public.tournaments WHERE id = v_req.tournament_id;
   IF v_req.status <> 'pending' THEN
     SELECT nullif(btrim(p.display_name), '') INTO v_by FROM public.profiles p WHERE p.id = v_req.decided_by;
@@ -413,6 +420,10 @@ BEGIN
   IF NOT FOUND OR NOT (public.is_real_account() AND public.has_tournament_permission(v_mem.tournament_id, 'manageHelpers')) THEN
     RAISE EXCEPTION 'Not authorized' USING ERRCODE = '42501';
   END IF;
+  -- Review M-1: Schalter fuer den Durchgang in protect_collaborator_row nur um die beiden UPDATEs (transaktionslokal, direkt
+  -- danach zurueck; bei einem Fehler nimmt der Abbruch der (Teil-)Transaktion ihn zurueck). Funktions-SET geht nicht: ein
+  -- eigener Parameter in proconfig braucht Superuser (Supabase: postgres ist keiner).
+  PERFORM set_config('hallenfussball.helper_access_write', 'on', true);
   IF p_action = 'revoke' THEN                                                         -- @HE-055 Z.1, @HE-056, @HE-080
     UPDATE public.tournament_collaborators SET declined_at = coalesce(declined_at, now()) WHERE id = p_member_id;
   ELSIF p_action = 'watch_only' THEN                                                  -- @HE-055 Z.2 "zum Zuschauer"
@@ -420,6 +431,7 @@ BEGIN
   ELSE
     RAISE EXCEPTION 'INVALID_ACTION' USING ERRCODE = '22023';
   END IF;
+  PERFORM set_config('hallenfussball.helper_access_write', '', true);
   -- K-2: Feldsteuerung des Geraets freigeben (Halterwechsel -> Epoche +1), die Uebersicht zeigt nicht weiter "steuert"
   UPDATE public.field_control
      SET holder_user_id = NULL, holder_device_id = NULL, holder_device_label = NULL, epoch = epoch + 1, claimed_at = now()
@@ -454,8 +466,8 @@ AS $$
 $$;
 
 -- 11. Bestehende Objekte
--- 11a. protect_collaborator_row: Rumpf woertlich aus 20260924_003 (Abschnitt 4) + EINE Zeile nach der tournament_id-Pruefung
---      (Definer-Durchgang). Wer als Definer tournament_collaborators schreibt, steht in der Positivliste der Assertion
+-- 11a. protect_collaborator_row: Rumpf woertlich aus 20260924_003 (Abschnitt 4) + EINE Bedingung nach der tournament_id-Pruefung
+--      (Definer-Durchgang, nur mit Schalter aus change_helper_access; Review M-1). Wer als Definer tournament_collaborators schreibt, steht in der Positivliste der Assertion
 --      `definer-writers-tournament-collaborators` (M4a); B-20 erweitert sie ausdruecklich.
 CREATE OR REPLACE FUNCTION "public"."protect_collaborator_row"() RETURNS "trigger"
     LANGUAGE "plpgsql"
@@ -476,7 +488,8 @@ BEGIN
       USING ERRCODE = 'insufficient_privilege';
   END IF;
 
-  IF current_user NOT IN ('authenticated', 'anon') THEN RETURN NEW; END IF;  -- A-16 Definer-Durchgang
+  IF current_user NOT IN ('authenticated', 'anon')                      -- A-16 Definer-Durchgang, nur mit Schalter
+     AND coalesce(current_setting('hallenfussball.helper_access_write', true), '') = 'on' THEN RETURN NEW; END IF;
 
   -- Turnier-Eigentümer verwaltet seine Mitarbeiter: uneingeschränkt (wie bisher).
   -- WICHTIG: OLD/NEW sind plpgsql-Record-Variablen, keine SQL-Tabellenreferenzen — NIE als
