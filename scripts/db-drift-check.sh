@@ -159,6 +159,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_008_helper_join.sql)
+      echo "helper-join-tables-no-client-access helper-join-ci-schema-reader-select helper-join-ci-schema-reader-no-bypassrls helper-join-rpcs-definer-owner-search-path helper-join-rpcs-execute-authenticated-only helper-join-internal-no-client-execute helper-join-definer-writers-tournament-collaborators helper-join-collaborators-delete-no-device-rows helper-join-protect-collaborator-row-a16 helper-join-decide-checks-check-number helper-join-device-role-guard-trigger helper-join-names-without-hidden-chars"
+      ;;
     *)
       return 1
       ;;
@@ -518,6 +521,19 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  # A-16 (20261110_008_helper_join.sql): Helfer-Beitritt per QR ohne Konto.
+  "helper-join-tables-no-client-access"
+  "helper-join-ci-schema-reader-select"
+  "helper-join-ci-schema-reader-no-bypassrls"
+  "helper-join-rpcs-definer-owner-search-path"
+  "helper-join-rpcs-execute-authenticated-only"
+  "helper-join-internal-no-client-execute"
+  "helper-join-definer-writers-tournament-collaborators"
+  "helper-join-collaborators-delete-no-device-rows"
+  "helper-join-protect-collaborator-row-a16"
+  "helper-join-decide-checks-check-number"
+  "helper-join-device-role-guard-trigger"
+  "helper-join-names-without-hidden-chars"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
