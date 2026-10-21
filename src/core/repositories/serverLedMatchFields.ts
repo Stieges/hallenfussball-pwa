@@ -19,6 +19,10 @@ export const SERVER_LED_MATCH_FIELDS = [
     'penaltyScoreA', 'penaltyScoreB',
     'matchStatus', 'decidedBy', 'finishedAt',
     'skippedReason', 'skippedAt',
+    // A-25c (Review M-1): wer bei einer Wertung fehlte (`matches.forfeit_absent`, ab 20261110_005). Ohne das Feld
+    // zählte die Tabelle der Turnierleitung eine Wertung beider (0:0) als Remis, und ein altes Merkmal bliebe nach
+    // einer Rücknahme stehen.
+    'forfeitAbsent',
 ] as const satisfies ReadonlyArray<keyof Match>;
 
 export type ServerLedMatchField = typeof SERVER_LED_MATCH_FIELDS[number];
