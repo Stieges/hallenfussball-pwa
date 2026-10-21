@@ -44,7 +44,7 @@ type ViewMode = 'groups' | 'ranking';
 const tieMarkerRow = (marker: React.ReactNode, columns: number): React.ReactNode =>
   marker === null ? null : (
     <tr data-testid="tie-marker-row">
-      <td colSpan={columns} style={{ padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}`, borderBottom: `1px solid ${cssVars.colors.border}` }}>{marker}</td>
+      <td colSpan={columns} style={{ padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}`, borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` }}>{marker}</td>
     </tr>
   );
 

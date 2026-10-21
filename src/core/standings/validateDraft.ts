@@ -15,7 +15,7 @@ export type DraftCheck =
   | { ok: true; groupId: string; block: { place: number; size: number } }
   | { ok: false; code: DecisionErrorCode };
 
-type CheckedTournament = Pick<Tournament, 'teams' | 'matches' | 'pointSystem' | 'placementLogic' | 'standingDecisions' | 'placementsToPlayOut'>;
+type CheckedTournament = Pick<Tournament, 'teams' | 'matches' | 'pointSystem' | 'placementLogic' | 'standingDecisions' | 'placementsToPlayOut' | 'forfeitScore'>;
 
 export function validateDraft(draft: DecisionDraft, tournament: CheckedTournament): DraftCheck {
   const fieldError = checkDraftFields(draft);

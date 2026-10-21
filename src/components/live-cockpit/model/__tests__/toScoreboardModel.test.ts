@@ -244,9 +244,14 @@ describe('toScoreboardModel: Abzeichen', () => {
     expect(toScoreboardModel(input({}, { eintraegeWarten: 2 }), t).eintraegeWartenText).toBe('tafel.eintraegeWarten:{"count":2}');
   });
 
+  it('@SL-061 C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE die Kurzform der wartenden Einträge ist nur die Zahl', () => {
+    expect(toScoreboardModel(input({}, { eintraegeWarten: 3 }), t).eintraegeWartenKurz).toBe('3');
+  });
+
   it('Gegenbeispiel: ohne wartende Einträge und Anfragen keine Abzeichen', () => {
     const m = toScoreboardModel(input({}), t);
     expect(m.eintraegeWartenText).toBeNull();
+    expect(m.eintraegeWartenKurz).toBeNull();
     expect(m.helferAnfragenText).toBeNull();
   });
 });

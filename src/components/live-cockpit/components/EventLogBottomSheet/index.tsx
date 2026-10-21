@@ -154,6 +154,7 @@ export function EventLogBottomSheet({
       isOpen={isOpen}
       onClose={onClose}
       title="Ereignisprotokoll"
+      testId="event-log-sheet"
     >
       {sortedEvents.length === 0 && resultEntries.ids.length === 0 ? (
         <div style={emptyStyle}>

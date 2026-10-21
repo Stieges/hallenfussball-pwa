@@ -16,7 +16,11 @@ async function teamErsetzen({ asRole }: StepContext): Promise<void> {
   await expectSollMarker(ownerPage, 'team-replace-button');
 }
 
-/** D9c: die eigene Halbfinal-Regel greift ohne manuelle Wahl: endet Halbfinale 1 unentschieden, entscheidet sofort das Strafstoßschießen. */
+/**
+ * D9c: Halbfinale tragen in der Cloud die Phase Halbfinale (A-12a, C-FINALPHASE-AUS-ID behoben). Das ist die Grundlage der
+ * eigenen Halbfinal-Regel (@W2A-007): Engine und Server wählen die Regel je Runde über `matches.phase`. Ob ein
+ * unentschiedenes Halbfinale dann sofort ins Strafstoßschießen geht, prüft dieser Schritt nicht.
+ */
 async function eigeneHalbfinalRegel(_ctx: StepContext): Promise<void> {
   const { finals } = await fetchTurniertagBracket();
   const hf1 = findFinalByLabel(finals, '1. Halbfinale');
@@ -43,7 +47,7 @@ async function absetzenWiederEinplanen({ asRole }: StepContext): Promise<void> {
 /** Nach D8 im Halbfinal-Block. */
 export const steps: readonly TurniertagStep[] = [
   { id: 'D8b', title: 'Team bei einer Absage ersetzen, Gleichstand in der Gruppe entscheiden', scenarios: ['@W5-010'], owner: 'GA4 / A-12c / B-02c', expectedFail: true, run: teamErsetzen },
-  { id: 'D9c', title: 'Eigene Halbfinal-Regel greift ohne manuelle Wahl', scenarios: ['@W2A-007', '@SL-053'], befunde: ['C-FINALPHASE-AUS-ID'], owner: 'A-12a (Phase aus dem Generator), A-14b/c', expectedFail: true, run: eigeneHalbfinalRegel },
+  { id: 'D9c', title: 'Halbfinale tragen in der Cloud die Phase Halbfinale (Grundlage der eigenen Halbfinal-Regel)', scenarios: ['@W2A-007'], befunde: [], owner: 'A-12a (Phase aus dem Generator)', expectedFail: false, run: eigeneHalbfinalRegel },
 ];
 
 /** Nach dem Abschluss (D11): der Endstand des abgeschlossenen Turniers. */

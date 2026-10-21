@@ -3,14 +3,17 @@
  *
  * Gültig ist eine Entscheidung genau dann, wenn (a) der offene Block ohne Entscheidungen heute genau ihre Teams umfasst
  * und (b) ihr Fingerabdruck der Grundlage gleich dem heutigen ist: Punkteschema, aktive Kriterien in Reihenfolge und
- * `[id, scoreA, scoreB, matchStatus]` aller Gruppenspiele, an denen ein Team des Blocks beteiligt ist (@W2A-005,
- * @W2A-052, @W2A-053). Reine Rechnung – nichts wird gelöscht; kehrt dieselbe Grundlage zurück, gilt sie wieder.
+ * `[id, scoreA, scoreB, matchStatus, forfeitAbsent]` aller Gruppenspiele, an denen ein Team des Blocks beteiligt ist
+ * (@W2A-005, @W2A-052, @W2A-053; Nichtantritt GA4 A-25c – ein 0:0 als Wertung beider ist eine andere Grundlage als ein
+ * gespieltes 0:0). Ist darunter eine Wertung beider Seiten, gehört auch die Wertung des Turniers dazu (sie setzt deren
+ * Gegentore). Reine Rechnung – nichts wird gelöscht; kehrt dieselbe Grundlage zurück, gilt sie wieder.
  * Eine Annahme („Ergebnis so akzeptieren“) gilt zusätzlich nur, solange ihr Platz nicht ausgespielt werden muss –
  * geprüft beim Anwenden in `rankGroup` (Einstellung, Herkünfte; @W2A-068, @W2A-069, TB-3').
  * Rein, ohne React.
  */
-import type { Match, PlacementCriterion, PointSystem, StandingDecision, Tournament } from '../../types/tournament';
+import type { ForfeitScore, Match, PlacementCriterion, PointSystem, StandingDecision, Tournament } from '../../types/tournament';
 import { matchSideTeamId } from '../models/matchSlot';
+import { isDoubleForfeit, isForfeitMatch } from '../models/forfeit';
 import { blockMayShare, effectivePlacementsToPlayOut, followUpRanks } from './playOutPlaces';
 
 export type DecisionErrorCode =
@@ -43,6 +46,7 @@ export const sameTeamSet = (a: readonly string[], b: readonly string[]): boolean
 
 export interface BasisInput {
   pointSystem: PointSystem;
+  forfeitScore: ForfeitScore;
   placementLogic: readonly PlacementCriterion[];
   matches: readonly Match[];
 }
@@ -50,14 +54,16 @@ export interface BasisInput {
 /** Fingerabdruck der Grundlage eines Blocks. */
 export function decisionBasis(input: BasisInput, teamIds: readonly string[]): string {
   const members = new Set(teamIds);
-  const matches = input.matches
-    .filter((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].some((id) => id !== undefined && members.has(id)))
-    .map((m) => [m.id, m.scoreA ?? null, m.scoreB ?? null, m.matchStatus ?? null] as const)
+  const blockMatches = input.matches
+    .filter((m) => [matchSideTeamId(m, 'A'), matchSideTeamId(m, 'B')].some((id) => id !== undefined && members.has(id)));
+  const matches = blockMatches
+    .map((m) => [m.id, m.scoreA ?? null, m.scoreB ?? null, m.matchStatus ?? null, isForfeitMatch(m) ? m.forfeitAbsent ?? null : null] as const)
     .sort((a, b) => a[0].localeCompare(b[0]));
   return JSON.stringify({
     points: [input.pointSystem.win, input.pointSystem.draw, input.pointSystem.loss],
     criteria: input.placementLogic.filter((c) => c.enabled).map((c) => c.id),
     matches,
+    ...(blockMatches.some(isDoubleForfeit) ? { forfeit: [input.forfeitScore.winner, input.forfeitScore.loser] } : {}),
   });
 }
 

@@ -7,6 +7,7 @@ import { MatchKitSchema } from '../kit';
 import { OPENING_MODES } from '../../../types/tournament';
 import { parseStandingDecisions, StandingDecisionSchema } from './StandingDecisionSchema';
 import { PlacementsToPlayOutSchema } from '../../standings/playOutPlaces';
+import { FORFEIT_ABSENT_VALUES, ForfeitScoreSchema } from '../forfeit';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -93,6 +94,8 @@ export const MatchSchema = z.object({
     penaltyScoreB: z.number().min(0).optional(),
     // decidedBy kommt aus einer nullable DB-Spalte (decided_by) – null wird wie "nicht gesetzt" behandelt (C-ZOD-DEC).
     decidedBy: z.string().nullable().optional().transform((v) => v ?? undefined),
+    // A-25c: wer bei einer Wertung fehlte (nur gelesen); ein unbekannter Wert fällt weg, das Spiel bleibt gültig.
+    forfeitAbsent: z.enum(FORFEIT_ABSENT_VALUES).optional().catch(undefined),
     skippedReason: z.string().optional(),
     skippedAt: z.string().optional(),
     liveState: z.unknown().optional(), // matches.live_state (Feinstatus für das Abzeichen, R-SA8); die Form prüft `badgeDetailFromLiveState`
@@ -165,6 +168,13 @@ export const TournamentSchema = z.object({
     standingDecisions: z.preprocess(parseStandingDecisions, z.array(StandingDecisionSchema).optional()),
     // Paket TB-B (TB-3'): Plätze, die bei Gleichstand ausgespielt werden müssen; fehlend/unbrauchbar → nur Platz 1.
     placementsToPlayOut: PlacementsToPlayOutSchema,
+    // A-25c (@W2A-025): Wertung bei Nichtantritt; unbrauchbar → weg (dann gilt 2:0), das Turnier bleibt gültig.
+    forfeitScore: ForfeitScoreSchema.optional().catch(undefined),
+    // A-12a (@TM-004): gewählte Platzierungsspiele. Nur `placements` wird geprüft, die übrigen Felder bleiben unverändert;
+    // ein unbrauchbarer Wert fällt weg (dann belegt die Vorlage vor), statt das Turnier beim Laden ungültig zu machen.
+    finalsConfig: z.looseObject({
+        placements: z.array(z.number().int().min(1).max(99)).optional().catch(undefined),
+    }).nullish(),
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
   .passthrough();

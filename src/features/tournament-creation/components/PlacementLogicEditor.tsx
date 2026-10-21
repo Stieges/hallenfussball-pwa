@@ -243,9 +243,9 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
     }
   };
 
-  const containerStyle: CSSProperties = { marginTop: '24px' };
+  const containerStyle: CSSProperties = { marginTop: cssVars.spacing.lg };
 
-  const headerStyle: CSSProperties = { color: cssVars.colors.primary, fontSize: cssVars.fontSizes.md, margin: '0 0 8px 0' };
+  const headerStyle: CSSProperties = { color: cssVars.colors.primary, fontSize: cssVars.fontSizes.md, margin: `0 0 ${cssVars.spacing.sm} 0` };
 
   const helpTextStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,

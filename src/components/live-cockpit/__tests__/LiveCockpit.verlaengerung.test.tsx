@@ -39,7 +39,7 @@ vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }))
 function baseProps(match: LiveMatch, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'Hallencup Süd', tournamentId: 'tour-1',
-    currentMatch: match, upcomingMatches: [],
+    currentMatch: match, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), ...handlers,

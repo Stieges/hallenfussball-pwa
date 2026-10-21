@@ -8,7 +8,9 @@
 .container {
   background: var(--color-background);
   color: var(--color-text-primary);
-  min-height: var(--min-h-screen);
+  /* Im Rahmen (Plan LT-2, K3) nimmt das Cockpit die Resthöhe, nie ein starres 100dvh; allein auf der Seite füllt es den Bildschirm */
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -19,9 +21,20 @@
   flex-direction: column;
   gap: var(--spacing-lg);
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Laptop (≥ 1024 px): die Fläche passt ohne Scrollen, die Liste der Einträge scrollt allein (@SL-061). Reicht die Höhe nicht
+   (z. B. 1024 × 768 mit dreizeiligem Teamnamen), scrollt die Fläche, statt Knöpfe abzuschneiden (visuelle Prüfung, text.abgeschnitten).
+   Engere Abstände (md), damit der schwere Fall bei 1280 × 720 ohne Scrollen passt. */
+.container[data-layout='breit'] .content {
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
 }
 
 .contentMobile {
+  gap: var(--spacing-sm);
   /* Mockup: schmaler seitlicher Rand am Handy, damit lange Teamnamen in den Spalten in höchstens drei Zeilen passen (@OB-025) */
   padding: var(--spacing-sm) var(--spacing-xs);
 }

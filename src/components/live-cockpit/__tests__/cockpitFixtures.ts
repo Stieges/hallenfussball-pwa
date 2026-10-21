@@ -21,7 +21,7 @@ export function makeProps(match: LiveMatch | null, overrides: Partial<LiveCockpi
     fieldName: 'Feld 1', tournamentName: 'Hallencup Süd', tournamentId: 'tour-1',
     currentMatch: match, upcomingMatches: [],
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
-    onLoadNextMatch: vi.fn(),
+    onLoadNextMatch: vi.fn(), kannSteuern: true,
     ...overrides,
   };
 }

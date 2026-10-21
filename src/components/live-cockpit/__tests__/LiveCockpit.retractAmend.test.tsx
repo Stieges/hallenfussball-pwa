@@ -92,7 +92,7 @@ function currentMatch(value: MatchEngineContextValue) {
 function props(value: MatchEngineContextValue, extra: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'T', tournamentId: 'tour-1',
-    currentMatch: currentMatch(value), upcomingMatches: [],
+    currentMatch: currentMatch(value), upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), onUpdateEvent: vi.fn(), onDeleteEvent: vi.fn(), ...extra,
@@ -142,33 +142,35 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
     renderCockpit(value);
 
     const undo = screen.getByTestId('match-undo-button');
-    expect(undo).toHaveAttribute('aria-label', 'Tor Nr. 7 zurücknehmen');
+    // sichtbarer Text „Rückgängig“ (passt in die schmale Zelle), zugänglicher Name nennt das Ziel und enthält den sichtbaren Text (WCAG 2.5.3)
+    expect(undo).toHaveAccessibleName('Rückgängig: Tor Nr. 7 zurücknehmen');
     await user.click(undo);
 
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));
   });
 
-  it('G1b/G3: Helfer, finished -> Rueckgaengig gesperrt, Hinweistext sichtbar, keine Tor-Taste', async () => {
+  it('G1b/G3 @SL-045 @HE-043: Helfer, finished -> kein Rueckgaengig, stehende Zeile „Spiel ist beendet – Korrektur über die Turnierleitung“, keine Tor-Taste', async () => {
     const { value, commands } = await setup();
     await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 7 });
     await commands.finish(MATCH_ID, CTX, 'helper');
     renderCockpit(value);
 
-    expect(screen.getByTestId('match-undo-button')).toBeDisabled();
-    expect(screen.getByTestId('match-undo-hint')).toHaveTextContent('Korrektur nur durch die Turnierleitung');
-    // Nach dem Abpfiff keine Tor-Taste und kein Minus-Knopf (@SL-113, @SL-037); die stehende Zeile „Spiel ist beendet“ kommt mit der Daumenleiste (3.6)
+    expect(screen.queryByTestId('match-undo-button')).toBeNull();
+    expect(screen.getByTestId('bar-finished')).toHaveTextContent('Spiel ist beendet – Korrektur über die Turnierleitung');
+    // Nach dem Abpfiff keine Tor-Taste und kein Minus-Knopf (@SL-113, @SL-037)
     expect(screen.queryByTestId('goal-minus-button-home')).toBeNull();
     expect(screen.queryByTestId('goal-button-home')).toBeNull();
   });
 
-  it('G1b: Leitung, finished, Karte -> Rueckgaengig deaktiviert mit Leitungs-Text', async () => {
+  it('G1b @SL-159: Leitung, finished, Karte -> kein Rueckgaengig, kein Helfer-Hinweis, der Leitungs-Text nennt den Grund', async () => {
     mockActor.current = 'leitung';
     const { value, commands } = await setup();
     await commands.card(MATCH_ID, CTX, 'leitung', 'teamb', 'YELLOW_CARD', { playerNumber: 3 });
     await commands.finish(MATCH_ID, CTX, 'leitung');
-    renderCockpit(value);
+    renderCockpit(value, { istLeitung: true });
 
-    expect(screen.getByTestId('match-undo-button')).toBeDisabled();
+    expect(screen.queryByTestId('match-undo-button')).toBeNull();
+    expect(screen.queryByTestId('bar-finished')).toBeNull();
     expect(screen.getByTestId('match-undo-hint')).toHaveTextContent('Nach dem Abpfiff nicht direkt zurücknehmbar – Korrektur folgt');
   });
 

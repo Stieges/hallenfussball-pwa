@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { rankGroup, type GroupTableRow } from '../groupTable';
 import type { PlacementCriterion, PointSystem } from '../../../types/tournament';
 import { BFV_ORDER, DATA, id, league, names, NAME, POINTS_210, POINTS_310, type Key } from './fixtures';
+import { DEFAULT_FORFEIT_SCORE } from '../../models/forfeit';
 
 function table(keys: string, results: string, opts: { pointSystem?: PointSystem; placementLogic?: PlacementCriterion[] } = {}) {
   const { teams, matches } = league(keys, results, opts);
@@ -16,6 +17,7 @@ function table(keys: string, results: string, opts: { pointSystem?: PointSystem;
     teams,
     matches,
     pointSystem: opts.pointSystem ?? POINTS_310,
+    forfeitScore: { ...DEFAULT_FORFEIT_SCORE },
     placementLogic: opts.placementLogic ?? BFV_ORDER,
     decisions: [],
     mode: 'group',
