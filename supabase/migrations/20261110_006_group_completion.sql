@@ -27,12 +27,15 @@
 --   record_standing_decision sperrt nur tournaments.
 -- Ablehnungen: jsonb {status:'rejected', code, ...}; Konflikte aus der Warteschlange: {status:'clarification', ...}.
 -- Rechte: fehlendes Recht -> RAISE 42501 (kein Existenz-Orakel). Die Sperre nach dem Turnierabschluss ergänzt A-21a.
--- Bau A-13b-S gegenüber Anhang A (Fassung 2.1), beide nur in complete_group Schritt 6, Container-Beweis
+-- Bau A-13b-S gegenüber Anhang A (Fassung 2.1), alle in complete_group, Container-Beweis
 -- scripts/group-completion-check.sh:
 --   B1 Eine NEUE Reihenfolge (3+ Teams) aus der Warteschlange braucht ihren Grund wie in record_standing_decision
 --      (REASON_REQUIRED, @W2A-004); vorher ging sie ohne Grund in den Verlauf.
 --   B2 Eine Entscheidung, die am Server schon zurückgenommen wurde (standing_withdraw mit ihrer id), kommt nicht still
 --      zurück ins config, sondern ist ein Konflikt DECIDED_ELSEWHERE (@TM-116 „nichts still überschrieben“).
+--   M2 (Review A-13b-S) GROUP_REOPENED nur, wenn ein ANDERER die Gruppe wieder geöffnet hat (reopened_by ≠ Aufrufer,
+--      @TM-116 Z4 „Maria … wieder geöffnet“). Eigenes Wiederöffnen und danach Abschluss aus der Warteschlange gilt; die
+--      Ergebnisse schützt weiter der Stand-Vergleich (RT-10b).
 --
 -- Voraussetzung: 20261026_001 (origin_a/b), 20261110_001 (manageLifecycle), 20261110_005 (forfeit_absent).
 -- Idempotent (IF NOT EXISTS, CREATE OR REPLACE, DROP ... IF EXISTS + CREATE). Keine Änderung an Bestandszeilen.
@@ -651,7 +654,7 @@ BEGIN
     RETURN match_engine.conflict_or_reject(p_from_queue, p_tournament_id, NULL, p_group_id, 'complete_group',
                                            v_requested, 'COMPLETED_DIFFERENTLY', v_uid);
   END IF;
-  IF p_from_queue AND v_reopened THEN
+  IF p_from_queue AND v_reopened AND v_prev.reopened_by IS DISTINCT FROM v_uid THEN   -- M2: nur fremdes Wiederöffnen
     RETURN match_engine.conflict_or_reject(true, p_tournament_id, NULL, p_group_id, 'complete_group',
                                            v_requested, 'GROUP_REOPENED', v_uid);
   END IF;

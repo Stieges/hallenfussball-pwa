@@ -16,14 +16,14 @@
 #   G  Gleichlauf-Fixtures (SQL-Seite): group-key, group-state, placements-to-play-out, standing-decision-shapes,
 #      shared-allowed (TS-Seite: src/core/standings/__tests__/groupCompletionTwins.test.ts).
 #   P  Pflichttests P-1 ... P-11 mit Gegenbeispielen.
-#   T  Mehrgeraete-Faelle RT-2, 2b, 5, 6, 9, 10, 12, 13, 14, 15, 16, 17, 18; Verklemmungs-Probe RT-2/12/15/16/17
+#   T  Mehrgeraete-Faelle RT-2, 2b, 5, 6, 9, 10, 10b, 12, 13, 14, 15, 16, 17, 18; Verklemmungs-Probe RT-2/12/15/16/17
 #      je RACE_RUNS (Vorgabe 50) Wiederholungen in zwei echten Sitzungen, kein 40P01.
 #   W  zweites Einspielen (idempotent): Exit 0, Schema (public + match_engine) und Daten gleich.
 #   X  Rueckweg (Block aus dem Kopf der Migration): Schema = vor der Migration; danach erneut einspielbar.
 #
 # Aufruf:
 #   bash scripts/group-completion-check.sh                  normaler Lauf, Exit 0 nur ohne Abweichung
-#   bash scripts/group-completion-check.sh --gegenprobe     ohne Migration und je Mutation MG1-MG16, MB1, MB2 (Plan
+#   bash scripts/group-completion-check.sh --gegenprobe     ohne Migration und je Mutation MG1-MG18, MB1, MB2 (Plan
 #                                                           A-13b-S); Exit 0 NUR, wenn jede Variante ihre Pruefung rot
 #                                                           faerbt (GEGENPROBE_NUR="MG3 MG14" schraenkt ein)
 #   bash scripts/group-completion-check.sh --print-rueckweg gibt den Rueckweg-Block aus (ohne Container)
@@ -368,6 +368,17 @@ run_pflicht() {
   check P "P-5 Gegenbeispiel: Halbfinale 2 laeuft schon -> TSV West bleibt, Hinweis started_follow_up" "ok|TSV West|A2|started_follow_up:B:-/TSV West" \
     "$(complete olli "$t" A "$R_CLEAN" '{2,3}' '[]' '{}' "$s" false)|$(side "$t" B1 B)|$(q "SELECT harness.notices('$t');")"
 
+  # P-5b (Review M4, @TM-145/@TM-099 „angepfiffen“, C-FOLGESPIEL-PAUSIERT-UNGEPRUEFT): ein unterbrochenes Folgespiel (Halbzeit, paused) bleibt ebenfalls
+  t="$(clone "$TPL_TIE")"; s="$(state "$t" A)"
+  dw="$(dec tabelle-west "$t" A shootout "SV Süd,TSV West" "TSV West,SV Süd" 4 3)"
+  decide olli "$t" decide "$dw" "" "$(version "$t")" >/dev/null
+  complete olli "$t" A "$R_WEST" '{}' "[$dw]" '{tabelle-west}' "$s" false >/dev/null
+  q "SELECT harness.correction('olli', '$t', 'SV Süd', 'TSV West', 2, 2);" >/dev/null
+  q "UPDATE public.matches SET match_status = 'paused' WHERE id = harness.hf('$t', 'B1');" >/dev/null   # Halbzeit (Zwischenspeicher)
+  s="$(state "$t" A)"
+  check P "P-5b Gegenbeispiel @TM-145 @TM-099: Halbfinale 2 unterbrochen (paused) -> TSV West bleibt, Hinweis started_follow_up (C-FOLGESPIEL-PAUSIERT-UNGEPRUEFT)" "ok|TSV West|A2|started_follow_up:B:-/TSV West" \
+    "$(complete olli "$t" A "$R_CLEAN" '{2,3}' '[]' '{}' "$s" true)|$(side "$t" B1 B)|$(q "SELECT harness.notices('$t');")"
+
   # --- P-6 @TM-099 Z1: von Hand gesetzte Seite bleibt nach Wiederoeffnen, Korrektur, erneutem Abschluss -------------
   t="$(clone "$TPL_TIE")"; s="$(state "$t" A)"
   dw="$(dec tabelle-west "$t" A shootout "SV Süd,TSV West" "TSV West,SV Süd" 4 3)"
@@ -558,6 +569,13 @@ run_rt_seq() {
   check T "RT-10 @TM-116 Z4 Abschluss aus der Warteschlange nach Marias Wiederoeffnen -> Klaerung GROUP_REOPENED, Gruppe bleibt offen" \
     "clarification:GROUP_REOPENED|reopened|reopen_group" \
     "$(complete olli "$t" A "$R_CLEAN" '{}' '[]' '{}' "$s" true)|$(gc "$t" A)|$(lastres | jq -r '.last.kind')"
+
+  # RT-10b @TM-148 (Gegenbeispiel zu @TM-116, Review M2, C-EIGENES-WIEDEROEFFNEN-KONFLIKT): Olli oeffnet selbst wieder, schliesst ohne Netz ab -> kein Konflikt
+  t="$(clone "$TPL_CLEAN")"; s="$(state "$t" A)"
+  complete olli "$t" A "$R_CLEAN" '{}' '[]' '{}' "$s" false >/dev/null
+  q "SELECT harness.reopen('olli', '$t', 'A', 'Ergebnis pruefen');" >/dev/null
+  check T "RT-10b @TM-148 Gegenbeispiel: eigenes Wiederoeffnen, dann Abschluss aus der Warteschlange -> ok, abgeschlossen, keine Klaerung (C-EIGENES-WIEDEROEFFNEN-KONFLIKT)" \
+    "ok|completed|0" "$(complete olli "$t" A "$R_CLEAN" '{}' '[]' '{}' "$s" true)|$(gc "$t" A)|$(nclar "$t")"
 
   # RT-14: eigenes letztes Ergebnis ohne Netz + Abschluss ohne Netz; Engine-Warteschlange zuerst -> kein Konflikt
   t="$(clone "$TPL_FIVE")"; s="$(state "$t" A)"; m="$(gm "$t" 'FC Nord' 'SC Ost')"
@@ -781,6 +799,8 @@ M = {
   "MG14": [("  PERFORM 1 FROM public.matches m\n   WHERE m.tournament_id = p_tournament_id\n     AND (   (NOT", "  PERFORM 1 FROM public.tournaments WHERE id = p_tournament_id FOR UPDATE;\n  PERFORM 1 FROM public.matches m\n   WHERE m.tournament_id = p_tournament_id\n     AND (   (NOT")],
   "MG15": [("CREATE TRIGGER tournaments_keep_standing_decisions\n  BEFORE UPDATE OF config ON public.tournaments\n  FOR EACH ROW EXECUTE FUNCTION public.tournaments_keep_standing_decisions();\n", "")],
   "MG16": [("    AND CASE WHEN jsonb_array_length(p -> \x27teamIds\x27) = 2 THEN p ->> \x27kind\x27 IN (\x27shootout\x27, \x27shared\x27)\n             ELSE p ->> \x27kind\x27 IN (\x27order\x27, \x27shared\x27) END\n", "    AND p ->> \x27kind\x27 IN (\x27shootout\x27, \x27order\x27, \x27shared\x27)\n")],
+  "MG17": [("NOT IN (\x27scheduled\x27, \x27waiting\x27);  -- paused", "NOT IN (\x27scheduled\x27, \x27waiting\x27, \x27paused\x27);  -- MUT paused")],
+  "MG18": [("  IF p_from_queue AND v_reopened AND v_prev.reopened_by IS DISTINCT FROM v_uid THEN", "  IF p_from_queue AND v_reopened THEN")],
   "MB1": [("      IF d ->> \x27kind\x27 = \x27order\x27 AND NOT (d ? \x27reason\x27) THEN", "      IF false THEN")],
   "MB2": [("      IF EXISTS (SELECT 1 FROM public.bracket_log l\n                  WHERE l.tournament_id = p_tournament_id AND l.kind = \x27standing_withdraw\x27\n                    AND l.detail ->> \x27id\x27 = d ->> \x27id\x27) THEN", "      IF false THEN")],
 }
@@ -811,13 +831,15 @@ expected_red() {
     MG14) echo "Verklemmungs-Probe: $RACE_RUNS Laeufe in zwei Sitzungen ohne 40P01" ;;
     MG15) echo "P-11 standingDecisions bleibt der Serverwert" ;;
     MG16) echo "standing-decision-shapes.json: 2 Teams Reihenfolge" ;;
+    MG17) echo "P-5b Gegenbeispiel" ;;
+    MG18) echo "RT-10b @TM-148 Gegenbeispiel" ;;
     MB1) echo "P-7 B1 neue Reihenfolge" ;;
     MB2) echo "RT-15 B2" ;;
   esac
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
-  VARIANTS=(OHNE MG1 MG2 MG3 MG4 MG5 MG6 MG7 MG8 MG9 MG10 MG11 MG12 MG13 MG14 MG15 MG16 MB1 MB2)
+  VARIANTS=(OHNE MG1 MG2 MG3 MG4 MG5 MG6 MG7 MG8 MG9 MG10 MG11 MG12 MG13 MG14 MG15 MG16 MG17 MG18 MB1 MB2)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a VARIANTS <<<"$GEGENPROBE_NUR"; fi
   start_container gegenprobe
   setup_before
