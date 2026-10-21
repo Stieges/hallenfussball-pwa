@@ -165,7 +165,7 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       await olli.page.setViewportSize({ width: 1280, height: 800 });
 
       await olli.context.setOffline(false);
-      await expect.poll(async () => (await localCopy(olli.page, cup.id))?.locationName, { message: '@FU-109: Stand des Servers', timeout: 15000 }).toBe(serverOrt);
+      await expect.poll(async () => (await localCopy(olli.page, cup.id))?.locationName, { message: '@FU-109: Stand des Servers spätestens 10 s nach Rückkehr der Verbindung', timeout: 10000 }).toBe(serverOrt);
       await expect(hinweis).toHaveCount(0, { timeout: 10000 });
       expect((await cupRow(cup.id)).location_name, 'nichts ging zum Server').toBe(serverOrt);
     } finally {

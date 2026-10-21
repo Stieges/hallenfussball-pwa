@@ -169,6 +169,8 @@ export class GenericMutationQueue<TType extends string> {
     }
 
     private readonly handleOnline = (): void => {
+        // @FU-109: wartet ein verworfenes Turnier auf den Stand des Servers, melden – die Zuhörer laden ihn sofort nach
+        if (this.cloudCopyNeeded.size > 0) { this.notifyListeners(); }
         if (this.retryTimer.inPause) { return; } // A-06d2: während der 30-s-Pause kein Versuch
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }

@@ -112,6 +112,24 @@ describe('@FU-106 Verwerfen nach einem Konflikt: die geöffnete Ansicht zeigt de
     expect(repo.mutationQueue.getFailedCount()).toBe(0);
   });
 
+  it('@FU-109 ohne erreichbaren Server verworfen: die Ansicht behält den Inhalt; kommt die Verbindung zurück, zeigt sie ohne Push den Stand des Servers', async () => {
+    const { view, cloud } = await mount(false);
+    const read = cloud.fake.getWithMatchRevisions.getMockImplementation()!;
+    cloud.fake.getWithMatchRevisions.mockRejectedValue(new Error('Failed to fetch')); // Server nicht erreichbar
+
+    act(() => { repo.mutationQueue.clearFailedMutation('dl-1'); });
+    await tick();
+    expect(view.getByTestId('titel').textContent).toBe('Marias Titel'); // nichts gelöscht
+    expect(repo.mutationQueue.needsCloudCopy('T')).toBe(true);
+
+    cloud.fake.getWithMatchRevisions.mockImplementation(read);
+    act(() => { window.dispatchEvent(new Event('online')); }); // Verbindung wieder da
+    await tick();
+
+    expect(view.getByTestId('titel').textContent).toBe('Ollis Titel');
+    expect(repo.mutationQueue.needsCloudCopy('T')).toBe(false);
+  });
+
   it('@FU-106 auch ohne Konflikt zeigt die Ansicht nach dem Verwerfen ohne Neuladen den Stand des Servers (Entscheidung 20.10.)', async () => {
     const { view } = await mount(false);
 
