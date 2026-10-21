@@ -24,7 +24,7 @@
 #   bash scripts/field-control-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigener Wegwerf-Container
-# (--platform linux/amd64), wird am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
+# (nativ, per DOCKER_PLATFORM ueberschreibbar), wird am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
 #
 set -euo pipefail
 
@@ -38,7 +38,7 @@ case "${1:-}" in
 esac
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # wie event-author-names-check.sh
-DOCKER_PLATFORM="${DOCKER_PLATFORM:-linux/amd64}"
+DOCKER_PLATFORM="${DOCKER_PLATFORM:-}" # leer = Plattform des Rechners (nativ); z. B. linux/amd64 erzwingt Emulation
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
@@ -99,7 +99,7 @@ trap cleanup EXIT
 
 start_container() {
   CURRENT_CONTAINER="$CONTAINER_PREFIX-$1"
-  docker run -d --platform "$DOCKER_PLATFORM" --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
+  docker run -d ${DOCKER_PLATFORM:+--platform "$DOCKER_PLATFORM"} --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
   local ready=0
   for _ in $(seq 1 120); do
     if [[ "$(docker logs "$CURRENT_CONTAINER" 2>&1 | grep -c "database system is ready to accept connections" || true)" -ge 2 ]]; then
