@@ -186,4 +186,24 @@ describe('ManagementTab – Endstand nach dem Abpfiff von selbst (B-10a)', () =>
     act(() => { fireEvent.click(screen.getByTestId('korrigieren')); });
     expect(screen.queryByTestId('cockpit-korrektur-dialog')).toBeNull();
   });
+
+  it('@SL-163 Olli wählt 12 Sekunden nach dem Abpfiff „Korrigieren“ und lässt die Korrektur 2 Minuten offen: weiter Spiel 11, nicht gewechselt', () => {
+    zeige(12_000);
+    act(() => { fireEvent.click(screen.getByTestId('korrigieren')); });
+    act(() => { vi.advanceTimersByTime(120_000); });
+    expect(zeigt()).toBe('m11');
+    expect(screen.getByTestId('cockpit-korrektur-dialog')).toBeInTheDocument();
+  });
+
+  it('@SL-164 bei Sekunde 28 geöffnet und abgebrochen: der Endstand steht noch 10 Sekunden, danach das nächste Spiel', () => {
+    zeige(28_000);
+    act(() => { fireEvent.click(screen.getByTestId('korrigieren')); });
+    act(() => { vi.advanceTimersByTime(20_000); });
+    act(() => { fireEvent.click(screen.getByTestId('cockpit-korrektur-cancel')); });
+    act(() => { vi.advanceTimersByTime(9_900); });
+    expect(zeigt()).toBe('m11'); // Gegenbeispiel: nicht nach den 2 Sekunden Restzeit
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(zeigt()).toBe('m12');
+  });
 });
+

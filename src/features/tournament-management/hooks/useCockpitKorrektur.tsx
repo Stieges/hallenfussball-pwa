@@ -3,6 +3,8 @@
  * über `useScheduleResultEntry.enterScore` – Turnierleitung-Prüfung, Stand-Abgleich (veraltet = Hinweis), Grund-Auswahl (Grundpflicht
  * @EK-004), `CORRECTION` über die Engine und Ablehnungstexte sind dieselben wie im Spielplan. Neu ist nur der Einstieg: ein Dialog mit dem
  * bisherigen und dem korrigierten Ergebnis. Nur die Turnierleitung (`istLeitung`) bekommt einen Handler; der Helfer keinen (@HE-043).
+ * Solange die Korrektur offen ist (Dialog, Grund-Auswahl, Senden), pausiert der Countdown des Endstands (`onBeginn`, @SL-163); nach Speichern
+ * oder Abbruch läuft er weiter (`onEnde`, @SL-164).
  */
 import { useCallback, useState, type ReactElement } from 'react';
 import { useToast } from '../../../components/ui/Toast';
@@ -20,12 +22,22 @@ export interface CockpitKorrektur {
   dialoge: ReactElement | null;
 }
 
-export function useCockpitKorrektur(tournament: Tournament, liveMatches: ReadonlyMap<string, LiveMatch>, istLeitung: boolean): CockpitKorrektur {
+export interface CockpitKorrekturPause {
+  /** Korrektur geöffnet: Countdown des Endstands anhalten (@SL-163). */
+  onBeginn?: (matchId: string) => void;
+  /** Korrektur gespeichert, abgelehnt oder abgebrochen: Countdown fortsetzen (@SL-164). */
+  onEnde?: () => void;
+}
+
+export function useCockpitKorrektur(
+  tournament: Tournament, liveMatches: ReadonlyMap<string, LiveMatch>, istLeitung: boolean, pause: CockpitKorrekturPause = {},
+): CockpitKorrektur {
+  const { onBeginn, onEnde } = pause;
   const { showWarning } = useToast();
   // Das Sperrfeld des Spielplans („Ergebnisse beendeter Spiele sperren“) gilt für die Schnelleingabe dort; „Korrigieren“ ist die ausdrückliche Korrektur.
   const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults: false });
   const [offen, setOffen] = useState<string | null>(null);
-  const onKorrigieren = useCallback((matchId: string) => { setOffen(matchId); }, []);
+  const onKorrigieren = useCallback((matchId: string) => { setOffen(matchId); onBeginn?.(matchId); }, [onBeginn]);
   const match = offen !== null ? liveMatches.get(offen) ?? null : null;
   const stand = match ? liveMatchFinalScore(match) : null;
 
@@ -34,8 +46,8 @@ export function useCockpitKorrektur(tournament: Tournament, liveMatches: Readonl
     ? (
       <CockpitKorrekturDialog
         key={offen} matchNumber={match.number} homeName={match.homeTeam.name} awayName={match.awayTeam.name} scoreHome={stand.a} scoreAway={stand.b}
-        onAbbrechen={() => { setOffen(null); }}
-        onWeiter={(home, away) => { setOffen(null); void resultEntry.enterScore(offen, home, away); }}
+        onAbbrechen={() => { setOffen(null); onEnde?.(); }}
+        onWeiter={(home, away) => { setOffen(null); void resultEntry.enterScore(offen, home, away).finally(() => { onEnde?.(); }); }}
       />
     )
     : prompt;

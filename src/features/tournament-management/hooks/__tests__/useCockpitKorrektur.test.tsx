@@ -5,7 +5,7 @@
  * der Weg geöffnet wird, mit dem bisherigen Ergebnis, nur für die Turnierleitung und ohne Speichern bei Abbruch.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { makeLiveMatch } from '../../../../components/live-cockpit/__tests__/cockpitFixtures';
@@ -31,8 +31,10 @@ const tournament = { id: 't1' } as Tournament;
 const spiel11 = makeLiveMatch({ id: 'match-11', number: 11, status: 'FINISHED', homeScore: 2, awayScore: 1 });
 const liveMatches = new Map<string, LiveMatch>([['match-11', spiel11]]);
 
+const pause = { onBeginn: vi.fn(), onEnde: vi.fn() };
+
 function Host({ istLeitung }: { istLeitung: boolean }) {
-  const k = useCockpitKorrektur(tournament, liveMatches, istLeitung);
+  const k = useCockpitKorrektur(tournament, liveMatches, istLeitung, pause);
   return (
     <div>
       <button type="button" data-testid="korrigieren" onClick={() => { k.onKorrigieren?.('match-11'); }} disabled={k.onKorrigieren === undefined}>Korrigieren</button>
@@ -100,5 +102,42 @@ describe('useCockpitKorrektur', () => {
     render(<Host istLeitung />);
     expect(screen.getByTestId('result-entry-reason-dialog')).toHaveTextContent('Ergebnis von Spiel 11 ändern');
     expect(screen.getByTestId('result-entry-reason-dialog')).toHaveTextContent('bisher 2:1 – neu 1:1');
+  });
+
+  // @SL-163/@SL-164: solange die Korrektur offen ist (Dialog, Grund-Auswahl, Senden), pausiert der Countdown; Speichern oder Abbruch setzt ihn fort
+  it('@SL-163 „Korrigieren“ hält den Countdown von Spiel 11 an, solange der Dialog offen ist', async () => {
+    const user = userEvent.setup();
+    render(<Host istLeitung />);
+    await user.click(screen.getByTestId('korrigieren'));
+    expect(pause.onBeginn).toHaveBeenCalledExactlyOnceWith('match-11');
+    expect(pause.onEnde).not.toHaveBeenCalled();
+  });
+
+  it('@SL-164 „abbricht“: der Abbruch setzt den Countdown fort', async () => {
+    const user = userEvent.setup();
+    render(<Host istLeitung />);
+    await user.click(screen.getByTestId('korrigieren'));
+    await user.click(screen.getByTestId('cockpit-korrektur-cancel'));
+    expect(pause.onEnde).toHaveBeenCalledTimes(1);
+  });
+
+  it('@SL-164 „mit dem Grund speichert“: fortgesetzt wird erst, wenn der Weg der Korrektur fertig ist, nicht schon beim Wechsel zur Grund-Auswahl', async () => {
+    let fertig: (ok: boolean) => void = () => undefined;
+    mocks.enterScore.mockReturnValue(new Promise<boolean>((resolve) => { fertig = resolve; }));
+    const user = userEvent.setup();
+    render(<Host istLeitung />);
+    await user.click(screen.getByTestId('korrigieren'));
+    await user.clear(screen.getByTestId('cockpit-korrektur-home'));
+    await user.type(screen.getByTestId('cockpit-korrektur-home'), '1');
+    await user.click(screen.getByTestId('cockpit-korrektur-weiter'));
+    expect(pause.onEnde).not.toHaveBeenCalled(); // Gegenbeispiel: die Grund-Auswahl ist noch offen
+    await act(async () => { fertig(true); });
+    expect(pause.onEnde).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel @SL-166: ein Helfer hält keinen Countdown an (kein Weg, kein Anhalten)', () => {
+    render(<Host istLeitung={false} />);
+    screen.getByTestId('korrigieren').click();
+    expect(pause.onBeginn).not.toHaveBeenCalled();
   });
 });

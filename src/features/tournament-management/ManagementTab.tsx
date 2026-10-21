@@ -82,11 +82,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const canPlay = useCan('writeMatchData', tournament.id);
   // Turnierleitung (@SL-159): nur sie bekommt „Korrigieren“, der Helfer den Hinweis „Korrektur über die Turnierleitung“ (@SL-045)
   const istLeitung = useCan('leadMatches', tournament.id);
-  // „Korrigieren“ nach dem Abpfiff (@SL-159): nur die Turnierleitung bekommt den Weg, derselbe wie die Korrektur im Spielplan
-  const korrektur = useCockpitKorrektur(tournament, liveMatches, istLeitung);
-  const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes } = useFieldMatchSelection({
+  const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes, endstandPause } = useFieldMatchSelection({
     numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed,
   });
+  // „Korrigieren“ nach dem Abpfiff (@SL-159): nur die Turnierleitung bekommt den Weg, derselbe wie die Korrektur im Spielplan;
+  // solange er offen ist, pausiert der Countdown des Endstands (@SL-163, @SL-164)
+  const korrektur = useCockpitKorrektur(tournament, liveMatches, istLeitung, { onBeginn: endstandPause.pausiere, onEnde: endstandPause.setzeFort });
 
   // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
   const sides = useMemo(
