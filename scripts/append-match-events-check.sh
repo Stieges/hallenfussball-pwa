@@ -136,6 +136,10 @@ A34_FILE=""
 # (Fail-fast), --without-sw laesst sie deshalb ebenfalls aus (und die Wertungs-Fixtures 69*).
 A25B_MIGRATION="20261110_005_result_entry_forfeit.sql"
 A25B_FILE=""
+# Spiel beenden (20261110_009): juengste Fassung von append_match_events, payload_valid, apply_result_entry, apply_effect
+# (Fixtures 40, 70a-70k) -- nach A-25b ans Ende der Kette; setzt A-25b voraus, --without-sw laesst sie deshalb aus.
+SB_MIGRATION="20261110_009_spiel_beenden.sql"
+SB_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 CONTAINER_NAME="append-match-events-check-$$"
 WORKDIR="$(mktemp -d)"
@@ -179,6 +183,10 @@ while IFS= read -r line; do
     A25B_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
   fi
+  if [[ "$(basename "$line")" == "$SB_MIGRATION" ]]; then
+    SB_FILE="$line"
+    [[ "$MODE" == "without-sw" ]] && continue
+  fi
   if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
     SW_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
@@ -192,6 +200,10 @@ fi
 
 if [[ -z "$A25B_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
   echo "::error::$A25B_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Fixtures 69* gegen einen Schreibweg ohne Nichtantritt." >&2
+  exit 1
+fi
+if [[ -z "$SB_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$SB_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Fixtures 40 und 70* gegen einen Schreibweg ohne Spiel beenden." >&2
   exit 1
 fi
 if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
@@ -243,7 +255,7 @@ if [[ "$MODE" != "without-migration" ]]; then
   psql_stdin < "$UR_FILE"
   [[ "$MODE" != "without-sw" ]] && psql_stdin < "$SW_FILE"
   if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
-  if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$A25B_FILE"; fi
+  if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$A25B_FILE"; psql_stdin < "$SB_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -256,6 +268,8 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   NEWEST_APPEND_FILE="$A25A_FILE"
   [[ -n "$A34_FILE" ]] && NEWEST_APPEND_FILE="$A34_FILE"
   [[ -n "$A25B_FILE" ]] && NEWEST_APPEND_FILE="$A25B_FILE"
+  # Spiel beenden: seit 20261110_009 steht die juengste Fassung dort -- diese Datei wird mutiert.
+  [[ -n "$SB_FILE" ]] && NEWEST_APPEND_FILE="$SB_FILE"
   HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$NEWEST_APPEND_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
@@ -516,6 +530,8 @@ for f in "$FIXTURES_DIR"/*.json; do
   # A-25b: ohne SW faellt auch 20261110_005 weg (Fail-fast) -- die Wertungs-Fixtures 69* bleiben dann aussen vor, damit
   # Gegenprobe D nur an der SW-Luecke (68a) rot wird.
   if [[ "$MODE" == "without-sw" && "$(basename "$f")" == 69* ]]; then continue; fi
+  # Spiel beenden (20261110_009) faellt ohne SW ebenfalls weg -- ihre Fixtures (40, 70*) bleiben dann aussen vor.
+  if [[ "$MODE" == "without-sw" && ( "$(basename "$f")" == 70* || "$(basename "$f")" == 40-* ) ]]; then continue; fi
   FIX_INDEX=$((FIX_INDEX + 1))
   jq -c --arg file "$(basename "$f")" --argjson idx "$FIX_INDEX" \
      --arg owner "$U_OWNER" --arg coadmin "$U_COADMIN" --arg helper "$U_HELPER" \

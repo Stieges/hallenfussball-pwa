@@ -492,7 +492,9 @@ A25B_ASSERTIONS="append-match-events-writes-forfeit-absent|t,matches-guard-engin
 run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # Spiel beenden: die Zeile der spaeteren Migration 20261110_009 ist hier f (sie laeuft erst am Ende, AFTER).
+  check S "Rechte-Assertion: keine Zeile |f (ausser der Zeile der spaeteren Migration 20261110_009)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^append-match-events-end-by-lead-without-claim\|' || true)"
   check S "Rechte-Assertion: die 2 A-25b-Zeilen vorhanden und |t" "$A25B_ASSERTIONS" \
     "$(grep -E '^(append-match-events-writes-forfeit-absent|matches-guard-engine-columns-forfeit-absent)\|' <<<"$priv" | sort | paste -sd, -)"
   check A "Rechte-Assertion append-match-events-checks-field-control bleibt |t (A-34 nicht zurueckgedreht, Auflage 4)" \

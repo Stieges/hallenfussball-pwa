@@ -162,6 +162,9 @@ pending_assertions_for() {
     20261110_005_result_entry_forfeit.sql)
       echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
       ;;
+    20261110_009_spiel_beenden.sql)
+      echo "append-match-events-end-by-lead-without-claim"
+      ;;
     *)
       return 1
       ;;
@@ -525,6 +528,7 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Feldsteuerung) geschrieben.
   "matches-guard-engine-columns-forfeit-absent"
   "append-match-events-writes-forfeit-absent"
+  "append-match-events-end-by-lead-without-claim"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
