@@ -34,8 +34,19 @@ const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     lastError: z.string().optional(),
     conflict: z.boolean().optional(),
     discardedCopy: z.boolean().optional(),
-    rejection: z.enum(['invalidValue', 'tournamentGone']).optional(),
+    // Review A3: tolerant – ein Grund einer neueren App-Version macht den Eintrag nicht ungültig (siehe knownRejection)
+    rejection: z.unknown().optional(),
 });
+
+const KNOWN_REJECTIONS: ReadonlyArray<FailedMutationItem['rejection']> = ['invalidValue', 'tournamentGone'];
+
+/**
+ * BP-1 Review A3 (@FU-004, @FU-126): Grund beim Laden. Unbekannte Werte (z. B. von einer neueren App-Version) gelten als
+ * „unklar“ (kein eigener Grund) – der Eintrag bleibt erhalten und wird nie still verworfen.
+ */
+function knownRejection(value: unknown): FailedMutationItem['rejection'] {
+    return KNOWN_REJECTIONS.find((known) => known === value);
+}
 
 /**
  * A requested change to be persisted to the cloud, generic over the
@@ -558,7 +569,11 @@ export class GenericMutationQueue<TType extends string> {
                         return false;
                     }
                     return true;
-                }) as FailedMutationItem<TType>[];
+                }).map((item) => {
+                    const { rejection, ...rest } = item as FailedMutationItem<TType> & { rejection?: unknown };
+                    const known = knownRejection(rejection);
+                    return known ? { ...rest, rejection: known } : rest;
+                });
             }
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load failed queue', e); }
