@@ -83,7 +83,7 @@
         },
         "deleted_at": null,
         "completed_at": null,
-        "version": null
+        "version": 1
       },
       "teams": [
         {
@@ -659,7 +659,7 @@
         },
         "deleted_at": null,
         "completed_at": null,
-        "version": null
+        "version": 1
       },
       "teams": [
         {

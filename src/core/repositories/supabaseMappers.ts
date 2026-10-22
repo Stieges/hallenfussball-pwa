@@ -761,7 +761,7 @@ export function mapTournamentToSupabase(
     config: config as unknown as Json,
     deleted_at: tournament.deletedAt ?? null,
     completed_at: tournament.completedAt ?? null,
-    version: tournament.version ?? null,
+    version: tournament.version ?? 1, // BP-1 C-TURNIER-VERSION-NULL: nie eine Zeile ohne Version (Backfill + NOT NULL: DB-Fenster)
   };
 
   // K1: is_public muss den echten Sichtbarkeitszustand tragen. SupabaseRepository.save()
