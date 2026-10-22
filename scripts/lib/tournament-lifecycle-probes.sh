@@ -119,7 +119,7 @@ code_of() { q "SELECT share_code FROM public.tournaments WHERE id = '$1';"; }
 fin_niko() { # fin_niko <Person> <tid> [Plaetze] [Rangfolge] [request_id] -> Kurzform
   q "SELECT lc.finish('$1', '$2', lc.snap('$2', '${4:-$R_NIKO}', '${3:-$P_NIKO}', 'group', lc.scorers('$2')), '${5:-$(rid)}');"
 }
-fin_hc() { q "SELECT lc.finish('$1', '$2', lc.snap('$2', '${3:-$R_HC}', '$P_HC', 'open'), '$(rid)');"; }
+fin_hc() { q "SELECT lc.finish('$1', '$2', lc.snap('$2', '${3:-$R_HC}', '$P_HC', '${4:-hc}'), '$(rid)');"; }
 last() { q "SELECT harness.last()::text;"; }
 reason() { q "SELECT harness.last() ->> 'reason';"; }
 as_exec() { q "SELECT harness.exec(harness.p('$1'), harness.pa('$1'), \$S\$$2\$S\$);"; }
@@ -233,7 +233,7 @@ run_probes() {
   q "UPDATE public.matches SET score_a = 3 WHERE id = lc.final('$t', 'final');" >/dev/null
   check R "P-2 @LZ-029 Finale geaendert (3:1 statt 2:1), Endstand auf altem Stand gerechnet -> STALE_STATE, Turnier laeuft" \
     "rejected:STALE_STATE|running|kein" \
-    "$(q "SELECT lc.finish('olli', '$t', lc.snap('$t', '$R_HC', '$P_HC', 'open'), gen_random_uuid(), \$J\$$s\$J\$::jsonb);")|$(life "$t")|$(fs_md5 "$t")"
+    "$(q "SELECT lc.finish('olli', '$t', lc.snap('$t', '$R_HC', '$P_HC', 'hc'), gen_random_uuid(), \$J\$$s\$J\$::jsonb);")|$(life "$t")|$(fs_md5 "$t")"
   check R "P-2 Gegenbeispiel: mit aktuellem Stand -> ok" "ok" "$(fin_hc olli "$t")"
   m="$(gm "$T_FIN" 'TSV 1921 Fridolfing' 'TSV Waging blau')"
   before="$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")"
@@ -320,6 +320,11 @@ run_probes() {
   check R "P-5 @LZ-037 B1 Gegenbeispiel: oeffentliche Ansicht beenden (Kaskade ueber Teams, Spiele, Ereignisse) -> gelingt, alle Kinder nicht mehr oeffentlich" \
     "ok:1|f|0" \
     "$(as_exec olli "SELECT public.make_tournament_private('$T_FIN')")|$(q "SELECT is_public FROM public.tournaments WHERE id = '$T_FIN';")|$(q "SELECT (SELECT count(*) FROM public.teams WHERE tournament_id = '$T_FIN' AND is_public) + (SELECT count(*) FROM public.matches WHERE tournament_id = '$T_FIN' AND is_public) + (SELECT count(*) FROM public.match_events e JOIN public.matches m ON m.id = e.match_id WHERE m.tournament_id = '$T_FIN' AND e.is_public);")"
+  u="$code"; t2="$(niko_ready)"; make_public "$t2"; fin_niko olli "$t2" >/dev/null; code="$(code_of "$t2")"
+  check R "P-9 Review A3: abgeschlossen, Teilen-Code bleibt, is_public per Metadaten-Update aus -> Zuschauer none (vorher final)" \
+    "final|ok:1|$code|none" \
+    "$(anon_val "SELECT public.public_final_standings('$code') ->> 'status'")|$(as_exec olli "UPDATE public.tournaments SET is_public = false WHERE id = '$t2'")|$(code_of "$t2")|$(anon_val "SELECT public.public_final_standings('$code') ->> 'status'")"
+  code="$u"
   check R "P-9 nicht geteilt -> Zuschauer: none (Teilen-Code weg)" "none" "$(anon_val "SELECT public.public_final_standings('$code') ->> 'status'")"
   check R "P-5 @LZ-037 Gegenbeispiel: wieder oeffentlich (make_tournament_public) und Teilen-Code erneuern -> gelingt; Kinder wieder oeffentlich" \
     "ok:1|ok:1|t|0" \
@@ -348,6 +353,8 @@ run_probes() {
     "$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-kai-$t', jsonb_build_object('at', $fa + 60000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging rot')))));")|$(nlate "$t")"
   check R "P-6b B3 ein vor dem Abschluss angenommenes Ereignis kommt nach dem Abschluss erneut -> duplicate, keine Zeile" "duplicate|3" \
     "$(q "SELECT lc.append('olli', '$m', jsonb_build_array(lc.stored_event('$m')));")|$(nlate "$t")"
+  check R "H-10 MX3: Ereignis-ID aus einem anderen Spiel nach dem Abschluss -> ID_CONFLICT, keine Zeile" "rejected:ID_CONFLICT|3" \
+    "$(q "SELECT lc.append('olli', '$m', jsonb_build_array(lc.stored_event(harness.gm('$t', 'TSV Petting', 'DJK Otting'))));")|$(nlate "$t")"
   check R "P-6 @HE-070 Tom liest den Endstand weiter (writeMatchData)" "1" \
     "$(as_val tom "SELECT count(*)::text FROM public.tournament_final_standings WHERE tournament_id = '$t'")"
 
@@ -377,6 +384,10 @@ run_probes() {
   t="$(hc_ready)"
   check R "P-8 Finale-Verlierer (SG Mitte) vor Finale-Sieger (FC Nord) -> INVALID_STANDINGS PLACEMENT_GAME" "rejected:INVALID_STANDINGS|PLACEMENT_GAME" \
     "$(fin_hc olli "$t" "SG Mitte,FC Nord,DJK Berg,SV Süd,TSV West,VfB Ufer,SC Ost,TuS Tal")|$(reason)"
+  check R "P-8 Review A1: vorlaeufiger Endstand (Herkunft 'open', Platzierungsspiele offen) -> INVALID_STANDINGS PROVISIONAL, Turnier laeuft" \
+    "rejected:INVALID_STANDINGS|PROVISIONAL|running" "$(fin_hc olli "$t" "$R_HC" open)|$(reason)|$(life "$t")"
+  check R "P-8 Review A1 Gegenbeispiel: derselbe Endstand mit echten Herkuenften (Finale, Spiel um Platz 3, Gruppenplaetze) -> ok" "ok" \
+    "$(fin_hc olli "$t")"
   t="$(clone "$TPL_NIKO")"
   q "UPDATE public.teams SET is_removed = true, removed_at = now() WHERE tournament_id = '$t' AND name = 'TSV Waging blau';" >/dev/null
   complete_group_as "$t" '' "$(sed 's/,TSV Waging blau//' <<<"$R_NIKO")" >/dev/null

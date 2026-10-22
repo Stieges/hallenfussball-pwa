@@ -6,7 +6,21 @@ SET check_function_bodies = off;
 CREATE SCHEMA lc;
 GRANT USAGE ON SCHEMA lc TO anon, authenticated, service_role;
 
--- Endstand aus Teamnamen und Platzziffern; Herkunft Gruppenplatz '' (Jeder gegen jeden) bzw. 'open' (Finalrunde).
+-- Herkunft im Hallencup Nord (Finale Nord–Mitte, Spiel um Platz 3 Berg–Süd, sonst Gruppenplatz), wie A-19b sie liefert.
+CREATE FUNCTION lc.hc_origin(p_name text) RETURNS jsonb LANGUAGE sql IMMUTABLE AS $fn$
+  SELECT CASE p_name
+    WHEN 'FC Nord' THEN '{"kind": "placementGame", "finalType": "final", "role": "winner"}'
+    WHEN 'SG Mitte' THEN '{"kind": "placementGame", "finalType": "final", "role": "loser"}'
+    WHEN 'DJK Berg' THEN '{"kind": "placementGame", "finalType": "thirdPlace", "role": "winner"}'
+    WHEN 'SV Süd' THEN '{"kind": "placementGame", "finalType": "thirdPlace", "role": "loser"}'
+    WHEN 'TSV West' THEN '{"kind": "groupPlace", "group": "A", "place": 3}'
+    WHEN 'VfB Ufer' THEN '{"kind": "groupPlace", "group": "B", "place": 3}'
+    WHEN 'SC Ost' THEN '{"kind": "groupPlace", "group": "A", "place": 4}'
+    ELSE '{"kind": "groupPlace", "group": "B", "place": 4}' END::jsonb
+$fn$;
+
+-- Endstand aus Teamnamen und Platzziffern; Herkunft Gruppenplatz '' (Jeder gegen jeden), 'hc' (Hallencup Nord, echte
+-- Herkuenfte) bzw. 'open' (vorlaeufig -- am Server PROVISIONAL, Review A1).
 CREATE FUNCTION lc.snap(p_tid uuid, p_names text, p_places integer[], p_origin text DEFAULT 'group',
                         p_scorers jsonb DEFAULT '[]'::jsonb) RETURNS jsonb
 LANGUAGE sql STABLE AS $fn$
@@ -15,6 +29,7 @@ LANGUAGE sql STABLE AS $fn$
     'ranking', (SELECT jsonb_agg(jsonb_build_object(
                   'place', p_places[o], 'teamId', harness.team(p_tid, btrim(n)), 'teamName', btrim(n),
                   'origin', CASE WHEN p_origin = 'group' THEN jsonb_build_object('kind', 'groupPlace', 'group', '', 'place', p_places[o])
+                                 WHEN p_origin = 'hc' THEN lc.hc_origin(btrim(n))
                                  ELSE jsonb_build_object('kind', 'open') END) ORDER BY o)
                   FROM unnest(string_to_array(p_names, ',')) WITH ORDINALITY AS x(n, o)),
     'scorers', p_scorers,

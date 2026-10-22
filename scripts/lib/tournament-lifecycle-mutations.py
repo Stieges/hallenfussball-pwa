@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tournament-lifecycle-mutations.py -- Mutationen ME1 ... ME20 fuer scripts/tournament-lifecycle-check.sh --gegenprobe
+"""tournament-lifecycle-mutations.py -- Mutationen ME1 ... ME22 fuer scripts/tournament-lifecycle-check.sh --gegenprobe
 (A-21a-S, plan-endstand-abschluss.md § 3 Tabelle „Mutationen“).
 
 Liest die Migration 20261113_003_tournament_lifecycle.sql von stdin, wendet die Mutation MUT_KEY an und schreibt die
@@ -95,6 +95,13 @@ M = {
     # ME20: reopen_tournament laesst finished_at stehen -> P-11
     "ME20": [("     SET lifecycle_status = 'fixed', finished_at = NULL, change_revision = change_revision + 1",
               "     SET lifecycle_status = 'fixed', change_revision = change_revision + 1")],
+    # ME21 (Review MX1/A3): public_final_standings ohne is_public-Pruefung -> P-9 „Code vorhanden, is_public aus“
+    "ME21": [("   WHERE t.share_code = p_share_code AND coalesce(t.is_public, false) AND t.deleted_at IS NULL;",
+              "   WHERE t.share_code = p_share_code AND t.deleted_at IS NULL;")],
+    # ME22 (Review A1): vorlaeufige Herkunft 'open' erlaubt -> P-8 PROVISIONAL
+    "ME22": [("""  IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_snapshot -> 'ranking') r WHERE r -> 'origin' ->> 'kind' = 'open') THEN
+    RETURN 'PROVISIONAL';""", """  IF false THEN
+    RETURN 'PROVISIONAL';""")],
 }
 
 

@@ -3,8 +3,10 @@
 -- (@LZ-091 Notweg, @ET-046; Plan Endstand und Abschluss F1, R-EA-12; Paket A-21a-S)
 --
 -- WER/WO: der Betreiber (Daniel), im Supabase-Dashboard unter "SQL Editor" (läuft dort als Rolle postgres).
--- Geprüft wird diese Datei von scripts/tournament-lifecycle-check.sh nicht direkt; der Weg darunter (reopen_tournament)
--- ist dort belegt (P-11, P-12). Den Knopf "Turnier wieder öffnen" in der App gibt es erst nach dem MVP (@LZ-058).
+-- Geprüft wird diese Datei von scripts/tournament-lifecycle-check.sh: Block 1 läuft dort WÖRTLICH (Platzhalter ersetzt)
+-- gegen ein abgeschlossenes Turnier und ein zweites Mal gegen das wieder geöffnete (Abbruch ohne Änderung, Probe bei P-11);
+-- reopen_tournament selbst belegen P-11 und P-12. Änderungen hier immer mit dem Skript prüfen. Den Knopf
+-- "Turnier wieder öffnen" in der App gibt es erst nach dem MVP (@LZ-058).
 --
 -- PLATZHALTER (nur im Editor ersetzen, nie in dieser Datei im Repo):
 --   <turnier-id>  die Kennung des Turniers (Block 0 zeigt sie, oder aus der Adresse in der App)

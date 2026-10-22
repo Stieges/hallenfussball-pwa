@@ -235,7 +235,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(ME1 ME2 ME3 ME4 ME5 ME6 ME7 ME8 ME9 ME10 ME11 ME12 ME13 ME14 ME15 ME16 ME17 ME18 ME19 ME20)
+  MUTATIONS=(ME1 ME2 ME3 ME4 ME5 ME6 ME7 ME8 ME9 ME10 ME11 ME12 ME13 ME14 ME15 ME16 ME17 ME18 ME19 ME20 ME21 ME22)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   RED_LIST=""

@@ -54,8 +54,9 @@
 --   Grenze (K6): aufbewahrt wird nur, was über append_match_events kommt; andere Schreibwege lehnen ab (sichtbarer Fehler).
 --   Endstand (R-EA-4): rechnet der Client; der Server prüft Form (Gleichlauf final-standings-shapes.json), jedes Team ohne
 --     is_removed genau einmal, Platzziffern (Platz = 1 + Zahl der Teams davor, geteilte Plätze mit Sprung), bei Jeder gegen
---     jeden Reihenfolge und Platzziffern aus group_completions('') (Gleichlauf final-standings-roundrobin.json) und bei
---     jedem entschiedenen Platzierungsspiel „Sieger auf dem oberen, Verlierer auf dem unteren Platz des Spiels“.
+--     jeden Reihenfolge und Platzziffern aus group_completions('') (Gleichlauf final-standings-roundrobin.json), bei
+--     jedem entschiedenen Platzierungsspiel „Sieger auf dem oberen, Verlierer auf dem unteren Platz des Spiels“ und dass
+--     keine Zeile die Herkunft 'open' trägt (vorläufig, Review A1 -> PROVISIONAL).
 --
 -- Voraussetzung: 20261110_006 (group_completions, bracket_*, clarifications, complete_group), 20261110_005
 --   (forfeit_absent, append_match_events mit Feldsteuerung), 20261110_003 (field_control), 20261110_001
@@ -534,6 +535,7 @@ $$;
 
 -- Endstand gegen das Turnier (R-EA-4, Review W4). NULL = stimmig, sonst der Grund:
 --   SHAPE           Form ungültig
+--   PROVISIONAL     eine Zeile trägt die Herkunft 'open' (nur im vorläufigen Endstand erlaubt, A-20a; Review A-21a-S A1)
 --   TEAM_SET        nicht genau die Teams ohne is_removed (fehlend, fremd, entfernt; doppelt fängt schon SHAPE)
 --   PLACE_NUMBERS   Platzziffern verletzen „Platz = 1 + Zahl der Teams davor, geteilt = Ziffer des Vorgängers“
 --   GROUP_ORDER     Jeder gegen jeden: Reihenfolge ≠ Abschluss der Gruppe '' (ohne entfernte Teams, @ET-058)
@@ -561,6 +563,10 @@ DECLARE
 BEGIN
   IF NOT match_engine.final_standings_shape_valid(p_snapshot) THEN
     RETURN 'SHAPE';
+  END IF;
+  -- Review A1: ein vorläufiger Endstand (offenes Platzierungsspiel) wird nie als endgültig gespeichert (R-EA-9).
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_snapshot -> 'ranking') r WHERE r -> 'origin' ->> 'kind' = 'open') THEN
+    RETURN 'PROVISIONAL';
   END IF;
   SELECT array_agg(r ->> 'teamId' ORDER BY o), array_agg((r ->> 'place')::numeric::integer ORDER BY o)
     INTO v_ids, v_places
