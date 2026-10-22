@@ -13,12 +13,12 @@ import { GroupDialogShell } from './GroupDialogShell';
 import { MAX_REOPEN_REASON, type GroupCompletionApi, type ReopenError } from './useGroupCompletion';
 
 const area: CSSProperties = {
-  display: 'block', width: '100%', minHeight: `calc(${cssVars.touchTargets.primary} * 2)`, padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-  font: 'inherit', fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyLg, color: cssVars.colors.textPrimary,
+  display: 'block', width: '100%', minHeight: `calc(${cssVars.touchTargets.primary} + ${cssVars.spacing.sm})`, padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+  font: 'inherit', fontSize: cssVars.fontSizes.lg, lineHeight: cssVars.lineHeights.bodyLg, color: cssVars.colors.textPrimary,
   background: cssVars.colors.background, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.md, resize: 'vertical', boxSizing: 'border-box',
 };
 const label: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: cssVars.spacing.sm, fontWeight: cssVars.fontWeights.semibold, marginBottom: cssVars.spacing.xs };
-const hint: CSSProperties = { margin: `${cssVars.spacing.xs} 0 0`, fontSize: cssVars.fontSizes.xs, lineHeight: cssVars.lineHeights.bodySm, color: cssVars.colors.textPrimary };
+const hint: CSSProperties = { margin: `${cssVars.spacing.xs} 0 0`, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm, color: cssVars.colors.textPrimary };
 
 export interface GroupReopenDialogProps {
   api: GroupCompletionApi;
@@ -50,7 +50,7 @@ export const GroupReopenDialog = ({ api, groupId, reason, busy, error }: GroupRe
       <div>
         <div style={label}>
           <label htmlFor="group-reopen-reason">{t('groupCompletion.reopen.reasonLabel')}</label>
-          <span style={{ color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.normal, fontSize: cssVars.fontSizes.xs }}>{t('groupCompletion.reopen.reasonCount', { count: reason.length, max: MAX_REOPEN_REASON })}</span>
+          <span style={{ color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.normal, fontSize: cssVars.fontSizes.sm }}>{t('groupCompletion.reopen.reasonCount', { count: reason.length, max: MAX_REOPEN_REASON })}</span>
         </div>
         <textarea
           id="group-reopen-reason"

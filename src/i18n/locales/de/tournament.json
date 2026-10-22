@@ -1351,8 +1351,8 @@
     "reopen": {
       "title": "{{name}} wieder öffnen",
       "title_all": "Gruppe wieder öffnen",
-      "body": "{{name}} ist abgeschlossen. Wiederöffnen brauchst du, wenn du die Gruppe neu entscheiden und erneut abschließen willst. Solange die Gruppe offen ist, bleibt die Besetzung der Finalrunde stehen; erst der erneute Abschluss besetzt neu. Einzelne Ergebnisse korrigierst du auch ohne Wiederöffnen.",
-      "body_all": "Die Gruppe ist abgeschlossen. Wiederöffnen brauchst du, wenn du die Gruppe neu entscheiden und erneut abschließen willst. Solange sie offen ist, bleibt der Endstand, wie er war; erst der erneute Abschluss übergibt ihn neu. Einzelne Ergebnisse korrigierst du auch ohne Wiederöffnen.",
+      "body": "Solange {{name}} offen ist, bleibt die Besetzung der Finalrunde stehen. Erst der erneute Abschluss besetzt neu. Einzelne Ergebnisse korrigierst du auch ohne Wiederöffnen.",
+      "body_all": "Solange die Gruppe offen ist, bleibt der Endstand, wie er war. Erst der erneute Abschluss übergibt ihn neu. Einzelne Ergebnisse korrigierst du auch ohne Wiederöffnen.",
       "reasonLabel": "Grund (Pflicht)",
       "reasonCount": "{{count}} / {{max}}",
       "reasonHint": "Bitte keine Spielernamen eintragen. Nur für die Turnierleitung sichtbar.",

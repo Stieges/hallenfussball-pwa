@@ -21,7 +21,7 @@ import type { CompletionError, GroupCompletionApi, ReadyPlan } from './useGroupC
 
 const list: CSSProperties = { listStyle: 'none', margin: 0, padding: 0, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md, background: cssVars.colors.surface };
 const row: CSSProperties = { display: 'grid', gridTemplateColumns: `${cssVars.spacing.lg} minmax(0, 1fr)`, gap: cssVars.spacing.sm, alignItems: 'start', padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` };
-const small: CSSProperties = { display: 'block', color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.normal, fontSize: cssVars.fontSizes.xs, lineHeight: cssVars.lineHeights.bodySm };
+const small: CSSProperties = { display: 'block', color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.normal, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 const text: CSSProperties = { margin: 0 };
 
 export interface GroupConfirmDialogProps {

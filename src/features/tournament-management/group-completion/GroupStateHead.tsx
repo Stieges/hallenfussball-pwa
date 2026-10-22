@@ -34,7 +34,7 @@ const WORD: Record<GroupStateWord, { tone: StateMarkTone; symbol: StateMarkSymbo
 };
 
 const marksRow: CSSProperties = { display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: cssVars.spacing.sm };
-const meta: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, lineHeight: cssVars.lineHeights.bodySm };
+const meta: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 const line: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyMd };
 const title: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md };
 

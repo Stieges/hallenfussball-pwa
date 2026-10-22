@@ -1351,8 +1351,8 @@
     "reopen": {
       "title": "Reopen {{name}}",
       "title_all": "Reopen group",
-      "body": "{{name}} is closed. You need to reopen it if you want to decide it anew and close it again. While the group is open, the placements in the final round stay as they are; only closing it again fills them anew. You can correct single results without reopening, too.",
-      "body_all": "The group is closed. You need to reopen it if you want to decide it anew and close it again. While it is open, the final standing stays as it was; only closing it again hands it over anew. You can correct single results without reopening, too.",
+      "body": "While {{name}} is open, the placements in the final round stay as they are. Only closing it again fills them anew. You can correct single results without reopening, too.",
+      "body_all": "While the group is open, the final standing stays as it was. Only closing it again hands it over anew. You can correct single results without reopening, too.",
       "reasonLabel": "Reason (required)",
       "reasonCount": "{{count}} / {{max}}",
       "reasonHint": "Please do not enter player names. Visible to the tournament director only.",
