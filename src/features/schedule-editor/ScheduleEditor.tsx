@@ -30,6 +30,7 @@ import { Button } from '../../components/ui';
 
 // Hooks
 import { getMatchStartState } from '../../utils/matchStartState';
+import { keepStartedPlaces } from './utils/startedGuard';
 import { useScheduleEditor } from './hooks/useScheduleEditor';
 import { useMatchConflicts } from './hooks/useMatchConflicts';
 import { useDragDrop, createSlotId } from './hooks/useDragDrop';
@@ -277,7 +278,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     if (!previousState) { return; } // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
-      matches: previousState.matches,
+      matches: keepStartedPlaces(previousState.matches, tournament.matches),
       updatedAt: new Date().toISOString(),
     });
     setHistoryVersion(v => v + 1);
@@ -298,7 +299,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     if (!nextState) { return; } // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
-      matches: nextState.matches,
+      matches: keepStartedPlaces(nextState.matches, tournament.matches),
       updatedAt: new Date().toISOString(),
     });
     setHistoryVersion(v => v + 1);

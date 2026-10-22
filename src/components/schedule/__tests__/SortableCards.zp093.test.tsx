@@ -24,16 +24,20 @@ describe('@ZP-093 Feld-Auswahl der Karten im Bearbeitungsmodus (C-ANGEPFIFFEN-TA
   it.each(['running', 'finished'] as const)('@ZP-093 Desktop-Karte: bei einem angepfiffenen Spiel (%s) ist die Feld-Auswahl gesperrt', (status) => {
     inDnd(<SortableDesktopCard {...common} status={status} />);
     expect(screen.getByRole('combobox')).toHaveProperty('disabled', true);
+    expect(screen.getByRole('combobox').style.cursor).toBe('not-allowed'); // sichtbar gesperrt (T2-UI)
+    expect(screen.getByRole('combobox').style.color).toBe('var(--color-text-disabled)');
   });
 
   it('@ZP-093 Desktop-Karte Gegenbeispiel: bei einem geplanten Spiel bleibt die Feld-Auswahl bedienbar', () => {
     inDnd(<SortableDesktopCard {...common} status="scheduled" />);
     expect(screen.getByRole('combobox')).toHaveProperty('disabled', false);
+    expect(screen.getByRole('combobox').style.cursor).toBe('pointer');
   });
 
   it('@ZP-093 Mobil-Karte: bei einem angepfiffenen Spiel ist die Feld-Auswahl gesperrt, bei einem geplanten nicht', () => {
     const { unmount } = inDnd(<SortableMobileCard {...common} isExpanded={false} onCardClick={vi.fn()} onCircleClick={vi.fn()} renderExpandContent={() => null} status="running" />);
     expect(screen.getByRole('combobox')).toHaveProperty('disabled', true);
+    expect(screen.getByRole('combobox').style.cursor).toBe('not-allowed');
     unmount();
     inDnd(<SortableMobileCard {...common} isExpanded={false} onCardClick={vi.fn()} onCircleClick={vi.fn()} renderExpandContent={() => null} status="scheduled" />);
     expect(screen.getByRole('combobox')).toHaveProperty('disabled', false);
