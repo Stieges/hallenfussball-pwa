@@ -1135,7 +1135,7 @@
       "decide": "Decide tie",
       "shootout": "Enter penalty shootout",
       "order": "Set order",
-      "withdrawnBy": "withdrawn by {{name}} · {{time}}",
+      "withdrawnBy": "Withdrawn by {{name}} · {{time}}",
       "withdrawnByUnknown": "Withdrawn · {{time}}"
     },
     "decided": {

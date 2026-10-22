@@ -1135,7 +1135,7 @@
       "decide": "Gleichstand entscheiden",
       "shootout": "Strafstoßschießen eintragen",
       "order": "Reihenfolge festlegen",
-      "withdrawnBy": "zurückgenommen von {{name}} · {{time}}",
+      "withdrawnBy": "Zurückgenommen von {{name}} · {{time}}",
       "withdrawnByUnknown": "Zurückgenommen · {{time}}"
     },
     "decided": {

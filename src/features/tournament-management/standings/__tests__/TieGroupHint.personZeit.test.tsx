@@ -51,11 +51,20 @@ describe('Person und Zeit der Entscheidung (Verlauf der Turnierleitung, GA4 A-13
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli · \d{2}:\d{2}/);
   });
 
-  it('@W2A-070 Olli akzeptiert, Maria nimmt zurück: der offene Hinweis nennt „zurückgenommen von Maria · Zeit“ (nur Turnierleitung)', async () => {
+  it('@W2A-070 Olli akzeptiert, Maria nimmt zurück: der offene Hinweis nennt „Zurückgenommen von Maria · Zeit“ (nur Turnierleitung)', async () => {
     const repo = await mitRuecknahme();
     await zeigeHinweis(repo.tournament, true);
     expect(screen.getByTestId('tie-hint-choice')).toBeInTheDocument();
-    expect(screen.getByTestId('tie-withdrawn-by')).toHaveTextContent(/zurückgenommen von Maria · \d{2}:\d{2}/);
+    expect(screen.getByTestId('tie-withdrawn-by')).toHaveTextContent(/Zurückgenommen von Maria · \d{2}:\d{2}/);
+  });
+
+  it('@W2A-070 entscheiden, zurücknehmen, neu entscheiden, Entscheidung verfällt: der offene Hinweis zeigt keine „Zurückgenommen“-Zeile mehr', async () => {
+    const repo = await mitRuecknahme();
+    expect((await repo.service(['e-2']).decide(repo.tournament.id, shared(['P', 'D']))).ok).toBe(true);
+    repo.setPlaces([1, 2, 3]); // die Annahme verfällt, der Gleichstand ist wieder offen
+    await zeigeHinweis(repo.tournament, true);
+    expect(screen.getByTestId('tie-hint-mandatory')).toBeInTheDocument();
+    expect(screen.queryByTestId('tie-withdrawn-by')).toBeNull();
   });
 
   it('@W2A-070 Gegenbeispiel: Tom als Helfer sieht nicht, wer zurückgenommen hat', async () => {
@@ -66,13 +75,13 @@ describe('Person und Zeit der Entscheidung (Verlauf der Turnierleitung, GA4 A-13
 
   it('@W2A-070 Gegenbeispiel: eine nie zurückgenommene Entscheidung zeigt keine „zurückgenommen“-Zeile; wird danach neu entschieden, auch nicht', async () => {
     await zeigeEntschieden(shared(['P', 'D']));
-    expect(screen.getByTestId('tie-decided-info')).not.toHaveTextContent(/zurückgenommen/);
+    expect(screen.getByTestId('tie-decided-info')).not.toHaveTextContent(/zurückgenommen/i);
     cleanup();
     const repo = await mitRuecknahme();
     expect((await repo.service(['e-2']).decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
     await zeigeHinweis(repo.tournament, true);
     expect(screen.queryByTestId('tie-withdrawn-by')).toBeNull();
-    expect(screen.getByTestId('tie-decided-info')).not.toHaveTextContent(/zurückgenommen/);
+    expect(screen.getByTestId('tie-decided-info')).not.toHaveTextContent(/zurückgenommen/i);
   });
 
   it('@W2A-071 Gegenbeispiel: Tom als Helfer sieht das Ergebnis, aber weder Person noch Zeit', async () => {

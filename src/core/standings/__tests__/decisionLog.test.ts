@@ -5,7 +5,7 @@
  * @W2A-071 (Helfer sehen es nicht), @W2A-072 (nicht im öffentlichen Datensatz), @ET-027, @ET-029.
  */
 import { describe, expect, it } from 'vitest';
-import { decidedBy, withdrawnBy } from '../decisionLog';
+import { decidedBy, withdrawnBy, withdrawnForBlock } from '../decisionLog';
 import { jgj, MemoryRepo, nikolaus, order, shared, shootout } from './decisionTestKit';
 import { DATA } from './fixtures';
 
@@ -55,5 +55,26 @@ describe('Verlauf der Entscheidungen (decisionLog)', () => {
     expect(decidedBy({ decisionLog: log }, 'e-1')).toBeUndefined();
     expect(decidedBy({ decisionLog: log }, 'e-9')).toEqual({ at: '2026-12-06T12:00:00Z' });
     expect(decidedBy({}, 'e-9')).toBeUndefined();
+  });
+});
+
+describe('withdrawnForBlock: nur die letzte Eintragung zu den Teams zählt (@W2A-070)', () => {
+  const teamIds = ['a', 'b'];
+  const eintrag = (id: number, kind: 'standing_decision' | 'standing_withdraw', actorName: string) =>
+    ({ id, kind, detail: { id: 'e-1', teamIds: ['b', 'a'] }, actorName, at: `2026-12-06T1${String(id)}:00:00Z` });
+
+  it('[decide, withdraw] nennt Maria', () => {
+    expect(withdrawnForBlock({ decisionLog: [eintrag(1, 'standing_decision', 'Olli'), eintrag(2, 'standing_withdraw', 'Maria')] }, teamIds))
+      .toEqual({ name: 'Maria', at: '2026-12-06T12:00:00Z' });
+  });
+
+  it('Gegenbeispiel [decide, withdraw, decide]: überholt, undefined', () => {
+    const log = [eintrag(1, 'standing_decision', 'Olli'), eintrag(2, 'standing_withdraw', 'Maria'), eintrag(3, 'standing_decision', 'Olli')];
+    expect(withdrawnForBlock({ decisionLog: log }, teamIds)).toBeUndefined();
+  });
+
+  it('andere Teams oder kein Verlauf: undefined', () => {
+    expect(withdrawnForBlock({ decisionLog: [eintrag(2, 'standing_withdraw', 'Maria')] }, ['x', 'y'])).toBeUndefined();
+    expect(withdrawnForBlock({}, teamIds)).toBeUndefined();
   });
 });
