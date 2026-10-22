@@ -352,6 +352,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               externalEditMode={isEditing}
               onBeforeChange={saveToHistory}
               hideToolbar={true}
+              onRejectStarted={() => showWarning(t('schedule.startedLocked'))}
             />
           )}
 

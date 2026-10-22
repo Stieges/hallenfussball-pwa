@@ -219,6 +219,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
             <select
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+              disabled={isLocked}
               style={{
                 ...mobileSelectStyle,
                 width: '100%',

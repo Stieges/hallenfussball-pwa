@@ -75,7 +75,7 @@ interface GroupStageScheduleProps {
    */
   conflictSource?: ConflictSource;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
-  onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
   /** Whether to show the section title (default: true) */
@@ -209,18 +209,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const sourceMatchId = active.id as string;
     const targetMatchId = over.id as string;
 
-    // Immediately update visual order using arrayMove
+    // Call the swap handler to persist change; `false` = abgelehnt (@ZP-093), dann bleibt die Anzeige stehen
+    if (onMatchSwap?.(sourceMatchId, targetMatchId) === false) { return; }
+
+    // Update visual order using arrayMove
     setDisplayOrder(prevOrder => {
       const oldIndex = prevOrder.indexOf(sourceMatchId);
       const newIndex = prevOrder.indexOf(targetMatchId);
       if (oldIndex === -1 || newIndex === -1) { return prevOrder; }
       return arrayMove(prevOrder, oldIndex, newIndex);
     });
-
-    // Call the swap handler to persist change
-    if (onMatchSwap) {
-      onMatchSwap(sourceMatchId, targetMatchId);
-    }
   };
 
   // ============================================================================

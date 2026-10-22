@@ -29,6 +29,7 @@ import { cssVars } from '../../design-tokens'
 import { Button } from '../../components/ui';
 
 // Hooks
+import { getMatchStartState } from '../../utils/matchStartState';
 import { useScheduleEditor } from './hooks/useScheduleEditor';
 import { useMatchConflicts } from './hooks/useMatchConflicts';
 import { useDragDrop, createSlotId } from './hooks/useDragDrop';
@@ -70,6 +71,8 @@ interface ScheduleEditorProps {
   onBeforeChange?: () => void;
   /** Hide internal toolbar (when parent shows unified toolbar) */
   hideToolbar?: boolean;
+  /** @ZP-093: Rückmeldung, wenn ein Ablegen wegen eines angepfiffenen Spiels abgelehnt wurde */
+  onRejectStarted?: () => void;
 }
 
 // ============================================================================
@@ -230,6 +233,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   externalEditMode,
   onBeforeChange,
   hideToolbar = false,
+  onRejectStarted,
 }) => {
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
 
@@ -348,10 +352,29 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     enabled: isEditing,
   });
 
+  // @ZP-093: Ein Ablegen berührt ein angepfiffenes Spiel, wenn die Quelle oder das Spiel auf dem Zielplatz angepfiffen ist.
+  const startedInDrop = useCallback(
+    (matchId: string, targetSlot: TimeSlotType): boolean => {
+      const isStarted = (m: Match | undefined): boolean => m !== undefined && getMatchStartState([m]) === 'started';
+      const source = tournament.matches.find(m => m.id === matchId);
+      const occupant = tournament.matches.find(
+        m =>
+          formatTime(m.scheduledTime) === targetSlot.startTime &&
+          m.field === targetSlot.fieldId &&
+          m.id !== matchId
+      );
+      return isStarted(source) || isStarted(occupant);
+    },
+    [tournament.matches]
+  );
+
   // Drag and drop - now supports SWAPPING when dropping on occupied slot
   // Uses ATOMIC UPDATE to avoid race conditions
   const handleMoveMatch = useCallback(
     (matchId: string, targetSlot: TimeSlotType) => {
+      // @ZP-093: angepfiffene Spiele (läuft, Halbzeit, beendet) bleiben stehen, auch als Tauschziel
+      if (startedInDrop(matchId, targetSlot)) { return; }
+
       // SAVE TO HISTORY BEFORE MAKING CHANGES (for undo)
       saveToHistory();
 
@@ -418,16 +441,19 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         updatedAt: new Date().toISOString(),
       });
     },
-    [tournament, onTournamentUpdate, saveToHistory]
+    [tournament, onTournamentUpdate, saveToHistory, startedInDrop]
   );
 
-  // Always allow drop - we handle swapping in handleMoveMatch
+  // Swapping is handled in handleMoveMatch; angepfiffene Spiele sind weder Quelle noch Tauschziel (@ZP-093)
   const validateDrop = useCallback(
-    (_matchId: string, _targetSlot: TimeSlotType): boolean => {
-      // Always allow - swapping is handled in handleMoveMatch
+    (matchId: string, targetSlot: TimeSlotType): boolean => {
+      if (startedInDrop(matchId, targetSlot)) {
+        onRejectStarted?.();
+        return false;
+      }
       return true;
     },
-    []
+    [startedInDrop, onRejectStarted]
   );
 
   const {

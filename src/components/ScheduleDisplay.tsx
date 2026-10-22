@@ -75,7 +75,8 @@ interface ScheduleDisplayProps {
   /** Callback when starting correction mode */
   onStartCorrection?: (matchId: string) => void;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
-  onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  /** `false` = abgelehnt (angepfiffenes Spiel, @ZP-093): die Anzeige ordnet dann nicht um */
+  onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
   /** US-VIEWER-FILTERS: Set of visible match IDs (for filtering). If undefined, all matches are visible. */

@@ -330,6 +330,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
             <select
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+              disabled={isLocked}
               style={fieldSelectStyle}
               aria-label={t('sortable.fieldLabel')}
             >

@@ -109,6 +109,7 @@
   },
   "schedule": {
     "runningMatchNoPermission": "Running match cannot be edited.",
+    "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped.",
     "matchLabel": "Round {{round}}",
     "conflicts": {
       "title": "Conflicts found",

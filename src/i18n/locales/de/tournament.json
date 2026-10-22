@@ -109,6 +109,7 @@
   },
   "schedule": {
     "runningMatchNoPermission": "Laufendes Spiel kann nicht bearbeitet werden.",
+    "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen.",
     "matchLabel": "Runde {{round}}",
     "conflicts": {
       "title": "Konflikte gefunden",
