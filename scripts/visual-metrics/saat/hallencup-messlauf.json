@@ -2231,6 +2231,9 @@
                 "enabled": true
               }
             ],
+            "placementsToPlayOut": [
+              1
+            ],
             "finals": {
               "final": true,
               "thirdPlace": true,
