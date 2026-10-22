@@ -228,5 +228,10 @@
       "message_other": "{{count}} entries are still waiting to be sent. They stay on this device and will be sent with this account after your next sign-in.",
       "confirm": "Sign out anyway"
     }
+  },
+  "deviceKind": {
+    "phone": "Phone",
+    "tablet": "Tablet",
+    "computer": "Computer"
   }
 }

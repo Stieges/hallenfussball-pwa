@@ -228,5 +228,10 @@
       "message_other": "Es warten noch {{count}} Einträge auf Übertragung. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung mit diesem Konto gesendet.",
       "confirm": "Trotzdem abmelden"
     }
+  },
+  "deviceKind": {
+    "phone": "Handy",
+    "tablet": "Tablet",
+    "computer": "Laptop"
   }
 }
