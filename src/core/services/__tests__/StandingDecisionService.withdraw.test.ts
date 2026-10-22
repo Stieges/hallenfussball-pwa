@@ -10,7 +10,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { rankTournamentGroup } from '../../standings/tournamentTable';
 import { DATA, id } from '../../standings/__tests__/fixtures';
 import { closeGroup, jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from '../../standings/__tests__/decisionTestKit';
-import { resolvePlayoffPairings } from '../../generators/playoffResolver';
+import { activeRanking } from '../GroupCompletionService';
+import { placeFollowUps } from '../followUpPlacement';
 import { StandingDecisionService } from '../StandingDecisionService';
 import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
 import type { Tournament } from '../../../types/tournament';
@@ -104,7 +105,7 @@ describe("A-13b-C: echter Zustand „Gruppe abgeschlossen“ (löst die Zwischen
   it('@W2A-070 ein besetztes oder angepfiffenes Folgespiel allein macht die Gruppe nicht „abgeschlossen“ (Zwischenregel abgelöst)', async () => {
     const repo = new MemoryRepo(lage048());
     expect((await repo.service(['e-west']).decide(repo.tournament.id, shootout('W', 'S', 4, 3, 'A'))).ok).toBe(true);
-    resolvePlayoffPairings(repo.tournament);
+    repo.tournament = placeFollowUps(repo.tournament, 'A', activeRanking(repo.tournament, 'A')).tournament;
     repo.tournament = { ...repo.tournament, matches: repo.tournament.matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'running' as const } : m)) };
     expect(await repo.service().withdraw(repo.tournament.id, 'e-west')).toEqual({ ok: true });
   });

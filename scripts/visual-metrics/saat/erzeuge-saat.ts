@@ -11,7 +11,9 @@
  * (Veroeffentlichungszeit); der Aufrufer friert es ein (`SAAT_ZEIT`).
  */
 import { TournamentCreationService } from '../../../src/core/services/TournamentCreationService';
-import { resolveBracketAfterPlayoffMatch, resolvePlayoffPairings } from '../../../src/core/generators';
+import { resolveBracketAfterPlayoffMatch } from '../../../src/core/generators';
+import { activeRanking } from '../../../src/core/services/GroupCompletionService';
+import { placeFollowUps } from '../../../src/core/services/followUpPlacement';
 import { cacheColumns, reduceMatch, serverRules } from '../../../src/core/match';
 import type { EngineEvent, MatchContext, MatchRules } from '../../../src/core/match';
 import { MATCH_COPY_FORMAT_VERSION, matchCopyKey } from '../../../src/core/match/client/matchCopy';
@@ -265,6 +267,13 @@ const seiteId = (m: Match, seite: 'slotA' | 'slotB'): string => {
 }
 
 /** Gemeinsames Gerüst: ersetzt Spiele und sammelt die Engine-Kopien. */
+/** A-13c: „Gruppe abschließen“ für jede Gruppe (statt des entfernten automatischen Besetzens): Finalrunde mit der Tabelle besetzen. */
+function schliesseGruppenAb(t: Tournament): void {
+  for (const gruppe of ['A', 'B']) {
+    t.matches = placeFollowUps(t, gruppe, activeRanking(t, gruppe)).tournament.matches
+  }
+}
+
 function werkbank(t: Tournament): { kopien: EngineKopie[]; ersetze: (alt: Match, e: MatchMitKopie) => void } {
   const kopien: EngineKopie[] = []
   return {
@@ -309,7 +318,7 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
     const tore = [...Array.from({ length: a }, () => seiteId(m, 'slotA')), ...Array.from({ length: b }, () => seiteId(m, 'slotB'))]
     ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore, bis: 'ende' }, start + i * 900_000))
   })
-  resolvePlayoffPairings(t)
+  schliesseGruppenAb(t)
 
   const [hf1, hf2] = halbfinaleVon(t)
   // Halbfinale 1: 1:1, die Verlaengerung entscheidet (Tor Heim).
@@ -377,7 +386,7 @@ async function erzeugePhasenturnier(art: PhasenArt, nr: number): Promise<Erzeugt
   gruppe.forEach((m, i) => {
     ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore: [seiteId(m, 'slotA')], bis: 'ende' }, start + i * 900_000))
   })
-  resolvePlayoffPairings(t)
+  schliesseGruppenAb(t)
   const [hf1] = halbfinaleVon(t)
   const [a, b] = [seiteId(hf1, 'slotA'), seiteId(hf1, 'slotB')]
   const plan: EreignisPlan =
