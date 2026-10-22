@@ -46,6 +46,7 @@ import { istAngepfiffenUndNichtBeendet } from './model/cockpitPhase';
 import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
 import { useTeamColumns } from './hooks/useTeamColumns';
+import { toTeamSummaryModel } from './model/toTeamSummaryModel';
 import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
@@ -130,6 +131,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern, fouls: foulsJeSeite,
     sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers,
   });
+  // Nach dem Abpfiff statt der Tastenblöcke die Zusammenfassung (@SL-048); sie liest nur die Einträge des Spiels, nach dem Neuladen steht sie wieder da (@SL-115)
+  const zusammenfassung = useMemo(() => {
+    if (!currentMatch || phase.zustand !== 'abgepfiffen') { return null; }
+    const je = (seite: 'home' | 'away') => toTeamSummaryModel({ match: currentMatch, seite, fouls: foulsJeSeite[seite] });
+    return { links: je(sides.links), rechts: je(sides.rechts) };
+  }, [currentMatch, phase.zustand, foulsJeSeite, sides.links, sides.rechts]);
   usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, tx);
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
@@ -224,6 +231,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           zustand={phase.zustand}
           strafstossForm={props.strafstossForm}
           columns={spalten}
+          zusammenfassung={zusammenfassung}
           sidebar={{ activePenalties: cmd.activePenalties, onEventEdit: cmd.onSidebarEventEdit }}
         />
       </main>
@@ -237,6 +245,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         steuerung={props.steuerung}
         controls={cmd.controls}
         onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
+        onKorrigieren={props.onKorrigieren ? () => { props.onKorrigieren?.(match.id); } : undefined}
         onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}
       />
 

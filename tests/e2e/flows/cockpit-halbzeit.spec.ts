@@ -3,8 +3,8 @@
  *
  * Szenarien: @SL-005 (Ablauf des ersten Abschnitts -> Halbzeit mit Pausen-Restzeit, Wiederanpfiff angeboten),
  * @SL-006 (der Wiederanpfiff startet den zweiten Abschnitt bei 0:00), @SL-009 (Ablauf der Spielzeit ->
- * Spiel abgepfiffen; der Endstand-Teil von @SL-073 ist offen: Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE; @SL-152 die Quittungszeile
- * „Abgepfiffen · 1:0 gespeichert“ unter „Ende“, 30 Sekunden lang, dann weg); Befund C-COCKPIT-HALBZEIT-START („Start“ in der Halbzeitpause meldete
+ * Spiel abgepfiffen; @SL-073/@SL-152: der Endstand bleibt 30 Sekunden stehen mit der Quittungszeile „Abgepfiffen · 1:0 gespeichert“ unter
+ * „Ende“, dann zeigt das Cockpit von selbst das nächste Spiel, B-10a); Befund C-COCKPIT-HALBZEIT-START („Start“ in der Halbzeitpause meldete
  * „Spiel fortgesetzt“, die Tafel blieb auf Halbzeit).
  *
  * Das Turnier ist so eingestellt, dass kein langes Warten nötig ist: 1 Minute Spielzeit in 2 Abschnitten = 2 x 30 Sekunden.
@@ -98,8 +98,8 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
       await page.screenshot({ path: join(bilder, `${name}-${testInfo.project.name}.png`), fullPage: false });
     };
 
-    // @SL-152: Spiel 1 über die Adresse öffnen (`?matchId=`, eine Spielauswahl gibt es nicht mehr, @SL-057), damit das Cockpit nach dem
-    // Abpfiff auf Spiel 1 bleibt (ohne Angabe springt es sofort zum folgenden) und die Quittungszeile zu sehen ist
+    // Spiel 1 über die Adresse öffnen (`?matchId=`, eine Spielauswahl gibt es nicht mehr, @SL-057): auch ein so geöffnetes Spiel hält
+    // seinen Endstand 30 Sekunden und gibt dann das nächste Spiel frei (B-10a)
     await page.goto(`/#/tournament/${TOURNAMENT_ID}/live?matchId=${SPIEL_IDS[0]}`);
     await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 10000 });
     await page.getByTestId('match-start-button').click();
@@ -128,17 +128,20 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     await bild('3-zweiter-abschnitt');
 
-    // @SL-009: nach weiteren 30 Sekunden ist das Spiel abgepfiffen. Das Cockpit bleibt hier auf dem gewählten Spiel 1; ohne Wahl
-    // springt es sofort zum nächsten Spiel (Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE, @SL-073 offen). Belegt ist der Abpfiff durch „Ende“.
+    // @SL-009 @SL-073: nach weiteren 30 Sekunden ist das Spiel abgepfiffen; „Ende“ mit dem Endstand steht, das nächste Spiel nur darunter
     await expect(page.getByTestId('scoreboard-state')).toHaveText('Ende', { timeout: 45_000 });
-    await expect(page.getByTestId('scoreboard')).toContainText(/Ende|Anstoß/);
+    await expect(page.getByTestId('scoreboard-score')).toHaveText('1:0');
+    await expect(page.getByTestId('team-name-home')).toHaveText('FC Test A');
 
     // @SL-152: das Abzeichen bleibt „Ende“, darunter die Quittungszeile mit dem tatsächlichen Endstand; nach 30 Sekunden ist sie weg
     await expect(page.getByTestId('scoreboard-state')).toHaveText('Ende');
     await expect(page.getByTestId('scoreboard-quittung')).toHaveText('Abgepfiffen · 1:0 gespeichert');
     await expect(page.getByTestId('notice-line'), '@SL-152 keine Doppelung: „Spiel abgepfiffen“ steht nicht zusätzlich in der Meldezeile').not.toContainText('abgepfiffen');
     await bild('4-abgepfiffen');
+    // @SL-049 @SL-152: nach den 30 Sekunden keine Zeile mehr, und das Cockpit zeigt von selbst das nächste Spiel (kein „Ende“ mehr)
     await expect(page.getByTestId('scoreboard-quittung'), '@SL-152 Gegenbeispiel: nach den 30 Sekunden keine Zeile').toHaveCount(0, { timeout: 35_000 });
-    await expect(page.getByTestId('scoreboard-state')).toHaveText('Ende');
+    await expect(page.getByTestId('team-name-home')).not.toHaveText('FC Test A');
+    await expect(page.getByTestId('scoreboard-state')).not.toHaveText('Ende');
+    await expect(page.getByTestId('match-start-button')).toBeVisible();
   });
 });

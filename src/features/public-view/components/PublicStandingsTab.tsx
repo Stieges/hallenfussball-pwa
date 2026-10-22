@@ -42,6 +42,7 @@ export const PublicStandingsTab: React.FC<PublicStandingsTabProps> = ({ tourname
         standings={standings}
         teams={tournament.teams}
         tournament={tournament}
+        tieDisplay="public"
       />
     </Card>
   );

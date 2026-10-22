@@ -2,7 +2,7 @@
 #
 # coadmin-einsatz-check.sh — Container-Beweis fuer supabase/migrations/20261110_004_coadmin_einsatz.sql (CA-2,
 # plan-coadmin-einsatzfaehig.md § CA-2, review-plan-coadmin.md Auflagen 2-5, 14). Muster: scripts/field-control-check.sh
-# (Wegwerf-Container supabase/postgres, --platform linux/amd64, Baseline + Migrationen seit Baseline, trap).
+# (Wegwerf-Container supabase/postgres, nativ, per DOCKER_PLATFORM ueberschreibbar, Baseline + Migrationen seit Baseline, trap).
 #
 # Probelauf in Fenster-Reihenfolge (Do 22.10.): alles vor 20261110_001 -> _001 -> _002 -> (Hook an: im Container ohne
 # Auth-Dienst nicht nachstellbar) -> _003 -> _004. Testwerte aus dem Gherkin (@BM-070, @ME-070, @HE-085): Turnierleitung
@@ -32,7 +32,7 @@
 # wird V als "uebersprungen" gemeldet (zaehlt als Abweichung -- ein Lauf ohne Rauchtest ist nicht gruen).
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigener Wegwerf-Container
-# (--platform linux/amd64), wird am Ende entfernt (trap). Einzige Harness-Anpassung: auth.users bekommt im Container die
+# (nativ, per DOCKER_PLATFORM ueberschreibbar), wird am Ende entfernt (trap). Einzige Harness-Anpassung: auth.users bekommt im Container die
 # Spalte email_confirmed_at (das Image hat eine aeltere, minimale auth.users; die Vorlage liest die Spalte).
 #
 set -euo pipefail
@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # wie field-control-check.sh
-DOCKER_PLATFORM="${DOCKER_PLATFORM:-linux/amd64}"
+DOCKER_PLATFORM="${DOCKER_PLATFORM:-}" # leer = Plattform des Rechners (nativ); z. B. linux/amd64 erzwingt Emulation
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
@@ -113,7 +113,7 @@ trap cleanup EXIT
 
 start_container() {
   CURRENT_CONTAINER="$CONTAINER_PREFIX-$1"
-  docker run -d --platform "$DOCKER_PLATFORM" --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
+  docker run -d ${DOCKER_PLATFORM:+--platform "$DOCKER_PLATFORM"} --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
   local ready=0
   for _ in $(seq 1 120); do
     if [[ "$(docker logs "$CURRENT_CONTAINER" 2>&1 | grep -c "database system is ready to accept connections" || true)" -ge 2 ]]; then

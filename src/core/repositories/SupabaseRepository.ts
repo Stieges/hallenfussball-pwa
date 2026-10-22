@@ -15,7 +15,7 @@ import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, R
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import type { StandingDecision } from '../../types/tournament';
-import { writeStandingDecisionsToCloud } from './standingDecisionsCloud';
+import { writeStandingDecisionsToCloud, writePlacementsToPlayOutToCloud } from './standingDecisionsCloud';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -735,6 +735,11 @@ export class SupabaseRepository implements ITournamentRepository {
   /** Paket TB: nur `config.standingDecisions`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
   updateStandingDecisions(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
     return writeStandingDecisionsToCloud(getSupabase(), tournamentId, decisions, expectedVersion);
+  }
+
+  /** Fixrunde TB-6: nur `config.placementsToPlayOut`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
+  updatePlacementsToPlayOut(tournamentId: string, places: number[], expectedVersion: number): Promise<void> {
+    return writePlacementsToPlayOutToCloud(getSupabase(), tournamentId, places, expectedVersion);
   }
 
   async delete(id: string): Promise<void> {

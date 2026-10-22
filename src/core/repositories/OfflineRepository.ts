@@ -13,6 +13,7 @@ import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from '.
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 import { CloudQueueGuard } from './cloudQueueGuard';
 import { effectiveHostTeamIds } from '../models/hostTeams';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 import { mergeAccountList, offlineAccountList, readAccountRoleMemory, writeAccountRoleMemory, type AccountRoleMemory } from './accountListMerge';
 import { checkedVersion, withCheckedVersion } from './confirmedVersion';
 
@@ -381,6 +382,21 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             const serverVersion = checkedVersion(local) === expectedVersion ? expectedVersion + 1 : local.serverVersion;
             // @FU-110: keine Kette über eine Entscheidung (die Ansicht kennt sie ggf. nicht – ein Voll-Speichern nähme sie zurück)
             await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1, serverVersion, ownUploadsFrom: undefined });
+        }
+    }
+
+    /**
+     * Fixrunde TB-6: die Einstellung „Plätze ausspielen“ nur mit Netz und nur dieses Feld (wie die Entscheidungen); ohne Netz
+     * `NetworkError` (isOffline), nichts eingereiht. Danach lokale Kopie mit neuer Version, Entscheidungen bleiben.
+     */
+    async updatePlacementsToPlayOut(id: string, places: number[], expectedVersion: number): Promise<void> {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            throw new NetworkError('Die Einstellung braucht eine Verbindung.', true);
+        }
+        await this.supabaseRepo.updatePlacementsToPlayOut(id, places, expectedVersion);
+        const local = await this.localRepo.get(id);
+        if (local) {
+            await this.localRepo.cacheCloudCopy({ ...local, placementsToPlayOut: parsePlacementsToPlayOut(places), version: expectedVersion + 1 });
         }
     }
 
