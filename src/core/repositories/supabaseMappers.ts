@@ -679,6 +679,15 @@ export function mapTournamentFromSupabase(
  * Maps frontend Tournament to Supabase insert format
  * Returns tournament row, team rows, and match rows
  */
+/**
+ * @FU-128 (C-STARTTIME): `start_time` ist vom Typ time. Eine leere Zeichenkette oder ein Anzeigetext wie
+ * „09:00 - 16:00“ lehnt Postgres ab; ohne gültige Uhrzeit geht NULL.
+ */
+function startTimeForDb(value: string | undefined): string | null {
+  const time = value?.trim();
+  return time && /^\d{1,2}:\d{2}(:\d{2})?$/.test(time) ? time : null;
+}
+
 export function mapTournamentToSupabase(
   tournament: Tournament,
   ownerId: string
@@ -742,7 +751,7 @@ export function mapTournamentToSupabase(
     sport: tournament.sport,
     tournament_type: tournament.tournamentType,
     date: tournament.startDate ?? tournament.date,
-    start_time: tournament.startTime ?? tournament.timeSlot ?? null,
+    start_time: startTimeForDb(tournament.startTime ?? tournament.timeSlot), // @FU-128
     location_name: tournament.location.name ?? null,
     location_street: tournament.location.street ?? null,
     location_city: tournament.location.city ?? null,
