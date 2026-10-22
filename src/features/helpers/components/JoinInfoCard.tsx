@@ -19,7 +19,7 @@ const card: CSSProperties = {
   padding: cssVars.spacing.md,
   display: 'flex',
   flexDirection: 'column',
-  gap: cssVars.spacing.sm,
+  gap: cssVars.spacing.xs,
 };
 const meta: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm };
 const titleStyle: CSSProperties = {

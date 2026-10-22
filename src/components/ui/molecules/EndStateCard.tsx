@@ -47,7 +47,7 @@ const titleStyle: CSSProperties = {
   overflowWrap: 'break-word',
   maxWidth: '100%',
 };
-const textStyle: CSSProperties = { margin: 0, maxWidth: '100%', overflowWrap: 'break-word' };
+const textStyle: CSSProperties = { margin: 0, maxWidth: '100%', overflowWrap: 'break-word', fontSize: cssVars.fontSizes.md };
 const actionStyle: CSSProperties = { width: '100%', marginTop: cssVars.spacing.sm, display: 'flex', flexDirection: 'column' };
 
 export const EndStateCard = ({ tone = 'neutral', icon, title, text, extra, action, 'data-testid': testId = 'end-state-card' }: EndStateCardProps) => {

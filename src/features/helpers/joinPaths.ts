@@ -38,5 +38,6 @@ export function formatJoinDate(date: string, locale: string): string {
   if (Number.isNaN(parsed.getTime())) {
     return date;
   }
-  return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'numeric' }).format(parsed);
+  // „Sa., 28.11.“ → „Sa 28.11.“ wie im Mockup (kein Komma, kein Punkt hinter dem Wochentag)
+  return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'numeric' }).format(parsed).replace(/^(\S+?)\.?,\s*/, '$1 ');
 }

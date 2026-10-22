@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, dialogWidths } from '../../../design-tokens';
 
 const page: CSSProperties = { minHeight: 'var(--min-h-screen)', background: cssVars.colors.background, color: cssVars.colors.textPrimary };
-const header: CSSProperties = { maxWidth: dialogWidths.md, margin: '0 auto', padding: `${cssVars.spacing.md} ${cssVars.spacing.md} 0` };
+const header: CSSProperties = { maxWidth: dialogWidths.md, margin: '0 auto', padding: `${cssVars.spacing.sm} ${cssVars.spacing.md} 0` };
 const title: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.xl, lineHeight: cssVars.lineHeights.title, fontWeight: cssVars.fontWeights.bold };
 const main: CSSProperties = {
   maxWidth: dialogWidths.md,

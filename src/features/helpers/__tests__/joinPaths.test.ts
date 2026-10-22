@@ -17,8 +17,7 @@ describe('joinPaths (A-17b)', () => {
     expect(helperFieldPath('a/b', 1)).toBe('/tournament/a%2Fb/live?f=1');
   });
   it('Datum: Ortszeit ohne Zeitzonen-Sprung; Unlesbares bleibt unverändert', () => {
-    expect(formatJoinDate('2026-11-28', 'de')).toContain('28');
-    expect(formatJoinDate('2026-11-28', 'de')).toMatch(/Sa/);
+    expect(formatJoinDate('2026-11-28', 'de')).toBe('Sa 28.11.');
     expect(formatJoinDate('kaputt', 'de')).toBe('kaputt');
   });
 });
