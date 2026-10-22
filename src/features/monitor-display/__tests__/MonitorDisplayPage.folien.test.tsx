@@ -101,7 +101,7 @@ describe('@ZM-071 Nächste Spiele: Zeilen über alle Felder, Uhrzeit und Feld, n
   });
 
   it('Gegenbeispiel: ein unterbrochenes (paused) Spiel erscheint nie als nächstes', async () => {
-    const pausiert = withScheduledTimes().map(m => (m.id === 'match-8' ? { ...m, matchStatus: 'paused' } : m));
+    const pausiert = withScheduledTimes().map(m => (m.id === 'match-8' ? { ...m, matchStatus: 'paused' as const } : m));
     await starte(monitorTurnier(buildTournament({ matches: pausiert }), [slide('next-matches', { matchCount: 3 })]));
     expect(zeilen()).toHaveLength(1);
     expect(zeilen()[0]).toHaveTextContent('Kickers West');

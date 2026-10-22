@@ -138,7 +138,7 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
     const match = spiel({
       ...PLATZ_3,
       // Cache-Status 'paused' fehlt im TS-Typ (C-MATCHSTATUS-OHNE-PAUSED), wie im Cache geschrieben
-      matchStatus: 'paused',
+      matchStatus: 'paused' as const,
       timerPausedAt: new Date(JETZT).toISOString(),
       timerElapsedSeconds: 680,
       liveState: {
