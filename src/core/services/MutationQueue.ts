@@ -120,6 +120,22 @@ async function confirmLocally(localRepo: LocalStorageRepository, tournamentId: s
     }
 }
 
+/**
+ * BP-1 (@FU-123, Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN): Kennt dieses Gerät das Turnier aus der Cloud? Ja, wenn die
+ * Nutzlast oder die lokale Kopie eine Änderungszählung der Cloud trägt (`changeRevision`, nur ein Cloud-Abruf setzt sie, A-10)
+ * oder eine Kette eigener bestätigter Uploads (`ownUploadsFrom`, nur `confirmUpload` setzt sie). Dann darf ein Speichern das
+ * Turnier nicht neu anlegen. Ist die lokale Kopie nicht lesbar, zählt nur die Nutzlast.
+ */
+async function knownFromCloud(tournament: Tournament, localRepo: LocalStorageRepository): Promise<boolean> {
+    const marked = (t: Tournament | null | undefined): boolean => t?.changeRevision !== undefined || t?.ownUploadsFrom !== undefined;
+    if (marked(tournament)) { return true; }
+    try {
+        return marked(await localRepo.get(tournament.id));
+    } catch {
+        return false;
+    }
+}
+
 /** A-08f3c2 (Regel Q): Turnier eines Eintrags -- SAVE trägt das Turnier, DELETE die ID, die übrigen `tournamentId`. */
 function tournamentIdOf(type: MutationType, payload: unknown): string | null {
     if (type === 'SAVE_TOURNAMENT') { return (payload as Tournament | null)?.id ?? null; }
@@ -290,7 +306,11 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         // C-VERSION-MEHRDEUTIG (@FU-106): geprüft wird gegen die bestätigte Version der (zusammengefassten)
                         // Nutzlast, nie gegen die lokal gestempelte; danach gilt der Upload als bestätigt.
                         const base = checkedVersion(tournament);
-                        const reached = await supabaseRepo.save(withCheckedVersion(tournament));
+                        const payload = withCheckedVersion(tournament);
+                        // @FU-123: ein aus der Cloud bekanntes Turnier nicht neu anlegen; sonst (@FU-124) unverändert
+                        const reached = await (await knownFromCloud(tournament, localRepo)
+                            ? supabaseRepo.save(payload, { mustExist: true })
+                            : supabaseRepo.save(payload));
                         reachedById.set(item.id, reached); // @FU-110: für das Anheben wartender Einträge (rebasePending)
                         await confirmLocally(localRepo, tournament.id, base, reached);
                         break;

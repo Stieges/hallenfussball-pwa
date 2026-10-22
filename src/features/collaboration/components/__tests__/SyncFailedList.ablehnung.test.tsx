@@ -68,3 +68,18 @@ describe('@FU-126 Liste gestörter Übertragungen: eindeutige Ablehnung mit Grun
     expect(screen.getByTestId('sync-retry-dl-1')).toBeTruthy();
   });
 });
+
+describe('@FU-123 Liste gestörter Übertragungen: Turnier gibt es nicht mehr (Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN)', () => {
+  it('@FU-123 „Nicht übernommen – Turnier gibt es nicht mehr“, kein „Erneut versuchen“', async () => {
+    await renderWithI18n(<SyncFailedList items={[eintrag({ rejection: 'tournamentGone' })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('sync-failed-reason-dl-1').textContent).toBe('Nicht übernommen – Turnier gibt es nicht mehr');
+    expect(screen.queryByTestId('sync-retry-dl-1')).toBeNull();
+  });
+
+  it('@FU-123 auf Englisch', async () => {
+    await renderWithI18n(<SyncFailedList items={[eintrag({ rejection: 'tournamentGone' })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />, 'en');
+
+    expect(screen.getByTestId('sync-failed-reason-dl-1').textContent).toBe('Not accepted – tournament no longer exists');
+  });
+});

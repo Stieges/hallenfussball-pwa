@@ -34,7 +34,7 @@ const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     lastError: z.string().optional(),
     conflict: z.boolean().optional(),
     discardedCopy: z.boolean().optional(),
-    rejection: z.enum(['invalidValue']).optional(),
+    rejection: z.enum(['invalidValue', 'tournamentGone']).optional(),
 });
 
 /**
@@ -69,7 +69,7 @@ export interface FailedMutationItem<TType extends string = string> extends Gener
     discardedCopy?: boolean;
     /**
      * BP-1 (@FU-126, Befund C-ENDGUELTIG-SOFORT-MELDEN): vom Server eindeutig abgelehnt, ohne Wiederholung abgelegt.
-     * `invalidValue`: ungültiger Wert. Ein Konflikt trägt weiter `conflict`.
+     * `invalidValue`: ungültiger Wert; `tournamentGone`: Turnier gibt es nicht mehr (@FU-123). Ein Konflikt trägt weiter `conflict`.
      */
     rejection?: Exclude<DefinitiveRejectionReason, 'conflict'>;
 }
@@ -288,7 +288,7 @@ export class GenericMutationQueue<TType extends string> {
             lastError: error,
             ...(reason === 'conflict' ? { conflict: true } : {}),
             ...(reason === 'discardedCopy' ? { discardedCopy: true } : {}),
-            ...(reason === 'invalidValue' ? { rejection: reason } : {}),
+            ...(reason === 'invalidValue' || reason === 'tournamentGone' ? { rejection: reason } : {}),
         };
         this.failedQueue.push(failedItem);
         this.saveFailed();

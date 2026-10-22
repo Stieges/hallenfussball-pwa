@@ -344,9 +344,24 @@ export function isVersionConflict(error: unknown): boolean {
  * - `conflict`: Versionsprüfung (ein anderes Gerät hat inzwischen gespeichert)
  * - `invalidValue`: ungültiger Wert – Postgres-Klasse 22 (Datenfehler) und 23 (Integrität), eigene Codes HF002/HF003,
  *   Team noch von einem Spiel referenziert
+ * - `tournamentGone`: das Turnier gibt es in der Cloud nicht mehr (`TournamentGoneError`)
  * `null`: unklar (z. B. 42501 Rechte, Netz, unbekannte Codes) – die Warteschlange wiederholt wie bisher.
  */
-export type DefinitiveRejectionReason = 'conflict' | 'invalidValue';
+export type DefinitiveRejectionReason = 'conflict' | 'invalidValue' | 'tournamentGone';
+
+/**
+ * BP-1 (Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN, @FU-123): Das Gerät kennt das Turnier aus der Cloud, dort gibt es
+ * die Zeile aber nicht mehr (endgültig gelöscht oder nicht mehr sichtbar). `save()` legt es dann nicht neu an.
+ */
+export class TournamentGoneError extends Error {
+  public readonly tournamentId: string;
+
+  constructor(tournamentId: string) {
+    super(`Turnier ${tournamentId} gibt es in der Cloud nicht mehr – nicht neu angelegt`);
+    this.name = 'TournamentGoneError';
+    this.tournamentId = tournamentId;
+  }
+}
 
 /** Postgres-Fehlerklassen 22 (data exception) und 23 (integrity constraint violation), fünfstellige SQLSTATE. */
 const INVALID_VALUE_SQLSTATE = /^2[23][0-9A-Z]{3}$/;
@@ -378,6 +393,9 @@ function isInvalidValueRejection(error: unknown): boolean {
 export function definitiveRejectionReason(error: unknown): DefinitiveRejectionReason | null {
   if (isVersionConflict(error)) {
     return 'conflict';
+  }
+  if (error instanceof TournamentGoneError) {
+    return 'tournamentGone';
   }
   return isInvalidValueRejection(error) ? 'invalidValue' : null;
 }

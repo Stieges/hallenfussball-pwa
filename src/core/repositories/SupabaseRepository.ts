@@ -11,7 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
+import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, TournamentGoneError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import type { StandingDecision } from '../../types/tournament';
@@ -222,7 +222,12 @@ export class SupabaseRepository implements ITournamentRepository {
    * Befund C-VERSION-NACH-ERSTANLAGE (@FU-110): liefert die Version, die die Zeile danach am Server trägt (Update: Basis + 1,
    * Neuanlage: 1, Upsert ohne Version: die geschriebene) – das Gerät vermerkt genau sie als bestätigt.
    */
-  async save(tournament: Tournament): Promise<number> {
+  /**
+   * BP-1 (@FU-123, Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN): `mustExist` – das Gerät kennt das Turnier aus der Cloud.
+   * Fehlt die Zeile dort, legt save() sie nicht neu an, sondern wirft `TournamentGoneError` (eindeutige Ablehnung).
+   * Ohne `mustExist` (noch nie in der Cloud, @FU-124) legt die erste Übertragung das Turnier an.
+   */
+  async save(tournament: Tournament, options: { mustExist?: boolean } = {}): Promise<number> {
     // Get current user for owner_id
     const {
       data: { user },
@@ -386,6 +391,8 @@ export class SupabaseRepository implements ITournamentRepository {
 
         if (existing) {
           throw new OptimisticLockError('Turnier wurde zwischenzeitlich verändert. Bitte neu laden.');
+        } else if (options.mustExist) {
+          throw new TournamentGoneError(tournament.id); // @FU-123: gelöscht – nicht neu anlegen
         } else {
           // New tournament with predefined version? Treat as insert
           const { error: insertError } = await getSupabase()
@@ -398,6 +405,11 @@ export class SupabaseRepository implements ITournamentRepository {
     } else {
       // Legacy/Fallback: Upsert (Blind Overwrite)
       // If version is missing, we initialize it to 1 if inserting
+      if (options.mustExist) {
+        // @FU-123: der Upsert legte eine fehlende Zeile still neu an – vorher prüfen, ob es sie noch gibt
+        const { data: existing } = await getSupabase().from('tournaments').select('id').eq('id', tournament.id).single();
+        if (!existing) { throw new TournamentGoneError(tournament.id); }
+      }
       reachedVersion = tournamentRow.version ?? 1;
       const { error } = await getSupabase()
         .from('tournaments')
