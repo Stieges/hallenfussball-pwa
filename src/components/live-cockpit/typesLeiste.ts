@@ -20,8 +20,12 @@ export interface LiveCockpitLeisteProps {
    * Taste da; der Helfer bekommt stattdessen den Hinweis (@HE-043).
    */
   onKorrigieren?(matchId: string): void;
-  /** Wer das Feld leitet, wenn dieses Gerät nur liest (@SL-046, @SL-015; Quelle B-49). Mit `onUebernehmen` steht „Spielleitung übernehmen“ da. */
-  steuerung?: { leitetName: string | null; onUebernehmen?: () => void } | null;
+  /**
+   * Ein anderes Gerät steuert das Feld, dieses liest nur (@FU-026, @SL-046; Quelle B-49 `useCockpitFieldControl`): Zeile „Feld 2 wird
+   * von Tom gesteuert“ (ohne Namen „… von einem anderen Gerät …“), nach dem Verlust der Steuer „Die Spielleitung hat jetzt Olli“
+   * (`verloren`, @FU-027). Mit `onUebernehmen` steht „Spielleitung übernehmen“ da (nur die Turnierleitung).
+   */
+  steuerung?: { leitetName: string | null; verloren?: boolean; onUebernehmen?: () => void } | null;
   /** Das Recht wurde entzogen (@HE-056, A-18): ersetzt die ganze Hülle durch den Hinweis mit der Zahl übergebener Einträge. */
   zugriffEntzogen?: { uebergebeneEintraege: number } | null;
   /** Entscheidung nach Gleichstand wählen (@SL-053, B-09a); ohne Handler bleibt die Hauptaktion gesperrt. */

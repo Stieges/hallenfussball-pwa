@@ -25,6 +25,7 @@ import { buildSideContext } from '../../components/schedule/matchSides';
 import { useFieldMatchSelection } from './hooks/useFieldMatchSelection';
 import { useEngineMatchInit } from './hooks/useEngineMatchInit';
 import { useCockpitKorrektur } from './hooks/useCockpitKorrektur';
+import { useCockpitFieldControl } from './hooks/useCockpitFieldControl';
 import { toMatchSummary } from './model/toMatchSummary';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
 import { StorageWarningBanner } from '../../components/StorageWarningBanner';
@@ -107,6 +108,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     currentMatchData ? liveMatches.get(currentMatchData.id) ?? null : null,
     [currentMatchData, liveMatches]
   );
+  // B-49: Steuer je Feld – fremd gesteuertes Feld nur lesend, „Spielleitung übernehmen“, Halter in der Feldwahl (@FU-026, @FU-027, @HE-049)
+  const steuer = useCockpitFieldControl({
+    tournamentId: tournament.id, feld, feldName: t('management.field', { number: feld }), canPlay, istLeitung, currentMatch,
+  });
 
   // Find last finished match
   const lastFinishedMatchData = useMemo(() => {
@@ -176,7 +181,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     <div className={vollbild ? `${styles.container} ${styles.containerVollbild}` : styles.container} data-testid="management-tab">
       {vollbild && (
         <CockpitSlimHeader
-          tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld}
+          tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} halter={steuer.halter}
           verbindung={<ConnectionPill tournamentId={tournament.id} />}
         />
       )}
@@ -191,7 +196,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             tournamentName={tournament.title}
             tournamentId={tournament.id}
             cockpitSettings={tournament.matchCockpitSettings}
-            kannSteuern={canPlay}
+            kannSteuern={steuer.kannSteuern}
+            steuerung={steuer.steuerung}
+            uebernahmeVon={steuer.uebernahmeVon}
             istLeitung={istLeitung}
             onKorrigieren={korrektur.onKorrigieren}
             currentMatch={currentMatch}
@@ -235,7 +242,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       ) : leer?.art === 'keinSpiel' ? (
         <>
           {/* Ohne Spiel auf dem Feld gibt es keinen schmalen Kopf: die Feldwahl steht über der Tafel (Zone 1, @OB-030) */}
-          {tournament.numberOfFields > 1 && <div className={styles.feldwahlLeer}><FeldWahl felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} /></div>}
+          {tournament.numberOfFields > 1 && <div className={styles.feldwahlLeer}><FeldWahl felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} halter={steuer.halter} /></div>}
           <LiveCockpit {...leerProps} />
         </>
       ) : (
@@ -246,6 +253,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
       {/* Korrektur nach dem Abpfiff: Ergebnis, dann Grund (@SL-159) */}
       {korrektur.dialoge}
+      {steuer.dialog}
     </div>
   );
 };

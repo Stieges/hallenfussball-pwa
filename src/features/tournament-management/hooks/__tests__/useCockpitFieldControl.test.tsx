@@ -1,0 +1,224 @@
+/**
+ * B-49 Steuer je Feld im Cockpit (Befund C-HELFER-FELD-OHNE-SPERRE). Echte Texte (DE), echter Dialog, echte Nur-Lesen-Zeile und
+ * Feldwahl; der Server ist ein kleines Abbild des Vertrags aus `20261110_003_field_control.sql` (A-34, belegt gegen echtes Postgres
+ * in scripts/field-control-check.sh): je Feld Halter = Geräte-ID mit Epoche, `isMine` aus Sicht des fragenden Geräts, Übernahme nur
+ * mit passender Epoche. Jedes Gerät ist eine eigene Instanz mit eigener Geräte-ID.
+ * Werte aus dem Gherkin: Live-Cup, Feld 2, Tom (Helfer, Handy), Olli (Turnierleitung), Clara (Helferin), Spiel 11.
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+
+const geraet = vi.hoisted(() => ({ id: 'tom-handy' }));
+vi.mock('../../../../core/device/deviceId', () => ({ getDeviceId: () => geraet.id }));
+
+/** Abbild des Servers (A-34): Feld → Halter (Geräte-ID), Name, Bezeichnung, Epoche. */
+const server = vi.hoisted(() => ({
+  felder: new Map<number, { epoch: number; halter: string | null; label: string | null }>(),
+  namen: new Map<string, string>([['tom-handy', 'Tom'], ['tom-tablet', 'Tom'], ['olli-tablet', 'Olli'], ['clara-handy', 'Clara']]),
+  rpc: vi.fn(),
+}));
+vi.mock('../../../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: { rpc: server.rpc } }));
+
+import { initRealDeI18n } from '../../../../test/realDeI18n';
+import { MatchEngineContext, type MatchEngineContextValue } from '../../../match-engine/matchEngineContextInstance';
+import { NurLesenLeiste } from '../../../../components/live-cockpit/areas/NurLesenLeiste';
+import { FeldWahl } from '../../../../components/live-cockpit/frame/FeldWahl';
+import type { LiveMatch } from '../../../../components/live-cockpit/types';
+import { useCockpitFieldControl } from '../useCockpitFieldControl';
+
+await initRealDeI18n();
+
+function info(field: number, f: { epoch: number; halter: string | null; label: string | null }, fragt: string) {
+  return {
+    field, epoch: f.epoch, holderName: f.halter ? server.namen.get(f.halter) ?? null : null, holderRole: f.halter ? 'helper' : null,
+    holderDeviceLabel: f.halter ? f.label : null, isMine: f.halter === fragt, claimedAt: f.halter ? 1_790_000_000_000 : null,
+  };
+}
+
+function antwort(fn: string, args: Record<string, unknown>): unknown {
+  const fragt = String(args.p_device_id);
+  if (fn === 'field_control_state') {
+    return [...server.felder].map(([field, f]) => info(field, f, fragt));
+  }
+  const field = Number(args.p_field);
+  const f = server.felder.get(field) ?? { epoch: 0, halter: null, label: null };
+  if (args.p_expected_epoch !== f.epoch) {
+    return { status: 'rejected', code: 'CONTROL_CHANGED', control: info(field, f, fragt), serverTime: 1 };
+  }
+  if (f.halter === fragt) {
+    server.felder.set(field, { ...f, label: (args.p_device_label as string | undefined) ?? f.label });
+    return { status: 'unchanged', control: info(field, server.felder.get(field) ?? f, fragt), serverTime: 1 };
+  }
+  const previous = f.halter ? info(field, f, fragt) : null;
+  server.felder.set(field, { epoch: f.epoch + 1, halter: fragt, label: (args.p_device_label as string | undefined) ?? null });
+  return { status: 'taken', control: info(field, server.felder.get(field) ?? f, fragt), previous, serverTime: 1 };
+}
+
+/** Sende-Läufe des Ausgangs je Gerät (nach jedem Lauf liest das Cockpit die Steuer neu). */
+const listeners = new Set<() => void>();
+const kick = vi.fn(() => Promise.resolve());
+const engine = { sender: { subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; }, kick }, accountId: 'konto' } as unknown as MatchEngineContextValue;
+const sendeLauf = () => { act(() => { for (const l of listeners) { l(); } }); };
+
+const spiel = (status: LiveMatch['status']) => ({ id: 'spiel-11', status } as LiveMatch);
+
+function Cockpit({ name, istLeitung, match = spiel('RUNNING') }: { name: string; istLeitung: boolean; match?: LiveMatch | null }) {
+  const steuer = useCockpitFieldControl({ tournamentId: 'live-cup', feld: 2, feldName: 'Feld 2', canPlay: true, istLeitung, currentMatch: match });
+  return (
+    <section data-testid={`geraet-${name}`}>
+      <span data-testid="kann">{String(steuer.kannSteuern)}</span>
+      <span data-testid="uebernahme">{steuer.uebernahmeVon ?? '–'}</span>
+      {steuer.steuerung && <NurLesenLeiste fieldName="Feld 2" steuerung={steuer.steuerung} mitEreignissen={false} onEreignisse={() => undefined} onMehr={() => undefined} />}
+      <FeldWahl felder={2} feld={2} onFeld={() => undefined} halter={steuer.halter} />
+      {steuer.dialog}
+    </section>
+  );
+}
+
+function geraetStarten(id: string, ui: ReactNode) {
+  geraet.id = id;
+  return render(<MatchEngineContext.Provider value={engine}>{ui}</MatchEngineContext.Provider>);
+}
+
+const von = (name: string) => within(screen.getByTestId(`geraet-${name}`));
+let online = true;
+
+beforeEach(() => {
+  server.felder.clear();
+  server.rpc.mockReset();
+  server.rpc.mockImplementation((fn: string, args: Record<string, unknown>) => (fn === 'take_field_control' && !online
+    ? Promise.reject(new TypeError('Failed to fetch'))
+    : Promise.resolve({ data: antwort(fn, args), error: null })));
+  listeners.clear();
+  kick.mockClear();
+  online = true;
+  vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
+});
+afterEach(() => { vi.restoreAllMocks(); });
+
+const takeCalls = () => server.rpc.mock.calls.filter(([fn, args]) => fn === 'take_field_control' && (args as { p_device_id: string }).p_device_id === 'olli-tablet');
+
+describe('B-49 Cockpit: Steuer je Feld', () => {
+  it('@FU-026 Toms Gerät steuert Feld 2: Olli sieht „Feld 2 wird von Tom (Handy) gesteuert“, kann nicht eintragen, sieht „Spielleitung übernehmen“', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' });
+    geraetStarten('olli-tablet', <Cockpit name="olli" istLeitung />);
+    expect(await von('olli').findByText('Feld 2 wird von Tom (Handy) gesteuert')).toBeInTheDocument();
+    expect(von('olli').getByTestId('kann')).toHaveTextContent('false');
+    expect(von('olli').getByRole('button', { name: 'Spielleitung übernehmen' })).toBeInTheDocument();
+  });
+
+  it('@FU-026 Gegenbeispiel: Toms Handy selbst steuert Feld 2 und trägt ein – keine Nur-Lesen-Zeile', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' });
+    geraetStarten('tom-handy', <Cockpit name="tom" istLeitung={false} />);
+    await waitFor(() => expect(von('tom').getByRole('option', { name: 'Feld 2: dieses Gerät' })).toBeInTheDocument());
+    expect(von('tom').getByTestId('kann')).toHaveTextContent('true');
+    expect(von('tom').queryByTestId('leiste-nur-lesen')).toBeNull();
+  });
+
+  it('@FU-027 @SL-046 Olli bestätigt „Spielleitung übernehmen“: Ollis Gerät steuert, Toms Gerät zeigt „Die Spielleitung hat jetzt Olli (Laptop)“ und trägt nicht mehr ein', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' });
+    geraetStarten('tom-handy', <Cockpit name="tom" istLeitung={false} />);
+    await waitFor(() => expect(von('tom').getByTestId('kann')).toHaveTextContent('true'));
+    geraetStarten('olli-tablet', <Cockpit name="olli" istLeitung />);
+    await userEvent.click(await von('olli').findByRole('button', { name: 'Spielleitung übernehmen' }));
+    // Rückfrage nennt Halter und Folge; erst die Bestätigung übernimmt
+    expect(screen.getByTestId('takeover-halter')).toHaveTextContent('Feld 2 wird gerade von Tom (Handy) gesteuert');
+    expect(takeCalls()).toHaveLength(0);
+    await userEvent.click(screen.getByTestId('takeover-confirm'));
+
+    await waitFor(() => expect(von('olli').getByTestId('kann')).toHaveTextContent('true'));
+    expect(takeCalls()[0][1]).toMatchObject({ p_tournament_id: 'live-cup', p_field: 2, p_expected_epoch: 1, p_device_label: 'computer' });
+    expect(screen.queryByTestId('takeover-dialog')).toBeNull();
+    expect(kick).toHaveBeenCalled();
+
+    sendeLauf();
+    expect(await von('tom').findByText('Die Spielleitung hat jetzt Olli (Laptop)')).toBeInTheDocument();
+    expect(von('tom').getByTestId('kann')).toHaveTextContent('false');
+  });
+
+  it.each([
+    ['Olli (normale Übernahme, ohne Notübernahme)', 'olli-tablet', true],
+  ])('@FU-028 %s hat kein Netz: „Übernehmen geht nur mit Netz“, Toms Gerät steuert weiter', async (_person, id, leitung) => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' });
+    geraetStarten(id, <Cockpit name="person" istLeitung={leitung} />);
+    await userEvent.click(await von('person').findByRole('button', { name: 'Spielleitung übernehmen' }));
+    online = false;
+    await userEvent.click(screen.getByTestId('takeover-confirm'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Übernehmen geht nur mit Netz');
+    expect(server.rpc.mock.calls.some(([fn]) => fn === 'take_field_control')).toBe(false);
+    expect(server.felder.get(2)?.halter).toBe('tom-handy');
+    expect(von('person').getByTestId('kann')).toHaveTextContent('false');
+    // @FU-034 (MVP+): keine Notübernahme ohne Netz – der Dialog bietet nichts anderes an
+    expect(within(screen.getByTestId('takeover-actions')).getAllByRole('button').map((b) => b.textContent)).toEqual(['Abbrechen', 'Spielleitung übernehmen']);
+  });
+
+  it('@FU-028 Helferin Clara: kein „Spielleitung übernehmen“ (Turnierleitung gegen Helfer, @FU-032 MVP+), Toms Gerät steuert weiter', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' });
+    geraetStarten('clara-handy', <Cockpit name="clara" istLeitung={false} />);
+    expect(await von('clara').findByText('Feld 2 wird von Tom (Handy) gesteuert')).toBeInTheDocument();
+    expect(von('clara').queryByRole('button', { name: 'Spielleitung übernehmen' })).toBeNull();
+    expect(von('clara').getByTestId('kann')).toHaveTextContent('false');
+    expect(server.felder.get(2)?.halter).toBe('tom-handy');
+  });
+
+  it('@FU-028 Übernahme kam zu spät (inzwischen Maria): Hinweis, keine Übernahme ohne aktuellen Stand', async () => {
+    server.namen.set('maria-handy', 'Maria');
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' });
+    geraetStarten('olli-tablet', <Cockpit name="olli" istLeitung />);
+    await userEvent.click(await von('olli').findByRole('button', { name: 'Spielleitung übernehmen' }));
+    server.felder.set(2, { epoch: 2, halter: 'maria-handy', label: 'phone' });
+    await userEvent.click(screen.getByTestId('takeover-confirm'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Feld 2 wird jetzt von Maria (Handy) gesteuert');
+    expect(server.felder.get(2)?.halter).toBe('maria-handy');
+  });
+
+  it('@SL-015 @FU-111 Toms Tablet ist aus, Olli übernimmt das laufende Spiel 11: Hinweis „Uhr prüfen“ mit Toms Namen', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-tablet', label: 'tablet' });
+    geraetStarten('olli-tablet', <Cockpit name="olli" istLeitung match={spiel('RUNNING')} />);
+    await userEvent.click(await von('olli').findByRole('button', { name: 'Spielleitung übernehmen' }));
+    await userEvent.click(screen.getByTestId('takeover-confirm'));
+    await waitFor(() => expect(von('olli').getByTestId('uebernahme')).toHaveTextContent('Tom'));
+    expect(von('olli').getByTestId('kann')).toHaveTextContent('true');
+  });
+
+  it('@SL-116 Übernahme kurz nach dem Abpfiff: Ollis Gerät steuert (Endstand und „Weiter“ kommen aus der Abpfiff-Zeit), kein Uhr-Hinweis', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-tablet', label: 'tablet' });
+    geraetStarten('olli-tablet', <Cockpit name="olli" istLeitung match={spiel('FINISHED')} />);
+    await userEvent.click(await von('olli').findByRole('button', { name: 'Spielleitung übernehmen' }));
+    await userEvent.click(screen.getByTestId('takeover-confirm'));
+    await waitFor(() => expect(von('olli').getByTestId('kann')).toHaveTextContent('true'));
+    expect(von('olli').getByTestId('uebernahme')).toHaveTextContent('–');
+  });
+
+  it('@FU-030 gleichzeitiger Anpfiff: Tom bekommt das Feld, Claras Gerät zeigt nach dem Sende-Lauf „Feld 2 wird von Tom (Handy) gesteuert“', async () => {
+    geraetStarten('clara-handy', <Cockpit name="clara" istLeitung={false} match={spiel('NOT_STARTED')} />);
+    await waitFor(() => expect(server.rpc).toHaveBeenCalled());
+    expect(von('clara').getByTestId('kann')).toHaveTextContent('true'); // frei: Clara darf anpfeifen
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' }); // Server: Tom kam zuerst, Claras Anpfiff abgelehnt
+    sendeLauf();
+    expect(await von('clara').findByText('Feld 2 wird von Tom (Handy) gesteuert')).toBeInTheDocument();
+    expect(von('clara').getByTestId('kann')).toHaveTextContent('false');
+  });
+
+  it('@HE-049 Feldübersicht: Olli sieht „Feld 2: Tom (Handy)“', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: 'phone' });
+    geraetStarten('olli-tablet', <Cockpit name="olli" istLeitung />);
+    expect(await von('olli').findByRole('option', { name: 'Feld 2: Tom (Handy)' })).toBeInTheDocument();
+    expect(von('olli').getByRole('option', { name: 'Feld 1' })).toBeInTheDocument();
+  });
+
+  it('@HE-049 Toms Gerät hat Feld 2 per Anpfiff (ohne Bezeichnung) – es trägt seine Bezeichnung mit der aktuellen Epoche nach', async () => {
+    server.felder.set(2, { epoch: 1, halter: 'tom-handy', label: null });
+    geraetStarten('tom-handy', <Cockpit name="tom" istLeitung={false} />);
+    await waitFor(() => expect(server.felder.get(2)?.label).toBe('computer'));
+    const nachtrag = server.rpc.mock.calls.find(([fn]) => fn === 'take_field_control');
+    expect(nachtrag?.[1]).toMatchObject({ p_field: 2, p_expected_epoch: 1, p_device_id: 'tom-handy' });
+    expect(server.felder.get(2)?.epoch).toBe(1);
+  });
+});
