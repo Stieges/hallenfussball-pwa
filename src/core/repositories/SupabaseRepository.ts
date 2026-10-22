@@ -41,6 +41,14 @@ function getSupabase() {
   return supabase;
 }
 
+/**
+ * BP-1 (C-AUTH-ABGELAUFEN-ANDERE-MUTATIONEN, C-ENDGUELTIG-SOFORT-MELDEN): der Code der Server-Antwort (PGRST301, 23505 …)
+ * bleibt am eingepackten Fehler je Spiel, damit die Warteschlange „Anmeldung abgelaufen“ und eindeutige Ablehnungen erkennt.
+ */
+function withPostgrestCode(wrapped: Error, original: { code?: string }): Error {
+  return original.code ? Object.assign(wrapped, { code: original.code }) : wrapped;
+}
+
 /** A-08f3a: Cloud-Stand eines Turniers mit Revision je Spiel. */
 export interface CloudReadWithRevisions {
   tournament: Tournament;
@@ -675,7 +683,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
-        errors.push(toOriginImmutableError(update.id, error) ?? new Error(`Match ${update.id}: ${error.message}`)); // A-36a: HF002
+        errors.push(toOriginImmutableError(update.id, error) ?? withPostgrestCode(new Error(`Match ${update.id}: ${error.message}`), error)); // A-36a: HF002
       } else if (!data || data.length === 0) {
         console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
         errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));
@@ -698,7 +706,7 @@ export class SupabaseRepository implements ITournamentRepository {
       const { data: updatedT, error: tError } = await query.select('id');
 
       if (tError) {
-        errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
+        errors.push(withPostgrestCode(new Error(`Failed to update tournament timestamp: ${tError.message}`), tError));
       } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
         errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
       }
