@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { NumberPicker, NUMBER_PICKER_SPERRE_MS, NUMBER_PICKER_ZEITABLAUF_MS, type NumberPickerProps } from '../NumberPicker';
 
-const texte = { titel: 'Rückennummer – Tor FC Nord', ohneNummer: 'ohne Nummer', andereNummer: 'Andere Nr.', uebernehmen: 'Übernehmen', eingabeLabel: 'Rückennummer' };
+const texte = { titel: 'Rückennummer – Tor FC Nord', ohneNummer: 'ohne Nummer', andereNummer: 'Andere Nr.', uebernehmen: 'Übernehmen', eingabeLabel: 'Rückennummer', ungueltig: 'Rückennummer: ganze Zahl von 1 bis 99.' };
 function setup(overrides: Partial<NumberPickerProps> = {}) {
   const props: NumberPickerProps = { isOpen: true, texte, ausloeserSeite: 'links', onWaehle: vi.fn(), onSchliesse: vi.fn(), testId: 'number-picker', ...overrides };
   render(<NumberPicker {...props} />);
@@ -63,6 +63,42 @@ describe('NumberPicker (Plan 3.2 / Altplan 3.2)', () => {
     fireEvent.change(feld, { target: { value: '17' } });
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
     expect(p.onWaehle).toHaveBeenCalledWith(17);
+  });
+
+  describe('@SL-172 Eingabe außerhalb 1–99 wird mit Hinweis abgewiesen, der Eintrag bleibt ohne Nummer', () => {
+    const offen = () => {
+      const p = setup();
+      ms(NUMBER_PICKER_SPERRE_MS);
+      fireEvent.click(screen.getByRole('button', { name: 'Andere Nr.' }));
+      return p;
+    };
+    it.each([['0'], ['100'], ['7a'], ['1e1'], ['-3'], ['4.5'], ['999']])('%j: Hinweis, „Übernehmen“ gesperrt, Eingabetaste übernimmt nichts', (eingabe) => {
+      const p = offen();
+      const feld = screen.getByLabelText('Rückennummer');
+      fireEvent.change(feld, { target: { value: eingabe } });
+      expect(screen.getByTestId('number-picker-ungueltig')).toHaveTextContent('ganze Zahl von 1 bis 99');
+      expect(screen.getByRole('button', { name: 'Übernehmen' })).toBeDisabled();
+      fireEvent.keyDown(feld, { key: 'Enter' });
+      expect(p.onWaehle).not.toHaveBeenCalled();
+      expect(p.onSchliesse).not.toHaveBeenCalled();
+    });
+    it.each([['7', 7], ['99', 99], ['1', 1]])('%j: kein Hinweis, übernimmt %s', (eingabe, nummer) => {
+      const p = offen();
+      const feld = screen.getByLabelText('Rückennummer');
+      fireEvent.change(feld, { target: { value: eingabe } });
+      expect(screen.queryByTestId('number-picker-ungueltig')).toBeNull();
+      fireEvent.keyDown(feld, { key: 'Enter' });
+      expect(p.onWaehle).toHaveBeenCalledWith(nummer);
+    });
+    it('leeres Feld: kein Hinweis; nach Korrektur auf eine gültige Nummer verschwindet der Hinweis', () => {
+      offen();
+      const feld = screen.getByLabelText('Rückennummer');
+      expect(screen.queryByTestId('number-picker-ungueltig')).toBeNull();
+      fireEvent.change(feld, { target: { value: '100' } });
+      expect(screen.getByTestId('number-picker-ungueltig')).toBeInTheDocument();
+      fireEvent.change(feld, { target: { value: '10' } });
+      expect(screen.queryByTestId('number-picker-ungueltig')).toBeNull();
+    });
   });
 
   it('Gegenbeispiel: eine Eingabe im Feld startet den 10-s-Zeitablauf neu', () => {
