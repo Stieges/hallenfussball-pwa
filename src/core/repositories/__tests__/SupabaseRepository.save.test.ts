@@ -160,6 +160,7 @@ vi.mock('../../services/matchProtectionNotices', () => ({
 
 import { SupabaseRepository } from '../SupabaseRepository';
 import { OptimisticLockError } from '../../errors';
+import { isAuthExpired } from '../../services/mutationQueueRetry';
 import {
   TeamStillReferencedError,
   TournamentGoneError,
@@ -959,6 +960,31 @@ describe('SupabaseRepository.save() — endgültig gelöschtes Turnier (@FU-123,
 
     await expect(repo.save(wintercup(undefined), { mustExist: true })).resolves.toBe(1);
     expect(tournamentsUpsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('@FU-123 @FU-127 Gegenbeispiel: Netzfehler bei der Prüfung „gibt es das Turnier noch?“ (mit Version) ist unklar, nicht „gibt es nicht mehr“', async () => {
+    tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: '', message: 'TypeError: Failed to fetch' } });
+    const repo = new SupabaseRepository();
+
+    const error: unknown = await repo.save(wintercup(7), { mustExist: true }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(RepositoryError);
+    expect(definitiveRejectionReason(error)).toBeNull();
+    expect(isTransientMutationError(error)).toBe(true); // wird wiederholt (@FU-127)
+    expect(tournamentsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-123 @FU-009 Gegenbeispiel: abgelaufene Anmeldung (PGRST301) bei der Prüfung ohne Version hält an, nicht „gibt es nicht mehr“', async () => {
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: 'PGRST301', message: 'JWT expired', details: null, hint: null } });
+    const repo = new SupabaseRepository();
+
+    const error: unknown = await repo.save(wintercup(undefined), { mustExist: true }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(RepositoryError);
+    expect(definitiveRejectionReason(error)).toBeNull();
+    expect(isAuthExpired(error)).toBe(true); // Warteschlange hält an (@FU-009)
+    expect(tournamentsUpsertMock).not.toHaveBeenCalled();
   });
 
   it('@FU-124 Gegenbeispiel: noch nie in der Cloud (lokal schon zweimal gespeichert, Version 2) – erste Übertragung legt an', async () => {

@@ -49,6 +49,17 @@ function withPostgrestCode(wrapped: Error, original: { code?: string }): Error {
   return original.code ? Object.assign(wrapped, { code: original.code }) : wrapped;
 }
 
+/**
+ * BP-1 Review A1 (@FU-123, @FU-127, @FU-009): Fehler der Prüfung „gibt es das Turnier noch?“. Nur PGRST116 (0 Zeilen) heißt
+ * „gibt es nicht“; jeder andere Fehler (Netz, Zeitlimit, abgelaufene Anmeldung) wird als `RepositoryError` geworfen, damit
+ * die Warteschlange ihn als unklar wiederholt bzw. bei 401 anhält – nie als „Turnier gibt es nicht mehr“.
+ */
+function throwUnlessNotFound(error: { code?: string; message: string } | null): void {
+  if (error && error.code !== 'PGRST116') {
+    throw new RepositoryError('save', error.message, error);
+  }
+}
+
 /** A-08f3a: Cloud-Stand eines Turniers mit Revision je Spiel. */
 export interface CloudReadWithRevisions {
   tournament: Tournament;
@@ -383,11 +394,12 @@ export class SupabaseRepository implements ITournamentRepository {
        
       } else if (!data || data.length === 0) {
         // No update happened - check if it exists (Conflict) or is new (Insert)
-        const { data: existing } = await getSupabase()
+        const { data: existing, error: existingError } = await getSupabase()
           .from('tournaments')
           .select('id')
           .eq('id', tournament.id)
           .single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: nur PGRST116 heißt „gibt es nicht“
 
         if (existing) {
           throw new OptimisticLockError('Turnier wurde zwischenzeitlich verändert. Bitte neu laden.');
@@ -407,7 +419,8 @@ export class SupabaseRepository implements ITournamentRepository {
       // If version is missing, we initialize it to 1 if inserting
       if (options.mustExist) {
         // @FU-123: der Upsert legte eine fehlende Zeile still neu an – vorher prüfen, ob es sie noch gibt
-        const { data: existing } = await getSupabase().from('tournaments').select('id').eq('id', tournament.id).single();
+        const { data: existing, error: existingError } = await getSupabase().from('tournaments').select('id').eq('id', tournament.id).single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: Netz/Anmeldung bleiben unklar bzw. halten an
         if (!existing) { throw new TournamentGoneError(tournament.id); }
       }
       reachedVersion = tournamentRow.version ?? 1;
