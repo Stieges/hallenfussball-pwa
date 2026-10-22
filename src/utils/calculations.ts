@@ -3,7 +3,7 @@ import { DEFAULT_FAIR_PLAY_PROFILE, type FairPlayProfile } from '../core/stats/f
 import { cardKindOf } from './cardKind';
 import { matchSideTeamId } from '../core/models/matchSlot';
 import { rankGroup } from '../core/standings/groupTable';
-import { tableInput } from '../core/standings/tournamentTable';
+import { tableInput, type TableTournament } from '../core/standings/tournamentTable';
 import { groupPlaceInfo, orderByGroupPlace } from '../core/standings/groupPlaces';
 import { standingsGroups, OVERALL_GROUP } from '../core/models/standingsGroups';
 import { matchFinalScore } from '../core/view/finalScore';
@@ -190,7 +190,7 @@ export const getMergedFinalRanking = (
   teams: Team[],
   matches: Match[],
   overallStandings: Standing[],
-  tournament: Tournament
+  tournament: TableTournament
 ): { ranking: FinalPlacement[]; finalsResult: FinalsPlacementResult } => {
   const finalsResult = calculateFinalsPlacement(teams, matches, overallStandings);
   const ranking: FinalPlacement[] = [...finalsResult.placements];
