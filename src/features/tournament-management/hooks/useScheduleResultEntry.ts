@@ -67,6 +67,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
   const { tournament, showWarning, lockFinishedResults } = options;
   const { t } = useTranslation('tournament');
   const { t: tCockpit } = useTranslation('cockpit');
+  const { t: tCommon } = useTranslation('common');
   const context = useMatchEngineContextOptional();
   const actor = useActorRole(tournament.id);
   const [prompt, setPrompt] = useState<ResultEntryPrompt | null>(null);
@@ -127,6 +128,16 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     return lastScoreAuthor(entry.matchId);
   }, [tournament, context, lastScoreAuthor]);
 
+  /** Hinweise des Notwegs (Spiel beenden); veraltete App: der vorhandene Update-Hinweis (N3). */
+  const endWarning = useCallback((key: 'offline' | 'notSent' | 'pending' | 'outdated'): string => {
+    switch (key) {
+      case 'offline': return t('schedule.resultEntry.endOffline');
+      case 'pending': return t('schedule.resultEntry.endPending');
+      case 'outdated': return tCommon('outbox.notice.clientOutdated');
+      default: return t('schedule.resultEntry.endNotSent');
+    }
+  }, [t, tCommon]);
+
   const rejectionText = useCallback(async (error: unknown, entry: ValidMatchEntry): Promise<string> => {
     if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE) {
       const current = (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores ?? {};
@@ -181,15 +192,18 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       if (route === 'end') {
         const { homeTeam, awayTeam } = entry.meta;
         eventId = await endMatchFromSchedule({
-          engine, commands, entry, field: match?.field ?? null, scoreA, scoreB, knockout,
-          online: () => typeof navigator === 'undefined' || navigator.onLine,
+          engine, commands, sender: context.sender, guest: context.accountId === 'guest',
+          entry, field: match?.field ?? null, entered: { home: scoreA, away: scoreB }, knockout,
+          online: () => context.accountId === 'guest' || typeof navigator === 'undefined' || navigator.onLine,
           readHolder: (field) => readForeignFieldHolder(supabase, tournament.id, field),
           ask,
           askShootout: async () => {
             const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
             return answer === null ? null : shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
           },
-          warn: () => showWarning(t('schedule.resultEntry.endOffline')),
+          warn: (key) => showWarning(endWarning(key)),
+          pendingCount: async () => (await context.store.load(context.accountId, id))?.pending.length ?? 0,
+          flush: () => context.sender.kick(id),
           warnStale: async (now) => showWarning(await staleText(entry, now)),
         });
         if (!eventId) {
@@ -236,7 +250,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       showWarning(await rejectionText(error, entry));
       return false;
     }
-  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText]);
+  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning]);
 
   return { enterScore, prompt, answerPrompt, changeAuthor };
 }

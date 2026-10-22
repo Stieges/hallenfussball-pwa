@@ -10,24 +10,28 @@
 # Alle Eintraege laufen ueber append_match_events (echter Weg), Uhrzeiten wie forfeit-check.sh (kleine `at`, Server klemmt).
 #
 # Kategorien:
-#   F  Fail-fast: ohne 20261110_005 bricht 20261110_009 mit Meldung ab und aendert nichts.
+#   F  Fail-fast: ohne 20261110_005 bricht 20261110_009 mit Meldung ab und aendert nichts; ebenso, wenn append_match_events
+#      schon eine spaetere Fassung mit closed_intake ist (Review A2, A-21a 20261113_003).
 #   E  Ende im Spielplan: @FU-112 (laufend, eigenes zweites Geraet, Uhr steht, Protokoll „von Olli“), @FU-114 (Spielzeit
 #      abgelaufen, Zuschauer-Spalten), @FU-115 (Toms Geraet steuert -- ohne Uebernahme, Tom pfeift das naechste Spiel an,
 #      Olli nicht), Co-Admin aus der Pause, K.-o.-Unentschieden mit Strafstoss (@FU-094), @FU-080 (geplant wie bisher).
 #   G  Gegenbeispiele: @FU-113 Helfer (Halter -> FORBIDDEN_ACTOR, nicht Halter -> NOT_CONTROLLER, freies Feld ohne
-#      Anspruch), Trainer, @FU-116 (Tor vorher -> STALE_BASE, ohne basedOn -> STALE_BASE, Tor danach -> MATCH_FINISHED),
+#      Anspruch), Trainer, @FU-116 (Tor vorher -> STALE_BASE, ohne basedOn -> STALE_BASE, Tor danach -> MATCH_FINISHED,
+#      Review A1: Tor in der Pause -> STALE_BASE auch aus paused), Review H1 (Tor der Leitung auf fremd gesteuertem Feld bleibt
+#      NOT_CONTROLLER -- die Ausnahme gilt nur fuer RESULT_ENTRY),
 #      @FU-118 (Strafstossschiessen -> abgelehnt), @FU-119 (Wertung aus running -> FORFEIT_NOT_SCHEDULED), Review M3
 #      (freies Feld: kein Anspruch), K.-o.-Unentschieden ohne Strafstoss -> SHOOTOUT_REQUIRED.
 #   S  Schema: genau vier neue Uebergaenge, Funktionszahl gleich, Rechte unveraendert, Rechte-Assertion |t, Namensliste
 #      und Zuordnung in db-drift-check.sh.
 #   W  zweites Einspielen (idempotent): Exit 0, Schema (public + match_engine) und Uebergaenge gleich.
 #   X  Rueckweg (--print-rueckweg, Anhang B der Freigabe): haelt an, solange ein Ergebnis mit basedOn gespeichert ist;
+#      haelt ebenso an, wenn append_match_events schon closed_intake enthaelt (Review A2: Rueckweg nur bis G2);
 #      danach Schema und Uebergaenge = vor der Migration, ein laufendes Spiel laesst sich nicht mehr beenden; erneut einspielbar.
 #
 # Aufrufoptionen:
 #   bash scripts/spiel-beenden-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/spiel-beenden-check.sh --without-migration  Gegenprobe: ohne 20261110_009 -> E muss ROT sein
-#   bash scripts/spiel-beenden-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M9); Exit 0 NUR, wenn
+#   bash scripts/spiel-beenden-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M11); Exit 0 NUR, wenn
 #                                                            JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/spiel-beenden-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
@@ -58,6 +62,9 @@ CURRENT_CONTAINER=""
 
 # fn_block <Datei> <Funktionsanfang> -- die Funktion woertlich (CREATE OR REPLACE ... bis zur Zeile "$$;").
 fn_block() { awk -v pat="$2" 'index($0, pat) == 1 {f = 1} f {print} f && $0 == "$$;" {exit}' "$1"; }
+# with_closed_intake <Datei> -- append_match_events aus der Datei, im Rumpf ein Kommentar "closed_intake" (Probe einer
+# spaeteren Fassung wie A-21a 20261113_003; nur im Wegwerf-Container).
+with_closed_intake() { fn_block "$1" "CREATE OR REPLACE FUNCTION public.append_match_events(" | awk '{print} $0 == "BEGIN" && !d {print "  -- closed_intake (Probe: spaetere Fassung)"; d = 1}'; }
 
 # Rueckweg (Anhang B): anhalten bei gespeicherten Ergebnissen mit basedOn, vier Uebergaenge weg, Funktionen woertlich aus
 # 20261110_005, Rechte wie vorher.
@@ -68,6 +75,10 @@ rueckweg_sql() {
   echo "SET LOCAL lock_timeout = '5s';"
   echo "DO \$\$"
   echo "BEGIN"
+  echo "  IF EXISTS (SELECT 1 FROM pg_proc WHERE oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')"
+  echo "              AND position('closed_intake' IN prosrc) > 0) THEN"
+  echo "    RAISE EXCEPTION 'Rueckweg 20261110_009: append_match_events ist schon eine spaetere Fassung (closed_intake, 20261113_003) -- Rueckweg gilt nur bis G2, danach aus der juengsten Fassung neu erzeugen';"
+  echo "  END IF;"
   echo "  IF EXISTS (SELECT 1 FROM public.match_events WHERE type = 'RESULT_ENTRY' AND event_format IS NOT NULL AND payload ? 'basedOn') THEN"
   echo "    RAISE EXCEPTION 'Rueckweg 20261110_009: im Spielplan beendete Spiele vorhanden -- sie liefen nach dem Rueckweg beim Nachrechnen wieder; vorher klaeren';"
   echo "  END IF;"
@@ -334,6 +345,10 @@ run_probes() {
   ev GOAL "$(E m9-tor)" "$(goal "$TN" 60000)"
   send "$U_TOM" "$D_TOM" "$M9"
   epoch_before="$(holder 2)"
+  ev GOAL "$(E m9-olli-tor)" "$(goal "$TS" 60500)"
+  send "$U_OLLI" "$D_OLLI" "$M9"
+  check G "Review H1: ein Tor der Turnierleitung auf Toms Feld 2 bleibt NOT_CONTROLLER (die Ausnahme gilt nur für das Beenden)" \
+    "rejected:NOT_CONTROLLER:OTHER_DEVICE|1:0" "$(results "$OUT")|$(row "$M9" | cut -d'|' -f1)"
   ev RESULT_ENTRY "$(E m9-alt)" "$(ende "$TN" "$TS" 3 1 61000 "")"
   send "$U_OLLI" "$D_OLLI" "$M9"
   check G "@FU-116 Toms Tor kam vor Ollis Eintrag an: Eintrag auf dem alten Stand -> STALE_BASE, Spiel 9 läuft weiter" \
@@ -395,7 +410,13 @@ run_probes() {
   ev MATCH_START "$(E m13-start)" '{"clockMs": null}'
   ev PAUSE "$(E m13-pause)" '{"at": 61000, "clockMs": null}'
   send "$U_OLLI" "$D_OLLI" "$M13"
-  ev RESULT_ENTRY "$(E m13-ende)" "$(ende "$TN" "$TW" 1 1 90000 "")"
+  ev GOAL "$(E m13-tor-pause)" "$(goal "$TN" 62000)"
+  send "$U_OLLI" "$D_OLLI" "$M13"
+  ev RESULT_ENTRY "$(E m13-alt)" "$(ende "$TN" "$TW" 1 1 80000 "")"
+  send "$U_MARIA" "" "$M13"
+  check G "@FU-116 Review A1: Tor in der Pause, Marias Eintrag auf dem alten Stand -> STALE_BASE auch aus paused, Spiel bleibt pausiert" \
+    "rejected:STALE_BASE|1:0|paused" "$(results "$OUT")|$(row "$M13" | cut -d'|' -f1-2)"
+  ev RESULT_ENTRY "$(E m13-ende)" "$(ende "$TN" "$TW" 1 1 90000 "$(E m13-tor-pause)")"
   send "$U_MARIA" "" "$M13"
   check E "@FU-112 Co-Admin Maria beendet das pausierte Spiel 13 mit 1:1 (Gruppenspiel, kein Strafstoß)" \
     "accepted|1:1|finished|regular|finished|true|true|true" "$(results "$OUT")|$(row "$M13")|$(viewer "$M13")"
@@ -502,6 +523,15 @@ setup_before() {
     check F "dabei nichts geaendert (kein Uebergang RESULT_ENTRY aus running)" "0" \
       "$(q "SELECT count(*) FROM public.match_transitions WHERE from_status = 'running' AND event_type = 'RESULT_ENTRY';")"
     for f in ${held[@]+"${held[@]}"}; do psql_stdin < "$f"; done
+    # Review A2: ueber einer spaeteren Fassung (closed_intake) bricht 20261110_009 ab und aendert nichts.
+    with_closed_intake "$BASE_FILE" | psql_stdin
+    set +e
+    out="$(psql_stdin < "$TARGET_FILE" 2>&1)"
+    ec=$?
+    set -e
+    check F "Review A2: ueber einer spaeteren Fassung von append_match_events (closed_intake) bricht 20261110_009 ab, nichts geaendert" "3|ja|0" \
+      "$ec|$(grep -q 'schon eine spaetere Fassung (closed_intake' <<<"$out" && echo ja || echo "nein: $out")|$(q "SELECT count(*) FROM public.match_transitions WHERE from_status = 'running' AND event_type = 'RESULT_ENTRY';")"
+    fn_block "$BASE_FILE" "CREATE OR REPLACE FUNCTION public.append_match_events(" | psql_stdin
   fi
   setup_helpers
   setup_data
@@ -509,7 +539,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -542,6 +572,11 @@ M = {
           "  ('\''decision_pending'\'', '\''RESULT_ENTRY'\'', '\''leitung'\'', '\''finished'\''),\n  ('\''shootout'\'', '\''RESULT_ENTRY'\'', '\''leitung'\'', '\''finished'\'')\n"),
          ("('\''running'\'', '\''paused'\'', '\''section_break'\'', '\''decision_pending'\''), false);",
           "('\''running'\'', '\''paused'\'', '\''section_break'\'', '\''decision_pending'\'', '\''shootout'\''), false);")],
+  # M10 (Review A1) basedOn-Pflicht nur aus running
+  "M10": [("        IF (p_event -> '\''payload'\'' -> '\''basedOn'\'') IS DISTINCT FROM",
+           "        IF p_state ->> '\''status'\'' = '\''running'\'' AND (p_event -> '\''payload'\'' -> '\''basedOn'\'') IS DISTINCT FROM")],
+  # M11 (Review H1) die Ausnahme gilt fuer jeden Eintrag der Leitung, nicht nur RESULT_ENTRY
+  "M11": [("v_actor = '\''leitung'\'' AND v_event ->> '\''type'\'' = '\''RESULT_ENTRY'\''\n", "v_actor = '\''leitung'\''\n")],
 }
 for frm, to in M[os.environ["MUT_KEY"]]:
     if s.count(frm) != 1:
@@ -631,6 +666,15 @@ SET session_replication_role = replica;
 DELETE FROM public.match_events WHERE match_id IN (SELECT match_id FROM public.match_events WHERE type = 'RESULT_ENTRY' AND payload ? 'basedOn');
 SET session_replication_role = origin;
 SQL
+# Review A2: ueber einer spaeteren Fassung (closed_intake) haelt der Rueckweg an und aendert nichts.
+with_closed_intake "$TARGET_FILE" | psql_stdin
+set +e
+X_OUT="$(rueckweg_sql 2>/dev/null | psql_stdin 2>&1)"
+X_EXIT=$?
+set -e
+check X "Review A2: Rueckweg haelt an, wenn append_match_events schon closed_intake enthaelt (nur bis G2), Uebergaenge unveraendert" "3|ja|gleich" \
+  "$X_EXIT|$(grep -q 'Rueckweg gilt nur bis G2' <<<"$X_OUT" && echo ja || echo "nein: $X_OUT")|$([[ "$(transitions_state)" == "$TRANS_W" ]] && echo gleich || echo verschieden)"
+fn_block "$TARGET_FILE" "CREATE OR REPLACE FUNCTION public.append_match_events(" | psql_stdin
 rueckweg_sql | psql_stdin
 check X "nach dem Rueckweg: Schema public + match_engine = vor der Migration (pg_dump identisch)" "identisch" \
   "$([[ "$(schema_dump)" == "$DUMP_BEFORE" ]] && echo identisch || echo verschieden)"

@@ -118,6 +118,8 @@ describe('Spiel beenden: Basis der ersetzten Funktionen (Review-Risiko 1)', () =
       expect(failFast, marker).toContain(marker);
     }
     expect(failFast).toContain("RAISE EXCEPTION '20261110_009_spiel_beenden: Vorgaenger fehlen");
+    // Review A2: nie still über eine spätere Fassung (A-21a 20261113_003, closed_intake) spielen.
+    expect(failFast).toMatch(/position\('closed_intake' IN prosrc\) > 0\) THEN\s+RAISE EXCEPTION '20261110_009_spiel_beenden: append_match_events ist schon eine spaetere Fassung/);
   });
 });
 
