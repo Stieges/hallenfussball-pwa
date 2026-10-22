@@ -708,4 +708,12 @@ SELECT 'heartbeats-select-manage-screens',
 UNION ALL
 SELECT 'positive-ci-schema-reader-select-field-control',
        coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.field_control'), 'SELECT'), false)
+
+-- 20261110_007_ci_schema_reader_grants.sql (Befund C-GRANTS-NUR-LIVE): das Leserecht auf match_corrections hat das
+-- Datenbank-Programm (21.09.) nur live vergeben; seit _007 steht es im Repo. Ohne den GRANT scheitert pg_dump
+-- --schema-only als Leserolle auf einem aus dem Repo aufgebauten Stand mit "permission denied for table
+-- match_corrections". Live schon "t"; im Container vor _007 "f".
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-match-corrections',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.match_corrections'), 'SELECT'), false)
 ;

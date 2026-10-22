@@ -160,7 +160,7 @@ pending_assertions_for() {
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
     20261110_007_ci_schema_reader_grants.sql)
-      echo "positive-ci-schema-reader-select-field-control"
+      echo "positive-ci-schema-reader-select-field-control positive-ci-schema-reader-select-match-corrections"
       ;;
     *)
       return 1
@@ -522,6 +522,7 @@ PRIVILEGE_ASSERTION_NAMES=(
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
   "positive-ci-schema-reader-select-field-control"
+  "positive-ci-schema-reader-select-match-corrections"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
