@@ -13,7 +13,7 @@ import { cssVars, iconSizeValues } from '../../../../design-tokens';
 import { deviceLabelText } from '../../../../core/device/deviceLabel';
 import type { HelperRowModel } from './helperAdminModel';
 
-// tabIndex={0} an den Inhalten: Wo der Inhalt am kleinen Handy scrollt und keine Taste enthält, braucht der Bereich einen Tastaturzugang (axe scrollable-region-focusable)
+// tabIndex={0} am ersten Absatz: Scrollt der Inhalt am kleinen Handy und enthält keine Taste, braucht der Bereich einen Tastaturzugang (axe scrollable-region-focusable)
 const stack: CSSProperties = { display: 'grid', gap: cssVars.spacing.md };
 const ctx: CSSProperties = { margin: 0, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyMd };
 const nameLine: CSSProperties = { display: 'block', fontWeight: cssVars.fontWeights.bold, fontSize: cssVars.fontSizes.lg, lineHeight: cssVars.lineHeights.title, overflowWrap: 'break-word' };
@@ -56,8 +56,8 @@ export const RenewCodeDialog = ({ openRequests, busy, onRenew, onClose }: RenewC
   );
   return (
     <Dialog isOpen onClose={onClose} title={t('teamHelpers.renew.title')} footer={footer}>
-      <div style={stack} data-testid="renew-dialog" tabIndex={0}>
-        <p style={ctx}>{t('teamHelpers.renew.text')}</p>
+      <div style={stack} data-testid="renew-dialog">
+        <p style={ctx} tabIndex={0}>{t('teamHelpers.renew.text')}</p>
         {openRequests > 0 ? <p style={{ ...ctx, fontWeight: cssVars.fontWeights.bold }}>{t('teamHelpers.renew.question', { count: openRequests })}</p> : null}
         {openRequests > 0 ? <Effect>{t('teamHelpers.renew.effect')}</Effect> : null}
       </div>
@@ -89,8 +89,8 @@ export const AccessChangeDialog = ({ kind, row, busy, onConfirm, onClose }: Acce
   );
   return (
     <Dialog isOpen onClose={onClose} title={t(`${prefix}.title`, { name })} footer={footer}>
-      <div style={stack} data-testid="access-dialog" data-kind={kind} tabIndex={0}>
-        <p style={ctx}><b style={nameLine} data-teamname>{name}</b>{' '}{t(`${prefix}.intro`, { where })}</p>
+      <div style={stack} data-testid="access-dialog" data-kind={kind}>
+        <p style={ctx} tabIndex={0}><b style={nameLine} data-teamname>{name}</b>{' '}{t(`${prefix}.intro`, { where })}</p>
         <Effect>{t(`${prefix}.effectSeen`, { name })}</Effect>
         <Effect>{t(`${prefix}.effectBlock`, { name })}</Effect>
         {kind === 'revoke' ? <Effect>{t('teamHelpers.revoke.effectNothing', { name })}</Effect> : null}
