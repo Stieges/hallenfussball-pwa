@@ -6,7 +6,7 @@
  * - Jede Funktion fängt Speicherfehler (privates Fenster, Platz, gesperrt) und arbeitet dann ohne Speicher.
  * Reines Modul ohne React; der Speicher wird übergeben.
  */
-import type { Match, Tournament } from '../../types/tournament';
+import type { Match, Team, Tournament } from '../../types/tournament';
 
 export type StandStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>;
 
@@ -52,10 +52,42 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-/** Für andere gedacht ist nur, was Zuschauer sehen dürfen: Notizen und Monitor-Konfiguration bleiben draußen. */
-function toPublicCopy(tournament: Tournament): Tournament {
-  const { adminNotes: _notes, monitors: _monitors, ...rest } = tournament;
-  return rest;
+/**
+ * Positivliste (B-15, Review A2): gespeichert wird nur, was die Zuschauer-Seite zum Rechnen und Anzeigen braucht. Nicht dabei:
+ * Ansprechpartner (`contactInfo`), Sponsoren (Base64-Logos), Notizen, Monitor-Konfiguration, AbsageGrund, Statistik-Schnappschuss,
+ * Herkunft des Imports, Trainer der Teams und die Korrekturhistorie der Spiele (Namen).
+ */
+const STAND_TOURNAMENT_KEYS = [
+  'id', 'status', 'sport', 'sportId', 'tournamentType', 'mode', 'numberOfFields', 'numberOfTeams', 'groupSystem', 'numberOfGroups',
+  'groupPhaseGameDuration', 'groupPhaseBreakDuration', 'finalRoundGameDuration', 'finalRoundBreakDuration', 'breakBetweenPhases',
+  'gamePeriods', 'halftimeBreak', 'gameDuration', 'breakDuration', 'roundLogic', 'numberOfRounds', 'placementLogic', 'placementsToPlayOut',
+  'finalsConfig', 'refereeConfig', 'fieldAssignments', 'groups', 'fields', 'finals', 'playoffConfig', 'minRestSlots', 'isKidsTournament',
+  'hideScoresForPublic', 'hideRankingsForPublic', 'resultMode', 'pointSystem', 'title', 'ageClass', 'date', 'timeSlot', 'startDate',
+  'startTime', 'location', 'organizer', 'rulebook', 'teams', 'matches', 'createdAt', 'updatedAt', 'completedAt', 'tournamentSystem',
+  'matchCockpitSettings', 'version', 'isPublic', 'shareCode', 'publishedAt', 'bibColor', 'spectatorDisplay', 'hostTeamIds',
+  'standingDecisions', 'groupCompletions', 'forfeitScore', 'openingMode',
+] as const satisfies readonly (keyof Tournament)[];
+
+function pickKeys<T extends object>(source: T, keys: readonly (keyof T)[]): Partial<T> {
+  const copy: Partial<T> = {};
+  for (const key of keys) {
+    if (source[key] !== undefined) {
+      copy[key] = source[key];
+    }
+  }
+  return copy;
+}
+
+const STAND_TEAM_KEYS = ['id', 'name', 'group', 'isRemoved', 'removedAt', 'logo', 'colors'] as const satisfies readonly (keyof Team)[];
+
+/** Kopie für den Speicher: nur die Positivliste (Turnier, Teams ohne Trainer, Spiele ohne Korrekturhistorie). */
+export function toPublicCopy(tournament: Tournament): Tournament {
+  const copy = pickKeys(tournament, STAND_TOURNAMENT_KEYS);
+  return {
+    ...copy,
+    teams: tournament.teams.map((team) => pickKeys(team, STAND_TEAM_KEYS) as Team),
+    matches: tournament.matches.map(({ correctionHistory: _history, ...match }) => match),
+  } as Tournament;
 }
 
 /** `scheduledTime` ist das einzige Datum im Turnier; JSON macht daraus einen Text. */
@@ -136,7 +168,10 @@ export function loadStand(storage: StandStorage | null, shareCode: string, today
   return { stand, contact: attempt(() => parseContact(storage.getItem(CONTACT_PREFIX + shareCode))) ?? null };
 }
 
-/** Räumt Stände anderer Turniere vom Vortag auf (@ZM-110): wer nie wiederkommt, lässt nichts liegen. */
+/**
+ * Räumt Stände anderer Turniere vom Vortag auf (@ZM-110) – beim Öffnen irgendeiner Zuschauer-Seite. Wer die Seite nie wieder
+ * öffnet, behält den Stand des letzten Besuchs (nur Positivliste, ohne Kennung) bis er den Browser-Speicher leert.
+ */
 export function purgeOldStands(storage: StandStorage | null, today: string): void {
   if (storage === null) {
     return;

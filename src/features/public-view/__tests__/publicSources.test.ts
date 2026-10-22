@@ -65,8 +65,9 @@ describe('Adapter (a) – heutiger Weg', () => {
     expect(await source.fetch(CODE, null)).toEqual({ kind: 'unreachable' });
   });
 
-  it('@ZM-021 Takt im Vordergrund 10 Sekunden', () => {
-    expect(createLegacyPublicSource(lookupOf(), withClock).pollIntervalMs).toBe(10_000);
+  it('Adapter (a) hat keinen festen Takt (BP-2: Voll-Abfrage im 10-s-Takt sprengt das Egress-Budget), Adapter (b) 10 Sekunden', () => {
+    expect(createLegacyPublicSource(lookupOf(), withClock).pollIntervalMs).toBeNull();
+    expect(createRpcPublicSource({ call: vi.fn() }).pollIntervalMs).toBe(10_000);
   });
 });
 

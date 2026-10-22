@@ -14,7 +14,7 @@ const { supabaseGet, localGet } = vi.hoisted(() => ({
 
 vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
-  supabase: { from: vi.fn(), rpc: vi.fn() },
+  supabase: { from: vi.fn(() => { const q: Record<string, unknown> = { select: () => q, eq: () => q, limit: () => Promise.resolve({ data: [], error: null }) }; return q; }), rpc: vi.fn() },
 }));
 // Konstruktor-Mock als `function`, damit `new SupabaseRepository()` funktioniert.
 vi.mock('../../../core/repositories/SupabaseRepository', () => ({

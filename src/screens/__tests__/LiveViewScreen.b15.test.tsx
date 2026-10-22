@@ -21,6 +21,12 @@ vi.mock('../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { getByShareCode: localGet }; }),
 }));
 
+// Der Takt gehört dem Adapter (b); für die Takt-Tests dieser Datei läuft der heutige Weg ausdrücklich mit 10 s.
+vi.mock('../../features/public-view/defaultPublicSource', async () => {
+  const { createLegacyPublicSource } = await import('../../features/public-view/legacyPublicSource');
+  return { defaultPublicTournamentSource: createLegacyPublicSource(undefined, { pollIntervalMs: 10_000 }) };
+});
+
 import { LiveViewScreen } from '../LiveViewScreen';
 import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
 import { fPAUSE, GAME, withCloudColumns, type Hallencup } from '../../core/view/__fixtures__/hallencupNord';

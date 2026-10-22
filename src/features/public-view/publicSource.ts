@@ -34,8 +34,11 @@ export type PublicFetchResult =
 export interface PublicTournamentSource {
   /** Welcher Adapter; ein gespeicherter Stand gilt nur für denselben (Versionen sind nicht vergleichbar) */
   readonly kind: 'legacy' | 'rpc';
-  /** Takt im Vordergrund (ms) */
-  readonly pollIntervalMs: number;
+  /**
+   * Takt im Vordergrund (ms); `null` = kein fester Takt. Dann wird nur beim Öffnen, bei Rückkehr in den Vordergrund, bei Netz und
+   * auf Wunsch (Herunterziehen) abgerufen.
+   */
+  readonly pollIntervalMs: number | null;
   fetch(shareCode: string, sinceVersion: string | null): Promise<PublicFetchResult>;
   /** Jetzt in Serverzeit (ms, @ZM-026); ohne Abgleich die Geräteuhr */
   nowMs(): number;

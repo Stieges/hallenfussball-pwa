@@ -199,7 +199,14 @@ export function usePublicTournament(
   const { pollNow } = usePolling({ task: poll, intervalMs: source.pollIntervalMs });
 
   // Anderes Turnier oder andere Quelle: Anfragen der alten Seite verwerfen
-  useEffect(() => () => { requestRef.current += 1; }, [shareCode, source]);
+  // (nicht beim bloßen Neu-Einhängen im Entwicklungsmodus: dort läuft der erste Abruf weiter und gilt)
+  const keyRef = useRef<{ shareCode: string; source: PublicTournamentSource }>({ shareCode, source });
+  useEffect(() => {
+    if (keyRef.current.shareCode !== shareCode || keyRef.current.source !== source) {
+      keyRef.current = { shareCode, source };
+      requestRef.current += 1;
+    }
+  }, [shareCode, source]);
 
   const connectionHint = useConnectionHint(loss);
 

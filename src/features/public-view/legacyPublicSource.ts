@@ -1,5 +1,5 @@
 /**
- * Adapter (a) der Zuschauer-Seite: der heutige Weg (B-15).
+ * Adapter (a) der Zuschauer-Seite: der heutige Weg (B-15). Ohne festen Takt (siehe `pollIntervalMs`).
  *
  * `getByShareCode` liefert immer das ganze Turnier und kennt kein `since_version`. Die Version einer Antwort ist deshalb
  * der Fingerabdruck ihres Inhalts (`contentVersionOf`): ist er gleich dem, den die Seite schon hält, meldet der Adapter
@@ -12,13 +12,35 @@
 import type { Tournament } from '../../types/tournament';
 import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepository';
-import { isSupabaseConfigured } from '../../lib/supabase';
-import { PUBLIC_POLL_INTERVAL_MS, type PublicFetchResult, type PublicTournamentSource } from './publicSource';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { type PublicFetchResult, type PublicTournamentSource } from './publicSource';
 import { contentVersionOf } from './publicVersion';
 import { MeasuredServerClock, type ServerClock } from './serverClock';
 
 export interface ShareCodeLookup {
   getByShareCode(code: string): Promise<Tournament | null>;
+}
+
+interface ProbeResult { error?: { message: string } | null }
+
+/**
+ * `getByShareCode` liefert bei jedem Fehler `null`, auch bei Netzfehler oder 5xx (Befund C-ZUSCHAUER-LADEFEHLER-ALS-NICHT-GEFUNDEN,
+ * Besitz Spur A). Antwortet es mit `null`, fragt diese kleine Prüfung noch einmal nach (nur die Kennung, eine Zeile): kommt
+ * dabei ein Fehler zurück, war es eine Störung und wird geworfen; „0 Zeilen“ heißt wirklich „gibt es nicht“.
+ */
+export async function assertShareCodeUnknown(code: string): Promise<void> {
+  if (supabase === null) {
+    return;
+  }
+  const result = (await supabase
+    .from('tournaments')
+    .select('id')
+    .eq('share_code', code.toUpperCase().trim())
+    .eq('is_public', true)
+    .limit(1)) as ProbeResult | undefined;
+  if (result?.error) {
+    throw new Error(result.error.message);
+  }
 }
 
 /**
@@ -33,6 +55,9 @@ export const defaultShareCodeLookup: ShareCodeLookup = {
     if (isSupabaseConfigured) {
       try {
         found = await new SupabaseRepository().getByShareCode(code);
+        if (found === null) {
+          await assertShareCodeUnknown(code);
+        }
       } catch (error) {
         cloudError = error;
         console.warn('Supabase lookup failed, trying localStorage:', error);
@@ -57,7 +82,8 @@ export const defaultShareCodeLookup: ShareCodeLookup = {
 export interface LegacyPublicSourceOptions {
   /** Serverzeit-Abgleich; Vorgabe: `server_time` des Servers (nur mit Supabase), sonst die Geräteuhr */
   clock?: ServerClock & { ensureMeasured?: () => Promise<void> };
-  pollIntervalMs?: number;
+  /** Vorgabe `null`: der heutige Weg lädt jedes Mal das ganze Turnier, ein fester Takt sprengt das Egress-Budget (BP-2). */
+  pollIntervalMs?: number | null;
 }
 
 export function createLegacyPublicSource(
@@ -72,7 +98,7 @@ export function createLegacyPublicSource(
 
   return {
     kind: 'legacy',
-    pollIntervalMs: options.pollIntervalMs ?? PUBLIC_POLL_INTERVAL_MS,
+    pollIntervalMs: options.pollIntervalMs ?? null,
     nowMs: () => clock().nowMs(),
     async fetch(shareCode: string, sinceVersion: string | null): Promise<PublicFetchResult> {
       let found: Tournament | null;

@@ -13,7 +13,8 @@ import { useCallback, useEffect, useRef } from 'react';
 export interface UsePollingOptions {
   /** Ein Abruf. Fehler fängt der Aufrufer; was hier geworfen wird, wird verschluckt, damit der Takt weiterläuft. */
   task: () => Promise<void>;
-  intervalMs: number;
+  /** Takt im Vordergrund; `null` = kein Takt, nur Abrufe beim Öffnen, bei Rückkehr in den Vordergrund und bei Netz */
+  intervalMs: number | null;
   /** Aus: kein Abruf und kein Takt */
   enabled?: boolean;
 }
@@ -61,7 +62,7 @@ export function usePolling({ task, intervalMs, enabled = true }: UsePollingOptio
     };
     const start = (): void => {
       stop();
-      if (isVisible()) {
+      if (intervalMs !== null && isVisible()) {
         timer = setInterval(() => { void pollNow(); }, intervalMs);
       }
     };

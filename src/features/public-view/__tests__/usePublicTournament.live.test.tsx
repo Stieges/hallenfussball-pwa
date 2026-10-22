@@ -152,7 +152,7 @@ describe('nur bei echter Änderung neu rechnen', () => {
   it('@ZM-021 Adapter (a): jeder Abruf liefert den ganzen Inhalt, gerechnet wird nur bei geändertem Inhalt', async () => {
     const t = buildLiveViewTournament();
     const lookup = { getByShareCode: vi.fn().mockImplementation(() => Promise.resolve(structuredClone(t))) };
-    const source = createLegacyPublicSource(lookup, { clock: { nowMs: () => Date.now() } });
+    const source = createLegacyPublicSource(lookup, { clock: { nowMs: () => Date.now() }, pollIntervalMs: TAKT });
     const { result } = renderHook(() => usePublicTournament(SHARE_CODE, source, { storage: null }));
     await advance(0);
     const schedule = result.current.schedule;
