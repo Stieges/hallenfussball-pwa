@@ -10,7 +10,7 @@
 import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
-import { Input } from '../ui';
+import { Input, Button } from '../ui';
 import { useRulesLocked } from './RulesLockContext';
 import type {
   MatchCockpitSettings,
@@ -32,9 +32,7 @@ const TOGGLE_THUMB_ON_POSITION = TOGGLE_WIDTH - TOGGLE_THUMB_SIZE - TOGGLE_THUMB
 
 // Form element dimensions
 const SELECT_MIN_WIDTH = 180;
-const SELECT_HEIGHT = 40;
 const SLIDER_WIDTH = 120;
-const SLIDER_HEIGHT = 6;
 
 // =============================================================================
 // Types
@@ -205,6 +203,7 @@ export function MatchCockpitSettingsPanel({
           <select
             value={settings.timerDirection}
             onChange={(e) => updateSetting('timerDirection', e.target.value as TimerDirection)}
+            aria-label={t('settings.timerDirection')}
             style={styles.select}
           >
             {TIMER_DIRECTION_OPTIONS.map((opt) => (
@@ -226,7 +225,8 @@ export function MatchCockpitSettingsPanel({
             value={settings.timePenaltyDurationSeconds}
             onChange={(e) => updateSetting('timePenaltyDurationSeconds', Number(e.target.value))}
             disabled={rulesLocked}
-            style={{ ...styles.select, fontSize: cssVars.fontSizes.lg }}
+            aria-label={t('settings.timePenaltyDuration')}
+            style={styles.select}
           >
             {TIME_PENALTY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -256,6 +256,7 @@ export function MatchCockpitSettingsPanel({
             }}
             onBlur={handleSchuetzenBlur}
             disabled={rulesLocked}
+            aria-label={t('settings.penaltyShooters')}
             errorMessage={schuetzenFehler ? t('settings.penaltyShootersRangeError') : undefined}
             data-testid="settings-penalty-shooters"
           />
@@ -271,6 +272,7 @@ export function MatchCockpitSettingsPanel({
             <select
               value={currentSoundValue}
               onChange={(e) => handleSoundChange(e.target.value)}
+              aria-label={t('settings.endSound')}
               style={styles.select}
             >
               {SOUND_PRESET_OPTIONS.map((opt) => (
@@ -285,14 +287,16 @@ export function MatchCockpitSettingsPanel({
               ))}
             </select>
             {onTestSound && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onTestSound}
-                style={styles.testButton}
+                style={styles.iconButton}
+                aria-label={t('settings.testSound')}
                 title={t('settings.testSound')}
               >
                 ▶
-              </button>
+              </Button>
             )}
           </div>
         </SettingRow>
@@ -312,8 +316,9 @@ export function MatchCockpitSettingsPanel({
                 aria-valuemax={100}
                 aria-valuenow={settings.soundVolume}
               />
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (settings.soundVolume > 0) {
                     updateSetting('soundVolume', 0);
@@ -321,15 +326,16 @@ export function MatchCockpitSettingsPanel({
                     updateSetting('soundVolume', 50); // Restore to default/medium volume
                   }
                 }}
-                style={styles.testButton}
+                style={styles.iconButton}
+                aria-label={settings.soundVolume > 0 ? t('settings.mute') : t('settings.unmute')}
                 title={settings.soundVolume > 0 ? t('settings.mute') : t('settings.unmute')}
               >
                 {settings.soundVolume > 0 ? '🔊' : '🔇'}
-              </button>
+              </Button>
               {onTestSound && (
-                <button type="button" onClick={onTestSound} style={styles.testButton}>
-                  Test
-                </button>
+                <Button variant="secondary" size="sm" onClick={onTestSound}>
+                  {t('settings.test')}
+                </Button>
               )}
             </div>
           </SettingRow>
@@ -346,17 +352,18 @@ export function MatchCockpitSettingsPanel({
               style={{ display: 'none' }}
               id="custom-sound-upload"
             />
-            <label htmlFor="custom-sound-upload" style={styles.uploadButton}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
               {isUploading ? t('settings.uploading') : t('settings.upload')}
-            </label>
+            </Button>
             {settings.hasCustomSound && (
-              <button
-                type="button"
-                onClick={() => void handleDeleteCustomSound()}
-                style={styles.deleteButton}
-              >
+              <Button variant="danger" size="sm" onClick={() => void handleDeleteCustomSound()}>
                 {t('settings.delete')}
-              </button>
+              </Button>
             )}
           </div>
         </SettingRow>
@@ -417,19 +424,17 @@ function Toggle({ checked, onChange, disabled, label }: ToggleProps): React.Reac
       aria-checked={checked}
       aria-label={label}
       onClick={() => !disabled && onChange(!checked)}
-      style={{
-        ...styles.toggle,
-        ...(checked ? styles.toggleOn : styles.toggleOff),
-        ...(disabled ? styles.toggleDisabled : {}),
-      }}
+      style={{ ...styles.toggle, ...(disabled ? styles.toggleDisabled : {}) }}
       disabled={disabled}
     >
-      <span
-        style={{
-          ...styles.toggleThumb,
-          ...(checked ? styles.toggleThumbOn : styles.toggleThumbOff),
-        }}
-      />
+      <span style={{ ...styles.toggleTrack, ...(checked ? styles.toggleOn : styles.toggleOff) }}>
+        <span
+          style={{
+            ...styles.toggleThumb,
+            ...(checked ? styles.toggleThumbOn : styles.toggleThumbOff),
+          }}
+        />
+      </span>
     </button>
   );
 }
@@ -467,6 +472,7 @@ const styles: Record<string, CSSProperties> = {
   },
   row: {
     display: 'flex',
+    flexWrap: 'wrap', // schmale Anzeige: Bedienelement rutscht unter die Beschriftung statt sie zu überdecken
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: cssVars.spacing.md,
@@ -477,7 +483,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: '2px',
-    flex: 1,
+    flex: '1 1 50%',
     minWidth: 0,
   },
   rowLabel: {
@@ -496,9 +502,10 @@ const styles: Record<string, CSSProperties> = {
   // Select
   select: {
     minWidth: `${SELECT_MIN_WIDTH}px`,
-    height: `${SELECT_HEIGHT}px`,
+    height: cssVars.touchTargets.minimum, // @OB-022: Bedienelemente mindestens 44 hoch
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    fontSize: cssVars.fontSizes.sm,
+    fontSize: cssVars.fontSizes.lg, // @OB-022: Eingabefelder mindestens 16
+    fontFamily: cssVars.fontFamilies.body,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
     border: `1px solid ${cssVars.colors.borderControl}`,
@@ -512,15 +519,23 @@ const styles: Record<string, CSSProperties> = {
   },
 
   // Toggle
+  // Tippfläche mindestens 44 hoch (@OB-022); die sichtbare Spur (toggleTrack) bleibt so klein wie bisher
   toggle: {
+    display: 'flex',
+    alignItems: 'center',
+    width: `${TOGGLE_WIDTH}px`,
+    height: cssVars.touchTargets.minimum,
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+  },
+  toggleTrack: {
     position: 'relative',
     width: `${TOGGLE_WIDTH}px`,
     height: `${TOGGLE_HEIGHT}px`,
     borderRadius: cssVars.borderRadius.full,
-    border: 'none',
-    cursor: 'pointer',
     transition: 'background-color 0.2s ease',
-    padding: 0,
   },
   toggleOff: {
     background: cssVars.colors.surfaceLight,
@@ -555,22 +570,16 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: cssVars.spacing.sm,
   },
+  // Schieberegler in nativer Darstellung: Tippfläche mindestens 44 hoch, Schrift mindestens 16 (@OB-022)
   slider: {
     width: `${SLIDER_WIDTH}px`,
-    height: `${SLIDER_HEIGHT}px`,
-    appearance: 'none',
-    background: cssVars.colors.surfaceLight,
-    borderRadius: cssVars.borderRadius.full,
+    height: cssVars.touchTargets.minimum,
+    fontSize: cssVars.fontSizes.lg,
+    accentColor: cssVars.colors.primary,
     cursor: 'pointer',
   },
-  testButton: {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.primary,
-    background: cssVars.colors.primaryLight,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
+  iconButton: {
+    minWidth: cssVars.touchTargets.minimum,
   },
 
   // Upload
@@ -578,28 +587,6 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: cssVars.spacing.sm,
-  },
-  uploadButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.primary,
-    background: cssVars.colors.primaryLight,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-  },
-  deleteButton: {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.error,
-    background: 'transparent',
-    border: `1px solid ${cssVars.colors.error}`,
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
   },
   errorText: {
     marginTop: cssVars.spacing.sm,
