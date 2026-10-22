@@ -94,6 +94,12 @@ export interface MutationQueueConfig<TType extends string> {
     execute: (item: GenericMutationItem<TType>) => Promise<void>;
     /** Coalesce-Schlüssel oder null (kein Coalescing) — Semantik wie Bestand. */
     coalesceKey: (type: TType, payload: unknown) => string | null;
+    /**
+     * BP-1 (@FU-125, @BM-072; Befunde C-METADATEN-ZUSAMMENFASSEN-VERLIERT-FELDER, -VERDRAENGT-TEILEN): Nutzlast nach dem Zusammenfassen mit dem letzten
+     * wartenden Eintrag gleichen Schlüssels, oder `null` = nicht zusammenfassbar (der neue Eintrag wird angehängt, die
+     * Reihenfolge bleibt). Ohne Angabe ersetzt die neue Nutzlast die alte (Bestand).
+     */
+    coalescePayload?: (type: TType, existing: unknown, incoming: unknown) => unknown;
     /** Sentry-Feature-Tag (Bestand: 'sync'). */
     sentryFeature: string;
     /**
@@ -205,11 +211,13 @@ export class GenericMutationQueue<TType extends string> {
                 if (this.config.coalesceKey(this.queue[i].type, this.queue[i].payload) === coalesceKey) { existingIndex = i; break; }
             }
 
-            if (existingIndex !== -1) {
-                // Replace existing mutation with newer payload
+            const merged = existingIndex === -1 ? null
+                : this.config.coalescePayload ? this.config.coalescePayload(type, this.queue[existingIndex].payload, payload) : payload;
+            if (existingIndex !== -1 && merged !== null) {
+                // Replace existing mutation with newer (or merged) payload
                 this.queue[existingIndex] = {
                     ...this.queue[existingIndex],
-                    payload,
+                    payload: merged,
                     timestamp: Date.now(),
                     // Keep retryCount from existing item (don't reset on coalesce)
                 };

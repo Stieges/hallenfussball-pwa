@@ -11,7 +11,7 @@ import {
     type FailedMutationItem as GenericFailedMutationItem,
 } from './GenericMutationQueue';
 import type { QueueTimers } from './mutationQueueRetry';
-import { executeMetadataMutation, type MetadataMutationPayload } from './metadataMutation';
+import { executeMetadataMutation, mergeMetadataPayloads, type MetadataMutationPayload } from './metadataMutation';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { checkedVersion, withCheckedVersion } from '../repositories/confirmedVersion';
 import { captureFeatureError } from '../../lib/sentry';
@@ -253,6 +253,11 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                 if (!id) { return null; }
                 if (type === 'SAVE_TOURNAMENT') { return `SAVE_TOURNAMENT:${id}`; }
                 return type === 'UPDATE_TOURNAMENT_METADATA' ? `UPDATE_METADATA:${id}` : null;
+            },
+            coalescePayload: (type, existing, incoming) => {
+                if (type !== 'UPDATE_TOURNAMENT_METADATA') { return incoming; }
+                // @FU-125: die jüngere Änderung gewinnt je Angabe, keine geht verloren
+                return mergeMetadataPayloads(existing as MetadataMutationPayload, incoming as MetadataMutationPayload);
             },
             scopeOf: tournamentIdOf, // A-08f3c2 (Regel Q): Zähler und Dead-Letter je Turnier
             // @FU-106 (Auflage A1), @FU-109: bis zum Laden des Server-Stands warten nur Voll-Speicherungen (Einstellungen, Teams,
