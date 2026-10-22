@@ -69,9 +69,9 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
     for (const feld of Array.from(container.querySelectorAll('select'))) {
       expect(feld.style.maxWidth).toBe('100%');
       expect(feld.style.minWidth).toMatch(/^min\(\d+px, 100%\)$/);
-      expect(feld.parentElement?.style.flexWrap, 'Zeile mit Auswahl und Taste darf umbrechen').not.toBe('nowrap');
+      expect((feld.parentElement!).style.flexWrap, 'Zeile mit Auswahl und Taste darf umbrechen').not.toBe('nowrap');
     }
-    for (const bereich of Array.from(container.querySelectorAll<HTMLElement>('select')).map((f) => f.closest('div[style*="flex-shrink"]')!)) {
+    for (const bereich of Array.from(container.querySelectorAll<HTMLElement>('select')).map((f) => f.closest<HTMLElement>('div[style*="flex-shrink"]')!)) {
       expect(bereich.style.maxWidth).toBe('100%');
     }
   });
