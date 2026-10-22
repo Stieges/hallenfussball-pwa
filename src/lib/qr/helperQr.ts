@@ -8,8 +8,3 @@ export function helperJoinUrl(code: string, baseUrl?: string): string {
   const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
   return `${origin}/#/join/${encodeURIComponent(code)}`;
 }
-
-/** Kurzadresse zum Abtippen: dieselbe Adresse ohne `https://`. */
-export function shortHelperJoinAddress(url: string): string {
-  return url.replace(/^https?:\/\//, '');
-}

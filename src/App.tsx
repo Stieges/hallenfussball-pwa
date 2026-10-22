@@ -25,7 +25,6 @@ import {
   LoginScreen,
   RegisterScreen,
   UserProfileScreen,
-  InviteAcceptScreen,
   AuthCallback,
   AuthConfirmPage,
   SetPasswordScreen,
@@ -275,7 +274,6 @@ function AppContent() {
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
-  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
   const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
@@ -287,7 +285,6 @@ function AppContent() {
   // because HashRouter puts routes in the hash fragment, not pathname
   useEffect(() => {
     const path = location.pathname; // Use React Router's parsed pathname
-    const search = location.search; // Use React Router's parsed search params
     // Local, effect-scoped route match (derived purely from `path`, which is
     // already a dependency below) — deliberately NOT the render-scope `route`
     // from useRouteMatch() above, so this effect doesn't need `route` itself in
@@ -313,12 +310,8 @@ function AppContent() {
       setLiveShareCode(liveMatch[1].toUpperCase());
       setScreen('live');
     } else if (matchedRoute?.name === 'invite') {
-      const params = new URLSearchParams(search);
-      const token = params.get('token');
-      if (token) {
-        setInviteToken(token);
-        setScreen('invite');
-      }
+      // A-18a: den Einladungsweg gibt es nicht mehr; der Hinweis auf den Helfer-QR-Code (@HE-063) kommt mit A-17b
+      setScreen('invite');
     } else if (matchedRoute?.name === 'authCallback') {
       // Handle OAuth/Magic Link callback
       setScreen('auth-callback');
@@ -464,19 +457,6 @@ function AppContent() {
     }
   };
 
-  // Helper to navigate to tournament after accepting invite
-  const handleInviteAccepted = (tournamentId: string) => {
-    setInviteToken(null);
-    // Navigate to the tournament
-    const tournament = tournaments.find(t => t.id === tournamentId);
-    if (tournament) {
-      setSelectedTournament(tournament);
-      setScreen('view');
-    } else {
-      void navigate('/');
-    }
-  };
-
   return (
     <div
       style={{
@@ -542,18 +522,6 @@ function AppContent() {
         {screen === 'settings' && (
           <SettingsScreen
             onBack={() => void navigate(-1)}
-          />
-        )}
-
-        {screen === 'invite' && inviteToken && (
-          <InviteAcceptScreen
-            token={inviteToken}
-            onAccepted={handleInviteAccepted}
-            onNeedLogin={() => setScreen('login')}
-            onCancel={() => {
-              setInviteToken(null);
-              void navigate('/');
-            }}
           />
         )}
 

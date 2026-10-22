@@ -799,7 +799,7 @@ export interface InvitationInsertInput {
 
 /**
  * Maps an invitation-creation request to a tournament_collaborators insert row.
- * Used by invitationService.createInvitation.
+ * Einladungsweg ohne Aufrufer seit A-18a (Helfer treten per QR-Code bei); wird mit der Aufräumrunde der Mapper entfernt.
  */
 export function mapInvitationInsertToSupabase(
   input: InvitationInsertInput

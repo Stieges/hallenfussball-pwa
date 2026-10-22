@@ -2,7 +2,7 @@
  * Adresse des Helfer-QR-Codes (A-18a, @HE-001): der QR trägt die Beitrittsadresse, nie die Zuschauer- oder Monitor-Adresse.
  */
 import { describe, it, expect } from 'vitest';
-import { helperJoinUrl, shortHelperJoinAddress } from '../helperQr';
+import { helperJoinUrl } from '../helperQr';
 
 describe('helperJoinUrl', () => {
   it('führt zum Beitritt: <Ursprung>/#/join/<Code> (HashRouter)', () => {
@@ -13,8 +13,5 @@ describe('helperJoinUrl', () => {
   });
   it('maskiert fremde Zeichen im Code', () => {
     expect(helperJoinUrl('A/B', 'https://x.example')).toBe('https://x.example/#/join/A%2FB');
-  });
-  it('Kurzadresse = QR-Adresse ohne https://', () => {
-    expect(shortHelperJoinAddress('https://hallen.example/#/join/ABC')).toBe('hallen.example/#/join/ABC');
   });
 });

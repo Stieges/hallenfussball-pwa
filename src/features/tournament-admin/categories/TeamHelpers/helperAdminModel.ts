@@ -94,7 +94,8 @@ export function formatValidDay(validUntil: string, locale: string): string {
     return '';
   }
   const lastMinute = new Date(cutoff.getTime() - 60_000);
-  return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Berlin' }).format(lastMinute);
+  // „Sa., 28.11.“ → „Sa 28.11.“ wie im Mockup (kein Komma, kein Punkt hinter dem Wochentag)
+  return new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Berlin' }).format(lastMinute).replace(/^(\S+?)\.?,\s*/, '$1 ');
 }
 
 export type HelperStatus = { kind: 'controls' } | { kind: 'seen'; at: string } | { kind: 'unseen' };

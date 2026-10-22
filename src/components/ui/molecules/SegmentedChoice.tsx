@@ -1,12 +1,12 @@
 /**
  * Auswahl aus wenigen Möglichkeiten in einer Reihe (A-18a, Mockup M4 `seg big`, z. B. „Feld 1 · Feld 2 · Ohne Feld“).
- * Fachfrei. Genau eine Möglichkeit ist gewählt (`role="radiogroup"`, je Knopf `role="radio"` mit `aria-checked`); die
- * Wahl steht nie nur in der Farbe: der gewählte Knopf trägt zusätzlich ein Häkchen. Jeder Knopf mindestens
- * `touchTargets.primary` hoch; bei wenig Platz umbricht die Reihe auf die nächste Zeile (Beschriftungen werden nie gekürzt).
+ * Fachfrei. Genau eine Möglichkeit ist gewählt (`role="radiogroup"`, je Knopf `role="radio"` mit `aria-checked`). Die Wahl
+ * steht nie nur in der Farbe: der gewählte Knopf ist gefüllt (Farbe des Haupttons, Schrift darauf umgekehrt) UND fett, die
+ * anderen sind leer und normal. Bis vier Möglichkeiten sitzen verbunden in einem Rahmen; ab fünf stehen sie als einzelne
+ * Knöpfe in umbrechenden Zeilen, damit Beschriftungen nie gekürzt werden. Jeder Knopf mindestens `touchTargets.primary` hoch.
  */
 import type { CSSProperties } from 'react';
-import { cssVars, iconSizeValues } from '../../../design-tokens';
-import { Icons } from '../Icons';
+import { cssVars } from '../../../design-tokens';
 
 export interface SegmentedOption<T extends string> {
   value: T;
@@ -24,56 +24,69 @@ export interface SegmentedChoiceProps<T extends string> {
   testId?: string;
 }
 
+/** Bis zu dieser Anzahl sitzen die Möglichkeiten verbunden in einem Rahmen. */
+const CONNECTED_MAX = 4;
+
 const fieldset: CSSProperties = { border: 0, margin: 0, padding: 0, minWidth: 0 };
 const legendStyle: CSSProperties = { padding: 0, margin: `0 0 ${cssVars.spacing.sm}`, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyMd, color: cssVars.colors.textPrimary };
-const row: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.sm };
 const hintStyle: CSSProperties = { margin: `${cssVars.spacing.xs} 0 0`, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 
-function optionStyle(selected: boolean, disabled: boolean): CSSProperties {
+function groupStyle(count: number): CSSProperties {
+  if (count <= CONNECTED_MAX) {
+    return {
+      display: 'grid',
+      gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`,
+      border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
+      borderRadius: cssVars.borderRadius.md,
+      overflow: 'hidden',
+      background: cssVars.colors.background,
+    };
+  }
+  return { display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.sm };
+}
+
+function optionStyle(selected: boolean, disabled: boolean, connected: boolean, first: boolean): CSSProperties {
   return {
-    flex: '1 1 auto',
-    display: 'inline-flex',
+    flex: connected ? undefined : '1 1 auto',
+    display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: cssVars.spacing.xs,
     minHeight: cssVars.touchTargets.primary,
-    padding: `0 ${cssVars.spacing.md}`,
-    border: `${cssVars.borderWidth.thin} solid ${selected ? cssVars.colors.primary : cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    backgroundColor: selected ? cssVars.colors.primaryLight : cssVars.colors.background,
-    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
+    padding: `0 ${cssVars.spacing.xs}`,
+    border: connected ? 0 : `${cssVars.borderWidth.thin} solid ${selected ? cssVars.colors.primary : cssVars.colors.borderControl}`,
+    borderLeft: connected && !first ? `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}` : undefined,
+    borderRadius: connected ? 0 : cssVars.borderRadius.md,
+    background: selected ? cssVars.colors.primary : cssVars.colors.background,
+    color: selected ? cssVars.colors.onPrimary : disabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     fontFamily: 'inherit',
     fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.semibold,
+    fontWeight: selected ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
+    textAlign: 'center',
     whiteSpace: 'nowrap',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    boxShadow: selected ? `inset 0 0 0 ${cssVars.borderWidth.thin} ${cssVars.colors.primary}` : 'none',
   };
 }
 
 export function SegmentedChoice<T extends string>({ legend, hint, options, value, onChange, disabled = false, testId = 'segmented-choice' }: SegmentedChoiceProps<T>) {
+  const connected = options.length <= CONNECTED_MAX;
   return (
     <fieldset style={fieldset} data-testid={testId}>
       <legend style={legendStyle}>{legend}</legend>
-      <div role="radiogroup" aria-label={legend} style={row}>
-        {options.map((option) => {
-          const selected = option.value === value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              disabled={disabled}
-              style={optionStyle(selected, disabled)}
-              data-testid={`${testId}-${option.value}`}
-              onClick={() => onChange(option.value)}
-            >
-              {selected ? <Icons.Check size={iconSizeValues.sm} aria-hidden="true" /> : null}
-              {option.label}
-            </button>
-          );
-        })}
+      <div role="radiogroup" aria-label={legend} style={groupStyle(options.length)}>
+        {options.map((option, index) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={option.value === value}
+            disabled={disabled}
+            style={optionStyle(option.value === value, disabled, connected, index === 0)}
+            data-testid={`${testId}-${option.value}`}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
       {hint ? <p style={hintStyle}>{hint}</p> : null}
     </fieldset>

@@ -10,8 +10,8 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../features/auth/hooks/useCan', () => ({ useCan: () => true }));
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { InviteDialog } from '../../../features/auth/components/InviteDialog';
-import { InviteLinkDialog } from '../../../features/auth/components/InviteLinkDialog';
+import { ApproveSheet } from '../../../features/tournament-admin/categories/TeamHelpers/ApproveSheet';
+import { AccessChangeDialog, RenewCodeDialog } from '../../../features/tournament-admin/categories/TeamHelpers/AccessDialogs';
 import { RoleChangeDialog } from '../../../features/auth/components/RoleChangeDialog';
 import { TransferOwnershipDialog } from '../../../features/auth/components/TransferOwnershipDialog';
 import { SyncFailedList } from '../../../features/collaboration/components/SyncFailedList';
@@ -82,8 +82,25 @@ interface Kind {
 const noop = vi.fn();
 
 const KINDS: Kind[] = [
-  { name: 'InviteDialog', mount: () => void render(<InviteDialog tournamentId="t1" onClose={noop} />) },
-  { name: 'InviteLinkDialog', mount: () => void render(<InviteLinkDialog link="https://example.org/i/abc" onClose={noop} />) },
+  // A-18a: Dialoge der Seite „Team & Helfer“
+  {
+    name: 'ApproveSheet (Zulassen-Blatt)',
+    mount: () =>
+      void render(
+        <ApproveSheet
+          request={{ id: 'r1', name: 'Tom', deviceLabel: 'phone', checkNumber: 47, createdAt: '2026-11-28T13:02:00Z', sameName: 1, sameNamePending: 1, sameNameMember: null, sameNameDeclinedAt: null }}
+          fieldCount={2} initialField={null} onFieldChange={noop} onApprove={() => Promise.resolve('done')} onClose={noop} busy={false}
+        />,
+      ),
+  },
+  { name: 'RenewCodeDialog', mount: () => void render(<RenewCodeDialog openRequests={2} busy={false} onRenew={noop} onClose={noop} />) },
+  {
+    name: 'AccessChangeDialog (Entziehen)',
+    mount: () =>
+      void render(
+        <AccessChangeDialog kind="revoke" row={{ memberId: 'm1', name: 'Tom', field: 2, status: { kind: 'controls' }, deviceLabel: 'phone', viewerOnly: false, revoked: false }} busy={false} onConfirm={noop} onClose={noop} />,
+      ),
+  },
   {
     name: 'RoleChangeDialog',
     mount: () =>

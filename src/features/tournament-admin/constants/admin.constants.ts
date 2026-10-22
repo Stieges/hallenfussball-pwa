@@ -58,6 +58,15 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     group: 'management',
     path: 'exports',
   },
+  // @OB-005 (A-18a): „Team & Helfer“ ist da, sobald der Einstieg per QR-Code gebaut ist – ohne Vertröstung.
+  {
+    id: 'team-helpers',
+    label: 'Team & Helfer',
+    description: 'Helfer-QR-Code, Anfragen und Zugänge',
+    icon: '👥',
+    group: 'management',
+    path: 'team-helpers',
+  },
   {
     id: 'sponsors',
     label: 'Sponsoren',

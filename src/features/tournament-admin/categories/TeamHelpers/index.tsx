@@ -1,28 +1,33 @@
 /**
- * TeamHelpersCategory - Team & Helper Management
+ * TeamHelpersCategory – „Team & Helfer“ (A-18a, GA5, Mockup M4): Die Turnierleitung zeigt den Helfer-QR-Code, sieht die
+ * Anfragen, lässt zu oder lehnt ab (Zulassen: Feld wählen, dann eine von vier Zahlknöpfen, S-1) und verwaltet die Zugänge
+ * (entziehen, nur zusehen). Alte Einladungswege gibt es nicht mehr (@OB-005): Helfer kommen über den QR-Code hinzu.
  *
- * Invite helpers, manage roles, and oversee team activity.
+ * Alles läuft über die Server-Funktionen aus `_008` (`helperAccessRpc`); die Seite fragt nur ab, wenn die Rolle das Recht
+ * „Helfer verwalten“ hat (@HE-062), alle 2 s und nur bei sichtbarer Seite. Ändern geht nur mit Netz (@HE-047).
  *
- * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.4
- * @see docs/concepts/MULTI-USER-KONZEPT.md
+ * @see .superpowers/sdd/2026-10-03-mvp-bauplan/plan-GA5-helfer-v2.md § A-18a, Mockup M4 (r0–r10)
  */
-
-import { useState, useEffect, CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../../design-tokens';
-import { CategoryPage, CollapsibleSection } from '../shared';
-import { Button } from '../../../../components/ui/Button';
-import { MemberList } from '../../../auth/components/MemberList';
-import { InviteDialog } from '../../../auth/components/InviteDialog';
-import { useCan } from '../../../auth/hooks/useCan';
-import { useInvitation } from '../../../auth/hooks/useInvitation';
-import type { Invitation } from '../../../auth/types/auth.types';
-import { useAuth } from '../../../auth/hooks/useAuth';
+import { Icons } from '../../../../components/ui/Icons';
+import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
+import { cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
+import { useBreakpoint } from '../../../../hooks/useBreakpoint';
 import type { Tournament } from '../../../../types/tournament';
-
-// =============================================================================
-// PROPS
-// =============================================================================
+import { useAuth } from '../../../auth/hooks/useAuth';
+import { useCan } from '../../../auth/hooks/useCan';
+import { CategoryPage } from '../shared';
+import { AccessChangeDialog, RenewCodeDialog } from './AccessDialogs';
+import { ApproveSheet } from './ApproveSheet';
+import { HelperCodeCard } from './HelperCodeCard';
+import { HelperList } from './HelperList';
+import { HelperNoRight } from './HelperNoRight';
+import { JoinRequestList } from './JoinRequestList';
+import type { HelperRowModel, JoinRequestRow } from './helperAdminModel';
+import { useHelperAdminActions } from './useHelperAdminActions';
+import { noticeText, noticeTitle } from './noticeStyles';
+import { useJoinRequests } from './useJoinRequests';
 
 interface TeamHelpersCategoryProps {
   tournamentId: string;
@@ -30,322 +35,145 @@ interface TeamHelpersCategoryProps {
   onTournamentUpdate: (tournament: Tournament) => void;
 }
 
-// =============================================================================
-// COMPONENT
-// =============================================================================
+type Dialog =
+  | { type: 'approve'; request: JoinRequestRow }
+  | { type: 'renew' }
+  | { type: 'access'; kind: 'revoke' | 'watch_only'; row: HelperRowModel };
 
-export function TeamHelpersCategory({
-  tournamentId,
-  tournament,
-}: TeamHelpersCategoryProps) {
+const columnsGap = cssVars.spacing.lg;
+const stack: CSSProperties = { display: 'grid', gap: cssVars.spacing.md, alignContent: 'start', minWidth: 0 };
+
+export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCategoryProps) {
   const { t } = useTranslation('admin');
   const { user, isAuthenticated } = useAuth();
-  const { getActiveInvitations } = useInvitation();
+  const { isTabletOrDesktop } = useBreakpoint();
+  // @HE-062: ohne das Recht „Helfer verwalten“ (Helfer-Gerät, Co-Admin ohne Recht) keine Abfrage, nur der Grund.
+  const canManage = useCan('manageHelpers', tournamentId);
+  const enabled = isAuthenticated && user !== null && canManage;
 
-  // Dialog states
-  const [showInviteDialog, setShowInviteDialog] = useState(false);
-  const [createdInviteLink, setCreatedInviteLink] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [activeInvitations, setActiveInvitations] = useState<Invitation[]>([]);
+  const { list, loadState, offline, refresh } = useJoinRequests(tournamentId, enabled);
+  const actions = useHelperAdminActions(tournamentId, enabled, refresh);
+  const [dialog, setDialog] = useState<Dialog | null>(null);
+  const [lastField, setLastField] = useState<number | null>(null);
 
-  // Mitglieder verwalten (R5/M6: nur der Eigentümer, DB prüft manageMembers). A-11: Rechte nur über useCan;
-  // manageHelpers (Co-Admin) prüfen erst A-16/A-18.
-  const canManageMembers = useCan('manageMembers', tournamentId);
+  const header = { icon: '👥', title: t('teamHelpers.title'), description: t('teamHelpers.description') };
 
-  // Load active invitations
-  useEffect(() => {
-    if (canManageMembers) {
-      void getActiveInvitations(tournamentId).then(setActiveInvitations);
-    }
-  }, [tournamentId, canManageMembers, getActiveInvitations]);
-
-  // Teams for trainer assignment
-  const availableTeams = tournament.teams.map(team => ({
-    id: team.id,
-    name: team.name,
-  }));
-
-  // Handle invite creation
-  const handleInviteCreated = (token: string, link: string) => {
-    setShowInviteDialog(false);
-    setCreatedInviteLink(link || `${window.location.origin}/invite/${token}`);
-  };
-
-  // Copy link to clipboard
-  const handleCopyLink = async () => {
-    if (!createdInviteLink) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(createdInviteLink);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = createdInviteLink;
-      document.body.appendChild(textArea);
-      textArea.select();
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for browsers without Clipboard API
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    }
-  };
-
-  // Not authenticated - show login prompt
   if (!isAuthenticated || !user) {
     return (
-      <CategoryPage
-        icon="👥"
-        title={t('teamHelpers.title')}
-        description={t('teamHelpers.description')}
-      >
-        <div style={styles.authPrompt}>
-          <div style={styles.authIcon}>🔐</div>
-          <h3 style={styles.authTitle}>{t('teamHelpers.authRequired')}</h3>
-          <p style={styles.authText}>
-            {t('teamHelpers.authRequiredDesc')}
-          </p>
-          <span style={styles.badge}>{t('teamHelpers.goToSettings')}</span>
-        </div>
+      <CategoryPage {...header}>
+        <InlineNotice tone="info" data-testid="auth-required">
+          <b style={noticeTitle}>{t('teamHelpers.authRequired')}</b>
+          <span style={noticeText}>{t('teamHelpers.authRequiredDesc')}</span>
+          <span style={noticeText}>{t('teamHelpers.goToSettings')}</span>
+        </InlineNotice>
+      </CategoryPage>
+    );
+  }
+  if (!canManage || loadState === 'noRight' || actions.codeState === 'noRight') {
+    return (
+      <CategoryPage {...header}>
+        <HelperNoRight />
       </CategoryPage>
     );
   }
 
+  const requests = list?.requests ?? [];
+  const members = list?.members ?? [];
+  const noNet = !actions.isOnline || offline;
+  const locked = noNet || actions.busy;
+  const noticeMessage = (() => {
+    const n = actions.notice;
+    if (n === null) {
+      return null;
+    }
+    switch (n.kind) {
+      case 'offline': return null; // zeigt der Hinweis „Geht nur mit Netz“
+      case 'alreadyDecided': return n.decidedBy === null ? t('teamHelpers.notice.alreadyDecidedUnknown') : t('teamHelpers.notice.alreadyDecided', { name: n.decidedBy });
+      case 'requestExpired': return t('teamHelpers.notice.requestExpired');
+      default: return t('teamHelpers.notice.failed');
+    }
+  })();
+  const showOffline = noNet || actions.notice?.kind === 'offline';
+
+  const close = () => setDialog(null);
+  const left = (
+    <div style={stack}>
+      <HelperCodeCard code={actions.code} state={actions.codeState} disabled={locked} onRenew={() => setDialog({ type: 'renew' })} />
+    </div>
+  );
+  const right = (
+    <div style={stack}>
+      {showOffline ? (
+        <InlineNotice tone="warn" icon={<Icons.WifiOff size={iconSizeValues.sm} />} data-testid="needs-network">
+          <b style={noticeTitle}>{t('teamHelpers.offline.title')}</b>
+          <span style={noticeText}>{t('teamHelpers.offline.text')}</span>
+        </InlineNotice>
+      ) : null}
+      {noticeMessage !== null ? (
+        <InlineNotice tone={actions.notice?.kind === 'failed' ? 'error' : 'info'} data-testid="action-notice">
+          {noticeMessage}
+        </InlineNotice>
+      ) : null}
+      {loadState === 'error' ? <InlineNotice tone="error" data-testid="load-error">{t('teamHelpers.loadError')}</InlineNotice> : null}
+      {loadState === 'loading' ? <p style={{ margin: 0, color: cssVars.colors.textSecondary }} role="status">{t('teamHelpers.loading')}</p> : null}
+      {loadState === 'ready' ? (
+        <>
+          <JoinRequestList
+            requests={requests}
+            disabled={locked}
+            onApprove={(request) => { actions.clearNotice(); setDialog({ type: 'approve', request }); }}
+            onDecline={(request) => { void actions.decline(request.id); }}
+          />
+          <HelperList
+            members={members}
+            disabled={locked}
+            onRevoke={(row) => setDialog({ type: 'access', kind: 'revoke', row })}
+            onWatchOnly={(row) => setDialog({ type: 'access', kind: 'watch_only', row })}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+
   return (
-    <CategoryPage
-      icon="👥"
-      title={t('teamHelpers.title')}
-      description={t('teamHelpers.description')}
-    >
-      {/* Invite Section - Only for Owner/Co-Admin */}
-      {canManageMembers && (
-        <CollapsibleSection icon="➕" title={t('teamHelpers.inviteHelpers')} defaultOpen>
-          <div style={styles.inviteSection}>
-            <p style={styles.inviteDescription}>
-              {t('teamHelpers.inviteDescription')}
-            </p>
-
-            <Button
-              variant="primary"
-              onClick={() => setShowInviteDialog(true)}
-              style={styles.inviteButton}
-            >
-              {t('teamHelpers.createInvite')}
-            </Button>
-
-            {/* Show created invite link */}
-            {createdInviteLink && (
-              <div style={styles.linkContainer}>
-                <p style={styles.linkLabel}>{t('teamHelpers.inviteLinkCreated')}</p>
-                <div style={styles.linkBox}>
-                  <code style={styles.linkCode}>{createdInviteLink}</code>
-                  <Button
-                    variant={copySuccess ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => { void handleCopyLink(); }}
-                  >
-                    {copySuccess ? t('teamHelpers.copied') : t('teamHelpers.copy')}
-                  </Button>
-                </div>
-                <p style={styles.linkHint}>
-                  {t('teamHelpers.shareLinkHint')}
-                </p>
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* Member List */}
-      <CollapsibleSection icon="👤" title={t('teamHelpers.currentMembers')} defaultOpen={!canManageMembers}>
-        <MemberList
-          tournamentId={tournamentId}
-          availableTeams={availableTeams}
-          onInvite={canManageMembers ? () => setShowInviteDialog(true) : undefined}
+    <CategoryPage {...header}>
+      <div
+        style={{ display: 'grid', gap: columnsGap, alignItems: 'start', gridTemplateColumns: isTabletOrDesktop ? `${dialogWidths.sm} minmax(0, 1fr)` : 'minmax(0, 1fr)' }}
+        data-testid="team-helpers-page"
+      >
+        {left}
+        {right}
+      </div>
+      {dialog?.type === 'approve' ? (
+        <ApproveSheet
+          request={dialog.request}
+          fieldCount={tournament.numberOfFields}
+          initialField={lastField}
+          onFieldChange={setLastField}
+          onApprove={actions.approve}
+          onClose={close}
+          busy={actions.busy}
         />
-      </CollapsibleSection>
-
-      {/* Active Invitations - Only for Owner/Co-Admin */}
-      {canManageMembers && activeInvitations.length > 0 && (
-        <CollapsibleSection icon="🔗" title={t('teamHelpers.activeInvitations', { count: activeInvitations.length })}>
-          <div style={styles.invitationList}>
-            {activeInvitations.map(invitation => (
-              <div key={invitation.id} style={styles.invitationCard}>
-                <div style={styles.invitationInfo}>
-                  <span style={styles.invitationRole}>
-                    {invitation.role === 'co-admin' && t('teamHelpers.roleDeputy')}
-                    {invitation.role === 'collaborator' && t('teamHelpers.roleHelper')}
-                    {invitation.role === 'trainer' && t('teamHelpers.roleTrainer')}
-                    {invitation.role === 'viewer' && t('teamHelpers.roleViewer')}
-                  </span>
-                  <span style={styles.invitationMeta}>
-                    {t('teamHelpers.usedCount', { used: invitation.useCount, max: invitation.maxUses === 0 ? '∞' : invitation.maxUses })}
-                  </span>
-                </div>
-                <code style={styles.invitationToken}>
-                  {invitation.token.substring(0, 8)}...
-                </code>
-              </div>
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* Invite Dialog */}
-      {showInviteDialog && (
-        <InviteDialog
-          tournamentId={tournamentId}
-          availableTeams={availableTeams}
-          onClose={() => setShowInviteDialog(false)}
-          onInviteCreated={handleInviteCreated}
+      ) : null}
+      {dialog?.type === 'renew' ? (
+        <RenewCodeDialog
+          openRequests={requests.length > 0 ? requests.length : (actions.code?.openRequests ?? 0)}
+          busy={actions.busy}
+          onClose={close}
+          onRenew={(mode) => { void actions.renewCode(mode).then(close); }}
         />
-      )}
+      ) : null}
+      {dialog?.type === 'access' ? (
+        <AccessChangeDialog
+          kind={dialog.kind}
+          row={dialog.row}
+          busy={actions.busy}
+          onClose={close}
+          onConfirm={() => { void actions.changeAccess(dialog.row.memberId, dialog.kind).then(close); }}
+        />
+      ) : null}
     </CategoryPage>
   );
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = {
-  // Auth Prompt
-  authPrompt: {
-    textAlign: 'center',
-    padding: cssVars.spacing.xl,
-  } as CSSProperties,
-
-  authIcon: {
-    fontSize: 48,
-    marginBottom: cssVars.spacing.md,
-  } as CSSProperties,
-
-  authTitle: {
-    margin: 0,
-    marginBottom: cssVars.spacing.sm,
-    fontSize: cssVars.fontSizes.titleMd,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  authText: {
-    margin: 0,
-    color: cssVars.colors.textMuted,
-  } as CSSProperties,
-
-  badge: {
-    display: 'inline-block',
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-    background: cssVars.colors.primarySubtle,
-    color: cssVars.colors.primary,
-    borderRadius: cssVars.borderRadius.full,
-    fontSize: cssVars.fontSizes.labelSm,
-    fontWeight: cssVars.fontWeights.medium,
-    marginTop: cssVars.spacing.md,
-  } as CSSProperties,
-
-  // Invite Section
-  inviteSection: {
-    padding: cssVars.spacing.md,
-  } as CSSProperties,
-
-  inviteDescription: {
-    margin: 0,
-    marginBottom: cssVars.spacing.md,
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
-  } as CSSProperties,
-
-  inviteButton: {
-    width: '100%',
-  } as CSSProperties,
-
-  // Link Container
-  linkContainer: {
-    marginTop: cssVars.spacing.lg,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.successLight,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.success}`,
-  } as CSSProperties,
-
-  linkLabel: {
-    margin: 0,
-    marginBottom: cssVars.spacing.sm,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.success,
-  } as CSSProperties,
-
-  linkBox: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.sm,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.sm,
-  } as CSSProperties,
-
-  linkCode: {
-    flex: 1,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textPrimary,
-    wordBreak: 'break-all',
-  } as CSSProperties,
-
-  linkHint: {
-    margin: 0,
-    marginTop: cssVars.spacing.sm,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textTertiary,
-  } as CSSProperties,
-
-  // Invitation List
-  invitationList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
-  } as CSSProperties,
-
-  invitationCard: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
-  } as CSSProperties,
-
-  invitationInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
-  } as CSSProperties,
-
-  invitationRole: {
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  invitationMeta: {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-  } as CSSProperties,
-
-  invitationToken: {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-    background: cssVars.colors.surfaceLight,
-    borderRadius: cssVars.borderRadius.sm,
-  } as CSSProperties,
-} as const;
 
 export default TeamHelpersCategory;

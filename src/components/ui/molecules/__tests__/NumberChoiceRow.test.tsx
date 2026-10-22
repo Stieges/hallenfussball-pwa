@@ -43,12 +43,19 @@ describe('NumberChoiceRow', () => {
 describe('SegmentedChoice', () => {
   const options = [{ value: '1', label: 'Feld 1' }, { value: '2', label: 'Feld 2' }, { value: 'none', label: 'Ohne Feld' }] as const;
 
-  it('genau eine Möglichkeit ist gewählt; die Wahl trägt ein Häkchen, nicht nur Farbe', () => {
+  it('genau eine Möglichkeit ist gewählt; die Wahl steht nicht nur in der Farbe: gefüllt und fett, die anderen leer und normal', () => {
     render(<SegmentedChoice legend="Feld" options={options} value="2" onChange={vi.fn()} testId="seg" />);
     const radios = screen.getAllByRole('radio');
     expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
-    expect(radios[1]?.querySelector('svg')).not.toBeNull();
-    expect(radios[0]?.querySelector('svg')).toBeNull();
+    expect(radios[1]?.style.fontWeight).toContain('bold');
+    expect(radios[0]?.style.fontWeight).not.toContain('bold');
+    expect(radios[1]?.style.background).not.toBe(radios[0]?.style.background);
+  });
+
+  it('ab fünf Möglichkeiten stehen sie einzeln und umbrechend statt verbunden (Beschriftungen werden nie gekürzt)', () => {
+    const many = ['1', '2', '3', '4', '5'].map((v) => ({ value: v, label: `Feld ${v}` }));
+    render(<SegmentedChoice legend="Feld" options={many} value="1" onChange={vi.fn()} testId="seg" />);
+    expect(screen.getByRole('radiogroup').style.flexWrap).toBe('wrap');
   });
 
   it('ein Tipp meldet den Wert', async () => {
