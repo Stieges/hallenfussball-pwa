@@ -498,9 +498,12 @@ export class GenericMutationQueue<TType extends string> {
     /**
      * BP-1 (@FU-121, @FU-122, Befunde C-QUEUE-SPEICHER-VOLL, -REST): Der Speicher hat den neuen Stand nicht genommen. Enthält
      * der abgelegte Stand Einträge, die nicht mehr warten (gesendet oder abgelegt), würde ein Neustart sie noch einmal
-     * senden – ein alter Stand überschriebe dann neuere Daten. Deshalb: alten Stand entfernen (gibt Platz frei), dann den
-     * neuen Stand ablegen; passt er nicht, nur die schon abgelegten, noch wartenden Einträge; passt auch das nicht, bleibt
-     * nichts abgelegt (Ungesendetes lebt bis zum Neustart im Arbeitsspeicher, die Störung ist gemeldet; Controller F1).
+     * senden – ein alter Stand überschriebe dann neuere Daten. Stufen (Review A2: nie alles entfernen, solange ein vorher
+     * dauerhaft abgelegter, noch wartender Eintrag existiert):
+     * 1. sicherer Stand: der abgelegte Stand, gekürzt auf die noch wartenden Einträge (alte Nutzlasten) – eine echte
+     *    Teilmenge des Abgelegten, passt bei Kontingent mit Gutschrift immer und sendet nichts doppelt;
+     *    nimmt der Speicher nicht einmal das, wird der alte Stand entfernt (Controller F1, Störung ist gemeldet);
+     * 2. nachbessern: der neue Stand vollständig, sonst die noch wartenden Einträge mit ihren aktuellen Nutzlasten.
      * Liefert `true`, wenn der neue Stand vollständig abgelegt ist.
      */
     private replaceStaleList(key: string, value: ReadonlyArray<{ id?: unknown }>): boolean {
@@ -513,13 +516,17 @@ export class GenericMutationQueue<TType extends string> {
         }
         const current = new Set(value.map((item) => item.id));
         if (stored.every((item) => current.has(item.id))) { return false; } // nichts Veraltetes: der abgelegte Stand bleibt
-        safeLocalStorage.removeItem(key);
+        const storedWaiting = stored.filter((item) => current.has(item.id));
+        if (storedWaiting.length === 0) {
+            safeLocalStorage.removeItem(key);
+        } else if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(storedWaiting))) {
+            safeLocalStorage.removeItem(key); // Speicher nimmt nichts: lieber nichts abgelegt als Gesendetes erneut senden
+            return false;
+        }
         if (safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { return true; }
         const storedIds = new Set(stored.map((item) => item.id));
         const stillWaiting = value.filter((item) => storedIds.has(item.id));
-        if (stillWaiting.length === 0 || !safeLocalStorage.setItemPersisted(key, JSON.stringify(stillWaiting))) {
-            safeLocalStorage.removeItem(key); // setItemPersisted legt bei Fehlschlag nichts im echten Speicher ab
-        }
+        if (stillWaiting.length > 0) { safeLocalStorage.setItemPersisted(key, JSON.stringify(stillWaiting)); } // sonst bleibt Stufe 1
         return false;
     }
 

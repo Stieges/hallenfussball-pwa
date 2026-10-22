@@ -152,6 +152,41 @@ describe('BP-1 C-QUEUE-SPEICHER-VOLL / C-QUEUE-SPEICHER-VOLL-REST: kein alter St
     second.dispose();
   });
 
+  it('@FU-122 Review A2: ein wartender Eintrag, der durch Zusammenfassen gewachsen ist, bleibt nach dem Neustart in seiner abgelegten Form erhalten', async () => {
+    const storage = new CapacityStorage();
+    const MutationQueue = await loadQueueModule(storage);
+    setOnline(false);
+    const angaben: Array<Record<string, unknown>> = [];
+    const repo = {
+      updateMatch: vi.fn(async () => undefined),
+      updateTournamentMetadata: vi.fn(async (_id: string, metadata: Record<string, unknown>) => {
+        if (!(globalThis.navigator as { onLine: boolean }).onLine || sitzung === 1) { throw netError(); }
+        angaben.push(metadata);
+      }),
+    };
+    let sitzung = 1;
+    const first = new MutationQueue(repo as never, localRepo as never);
+    first.enqueue('UPDATE_MATCH', ergebnis('m5'));
+    first.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: 'live-cup', metadata: { title: 'Live-Cup Ost' } });
+    storage.capacity = storage.used(); // Speicher voll: abgelegt sind [m5, Name]
+    // Zusammenfassen: dieselbe wartende Änderung wächst um einen langen Ort und passt nicht mehr
+    first.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: 'live-cup', metadata: { location: { name: 'H'.repeat(600) } } });
+
+    setOnline(true);
+    await first.process(); // m5 geht raus, die Turnierangaben scheitern am Netz
+    await flush();
+    expect(repo.updateMatch).toHaveBeenCalledTimes(1);
+    first.dispose();
+
+    // Neustart: der vorher dauerhaft abgelegte, noch wartende Eintrag ist da (alte Form), m5 nicht noch einmal
+    sitzung = 2;
+    const second = new MutationQueue(repo as never, localRepo as never);
+    await flush();
+    expect(repo.updateMatch).toHaveBeenCalledTimes(1);
+    expect(angaben).toEqual([{ title: 'Live-Cup Ost' }]);
+    second.dispose();
+  });
+
   it('@FU-122 Gegenbeispiel ohne vollen Speicher: alles bleibt wie bisher (nichts entfernt, keine Störung)', async () => {
     const storage = new CapacityStorage();
     const MutationQueue = await loadQueueModule(storage);
