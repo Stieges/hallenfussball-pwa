@@ -72,10 +72,13 @@ export const ApproveSheet = ({ request, fieldCount, initialField, onFieldChange,
       )}
     >
       <div style={stack} data-testid="approve-sheet">
-        <div>
-          <p style={nameStyle} data-teamname>{name}</p>
-          <p style={ctx}>{t('teamHelpers.approve.intro', { time: formatClock(request.createdAt, locale) })}</p>
-        </div>
+        {/* Nach einer falschen Zahl entfällt die Vorstellung: am kleinen Handy bleiben so die Zahlknöpfe im Blick (Legende nennt den Namen weiter) */}
+        {mismatch ? null : (
+          <div>
+            <p style={nameStyle} data-teamname>{name}</p>
+            <p style={ctx}>{t('teamHelpers.approve.intro', { time: formatClock(request.createdAt, locale) })}</p>
+          </div>
+        )}
         {mismatch ? (
           <InlineNotice tone="error" data-testid="check-number-mismatch">
             <b style={noticeTitle}>{t('teamHelpers.approve.mismatchTitle')}</b>
@@ -84,7 +87,7 @@ export const ApproveSheet = ({ request, fieldCount, initialField, onFieldChange,
         ) : null}
         <SegmentedChoice
           legend={t('teamHelpers.approve.fieldLegend', { name })}
-          hint={t('teamHelpers.approve.fieldHint', { name })}
+          hint={field === NONE ? t('teamHelpers.approve.fieldHint', { name }) : undefined}
           options={options}
           value={field}
           disabled={busy}

@@ -62,7 +62,10 @@ function optionStyle(selected: boolean, disabled: boolean, connected: boolean, f
     fontSize: cssVars.fontSizes.lg,
     fontWeight: selected ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
     textAlign: 'center',
-    whiteSpace: 'nowrap',
+    // verbunden darf die Beschriftung umbrechen (nie kürzen), einzeln bleibt sie einzeilig in umbrechenden Zeilen
+    whiteSpace: connected ? 'normal' : 'nowrap',
+    overflowWrap: connected ? 'anywhere' : undefined,
+    minWidth: 0,
     cursor: disabled ? 'not-allowed' : 'pointer',
   };
 }
