@@ -36,7 +36,9 @@ describe('B-49 Geräte-ID an jedem Weg der Steuer je Feld', () => {
     for (const { path, text } of aufrufe) {
       const ab = text.indexOf("rpc('field_control_state'");
       const block = text.slice(ab, text.indexOf('})', ab));
-      expect(block, path).toMatch(/p_device_id: deviceId/);
+      // eigene Zeile `p_device_id: deviceId,` – nicht als bedingter Teil `...(deviceId !== undefined ? { p_device_id: deviceId } : {})`
+      expect(block, path).toMatch(/^\s*p_device_id: deviceId,?\s*$/m);
+      expect(block, path).not.toMatch(/\?\s*\{\s*p_device_id/);
     }
   });
 
@@ -46,5 +48,16 @@ describe('B-49 Geräte-ID an jedem Weg der Steuer je Feld', () => {
         expect(m[1].split(',').length, `${path}: ${m[0]}`).toBeGreaterThanOrEqual(4);
       }
     }
+  });
+});
+
+/** Prüfung 2 gegen beide Formen (Review #341 N4): so wie hier erkannt, so wie in Variante A (#337) abgelehnt. */
+describe('B-49 Wächter erkennt ein bedingtes p_device_id', () => {
+  const muster = (block: string): boolean => /^\s*p_device_id: deviceId,?\s*$/m.test(block) && !/\?\s*\{\s*p_device_id/.test(block);
+  it('@HE-049 unbedingt (eigene Zeile) → erlaubt', () => {
+    expect(muster("rpc('field_control_state', {\n      p_tournament_id: tournamentId,\n      p_device_id: deviceId,\n    ")).toBe(true);
+  });
+  it('@HE-049 Gegenbeispiel: bedingt (Variante A) → abgelehnt', () => {
+    expect(muster("rpc('field_control_state', {\n      p_tournament_id: tournamentId,\n      ...(deviceId !== undefined ? { p_device_id: deviceId } : {}),\n    ")).toBe(false);
   });
 });
