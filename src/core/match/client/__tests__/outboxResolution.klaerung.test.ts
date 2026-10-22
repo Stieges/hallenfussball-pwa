@@ -3,7 +3,7 @@
  * AFTER_END; 20261117_005_klaerungsliste.sql) ist kein Fehler. Der Eintrag verlässt den Ausgang, wird nicht als
  * angenommen gebucht und liegt in `review` („wird geprüft“ bzw. „an die Turnierleitung übergeben“, Anzeige B-50).
  * Ein Anpfiff zur Klärung reißt die folgenden Einträge nicht mit (keine Folgeablehnung wie bei `rejected`).
- * Szenarien: @FU-038, @FU-036, @FU-017, @HE-056, @HE-080, @FU-116.
+ * Szenarien: @FU-038, @FU-036, @FU-017, @HE-056, @HE-080, @FU-116, @FU-130.
  */
 import { describe, it, expect } from 'vitest';
 import { buildResolution } from '../outboxResolution';
@@ -35,6 +35,7 @@ describe('A-35: Antwort „review“ beim Senden', () => {
     ['@HE-056', 'RIGHTS_REVOKED'],
     ['@HE-080', 'RIGHTS_REVOKED'],
     ['@FU-116', 'AFTER_END'],
+    ['@FU-130', 'AFTER_END'],
   ])('%s Grund %s: Eintrag verlässt den Ausgang, liegt in „wird geprüft“, kein Fehler, nicht angenommen', (_id, code) => {
     const tor = ev({ id: 'tor-tom', type: 'GOAL', at: 1, teamId: 'teamA' });
     const { resolution } = buildResolution([tor], [{ id: tor.id, status: 'review', code }], NOW);

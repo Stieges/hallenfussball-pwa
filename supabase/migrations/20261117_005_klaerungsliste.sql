@@ -25,13 +25,14 @@
 --      review_route, review_target_check, review_copy, revoked_intake.
 --   6. public.append_match_events (Fassung 20261113_003 = 20261110_009 + closed_intake, plus NUR hinzugefügte Zeilen):
 --      a. Recht verloren (I-4, @FU-017, @HE-056, @HE-080): wer im Turnier eingetragen hatte und jetzt entzogen, entfernt
---         oder zum Zuschauer gemacht ist, bekommt statt FORBIDDEN_ACTOR „review RIGHTS_REVOKED“ – Einträge mit Gerätezeit
---         nach dem Entziehen nimmt der Server nicht an (FORBIDDEN_ACTOR RIGHTS_REVOKED).
+--         oder zum Zuschauer gemacht ist, bekommt statt FORBIDDEN_ACTOR „review RIGHTS_REVOKED“ für alles, was das Gerät
+--         bis zu seiner ersten Verbindung nach dem Entzug gemacht hat; danach nimmt der Server nichts mehr an
+--         (FORBIDDEN_ACTOR RIGHTS_REVOKED; Regel F6, Tabelle revoked_device_contacts).
 --      b. Steuer verloren (@FU-036, @FU-038): Einträge eines Geräts mit einer Steuer-Epoche, die es selbst gehalten hat,
 --         die aber nicht mehr gilt -> „review CONTROL_LOST“. Ausnahme @FU-037: vor der Übernahme gemacht, Spielstand-,
 --         Karten-, Straf-, Foul- oder Wechsel-Eintrag, kein gleichartiger Eintrag des neuen Halters für dasselbe Team und
 --         keine Überschreibung seitdem -> zählt wie gesendet (accepted) mit Hinweis (kind 'notice'); lehnt die
---         Rechenfunktion ihn dann ab (z. B. Spiel inzwischen beendet), landet er doch in der Klärungsliste.
+--         Rechenfunktion ihn dann ab (Spiel inzwischen beendet, @FU-130), landet er mit AFTER_END in der Klärungsliste.
 --      c. Nach dem Ende (@FU-116 Z. 2): ein Spielstand-, Karten-, Straf-, Foul- oder Wechsel-Eintrag, den die
 --         Rechenfunktion mit MATCH_FINISHED ablehnt -> „review AFTER_END“.
 --      d. Entscheiden: REVIEW_ACCEPT/REVIEW_DISCARD der Turnierleitung (ohne Feldsteuerung, wie das Beenden im Spielplan)
@@ -148,6 +149,23 @@ INSERT INTO public.field_control_log (tournament_id, field, epoch, holder_user_i
 SELECT fc.tournament_id, fc.field, fc.epoch, fc.holder_user_id, fc.holder_device_id, fc.claimed_at
   FROM public.field_control fc
 ON CONFLICT (tournament_id, field, epoch) DO NOTHING;
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- 1b. revoked_device_contacts: erster Kontakt eines Geräts nach dem Entzug (F6, @HE-080, @HE-056)
+-- ---------------------------------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.revoked_device_contacts (
+  tournament_id    uuid        NOT NULL REFERENCES public.tournaments(id) ON DELETE CASCADE,
+  user_id          uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  device_id        uuid        NOT NULL,   -- ohne Geräte-ID (App vor B-49): 00000000-0000-0000-0000-000000000000
+  revoked_since    timestamptz,            -- declined_at beim Entziehen, sonst NULL (zum Zuschauer gemacht, entfernt)
+  first_contact_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tournament_id, user_id, device_id)
+);
+COMMENT ON TABLE public.revoked_device_contacts IS
+  'A-35 F6 (Daniel 23.10., @HE-080, @HE-056): erster Aufruf eines Geräts nach dem Entzug seines Rechts. Einträge mit Gerätezeit bis dahin gehen zur Klärung (RIGHTS_REVOKED), spätere lehnt append_match_events ab. Nur Server-Funktionen (revoked_intake); keine Client-Rechte.';
+ALTER TABLE public.revoked_device_contacts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.revoked_device_contacts FROM PUBLIC, anon, authenticated, ci_schema_reader;
+GRANT SELECT ON TABLE public.revoked_device_contacts TO ci_schema_reader;   -- pg_dump des Drift-Checks; RLS an, keine Policy
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 2. match_reviews: Klärungseinträge und Hinweise
@@ -504,7 +522,9 @@ AS $$
 $$;
 
 -- Recht verloren (I-4): Einträge zur Klärung statt FORBIDDEN_ACTOR; nichts wird angewendet, kein field_control, Antwort
--- ohne Stand. Gerätezeit nach dem Entziehen -> FORBIDDEN_ACTOR RIGHTS_REVOKED (@HE-080 „nimmt keinen Eintrag mehr an“).
+-- ohne Stand. Regel F6 (Daniel 23.10., @HE-080, @HE-056): alles, was das Gerät bis zu seiner ERSTEN Verbindung nach dem
+-- Entzug ohne Netz gemacht hat (Gerätezeit <= erster Kontakt), geht zur Klärung; was es danach macht -> FORBIDDEN_ACTOR
+-- RIGHTS_REVOKED. Der erste Kontakt steht je Turnier, Konto und Gerät in revoked_device_contacts (neu bei erneutem Entzug).
 -- Abgeschlossenes Turnier, Spiel ohne zwei Teams oder nie Schreiber gewesen: wie vor A-35 (FORBIDDEN_ACTOR).
 CREATE OR REPLACE FUNCTION match_engine.revoked_intake(p_tournament_id uuid, p_match_id uuid, p_events jsonb,
                                                        p_uid uuid, p_device_id uuid)
@@ -514,7 +534,9 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_change   jsonb := match_engine.rights_change(p_tournament_id, p_uid);
-  v_since    bigint := (v_change ->> 'since')::bigint;
+  v_since    timestamptz := to_timestamp((v_change ->> 'since')::numeric / 1000.0);
+  v_device   uuid := coalesce(p_device_id, '00000000-0000-0000-0000-000000000000'::uuid);
+  v_limit_ms bigint;
   v_match    public.matches%ROWTYPE;
   v_raw      jsonb;
   v_event    jsonb;
@@ -535,6 +557,15 @@ BEGIN
                               'serverTime', floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint);
   END IF;
   SELECT coalesce(max(e.seq), 0) INTO v_base_seq FROM public.match_events e WHERE e.match_id = p_match_id;
+  -- F6: erster Kontakt nach dem (jüngsten) Entzug; ein neuer Entzug (anderes declined_at) beginnt neu.
+  INSERT INTO public.revoked_device_contacts (tournament_id, user_id, device_id, revoked_since)
+  VALUES (p_tournament_id, p_uid, v_device, v_since)
+  ON CONFLICT (tournament_id, user_id, device_id) DO UPDATE
+     SET revoked_since = EXCLUDED.revoked_since, first_contact_at = now()
+   WHERE public.revoked_device_contacts.revoked_since IS DISTINCT FROM EXCLUDED.revoked_since;
+  SELECT floor(extract(epoch FROM c.first_contact_at) * 1000)::bigint INTO v_limit_ms
+    FROM public.revoked_device_contacts c
+   WHERE c.tournament_id = p_tournament_id AND c.user_id = p_uid AND c.device_id = v_device;
   FOR v_raw IN SELECT x.e FROM jsonb_array_elements(p_events) WITH ORDINALITY AS x(e, ord) ORDER BY x.ord LOOP
     v_event := match_engine.envelope(v_raw, v_match.team_a_id::text, v_match.team_b_id::text);
     IF v_event IS NULL THEN
@@ -555,7 +586,7 @@ BEGIN
         ELSE
           v_result := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'ID_CONFLICT');
         END IF;
-      ELSIF v_since IS NOT NULL AND (v_event ->> 'at')::numeric > v_since THEN
+      ELSIF (v_event ->> 'at')::numeric > v_limit_ms THEN
         v_result := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'FORBIDDEN_ACTOR',
                                        'detail', '{"reason": "RIGHTS_REVOKED"}'::jsonb);
       ELSE
@@ -1013,8 +1044,10 @@ BEGIN
         -- inzwischen beendet) oder einen Spielstand-/Karten-/Straf-/Foul-/Wechsel-Eintrag nach dem Ende (@FU-116 Z. 2),
         -- geht er zur Klaerung statt verloren.
         IF v_result ->> 'status' = 'rejected' AND v_route ->> 'route' = 'auto' THEN
+          -- @FU-130 (Daniel 23.10.): nach dem Abpfiff angekommen -> AFTER_END (zaehlt erst nach „Uebernehmen“).
           v_result := match_engine.review_store(v_match, v_event || jsonb_build_object('at', (v_raw ->> 'at')::numeric::bigint),
-                                                v_uid, p_device_id, 'CONTROL_LOST',
+                                                v_uid, p_device_id,
+                                                CASE WHEN v_result ->> 'code' = 'MATCH_FINISHED' THEN 'AFTER_END' ELSE 'CONTROL_LOST' END,
                                                 (v_route -> 'detail') || jsonb_build_object('rejected', v_result ->> 'code'),
                                                 v_base_seq);
         ELSIF v_result ->> 'status' = 'rejected' AND v_result ->> 'code' = 'MATCH_FINISHED'

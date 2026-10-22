@@ -26,7 +26,7 @@
 # Aufrufoptionen:
 #   bash scripts/klaerungsliste-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/klaerungsliste-check.sh --without-migration  Gegenprobe: ohne 20261117_005 -> K muss ROT sein
-#   bash scripts/klaerungsliste-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M13); Exit 0 NUR, wenn
+#   bash scripts/klaerungsliste-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M18); Exit 0 NUR, wenn
 #                                                             JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/klaerungsliste-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
@@ -93,6 +93,7 @@ rueckweg_sql() {
   echo "DROP FUNCTION IF EXISTS public.field_control_log_write();"
   echo "DROP TABLE IF EXISTS public.match_reviews;"
   echo "DROP TABLE IF EXISTS public.field_control_log;"
+  echo "DROP TABLE IF EXISTS public.revoked_device_contacts;"
   echo "-- Rechte wie vorher (unveraendert)"
   echo "REVOKE ALL ON FUNCTION match_engine.closed_intake(uuid, uuid, jsonb, uuid, uuid) FROM PUBLIC, anon, authenticated;"
   echo "REVOKE ALL ON FUNCTION public.match_apply_event(jsonb, jsonb, jsonb, jsonb) FROM PUBLIC;"
@@ -199,18 +200,18 @@ uuid_for() {
 U_OLLI="$(uuid_for user:olli)"; U_MARIA="$(uuid_for user:maria)"; U_TRAINER="$(uuid_for user:trainer)"
 U_TOM="$(uuid_for user:tom-handy)"; U_CLARA="$(uuid_for user:clara)"; U_STRANGER="$(uuid_for user:fremd)"
 U_TOM_A="$(uuid_for user:tom-entzogen)"; U_TOM_B="$(uuid_for user:tom-entfernt)"; U_TOM_C="$(uuid_for user:tom-zuschauer)"
-U_TOM_D="$(uuid_for user:tom-he056)"; U_TOM_LOST="$(uuid_for user:tom-verlorenes-handy)"; U_TOM_NEW="$(uuid_for user:tom-ersatzhandy)"
-ANON_UIDS=" $U_TOM_LOST $U_TOM_NEW "
+U_TOM_D="$(uuid_for user:tom-he056)"; U_TOM_QR56="$(uuid_for user:tom-qr-he056)"; U_TOM_LOST="$(uuid_for user:tom-verlorenes-handy)"; U_TOM_NEW="$(uuid_for user:tom-ersatzhandy)"
+ANON_UIDS=" $U_TOM_LOST $U_TOM_NEW $U_TOM_QR56 "
 D_OLLI="$(uuid_for device:olli-tablet)"; D_TOM="$(uuid_for device:tom-handy)"; D_CLARA="$(uuid_for device:clara)"
 D_TOM_A="$(uuid_for device:tom-a)"; D_TOM_B="$(uuid_for device:tom-b)"; D_TOM_C="$(uuid_for device:tom-c)"
-D_TOM_D="$(uuid_for device:tom-d)"; D_TOM_LOST="$(uuid_for device:tom-verloren)"; D_TOM_NEW="$(uuid_for device:tom-ersatz)"
+D_TOM_D="$(uuid_for device:tom-d)"; D_TOM_QR56="$(uuid_for device:tom-qr-he056)"; D_TOM_LOST="$(uuid_for device:tom-verloren)"; D_TOM_NEW="$(uuid_for device:tom-ersatz)"
 T_CUP="$(uuid_for tournament:live-cup)"
 team() { uuid_for "team:$1"; }
 TN="$(team fc-nord)"; TS="$(team sv-sued)"; TW="$(team tsv-west)"; TO="$(team sc-ost)"; TB="$(team djk-berg)"; TM="$(team sg-mitte)"
 match() { uuid_for "match:$1"; }
 M9="$(match spiel-9)"; M13="$(match spiel-13)"; M14="$(match spiel-14)"; M15="$(match spiel-15)"; M16="$(match spiel-16)"
 M_R1="$(match recht-1)"; M_R2="$(match recht-2)"; M_R3="$(match recht-3)"; M_R4="$(match recht-4)"; M_R5="$(match recht-5)"
-M_HF1="$(match hf1)"
+M_HF1="$(match hf1)"; M130="$(match spiel-130)"
 E() { uuid_for "event:$1"; }
 
 EVS=""
@@ -239,6 +240,17 @@ cms() { q "SELECT harness.cms('$1'::uuid, '$2'::uuid);"; }
 take() { q "SELECT harness.take('$1'::uuid, $(is_anon "$1"), '$T_CUP'::uuid, $2, '$3'::uuid, $4);"; }
 holder() { q "SELECT coalesce(holder_user_id::text, '-') || '|' || epoch FROM public.field_control WHERE tournament_id = '$T_CUP' AND field = $1;"; }
 taken_ms() { q "SELECT floor(extract(epoch FROM claimed_at) * 1000)::bigint FROM public.field_control_log WHERE tournament_id = '$T_CUP' AND field = $1 AND epoch = $2;"; }
+# Echter QR-Weg (20261110_008): Code (Olli) -> Anfrage (Geraet) -> Zulassen (Olli mit Pruefzahl) -> Mitglieds-ID.
+as_json() { q "SELECT harness.as_json('$1'::uuid, $(is_anon "$1"), \$S\$$2\$S\$);"; }
+qr_join() { # qr_join <Geraete-Nutzer> <Name>
+  local code req chk
+  code="$(as_json "$U_OLLI" "SELECT public.ensure_helper_code('$T_CUP')" | jq -r '.code' 2>/dev/null)"
+  as_json "$1" "SELECT public.request_helper_access('$code', '$2', 'Handy')" >/dev/null
+  req="$(q "SELECT id || '|' || check_number FROM public.tournament_join_requests WHERE tournament_id = '$T_CUP' AND device_user_id = '$1' AND status = 'pending';")"
+  chk="${req#*|}"; req="${req%%|*}"
+  as_json "$U_OLLI" "SELECT public.decide_join_request('$req', true, NULL, $chk::smallint)" | jq -r '.memberId' 2>/dev/null
+}
+revoke() { as_json "$U_OLLI" "SELECT public.change_helper_access('$1', 'revoke')" | jq -r '.result // .exception' 2>/dev/null; }
 review_list() { q "SELECT harness.list('$1'::uuid, $(is_anon "$1"));"; }
 # Klaerungsliste als Text: je Eintrag kind:reason:Typ:Autor:Entscheidung (Turnierleitung, Reihenfolge des Eingangs)
 list_for() { jq -r --arg ev "$2" '[.[]? | select($ev == "" or .eventId == $ev) | .kind + ":" + .reason + ":" + .entry.type + ":" + (.author // "-") + ":" + (if .decision then .decision.type + "/" + (.decision.by // "-") else "offen" end)] | join(",")' <<<"$1" 2>/dev/null || echo "keine-json:$1"; }
@@ -285,6 +297,19 @@ BEGIN
   RETURN coalesce(v ->> 'status', '-') || coalesce(':' || (v ->> 'code'), '');
 END;
 $fn$;
+CREATE FUNCTION harness.as_json(p_user uuid, p_anon boolean, p_sql text) RETURNS jsonb LANGUAGE plpgsql AS $fn$
+DECLARE v jsonb;
+BEGIN
+  PERFORM harness.claims(p_user, p_anon, 'authenticated');
+  BEGIN
+    EXECUTE p_sql INTO v;
+  EXCEPTION WHEN OTHERS THEN
+    v := jsonb_build_object('exception', SQLSTATE, 'message', SQLERRM);
+  END;
+  PERFORM set_config('role', 'postgres', true);
+  RETURN v;
+END;
+$fn$;
 CREATE FUNCTION harness.list(p_user uuid, p_anon boolean) RETURNS jsonb LANGUAGE plpgsql AS $fn$
 DECLARE v jsonb;
 BEGIN
@@ -326,7 +351,7 @@ FROM (VALUES ('$U_OLLI'::uuid, 'olli@kl.test', false), ('$U_MARIA'::uuid, 'maria
              ('$U_CLARA'::uuid, 'clara@kl.test', false), ('$U_STRANGER'::uuid, 'fremd@kl.test', false),
              ('$U_TOM_A'::uuid, 'tom-a@kl.test', false), ('$U_TOM_B'::uuid, 'tom-b@kl.test', false),
              ('$U_TOM_C'::uuid, 'tom-c@kl.test', false), ('$U_TOM_D'::uuid, 'tom-d@kl.test', false),
-             ('$U_TOM_LOST'::uuid, NULL, true),
+             ('$U_TOM_LOST'::uuid, NULL, true), ('$U_TOM_QR56'::uuid, NULL, true),
              ('$U_TOM_NEW'::uuid, NULL, true)) AS u(id, email, anon);
 INSERT INTO public.profiles (id, display_name, email)
 VALUES ('$U_OLLI', 'Olli', 'olli@kl.test'), ('$U_MARIA', 'Maria', 'maria@kl.test'), ('$U_TRAINER', 'Trainer Rot', 'trainer@kl.test'),
@@ -340,7 +365,6 @@ INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accep
   ('$T_CUP', '$U_CLARA', 'collaborator', now(), 'Clara'), ('$T_CUP', '$U_TRAINER', 'trainer', now(), 'Trainer Rot'),
   ('$T_CUP', '$U_TOM_A', 'collaborator', now(), 'Tom'), ('$T_CUP', '$U_TOM_B', 'collaborator', now(), 'Tom'),
   ('$T_CUP', '$U_TOM_C', 'collaborator', now(), 'Tom'), ('$T_CUP', '$U_TOM_D', 'collaborator', now(), 'Tom'),
-  ('$T_CUP', '$U_TOM_LOST', 'helper', now(), 'Tom'),
   ('$T_CUP', '$U_TOM_NEW', 'helper', now(), 'Tom (Ersatz)');
 INSERT INTO public.teams (id, tournament_id, name) VALUES
   ('$TN', '$T_CUP', 'FC Nord'), ('$TS', '$T_CUP', 'SV Süd'), ('$TW', '$T_CUP', 'TSV West'), ('$TO', '$T_CUP', 'SC Ost'),
@@ -351,6 +375,7 @@ INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_i
   ('$M13', '$T_CUP', 1, 3, '$TN', '$TW', 13, '14:00', 'A'),
   ('$M14', '$T_CUP', 1, 4, '$TS', '$TO', 14, '14:00', 'A'),
   ('$M16', '$T_CUP', 1, 5, '$TB', '$TM', 16, '14:00', 'B'),
+  ('$M130', '$T_CUP', 2, 6, '$TN', '$TW', 17, '14:15', 'A'),
   ('$M_R1', '$T_CUP', 3, 11, '$TN', '$TS', 31, '15:00', 'A'),
   ('$M_R2', '$T_CUP', 3, 12, '$TW', '$TO', 32, '15:00', 'A'),
   ('$M_R3', '$T_CUP', 3, 13, '$TB', '$TM', 33, '15:00', 'B'),
@@ -405,7 +430,7 @@ run_probes() {
   e="$(E m9-tor-vor-uebernahme)"
   ev GOAL "$e" "$(goal "$TN" $((taken - 120000)) 1)"
   send "$U_TOM" "$D_TOM" "$M9"
-  check G "@FU-037 Toms Tor von 12:04 (vor Ollis Übernahme um 12:06, kein Heimtor von Olli seitdem) zählt: angenommen, 2:0" \
+  check G "@FU-037 Toms Tor von 12:04 (vor Ollis Übernahme um 12:06, kein Heimtor von Olli seitdem, Spiel läuft noch) zählt: angenommen, 2:0" \
     "accepted|2:0|running" "$(results "$OUT")|$(row "$M9")"
   list="$(review_list "$U_OLLI")"
   check G "@FU-037 Olli sieht den Hinweis „1 Tor von Tom (Feld 2) nachträglich eingefügt“ (Hinweis, keine offene Klärung)" \
@@ -491,6 +516,27 @@ run_probes() {
   send "$U_OLLI" "$D_OLLI" "$M15"
   check K "@FU-036 Spiel 15 gehört weiterhin Ollis Steuer: Olli pfeift an" "accepted|running|$U_OLLI|2" \
     "$(results "$OUT")|$(row "$M15" | cut -d'|' -f2)|$(holder 2)"
+
+  # --- @FU-130: eindeutiger Eintrag (vor der Uebernahme) kommt erst nach dem Abpfiff an -> AFTER_END, zaehlt erst nach
+  #     „Uebernehmen“ (Gegenbeispiel @FU-037 oben: Rueckkehr vor dem Abpfiff wird automatisch einsortiert).
+  local t130
+  ev MATCH_START "$(E m130-start)" "$(jq -cn --argjson at "$(at_rel -600000)" '{at: $at, clockMs: null, controlEpoch: 0}')"
+  send "$U_TOM" "$D_TOM" "$M130"
+  q "UPDATE public.field_control_log SET claimed_at = claimed_at - interval '15 minutes' WHERE tournament_id = '$T_CUP' AND field = 6 AND epoch = 1;" >/dev/null
+  take "$U_OLLI" 6 "$D_OLLI" 1 >/dev/null
+  t130="$(taken_ms 6 2)"
+  [[ -z "$t130" || "$t130" == *ERROR* ]] && t130="$NOW_MS"
+  ev MATCH_END "$(E m130-ende)" "$(jq -cn --argjson at "$(at_rel 1000)" '{at: $at, clockMs: 600000, controlEpoch: 2}')"
+  send "$U_OLLI" "$D_OLLI" "$M130"
+  ev GOAL "$(E m130-tor)" "$(goal "$TN" $((t130 - 120000)) 1)"
+  send "$U_TOM" "$D_TOM" "$M130"
+  list="$(review_list "$U_OLLI")"
+  check K "@FU-130 Toms Tor von 12:04 kommt nach Ollis Abpfiff an -> „nach dem Ende angekommen“ (AFTER_END), zählt noch nicht (0:0)" \
+    "review:AFTER_END|0:0|finished|review:AFTER_END:GOAL:Tom:offen" \
+    "$(results "$OUT")|$(row "$M130")|$(list_for "$list" "$(E m130-tor)")"
+  ev REVIEW_ACCEPT "$(E m130-accept)" "$(jq -cn --arg t "$(E m130-tor)" --argjson at "$(at_rel 2000)" '{at: $at, clockMs: null, section: null, targetId: $t}')"
+  send "$U_OLLI" "$D_OLLI" "$M130"
+  check K "@FU-130 Olli wählt „Übernehmen“ -> Toms Tor ist im Spielstand (1:0)" "accepted|1:0|finished" "$(results "$OUT")|$(row "$M130")"
 
   # --- @FU-095: Fall mit drei Eintraegen nach der Uebernahme; Olli uebernimmt nur die Gelbe Karte (beendetes Spiel 13) ----
   ev MATCH_START "$(E m13-start)" "$(jq -cn --argjson at "$(at_rel -600000)" '{at: $at, clockMs: null, controlEpoch: 0}')"
@@ -605,27 +651,40 @@ run_probes() {
   check K "Review m2: ein anderes Gerät kommt im selben Spiel weiter in die Klärungsliste (Grenze je Absender, nicht je Spiel)" \
     "review:RIGHTS_REVOKED" "$(results "$OUT")"
 
-  # --- @HE-056: Olli uebernimmt Feld 14 und entfernt Tom (Konto), Tom traegt um 12:07 offline ein Tor ein -----------------
+  # --- @HE-056 (echter QR-Weg): Tom ist per QR zugelassen, steuert Feld 14; Olli uebernimmt um 12:06 und entfernt Tom per
+  #     change_helper_access('revoke'); Tom traegt um 12:07 offline ein Tor ein und hat danach zum ersten Mal Netz.
+  local m56 cur
+  m56="$(qr_join "$U_TOM_QR56" "Tom")"
   ev MATCH_START "$(E he56-start)" "$(jq -cn --argjson at "$(at_rel -600000)" '{at: $at, clockMs: null, controlEpoch: 0}')"
-  send "$U_TOM_D" "$D_TOM_D" "$M_R4"
+  send "$U_TOM_QR56" "$D_TOM_QR56" "$M_R4"
   take "$U_OLLI" 14 "$D_OLLI" 1 >/dev/null
-  q "SET session_replication_role = replica; DELETE FROM public.tournament_collaborators WHERE tournament_id = '$T_CUP' AND user_id = '$U_TOM_D'; SET session_replication_role = origin;" >/dev/null
-  ev GOAL "$(E he56-tor)" "$(goal "$TN" "$(at_rel 60000)" 1)"
-  send "$U_TOM_D" "$D_TOM_D" "$M_R4"
-  check K "@HE-056 Tor nach Übernahme UND Entfernen -> „von Tom, Recht entzogen“ (RIGHTS_REVOKED geht vor), Spiel 0:0" \
-    "review:RIGHTS_REVOKED|0:0" "$(results "$OUT")|$(row "$M_R4" | cut -d'|' -f1)"
+  check K "Vorbereitung @HE-056: Olli entfernt Tom (QR-Zugang) per change_helper_access('revoke')" "OK" "$(revoke "$m56")"
+  cur="$(q "SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint;")"
+  ev GOAL "$(E he56-tor)" "$(goal "$TN" "$cur" 1)"
+  send "$U_TOM_QR56" "$D_TOM_QR56" "$M_R4"
+  list="$(review_list "$U_OLLI")"
+  check K "@HE-056 Tor nach Übernahme UND Entfernen (offline, vor der ersten Verbindung) -> „von Tom, Recht entzogen“, Spiel 0:0" \
+    "review:RIGHTS_REVOKED|0:0|review:RIGHTS_REVOKED:GOAL:Tom:offen" \
+    "$(results "$OUT")|$(row "$M_R4" | cut -d'|' -f1)|$(list_for "$list" "$(E he56-tor)")"
 
-  # --- @HE-080: Zugang des verlorenen Handys entzogen; vorher offline gemacht -> Klaerung, danach -> nicht angenommen; ------
-  #     Ersatzhandy schreibt weiter.
+  # --- @HE-080 (echter QR-Weg, Regel F6): Zugang des verlorenen Handys entzogen. Alles bis zur ersten Verbindung nach dem
+  #     Entzug -> Klaerungsliste; eine spaetere Sendung -> nicht angenommen (Gegenbeispiel). Ersatzhandy schreibt weiter.
+  local mlost
+  mlost="$(qr_join "$U_TOM_LOST" "Tom")"
   ev MATCH_START "$(E he80-start)" "$(jq -cn --argjson at "$(at_rel -600000)" '{at: $at, clockMs: null, controlEpoch: 0}')"
   send "$U_TOM_LOST" "$D_TOM_LOST" "$M_R5"
-  q "SET session_replication_role = replica; UPDATE public.tournament_collaborators SET declined_at = now() WHERE tournament_id = '$T_CUP' AND user_id = '$U_TOM_LOST'; SET session_replication_role = origin;" >/dev/null
-  ev GOAL "$(E he80-vorher)" "$(goal "$TS" "$(at_rel -120000)" 1)"
-  ev GOAL "$(E he80-nachher)" "$(goal "$TS" "$(at_rel 600000)" 1)"
+  check K "Vorbereitung @HE-080: Olli entzieht den Zugang des verlorenen Handys per change_helper_access('revoke')" "OK" "$(revoke "$mlost")"
+  cur="$(q "SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint;")"
+  ev GOAL "$(E he80-vorher)" "$(goal "$TS" $((cur - 300000)) 1)"
+  ev YELLOW_CARD "$(E he80-nach-entzug-offline)" "$(jq -cn --arg t "$TS" --argjson at "$cur" '{at: $at, clockMs: 120000, teamId: $t, controlEpoch: 1, payload: {playerNumber: 3}}')"
   send "$U_TOM_LOST" "$D_TOM_LOST" "$M_R5"
-  check K "@HE-080 verlorenes Handy: Eintrag von vorher -> Klärungsliste, Eintrag nach dem Entziehen -> nicht angenommen" \
-    "review:RIGHTS_REVOKED,rejected:FORBIDDEN_ACTOR:RIGHTS_REVOKED|0:0" "$(results "$OUT")|$(row "$M_R5" | cut -d'|' -f1)"
-  q "UPDATE public.field_control SET holder_user_id = NULL, holder_device_id = NULL, epoch = epoch + 1 WHERE tournament_id = '$T_CUP' AND field = 15;" >/dev/null
+  check K "@HE-080 erste Verbindung nach dem Entzug: alle bis dahin offline gemachten Einträge (vor und nach dem Entzug) -> Klärungsliste, 0:0" \
+    "review:RIGHTS_REVOKED,review:RIGHTS_REVOKED|0:0" "$(results "$OUT")|$(row "$M_R5" | cut -d'|' -f1)"
+  cur="$(q "SELECT floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint;")"
+  ev GOAL "$(E he80-spaeter)" "$(goal "$TS" $((cur + 1000)) 1)"
+  send "$U_TOM_LOST" "$D_TOM_LOST" "$M_R5"
+  check G "@HE-080 Gegenbeispiel: ein Eintrag aus einer Sendung nach der ersten Verbindung wird nicht angenommen, nichts gespeichert" \
+    "rejected:FORBIDDEN_ACTOR:RIGHTS_REVOKED|0" "$(results "$OUT")|$(q "SELECT count(*) FROM public.match_events WHERE id = '$(E he80-spaeter)';")"
   ev GOAL "$(E he80-ersatz)" "$(goal "$TW" "$(at_rel 700000)" "$(q "SELECT epoch FROM public.field_control WHERE tournament_id = '$T_CUP' AND field = 15;")")"
   send "$U_TOM_NEW" "$D_TOM_NEW" "$M_R5"
   check K "@HE-080 Toms Zugang auf dem Ersatzhandy bleibt: sein Tor zählt (0:1)" "accepted|0:1" "$(results "$OUT")|$(row "$M_R5" | cut -d'|' -f1)"
@@ -707,7 +766,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -728,7 +787,7 @@ M = {
   # M5 Recht verloren -> wieder FORBIDDEN_ACTOR (Weiche weg)
   "M5": [("  ELSIF v_tournament_id IS NOT NULL AND match_engine.rights_change(v_tournament_id, v_uid) IS NOT NULL THEN", "  ELSIF false THEN")],
   # M6 Zeitpunkt des Entziehens nicht geprueft (@HE-080)
-  "M6": [("      ELSIF v_since IS NOT NULL AND (v_event ->> '\''at'\'')::numeric > v_since THEN", "      ELSIF false THEN")],
+  "M6": [("      ELSIF (v_event ->> '\''at'\'')::numeric > v_limit_ms THEN", "      ELSIF false THEN")],
   # M7 schon entschieden nicht geprueft
   "M7": [("              WHERE d.target_event_id = v_target AND d.type IN ('\''REVIEW_ACCEPT'\'', '\''REVIEW_DISCARD'\'') AND d.review_state IS NULL) THEN", "              WHERE false) THEN")],
   # M8 Uebernehmen ohne Wirkung (keine Kopie)
@@ -748,6 +807,10 @@ M = {
   "M15": [("         AND r.user_id IS NOT DISTINCT FROM p_uid AND r.device_id IS NOT DISTINCT FROM p_device_id) >= 100 THEN", "         ) >= 100 THEN")],
   # M16 (Review m3) keine Untergrenze beim Einsortieren
   "M16": [("  IF p_device_at < floor(extract(epoch FROM v_own_start) * 1000)::bigint THEN", "  IF false THEN")],
+  # M17 (@FU-130) nach dem Abpfiff angekommen bleibt CONTROL_LOST statt AFTER_END
+  "M17": [("CASE WHEN v_result ->> '\''code'\'' = '\''MATCH_FINISHED'\'' THEN '\''AFTER_END'\'' ELSE '\''CONTROL_LOST'\'' END,", "'\''CONTROL_LOST'\'',")],
+  # M18 (F6) Grenze wieder declined_at statt erster Kontakt (die alte Fassung vor Daniels Entscheidung)
+  "M18": [("  SELECT floor(extract(epoch FROM c.first_contact_at) * 1000)::bigint INTO v_limit_ms", "  SELECT floor(extract(epoch FROM coalesce(c.revoked_since, c.first_contact_at)) * 1000)::bigint INTO v_limit_ms")],
   "M13": [("          v_control_reject := NULL;\n          v_claim_pending := false;\n          v_review_reject := match_engine.review_target_check(p_match_id, v_event);", "          v_review_reject := match_engine.review_target_check(p_match_id, v_event);")],
 }
 for frm, to in M[os.environ["MUT_KEY"]]:
@@ -828,7 +891,7 @@ check S "Funktionen (public + match_engine): +9 (7 Hilfen, Trigger, Liste); appe
 check S "Rechte: Liste nur authenticated, Hilfen ohne Client-EXECUTE, Tabellen ohne Client-Schreibrechte" "true|false|false|false|false|false|false|false" \
   "$(q "SELECT has_function_privilege('authenticated', 'public.list_match_reviews(uuid)', 'EXECUTE') || '|' || has_function_privilege('anon', 'public.list_match_reviews(uuid)', 'EXECUTE') || '|' || has_function_privilege('authenticated', 'match_engine.review_store(public.matches,jsonb,uuid,uuid,text,jsonb,bigint)', 'EXECUTE') || '|' || has_function_privilege('authenticated', 'match_engine.revoked_intake(uuid,uuid,jsonb,uuid,uuid)', 'EXECUTE') || '|' || has_table_privilege('authenticated', 'public.match_reviews', 'INSERT') || '|' || has_table_privilege('authenticated', 'public.match_reviews', 'UPDATE') || '|' || has_table_privilege('authenticated', 'public.field_control_log', 'SELECT') || '|' || has_table_privilege('anon', 'public.match_reviews', 'SELECT');")"
 COUNTS_AFTER="$(counts "$(schema_public)")"
-check S "Katalog: Tabellen +2, RLS-Tabellen +2, Policies +1, Trigger +1, Indizes +4 (2 Primärschlüssel, 2 Suchindizes)" "2|2|1|1|4" \
+check S "Katalog: Tabellen +3, RLS-Tabellen +3, Policies +1, Trigger +1, Indizes +5 (3 Primärschlüssel, 2 Suchindizes)" "3|3|1|1|5" \
   "$(( $(count_of "$COUNTS_AFTER" tables) - $(count_of "$COUNTS_BEFORE" tables) ))|$(( $(count_of "$COUNTS_AFTER" rls_tables) - $(count_of "$COUNTS_BEFORE" rls_tables) ))|$(( $(count_of "$COUNTS_AFTER" policies) - $(count_of "$COUNTS_BEFORE" policies) ))|$(( $(count_of "$COUNTS_AFTER" triggers) - $(count_of "$COUNTS_BEFORE" triggers) ))|$(( $(count_of "$COUNTS_AFTER" indexes) - $(count_of "$COUNTS_BEFORE" indexes) ))"
 DUMP_AFTER="$(schema_dump)"
 

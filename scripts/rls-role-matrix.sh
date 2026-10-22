@@ -755,10 +755,10 @@ if [[ "$WITH_A21AS" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 3))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 4))
 fi
-# A-35: match_reviews (eine Lese-Policy) und field_control_log (ohne Policy) sind RLS-aktiv.
+# A-35: match_reviews (eine Lese-Policy), field_control_log und revoked_device_contacts (ohne Policy) sind RLS-aktiv.
 if [[ "$WITH_A35" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 1))
-  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 2))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 3))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"

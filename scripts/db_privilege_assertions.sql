@@ -1046,7 +1046,7 @@ SELECT 'lifecycle-guard-triggers-complete',
                                            'match_event_authors',
                                            -- A-35 (20261117_005): schreibt nur append_match_events nach closed_intake bzw. der Trigger auf
                                            -- field_control (selbst gesperrt) -- nach dem Abschluss unerreichbar
-                                           'match_reviews', 'field_control_log')
+                                           'match_reviews', 'field_control_log', 'revoked_device_contacts')
                     AND NOT EXISTS (SELECT 1 FROM pg_trigger t
                                      WHERE t.tgrelid = cl.oid AND t.tgname = cl.relname || '_guard_closed'
                                        AND t.tgfoid = to_regprocedure('public.guard_closed_tournament()')
@@ -1119,11 +1119,15 @@ SELECT 'append-match-events-end-by-lead-without-claim',
                                      WHERE t.from_status = 'running' AND t.event_type = 'RESULT_ENTRY' AND t.actor = 'leitung')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
 -- A-35 Klaerungsliste (20261117_005_klaerungsliste.sql, @FU-038, @FU-017, @HE-056, @HE-080). Vor dem Live-Einspielen: "f".
--- (1) match_reviews und field_control_log: RLS an, keine Schreibrechte fuer Client-Rollen; field_control_log ohne Lesen.
+-- (1) match_reviews, field_control_log, revoked_device_contacts: RLS an, keine Schreibrechte fuer Client-Rollen; field_control_log ohne Lesen.
 UNION ALL
 SELECT 'klaerungsliste-tables-rls-no-client-writes',
-       coalesce((SELECT bool_and(c.relrowsecurity) AND count(*) = 2 FROM pg_class c
-                  WHERE c.oid IN (to_regclass('public.match_reviews'), to_regclass('public.field_control_log'))), false)
+       coalesce((SELECT bool_and(c.relrowsecurity) AND count(*) = 3 FROM pg_class c
+                  WHERE c.oid IN (to_regclass('public.match_reviews'), to_regclass('public.field_control_log'),
+                                  to_regclass('public.revoked_device_contacts'))), false)
+       AND NOT EXISTS (SELECT 1 FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'revoked_device_contacts')
+       AND coalesce(NOT has_table_privilege('authenticated', 'public.revoked_device_contacts', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                    AND NOT has_table_privilege('anon', 'public.revoked_device_contacts', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE'), false)
        AND coalesce(NOT has_table_privilege('authenticated', 'public.match_reviews', 'INSERT, UPDATE, DELETE, TRUNCATE')
                     AND NOT has_table_privilege('anon', 'public.match_reviews', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
                     AND NOT has_table_privilege('authenticated', 'public.field_control_log', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
