@@ -118,12 +118,27 @@ fi
 # idempotent (ersetzt den Tabellensatz vollständig, kein Unterschied ob vorher leer oder
 # bereits gesetzt) — läuft deshalb IMMER, unabhängig vom obigen Schema-Einspielen-Zweig, damit
 # auch ein `test:env:up` auf einen bereits eingespielten Stack die Publikation korrigiert.
-echo "Realtime-Publikation setzen (supabase_realtime: 4 Tabellen wie Produktion)…" >&2
+#
+# A-13b-S M1 (Review #330): 20261110_006 nimmt public.group_completions, public.bracket_notices und
+# public.clarifications in die Publikation auf. Weil SET TABLE den Satz ERSETZT, würde die alte 4er-Liste
+# sie hier wieder entfernen -- lokal lehnte der Server dann den ganzen Realtime-Kanal ab (auch Spiele/Teams).
+# Deshalb 7 Tabellen, gleich mit REALTIME_PUBLICATION_TABLES in scripts/db-drift-check.sh (dort an PENDING-LIVE
+# gekoppelt; lokal wird jede Migration eingespielt). Fehlt eine der Tabellen (Stack vor _006 eingespielt), bricht das
+# Skript mit Hinweis ab, statt Realtime still unvollständig zu lassen.
+echo "Realtime-Publikation setzen (supabase_realtime: 7 Tabellen, Stand nach 20261110_006)…" >&2
+MISSING_PUB_TABLES="$(psql_scalar "SELECT string_agg(t, ', ') FROM unnest(ARRAY['public.match_events', 'public.matches', 'public.monitor_heartbeats', 'public.teams', 'public.group_completions', 'public.bracket_notices', 'public.clarifications']) t WHERE to_regclass(t) IS NULL;")"
+if [[ -n "$MISSING_PUB_TABLES" ]]; then
+  echo "::error::Für die Realtime-Publikation fehlen Tabellen: $MISSING_PUB_TABLES -- Schema älter als die Migrationen? npm run test:env:reset" >&2
+  exit 1
+fi
 psql_stdin <<'SQL'
 ALTER PUBLICATION supabase_realtime SET TABLE
   public.match_events,
   public.matches,
   public.monitor_heartbeats,
-  public.teams;
+  public.teams,
+  public.group_completions,
+  public.bracket_notices,
+  public.clarifications;
 SQL
 echo "Realtime-Publikation gesetzt." >&2
