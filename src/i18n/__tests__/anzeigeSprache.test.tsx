@@ -25,7 +25,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: { from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })), rpc: vi.fn().mockResolvedValue({ error: null }) },
 }));
 vi.mock('../../core/repositories/SupabaseRepository', () => ({
-  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet, getByShareCode: supabaseGet }; }),
+  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet, getForDisplay: async (id: string) => { const t: unknown = await supabaseGet(id); return t ? { kind: 'full', version: 1, serverNowMs: 0, tournament: t } : { kind: 'not-found' }; }, getByShareCode: supabaseGet }; }),
 }));
 vi.mock('../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { get: localGet, getByShareCode: localGet }; }),
@@ -45,7 +45,7 @@ import i18n from '../index';
 import { anzeigeT, anzeigeI18n, ANZEIGE_SPRACHE } from '../anzeigeSprache';
 import { LiveViewScreen } from '../../screens/LiveViewScreen';
 import { MonitorDisplayPage } from '../../features/monitor-display/MonitorDisplayPage';
-import { createLegacyMonitorSource } from '../../features/monitor-display/monitorDataSource';
+import { createMonitorSource } from '../../features/monitor-display/monitorDataSource';
 import { applyFetchError, initialDisplayState } from '../../features/monitor-display/monitorDisplayState';
 import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
 
@@ -175,7 +175,7 @@ describe('Monitor-Folien bei Browsersprache en (B-41 Fixrunde 2)', () => {
     supabaseGet.mockReturnValue(new Promise(() => undefined));
     localGet.mockResolvedValue(null);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const quelle = createLegacyMonitorSource('tour-1', 'mon-1');
+    const quelle = createMonitorSource('tour-1', 'mon-1');
     const ergebnis = quelle.fetch(null);
     await vorspulen(4_000);
     await ergebnis;

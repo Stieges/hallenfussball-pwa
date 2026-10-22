@@ -26,6 +26,8 @@ import {
 } from './supabaseMappers';
 import { readAccountTournamentList, type CloudTournamentList } from './accountTournamentList';
 import { shareIfUnshared, type ShareIfUnsharedResult } from './shareIfUnshared';
+import { callDisplayTournament, callPublicTournament } from './publicPayloadRpc';
+import type { PublicReply } from './publicPayload';
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -823,62 +825,32 @@ export class SupabaseRepository implements ITournamentRepository {
   // =============================================================================
 
   /**
-   * Fetches a public tournament by share code (for anonymous access)
-   * Returns null if not found or not public
+   * Öffentliches Turnier per Teilen-Code (B-14, E-A2): nur über die Server-Funktion `public_tournament` mit fester
+   * Positivliste -- anon liest die Tabellen nicht mehr direkt. `null` heißt sicher „nicht geteilt oder unbekannt“
+   * (@ZM-068); jede Störung (Netz, Serverfehler, unlesbare Antwort) wirft und ist nie „nicht gefunden“ (@ZM-109).
    */
   async getByShareCode(shareCode: string): Promise<Tournament | null> {
-    // Normalize to uppercase
     const normalizedCode = shareCode.toUpperCase().trim();
-
-    // Validate format
     if (!/^[A-Z0-9]{6}$/.test(normalizedCode)) {
       return null;
     }
-
-    // Fetch tournament by share_code (RLS policy allows this for public tournaments)
-    const { data: tournamentRow, error: tournamentError } = await getSupabase()
-      .from('tournaments')
-      .select('*')
-      .eq('share_code', normalizedCode)
-      .eq('is_public', true)
-      .single();
-
-    if (tournamentError) {
-      if (tournamentError.code === 'PGRST116') {
-        // Not found
-        return null;
-      }
-      console.error('Failed to fetch public tournament:', tournamentError);
+    const reply = await callPublicTournament(getSupabase(), normalizedCode, null);
+    if (reply.kind === 'not-found') {
       return null;
     }
-
-    // Fetch teams
-    const { data: teamRows, error: teamsError } = await getSupabase()
-      .from('teams')
-      .select('*')
-      .eq('tournament_id', tournamentRow.id)
-      .order('sort_order', { ascending: true });
-
-    if (teamsError) {
-      console.error('Failed to fetch teams:', teamsError);
-      return null;
+    if (reply.kind !== 'full') {
+      throw new UnreadableResponseError('getByShareCode', new Error(`Antwort ${reply.kind} ohne since_version`));
     }
+    return reply.tournament;
+  }
 
-    // Fetch matches
-    const { data: matchRows, error: matchesError } = await getSupabase()
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', tournamentRow.id)
-      .order('match_number', { ascending: true });
-
-    if (matchesError) {
-      console.error('Failed to fetch matches:', matchesError);
-      return null;
-    }
-
-    // Convert to frontend types (database may return null for empty arrays)
-     
-    return mapTournamentFromSupabase(tournamentRow, teamRows ?? [], matchRows ?? []);
+  /**
+   * Monitor-Link `/display/:tournamentId/:monitorId` (B-14, Übergang bis B-20/B-21): Server-Funktion
+   * `display_tournament` mit Positivliste, Schiedsrichtern und nur dem eigenen Monitor; mit `sinceVersion` nur Änderungen.
+   * Störungen werfen (`RepositoryError`), eine Antwort außerhalb des Vertrags wirft `UnreadableResponseError`.
+   */
+  getForDisplay(tournamentId: string, monitorId: string, sinceVersion: number | null): Promise<PublicReply> {
+    return callDisplayTournament(getSupabase(), tournamentId, monitorId, sinceVersion);
   }
 
   /**
