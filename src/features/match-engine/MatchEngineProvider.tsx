@@ -72,7 +72,10 @@ function buildBundle(
   const sender = new OutboxSender({
     store,
     api,
-    clientFormat: 1,
+    // B-49 (Brief A-34 L7): Format 2 = sendet Geräte-ID und Steuer-Epoche. Der Server nimmt jedes Format >= min_client_format an
+    // (`append_match_events`: `p_client_format < v_min_format` → CLIENT_OUTDATED, heute min 1); erst ein Anheben von
+    // min_client_format auf 2 (DB-Fenster, Freigabe Daniel) sperrt alte Stände ohne Geräte-ID aus.
+    clientFormat: 2,
     // B-49 (@FU-026, @FU-030): stabile Geraete-ID -- ohne sie entsteht am Server kein Anspruch (A-34), die Sperre greift nicht.
     deviceId: getDeviceId(),
     timers: {

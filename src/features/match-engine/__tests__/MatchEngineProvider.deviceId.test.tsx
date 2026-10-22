@@ -61,4 +61,16 @@ describe('B-49 Geräte-ID im Ausgang', () => {
     expect(options.deviceId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(options.deviceId).toBe(getDeviceId());
   });
+
+  it('Brief A-34 L7: der Ausgang meldet Format 2 (Geräte-ID und Epoche), der Server nimmt jedes Format >= min_client_format (1) an', async () => {
+    let ctx: MatchEngineContextValue | null = null;
+    render(<MatchEngineProvider><Probe onReady={(value) => { ctx = value; }} /></MatchEngineProvider>);
+    await waitFor(() => expect(ctx?.accountId).toBe('tom'));
+    const c = ctx as unknown as MatchEngineContextValue;
+    await c.store.create('tom', 'spiel-16', { ...CTX, matchId: 'spiel-16' }, 'T');
+    await c.store.addPending('tom', 'spiel-16', { ...ANPFIFF, id: '55555555-5555-4555-8555-555555555555' });
+    await c.sender.kick('spiel-16');
+    await waitFor(() => expect(append).toHaveBeenCalled());
+    expect((append.mock.calls[0][2] as AppendOptions).clientFormat).toBe(2);
+  });
 });
