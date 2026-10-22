@@ -3,17 +3,36 @@
  * Gespeichert im `tournaments.config`-JSONB (keine Migration). TB-3' (@W2A-072): Person, Zeitpunkt und Grund stehen nicht
  * mehr im öffentlich lesbaren config – Altwerte (`decidedBy`, `decidedAt`, `reason`) entfernt das Lesen, also auch das
  * nächste Schreiben; alles andere Unbekannte macht die Entscheidung weiter ungültig.
+ *
+ * GA4 A-13b-S Punkt 7 (Auflage 8): Schema + `checkDraftFields` (decisions.ts) sind der Zwilling von
+ * `match_engine.standing_decision_valid` (Migration `20261110_006`) – weder strenger noch lockerer als der Server.
+ * Gleichlauf: `src/core/standings/__fixtures__/standing-decision-shapes.json`. Anforderungen: @W2A-048, @TM-147.
  */
 import { z } from 'zod';
+import { TeamIdSchema } from './MatchSlotSchema';
+
+/** Länge in Zeichen wie Postgres `char_length` (Unicode-Zeichen, nicht UTF-16-Einheiten wie `String.length`). */
+const charLength = (value: string): number => [...value].length;
+
+/** Text mit `min`–`max` Zeichen, gezählt wie am Server. */
+const textOfLength = (min: number, max: number) =>
+  z.string().refine((value) => {
+    const length = charLength(value);
+    return length >= min && length <= max;
+  }, `Text muss ${min}–${max} Zeichen lang sein`);
 
 export const StandingDecisionSchema = z.strictObject({
-  id: z.string().min(1),
-  groupId: z.string(),
-  teamIds: z.array(z.string().min(1)).min(2),
-  order: z.array(z.string().min(1)).min(2),
+  id: textOfLength(1, 100),
+  groupId: textOfLength(0, 40),
+  /** Team-IDs als UUID in Kleinschreibung (wie der Server); die Gleichheit mit `order` prüft `checkDraftFields`. */
+  teamIds: z.array(TeamIdSchema).min(2),
+  order: z.array(TeamIdSchema).min(2),
   kind: z.enum(['shootout', 'order', 'shared']),
   shootout: z.strictObject({ winner: z.number().int().min(0), loser: z.number().int().min(0) }).optional(),
-  basis: z.string(),
+  basis: textOfLength(0, 20000),
+}).refine((decision) => decision.kind === 'shootout' || decision.shootout === undefined, {
+  message: "Ein Ergebnis (shootout) gibt es nur bei kind 'shootout'",
+  path: ['shootout'],
 });
 
 /** Frühere Felder mit Person, Zeit und Grund (vor TB-3'), die beim Lesen wegfallen. */

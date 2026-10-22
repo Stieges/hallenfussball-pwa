@@ -52,4 +52,22 @@ describe('TB-3 Entscheidungen im config (Mapper, Zod)', () => {
     expect(TournamentSchema.safeParse({ ...turnier, standingDecisions: 'kein Feld' }).data?.standingDecisions).toBeUndefined();
     expect(TournamentSchema.safeParse({ ...turnier, standingDecisions: [ENTSCHEIDUNG] }).data?.standingDecisions).toEqual([ENTSCHEIDUNG]);
   });
+
+  it('A-13b-S Punkt 7 (Plan-Risiko 8): eine Altkopie mit einem Eintrag, den der Server ablehnen würde, verliert nur diesen Eintrag', () => {
+    const turnier = { ...league('RKMUNO', DATA.ET_055).tournament, sportId: 'football-indoor' };
+    const kurzIds = { ...ENTSCHEIDUNG, id: 'kurz-ids', teamIds: ['a', 'b'], order: ['b', 'a'] };
+    const ergebnisBeiAkzeptieren = { ...ENTSCHEIDUNG, id: 'akzeptiert-mit-ergebnis', kind: 'shared' };
+    const lokal = TournamentSchema.safeParse({
+      ...turnier, standingDecisions: [kurzIds, ergebnisBeiAkzeptieren, ENTSCHEIDUNG], placementsToPlayOut: [1, 100],
+    });
+    expect(lokal.success).toBe(true);
+    expect(lokal.data?.standingDecisions).toEqual([ENTSCHEIDUNG]);
+    // Platz 100 gibt es am Server nicht: die Liste fällt auf die Voreinstellung zurück, das Turnier bleibt lesbar.
+    expect(lokal.data?.placementsToPlayOut).toEqual([1]);
+    // Cloud-Weg: dieselbe Regel beim Lesen des config.
+    expect(roundTrip({ standingDecisions: [kurzIds, ergebnisBeiAkzeptieren, ENTSCHEIDUNG] }).back.standingDecisions).toEqual([ENTSCHEIDUNG]);
+    // Gegenbeispiel: „so akzeptieren“ ohne Ergebnis bleibt gültig.
+    const akzeptiert = { ...ENTSCHEIDUNG, id: 'akzeptiert', kind: 'shared' as const, shootout: undefined };
+    expect(roundTrip({ standingDecisions: [akzeptiert] }).back.standingDecisions?.map((d) => d.id)).toEqual(['akzeptiert']);
+  });
 });
