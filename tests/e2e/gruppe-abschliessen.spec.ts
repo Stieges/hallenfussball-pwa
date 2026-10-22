@@ -74,7 +74,7 @@ for (const geraet of GERAETE) {
   test.describe(`Gruppe abschließen – ${geraet.name}`, () => {
     test.use({ viewport: { width: geraet.width, height: geraet.height } });
 
-    test('Banner, Dialog, Abschluss besetzt die Halbfinals, Wiederöffnen mit Grund (@TM-044, @TM-016, @TM-046, @TM-072)', async ({ page, seedIndexedDB }) => {
+    test('Banner, Dialog, Abschluss (Wirkung aus der Rangfolge), Wiederöffnen mit Grund (@TM-044, @TM-016, @TM-046, @TM-072)', async ({ page, seedIndexedDB }) => {
       mkdirSync(BILDER, { recursive: true });
       await oeffneTabellen(page, seedIndexedDB, false);
 
@@ -93,7 +93,7 @@ for (const geraet of GERAETE) {
       await page.screenshot({ path: join(BILDER, `z7-${geraet.name}.png`) });
       await dialog.getByTestId('group-close-confirm').click();
 
-      // @TM-046: abgeschlossen, Wirkung im Hinweis, „Gruppe wieder öffnen“ vorhanden
+      // @TM-046: abgeschlossen, Wirkung im Hinweis (aus der Rangfolge; das Besetzen der Halbfinal-Seiten selbst belegt `localGroupCompletion.besetzen.test.ts`), „Gruppe wieder öffnen“ vorhanden
       await expect(page.getByTestId('group-state-A')).toHaveText('abgeschlossen');
       await expect(page.getByTestId('group-done-A')).toContainText('FC Nord');
       await expect(page.getByTestId('group-close-suggestion')).toHaveCount(0);

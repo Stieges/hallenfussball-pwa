@@ -17,6 +17,7 @@ import { StateMark, type StateMarkSymbol, type StateMarkTone } from '../../../co
 import {
   groupMatches, groupState, groupStateLabel, phaseState, undecidedMatches, type GroupStateWord, type PhaseState,
 } from '../../../core/services/GroupCompletionService';
+import { isPendingSlot } from '../../../core/models/matchSlot';
 import { completionEffect } from '../../../core/services/groupCompletionPlan';
 import { activeCompletion } from '../../../core/standings/groupCompletions';
 import { timeText } from '../standings/tieFormat';
@@ -115,7 +116,9 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
   const suffix = at === undefined ? '' : person?.name !== undefined ? ` · ${t('groupCompletion.done.by', { name: person.name, time: timeText(at, i18n.language) })}` : ` · ${timeText(at, i18n.language)}`;
   const effect = completionEffect(tournament, groupId, completion.ranking, completion.openRanks)
     .map((e) => t('groupCompletion.done.effect', { label: labelText(e.label), side: t(e.side === 'A' ? 'groupCompletion.done.sideHome' : 'groupCompletion.done.sideAway'), team: nameOf(e.teamId) }).trim());
-  const finals = tournament.matches.some((m) => m.isFinal === true);
+  // „Alle Plätze der Finalrunde sind besetzt“ nur, wenn es Finalspiele gibt und keine Seite mehr auf einen Gruppenplatz wartet (aus den Seiten, nicht aus dem Phasenzustand)
+  const finalMatches = tournament.matches.filter((m) => m.isFinal === true);
+  const allGroupSidesFilled = finalMatches.length > 0 && finalMatches.every((m) => [m.slotA, m.slotB].every((slot) => !(isPendingSlot(slot) && slot.source.kind === 'groupRank')));
   return (
     <InlineNotice
       tone="ok"
@@ -137,7 +140,7 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
     >
       <span style={title}>{`${t('groupCompletion.done.title', withGroup(name))}${suffix}`}</span>
       <p style={line}>{name === undefined ? t('groupCompletion.done.effectAll') : effect.join(' ')}</p>
-      {finals && phaseState(tournament, 'groups') === 'completed' ? <p style={line} data-testid="group-phase-done">{t('groupCompletion.done.phaseDone')}</p> : null}
+      {allGroupSidesFilled ? <p style={line} data-testid="group-phase-done">{t('groupCompletion.done.phaseDone')}</p> : null}
     </InlineNotice>
   );
 };

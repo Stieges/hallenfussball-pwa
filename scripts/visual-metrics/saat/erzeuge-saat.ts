@@ -12,8 +12,8 @@
  */
 import { TournamentCreationService } from '../../../src/core/services/TournamentCreationService';
 import { resolveBracketAfterPlayoffMatch } from '../../../src/core/generators';
-import { activeRanking } from '../../../src/core/services/GroupCompletionService';
-import { placeFollowUps } from '../../../src/core/services/followUpPlacement';
+import { activeRanking, expectedState } from '../../../src/core/services/GroupCompletionService';
+import { applyCompleteGroup } from '../../../src/core/repositories/localGroupCompletion';
 import { cacheColumns, reduceMatch, serverRules } from '../../../src/core/match';
 import type { EngineEvent, MatchContext, MatchRules } from '../../../src/core/match';
 import { MATCH_COPY_FORMAT_VERSION, matchCopyKey } from '../../../src/core/match/client/matchCopy';
@@ -267,10 +267,19 @@ const seiteId = (m: Match, seite: 'slotA' | 'slotB'): string => {
 }
 
 /** Gemeinsames Gerüst: ersetzt Spiele und sammelt die Engine-Kopien. */
-/** A-13c: „Gruppe abschließen“ für jede Gruppe (statt des entfernten automatischen Besetzens): Finalrunde mit der Tabelle besetzen. */
+/**
+ * A-13c: „Gruppe abschließen“ für jede Gruppe über den echten lokalen Weg (`applyCompleteGroup`): Abschluss (`groupCompletions`) und
+ * besetzte Finalrunde. Ohne den Abschluss zeigte die Ansicht einen Vorschlag für Gruppen, deren Halbfinals längst laufen
+ * (Review #336 A3) – diesen Zustand gibt es nach A-13c nicht mehr.
+ */
 function schliesseGruppenAb(t: Tournament): void {
   for (const gruppe of ['A', 'B']) {
-    t.matches = placeFollowUps(t, gruppe, activeRanking(t, gruppe)).tournament.matches
+    const { tournament } = applyCompleteGroup(t, {
+      groupId: gruppe, ranking: activeRanking(t, gruppe), openRanks: [], tieDecisions: [], knownDecisionIds: [], expectedState: expectedState(t, gruppe),
+    })
+    if (tournament === undefined) { throw new Error(`Gruppe ${gruppe} nicht abgeschlossen`) }
+    t.matches = tournament.matches
+    t.groupCompletions = tournament.groupCompletions
   }
 }
 

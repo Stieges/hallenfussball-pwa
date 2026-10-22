@@ -6,9 +6,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Tournament } from '../../../types/tournament';
-import { activeRanking, prepareGroupCompletion, prepareRecompletion } from '../GroupCompletionService';
+import { activeRanking, groupState, prepareGroupCompletion, prepareRecompletion } from '../GroupCompletionService';
 import { completion, NK, tournamentFromFixture } from '../../standings/__tests__/groupCompletionKit';
 import { MemoryRepo } from '../../standings/__tests__/decisionTestKit';
+import { id, league } from '../../standings/__tests__/fixtures';
 
 const nikolaus = (places?: number[]): Tournament => ({ ...tournamentFromFixture('nikolaus'), ...(places !== undefined ? { placementsToPlayOut: places } : {}), version: 1 });
 
@@ -80,5 +81,41 @@ describe('@TM-150 Der Neu-Abschluss legt einen auszuspielenden Platz ohne Folges
     expect(result).toMatchObject({ code: 'READY', openRanks: [] });
     expect(result.code === 'READY' && result.tieDecisions.map((d) => d.id)).toEqual(['e-1']);
     expect(result.code === 'READY' && result.ranking.slice(2, 4)).toEqual([NK.otting, NK.petting]);
+  });
+});
+
+/**
+ * @TM-150 wörtlich (Review #336 A4): Nikolaus-Art (eine Gruppe „Jeder gegen jeden“, Platz 1 als auszuspielender Platz eingestellt, kein Spiel
+ * mit der Herkunft „Erster der Gruppe“), Gleichstand bzw. Alleinstellung auf PLATZ 1. Vier Teams genügen für die Regel.
+ */
+describe('@TM-150 wörtlich: Platz 1 ausgespielt, kein Folgespiel', () => {
+  const lage = (wOst: string): Tournament => {
+    const { tournament } = league('WONB', `W–O ${wOst}; W–N 2:0; W–B 1:0; O–N 2:0; O–B 1:0; N–B 1:0`, { group: undefined });
+    return { ...tournament, placementsToPlayOut: [1], groupCompletions: [completion('', [id('W'), id('O'), id('N'), id('B')], { stale: true })] };
+  };
+
+  it('Zeile 1: SC Ost und TSV West nach allen Kriterien gleich auf Platz 1 → Entscheidung nötig, „Besetzung prüfen“ bleibt, die Gruppe ist nicht neu abgeschlossen', () => {
+    const t = lage('1:1');
+    const result = prepareRecompletion(t, '');
+    expect(result).toEqual({ code: 'DECISION_REQUIRED', blocks: [expect.objectContaining({ teamIds: expect.arrayContaining([id('W'), id('O')]), place: 1, size: 2, mayShare: false, mandatory: { kind: 'setting', place: 1 } })] });
+    expect(groupState(t, '')).toBe('stale'); // nichts abgeschlossen, solange keine Entscheidung vorliegt
+  });
+
+  it('Zeile 1: nach Ollis Entscheidung zwischen beiden ist die Gruppe neu abschließbar (bereit, ohne offene Plätze)', async () => {
+    const repo = new MemoryRepo({ ...lage('1:1'), version: 1 });
+    const gewinner = id('O');
+    const entschieden = await repo.service(['e-1']).decide(repo.tournament.id, { groupId: '', teamIds: [id('W'), id('O')], order: [gewinner, id('W')], kind: 'shootout', shootout: { winner: 4, loser: 3 } });
+    expect(entschieden.ok).toBe(true);
+    expect(prepareRecompletion(repo.tournament, '')).toMatchObject({ code: 'READY', openRanks: [] });
+  });
+
+  it('Zeile 2: SC Ost allein auf Platz 1 → neu abschließbar ohne offene Plätze (READY)', () => {
+    expect(prepareRecompletion(lage('0:1'), '')).toMatchObject({ code: 'READY', openRanks: [] });
+  });
+
+  // Der Teil „ohne dass ‚Besetzung prüfen‘ erscheint“ braucht den AUSLÖSER nach der Korrektur (A-15b: automatischer Neu-Abschluss).
+  // Heute (A-13c) wirkt nur die Taste „Erneut abschließen“; die Gruppe bleibt nach der Korrektur `stale`. Befund C-NEUABSCHLUSS-PFLICHTBLOCK-STILL, Besitzer A-15b.
+  it.fails('@TM-150 Zeile 2 C-NEUABSCHLUSS-PFLICHTBLOCK-STILL (A-15b): nach der Korrektur ohne Klick neu abgeschlossen, „Besetzung prüfen“ erscheint nicht', () => {
+    expect(groupState(lage('0:1'), '')).not.toBe('stale');
   });
 });

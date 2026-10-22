@@ -30,6 +30,8 @@ import { RetryLaterError } from '../../../../core/errors';
 import { completion, HC, matchOf, NK, tournamentFromFixture, withMatch } from '../../../../core/standings/__tests__/groupCompletionKit';
 import { MemoryRepo } from '../../../../core/standings/__tests__/decisionTestKit';
 import { ET021_GRUPPE_A, ET021_GRUPPE_B, zweiGruppen } from '../../../../core/standings/__tests__/tb4Kit';
+import { placeFollowUps } from '../../../../core/services/followUpPlacement';
+import { activeRanking } from '../../../../core/services/GroupCompletionService';
 import { groupRank, slots } from '../../../../test/matchSlotFixtures';
 import { i18nWrapper } from '../../standings/__tests__/tieTestKit';
 import { rankingTitle } from '../../__tests__/openPlacementTestHelpers';
@@ -95,6 +97,8 @@ const lage060 = (places: number[], spielUmPlatz5: boolean): Tournament => {
     placementsToPlayOut: places,
   };
 };
+
+const placeAll = (t: Tournament): Tournament['matches'] => ['A', 'B'].reduce((acc, g) => placeFollowUps(acc, g, activeRanking(acc, g)).tournament, t).matches;
 
 const marke = (g: string): string => screen.getByTestId(`group-state-${groupTestId(g)}`).textContent ?? '';
 
@@ -173,6 +177,36 @@ describe('@TM-044 @TM-045 Vorschlag und Rechte', () => {
     expect(tasten.map((b) => b.getAttribute('data-testid'))).toEqual(['group-close-button-B', 'group-close-button-A']);
     expect(tasten.filter((b) => b.hasAttribute('data-primary'))).toHaveLength(1);
     expect(tasten[0]).toHaveAttribute('data-primary');
+  });
+});
+
+describe('Abschluss-Hinweis: Wirkung, Person und Zeit (@TM-046, @TM-113)', () => {
+  const abgeschlossen = (): Tournament => ({
+    ...hallencup(),
+    groupCompletions: [completion('A', [HC.nord, HC.sued, HC.west, HC.ost])],
+    decisionLog: [{ id: 1, kind: 'complete_group', groupId: 'A', detail: {}, actorName: 'Olli', at: '2026-11-28T11:00:00Z' }],
+  });
+
+  it('@TM-046 die Turnierleitung sieht „Gruppe A abgeschlossen · Olli · Zeit“ (aus dem Verlauf)', async () => {
+    await zeige(abgeschlossen());
+    expect(screen.getByTestId('group-done-A')).toHaveTextContent(/Gruppe A abgeschlossen · Olli · \d{2}:\d{2}/);
+  });
+
+  it('@TM-113 Gegenbeispiel Helfer: Wirkung ja, aber weder Person noch Zeit', async () => {
+    await zeige(abgeschlossen(), { leitung: false });
+    expect(screen.getByTestId('group-done-A')).toHaveTextContent('Gruppe A abgeschlossen');
+    expect(screen.getByTestId('group-done-A')).not.toHaveTextContent(/Olli|\d{2}:\d{2}/);
+  });
+
+  it('S2 „Alle Plätze der Finalrunde sind besetzt“ nur, wenn keine Seite mehr auf einen Gruppenplatz wartet', async () => {
+    const t = hallencup();
+    const beide = { ...t, matches: t.matches.map((m) => (m.group === 'B' ? { ...m, matchStatus: 'finished' as const, scoreA: m.scoreA ?? 1, scoreB: m.scoreB ?? 0 } : m)), groupCompletions: [completion('A', [HC.nord, HC.sued, HC.west, HC.ost]), completion('B', [HC.mitte, HC.berg, HC.ufer, HC.tal])] };
+    await zeige(beide); // Gruppen abgeschlossen, die Halbfinals zeigen aber noch ihre Herkunft
+    expect(screen.queryByTestId('group-phase-done')).toBeNull();
+    cleanup();
+    const gefuellt = { ...beide, matches: placeAll(beide) };
+    await zeige(gefuellt);
+    expect(screen.getAllByTestId('group-phase-done').length).toBeGreaterThan(0);
   });
 });
 
