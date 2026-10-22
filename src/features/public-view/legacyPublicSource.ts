@@ -21,7 +21,7 @@ export interface ShareCodeLookup {
   getByShareCode(code: string): Promise<Tournament | null>;
 }
 
-interface ProbeResult { error?: { message: string } | null }
+interface ProbeResult { error?: { message: string } | null; data?: readonly unknown[] | null }
 
 /**
  * `getByShareCode` liefert bei jedem Fehler `null`, auch bei Netzfehler oder 5xx (Befund C-ZUSCHAUER-LADEFEHLER-ALS-NICHT-GEFUNDEN,
@@ -40,6 +40,10 @@ export async function assertShareCodeUnknown(code: string): Promise<void> {
     .limit(1)) as ProbeResult | undefined;
   if (result?.error) {
     throw new Error(result.error.message);
+  }
+  // Findet die Prüfung das Turnier doch, war `getByShareCode` nur gestört: ebenfalls eine Störung, kein „nicht gefunden“
+  if ((result?.data?.length ?? 0) > 0) {
+    throw new Error('Turnier vorhanden, aber nicht gelesen (Störung)');
   }
 }
 

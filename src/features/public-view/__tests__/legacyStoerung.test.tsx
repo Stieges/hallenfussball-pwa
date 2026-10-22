@@ -45,6 +45,12 @@ describe('Adapter (a) mit dem echten Repository', () => {
     expect(await source.fetch('ABC123', null)).toEqual({ kind: 'unreachable' });
   });
 
+  it('@ZM-109 getByShareCode liefert null, die Zusatzabfrage aber 1 Zeile: nur kurz gestört, also „nicht erreichbar“', async () => {
+    state.single = { data: null, error: { code: '', message: 'Failed to fetch' } };
+    state.probe = { data: [{ id: 'abc' }], error: null };
+    expect(await source.fetch('ABC123', null)).toEqual({ kind: 'unreachable' });
+  });
+
   it('@ZM-109 Gegenbeispiel: 0 Zeilen (Turnier nicht freigegeben) bleibt „nicht gefunden“', async () => {
     state.single = { data: null, error: { code: 'PGRST116', message: 'no rows' } };
     state.probe = { data: [], error: null };

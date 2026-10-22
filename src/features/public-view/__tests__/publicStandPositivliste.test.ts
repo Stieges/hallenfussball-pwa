@@ -32,7 +32,7 @@ const withSecrets = (): Tournament => {
     monitors: [{ id: 'm1', accessCode: 'GEHEIM' }],
     externalSource: 'CSV Import',
     teams: t.teams.map((team, i) => (i === 0 ? { ...team, trainers: [{ id: 'tr', name: 'Trainer Tom', email: 'tom@example.org' }] } : team)),
-    matches: t.matches.map((m, i) => (i === 0 ? { ...m, correctionHistory: [{ timestamp: 'x', previousScoreA: 0, previousScoreB: 0, newScoreA: 1, newScoreB: 0, userName: 'Olli Orga' }] } : m)),
+    matches: t.matches.map((m, i) => (i === 0 ? { ...m, skippedReason: 'Team zurückgezogen (Freitext)', correctionHistory: [{ timestamp: 'x', previousScoreA: 0, previousScoreB: 0, newScoreA: 1, newScoreB: 0, userName: 'Olli Orga' }] } : m)),
   } as unknown as Tournament;
 };
 
@@ -41,7 +41,7 @@ describe('Stand-Speicher: Positivliste', () => {
     const storage = memory();
     saveStand(storage, 'ABC123', { source: 'legacy', version: '1', day: '2026-10-10', tournament: withSecrets() });
     const stored = storage.getItem('publicStand:v1:ABC123') ?? '';
-    for (const secret of ['erika@example.org', '0170 1234567', 'GEHEIMLOGO', 'Hallenschaden', 'Schlüssel unter der Matte', 'GEHEIM"', 'CSV Import', 'tom@example.org', 'Olli Orga', 'statsSnapshot', 'contactInfo']) {
+    for (const secret of ['erika@example.org', '0170 1234567', 'GEHEIMLOGO', 'Hallenschaden', 'Schlüssel unter der Matte', 'GEHEIM"', 'CSV Import', 'tom@example.org', 'Olli Orga', 'Team zurückgezogen', 'statsSnapshot', 'contactInfo']) {
       expect(stored).not.toContain(secret);
     }
   });

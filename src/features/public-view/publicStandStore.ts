@@ -55,7 +55,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Positivliste (B-15, Review A2): gespeichert wird nur, was die Zuschauer-Seite zum Rechnen und Anzeigen braucht. Nicht dabei:
  * Ansprechpartner (`contactInfo`), Sponsoren (Base64-Logos), Notizen, Monitor-Konfiguration, AbsageGrund, Statistik-Schnappschuss,
- * Herkunft des Imports, Trainer der Teams und die Korrekturhistorie der Spiele (Namen).
+ * Herkunft des Imports, Trainer der Teams die Korrekturhistorie der Spiele (Namen) und der Grund eines Ausfalls (Freitext).
  */
 const STAND_TOURNAMENT_KEYS = [
   'id', 'status', 'sport', 'sportId', 'tournamentType', 'mode', 'numberOfFields', 'numberOfTeams', 'groupSystem', 'numberOfGroups',
@@ -86,7 +86,7 @@ export function toPublicCopy(tournament: Tournament): Tournament {
   return {
     ...copy,
     teams: tournament.teams.map((team) => pickKeys(team, STAND_TEAM_KEYS) as Team),
-    matches: tournament.matches.map(({ correctionHistory: _history, ...match }) => match),
+    matches: tournament.matches.map(({ correctionHistory: _history, skippedReason: _reason, ...match }) => match),
   } as Tournament;
 }
 
