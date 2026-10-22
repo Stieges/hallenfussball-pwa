@@ -29,6 +29,8 @@ import { getGroupShortCode } from '../../utils/displayNames';
 import { computeFinalStandings } from '../../core/standings/finalStandings';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
 import { useTieRenderers } from './standings/useTieRenderers';
+import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
+import { GroupStateDetails, GroupStateMarks } from './group-completion/GroupStateHead';
 
 interface TabellenTabProps {
   tournament: Tournament;
@@ -133,6 +135,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         tieDisplay="app"
         renderTieHint={tieUi.hint}
         renderTieMarker={tieUi.marker}
+        renderGroupState={(groupId) => ({ marks: <GroupStateMarks groupId={groupId} />, below: <GroupStateDetails groupId={groupId} /> })}
       />
     );
   };
@@ -358,6 +361,14 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     return (
       <div style={{ padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
         {/* Gleichstand bei Jeder gegen jeden (eine Tabelle ohne Gruppen), Paket TB-B: ganz oben, die Taste bleibt ohne Scrollen erreichbar */}
+        {!hasGroups && (
+          <div style={{ marginBottom: cssVars.spacing.md }} data-testid="group-head-all">
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, marginBottom: cssVars.spacing.sm }}>
+              <GroupStateMarks groupId="" />
+            </div>
+            <GroupStateDetails groupId="" />
+          </div>
+        )}
         {!hasGroups && tieUi.hint('')}
         <h2 style={titleStyle}>{t('ranking.title')}</h2>
 
@@ -697,6 +708,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
       )}
 
       <Card>
+        {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
+        <GroupCompletionTop />
         {/* Segment Control */}
         <div style={segmentContainerStyle}>
           <div style={segmentGroupStyle}>

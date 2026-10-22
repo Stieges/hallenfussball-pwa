@@ -34,14 +34,37 @@ const teamIdsOf = (entry: BracketLogEntry): string[] | undefined => {
   return Array.isArray(ids) && ids.every((id): id is string => typeof id === 'string') ? ids : undefined;
 };
 
+/** Letzter Verlaufseintrag (Entscheidung oder Rücknahme) über genau diese Teams. */
+function lastBlockEntry(tournament: Pick<Tournament, 'decisionLog'>, teamIds: readonly string[]): BracketLogEntry | undefined {
+  return [...(tournament.decisionLog ?? [])].reverse().find((e) => {
+    const ids = teamIdsOf(e);
+    return (e.kind === 'standing_decision' || e.kind === 'standing_withdraw') && ids !== undefined && sameTeamSet(ids, teamIds);
+  });
+}
+
+const authorOf = (entry: BracketLogEntry): DecisionAuthor => ({ ...(entry.actorName !== undefined ? { name: entry.actorName } : {}), at: entry.at });
+
 /**
  * Wurde die letzte Entscheidung über genau diese Teams zurückgenommen? (@W2A-070: „wer wann zurückgenommen hat“.) Gilt nur, wenn
  * die Rücknahme der LETZTE Verlaufseintrag zu diesen Teams ist; wurde danach neu entschieden, ist sie überholt.
  */
 export function withdrawnForBlock(tournament: Pick<Tournament, 'decisionLog'>, teamIds: readonly string[]): DecisionAuthor | undefined {
-  const last = [...(tournament.decisionLog ?? [])].reverse().find((e) => {
-    const ids = teamIdsOf(e);
-    return (e.kind === 'standing_decision' || e.kind === 'standing_withdraw') && ids !== undefined && sameTeamSet(ids, teamIds);
-  });
-  return last?.kind === 'standing_withdraw' ? { ...(last.actorName !== undefined ? { name: last.actorName } : {}), at: last.at } : undefined;
+  const last = lastBlockEntry(tournament, teamIds);
+  return last?.kind === 'standing_withdraw' ? authorOf(last) : undefined;
+}
+
+/** Rücknahme mit der zurückgenommenen Entscheidung: wer sie wann eingetragen und wer sie wann zurückgenommen hat (GA4 A-13c, N2). */
+export interface BlockWithdrawal {
+  withdrawn: DecisionAuthor;
+  /** Die zurückgenommene Entscheidung: Art und wer sie wann eingetragen hat; fehlt, wenn der Verlauf sie nicht mehr enthält. */
+  decided?: DecisionAuthor & { kind: BracketLogEntry['detail']['kind'] };
+}
+
+export function withdrawalOfBlock(tournament: Pick<Tournament, 'decisionLog'>, teamIds: readonly string[]): BlockWithdrawal | undefined {
+  const last = lastBlockEntry(tournament, teamIds);
+  if (last?.kind !== 'standing_withdraw') {
+    return undefined;
+  }
+  const entry = [...(tournament.decisionLog ?? [])].reverse().find((e) => e.kind === 'standing_decision' && idOf(e) === idOf(last));
+  return { withdrawn: authorOf(last), ...(entry !== undefined ? { decided: { ...authorOf(entry), kind: entry.detail.kind } } : {}) };
 }

@@ -85,6 +85,11 @@ export function groupMatches(tournament: Pick<Tournament, 'matches'>, groupId: s
   return tournament.matches.filter((m) => !isFinalMatch(m) && groupKeyOf(m.group) === groupId);
 }
 
+/** Gruppenspiele, die noch nicht entschieden sind (@TM-054): laufend, angesetzt oder ohne Stand. */
+export function undecidedMatches(tournament: Pick<Tournament, 'matches'>, groupId: string): Match[] {
+  return groupMatches(tournament, groupId).filter((m) => !isDecided(m));
+}
+
 /** Alle Gruppen mit mindestens einem Gruppenspiel, sortiert (Jeder gegen jeden: `['']`). */
 export function groupIds(tournament: Pick<Tournament, 'matches'>): string[] {
   return [...new Set(tournament.matches.filter((m) => !isFinalMatch(m)).map((m) => groupKeyOf(m.group)))].sort();

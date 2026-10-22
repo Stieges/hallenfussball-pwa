@@ -126,9 +126,11 @@ export interface OrderStepProps extends BlockProps {
   reason: string;
   onReason: (value: string) => void;
   onRules: () => void;
+  /** Kennung des Grund-Feldes (Standard `tie-reason`; im Abschluss `group-close-reason`). */
+  reasonTestId?: string;
 }
 
-export const OrderStep = ({ block, nameOf, order, onMove, reason, onReason, onRules }: OrderStepProps) => {
+export const OrderStep = ({ block, nameOf, order, onMove, reason, onReason, onRules, reasonTestId = 'tie-reason' }: OrderStepProps) => {
   const { t } = useTranslation('tournament');
   const area: CSSProperties = {
     display: 'block',
@@ -168,7 +170,7 @@ export const OrderStep = ({ block, nameOf, order, onMove, reason, onReason, onRu
         </div>
         <textarea
           id="tie-reason"
-          data-testid="tie-reason"
+          data-testid={reasonTestId}
           style={area}
           value={reason}
           maxLength={DECISION_REASON_MAX_LENGTH}

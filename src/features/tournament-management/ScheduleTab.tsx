@@ -38,6 +38,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useAppSettings } from '../../hooks/useUserProfile';
 import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
+import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -269,6 +270,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     <>
       <div style={containerStyle} className="schedule-tab-container">
         <Card style={editModeCardStyle} className="schedule-tab-card">
+          {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
+          <GroupCompletionTop />
           {/* Action Buttons Header */}
           <ScheduleToolbar
             isEditing={isEditing}

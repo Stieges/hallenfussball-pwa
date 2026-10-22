@@ -14,6 +14,9 @@ const verwaltung = vi.hoisted(() => ({
   tournament: { id: 't-1', title: 'Hallencup Süd', ageClass: 'U11', date: '2026-11-28', numberOfFields: 1, teams: [], matches: [] },
   schedule: { allMatches: [], phases: [], teams: [] },
 }));
+// GA4 A-13c: Spielplan und Tabellen liegen unter den Anbietern für „Gruppe abschließen“ (Rechte, Repositories); hier nur die Hülle des Bildschirms
+vi.mock('../../features/tournament-management/standings/StandingTieProvider', () => ({ StandingTieProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock('../../features/tournament-management/group-completion/GroupCompletionProvider', () => ({ GroupCompletionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => mobil.wert }));
 vi.mock('../../hooks/useTournamentManager', () => ({
   useTournamentManager: () => ({
