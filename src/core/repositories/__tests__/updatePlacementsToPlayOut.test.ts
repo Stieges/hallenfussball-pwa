@@ -30,8 +30,13 @@ vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 import { LocalStorageRepository } from '../LocalStorageRepository';
 import { OfflineRepository } from '../OfflineRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
+import { testUuid } from '../../../test/testIds';
 
-const MARIA: StandingDecision = { id: 'e-maria', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x' };
+/** Team-IDs sind UUIDs (wie am Server, `standing_decision_valid`, A-13b-S Punkt 7). */
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
+
+const MARIA: StandingDecision = { id: 'e-maria', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x' };
 const turnier = (version: number): Tournament =>
   ({ ...league('RKMUNO', DATA.ET_055).tournament, id: 't1', sportId: 'football-indoor', version, standingDecisions: [MARIA] });
 

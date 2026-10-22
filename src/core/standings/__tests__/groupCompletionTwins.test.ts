@@ -4,7 +4,7 @@
  *
  * - placements-to-play-out.json: parsePlacementsToPlayOut == match_engine.places_to_play_out
  * - standing-decision-shapes.json: StandingDecisionSchema (über parseStandingDecisions) + checkDraftFields ==
- *   match_engine.standing_decision_valid; wo TS heute lockerer ist, `it.fails` bis A-13b-S Punkt 7 (nach TB-B-Merge)
+ *   match_engine.standing_decision_valid; seit A-13b-S Punkt 7 ohne Ausnahme gleich (außer der gewollten Altfelder-Zeile)
  * - shared-allowed.json: sharedPlaceAllowed == match_engine.shared_allowed (Spiele als Cloud-Zeilen über den Mapper)
  * - group-state.json: Zeilen ECHT ERZEUGT (publish → mapTournamentToSupabase, hier erneut erzeugt und verglichen);
  *   TS-Zwilling `expectedState` (A-13a, GroupCompletionService) über den Mapper zurück == `cases[].expected`
@@ -42,33 +42,26 @@ function tsValid(decision: unknown): boolean {
 describe('A-13b-S Gleichlauf placements-to-play-out.json (parsePlacementsToPlayOut == places_to_play_out)', () => {
   for (const row of placementsFixture.rows) {
     const config = row.config as { placementsToPlayOut?: unknown };
-    if ('tsHeute' in row) {
-      it.fails(`${row.name} – TS heute ${JSON.stringify(row.tsHeute)} (bis A-13b-S Punkt 7, C-ENTSCHEIDUNG-TS-GRENZEN)`, () => {
-        expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.expected);
-      });
-      it(`${row.name} – heutiger TS-Wert ist festgehalten`, () => {
-        expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.tsHeute);
-      });
-    } else {
-      it(row.name, () => {
-        expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.expected);
-      });
-    }
+    it(row.name, () => {
+      expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.expected);
+    });
   }
+
+  it('A-13b-S Punkt 7: keine Zeile hält mehr einen abweichenden TS-Wert fest (C-ENTSCHEIDUNG-TS-GRENZEN)', () => {
+    expect(placementsFixture.rows.filter((r) => 'tsHeute' in r).map((r) => r.name)).toEqual([]);
+  });
 });
 
 describe('A-13b-S Gleichlauf standing-decision-shapes.json (StandingDecisionSchema + checkDraftFields == standing_decision_valid)', () => {
   for (const row of shapesFixture.rows) {
-    if ('tsHeute' in row && row.tsHeute !== row.ts) {
-      it.fails(`${row.name} – TS heute ${String(row.tsHeute)} (bis A-13b-S Punkt 7, C-ENTSCHEIDUNG-TS-GRENZEN)`, () => {
-        expect(tsValid(row.decision)).toBe(row.ts);
-      });
-    } else {
-      it(row.name, () => {
-        expect(tsValid(row.decision)).toBe(row.ts);
-      });
-    }
+    it(row.name, () => {
+      expect(tsValid(row.decision)).toBe(row.ts);
+    });
   }
+
+  it('A-13b-S Punkt 7: keine Zeile hält mehr einen abweichenden TS-Wert fest (C-ENTSCHEIDUNG-TS-GRENZEN)', () => {
+    expect(shapesFixture.rows.filter((r) => 'tsHeute' in r).map((r) => r.name)).toEqual([]);
+  });
 
   it('N2: die Zeilen „ohne Ergebnis“, „Sieger nicht größer“ und „Altfelder“ stehen in der Fixture', () => {
     const names = shapesFixture.rows.map((r) => r.name);
