@@ -14,8 +14,13 @@ import { Tournament, MatchUpdate } from '../models/types';
 import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
-import type { StandingDecision } from '../../types/tournament';
-import { writeStandingDecisionsToCloud, writePlacementsToPlayOutToCloud } from './standingDecisionsCloud';
+import type { BracketLogEntry } from '../../types/tournament';
+import { writePlacementsToPlayOutToCloud } from './standingDecisionsCloud';
+import {
+  callCompleteGroup, callRecordStandingDecision, callReopenGroup, readGroupCompletions,
+  type CompleteGroupRequest, type CompleteGroupResult, type RecordDecisionRequest, type RecordDecisionResult, type ReopenGroupResult,
+} from './groupCompletionCloud';
+import { readBracketLog } from './bracketLogCloud';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -125,11 +130,20 @@ export class SupabaseRepository implements ITournamentRepository {
       throw new RepositoryError('get', matchesError.message, matchesError);
     }
 
+    // GA4 A-13b-C: Abschlüsse der Gruppen und Verlauf der Entscheidungen (Server-Tabellen, nie vom Gerät geschrieben). Der Verlauf
+    // ist Zusatzwissen und verhindert das Laden nie; die Abschlüsse fehlen vor `_006` ganz (dann gilt keine Gruppe als abgeschlossen).
+    const groupCompletions = await readGroupCompletions(getSupabase(), id);
+    const decisionLog = await readBracketLog(getSupabase(), id);
+
     // Convert to frontend types. B-19b (@ME-032): lässt sich die empfangene Antwort nicht abbilden, ist sie
     // „unlesbar“ (kein Netzfehler); der Monitor lädt dann neu.
     try {
       return {
-        tournament: mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
+        tournament: {
+          ...mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
+          ...(groupCompletions !== undefined ? { groupCompletions } : {}),
+          ...(decisionLog !== undefined ? { decisionLog } : {}),
+        },
         matchRevisions: new Map(matchRows.map((row) => [row.id, row.version ?? 1])),
       };
     } catch (err) {
@@ -732,9 +746,24 @@ export class SupabaseRepository implements ITournamentRepository {
    * (`pg_trigger_depth() > 1`) true, so a tournament with matches AND events can still be deleted
    * in one step, exactly as intended.
    */
-  /** Paket TB: nur `config.standingDecisions`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
-  updateStandingDecisions(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
-    return writeStandingDecisionsToCloud(getSupabase(), tournamentId, decisions, expectedVersion);
+  /** GA4 A-13b-C: Entscheidung eintragen/zurücknehmen über `record_standing_decision` (`groupCompletionCloud.ts`), nie über REST. */
+  recordStandingDecision(tournamentId: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> {
+    return callRecordStandingDecision(getSupabase(), tournamentId, request, expectedVersion);
+  }
+
+  /** GA4 A-13b-C: „Gruppe abschließen“ über `complete_group`. */
+  completeGroup(tournamentId: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+    return callCompleteGroup(getSupabase(), tournamentId, request);
+  }
+
+  /** GA4 A-13b-C: Gruppe wieder öffnen über `reopen_group`. */
+  reopenGroup(tournamentId: string, groupId: string, reason: string): Promise<ReopenGroupResult> {
+    return callReopenGroup(getSupabase(), tournamentId, groupId, reason);
+  }
+
+  /** GA4 A-13b-C: Verlauf über `bracket_log_read`. */
+  readBracketLog(tournamentId: string): Promise<BracketLogEntry[] | undefined> {
+    return readBracketLog(getSupabase(), tournamentId);
   }
 
   /** Fixrunde TB-6: nur `config.placementsToPlayOut`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
