@@ -143,22 +143,7 @@ a13b_out="$(a27_sql authenticated "$U_OWNER" \
 a13b_cell "P-11 Eigentuemer REST config: standingDecisions bleibt, placementsToPlayOut uebernommen" \
   "$( (grep -m1 '^c:' <<<"$a13b_out" || echo "c:fehler $a13b_out") | cut -c3-)" "[]|[1, 2]"
 
-# @W2A-050 ueber den neuen Weg: Maria (Co-Admin) und Olli (Eigentuemer) tragen 4:3 per record_standing_decision ein -> im
-# config (Gegenstueck zu den REST-Zeilen in spur-a.sh, die seit _006 ohne Wirkung bleiben); Tom (Helfer) -> 42501.
-A13B_DECISION="{\"id\": \"e-1\", \"groupId\": \"A\", \"teamIds\": [\"$A13B_TEAM_A\", \"$A13B_TEAM_B\"], \"order\": [\"$A13B_TEAM_B\", \"$A13B_TEAM_A\"], \"kind\": \"shootout\", \"shootout\": {\"winner\": 4, \"loser\": 3}, \"basis\": \"x\"}"
-for a13b_pair in "co-admin:$U_COADMIN:ok|4" "owner:$U_OWNER:ok|4" "collaborator:$U_COLLAB:42501|keine"; do
-  IFS=: read -r a13b_who a13b_uid a13b_exp <<<"$a13b_pair"
-  a13b_out="$(a27_sql authenticated "$a13b_uid" \
-    "SELECT 'r:' || (public.record_standing_decision('$T_MAIN', 'decide', '$A13B_DECISION'::jsonb, NULL,
-                     (SELECT version FROM public.tournaments WHERE id = '$T_MAIN')) ->> 'status');" "$A13B_SETUP")"
-  a13b_got="$( (grep -m1 '^r:' <<<"$a13b_out" || { grep -q 'permission denied\|keine Berechtigung' <<<"$a13b_out" && echo "r:42501"; } || echo "r:fehler") | cut -c3-)"
-  a13b_val="$(a27_sql authenticated "$a13b_uid" \
-    "DO \$x\$ BEGIN PERFORM public.record_standing_decision('$T_MAIN', 'decide', '$A13B_DECISION'::jsonb, NULL,
-       (SELECT version FROM public.tournaments WHERE id = '$T_MAIN')); EXCEPTION WHEN OTHERS THEN NULL; END \$x\$;
-     RESET ROLE;
-     SELECT 'v:' || coalesce(config -> 'standingDecisions' -> 0 -> 'shootout' ->> 'winner', 'keine') FROM public.tournaments WHERE id = '$T_MAIN';" \
-    "$A13B_SETUP")"
-  a13b_cell "@W2A-050 $a13b_who traegt 4:3 ueber record_standing_decision ein" "$a13b_got|$( (grep -m1 '^v:' <<<"$a13b_val" || echo "v:fehler") | cut -c3-)" "$a13b_exp"
-done
+# @W2A-050 (Eintragen ueber record_standing_decision: Olli/Maria gelingt, Tom/Zuschauer/anon 42501, REST-Gegenzeilen)
+# steht gesammelt in rls-matrix.d/spur-a.sh (Review #330 S6).
 
-echo "a13b: $A13B_CELLS Zellen geprueft (${#MATRIX_IDS[@]} Identitaeten x 23 + anon 10 + P-11 1 + @W2A-050 3), $A13B_MISMATCHES Abweichung(en)"
+echo "a13b: $A13B_CELLS Zellen geprueft (${#MATRIX_IDS[@]} Identitaeten x 23 + anon 10 + P-11 1), $A13B_MISMATCHES Abweichung(en)"
