@@ -256,6 +256,10 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
             },
             coalescePayload: (type, existing, incoming) => {
                 if (type !== 'UPDATE_TOURNAMENT_METADATA') { return incoming; }
+                // @BM-072/@BM-073: ein Teilen-Rückfall prüft am Server „noch kein Code“ und schreibt nur den Code – er verträgt
+                // weder fremde Felder noch das Verdrängen; deshalb nie zusammenfassen (angehängt, Reihenfolge bleibt).
+                const isShare = (p: unknown): boolean => (p as MetadataMutationPayload | null)?.onlyIfUnshared === true;
+                if (isShare(existing) || isShare(incoming)) { return null; }
                 // @FU-125: die jüngere Änderung gewinnt je Angabe, keine geht verloren
                 return mergeMetadataPayloads(existing as MetadataMutationPayload, incoming as MetadataMutationPayload);
             },
