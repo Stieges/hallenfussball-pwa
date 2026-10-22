@@ -4,7 +4,8 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-const { state } = vi.hoisted(() => ({
+interface Answer { data: unknown; error: { code?: string; message: string } | null }
+const { state } = vi.hoisted<{ state: { single: Answer; probe: Answer } }>(() => ({
   state: {
     single: { data: null, error: { code: 'PGRST116', message: 'no rows' } },
     probe: { data: [], error: null },
