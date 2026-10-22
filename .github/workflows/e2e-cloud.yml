@@ -31,7 +31,7 @@ jobs:
   e2e-cloud:
     name: Cloud E2E Tests (lokaler Supabase-Stack)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -46,8 +46,41 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright (nur Chromium -- die cloud-Projekte nutzen kein anderes)
+      - name: Playwright-Version ermitteln
+        id: pw-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright-Browser-Cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ steps.pw-version.outputs.version }}
+
+      # Nur Chromium -- die cloud-Projekte nutzen kein anderes.
+      - name: Install Playwright (nur Chromium)
+        id: pw-install
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        timeout-minutes: 8
         run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright (Wiederholung)
+        if: steps.pw-cache.outputs.cache-hit != 'true' && steps.pw-install.outcome != 'success'
+        timeout-minutes: 8
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies (Cache-Treffer)
+        id: pw-deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        continue-on-error: true
+        timeout-minutes: 8
+        run: npx playwright install-deps chromium
+
+      - name: Install Playwright system dependencies (Wiederholung)
+        if: steps.pw-cache.outputs.cache-hit == 'true' && steps.pw-deps.outcome != 'success'
+        timeout-minutes: 8
+        run: npx playwright install-deps chromium
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
