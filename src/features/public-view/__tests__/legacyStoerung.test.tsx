@@ -4,7 +4,12 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-const { state } = vi.hoisted(() => ({ state: { single: { data: null, error: { code: 'PGRST116', message: 'no rows' } }, probe: { data: [], error: null } } }));
+const { state } = vi.hoisted(() => ({
+  state: {
+    single: { data: null, error: { code: 'PGRST116', message: 'no rows' } },
+    probe: { data: [], error: null },
+  },
+}));
 vi.mock('../../../lib/supabase', () => {
   const query = (): Record<string, unknown> => {
     const q: Record<string, unknown> = {
