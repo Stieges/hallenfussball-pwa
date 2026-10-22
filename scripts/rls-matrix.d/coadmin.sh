@@ -94,7 +94,9 @@ ca2_verdict_public() { # <probe> -- vorher: nicht oeffentlich, ohne Code
 }
 ca2_verdict_private() { # vorher: oeffentlich mit CA2_CODE
   local res="${1%%|*}" chk="${1#*|}"
-  if [[ "$res" == "ok" && "$chk" == "false|NULL|NULL" ]]; then echo "gelingt"
+  # B-14 (@ZM-067): ab 20261117_104 bleibt der Code beim Zuruecknehmen am Turnier (nur is_public = false).
+  if [[ "$res" == "ok" && "${WITH_B14:-0}" -eq 1 && "$chk" == "false|$CA2_CODE|alt" ]]; then echo "gelingt"
+  elif [[ "$res" == "ok" && "${WITH_B14:-0}" -ne 1 && "$chk" == "false|NULL|NULL" ]]; then echo "gelingt"
   elif [[ "$res" == "fehler:Not authorized to modify this tournament" && "$chk" == "true|$CA2_CODE|alt" ]]; then echo "abgelehnt"
   else echo "anders($1)"; fi
 }

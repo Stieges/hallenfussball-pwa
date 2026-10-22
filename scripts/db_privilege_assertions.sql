@@ -700,4 +700,57 @@ SELECT 'heartbeats-select-manage-screens',
                                      AND position('owner_id' IN coalesce(p.qual, '')) = 0)
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
+
+-- B-14 (20261117_104_public_payload.sql, E-A2, @ZM-096..@ZM-102, @ME-018, Review Focus 6): oeffentliche Daten nur ueber
+-- public_tournament/display_tournament (SECURITY DEFINER, EXECUTE anon+authenticated, nie PUBLIC); keine SELECT-Policy
+-- fuer anon/public und keine mit is_public auf den acht Tabellen; Baustein public_view ohne Client-Rechte;
+-- is_reading_member nur fuer authenticated; neue Tabellen in public ohne Standardrechte fuer anon
+-- (C-ANON-STANDARDRECHTE-NEUE-TABELLEN). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'public-read-functions-definer-execute-anon',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
+                                  to_regprocedure('public.display_tournament(uuid,text,bigint)'))), false)
+UNION ALL
+SELECT 'public-read-no-anon-select-policies',
+       coalesce((SELECT count(*) = 8
+                        AND NOT bool_or(p.roles && ARRAY['anon', 'public']::name[])
+                        AND NOT bool_or(position('is_public' IN coalesce(p.qual, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.cmd IN ('SELECT', 'ALL')
+                    AND p.tablename IN ('tournaments', 'teams', 'team_players', 'matches', 'match_events', 'monitors',
+                                        'sponsors', 'match_corrections')), false)
+UNION ALL
+SELECT 'public-read-view-schema-no-client-access',
+       coalesce(to_regnamespace('public_view') IS NOT NULL
+                AND NOT has_schema_privilege('anon', 'public_view', 'USAGE')
+                AND NOT has_schema_privilege('authenticated', 'public_view', 'USAGE')
+                AND NOT EXISTS (SELECT 1 FROM pg_proc p
+                                 WHERE p.pronamespace = to_regnamespace('public_view')
+                                   AND (has_function_privilege('anon', p.oid, 'EXECUTE')
+                                        OR has_function_privilege('authenticated', p.oid, 'EXECUTE'))), false)
+UNION ALL
+SELECT 'public-read-reading-member-execute-only-authenticated',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND position('''screen''' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.is_reading_member(uuid)')), false)
+UNION ALL
+SELECT 'public-read-default-privileges-no-anon',
+       NOT EXISTS (SELECT 1 FROM pg_default_acl d, aclexplode(d.defaclacl) a
+                    WHERE d.defaclrole = 'postgres'::regrole AND d.defaclnamespace = 'public'::regnamespace
+                      AND d.defaclobjtype = 'r' AND a.grantee = 'anon'::regrole)
+UNION ALL
+SELECT 'public-read-reshare-keeps-code',
+       coalesce((SELECT position('share_code = NULL' IN pg_get_functiondef(p.oid)) = 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_private(uuid)')), false)
+       AND coalesce((SELECT position('IF v_existing_code IS NOT NULL THEN' IN pg_get_functiondef(p.oid)) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_public(uuid)')), false)
 ;
