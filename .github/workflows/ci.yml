@@ -120,10 +120,10 @@ jobs:
 
       - name: Playwright-Browser-Cache
         id: pw-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ env.PW_BROWSER }}-${{ steps.pw-version.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-${{ env.PW_BROWSER }}-${{ steps.pw-version.outputs.version }}
 
       # Ursache des 20-Min-Hangs: apt-get haengt beim Paket-Download (Mirror) und haelt danach das dpkg-Lock.
       # Daher: apt mit Timeout/Retries, Install mit Step-Timeout, vor der Wiederholung haengende apt-Prozesse beenden.
