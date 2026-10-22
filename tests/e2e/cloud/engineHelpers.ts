@@ -85,7 +85,8 @@ export async function releaseFieldControlOf(matchId: string): Promise<void> {
 
 /**
  * Ruft `append_match_events` MIT dem JWT der Rolle auf (Muster `serverHasTournamentPermission`), ohne Geräte-ID.
- * Standard: das Feld wird vorher freigegeben (`releaseFieldControlOf`, Vorbedingung); `{ feldFreigeben: false }` prüft die Sperre.
+ * Standard: keine Freigabe (die Sperre gilt). Vorbedingungen, die auf einem vom Gerät der Oberfläche gehaltenen Feld nachschreiben,
+ * setzen `{ feldFreigeben: true }` ausdrücklich (`releaseFieldControlOf`, Review #341 N9).
  */
 export async function appendAsRole(
   role: LoggedInRole,
@@ -93,7 +94,7 @@ export async function appendAsRole(
   events: readonly AppendAsRoleEvent[],
   options: { feldFreigeben?: boolean } = {},
 ): Promise<AppendAsRoleResult> {
-  if (options.feldFreigeben ?? true) {
+  if (options.feldFreigeben === true) {
     await releaseFieldControlOf(matchId);
   }
   const { url, anonKey } = getLocalServiceRoleClient();

@@ -53,12 +53,22 @@ interface Spur { tournamentId: string; feld: number; kind: FieldControlView['kin
 /** Laufend aus Sicht der Steuer: `RUNNING`, sowie `PAUSED` (= paused, section_break, decision_pending, shootout, `viewAdapters.mapStatus`). */
 const LAUFEND: ReadonlySet<LiveMatch['status']> = new Set(['RUNNING', 'PAUSED']);
 
-/** Läuft eines der Spiele des Felds gerade (@FU-120)? */
-export function laeuftAufFeld(matchIds: readonly string[], liveMatches: ReadonlyMap<string, Pick<LiveMatch, 'status'>>): boolean {
-  return matchIds.some((id) => {
+/**
+ * Läuft eines der Spiele des Felds gerade (@FU-120)? Zwei Quellen, eine genügt (Review #341 N8): die Engine-Sicht dieses Geräts
+ * (`liveMatches`) und der gespeicherte Spielstatus des Turniers (`matchStatus === 'running'`, Zwischenspeicher am Server). Fehlt
+ * dem Helfergerät ein Live-Ereignis, verrät der Spielstatus das laufende Spiel trotzdem.
+ */
+export function laeuftAufFeld(
+  matchIds: readonly string[],
+  liveMatches: ReadonlyMap<string, Pick<LiveMatch, 'status'>>,
+  turnierSpiele: readonly { id: string; matchStatus?: string }[] = [],
+): boolean {
+  const ids = new Set(matchIds);
+  const engineLaeuft = matchIds.some((id) => {
     const status = liveMatches.get(id)?.status;
     return status !== undefined && LAUFEND.has(status);
   });
+  return engineLaeuft || turnierSpiele.some((m) => ids.has(m.id) && m.matchStatus === 'running');
 }
 
 export function useCockpitFieldControl(input: CockpitFieldControlInput): CockpitFieldControl {

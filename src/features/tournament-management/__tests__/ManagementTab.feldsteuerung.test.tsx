@@ -11,7 +11,8 @@ import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch';
 import type { TournamentRole } from '../../auth/types/auth.types';
-import { testTeamSlot } from '../../../test/matchSlotFixtures';
+import { testTeamSlot, testUuid, vs } from '../../../test/matchSlotFixtures';
+import { createMockMatch } from '../../../test/factories';
 
 import { RouterWrapper } from './routerWrapper';
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
@@ -155,6 +156,15 @@ describe('B-49 Cockpit: Steuer je Feld (Verdrahtung)', () => {
     liveMatches.set(MATCH_RUNNING, makeLiveMatch(MATCH_RUNNING, 1, 'FINISHED'));
     liveMatches.set(MATCH_TARGET, makeLiveMatch(MATCH_TARGET, 2, 'PAUSED'));
     expect(renderTab()).toHaveAttribute('data-uebernehmen', 'false');
+  });
+
+  it('@FU-120 Gegenbeispiel (Review N8): die Engine-Sicht sagt „nicht laufend“, der Spielstatus des Turniers sagt „running“ → keine Taste für den Helfer', () => {
+    currentRole = 'collaborator';
+    steuer.list = [TOM_HANDY];
+    liveMatches.set(MATCH_RUNNING, makeLiveMatch(MATCH_RUNNING, 1, 'NOT_STARTED')); // Live-Ereignis fehlt auf diesem Gerät
+    const laufend = { ...tournament, matches: [createMockMatch({ id: MATCH_RUNNING, matchNumber: 1, field: 1, ...vs(testUuid(81), testUuid(82)), matchStatus: 'running' })] };
+    render(<ManagementTab tournament={laufend} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-uebernehmen', 'false');
   });
 
   it('@FU-026 @FU-120 Helferin Clara bei laufendem Spiel: nur lesend, ohne „Spielleitung übernehmen“', () => {
