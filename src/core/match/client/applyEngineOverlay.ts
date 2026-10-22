@@ -31,6 +31,12 @@ export interface EngineOverlayFields {
   decidedBy: CacheDecidedBy | undefined;
   /** A-30a: getragene Farben aus dem eigenen MATCH_START (TS-Gegenstück zum Server-Trigger, `kitFromEvents`). */
   kit: MatchKit | undefined;
+  /**
+   * C-OVERLAY-LIVESTATE-BLEIBT (@OB-066): der Server leert `live_state` beim Beenden (und es gibt keinen
+   * beim geplanten/abgesetzten Spiel); `true` heißt: auch den Feinstatus am Datensatz leeren. Sonst bleibt er
+   * unberührt (er kommt vom Server, nicht aus der Überlagerung).
+   */
+  clearLiveState?: boolean;
 }
 
 function nullToUndefined<T>(value: T | null): T | undefined {
@@ -54,6 +60,7 @@ export function engineOverlayFields(view: MatchEngineView, ctx: MatchContext): E
     matchStatus: mapMatchStatus(columns.match_status),
     decidedBy: nullToUndefined(columns.decided_by),
     kit: kitFromEvents(view.log),
+    clearLiveState: columns.live_state === null,
   };
 }
 
@@ -70,6 +77,8 @@ export interface OverlayableMatch {
   matchStatus?: string;
   decidedBy?: string;
   kit?: MatchKit;
+  /** `matches.live_state` (Feinstatus fuer Abzeichen); die Ueberlagerung leert ihn nur (`clearLiveState`). */
+  liveState?: unknown;
 }
 
 export interface OverlayableTournament<TMatch extends OverlayableMatch> {
@@ -91,7 +100,8 @@ function fieldsEqual(match: OverlayableMatch, fields: EngineOverlayFields): bool
     match.penaltyScoreB === fields.penaltyScoreB &&
     match.matchStatus === fields.matchStatus &&
     match.decidedBy === fields.decidedBy &&
-    kitEqual(match.kit, fields.kit)
+    kitEqual(match.kit, fields.kit) &&
+    (!fields.clearLiveState || match.liveState === undefined)
   );
 }
 
@@ -114,7 +124,8 @@ export function applyEngineOverlay<TTournament extends OverlayableTournament<TMa
       return match;
     }
     changed = true;
-    return { ...match, ...fields };
+    const { clearLiveState, ...projection } = fields;
+    return clearLiveState ? { ...match, ...projection, liveState: undefined } : { ...match, ...projection };
   });
   return changed ? { ...tournament, matches } : tournament;
 }
