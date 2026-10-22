@@ -64,7 +64,8 @@ describe('OfflineRepository - Granular Sync', () => {
     });
 
     it('should perform granular metadata update when only title changes', async () => {
-        const localT = { ...baseTournament, title: 'New Title', version: 2 };
+        // C-VERSION-MEHRDEUTIG: lokale Änderung auf der bestätigten Version 1 (lokal gestempelt 2)
+        const localT = { ...baseTournament, title: 'New Title', version: 2, serverVersion: 1 };
         const remoteT = { ...baseTournament, title: 'Old Title', version: 1 };
 
         // Setup
@@ -78,9 +79,9 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockSupabase.save).not.toHaveBeenCalled(); // Should NOT be full save
         expect(mockSupabase.updateTournamentMetadata).toHaveBeenCalledWith(
             't1',
-            expect.objectContaining({ title: 'New Title', version: 1 }) // Base version passed!
+            expect.objectContaining({ title: 'New Title', version: 1 }) // Basis = bestätigte Version der Kopie
         );
-        expect(mockLocal.updateLocalVersion).toHaveBeenCalled(); // Phase 2 Fix Check
+        expect(mockLocal.confirmUpload).toHaveBeenCalledWith('t1', 1, 2); // Phase 2 Fix Check: Upload bestätigt
     });
 
     it('Delta-Sync sendet kein updateMatches bei reiner Score-Änderung', async () => {
@@ -211,7 +212,7 @@ describe('OfflineRepository - Granular Sync', () => {
     });
 
     it('should update local version after successful sync', async () => {
-        const localT = { ...baseTournament, title: 'Updated', version: 2 };
+        const localT = { ...baseTournament, title: 'Updated', version: 2, serverVersion: 1 };
         const remoteT = { ...baseTournament, version: 1 }; // Remote is behind
 
         mockLocal.listForCurrentUser.mockResolvedValue([localT]);
@@ -219,14 +220,13 @@ describe('OfflineRepository - Granular Sync', () => {
 
         await offlineRepo.syncUp();
 
-        // Expectation: After syncing (delta), we update local version to match what remote becomes (ver 2)
-        // Note: Logic in code is: baseVer(1) -> metadata update -> baseVer++ (2) -> updateLocal(2)
-        expect(mockLocal.updateLocalVersion).toHaveBeenCalledWith('t1', 2);
+        // Expectation: After syncing (delta), the confirmed upload sets the local version to what remote becomes (ver 2)
+        expect(mockLocal.confirmUpload).toHaveBeenCalledWith('t1', 1, 2);
     });
 
     it('bei reinem Versionsvorsprung ohne sendbare Änderung gleicht sich die lokale Version an die Cloud an', async () => {
         const localMatch = { ...baseTournament.matches[0], scoreA: 1, scoreB: 0 };
-        const localT = { ...baseTournament, matches: [localMatch], version: 5 };
+        const localT = { ...baseTournament, matches: [localMatch], version: 5, serverVersion: 4 };
         const remoteT = { ...baseTournament, version: 4 };
 
         mockLocal.listForCurrentUser.mockResolvedValue([localT]);
@@ -299,7 +299,7 @@ describe('OfflineRepository - Granular Sync', () => {
         await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
             .refreshFromCloudInBackground('t1');
 
-        expect(mockLocal.save).toHaveBeenCalledWith(cloudT);
+        expect(mockLocal.save).toHaveBeenCalledWith({ ...cloudT, serverVersion: 1 }); // C-VERSION-MEHRDEUTIG: mit bestätigter Version
     });
 
     it('Fix 2 (Kontrolle): refreshFromCloudInBackground schreibt NICHT, wenn Version UND isPublic gleich sind', async () => {

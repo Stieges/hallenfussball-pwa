@@ -22,6 +22,12 @@ export interface EngineOutboxSummary {
   rejectedCount: number;
   reviewCount: number;
   entries: EngineRejectedEntry[];
+  /**
+   * @SL-168 „Netz da, aber nichts kommt durch“ (Hallen-WLAN ohne Internet): mindestens ein Spiel dieses Turniers hat wartende Einträge
+   * und steht nach einem VORLÄUFIGEN Fehler (Netz/Zeitlimit) in der Wartepause (`backoff`). „Gerade unterwegs“ zählt nicht, auch nicht
+   * dauerhafte Fehler oder „Spiel noch nicht bereit“.
+   */
+  sendBlocked: boolean;
   dismiss: (ids: string[]) => Promise<void>;
 }
 
@@ -29,15 +35,18 @@ export function useEngineOutboxSummary(tournamentId: string): EngineOutboxSummar
   const context = useMatchEngineContextOptional();
   const status = useOutboxStatus(context?.sender ?? null);
   const [entries, setEntries] = useState<EngineRejectedEntry[]>([]);
+  const [matchIds, setMatchIds] = useState<readonly string[]>([]);
 
   const refresh = useCallback(async () => {
     if (!context) {
       setEntries([]);
+      setMatchIds([]);
       return;
     }
     try {
       const copies = await context.store.forAccount(context.accountId);
       const forTournament = copies.filter((copy) => copy.tournamentId === tournamentId);
+      setMatchIds(forTournament.map((copy) => copy.matchId));
       setEntries(
         forTournament.flatMap((copy) => copy.rejected.map((entry) => ({ ...entry, matchId: copy.matchId }))),
       );
@@ -79,8 +88,13 @@ export function useEngineOutboxSummary(tournamentId: string): EngineOutboxSummar
     [context, entries, refresh],
   );
 
+  const sendBlocked =
+    status.lastFailureKind === 'transient' &&
+    matchIds.some((matchId) => status.pausedMatches[matchId] === 'backoff' && (status.pendingByMatch[matchId] ?? 0) > 0);
+
   return {
     pendingCount: pendingForTournament(status, tournamentId),
+    sendBlocked,
     // Turnier-scoped: `entries` ist bereits auf dieses Turnier gefiltert (s. o.).
     rejectedCount: entries.length,
     reviewCount: 0,

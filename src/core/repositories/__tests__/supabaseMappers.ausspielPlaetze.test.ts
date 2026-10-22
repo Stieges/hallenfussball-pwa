@@ -15,6 +15,11 @@ import { createTournamentRow, type TournamentRow } from '../../../../tests/facto
 import type { Tournament } from '../../../types/tournament';
 import { DATA, league } from '../../standings/__tests__/fixtures';
 import { jgj, MemoryRepo, nikolaus, order, shared, shootout } from '../../standings/__tests__/decisionTestKit';
+import { testUuid } from '../../../test/testIds';
+
+/** Team-IDs sind UUIDs (wie am Server, `standing_decision_valid`, A-13b-S Punkt 7). */
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
 
 function fromConfig(config: object): Tournament {
   return mapTournamentFromSupabase(createTournamentRow({ config: JSON.parse(JSON.stringify(config)) as TournamentRow['config'] }), [], []);
@@ -90,11 +95,11 @@ describe("TB-3' Entscheidung im öffentlich lesbaren config ohne Person, Zeit, G
 
   it('@W2A-072:teil Altwerte (Person, Zeit, Grund) aus dem config fallen beim Lesen weg und kommen beim nächsten Schreiben nicht zurück', () => {
     const alt = {
-      id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shootout', shootout: { winner: 4, loser: 3 },
+      id: 'e-1', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shootout', shootout: { winner: 4, loser: 3 },
       decidedBy: { userId: 'user-olli', name: 'Olli' }, decidedAt: '2026-12-06T14:32:00.000Z', reason: 'Hallenzeit', basis: 'x',
     };
     const gelesen = fromConfig({ standingDecisions: [alt] });
-    expect(gelesen.standingDecisions).toEqual([{ id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x' }]);
+    expect(gelesen.standingDecisions).toEqual([{ id: 'e-1', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x' }]);
     const geschrieben = wireConfig(gelesen).standingDecisions as Array<Record<string, unknown>>;
     for (const feld of VERBOTEN) {
       expect(geschrieben[0]).not.toHaveProperty(feld);
@@ -118,11 +123,11 @@ describe("TB-3' Cloud-Schreibweg der Entscheidungen ohne Altwerte", () => {
       }),
     };
     const alt = {
-      id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shared' as const, basis: 'x',
+      id: 'e-1', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shared' as const, basis: 'x',
       decidedBy: { userId: 'user-olli', name: 'Olli' }, decidedAt: '2026-12-06T14:32:00.000Z', reason: 'Hallenzeit',
     };
     await writeStandingDecisionsToCloud(client as unknown as Parameters<typeof writeStandingDecisionsToCloud>[0], 't1', [alt], 3);
-    expect(geschrieben?.config.standingDecisions).toEqual([{ id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shared', basis: 'x' }]);
+    expect(geschrieben?.config.standingDecisions).toEqual([{ id: 'e-1', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shared', basis: 'x' }]);
     // Gegenbeispiel: das übrige config bleibt.
     expect(geschrieben?.config).toMatchObject({ andere: 1 });
   });

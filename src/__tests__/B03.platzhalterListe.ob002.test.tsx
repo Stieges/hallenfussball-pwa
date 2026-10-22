@@ -90,6 +90,7 @@ const OB002: FunktionFall[] = [
           fieldName="Feld 1"
           tournamentName="Test-Turnier"
           tournamentId="t1"
+          kannSteuern
           currentMatch={match as never}
           upcomingMatches={[]}
           onStart={vi.fn()}
@@ -106,7 +107,8 @@ const OB002: FunktionFall[] = [
       );
       // Die Uhr der Tafel ist reine Anzeige; auch „Zeit bearbeiten“ fehlt bei einem neuen Spiel
       fireEvent.click(screen.getByTestId('scoreboard-clock'));
-      expect(screen.queryByTestId('match-edit-time-button')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('cockpit-more-button'));
+      expect(screen.queryByTestId('mehr-uhr-korrigieren')).not.toBeInTheDocument();
       expect(screen.queryByRole('dialog', { name: 'cockpit:timeAdjust.title' })).not.toBeInTheDocument();
     },
   },

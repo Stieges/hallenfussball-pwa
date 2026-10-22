@@ -155,16 +155,16 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
   });
 
   // B2 (Review 2c, Auflage A-36b „Endstand nur aus matchFinalScore“): unter „Ende“ steht nie eine Restzeit
-  it('@SL-073 abgepfiffen nach Ablauf: unter dem Zustand steht die gespielte Zeit, keine Restzeit', () => {
+  it('@SL-073 @SL-169 abgepfiffen nach Ablauf: unter dem Zustand steht die ganze gespielte Zeit (2 × 6 Minuten), keine Restzeit', () => {
     const m = toScoreboardModel(input({ status: 'finished', sectionElapsedMs: min(6) }, { match: makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1 }) }, 'FINISHED'), t);
-    expect(m.uhr).toMatchObject({ label: 'tafel.uhr.spielzeit', rest: '6:00', ton: 'gedaempft' });
+    expect(m.uhr).toMatchObject({ label: 'tafel.uhr.gespielt', rest: '12:00', ton: 'gedaempft' });
   });
 
-  it('@SL-082 Golden Goal bei 1:10 von 3:00 beendet das Spiel: die Tafel zeigt 1:10 gespielt, nicht 1:50 „Rest“', () => {
+  it('@SL-082 @SL-169 Golden Goal bei 1:10 von 3:00 beendet das Spiel: die Tafel zeigt die ganze gespielte Zeit 13:10, nicht 1:50 „Rest“', () => {
     const m = toScoreboardModel(input(
-      { status: 'finished', phase: 'overtime', tiebreakMode: 'goldenGoal', sectionLimitMs: min(3), sectionElapsedMs: min(1, 10) },
+      { status: 'finished', phase: 'overtime', tiebreakMode: 'goldenGoal', sectionLimitMs: min(3), sectionElapsedMs: min(1, 10), playedMs: min(13, 10), plannedMs: min(15) },
       { match: makeLiveMatch({ status: 'FINISHED', homeScore: 1, awayScore: 1, overtimeScoreA: 1, overtimeScoreB: 0 }) }, 'FINISHED'), t);
-    expect(m.uhr).toMatchObject({ label: 'tafel.uhr.spielzeit', rest: '1:10' });
+    expect(m.uhr).toMatchObject({ label: 'tafel.uhr.gespielt', rest: '13:10' });
     expect([m.links.tore, m.rechts.tore]).toEqual([2, 1]);
   });
 
@@ -184,7 +184,7 @@ describe('toScoreboardModel: Zustand, Abschnitt und Stand', () => {
   it('@ET-013 Gegenbeispiel: Strafstoß-Spalten ohne Phase Strafstoßschießen ergeben keinen Strafstoß-Text', () => {
     const match = makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 2, penaltyScoreA: 4, penaltyScoreB: 3 });
     const m = toScoreboardModel(input({ status: 'finished', phase: 'regular', sectionElapsedMs: min(6) }, { match }, 'FINISHED'), t);
-    expect(m.uhr?.label).toBe('tafel.uhr.spielzeit');
+    expect(m.uhr?.label).toBe('tafel.uhr.gespielt');
     expect(m.ariaStand.startsWith('tafel.ariaStand:')).toBe(true);
   });
 
@@ -244,9 +244,14 @@ describe('toScoreboardModel: Abzeichen', () => {
     expect(toScoreboardModel(input({}, { eintraegeWarten: 2 }), t).eintraegeWartenText).toBe('tafel.eintraegeWarten:{"count":2}');
   });
 
+  it('@SL-061 C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE die Kurzform der wartenden Einträge ist nur die Zahl', () => {
+    expect(toScoreboardModel(input({}, { eintraegeWarten: 3 }), t).eintraegeWartenKurz).toBe('3');
+  });
+
   it('Gegenbeispiel: ohne wartende Einträge und Anfragen keine Abzeichen', () => {
     const m = toScoreboardModel(input({}), t);
     expect(m.eintraegeWartenText).toBeNull();
+    expect(m.eintraegeWartenKurz).toBeNull();
     expect(m.helferAnfragenText).toBeNull();
   });
 });

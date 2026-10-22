@@ -234,7 +234,7 @@ for (const role of ALL_ROLES) {
       const goalButton = page.locator('[data-testid="goal-button-home"]');
       if (canWrite) {
         await expect(readOnlyBanner).toHaveCount(0);
-        await expect(page.locator('[data-testid="match-pause-button"], [data-testid="match-start-button"]')).toBeVisible();
+        await expect(page.locator('[data-testid="match-pause-button"], [data-testid="match-resume-button"], [data-testid="match-start-button"]')).toBeVisible();
         await expect(goalButton).toBeEnabled();
       } else {
         await expect(readOnlyBanner).toBeVisible({ timeout: 15000 });

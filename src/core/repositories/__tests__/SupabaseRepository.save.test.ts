@@ -48,6 +48,11 @@ const hoisted = vi.hoisted(() => {
   // -- keeps the mock focused on the teams/matches delete-count behaviour under test, instead of
   // also exercising the optimistic-locking update branch).
   const tournamentsUpsertMock = vi.fn();
+  // C-VERSION-NACH-ERSTANLAGE: Zweig mit Version – update().eq().eq().select(), sonst select().eq().single() + insert()
+  const tournamentsUpdateSelectMock = vi.fn();
+  const tournamentsUpdateMock = vi.fn((_row: Record<string, unknown>) => ({ eq: () => ({ eq: () => ({ select: tournamentsUpdateSelectMock }) }) }));
+  const tournamentsExistingSingleMock = vi.fn();
+  const tournamentsInsertMock = vi.fn();
 
   // teams: select (existing ids) -> delete().in().select() (R5-H1) -> upsert (survivors)
   const teamsSelectEqMock = vi.fn();
@@ -87,7 +92,12 @@ const hoisted = vi.hoisted(() => {
 
   const fromMock = vi.fn((table: string) => {
     if (table === 'tournaments') {
-      return { upsert: tournamentsUpsertMock };
+      return {
+        upsert: tournamentsUpsertMock,
+        update: tournamentsUpdateMock,
+        select: () => ({ eq: () => ({ single: tournamentsExistingSingleMock }) }),
+        insert: tournamentsInsertMock,
+      };
     }
     if (table === 'teams') {
       return { select: teamsSelectMock, delete: teamsDeleteMock, upsert: teamsUpsertMock, update: teamsUpdateMock };
@@ -114,6 +124,10 @@ const hoisted = vi.hoisted(() => {
   return {
     getUserMock,
     tournamentsUpsertMock,
+    tournamentsUpdateSelectMock,
+    tournamentsUpdateMock,
+    tournamentsExistingSingleMock,
+    tournamentsInsertMock,
     teamsSelectEqMock,
     teamsDeleteSelectMock,
     teamsDeleteMock,
@@ -145,6 +159,7 @@ vi.mock('../../services/matchProtectionNotices', () => ({
 }));
 
 import { SupabaseRepository } from '../SupabaseRepository';
+import { OptimisticLockError } from '../../errors';
 import {
   TeamStillReferencedError,
   AuthenticationError,
@@ -155,6 +170,10 @@ import {
 const {
   getUserMock,
   tournamentsUpsertMock,
+  tournamentsUpdateSelectMock,
+  tournamentsUpdateMock,
+  tournamentsExistingSingleMock,
+  tournamentsInsertMock,
   teamsSelectEqMock,
   teamsDeleteSelectMock,
   teamsDeleteMock,
@@ -254,7 +273,7 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
     matchesDeleteSelectMock.mockResolvedValue({ data: [{ id: 'match-removed' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(teamsUpsertMock).toHaveBeenCalledTimes(1);
     // 'match-survivor' already exists in the cloud (see beforeEach) -> A2: existing matches are
@@ -269,7 +288,7 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(teamsDeleteSelectMock).not.toHaveBeenCalled();
     expect(matchesDeleteSelectMock).not.toHaveBeenCalled();
@@ -296,7 +315,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
 
     const repo = new SupabaseRepository();
     const tournament = makeTournamentWithOneTeamAndMatch();
-    await expect(repo.save(tournament)).resolves.toBeUndefined();
+    await expect(repo.save(tournament)).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     // 'match-removed' was the only delete candidate -- once it's protected, nothing is left to
     // delete at all.
@@ -323,7 +342,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
     matchEventsSelectInMock.mockResolvedValue({ data: [], error: null }); // no events, status alone blocks it
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(matchesDeleteMock).not.toHaveBeenCalled();
     expect(notifyMatchesProtectedMock).toHaveBeenCalledWith(
@@ -337,7 +356,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
     matchEventsSelectInMock.mockResolvedValue({ data: [{ match_id: 'match-removed' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     // 'team-removed' is referenced by the protected match -- must survive, or the FK
     // (ON DELETE SET NULL) would silently null out team_a_id on the match that was "kept".
@@ -359,7 +378,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
     matchesDeleteSelectMock.mockResolvedValue({ data: [{ id: 'match-removed' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(callOrder[0]).toBe('match_events');
     expect(callOrder).toContain('tournaments');
@@ -371,7 +390,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
     matchesDeleteSelectMock.mockResolvedValue({ data: [{ id: 'match-removed' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(matchesDeleteMock).toHaveBeenCalledTimes(1);
     expect(matchEventsSelectInMock).toHaveBeenCalledWith('match_id', ['match-removed']);
@@ -391,7 +410,7 @@ describe('SupabaseRepository.save() — A6: protects matches with events or a no
     matchesDeleteSelectMock.mockResolvedValue({ data: [{ id: 'match-removed' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(matchesDeleteMock).toHaveBeenCalledTimes(1);
     expect(notifyMatchesProtectedMock).not.toHaveBeenCalled();
@@ -408,7 +427,7 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(matchesUpsertMock).not.toHaveBeenCalled();
     expect(matchesUpdateMock).toHaveBeenCalledTimes(1);
@@ -443,7 +462,7 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
     matchesSelectEqMock.mockResolvedValue({ data: [], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(matchesUpdateMock).not.toHaveBeenCalled();
     expect(matchesUpsertMock).toHaveBeenCalledTimes(1);
@@ -461,7 +480,7 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
 
     const repo = new SupabaseRepository();
     const tournament = makeTournamentWithOneTeamAndMatch();
-    await expect(repo.save(tournament)).resolves.toBeUndefined();
+    await expect(repo.save(tournament)).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(matchesUpdateMock).toHaveBeenCalledTimes(1);
     expect(matchesUpdateEqTournamentMock).toHaveBeenCalledWith('tournament_id', tournament.id);
@@ -509,7 +528,7 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
     );
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(tournament)).resolves.toBeUndefined();
+    await expect(repo.save(tournament)).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(matchesUpdateMock).toHaveBeenCalledTimes(2);
     expect(maxInFlight).toBe(2);
@@ -571,7 +590,7 @@ describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten
     });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(order).toEqual(['teams.upsert', 'matches.delete', 'matches.update', 'teams.delete']);
   });
@@ -590,7 +609,7 @@ describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten
     });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(order).toEqual(['matches.insert', 'teams.delete']);
   });
@@ -616,7 +635,7 @@ describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten
     matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-final' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(staleLocal)).resolves.toBeUndefined();
+    await expect(repo.save(staleLocal)).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     const payload = matchesUpdateMock.mock.calls[0][0];
     expect(payload).not.toHaveProperty('team_a_id');
@@ -639,7 +658,7 @@ describe('SupabaseRepository.save() — A-02: Reihenfolge und aufgelöste Seiten
     matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-final' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(local)).resolves.toBeUndefined();
+    await expect(repo.save(local)).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     const payload = matchesUpdateMock.mock.calls[0][0];
     expect(payload).toHaveProperty('team_a_id', null);
@@ -677,7 +696,7 @@ describe('SupabaseRepository.save() — A-02 Fixrunde 1: gleichnamiges Ersatztea
     teamsDeleteSelectMock.mockImplementation(async () => { order.push('teams.delete'); return { data: [{ id: 'team-removed' }], error: null }; });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(tournamentWithReplacement())).resolves.toBeUndefined();
+    await expect(repo.save(tournamentWithReplacement())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(order).toEqual(['teams.rename', 'teams.upsert', 'teams.delete']);
     expect(teamsUpdateMock).toHaveBeenCalledTimes(1);
@@ -696,7 +715,7 @@ describe('SupabaseRepository.save() — A-02 Fixrunde 1: gleichnamiges Ersatztea
     teamsDeleteSelectMock.mockResolvedValue({ data: [{ id: 'team-removed' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(tournamentWithReplacement())).resolves.toBeUndefined();
+    await expect(repo.save(tournamentWithReplacement())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(teamsUpdateMock).not.toHaveBeenCalled();
     expect(teamsDeleteMock).toHaveBeenCalledTimes(1);
@@ -707,7 +726,7 @@ describe('SupabaseRepository.save() — A-02 Fixrunde 1: gleichnamiges Ersatztea
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
 
     expect(teamsUpdateMock).not.toHaveBeenCalled();
   });
@@ -773,7 +792,7 @@ describe('SupabaseRepository.save() — A-05 Fixrunde 1 (@FU-086): Spiel zeigt n
       [createTeamRow({ id: TEAM_SURVIVOR, name: 'Survivor' })],
       [survivorMatchRow('match-survivor')]
     );
-    await expect(new SupabaseRepository().save(consistent)).resolves.toBeUndefined();
+    await expect(new SupabaseRepository().save(consistent)).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */;
     expect(teamsDeleteMock).toHaveBeenCalledTimes(1);
   });
 });
@@ -783,6 +802,46 @@ describe('SupabaseRepository.save() — A-05 Fixrunde 1 (@FU-086): Spiel zeigt n
 // dauerhaft — auth-js liefert dafür { user: null, error: AuthRetryableFetchError }.
 // Szenarien: @FU-013, @FU-016, @FU-009.
 // ============================================================================================
+
+describe('SupabaseRepository.save() — erreichte Version (@FU-110, Befund C-VERSION-NACH-ERSTANLAGE)', () => {
+  const mitVersion = (version: number): Tournament => ({ ...makeTournamentWithOneTeamAndMatch(), version });
+
+  it('@FU-110 bestehende Zeile auf Version 7: save() liefert 8 (die Zeile trägt danach 8)', async () => {
+    tournamentsUpdateSelectMock.mockResolvedValue({ data: [{ id: 't' }], error: null });
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(mitVersion(7))).resolves.toBe(8);
+    expect(tournamentsUpdateMock.mock.calls[0][0]).toMatchObject({ version: 8 });
+    expect(tournamentsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-110 Erstanlage: die Zeile fehlt noch (ohne Netz angelegt, lokal schon Version 2) – save() legt mit 1 an und liefert 1, nicht 3', async () => {
+    tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116' } });
+    tournamentsInsertMock.mockResolvedValue({ error: null });
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(mitVersion(2))).resolves.toBe(1);
+    expect(tournamentsInsertMock.mock.calls[0][0]).toMatchObject({ version: 1 });
+  });
+
+  it('Upsert ohne Version (neues Turnier aus dem Assistenten): save() schreibt Version 1 und liefert genau 1', async () => {
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBe(1);
+    expect(tournamentsUpsertMock.mock.calls[0][0]).toMatchObject({ version: 1 });
+    expect(tournamentsUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: die Zeile trägt inzwischen eine andere Version – save() wirft OptimisticLockError, keine Version', async () => {
+    tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
+    tournamentsExistingSingleMock.mockResolvedValue({ data: { id: 't' }, error: null });
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(mitVersion(7))).rejects.toBeInstanceOf(OptimisticLockError);
+    expect(tournamentsInsertMock).not.toHaveBeenCalled();
+  });
+});
 
 describe('SupabaseRepository.save() — A-06a A1b: Netzfehler bei auth.getUser()', () => {
   it("@FU-009 A1b Test 1: 'Failed to fetch' (AuthRetryableFetchError) → RepositoryError, transient, kein from(...)-Aufruf", async () => {

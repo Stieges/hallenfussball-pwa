@@ -54,7 +54,7 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
 function renderCockpit(match: unknown, cockpitTimePenaltySeconds: number, handlers: Partial<LiveCockpitProps> = {}) {
   const props: LiveCockpitProps = {
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
-    currentMatch: match as never, upcomingMatches: [],
+    currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     cockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, timePenaltyDurationSeconds: cockpitTimePenaltySeconds },
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),

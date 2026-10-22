@@ -7,33 +7,30 @@
  * 3. Monitor - Konfigurator für die Hallenbildschirme
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CSSProperties } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { cssVars, fontSizesMd3 } from '../design-tokens';
+import { cssVars } from '../design-tokens';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Tournament } from '../types/tournament';
 import { MatchUpdate } from '../core/models/types';
 import { useToast } from '../components/ui/Toast';
-import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTournamentManager } from '../hooks/useTournamentManager';
-import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
-import type { BottomNavTab } from '../components/ui';
+import { ManagementHeader, ManagementMobileNav } from './ManagementChrome';
+import { useCockpitFrame } from '../components/live-cockpit/frame/cockpitFrame';
 import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
 import { TabellenTab } from '../features/tournament-management/TabellenTab';
+import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
-import { SettingsTab } from '../features/tournament-management/SettingsTab';
+import { SettingsTabConnected } from '../features/tournament-management/SettingsTabConnected';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
 import { MonitorsConfigTab } from '../features/tournament-management/MonitorsConfigTab';
 import { MonitorEditor } from '../features/tournament-management/MonitorEditor';
 
-// Auth
-import { AuthSection } from '../components/layout/AuthSection';
-import { EngineOutboxHeaderStatus } from '../features/tournament-management/components/EngineOutboxHeaderStatus';
 
 interface TournamentManagementScreenProps {
   tournamentId: string;
@@ -73,10 +70,12 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   // Initial match ID for cockpit navigation (passed from ScheduleTab or URL)
   const [initialMatchId, setInitialMatchId] = useState<string | null>(matchIdFromUrl);
+  // Ändert sich die Adresse im geöffneten Bildschirm (Link, Zurück/Vor), gilt die neue Spiel-Kennung (@OB-029: die Adresse nennt das Spiel)
+  useEffect(() => { if (matchIdFromUrl) { setInitialMatchId(matchIdFromUrl); } }, [matchIdFromUrl]);
 
   // Mobile Navigation
   const isMobile = useIsMobile();
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const { vollbild } = useCockpitFrame();
 
   // TOUR-EDIT-META: Dirty-State-Tracking für SettingsTab
   const [isSettingsDirty, setIsSettingsDirty] = useState(false);
@@ -96,8 +95,13 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     loadingError,
     handleTournamentUpdate,
     applyRemote,
+    reload,
     scheduleService,
   } = useTournamentManager(tournamentId);
+
+  // Paket TB-B: nach dem Eintragen oder Zurücknehmen einer Gleichstands-Entscheidung frisch aus der Cloud lesen
+  const reloadFresh = useCallback(() => { void reload({ fresh: true }); }, [reload]);
+
 
   // A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): result entry in
   // the schedule persists ONLY the touched matches (targeted update) instead of a full tournament
@@ -143,21 +147,6 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   const handleCancelTabChange = () => {
     setPendingTab(null);
     setShowDirtyWarning(false);
-  };
-
-  // Handle mobile bottom navigation
-  const handleMobileNavChange = (tab: BottomNavTab) => {
-    if (tab === 'more') {
-      setShowMoreMenu(true);
-    } else {
-      handleTabChange(tab);
-    }
-  };
-
-  // Handle selection from "more" menu
-  const handleMoreMenuSelect = (tab: TabType) => {
-    setShowMoreMenu(false);
-    handleTabChange(tab);
   };
 
   // Handle navigation to cockpit with specific match
@@ -218,149 +207,25 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   const containerStyle: CSSProperties = {
     minHeight: 'var(--min-h-screen)',
+    ...(vollbild ? { flex: 1, minHeight: 0 } : {}),
     background: cssVars.colors.background,
     display: 'flex',
     flexDirection: 'column',
   };
 
-  const headerStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    background: cssVars.colors.surface,
-    position: 'relative',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  };
-
-  const headerContentStyle: CSSProperties = {
-    flex: 1,
-    minWidth: 0, // For text truncation
-  };
-
-  const backButtonStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    background: 'transparent',
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: fontSizesMd3.headlineMedium,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '36px',
-    height: '36px',
-    transition: 'all 0.2s ease',
-    flexShrink: 0,
-    marginRight: cssVars.spacing.md,
-  };
-
-  const titleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xxl,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
-    marginBottom: cssVars.spacing.xs,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  };
-
-  const subtitleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  };
-
-  const tabBarStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.xs,
-    padding: `0 ${cssVars.spacing.lg}`,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    background: cssVars.colors.surface,
-    overflowX: 'auto',
-    WebkitOverflowScrolling: 'touch',
-    scrollbarWidth: 'none',
-    msOverflowStyle: 'none',
-  };
-
-  const contentStyle: CSSProperties = {
-    flex: 1,
-    overflow: 'auto',
-    paddingBottom: isMobile ? '72px' : undefined,
-  };
+  // Im Rahmen (Cockpit-Vollbild, @SL-140) füllt der Inhalt die Resthöhe und gibt sie dem Cockpit weiter (K3); sonst scrollt die Seite wie bisher
+  const contentStyle: CSSProperties = vollbild
+    ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }
+    : { flex: 1, overflow: 'auto', paddingBottom: isMobile ? '72px' : undefined };
 
   return (
     <div style={containerStyle}>
-      {/* HEADER */}
-      <header style={headerStyle}>
-        {/* Left: Back Button */}
-        {onBack && (
-          <button
-            onClick={onBack}
-            style={backButtonStyle}
-            title="Zurück zum Dashboard"
-          >
-            ←
-          </button>
-        )}
-
-        {/* Center: Title & Subtitle */}
-        <div style={headerContentStyle}>
-          <div style={titleStyle}>{tournament.title}</div>
-          <div style={subtitleStyle}>
-            {tournament.ageClass} · {formatDateGerman(tournament.date)} · {getLocationName(tournament)}
-          </div>
-        </div>
-
-        {/* Admin Center Button */}
-        <button
-          onClick={() => { void navigate(`/tournament/${tournamentId}/admin`); }}
-          style={{
-            padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-            background: cssVars.colors.primarySubtle,
-            border: `1px solid ${cssVars.colors.primaryBorder}`,
-            borderRadius: cssVars.borderRadius.md,
-            color: cssVars.colors.primary,
-            fontSize: cssVars.fontSizes.sm,
-            fontWeight: cssVars.fontWeights.medium,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: cssVars.spacing.xs,
-            marginRight: cssVars.spacing.md,
-            transition: 'all 0.15s ease',
-            flexShrink: 0,
-          }}
-          title="Admin Center öffnen"
-        >
-          <span>⚙️</span>
-          {!isMobile && <span>Admin Center</span>}
-        </button>
-
-        {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}
-        {activeTab !== 'management' && <EngineOutboxHeaderStatus tournament={tournament} />}
-        {/* Right: Auth Section */}
-        <AuthSection
-          onNavigateToLogin={onNavigateToLogin}
-          onNavigateToRegister={onNavigateToRegister}
-          onNavigateToProfile={onNavigateToProfile}
-          onNavigateToSettings={onNavigateToSettings}
+      {!vollbild && (
+        <ManagementHeader
+          tournament={tournament} isMobile={isMobile} activeTab={activeTab} isSettingsDirty={isSettingsDirty} onBack={onBack}
+          onTabChange={handleTabChange} onNavigateToLogin={onNavigateToLogin} onNavigateToRegister={onNavigateToRegister}
+          onNavigateToProfile={onNavigateToProfile} onNavigateToSettings={onNavigateToSettings}
         />
-      </header>
-
-      {/* TAB BAR - Desktop only */}
-      {!isMobile && (
-        <nav style={tabBarStyle}>
-          <TabButton label="Spielplan" isActive={activeTab === 'schedule'} onClick={() => handleTabChange('schedule')} />
-          <TabButton label="Tabellen" isActive={activeTab === 'tabellen'} onClick={() => handleTabChange('tabellen')} />
-          <TabButton label="Live" isActive={activeTab === 'management'} onClick={() => handleTabChange('management')} />
-          <TabButton label="Monitor" isActive={activeTab === 'monitor'} onClick={() => handleTabChange('monitor')} />
-          <TabButton label="Teams" isActive={activeTab === 'teams'} onClick={() => handleTabChange('teams')} />
-          <TabButton label="Einstellungen" isActive={activeTab === 'settings'} onClick={() => handleTabChange('settings')} isDirty={isSettingsDirty} />
-        </nav>
       )}
 
       {/* TAB CONTENT */}
@@ -377,12 +242,14 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           />
         )}
         {activeTab === 'tabellen' && (
-          <TabellenTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
-            overallStandings={overallStandings}
-          />
+          <StandingTieProvider tournamentId={tournamentId} onChanged={reloadFresh}>
+            <TabellenTab
+              tournament={tournament}
+              schedule={schedule}
+              currentStandings={currentStandings}
+              overallStandings={overallStandings}
+            />
+          </StandingTieProvider>
         )}
         {activeTab === 'management' && (
           <ManagementTab
@@ -401,11 +268,13 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           />
         )}
         {activeTab === 'settings' && (
-          <SettingsTab
+          <SettingsTabConnected
             tournament={tournament}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
             onDirtyChange={setIsSettingsDirty}
             onEditInWizard={onEditInWizard}
+            focusSection={searchParams.get('abschnitt') ?? undefined}
+            onPlacesSaved={reloadFresh}
           />
         )}
         {activeTab === 'monitor' && (
@@ -440,93 +309,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         />
       )}
 
-      {/* MOBILE BOTTOM NAVIGATION */}
-      {isMobile && (
-        <BottomNavigation
-          activeTab={activeTab}
-          onTabChange={handleMobileNavChange}
-        />
-      )}
-
-      {/* MOBILE "MEHR" BOTTOM SHEET */}
-      <BottomSheet
-        isOpen={showMoreMenu}
-        onClose={() => setShowMoreMenu(false)}
-        title="Mehr"
-      >
-        <BottomSheetItem
-          icon={<Icons.Users size={20} color="currentColor" />}
-          label="Teams"
-          description="Teams verwalten"
-          onClick={() => handleMoreMenuSelect('teams')}
-          isActive={activeTab === 'teams'}
-        />
-        <BottomSheetItem
-          icon={<Icons.Settings size={20} color="currentColor" />}
-          label="Einstellungen"
-          description="Turnier konfigurieren"
-          onClick={() => handleMoreMenuSelect('settings')}
-          isActive={activeTab === 'settings'}
-        />
-        <BottomSheetItem
-          icon={<Icons.Monitor size={20} color="currentColor" />}
-          label="Monitor"
-          description="Display-Konfiguration"
-          onClick={() => handleMoreMenuSelect('monitor')}
-          isActive={activeTab === 'monitor'}
-        />
-      </BottomSheet>
+      {!vollbild && isMobile && <ManagementMobileNav activeTab={activeTab} onTabChange={handleTabChange} />}
     </div>
-  );
-};
-
-// ============================================================================
-// TAB BUTTON COMPONENT
-// ============================================================================
-
-interface TabButtonProps {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-  isDirty?: boolean;
-}
-
-const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty }) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const buttonStyle: CSSProperties = {
-    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
-    background: 'transparent',
-    border: 'none',
-    borderBottom: isActive ? `3px solid ${cssVars.colors.primary}` : '3px solid transparent',
-    color: isActive ? cssVars.colors.primary : (isHovered ? cssVars.colors.primary : cssVars.colors.textSecondary),
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: isActive ? cssVars.fontWeights.semibold : cssVars.fontWeights.normal,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    fontFamily: cssVars.fontFamilies.body,
-  };
-
-  return (
-    <button
-      style={buttonStyle}
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      data-testid={`desktop-tab-${label.toLowerCase().replace(/\s+/g, '-')}`}
-    >
-      {label}
-      {isDirty && (
-        <span style={{
-          marginLeft: '6px',
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          background: cssVars.colors.warning,
-          display: 'inline-block',
-        }} title="Ungespeicherte Änderungen" />
-      )}
-    </button>
   );
 };
 

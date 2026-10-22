@@ -20,6 +20,7 @@ import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch'
 import type { TournamentRole } from '../../auth/types/auth.types';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 vi.mock('../../auth/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
 }));
@@ -111,12 +112,13 @@ function renderTab(onTournamentUpdate: ReturnType<typeof vi.fn<OnTournamentUpdat
       schedule={schedule}
       onTournamentUpdate={onTournamentUpdate}
       onLocalTournamentUpdate={vi.fn()}
-    />,
+    />, { wrapper: RouterWrapper }
   );
 }
 
 async function openSettings(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'Einstellungen' }));
+  await user.click(screen.getByTestId('cockpit-more-button'));
+  await user.click(screen.getByTestId('mehr-einstellungen'));
 }
 
 /** Jeder Aufruf der Speicherstrecke muss die Regeln unverändert lassen (Speicherschutz). */
