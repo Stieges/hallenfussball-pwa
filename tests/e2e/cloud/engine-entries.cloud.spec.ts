@@ -23,7 +23,7 @@ import {
 } from './engineHelpers';
 import { fetchMatchRow } from './helpers';
 import { E2E_USERS, engineCupIds, engineEventId, type EngineCupSlug } from './testData';
-import { tippeKarte } from '../helpers/cockpitNeu';
+import { tippeKarte, wartePicker } from '../helpers/cockpitNeu';
 
 function cup(slug: EngineCupSlug) {
   return { ids: engineCupIds(slug), target: engineCupTarget(slug) };
@@ -177,5 +177,32 @@ test.describe('Engine-Einträge über Geräte', () => {
     const rowId = await expectOneNewRow(ids.matchId, seededRows, 'YELLOW_RED_CARD');
     expect(rowId).toBeTruthy();
     expect((await fetchEngineRows(ids.matchId)).filter((row) => row.type === 'RED_CARD')).toHaveLength(0);
+  });
+  test('@SL-172 Rückennummer außerhalb 1–99: Picker mit 100 und Bearbeiten-Dialog mit „7a“ zeigen den Hinweis (Bildschirmfotos)', async ({ asRole }) => {
+    const { ids } = cup('AMEND');
+    await expectSeededEngineMatch(cup('AMEND').target);
+    const ownerPage = await asRole('owner');
+    await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
+    await expectEngineMatchRunningUi(ownerPage);
+
+    // Picker über den Kartenablauf (Esc verwirft die Karte: es entsteht keine Zeile, der Seed bleibt unverbraucht).
+    await ownerPage.getByTestId('card-button-home').click();
+    await ownerPage.getByTestId('card-kind-step').getByRole('button', { name: 'Gelb', exact: true }).click();
+    await wartePicker(ownerPage);
+    const picker = ownerPage.getByTestId('number-picker');
+    await picker.getByRole('button', { name: 'Andere Nr.' }).click();
+    await picker.getByRole('textbox').fill('100');
+    await expect(ownerPage.getByTestId('number-picker-ungueltig')).toBeVisible();
+    await expect(picker.getByRole('button', { name: 'Übernehmen' })).toBeDisabled();
+    await ownerPage.screenshot({ path: test.info().outputPath('sl172-picker-100.png') });
+    await ownerPage.keyboard.press('Escape');
+    await expect(picker).toBeHidden();
+
+    // Bearbeiten-Dialog: „7a“ -> Hinweis, Speichern gesperrt, die Nummer 7 bleibt.
+    await ownerPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
+    await ownerPage.getByTestId('event-edit-number').fill('7a');
+    await expect(ownerPage.getByTestId('event-edit-number-invalid')).toBeVisible();
+    await expect(ownerPage.getByTestId('event-edit-save')).toBeDisabled();
+    await ownerPage.screenshot({ path: test.info().outputPath('sl172-bearbeiten-7a.png') });
   });
 });

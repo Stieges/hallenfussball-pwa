@@ -8,11 +8,13 @@
  * Ein Eigentor steht bei keinem Schützen, sondern in der Zeile „Eigentore“ des begünstigten Teams. Tore ohne gültige
  * Rückennummer (1–99, @SL-172; Altdaten außerhalb inklusive) stehen gesammelt je Team in „ohne Nummer“. Beide Sammelzeilen
  * haben keinen Rang und stehen am Ende. Rang: absteigend nach Toren, Gleichstand = gleicher Rang; darin deutsche
- * Sortierung nach Teamname, dann Nummer. Rein, ohne React.
+ * Sortierung nach Teamname, dann Nummer. Laufende und nicht beendete Spiele zählen mit (nur `skipped` und Wertungen nicht);
+ * für das abgeschlossene Turnier ist das gleichwertig, eine Live-Liste müsste das wissen. Rein, ohne React.
  */
 import type { Tournament } from '../../types/tournament';
 import { eventsForMatch, type EngineEventsById } from '../../utils/calculations';
 import { isJerseyNumber } from '../match/jerseyNumber';
+import { isForfeitMatch } from '../models/forfeit';
 import type { TeamId } from '../models/schemas/MatchSlotSchema';
 import type { ScorerRow } from './finalStandings/types';
 
@@ -42,7 +44,7 @@ export function computeScorers(
   const ownGoals = new Map<string, CollectiveRow>();
 
   for (const match of t.matches) {
-    if (match.matchStatus === 'skipped') { continue; }
+    if (match.matchStatus === 'skipped' || isForfeitMatch(match)) { continue; }
     for (const event of eventsForMatch(match, engineEventsById)) {
       const teamId = event.payload.teamId;
       const teamName = teamId === undefined ? undefined : nameOf.get(teamId);

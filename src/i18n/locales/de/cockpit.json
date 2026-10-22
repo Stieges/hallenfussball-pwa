@@ -513,7 +513,7 @@
     "andere": "Andere Nr.",
     "uebernehmen": "Übernehmen",
     "eingabe": "Rückennummer",
-    "ungueltig": "Rückennummer: ganze Zahl von 1 bis 99. Der Eintrag zählt ohne Nummer.",
+    "ungueltig": "Rückennummer: ganze Zahl von 1 bis 99.",
     "titelKarte": "Rückennummer – {{art}} {{team}}",
     "titelZeitstrafe": "Rückennummer – Zeitstrafe {{team}}"
   },

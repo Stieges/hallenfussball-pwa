@@ -25,7 +25,7 @@ export function EventNumberField({ value, onChange, lockedReason, invalidHint }:
       <div style={styles.inputContainer}>
         <input
           id="event-edit-number"
-          type="number"
+          type="text"
           inputMode="numeric"
           pattern="[0-9]*"
           placeholder="#"
@@ -33,8 +33,6 @@ export function EventNumberField({ value, onChange, lockedReason, invalidHint }:
           onChange={(e) => onChange(e.target.value)}
           style={styles.numberInput}
           autoFocus
-          min={1}
-          max={99}
           disabled={locked}
           data-testid="event-edit-number"
         />

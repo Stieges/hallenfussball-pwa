@@ -513,7 +513,7 @@
     "andere": "Other no.",
     "uebernehmen": "Apply",
     "eingabe": "Shirt number",
-    "ungueltig": "Shirt number: a whole number from 1 to 99. The entry counts without a number.",
+    "ungueltig": "Shirt number: a whole number from 1 to 99.",
     "titelKarte": "Shirt number – {{art}} {{team}}",
     "titelZeitstrafe": "Shirt number – time penalty {{team}}"
   },

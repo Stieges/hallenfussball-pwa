@@ -69,6 +69,18 @@ describe('A-20b computeScorers', () => {
     });
   });
 
+  it('@ET-035 Gegenbeispiel: eine Wertung MIT Tor-Einträgen (Spiel war angepfiffen, dann gewertet) ergibt keine Zeile', () => {
+    const wertung = spiel([{ team: ID.mitte, nr: 8 }, { team: ID.mitte }], { scoreA: 0, scoreB: 2, decidedBy: 'forfeit', forfeitAbsent: 'A' });
+    expect(liste([wertung])).toEqual([]);
+  });
+
+  it('H1 Rang nach Gleichstand mit Überspringen: 5, 3, 3, 1 Tore → 1, 2, 2, 4', () => {
+    const rows = liste([spiel([
+      ...mal(5, { team: ID.nord, nr: 1 }), ...mal(3, { team: ID.mitte, nr: 2 }), ...mal(3, { team: ID.sued, nr: 3 }), { team: ID.berg, nr: 4 },
+    ])]);
+    expect(rows.map((r) => r.rank)).toEqual([1, 2, 2, 4]);
+  });
+
   it('@ET-035 Wertung: keine Tor-Ereignisse, keine Zeile für den Gewinner', () => {
     const wertung = spiel([], { scoreA: 2, scoreB: 0, decidedBy: 'forfeit', forfeitAbsent: 'B' });
     expect(liste([wertung])).toEqual([]);

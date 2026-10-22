@@ -34,7 +34,7 @@ describe('@SL-172 EventEditDialog: Rückennummer 1–99', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it.each([['0'], ['100'], ['1e1'], ['-3'], ['4.5'], ['999']])('%j: Hinweis, Speichern gesperrt, nichts gesendet', (eingabe) => {
+  it.each([['0'], ['100'], ['7a'], ['1e1'], ['-3'], ['4.5'], ['999']])('%j: Hinweis, Speichern gesperrt, nichts gesendet', (eingabe) => {
     const { onUpdate, onClose, feld } = open(tor(5));
     fireEvent.change(feld, { target: { value: eingabe } });
     expect(screen.getByTestId('event-edit-number-invalid')).toHaveTextContent('eventEditDialog.numberInvalid');
@@ -43,6 +43,16 @@ describe('@SL-172 EventEditDialog: Rückennummer 1–99', () => {
     fireEvent.click(speichern);
     expect(onUpdate).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('A1: „7a“ löscht die bisherige Nummer nie (Feld ist ein Textfeld mit Zifferntastatur, kein number-Feld)', () => {
+    const { onUpdate, feld } = open(tor(5));
+    expect(feld).toHaveAttribute('type', 'text');
+    expect(feld).toHaveAttribute('inputmode', 'numeric');
+    fireEvent.change(feld, { target: { value: '7a' } });
+    expect(feld).toHaveValue('7a');
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it('Korrektur der ungültigen Eingabe hebt die Sperre auf', () => {
