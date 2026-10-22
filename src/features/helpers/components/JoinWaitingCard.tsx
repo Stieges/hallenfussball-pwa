@@ -28,7 +28,7 @@ const card: CSSProperties = {
   borderRadius: cssVars.borderRadius.md,
   padding: cssVars.spacing.md,
 };
-const meta: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs };
+const meta: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm };
 
 export const JoinWaitingCard = ({ tournament, name, checkNumber }: JoinWaitingCardProps) => {
   const { t } = useTranslation('helpers');

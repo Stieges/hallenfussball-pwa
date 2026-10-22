@@ -26,8 +26,8 @@ export interface CountedTextFieldProps {
 
 const row: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: cssVars.spacing.sm, marginBottom: cssVars.spacing.xs };
 const labelStyle: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary };
-const counterStyle: CSSProperties = { color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs };
-const hintStyle: CSSProperties = { margin: `${cssVars.spacing.xs} 0 0`, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs };
+const counterStyle: CSSProperties = { color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm };
+const hintStyle: CSSProperties = { margin: `${cssVars.spacing.xs} 0 0`, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm };
 const errorStyle: CSSProperties = {
   display: 'flex',
   gap: cssVars.spacing.sm,

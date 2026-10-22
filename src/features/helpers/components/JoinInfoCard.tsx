@@ -21,7 +21,7 @@ const card: CSSProperties = {
   flexDirection: 'column',
   gap: cssVars.spacing.sm,
 };
-const meta: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs };
+const meta: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm };
 const titleStyle: CSSProperties = {
   margin: 0,
   fontSize: cssVars.fontSizes.xl,
