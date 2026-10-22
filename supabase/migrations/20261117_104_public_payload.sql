@@ -31,21 +31,23 @@
 --                 referee_*, owner_id, last_modified_by, version.
 --        Torschuetzen nur mit config.publicScorers = true, nie im Kindermodus (Zwischenstand, Tore beendeter Spiele
 --                 und laufender Spiele nur bei eingeschaltetem Live-Stand, @ZM-102).
---        Bildschirm (audience 'screen') zusaetzlich: Schiedsrichter (referee_config, referee_number; @W3-001,
---                 @W3-032), nur der eigene Monitor (config.monitors) und nur die Sponsoren seiner Folien, ohne
+--        Bildschirm (audience 'screen') zusaetzlich: Schiedsrichter nach config.monitorReferees (@W3-001,
+--                 @W3-032, Daniel 22.10.: 'number' Vorgabe = nur Nummern, referee_config ohne refereeNames;
+--                 'name' = mit Namen; 'none' = keine SR-Angaben), nur der eigene Monitor (config.monitors) und nur die Sponsoren seiner Folien, ohne
 --                 Kontaktperson. Nie: Team-Kontakte, andere Monitore, monitors.access_code, Mitglieder,
 --                 Beitrittscodes, interne Notizen (adminNotes), Statistiken, Korrektur-Gruende und -Personen.
 --      Antwort: {state:'not_found'} | {state:'unchanged', version, server_now} |
 --               {state:'full', version, server_now, tournament, teams, matches[, scorers]} |
---               {state:'delta', version, base_version, server_now, tournament_date, matches, removed_match_ids
---                [, scorers]}.
+--               {state:'delta', version, base_version, server_now, tournament_date, matches[, scorers]}.
 --      version = Mikrosekunden seit 1970 der letzten Aenderung an Turnier, Teams oder Spielen, hoechstens
 --      "jetzt - 5 s" (c_lag_us): eine Schreib-Transaktion, die vor der Antwort begann und erst danach festschreibt,
 --      liegt so immer nach der gemeldeten Version und kommt mit der naechsten Antwort. server_now in Millisekunden.
 --      Voll-Antwort, wenn since fehlt, voraus ist oder sich Turnierzeile oder Teams seither geaendert haben -- also
 --      auch bei jedem Wechsel eines Zuschauer-Schalters oder des Kindermodus (config steht in der Turnierzeile).
---      Sonst nur die seither geaenderten Spiele (Delta); geloeschte Spiele entstehen nur zusammen mit einer
---      Aenderung der Turnierzeile (save()) und kommen deshalb immer als Voll-Antwort.
+--      Sonst nur die seither geaenderten Spiele (Delta). Neue Spiele/Teams tragen updated_at vom Server (Trigger
+--      BEFORE INSERT), geloeschte Spiele/Teams merkt public_view.structure_changes (Trigger AFTER DELETE) -- danach
+--      kommt die Voll-Antwort, auch wenn save() zwischen Turnier-Upsert und Loeschen/Einfuegen lange braucht (A1).
+--      live_state nur mit den Uhr-Schluesseln der Engine, im Kindermodus ohne Entscheidungs-Angaben (N2).
 --   5. public.public_tournament(share_code, since_version) -- Zuschauer, anon und authenticated: nur ein
 --      oeffentliches, nicht geloeschtes Turnier mit genau diesem Code; sonst {state:'not_found'} (nicht geteilt und
 --      unbekannt sind gleich, @ZM-068). Eine Stoerung ist ein Fehler der Anfrage, nie not_found (@ZM-109).
@@ -234,7 +236,7 @@ DECLARE
     'fieldAssignments', 'groups', 'fields', 'finals', 'playoffConfig', 'minRestSlots', 'isKidsTournament',
     'hideScoresForPublic', 'hideRankingsForPublic', 'publicLiveScore', 'publicEvents', 'publicScorers', 'resultMode',
     'ageClass', 'organizer', 'bibColor', 'spectatorDisplay', 'hostTeamIds', 'openingMode', 'placementsToPlayOut',
-    'forfeitScore'];
+    'forfeitScore', 'monitorReferees'];
   v_config jsonb := CASE WHEN jsonb_typeof(p_config) = 'object' THEN p_config ELSE '{}'::jsonb END;
   v_out jsonb;
   v_contact jsonb := v_config -> 'contactInfo';
@@ -352,6 +354,60 @@ AS $$
     ) AS amend ON true;
 $$;
 
+-- Uhr der Spieluhr ohne Fremdschluessel (N2): nur die Schluessel, die die Engine schreibt; im Kindermodus ohne die
+-- Entscheidungs-Angaben (Wahl Verlaengerung/Strafstoss offen, Art der Entscheidung).
+CREATE OR REPLACE FUNCTION public_view.live_state_for(p_state jsonb, p_kids boolean) RETURNS jsonb
+LANGUAGE sql IMMUTABLE PARALLEL SAFE
+SET search_path = public, pg_temp
+AS $$
+  SELECT CASE WHEN p_state IS NULL OR jsonb_typeof(p_state) <> 'object' THEN NULL ELSE (
+    SELECT coalesce(jsonb_object_agg(e.key, e.value), '{}'::jsonb)
+      FROM jsonb_each(p_state) AS e
+     WHERE e.key = ANY (ARRAY['engine', 'status', 'phase', 'section', 'running', 'elapsedMs', 'anchorAt', 'elapsedSeconds',
+                              'durationSeconds', 'playPhase', 'tiebreakerMode', 'overtimeDurationSeconds',
+                              'awaitingTiebreakerChoice', 'sections', 'sectionSeconds', 'breakSeconds', 'overtimeSeconds',
+                              'sectionStartMs', 'breakStartedAt'])
+       AND NOT (p_kids AND e.key IN ('tiebreakerMode', 'awaitingTiebreakerChoice'))) END;
+$$;
+
+-- Geloeschte Spiele und Teams (A1): save() loescht in eigenen Anfragen, ohne die Turnierzeile zu beruehren. Der
+-- Loesch-Trigger merkt den Zeitpunkt je Turnier; public_payload antwortet danach voll (kein Delta mit Phantom-Spielen).
+CREATE TABLE IF NOT EXISTS public_view.structure_changes (
+  tournament_id uuid PRIMARY KEY,
+  changed_at timestamptz NOT NULL
+);
+ALTER TABLE public_view.structure_changes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public_view.structure_changes FROM PUBLIC, anon, authenticated;
+COMMENT ON TABLE public_view.structure_changes IS
+  'B-14 (A1): letzter Loeschzeitpunkt von Spielen/Teams je Turnier; nur fuer public_payload (Voll-Antwort danach).';
+
+CREATE OR REPLACE FUNCTION public_view.note_structure_change() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  INSERT INTO public_view.structure_changes (tournament_id, changed_at)
+  VALUES (OLD.tournament_id, now())
+  ON CONFLICT (tournament_id) DO UPDATE SET changed_at = greatest(public_view.structure_changes.changed_at, EXCLUDED.changed_at);
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS matches_public_structure_delete ON public.matches;
+CREATE TRIGGER matches_public_structure_delete AFTER DELETE ON public.matches
+  FOR EACH ROW EXECUTE FUNCTION public_view.note_structure_change();
+DROP TRIGGER IF EXISTS teams_public_structure_delete ON public.teams;
+CREATE TRIGGER teams_public_structure_delete AFTER DELETE ON public.teams
+  FOR EACH ROW EXECUTE FUNCTION public_view.note_structure_change();
+
+-- Neue Spiele und Teams (A1): updated_at beim Einfuegen vom Server statt von der Geraeteuhr (Mapper schickt sie mit).
+DROP TRIGGER IF EXISTS matches_updated_at_insert ON public.matches;
+CREATE TRIGGER matches_updated_at_insert BEFORE INSERT ON public.matches
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+DROP TRIGGER IF EXISTS teams_updated_at_insert ON public.teams;
+CREATE TRIGGER teams_updated_at_insert BEFORE INSERT ON public.teams
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
 -- Der interne Baustein (Plan B-14: public_payload(tournament_id, since_version)).
 CREATE OR REPLACE FUNCTION public_view.public_payload(p_tournament_id uuid, p_since_version bigint, p_audience text,
                                                      p_monitor_id text DEFAULT NULL)
@@ -367,6 +423,7 @@ DECLARE
   v_tournament_us bigint;
   v_teams_us bigint;
   v_matches_us bigint;
+  v_structure_us bigint;
   v_max_us bigint;
   v_version bigint;
   v_full boolean;
@@ -377,6 +434,7 @@ DECLARE
   v_events boolean;
   v_scorers boolean;
   v_screen boolean := p_audience = 'screen';
+  v_referees text;
   v_tournament jsonb;
   v_teams jsonb;
   v_matches jsonb;
@@ -393,7 +451,11 @@ BEGIN
   v_tournament_us := public_view.epoch_us(coalesce(v_t.updated_at, v_t.created_at, '-infinity'::timestamptz));
   SELECT public_view.epoch_us(max(tm.updated_at)) INTO v_teams_us FROM public.teams tm WHERE tm.tournament_id = v_t.id;
   SELECT public_view.epoch_us(max(m.updated_at)) INTO v_matches_us FROM public.matches m WHERE m.tournament_id = v_t.id;
-  v_max_us := greatest(coalesce(v_tournament_us, 0), coalesce(v_teams_us, 0), coalesce(v_matches_us, 0), 0);
+  -- Geloeschte Spiele/Teams (A1): Zeitpunkt der letzten Loeschung aus public_view.structure_changes.
+  SELECT public_view.epoch_us(sc.changed_at) INTO v_structure_us
+    FROM public_view.structure_changes sc WHERE sc.tournament_id = v_t.id;
+  v_max_us := greatest(coalesce(v_tournament_us, 0), coalesce(v_teams_us, 0), coalesce(v_matches_us, 0),
+                       coalesce(v_structure_us, 0), 0);
   v_version := greatest(least(v_max_us, v_now_us - c_lag_us), 0);
 
   IF p_since_version IS NULL OR p_since_version < 0 OR p_since_version > v_version THEN
@@ -401,7 +463,8 @@ BEGIN
   ELSIF v_max_us <= p_since_version THEN
     RETURN jsonb_build_object('state', 'unchanged', 'version', p_since_version, 'server_now', v_server_now);
   ELSE
-    v_full := coalesce(v_tournament_us, 0) > p_since_version OR coalesce(v_teams_us, 0) > p_since_version;
+    v_full := coalesce(v_tournament_us, 0) > p_since_version OR coalesce(v_teams_us, 0) > p_since_version
+              OR coalesce(v_structure_us, 0) > p_since_version;
   END IF;
 
   v_sw := public_view.switches(v_t.config);
@@ -410,6 +473,10 @@ BEGIN
   v_live := NOT v_kids AND (v_sw ->> 'liveScore')::boolean;
   v_events := NOT v_kids AND (v_sw ->> 'events')::boolean;
   v_scorers := NOT v_kids AND (v_sw ->> 'scorers')::boolean;
+  -- Schiedsrichter am Bildschirm (@W3-032, Regel 12): config.monitorReferees 'number' (Vorgabe) | 'name' | 'none'.
+  v_referees := CASE WHEN NOT v_screen THEN 'none'
+                     WHEN v_t.config ->> 'monitorReferees' IN ('name', 'none') THEN v_t.config ->> 'monitorReferees'
+                     ELSE 'number' END;
 
   -- Spiele (alle oder nur die seither geaenderten).
   SELECT coalesce(jsonb_agg(row_json ORDER BY sort_number NULLS LAST, sort_id), '[]'::jsonb) INTO v_matches
@@ -425,7 +492,7 @@ BEGIN
                'is_final', m.is_final, 'final_type', m.final_type, 'label', m.label,
                'scheduled_start', m.scheduled_start, 'original_start', m.original_start,
                'match_status', m.match_status,
-               'live_state', m.live_state, 'timer_start_time', m.timer_start_time,
+               'live_state', public_view.live_state_for(m.live_state, v_kids), 'timer_start_time', m.timer_start_time,
                'timer_paused_at', m.timer_paused_at, 'timer_elapsed_seconds', m.timer_elapsed_seconds,
                'actual_start', m.actual_start, 'actual_end', m.actual_end, 'skipped_at', m.skipped_at,
                'kit_color_a', jm.j -> 'kit_color_a', 'kit_color_b', jm.j -> 'kit_color_b', 'bib_side', jm.j -> 'bib_side',
@@ -437,7 +504,7 @@ BEGIN
                'penalty_score_b', CASE WHEN vis.scores THEN m.penalty_score_b END,
                'decided_by', CASE WHEN NOT v_kids THEN m.decided_by END,
                'forfeit_absent', CASE WHEN NOT v_kids THEN jm.j -> 'forfeit_absent' END,
-               'referee_number', CASE WHEN v_screen THEN m.referee_number END))
+               'referee_number', CASE WHEN v_referees <> 'none' THEN m.referee_number END))
              -- Seiten immer mit Schluessel (der Client unterscheidet "kein Team" = null von "fehlt").
              || jsonb_build_object('team_a_id', m.team_a_id, 'team_b_id', m.team_b_id)
              || CASE WHEN ev.list = '[]'::jsonb THEN '{}'::jsonb ELSE jsonb_build_object('events', ev.list) END
@@ -457,7 +524,8 @@ BEGIN
          AND (v_full OR public_view.epoch_us(m.updated_at) > p_since_version)
     ) AS r;
 
-  v_result := jsonb_build_object('version', greatest(v_version, coalesce(p_since_version, 0)),
+  -- Voll-Antwort: die eigene Version (auch wenn since voraus war, N5); Delta: nie kleiner als since.
+  v_result := jsonb_build_object('version', CASE WHEN v_full THEN v_version ELSE greatest(v_version, p_since_version) END,
                                  'server_now', v_server_now);
 
   -- Torschuetzen-Zwischenstand (@ZM-099, @ZM-102): nur mit Schalter, aus Toren mit Nummer in Spielen, deren Stand
@@ -478,8 +546,7 @@ BEGIN
 
   IF NOT v_full THEN
     RETURN v_result || jsonb_build_object('state', 'delta', 'base_version', p_since_version,
-                                          'tournament_date', v_t.date, 'matches', v_matches,
-                                          'removed_match_ids', '[]'::jsonb);
+                                          'tournament_date', v_t.date, 'matches', v_matches);
   END IF;
 
   v_tournament := public_view.without_nulls(jsonb_build_object(
@@ -493,7 +560,9 @@ BEGIN
       'group_phase_break', v_t.group_phase_break, 'final_round_duration', v_t.final_round_duration,
       'final_round_break', v_t.final_round_break, 'point_system', v_t.point_system,
       'finals_config', v_t.finals_config,
-      'referee_config', CASE WHEN v_screen THEN v_t.referee_config END,
+      'referee_config', CASE WHEN v_referees = 'name' THEN v_t.referee_config
+                             WHEN v_referees = 'number' AND jsonb_typeof(v_t.referee_config) = 'object'
+                               THEN v_t.referee_config - 'refereeNames' END,
       'is_public', coalesce(v_t.is_public, false),
       'share_code', CASE WHEN coalesce(v_t.is_public, false) THEN v_t.share_code END,
       'completed_at', v_t.completed_at,

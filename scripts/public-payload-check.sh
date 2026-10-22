@@ -40,9 +40,13 @@
 #     G4 Ereignisse mit ganzer payload (Urheber, Freitext)                       -> P rot (@ZM-098)
 #     G5 Monitor-Link ohne Pruefung des Monitors                                 -> M rot
 #     G6 public_tournament ohne is_public                                        -> A rot (@ZM-100/@ZM-101)
-#     G7 Schiedsrichter auch fuer Zuschauer                                      -> P rot (@W3-001)
+#     G7 Schiedsrichter auch fuer Zuschauer (Einstellung Name)                   -> P rot (@W3-001)
 #     G8 Schalter-Wechsel liefert nur ein Delta                                  -> A rot
 #     G9 config ohne Positivliste (alle Schluessel)                              -> P rot (@ME-018, adminNotes)
+#     G10 Loeschen merkt keine Strukturaenderung (langsames save())              -> A rot (A1)
+#     G11 Einfuegen ohne Server-Zeit (Geraeteuhr in updated_at)                  -> A rot (A1)
+#     G12 Bildschirm bekommt SR-Namen trotz Vorgabe Nummer                       -> P rot (A2, @W3-032)
+#     G13 Kindermodus mit Entscheidungs-Angaben in live_state                    -> P rot (N2)
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigene Wegwerf-Container und ein
 # eigenes Wegwerf-Netz, am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
@@ -214,7 +218,7 @@ SC_OST="$(uuid_for team:sc-ost)"; SG_MITTE="$(uuid_for team:sg-mitte)"; DJK_BERG
 W_A="$(uuid_for team:winter-a)"; W_B="$(uuid_for team:winter-b)"; D_A="$(uuid_for team:del-a)"; D_B="$(uuid_for team:del-b)"
 S1="$(uuid_for match:spiel-1)"; S7="$(uuid_for match:spiel-7)"; S8="$(uuid_for match:spiel-8)"; S9="$(uuid_for match:spiel-9)"
 HF1="$(uuid_for match:halbfinale-1)"; HF2="$(uuid_for match:halbfinale-2)"; M_WINTER="$(uuid_for match:winter-1)"
-M_DEL="$(uuid_for match:del-1)"
+M_DEL="$(uuid_for match:del-1)"; S_NEU="$(uuid_for match:spiel-15-neu)"; T_NEU="$(uuid_for team:fc-neu)"
 E() { uuid_for "event:$1"; }
 SHARE="HCNORD"
 
@@ -299,6 +303,11 @@ SET session_replication_role = replica;
 UPDATE public.tournaments SET updated_at = updated_at - interval '1 minute' WHERE id IN ('$T', '$T_WINTER');
 UPDATE public.teams SET updated_at = updated_at - interval '1 minute' WHERE tournament_id IN ('$T', '$T_WINTER');
 UPDATE public.matches SET updated_at = updated_at - interval '1 minute' WHERE tournament_id IN ('$T', '$T_WINTER');
+DO \$\$ BEGIN
+  IF to_regclass('public_view.structure_changes') IS NOT NULL THEN
+    UPDATE public_view.structure_changes SET changed_at = changed_at - interval '1 minute';
+  END IF;
+END \$\$;
 SQL
 }
 set_config() { # set_config <jsonb-Ausdruck, der config veraendert>
@@ -543,8 +552,19 @@ run_probes() {
   set_config "config #- '{contactInfo,showPublic}'"
 
   # Bildschirm: Schiedsrichter, eigener Monitor, eigene Sponsoren (@W3-001, @W3-032, @ME-018, E-A2)
-  check P "@W3-001 Monitor-Link: Schiedsrichter-Name und Nummer fuer Spiel 7" "Paul Schmidt|1" \
-    "$(jq -r '"\(.tournament.referee_config.refereeNames."1")|\(.matches[] | select(.id == "'"$S7"'") | .referee_number)"' <<<"$screen" 2>/dev/null)"
+  check P "@W3-032 Monitor-Link Vorgabe Nummer: SR-Nummer fuer Spiel 7, kein Name (Regel 12)" "1|fehlt|false" \
+    "$(jq -r '.matches[] | select(.id == "'"$S7"'") | .referee_number' <<<"$screen" 2>/dev/null)|$(has "$screen" 'Paul Schmidt')|$(jq '.tournament.referee_config | has("refereeNames")' <<<"$screen" 2>/dev/null)"
+  set_config "config || '{\"monitorReferees\":\"name\"}'::jsonb"
+  tmp="$(disp anon "$T" mon-feld1 null)"
+  check P "@W3-032 Gegenbeispiel: Einstellung Name -> Paul Schmidt und Nummer 1" "Paul Schmidt|1" \
+    "$(jq -r '"\(.tournament.referee_config.refereeNames."1")|\(.matches[] | select(.id == "'"$S7"'") | .referee_number)"' <<<"$tmp" 2>/dev/null)"
+  check P "@W3-001 auch mit Einstellung Name: Zuschauer-Link ohne Schiedsrichter" "fehlt|fehlt" \
+    "$(has "$(pub anon null)" 'Paul Schmidt')|$(has "$(pub anon null)" 'referee_number')"
+  set_config "config || '{\"monitorReferees\":\"none\"}'::jsonb"
+  tmp="$(disp anon "$T" mon-feld1 null)"
+  check P "@W3-032 Einstellung gar nicht -> keine SR-Angaben am Monitor" "fehlt|fehlt|fehlt" \
+    "$(has "$tmp" 'Paul Schmidt')|$(has "$tmp" 'referee_number')|$(has "$tmp" 'referee_config')"
+  set_config "config - 'monitorReferees'"
   check P "@ME-018 Monitor-Link: nur der eigene Monitor, nur seine Sponsoren, kein access_code" "mon-feld1|sp-baecker|fehlt|fehlt|fehlt" \
     "$(jq -r '[.tournament.config.monitors[]?.id] | join(",")' <<<"$screen" 2>/dev/null)|$(jq -r '[.tournament.config.sponsors[]?.id] | join(",")' <<<"$screen" 2>/dev/null)|$(has "$screen" 'mon-eingang')|$(has "$screen" 'sp-auto')|$(has "$screen" 'ACC9Z1')"
   check P "Monitor-Link: keine internen Notizen, keine Sponsoren-Zaehler" "fehlt|fehlt" "$(has "$screen" 'Hausmeister Kurt')|$(has "$screen" '4711')"
@@ -586,6 +606,8 @@ run_probes() {
     "$(jq '[.matches[] | select(has("score_a"))] | length' <<<"$screen" 2>/dev/null)|$(jq '[.matches[].events[]?] | length' <<<"$screen" 2>/dev/null)"
   check P "Kindermodus Gegenbeispiel: Phase und Uhr von Spiel 7 bleiben (live_state)" "running" \
     "$(jq -r '.live_state.status' <<<"$(match_of "$viewer" "$S7")" 2>/dev/null)"
+  check P "N2 Kindermodus: live_state ohne Entscheidungs-Angaben (awaitingTiebreakerChoice, tiebreakerMode)" "false|false" \
+    "$(jq -r '.live_state | "\(has("awaitingTiebreakerChoice"))|\(has("tiebreakerMode"))"' <<<"$(match_of "$viewer" "$S7")" 2>/dev/null)"
   set_config "config - 'hideScoresForPublic' - 'publicScorers'"
 
   # --- A: Antwort und Versionen ---------------------------------------------------------------------------------
@@ -633,8 +655,8 @@ run_probes() {
   ev GOAL "$(E s8-goal-berg)" "{\"at\":6000,\"clockMs\":240000,\"teamId\":\"$DJK_BERG\",\"payload\":{\"playerNumber\":11}}"
   send "$U_OLLI" "$S8"; need_accepted "Spiel 8 Tor" "accepted"
   delta="$(pub anon "$v")"
-  check A "1 Tor -> {state:delta} nur mit Spiel 8, tournament_date, base_version, removed_match_ids []" \
-    "delta|$S8|2026-11-21|$v|[]" \
+  check A "1 Tor -> {state:delta} nur mit Spiel 8, tournament_date, base_version (geloeschte Spiele kommen voll, A1)" \
+    "delta|$S8|2026-11-21|$v|null" \
     "$(state_of "$delta")|$(jq -r '[.matches[].id] | join(",")' <<<"$delta" 2>/dev/null)|$(jq -r '.tournament_date' <<<"$delta" 2>/dev/null)|$(jq -r '.base_version' <<<"$delta" 2>/dev/null)|$(jq -c '.removed_match_ids' <<<"$delta" 2>/dev/null)"
   check A "Delta: Spiel 8 komplett (Stand 0:1, Tor DJK Berg Nr. 11), keine Teams, kein Turnierkopf" "0:1|11|false|false" \
     "$(jq -r '"\(.score_a):\(.score_b)"' <<<"$(match_of "$delta" "$S8")" 2>/dev/null)|$(jq -r '[.events[]? | select(.type == "GOAL")][0].number' <<<"$(match_of "$delta" "$S8")" 2>/dev/null)|$(jq 'has("teams")' <<<"$delta" 2>/dev/null)|$(jq 'has("tournament")' <<<"$delta" 2>/dev/null)"
@@ -667,6 +689,37 @@ run_probes() {
     "$(state_of "$res")|$(jq -r --arg id "$SC_OST" '.teams[] | select(.id == $id) | .name' <<<"$res" 2>/dev/null)"
   check A "since voraus (Zukunft) oder negativ -> Voll-Antwort" "full|full" \
     "$(state_of "$(pub anon 99999999999999999)")|$(state_of "$(pub anon -1)")"
+  check A "N5 since voraus: die Voll-Antwort traegt die eigene Version, nicht since" "true" \
+    "$(jq -r '.version < 99999999999999999' <<<"$(pub anon 99999999999999999)" 2>/dev/null)"
+
+  # A1 langsames save(): Turnier-Upsert, > 5 s Pause (Altern), dann Spiel einfuegen bzw. loeschen.
+  q "UPDATE public.tournaments SET title = title WHERE id = '$T';" >/dev/null
+  age_rows
+  v3="$(jq -r '.version' <<<"$(pub anon null)")"
+  q "INSERT INTO public.matches (id, tournament_id, round, field, match_number, scheduled_start, group_letter, phase, team_a_id, team_b_id, updated_at)
+     VALUES ('$S_NEU', '$T', 5, 2, 15, '15:05', 'A', 'groupStage', '$SV_SUED', '$SC_OST', now() - interval '1 hour');" >/dev/null
+  res="$(pub anon "$v3")"
+  check A "A1 neues Spiel mit nachgehender Geraeteuhr (updated_at vor since) kommt an" "enthalten" \
+    "$([[ "$(jq -r --arg id "$S_NEU" '[.matches[]?.id] | index($id) != null' <<<"$res" 2>/dev/null)" == "true" ]] && echo enthalten || echo "fehlt:$(state_of "$res")")"
+  q "UPDATE public.tournaments SET title = title WHERE id = '$T';" >/dev/null
+  age_rows
+  v3="$(jq -r '.version' <<<"$(pub anon null)")"
+  st="$(rest "$U_OLLI" DELETE "/matches?id=eq.$HF2")"
+  res="$(pub anon "$v3")"
+  check A "A1 Olli loescht Halbfinale 2 (REST) > 5 s nach dem Turnier-Upsert -> Voll-Antwort ohne HF2" "204|full|fehlt" \
+    "$st|$(state_of "$res")|$(has "$(jq -c '[.matches[]?.id]' <<<"$res")" "$HF2")"
+  age_rows
+  v3="$(jq -r '.version' <<<"$(pub anon null)")"
+  q "INSERT INTO public.teams (id, tournament_id, name, group_letter, sort_order, updated_at) VALUES ('$T_NEU', '$T', 'FC Neu', 'B', 7, now() - interval '1 hour');" >/dev/null
+  res="$(pub anon "$v3")"
+  check A "A1 neues Team mit alter Uhr -> Voll-Antwort mit FC Neu" "full|FC Neu" \
+    "$(state_of "$res")|$(jq -r --arg id "$T_NEU" '.teams[]? | select(.id == $id) | .name' <<<"$res" 2>/dev/null)"
+  age_rows
+  v3="$(jq -r '.version' <<<"$(pub anon null)")"
+  st="$(rest "$U_OLLI" DELETE "/teams?id=eq.$T_NEU")"
+  res="$(pub anon "$v3")"
+  check A "A1 Olli loescht das Team wieder (REST) -> Voll-Antwort ohne FC Neu" "204|full|fehlt" \
+    "$st|$(state_of "$res")|$(has "$res" 'FC Neu')"
 
   # --- M: Monitor-Link -------------------------------------------------------------------------------------------
   check M "Hallenmonitor Feld 1 (anon, Monitor-Link) -> Voll-Antwort" "full" "$(state_of "$(disp anon "$T" mon-feld1 null)")"
@@ -771,13 +824,24 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   export G5_TO="     THEN"
   export G6_FROM="   WHERE t.share_code = v_code AND coalesce(t.is_public, false) AND t.deleted_at IS NULL;"
   export G6_TO="   WHERE t.share_code = v_code AND t.deleted_at IS NULL;"
-  export G7_FROM="      'referee_config', CASE WHEN v_screen THEN v_t.referee_config END,"
-  export G7_TO="      'referee_config', v_t.referee_config,"
-  export G8_FROM="    v_full := coalesce(v_tournament_us, 0) > p_since_version OR coalesce(v_teams_us, 0) > p_since_version;"
-  export G8_TO="    v_full := coalesce(v_teams_us, 0) > p_since_version;"
+  export G7_FROM="  v_referees := CASE WHEN NOT v_screen THEN 'none'"
+  export G7_TO="  v_referees := CASE WHEN false THEN 'none'"
+  export G10_FROM="              OR coalesce(v_structure_us, 0) > p_since_version;"
+  export G10_TO="              ;"
+  export G11_FROM="CREATE TRIGGER matches_updated_at_insert BEFORE INSERT ON public.matches
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();"
+  export G11_TO=""
+  export G12_FROM="                               THEN v_t.referee_config - 'refereeNames' END,"
+  export G12_TO="                               THEN v_t.referee_config END,"
+  export G13_FROM="       AND NOT (p_kids AND e.key IN ('tiebreakerMode', 'awaitingTiebreakerChoice'))) END;"
+  export G13_TO=") END;"
+  export G8_FROM="    v_full := coalesce(v_tournament_us, 0) > p_since_version OR coalesce(v_teams_us, 0) > p_since_version
+              OR coalesce(v_structure_us, 0) > p_since_version;"
+  export G8_TO="    v_full := coalesce(v_teams_us, 0) > p_since_version
+              OR coalesce(v_structure_us, 0) > p_since_version;"
   export G9_FROM="   WHERE e.key = ANY (c_config_keys) AND e.value <> 'null'::jsonb;"
   export G9_TO="   WHERE e.value <> 'null'::jsonb;"
-  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9)
+  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13)
   RED_TOTAL=0
   for mut in "${MUTS[@]}"; do
     start_container "$(tr 'A-Z' 'a-z' <<<"$mut")"
@@ -856,6 +920,7 @@ for dim in columns functions triggers tables policies indexes rls_tables; do
   expected=0
   [[ "$dim" == "functions" ]] && expected=3
   [[ "$dim" == "columns" ]] && expected=1
+  [[ "$dim" == "triggers" ]] && expected=4
   check S "Katalogzaehlung public $dim: Zuwachs" "$expected" $(( $(count_of "$COUNTS_AFTER" "$dim") - $(count_of "$COUNTS_BEFORE" "$dim") ))
 done
 

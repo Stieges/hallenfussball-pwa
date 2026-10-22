@@ -15,6 +15,10 @@ SET LOCAL lock_timeout = '5s';
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO anon;
 
+DROP TRIGGER IF EXISTS matches_public_structure_delete ON public.matches;
+DROP TRIGGER IF EXISTS teams_public_structure_delete ON public.teams;
+DROP TRIGGER IF EXISTS matches_updated_at_insert ON public.matches;
+DROP TRIGGER IF EXISTS teams_updated_at_insert ON public.teams;
 DROP FUNCTION IF EXISTS public.public_tournament(text, bigint);
 DROP FUNCTION IF EXISTS public.display_tournament(uuid, text, bigint);
 DROP SCHEMA IF EXISTS public_view CASCADE;

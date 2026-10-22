@@ -117,6 +117,18 @@ a11_mark "@ZP-084 mama-petra-anon-verschiebt-abgelehnt                   " "$(a1
 # anon die Tabelle nicht mehr direkt (0), sondern nur ueber public_tournament (Zeilen in rls-matrix.d/spur-b.sh).
 r="$(a11_probe anon "" "SELECT count(*) FROM public.matches WHERE tournament_id = '$T_PUBLIC'" "SELECT 1;" "SELECT 'ok'")"
 a11_mark "@ZP-084 gegen-mama-petra-liest-oeffentlichen-spielplan         " "$(cut -d'|' -f1 <<<"$r")" "$([[ "${WITH_B14:-0}" -eq 1 ]] && echo 0 || echo 1)"
+# B-14 (N10): das Gegenbeispiel bleibt positiv -- Mama Petra liest denselben Spielplan ueber public_tournament (full).
+if [[ "${WITH_B14:-0}" -eq 1 ]]; then
+  r="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=0 <<SQL 2>&1 | grep -E '^(full|not_found|unchanged|delta)$' | head -1
+BEGIN;
+UPDATE public.tournaments SET share_code = 'ZP084X' WHERE id = '$T_PUBLIC';
+SET LOCAL ROLE anon;
+SELECT public.public_tournament('ZP084X', NULL) ->> 'state';
+ROLLBACK;
+SQL
+)"
+  a11_mark "@ZP-084 gegen-mama-petra-liest-spielplan-ueber-positivliste    " "${r:-fehler}" "full"
+fi
 
 # @LZ-023: Tom schickt den Abschluss-Patch (wie buildFinishTournamentPatch: config.manuallyCompleted/dashboardStatus,
 # completed_at) direkt an die Schnittstelle -> abgelehnt, Turnier weiter „Läuft“.

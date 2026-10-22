@@ -6,7 +6,7 @@
  *   {state:'not_found'}                                         nicht geteilt oder unbekannt (nie bei einer Störung)
  *   {state:'unchanged', version, server_now}
  *   {state:'full', version, server_now, tournament, teams, matches[, scorers]}
- *   {state:'delta', version, base_version, server_now, tournament_date, matches, removed_match_ids[, scorers]}
+ *   {state:'delta', version, base_version, server_now, tournament_date, matches[, scorers]} (gelöschte Spiele: voll)
  * `version`: ganze Zahl (Mikrosekunden der letzten öffentlich sichtbaren Änderung, steigt monoton); `server_now`: Serverzeit
  * in Millisekunden (@ZM-026). Zeilen tragen nur die Felder der Positivliste; Ereignisse haben die öffentliche Form
  * `{id, type, team_id, section, clock_ms, number?, duration_seconds?, scored?}` und werden hier in `RuntimeMatchEvent`
@@ -138,7 +138,8 @@ const ReplySchema = z.discriminatedUnion('state', [
     server_now: z.number(),
     tournament_date: z.string(),
     matches: z.array(MatchRowSchema),
-    removed_match_ids: z.array(z.string()),
+    /** Seit A1 (Review #346) liefert der Server nach Löschungen eine Voll-Antwort; das Feld fehlt dann im Delta. */
+    removed_match_ids: z.array(z.string()).optional(),
     scorers: z.array(ScorerSchema).optional(),
   }),
 ]);
@@ -267,7 +268,7 @@ export function parsePublicPayload(raw: unknown): PublicReply {
         baseVersion: reply.base_version,
         serverNowMs: reply.server_now,
         matches: reply.matches.map((row) => toMatch(row, reply.tournament_date)),
-        removedMatchIds: reply.removed_match_ids,
+        removedMatchIds: reply.removed_match_ids ?? [],
         ...(reply.scorers === undefined ? {} : { scorers: reply.scorers }),
       };
   }
