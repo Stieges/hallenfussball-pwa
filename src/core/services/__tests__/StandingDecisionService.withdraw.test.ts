@@ -131,7 +131,7 @@ describe("TB-3' Fixrunde: Zwischenregel „Gruppe abgeschlossen“ bis GA4 A-13 
     const paused = handBesetzt(lage048(), 'hf-2', 'B', 'paused' as 'running');
     expect(groupClosedByFollowUp(paused, 'A')).toBe(true);
     // pausiert, Seite noch offen (angepfiffen über die andere, besetzte Seite aus Gruppe A)
-    const pausedOffen = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'paused' as never } : m)) };
+    const pausedOffen = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'paused' } : m)) };
     expect(groupClosedByFollowUp(pausedOffen, 'A')).toBe(true);
     for (const status of ['scheduled', 'waiting', 'skipped'] as const) {
       const offen = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: status } : m)) };

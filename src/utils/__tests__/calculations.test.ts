@@ -472,7 +472,7 @@ describe('@TM-143 Nur abgepfiffene Spiele zählen für die Tabelle', () => {
 
   it('Gegenbeispiel: unterbrochenes Spiel (paused) zählt nicht', () => {
     // Die DB kennt 'paused' (matches_match_status_check), der TS-Typ MatchStatus noch nicht.
-    const matches = [spiel7('paused' as unknown as Match['matchStatus'])];
+    const matches = [spiel7('paused')];
     const tournament = createTournament({ teams, matches });
 
     const standings = calculateStandings(teams, matches, tournament);
