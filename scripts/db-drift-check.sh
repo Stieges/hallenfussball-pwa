@@ -175,6 +175,9 @@ pending_assertions_for() {
     20261110_008_helper_join.sql)
       echo "helper-join-tables-no-client-access helper-join-ci-schema-reader-select helper-join-ci-schema-reader-no-bypassrls helper-join-rpcs-definer-owner-search-path helper-join-rpcs-execute-authenticated-only helper-join-internal-no-client-execute helper-join-definer-writers-tournament-collaborators helper-join-collaborators-delete-no-device-rows helper-join-protect-collaborator-row-a16 helper-join-decide-checks-check-number helper-join-device-role-guard-trigger helper-join-names-without-hidden-chars"
       ;;
+    20261113_003_tournament_lifecycle.sql)
+      echo "lifecycle-columns-check lifecycle-tables-rls-no-client-writes lifecycle-select-policies lifecycle-ci-schema-reader-select lifecycle-rpcs-definer-authenticated-only lifecycle-public-reads lifecycle-helpers-no-client-execute lifecycle-append-closed-intake-before-field-control lifecycle-guard-triggers-complete lifecycle-guard-triggers-shape lifecycle-tournaments-triggers lifecycle-switch-outside-client-roles lifecycle-finish-locks-matches-before-tournament lifecycle-closed-for-helpers-single-source lifecycle-late-entries-unique-event lifecycle-log-request-id-unique"
+      ;;
     *)
       return 1
       ;;
@@ -622,6 +625,23 @@ PRIVILEGE_ASSERTION_NAMES=(
   "helper-join-decide-checks-check-number"
   "helper-join-device-role-guard-trigger"
   "helper-join-names-without-hidden-chars"
+  # A-21a-S (20261113_003_tournament_lifecycle.sql): Lebenszyklus, Abschluss-Sperre, Endstand, spaete Eintraege.
+  "lifecycle-columns-check"
+  "lifecycle-tables-rls-no-client-writes"
+  "lifecycle-select-policies"
+  "lifecycle-ci-schema-reader-select"
+  "lifecycle-rpcs-definer-authenticated-only"
+  "lifecycle-public-reads"
+  "lifecycle-helpers-no-client-execute"
+  "lifecycle-append-closed-intake-before-field-control"
+  "lifecycle-guard-triggers-complete"
+  "lifecycle-guard-triggers-shape"
+  "lifecycle-tournaments-triggers"
+  "lifecycle-switch-outside-client-roles"
+  "lifecycle-finish-locks-matches-before-tournament"
+  "lifecycle-closed-for-helpers-single-source"
+  "lifecycle-late-entries-unique-event"
+  "lifecycle-log-request-id-unique"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

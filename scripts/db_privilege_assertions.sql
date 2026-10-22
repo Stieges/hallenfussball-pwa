@@ -234,13 +234,17 @@ UNION ALL
 -- abschliessen“ (group_key ... conflict_or_reject) im selben Schema sind ausgenommen und eigens geprueft.
 SELECT 'match-engine-function-count-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+                                  -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
+                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
 SELECT 'match-engine-immutable-count-51',
        (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+                                  -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
+                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
 UNION ALL
@@ -252,7 +256,9 @@ SELECT 'match-engine-no-security-definer',
 UNION ALL
 SELECT 'match-engine-search-path-all-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+                                  -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
+                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
 UNION ALL
@@ -354,7 +360,9 @@ SELECT 'match-engine-non-b3b-executable-anon-authenticated',
            AND p.proname NOT IN ('normalize_uuid', 'cfg_num', 'envelope', 'dedupe_key', 'server_rules', 'cache_columns')
            -- A-13b-S (20261110_006): die Hilfen fuer „Gruppe abschliessen“ liegen in match_engine, sind aber nur aus den
            -- Server-Funktionen erreichbar (eigene Assertion group-completion-helpers-no-client-execute).
-           AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
+           AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+                                  -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
+                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
 UNION ALL
 SELECT 'positive-anon-execute-match-engine-apply-amend',
        coalesce(has_function_privilege('anon', to_regprocedure('match_engine.apply_amend(jsonb,jsonb)'), 'EXECUTE'), false)
@@ -908,4 +916,183 @@ SELECT 'helper-join-names-without-hidden-chars',
                    FROM pg_constraint c
                   WHERE c.conrelid = to_regclass('public.tournament_join_requests') AND c.contype = 'c'
                     AND (pg_get_constraintdef(c.oid) LIKE '%display_name%' OR pg_get_constraintdef(c.oid) LIKE '%device_label%')), false)
+
+-- A-21a-S (20261113_003_tournament_lifecycle.sql, plan-endstand-abschluss.md R-EA-1..R-EA-12; @LZ-009, @LZ-022, @LZ-036,
+-- @LZ-038, @LZ-039, @HE-038, @ZM-012): Lebenszyklus und Abschluss-Sperre am Server. Vor dem Live-Einspielen: "f".
+--  (1) Spalten und CHECK ohne 'running' (wird gelesen, nie gespeichert)
+UNION ALL
+SELECT 'lifecycle-columns-check',
+       coalesce((SELECT count(*) = 2 FROM pg_attribute a
+                  WHERE a.attrelid = to_regclass('public.tournaments') AND NOT a.attisdropped
+                    AND a.attname IN ('lifecycle_status', 'finished_at')), false)
+       AND coalesce((SELECT position('''draft''' IN pg_get_constraintdef(c.oid)) > 0
+                            AND position('''finished''' IN pg_get_constraintdef(c.oid)) > 0
+                            AND position('''running''' IN pg_get_constraintdef(c.oid)) = 0
+                       FROM pg_constraint c
+                      WHERE c.conrelid = to_regclass('public.tournaments') AND c.conname = 'tournaments_lifecycle_status_check'), false)
+--  (2) Vier Tabellen: RLS an, keine Client-Schreibrechte, anon nichts, authenticated liest nur Endstand/Verlauf/spaete Eintraege
+UNION ALL
+SELECT 'lifecycle-tables-rls-no-client-writes',
+       coalesce((SELECT count(*) = 4
+                        AND bool_and(c.relrowsecurity
+                                     AND NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                                     AND NOT has_table_privilege('authenticated', c.oid, 'INSERT, UPDATE, DELETE, TRUNCATE')
+                                     AND has_table_privilege('authenticated', c.oid, 'SELECT') = (c.relname <> 'device_outbox_reports'))
+                   FROM pg_class c
+                  WHERE c.oid IN (to_regclass('public.tournament_final_standings'), to_regclass('public.tournament_lifecycle_log'),
+                                  to_regclass('public.late_entries'), to_regclass('public.device_outbox_reports'))), false)
+--  (3) B5: Endstand lesen Eigentuemer/Co-Admin/Helfer (writeMatchData), nicht der Bildschirm; Verlauf/spaete Eintraege nur
+--      manageLifecycle
+UNION ALL
+SELECT 'lifecycle-select-policies',
+       coalesce((SELECT count(*) = 3
+                        AND bool_and(p.roles = ARRAY['authenticated']::name[]
+                                     AND position(CASE p.tablename WHEN 'tournament_final_standings' THEN 'writeMatchData'
+                                                                   ELSE 'manageLifecycle' END IN p.qual) > 0
+                                     AND position('is_active_tournament_member' IN p.qual) = 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public'
+                    AND p.tablename IN ('tournament_final_standings', 'tournament_lifecycle_log', 'late_entries')), false)
+       AND NOT EXISTS (SELECT 1 FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'device_outbox_reports')
+--  (4) Leserolle des Drift-Checks liest die vier Tabellen, nur lesen
+UNION ALL
+SELECT 'lifecycle-ci-schema-reader-select',
+       coalesce((SELECT bool_and(to_regclass('public.' || t) IS NOT NULL
+                                 AND has_table_privilege('ci_schema_reader', 'public.' || t, 'SELECT')
+                                 AND NOT has_table_privilege('ci_schema_reader', 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
+                   FROM unnest(ARRAY['tournament_final_standings', 'tournament_lifecycle_log', 'late_entries',
+                                     'device_outbox_reports']) AS t), false)
+--  (5) RPCs der Turnierleitung/Geraete: SECURITY DEFINER, search_path, nur authenticated
+UNION ALL
+SELECT 'lifecycle-rpcs-definer-authenticated-only',
+       coalesce((SELECT count(*) = 4
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.finish_tournament(uuid,jsonb,jsonb,uuid)'),
+                                  to_regprocedure('public.finish_preflight(uuid)'),
+                                  to_regprocedure('public.reopen_tournament(uuid,text,uuid)'),
+                                  to_regprocedure('public.report_device_outbox(uuid,uuid,integer,integer)'))), false)
+--  (6) Oeffentliches Lesen (Zuschauer, Monitor): DEFINER, anon und authenticated; Torschuetzen nur mit Schalter
+UNION ALL
+SELECT 'lifecycle-public-reads',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND position('final_standings_payload' IN p.prosrc) > 0)
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.public_final_standings(text)'),
+                                  to_regprocedure('public.display_final_standings(uuid)'))), false)
+       AND coalesce((SELECT position('publicScorers' IN p.prosrc) > 0 AND position('- ''scorers''' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('match_engine.final_standings_payload(public.tournaments)')), false)
+--  (7) Hilfen und Trigger-Funktionen: kein EXECUTE fuer Client-Rollen; Lese-Funktion tournament_lifecycle als INVOKER
+UNION ALL
+SELECT 'lifecycle-helpers-no-client-execute',
+       coalesce((SELECT count(*) = 18
+                        AND bool_and(NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('match_engine.tournament_state(uuid)'),
+                                  to_regprocedure('match_engine.match_winner(public.matches)'),
+                                  to_regprocedure('match_engine.finish_open_items(uuid)'),
+                                  to_regprocedure('match_engine.finish_warnings(uuid)'),
+                                  to_regprocedure('match_engine.json_int_between(jsonb,numeric,numeric)'),
+                                  to_regprocedure('match_engine.json_text_length_between(jsonb,integer,integer)'),
+                                  to_regprocedure('match_engine.final_standing_row_valid(jsonb)'),
+                                  to_regprocedure('match_engine.scorer_row_valid(jsonb)'),
+                                  to_regprocedure('match_engine.final_standings_shape_valid(jsonb)'),
+                                  to_regprocedure('match_engine.place_numbers_valid(integer[])'),
+                                  to_regprocedure('match_engine.final_standings_consistent(uuid,jsonb)'),
+                                  to_regprocedure('match_engine.closed_intake(uuid,uuid,jsonb,uuid,uuid)'),
+                                  to_regprocedure('match_engine.actor_name(uuid,uuid)'),
+                                  to_regprocedure('match_engine.final_standings_payload(public.tournaments)'),
+                                  to_regprocedure('public.tournament_is_closed(uuid)'),
+                                  to_regprocedure('public.guard_closed_tournament()'),
+                                  to_regprocedure('public.tournaments_guard_lifecycle()'),
+                                  to_regprocedure('public.tournaments_lifecycle_follow_status()'))), false)
+       AND coalesce((SELECT NOT p.prosecdef AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournament_lifecycle(uuid)')), false)
+--  (8) R-EA-8a, Review B3, I-5: append_match_events ruft closed_intake auf -- und zwar VOR dem field_control-INSERT
+UNION ALL
+SELECT 'lifecycle-append-closed-intake-before-field-control',
+       coalesce((SELECT position('match_engine.closed_intake(' IN p.prosrc) > 0
+                        AND position('match_engine.closed_intake(' IN p.prosrc) < position('INSERT INTO public.field_control' IN p.prosrc)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+--  (9) R-EA-8b, Review B4: JEDE Tabelle in public, die per Fremdschluessel (direkt oder ueber andere Tabellen) an tournaments
+--      haengt, traegt <Tabelle>_guard_closed (guard_closed_tournament, aktiv) ODER steht mit Grund auf der Ausnahmeliste
+--      (Kopf von 20261113_003). Ergebnis: Liste der Tabellen ohne beides (leer = gut).
+UNION ALL
+SELECT 'lifecycle-guard-triggers-complete',
+       coalesce((WITH RECURSIVE dep(oid) AS (
+                   SELECT 'public.tournaments'::regclass::oid
+                   UNION
+                   SELECT c.conrelid FROM pg_constraint c JOIN dep ON c.confrelid = dep.oid WHERE c.contype = 'f')
+                 SELECT string_agg(cl.relname, ',' ORDER BY cl.relname)
+                   FROM dep JOIN pg_class cl ON cl.oid = dep.oid
+                  WHERE cl.relnamespace = 'public'::regnamespace AND cl.relname <> 'tournaments'
+                    AND cl.relname NOT IN ('tournament_collaborators', 'tournament_join_codes', 'tournament_join_requests',
+                                           'monitors', 'monitor_heartbeats', 'monitor_screens', 'device_outbox_reports',
+                                           'late_entries', 'tournament_lifecycle_log', 'tournament_final_standings',
+                                           'match_event_authors')
+                    AND NOT EXISTS (SELECT 1 FROM pg_trigger t
+                                     WHERE t.tgrelid = cl.oid AND t.tgname = cl.relname || '_guard_closed'
+                                       AND t.tgfoid = to_regprocedure('public.guard_closed_tournament()')
+                                       AND t.tgenabled = 'O' AND NOT t.tgisinternal)), '') = ''
+       AND to_regprocedure('public.guard_closed_tournament()') IS NOT NULL
+-- (10) Die elf Sperr-Trigger: BEFORE INSERT OR UPDATE OR DELETE, je Zeile; Kind-Ausnahme nur is_public + Verwaltungsspalten
+UNION ALL
+SELECT 'lifecycle-guard-triggers-shape',
+       coalesce((SELECT count(*) = 11 AND bool_and((t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 28) = 28)
+                   FROM pg_trigger t
+                  WHERE t.tgfoid = to_regprocedure('public.guard_closed_tournament()') AND NOT t.tgisinternal), false)
+       AND coalesce((SELECT position('ARRAY[''is_public'', ''version'', ''updated_at'', ''change_revision'', ''owner_id'']' IN p.prosrc) > 0
+                            AND position('55000' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.guard_closed_tournament()')), false)
+-- (11) tournaments: Waechter BEFORE INSERT OR UPDATE (INVOKER, Client-Rolle sichtbar), Folge-Trigger BEFORE INSERT OR UPDATE OF status
+UNION ALL
+SELECT 'lifecycle-tournaments-triggers',
+       coalesce((SELECT count(*) = 2 FROM pg_trigger t
+                  WHERE t.tgrelid = to_regclass('public.tournaments') AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                    AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4 AND (t.tgtype & 16) = 16
+                    AND ((t.tgname = 'tournaments_guard_lifecycle' AND t.tgfoid = to_regprocedure('public.tournaments_guard_lifecycle()')
+                          AND NOT (SELECT prosecdef FROM pg_proc WHERE oid = t.tgfoid) AND t.tgattr::text = '')
+                      OR (t.tgname = 'tournaments_lifecycle_follow_status'
+                          AND t.tgfoid = to_regprocedure('public.tournaments_lifecycle_follow_status()')
+                          AND t.tgattr::text <> ''))), false)
+-- (12) Schalter app.lifecycle_write wirkt nur ausserhalb der Client-Rollen (Muster A-16 A1, ME12)
+UNION ALL
+SELECT 'lifecycle-switch-outside-client-roles',
+       coalesce((SELECT position('current_setting(''app.lifecycle_write'', true)' IN p.prosrc) > 0
+                        AND position('AND current_user NOT IN (''authenticated'', ''anon'')' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournaments_guard_lifecycle()')), false)
+-- (13) R-EA-2: finish_tournament sperrt die Spiele (nach id) vor der Turnierzeile; request_id vor dem Zustand
+UNION ALL
+SELECT 'lifecycle-finish-locks-matches-before-tournament',
+       coalesce((SELECT position('ORDER BY m.id FOR UPDATE' IN p.prosrc) > 0
+                        AND position('ORDER BY m.id FOR UPDATE' IN p.prosrc)
+                            < position('FROM public.tournaments WHERE id = p_tournament_id AND deleted_at IS NULL FOR UPDATE' IN p.prosrc)
+                        AND position('WHERE request_id = p_request_id' IN p.prosrc)
+                            < position('IF v_t.lifecycle_status = ''finished''' IN p.prosrc)
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.finish_tournament(uuid,jsonb,jsonb,uuid)')), false)
+-- (14) R-EA-12, I-4: Helfer-Beitritt geschlossen nur nach Loeschen oder Abschluss/Abbruch (eine Quelle, kein status-Haken)
+UNION ALL
+SELECT 'lifecycle-closed-for-helpers-single-source',
+       to_regclass('public.tournament_join_codes') IS NULL
+       OR coalesce((SELECT position('lifecycle_status IN (''finished'', ''cancelled'')' IN p.prosrc) > 0
+                            AND position('to_jsonb' IN p.prosrc) = 0 AND position('t.status' IN p.prosrc) = 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournament_closed_for_helpers(uuid)')), false)
+-- (15) Review B3: spaete Eintraege je Spiel und Ereignis nur einmal
+UNION ALL
+SELECT 'lifecycle-late-entries-unique-event',
+       coalesce((SELECT count(*) = 1 FROM pg_constraint c
+                  WHERE c.conrelid = to_regclass('public.late_entries') AND c.contype = 'u'
+                    AND pg_get_constraintdef(c.oid) = 'UNIQUE (match_id, event_id)'), false)
+-- (16) Ein Verlaufseintrag je request_id (@LZ-021)
+UNION ALL
+SELECT 'lifecycle-log-request-id-unique',
+       coalesce((SELECT count(*) = 1 FROM pg_constraint c
+                  WHERE c.conrelid = to_regclass('public.tournament_lifecycle_log') AND c.contype = 'u'
+                    AND pg_get_constraintdef(c.oid) = 'UNIQUE (request_id)'), false)
 ;
