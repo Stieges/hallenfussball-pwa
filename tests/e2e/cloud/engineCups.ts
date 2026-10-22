@@ -100,6 +100,9 @@ export const E2E_ENGINE_CUPS = [
   runningCup('REALTIME'),
   runningCup('TABWECHSEL'),
   runningCup('TABSCHNELL'),
+  // @SL-168: „Verbinden“ im Kopf bei Netz ohne Durchkommen (der Test schreibt nichts, je Test ein eigener Cup).
+  runningCup('KOPFVERBINDEN'),
+  runningCup('KOPFNORMAL'),
   // A-07g: Neustart ohne Netz (@FU-007) -- die Einträge bleiben im Gerätespeicher, der Server wird nie erreicht.
   runningCup('NEUSTART'),
   runningCup('QUEUE', false),

@@ -57,7 +57,7 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
-    currentMatch: match as never, upcomingMatches: [],
+    currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), ...handlers,
@@ -214,7 +214,7 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
   });
 
   it('Nur-Lesen-Banner und Meldezeile stehen getrennt: die Meldezeile zeigt keinen Berechtigungstext', () => {
-    render(<LiveCockpit {...baseProps(matchMit(0), { readOnly: true })} />);
+    render(<LiveCockpit {...baseProps(matchMit(0), { kannSteuern: false })} />);
     expect(screen.getByTestId(MELDUNG)).toBeEmptyDOMElement();
     expect(screen.getByTestId('cockpit-readonly-banner')).toBeInTheDocument();
   });

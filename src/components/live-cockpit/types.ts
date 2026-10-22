@@ -10,11 +10,11 @@ import type { SperrHinweis } from '../../core/match';
 import type { GoalHandlerOptions } from '../../hooks/engineCommandWiringTypes';
 import type { LeerGrund } from './model/cockpitPhase';
 import type { MindestpauseHinweis } from './model/cockpitTypes';
+import type { LiveCockpitLeisteProps, MatchSummaryFarben } from './typesLeiste';
 
 // ---------------------------------------------------------------------------
 // Spiel-Typen (B-06: aus dem gelöschten match-cockpit/MatchCockpit.tsx hierher umgezogen)
 // ---------------------------------------------------------------------------
-
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
 
 export interface Team {
@@ -93,6 +93,8 @@ export interface MatchSummary {
   awayTeam: Team;
   /** Tournament phase for detecting phase changes (group → finals) */
   tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+  /** Getragene Farben beider Seiten für die Zeile „Nächstes“ (@SL-160). */
+  farben?: MatchSummaryFarben;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +124,7 @@ export interface GoalAction {
 // Component Props Types (matches MatchCockpitProps for drop-in replacement)
 // ---------------------------------------------------------------------------
 
-export interface LiveCockpitProps {
+export interface LiveCockpitProps extends LiveCockpitLeisteProps {
   /** Name of the field/court */
   fieldName: string;
   /** Tournament name for display */
@@ -131,8 +133,8 @@ export interface LiveCockpitProps {
   tournamentId: string;
   /** Match Cockpit Pro settings from tournament */
   cockpitSettings?: import('../../types/tournament').MatchCockpitSettings;
-  /** If true, actions are disabled (viewer mode) */
-  readOnly?: boolean;
+  /** Steuerrecht dieses Geräts (A-11, `useCan('writeMatchData')`); false = nur ansehen (@SL-018) */
+  kannSteuern: boolean;
 
   /** The current match being played */
   currentMatch: LiveMatch | null;
@@ -154,9 +156,6 @@ export interface LiveCockpitProps {
   } | null;
   /** Upcoming matches for proactive hints */
   upcomingMatches: MatchSummary[];
-  /** Minutes before next match to show warning */
-  highlightNextMatchMinutesBefore?: number;
-
   // Event Handlers - Required (match MatchCockpit signature with matchId)
   onStart(matchId: string): void;
   onPause(matchId: string): void;

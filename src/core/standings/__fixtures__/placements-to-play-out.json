@@ -1,5 +1,5 @@
 {
-  "$comment": "Gleichlauf parsePlacementsToPlayOut (src/core/standings/playOutPlaces.ts) == match_engine.places_to_play_out (A-13b-S Punkt 3, Review-Auflage 8): fehlend/unbrauchbar -> [1], [] bleibt leer, sortiert ohne Doppelte, Plätze 1-99 ganzzahlig, ein ungültiger Eintrag verwirft die ganze Liste. 'tsHeute': abweichender TS-Wert bis zur TS-Angleichung (it.fails).",
+  "$comment": "Gleichlauf parsePlacementsToPlayOut (src/core/standings/playOutPlaces.ts) == match_engine.places_to_play_out (A-13b-S Punkt 3, Review-Auflage 8): fehlend/unbrauchbar -> [1], [] bleibt leer, sortiert ohne Doppelte, Plätze 1-99 ganzzahlig, ein ungültiger Eintrag verwirft die ganze Liste.",
   "rows": [
     {
       "name": "fehlend -> Voreinstellung nur Platz 1",
@@ -96,12 +96,7 @@
       },
       "expected": [
         1
-      ],
-      "tsHeute": [
-        1,
-        100
-      ],
-      "tsBis": "A-13b-S Punkt 7 (nach TB-B-Merge): PlacementsToPlayOutSchema .max(99)"
+      ]
     },
     {
       "name": "Platz 0 -> ungültig",

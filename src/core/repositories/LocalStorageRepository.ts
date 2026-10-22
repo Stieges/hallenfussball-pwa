@@ -12,7 +12,9 @@ import { isLegacyTournamentShape } from '../models/legacyFormat';
 import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
 import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
 import { readServerRevisions, writeServerRevisions, type CloudAdoption } from './cloudAdoption';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 import { generateShareCode } from '../models/shareCode';
+import { checkedVersion, ownChainBase } from './confirmedVersion';
 
 /**
  * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
@@ -61,11 +63,12 @@ export class LocalStorageRepository implements ITournamentRepository {
         return this.serialize(() => this.patchNow(id, patch));
     }
 
-    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>): Promise<void> {
+    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>, confirmedVersion?: number): Promise<void> {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === id);
         if (index === -1) { return; }
-        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch) };
+        const confirmed = confirmedVersion === undefined ? {} : { serverVersion: confirmedVersion }; // C-VERSION-MEHRDEUTIG
+        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch), ...confirmed };
         await this.saveList(list);
     }
 
@@ -79,7 +82,11 @@ export class LocalStorageRepository implements ITournamentRepository {
         return this.serialize(async () => {
             const storage = await createStorage();
             const adoption = decide(await this.get(id), await readServerRevisions(storage, id));
-            if (adoption.save) { await this.saveNow(adoption.save, true); } else if (adoption.patch?.size) { await this.patchNow(id, adoption.patch); }
+            if (adoption.save) {
+                await this.saveNow(adoption.save, true);
+            } else if (adoption.patch?.size || adoption.confirmedVersion !== undefined) {
+                await this.patchNow(id, adoption.patch ?? new Map(), adoption.confirmedVersion);
+            }
             await writeServerRevisions(storage, id, adoption.revisions, adoption.save && new Set(adoption.save.matches.map(m => m.id)));
             return adoption;
         });
@@ -108,21 +115,33 @@ export class LocalStorageRepository implements ITournamentRepository {
         return list.find(t => t.shareCode?.toUpperCase() === normalizedCode && t.isPublic) ?? null;
     }
 
-    /** A-08f3c1: Version = Version der Nutzlast + 1 (wie die Cloud beim Speichern; ohne Version setzt sie 1). */
-    save(tournament: Tournament): Promise<void> {
+    /**
+     * A-08f3c1: Version = Version der Nutzlast + 1 (Anzeige, wie die Cloud beim Speichern; ohne Version setzt sie 1).
+     * C-VERSION-MEHRDEUTIG: die bestätigte Version ist die Basis der Nutzlast (`checkedVersion`), nie die gestempelte.
+     */
+    /** @FU-110: liefert die Basis, auf der der gespeicherte Inhalt beruht (ggf. über die Kette eigener Uploads angehoben). */
+    save(tournament: Tournament): Promise<number | undefined> {
         return this.serialize(() => this.saveNow(tournament));
     }
 
     /** A-08f3c1: Cloud-Kopie (oder lokale Kopie ohne Zählen) übernehmen -- Version und `updatedAt` wie übergeben. */
     cacheCloudCopy(tournament: Tournament): Promise<void> {
-        return this.serialize(() => this.saveNow(tournament, true));
+        return this.serialize(async () => { await this.saveNow(tournament, true); });
     }
 
-    private async saveNow(tournament: Tournament, cached = false): Promise<void> {
+    private async saveNow(tournament: Tournament, cached = false): Promise<number | undefined> {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === tournament.id);
         // A-10: die Änderungszählung kommt nur aus der Cloud (cacheCloudCopy); lokale Schreibwege behalten den gespeicherten Wert.
-        const stamp = cached ? {} : { version: (tournament.version ?? 0) + 1, updatedAt: new Date().toISOString(), changeRevision: list[index]?.changeRevision };
+        // C-VERSION-MEHRDEUTIG: der Inhalt beruht auf der bestätigten Version der Nutzlast -- sie geht mit, die gestempelte Zahl nicht.
+        // @FU-110: liegt sie in der Kette eigener Uploads, beruht er auf der aktuellen bestätigten Version (Kette bleibt).
+        const existing = index >= 0 ? list[index] : undefined;
+        const base = ownChainBase(checkedVersion(tournament), existing);
+        const chain = existing?.ownUploadsFrom !== undefined && base === existing.serverVersion ? existing.ownUploadsFrom : undefined;
+        const stamp = cached ? {} : {
+            version: (tournament.version ?? 0) + 1, serverVersion: base, ownUploadsFrom: chain,
+            updatedAt: new Date().toISOString(), changeRevision: existing?.changeRevision,
+        };
 
         if (index >= 0) {
             // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
@@ -136,6 +155,7 @@ export class LocalStorageRepository implements ITournamentRepository {
         const storage = await createStorage();
         const stored = await readServerRevisions(storage, tournament.id);
         if (stored.size > 0) { await writeServerRevisions(storage, tournament.id, stored, new Set(tournament.matches.map(m => m.id))); }
+        return base;
     }
 
     updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
@@ -172,6 +192,22 @@ export class LocalStorageRepository implements ITournamentRepository {
                 throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
             }
             list[index] = { ...list[index], standingDecisions: decisions, version: expectedVersion + 1, updatedAt: new Date().toISOString() };
+            await this.saveList(list);
+        });
+    }
+
+    /** Fixrunde TB-6: nur die Einstellung „Plätze ausspielen“, mit Versionsprüfung (lokal); `standingDecisions` bleiben. */
+    updatePlacementsToPlayOut(id: string, places: number[], expectedVersion: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1) {
+                throw new Error(`Tournament ${id} not found`);
+            }
+            if ((list[index].version ?? 0) !== expectedVersion) {
+                throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
+            }
+            list[index] = { ...list[index], placementsToPlayOut: parsePlacementsToPlayOut(places), version: expectedVersion + 1, updatedAt: new Date().toISOString() };
             await this.saveList(list);
         });
     }
@@ -246,8 +282,25 @@ export class LocalStorageRepository implements ITournamentRepository {
     }
 
     /**
+     * C-VERSION-MEHRDEUTIG: bestätigter Upload. Beruht die Kopie noch auf der geprüften Basis `base` (nichts anderes kam
+     * dazwischen), tragen Version und bestätigte Version danach `confirmed`. Sonst bleibt sie unverändert.
+     */
+    confirmUpload(id: string, base: number | undefined, confirmed: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1 || checkedVersion(list[index]) !== base) { return; }
+            // @FU-110: die Kette eigener Uploads beginnt beim ersten bestätigten eigenen Upload und wächst mit jedem weiteren
+            const ownUploadsFrom = list[index].ownUploadsFrom ?? base ?? confirmed;
+            list[index] = { ...list[index], version: confirmed, serverVersion: confirmed, ownUploadsFrom };
+            await this.saveList(list);
+        });
+    }
+
+    /**
      * Updates the local version number after a successful cloud sync.
      * Does NOT increment - sets it to the exact value from cloud.
+     * C-VERSION-MEHRDEUTIG: nur die angezeigte Version; die bestätigte setzt `confirmUpload`.
      */
     updateLocalVersion(id: string, version: number): Promise<void> {
         return this.serialize(async () => {

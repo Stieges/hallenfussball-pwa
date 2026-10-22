@@ -340,6 +340,18 @@ export function isVersionConflict(error: unknown): boolean {
 }
 
 /**
+ * Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH (@FU-109): ein Cloud-Abruf wurde abgebrochen (Navigation, Signal). Anders als
+ * „nicht gefunden“ sagt er nichts über das Turnier am Server – `getWithMatchRevisions` wirft ihn statt `null`.
+ * `isAbortError` erkennt ihn (Name `AbortError`).
+ */
+export class CloudReadAbortedError extends Error {
+  constructor(public readonly originalError?: unknown) {
+    super('Cloud-Abruf abgebrochen (aborted)');
+    this.name = 'AbortError';
+  }
+}
+
+/**
  * Checks if an error is an AbortError (expected during navigation, StrictMode, unmount).
  * Consolidated from 3 duplicate implementations across the codebase.
  *

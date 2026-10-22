@@ -20,6 +20,7 @@ import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 // CI skip removed - using reliable seeding fixture
 
 /**
@@ -475,7 +476,7 @@ test.describe('Timer-Stabilität', () => {
 
     // WHEN - Pause
     await page.getByTestId('match-pause-button').click();
-    await expect(page.getByTestId('match-start-button')).toBeVisible();
+    await expect(page.getByTestId('match-resume-button')).toBeVisible();
 
     // Get timer immediately after pause
     const timerBeforePause = await page.getByTestId('scoreboard-clock-rest').textContent();
@@ -489,7 +490,7 @@ test.describe('Timer-Stabilität', () => {
     expect(diff).toBeLessThanOrEqual(1);
 
     // Resume
-    await page.getByTestId('match-start-button').click();
+    await page.getByTestId('match-resume-button').click();
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
 
     // Let it run
@@ -586,13 +587,8 @@ test.describe('Panel schließen', () => {
 
     // Pause and finish
     await page.getByTestId('match-pause-button').click();
-    await page.getByTestId('match-finish-button').click();
-
-    // Handle confirmation
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan

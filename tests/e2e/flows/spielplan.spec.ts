@@ -23,6 +23,7 @@ import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 // CI skip removed - using reliable seeding fixture
 
 /**
@@ -472,13 +473,8 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
 
     // Pause and finish
     await page.getByTestId('match-pause-button').click();
-    await page.getByTestId('match-finish-button').click();
-
-    // Handle confirmation dialog
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan
@@ -701,11 +697,8 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
     // Finish match
     await page.getByTestId('match-pause-button').click();
-    await page.getByTestId('match-finish-button').click();
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan

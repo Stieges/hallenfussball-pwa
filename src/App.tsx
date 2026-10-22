@@ -31,7 +31,8 @@ import {
   SetPasswordScreen,
   AuthGuard,
 } from './features/auth/components';
-import { Footer } from './components/layout';
+import { AppFooter } from './components/layout/AppFooter';
+import { useRahmenWurzelStil } from './components/live-cockpit/frame/cockpitFrame';
 import { captureFeatureError } from './lib/sentry';
 import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
@@ -141,11 +142,10 @@ function AppContent() {
   // C3b-2c (G7): einmaliger Hinweis für im Konto ausgeblendete Gast-Turniere
   useGuestTournamentNotices();
 
-  // Central route match — replaces the individual location.pathname regex
-  // matchers below (derivations only; render blocks stay untouched).
+  // Central route match — replaces the individual pathname matchers (render blocks stay untouched).
   const route = useRouteMatch();
+  const rahmenStil = useRahmenWurzelStil(); // Cockpit-Rahmen (@SL-140, K3)
 
-  // Check if current path is a dashboard path
   const isDashboardPath = route?.name === 'dashboard' || route?.name === 'archive' || route?.name === 'trash';
 
   // Check if current path is a legal page path
@@ -481,6 +481,7 @@ function AppContent() {
     <div
       style={{
         minHeight: 'var(--min-h-screen)',
+        ...rahmenStil,
         background: cssVars.colors.background,
         color: cssVars.colors.textPrimary,
         fontFamily: cssVars.fontFamilies.body,
@@ -502,7 +503,6 @@ function AppContent() {
       )}
 
       <Suspense fallback={<ScreenLoader />}>
-        {/* Auth Screens */}
         {/* Auth Screens */}
         {screen === 'login' && (
           <LoginScreen
@@ -717,7 +717,7 @@ function AppContent() {
 
       {/* Footer - shown on main screens (not on public/invite flows or legal pages) */}
       {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && !isLegalPath && (
-        <Footer
+        <AppFooter
           onOpenCookieSettings={() => {
             // TODO: Integrate with Cookie Banner when implemented
             // Cookie banner will be added in a future commit

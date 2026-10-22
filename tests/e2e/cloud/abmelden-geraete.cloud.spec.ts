@@ -45,6 +45,7 @@ import {
   newFreshContext,
   readSessionAccessToken,
   seedGuestTournament,
+  verlasseLiveRahmen,
 } from './helpers';
 import { E2E_STRANGER_CUP_ID, engineCupIds } from './testData';
 
@@ -107,8 +108,12 @@ test.describe('Abmelden und andere Geräte', () => {
       // ohne Hinweis, und das nächste Tor kommt in der DB an (Pflichtprüfung des echten Wegs).
       expect(await fetchAuthUserStatus(tabletToken)).toBe(200);
       await simulateWakeFromSleep(tablet.page);
+      // Im Live-Bereich gibt es nur den schmalen Kopf ohne Konto-Menü (@SL-140): für das „angemeldet“-Merkmal zurück zum Spielplan, danach wieder ins Live
+      await verlasseLiveRahmen(tablet.page);
       await expect(tablet.page.locator('[data-testid="auth-avatar-button"]')).toBeVisible();
       await expect(tablet.page.locator('[data-testid="signed-out-elsewhere"]')).toHaveCount(0);
+      await tablet.page.locator('[data-testid="desktop-tab-live"]').click();
+      await expectEngineMatchRunningUi(tablet.page);
       await enterGoal(tablet.page, 'away');
       await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 10000 }).toBe(baseRows + 2);
       await expectOutboxSettled(tablet.page);

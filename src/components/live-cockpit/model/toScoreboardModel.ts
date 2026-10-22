@@ -70,8 +70,15 @@ function badgeOf(input: ScoreboardInput): MatchBadgeModel {
   return matchBadgeModel({ status, engine });
 }
 
-function abschnittTextOf(phase: CockpitPhase, t: Uebersetzer): string | null {
-  if (phase.zustand !== 'laeuft' && phase.zustand !== 'pausiert' && phase.zustand !== 'abgepfiffen') { return null; }
+/** Nach dem Ende (@SL-169): statt des Abschnitts, wie das Spiel endete – regulär nichts, sonst „nach Verlängerung“ bzw. „nach Strafstoßschießen“. */
+function nachEndeTextOf(view: PhaseView | null, t: Uebersetzer): string | null {
+  if (view?.phase === 'shootout') { return t('tafel.nachEnde.strafstoss'); }
+  return view?.phase === 'overtime' ? t('tafel.nachEnde.verlaengerung') : null;
+}
+
+function abschnittTextOf(phase: CockpitPhase, view: PhaseView | null, t: Uebersetzer): string | null {
+  if (phase.zustand === 'abgepfiffen') { return nachEndeTextOf(view, t); }
+  if (phase.zustand !== 'laeuft' && phase.zustand !== 'pausiert') { return null; }
   if (phase.abschnittArt === 'goldenGoal') { return t('tafel.abschnitt.goldenGoal'); }
   if (phase.abschnittArt === 'verlaengerung') { return t('tafel.abschnitt.verlaengerung'); }
   if (phase.abschnitte === 2) { return t('tafel.abschnitt.halbzeit', { nummer: phase.abschnitt }); }
@@ -146,9 +153,16 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
         uhr: { rest: `${seite(input.links)}:${seite(input.rechts)}`, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.strafstoss'), unterzeile: null },
       };
     }
+    if (view.status === 'skipped') { return { uhr: null, hinweise }; } // ausgefallen: nichts gespielt, keine Zeit
+    // @SL-169: die ganze gespielte Zeit aller Abschnitte; „von 14:00“ nur bei vorzeitigem Abpfiff der regulären Spielzeit
+    const gespielt = Math.min(view.playedMs, view.plannedMs);
+    const vorzeitig = view.phase === 'regular' && gespielt < view.plannedMs;
     return {
       hinweise,
-      uhr: { rest: formatUhr(Math.min(view.sectionElapsedMs, view.sectionLimitMs) / 1000), gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.spielzeit'), unterzeile: null },
+      uhr: {
+        rest: formatUhr(gespielt / 1000), gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft',
+        label: t('tafel.uhr.gespielt'), unterzeile: vorzeitig ? t('tafel.unterzeile.vonGeplant', { zeit: formatUhr(view.plannedMs / 1000) }) : null,
+      },
     };
   }
   return { uhr: null, hinweise };
@@ -183,9 +197,10 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const vor = scoreboardVor(input, t);
   return {
     badge: badgeOf(input), links, rechts,
-    uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
+    uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, input.view, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
     ueberfaelligText: vor.ueberfaelligText, quittungText: quittungTextOf(input, links, rechts, t),
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
+    eintraegeWartenKurz: input.eintraegeWarten > 0 ? String(input.eintraegeWarten) : null,
     helferAnfragenText: input.helferAnfragen > 0 ? t('tafel.helferAnfragen', { count: input.helferAnfragen }) : null,
     ariaStand: ariaStandOf(input, links, rechts, input.view?.phase === 'shootout' ? endstand?.penalty : undefined, t),
   };

@@ -4,11 +4,11 @@
  *
  * - placements-to-play-out.json: parsePlacementsToPlayOut == match_engine.places_to_play_out
  * - standing-decision-shapes.json: StandingDecisionSchema (über parseStandingDecisions) + checkDraftFields ==
- *   match_engine.standing_decision_valid; wo TS heute lockerer ist, `it.fails` bis A-13b-S Punkt 7 (nach TB-B-Merge)
+ *   match_engine.standing_decision_valid; seit A-13b-S Punkt 7 ohne Ausnahme gleich (außer der gewollten Altfelder-Zeile)
  * - shared-allowed.json: sharedPlaceAllowed == match_engine.shared_allowed (Spiele als Cloud-Zeilen über den Mapper)
  * - group-state.json: Zeilen ECHT ERZEUGT (publish → mapTournamentToSupabase, hier erneut erzeugt und verglichen);
- *   der TS-Zwilling expectedState kommt mit A-13a (GroupCompletionService) – bis dahin `it.todo`
- * - group-key.json: TS-Zwilling groupKeyOf kommt mit A-13a – bis dahin `it.todo`
+ *   TS-Zwilling `expectedState` (A-13a, GroupCompletionService) über den Mapper zurück == `cases[].expected`
+ * - group-key.json: TS-Zwilling `groupKeyOf` (A-13a, standingsGroups.ts) == `rows[].out`
  * Anforderungen: @TM-057, @TM-058, @TM-147, @W2A-048, @W2A-063, @W2A-064, @W2A-066, @W2A-067.
  */
 import { describe, it, expect } from 'vitest';
@@ -23,6 +23,9 @@ import { parseStandingDecisions } from '../../models/schemas/StandingDecisionSch
 import { mapMatchFromSupabase } from '../../repositories/supabaseMappers';
 import { generateRows, normalizeRows, type GeneratedRows, type GeneratedTournamentKey } from '../../../test/groupCompletionRows';
 import type { Team } from '../../../types/tournament';
+import { groupKeyOf } from '../../models/standingsGroups';
+import { expectedState } from '../../services/GroupCompletionService';
+import { tournamentFromFixture } from './groupCompletionKit';
 
 type MatchRowInput = Parameters<typeof mapMatchFromSupabase>[0];
 
@@ -39,33 +42,26 @@ function tsValid(decision: unknown): boolean {
 describe('A-13b-S Gleichlauf placements-to-play-out.json (parsePlacementsToPlayOut == places_to_play_out)', () => {
   for (const row of placementsFixture.rows) {
     const config = row.config as { placementsToPlayOut?: unknown };
-    if ('tsHeute' in row) {
-      it.fails(`${row.name} – TS heute ${JSON.stringify(row.tsHeute)} (bis A-13b-S Punkt 7)`, () => {
-        expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.expected);
-      });
-      it(`${row.name} – heutiger TS-Wert ist festgehalten`, () => {
-        expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.tsHeute);
-      });
-    } else {
-      it(row.name, () => {
-        expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.expected);
-      });
-    }
+    it(row.name, () => {
+      expect(parsePlacementsToPlayOut(config.placementsToPlayOut)).toEqual(row.expected);
+    });
   }
+
+  it('A-13b-S Punkt 7: keine Zeile hält mehr einen abweichenden TS-Wert fest (C-ENTSCHEIDUNG-TS-GRENZEN)', () => {
+    expect(placementsFixture.rows.filter((r) => 'tsHeute' in r).map((r) => r.name)).toEqual([]);
+  });
 });
 
 describe('A-13b-S Gleichlauf standing-decision-shapes.json (StandingDecisionSchema + checkDraftFields == standing_decision_valid)', () => {
   for (const row of shapesFixture.rows) {
-    if ('tsHeute' in row && row.tsHeute !== row.ts) {
-      it.fails(`${row.name} – TS heute ${String(row.tsHeute)} (bis A-13b-S Punkt 7)`, () => {
-        expect(tsValid(row.decision)).toBe(row.ts);
-      });
-    } else {
-      it(row.name, () => {
-        expect(tsValid(row.decision)).toBe(row.ts);
-      });
-    }
+    it(row.name, () => {
+      expect(tsValid(row.decision)).toBe(row.ts);
+    });
   }
+
+  it('A-13b-S Punkt 7: keine Zeile hält mehr einen abweichenden TS-Wert fest (C-ENTSCHEIDUNG-TS-GRENZEN)', () => {
+    expect(shapesFixture.rows.filter((r) => 'tsHeute' in r).map((r) => r.name)).toEqual([]);
+  });
 
   it('N2: die Zeilen „ohne Ergebnis“, „Sieger nicht größer“ und „Altfelder“ stehen in der Fixture', () => {
     const names = shapesFixture.rows.map((r) => r.name);
@@ -141,7 +137,11 @@ describe('A-13b-S group-state.json: Zeilen echt erzeugt (Review-Auflage 1, R-GA4
     expect(groupStateFixture.cases.flatMap((c) => c.expected).some((e) => finals.has(e.id))).toBe(false);
   });
 
-  it.todo('A-13a: expectedState(t, group) aus den Zeilen (Mapper) == cases[].expected (Zwilling von match_engine.group_state)');
+  for (const c of groupStateFixture.cases) {
+    it(`@TM-057 @TM-058 A-13a: expectedState(${c.tournament}, „${c.group}“) aus den Zeilen (Mapper) == match_engine.group_state – ${c.note}`, () => {
+      expect(expectedState(tournamentFromFixture(c.tournament as GeneratedTournamentKey), c.group)).toEqual(c.expected);
+    });
+  }
 });
 
 describe('A-13b-S group-key.json', () => {
@@ -149,5 +149,10 @@ describe('A-13b-S group-key.json', () => {
     expect(groupKeyFixture.rows.map((r) => r.in)).toEqual(expect.arrayContaining([null, '', 'all', 'A']));
   });
 
-  it.todo('A-13a: groupKeyOf(row.in ?? undefined) == row.out (Zwilling von match_engine.group_key)');
+  for (const row of groupKeyFixture.rows) {
+    it(`@TM-057 A-13a: groupKeyOf == match_engine.group_key – ${row.name}`, () => {
+      expect(groupKeyOf(row.in ?? undefined)).toBe(row.out);
+      expect(groupKeyOf(row.in)).toBe(row.out);
+    });
+  }
 });

@@ -12,8 +12,7 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { useAuth } from '../features/auth/hooks/useAuth';
-import { useResyncNow } from '../features/match-engine/useResyncNow';
+import { useVerbinden } from '../features/match-engine/useVerbinden';
 import { cssVars } from '../design-tokens'
 interface OfflineBannerProps {
   /** Optional: Number of pending changes waiting to sync (Phase 3) */
@@ -24,10 +23,9 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   pendingSyncCount = 0,
 }) => {
   const { isOnline, wasOffline } = useOnlineStatus();
-  const { reconnect } = useAuth();
-  // A-06h (Brief A9): Verbinden stoesst zusaetzlich die Uebertragung an. Oben bei den
+  // A-06h (Brief A9): Verbinden stoesst zusaetzlich die Uebertragung an (gemeinsamer Hook, auch im Cockpit-Kopf). Oben bei den
   // anderen Hooks, vor jedem fruehen return (Rules of Hooks).
-  const resyncNow = useResyncNow();
+  const verbinden = useVerbinden();
   const { t } = useTranslation('common');
 
   // Don't render if online and not recently reconnected and no pending syncs
@@ -78,10 +76,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
         <span role="img" aria-label="Offline">📡</span>
         <span>{t('offlineBanner.message')}</span>
         <button
-          onClick={() => {
-            void reconnect();
-            void resyncNow();
-          }}
+          onClick={verbinden}
           data-testid="offline-banner-connect"
           style={{
             background: 'transparent',

@@ -67,12 +67,33 @@ export async function loginAsRole(page: Page, userKey: Exclude<E2EUserKey, 'goog
 }
 
 /**
+ * Zurück zum Spielplan, wenn die Seite den Live-Bereich im schmalen Rahmen zeigt (@SL-140: nur Kopf mit „Zurück“, Spielfläche und Leiste,
+ * keine App-Navigation, kein Konto-Menü). Ohne diesen Rahmen passiert nichts. Danach stehen App-Navigation und Konto-Menü wieder da.
+ */
+export async function verlasseLiveRahmen(page: Page): Promise<void> {
+  const zurueck = page.getByTestId('cockpit-zurueck');
+  if ((await zurueck.count()) > 0) {
+    await zurueck.click();
+  }
+  await expect(page.locator('[data-testid="auth-avatar-button"]')).toBeVisible({ timeout: 15000 });
+}
+
+/**
+ * Vom Live-Bereich (schmaler Rahmen, @SL-140) zum Spielplan: „Zurück“ im Kopf führt zum Spielplan des Turniers, dort steht die App-Navigation.
+ */
+export async function vomLiveZumSpielplan(page: Page): Promise<void> {
+  await page.getByTestId('cockpit-zurueck').click();
+  await expect(page.locator('[data-testid="desktop-tab-spielplan"]')).toBeVisible({ timeout: 15000 });
+}
+
+/**
  * Meldet den aktuell angemeldeten Nutzer über die Oberfläche ab (Avatar-Menü,
  * `auth-avatar-button` → `auth-logout-button`, siehe `src/components/layout/AuthSection.tsx`).
  * Wartet danach auf ein "abgemeldet"-Merkmal -- Desktop zeigt `auth-login-button`, Mobile
  * `auth-mobile-button` (gleiche Unterscheidung wie `gotoLogin()` oben).
  */
 export async function logoutViaUi(page: Page): Promise<void> {
+  await verlasseLiveRahmen(page);
   await page.locator('[data-testid="auth-avatar-button"]').click();
   await page.locator('[data-testid="auth-logout-button"]').click();
 
@@ -412,6 +433,7 @@ export async function fetchAuthUserStatus(accessToken: string): Promise<number> 
  * erwarteten Anzahl im Titel) und wird bestätigt. Danach ist das Gerät abgemeldet.
  */
 export async function logoutViaUiConfirmingWarning(page: Page, waitingCount: number): Promise<void> {
+  await verlasseLiveRahmen(page);
   await page.locator('[data-testid="auth-avatar-button"]').click();
   await page.locator('[data-testid="auth-logout-button"]').click();
   const dialog = page.locator('[data-testid="logout-warning-dialog"]');

@@ -305,6 +305,8 @@ export const semanticColorsLight = {
   noticeLineText: palette.neutral[0],
   // Halteknopf (Cockpit Scheibe 3, 3.1): Füllung beim Gedrückthalten, gleiche Farbe wie der Abpfiff-Rand (error)
   holdFill: palette.red[600],
+  // Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (Cockpit LT-3, @SL-155): Warnfarbe, kein Fehler-Rot (C-COCKPIT-NAECHSTES-WIE-FEHLER)
+  nextWarnBorder: palette.amber[700],
   // Karten (Cockpit, Entscheidung Daniel 19.10.): eigene Farben nur für Karten, in hell und dunkel gleich; Befund C-KARTE-GELB-ALS-WARNFARBE
   cardYellow: palette.yellow[400],
   cardRed: palette.red[600],

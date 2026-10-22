@@ -59,6 +59,10 @@ export interface PhaseView {
    * solange das Spiel nicht beendet ist (auch ausgefallen) oder der Abpfiff keine Zeit trägt.
    */
   quittungRestMs: number | null;
+  /** Ganze gespielte Zeit über alle Abschnitte (Spieluhr, ohne Pausen), für die Tafel nach dem Ende (@SL-169). */
+  playedMs: number;
+  /** Ganze geplante Spielzeit: alle regulären Abschnitte, in der Verlängerung zusätzlich deren Dauer (@SL-169). */
+  plannedMs: number;
   /** Kleinste zulässige Uhr im Abschnitt (relativ): spätester Eintrag des Abschnitts. */
   earliestAdjustMs: number;
   /** Der spätere Eintrag, der die Untergrenze setzt, ist ein Tor (für den Hinweis im Korrektur-Dialog, B-08d). */
@@ -80,6 +84,15 @@ export function quittungRestOf(state: MatchState, serverNow: number): number | n
   }
   // nach oben auf 30 s begrenzt: liegt der Abpfiff durch eine fremde Geräteuhr in der Zukunft, steht die Zeile nicht länger
   return Math.min(QUITTUNG_MS, Math.max(0, QUITTUNG_MS - (serverNow - state.finishedAt)));
+}
+
+/** Geplante Gesamtzeit bis zum Ende des aktuellen Abschnitts-Typs: reguläre Abschnitte, in der Verlängerung dazu deren Dauer. */
+function plannedMsOf(state: MatchState): number {
+  const rules = state.rules;
+  if (!rules) {
+    return 0;
+  }
+  return (rules.sections * rules.sectionSeconds + (state.phase === 'overtime' ? rules.overtimeSeconds : 0)) * 1000;
 }
 
 /** Ereignistypen, die keine Uhr-Stellung eines Eintrags sind. */
@@ -106,6 +119,8 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     isLastRegularSection: state.section >= sections,
     breakRemainingMs,
     quittungRestMs: quittungRestOf(state, serverNow),
+    playedMs: elapsedMs,
+    plannedMs: plannedMsOf(state),
     earliestAdjustMs: earliestAdjustOf(state).ms,
     earliestAdjustIsGoal: earliestAdjustOf(state).isGoal,
     penalties: penaltiesOf(state, elapsedMs),
