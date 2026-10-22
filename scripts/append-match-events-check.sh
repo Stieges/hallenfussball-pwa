@@ -159,6 +159,7 @@ UR_FILE=""
 SW_FILE=""
 AFTER_TARGET=0
 A13BS_APPLIED=0
+A21AS_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -187,6 +188,12 @@ while IFS= read -r line; do
   if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
     SW_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
+  fi
+  # A-21a-S: 20261113_003 setzt 20261110_006 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg. Sie fasst
+  # append_match_events zuletzt (closed_intake) und bringt den Trigger matches_guard_closed.
+  if [[ "$(basename "$line")" == "20261113_003_tournament_lifecycle.sql" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    A21AS_FILE="$line"
   fi
   # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
   [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
@@ -251,6 +258,9 @@ if [[ "$MODE" != "without-migration" ]]; then
   [[ "$MODE" != "without-sw" ]] && psql_stdin < "$SW_FILE"
   if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
   if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$A25B_FILE"; fi
+  # A-21a-S: seit 20261113_003 steht die juengste Fassung von append_match_events dort (nicht in der Gegenprobe, die die
+  # Fassung aus _005 mutiert und danach einspielt).
+  if [[ -n "$A21AS_FILE" && "$MODE" != "without-sw" && "$MODE" != "gegenprobe" ]]; then psql_stdin < "$A21AS_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -1263,13 +1273,16 @@ psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
 # gilt hier nicht). Auf main vor dem Merge von G1b fehlt die Datei und damit der Trigger.
 A13BS_TRIGGER=""
 [[ "$A13BS_APPLIED" -eq 1 ]] && A13BS_TRIGGER="matches_guard_ga4_columns,"
+# A-21a-S (20261113_003): matches_guard_closed (Abschluss-Sperre) feuert alphabetisch zuerst (Unterlage A-21a, W5).
+A21AS_TRIGGER=""
+[[ -n "$A21AS_FILE" ]] && A21AS_TRIGGER="matches_guard_closed,"
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
 check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  ". == \"matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
+  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
 # A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
 check Spaltenschutz "BEFORE-INSERT-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  ". == \"matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_sync_owner\"" "$(jq -Rn --arg v "$out" '$v')"
+  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_sync_owner\"" "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
 echo "Absetzen (skipped_at/skipped_reason)..." >&2

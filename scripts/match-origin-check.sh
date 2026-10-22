@@ -252,10 +252,10 @@ fi
 
 # A5: spaetere Migrationen auf dem Zustand NACH dem Rueckbau einspielen -- nur als Lauffaehigkeits-
 # Nachweis (psql_stdin bricht bei einem Fehler ab). Die Messungen oben sind davon unabhaengig.
-# Ausnahme: Migrationen, die 20261026_001 per Fail-fast VORAUSSETZEN (fest gelistet, heute nur 20261110_006), koennen nach dem
+# Ausnahme: Migrationen, die 20261026_001 per Fail-fast VORAUSSETZEN (fest gelistet: 20261110_006 und, ueber _006, 20261113_003), koennen nach dem
 # Rueckbau nicht laufen. Sie werden nicht eingespielt, sondern sichtbar gemeldet; geprueft wird, dass ihr Fail-fast
 # greift (Abbruch mit „Voraussetzungen fehlen“) und das Schema unveraendert laesst.
-A5_NEEDS_TARGET=" 20261110_006_group_completion.sql "
+A5_NEEDS_TARGET=" 20261110_006_group_completion.sql 20261113_003_tournament_lifecycle.sql "
 for f in ${AFTER[@]+"${AFTER[@]}"}; do
   if [[ "$A5_NEEDS_TARGET" == *" $(basename "$f") "* ]]; then
     echo "UEBERSPRUNGEN A5 $(basename "$f"): setzt $TARGET_NAME voraus (Fail-fast), nach dem Rueckbau nicht einspielbar" >&2

@@ -404,8 +404,8 @@ run_assertions() {
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
   # A-11: die drei Zeilen der spaeteren Migration 20261110_001 sind hier f (sie laeuft erst in A5 nach dem Rueckweg).
   # A-16 (20261110_008): die helper-join-*-Zeilen der spaeteren Migration sind hier f (laeuft erst am Ende).
-  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261110_001)" "" \
   # A-21a-S (20261113_003): die lifecycle-*-Zeilen der spaeteren Migration sind hier f (laeuft erst am Ende bzw. nie);
+  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261110_001)" "" \
     "$(grep -v '|t$' <<<"$priv" | grep -vE '^(lifecycle-[a-z0-9-]+)\|' | grep -vE '^(role-permissions-check-mvp-rights|matches-update-only-manage-schedule|monitors-writes-manage-screens|role-checks-device-roles|has-permission-device-roles-for-anonymous|tournaments-insert-real-account-only|anon-no-write-public-tables|device-roles-guard-trigger|hook-before-user-created-auth-admin-only|auth-users-block-anonymous-upgrade|field-control-|append-match-events-checks-field-control|share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|matches-guard-engine-columns-forfeit-absent|append-match-events-writes-forfeit-absent|group-completion-|complete-group-locks-matches-before-tournament|ci-schema-reader-select-group-completion|helper-join-[a-z0-9-]+)' || true)"
   check S "Rechte-Assertion: die 2 UR-Zeilen vorhanden und |t" \
     "match-event-author-names-definer-search-path|t,match-event-author-names-execute-only-authenticated|t" \
