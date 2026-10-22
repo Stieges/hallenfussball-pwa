@@ -8,6 +8,7 @@ import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeSt
 import {
   clearHelperAccessIndex,
   entryFromServer,
+  hasStoredHelperAccessIndex,
   findHelperAccessEntry,
   readHelperAccessIndex,
   removeHelperAccessEntry,
@@ -56,12 +57,11 @@ describe('Speicherort', () => {
 });
 
 describe('Index gehört zu genau einer Gerätesitzung (§ 3.2)', () => {
-  it('andere Gerätesitzung, fremde Version, kaputter Inhalt oder keine Sitzung → verwerfen und entfernen', () => {
-    const cases: Array<[string, string | null]> = [
+  it('andere Gerätesitzung, fremde Version oder kaputter Inhalt → verwerfen und entfernen', () => {
+    const cases: Array<[string, string]> = [
       [JSON.stringify({ version: 1, deviceUserId: 'anon-alt', entries: [entry()] }), 'anon-neu'],
       [JSON.stringify({ version: 2, deviceUserId: 'anon-tom', entries: [] }), 'anon-tom'],
       ['{kaputt', 'anon-tom'],
-      [JSON.stringify({ version: 1, deviceUserId: 'anon-tom', entries: [entry()] }), null],
     ];
     for (const [raw, session] of cases) {
       const store = memory();
@@ -69,6 +69,15 @@ describe('Index gehört zu genau einer Gerätesitzung (§ 3.2)', () => {
       expect(readHelperAccessIndex(session, store)).toBeNull();
       expect(store.data.has(HELPER_ACCESS_STORAGE_KEY)).toBe(false);
     }
+  });
+
+  it('@HE-028 @HE-074 Sitzung unbekannt (Offline-Start, Lesefehler) → Index bleibt samt Merkern liegen (Review #331 M-2)', () => {
+    const store = memory();
+    upsertHelperAccessEntry('anon-tom', entry({ homeHintDismissed: true, offlineReadyAt: '2026-11-27T20:00:00Z' }), store);
+    expect(readHelperAccessIndex(null, store)).toBeNull();
+    expect(hasStoredHelperAccessIndex(store)).toBe(true);
+    // Sobald die Sitzung wieder lesbar ist, ist alles noch da.
+    expect(findHelperAccessEntry('anon-tom', 't-cup', store)).toMatchObject({ homeHintDismissed: true, offlineReadyAt: '2026-11-27T20:00:00Z' });
   });
 
   it('kein Index → null, nichts geschrieben', () => {
@@ -114,6 +123,20 @@ describe('entryFromServer / syncHelperAccessEntry', () => {
     const previous = entry({ homeHintDismissed: true, offlineReadyAt: '2026-11-27T20:00:00Z', closed: true });
     const next = entryFromServer({ relation: 'accepted', field: 2 }, null, previous, NOW);
     expect(next).toMatchObject({ homeHintDismissed: true, offlineReadyAt: '2026-11-27T20:00:00Z', title: 'Live-Cup', code: 'CODE123456', closed: true });
+  });
+
+  it('@HE-098 Z.2 Server-Form von join_code_info (state closed, ohne closed) → Eintrag closed:true', () => {
+    expect(entryFromServer({ state: 'closed', relation: 'accepted', tournament: CUP, field: 2 }, 'C', entry({ closed: false }), NOW))
+      .toMatchObject({ relation: 'accepted', closed: true });
+  });
+
+  it('@HE-098 Z.3 Gegenbeispiel: Code abgelaufen, Turnier läuft → closed:false, auch wenn der alte Eintrag anderes sagte', () => {
+    expect(entryFromServer({ state: 'expired', relation: 'accepted', tournament: CUP, field: 2 }, 'C', entry({ closed: true }), NOW))
+      .toMatchObject({ relation: 'accepted', closed: false, field: 2 });
+  });
+
+  it('Zugangsstatus mit closed gewinnt vor dem Code-Zustand', () => {
+    expect(entryFromServer({ state: 'open', relation: 'accepted', tournament: CUP, closed: true }, 'C', null, NOW)).toMatchObject({ closed: true });
   });
 
   it('ohne eigene Beziehung (none, leader) oder ohne Turnier-Angaben → kein Eintrag', () => {

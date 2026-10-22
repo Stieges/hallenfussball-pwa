@@ -150,12 +150,24 @@ describe('readSessionInfo (S-5: liest nur, legt nie an)', () => {
     await expect(readSessionInfo(fakeAuth(account('greta')))).resolves.toEqual({ kind: 'account', userId: 'greta' });
   });
 
-  it('ohne Client oder bei Lesefehler: keine Sitzung', async () => {
+  it('ohne Client: keine Sitzung', async () => {
     await expect(readSessionInfo(null)).resolves.toEqual({ kind: 'none', userId: null });
+  });
+
+  it('@HE-028 @HE-074 Offline-Start mit abgelaufenem Zugang oder Lesefehler → unknown, nicht „keine Sitzung“', async () => {
+    const offline = fakeAuth(device('tom'));
+    offline.getSession.mockResolvedValueOnce({ data: { session: null }, error: new AuthRetryableFetchError('Failed to fetch', 0) });
+    await expect(readSessionInfo(offline)).resolves.toEqual({ kind: 'unknown', userId: null });
     const throwing: DeviceSessionAuth = {
       getSession: () => Promise.reject(new Error('weg')),
       signInAnonymously: vi.fn(),
     };
-    await expect(readSessionInfo(throwing)).resolves.toEqual({ kind: 'none', userId: null });
+    await expect(readSessionInfo(throwing)).resolves.toEqual({ kind: 'unknown', userId: null });
+  });
+
+  it('Gegenbeispiel: Server lehnt den Zugang ab (Sitzung entfernt) → none', async () => {
+    const rejected = fakeAuth(device('tom'));
+    rejected.getSession.mockResolvedValueOnce({ data: { session: null }, error: new AuthApiError('Invalid Refresh Token', 400, 'refresh_token_not_found') });
+    await expect(readSessionInfo(rejected)).resolves.toEqual({ kind: 'none', userId: null });
   });
 });

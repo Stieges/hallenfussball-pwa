@@ -7,6 +7,7 @@
  *   accountConfirm ─confirmSignOut→ signingOut ─signedOut→ form       (@HE-089)
  *                  ─cancel→ cancelled (angemeldet, keine Anfrage)       (@HE-090)
  *   signingOut ─signOutBlocked→ show(offline) | accountWaiting         (@HE-093, @HE-092)
+ *   accountWaiting: „Erst verbinden – N Einträge warten“; N = null, wenn die Zählung scheiterte (gesperrt, Review #331 M-1)
  *   form ─submit→ submitting ─requestDone→ show(waiting | …)            (@HE-001, @HE-095)
  *                            ─sessionFailed/requestFailed→ form + Hinweis, Name bleibt (@HE-015)
  *
@@ -48,18 +49,19 @@ export type JoinFlowState =
   | { step: 'loading'; code: string }
   | { step: 'show'; code: string; view: HelperAccessView }
   | { step: 'accountConfirm'; code: string; tournament: JoinTournament | null; shareCode: string | null }
-  | { step: 'accountWaiting'; code: string; waitingCount: number }
+  | { step: 'accountWaiting'; code: string; waitingCount: number | null }
   | { step: 'signingOut'; code: string; tournament: JoinTournament | null; shareCode: string | null }
   | { step: 'cancelled'; code: string }
   | (JoinFormFields & { step: 'form' })
   | (JoinFormFields & { step: 'submitting' });
 
 export type JoinFlowEvent =
-  | { type: 'infoLoaded'; info: HelperAccessStatus; session: SessionKind; waitingCount: number }
+  /** `waitingCount`: wartende Einträge des Kontos; `null` = Zählung gescheitert (dann wird nicht abgemeldet). */
+  | { type: 'infoLoaded'; info: HelperAccessStatus; session: SessionKind; waitingCount: number | null }
   | { type: 'infoFailed'; error: HelperRpcError }
   | { type: 'confirmSignOut' }
   | { type: 'cancel' }
-  | { type: 'signOutBlocked'; reason: 'offline' } | { type: 'signOutBlocked'; reason: 'waiting'; waitingCount: number }
+  | { type: 'signOutBlocked'; reason: 'offline' } | { type: 'signOutBlocked'; reason: 'waiting'; waitingCount: number | null }
   | { type: 'signedOut' }
   | { type: 'nameChanged'; name: string }
   | { type: 'submit' }
@@ -80,12 +82,22 @@ function show(code: string, view: HelperAccessView): JoinFlowState {
   return { step: 'show', code, view };
 }
 
+/**
+ * @HE-098 Z.2: `join_code_info` (auch als `EXISTING` aus `request_helper_access`) meldet den Turnierabschluss nur über
+ * `state:'closed'`, ohne den Schlüssel `closed`; nur der Zugangsstatus liefert `closed`. Für die Anzeige gilt beides.
+ */
+export function withDerivedClosed<T extends HelperAccessStatus>(info: T): T {
+  return info.closed === undefined && info.state !== undefined ? { ...info, closed: info.state === 'closed' } : info;
+}
+
 function onInfoLoaded(code: string, event: Extract<JoinFlowEvent, { type: 'infoLoaded' }>): JoinFlowState {
-  const view = helperAccessView({ source: 'info', info: event.info, session: event.session });
+  // `unknown` (Sitzung nicht lesbar): für die Anzeige wie ohne Sitzung – angelegt wird erst beim Absenden.
+  const session = event.session === 'unknown' ? 'none' : event.session;
+  const view = helperAccessView({ source: 'info', info: withDerivedClosed(event.info), session });
   const tournament = event.info.tournament ?? null;
   if (view.view === 'accountScan') {
-    // @HE-092: solange Einträge warten, gibt es kein „Weiter“; @HE-089: sonst Rückfrage vor dem Abmelden.
-    return event.waitingCount > 0
+    // @HE-092: solange Einträge warten (oder die Zählung scheiterte), gibt es kein „Weiter“; @HE-089: sonst Rückfrage.
+    return event.waitingCount !== 0
       ? { step: 'accountWaiting', code, waitingCount: event.waitingCount }
       : { step: 'accountConfirm', code, tournament, shareCode: event.info.shareCode ?? null };
   }
@@ -110,8 +122,10 @@ function formNoticeForError(error: HelperRpcError): JoinFormNotice | null {
       return error.reason === 'INVALID_NAME' ? 'invalidName' : 'unexpected';
     case 'unexpected':
       return 'unexpected';
-    case 'noSession':
     case 'notAuthorized':
+      // Nur für die Turnierleitung gedacht; dem Helfer nie „Nur die Turnierleitung …“ zeigen (Review #331 N-5).
+      return 'unexpected';
+    case 'noSession':
       return null;
   }
 }
@@ -124,7 +138,7 @@ function onSubmitting(state: Extract<JoinFlowState, { step: 'submitting' }>, eve
         ? show(state.code, { view: 'retryScan' })
         : { ...state, step: 'form', notice: SESSION_NOTICES[event.reason] };
     case 'requestDone':
-      return show(state.code, helperAccessView({ source: 'request', result: event.result }));
+      return show(state.code, helperAccessView({ source: 'request', result: withDerivedClosed(event.result) }));
     case 'requestFailed': {
       const notice = formNoticeForError(event.error);
       return notice

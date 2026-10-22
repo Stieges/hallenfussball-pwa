@@ -26,8 +26,12 @@ export interface DeviceSessionAuth {
   signInAnonymously(): Promise<{ data: { session: DeviceSessionLike | null }; error: unknown }>;
 }
 
-/** `none` = keine Sitzung, `device` = anonyme Gerätesitzung, `account` = echtes Konto. */
-export type SessionKind = 'none' | 'device' | 'account';
+/**
+ * `none` = keine Sitzung, `device` = anonyme Gerätesitzung, `account` = echtes Konto, `unknown` = Sitzung nicht lesbar
+ * (ohne Netz beim Auffrischen eines abgelaufenen Zugangs oder Lesefehler). `unknown` heißt nie „keine Sitzung“: das
+ * Token kann noch da sein, also nichts verwerfen und nichts neu anlegen (Review #331 M-2, @HE-028, @HE-074).
+ */
+export type SessionKind = 'none' | 'device' | 'account' | 'unknown';
 
 export interface SessionInfo {
   kind: SessionKind;
@@ -40,7 +44,7 @@ export type DeviceSessionResult =
   | { ok: true; userId: string; created: boolean }
   | { ok: false; reason: DeviceSessionFailure; message?: string };
 
-export function sessionKind(session: DeviceSessionLike | null): SessionKind {
+export function sessionKind(session: DeviceSessionLike | null): Exclude<SessionKind, 'unknown'> {
   if (!session) {
     return 'none';
   }
@@ -63,16 +67,22 @@ function classifySignInError(error: unknown): { ok: false; reason: DeviceSession
   return { ok: false, reason: 'unexpected', message: error instanceof Error ? error.message : String(error) };
 }
 
-/** Liest die Sitzung dieses Geräts. Fehler beim Lesen gelten als „keine Sitzung“ – nur für die Anzeige, nie zum Anmelden. */
+/**
+ * Liest die Sitzung dieses Geräts, legt nie eine an. Netzfehler beim Auffrischen oder ein geworfener Fehler → `unknown`;
+ * lehnt der Server den Zugang ab (auth-js hat die Sitzung dann entfernt) → `none`.
+ */
 export async function readSessionInfo(auth: DeviceSessionAuth | null): Promise<SessionInfo> {
   if (!auth) {
     return { kind: 'none', userId: null };
   }
   try {
-    const { data } = await auth.getSession();
-    return { kind: sessionKind(data.session), userId: data.session?.user.id ?? null };
+    const { data, error } = await auth.getSession();
+    if (data.session) {
+      return { kind: sessionKind(data.session), userId: data.session.user.id };
+    }
+    return { kind: error && isNetworkError(error) ? 'unknown' : 'none', userId: null };
   } catch {
-    return { kind: 'none', userId: null };
+    return { kind: 'unknown', userId: null };
   }
 }
 

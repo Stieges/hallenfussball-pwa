@@ -4,13 +4,19 @@
  *
  * Reihenfolge-Regeln (je mit Test und Mutation):
  * - S-5: `ensureDeviceSession` erst in `submitJoinRequest`, nie beim Laden oder in der Rückfrage.
- * - @HE-093: Abmelden erst, nachdem der Server erreichbar war (Code erneut geprüft) – ohne Netz kein Abmelden.
+ * - @HE-093: Abmelden erst, nachdem der Server erreichbar war – ohne Netz kein Abmelden. Die Netzprüfung ist ein erneutes
+ *   `join_code_info`: der billigste Aufruf ohne Nebenwirkung, er beweist die Erreichbarkeit desselben Backends und prüft
+ *   den Code zugleich neu (erneuert, abgelaufen, inzwischen leitend). Den Auth-Endpunkt beweist er nicht (z. B. 429 nach
+ *   dem Abmelden); dieser Fall endet im Pfad „Abmelden gelingt, Netz reißt“: Name bleibt, erneut versuchen.
  * - @HE-092: Abmelden nur ohne wartende Einträge des Kontos (`countWaitingBeforeSignOut`, wie `useGuardedLogout`).
+ *   Anders als beim gewollten Abmelden sperrt hier auch ein Zählfehler (fail-closed, Review #331 M-1): der Beitritt ist ein
+ *   Nebenweg, Sperren kostet nichts, und die Einträge sollen gleich unter dem Konto weitergehen.
  * - Abmelden über `logout({ scope: 'local' })` (`logoutAction`): andere Geräte des Kontos bleiben angemeldet (@HE-089).
  */
 import {
   callJoinCodeInfo,
   callRequestHelperAccess,
+  type HelperAccessStatus,
   type HelperRpcResult,
   type JoinCodeInfo,
   type RequestHelperAccessResult,
@@ -32,7 +38,7 @@ export interface JoinFlowDeps {
   requestAccess(code: string, name: string, deviceLabel: string | null): Promise<HelperRpcResult<RequestHelperAccessResult>>;
   deviceLabel(): string | null;
   /** Zugangs-Index nachführen (`syncHelperAccessEntry`). */
-  syncEntry(deviceUserId: string, tournamentId: string, info: JoinCodeInfo, code: string): void;
+  syncEntry(deviceUserId: string, tournamentId: string, info: HelperAccessStatus, code: string): void;
   /** Programmierfehler melden (Sentry), z. B. `ACCOUNT_SESSION` (§ 3.2). */
   reportError(error: Error): void;
 }
@@ -42,14 +48,15 @@ function needsAccountDecision(info: JoinCodeInfo, session: SessionInfo): boolean
   return session.kind === 'account' && info.state === 'open' && (info.relation === undefined || info.relation === 'none');
 }
 
-async function waitingFor(session: SessionInfo, deps: JoinFlowDeps): Promise<number> {
+/** Wartende Einträge des Kontos; `null` = nicht zählbar (Fehler oder keine Nutzer-ID) → nicht abmelden. */
+async function waitingFor(session: SessionInfo, deps: JoinFlowDeps): Promise<number | null> {
   if (session.userId === null) {
-    return 0;
+    return null;
   }
   try {
     return await deps.countWaiting(session.userId);
   } catch {
-    return 0;
+    return null;
   }
 }
 
@@ -87,12 +94,14 @@ export async function confirmSignOut(code: string, deps: JoinFlowDeps): Promise<
     return { type: 'infoLoaded', info: response.data, session: session.kind, waitingCount: 0 };
   }
   const waitingCount = await waitingFor(session, deps);
-  if (waitingCount > 0) {
+  if (waitingCount !== 0) {
     return { type: 'signOutBlocked', reason: 'waiting', waitingCount };
   }
   await deps.signOutLocal();
   return { type: 'signedOut' };
 }
+
+const STALE_RESULTS: ReadonlySet<RequestHelperAccessResult['result']> = new Set(['ROTATED', 'EXPIRED', 'CLOSED', 'INVALID']);
 
 /** Name absenden: jetzt erst Gerätesitzung (S-5), dann Anfrage; Index nachführen. */
 export async function submitJoinRequest(
@@ -119,7 +128,10 @@ export async function submitJoinRequest(
   }
   const tournament = result.tournament ?? state.tournament;
   if ((result.result === 'PENDING' || result.result === 'EXISTING') && tournament) {
-    deps.syncEntry(session.userId, tournament.id, { ...result, state: result.state ?? 'open', tournament }, state.code);
+    deps.syncEntry(session.userId, tournament.id, { ...result, tournament }, state.code);
+  } else if (STALE_RESULTS.has(result.result) && tournament) {
+    // Kein Zugang (mehr) über diesen Code: einen alten Index-Eintrag des Turniers entfernen (Review #331 N-6).
+    deps.syncEntry(session.userId, tournament.id, { relation: 'none' }, state.code);
   }
   return { type: 'requestDone', result };
 }

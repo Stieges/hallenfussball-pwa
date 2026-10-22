@@ -58,16 +58,22 @@ export function clearHelperAccessIndex(storage: HelperAccessStorage = defaultSto
   storage.removeItem(HELPER_ACCESS_STORAGE_KEY);
 }
 
+/** Liegt überhaupt ein Index auf dem Gerät (ohne Prüfung, zu welcher Sitzung er gehört)? */
+export function hasStoredHelperAccessIndex(storage: HelperAccessStorage = defaultStorage): boolean {
+  return storage.getItem(HELPER_ACCESS_STORAGE_KEY) !== null;
+}
+
 /**
- * Index der aktuellen Gerätesitzung. Ein gespeicherter Index, der nicht passt (fremde Version, kaputt, andere Sitzung),
- * wird dabei entfernt; `null` heißt „online neu aufbauen“.
+ * Index der aktuellen Gerätesitzung. Ein gespeicherter Index, der nachweislich nicht passt (fremde Version, kaputt, andere
+ * Gerätesitzung), wird dabei entfernt; `null` heißt „online neu aufbauen“. Ist die Sitzung unbekannt (`null`, z. B.
+ * Offline-Start mit abgelaufenem Zugang), bleibt der Index liegen – samt Merkern (Review #331 M-2, @HE-028, @HE-074).
  */
 export function readHelperAccessIndex(
   sessionUserId: string | null,
   storage: HelperAccessStorage = defaultStorage,
 ): HelperAccessIndexV1 | null {
   const raw = storage.getItem(HELPER_ACCESS_STORAGE_KEY);
-  if (raw === null) {
+  if (raw === null || sessionUserId === null) {
     return null;
   }
   const index = parseHelperAccessIndex(parseJson(raw), sessionUserId);
@@ -139,7 +145,9 @@ export function entryFromServer(
     code: entryCode,
     field: info.field ?? null,
     relation: info.relation,
-    closed: info.closed ?? previous?.closed ?? false,
+    // @HE-098 Z.2: `join_code_info` meldet den Abschluss nur über `state:'closed'` (ohne `closed`), der Zugangsstatus
+    // zusätzlich über `closed`. Ohne beides gilt der alte Stand.
+    closed: info.closed ?? (info.state === undefined ? previous?.closed ?? false : info.state === 'closed'),
     checkNumber: info.checkNumber ?? null,
     homeHintDismissed: previous?.homeHintDismissed ?? false,
     offlineReadyAt: previous?.offlineReadyAt ?? null,

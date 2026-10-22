@@ -48,20 +48,37 @@ describe('@HE-094 Anmelden auf einem Gerät mit Helfer-Zugang', () => {
     await expect(checkLoginOnHelperDevice(gone.deps)).resolves.toEqual({ kind: 'proceed' });
   });
 
-  it('Gegenbeispiel: kein Helfer-Gerät (Konto, keine Sitzung, Gast ohne Index) → ohne Rückfrage anmelden', async () => {
+  it('Gegenbeispiel: Konto oder keine Sitzung → ohne Rückfrage anmelden, nichts gezählt', async () => {
     const account = setup([entry('accepted')], 0, { kind: 'account', userId: 'greta' });
     await expect(checkLoginOnHelperDevice(account.deps)).resolves.toEqual({ kind: 'proceed' });
     expect(account.countWaiting).not.toHaveBeenCalled();
     const none = setup([], 0, { kind: 'none', userId: null });
     await expect(checkLoginOnHelperDevice(none.deps)).resolves.toEqual({ kind: 'proceed' });
-    const guest = setup([], 3);
-    await expect(checkLoginOnHelperDevice(guest.deps)).resolves.toEqual({ kind: 'proceed' });
+    const guestNothingWaiting = setup([], 0);
+    await expect(checkLoginOnHelperDevice(guestNothingWaiting.deps)).resolves.toEqual({ kind: 'proceed' });
   });
 
-  it('Zählfehler blockiert nicht (wie useGuardedLogout)', async () => {
+  // Vorher falsch festgeschrieben: „Gast ohne Index, 3 wartend → anmelden“. @HE-094 „Aber …“: wartende Einträge der
+  // Gerätesitzung sperren das Anmelden unabhängig vom Index (privates Fenster, verworfener Index, Gast mit anonymer Sitzung).
+  it('Aber: wartende Einträge sperren auch ohne Index (Review #331 H-2)', async () => {
+    const guest = setup([], 3);
+    await expect(checkLoginOnHelperDevice(guest.deps)).resolves.toEqual({ kind: 'blocked', waitingCount: 3 });
+  });
+
+  // Vorher falsch festgeschrieben: „Zählfehler blockiert nicht“. Eine anonyme Gerätesitzung kommt nach dem Anmelden nicht
+  // zurück – fail-closed.
+  it('Aber: Zählfehler auf einer Gerätesitzung → nicht anmelden, ohne Zahl', async () => {
     const { deps } = setup([entry('accepted')]);
     deps.countWaiting.mockRejectedValueOnce(new Error('IndexedDB'));
-    await expect(checkLoginOnHelperDevice(deps)).resolves.toEqual({ kind: 'confirm', tournamentTitles: ['Live-Cup'] });
+    await expect(checkLoginOnHelperDevice(deps)).resolves.toEqual({ kind: 'blocked', waitingCount: null });
+  });
+
+  it('Aber: Sitzung nicht lesbar und Helfer-Index liegt auf dem Gerät → nicht anmelden; ohne Index → anmelden', async () => {
+    const withIndex = setup([entry('accepted')], 0, { kind: 'unknown', userId: null });
+    await expect(checkLoginOnHelperDevice(withIndex.deps)).resolves.toEqual({ kind: 'blocked', waitingCount: null });
+    expect(withIndex.storage.data.has(HELPER_ACCESS_STORAGE_KEY)).toBe(true);
+    const withoutIndex = setup([], 0, { kind: 'unknown', userId: null });
+    await expect(checkLoginOnHelperDevice(withoutIndex.deps)).resolves.toEqual({ kind: 'proceed' });
   });
 
   it('nach der Anmeldung des Kontos ist der Zugangs-Index leer', () => {
@@ -71,7 +88,11 @@ describe('@HE-094 Anmelden auf einem Gerät mit Helfer-Zugang', () => {
     expect(storage.data.has(HELPER_ACCESS_STORAGE_KEY)).toBe(false);
   });
 
-  it('decideLogin ohne Index → anmelden', () => {
-    expect(decideLogin(DEVICE, null, 5)).toEqual({ kind: 'proceed' });
+  // Vorher falsch festgeschrieben: decideLogin(Gerät, ohne Index, 5 wartend) → anmelden. Die Zählung kommt zuerst.
+  it('decideLogin prüft die Zählung vor dem Index: ohne Index, 5 wartend → gesperrt; ohne Index, 0 → anmelden', () => {
+    expect(decideLogin(DEVICE, null, 5)).toEqual({ kind: 'blocked', waitingCount: 5 });
+    expect(decideLogin(DEVICE, null, null)).toEqual({ kind: 'blocked', waitingCount: null });
+    expect(decideLogin(DEVICE, null, 0)).toEqual({ kind: 'proceed' });
+    expect(decideLogin({ kind: 'account', userId: 'greta' }, null, 5)).toEqual({ kind: 'proceed' });
   });
 });

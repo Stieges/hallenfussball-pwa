@@ -37,7 +37,7 @@ function device(start: DeviceSessionLike | null, overrides: Partial<JoinFlowDeps
     signOutLocal: vi.fn(async () => { calls.push('signOutLocal'); session = null; return { ok: true }; }),
     ensureDeviceSession: () => ensureDeviceSession(auth),
     requestAccess: vi.fn(async () => { calls.push('requestAccess'); return ok(PENDING); }),
-    deviceLabel: () => 'Handy',
+    deviceLabel: () => 'phone',
     syncEntry: vi.fn(),
     reportError: vi.fn(),
     ...overrides,
@@ -75,7 +75,7 @@ describe('@HE-089 Konto scannt → Rückfrage → Abmelden nur auf diesem Gerät
     state = await submit(state, deps);
     expect(state).toEqual({ step: 'show', code: 'CODE123456', view: { view: 'waiting', checkNumber: 47 } });
     expect(auth.signInAnonymously).toHaveBeenCalledTimes(1);
-    expect(deps.requestAccess).toHaveBeenCalledWith('CODE123456', 'Tom', 'Handy');
+    expect(deps.requestAccess).toHaveBeenCalledWith('CODE123456', 'Tom', 'phone');
     // Der Zugang gehört zur Gerätesitzung, nicht zu Gretas Konto.
     expect(deps.syncEntry).toHaveBeenCalledWith('anon-tom', 't-cup', expect.objectContaining({ relation: 'pending', checkNumber: 47 }), 'CODE123456');
   });
@@ -144,9 +144,24 @@ describe('@HE-092 Einträge warten', () => {
     expect(deps.signOutLocal).not.toHaveBeenCalled();
   });
 
-  it('Zählfehler blockiert nicht (wie useGuardedLogout)', async () => {
-    const { deps } = device(GRETA, { countWaiting: vi.fn(async () => { throw new Error('IndexedDB'); }) });
+  it('Zählfehler beim Scan → kein „Weiter“, gesperrt wie „Erst verbinden“ (fail-closed, Review #331 M-1)', async () => {
+    const countWaiting = vi.fn(async (): Promise<number> => { throw new Error('IndexedDB'); });
+    const { deps } = device(GRETA, { countWaiting });
+    expect(await scan(deps)).toEqual({ step: 'accountWaiting', code: 'CODE123456', waitingCount: null });
+    expect(deps.signOutLocal).not.toHaveBeenCalled();
+    // Erneut scannen, wenn die Zählung wieder geht → Rückfrage wie sonst.
+    countWaiting.mockResolvedValue(0);
     expect(await scan(deps)).toMatchObject({ step: 'accountConfirm' });
+  });
+
+  it('Zählfehler zwischen Rückfrage und „Weiter“ → nicht abmelden', async () => {
+    const countWaiting = vi.fn(async (): Promise<number> => 0);
+    const { deps } = device(GRETA, { countWaiting });
+    let state = joinFlowReducer(await scan(deps), { type: 'confirmSignOut' });
+    countWaiting.mockRejectedValueOnce(new Error('IndexedDB'));
+    state = joinFlowReducer(state, await confirmSignOut('CODE123456', deps));
+    expect(state).toEqual({ step: 'accountWaiting', code: 'CODE123456', waitingCount: null });
+    expect(deps.signOutLocal).not.toHaveBeenCalled();
   });
 });
 
@@ -223,6 +238,17 @@ describe('@HE-095 @HE-074 Wiedereinstieg auf demselben Gerät', () => {
     expect(deps.syncEntry).toHaveBeenCalledWith('anon-tom', 't-cup', info, 'CODE123456');
   });
 
+  it('N-1 Gegenbeispiel: ein Konto-Scan fasst den Index nie an (auch mit Turnier-Angabe)', async () => {
+    const forAccount = device(GRETA);
+    await scan(forAccount.deps);
+    const leader = device({ user: { id: 'olli', is_anonymous: false } }, {
+      loadInfo: vi.fn(async () => ok<JoinCodeInfo>({ state: 'open', relation: 'leader', tournament: CUP })),
+    });
+    await scan(leader.deps);
+    expect(forAccount.deps.syncEntry).not.toHaveBeenCalled();
+    expect(leader.deps.syncEntry).not.toHaveBeenCalled();
+  });
+
   it('ohne Turnier-Angabe (Code ungültig) oder ohne Gerätesitzung wird der Index nicht angefasst', async () => {
     const a = device(TOM_DEVICE, { loadInfo: vi.fn(async () => ok<JoinCodeInfo>({ state: 'invalid' })) });
     await scan(a.deps);
@@ -261,10 +287,23 @@ describe('Absenden: Fehler und Meldungen', () => {
     expect(b.deps.reportError).not.toHaveBeenCalled();
   });
 
+  it.each(['ROTATED', 'EXPIRED', 'CLOSED', 'INVALID'] as const)('N-6 Ergebnis %s ohne Beziehung → alter Index-Eintrag des Turniers wird entfernt', async (code) => {
+    const { deps } = device(null, { requestAccess: vi.fn(async () => ok<RequestHelperAccessResult>({ result: code })) });
+    await submit(await scan(deps), deps);
+    expect(deps.syncEntry).toHaveBeenCalledWith('anon-tom', 't-cup', { relation: 'none' }, 'CODE123456');
+  });
+
+  it('@HE-098 EXISTING bei abgeschlossenem Turnier: Index bekommt die Server-Form (state closed) zum Ableiten', async () => {
+    const result: RequestHelperAccessResult = { result: 'EXISTING', state: 'closed', relation: 'accepted', tournament: CUP, field: 2 };
+    const { deps } = device(null, { requestAccess: vi.fn(async () => ok(result)) });
+    expect(await submit(await scan(deps), deps)).toMatchObject({ view: { view: 'finalStandings' } });
+    expect(deps.syncEntry).toHaveBeenCalledWith('anon-tom', 't-cup', expect.objectContaining({ state: 'closed', relation: 'accepted' }), 'CODE123456');
+  });
+
   it('EXISTING ohne Turnier in der Antwort nutzt das Turnier aus dem Scan für den Index', async () => {
     const { deps } = device(null, { requestAccess: vi.fn(async () => ok<RequestHelperAccessResult>({ result: 'EXISTING', relation: 'pending', checkNumber: 12 })) });
     await submit(await scan(deps), deps);
-    expect(deps.syncEntry).toHaveBeenCalledWith('anon-tom', 't-cup', expect.objectContaining({ relation: 'pending', state: 'open', tournament: CUP }), 'CODE123456');
+    expect(deps.syncEntry).toHaveBeenCalledWith('anon-tom', 't-cup', expect.objectContaining({ relation: 'pending', tournament: CUP }), 'CODE123456');
   });
 });
 
@@ -276,7 +315,7 @@ describe('createJoinFlowDeps', () => {
     const wired = createJoinFlowDeps(client, deps);
     await wired.loadInfo('ABC');
     expect(rpc).toHaveBeenCalledWith('join_code_info', { p_code: 'ABC' });
-    await wired.requestAccess('ABC', 'Tom', 'Handy');
-    expect(rpc).toHaveBeenCalledWith('request_helper_access', { p_code: 'ABC', p_display_name: 'Tom', p_device_label: 'Handy' });
+    await wired.requestAccess('ABC', 'Tom', 'phone');
+    expect(rpc).toHaveBeenCalledWith('request_helper_access', { p_code: 'ABC', p_display_name: 'Tom', p_device_label: 'phone' });
   });
 });

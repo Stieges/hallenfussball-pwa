@@ -16,7 +16,7 @@ import {
 const CUP = { id: 't-cup', title: 'Live-Cup', date: '2026-11-28' };
 const OPEN: HelperAccessStatus = { state: 'open', relation: 'none', tournament: CUP, shareCode: 'SHARE1' };
 
-function loaded(info: HelperAccessStatus, session: SessionKind = 'none', waitingCount = 0): JoinFlowState {
+function loaded(info: HelperAccessStatus, session: SessionKind = 'none', waitingCount: number | null = 0): JoinFlowState {
   return joinFlowReducer(initialJoinFlowState('CODE123456'), { type: 'infoLoaded', info, session, waitingCount });
 }
 
@@ -67,7 +67,8 @@ describe('Scan: Anzeige nach § 3.2', () => {
 
   const WIEDEREINSTIEG: Array<[string, HelperAccessStatus, HelperAccessView]> = [
     ['Zugang entzogen', { state: 'open', relation: 'revoked', tournament: CUP }, { view: 'noAccess' }],
-    ['Turnier abgeschlossen', { state: 'closed', relation: 'accepted', tournament: CUP, field: 2, closed: true },
+    // Genau die Server-Form von join_code_info: Abschluss nur über state:'closed', ohne Schlüssel `closed` (Review #331 H-1).
+    ['Turnier abgeschlossen', { state: 'closed', relation: 'accepted', tournament: CUP, field: 2 },
       { view: 'finalStandings', tournamentId: 't-cup' }],
     ['Code abgelaufen, Turnier läuft', { state: 'expired', relation: 'accepted', tournament: CUP, field: 2 },
       { view: 'openField', tournamentId: 't-cup', field: 2 }],
@@ -83,6 +84,23 @@ describe('Scan: Anzeige nach § 3.2', () => {
     ['closed', 'tournamentClosed'],
   ] as const)('@HE-007 @HE-009 @HE-038 Code %s ohne Beziehung → %s, auch für ein Konto (keine Rückfrage)', (state, view) => {
     expect(loaded({ state }, 'account')).toEqual({ step: 'show', code: 'CODE123456', view: { view } });
+  });
+
+  it('@HE-098 Zugangsstatus mit closed:false und Code-Zustand closed fehlt → Feld (closed vom Server gewinnt)', () => {
+    expect(loaded({ relation: 'accepted', tournament: CUP, field: 2, closed: false }, 'device'))
+      .toMatchObject({ view: { view: 'openField', field: 2 } });
+    expect(loaded({ relation: 'accepted', tournament: CUP, field: 2, closed: true }, 'device'))
+      .toMatchObject({ view: { view: 'finalStandings' } });
+  });
+
+  it('@HE-092 Konto, Zählung gescheitert → gesperrt wie „Erst verbinden“, ohne Zahl (Review #331 M-1)', () => {
+    const state = loaded(OPEN, 'account', null);
+    expect(state).toEqual({ step: 'accountWaiting', code: 'CODE123456', waitingCount: null });
+    expect(run(state, { type: 'confirmSignOut' })).toBe(state);
+  });
+
+  it('Sitzung nicht lesbar (unknown) → Namensformular wie ohne Sitzung', () => {
+    expect(loaded(OPEN, 'unknown')).toMatchObject({ step: 'form', name: '' });
   });
 
   it('@HE-001 Anfrage offen → Warteschirm mit Prüfzahl', () => {
@@ -115,6 +133,11 @@ describe('Rückfrage und Abmelden', () => {
     expect(run(signingOut, { type: 'signedOut' })).toEqual({
       step: 'form', code: 'CODE123456', tournament: CUP, shareCode: 'SHARE1', name: '', notice: null,
     });
+  });
+
+  it('@HE-092 Zählfehler beim „Weiter“ → nicht abmelden, gesperrt ohne Zahl', () => {
+    const state = run(loaded(OPEN, 'account'), { type: 'confirmSignOut' }, { type: 'signOutBlocked', reason: 'waiting', waitingCount: null });
+    expect(state).toEqual({ step: 'accountWaiting', code: 'CODE123456', waitingCount: null });
   });
 
   it('@HE-093 Netz weg beim „Weiter“ → nicht abgemeldet, Netz-Hinweis', () => {
@@ -159,6 +182,11 @@ describe('Namensformular und Anfrage', () => {
     });
   });
 
+  it('@HE-098 EXISTING bei abgeschlossenem Turnier (Server-Form ohne closed) → Endstand, nicht das Feld', () => {
+    const result: RequestHelperAccessResult = { result: 'EXISTING', state: 'closed', relation: 'accepted', tournament: CUP, field: 2 };
+    expect(run(submitting(), { type: 'requestDone', result })).toMatchObject({ view: { view: 'finalStandings', tournamentId: 't-cup' } });
+  });
+
   it('@HE-095 Anfrage existiert schon (EXISTING, zugelassen) → Feld öffnen ohne neue Anfrage', () => {
     const result: RequestHelperAccessResult = { result: 'EXISTING', relation: 'accepted', tournament: CUP, field: 2 };
     expect(run(submitting(), { type: 'requestDone', result })).toMatchObject({ view: { view: 'openField', field: 2 } });
@@ -197,7 +225,8 @@ describe('Namensformular und Anfrage', () => {
     [{ kind: 'invalidInput', reason: 'INVALID_FIELD' } as const, { step: 'form', notice: 'unexpected' }],
     [{ kind: 'unexpected', message: 'x' } as const, { step: 'form', notice: 'unexpected' }],
     [{ kind: 'noSession' } as const, { step: 'show', view: { view: 'retryScan' } }],
-    [{ kind: 'notAuthorized' } as const, { step: 'show', view: { view: 'leaderOnly' } }],
+    // N-5: der Helfer sieht nie den Text der Turnierleitung („Nur die Turnierleitung …“).
+    [{ kind: 'notAuthorized' } as const, { step: 'form', notice: 'unexpected' }],
   ])('Fehler %o → %o', (error, expected) => {
     expect(run(submitting(), { type: 'requestFailed', error })).toMatchObject(expected);
   });
