@@ -77,8 +77,9 @@ rueckweg_sql() {
   echo "END;"
   echo "\$\$;"
   echo "DELETE FROM public.match_transitions WHERE event_type IN ('REVIEW_ACCEPT', 'REVIEW_DISCARD');"
-  echo "-- append_match_events woertlich aus 20261113_003_tournament_lifecycle.sql, match_apply_event aus 20261110_005_result_entry_forfeit.sql"
+  echo "-- append_match_events und closed_intake woertlich aus 20261113_003_tournament_lifecycle.sql, match_apply_event aus 20261110_005_result_entry_forfeit.sql"
   fn_block "$APPEND_BASE_FILE" "CREATE OR REPLACE FUNCTION public.append_match_events("
+  fn_block "$APPEND_BASE_FILE" "CREATE OR REPLACE FUNCTION match_engine.closed_intake("
   fn_block "$APPLY_BASE_FILE" "CREATE OR REPLACE FUNCTION public.match_apply_event("
   echo "DROP FUNCTION IF EXISTS public.list_match_reviews(uuid);"
   echo "DROP FUNCTION IF EXISTS match_engine.revoked_intake(uuid, uuid, jsonb, uuid, uuid);"
@@ -93,6 +94,7 @@ rueckweg_sql() {
   echo "DROP TABLE IF EXISTS public.match_reviews;"
   echo "DROP TABLE IF EXISTS public.field_control_log;"
   echo "-- Rechte wie vorher (unveraendert)"
+  echo "REVOKE ALL ON FUNCTION match_engine.closed_intake(uuid, uuid, jsonb, uuid, uuid) FROM PUBLIC, anon, authenticated;"
   echo "REVOKE ALL ON FUNCTION public.match_apply_event(jsonb, jsonb, jsonb, jsonb) FROM PUBLIC;"
   echo "GRANT EXECUTE ON FUNCTION public.match_apply_event(jsonb, jsonb, jsonb, jsonb) TO authenticated, anon, service_role;"
   echo "REVOKE ALL ON FUNCTION public.append_match_events(uuid, jsonb, integer, uuid) FROM PUBLIC, anon, service_role;"
@@ -373,13 +375,17 @@ run_probes() {
   send "$U_TOM" "$D_TOM" "$M9"
   check K "Vorbereitung: Tom pfeift Spiel 9 an und trägt das 1:0 ein (steuert Feld 2, Epoche 1)" "accepted,accepted|1:0|running|$U_TOM|1" \
     "$(results "$OUT")|$(row "$M9")|$(holder 2)"
+  # Tom steuert Feld 2 im Gherkin seit Minuten (12:03 Netz weg, 12:06 Übernahme); der Lauf dauert Sekunden -> Beginn seiner
+  # Epoche im Protokoll 15 min zurück (nur Wegwerf-Container), sonst lägen „12:04“-Einträge vor seinem Steuerbeginn (m3).
+  q "UPDATE public.field_control_log SET claimed_at = claimed_at - interval '15 minutes' WHERE tournament_id = '$T_CUP' AND field = 2 AND epoch = 1;" >/dev/null
   check K "Vorbereitung: Olli übernimmt Feld 2 („Spielleitung übernehmen“, echter Weg) -> Epoche 2" "taken" "$(take "$U_OLLI" 2 "$D_OLLI" 1)"
   taken="$(taken_ms 2 2)"
   [[ -z "$taken" || "$taken" == *ERROR* ]] && taken="$NOW_MS"
 
   # --- @FU-038 Pflichttest: Tor nach dem Steuerverlust, offline -> Klaerungsliste, zaehlt nicht, Toms Geraet „wird geprueft“
   g038="$(E m9-tor-nach-uebernahme)"
-  ev GOAL "$g038" "$(goal "$TS" $((taken + 120000)) 1)"
+  G038_EXTRA="$(goal "$TS" $((taken + 120000)) 1)"
+  ev GOAL "$g038" "$G038_EXTRA"
   send "$U_TOM" "$D_TOM" "$M9"
   check K "@FU-038 Toms Tor von 12:08 (Steuer um 12:06 an Olli verloren) -> „wird geprüft“ (review CONTROL_LOST)" \
     "review:CONTROL_LOST" "$(results "$OUT")"
@@ -405,6 +411,18 @@ run_probes() {
   check G "@FU-037 Olli sieht den Hinweis „1 Tor von Tom (Feld 2) nachträglich eingefügt“ (Hinweis, keine offene Klärung)" \
     "notice:CONTROL_LOST:GOAL:Tom:offen|$(q "SELECT count(*) FROM public.match_events WHERE id = '$e' AND review_state IS NULL;")" \
     "$(list_for "$list" "$e")|1"
+
+  # --- Review m3: Eintrag mit Geraetezeit vor dem Beginn der eigenen Steuer-Epoche wird nie von selbst einsortiert --------
+  local own_start
+  own_start="$(q "SELECT floor(extract(epoch FROM claimed_at) * 1000)::bigint FROM public.field_control_log WHERE tournament_id = '$T_CUP' AND field = 2 AND epoch = 1;")"
+  [[ -z "$own_start" || "$own_start" == *ERROR* ]] && own_start="$NOW_MS"
+  e="$(E m9-tor-vor-eigener-epoche)"
+  ev GOAL "$e" "$(goal "$TN" $((own_start - 60000)) 1)"
+  send "$U_TOM" "$D_TOM" "$M9"
+  list="$(review_list "$U_OLLI")"
+  check G "Review m3: Toms Tor mit Gerätezeit vor seinem eigenen Steuerbeginn zählt nicht von selbst (Klärung, IMPLAUSIBLE_TIME), 2:0" \
+    "review:CONTROL_LOST|IMPLAUSIBLE_TIME|2:0" \
+    "$(results "$OUT")|$(jq -r --arg ev "$e" '[.[] | select(.eventId == $ev) | .detail.why][0] // "-"' <<<"$list" 2>/dev/null || echo fehlt)|$(row "$M9" | cut -d'|' -f1)"
 
   # --- Doppelung (K2) und Statuseintrag (W1) vor der Uebernahme -> Klaerung ------------------------------------------------
   ev GOAL "$(E m9-olli-tor)" "$(goal "$TS" "$(at_rel 1000)" 2)"
@@ -572,6 +590,21 @@ run_probes() {
       "$(results "$OUT")|$(row "$m" | cut -d'|' -f1)|$(jq -r --arg m "$m" '[.[] | select(.matchId == $m) | .kind + ":" + .reason + ":" + .entry.type + ":" + (.author // "-") + ":" + (if .decision then "entschieden" else "offen" end)] | join(",")' <<<"$list" 2>/dev/null || echo fehlt)|$(jq -c '.state' <<<"$OUT" 2>/dev/null || echo fehlt)"
   done
 
+  # --- Review m2: Grenze je Absender und Spiel (100) -- das entzogene Handy fuellt nur seinen Anteil ---------------------
+  q "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, payload, score_home, score_away, event_format,
+                                      client_time, clock_ms, section, review_state)
+     SELECT md5('fuell-' || g)::uuid, '$M_R1', 'GOAL', '$TN', 60, '{}'::jsonb, 0, 0, 1, now(), 60000, 1, 'pending' FROM generate_series(1, 98) g;
+     INSERT INTO public.match_reviews (event_id, tournament_id, match_id, field, kind, reason, user_id, device_id)
+     SELECT md5('fuell-' || g)::uuid, '$T_CUP', '$M_R1', 11, 'review', 'RIGHTS_REVOKED', '$U_TOM_A', '$D_TOM_A' FROM generate_series(1, 98) g;" >/dev/null
+  ev GOAL "$(E m2-tom-a-101)" "$(goal "$TS" "$(at_rel -100000)" 1)"
+  send "$U_TOM_A" "$D_TOM_A" "$M_R1"
+  check G "Review m2: Toms entzogenes Handy hat 100 Klärungseinträge in Spiel 31 -> der 101. wird nicht mehr angenommen (REVIEW_LIMIT)" \
+    "rejected:FORBIDDEN_ACTOR:REVIEW_LIMIT" "$(results "$OUT")"
+  ev GOAL "$(E m2-tom-b-im-selben-spiel)" "$(goal "$TS" "$(at_rel -100000)" 1)"
+  send "$U_TOM_B" "$D_TOM_B" "$M_R1"
+  check K "Review m2: ein anderes Gerät kommt im selben Spiel weiter in die Klärungsliste (Grenze je Absender, nicht je Spiel)" \
+    "review:RIGHTS_REVOKED" "$(results "$OUT")"
+
   # --- @HE-056: Olli uebernimmt Feld 14 und entfernt Tom (Konto), Tom traegt um 12:07 offline ein Tor ein -----------------
   ev MATCH_START "$(E he56-start)" "$(jq -cn --argjson at "$(at_rel -600000)" '{at: $at, clockMs: null, controlEpoch: 0}')"
   send "$U_TOM_D" "$D_TOM_D" "$M_R4"
@@ -610,6 +643,15 @@ run_probes() {
     "gleich|0|0" "$([[ "$(review_list "$U_MARIA")" == "$(review_list "$U_OLLI")" && "$(review_list "$U_OLLI")" != "[]" ]] && echo gleich || echo verschieden)|$(review_list "$U_CLARA" | jq 'length' 2>/dev/null || echo fehlt)|$(review_list "$U_TRAINER" | jq 'length' 2>/dev/null || echo fehlt)"
   check G "Klärungseinträge zählen in keiner Rechnung: compute_match_state Spiel 9 = Zwischenspeicher (2:2)" "running|2:2|2:2" \
     "$(cms "$U_OLLI" "$M9")|$(row "$M9" | cut -d'|' -f1)"
+
+  # --- Review m1: nach dem Abschluss sendet Toms Geraet den Klaerungseintrag aus @FU-038 erneut (Antwort ging verloren) ---
+  q "BEGIN; SET LOCAL app.lifecycle_write = 'on'; UPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '$T_CUP'; COMMIT;" >/dev/null
+  ev GOAL "$g038" "$G038_EXTRA"
+  ev GOAL "$(E m1-neu-nach-abschluss)" "$(goal "$TS" "$(at_rel 900000)" 1)"
+  send "$U_TOM" "$D_TOM" "$M9"
+  check K "Review m1: Turnier abgeschlossen, Toms Gerät wiederholt den Klärungseintrag -> wieder review (nie duplicate = Geistertor); ein neuer Eintrag -> AFTER_FINISH" \
+    "review:CONTROL_LOST,review:AFTER_FINISH|2:2" "$(results "$OUT")|$(row "$M9" | cut -d'|' -f1)"
+  q "BEGIN; SET LOCAL app.lifecycle_write = 'on'; UPDATE public.tournaments SET lifecycle_status = 'fixed', finished_at = NULL WHERE id = '$T_CUP'; COMMIT;" >/dev/null
 }
 
 # run_assertions -- Rechte-Assertions als ci_schema_reader; neue Namen; Namensliste = db-drift-check.sh.
@@ -665,7 +707,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -700,6 +742,12 @@ M = {
   # M12 Liste ohne Rechtepruefung
   "M12": [("     AND public.has_tournament_permission(p_tournament_id, '\''leadMatches'\'');\n$$;", "     AND true;\n$$;")],
   # M13 Entscheidungen brauchen die Feldsteuerung (c3 nicht umgangen)
+  # M14 (Review m1) closed_intake ohne review_repeat
+  "M14": [("      IF v_results -> -1 ->> '\''status'\'' = '\''duplicate'\'' AND match_engine.review_repeat(v_event) IS NOT NULL THEN", "      IF false THEN")],
+  # M15 (Review m2) Grenze je Spiel statt je Absender
+  "M15": [("         AND r.user_id IS NOT DISTINCT FROM p_uid AND r.device_id IS NOT DISTINCT FROM p_device_id) >= 100 THEN", "         ) >= 100 THEN")],
+  # M16 (Review m3) keine Untergrenze beim Einsortieren
+  "M16": [("  IF p_device_at < floor(extract(epoch FROM v_own_start) * 1000)::bigint THEN", "  IF false THEN")],
   "M13": [("          v_control_reject := NULL;\n          v_claim_pending := false;\n          v_review_reject := match_engine.review_target_check(p_match_id, v_event);", "          v_review_reject := match_engine.review_target_check(p_match_id, v_event);")],
 }
 for frm, to in M[os.environ["MUT_KEY"]]:
@@ -771,6 +819,8 @@ diff_removed() { # diff_removed <Basisdatei> <Funktionsanfang> -> Zahl entfernte
 }
 check S "Diff-Wächter: append_match_events = 20261113_003 + nur hinzugefügte Zeilen (entfernt 0)" "0" \
   "$(diff_removed "$APPEND_BASE_FILE" "CREATE OR REPLACE FUNCTION public.append_match_events(" | cut -d'|' -f1)"
+check S "Diff-Wächter: closed_intake = 20261113_003 + nur hinzugefügte Zeilen (entfernt 0, hinzugefügt 4)" "0|4" \
+  "$(diff_removed "$APPEND_BASE_FILE" "CREATE OR REPLACE FUNCTION match_engine.closed_intake(")"
 check S "Diff-Wächter: match_apply_event = 20261110_005 + nur hinzugefügte Zeilen (entfernt 0, hinzugefügt 17)" "0|17" \
   "$(diff_removed "$APPLY_BASE_FILE" "CREATE OR REPLACE FUNCTION public.match_apply_event(")"
 check S "Funktionen (public + match_engine): +9 (7 Hilfen, Trigger, Liste); append/match_apply_event-Rechte unverändert" "$((FN_BEFORE + 9))|true|false|false|true|true" \

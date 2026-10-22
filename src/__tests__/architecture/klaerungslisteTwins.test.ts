@@ -43,6 +43,7 @@ describe('A-35: Diff-Wächter der ersetzten Funktionen', () => {
   it.each([
     ['public.append_match_events', APPEND_BASE],
     ['public.match_apply_event', APPLY_BASE],
+    ['match_engine.closed_intake', APPEND_BASE],
   ])('%s baut auf %s auf und hat nur hinzugefügte Zeilen', (fn, base) => {
     expect(latestBefore(MIGRATION_NAME, fn)).toBe(base);
     const diff = lineDiff(functionBlock(readMigration(base), fn), functionBlock(migration, fn));
@@ -103,6 +104,17 @@ describe('A-35: Drift-Check (Rechte-Assertions, PENDING-LIVE)', () => {
       expect(assertions).toContain(`SELECT '${name}',`);
       expect(drift).toContain(`  "${name}"`);
     }
+  });
+
+  it('PENDING-LIVE: alle Zeilen mit demselben Vergleichscommit (Drift-Check, Review A3: gleich mit B-14)', () => {
+    const commits = new Set(
+      pending
+        .split('\n')
+        .map((l) => l.replace(/#.*/, '').trim())
+        .filter(Boolean)
+        .map((l) => l.split(/\s+/)[2]),
+    );
+    expect([...commits]).toEqual(['5e0d1eeca38392cfeca6607e58e0ed1389c50cd1']);
   });
 
   it('PENDING-LIVE: Zeile <datei> 2026-11-17 <commit-vorher> (Fenster F4)', () => {

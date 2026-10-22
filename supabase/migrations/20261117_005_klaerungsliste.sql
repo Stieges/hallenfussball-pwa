@@ -40,6 +40,8 @@
 --         und nur, wenn die Kopie gilt (sonst deren Ablehnung). Gespeichert: zuerst die Entscheidung, dann die Kopie.
 --      e. Wiederholt ein Gerät einen schon zur Klärung gelegten Eintrag, bleibt es „review“ (nie duplicate = angenommen).
 --   7. RPC public.list_match_reviews(uuid): Klärungsliste eines Turniers für die Turnierleitung (B-50), sonst [].
+--   8. match_engine.closed_intake (Fassung 20261113_003, nur hinzugefügte Zeilen): die Wiederholung eines schon zur Klärung
+--      gelegten Eintrags nach dem Abschluss bleibt review (Review m1, kein Geistertor auf dem Gerät).
 --
 -- Antwort an das Gerät: {id, status 'review', code <Grund>} – die App nimmt den Eintrag aus dem Ausgang und zeigt
 -- „wird geprüft“ (outboxResolution.ts kennt 'review' schon). Ein Klärungseintrag ändert weder Stand noch Zwischenspeicher.
@@ -54,8 +56,8 @@
 --   (Zählung in der Freigabe-Unterlage).
 --
 -- RÜCKWEG: eigene Datei (Anhang B von A-35-sql-freigabe.md, erzeugt mit `bash scripts/klaerungsliste-check.sh
---   --print-rueckweg`), EIN Block. append_match_events kommt wörtlich aus 20261113_003, match_apply_event wörtlich aus
---   20261110_005 zurück. Hält an, sobald ein Klärungseintrag oder eine Entscheidung gespeichert ist.
+--   --print-rueckweg`), EIN Block. append_match_events und closed_intake kommen wörtlich aus 20261113_003,
+--   match_apply_event wörtlich aus 20261110_005 zurück. Hält an, sobald ein Klärungseintrag oder eine Entscheidung gespeichert ist.
 --   Belegt in scripts/klaerungsliste-check.sh (Kategorie X: Schema danach = vorher).
 --
 -- Produktion: nur im DB-Fenster F4 (Di 17.11.) durch den Controller nach Daniels Freigabe (A-35-sql-freigabe.md), nach
@@ -91,6 +93,11 @@ BEGIN
              AND position('IF NOT v_end_by_lead' IN v_append) > 0
              AND position('INSERT INTO public.field_control' IN v_append) > 0) THEN
     RAISE EXCEPTION '20261117_005_klaerungsliste: append_match_events hat eine unbekannte Fassung (erwartet 20261113_003) – erst klären';
+  END IF;
+  -- closed_intake: Fassung 20261113_003 (late_entries) oder diese Datei.
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE oid = to_regprocedure('match_engine.closed_intake(uuid,uuid,jsonb,uuid,uuid)')
+                  AND position('INSERT INTO public.late_entries' IN prosrc) > 0) THEN
+    RAISE EXCEPTION '20261117_005_klaerungsliste: closed_intake hat eine unbekannte Fassung (erwartet 20261113_003) – erst klären';
   END IF;
   -- match_apply_event: Fassung 20261110_005 (A-25n '@reopen') oder diese Datei.
   SELECT prosrc INTO v_apply FROM pg_proc WHERE oid = to_regprocedure('public.match_apply_event(jsonb,jsonb,jsonb,jsonb)');
@@ -316,8 +323,9 @@ $$;
 
 -- Eintrag zur Klärung ablegen: in match_events mit review_state 'pending' (zählt nie), Urheber in match_event_authors,
 -- Grund in match_reviews. Gerätezeit = gesendetes `at` (höchstens jetzt), nicht die geklemmte Serverzeit. Ein Ziel
--- (targetId), das es in diesem Spiel nicht gibt, steht nur im Detail (Fremdschlüssel). Höchstens 500 Klärungseinträge je
--- Spiel – danach FORBIDDEN_ACTOR REVIEW_LIMIT (ein Gerät ohne Recht kann die Liste nicht fluten).
+-- (targetId), das es in diesem Spiel nicht gibt, steht nur im Detail (Fremdschlüssel). Höchstens 100 Klärungseinträge je
+-- Spiel UND Absender (Konto + Gerät; Review m2) – danach FORBIDDEN_ACTOR REVIEW_LIMIT. Ein entzogenes Handy füllt so nur
+-- seinen eigenen Anteil und verdrängt die Einträge anderer Geräte nicht.
 CREATE OR REPLACE FUNCTION match_engine.review_store(p_match public.matches, p_event jsonb, p_uid uuid, p_device_id uuid,
                                                      p_reason text, p_detail jsonb, p_base_seq bigint)
 RETURNS jsonb
@@ -328,7 +336,9 @@ DECLARE
   v_target uuid := (p_event ->> 'targetId')::uuid;
   v_at bigint := least((p_event ->> 'at')::numeric, floor(extract(epoch FROM clock_timestamp()) * 1000))::bigint;
 BEGIN
-  IF (SELECT count(*) FROM public.match_reviews r WHERE r.match_id = p_match.id AND r.kind = 'review') >= 500 THEN
+  IF (SELECT count(*) FROM public.match_reviews r
+       WHERE r.match_id = p_match.id AND r.kind = 'review'
+         AND r.user_id IS NOT DISTINCT FROM p_uid AND r.device_id IS NOT DISTINCT FROM p_device_id) >= 100 THEN
     RETURN jsonb_build_object('id', p_event -> 'id', 'status', 'rejected', 'code', 'FORBIDDEN_ACTOR',
                               'detail', '{"reason": "REVIEW_LIMIT"}'::jsonb);
   END IF;
@@ -392,6 +402,7 @@ DECLARE
   v_epoch integer := (p_event ->> 'controlEpoch')::integer;
   v_type text := p_event ->> 'type';
   v_taken timestamptz;
+  v_own_start timestamptz;
   v_detail jsonb;
 BEGIN
   IF p_device_id IS NULL OR v_epoch IS NULL OR p_epoch_now IS NULL OR v_epoch >= p_epoch_now
@@ -401,9 +412,11 @@ BEGIN
   IF p_actor = 'leitung' AND NOT (p_status = ANY (c_live_states) OR v_type IN ('MATCH_START', 'REOPEN')) THEN
     RETURN NULL;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.field_control_log l
-                  WHERE l.tournament_id = p_match.tournament_id AND l.field = p_match.field AND l.epoch = v_epoch
-                    AND l.holder_user_id = p_uid AND l.holder_device_id = p_device_id) THEN
+  SELECT l.claimed_at INTO v_own_start
+    FROM public.field_control_log l
+   WHERE l.tournament_id = p_match.tournament_id AND l.field = p_match.field AND l.epoch = v_epoch
+     AND l.holder_user_id = p_uid AND l.holder_device_id = p_device_id;
+  IF v_own_start IS NULL THEN
     RETURN NULL;
   END IF;
   SELECT l.claimed_at INTO v_taken
@@ -415,6 +428,12 @@ BEGIN
                                  'takenAt', floor(extract(epoch FROM v_taken) * 1000)::bigint);
   IF v_taken IS NULL OR p_device_at >= floor(extract(epoch FROM v_taken) * 1000)::bigint THEN
     RETURN jsonb_build_object('route', 'review', 'reason', 'CONTROL_LOST', 'detail', v_detail || '{"timing": "after"}'::jsonb);
+  END IF;
+  -- Review m3: vor dem Beginn der eigenen Steuer-Epoche kann das Gerät nicht eingetragen haben (zurückdatiert oder Uhr
+  -- falsch) – nicht von selbst einsortieren.
+  IF p_device_at < floor(extract(epoch FROM v_own_start) * 1000)::bigint THEN
+    RETURN jsonb_build_object('route', 'review', 'reason', 'CONTROL_LOST',
+                              'detail', v_detail || '{"timing": "before", "why": "IMPLAUSIBLE_TIME"}'::jsonb);
   END IF;
   IF NOT (v_type = ANY (c_record_types)) THEN
     RETURN jsonb_build_object('route', 'review', 'reason', 'CONTROL_LOST',
@@ -559,6 +578,63 @@ REVOKE ALL ON FUNCTION match_engine.rights_change(uuid, uuid),
                        match_engine.review_copy(jsonb, bigint),
                        match_engine.revoked_intake(uuid, uuid, jsonb, uuid, uuid)
   FROM PUBLIC, anon, authenticated;
+
+-- Review m1: closed_intake (Fassung 20261113_003 + nur hinzugefügte Zeilen) beantwortet die Wiederholung eines schon zur
+-- Klärung gelegten Eintrags nach dem Abschluss mit review statt duplicate (sonst buchte das Gerät ein Geistertor).
+CREATE OR REPLACE FUNCTION match_engine.closed_intake(p_tournament_id uuid, p_match_id uuid, p_events jsonb,
+                                                      p_actor uuid, p_device_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_match    public.matches;
+  v_raw      jsonb;
+  v_event    jsonb;
+  v_id       jsonb;
+  v_existing record;
+  v_results  jsonb := '[]'::jsonb;
+BEGIN
+  SELECT * INTO v_match FROM public.matches WHERE id = p_match_id;
+  FOR v_raw IN SELECT x.e FROM jsonb_array_elements(p_events) WITH ORDINALITY AS x(e, ord) ORDER BY x.ord LOOP
+    v_event := match_engine.envelope(v_raw, v_match.team_a_id::text, v_match.team_b_id::text);
+    v_id := coalesce(v_event -> 'id', CASE WHEN jsonb_typeof(v_raw) = 'object' THEN v_raw -> 'id' END, 'null'::jsonb);
+    IF v_event IS NULL THEN
+      v_results := v_results || jsonb_build_array(jsonb_build_object('id', v_id, 'status', 'rejected', 'code', 'INVALID_PAYLOAD'));
+      CONTINUE;
+    END IF;
+    SELECT e.match_id, e.seq,
+           match_engine.dedupe_key(jsonb_build_object(
+             'type', e.type, 'teamId', e.team_id::text, 'targetId', e.target_event_id::text,
+             'section', e.section, 'clockMs', e.clock_ms, 'payload', e.payload)) AS content
+      INTO v_existing
+      FROM public.match_events e
+     WHERE e.id = (v_event ->> 'id')::uuid;
+    IF FOUND THEN
+      IF v_existing.match_id = p_match_id AND v_existing.content = match_engine.dedupe_key(v_event) THEN
+        v_results := v_results || jsonb_build_array(jsonb_build_object('id', v_event -> 'id', 'status', 'duplicate',
+                                                                       'seq', v_existing.seq));
+      ELSE
+        v_results := v_results || jsonb_build_array(jsonb_build_object('id', v_event -> 'id', 'status', 'rejected',
+                                                                       'code', 'ID_CONFLICT'));
+      END IF;
+      -- A-35 (Review m1): schon zur Klaerung gelegt -> wieder review (nie duplicate = angenommen).
+      IF v_results -> -1 ->> 'status' = 'duplicate' AND match_engine.review_repeat(v_event) IS NOT NULL THEN
+        v_results := (v_results - (-1)) || jsonb_build_array(match_engine.review_repeat(v_event));
+      END IF;
+      CONTINUE;
+    END IF;
+    INSERT INTO public.late_entries (tournament_id, match_id, event_id, event, actor, device_id)
+    VALUES (p_tournament_id, p_match_id, (v_event ->> 'id')::uuid, v_raw, p_actor, p_device_id)
+    ON CONFLICT (match_id, event_id) DO NOTHING;
+    v_results := v_results || jsonb_build_array(jsonb_build_object('id', v_event -> 'id', 'status', 'review',
+                                                                   'code', 'AFTER_FINISH'));
+  END LOOP;
+  RETURN jsonb_build_object('results', v_results, 'state', NULL, 'tournamentClosed', true,
+                            'serverTime', floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint);
+END;
+$$;
+REVOKE ALL ON FUNCTION match_engine.closed_intake(uuid, uuid, jsonb, uuid, uuid) FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 6. append_match_events (Fassung 20261113_003 + A-35, nur hinzugefügte Zeilen)
