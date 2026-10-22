@@ -196,16 +196,16 @@ test.describe('Cockpit-Tafel', () => {
     }
   });
 
-  test('@SL-009 @SL-073 nach dem Abpfiff steht „Ende“ im Abzeichen der Tafel (@OB-065) oder das nächste Spiel steht bereit', async ({ page }) => {
+  test('@SL-009 @SL-073 nach dem Abpfiff steht „Ende“ im Abzeichen der Tafel (@OB-065), das Spiel bleibt stehen (B-10a)', async ({ page }) => {
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     await page.getByTestId('match-pause-button').click();
     await expect(page.getByTestId('match-resume-button')).toBeVisible();
     await abpfiffHalten(page);
     await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
-    await expect(async () => {
-      const text = (await page.getByTestId('scoreboard').textContent()) ?? '';
-      expect(/Ende|Anstoß/.test(text)).toBe(true);
-    }).toPass({ timeout: 5000 });
+    // nicht mehr „Ende oder Anstoß“: das abgepfiffene Spiel bleibt mit dem Endstand stehen (Befund C-COCKPIT-ENDSTAND-NACH-AUTOENDE)
+    await expect(page.getByTestId('scoreboard-state')).toContainText('Ende');
+    await expect(page.getByTestId('scoreboard-quittung')).toHaveText(/^Abgepfiffen · \d+:\d+ gespeichert$/);
+    await expect(page.getByTestId('scoreboard-clock')).not.toContainText('Anstoß');
   });
 });

@@ -4,12 +4,14 @@
  * Das Feld steht in der Adresse (`?f=<n>`, URL-ROUTING.md, @OB-030 „Neu laden behält Auswahl“); ungültige Werte gelten als Feld 1.
  * Eine Spielauswahl gibt es nicht mehr (@SL-057): Das Cockpit zeigt das laufende oder das nächste Spiel des Felds; `waehleSpiel`
  * bleibt nur für „Weiter“, das Ende des Spiels und `?matchId=` aus dem Spielplan. `?matchId=` setzt auch das Feld.
+ * Nach dem Abpfiff bleibt das Spiel mit dem Endstand 30 Sekunden stehen, bis „Weiter“ kommt (@SL-152, @SL-162, B-10a, `useEndstandHalten`).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { GeneratedSchedule, ScheduledMatch } from '../../../core/generators';
 import type { LiveMatch } from '../../../components/live-cockpit/types';
 import { matchesOfFieldInPlayOrder } from '../utils/fieldMatchOrder';
+import { useEndstandHalten } from './useEndstandHalten';
 
 export interface FieldMatchSelectionParams {
   numberOfFields: number;
@@ -28,6 +30,8 @@ export interface FieldMatchSelection {
   waehleSpiel: (id: string | null) => void;
   /** „Weiter“ (@SL-162): das nächste ungespielte Spiel des Felds, sonst das erste ungespielte irgendeines Felds. */
   ladeNaechstes: () => void;
+  /** Korrektur in den 30 Sekunden (@SL-163, @SL-164): Frist des Endstands anhalten und danach mit Restzeit (mind. 10 s) fortsetzen. */
+  endstandPause: { pausiere: (matchId: string) => void; setzeFort: () => void };
 }
 
 const FELD_PARAM = 'f';
@@ -69,17 +73,43 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
 
   const fieldMatches = useMemo(() => matchesOfFieldInPlayOrder(schedule.allMatches, feld), [schedule.allMatches, feld]);
 
-  // Gewählt, sonst laufend, sonst das erste ohne Ergebnis
+  const { gehalten, quittiere, pausiere, setzeFort } = useEndstandHalten(fieldMatches, liveMatches);
+  const endstandPause = useMemo(() => ({ pausiere, setzeFort }), [pausiere, setzeFort]);
+
+  // Ein gewähltes Spiel (Spielplan, „Weiter“) gilt nur bis zu seinem Ende: Endet es von selbst oder von Hand, übernimmt der Endstand
+  // (30 Sekunden), dann das nächste Spiel (@SL-152, @SL-049). Nur ein Ende, das jetzt gerade geschah (der Endstand wird gehalten),
+  // gibt frei: Ein schon lange beendet geöffnetes Spiel bleibt stehen, auch wenn seine Kopie erst beim Laden auf „beendet“ springt.
+  const warNochNichtBeendet = useRef<string | null>(null);
+  // Jeder Wechsel der Auswahl beginnt neu: ein früher gemerktes Spiel gibt später nicht ein bewusst geöffnetes frei
+  useEffect(() => { warNochNichtBeendet.current = null; }, [selectedMatchId]);
+  const gehaltenId = gehalten.id;
+  useEffect(() => {
+    const status = selectedMatchId ? liveMatches.get(selectedMatchId)?.status : undefined;
+    if (status === undefined) { return; }
+    if (status !== 'FINISHED') { warNochNichtBeendet.current = selectedMatchId; return; }
+    if (warNochNichtBeendet.current === selectedMatchId) {
+      warNochNichtBeendet.current = null;
+      if (gehaltenId === selectedMatchId) { setSelectedMatchId(null); }
+    }
+  }, [selectedMatchId, liveMatches, gehaltenId]);
+
+  // Gewählt, sonst läuft ein Spiel, sonst der Endstand des eben abgepfiffenen Spiels, sonst das laufende/geladene, sonst das erste ohne Ergebnis
   const currentMatchData = useMemo((): ScheduledMatch | undefined => {
     if (selectedMatchId) { return fieldMatches.find((m) => m.id === selectedMatchId); }
-    const laufend = fieldMatches.find((m) => {
-      const live = liveMatches.get(m.id);
-      return live && live.status !== 'FINISHED';
+    const liveStatus = (m: ScheduledMatch): LiveMatch['status'] | undefined => liveMatches.get(m.id)?.status;
+    const imGang = fieldMatches.find((m) => liveStatus(m) === 'RUNNING' || liveStatus(m) === 'PAUSED');
+    if (imGang) { return imGang; }
+    const gehaltenesSpiel = gehalten.id ? fieldMatches.find((m) => m.id === gehalten.id) : undefined;
+    if (gehaltenesSpiel) { return gehaltenesSpiel; }
+    const geladen = fieldMatches.find((m) => {
+      const status = liveStatus(m);
+      return status !== undefined && status !== 'FINISHED';
     });
-    return laufend ?? fieldMatches.find((m) => m.scoreA === undefined || m.scoreB === undefined);
-  }, [selectedMatchId, fieldMatches, liveMatches]);
+    return geladen ?? fieldMatches.find((m) => m.scoreA === undefined || m.scoreB === undefined);
+  }, [selectedMatchId, fieldMatches, liveMatches, gehalten.id]);
 
   const ladeNaechstes = useCallback(() => {
+    quittiere(); // das abgepfiffene Spiel kommt nicht zurück (@SL-162)
     const index = fieldMatches.findIndex((m) => m.id === currentMatchData?.id);
     const naechstes = fieldMatches.slice(index + 1).find((m) => m.scoreA === undefined || m.scoreB === undefined);
     if (naechstes) { setSelectedMatchId(naechstes.id); return; }
@@ -90,7 +120,7 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
     } else {
       setSelectedMatchId(null);
     }
-  }, [fieldMatches, currentMatchData, schedule.allMatches, feld, schreibeFeld]);
+  }, [fieldMatches, currentMatchData, schedule.allMatches, feld, schreibeFeld, quittiere]);
 
-  return { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel: setSelectedMatchId, ladeNaechstes };
+  return { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel: setSelectedMatchId, ladeNaechstes, endstandPause };
 }

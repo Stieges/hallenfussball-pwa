@@ -11,7 +11,7 @@
 #               gestartet, gestoppt oder zurueckgesetzt. Konten entstehen ueber die Admin-Schnittstelle des
 #               lokalen Auth-Dienstes (email_confirm: true = der Weg von "Add user"). Alle Testdaten
 #               (Konten @example.org, Turniere "CA1-Pruefung ...") raeumt ein trap am Ende wieder ab.
-#   --wegwerf   frischer Wegwerf-Container (supabase/postgres, linux/amd64): Baseline + Migrationen bis VOR
+#   --wegwerf   frischer Wegwerf-Container (supabase/postgres, nativ, per DOCKER_PLATFORM ueberschreibbar): Baseline + Migrationen bis VOR
 #               20261110 (Stand vor A-11). Mit --mit-a11 zusaetzlich alle Migrationen ab 20261110 aus
 #               supabase/migrations/ (Zielzustand A-11; A-27 liegt erst auf seinem Branch: ueber
 #               --zusatz <datei.sql> nachspielen). Container wird am Ende entfernt (trap).
@@ -47,6 +47,7 @@ MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 ROLES_JSON="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # wie rls-role-matrix.sh (Live-Version)
+DOCKER_PLATFORM="${DOCKER_PLATFORM:-}" # leer = Plattform des Rechners (nativ)
 A11_PRAEFIX="20261110_"
 
 MODE="stack"
@@ -192,7 +193,7 @@ setup_wegwerf() {
 
   WEGWERF_CONTAINER="coadmin-vorlage-check-$$"
   CONTAINER="$WEGWERF_CONTAINER"
-  docker run -d --name "$CONTAINER" --platform linux/amd64 \
+  docker run -d --name "$CONTAINER" ${DOCKER_PLATFORM:+--platform "$DOCKER_PLATFORM"} \
     -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null || { echo "::error::Container-Start schlug fehl." >&2; exit 1; }
   local ready=0 n
   for _ in $(seq 1 180); do

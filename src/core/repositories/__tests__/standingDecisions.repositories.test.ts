@@ -25,9 +25,14 @@ vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 import { LocalStorageRepository } from '../LocalStorageRepository';
 import { OfflineRepository } from '../OfflineRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
+import { testUuid } from '../../../test/testIds';
+
+/** Team-IDs sind UUIDs (wie am Server, `standing_decision_valid`, A-13b-S Punkt 7). */
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
 
 const ENTSCHEIDUNG: StandingDecision = {
-  id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['b', 'a'], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x',
+  id: 'e-1', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x',
 };
 
 const turnier = (version: number): Tournament =>

@@ -25,6 +25,8 @@ export interface CockpitLeerGrundArgs {
   selectedFieldNumber: number;
   upcomingMatches: MatchSummary[];
   onLoadNextMatch: (fieldId: string) => void;
+  /** Turnierleitung dieses Geräts (`leadMatches`); ohne Spiel wirkungslos, aber die Props des leeren Cockpits tragen dasselbe Recht wie die des vollen (@SL-159). */
+  istLeitung?: boolean;
 }
 
 export interface CockpitLeerGrund {
@@ -35,7 +37,7 @@ export interface CockpitLeerGrund {
 }
 
 export function useCockpitLeerGrund(args: CockpitLeerGrundArgs): CockpitLeerGrund {
-  const { tournament, allMatches, currentMatchData, awaitingTeams, isOnline, sides, selectedFieldNumber, upcomingMatches, onLoadNextMatch } = args;
+  const { tournament, allMatches, currentMatchData, awaitingTeams, isOnline, sides, selectedFieldNumber, upcomingMatches, onLoadNextMatch, istLeitung = false } = args;
   const { t } = useTranslation('tournament');
   const { t: tCockpit } = useTranslation('cockpit');
 
@@ -65,7 +67,7 @@ export function useCockpitLeerGrund(args: CockpitLeerGrundArgs): CockpitLeerGrun
   const leerProps: LiveCockpitProps = {
     fieldName: t('management.field', { number: selectedFieldNumber }), tournamentName: tournament.title, tournamentId: tournament.id,
     // ohne Spiel gibt es nichts zu steuern: nur die Tafel mit dem Grund
-    cockpitSettings: tournament.matchCockpitSettings, kannSteuern: false, currentMatch: null, leer, upcomingMatches,
+    cockpitSettings: tournament.matchCockpitSettings, kannSteuern: false, istLeitung, currentMatch: null, leer, upcomingMatches,
     onStart: () => undefined, onPause: () => undefined, onResume: () => undefined, onFinish: () => undefined,
     onGoal: () => Promise.resolve(null), onLoadNextMatch,
   };

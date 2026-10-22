@@ -15,6 +15,11 @@ export interface LiveCockpitLeisteProps {
    * den Hinweis „Korrektur über die Turnierleitung“ (@SL-045). Ohne Angabe gilt: kein Leitungsrecht.
    */
   istLeitung?: boolean;
+  /**
+   * „Korrigieren“ nach dem Ende (@SL-159, B-10a2): öffnet die Korrektur des Spiels mit Grund. Nur mit Handler und Leitungsrecht steht die
+   * Taste da; der Helfer bekommt stattdessen den Hinweis (@HE-043).
+   */
+  onKorrigieren?(matchId: string): void;
   /** Wer das Feld leitet, wenn dieses Gerät nur liest (@SL-046, @SL-015; Quelle B-49). Mit `onUebernehmen` steht „Spielleitung übernehmen“ da. */
   steuerung?: { leitetName: string | null; onUebernehmen?: () => void } | null;
   /** Das Recht wurde entzogen (@HE-056, A-18): ersetzt die ganze Hülle durch den Hinweis mit der Zahl übergebener Einträge. */

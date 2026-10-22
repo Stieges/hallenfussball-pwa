@@ -2,7 +2,8 @@
  * Paket TB-B, Task TB-3' (Kern): Gleichstands-Entscheidung zurücknehmen (Daniel „K6 ja“): jede Art – Annahme,
  * Strafstoßschießen, Reihenfolge – bis zum Abschluss der Gruppe, danach nicht mehr (WITHDRAW_NOT_ALLOWED). Schreibweg wie
  * `decide`: frisch lesen, nur `standingDecisions` mit Versionsprüfung, ohne Netz OFFLINE. Den Zustand „Gruppe
- * abgeschlossen“ liefert GA4 A-13; bis dahin ist er hier eine Abhängigkeit des Dienstes (Voreinstellung: nie).
+ * abgeschlossen“ liefert GA4 A-13; bis dahin ist er eine Pflicht-Abhängigkeit des Dienstes (kein Voreinstellungswert),
+ * in der App die Zwischenregel `groupClosedByFollowUp`.
  * Record `2026-09-27_wizard-regelinhalte` (@W2A-070; „wer wann“ → `entscheidung.personZeit.test.ts`).
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -10,6 +11,7 @@ import { rankTournamentGroup } from '../../standings/tournamentTable';
 import { DATA, id } from '../../standings/__tests__/fixtures';
 import { jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from '../../standings/__tests__/decisionTestKit';
 import { groupClosedByFollowUp } from '../../standings/groupClosure';
+import { slotSource, teamSlot } from '../../models/matchSlot';
 import { resolvePlayoffPairings } from '../../generators/playoffResolver';
 import { StandingDecisionService } from '../StandingDecisionService';
 import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
@@ -93,6 +95,48 @@ describe("TB-3' Fixrunde: Zwischenregel „Gruppe abgeschlossen“ bis GA4 A-13 
     // Angepfiffen, obwohl die A-Seite noch offen ist: Halbfinale 2 („Zweiter Gruppe A“) läuft.
     const laeuft = { ...t, matches: t.matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'running' as const } : m)) };
     expect(groupClosedByFollowUp(laeuft, 'A')).toBe(true);
+  });
+
+  // N-A1 (Nachreview): eine von Hand besetzte Seite (`resolvedFrom` fällt weg, `originX` bleibt) schließt die Gruppe;
+  // ein angepfiffenes Spiel zählt auch im Laufzeitwert `paused` (der Typ kennt ihn nicht).
+  const handBesetzt = (t: Tournament, matchId: string, side: 'A' | 'B', status?: 'running'): Tournament => ({
+    ...t,
+    matches: t.matches.map((m) => {
+      if (m.id !== matchId) {
+        return m;
+      }
+      const slot = side === 'A' ? m.slotA : m.slotB;
+      const origin = slotSource(slot);
+      return {
+        ...m,
+        ...(side === 'A' ? { originA: origin, slotA: teamSlot(id('S')) } : { originB: origin, slotB: teamSlot(id('S')) }),
+        ...(status !== undefined ? { matchStatus: status } : {}),
+      };
+    }),
+  });
+
+  it('@W2A-070 Zwischenregel: von Hand besetzte Seite aus der Gruppe schließt sie, auch geplant; Gegenbeispiel: Seite aus anderer Gruppe', () => {
+    const t = handBesetzt(lage048(), 'hf-2', 'B');
+    expect(groupClosedByFollowUp(t, 'A')).toBe(true);
+    expect(groupClosedByFollowUp(t, 'B')).toBe(false);
+    // Gegenbeispiel: dieselbe Handbesetzung auf der B-Seite von HF1 (Herkunft „Zweiter Gruppe B“) schließt nur Gruppe B.
+    const anders = handBesetzt(lage048(), 'hf-1', 'B');
+    expect([groupClosedByFollowUp(anders, 'A'), groupClosedByFollowUp(anders, 'B')]).toEqual([false, true]);
+    // Gegenbeispiel: Team ohne bekannte Herkunft (kein origin, kein resolvedFrom) schließt keine Gruppe.
+    const ohneHerkunft = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, slotB: teamSlot(id('S')) } : m)) };
+    expect(groupClosedByFollowUp(ohneHerkunft, 'A')).toBe(false);
+  });
+
+  it('@W2A-070 Zwischenregel: von Hand besetzt und pausiert (Laufzeitwert paused) ist geschlossen; geplant/wartend/ausgefallen allein nicht', () => {
+    const paused = handBesetzt(lage048(), 'hf-2', 'B', 'paused' as 'running');
+    expect(groupClosedByFollowUp(paused, 'A')).toBe(true);
+    // pausiert, Seite noch offen (angepfiffen über die andere, besetzte Seite aus Gruppe A)
+    const pausedOffen = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'paused' as never } : m)) };
+    expect(groupClosedByFollowUp(pausedOffen, 'A')).toBe(true);
+    for (const status of ['scheduled', 'waiting', 'skipped'] as const) {
+      const offen = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: status } : m)) };
+      expect(groupClosedByFollowUp(offen, 'A')).toBe(false);
+    }
   });
 
   it('@W2A-070 Zwischenregel im Dienst: nach dem Besetzen des Halbfinales ist das Strafstoßschießen nicht mehr zurücknehmbar, davor schon', async () => {

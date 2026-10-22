@@ -1,0 +1,1088 @@
+{
+  "$comment": "Gleichlauf sharedPlaceAllowed (src/core/standings/decisions.ts) == match_engine.shared_allowed (A-13b-S Punkt 3): 'Ergebnis so akzeptieren' nur, wenn kein Platz des Blocks eingestellt ist und keiner als Gruppenplatz-Herkunft (Platz oder Besetzung) in ein weiteres Spiel führt. Spiele als Cloud-Zeilen (origin_x, slot_x_source); SQL bekommt die Plätze place..place+size-1.",
+  "rows": [
+    {
+      "name": "@TM-147 Z1: Nikolaus, Platz 1 und 2 eingestellt, Petting/Otting auf 3/4 -> erlaubt",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "name": "DJK Kammer"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "TSV Waging rot"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "TSV Petting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "name": "DJK Otting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "name": "TSV 1921 Fridolfing"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "name": "TSV Waging blau"
+        }
+      ],
+      "matches": [],
+      "config": {
+        "placementsToPlayOut": [
+          1,
+          2
+        ]
+      },
+      "groupId": "",
+      "block": {
+        "place": 3,
+        "size": 2
+      },
+      "expected": true
+    },
+    {
+      "name": "@TM-147 Z3: Platz 3 angehakt -> nicht erlaubt (MG4)",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "name": "DJK Kammer"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "TSV Waging rot"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "TSV Petting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "name": "DJK Otting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "name": "TSV 1921 Fridolfing"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "name": "TSV Waging blau"
+        }
+      ],
+      "matches": [],
+      "config": {
+        "placementsToPlayOut": [
+          1,
+          2,
+          3
+        ]
+      },
+      "groupId": "",
+      "block": {
+        "place": 3,
+        "size": 2
+      },
+      "expected": false
+    },
+    {
+      "name": "@TM-147 Z5: Platz 5 angehakt -> weiter erlaubt",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "name": "DJK Kammer"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "TSV Waging rot"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "TSV Petting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "name": "DJK Otting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "name": "TSV 1921 Fridolfing"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "name": "TSV Waging blau"
+        }
+      ],
+      "matches": [],
+      "config": {
+        "placementsToPlayOut": [
+          1,
+          2,
+          5
+        ]
+      },
+      "groupId": "",
+      "block": {
+        "place": 3,
+        "size": 2
+      },
+      "expected": true
+    },
+    {
+      "name": "Voreinstellung (fehlt): Platz 1 geteilt -> nicht erlaubt",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "name": "DJK Kammer"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "TSV Waging rot"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "TSV Petting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "name": "DJK Otting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "name": "TSV 1921 Fridolfing"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "name": "TSV Waging blau"
+        }
+      ],
+      "matches": [],
+      "config": {},
+      "groupId": "",
+      "block": {
+        "place": 1,
+        "size": 2
+      },
+      "expected": false
+    },
+    {
+      "name": "Voreinstellung (fehlt): Platz 2/3 -> erlaubt",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "name": "DJK Kammer"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "TSV Waging rot"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "TSV Petting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "name": "DJK Otting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "name": "TSV 1921 Fridolfing"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "name": "TSV Waging blau"
+        }
+      ],
+      "matches": [],
+      "config": {},
+      "groupId": "",
+      "block": {
+        "place": 2,
+        "size": 2
+      },
+      "expected": true
+    },
+    {
+      "name": "Platz 1 abgewählt ([]) -> Platz 1 darf geteilt bleiben (@W2A-066)",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "name": "DJK Kammer"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "TSV Waging rot"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "TSV Petting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "name": "DJK Otting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "name": "TSV 1921 Fridolfing"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "name": "TSV Waging blau"
+        }
+      ],
+      "matches": [],
+      "config": {
+        "placementsToPlayOut": []
+      },
+      "groupId": "",
+      "block": {
+        "place": 1,
+        "size": 2
+      },
+      "expected": true
+    },
+    {
+      "name": "Block berührt eingestellten Platz am Ende (ganzer Block, @W2A-064)",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000010",
+          "name": "DJK Kammer"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000011",
+          "name": "TSV Waging rot"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000012",
+          "name": "TSV Petting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000013",
+          "name": "DJK Otting"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000014",
+          "name": "TSV 1921 Fridolfing"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000015",
+          "name": "TSV Waging blau"
+        }
+      ],
+      "matches": [],
+      "config": {
+        "placementsToPlayOut": [
+          4
+        ]
+      },
+      "groupId": "",
+      "block": {
+        "place": 2,
+        "size": 3
+      },
+      "expected": false
+    },
+    {
+      "name": "@W2A-048: Platz 2 führt ins Halbfinale 2 -> nicht erlaubt",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "FC Nord",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "name": "SV Süd",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "name": "TSV West",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000004",
+          "name": "SC Ost",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "name": "SG Mitte",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000006",
+          "name": "DJK Berg",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000007",
+          "name": "VfB Ufer",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "name": "TuS Tal",
+          "group": "B"
+        }
+      ],
+      "matches": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "match_number": 13,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000102",
+          "match_number": 14,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 2
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000103",
+          "match_number": 15,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000104",
+          "match_number": 16,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          }
+        }
+      ],
+      "config": {
+        "placementsToPlayOut": [
+          1
+        ]
+      },
+      "groupId": "A",
+      "block": {
+        "place": 2,
+        "size": 2
+      },
+      "expected": false
+    },
+    {
+      "name": "Platz 3/4 in Gruppe A ohne weiteres Spiel -> erlaubt",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "FC Nord",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "name": "SV Süd",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "name": "TSV West",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000004",
+          "name": "SC Ost",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "name": "SG Mitte",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000006",
+          "name": "DJK Berg",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000007",
+          "name": "VfB Ufer",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "name": "TuS Tal",
+          "group": "B"
+        }
+      ],
+      "matches": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "match_number": 13,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000102",
+          "match_number": 14,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 2
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000103",
+          "match_number": 15,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000104",
+          "match_number": 16,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          }
+        }
+      ],
+      "config": {
+        "placementsToPlayOut": [
+          1
+        ]
+      },
+      "groupId": "A",
+      "block": {
+        "place": 3,
+        "size": 2
+      },
+      "expected": true
+    },
+    {
+      "name": "Herkunft der Besetzung zählt (R-GA4v2-2): Halbfinale 2 holt jetzt Dritter A -> 3/4 nicht erlaubt",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "FC Nord",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "name": "SV Süd",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "name": "TSV West",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000004",
+          "name": "SC Ost",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "name": "SG Mitte",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000006",
+          "name": "DJK Berg",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000007",
+          "name": "VfB Ufer",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "name": "TuS Tal",
+          "group": "B"
+        }
+      ],
+      "matches": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "match_number": 13,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000102",
+          "match_number": 14,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 3
+          }
+        }
+      ],
+      "config": {
+        "placementsToPlayOut": [
+          1
+        ]
+      },
+      "groupId": "A",
+      "block": {
+        "place": 3,
+        "size": 2
+      },
+      "expected": false
+    },
+    {
+      "name": "Herkunft aus Gruppe B betrifft Gruppe A nicht",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "FC Nord",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "name": "SV Süd",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "name": "TSV West",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000004",
+          "name": "SC Ost",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "name": "SG Mitte",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000006",
+          "name": "DJK Berg",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000007",
+          "name": "VfB Ufer",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "name": "TuS Tal",
+          "group": "B"
+        }
+      ],
+      "matches": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "match_number": 13,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          }
+        }
+      ],
+      "config": {
+        "placementsToPlayOut": []
+      },
+      "groupId": "A",
+      "block": {
+        "place": 1,
+        "size": 2
+      },
+      "expected": true
+    },
+    {
+      "name": "Spielergebnis-Herkünfte zählen nicht",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "FC Nord",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "name": "SV Süd",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "name": "TSV West",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000004",
+          "name": "SC Ost",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "name": "SG Mitte",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000006",
+          "name": "DJK Berg",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000007",
+          "name": "VfB Ufer",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "name": "TuS Tal",
+          "group": "B"
+        }
+      ],
+      "matches": [
+        {
+          "id": "00000000-0000-4000-8000-000000000103",
+          "match_number": 15,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000104",
+          "match_number": 16,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          }
+        }
+      ],
+      "config": {
+        "placementsToPlayOut": []
+      },
+      "groupId": "A",
+      "block": {
+        "place": 1,
+        "size": 2
+      },
+      "expected": true
+    },
+    {
+      "name": "Gesamttabelle '' unberührt von Gruppenplatz-Herkünften der Gruppe A",
+      "teams": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "name": "FC Nord",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "name": "SV Süd",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000003",
+          "name": "TSV West",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000004",
+          "name": "SC Ost",
+          "group": "A"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000005",
+          "name": "SG Mitte",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000006",
+          "name": "DJK Berg",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000007",
+          "name": "VfB Ufer",
+          "group": "B"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "name": "TuS Tal",
+          "group": "B"
+        }
+      ],
+      "matches": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "match_number": 13,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 2
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000102",
+          "match_number": 14,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "origin_b": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 2
+          },
+          "slot_a_source": {
+            "kind": "groupRank",
+            "group": "B",
+            "rank": 1
+          },
+          "slot_b_source": {
+            "kind": "groupRank",
+            "group": "A",
+            "rank": 2
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000103",
+          "match_number": 15,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "loser"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "loser"
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000104",
+          "match_number": 16,
+          "is_final": true,
+          "team_a_id": null,
+          "team_b_id": null,
+          "origin_a": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "origin_b": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          },
+          "slot_a_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000101",
+            "role": "winner"
+          },
+          "slot_b_source": {
+            "kind": "matchResult",
+            "matchId": "00000000-0000-4000-8000-000000000102",
+            "role": "winner"
+          }
+        }
+      ],
+      "config": {
+        "placementsToPlayOut": []
+      },
+      "groupId": "",
+      "block": {
+        "place": 1,
+        "size": 2
+      },
+      "expected": true
+    }
+  ]
+}

@@ -21,6 +21,7 @@ import { Icons } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens'
 import { PlacementCriterion } from '../../../types/tournament';
 import { resolvePlacementCriterionLabel } from './placementLogicLabels';
+import { DirectComparisonHint, PlacementAfterRow, PlacementBfvHelp } from './PlacementAfterRow';
 
 interface PlacementLogicEditorProps {
   placementLogic: PlacementCriterion[];
@@ -182,6 +183,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         {/* Label */}
         <span style={{ flex: 1, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md }}>
           {label}
+          {criterion.id === 'directComparison' && <DirectComparisonHint />}
         </span>
 
         {/* Toggle Button */}
@@ -241,15 +243,9 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
     }
   };
 
-  const containerStyle: CSSProperties = {
-    marginTop: '24px',
-  };
+  const containerStyle: CSSProperties = { marginTop: cssVars.spacing.lg };
 
-  const headerStyle: CSSProperties = {
-    color: cssVars.colors.primary,
-    fontSize: cssVars.fontSizes.md,
-    margin: '0 0 8px 0',
-  };
+  const headerStyle: CSSProperties = { color: cssVars.colors.primary, fontSize: cssVars.fontSizes.md, margin: `0 0 ${cssVars.spacing.sm} 0` };
 
   const helpTextStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
@@ -266,6 +262,7 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
       <p style={helpTextStyle}>
         <span>{t('placementLogic.helpText')}</span>
       </p>
+      <PlacementBfvHelp style={{ ...helpTextStyle, marginTop: `-${cssVars.spacing.sm}` }} />
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -293,6 +290,7 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
           </div>
         </SortableContext>
       </DndContext>
+      <PlacementAfterRow />
     </div>
   );
 };
