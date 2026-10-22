@@ -1,5 +1,5 @@
 /**
- * C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG (@FU-025, @FU-102): Kommt Olli in die App zurück, tritt das
+ * C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG (@FU-129, Bezug @FU-025): Kommt Olli in die App zurück, tritt das
  * Repository dem Live-Kanal frisch bei.
  *
  * supabase-js baut einen Kanal asynchron ab (`removeChannel` wartet auf den Server) und gibt unter
@@ -62,7 +62,7 @@ vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 
 import { SupabaseLiveMatchRepository } from '../SupabaseLiveMatchRepository';
 
-describe('C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG: frisches Beitreten nach Rückkehr (@FU-102)', () => {
+describe('C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG: frisches Beitreten nach Rückkehr (@FU-129)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     hoisted.channels.length = 0;
@@ -72,7 +72,7 @@ describe('C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG: frisches Beitreten nach Rückke
     vi.useRealTimers();
   });
 
-  it('@FU-102 Rückkehr, solange der alte Kanal noch abgebaut wird: das Beitreten klappt und meldet SUBSCRIBED', () => {
+  it('@FU-129 Rückkehr, solange der alte Kanal noch abgebaut wird: das Beitreten klappt und meldet SUBSCRIBED', () => {
     const repo = new SupabaseLiveMatchRepository();
     const first = vi.fn();
     const second = vi.fn();
@@ -87,7 +87,7 @@ describe('C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG: frisches Beitreten nach Rückke
     expect(hoisted.channels.some((c) => c.state === 'leaving')).toBe(true);
   });
 
-  it('@FU-102 nach dem Abbau tritt auch ein späteres Beitreten frisch bei, der alte Kanal bleibt nicht übrig', async () => {
+  it('@FU-129 nach dem Abbau tritt auch ein späteres Beitreten frisch bei, der alte Kanal bleibt nicht übrig', async () => {
     const repo = new SupabaseLiveMatchRepository();
     repo.subscribe('t1', {});
     repo.unsubscribe('t1');

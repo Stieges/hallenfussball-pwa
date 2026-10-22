@@ -28,7 +28,7 @@ const FRESH = { fresh: true } as const;
  * ohnehin nie einen unterstuetzten Weg, ihr Ergebnis ueber `handleTournamentUpdate` zu aendern --
  * das ist ausschliesslich der RPC/`MatchCommands` (B4/PC16).
  */
-function stripEngineOverlayFields(
+export function stripEngineOverlayFields(
     updated: Tournament,
     raw: Tournament | null,
     overlaidIds: ReadonlySet<string>,

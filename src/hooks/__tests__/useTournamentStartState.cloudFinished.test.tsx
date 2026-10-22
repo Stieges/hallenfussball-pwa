@@ -53,7 +53,7 @@ describe('C-LIVE-STAND-BEENDET-FEHLT: Anpfiff-Sperre über hasStartedMatches (@L
     fakeLive.getAll.mockResolvedValue(new Map());
   });
 
-  it('@LZ-003 lokal geplant, in der Cloud ein Spiel beendet: angepfiffen (Anzeige und recheck)', async () => {
+  it('@LZ-003 Zeile „das erste Gruppenspiel ist schon beendet“: lokal geplant, in der Cloud beendet: angepfiffen (Anzeige und recheck)', async () => {
     fakeLive.hasStartedMatches.mockResolvedValue(true);
     const { result } = renderHook(() => useTournamentStartState(scheduledTournament()), { wrapper });
 
@@ -61,7 +61,7 @@ describe('C-LIVE-STAND-BEENDET-FEHLT: Anpfiff-Sperre über hasStartedMatches (@L
     await expect(result.current.recheck()).resolves.toBe('started');
   });
 
-  it('@LZ-003 Lesefehler: nicht feststellbar, nicht „nicht angepfiffen“', async () => {
+  it('@LZ-003 Zeile „der Stand der Spiele ist gerade nicht lesbar“: Lesefehler: nicht feststellbar, Aktionen nicht angeboten', async () => {
     fakeLive.hasStartedMatches.mockRejectedValue(new Error('network down'));
     const { result } = renderHook(() => useTournamentStartState(scheduledTournament()), { wrapper });
 

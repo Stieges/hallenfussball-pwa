@@ -16,7 +16,7 @@ function spielMit(matchStatus: StatefulMatch['matchStatus']): StatefulMatch {
 }
 
 describe('C-MATCHSTATUS-OHNE-PAUSED: Ausdruck kennt den Cloud-Status paused', () => {
-  it('@DR-019 Spiel in der Halbzeit (Cloud-Status paused) ist laufend: „läuft“ mit leeren Feldern', () => {
+  it('@DR-019 Zeile „in der Halbzeit“: Spiel in der Halbzeit (Cloud-Status paused) ist laufend: „läuft“ mit leeren Feldern', () => {
     expect(resultState(spielMit('paused'))).toEqual({ kind: 'live' });
     expect(resultState(spielMit('running'))).toEqual({ kind: 'live' });
   });

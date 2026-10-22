@@ -62,7 +62,7 @@ describe('C-LIVE-STAND-BEENDET-FEHLT: hasStartedMatches (@LZ-003)', () => {
     hoisted.setRows([]);
   });
 
-  it('@LZ-003 ein beendetes Spiel (live_state null) zählt als angepfiffen', async () => {
+  it('@LZ-003 Zeile „das erste Gruppenspiel ist schon beendet“: ein beendetes Spiel (live_state null) zählt als angepfiffen', async () => {
     hoisted.setRows([
       { id: 'm1', match_status: 'finished', live_state: null },
       { id: 'm2', match_status: 'scheduled', live_state: null },
@@ -92,7 +92,7 @@ describe('C-LIVE-STAND-BEENDET-FEHLT: hasStartedMatches (@LZ-003)', () => {
     await expect(repo.hasStartedMatches('t1')).resolves.toBe(false);
   });
 
-  it('Lesefehler wird geworfen, nicht als „keins angepfiffen“ gemeldet', async () => {
+  it('@LZ-003 Zeile „der Stand der Spiele ist gerade nicht lesbar“: Lesefehler wird geworfen, nicht als „keins angepfiffen“ gemeldet', async () => {
     hoisted.result.value = { data: null, error: { message: 'network down' } };
     const repo = new SupabaseLiveMatchRepository();
 

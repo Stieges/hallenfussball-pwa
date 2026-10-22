@@ -45,8 +45,8 @@ function finishedState(): MatchState {
   };
 }
 
-describe('C-OVERLAY-LIVESTATE-BLEIBT: Feinstatus nach dem Abpfiff (@OB-066)', () => {
-  it('@OB-066 beendet 2:0: der alte Feinstatus „Halbzeit“ ist am Datensatz geleert, das Abzeichen ist „Ende“', () => {
+describe('C-OVERLAY-LIVESTATE-BLEIBT: reines Aufräumen, Feinstatus nach dem Abpfiff (Bezug @OB-066)', () => {
+  it('@OB-066 (Bezug) beendet 2:0: der alte Feinstatus „Halbzeit“ ist am Datensatz geleert, das Abzeichen ist „Ende“', () => {
     const fields = engineOverlayFields(viewFromState(finishedState()), ctx);
     const stale: OverlayableMatch = {
       id: ctx.matchId,
@@ -64,7 +64,7 @@ describe('C-OVERLAY-LIVESTATE-BLEIBT: Feinstatus nach dem Abpfiff (@OB-066)', ()
     expect(stale.liveState).toBe(HALBZEIT_LIVE_STATE);
   });
 
-  it('@OB-066 beendet und bereits ohne Feinstatus: Tournament-Objekt bleibt dieselbe Referenz', () => {
+  it('@OB-066 (Bezug) beendet und bereits ohne Feinstatus: Tournament-Objekt bleibt dieselbe Referenz', () => {
     const fields = engineOverlayFields(viewFromState(finishedState()), ctx);
     const match: OverlayableMatch = {
       id: ctx.matchId,
