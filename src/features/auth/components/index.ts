@@ -17,9 +17,6 @@ export { TournamentCard } from './TournamentCard';
 export type { TournamentCardData, TournamentDisplayStatus } from './TournamentCard';
 export { UserProfileScreen } from './UserProfileScreen';
 
-// Mitglieder
-export { MemberList } from './MemberList';
-
 // Phase 5: Role Management
 export { RoleChangeDialog } from './RoleChangeDialog';
 export { TransferOwnershipDialog } from './TransferOwnershipDialog';

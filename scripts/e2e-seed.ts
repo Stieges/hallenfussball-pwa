@@ -30,11 +30,10 @@
  *   - Fester Share-Code (`E2EPUB`): `TournamentCreationService.publish()` generiert nur einen
  *     Code, wenn noch keiner gesetzt ist — wir setzen ihn vorher, kein Sonderfall nötig.
  *   - `declined_at` (widerrufene Einladung/Mitgliedschaft): Die App selbst setzt das per
- *     direktem `.update({declined_at: …})` (`invitationService.ts`), es gibt keinen Mapper dafür.
- *   - `invite_email`-Ziel-Einladungen (invitee/expired/revokedinvite): `mapInvitationInsertToSupabase`
- *     ist für Einladungs-LINKS gebaut (keine Ziel-E-Mail im Feld), nicht für an eine konkrete
- *     Adresse adressierte Einladungen mit `invite_email`. Wir bauen die Zeile direkt im
- *     `CollaboratorInsert`-Format (demselben Typ, den der Mapper auch zurückgibt).
+ *     direktem `.update({declined_at: …})` (früher `invitationService.ts`), es gibt keinen Mapper dafür.
+ *   - `invite_email`-Ziel-Einladungen (invitee/expired/revokedinvite): der Einladungs-Mapper ist mit A-18a entfallen (Helfer treten per QR-Code bei);
+ *     die Zeilen mit `invite_email` entstehen direkt. Wir bauen die Zeile direkt im
+ *     `CollaboratorInsert`-Format (Typ der Tabelle).
  *   - `match_events` für Engine-Spiele: Schreibzugriff über `append_match_events` (Owner-JWT,
  *     `engineSeedDb.ts`), nicht über `ITournamentRepository.save()`, das keine Events schreibt.
  *   - Google-Provider (`app_metadata.provider`): Auth-Admin-API, kein DB-Mapper-Thema.
@@ -490,8 +489,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // invite_email-Ziel-Einladungen: mapInvitationInsertToSupabase deckt das nicht ab
-  // (kein invite_email-Feld, siehe Kopfkommentar) — direkte CollaboratorInsert-Zeilen.
+  // invite_email-Ziel-Einladungen: direkte CollaboratorInsert-Zeilen (siehe Kopfkommentar).
   const nowIso = new Date().toISOString();
   const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();

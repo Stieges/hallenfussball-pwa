@@ -30,15 +30,6 @@ import {
   type ThemeName,
 } from '../../../test/contrast';
 
-vi.mock('../../../features/auth/hooks/useInvitation', () => ({
-  useInvitation: () => ({
-    createNewInvitation: vi.fn(),
-    isLoading: false,
-    error: null,
-    clearError: vi.fn(),
-  }),
-}));
-
 const hoisted = vi.hoisted(() => ({
   monitor: {
     id: 'monitor-1', name: 'Haupthalle', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500,
