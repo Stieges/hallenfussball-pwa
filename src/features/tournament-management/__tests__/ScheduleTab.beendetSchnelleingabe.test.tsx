@@ -159,7 +159,7 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     h.api.mockClear();
   }
 
-  it('@EK-063 beendet → Speichern startet die Korrektur: Grund-Auswahl mit bisher 3:1 und neu 4:1, noch nichts gesendet', async () => {
+  it('@EK-063:teil beendet → Speichern startet die Korrektur: Grund-Auswahl mit bisher 3:1 und neu 4:1, noch nichts gesendet', async () => {
     await finishFirstMatch();
     const { view, card } = await renderSchedule();
     expect(card().textContent).toMatch(/3\s*:\s*1/); // Ausgangslage: Spiel ist beendet und zeigt 3:1
@@ -171,21 +171,22 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     expect(h.api).not.toHaveBeenCalled();
   });
 
-  it('@EK-001 mit Grund „Eingabefehler“ → Ausgang CORRECTION, Zeile 4:1, Tabelle rechnet mit', async () => {
+  it('@EK-001 mit Grund „Eingabefehler“ → Ausgang CORRECTION, Zeile 3:3, Tabelle rechnet mit (Heim 3 → 1 Punkt)', async () => {
     await finishFirstMatch();
     const { view, card } = await renderSchedule();
-    await quickEntry(card, 1, 0);
+    expect(view.getByTestId('home-points').textContent).toBe('3'); // Ausgangslage: 3:1 gewonnen
+    await quickEntry(card, 0, 2);
     await view.findByTestId('result-entry-reason-dialog');
 
     fireEvent.change(view.getByTestId('result-entry-reason'), { target: { value: 'input_error' } });
     await act(async () => { fireEvent.click(view.getByText('Speichern', { selector: 'button' })); await settle(); });
 
     expect(eventTypes()).toEqual([['CORRECTION']]);
-    expect(card().textContent).toMatch(/4\s*:\s*1/);
-    expect(view.getByTestId('home-points').textContent).toBe('3');
+    expect(card().textContent).toMatch(/3\s*:\s*3/);
+    expect(view.getByTestId('home-points').textContent).toBe('1');
   });
 
-  it('@EK-004 ohne Grund keine Korrektur: Abbrechen sendet nichts, die Zeile zeigt weiter 3:1', async () => {
+  it('@EK-004 Abbrechen sendet nichts: die Zeile zeigt weiter 3:1', async () => {
     await finishFirstMatch();
     const { view, card } = await renderSchedule();
     await quickEntry(card, 1, 0);
@@ -198,7 +199,7 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     expect(card().textContent).not.toMatch(/4\s*:\s*1/);
   });
 
-  it('@EK-063 beendet → Zusammenfassung → „Ergebnis ändern“ tut nicht still nichts, sondern öffnet die Schnelleingabe mit Grund-Weg', async () => {
+  it('@EK-063:teil beendet → Zusammenfassung → „Ergebnis ändern“ tut nicht still nichts, sondern öffnet die Schnelleingabe mit Grund-Weg', async () => {
     await finishFirstMatch();
     const { view, card } = await renderSchedule();
 
