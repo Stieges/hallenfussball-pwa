@@ -71,13 +71,14 @@ export const HelperCodeCard = ({ code, state, disabled, onRenew }: HelperCodeCar
         <span style={meta}>{t('teamHelpers.code.validUntil', { date: formatValidDay(code.validUntil, locale) })}</span>
       </div>
       <div style={qrBox}>
-        <div style={qrFrame} role="img" aria-label={t('teamHelpers.code.qrLabel')} data-testid="helper-qr" data-url={url}>
+        <div style={qrFrame} data-testid="helper-qr" data-url={url}>
           <QRCodeSVG
             value={url}
             size={displayMonitor.qr.sizeLarge}
             bgColor={displayMonitor.qr.background}
             fgColor={displayMonitor.qr.foreground}
             level="M"
+            title={t('teamHelpers.code.qrLabel')}
             marginSize={2}
           />
         </div>

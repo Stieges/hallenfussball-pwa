@@ -12,8 +12,7 @@ import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '../../../../components/ui/Icons';
 import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
-import { cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
-import { useBreakpoint } from '../../../../hooks/useBreakpoint';
+import { breakpointValues, cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
 import type { Tournament } from '../../../../types/tournament';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { useCan } from '../../../auth/hooks/useCan';
@@ -40,13 +39,19 @@ type Dialog =
   | { type: 'renew' }
   | { type: 'access'; kind: 'revoke' | 'watch_only'; row: HelperRowModel };
 
-const columnsGap = cssVars.spacing.lg;
+// Zwei Spalten (QR links, Anfragen und Helfer rechts) richten sich nach der Breite des Inhalts, nicht des Fensters: im Admin
+// Center nimmt die Seitenleiste Platz (Mockup M4, Laptop). Ab `breakpoints.tablet` Inhaltsbreite stehen sie nebeneinander.
+const columnsCss = `
+  .th-cols { display: grid; gap: ${cssVars.spacing.md}; align-items: start; grid-template-columns: minmax(0, 1fr); }
+  @container (min-width: ${breakpointValues.tablet}px) {
+    .th-cols { grid-template-columns: ${dialogWidths.sm} minmax(0, 1fr); gap: ${cssVars.spacing.lg}; }
+  }
+`;
 const stack: CSSProperties = { display: 'grid', gap: cssVars.spacing.md, alignContent: 'start', minWidth: 0 };
 
 export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCategoryProps) {
   const { t } = useTranslation('admin');
   const { user, isAuthenticated } = useAuth();
-  const { isTabletOrDesktop } = useBreakpoint();
   // @HE-062: ohne das Recht „Helfer verwalten“ (Helfer-Gerät, Co-Admin ohne Recht) keine Abfrage, nur der Grund.
   const canManage = useCan('manageHelpers', tournamentId);
   const enabled = isAuthenticated && user !== null && canManage;
@@ -137,12 +142,12 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
 
   return (
     <CategoryPage {...header}>
-      <div
-        style={{ display: 'grid', gap: columnsGap, alignItems: 'start', gridTemplateColumns: isTabletOrDesktop ? `${dialogWidths.sm} minmax(0, 1fr)` : 'minmax(0, 1fr)' }}
-        data-testid="team-helpers-page"
-      >
-        {left}
-        {right}
+      <div style={{ containerType: 'inline-size' }}>
+        <div className="th-cols" data-testid="team-helpers-page">
+          {left}
+          {right}
+        </div>
+        <style>{columnsCss}</style>
       </div>
       {dialog?.type === 'approve' ? (
         <ApproveSheet
