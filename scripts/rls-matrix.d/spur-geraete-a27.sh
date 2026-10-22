@@ -197,7 +197,10 @@ A27_OLLI_WIDERRUFT="SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.su
 UPDATE public.tournament_collaborators SET declined_at = now() WHERE id = '$MEMBERSHIP_HELPER_DEVICE';
 RESET ROLE;"
 a11_mark "@HE-006:teil widerrufener-helfer-zugang-hat-kein-schreibrecht " "$(a27_sql authenticated "$U_HELPER_DEVICE" "SELECT public.has_tournament_permission('$T_MAIN','writeMatchData');" "$A27_OLLI_WIDERRUFT")" "f"
-a11_mark "@HE-006:teil widerrufener-helfer-tor-abgelehnt                " "$(a27_append "$U_HELPER_DEVICE" "$A11_M13" "$A27_START_GOAL_13" "$A27_OLLI_WIDERRUFT")" "rejected:FORBIDDEN_ACTOR,rejected:FORBIDDEN_ACTOR|0|0"
+# A-35 (I-4, @HE-080): mit der Klaerungsliste zaehlen die Eintraege des entzogenen Geraets weiter nicht, landen aber
+# (Geraetezeit vor dem Entziehen) als „von Tom, Recht entzogen“ in der Klaerungsliste statt abgelehnt.
+a11_mark "@HE-006:teil widerrufener-helfer-tor-abgelehnt                " "$(a27_append "$U_HELPER_DEVICE" "$A11_M13" "$A27_START_GOAL_13" "$A27_OLLI_WIDERRUFT")" \
+  "$(if [[ "${WITH_A35:-0}" -eq 1 ]]; then echo "review:RIGHTS_REVOKED,review:RIGHTS_REVOKED|0|2"; else echo "rejected:FORBIDDEN_ACTOR,rejected:FORBIDDEN_ACTOR|0|0"; fi)"
 a11_mark "@HE-006:teil gegen-vor-dem-widerruf-tor-angenommen            " "$(a27_append "$U_HELPER_DEVICE" "$A11_M13" "$A27_START_GOAL_13")" "accepted,accepted|0|2"
 
 # --- @HE-042 / L1: Tom oeffnet ein beendetes Spiel nicht wieder (nach der Fortsetzen-Frist), Team umbenennen nein -----

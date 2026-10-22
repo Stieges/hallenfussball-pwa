@@ -49,6 +49,8 @@ for a25b_id in "${MATRIX_IDS[@]}"; do
     "$A25B_SETUP")"
   a25b_got="$( (grep -m1 '^r:' <<<"$a25b_out" || echo "r:fehler") | cut -c3-)|$( (grep -m1 '^c:' <<<"$a25b_out" || echo "c:fehler") | cut -c3-)"
   [[ "$a25b_allowed" == "true" ]] && a25b_exp="accepted|forfeit|A" || a25b_exp="rejected:FORBIDDEN_ACTOR|-|-"
+  # A-35 (I-4, @FU-017): ein angenommenes, dann entzogenes Mitglied bekommt seine Eintraege zur Klaerung (zaehlt nicht).
+  if [[ "${WITH_A35:-0}" -eq 1 && "$a25b_id" == "declined-membership" ]]; then a25b_exp="review:RIGHTS_REVOKED|-|-"; fi
   a25b_cell "@W2A-022 Wertung (append_match_events) $a25b_id" "$a25b_got" "$a25b_exp"
 
   # (ii) Spalte direkt

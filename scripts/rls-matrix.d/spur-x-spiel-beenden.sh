@@ -61,6 +61,8 @@ for sb_id in "${MATRIX_IDS[@]}"; do
   sb_uid="$(user_id_for_id "$sb_id")"
   sb_allowed="$(perm_expected "$(role_for_id "$sb_id")" "leadMatches")"
   [[ "$sb_allowed" == "true" ]] && sb_exp="accepted|finished" || sb_exp="rejected|running"
+  # A-35 (I-4, @FU-017): ein angenommenes, dann entzogenes Mitglied bekommt seine Eintraege zur Klaerung (zaehlt nicht).
+  if [[ "${WITH_A35:-0}" -eq 1 && "$sb_id" == "declined-membership" ]]; then sb_exp="review|running"; fi
 
   # (i) freies Feld, ohne Geraete-ID (kein Anspruch moeglich)
   sb_got="$(sb_send "$sb_uid" "NULL" "$SB_SETUP")"

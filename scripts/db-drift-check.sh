@@ -181,6 +181,9 @@ pending_assertions_for() {
     20261110_009_spiel_beenden.sql)
       echo "append-match-events-end-by-lead-without-claim"
       ;;
+    20261117_005_klaerungsliste.sql)
+      echo "klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"
+      ;;
     *)
       return 1
       ;;
@@ -646,6 +649,12 @@ PRIVILEGE_ASSERTION_NAMES=(
   "lifecycle-late-entries-unique-event"
   "lifecycle-log-request-id-unique"
   "append-match-events-end-by-lead-without-claim"
+  # A-35 (20261117_005_klaerungsliste.sql): Klaerungsliste am Server.
+  "klaerungsliste-tables-rls-no-client-writes"
+  "klaerungsliste-select-policy"
+  "klaerungsliste-helpers-no-client-execute"
+  "klaerungsliste-rpc-definer-authenticated-only"
+  "klaerungsliste-append-routes-reviews"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

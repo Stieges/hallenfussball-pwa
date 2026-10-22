@@ -109,6 +109,14 @@ A25B_FILE=""
 # erneuten Einspielen von A-25b ebenfalls erneut. Pflicht wie A-34.
 SB_MIGRATION="20261110_009_spiel_beenden.sql"
 SB_FILE=""
+# A-21a-S (20261113_003) und A-35 Klaerungsliste (20261117_005): fassen append_match_events (closed_intake, Klaerung) bzw.
+# match_apply_event (Kopie eines uebernommenen Klaerungseintrags, Fixtures 71a-71e) neu und liegen ueber Spiel beenden --
+# nach jedem erneuten Einspielen von _009 ebenfalls erneut, in Fenster-Reihenfolge (sonst stuende die aeltere Fassung).
+# Optional: fehlt eine Datei (anderer Branch), entfaellt sie.
+A21AS_MIGRATION="20261113_003_tournament_lifecycle.sql"
+A21AS_FILE=""
+A35_MIGRATION="20261117_005_klaerungsliste.sql"
+A35_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -156,6 +164,8 @@ while IFS= read -r line; do
     "$A34_MIGRATION") A34_FILE="$line" ;;
     "$A25B_MIGRATION") A25B_FILE="$line" ;;
     "$SB_MIGRATION") SB_FILE="$line" ;;
+    "$A21AS_MIGRATION") A21AS_FILE="$line" ;;
+    "$A35_MIGRATION") A35_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ -z "$A25B_FILE" ]]; then
@@ -220,6 +230,11 @@ psql_stdin() {
 psql_value() {
   docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q -tA
 }
+# Nach jedem erneuten Einspielen von _009: die spaeteren Fassungen (A-21a-S, A-35) wieder obenauf.
+reapply_after_sb() {
+  if [[ -n "$A21AS_FILE" ]]; then psql_stdin < "$A21AS_FILE"; fi
+  if [[ -n "$A35_FILE" ]]; then psql_stdin < "$A35_FILE"; fi
+}
 
 echo "Baseline + ${#NEWER_MIGRATIONS[@]} neuere Migration(en) einspielen..." >&2
 psql_stdin < "$BASELINE_FILE"
@@ -241,6 +256,7 @@ psql_stdin < "$SW_FILE"
 if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
 psql_stdin < "$A25B_FILE"
 psql_stdin < "$SB_FILE"
+reapply_after_sb
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
@@ -326,6 +342,7 @@ for k in os.environ["MUT_KEYS"].split():
     s = s.replace(os.environ[k], os.environ[k + "_TO"])
 sys.stdout.write(s)' < "$A25B_FILE" | psql_stdin
   psql_stdin < "$SB_FILE"
+  reapply_after_sb
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
@@ -589,6 +606,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
   psql_stdin < "$A25B_FILE"
   psql_stdin < "$SB_FILE"
+  reapply_after_sb
   psql_stdin <<'SQL'
 UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
 GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;

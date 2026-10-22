@@ -166,6 +166,9 @@
 #   scripts/rls-role-matrix.sh --without-sb        # Alles ("nachher"), aber OHNE 20261110_009 (Spiel beenden im Spielplan)
 #                                                   # -- die Zeilen (rls-matrix.d/spur-x-spiel-beenden.sh) muessen hier
 #                                                   # ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a35       # Alles ("nachher"), aber OHNE 20261117_005 (A-35 Klaerungsliste) --
+#                                                   # die Zeilen (rls-matrix.d/spur-y-klaerung-a35.sh) muessen hier
+#                                                   # ROT sein (Gegenprobe, Exit 0).
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -274,6 +277,8 @@ WITH_A16_REQ=1
 WITH_A21AS_REQ=1
 # Spiel beenden: 20261110_009 im Modus "nachher" einspielen (Gegenprobe --without-sb laesst sie weg; braucht _005 A-25b).
 WITH_SB_REQ=1
+# A-35: 20261117_005 im Modus "nachher" einspielen (Gegenprobe --without-a35 laesst sie weg; braucht _003 A-21a-S und _008).
+WITH_A35_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -341,6 +346,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-sb)
       WITH_SB_REQ=0
+      shift
+      ;;
+    --without-a35)
+      WITH_A35_REQ=0
       shift
       ;;
     -h|--help)
@@ -690,6 +699,20 @@ elif [[ "$WITH_A13BS" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, A-21a-S-Gegenprobe (ohne 20261113_003)"
 fi
 
+# A-35 (20261117_005, Klaerungsliste am Server): zwei Tabellen (match_reviews mit Lese-Policy, field_control_log ohne),
+# Klaerungs-Hilfen, list_match_reviews, append_match_events auf der Fassung _003. Setzt _003 (A-21a-S), _009 und _008 voraus
+# (Fail-fast); --without-a35 ist die Gegenprobe.
+A35_FILE="$(find_migration 20261117_005)"
+WITH_A35=0
+if [[ "$WITH_A21AS" -eq 1 && "$WITH_SB" -eq 1 && "$WITH_A16" -eq 1 && "$WITH_A35_REQ" -eq 1 ]]; then
+  WITH_A35=1
+  echo "Migration einspielen: $(basename "$A35_FILE")" >&2
+  psql_stdin < "$A35_FILE"
+  MODE_LABEL="$MODE_LABEL + A-35 (20261117_005)"
+elif [[ "$WITH_A21AS" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-35-Gegenprobe (ohne 20261117_005)"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -731,6 +754,11 @@ fi
 if [[ "$WITH_A21AS" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 3))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 4))
+fi
+# A-35: match_reviews (eine Lese-Policy) und field_control_log (ohne Policy) sind RLS-aktiv.
+if [[ "$WITH_A35" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 1))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 2))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"

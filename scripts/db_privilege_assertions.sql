@@ -236,7 +236,9 @@ SELECT 'match-engine-function-count-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload')
+                                  -- A-35 (20261117_005): Klaerungs-Hilfen, nur aus append_match_events (klaerungsliste-helpers-no-client-execute)
+                                  AND p.proname NOT IN ('rights_change', 'review_store', 'review_repeat', 'review_route', 'review_target_check', 'review_copy', 'revoked_intake'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
@@ -244,7 +246,9 @@ SELECT 'match-engine-immutable-count-51',
        (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload')
+                                  -- A-35 (20261117_005): Klaerungs-Hilfen, nur aus append_match_events (klaerungsliste-helpers-no-client-execute)
+                                  AND p.proname NOT IN ('rights_change', 'review_store', 'review_repeat', 'review_route', 'review_target_check', 'review_copy', 'revoked_intake'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
 UNION ALL
@@ -258,7 +262,9 @@ SELECT 'match-engine-search-path-all-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload')
+                                  -- A-35 (20261117_005): Klaerungs-Hilfen, nur aus append_match_events (klaerungsliste-helpers-no-client-execute)
+                                  AND p.proname NOT IN ('rights_change', 'review_store', 'review_repeat', 'review_route', 'review_target_check', 'review_copy', 'revoked_intake'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
 UNION ALL
@@ -362,7 +368,9 @@ SELECT 'match-engine-non-b3b-executable-anon-authenticated',
            -- Server-Funktionen erreichbar (eigene Assertion group-completion-helpers-no-client-execute).
            AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload')
+                                  -- A-35 (20261117_005): Klaerungs-Hilfen, nur aus append_match_events (klaerungsliste-helpers-no-client-execute)
+                                  AND p.proname NOT IN ('rights_change', 'review_store', 'review_repeat', 'review_route', 'review_target_check', 'review_copy', 'revoked_intake'))
 UNION ALL
 SELECT 'positive-anon-execute-match-engine-apply-amend',
        coalesce(has_function_privilege('anon', to_regprocedure('match_engine.apply_amend(jsonb,jsonb)'), 'EXECUTE'), false)
@@ -1035,7 +1043,10 @@ SELECT 'lifecycle-guard-triggers-complete',
                     AND cl.relname NOT IN ('tournament_collaborators', 'tournament_join_codes', 'tournament_join_requests',
                                            'monitors', 'monitor_heartbeats', 'monitor_screens', 'device_outbox_reports',
                                            'late_entries', 'tournament_lifecycle_log', 'tournament_final_standings',
-                                           'match_event_authors')
+                                           'match_event_authors',
+                                           -- A-35 (20261117_005): schreibt nur append_match_events nach closed_intake bzw. der Trigger auf
+                                           -- field_control (selbst gesperrt) -- nach dem Abschluss unerreichbar
+                                           'match_reviews', 'field_control_log')
                     AND NOT EXISTS (SELECT 1 FROM pg_trigger t
                                      WHERE t.tgrelid = cl.oid AND t.tgname = cl.relname || '_guard_closed'
                                        AND t.tgfoid = to_regprocedure('public.guard_closed_tournament()')
@@ -1107,4 +1118,59 @@ SELECT 'append-match-events-end-by-lead-without-claim',
                         AND EXISTS (SELECT 1 FROM public.match_transitions t
                                      WHERE t.from_status = 'running' AND t.event_type = 'RESULT_ENTRY' AND t.actor = 'leitung')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+-- A-35 Klaerungsliste (20261117_005_klaerungsliste.sql, @FU-038, @FU-017, @HE-056, @HE-080). Vor dem Live-Einspielen: "f".
+-- (1) match_reviews und field_control_log: RLS an, keine Schreibrechte fuer Client-Rollen; field_control_log ohne Lesen.
+UNION ALL
+SELECT 'klaerungsliste-tables-rls-no-client-writes',
+       coalesce((SELECT bool_and(c.relrowsecurity) AND count(*) = 2 FROM pg_class c
+                  WHERE c.oid IN (to_regclass('public.match_reviews'), to_regclass('public.field_control_log'))), false)
+       AND coalesce(NOT has_table_privilege('authenticated', 'public.match_reviews', 'INSERT, UPDATE, DELETE, TRUNCATE')
+                    AND NOT has_table_privilege('anon', 'public.match_reviews', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                    AND NOT has_table_privilege('authenticated', 'public.field_control_log', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                    AND NOT has_table_privilege('anon', 'public.field_control_log', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                    AND has_table_privilege('ci_schema_reader', 'public.match_reviews', 'SELECT')
+                    AND has_table_privilege('ci_schema_reader', 'public.field_control_log', 'SELECT')
+                    AND to_regclass('public.match_reviews') IS NOT NULL, false)
+-- (2) Klaerungsliste lesen nur mit leadMatches (Turnierleitung), genau eine Policy, nur SELECT; field_control_log ohne Policy
+UNION ALL
+SELECT 'klaerungsliste-select-policy',
+       coalesce((SELECT count(*) = 1 AND bool_and(p.cmd = 'SELECT' AND p.roles = '{authenticated}'
+                                                  AND p.qual LIKE '%has_tournament_permission(tournament_id, ''leadMatches''::text)%')
+                   FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'match_reviews'), false)
+       AND to_regclass('public.field_control_log') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'field_control_log')
+-- (3) Hilfen ohne EXECUTE fuer Client-Rollen; Trigger-Funktion ohne EXECUTE
+UNION ALL
+SELECT 'klaerungsliste-helpers-no-client-execute',
+       coalesce((SELECT count(*) = 8 AND bool_and(NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                                  AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+                   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                  WHERE (n.nspname = 'match_engine' AND p.proname IN ('rights_change', 'review_store', 'review_repeat', 'review_route',
+                                                                      'review_target_check', 'review_copy', 'revoked_intake'))
+                     OR (n.nspname = 'public' AND p.proname = 'field_control_log_write')), false)
+-- (4) list_match_reviews: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated, prueft leadMatches
+UNION ALL
+SELECT 'klaerungsliste-rpc-definer-authenticated-only',
+       coalesce((SELECT p.prosecdef AND p.proconfig::text LIKE '%search_path=public, pg_temp%'
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND position('has_tournament_permission(p_tournament_id, ''leadMatches'')' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.list_match_reviews(uuid)')), false)
+-- (5) append_match_events: Fassung 20261113_003 + Klaerung -- Recht verloren vor dem Ablehnen, Weiche vor dem Rechnen,
+--     closed_intake weiter vor dem field_control-INSERT; Uebergaenge REVIEW_* fuer die Leitung aus allen acht Zustaenden.
+UNION ALL
+SELECT 'klaerungsliste-append-routes-reviews',
+       coalesce((SELECT position('match_engine.revoked_intake(' IN p.prosrc) > 0
+                        AND position('match_engine.revoked_intake(' IN p.prosrc)
+                            < position('''status'', ''rejected'', ''code'', ''FORBIDDEN_ACTOR'') ORDER BY ord)' IN p.prosrc)
+                        AND position('match_engine.review_route(' IN p.prosrc) > 0
+                        AND position('match_engine.review_route(' IN p.prosrc) < position('public.match_continue(v_state' IN p.prosrc)
+                        AND position('match_engine.review_repeat(' IN p.prosrc) > 0
+                        AND position('match_engine.closed_intake(' IN p.prosrc) > 0
+                        AND position('match_engine.closed_intake(' IN p.prosrc) < position('INSERT INTO public.field_control' IN p.prosrc)
+                        AND position('IF NOT v_end_by_lead' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+       AND coalesce((SELECT count(*) = 16 AND bool_and(t.actor = 'leitung' AND t.to_status = '=')
+                       FROM public.match_transitions t WHERE t.event_type IN ('REVIEW_ACCEPT', 'REVIEW_DISCARD')), false)
 ;
