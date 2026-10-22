@@ -1,9 +1,14 @@
 /**
- * Paket TB-B, Task TB-3': „wer wann entschieden hat“ sieht allein die Turnierleitung – im öffentlich lesbaren
- * Turnierdatensatz steht es nicht mehr (@W2A-072, Daniel B4d). Der interne Weg (Verlaufsprotokoll `bracket_log` über
- * GA4 A-13b) ist noch nicht gebaut; bis dahin sind diese Zeilen erwartet rot mit Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH
- * (Lücken-Tabelle Nachtrag Ausspiel-Plätze, Besitzer GA4 A-13b). Geprüft wird, was die App der Turnierleitung nach der
- * Entscheidung über Person und Zeit liefern kann – heute nichts.
+ * Paket TB-B, Task TB-3' / GA4 A-13b-C: „wer wann entschieden hat“ sieht allein die Turnierleitung – im öffentlich lesbaren
+ * Turnierdatensatz steht es nicht (@W2A-072, Daniel B4d). Der interne Weg ist der Verlauf (`Tournament.decisionLog`, Server
+ * `bracket_log_read`). Geprüft wird, was die App der Turnierleitung nach der Entscheidung über Person und Zeit liefert.
+ *
+ * Grün: @W2A-060 „von wem“ (`ALREADY_DECIDED` nennt die Person aus dem Verlauf).
+ * `it.fails` bleiben die Fälle, die Person und Zeit an der ÖFFENTLICHEN Entscheidung (`standingDecisions[0]`, Tabellenzeile)
+ * verlangen oder ein Feld `standingDecisionLog` nennen: Das widerspricht @W2A-072 („weder Name noch Zeitpunkt im öffentlichen
+ * Lesepfad“) und dem Plan („Verlauf → `Tournament.decisionLog`“). Die Szenarien selbst sind erfüllt, belegt durch
+ * `decisionLog.test.ts` und die Oberflächen-Tests (Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH bleibt für diese Testform offen,
+ * Bericht A-13b-C).
  */
 import { describe, expect, it } from 'vitest';
 import { rankTournamentGroup } from '../tournamentTable';
@@ -14,7 +19,7 @@ const PERSON_ZEIT = { decidedBy: { name: 'Olli' }, decidedAt: expect.any(String)
 const DATEN_PLATZ_1 = 'M–N 2:2; M–W 1:0; M–O 1:0; M–U 1:0; M–B 1:0; N–W 1:0; N–O 1:0; N–U 1:0; N–B 1:0; W–O 1:0; W–U 1:0; W–B 1:0; O–U 1:0; O–B 1:0; U–B 1:0';
 const DATEN_029 = 'M–N 1:0; M–U 1:0; M–W 1:0; M–O 1:0; M–B 1:0; N–U 1:1; N–W 1:0; N–O 1:0; N–B 1:0; U–W 1:0; U–O 1:0; U–B 1:0; W–O 1:0; W–B 1:0; O–B 1:0';
 
-describe("TB-3' wer und wann – nur intern, Verlaufsprotokoll fehlt noch (C-ENTSCHEIDUNG-PERSON-OEFFENTLICH)", () => {
+describe("TB-3' wer und wann – nur intern, im Verlauf der Turnierleitung (C-ENTSCHEIDUNG-PERSON-OEFFENTLICH)", () => {
   it.fails('@W2A-063 die Turnierleitung sieht, wer das Ergebnis wann akzeptiert hat (C-ENTSCHEIDUNG-PERSON-OEFFENTLICH)', async () => {
     const repo = new MemoryRepo(nikolaus([1, 2]));
     expect((await repo.service().decide(repo.tournament.id, shared(['P', 'D']))).ok).toBe(true);
@@ -36,7 +41,7 @@ describe("TB-3' wer und wann – nur intern, Verlaufsprotokoll fehlt noch (C-ENT
     expect(gelesenVonMaria?.standingDecisions?.[0]).toMatchObject(PERSON_ZEIT);
   });
 
-  it.fails('@W2A-060 Maria sieht, dass und von wem schon entschieden wurde (C-ENTSCHEIDUNG-PERSON-OEFFENTLICH)', async () => {
+  it('@W2A-060 Maria sieht, dass und von wem schon entschieden wurde (Verlauf, GA4 A-13b-C)', async () => {
     const repo = new MemoryRepo(nikolaus());
     const gelesenVonMaria = await repo.get();
     if (gelesenVonMaria === null) { throw new Error('Turnier fehlt'); }

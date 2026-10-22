@@ -2,7 +2,7 @@
  * Paket TB-B, Task TB-6c/TB-6c' (Dialog „Gleichstand entscheiden“): Wahl (Strafstoßschießen/Reihenfolge oder „Ergebnis so
  * akzeptieren“, ohne Grundfeld), Ergebnis des Strafstoßschießens, Reihenfolge von drei Teams mit Grund, Feldmeldung ohne
  * Sieger, „schon entschieden“, ohne Netz, Modus „mit Abschluss“. Aus dem Gherkin: @ET-055, @W2A-044, @W2A-060, @W2A-061,
- * @W2A-062, @W2A-063, @W2A-064, @W2A-067, @TM-146. Mockup v3, Daniel G1/G2. „Von wem“ (Maria) erst mit GA4 A-13b: it.fails.
+ * @W2A-062, @W2A-063, @W2A-064, @W2A-067, @TM-146. Mockup v3, Daniel G1/G2. „Von wem“ (Maria) nennt der Dienst aus dem Verlauf (GA4 A-13b-C).
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -171,9 +171,9 @@ describe('Konflikte und Fehler (@W2A-060)', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it.fails('@W2A-060 „von wem schon entschieden wurde“ (Maria) – erst mit dem Verlaufsprotokoll (GA4 A-13b, C-ENTSCHEIDUNG-PERSON-OEFFENTLICH)', async () => {
+  it('@W2A-060 „von wem schon entschieden wurde“ (Maria): der Dienst nennt die Person aus dem Verlauf (GA4 A-13b-C)', async () => {
     const tie = fakeTie();
-    tie.decide.mockResolvedValue({ ok: false, code: 'ALREADY_DECIDED' });
+    tie.decide.mockResolvedValue({ ok: false, code: 'ALREADY_DECIDED', by: 'Maria' });
     await open(nikolaus(), '', tie);
     await userEvent.click(screen.getByTestId('tie-accept-result'));
     expect(await screen.findByTestId('tie-seen')).toHaveTextContent('Schon entschieden von Maria');
