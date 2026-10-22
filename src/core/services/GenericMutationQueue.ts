@@ -481,7 +481,38 @@ export class GenericMutationQueue<TType extends string> {
 
     /** A-07i (@FU-004): nur ein im echten Speicher angekommener Stand gilt als gespeichert. */
     private persist(key: string, value: unknown, action: string): void {
-        if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { if (Array.isArray(value) && value.length === 0) { safeLocalStorage.removeItem(key); } this.reportStorageFailure(action); } // A-07i Fixrunde 1 (2): leerer Stand -> veralteten Schluessel entfernen (Doppelversand)
+        if (safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { return; }
+        if (Array.isArray(value) && value.length === 0) { safeLocalStorage.removeItem(key); } // A-07i Fixrunde 1 (2): leerer Stand -> veralteten Schluessel entfernen (Doppelversand)
+        else if (Array.isArray(value) && this.replaceStaleList(key, value as ReadonlyArray<{ id?: unknown }>)) { return; }
+        this.reportStorageFailure(action);
+    }
+
+    /**
+     * BP-1 (@FU-121, @FU-122, Befunde C-QUEUE-SPEICHER-VOLL, -REST): Der Speicher hat den neuen Stand nicht genommen. Enthält
+     * der abgelegte Stand Einträge, die nicht mehr warten (gesendet oder abgelegt), würde ein Neustart sie noch einmal
+     * senden – ein alter Stand überschriebe dann neuere Daten. Deshalb: alten Stand entfernen (gibt Platz frei), dann den
+     * neuen Stand ablegen; passt er nicht, nur die schon abgelegten, noch wartenden Einträge; passt auch das nicht, bleibt
+     * nichts abgelegt (Ungesendetes lebt bis zum Neustart im Arbeitsspeicher, die Störung ist gemeldet; Controller F1).
+     * Liefert `true`, wenn der neue Stand vollständig abgelegt ist.
+     */
+    private replaceStaleList(key: string, value: ReadonlyArray<{ id?: unknown }>): boolean {
+        let stored: Array<{ id?: unknown }>;
+        try {
+            const parsed: unknown = JSON.parse(safeLocalStorage.getItem(key) ?? '[]');
+            stored = Array.isArray(parsed) ? (parsed as Array<{ id?: unknown }>) : [];
+        } catch {
+            stored = [];
+        }
+        const current = new Set(value.map((item) => item.id));
+        if (stored.every((item) => current.has(item.id))) { return false; } // nichts Veraltetes: der abgelegte Stand bleibt
+        safeLocalStorage.removeItem(key);
+        if (safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { return true; }
+        const storedIds = new Set(stored.map((item) => item.id));
+        const stillWaiting = value.filter((item) => storedIds.has(item.id));
+        if (stillWaiting.length === 0 || !safeLocalStorage.setItemPersisted(key, JSON.stringify(stillWaiting))) {
+            safeLocalStorage.removeItem(key); // setItemPersisted legt bei Fehlschlag nichts im echten Speicher ab
+        }
+        return false;
     }
 
     /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry (1× je Ursache). */
