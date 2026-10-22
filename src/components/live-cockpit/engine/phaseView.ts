@@ -104,9 +104,12 @@ function plannedMsOf(state: MatchState): number {
  * @FU-112: das Spiel wurde angepfiffen (Regeln aus dem Anpfiff) und endete mit einem Direkteintrag -- die letzte
  * Überschreibung ist `direct` und trägt den Zeitpunkt des Spielendes (nach einem späteren Abpfiff nicht mehr).
  */
-function eingetragenImSpielplanOf(state: MatchState): string | null {
+export function eingetragenImSpielplanOf(state: MatchState): string | null {
+  if (state.status !== 'finished' || !state.rules) {
+    return null;
+  }
   const last = state.overrides.at(-1);
-  if (state.status !== 'finished' || state.rules === null || last?.kind !== 'direct' || last.at !== state.finishedAt) {
+  if (last?.kind !== 'direct' || last.at !== state.finishedAt) {
     return null;
   }
   return last.id;
