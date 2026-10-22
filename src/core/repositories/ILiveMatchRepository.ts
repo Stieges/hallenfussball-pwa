@@ -19,4 +19,11 @@ export interface ILiveMatchRepository {
      * Get all live matches for a tournament
      */
     getAll(tournamentId: string): Promise<Map<string, LiveMatch>>;
+
+    /**
+     * Strikte Abfrage für die Anpfiff-Sperre (@LZ-003, C-LIVE-STAND-BEENDET-FEHLT): Ist im Turnier
+     * mindestens ein Spiel angepfiffen worden (laufend, pausiert oder beendet)? Anders als `getAll`
+     * zählt sie beendete Spiele mit und WIRFT bei Lesefehlern, statt „keins“ zu melden.
+     */
+    hasStartedMatches(tournamentId: string): Promise<boolean>;
 }

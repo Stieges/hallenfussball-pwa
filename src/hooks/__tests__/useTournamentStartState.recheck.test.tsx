@@ -11,11 +11,10 @@ import type { ReactNode } from 'react';
 import { useTournamentStartState } from '../useTournamentStartState';
 import type { Tournament } from '../../types/tournament';
 import type { ILiveMatchRepository } from '../../core/repositories/ILiveMatchRepository';
-import type { LiveMatch } from '../../core/models/LiveMatch';
 import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
 
 const fakeLive = vi.hoisted(() => ({
-  getAll: vi.fn(),
+  hasStartedMatches: vi.fn(),
 }));
 
 const online = vi.hoisted(() => ({ isOnline: true }));
@@ -33,11 +32,6 @@ vi.mock('../useOnlineStatus', () => ({
 const wrapper = ({ children }: { children: ReactNode }) => (
   <RealtimeEnabledContext.Provider value={true}>{children}</RealtimeEnabledContext.Provider>
 );
-
-function runningLiveMatch(): Map<string, LiveMatch> {
-  const match = { id: 'm1', status: 'RUNNING' } as LiveMatch;
-  return new Map([['m1', match]]);
-}
 
 function tournamentWithMatches(): Pick<
   Tournament,
@@ -64,11 +58,11 @@ describe('useTournamentStartState — recheck() fail-closed (B-02 Fixrunde 2, B2
   beforeEach(() => {
     vi.clearAllMocks();
     online.isOnline = true;
-    fakeLive.getAll.mockResolvedValue(new Map());
+    fakeLive.hasStartedMatches.mockResolvedValue(false);
   });
 
-  it('getAll wirft: nicht feststellbar', async () => {
-    fakeLive.getAll.mockRejectedValue(new Error('server down'));
+  it('hasStartedMatches wirft: nicht feststellbar', async () => {
+    fakeLive.hasStartedMatches.mockRejectedValue(new Error('server down'));
     const { result } = renderHook(() => useTournamentStartState(tournamentWithMatches()), {
       wrapper,
     });
@@ -77,7 +71,7 @@ describe('useTournamentStartState — recheck() fail-closed (B-02 Fixrunde 2, B2
   });
 
   it('laufendes Live-Spiel: angepfiffen', async () => {
-    fakeLive.getAll.mockResolvedValue(runningLiveMatch());
+    fakeLive.hasStartedMatches.mockResolvedValue(true);
     const { result } = renderHook(() => useTournamentStartState(tournamentWithMatches()), {
       wrapper,
     });
@@ -92,11 +86,11 @@ describe('useTournamentStartState — recheck() fail-closed (B-02 Fixrunde 2, B2
     });
 
     await expect(result.current.recheck()).resolves.toBe('unknown');
-    expect(fakeLive.getAll).not.toHaveBeenCalled();
+    expect(fakeLive.hasStartedMatches).not.toHaveBeenCalled();
   });
 
   it('Gegenbeispiel: leerer Live-Stand und online: nicht angepfiffen', async () => {
-    fakeLive.getAll.mockResolvedValue(new Map());
+    fakeLive.hasStartedMatches.mockResolvedValue(false);
     const { result } = renderHook(() => useTournamentStartState(tournamentWithMatches()), {
       wrapper,
     });
