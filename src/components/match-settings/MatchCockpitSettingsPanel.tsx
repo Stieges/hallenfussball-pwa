@@ -268,7 +268,7 @@ export function MatchCockpitSettingsPanel({
         <h3 style={styles.sectionTitle}>{t('settings.sound')}</h3>
 
         <SettingRow label={t('settings.endSound')} description={t('settings.endSoundDesc')}>
-          <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.sm, alignItems: 'center' }}>
             <select
               value={currentSoundValue}
               onChange={(e) => handleSoundChange(e.target.value)}
@@ -497,11 +497,14 @@ const styles: Record<string, CSSProperties> = {
   },
   rowControl: {
     flexShrink: 0,
+    maxWidth: '100%',
   },
 
   // Select
   select: {
-    minWidth: `${SELECT_MIN_WIDTH}px`,
+    minWidth: `min(${SELECT_MIN_WIDTH}px, 100%)`, // nie breiter als die Karte (@OB-021)
+    maxWidth: '100%',
+    flex: '1 1 auto',
     height: cssVars.touchTargets.minimum, // @OB-022: Bedienelemente mindestens 44 hoch
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
     fontSize: cssVars.fontSizes.lg, // @OB-022: Eingabefelder mindestens 16

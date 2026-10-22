@@ -64,6 +64,18 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
     }
   });
 
+  it('@OB-021 schmale Anzeige: Auswahlfelder und Bedienbereich laufen nie über die Karte hinaus', () => {
+    const { container } = zeige();
+    for (const feld of Array.from(container.querySelectorAll('select'))) {
+      expect(feld.style.maxWidth).toBe('100%');
+      expect(feld.style.minWidth).toMatch(/^min\(\d+px, 100%\)$/);
+      expect(feld.parentElement?.style.flexWrap, 'Zeile mit Auswahl und Taste darf umbrechen').not.toBe('nowrap');
+    }
+    for (const bereich of Array.from(container.querySelectorAll<HTMLElement>('select')).map((f) => f.closest('div[style*="flex-shrink"]')!)) {
+      expect(bereich.style.maxWidth).toBe('100%');
+    }
+  });
+
   it('@OB-022 Tasten, Schieberegler und Schalter sind mindestens 44 hoch', () => {
     const { container } = zeige();
     const bedienelemente = [
