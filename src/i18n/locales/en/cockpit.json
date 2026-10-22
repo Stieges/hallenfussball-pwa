@@ -169,7 +169,8 @@
     "countsAsFoul": "counts as a foul"
   },
   "eventEditDialog": {
-    "title": "Edit {{label}}"
+    "title": "Edit {{label}}",
+    "numberInvalid": "Shirt number: a whole number from 1 to 99. The previous number stays."
   },
   "cardDialog": {
     "title": "Issue Card",
@@ -514,6 +515,7 @@
     "andere": "Other no.",
     "uebernehmen": "Apply",
     "eingabe": "Shirt number",
+    "ungueltig": "Shirt number: a whole number from 1 to 99.",
     "titelKarte": "Shirt number – {{art}} {{team}}",
     "titelZeitstrafe": "Shirt number – time penalty {{team}}"
   },
