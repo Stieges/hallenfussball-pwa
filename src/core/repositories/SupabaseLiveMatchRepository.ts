@@ -67,6 +67,7 @@ const STARTED_MATCH_STATUSES: string[] = ['running', 'paused', 'finished'];
 
 export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
   private subscriptions = new Map<string, RealtimeChannel>();
+  private channelSequence = 0;
   private teamsCache = new Map<string, Map<string, TeamRow>>();
 
   // ==========================================================================
@@ -243,7 +244,10 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
     this.unsubscribe(tournamentId);
 
     const channel = supabase
-      .channel(`live-matches-${tournamentId}`)
+      // C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG: supabase-js baut einen Kanal asynchron ab und liefert unter
+      // demselben Namen bis dahin den noch „leaving“ Kanal zurück (`.on()` wirft dann). Jeder Beitritt bekommt
+      // deshalb einen eigenen Namen und damit einen frischen Kanal.
+      .channel(`live-matches-${tournamentId}-${++this.channelSequence}`)
       .on(
         'postgres_changes',
         {
