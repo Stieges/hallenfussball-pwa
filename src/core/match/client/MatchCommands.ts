@@ -152,6 +152,17 @@ export class MatchCommands {
     return built.ok ? this.submit(matchId, ctx, actor, built.spec) : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
   }
 
+  /**
+   * Spiel beenden (@FU-112, @FU-114, @FU-116): Abpfiff und Ergebnis in EINEM Eintrag (RESULT_ENTRY aus einem angepfiffenen
+   * Zustand, nur Leitung); `basedOn` = letzter Spielstand-Eintrag, den die Turnierleitung kannte (sonst STALE_BASE).
+   */
+  endWithResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout: TeamScores | undefined, knockout: boolean, basedOn: string | null): CommandResult {
+    const built = resultEntryCommand(knockout, scores, shootout);
+    return built.ok
+      ? this.submit(matchId, ctx, actor, { ...built.spec, payload: { ...built.spec.payload, basedOn } })
+      : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
+  }
+
   /** B-07a (@FU-089): Spiel absetzen/ueberspringen -- nur Leitung, nur im Zustand `scheduled`. */
   skip(matchId: string, ctx: MatchContext, actor: Actor, reason?: string): CommandResult {
     return this.submit(matchId, ctx, actor, skipSpec(reason));

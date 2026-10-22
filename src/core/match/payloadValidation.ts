@@ -42,6 +42,8 @@ const ResultEntryPayloadSchema = z.object({
   scores: TeamScoresSchema,
   shootout: TeamScoresSchema.optional(),
   forfeit: ForfeitSchema.optional(),
+  /** Spiel beenden (@FU-116): Stand, den die Turnierleitung kannte -- Pflicht nur aus einem angepfiffenen Zustand (handlers/correction.ts). */
+  basedOn: z.string().nullable().optional(),
 });
 const SkipPayloadSchema = z.object({ reason: z.string().optional() });
 const ClockAdjustPayloadSchema = z.object({});

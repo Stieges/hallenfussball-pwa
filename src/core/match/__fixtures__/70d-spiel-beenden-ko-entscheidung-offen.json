@@ -1,0 +1,119 @@
+{
+  "title": "@FU-114 @FU-094 K.-o.-Spiel nach Ablauf 0:0, Entscheidung offen (decision_pending): Turnierleitung beendet mit 1:1 und Strafstoß 4:3 -> beendet, Sieger Heim",
+  "szenario": "Steht ein Spiel nach abgelaufener Spielzeit ohne Abpfiff, beendet es die Turnierleitung im Spielplan",
+  "ctx": {
+    "matchId": "match-70d",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000070d-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": true,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "0000070d-0000-4000-8000-000000000002",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1201000,
+      "section": 1,
+      "clockMs": 1200000,
+      "payload": {}
+    },
+    {
+      "id": "0000070d-0000-4000-8000-000000000003",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 1210000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 1,
+          "teamB": 1
+        },
+        "basedOn": null,
+        "shootout": {
+          "teamA": 4,
+          "teamB": 3
+        }
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000070d-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070d-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070d-0000-4000-8000-000000000003",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 1200000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 1
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000070d-0000-4000-8000-000000000003",
+      "decidedBy": "direct",
+      "finishedAt": 1210000
+    },
+    "liveState": null,
+    "cacheColumns": {
+      "score_a": 1,
+      "score_b": 1,
+      "penalty_score_a": 4,
+      "penalty_score_b": 3,
+      "match_status": "finished",
+      "decided_by": "penalty"
+    }
+  }
+}
