@@ -22,6 +22,8 @@ interface UseScheduleTabActionsProps {
   setPendingReferee: (matchId: string, referee: number | null) => void;
   setPendingField: (matchId: string, field: number) => void;
   lockFinishedResults: boolean;
+  /** B-49 (@FU-081): fremd gesteuertes Feld bei laufendem Spiel – Hinweis bzw. „Spielleitung übernehmen“. */
+  offerTakeover?: (matchId: string, field: number | null) => Promise<boolean>;
 }
 
 interface UseScheduleTabActionsResult {
@@ -46,6 +48,7 @@ export function useScheduleTabActions({
   setPendingReferee,
   setPendingField,
   lockFinishedResults,
+  offerTakeover,
 }: UseScheduleTabActionsProps): UseScheduleTabActionsResult {
   const { t } = useTranslation('tournament');
 
@@ -134,7 +137,7 @@ export function useScheduleTabActions({
   }, [tournament, onTournamentUpdate, showSuccess, saveToHistory, t]);
 
   // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
-  const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults });
+  const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults, offerTakeover });
   const { enterScore } = resultEntry;
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
     return enterScore(matchId, scoreA, scoreB);

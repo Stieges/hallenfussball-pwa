@@ -30,6 +30,7 @@ import {
 import { useScheduleView } from './hooks/useScheduleView';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
 import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
+import { useScheduleTakeover } from './hooks/useScheduleTakeover';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
@@ -214,6 +215,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     };
   }, [liveMatchIds, tournament.matches, view]);
 
+  // B-49 (@FU-081): fremd gesteuertes Feld – „Feld 2 wird gerade von Tom gesteuert“ mit „Spielleitung übernehmen“, danach ins Cockpit
+  const takeover = useScheduleTakeover({ tournamentId: tournament.id, showWarning, onTaken: onNavigateToCockpit });
+
   // Action handlers (extracted for maintainability)
   const {
     handleRedistributeSR,
@@ -234,6 +238,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     setPendingReferee,
     setPendingField,
     lockFinishedResults: appSettings.lockFinishedResults,
+    offerTakeover: takeover.offerTakeover,
   });
 
   // ==========================================================================
@@ -368,6 +373,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       </div>
 
       <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} />
+      {takeover.dialog}
 
       {/* Conflict Warning Dialog */}
       <ConfirmDialog

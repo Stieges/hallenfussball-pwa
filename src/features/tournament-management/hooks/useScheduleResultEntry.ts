@@ -9,6 +9,7 @@
  * (M-2, Wortlaut @HE-042) melden sofort. K.-o.-Auflösung über `useResultEntryAck` → `useKoResolutionAfterAck`.
  * UR (@FU-082): den Namen im Hinweis „inzwischen von … geändert“ liest `readEventAuthorNames` (Server-Lesefunktion),
  * ohne Namen bleibt es beim Text ohne „von …“.
+ * B-49: laufend auf fremd gesteuertem Feld → `offerTakeover` (Hinweis bzw. „Spielleitung übernehmen“, @FU-081).
  * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -48,6 +49,11 @@ export interface UseScheduleResultEntryOptions {
   tournament: Tournament;
   showWarning: (message: string) => void;
   lockFinishedResults: boolean;
+  /**
+   * B-49 (@FU-081): laufendes Spiel auf einem fremd gesteuerten Feld → Hinweis „Feld 2 wird gerade von Tom gesteuert“ bzw.
+   * „Spielleitung übernehmen“ (`useScheduleTakeover`); `true` = erledigt, sonst der Hinweis „Spiel läuft“.
+   */
+  offerTakeover?: (matchId: string, field: number | null) => Promise<boolean>;
 }
 
 const score = (a: number, b: number): string => `${a}:${b}`;
@@ -58,7 +64,7 @@ const shootoutOf = (answer: string, teamAId: string, teamBId: string): Record<st
 };
 
 export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): ScheduleResultEntry {
-  const { tournament, showWarning, lockFinishedResults } = options;
+  const { tournament, showWarning, lockFinishedResults, offerTakeover } = options;
   const { t } = useTranslation('tournament');
   const { t: tCockpit } = useTranslation('cockpit');
   const context = useMatchEngineContextOptional();
@@ -161,7 +167,9 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       const route = routeForStatus(state.status);
       let eventId: string | null = null;
       if (route === 'running') {
-        showWarning(t('schedule.resultEntry.running'));
+        if (!(await offerTakeover?.(matchId, match?.field ?? null))) {
+          showWarning(t('schedule.resultEntry.running'));
+        }
         return false;
       }
       if (actor !== 'leitung') {
@@ -209,7 +217,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       showWarning(await rejectionText(error, entry));
       return false;
     }
-  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText]);
+  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, offerTakeover]);
 
   return { enterScore, prompt, answerPrompt, changeAuthor };
 }
