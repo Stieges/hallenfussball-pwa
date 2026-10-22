@@ -231,7 +231,7 @@
     "gameTimes": "Game times",
     "gameTimePerMatch": "Game time per match",
     "minutesLocked": "Minutes 🔒",
-    "gameTimeLockedHint": "Locked because matches have already started. Reset schedule to change.",
+    "gameTimeLockedHint": "This time cannot be changed here.",
     "breakTime": "Break time between matches",
     "minutes": "Minutes"
   },

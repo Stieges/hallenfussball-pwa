@@ -231,7 +231,7 @@
     "gameTimes": "Spielzeiten",
     "gameTimePerMatch": "Spielzeit pro Spiel",
     "minutesLocked": "Minuten 🔒",
-    "gameTimeLockedHint": "Gesperrt, da bereits Spiele gestartet wurden. Spielplan zurücksetzen um zu ändern.",
+    "gameTimeLockedHint": "Diese Zeit lässt sich hier nicht ändern.",
     "breakTime": "Pausenzeit zwischen Spielen",
     "minutes": "Minuten"
   },
