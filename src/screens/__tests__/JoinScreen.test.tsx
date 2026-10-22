@@ -220,11 +220,55 @@ describe('M2 Endzustände (Tabelle § 3.2)', () => {
     expect(screen.queryByTestId('join-submit')).toBeNull();
   });
 
-  it('@HE-008 abgelehnt: keine Turnier-Inhalte, Hinweis auf anderen Browser', async () => {
+  it('@HE-008 abgelehnt (einzeln, Code noch offen): keine Turnier-Inhalte, Sperr-Satz und Hinweis auf anderen Browser', async () => {
     renderJoin(makeDeps(ok({ ...OPEN, relation: 'declined' })));
     const card = await endTitle('Anfrage abgelehnt');
+    expect(card.textContent).toContain('bis zum Ende des Turniers keine neue Anfrage');
     expect(card.textContent).toContain('anderen Browser');
     expect(screen.queryByTestId('join-info-card')).toBeNull();
+  });
+
+  it('@HE-102 abgelehnt mit altem Code (rotated): kein Sperr-Satz, neutral „aktuellen QR-Code“', async () => {
+    renderJoin(makeDeps(ok({ state: 'rotated', relation: 'declined', tournament: CUP })));
+    const card = await endTitle('Anfrage abgelehnt');
+    expect(card.textContent).not.toContain('keine neue Anfrage');
+    expect(card.textContent).toContain('aktuellen QR-Code');
+  });
+
+  it.each([
+    ['declined', { ...OPEN, relation: 'declined' }],
+    ['declined (alter Code)', { state: 'rotated', relation: 'declined', tournament: CUP }],
+    ['requestExpired', { state: 'expired', relation: 'expired', tournament: CUP }],
+    ['revoked', { ...OPEN, relation: 'revoked' }],
+    ['viewer', { ...OPEN, relation: 'viewer' }],
+    ['accepted + closed', { state: 'closed', relation: 'accepted', tournament: CUP, field: 2 }],
+  ] as [string, JoinCodeInfo][])('@HE-004 Endkarte mit Beziehung (%s) nennt den Turniernamen nicht, auch wenn der Server ihn liefert', async (_n, info) => {
+    renderJoin(makeDeps(ok(info)));
+    await screen.findByTestId('join-end-state');
+    expect(screen.queryByText(/Live-Cup/)).toBeNull();
+    expect(screen.queryByTestId('join-info-card')).toBeNull();
+  });
+
+  it('@HE-004 BUSY und „Bitte noch einmal scannen“ nach dem Formular (Turnier war bekannt) nennen den Turniernamen nicht', async () => {
+    for (const request of [ok<RequestHelperAccessResult>({ result: 'BUSY', tournament: CUP }), { ok: false as const, error: { kind: 'noSession' as const } }]) {
+      const { unmount } = renderJoin(makeDeps(ok(OPEN), { request }));
+      await userEvent.type(await screen.findByTestId('join-name'), 'Tom');
+      await userEvent.click(screen.getByTestId('join-submit'));
+      await screen.findByTestId('join-end-state');
+      expect(screen.queryByText(/Live-Cup/)).toBeNull();
+      unmount();
+    }
+  });
+
+  it('Mockup e5: die Leitung sieht die Turnierkarte, e4: „Erst verbinden“ ebenfalls', async () => {
+    authState.user = { name: 'Maria' };
+    const leader = renderJoin(makeDeps(ok({ ...OPEN, relation: 'leader' }), { session: { kind: 'account', userId: 'm' } }));
+    await screen.findByTestId('join-leader');
+    expect(screen.getByTestId('join-info-card').textContent).toContain('Live-Cup');
+    leader.unmount();
+    renderJoin(makeDeps(ok(OPEN), { session: { kind: 'account', userId: 'm' }, waiting: 1 }));
+    await screen.findByTestId('join-pending-entries');
+    expect(screen.getByTestId('join-info-card').textContent).toContain('Live-Cup');
   });
 
   it('@HE-095 @HE-037 zugelassen, Turnier läuft → direkt Feld 2 öffnen, kein Formular, keine Anfrage', async () => {
@@ -275,7 +319,7 @@ describe('M2 Endzustände (Tabelle § 3.2)', () => {
     expect(screen.getByTestId<HTMLInputElement>('join-name').value).toBe('Tom');
   });
 
-  it('§ 3.2 noRequest (Konto-Sitzung ohne Anfrage) → Hinweis, Eintrag entfernt', async () => {
+  it('§ 3.2 noRequest (Konto-Sitzung ohne Anfrage) → Hinweis', async () => {
     renderJoin(makeDeps(ok({ relation: 'none' } as JoinCodeInfo)));
     await endTitle('Für dieses Turnier hast du keinen Zugang');
   });

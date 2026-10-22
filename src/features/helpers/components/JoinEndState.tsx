@@ -109,7 +109,7 @@ export const JoinEndState = ({ view, tournament, accountName, onNavigate, onHome
       icon={spec.icon}
       title={t(`join.end.${key}.title`)}
       text={spec.text ? t(spec.text) : undefined}
-      extra={spec.hint ? <p style={{ margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs }}>{t('join.end.declined.hint')}</p> : undefined}
+      extra={spec.hint ? <p style={{ margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs }}>{t(view.view === 'declined' && view.codeOpen ? 'join.end.declined.hint' : 'join.end.declined.hintRotated')}</p> : undefined}
       action={ownAction ? (
         <Button variant="primary" fullWidth onClick={() => onNavigate(ownAction.path)} style={bigButton} data-primary data-testid={ownAction.testId}>{ownAction.label}</Button>
       ) : (

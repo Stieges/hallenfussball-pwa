@@ -538,7 +538,7 @@ function AppContent() {
         )}
 
         {/* A-17b: Helfer-QR-Code (Adresse trägt den Code) und Hinweis für alte Einladungslinks */}
-        {route?.name === 'join' && route.params.code && <JoinScreen code={route.params.code} />}
+        {route?.name === 'join' && route.params.code && <JoinScreen key={route.params.code} code={route.params.code} />}
         {route?.name === 'invite' && <LegacyInviteScreen />}
 
         {/* Main App Screens */}

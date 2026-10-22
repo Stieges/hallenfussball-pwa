@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { JoinAccountDialog } from '../features/helpers/components/JoinAccountDialog';
 import { JoinAccountWaiting } from '../features/helpers/components/JoinAccountWaiting';
 import { JoinEndState } from '../features/helpers/components/JoinEndState';
+import { JoinInfoCard } from '../features/helpers/components/JoinInfoCard';
 import { JoinEntryForm } from '../features/helpers/components/JoinEntryForm';
 import { JoinShell } from '../features/helpers/components/JoinShell';
 import { JoinWaitingCard } from '../features/helpers/components/JoinWaitingCard';
@@ -91,21 +92,30 @@ export const JoinScreen = ({ code, deps }: JoinScreenProps) => {
           </>
         );
       case 'accountWaiting':
-        return <JoinAccountWaiting waitingCount={state.waitingCount} onRecheck={flow.recheck} />;
+        return (
+          <>
+            {meta.tournament ? <JoinInfoCard title={meta.tournament.title} date={meta.tournament.date} /> : null}
+            <JoinAccountWaiting waitingCount={state.waitingCount} onRecheck={flow.recheck} />
+          </>
+        );
       case 'cancelled':
         return null;
       case 'show':
         return state.view.view === 'waiting' ? (
           <JoinWaitingCard tournament={meta.tournament} name={meta.name} checkNumber={state.view.checkNumber} />
         ) : openField ? null : (
-          <JoinEndState
-            view={state.view}
-            tournament={meta.tournament}
-            accountName={accountName}
-            onNavigate={go}
-            onHome={() => go('/')}
-            onRecheck={flow.recheck}
-          />
+          <>
+            {/* e5: die Leitung sieht die Turnierkarte; alle anderen Endkarten zeigen kein Turnier (@HE-004) */}
+            {state.view.view === 'leader' && meta.tournament ? <JoinInfoCard title={meta.tournament.title} date={meta.tournament.date} /> : null}
+            <JoinEndState
+              view={state.view}
+              tournament={meta.tournament}
+              accountName={accountName}
+              onNavigate={go}
+              onHome={() => go('/')}
+              onRecheck={flow.recheck}
+            />
+          </>
         );
     }
   })();

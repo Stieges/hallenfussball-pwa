@@ -72,6 +72,33 @@ function stripInterpolationRefs(value) {
 }
 
 /**
+ * Kontextregel (wie docs/anforderungen/_tools/glossar-kontext.yaml, C6): Manche verbotenen Begriffe gelten nur im Zusammenhang,
+ * für den das Glossar sie verbietet. „abgelehnt“ ist für Einträge des Ausgangs verboten (D-C1), nicht für eine abgelehnte
+ * Beitrittsanfrage (@HE-008). Der Begriff wird nur gemeldet, wenn mindestens eines dieser Wörter im selben Wert steht
+ * („Wort*“ = Wortanfang, sonst ganzes Wort; Groß-/Kleinschreibung zählt). Begriffe ohne Eintrag gelten überall.
+ */
+const OUTBOX_CONTEXT = ['Server', 'Eintrag', 'Eintrags', 'Eintrages', 'Einträge', 'Einträgen', 'Ausgang*', 'Warteschlange', 'Übertrag*', 'nicht übernommen'];
+const CONTEXT_RULES = {
+  abgelehnt: OUTBOX_CONTEXT,
+  Ablehnung: OUTBOX_CONTEXT,
+  'in Prüfung': OUTBOX_CONTEXT,
+  'Review offen': OUTBOX_CONTEXT,
+};
+
+function contextWordRegex(word) {
+  const prefix = word.endsWith('*');
+  const base = prefix ? word.slice(0, -1) : word;
+  return new RegExp(`(?<![${GERMAN_WORD_CHAR}])${escapeRegExp(base)}${prefix ? '' : `(?![${GERMAN_WORD_CHAR}])`}`, 'u');
+}
+
+/** Gilt das verbotene Synonym für diesen Text? Ohne Kontextregel immer, sonst nur mit einem Kontextwort. */
+function contextApplies(forbidden, text) {
+  const words = CONTEXT_RULES[forbidden];
+  if (!words) return true;
+  return words.some((word) => contextWordRegex(word).test(text));
+}
+
+/**
  * Findet alle Sprachverzeichnisse unter src/i18n/locales/
  * @returns {string[]}
  */
@@ -201,7 +228,8 @@ function buildForbiddenPatterns(glossary) {
         term,
         forbidden,
         reason: entry.reason,
-        regex: wordBoundaryRegex(forbidden),
+        // Begriffe mit Kontextregel erfassen auch Beugungen („abgelehnter Eintrag“): nur der Wortanfang zählt.
+        regex: CONTEXT_RULES[forbidden] ? new RegExp(`(?<![${GERMAN_WORD_CHAR}])${escapeRegExp(forbidden)}`, 'iu') : wordBoundaryRegex(forbidden),
       });
     }
   }
@@ -226,7 +254,7 @@ function checkForbiddenSynonyms(localesDir, locales, namespaces, patterns) {
         const cleaned = stripInterpolationRefs(value);
 
         for (const pattern of patterns) {
-          if (pattern.regex.test(cleaned)) {
+          if (pattern.regex.test(cleaned) && contextApplies(pattern.forbidden, cleaned)) {
             errors.push(
               `Verbotenes Synonym "${pattern.forbidden}" (Begriff "${pattern.term}") in ` +
                 `src/i18n/locales/${locale}/${namespace}.json, Schlüssel "${key}": "${value}". ` +
@@ -395,6 +423,7 @@ module.exports = {
   flatten,
   loadGlossary,
   wordBoundaryRegex,
+  contextApplies,
   stripInterpolationRefs,
   buildForbiddenPatterns,
   checkKeyParity,

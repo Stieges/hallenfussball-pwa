@@ -1,8 +1,9 @@
 /**
  * tests/e2e/cloud/helfer-beitritt.cloud.spec.ts — GA5 A-17b „Einstieg per QR“.
  *
- * Szenarien: @HE-001 (Scan → Name → gleiche Prüfzahl → Zulassen → Feld), @HE-089 (Konto scannt → Rückfrage → der Laptop-Kontext
- * bleibt angemeldet), @HE-015 (Gegenbeispiel: Hallen-WLAN ohne Internet → „Für den Einstieg brauchst du Netz“, Name bleibt).
+ * Szenarien: @HE-095 (Scan → Name → gleiche Prüfzahl → Zulassen → gleicher QR öffnet das Feld; @HE-001 ist in A-17b nur Teil:
+ * der Wechsel Warteschirm → „Du bist zugelassen“ ohne neuen Scan kommt mit A-17c), @HE-089 (Konto scannt → Rückfrage → der
+ * Laptop-Kontext bleibt angemeldet), @HE-015 (Gegenbeispiel: Hallen-WLAN ohne Internet → „Für den Einstieg brauchst du Netz“).
  *
  * Voraussetzung: lokaler Stack MIT der Migration `20261110_008_helper_join.sql` (A-16). Dieser Stack hat sie noch nicht
  * (Einspielen = Sache des Fensters/Controllers; hier wird nie zurückgesetzt oder gesät). Darum läuft der Block erst mit
@@ -11,7 +12,8 @@
  */
 import { test, expect } from './fixtures';
 import { restAsRole } from './restAsRole';
-import { E2E_LIVE_CUP_ID } from './testData';
+import { loginAsRole } from './helpers';
+import { E2E_LIVE_CUP_ID, E2E_USERS } from './testData';
 
 const HAS_008 = process.env.E2E_STACK_HAS_008 === '1';
 
@@ -27,7 +29,7 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     return (res.json as { code: string }).code;
   }
 
-  test('@HE-001 Scan → Name → Prüfzahl → Zulassen mit Feld 2 → Feld 2 öffnet', async ({ browser }) => {
+  test('@HE-095 Scan → Name → Prüfzahl → Zulassen mit Feld 2 → gleicher QR öffnet Feld 2', async ({ browser }) => {
     const code = await helperCode();
     const helper = await (await browser.newContext()).newPage();
     await helper.goto(`/#/join/${code}`);
@@ -47,17 +49,27 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     await expect(helper).toHaveURL(/\/live\?f=2/);
   });
 
-  test('@HE-089 Konto scannt: Rückfrage; „Weiter“ meldet nur diesen Kontext ab, der Laptop bleibt angemeldet', async ({ asRole }) => {
+  test('@HE-089 Konto scannt: Rückfrage; „Weiter“ meldet nur das Handy ab, der Laptop (eigene Anmeldung) bleibt angemeldet', async ({ browser }) => {
     const code = await helperCode();
-    const laptop = await asRole('coadmin');
-    const phone = await asRole('coadmin');
+    // Greta = `stranger` leitet den Live-Cup nicht (sonst @HE-091). Handy und Laptop melden sich je selbst an: getrennte Sitzungen,
+    // denn `signOut({ scope: 'local' })` beendet genau die Sitzung des Handys.
+    const consent = { errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 };
+    const open = async () => {
+      const context = await browser.newContext();
+      await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
+      const page = await context.newPage();
+      await loginAsRole(page, 'stranger');
+      return page;
+    };
+    const laptop = await open();
+    const phone = await open();
     await phone.goto(`/#/join/${code}`);
-    await expect(phone.getByTestId('join-account-continue')).toBeVisible();
+    await expect(phone.getByTestId('join-account-text')).toContainText(E2E_USERS.stranger.displayName);
     await phone.getByTestId('join-account-continue').click();
     await expect(phone.getByTestId('join-submit')).toBeVisible();
-    await laptop.goto('/#/');
+    await laptop.reload();
+    await expect(laptop.getByTestId('auth-avatar-button')).toBeVisible({ timeout: 15000 });
     await expect(laptop.getByTestId('join-account-continue')).toHaveCount(0);
-    await expect(laptop.getByText(/Anmelden/)).toHaveCount(0);
   });
 
   test('@HE-015 Gegenbeispiel: ohne Internet „Für den Einstieg brauchst du Netz“, nicht „Code ungültig“, Name bleibt', async ({ browser }) => {

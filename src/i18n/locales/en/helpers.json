@@ -43,9 +43,9 @@
       "waitingTitleCount_one": "Connect first – {{count}} entry is waiting",
       "waitingTitleCount_other": "Connect first – {{count}} entries are waiting",
       "waitingTitleUnknown": "Connect first – entries are waiting",
-      "waitingTextCount_one": "{{count}} entry from your own tournament is waiting on this device. It goes to the server under your account as soon as the device has a connection. After that you can join as helper.",
-      "waitingTextCount_other": "{{count}} entries from your own tournament are waiting on this device. They go to the server under your account as soon as the device has a connection. After that you can join as helper.",
-      "waitingTextUnknown": "Entries from your own tournament are waiting on this device. They go to the server under your account as soon as the device has a connection. After that you can join as helper."
+      "waitingTextCount_one": "{{count}} entry from your own tournament is waiting on this device. It goes to the server under your account once the device has a connection. After that you can join as helper.",
+      "waitingTextCount_other": "{{count}} entries from your own tournament are waiting on this device. They go to the server under your account once the device has a connection. After that you can join as helper.",
+      "waitingTextUnknown": "Entries from your own tournament are waiting on this device. They go to the server under your account once the device has a connection. After that you can join as helper."
     },
     "leader": {
       "title": "You already run this tournament",
@@ -79,7 +79,8 @@
       "declined": {
         "title": "Request declined",
         "text": "The tournament organisers did not approve your request.",
-        "hint": "On this device you cannot make a new request until the tournament ends. If your request was declined by mistake, scan again with another browser or another device."
+        "hint": "On this device you cannot make a new request until the tournament ends. If your request was declined by mistake, scan again with another browser or another device.",
+        "hintRotated": "Ask the tournament organisers for the current QR code."
       },
       "requestExpired": {
         "title": "Request expired",
@@ -114,9 +115,6 @@
         "title": "You need a connection to join",
         "text": "Check the connection and then scan again.",
         "stayAccount": "You stay signed in as {{name}}."
-      },
-      "authRateLimited": {
-        "title": "Too many sign-ins from this network – please try again in 2 minutes or use mobile data"
       },
       "unexpected": {
         "title": "That did not work – please try again",

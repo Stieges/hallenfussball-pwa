@@ -79,7 +79,8 @@
       "declined": {
         "title": "Anfrage abgelehnt",
         "text": "Die Turnierleitung hat deine Anfrage nicht zugelassen.",
-        "hint": "Auf diesem Gerät kannst du bis zum Ende des Turniers keine neue Anfrage stellen. Wurde deine Anfrage aus Versehen abgelehnt, scanne mit einem anderen Browser oder einem anderen Gerät noch einmal."
+        "hint": "Auf diesem Gerät kannst du bis zum Ende des Turniers keine neue Anfrage stellen. Wurde deine Anfrage aus Versehen abgelehnt, scanne mit einem anderen Browser oder einem anderen Gerät noch einmal.",
+        "hintRotated": "Frag die Turnierleitung nach dem aktuellen QR-Code."
       },
       "requestExpired": {
         "title": "Anfrage verfallen",
@@ -114,9 +115,6 @@
         "title": "Für den Einstieg brauchst du Netz",
         "text": "Prüfe die Verbindung und scanne dann noch einmal.",
         "stayAccount": "Du bleibst als {{name}} angemeldet."
-      },
-      "authRateLimited": {
-        "title": "Zu viele Anmeldungen aus diesem Netz – bitte in 2 Minuten noch einmal versuchen oder mobile Daten nutzen"
       },
       "unexpected": {
         "title": "Das hat nicht geklappt – bitte noch einmal",

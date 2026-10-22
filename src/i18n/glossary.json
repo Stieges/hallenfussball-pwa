@@ -57,7 +57,7 @@
     "rejectedEntry": {
       "de": "nicht übernommen",
       "en": "not accepted",
-      "forbidden_de": ["Eintrag abgelehnt", "Eintrag wurde abgelehnt", "Einträge abgelehnt", "Ablehnung"],
+      "forbidden_de": ["abgelehnt", "Ablehnung"],
       "reason": "D-C1: Eintrag, den der Server nicht angenommen hat – ohne Wertung beschrieben, damit Helfer:innen ihn verstehen und bestätigen können.",
       "i18nKey": "outbox.rejectedEntry"
     },
@@ -86,7 +86,7 @@
       "de": "zulassen",
       "en": "approve",
       "forbidden_de": ["freischalten", "genehmigen"],
-      "reason": "A-17b: die Turnierleitung lässt eine Helfer-Anfrage zu (Taste „Zulassen“, @HE-001); ein Verb für Handy und Leitung. „abgelehnt“ bleibt für Anfragen erlaubt (@HE-008), nur nicht für Einträge (D-C1).",
+      "reason": "A-17b: die Turnierleitung lässt eine Helfer-Anfrage zu (Taste „Zulassen“, @HE-001); ein Verb für Handy und Leitung.",
       "i18nKey": "helpers.approve"
     },
     "cancelledMatch": {

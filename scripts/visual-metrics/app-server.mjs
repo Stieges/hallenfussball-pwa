@@ -33,13 +33,15 @@ export function freierPort() {
   })
 }
 
-export async function starteApp({ neuBauen = false, log = () => {} } = {}) {
+export async function starteApp({ neuBauen = false, log = () => {}, stubUrl = null } = {}) {
   const wurzel = repoWurzel()
   const stand = gitStand(wurzel)
   const cache = join(wurzel, 'node_modules', '.cache', 'visual-metrics')
-  const envLeer = join(cache, 'env-leer')
+  // Mit Stub (A-17b): Scheinadresse für Supabase (lokal, nie ein Produktionsprojekt); sonst leeres envDir wie bisher.
+  const envLeer = join(cache, stubUrl ? 'env-stub' : 'env-leer')
   mkdirSync(envLeer, { recursive: true })
-  const outDir = join(cache, stand.veraendert ? `build-${stand.kurz}-veraendert` : `build-${stand.kurz}`)
+  if (stubUrl) writeFileSync(join(envLeer, '.env'), `VITE_SUPABASE_URL=${stubUrl}\nVITE_SUPABASE_ANON_KEY=vm-stub-key\n`)
+  const outDir = join(cache, `${stand.veraendert ? `build-${stand.kurz}-veraendert` : `build-${stand.kurz}`}${stubUrl ? '-stub' : ''}`)
   const stempelPfad = join(outDir, 'vm-build.json')
   const { build, preview } = await import(join(wurzel, 'node_modules', 'vite', 'dist', 'node', 'index.js'))
 
