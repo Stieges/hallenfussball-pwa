@@ -195,6 +195,8 @@ export function MetadataCategory({
       contactName: tournament.contactInfo?.name ?? '',
       contactPhone: tournament.contactInfo?.phone ?? '',
       contactEmail: tournament.contactInfo?.email ?? '',
+      contactWebsite: tournament.contactInfo?.website ?? '',
+      contactShowPublic: tournament.contactInfo?.showPublic === true, // B-14 (@W1-031): Häkchen allein speicherbar
       startDate: tournament.startDate ?? tournament.date,
       startTime: tournament.startTime ?? tournament.timeSlot,
       notes: tournament.adminNotes ?? '',
@@ -211,6 +213,8 @@ export function MetadataCategory({
       contactName: formData.contactInfo?.name ?? '',
       contactPhone: formData.contactInfo?.phone ?? '',
       contactEmail: formData.contactInfo?.email ?? '',
+      contactWebsite: formData.contactInfo?.website ?? '',
+      contactShowPublic: formData.contactInfo?.showPublic === true,
       startDate: formData.startDate ?? '',
       startTime: formData.startTime ?? '',
       notes: notes,
