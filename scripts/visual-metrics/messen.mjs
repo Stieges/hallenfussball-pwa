@@ -373,8 +373,8 @@ async function main() {
               // 'warte:<ms>' wartet, statt zu klicken (z. B. die Sperre des Nummern-Bausteins von 300 ms, @SL-021)
               const warte = /^warte:(\d+)$/.exec(k)
               if (warte) { await page.waitForTimeout(Number(warte[1])); continue }
-              // 'fill:<selektor>=<text>' tippt Text in ein Feld (z. B. den Namen des Helfers), dann weiter
-              const fuell = /^fill:(.+?)=(.*)$/.exec(k)
+              // 'fill:<selektor>::<text>' tippt Text in ein Feld (z. B. den Namen des Helfers), dann weiter
+              const fuell = /^fill:(.+?)::(.*)$/.exec(k)
               if (fuell) {
                 try { await page.locator(fuell[1]).first().fill(fuell[2], { timeout: 5000 }) } catch { gr.push(`Vorbedingung nicht erfuellbar: Eingabe in ${fuell[1]}`) }
                 continue
