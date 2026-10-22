@@ -100,29 +100,35 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     expect(scoreOf(h, SPIEL_9, SV_SUED, FC_NORD)).toBe('3:1');
   });
 
-  it('@FU-081 Gegenbeispiel: Spiel 9 läuft am Server (fremdes Gerät) → „Spiel läuft“, Ausgang leer', async () => {
+  // @FU-081 präzisiert (20261110_009): kein einfacher Eintrag in ein laufendes Spiel -- die Turnierleitung bekommt die
+  // Rückfrage „Spiel beenden und Ergebnis eintragen“ (@FU-112, Tests in useScheduleResultEntry.spielBeenden.test.tsx).
+  it('@FU-081 Spiel 9 läuft am Server (fremdes Gerät) → kein einfacher Eintrag, Rückfrage „Spiel beenden“, bis dahin Ausgang leer', async () => {
     h.fetchConfirmed.mockResolvedValueOnce({
       events: [seq(anpfiff, 1)],
       newWatermark: 1,
     });
-    const { enter, showWarning } = render(h);
-    await enter(SPIEL_9, 3, 1);
-    await settle();
+    const { hook, enter, showWarning } = render(h);
+    const done = enter(SPIEL_9, 3, 1);
+    await act(async () => { await settle(); });
 
-    expect(lastWarning(showWarning)).toBe('Spiel läuft – Ergebnis erst nach dem Abpfiff');
+    expect(hook.result.current.prompt).toMatchObject({ kind: 'end', matchNumber: 9, score: '3:1' });
+    expect(showWarning).not.toHaveBeenCalled();
     expect((await outbox(h, SPIEL_9))?.pending).toEqual([]);
     expect(h.api).not.toHaveBeenCalled();
+    await act(async () => { hook.result.current.answerPrompt(null); await settle(); });
+    expect(await done).toBe(false);
   });
 
-  // Rest von @FU-081 (Gerätename, „Spielleitung übernehmen“) gehört zu A-34/B-49 (Brief A-08f3e2e3 § 1).
-  it.fails('@FU-081 Rest (A-34/B-49): Ablehnung nennt „Feld 2 wird von Tom gesteuert“', async () => {
+  // Rest von @FU-081 („Spielleitung übernehmen“ neben dem Notweg) gehört zu B-49 (Übernahme aus dem Spielplan).
+  it.fails('@FU-081 Rest (B-49): Olli sieht in der Rückfrage zusätzlich „Spielleitung übernehmen“', async () => {
     h.fetchConfirmed.mockResolvedValueOnce({
       events: [seq(anpfiff, 1)],
       newWatermark: 1,
     });
-    const { enter, showWarning } = render(h);
-    await enter(SPIEL_9, 3, 1);
-    expect(lastWarning(showWarning)).toBe('Spiel läuft – Feld 2 wird von Tom gesteuert');
+    const { hook, enter } = render(h);
+    void enter(SPIEL_9, 3, 1);
+    await act(async () => { await settle(); });
+    expect(hook.result.current.prompt).toMatchObject({ kind: 'end', takeOver: true });
   });
 
   // Fixrunde 1 (M-1): Die Turnierleitung kannte das 2:1 nicht -- statt einer Grund-Rückfrage, die sicher scheitert,

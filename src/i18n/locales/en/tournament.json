@@ -136,6 +136,13 @@
     },
     "resultEntry": {
       "running": "Match in progress – enter the result after the final whistle",
+      "shootoutRunning": "$t(sport:events.penaltyShootout) in progress – finish it in the cockpit",
+      "endOffline": "Only possible with a connection",
+      "endTitle": "End match and enter result",
+      "endQuestionRunning": "Match {{number}} is still running – the clock shows {{rest}} remaining. End it now at {{score}}?",
+      "endQuestionExpired": "Playing time is up – end it now at {{score}}?",
+      "endControlledBy": "Field {{field}} is currently controlled by {{name}}",
+      "endControlledByOther": "Field {{field}} is currently controlled by another device",
       "teamsMissing": "Enter a result once both teams are known",
       "unavailable": "Entering a result is not possible right now",
       "shootoutTitle": "Penalty shootout result",
