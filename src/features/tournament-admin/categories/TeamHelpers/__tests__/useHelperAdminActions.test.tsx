@@ -181,6 +181,46 @@ describe('useHelperAdminActions', () => {
   });
 
   describe('Ohne Netz (@HE-047)', () => {
+    it('Ollis Gerät geht offline: der geladene Code bleibt, es gibt keinen neuen ensure-Aufruf (Mockup r9)', async () => {
+      const { result, rerender } = await setup();
+      expect(result.current.code?.code).toBe('K7MQ4X9R2P');
+      rpc.ensure.mockClear();
+      online.value = false;
+      rerender();
+      await new Promise((r) => setTimeout(r, 20));
+      expect(rpc.ensure).not.toHaveBeenCalled();
+      expect(result.current.code?.code).toBe('K7MQ4X9R2P');
+      expect(result.current.codeState).toBe('ready');
+    });
+
+    it('Netzfehler beim erneuten Holen (Netz kommt zurück, Server noch nicht erreichbar): der vorhandene Code bleibt', async () => {
+      const { result, rerender } = await setup();
+      online.value = false;
+      rerender();
+      rpc.ensure.mockResolvedValue({ ok: false, error: { kind: 'network' } });
+      online.value = true;
+      rerender();
+      await waitFor(() => expect(rpc.ensure).toHaveBeenCalledTimes(2));
+      expect(result.current.code?.code).toBe('K7MQ4X9R2P');
+      expect(result.current.codeState).toBe('ready');
+    });
+
+    it('Gegenbeispiel: beim ersten Laden ohne Netz und ohne Code kein Aufruf, kein Code (Zustand bleibt „loading“)', async () => {
+      online.value = false;
+      const onChanged = vi.fn();
+      const { result } = renderHook(() => useHelperAdminActions('t1', true, onChanged));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(rpc.ensure).not.toHaveBeenCalled();
+      expect(result.current.code).toBeNull();
+      expect(result.current.isOnline).toBe(false);
+    });
+
+    it('Gegenbeispiel: ohne vorhandenen Code bleibt ein Netzfehler beim ersten Holen ein Fehlerzustand', async () => {
+      rpc.ensure.mockResolvedValue({ ok: false, error: { kind: 'network' } });
+      const { result } = await setup();
+      expect(result.current.codeState).toBe('error');
+    });
+
     it('Gegenbeispiel: ohne Netz geht kein Aufruf an den Server, nichts wird vorgemerkt, Hinweis „offline“', async () => {
       const { result, onChanged } = await setup();
       online.value = false;

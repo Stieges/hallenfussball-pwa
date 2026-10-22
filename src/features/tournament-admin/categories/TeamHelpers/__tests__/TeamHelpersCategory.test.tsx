@@ -322,6 +322,41 @@ describe('Team & Helfer', () => {
       expect(screen.queryByTestId('helper-revoked-tag')).not.toBeInTheDocument();
     });
 
+    it('keine optimistische Anzeige: solange der Server nicht geantwortet hat, bleibt die Zeile unverändert; erst seine Liste zeigt „entzogen“', async () => {
+      const user = await open([], [member({ memberId: 'm1', name: 'Tom' })]);
+      let answer: (value: unknown) => void = () => undefined;
+      rpc.change.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+      await user.click(screen.getByTestId('helper-revoke'));
+      await user.click(await screen.findByTestId('helper-revoke-confirm'));
+      await waitFor(() => expect(rpc.change).toHaveBeenCalledTimes(1));
+      // Antwort ausstehend: nichts darf sich ändern (auch nicht „vorläufig“)
+      await new Promise((r) => setTimeout(r, 50));
+      const row = screen.getByTestId('helper-row');
+      expect(row.dataset.state).toBe('helper');
+      expect(screen.queryByTestId('helper-revoked-tag')).not.toBeInTheDocument();
+      expect(within(row).getByTestId('helper-revoke')).toBeInTheDocument();
+      // Server entzieht, seine Liste kommt
+      rpc.list.mockResolvedValue(listOf([], [member({ memberId: 'm1', name: 'Tom', revokedAt: '2026-11-28T11:30:00Z' })]));
+      answer({ ok: true, data: { result: 'OK' } });
+      expect(await screen.findByTestId('helper-revoked-tag')).toBeInTheDocument();
+    });
+
+    it('keine optimistische Anzeige beim Zulassen: die Anfrage bleibt in der Liste, bis der Server geantwortet hat und seine Liste sie nicht mehr enthält', async () => {
+      const user = await open([req('r1', 'Tom', 47)], []);
+      let answer: (value: unknown) => void = () => undefined;
+      rpc.decide.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+      await user.click(screen.getByTestId('request-approve'));
+      await user.click(await screen.findByTestId('approve-number-47'));
+      await waitFor(() => expect(rpc.decide).toHaveBeenCalledTimes(1));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(screen.getByTestId('join-request')).toBeInTheDocument();
+      expect(screen.queryByTestId('helper-row')).not.toBeInTheDocument();
+      rpc.list.mockResolvedValue(listOf([], [member({ memberId: 'm9', name: 'Tom', field: null })]));
+      answer({ ok: true, data: { result: 'OK', memberId: 'm9' } });
+      await waitFor(() => expect(screen.queryByTestId('join-request')).not.toBeInTheDocument());
+      expect(screen.getByTestId('helper-row')).toHaveTextContent('Tom');
+    });
+
     it('Gegenbeispiel: „Abbrechen“ im Entziehen-Dialog ruft den Server nicht an', async () => {
       const user = await open([], [member({})]);
       await user.click(screen.getByTestId('helper-revoke'));
@@ -350,8 +385,13 @@ describe('Team & Helfer', () => {
 
   describe('Ohne Netz (@HE-047)', () => {
     it('„Geht nur mit Netz“: Zulassen, Ablehnen, Entziehen, Nur zusehen und Code erneuern sind gesperrt, nichts wird vorgemerkt', async () => {
-      env.online = false;
-      const user = await open([req('r1', 'Tom', 47)], [member({})]);
+      rpc.list.mockResolvedValue(listOf([req('r1', 'Tom', 47)], [member({})]));
+      const user = userEvent.setup();
+      const view = render(<TeamHelpersCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
+      await screen.findByTestId('helper-qr');
+      await screen.findByTestId('request-approve');
+      env.online = false; // das Gerät verliert das Netz, die Seite war schon geladen
+      view.rerender(<TeamHelpersCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
       expect(screen.getByTestId('needs-network')).toHaveTextContent('Geht nur mit Netz');
       expect(screen.getByTestId('needs-network')).toHaveTextContent(/Nichts wird vorgemerkt/);
       expect(screen.getByTestId('needs-network')).toHaveTextContent(/Notübernahme/);
@@ -364,6 +404,27 @@ describe('Team & Helfer', () => {
       expect(rpc.change).not.toHaveBeenCalled();
       expect(rpc.rotate).not.toHaveBeenCalled();
       expect(screen.queryByTestId('approve-sheet')).not.toBeInTheDocument();
+    });
+
+    it('Ollis Gerät verliert das Netz: QR und Code bleiben sichtbar, dazu der Hinweis (Mockup r9)', async () => {
+      rpc.list.mockResolvedValue(listOf([], []));
+      const view = render(<TeamHelpersCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
+      await screen.findByTestId('helper-qr');
+      env.online = false;
+      view.rerender(<TeamHelpersCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
+      expect(await screen.findByTestId('needs-network')).toBeInTheDocument();
+      expect(screen.getByTestId('helper-qr')).toBeInTheDocument();
+      expect(screen.getByTestId('helper-code')).toHaveTextContent('K7MQ4X9R2P');
+      expect(rpc.ensure).toHaveBeenCalledTimes(1);
+    });
+
+    it('Gegenbeispiel: erstes Laden ohne Netz und ohne Code – kein Code, aber der Hinweis „Geht nur mit Netz“; der Server wird für den Code nicht gefragt', async () => {
+      env.online = false;
+      rpc.list.mockResolvedValue(listOf([], []));
+      render(<TeamHelpersCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
+      expect(await screen.findByTestId('needs-network')).toHaveTextContent('Geht nur mit Netz');
+      expect(screen.queryByTestId('helper-qr')).not.toBeInTheDocument();
+      expect(rpc.ensure).not.toHaveBeenCalled();
     });
 
     it('Gegenbeispiel: mit Netz kein Hinweis „Geht nur mit Netz“', async () => {

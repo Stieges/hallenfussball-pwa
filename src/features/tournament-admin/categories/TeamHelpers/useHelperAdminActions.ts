@@ -89,7 +89,8 @@ export function useHelperAdminActions(tournamentId: string, enabled: boolean, on
 
   const applyCodeResult = useCallback((result: HelperRpcResult<HelperCodeResult>) => {
     if (!result.ok) {
-      setCodeState(result.error.kind === 'notAuthorized' ? 'noRight' : 'error');
+      // Ein vorhandener Code bleibt stehen (Netz weg, Mockup r9): „error“ nur, solange noch keiner da ist
+      setCodeState((prev) => (result.error.kind === 'notAuthorized' ? 'noRight' : prev === 'ready' ? 'ready' : 'error'));
       if (result.error.kind !== 'notAuthorized' && result.error.kind !== 'network') {
         captureFeatureError(new Error(`ensure_helper_code: ${result.error.kind}`), 'helpers', 'code');
       }
@@ -106,7 +107,8 @@ export function useHelperAdminActions(tournamentId: string, enabled: boolean, on
   }, []);
 
   useEffect(() => {
-    if (!enabled) {
+    // Ohne Netz kein Aufruf (@HE-047): ein bereits geladener Code bleibt sichtbar, beim ersten Laden zeigt die Seite den Hinweis
+    if (!enabled || !isOnline) {
       return;
     }
     void callEnsureHelperCode(supabase, tournamentId).then((result) => {
