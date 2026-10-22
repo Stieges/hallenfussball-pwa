@@ -140,7 +140,24 @@ describe('B-49 Cockpit: Steuer je Feld (Verdrahtung)', () => {
     expect(cockpit).toHaveAttribute('data-uebernehmen', 'true');
   });
 
-  it('@FU-026 Helferin Clara: nur lesend, ohne „Spielleitung übernehmen“', () => {
+  it('@FU-120 Helfer Tom, auf Feld 1 läuft kein Spiel: nur lesend, mit „Spielleitung übernehmen“', () => {
+    currentRole = 'collaborator';
+    steuer.list = [TOM_HANDY];
+    liveMatches.set(MATCH_RUNNING, makeLiveMatch(MATCH_RUNNING, 1, 'FINISHED'));
+    const cockpit = renderTab();
+    expect(cockpit).toHaveAttribute('data-readonly', 'true');
+    expect(cockpit).toHaveAttribute('data-uebernehmen', 'true');
+  });
+
+  it('@FU-120 Gegenbeispiel: läuft irgendein Spiel des Felds (pausiert), bekommt der Helfer keine Übernahme', () => {
+    currentRole = 'collaborator';
+    steuer.list = [TOM_HANDY];
+    liveMatches.set(MATCH_RUNNING, makeLiveMatch(MATCH_RUNNING, 1, 'FINISHED'));
+    liveMatches.set(MATCH_TARGET, makeLiveMatch(MATCH_TARGET, 2, 'PAUSED'));
+    expect(renderTab()).toHaveAttribute('data-uebernehmen', 'false');
+  });
+
+  it('@FU-026 @FU-120 Helferin Clara bei laufendem Spiel: nur lesend, ohne „Spielleitung übernehmen“', () => {
     currentRole = 'collaborator';
     steuer.list = [TOM_HANDY];
     const cockpit = renderTab();

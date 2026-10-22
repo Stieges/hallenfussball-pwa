@@ -25,7 +25,7 @@ import { buildSideContext } from '../../components/schedule/matchSides';
 import { useFieldMatchSelection } from './hooks/useFieldMatchSelection';
 import { useEngineMatchInit } from './hooks/useEngineMatchInit';
 import { useCockpitKorrektur } from './hooks/useCockpitKorrektur';
-import { useCockpitFieldControl } from './hooks/useCockpitFieldControl';
+import { laeuftAufFeld, useCockpitFieldControl } from './hooks/useCockpitFieldControl';
 import { toMatchSummary } from './model/toMatchSummary';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
 import { StorageWarningBanner } from '../../components/StorageWarningBanner';
@@ -109,8 +109,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     [currentMatchData, liveMatches]
   );
   // B-49: Steuer je Feld – fremd gesteuertes Feld nur lesend, „Spielleitung übernehmen“, Halter in der Feldwahl (@FU-026, @FU-027, @HE-049)
+  const feldLaeuft = useMemo(() => laeuftAufFeld(fieldMatches.map((m) => m.id), liveMatches), [fieldMatches, liveMatches]);
   const steuer = useCockpitFieldControl({
-    tournamentId: tournament.id, feld, feldName: t('management.field', { number: feld }), canPlay, istLeitung, currentMatch,
+    tournamentId: tournament.id, feld, feldName: t('management.field', { number: feld }), canPlay, istLeitung, feldLaeuft, currentMatch,
   });
 
   // Find last finished match
