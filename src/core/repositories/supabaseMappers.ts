@@ -614,9 +614,9 @@ export function mapTournamentFromSupabase(
     title: row.title,
     ageClass: config.ageClass ?? '',
     date: row.date,
-    timeSlot: row.start_time ?? '',
+    timeSlot: timeFromDb(row.start_time) ?? '',
     startDate: row.date,
-    startTime: row.start_time ?? undefined,
+    startTime: timeFromDb(row.start_time),
     location,
     organizer: config.organizer,
     rulebook: config.rulebook, ...bibColorFromConfig(config), ...spectatorDisplayFromConfig(config), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
@@ -683,9 +683,21 @@ export function mapTournamentFromSupabase(
  * @FU-128 (C-STARTTIME): `start_time` ist vom Typ time. Eine leere Zeichenkette oder ein Anzeigetext wie
  * „09:00 - 16:00“ lehnt Postgres ab; ohne gültige Uhrzeit geht NULL.
  */
-function startTimeForDb(value: string | undefined): string | null {
+export function startTimeForDb(value: string | undefined): string | null {
   const time = value?.trim();
   return time && /^\d{1,2}:\d{2}(:\d{2})?$/.test(time) ? time : null;
+}
+
+/** Erste Uhrzeit eines Anzeigetexts („09:00 - 16:00“ -> „09:00“), z. B. aus einem JSON-Import; sonst NULL. */
+function firstTimeOf(text: string | undefined): string | null {
+  const match = /(\d{1,2}:\d{2})/.exec(text ?? '');
+  return match ? match[1] : null;
+}
+
+/** Der Server liefert time-Spalten als HH:MM:SS; die Anzeige zeigt HH:MM (@FU-128). */
+function timeFromDb(value: string | null): string | undefined {
+  const match = value ? /^(\d{1,2}):(\d{2})/.exec(value) : null;
+  return match ? `${match[1].padStart(2, '0')}:${match[2]}` : undefined;
 }
 
 export function mapTournamentToSupabase(
@@ -751,7 +763,7 @@ export function mapTournamentToSupabase(
     sport: tournament.sport,
     tournament_type: tournament.tournamentType,
     date: tournament.startDate ?? tournament.date,
-    start_time: startTimeForDb(tournament.startTime ?? tournament.timeSlot), // @FU-128
+    start_time: startTimeForDb(tournament.startTime) ?? firstTimeOf(tournament.timeSlot), // @FU-128
     location_name: tournament.location.name ?? null,
     location_street: tournament.location.street ?? null,
     location_city: tournament.location.city ?? null,

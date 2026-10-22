@@ -30,13 +30,26 @@ describe('Startzeit beim Speichern (@FU-128, C-STARTTIME)', () => {
     const { tournament } = ueberDieLeitung(createTournamentRow({ start_time: null }));
     const { tournamentRow } = mapTournamentToSupabase({ ...tournament, startTime: '09:30', timeSlot: '09:30' }, 'user-1');
     expect(tournamentRow.start_time).toBe('09:30');
-    const zurueck = mapTournamentFromSupabase(createTournamentRow({ start_time: tournamentRow.start_time }), [], []);
+    // der Server gibt time-Spalten als HH:MM:SS zurück
+    const zurueck = mapTournamentFromSupabase(createTournamentRow({ start_time: '09:30:00' }), [], []);
     expect(zurueck.startTime).toBe('09:30');
   });
 
-  it('@FU-128 Anzeigetext wie „09:00 - 16:00“ ohne startTime wird nicht als Uhrzeit gesendet', () => {
+  it('@FU-128 Zeitspanne als Startzeit (z. B. aus einem JSON-Import): die erste Uhrzeit wird übernommen', () => {
     const { tournament } = ueberDieLeitung(createTournamentRow({ start_time: null }));
     const { tournamentRow } = mapTournamentToSupabase({ ...tournament, startTime: undefined, timeSlot: '09:00 - 16:00' }, 'user-1');
+    expect(tournamentRow.start_time).toBe('09:00');
+  });
+
+  it('@FU-128 Text ohne Uhrzeit ergibt NULL', () => {
+    const { tournament } = ueberDieLeitung(createTournamentRow({ start_time: null }));
+    const { tournamentRow } = mapTournamentToSupabase({ ...tournament, startTime: undefined, timeSlot: 'ganztägig' }, 'user-1');
     expect(tournamentRow.start_time).toBeNull();
+  });
+
+  it('@FU-128 der Server liefert 09:30:00, die Anzeige zeigt 09:30', () => {
+    const zurueck = mapTournamentFromSupabase(createTournamentRow({ start_time: '09:30:00' }), [], []);
+    expect(zurueck.startTime).toBe('09:30');
+    expect(zurueck.timeSlot).toBe('09:30');
   });
 });
