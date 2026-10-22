@@ -171,12 +171,12 @@ describe('Konflikte und Fehler (@W2A-060)', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('@W2A-060 „von wem schon entschieden wurde“ (Maria): der Dienst nennt die Person aus dem Verlauf (GA4 A-13b-C)', async () => {
+  it('@W2A-060 Olli hat zuerst eingetragen; Maria sieht „von wem schon entschieden wurde“: der Dienst nennt die Person aus dem Verlauf (GA4 A-13b-C)', async () => {
     const tie = fakeTie();
-    tie.decide.mockResolvedValue({ ok: false, code: 'ALREADY_DECIDED', by: 'Maria' });
+    tie.decide.mockResolvedValue({ ok: false, code: 'ALREADY_DECIDED', by: 'Olli' });
     await open(nikolaus(), '', tie);
     await userEvent.click(screen.getByTestId('tie-accept-result'));
-    expect(await screen.findByTestId('tie-seen')).toHaveTextContent('Schon entschieden von Maria');
+    expect(await screen.findByTestId('tie-seen')).toHaveTextContent('Schon entschieden von Olli');
   });
 
   it.each([

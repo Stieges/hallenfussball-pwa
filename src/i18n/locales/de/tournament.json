@@ -1134,7 +1134,9 @@
       "offline": "Entscheiden geht nur mit Netz – oder über „Gruppe abschließen“.",
       "decide": "Gleichstand entscheiden",
       "shootout": "Strafstoßschießen eintragen",
-      "order": "Reihenfolge festlegen"
+      "order": "Reihenfolge festlegen",
+      "withdrawnBy": "zurückgenommen von {{name}} · {{time}}",
+      "withdrawnByUnknown": "Zurückgenommen · {{time}}"
     },
     "decided": {
       "sharedTitle": "Ergebnis akzeptiert",

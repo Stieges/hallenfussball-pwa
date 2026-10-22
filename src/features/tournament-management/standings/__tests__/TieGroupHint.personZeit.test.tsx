@@ -2,11 +2,11 @@
  * Paket TB-B / GA4 A-13b-C: Szenarien, deren letzte Zeile „wer hat wann entschieden / zurückgenommen“ nennt. Person und
  * Zeit stehen absichtlich nicht im öffentlich lesbaren `config` (@W2A-072), sondern im Verlauf der Turnierleitung
  * (`Tournament.decisionLog`, Server `bracket_log_read`); der Hinweis in der Tabelle zeigt sie nur der Turnierleitung.
- * Der Fall @W2A-070 „zurückgenommen von“ bleibt `it.fails`: Er verlangt den Text an einer GELTENDEN Entscheidung, die nie
- * zurückgenommen wurde (Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH, siehe Bericht A-13b-C).
+ * @W2A-070: Nach dem Zurücknehmen nennt der offene Hinweis, wer wann zurückgenommen hat (nur Turnierleitung).
  */
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
+import type { Tournament } from '../../../../types/tournament';
 import { TieGroupHint } from '../TieGroupHint';
 import { MemoryRepo, nikolaus, shared, shootout } from '../../../../core/standings/__tests__/decisionTestKit';
 import type { DecisionDraft } from '../../../../core/standings/decisions';
@@ -20,6 +20,19 @@ async function zeigeEntschieden(draft: DecisionDraft, canDecide = true): Promise
   expect((await repo.service(['e-1']).decide(repo.tournament.id, draft)).ok).toBe(true);
   const Wrapper = await i18nWrapper('de');
   render(<Wrapper>{withTie(fakeTie({ canDecide }), <TieGroupHint tournament={repo.tournament} groupId="" />)}</Wrapper>);
+}
+
+async function mitRuecknahme(): Promise<MemoryRepo> {
+  const repo = new MemoryRepo(nikolaus());
+  expect((await repo.service(['e-1']).decide(repo.tournament.id, shared(['P', 'D']))).ok).toBe(true);
+  repo.author = 'Maria';
+  expect((await repo.service().withdraw(repo.tournament.id, 'e-1')).ok).toBe(true);
+  return repo;
+}
+
+async function zeigeHinweis(tournament: Tournament, canDecide: boolean): Promise<void> {
+  const Wrapper = await i18nWrapper('de');
+  render(<Wrapper>{withTie(fakeTie({ canDecide }), <TieGroupHint tournament={tournament} groupId="" />)}</Wrapper>);
 }
 
 describe('Person und Zeit der Entscheidung (Verlauf der Turnierleitung, GA4 A-13b-C)', () => {
@@ -38,9 +51,28 @@ describe('Person und Zeit der Entscheidung (Verlauf der Turnierleitung, GA4 A-13
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli · \d{2}:\d{2}/);
   });
 
-  it.fails('@W2A-070 die Turnierleitung sieht, wer wann akzeptiert und zurückgenommen hat – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
+  it('@W2A-070 Olli akzeptiert, Maria nimmt zurück: der offene Hinweis nennt „zurückgenommen von Maria · Zeit“ (nur Turnierleitung)', async () => {
+    const repo = await mitRuecknahme();
+    await zeigeHinweis(repo.tournament, true);
+    expect(screen.getByTestId('tie-hint-choice')).toBeInTheDocument();
+    expect(screen.getByTestId('tie-withdrawn-by')).toHaveTextContent(/zurückgenommen von Maria · \d{2}:\d{2}/);
+  });
+
+  it('@W2A-070 Gegenbeispiel: Tom als Helfer sieht nicht, wer zurückgenommen hat', async () => {
+    const repo = await mitRuecknahme();
+    await zeigeHinweis(repo.tournament, false);
+    expect(screen.queryByTestId('tie-withdrawn-by')).toBeNull();
+  });
+
+  it('@W2A-070 Gegenbeispiel: eine nie zurückgenommene Entscheidung zeigt keine „zurückgenommen“-Zeile; wird danach neu entschieden, auch nicht', async () => {
     await zeigeEntschieden(shared(['P', 'D']));
-    expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/zurückgenommen von/);
+    expect(screen.getByTestId('tie-decided-info')).not.toHaveTextContent(/zurückgenommen/);
+    cleanup();
+    const repo = await mitRuecknahme();
+    expect((await repo.service(['e-2']).decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
+    await zeigeHinweis(repo.tournament, true);
+    expect(screen.queryByTestId('tie-withdrawn-by')).toBeNull();
+    expect(screen.getByTestId('tie-decided-info')).not.toHaveTextContent(/zurückgenommen/);
   });
 
   it('@W2A-071 Gegenbeispiel: Tom als Helfer sieht das Ergebnis, aber weder Person noch Zeit', async () => {

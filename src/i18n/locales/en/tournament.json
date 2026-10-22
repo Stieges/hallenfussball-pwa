@@ -1134,7 +1134,9 @@
       "offline": "Deciding needs a connection – or use “Complete group”.",
       "decide": "Decide tie",
       "shootout": "Enter penalty shootout",
-      "order": "Set order"
+      "order": "Set order",
+      "withdrawnBy": "withdrawn by {{name}} · {{time}}",
+      "withdrawnByUnknown": "Withdrawn · {{time}}"
     },
     "decided": {
       "sharedTitle": "Result accepted",

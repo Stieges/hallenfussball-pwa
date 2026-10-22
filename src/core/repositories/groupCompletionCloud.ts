@@ -287,15 +287,18 @@ type UntypedFrom = (table: string) => {
 /** Tabelle fehlt (vor dem Einspielen von `_006`): PostgREST `PGRST205`, Postgres `42P01`. */
 const isMissingTable = (code: string | undefined): boolean => code === 'PGRST205' || code === '42P01';
 
+/** Kein Leserecht (`42501`): Geräte ohne Anmeldung, etwa der Hallen-Monitor (`anon` hat kein SELECT auf `group_completions`). */
+const isNoAccess = (code: string | undefined): boolean => code === '42501';
+
 /**
- * Lesen der Abschlüsse eines Turniers. `undefined` = Tabelle gibt es (noch) nicht – dann gilt keine Gruppe als abgeschlossen
- * und der lokale Stand bleibt; ein anderer Fehler wirft `RepositoryError` wie das Lesen von Teams und Spielen.
+ * Lesen der Abschlüsse eines Turniers. `undefined` = Tabelle gibt es (noch) nicht oder das Gerät darf sie nicht lesen (anon,
+ * Hallen-Monitor, `42501`) – dann gilt der Abschluss als unbekannt und der lokale Stand bleibt; ein anderer Fehler wirft `RepositoryError` wie das Lesen von Teams und Spielen.
  */
 export async function readGroupCompletions(client: SupabaseClient<Database>, tournamentId: string): Promise<GroupCompletion[] | undefined> {
   const from = client.from.bind(client) as unknown as UntypedFrom;
   const { data, error } = await from('group_completions').select(GROUP_COMPLETION_COLUMNS).eq('tournament_id', tournamentId);
   if (error) {
-    if (isMissingTable(error.code)) {
+    if (isMissingTable(error.code) || isNoAccess(error.code)) {
       return undefined;
     }
     if (isAbortError(error)) {
@@ -307,5 +310,5 @@ export async function readGroupCompletions(client: SupabaseClient<Database>, tou
   if (!parsed.success) {
     throw new RepositoryError('get', 'Unerwartete Antwort von group_completions', parsed.error);
   }
-  return parsed.data.map(mapGroupCompletionRow);
+  return parsed.data.map(mapGroupCompletionRow).sort((x, y) => (x.groupId < y.groupId ? -1 : x.groupId > y.groupId ? 1 : 0));
 }

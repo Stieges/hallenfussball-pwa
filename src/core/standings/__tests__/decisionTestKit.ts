@@ -76,7 +76,7 @@ export class MemoryRepo {
         this.log({ kind: 'standing_decision', groupId: request.decision.groupId, detail, ...(request.decision.kind === 'order' && request.reason !== undefined ? { reason: request.reason } : {}) });
       } else {
         const gone = before.find((d) => d.id === request.decision.id);
-        this.log({ kind: 'standing_withdraw', ...(gone !== undefined ? { groupId: gone.groupId } : {}), detail: { id: request.decision.id } });
+        this.log({ kind: 'standing_withdraw', ...(gone !== undefined ? { groupId: gone.groupId } : {}), detail: { id: request.decision.id, ...(gone !== undefined ? { teamIds: gone.teamIds } : {}) } });
       }
     }
     return Promise.resolve(result);

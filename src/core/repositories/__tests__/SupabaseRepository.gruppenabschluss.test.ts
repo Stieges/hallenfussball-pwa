@@ -99,6 +99,31 @@ describe('Lesen: Abschlüsse und Verlauf am Turnier (@TM-046, @W2A-071)', () => 
   });
 });
 
+describe('Hallen-Monitor ohne Anmeldung (anon, 42501) lädt weiter', () => {
+  it('@W2A-072 group_completions und bracket_log_read ohne Leserecht: das Turnier lädt, die Felder fehlen (unbekannt)', async () => {
+    ladeAlles();
+    enqueue('group_completions', { data: null, error: { code: '42501', message: 'permission denied for table group_completions' } });
+    rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'permission denied for function bracket_log_read' } });
+    const t = await new SupabaseRepository().get('tournament-1');
+    expect(t?.id).toBe('tournament-1');
+    expect(t).not.toHaveProperty('groupCompletions');
+    expect(t).not.toHaveProperty('decisionLog');
+  });
+
+  it('Gegenbeispiel: ein anderer Fehler beim Lesen der Abschlüsse lässt get() scheitern', async () => {
+    ladeAlles();
+    enqueue('group_completions', { data: null, error: { code: '57014', message: 'statement timeout' } });
+    await expect(new SupabaseRepository().get('tournament-1')).rejects.toThrow(/statement timeout/);
+  });
+
+  it('Abschlüsse kommen nach Gruppe sortiert an (gleiche Reihenfolge, kein unnötiges Schreiben der lokalen Kopie)', async () => {
+    ladeAlles();
+    enqueue('group_completions', { data: [{ ...ABSCHLUSS_ZEILE, group_id: 'B' }, ABSCHLUSS_ZEILE], error: null });
+    const t = await new SupabaseRepository().get('tournament-1');
+    expect(t?.groupCompletions?.map((c) => c.groupId)).toEqual(['A', 'B']);
+  });
+});
+
 describe('Schreiben nur über die Funktionen (R-GA4v2-1)', () => {
   it('@W2A-060 recordStandingDecision ruft record_standing_decision – kein einziger Zugriff auf eine Tabelle', async () => {
     rpc.mockResolvedValue({ data: { status: 'ok', version: 4 }, error: null });
