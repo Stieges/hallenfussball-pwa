@@ -35,7 +35,8 @@
 -- RUECKWEG: Vorlage aus `bash scripts/spiel-beenden-check.sh --print-rueckweg` (Anhang B der Freigabe-Unterlage
 -- spiel-beenden-sql-freigabe.md), in EINEM Block; belegt in Kategorie X. Vorher die App zurueck (die neue App sendet
 -- RESULT_ENTRY mit basedOn). Haelt an, wenn schon ein Ergebnis mit basedOn gespeichert ist (ein solches Spiel liefe nach dem
--- Rueckweg beim Nachrechnen wieder) -- dann vorher klaeren.
+-- Rueckweg beim Nachrechnen wieder) -- nach der ersten Nutzung gibt es nur noch eine Korrektur nach vorn. Haelt ebenso an, wenn
+-- append_match_events schon eine spaetere Fassung ist (closed_intake, A-21a 20261113_003): der Rueckweg gilt nur bis G2.
 --
 -- Produktion: nur im DB-Fenster G1b durch den Controller nach Daniels Freigabe des woertlichen SQL
 -- (spiel-beenden-sql-freigabe.md), Reihenfolge NACH 20261110_005 (.._008), VOR 20261113_003. Dieser Branch spielt nichts ein.
@@ -61,6 +62,12 @@ BEGIN
      OR to_regprocedure('match_engine.stale_base_detail(jsonb,jsonb)') IS NULL
      OR to_regprocedure('match_engine.stop_clock(jsonb,jsonb)') IS NULL THEN
     RAISE EXCEPTION '20261110_009_spiel_beenden: Vorgaenger fehlen (Wertung 20261110_005 mit A-34 20261110_003) -- zuerst alle Migrationen bis 20261110_008 einspielen';
+  END IF;
+  -- Review A2: nie still ueber eine spaetere Neufassung spielen (A-21a 20261113_003 fasst append_match_events mit
+  -- closed_intake neu) -- dann muss die spaetere Datei auf dieser aufbauen, nicht umgekehrt.
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')
+              AND position('closed_intake' IN prosrc) > 0) THEN
+    RAISE EXCEPTION '20261110_009_spiel_beenden: append_match_events ist schon eine spaetere Fassung (closed_intake, 20261113_003) -- diese Datei nicht darueber spielen';
   END IF;
 END;
 $$;
