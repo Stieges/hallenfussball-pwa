@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
-import { isTransientMutationError, isVersionConflict } from '../errors';
+import { definitiveRejectionReason, isTransientMutationError, isVersionConflict, type DefinitiveRejectionReason } from '../errors';
 import { StorageError } from '../storage/StorageError';
 import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
@@ -34,6 +34,7 @@ const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     lastError: z.string().optional(),
     conflict: z.boolean().optional(),
     discardedCopy: z.boolean().optional(),
+    rejection: z.enum(['invalidValue']).optional(),
 });
 
 /**
@@ -66,6 +67,11 @@ export interface FailedMutationItem<TType extends string = string> extends Gener
      * Servers wartet (z. B. Server nicht erreichbar). Kein Konflikt mit einem anderen Gerät; „Erneut versuchen“ hilft nicht.
      */
     discardedCopy?: boolean;
+    /**
+     * BP-1 (@FU-126, Befund C-ENDGUELTIG-SOFORT-MELDEN): vom Server eindeutig abgelehnt, ohne Wiederholung abgelegt.
+     * `invalidValue`: ungültiger Wert. Ein Konflikt trägt weiter `conflict`.
+     */
+    rejection?: Exclude<DefinitiveRejectionReason, 'conflict'>;
 }
 
 /**
@@ -275,18 +281,30 @@ export class GenericMutationQueue<TType extends string> {
     /**
      * Move a failed mutation to the dead-letter queue
      */
-    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, reason?: 'conflict' | 'discardedCopy'): void {
+    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, reason?: DefinitiveRejectionReason | 'discardedCopy'): void {
         const failedItem: FailedMutationItem<TType> = {
             ...item,
             failedAt: Date.now(),
             lastError: error,
             ...(reason === 'conflict' ? { conflict: true } : {}),
             ...(reason === 'discardedCopy' ? { discardedCopy: true } : {}),
+            ...(reason === 'invalidValue' ? { rejection: reason } : {}),
         };
         this.failedQueue.push(failedItem);
         this.saveFailed();
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) { console.log(`MutationQueue: Moved ${item.id} to dead-letter queue`); }
+    }
+
+    /** Kopf der Warteschlange in den Dead-Letter (Sentry wie bisher) – nach MAX_RETRIES oder bei eindeutiger Ablehnung. */
+    private deadLetterHead(item: GenericMutationItem<TType>, error: unknown, reason?: DefinitiveRejectionReason): void {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
+        this.queue.shift();
+        this.moveToDeadLetter(item, errorMessage, reason);
+        this.lastFailure = 'permanent';
+        this.save();
+        this.notifyListeners();
     }
 
     /**
@@ -566,18 +584,19 @@ export class GenericMutationQueue<TType extends string> {
                         break;
                     }
 
+                    // BP-1 (@FU-126): eindeutig endgültige Ablehnung – sofort mit Grund ablegen, kein neuer Versuch
+                    const rejection = definitiveRejectionReason(error);
+                    if (rejection) {
+                        this.deadLetterHead(item, error, rejection);
+                        continue;
+                    }
+
                     this.lastFailure = 'permanent'; this.notifyListeners();
                     item.retryCount++;
 
                     if (item.retryCount >= MAX_RETRIES) {
-                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                         if (import.meta.env.DEV) { console.error(`MutationQueue: Max retries exceeded for ${item.id}. Moving to dead-letter queue.`); }
-                        if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
-                        // Move to dead-letter queue instead of dropping
-                        this.queue.shift();
-                        this.moveToDeadLetter(item, errorMessage, isVersionConflict(error) ? 'conflict' : undefined);
-                        this.save();
-                        this.notifyListeners();
+                        this.deadLetterHead(item, error, isVersionConflict(error) ? 'conflict' : undefined);
                         continue; // Continue to next item
                     } else {
                         // Keep in queue, stop processing for now (retry later)
