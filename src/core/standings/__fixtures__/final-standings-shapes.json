@@ -1698,6 +1698,1660 @@
       },
       "valid": false,
       "reason": "Art unbekannt"
+    },
+    {
+      "name": "Grenze: Platz 999",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 999,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Platz 1000",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1000,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Platz höchstens 999"
+    },
+    {
+      "name": "Grenze: Rang 999",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 999,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Rang 1000",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1000,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Rang höchstens 999"
+    },
+    {
+      "name": "Grenze: Nummer 0",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 0,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Nummer 999",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 999,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Nummer -1",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": -1,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Rückennummer ab 0"
+    },
+    {
+      "name": "Grenze: Nummer 1000",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 1000,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Rückennummer höchstens 999"
+    },
+    {
+      "name": "Grenze: Teamname 200 Zeichen",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Teamname 201 Zeichen",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Teamname höchstens 200 Zeichen"
+    },
+    {
+      "name": "Grenze: Teamname 200 Emoji (je 1 Zeichen wie char_length, 2 UTF-16-Einheiten)",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽⚽😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Teamname 201 Emoji",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Teamname höchstens 200 Zeichen (Unicode-Zeichen)"
+    },
+    {
+      "name": "Grenze: Teamname 200 Zeichen mit Umlaut (Mehrbyte)",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖ",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Gruppe 40 Zeichen",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Gruppe 41 Zeichen",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Gruppe höchstens 40 Zeichen"
+    },
+    {
+      "name": "Grenze: App-Version 50 Zeichen",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "11111111111111111111111111111111111111111111111111",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: App-Version 51 Zeichen",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "111111111111111111111111111111111111111111111111111",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "App-Version höchstens 50 Zeichen"
+    },
+    {
+      "name": "Grenze: Tore 9999",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 9999
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Tore 10000",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 10000
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Tore höchstens 9999"
+    },
+    {
+      "name": "Grenze: Tore 10000 bei Eigentoren",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 10000
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Tore höchstens 9999"
+    },
+    {
+      "name": "Grenze: Zeitpunkt mit Z",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Zeitpunkt mit +01:00",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T16:30:00+01:00"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Zeitpunkt ohne Zone mit Millisekunden",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000"
+      },
+      "valid": false,
+      "reason": "Zeitpunkt mit Zeitzone"
+    },
+    {
+      "name": "Grenze: Zeitpunkt nur Datum",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28"
+      },
+      "valid": false,
+      "reason": "Zeitpunkt mit Uhrzeit und Zeitzone"
+    },
+    {
+      "name": "Grenze: Werte je Spiel: negative Tordifferenz",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            },
+            "perGame": {
+              "points": 1,
+              "goalDiff": -1.5,
+              "goals": 0,
+              "games": 2
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": true,
+      "reason": ""
+    },
+    {
+      "name": "Grenze: Werte je Spiel: negative Punkte",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            },
+            "perGame": {
+              "points": -1,
+              "goalDiff": 0,
+              "goals": 1,
+              "games": 2
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Punkte je Spiel ab 0"
+    },
+    {
+      "name": "Grenze: Werte je Spiel: negative Tore",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            },
+            "perGame": {
+              "points": 1,
+              "goalDiff": 0,
+              "goals": -0.5,
+              "games": 2
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Tore je Spiel ab 0"
+    },
+    {
+      "name": "Grenze: Werte je Spiel: Spielzahl 0",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            },
+            "perGame": {
+              "points": 1,
+              "goalDiff": 0,
+              "goals": 1,
+              "games": 0
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Spielzahl ab 1"
+    },
+    {
+      "name": "Grenze: Werte je Spiel: Spielzahl negativ",
+      "snapshot": {
+        "format": 1,
+        "ranking": [
+          {
+            "place": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 1
+            },
+            "perGame": {
+              "points": 1,
+              "goalDiff": 0,
+              "goals": 1,
+              "games": -2
+            }
+          },
+          {
+            "place": 2,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "origin": {
+              "kind": "groupPlace",
+              "group": "",
+              "place": 2
+            }
+          }
+        ],
+        "scorers": [
+          {
+            "kind": "player",
+            "rank": 1,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "number": 7,
+            "goals": 5
+          },
+          {
+            "kind": "noNumber",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000911",
+            "teamName": "TSV Waging rot",
+            "goals": 2
+          },
+          {
+            "kind": "ownGoals",
+            "rank": null,
+            "teamId": "00000000-0000-4000-8000-000000000910",
+            "teamName": "DJK Kammer",
+            "goals": 1
+          }
+        ],
+        "appVersion": "2.3.0",
+        "computedAt": "2026-11-28T15:30:00.000Z"
+      },
+      "valid": false,
+      "reason": "Spielzahl ab 1"
     }
   ]
 }

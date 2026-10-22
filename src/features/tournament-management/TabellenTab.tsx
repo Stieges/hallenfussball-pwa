@@ -171,6 +171,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     setExpandedRows(newExpanded);
   };
 
+  const roundRobinRanking = useMemo(() => computeFinalStandings(tournament).ranking, [tournament]);
+
   // Berechne finale Platzierung (Legacy-Funktion für Fallback)
   const getGroupBasedRanking = (): Standing[] => {
     const groups = Array.from(new Set(tournament.teams.map(t => t.group).filter(Boolean)));
@@ -242,7 +244,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   // A-19a: Jeder gegen jeden zeigt den Endstand (Gruppenabschluss, Platzziffern mit Sprung, ohne entfernte Teams, @ET-022/@ET-058)
   const finalRanking = hasPlayoffs ? mergedRanking : hasGroups
     ? getGroupBasedRanking().map((standing, index) => ({ rank: index + 1, team: standing.team, decidedBy: 'groupStage' as const }))
-    : computeFinalStandings(tournament).ranking.flatMap((row) => tournament.teams.filter((team) => team.id === row.teamId)
+    : roundRobinRanking.flatMap((row) => tournament.teams.filter((team) => team.id === row.teamId)
       .map((team) => ({ rank: row.place, team, decidedBy: 'groupStage' as const })));
 
   const standingsMap = useMemo(() => {

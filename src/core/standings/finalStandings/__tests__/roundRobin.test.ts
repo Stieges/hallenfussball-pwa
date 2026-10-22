@@ -46,11 +46,44 @@ describe('A-19a Pflichttest Nikolaus (eine Gruppe, 6 Teams, echt erzeugt)', () =
     expect([...ids].sort()).toEqual(t.teams.map((team) => team.id).sort());
   });
 
-  it('@TM-058 14 von 15 Spielen entschieden → der Endstand steht noch nicht fest (vorläufig)', () => {
+  it('@TM-058 14 von 15 entschieden, Tom pfeift das letzte Spiel ab (15/15): ohne Gruppenabschluss steht der Endstand noch nicht fest', async () => {
     const t = nikolaus();
     const letztes = matchOf(t, NK.fridolfing, NK.wagingBlau);
-    const offen = withMatch(t, letztes.id, { matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined });
-    expect(computeFinalStandings(offen).state).toBe('provisional');
+    const vierzehn = withMatch(t, letztes.id, { matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined });
+    expect(vierzehn.matches.filter((m) => m.matchStatus === 'finished')).toHaveLength(14); // Vorbedingung
+    expect(computeFinalStandings(vierzehn).state).toBe('provisional');
+    // Abpfiff des letzten Spiels mit dem echten Stand; der Gleichstand Petting/Otting ist entschieden, nur der Abschluss fehlt.
+    const fuenfzehn = await decide(withMatch(vierzehn, letztes.id, { matchStatus: 'finished', scoreA: letztes.scoreA, scoreB: letztes.scoreB }), ottingGewinnt);
+    expect(fuenfzehn.matches.every((m) => m.matchStatus === 'finished')).toBe(true);
+    expect(prepareGroupCompletion(fuenfzehn, '').code).toBe('READY');
+    expect(fuenfzehn.groupCompletions ?? []).toEqual([]);
+    expect(computeFinalStandings(fuenfzehn).state).toBe('provisional');
+    // Gegenprobe: erst mit „Gruppe abschließen“ steht er fest.
+    expect(computeFinalStandings(completeGroup(fuenfzehn)).state).toBe('complete');
+  });
+
+  it('@ET-031 Gegenbeispiel: ein Abschluss, in dem ein Team fehlt oder ein fremdes Team steht, macht den Endstand nicht fest (kein Team fehlt)', async () => {
+    const t = await decide(nikolaus(), ottingGewinnt);
+    const ohneFridolfing = [NK.kammer, NK.wagingRot, NK.otting, NK.petting, NK.wagingBlau];
+    expect(computeFinalStandings({ ...t, groupCompletions: [completion('', ohneFridolfing)] }).state).toBe('provisional');
+    const fremd = [...ohneFridolfing.slice(0, 4), '00000000-0000-4000-8000-000000000999', NK.wagingBlau];
+    expect(computeFinalStandings({ ...t, groupCompletions: [completion('', fremd)] }).state).toBe('provisional');
+  });
+
+  it('Gegenbeispiel: Abschluss nicht als veraltet gemeldet, aber ein Gruppenspiel ist wieder offen → nicht fest', async () => {
+    const t = completeGroup(await decide(nikolaus(), ottingGewinnt));
+    const spiel = matchOf(t, NK.kammer, NK.fridolfing);
+    const wiederOffen = withMatch(t, spiel.id, { matchStatus: 'scheduled', scoreA: undefined, scoreB: undefined });
+    expect(wiederOffen.groupCompletions?.[0]).toMatchObject({ stale: false });
+    expect(computeFinalStandings(wiederOffen).state).toBe('provisional');
+  });
+
+  it('Gegenbeispiel: ein Abschluss mit offenen Plätzen (Herkunft zurückgegeben, @TM-145) ist nicht fest', async () => {
+    // Bei Jeder gegen jeden ohne Folgespiel setzt die App keine offenen Plätze (prepareRecompletion); die Zeile kommt aber vom
+    // Server (`group_completions.open_ranks`) und wird nie als fester Endstand gelesen.
+    const t = completeGroup(await decide(nikolaus(), ottingGewinnt));
+    const mitOffenenPlaetzen: Tournament = { ...t, groupCompletions: (t.groupCompletions ?? []).map((c) => ({ ...c, openRanks: [3] })) };
+    expect(computeFinalStandings(mitOffenenPlaetzen).state).toBe('provisional');
   });
 
   it('@ET-042 alle Spiele entschieden, Gruppe noch nicht abgeschlossen → vorläufig, so wie die Tabelle gerade steht', async () => {
