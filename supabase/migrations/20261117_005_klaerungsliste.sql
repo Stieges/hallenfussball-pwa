@@ -153,16 +153,18 @@ ON CONFLICT (tournament_id, field, epoch) DO NOTHING;
 -- ---------------------------------------------------------------------------------------------------------------
 -- 1b. revoked_device_contacts: erster Kontakt eines Geräts nach dem Entzug (F6, @HE-080, @HE-056)
 -- ---------------------------------------------------------------------------------------------------------------
+-- Nachblick N1: je Turnier und KONTO (nicht je Geräte-ID – die schickt der Client selbst und könnte sie wechseln). Ein
+-- QR-Gerät ist ein eigenes anonymes Konto, verlorenes Handy und Ersatzhandy bleiben getrennt (@HE-080).
 CREATE TABLE IF NOT EXISTS public.revoked_device_contacts (
   tournament_id    uuid        NOT NULL REFERENCES public.tournaments(id) ON DELETE CASCADE,
   user_id          uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  device_id        uuid        NOT NULL,   -- ohne Geräte-ID (App vor B-49): 00000000-0000-0000-0000-000000000000
+  first_device_id  uuid,                   -- Geräte-ID der ersten Verbindung (nur zur Anzeige, nie Schlüssel)
   revoked_since    timestamptz,            -- declined_at beim Entziehen, sonst NULL (zum Zuschauer gemacht, entfernt)
   first_contact_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (tournament_id, user_id, device_id)
+  PRIMARY KEY (tournament_id, user_id)
 );
 COMMENT ON TABLE public.revoked_device_contacts IS
-  'A-35 F6 (Daniel 23.10., @HE-080, @HE-056): erster Aufruf eines Geräts nach dem Entzug seines Rechts. Einträge mit Gerätezeit bis dahin gehen zur Klärung (RIGHTS_REVOKED), spätere lehnt append_match_events ab. Nur Server-Funktionen (revoked_intake); keine Client-Rechte.';
+  'A-35 F6 (Daniel 23.10., @HE-080, @HE-056): erster Aufruf eines Kontos (QR-Gerät = eigenes anonymes Konto) nach dem Entzug seines Rechts. Einträge mit Gerätezeit bis dahin gehen zur Klärung (RIGHTS_REVOKED), spätere lehnt append_match_events ab. Nur Server-Funktionen (revoked_intake); keine Client-Rechte.';
 ALTER TABLE public.revoked_device_contacts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.revoked_device_contacts FROM PUBLIC, anon, authenticated, ci_schema_reader;
 GRANT SELECT ON TABLE public.revoked_device_contacts TO ci_schema_reader;   -- pg_dump des Drift-Checks; RLS an, keine Policy
@@ -342,8 +344,10 @@ $$;
 -- Eintrag zur Klärung ablegen: in match_events mit review_state 'pending' (zählt nie), Urheber in match_event_authors,
 -- Grund in match_reviews. Gerätezeit = gesendetes `at` (höchstens jetzt), nicht die geklemmte Serverzeit. Ein Ziel
 -- (targetId), das es in diesem Spiel nicht gibt, steht nur im Detail (Fremdschlüssel). Höchstens 100 Klärungseinträge je
--- Spiel UND Absender (Konto + Gerät; Review m2) – danach FORBIDDEN_ACTOR REVIEW_LIMIT. Ein entzogenes Handy füllt so nur
--- seinen eigenen Anteil und verdrängt die Einträge anderer Geräte nicht.
+-- Spiel UND Konto (Review m2, Nachblick N1: nicht je Geräte-ID, die der Client selbst schickt) – danach FORBIDDEN_ACTOR
+-- REVIEW_LIMIT. Ein entzogenes Handy (eigenes anonymes Konto) füllt so nur seinen Anteil und verdrängt andere nicht. Gilt
+-- für alle Gründe: ein Konto mit zwei Geräten (Tom mit Handy und Tablet, @FU-038) teilt sich die 100 je Spiel – das reicht
+-- für jedes echte Spiel (Tore, Karten, Fouls) und ist nicht umgehbar.
 CREATE OR REPLACE FUNCTION match_engine.review_store(p_match public.matches, p_event jsonb, p_uid uuid, p_device_id uuid,
                                                      p_reason text, p_detail jsonb, p_base_seq bigint)
 RETURNS jsonb
@@ -356,7 +360,7 @@ DECLARE
 BEGIN
   IF (SELECT count(*) FROM public.match_reviews r
        WHERE r.match_id = p_match.id AND r.kind = 'review'
-         AND r.user_id IS NOT DISTINCT FROM p_uid AND r.device_id IS NOT DISTINCT FROM p_device_id) >= 100 THEN
+         AND r.user_id IS NOT DISTINCT FROM p_uid) >= 100 THEN
     RETURN jsonb_build_object('id', p_event -> 'id', 'status', 'rejected', 'code', 'FORBIDDEN_ACTOR',
                               'detail', '{"reason": "REVIEW_LIMIT"}'::jsonb);
   END IF;
@@ -524,7 +528,8 @@ $$;
 -- Recht verloren (I-4): Einträge zur Klärung statt FORBIDDEN_ACTOR; nichts wird angewendet, kein field_control, Antwort
 -- ohne Stand. Regel F6 (Daniel 23.10., @HE-080, @HE-056): alles, was das Gerät bis zu seiner ERSTEN Verbindung nach dem
 -- Entzug ohne Netz gemacht hat (Gerätezeit <= erster Kontakt), geht zur Klärung; was es danach macht -> FORBIDDEN_ACTOR
--- RIGHTS_REVOKED. Der erste Kontakt steht je Turnier, Konto und Gerät in revoked_device_contacts (neu bei erneutem Entzug).
+-- RIGHTS_REVOKED. Der erste Kontakt steht je Turnier und Konto in revoked_device_contacts (neu bei erneutem Entzug;
+-- Nachblick N1: eine gewechselte Geräte-ID öffnet kein neues Fenster).
 -- Abgeschlossenes Turnier, Spiel ohne zwei Teams oder nie Schreiber gewesen: wie vor A-35 (FORBIDDEN_ACTOR).
 CREATE OR REPLACE FUNCTION match_engine.revoked_intake(p_tournament_id uuid, p_match_id uuid, p_events jsonb,
                                                        p_uid uuid, p_device_id uuid)
@@ -535,7 +540,6 @@ AS $$
 DECLARE
   v_change   jsonb := match_engine.rights_change(p_tournament_id, p_uid);
   v_since    timestamptz := to_timestamp((v_change ->> 'since')::numeric / 1000.0);
-  v_device   uuid := coalesce(p_device_id, '00000000-0000-0000-0000-000000000000'::uuid);
   v_limit_ms bigint;
   v_match    public.matches%ROWTYPE;
   v_raw      jsonb;
@@ -558,14 +562,14 @@ BEGIN
   END IF;
   SELECT coalesce(max(e.seq), 0) INTO v_base_seq FROM public.match_events e WHERE e.match_id = p_match_id;
   -- F6: erster Kontakt nach dem (jüngsten) Entzug; ein neuer Entzug (anderes declined_at) beginnt neu.
-  INSERT INTO public.revoked_device_contacts (tournament_id, user_id, device_id, revoked_since)
-  VALUES (p_tournament_id, p_uid, v_device, v_since)
-  ON CONFLICT (tournament_id, user_id, device_id) DO UPDATE
-     SET revoked_since = EXCLUDED.revoked_since, first_contact_at = now()
+  INSERT INTO public.revoked_device_contacts (tournament_id, user_id, first_device_id, revoked_since)
+  VALUES (p_tournament_id, p_uid, p_device_id, v_since)
+  ON CONFLICT (tournament_id, user_id) DO UPDATE
+     SET revoked_since = EXCLUDED.revoked_since, first_device_id = EXCLUDED.first_device_id, first_contact_at = now()
    WHERE public.revoked_device_contacts.revoked_since IS DISTINCT FROM EXCLUDED.revoked_since;
   SELECT floor(extract(epoch FROM c.first_contact_at) * 1000)::bigint INTO v_limit_ms
     FROM public.revoked_device_contacts c
-   WHERE c.tournament_id = p_tournament_id AND c.user_id = p_uid AND c.device_id = v_device;
+   WHERE c.tournament_id = p_tournament_id AND c.user_id = p_uid;
   FOR v_raw IN SELECT x.e FROM jsonb_array_elements(p_events) WITH ORDINALITY AS x(e, ord) ORDER BY x.ord LOOP
     v_event := match_engine.envelope(v_raw, v_match.team_a_id::text, v_match.team_b_id::text);
     IF v_event IS NULL THEN

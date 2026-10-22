@@ -37,5 +37,5 @@ jobs:
       - name: Gegenprobe A (ohne 20261117_005 muss K ROT sein)
         run: bash scripts/klaerungsliste-check.sh --without-migration
 
-      - name: Gegenprobe B (jede der Mutationen M1-M18 muss mindestens eine Pruefung ROT machen)
+      - name: Gegenprobe B (jede der Mutationen M1-M19 muss mindestens eine Pruefung ROT machen)
         run: bash scripts/klaerungsliste-check.sh --gegenprobe

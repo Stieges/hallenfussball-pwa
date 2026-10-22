@@ -26,7 +26,7 @@
 # Aufrufoptionen:
 #   bash scripts/klaerungsliste-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/klaerungsliste-check.sh --without-migration  Gegenprobe: ohne 20261117_005 -> K muss ROT sein
-#   bash scripts/klaerungsliste-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M18); Exit 0 NUR, wenn
+#   bash scripts/klaerungsliste-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M19); Exit 0 NUR, wenn
 #                                                             JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/klaerungsliste-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
@@ -204,7 +204,7 @@ U_TOM_D="$(uuid_for user:tom-he056)"; U_TOM_QR56="$(uuid_for user:tom-qr-he056)"
 ANON_UIDS=" $U_TOM_LOST $U_TOM_NEW $U_TOM_QR56 "
 D_OLLI="$(uuid_for device:olli-tablet)"; D_TOM="$(uuid_for device:tom-handy)"; D_CLARA="$(uuid_for device:clara)"
 D_TOM_A="$(uuid_for device:tom-a)"; D_TOM_B="$(uuid_for device:tom-b)"; D_TOM_C="$(uuid_for device:tom-c)"
-D_TOM_D="$(uuid_for device:tom-d)"; D_TOM_QR56="$(uuid_for device:tom-qr-he056)"; D_TOM_LOST="$(uuid_for device:tom-verloren)"; D_TOM_NEW="$(uuid_for device:tom-ersatz)"
+D_TOM_D="$(uuid_for device:tom-d)"; D_TOM_QR56="$(uuid_for device:tom-qr-he056)"; D_TOM_LOST="$(uuid_for device:tom-verloren)"; D_TOM_LOST_NEU="$(uuid_for device:tom-verloren-neue-id)"; D_TOM_A_NEU="$(uuid_for device:tom-a-neue-id)"; D_TOM_NEW="$(uuid_for device:tom-ersatz)"
 T_CUP="$(uuid_for tournament:live-cup)"
 team() { uuid_for "team:$1"; }
 TN="$(team fc-nord)"; TS="$(team sv-sued)"; TW="$(team tsv-west)"; TO="$(team sc-ost)"; TB="$(team djk-berg)"; TM="$(team sg-mitte)"
@@ -643,8 +643,8 @@ run_probes() {
      INSERT INTO public.match_reviews (event_id, tournament_id, match_id, field, kind, reason, user_id, device_id)
      SELECT md5('fuell-' || g)::uuid, '$T_CUP', '$M_R1', 11, 'review', 'RIGHTS_REVOKED', '$U_TOM_A', '$D_TOM_A' FROM generate_series(1, 98) g;" >/dev/null
   ev GOAL "$(E m2-tom-a-101)" "$(goal "$TS" "$(at_rel -100000)" 1)"
-  send "$U_TOM_A" "$D_TOM_A" "$M_R1"
-  check G "Review m2: Toms entzogenes Handy hat 100 Klärungseinträge in Spiel 31 -> der 101. wird nicht mehr angenommen (REVIEW_LIMIT)" \
+  send "$U_TOM_A" "$D_TOM_A_NEU" "$M_R1"
+  check G "Review m2 / N1: Toms entzogenes Konto hat 100 Klärungseinträge in Spiel 31 -> der 101. wird nicht angenommen, auch mit gewechselter Geräte-ID (REVIEW_LIMIT)" \
     "rejected:FORBIDDEN_ACTOR:REVIEW_LIMIT" "$(results "$OUT")"
   ev GOAL "$(E m2-tom-b-im-selben-spiel)" "$(goal "$TS" "$(at_rel -100000)" 1)"
   send "$U_TOM_B" "$D_TOM_B" "$M_R1"
@@ -685,6 +685,11 @@ run_probes() {
   send "$U_TOM_LOST" "$D_TOM_LOST" "$M_R5"
   check G "@HE-080 Gegenbeispiel: ein Eintrag aus einer Sendung nach der ersten Verbindung wird nicht angenommen, nichts gespeichert" \
     "rejected:FORBIDDEN_ACTOR:RIGHTS_REVOKED|0" "$(results "$OUT")|$(q "SELECT count(*) FROM public.match_events WHERE id = '$(E he80-spaeter)';")"
+  # Nachblick N1: dasselbe Konto mit gewechselter Geraete-ID oeffnet kein neues Fenster (Eintrag nach der ersten Verbindung).
+  ev GOAL "$(E he80-andere-geraete-id)" "$(goal "$TS" "$cur" 1)"
+  send "$U_TOM_LOST" "$D_TOM_LOST_NEU" "$M_R5"
+  check G "N1: verlorenes Handy schickt eine andere Geräte-ID -> nach der ersten Verbindung trotzdem nicht angenommen" \
+    "rejected:FORBIDDEN_ACTOR:RIGHTS_REVOKED|0" "$(results "$OUT")|$(q "SELECT count(*) FROM public.match_events WHERE id = '$(E he80-andere-geraete-id)';")"
   ev GOAL "$(E he80-ersatz)" "$(goal "$TW" "$(at_rel 700000)" "$(q "SELECT epoch FROM public.field_control WHERE tournament_id = '$T_CUP' AND field = 15;")")"
   send "$U_TOM_NEW" "$D_TOM_NEW" "$M_R5"
   check K "@HE-080 Toms Zugang auf dem Ersatzhandy bleibt: sein Tor zählt (0:1)" "accepted|0:1" "$(results "$OUT")|$(row "$M_R5" | cut -d'|' -f1)"
@@ -766,7 +771,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -804,7 +809,11 @@ M = {
   # M14 (Review m1) closed_intake ohne review_repeat
   "M14": [("      IF v_results -> -1 ->> '\''status'\'' = '\''duplicate'\'' AND match_engine.review_repeat(v_event) IS NOT NULL THEN", "      IF false THEN")],
   # M15 (Review m2) Grenze je Spiel statt je Absender
-  "M15": [("         AND r.user_id IS NOT DISTINCT FROM p_uid AND r.device_id IS NOT DISTINCT FROM p_device_id) >= 100 THEN", "         ) >= 100 THEN")],
+  "M15": [("         AND r.user_id IS NOT DISTINCT FROM p_uid) >= 100 THEN", "         ) >= 100 THEN")],
+  # M19 (Nachblick N1) wieder je Geraete-ID: Grenze und erster Kontakt haengen an der vom Client geschickten Geraete-ID
+  "M19": [("         AND r.user_id IS NOT DISTINCT FROM p_uid) >= 100 THEN", "         AND r.user_id IS NOT DISTINCT FROM p_uid AND r.device_id IS NOT DISTINCT FROM p_device_id) >= 100 THEN"),
+          ("   WHERE public.revoked_device_contacts.revoked_since IS DISTINCT FROM EXCLUDED.revoked_since;",
+           "   WHERE public.revoked_device_contacts.revoked_since IS DISTINCT FROM EXCLUDED.revoked_since\n      OR public.revoked_device_contacts.first_device_id IS DISTINCT FROM EXCLUDED.first_device_id;")],
   # M16 (Review m3) keine Untergrenze beim Einsortieren
   "M16": [("  IF p_device_at < floor(extract(epoch FROM v_own_start) * 1000)::bigint THEN", "  IF false THEN")],
   # M17 (@FU-130) nach dem Abpfiff angekommen bleibt CONTROL_LOST statt AFTER_END
