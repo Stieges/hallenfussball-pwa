@@ -713,7 +713,8 @@ run_schema() {
   check S "Sperrreihenfolge (R-GA4v2-8): reopen_group sperrt Spiele vor dem Abschluss, record_standing_decision nur das Turnier" "ja|ja" \
     "$(q "SELECT CASE WHEN position('ORDER BY m.id FOR UPDATE' IN prosrc) BETWEEN 1 AND position('FROM public.group_completions' IN prosrc) THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.reopen_group(uuid,text,text,boolean)');")|$(q "SELECT CASE WHEN position('public.matches' IN prosrc) = 0 THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.record_standing_decision(uuid,text,jsonb,text,integer)');")"
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # A-21a-S (20261113_003): die lifecycle-*-Zeilen der spaeteren Migration sind hier f (laeuft erst am Ende bzw. nie); ebenso helper-join-* (20261110_008, seit dem Merge im Stapel).
+  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE '^(lifecycle-[a-z0-9-]+|helper-join-[a-z0-9-]+)\|' || true)"
   check S "Rechte-Assertion: die 6 A-13b-S-Zeilen vorhanden und |t" "$(tr ' ' '\n' <<<"$G1_ASSERTIONS" | sed 's/$/|t/' | sort | paste -sd, -)" \
     "$(grep -E "^($(tr ' ' '|' <<<"$G1_ASSERTIONS"))\|" <<<"$priv" | sort | paste -sd, -)"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
