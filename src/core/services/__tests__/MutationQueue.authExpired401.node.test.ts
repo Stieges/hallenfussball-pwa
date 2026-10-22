@@ -143,7 +143,7 @@ describe('BP-1 C-AUTH-ABGELAUFEN-ANDERE-MUTATIONEN: PostgREST-401 hält die Wart
     },
   );
 
-  it('@FU-009 Ollis vollständiges Speichern des Spielplans, Antwort PGRST303 beim Schreiben: Anmeldung, kein Fehlversuch', async () => {
+  it('@FU-009 Ollis vollständiges Speichern des Spielplans, Antwort PGRST303 auf jede Abfrage (schon beim ersten Lesen): Anmeldung, kein Fehlversuch', async () => {
     mq = new MutationQueue(new SupabaseRepository(), localRepo);
     mq.enqueue('SAVE_TOURNAMENT', tour('t1'));
     client.state.response = JWT_EXPIRED('PGRST303');

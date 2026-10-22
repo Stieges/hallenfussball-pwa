@@ -222,7 +222,7 @@ describe('@FU-105 CA-6 Marias Gerät (Mitglied) bleibt über viele Änderungen v
       await flush();
       // 1. kein stilles Überschreiben von Ollis Änderung
       expect(await cloudNow(cloud)).toMatchObject({ title: 'Ollis Titel', version: 8 });
-      // 2. der Konflikt ist sichtbar (Eintrag wartet, Störung „permanent“)
+      // 2. der Konflikt ist sichtbar (@FU-126: Eintrag sofort „nicht übernommen“ im Dead-Letter, Störung „permanent“)
       expectConflictVisible(maria);
       // 3. der nächste Abruf überschreibt Marias abgelegte Änderung nicht (Regel Q)
       await maria.get('T', { fresh: true });
