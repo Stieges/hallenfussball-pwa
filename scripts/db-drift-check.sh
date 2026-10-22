@@ -172,6 +172,9 @@ pending_assertions_for() {
     20261110_006_group_completion.sql)
       echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers ci-schema-reader-select-group-completion"
       ;;
+    20261110_008_helper_join.sql)
+      echo "helper-join-tables-no-client-access helper-join-ci-schema-reader-select helper-join-ci-schema-reader-no-bypassrls helper-join-rpcs-definer-owner-search-path helper-join-rpcs-execute-authenticated-only helper-join-internal-no-client-execute helper-join-definer-writers-tournament-collaborators helper-join-collaborators-delete-no-device-rows helper-join-protect-collaborator-row-a16 helper-join-decide-checks-check-number helper-join-device-role-guard-trigger helper-join-names-without-hidden-chars"
+      ;;
     *)
       return 1
       ;;
@@ -606,6 +609,19 @@ PRIVILEGE_ASSERTION_NAMES=(
   "group-completion-triggers"
   # A-13b-S: Leserolle des Drift-Checks liest die vier neuen Tabellen (Daniel 21.10.).
   "ci-schema-reader-select-group-completion"
+  # A-16 (20261110_008_helper_join.sql): Helfer-Beitritt per QR ohne Konto.
+  "helper-join-tables-no-client-access"
+  "helper-join-ci-schema-reader-select"
+  "helper-join-ci-schema-reader-no-bypassrls"
+  "helper-join-rpcs-definer-owner-search-path"
+  "helper-join-rpcs-execute-authenticated-only"
+  "helper-join-internal-no-client-execute"
+  "helper-join-definer-writers-tournament-collaborators"
+  "helper-join-collaborators-delete-no-device-rows"
+  "helper-join-protect-collaborator-row-a16"
+  "helper-join-decide-checks-check-number"
+  "helper-join-device-role-guard-trigger"
+  "helper-join-names-without-hidden-chars"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

@@ -6,3 +6,4 @@
 # Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
 20261110_005_result_entry_forfeit.sql 2026-11-10 d2dd7a1a7020344f741feac68d52fa242beb6f62
 20261110_006_group_completion.sql 2026-11-10 d2dd7a1a7020344f741feac68d52fa242beb6f62
+20261110_008_helper_join.sql 2026-11-17 3da3a112ac2c5d0a0d942b517dea3ddb9c5c95d7

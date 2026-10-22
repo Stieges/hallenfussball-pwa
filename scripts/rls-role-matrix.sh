@@ -156,6 +156,10 @@
 #   scripts/rls-role-matrix.sh --without-a13bs     # Alles ("nachher"), aber OHNE 20261110_006 (A-13b-S: Gruppe abschliessen,
 #                                                   # Verlauf, Hinweise, Klaerungen) -- die A-13b-S-Zeilen
 #                                                   # (rls-matrix.d/spur-gruppe-a13b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a16       # Alles ("nachher"), aber OHNE 20261110_008 (A-16: Helfer-Beitritt per
+#                                                   # QR) -- die A-16-Zeilen (rls-matrix.d/spur-helfer-a16.sh) muessen
+#                                                   # hier ROT sein (Gegenprobe, Exit 0). Ohne A-34 (_003) entfaellt A-16
+#                                                   # ebenfalls (Fail-fast der Migration braucht field_control).
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -258,6 +262,8 @@ WITH_CA2_REQ=1
 WITH_A25B_REQ=1
 # A-13b-S: 20261110_006 im Modus "nachher" einspielen (Gegenprobe --without-a13bs laesst sie weg; braucht _005).
 WITH_A13BS_REQ=1
+# A-16: 20261110_008 im Modus "nachher" einspielen (Gegenprobe --without-a16 laesst sie weg; braucht _002 und _003).
+WITH_A16_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -313,6 +319,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-a13bs)
       WITH_A13BS_REQ=0
+      shift
+      ;;
+    --without-a16)
+      WITH_A16_REQ=0
       shift
       ;;
     -h|--help)
@@ -621,6 +631,20 @@ elif [[ "$WITH_A25B" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, A-13b-S-Gegenprobe (ohne 20261110_006)"
 fi
 
+# A-16 (20261110_008, Plan GA5 v2.1): Helfer-Beitritt per QR -- zwei Tabellen (RLS, keine Policy), Beitritts-Funktionen,
+# Loesch-Policy collaborators_delete_v4 (ersetzt _v3), Trigger protect_helper_access_row. Setzt _002 und _003 voraus
+# (Fail-fast der Migration); --without-a16 ist die Gegenprobe.
+A16_FILE="$(find_migration 20261110_008)"
+WITH_A16=0
+if [[ "$WITH_A34" -eq 1 && "$WITH_A16_REQ" -eq 1 ]]; then
+  WITH_A16=1
+  echo "Migration einspielen: $(basename "$A16_FILE")" >&2
+  psql_stdin < "$A16_FILE"
+  MODE_LABEL="$MODE_LABEL + A-16 (20261110_008)"
+elif [[ "$WITH_A34" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-16-Gegenprobe (ohne 20261110_008)"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -650,6 +674,12 @@ fi
 if [[ "$WITH_A13BS" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 3))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 4))
+fi
+
+# A-16: tournament_join_codes und tournament_join_requests sind RLS-aktiv, ohne Policy; die Loesch-Policy der
+# Mitglieder wird ersetzt (v3 -> v4), die Zahl der Policies bleibt.
+if [[ "$WITH_A16" -eq 1 ]]; then
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 2))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -2200,7 +2230,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

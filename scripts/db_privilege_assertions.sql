@@ -794,4 +794,118 @@ SELECT 'ci-schema-reader-select-group-completion',
                                  AND has_table_privilege('ci_schema_reader', 'public.' || t, 'SELECT')
                                  AND NOT has_table_privilege('ci_schema_reader', 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
                    FROM unnest(ARRAY['group_completions', 'bracket_log', 'bracket_notices', 'clarifications']) AS t), false)
+-- A-16 (20261110_008_helper_join.sql, @HE-004 @HE-062 @HE-073 @HE-084 @HE-104 @HE-105; C-HELFER-OHNE-KONTO): Helfer-Beitritt
+-- per QR. Zwei Tabellen ohne Client-Rechte (RLS an, keine Policy; ci_schema_reader liest fuer den Schema-Dump, ohne
+-- BYPASSRLS); zehn Client-Funktionen SECURITY DEFINER mit search_path und Eigentuemer postgres, EXECUTE nur authenticated
+-- (join_code_info zusaetzlich anon, Scan ohne Sitzung); interne Funktionen fuer keinen Client; Positivliste der
+-- Definer-Schreiber auf tournament_collaborators (M4a, B-20 erweitert sie ausdruecklich); Loesch-Policy schuetzt
+-- Geraete-Zeilen (M2); protect_collaborator_row in der A-16-Fassung (md5, M4; Durchgang nur mit dem Schalter, den
+-- change_helper_access nur um seine UPDATEs setzt, Review M-1); Pruefzahl am Server (S-1); Rollen-Schutz
+-- der Geraete-Zeilen (K-3); keine verborgenen Zeichen in Namen (S-4). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'helper-join-tables-no-client-access',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(c.relrowsecurity
+                                     AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = c.oid)
+                                     AND NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                                     AND NOT has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE'))
+                   FROM pg_class c
+                  WHERE c.oid IN (to_regclass('public.tournament_join_codes'), to_regclass('public.tournament_join_requests'))), false)
+UNION ALL
+SELECT 'helper-join-ci-schema-reader-select',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.tournament_join_codes'), 'SELECT')
+                AND has_table_privilege('ci_schema_reader', to_regclass('public.tournament_join_requests'), 'SELECT'), false)
+UNION ALL
+SELECT 'helper-join-ci-schema-reader-no-bypassrls',
+       coalesce((SELECT NOT r.rolbypassrls FROM pg_roles r WHERE r.rolname = 'ci_schema_reader'), false)
+UNION ALL
+SELECT 'helper-join-rpcs-definer-owner-search-path',
+       coalesce((SELECT count(*) = 11
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND pg_get_userbyid(p.proowner) = 'postgres'
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.join_code_info(text)'),
+                                  to_regprocedure('public.request_helper_access(text,text,text)'),
+                                  to_regprocedure('public.helper_access_status(uuid)'),
+                                  to_regprocedure('public.ensure_helper_code(uuid)'),
+                                  to_regprocedure('public.rotate_helper_code(uuid,text)'),
+                                  to_regprocedure('public.list_helper_access(uuid)'),
+                                  to_regprocedure('public.helper_request_count(uuid)'),
+                                  to_regprocedure('public.decide_join_request(uuid,boolean,integer,smallint)'),
+                                  to_regprocedure('public.change_helper_access(uuid,text)'),
+                                  to_regprocedure('public.match_event_author_devices(uuid)'),
+                                  to_regprocedure('public.is_device_membership(uuid,text)'))), false)
+UNION ALL
+SELECT 'helper-join-rpcs-execute-authenticated-only',
+       coalesce((SELECT count(*) = 10
+                        AND bool_and(has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.request_helper_access(text,text,text)'),
+                                  to_regprocedure('public.helper_access_status(uuid)'),
+                                  to_regprocedure('public.ensure_helper_code(uuid)'),
+                                  to_regprocedure('public.rotate_helper_code(uuid,text)'),
+                                  to_regprocedure('public.list_helper_access(uuid)'),
+                                  to_regprocedure('public.helper_request_count(uuid)'),
+                                  to_regprocedure('public.decide_join_request(uuid,boolean,integer,smallint)'),
+                                  to_regprocedure('public.change_helper_access(uuid,text)'),
+                                  to_regprocedure('public.match_event_author_devices(uuid)'),
+                                  to_regprocedure('public.is_device_membership(uuid,text)'))), false)
+       AND coalesce(has_function_privilege('anon', to_regprocedure('public.join_code_info(text)'), 'EXECUTE')
+                    AND has_function_privilege('authenticated', to_regprocedure('public.join_code_info(text)'), 'EXECUTE'), false)
+UNION ALL
+SELECT 'helper-join-internal-no-client-execute',
+       coalesce((SELECT count(*) = 4
+                        AND bool_and(NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.helper_code_cutoff(date)'),
+                                  to_regprocedure('public.tournament_closed_for_helpers(uuid)'),
+                                  to_regprocedure('public.generate_helper_code()'),
+                                  to_regprocedure('public.protect_helper_access_row()'))), false)
+UNION ALL
+SELECT 'helper-join-definer-writers-tournament-collaborators',
+       coalesce((SELECT string_agg(p.proname, ',' ORDER BY p.proname)
+                   FROM pg_proc p
+                  WHERE p.pronamespace NOT IN ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) AND p.prosecdef
+                    AND p.prosrc ~* '(insert\s+into|update(\s+only)?|delete\s+from(\s+only)?)\s+("?public"?\s*\.\s*)?"?tournament_collaborators'),
+                '') = 'change_helper_access,decide_join_request'
+UNION ALL
+SELECT 'helper-join-collaborators-delete-no-device-rows',
+       coalesce((SELECT count(*) = 1
+                        AND bool_and(p.policyname = 'collaborators_delete_v4' AND p.roles = ARRAY['authenticated']::name[]
+                                     AND position('is_device_membership' IN coalesce(p.qual, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'tournament_collaborators' AND p.cmd = 'DELETE'), false)
+UNION ALL
+SELECT 'helper-join-protect-collaborator-row-a16',
+       coalesce((SELECT md5(p.prosrc) = '378a7e1ed6b72381c9b6924e0e664bc3'
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.protect_collaborator_row()')), false)
+       AND coalesce((SELECT position('set_config(''hallenfussball.helper_access_write'', ''on'', true)' IN p.prosrc) > 0
+                            AND position('set_config(''hallenfussball.helper_access_write'', '''', true)' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.change_helper_access(uuid,text)')), false)
+UNION ALL
+SELECT 'helper-join-decide-checks-check-number',
+       coalesce((SELECT position('p_check_number IS DISTINCT FROM v_req.check_number' IN p.prosrc) > 0
+                        AND position('''CHECK_MISMATCH''' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.decide_join_request(uuid,boolean,integer,smallint)')), false)
+UNION ALL
+SELECT 'helper-join-device-role-guard-trigger',
+       coalesce((SELECT t.tgenabled = 'O' AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16
+                        AND t.tgfoid = to_regprocedure('public.protect_helper_access_row()')
+                   FROM pg_trigger t
+                  WHERE t.tgrelid = to_regclass('public.tournament_collaborators') AND t.tgname = 'protect_helper_access_row'
+                    AND NOT t.tgisinternal), false)
+UNION ALL
+SELECT 'helper-join-names-without-hidden-chars',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(position('u200B' IN pg_get_constraintdef(c.oid)) > 0
+                                     AND position('u202E' IN pg_get_constraintdef(c.oid)) > 0)
+                   FROM pg_constraint c
+                  WHERE c.conrelid = to_regclass('public.tournament_join_requests') AND c.contype = 'c'
+                    AND (pg_get_constraintdef(c.oid) LIKE '%display_name%' OR pg_get_constraintdef(c.oid) LIKE '%device_label%')), false)
 ;
