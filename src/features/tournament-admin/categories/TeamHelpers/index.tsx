@@ -111,7 +111,7 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
   const close = () => setDialog(null);
   const left = (
     <div style={stack}>
-      <HelperCodeCard code={actions.code} state={actions.codeState} disabled={locked} onRenew={() => setDialog({ type: 'renew' })} />
+      <HelperCodeCard code={actions.code} state={actions.codeState} disabled={locked} offline={noNet} onRenew={() => setDialog({ type: 'renew' })} />
     </div>
   );
   const right = (

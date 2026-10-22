@@ -20,6 +20,8 @@ export interface HelperCodeCardProps {
   code: HelperCodeInfo | null;
   state: HelperCodeState;
   disabled: boolean;
+  /** Ohne Netz: beim ersten Laden steht statt „Wird geladen“ der Grund (Geht nur mit Netz). */
+  offline?: boolean;
   onRenew: () => void;
 }
 
@@ -39,7 +41,7 @@ const qrFrame: CSSProperties = { borderRadius: cssVars.borderRadius.md, border: 
 const codeText: CSSProperties = { margin: 0, fontWeight: cssVars.fontWeights.bold, fontSize: cssVars.fontSizes.lg, letterSpacing: cssVars.letterSpacing.wider, overflowWrap: 'anywhere', color: cssVars.colors.textPrimary };
 const hint: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 
-export const HelperCodeCard = ({ code, state, disabled, onRenew }: HelperCodeCardProps) => {
+export const HelperCodeCard = ({ code, state, disabled, offline = false, onRenew }: HelperCodeCardProps) => {
   const { t, i18n } = useTranslation('admin');
   const locale = i18n.language === 'en' ? 'en-GB' : 'de-DE';
 
@@ -58,7 +60,7 @@ export const HelperCodeCard = ({ code, state, disabled, onRenew }: HelperCodeCar
       <section style={card} data-testid="helper-code-card" data-state={state}>
         <h2 style={h2}>{t('teamHelpers.code.title')}</h2>
         <p style={meta} role={state === 'error' ? 'alert' : 'status'}>
-          {state === 'error' ? t('teamHelpers.code.error') : t('teamHelpers.code.loading')}
+          {state === 'error' ? t('teamHelpers.code.error') : offline ? t('teamHelpers.offline.title') : t('teamHelpers.code.loading')}
         </p>
       </section>
     );

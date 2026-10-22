@@ -474,7 +474,7 @@ async function main(): Promise<void> {
     }
     if (collab.revoked) {
       // Kein Mapper dafür — die App selbst setzt declined_at per direktem Update
-      // (src/features/auth/services/invitationService.ts), kein Sonderfall.
+      // (früher src/features/auth/services/invitationService.ts, mit A-18a entfernt), kein Sonderfall.
       // `protect_collaborator_row` (20260922_003) prüft `user_owns_tournament()`, also
       // `auth.uid()` — beim Service-Role-Key immer NULL. Deshalb hier als Owner authentifiziert
       // (siehe signLocalUserJwt/asUserClient oben), nicht mit dem Service-Role-Client.

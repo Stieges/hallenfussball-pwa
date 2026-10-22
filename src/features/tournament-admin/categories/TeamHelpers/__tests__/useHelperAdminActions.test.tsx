@@ -201,6 +201,9 @@ describe('useHelperAdminActions', () => {
       online.value = true;
       rerender();
       await waitFor(() => expect(rpc.ensure).toHaveBeenCalledTimes(2));
+      // Erst prüfen, wenn die Antwort verarbeitet ist (sonst vakuum-grün): Versprechen des zweiten Aufrufs abwarten, dann die Zustandsänderung abschließen
+      await rpc.ensure.mock.results[1]?.value;
+      await act(async () => undefined);
       expect(result.current.code?.code).toBe('K7MQ4X9R2P');
       expect(result.current.codeState).toBe('ready');
     });

@@ -7,7 +7,7 @@
  * (`membershipService.ts`) hat im ganzen `src` keinen Aufrufer — der Eigentümer bekommt live
  * NIE eine solche Zeile, `tournament_collaborators` ist live leer. Jede Stelle, die bisher
  * `myMembership ? can…(myMembership.role) : false` schrieb (DangerZoneCategory,
- * TeamHelpersCategory, MemberList), sah den echten Eigentümer deshalb IMMER als "kein Recht" —
+ * TeamHelpersCategory, damals auch MemberList), sah den echten Eigentümer deshalb IMMER als "kein Recht" —
  * der Löschen-Bereich, die Einladungs-Verwaltung usw. verschwanden für genau die Person, die sie
  * am meisten braucht.
  *
@@ -29,7 +29,7 @@
  *    "ist der Eigentümer" — kein falsch-positives Ergebnis für Co-Admin & Co möglich. `false`
  *    bedeutet: kein Mitglied, kein Eigentümer (`role: null`).
  *
- * Gemeinsam genutzt von DangerZoneCategory, TeamHelpersCategory und MemberList.
+ * Gemeinsam genutzt von DangerZoneCategory und TeamHelpersCategory (MemberList entfiel mit A-18a).
  */
 
 import { useEffect, useState } from 'react';
@@ -70,7 +70,7 @@ interface OwnerCheck {
 
 /**
  * Reiner Auswertungs-Kern (kein eigener `useTournamentMembers()`-Aufruf) — für Stellen, die
- * bereits eine eigene `useTournamentMembers()`-Instanz halten (z.B. MemberList, das auch die
+ * bereits eine eigene `useTournamentMembers()`-Instanz halten (z.B. früher MemberList, das auch die
  * Mitgliederliste braucht) und keinen zweiten, redundanten Fetch auslösen wollen.
  *
  * Review A-11 A4 (@FU-098, @FU-099, @FU-100):

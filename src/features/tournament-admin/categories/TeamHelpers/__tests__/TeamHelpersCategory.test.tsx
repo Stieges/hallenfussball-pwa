@@ -426,6 +426,9 @@ describe('Team & Helfer', () => {
       expect(await screen.findByTestId('needs-network')).toHaveTextContent('Geht nur mit Netz');
       expect(screen.queryByTestId('helper-qr')).not.toBeInTheDocument();
       expect(rpc.ensure).not.toHaveBeenCalled();
+      // die Karte bleibt nicht auf „Wird geladen“ stehen, sie nennt den Grund
+      expect(screen.getByTestId('helper-code-card')).toHaveTextContent('Geht nur mit Netz');
+      expect(screen.getByTestId('helper-code-card')).not.toHaveTextContent('Code wird geladen');
     });
 
     it('Gegenbeispiel: mit Netz kein Hinweis „Geht nur mit Netz“', async () => {

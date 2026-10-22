@@ -57,7 +57,7 @@ const rolePermissionsJson = JSON.parse(readFileSync(ROLE_PERMISSIONS_PATH, 'utf8
 /**
  * N7 (Fixrunde 2): ALLE Capability-Schlüssel aus `rolePermissionsJson.capabilities` -- vorher
  * deckte das zweite Orakel (I5/Ruling T, Server-RPC vs. JSON) nur die 3 Capabilities ab, die
- * auch ein UI-Element haben (`deleteTournament`, `manageMembers`, `writeMatchData`).
+ * auch ein UI-Element haben (`deleteTournament`, `manageMembers`, `writeMatchData`; die Einladen-Oberfläche zu `manageMembers` entfiel mit A-18a).
  * `correctEvents`/`tournamentSettings`/`teams`/`restructure` blieben ohne jede RPC-Gegenprobe --
  * eine Drift zwischen JSON und `role_permissions`-Tabelle bei GENAU diesen vier Rechten wäre nie
  * aufgefallen. Die Gegenprobe braucht kein UI-Element (nur die RPC), ist also billig
