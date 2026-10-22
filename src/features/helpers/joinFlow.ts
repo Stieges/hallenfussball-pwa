@@ -43,6 +43,11 @@ interface JoinFormFields {
   shareCode: string | null;
   name: string;
   notice: JoinFormNotice | null;
+  /**
+   * Der Scan sah ein angemeldetes Konto (Formular nach der Rückfrage). Nur dann ist `accountSession` beim Absenden ein
+   * Programmierfehler für Sentry; kommt das Konto erst nach dem Scan zurück, ist es ein Wettlauf (Review #331 N-2).
+   */
+  sawAccount?: boolean;
 }
 
 export type JoinFlowState =
@@ -63,6 +68,8 @@ export type JoinFlowEvent =
   | { type: 'cancel' }
   | { type: 'signOutBlocked'; reason: 'offline' } | { type: 'signOutBlocked'; reason: 'waiting'; waitingCount: number | null }
   | { type: 'signedOut' }
+  /** „Erneut versuchen“ in `accountWaiting` und `offline`: Code und Sitzung noch einmal prüfen (Review #331 N-7). */
+  | { type: 'recheck' }
   | { type: 'nameChanged'; name: string }
   | { type: 'submit' }
   | { type: 'sessionFailed'; reason: DeviceSessionFailure }
@@ -175,7 +182,7 @@ export function joinFlowReducer(state: JoinFlowState, event: JoinFlowEvent): Joi
             ? show(state.code, { view: 'offline' })
             : { step: 'accountWaiting', code: state.code, waitingCount: event.waitingCount };
         case 'signedOut':
-          return { step: 'form', code: state.code, tournament: state.tournament, shareCode: state.shareCode, name: '', notice: null };
+          return { step: 'form', code: state.code, tournament: state.tournament, shareCode: state.shareCode, name: '', notice: null, sawAccount: true };
         case 'infoLoaded':
           // Beim erneuten Prüfen hat sich der Code geändert (erneuert, abgelaufen, schon leitend …).
           return onInfoLoaded(state.code, event);
@@ -196,8 +203,10 @@ export function joinFlowReducer(state: JoinFlowState, event: JoinFlowEvent): Joi
       return state;
     case 'submitting':
       return onSubmitting(state, event);
-    case 'show':
     case 'accountWaiting':
+      return event.type === 'recheck' ? initialJoinFlowState(state.code) : state;
+    case 'show':
+      return event.type === 'recheck' && state.view.view === 'offline' ? initialJoinFlowState(state.code) : state;
     case 'cancelled':
       return state;
   }

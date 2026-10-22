@@ -57,7 +57,7 @@
     "rejectedEntry": {
       "de": "nicht übernommen",
       "en": "not accepted",
-      "forbidden_de": ["abgelehnt", "Ablehnung"],
+      "forbidden_de": ["Eintrag abgelehnt", "Eintrag wurde abgelehnt", "Einträge abgelehnt", "Ablehnung"],
       "reason": "D-C1: Eintrag, den der Server nicht angenommen hat – ohne Wertung beschrieben, damit Helfer:innen ihn verstehen und bestätigen können.",
       "i18nKey": "outbox.rejectedEntry"
     },
@@ -67,6 +67,27 @@
       "forbidden_de": ["in Prüfung", "Review offen"],
       "reason": "Der Server nimmt den Eintrag vorerst an, die Turnierleitung entscheidet später darüber.",
       "i18nKey": "outbox.awaitingReview"
+    },
+    "helperAccess": {
+      "de": "Helfer-Zugang",
+      "en": "helper access",
+      "forbidden_de": ["Helfer-Einladung", "Helfer-Login"],
+      "reason": "A-17b: Helfer treten per QR-Code ohne Konto bei; „Einladung“ klänge nach Konto und E-Mail (R-GA5-1).",
+      "i18nKey": "helpers.access"
+    },
+    "checkNumber": {
+      "de": "Prüfzahl",
+      "en": "check number",
+      "forbidden_de": ["Prüfcode", "Bestätigungszahl"],
+      "reason": "A-17b: zweistellige Zahl (10–99), die Helfer-Handy und Turnierleitung gemeinsam zeigen (@HE-001, @HE-105); kein Passwort und kein Code.",
+      "i18nKey": "helpers.checkNumber"
+    },
+    "approve": {
+      "de": "zulassen",
+      "en": "approve",
+      "forbidden_de": ["freischalten", "genehmigen"],
+      "reason": "A-17b: die Turnierleitung lässt eine Helfer-Anfrage zu (Taste „Zulassen“, @HE-001); ein Verb für Handy und Leitung. „abgelehnt“ bleibt für Anfragen erlaubt (@HE-008), nur nicht für Einträge (D-C1).",
+      "i18nKey": "helpers.approve"
     },
     "cancelledMatch": {
       "de": "Ausgefallen",

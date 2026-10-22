@@ -131,7 +131,7 @@ describe('Rückfrage und Abmelden', () => {
     const signingOut = run(loaded(OPEN, 'account'), { type: 'confirmSignOut' });
     expect(signingOut).toMatchObject({ step: 'signingOut' });
     expect(run(signingOut, { type: 'signedOut' })).toEqual({
-      step: 'form', code: 'CODE123456', tournament: CUP, shareCode: 'SHARE1', name: '', notice: null,
+      step: 'form', code: 'CODE123456', tournament: CUP, shareCode: 'SHARE1', name: '', notice: null, sawAccount: true,
     });
   });
 
@@ -237,5 +237,27 @@ describe('Namensformular und Anfrage', () => {
     const sub = submitting();
     expect(run(sub, { type: 'cancel' })).toBe(sub);
     expect(run(form(), { type: 'cancel' })).toMatchObject({ step: 'form' });
+  });
+});
+
+describe('Noch einmal prüfen (Review #331 N-7)', () => {
+  it('@HE-092 accountWaiting (mit und ohne Zahl) → recheck lädt neu', () => {
+    for (const waitingCount of [2, null]) {
+      const waiting = loaded(OPEN, 'account', waitingCount);
+      expect(waiting.step).toBe('accountWaiting');
+      expect(run(waiting, { type: 'recheck' })).toEqual({ step: 'loading', code: 'CODE123456' });
+    }
+  });
+
+  it('@HE-015 @HE-093 offline → recheck lädt neu', () => {
+    const offline = joinFlowReducer(initialJoinFlowState('CODE123456'), { type: 'infoFailed', error: { kind: 'network' } });
+    expect(run(offline, { type: 'recheck' })).toEqual({ step: 'loading', code: 'CODE123456' });
+  });
+
+  it('Gegenbeispiel: Endzustände (ungültig, abgelehnt) und das Formular ignorieren recheck', () => {
+    const invalid = loaded({ state: 'invalid' });
+    expect(run(invalid, { type: 'recheck' })).toBe(invalid);
+    const f = form();
+    expect(run(f, { type: 'recheck' })).toBe(f);
   });
 });
