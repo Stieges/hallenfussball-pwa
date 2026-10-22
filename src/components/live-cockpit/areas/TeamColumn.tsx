@@ -12,6 +12,7 @@ import { cssVars } from '../../../design-tokens';
 import { Button } from '../../ui/Button';
 import { MatchIcons } from '../../ui/IconsMatch';
 import type { TeamColumnModel, TeamKnoepfe } from '../model/toTeamColumnModel';
+import { TeamKopf } from './TeamKopf';
 
 export interface TeamColumnProps {
   model: TeamColumnModel;
@@ -29,26 +30,6 @@ export interface TeamColumnProps {
 // Beide Spalten teilen sich die Zeilen der Spaltenreihe (Subgrid): gleich hoch laufen Kopf, Tor und Knopfreihe, ohne dass der Kopf Platz für drei Namenszeilen
 // reservieren muss; der längere Name macht beide Köpfe höher (@OB-025). Kopf (mit Zähler), Tor, Knopfreihe, Zusatzzeilen = vier Zeilen.
 const spalteStil: CSSProperties = { display: 'grid', gridTemplateRows: 'subgrid', gridRow: 'span 4', rowGap: cssVars.spacing.sm, minWidth: 0 };
-// Kopf nach Mockup: umrandet, oben Streifen und „Heim/Gast“, darunter der Name (@OB-025). Mindesthöhe für drei Namenszeilen, damit
-// beide Köpfe gleich hoch sind und die Tor-Knöpfe auf einer Höhe stehen. Der Name wird nie gekürzt und nie getrennt (VISUAL-DESIGN § 1/§ 2).
-const kopfStil: CSSProperties = {
-  display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, boxSizing: 'border-box', minWidth: 0,
-  padding: cssVars.spacing.xs,
-  border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md,
-  hyphens: 'manual',
-};
-const zeileStil: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm };
-const nameStil = (breit: boolean): CSSProperties => ({
-  margin: 0, hyphens: 'manual', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
-  // Kleiner statt kürzen: eine Stufe zwischen mittel und groß, damit der Name in höchstens drei Zeilen passt
-  fontSize: breit ? cssVars.fontSizes.titleMd : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`,
-  fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary,
-});
-const streifenStil = (farbe: string | null): CSSProperties => ({
-  flex: 1, height: cssVars.sizing.teamStripeWidth, background: farbe ?? cssVars.colors.border, borderRadius: cssVars.borderRadius.sm,
-  border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`,
-});
-const seiteStil: CSSProperties = { fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted, textTransform: 'uppercase' };
 const zaehlerStil: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.semibold };
 // Volle Fläche in der Primärfarbe, Schrift in „auf Primär“ (Kontrast ≥ 4,5 : 1, VISUAL-DESIGN § 5), kein Verlauf
 const torStil = (breit: boolean): CSSProperties => ({
@@ -87,13 +68,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
   return (
     <section style={spalteStil} data-testid={`team-column-${seite}`} aria-label={name}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
-      <div style={kopfStil} data-testid={`team-head-${seite}`}>
-        <div style={zeileStil}>
-          <span data-testid={`team-stripe-${seite}`} style={streifenStil(model.farbe)} />
-          <span style={seiteStil}>{t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')}</span>
-        </div>
-        <p data-teamname="" data-testid={`team-name-${seite}`} style={nameStil(breit)}>{name}</p>
-      </div>
+      <TeamKopf seite={seite} name={name} farbe={model.farbe} breit={breit} />
       {/* Der Zähler steht im Foul-Knopf (Laptop-Mockup Stand 4); eine eigene Zeile nur ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) */}
       {!knoepfe.foul && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
       </div>

@@ -12,7 +12,9 @@ import type { LiveMatch } from '../types';
 import { Sidebar } from '../components';
 import type { SidebarProps } from '../components';
 import type { CockpitZustand } from '../model/cockpitPhase';
+import type { TeamSummaryModel } from '../model/toTeamSummaryModel';
 import { TeamColumn, type TeamColumnProps } from './TeamColumn';
+import { TeamSummary } from './TeamSummary';
 import styles from './LegacyAreas.module.css';
 
 export interface LegacyPlayAreaProps {
@@ -29,6 +31,8 @@ export interface LegacyPlayAreaProps {
   strafstossForm?: ReactNode;
   /** Die beiden Spalten in Anzeige-Reihenfolge (`useSideOrder`): wer links, wer rechts steht. */
   columns: { links: Omit<TeamColumnProps, 'kompakt' | 'breit'>; rechts: Omit<TeamColumnProps, 'kompakt' | 'breit'> };
+  /** Nach dem Abpfiff statt der Tastenblöcke: Tore, Karten, Zeitstrafen, Fouls je Team (@SL-048); in Anzeige-Reihenfolge. */
+  zusammenfassung?: { links: TeamSummaryModel; rechts: TeamSummaryModel } | null;
   sidebar: {
     activePenalties: ActivePenalty[];
     onEventEdit?: SidebarProps['onEventEdit'];
@@ -38,7 +42,7 @@ export interface LegacyPlayAreaProps {
 const cls = (...names: Array<string | false>): string => names.filter(Boolean).join(' ');
 
 export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
-  const { match, naechstes, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, sidebar } = props;
+  const { match, naechstes, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, zusammenfassung, sidebar } = props;
   const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links']): ReactElement => (
     <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} />
   );
@@ -52,8 +56,8 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
             <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile)}>
-              {spalte(columns.links)}
-              {spalte(columns.rechts)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts)}
             </div>
           )}
         </div>
