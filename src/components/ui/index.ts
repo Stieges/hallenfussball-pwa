@@ -67,3 +67,5 @@ export type { ConnectionStatusBarProps, ConnectionStatus } from './ConnectionSta
 // Paket TB-B: Bausteine der Gleichstands-Oberfläche
 export { TieMarker, ShootoutScoreInput, OrderPicker, PlacesToPlayOutPicker } from './molecules';
 export type { TieMarkerProps, ShootoutScoreInputProps, OrderPickerProps, PlacesToPlayOutPickerProps } from './molecules';
+export { NumberChoiceRow, SegmentedChoice } from './molecules';
+export type { NumberChoiceRowProps, SegmentedChoiceProps, SegmentedOption } from './molecules';

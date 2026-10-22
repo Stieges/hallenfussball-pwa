@@ -15,7 +15,7 @@ import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
 import { breakpointValues, cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
 import type { Tournament } from '../../../../types/tournament';
 import { useAuth } from '../../../auth/hooks/useAuth';
-import { useCan } from '../../../auth/hooks/useCan';
+import { useCanState } from '../../../auth/hooks/useCan';
 import { CategoryPage } from '../shared';
 import { AccessChangeDialog, RenewCodeDialog } from './AccessDialogs';
 import { ApproveSheet } from './ApproveSheet';
@@ -53,7 +53,7 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
   const { t } = useTranslation('admin');
   const { user, isAuthenticated } = useAuth();
   // @HE-062: ohne das Recht „Helfer verwalten“ (Helfer-Gerät, Co-Admin ohne Recht) keine Abfrage, nur der Grund.
-  const canManage = useCan('manageHelpers', tournamentId);
+  const { allowed: canManage, isLoading: roleLoading } = useCanState('manageHelpers', tournamentId);
   const enabled = isAuthenticated && user !== null && canManage;
 
   const { list, loadState, offline, refresh } = useJoinRequests(tournamentId, enabled);
@@ -71,6 +71,14 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
           <span style={noticeText}>{t('teamHelpers.authRequiredDesc')}</span>
           <span style={noticeText}>{t('teamHelpers.goToSettings')}</span>
         </InlineNotice>
+      </CategoryPage>
+    );
+  }
+  // Solange die Rolle noch geladen wird (neues Gerät, kein Rollen-Gedächtnis), kein „kein Recht“: auch der Eigentümer sähe es kurz
+  if (roleLoading && !canManage) {
+    return (
+      <CategoryPage {...header}>
+        <p style={{ margin: 0, color: cssVars.colors.textSecondary }} role="status" data-testid="role-loading">{t('teamHelpers.loading')}</p>
       </CategoryPage>
     );
   }

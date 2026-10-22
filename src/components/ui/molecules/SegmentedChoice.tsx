@@ -4,8 +4,10 @@
  * steht nie nur in der Farbe: der gewählte Knopf ist gefüllt (Farbe des Haupttons, Schrift darauf umgekehrt) UND fett, die
  * anderen sind leer und normal. Bis vier Möglichkeiten sitzen verbunden in einem Rahmen; ab fünf stehen sie als einzelne
  * Knöpfe in umbrechenden Zeilen, damit Beschriftungen nie gekürzt werden. Jeder Knopf mindestens `touchTargets.primary` hoch.
+ * Tastatur nach dem Radiogroup-Muster: ein Tab-Stopp für die Gruppe (der gewählte Knopf), Pfeiltasten wählen den nächsten oder
+ * vorherigen (am Rand rundum), Pos1/Ende den ersten/letzten.
  */
-import type { CSSProperties } from 'react';
+import { useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { cssVars } from '../../../design-tokens';
 
 export interface SegmentedOption<T extends string> {
@@ -72,15 +74,51 @@ function optionStyle(selected: boolean, disabled: boolean, connected: boolean, f
 
 export function SegmentedChoice<T extends string>({ legend, hint, options, value, onChange, disabled = false, testId = 'segmented-choice' }: SegmentedChoiceProps<T>) {
   const connected = options.length <= CONNECTED_MAX;
+  const buttons = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const move = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) {
+      return;
+    }
+    const current = options.findIndex((option) => option.value === value);
+    const last = options.length - 1;
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        next = current >= last ? 0 : current + 1;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        next = current <= 0 ? last : current - 1;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = last;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const target = options[next];
+    if (target) {
+      onChange(target.value);
+      buttons.current[next]?.focus();
+    }
+  };
   return (
     <fieldset style={fieldset} data-testid={testId}>
       <legend style={legendStyle}>{legend}</legend>
-      <div role="radiogroup" aria-label={legend} style={groupStyle(options.length)}>
+      <div role="radiogroup" aria-label={legend} style={groupStyle(options.length)} onKeyDown={move}>
         {options.map((option, index) => (
           <button
             key={option.value}
+            ref={(element) => { buttons.current[index] = element; }}
             type="button"
             role="radio"
+            tabIndex={option.value === value ? 0 : -1}
             aria-checked={option.value === value}
             disabled={disabled}
             style={optionStyle(option.value === value, disabled, connected, index === 0)}

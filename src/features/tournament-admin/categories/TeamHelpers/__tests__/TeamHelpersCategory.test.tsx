@@ -14,7 +14,7 @@ vi.unmock('i18next');
 vi.unmock('react-i18next');
 
 const rpc = vi.hoisted(() => ({ ensure: vi.fn(), rotate: vi.fn(), list: vi.fn(), decide: vi.fn(), change: vi.fn() }));
-const env = vi.hoisted(() => ({ online: true, canManage: true }));
+const env = vi.hoisted(() => ({ online: true, canManage: true, roleLoading: false }));
 
 vi.mock('../../../../../core/repositories/helperAccessRpc', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../../../core/repositories/helperAccessRpc')>()),
@@ -28,7 +28,7 @@ vi.mock('../../../../../lib/supabase', () => ({ supabase: {}, isSupabaseConfigur
 vi.mock('../../../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 vi.mock('../../../../../hooks/useOnlineStatus', () => ({ useOnlineStatus: () => ({ isOnline: env.online, wasOffline: false }) }));
 vi.mock('../../../../auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: true, user: { id: 'u1', name: 'Olli' } }) }));
-vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => env.canManage }));
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCanState: () => ({ allowed: env.canManage, isLoading: env.roleLoading }) }));
 
 import { initRealDeI18n } from '../../../../../test/realDeI18n';
 import { TeamHelpersCategory } from '../index';
@@ -62,6 +62,7 @@ describe('Team & Helfer', () => {
   beforeEach(() => {
     env.online = true;
     env.canManage = true;
+    env.roleLoading = false;
     Object.values(rpc).forEach((m) => m.mockReset());
     rpc.ensure.mockResolvedValue(CODE);
     rpc.decide.mockResolvedValue({ ok: true, data: { result: 'OK', memberId: 'm9' } });
@@ -442,6 +443,17 @@ describe('Team & Helfer', () => {
       expect(screen.queryByTestId('helper-code-card')).not.toBeInTheDocument();
       expect(screen.queryByTestId('request-approve')).not.toBeInTheDocument();
       expect(screen.queryByTestId('helper-revoke')).not.toBeInTheDocument();
+      await new Promise((r) => setTimeout(r, 30));
+      expect(rpc.ensure).not.toHaveBeenCalled();
+      expect(rpc.list).not.toHaveBeenCalled();
+    });
+
+    it('Solange die Rolle noch lädt, steht „Wird geladen“ statt „kein Recht“; der Server wird noch nicht gefragt', async () => {
+      env.canManage = false;
+      env.roleLoading = true;
+      render(<TeamHelpersCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
+      expect(await screen.findByTestId('role-loading')).toHaveTextContent('Wird geladen');
+      expect(screen.queryByTestId('no-right')).not.toBeInTheDocument();
       await new Promise((r) => setTimeout(r, 30));
       expect(rpc.ensure).not.toHaveBeenCalled();
       expect(rpc.list).not.toHaveBeenCalled();
