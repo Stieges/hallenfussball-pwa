@@ -345,6 +345,10 @@ run_probes() {
     "$(q "SELECT lc.append('tom', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-tor-vor-$t', jsonb_build_object('at', $fa - 900000, 'clockMs', 130000, 'teamId', harness.team('$t', 'DJK Kammer'))), lc.ev('GOAL', 'p6-tor-nach-$t', jsonb_build_object('at', $fa + 600000, 'clockMs', 140000, 'teamId', harness.team('$t', 'DJK Kammer')))), '$d');")"
   check R "P-6 @LZ-040 Konto-Helfer Kai sendet ein Tor -> review AFTER_FINISH" "review:AFTER_FINISH" \
     "$(q "SELECT lc.append('kai', '$m', jsonb_build_array(lc.ev('GOAL', 'p6-kai-$t', jsonb_build_object('at', $fa + 60000, 'clockMs', 150000, 'teamId', harness.team('$t', 'TSV Waging rot')))));")"
+  check R "_009 Spiel beenden nach dem Abschluss: Ollis RESULT_ENTRY (mit basedOn, Leitung ohne Feldsteuerung) -> review AFTER_FINISH, Ergebnis gleich" \
+    "review:AFTER_FINISH|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")" \
+    "$(q "SELECT lc.append('olli', '$m', jsonb_build_array(lc.ev('RESULT_ENTRY', 'p6-ende-$t', jsonb_build_object('at', $fa + 120000, 'section', NULL, 'clockMs', NULL, 'payload', jsonb_build_object('scores', jsonb_build_object(harness.team('$t', 'DJK Kammer'), 5, harness.team('$t', 'TSV Waging rot'), 0), 'basedOn', NULL)))));")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")"
+  q "DELETE FROM public.late_entries WHERE tournament_id = '$t' AND event_id = harness.u('lc-event:p6-ende-$t');" >/dev/null
   check R "P-6 danach: keine neue field_control-Zeile, Endstand und Ergebnis gleich, 3 Zeilen 'nach dem Ende eingetroffen'" "$before|3" \
     "$(q "SELECT count(*) FROM public.field_control WHERE tournament_id = '$t';")|$(fs_md5 "$t")|$(q "SELECT score_a || ':' || score_b FROM public.matches WHERE id = '$m';")|$(nlate "$t")"
   check R "P-6 @LZ-039 Olli und Maria sehen die drei Eintraege, Tom und Kai nicht" "3|3|0|0" \

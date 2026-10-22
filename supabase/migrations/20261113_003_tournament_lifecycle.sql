@@ -22,7 +22,7 @@
 --      closed_intake; dazu public.tournament_is_closed (NULL-fest, nur für Server-Funktionen).
 --   4. RPCs finish_tournament, finish_preflight, reopen_tournament, report_device_outbox (authenticated) und
 --      public_final_standings, display_final_standings (anon + authenticated), tournament_lifecycle (Invoker).
---   5. append_match_events (Fassung 20261110_005) mit EINEM Block nach der Prüfung „Spiel nicht mehr beschreibbar“ und
+--   5. append_match_events (Fassung 20261110_009 „Spiel beenden“, Basis _005) mit EINEM Block nach der Prüfung „Spiel nicht mehr beschreibbar“ und
 --      VOR dem field_control-INSERT: abgeschlossenes Turnier -> match_engine.closed_intake (R-EA-5, Review B3).
 --   6. Trigger: tournaments_guard_lifecycle, tournaments_lifecycle_follow_status, *_guard_closed auf elf Tabellen;
 --      Rumpf von tournament_closed_for_helpers (20261110_008) ersetzt (R-EA-12, I-4), falls die Funktion existiert.
@@ -58,8 +58,8 @@
 --     jedem entschiedenen Platzierungsspiel „Sieger auf dem oberen, Verlierer auf dem unteren Platz des Spiels“ und dass
 --     keine Zeile die Herkunft 'open' trägt (vorläufig, Review A1 -> PROVISIONAL).
 --
--- Voraussetzung: 20261110_006 (group_completions, bracket_*, clarifications, complete_group), 20261110_005
---   (forfeit_absent, append_match_events mit Feldsteuerung), 20261110_003 (field_control), 20261110_001
+-- Voraussetzung: 20261110_006 (group_completions, bracket_*, clarifications, complete_group), 20261110_009
+--   (append_match_events mit Feldsteuerung, Nichtantritt und v_end_by_lead; darunter 20261110_005 forfeit_absent), 20261110_003 (field_control), 20261110_001
 --   (manageLifecycle), 20260924_002 (ci_schema_reader). 20261110_008 optional: ist tournament_closed_for_helpers da,
 --   wird der Rumpf ersetzt. Idempotent (IF NOT EXISTS, CREATE OR REPLACE, DROP ... IF EXISTS + CREATE); der Backfill
 --   läuft nur beim ersten Einspielen (Spalte neu).
@@ -67,11 +67,11 @@
 -- RÜCKWEG: eigene Datei (Anhang B von A-21a-sql-freigabe.md, erzeugt mit
 --   `bash scripts/tournament-lifecycle-check.sh --print-rueckweg`), EIN Block. Vorher die App ohne A-21a-Client deployen
 --   und gespeicherte Endstände/späte Einträge per COPY sichern (sie gehen mit den Tabellen verloren).
---   append_match_events und tournament_closed_for_helpers kommen wörtlich aus 20261110_005 bzw. 20261110_008 zurück.
+--   append_match_events und tournament_closed_for_helpers kommen wörtlich aus 20261110_009 bzw. 20261110_008 zurück.
 --   Belegt in scripts/tournament-lifecycle-check.sh (Kategorie X: Schema danach = vorher).
 --
 -- Produktion: nur im DB-Fenster (Vorschlag G2) durch den Controller nach Daniels Freigabe (A-21a-sql-freigabe.md), nach
--- 20261110_005 … _008 und 20261113_101. Dieser Branch spielt nichts ein. Typen-PR nötig (neue Spalten/Funktionen).
+-- 20261110_005 … _009 und 20261113_101 (Fenster G1b, Reihenfolge _008 -> _009 -> _003). Dieser Branch spielt nichts ein. Typen-PR nötig (neue Spalten/Funktionen).
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';
@@ -98,16 +98,18 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM public.role_permissions WHERE role = 'co-admin' AND permission = 'manageLifecycle')
      OR NOT EXISTS (SELECT 1 FROM public.role_permissions WHERE role = 'screen' AND permission = 'readDisplay')
      OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
-    RAISE EXCEPTION '20261113_003_tournament_lifecycle: Voraussetzungen fehlen – zuerst 20261110_001 … 20261110_006 (Gruppe abschließen) einspielen';
+    RAISE EXCEPTION '20261113_003_tournament_lifecycle: Voraussetzungen fehlen – zuerst 20261110_001 … 20261110_009 (Gruppe abschließen, Spiel beenden) einspielen';
   END IF;
-  -- append_match_events: nur die Fassung aus 20261110_005 (Feldsteuerung + Nichtantritt) oder diese Datei ersetzen,
-  -- nie still eine spätere Neufassung (I-5: wer append neu fasst, übernimmt closed_intake selbst).
+  -- append_match_events: nur die Fassung aus 20261110_009 (Feldsteuerung + Nichtantritt + „Spiel beenden“ v_end_by_lead)
+  -- oder diese Datei ersetzen, nie still eine andere Fassung -- sonst ginge die Ausnahme aus _009 verloren (I-5: wer append
+  -- neu fasst, übernimmt closed_intake selbst).
   SELECT prosrc INTO v_append FROM pg_proc WHERE oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)');
   IF v_append IS NULL
      OR NOT (   position('match_engine.closed_intake(' IN v_append) > 0
              OR (    position('forfeit_absent = v_cache ->> ''forfeit_absent''' IN v_append) > 0
-                 AND position('INSERT INTO public.field_control' IN v_append) > 0)) THEN
-    RAISE EXCEPTION '20261113_003_tournament_lifecycle: append_match_events hat eine unbekannte Fassung – erst klären';
+                 AND position('INSERT INTO public.field_control' IN v_append) > 0
+                 AND position('IF NOT v_end_by_lead' IN v_append) > 0)) THEN
+    RAISE EXCEPTION '20261113_003_tournament_lifecycle: append_match_events hat eine unbekannte Fassung (erwartet 20261110_009) – erst klären';
   END IF;
 END;
 $$;
@@ -980,7 +982,7 @@ GRANT EXECUTE ON FUNCTION public.finish_tournament(uuid, jsonb, jsonb, uuid),
 GRANT EXECUTE ON FUNCTION public.public_final_standings(text), public.display_final_standings(uuid) TO anon, authenticated;
 
 -- ---------------------------------------------------------------------------------------------------------------
--- 5. append_match_events (Fassung 20261110_005) + A-21a-Block (R-EA-5)
+-- 5. append_match_events (Fassung 20261110_009) + A-21a-Block (R-EA-5)
 -- ---------------------------------------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.append_match_events(p_match_id uuid, p_events jsonb,
                                                       p_client_format integer, p_device_id uuid DEFAULT NULL)
@@ -1041,6 +1043,8 @@ DECLARE
   v_epoch_sent integer;
   -- A-25n (R-A25b-1): REOPEN, das eine Nichtantritt-Wertung zuruecknimmt (Spiel wird wieder 'scheduled', nicht laufend).
   v_forfeit_reopen boolean;
+  -- Spiel beenden (20261110_009, Review M3): Ergebnis der Turnierleitung in ein angepfiffenes Spiel -- ohne Feldsteuerung.
+  v_end_by_lead boolean;
 BEGIN
   -- 1. Aufrufer, Eingabe, Client-Format.
   IF v_uid IS NULL THEN
@@ -1206,8 +1210,15 @@ BEGIN
         -- braucht keine Steuer, wie Direkteintrag und Korrektur an nicht laufenden Spielen (Auflage Bauplan § 20).
         v_forfeit_reopen := coalesce(v_event ->> 'type' = 'REOPEN' AND v_state ->> 'status' = 'finished'
                                      AND v_state -> 'overrides' -> -1 ->> 'kind' = 'forfeit', false);
-        IF v_state ->> 'status' = ANY (c_live_states)
-           OR (v_event ->> 'type' IN ('MATCH_START', 'REOPEN') AND NOT v_forfeit_reopen) THEN
+        -- Spiel beenden (20261110_009, @FU-112, @FU-115, Review M3): die Turnierleitung beendet ein angepfiffenes Spiel mit
+        -- ihrem Ergebnis auch, wenn ein anderes Geraet das Feld steuert -- VOR dem ganzen c3-Block: keine Ablehnung, kein
+        -- Anspruch auf ein freies Feld, keine Epochen-Pruefung (der Halter bleibt). Nicht im Strafstossschiessen (@FU-118:
+        -- dort gilt c3, die Rechenfunktion lehnt ohnehin ab); Helfer pruefen c3 und die Rechenfunktion (@FU-113).
+        v_end_by_lead := coalesce(v_actor = 'leitung' AND v_event ->> 'type' = 'RESULT_ENTRY'
+                                  AND v_state ->> 'status' IN ('running', 'paused', 'section_break', 'decision_pending'), false);
+        IF NOT v_end_by_lead
+           AND (v_state ->> 'status' = ANY (c_live_states)
+                OR (v_event ->> 'type' IN ('MATCH_START', 'REOPEN') AND NOT v_forfeit_reopen)) THEN
           IF v_fc.holder_user_id IS NULL THEN
             -- Feld frei: mit Geraete-ID wird der Aufrufer Halter, sobald das Ereignis angenommen ist (f2);
             -- ohne Geraete-ID bleibt es frei und ungeprueft (brief-A-34 L7).

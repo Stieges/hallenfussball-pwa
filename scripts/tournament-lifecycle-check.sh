@@ -49,16 +49,21 @@ MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 TARGET_NAME="20261113_003_tournament_lifecycle.sql"
 TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
-APPEND_SOURCE_FILE="$MIGRATIONS_DIR/20261110_005_result_entry_forfeit.sql"
+APPEND_SOURCE_FILE="$MIGRATIONS_DIR/20261110_009_spiel_beenden.sql"
+APPEND_005_FILE="$MIGRATIONS_DIR/20261110_005_result_entry_forfeit.sql"
 HELPERS_SOURCE_FILE="$MIGRATIONS_DIR/20261110_008_helper_join.sql"
 FIX_DIR="$REPO_ROOT/src/core/standings/__fixtures__"
 CONTAINER_PREFIX="tournament-lifecycle-check-$$"
 CURRENT_CONTAINER=""
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tournament-lifecycle-check.XXXXXX")"
 
-# append_match_events woertlich aus 20261110_005 (Abschnitt 4) bzw. tournament_closed_for_helpers aus 20261110_008.
-append_005_sql() {
+# append_match_events woertlich aus 20261110_009 (Spiel beenden, juengste Fassung vor A-21a) bzw. aus 20261110_005 (nur
+# Fail-fast-Probe) und tournament_closed_for_helpers aus 20261110_008.
+append_009_sql() {
   awk '/^CREATE OR REPLACE FUNCTION public.append_match_events\(/{f=1} f{print} f && $0=="$$;"{exit}' "$APPEND_SOURCE_FILE"
+}
+append_005_sql() {
+  awk '/^CREATE OR REPLACE FUNCTION public.append_match_events\(/{f=1} f{print} f && $0=="$$;"{exit}' "$APPEND_005_FILE"
 }
 helpers_008_sql() {
   awk '/^CREATE OR REPLACE FUNCTION public.tournament_closed_for_helpers\(/{f=1} f{print} f && /^\$\$;/{exit}' "$HELPERS_SOURCE_FILE"
@@ -98,9 +103,9 @@ DROP TRIGGER IF EXISTS bracket_log_guard_closed ON public.bracket_log;
 DROP TRIGGER IF EXISTS field_control_guard_closed ON public.field_control;
 DROP TRIGGER IF EXISTS tournaments_guard_lifecycle ON public.tournaments;
 DROP TRIGGER IF EXISTS tournaments_lifecycle_follow_status ON public.tournaments;
--- 2. append_match_events woertlich aus 20261110_005_result_entry_forfeit.sql (Abschnitt 4)
+-- 2. append_match_events woertlich aus 20261110_009_spiel_beenden.sql (juengste Fassung vor A-21a)
 SQL
-  append_005_sql
+  append_009_sql
   cat <<'SQL'
 -- 3. tournament_closed_for_helpers woertlich aus 20261110_008_helper_join.sql (nur, wenn vorhanden)
 DO $rw$
@@ -302,6 +307,25 @@ check F "F3 fremde Fassung von append_match_events (ohne Feldsteuerung) -> Abbru
   "$(q "BEGIN; CREATE OR REPLACE FUNCTION public.append_match_events(p_match_id uuid, p_events jsonb, p_client_format integer, p_device_id uuid DEFAULT NULL) RETURNS jsonb LANGUAGE sql AS \$x\$ SELECT '{}'::jsonb \$x\$;
 $FAILFAST
 ROLLBACK;" | grep -c 'unbekannte Fassung')"
+check F "F3b Fassung 20261110_005 ohne „Spiel beenden“ (v_end_by_lead) -> Abbruch 'unbekannte Fassung' (die _009-Ausnahme ginge sonst still verloren)" "1" \
+  "$(q "BEGIN; $(append_005_sql)
+$FAILFAST
+ROLLBACK;" | grep -c 'unbekannte Fassung')"
+APPEND_009_SHA="4613616212c19d8d6b040c932eb505121016440929814cd2a70d7a378bbb74f6"   # 20261110_009 nach Fixrunde (c1454cc7/cd3cd8bb)
+check S "Waechter: Basis 20261110_009_spiel_beenden.sql hat die freigegebene Fassung (SHA-256 4613616…74f6)" "$APPEND_009_SHA" \
+  "$(shasum -a 256 "$APPEND_SOURCE_FILE" | cut -d' ' -f1)"
+check S "Diff-Waechter: append_match_events = Fassung 20261110_009 plus genau der closed_intake-Block (5 Zeilen, vor dem Feld-INSERT)" "0|5" \
+  "$(python3 - "$APPEND_SOURCE_FILE" "$TARGET_FILE" <<'PY'
+import sys, difflib
+def fn(p):
+    L = open(p).read().split('\n')
+    i = next(k for k, l in enumerate(L) if l.startswith('CREATE OR REPLACE FUNCTION public.append_match_events('))
+    j = next(k for k in range(i, len(L)) if L[k] == '$$;')
+    return L[i:j + 1]
+d = [l for l in difflib.ndiff(fn(sys.argv[1]), fn(sys.argv[2])) if l[:2] in ('- ', '+ ')]
+print(f"{sum(1 for l in d if l.startswith('- '))}|{sum(1 for l in d if l.startswith('+ '))}")
+PY
+)"
 q "DELETE FROM public.role_permissions WHERE role = 'screen' AND permission = 'readDisplay';" >/dev/null
 psql_stdin < "$TARGET_FILE" >/dev/null 2>&1
 F4_EXIT=$?

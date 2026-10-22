@@ -234,17 +234,17 @@ UNION ALL
 -- abschliessen“ (group_key ... conflict_or_reject) im selben Schema sind ausgenommen und eigens geprueft.
 SELECT 'match-engine-function-count-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
 SELECT 'match-engine-immutable-count-51',
        (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
 UNION ALL
@@ -256,9 +256,9 @@ SELECT 'match-engine-no-security-definer',
 UNION ALL
 SELECT 'match-engine-search-path-all-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
 UNION ALL
@@ -360,9 +360,9 @@ SELECT 'match-engine-non-b3b-executable-anon-authenticated',
            AND p.proname NOT IN ('normalize_uuid', 'cfg_num', 'envelope', 'dedupe_key', 'server_rules', 'cache_columns')
            -- A-13b-S (20261110_006): die Hilfen fuer „Gruppe abschliessen“ liegen in match_engine, sind aber nur aus den
            -- Server-Funktionen erreichbar (eigene Assertion group-completion-helpers-no-client-execute).
-           AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject',
+           AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject')
                                   -- A-21a-S (20261113_003): Abschluss-Hilfen, nur aus Server-Funktionen (lifecycle-helpers-no-client-execute)
-                                  'tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
+                                  AND p.proname NOT IN ('tournament_state', 'match_winner', 'finish_open_items', 'finish_warnings', 'json_int_between', 'json_text_length_between', 'final_standing_row_valid', 'scorer_row_valid', 'final_standings_shape_valid', 'place_numbers_valid', 'final_standings_consistent', 'closed_intake', 'actor_name', 'final_standings_payload'))
 UNION ALL
 SELECT 'positive-anon-execute-match-engine-apply-amend',
        coalesce(has_function_privilege('anon', to_regprocedure('match_engine.apply_amend(jsonb,jsonb)'), 'EXECUTE'), false)

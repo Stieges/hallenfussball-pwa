@@ -484,7 +484,8 @@ SB_ASSERTION="append-match-events-end-by-lead-without-claim"
 run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # A-21a-S (20261113_003): die lifecycle-*-Zeilen der spaeteren Migration sind hier f (laeuft erst am Ende, AFTER).
+  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE '^(lifecycle-[a-z0-9-]+)\|' || true)"
   check S "Rechte-Assertion: $SB_ASSERTION vorhanden und |t" "$SB_ASSERTION|t" "$(grep -E "^$SB_ASSERTION\|" <<<"$priv" || true)"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
   names_sh="$(awk '/^PRIVILEGE_ASSERTION_NAMES=\(/{f=1; next} f && /^\)/{exit} f' "$REPO_ROOT/scripts/db-drift-check.sh" | grep -oE '^  "[a-z0-9-]+"' | tr -d ' "' | sort)"
