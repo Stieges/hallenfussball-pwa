@@ -125,29 +125,32 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ env.PW_BROWSER }}-${{ steps.pw-version.outputs.version }}
 
-      - name: Install Playwright browsers
+      # Ursache des 20-Min-Hangs: apt-get haengt beim Paket-Download (Mirror) und haelt danach das dpkg-Lock.
+      # Daher: apt mit Timeout/Retries, Install mit Step-Timeout, vor der Wiederholung haengende apt-Prozesse beenden.
+      - name: apt-Haertung (Download-Timeout und Retries)
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/99ci-retries >/dev/null
+
+      - name: Install Playwright Browser
         id: pw-install
-        if: steps.pw-cache.outputs.cache-hit != 'true'
         continue-on-error: true
-        timeout-minutes: 8
-        run: npx playwright install --with-deps "$PW_BROWSER"
+        timeout-minutes: 6
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps "$PW_BROWSER"; else npx playwright install --with-deps "$PW_BROWSER"; fi
 
-      - name: Install Playwright browsers (Wiederholung)
-        if: steps.pw-cache.outputs.cache-hit != 'true' && steps.pw-install.outcome != 'success'
+      - name: Install Playwright Browser (Wiederholung)
+        if: steps.pw-install.outcome != 'success'
         timeout-minutes: 8
-        run: npx playwright install --with-deps "$PW_BROWSER"
-
-      - name: Install Playwright system dependencies (Cache-Treffer)
-        id: pw-deps
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        continue-on-error: true
-        timeout-minutes: 8
-        run: npx playwright install-deps "$PW_BROWSER"
-
-      - name: Install Playwright system dependencies (Wiederholung)
-        if: steps.pw-cache.outputs.cache-hit == 'true' && steps.pw-deps.outcome != 'success'
-        timeout-minutes: 8
-        run: npx playwright install-deps "$PW_BROWSER"
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          sudo pkill -KILL -x apt-get || true
+          sudo pkill -KILL -x dpkg || true
+          sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+          sudo dpkg --configure -a || true
+          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps "$PW_BROWSER"; else npx playwright install --with-deps "$PW_BROWSER"; fi
 
       - name: Build for E2E tests
         run: npm run build
