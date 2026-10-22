@@ -27,7 +27,7 @@ const closeStyle: CSSProperties = {
   width: cssVars.touchTargets.minimum, height: cssVars.touchTargets.minimum, display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'none', border: 0, color: cssVars.colors.textPrimary, cursor: 'pointer', flex: 'none',
 };
-const dialogBody: CSSProperties = { display: 'grid', gap: cssVars.spacing.md, padding: `0 ${cssVars.spacing.md} ${cssVars.spacing.md}` };
+const dialogBody: CSSProperties = { display: 'grid', gap: cssVars.spacing.sm, padding: `0 ${cssVars.spacing.md} ${cssVars.spacing.md}` };
 /** Fuß: untereinander, Haupttaste zuerst (oben, auch in der Tab-Reihenfolge). */
 const dialogFooterStack: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm };
 

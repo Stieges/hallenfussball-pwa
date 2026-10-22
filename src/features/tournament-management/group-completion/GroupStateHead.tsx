@@ -116,7 +116,7 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
   const suffix = at === undefined ? '' : person?.name !== undefined ? ` · ${t('groupCompletion.done.by', { name: person.name, time: timeText(at, i18n.language) })}` : ` · ${timeText(at, i18n.language)}`;
   const effect = completionEffect(tournament, groupId, completion.ranking, completion.openRanks)
     .map((e) => t('groupCompletion.done.effect', { label: labelText(e.label), side: t(e.side === 'A' ? 'groupCompletion.done.sideHome' : 'groupCompletion.done.sideAway'), team: nameOf(e.teamId) }).trim());
-  // „Alle Plätze der Finalrunde sind besetzt“ nur, wenn es Finalspiele gibt und keine Seite mehr auf einen Gruppenplatz wartet (aus den Seiten, nicht aus dem Phasenzustand)
+  // „Alle Plätze der Finalrunde sind besetzt“ nur, wenn es Finalspiele gibt, keine Seite mehr auf einen Gruppenplatz wartet (aus den Seiten) UND die Gruppenphase abgeschlossen ist
   const finalMatches = tournament.matches.filter((m) => m.isFinal === true);
   const allGroupSidesFilled = finalMatches.length > 0 && finalMatches.every((m) => [m.slotA, m.slotB].every((slot) => !(isPendingSlot(slot) && slot.source.kind === 'groupRank')));
   return (
@@ -140,7 +140,7 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
     >
       <span style={title}>{`${t('groupCompletion.done.title', withGroup(name))}${suffix}`}</span>
       <p style={line}>{name === undefined ? t('groupCompletion.done.effectAll') : effect.join(' ')}</p>
-      {allGroupSidesFilled ? <p style={line} data-testid="group-phase-done">{t('groupCompletion.done.phaseDone')}</p> : null}
+      {allGroupSidesFilled && phaseState(tournament, 'groups') === 'completed' ? <p style={line} data-testid="group-phase-done">{t('groupCompletion.done.phaseDone')}</p> : null}
     </InlineNotice>
   );
 };

@@ -2427,6 +2427,652 @@
                 "defaultName": "Feld 2"
               }
             ]
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 2,
+            "numberOfTeams": 8,
+            "groupSystem": "groupsAndFinals",
+            "numberOfGroups": 2,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": true,
+              "thirdPlace": true,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "top-4",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Hallencup Abschluss",
+            "ageClass": "U11",
+            "date": "2026-11-14",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Nordheim"
+            },
+            "teams": [
+              {
+                "id": "00000001-0000-4000-8000-000000000001",
+                "name": "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921",
+                "group": "A"
+              },
+              {
+                "id": "00000001-0000-4000-8000-000000000002",
+                "name": "Turn- und Sportverein Ost",
+                "group": "A"
+              },
+              {
+                "id": "00000001-0000-4000-8000-000000000003",
+                "name": "FC Nordstadt",
+                "group": "A"
+              },
+              {
+                "id": "00000001-0000-4000-8000-000000000004",
+                "name": "SV Südpark",
+                "group": "A"
+              },
+              {
+                "id": "00000001-0000-4000-8000-000000000005",
+                "name": "Eintracht Oberweiler-Niederstetten 1919",
+                "group": "B"
+              },
+              {
+                "id": "00000001-0000-4000-8000-000000000006",
+                "name": "TSV Westtal",
+                "group": "B"
+              },
+              {
+                "id": "00000001-0000-4000-8000-000000000007",
+                "name": "BSC Ostring",
+                "group": "B"
+              },
+              {
+                "id": "00000001-0000-4000-8000-000000000008",
+                "name": "Sportvereinigung Nordheim",
+                "group": "B"
+              }
+            ],
+            "matches": [
+              {
+                "id": "00000009-0000-4000-8000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000001"
+                },
+                "scoreA": 3,
+                "scoreB": 1,
+                "group": "A",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T08:10:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000002",
+                "round": 1,
+                "field": 2,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000002"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000003"
+                },
+                "scoreA": 2,
+                "scoreB": 2,
+                "group": "A",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T08:25:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000003",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000008"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000005"
+                },
+                "scoreA": 0,
+                "scoreB": 1,
+                "group": "B",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:12:00.000Z",
+                "matchNumber": 3,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T08:40:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000004",
+                "round": 2,
+                "field": 2,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000006"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000007"
+                },
+                "scoreA": 4,
+                "scoreB": 0,
+                "group": "B",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:12:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T08:55:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000005",
+                "round": 3,
+                "field": 1,
+                "slot": 2,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000004"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 1,
+                "group": "A",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:24:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T09:10:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000006",
+                "round": 3,
+                "field": 2,
+                "slot": 2,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000003"
+                },
+                "scoreA": 2,
+                "scoreB": 0,
+                "group": "A",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:24:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T09:25:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000007",
+                "round": 4,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000008"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000006"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "B",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:36:00.000Z",
+                "matchNumber": 7,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T09:40:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000008",
+                "round": 4,
+                "field": 2,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000005"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000007"
+                },
+                "scoreA": 0,
+                "scoreB": 0,
+                "group": "B",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:36:00.000Z",
+                "matchNumber": 8,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T09:55:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000009",
+                "round": 5,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000003"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000004"
+                },
+                "scoreA": 3,
+                "scoreB": 2,
+                "group": "A",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:48:00.000Z",
+                "matchNumber": 9,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T10:10:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000010",
+                "round": 5,
+                "field": 2,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000001"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000002"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "A",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:48:00.000Z",
+                "matchNumber": 10,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T10:25:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000011",
+                "round": 6,
+                "field": 1,
+                "slot": 5,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000007"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000008"
+                },
+                "scoreA": 2,
+                "scoreB": 2,
+                "group": "B",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T09:00:00.000Z",
+                "matchNumber": 11,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T10:40:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000012",
+                "round": 6,
+                "field": 2,
+                "slot": 5,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000005"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000006"
+                },
+                "scoreA": 0,
+                "scoreB": 3,
+                "group": "B",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T09:00:00.000Z",
+                "matchNumber": 12,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T10:55:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000013",
+                "round": 7,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000001",
+                  "resolvedFrom": {
+                    "kind": "groupRank",
+                    "group": "A",
+                    "rank": 1
+                  }
+                },
+                "slotB": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "groupRank",
+                    "group": "B",
+                    "rank": 2
+                  }
+                },
+                "originA": {
+                  "kind": "groupRank",
+                  "group": "A",
+                  "rank": 1
+                },
+                "originB": {
+                  "kind": "groupRank",
+                  "group": "B",
+                  "rank": 2
+                },
+                "isFinal": true,
+                "phase": "semifinal",
+                "label": "1. Halbfinale",
+                "scheduledTime": "2026-11-14T09:15:00.000Z",
+                "matchNumber": 13,
+                "matchStatus": "scheduled"
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000014",
+                "round": 7,
+                "field": 2,
+                "slot": 7,
+                "slotA": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "groupRank",
+                    "group": "B",
+                    "rank": 1
+                  }
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000001-0000-4000-8000-000000000003",
+                  "resolvedFrom": {
+                    "kind": "groupRank",
+                    "group": "A",
+                    "rank": 2
+                  }
+                },
+                "originA": {
+                  "kind": "groupRank",
+                  "group": "B",
+                  "rank": 1
+                },
+                "originB": {
+                  "kind": "groupRank",
+                  "group": "A",
+                  "rank": 2
+                },
+                "isFinal": true,
+                "phase": "semifinal",
+                "label": "2. Halbfinale",
+                "scheduledTime": "2026-11-14T09:15:00.000Z",
+                "matchNumber": 14,
+                "matchStatus": "scheduled"
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000015",
+                "round": 8,
+                "field": 1,
+                "slot": 8,
+                "slotA": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000003-0000-4000-8000-000000000013",
+                    "role": "loser"
+                  }
+                },
+                "slotB": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000003-0000-4000-8000-000000000014",
+                    "role": "loser"
+                  }
+                },
+                "originA": {
+                  "kind": "matchResult",
+                  "matchId": "00000003-0000-4000-8000-000000000013",
+                  "role": "loser"
+                },
+                "originB": {
+                  "kind": "matchResult",
+                  "matchId": "00000003-0000-4000-8000-000000000014",
+                  "role": "loser"
+                },
+                "isFinal": true,
+                "phase": "final",
+                "finalType": "thirdPlace",
+                "label": "Spiel um Platz 3",
+                "scheduledTime": "2026-11-14T09:27:00.000Z",
+                "matchNumber": 15,
+                "matchStatus": "scheduled"
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000016",
+                "round": 8,
+                "field": 1,
+                "slot": 9,
+                "slotA": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000003-0000-4000-8000-000000000013",
+                    "role": "winner"
+                  }
+                },
+                "slotB": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000003-0000-4000-8000-000000000014",
+                    "role": "winner"
+                  }
+                },
+                "originA": {
+                  "kind": "matchResult",
+                  "matchId": "00000003-0000-4000-8000-000000000013",
+                  "role": "winner"
+                },
+                "originB": {
+                  "kind": "matchResult",
+                  "matchId": "00000003-0000-4000-8000-000000000014",
+                  "role": "winner"
+                },
+                "isFinal": true,
+                "phase": "final",
+                "finalType": "final",
+                "label": "Finale",
+                "scheduledTime": "2026-11-14T09:39:00.000Z",
+                "matchNumber": 16,
+                "matchStatus": "scheduled",
+                "liveState": {
+                  "engine": true,
+                  "status": "running",
+                  "phase": "regular",
+                  "section": 1,
+                  "running": true,
+                  "elapsedMs": 0,
+                  "anchorAt": "@jetzt-ms-320000",
+                  "elapsedSeconds": 0,
+                  "durationSeconds": 600,
+                  "playPhase": "regular",
+                  "tiebreakerMode": "overtime-then-shootout",
+                  "overtimeDurationSeconds": 300,
+                  "awaitingTiebreakerChoice": false,
+                  "sections": 1,
+                  "sectionSeconds": 600,
+                  "breakSeconds": 60,
+                  "overtimeSeconds": 300,
+                  "sectionStartMs": 0,
+                  "breakStartedAt": null
+                }
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-11-14T08:00:00.000Z",
+            "updatedAt": "2026-11-14T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "abschluss-messlauf",
+            "startDate": "2026-11-14",
+            "startTime": "09:00",
+            "organizer": "Turn- und Sportverein Ost",
+            "groups": [
+              {
+                "id": "A",
+                "customName": "Gruppe A"
+              },
+              {
+                "id": "B",
+                "customName": "Gruppe B"
+              }
+            ],
+            "fields": [
+              {
+                "id": "field-1",
+                "defaultName": "Feld 1"
+              },
+              {
+                "id": "field-2",
+                "defaultName": "Feld 2"
+              }
+            ],
+            "shareCode": "ABSC26",
+            "shareCodeCreatedAt": "2026-11-14T08:00:00.000Z",
+            "monitors": [],
+            "sponsors": [
+              {
+                "id": "sponsor-messlauf",
+                "name": "Autohaus Süd-Westfalen Nordheim GmbH",
+                "tier": "gold",
+                "websiteUrl": "https://example.invalid/sponsor",
+                "createdAt": "2026-11-14T07:00:00.000Z",
+                "updatedAt": "2026-11-14T07:00:00.000Z"
+              }
+            ],
+            "publishedAt": "2026-11-14T08:00:00.000Z",
+            "groupCompletions": [
+              {
+                "groupId": "A",
+                "ranking": [
+                  "00000001-0000-4000-8000-000000000001",
+                  "00000001-0000-4000-8000-000000000003",
+                  "00000001-0000-4000-8000-000000000004",
+                  "00000001-0000-4000-8000-000000000002"
+                ],
+                "openRanks": [],
+                "stale": true,
+                "completedAt": "2026-11-14T08:00:00.000Z"
+              }
+            ]
           }
         ]
       }

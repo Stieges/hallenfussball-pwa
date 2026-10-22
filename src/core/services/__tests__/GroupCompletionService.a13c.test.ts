@@ -112,10 +112,5 @@ describe('@TM-150 wörtlich: Platz 1 ausgespielt, kein Folgespiel', () => {
   it('Zeile 2: SC Ost allein auf Platz 1 → neu abschließbar ohne offene Plätze (READY)', () => {
     expect(prepareRecompletion(lage('0:1'), '')).toMatchObject({ code: 'READY', openRanks: [] });
   });
-
-  // Der Teil „ohne dass ‚Besetzung prüfen‘ erscheint“ braucht den AUSLÖSER nach der Korrektur (A-15b: automatischer Neu-Abschluss).
-  // Heute (A-13c) wirkt nur die Taste „Erneut abschließen“; die Gruppe bleibt nach der Korrektur `stale`. Befund C-NEUABSCHLUSS-PFLICHTBLOCK-STILL, Besitzer A-15b.
-  it.fails('@TM-150 Zeile 2 C-NEUABSCHLUSS-PFLICHTBLOCK-STILL (A-15b): nach der Korrektur ohne Klick neu abgeschlossen, „Besetzung prüfen“ erscheint nicht', () => {
-    expect(groupState(lage('0:1'), '')).not.toBe('stale');
-  });
+  // Der Teil „ohne dass ‚Besetzung prüfen‘ erscheint“ braucht den Auslöser nach der Korrektur und steht im A-15b-Brief (kein Test hier).
 });

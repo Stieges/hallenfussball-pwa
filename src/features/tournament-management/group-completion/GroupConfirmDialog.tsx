@@ -20,8 +20,8 @@ import { GroupDialogShell } from './GroupDialogShell';
 import type { CompletionError, GroupCompletionApi, ReadyPlan } from './useGroupCompletion';
 
 const list: CSSProperties = { listStyle: 'none', margin: 0, padding: 0, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md, background: cssVars.colors.surface };
-const row: CSSProperties = { display: 'grid', gridTemplateColumns: `${cssVars.spacing.lg} minmax(0, 1fr)`, gap: cssVars.spacing.sm, alignItems: 'start', padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` };
-const small: CSSProperties = { display: 'block', color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.normal, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
+const row: CSSProperties = { display: 'grid', gridTemplateColumns: `${cssVars.spacing.lg} minmax(0, 1fr)`, gap: cssVars.spacing.sm, alignItems: 'start', padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`, borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` };
+const small: CSSProperties = { display: 'inline', marginLeft: cssVars.spacing.sm, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.normal, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm };
 const text: CSSProperties = { margin: 0 };
 
 export interface GroupConfirmDialogProps {
@@ -61,7 +61,7 @@ export const GroupConfirmDialog = ({ api, groupId, plan, busy, error }: GroupCon
       <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={busy || offline} onClick={api.confirm} data-primary data-testid="group-close-confirm">
         {t(plan.again ? 'groupCompletion.dialog.confirmAgain' : 'groupCompletion.dialog.confirm')}
       </Button>
-      <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={busy} onClick={api.close} data-testid="group-close-cancel">
+      <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.minimum }} disabled={busy} onClick={api.close} data-testid="group-close-cancel">
         {t('groupCompletion.dialog.cancel')}
       </Button>
     </>

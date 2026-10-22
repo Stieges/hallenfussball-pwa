@@ -30,6 +30,7 @@ import { RetryLaterError } from '../../../../core/errors';
 import { completion, HC, matchOf, NK, tournamentFromFixture, withMatch } from '../../../../core/standings/__tests__/groupCompletionKit';
 import { MemoryRepo } from '../../../../core/standings/__tests__/decisionTestKit';
 import { ET021_GRUPPE_A, ET021_GRUPPE_B, zweiGruppen } from '../../../../core/standings/__tests__/tb4Kit';
+import { teamSlot } from '../../../../core/models/matchSlot';
 import { placeFollowUps } from '../../../../core/services/followUpPlacement';
 import { activeRanking } from '../../../../core/services/GroupCompletionService';
 import { groupRank, slots } from '../../../../test/matchSlotFixtures';
@@ -207,6 +208,14 @@ describe('Abschluss-Hinweis: Wirkung, Person und Zeit (@TM-046, @TM-113)', () =>
     const gefuellt = { ...beide, matches: placeAll(beide) };
     await zeige(gefuellt);
     expect(screen.getAllByTestId('group-phase-done').length).toBeGreaterThan(0);
+  });
+
+  it('S2 Gegenbeispiel: alle Seiten von Hand besetzt, aber eine Gruppe ist offen → kein Satz „Die Gruppenphase ist abgeschlossen“', async () => {
+    const t = hallencup();
+    const manuell = { ...t, matches: t.matches.map((m) => (m.isFinal === true ? { ...m, slotA: teamSlot(HC.nord), slotB: teamSlot(HC.mitte) } : m)), groupCompletions: [completion('A', [HC.nord, HC.sued, HC.west, HC.ost])] };
+    await zeige(manuell); // Gruppe A abgeschlossen, Gruppe B läuft
+    expect(screen.getByTestId('group-done-A')).toBeInTheDocument();
+    expect(screen.queryByTestId('group-phase-done')).toBeNull();
   });
 });
 

@@ -19,6 +19,7 @@ import type { EngineEvent, MatchContext, MatchRules } from '../../../src/core/ma
 import { MATCH_COPY_FORMAT_VERSION, matchCopyKey } from '../../../src/core/match/client/matchCopy';
 import type { ITournamentRepository } from '../../../src/core/repositories/ITournamentRepository';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type Match, type Team, type Tournament } from '../../../src/types/tournament';
+import { pendingSlot } from '../../../src/core/models/matchSlot'
 import type { Sponsor } from '../../../src/types/sponsor';
 import type { MonitorSlide, TournamentMonitor } from '../../../src/types/monitor';
 
@@ -28,6 +29,7 @@ export const SAAT_FORMAT = 1
 export const SAAT_ZEIT = '2026-11-14T08:00:00.000Z'
 export const TURNIER_ID = 'hallencup-messlauf'
 export const SHARE_CODE = 'MESS26'
+export const ABSCHLUSS_ID = 'abschluss-messlauf'
 export const ENTWURF_ID = 'hallencup-entwurf'
 
 /** Marke fuer "Zeit relativ zum Laden", vom Lader beim Befuellen aufgeloest (laufendes Spiel). */
@@ -436,6 +438,29 @@ function normalisiereIds<T>(wert: T, spielIds: string[], art: number): T {
   return JSON.parse(text) as T
 }
 
+/**
+ * A-13c (Review #336 R1): Abschluss-Lage für die Messung der neuen Elemente. Aus dem Hauptturnier abgeleitet: alle Gruppenspiele
+ * entschieden, die Finalrunde noch ohne Spiele und ohne Besetzung; Gruppe A abgeschlossen und nach einer Korrektur veraltet
+ * (`stale`, „Besetzung prüfen“, Halbfinal-Seiten aus A besetzt), Gruppe B fertig, aber nicht abgeschlossen (Vorschlag „Gruppe abschließen“).
+ */
+function abschlussTurnier(basis: Tournament): Tournament {
+  const matches: Match[] = basis.matches.map((m, i) => {
+    const id = uuid(9, i + 1)
+    if (m.isFinal !== true) { return { ...m, id } }
+    const { scoreA: _a, scoreB: _b, decidedBy: _d, finishedAt: _f, timerStartTime: _s, timerElapsedSeconds: _e, penaltyScoreA: _pa, penaltyScoreB: _pb, overtimeScoreA: _oa, overtimeScoreB: _ob, events: _ev, ...rest } = m
+    return {
+      ...rest, id, matchStatus: 'scheduled',
+      slotA: m.originA === undefined ? m.slotA : pendingSlot(m.originA),
+      slotB: m.originB === undefined ? m.slotB : pendingSlot(m.originB),
+    }
+  })
+  const t: Tournament = { ...basis, id: ABSCHLUSS_ID, title: 'Hallencup Abschluss', shareCode: 'ABSC26', monitors: [], matches, groupCompletions: [] }
+  const ranking = activeRanking(t, 'A')
+  const placed = applyCompleteGroup(t, { groupId: 'A', ranking, openRanks: [], tieDecisions: [], knownDecisionIds: [], expectedState: expectedState(t, 'A') })
+  if (placed.tournament === undefined) { throw new Error('Abschluss-Saat: Gruppe A nicht abgeschlossen') }
+  return { ...placed.tournament, groupCompletions: (placed.tournament.groupCompletions ?? []).map((c) => ({ ...c, stale: true })) }
+}
+
 export async function erzeugeSaat(): Promise<SaatDatei> {
   ereignisZaehler = 0
   const haupt = await erzeugeHauptturnier()
@@ -444,7 +469,7 @@ export async function erzeugeSaat(): Promise<SaatDatei> {
   const entwurf = await erzeugeEntwurf()
   const h = normalisiereIds(haupt, haupt.turnier.matches.map((m) => m.id), 3)
   const p = phasen.map((x, i) => normalisiereIds(x, x.turnier.matches.map((m) => m.id), 6 + i))
-  const turniere = [h.turnier, ...p.map((x) => x.turnier), entwurf.turnier]
+  const turniere = [h.turnier, ...p.map((x) => x.turnier), entwurf.turnier, abschlussTurnier(h.turnier)]
   const rolle = (f: (m: Match) => boolean): string | undefined => h.turnier.matches.find(f)?.id
   const kopien = [...h.kopien, ...p.flatMap((x) => x.kopien)]
   return {
