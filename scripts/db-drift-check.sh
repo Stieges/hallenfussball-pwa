@@ -160,7 +160,7 @@ pending_assertions_for() {
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
     20261117_104_public_payload.sql)
-      echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code"
+      echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
       ;;
     *)
       return 1
@@ -528,6 +528,7 @@ PRIVILEGE_ASSERTION_NAMES=(
   "public-read-reading-member-execute-only-authenticated"
   "public-read-default-privileges-no-anon"
   "public-read-reshare-keeps-code"
+  "public-read-core-unchanged"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

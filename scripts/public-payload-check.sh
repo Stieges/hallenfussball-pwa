@@ -45,6 +45,7 @@
 #     G9 config ohne Positivliste (alle Schluessel)                              -> P rot (@ME-018, adminNotes)
 #     G10 Loeschen merkt keine Strukturaenderung (langsames save())              -> A rot (A1)
 #     G11 Einfuegen ohne Server-Zeit (Geraeteuhr in updated_at)                  -> A rot (A1)
+#     G11B wie G11 fuer Teams (Team-INSERT-Trigger fehlt)                        -> A rot (A1, NB-2)
 #     G12 Bildschirm bekommt SR-Namen trotz Vorgabe Nummer                       -> P rot (A2, @W3-032)
 #     G13 Kindermodus mit Entscheidungs-Angaben in live_state                    -> P rot (N2)
 #
@@ -762,7 +763,7 @@ run_assertions() {
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
   check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
   check S "Rechte-Assertion: die B-14-Zeilen vorhanden und |t" \
-    "public-read-default-privileges-no-anon|t,public-read-functions-definer-execute-anon|t,public-read-no-anon-select-policies|t,public-read-reading-member-execute-only-authenticated|t,public-read-reshare-keeps-code|t,public-read-view-schema-no-client-access|t" \
+    "public-read-core-unchanged|t,public-read-default-privileges-no-anon|t,public-read-functions-definer-execute-anon|t,public-read-no-anon-select-policies|t,public-read-reading-member-execute-only-authenticated|t,public-read-reshare-keeps-code|t,public-read-view-schema-no-client-access|t" \
     "$(grep -E '^public-read-' <<<"$priv" | sort | paste -sd, -)"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
   names_sh="$(awk '/^PRIVILEGE_ASSERTION_NAMES=\(/{f=1; next} f && /^\)/{exit} f' "$REPO_ROOT/scripts/db-drift-check.sh" | grep -oE '^  "[a-z0-9-]+"' | tr -d ' "' | sort)"
@@ -831,6 +832,9 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   export G11_FROM="CREATE TRIGGER matches_updated_at_insert BEFORE INSERT ON public.matches
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();"
   export G11_TO=""
+  export G11B_FROM="CREATE TRIGGER teams_updated_at_insert BEFORE INSERT ON public.teams
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();"
+  export G11B_TO=""
   export G12_FROM="                               THEN v_t.referee_config - 'refereeNames' END,"
   export G12_TO="                               THEN v_t.referee_config END,"
   export G13_FROM="       AND NOT (p_kids AND e.key IN ('tiebreakerMode', 'awaitingTiebreakerChoice'))) END;"
@@ -841,7 +845,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
               OR coalesce(v_structure_us, 0) > p_since_version;"
   export G9_FROM="   WHERE e.key = ANY (c_config_keys) AND e.value <> 'null'::jsonb;"
   export G9_TO="   WHERE e.value <> 'null'::jsonb;"
-  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13)
+  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13)
   RED_TOTAL=0
   for mut in "${MUTS[@]}"; do
     start_container "$(tr 'A-Z' 'a-z' <<<"$mut")"
