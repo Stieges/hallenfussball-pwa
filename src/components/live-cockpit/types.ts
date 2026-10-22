@@ -146,6 +146,11 @@ export interface LiveCockpitProps extends LiveCockpitLeisteProps {
   sperrHinweise?: readonly SperrHinweis[];
   /** Name des Geräts, von dem das Spiel übernommen wurde (@SL-015, B-49). */
   uebernahmeVon?: string | null;
+  /**
+   * @FU-115: Name dessen, der das Spiel im Spielplan beendet hat (Eintrags-ID → Name), nur wenn es jemand anderes als dieses
+   * Konto war; sonst `null`. Fehlt die Funktion, zeigt die Tafel den Text ohne Namen.
+   */
+  eintragAutor?: (eventId: string) => string | null;
   /** Letztes Zurücksetzen durch die Turnierleitung (@SL-068, A-10); eine neue `id` meldet sich in der Meldezeile. */
   letzteZuruecksetzung?: { id: string; spielNummer: number } | null;
   /** Last finished match for reopening */

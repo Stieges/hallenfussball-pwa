@@ -79,6 +79,8 @@
     },
     "nachEnde": {
       "verlaengerung": "nach Verlängerung",
+      "eingetragen": "Ende – eingetragen im Spielplan",
+      "eingetragenVon": "Ende – eingetragen im Spielplan von {{name}}",
       "strafstoss": "nach $t(sport:events.penaltyShootout)"
     },
     "quittung": "Abgepfiffen · {{links}}:{{rechts}} gespeichert",

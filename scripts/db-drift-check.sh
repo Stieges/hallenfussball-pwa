@@ -178,6 +178,9 @@ pending_assertions_for() {
     20261113_003_tournament_lifecycle.sql)
       echo "lifecycle-columns-check lifecycle-tables-rls-no-client-writes lifecycle-select-policies lifecycle-ci-schema-reader-select lifecycle-rpcs-definer-authenticated-only lifecycle-public-reads lifecycle-helpers-no-client-execute lifecycle-append-closed-intake-before-field-control lifecycle-guard-triggers-complete lifecycle-guard-triggers-shape lifecycle-tournaments-triggers lifecycle-switch-outside-client-roles lifecycle-finish-locks-matches-before-tournament lifecycle-closed-for-helpers-single-source lifecycle-late-entries-unique-event lifecycle-log-request-id-unique"
       ;;
+    20261110_009_spiel_beenden.sql)
+      echo "append-match-events-end-by-lead-without-claim"
+      ;;
     *)
       return 1
       ;;
@@ -642,6 +645,7 @@ PRIVILEGE_ASSERTION_NAMES=(
   "lifecycle-closed-for-helpers-single-source"
   "lifecycle-late-entries-unique-event"
   "lifecycle-log-request-id-unique"
+  "append-match-events-end-by-lead-without-claim"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

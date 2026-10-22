@@ -157,12 +157,15 @@
 #                                                   # Verlauf, Hinweise, Klaerungen) -- die A-13b-S-Zeilen
 #                                                   # (rls-matrix.d/spur-gruppe-a13b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-a21as     # Alles ("nachher"), aber OHNE 20261113_003 (A-21a-S: Lebenszyklus und
-#                                                   # Abschluss-Sperre) -- die A-21a-Zeilen (rls-matrix.d/spur-abschluss-a21a.sh
+#                                                   # Abschluss-Sperre) -- die A-21a-Zeilen (rls-matrix.d/spur-lebenszyklus-a21a.sh
 #                                                   # und @LZ-023 in spur-a.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-a16       # Alles ("nachher"), aber OHNE 20261110_008 (A-16: Helfer-Beitritt per
 #                                                   # QR) -- die A-16-Zeilen (rls-matrix.d/spur-helfer-a16.sh) muessen
 #                                                   # hier ROT sein (Gegenprobe, Exit 0). Ohne A-34 (_003) entfaellt A-16
 #                                                   # ebenfalls (Fail-fast der Migration braucht field_control).
+#   scripts/rls-role-matrix.sh --without-sb        # Alles ("nachher"), aber OHNE 20261110_009 (Spiel beenden im Spielplan)
+#                                                   # -- die Zeilen (rls-matrix.d/spur-x-spiel-beenden.sh) muessen hier
+#                                                   # ROT sein (Gegenprobe, Exit 0).
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -269,6 +272,8 @@ WITH_A13BS_REQ=1
 WITH_A16_REQ=1
 # A-21a-S: 20261113_003 im Modus "nachher" einspielen (Gegenprobe --without-a21as laesst sie weg; braucht _006).
 WITH_A21AS_REQ=1
+# Spiel beenden: 20261110_009 im Modus "nachher" einspielen (Gegenprobe --without-sb laesst sie weg; braucht _005 A-25b).
+WITH_SB_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -332,6 +337,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-a16)
       WITH_A16_REQ=0
+      shift
+      ;;
+    --without-sb)
+      WITH_SB_REQ=0
       shift
       ;;
     -h|--help)
@@ -652,6 +661,19 @@ if [[ "$WITH_A34" -eq 1 && "$WITH_A16_REQ" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL + A-16 (20261110_008)"
 elif [[ "$WITH_A34" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, A-16-Gegenprobe (ohne 20261110_008)"
+fi
+
+# Spiel beenden (20261110_009, @FU-112, @FU-113, @FU-115): RESULT_ENTRY der Turnierleitung aus einem angepfiffenen Spiel,
+# ohne Feldsteuerung und ohne Anspruch. Setzt A-25b (_005) voraus (Fail-fast); --without-sb ist die Gegenprobe.
+SB_FILE="$(find_migration 20261110_009)"
+WITH_SB=0
+if [[ "$WITH_A25B" -eq 1 && "$WITH_SB_REQ" -eq 1 ]]; then
+  WITH_SB=1
+  echo "Migration einspielen: $(basename "$SB_FILE")" >&2
+  psql_stdin < "$SB_FILE"
+  MODE_LABEL="$MODE_LABEL + Spiel beenden (20261110_009)"
+elif [[ "$WITH_A25B" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, Spiel-beenden-Gegenprobe (ohne 20261110_009)"
 fi
 
 # A-21a-S (20261113_003, plan-endstand-abschluss.md): Lebenszyklus und Abschluss-Sperre am Server -- vier Tabellen (RLS,
@@ -2259,7 +2281,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

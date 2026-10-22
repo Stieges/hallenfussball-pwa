@@ -104,6 +104,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     [engineView, currentMatch, elapsedSeconds],
   );
   const phase = useCockpitPhase(currentMatch, view, currentMatch ? null : leer);
+  // @FU-112/@FU-115: im Spielplan beendet -- „von <Name>“ liefert der Aufrufer (nur, wenn es jemand anderes war)
+  const eingetragenVon = view?.eingetragenImSpielplan ? props.eintragAutor?.(view.eingetragenImSpielplan) ?? null : null;
   // Nur im angepfiffenen Spiel: vor dem Anpfiff und ohne Spiel hat das Abzeichen keine Wirkung, der Anpfiff-Tipp gibt den Ton frei
   const tonHinweis = cockpitSettings.soundEnabled && !sound.isActivated && istAngepfiffenUndNichtBeendet(phase.zustand)
     ? { label: t('tafel.tonAusAntippen'), kurz: t('tafel.tonAus'), onAntippen: () => { void sound.activate(); } }
@@ -157,6 +159,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       mindestpause={props.mindestpause}
       sperrHinweise={props.sperrHinweise}
       uebernahmeVon={props.uebernahmeVon}
+      eingetragenVon={eingetragenVon}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
       // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
       sync={

@@ -1,0 +1,162 @@
+{
+  "title": "@FU-116 Toms Tor kommt vor Ollis Eintrag an: Eintrag auf dem alten Stand (basedOn null) und ohne basedOn -> STALE_BASE mit dem aktuellen Stand 1:0; auf dem aktuellen Stand angenommen",
+  "szenario": "Ein Tor aus dem Cockpit kurz vor oder nach dem Beenden im Spielplan geht nicht verloren",
+  "ctx": {
+    "matchId": "match-70h",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000070h-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "0000070h-0000-4000-8000-000000000002",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 61000,
+      "section": 1,
+      "clockMs": 60000,
+      "payload": {},
+      "teamId": "teamA"
+    },
+    {
+      "id": "0000070h-0000-4000-8000-000000000003",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 62000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 1
+        },
+        "basedOn": null
+      }
+    },
+    {
+      "id": "0000070h-0000-4000-8000-000000000004",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 63000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 1
+        }
+      }
+    },
+    {
+      "id": "0000070h-0000-4000-8000-000000000005",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 64000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 1
+        },
+        "basedOn": "0000070h-0000-4000-8000-000000000002"
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000070h-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070h-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070h-0000-4000-8000-000000000003",
+        "status": "rejected",
+        "code": "STALE_BASE",
+        "detail": {
+          "currentScores": {
+            "teamA": 1,
+            "teamB": 0
+          },
+          "lastScoreEventId": "0000070h-0000-4000-8000-000000000002"
+        }
+      },
+      {
+        "id": "0000070h-0000-4000-8000-000000000004",
+        "status": "rejected",
+        "code": "STALE_BASE",
+        "detail": {
+          "currentScores": {
+            "teamA": 1,
+            "teamB": 0
+          },
+          "lastScoreEventId": "0000070h-0000-4000-8000-000000000002"
+        }
+      },
+      {
+        "id": "0000070h-0000-4000-8000-000000000005",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 63000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 1
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000070h-0000-4000-8000-000000000005",
+      "decidedBy": "direct",
+      "finishedAt": 64000
+    }
+  }
+}

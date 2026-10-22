@@ -162,7 +162,7 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'SHOOTOUT_END':
       return applyShootoutEnd(state, event, ctx);
     case 'RESULT_ENTRY':
-      return { status: 'ok', state: applyResultEntry(state, event, ctx) };
+      return applyResultEntry(state, event, ctx);
     case 'AMEND':
       return applyAmend(state, event);
     default:

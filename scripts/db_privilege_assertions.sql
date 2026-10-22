@@ -1095,4 +1095,16 @@ SELECT 'lifecycle-log-request-id-unique',
        coalesce((SELECT count(*) = 1 FROM pg_constraint c
                   WHERE c.conrelid = to_regclass('public.tournament_lifecycle_log') AND c.contype = 'u'
                     AND pg_get_constraintdef(c.oid) = 'UNIQUE (request_id)'), false)
+-- Spiel beenden (20261110_009_spiel_beenden.sql, @FU-112, @FU-115, Review M3): append_match_events laesst das Ergebnis der
+-- Turnierleitung in ein angepfiffenes Spiel ohne Feldsteuerung zu -- VOR dem c3-Block (kein Anspruch), weiter MIT
+-- Feldsteuerung und Wertungs-Ausnahme (Basis 20261110_005); RESULT_ENTRY aus running gibt es fuer die Leitung.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'append-match-events-end-by-lead-without-claim',
+       coalesce((SELECT position('IF NOT v_end_by_lead' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('v_forfeit_reopen' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
+                        AND EXISTS (SELECT 1 FROM public.match_transitions t
+                                     WHERE t.from_status = 'running' AND t.event_type = 'RESULT_ENTRY' AND t.actor = 'leitung')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
 ;

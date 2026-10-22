@@ -50,6 +50,20 @@ export function pausedAtOneNil(prefix: number, teamA: string): EngineEvent[] {
   ];
 }
 
+/**
+ * Spiel beenden (@FU-112, @FU-114): Anpfiff, Tor für Heim zum 1:0, Spielzeit (2 × 10 min) abgelaufen ohne Abpfiff
+ * (`ohneEnde`), danach beendet die Turnierleitung im Spielplan mit `a:b` (RESULT_ENTRY mit `basedOn` = das Tor).
+ */
+export function endedInSchedule(prefix: number, teamA: string, teamB: string, a: number, b: number, ohneEnde = false): EngineEvent[] {
+  const ev = script(prefix);
+  const start = ev({ type: 'MATCH_START', at: 1000, payload: { rules: GROUP_RULES } });
+  const goal = ev({ type: 'GOAL', at: 200000, clockMs: 199000, teamId: teamA });
+  if (ohneEnde) {
+    return [start, goal];
+  }
+  return [start, goal, ev({ type: 'RESULT_ENTRY', actor: 'leitung', at: 1_300_000, section: null, payload: { scores: { [teamA]: a, [teamB]: b }, basedOn: goal.id } })];
+}
+
 /** Nur angepfiffen (0:0, läuft). */
 export function kickedOff(prefix: number): EngineEvent[] {
   const ev = script(prefix);

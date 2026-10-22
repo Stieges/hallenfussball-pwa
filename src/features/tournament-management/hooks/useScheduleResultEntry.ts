@@ -9,7 +9,10 @@
  * (M-2, Wortlaut @HE-042) melden sofort. K.-o.-Auflösung über `useResultEntryAck` → `useKoResolutionAfterAck`.
  * UR (@FU-082): den Namen im Hinweis „inzwischen von … geändert“ liest `readEventAuthorNames` (Server-Lesefunktion),
  * ohne Namen bleibt es beim Text ohne „von …“.
- * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042.
+ * Spiel beenden (20261110_009): angepfiffen → nur Turnierleitung, nach Rückfrage Abpfiff und Ergebnis in einem Eintrag
+ * (`scheduleEndMatch.ts`); Helfer bekommen den Weg nicht (Hinweis wie bisher), im Strafstoßschießen abgelehnt.
+ * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042, @FU-112, @FU-113, @FU-114,
+ * @FU-115, @FU-116, @FU-117, @FU-118.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,17 +28,20 @@ import { routeForStatus } from './scoreChangeHelpers';
 import { useResultEntryAck } from './useResultEntryAck';
 import { readEventAuthorNames } from '../../../core/repositories/eventAuthorNamesRpc';
 import { supabase } from '../../../lib/supabase';
+import { readForeignFieldHolder } from '../../../core/repositories/fieldControlStateRpc';
+import { endMatchFromSchedule, type EndPrompt } from './scheduleEndMatch';
 
 export type ResultEntryPrompt =
   | { kind: 'reason'; matchNumber: number; before: string; after: string }
   | { kind: 'unskip'; matchNumber: number }
-  | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string };
+  | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string }
+  | EndPrompt;
 
 export interface ScheduleResultEntry {
   /** `false` = nichts gespeichert (Nein/Abbrechen/Ablehnung), die Eingabe-Zelle zeigt dann wieder den gespeicherten Stand */
   enterScore: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
   prompt: ResultEntryPrompt | null;
-  /** Grund (`reason`), `'yes'` (abgesetzt), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
+  /** Grund (`reason`), `'yes'` (abgesetzt, beenden), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
   /**
    * @FU-104: Name dessen, der den Stand eines Spiels zuletzt geändert hat (letzter Spielstand-Eintrag nach dem Abgleich,
@@ -160,15 +166,36 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       }
       const route = routeForStatus(state.status);
       let eventId: string | null = null;
-      if (route === 'running') {
-        showWarning(t('schedule.resultEntry.running'));
+      if (route === 'shootout') {
+        showWarning(t('schedule.resultEntry.shootoutRunning')); // @FU-118
+        return false;
+      }
+      if (route === 'end' && actor !== 'leitung') {
+        showWarning(t('schedule.resultEntry.running')); // @FU-113: Helfer bekommen den Weg nicht
         return false;
       }
       if (actor !== 'leitung') {
         showWarning(t(route === 'correct' ? 'schedule.resultEntry.correctionLeadOnly' : 'schedule.resultEntry.leadOnly'));
         return false;
       }
-      if (route === 'enter' || route === 'unskip') {
+      if (route === 'end') {
+        const { homeTeam, awayTeam } = entry.meta;
+        eventId = await endMatchFromSchedule({
+          engine, commands, entry, field: match?.field ?? null, scoreA, scoreB, knockout,
+          online: () => typeof navigator === 'undefined' || navigator.onLine,
+          readHolder: (field) => readForeignFieldHolder(supabase, tournament.id, field),
+          ask,
+          askShootout: async () => {
+            const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
+            return answer === null ? null : shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
+          },
+          warn: () => showWarning(t('schedule.resultEntry.endOffline')),
+          warnStale: async (now) => showWarning(await staleText(entry, now)),
+        });
+        if (!eventId) {
+          return false;
+        }
+      } else if (route === 'enter' || route === 'unskip') {
         // @FU-093: abgesetzt → erst die Rückfrage; @FU-094/@FU-097: K.-o.-Unentschieden → danach die Strafstoß-Abfrage.
         if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
           return false;
