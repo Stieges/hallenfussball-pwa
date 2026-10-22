@@ -7,9 +7,8 @@
  * Server-Zwischenspeicher (RPC), NICHT der "effektive Stand" (`calculations.ts:274` addiert
  * Verlaengerung selbst dazu -- eine effektive Projektion wuerde sie doppelt zaehlen).
  *
- * `match_status` kennt am Server/Engine `'paused'`; die Turnierkopie (`types/tournament.ts`,
- * `MatchStatus`) hat stattdessen `'waiting'` (im gesamten Repo ungenutzt) -- hier auf
- * `'running'` abgebildet (naeher an der Bedeutung "laeuft, nicht fertig" als das tote `'waiting'`).
+ * `match_status` kennt am Server/Engine `'paused'` (auch die Turnierkopie, `MatchStatus`); die Ueberlagerung bildet es
+ * unveraendert auf `'running'` ab ("laeuft, nicht fertig"; Verwaltung und Cockpit lesen den Feinstatus aus der Engine).
  *
  * Framework-frei (LAYERING core/hooks); die aufrufende Seite (Hook) baut die `MatchContext`s
  * (W4: Platzhalter-Teams -> keine Kopie, IDs klein) und liefert `view`s aus `engine.view(matchId)`.

@@ -13,7 +13,7 @@ import { TeamLogo, TeamColors, CardType } from '../../types/tournament';
 
 /**
  * Live execution status of a match (NOT_STARTED → RUNNING → PAUSED → FINISHED).
- * Note: This is different from tournament.ts MatchStatus ('scheduled'|'waiting'|'running'|'finished'|'skipped')
+ * Note: This is different from tournament.ts MatchStatus ('scheduled'|'waiting'|'running'|'paused'|'finished'|'skipped')
  * which tracks the scheduling/persistence status.
  */
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';

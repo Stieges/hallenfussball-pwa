@@ -10,7 +10,7 @@ import type { MatchSlot } from '../models/schemas/MatchSlotSchema';
 import type { SlotSource } from '../models/schemas/MatchSlotSchema';
 import { slotSource } from '../models/matchSlot';
 
-/** Noch nicht angepfiffen. Alles andere (auch der Laufzeitwert `paused`, den der Typ nicht kennt) gilt als angepfiffen. */
+/** Noch nicht angepfiffen. Alles andere (auch `paused`) gilt als angepfiffen. */
 const NOT_STARTED: readonly MatchStatus[] = ['scheduled', 'waiting', 'skipped'];
 
 const fromGroup = (source: SlotSource | undefined, groupId: string): boolean =>

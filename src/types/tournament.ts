@@ -271,14 +271,18 @@ export interface PlayoffConfig {
 }
 
 /**
- * Match Status for TL-RESULT-LOCK-01 (extended for US-SCHEDULE-EDITOR)
+ * Match Status for TL-RESULT-LOCK-01 (extended for US-SCHEDULE-EDITOR) -- alle Werte der Cloud-Spalte
+ * `matches.match_status` (CHECK `matches_match_status_check`)
  * - scheduled: Match not yet started
  * - waiting: Waiting for previous match to complete (dependency)
  * - running: Match currently in progress
+ * - paused: Match angepfiffen, aber unterbrochen (Halbzeit, Pause, Entscheidung offen, Strafstoßschießen);
+ *   der Cache schreibt `section_break`/`decision_pending`/`shootout` als `paused`, der Feinstatus steht in `liveState`
  * - finished: Match completed, results locked
  * - skipped: Match skipped (e.g., team withdrew)
  */
-export type MatchStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
+export const MATCH_STATUSES = ['scheduled', 'waiting', 'running', 'paused', 'finished', 'skipped'] as const;
+export type MatchStatus = (typeof MATCH_STATUSES)[number];
 
 /**
  * How a finals match was decided (for display purposes). 'forfeit' = Nichtantritts-Wertung (A-25, E-A4; in der Spalte

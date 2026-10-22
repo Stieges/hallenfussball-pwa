@@ -23,8 +23,8 @@ export type ViewEdition = 'plan' | 'blank' | 'final';
 export type ViewerPdfChoice = 'planOnly' | 'withResults' | 'none';
 
 /**
- * Fachlicher Status. 'cancelled' = „ausgefallen“ (@ZM-104/@DR-001). 'paused' gibt es nur hier, nicht in
- * `types/tournament.ts` (R-A36b-2): der Cache bildet Unterbrechungen auf 'paused' ab, der Feinstatus kommt über die Engine.
+ * Fachlicher Status. 'cancelled' = „ausgefallen“ (@ZM-104/@DR-001). 'paused' = Unterbrechung
+ * (R-A36b-2): der Cache bildet sie auf 'paused' ab (auch `types/tournament.ts`), der Feinstatus kommt über die Engine.
  */
 export type ViewMatchStatus = 'scheduled' | 'running' | 'paused' | 'finished' | 'cancelled' | 'awarded';
 
@@ -36,7 +36,7 @@ export type ViewDecidedBy = MatchDecidedBy | 'forfeit';
 
 /** Spielstatus aus Sicht der Ansicht: Cache-Status (auch 'paused' per Cache-Abbildung) und Entscheidungsart. */
 export interface ViewStatusSource {
-  matchStatus?: Match['matchStatus'] | 'paused';
+  matchStatus?: Match['matchStatus'];
   decidedBy?: ViewDecidedBy;
 }
 
