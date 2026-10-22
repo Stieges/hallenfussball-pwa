@@ -68,7 +68,9 @@ test.describe('Engine-Einträge über Geräte', () => {
     await ownerPage.getByTestId('card-kind-step').getByRole('button', { name: 'Gelb', exact: true }).click();
     await wartePicker(ownerPage);
     const picker = ownerPage.getByTestId('number-picker');
-    await picker.getByRole('button', { name: 'Andere Nr.' }).click();
+    // Mit feinem Zeiger (Desktop) ist das Feld schon offen und fokussiert (`tastatur`), sonst erst über „Andere Nr.“.
+    const andere = picker.getByRole('button', { name: 'Andere Nr.' });
+    if (await andere.count() > 0) { await andere.click(); }
     await picker.getByRole('textbox').fill('100');
     await expect(ownerPage.getByTestId('number-picker-ungueltig')).toBeVisible();
     await expect(picker.getByRole('button', { name: 'Übernehmen' })).toBeDisabled();
