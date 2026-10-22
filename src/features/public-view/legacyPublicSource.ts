@@ -5,9 +5,9 @@
  * der Fingerabdruck ihres Inhalts (`contentVersionOf`): ist er gleich dem, den die Seite schon hält, meldet der Adapter
  * „nichts geändert“, und die Seite rechnet und zeichnet nicht neu. Egress und Anfragen bleiben die des Voll-Abrufs.
  *
- * Grenze des Weges: `getByShareCode` unterscheidet „gibt es nicht“ nicht von einem Fehler (beides `null`). Hält die Seite
- * schon einen Stand, gilt `null` darum als „nicht erreichbar“ (der Stand bleibt, @ZM-109); erst der Server-Weg (b) kann ein
- * Zurücknehmen der Freigabe sicher melden.
+ * `getByShareCode` unterscheidet „gibt es nicht“ nicht von einem Fehler (beides `null`); die Standard-Abfrage fragt deshalb bei
+ * `null` mit `assertShareCodeUnknown` nach: Fehler oder vorhandene Zeile werfen (Störung, der Stand bleibt, @ZM-109), 0 Zeilen
+ * heißt „nicht gefunden“ (der Stand wird gelöscht, @ZM-036).
  */
 import type { Tournament } from '../../types/tournament';
 import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
@@ -43,7 +43,7 @@ export async function assertShareCodeUnknown(code: string): Promise<void> {
   }
   // Findet die Prüfung das Turnier doch, war `getByShareCode` nur gestört: ebenfalls eine Störung, kein „nicht gefunden“
   if ((result?.data?.length ?? 0) > 0) {
-    throw new Error('Turnier vorhanden, aber nicht gelesen (Störung)');
+    throw new Error('tournament exists but was not readable (disruption)');
   }
 }
 
@@ -114,7 +114,9 @@ export function createLegacyPublicSource(
         return { kind: 'unreachable' };
       }
       if (found === null) {
-        return sinceVersion === null ? { kind: 'not-found' } : { kind: 'unreachable' };
+        // Die Standard-Abfrage hat bei `null` nachgefragt (`assertShareCodeUnknown`): eine Störung wirft, `null` heißt wirklich
+        // „gibt es nicht“ – auch mit gehaltenem Stand (Teilen zurückgenommen, @ZM-036)
+        return { kind: 'not-found' };
       }
       const version = contentVersionOf(found);
       return version === sinceVersion ? { kind: 'unchanged', version } : { kind: 'full', version, tournament: found };

@@ -54,10 +54,10 @@ describe('Adapter (a) – heutiger Weg', () => {
     expect(result.kind).toBe('full');
   });
 
-  it('@ZM-109 ohne Stand: null heißt „nicht gefunden“; mit Stand heißt null „nicht erreichbar“ (der Stand bleibt)', async () => {
+  it('@ZM-036 null aus der Abfrage (sie hat nachgefragt) heißt „nicht gefunden“, auch mit gehaltenem Stand', async () => {
     const source = createLegacyPublicSource(lookupOf(null, null), withClock);
     expect(await source.fetch(CODE, null)).toEqual({ kind: 'not-found' });
-    expect(await source.fetch(CODE, '1')).toEqual({ kind: 'unreachable' });
+    expect(await source.fetch(CODE, '1')).toEqual({ kind: 'not-found' });
   });
 
   it('@ZM-109 eine werfende Abfrage ist „nicht erreichbar“, nie „nicht gefunden“', async () => {

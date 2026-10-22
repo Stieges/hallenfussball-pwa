@@ -26,7 +26,7 @@ export type PublicRpcCall = (args: PublicRpcArgs) => Promise<PublicRpcResponse>;
 /** Aufruf über den Supabase-Client; die generierten Typen kennen die Funktion noch nicht (B-14). */
 const supabaseCall: PublicRpcCall = async (args) => {
   if (supabase === null) {
-    return { data: null, error: { message: 'Supabase ist nicht konfiguriert' } };
+    return { data: null, error: { message: 'supabase not configured' } };
   }
   const client = supabase as unknown as { rpc: (name: string, params: PublicRpcArgs) => PromiseLike<PublicRpcResponse> };
   return client.rpc('public_tournament', args);
