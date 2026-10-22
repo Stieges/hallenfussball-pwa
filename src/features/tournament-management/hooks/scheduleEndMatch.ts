@@ -9,11 +9,16 @@
  *  4. K.-o.-Unentschieden: Strafstoßergebnis wie beim Direkteintrag (@FU-094),
  *  5. vor dem Senden erneut abgleichen: hat sich der Stand inzwischen geändert (Tor aus dem Cockpit), wird nichts
  *     gespeichert, und die Turnierleitung sieht „inzwischen von Tom geändert (jetzt 3:1)“ (@FU-116); der Server prüft
- *     `basedOn` zusätzlich (STALE_BASE).
+ *     `basedOn` zusätzlich (STALE_BASE),
+ *  6. Review H2: mit Konto SOFORT senden, am Ausgang vorbei (`OutboxSender.sendNow`) -- scheitert das Senden, kommt
+ *     „Nicht gesendet – bitte erneut versuchen“, und nichts ist vorgemerkt; eine Ablehnung des Servers wirft
+ *     `MatchCommandRejectedError` (Hinweis wie bei jedem Eintrag). Gast (nur lokal, H3): ohne Netz-Prüfung, lokal bestätigt.
  * Rein bis auf die übergebenen Abhängigkeiten (kein React).
  */
-import { effectiveScoreFor, type MatchState } from '../../../core/match';
-import type { MatchCommands } from '../../../core/match/client';
+import { effectiveScoreFor, type ErrorCode, type MatchState } from '../../../core/match';
+import { MatchCommandRejectedError, type MatchCommands, type MatchEngine, type OutboxSender } from '../../../core/match/client';
+import { buildEndWithResultEvent } from '../../../core/match/client/matchCommandsEnd';
+import { isClientOutdated } from '../../../core/repositories/appendMatchEventsRpc';
 import type { ValidMatchEntry } from '../../../hooks/engineMatchModel';
 import type { FieldHolder } from '../../../core/repositories/fieldControlStateRpc';
 import { endPromptRestSeconds, routeForStatus } from './scoreChangeHelpers';
@@ -28,15 +33,12 @@ export interface EndPrompt {
   controlledBy: { field: number; holder: string | null } | null;
 }
 
-export interface EndMatchEngine {
-  catchUp(matchId: string): Promise<unknown>;
-  view(matchId: string): { result: { state: MatchState } } | null;
-  serverNow(): number;
-}
-
 export interface EndMatchInput {
-  engine: EndMatchEngine;
+  engine: Pick<MatchEngine, 'catchUp' | 'view' | 'serverNow'>;
   commands: Pick<MatchCommands, 'endWithResult'>;
+  sender: Pick<OutboxSender, 'sendNow'>;
+  /** Gast: nur lokal (keine Netz-Prüfung, lokal bestätigt, H3). */
+  guest: boolean;
   entry: ValidMatchEntry;
   field: number | null;
   scoreA: number;
@@ -46,7 +48,7 @@ export interface EndMatchInput {
   readHolder: (field: number) => Promise<FieldHolder | null>;
   ask: (prompt: EndPrompt) => Promise<string | null>;
   askShootout: () => Promise<Record<string, number> | null>;
-  warn: (key: 'offline') => void;
+  warn: (key: 'offline' | 'notSent') => void;
   warnStale: (now: string) => Promise<void>;
 }
 
@@ -103,5 +105,35 @@ export async function endMatchFromSchedule(input: EndMatchInput): Promise<string
     return null;
   }
   const scores = { [entry.ctx.teamAId]: input.scoreA, [entry.ctx.teamBId]: input.scoreB };
-  return input.commands.endWithResult(id, entry.ctx, 'leitung', scores, shootout, input.knockout, basedOn);
+  if (input.guest) {
+    return input.commands.endWithResult(id, entry.ctx, 'leitung', scores, shootout, input.knockout, basedOn);
+  }
+  return sendNow(input, scores, shootout, basedOn);
+}
+
+/** H2: sofort senden; `null` = nicht gesendet (Hinweis gezeigt, nichts vorgemerkt), Server-Ablehnung wirft. */
+async function sendNow(input: EndMatchInput, scores: Record<string, number>, shootout: Record<string, number> | undefined, basedOn: string | null): Promise<string | null> {
+  const { engine, entry } = input;
+  const view = engine.view(entry.matchId);
+  if (!view) {
+    return null;
+  }
+  const event = buildEndWithResultEvent(view, engine.serverNow(), { ctx: entry.ctx, actor: 'leitung', scores, shootout, knockout: input.knockout, basedOn });
+  let result: Awaited<ReturnType<OutboxSender['sendNow']>>;
+  try {
+    result = await input.sender.sendNow(entry.matchId, [event]);
+  } catch {
+    input.warn('notSent');
+    return null;
+  }
+  const first = isClientOutdated(result) ? undefined : result.results[0];
+  if (first?.status === 'rejected') {
+    throw new MatchCommandRejectedError((first.code ?? 'INVALID_PAYLOAD') as ErrorCode, first.detail);
+  }
+  if (first?.status !== 'accepted' && first?.status !== 'duplicate') {
+    input.warn('notSent');
+    return null;
+  }
+  await engine.catchUp(entry.matchId);
+  return event.id;
 }

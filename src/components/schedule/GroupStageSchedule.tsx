@@ -80,6 +80,8 @@ interface GroupStageScheduleProps {
   onNavigateToCockpit?: (matchId: string) => void;
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
+  /** Spiel beenden (@FU-112): die Turnierleitung darf ein laufendes Spiel im Spielplan beenden (sonst nicht angeboten, @FU-113). */
+  canEndRunning?: boolean;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -102,6 +104,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onMatchSwap,
   onNavigateToCockpit,
   showTitle = true,
+  canEndRunning = false,
 }) => {
   const { t } = useTranslation('tournament');
   // DnD State
@@ -423,6 +426,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             badge={matchViewOf(sides, match.id)?.badge}
             events={events}
             onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
+            onEndAndEnter={_editable && canEndRunning && onScoreChange ? () => setExpandType('quick') : undefined}
             onClose={handleExpandClose}
           />
         );
@@ -485,7 +489,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable, canEndRunning, onScoreChange]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {

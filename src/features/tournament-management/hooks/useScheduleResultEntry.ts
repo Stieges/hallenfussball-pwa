@@ -181,15 +181,16 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       if (route === 'end') {
         const { homeTeam, awayTeam } = entry.meta;
         eventId = await endMatchFromSchedule({
-          engine, commands, entry, field: match?.field ?? null, scoreA, scoreB, knockout,
-          online: () => typeof navigator === 'undefined' || navigator.onLine,
+          engine, commands, sender: context.sender, guest: context.accountId === 'guest',
+          entry, field: match?.field ?? null, scoreA, scoreB, knockout,
+          online: () => context.accountId === 'guest' || typeof navigator === 'undefined' || navigator.onLine,
           readHolder: (field) => readForeignFieldHolder(supabase, tournament.id, field),
           ask,
           askShootout: async () => {
             const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
             return answer === null ? null : shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
           },
-          warn: () => showWarning(t('schedule.resultEntry.endOffline')),
+          warn: (key) => showWarning(t(key === 'offline' ? 'schedule.resultEntry.endOffline' : 'schedule.resultEntry.endNotSent')),
           warnStale: async (now) => showWarning(await staleText(entry, now)),
         });
         if (!eventId) {

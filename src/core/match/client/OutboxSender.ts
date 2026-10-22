@@ -288,8 +288,16 @@ export class OutboxSender {
 
   /** A3: der Netzaufruf bekommt REQUEST_TIMEOUT_MS -- haengende Anfragen werden abgebrochen. */
   private appendWithTimeout(queue: MatchQueue, batch: readonly AppendableEvent[]): Promise<AppendResult> {
+    return this.sendNow(queue.matchId, batch);
+  }
+
+  /**
+   * Spiel beenden (H2, @FU-117): sendet Einträge SOFORT am Ausgang vorbei -- nichts wird vorgemerkt, nichts gespeichert.
+   * Wirft bei Netz- oder Serverfehler; der Aufrufer meldet es und gleicht danach selbst ab (catchUp).
+   */
+  sendNow(matchId: string, events: readonly AppendableEvent[]): Promise<AppendResult> {
     return withRequestTimeout(this.timers, REQUEST_TIMEOUT_MS, (signal) =>
-      this.api.appendMatchEvents(queue.matchId, batch, {
+      this.api.appendMatchEvents(matchId, events, {
         clientFormat: this.clientFormat,
         ...(this.deviceId !== undefined ? { deviceId: this.deviceId } : {}),
         signal,

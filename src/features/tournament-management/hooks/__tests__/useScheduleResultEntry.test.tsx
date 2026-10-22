@@ -120,7 +120,7 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
   });
 
   // Rest von @FU-081 („Spielleitung übernehmen“ neben dem Notweg) gehört zu B-49 (Übernahme aus dem Spielplan).
-  it.fails('@FU-081 Rest (B-49): Olli sieht in der Rückfrage zusätzlich „Spielleitung übernehmen“', async () => {
+  it.fails('@FU-081 Rest (B-49): Olli sieht in der Rückfrage zusätzlich „Spielleitung übernehmen“ (C-SPIELPLAN-UEBERNEHMEN-FEHLT)', async () => {
     h.fetchConfirmed.mockResolvedValueOnce({
       events: [seq(anpfiff, 1)],
       newWatermark: 1,
