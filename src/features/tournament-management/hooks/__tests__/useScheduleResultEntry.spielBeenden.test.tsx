@@ -337,19 +337,21 @@ describe('Spiel beenden und Ergebnis eintragen (Spielplan)', () => {
     expect(state(h, SPIEL_9)?.status).toBe('finished');
   });
 
-  // @FU-116 Z. 2: Toms Tor, das nach Ollis Eintrag ankommt, gehört in die Klärungsliste der Turnierleitung. Heute lehnt der
-  // Server mit MATCH_FINISHED ab, und der Eintrag steht nur in Toms eigener Ablehnungsliste (nur „Verwerfen“).
-  it.fails('@FU-116 Z. 2 Toms verspätetes Tor steht in der Klärungsliste der Turnierleitung (C-KLAERUNGSLISTE-OHNE-PAKET)', async () => {
+  // @FU-116 Z. 2: Toms Tor, das nach Ollis Eintrag ankommt, gehört in die Klärungsliste der Turnierleitung. Seit A-35
+  // (20261117_005) antwortet der Server `review AFTER_END`; Toms Gerät nimmt das Tor aus dem Ausgang („wird geprüft“).
+  it('@FU-116 Z. 2 Toms verspätetes Tor steht in der Klärungsliste der Turnierleitung (Antwort review AFTER_END)', async () => {
     const commands = new MatchCommands({ engine: h.engine, store: h.store, sender: h.sender, accountId: h.value.accountId });
     const ctx = { matchId: SPIEL_9, teamAId: SV_SUED, teamBId: FC_NORD };
     await h.engine.ensureMatch(SPIEL_9, ctx, 'T');
     await commands.start(SPIEL_9, ctx, 'helper', RULES);
     await settle();
-    h.api.mockResolvedValueOnce({ results: [{ id: null, status: 'rejected', code: 'MATCH_FINISHED' }], state: null, serverTime: NOW });
+    h.api.mockResolvedValueOnce({ results: [{ id: null, status: 'review', code: 'AFTER_END' }], state: null, serverTime: NOW });
     const goalId = await commands.goal(SPIEL_9, ctx, 'helper', SV_SUED, false);
     await settle();
     const copy = await h.store.load(h.value.accountId, SPIEL_9);
     expect(copy?.review.map((e) => e.id)).toContain(goalId);
+    expect(copy?.rejected.map((entry) => entry.event.id)).not.toContain(goalId);
+    expect(copy?.acked.map((e) => e.id)).not.toContain(goalId);
   });
 
   // --- Nachblick N2: wartende Einträge im Ausgang zuerst senden ------------------------------------------------------
