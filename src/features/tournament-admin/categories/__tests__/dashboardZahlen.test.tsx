@@ -33,7 +33,7 @@ function zeige(t: Tournament) {
 const BEENDET_1_0 = { matchStatus: 'finished', scoreA: 1, scoreB: 0 };
 const LAUFEND_2_1 = { matchStatus: 'running', scoreA: 2, scoreB: 1 };
 
-describe('Dashboard: richtige Zahlen (@OB-069)', () => {
+describe('Dashboard: richtige Zahlen (@OB-069, C-ADMIN-DASHBOARD-ZAHLEN)', () => {
   it('@OB-069 Jeder gegen jeden mit 4 Teams zeigt 1 Gruppe, nicht 2', () => {
     zeige(jgj([BEENDET_1_0, LAUFEND_2_1]));
     expect(screen.getByText('1 Gruppe')).toBeTruthy();
