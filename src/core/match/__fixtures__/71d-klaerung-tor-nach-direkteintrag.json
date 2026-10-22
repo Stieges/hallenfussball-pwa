@@ -1,0 +1,85 @@
+{
+  "title": "A-35 übernommenes Tor in ein direkt eingetragenes (nie angepfiffenes) Spiel wird abgelehnt (INVALID_TRANSITION NOT_STARTED)",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-71d",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "000071d-0000-4000-8000-000000000001",
+      "actor": "leitung",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 0
+        }
+      },
+      "type": "RESULT_ENTRY",
+      "actorUser": "owner"
+    },
+    {
+      "id": "000071d-0000-4000-8000-000000000002",
+      "actor": "leitung",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 300000,
+      "payload": {},
+      "type": "GOAL",
+      "teamId": "teamB",
+      "targetId": "deadbeef-0000-4000-8000-0000000000aa",
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "000071d-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "000071d-0000-4000-8000-000000000002",
+        "status": "rejected",
+        "code": "INVALID_TRANSITION",
+        "detail": {
+          "reason": "NOT_STARTED"
+        }
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "000071d-0000-4000-8000-000000000001",
+      "decidedBy": "direct",
+      "finishedAt": 2000
+    }
+  }
+}

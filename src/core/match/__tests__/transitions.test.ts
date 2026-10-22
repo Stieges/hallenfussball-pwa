@@ -127,6 +127,12 @@ describe('matchTransitions.json', () => {
       { from: 'paused', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
       { from: 'section_break', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
       { from: 'decision_pending', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
+
+      // A-35 Klärungsliste (@FU-038, @FU-095): Entscheidungen nur durch die Turnierleitung, aus jedem Zustand, ohne Wirkung.
+      ...MatchStatusSchema.options.flatMap((from): TransitionRow[] => [
+        { from, type: 'REVIEW_ACCEPT', actor: 'leitung', to: '=' },
+        { from, type: 'REVIEW_DISCARD', actor: 'leitung', to: '=' },
+      ]),
     ];
 
     const sortKey = (row: TransitionRow): string => `${row.from}::${row.type}`;
