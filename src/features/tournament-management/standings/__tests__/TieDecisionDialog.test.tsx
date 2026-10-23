@@ -29,14 +29,17 @@ async function open(tournament: Tournament, groupId: string, tie: FakeTie, extra
 
 const dialog = () => screen.getByTestId('tie-decision-dialog');
 
-describe('Wahl: Strafstoßschießen eintragen oder Ergebnis so akzeptieren (@W2A-063, @W2A-067)', () => {
-  it('@W2A-067 Nikolaus mit Voreinstellung öffnet die Wahl: Haupttaste „Strafstoßschießen eintragen“, daneben „Ergebnis so akzeptieren“, kein Grundfeld', async () => {
+describe('Wahl: Strafstoßschießen eintragen oder Platz teilen (@W2A-063, @W2A-067; Wortlaut Daniel 23.10.)', () => {
+  it('@W2A-067 Nikolaus mit Voreinstellung öffnet die Wahl: Titel „Gleichstand auf Platz 3“, Haupttaste „Strafstoßschießen eintragen“, daneben „Platz teilen“, kein Grundfeld', async () => {
     await open(nikolaus(), '', fakeTie());
-    expect(within(dialog()).getByRole('heading', { name: 'Gleichstand entscheiden' })).toBeInTheDocument();
-    expect(screen.getByTestId('tie-dialog-context')).toHaveTextContent('Gleichauf auf Platz 3 und 4 nach allen Kriterien: TSV Petting und DJK Otting.');
+    expect(within(dialog()).getByRole('heading', { name: 'Gleichstand auf Platz 3' })).toBeInTheDocument();
+    expect(screen.getByTestId('tie-dialog-context')).toHaveTextContent('TSV Petting und DJK Otting sind nach allen Regeln gleich.');
+    expect(screen.getByText('Der Sieger bekommt Platz 3.')).toBeInTheDocument();
     expect(screen.getByTestId('tie-pick-shootout')).toHaveTextContent('Strafstoßschießen eintragen');
-    expect(screen.getByTestId('tie-accept-result')).toHaveTextContent('Ergebnis so akzeptieren');
-    expect(screen.getByText(/Ein Tipp genügt, einen Grund brauchst du nicht\. TSV Petting und DJK Otting teilen dann Platz 3, das nächste Team steht auf Platz 5\./)).toBeInTheDocument();
+    expect(screen.getByTestId('tie-accept-result')).toHaveTextContent('Platz teilen');
+    expect(screen.getByText('Beide auf Platz 3, danach folgt Platz 5.')).toBeInTheDocument();
+    // Gegenbeispiel: die entfallenen Sätze stehen nicht mehr im Dialog; aus der Tabelle (ohne Abschluss) kein „Danach ist die Gruppe abgeschlossen.“
+    expect(dialog().textContent).not.toMatch(/Ein Tipp genügt|Ergebnis so akzeptieren|an den Endstand übergeben|Danach ist die Gruppe abgeschlossen/);
     expect(screen.queryByTestId('tie-reason')).toBeNull(); // Gegenbeispiel: kein Grundfeld bei der Annahme
   });
 
@@ -56,7 +59,8 @@ describe('Wahl: Strafstoßschießen eintragen oder Ergebnis so akzeptieren (@W2A
     await open(jgj('WOUMNB', DATA.W2A_044), '', fakeTie());
     expect(screen.getByTestId('tie-pick-shootout')).toHaveTextContent('Reihenfolge festlegen');
     expect(screen.getByText('Nach dem Strafstoßschießen. Du nennst kurz den Grund.')).toBeInTheDocument();
-    expect(screen.getByTestId('tie-accept-result')).toHaveTextContent('Ergebnis so akzeptieren');
+    expect(screen.getByTestId('tie-accept-result')).toHaveTextContent('Platz teilen');
+    expect(screen.getByText(/^Alle drei auf Platz \d+, danach folgt Platz \d+\.$/)).toBeInTheDocument();
   });
 });
 
@@ -238,7 +242,7 @@ describe('Englisch (Sprachparität)', () => {
   it('der Wahl-Dialog zeigt die englischen Texte, keine rohen Schlüssel', async () => {
     await open(nikolaus(), '', fakeTie(), { lng: 'en' });
     expect(screen.getByTestId('tie-pick-shootout')).toHaveTextContent('Enter penalty shootout');
-    expect(screen.getByTestId('tie-accept-result')).toHaveTextContent('Accept result as it is');
+    expect(screen.getByTestId('tie-accept-result')).toHaveTextContent('Share place');
     expect(dialog().textContent).not.toMatch(/standingsTie\./);
   });
 });

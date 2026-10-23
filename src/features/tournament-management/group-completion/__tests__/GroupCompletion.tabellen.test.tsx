@@ -143,11 +143,12 @@ describe('@TM-059 Zustand je Gruppe (vier Zustandswörter, Zusatzmarke ersetzt d
 });
 
 describe('@TM-044 @TM-045 Vorschlag und Rechte', () => {
-  it('@TM-044 Gruppe A fertig: Banner mit der Haupttaste „Gruppe abschließen“; die Halbfinals zeigen weiter ihre Herkunft (nichts besetzt)', async () => {
+  it('@TM-044 Gruppe A fertig: ein Banner mit einer Haupttaste; bei offenem Gleichstand mit Folgespiel heißt sie „Strafstoßschießen eintragen“ (Daniel 23.10.); die Halbfinals zeigen weiter ihre Herkunft (nichts besetzt)', async () => {
     const t = gruppeA();
     await zeige(t);
     expect(screen.getByTestId('group-close-suggestion')).toHaveTextContent('Gruppe A ist fertig – Tabelle prüfen und abschließen');
-    expect(within(screen.getByTestId('group-close-suggestion')).getByTestId('group-close-button-A')).toHaveTextContent('Gruppe abschließen');
+    expect(within(screen.getByTestId('group-close-suggestion')).getByTestId('group-close-button-A')).toHaveTextContent('Strafstoßschießen eintragen');
+    expect(screen.getByTestId('group-close-then-A')).toHaveTextContent('Danach ist die Gruppe abgeschlossen.');
     expect(t.matches.filter((m) => m.isFinal === true).every((m) => m.slotA.kind === 'pending')).toBe(true);
   });
 
@@ -488,10 +489,10 @@ describe('@TM-072 @TM-099 Gruppe wieder öffnen', () => {
     expect(repo.reopenGroup).not.toHaveBeenCalled();
   });
 
-  it('nach dem Wiederöffnen schlägt die App den Abschluss wieder vor („Erneut abschließen“), die Besetzung bleibt', async () => {
+  it('nach dem Wiederöffnen schlägt die App den Abschluss wieder vor (offener Gleichstand: „Strafstoßschießen eintragen“), die Besetzung bleibt', async () => {
     const wiederOffen: Tournament = { ...hallencup(), groupCompletions: [completion('A', [HC.nord, HC.sued, HC.west, HC.ost], { reopenedAt: '2026-11-28T12:00:00Z' })] };
     await zeige(wiederOffen);
-    expect(screen.getByTestId('group-close-button-A')).toHaveTextContent('Erneut abschließen');
+    expect(screen.getByTestId('group-close-button-A')).toHaveTextContent('Strafstoßschießen eintragen');
     expect(marke('A')).toBe('bereit zum Abschluss');
   });
 });
@@ -499,11 +500,11 @@ describe('@TM-072 @TM-099 Gruppe wieder öffnen', () => {
 describe('@TM-145 @TM-150 Besetzung prüfen nach einer Korrektur', () => {
   const veraltet = (t: Tournament): Tournament => ({ ...t, groupCompletions: [completion('', [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau], { stale: true })] });
 
-  it('Banner (warn) „Besetzung nach Korrektur prüfen“ mit der Haupttaste „Erneut abschließen“; das Zustandswort bleibt „abgeschlossen“', async () => {
+  it('Banner (warn) „Besetzung nach Korrektur prüfen“ mit der Haupttaste (offener Gleichstand mit Wahl: „Gleichstand entscheiden“); das Zustandswort bleibt „abgeschlossen“', async () => {
     await zeige(veraltet(nikolaus([1, 2])));
     await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
     expect(screen.getByTestId('group-stale-all')).toHaveTextContent('Besetzung nach Korrektur prüfen');
-    expect(screen.getByTestId('group-close-button-all')).toHaveTextContent('Erneut abschließen');
+    expect(screen.getByTestId('group-close-button-all')).toHaveTextContent('Gleichstand entscheiden');
     expect(marke('')).toBe('abgeschlossen');
   });
 
@@ -536,8 +537,73 @@ describe('Englisch (Sprachparität)', () => {
   it('Banner, Taste und Zustandswort auf Englisch', async () => {
     await zeige(hallencup(), { language: 'en' });
     expect(screen.getByTestId('group-close-suggestion')).toHaveTextContent(/A is ready/i);
-    expect(screen.getByTestId('group-close-button-A')).toHaveTextContent(/Close group/i);
+    expect(screen.getByTestId('group-close-button-A')).toHaveTextContent(/Enter penalty shootout/i);
+    expect(screen.getByTestId('group-close-then-A')).toHaveTextContent(/Afterwards the group is closed/i);
     expect(marke('A')).toMatch(/ready to close/i);
   });
 });
 
+
+/**
+ * Daniel 23.10. (Ansicht und Wortlaut, gilt so): bei fertiger Gruppe EIN Kasten mit EINER Haupttaste (VISUAL-DESIGN § 8). Beschriftung je
+ * Zustand – offener Gleichstand mit Wahl → „Gleichstand entscheiden“, auszuspielender Platz → „Strafstoßschießen eintragen“, kein offener
+ * Gleichstand → „Gruppe abschließen“; darunter „Danach ist die Gruppe abgeschlossen.“ nur bei Gleichstand. Der eigene Gleichstand-Hinweis
+ * entfällt, solange der Kasten die Entscheidung trägt. Dialog: „Gleichstand auf Platz 3“, „… sind nach allen Regeln gleich.“, Satz am Ende
+ * einmal. Szenarien: @W2A-067 (Spalte „Taste“), @W2A-063, @W2A-064, @TM-044, @TM-046.
+ */
+describe('Ein Kasten, eine Haupttaste (Daniel 23.10., @W2A-067 @W2A-064 @TM-044)', () => {
+  const haupttasten = (): string[] => Array.from(document.querySelectorAll('[data-primary]')).map((el) => el.textContent ?? '');
+
+  it('@W2A-067 Wahl (nur Platz 1): Haupttaste „Gleichstand entscheiden“, darunter „Danach ist die Gruppe abgeschlossen.“, kein zweiter Hinweis-Kasten', async () => {
+    await zeige(nikolaus([1]));
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    expect(screen.getByTestId('group-close-button-all')).toHaveTextContent('Gleichstand entscheiden');
+    expect(screen.getByTestId('group-close-then-all')).toHaveTextContent('Danach ist die Gruppe abgeschlossen.');
+    expect(screen.queryByTestId('tie-hint-choice')).toBeNull();
+    expect(screen.queryByTestId('tie-decide-entry')).toBeNull();
+    expect(haupttasten()).toEqual(['Gleichstand entscheiden']); // genau eine Haupttaste in der Ansicht
+    expect(screen.getAllByTestId('tie-marker')).toHaveLength(2); // die Marken in der Tabelle bleiben
+  });
+
+  it('@W2A-064 auszuspielender Platz (Platz 1 bis 3): Haupttaste „Strafstoßschießen eintragen“; Gegenbeispiel: im Dialog kein „Platz teilen“', async () => {
+    await zeige(nikolaus([1, 2, 3]));
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    expect(screen.getByTestId('group-close-button-all')).toHaveTextContent('Strafstoßschießen eintragen');
+    expect(haupttasten()).toEqual(['Strafstoßschießen eintragen']);
+    await userEvent.click(screen.getByTestId('group-close-button-all'));
+    const dialog = await screen.findByTestId('tie-decision-dialog');
+    expect(within(dialog).queryByTestId('tie-accept-result')).toBeNull();
+    expect(within(dialog).queryByText(/Platz teilen/)).toBeNull();
+  });
+
+  it('@TM-044 kein offener Gleichstand (Platz geteilt): Haupttaste „Gruppe abschließen“, kein Satz „Danach ist die Gruppe abgeschlossen.“ am Kasten', async () => {
+    const repo = new MemoryRepo({ ...nikolaus([1]), version: 1 });
+    expect((await repo.service(['e-1']).decide(repo.tournament.id, { groupId: '', teamIds: [NK.petting, NK.otting], order: [NK.petting, NK.otting], kind: 'shared' })).ok).toBe(true);
+    await zeige(repo.tournament);
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    expect(screen.getByTestId('group-close-button-all')).toHaveTextContent('Gruppe abschließen');
+    expect(screen.queryByTestId('group-close-then-all')).toBeNull();
+    expect(haupttasten()).toEqual(['Gruppe abschließen']);
+  });
+
+  it('@W2A-063 Dialog-Wortlaut: „Gleichstand auf Platz 3“, „TSV Petting und DJK Otting sind nach allen Regeln gleich.“, „Platz teilen“, Satz am Ende genau einmal', async () => {
+    await zeige(nikolaus([1]));
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    await userEvent.click(screen.getByTestId('group-close-button-all'));
+    const dialog = await screen.findByTestId('tie-decision-dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Gleichstand auf Platz 3' })).toBeInTheDocument();
+    expect(within(dialog).getByTestId('tie-dialog-context')).toHaveTextContent('TSV Petting und DJK Otting sind nach allen Regeln gleich.');
+    expect(within(dialog).getByText('Der Sieger bekommt Platz 3.')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('tie-accept-result')).toHaveTextContent('Platz teilen');
+    expect(within(dialog).getByText('Beide auf Platz 3, danach folgt Platz 5.')).toBeInTheDocument();
+    expect(dialog.textContent?.match(/Danach ist die Gruppe abgeschlossen\./g)).toHaveLength(1);
+    expect(dialog.textContent).not.toMatch(/Zuerst den Gleichstand|an den Endstand übergeben|Ein Tipp genügt|Ergebnis so akzeptieren/);
+  });
+
+  it('@W2A-050 Helfer: kein Kasten mit Taste – der Hinweis nennt weiter, wer entscheidet (Gegenbeispiel zur Turnierleitung)', async () => {
+    await zeige(nikolaus([1]), { leitung: false });
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    expect(screen.queryByTestId('group-close-button-all')).toBeNull();
+    expect(screen.getByTestId('tie-hint-choice')).toHaveTextContent('Die Turnierleitung entscheidet: Strafstoßschießen oder Platz teilen.');
+  });
+});

@@ -1158,32 +1158,32 @@
       "teamsEqual": "{{names}} are level on all criteria ({{places}}).",
       "needSetting": "Place {{place}} must be played out according to the tournament rules.",
       "needFollowUp": "Place {{place}} of the group goes on to a further match – a shared place is not possible there.",
-      "openChoice": "Enter a penalty shootout or accept the result as it is.",
+      "openChoice": "Enter a penalty shootout or share the place.",
       "helperShootout": "The tournament organiser enters the result of the penalty shootout.",
       "helperOrder": "The tournament organiser sets the order.",
-      "helperChoice": "The tournament organiser decides: penalty shootout or accept the result as it is.",
+      "helperChoice": "The tournament organiser decides: penalty shootout or share the place.",
       "offline": "Deciding needs a connection – or use “Complete group”.",
       "decide": "Decide tie",
       "shootout": "Enter penalty shootout",
       "order": "Set order",
       "withdrawnBy": "Withdrawn by {{name}} · {{time}}",
       "withdrawnByUnknown": "Withdrawn · {{time}}",
-      "acceptedBy": "accepted by {{name}} · {{time}}",
-      "acceptedByUnknown": "accepted · {{time}}",
+      "acceptedBy": "place shared by {{name}} · {{time}}",
+      "acceptedByUnknown": "place shared · {{time}}",
       "shootoutBy": "shootout entered by {{name}} · {{time}}",
       "shootoutByUnknown": "shootout entered · {{time}}",
       "orderBy": "order set by {{name}} · {{time}}",
       "orderByUnknown": "order set · {{time}}"
     },
     "decided": {
-      "sharedTitle": "Result accepted",
+      "sharedTitle": "Place shared",
       "sharedTitleHelper": "Same place",
       "sharedBody": "{{names}} share {{places}}. The next team is in place {{next}}.",
       "shootoutTitle": "Penalty shootout {{winner}}:{{loser}} for {{team}}",
       "shootoutBody": "{{team}} is ahead of {{other}} in the table. The match results stay unchanged.",
       "orderTitle": "Order set",
       "orderBody": "Order of {{names}} set after the penalty shootout. The match results stay unchanged.",
-      "withdrawShared": "Withdraw acceptance",
+      "withdrawShared": "Undo sharing",
       "withdrawShootout": "Withdraw penalty shootout",
       "withdrawOrder": "Withdraw order",
       "withdrawUntil": "Possible until the group is completed.",
@@ -1194,7 +1194,7 @@
       "byUnknown": "Tournament management · {{time}}"
     },
     "dialog": {
-      "titleChoice": "Decide tie",
+      "titleChoice": "Tie for place {{place}}",
       "titleShootout": "Enter penalty shootout",
       "titleOrder": "Set order",
       "close": "Close",
@@ -1203,12 +1203,10 @@
       "save": "Save",
       "understood": "Understood",
       "context": "Level on {{places}} on all criteria: {{names}}.",
-      "contextNoPlay": "{{places}} do not have to be played out according to the tournament rules.",
       "choiceGroup": "How do you want to decide?",
-      "shootoutHint": "You enter the hits of both teams, the winner is placed first. The normal case.",
+      "shootoutHint": "The winner gets place {{place}}.",
       "orderHint": "After the penalty shootout. You briefly give the reason.",
-      "accept": "Accept result as it is",
-      "acceptHint": "One tap is enough, no reason needed. {{names}} then share {{places}}, the next team is in place {{next}}. You can withdraw this until the group is completed.",
+      "accept": "Share place",
       "whyTitle": "Why only the penalty shootout?",
       "whyRules": "View tournament rules",
       "shootoutLegend": "Result of the penalty shootout",
@@ -1227,7 +1225,7 @@
         "BLOCK_CHANGED": "The tie has changed in the meantime. Please close the dialog and check the table.",
         "STALE": "Saving did not work because the tournament changed at the same time. Please try again.",
         "OFFLINE": "Deciding needs a connection – or use “Complete group”.",
-        "SHARED_PLACE_NOT_ALLOWED": "This place must be played out. “Accept result as it is” is not possible here.",
+        "SHARED_PLACE_NOT_ALLOWED": "This place must be played out. “Share place” is not possible here.",
         "REASON_REQUIRED": "Please give a reason (at most 500 characters).",
         "ORDER_MISMATCH": "The order does not match the tie. Please close the dialog and open it again.",
         "SHOOTOUT_NEEDS_WINNER": "The penalty shootout needs a winner.",
@@ -1242,7 +1240,12 @@
         "current": "In effect: {{what}}",
         "notSaved": "Your entry was not saved. The table shows the decision in effect.",
         "titleBy": "Already decided by {{name}}"
-      }
+      },
+      "teamsEqual": "{{names}} are level on all rules.",
+      "acceptHintTwo": "Both in place {{place}}, then place {{next}} follows.",
+      "acceptHintThree": "All three in place {{place}}, then place {{next}} follows.",
+      "acceptHintMany": "All {{count}} in place {{place}}, then place {{next}} follows.",
+      "thenClosed": "Afterwards the group is closed."
     },
     "settings": {
       "title": "Tournament rules: ties",
@@ -1250,12 +1253,12 @@
       "save": "Apply places",
       "reset": "Discard change",
       "readOnly": "Only the tournament organiser changes this setting.",
-      "confirmTitle": "Acceptance will be withdrawn",
+      "confirmTitle": "Shared place will be undone",
       "confirmIntro": "You changed the places that must be played out.",
-      "confirmBody": "For {{names}} the acceptance “Accept result as it is” is on record. It will be withdrawn, then a penalty shootout is needed.",
+      "confirmBody": "{{names}} currently share a place (“Share place”). This will be undone, then a penalty shootout is needed.",
       "confirmKeep": "An entered penalty shootout or a set order stays in place whatever you change.",
       "confirmCancel": "Cancel",
-      "confirmOk": "Withdraw acceptance",
+      "confirmOk": "Undo sharing",
       "errors": {
         "STALE": "The setting changed at the same time and was not saved. Please check the new state and try again.",
         "OFFLINE": "Saving needs a connection.",
@@ -1293,7 +1296,13 @@
       "close": "Close group",
       "again": "Close again",
       "closeGroup": "Close {{name}}",
-      "reopen": "Reopen group"
+      "reopen": "Reopen group",
+      "decide": "Decide tie",
+      "shootout": "Enter penalty shootout",
+      "order": "Set order",
+      "decideGroup": "{{name}}: decide tie",
+      "shootoutGroup": "{{name}}: enter penalty shootout",
+      "orderGroup": "{{name}}: set order"
     },
     "banner": {
       "title": "{{name}} is ready – check the table and close it",
@@ -1308,7 +1317,8 @@
       "reopenedBy": "{{name}} · {{time}} · Reason: {{reason}}",
       "reopenedByUnknown": "Reason: {{reason}}",
       "reopenedBody": "The placements in the final round stay as they are until you close the group again. Correct what is needed, then close it again.",
-      "reopenedBody_all": "The final standing stays as it was until you close the group again. Correct what is needed, then close it again."
+      "reopenedBody_all": "The final standing stays as it was until you close the group again. Correct what is needed, then close it again.",
+      "thenClosed": "Afterwards the group is closed."
     },
     "stale": {
       "title": "{{name}}: check placements after a correction",
@@ -1345,11 +1355,7 @@
       "confirmAgain": "Close again",
       "cancel": "Cancel",
       "close": "Close dialog",
-      "understood": "Understood",
-      "tiePrefix": "Close {{name}}: decide the tie first.",
-      "tiePrefix_all": "Close group: decide the tie first.",
-      "tiePrefixAgain": "Close {{name}} again: decide the tie first.",
-      "tiePrefixAgain_all": "Close group again: decide the tie first."
+      "understood": "Understood"
     },
     "notice": {
       "openMatches": {

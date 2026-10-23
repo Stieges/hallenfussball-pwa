@@ -21,7 +21,6 @@ import { decidedTexts } from './decidedText';
 import { ChoiceStep, OrderStep, ShootoutStep } from './TieDialogSteps';
 import { stepText } from './tieStyles';
 import { useStandingTie } from './standingTieContext';
-import { withGroup } from '../group-completion/completionTexts';
 import { useTieDraft, type TieDialogMode } from './useTieDraft';
 
 export interface TieDecisionDialogProps {
@@ -33,7 +32,7 @@ export interface TieDecisionDialogProps {
   onDraft?: (draft: DecisionDraft) => void;
   /**
    * Modus „withClose“ (GA4 A-13c): Name der Gruppe (`undefined` bei Jeder gegen jeden) und ob sie schon einmal abgeschlossen war.
-   * Der Dialog trägt dann den Satz „Gruppe A abschließen: Zuerst den Gleichstand entscheiden.“, die Haupttaste heißt „Gruppe
+   * Der Dialog endet dann einmal mit „Danach ist die Gruppe abgeschlossen.“ (Daniel 23.10.), die Haupttaste heißt „Gruppe
    * abschließen“ (bzw. „Erneut abschließen“) und die Tasten stehen untereinander, Haupttaste oben (Mockup A-13c).
    */
   closeFlow?: { name: string | undefined; again: boolean };
@@ -49,7 +48,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   const { step } = draft;
   const titleKey = step === 'order' ? 'titleOrder' : step === 'shootout' ? 'titleShootout' : 'titleChoice';
   const seenTitle = draft.seenBy === undefined ? t('standingsTie.dialog.seen.title') : t('standingsTie.dialog.seen.titleBy', { name: draft.seenBy });
-  const title = step === 'seen' ? seenTitle : t(`standingsTie.dialog.${titleKey}`);
+  const title = step === 'seen' ? seenTitle : t(`standingsTie.dialog.${titleKey}`, { place: block.place });
 
   const effect = useMemo(() => {
     if (draft.shootoutDraft === null) {
@@ -121,11 +120,6 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   return (
     <DialogSurface isOpen onClose={dismiss} labelledBy="tie-dialog-title" header={header} footer={footer} testId="tie-decision-dialog" maxWidth={dialogWidths.md}>
       <div style={bodyStack}>
-        {closing ? (
-          <p style={stepText} data-testid="group-close-tie-prefix">
-            {t(closeFlow.again ? 'groupCompletion.dialog.tiePrefixAgain' : 'groupCompletion.dialog.tiePrefix', withGroup(closeFlow.name))}
-          </p>
-        ) : null}
         {step === 'choice' ? (
           <ChoiceStep
             block={block}
@@ -159,6 +153,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
         {draft.needsNet && step !== 'seen' ? (
           <p style={{ ...stepText, fontWeight: cssVars.fontWeights.semibold }} data-testid="tie-offline-hint">{t('standingsTie.dialog.errors.OFFLINE')}</p>
         ) : null}
+        {closing && step !== 'seen' ? <p style={stepText} data-testid="tie-then-closed">{t('standingsTie.dialog.thenClosed')}</p> : null}
         {errorText !== null ? <InlineNotice tone="error" data-testid="tie-error"><span>{errorText}</span></InlineNotice> : null}
       </div>
     </DialogSurface>

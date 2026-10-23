@@ -14,6 +14,7 @@ import { useIsMobile } from '../../../hooks/useIsMobile';
 import { everCompleted } from '../../../core/standings/groupCompletions';
 import { groupMatches } from '../../../core/services/GroupCompletionService';
 import { listText } from '../standings/tieFormat';
+import { groupTieView } from '../../../core/standings/tieViews';
 import { groupNameOf, withGroup } from './completionTexts';
 import { lastGroupLog } from './completionLog';
 import { useGroupCompletionUi } from './groupCompletionContext';
@@ -25,6 +26,17 @@ const title: CSSProperties = { fontWeight: cssVars.fontWeights.semibold, fontSiz
 const line: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyMd };
 const primaryStyle: CSSProperties = { minHeight: cssVars.touchTargets.primary };
 const secondaryStyle: CSSProperties = { minHeight: cssVars.touchTargets.primary };
+const thenClosedStyle: CSSProperties = { ...line, marginTop: cssVars.spacing.sm, color: cssVars.colors.textSecondary };
+
+/** Art der Haupttaste bei offenem Gleichstand (Daniel 23.10.): Wahl → „Gleichstand entscheiden“, Pflicht → „Strafstoßschießen eintragen“ (drei und mehr: „Reihenfolge festlegen“). */
+type TieEntry = 'decide' | 'shootout' | 'order';
+function tieEntryOf(tournament: Parameters<typeof groupTieView>[0], groupId: string): TieEntry | null {
+  const block = groupTieView(tournament, groupId).open[0];
+  if (block === undefined) {
+    return null;
+  }
+  return block.mayShare ? 'decide' : block.size === 2 ? 'shootout' : 'order';
+}
 
 export const GroupCompletionBanner = () => {
   const { t, i18n } = useTranslation('tournament');
@@ -37,13 +49,28 @@ export const GroupCompletionBanner = () => {
   const nameOf = (groupId: string): string | undefined => groupNameOf(tournament, groupId);
   // Eine Haupttaste je Ansicht (VISUAL-DESIGN § 8): die erste Taste des ersten Banners, alle weiteren sind Zweittasten
   const primaryGroup = proposals[0] ?? staleGroups[0];
-  const closeButton = (groupId: string, label: string, primary: boolean) => (
+  // Ein Kasten, eine Haupttaste (VISUAL-DESIGN § 8, Daniel 23.10.): bei offenem Gleichstand trägt die Taste die Entscheidung, der
+  // Abschluss folgt in einem Zug – darunter „Danach ist die Gruppe abgeschlossen.“
+  const closeButton = (groupId: string, label: string, primary: boolean) => {
+    const entry = tieEntryOf(tournament, groupId);
+    const name = nameOf(groupId);
+    const tieLabel = entry === null ? label
+      : proposals.length > 1 && name !== undefined ? t(`groupCompletion.button.${entry}Group`, { name }) : t(`groupCompletion.button.${entry}`);
+    return (
+      <div key={groupId} style={{ display: 'grid', justifyItems: mobile ? 'stretch' : 'start' }}>
+        {button(groupId, tieLabel, primary)}
+        {entry !== null ? <p style={thenClosedStyle} data-testid={`group-close-then-${groupTestId(groupId)}`}>{t('groupCompletion.banner.thenClosed')}</p> : null}
+      </div>
+    );
+  };
+  const button = (groupId: string, label: string, primary: boolean) => (
     <Button
       key={groupId}
       variant={primary ? 'primary' : 'secondary'}
       size="lg"
       fullWidth={mobile}
-      style={{ ...(primary ? primaryStyle : secondaryStyle), ...(mobile ? {} : { alignSelf: 'flex-start', padding: `0 ${cssVars.spacing.xl}` }) }}
+      // Handy: kleiner Innenabstand wie im Gleichstand-Hinweis – „Strafstoßschießen eintragen“ passt auf 360 px in eine Zeile
+      style={{ ...(primary ? primaryStyle : secondaryStyle), ...(mobile ? { padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}` } : { alignSelf: 'flex-start', padding: `0 ${cssVars.spacing.xl}` }) }}
       onClick={() => { api.begin(groupId); }}
       {...(primary ? { 'data-primary': true } : {})}
       data-testid={`group-close-button-${groupTestId(groupId)}`}

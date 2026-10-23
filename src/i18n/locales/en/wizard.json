@@ -585,13 +585,13 @@
   },
   "playOut": {
     "title": "These places must be played out in case of a tie",
-    "help": "A tie on a ticked place is decided by a penalty shootout. On every other place the tournament organiser may accept the result as it is. Place 1 is preset; every place can be ticked and unticked, including place 1. The setting can be changed at any time.",
+    "help": "A tie on a ticked place is decided by a penalty shootout. On every other place the tournament organiser may share the place. Place 1 is preset; every place can be ticked and unticked, including place 1. The setting can be changed at any time.",
     "followUpNote": "A place that leads to a further match (for example into the semi-final) is always played out – even if it is not ticked here.",
     "place": "Place {{place}}",
     "legend": "Places to play out",
-    "summary": "Tie on {{selected}}: penalty shootout needed. On {{others}} the tournament organiser may accept the result as it is – the teams then share the place.",
+    "summary": "Tie on {{selected}}: penalty shootout needed. On {{others}} the tournament organiser may share the place.",
     "summaryAll": "Tie on {{selected}}: penalty shootout needed. All places are set, teams never share a place.",
-    "summaryNone": "No place is set: on every place the tournament organiser may accept the result as it is – the teams then share the place.",
+    "summaryNone": "No place is set: on every place the tournament organiser may share the place.",
     "places": {
       "one": "place {{from}}",
       "two": "places {{from}} and {{to}}",
