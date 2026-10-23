@@ -177,8 +177,8 @@ function MonitorDisplayPageContent({
   const hinweisPhase = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
   const hinweisZeigt = hinweisPhase && istHinweisFolie(currentSlide, monitor?.slides.length === 0 ? slides : monitor?.slides ?? []);
 
-  // Heartbeat alle 30 s (Takt und Deps in useMonitorHeartbeat)
-  useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);
+  // Lebenszeichen alle 30 s und bei jedem neuen Wachhalten-Zustand (B-48b, @ME-064; Takt in useMonitorHeartbeat)
+  useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status, wakeLock.status);
 
   // ==========================================================================
   // KEYBOARD (f = Vollbild, c = Cache-Anzeige; Pfeile und Leertaste ohne Wirkung, @ME-022;
