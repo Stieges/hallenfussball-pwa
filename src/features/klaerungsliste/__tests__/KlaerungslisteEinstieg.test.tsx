@@ -3,6 +3,9 @@
  * (URL-ROUTING). @FU-038 (Olli sieht den Eintrag), Gegenbeispiele: Helfer sieht nichts, ohne Einträge kein Knopf.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+import { initRealDeI18n } from '../../../test/realDeI18n';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
@@ -11,14 +14,20 @@ import { review } from '../../../core/match/review/__tests__/reviewFixtures';
 
 const state: { enabled: boolean; reviews: MatchReview[] } = { enabled: true, reviews: [] };
 // Gerätespeicher (Q4): im Test ein Speicher im Arbeitsspeicher (jsdom-localStorage ist hier nicht beschreibbar)
-const speicher = new Map<string, string>();
+// @FU-131: je Gerät ein eigener Speicher (Ollis Tablet, Ollis Handy)
+const geraete = { tablet: new Map<string, string>(), handy: new Map<string, string>() };
+const aktiv: { geraet: keyof typeof geraete } = { geraet: 'tablet' };
 vi.mock('../../../core/utils/safeStorage', () => ({
-  safeLocalStorage: { getItem: (k: string) => speicher.get(k) ?? null, setItem: (k: string, v: string) => { speicher.set(k, v); } },
+  safeLocalStorage: {
+    getItem: (k: string) => geraete[aktiv.geraet].get(k) ?? null,
+    setItem: (k: string, v: string) => { geraete[aktiv.geraet].set(k, v); },
+  },
 }));
 vi.mock('../useMatchReviews', () => ({ useMatchReviews: () => ({ ...state, refresh: vi.fn() }) }));
 vi.mock('../KlaerungslisteDialog', () => ({
   KlaerungslisteDialog: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="klaerungsliste-offen" /> : null),
 }));
+await initRealDeI18n();
 const { KlaerungslisteEinstieg } = await import('../KlaerungslisteEinstieg');
 
 const tournament = { id: 'live-cup', teams: [] } as unknown as Tournament;
@@ -72,8 +81,27 @@ describe('B-50 Einstieg in die Klärungsliste', () => {
   });
 });
 
-describe('Q4 (Daniel 23.10.): Hinweise gelten je Gerät als gesehen, sobald die Liste offen war', () => {
-  beforeEach(() => { speicher.clear(); });
+describe('@FU-131 Ein angesehener Hinweis zählt auf diesem Gerät nicht mehr', () => {
+  beforeEach(() => { geraete.tablet.clear(); geraete.handy.clear(); aktiv.geraet = 'tablet'; });
+
+  it('Knopf zeigt 1 offenen Fall und 1 Hinweis; nach dem Ansehen auf dem Tablet nur noch den Fall, auf dem Handy weiter beides', () => {
+    state.enabled = true;
+    state.reviews = [review({ eventId: 'fall-1' }), review({ eventId: 'hinweis-abpfiff', kind: 'notice' })];
+    const vorher = show();
+    expect(screen.getByTestId('klaerungsliste-zaehler')).toHaveTextContent('1');
+    expect(screen.getByTestId('klaerungsliste-hinweise-kurz')).toHaveTextContent('1 Hinweis');
+    vorher.unmount();
+    show('/tournament/live-cup/schedule?klaerung=1').unmount(); // Olli öffnet die Liste auf dem Tablet
+    const tablet = show();
+    expect(screen.getByTestId('klaerungsliste-zaehler')).toHaveTextContent('1');
+    expect(screen.queryByTestId('klaerungsliste-hinweise-kurz')).toBeNull();
+    tablet.unmount();
+    aktiv.geraet = 'handy';
+    show();
+    expect(screen.getByTestId('klaerungsliste-zaehler')).toHaveTextContent('1');
+    expect(screen.getByTestId('klaerungsliste-hinweise-kurz')).toHaveTextContent('1 Hinweis');
+  });
+
 
   it('nach dem Öffnen zählt der Hinweis im Kopf nicht mehr', () => {
     state.enabled = true;
@@ -96,7 +124,7 @@ describe('Q4 (Daniel 23.10.): Hinweise gelten je Gerät als gesehen, sobald die 
   });
 });
 
-describe('Q8 (Daniel 23.10.): unauffälliger Einstieg im Cockpit-Kopf', () => {
+describe('@FU-132 Im Cockpit-Vollbild erreicht die Turnierleitung die Klärungsliste, ohne dass es stört', () => {
   it('Turnierleitung mit offenem Fall: kleiner Zähler-Knopf ohne Beschriftung, öffnet die Liste', () => {
     state.enabled = true;
     state.reviews = [review()];

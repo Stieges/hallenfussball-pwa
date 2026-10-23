@@ -2,9 +2,9 @@
  * B-50: Einstieg in die Klärungsliste – Knopf mit Zähler der offenen Einträge (Bauplan B-50), nur für die Turnierleitung
  * (`useMatchReviews`: leadMatches, Cloud-Turnier). Die Liste öffnet über `?klaerung=1` (URL-ROUTING: Zustand in der Adresse,
  * Zurück schließt sie, Neuladen behält sie).
- * - `variant="kopf"` (Kopf der Turnierverwaltung): sichtbar bei offenen Einträgen oder ungesehenen Hinweisen (Q4: „gesehen“
- *   je Gerät lokal, `seenNotices.ts`; gesehen ist ein Hinweis, sobald die Liste offen war).
- * - `variant="cockpit"` (Cockpit-Vollbild, Q8 Daniel 23.10.): unauffällig – kleiner neutraler Zähler-Knopf, keine Animation,
+ * - `variant="kopf"` (Kopf der Turnierverwaltung): sichtbar bei offenen Einträgen oder ungesehenen Hinweisen; beide getrennt
+ *   („2 · 1 Hinweis“, @FU-131). „Gesehen“ je Gerät lokal (`seenNotices.ts`), sobald die Liste offen war.
+ * - `variant="cockpit"` (Cockpit-Vollbild, @FU-132): unauffällig – kleiner neutraler Zähler-Knopf, keine Animation,
  *   nur bei offenen Einträgen; ohne offene Fälle nicht sichtbar. Ob er gezeigt wird, steuert `KLAERUNG_IM_COCKPIT_KOPF`.
  */
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
@@ -85,9 +85,11 @@ export function KlaerungslisteEinstieg({ tournament, compact = false, variant = 
           aria-label={t('tournament:klaerung.knopfAria', { offen: open, hinweise: unseen })}
         >
           {!compact && !cockpit && <span>{t('tournament:klaerung.knopf')}</span>}
-          {open > 0
-            ? <span style={cockpit ? undefined : badge} data-testid="klaerungsliste-zaehler">{open}</span>
-            : <span data-testid="klaerungsliste-hinweise-kurz">{t('tournament:klaerung.hinweiseKurz', { count: unseen })}</span>}
+          {open > 0 && <span style={cockpit ? undefined : badge} data-testid="klaerungsliste-zaehler">{open}</span>}
+          {/* @FU-131: ungesehene Hinweise getrennt neben der Fallzahl („2 · 1 Hinweis“); im Cockpit-Kopf nur die Fälle (@FU-132) */}
+          {!cockpit && unseen > 0 && (
+            <span data-testid="klaerungsliste-hinweise-kurz">{open > 0 ? '· ' : ''}{t('tournament:klaerung.hinweiseKurz', { count: unseen })}</span>
+          )}
         </button>
       )}
       {isOpen && <KlaerungslisteDialog isOpen onClose={() => setOpen(false)} tournament={tournament} reviews={reviews} refresh={refresh} />}

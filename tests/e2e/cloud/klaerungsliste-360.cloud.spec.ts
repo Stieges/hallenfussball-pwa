@@ -59,3 +59,44 @@ test('B-50 T2-UI: Klärungsliste bei 360 px – kein Überlauf, Zeilen ≥ 44 px
   await ohneUeberlauf(page);
   await page.screenshot({ path: 'test-results/b50-360-dialog.png', fullPage: true });
 });
+
+/**
+ * @FU-132 Cockpit-Vollbild bei 360 × 640: der Zähler im Cockpit-Kopf bricht den Kopf nicht um (gleiche Kopfhöhe mit und ohne
+ * Zähler), verdrängt weder Uhr noch Stand (Stand sichtbar, unterhalb des Kopfs, gleiche Lage) und hat ≥ 44 px.
+ */
+test('@FU-132 T2-UI: Zähler im Cockpit-Kopf bei 360 px – kein Umbruch, Uhr und Stand bleiben an ihrem Platz', async ({ asRole }) => {
+  const page = await asRole('owner');
+  await page.setViewportSize({ width: 360, height: 640 });
+  const antwort = { faelle: [] as unknown[] };
+  await page.route('**/rest/v1/rpc/list_match_reviews', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(antwort.faelle) }));
+
+  const messen = async () => {
+    const kopf = page.getByTestId('cockpit-slim-header');
+    await expect(kopf).toBeVisible({ timeout: 20_000 });
+    const stand = page.getByTestId('scoreboard-score').first();
+    await expect(stand).toBeVisible();
+    return { kopf: await kopf.boundingBox(), stand: await stand.boundingBox() };
+  };
+
+  await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live?f=1`);
+  const ohne = await messen();
+  await expect(page.getByTestId('klaerungsliste-knopf-cockpit')).toHaveCount(0);
+
+  antwort.faelle = ANTWORT;
+  await page.reload();
+  const mit = await messen();
+  const zaehler = page.getByTestId('klaerungsliste-knopf-cockpit');
+  await expect(zaehler).toBeVisible({ timeout: 20_000 });
+  await expect(zaehler).toHaveText('3');
+  const box = await zaehler.boundingBox();
+  expect(box?.height ?? 0, 'Zähler ≥ 44 px').toBeGreaterThanOrEqual(44);
+  expect(mit.kopf?.height, 'Kopf bricht nicht um (gleiche Höhe wie ohne Zähler)').toBe(ohne.kopf?.height);
+  expect(mit.stand?.y, 'Stand bleibt an seinem Platz').toBe(ohne.stand?.y);
+  expect((mit.stand?.y ?? 0), 'Stand liegt unter dem Kopf').toBeGreaterThanOrEqual((mit.kopf?.y ?? 0) + (mit.kopf?.height ?? 0));
+  expect((mit.stand?.y ?? 0) + (mit.stand?.height ?? 0), 'Stand im Bild').toBeLessThanOrEqual(640);
+  const animiert = await zaehler.evaluate((el) => getComputedStyle(el).animationName);
+  expect(animiert, 'keine Animation').toBe('none');
+  await ohneUeberlauf(page);
+  await page.screenshot({ path: 'test-results/b50-360-cockpit-kopf.png' });
+});
+

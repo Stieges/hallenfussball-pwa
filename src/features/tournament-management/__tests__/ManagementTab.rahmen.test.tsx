@@ -15,6 +15,8 @@ import type { GeneratedSchedule } from '../../../core/generators';
 import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch';
 import type { TournamentRole } from '../../auth/types/auth.types';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
+import type { MatchReview } from '../../../core/match/review/matchReviewTypes';
+import { review } from '../../../core/match/review/__tests__/reviewFixtures';
 
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 vi.mock('../../../components/live-cockpit', () => ({
@@ -29,6 +31,17 @@ vi.mock('../../../hooks/useMatchSound', () => ({
 vi.mock('../../../components/ui/Toast/ToastContext', () => ({
   useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
 }));
+
+// B-50 @FU-132: Klärungsliste (Server-Abfrage ersetzt, Rechte über das echte useCan)
+const offeneFaelle: { current: MatchReview[] } = { current: [] };
+vi.mock('../../klaerungsliste/useMatchReviews', async () => {
+  const { useCan } = await import('../../auth/hooks/useCan');
+  const zustand = (_id: string, lead: boolean) => ({ enabled: lead, reviews: lead ? offeneFaelle.current : [], refresh: () => Promise.resolve() });
+  return {
+    useMatchReviews: (id: string) => zustand(id, useCan('leadMatches', id)),
+    useMatchReviewsFor: (id: string, lead: boolean) => zustand(id, lead),
+  };
+});
 
 let currentRole: TournamentRole = 'collaborator';
 vi.mock('../../auth/hooks/useAuth', () => ({
@@ -254,3 +267,43 @@ describe('Rahmen und Feldwahl im Live-Reiter (Plan LT-2)', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
+
+describe('@FU-132 Im Cockpit-Vollbild erreicht die Turnierleitung die Klärungsliste, ohne dass es stört', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    liveMatches.clear();
+    liveMatches.set(SPIEL_11, live(SPIEL_11, 11, 'field-1', NORD, SUED, 'RUNNING'));
+    liveMatches.set(SPIEL_12, live(SPIEL_12, 12, 'field-2', WEST, MITTE, 'RUNNING'));
+    offeneFaelle.current = [review({ eventId: 'fall-a', author: 'Tom' }), review({ eventId: 'fall-b', author: 'Clara' })];
+  });
+
+  it('Olli leitet Spiel 12 im Vollbild, 2 offene Fälle: kleiner Zähler „2“ im Cockpit-Kopf öffnet die Liste, das Spiel läuft weiter', async () => {
+    currentRole = 'co-admin';
+    const user = userEvent.setup();
+    zeige('/tournament/tournament-1/live?f=2');
+    const kopf = await screen.findByTestId('cockpit-slim-header');
+    const zaehler = within(kopf).getByTestId('klaerungsliste-knopf-cockpit');
+    expect(zaehler).toHaveTextContent(/^2$/);
+    expect(zaehler.style.animation).toBe('');
+    await user.click(zaehler);
+    await waitFor(() => expect(sonde()).toHaveAttribute('data-suche', expect.stringContaining('klaerung=1')));
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_12);
+    expect(sonde()).toHaveAttribute('data-rahmen', 'true');
+  });
+
+  it('Gegenbeispiel: ohne offene Fälle zeigt der Cockpit-Kopf keinen Zähler', async () => {
+    currentRole = 'co-admin';
+    offeneFaelle.current = [];
+    zeige('/tournament/tournament-1/live');
+    const kopf = await screen.findByTestId('cockpit-slim-header');
+    expect(within(kopf).queryByTestId('klaerungsliste-knopf-cockpit')).toBeNull();
+  });
+
+  it('Gegenbeispiel: Tom als Helfer sieht im Cockpit keinen Zähler', async () => {
+    currentRole = 'collaborator';
+    zeige('/tournament/tournament-1/live');
+    const kopf = await screen.findByTestId('cockpit-slim-header');
+    expect(within(kopf).queryByTestId('klaerungsliste-knopf-cockpit')).toBeNull();
+  });
+});
+
