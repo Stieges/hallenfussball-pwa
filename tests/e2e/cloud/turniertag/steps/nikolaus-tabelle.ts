@@ -79,6 +79,10 @@ async function strafstossEintragen({ asRole }: StepContext): Promise<void> {
   await dialog.getByLabel(/DJK Otting/).fill('4');
   await dialog.getByLabel(/TSV Petting/).fill('3');
   await dialog.getByTestId('tie-decision-save').click();
+  // Kein stiller Fehler: erst muss das Speichern sichtbar fertig sein (Dialog zu) – eine Ablehnung steht mit ihrem Text im Fehlschlag.
+  const fehler = seite.getByTestId('tie-error');
+  await expect.poll(async () => ((await fehler.count()) > 0 ? `Ablehnung: ${await fehler.innerText()}` : (await dialog.count()) === 0 ? 'gespeichert' : 'speichert'),
+    { message: 'Strafstoßschießen 4:3 gespeichert, Dialog geschlossen', timeout: SOLL_TIMEOUT_MS }).toBe('gespeichert');
   await expect.poll(async () => (await tabelleTurnierleitung(seite)).slice(2, 4).map((n) => n.replace(/\s*Strafstoßschießen.*$/s, '').trim()), { timeout: SOLL_TIMEOUT_MS }).toEqual(['DJK Otting', 'TSV Petting']);
 }
 
