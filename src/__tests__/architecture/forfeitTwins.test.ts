@@ -6,7 +6,8 @@
  *    dokumentierten Zeilen ab (append_match_events aus 20261110_003 A-34 – nie aus einer 20261028-Fassung, sonst wäre die
  *    Steuer je Feld live zurückgedreht),
  *  - REOPEN zeigt in matchTransitions.json und in der Migration auf '@reopen',
- *  - die Schutzspalte forfeit_absent, die Rechte-Assertions und der PENDING-LIVE-Eintrag passen zusammen.
+ *  - die Schutzspalte forfeit_absent und die Rechte-Assertions passen zusammen; seit dem Einspielen (23.10.) steht die
+ *    Migration nicht mehr in PENDING-LIVE.
  * Anforderungen: @W2A-022, @W2A-024, @W2A-026, @TM-063, @TM-004.
  */
 import { describe, it, expect } from 'vitest';
@@ -279,7 +280,8 @@ describe('A-25b Drift-Check (Rechte-Assertions, PENDING-LIVE)', () => {
   const NAMES = ['matches-guard-engine-columns-forfeit-absent', 'append-match-events-writes-forfeit-absent'];
 
   it('die zwei Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
-    const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/\./g, '\\.')}\\)\\n\\s+echo "([^"]+)"`));
+    const escaped = MIGRATION_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const mapping = drift.match(new RegExp(`    ${escaped}\\)\\n\\s+echo "([^"]+)"`));
     expect(mapping?.[1].split(' ').sort()).toEqual([...NAMES].sort());
     for (const name of NAMES) {
       expect(assertions).toContain(`SELECT '${name}',`);
@@ -287,15 +289,12 @@ describe('A-25b Drift-Check (Rechte-Assertions, PENDING-LIVE)', () => {
     }
   });
 
-  it('PENDING-LIVE: die Zeile für 20261110_005 hat das Format <datei> <frist> <commit-vorher> (bis zum Fenster G1)', () => {
-    const lines = pending
+  it('keine PENDING-LIVE-Zeile: 20261110_005 ist live (vorgezogenes Fenster 23.10.) – sonst ließe der Drift-Check die Assertions aus', () => {
+    const files = pending
       .split('\n')
       .map((l) => l.replace(/#.*/, '').trim())
       .filter(Boolean)
-      .map((l) => l.split(/\s+/));
-    const row = lines.find(([file]) => file === MIGRATION_NAME);
-    expect(row).toBeDefined();
-    expect(row?.[1]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(row?.[2]).toMatch(/^[0-9a-f]{40}$/);
+      .map((l) => l.split(/\s+/)[0]);
+    expect(files).not.toContain(MIGRATION_NAME);
   });
 });
