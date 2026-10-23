@@ -953,6 +953,20 @@ for f in ${AFTER[@]+"${AFTER[@]}"}; do
   echo "OK    spaetere Migration laeuft: $(basename "$f")" >&2
 done
 
+# --- 20261110_007 (Cloud-E2E N6d, @ET-055, @W2A-067): ein Turnier ohne Version (version IS NULL, etwa vom Seed) gilt als
+# Version 0. Vorher lehnte record_standing_decision jede Entscheidung dafuer als STALE ab (NULL IS DISTINCT FROM 0).
+if [[ -f "$MIGRATIONS_DIR/20261110_007_standing_decision_null_version.sql" ]]; then
+  t="$(clone "$TPL_NIKO")"
+  q "UPDATE public.tournaments SET version = NULL WHERE id = '$t';" >/dev/null
+  dn="$(dec ohne-version "$t" '' shootout "TSV Petting,DJK Otting" "DJK Otting,TSV Petting" 4 3)"
+  check P "P-12 @ET-055 Nikolaus ohne Version: Gegenbeispiel erwartete Version 5 -> STALE (gemeldete Version 0), nichts geschrieben" "rejected:STALE|0|0" \
+    "$(decide olli "$t" decide "$dn" "" 5)|$(lastres | jq -r '.version')|$(ndec "$t")"
+  check P "P-12 @ET-055 Nikolaus ohne Version: 4:3 fuer Otting mit erwarteter Version 0 wird angenommen, danach Version 1" "ok|1|1" \
+    "$(decide olli "$t" decide "$dn" "" 0)|$(ndec "$t")|$(version "$t")"
+  check P "P-12 @ET-055 Wiederholung nach verlorener Antwort: ALREADY_APPLIED mit Zahl als Version" "ok:ALREADY_APPLIED|1" \
+    "$(decide olli "$t" decide "$dn" "" 0)|$(lastres | jq -r '.version')"
+fi
+
 summary
 echo
 echo "Ergebnis: $(total_dev) Abweichung(en)."

@@ -50,6 +50,30 @@ describe('Grund nur bei einer Reihenfolge (@W2A-063, @W2A-004)', () => {
   });
 });
 
+/** Wie aus einer Cloud-Zeile mit `version IS NULL` gelesen (`mapTournamentFromSupabase`: `version` fehlt). */
+function ohneVersion(): MemoryRepo {
+  const base = new MemoryRepo(nikolaus());
+  base.tournament = { ...base.tournament, version: undefined };
+  return base;
+}
+
+describe('Turnier ohne Version (Zeile mit version IS NULL) – Cloud-E2E N6d (@ET-055, @W2A-067)', () => {
+  it('@ET-055 ohne Version schickt der Dienst die erwartete Version 0 (Vertrag mit record_standing_decision ab 20261110_007: NULL gilt als 0)', async () => {
+    const base = ohneVersion();
+    const { service, calls } = spyRepo(base);
+    expect((await service.decide(base.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].expectedVersion).toBe(0);
+  });
+
+  it('@ET-055 Gegenbeispiel: lehnt der Server dennoch zweimal mit STALE ab, meldet der Dienst STALE (die Oberfläche zeigt es) statt still zu scheitern', async () => {
+    const base = ohneVersion();
+    const { service, calls } = spyRepo(base, { status: 'rejected', code: 'STALE' });
+    expect(await service.decide(base.tournament.id, shootout('D', 'P', 4, 3))).toEqual({ ok: false, code: 'STALE' });
+    expect(calls).toHaveLength(2); // einmal frisch gelesen und erneut versucht
+  });
+});
+
 describe('Verklemmung und Wartezeit am Server: „Bitte erneut versuchen“ (Review A-13b-S Auflage 2)', () => {
   it.each(['40P01', '55P03'] as const)('%s beim Eintragen: RETRY_LATER, nichts geschrieben; ein zweiter Versuch gelingt', async (sqlState) => {
     const repo = new MemoryRepo(nikolaus());
