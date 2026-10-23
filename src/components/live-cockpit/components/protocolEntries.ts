@@ -10,6 +10,15 @@ import type { RuntimeMatchEvent } from '../../../types/tournament';
 export interface ProtocolEntry {
   event: RuntimeMatchEvent;
   retracted: boolean;
+  /** B-50 (@FU-095, B6.3): verworfener Klärungseintrag – wie zurückgenommen dargestellt, „verworfen von …, hh:mm“. */
+  discarded?: { by: string | null; at: number };
+}
+
+/** B-50: verworfener Klärungseintrag mit Entscheidung (nur Turnierleitung, aus der Klärungsliste). */
+export interface DiscardedProtocolEntry {
+  event: RuntimeMatchEvent;
+  by: string | null;
+  at: number;
 }
 
 export const formatTime = (seconds: number): string => {
@@ -23,12 +32,14 @@ export const formatTime = (seconds: number): string => {
 export function mergeProtocol(
   events: readonly RuntimeMatchEvent[],
   retractedEvents: readonly RuntimeMatchEvent[] = [],
+  discardedEntries: readonly DiscardedProtocolEntry[] = [],
 ): ProtocolEntry[] {
   const entries: ProtocolEntry[] = [
     ...events.map((event) => ({ event, retracted: false })),
     ...retractedEvents.map((event) => ({ event, retracted: true })),
+    ...discardedEntries.map(({ event, by, at }) => ({ event, retracted: true, discarded: { by, at } })),
   ];
-  if (retractedEvents.length === 0) {
+  if (retractedEvents.length === 0 && discardedEntries.length === 0) {
     return entries;
   }
   return entries

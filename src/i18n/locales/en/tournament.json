@@ -1303,7 +1303,7 @@
       "keinRecht": "You can no longer decide – your access has been revoked"
     },
     "verlauf": {
-      "titel": "History",
+      "titel": "Recently decided",
       "uebernommen": "{{what}} – accepted by {{by}}, {{time}}",
       "verworfen": "{{what}} – discarded by {{by}}, {{time}}",
       "turnierleitung": "the organisers"

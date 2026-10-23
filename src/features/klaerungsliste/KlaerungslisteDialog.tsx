@@ -4,8 +4,9 @@
  *   („Bereits entschieden“, „Spiel 9 war schon beendet – … bitte neu abschließen“, „Geht nur mit Netz“).
  * - Offene Fälle (ältester zuerst); höchstens EINE Vorschau zugleich (eine Haupttaste im Dialog, Review m6).
  * - Hinweise „nachträglich eingefügt“ (@FU-037).
- * - Verlauf (@FU-095 „die beiden Tore stehen als verworfen im Verlauf“): entschiedene Einträge mit „verworfen“ bzw.
- *   „übernommen von …, Uhrzeit“, jüngste zuerst.
+ * - „Zuletzt entschieden“: entschiedene Einträge mit „verworfen“ bzw. „übernommen von …, Uhrzeit“, jüngste zuerst – nur als
+ *   Rückblick in der Liste. Der eine Verlauf je Spiel (B6.3, @FU-095) ist das Spielprotokoll im Cockpit
+ *   (`discardedProtocol.ts`, `ProtocolRow` „verworfen von …“).
  */
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Dialog } from '../../components/dialogs';

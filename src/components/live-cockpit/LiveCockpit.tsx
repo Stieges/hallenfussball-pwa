@@ -20,6 +20,7 @@ import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
 import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
 import { useUebergabe } from '../../features/klaerungsliste/useUebergabe';
+import { useVerworfeneEintraege } from '../../features/klaerungsliste/useVerworfeneEintraege';
 import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
@@ -68,6 +69,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   // B-50 Review M2: nur Spiele mit übergebenen Einträgen; Recht zurück schließt ab, Zuschauer behält die Lesesicht
   const uebergabe = useUebergabe(outboxStatus, currentMatch?.id, kannSteuern);
   const zugriffEntzogen = props.zugriffEntzogen ?? (uebergabe?.art === 'sperre' ? { uebergebeneEintraege: uebergabe.count } : null);
+  // B-50 (@FU-095, B6.3): verworfene Klärungseinträge stehen im Spielprotokoll der Turnierleitung (zählen nicht)
+  const verworfene = useVerworfeneEintraege(tournamentId, currentMatch, istLeitung);
+  const matchMitVerlauf = useMemo(() => (currentMatch && verworfene.length > 0 ? { ...currentMatch, discardedEntries: verworfene } : currentMatch), [currentMatch, verworfene]);
 
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
@@ -204,7 +208,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     );
   }
 
-  const match = currentMatch;
+  const match = matchMitVerlauf ?? currentMatch;
   if (!spalten) { return null; } // nie: ohne Spiel (spalten === null) kehrt die Hülle oben zurück
   // Task R2: `kannSteuern` kommt aus einer echten Berechtigungsprüfung (ManagementTab, `useCan('writeMatchData')`), das
   // beendete Spiel ist die bestehende "Spiel ist vorbei"-Sperre. Beide führen zu "keine Bedienung", aber nur das

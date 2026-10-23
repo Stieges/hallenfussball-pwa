@@ -21,7 +21,11 @@ export interface MatchReviewsState {
 }
 
 export function useMatchReviews(tournamentId: string): MatchReviewsState {
-  const lead = useCan('leadMatches', tournamentId);
+  return useMatchReviewsFor(tournamentId, useCan('leadMatches', tournamentId));
+}
+
+/** Wie `useMatchReviews`, das Recht der Turnierleitung kommt vom Aufrufer (Cockpit: `istLeitung`, ohne zweite Rechte-Abfrage). */
+export function useMatchReviewsFor(tournamentId: string, lead: boolean): MatchReviewsState {
   const context = useMatchEngineContextOptional();
   const cloud = context !== null && context.accountId !== 'guest';
   const enabled = lead && cloud;

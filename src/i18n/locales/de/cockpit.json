@@ -263,6 +263,8 @@
     "editAria": "{{description}} bearbeiten",
     "edit": "Bearbeiten",
     "retractedMark": "zurückgenommen",
+    "discardedMark": "verworfen von {{by}}, {{time}}",
+    "discardedByLead": "der Turnierleitung",
     "retractedAria": "{{description}} – zurückgenommen",
     "resultEntryBy": "Ergebnis eingetragen von {{name}}",
     "resultEntry": "Ergebnis eingetragen"

@@ -1303,7 +1303,7 @@
       "keinRecht": "Du darfst nicht mehr entscheiden – die Turnierleitung hat dir das Recht entzogen"
     },
     "verlauf": {
-      "titel": "Verlauf",
+      "titel": "Zuletzt entschieden",
       "uebernommen": "{{what}} – übernommen von {{by}}, {{time}}",
       "verworfen": "{{what}} – verworfen von {{by}}, {{time}}",
       "turnierleitung": "der Turnierleitung"

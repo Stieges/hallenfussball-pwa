@@ -5,6 +5,7 @@
  *
  */
 
+import type { DiscardedProtocolEntry } from './components/protocolEntries';
 import type { RuntimeMatchEvent } from '../../types/tournament';
 import type { SperrHinweis } from '../../core/match';
 import type { GoalHandlerOptions } from '../../hooks/engineCommandWiringTypes';
@@ -56,6 +57,8 @@ export interface LiveMatch {
   events: MatchEvent[];
   /** C3b-1 (G6): zurückgenommene Einträge eines Engine-Spiels, nur für die Protokoll-Anzeige. */
   retractedEvents?: MatchEvent[];
+  /** B-50 (@FU-095, B6.3): verworfene Klärungseinträge des Spiels, nur für die Turnierleitung und nur im Protokoll. */
+  discardedEntries?: DiscardedProtocolEntry[];
 
   // DEF-005: Timer persistence fields
   timerStartTime?: string;

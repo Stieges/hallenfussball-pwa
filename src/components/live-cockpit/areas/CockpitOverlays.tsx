@@ -138,6 +138,7 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         onClose={handlers.closeEventLog}
         events={match.events}
         retractedEvents={match.retractedEvents}
+        discardedEntries={match.discardedEntries}
         homeTeamName={match.homeTeam.name}
         awayTeamName={match.awayTeam.name}
         homeTeamId={match.homeTeam.id}

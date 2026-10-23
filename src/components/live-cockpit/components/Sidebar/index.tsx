@@ -12,7 +12,7 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
-import { mergeProtocol, takeRecent, formatTime } from '../protocolEntries';
+import { mergeProtocol, takeRecent, formatTime, type DiscardedProtocolEntry } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
 import { cardKindOf } from '../../../../utils/cardKind';
 import { useResultEntryEvents } from '../../../../features/match-engine/useResultEntryEvents';
@@ -23,6 +23,8 @@ export interface SidebarProps {
   events: RuntimeMatchEvent[];
   /** C3b-1 (G6): zurückgenommene Einträge, nur zur Anzeige (durchgestrichen, ohne Bearbeiten). */
   retractedEvents?: RuntimeMatchEvent[];
+  /** B-50 (@FU-095, B6.3): verworfene Klärungseinträge (nur Turnierleitung). */
+  discardedEntries?: DiscardedProtocolEntry[];
   homeTeamName: string;
   awayTeamName: string;
   homeTeamId: string;
@@ -45,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activePenalties,
   events,
   retractedEvents,
+  discardedEntries,
   homeTeamName,
   awayTeamName,
   homeTeamId,
@@ -166,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Show most recent events first, limit to 10 effective entries (M2)
-  const recentEvents = takeRecent(mergeProtocol(events, retractedEvents).reverse(), 10);
+  const recentEvents = takeRecent(mergeProtocol(events, retractedEvents, discardedEntries).reverse(), 10);
 
   // ---------------------------------------------------------------------------
   // Render
