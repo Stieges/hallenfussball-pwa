@@ -793,6 +793,7 @@ async function main(): Promise<void> {
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
+      numberOfFields: 2, // der Test wählt „Feld 2“ (approve-field-2 gibt es nur ab zwei Feldern)
       numberOfTeams: 2,
       teams: [
         { id: e2eUuid('team:team-helfer-cup:1'), name: 'Team-Helfer Team 1' },
