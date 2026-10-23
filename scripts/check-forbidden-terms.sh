@@ -67,7 +67,7 @@ check_files_from_stdin() {
     is_exempt "$f" && continue
     # Binärdateien überspringen
     if grep -Iq . "$f" 2>/dev/null; then
-      if grep -noE "$PATTERN" -- "$f" > "$HITFILE" 2>/dev/null; then
+      if grep -inoE "$PATTERN" -- "$f" > "$HITFILE" 2>/dev/null; then
         while IFS=: read -r lineno _rest; do
           echo "$f:$lineno"
         done < "$HITFILE"
@@ -86,14 +86,14 @@ case "$MODE" in
     ;;
   --message)
     MSG_FILE="${2:?Pfad zur Commit-Message-Datei fehlt}"
-    if grep -noE "$PATTERN" -- "$MSG_FILE" > "$HITFILE" 2>/dev/null; then
+    if grep -inoE "$PATTERN" -- "$MSG_FILE" > "$HITFILE" 2>/dev/null; then
       echo "commit-message: Treffer in Zeile $(head -1 "$HITFILE" | cut -d: -f1)"
       FOUND=1
     fi
     ;;
   --text)
     TEXT="${2:?Text fehlt}"
-    if printf '%s\n' "$TEXT" | grep -noE "$PATTERN" > "$HITFILE" 2>/dev/null; then
+    if printf '%s\n' "$TEXT" | grep -inoE "$PATTERN" > "$HITFILE" 2>/dev/null; then
       echo "text: Treffer in Zeile $(head -1 "$HITFILE" | cut -d: -f1)"
       FOUND=1
     fi
