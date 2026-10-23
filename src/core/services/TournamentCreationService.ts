@@ -117,10 +117,12 @@ export class TournamentCreationService {
 
         switch (step) {
             case 1:
-                if (!data.title) { errors.push('Turniername erforderlich'); }
+                if (!data.title?.trim()) { errors.push('Turniername erforderlich'); }
                 if (!data.date) {
                     errors.push('Startdatum erforderlich');
-                } else if (this.isPastDate(data.date)) {
+                // @W5-003 (C-META-NOVALID): nur ein Entwurf darf nicht in der Vergangenheit liegen; ein festgelegtes
+                // Turnier bleibt nach dem Turniertag korrigierbar (Ort, Schreibweise).
+                } else if (data.status !== 'published' && this.isPastDate(data.date)) {
                     errors.push('Startdatum darf nicht in der Vergangenheit liegen');
                 }
                 if (!data.location?.name) { errors.push('Ort erforderlich'); }

@@ -329,6 +329,8 @@
     "noChanges": "No changes",
     "masterData": "Master Data",
     "tournamentName": "Tournament Name",
+    "tournamentNameRequired": "Please enter a tournament name.",
+    "startDateRequired": "Please choose a start date.",
     "tournamentNamePlaceholder": "Club Name Indoor Cup 2025",
     "organizer": "Organizer (optional)",
     "organizerPlaceholder": "My Club",
