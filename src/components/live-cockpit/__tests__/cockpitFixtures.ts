@@ -27,12 +27,19 @@ export function makeProps(match: LiveMatch | null, overrides: Partial<LiveCockpi
 }
 
 export function makePhaseView(overrides: Partial<PhaseView> = {}): PhaseView {
-  return {
+  const basis: PhaseView = {
     status: 'running', phase: 'regular', section: 2, sections: 2,
     sectionElapsedMs: 192_000, sectionLimitMs: 360_000, limitClockMs: 360_000, limitAt: null, reopenCount: 0,
     isLastRegularSection: true,
     breakRemainingMs: null, quittungRestMs: null, earliestAdjustMs: 0, earliestAdjustIsGoal: false, penalties: [], shootout: null,
-    clockAdjustments: [], tiebreakMode: null,
+    clockAdjustments: [], tiebreakMode: null, playedMs: 0, plannedMs: 0,
     ...overrides,
+  };
+  // gespielte und geplante Gesamtzeit folgen den Abschnitten, solange der Test sie nicht selbst nennt (`sectionLimitMs` je Abschnitt)
+  const vorher = Math.max(0, Math.min(basis.section, basis.sections) - 1) * basis.sectionLimitMs;
+  return {
+    ...basis,
+    playedMs: overrides.playedMs ?? vorher + basis.sectionElapsedMs,
+    plannedMs: overrides.plannedMs ?? basis.sections * basis.sectionLimitMs,
   };
 }

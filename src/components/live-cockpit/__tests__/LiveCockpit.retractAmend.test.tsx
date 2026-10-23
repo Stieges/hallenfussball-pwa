@@ -162,16 +162,18 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
     expect(screen.queryByTestId('goal-button-home')).toBeNull();
   });
 
-  it('G1b @SL-159: Leitung, finished, Karte -> kein Rueckgaengig, kein Helfer-Hinweis, der Leitungs-Text nennt den Grund', async () => {
+  it('G1b @SL-159 (B-10a2): Leitung, finished, Karte -> kein Rueckgaengig, kein Helfer-Hinweis und auch nicht mehr „Korrektur folgt“ (die Leitung hat „Korrigieren“)', async () => {
     mockActor.current = 'leitung';
     const { value, commands } = await setup();
     await commands.card(MATCH_ID, CTX, 'leitung', 'teamb', 'YELLOW_CARD', { playerNumber: 3 });
     await commands.finish(MATCH_ID, CTX, 'leitung');
-    renderCockpit(value, { istLeitung: true });
+    renderCockpit(value, { istLeitung: true, onKorrigieren: vi.fn() });
 
     expect(screen.queryByTestId('match-undo-button')).toBeNull();
     expect(screen.queryByTestId('bar-finished')).toBeNull();
-    expect(screen.getByTestId('match-undo-hint')).toHaveTextContent('Nach dem Abpfiff nicht direkt zurücknehmbar – Korrektur folgt');
+    expect(screen.queryByTestId('match-undo-hint')).toBeNull();
+    expect(screen.queryByText(/Korrektur folgt/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Korrigieren' })).toBeInTheDocument();
   });
 
   it('G4: Bestaetigung NUR beim Loeschen -- Dialog fragt, erst "Ja, loeschen" nimmt zurueck', async () => {

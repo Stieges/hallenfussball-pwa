@@ -7,12 +7,22 @@
  *
  * C0b-Fixrunde 1 (Review M2, Ruling PC6): `skipped_at` (Epoch-ms = `at` des SKIP, der das Spiel
  * abgesetzt hat) und `skipped_reason` (`payload.reason` oder `null`), nur im Status `skipped`.
+ * A-25n (20261110_005): `decided_by` 'forfeit' und `forfeit_absent` für die Nichtantritt-Wertung.
  */
-import { effectiveScoreFor, type EngineEvent, type MatchContext, type MatchState, type MatchStatus, type Phase, type TiebreakMode } from '../types';
+import {
+  effectiveScoreFor,
+  type EngineEvent,
+  type ForfeitAbsent,
+  type MatchContext,
+  type MatchState,
+  type MatchStatus,
+  type Phase,
+  type TiebreakMode,
+} from '../types';
 import { enteredShootoutStatus } from '../shootoutStatus';
 
 export type CacheMatchStatus = Exclude<MatchStatus, 'section_break' | 'decision_pending' | 'shootout'>;
-// 'forfeit' (Nichtantritts-Wertung): Wert der Spalte ab `20261110_005`; die Engine erzeugt ihn erst mit A-25n.
+/** A-25n: 'forfeit' = Nichtantritt-Wertung (Spalte matches.decided_by, CHECK seit 20261110_005). */
 export type CacheDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty' | 'forfeit';
 
 export interface CacheLiveState {
@@ -54,6 +64,8 @@ export interface CacheColumns {
   live_state: CacheLiveState | null;
   skipped_at: number | null;
   skipped_reason: string | null;
+  /** A-25n (@W2A-022): wer nicht angetreten ist -- nur im beendeten Spiel mit Wertung als letzter Überschreibung. */
+  forfeit_absent: ForfeitAbsent | null;
 }
 
 function cacheStatus(status: MatchStatus): CacheMatchStatus {
@@ -79,6 +91,12 @@ function cacheDecidedBy(state: MatchState, ctx: MatchContext): CacheDecidedBy | 
     return 'penalty';
   }
   return state.decidedBy === 'correction' || state.decidedBy === 'direct' ? 'regular' : state.decidedBy;
+}
+
+/** A-25n (@W2A-022/@W2A-024): Fehlender der Wertung, solange sie das beendete Spiel entscheidet (sonst null). */
+function forfeitAbsent(state: MatchState): ForfeitAbsent | null {
+  const lastOverride = state.overrides[state.overrides.length - 1];
+  return state.status === 'finished' && lastOverride?.kind === 'forfeit' ? (lastOverride.absent ?? null) : null;
 }
 
 function playPhaseOf(state: MatchState): CacheLiveState['playPhase'] {
@@ -184,5 +202,6 @@ export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns
     live_state: unplayed || state.status === 'finished' ? null : liveStateOf(state),
     skipped_at: skip ? skip.at : null,
     skipped_reason: skip && typeof skip.payload.reason === 'string' ? skip.payload.reason : null,
+    forfeit_absent: forfeitAbsent(state),
   };
 }

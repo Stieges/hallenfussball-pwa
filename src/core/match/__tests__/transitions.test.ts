@@ -18,12 +18,13 @@ describe('matchTransitions.json', () => {
     expect(transitions.length).toBe(seen.size);
   });
 
-  it('jede `to` ist ein gültiger MatchStatus, "=" oder "@endcheck"', () => {
+  it('jede `to` ist ein gültiger MatchStatus, "=", "@endcheck" oder "@reopen" (A-25n, nur REOPEN)', () => {
     for (const row of transitions) {
       const isSelf = row.to === '=';
       const isEndcheck = row.to === '@endcheck';
+      const isReopen = row.to === '@reopen' && row.type === 'REOPEN';
       const isValidStatus = MatchStatusSchema.safeParse(row.to).success;
-      expect(isSelf || isEndcheck || isValidStatus).toBe(true);
+      expect(isSelf || isEndcheck || isReopen || isValidStatus).toBe(true);
     }
   });
 
@@ -107,7 +108,7 @@ describe('matchTransitions.json', () => {
 
       { from: 'finished', type: 'CORRECTION', actor: 'leitung', to: '=' },
       // ZA-3 (@SL-074/@SL-075): Helfer-Zeile; Frist/„einmal“/Strafstoß prüft handlers/reopen.ts.
-      { from: 'finished', type: 'REOPEN', actor: 'helper', to: 'running' },
+      { from: 'finished', type: 'REOPEN', actor: 'helper', to: '@reopen' }, // A-25n (R-GA4-4)
       { from: 'finished', type: 'RETRACT', actor: 'leitung', to: '=' },
 
       { from: 'skipped', type: 'UNSKIP', actor: 'leitung', to: 'scheduled' },

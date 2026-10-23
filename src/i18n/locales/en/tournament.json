@@ -89,6 +89,8 @@
     "title": "Participants"
   },
   "correctionDialog": {
+    "titleMatch": "Correct the result of match {{number}}",
+    "next": "Next",
     "title": "Correct Result",
     "currentResult": "Current Result",
     "correctedResult": "Corrected Result",
@@ -101,6 +103,7 @@
     "cancel": "Cancel",
     "confirm": "Save Correction",
     "validation": {
+      "missing": "Please enter both scores as whole numbers.",
       "mustDiffer": "The new result must be different from the original."
     }
   },
@@ -326,6 +329,8 @@
     "noChanges": "No changes",
     "masterData": "Master Data",
     "tournamentName": "Tournament Name",
+    "tournamentNameRequired": "Please enter a tournament name.",
+    "startDateRequired": "Please choose a start date.",
     "tournamentNamePlaceholder": "Club Name Indoor Cup 2025",
     "organizer": "Organizer (optional)",
     "organizerPlaceholder": "My Club",

@@ -30,9 +30,12 @@ export interface HarnessProps {
   zeitKorrektur?: boolean;
   /** Steuerrecht dieses Geräts (Vorgabe `true`); ein `rerender` mit `false` spielt den Verlust des Rechts nach (S3). */
   kannSteuern?: boolean;
+  /** B-10a2: Turnierleitung dieses Geräts und ihr Weg „Korrigieren“ (Vorgabe: keine Leitung, kein Weg). */
+  istLeitung?: boolean;
+  onKorrigieren?: (matchId: string) => void;
 }
 
-function Cockpit({ context, turnier, einstellungen, zeitKorrektur, kannSteuern }: { context: MatchEngineContextValue; turnier?: Partial<Tournament>; einstellungen?: Partial<MatchCockpitSettings>; zeitKorrektur?: boolean; kannSteuern: boolean }): ReactElement | null {
+function Cockpit({ context, turnier, einstellungen, zeitKorrektur, kannSteuern, istLeitung, onKorrigieren }: { context: MatchEngineContextValue; turnier?: Partial<Tournament>; einstellungen?: Partial<MatchCockpitSettings>; zeitKorrektur?: boolean; kannSteuern: boolean; istLeitung?: boolean; onKorrigieren?: (matchId: string) => void }): ReactElement | null {
   const tournament = useMemo((): Tournament => ({ ...harnessTournament, ...turnier }), [turnier]);
   const validMatches = useMemo(() => buildValidMatches(tournament), [tournament]);
   const compute = useCallback(
@@ -49,6 +52,8 @@ function Cockpit({ context, turnier, einstellungen, zeitKorrektur, kannSteuern }
     <LiveCockpit
       {...STABLE_PROPS}
       kannSteuern={kannSteuern}
+      istLeitung={istLeitung}
+      onKorrigieren={onKorrigieren}
       currentMatch={match}
       cockpitSettings={einstellungen ? { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...einstellungen } : undefined}
       onStart={(matchId) => { void wiring.handleStart(matchId); }}
@@ -65,7 +70,7 @@ function Cockpit({ context, turnier, einstellungen, zeitKorrektur, kannSteuern }
 }
 
 /** Baut die Engine im Hintergrund auf und zeigt dann das Cockpit mit einem noch nicht angepfiffenen Spiel. */
-export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen, zeitKorrektur = false, kannSteuern = true }: HarnessProps): ReactElement | null {
+export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen, zeitKorrektur = false, kannSteuern = true, istLeitung, onKorrigieren }: HarnessProps): ReactElement | null {
   const [context, setContext] = useState<MatchEngineContextValue | null>(null);
   useEffect(() => {
     let abgebrochen = false;
@@ -73,6 +78,6 @@ export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier
     return () => { abgebrochen = true; };
   }, [senderFabrik, gastKonto]);
   if (!context) { return null; }
-  return <MatchEngineContext.Provider value={context}><Cockpit context={context} turnier={turnier} einstellungen={einstellungen} zeitKorrektur={zeitKorrektur} kannSteuern={kannSteuern} /></MatchEngineContext.Provider>;
+  return <MatchEngineContext.Provider value={context}><Cockpit context={context} turnier={turnier} einstellungen={einstellungen} zeitKorrektur={zeitKorrektur} kannSteuern={kannSteuern} istLeitung={istLeitung} onKorrigieren={onKorrigieren} /></MatchEngineContext.Provider>;
 }
 

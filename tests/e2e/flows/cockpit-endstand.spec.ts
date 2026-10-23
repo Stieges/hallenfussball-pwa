@@ -41,6 +41,12 @@ async function bild(page: Page, name: string, projekt: string): Promise<void> {
   if (ordner) { await page.screenshot({ path: `${ordner}/${name}-v2-${projekt}.png` }); }
 }
 
+/** B-10a2: Bilder der Tafel und Zusammenfassung nach dem Ende, nur wenn B10A2_BILDER gesetzt ist. */
+async function bild2(page: Page, name: string, projekt: string): Promise<void> {
+  const ordner = process.env.B10A2_BILDER;
+  if (ordner) { await page.screenshot({ path: `${ordner}/${name}-${projekt}.png` }); }
+}
+
 /** Spiel 1 anpfeifen, ein Tor für FC Nord, von Hand abpfeifen: danach steht der Endstand 1:0. */
 async function pfeifeAb(page: Page): Promise<void> {
   await page.goto(`/#/tournament/${ID}/live`);
@@ -103,5 +109,49 @@ test.describe('Cockpit: Endstand nach dem Abpfiff (B-10a)', () => {
     await expect(page.getByTestId('scoreboard-state')).toBeEmpty();
     await expect(page.getByTestId('scoreboard-quittung')).toHaveCount(0);
     await expect(page.getByTestId('match-start-button')).toBeVisible();
+  });
+
+  // B-10a2: Zusammenfassung statt Tastenblöcke, Tafel mit „Gespielt … von …“, „Korrigieren“ für die Turnierleitung (lokal der Eigentümer)
+  test('@SL-169 @SL-048 @SL-115 @SL-159 nach dem Ende: Tafel „Gespielt … von 12:00“, Zusammenfassung je Team, „Korrigieren“ öffnet die Korrektur', async ({ page }, testInfo) => {
+    await pfeifeAb(page);
+    await pruefeEndstand(page);
+    // @SL-169: kein Abschnitt neben „Ende“, „Gespielt“ statt „Spielzeit“, vorzeitig mit „von 12:00“ (zwei Abschnitte zu 6 Minuten)
+    await expect(page.getByTestId('scoreboard')).not.toContainText(/Halbzeit/);
+    await expect(page.getByTestId('scoreboard-clock')).toContainText('Gespielt');
+    await expect(page.getByTestId('scoreboard-clock-sub')).toHaveText('von 12:00');
+    // @SL-048: Zusammenfassung statt Tasten
+    await expect(page.getByTestId('team-summary-home')).toContainText('Tore (1)');
+    await expect(page.getByTestId('team-summary-away')).toContainText('Tore (0): keine');
+    await expect(page.getByTestId('team-summary-home')).toContainText('Fouls: 0');
+    await expect(page.getByTestId('goal-button-home')).toHaveCount(0);
+    await expect(page.getByTestId('foul-button-home')).toHaveCount(0);
+    // @SL-159: „Korrigieren“ öffnet die Korrektur mit dem bisherigen Ergebnis; ohne Änderung bleibt „Weiter“ gesperrt
+    await bild2(page, 'leitung-vorzeitig', testInfo.project.name);
+    await page.getByTestId('match-correct-button').click();
+    await expect(page.getByTestId('cockpit-korrektur-dialog')).toBeVisible();
+    await expect(page.getByTestId('cockpit-korrektur-home')).toHaveValue('1');
+    await expect(page.getByTestId('cockpit-korrektur-weiter')).toBeDisabled();
+    await bild2(page, 'leitung-korrigieren-dialog', testInfo.project.name);
+    await page.getByTestId('cockpit-korrektur-home').fill('0');
+    await page.getByTestId('cockpit-korrektur-weiter').click();
+    await expect(page.getByTestId('result-entry-reason-dialog')).toBeVisible(); // Grundpflicht: ohne Grund wird nichts gespeichert
+    await bild2(page, 'leitung-korrigieren-grund', testInfo.project.name);
+    await page.getByTestId('result-entry-cancel').click();
+    await expect(page.getByTestId('scoreboard-score')).toHaveText('1:0'); // Abbruch ändert nichts
+    // @SL-115: nach dem Neuladen steht die Zusammenfassung für den Rest der Frist wieder da
+    await page.reload();
+    await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('team-summary-home')).toContainText('Tore (1)');
+    await expect(page.getByTestId('match-correct-button')).toBeVisible();
+  });
+
+  test('@SL-169 Gegenbeispiel: im laufenden Spiel stehen die Tasten, kein „Gespielt“, keine Zusammenfassung, kein „Korrigieren“', async ({ page }) => {
+    await page.goto(`/#/tournament/${ID}/live`);
+    await page.getByTestId('match-start-button').click({ timeout: 15000 });
+    await expect(page.getByTestId('match-pause-button')).toBeVisible();
+    await expect(page.getByTestId('goal-button-home')).toBeVisible();
+    await expect(page.getByTestId('team-summary-home')).toHaveCount(0);
+    await expect(page.getByTestId('match-correct-button')).toHaveCount(0);
+    await expect(page.getByTestId('scoreboard-clock')).not.toContainText('Gespielt');
   });
 });

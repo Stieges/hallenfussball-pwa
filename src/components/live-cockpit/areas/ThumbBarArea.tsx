@@ -31,6 +31,8 @@ export interface ThumbBarAreaProps {
   controls: CockpitControls;
   /** „Weiter“ nach dem Abpfiff: das nächste Spiel des Felds (@SL-162). */
   onWeiterNaechstes: () => void;
+  /** „Korrigieren“ nach dem Abpfiff (@SL-159): öffnet die Korrektur mit Grund; ohne Handler keine Taste. */
+  onKorrigieren?: () => void;
   onChooseTiebreak?: (wahl: TiebreakWahl) => void;
 }
 
@@ -49,8 +51,8 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
   const onUndo = controls.onUndo;
   const rueckgaengig = useUndoGuard(useCallback(async () => { onUndo?.(); }, [onUndo]));
 
-  // PR 3: Fortsetzen (LT-6) und Korrigieren (LT-5) sind noch nicht gebunden.
-  const modell = leisteFuer(phase, { layout, istLeitung, fortsetzenMoeglich: false, korrigierenMoeglich: false });
+  // „Spiel fortsetzen“ (LT-6) ist noch nicht gebunden; „Korrigieren“ steht, sobald die Hülle einen Weg übergibt und die Leitung es darf (@SL-159).
+  const modell = leisteFuer(phase, { layout, istLeitung, fortsetzenMoeglich: false, korrigierenMoeglich: p.onKorrigieren !== undefined });
   if (modell.aktionen.length === 0) { return null; }
 
   if (!kannSteuern) {
@@ -95,15 +97,20 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
             testId: 'match-finish-button', beschreibung: t('abpfiff.beschreibung'),
           },
         };
+      case 'korrigieren': {
+        const onKorrigieren = p.onKorrigieren;
+        return onKorrigieren ? aktion(t('leiste.korrigieren'), 'match-correct-button', 'neben', onKorrigieren, <MatchIcons.Edit />) : null;
+      }
       case 'fortsetzen':
-      case 'korrigieren':
         return null;
     }
   };
   const slots = modell.aktionen.map(slotFuer).filter((s): s is ThumbBarSlot => s !== null);
+  // Nach dem Abpfiff steht der Hinweis „Korrektur über die Turnierleitung“ nur für Helfer (@HE-043); der Hinweis „Korrektur folgt“ für die
+  // Turnierleitung entfällt, sie hat „Korrigieren“ (@SL-159). Die Leiste hat dort kein Rückgängig, ein Grund dafür wäre ohne Platz.
   const hinweis = modell.hinweis === 'beendetHelfer'
     ? { text: t('leiste.beendet'), testId: 'bar-finished' }
-    : controls.undoHint ? { text: controls.undoHint, testId: 'match-undo-hint' } : undefined;
+    : controls.undoHint && phase.zustand !== 'abgepfiffen' ? { text: controls.undoHint, testId: 'match-undo-hint' } : undefined;
 
   return (
     <div style={klebtUnten}>

@@ -1,0 +1,179 @@
+{
+  "$comment": "Gleichlauf parsePlacementsToPlayOut (src/core/standings/playOutPlaces.ts) == match_engine.places_to_play_out (A-13b-S Punkt 3, Review-Auflage 8): fehlend/unbrauchbar -> [1], [] bleibt leer, sortiert ohne Doppelte, Plätze 1-99 ganzzahlig, ein ungültiger Eintrag verwirft die ganze Liste.",
+  "rows": [
+    {
+      "name": "fehlend -> Voreinstellung nur Platz 1",
+      "config": {},
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "null -> Voreinstellung",
+      "config": {
+        "placementsToPlayOut": null
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "leer bleibt leer (kein Platz)",
+      "config": {
+        "placementsToPlayOut": []
+      },
+      "expected": []
+    },
+    {
+      "name": "nur Platz 1",
+      "config": {
+        "placementsToPlayOut": [
+          1
+        ]
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "Platz 1 und 2 (@TM-147)",
+      "config": {
+        "placementsToPlayOut": [
+          1,
+          2
+        ]
+      },
+      "expected": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "sortiert, ohne Doppelte",
+      "config": {
+        "placementsToPlayOut": [
+          3,
+          1,
+          3
+        ]
+      },
+      "expected": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "3.0 gilt als 3",
+      "config": {
+        "placementsToPlayOut": [
+          1,
+          3.0
+        ]
+      },
+      "expected": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Platz 99 ist die Grenze",
+      "config": {
+        "placementsToPlayOut": [
+          99
+        ]
+      },
+      "expected": [
+        99
+      ]
+    },
+    {
+      "name": "Platz 100 -> ungültig, Voreinstellung",
+      "config": {
+        "placementsToPlayOut": [
+          1,
+          100
+        ]
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "Platz 0 -> ungültig",
+      "config": {
+        "placementsToPlayOut": [
+          0,
+          2
+        ]
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "negativ -> ungültig",
+      "config": {
+        "placementsToPlayOut": [
+          -1
+        ]
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "Bruch -> ungültig",
+      "config": {
+        "placementsToPlayOut": [
+          2.5
+        ]
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "Text in der Liste -> ungültig",
+      "config": {
+        "placementsToPlayOut": [
+          1,
+          "x"
+        ]
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "Zahl als Text -> ungültig",
+      "config": {
+        "placementsToPlayOut": [
+          "2"
+        ]
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "kein Array -> Voreinstellung",
+      "config": {
+        "placementsToPlayOut": "1,2"
+      },
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "Objekt -> Voreinstellung",
+      "config": {
+        "placementsToPlayOut": {
+          "1": true
+        }
+      },
+      "expected": [
+        1
+      ]
+    }
+  ]
+}

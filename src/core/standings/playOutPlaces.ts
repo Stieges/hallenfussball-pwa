@@ -17,8 +17,11 @@ import { standingsGroups } from '../models/standingsGroups';
 /** Voreinstellung: nur Platz 1 muss ausgespielt werden (Daniel K10, @W2A-066). */
 export const DEFAULT_PLACEMENTS_TO_PLAY_OUT: readonly number[] = [1];
 
-/** Schema des Turnierfelds: Liste ganzer Plätze ab 1; Unbrauchbares ergibt die Voreinstellung (Turnier bleibt gültig). */
-export const PlacementsToPlayOutSchema = z.array(z.number().int().min(1)).catch(() => [...DEFAULT_PLACEMENTS_TO_PLAY_OUT]);
+/**
+ * Schema des Turnierfelds: Liste ganzer Plätze 1–99; Unbrauchbares ergibt die Voreinstellung (Turnier bleibt gültig).
+ * Zwilling von `match_engine.places_to_play_out` (A-13b-S Punkt 7, Gleichlauf `placements-to-play-out.json`).
+ */
+export const PlacementsToPlayOutSchema = z.array(z.number().int().min(1).max(99)).catch(() => [...DEFAULT_PLACEMENTS_TO_PLAY_OUT]);
 
 const sortedUnique = (places: readonly number[]): number[] => [...new Set(places)].sort((a, b) => a - b);
 

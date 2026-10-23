@@ -6,13 +6,16 @@
  * wird nie geraten. Die ersten 300 ms nach dem Öffnen sind gesperrt (@SL-021, Doppeltipp). „ohne Nummer“
  * liegt gegenüber dem auslösenden Knopf und ist kein Hauptknopf (@SL-020). Keine Felder für Torvorlagen (@SL-037).
  * Mit `tastatur` ist „Andere Nr.“ schon offen und das Feld fokussiert: Eingabetaste übernimmt (nur 1–99, nach der
- * Sperre), Esc schließt. Wann `tastatur` gilt (Taste geöffnet oder hover:hover + pointer:fine, nie nach Breite),
+ * Sperre), Esc schließt. Eine Eingabe außerhalb 1–99 (0, 100, „7a“) weist der Baustein mit einem Hinweis ab; das Tor
+ * zählt dann ohne Nummer weiter (@SL-172). Wann `tastatur` gilt (Taste geöffnet oder hover:hover + pointer:fine, nie nach Breite),
  * entscheidet der Aufrufer.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode } from 'react';
 import { cssVars } from '../../../design-tokens';
+import { parseJerseyNumberInput } from '../../../core/match/jerseyNumber';
 import { Button } from '../Button';
+import { InlineNotice } from './InlineNotice';
 import { DialogSurface } from './DialogSurface';
 
 /** @SL-021 */
@@ -21,7 +24,7 @@ export const NUMBER_PICKER_SPERRE_MS = 300;
 export const NUMBER_PICKER_ZEITABLAUF_MS = 10_000;
 
 export type NumberPickerSchliessGrund = 'schliessen' | 'abdunkelung' | 'zeitablauf' | 'ohneNummer';
-export interface NumberPickerTexte { titel: string; ohneNummer: string; andereNummer: string; uebernehmen: string; eingabeLabel: string }
+export interface NumberPickerTexte { titel: string; ohneNummer: string; andereNummer: string; uebernehmen: string; eingabeLabel: string; ungueltig: string }
 export interface NumberPickerProps {
   isOpen: boolean;
   texte: NumberPickerTexte;
@@ -77,9 +80,10 @@ export function NumberPicker({
   }, [isOpen, eingabeTakt]);
 
   const tippe = (fn: () => void) => () => { if (!gesperrtRef.current) { fn(); } };
-  const nummer = andere === null || andere === '' ? null : Number(andere);
-  const gueltig = nummer !== null && Number.isInteger(nummer) && nummer >= 1 && nummer <= 99;
-  const uebernehmen = tippe(() => { if (gueltig && nummer !== null) { onWaehle(nummer); } });
+  const eingabe = parseJerseyNumberInput(andere ?? '');
+  const nummer = eingabe === 'ungueltig' ? null : eingabe;
+  const gueltig = nummer !== null;
+  const uebernehmen = tippe(() => { if (nummer !== null) { onWaehle(nummer); } });
   const onFeldTaste = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -118,6 +122,9 @@ export function NumberPicker({
             />
             <Button variant="primary" disabled={!gueltig} onClick={uebernehmen} style={knopfMass}>{texte.uebernehmen}</Button>
           </div>
+        )}
+        {eingabe === 'ungueltig' && (
+          <InlineNotice tone="warn" data-testid={`${testId}-ungueltig`}>{texte.ungueltig}</InlineNotice>
         )}
         <div data-lage={gegenueber} style={{ display: 'flex', justifyContent: ausloeserSeite === 'links' ? 'flex-end' : 'flex-start' }}>
           <Button variant="ghost" onClick={tippe(() => onSchliesse('ohneNummer'))} style={knopfMass}>{texte.ohneNummer}</Button>
