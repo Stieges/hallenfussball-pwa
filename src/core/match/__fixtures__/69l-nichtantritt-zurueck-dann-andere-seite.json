@@ -1,0 +1,111 @@
+{
+  "title": "Irrtum: Wertung gegen Heim zurückgenommen, danach Gast gewertet (2:0, forfeit_absent B)",
+  "szenario": "Nichtantritt zurücknehmen (@W2A-026)",
+  "ctx": {
+    "matchId": "match-000069l",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000069l-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 2
+        },
+        "forfeit": {
+          "absent": "A"
+        }
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000069l-0000-4000-8000-000000000002",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000069l-0000-4000-8000-000000000003",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 3000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 0
+        },
+        "forfeit": {
+          "absent": "B"
+        }
+      },
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000069l-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000069l-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000069l-0000-4000-8000-000000000003",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000069l-0000-4000-8000-000000000003",
+      "decidedBy": "forfeit",
+      "finishedAt": 3000
+    },
+    "cacheColumns": {
+      "match_status": "finished",
+      "score_a": 2,
+      "score_b": 0,
+      "decided_by": "forfeit",
+      "forfeit_absent": "B"
+    }
+  }
+}

@@ -1,11 +1,13 @@
 /**
  * A-10 Wächter Zwillingsregel TS ↔ SQL (brief-A-10.md § 4). TS ist Referenz, SQL folgt.
  *
- * Z1 Schutzspalten: Spaltenliste in `matches_guard_engine_columns` (20261028_005) = `SERVER_ONLY_MATCH_COLUMNS`;
+ * Z1 Schutzspalten: Spaltenliste in `matches_guard_engine_columns` (jüngste Fassung, seit A-25b 20261110_005) =
+ *    `SERVER_ONLY_MATCH_COLUMNS`;
  *    die Client-Schreibwege für bestehende Spiele (`mapMatchUpdateToSupabase`, `mapMatchToScheduleUpdate`) senden keine.
  * Z2 Spielplan-Spalten: `WHEN`-Liste von `matches_bump_change_revision` = Schlüssel von `mapMatchToScheduleUpdate`
  *    ohne `updated_at` und die Altspalten `team_a/b_placeholder`.
- * Z3 Neutralwerte: INSERT-Zweig des Schutzes und `UPDATE` in `reset_match_results` = `NEUTRAL_RESULT_COLUMNS`;
+ * Z3 Neutralwerte: INSERT-Zweig des Schutzes und `UPDATE` in `reset_match_results` = `NEUTRAL_RESULT_COLUMNS` (reset ohne
+ *    `ENGINE_EVENT_ONLY_MATCH_COLUMNS`: ein Spiel mit Wertung hat Ereignisse, reset lehnt es mit HAS_ENTRIES ab);
  *    `mapMatchToSupabase` legt neue Spiele mit denselben Werten an; das lokale Zurücksetzen leert dieselben Felder.
  * Z4 „hat Einträge“: TS liest die Server-Revision (> 1, `ServerRevisionRegistry` → `matchesWithEntries`), SQL fragt
  *    `match_events.event_format IS NOT NULL`. Revisionen aus `scripts/guard-all-matches-check.sh` (Kategorie B, „Z4“):
@@ -13,10 +15,10 @@
  *    `matches.version` nie (Container-Probe „Z4/F3“), sonst gälte ein zurückgesetztes Spiel in TS als „hat Einträge“.
  * Anforderungen: @EK-060, @FU-090, @TM-027.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { SERVER_ONLY_MATCH_COLUMNS, NEUTRAL_RESULT_COLUMNS } from '../../core/repositories/serverOnlyMatchColumns';
+import { ENGINE_EVENT_ONLY_MATCH_COLUMNS, SERVER_ONLY_MATCH_COLUMNS, NEUTRAL_RESULT_COLUMNS } from '../../core/repositories/serverOnlyMatchColumns';
 import { mapMatchToScheduleUpdate, mapMatchToSupabase, mapMatchUpdateToSupabase } from '../../core/repositories/supabaseMappers';
 import { ServerRevisionRegistry } from '../../core/repositories/serverRevisionRegistry';
 import { SERVER_LED_MATCH_FIELDS } from '../../core/repositories/serverLedMatchFields';
@@ -27,7 +29,16 @@ import { testTeamSlot } from '../../test/matchSlotFixtures';
 import { testUuid } from '../../test/testIds';
 import type { Match } from '../../types/tournament';
 
-const MIGRATION = readFileSync(join(__dirname, '..', '..', '..', 'supabase', 'migrations', '20261028_005_guard_all_matches.sql'), 'utf8');
+const MIGRATIONS_DIR = join(__dirname, '..', '..', '..', 'supabase', 'migrations');
+const MIGRATION = readFileSync(join(MIGRATIONS_DIR, '20261028_005_guard_all_matches.sql'), 'utf8');
+const GUARD_START = 'CREATE OR REPLACE FUNCTION public.matches_guard_engine_columns()';
+/** A-25b: die jüngste Migration, die den Spalten-Schutz definiert (Dateinamen sortieren wie das Einspielen). */
+const LATEST_GUARD_MIGRATION = readdirSync(MIGRATIONS_DIR)
+  .filter((name) => name.endsWith('.sql'))
+  .sort()
+  .map((name) => readFileSync(join(MIGRATIONS_DIR, name), 'utf8'))
+  .filter((text) => text.includes(GUARD_START))
+  .at(-1) ?? '';
 
 /** Text zwischen zwei Markierungen (beide müssen genau einmal vorkommen). */
 function between(text: string, start: string, end: string): string {
@@ -57,7 +68,7 @@ function fullMatch(): Match {
 }
 
 describe('A-10 Zwillinge TS ↔ SQL (Spalten-Schutz, Spielplan-Zählung, Neutralwerte, „hat Einträge“)', () => {
-  const guardBody = between(MIGRATION, 'CREATE OR REPLACE FUNCTION public.matches_guard_engine_columns()', '$$;');
+  const guardBody = between(LATEST_GUARD_MIGRATION, GUARD_START, '$$;');
 
   it('Z1 die Schutzspalten des Guards = SERVER_ONLY_MATCH_COLUMNS (@EK-060)', () => {
     const guarded = [...guardBody.matchAll(/NEW\.(\w+) IS DISTINCT FROM OLD\.(\w+)/g)].map((m) => {
@@ -98,7 +109,9 @@ describe('A-10 Zwillinge TS ↔ SQL (Spalten-Schutz, Spielplan-Zählung, Neutral
       .map((part) => part.split('=').map((x) => x.trim()) as [string, string])
       .filter(([column]) => column !== 'updated_at')
       .map(([column, value]) => [column, sqlValue(value)]));
-    expect(assigned).toEqual(NEUTRAL_RESULT_COLUMNS);
+    const resetNeutral = Object.fromEntries(Object.entries(NEUTRAL_RESULT_COLUMNS)
+      .filter(([column]) => !(ENGINE_EVENT_ONLY_MATCH_COLUMNS as readonly string[]).includes(column)));
+    expect(assigned).toEqual(resetNeutral);
     expect(resetUpdate).not.toMatch(/\bversion\b/); // F3: matches.version bleibt
   });
 

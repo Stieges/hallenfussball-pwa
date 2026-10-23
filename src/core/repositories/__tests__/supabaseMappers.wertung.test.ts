@@ -77,7 +77,16 @@ describe('A-25c Wächter: forfeit_absent in keiner Spaltenliste', () => {
     // Die erzeugten Datenbank-Typen nennen die Spalte nach dem Einspielen von `_005` (Skill supabase-types-regen).
     const readers = files.filter(({ source }) => source.includes('forfeit_absent')).map((f) => f.path)
       .filter((path) => path !== 'types/supabase.ts').sort();
+    // G1a (A-25n/A-25b) bringt die Engine-Zwillinge der Spalte mit – sie lesen nichts aus der Datenbank:
+    // `cacheColumns.ts` berechnet den Zwischenspeicher wie `match_engine.cache_columns`, `applyEngineOverlay.ts` liest
+    // dieses Ergebnis (lokaler Eintrag vor der Server-Zeile), `serverOnlyMatchColumns.ts` nennt die Schutzspalte (A-10).
     // B-14: das Antwort-Schema der öffentlichen Server-Funktionen nennt die Spalte (Positivliste, E-A2) -- keine select-Liste.
-    expect(readers).toEqual(['core/repositories/matchForfeitRow.ts', 'core/repositories/publicPayload.ts']);
+    expect(readers).toEqual([
+      'core/match/client/applyEngineOverlay.ts',
+      'core/match/client/cacheColumns.ts',
+      'core/repositories/matchForfeitRow.ts',
+      'core/repositories/publicPayload.ts',
+      'core/repositories/serverOnlyMatchColumns.ts',
+    ]);
   }, 30_000); // liest den ganzen Quellbaum; unter Volllast > 5 s (wie die anderen Wächter)
 });

@@ -1,0 +1,76 @@
+{
+  "title": "Gegenbeispiel: Heim fehlt, aber 2:0 für Heim -> INVALID_PAYLOAD, Spiel bleibt geplant",
+  "szenario": "Nichtantritt wird gewertet (@W2A-022)",
+  "ctx": {
+    "matchId": "match-000069d",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000069d-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 0
+        },
+        "forfeit": {
+          "absent": "A"
+        }
+      },
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000069d-0000-4000-8000-000000000001",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      }
+    ],
+    "serverState": {
+      "status": "scheduled",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "cacheColumns": {
+      "match_status": "scheduled",
+      "score_a": null,
+      "score_b": null,
+      "decided_by": null,
+      "forfeit_absent": null
+    }
+  }
+}
