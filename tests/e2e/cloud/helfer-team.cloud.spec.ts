@@ -39,6 +39,8 @@ test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
 
   async function joinAs(browser: import('@playwright/test').Browser, code: string, name: string) {
     const context = await browser.newContext();
+    // Datenschutz-Abfrage vorab beantwortet (wie `newDevice` in helfer-beitritt): sonst deckt ihr Dialog „Anfrage senden“ zu.
+    await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
     const page = await context.newPage();
     await page.goto(`/#/join/${code}`);
     await page.getByTestId('join-name').fill(name);
