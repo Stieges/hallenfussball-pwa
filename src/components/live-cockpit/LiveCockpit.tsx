@@ -19,7 +19,7 @@ import { useFoulCounts } from '../../hooks/useFoulCounts';
 import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
 import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
-import { zugriffEntzogenFor } from '../../features/klaerungsliste/zugriffEntzogen';
+import { useUebergabe } from '../../features/klaerungsliste/useUebergabe';
 import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
@@ -65,7 +65,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const outboxStatus = useOutboxStatus(matchEngineContext?.sender ?? null);
   const handleOutboxReload = useCallback(() => window.location.reload(), []);
   // B-50 (@HE-056, @FU-017): hat der Server Einträge dieses Geräts wegen entzogenen Rechts zur Klärung gelegt
-  const zugriffEntzogen = props.zugriffEntzogen ?? zugriffEntzogenFor(outboxStatus, tournamentId);
+  // B-50 Review M2: nur Spiele mit übergebenen Einträgen; Recht zurück schließt ab, Zuschauer behält die Lesesicht
+  const uebergabe = useUebergabe(outboxStatus, currentMatch?.id, kannSteuern);
+  const zugriffEntzogen = props.zugriffEntzogen ?? (uebergabe?.art === 'sperre' ? { uebergebeneEintraege: uebergabe.count } : null);
 
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
@@ -228,6 +230,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
               )}
               {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand vorliegt. */}
               <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
+              {uebergabe?.art === 'zusehen' && <p className={shell.readOnlyBanner} data-testid="cockpit-uebergeben-zusehen" role="status">{t('leiste.nurZusehen', { count: uebergabe.count })}</p>}
             </>
           )}
           match={match}

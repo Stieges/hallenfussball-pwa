@@ -4,26 +4,24 @@
  * die Listener sofort (Sichtbarkeit ≤ 10 s, L92).
  */
 import type { LocalMatchStore } from './LocalMatchStore';
-import type { MatchCopy } from './matchCopy';
+import { RIGHTS_REVOKED, type MatchCopy } from './matchCopy';
 import { emptyOutboxStatus, type OutboxPause, type OutboxStatus } from './outboxTypes';
 
-/** Grund des Servers für „an die Turnierleitung übergeben“ (@HE-056, @FU-017, @HE-080). */
-const RIGHTS_REVOKED = 'RIGHTS_REVOKED';
-
-export type CopyListCounts = Pick<OutboxStatus, 'pendingByTournament' | 'pendingByMatch' | 'rejectedByMatch' | 'reviewByMatch' | 'revokedByTournament'>;
+export type CopyListCounts = Pick<OutboxStatus, 'pendingByTournament' | 'pendingByMatch' | 'rejectedByMatch' | 'reviewByMatch' | 'revokedByMatch' | 'revokedWatchOnlyByMatch'>;
 
 /** Zähler der Listen aller Kopien eines Kontos (rein). */
 export function countCopyLists(copies: readonly MatchCopy[]): CopyListCounts {
-  const counts: CopyListCounts = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, revokedByTournament: {} };
+  const counts: CopyListCounts = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, revokedByMatch: {}, revokedWatchOnlyByMatch: {} };
   for (const copy of copies) {
     counts.pendingByMatch[copy.matchId] = copy.pending.length;
     counts.rejectedByMatch[copy.matchId] = copy.rejected.length;
     counts.reviewByMatch[copy.matchId] = copy.review.length;
     const tournamentKey = copy.tournamentId ?? '';
     counts.pendingByTournament[tournamentKey] = (counts.pendingByTournament[tournamentKey] ?? 0) + copy.pending.length;
-    const revoked = copy.review.filter((event) => copy.reviewCodes?.[event.id] === RIGHTS_REVOKED).length;
-    if (revoked > 0) {
-      counts.revokedByTournament[tournamentKey] = (counts.revokedByTournament[tournamentKey] ?? 0) + revoked;
+    const handedOver = copy.review.map((event) => copy.reviewReasons?.[event.id]).filter((reason) => reason?.code === RIGHTS_REVOKED);
+    if (handedOver.length > 0) {
+      counts.revokedByMatch[copy.matchId] = handedOver.length;
+      counts.revokedWatchOnlyByMatch[copy.matchId] = handedOver.filter((reason) => reason?.change === 'watch_only').length;
     }
   }
   return counts;

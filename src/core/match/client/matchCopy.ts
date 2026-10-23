@@ -11,6 +11,30 @@ const DEPENDS_ON_REJECTED = ERROR_CODES.DEPENDS_ON_REJECTED;
 /** Record-Format 2 (C2a): mit `rejected`, `review` und optionalem `tournamentId`. */
 export const MATCH_COPY_FORMAT_VERSION = 2;
 
+/** B-50: Grund einer Server-Antwort `review`; `change` nur bei `RIGHTS_REVOKED` (revoked | removed | watch_only). */
+export interface ReviewReason {
+  code: string;
+  change?: string;
+}
+
+/** Grund des Servers für „an die Turnierleitung übergeben“ (@HE-056, @FU-017, @HE-080). */
+export const RIGHTS_REVOKED = 'RIGHTS_REVOKED';
+
+/**
+ * B-50 Review M2: Hat das Gerät das Schreibrecht zurück, sind die übergebenen Einträge (`RIGHTS_REVOKED`) als übergeben
+ * abgeschlossen – sie liegen in Ollis Klärungsliste, das Gerät führt sie nicht weiter. Andere Klärungseinträge bleiben.
+ */
+export function closeHandedOverEntries(copy: MatchCopy): void {
+  const reasons = copy.reviewReasons ?? {};
+  const handedOver = new Set(copy.review.filter((event) => reasons[event.id]?.code === RIGHTS_REVOKED).map((event) => event.id));
+  if (handedOver.size === 0) {
+    return;
+  }
+  copy.review = copy.review.filter((event) => !handedOver.has(event.id));
+  copy.reviewReasons = Object.fromEntries(Object.entries(reasons).filter(([id]) => !handedOver.has(id)));
+  copy.updatedAt = Date.now();
+}
+
 export interface RejectedEntry {
   event: EngineEvent;
   code: string;
@@ -37,8 +61,8 @@ export interface MatchCopy {
   rejected: RejectedEntry[];
   /** „wird geprüft" -- der Server liefert `review` erst ab F. */
   review: EngineEvent[];
-  /** B-50: Grund des Servers je Eintrag in `review` (z. B. `RIGHTS_REVOKED`, @HE-056); fehlt in älteren Kopien. */
-  reviewCodes?: Record<string, string>;
+  /** B-50: Grund des Servers je Eintrag in `review` (z. B. `RIGHTS_REVOKED` mit Art `watch_only`, @HE-056, @FU-017). */
+  reviewReasons?: Record<string, ReviewReason>;
   updatedAt: number;
 }
 
@@ -83,7 +107,7 @@ export interface BatchResolution {
   rejected: RejectedEntry[];
   reviewIds: string[];
   /** B-50: Grund des Servers je Eintrag in `reviewIds`. */
-  reviewCodes?: Record<string, string>;
+  reviewReasons?: Record<string, ReviewReason>;
   /** A-08b3 (B2, @FU-070): Server-Antwort `noop` -- Eintrag wird aus `pending` entfernt, nicht `acked`. */
   droppedIds?: string[];
   cascade?: CascadeInfo;
@@ -137,15 +161,15 @@ export function applyResolution(copy: MatchCopy, resolution: BatchResolution): v
   copy.pending = stillPending;
   copy.acked = copy.acked.concat(movedAcked);
   copy.review = copy.review.concat(movedReview);
-  if (movedReview.length > 0 && resolution.reviewCodes) {
-    const codes = { ...(copy.reviewCodes ?? {}) };
+  if (movedReview.length > 0 && resolution.reviewReasons) {
+    const reasons = { ...(copy.reviewReasons ?? {}) };
     for (const event of movedReview) {
-      const code = resolution.reviewCodes[event.id];
-      if (code !== undefined) {
-        codes[event.id] = code;
+      const reason = resolution.reviewReasons[event.id];
+      if (reason !== undefined) {
+        reasons[event.id] = reason;
       }
     }
-    copy.reviewCodes = codes;
+    copy.reviewReasons = reasons;
   }
   copy.rejected = copy.rejected.concat(
     resolution.rejected.filter((entry) => presentIds.has(entry.event.id)),
