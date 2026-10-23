@@ -28,7 +28,7 @@ const ADMIN = `/#/tournament/${E2E_TEAM_HELFER_CUP_ID}/admin/team-helpers`;
 
 test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
   test.describe.configure({ mode: 'serial' });
-  test.beforeEach((_fixtures, testInfo) => { counter += 1; current = `${counter}${testInfo.retry}`; });
+  test.beforeEach(({ browserName: _browserName }, testInfo) => { counter += 1; current = `${counter}${testInfo.retry}`; });
   test.fixme(!HAS_008, 'Lokaler Stack ohne Migration _008 (helper_join). Mit E2E_STACK_HAS_008=1 gegen einen Stack mit _008 und mit A-17b/A-17c starten.');
   test.beforeEach(async () => {
     if (!HAS_008) { return; }
