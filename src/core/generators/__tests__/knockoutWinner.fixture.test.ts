@@ -44,11 +44,11 @@ const TOURNAMENT_DATE = '2026-11-28';
 /** Jede Spalte der Tabelle `matches` außer den Pflichtspalten; die Fixture-Zeile überschreibt. */
 const NULL_COLUMNS: Omit<MatchRow, 'id' | 'round' | 'field' | 'tournament_id'> = {
   actual_end: null, actual_start: null, bib_side: null, created_at: null, decided_by: null, duration_minutes: null,
-  final_type: null, group_letter: null, is_final: null, is_public: null, kit_color_a: null, kit_color_b: null,
+  final_type: null, forfeit_absent: null, group_letter: null, is_final: null, is_public: null, kit_color_a: null, kit_color_b: null,
   label: null, last_modified_by: null, live_state: null, match_number: null, match_status: null, origin_a: null,
   origin_b: null, overtime_score_a: null, overtime_score_b: null, owner_id: null, penalty_score_a: null,
   penalty_score_b: null, phase: null, referee_number: null, referee_team_id: null, scheduled_start: null,
-  score_a: null, score_b: null, skipped_at: null, skipped_reason: null, slot: null, slot_a_source: null,
+  original_start: null, reassigned_at: null, score_a: null, score_b: null, skipped_at: null, skipped_reason: null, slot: null, slot_a_source: null,
   slot_b_source: null, team_a_id: null, team_a_placeholder: null, team_b_id: null, team_b_placeholder: null,
   timer_elapsed_seconds: null, timer_paused_at: null, timer_start_time: null, updated_at: null, version: null,
 };

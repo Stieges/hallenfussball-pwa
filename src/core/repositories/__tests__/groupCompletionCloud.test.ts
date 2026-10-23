@@ -82,13 +82,13 @@ describe('Abschluss lesen: group_completions → Tournament.groupCompletions (@T
 
 describe('Nichtantritt am Spiel: matches.forfeit_absent → Match.forfeitAbsent → Stand für den Abschluss (@W2A-025, @W2A-054)', () => {
   it.each(['A', 'B', 'both'] as const)('forfeit_absent %s wird gelesen und geht als f in den Stand für complete_group', (absent) => {
-    const match = mapMatchFromSupabase(createMatchRow({ id: testUuid(30), team_a_id: A, team_b_id: B, forfeit_absent: absent, match_status: 'finished', score_a: 2, score_b: 0, group_letter: 'A' } as never), '2026-12-06');
+    const match = mapMatchFromSupabase(createMatchRow({ id: testUuid(30), team_a_id: A, team_b_id: B, forfeit_absent: absent, match_status: 'finished', score_a: 2, score_b: 0, group_letter: 'A' }), '2026-12-06');
     expect(match.forfeitAbsent).toBe(absent);
     expect(expectedState({ matches: [match] }, 'A')).toEqual([expect.objectContaining({ id: testUuid(30), f: absent, s: 'finished' })]);
   });
 
   it('Gegenbeispiel: ohne Nichtantritt fehlt f im Stand (fehlend = null am Server)', () => {
-    const match = mapMatchFromSupabase(createMatchRow({ id: testUuid(31), team_a_id: A, team_b_id: B, forfeit_absent: null, match_status: 'finished', score_a: 1, score_b: 1, group_letter: 'A' } as never), '2026-12-06');
+    const match = mapMatchFromSupabase(createMatchRow({ id: testUuid(31), team_a_id: A, team_b_id: B, forfeit_absent: null, match_status: 'finished', score_a: 1, score_b: 1, group_letter: 'A' }), '2026-12-06');
     expect(match.forfeitAbsent).toBeUndefined();
     expect(expectedState({ matches: [match] }, 'A')[0]).not.toHaveProperty('f');
   });
