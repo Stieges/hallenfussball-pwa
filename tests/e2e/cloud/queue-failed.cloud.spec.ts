@@ -9,9 +9,11 @@
  *   „nicht übernommen“ mit Grund, keine Wiederholung, statt „Erneut versuchen“ nur „Verwerfen und aktuellen Stand laden“.
  * - @FU-127 unklar (z. B. 42501, unbekannte Codes): wird wiederholt; in der Fehlerliste bleibt „Erneut versuchen“.
  *
- * Deterministisch eindeutig scheiternder Weg: ein direkt eingespeistes `UPDATE_TOURNAMENT_METADATA` mit `status` außerhalb
- * des DB-Constraints `tournaments_status_check` (Postgres 23514 = Klasse 23, ungültiger Wert). Der Client weist ihn lokal nicht
- * ab (`updateTournamentMetadata` reicht `status` unverändert durch). Früher erwartete dieser Test 5 Versuche à 30 s – das
+ * Deterministisch eindeutig scheiternder Weg: ein direkt eingespeistes `UPDATE_TOURNAMENT_METADATA` mit einem `date`, das
+ * kein Datum ist (Postgres 22007 = Klasse 22, ungültiger Wert). Der Client weist ihn lokal nicht ab
+ * (`updateTournamentMetadata` reicht `date` unverändert durch). Früher war es ein `status` außerhalb von
+ * `tournaments_status_check` (23514); seit A-21a-S (20261113_003, W3) lehnt der Server jeden Client-`status` außer
+ * draft/published schon vorher mit 42501 ab (Rechte = unklar, @FU-127), der Weg trifft @FU-126 also nicht mehr. Früher erwartete dieser Test 5 Versuche à 30 s – das
  * ist mit @FU-126 bewusst entfallen. Der Weg „unklar → Erneut versuchen“ wird mit einem direkt gesetzten Eintrag ohne Grund
  * geprüft.
  */
@@ -38,7 +40,7 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
       const item = {
         id,
         type: 'UPDATE_TOURNAMENT_METADATA',
-        payload: { tournamentId, metadata: { status: 'A4_TEST_INVALID_STATUS' } },
+        payload: { tournamentId, metadata: { date: 'A4_TEST_INVALID_DATE' } },
         timestamp: Date.now(),
         retryCount: 0,
       };
