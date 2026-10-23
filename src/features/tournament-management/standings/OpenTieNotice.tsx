@@ -5,12 +5,13 @@
  * (@W2A-050). Ohne Netz bleibt die Taste sichtbar, ist gesperrt und nennt „Gruppe abschließen“ als Weg (@W2A-062, F9).
  */
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import type { OpenTieBlock } from '../../../core/standings/tieViews';
-import type { DecisionAuthor } from '../../../core/standings/decisionLog';
+import type { BlockWithdrawal } from '../../../core/standings/decisionLog';
 import { listText, placeText, timeText } from './tieFormat';
 import { useTiePlaceTexts } from './useTiePlaceTexts';
 
@@ -19,8 +20,11 @@ export interface OpenTieNoticeProps {
   names: string[];
   canDecide: boolean;
   online: boolean;
-  /** Wer wann die Entscheidung zurückgenommen hat (nur Turnierleitung, aus dem Verlauf, @W2A-070). */
-  withdrawn?: DecisionAuthor;
+  /**
+   * Wer wann die Entscheidung zurückgenommen hat – und wer sie wann eingetragen hatte (nur Turnierleitung, aus dem Verlauf, @W2A-070;
+   * eine Zeile: „akzeptiert von Olli · 14:32 · Zurückgenommen von Maria · 14:35“).
+   */
+  withdrawn?: BlockWithdrawal;
   onEntry: () => void;
 }
 
@@ -35,6 +39,20 @@ const lockedButton: CSSProperties = {
   color: cssVars.colors.textSecondary,
   border: `${cssVars.borderWidth.thin} dashed ${cssVars.colors.borderControl}`,
 };
+
+/** Eine Zeile: Wer entschieden hat (soweit bekannt) · Zurückgenommen von … */
+function withdrawnLine(t: TFunction<'tournament'>, language: string, { withdrawn, decided }: BlockWithdrawal): string {
+  const back = withdrawn.name !== undefined
+    ? t('standingsTie.notice.withdrawnBy', { name: withdrawn.name, time: timeText(withdrawn.at, language) })
+    : t('standingsTie.notice.withdrawnByUnknown', { time: timeText(withdrawn.at, language) });
+  if (decided === undefined) {
+    return back;
+  }
+  const what = decided.kind === 'shared' ? 'accepted' : decided.kind === 'shootout' ? 'shootout' : 'order';
+  const time = timeText(decided.at, language);
+  const front = decided.name !== undefined ? t(`standingsTie.notice.${what}By`, { name: decided.name, time }) : t(`standingsTie.notice.${what}ByUnknown`, { time });
+  return `${front} · ${back}`;
+}
 
 export const OpenTieNotice = ({ block, names, canDecide, online, withdrawn, onEntry }: OpenTieNoticeProps) => {
   const { t, i18n } = useTranslation('tournament');
@@ -71,11 +89,7 @@ export const OpenTieNotice = ({ block, names, canDecide, online, withdrawn, onEn
       <span style={title}>{choice ? t('standingsTie.notice.openTitle') : t('standingsTie.notice.needTitle')}</span>
       <p style={line}>{t('standingsTie.notice.teamsEqual', { names: listText(names, i18n.language), places })}</p>
       {canDecide && withdrawn !== undefined ? (
-        <p style={line} data-testid="tie-withdrawn-by">
-          {withdrawn.name !== undefined
-            ? t('standingsTie.notice.withdrawnBy', { name: withdrawn.name, time: timeText(withdrawn.at, i18n.language) })
-            : t('standingsTie.notice.withdrawnByUnknown', { time: timeText(withdrawn.at, i18n.language) })}
-        </p>
+        <p style={line} data-testid="tie-withdrawn-by">{withdrawnLine(t, i18n.language, withdrawn)}</p>
       ) : null}
       {reason?.kind === 'setting' ? <p style={line}>{t('standingsTie.notice.needSetting', { place: reason.place })}</p> : null}
       {reason?.kind === 'followUp' ? <p style={line}>{t('standingsTie.notice.needFollowUp', { place: reason.place })}</p> : null}

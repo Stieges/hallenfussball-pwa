@@ -4,18 +4,13 @@
  * dieselben Aussagen, jetzt über Slots mit Herkunft und echten Spiel-IDs (UUID statt „semi1“).
  *
  * @TM-033 / @TM-034 (Besetzung): eine Seite ist erst besetzt, wenn ihre Herkunft entschieden ist.
+ * GA4 A-13c: Gruppenplätze besetzt der Resolver nie mehr (@TM-044, @TM-016) – nur „Gruppe abschließen" (siehe
+ * `groupCompletionPlan.test.ts`, `followUpPlacement.test.ts`, `koSlotResolution.a13c.test.ts`).
  */
 import { describe, it, expect } from 'vitest';
-import {
-  areAllGroupMatchesCompleted,
-  needsPlayoffResolution,
-  resolvePlayoffPairings,
-  autoResolvePlayoffsIfReady,
-  resolveBracketAfterPlayoffMatch,
-} from '..';
+import { needsPlayoffResolution, resolveBracketAfterPlayoffMatch } from '..';
 import type { Match, Team, Tournament } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
-import { teamSlot } from '../../models/matchSlot';
 import { vs, slots, groupRank, resultOf, testUuid, withStaleSides } from '../../../test/matchSlotFixtures';
 
 const [A1, A2, B1, B2] = [1, 2, 3, 4].map(testUuid);
@@ -62,25 +57,6 @@ const idOf = (m: Match | undefined, side: 'A' | 'B') => {
   return slot?.kind === 'team' ? slot.teamId : undefined;
 };
 
-describe('areAllGroupMatchesCompleted', () => {
-  it('returns false when no matches exist', () => {
-    expect(areAllGroupMatchesCompleted(tournamentOf([]))).toBe(false);
-  });
-
-  it('returns false when group matches are incomplete', () => {
-    const t = tournamentOf([groupMatch('g1', A1, A2, 'A', [1, 0]), groupMatch('g2', B1, B2, 'B')]);
-    expect(areAllGroupMatchesCompleted(t)).toBe(false);
-  });
-
-  it('returns true when all group matches are completed', () => {
-    expect(areAllGroupMatchesCompleted(tournamentOf(finishedGroups()))).toBe(true);
-  });
-
-  it('ignores playoff matches when checking group completion', () => {
-    expect(areAllGroupMatchesCompleted(tournamentOf([...finishedGroups(), ...semis()]))).toBe(true);
-  });
-});
-
 describe('needsPlayoffResolution', () => {
   it('returns false when no playoff matches exist', () => {
     expect(needsPlayoffResolution(tournamentOf(finishedGroups()))).toBe(false);
@@ -101,105 +77,20 @@ describe('needsPlayoffResolution', () => {
   });
 });
 
-describe('resolvePlayoffPairings', () => {
-  it('returns not resolved when group phase is incomplete', () => {
-    const t = tournamentOf([groupMatch('g1', A1, A2, 'A'), ...semis()]);
-    const result = resolvePlayoffPairings(t);
-    expect(result.wasResolved).toBe(false);
-    expect(byId(t, SEMI1)?.slotA?.kind).toBe('pending');
-  });
-
-  it('returns not resolved when playoffs are already resolved', () => {
-    const occupied: Match = { id: FINAL, round: 2, field: 1, isFinal: true, ...vs(A1, B1) };
-    const result = resolvePlayoffPairings(tournamentOf([...finishedGroups(), occupied]));
-    expect(result.wasResolved).toBe(false);
-    expect(result.message).toContain('bereits aufgelöst');
-  });
-
-  it('@TM-034 resolves playoff pairings based on group standings and keeps the origin', () => {
-    const t = tournamentOf([...finishedGroups(), ...semis()]);
-    const result = resolvePlayoffPairings(t);
-
-    expect(result.wasResolved).toBe(true);
-    expect(result.updatedMatchIds).toEqual([SEMI1, SEMI2]);
-    const semi1 = byId(t, SEMI1);
-    expect(idOf(semi1, 'A')).toBe(A2); // Zweiter A
-    expect(idOf(semi1, 'B')).toBe(B1); // Erster B
-    expect(idOf(byId(t, SEMI2), 'A')).toBe(A1);
-    expect(idOf(byId(t, SEMI2), 'B')).toBe(B2);
-    expect(semi1?.slotA).toEqual({ kind: 'team', teamId: A2, resolvedFrom: { kind: 'groupRank', group: 'A', rank: 2 } });
-    // A-36a: kein Übergangsfeld mehr, die Seite steht nur im Slot
-    expect(semi1 && 'teamA' in semi1).toBe(false);
-  });
-
-  it('@TM-034 resolves based on goal difference when points are equal', () => {
-    const matches = [
-      groupMatch(testUuid(301), A1, A2, 'A', [4, 3]),
-      groupMatch(testUuid(302), B1, B2, 'B', [1, 1]),
-      ...semis(),
-    ];
-    const t = tournamentOf(matches);
-    resolvePlayoffPairings(t);
-    expect(idOf(byId(t, SEMI2), 'A')).toBe(A1);
-  });
-
-  it('@TM-033 Gegenbeispiel: eine bereits besetzte Seite wird nie umbesetzt', () => {
-    // HF1: Heimseite schon mit B2 besetzt (z. B. von Hand) – obwohl A2 der Zweite von A ist
-    const manual: Match = { id: SEMI1, round: 2, field: 1, isFinal: true, ...slots(teamSlot(B2), groupRank('B', 1)) };
-    const t = tournamentOf([...finishedGroups(), manual]);
-    resolvePlayoffPairings(t);
-    expect(idOf(byId(t, SEMI1), 'A')).toBe(B2);
-    expect(idOf(byId(t, SEMI1), 'B')).toBe(B1);
-  });
-});
-
-describe('autoResolvePlayoffsIfReady', () => {
-  it('returns null when group phase is not complete', () => {
-    const t = tournamentOf([groupMatch('g1', A1, A2, 'A'), ...semis()]);
-    expect(autoResolvePlayoffsIfReady(t)).toBeNull();
-  });
-
-  it('returns null when playoffs are already resolved', () => {
-    const occupied: Match = { id: FINAL, round: 2, field: 1, isFinal: true, ...vs(A1, B1) };
-    expect(autoResolvePlayoffsIfReady(tournamentOf([...finishedGroups(), occupied]))).toBeNull();
-  });
-
-  it('@TM-034 resolves the semifinals when the group phase is complete; the final stays open', () => {
-    const t = tournamentOf([...finishedGroups(), ...semis(), ...finals()]);
-    const result = autoResolvePlayoffsIfReady(t);
-
-    expect(result?.wasResolved).toBe(true);
-    expect(result?.updatedMatches).toBe(2);
-    expect(byId(t, FINAL)?.slotA?.kind).toBe('pending');
-    expect(byId(t, FINAL)?.slotB?.kind).toBe('pending');
-  });
-});
-
-// @TM-143 (B-40 Fixrunde 1, F2; beim Merge main → Spur B aus src/utils/__tests__/playoffResolver.test.ts
-// auf Slots übertragen): Finalrunde nur nach abgepfiffener Gruppe, mit der Tabelle, die die Anzeige zeigt.
-// Das letzte Gruppenspiel läuft mit Zwischenstand und darf nichts auslösen.
-describe('Weiterkommen zählt wie die Tabelle (@TM-143)', () => {
-  /** Gruppe A: A1 gewinnt 1:0, dann läuft A2 gegen A1 mit 2:0 für A2. Gruppe B: B1 gewinnt 3:0, abgepfiffen. */
+// @TM-143 (B-40) / GA4 A-13c @TM-044: Das letzte Gruppenspiel besetzt nichts – weder mit Zwischenstand noch nach dem Abpfiff.
+describe('Das letzte Gruppenspiel besetzt keine Gruppenplätze (@TM-044, @TM-143)', () => {
   const gruppenMatches = (letztesSpiel: Partial<Match>): Match[] => [
     { ...groupMatch(testUuid(311), A1, A2, 'A', [1, 0]), matchStatus: 'finished' },
     { ...groupMatch(testUuid(312), A2, A1, 'A', [2, 0]), round: 2, ...letztesSpiel },
     { ...groupMatch(testUuid(313), B1, B2, 'B', [3, 0]), matchStatus: 'finished' },
   ];
 
-  it('@TM-143 laufendes letztes Gruppenspiel mit Zwischenstand löst die Finalrunde nicht auf', () => {
-    const t = tournamentOf([...gruppenMatches({ matchStatus: 'running' }), ...semis()]);
-
-    expect(autoResolvePlayoffsIfReady(t)).toBeNull();
+  it.each(['running', 'finished'] as const)('@TM-044 letztes Gruppenspiel %s: die Halbfinals zeigen weiter ihre Herkunft', (status) => {
+    const t = tournamentOf([...gruppenMatches({ matchStatus: status }), ...semis()]);
+    resolveBracketAfterPlayoffMatch(t);
+    expect(byId(t, SEMI1)?.slotA?.kind).toBe('pending');
     expect(byId(t, SEMI2)?.slotA?.kind).toBe('pending');
-  });
-
-  it('@TM-143 nach dem Abpfiff wird mit der Tabelle aufgelöst (A2 ist Gruppensieger)', () => {
-    const t = tournamentOf([...gruppenMatches({ matchStatus: 'finished' }), ...semis()]);
-
-    const result = autoResolvePlayoffsIfReady(t);
-
-    expect(result?.wasResolved).toBe(true);
-    expect(idOf(byId(t, SEMI2), 'A')).toBe(A2);
+    expect(byId(t, SEMI2)?.slotB?.kind).toBe('pending');
   });
 });
 

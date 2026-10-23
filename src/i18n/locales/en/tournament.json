@@ -1138,7 +1138,13 @@
       "shootout": "Enter penalty shootout",
       "order": "Set order",
       "withdrawnBy": "Withdrawn by {{name}} · {{time}}",
-      "withdrawnByUnknown": "Withdrawn · {{time}}"
+      "withdrawnByUnknown": "Withdrawn · {{time}}",
+      "acceptedBy": "accepted by {{name}} · {{time}}",
+      "acceptedByUnknown": "accepted · {{time}}",
+      "shootoutBy": "shootout entered by {{name}} · {{time}}",
+      "shootoutByUnknown": "shootout entered · {{time}}",
+      "orderBy": "order set by {{name}} · {{time}}",
+      "orderByUnknown": "order set · {{time}}"
     },
     "decided": {
       "sharedTitle": "Result accepted",
@@ -1232,6 +1238,131 @@
       "one": "place {{from}}",
       "two": "places {{from}} and {{to}}",
       "range": "places {{from}} to {{to}}"
+    }
+  },
+  "groupCompletion": {
+    "state": {
+      "open": "open",
+      "running": "in progress",
+      "ready": "ready to close",
+      "completed": "closed",
+      "checkSlots": "Check placements",
+      "notSent": "not sent yet"
+    },
+    "phase": {
+      "label": "{{phase}}: {{state}}",
+      "groups": "Group stage",
+      "finals": "Final round"
+    },
+    "head": {
+      "count": "{{done}} of {{total}} matches decided",
+      "helperNote": "The tournament director closes the group.",
+      "lockedWhy_one": "{{count}} match not decided yet",
+      "lockedWhy_other": "{{count}} matches not decided yet"
+    },
+    "button": {
+      "close": "Close group",
+      "again": "Close again",
+      "closeGroup": "Close {{name}}",
+      "reopen": "Reopen group"
+    },
+    "banner": {
+      "title": "{{name}} is ready – check the table and close it",
+      "title_all": "All matches decided – check the table and close it",
+      "body": "All {{count}} matches are decided. Only closing the group fills the places in the final round.",
+      "bodyNoFinals": "All {{count}} matches are decided. Only closing the group makes it final.",
+      "body_all": "All {{count}} matches are decided. Only closing the group makes the final standing final.",
+      "many": "{{groups}} are ready – check the tables and close them",
+      "manyBody": "All matches of these groups are decided. Close each group on its own; only closing fills its places.",
+      "reopenedTitle": "{{name}} is open again",
+      "reopenedTitle_all": "The group is open again",
+      "reopenedBy": "{{name}} · {{time}} · Reason: {{reason}}",
+      "reopenedByUnknown": "Reason: {{reason}}",
+      "reopenedBody": "The placements in the final round stay as they are until you close the group again. Correct what is needed, then close it again.",
+      "reopenedBody_all": "The final standing stays as it was until you close the group again. Correct what is needed, then close it again."
+    },
+    "stale": {
+      "title": "{{name}}: check placements after a correction",
+      "title_all": "Check placements after a correction",
+      "body": "A result was corrected after the group was closed. Check the table; closing again fills the places anew.",
+      "body_all": "A result was corrected after the group was closed. Check the table; closing again hands over the final standing anew."
+    },
+    "done": {
+      "title": "{{name}} closed",
+      "title_all": "Group closed",
+      "by": "{{name}} · {{time}}",
+      "effect": "{{label}}: {{team}} ({{side}}).",
+      "sideHome": "home",
+      "sideAway": "away",
+      "effectAll": "The table has been handed over to the final standing.",
+      "phaseDone": "The group stage is closed. All places in the final round are filled."
+    },
+    "dialog": {
+      "title": "Close {{name}}",
+      "title_all": "Close group",
+      "titleAgain": "Close {{name}} again",
+      "titleAgain_all": "Close group again",
+      "intro": "All {{count}} matches of {{name}} are decided. Check the table before you close it.",
+      "intro_all": "All {{count}} matches are decided. Check the table before you close it.",
+      "rankAria": "Table",
+      "rankLine": "{{points}} pts · {{goals}} · {{diff}}",
+      "effectTitle": "Fills afterwards: {{list}}.",
+      "effectItem": "{{label}} {{side}} {{team}}",
+      "effectOthers": "The other groups are still in progress, their places stay open.",
+      "effectAll": "Afterwards the table is handed over to the final standing.",
+      "effectNone": "Afterwards the group is closed.",
+      "decided": "The tie is already decided: {{what}}. You do not need to enter it again.",
+      "confirm": "Close group",
+      "confirmAgain": "Close again",
+      "cancel": "Cancel",
+      "close": "Close dialog",
+      "understood": "Understood",
+      "tiePrefix": "Close {{name}}: decide the tie first.",
+      "tiePrefix_all": "Close group: decide the tie first.",
+      "tiePrefixAgain": "Close {{name}} again: decide the tie first.",
+      "tiePrefixAgain_all": "Close group again: decide the tie first."
+    },
+    "notice": {
+      "openMatches": {
+        "title_one": "{{count}} match not decided yet",
+        "title_other": "{{count}} matches not decided yet",
+        "body": "{{matches}}. {{name}} is not closed, the places stay open.",
+        "body_all": "{{matches}}. The group is not closed.",
+        "hint": "Close it as soon as all matches are decided."
+      },
+      "already": {
+        "title": "{{name}} is already closed",
+        "title_all": "The group is already closed",
+        "body": "Someone else closed the group with the same table. You do not need to do anything."
+      },
+      "tableChanged": {
+        "title": "The table has changed",
+        "body": "Something changed while you were closing. Your closing was not saved. Check the table and close it again."
+      },
+      "differently": {
+        "title": "Already closed differently",
+        "body": "Someone else closed the group with a different ranking. Your closing was not saved. The table shows the current state."
+      }
+    },
+    "errors": {
+      "OFFLINE": "“Close group” needs a connection. Please try again with a network.",
+      "RETRY_LATER": "The server was busy. Please try again.",
+      "UNKNOWN": "That did not work. Please try again.",
+      "FORBIDDEN": "You are not allowed to do this. Only the tournament director closes groups."
+    },
+    "reopen": {
+      "title": "Reopen {{name}}",
+      "title_all": "Reopen group",
+      "body": "While {{name}} is open, the placements in the final round stay as they are. Only closing it again fills them anew. You can correct single results without reopening, too.",
+      "body_all": "While the group is open, the final standing stays as it was. Only closing it again hands it over anew. You can correct single results without reopening, too.",
+      "reasonLabel": "Reason (required)",
+      "reasonCount": "{{count}} / {{max}}",
+      "reasonHint": "Please do not enter player names. Visible to the tournament director only.",
+      "confirm": "Reopen group",
+      "errors": {
+        "NOT_COMPLETED": "The group is no longer closed. Please check the table.",
+        "REASON_REQUIRED": "Please give a reason (up to 500 characters)."
+      }
     }
   }
 }

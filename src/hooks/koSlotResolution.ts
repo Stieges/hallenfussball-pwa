@@ -6,7 +6,7 @@
 import type { Tournament } from '../types/tournament';
 import type { MatchUpdate } from '../core/models/types';
 import { applyEngineOverlay, engineOverlayFields, type MatchEngineView } from '../core/match/client';
-import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../core/generators';
+import { resolveBracketAfterPlayoffMatch } from '../core/generators';
 import type { ValidMatchEntry } from './engineMatchModel';
 
 /** Turnier mit der aktuellen Engine-Ansicht EINES Spiels überlagert (React hat evtl. noch nicht neu gerendert). */
@@ -17,14 +17,15 @@ export function withEngineResult(tournament: Tournament, entry: ValidMatchEntry,
   return applyEngineOverlay(tournament, new Map([[entry.externalId, engineOverlayFields(view, entry.ctx)]]));
 }
 
-/** Slot-Updates der Playoff-/Bracket-Auflösung; die Resolver schreiben `tournament.matches` neu -- deshalb flache Kopie. */
+/**
+ * Slot-Updates der K.-o.-Auflösung nach einem Ergebnis; der Resolver schreibt `tournament.matches` neu -- deshalb flache Kopie.
+ * GA4 A-13c: Gruppenplätze besetzt ausschließlich „Gruppe abschließen“ (@TM-044: das letzte Gruppenspiel besetzt nichts, @TM-016);
+ * hier entstehen nur Slot-Updates mit Herkunft aus einem Spiel (Sieger/Verlierer), nie aus einer Gruppe. Das gilt auch für
+ * den Offline-Pfad (`useResultEntryAck`).
+ */
 export function slotUpdatesAfterResult(tournament: Tournament): MatchUpdate[] {
   const working: Tournament = { ...tournament };
   const ids = new Set<string>();
-  const playoff = autoResolvePlayoffsIfReady(working);
-  if (playoff?.wasResolved) {
-    playoff.updatedMatchIds.forEach((id) => ids.add(id));
-  }
   const bracket = resolveBracketAfterPlayoffMatch(working);
   if (bracket?.wasResolved) {
     bracket.updatedMatchIds.forEach((id) => ids.add(id));

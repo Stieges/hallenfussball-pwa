@@ -21,6 +21,7 @@ import { decidedTexts } from './decidedText';
 import { ChoiceStep, OrderStep, ShootoutStep } from './TieDialogSteps';
 import { stepText } from './tieStyles';
 import { useStandingTie } from './standingTieContext';
+import { withGroup } from '../group-completion/completionTexts';
 import { useTieDraft, type TieDialogMode } from './useTieDraft';
 
 export interface TieDecisionDialogProps {
@@ -30,11 +31,17 @@ export interface TieDecisionDialogProps {
   mode?: TieDialogMode;
   /** Modus „withClose“: bekommt den geprüften Entwurf statt eines Speicherns. */
   onDraft?: (draft: DecisionDraft) => void;
+  /**
+   * Modus „withClose“ (GA4 A-13c): Name der Gruppe (`undefined` bei Jeder gegen jeden) und ob sie schon einmal abgeschlossen war.
+   * Der Dialog trägt dann den Satz „Gruppe A abschließen: Zuerst den Gleichstand entscheiden.“, die Haupttaste heißt „Gruppe
+   * abschließen“ (bzw. „Erneut abschließen“) und die Tasten stehen untereinander, Haupttaste oben (Mockup A-13c).
+   */
+  closeFlow?: { name: string | undefined; again: boolean };
 }
 
 const bodyStack: CSSProperties = { display: 'grid', gap: cssVars.spacing.md, padding: `0 ${cssVars.spacing.md} ${cssVars.spacing.md}` };
 
-export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', onDraft }: TieDecisionDialogProps) => {
+export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', onDraft, closeFlow }: TieDecisionDialogProps) => {
   const { t, i18n } = useTranslation('tournament');
   const tie = useStandingTie();
   const draft = useTieDraft({ tournament, block, mode, onDraft, onClose });
@@ -80,11 +87,20 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   );
 
   const cancel = { label: t(block.mayShare && step !== 'choice' && step !== 'seen' ? 'standingsTie.dialog.back' : 'standingsTie.dialog.cancel'), onClick: block.mayShare && step !== 'choice' && step !== 'seen' ? () => draft.setStep('choice') : onClose, 'data-testid': 'tie-dialog-cancel' };
+  const closing = mode === 'withClose' && closeFlow !== undefined;
+  const stackedFooter = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }} data-dialog-actions>
+      <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={draft.busy || !draft.canSave} onClick={() => { void draft.submit(step === 'order' ? 'order' : 'shootout'); }} data-primary data-testid="group-close-confirm">
+        {t(closeFlow?.again === true ? 'groupCompletion.dialog.confirmAgain' : 'groupCompletion.dialog.confirm')}
+      </Button>
+      <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} onClick={cancel.onClick} data-testid="tie-dialog-cancel">{cancel.label}</Button>
+    </div>
+  );
   const footer = step === 'choice' ? (
     <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} onClick={onClose} data-testid="tie-dialog-cancel">{t('standingsTie.dialog.cancel')}</Button>
   ) : step === 'seen' ? (
     <DialogActions primary={{ label: t('standingsTie.dialog.understood'), onClick: onClose, 'data-testid': 'tie-dialog-understood' }} />
-  ) : (
+  ) : closing ? stackedFooter : (
     <DialogActions
       secondary={[cancel]}
       primary={{ label: t('standingsTie.dialog.save'), onClick: () => { void draft.submit(step === 'order' ? 'order' : 'shootout'); }, disabled: draft.busy || draft.needsNet || !draft.canSave, 'data-testid': 'tie-decision-save' }}
@@ -96,6 +112,11 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   return (
     <DialogSurface isOpen onClose={onClose} labelledBy="tie-dialog-title" header={header} footer={footer} testId="tie-decision-dialog" maxWidth={dialogWidths.md}>
       <div style={bodyStack}>
+        {closing ? (
+          <p style={stepText} data-testid="group-close-tie-prefix">
+            {t(closeFlow.again ? 'groupCompletion.dialog.tiePrefixAgain' : 'groupCompletion.dialog.tiePrefix', withGroup(closeFlow.name))}
+          </p>
+        ) : null}
         {step === 'choice' ? (
           <ChoiceStep
             block={block}
@@ -110,7 +131,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
           <ShootoutStep block={block} nameOf={nameOf} scores={draft.scores} onScore={draft.setScore} fieldError={draft.shootoutFieldError} effect={effect} onRules={goRules} />
         ) : null}
         {step === 'order' ? (
-          <OrderStep block={block} nameOf={nameOf} order={draft.order} onMove={draft.move} reason={draft.reason} onReason={draft.setReason} onRules={goRules} />
+          <OrderStep block={block} nameOf={nameOf} order={draft.order} onMove={draft.move} reason={draft.reason} onReason={draft.setReason} onRules={goRules} reasonTestId={closing ? 'group-close-reason' : 'tie-reason'} />
         ) : null}
         {step === 'seen' ? (
           <>

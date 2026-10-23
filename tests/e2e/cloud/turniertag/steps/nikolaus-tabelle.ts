@@ -128,7 +128,12 @@ async function entscheidungNichtOeffentlich(): Promise<void> {
   }
 }
 
-/** N7a: der Abschluss der Gruppe: die App schlägt ihn vor, die Turnierleitung wählt „Gruppe abschließen“, der Gleichstand von Petting und Otting verlangt vorher eine Entscheidung (@TM-044, @TM-046, @TM-048). */
+/**
+ * N7a: der Abschluss der Gruppe (GA4 A-13c, Mockup A-13c): die App schlägt ihn im Spielplan vor (@TM-044), die Turnierleitung wählt „Gruppe abschließen“.
+ * Der Gleichstand von Petting und Otting ist seit N6d entschieden (Strafstoßschießen 4:3): der Dialog fragt nicht erneut (@W2A-058), zeigt Tabelle und
+ * Übergabe an den Endstand und schließt mit einer Taste ab (@TM-046, @TM-057). Danach zeigt die Tabelle „abgeschlossen“ und „Gruppe wieder öffnen“ (Test-ID
+ * über `groupTestId`: `''` → `all`). Läuft erst nach dem Fenster am 10.11. (`complete_group` am Server) grün.
+ */
 async function gruppeAbschliessen({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
   const seite = await asRole('owner');
@@ -136,7 +141,16 @@ async function gruppeAbschliessen({ asRole }: StepContext): Promise<void> {
   await expectPageAnchor(seite.getByRole('button', { name: 'Spielplan bearbeiten' }), 'Spielplan der Turnierleitung');
   await expectSollMarker(seite, 'group-close-suggestion');
   await seite.getByTestId('group-close-button-all').click({ timeout: SOLL_TIMEOUT_MS });
-  await expect(seite.getByTestId('tie-decision-dialog'), 'der Gleichstand wird vor dem Abschluss entschieden').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  const dialog = seite.getByTestId('group-close-dialog');
+  await expect(dialog, 'die Entscheidung aus N6d gilt: der Dialog fragt nicht erneut').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  await expect(seite.getByTestId('tie-decision-dialog')).toHaveCount(0);
+  await expect(dialog.getByTestId('group-close-ranking').locator('li')).toHaveCount(6);
+  await dialog.getByTestId('group-close-confirm').click();
+  await openNikolausPath(seite, '/standings');
+  await seite.getByText('Gesamtplatzierung', { exact: true }).first().click();
+  await expect(seite.getByTestId('group-state-all'), 'Zustand „abgeschlossen“').toHaveText('abgeschlossen', { timeout: SOLL_TIMEOUT_MS });
+  await expect(seite.getByTestId('group-reopen-all')).toBeVisible();
+  await expect(seite.getByTestId('tie-accept-withdraw'), 'nach dem Abschluss kein Zurücknehmen mehr (@W2A-070)').toHaveCount(0);
 }
 
 /** N7b: Turnier abschließen: danach ist es abgeschlossen und gesperrt (@LZ-030). */
@@ -169,7 +183,7 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N6d', title: 'Tabelle: Strafstoßschießen 4:3 für Otting über „Gleichstand entscheiden“ eintragen, Sieger steht vorn', scenarios: ['@ET-055', '@W2A-067'], owner: 'Paket TB', expectedFail: false, run: strafstossEintragen },
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB (TB-2)', expectedFail: false, run: vorbelegungPrivat },
   { id: 'N6f', title: 'Entscheidung öffentlich ohne Person, Zeit und Grund; Entscheidungsverlauf nicht anonym lesbar', scenarios: ['@W2A-072'], owner: 'Paket TB (TB-3\')', expectedFail: false, run: entscheidungNichtOeffentlich },
-  { id: 'N7a', title: 'Gruppe abschließen: Vorschlag, Entscheidung des Gleichstands, abgeschlossen', scenarios: ['@TM-044', '@TM-046', '@TM-048'], owner: 'A-13c', expectedFail: true, run: gruppeAbschliessen },
+  { id: 'N7a', title: 'Gruppe abschließen: Vorschlag, Dialog ohne erneute Frage nach der Entscheidung, abgeschlossen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-058'], owner: 'A-13c', expectedFail: true, run: gruppeAbschliessen },
   { id: 'N7b', title: 'Turnier abschließen: abgeschlossen und gesperrt', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a / B-33', expectedFail: true, run: turnierAbschliessen },
   { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
 ];

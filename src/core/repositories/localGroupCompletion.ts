@@ -4,11 +4,14 @@
  * braucht – Versionsprüfung der Entscheidung (`STALE`), kein Zurücknehmen nach dem Abschluss (`WITHDRAW_NOT_ALLOWED`),
  * Wiederöffnen nur nach einem Abschluss (`NOT_COMPLETED`). Folgespiele besetzt der Client wie bisher selbst (A-15b);
  * den Verlauf (Person, Zeit) gibt es lokal nicht.
+ * GA4 A-13c: Der Abschluss besetzt die Finalrunde auch lokal (`placeFollowUps`, Zwilling von `apply_follow_up`), denn der alte Weg
+ * „letztes Gruppenspiel besetzt automatisch“ ist entfernt (@TM-044, @TM-016).
  */
 import type { GroupCompletion, StandingDecision, Tournament } from '../../types/tournament';
 import { groupKeyOf } from '../models/standingsGroups';
 import { activeCompletion } from '../standings/groupCompletions';
 import { parseStandingDecisions } from '../models/schemas/StandingDecisionSchema';
+import { placeFollowUps } from '../services/followUpPlacement';
 import type {
   CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
 } from './groupCompletionCloud';
@@ -61,14 +64,16 @@ export function applyCompleteGroup(tournament: Tournament, request: CompleteGrou
   const others = (tournament.groupCompletions ?? []).filter((c) => groupKeyOf(c.groupId) !== groupId);
   const version = tournament.version ?? 0;
   const standingDecisions = added.length === 0 ? tournament.standingDecisions : parseStandingDecisions([...(tournament.standingDecisions ?? []), ...added]);
+  const closed: Tournament = {
+    ...tournament,
+    groupCompletions: [...others, completion],
+    ...(standingDecisions !== undefined ? { standingDecisions } : {}),
+    ...(added.length > 0 ? { version: version + 1 } : {}),
+  };
+  const placed = placeFollowUps(closed, groupId, request.ranking, request.openRanks);
   return {
-    tournament: {
-      ...tournament,
-      groupCompletions: [...others, completion],
-      ...(standingDecisions !== undefined ? { standingDecisions } : {}),
-      ...(added.length > 0 ? { version: version + 1 } : {}),
-    },
-    result: { status: 'ok', alreadyCompleted: false, changed: [], ...(added.length > 0 ? { tournamentVersion: version + 1 } : {}) },
+    tournament: placed.tournament,
+    result: { status: 'ok', alreadyCompleted: false, changed: placed.changed, ...(added.length > 0 ? { tournamentVersion: version + 1 } : {}) },
   };
 }
 
