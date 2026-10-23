@@ -1,0 +1,93 @@
+{
+  "title": "Gegenbeispiel: ein Helfer nimmt eine Wertung nicht zurück (FORBIDDEN_ACTOR, NOT_ENDED_BY_CLOCK), Wertung bleibt",
+  "szenario": "Nichtantritt zurücknehmen (@W2A-026)",
+  "ctx": {
+    "matchId": "match-000069g",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000069g-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 2
+        },
+        "forfeit": {
+          "absent": "A"
+        }
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000069g-0000-4000-8000-000000000002",
+      "type": "REOPEN",
+      "actor": "helper",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000069g-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000069g-0000-4000-8000-000000000002",
+        "status": "rejected",
+        "code": "FORBIDDEN_ACTOR",
+        "detail": {
+          "reason": "NOT_ENDED_BY_CLOCK"
+        }
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 2
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000069g-0000-4000-8000-000000000001",
+      "decidedBy": "forfeit",
+      "finishedAt": 1000
+    },
+    "cacheColumns": {
+      "match_status": "finished",
+      "score_a": 0,
+      "score_b": 2,
+      "decided_by": "forfeit",
+      "forfeit_absent": "A"
+    }
+  }
+}

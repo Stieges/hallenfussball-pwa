@@ -44,6 +44,9 @@ export interface UseRealtimeTournamentOptions {
   /** Callback for match event changes */
   onMatchEventChange?: (payload: RealtimePayload) => void;
 
+  /** Callback when a group completion, a follow-up notice or a clarification changes (GA4 A-13b-C) */
+  onBracketChange?: (payload: RealtimePayload) => void;
+
   /** Callback when connection status changes */
   onStatusChange?: (status: RealtimeConnectionStatus) => void;
 
@@ -90,6 +93,7 @@ export function useRealtimeTournament(
     onTeamChange,
     onMatchChange,
     onMatchEventChange,
+    onBracketChange,
     onStatusChange,
     onError,
   } = options;
@@ -103,6 +107,7 @@ export function useRealtimeTournament(
     onTeamChange,
     onMatchChange,
     onMatchEventChange,
+    onBracketChange,
     onStatusChange,
     onError,
   });
@@ -114,10 +119,11 @@ export function useRealtimeTournament(
       onTeamChange,
       onMatchChange,
       onMatchEventChange,
+      onBracketChange,
       onStatusChange,
       onError,
     };
-  }, [onUpdate, onTeamChange, onMatchChange, onMatchEventChange, onStatusChange, onError]);
+  }, [onUpdate, onTeamChange, onMatchChange, onMatchEventChange, onBracketChange, onStatusChange, onError]);
 
   // Subscribe/unsubscribe effect
   useEffect(() => {
@@ -143,6 +149,11 @@ export function useRealtimeTournament(
 
     const handleMatchEventChange = (payload: RealtimePayload) => {
       callbacksRef.current.onMatchEventChange?.(payload);
+      callbacksRef.current.onUpdate?.(payload);
+    };
+
+    const handleBracketChange = (payload: RealtimePayload) => {
+      callbacksRef.current.onBracketChange?.(payload);
       callbacksRef.current.onUpdate?.(payload);
     };
 
@@ -173,6 +184,7 @@ export function useRealtimeTournament(
       onTeamChange: handleTeamChange,
       onMatchChange: handleMatchChange,
       onMatchEventChange: handleMatchEventChange,
+      onBracketChange: handleBracketChange,
       onError: handleError,
       onStatusChange: handleStatusChange,
     });

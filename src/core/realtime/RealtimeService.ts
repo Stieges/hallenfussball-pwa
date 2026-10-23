@@ -15,10 +15,12 @@
 
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { bindServerTables } from './realtimeServerTables';
 import type {
   RealtimeConnectionStatus,
   RealtimePayload,
   RealtimeState,
+  RealtimeTable,
   TournamentSubscriptionOptions,
 } from './types';
 
@@ -234,6 +236,11 @@ export class RealtimeService {
       );
     }
 
+    // GA4 A-13b-C: Abschlüsse, Folgen-Hinweise und Klärungen (Tabellen aus Migration 20261110_006, in der Publikation)
+    bindServerTables(channel, tournamentId, options.onBracketChange === undefined ? undefined : (table, raw) => {
+      options.onBracketChange?.(this.normalizePayload(raw, table));
+    });
+
     // A-08f3b2 (C-SPIELPLAN-PUSH-KANAL-OFFEN, @FU-087): KEINE Bindung auf `tournaments` -- die Tabelle steht
     // nicht in der Publikation `supabase_realtime` (Migration 20260928_001 § 9). Eine solche Bindung lässt den
     // Server den GANZEN Kanal ablehnen (System-Nachricht status 'error'), der Kanal bleibt aber SUBSCRIBED:
@@ -283,7 +290,7 @@ export class RealtimeService {
 
   private normalizePayload(
     raw: { eventType: string; new: unknown; old: unknown },
-    table: 'teams' | 'matches' | 'match_events'
+    table: Exclude<RealtimeTable, 'tournaments'>
   ): RealtimePayload {
     return {
       eventType: raw.eventType as 'INSERT' | 'UPDATE' | 'DELETE',

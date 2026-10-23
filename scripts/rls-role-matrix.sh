@@ -150,6 +150,12 @@
 #                                                   # Lebenszeichen lesen ueber tournamentSettings/manageScreens) --
 #                                                   # die CA-2-Zeilen (rls-matrix.d/coadmin.sh) muessen hier die alten
 #                                                   # Werte zeigen, also ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a25b      # Alles ("nachher"), aber OHNE 20261110_005 (A-25b: Nichtantritt-Wertung,
+#                                                   # forfeit_absent als Schutzspalte) -- die A-25b-Zeilen
+#                                                   # (rls-matrix.d/spur-wertung-a25.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a13bs     # Alles ("nachher"), aber OHNE 20261110_006 (A-13b-S: Gruppe abschliessen,
+#                                                   # Verlauf, Hinweise, Klaerungen) -- die A-13b-S-Zeilen
+#                                                   # (rls-matrix.d/spur-gruppe-a13b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-a16       # Alles ("nachher"), aber OHNE 20261110_008 (A-16: Helfer-Beitritt per
 #                                                   # QR) -- die A-16-Zeilen (rls-matrix.d/spur-helfer-a16.sh) muessen
 #                                                   # hier ROT sein (Gegenprobe, Exit 0). Ohne A-34 (_003) entfaellt A-16
@@ -252,6 +258,10 @@ WITH_A27_REQ=1
 WITH_A34_REQ=1
 # CA-2: 20261110_004 im Modus "nachher" einspielen (Gegenprobe --without-coadmin laesst sie weg; braucht _001 und _002).
 WITH_CA2_REQ=1
+# A-25b: 20261110_005 im Modus "nachher" einspielen (Gegenprobe --without-a25b laesst sie weg; braucht _003 A-34).
+WITH_A25B_REQ=1
+# A-13b-S: 20261110_006 im Modus "nachher" einspielen (Gegenprobe --without-a13bs laesst sie weg; braucht _005).
+WITH_A13BS_REQ=1
 # A-16: 20261110_008 im Modus "nachher" einspielen (Gegenprobe --without-a16 laesst sie weg; braucht _002 und _003).
 WITH_A16_REQ=1
 
@@ -301,6 +311,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-coadmin)
       WITH_CA2_REQ=0
+      shift
+      ;;
+    --without-a25b)
+      WITH_A25B_REQ=0
+      shift
+      ;;
+    --without-a13bs)
+      WITH_A13BS_REQ=0
       shift
       ;;
     --without-a16)
@@ -576,6 +594,43 @@ elif [[ "$WITH_A27" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, CA-2-Gegenprobe (ohne 20261110_004)"
 fi
 
+# A-25b (20261110_005, @W2A-022, @W2A-024, @W2A-026): Nichtantritt-Wertung -- matches.forfeit_absent (Schutzspalte),
+# Rechenfunktion und Schreibweg. Setzt A-34 (_003) voraus (Fail-fast der Migration); --without-a25b ist die Gegenprobe.
+A25B_FILE="$(find_migration 20261110_005)"
+WITH_A25B=0
+if [[ "$WITH_A34" -eq 1 && "$WITH_A25B_REQ" -eq 1 ]]; then
+  WITH_A25B=1
+  # Fail-fast von _005 verlangt die juengsten Engine-Fassungen A-25a (20261028_003) und SW (20261028_007), die diese
+  # Matrix sonst nicht einspielt. A-25a ersetzt dabei append_match_events durch die Fassung ohne Steuer -- deshalb danach
+  # A-34 (_003, idempotent) erneut; _005 baut darauf auf, der Endstand der ersetzten Funktionen ist wie in Produktion.
+  for a25b_pre in 20261028_003 20261028_007 20261110_003; do
+    echo "Migration einspielen (Voraussetzung A-25b): $(basename "$(find_migration "$a25b_pre")")" >&2
+    psql_stdin < "$(find_migration "$a25b_pre")"
+  done
+  echo "Migration einspielen: $(basename "$A25B_FILE")" >&2
+  psql_stdin < "$A25B_FILE"
+  MODE_LABEL="$MODE_LABEL + A-25b (20261110_005)"
+elif [[ "$WITH_A34" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-25b-Gegenprobe (ohne 20261110_005)"
+fi
+
+# A-13b-S (20261110_006, @TM-046, @TM-113, @W2A-070, @W2A-072): Gruppe abschliessen am Server -- vier Tabellen (RLS, keine
+# Client-Schreibrechte), sechs RPCs, Trigger. Setzt _005 voraus (Fail-fast); --without-a13bs ist die Gegenprobe.
+A13BS_FILE="$(find_migration 20261110_006)"
+WITH_A13BS=0
+if [[ "$WITH_A25B" -eq 1 && "$WITH_A13BS_REQ" -eq 1 ]]; then
+  WITH_A13BS=1
+  # Fail-fast von _006 verlangt matches.origin_a (A-36a, 20261026_001), das diese Matrix sonst nicht einspielt
+  # (idempotent: Spalten, CHECKs und Trigger nur, falls sie fehlen).
+  echo "Migration einspielen (Voraussetzung A-13b-S): $(basename "$(find_migration 20261026_001)")" >&2
+  psql_stdin < "$(find_migration 20261026_001)"
+  echo "Migration einspielen: $(basename "$A13BS_FILE")" >&2
+  psql_stdin < "$A13BS_FILE"
+  MODE_LABEL="$MODE_LABEL + A-13b-S (20261110_006)"
+elif [[ "$WITH_A25B" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-13b-S-Gegenprobe (ohne 20261110_006)"
+fi
+
 # A-16 (20261110_008, Plan GA5 v2.1): Helfer-Beitritt per QR -- zwei Tabellen (RLS, keine Policy), Beitritts-Funktionen,
 # Loesch-Policy collaborators_delete_v4 (ersetzt _v3), Trigger protect_helper_access_row. Setzt _002 und _003 voraus
 # (Fail-fast der Migration); --without-a16 ist die Gegenprobe.
@@ -614,6 +669,13 @@ fi
 if [[ "$WITH_A34" -eq 1 ]]; then
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
 fi
+# A-13b-S: group_completions, bracket_log, bracket_notices, clarifications sind RLS-aktiv; Policies nur zum Lesen
+# (group_completions_select, bracket_notices_select, clarifications_select), bracket_log ohne Policy.
+if [[ "$WITH_A13BS" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 3))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 4))
+fi
+
 # A-16: tournament_join_codes und tournament_join_requests sind RLS-aktiv, ohne Policy; die Loesch-Policy der
 # Mitglieder wird ersetzt (v3 -> v4), die Zahl der Policies bleibt.
 if [[ "$WITH_A16" -eq 1 ]]; then
@@ -2168,7 +2230,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi
