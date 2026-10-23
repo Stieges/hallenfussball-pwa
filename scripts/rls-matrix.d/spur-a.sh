@@ -112,10 +112,23 @@ a11_mark "@ZP-084 tom-fuegt-pause-im-turnier-ein-abgelehnt               " "$(a1
 r="$(a11_probe anon "" "SELECT count(*) FROM public.matches WHERE tournament_id = '$T_PUBLIC'" \
   "UPDATE public.matches SET scheduled_start = coalesce(scheduled_start, '15:15') + interval '10 minutes' WHERE tournament_id = '$T_PUBLIC';" \
   "SELECT coalesce(to_char(scheduled_start, 'HH24:MI'), 'leer') FROM public.matches WHERE id = '$M_PUBLIC'")"
-a11_mark "@ZP-084 mama-petra-anon-verschiebt-abgelehnt                   " "$(a11_denied_verdict "$r" "leer")" "abgelehnt"
-# Gegenbeispiel: oeffentliches Lesen des Spielplans als anon geht weiter (Bestand).
+a11_mark "@ZP-084 mama-petra-anon-verschiebt-abgelehnt                   " "$(a11_denied_verdict_b14 "$r" "leer")" "abgelehnt"
+# Gegenbeispiel: oeffentliches Lesen des Spielplans als anon geht weiter (Bestand). Ab B-14 (20261117_104, E-A2) liest
+# anon die Tabelle nicht mehr direkt (0), sondern nur ueber public_tournament (Zeilen in rls-matrix.d/spur-b.sh).
 r="$(a11_probe anon "" "SELECT count(*) FROM public.matches WHERE tournament_id = '$T_PUBLIC'" "SELECT 1;" "SELECT 'ok'")"
-a11_mark "@ZP-084 gegen-mama-petra-liest-oeffentlichen-spielplan         " "$(cut -d'|' -f1 <<<"$r")" "1"
+a11_mark "@ZP-084 gegen-mama-petra-liest-oeffentlichen-spielplan         " "$(cut -d'|' -f1 <<<"$r")" "$([[ "${WITH_B14:-0}" -eq 1 ]] && echo 0 || echo 1)"
+# B-14 (N10): das Gegenbeispiel bleibt positiv -- Mama Petra liest denselben Spielplan ueber public_tournament (full).
+if [[ "${WITH_B14:-0}" -eq 1 ]]; then
+  r="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=0 <<SQL 2>&1 | grep -E '^(full|not_found|unchanged|delta)$' | head -1
+BEGIN;
+UPDATE public.tournaments SET share_code = 'ZP084X' WHERE id = '$T_PUBLIC';
+SET LOCAL ROLE anon;
+SELECT public.public_tournament('ZP084X', NULL) ->> 'state';
+ROLLBACK;
+SQL
+)"
+  a11_mark "@ZP-084 gegen-mama-petra-liest-spielplan-ueber-positivliste    " "${r:-fehler}" "full"
+fi
 
 # @LZ-023: Tom schickt den Abschluss-Patch (wie buildFinishTournamentPatch: config.manuallyCompleted/dashboardStatus,
 # completed_at) direkt an die Schnittstelle -> abgelehnt, Turnier weiter „Läuft“.
@@ -193,7 +206,8 @@ a11_mark "@ZM-019 gegen-maria-aendert-folienprogramm-im-turnier          " "$(a1
 r="$(a11_probe anon "" "$A11_FELD1_VISIBLE" "SELECT 1;" "SELECT 'ok'")"
 a11_mark "@ZM-019 mama-petra-liest-nicht-oeffentlichen-monitor-nicht     " "$(cut -d'|' -f1 <<<"$r")" "0"
 r="$(a11_probe anon "" "SELECT count(*) FROM public.monitors WHERE id = '$A11_MONITOR_PUBLIC'" "SELECT 1;" "SELECT 'ok'")"
-a11_mark "@ZM-019 gegen-mama-petra-liest-oeffentlichen-monitor           " "$(cut -d'|' -f1 <<<"$r")" "1"
+# Ab B-14 (E-A2, @ME-018) liest anon keine Monitor-Zeile mehr, auch nicht die eines oeffentlichen Turniers.
+a11_mark "@ZM-019 gegen-mama-petra-liest-oeffentlichen-monitor           " "$(cut -d'|' -f1 <<<"$r")" "$([[ "${WITH_B14:-0}" -eq 1 ]] && echo 0 || echo 1)"
 # Maria liest den nicht-oeffentlichen Monitor (Editor der Co-Admin, monitors_select_v4).
 r="$(a11_probe authenticated "$U_COADMIN" "$A11_FELD1_VISIBLE" "SELECT 1;" "SELECT 'ok'")"
 a11_mark "@ZM-019 maria-liest-nicht-oeffentlichen-monitor                " "$(cut -d'|' -f1 <<<"$r")" "1"
