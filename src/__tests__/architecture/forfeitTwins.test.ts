@@ -280,7 +280,8 @@ describe('A-25b Drift-Check (Rechte-Assertions, PENDING-LIVE)', () => {
   const NAMES = ['matches-guard-engine-columns-forfeit-absent', 'append-match-events-writes-forfeit-absent'];
 
   it('die zwei Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
-    const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/\./g, '\\.')}\\)\\n\\s+echo "([^"]+)"`));
+    const escaped = MIGRATION_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const mapping = drift.match(new RegExp(`    ${escaped}\\)\\n\\s+echo "([^"]+)"`));
     expect(mapping?.[1].split(' ').sort()).toEqual([...NAMES].sort());
     for (const name of NAMES) {
       expect(assertions).toContain(`SELECT '${name}',`);
