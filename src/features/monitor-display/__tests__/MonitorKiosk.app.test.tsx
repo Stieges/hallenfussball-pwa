@@ -22,7 +22,7 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 // Die Monitor-Datenquelle wird ersetzt; die übrige App (Verwaltung, Repositories) bleibt echt.
 vi.mock('../monitorDataSource', () => ({
-  createLegacyMonitorSource: () => ({ fetch: monitorLoad }),
+  createMonitorSource: () => ({ fetch: monitorLoad }),
 }));
 vi.mock('qrcode.react', async () => {
   const React = await import('react');

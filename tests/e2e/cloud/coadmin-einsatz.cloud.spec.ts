@@ -147,7 +147,8 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       await privateRadio.click();
       expect((await response).status()).toBeLessThan(300);
       await expect.poll(async () => (await cupRow(cup.id)).is_public, { timeout: 10000 }).toBe(false);
-      expect((await cupRow(cup.id)).share_code).toBeNull();
+      // B-14 (@ZM-067): der Code bleibt am Turnier (nur nicht mehr öffentlich); der Link führt trotzdem auf „nicht gefunden“.
+      expect((await cupRow(cup.id)).share_code).toBe(code);
 
       await anonymous.goto(`/#/live/${code}`);
       await anonymous.reload();

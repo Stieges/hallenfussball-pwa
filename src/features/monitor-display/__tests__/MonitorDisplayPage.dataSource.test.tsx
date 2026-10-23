@@ -18,7 +18,7 @@ vi.mock('../../../lib/supabase', () => ({
 // Regular `function` (not an arrow function) so `new SupabaseRepository()` in the production
 // code — matching the LiveViewScreen.tsx pattern — can actually invoke it as a constructor.
 vi.mock('../../../core/repositories/SupabaseRepository', () => ({
-  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet }; }),
+  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet, getForDisplay: async (id: string) => { const t: unknown = await supabaseGet(id); return t ? { kind: 'full', version: 1, serverNowMs: 0, tournament: t } : { kind: 'not-found' }; } }; }),
 }));
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { get: localGet }; }),

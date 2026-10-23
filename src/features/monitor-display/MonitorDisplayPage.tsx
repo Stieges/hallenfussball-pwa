@@ -43,7 +43,7 @@ import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
 import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
-import { createLegacyMonitorSource } from './monitorDataSource';
+import { createMonitorSource } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
 import { useMonitorEvents } from './useMonitorEvents';
 import { useMonitorHeartbeat } from './useMonitorHeartbeat';
@@ -79,7 +79,7 @@ function MonitorDisplayPageContent({
 }: MonitorDisplayPageProps) {
   // Datenquelle (stabil je Ziel) und Abruf-/Zustandsregeln in den Bausteinen (B-16b2)
   const displaySource = useMemo(
-    () => createLegacyMonitorSource(tournamentId, monitorId),
+    () => createMonitorSource(tournamentId, monitorId),
     [tournamentId, monitorId]
   );
   const { tournament, monitor, origin, loading, error, lastFetch } = useMonitorDisplayData(

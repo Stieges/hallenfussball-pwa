@@ -90,17 +90,18 @@ describe('SupabaseRepository.get / getByShareCode – Besetzung als Slots (@TM-0
     expect(t?.matches[1].slotB).toEqual({ kind: 'pending', source: { kind: 'matchResult', matchId: testUuid(51), role: 'winner' } });
   });
 
-  it('@TM-027 getByShareCode(): Zuschauer sieht dieselbe Besetzung wie die Leitung', async () => {
-    enqueue('tournaments', { data: TOURNAMENT, error: null }, { data: TOURNAMENT, error: null });
-    enqueue('teams', { data: TEAMS, error: null }, { data: TEAMS, error: null });
-    enqueue('matches', { data: MATCHES, error: null }, { data: MATCHES, error: null });
+  it('@TM-027 getByShareCode(): Zuschauer sieht dieselbe Besetzung wie die Leitung (B-14: über public_tournament)', async () => {
+    enqueue('tournaments', { data: TOURNAMENT, error: null });
+    enqueue('teams', { data: TEAMS, error: null });
+    enqueue('matches', { data: MATCHES, error: null });
+    rpc.mockResolvedValueOnce({ data: { state: 'full', version: 1, server_now: 1, tournament: TOURNAMENT, teams: TEAMS, matches: MATCHES }, error: null });
     const repo = new SupabaseRepository();
 
     const leitung = await repo.get('tournament-1');
     const zuschauer = await repo.getByShareCode(' abc123 ');
 
     expect(zuschauer?.matches.map((m) => [m.slotA, m.slotB])).toEqual(leitung?.matches.map((m) => [m.slotA, m.slotB]));
-    expect(calls).toContainEqual({ table: 'tournaments', method: 'eq', args: ['share_code', 'ABC123'] });
+    expect(rpc).toHaveBeenCalledWith('public_tournament', { share_code: 'ABC123', since_version: null });
   });
 
   it('@TM-027 Gegenbeispiel: kaputte Zeile (Seite ohne Team-ID und Herkunft) lässt get() laut scheitern statt „TBD“', async () => {
@@ -170,22 +171,8 @@ describe('SupabaseRepository.get / getByShareCode – Besetzung als Slots (@TM-0
     await expect(repo.get('t')).rejects.toThrow('boom-matches');
   });
 
-  it('getByShareCode(): ungültiges Format, nicht gefunden und Teilfehler → null', async () => {
-    enqueue('tournaments',
-      { data: null, error: { message: 'none', code: 'PGRST116' } },
-      { data: null, error: { message: 'boom' } },
-      { data: TOURNAMENT, error: null },
-      { data: TOURNAMENT, error: null });
-    enqueue('teams', { data: null, error: { message: 'boom-teams' } }, { data: TEAMS, error: null });
-    enqueue('matches', { data: null, error: { message: 'boom-matches' } });
-    const repo = new SupabaseRepository();
-
-    await expect(repo.getByShareCode('zu-lang!')).resolves.toBeNull();
-    await expect(repo.getByShareCode('ABC123')).resolves.toBeNull();
-    await expect(repo.getByShareCode('ABC123')).resolves.toBeNull();
-    await expect(repo.getByShareCode('ABC123')).resolves.toBeNull();
-    await expect(repo.getByShareCode('ABC123')).resolves.toBeNull();
-  });
+  // B-14 (@ZM-109): Der frühere Fall „Teilfehler → null“ beschrieb den Fehler C-ZUSCHAUER-FREIGABE-ZURUECK-ALS-STOERUNG
+  // (Störung als „nicht gefunden“). Er ist durch die Fälle unten (describe B-14) ersetzt: Störung wirft, nur not_found ist null.
 });
 
 describe('SupabaseRepository – Verwaltungsmethoden', () => {
@@ -286,5 +273,40 @@ describe('SupabaseRepository – Verwaltungsmethoden', () => {
     await expect(repo.getTournamentVisibility('t')).resolves.toEqual({ isPublic: false, shareCode: null, shareCodeCreatedAt: null });
     await expect(repo.getTournamentVisibility('t')).resolves.toBeNull();
     await expect(repo.getTournamentVisibility('t')).resolves.toBeNull();
+  });
+});
+
+describe('SupabaseRepository.getByShareCode – nur über die Positivliste (B-14, E-A2)', () => {
+  it('Pflichttest Gegenbeispiel: kein direkter Tabellenzugriff (kein select(\'*\') auf tournaments/teams/matches)', async () => {
+    rpc.mockResolvedValueOnce({ data: { state: 'full', version: 1, server_now: 1, tournament: TOURNAMENT, teams: TEAMS, matches: MATCHES }, error: null });
+
+    const t = await new SupabaseRepository().getByShareCode('ABC123');
+
+    expect(t?.title).toBe(TOURNAMENT.title);
+    expect(calls).toEqual([]);
+  });
+
+  it('@ZM-068 @ZM-100 Antwort not_found → null (nicht geteilt und unbekannt sind gleich)', async () => {
+    rpc.mockResolvedValueOnce({ data: { state: 'not_found' }, error: null });
+    await expect(new SupabaseRepository().getByShareCode('ZZZZZZ')).resolves.toBeNull();
+  });
+
+  it('@ZM-068 Code in falscher Form → null ohne Anfrage', async () => {
+    await expect(new SupabaseRepository().getByShareCode('ABC-12')).resolves.toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Serverfehler', { data: null, error: { message: 'internal error', code: '500' } }],
+    ['Überlast', { data: null, error: { message: 'too many requests', code: '429' } }],
+    ['Zeitüberschreitung', { data: null, error: { message: 'canceling statement due to statement timeout', code: '57014' } }],
+  ])('@ZM-109 Störung (%s) wirft RepositoryError und ist nie „nicht gefunden“', async (_name, response) => {
+    rpc.mockResolvedValueOnce(response);
+    await expect(new SupabaseRepository().getByShareCode('ABC123')).rejects.toBeInstanceOf(RepositoryError);
+  });
+
+  it('@ZM-109 unlesbare Antwort wirft (UnreadableResponseError), nie null', async () => {
+    rpc.mockResolvedValueOnce({ data: { state: 'full', version: 'x' }, error: null });
+    await expect(new SupabaseRepository().getByShareCode('ABC123')).rejects.toBeInstanceOf(RepositoryError);
   });
 });
