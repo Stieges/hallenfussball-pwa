@@ -10,6 +10,7 @@ import {
   effectiveScoreFor,
   type EngineEvent,
   type ErrorCode,
+  type ForfeitAbsent,
   type MatchContext,
   type MatchState,
   type OverrideRecord,
@@ -69,12 +70,20 @@ export function applyCorrection(state: MatchState, event: EngineEvent, ctx: Matc
   };
 }
 
-/** RESULT_ENTRY: Direkteintrag, beendet das Spiel sofort mit dem eingegebenen Stand (K1: als Überschreibung). */
+/**
+ * RESULT_ENTRY: Direkteintrag, beendet das Spiel sofort mit dem eingegebenen Stand (K1: als Überschreibung).
+ * A-25n (@W2A-022): mit `forfeit` ist es eine Nichtantritt-Wertung (Art `forfeit`, Fehlender in `absent`).
+ */
 export function applyResultEntry(state: MatchState, event: EngineEvent, ctx: MatchContext): MatchState {
-  const payload = event.payload as { scores: Record<string, number>; shootout?: Record<string, number> };
+  const payload = event.payload as {
+    scores: Record<string, number>;
+    shootout?: Record<string, number>;
+    forfeit?: { absent: ForfeitAbsent };
+  };
   const override: OverrideRecord = {
     id: event.id,
-    kind: 'direct',
+    kind: payload.forfeit !== undefined ? 'forfeit' : 'direct',
+    ...(payload.forfeit !== undefined ? { absent: payload.forfeit.absent } : {}),
     scores: payload.scores,
     // A-25a (@FU-094): Strafstoßergebnis nur übernehmen, wenn eingetragen (kein leerer Schlüssel, wie SQL).
     ...(payload.shootout !== undefined ? { shootout: payload.shootout } : {}),

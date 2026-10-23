@@ -14,6 +14,7 @@ import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { useAuth } from './useAuth';
 import { filterWithoutGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
 import type { TournamentDisplayStatus, TournamentCardData } from '../components/TournamentCard';
+import { isMatchInProgress } from '../../../core/view';
 import { useRepository } from '../../../hooks/useRepository';
 
 /**
@@ -68,7 +69,7 @@ const getTournamentDisplayStatus = (tournament: Tournament): TournamentDisplaySt
 
   // Check if any match is running (live)
   const hasRunningMatch = tournament.matches.some(
-    (match: Match) => match.matchStatus === 'running'
+    (match: Match) => isMatchInProgress(match.matchStatus)
   );
   if (hasRunningMatch) {
     return 'live';
@@ -87,7 +88,7 @@ const getTournamentDisplayStatus = (tournament: Tournament): TournamentDisplaySt
   // Has any match started?
   const hasStartedMatch = tournament.matches.some(
     (match: Match) =>
-      match.matchStatus === 'finished' || match.matchStatus === 'running'
+      match.matchStatus === 'finished' || isMatchInProgress(match.matchStatus)
   );
   if (hasStartedMatch) {
     // In progress but no running match = paused
