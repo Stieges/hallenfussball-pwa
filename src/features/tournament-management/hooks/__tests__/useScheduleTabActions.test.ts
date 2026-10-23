@@ -41,7 +41,8 @@ function renderActions(h: ScheduleEngine, tournament: Tournament) {
   const scoreChange = async (matchId: string, a: number, b: number) => {
     await act(async () => { void result.current.handleScoreChange(matchId, a, b); await settle(); });
   };
-  return { scoreChange, onTournamentUpdate, showWarning, confirmSpy };
+  const prompt = () => result.current.resultEntry.prompt;
+  return { scoreChange, onTournamentUpdate, showWarning, confirmSpy, prompt };
 }
 
 /** Wie `useTournamentManager`: das Turnier mit der Engine-Überlagerung von Spiel 9. */
@@ -85,10 +86,12 @@ describe('useScheduleTabActions — Schnelleingabe über Server-Einträge (@FU-0
       newWatermark: 1,
     });
     const tournament = scheduleTournament();
-    const { scoreChange, showWarning, confirmSpy } = renderActions(h, tournament);
+    const { scoreChange, showWarning, confirmSpy, prompt } = renderActions(h, tournament);
     await scoreChange(SPIEL_9, 3, 1);
 
-    expect(showWarning).toHaveBeenCalledTimes(1);
+    // @FU-112 (20261110_009): kein einfacher Eintrag -- erst die Rückfrage „Spiel beenden“, ohne „Ja“ zählt nichts.
+    expect(prompt()?.kind).toBe('end');
+    expect(showWarning).not.toHaveBeenCalled();
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(h.api).not.toHaveBeenCalled();
     expect(overlaid(h, tournament).matches.find((m) => m.id === SPIEL_9)?.matchStatus).not.toBe('finished');

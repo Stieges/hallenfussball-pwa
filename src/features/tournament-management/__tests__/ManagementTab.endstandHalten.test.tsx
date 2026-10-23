@@ -26,6 +26,9 @@ vi.mock('../../auth/hooks/useAuth', () => ({
   useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
 }));
 
+// @FU-115: Urheber-Namen für „Ende – eingetragen im Spielplan von …“ -- hier nicht Gegenstand.
+vi.mock('../../match-engine/useEventAuthors', () => ({ useEventAuthors: () => ({ nameOf: () => null, ownName: null }) }));
+
 const mockCaptureFeatureError = vi.fn();
 vi.mock('../../../lib/sentry', () => ({
   captureFeatureError: (...args: unknown[]) => mockCaptureFeatureError(...args),

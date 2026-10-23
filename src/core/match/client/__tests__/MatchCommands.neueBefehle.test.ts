@@ -129,6 +129,26 @@ const FAELLE: Fall[] = [
     payload: { scores: { 'fc-nord': 2, 'sv-sued': 1 }, reason: 'Eingabefehler', basedOn: null }, clockMs: 400_000,
     statusAfter: 'finished',
   },
+  {
+    // @FU-112: Abpfiff und Ergebnis in EINEM Eintrag -- Uhr steht beim Senden (clockMs), Stand der Turnierleitung als basedOn.
+    name: 'endWithResult -> ein RESULT_ENTRY mit basedOn aus dem laufenden Spiel',
+    pre: () => [kickoff()],
+    now: K + 480_000,
+    send: (c) => c.endWithResult(ID, B07_CTX, 'leitung', { 'fc-nord': 3, 'sv-sued': 1 }, undefined, false, null),
+    type: 'RESULT_ENTRY', teamId: null, targetId: null,
+    payload: { scores: { 'fc-nord': 3, 'sv-sued': 1 }, basedOn: null }, clockMs: 480_000,
+    statusAfter: 'finished',
+  },
+  {
+    // @FU-114 + @FU-094: K.-o. nach Ablauf mit offener Entscheidung, Unentschieden mit Strafstoß.
+    name: 'endWithResult -> K.-o.-Unentschieden mit Strafstoß aus decision_pending',
+    pre: () => regulaerAus(KO_OPEN),
+    now: K + 1_270_000,
+    send: (c) => c.endWithResult(ID, B07_CTX, 'leitung', { 'fc-nord': 1, 'sv-sued': 1 }, { 'fc-nord': 4, 'sv-sued': 3 }, true, null),
+    type: 'RESULT_ENTRY', teamId: null, targetId: null,
+    payload: { scores: { 'fc-nord': 1, 'sv-sued': 1 }, shootout: { 'fc-nord': 4, 'sv-sued': 3 }, basedOn: null }, clockMs: 1_200_000,
+    statusAfter: 'finished',
+  },
 ];
 
 describe('MatchCommands – neue Befehle (B-07, I3)', () => {
@@ -156,13 +176,47 @@ describe('MatchCommands – neue Befehle (B-07, I3)', () => {
 });
 
 describe('MatchCommands – Gegenbeispiele (@FU-081)', () => {
-  it('@FU-081 enterResult auf laufendem Spiel -> INVALID_TRANSITION, Store unveraendert, kein kick', async () => {
+  // @FU-081 präzisiert (20261110_009): der einfache Eintrag kennt keinen Stand -- auf einem laufenden Spiel abgelehnt
+  // (STALE_BASE, basedOn fehlt); beenden geht nur über `endWithResult` (@FU-112).
+  it('@FU-081 enterResult (ohne Stand) auf laufendem Spiel -> abgelehnt, Store unveraendert, kein kick', async () => {
     const harness = makeHarness([kickoff()], K + 300_000);
 
     const sending = harness.commands.enterResult(ID, B07_CTX, 'leitung', { 'fc-nord': 3, 'sv-sued': 1 }, undefined, false);
 
     await expect(sending).rejects.toBeInstanceOf(MatchCommandRejectedError);
-    await expect(sending).rejects.toMatchObject({ code: ERROR_CODES.INVALID_TRANSITION });
+    await expect(sending).rejects.toMatchObject({ code: ERROR_CODES.STALE_BASE });
+    expect(harness.stored).toHaveLength(0);
+    expect(harness.kick).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      name: '@FU-113 Helfer -> FORBIDDEN_ACTOR',
+      pre: () => [kickoff()],
+      send: (c: MatchCommands) => c.endWithResult(ID, B07_CTX, 'helper', { 'fc-nord': 3, 'sv-sued': 1 }, undefined, false, null),
+      code: ERROR_CODES.FORBIDDEN_ACTOR,
+    },
+    {
+      name: '@FU-094 K.-o.-Unentschieden ohne Strafstoß -> INVALID_PAYLOAD',
+      pre: () => regulaerAus(KO_OPEN),
+      send: (c: MatchCommands) => c.endWithResult(ID, B07_CTX, 'leitung', { 'fc-nord': 1, 'sv-sued': 1 }, undefined, true, null),
+      code: ERROR_CODES.INVALID_PAYLOAD,
+    },
+    {
+      name: '@FU-116 veralteter Stand (basedOn nicht der letzte Eintrag) -> STALE_BASE',
+      pre: () => [kickoff(), { ...plain('GOAL', K + 60_000, 60_000, 1), teamId: 'fc-nord' }],
+      send: (c: MatchCommands) => c.endWithResult(ID, B07_CTX, 'leitung', { 'fc-nord': 3, 'sv-sued': 1 }, undefined, false, null),
+      code: ERROR_CODES.STALE_BASE,
+    },
+    {
+      name: '@FU-118 laufendes Strafstoßschießen -> INVALID_TRANSITION',
+      pre: () => regulaerAus(KO_SHOOTOUT),
+      send: (c: MatchCommands) => c.endWithResult(ID, B07_CTX, 'leitung', { 'fc-nord': 1, 'sv-sued': 1 }, { 'fc-nord': 4, 'sv-sued': 3 }, true, null),
+      code: ERROR_CODES.INVALID_TRANSITION,
+    },
+  ])('endWithResult $name, nichts gespeichert, kein kick', async ({ pre, send, code }) => {
+    const harness = makeHarness(pre(), K + 1_300_000);
+    await expect(send(harness.commands)).rejects.toMatchObject({ code });
     expect(harness.stored).toHaveLength(0);
     expect(harness.kick).not.toHaveBeenCalled();
   });

@@ -72,6 +72,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const canControlTimer = useCan('writeMatchData', tournament.id);
   const canSchedule = useCan('manageSchedule', tournament.id);
   const canNotice = useCan('tournamentSettings', tournament.id);
+  const canEndRunning = useCan('leadMatches', tournament.id); // @FU-112/@FU-113: Spiel beenden nur Turnierleitung
   // Toast notifications
   const { showWarning, showSuccess } = useToast();
 
@@ -353,6 +354,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 locale={locale}
                 elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
+                canEndRunning={canEndRunning}
                 forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />

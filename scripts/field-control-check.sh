@@ -599,8 +599,8 @@ run_assertions() {
   # CA-2: die drei Zeilen der spaeteren Migration 20261110_004 sind hier f (sie laeuft erst am Ende, AFTER).
   # A-16 (20261110_008): die helper-join-*-Zeilen der spaeteren Migration sind hier f (laeuft erst am Ende).
   # B-48b: die zwei Zeilen monitor-heartbeat-* der spaeteren Migration 20261113_101 sind hier f (laeuft erst am Ende).
-  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261110_004, 20261110_005, 20261110_006)" "" \
-    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|matches-guard-engine-columns-forfeit-absent|append-match-events-writes-forfeit-absent|helper-join-[a-z0-9-]+|monitor-heartbeat-[a-z0-9-]+|group-completion-[a-z-]+|complete-group-locks-matches-before-tournament|ci-schema-reader-select-group-completion)\|' || true)"
+  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261110_004, 20261110_005, 20261110_006, 20261110_009)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|matches-guard-engine-columns-forfeit-absent|append-match-events-writes-forfeit-absent|append-match-events-end-by-lead-without-claim|helper-join-[a-z0-9-]+|monitor-heartbeat-[a-z0-9-]+|group-completion-[a-z-]+|complete-group-locks-matches-before-tournament|ci-schema-reader-select-group-completion)\|' || true)"
   check S "Rechte-Assertion: die 3 A-34-Zeilen vorhanden und |t" \
     "append-match-events-checks-field-control|t,field-control-no-client-access|t,field-control-rpcs-execute-only-authenticated|t" \
     "$(grep -E '^(append-match-events-checks-field-control|field-control-)' <<<"$priv" | sort | paste -sd, -)"
