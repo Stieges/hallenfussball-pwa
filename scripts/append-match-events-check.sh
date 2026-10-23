@@ -1272,8 +1272,10 @@ check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name)
   '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at"' "$(jq -Rn --arg v "$out" '$v')"
 # A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
+# B-14 (20261117_104): matches_updated_at_insert setzt updated_at auch beim INSERT; er
+# feuert nach den Schutz-Triggern (Name) und ändert keine Engine-Spalte.
 check Spaltenschutz "BEFORE-INSERT-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_sync_owner"' "$(jq -Rn --arg v "$out" '$v')"
+  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_sync_owner,matches_updated_at_insert"' "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
 echo "Absetzen (skipped_at/skipped_reason)..." >&2

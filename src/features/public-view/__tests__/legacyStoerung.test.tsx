@@ -23,7 +23,14 @@ vi.mock('../../../lib/supabase', () => {
     };
     return q;
   };
-  return { isSupabaseConfigured: true, supabase: { from: () => query(), rpc: () => Promise.resolve({ data: null, error: { message: 'x' } }) } };
+  // Seit B-14 liest getByShareCode über die Server-Funktion public_tournament: „0 Zeilen“ (PGRST116) entspricht dort
+  // {state:'not_found'}, jeder andere Fehler bleibt ein Fehler der Anfrage (@ZM-068, @ZM-109).
+  const rpc = (): Promise<Answer> => Promise.resolve(
+    state.single.error?.code === 'PGRST116'
+      ? { data: { state: 'not_found' }, error: null }
+      : { data: null, error: state.single.error },
+  );
+  return { isSupabaseConfigured: true, supabase: { from: () => query(), rpc } };
 });
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { getByShareCode: () => Promise.resolve(null) }; }),
