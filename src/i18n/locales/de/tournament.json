@@ -109,6 +109,7 @@
   },
   "schedule": {
     "runningMatchNoPermission": "Laufendes Spiel kann nicht bearbeitet werden.",
+    "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen.",
     "matchLabel": "Runde {{round}}",
     "conflicts": {
       "title": "Konflikte gefunden",
@@ -136,6 +137,15 @@
     },
     "resultEntry": {
       "running": "Spiel läuft – Ergebnis erst nach dem Abpfiff",
+      "shootoutRunning": "$t(sport:events.penaltyShootout) läuft – im Cockpit zu Ende bringen",
+      "endOffline": "Geht nur mit Netz",
+      "endNotSent": "Nicht gesendet – bitte erneut versuchen",
+      "endPending": "Erst ausstehende Einträge senden – bitte gleich noch einmal",
+      "endTitle": "Spiel beenden und Ergebnis eintragen",
+      "endQuestionRunning": "Spiel {{number}} läuft noch – Uhr zeigt {{rest}} Restzeit. Jetzt mit {{score}} beenden?",
+      "endQuestionExpired": "Spielzeit abgelaufen – jetzt mit {{score}} beenden?",
+      "endControlledBy": "Feld {{field}} wird gerade von {{name}} gesteuert",
+      "endControlledByOther": "Feld {{field}} wird gerade von einem anderen Gerät gesteuert",
       "teamsMissing": "Ergebnis erst, wenn beide Teams feststehen",
       "unavailable": "Ergebnis eintragen ist gerade nicht möglich",
       "shootoutTitle": "Ergebnis des Strafstoßschießens",
@@ -167,6 +177,34 @@
       },
       "leadOnly": "nur Turnierleitung",
       "correctionLeadOnly": "Korrektur nur durch die Turnierleitung"
+    },
+    "forfeit": {
+      "mark": "Nicht angetreten",
+      "revoke": "Wertung zurücknehmen",
+      "title": "Spiel {{number}}: nicht angetreten",
+      "question": "Welches Team ist nicht angetreten?",
+      "teamAbsent": "{{name}} nicht angetreten",
+      "bothAbsent": "Beide Teams nicht angetreten",
+      "summaryOne": "{{winner}} gewinnt {{score}} (Wertung)",
+      "summaryBoth": "Beide Teams erhalten 0 Punkte und je 0:{{against}} Tore, keines einen Sieg. Das Spiel gilt als entschieden und ist als Wertung gekennzeichnet.",
+      "confirm": "Wertung eintragen",
+      "cancel": "Abbrechen",
+      "revokeTitle": "Spiel {{number}}: Wertung zurücknehmen",
+      "revokeQuestion": "Die Wertung wird zurückgenommen. Das Spiel ist danach wieder offen und die Tabelle wird neu berechnet.",
+      "revokeConfirm": "Wertung zurücknehmen",
+      "notScheduled": "Ein angepfiffenes Spiel lässt sich nicht als „nicht angetreten“ werten. Beenden Sie es mit „Spiel beenden und Ergebnis eintragen“.",
+      "leadOnly": "Nur die Turnierleitung kann einen Nichtantritt werten oder zurücknehmen.",
+      "notForfeit": "Dieses Spiel ist nicht als Nichtantritt gewertet.",
+      "unavailable": "Der Nichtantritt kann gerade nicht eingetragen werden.",
+      "teamsMissing": "Die Teams dieses Spiels stehen noch nicht fest.",
+      "scopeLabel": "Wie weit gilt der Nichtantritt?",
+      "scopeThis": "Nur dieses Spiel",
+      "scopeRest": "Team ist abgereist – auch alle restlichen Spiele werten",
+      "scopeRestCount_one": "{{count}} weiteres geplantes Spiel von {{name}} wird als Wertung eingetragen; angepfiffene und gespielte Spiele bleiben unverändert.",
+      "scopeRestCount_other": "{{count}} weitere geplante Spiele von {{name}} werden als Wertung eingetragen; angepfiffene und gespielte Spiele bleiben unverändert.",
+      "restDone_one": "{{count}} weiteres Spiel als Wertung eingetragen.",
+      "restDone_other": "{{count}} weitere Spiele als Wertung eingetragen.",
+      "restPartial": "{{done}} weitere Spiele gewertet, {{skipped}} nicht (schon angepfiffen oder Fehler)."
     }
   },
   "scheduleActions": {
@@ -329,6 +367,8 @@
     "noChanges": "Keine Änderungen vorhanden",
     "masterData": "Stammdaten",
     "tournamentName": "Turniername",
+    "tournamentNameRequired": "Bitte gib einen Turniernamen ein.",
+    "startDateRequired": "Bitte wähle ein Startdatum.",
     "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
@@ -623,6 +663,7 @@
       "noEvents": "Noch keine Ereignisse",
       "close": "Schließen",
       "gotoCockpit": "Zum Cockpit",
+      "endAndEnter": "Spiel beenden und Ergebnis eintragen",
       "eventYellowRedCard": "Gelb-Rote Karte {{team}}{{player}}",
       "eventGoal": "TOR {{team}}{{player}}",
       "eventYellowCard": "Gelbe Karte {{team}}{{player}}",
@@ -1134,7 +1175,9 @@
       "offline": "Entscheiden geht nur mit Netz – oder über „Gruppe abschließen“.",
       "decide": "Gleichstand entscheiden",
       "shootout": "Strafstoßschießen eintragen",
-      "order": "Reihenfolge festlegen"
+      "order": "Reihenfolge festlegen",
+      "withdrawnBy": "Zurückgenommen von {{name}} · {{time}}",
+      "withdrawnByUnknown": "Zurückgenommen · {{time}}"
     },
     "decided": {
       "sharedTitle": "Ergebnis akzeptiert",
@@ -1150,7 +1193,9 @@
       "withdrawUntil": "Möglich bis zum Abschluss der Gruppe.",
       "closed": "Die Gruppe ist abgeschlossen. Die Entscheidung steht fest. Ändern geht nur über eine Korrektur oder das Wiederöffnen der Gruppe.",
       "withdrawFailed": "Zurücknehmen hat nicht geklappt. Bitte erneut versuchen.",
-      "withdrawOffline": "Zurücknehmen geht nur mit Netz."
+      "withdrawOffline": "Zurücknehmen geht nur mit Netz.",
+      "by": "{{name}} · {{time}}",
+      "byUnknown": "Turnierleitung · {{time}}"
     },
     "dialog": {
       "titleChoice": "Gleichstand entscheiden",
@@ -1192,13 +1237,15 @@
         "SHOOTOUT_NEEDS_WINNER": "Das Strafstoßschießen braucht einen Sieger.",
         "UNKNOWN": "Das hat nicht geklappt. Bitte erneut versuchen.",
         "ALREADY_DECIDED": "Dieser Gleichstand ist schon entschieden. Bitte prüfe die Tabelle.",
-        "WITHDRAW_NOT_ALLOWED": "Die Gruppe ist abgeschlossen. Die Entscheidung lässt sich nicht mehr zurücknehmen."
+        "WITHDRAW_NOT_ALLOWED": "Die Gruppe ist abgeschlossen. Die Entscheidung lässt sich nicht mehr zurücknehmen.",
+        "RETRY_LATER": "Der Server war gerade belegt. Bitte erneut versuchen."
       },
       "seen": {
         "title": "Schon entschieden",
         "body": "Dieser Gleichstand wurde inzwischen entschieden.",
         "current": "Es gilt: {{what}}",
-        "notSaved": "Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt die geltende Entscheidung."
+        "notSaved": "Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt die geltende Entscheidung.",
+        "titleBy": "Schon entschieden von {{name}}"
       }
     },
     "settings": {

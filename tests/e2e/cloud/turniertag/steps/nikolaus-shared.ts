@@ -118,7 +118,7 @@ export async function spieleErgebnis(spiel: NikolausMatch, toreA: number, toreB:
   const rows = await fetchEngineRows(spiel.id);
   expect(rows, `Spiel ${spielnummer(spiel)} ist noch nicht angepfiffen`).toHaveLength(0);
   const events = ergebnisEreignisse(spiel, toreA, toreB);
-  const result = await appendAsRole('owner', spiel.id, events);
+  const result = await appendAsRole('owner', spiel.id, events, { feldFreigeben: true });
   expect(result.results.map((r) => r.status), `Ergebnis ${toreA}:${toreB} für Spiel ${spielnummer(spiel)}`).toEqual(events.map(() => 'accepted'));
 }
 
@@ -144,7 +144,7 @@ export async function beendeAlleSpiele(): Promise<void> {
       continue;
     }
     const events = rows.length === 0 ? ergebnisEreignisse(spiel, toreA, toreB) : finishingEvents(rows, ergebnisEreignisse(spiel, toreA, toreB));
-    const result = await appendAsRole('owner', spiel.id, events);
+    const result = await appendAsRole('owner', spiel.id, events, { feldFreigeben: true });
     expect(result.results.map((r) => r.status), `Spiel ${spielnummer(spiel)} beenden`).toEqual(events.map(() => 'accepted'));
   }
   const nachher = await fetchNikolausSpiele();

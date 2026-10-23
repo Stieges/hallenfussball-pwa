@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useTournaments } from './hooks/useTournaments';
-import { Tournament, TournamentStatus } from './types/tournament';
+import { Tournament } from './types/tournament';
 import { useCopyTournament } from './hooks/useCopyTournament';
 import { cssVars } from './design-tokens';
 import { useToast } from './components/ui/Toast';
@@ -25,7 +25,6 @@ import {
   LoginScreen,
   RegisterScreen,
   UserProfileScreen,
-  InviteAcceptScreen,
   AuthCallback,
   AuthConfirmPage,
   SetPasswordScreen,
@@ -36,6 +35,7 @@ import { useRahmenWurzelStil } from './components/live-cockpit/frame/cockpitFram
 import { captureFeatureError } from './lib/sentry';
 import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
+import { HelperStartGate } from './features/helpers/components/HelperStartGate'; // A-17c: Wiedereinstieg @HE-096
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazyWithRetry(
@@ -47,12 +47,26 @@ const TournamentCreationScreen = lazyWithRetry(
   'TournamentCreationScreen'
 );
 const TournamentManagementScreen = lazyWithRetry(
-  () => import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen })),
+  () => import('./screens/GuardedTournamentManagementScreen').then(m => ({ default: m.GuardedTournamentManagementScreen })),
   'TournamentManagementScreen'
 );
 const LiveViewScreen = lazyWithRetry(
   () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
   'LiveViewScreen'
+);
+// A-17c: Auswahl bei mehreren Helfer-Zugängen (/helfer, @HE-099)
+const HelperChooserScreen = lazyWithRetry(
+  () => import('./features/helpers/components/HelperTournamentChooser').then(m => ({ default: m.HelperTournamentChooser })),
+  'HelperChooserScreen'
+);
+// A-17b: Beitritt per Helfer-QR-Code (/join/:code) und Hinweis für alte Einladungslinks (/invite)
+const JoinScreen = lazyWithRetry(
+  () => import('./screens/JoinScreen').then(m => ({ default: m.JoinScreen })),
+  'JoinScreen'
+);
+const LegacyInviteScreen = lazyWithRetry(
+  () => import('./screens/JoinScreen').then(m => ({ default: m.LegacyInviteScreen })),
+  'LegacyInviteScreen'
 );
 const ImpressumScreen = lazyWithRetry(
   () => import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen })),
@@ -116,7 +130,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'join' | 'helper-chooser' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -275,9 +289,7 @@ function AppContent() {
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
-  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
-  const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
   // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
   // Removed monitorDisplayParams state in favor of monitorDisplayParamsFromUrl
@@ -287,7 +299,6 @@ function AppContent() {
   // because HashRouter puts routes in the hash fragment, not pathname
   useEffect(() => {
     const path = location.pathname; // Use React Router's parsed pathname
-    const search = location.search; // Use React Router's parsed search params
     // Local, effect-scoped route match (derived purely from `path`, which is
     // already a dependency below) — deliberately NOT the render-scope `route`
     // from useRouteMatch() above, so this effect doesn't need `route` itself in
@@ -312,13 +323,14 @@ function AppContent() {
       // Live View via share code (e.g., /live/ABC123)
       setLiveShareCode(liveMatch[1].toUpperCase());
       setScreen('live');
+    } else if (matchedRoute?.name === 'join') {
+      // A-17b: Helfer-QR-Code; der Bildschirm liest den Code aus der Adresse (siehe Render unten)
+      setScreen('join');
+    } else if (matchedRoute?.name === 'helperChooser') {
+      setScreen('helper-chooser'); // A-17c (@HE-099)
     } else if (matchedRoute?.name === 'invite') {
-      const params = new URLSearchParams(search);
-      const token = params.get('token');
-      if (token) {
-        setInviteToken(token);
-        setScreen('invite');
-      }
+      // A-17b (@HE-063): alte Einladungslinks (/invite?token=…) führen zum Hinweis, nie zu einer Anfrage
+      setScreen('invite');
     } else if (matchedRoute?.name === 'authCallback') {
       // Handle OAuth/Magic Link callback
       setScreen('auth-callback');
@@ -358,7 +370,7 @@ function AppContent() {
   // Don't block public/display screens with global loading state
   // These screens have their own data loading logic
   // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
-  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname === '/test-live';
+  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || route?.name === 'join' || route?.name === 'helperChooser' || route?.name === 'invite' || location.pathname === '/test-live';
 
   // Auth screens should not be blocked by tournament loading
   const isAuthScreen = ['login', 'register', 'auth-callback', 'auth-confirm', 'set-password'].includes(screen);
@@ -440,16 +452,12 @@ function AppContent() {
   // Handler for editing a published tournament in the wizard
   const handleEditInWizard = async (tournament: Tournament, targetStep?: number) => {
     try {
-      // "Erweiterte Bearbeitung" is only available for published tournaments
-      // SettingsTab already sets status to 'draft', so we always restore to 'published'
-      originalStatusRef.current = 'published';
-
       // Update lastVisitedStep if targetStep is provided
       const tournamentToEdit = targetStep
         ? { ...tournament, lastVisitedStep: targetStep }
         : tournament;
 
-      // Save the tournament with draft status (already set by SettingsTab)
+      // Der Zustand bleibt, wie er ist (@W5-004, @LZ-001): kein Setzen auf Entwurf und, beim Abbrechen, kein Setzen auf festgelegt
       await saveTournament(tournamentToEdit);
 
       // Enable quick edit mode and navigate to wizard via URL
@@ -461,19 +469,6 @@ function AppContent() {
       console.error('[App] Failed to open tournament in wizard:', error);
       if (error instanceof Error) { captureFeatureError(error, 'tournament', 'editInWizard'); }
       showError(t('errors.editInWizard'));
-    }
-  };
-
-  // Helper to navigate to tournament after accepting invite
-  const handleInviteAccepted = (tournamentId: string) => {
-    setInviteToken(null);
-    // Navigate to the tournament
-    const tournament = tournaments.find(t => t.id === tournamentId);
-    if (tournament) {
-      setSelectedTournament(tournament);
-      setScreen('view');
-    } else {
-      void navigate('/');
     }
   };
 
@@ -545,20 +540,14 @@ function AppContent() {
           />
         )}
 
-        {screen === 'invite' && inviteToken && (
-          <InviteAcceptScreen
-            token={inviteToken}
-            onAccepted={handleInviteAccepted}
-            onNeedLogin={() => setScreen('login')}
-            onCancel={() => {
-              setInviteToken(null);
-              void navigate('/');
-            }}
-          />
-        )}
+        {/* A-17b: Helfer-QR-Code (Adresse trägt den Code) und Hinweis für alte Einladungslinks */}
+        {route?.name === 'join' && route.params.code && <JoinScreen key={route.params.code} code={route.params.code} />}
+        {route?.name === 'invite' && <LegacyInviteScreen />}
+        {route?.name === 'helperChooser' && <HelperChooserScreen tournaments={tournaments} />}
 
         {/* Main App Screens */}
         {isDashboardPath && (
+          <HelperStartGate active={route?.name === 'dashboard'} tournaments={tournaments}>
           <DashboardScreen
             tournaments={tournaments}
             onCreateNew={() => void navigate('/tournament/new')}
@@ -574,16 +563,17 @@ function AppContent() {
             onNavigateToProfile={() => void navigate('/profile')}
             onNavigateToSettings={() => void navigate('/settings')}
           />
+          </HelperStartGate>
         )}
 
         {(isWizardPath || screen === 'create') && (
           <TournamentCreationScreen
             onBack={() => {
-              // If in quickEditMode and user cancels, restore original status
-              if (quickEditMode && selectedTournament && originalStatusRef.current) {
+              // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher
+              // (C-ENTWURF-KIPPT-BEIM-ABBRECHEN: ein Entwurf wurde sonst „festgelegt“ gespeichert)
+              if (quickEditMode && selectedTournament) {
                 const restoredTournament: Tournament = {
                   ...selectedTournament,
-                  status: originalStatusRef.current,
                   updatedAt: new Date().toISOString(),
                 };
                 // Fire-and-forget: Don't await, just trigger the save
@@ -593,14 +583,12 @@ function AppContent() {
                     if (err instanceof Error) { captureFeatureError(err, 'tournament', 'restoreStatus'); }
                   });
               }
-              originalStatusRef.current = null; // Reset ref
               setSelectedTournament(null); // Clear selection when going back
               setQuickEditMode(false); // Reset quick edit mode
               void navigate('/');
             }}
             onSave={async (tournament) => {
               await saveTournament(tournament);
-              originalStatusRef.current = null; // Reset ref after successful save
               setSelectedTournament(null); // Clear selection after save
               setQuickEditMode(false); // Reset quick edit mode
               // Small delay to ensure state updates propagate
@@ -647,7 +635,7 @@ function AppContent() {
 
         {/* Live View via Share Code (e.g., /live/ABC123) */}
         {screen === 'live' && liveShareCode && (
-          <LiveViewScreen shareCode={liveShareCode} />
+          <LiveViewScreen key={liveShareCode} shareCode={liveShareCode} />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}

@@ -1,5 +1,5 @@
 {
-  "$comment": "Übergangstabelle der Spiel-Rechenfunktion (Brief B1a, Ruling P1 -- vollständig für alle 8 Zustände). Zeilen mit ⁽ᵇ⁾ in der Brief-Prosa stehen bereits hier, ihre volle Semantik implementiert erst B1b. B2 seedet public.match_transitions aus genau dieser Datei. C0a: AMEND-Zeilen (Akteur helper, auch in finished; die Nachtrag-Regel prüft handlers/amend.ts). ZA-3: paused + GOAL/OWN_GOAL/FOUL (@SL-085), section_break + TIME_PENALTY (@SL-087), finished REOPEN mit Akteur helper -- „Spiel fortsetzen“ (≤ 120 s, einmal, nicht nach Strafstoßschießen) prüft handlers/reopen.ts, die Turnierleitung bleibt ohne Frist (@SL-074, @SL-075). Genau eine Zeile je (from, type) -- geprüft von transitions.ts beim Laden und von __tests__/transitions.test.ts.",
+  "$comment": "Übergangstabelle der Spiel-Rechenfunktion (Brief B1a, Ruling P1 -- vollständig für alle 8 Zustände). Zeilen mit ⁽ᵇ⁾ in der Brief-Prosa stehen bereits hier, ihre volle Semantik implementiert erst B1b. B2 seedet public.match_transitions aus genau dieser Datei. Spiel beenden (20261110_009, @FU-112/@FU-114/@FU-118): RESULT_ENTRY der Turnierleitung auch aus running, paused, section_break und decision_pending (nie aus shootout); Wertung nur aus scheduled und basedOn-Pflicht prüft handlers/correction.ts. C0a: AMEND-Zeilen (Akteur helper, auch in finished; die Nachtrag-Regel prüft handlers/amend.ts). ZA-3: paused + GOAL/OWN_GOAL/FOUL (@SL-085), section_break + TIME_PENALTY (@SL-087), finished REOPEN mit Akteur helper -- „Spiel fortsetzen“ (≤ 120 s, einmal, nicht nach Strafstoßschießen) prüft handlers/reopen.ts, die Turnierleitung bleibt ohne Frist (@SL-074, @SL-075). A-25n: Ziel von REOPEN ist \"@reopen\" -- running, bzw. scheduled beim Zurücknehmen einer Nichtantritt-Wertung (@W2A-026, handlers/reopen.ts). Genau eine Zeile je (from, type) -- geprüft von transitions.ts beim Laden und von __tests__/transitions.test.ts.",
   "transitions": [
     { "from": "scheduled", "type": "MATCH_START", "actor": "helper", "to": "running" },
     { "from": "scheduled", "type": "SKIP", "actor": "leitung", "to": "skipped" },
@@ -19,6 +19,7 @@
     { "from": "running", "type": "SECTION_END", "actor": "helper", "to": "section_break" },
     { "from": "running", "type": "MATCH_END", "actor": "helper", "to": "@endcheck" },
     { "from": "running", "type": "AMEND", "actor": "helper", "to": "=" },
+    { "from": "running", "type": "RESULT_ENTRY", "actor": "leitung", "to": "finished" },
 
     { "from": "paused", "type": "RESUME", "actor": "helper", "to": "running" },
     { "from": "paused", "type": "GOAL", "actor": "helper", "to": "=" },
@@ -33,6 +34,7 @@
     { "from": "paused", "type": "CLOCK_ADJUST", "actor": "helper", "to": "=" },
     { "from": "paused", "type": "MATCH_END", "actor": "helper", "to": "@endcheck" },
     { "from": "paused", "type": "AMEND", "actor": "helper", "to": "=" },
+    { "from": "paused", "type": "RESULT_ENTRY", "actor": "leitung", "to": "finished" },
 
     { "from": "section_break", "type": "SECTION_START", "actor": "helper", "to": "running" },
     { "from": "section_break", "type": "YELLOW_CARD", "actor": "helper", "to": "=" },
@@ -42,9 +44,11 @@
     { "from": "section_break", "type": "SUBSTITUTION", "actor": "helper", "to": "=" },
     { "from": "section_break", "type": "RETRACT", "actor": "helper", "to": "=" },
     { "from": "section_break", "type": "AMEND", "actor": "helper", "to": "=" },
+    { "from": "section_break", "type": "RESULT_ENTRY", "actor": "leitung", "to": "finished" },
 
     { "from": "decision_pending", "type": "TIEBREAK_CHOICE", "actor": "helper", "to": "=" },
     { "from": "decision_pending", "type": "AMEND", "actor": "helper", "to": "=" },
+    { "from": "decision_pending", "type": "RESULT_ENTRY", "actor": "leitung", "to": "finished" },
 
     { "from": "shootout", "type": "SHOOTOUT_KICK", "actor": "helper", "to": "=" },
     { "from": "shootout", "type": "RETRACT", "actor": "helper", "to": "=" },
@@ -52,7 +56,7 @@
     { "from": "shootout", "type": "AMEND", "actor": "helper", "to": "=" },
 
     { "from": "finished", "type": "CORRECTION", "actor": "leitung", "to": "=" },
-    { "from": "finished", "type": "REOPEN", "actor": "helper", "to": "running" },
+    { "from": "finished", "type": "REOPEN", "actor": "helper", "to": "@reopen" },
     { "from": "finished", "type": "RETRACT", "actor": "leitung", "to": "=" },
     { "from": "finished", "type": "AMEND", "actor": "helper", "to": "=" },
 

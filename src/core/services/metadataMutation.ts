@@ -42,3 +42,14 @@ export async function executeMetadataMutation(
         });
     }
 }
+
+/**
+ * BP-1 (@FU-125, Befund C-METADATEN-ZUSAMMENFASSEN-VERLIERT-FELDER): zwei wartende Änderungen der Turnierangaben desselben
+ * Turniers zusammenfassen, ohne eine Angabe zu verlieren – die jüngere gewinnt je Angabe, der Ort je Teilfeld.
+ */
+export function mergeMetadataPayloads(existing: MetadataMutationPayload, incoming: MetadataMutationPayload): MetadataMutationPayload {
+    const location = existing.metadata.location && incoming.metadata.location
+        ? { location: { ...existing.metadata.location, ...incoming.metadata.location } }
+        : {};
+    return { ...incoming, metadata: { ...existing.metadata, ...incoming.metadata, ...location } };
+}

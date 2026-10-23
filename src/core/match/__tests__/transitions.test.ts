@@ -18,12 +18,13 @@ describe('matchTransitions.json', () => {
     expect(transitions.length).toBe(seen.size);
   });
 
-  it('jede `to` ist ein gültiger MatchStatus, "=" oder "@endcheck"', () => {
+  it('jede `to` ist ein gültiger MatchStatus, "=", "@endcheck" oder "@reopen" (A-25n, nur REOPEN)', () => {
     for (const row of transitions) {
       const isSelf = row.to === '=';
       const isEndcheck = row.to === '@endcheck';
+      const isReopen = row.to === '@reopen' && row.type === 'REOPEN';
       const isValidStatus = MatchStatusSchema.safeParse(row.to).success;
-      expect(isSelf || isEndcheck || isValidStatus).toBe(true);
+      expect(isSelf || isEndcheck || isReopen || isValidStatus).toBe(true);
     }
   });
 
@@ -107,7 +108,7 @@ describe('matchTransitions.json', () => {
 
       { from: 'finished', type: 'CORRECTION', actor: 'leitung', to: '=' },
       // ZA-3 (@SL-074/@SL-075): Helfer-Zeile; Frist/„einmal“/Strafstoß prüft handlers/reopen.ts.
-      { from: 'finished', type: 'REOPEN', actor: 'helper', to: 'running' },
+      { from: 'finished', type: 'REOPEN', actor: 'helper', to: '@reopen' }, // A-25n (R-GA4-4)
       { from: 'finished', type: 'RETRACT', actor: 'leitung', to: '=' },
 
       { from: 'skipped', type: 'UNSKIP', actor: 'leitung', to: 'scheduled' },
@@ -120,6 +121,12 @@ describe('matchTransitions.json', () => {
       { from: 'decision_pending', type: 'AMEND', actor: 'helper', to: '=' },
       { from: 'shootout', type: 'AMEND', actor: 'helper', to: '=' },
       { from: 'finished', type: 'AMEND', actor: 'helper', to: '=' },
+
+      // Spiel beenden (20261110_009, @FU-112, @FU-114): nur die Turnierleitung, nie aus 'shootout' (@FU-118).
+      { from: 'running', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
+      { from: 'paused', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
+      { from: 'section_break', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
+      { from: 'decision_pending', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
     ];
 
     const sortKey = (row: TransitionRow): string => `${row.from}::${row.type}`;

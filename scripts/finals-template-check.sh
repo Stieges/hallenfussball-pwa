@@ -10,16 +10,16 @@
 #   K2 Halbfinale stehen mit phase = 'semifinal' in der Cloud (C-FINALPHASE-AUS-ID), Platz 3 und Finale mit 'final'.
 #   K3 jede Seite eines Finalspiels hat eine Herkunft (origin_a/origin_b, @TM-004 „auf jeder Seite eine Herkunft“).
 #   K4 Spiele um Platz 5 und 7 (final_type fifthSixth/seventhEighth) lassen sich einfügen.
-#      ERWARTET ROT bis G1 (Befund C-FINALTYPE-PLATZ5-7): `matches_final_type_check` kennt Platz 5/7 erst mit
-#      `20261110_005`. Solange PLATZ57_ERWARTET=rot gilt, zählt die Ablehnung durch genau diese Prüfregel als OK; geht der
-#      Insert durch, ist das eine ABWEICHUNG („Marker entfernen“). In PR G1a wird die Vorgabe auf „gruen“ gestellt.
+#      Seit PR G1a (A-25b, `20261110_005` im Branch) scharf: PLATZ57_ERWARTET=gruen ist die Vorgabe (Befund
+#      C-FINALTYPE-PLATZ5-7 behoben). `PLATZ57_ERWARTET=rot` prüft weiter den alten Stand (Ablehnung durch
+#      `matches_final_type_check`), etwa gegen einen Stand ohne `_005`.
 #
 # Ändert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigener Wegwerf-Container, wird am
 # Ende entfernt (trap).
 #
 set -euo pipefail
 
-PLATZ57_ERWARTET="${PLATZ57_ERWARTET:-rot}" # rot bis G1 (C-FINALTYPE-PLATZ5-7), danach gruen
+PLATZ57_ERWARTET="${PLATZ57_ERWARTET:-gruen}" # gruen seit G1a (20261110_005, C-FINALTYPE-PLATZ5-7)
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # wie match-slots-check.sh / rls-role-matrix.sh
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

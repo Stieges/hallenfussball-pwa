@@ -79,11 +79,14 @@
     },
     "nachEnde": {
       "verlaengerung": "nach Verlängerung",
+      "eingetragen": "Ende – eingetragen im Spielplan",
+      "eingetragenVon": "Ende – eingetragen im Spielplan von {{name}}",
       "strafstoss": "nach $t(sport:events.penaltyShootout)"
     },
     "quittung": "Abgepfiffen · {{links}}:{{rechts}} gespeichert",
     "keinWeiteresSpiel": "Kein weiteres Spiel",
     "uebernahmePruefen": "Spielzeit beruht auf {{name}}s Gerät – bitte prüfen",
+    "uebernahmePruefenOhneName": "Spielzeit beruht auf dem vorigen Gerät – bitte prüfen",
     "vor": {
       "spielFeld": "Spiel {{nummer}} · {{feld}}",
       "mindestpause": "{{teamName}} hätte nur {{minuten}} statt {{mindestMinuten}} Minuten Pause",
@@ -167,7 +170,8 @@
     "countsAsFoul": "zählt als Foul"
   },
   "eventEditDialog": {
-    "title": "{{label}} bearbeiten"
+    "title": "{{label}} bearbeiten",
+    "numberInvalid": "Rückennummer: ganze Zahl von 1 bis 99. Die bisherige Nummer bleibt."
   },
   "cardDialog": {
     "title": "Karte vergeben",
@@ -315,6 +319,7 @@
     "horn3": "Horn 3 (Tief)",
     "customSound": "Eigener Sound",
     "notUploaded": "(nicht hochgeladen)",
+    "test": "Test",
     "testSound": "Sound testen",
     "volume": "Lautstärke",
     "volumePercent": "{{percent}}%",
@@ -512,6 +517,7 @@
     "andere": "Andere Nr.",
     "uebernehmen": "Übernehmen",
     "eingabe": "Rückennummer",
+    "ungueltig": "Rückennummer: ganze Zahl von 1 bis 99.",
     "titelKarte": "Rückennummer – {{art}} {{team}}",
     "titelZeitstrafe": "Rückennummer – Zeitstrafe {{team}}"
   },
@@ -538,7 +544,10 @@
     "mehr": "Mehr",
     "ereignisse": "Ereignisse",
     "beendet": "Spiel ist beendet – Korrektur über die Turnierleitung",
-    "leitet": "{{feld}} leitet: {{name}}",
+    "leitet": "{{feld}} wird von {{name}} gesteuert",
+    "leitetOhneName": "{{feld}} wird von einem anderen Gerät gesteuert",
+    "uebergegangen": "Die Spielleitung hat jetzt {{name}}",
+    "uebergegangenOhneName": "Die Spielleitung hat jetzt ein anderes Gerät",
     "uebernehmen": "Spielleitung übernehmen",
     "keinZugriff_one": "Du hast keinen Zugriff mehr – 1 Eintrag an die Turnierleitung übergeben",
     "keinZugriff_other": "Du hast keinen Zugriff mehr – {{count}} Einträge an die Turnierleitung übergeben",
@@ -559,7 +568,8 @@
     "uhrKorrigieren": "Uhr korrigieren",
     "seitenTauschen": "Seiten tauschen",
     "einstellungen": "Einstellungen",
-    "schliessen": "Schließen"
+    "schliessen": "Schließen",
+    "nichtAngetreten": "Nicht angetreten"
   },
   "entscheidung": {
     "titel": "Wie wird entschieden?",
@@ -572,6 +582,8 @@
     "zurueckAria": "Zurück zum Spielplan",
     "feldAria": "Feld wählen, jetzt Feld {{feld}}",
     "feld": "Feld {{feld}}",
+    "feldHalter": "Feld {{feld}}: {{name}}",
+    "feldDiesesGeraet": "Feld {{feld}}: dieses Gerät",
     "online": "Verbunden",
     "offline": "Offline",
     "verbinden": "Verbinden",
@@ -583,5 +595,19 @@
     "spiel": "Spiel {{nummer}}",
     "anstoss": "Anstoß {{zeit}}",
     "leibchen": "Leibchen nötig, die Farben sind zu ähnlich"
+  },
+  "steuer": {
+    "titel": "Spielleitung übernehmen?",
+    "gesteuert": "{{feld}} wird gerade von {{name}} gesteuert",
+    "gesteuertOhneName": "{{feld}} wird gerade von einem anderen Gerät gesteuert",
+    "folge": "Danach steuert dieses Gerät {{feld}}. Das andere Gerät kann dann nicht mehr eintragen.",
+    "bestaetigen": "Spielleitung übernehmen",
+    "abbrechen": "Abbrechen",
+    "nurMitNetz": "Übernehmen geht nur mit Netz",
+    "inzwischen": "{{feld}} wird jetzt von {{name}} gesteuert",
+    "inzwischenOhneName": "{{feld}} wird jetzt von einem anderen Gerät gesteuert",
+    "keinRecht": "Du darfst die Spielleitung nicht übernehmen",
+    "fehler": "Übernehmen hat nicht geklappt – bitte erneut versuchen",
+    "anderesGeraet": "anderes Gerät"
   }
 }

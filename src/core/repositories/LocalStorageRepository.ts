@@ -1,6 +1,9 @@
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, Match, MatchUpdate } from '../models/types';
-import type { StandingDecision } from '../../types/tournament';
+import type {
+    CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
+} from './groupCompletionCloud';
+import { applyCompleteGroup, applyRecordDecision, applyReopenGroup, type LocalChange } from './localGroupCompletion';
 import { OptimisticLockError } from '../errors';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
@@ -11,7 +14,7 @@ import { captureFeatureError } from '../../lib/sentry';
 import { isLegacyTournamentShape } from '../models/legacyFormat';
 import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
 import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
-import { readServerRevisions, writeServerRevisions, type CloudAdoption } from './cloudAdoption';
+import { readServerRevisions, writeServerRevisions, type CloudAdoption, type ServerTables } from './cloudAdoption';
 import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 import { generateShareCode } from '../models/shareCode';
 import { checkedVersion, ownChainBase } from './confirmedVersion';
@@ -63,12 +66,12 @@ export class LocalStorageRepository implements ITournamentRepository {
         return this.serialize(() => this.patchNow(id, patch));
     }
 
-    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>, confirmedVersion?: number): Promise<void> {
+    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>, confirmedVersion?: number, serverTables?: ServerTables): Promise<void> {
         const list = await this.loadList();
         const index = list.findIndex(t => t.id === id);
         if (index === -1) { return; }
         const confirmed = confirmedVersion === undefined ? {} : { serverVersion: confirmedVersion }; // C-VERSION-MEHRDEUTIG
-        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch), ...confirmed };
+        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch), ...confirmed, ...serverTables }; // A-13b-C: Abschlüsse und Verlauf folgen der Cloud
         await this.saveList(list);
     }
 
@@ -84,8 +87,8 @@ export class LocalStorageRepository implements ITournamentRepository {
             const adoption = decide(await this.get(id), await readServerRevisions(storage, id));
             if (adoption.save) {
                 await this.saveNow(adoption.save, true);
-            } else if (adoption.patch?.size || adoption.confirmedVersion !== undefined) {
-                await this.patchNow(id, adoption.patch ?? new Map(), adoption.confirmedVersion);
+            } else if (adoption.patch?.size || adoption.confirmedVersion !== undefined || adoption.serverTables !== undefined) {
+                await this.patchNow(id, adoption.patch ?? new Map(), adoption.confirmedVersion, adoption.serverTables);
             }
             await writeServerRevisions(storage, id, adoption.revisions, adoption.save && new Set(adoption.save.matches.map(m => m.id)));
             return adoption;
@@ -180,19 +183,38 @@ export class LocalStorageRepository implements ITournamentRepository {
         });
     }
 
-    /** Paket TB: nur die Gleichstands-Entscheidungen, mit Versionsprüfung (lokal; Konflikt → OptimisticLockError). */
-    updateStandingDecisions(id: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
+    /**
+     * GA4 A-13b-C: Entscheidung eintragen/zurücknehmen (lokal, Versionsprüfung wie die Cloud; Konflikt → `rejected STALE`).
+     * Rechenregeln in `localGroupCompletion.ts`; Person und Zeit gibt es lokal nicht.
+     */
+    recordStandingDecision(id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> {
+        return this.changeTournament(id, (t) => applyRecordDecision(t, request, expectedVersion));
+    }
+
+    /** GA4 A-13b-C: „Gruppe abschließen“ im lokalen Speicher (Gast). */
+    completeGroup(id: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+        return this.changeTournament(id, (t) => applyCompleteGroup(t, request));
+    }
+
+    /** GA4 A-13b-C: Gruppe lokal wieder öffnen. */
+    reopenGroup(id: string, groupId: string, _reason: string): Promise<ReopenGroupResult> {
+        return this.changeTournament(id, (t) => applyReopenGroup(t, groupId));
+    }
+
+    /** Ändert ein Turnier in einem Kettenschritt; `tournament` im Ergebnis fehlt, wenn nichts zu schreiben ist. */
+    private changeTournament<R>(id: string, change: (tournament: Tournament) => LocalChange<R>): Promise<R> {
         return this.serialize(async () => {
             const list = await this.loadList();
             const index = list.findIndex(t => t.id === id);
             if (index === -1) {
                 throw new Error(`Tournament ${id} not found`);
             }
-            if ((list[index].version ?? 0) !== expectedVersion) {
-                throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
+            const { tournament, result } = change(list[index]);
+            if (tournament !== undefined) {
+                list[index] = { ...tournament, updatedAt: new Date().toISOString() };
+                await this.saveList(list);
             }
-            list[index] = { ...list[index], standingDecisions: decisions, version: expectedVersion + 1, updatedAt: new Date().toISOString() };
-            await this.saveList(list);
+            return result;
         });
     }
 

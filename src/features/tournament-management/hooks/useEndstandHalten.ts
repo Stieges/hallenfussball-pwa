@@ -4,7 +4,8 @@
  * Nach dem Abpfiff bleibt der Endstand 30 Sekunden stehen (@SL-152, @SL-073), bis „Weiter“ getippt wird (@SL-162) oder die 30 Sekunden
  * um sind (@SL-049). Die Frist hängt am Abpfiff-Zeitpunkt in der Engine (`finishedAt`, Serverzeit), nicht an einer eigenen Uhr dieses
  * Geräts: Übernimmt ein zweites Gerät kurz nach dem Abpfiff, sieht es nur den Rest der Frist (@SL-116). Ohne Engine oder ohne Abpfiff-Zeit
- * (ausgefallen, noch nicht beendet) und ohne echten Abpfiff (Direkteintrag im Spielplan) wird nichts gehalten.
+ * (ausgefallen, noch nicht beendet) und ohne echten Abpfiff (Direkteintrag im Spielplan) wird nichts gehalten -- außer das angepfiffene
+ * Spiel wurde im Spielplan beendet (@FU-112, @FU-115): dann steht „Ende – eingetragen im Spielplan (von Olli)“ ebenso 30 Sekunden.
  *
  * Korrektur in den 30 Sekunden (@SL-163, @SL-164): Solange die Turnierleitung korrigiert, pausiert die Frist (`pausiere`), das Spiel bleibt
  * stehen, wie lange die Korrektur auch offen ist. Nach Speichern oder Abbruch (`setzeFort`) läuft sie mit der Restzeit beim Öffnen weiter,
@@ -14,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ScheduledMatch } from '../../../core/generators';
 import type { MatchEngine } from '../../../core/match/client';
 import type { LiveMatch } from '../../../components/live-cockpit/types';
-import { quittungRestOf } from '../../../components/live-cockpit/engine/phaseView';
+import { eingetragenImSpielplanOf, quittungRestOf } from '../../../components/live-cockpit/engine/phaseView';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
 
 /** Reserve, damit der Wechsel nach dem Ablauf der Frist sicher hinter ihr liegt. */
@@ -60,7 +61,8 @@ export function gehaltenesSpielOf(
     const zustand = engine.view(match.id)?.result.state;
     const abpfiff = zustand?.finishedAt ?? null;
     // Nur ein echter Abpfiff (Ablauf, Hand, Strafstoßschießen) setzt `baseDecidedBy`; ein Direkteintrag (RESULT_ENTRY) nicht (S1)
-    if (zustand === undefined || abpfiff === null || zustand.baseDecidedBy === null) { continue; }
+    // @FU-115: das im Spielplan beendete, angepfiffene Spiel hält ebenso (Toms Cockpit zeigt, wer es beendet hat)
+    if (zustand === undefined || abpfiff === null || (zustand.baseDecidedBy === null && eingetragenImSpielplanOf(zustand) === null)) { continue; }
     const schluessel = `${match.id}@${abpfiff}`;
     // Während einer Korrektur gilt die Frist der Pause statt der 30 Sekunden ab dem Abpfiff (@SL-163, @SL-164)
     const pausiert = pause !== null && pause.schluessel === schluessel;

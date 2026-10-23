@@ -104,6 +104,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     [engineView, currentMatch, elapsedSeconds],
   );
   const phase = useCockpitPhase(currentMatch, view, currentMatch ? null : leer);
+  // @FU-112/@FU-115: im Spielplan beendet -- „von <Name>“ liefert der Aufrufer (nur, wenn es jemand anderes war)
+  const eingetragenVon = view?.eingetragenImSpielplan ? props.eintragAutor?.(view.eingetragenImSpielplan) ?? null : null;
   // Nur im angepfiffenen Spiel: vor dem Anpfiff und ohne Spiel hat das Abzeichen keine Wirkung, der Anpfiff-Tipp gibt den Ton frei
   const tonHinweis = cockpitSettings.soundEnabled && !sound.isActivated && istAngepfiffenUndNichtBeendet(phase.zustand)
     ? { label: t('tafel.tonAusAntippen'), kurz: t('tafel.tonAus'), onAntippen: () => { void sound.activate(); } }
@@ -157,6 +159,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       mindestpause={props.mindestpause}
       sperrHinweise={props.sperrHinweise}
       uebernahmeVon={props.uebernahmeVon}
+      eingetragenVon={eingetragenVon}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
       // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).
       sync={
@@ -214,8 +217,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
               {tafel}
               {/* @FU-109: Statuszeile im normalen Fluss unter der Anzeigetafel (Review Version-Fix R1) */}
               <AwaitingServerCopyLine tournamentId={tournamentId} />
-              {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
-              {readOnly && (
+              {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung, nicht bei beendetem Spiel und nicht bei fremd gesteuertem Feld (B-49: Zeile in der Leiste). */}
+              {readOnly && !props.steuerung && (
                 <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
                   {t('readOnly.banner')}
                 </div>
@@ -261,7 +264,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         editing={cmd.editing}
         handlers={cmd.overlayHandlers}
         rejectedOutbox={rejectedOutbox}
-        mehr={{ punkte: mehrPunkteGrundgeruest(phase, { kannSteuern }), aktionen: cmd.mehrAktionen }}
+        mehr={{
+          punkte: mehrPunkteGrundgeruest(phase, { kannSteuern, istLeitung: istLeitung && props.onNichtAngetreten !== undefined }),
+          aktionen: { ...cmd.mehrAktionen, nichtAngetreten: () => { props.onNichtAngetreten?.(match.id); } },
+        }}
         entrySheets={{ flows, teams: teams ?? NO_TEAMS, ausloeserSeite: (seite) => (sides.links === seite ? 'links' : 'rechts'), kartenArten: cockpitSettings.enabledCards, t: tx }}
       />
     </div>

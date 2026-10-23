@@ -11,8 +11,8 @@
  * räumt sie im `finally` ab -- unabhängig von anderen Dateien (publish-coadmin ändert den Freigabe-Cup selbst) und von der
  * Uhrzeit des Seeds (kein Engine-Spiel mit Zeitfenster). Nur cloud-desktop.
  *
- * Besitzer statt Befund bei Ungebautem: Z3 (Anzeige "Online" im Monitor-Editor) hängt an B-48b, Z6 (Gruppe abschließen,
- * Helfer-Anfrage zulassen) an A-16 -- dort `test.fail` bzw. `test.fixme` mit dem Besitzer im Titel.
+ * Besitzer statt Befund bei Ungebautem: Z6 (Gruppe abschließen, Helfer-Anfrage zulassen) hängt an A-16 -- dort `test.fixme`
+ * mit dem Besitzer im Titel. Z3 (Anzeige "Online" im Monitor-Editor) ist seit B-48b (Befund C-HEARTBEAT) regulär.
  *
  * Fall Z5 benutzt die Betreiber-Vorlage wörtlich per `docker exec ... psql` im Datenbank-Container (Docker gibt es im
  * CI-Job `e2e-cloud`: der Stack läuft dort in Containern, `scripts/local-db-apply.sh` nutzt denselben Weg).
@@ -147,7 +147,8 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       await privateRadio.click();
       expect((await response).status()).toBeLessThan(300);
       await expect.poll(async () => (await cupRow(cup.id)).is_public, { timeout: 10000 }).toBe(false);
-      expect((await cupRow(cup.id)).share_code).toBeNull();
+      // B-14 (@ZM-067): der Code bleibt am Turnier (nur nicht mehr öffentlich); der Link führt trotzdem auf „nicht gefunden“.
+      expect((await cupRow(cup.id)).share_code).toBe(code);
 
       await anonymous.goto(`/#/live/${code}`);
       await anonymous.reload();
@@ -164,11 +165,10 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
   // ---------------------------------------------------------------------------------------------------------------
   test('@ME-070 Z3 Lebenszeichen: wer manageScreens hat, liest sie (Eigentümer, Co-Admin); Helfer und Fremde sehen keine Zeile', async () => {
     const cup = await cloneReleaseCup('z3b');
-    const monitorId = randomUUID();
     try {
-      // Das Lebenszeichen braucht eine Zeile in `monitors` (FK); die App schreibt sie noch nicht (Besitzer B-48b), also direkt.
-      await svc('POST', '/rest/v1/monitors', [{ id: monitorId, tournament_id: cup.id, name: 'Z3b', type: 'schedule', config: {} }]);
-      await svc('POST', '/rest/v1/monitor_heartbeats', [{ monitor_id: monitorId, tournament_id: cup.id, last_seen: new Date().toISOString(), slide_index: 0, cache_status: 'fresh' }]);
+      // Seit B-48b traegt das Lebenszeichen die Kennung des Monitors aus `config.monitors` (Text, ohne FK auf `monitors`).
+      expect(cup.monitorId, 'Vorbedingung: der Freigabe-Cup hat einen Monitor in config.monitors').not.toBe('');
+      await svc('POST', '/rest/v1/monitor_heartbeats', [{ monitor_id: cup.monitorId, tournament_id: cup.id, last_seen: new Date().toISOString(), slide_index: 0, cache_status: 'fresh', wake_lock: 'granted' }]);
       await addMember(cup.id, await fetchUserIdByEmail(E2E_USERS.helper.email), 'collaborator', cup.ownerId);
       expect(await svc('GET', `/rest/v1/monitor_heartbeats?tournament_id=eq.${cup.id}&select=monitor_id`)).toHaveLength(1); // Vorbedingung
 
@@ -183,11 +183,9 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
     }
   });
 
-  // B-48b (Besitzer): die App schreibt das Lebenszeichen noch nie in die Datenbank (`record_monitor_heartbeat` prüft die
-  // verwaiste Tabelle `monitors`, die Monitore stehen im `config` des Turniers). Bis B-48b gebaut ist, ist dieser Fall
-  // erwartet rot; wird er grün, muss `test.fail` fallen.
-  test('@ME-070 Z3 Anzeige "Online" im Monitor-Editor bei Olli und Maria innerhalb von 40 s (Besitzer B-48b, Befund C-HEARTBEAT)', async ({ browser, page: anonymousMonitor }) => {
-    test.fail(true, 'Besitzer B-48b: Lebenszeichen der Monitore kommen noch nicht in der Datenbank an.');
+  // B-48b (Befund C-HEARTBEAT behoben): der anonyme Monitor sendet `record_monitor_heartbeat` mit der Kennung aus
+  // `config.monitors`; Olli (Eigentuemer) und Maria (Co-Admin, manageScreens) sehen ihn als verbunden.
+  test('@ME-070 Z3 Anzeige "Online" im Monitor-Editor bei Olli und Maria innerhalb von 40 s (B-48b, Befund C-HEARTBEAT)', async ({ browser, page: anonymousMonitor }) => {
     test.setTimeout(120_000);
     const cup = await cloneReleaseCup('z3');
     const olli = await newRoleContext(browser, 'owner');

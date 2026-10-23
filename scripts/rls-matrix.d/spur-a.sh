@@ -112,10 +112,23 @@ a11_mark "@ZP-084 tom-fuegt-pause-im-turnier-ein-abgelehnt               " "$(a1
 r="$(a11_probe anon "" "SELECT count(*) FROM public.matches WHERE tournament_id = '$T_PUBLIC'" \
   "UPDATE public.matches SET scheduled_start = coalesce(scheduled_start, '15:15') + interval '10 minutes' WHERE tournament_id = '$T_PUBLIC';" \
   "SELECT coalesce(to_char(scheduled_start, 'HH24:MI'), 'leer') FROM public.matches WHERE id = '$M_PUBLIC'")"
-a11_mark "@ZP-084 mama-petra-anon-verschiebt-abgelehnt                   " "$(a11_denied_verdict "$r" "leer")" "abgelehnt"
-# Gegenbeispiel: oeffentliches Lesen des Spielplans als anon geht weiter (Bestand).
+a11_mark "@ZP-084 mama-petra-anon-verschiebt-abgelehnt                   " "$(a11_denied_verdict_b14 "$r" "leer")" "abgelehnt"
+# Gegenbeispiel: oeffentliches Lesen des Spielplans als anon geht weiter (Bestand). Ab B-14 (20261117_104, E-A2) liest
+# anon die Tabelle nicht mehr direkt (0), sondern nur ueber public_tournament (Zeilen in rls-matrix.d/spur-b.sh).
 r="$(a11_probe anon "" "SELECT count(*) FROM public.matches WHERE tournament_id = '$T_PUBLIC'" "SELECT 1;" "SELECT 'ok'")"
-a11_mark "@ZP-084 gegen-mama-petra-liest-oeffentlichen-spielplan         " "$(cut -d'|' -f1 <<<"$r")" "1"
+a11_mark "@ZP-084 gegen-mama-petra-liest-oeffentlichen-spielplan         " "$(cut -d'|' -f1 <<<"$r")" "$([[ "${WITH_B14:-0}" -eq 1 ]] && echo 0 || echo 1)"
+# B-14 (N10): das Gegenbeispiel bleibt positiv -- Mama Petra liest denselben Spielplan ueber public_tournament (full).
+if [[ "${WITH_B14:-0}" -eq 1 ]]; then
+  r="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=0 <<SQL 2>&1 | grep -E '^(full|not_found|unchanged|delta)$' | head -1
+BEGIN;
+UPDATE public.tournaments SET share_code = 'ZP084X' WHERE id = '$T_PUBLIC';
+SET LOCAL ROLE anon;
+SELECT public.public_tournament('ZP084X', NULL) ->> 'state';
+ROLLBACK;
+SQL
+)"
+  a11_mark "@ZP-084 gegen-mama-petra-liest-spielplan-ueber-positivliste    " "${r:-fehler}" "full"
+fi
 
 # @LZ-023: Tom schickt den Abschluss-Patch (wie buildFinishTournamentPatch: config.manuallyCompleted/dashboardStatus,
 # completed_at) direkt an die Schnittstelle -> abgelehnt, Turnier weiter „Läuft“.
@@ -193,19 +206,60 @@ a11_mark "@ZM-019 gegen-maria-aendert-folienprogramm-im-turnier          " "$(a1
 r="$(a11_probe anon "" "$A11_FELD1_VISIBLE" "SELECT 1;" "SELECT 'ok'")"
 a11_mark "@ZM-019 mama-petra-liest-nicht-oeffentlichen-monitor-nicht     " "$(cut -d'|' -f1 <<<"$r")" "0"
 r="$(a11_probe anon "" "SELECT count(*) FROM public.monitors WHERE id = '$A11_MONITOR_PUBLIC'" "SELECT 1;" "SELECT 'ok'")"
-a11_mark "@ZM-019 gegen-mama-petra-liest-oeffentlichen-monitor           " "$(cut -d'|' -f1 <<<"$r")" "1"
+# Ab B-14 (E-A2, @ME-018) liest anon keine Monitor-Zeile mehr, auch nicht die eines oeffentlichen Turniers.
+a11_mark "@ZM-019 gegen-mama-petra-liest-oeffentlichen-monitor           " "$(cut -d'|' -f1 <<<"$r")" "$([[ "${WITH_B14:-0}" -eq 1 ]] && echo 0 || echo 1)"
 # Maria liest den nicht-oeffentlichen Monitor (Editor der Co-Admin, monitors_select_v4).
 r="$(a11_probe authenticated "$U_COADMIN" "$A11_FELD1_VISIBLE" "SELECT 1;" "SELECT 'ok'")"
 a11_mark "@ZM-019 maria-liest-nicht-oeffentlichen-monitor                " "$(cut -d'|' -f1 <<<"$r")" "1"
 
-# @W2A-050 (Paket TB, TB-3): Gleichstands-Entscheidung in der Tabelle = tournaments.config.standingDecisions
-# (StandingDecisionService -> updateStandingDecisions, keine Migration). Tom als Helfer -> abgelehnt (tournaments_update_v3,
-# tournamentSettings); Maria (Co-Admin) und Olli (Eigentuemer) -> gelingt.
-A11_DECIDE="UPDATE public.tournaments SET config = config || '{\"standingDecisions\":[{\"id\":\"e-1\",\"groupId\":\"\",\"teamIds\":[\"a\",\"b\"],\"order\":[\"b\",\"a\"],\"kind\":\"shootout\",\"shootout\":{\"winner\":4,\"loser\":3},\"decidedBy\":{\"userId\":\"u\",\"name\":\"Olli\"},\"decidedAt\":\"2026-12-06T14:32:00.000Z\",\"basis\":\"x\"}]}'::jsonb WHERE id = '$T_MAIN';"
+# @W2A-050 (Paket TB, TB-3): Gleichstands-Entscheidung in der Tabelle (Olli trägt das Strafstoßschießen 4:3 ein).
+# Seit A-13b-S (20261110_006) schreibt die App sie ausschließlich über record_standing_decision (A-13b-C, PR #330);
+# Review #330 S6: die Zellen messen diesen Weg. Darf (manageLifecycle): Olli (Eigentümer), Maria (Co-Admin).
+# Darf nicht: Tom (Helfer), Zuschauer (viewer), Mama Petra (anon, ohne Sitzung) -> 42501, config unverändert.
+# Gegenzeilen REST: UPDATE tournaments.config.standingDecisions bleibt für Tom abgelehnt und für Maria/Olli ohne
+# Wirkung (Trigger tournaments_keep_standing_decisions behält den Serverwert, das Speichern selbst gelingt).
+# Ohne _006 (--without-a13bs) sind alle @W2A-050-Zellen rot (RPC fehlt, REST schreibt).
+A11_DECISION_JSON="{\"id\": \"e-1\", \"groupId\": \"\", \"teamIds\": [\"$A11_TEAM_SG\", \"$A11_TEAM_VFB\"], \"order\": [\"$A11_TEAM_VFB\", \"$A11_TEAM_SG\"], \"kind\": \"shootout\", \"shootout\": {\"winner\": 4, \"loser\": 3}, \"basis\": \"x\"}"
 A11_DECIDE_NOW="SELECT coalesce(config->'standingDecisions'->0->'shootout'->>'winner', 'keine') FROM public.tournaments WHERE id = '$T_MAIN'"
+# a11_decide_rpc <rolle authenticated|anon> <user-id oder leer> -> "<status oder SQLSTATE>|<Wert danach als Superuser>"
+# (eine nie committete Transaktion; der Ausnahmeblock hält den SQLSTATE fest, z. B. 42501 = keine Berechtigung,
+# 42883 = Funktion fehlt).
+a11_decide_rpc() {
+  local role="$1" uid="$2" sub_line="" out
+  [[ -n "$uid" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$uid'; $(claims_line "$uid")"
+  set +e
+  out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -A -t -v ON_ERROR_STOP=0 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE $role;
+$sub_line
+DO \$a11dec\$
+DECLARE v text;
+BEGIN
+  v := public.record_standing_decision('$T_MAIN', 'decide', '$A11_DECISION_JSON'::jsonb, NULL,
+         (SELECT version FROM public.tournaments WHERE id = '$T_MAIN')) ->> 'status';
+  RAISE NOTICE 'a11dec:%', coalesce(v, 'null');
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'a11dec:%', SQLSTATE;
+END
+\$a11dec\$;
+RESET ROLE;
+SELECT 'a11pruef:' || coalesce(($A11_DECIDE_NOW)::text, 'NULL');
+ROLLBACK;
+SQL
+)"
+  set -e
+  echo "$( (grep -m1 -oE 'a11dec:[^ ]+' <<<"$out" || echo 'a11dec:fehler') | sed 's/^a11dec://')|$( (grep -m1 '^a11pruef:' <<<"$out" || echo 'a11pruef:?') | sed 's/^a11pruef://')"
+}
+a11_mark "@W2A-050 olli-traegt-strafstossschiessen-ein (record_standing_decision)    " "$(a11_decide_rpc authenticated "$U_OWNER")" "ok|4"
+a11_mark "@W2A-050 maria-traegt-strafstossschiessen-ein (record_standing_decision)   " "$(a11_decide_rpc authenticated "$U_COADMIN")" "ok|4"
+a11_mark "@W2A-050 tom-traegt-strafstossschiessen-ein-abgelehnt (record_standing_decision)" "$(a11_decide_rpc authenticated "$U_COLLAB")" "42501|keine"
+a11_mark "@W2A-050 zuschauer-traegt-ein-abgelehnt (record_standing_decision)        " "$(a11_decide_rpc authenticated "$U_VIEWER")" "42501|keine"
+a11_mark "@W2A-050 mama-petra-anon-traegt-ein-abgelehnt (record_standing_decision)  " "$(a11_decide_rpc anon "")" "42501|keine"
+# Gegenzeilen: der alte REST-Weg (Voll-Speichern des config).
+A11_DECIDE="UPDATE public.tournaments SET config = config || '{\"standingDecisions\":[{\"id\":\"e-1\",\"groupId\":\"\",\"teamIds\":[\"a\",\"b\"],\"order\":[\"b\",\"a\"],\"kind\":\"shootout\",\"shootout\":{\"winner\":4,\"loser\":3},\"decidedBy\":{\"userId\":\"u\",\"name\":\"Olli\"},\"decidedAt\":\"2026-12-06T14:32:00.000Z\",\"basis\":\"x\"}]}'::jsonb WHERE id = '$T_MAIN';"
 r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 tom-traegt-strafstossschiessen-ein-abgelehnt          " "$(a11_denied_verdict "$r" "keine")" "abgelehnt"
+a11_mark "@W2A-050 gegenzeile-tom-traegt-per-rest-ein-abgelehnt                    " "$(a11_denied_verdict "$r" "keine")" "abgelehnt"
 r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 gegen-maria-traegt-strafstossschiessen-ein            " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"
+a11_mark "@W2A-050 gegenzeile-maria-traegt-per-rest-ein-ohne-wirkung               " "$(a11_allowed_verdict "$r" 1 "keine")" "gelingt"
 r="$(a11_probe authenticated "$U_OWNER" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 gegen-olli-traegt-strafstossschiessen-ein             " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"
+a11_mark "@W2A-050 gegenzeile-olli-traegt-per-rest-ein-ohne-wirkung                " "$(a11_allowed_verdict "$r" 1 "keine")" "gelingt"

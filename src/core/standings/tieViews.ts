@@ -7,11 +7,11 @@
  */
 import type { StandingDecision, Tournament } from '../../types/tournament';
 import { standingsGroups } from '../models/standingsGroups';
-import { groupClosedByFollowUp } from './groupClosure';
+import { groupClosedFromCompletions } from './groupCompletions';
 import { rankTournamentGroup, type TableTournament } from './tournamentTable';
 import { blockMayShare, effectivePlacementsToPlayOut, followUpRanks, mandatoryReason, type MandatoryReason } from './playOutPlaces';
 
-type ViewTournament = Pick<Tournament, 'teams' | 'matches'> & TableTournament;
+type ViewTournament = Pick<Tournament, 'teams' | 'matches' | 'groupCompletions'> & TableTournament;
 
 export interface OpenTieBlock {
   groupId: string;
@@ -35,7 +35,7 @@ export interface GroupTieView {
   groupId: string;
   open: OpenTieBlock[];
   decided: DecidedTieBlock[];
-  /** Zwischenregel „Gruppe abgeschlossen“ bis GA4 A-13: ein Spiel mit Herkunft aus der Gruppe ist besetzt oder angepfiffen. */
+  /** Gruppe abgeschlossen (GA4 A-13b-C): Abschluss vorhanden und nicht wieder geöffnet; dann kein Zurücknehmen (@W2A-070). */
   closed: boolean;
 }
 
@@ -69,7 +69,7 @@ export function groupTieView(tournament: ViewTournament, groupId: string): Group
       decided.push({ groupId: table.groupId, decision: row.decision, place: Math.min(...members.map((r) => r.place)), size: members.length });
     }
   }
-  return { groupId: table.groupId, open, decided, closed: groupClosedByFollowUp(tournament, table.groupId) };
+  return { groupId: table.groupId, open, decided, closed: groupClosedFromCompletions(tournament, table.groupId) };
 }
 
 /** Marke eines Teams (Symbol und Wort, Farbe nie allein) oder `undefined`, wenn es keinen Gleichstand betrifft. */

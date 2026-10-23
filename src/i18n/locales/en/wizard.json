@@ -111,7 +111,9 @@
     "phonePlaceholder": "+49 123 456789",
     "website": "Website",
     "websitePlaceholder": "www.my-club.com",
-    "hint": "This information will appear in the schedule footer and PDF export."
+    "hint": "Without the tick, only the tournament management sees these details.",
+    "showPublic": "Show contact person publicly",
+    "showPublicHint": "With the tick, name, email, phone and website appear on the spectator page and in the schedule PDF – for everyone with the spectator link. Without it, only the tournament management sees them."
   },
   "step4": {
     "title": "Teams",

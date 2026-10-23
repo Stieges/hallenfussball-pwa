@@ -1,0 +1,76 @@
+{
+  "title": "K.-o.: beide treten nicht an, 0:0 ohne Strafstoß wird angenommen (kein SHOOTOUT_REQUIRED für Wertungen, R-A25b-2), kein Sieger",
+  "szenario": "Beide Teams treten nicht an (@W2A-024, @TM-063)",
+  "knockout": true,
+  "ctx": {
+    "matchId": "match-000069k",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000069k-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 0
+        },
+        "forfeit": {
+          "absent": "both"
+        }
+      },
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000069k-0000-4000-8000-000000000001",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000069k-0000-4000-8000-000000000001",
+      "decidedBy": "forfeit",
+      "finishedAt": 1000
+    },
+    "cacheColumns": {
+      "match_status": "finished",
+      "score_a": 0,
+      "score_b": 0,
+      "decided_by": "forfeit",
+      "forfeit_absent": "both"
+    }
+  }
+}

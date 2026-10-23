@@ -15,11 +15,14 @@ function chain(result: { data: unknown; error: unknown }) {
   return obj;
 }
 
-const tables: Record<string, unknown> = {};
+/** GA4 A-13b-C: das Lesen der Abschlüsse (`group_completions`, ohne Zeilen) und des Verlaufs (`bracket_log_read`, leer). */
+const abschluesse = { select: () => ({ eq: async () => ({ data: [], error: null }) }) };
+
+const tables: Record<string, unknown> = { group_completions: abschluesse };
 
 vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
-  supabase: { from: vi.fn((name: string) => tables[name]) },
+  supabase: { from: vi.fn((name: string) => tables[name]), rpc: vi.fn(async () => ({ data: [], error: null })) },
 }));
 
 import { SupabaseRepository } from '../SupabaseRepository';

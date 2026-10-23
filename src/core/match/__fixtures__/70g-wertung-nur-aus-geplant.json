@@ -1,0 +1,154 @@
+{
+  "title": "@FU-119 Gegenbeispiel (Review M1): ein angepfiffenes Spiel lässt sich nicht als Nichtantritt werten -- weder pausiert noch laufend (INVALID_TRANSITION FORFEIT_NOT_SCHEDULED), Spiel läuft weiter",
+  "szenario": "Ein angepfiffenes Spiel lässt sich nicht als Nichtantritt werten",
+  "ctx": {
+    "matchId": "match-70g",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000070g-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "0000070g-0000-4000-8000-000000000002",
+      "type": "PAUSE",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 61000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {}
+    },
+    {
+      "id": "0000070g-0000-4000-8000-000000000003",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 62000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 2
+        },
+        "basedOn": null,
+        "forfeit": {
+          "absent": "A"
+        }
+      }
+    },
+    {
+      "id": "0000070g-0000-4000-8000-000000000004",
+      "type": "RESUME",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 63000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {}
+    },
+    {
+      "id": "0000070g-0000-4000-8000-000000000005",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 64000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 0
+        },
+        "basedOn": null,
+        "forfeit": {
+          "absent": "both"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000070g-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070g-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070g-0000-4000-8000-000000000003",
+        "status": "rejected",
+        "code": "INVALID_TRANSITION",
+        "detail": {
+          "reason": "FORFEIT_NOT_SCHEDULED"
+        }
+      },
+      {
+        "id": "0000070g-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070g-0000-4000-8000-000000000005",
+        "status": "rejected",
+        "code": "INVALID_TRANSITION",
+        "detail": {
+          "reason": "FORFEIT_NOT_SCHEDULED"
+        }
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 60000,
+        "anchorAt": 63000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

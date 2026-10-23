@@ -19,12 +19,17 @@ import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
 import { useCan } from '../auth/hooks/useCan';
+import { useEventAuthors } from '../match-engine/useEventAuthors';
+import { useToast } from '../../components/ui/Toast';
+import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
+import { useScheduleForfeit } from './hooks/useScheduleForfeit';
 import { RulesLockProvider } from '../../components/match-settings/RulesLockContext';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext } from '../../components/schedule/matchSides';
 import { useFieldMatchSelection } from './hooks/useFieldMatchSelection';
 import { useEngineMatchInit } from './hooks/useEngineMatchInit';
 import { useCockpitKorrektur } from './hooks/useCockpitKorrektur';
+import { laeuftAufFeld, useCockpitFieldControl } from './hooks/useCockpitFieldControl';
 import { toMatchSummary } from './model/toMatchSummary';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
 import { StorageWarningBanner } from '../../components/StorageWarningBanner';
@@ -89,6 +94,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // solange er offen ist, pausiert der Countdown des Endstands (@SL-163, @SL-164)
   const korrektur = useCockpitKorrektur(tournament, liveMatches, istLeitung, { onBeginn: endstandPause.pausiere, onEnde: endstandPause.setzeFort });
 
+  // B-12 (@SL-174): „Nicht angetreten“ unter „Mehr“ öffnet denselben Dialog wie der Spielplan (nur Turnierleitung, vor dem Anpfiff)
+  const { showWarning, showSuccess } = useToast();
+  const forfeit = useScheduleForfeit({ tournament, showWarning: (message) => { showWarning(message); }, showSuccess: (message) => { showSuccess(message); } });
+
   // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
   const sides = useMemo(
     () => buildSideContext(
@@ -103,10 +112,21 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const { isInitializingMatch, engineReadyError, awaitingTeams, notOnEngineReason, handleRetryEngineReady } = useEngineMatchInit({ currentMatchData, liveMatches, getLiveMatchData });
 
   // Current match as LiveMatch (derived from state)
+  const { nameOf, ownName } = useEventAuthors(tournament.id, currentMatchData?.id ?? '');
+  // @FU-115: „Ende – eingetragen im Spielplan von Olli“ -- der Name nur, wenn ein anderes Konto beendet hat
+  const eintragAutor = useCallback((eventId: string): string | null => {
+    const name = nameOf(eventId);
+    return name !== ownName ? name : null;
+  }, [nameOf, ownName]);
   const currentMatch = useMemo(() =>
     currentMatchData ? liveMatches.get(currentMatchData.id) ?? null : null,
     [currentMatchData, liveMatches]
   );
+  // B-49: Steuer je Feld – fremd gesteuertes Feld nur lesend, „Spielleitung übernehmen“, Halter in der Feldwahl (@FU-026, @FU-027, @HE-049)
+  const feldLaeuft = useMemo(() => laeuftAufFeld(fieldMatches.map((m) => m.id), liveMatches, tournament.matches), [fieldMatches, liveMatches, tournament.matches]);
+  const steuer = useCockpitFieldControl({
+    tournamentId: tournament.id, feld, feldName: t('management.field', { number: feld }), canPlay, istLeitung, feldLaeuft, currentMatch,
+  });
 
   // Find last finished match
   const lastFinishedMatchData = useMemo(() => {
@@ -176,7 +196,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     <div className={vollbild ? `${styles.container} ${styles.containerVollbild}` : styles.container} data-testid="management-tab">
       {vollbild && (
         <CockpitSlimHeader
-          tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld}
+          tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} halter={steuer.halter}
           verbindung={<ConnectionPill tournamentId={tournament.id} />}
         />
       )}
@@ -191,11 +211,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             tournamentName={tournament.title}
             tournamentId={tournament.id}
             cockpitSettings={tournament.matchCockpitSettings}
-            kannSteuern={canPlay}
+            kannSteuern={steuer.kannSteuern}
+            steuerung={steuer.steuerung}
+            uebernahmeVon={steuer.uebernahmeVon}
             istLeitung={istLeitung}
             onKorrigieren={korrektur.onKorrigieren}
+            onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}
             sperrHinweise={sperrHinweise}
+            eintragAutor={eintragAutor}
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
             onStart={(matchId) => { void hookHandleStart(matchId); }}
@@ -235,7 +259,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       ) : leer?.art === 'keinSpiel' ? (
         <>
           {/* Ohne Spiel auf dem Feld gibt es keinen schmalen Kopf: die Feldwahl steht über der Tafel (Zone 1, @OB-030) */}
-          {tournament.numberOfFields > 1 && <div className={styles.feldwahlLeer}><FeldWahl felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} /></div>}
+          {tournament.numberOfFields > 1 && <div className={styles.feldwahlLeer}><FeldWahl felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} halter={steuer.halter} /></div>}
           <LiveCockpit {...leerProps} />
         </>
       ) : (
@@ -244,8 +268,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         </div>
       )}
 
+      <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
+
       {/* Korrektur nach dem Abpfiff: Ergebnis, dann Grund (@SL-159) */}
       {korrektur.dialoge}
+      {steuer.dialog}
     </div>
   );
 };

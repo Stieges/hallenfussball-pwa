@@ -1,0 +1,106 @@
+{
+  "title": "Review F9: nach dem Beenden im Spielplan öffnet die Turnierleitung wieder (ohne Frist) -> läuft ab dem angehaltenen Uhrstand 2:00 weiter, die Überschreibung 1:0 bleibt (K1)",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-70k",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000070k-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "0000070k-0000-4000-8000-000000000002",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 121000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 1,
+          "teamB": 0
+        },
+        "basedOn": null
+      }
+    },
+    {
+      "id": "0000070k-0000-4000-8000-000000000003",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 130000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000070k-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070k-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070k-0000-4000-8000-000000000003",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 120000,
+        "anchorAt": 130000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000070k-0000-4000-8000-000000000002",
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

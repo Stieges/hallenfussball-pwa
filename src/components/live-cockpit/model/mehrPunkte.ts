@@ -8,13 +8,18 @@
 import type { CockpitPhase } from './cockpitPhase';
 import { darfImZustand } from './darf';
 
-export type MehrPunkt = 'uhrKorrigieren' | 'seitenTauschen' | 'einstellungen';
+export type MehrPunkt = 'uhrKorrigieren' | 'seitenTauschen' | 'einstellungen' | 'nichtAngetreten';
 
 /** Welche Punkte „Mehr“ im Zustand anbietet (ohne Rücksicht darauf, ob der Aufrufer eine Aktion liefert). */
-export function mehrPunkteGrundgeruest(phase: CockpitPhase, k: { kannSteuern: boolean }): MehrPunkt[] {
+/**
+ * B-12 (@SL-174, @SL-175): „Nicht angetreten“ nur für die Turnierleitung (`istLeitung`, nie für Helfer, auch nicht mit Steuerrecht)
+ * und nur vor dem Anpfiff.
+ */
+export function mehrPunkteGrundgeruest(phase: CockpitPhase, k: { kannSteuern: boolean; istLeitung?: boolean }): MehrPunkt[] {
   const punkte: MehrPunkt[] = [];
   if (darfImZustand(phase.zustand, k.kannSteuern, 'uhrKorrigieren')) { punkte.push('uhrKorrigieren'); }
   if (darfImZustand(phase.zustand, k.kannSteuern, 'seitenTauschen')) { punkte.push('seitenTauschen'); }
+  if (k.istLeitung === true && darfImZustand(phase.zustand, true, 'nichtAngetreten')) { punkte.push('nichtAngetreten'); }
   punkte.push('einstellungen');
   return punkte;
 }

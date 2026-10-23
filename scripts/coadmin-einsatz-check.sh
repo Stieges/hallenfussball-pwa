@@ -438,9 +438,10 @@ run_assertions() { # <erwartet t|f fuer die 3 CA-2-Zeilen>
   check S "Rechte-Assertion: die 3 CA-2-Zeilen |$want" \
     "heartbeats-select-manage-screens|$want,make-public-keeps-existing-code|$want,share-rpcs-permission-based|$want" \
     "$(grep -E '^(share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens)\|' <<<"$priv" | sort | paste -sd, -)"
-  # 20261110_007: die Zeilen positive-ci-schema-reader-select-field-control/-match-corrections der spaeteren Migration sind hier f (laeuft erst am Ende).
-  check S "Rechte-Assertion: keine andere Zeile |f" "" \
-    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|positive-ci-schema-reader-select-field-control|positive-ci-schema-reader-select-match-corrections)\|' || true)"
+  # A-16 (20261110_008): die helper-join-*-Zeilen der spaeteren Migration sind hier f (laeuft erst am Ende).
+  # B-48b: die zwei Zeilen monitor-heartbeat-* der spaeteren Migration 20261113_101 sind hier f (laeuft erst am Ende).
+  check S "Rechte-Assertion: keine andere Zeile |f (ausser Zeilen der spaeteren Migrationen 20261110_005, 20261110_006)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(positive-ci-schema-reader-select-field-control|positive-ci-schema-reader-select-match-corrections|share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|matches-guard-engine-columns-forfeit-absent|append-match-events-writes-forfeit-absent|helper-join-[a-z0-9-]+|monitor-heartbeat-[a-z0-9-]+|group-completion-[a-z-]+|complete-group-locks-matches-before-tournament|ci-schema-reader-select-group-completion)\|' || true)"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
   names_sh="$(awk '/^PRIVILEGE_ASSERTION_NAMES=\(/{f=1; next} f && /^\)/{exit} f' "$REPO_ROOT/scripts/db-drift-check.sh" | grep -oE '^  "[a-z0-9-]+"' | tr -d ' "' | sort)"
   check S "Namensliste PRIVILEGE_ASSERTION_NAMES = Namen der SQL-Datei (diff leer)" "" "$(diff <(echo "$names_sh") <(echo "$names_sql") || true)"

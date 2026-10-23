@@ -69,7 +69,7 @@ describe("TB-3' Verfall: Einstellung geändert (@W2A-068)", () => {
     expect(danach.openTies).toEqual([]);
     expect(danach.rows.some((r) => r.decisionNeeded)).toBe(false);
     expect(row(danach.rows, 'D').decision?.id).toBe('e-otting');
-    expect(await repo.service().decide(repo.tournament.id, shootout('P', 'D', 5, 4))).toEqual({ ok: false, code: 'ALREADY_DECIDED' });
+    expect(await repo.service().decide(repo.tournament.id, shootout('P', 'D', 5, 4))).toEqual({ ok: false, code: 'ALREADY_DECIDED', by: 'Olli' });
   });
 
   it('@W2A-068 Gegenbeispiel: wird Platz 3 danach wieder abgehakt, gilt weiter das neuere Strafstoßschießen, nicht die alte Annahme', async () => {
@@ -154,7 +154,7 @@ describe("TB-3' Verfall: Herkunft geändert (@W2A-069)", () => {
     const entschieden = rankTournamentGroup(repo.tournament, 'A');
     expect([row(entschieden.rows, 'O').place, row(entschieden.rows, 'H').place]).toEqual([4, 5]);
     expect(entschieden.openTies).toEqual([]);
-    expect(await repo.service().decide(repo.tournament.id, shootout('H', 'O', 5, 4, 'A'))).toEqual({ ok: false, code: 'ALREADY_DECIDED' });
+    expect(await repo.service().decide(repo.tournament.id, shootout('H', 'O', 5, 4, 'A'))).toEqual({ ok: false, code: 'ALREADY_DECIDED', by: 'Olli' });
     const turnier = repo.tournament;
     expect(resolvePlayoffPairings(turnier).wasResolved).toBe(true);
     const seite = (matchId: string, s: 'slotA' | 'slotB'): string | undefined => {
@@ -180,13 +180,13 @@ describe("TB-3' Prüfung gegen den Serverstand beim Abschluss ohne Netz (@TM-146
   it('@TM-147:teil hat Maria inzwischen 4:3 für Otting eingetragen, ist Ollis Annahme ein Konflikt (ALREADY_DECIDED)', async () => {
     const repo = new MemoryRepo(nikolaus([1, 2]));
     expect((await repo.service().decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
-    expect(validateDraft(shared(['P', 'D']), repo.tournament)).toEqual({ ok: false, code: 'ALREADY_DECIDED' });
+    expect(validateDraft(shared(['P', 'D']), repo.tournament)).toMatchObject({ ok: false, code: 'ALREADY_DECIDED' });
   });
 
   it('@TM-146:teil hat Maria inzwischen 5:4 für SV Süd eingetragen, ist Ollis 4:3 für TSV West ein Konflikt (ALREADY_DECIDED)', async () => {
     const repo = new MemoryRepo(lage048());
     expect((await repo.service().decide(repo.tournament.id, shootout('S', 'W', 5, 4, 'A'))).ok).toBe(true);
-    expect(validateDraft(shootout('W', 'S', 4, 3, 'A'), repo.tournament)).toEqual({ ok: false, code: 'ALREADY_DECIDED' });
+    expect(validateDraft(shootout('W', 'S', 4, 3, 'A'), repo.tournament)).toMatchObject({ ok: false, code: 'ALREADY_DECIDED' });
   });
 });
 

@@ -1,0 +1,167 @@
+{
+  "join": {
+    "title": "Helfer-Zugang",
+    "forTournament": "Helfer-Zugang für",
+    "loading": "Code wird geprüft …",
+    "info": {
+      "title": "Helfer-Zugang – nur für Helfer der Turnierleitung",
+      "text": "Die Turnierleitung muss dich zulassen, bevor du etwas eintragen kannst. Bis dahin siehst du nur Turniername und Datum.",
+      "viewer": "Zur Zuschauer-Ansicht"
+    },
+    "name": {
+      "label": "Dein Name",
+      "counter": "{{count}} / {{max}}",
+      "hint": "1 bis 40 Zeichen. Die Turnierleitung sieht deinen Namen bei deiner Anfrage.",
+      "invalid": "Bitte gib einen Namen mit 1 bis 40 Zeichen ein."
+    },
+    "submit": "Anfrage senden",
+    "sending": "Anfrage wird gesendet …",
+    "retry": "Erneut versuchen",
+    "privacy": "Datenschutzhinweis",
+    "home": "Zur Startseite",
+    "formNotice": {
+      "offline": {
+        "title": "Für den Einstieg brauchst du Netz",
+        "text": "Dein Name bleibt stehen. Prüfe die Verbindung und versuche es noch einmal."
+      },
+      "authRateLimited": {
+        "title": "Zu viele Anmeldungen aus diesem Netz – bitte in 2 Minuten noch einmal versuchen oder mobile Daten nutzen"
+      },
+      "unexpected": {
+        "title": "Das hat nicht geklappt – bitte noch einmal",
+        "text": "Dein Name bleibt stehen."
+      }
+    },
+    "account": {
+      "dialogTitle": "Als Helfer beitreten",
+      "dialogText": "Du bist als <b>{{name}}</b> angemeldet. Als Helfer beitreten meldet dich auf diesem Gerät ab. Weiter?",
+      "dialogTextNoName": "Du bist angemeldet. Als Helfer beitreten meldet dich auf diesem Gerät ab. Weiter?",
+      "otherDevices": "Auf deinem Laptop und deinen anderen Geräten bleibst du angemeldet.",
+      "cancel": "Abbrechen",
+      "continue": "Weiter",
+      "signingOut": "Du wirst abgemeldet …",
+      "waitingTitleCount_one": "Erst verbinden – {{count}} Eintrag wartet",
+      "waitingTitleCount_other": "Erst verbinden – {{count}} Einträge warten",
+      "waitingTitleUnknown": "Erst verbinden – Einträge warten",
+      "waitingTextCount_one": "Auf diesem Gerät wartet {{count}} Eintrag aus deinem eigenen Turnier. Er geht unter deinem Konto an den Server, sobald das Gerät Verbindung hat. Danach kannst du als Helfer beitreten.",
+      "waitingTextCount_other": "Auf diesem Gerät warten {{count}} Einträge aus deinem eigenen Turnier. Sie gehen unter deinem Konto an den Server, sobald das Gerät Verbindung hat. Danach kannst du als Helfer beitreten.",
+      "waitingTextUnknown": "Auf diesem Gerät warten Einträge aus deinem eigenen Turnier. Sie gehen unter deinem Konto an den Server, sobald das Gerät Verbindung hat. Danach kannst du als Helfer beitreten."
+    },
+    "leader": {
+      "title": "Du leitest dieses Turnier bereits",
+      "text": "Du bist als {{name}} angemeldet und bleibst es. Es entsteht keine Anfrage.",
+      "textNoName": "Du bist angemeldet und bleibst es. Es entsteht keine Anfrage.",
+      "open": "{{title}} öffnen",
+      "openNoTitle": "Turnier öffnen"
+    },
+    "waiting": {
+      "requestFrom": "Anfrage von",
+      "checkNumber": "Deine Prüfzahl",
+      "title": "Wartet auf Freigabe durch die Turnierleitung",
+      "text": "Die Turnierleitung sieht dieselbe Prüfzahl bei deiner Anfrage. Bis zur Zulassung kannst du nichts eintragen. Lass diese Seite offen."
+    },
+    "end": {
+      "invalidCode": {
+        "title": "Dieser Code ist nicht gültig",
+        "text": "Scanne den Helfer-QR-Code der Turnierleitung noch einmal vollständig."
+      },
+      "codeRotated": {
+        "title": "Dieser Code ist nicht mehr gültig",
+        "text": "Die Turnierleitung hat einen neuen QR-Code erzeugt. Bitte den aktuellen Code scannen."
+      },
+      "codeExpired": {
+        "title": "Dieser Code ist abgelaufen",
+        "text": "Der Helfer-QR-Code gilt nur bis zum Ende des letzten Turniertags."
+      },
+      "tournamentClosed": {
+        "title": "Das Turnier ist abgeschlossen – ein Beitritt ist nicht mehr möglich"
+      },
+      "declined": {
+        "title": "Anfrage abgelehnt",
+        "text": "Die Turnierleitung hat deine Anfrage nicht zugelassen.",
+        "hint": "Auf diesem Gerät kannst du bis zum Ende des Turniers keine neue Anfrage stellen. Wurde deine Anfrage aus Versehen abgelehnt, scanne mit einem anderen Browser oder einem anderen Gerät noch einmal.",
+        "hintRotated": "Frag die Turnierleitung nach dem aktuellen QR-Code."
+      },
+      "requestExpired": {
+        "title": "Anfrage verfallen",
+        "text": "Der Code ist abgelaufen, bevor die Turnierleitung entschieden hat. Frage nach dem aktuellen QR-Code."
+      },
+      "noAccess": {
+        "title": "Du hast keinen Zugriff mehr",
+        "text": "Die Turnierleitung hat deinen Zugang entzogen. Eintragen ist auf diesem Gerät nicht mehr möglich."
+      },
+      "watchOnly": {
+        "title": "Du kannst nur noch zusehen",
+        "text": "Du siehst Spielplan und Ergebnisse, aber du kannst nichts mehr eintragen.",
+        "open": "Spielplan ansehen"
+      },
+      "finalStandings": {
+        "title": "Das Turnier ist abgeschlossen",
+        "text": "Du siehst den Endstand. Eintragen ist nicht mehr möglich.",
+        "open": "Endstand ansehen"
+      },
+      "noRequest": {
+        "title": "Für dieses Turnier hast du keinen Zugang",
+        "text": "Bitte den Helfer-Code scannen."
+      },
+      "busy": {
+        "title": "Zu viele offene Anfragen – bitte an die Turnierleitung wenden"
+      },
+      "retryScan": {
+        "title": "Bitte noch einmal scannen",
+        "text": "Auf diesem Gerät ist etwas schiefgelaufen."
+      },
+      "offline": {
+        "title": "Für den Einstieg brauchst du Netz",
+        "text": "Prüfe die Verbindung und scanne dann noch einmal.",
+        "stayAccount": "Du bleibst als {{name}} angemeldet."
+      },
+      "unexpected": {
+        "title": "Das hat nicht geklappt – bitte noch einmal",
+        "text": "Scanne den Helfer-QR-Code noch einmal."
+      },
+      "oldInvite": {
+        "title": "Dieser Einladungsweg gilt nicht mehr – bitte den Helfer-QR-Code der Turnierleitung nutzen"
+      }
+    },
+    "approved": {
+      "title": "Du bist zugelassen",
+      "textField": "Die Turnierleitung hat dich für Feld {{field}} zugelassen.",
+      "textNoField": "Die Turnierleitung hat dich zugelassen.",
+      "openField": "Feld {{field}} öffnen",
+      "openTournament": "Turnier öffnen"
+    },
+    "homeHint": {
+      "title": "Zum Startbildschirm hinzufügen",
+      "textField": "So öffnest du Feld {{field}} beim nächsten Mal mit einem Tipp, auch ohne QR-Code.",
+      "textNoField": "So öffnest du das Turnier beim nächsten Mal mit einem Tipp, auch ohne QR-Code.",
+      "dismiss": "Hinweis schließen"
+    },
+    "offlineReady": {
+      "title": "Offline bereit",
+      "textField": "Spielplan und Feld {{field}} sind auf diesem Gerät gespeichert. In der Halle ohne Netz kannst du trotzdem anpfeifen.",
+      "textNoField": "Der Spielplan ist auf diesem Gerät gespeichert. In der Halle ohne Netz kannst du ihn trotzdem öffnen."
+    },
+    "chooser": {
+      "title": "Wohin geht es?",
+      "field": "Feld {{field}}",
+      "noField": "ohne Feld",
+      "fieldAndDate": "{{field}} · {{date}}",
+      "home": "Zur Startseite",
+      "checking": "Dein Zugang wird geprüft …",
+      "own": "Eigenes Turnier · {{date}}"
+    },
+    "guard": {
+      "pending": {
+        "title": "Wartet auf Freigabe durch die Turnierleitung",
+        "text": "Du kannst nichts eintragen, bis die Turnierleitung dich zulässt."
+      }
+    },
+    "assignment": {
+      "card": "Du hilfst beim {{title}} · {{field}} · {{weekday}}"
+    }
+  },
+  "mehr": {
+    "meineTurniere": "Meine Turniere auf diesem Handy"
+  }
+}

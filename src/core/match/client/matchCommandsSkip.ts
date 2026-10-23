@@ -12,6 +12,7 @@ import type { MatchCommandsStore } from './MatchCommands';
 import type { MatchEngineView } from './MatchEngine';
 import { stampFor } from './matchCommandStamp';
 import type { CommandSpec, TeamScores } from './matchCommandTypes';
+import { withControlEpoch } from '../../fieldControl/controlEpochs';
 
 /** @FU-089: Ueberspringen; der Grund ist optional und fehlt sonst ganz in der Payload. */
 export function skipSpec(reason?: string): CommandSpec {
@@ -83,9 +84,11 @@ export async function storeEvents(
   events: readonly EngineEvent[],
 ): Promise<void> {
   const guest = accountId === 'guest';
-  if (events.length === 1) {
-    await (guest ? store.addConfirmedLocal(accountId, matchId, events[0]) : store.addPending(accountId, matchId, events[0]));
+  // B-49 (Brief A-34 L7): Steuer-Epoche beim Speichern, nur wenn dieses Gerät das Feld mit bekannter Epoche steuert
+  const stamped = guest ? events : withControlEpoch(matchId, events);
+  if (stamped.length === 1) {
+    await (guest ? store.addConfirmedLocal(accountId, matchId, stamped[0]) : store.addPending(accountId, matchId, stamped[0]));
     return;
   }
-  await (guest ? store.addConfirmedLocalBatch(accountId, matchId, events) : store.addPendingBatch(accountId, matchId, events));
+  await (guest ? store.addConfirmedLocalBatch(accountId, matchId, stamped) : store.addPendingBatch(accountId, matchId, stamped));
 }

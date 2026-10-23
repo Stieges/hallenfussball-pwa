@@ -16,7 +16,7 @@ import type { Actor, EngineEvent, ErrorCode, MatchContext, MatchRules } from '..
 import type { MatchEngineView } from './MatchEngine';
 import { definedFields, splitFirstTap, timingClock } from './matchCommandStamp';
 import { buildEvents, skipSpec, storeEvents, UNSKIP_SPEC } from './matchCommandsSkip';
-import { resultEntryCommand } from '../resultEntryShootout';
+import { forfeitEntrySpec, resultEntryCommand } from '../resultEntryShootout';
 import type {
   AmendFields,
   CardOptions,
@@ -150,6 +150,26 @@ export class MatchCommands {
   enterResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout: TeamScores | undefined, knockout: boolean): CommandResult {
     const built = resultEntryCommand(knockout, scores, shootout);
     return built.ok ? this.submit(matchId, ctx, actor, built.spec) : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
+  }
+
+  /**
+   * Spiel beenden (@FU-112, @FU-114, @FU-116): Abpfiff und Ergebnis in EINEM Eintrag (RESULT_ENTRY aus einem angepfiffenen
+   * Zustand, nur Leitung); `basedOn` = letzter Spielstand-Eintrag, den die Turnierleitung kannte (sonst STALE_BASE).
+   */
+  endWithResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout: TeamScores | undefined, knockout: boolean, basedOn: string | null): CommandResult {
+    const built = resultEntryCommand(knockout, scores, shootout);
+    return built.ok
+      ? this.submit(matchId, ctx, actor, { ...built.spec, payload: { ...built.spec.payload, basedOn } })
+      : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
+  }
+
+  /**
+   * B-12 (@W2A-022, @W2A-024): „nicht angetreten“ -- Wertung als Ergebniseintrag mit `forfeit.absent`; nur Leitung und nur
+   * aus `scheduled` (@FU-119, wie am Server). Eine Wertung braucht nie ein Strafstoßergebnis, auch im K.-o. nicht.
+   * Zurücknehmen: `reopen` (@W2A-026).
+   */
+  forfeit(matchId: string, ctx: MatchContext, actor: Actor, absent: 'A' | 'B' | 'both', result: { a: number; b: number }): CommandResult {
+    return this.submit(matchId, ctx, actor, forfeitEntrySpec(ctx, absent, result));
   }
 
   /** B-07a (@FU-089): Spiel absetzen/ueberspringen -- nur Leitung, nur im Zustand `scheduled`. */

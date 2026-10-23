@@ -31,7 +31,7 @@ jobs:
   e2e-cloud:
     name: Cloud E2E Tests (lokaler Supabase-Stack)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -46,8 +46,44 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright (nur Chromium -- die cloud-Projekte nutzen kein anderes)
-        run: npx playwright install --with-deps chromium
+      - name: Playwright-Version ermitteln
+        id: pw-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright-Browser-Cache
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-chromium-${{ steps.pw-version.outputs.version }}
+
+      # Nur Chromium -- die cloud-Projekte nutzen kein anderes.
+      # Ursache des 20-Min-Hangs: apt-get haengt beim Paket-Download (Mirror) und haelt danach das dpkg-Lock.
+      # Daher: apt mit Timeout/Retries, Install mit Step-Timeout, vor der Wiederholung haengende apt-Prozesse beenden.
+      - name: apt-Haertung (Download-Timeout und Retries)
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/99ci-retries >/dev/null
+
+      - name: Install Playwright Chromium
+        id: pw-install
+        continue-on-error: true
+        timeout-minutes: 6
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps chromium; else npx playwright install --with-deps chromium; fi
+
+      - name: Install Playwright Chromium (Wiederholung)
+        if: steps.pw-install.outcome != 'success'
+        timeout-minutes: 8
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          sudo pkill -KILL -x apt-get || true
+          sudo pkill -KILL -x dpkg || true
+          sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+          sudo dpkg --configure -a || true
+          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps chromium; else npx playwright install --with-deps chromium; fi
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -77,6 +113,10 @@ jobs:
         # ohne Zutun: assertLocalSupabaseTarget prüft die Ziel-URL/den Key vor jedem
         # Service-Role-Zugriff, und dieser Job setzt nirgends eine Produktions-URL oder
         # -Keys -- der lokale Stack ist die einzige konfigurierte Quelle.
+        env:
+          # Der Stack oben entsteht aus den Migrationen des Repos, also mit 20261110_008_helper_join.sql (A-16):
+          # die Helfer-Beitritts-Specs (helfer-beitritt.cloud.spec.ts, A-17b) laufen hier statt fixme.
+          E2E_STACK_HAS_008: '1'
         run: npm run test:e2e:cloud
 
       - name: Supabase-Diagnose einsammeln
@@ -99,6 +139,15 @@ jobs:
           name: supabase-logs-cloud
           path: ci-diagnostics/
           retention-days: 7
+
+      - name: Bildschirmfotos Feldsteuerung hochladen (B-49, für die Bildprüfung)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: b49-bilder
+          path: test-results/b49-bilder/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Playwright-Report hochladen
         if: failure()

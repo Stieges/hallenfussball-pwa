@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
-import { isTransientMutationError, isVersionConflict } from '../errors';
+import { definitiveRejectionReason, isTransientMutationError, isVersionConflict, type DefinitiveRejectionReason } from '../errors';
 import { StorageError } from '../storage/StorageError';
 import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
@@ -34,7 +34,19 @@ const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     lastError: z.string().optional(),
     conflict: z.boolean().optional(),
     discardedCopy: z.boolean().optional(),
+    // Review A3: tolerant – ein Grund einer neueren App-Version macht den Eintrag nicht ungültig (siehe knownRejection)
+    rejection: z.unknown().optional(),
 });
+
+const KNOWN_REJECTIONS: ReadonlyArray<FailedMutationItem['rejection']> = ['invalidValue', 'tournamentGone'];
+
+/**
+ * BP-1 Review A3 (@FU-004, @FU-126): Grund beim Laden. Unbekannte Werte (z. B. von einer neueren App-Version) gelten als
+ * „unklar“ (kein eigener Grund) – der Eintrag bleibt erhalten und wird nie still verworfen.
+ */
+function knownRejection(value: unknown): FailedMutationItem['rejection'] {
+    return KNOWN_REJECTIONS.find((known) => known === value);
+}
 
 /**
  * A requested change to be persisted to the cloud, generic over the
@@ -66,6 +78,11 @@ export interface FailedMutationItem<TType extends string = string> extends Gener
      * Servers wartet (z. B. Server nicht erreichbar). Kein Konflikt mit einem anderen Gerät; „Erneut versuchen“ hilft nicht.
      */
     discardedCopy?: boolean;
+    /**
+     * BP-1 (@FU-126, Befund C-ENDGUELTIG-SOFORT-MELDEN): vom Server eindeutig abgelehnt, ohne Wiederholung abgelegt.
+     * `invalidValue`: ungültiger Wert; `tournamentGone`: Turnier gibt es nicht mehr (@FU-123). Ein Konflikt trägt weiter `conflict`.
+     */
+    rejection?: Exclude<DefinitiveRejectionReason, 'conflict'>;
 }
 
 /**
@@ -88,6 +105,12 @@ export interface MutationQueueConfig<TType extends string> {
     execute: (item: GenericMutationItem<TType>) => Promise<void>;
     /** Coalesce-Schlüssel oder null (kein Coalescing) — Semantik wie Bestand. */
     coalesceKey: (type: TType, payload: unknown) => string | null;
+    /**
+     * BP-1 (@FU-125, @BM-072; Befunde C-METADATEN-ZUSAMMENFASSEN-VERLIERT-FELDER, -VERDRAENGT-TEILEN): Nutzlast nach dem Zusammenfassen mit dem letzten
+     * wartenden Eintrag gleichen Schlüssels, oder `null` = nicht zusammenfassbar (der neue Eintrag wird angehängt, die
+     * Reihenfolge bleibt). Ohne Angabe ersetzt die neue Nutzlast die alte (Bestand).
+     */
+    coalescePayload?: (type: TType, existing: unknown, incoming: unknown) => unknown;
     /** Sentry-Feature-Tag (Bestand: 'sync'). */
     sentryFeature: string;
     /**
@@ -199,11 +222,13 @@ export class GenericMutationQueue<TType extends string> {
                 if (this.config.coalesceKey(this.queue[i].type, this.queue[i].payload) === coalesceKey) { existingIndex = i; break; }
             }
 
-            if (existingIndex !== -1) {
-                // Replace existing mutation with newer payload
+            const merged = existingIndex === -1 ? null
+                : this.config.coalescePayload ? this.config.coalescePayload(type, this.queue[existingIndex].payload, payload) : payload;
+            if (existingIndex !== -1 && merged !== null) {
+                // Replace existing mutation with newer (or merged) payload
                 this.queue[existingIndex] = {
                     ...this.queue[existingIndex],
-                    payload,
+                    payload: merged,
                     timestamp: Date.now(),
                     // Keep retryCount from existing item (don't reset on coalesce)
                 };
@@ -275,18 +300,30 @@ export class GenericMutationQueue<TType extends string> {
     /**
      * Move a failed mutation to the dead-letter queue
      */
-    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, reason?: 'conflict' | 'discardedCopy'): void {
+    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, reason?: DefinitiveRejectionReason | 'discardedCopy'): void {
         const failedItem: FailedMutationItem<TType> = {
             ...item,
             failedAt: Date.now(),
             lastError: error,
             ...(reason === 'conflict' ? { conflict: true } : {}),
             ...(reason === 'discardedCopy' ? { discardedCopy: true } : {}),
+            ...(reason === 'invalidValue' || reason === 'tournamentGone' ? { rejection: reason } : {}),
         };
         this.failedQueue.push(failedItem);
         this.saveFailed();
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) { console.log(`MutationQueue: Moved ${item.id} to dead-letter queue`); }
+    }
+
+    /** Kopf der Warteschlange in den Dead-Letter (Sentry wie bisher) – nach MAX_RETRIES oder bei eindeutiger Ablehnung. */
+    private deadLetterHead(item: GenericMutationItem<TType>, error: unknown, reason?: DefinitiveRejectionReason): void {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
+        this.queue.shift();
+        this.moveToDeadLetter(item, errorMessage, reason);
+        this.lastFailure = 'permanent';
+        this.save();
+        this.notifyListeners();
     }
 
     /**
@@ -463,7 +500,45 @@ export class GenericMutationQueue<TType extends string> {
 
     /** A-07i (@FU-004): nur ein im echten Speicher angekommener Stand gilt als gespeichert. */
     private persist(key: string, value: unknown, action: string): void {
-        if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { if (Array.isArray(value) && value.length === 0) { safeLocalStorage.removeItem(key); } this.reportStorageFailure(action); } // A-07i Fixrunde 1 (2): leerer Stand -> veralteten Schluessel entfernen (Doppelversand)
+        if (safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { return; }
+        if (Array.isArray(value) && value.length === 0) { safeLocalStorage.removeItem(key); } // A-07i Fixrunde 1 (2): leerer Stand -> veralteten Schluessel entfernen (Doppelversand)
+        else if (Array.isArray(value) && this.replaceStaleList(key, value as ReadonlyArray<{ id?: unknown }>)) { return; }
+        this.reportStorageFailure(action);
+    }
+
+    /**
+     * BP-1 (@FU-121, @FU-122, Befunde C-QUEUE-SPEICHER-VOLL, -REST): Der Speicher hat den neuen Stand nicht genommen. Enthält
+     * der abgelegte Stand Einträge, die nicht mehr warten (gesendet oder abgelegt), würde ein Neustart sie noch einmal
+     * senden – ein alter Stand überschriebe dann neuere Daten. Stufen (Review A2: nie alles entfernen, solange ein vorher
+     * dauerhaft abgelegter, noch wartender Eintrag existiert):
+     * 1. sicherer Stand: der abgelegte Stand, gekürzt auf die noch wartenden Einträge (alte Nutzlasten) – eine echte
+     *    Teilmenge des Abgelegten, passt bei Kontingent mit Gutschrift immer und sendet nichts doppelt;
+     *    nimmt der Speicher nicht einmal das, wird der alte Stand entfernt (Controller F1, Störung ist gemeldet);
+     * 2. nachbessern: der neue Stand vollständig, sonst die noch wartenden Einträge mit ihren aktuellen Nutzlasten.
+     * Liefert `true`, wenn der neue Stand vollständig abgelegt ist.
+     */
+    private replaceStaleList(key: string, value: ReadonlyArray<{ id?: unknown }>): boolean {
+        let stored: Array<{ id?: unknown }>;
+        try {
+            const parsed: unknown = JSON.parse(safeLocalStorage.getItem(key) ?? '[]');
+            stored = Array.isArray(parsed) ? (parsed as Array<{ id?: unknown }>) : [];
+        } catch {
+            stored = [];
+        }
+        const current = new Set(value.map((item) => item.id));
+        if (stored.every((item) => current.has(item.id))) { return false; } // nichts Veraltetes: der abgelegte Stand bleibt
+        const storedWaiting = stored.filter((item) => current.has(item.id));
+        if (storedWaiting.length === 0) {
+            safeLocalStorage.removeItem(key);
+        } else if (!safeLocalStorage.setItemPersisted(key, JSON.stringify(storedWaiting))) {
+            safeLocalStorage.removeItem(key); // Speicher nimmt nichts: lieber nichts abgelegt als Gesendetes erneut senden
+            return false;
+        }
+        if (safeLocalStorage.setItemPersisted(key, JSON.stringify(value))) { return true; }
+        const storedIds = new Set(stored.map((item) => item.id));
+        const stillWaiting = value.filter((item) => storedIds.has(item.id));
+        if (stillWaiting.length > 0) { safeLocalStorage.setItemPersisted(key, JSON.stringify(stillWaiting)); } // sonst bleibt Stufe 1
+        return false;
     }
 
     /** A-07i: Speichern fehlgeschlagen → Störungsanzeige „Gerätespeicher voll“ (lastFailure 'storage') + Sentry (1× je Ursache). */
@@ -494,7 +569,11 @@ export class GenericMutationQueue<TType extends string> {
                         return false;
                     }
                     return true;
-                }) as FailedMutationItem<TType>[];
+                }).map((item) => {
+                    const { rejection, ...rest } = item as FailedMutationItem<TType> & { rejection?: unknown };
+                    const known = knownRejection(rejection);
+                    return known ? { ...rest, rejection: known } : rest;
+                });
             }
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load failed queue', e); }
@@ -566,18 +645,19 @@ export class GenericMutationQueue<TType extends string> {
                         break;
                     }
 
+                    // BP-1 (@FU-126): eindeutig endgültige Ablehnung – sofort mit Grund ablegen, kein neuer Versuch
+                    const rejection = definitiveRejectionReason(error);
+                    if (rejection) {
+                        this.deadLetterHead(item, error, rejection);
+                        continue;
+                    }
+
                     this.lastFailure = 'permanent'; this.notifyListeners();
                     item.retryCount++;
 
                     if (item.retryCount >= MAX_RETRIES) {
-                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                         if (import.meta.env.DEV) { console.error(`MutationQueue: Max retries exceeded for ${item.id}. Moving to dead-letter queue.`); }
-                        if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
-                        // Move to dead-letter queue instead of dropping
-                        this.queue.shift();
-                        this.moveToDeadLetter(item, errorMessage, isVersionConflict(error) ? 'conflict' : undefined);
-                        this.save();
-                        this.notifyListeners();
+                        this.deadLetterHead(item, error, isVersionConflict(error) ? 'conflict' : undefined);
                         continue; // Continue to next item
                     } else {
                         // Keep in queue, stop processing for now (retry later)

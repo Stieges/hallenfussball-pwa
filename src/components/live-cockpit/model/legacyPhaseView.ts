@@ -41,5 +41,6 @@ export function legacyPhaseViewOf(match: LegacyPhaseMatch, elapsedSeconds: numbe
     shootout: null,
     clockAdjustments: [],
     tiebreakMode: match.playPhase === 'goldenGoal' ? 'goldenGoal' : match.tiebreakerMode ?? null,
+    eingetragenImSpielplan: null, // ohne Engine-Kopie kein Ergebnis-Eintrag (@FU-112)
   };
 }

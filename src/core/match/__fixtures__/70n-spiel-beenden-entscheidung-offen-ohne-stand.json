@@ -1,0 +1,135 @@
+{
+  "title": "@FU-116 Review A1: K.-o.-Entscheidung offen -- ohne basedOn -> STALE_BASE (Pflicht auch hier), mit basedOn null angenommen",
+  "szenario": "Steht ein Spiel nach abgelaufener Spielzeit ohne Abpfiff, beendet es die Turnierleitung im Spielplan",
+  "ctx": {
+    "matchId": "match-70n",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000070n-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": true,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "0000070n-0000-4000-8000-000000000002",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1201000,
+      "section": 1,
+      "clockMs": 1200000,
+      "payload": {}
+    },
+    {
+      "id": "0000070n-0000-4000-8000-000000000003",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 1210000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 1,
+          "teamB": 1
+        },
+        "shootout": {
+          "teamA": 4,
+          "teamB": 3
+        }
+      }
+    },
+    {
+      "id": "0000070n-0000-4000-8000-000000000004",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 1211000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 1,
+          "teamB": 1
+        },
+        "basedOn": null,
+        "shootout": {
+          "teamA": 4,
+          "teamB": 3
+        }
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000070n-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070n-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000070n-0000-4000-8000-000000000003",
+        "status": "rejected",
+        "code": "STALE_BASE"
+      },
+      {
+        "id": "0000070n-0000-4000-8000-000000000004",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 1200000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 1
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000070n-0000-4000-8000-000000000004",
+      "decidedBy": "direct",
+      "finishedAt": 1211000
+    },
+    "liveState": null
+  }
+}

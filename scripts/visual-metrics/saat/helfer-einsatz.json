@@ -1,0 +1,250 @@
+{
+ "formatVersion": 1,
+ "name": "helfer-einsatz",
+ "beschreibung": "Helfer-Handy vor dem Turniertag (A-17c-2, @HE-109): Zugang zum Live-Cup am 01.01.2099 (immer in der Zukunft), dazu das eigene Trainingsturnier von letzter Woche. Gerätesitzung und Server-Antworten kommen aus dem Stub helfer-start/karte.",
+ "datenbanken": [
+  {
+   "name": "hallenfussball",
+   "version": 1,
+   "store": "cache",
+   "eintraege": {
+    "tournaments": [
+     {
+      "id": "00000000-0000-4000-8000-00000000c0b1",
+      "ownerId": "00000000-0000-4000-8000-0000000000aa",
+      "status": "published",
+      "publishedAt": "@jetzt-86400s",
+      "sport": "football",
+      "sportId": "football-indoor",
+      "tournamentType": "classic",
+      "mode": "classic",
+      "numberOfFields": 2,
+      "numberOfTeams": 4,
+      "numberOfGroups": 1,
+      "groupSystem": "roundRobin",
+      "groupPhaseGameDuration": 10,
+      "groupPhaseBreakDuration": 2,
+      "gameDuration": 10,
+      "breakDuration": 2,
+      "placementLogic": [
+       "points",
+       "goalDifference",
+       "goalsFor"
+      ],
+      "finals": {
+       "enabled": false
+      },
+      "isKidsTournament": false,
+      "hideScoresForPublic": false,
+      "hideRankingsForPublic": false,
+      "resultMode": "goals",
+      "pointSystem": {
+       "win": 3,
+       "draw": 1,
+       "loss": 0
+      },
+      "title": "Live-Cup",
+      "ageClass": "U12",
+      "date": "2099-01-01",
+      "timeSlot": "10:00 - 14:00",
+      "startDate": "2099-01-01",
+      "startTime": "10:00",
+      "location": {
+       "name": "Test-Halle"
+      },
+      "teams": [
+       {
+        "id": "00000000-0000-4000-8000-c0b1aaaaaaaa",
+        "name": "FC Live A",
+        "group": "A"
+       },
+       {
+        "id": "00000000-0000-4000-8000-c0b1bbbbbbbb",
+        "name": "FC Live B",
+        "group": "A"
+       },
+       {
+        "id": "00000000-0000-4000-8000-c0b1cccccccc",
+        "name": "FC Live C",
+        "group": "A"
+       },
+       {
+        "id": "00000000-0000-4000-8000-c0b1dddddddd",
+        "name": "FC Live D",
+        "group": "A"
+       }
+      ],
+      "matches": [
+       {
+        "id": "00000000-0000-4000-9000-c0b100000000",
+        "matchNumber": 1,
+        "round": 1,
+        "field": 1,
+        "group": "A",
+        "phase": "groupStage",
+        "slotA": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-c0b1aaaaaaaa"
+        },
+        "slotB": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-c0b1bbbbbbbb"
+        },
+        "matchStatus": "scheduled",
+        "scheduledTime": "@jetzt+345600s"
+       },
+       {
+        "id": "00000000-0000-4000-9000-c0b100000001",
+        "matchNumber": 2,
+        "round": 1,
+        "field": 2,
+        "group": "A",
+        "phase": "groupStage",
+        "slotA": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-c0b1cccccccc"
+        },
+        "slotB": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-c0b1dddddddd"
+        },
+        "matchStatus": "scheduled",
+        "scheduledTime": "@jetzt+345600s"
+       }
+      ],
+      "createdAt": "@jetzt-86400s",
+      "updatedAt": "@jetzt-86400s"
+     },
+     {
+      "id": "00000000-0000-4000-8000-0000000007a1",
+      "ownerId": "00000000-0000-4000-8000-0000000000aa",
+      "status": "published",
+      "publishedAt": "@jetzt-86400s",
+      "sport": "football",
+      "sportId": "football-indoor",
+      "tournamentType": "classic",
+      "mode": "classic",
+      "numberOfFields": 2,
+      "numberOfTeams": 4,
+      "numberOfGroups": 1,
+      "groupSystem": "roundRobin",
+      "groupPhaseGameDuration": 10,
+      "groupPhaseBreakDuration": 2,
+      "gameDuration": 10,
+      "breakDuration": 2,
+      "placementLogic": [
+       "points",
+       "goalDifference",
+       "goalsFor"
+      ],
+      "finals": {
+       "enabled": false
+      },
+      "isKidsTournament": false,
+      "hideScoresForPublic": false,
+      "hideRankingsForPublic": false,
+      "resultMode": "goals",
+      "pointSystem": {
+       "win": 3,
+       "draw": 1,
+       "loss": 0
+      },
+      "title": "Training",
+      "ageClass": "U12",
+      "date": "@jetzt-604800s",
+      "timeSlot": "10:00 - 14:00",
+      "startDate": "@jetzt-604800s",
+      "startTime": "10:00",
+      "location": {
+       "name": "Test-Halle"
+      },
+      "teams": [
+       {
+        "id": "00000000-0000-4000-8000-07a1aaaaaaaa",
+        "name": "FC Trai A",
+        "group": "A"
+       },
+       {
+        "id": "00000000-0000-4000-8000-07a1bbbbbbbb",
+        "name": "FC Trai B",
+        "group": "A"
+       },
+       {
+        "id": "00000000-0000-4000-8000-07a1cccccccc",
+        "name": "FC Trai C",
+        "group": "A"
+       },
+       {
+        "id": "00000000-0000-4000-8000-07a1dddddddd",
+        "name": "FC Trai D",
+        "group": "A"
+       }
+      ],
+      "matches": [
+       {
+        "id": "00000000-0000-4000-9000-07a100000000",
+        "matchNumber": 1,
+        "round": 1,
+        "field": 1,
+        "group": "A",
+        "phase": "groupStage",
+        "slotA": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-07a1aaaaaaaa"
+        },
+        "slotB": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-07a1bbbbbbbb"
+        },
+        "matchStatus": "scheduled",
+        "scheduledTime": "@jetzt-604800s"
+       },
+       {
+        "id": "00000000-0000-4000-9000-07a100000001",
+        "matchNumber": 2,
+        "round": 1,
+        "field": 2,
+        "group": "A",
+        "phase": "groupStage",
+        "slotA": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-07a1cccccccc"
+        },
+        "slotB": {
+         "kind": "team",
+         "teamId": "00000000-0000-4000-8000-07a1dddddddd"
+        },
+        "matchStatus": "scheduled",
+        "scheduledTime": "@jetzt-604800s"
+       }
+      ],
+      "createdAt": "@jetzt-86400s",
+      "updatedAt": "@jetzt-86400s"
+     }
+    ]
+   }
+  }
+ ],
+ "localStorage": {
+  "helper:access:v1": {
+   "version": 1,
+   "deviceUserId": "00000000-0000-4000-8000-0000000000aa",
+   "entries": [
+    {
+     "tournamentId": "00000000-0000-4000-8000-00000000c0b1",
+     "title": "Live-Cup",
+     "date": "2099-01-01",
+     "code": "CODE2ABCDEFGH",
+     "field": 2,
+     "relation": "accepted",
+     "closed": false,
+     "checkNumber": null,
+     "homeHintDismissed": true,
+     "offlineReadyAt": null,
+     "updatedAt": "2099-01-01T00:00:00.000Z"
+    }
+   ]
+  }
+ },
+ "kennzahlen": {}
+}

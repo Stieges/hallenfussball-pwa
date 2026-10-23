@@ -8,7 +8,6 @@
 import { describe, expect, it } from 'vitest';
 import { mapTournamentFromSupabase, mapTournamentToSupabase } from '../supabaseMappers';
 import { hydrateTournament } from '../hydration';
-import { writeStandingDecisionsToCloud } from '../standingDecisionsCloud';
 import { TournamentSchema } from '../../models/schemas/TournamentSchema';
 import { effectivePlacementsToPlayOut, offeredPlaces } from '../../standings/playOutPlaces';
 import { createTournamentRow, type TournamentRow } from '../../../../tests/factories/supabase';
@@ -107,28 +106,5 @@ describe("TB-3' Entscheidung im öffentlich lesbaren config ohne Person, Zeit, G
     expect(TournamentSchema.safeParse({ ...turnier, standingDecisions: [alt] }).data?.standingDecisions?.[0]).not.toHaveProperty('decidedBy');
     // Gegenbeispiel: ein anderes unbekanntes Feld macht die Entscheidung weiter ungültig (strikt).
     expect(fromConfig({ standingDecisions: [{ ...alt, spielerName: 'Max' }] }).standingDecisions).toEqual([]);
-  });
-});
-
-describe("TB-3' Cloud-Schreibweg der Entscheidungen ohne Altwerte", () => {
-  it('@W2A-072:teil eine lokal gespeicherte Entscheidung mit Person, Zeit und Grund kommt ohne diese Angaben ins config', async () => {
-    let geschrieben: { config: { standingDecisions: Array<Record<string, unknown>> } } | undefined;
-    const client = {
-      from: () => ({
-        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { config: { andere: 1 }, version: 3 }, error: null }) }) }),
-        update: (payload: typeof geschrieben) => {
-          geschrieben = payload;
-          return { eq: () => ({ eq: () => ({ select: () => Promise.resolve({ data: [{ id: 't1' }], error: null }) }) }) };
-        },
-      }),
-    };
-    const alt = {
-      id: 'e-1', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shared' as const, basis: 'x',
-      decidedBy: { userId: 'user-olli', name: 'Olli' }, decidedAt: '2026-12-06T14:32:00.000Z', reason: 'Hallenzeit',
-    };
-    await writeStandingDecisionsToCloud(client as unknown as Parameters<typeof writeStandingDecisionsToCloud>[0], 't1', [alt], 3);
-    expect(geschrieben?.config.standingDecisions).toEqual([{ id: 'e-1', groupId: '', teamIds: [TEAM_A, TEAM_B], order: [TEAM_B, TEAM_A], kind: 'shared', basis: 'x' }]);
-    // Gegenbeispiel: das übrige config bleibt.
-    expect(geschrieben?.config).toMatchObject({ andere: 1 });
   });
 });

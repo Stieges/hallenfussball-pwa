@@ -82,7 +82,10 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
     leerAnzeige = { titel: t('tafel.keinWeiteresSpiel'), untertitel: grund.feldName };
     hinweise.push(t('tafel.vor.keinSpielMehr', { feld: grund.feldName }));
   }
-  if (vor.uebernahmeVon !== null) { hinweise.push(t('tafel.uebernahmePruefen', { name: vor.uebernahmeVon })); }
+  // @SL-015, @FU-111: nach der Übernahme Uhr prüfen; '' = Vorgänger ohne Namen (B-49)
+  if (vor.uebernahmeVon !== null) {
+    hinweise.push(vor.uebernahmeVon === '' ? t('tafel.uebernahmePruefenOhneName') : t('tafel.uebernahmePruefen', { name: vor.uebernahmeVon }));
+  }
 
   const istVorZustand = phase.zustand === 'vorAnpfiff' || phase.zustand === 'wartetAufHerkunft' || phase.zustand === 'keinSpiel';
   return { uhr, ueberfaelligText, kopfText: istVorZustand ? kopfText : null, hinweise, leerAnzeige };

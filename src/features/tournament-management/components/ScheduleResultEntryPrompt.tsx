@@ -5,6 +5,8 @@
  *   „Sonstiges“ nur mit Freitext. Abbruch speichert nichts. Fixrunde 1 (I-3): Bausteine `Select`/`Input`
  *   (Schrift ≥ 16 px, sichtbare Beschriftung), Fläche `DialogSurface`.
  * - K.-o.-Unentschieden (A-25a, @FU-094): Ergebnis des Strafstoßschießens (`ScheduleShootoutPrompt`).
+ * - Spiel beenden (@FU-112, @FU-114, @FU-115): „Spiel 9 läuft noch – Uhr zeigt 2:00 Restzeit. Jetzt mit 3:1 beenden?“ bzw.
+ *   „Spielzeit abgelaufen – …“, darüber der Hinweis „Feld 2 wird gerade von Tom gesteuert“ (`ScheduleEndPrompt`).
  */
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +19,7 @@ import { cssVars, dialogWidths } from '../../../design-tokens';
 import { CORRECTION_REASONS, type CorrectionReason } from '../../../types/userProfile';
 import type { ResultEntryPrompt } from '../hooks/useScheduleResultEntry';
 import { ScheduleShootoutPrompt } from './ScheduleShootoutPrompt';
+import { ScheduleEndPrompt } from './ScheduleEndPrompt';
 
 export interface ScheduleResultEntryPromptProps {
   prompt: ResultEntryPrompt | null;
@@ -92,6 +95,9 @@ export function ScheduleResultEntryPrompt({ prompt, answerPrompt }: ScheduleResu
   }
   if (prompt.kind === 'reason') {
     return <ReasonPrompt key={`${prompt.matchNumber}-${prompt.after}`} prompt={prompt} answerPrompt={answerPrompt} />;
+  }
+  if (prompt.kind === 'end') {
+    return <ScheduleEndPrompt prompt={prompt} answerPrompt={answerPrompt} />;
   }
   if (prompt.kind === 'shootout') {
     return <ScheduleShootoutPrompt key={`${prompt.matchNumber}-${prompt.score}`} prompt={prompt} answerPrompt={answerPrompt} />;

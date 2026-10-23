@@ -45,8 +45,8 @@ describe('TB-3 Entscheidung in der Tabelle', () => {
       .toEqual(vorher.matches.map((m) => [m.id, m.scoreA, m.scoreB, m.matchStatus]));
   });
 
-  // TB-3': „mit Zeit und Person“ steht nicht mehr im Turnierdatensatz (@W2A-072) – erwartet rot in
-  // `entscheidung.personZeit.test.ts` (C-ENTSCHEIDUNG-PERSON-OEFFENTLICH, Besitzer GA4 A-13b).
+  // „mit Zeit und Person“ steht nicht im Turnierdatensatz (@W2A-072), sondern im Verlauf der Turnierleitung
+  // (`decisionLog.test.ts`, `entscheidung.personZeit.test.ts`, GA4 A-13b-C).
   it('@W2A-004 die App zieht nicht selbst: ohne Eintrag markiert, nach dem Eintrag das Ergebnis übernommen', async () => {
     const ohne = table(jgj('RKMUNO', DATA.ET_055));
     expect([row(ohne, 'R').decisionNeeded, row(ohne, 'K').decisionNeeded]).toEqual([true, true]);

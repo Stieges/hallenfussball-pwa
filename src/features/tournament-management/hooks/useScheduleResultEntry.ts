@@ -9,7 +9,12 @@
  * (M-2, Wortlaut @HE-042) melden sofort. K.-o.-Auflösung über `useResultEntryAck` → `useKoResolutionAfterAck`.
  * UR (@FU-082): den Namen im Hinweis „inzwischen von … geändert“ liest `readEventAuthorNames` (Server-Lesefunktion),
  * ohne Namen bleibt es beim Text ohne „von …“.
- * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042.
+ * Spiel beenden (20261110_009): angepfiffen → nur Turnierleitung, nach Rückfrage Abpfiff und Ergebnis in einem Eintrag
+ * (`scheduleEndMatch.ts`); Helfer bekommen den Weg nicht, im Strafstoßschießen abgelehnt.
+ * B-49: Helfer bei laufendem Spiel auf fremd gesteuertem Feld → `offerTakeover` (Hinweis bzw. „Spielleitung übernehmen“,
+ * @FU-081), sonst der Hinweis wie bisher (@FU-113).
+ * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042, @FU-112, @FU-113, @FU-114,
+ * @FU-115, @FU-116, @FU-117, @FU-118.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,17 +30,22 @@ import { routeForStatus } from './scoreChangeHelpers';
 import { useResultEntryAck } from './useResultEntryAck';
 import { readEventAuthorNames } from '../../../core/repositories/eventAuthorNamesRpc';
 import { supabase } from '../../../lib/supabase';
+import { readForeignFieldHolder } from '../../../core/repositories/fieldControlStateRpc';
+import { getDeviceId } from '../../../core/device/deviceId';
+import { fieldHolderText } from '../../match-engine/fieldHolderText';
+import { endMatchFromSchedule, type EndPrompt } from './scheduleEndMatch';
 
 export type ResultEntryPrompt =
   | { kind: 'reason'; matchNumber: number; before: string; after: string }
   | { kind: 'unskip'; matchNumber: number }
-  | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string };
+  | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string }
+  | EndPrompt;
 
 export interface ScheduleResultEntry {
   /** `false` = nichts gespeichert (Nein/Abbrechen/Ablehnung), die Eingabe-Zelle zeigt dann wieder den gespeicherten Stand */
   enterScore: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
   prompt: ResultEntryPrompt | null;
-  /** Grund (`reason`), `'yes'` (abgesetzt), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
+  /** Grund (`reason`), `'yes'` (abgesetzt, beenden), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
   /**
    * @FU-104: Name dessen, der den Stand eines Spiels zuletzt geändert hat (letzter Spielstand-Eintrag nach dem Abgleich,
@@ -48,6 +58,11 @@ export interface UseScheduleResultEntryOptions {
   tournament: Tournament;
   showWarning: (message: string) => void;
   lockFinishedResults: boolean;
+  /**
+   * B-49 (@FU-081): laufendes Spiel auf einem fremd gesteuerten Feld → Hinweis „Feld 2 wird gerade von Tom gesteuert“ bzw.
+   * „Spielleitung übernehmen“ (`useScheduleTakeover`); `true` = erledigt, sonst der Hinweis „Spiel läuft“.
+   */
+  offerTakeover?: (matchId: string, field: number | null) => Promise<boolean>;
 }
 
 const score = (a: number, b: number): string => `${a}:${b}`;
@@ -58,9 +73,10 @@ const shootoutOf = (answer: string, teamAId: string, teamBId: string): Record<st
 };
 
 export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): ScheduleResultEntry {
-  const { tournament, showWarning, lockFinishedResults } = options;
+  const { tournament, showWarning, lockFinishedResults, offerTakeover } = options;
   const { t } = useTranslation('tournament');
   const { t: tCockpit } = useTranslation('cockpit');
+  const { t: tCommon } = useTranslation('common');
   const context = useMatchEngineContextOptional();
   const actor = useActorRole(tournament.id);
   const [prompt, setPrompt] = useState<ResultEntryPrompt | null>(null);
@@ -121,6 +137,16 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     return lastScoreAuthor(entry.matchId);
   }, [tournament, context, lastScoreAuthor]);
 
+  /** Hinweise des Notwegs (Spiel beenden); veraltete App: der vorhandene Update-Hinweis (N3). */
+  const endWarning = useCallback((key: 'offline' | 'notSent' | 'pending' | 'outdated'): string => {
+    switch (key) {
+      case 'offline': return t('schedule.resultEntry.endOffline');
+      case 'pending': return t('schedule.resultEntry.endPending');
+      case 'outdated': return tCommon('outbox.notice.clientOutdated');
+      default: return t('schedule.resultEntry.endNotSent');
+    }
+  }, [t, tCommon]);
+
   const rejectionText = useCallback(async (error: unknown, entry: ValidMatchEntry): Promise<string> => {
     if (error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE) {
       const current = (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores ?? {};
@@ -160,15 +186,54 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       }
       const route = routeForStatus(state.status);
       let eventId: string | null = null;
-      if (route === 'running') {
-        showWarning(t('schedule.resultEntry.running'));
+      if (route === 'shootout') {
+        showWarning(t('schedule.resultEntry.shootoutRunning')); // @FU-118
+        return false;
+      }
+      if (route === 'end' && actor !== 'leitung') {
+        // @FU-113: Helfer bekommen den Weg nicht; B-49: fremd gesteuertes Feld → erst Übernahme anbieten (@FU-081)
+        if (!(await offerTakeover?.(matchId, match?.field ?? null))) {
+          showWarning(t('schedule.resultEntry.running'));
+        }
         return false;
       }
       if (actor !== 'leitung') {
         showWarning(t(route === 'correct' ? 'schedule.resultEntry.correctionLeadOnly' : 'schedule.resultEntry.leadOnly'));
         return false;
       }
-      if (route === 'enter' || route === 'unskip') {
+      if (route === 'end') {
+        const { homeTeam, awayTeam } = entry.meta;
+        eventId = await endMatchFromSchedule({
+          engine, commands, sender: context.sender, guest: context.accountId === 'guest',
+          entry, field: match?.field ?? null, entered: { home: scoreA, away: scoreB }, knockout,
+          online: () => context.accountId === 'guest' || typeof navigator === 'undefined' || navigator.onLine,
+          readHolder: async (field) => {
+            const info = await readForeignFieldHolder(supabase, tournament.id, field, getDeviceId());
+            return info ? { field: info.field, holder: fieldHolderText(info) } : null;
+          },
+          // @FU-081 (B-49): steuert ein anderes Gerät das Feld, bietet die Rückfrage zusätzlich „Spielleitung übernehmen“ an;
+          // die Übernahme liest den Stand frisch (Epoche) und öffnet die Übernahme-Rückfrage, das Spiel bleibt unverändert.
+          ask: async (endPrompt) => {
+            const answer = await ask(offerTakeover !== undefined && endPrompt.controlledBy !== null ? { ...endPrompt, takeOver: true } : endPrompt);
+            if (answer === 'takeover') {
+              void offerTakeover?.(matchId, match?.field ?? null);
+              return null;
+            }
+            return answer;
+          },
+          askShootout: async () => {
+            const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
+            return answer === null ? null : shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
+          },
+          warn: (key) => showWarning(endWarning(key)),
+          pendingCount: async () => (await context.store.load(context.accountId, id))?.pending.length ?? 0,
+          flush: () => context.sender.kick(id),
+          warnStale: async (now) => showWarning(await staleText(entry, now)),
+        });
+        if (!eventId) {
+          return false;
+        }
+      } else if (route === 'enter' || route === 'unskip') {
         // @FU-093: abgesetzt → erst die Rückfrage; @FU-094/@FU-097: K.-o.-Unentschieden → danach die Strafstoß-Abfrage.
         if (route === 'unskip' && (await ask({ kind: 'unskip', matchNumber: entry.meta.number })) === null) {
           return false;
@@ -209,7 +274,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       showWarning(await rejectionText(error, entry));
       return false;
     }
-  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText]);
+  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning, offerTakeover]);
 
   return { enterScore, prompt, answerPrompt, changeAuthor };
 }

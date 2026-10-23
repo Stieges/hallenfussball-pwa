@@ -95,7 +95,8 @@ describe('A-36a HF002 ist nicht transient', () => {
 });
 
 describe('A-36a HF002 in der Warteschlange: Dead-Letter statt Endlos-Wiederholung', () => {
-  it('@FU-019 nach MAX_RETRIES Fehlversuchen liegt der Eintrag im Dead-Letter (Nutzlast erhalten)', async () => {
+  // BP-1 (@FU-126, Befund C-ENDGUELTIG-SOFORT-MELDEN): HF002 ist eine eindeutige Ablehnung – sofort, ohne Wiederholung
+  it('@FU-019 @FU-126 HF002 liegt nach dem ersten Versuch im Dead-Letter (Nutzlast erhalten, ungültiger Wert), kein weiterer Versuch', async () => {
     const execute = vi.fn().mockRejectedValue(updateMatchesHf002());
     q = makeQ(execute as (item: GenericMutationItem<QType>) => Promise<void>);
     enqueueOffline(q);
@@ -104,7 +105,8 @@ describe('A-36a HF002 in der Warteschlange: Dead-Letter statt Endlos-Wiederholun
       await q.process();
     }
 
-    expect(execute).toHaveBeenCalledTimes(MAX_RETRIES);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(q.getFailedMutations()[0].rejection).toBe('invalidValue');
     expect(q.getPendingCount()).toBe(0);
     expect(q.getFailedCount()).toBe(1);
     expect(q.getFailedMutations()[0].payload).toEqual({ tournamentId: 't1', updates: [{ id: 'm1' }] });
