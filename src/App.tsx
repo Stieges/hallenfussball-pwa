@@ -647,7 +647,7 @@ function AppContent() {
 
         {/* Live View via Share Code (e.g., /live/ABC123) */}
         {screen === 'live' && liveShareCode && (
-          <LiveViewScreen shareCode={liveShareCode} />
+          <LiveViewScreen key={liveShareCode} shareCode={liveShareCode} />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}
