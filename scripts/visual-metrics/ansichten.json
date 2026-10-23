@@ -310,6 +310,16 @@
       "profil": "desktop-1440"
     },
     {
+      "id": "cockpit-laptop-vorwarnung",
+      "titel": "Cockpit: Laptop-Ansicht, Vorwarnung (Restzeit 2:40, Rahmen der Zeile „Nächstes“ farbig)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-vorwarnung/live?matchId=00000009-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"cockpit-naechstes\"]",
+      "profil": "laptop-1280"
+    },
+    {
       "id": "cockpit-abgepfiffen-verlaengerung",
       "titel": "Cockpit: abgepfiffen nach Verlängerung (Halbfinale 1)",
       "gruppen": [

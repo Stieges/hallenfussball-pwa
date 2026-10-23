@@ -16,8 +16,9 @@ function ansichtenListe(ordner, gruppe) {
   return { daten, liste }
 }
 
-function argumenteFuer(a, daten, o, durch, berichtPfad) {
-  const args = ['--app', a.app, '--erwarte', a.erwarte, '--profil', a.profil === 'monitor' ? (o.monitorProfil ?? 'monitor') : (o.profil ?? a.profil)]
+// `o.profil` hat in messen.mjs den Standard 'app'; nur ein ausdruecklich uebergebenes --profil ersetzt das Profil der Ansicht.
+function argumenteFuer(a, daten, o, durch, berichtPfad, profilGegeben) {
+  const args = ['--app', a.app, '--erwarte', a.erwarte, '--profil', a.profil === 'monitor' ? (o.monitorProfil ?? 'monitor') : (profilGegeben ? o.profil : a.profil)]
   if (a.saat !== false) args.push('--saat', typeof a.saat === 'string' ? a.saat : daten.saat)
   for (const k of a.klick ?? []) args.push('--klick', k)
   args.push('--bericht', berichtPfad, ...durch)
@@ -57,7 +58,7 @@ export async function fuehreAnsichtenAus(o, argv, ordner) {
   for (const a of liste) {
     const berichtPfad = join(aus, `${a.id}.json`)
     process.stderr.write(`→ ${a.id} (${a.app}) …\n`)
-    const r = await fuehreAus(messen, [...argumenteFuer(a, daten, o, [...durch, '--aus', aus], berichtPfad)])
+    const r = await fuehreAus(messen, [...argumenteFuer(a, daten, o, [...durch, '--aus', aus], berichtPfad, o.profilGegeben === true)])
     let b = null
     if (existsSync(berichtPfad)) {
       try { b = JSON.parse(readFileSync(berichtPfad, 'utf8')) } catch { b = null }
