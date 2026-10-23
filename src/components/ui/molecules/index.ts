@@ -48,3 +48,11 @@ export { NumberChoiceRow } from './NumberChoiceRow';
 export type { NumberChoiceRowProps } from './NumberChoiceRow';
 export { SegmentedChoice } from './SegmentedChoice';
 export type { SegmentedChoiceProps, SegmentedOption } from './SegmentedChoice';
+
+// A-17b (@HE-001): Prüfzahl, fachfrei
+export { CheckNumberBadge } from './CheckNumberBadge';
+export type { CheckNumberBadgeProps, CheckNumberBadgeSize } from './CheckNumberBadge';
+export { CountedTextField } from './CountedTextField';
+export type { CountedTextFieldProps } from './CountedTextField';
+export { EndStateCard } from './EndStateCard';
+export type { EndStateCardProps, EndStateTone } from './EndStateCard';

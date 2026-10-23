@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ContactInfo } from '../types/tournament';
 import { Input } from './ui';
+import { CheckboxField } from './ui/molecules/CheckboxField';
 import { cssVars } from '../design-tokens'
 interface ContactFormProps {
   value: ContactInfo;
@@ -23,7 +24,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
   const contactInfo: ContactInfo = value;
 
-  const handleFieldChange = (field: keyof ContactInfo, fieldValue: string) => {
+  const handleFieldChange = (field: Exclude<keyof ContactInfo, 'showPublic'>, fieldValue: string) => {
     onChange({
       ...contactInfo,
       [field]: fieldValue || undefined, // Remove empty strings
@@ -103,6 +104,14 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             onChange={(v) => handleFieldChange('website', v)}
             placeholder={t('contact.websitePlaceholder')}
             style={{ marginTop: '16px' }}
+          />
+
+          <CheckboxField
+            checked={contactInfo.showPublic === true}
+            onChange={(showPublic) => onChange({ ...contactInfo, showPublic: showPublic || undefined })}
+            label={t('contact.showPublic')}
+            hint={t('contact.showPublicHint')}
+            data-testid="contact-show-public"
           />
 
           <p

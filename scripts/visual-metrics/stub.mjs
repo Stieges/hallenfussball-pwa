@@ -5,10 +5,12 @@
 // Zustand: { rpc: { <funktion>: { json } | { fehler: { code, message } } | { abbruch: true } },
 //            einwilligung: true (Datenschutz-Abfrage vorab beantwortet), signup: "ok" | "429" (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
 //            rest: { <tabelle>: [Zeile, …] } (optional: Antworten auf /rest/v1/<tabelle>, sonst leer) }
+//            ausgang: <N> (optional, nur mit konto: N wartende Einträge des Kontos in der lokalen Kopie, z. B. e4 „Erst verbinden“ @HE-092) }
 // Kein Code in src/ (Testumgebung ≠ Produktivcode). Nie gegen Produktion: die Adresse ist fest 127.0.0.1.
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { installiereSaat } from './saat/lader.mjs'
 
 const HIER = dirname(fileURLToPath(import.meta.url))
 export const STUB_URL = 'http://127.0.0.1:54399'
@@ -24,6 +26,11 @@ export function leseStub(angabe) {
   return { name: angabe, zustand }
 }
 
+/** Echtes Supabase-Projekt (`*.supabase.co`, `*.supabase.in`)? Im Stub-Lauf wird jede solche Anfrage abgebrochen (Nachblick #335 F-4). */
+export function istEchtesSupabase(url) {
+  return /(^|\.)supabase\.(co|in)$/i.test(url.hostname)
+}
+
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers': '*',
@@ -36,6 +43,25 @@ function sitzung(id, anonym, name) {
   return { access_token: 'vm-stub-token', token_type: 'bearer', expires_in: 3600, expires_at: jetzt + 3600, refresh_token: 'vm-stub-refresh', user }
 }
 
+/**
+ * Wartende Einträge eines Kontos (Stub-Feld `ausgang`, Nachblick #335 F-1): eine Spielkopie mit `anzahl` offenen Einträgen
+ * in der lokalen Kopie (`hallenfussball-matches`, wie `LocalMatchStore`), geladen über den Saat-Lader vor dem ersten Skript.
+ */
+export function ausgangSaat(accountId, anzahl) {
+  const matchId = '00000003-0000-4000-8000-0000000000e4'
+  const pending = Array.from({ length: anzahl }, (_, i) => ({
+    id: `00000002-0000-4000-8000-0000000004${String(i).padStart(2, '0')}`,
+    type: 'GOAL', actor: 'helper', actorUser: 'helper', at: 1794643300000 + i * 1000, section: 1, clockMs: 100000 + i * 1000, payload: {},
+    teamId: '00000001-0000-4000-8000-0000000000e1',
+  }))
+  const kopie = {
+    formatVersion: 2, accountId, matchId, tournamentId: 't-cup',
+    ctx: { matchId, teamAId: '00000001-0000-4000-8000-0000000000e1', teamBId: '00000001-0000-4000-8000-0000000000e2' },
+    confirmed: [], watermarkSeq: 0, acked: [], pending, rejected: [], review: [], updatedAt: 1794643300000,
+  }
+  return { localStorage: {}, datenbanken: [{ name: 'hallenfussball-matches', version: 2, store: 'matches', eintraege: { [`${accountId}|${matchId}`]: kopie } }] }
+}
+
 /** Vor dem ersten Skript: ggf. ein angemeldetes Konto in den Speicher legen; alle Aufrufe an STUB_URL beantworten. */
 export async function installiereStub(ctx, stub) {
   const z = stub.zustand
@@ -43,11 +69,17 @@ export async function installiereStub(ctx, stub) {
     const wert = JSON.stringify(sitzung(z.konto.id, false, z.konto.name))
     await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v) } catch { /* gesperrt */ } }, [STUB_STORAGE_KEY, wert])
   }
+  if (z.ausgang) {
+    if (!z.konto) throw new Error(`Stub ${stub.name}: "ausgang" braucht "konto"`)
+    await installiereSaat(ctx, ausgangSaat(z.konto.id, z.ausgang))
+  }
   if (z.einwilligung) {
     // Zustände mit Dialog über der Seite (Rückfrage): die Datenschutz-Abfrage vorab beantworten, sonst deckt sie den Dialog zu
     const wert = JSON.stringify({ errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 })
     await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v) } catch { /* gesperrt */ } }, ['app:consent', wert])
   }
+  // Zweite Sicherung neben der festen Stub-Adresse: auch ein falsch gebauter Lauf erreicht kein echtes Projekt.
+  await ctx.route((url) => istEchtesSupabase(url), (route) => route.abort('blockedbyclient'))
   await ctx.route(`${STUB_URL}/**`, async (route) => {
     const req = route.request()
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS })

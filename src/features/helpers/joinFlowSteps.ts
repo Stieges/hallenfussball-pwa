@@ -84,6 +84,10 @@ export async function loadJoinInfo(code: string, deps: JoinFlowDeps): Promise<Jo
  */
 export async function confirmSignOut(code: string, deps: JoinFlowDeps): Promise<JoinFlowEvent> {
   const session = await deps.readSession();
+  if (session.kind === 'unknown') {
+    // Auth-Endpunkt nicht lesbar: das Konto-Token kann noch da sein. Nicht abmelden, nicht still ins Formular (F-1).
+    return { type: 'signOutBlocked', reason: 'offline' };
+  }
   const response = await deps.loadInfo(code);
   if (!response.ok) {
     return response.error.kind === 'network'
@@ -110,7 +114,9 @@ export async function submitJoinRequest(
 ): Promise<JoinFlowEvent> {
   const session = await deps.ensureDeviceSession();
   if (!session.ok) {
-    if (session.reason === 'accountSession' || session.reason === 'unexpected' || session.reason === 'unavailable') {
+    // N-2: `accountSession` meldet nur, wenn schon der Scan das Konto sah; sonst kam es danach zurück (Wettlauf, kein Fehler).
+    const reportable = session.reason === 'accountSession' ? state.sawAccount === true : session.reason === 'unexpected' || session.reason === 'unavailable';
+    if (reportable) {
       deps.reportError(new Error(`Helfer-Beitritt: Gerätesitzung ${session.reason}${session.message ? ` – ${session.message}` : ''}`));
     }
     return { type: 'sessionFailed', reason: session.reason };

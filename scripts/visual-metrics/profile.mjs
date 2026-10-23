@@ -8,6 +8,8 @@ export const PROFILE = {
   'tablet-hoch': { art: 'tablet', breite: 768, hoehe: 1024 },
   'tablet-quer': { art: 'tablet', breite: 1024, hoehe: 768 },
   'desktop-1440': { art: 'desktop', breite: 1440, hoehe: 900 },
+  // Laptop-Rahmen des Cockpits (Pflichtgroesse 1280x720); nur fuer einzelne Ansichten, nicht Teil der Gruppe app
+  'laptop-1280': { art: 'desktop', breite: 1280, hoehe: 720 },
   'monitor-1080-rand0': { art: 'monitor', breite: 1920, hoehe: 1080, rand: 'null' },
   'monitor-1080-standard': { art: 'monitor', breite: 1920, hoehe: 1080, rand: 'standard' },
   'monitor-720-rand0': { art: 'monitor', breite: 1280, hoehe: 720, rand: 'null' },

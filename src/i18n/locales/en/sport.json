@@ -129,5 +129,10 @@
   "outbox": {
     "rejectedEntry": "not accepted",
     "awaitingReview": "awaiting review"
+  },
+  "helpers": {
+    "access": "helper access",
+    "checkNumber": "check number",
+    "approve": "approve"
   }
 }

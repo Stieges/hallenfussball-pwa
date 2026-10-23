@@ -1,0 +1,347 @@
+{
+ "e1": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  }
+ },
+ "e2": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": null
+    }
+   }
+  }
+ },
+ "e3": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  },
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000b1",
+   "name": "Greta"
+  },
+  "einwilligung": true
+ },
+ "e4": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  },
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000b1",
+   "name": "Greta"
+  },
+  "einwilligung": true,
+  "ausgang": 2
+ },
+ "e5": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "leader",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  },
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000b2",
+   "name": "Maria"
+  }
+ },
+ "e6": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   },
+   "request_helper_access": {
+    "json": {
+     "result": "PENDING",
+     "state": "open",
+     "relation": "pending",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "checkNumber": 47
+    }
+   }
+  }
+ },
+ "x1": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "invalid"
+    }
+   }
+  }
+ },
+ "x2": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "rotated"
+    }
+   }
+  }
+ },
+ "x3": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "expired"
+    }
+   }
+  }
+ },
+ "x4": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "closed"
+    }
+   }
+  }
+ },
+ "x5": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "declined",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  }
+ },
+ "x6": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "rotated",
+     "relation": "declined",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     }
+    }
+   }
+  }
+ },
+ "x7": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "expired",
+     "relation": "expired",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     }
+    }
+   }
+  }
+ },
+ "x8": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   },
+   "request_helper_access": {
+    "abbruch": true
+   }
+  }
+ },
+ "x9": {
+  "rpc": {
+   "join_code_info": {
+    "abbruch": true
+   }
+  },
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000b1",
+   "name": "Greta"
+  }
+ },
+ "x11": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   },
+   "request_helper_access": {
+    "json": {
+     "result": "BUSY"
+    }
+   }
+  }
+ },
+ "x12": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  },
+  "signup": "429"
+ },
+ "x13": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   },
+   "request_helper_access": {
+    "fehler": {
+     "code": "42501",
+     "message": "NOT_SIGNED_IN"
+    }
+   }
+  }
+ },
+ "n5": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "revoked",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  }
+ },
+ "n7": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "viewer",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  }
+ },
+ "n8": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "closed",
+     "relation": "accepted",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "closed": true,
+     "field": 2
+    }
+   }
+  }
+ }
+}

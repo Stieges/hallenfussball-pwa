@@ -267,8 +267,8 @@ describe('Absenden: Fehler und Meldungen', () => {
     expect(deps.syncEntry).not.toHaveBeenCalled();
   });
 
-  it('Gerätesitzung: Konto/unexpected/unavailable → Sentry; rateLimited ohne Sentry', async () => {
-    for (const reason of ['accountSession', 'unexpected', 'unavailable'] as const) {
+  it('Gerätesitzung: unexpected/unavailable → Sentry; rateLimited ohne Sentry', async () => {
+    for (const reason of ['unexpected', 'unavailable'] as const) {
       const { deps } = device(null, { ensureDeviceSession: async () => ({ ok: false, reason, message: 'm' }) });
       await submit(await scan(deps), deps);
       expect(deps.reportError).toHaveBeenCalledTimes(1);
@@ -276,6 +276,26 @@ describe('Absenden: Fehler und Meldungen', () => {
     const { deps } = device(null, { ensureDeviceSession: async () => ({ ok: false, reason: 'rateLimited' }) });
     expect(await submit(await scan(deps), deps)).toMatchObject({ step: 'form', notice: 'authRateLimited' });
     expect(deps.reportError).not.toHaveBeenCalled();
+  });
+
+  it('N-2 accountSession → Sentry nur, wenn schon der Scan das Konto sah; kommt es nach dem Scan zurück, kein Sentry', async () => {
+    // Scan ohne Sitzung, danach kommt ein Konto zurück (Wettlauf): „Bitte noch einmal scannen“, ohne Sentry.
+    const race = device(null, { ensureDeviceSession: async () => ({ ok: false, reason: 'accountSession' }) });
+    expect(await submit(await scan(race.deps), race.deps)).toMatchObject({ step: 'show', view: { view: 'retryScan' } });
+    expect(race.deps.reportError).not.toHaveBeenCalled();
+    // Scan sah das Konto, es wurde abgemeldet, beim Absenden ist es wieder da: das ist ein Fehler im Ablauf → Sentry.
+    const seen = device(GRETA, { ensureDeviceSession: async () => ({ ok: false, reason: 'accountSession' }) });
+    let state = joinFlowReducer(await scan(seen.deps), { type: 'confirmSignOut' });
+    state = joinFlowReducer(state, await confirmSignOut('CODE123456', seen.deps));
+    expect(await submit(state, seen.deps)).toMatchObject({ step: 'show', view: { view: 'retryScan' } });
+    expect(seen.deps.reportError).toHaveBeenCalledTimes(1);
+  });
+
+  it('F-1 Sitzung beim „Weiter“ nicht lesbar (unknown) → nicht abmelden, Netz-Hinweis, nie still ins Formular', async () => {
+    const { deps } = device(GRETA, { readSession: vi.fn(async () => ({ kind: 'unknown' as const, userId: null })) });
+    const event = await confirmSignOut('CODE123456', deps);
+    expect(event).toEqual({ type: 'signOutBlocked', reason: 'offline' });
+    expect(deps.signOutLocal).not.toHaveBeenCalled();
   });
 
   it('unerwartete Server-Antwort → Sentry, Formular bleibt; INVALID_NAME ohne Sentry', async () => {

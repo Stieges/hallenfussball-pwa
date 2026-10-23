@@ -7,7 +7,6 @@ import { buildLiveViewTournament } from '../../../screens/__tests__/liveViewFixt
 import type { Tournament } from '../../../types/tournament';
 import { createLegacyPublicSource } from '../legacyPublicSource';
 import { createRpcPublicSource, type PublicRpcCall } from '../rpcPublicSource';
-import { selectPublicSource } from '../defaultPublicSource';
 import { contentVersionOf } from '../publicVersion';
 import { applyPublicDelta } from '../publicDelta';
 import { parsePublicReply } from '../publicTournamentWire';
@@ -138,9 +137,16 @@ describe('Adapter (b) – Server-Funktion nach dem Vertrag (Stub)', () => {
     expect(merged.matches.filter((m) => m.matchNumber !== 9)).toEqual(full.tournament.matches.filter((m) => m.matchNumber !== 9));
   });
 
-  it('@ZM-021 Delta kann Spiele entfernen und Teams ersetzen', () => {
+  it('@ZM-021 Delta kann Spiele entfernen', () => {
     const parsed = parsePublicReply({ ...deltaOneGoalReply(), removed_match_ids: ['gibt-es-nicht'], matches: [] });
-    expect(parsed.result.kind).toBe('delta');
+    expect(parsed.result).toMatchObject({ kind: 'delta', delta: { matches: [], removedMatchIds: ['gibt-es-nicht'] } });
+  });
+
+  it('@ZM-109 Gegenbeispiel: ein Ereignistyp außerhalb der öffentlichen Positivliste (B-14-Vertrag) ist „nicht erreichbar“', async () => {
+    const reply = fullReply();
+    const matches = reply.matches as Array<Record<string, unknown>>;
+    const bad = { ...reply, matches: [{ ...matches[0], events: [{ id: 'e1', type: 'MATCH_STARTED', team_id: null, section: 1, clock_ms: 0 }] }, ...matches.slice(1)] };
+    expect(await createRpcPublicSource({ call: stub(bad) }).fetch(CODE, null)).toEqual({ kind: 'unreachable' });
   });
 
   it('@ZM-109 Gegenbeispiel: nur „not_found“ heißt nicht gefunden; Fehler, Zeitüberschreitung und Unsinn sind „nicht erreichbar“', async () => {
@@ -170,9 +176,4 @@ describe('Adapter (b) – Server-Funktion nach dem Vertrag (Stub)', () => {
   });
 });
 
-describe('Schalter für die Server-Funktion', () => {
-  it('ohne Schalter liest die Seite über den heutigen Weg, mit Schalter über die Server-Funktion', () => {
-    expect(selectPublicSource(false).kind).toBe('legacy');
-    expect(selectPublicSource(true).kind).toBe('rpc');
-  });
-});
+// Die Wahl der Standardquelle (mit/ohne Supabase) prüft `defaultPublicSource.test.ts`.

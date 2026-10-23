@@ -109,6 +109,7 @@
   },
   "schedule": {
     "runningMatchNoPermission": "Running match cannot be edited.",
+    "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped.",
     "matchLabel": "Round {{round}}",
     "conflicts": {
       "title": "Conflicts found",
@@ -167,6 +168,34 @@
       },
       "leadOnly": "tournament management only",
       "correctionLeadOnly": "Correction by the tournament management only"
+    },
+    "forfeit": {
+      "mark": "Did not show up",
+      "revoke": "Withdraw forfeit",
+      "title": "Match {{number}}: did not show up",
+      "question": "Which team did not show up?",
+      "teamAbsent": "{{name}} did not show up",
+      "bothAbsent": "Both teams did not show up",
+      "summaryOne": "{{winner}} wins {{score}} (forfeit)",
+      "summaryBoth": "Both teams get 0 points and 0:{{against}} goals each, neither a win. The match counts as decided and is marked as a forfeit.",
+      "confirm": "Record forfeit",
+      "cancel": "Cancel",
+      "revokeTitle": "Match {{number}}: withdraw forfeit",
+      "revokeQuestion": "The forfeit is withdrawn. The match is open again afterwards and the table is recalculated.",
+      "revokeConfirm": "Withdraw forfeit",
+      "notScheduled": "A match that has kicked off cannot be recorded as a no-show. End it with \"End match and enter result\".",
+      "leadOnly": "Only the tournament director can record or withdraw a no-show.",
+      "notForfeit": "This match is not recorded as a no-show.",
+      "unavailable": "The no-show cannot be recorded right now.",
+      "teamsMissing": "The teams of this match are not decided yet.",
+      "scopeLabel": "How far does the no-show apply?",
+      "scopeThis": "This match only",
+      "scopeRest": "Team has left – also record all remaining matches as forfeits",
+      "scopeRestCount_one": "{{count}} more scheduled match of {{name}} will be recorded as a forfeit; matches already started or played stay unchanged.",
+      "scopeRestCount_other": "{{count}} more scheduled matches of {{name}} will be recorded as forfeits; matches already started or played stay unchanged.",
+      "restDone_one": "{{count}} more match recorded as a forfeit.",
+      "restDone_other": "{{count}} more matches recorded as forfeits.",
+      "restPartial": "{{done}} more matches recorded, {{skipped}} not (already started or error)."
     }
   },
   "scheduleActions": {

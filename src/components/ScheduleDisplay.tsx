@@ -17,6 +17,7 @@ import type { TournamentView, ViewLocale } from '../core/view';
 import { Standing, Match, Team } from '../types/tournament';
 import type { ScheduleSource } from './schedule/scheduleSource';
 import { useElapsedSeconds } from './schedule/useTickingNow';
+import type { MatchForfeitActions } from './schedule/MatchForfeitAction';
 import { useSpectatorClocks } from './schedule/useSpectatorClocks';
 import {
   TournamentHeader,
@@ -75,9 +76,12 @@ interface ScheduleDisplayProps {
   /** Callback when starting correction mode */
   onStartCorrection?: (matchId: string) => void;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
-  onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  /** `false` = abgelehnt (angepfiffenes Spiel, @ZP-093): die Anzeige ordnet dann nicht um */
+  onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
+  /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ an den Spielkarten (nur Turnierleitung) */
+  forfeit?: MatchForfeitActions;
   /** US-VIEWER-FILTERS: Set of visible match IDs (for filtering). If undefined, all matches are visible. */
   visibleMatchIds?: Set<string>;
   /** Full tournament teams with logo and colors (for display in match cards) */
@@ -111,6 +115,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onStartCorrection,
   onMatchSwap,
   onNavigateToCockpit,
+  forfeit,
   visibleMatchIds,
   tournamentTeams,
   activeMatchTeamIds,
@@ -220,6 +225,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           tournament={sideSource}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
+          forfeit={forfeit}
         />
       )}
 
@@ -251,6 +257,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           clockOf={clockOf}
           onMatchSwap={onMatchSwap}
           tournament={sideSource}
+          forfeit={forfeit}
         />
       )}
 

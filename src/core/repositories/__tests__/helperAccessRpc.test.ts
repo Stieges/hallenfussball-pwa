@@ -61,7 +61,11 @@ describe('§ 3.2 Zuordnung Code-Info / Zugangsstatus → Anzeige', () => {
       .toEqual({ view: 'waiting', checkNumber: 42 });
   });
   it('@HE-004 @HE-008 abgelehnt → „Anfrage abgelehnt“', () => {
-    expect(helperAccessView({ source: 'info', info: info({ relation: 'declined' }), session: 'device' })).toEqual({ view: 'declined' });
+    expect(helperAccessView({ source: 'info', info: info({ relation: 'declined' }), session: 'device' })).toEqual({ view: 'declined', codeOpen: true });
+  });
+  it('@HE-008 @HE-102 abgelehnt: codeOpen nur bei offenem Code (einzelne Ablehnung), nicht beim alten Code', () => {
+    expect(helperAccessView({ source: 'info', info: info({ state: 'open', relation: 'declined' }), session: 'device' })).toEqual({ view: 'declined', codeOpen: true });
+    expect(helperAccessView({ source: 'info', info: info({ state: 'rotated', relation: 'declined' }), session: 'device' })).toEqual({ view: 'declined', codeOpen: false });
   });
   it('@HE-011 verfallen → „Anfrage verfallen“', () => {
     expect(helperAccessView({ source: 'info', info: info({ relation: 'expired' }), session: 'device' })).toEqual({ view: 'requestExpired' });
@@ -114,7 +118,7 @@ describe('§ 3.2 Zuordnung Anfrage / Entscheidung / Fehler → Anzeige', () => {
   });
   it('@HE-004 per Tipp abgelehnt, erneut gescannt → EXISTING abgelehnt', () => {
     expect(helperAccessView({ source: 'request', result: { result: 'EXISTING', ...info({ relation: 'declined' }) } }))
-      .toEqual({ view: 'declined' });
+      .toMatchObject({ view: 'declined' });
   });
   it('BUSY → „Zu viele offene Anfragen …“; ACCOUNT_SESSION → „Bitte noch einmal scannen“', () => {
     expect(helperAccessView({ source: 'request', result: { result: 'BUSY' } })).toEqual({ view: 'busy' });

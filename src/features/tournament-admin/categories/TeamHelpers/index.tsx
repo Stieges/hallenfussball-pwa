@@ -11,7 +11,9 @@
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '../../../../components/ui/Icons';
+import { EndStateCard } from '../../../../components/ui/molecules/EndStateCard';
 import { InlineNotice } from '../../../../components/ui/molecules/InlineNotice';
+import { TafelIcons } from '../../../../components/ui/IconsTafel';
 import { breakpointValues, cssVars, dialogWidths, iconSizeValues } from '../../../../design-tokens';
 import type { Tournament } from '../../../../types/tournament';
 import { useAuth } from '../../../auth/hooks/useAuth';
@@ -21,7 +23,6 @@ import { AccessChangeDialog, RenewCodeDialog } from './AccessDialogs';
 import { ApproveSheet } from './ApproveSheet';
 import { HelperCodeCard } from './HelperCodeCard';
 import { HelperList } from './HelperList';
-import { HelperNoRight } from './HelperNoRight';
 import { JoinRequestList } from './JoinRequestList';
 import type { HelperRowModel, JoinRequestRow } from './helperAdminModel';
 import { useHelperAdminActions } from './useHelperAdminActions';
@@ -85,7 +86,13 @@ export function TeamHelpersCategory({ tournamentId, tournament }: TeamHelpersCat
   if (!canManage || loadState === 'noRight' || actions.codeState === 'noRight') {
     return (
       <CategoryPage {...header}>
-        <HelperNoRight />
+        <EndStateCard
+          tone="neutral"
+          icon={<TafelIcons.Lock size={iconSizeValues.md} />}
+          title={t('teamHelpers.noRight.title')}
+          text={t('teamHelpers.noRight.text')}
+          data-testid="no-right"
+        />
       </CategoryPage>
     );
   }
