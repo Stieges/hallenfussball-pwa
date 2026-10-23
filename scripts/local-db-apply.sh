@@ -122,8 +122,8 @@ fi
 # A-13b-S M1 (Review #330): 20261110_006 nimmt public.group_completions, public.bracket_notices und
 # public.clarifications in die Publikation auf. Weil SET TABLE den Satz ERSETZT, würde die alte 4er-Liste
 # sie hier wieder entfernen -- lokal lehnte der Server dann den ganzen Realtime-Kanal ab (auch Spiele/Teams).
-# Deshalb 7 Tabellen, gleich mit REALTIME_PUBLICATION_TABLES in scripts/db-drift-check.sh (dort an PENDING-LIVE
-# gekoppelt; lokal wird jede Migration eingespielt). Fehlt eine der Tabellen (Stack vor _006 eingespielt), bricht das
+# Deshalb 7 Tabellen, gleich mit REALTIME_PUBLICATION_TABLES in scripts/db-drift-check.sh (dort an die Ausnahmeliste
+# des Drift-Checks gekoppelt; lokal wird jede Migration eingespielt). Fehlt eine der Tabellen (Stack vor _006 eingespielt), bricht das
 # Skript mit Hinweis ab, statt Realtime still unvollständig zu lassen.
 echo "Realtime-Publikation setzen (supabase_realtime: 7 Tabellen, Stand nach 20261110_006)…" >&2
 MISSING_PUB_TABLES="$(psql_scalar "SELECT string_agg(t, ', ') FROM unnest(ARRAY['public.match_events', 'public.matches', 'public.monitor_heartbeats', 'public.teams', 'public.group_completions', 'public.bracket_notices', 'public.clarifications']) t WHERE to_regclass(t) IS NULL;")"
