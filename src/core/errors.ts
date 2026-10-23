@@ -340,6 +340,71 @@ export function isVersionConflict(error: unknown): boolean {
 }
 
 /**
+ * BP-1 (Befund C-ENDGUELTIG-SOFORT-MELDEN, @FU-126): Grund einer eindeutig endgültigen Ablehnung durch den Server.
+ * - `conflict`: Versionsprüfung (ein anderes Gerät hat inzwischen gespeichert)
+ * - `invalidValue`: ungültiger Wert – Postgres-Klasse 22 (Datenfehler) und 23 (Integrität), eigene Codes HF002/HF003,
+ *   Team noch von einem Spiel referenziert
+ * - `tournamentGone`: das Turnier gibt es in der Cloud nicht mehr (`TournamentGoneError`)
+ * `null`: unklar (z. B. 42501 Rechte, Netz, unbekannte Codes) – die Warteschlange wiederholt wie bisher.
+ */
+export type DefinitiveRejectionReason = 'conflict' | 'invalidValue' | 'tournamentGone';
+
+/**
+ * BP-1 (Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN, @FU-123): Das Gerät kennt das Turnier aus der Cloud, dort gibt es
+ * die Zeile aber nicht mehr (endgültig gelöscht oder nicht mehr sichtbar). `save()` legt es dann nicht neu an.
+ */
+export class TournamentGoneError extends Error {
+  public readonly tournamentId: string;
+
+  constructor(tournamentId: string) {
+    super(`Turnier ${tournamentId} gibt es in der Cloud nicht mehr – nicht neu angelegt`);
+    this.name = 'TournamentGoneError';
+    this.tournamentId = tournamentId;
+  }
+}
+
+/** Postgres-Fehlerklassen 22 (data exception) und 23 (integrity constraint violation), fünfstellige SQLSTATE. */
+const INVALID_VALUE_SQLSTATE = /^2[23][0-9A-Z]{3}$/;
+
+function carriesInvalidValueCode(candidate: unknown): boolean {
+  if (!candidate || typeof candidate !== 'object') {
+    return false;
+  }
+  const code = (candidate as { code?: unknown }).code;
+  return typeof code === 'string' && (INVALID_VALUE_SQLSTATE.test(code) || code === ORIGIN_IMMUTABLE_CODE || code === KIT_COLUMNS_SERVER_ONLY_CODE);
+}
+
+function isInvalidValueRejection(error: unknown): boolean {
+  if (error instanceof TeamStillReferencedError || error instanceof OriginImmutableError || carriesInvalidValueCode(error)) {
+    return true;
+  }
+  if (error instanceof RepositoryError) {
+    const inner = error.originalError;
+    return Array.isArray(inner) ? inner.some(isInvalidValueRejection) : isInvalidValueRejection(inner);
+  }
+  return false;
+}
+
+/**
+ * Einhängepunkt für eindeutig endgültige Ablehnungen (@FU-126): die Warteschlange meldet sie beim ersten Versuch als
+ * „nicht übernommen“ mit Grund und wiederholt sie nicht. Weitere eindeutige Gründe (z. B. A-21a-C1: `55000`
+ * TOURNAMENT_FINISHED) werden hier ergänzt.
+ */
+export function definitiveRejectionReason(error: unknown): DefinitiveRejectionReason | null {
+  if (isVersionConflict(error)) {
+    return 'conflict';
+  }
+  if (error instanceof TournamentGoneError) {
+    return 'tournamentGone';
+  }
+  return isInvalidValueRejection(error) ? 'invalidValue' : null;
+}
+
+export function isDefinitiveRejection(error: unknown): boolean {
+  return definitiveRejectionReason(error) !== null;
+}
+
+/**
  * Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH (@FU-109): ein Cloud-Abruf wurde abgebrochen (Navigation, Signal). Anders als
  * „nicht gefunden“ sagt er nichts über das Turnier am Server – `getWithMatchRevisions` wirft ihn statt `null`.
  * `isAbortError` erkennt ihn (Name `AbortError`).

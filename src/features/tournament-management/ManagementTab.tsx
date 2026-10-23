@@ -19,6 +19,9 @@ import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
 import { useCan } from '../auth/hooks/useCan';
+import { useToast } from '../../components/ui/Toast';
+import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
+import { useScheduleForfeit } from './hooks/useScheduleForfeit';
 import { RulesLockProvider } from '../../components/match-settings/RulesLockContext';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { buildSideContext } from '../../components/schedule/matchSides';
@@ -89,6 +92,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // „Korrigieren“ nach dem Abpfiff (@SL-159): nur die Turnierleitung bekommt den Weg, derselbe wie die Korrektur im Spielplan;
   // solange er offen ist, pausiert der Countdown des Endstands (@SL-163, @SL-164)
   const korrektur = useCockpitKorrektur(tournament, liveMatches, istLeitung, { onBeginn: endstandPause.pausiere, onEnde: endstandPause.setzeFort });
+
+  // B-12 (@SL-174): „Nicht angetreten“ unter „Mehr“ öffnet denselben Dialog wie der Spielplan (nur Turnierleitung, vor dem Anpfiff)
+  const { showWarning, showSuccess } = useToast();
+  const forfeit = useScheduleForfeit({ tournament, showWarning: (message) => { showWarning(message); }, showSuccess: (message) => { showSuccess(message); } });
 
   // Spielseiten: Team über die Team-ID, offene Seite über ihre Herkunft (@TM-015) – nie über gespeicherte Namen
   const sides = useMemo(
@@ -202,6 +209,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             uebernahmeVon={steuer.uebernahmeVon}
             istLeitung={istLeitung}
             onKorrigieren={korrektur.onKorrigieren}
+            onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}
             sperrHinweise={sperrHinweise}
             lastFinishedMatch={lastFinishedMatch}
@@ -251,6 +259,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           {t('management.noMatchesOnField')}
         </div>
       )}
+
+      <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
 
       {/* Korrektur nach dem Abpfiff: Ergebnis, dann Grund (@SL-159) */}
       {korrektur.dialoge}

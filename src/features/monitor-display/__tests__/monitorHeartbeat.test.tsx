@@ -16,7 +16,7 @@ vi.mock('../../../lib/supabase', () => ({
   supabase: { from: vi.fn(), rpc },
 }));
 vi.mock('../../../core/repositories/SupabaseRepository', () => ({
-  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet }; }),
+  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet, getForDisplay: async (id: string) => { const t: unknown = await supabaseGet(id); return t ? { kind: 'full', version: 1, serverNowMs: 0, tournament: t } : { kind: 'not-found' }; } }; }),
 }));
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { get: localGet }; }),
@@ -81,5 +81,19 @@ describe('MonitorDisplayPage – Heartbeat (C-MON-HEARTBEAT-JE-POLL)', () => {
 
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(heartbeatCalls() - start).toBe(1);
+  });
+
+  it('@ME-064:teil Befund C-HEARTBEAT: die Seite sendet die Kennung des Monitors aus dem Turnier (mon-1) und den Wachhalten-Zustand', async () => {
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+    const aufrufe = rpc.mock.calls.filter(([name]) => name === 'record_monitor_heartbeat').map(([, args]) => args as Record<string, unknown>);
+    expect(aufrufe.length).toBeGreaterThan(0);
+    for (const args of aufrufe) {
+      expect(args).toMatchObject({ p_monitor_key: 'mon-1', p_tournament_id: 'tour-1', p_cache_status: 'fresh' });
+      expect(args).not.toHaveProperty('p_monitor_id');
+    }
+    // jsdom hat keine Wake-Lock-Schnittstelle: „nicht möglich“ kommt sofort, nicht erst im nächsten Takt
+    expect(aufrufe.at(-1)?.p_wake_lock).toBe('denied');
   });
 });

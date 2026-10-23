@@ -30,6 +30,7 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'components/live-cockpit/types.ts': 'Typ LiveMatch (Cockpit-Form, deklariert nur; B-06 aus match-cockpit/MatchCockpit.tsx umgezogen)',
   // Transport: Spalten lesen/schreiben, keinen Endstand rechnen
   'core/repositories/supabaseMappers.ts': 'Mapper Cloud ↔ Match',
+  'core/repositories/publicPayload.ts': 'B-14 Zod-Schema der öffentlichen Antwort (Positivliste), deklariert nur, rechnet keinen Endstand',
   'core/repositories/liveMatchMappers.ts': 'Mapper LiveMatch',
   'core/repositories/serverLedMatchFields.ts': 'Feldliste serverführend',
   'core/match/client/applyEngineOverlay.ts': 'Engine-Cache → Match',

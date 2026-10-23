@@ -131,6 +131,11 @@ SW_MIGRATION="20261028_007_entered_shootout_needs_draw.sql"
 # zu pruefen.
 A34_MIGRATION="20261110_003_field_control.sql"
 A34_FILE=""
+# A-25b (Nichtantritt): juengste Fassung von append_match_events und der Rechenfunktion (payload_valid, apply_result_entry,
+# decided_by, apply_effect, match_apply_event, cache_columns) -- ans Ende der Idempotenz-Kette. Setzt SW voraus
+# (Fail-fast), --without-sw laesst sie deshalb ebenfalls aus (und die Wertungs-Fixtures 69*).
+A25B_MIGRATION="20261110_005_result_entry_forfeit.sql"
+A25B_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 CONTAINER_NAME="append-match-events-check-$$"
 WORKDIR="$(mktemp -d)"
@@ -170,6 +175,10 @@ while IFS= read -r line; do
   [[ "$(basename "$line")" == "$A10_MIGRATION" ]] && A10_FILE="$line"
   [[ "$(basename "$line")" == "$UR_MIGRATION" ]] && UR_FILE="$line"
   [[ "$(basename "$line")" == "$A34_MIGRATION" ]] && A34_FILE="$line"
+  if [[ "$(basename "$line")" == "$A25B_MIGRATION" ]]; then
+    A25B_FILE="$line"
+    [[ "$MODE" == "without-sw" ]] && continue
+  fi
   if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
     SW_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
@@ -181,6 +190,10 @@ if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" 
   exit 1
 fi
 
+if [[ -z "$A25B_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$A25B_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Fixtures 69* gegen einen Schreibweg ohne Nichtantritt." >&2
+  exit 1
+fi
 if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
   echo "::error::$A34_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still append_match_events ohne Steuer je Feld." >&2
   exit 1
@@ -230,6 +243,7 @@ if [[ "$MODE" != "without-migration" ]]; then
   psql_stdin < "$UR_FILE"
   [[ "$MODE" != "without-sw" ]] && psql_stdin < "$SW_FILE"
   if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
+  if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$A25B_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -238,8 +252,10 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   # ZA-3: seit 20261028 steht die juengste Fassung dort -- diese Datei wird mutiert.
   # A-25a: seit 20261028_003 steht die juengste Fassung dort -- diese Datei wird mutiert.
   # A-34: seit 20261110_003 steht die juengste Fassung dort -- diese Datei wird mutiert (falls vorhanden).
+  # A-25b: seit 20261110_005 steht die juengste Fassung dort -- diese Datei wird mutiert.
   NEWEST_APPEND_FILE="$A25A_FILE"
   [[ -n "$A34_FILE" ]] && NEWEST_APPEND_FILE="$A34_FILE"
+  [[ -n "$A25B_FILE" ]] && NEWEST_APPEND_FILE="$A25B_FILE"
   HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$NEWEST_APPEND_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
@@ -348,7 +364,9 @@ CREATE FUNCTION public.__b3b_cache(p_match uuid) RETURNS jsonb LANGUAGE sql AS $
     'actual_end_ms', floor(extract(epoch FROM m.actual_end) * 1000)::bigint,
     'live_state', m.live_state, 'version', m.version, 'last_modified_by', m.last_modified_by,
     'skipped_at_ms', floor(extract(epoch FROM m.skipped_at) * 1000)::bigint, 'skipped_reason', m.skipped_reason,
-    'team_a', m.team_a_id, 'team_b', m.team_b_id)
+    'team_a', m.team_a_id, 'team_b', m.team_b_id,
+    -- A-25b (20261110_005): wer nicht angetreten ist; ueber to_jsonb, damit der Lauf ohne die Migration (ohne Spalte) laeuft.
+    'forfeit_absent', to_jsonb(m) -> 'forfeit_absent')
   FROM public.matches m WHERE m.id = p_match;
 $fn$;
 SQL
@@ -495,6 +513,9 @@ echo "Fixtures durch die RPC..." >&2
 FIX_INDEX=0
 : > "$WORKDIR/plans.jsonl"
 for f in "$FIXTURES_DIR"/*.json; do
+  # A-25b: ohne SW faellt auch 20261110_005 weg (Fail-fast) -- die Wertungs-Fixtures 69* bleiben dann aussen vor, damit
+  # Gegenprobe D nur an der SW-Luecke (68a) rot wird.
+  if [[ "$MODE" == "without-sw" && "$(basename "$f")" == 69* ]]; then continue; fi
   FIX_INDEX=$((FIX_INDEX + 1))
   jq -c --arg file "$(basename "$f")" --argjson idx "$FIX_INDEX" \
      --arg owner "$U_OWNER" --arg coadmin "$U_COADMIN" --arg helper "$U_HELPER" \
@@ -1235,8 +1256,10 @@ check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name)
   '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at"' "$(jq -Rn --arg v "$out" '$v')"
 # A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
+# B-14 (20261117_104): matches_updated_at_insert setzt updated_at auch beim INSERT; er
+# feuert nach den Schutz-Triggern (Name) und ändert keine Engine-Spalte.
 check Spaltenschutz "BEFORE-INSERT-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_sync_owner"' "$(jq -Rn --arg v "$out" '$v')"
+  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_sync_owner,matches_updated_at_insert"' "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
 echo "Absetzen (skipped_at/skipped_reason)..." >&2

@@ -20,6 +20,8 @@ export interface LiveCockpitLeisteProps {
    * Taste da; der Helfer bekommt stattdessen den Hinweis (@HE-043).
    */
   onKorrigieren?(matchId: string): void;
+  /** B-12 (@SL-174): „Nicht angetreten“ unter „Mehr“ (nur Turnierleitung, vor dem Anpfiff); öffnet den Dialog der Verwaltung */
+  onNichtAngetreten?(matchId: string): void;
   /**
    * Ein anderes Gerät steuert das Feld, dieses liest nur (@FU-026, @SL-046; Quelle B-49 `useCockpitFieldControl`): Zeile „Feld 2 wird
    * von Tom gesteuert“ (ohne Namen „… von einem anderen Gerät …“), nach dem Verlust der Steuer „Die Spielleitung hat jetzt Olli“

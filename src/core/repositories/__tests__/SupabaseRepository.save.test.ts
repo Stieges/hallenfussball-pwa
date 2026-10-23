@@ -160,8 +160,11 @@ vi.mock('../../services/matchProtectionNotices', () => ({
 
 import { SupabaseRepository } from '../SupabaseRepository';
 import { OptimisticLockError } from '../../errors';
+import { isAuthExpired } from '../../services/mutationQueueRetry';
 import {
   TeamStillReferencedError,
+  TournamentGoneError,
+  definitiveRejectionReason,
   AuthenticationError,
   RepositoryError,
   isTransientMutationError,
@@ -913,5 +916,84 @@ describe('SupabaseRepository.save() — A-06a A1b: Netzfehler bei auth.getUser()
 
     expect(err).toBeInstanceOf(RepositoryError);
     expect(isTransientMutationError(err)).toBe(false);
+  });
+});
+
+// ============================================================================================
+// BP-1 – Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN, Szenarien @FU-123 (Grundriss) und @FU-124 (Gegenbeispiel).
+// @FU-123: war der „Wintercup“ in der Cloud und ist inzwischen endgültig gelöscht, legt eine alte wartende Änderung ihn
+// nicht neu an. @FU-124: ein Turnier, das noch nie in der Cloud war, wird bei der ersten Übertragung angelegt.
+// `mustExist` sagt save(), dass das Gerät das Turnier aus der Cloud kennt (Warteschlange: Merkmal der lokalen Kopie).
+// ============================================================================================
+
+describe('SupabaseRepository.save() — endgültig gelöschtes Turnier (@FU-123, @FU-124, Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN)', () => {
+  const wintercup = (version: number | undefined): Tournament => ({ ...makeTournamentWithOneTeamAndMatch(), version });
+
+  it('@FU-123 Zeile endgültig gelöscht, Änderung mit Version: kein INSERT, eindeutige Ablehnung „Turnier gibt es nicht mehr“', async () => {
+    tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116' } });
+    tournamentsInsertMock.mockResolvedValue({ error: null });
+    const repo = new SupabaseRepository();
+
+    const result = repo.save(wintercup(7), { mustExist: true });
+
+    await expect(result).rejects.toBeInstanceOf(TournamentGoneError);
+    await expect(result.catch((e: unknown) => definitiveRejectionReason(e))).resolves.toBe('tournamentGone');
+    expect(tournamentsInsertMock).not.toHaveBeenCalled();
+    expect(tournamentsUpsertMock).not.toHaveBeenCalled();
+    expect(teamsUpsertMock).not.toHaveBeenCalled();
+    expect(matchesUpsertMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-123 Zeile endgültig gelöscht, Änderung ohne Version (Zeile trug keine Version): kein Upsert', async () => {
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116' } });
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(wintercup(undefined), { mustExist: true })).rejects.toBeInstanceOf(TournamentGoneError);
+    expect(tournamentsUpsertMock).not.toHaveBeenCalled();
+    expect(tournamentsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-123 Gegenprobe: das Turnier gibt es noch (ohne Version) – gespeichert wie bisher', async () => {
+    tournamentsExistingSingleMock.mockResolvedValue({ data: { id: 't' }, error: null });
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(wintercup(undefined), { mustExist: true })).resolves.toBe(1);
+    expect(tournamentsUpsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('@FU-123 @FU-127 Gegenbeispiel: Netzfehler bei der Prüfung „gibt es das Turnier noch?“ (mit Version) ist unklar, nicht „gibt es nicht mehr“', async () => {
+    tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: '', message: 'TypeError: Failed to fetch' } });
+    const repo = new SupabaseRepository();
+
+    const error: unknown = await repo.save(wintercup(7), { mustExist: true }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(RepositoryError);
+    expect(definitiveRejectionReason(error)).toBeNull();
+    expect(isTransientMutationError(error)).toBe(true); // wird wiederholt (@FU-127)
+    expect(tournamentsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-123 @FU-009 Gegenbeispiel: abgelaufene Anmeldung (PGRST301) bei der Prüfung ohne Version hält an, nicht „gibt es nicht mehr“', async () => {
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: 'PGRST301', message: 'JWT expired', details: null, hint: null } });
+    const repo = new SupabaseRepository();
+
+    const error: unknown = await repo.save(wintercup(undefined), { mustExist: true }).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(RepositoryError);
+    expect(definitiveRejectionReason(error)).toBeNull();
+    expect(isAuthExpired(error)).toBe(true); // Warteschlange hält an (@FU-009)
+    expect(tournamentsUpsertMock).not.toHaveBeenCalled();
+  });
+
+  it('@FU-124 Gegenbeispiel: noch nie in der Cloud (lokal schon zweimal gespeichert, Version 2) – erste Übertragung legt an', async () => {
+    tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
+    tournamentsExistingSingleMock.mockResolvedValue({ data: null, error: { code: 'PGRST116' } });
+    tournamentsInsertMock.mockResolvedValue({ error: null });
+    const repo = new SupabaseRepository();
+
+    await expect(repo.save(wintercup(2), { mustExist: false })).resolves.toBe(1);
+    expect(tournamentsInsertMock).toHaveBeenCalledTimes(1);
   });
 });

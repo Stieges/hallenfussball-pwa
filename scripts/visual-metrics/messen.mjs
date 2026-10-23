@@ -72,7 +72,7 @@ function parseArgs(argv) {
       case '--ansichten': o.ansichten = wert(); break
       case '--nur': o.nur = wert(); break
       case '--monitor-profil': o.monitorProfil = wert(); break
-      case '--profil': o.profil = wert(); break
+      case '--profil': o.profil = wert(); o.profilGegeben = true; break
       case '--themen': o.themen = wert(); break
       case '--sprachen': o.sprachen = wert(); break
       case '--varianten': o.varianten = wert(); break
