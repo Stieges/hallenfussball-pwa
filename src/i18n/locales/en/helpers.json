@@ -1,0 +1,128 @@
+{
+  "join": {
+    "title": "Helper access",
+    "forTournament": "Helper access for",
+    "loading": "Checking code …",
+    "info": {
+      "title": "Helper access – only for helpers of the tournament organisers",
+      "text": "The tournament organisers must approve you before you can enter anything. Until then you only see the tournament name and date.",
+      "viewer": "Go to spectator view"
+    },
+    "name": {
+      "label": "Your name",
+      "counter": "{{count}} / {{max}}",
+      "hint": "1 to 40 characters. The tournament organisers see your name with your request.",
+      "invalid": "Please enter a name with 1 to 40 characters."
+    },
+    "submit": "Send request",
+    "sending": "Sending request …",
+    "retry": "Try again",
+    "privacy": "Privacy notice",
+    "home": "Back to start",
+    "formNotice": {
+      "offline": {
+        "title": "You need a connection to join",
+        "text": "Your name stays in the field. Check the connection and try again."
+      },
+      "authRateLimited": {
+        "title": "Too many sign-ins from this network – please try again in 2 minutes or use mobile data"
+      },
+      "unexpected": {
+        "title": "That did not work – please try again",
+        "text": "Your name stays in the field."
+      }
+    },
+    "account": {
+      "dialogTitle": "Join as helper",
+      "dialogText": "You are signed in as <b>{{name}}</b>. Joining as helper signs you out on this device. Continue?",
+      "dialogTextNoName": "You are signed in. Joining as helper signs you out on this device. Continue?",
+      "otherDevices": "You stay signed in on your laptop and your other devices.",
+      "cancel": "Cancel",
+      "continue": "Continue",
+      "signingOut": "Signing you out …",
+      "waitingTitleCount_one": "Connect first – {{count}} entry is waiting",
+      "waitingTitleCount_other": "Connect first – {{count}} entries are waiting",
+      "waitingTitleUnknown": "Connect first – entries are waiting",
+      "waitingTextCount_one": "{{count}} entry from your own tournament is waiting on this device. It goes to the server under your account once the device has a connection. After that you can join as helper.",
+      "waitingTextCount_other": "{{count}} entries from your own tournament are waiting on this device. They go to the server under your account once the device has a connection. After that you can join as helper.",
+      "waitingTextUnknown": "Entries from your own tournament are waiting on this device. They go to the server under your account once the device has a connection. After that you can join as helper."
+    },
+    "leader": {
+      "title": "You already run this tournament",
+      "text": "You are signed in as {{name}} and stay signed in. No request is created.",
+      "textNoName": "You are signed in and stay signed in. No request is created.",
+      "open": "Open {{title}}",
+      "openNoTitle": "Open tournament"
+    },
+    "waiting": {
+      "requestFrom": "Request from",
+      "checkNumber": "Your check number",
+      "title": "Waiting for approval by the tournament organisers",
+      "text": "The tournament organisers see the same check number with your request. Until you are approved you cannot enter anything. Keep this page open."
+    },
+    "end": {
+      "invalidCode": {
+        "title": "This code is not valid",
+        "text": "Scan the helper QR code of the tournament organisers again, completely."
+      },
+      "codeRotated": {
+        "title": "This code is no longer valid",
+        "text": "The tournament organisers created a new QR code. Please scan the current code."
+      },
+      "codeExpired": {
+        "title": "This code has expired",
+        "text": "The helper QR code is only valid until the end of the last tournament day."
+      },
+      "tournamentClosed": {
+        "title": "The tournament is finished – joining is no longer possible"
+      },
+      "declined": {
+        "title": "Request declined",
+        "text": "The tournament organisers did not approve your request.",
+        "hint": "On this device you cannot make a new request until the tournament ends. If your request was declined by mistake, scan again with another browser or another device.",
+        "hintRotated": "Ask the tournament organisers for the current QR code."
+      },
+      "requestExpired": {
+        "title": "Request expired",
+        "text": "The code expired before the tournament organisers decided. Ask for the current QR code."
+      },
+      "noAccess": {
+        "title": "You no longer have access",
+        "text": "The tournament organisers withdrew your access. Entering results is no longer possible on this device."
+      },
+      "watchOnly": {
+        "title": "You can only watch now",
+        "text": "You see the schedule and results, but you cannot enter anything any more.",
+        "open": "View schedule"
+      },
+      "finalStandings": {
+        "title": "The tournament is finished",
+        "text": "You see the final standings. Entering results is no longer possible.",
+        "open": "View final standings"
+      },
+      "noRequest": {
+        "title": "You have no access to this tournament",
+        "text": "Please scan the helper code."
+      },
+      "busy": {
+        "title": "Too many open requests – please ask the tournament organisers"
+      },
+      "retryScan": {
+        "title": "Please scan again",
+        "text": "Something went wrong on this device."
+      },
+      "offline": {
+        "title": "You need a connection to join",
+        "text": "Check the connection and then scan again.",
+        "stayAccount": "You stay signed in as {{name}}."
+      },
+      "unexpected": {
+        "title": "That did not work – please try again",
+        "text": "Scan the helper QR code again."
+      },
+      "oldInvite": {
+        "title": "This invitation route no longer works – please use the helper QR code of the tournament organisers"
+      }
+    }
+  }
+}

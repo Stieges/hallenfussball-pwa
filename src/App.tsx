@@ -25,7 +25,6 @@ import {
   LoginScreen,
   RegisterScreen,
   UserProfileScreen,
-  InviteAcceptScreen,
   AuthCallback,
   AuthConfirmPage,
   SetPasswordScreen,
@@ -53,6 +52,15 @@ const TournamentManagementScreen = lazyWithRetry(
 const LiveViewScreen = lazyWithRetry(
   () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
   'LiveViewScreen'
+);
+// A-17b: Beitritt per Helfer-QR-Code (/join/:code) und Hinweis für alte Einladungslinks (/invite)
+const JoinScreen = lazyWithRetry(
+  () => import('./screens/JoinScreen').then(m => ({ default: m.JoinScreen })),
+  'JoinScreen'
+);
+const LegacyInviteScreen = lazyWithRetry(
+  () => import('./screens/JoinScreen').then(m => ({ default: m.LegacyInviteScreen })),
+  'LegacyInviteScreen'
 );
 const ImpressumScreen = lazyWithRetry(
   () => import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen })),
@@ -116,7 +124,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'join' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -275,7 +283,6 @@ function AppContent() {
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
-  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
 
   // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
@@ -286,7 +293,6 @@ function AppContent() {
   // because HashRouter puts routes in the hash fragment, not pathname
   useEffect(() => {
     const path = location.pathname; // Use React Router's parsed pathname
-    const search = location.search; // Use React Router's parsed search params
     // Local, effect-scoped route match (derived purely from `path`, which is
     // already a dependency below) — deliberately NOT the render-scope `route`
     // from useRouteMatch() above, so this effect doesn't need `route` itself in
@@ -311,13 +317,12 @@ function AppContent() {
       // Live View via share code (e.g., /live/ABC123)
       setLiveShareCode(liveMatch[1].toUpperCase());
       setScreen('live');
+    } else if (matchedRoute?.name === 'join') {
+      // A-17b: Helfer-QR-Code; der Bildschirm liest den Code aus der Adresse (siehe Render unten)
+      setScreen('join');
     } else if (matchedRoute?.name === 'invite') {
-      const params = new URLSearchParams(search);
-      const token = params.get('token');
-      if (token) {
-        setInviteToken(token);
-        setScreen('invite');
-      }
+      // A-17b (@HE-063): alte Einladungslinks (/invite?token=…) führen zum Hinweis, nie zu einer Anfrage
+      setScreen('invite');
     } else if (matchedRoute?.name === 'authCallback') {
       // Handle OAuth/Magic Link callback
       setScreen('auth-callback');
@@ -357,7 +362,7 @@ function AppContent() {
   // Don't block public/display screens with global loading state
   // These screens have their own data loading logic
   // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
-  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname === '/test-live';
+  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || route?.name === 'join' || route?.name === 'invite' || location.pathname === '/test-live';
 
   // Auth screens should not be blocked by tournament loading
   const isAuthScreen = ['login', 'register', 'auth-callback', 'auth-confirm', 'set-password'].includes(screen);
@@ -459,19 +464,6 @@ function AppContent() {
     }
   };
 
-  // Helper to navigate to tournament after accepting invite
-  const handleInviteAccepted = (tournamentId: string) => {
-    setInviteToken(null);
-    // Navigate to the tournament
-    const tournament = tournaments.find(t => t.id === tournamentId);
-    if (tournament) {
-      setSelectedTournament(tournament);
-      setScreen('view');
-    } else {
-      void navigate('/');
-    }
-  };
-
   return (
     <div
       style={{
@@ -540,17 +532,9 @@ function AppContent() {
           />
         )}
 
-        {screen === 'invite' && inviteToken && (
-          <InviteAcceptScreen
-            token={inviteToken}
-            onAccepted={handleInviteAccepted}
-            onNeedLogin={() => setScreen('login')}
-            onCancel={() => {
-              setInviteToken(null);
-              void navigate('/');
-            }}
-          />
-        )}
+        {/* A-17b: Helfer-QR-Code (Adresse trägt den Code) und Hinweis für alte Einladungslinks */}
+        {route?.name === 'join' && route.params.code && <JoinScreen key={route.params.code} code={route.params.code} />}
+        {route?.name === 'invite' && <LegacyInviteScreen />}
 
         {/* Main App Screens */}
         {isDashboardPath && (

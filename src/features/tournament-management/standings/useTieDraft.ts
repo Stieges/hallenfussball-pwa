@@ -35,6 +35,8 @@ export function useTieDraft({ tournament, block, mode, onDraft, onClose }: UseTi
   const [error, setError] = useState<TieError | null>(null);
   const [triedSave, setTriedSave] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Name der Person, die schon entschieden hat (Schritt „seen“, @W2A-060); fehlt ohne Verlauf. */
+  const [seenBy, setSeenBy] = useState<string | undefined>(undefined);
   const online = tie?.online ?? true;
   const needsNet = mode === 'table' && !online;
 
@@ -107,6 +109,7 @@ export function useTieDraft({ tournament, block, mode, onDraft, onClose }: UseTi
         onClose();
       } else if (result.code === 'ALREADY_DECIDED') {
         tie.onChanged();
+        setSeenBy(result.by);
         setStep('seen');
       } else {
         setError(result.code);
@@ -135,5 +138,5 @@ export function useTieDraft({ tournament, block, mode, onDraft, onClose }: UseTi
     });
   }, []);
 
-  return { step, setStep, scores, setScore, order, move, reason, setReason, error, busy, canSave, needsNet, shootoutDraft, shootoutFieldError, submit };
+  return { step, setStep, scores, setScore, order, move, reason, setReason, error, busy, canSave, needsNet, shootoutDraft, shootoutFieldError, seenBy, submit };
 }

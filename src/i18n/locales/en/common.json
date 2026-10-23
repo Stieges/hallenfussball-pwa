@@ -128,6 +128,8 @@
     "discardConfirmTitle": "Discard transfer?",
     "discardConfirmMessage": "This change will be permanently discarded and will no longer be transferred to the cloud. If the server knows the tournament, the device will then show its state – without a connection, once it is back. A tournament that has never been on the server stays on this device with all teams and matches. This cannot be undone.",
     "conflictReason": "The tournament has since been changed on another device",
+    "invalidValueReason": "Not accepted – invalid value",
+    "tournamentGoneReason": "Not accepted – tournament no longer exists",
     "discardedCopyReason": "Not sent: this change is based on a discarded state. The state of the server will load once the connection is back.",
     "discardAndLoad": "Discard and load current state",
     "discardAndLoadAriaLabel": "Discard the change and load the current state of the server",
@@ -228,5 +230,10 @@
       "message_other": "{{count}} entries are still waiting to be sent. They stay on this device and will be sent with this account after your next sign-in.",
       "confirm": "Sign out anyway"
     }
+  },
+  "deviceKind": {
+    "phone": "Phone",
+    "tablet": "Tablet",
+    "computer": "Computer"
   }
 }

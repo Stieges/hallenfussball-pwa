@@ -20,7 +20,7 @@
  * ```
  */
 
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
@@ -51,6 +51,8 @@ export interface StartMatchExpandProps {
   onCancel: () => void;
   /** Whether the action is in progress */
   isLoading?: boolean;
+  /** B-12: weitere Aktion der Turnierleitung (z. B. „Nicht angetreten“) über den Tasten */
+  extraAction?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,6 +84,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
   onConfirm,
   onCancel,
   isLoading = false,
+  extraAction,
 }) => {
   const { t } = useTranslation('tournament');
 
@@ -204,6 +207,8 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
       <div style={hintStyle}>
         {t('matchExpand.start.confirmHint')}
       </div>
+
+      {extraAction}
 
       {/* Action Buttons */}
       <div style={actionsStyle}>

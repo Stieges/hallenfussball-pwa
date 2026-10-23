@@ -109,6 +109,7 @@
   },
   "schedule": {
     "runningMatchNoPermission": "Running match cannot be edited.",
+    "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped.",
     "matchLabel": "Round {{round}}",
     "conflicts": {
       "title": "Conflicts found",
@@ -167,6 +168,34 @@
       },
       "leadOnly": "tournament management only",
       "correctionLeadOnly": "Correction by the tournament management only"
+    },
+    "forfeit": {
+      "mark": "Did not show up",
+      "revoke": "Withdraw forfeit",
+      "title": "Match {{number}}: did not show up",
+      "question": "Which team did not show up?",
+      "teamAbsent": "{{name}} did not show up",
+      "bothAbsent": "Both teams did not show up",
+      "summaryOne": "{{winner}} wins {{score}} (forfeit)",
+      "summaryBoth": "Both teams get 0 points and 0:{{against}} goals each, neither a win. The match counts as decided and is marked as a forfeit.",
+      "confirm": "Record forfeit",
+      "cancel": "Cancel",
+      "revokeTitle": "Match {{number}}: withdraw forfeit",
+      "revokeQuestion": "The forfeit is withdrawn. The match is open again afterwards and the table is recalculated.",
+      "revokeConfirm": "Withdraw forfeit",
+      "notScheduled": "A match that has kicked off cannot be recorded as a no-show. End it with \"End match and enter result\".",
+      "leadOnly": "Only the tournament director can record or withdraw a no-show.",
+      "notForfeit": "This match is not recorded as a no-show.",
+      "unavailable": "The no-show cannot be recorded right now.",
+      "teamsMissing": "The teams of this match are not decided yet.",
+      "scopeLabel": "How far does the no-show apply?",
+      "scopeThis": "This match only",
+      "scopeRest": "Team has left – also record all remaining matches as forfeits",
+      "scopeRestCount_one": "{{count}} more scheduled match of {{name}} will be recorded as a forfeit; matches already started or played stay unchanged.",
+      "scopeRestCount_other": "{{count}} more scheduled matches of {{name}} will be recorded as forfeits; matches already started or played stay unchanged.",
+      "restDone_one": "{{count}} more match recorded as a forfeit.",
+      "restDone_other": "{{count}} more matches recorded as forfeits.",
+      "restPartial": "{{done}} more matches recorded, {{skipped}} not (already started or error)."
     }
   },
   "scheduleActions": {
@@ -1136,7 +1165,9 @@
       "offline": "Deciding needs a connection – or use “Complete group”.",
       "decide": "Decide tie",
       "shootout": "Enter penalty shootout",
-      "order": "Set order"
+      "order": "Set order",
+      "withdrawnBy": "Withdrawn by {{name}} · {{time}}",
+      "withdrawnByUnknown": "Withdrawn · {{time}}"
     },
     "decided": {
       "sharedTitle": "Result accepted",
@@ -1152,7 +1183,9 @@
       "withdrawUntil": "Possible until the group is completed.",
       "closed": "The group is completed. The decision is final. It can only be changed by a correction or by reopening the group.",
       "withdrawFailed": "Withdrawing did not work. Please try again.",
-      "withdrawOffline": "Withdrawing needs a connection."
+      "withdrawOffline": "Withdrawing needs a connection.",
+      "by": "{{name}} · {{time}}",
+      "byUnknown": "Tournament management · {{time}}"
     },
     "dialog": {
       "titleChoice": "Decide tie",
@@ -1194,13 +1227,15 @@
         "SHOOTOUT_NEEDS_WINNER": "The penalty shootout needs a winner.",
         "UNKNOWN": "That did not work. Please try again.",
         "ALREADY_DECIDED": "This tie has already been decided. Please check the table.",
-        "WITHDRAW_NOT_ALLOWED": "The group is completed. The decision can no longer be withdrawn."
+        "WITHDRAW_NOT_ALLOWED": "The group is completed. The decision can no longer be withdrawn.",
+        "RETRY_LATER": "The server was busy. Please try again."
       },
       "seen": {
         "title": "Already decided",
         "body": "This tie has been decided in the meantime.",
         "current": "In effect: {{what}}",
-        "notSaved": "Your entry was not saved. The table shows the decision in effect."
+        "notSaved": "Your entry was not saved. The table shows the decision in effect.",
+        "titleBy": "Already decided by {{name}}"
       }
     },
     "settings": {

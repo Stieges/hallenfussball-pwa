@@ -212,14 +212,54 @@ a11_mark "@ZM-019 gegen-mama-petra-liest-oeffentlichen-monitor           " "$(cu
 r="$(a11_probe authenticated "$U_COADMIN" "$A11_FELD1_VISIBLE" "SELECT 1;" "SELECT 'ok'")"
 a11_mark "@ZM-019 maria-liest-nicht-oeffentlichen-monitor                " "$(cut -d'|' -f1 <<<"$r")" "1"
 
-# @W2A-050 (Paket TB, TB-3): Gleichstands-Entscheidung in der Tabelle = tournaments.config.standingDecisions
-# (StandingDecisionService -> updateStandingDecisions, keine Migration). Tom als Helfer -> abgelehnt (tournaments_update_v3,
-# tournamentSettings); Maria (Co-Admin) und Olli (Eigentuemer) -> gelingt.
-A11_DECIDE="UPDATE public.tournaments SET config = config || '{\"standingDecisions\":[{\"id\":\"e-1\",\"groupId\":\"\",\"teamIds\":[\"a\",\"b\"],\"order\":[\"b\",\"a\"],\"kind\":\"shootout\",\"shootout\":{\"winner\":4,\"loser\":3},\"decidedBy\":{\"userId\":\"u\",\"name\":\"Olli\"},\"decidedAt\":\"2026-12-06T14:32:00.000Z\",\"basis\":\"x\"}]}'::jsonb WHERE id = '$T_MAIN';"
+# @W2A-050 (Paket TB, TB-3): Gleichstands-Entscheidung in der Tabelle (Olli trägt das Strafstoßschießen 4:3 ein).
+# Seit A-13b-S (20261110_006) schreibt die App sie ausschließlich über record_standing_decision (A-13b-C, PR #330);
+# Review #330 S6: die Zellen messen diesen Weg. Darf (manageLifecycle): Olli (Eigentümer), Maria (Co-Admin).
+# Darf nicht: Tom (Helfer), Zuschauer (viewer), Mama Petra (anon, ohne Sitzung) -> 42501, config unverändert.
+# Gegenzeilen REST: UPDATE tournaments.config.standingDecisions bleibt für Tom abgelehnt und für Maria/Olli ohne
+# Wirkung (Trigger tournaments_keep_standing_decisions behält den Serverwert, das Speichern selbst gelingt).
+# Ohne _006 (--without-a13bs) sind alle @W2A-050-Zellen rot (RPC fehlt, REST schreibt).
+A11_DECISION_JSON="{\"id\": \"e-1\", \"groupId\": \"\", \"teamIds\": [\"$A11_TEAM_SG\", \"$A11_TEAM_VFB\"], \"order\": [\"$A11_TEAM_VFB\", \"$A11_TEAM_SG\"], \"kind\": \"shootout\", \"shootout\": {\"winner\": 4, \"loser\": 3}, \"basis\": \"x\"}"
 A11_DECIDE_NOW="SELECT coalesce(config->'standingDecisions'->0->'shootout'->>'winner', 'keine') FROM public.tournaments WHERE id = '$T_MAIN'"
+# a11_decide_rpc <rolle authenticated|anon> <user-id oder leer> -> "<status oder SQLSTATE>|<Wert danach als Superuser>"
+# (eine nie committete Transaktion; der Ausnahmeblock hält den SQLSTATE fest, z. B. 42501 = keine Berechtigung,
+# 42883 = Funktion fehlt).
+a11_decide_rpc() {
+  local role="$1" uid="$2" sub_line="" out
+  [[ -n "$uid" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$uid'; $(claims_line "$uid")"
+  set +e
+  out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -A -t -v ON_ERROR_STOP=0 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE $role;
+$sub_line
+DO \$a11dec\$
+DECLARE v text;
+BEGIN
+  v := public.record_standing_decision('$T_MAIN', 'decide', '$A11_DECISION_JSON'::jsonb, NULL,
+         (SELECT version FROM public.tournaments WHERE id = '$T_MAIN')) ->> 'status';
+  RAISE NOTICE 'a11dec:%', coalesce(v, 'null');
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'a11dec:%', SQLSTATE;
+END
+\$a11dec\$;
+RESET ROLE;
+SELECT 'a11pruef:' || coalesce(($A11_DECIDE_NOW)::text, 'NULL');
+ROLLBACK;
+SQL
+)"
+  set -e
+  echo "$( (grep -m1 -oE 'a11dec:[^ ]+' <<<"$out" || echo 'a11dec:fehler') | sed 's/^a11dec://')|$( (grep -m1 '^a11pruef:' <<<"$out" || echo 'a11pruef:?') | sed 's/^a11pruef://')"
+}
+a11_mark "@W2A-050 olli-traegt-strafstossschiessen-ein (record_standing_decision)    " "$(a11_decide_rpc authenticated "$U_OWNER")" "ok|4"
+a11_mark "@W2A-050 maria-traegt-strafstossschiessen-ein (record_standing_decision)   " "$(a11_decide_rpc authenticated "$U_COADMIN")" "ok|4"
+a11_mark "@W2A-050 tom-traegt-strafstossschiessen-ein-abgelehnt (record_standing_decision)" "$(a11_decide_rpc authenticated "$U_COLLAB")" "42501|keine"
+a11_mark "@W2A-050 zuschauer-traegt-ein-abgelehnt (record_standing_decision)        " "$(a11_decide_rpc authenticated "$U_VIEWER")" "42501|keine"
+a11_mark "@W2A-050 mama-petra-anon-traegt-ein-abgelehnt (record_standing_decision)  " "$(a11_decide_rpc anon "")" "42501|keine"
+# Gegenzeilen: der alte REST-Weg (Voll-Speichern des config).
+A11_DECIDE="UPDATE public.tournaments SET config = config || '{\"standingDecisions\":[{\"id\":\"e-1\",\"groupId\":\"\",\"teamIds\":[\"a\",\"b\"],\"order\":[\"b\",\"a\"],\"kind\":\"shootout\",\"shootout\":{\"winner\":4,\"loser\":3},\"decidedBy\":{\"userId\":\"u\",\"name\":\"Olli\"},\"decidedAt\":\"2026-12-06T14:32:00.000Z\",\"basis\":\"x\"}]}'::jsonb WHERE id = '$T_MAIN';"
 r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 tom-traegt-strafstossschiessen-ein-abgelehnt          " "$(a11_denied_verdict "$r" "keine")" "abgelehnt"
+a11_mark "@W2A-050 gegenzeile-tom-traegt-per-rest-ein-abgelehnt                    " "$(a11_denied_verdict "$r" "keine")" "abgelehnt"
 r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 gegen-maria-traegt-strafstossschiessen-ein            " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"
+a11_mark "@W2A-050 gegenzeile-maria-traegt-per-rest-ein-ohne-wirkung               " "$(a11_allowed_verdict "$r" 1 "keine")" "gelingt"
 r="$(a11_probe authenticated "$U_OWNER" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_DECIDE" "$A11_DECIDE_NOW")"
-a11_mark "@W2A-050 gegen-olli-traegt-strafstossschiessen-ein             " "$(a11_allowed_verdict "$r" 1 "4")" "gelingt"
+a11_mark "@W2A-050 gegenzeile-olli-traegt-per-rest-ein-ohne-wirkung                " "$(a11_allowed_verdict "$r" 1 "keine")" "gelingt"

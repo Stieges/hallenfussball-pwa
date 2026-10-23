@@ -58,7 +58,7 @@ async function oeffneUndBrichAb(t: Tournament): Promise<void> {
   render(<MemoryRouter initialEntries={['/tournament/t1']}><App /></MemoryRouter>);
   fireEvent.click(await screen.findByText('im-wizard-bearbeiten', {}, { timeout: 5000 }));
   fireEvent.click(await screen.findByText('wizard-abbrechen', {}, { timeout: 5000 }));
-  await waitFor(() => expect(screen.queryByText('wizard-abbrechen')).toBeNull());
+  await waitFor(() => expect(screen.queryByText('wizard-abbrechen')).toBeNull(), { timeout: 5000 });
 }
 
 function gespeicherteStatus(): string[] {

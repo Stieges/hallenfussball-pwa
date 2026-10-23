@@ -8,7 +8,7 @@
 import { useCallback, useState } from 'react';
 import { LocalMatchStore } from '../../../core/match/client/LocalMatchStore';
 import { useRepositories } from '../../../core/contexts/RepositoryContext';
-import { countWaitingEntries, type WaitingEntriesSource } from './countWaitingEntries';
+import { countWaitingBeforeSignOut, type WaitingEntriesSource } from './countWaitingEntries';
 
 export interface UseGuardedLogoutOptions {
   isGuest: boolean;
@@ -28,25 +28,7 @@ export interface UseGuardedLogoutResult {
   confirm: () => void;
 }
 
-const defaultMatchStoreFactory = (): WaitingEntriesSource => new LocalMatchStore();
-
-/** Weg B (A-07c, @FU-006): Repo mit Ausgangs-Queue des Kontos (`OfflineRepository.mutationQueue`). */
-interface QueueHolder {
-  readonly mutationQueue: { getPendingCount(): number };
-}
-
-function isQueueHolder(repo: unknown): repo is QueueHolder {
-  return typeof repo === 'object' && repo !== null && 'mutationQueue' in repo && repo.mutationQueue !== undefined && repo.mutationQueue !== null;
-}
-
-/** Wartende Eintraege der Konto-Queue (Weg B). Ein Lesefehler zaehlt 0 -- nie blockierend. */
-function countQueuedEntries(repo: unknown): number {
-  try {
-    return isQueueHolder(repo) ? repo.mutationQueue.getPendingCount() : 0;
-  } catch {
-    return 0;
-  }
-}
+export const defaultMatchStoreFactory = (): WaitingEntriesSource => new LocalMatchStore();
 
 export function useGuardedLogout({
   isGuest,
@@ -72,11 +54,8 @@ export function useGuardedLogout({
     // Promise-Callbacks wuerde das als unhandled rejection enden und logout() nie erreichen.
     // A-07c (@FU-006): Summe aus Weg A (lokale Kopie) und Weg B (Konto-Queue); jeder Ausgang
     // zaehlt fuer sich, ein Fehler in einem Ausgang nimmt nur dessen Anteil auf 0.
-    void Promise.resolve()
-      .then(() => countWaitingEntries(createMatchStore(), accountId))
-      .catch(() => 0)
-      .then((storeWaiting) => {
-        const waiting = storeWaiting + countQueuedEntries(tournamentRepository);
+    void countWaitingBeforeSignOut(createMatchStore, accountId, tournamentRepository)
+      .then((waiting) => {
         if (waiting > 0) {
           setWaitingCount(waiting);
           return;

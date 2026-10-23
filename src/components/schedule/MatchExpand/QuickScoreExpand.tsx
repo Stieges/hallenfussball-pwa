@@ -21,7 +21,7 @@
  * ```
  */
 
-import { type CSSProperties, useState } from 'react';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { ScoreStepper } from '../../ui/ScoreStepper';
@@ -58,6 +58,8 @@ export interface QuickScoreExpandProps {
   onShowGoals?: () => void;
   /** Disable save (e.g., during save operation) */
   isSaving?: boolean;
+  /** B-12: weitere Aktion der Turnierleitung (z. B. „Nicht angetreten“) über den Tasten */
+  extraAction?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +76,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
   onCancel,
   onShowGoals,
   isSaving = false,
+  extraAction,
 }) => {
   const { t } = useTranslation('tournament');
   const [homeScore, setHomeScore] = useState(initialHomeScore);
@@ -198,6 +201,8 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           )}
         </div>
       )}
+
+      {extraAction}
 
       {/* Action Buttons */}
       <div style={actionsStyle}>
