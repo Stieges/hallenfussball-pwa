@@ -722,7 +722,8 @@ run_catalog() {
 run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | q "$(cat)" 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # A-21a-S (20261113_003): die lifecycle-*-Zeilen der spaeteren Migration sind hier f (laeuft erst am Ende).
+  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE '^(lifecycle-[a-z0-9-]+)\|' || true)"
   check S "Rechte-Assertion: die 12 A-16-Zeilen vorhanden und |t" "12|12" \
     "$(grep -cE '^helper-join-[a-z0-9-]+\|' <<<"$priv")|$(grep -cE '^helper-join-[a-z0-9-]+\|t$' <<<"$priv")"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"

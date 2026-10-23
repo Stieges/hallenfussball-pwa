@@ -130,23 +130,31 @@ SQL
   a11_mark "@ZP-084 gegen-mama-petra-liest-spielplan-ueber-positivliste    " "${r:-fehler}" "full"
 fi
 
-# @LZ-023: Tom schickt den Abschluss-Patch (wie buildFinishTournamentPatch: config.manuallyCompleted/dashboardStatus,
-# completed_at) direkt an die Schnittstelle -> abgelehnt, Turnier weiter „Läuft“.
-A11_FINISH="UPDATE public.tournaments SET config = config || '{\"manuallyCompleted\":true,\"dashboardStatus\":\"finished\"}'::jsonb, completed_at = now() WHERE id = '$T_MAIN';"
-A11_FINISH_STATE="SELECT coalesce(config->>'manuallyCompleted', 'laeuft') FROM public.tournaments WHERE id = '$T_MAIN'"
-r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_FINISH" "$A11_FINISH_STATE")"
+# @LZ-023 (A-21a-S, 20261113_003; vorher am alten Haken-Patch, Befund C-GUARD-RLS-MATRIX-ALT): Toms Konto ruft den
+# Abschluss bzw. das Wiederoeffnen direkt an der Schnittstelle -> abgelehnt (42501), Zustand unveraendert. Die Haken-Patches
+# (config.manuallyCompleted, completed_at) schliessen seit A-21a nichts mehr ab und sind deshalb keine Zeile mehr.
+A11_LZ_STATE="SELECT CASE WHEN lifecycle_status = 'finished' THEN 'abgeschlossen' ELSE 'laeuft' END FROM public.tournaments WHERE id = '$T_MAIN'"
+A11_LZ_FINISHED="SET LOCAL app.lifecycle_write = 'on'; UPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '$T_MAIN'; RESET app.lifecycle_write;"
+r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" \
+  "SELECT public.finish_tournament('$T_MAIN', '[]'::jsonb, '{}'::jsonb, gen_random_uuid());" "$A11_LZ_STATE")"
 a11_mark "@LZ-023 tom-schliesst-turnier-ab-abgelehnt                     " "$(a11_denied_verdict "$r" "laeuft")" "abgelehnt"
 r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" \
   "UPDATE public.tournaments SET config = config || '{\"dashboardStatus\":\"cancelled\"}'::jsonb WHERE id = '$T_MAIN';" \
   "SELECT coalesce(config->>'dashboardStatus', 'laeuft') FROM public.tournaments WHERE id = '$T_MAIN'")"
 a11_mark "@LZ-023 tom-bricht-turnier-ab-abgelehnt                        " "$(a11_denied_verdict "$r" "laeuft")" "abgelehnt"
-# „Abgeschlossen“ -> „wieder öffnen“: Vorbereitung als Superuser (abgeschlossen), Tom setzt manuallyCompleted zurueck.
 r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" \
-  "UPDATE public.tournaments SET config = config || '{\"manuallyCompleted\":false}'::jsonb, completed_at = NULL WHERE id = '$T_MAIN';" \
-  "$A11_FINISH_STATE" "$A11_FINISH")"
-a11_mark "@LZ-023 tom-oeffnet-abgeschlossenes-turnier-abgelehnt          " "$(a11_denied_verdict "$r" "true")" "abgelehnt"
-r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" "$A11_FINISH" "$A11_FINISH_STATE")"
-a11_mark "@LZ-023 gegen-maria-schliesst-turnier-ab                       " "$(a11_allowed_verdict "$r" 1 "true")" "gelingt"
+  "SELECT public.reopen_tournament('$T_MAIN', 'Grund', gen_random_uuid());" "$A11_LZ_STATE" "$A11_LZ_FINISHED")"
+a11_mark "@LZ-023 tom-oeffnet-abgeschlossenes-turnier-abgelehnt          " "$(a11_denied_verdict "$r" "abgeschlossen")" "abgelehnt"
+r="$(a11_probe authenticated "$U_COLLAB" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" \
+  "UPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '$T_MAIN';" "$A11_LZ_STATE")"
+a11_mark "@LZ-023 tom-setzt-zustand-per-rest-abgelehnt                   " "$(a11_denied_verdict "$r" "laeuft")" "abgelehnt"
+# Gegenbeispiele @LZ-022: Maria (Co-Admin) hat das Recht -- die Funktion antwortet (kein 42501), Wiederoeffnen gelingt.
+r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" \
+  "SELECT public.finish_tournament('$T_MAIN', '[]'::jsonb, '{}'::jsonb, gen_random_uuid());" "$A11_LZ_STATE")"
+a11_mark "@LZ-023 gegen-maria-darf-abschliessen-funktion-antwortet       " "$(a11_allowed_verdict "$r" 0 "laeuft")" "gelingt"
+r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" \
+  "SELECT public.reopen_tournament('$T_MAIN', 'versehentlich abgeschlossen', gen_random_uuid());" "$A11_LZ_STATE" "$A11_LZ_FINISHED")"
+a11_mark "@LZ-023 gegen-maria-oeffnet-wieder                             " "$(a11_allowed_verdict "$r" 0 "laeuft")" "gelingt"
 
 # @TM-084: Gruppen-Abschluss hat heute kein Server-Feld (complete_group kommt mit A-13). Regression „Helfer aendert
 # tournaments nicht“: Tom setzt einen Gruppen-Abschluss-Vermerk im Turnier -> abgelehnt, Gruppe A nicht abgeschlossen.

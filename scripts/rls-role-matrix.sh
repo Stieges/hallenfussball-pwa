@@ -162,6 +162,9 @@
 #   scripts/rls-role-matrix.sh --without-a13bs     # Alles ("nachher"), aber OHNE 20261110_006 (A-13b-S: Gruppe abschliessen,
 #                                                   # Verlauf, Hinweise, Klaerungen) -- die A-13b-S-Zeilen
 #                                                   # (rls-matrix.d/spur-gruppe-a13b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a21as     # Alles ("nachher"), aber OHNE 20261113_003 (A-21a-S: Lebenszyklus und
+#                                                   # Abschluss-Sperre) -- die A-21a-Zeilen (rls-matrix.d/spur-lebenszyklus-a21a.sh
+#                                                   # und @LZ-023 in spur-a.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-a16       # Alles ("nachher"), aber OHNE 20261110_008 (A-16: Helfer-Beitritt per
 #                                                   # QR) -- die A-16-Zeilen (rls-matrix.d/spur-helfer-a16.sh) muessen
 #                                                   # hier ROT sein (Gegenprobe, Exit 0). Ohne A-34 (_003) entfaellt A-16
@@ -275,6 +278,8 @@ WITH_SB_REQ=1
 WITH_A13BS_REQ=1
 # A-16: 20261110_008 im Modus "nachher" einspielen (Gegenprobe --without-a16 laesst sie weg; braucht _002 und _003).
 WITH_A16_REQ=1
+# A-21a-S: 20261113_003 im Modus "nachher" einspielen (Gegenprobe --without-a21as laesst sie weg; braucht _006).
+WITH_A21AS_REQ=1
 # B-14: 20261117_104 im Modus "nachher" einspielen (Gegenprobe --without-b14 laesst sie weg; braucht _002 und _004).
 WITH_B14_REQ=1
 # B-48b: 20261113_101 im Modus "nachher" einspielen (Gegenprobe --without-b48b laesst sie weg; Erwartungen setzen A-27 voraus).
@@ -338,6 +343,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-a13bs)
       WITH_A13BS_REQ=0
+      shift
+      ;;
+    --without-a21as)
+      WITH_A21AS_REQ=0
       shift
       ;;
     --without-a16)
@@ -685,6 +694,20 @@ elif [[ "$WITH_A25B" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, Spiel-beenden-Gegenprobe (ohne 20261110_009)"
 fi
 
+# A-21a-S (20261113_003, plan-endstand-abschluss.md): Lebenszyklus und Abschluss-Sperre am Server -- vier Tabellen (RLS,
+# drei Lese-Policies), Sperr-Trigger, Abschluss-RPCs. Setzt _006 (A-13b-S) voraus (Fail-fast); --without-a21as ist die
+# Gegenprobe. Laeuft nach _008, damit der Rumpf von tournament_closed_for_helpers ersetzt wird (Fenster-Reihenfolge).
+A21AS_FILE="$(find_migration 20261113_003)"
+WITH_A21AS=0
+if [[ "$WITH_A13BS" -eq 1 && "$WITH_A21AS_REQ" -eq 1 ]]; then
+  WITH_A21AS=1
+  echo "Migration einspielen: $(basename "$A21AS_FILE")" >&2
+  psql_stdin < "$A21AS_FILE"
+  MODE_LABEL="$MODE_LABEL + A-21a-S (20261113_003)"
+elif [[ "$WITH_A13BS" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-21a-S-Gegenprobe (ohne 20261113_003)"
+fi
+
 # B-48b (20261113_101, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): record_monitor_heartbeat mit Kennung als
 # Text, Pruefung gegen config.monitors, Sichtbarkeit is_public oder tournamentSettings. Haengt technisch nur an
 # has_tournament_permission (20260924_002); eingespielt mit A-27, weil die Zeilen in rls-matrix.d/spur-b.sh die Regel
@@ -751,6 +774,12 @@ fi
 # Mitglieder wird ersetzt (v3 -> v4), die Zahl der Policies bleibt.
 if [[ "$WITH_A16" -eq 1 ]]; then
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 2))
+fi
+# A-21a-S: tournament_final_standings, tournament_lifecycle_log, late_entries (je eine Lese-Policy), device_outbox_reports
+# (ohne Policy) sind RLS-aktiv.
+if [[ "$WITH_A21AS" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 3))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 4))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -2309,7 +2338,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi
