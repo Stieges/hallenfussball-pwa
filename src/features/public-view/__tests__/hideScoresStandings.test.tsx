@@ -24,8 +24,8 @@ vi.mock('../../../core/repositories/SupabaseRepository', () => ({
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { getByShareCode: localGet }; }),
 }));
-// Seit dem B-15-Anschluss liest die Seite standardmäßig über die Server-Funktion (Adapter (b)). Diese Datei prüft die
-// Anzeige mit Daten aus den Repository-Mocks und nimmt deshalb ausdrücklich den Weg über getByShareCode (Adapter (a)).
+// Mit Supabase liest die Seite über die Server-Funktion (Adapter (b)), ohne Supabase über getByShareCode (Adapter (a)).
+// Diese Datei prüft die Anzeige mit Daten aus den Repository-Mocks und legt deshalb den Weg ohne Supabase fest (Adapter (a)).
 vi.mock('../defaultPublicSource', async () => {
   const { createLegacyPublicSource } = await import('../legacyPublicSource');
   return { defaultPublicTournamentSource: createLegacyPublicSource() };

@@ -7,7 +7,6 @@ import { buildLiveViewTournament } from '../../../screens/__tests__/liveViewFixt
 import type { Tournament } from '../../../types/tournament';
 import { createLegacyPublicSource } from '../legacyPublicSource';
 import { createRpcPublicSource, type PublicRpcCall } from '../rpcPublicSource';
-import { defaultPublicTournamentSource } from '../defaultPublicSource';
 import { contentVersionOf } from '../publicVersion';
 import { applyPublicDelta } from '../publicDelta';
 import { parsePublicReply } from '../publicTournamentWire';
@@ -177,8 +176,4 @@ describe('Adapter (b) – Server-Funktion nach dem Vertrag (Stub)', () => {
   });
 });
 
-describe('Standardweg der Zuschauer-Seite', () => {
-  it('@ZM-068 liest ohne Schalter über die Server-Funktion (B-14 ist live, anon liest die Tabellen nicht mehr)', () => {
-    expect(defaultPublicTournamentSource.kind).toBe('rpc');
-  });
-});
+// Die Wahl der Standardquelle (mit/ohne Supabase) prüft `defaultPublicSource.test.ts`.

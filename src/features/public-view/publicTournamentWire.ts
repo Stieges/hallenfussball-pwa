@@ -6,7 +6,9 @@
  *   not_found → „nicht gefunden“ (sicher, nie bei einer Störung, @ZM-068)
  *   unchanged → Version ohne Inhalt
  *   full      → Turnier mit Teamnamen an den Ereignissen
- *   delta     → geänderte Spiele (+ entfernte Kennungen); Kopfdaten und Teams bringt der Server nur in einer vollen Antwort
+ *   delta     → nur geänderte Spiele; Kopfdaten und Teams bringt der Server nur in einer vollen Antwort. Nach dem
+ *               Löschen von Spielen antwortet der Server voll, `removed_match_ids` fehlt deshalb praktisch immer (leere
+ *               Liste); das Feld wird nur für den Fall verarbeitet, dass der Vertrag es künftig füllt.
  * `version` wird als Zeichenkette gehalten (Stand-Speicher), `server_now` gleicht die Uhr ab (@ZM-026).
  * Jede Abweichung vom Vertrag wirft und gilt als „nicht erreichbar“ (@ZM-109).
  */
