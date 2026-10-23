@@ -77,6 +77,7 @@ export function buildResolution(
 
   const ackedIds: string[] = [];
   const reviewIds: string[] = [];
+  const reviewCodes: Record<string, string> = {};
   const droppedIds: string[] = [];
   const rejected: RejectedEntry[] = [];
   for (let i = 0; i < batch.length; i += 1) {
@@ -94,6 +95,7 @@ export function buildResolution(
     }
     if (result.status === 'review') {
       reviewIds.push(event.id);
+      reviewCodes[event.id] = result.code ?? FALLBACK_CODE;
       continue;
     }
     // result.status === 'rejected': der Server hat DIESEN Eintrag beantwortet -- sein
@@ -127,6 +129,7 @@ export function buildResolution(
       ackedIds,
       rejected,
       reviewIds,
+      ...(reviewIds.length > 0 ? { reviewCodes } : {}),
       ...(droppedIds.length > 0 ? { droppedIds } : {}),
       ...(cascade ? { cascade } : {}),
     },

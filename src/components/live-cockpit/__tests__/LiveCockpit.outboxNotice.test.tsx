@@ -83,4 +83,18 @@ describe('LiveCockpit x OutboxNotice (C3a-2a, W1)', () => {
 
     expect(screen.queryByTestId('outbox-notice')).not.toBeInTheDocument();
   });
+
+  it('B-50 @HE-056: Server hat Toms Eintrag wegen entzogenen Rechts übergeben → Cockpit zeigt „keinen Zugriff“ statt Bedienung', () => {
+    mockStatus.current = { ...emptyOutboxStatus(), revokedByTournament: { 'tour-1': 1 } };
+    render(<LiveCockpit {...baseProps(makeMatch())} />);
+
+    expect(screen.getByTestId('cockpit-zugriff-entzogen')).toHaveTextContent('cockpit:leiste.keinZugriff');
+  });
+
+  it('B-50 Gegenbeispiel: übergebene Einträge eines anderen Turniers sperren dieses Cockpit nicht', () => {
+    mockStatus.current = { ...emptyOutboxStatus(), revokedByTournament: { 'anderes-turnier': 1 } };
+    render(<LiveCockpit {...baseProps(makeMatch())} />);
+
+    expect(screen.queryByTestId('cockpit-zugriff-entzogen')).not.toBeInTheDocument();
+  });
 });

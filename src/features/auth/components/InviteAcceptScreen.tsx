@@ -89,7 +89,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
       <div data-testid="invite-accept-screen" style={styles.container}>
         <div style={styles.card}>
           <div style={styles.loadingSpinner} />
-          <p style={styles.loadingText}>Einladung wird geprüft...</p>
+          <p style={styles.loadingText}>Einladung wird überprüft...</p>
         </div>
       </div>
     );

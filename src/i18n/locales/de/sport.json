@@ -128,6 +128,6 @@
   },
   "outbox": {
     "rejectedEntry": "nicht übernommen",
-    "awaitingReview": "wartet auf Turnierleitung"
+    "awaitingReview": "wird geprüft"
   }
 }

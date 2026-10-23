@@ -4,7 +4,30 @@
  * die Listener sofort (Sichtbarkeit ≤ 10 s, L92).
  */
 import type { LocalMatchStore } from './LocalMatchStore';
+import type { MatchCopy } from './matchCopy';
 import { emptyOutboxStatus, type OutboxPause, type OutboxStatus } from './outboxTypes';
+
+/** Grund des Servers für „an die Turnierleitung übergeben“ (@HE-056, @FU-017, @HE-080). */
+const RIGHTS_REVOKED = 'RIGHTS_REVOKED';
+
+export type CopyListCounts = Pick<OutboxStatus, 'pendingByTournament' | 'pendingByMatch' | 'rejectedByMatch' | 'reviewByMatch' | 'revokedByTournament'>;
+
+/** Zähler der Listen aller Kopien eines Kontos (rein). */
+export function countCopyLists(copies: readonly MatchCopy[]): CopyListCounts {
+  const counts: CopyListCounts = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, revokedByTournament: {} };
+  for (const copy of copies) {
+    counts.pendingByMatch[copy.matchId] = copy.pending.length;
+    counts.rejectedByMatch[copy.matchId] = copy.rejected.length;
+    counts.reviewByMatch[copy.matchId] = copy.review.length;
+    const tournamentKey = copy.tournamentId ?? '';
+    counts.pendingByTournament[tournamentKey] = (counts.pendingByTournament[tournamentKey] ?? 0) + copy.pending.length;
+    const revoked = copy.review.filter((event) => copy.reviewCodes?.[event.id] === RIGHTS_REVOKED).length;
+    if (revoked > 0) {
+      counts.revokedByTournament[tournamentKey] = (counts.revokedByTournament[tournamentKey] ?? 0) + revoked;
+    }
+  }
+  return counts;
+}
 
 export class OutboxStatusBook {
   private snapshot: OutboxStatus = emptyOutboxStatus();
@@ -45,18 +68,7 @@ export class OutboxStatusBook {
     pausedMatches: Record<string, OutboxPause>,
   ): Promise<void> {
     const copies = accountId === null ? [] : await store.forAccount(accountId);
-    const pendingByTournament: Record<string, number> = {};
-    const pendingByMatch: Record<string, number> = {};
-    const rejectedByMatch: Record<string, number> = {};
-    const reviewByMatch: Record<string, number> = {};
-    for (const copy of copies) {
-      pendingByMatch[copy.matchId] = copy.pending.length;
-      rejectedByMatch[copy.matchId] = copy.rejected.length;
-      reviewByMatch[copy.matchId] = copy.review.length;
-      const tournamentKey = copy.tournamentId ?? '';
-      pendingByTournament[tournamentKey] = (pendingByTournament[tournamentKey] ?? 0) + copy.pending.length;
-    }
-    this.set({ pendingByTournament, pendingByMatch, rejectedByMatch, reviewByMatch, pausedMatches });
+    this.set({ ...countCopyLists(copies), pausedMatches });
   }
 
   /** Einmal je Instanz: `navigator.storage.persist()` anfordern (RC6). Fehlt die API, kein Fehler. */

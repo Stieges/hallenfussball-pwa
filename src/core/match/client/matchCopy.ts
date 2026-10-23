@@ -35,8 +35,10 @@ export interface MatchCopy {
   pending: EngineEvent[];
   /** Ablehnungsliste (D-C1). */
   rejected: RejectedEntry[];
-  /** „wartet auf Turnierleitung" -- der Server liefert `review` erst ab F. */
+  /** „wird geprüft" -- der Server liefert `review` erst ab F. */
   review: EngineEvent[];
+  /** B-50: Grund des Servers je Eintrag in `review` (z. B. `RIGHTS_REVOKED`, @HE-056); fehlt in älteren Kopien. */
+  reviewCodes?: Record<string, string>;
   updatedAt: number;
 }
 
@@ -80,6 +82,8 @@ export interface BatchResolution {
   ackedIds: string[];
   rejected: RejectedEntry[];
   reviewIds: string[];
+  /** B-50: Grund des Servers je Eintrag in `reviewIds`. */
+  reviewCodes?: Record<string, string>;
   /** A-08b3 (B2, @FU-070): Server-Antwort `noop` -- Eintrag wird aus `pending` entfernt, nicht `acked`. */
   droppedIds?: string[];
   cascade?: CascadeInfo;
@@ -133,6 +137,16 @@ export function applyResolution(copy: MatchCopy, resolution: BatchResolution): v
   copy.pending = stillPending;
   copy.acked = copy.acked.concat(movedAcked);
   copy.review = copy.review.concat(movedReview);
+  if (movedReview.length > 0 && resolution.reviewCodes) {
+    const codes = { ...(copy.reviewCodes ?? {}) };
+    for (const event of movedReview) {
+      const code = resolution.reviewCodes[event.id];
+      if (code !== undefined) {
+        codes[event.id] = code;
+      }
+    }
+    copy.reviewCodes = codes;
+  }
   copy.rejected = copy.rejected.concat(
     resolution.rejected.filter((entry) => presentIds.has(entry.event.id)),
     cascaded,

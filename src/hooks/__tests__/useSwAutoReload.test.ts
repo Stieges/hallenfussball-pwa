@@ -67,6 +67,7 @@ function waitingStatus(pending: number): OutboxStatus {
     pendingByMatch: pending > 0 ? { m1: pending } : {},
     rejectedByMatch: {},
     reviewByMatch: {},
+    revokedByTournament: {},
     pausedMatches: {},
     authRequired: false,
     clientOutdated: false,
