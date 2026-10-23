@@ -42,3 +42,16 @@ export function resultEntryCommand(knockout: boolean, scores: Record<string, num
   const payload = shootout === undefined ? { scores: { ...scores } } : { scores: { ...scores }, shootout: { ...shootout } };
   return { ok: true, spec: { type: 'RESULT_ENTRY', teamId: null, payload } };
 }
+
+/**
+ * B-12 (@W2A-022, @W2A-024): Befehl „nicht angetreten“ -- ein Ergebniseintrag mit `forfeit.absent`. Die Tore je Seite
+ * (`result`, aus `forfeitResultFor`: Einstellung des Turniers, bei „beide“ 0:0) werden den Team-IDs des Spiels zugeordnet.
+ * Nie mit Strafstoßergebnis, auch im K.-o. nicht (A-25n).
+ */
+export function forfeitEntrySpec(ctx: { teamAId: string; teamBId: string }, absent: 'A' | 'B' | 'both', result: { a: number; b: number }): CommandSpec {
+  return {
+    type: 'RESULT_ENTRY',
+    teamId: null,
+    payload: { scores: { [ctx.teamAId]: result.a, [ctx.teamBId]: result.b }, forfeit: { absent } },
+  };
+}

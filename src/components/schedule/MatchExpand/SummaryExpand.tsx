@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { ScoreHeader } from '../MatchSummary/ScoreHeader';
@@ -16,6 +16,8 @@ export interface SummaryExpandProps {
     onEditScore?: () => void;
     onEditEvent?: (event: RuntimeMatchEvent) => void;
     onClose?: () => void;
+    /** B-12: weitere Aktion der Turnierleitung (z. B. „Wertung zurücknehmen“) */
+    extraAction?: ReactNode;
 }
 
 export function SummaryExpand({
@@ -28,7 +30,7 @@ export function SummaryExpand({
     events,
     onEditScore,
     onEditEvent,
-
+    extraAction,
 }: SummaryExpandProps) {
     const { t } = useTranslation('tournament');
 
@@ -89,6 +91,8 @@ export function SummaryExpand({
                     </div>
                 )}
             </div>
+
+            {extraAction}
 
             {/* Close/Action Footer if needed? Usually expand closes on click outside or header click */}
             {/* GroupStageSchedule logic should handle closing via existing expand behavior */}
