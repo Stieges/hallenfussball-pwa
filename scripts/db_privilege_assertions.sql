@@ -908,4 +908,78 @@ SELECT 'helper-join-names-without-hidden-chars',
                    FROM pg_constraint c
                   WHERE c.conrelid = to_regclass('public.tournament_join_requests') AND c.contype = 'c'
                     AND (pg_get_constraintdef(c.oid) LIKE '%display_name%' OR pg_get_constraintdef(c.oid) LIKE '%device_label%')), false)
+
+-- B-14 (20261117_104_public_payload.sql, E-A2, @ZM-096..@ZM-102, @ME-018, Review Focus 6): oeffentliche Daten nur ueber
+-- public_tournament/display_tournament (SECURITY DEFINER, EXECUTE anon+authenticated, nie PUBLIC); keine SELECT-Policy
+-- fuer anon/public und keine mit is_public auf den acht Tabellen; Baustein public_view ohne Client-Rechte;
+-- is_reading_member nur fuer authenticated; neue Tabellen in public ohne Standardrechte fuer anon
+-- (C-ANON-STANDARDRECHTE-NEUE-TABELLEN). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'public-read-functions-definer-execute-anon',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
+                                  to_regprocedure('public.display_tournament(uuid,text,bigint)'))), false)
+UNION ALL
+SELECT 'public-read-no-anon-select-policies',
+       coalesce((SELECT count(*) = 8
+                        AND NOT bool_or(p.roles && ARRAY['anon', 'public']::name[])
+                        AND NOT bool_or(position('is_public' IN coalesce(p.qual, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.cmd IN ('SELECT', 'ALL')
+                    AND p.tablename IN ('tournaments', 'teams', 'team_players', 'matches', 'match_events', 'monitors',
+                                        'sponsors', 'match_corrections')), false)
+UNION ALL
+SELECT 'public-read-view-schema-no-client-access',
+       coalesce(to_regnamespace('public_view') IS NOT NULL
+                AND NOT has_schema_privilege('anon', 'public_view', 'USAGE')
+                AND NOT has_schema_privilege('authenticated', 'public_view', 'USAGE')
+                AND NOT EXISTS (SELECT 1 FROM pg_proc p
+                                 WHERE p.pronamespace = to_regnamespace('public_view')
+                                   AND (has_function_privilege('anon', p.oid, 'EXECUTE')
+                                        OR has_function_privilege('authenticated', p.oid, 'EXECUTE'))), false)
+UNION ALL
+SELECT 'public-read-reading-member-execute-only-authenticated',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND position('''screen''' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.is_reading_member(uuid)')), false)
+UNION ALL
+SELECT 'public-read-default-privileges-no-anon',
+       NOT EXISTS (SELECT 1 FROM pg_default_acl d, aclexplode(d.defaclacl) a
+                    WHERE d.defaclrole = 'postgres'::regrole AND d.defaclnamespace = 'public'::regnamespace
+                      AND d.defaclobjtype = 'r' AND a.grantee = 'anon'::regrole)
+UNION ALL
+SELECT 'public-read-reshare-keeps-code',
+       coalesce((SELECT position('share_code = NULL' IN pg_get_functiondef(p.oid)) = 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_private(uuid)')), false)
+       AND coalesce((SELECT position('IF v_existing_code IS NOT NULL THEN' IN pg_get_functiondef(p.oid)) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_public(uuid)')), false)
+-- B-14 NB-1 (Review #346 Nachblick): Sicherheitskern unveraendert -- md5 der Funktionstexte (public_view.*,
+-- public_tournament, display_tournament, is_reading_member; Reihenfolge Schema, Name, Argumente) wie in
+-- 20261117_104_public_payload.sql, und die vier Trigger aus A1 aktiv. Aendert eine spaetere Migration eine dieser
+-- Funktionen, muss der Wert hier mitgezogen werden (bewusst). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'public-read-core-unchanged',
+       coalesce((SELECT count(*) = 12
+                        AND md5(string_agg(pg_get_functiondef(p.oid), E'\n'
+                                           ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
+                            = 'b066d903d80edc87778e7e65b2958366'
+                   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                  WHERE n.nspname = 'public_view'
+                     OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
+                                  to_regprocedure('public.display_tournament(uuid,text,bigint)'),
+                                  to_regprocedure('public.is_reading_member(uuid)'))), false)
+       AND (SELECT count(*) = 4 FROM pg_trigger t
+             WHERE NOT t.tgisinternal AND t.tgenabled = 'O'
+               AND (t.tgrelid, t.tgname) IN (('public.matches'::regclass, 'matches_updated_at_insert'),
+                                             ('public.teams'::regclass, 'teams_updated_at_insert'),
+                                             ('public.matches'::regclass, 'matches_public_structure_delete'),
+                                             ('public.teams'::regclass, 'teams_public_structure_delete')))
 ;

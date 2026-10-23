@@ -111,7 +111,9 @@
     "phonePlaceholder": "+49 123 456789",
     "website": "Website",
     "websitePlaceholder": "www.mein-verein.de",
-    "hint": "Diese Angaben erscheinen in der Fußzeile des Spielplans und im PDF-Export."
+    "hint": "Ohne Häkchen sieht diese Angaben nur die Turnierleitung.",
+    "showPublic": "Ansprechpartner öffentlich zeigen",
+    "showPublicHint": "Mit Häkchen erscheinen Name, E-Mail, Telefon und Website auf der Zuschauer-Seite und im Spielplan-PDF – für alle mit dem Zuschauer-Link. Ohne Häkchen sieht sie nur die Turnierleitung."
   },
   "step4": {
     "title": "Teams",
