@@ -5,46 +5,20 @@
  * der Fingerabdruck ihres Inhalts (`contentVersionOf`): ist er gleich dem, den die Seite schon hält, meldet der Adapter
  * „nichts geändert“, und die Seite rechnet und zeichnet nicht neu. Egress und Anfragen bleiben die des Voll-Abrufs.
  *
- * `getByShareCode` unterscheidet „gibt es nicht“ nicht von einem Fehler (beides `null`); die Standard-Abfrage fragt deshalb bei
- * `null` mit `assertShareCodeUnknown` nach: Fehler oder vorhandene Zeile werfen (Störung, der Stand bleibt, @ZM-109), 0 Zeilen
- * heißt „nicht gefunden“ (der Stand wird gelöscht, @ZM-036).
+ * Seit B-14 liest `getByShareCode` über die Server-Funktion `public_tournament`: `null` heißt sicher „nicht geteilt oder
+ * unbekannt“ (der Stand wird gelöscht, @ZM-036, @ZM-068), jede Störung wirft (der Stand bleibt, @ZM-109). Die frühere
+ * Zusatzabfrage auf die Tabelle entfällt (anon liest `tournaments` nicht mehr). Standardweg der Seite ist Adapter (b).
  */
 import type { Tournament } from '../../types/tournament';
 import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepository';
-import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { isSupabaseConfigured } from '../../lib/supabase';
 import { type PublicFetchResult, type PublicTournamentSource } from './publicSource';
 import { contentVersionOf } from './publicVersion';
 import { MeasuredServerClock, type ServerClock } from './serverClock';
 
 export interface ShareCodeLookup {
   getByShareCode(code: string): Promise<Tournament | null>;
-}
-
-interface ProbeResult { error?: { message: string } | null; data?: readonly unknown[] | null }
-
-/**
- * `getByShareCode` liefert bei jedem Fehler `null`, auch bei Netzfehler oder 5xx (Befund C-ZUSCHAUER-LADEFEHLER-ALS-NICHT-GEFUNDEN,
- * Besitz Spur A). Antwortet es mit `null`, fragt diese kleine Prüfung noch einmal nach (nur die Kennung, eine Zeile): kommt
- * dabei ein Fehler zurück, war es eine Störung und wird geworfen; „0 Zeilen“ heißt wirklich „gibt es nicht“.
- */
-export async function assertShareCodeUnknown(code: string): Promise<void> {
-  if (supabase === null) {
-    return;
-  }
-  const result = (await supabase
-    .from('tournaments')
-    .select('id')
-    .eq('share_code', code.toUpperCase().trim())
-    .eq('is_public', true)
-    .limit(1)) as ProbeResult | undefined;
-  if (result?.error) {
-    throw new Error(result.error.message);
-  }
-  // Findet die Prüfung das Turnier doch, war `getByShareCode` nur gestört: ebenfalls eine Störung, kein „nicht gefunden“
-  if ((result?.data?.length ?? 0) > 0) {
-    throw new Error('tournament exists but was not readable (disruption)');
-  }
 }
 
 /**
@@ -59,9 +33,6 @@ export const defaultShareCodeLookup: ShareCodeLookup = {
     if (isSupabaseConfigured) {
       try {
         found = await new SupabaseRepository().getByShareCode(code);
-        if (found === null) {
-          await assertShareCodeUnknown(code);
-        }
       } catch (error) {
         cloudError = error;
         console.warn('Supabase lookup failed, trying localStorage:', error);
@@ -114,8 +85,8 @@ export function createLegacyPublicSource(
         return { kind: 'unreachable' };
       }
       if (found === null) {
-        // Die Standard-Abfrage hat bei `null` nachgefragt (`assertShareCodeUnknown`): eine Störung wirft, `null` heißt wirklich
-        // „gibt es nicht“ – auch mit gehaltenem Stand (Teilen zurückgenommen, @ZM-036)
+        // `getByShareCode` wirft bei einer Störung, `null` heißt wirklich „gibt es nicht“ – auch mit gehaltenem Stand
+        // (Teilen zurückgenommen, @ZM-036)
         return { kind: 'not-found' };
       }
       const version = contentVersionOf(found);
