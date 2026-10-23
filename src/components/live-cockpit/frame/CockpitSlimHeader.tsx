@@ -20,6 +20,8 @@ export interface CockpitSlimHeaderProps {
   feld: number;
   onFeld: (n: number) => void;
   verbindung: ReactNode;
+  /** B-50 Q8: unauffälliger Einstieg in die Klärungsliste (nur Turnierleitung, nur bei offenen Fällen), links der Verbindung. */
+  klaerung?: ReactNode;
   /** Nur ab 1024 px (`layout === 'breit'`) und nur mit Handler. */
   breit?: boolean;
   onTastenkuerzel?: () => void;
@@ -63,6 +65,7 @@ export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
       {p.breit === true && p.onTastenkuerzel && (
         <button type="button" style={knopfStil} data-testid="cockpit-tastenkuerzel" onClick={p.onTastenkuerzel}>{t('rahmen.tastenkuerzel')}</button>
       )}
+      {p.klaerung}
       {p.verbindung}
     </header>
   );
