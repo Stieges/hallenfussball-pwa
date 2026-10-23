@@ -1,0 +1,100 @@
+/**
+ * Verwaltung, Reiter Einstellungen: Stammdaten werden vor dem Speichern geprüft (C-META-NOVALID).
+ * @W5-002: leerer Turniername -> Fehler am Feld, nichts wird gespeichert.
+ * @W5-003: liegt der Turniertag in der Vergangenheit, wird eine Korrektur von Ort oder Schreibweise trotzdem
+ * gespeichert (das vergangene Datum blockiert nicht).
+ * Szenarien aus docs/anforderungen/2026-09-27_wizard-nach-dem-anlegen.md.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import type { Tournament } from '../../../types/tournament';
+import { initRealDeI18n } from '../../../test/realDeI18n';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+await initRealDeI18n();
+
+vi.mock('../../auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: false }) }));
+vi.mock('../../auth/hooks/useTournamentMembers', () => ({ useTournamentMembers: () => ({ myMembership: null, isLoading: false }) }));
+vi.mock('../../../hooks/useTournaments', () => ({ useTournaments: () => ({ saveTournament: vi.fn(() => Promise.resolve()), tournaments: [] }) }));
+
+import { SettingsTab } from '../SettingsTab';
+
+function turnier(startDate: string): Tournament {
+  return {
+    id: 't1', title: 'Wintercup', status: 'published', publishedAt: '2026-10-01T08:00:00Z',
+    teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], matches: [],
+    startDate, startTime: '10:00', date: startDate, timeSlot: '10:00',
+    ageClass: 'U11', location: { name: 'Halle Süd', city: 'Musterstadt' }, placementLogic: [],
+  } as unknown as Tournament;
+}
+
+function zeige(t: Tournament) {
+  const onTournamentUpdate = vi.fn();
+  render(<SettingsTab tournament={t} onTournamentUpdate={onTournamentUpdate} />);
+  fireEvent.click(screen.getByText('Metadaten bearbeiten')); // Abschnitt ist zunächst eingeklappt
+  return onTournamentUpdate;
+}
+
+const feld = (name: RegExp) => screen.getByLabelText(name);
+const speichern = () => fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('Einstellungen speichern prüft die Stammdaten (C-META-NOVALID)', () => {
+  it('@W5-002 leerer Turniername: Fehler am Feld, es wird nicht gespeichert', () => {
+    const speicher = zeige(turnier('2099-03-01'));
+    fireEvent.change(feld(/Turniername/), { target: { value: '' } });
+    speichern();
+    expect(speicher).not.toHaveBeenCalled();
+    const meldung = screen.getByRole('alert');
+    expect(meldung.textContent).toMatch(/Turniername/);
+    expect(feld(/Turniername/).getAttribute('aria-describedby')).toBe(meldung.id);
+  });
+
+  it('@W5-002 nur Leerzeichen als Turniername zählt als leer', () => {
+    const speicher = zeige(turnier('2099-03-01'));
+    fireEvent.change(feld(/Turniername/), { target: { value: '   ' } });
+    speichern();
+    expect(speicher).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toBeTruthy();
+  });
+
+  it('C-META-NOVALID leeres Startdatum: Fehler am Feld, es wird nicht gespeichert', () => {
+    const speicher = zeige(turnier('2099-03-01'));
+    fireEvent.change(feld(/Startdatum/), { target: { value: '' } });
+    speichern();
+    expect(speicher).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/datum/i);
+  });
+
+  it('@W5-002 Gegenbeispiel: gültiger neuer Name wird gespeichert, ohne Fehlermeldung', () => {
+    const speicher = zeige(turnier('2099-03-01'));
+    fireEvent.change(feld(/Turniername/), { target: { value: 'Wintercup Süd' } });
+    speichern();
+    expect(speicher).toHaveBeenCalledTimes(1);
+    expect((speicher.mock.calls[0][0] as Tournament).title).toBe('Wintercup Süd');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('@W5-002 nach dem Fehler löscht Tippen im Feld die Meldung, und Speichern gelingt', () => {
+    const speicher = zeige(turnier('2099-03-01'));
+    fireEvent.change(feld(/Turniername/), { target: { value: '' } });
+    speichern();
+    fireEvent.change(feld(/Turniername/), { target: { value: 'Neu' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    speichern();
+    expect(speicher).toHaveBeenCalledTimes(1);
+  });
+
+  it('@W5-003 Turniertag liegt in der Vergangenheit: die Korrektur des Ortes wird gespeichert', () => {
+    const speicher = zeige(turnier('2020-01-11'));
+    fireEvent.change(screen.getByDisplayValue('Halle Süd'), { target: { value: 'Halle Nord' } });
+    speichern();
+    expect(speicher).toHaveBeenCalledTimes(1);
+    const gespeichert = speicher.mock.calls[0][0] as Tournament;
+    expect(gespeichert.location.name).toBe('Halle Nord');
+    expect(gespeichert.startDate).toBe('2020-01-11');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
