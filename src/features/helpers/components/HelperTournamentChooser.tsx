@@ -1,7 +1,7 @@
 /**
  * Auswahl „Wohin geht es?“ (A-17c, Mockup M3 n4, @HE-099): Ein Gerät mit zwei laufenden Turnieren zeigt beide statt der
  * Startseite – Helfer-Zugänge mit seinem Feld, eigene laufende Turniere des Geräts zählen wie ein Zugang und stehen mit drin. Keine Haupttaste – beide Wege sind gleichwertig, jede Zeile ist 56 px hoch. „Zur
- * Startseite“ bleibt immer erreichbar (Gast-Turniere bleiben sichtbar, Pflichtzeile GA5 v2.1).
+ * Startseite“ bleibt immer erreichbar (eigene Turniere des Geräts stehen dort).
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +14,7 @@ import { captureFeatureError } from '../../../lib/sentry';
 import type { Tournament } from '../../../types/tournament';
 import { isRunningHelperEntry, isRunningOwnTournament, toDateKey } from '../runningState';
 import { loadHelperStartContext, type HelperStartContextDeps } from '../helperStartContext';
-import { defaultHelperStartDeps } from '../helperStartDeps';
+import { defaultHelperStartDeps, markHelperStartHandled } from '../helperStartDeps';
 import { formatJoinDate, helperFieldPath, helperTournamentPath } from '../joinPaths';
 import { JoinShell } from './JoinShell';
 
@@ -102,7 +102,7 @@ export const HelperTournamentChooser = ({ deps, tournaments = [] }: HelperTourna
           ))}
         </ul>
       )}
-      <Button variant="ghost" fullWidth onClick={() => void navigate('/')} style={{ minHeight: cssVars.touchTargets.minimum }} data-testid="helper-chooser-home">
+      <Button variant="ghost" fullWidth onClick={() => { markHelperStartHandled(); void navigate('/'); }} style={{ minHeight: cssVars.touchTargets.minimum }} data-testid="helper-chooser-home">
         {t('join.chooser.home')}
       </Button>
     </JoinShell>

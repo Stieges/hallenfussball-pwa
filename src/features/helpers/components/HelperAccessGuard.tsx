@@ -21,6 +21,7 @@ import { cssVars, iconSizeValues } from '../../../design-tokens';
 import type { HelperAccessView } from '../../../core/repositories/helperAccessRpc';
 import { AuthContext } from '../../auth/context/authContextInstance';
 import { findHelperAccessEntry } from '../helperAccessStore';
+import { markHelperStartHandled } from '../helperStartDeps';
 import { outcomeFromEntry, type HelperAccessOutcome } from '../helperAccessOutcome';
 import { useHelperAccessStatus, type HelperStatusDeps } from '../useHelperAccessStatus';
 import { JoinEndState } from './JoinEndState';
@@ -66,6 +67,8 @@ export const HelperAccessGuard = ({ tournamentId, activeTab, children, statusDep
   }
 
   const go = (path: string) => void navigate(path);
+  // Wer von einer Endkarte zur Startseite geht, soll dort bleiben: die Start-Weiche darf ihn nicht zurückleiten
+  const goHome = () => { markHelperStartHandled(); go('/'); };
   const readOnlyNotice = outcome.kind === 'watchOnly' || outcome.kind === 'closed';
   if (readOnlyNotice && activeTab !== 'management') {
     return (
@@ -94,7 +97,7 @@ export const HelperAccessGuard = ({ tournamentId, activeTab, children, statusDep
           title={t('join.guard.pending.title')}
           text={t('join.guard.pending.text')}
           action={(
-            <Button variant="primary" fullWidth onClick={() => go('/')} style={{ minHeight: cssVars.touchTargets.primary, fontSize: cssVars.fontSizes.lg }} data-primary data-testid="join-home">
+            <Button variant="primary" fullWidth onClick={goHome} style={{ minHeight: cssVars.touchTargets.primary, fontSize: cssVars.fontSizes.lg }} data-primary data-testid="join-home">
               {t('join.home')}
             </Button>
           )}
@@ -104,7 +107,7 @@ export const HelperAccessGuard = ({ tournamentId, activeTab, children, statusDep
         <JoinEndState
           view={view}
           onNavigate={go}
-          onHome={() => go('/')}
+          onHome={goHome}
           onRecheck={() => undefined}
         />
       ) : null}

@@ -19,7 +19,6 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { useTournamentManager } from '../hooks/useTournamentManager';
 import { ManagementHeader, ManagementMobileNav } from './ManagementChrome';
 import { useCockpitFrame } from '../components/live-cockpit/frame/cockpitFrame';
-import { HelperAccessGuard } from '../features/helpers/components/HelperAccessGuard';
 import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
 
 // Tab Components
@@ -47,7 +46,7 @@ interface TournamentManagementScreenProps {
 // Type alias for backward compatibility
 type TabType = TournamentTab;
 
-const TournamentManagementContent: React.FC<TournamentManagementScreenProps> = ({
+export const TournamentManagementScreen: React.FC<TournamentManagementScreenProps> = ({
   tournamentId,
   onBack,
   onEditInWizard,
@@ -312,20 +311,6 @@ const TournamentManagementContent: React.FC<TournamentManagementScreenProps> = (
 
       {!vollbild && isMobile && <ManagementMobileNav activeTab={activeTab} onTabChange={handleTabChange} tournamentId={tournamentId} />}
     </div>
-  );
-};
-
-/**
- * A-17c (@HE-055, @HE-070, @OB-053): Helfer-Geräte mit Eintrag im Zugangs-Index werden vor dem Laden des Turniers geprüft
- * (entzogen, nur zusehen, abgeschlossen, Anfrage offen oder abgelehnt); alle anderen sehen das Fenster unverändert.
- */
-export const TournamentManagementScreen: React.FC<TournamentManagementScreenProps> = (props) => {
-  const { pathname } = useLocation();
-  const activeTab = getTabFromPath(pathname.split('/')[3]);
-  return (
-    <HelperAccessGuard tournamentId={props.tournamentId} activeTab={activeTab}>
-      <TournamentManagementContent {...props} />
-    </HelperAccessGuard>
   );
 };
 

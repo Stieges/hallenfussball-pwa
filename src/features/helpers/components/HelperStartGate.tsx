@@ -4,7 +4,8 @@
  * sein Feld (oder zur Auswahl, oder zur Endkarte) – ohne Startseite, ohne neuen Scan und ohne Zwischenfrage. Läuft nichts,
  * steht die Startseite mit der Einsatz-Karte. Geräte ohne Zugangs-Index sehen die Startseite sofort, ohne Verzögerung und ohne Netzaufruf.
  * Die Entscheidung trifft `decideHelperStart`; hier wird nur geladen, kurz „Zugang wird geprüft …“ gezeigt und navigiert.
- * Nur beim ersten Öffnen je Seitenaufruf: „Zur Startseite“ führt danach nicht wieder zurück ans Feld.
+ * Nur beim ersten Öffnen je Seitenaufruf. Wer von Feld, Auswahl oder Endkarte bewusst zur Startseite geht („Meine Turniere auf diesem
+ * Handy“, „Zur Startseite“), setzt vorher den Merker (`markHelperStartHandled`), damit die Weiche ihn nicht zurückleitet (@HE-110).
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +24,7 @@ import { JoinShell } from './JoinShell';
 export interface HelperStartGateProps {
   /** Nur die Startseite `/` leitet weiter (nicht Archiv und Papierkorb). */
   active: boolean;
-  /** Lokale Turniere des Geräts (Gast-Turniere bleiben sichtbar). */
+  /** Lokale Turniere des Geräts (eigene laufende zählen mit, @HE-099). */
   tournaments: readonly Tournament[];
   children: ReactNode;
   /** Nur für Tests. */

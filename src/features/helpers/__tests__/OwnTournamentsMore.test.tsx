@@ -13,6 +13,12 @@ import { MoreSheet } from '../../../components/live-cockpit/areas/MoreSheet';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { clearHelperAccessIndex, upsertHelperAccessEntry } from '../helperAccessStore';
 import { hasOwnTournamentsBesidesHelper } from '../useOwnTournamentsOffer';
+import { HelperStartGate } from '../components/HelperStartGate';
+import { HelperTournamentChooser } from '../components/HelperTournamentChooser';
+import { resetHelperStart } from '../helperStartDeps';
+import type { HelperStartContextDeps } from '../helperStartContext';
+import { createMockTournament } from '../../../test/factories';
+import { localDateKey } from '../runningState';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -29,6 +35,7 @@ beforeEach(() => {
   vi.mocked(window.localStorage.setItem).mockImplementation((key: string, value: string) => { memory.set(key, value); });
   vi.mocked(window.localStorage.removeItem).mockImplementation((key: string) => { memory.delete(key); });
   clearHelperAccessIndex();
+  resetHelperStart();
   listForCurrentUser.mockReset();
 });
 
@@ -96,5 +103,49 @@ describe('@HE-110 „Meine Turniere auf diesem Handy“', () => {
     renderSheet(false);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(screen.queryByTestId('mehr-meine-turniere')).toBeNull();
+  });
+});
+
+describe('@HE-110 Start direkt am Feld (Start-Weiche nie gelaufen): der Weg zur Startseite bleibt auf der Startseite', () => {
+  const heute = localDateKey(new Date());
+  const laufend = (): HelperAccessEntry => ({ ...cup(), date: heute });
+  const startDeps: HelperStartContextDeps = {
+    readSession: async () => ({ kind: 'device', userId: 'anon-tom' }),
+    fetchStatus: async () => ({ ok: false, error: { kind: 'network' } }),
+  };
+  const training = createMockTournament({ id: 't-training', status: 'published', startDate: '2026-01-01', date: '2026-01-01', matches: [] });
+
+  function renderFeldUndStart(startAt: string) {
+    return render(
+      <AuthContext.Provider value={{ user: { id: 'anon-tom', isAnonymous: true } } as unknown as AuthContextValue}>
+        <MemoryRouter initialEntries={[startAt]}>
+          <Routes>
+            <Route path="/" element={<><HelperStartGate active tournaments={[training]} deps={startDeps}><div data-testid="startseite">Startseite</div></HelperStartGate><Where /></>} />
+            <Route path="/helfer" element={<><HelperTournamentChooser deps={startDeps} tournaments={[training]} /><Where /></>} />
+            <Route path="/tournament/t-cup/live" element={<><MoreSheet isOpen onClose={() => undefined} punkte={['einstellungen']} aktionen={{ einstellungen: () => undefined }} tournamentId="t-cup" /><Where /></>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    );
+  }
+
+  it('Feld per Link geöffnet, „Mehr“ → „Meine Turniere auf diesem Handy“ → Startseite bleibt stehen (kein Rücksprung ans laufende Feld)', async () => {
+    upsertHelperAccessEntry('anon-tom', laufend());
+    listForCurrentUser.mockResolvedValue([{ id: 't-cup' }, { id: 't-training' }]);
+    renderFeldUndStart('/tournament/t-cup/live');
+    await userEvent.click(await screen.findByTestId('mehr-meine-turniere'));
+    expect(await screen.findByTestId('startseite')).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.getByTestId('where').textContent).toBe('/');
+    expect(screen.getByTestId('startseite')).toBeTruthy();
+  });
+
+  it('Auswahl direkt geöffnet (Weiche nie gelaufen), „Zur Startseite“ → bleibt auf der Startseite', async () => {
+    upsertHelperAccessEntry('anon-tom', laufend());
+    renderFeldUndStart('/helfer');
+    await userEvent.click(await screen.findByTestId('helper-chooser-home'));
+    expect(await screen.findByTestId('startseite')).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.getByTestId('where').textContent).toBe('/');
   });
 });

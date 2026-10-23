@@ -47,7 +47,7 @@ const TournamentCreationScreen = lazyWithRetry(
   'TournamentCreationScreen'
 );
 const TournamentManagementScreen = lazyWithRetry(
-  () => import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen })),
+  () => import('./screens/GuardedTournamentManagementScreen').then(m => ({ default: m.GuardedTournamentManagementScreen })),
   'TournamentManagementScreen'
 );
 const LiveViewScreen = lazyWithRetry(

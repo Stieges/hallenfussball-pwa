@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { cssVars } from '../../../design-tokens';
+import { markHelperStartHandled } from '../helperStartDeps';
 import { useHelperAccessHere, useOwnTournamentsOffer } from '../useOwnTournamentsOffer';
 
 export interface OwnTournamentsMoreItemProps {
@@ -26,7 +27,7 @@ const OwnTournamentsMoreButton = ({ onBeforeNavigate }: Pick<OwnTournamentsMoreI
       variant="secondary"
       style={{ minHeight: cssVars.touchTargets.primary, width: '100%' }}
       data-testid="mehr-meine-turniere"
-      onClick={() => { onBeforeNavigate?.(); void navigate('/'); }}
+      onClick={() => { markHelperStartHandled(); onBeforeNavigate?.(); void navigate('/'); }}
     >
       {t('mehr.meineTurniere')}
     </Button>

@@ -93,3 +93,17 @@ describe('Eigenes Turnier läuft', () => {
     expect(isRunningOwnTournament(own({ status: 'draft' }), NOW)).toBe(false);
   });
 });
+
+describe('unlesbares oder leeres Datum gilt nicht als laufend (sichere Richtung zu @HE-111)', () => {
+  it('Helfer-Zugang ohne lesbares Datum → läuft nicht', () => {
+    expect(isRunningHelperEntry(entry({ date: '' }), NOW)).toBe(false);
+    expect(isRunningHelperEntry(entry({ date: 'bald' }), NOW)).toBe(false);
+  });
+  it('Gegenbeispiel: lesbares Datum heute → läuft', () => {
+    expect(isRunningHelperEntry(entry({ date: '2026-11-28' }), NOW)).toBe(true);
+  });
+  it('eigenes, angepfiffenes Turnier ohne Datum → läuft nicht', () => {
+    const t = createMockTournament({ status: 'published', startDate: undefined, date: '', matches: [createMockMatch({ id: 'm1', matchStatus: 'running' })] });
+    expect(isRunningOwnTournament(t, NOW)).toBe(false);
+  });
+});

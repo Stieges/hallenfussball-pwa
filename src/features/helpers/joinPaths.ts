@@ -4,7 +4,7 @@
  */
 export const HELPER_JOIN_PATH_PREFIX = '/join/';
 
-/** @HE-099: Auswahl, wenn das Gerät Zugänge zu mehreren laufenden Turnieren hat (oder Gast-Turniere neben dem Feld-Weg). */
+/** @HE-099: Auswahl, wenn das Gerät Zugänge zu mehreren laufenden Turnieren hat (Helfer-Zugänge und eigene laufende Turniere). */
 export const HELPER_CHOOSER_PATH = '/helfer';
 
 /** @HE-095, @HE-098 Z.3: Feld öffnen; ohne Feld Feld 1 (die Ansicht liefert `field` schon mit Vorgabe 1). */

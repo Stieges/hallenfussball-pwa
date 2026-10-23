@@ -8,7 +8,9 @@
  *   nicht dauerhaft an sich, @HE-111). Ein Turniertag in der Zukunft läuft nicht (→ Einsatz-Karte, @HE-109).
  * - Eigenes Turnier: veröffentlicht, nicht im Papierkorb, nicht abgeschlossen oder abgebrochen und (Turniertag heute oder ein
  *   Spiel angepfiffen, Letzteres ebenfalls nur bis einschließlich zum Tag nach dem Turniertag, @HE-111).
- * Der Turniertag ist der letzte bekannte Turniertag (bei mehrtägigen Turnieren zählt der letzte).
+ * Es zählt das eine Turnierdatum (Index-Eintrag `date`, bei eigenen Turnieren `startDate`, sonst `date`); Datenmodell und Server
+ * kennen kein Enddatum, der eine Nachlauftag deckt auch einen zweiten Turniertag. Ein unlesbares oder leeres Datum gilt
+ * nie als laufend (sichere Richtung zu @HE-111).
  */
 /** Tage Nachlauf nach dem letzten Turniertag, in denen ein nie abgeschlossenes Turnier noch als laufend gilt (@HE-111). */
 export const RUNNING_GRACE_DAYS = 1;
@@ -48,13 +50,13 @@ export function isOpenAssignment(entry: HelperAccessEntry): boolean {
   return entry.relation === 'accepted' && !entry.closed;
 }
 
-/** Läuft der Helfer-Zugang? Unlesbares Datum zählt als laufend (lieber das Feld öffnen als es zu verlieren). */
+/** Läuft der Helfer-Zugang? Ein unlesbares Datum zählt nicht als laufend (das Feld bleibt über die Einsatz-Karte erreichbar). */
 export function isRunningHelperEntry(entry: HelperAccessEntry, now: Date): boolean {
   if (!isOpenAssignment(entry)) {
     return false;
   }
   const day = toDateKey(entry.date);
-  return day === null || (day <= localDateKey(now) && localDateKey(now) <= addDaysKey(day, RUNNING_GRACE_DAYS));
+  return day !== null && day <= localDateKey(now) && localDateKey(now) <= addDaysKey(day, RUNNING_GRACE_DAYS);
 }
 
 function wasKickedOff(tournament: Tournament): boolean {
@@ -68,5 +70,5 @@ export function isRunningOwnTournament(tournament: Tournament, now: Date): boole
   }
   const day = toDateKey(tournament.startDate ?? tournament.date);
   const today = localDateKey(now);
-  return day === today || (wasKickedOff(tournament) && (day === null || today <= addDaysKey(day, RUNNING_GRACE_DAYS)));
+  return day !== null && (day === today || (wasKickedOff(tournament) && today <= addDaysKey(day, RUNNING_GRACE_DAYS)));
 }

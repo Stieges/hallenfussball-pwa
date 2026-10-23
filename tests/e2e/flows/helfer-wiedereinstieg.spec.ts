@@ -96,6 +96,7 @@ async function bild(page: Page, name: string) {
 }
 
 test.describe('A-17c-2 Helfer-Wiedereinstieg (Netz-Stub)', () => {
+  test.describe.configure({ mode: 'serial' }); // ein Worker, ein Build der App (parallele Builds würden sich überschreiben)
   // eslint-disable-next-line no-empty-pattern -- Playwright verlangt für den ersten Parameter ein Destrukturierungsmuster
   test.beforeAll(async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'eigene Größen; nur im Projekt desktop');
@@ -143,7 +144,7 @@ test.describe('A-17c-2 Helfer-Wiedereinstieg (Netz-Stub)', () => {
       test('@HE-110 „Meine Turniere auf diesem Handy“ im Menü „Mehr“ des Felds → Startseite mit Karte und Trainingsturnier', async ({ page, context }) => {
         await oeffneApp(context, {
           eintraege: [eintrag(CUP, 'Live-Cup', 2, 0)],
-          turniere: [turnier(CUP, 'Live-Cup', 0), turnier(TRAINING, 'Training', -7)],
+          turniere: [turnier(CUP, 'Live-Cup', 0), turnier(TRAINING, 'Training', 10)],
           status: zugangAntwort(CUP, 'Live-Cup', 0),
         });
         await page.goto(`${app.basisUrl}/#/`);
@@ -157,7 +158,24 @@ test.describe('A-17c-2 Helfer-Wiedereinstieg (Netz-Stub)', () => {
         await punkt.click();
         await expect(page).toHaveURL(/#\/$/);
         await expect(page.getByTestId(`helper-assignment-${CUP}`)).toBeVisible();
+        await expect(page.getByTestId(`tournament-card-${TRAINING}`)).toBeVisible(); // Toms eigenes Trainingsturnier (läuft nicht) steht auf der Startseite
         await bild(page, 'startseite-vom-feld');
+      });
+
+      test('@HE-110 Start direkt am Feld (ohne Startweiche): „Mehr“ → „Meine Turniere auf diesem Handy“ bleibt auf der Startseite', async ({ page, context }) => {
+        await oeffneApp(context, {
+          eintraege: [eintrag(CUP, 'Live-Cup', 2, 0)],
+          turniere: [turnier(CUP, 'Live-Cup', 0), turnier(TRAINING, 'Training', 10)],
+          status: zugangAntwort(CUP, 'Live-Cup', 0),
+        });
+        // wie nach dem QR-Scan, Neuladen oder direktem Link: die Adresse ist schon das Feld, die Start-Weiche auf „/“ läuft nie
+        await page.goto(`${app.basisUrl}/#/tournament/${CUP}/live?f=2`);
+        await page.getByTestId('cockpit-more-button').click({ timeout: 20000 });
+        await page.getByTestId('mehr-meine-turniere').click();
+        await expect(page.getByTestId(`helper-assignment-${CUP}`)).toBeVisible({ timeout: 10000 });
+        await page.waitForTimeout(4000); // die Weiche darf nicht nachträglich ans Feld zurückleiten
+        await expect(page).toHaveURL(/#\/$/);
+        await expect(page.getByTestId(`tournament-card-${TRAINING}`)).toBeVisible();
       });
     });
   }

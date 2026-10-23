@@ -1,6 +1,8 @@
 /**
  * Echte Verdrahtung für den Start auf einem Helfer-Gerät (A-17c): Sitzung lesen (legt nie eine an) und Zugangsstatus holen.
- * Dazu der Merker „Entscheidung schon getroffen“, damit „Zur Startseite“ nicht wieder ans Feld zurückführt (@HE-096).
+ * Dazu der Merker „Entscheidung schon getroffen“, damit ein bewusster Weg zur Startseite („Meine Turniere auf diesem Handy“,
+ * „Zur Startseite“ der Auswahl und der Endkarten) nicht von der Weiche zurückgeleitet wird (@HE-096, @HE-110).
+ * Wer ihn geht, ruft vorher `markHelperStartHandled`.
  */
 import { readSessionInfo } from '../../core/auth/deviceSession';
 import { callHelperAccessStatus } from '../../core/repositories/helperAccessRpc';
