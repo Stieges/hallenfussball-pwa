@@ -24,6 +24,7 @@ import type { MatchCommands } from '../../../core/match/client';
 import type { MatchContext } from '../../../core/match';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 
+import { RouterWrapper } from './routerWrapper';
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 await initRealDeI18n();
@@ -149,7 +150,7 @@ function renderTab(aufbau: Aufbau): void {
       schedule={aufbau.schedule}
       onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()}
     />
-  );
+  , { wrapper: RouterWrapper });
 }
 
 describe('ManagementTab → LiveCockpit: Ereignis-Darstellung über den Engine-Weg (B1)', () => {

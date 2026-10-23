@@ -189,7 +189,7 @@ describe('@FU-105 CA-6 Marias Gerät (Mitglied) bleibt über viele Änderungen v
       }
 
       expect(cloud.fake.save.mock.calls.length).toBe(4 + 4); // 4× Olli (direkt) + 4× Maria (Warteschlange)
-      for (const result of cloud.fake.save.mock.results) { await expect(result.value).resolves.toBeUndefined(); }
+      for (const result of cloud.fake.save.mock.results) { await expect(result.value).resolves.toEqual(expect.any(Number)) /* wirft nicht; liefert die erreichte Version */; }
     });
 
     it('Gegenbeispiel: speichert Maria aus einem veralteten Stand (Olli war dazwischen), meldet das Gerät den Konflikt statt still zu überschreiben', async () => {

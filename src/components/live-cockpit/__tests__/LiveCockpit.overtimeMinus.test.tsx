@@ -44,7 +44,7 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
-    currentMatch: match as never, upcomingMatches: [],
+    currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), ...handlers,
@@ -115,7 +115,8 @@ describe('LiveCockpit — Effektiver Spielstand (getEffectiveScore)', () => {
     // Vor dem Tausch: links der Heim-Effektivstand 1+2=3, rechts der Gast-Effektivstand 0
     expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('3:0');
 
-    await user.click(screen.getByRole('button', { name: 'Seiten tauschen' }));
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    await user.click(screen.getByTestId('mehr-seiten-tauschen'));
 
     // Nach dem Tausch stehen die Effektivstände auf den getauschten Seiten: 0:3
     expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('0:3');

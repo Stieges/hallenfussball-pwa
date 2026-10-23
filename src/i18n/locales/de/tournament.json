@@ -89,6 +89,8 @@
     "title": "Teilnehmer"
   },
   "correctionDialog": {
+    "titleMatch": "Ergebnis von Spiel {{number}} korrigieren",
+    "next": "Weiter",
     "title": "Ergebnis korrigieren",
     "currentResult": "Aktuelles Ergebnis",
     "correctedResult": "Korrigiertes Ergebnis",
@@ -101,6 +103,7 @@
     "cancel": "Abbrechen",
     "confirm": "Korrektur speichern",
     "validation": {
+      "missing": "Bitte beide Ergebnisse als ganze Zahl eintragen.",
       "mustDiffer": "Das neue Ergebnis muss sich vom ursprünglichen unterscheiden."
     }
   },
@@ -326,6 +329,8 @@
     "noChanges": "Keine Änderungen vorhanden",
     "masterData": "Stammdaten",
     "tournamentName": "Turniername",
+    "tournamentNameRequired": "Bitte gib einen Turniernamen ein.",
+    "startDateRequired": "Bitte wähle ein Startdatum.",
     "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
@@ -1109,5 +1114,118 @@
   },
   "rights": {
     "leadOnlyHint": "Ändern nur durch die Turnierleitung"
+  },
+  "standingsTie": {
+    "marker": {
+      "need": "Strafstoßschießen nötig",
+      "open": "Gleichstand – Entscheidung nötig",
+      "same": "Gleicher Platz",
+      "shootout": "Strafstoßschießen {{own}}:{{other}}",
+      "ordered": "Reihenfolge festgelegt"
+    },
+    "notice": {
+      "needTitle": "Strafstoßschießen nötig",
+      "openTitle": "Gleichstand – Entscheidung nötig",
+      "teamsEqual": "{{names}} sind nach allen Kriterien gleich ({{places}}).",
+      "needSetting": "Platz {{place}} muss laut Turnierregeln ausgespielt werden.",
+      "needFollowUp": "Platz {{place}} der Gruppe spielt in einem weiteren Spiel weiter – ein gleicher Platz ginge dort nicht.",
+      "openChoice": "Strafstoßschießen eintragen oder Ergebnis so akzeptieren.",
+      "helperShootout": "Die Turnierleitung trägt das Ergebnis des Strafstoßschießens ein.",
+      "helperOrder": "Die Turnierleitung legt die Reihenfolge fest.",
+      "helperChoice": "Die Turnierleitung entscheidet: Strafstoßschießen oder Ergebnis so akzeptieren.",
+      "offline": "Entscheiden geht nur mit Netz – oder über „Gruppe abschließen“.",
+      "decide": "Gleichstand entscheiden",
+      "shootout": "Strafstoßschießen eintragen",
+      "order": "Reihenfolge festlegen"
+    },
+    "decided": {
+      "sharedTitle": "Ergebnis akzeptiert",
+      "sharedTitleHelper": "Gleicher Platz",
+      "sharedBody": "{{names}} teilen {{places}}. Das nächste Team steht auf Platz {{next}}.",
+      "shootoutTitle": "Strafstoßschießen {{winner}}:{{loser}} für {{team}}",
+      "shootoutBody": "{{team}} steht in der Tabelle vor {{other}}. Die Spielergebnisse bleiben unverändert.",
+      "orderTitle": "Reihenfolge festgelegt",
+      "orderBody": "Reihenfolge von {{names}} nach dem Strafstoßschießen festgelegt. Die Spielergebnisse bleiben unverändert.",
+      "withdrawShared": "Annahme zurücknehmen",
+      "withdrawShootout": "Strafstoßschießen zurücknehmen",
+      "withdrawOrder": "Reihenfolge zurücknehmen",
+      "withdrawUntil": "Möglich bis zum Abschluss der Gruppe.",
+      "closed": "Die Gruppe ist abgeschlossen. Die Entscheidung steht fest. Ändern geht nur über eine Korrektur oder das Wiederöffnen der Gruppe.",
+      "withdrawFailed": "Zurücknehmen hat nicht geklappt. Bitte erneut versuchen.",
+      "withdrawOffline": "Zurücknehmen geht nur mit Netz."
+    },
+    "dialog": {
+      "titleChoice": "Gleichstand entscheiden",
+      "titleShootout": "Strafstoßschießen eintragen",
+      "titleOrder": "Reihenfolge festlegen",
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "back": "Zurück",
+      "save": "Speichern",
+      "understood": "Verstanden",
+      "context": "Gleichauf auf {{places}} nach allen Kriterien: {{names}}.",
+      "contextNoPlay": "{{places}} müssen laut Turnierregeln nicht ausgespielt werden.",
+      "choiceGroup": "Wie willst du entscheiden?",
+      "shootoutHint": "Du trägst die Treffer beider Teams ein, der Sieger steht vorn. Der Normalfall.",
+      "orderHint": "Nach dem Strafstoßschießen. Du nennst kurz den Grund.",
+      "accept": "Ergebnis so akzeptieren",
+      "acceptHint": "Ein Tipp genügt, einen Grund brauchst du nicht. {{names}} teilen dann {{places}}, das nächste Team steht auf Platz {{next}}. Bis zum Abschluss der Gruppe kannst du das zurücknehmen.",
+      "whyTitle": "Warum nur das Strafstoßschießen?",
+      "whyRules": "Turnierregeln ansehen",
+      "shootoutLegend": "Ergebnis des Strafstoßschießens",
+      "hits": "Treffer",
+      "shootoutInfo": "Der Sieger steht in Tabelle und Endstand vorn. Die Spielergebnisse bleiben unverändert.",
+      "needWinner": "Das Strafstoßschießen braucht einen Sieger. {{a}}:{{b}} geht nicht – trage das Endergebnis ein.",
+      "effect": "Danach in der Tabelle: {{list}}",
+      "orderLegend": "Reihenfolge (vorn = besser)",
+      "orderAfter": "Nach dem Strafstoßschießen",
+      "moveUp": "{{name}} nach oben",
+      "moveDown": "{{name}} nach unten",
+      "reasonLabel": "Grund (Pflicht)",
+      "reasonCount": "{{count}} / {{max}}",
+      "reasonHint": "Bitte keine Spielernamen eintragen.",
+      "errors": {
+        "BLOCK_CHANGED": "Der Gleichstand hat sich inzwischen geändert. Bitte schließe den Dialog und prüfe die Tabelle.",
+        "STALE": "Speichern hat nicht geklappt, weil sich das Turnier gleichzeitig geändert hat. Bitte erneut versuchen.",
+        "OFFLINE": "Entscheiden geht nur mit Netz – oder über „Gruppe abschließen“.",
+        "SHARED_PLACE_NOT_ALLOWED": "Dieser Platz muss ausgespielt werden. „Ergebnis so akzeptieren“ geht hier nicht.",
+        "REASON_REQUIRED": "Bitte nenne einen Grund (höchstens 500 Zeichen).",
+        "ORDER_MISMATCH": "Die Reihenfolge passt nicht zum Gleichstand. Bitte schließe den Dialog und öffne ihn neu.",
+        "SHOOTOUT_NEEDS_WINNER": "Das Strafstoßschießen braucht einen Sieger.",
+        "UNKNOWN": "Das hat nicht geklappt. Bitte erneut versuchen.",
+        "ALREADY_DECIDED": "Dieser Gleichstand ist schon entschieden. Bitte prüfe die Tabelle.",
+        "WITHDRAW_NOT_ALLOWED": "Die Gruppe ist abgeschlossen. Die Entscheidung lässt sich nicht mehr zurücknehmen."
+      },
+      "seen": {
+        "title": "Schon entschieden",
+        "body": "Dieser Gleichstand wurde inzwischen entschieden.",
+        "current": "Es gilt: {{what}}",
+        "notSaved": "Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt die geltende Entscheidung."
+      }
+    },
+    "settings": {
+      "title": "Turnierregeln: Gleichstand",
+      "hint": "Die Einstellung wirkt sofort auf Tabelle und Endstand.",
+      "save": "Plätze übernehmen",
+      "reset": "Änderung verwerfen",
+      "readOnly": "Nur die Turnierleitung ändert diese Einstellung.",
+      "confirmTitle": "Annahme wird aufgehoben",
+      "confirmIntro": "Du hast die auszuspielenden Plätze geändert.",
+      "confirmBody": "Für {{names}} liegt die Annahme „Ergebnis so akzeptieren“ vor. Sie wird aufgehoben, dann ist ein Strafstoßschießen nötig.",
+      "confirmKeep": "Ein eingetragenes Strafstoßschießen oder eine festgelegte Reihenfolge bleibt bei jeder Änderung bestehen.",
+      "confirmCancel": "Abbrechen",
+      "confirmOk": "Annahme aufheben",
+      "errors": {
+        "STALE": "Die Einstellung hat sich gleichzeitig geändert und wurde nicht gespeichert. Bitte prüfe den neuen Stand und versuche es erneut.",
+        "OFFLINE": "Speichern geht nur mit Netz.",
+        "NOT_FOUND": "Das Turnier wurde nicht gefunden.",
+        "UNKNOWN": "Das Speichern hat nicht geklappt. Bitte versuche es erneut."
+      }
+    },
+    "places": {
+      "one": "Platz {{from}}",
+      "two": "Platz {{from}} und {{to}}",
+      "range": "Platz {{from}} bis {{to}}"
+    }
   }
 }

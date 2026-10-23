@@ -7,6 +7,7 @@ import { generateShareCode } from '../../utils/shareCode';
 import { matchOrigins } from '../models/matchOrigin';
 import { effectiveHostTeamIds } from '../models/hostTeams';
 import { defaultPlacementLogic } from '../standings/placementDefaults';
+import { DEFAULT_PLACEMENTS_TO_PLAY_OUT } from '../standings/playOutPlaces';
 
 /**
  * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
@@ -56,6 +57,8 @@ export class TournamentCreationService {
             // für bereits gespeicherte Turniere ohne passenden Schlüssel.
             // Voreinstellung privates Hallenturnier nach BFV Teil 3 § 20 (13) (@W2A-046, Paket TB).
             placementLogic: defaultPlacementLogic(),
+            // „Diese Plätze müssen bei Gleichstand ausgespielt werden“: vorbelegt nur Platz 1 (Daniel K10, @W2A-066)
+            placementsToPlayOut: [...DEFAULT_PLACEMENTS_TO_PLAY_OUT],
             finals: {
                 final: false,
                 thirdPlace: false,
@@ -114,10 +117,12 @@ export class TournamentCreationService {
 
         switch (step) {
             case 1:
-                if (!data.title) { errors.push('Turniername erforderlich'); }
+                if (!data.title?.trim()) { errors.push('Turniername erforderlich'); }
                 if (!data.date) {
                     errors.push('Startdatum erforderlich');
-                } else if (this.isPastDate(data.date)) {
+                // @W5-003 (C-META-NOVALID): nur ein Entwurf darf nicht in der Vergangenheit liegen; ein festgelegtes
+                // Turnier bleibt nach dem Turniertag korrigierbar (Ort, Schreibweise).
+                } else if (data.status !== 'published' && this.isPastDate(data.date)) {
                     errors.push('Startdatum darf nicht in der Vergangenheit liegen');
                 }
                 if (!data.location?.name) { errors.push('Ort erforderlich'); }

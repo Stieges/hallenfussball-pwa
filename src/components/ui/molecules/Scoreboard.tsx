@@ -40,6 +40,8 @@ export interface ScoreboardModel {
   abschnittText: string | null;
   hinweise: string[];
   eintraegeWartenText: string | null;
+  /** Nur die Zahl: steht statt des vollen Wortlauts, wenn neben dem Zustand auch das Ton-Abzeichen Platz braucht (C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE). */
+  eintraegeWartenKurz?: string | null;
   helferAnfragenText: string | null;
   ariaStand: string;
   /** Statt Stand und Uhr: „wartet auf Teams“ und „kein Spiel mehr“ (Aufgabe 2.5). */
@@ -75,6 +77,12 @@ function ziffernFarbe(trikot: string): string | null {
   return 1.05 / (leuchtdichte + 0.05) >= (leuchtdichte + 0.05) / 0.05 ? cssVars.colors.scoreboardOnLive : cssVars.colors.scoreboardOnHighlight;
 }
 
+/** Nur für Bildschirmleser: der volle Wortlaut eines Abzeichens, dessen sichtbarer Text verkürzt ist. */
+const nurVorlesen: CSSProperties = {
+  position: 'absolute', width: cssVars.sizing.hairline, height: cssVars.sizing.hairline, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap', margin: `calc(-1 * ${cssVars.sizing.hairline})`, padding: 0, border: 0,
+};
+
 /** Höhe der Kopfzeile; die Tippfläche der Abzeichen (44 px) ragt darüber hinaus (`ueberstand`) und braucht dort Platz. */
 const zeileHoehe = (gross: boolean): string => (gross ? cssVars.spacing.xl : cssVars.spacing.lg);
 const ueberstandVon = (hoehe: string): string => `max(0px, calc((${cssVars.touchTargets.minimum} - ${hoehe}) / 2))`;
@@ -87,7 +95,13 @@ function Abzeichen({ label, kurz, icon, onAntippen, testId, hoehe }: { label: st
     color: cssVars.colors.scoreboardText, whiteSpace: 'nowrap',
   };
   if (onAntippen === undefined) {
-    return <span style={marke} data-testid={testId}>{icon}{kurz ?? label}</span>;
+    // Verkürzter Text: sichtbar nur `kurz`, der volle Wortlaut bleibt für Bildschirmleser (das Abzeichen trägt weiter sein Wort bzw. seine Zahl)
+    return (
+      <span style={{ ...marke, position: 'relative' }} data-testid={testId}>
+        {icon}
+        {kurz === undefined ? label : <><span aria-hidden="true">{kurz}</span><span style={nurVorlesen}>{label}</span></>}
+      </span>
+    );
   }
   // Tippfläche 44 px; der negative Rand hält die Zeile in ihrer Höhe (wie das Kreuz der Meldezeile)
   const flaeche: CSSProperties = {
@@ -195,7 +209,7 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
           {kopfRechts}
           {tonHinweis && <Abzeichen hoehe={hoehe} label={tonHinweis.label} kurz={tonHinweis.kurz} icon={<TafelIcons.VolumeOff size={icon} />} onAntippen={tonHinweis.onAntippen} testId={id('ton')} />}
           {wachhaltenHinweis && <Abzeichen hoehe={hoehe} label={wachhaltenHinweis.label} kurz={wachhaltenHinweis.kurz} icon={<TafelIcons.Lock size={icon} />} onAntippen={wachhaltenHinweis.onAntippen} testId={id('wachhalten')} />}
-          {model.eintraegeWartenText && <Abzeichen hoehe={hoehe} label={model.eintraegeWartenText} icon={<Icons.Upload size={icon} />} testId={id('eintraege-warten')} />}
+          {model.eintraegeWartenText && <Abzeichen hoehe={hoehe} label={model.eintraegeWartenText} kurz={tonHinweis ? (model.eintraegeWartenKurz ?? undefined) : undefined} icon={<Icons.Upload size={icon} />} testId={id('eintraege-warten')} />}
           {model.helferAnfragenText && <Abzeichen hoehe={hoehe} label={model.helferAnfragenText} icon={<Icons.Users size={icon} />} onAntippen={onHelferAnfragen} testId={id('helfer-anfragen')} />}
         </span>
       </div>

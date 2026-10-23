@@ -16,6 +16,8 @@ vi.mock('../../hooks/useTournamentManager', () => ({
     handleTournamentUpdate: vi.fn(), applyRemote: vi.fn(), scheduleService: {},
   }),
 }));
+// Fixrunde TB-6: der Reiter „Einstellungen“ holt das Repository aus dem Kontext (schmaler Speicherweg der Plätze-Einstellung)
+vi.mock('../../core/contexts/RepositoryContext', () => ({ useRepositories: () => ({ tournamentRepository: {} }) }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
 // A-08f3e3: Übertragungsstatus im Kopf braucht Repository-Kontext; hier nicht Gegenstand.

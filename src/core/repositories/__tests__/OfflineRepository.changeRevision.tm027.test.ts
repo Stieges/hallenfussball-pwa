@@ -146,7 +146,7 @@ describe('A-10 @TM-027 Zwei Geräte: K.-o.-Auflösung ohne Versions-CAS erreicht
   it('Regel Q: Cloud-Zählung höher, aber Ollis eigenes Speichern wartet → nichts Wartendes wird überschrieben', async () => {
     const cloud = createFakeCloud({ tournament: { ...liveCup(7, { hfHeim: FC_NORD }), changeRevision: 4 }, revisions: revisions() });
     let releaseSave: () => void = () => undefined;
-    cloud.fake.save.mockImplementation(() => new Promise<void>((resolve) => { releaseSave = resolve; }));
+    cloud.fake.save.mockImplementation(() => new Promise<number>((resolve) => { releaseSave = () => resolve(8); }));
     on('olli');
     const olli = new OfflineRepository(new LocalStorageRepository(), cloud.fake as never, 'olli');
     repos.push(olli);

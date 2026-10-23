@@ -17,10 +17,11 @@ import {
   openCockpit,
   type AppendAsRoleEvent,
 } from './engineHelpers';
-import { enterGoal, fetchMatchRow } from './helpers';
+import { enterGoal, fetchMatchRow, vomLiveZumSpielplan } from './helpers';
 import { restAsRole, serviceRest } from './restAsRole';
 import { E2E_LIVE_CUP_ID, E2E_SPIELPLANOWNER_MONITOR_ID, engineCupIds, type EngineCupSlug } from './testData';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 /** Schließt alle Realtime-Kanäle der App (derselbe Client wie in der App, Vite-Dev-Modul). */
 async function closeRealtimeChannels(page: Page): Promise<void> {
   await page.evaluate("import('/src/lib/supabase.ts').then((m) => m.supabase.removeAllChannels())");
@@ -32,7 +33,7 @@ async function openLiveThenSchedule(page: Page, slug: EngineCupSlug): Promise<vo
   const ids = engineCupIds(slug);
   await openCockpit(page, ids.tournamentId, ids.matchId); // Live-Tab zuerst: lädt die Engine-Kopie
   await expectEngineMatchRunningUi(page);
-  await page.locator('[data-testid="desktop-tab-spielplan"]').click();
+  await vomLiveZumSpielplan(page); // Live-Bereich zeigt nur den schmalen Kopf: „Zurück“ führt zum Spielplan (@SL-140)
   await expect(page.locator(`[data-testid="match-circle-${ids.matchId}"]`)).toContainText('1:0', { timeout: 15000 });
 }
 
@@ -88,7 +89,7 @@ test.describe('Spielplan liest fremde Tore', () => {
       await expect(homeRow).not.toContainText('2:0');
 
       // @TM-143: nach dem Abpfiff zählt es (2:0 in der Tabelle des Eigentümers, Kanal weiter zu).
-      await helper.page.locator('[data-testid="match-finish-button"]').click();
+      await abpfiffHalten(helper.page);
       await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => row.match_status), { timeout: 10000 }).toBe('finished');
       await expect(homeRow).toContainText('2:0', { timeout: 10000 });
       await expect(owner.page.locator('[data-testid="realtime-interrupted-hint"]')).toHaveCount(0);

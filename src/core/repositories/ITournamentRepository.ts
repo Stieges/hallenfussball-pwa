@@ -18,8 +18,9 @@ export interface ITournamentRepository {
      * Saves a full tournament object.
      * WARNING: Use only for creation or full configuration updates.
      * Avoid using for match updates to prevent concurrency issues.
+     * Ergebnis ohne Bedeutung für Aufrufer; `SupabaseRepository` liefert die erreichte Server-Version (C-VERSION-NACH-ERSTANLAGE).
      */
-    save(tournament: Tournament): Promise<void>;
+    save(tournament: Tournament): Promise<unknown>;
 
     /**
      * Updates a specific match.
@@ -39,6 +40,13 @@ export interface ITournamentRepository {
      * mit `isOffline`. Kein Voll-Speichern. Optional wie `syncUp` (alle drei Repositories haben sie).
      */
     updateStandingDecisions?(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void>;
+
+    /**
+     * Fixrunde TB-6: schreibt NUR die Einstellung `placementsToPlayOut` (Plätze, die bei Gleichstand ausgespielt werden müssen),
+     * mit Versionsprüfung wie `updateStandingDecisions`; `standingDecisions` und alles andere bleiben unberührt. Konflikt →
+     * `OptimisticLockError`; ohne Netz (Cloud) → `NetworkError` mit `isOffline`.
+     */
+    updatePlacementsToPlayOut?(tournamentId: string, places: number[], expectedVersion: number): Promise<void>;
 
     /**
      * Delete a tournament.

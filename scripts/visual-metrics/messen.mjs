@@ -36,7 +36,7 @@ const HILFE = `Aufruf:
                             weitere Optionen (--themen, --sprachen, --varianten, --ohne-axe, --screenshots, --aus) gelten fuer jede
                             Ansicht; --profil <p> ersetzt das Profil der App-Ansichten, --monitor-profil <p> das der Monitor-Folien;
                             --nur <id,id> misst nur diese Ansichten
-  --klick <selektor>        Vorbedingung, mehrfach (z. B. Datenschutz-Abfrage: 'role=button[name=/notwendig/i]'); 'warte:<ms>' wartet statt zu klicken
+  --klick <selektor>        Vorbedingung, mehrfach (z. B. Datenschutz-Abfrage: 'role=button[name=/notwendig/i]'); 'warte:<ms>' wartet statt zu klicken, 'scroll:oben' rollt alles an den Anfang
   --profil <liste>          app (Standard) | monitor | handy | tablet | desktop | reflow | Profilname(n)
                             Profile: ${Object.keys(PROFILE).join(', ')}
                             Monitor-Profile laufen immer paarweise (Rand 0 + Standard)
@@ -356,6 +356,12 @@ async function main() {
               // 'warte:<ms>' wartet, statt zu klicken (z. B. die Sperre des Nummern-Bausteins von 300 ms, @SL-021)
               const warte = /^warte:(\d+)$/.exec(k)
               if (warte) { await page.waitForTimeout(Number(warte[1])); continue }
+              // 'scroll:oben' stellt den Messzustand ohne Klick-Scroll her (Fenster und alle Rollbereiche an den Anfang)
+              if (k === 'scroll:oben') {
+                await page.evaluate(() => { window.scrollTo(0, 0); for (const el of document.querySelectorAll('*')) if (el.scrollTop > 0) el.scrollTop = 0 })
+                await page.waitForTimeout(100)
+                continue
+              }
               try {
                 await page.locator(k).first().click({ timeout: 5000 })
                 await page.waitForLoadState('networkidle')

@@ -23,7 +23,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { ManagementTab } from '../ManagementTab';
 import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
@@ -31,11 +30,12 @@ import type { LiveMatch as CoreLiveMatch } from '../../../core/models/LiveMatch'
 import type { TournamentRole } from '../../auth/types/auth.types';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 // C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: () => <div data-testid="cockpit-stub" />,
+  LiveCockpit: ({ currentMatch }: { currentMatch: { id: string } | null }) => <div data-testid="cockpit-stub" data-match-id={currentMatch?.id} />,
 }));
 
 vi.mock('../../../hooks/useMatchSound', () => ({
@@ -138,30 +138,12 @@ describe('ManagementTab — "Beenden und wechseln" prüft die Berechtigung für 
     liveMatches.set(MATCH_TARGET, makeLiveMatch(MATCH_TARGET, 2, 'NOT_STARTED'));
   });
 
-  it('ohne Berechtigung (viewer): kein Bestätigungsdialog, kein handleFinish — Auswahl wechselt trotzdem', async () => {
-    currentRole = 'viewer';
-    const user = userEvent.setup();
-    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+  it.each(['viewer', 'owner'] as const)('@SL-057 @SL-010 %s: es gibt keine Spielauswahl; das laufende Spiel bleibt im Cockpit, kein Dialog, kein handleFinish', (rolle) => {
+    currentRole = rolle;
+    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper });
 
-    const select = screen.getByRole('combobox');
-    await user.selectOptions(select, MATCH_TARGET);
-
-    expect(screen.queryByTestId('confirm-dialog-confirm')).not.toBeInTheDocument();
-    expect(handleFinish).not.toHaveBeenCalled();
-    await waitFor(() => expect(select).toHaveValue(MATCH_TARGET));
-  });
-
-  // C-COCKPIT-MATCHID-BEENDET (pflicht-testanpassung): pinnte vorher „Dialog + handleFinish“ – die
-  // Spielauswahl beendet kein laufendes Spiel, auch nicht mit Berechtigung (@SL-010).
-  it('@SL-010 mit Berechtigung (owner): kein Beenden-Dialog, kein handleFinish — Auswahl wechselt, das laufende Spiel läuft weiter', async () => {
-    currentRole = 'owner';
-    const user = userEvent.setup();
-    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
-
-    const select = screen.getByRole('combobox');
-    await user.selectOptions(select, MATCH_TARGET);
-
-    await waitFor(() => expect(select).toHaveValue(MATCH_TARGET));
+    expect(screen.queryByRole('combobox', { name: /Spiel/ })).toBeNull();
+    expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', MATCH_RUNNING);
     expect(screen.queryByTestId('confirm-dialog-confirm')).not.toBeInTheDocument();
     expect(handleFinish).not.toHaveBeenCalled();
   });
@@ -193,10 +175,9 @@ describe('ManagementTab — initialMatchId (URL-Parameter) prüft die Berechtigu
 
   it('ohne Berechtigung (viewer) für das laufende Spiel: kein handleFinish, Auswahl wechselt trotzdem zum Ziel-Spiel', async () => {
     currentRole = 'viewer';
-    render(<UrlEntryWrapper initialMatchId={MATCH_TARGET} />);
+    render(<UrlEntryWrapper initialMatchId={MATCH_TARGET} />, { wrapper: RouterWrapper });
 
-    const select = await screen.findByRole('combobox');
-    await waitFor(() => expect(select).toHaveValue(MATCH_TARGET));
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', MATCH_TARGET));
     expect(handleFinish).not.toHaveBeenCalled();
   });
 
@@ -204,10 +185,9 @@ describe('ManagementTab — initialMatchId (URL-Parameter) prüft die Berechtigu
   // Spiel“ – das Öffnen per ?matchId= beendet nie ein anderes Spiel (@SL-010).
   it('@SL-010 mit Berechtigung (owner) für das laufende Spiel: kein handleFinish — Auswahl wechselt zum Ziel-Spiel', async () => {
     currentRole = 'owner';
-    render(<UrlEntryWrapper initialMatchId={MATCH_TARGET} />);
+    render(<UrlEntryWrapper initialMatchId={MATCH_TARGET} />, { wrapper: RouterWrapper });
 
-    const select = await screen.findByRole('combobox');
-    await waitFor(() => expect(select).toHaveValue(MATCH_TARGET));
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', MATCH_TARGET));
     expect(handleFinish).not.toHaveBeenCalled();
   });
 });

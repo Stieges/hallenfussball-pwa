@@ -57,7 +57,7 @@
       "endstand": "Endstand",
       "schuesse": "Schüsse",
       "anstoss": "Anstoß",
-      "spielzeit": "Spielzeit",
+      "gespielt": "Gespielt",
       "strafstoss": "$t(sport:events.penaltyShootout)"
     },
     "unterzeile": {
@@ -66,6 +66,7 @@
       "bisVerlaengerung": "bis Verlängerung",
       "wiederanpfiff": "Wiederanpfiff",
       "anpfiffVerlaengerung": "Anpfiff Verlängerung",
+      "vonGeplant": "von {{zeit}}",
       "amSchuss": "am Schuss: {{team}}"
     },
     "uhrHaelt": "Uhr hält bei Unterbrechung",
@@ -75,6 +76,10 @@
       "vonN": "Abschnitt {{nummer}} von {{gesamt}}",
       "verlaengerung": "Verlängerung",
       "goldenGoal": "Golden Goal"
+    },
+    "nachEnde": {
+      "verlaengerung": "nach Verlängerung",
+      "strafstoss": "nach $t(sport:events.penaltyShootout)"
     },
     "quittung": "Abgepfiffen · {{links}}:{{rechts}} gespeichert",
     "keinWeiteresSpiel": "Kein weiteres Spiel",
@@ -162,7 +167,8 @@
     "countsAsFoul": "zählt als Foul"
   },
   "eventEditDialog": {
-    "title": "{{label}} bearbeiten"
+    "title": "{{label}} bearbeiten",
+    "numberInvalid": "Rückennummer: ganze Zahl von 1 bis 99. Die bisherige Nummer bleibt."
   },
   "cardDialog": {
     "title": "Karte vergeben",
@@ -310,6 +316,7 @@
     "horn3": "Horn 3 (Tief)",
     "customSound": "Eigener Sound",
     "notUploaded": "(nicht hochgeladen)",
+    "test": "Test",
     "testSound": "Sound testen",
     "volume": "Lautstärke",
     "volumePercent": "{{percent}}%",
@@ -461,6 +468,23 @@
       "done": "{{target}} aktualisiert"
     }
   },
+  "zusammenfassung": {
+    "tore": "Tore ({{count}})",
+    "toreKeine": "Tore (0): keine",
+    "karten": "Karten ({{count}})",
+    "kartenKeine": "Karten (0): keine",
+    "zeitstrafen": "Zeitstrafen ({{count}})",
+    "zeitstrafenKeine": "Zeitstrafen (0): keine",
+    "fouls": "Fouls: {{count}}",
+    "nr": "Nr. {{nummer}}, {{zeit}}",
+    "ohneNr": "ohne Nr., {{zeit}}",
+    "eigentor": "$t(sport:events.ownGoal) {{text}}",
+    "karte": {
+      "YELLOW": "$t(cardDialog.yellowCard)",
+      "YELLOW_RED": "$t(cardDialog.yellowRedCard)",
+      "RED": "$t(cardDialog.redCard)"
+    }
+  },
   "spalte": {
     "heim": "Heim",
     "gast": "Gast",
@@ -490,6 +514,7 @@
     "andere": "Andere Nr.",
     "uebernehmen": "Übernehmen",
     "eingabe": "Rückennummer",
+    "ungueltig": "Rückennummer: ganze Zahl von 1 bis 99.",
     "titelKarte": "Rückennummer – {{art}} {{team}}",
     "titelZeitstrafe": "Rückennummer – Zeitstrafe {{team}}"
   },
@@ -500,5 +525,66 @@
     "rot": "Rot",
     "schonGelb": "Nr. {{nummer}} hat schon Gelb",
     "trotzdemGelb": "Trotzdem Gelb"
+  },
+  "leiste": {
+    "aria": "Spielsteuerung",
+    "rueckgaengig": "Rückgängig",
+    "rueckgaengigAria": "Rückgängig: {{ziel}}",
+    "anpfiff": "Anpfiff",
+    "pause": "Pause",
+    "weiter": "Weiter",
+    "wiederanpfiff": "Wiederanpfiff",
+    "anpfiffVerlaengerung": "Anpfiff Verlängerung",
+    "entscheidung": "Entscheidung wählen",
+    "weiterNaechstes": "Weiter",
+    "korrigieren": "Korrigieren",
+    "mehr": "Mehr",
+    "ereignisse": "Ereignisse",
+    "beendet": "Spiel ist beendet – Korrektur über die Turnierleitung",
+    "leitet": "{{feld}} leitet: {{name}}",
+    "uebernehmen": "Spielleitung übernehmen",
+    "keinZugriff_one": "Du hast keinen Zugriff mehr – 1 Eintrag an die Turnierleitung übergeben",
+    "keinZugriff_other": "Du hast keinen Zugriff mehr – {{count}} Einträge an die Turnierleitung übergeben",
+    "tasteLeertaste": "Leertaste",
+    "tasteRueckgaengigStrg": "Strg+Z",
+    "tasteRueckgaengigCmd": "Cmd+Z"
+  },
+  "abpfiff": {
+    "label": "Abpfiff",
+    "halten": "halten",
+    "beschreibung": "Gedrückt halten, etwa eine Sekunde",
+    "frage": "Spiel {{spiel}} bei noch {{rest}} Minuten Spielzeit beenden?",
+    "beenden": "Beenden",
+    "weiterspielen": "Weiterspielen"
+  },
+  "mehr": {
+    "titel": "Mehr",
+    "uhrKorrigieren": "Uhr korrigieren",
+    "seitenTauschen": "Seiten tauschen",
+    "einstellungen": "Einstellungen",
+    "schliessen": "Schließen"
+  },
+  "entscheidung": {
+    "titel": "Wie wird entschieden?",
+    "verlaengerung": "$t(sport:phases.overtime)",
+    "goldenGoal": "$t(sport:phases.goldenGoal)",
+    "strafstoss": "$t(sport:events.penaltyShootout)"
+  },
+  "rahmen": {
+    "zurueck": "Zurück",
+    "zurueckAria": "Zurück zum Spielplan",
+    "feldAria": "Feld wählen, jetzt Feld {{feld}}",
+    "feld": "Feld {{feld}}",
+    "online": "Verbunden",
+    "offline": "Offline",
+    "verbinden": "Verbinden",
+    "verbindet": "Verbinde …",
+    "tastenkuerzel": "Tastenkürzel"
+  },
+  "naechstes": {
+    "label": "Nächstes:",
+    "spiel": "Spiel {{nummer}}",
+    "anstoss": "Anstoß {{zeit}}",
+    "leibchen": "Leibchen nötig, die Farben sind zu ähnlich"
   }
 }

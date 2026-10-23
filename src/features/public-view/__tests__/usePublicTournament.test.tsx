@@ -14,7 +14,7 @@ const { supabaseGet, localGet } = vi.hoisted(() => ({
 
 vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
-  supabase: { from: vi.fn(), rpc: vi.fn() },
+  supabase: { from: vi.fn(() => { const q: Record<string, unknown> = { select: () => q, eq: () => q, limit: () => Promise.resolve({ data: [], error: null }) }; return q; }), rpc: vi.fn() },
 }));
 // Konstruktor-Mock als `function`, damit `new SupabaseRepository()` funktioniert.
 vi.mock('../../../core/repositories/SupabaseRepository', () => ({
@@ -24,9 +24,12 @@ vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { getByShareCode: localGet }; }),
 }));
 
-import { usePublicTournament, PublicTournamentSource } from '../usePublicTournament';
+import { usePublicTournament } from '../usePublicTournament';
+import { createLegacyPublicSource } from '../legacyPublicSource';
+import type { PublicTournamentSource } from '../publicSource';
 
-function sourceOf(...results: Array<Tournament | null | Error>): PublicTournamentSource {
+/** Quelle über den heutigen Weg (Adapter (a)); `lookup` zeigt die Aufrufe der Abfrage. */
+function sourceOf(...results: Array<Tournament | null | Error>): PublicTournamentSource & { lookup: { getByShareCode: ReturnType<typeof vi.fn> } } {
   const getByShareCode = vi.fn();
   for (const r of results) {
     if (r instanceof Error) {
@@ -35,7 +38,7 @@ function sourceOf(...results: Array<Tournament | null | Error>): PublicTournamen
       getByShareCode.mockResolvedValueOnce(r);
     }
   }
-  return { getByShareCode };
+  return Object.assign(createLegacyPublicSource({ getByShareCode }), { lookup: { getByShareCode } });
 }
 
 describe('usePublicTournament', () => {
@@ -51,7 +54,7 @@ describe('usePublicTournament', () => {
     expect(result.current.loadingState).toBe('loading');
     await waitFor(() => expect(result.current.loadingState).toBe('success'));
 
-    expect(source.getByShareCode).toHaveBeenCalledWith(SHARE_CODE);
+    expect(source.lookup.getByShareCode).toHaveBeenCalledWith(SHARE_CODE);
     expect(result.current.tournament?.id).toBe(t.id);
     expect(result.current.schedule).not.toBeNull();
     expect(result.current.standings.length).toBeGreaterThan(0);
@@ -107,7 +110,7 @@ describe('usePublicTournament', () => {
       await result.current.refresh();
     });
 
-    expect(source.getByShareCode).toHaveBeenCalledTimes(2);
+    expect(source.lookup.getByShareCode).toHaveBeenCalledTimes(2);
     expect(result.current.loadingState).toBe('success');
     expect(result.current.errorMessage).toBeNull();
   });
@@ -126,11 +129,21 @@ describe('usePublicTournament', () => {
     await act(async () => {
       await pending;
     });
-    expect(source.getByShareCode).toHaveBeenCalledTimes(2);
+    expect(source.lookup.getByShareCode).toHaveBeenCalledTimes(2);
   });
 
-  it('Quelle wirft (eingespeist) → not-found statt Absturz', async () => {
+  // Befund „Ladefehler als nicht gefunden“ (B-41 Fixrunde 2): eine Störung ist nie „nicht gefunden“ (@ZM-109)
+  it('@ZM-109 Quelle wirft → „Fehler beim Laden“, nicht „nicht gefunden“, ohne Absturz', async () => {
     const { result } = renderHook(() => usePublicTournament(SHARE_CODE, sourceOf(new Error('kaputt'))));
-    await waitFor(() => expect(result.current.loadingState).toBe('not-found'));
+    await waitFor(() => expect(result.current.loadingState).toBe('error'));
+    expect(result.current.errorMessage).not.toBeNull();
+    expect(result.current.tournament).toBeNull();
+  });
+
+  it('@ZM-109 Supabase wirft und der lokale Speicher hat nichts → „Fehler beim Laden“', async () => {
+    supabaseGet.mockRejectedValue(new Error('netz weg'));
+    localGet.mockResolvedValue(null);
+    const { result } = renderHook(() => usePublicTournament(SHARE_CODE));
+    await waitFor(() => expect(result.current.loadingState).toBe('error'));
   });
 });

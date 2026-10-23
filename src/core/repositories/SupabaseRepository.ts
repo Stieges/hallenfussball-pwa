@@ -11,14 +11,15 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
+import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import type { StandingDecision } from '../../types/tournament';
-import { writeStandingDecisionsToCloud } from './standingDecisionsCloud';
+import { writeStandingDecisionsToCloud, writePlacementsToPlayOutToCloud } from './standingDecisionsCloud';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
+  startTimeForDb,
   mapMatchUpdateToSupabase,
   mapMatchToScheduleUpdate,
   mapTeamToSupabase,
@@ -60,12 +61,19 @@ export class SupabaseRepository implements ITournamentRepository {
    * Loads a tournament by ID with all related data (teams, matches)
    */
   async get(id: string): Promise<Tournament | null> {
-    return (await this.getWithMatchRevisions(id))?.tournament ?? null;
+    try {
+      return (await this.getWithMatchRevisions(id))?.tournament ?? null;
+    } catch (error) {
+      if (error instanceof CloudReadAbortedError) { return null; } // Abbruch ist hier wie bisher „kein Ergebnis“
+      throw error;
+    }
   }
 
   /**
    * A-08f3a: wie `get`, dazu die Server-Revision je Spiel (`matches.version`, nur durch Einträge erhöht).
    * Grundlage für den Feldweg in `OfflineRepository` (Regel S, Monotonie je Spiel).
+   * `null` heißt nur „nicht gefunden“ (PGRST116, auch unsichtbar); ein Abbruch wirft `CloudReadAbortedError`
+   * (Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH, @FU-109).
    */
   async getWithMatchRevisions(id: string): Promise<CloudReadWithRevisions | null> {
     // Fetch tournament
@@ -80,9 +88,9 @@ export class SupabaseRepository implements ITournamentRepository {
         // Not found
         return null;
       }
-      // AbortError is expected during navigation, StrictMode unmount, etc.
+      // AbortError is expected during navigation, StrictMode unmount, etc. -- kein „nicht gefunden“
       if (isAbortError(tournamentError)) {
-        return null;
+        throw new CloudReadAbortedError(tournamentError);
       }
       console.error('Failed to fetch tournament:', tournamentError);
       throw new RepositoryError('get', tournamentError.message, tournamentError);
@@ -97,7 +105,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (teamsError) {
       if (isAbortError(teamsError)) {
-        return null;
+        throw new CloudReadAbortedError(teamsError);
       }
       console.error('Failed to fetch teams:', teamsError);
       throw new RepositoryError('get', teamsError.message, teamsError);
@@ -112,7 +120,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (matchesError) {
       if (isAbortError(matchesError)) {
-        return null;
+        throw new CloudReadAbortedError(matchesError);
       }
       console.error('Failed to fetch matches:', matchesError);
       throw new RepositoryError('get', matchesError.message, matchesError);
@@ -141,7 +149,7 @@ export class SupabaseRepository implements ITournamentRepository {
     if (metadata.title !== undefined) {updatePayload.title = metadata.title;}
     if (metadata.date !== undefined) {updatePayload.date = metadata.date;}
     if (metadata.status !== undefined) {updatePayload.status = metadata.status;}
-    if (metadata.startTime !== undefined) {updatePayload.start_time = metadata.startTime;}
+    if (metadata.startTime !== undefined) {updatePayload.start_time = startTimeForDb(metadata.startTime);} // @FU-128
      
     if (metadata.location) {
       if (metadata.location.name !== undefined) {updatePayload.location_name = metadata.location.name;}
@@ -203,7 +211,11 @@ export class SupabaseRepository implements ITournamentRepository {
    * WARNING: This replaces all teams and matches. For granular updates,
    * use updateMatch() or updateMatches() instead.
    */
-  async save(tournament: Tournament): Promise<void> {
+  /**
+   * Befund C-VERSION-NACH-ERSTANLAGE (@FU-110): liefert die Version, die die Zeile danach am Server trägt (Update: Basis + 1,
+   * Neuanlage: 1, Upsert ohne Version: die geschriebene) – das Gerät vermerkt genau sie als bestätigt.
+   */
+  async save(tournament: Tournament): Promise<number> {
     // Get current user for owner_id
     const {
       data: { user },
@@ -338,11 +350,13 @@ export class SupabaseRepository implements ITournamentRepository {
 
     // 1. Persist Tournament (with Optimistic Locking)
     let saveError = null;
+    let reachedVersion: number;
 
      
     if (tournament.version !== undefined && tournament.version !== null) {
       // Optimistic Locking: Only update if version matches
       const nextVersion = tournament.version + 1;
+      reachedVersion = nextVersion;
 
       // Try update first
       const { data, error } = await getSupabase()
@@ -371,14 +385,16 @@ export class SupabaseRepository implements ITournamentRepository {
             .from('tournaments')
             .insert({ ...tournamentRow, version: 1 }); // Start at version 1
           saveError = insertError;
+          reachedVersion = 1;
         }
       }
     } else {
       // Legacy/Fallback: Upsert (Blind Overwrite)
       // If version is missing, we initialize it to 1 if inserting
+      reachedVersion = tournamentRow.version ?? 1;
       const { error } = await getSupabase()
         .from('tournaments')
-        .upsert({ ...tournamentRow, version: tournamentRow.version ?? 1 }, { onConflict: 'id' });
+        .upsert({ ...tournamentRow, version: reachedVersion }, { onConflict: 'id' });
       saveError = error;
     }
 
@@ -579,6 +595,7 @@ export class SupabaseRepository implements ITournamentRepository {
         matches: blockedMatchIds.map((id) => ({ id, matchNumber: matchNumberById.get(id) ?? null })),
       });
     }
+    return reachedVersion;
   }
 
   /**
@@ -719,6 +736,11 @@ export class SupabaseRepository implements ITournamentRepository {
   /** Paket TB: nur `config.standingDecisions`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
   updateStandingDecisions(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
     return writeStandingDecisionsToCloud(getSupabase(), tournamentId, decisions, expectedVersion);
+  }
+
+  /** Fixrunde TB-6: nur `config.placementsToPlayOut`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
+  updatePlacementsToPlayOut(tournamentId: string, places: number[], expectedVersion: number): Promise<void> {
+    return writePlacementsToPlayOutToCloud(getSupabase(), tournamentId, places, expectedVersion);
   }
 
   async delete(id: string): Promise<void> {

@@ -3,7 +3,7 @@
  * Getrennt von `engineHarness.tsx`, damit diese Datei nur Funktionen und Typen und jene nur die Komponente exportiert.
  */
 import 'fake-indexeddb/auto';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { createElement } from 'react';
 import type { UserEvent } from '@testing-library/user-event';
@@ -13,6 +13,7 @@ import { looseVs } from '../../../test/matchSlotFixtures';
 import { ClockSync, LocalMatchStore, MatchCommands, MatchEngine } from '../../../core/match/client';
 import { serverRules, type EngineEvent, type EventDetails, type MatchContext } from '../../../core/match';
 import { MatchEngineContext, type MatchEngineContextValue } from '../../../features/match-engine/matchEngineContextInstance';
+import { HOLD_MS } from '../../ui/atoms/HoldButton';
 import { emptyOutboxStatus, type OutboxStatus } from '../../../core/match/client/outboxTypes';
 
 export const HARNESS_MATCH_ID = 'match-harness-1';
@@ -148,4 +149,11 @@ export async function fremdesGeraetSendetTor(teamId: string): Promise<void> {
 /** Wartet die Sperre des Nummern-Bausteins ab (echte Zeitgeber, 300 ms; nur `Date` ist gefälscht). */
 export async function warteSperre(): Promise<void> {
   await act(async () => { await new Promise((fertig) => { setTimeout(fertig, 310); }); });
+}
+
+/** Hält einen Halteknopf (Abpfiff) gedrückt, bis er ausgelöst hat (echte Zeitgeber, `HOLD_MS` plus Reserve; @SL-157). */
+export async function halte(knopf: HTMLElement): Promise<void> {
+  fireEvent.pointerDown(knopf, { pointerId: 1, button: 0 });
+  await act(async () => { await new Promise((fertig) => { setTimeout(fertig, HOLD_MS + 60); }); });
+  fireEvent.pointerUp(knopf, { pointerId: 1 });
 }

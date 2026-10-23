@@ -12,7 +12,8 @@ import type { Match, Tournament } from '../../../types/tournament';
 import { generateFullSchedule } from '../../../core/generators';
 import { createMockTeam, createMockTournament } from '../../../test/factories';
 import { testUuid } from '../../../test/testIds';
-import { usePublicTournament, type PublicTournamentSource } from '../usePublicTournament';
+import { usePublicTournament } from '../usePublicTournament';
+import { createLegacyPublicSource } from '../legacyPublicSource';
 import { PublicStandingsTab } from '../components/PublicStandingsTab';
 import { buildLiveViewTournament, SHARE_CODE } from '../../../screens/__tests__/liveViewFixture';
 
@@ -40,7 +41,7 @@ function jederGegenJeden(): Tournament {
 }
 
 async function zuschauerTabelle(tournament: Tournament) {
-  const source: PublicTournamentSource = { getByShareCode: vi.fn().mockResolvedValue(tournament) };
+  const source = createLegacyPublicSource({ getByShareCode: vi.fn().mockResolvedValue(tournament) });
   const { result } = renderHook(() => usePublicTournament(SHARE_CODE, source));
   await waitFor(() => expect(result.current.loadingState).toBe('success'));
   const loaded = result.current.tournament!;
