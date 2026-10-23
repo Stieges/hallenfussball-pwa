@@ -17,6 +17,7 @@ import { ContactForm } from '../../../../components/ContactForm';
 import { RulebookField } from '../../../../components/ui/molecules/RulebookField';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
 import type { Tournament } from '../../../../types/tournament';
+import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../../../core/services/tournamentMetaValidation';
 
 // =============================================================================
 // PROPS
@@ -175,6 +176,7 @@ export function MetadataCategory({
   // Private notes (stored in tournament.adminNotes or similar)
   const [notes, setNotes] = useState(tournament.adminNotes ?? '');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
 
   // Sync formData when tournament changes (after save)
   useEffect(() => {
@@ -242,10 +244,15 @@ export function MetadataCategory({
   // Update handler
   const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'title' || field === 'startDate') { setMetaErrors(prev => ({ ...prev, [field]: undefined })); }
   };
 
   // Save handler
   const handleSave = () => {
+    // @W5-002 / C-META-NOVALID: leerer Name oder leeres Datum werden nicht gespeichert (ein vergangenes Datum schon, @W5-003)
+    const errors = validateTournamentMeta({ title: formData.title, startDate: formData.startDate });
+    setMetaErrors(errors);
+    if (hasMetaErrors(errors)) { return; }
     const updatedTournament: Tournament = {
       ...tournament,
       title: formData.title ?? tournament.title,
@@ -277,6 +284,7 @@ export function MetadataCategory({
 
     setFormData(toFormData(tournament));
     setNotes(tournament.adminNotes ?? '');
+    setMetaErrors({});
   };
 
   // Get mode display name
@@ -315,6 +323,7 @@ export function MetadataCategory({
             value={formData.title ?? ''}
             onChange={(v) => handleUpdate('title', v)}
             placeholder={t('metadata.tournamentNamePlaceholder')}
+            errorMessage={metaErrors.title ? t('metadata.tournamentNameRequired') : undefined}
             required
           />
 
@@ -371,6 +380,7 @@ export function MetadataCategory({
             type="date"
             value={formData.startDate ?? ''}
             onChange={(v) => handleUpdate('startDate', v)}
+            errorMessage={metaErrors.startDate ? t('metadata.startDateRequired') : undefined}
             required
           />
           <Input

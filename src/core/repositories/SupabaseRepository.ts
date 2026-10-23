@@ -19,6 +19,7 @@ import { writeStandingDecisionsToCloud, writePlacementsToPlayOutToCloud } from '
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
+  startTimeForDb,
   mapMatchUpdateToSupabase,
   mapMatchToScheduleUpdate,
   mapTeamToSupabase,
@@ -150,7 +151,7 @@ export class SupabaseRepository implements ITournamentRepository {
     if (metadata.title !== undefined) {updatePayload.title = metadata.title;}
     if (metadata.date !== undefined) {updatePayload.date = metadata.date;}
     if (metadata.status !== undefined) {updatePayload.status = metadata.status;}
-    if (metadata.startTime !== undefined) {updatePayload.start_time = metadata.startTime;}
+    if (metadata.startTime !== undefined) {updatePayload.start_time = startTimeForDb(metadata.startTime);} // @FU-128
      
     if (metadata.location) {
       if (metadata.location.name !== undefined) {updatePayload.location_name = metadata.location.name;}

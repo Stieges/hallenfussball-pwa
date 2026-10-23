@@ -22,7 +22,7 @@ const { supabaseGet, localGet } = vi.hoisted(() => ({
 
 vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: true,
-  supabase: { from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })), rpc: vi.fn().mockResolvedValue({ error: null }) },
+  supabase: { from: vi.fn(() => { const q: Record<string, unknown> = { upsert: vi.fn().mockResolvedValue({}), select: () => q, eq: () => q, limit: () => Promise.resolve({ data: [], error: null }) }; return q; }), rpc: vi.fn().mockResolvedValue({ error: null }) },
 }));
 vi.mock('../../core/repositories/SupabaseRepository', () => ({
   SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet, getForDisplay: async (id: string) => { const t: unknown = await supabaseGet(id); return t ? { kind: 'full', version: 1, serverNowMs: 0, tournament: t } : { kind: 'not-found' }; }, getByShareCode: supabaseGet }; }),
