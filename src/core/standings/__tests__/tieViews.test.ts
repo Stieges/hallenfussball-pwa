@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { DATA, id, league } from './fixtures';
 import { rankTournamentGroup } from '../tournamentTable';
 import { teamSlot } from '../../models/matchSlot';
-import { jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from './decisionTestKit';
+import { closeGroup, jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from './decisionTestKit';
 import { groupTieView, placesChangeEffects, tieMarkerOf } from '../tieViews';
 
 const marker = (t: ReturnType<typeof nikolaus>, key: Parameters<typeof id>[0]) => tieMarkerOf(groupTieView(t, ''), id(key));
@@ -74,15 +74,31 @@ describe('Paket TB-B Oberfläche: Sicht auf Gleichstände (tieViews)', () => {
     expect(tieMarkerOf(groupTieView(drei.tournament, ''), id('U'))).toEqual({ kind: 'ordered' });
   });
 
-  it('@W2A-070 „Gruppe abgeschlossen“ kommt aus der Zwischenregel: nach dem Besetzen eines Folgespiels aus der Gruppe geschlossen, davor offen', () => {
-    expect(groupTieView(lage048(), 'A').closed).toBe(false);
+  it('@W2A-070 „Gruppe abgeschlossen“ ist der echte Abschluss: erst nach „Gruppe abschließen“ geschlossen, nach dem Wiederöffnen wieder offen', async () => {
+    const repo = new MemoryRepo(lage048());
+    expect((await repo.service(['e-w']).decide(repo.tournament.id, shootout('W', 'S', 4, 3, 'A'))).ok).toBe(true);
+    expect(groupTieView(repo.tournament, 'A').closed).toBe(false);
+    await closeGroup(repo, 'A');
+    expect(groupTieView(repo.tournament, 'A').closed).toBe(true);
+    expect(groupTieView(repo.tournament, 'B').closed).toBe(false); // Gegenbeispiel: andere Gruppe bleibt offen
+    expect((await repo.reopenGroup(repo.tournament.id, 'A', 'Ergebnis falsch eingetragen')).status).toBe('ok');
+    expect(groupTieView(repo.tournament, 'A').closed).toBe(false);
+  });
+
+  it('@W2A-070 Gegenbeispiel: ein besetztes Folgespiel aus der Gruppe schließt sie NICHT (Zwischenregel abgelöst)', () => {
     const t = lage048();
     const besetzt = {
       ...t,
       matches: t.matches.map((m) => (m.id === 'hf-1' ? { ...m, slotA: teamSlot(id('N')), originA: { kind: 'groupRank' as const, group: 'A', rank: 1 } } : m)),
     };
-    expect(groupTieView(besetzt, 'A').closed).toBe(true);
-    expect(groupTieView(besetzt, 'B').closed).toBe(false); // Gegenbeispiel: andere Gruppe bleibt offen
+    expect(groupTieView(besetzt, 'A').closed).toBe(false);
+  });
+
+  it('@W2A-070 Jeder gegen jeden: der Abschluss der Gruppe „“ schließt, ein Abschluss unter „all“ ebenso (eine Abbildung)', () => {
+    const t = nikolaus();
+    expect(groupTieView({ ...t, groupCompletions: [{ groupId: '', ranking: [], openRanks: [], stale: false }] }, '').closed).toBe(true);
+    expect(groupTieView({ ...t, groupCompletions: [{ groupId: 'all', ranking: [], openRanks: [], stale: false }] }, '').closed).toBe(true);
+    expect(groupTieView({ ...t, groupCompletions: [{ groupId: '', ranking: [], openRanks: [], stale: false, reopenedAt: '2026-12-06T12:00:00Z' }] }, '').closed).toBe(false);
   });
 });
 

@@ -15,9 +15,10 @@
  * Ein Spiel ist entschieden wie am Server (`complete_group`, Schritt 2): Status `finished` oder `skipped` (@W2A-055).
  * Zusätzlich verlangt die App bei `finished` einen Stand – nie lockerer als der Server, nur strenger.
  */
-import type { ForfeitAbsent, GroupCompletion, Match, StandingDecision, Tournament } from '../../types/tournament';
+import type { ForfeitAbsent, Match, StandingDecision, Tournament } from '../../types/tournament';
 import { groupKeyOf } from '../models/standingsGroups';
 import { matchSideTeamId } from '../models/matchSlot';
+import { activeCompletion, everCompleted, groupClosedFromCompletions } from '../standings/groupCompletions';
 import { groupTieView, type OpenTieBlock } from '../standings/tieViews';
 import { rankTournamentGroup, type TableTournament } from '../standings/tournamentTable';
 
@@ -112,23 +113,7 @@ export function expectedState(tournament: Pick<Tournament, 'matches'>, groupId: 
     .sort(byId);
 }
 
-const completionsOf = (tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): GroupCompletion[] =>
-  (tournament.groupCompletions ?? []).filter((c) => groupKeyOf(c.groupId) === groupId);
-
-/** Geltender Abschluss der Gruppe (vorhanden und nicht wieder geöffnet) oder `undefined`. */
-export function activeCompletion(tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): GroupCompletion | undefined {
-  return completionsOf(tournament, groupId).find((c) => c.reopenedAt === undefined);
-}
-
-/** War die Gruppe schon einmal abgeschlossen (auch wenn wieder geöffnet)? Dann heißt die Taste „Erneut abschließen“. */
-export function everCompleted(tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): boolean {
-  return completionsOf(tournament, groupId).length > 0;
-}
-
-/** Echter Zustand „Gruppe abgeschlossen“ (ersetzt in A-13b-C die Zwischenregel `groupClosedByFollowUp`). */
-export function groupClosedFromCompletions(tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): boolean {
-  return activeCompletion(tournament, groupId) !== undefined;
-}
+export { activeCompletion, everCompleted, groupClosedFromCompletions };
 
 /** Zustand einer Gruppe (@TM-059). Ein Abschluss bleibt bestehen, bis die Gruppe wieder geöffnet wird. */
 export function groupState(tournament: Pick<Tournament, 'matches' | 'groupCompletions'>, groupId: string): GroupState {
