@@ -52,6 +52,28 @@
   },
   "einwilligung": true
  },
+ "e4": {
+  "rpc": {
+   "join_code_info": {
+    "json": {
+     "state": "open",
+     "relation": "none",
+     "tournament": {
+      "id": "t-cup",
+      "title": "Live-Cup",
+      "date": "2026-11-28"
+     },
+     "shareCode": "SHARE1"
+    }
+   }
+  },
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000b1",
+   "name": "Greta"
+  },
+  "einwilligung": true,
+  "ausgang": 2
+ },
  "e5": {
   "rpc": {
    "join_code_info": {
