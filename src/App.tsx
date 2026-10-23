@@ -548,7 +548,7 @@ function AppContent() {
         {/* A-17b: Helfer-QR-Code (Adresse trägt den Code) und Hinweis für alte Einladungslinks */}
         {route?.name === 'join' && route.params.code && <JoinScreen key={route.params.code} code={route.params.code} />}
         {route?.name === 'invite' && <LegacyInviteScreen />}
-        {route?.name === 'helperChooser' && <HelperChooserScreen />}
+        {route?.name === 'helperChooser' && <HelperChooserScreen tournaments={tournaments} />}
 
         {/* Main App Screens */}
         {isDashboardPath && (

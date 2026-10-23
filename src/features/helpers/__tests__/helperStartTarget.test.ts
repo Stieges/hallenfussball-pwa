@@ -6,13 +6,13 @@ import { describe, expect, it } from 'vitest';
 import type { HelperAccessEntry } from '../../../core/repositories/helperAccessRpc';
 import { decideHelperStart, END_REDIRECT_MAX_AGE_DAYS } from '../helperStartTarget';
 
-const NOW = new Date('2026-11-28T12:00:00Z');
+const NOW = new Date(2026, 10, 28, 12, 0, 0); // Ortszeit: Turniertag 28.11.2026
 const entry = (o: Partial<HelperAccessEntry>): HelperAccessEntry => ({
   tournamentId: 't-cup', title: 'Live-Cup', date: '2026-11-28', code: 'CUPCODE123', field: 2, relation: 'accepted',
   closed: false, checkNumber: null, homeHintDismissed: false, offlineReadyAt: null, updatedAt: '2026-11-28T10:00:00Z', ...o,
 });
-const decide = (entries: HelperAccessEntry[], o: { session?: 'device' | 'unknown' | 'account' | 'none'; other?: boolean } = {}) =>
-  decideHelperStart({ sessionKind: o.session ?? 'device', entries, hasOtherTournaments: o.other ?? false, now: NOW });
+const decide = (entries: HelperAccessEntry[], o: { session?: 'device' | 'unknown' | 'account' | 'none'; ownRunning?: string[]; hasOwn?: boolean } = {}) =>
+  decideHelperStart({ sessionKind: o.session ?? 'device', entries, ownRunningIds: o.ownRunning ?? [], hasOwnTournaments: o.hasOwn ?? (o.ownRunning?.length ?? 0) > 0, now: NOW });
 
 describe('@HE-096 Adresse der App → Feld', () => {
   it('ein laufender Zugang → direkt Feld 2, ohne Startseite', () => {
@@ -95,12 +95,54 @@ describe('@HE-099 Auswahl bei mehreren Turnieren', () => {
   });
 });
 
-describe('Pflichtzeile GA5: Gast-Turniere bleiben sichtbar', () => {
-  it('ein laufender Zugang neben lokalen Turnieren → Auswahl (mit Weg zur Startseite) statt direkt ins Feld', () => {
-    expect(decide([entry({})], { other: true })).toEqual({ kind: 'chooser' });
+describe('@HE-096 / @HE-099 (präzisiert 23.10.): eigene Turniere auf dem Gerät', () => {
+  it('@HE-096 Gegenbeispiel: ein eigenes, nicht laufendes Turnier stoppt den Weg ans Feld NICHT (keine Zwischenfrage)', () => {
+    expect(decide([entry({})], { hasOwn: true, ownRunning: [] })).toEqual({ kind: 'field', tournamentId: 't-cup', field: 2 });
   });
 
-  it('kein laufender Zugang, aber lokale Turniere → Startseite bleibt', () => {
-    expect(decide([entry({ relation: 'revoked' })], { other: true })).toEqual({ kind: 'stay' });
+  it('@HE-099 Aber-Zeile: ein eigenes Turnier, das heute läuft, zählt wie ein Zugang → zwei laufen → Auswahl', () => {
+    expect(decide([entry({})], { ownRunning: ['t-eigen'] })).toEqual({ kind: 'chooser' });
+  });
+
+  it('genau ein eigenes Turnier läuft und kein Zugang → dieses Turnier öffnet sich direkt', () => {
+    expect(decide([entry({ date: '2026-12-05' })], { ownRunning: ['t-eigen'] })).toEqual({ kind: 'own', tournamentId: 't-eigen' });
+  });
+
+  it('zwei eigene laufende Turniere, Zugang liegt in der Zukunft → Auswahl', () => {
+    expect(decide([entry({ date: '2026-12-05' })], { ownRunning: ['a', 'b'] })).toEqual({ kind: 'chooser' });
+  });
+
+  it('Gegenbeispiel: ein abgeschlossener Zugang plus ein eigenes laufendes Turnier → das eigene öffnet sich, keine Auswahl', () => {
+    expect(decide([entry({ closed: true })], { ownRunning: ['t-eigen'] })).toEqual({ kind: 'own', tournamentId: 't-eigen' });
+  });
+});
+
+describe('@HE-109 Vor dem Turniertag: Startseite mit Einsatz-Karte', () => {
+  const freitag = (o: Partial<HelperAccessEntry> = {}) => entry({ date: '2026-12-04', ...o });
+
+  it('Live-Cup erst am Freitag, nichts läuft → Startseite (die Karte zeigt der Gate), nicht das leere Feld', () => {
+    expect(decide([freitag()])).toEqual({ kind: 'stay' });
+  });
+
+  it('Gegenbeispiel: Turniertag ist heute → Feld 2 (nicht Startseite)', () => {
+    expect(decide([entry({ date: '2026-11-28' })])).toEqual({ kind: 'field', tournamentId: 't-cup', field: 2 });
+  });
+
+  it('Gegenbeispiel: Turniertag gestern, Turnier nicht abgeschlossen → läuft noch, Feld 2 (@HE-098 Zeile 3)', () => {
+    expect(decide([entry({ date: '2026-11-27' })])).toEqual({ kind: 'field', tournamentId: 't-cup', field: 2 });
+  });
+
+  it('Gegenbeispiel: abgeschlossenes Turnier zählt nicht als Einsatz → Endkarte statt Startseite', () => {
+    expect(decide([entry({ closed: true })])).toEqual({ kind: 'join', code: 'CUPCODE123' });
+  });
+
+  it('Einsatz in der Zukunft verhindert die Endkarte eines alten entzogenen Zugangs (Startseite mit Karte)', () => {
+    expect(decide([freitag(), entry({ tournamentId: 't-alt', relation: 'revoked', code: 'ALT' })])).toEqual({ kind: 'stay' });
+  });
+});
+
+describe('Pflichtzeile GA5: eigene Turniere bleiben sichtbar', () => {
+  it('kein laufender Zugang (entzogen), aber lokale Turniere → Startseite bleibt', () => {
+    expect(decide([entry({ relation: 'revoked' })], { hasOwn: true })).toEqual({ kind: 'stay' });
   });
 });

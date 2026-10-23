@@ -310,7 +310,7 @@ const TournamentManagementContent: React.FC<TournamentManagementScreenProps> = (
         />
       )}
 
-      {!vollbild && isMobile && <ManagementMobileNav activeTab={activeTab} onTabChange={handleTabChange} />}
+      {!vollbild && isMobile && <ManagementMobileNav activeTab={activeTab} onTabChange={handleTabChange} tournamentId={tournamentId} />}
     </div>
   );
 };

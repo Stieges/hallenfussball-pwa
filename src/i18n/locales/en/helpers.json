@@ -148,13 +148,20 @@
       "noField": "no field",
       "fieldAndDate": "{{field}} · {{date}}",
       "home": "Go to start page",
-      "checking": "Checking your access …"
+      "checking": "Checking your access …",
+      "own": "Own tournament · {{date}}"
     },
     "guard": {
       "pending": {
         "title": "Waiting for approval by the tournament organisers",
         "text": "You cannot enter anything until the tournament organisers approve you."
       }
+    },
+    "assignment": {
+      "card": "You are helping at {{title}} · {{field}} · {{weekday}}"
     }
+  },
+  "mehr": {
+    "meineTurniere": "My tournaments on this phone"
   }
 }
