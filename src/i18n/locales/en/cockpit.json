@@ -316,6 +316,7 @@
     "horn3": "Horn 3 (Deep)",
     "customSound": "Custom Sound",
     "notUploaded": "(not uploaded)",
+    "test": "Test",
     "testSound": "Test sound",
     "volume": "Volume",
     "volumePercent": "{{percent}}%",

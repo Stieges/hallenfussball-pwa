@@ -2,23 +2,35 @@
  * Sekundentakt für laufende Spiele: liefert die aktuelle Zeit in ms und aktualisiert sie jede Sekunde,
  * solange `active` gilt. Ohne laufendes Spiel gibt es keinen Takt.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { TournamentView } from '../../core/view';
 import type { Match } from '../../types/tournament';
 import { cachedElapsedSeconds } from './matchResult';
 
 const TICK_MS = 1000;
 
-export function useTickingNow(active: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
+/**
+ * Jetzt in Serverzeit (ms): die Zuschauer-Seite stellt hier den Abstand zum Server bereit (B-15, @ZM-026), damit die Restzeit
+ * nicht von der Uhr des Handys abhängt. Ohne Bereitsteller gilt die Geräteuhr.
+ */
+export const NowSourceContext = createContext<() => number>(() => Date.now());
+
+/**
+ * Sekundentakt für laufende Spiele. `serverTime`: die Zeit kommt vom Bereitsteller des Kontexts (Serverzeit) statt von der
+ * Geräteuhr – nur dort, wo gegen Zeitpunkte in Serverzeit gerechnet wird (Feinstatus `live_state`).
+ */
+export function useTickingNow(active: boolean, serverTime = false): number {
+  const serverNow = useContext(NowSourceContext);
+  const read = serverTime ? serverNow : Date.now;
+  const [now, setNow] = useState(() => read());
   useEffect(() => {
     if (!active) {
       return undefined;
     }
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), TICK_MS);
+    setNow(read());
+    const timer = setInterval(() => setNow(read()), TICK_MS);
     return () => clearInterval(timer);
-  }, [active]);
+  }, [active, read]);
   return now;
 }
 
