@@ -30,6 +30,8 @@ import {
 import { useScheduleView } from './hooks/useScheduleView';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
 import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
+import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
+import { useScheduleForfeit } from './hooks/useScheduleForfeit';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
@@ -235,6 +237,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     lockFinishedResults: false,
   });
 
+  // B-12: „nicht angetreten“ und „Wertung zurücknehmen“ -- Bedienung nur für die Turnierleitung (@SL-118)
+  const forfeit = useScheduleForfeit({ tournament, showWarning, showSuccess });
+  const forfeitActions = useMemo(
+    () => (forfeit.allowed ? { mark: (id: string) => { void forfeit.markForfeit(id); }, revoke: (id: string) => { void forfeit.revokeForfeit(id); } } : undefined),
+    [forfeit],
+  );
+
   // ==========================================================================
   // RENDER
   // ==========================================================================
@@ -339,6 +348,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 locale={locale}
                 elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
+                forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />
             )
@@ -367,6 +377,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       </div>
 
       <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} />
+      <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
 
       {/* Conflict Warning Dialog */}
       <ConfirmDialog

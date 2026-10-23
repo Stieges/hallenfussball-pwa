@@ -11,7 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
+import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, TournamentGoneError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import type { BracketLogEntry } from '../../types/tournament';
@@ -47,6 +47,25 @@ function getSupabase() {
     );
   }
   return supabase;
+}
+
+/**
+ * BP-1 (C-AUTH-ABGELAUFEN-ANDERE-MUTATIONEN, C-ENDGUELTIG-SOFORT-MELDEN): der Code der Server-Antwort (PGRST301, 23505 …)
+ * bleibt am eingepackten Fehler je Spiel, damit die Warteschlange „Anmeldung abgelaufen“ und eindeutige Ablehnungen erkennt.
+ */
+function withPostgrestCode(wrapped: Error, original: { code?: string }): Error {
+  return original.code ? Object.assign(wrapped, { code: original.code }) : wrapped;
+}
+
+/**
+ * BP-1 Review A1 (@FU-123, @FU-127, @FU-009): Fehler der Prüfung „gibt es das Turnier noch?“. Nur PGRST116 (0 Zeilen) heißt
+ * „gibt es nicht“; jeder andere Fehler (Netz, Zeitlimit, abgelaufene Anmeldung) wird als `RepositoryError` geworfen, damit
+ * die Warteschlange ihn als unklar wiederholt bzw. bei 401 anhält – nie als „Turnier gibt es nicht mehr“.
+ */
+function throwUnlessNotFound(error: { code?: string; message: string } | null): void {
+  if (error && error.code !== 'PGRST116') {
+    throw new RepositoryError('save', error.message, error);
+  }
 }
 
 /** A-08f3a: Cloud-Stand eines Turniers mit Revision je Spiel. */
@@ -231,7 +250,12 @@ export class SupabaseRepository implements ITournamentRepository {
    * Befund C-VERSION-NACH-ERSTANLAGE (@FU-110): liefert die Version, die die Zeile danach am Server trägt (Update: Basis + 1,
    * Neuanlage: 1, Upsert ohne Version: die geschriebene) – das Gerät vermerkt genau sie als bestätigt.
    */
-  async save(tournament: Tournament): Promise<number> {
+  /**
+   * BP-1 (@FU-123, Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN): `mustExist` – das Gerät kennt das Turnier aus der Cloud.
+   * Fehlt die Zeile dort, legt save() sie nicht neu an, sondern wirft `TournamentGoneError` (eindeutige Ablehnung).
+   * Ohne `mustExist` (noch nie in der Cloud, @FU-124) legt die erste Übertragung das Turnier an.
+   */
+  async save(tournament: Tournament, options: { mustExist?: boolean } = {}): Promise<number> {
     // Get current user for owner_id
     const {
       data: { user },
@@ -387,14 +411,17 @@ export class SupabaseRepository implements ITournamentRepository {
        
       } else if (!data || data.length === 0) {
         // No update happened - check if it exists (Conflict) or is new (Insert)
-        const { data: existing } = await getSupabase()
+        const { data: existing, error: existingError } = await getSupabase()
           .from('tournaments')
           .select('id')
           .eq('id', tournament.id)
           .single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: nur PGRST116 heißt „gibt es nicht“
 
         if (existing) {
           throw new OptimisticLockError('Turnier wurde zwischenzeitlich verändert. Bitte neu laden.');
+        } else if (options.mustExist) {
+          throw new TournamentGoneError(tournament.id); // @FU-123: gelöscht – nicht neu anlegen
         } else {
           // New tournament with predefined version? Treat as insert
           const { error: insertError } = await getSupabase()
@@ -407,6 +434,12 @@ export class SupabaseRepository implements ITournamentRepository {
     } else {
       // Legacy/Fallback: Upsert (Blind Overwrite)
       // If version is missing, we initialize it to 1 if inserting
+      if (options.mustExist) {
+        // @FU-123: der Upsert legte eine fehlende Zeile still neu an – vorher prüfen, ob es sie noch gibt
+        const { data: existing, error: existingError } = await getSupabase().from('tournaments').select('id').eq('id', tournament.id).single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: Netz/Anmeldung bleiben unklar bzw. halten an
+        if (!existing) { throw new TournamentGoneError(tournament.id); }
+      }
       reachedVersion = tournamentRow.version ?? 1;
       const { error } = await getSupabase()
         .from('tournaments')
@@ -692,7 +725,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
-        errors.push(toOriginImmutableError(update.id, error) ?? new Error(`Match ${update.id}: ${error.message}`)); // A-36a: HF002
+        errors.push(toOriginImmutableError(update.id, error) ?? withPostgrestCode(new Error(`Match ${update.id}: ${error.message}`), error)); // A-36a: HF002
       } else if (!data || data.length === 0) {
         console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
         errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));
@@ -715,7 +748,7 @@ export class SupabaseRepository implements ITournamentRepository {
       const { data: updatedT, error: tError } = await query.select('id');
 
       if (tError) {
-        errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
+        errors.push(withPostgrestCode(new Error(`Failed to update tournament timestamp: ${tError.message}`), tError));
       } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
         errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
       }

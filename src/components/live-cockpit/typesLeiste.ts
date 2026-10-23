@@ -20,6 +20,8 @@ export interface LiveCockpitLeisteProps {
    * Taste da; der Helfer bekommt stattdessen den Hinweis (@HE-043).
    */
   onKorrigieren?(matchId: string): void;
+  /** B-12 (@SL-174): „Nicht angetreten“ unter „Mehr“ (nur Turnierleitung, vor dem Anpfiff); öffnet den Dialog der Verwaltung */
+  onNichtAngetreten?(matchId: string): void;
   /** Wer das Feld leitet, wenn dieses Gerät nur liest (@SL-046, @SL-015; Quelle B-49). Mit `onUebernehmen` steht „Spielleitung übernehmen“ da. */
   steuerung?: { leitetName: string | null; onUebernehmen?: () => void } | null;
   /** Das Recht wurde entzogen (@HE-056, A-18): ersetzt die ganze Hülle durch den Hinweis mit der Zahl übergebener Einträge. */

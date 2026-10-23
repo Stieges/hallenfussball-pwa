@@ -4,11 +4,16 @@
  * (`sync-failed-list`, `sync-retry-*`, `sync-discard-*`). Engine-Ablehnungen kennen nur
  * "Verstanden" (Teil A, `two-devices.cloud.spec.ts`, Cup REJECT).
  *
- * Deterministisch dauerhaft scheiternder Weg: ein direkt eingespeistes `UPDATE_TOURNAMENT_METADATA`
- * mit `status` außerhalb des DB-Constraints `tournaments_status_check` (Postgres 23514, kein RLS-
- * Silent-Drop, nicht transient). Der Client weist ihn lokal nicht ab (`updateTournamentMetadata`
- * reicht `status` unverändert durch). `MAX_RETRIES = 5` braucht 5 GETRENNTE `process()`-Anstöße;
- * synthetische `online`-Events lösen sie aus, ohne die Netzwerkverbindung anzufassen.
+ * Seit BP-1 (Befund C-ENDGUELTIG-SOFORT-MELDEN, Controller-Entscheidung F2) gilt je nach Art der Ablehnung:
+ * - @FU-126 eindeutig (Konflikt, Postgres-Klasse 22/23, HF002/HF003, Team noch referenziert): beim ERSTEN Versuch
+ *   „nicht übernommen“ mit Grund, keine Wiederholung, statt „Erneut versuchen“ nur „Verwerfen und aktuellen Stand laden“.
+ * - @FU-127 unklar (z. B. 42501, unbekannte Codes): wird wiederholt; in der Fehlerliste bleibt „Erneut versuchen“.
+ *
+ * Deterministisch eindeutig scheiternder Weg: ein direkt eingespeistes `UPDATE_TOURNAMENT_METADATA` mit `status` außerhalb
+ * des DB-Constraints `tournaments_status_check` (Postgres 23514 = Klasse 23, ungültiger Wert). Der Client weist ihn lokal nicht
+ * ab (`updateTournamentMetadata` reicht `status` unverändert durch). Früher erwartete dieser Test 5 Versuche à 30 s – das
+ * ist mit @FU-126 bewusst entfallen. Der Weg „unklar → Erneut versuchen“ wird mit einem direkt gesetzten Eintrag ohne Grund
+ * geprüft.
  */
 
 import { test, expect } from './fixtures';
@@ -17,7 +22,7 @@ import { expectLegacyQueueKeysEmpty, queueKeys } from './helpers';
 import { E2E_USERS, engineCupIds } from './testData';
 import { HOLD_RETRY_MS } from '../../../src/core/services/mutationQueueRetry';
 
-test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10s als gescheitert sichtbar, retry/verwerfen wirken (Task A4, C-SYNC Teil B)', async ({ asRole }, testInfo) => {
+test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10s als gescheitert sichtbar, retry/verwerfen wirken (Task A4, C-SYNC Teil B, @FU-126, @FU-127)', async ({ asRole }, testInfo) => {
   test.skip(!testInfo.project.name.includes('desktop'), 'Engine-Cups nur auf cloud-desktop.');
   const ids = engineCupIds('QUEUE');
   await expectSeededEngineMatch(engineCupTarget('QUEUE'));
@@ -52,40 +57,66 @@ test('Cup QUEUE: eine dauerhaft abgelehnte Turnier-Mutation ist innerhalb von 10
   const readQueueState = () =>
     ownerPage.evaluate(({ queueKey, failedKey }) => {
       const failedRaw = window.localStorage.getItem(failedKey);
-      const failed = failedRaw ? (JSON.parse(failedRaw) as unknown[]) : [];
-      if (failed.length > 0) { return { retryCount: -1, deadLettered: true }; }
+      const failed = failedRaw ? (JSON.parse(failedRaw) as Array<{ id: string; retryCount: number; rejection?: string }>) : [];
       const queuedRaw = window.localStorage.getItem(queueKey);
-      const queued = queuedRaw ? (JSON.parse(queuedRaw) as Array<{ retryCount?: number }>) : [];
-      return { retryCount: queued[0]?.retryCount ?? 0, deadLettered: false };
+      const queued = queuedRaw ? (JSON.parse(queuedRaw) as unknown[]) : [];
+      return { failed, pending: queued.length };
     }, { queueKey: keys.queue, failedKey: keys.failed });
 
-  await expect.poll(async () => (await readQueueState()).retryCount, { message: 'Anstoß 1 (Neuladen): retryCount soll 1 sein', timeout: 8000 }).toBeGreaterThanOrEqual(1);
-  let lastRetryCount = (await readQueueState()).retryCount;
-  for (let attempt = 2; attempt <= 5; attempt++) {
-    if ((await readQueueState()).deadLettered) { break; }
-    // Seit A-06d2 wartet jeder Anstoß (online/enqueue) die 30-s-Pause nach einem echten Fehler ab; der
-    // Zeitgeber der Queue sendet danach selbst. Die Uhr der Seite springt über die Pause (kein echtes Warten).
-    await ownerPage.clock.fastForward(HOLD_RETRY_MS + 1000);
-    await expect.poll(async () => {
-      const state = await readQueueState();
-      return state.deadLettered || state.retryCount > lastRetryCount;
-    }, { message: `Anstoß ${attempt}: retryCount soll über ${lastRetryCount} steigen (oder Dead-Letter)`, timeout: 8000 }).toBe(true);
-    lastRetryCount = (await readQueueState()).retryCount;
-  }
+  // @FU-126: spätestens 10 s nach dem Neuladen (erster Versuch) liegt der Eintrag ohne Wiederholung als „nicht übernommen“ ab
+  await expect.poll(async () => (await readQueueState()).failed.map((f) => f.id), { message: '@FU-126: beim ersten Versuch abgelegt', timeout: 10000 }).toEqual([badMutationId]);
+  const [abgelegt] = (await readQueueState()).failed;
+  expect(abgelegt.retryCount).toBe(0);
+  expect(abgelegt.rejection).toBe('invalidValue');
+  // … und versucht ihn nicht noch einmal von selbst, auch nicht nach der früheren 30-s-Pause
+  await ownerPage.clock.fastForward(HOLD_RETRY_MS + 1000);
+  expect(await readQueueState()).toMatchObject({ pending: 0, failed: [expect.objectContaining({ id: badMutationId, retryCount: 0 })] });
 
   const syncStatus = ownerPage.locator('[data-testid="sync-status"]');
   await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
   await syncStatus.click();
   const failedList = ownerPage.locator('[data-testid="sync-failed-list"]');
   await expect(failedList).toBeVisible({ timeout: 2000 });
-  await expect(failedList).toContainText('tournaments_status_check');
+  // Grund in Klartext (Glossar „nicht übernommen“), kein „Erneut versuchen“, nur Verwerfen mit Laden des Server-Stands
+  await expect(ownerPage.locator(`[data-testid="sync-failed-reason-${badMutationId}"]`)).toHaveText('Nicht übernommen – ungültiger Wert');
+  await expect(ownerPage.locator(`[data-testid="sync-retry-${badMutationId}"]`)).toHaveCount(0);
+  const verwerfenEindeutig = ownerPage.locator(`[data-testid="sync-discard-${badMutationId}"]`);
+  await expect(verwerfenEindeutig).toHaveText('Verwerfen und aktuellen Stand laden');
+  await verwerfenEindeutig.click();
+  await ownerPage.locator('[data-testid="confirm-dialog-confirm"]').click();
+  await expect.poll(async () => (await readQueueState()).failed.length, { message: 'Verwerfen entfernt den Eintrag', timeout: 5000 }).toBe(0);
 
-  // "Erneut versuchen": der Eintrag verlässt die Fehlerliste und landet wieder in der Warteschlange.
-  await ownerPage.locator(`[data-testid="sync-retry-${badMutationId}"]`).click();
-  await expect.poll(async () => (await readQueueState()).deadLettered, { message: '„erneut versuchen": Eintrag verlässt die Fehlerliste sofort', timeout: 5000 }).toBe(false);
+  // @FU-127: ein Eintrag mit unklarem Grund (ohne Merkmal) behält „Erneut versuchen“; er verlässt die Fehlerliste und
+  // geht erneut in die Warteschlange (leere Angaben: der erneute Versuch gelingt ohne Schreiben).
+  const unklarId = `${badMutationId}-unklar`;
+  await ownerPage.evaluate(
+    ({ id, tournamentId, queueKey, failedKey }) => {
+      const item = {
+        id,
+        type: 'UPDATE_TOURNAMENT_METADATA',
+        payload: { tournamentId, metadata: {} },
+        timestamp: Date.now(),
+        retryCount: 5,
+        failedAt: Date.now(),
+        lastError: 'new row violates row-level security policy for table "tournaments"',
+      };
+      window.localStorage.setItem(queueKey, '[]');
+      window.localStorage.setItem(failedKey, JSON.stringify([item]));
+    },
+    { id: unklarId, tournamentId: ids.tournamentId, queueKey: keys.queue, failedKey: keys.failed }
+  );
+  await ownerPage.reload();
+  await ownerPage.waitForLoadState('networkidle');
+  await expectEngineMatchRunningUi(ownerPage);
+  await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
+  await syncStatus.click();
+  await expect(failedList).toBeVisible({ timeout: 2000 });
+  await expect(ownerPage.locator(`[data-testid="sync-failed-reason-${unklarId}"]`)).toHaveText('new row violates row-level security policy for table "tournaments"');
+  await ownerPage.locator(`[data-testid="sync-retry-${unklarId}"]`).click();
+  await expect.poll(async () => (await readQueueState()).failed.length, { message: '„erneut versuchen": Eintrag verlässt die Fehlerliste sofort', timeout: 5000 }).toBe(0);
   await expect(syncStatus).not.toHaveAttribute('data-state', 'error', { timeout: 5000 });
 
-  // "Verwerfen": für den isolierten Nachweis ein direkt gesetzter Dead-Letter-Eintrag.
+  // "Verwerfen" eines unklaren Eintrags: für den isolierten Nachweis ein direkt gesetzter Dead-Letter-Eintrag.
   await ownerPage.evaluate(
     ({ id, queueKey, failedKey }) => {
       const item = {
