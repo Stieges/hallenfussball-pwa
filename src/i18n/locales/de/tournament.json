@@ -1235,5 +1235,72 @@
       "two": "Platz {{from}} und {{to}}",
       "range": "Platz {{from}} bis {{to}}"
     }
+  },
+  "klaerung": {
+    "titel": "Klärungsliste",
+    "knopf": "Klärungsliste",
+    "knopfAria": "Klärungsliste öffnen: {{offen}} offen, {{hinweise}} Hinweise",
+    "hinweiseKurz_one": "1 Hinweis",
+    "hinweiseKurz_other": "{{count}} Hinweise",
+    "leer": "Nichts zu klären.",
+    "spiel": "Spiel {{number}} · Feld {{field}}",
+    "spielOhneFeld": "Spiel {{number}}",
+    "unbekannt": "einem Gerät",
+    "fall": {
+      "afterTakeover_one": "1 Eintrag von {{author}} nach Übernahme",
+      "afterTakeover_other": "{{count}} Einträge von {{author}} nach Übernahme",
+      "beforeTakeover_one": "1 Eintrag von {{author}} vor Übernahme",
+      "beforeTakeover_other": "{{count}} Einträge von {{author}} vor Übernahme",
+      "rightsRevoked_one": "1 Eintrag von {{author}}, Recht entzogen",
+      "rightsRevoked_other": "{{count}} Einträge von {{author}}, Recht entzogen",
+      "afterEnd_one": "1 Eintrag von {{author}}, nach dem Ende angekommen",
+      "afterEnd_other": "{{count}} Einträge von {{author}}, nach dem Ende angekommen",
+      "beforeReset_one": "1 Eintrag von {{author}} vor dem Zurücksetzen",
+      "beforeReset_other": "{{count}} Einträge von {{author}} vor dem Zurücksetzen"
+    },
+    "hinweis": {
+      "titel": "Hinweise",
+      "tor_one": "1 Tor von {{author}} (Feld {{field}}) nachträglich eingefügt",
+      "tor_other": "{{count}} Tore von {{author}} (Feld {{field}}) nachträglich eingefügt",
+      "eintrag_one": "1 Eintrag von {{author}} (Feld {{field}}) nachträglich eingefügt",
+      "eintrag_other": "{{count}} Einträge von {{author}} (Feld {{field}}) nachträglich eingefügt"
+    },
+    "zeile": {
+      "mitNummer": "{{what}} {{team}}, Nr. {{nr}}",
+      "team": "{{what}} {{team}}",
+      "ohneTeam": "{{what}}",
+      "minute": "{{line}} · Abschnitt {{section}}, {{minute}}. Minute",
+      "geraet": "Gerät {{time}}"
+    },
+    "aufklappen": "Einträge zeigen",
+    "zuklappen": "Einträge ausblenden",
+    "uebernehmen": "Übernehmen",
+    "verwerfen": "Verwerfen",
+    "alleUebernehmen": "Alle übernehmen",
+    "alleVerwerfen": "Alle verwerfen",
+    "speichern": "Speichern",
+    "zurueck": "Zurück",
+    "nurVerwerfen": "nur Verwerfen möglich",
+    "vorschau": {
+      "titel": "Vorschau",
+      "stand": "Neuer Stand: {{home}} {{score}} {{away}}",
+      "uebernommen": "Übernommen: {{list}}",
+      "verworfen": "Verworfen: {{list}}",
+      "nichts": "nichts wird übernommen",
+      "koBeendet": "Nicht möglich: Das K.-o.-Spiel ist beendet – bitte das Ergebnis korrigieren",
+      "nichtMoeglich": "Nicht möglich: {{reason}}"
+    },
+    "ergebnis": {
+      "gespeichert": "Entscheidung gespeichert",
+      "gruppeVeraltet": "Spiel {{number}} war schon beendet – ist die Gruppe abgeschlossen, bitte neu abschließen."
+    },
+    "fehler": {
+      "offline": "Geht nur mit Netz",
+      "nichtGesendet": "Nicht gesendet – bitte erneut versuchen",
+      "veraltet": "App aktualisieren",
+      "schonEntschieden": "Bereits entschieden – die Liste wird neu geladen",
+      "spielFehlt": "Spiel {{number}} ist auf diesem Gerät noch nicht geladen",
+      "sonst": "Nicht übernommen – {{reason}}"
+    }
   }
 }

@@ -13,6 +13,7 @@ import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import type { TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
 import { AuthSection } from '../components/layout/AuthSection';
 import { EngineOutboxHeaderStatus } from '../features/tournament-management/components/EngineOutboxHeaderStatus';
+import { KlaerungslisteEinstieg } from '../features/klaerungsliste/KlaerungslisteEinstieg';
 
 export interface ManagementHeaderProps {
   tournament: Tournament;
@@ -119,6 +120,8 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
         </button>
         {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}
         {activeTab !== 'management' && <EngineOutboxHeaderStatus tournament={tournament} />}
+        {/* B-50: Klärungsliste der Turnierleitung (Zähler offener Einträge, Liste über ?klaerung=1) */}
+        <KlaerungslisteEinstieg tournament={tournament} compact={isMobile} />
         <AuthSection
           onNavigateToLogin={p.onNavigateToLogin}
           onNavigateToRegister={p.onNavigateToRegister}

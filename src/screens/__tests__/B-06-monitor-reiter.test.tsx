@@ -22,6 +22,7 @@ vi.mock('../../hooks/useTournamentManager', () => ({
 }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => geraet.mobil }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
+vi.mock('../../features/klaerungsliste/KlaerungslisteEinstieg', () => ({ KlaerungslisteEinstieg: () => null })); // B-50: braucht AuthProvider, hier nicht Gegenstand
 vi.mock('../../features/tournament-management/ScheduleTab', () => ({
   ScheduleTab: () => <p>Spielplan</p>,
 }));
