@@ -6,7 +6,7 @@
  *   Standardfarbe → Standardfarbe der anderen Seite → Weiß oder Schwarz, was vom Gegner weiter entfernt ist (D-1).
  * - Teamfarben aus: Standardfarben, Leibchen nur als Zeichen (@ZM-154). Zu ähnliche Standardfarben → Gast Weiß/Schwarz.
  *
- * „Zu ähnlich“ = `kitConflict(x, y) !== 'none'` (ΔE2000 < 30, @SL-139). Weiß/Schwarz sind Daten (Ausweichfarben).
+ * „Zu ähnlich“ = `kitConflict(x, y) !== 'none'` (nur ΔE2000 < 30, @SL-139; ohne Helligkeitsregel @SL-173). Weiß/Schwarz sind Daten (Ausweichfarben).
  */
 import { kitConflict, normalizeKitColor, type KitSide } from './kit';
 import { hexDeltaE2000 } from './kitColorDistance';
