@@ -13,7 +13,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../components/ui/Toast';
 import { Tournament } from '../../../types/tournament';
-import { detectAllConflicts, ScheduleConflict, ConflictDetectionConfig } from '../../schedule-editor';
+import { detectAllConflicts, isStartedMatch, ScheduleConflict, ConflictDetectionConfig } from '../../schedule-editor';
 
 // Pending changes during edit mode (SR and field changes only)
 // Note: Match time swaps are applied immediately to tournament.matches for view sync
@@ -133,14 +133,17 @@ export function usePendingChanges({
     // Apply pending field assignments to both config and matches
     if (Object.keys(pendingChanges.fieldAssignments).length > 0) {
       updated.fieldAssignments ??= {};
+      // @ZP-093: ein vorgemerkter Feldwechsel gilt nicht für ein inzwischen angepfiffenes Spiel
+      const startedIds = new Set(tournament.matches.filter(isStartedMatch).map((m) => m.id));
       for (const [id, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
+        if (startedIds.has(id)) { continue; }
         updated.fieldAssignments[id] = fieldNumber;
       }
 
       updated.matches = updated.matches.map(match => {
         const newField = pendingChanges.fieldAssignments[match.id];
          
-        if (newField !== undefined) {
+        if (newField !== undefined && !startedIds.has(match.id)) {
           return { ...match, field: newField };
         }
         return match;

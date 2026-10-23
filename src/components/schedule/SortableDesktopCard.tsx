@@ -227,8 +227,8 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
     backgroundColor: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-    cursor: 'pointer',
+    color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
+    cursor: isLocked ? 'not-allowed' : 'pointer',
     minWidth: 60,
     // Fix: Prevent all options from rendering at once
     overflow: 'hidden',
@@ -330,6 +330,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
             <select
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+              disabled={isLocked}
               style={fieldSelectStyle}
               aria-label={t('sortable.fieldLabel')}
             >

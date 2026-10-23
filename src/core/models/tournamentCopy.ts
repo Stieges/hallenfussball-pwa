@@ -97,7 +97,8 @@ export function proposeCopyTitle(title: string, suffix: string): string {
 
 /**
  * Vorschlag für das „Datum der Probe“ (YYYY-MM-DD, lokale Zeit, @W5-025): das Originaldatum, wenn es nach `today` liegt,
- * sonst der Tag nach `today`. Nur dann steht die Kopie bei „kommend“.
+ * sonst der Tag nach `today`. Die Kopie steht bei „kommend“, weil sie nicht abgeschlossen ist und nichts angepfiffen
+ * ist (@LZ-001), nicht wegen des Datums. Das Datum bestimmt nur die Anstoßzeiten (@W5-029) und die Plausibilität.
  */
 export function proposeProbeDate(tournament: Pick<Tournament, 'startDate'>, today: Date): string {
   const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

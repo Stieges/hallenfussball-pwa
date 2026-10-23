@@ -48,7 +48,8 @@ async function archivieren() {
 describe('@W5-027 Kopie nach der Generalprobe archivieren', () => {
   it('@W5-027 die Kopie steht vor dem Archivieren auf der Startseite, danach im Archiv und nicht mehr dort', async () => {
     const kopie = gespielteKopie();
-    expect(categorizeTournament(kopie, JETZT)).toBe('upcoming');
+    // KB-3c: ein Spiel ist beendet, also angepfiffen: „Läuft“ (@LZ-001), nicht mehr „kommend“ (früher nur über das Datum).
+    expect(categorizeTournament(kopie, JETZT)).toBe('running');
 
     const onUpdate = renderDangerZone(kopie);
     await archivieren();
