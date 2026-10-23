@@ -83,3 +83,15 @@ describe('MoreSheet', () => {
     expect(screen.getByRole('button', { name: 'Einstellungen' })).toBeInTheDocument();
   });
 });
+
+describe('B-12 mehrPunkteGrundgeruest: „Nicht angetreten“ (@SL-174, @SL-175)', () => {
+  it('@SL-174 vor dem Anpfiff: nur mit istLeitung', () => {
+    expect(mehrPunkteGrundgeruest(phase('vorAnpfiff'), { kannSteuern: true, istLeitung: true })).toContain('nichtAngetreten');
+    expect(mehrPunkteGrundgeruest(phase('vorAnpfiff'), { kannSteuern: true, istLeitung: false })).not.toContain('nichtAngetreten');
+    expect(mehrPunkteGrundgeruest(phase('vorAnpfiff'), { kannSteuern: true })).not.toContain('nichtAngetreten');
+  });
+
+  it.each(ZUSTAENDE.filter((z) => z !== 'vorAnpfiff'))('@SL-175 %s: auch die Turnierleitung bekommt keinen Eintrag', (zustand) => {
+    expect(mehrPunkteGrundgeruest(phase(zustand), { kannSteuern: true, istLeitung: true })).not.toContain('nichtAngetreten');
+  });
+});

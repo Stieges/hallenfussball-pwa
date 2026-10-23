@@ -562,7 +562,8 @@
     "uhrKorrigieren": "Correct clock",
     "seitenTauschen": "Switch sides",
     "einstellungen": "Settings",
-    "schliessen": "Close"
+    "schliessen": "Close",
+    "nichtAngetreten": "Did not show up"
   },
   "entscheidung": {
     "titel": "How is the match decided?",
