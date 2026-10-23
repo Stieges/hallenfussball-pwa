@@ -1,11 +1,14 @@
 /**
  * Tournament Category Helpers
  *
- * Kategorisiert Turniere basierend auf Status, Spielstand und Zeitpunkt:
- * 1. Aktuell laufende Turniere - published + datum ist heute + aktuelle Zeit > Startzeit + nicht alle Spiele beendet
- * 2. Bevorstehende Turniere - published + Datum+Zeit in der Zukunft
- * 3. Beendete Turniere - published + (alle Spiele beendet ODER manuell beendet ODER Datum in Vergangenheit)
- * 4. Gespeicherte Turniere - draft status
+ * Kategorisiert Turniere basierend auf Status, Spielstand und Datum:
+ * 1. Bevorstehende Turniere - published + nicht abgeschlossen, solange das Datum nicht vergangen ist
+ * 2. Beendete Turniere - published + (alle Spiele beendet ODER manuell beendet ODER Datum in Vergangenheit)
+ * 3. Gespeicherte Turniere - draft status
+ *
+ * „Laufend“ leitet die Startseite nicht aus der Uhr ab (@LZ-001: festgelegt, kein Spiel angepfiffen → „Festgelegt“).
+ * Bis @FU-128 kam die Startzeit aus der Cloud als HH:MM:SS und war hier unlesbar; seitdem ist sie lesbar (HH:MM),
+ * und die frühere Regel „heute + Startzeit vorbei → laufend“ hätte festgelegte Turniere aus „kommend“ geschoben.
  */
 
 import { Tournament, Match, TRASH_RETENTION_DAYS } from '../types/tournament';
@@ -104,34 +107,6 @@ export function isTournamentCompleted(tournament: Tournament): boolean {
 }
 
 /**
- * Check if tournament is currently running
- * Running = datum ist heute UND aktuelle Zeit > Startzeit UND nicht beendet
- */
-function isTournamentRunning(tournament: Tournament, now: Date): boolean {
-  if (tournament.status !== 'published') {return false;}
-
-  // If tournament is completed (all matches done or manually marked), it's not running
-  if (isTournamentCompleted(tournament)) {return false;}
-
-  const tournamentDate = getTournamentDateTime(tournament);
-  if (!tournamentDate) {return false;}
-
-  const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tournamentDateOnly = new Date(
-    tournamentDate.getFullYear(),
-    tournamentDate.getMonth(),
-    tournamentDate.getDate()
-  );
-
-  // Check if tournament date is today
-  const isToday = nowDateOnly.getTime() === tournamentDateOnly.getTime();
-  if (!isToday) {return false;}
-
-  // Check if current time is after tournament start time
-  return now >= tournamentDate;
-}
-
-/**
  * Check if tournament is upcoming (future date/time)
  */
 function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
@@ -194,11 +169,7 @@ export function categorizeTournament(tournament: Tournament, now: Date = new Dat
     return 'draft';
   }
 
-  // Published tournaments - check timing
-  if (isTournamentRunning(tournament, now)) {
-    return 'running';
-  }
-
+  // Published tournaments: die Uhr allein macht kein Turnier „laufend“ (@LZ-001)
   if (isTournamentUpcoming(tournament, now)) {
     return 'upcoming';
   }
