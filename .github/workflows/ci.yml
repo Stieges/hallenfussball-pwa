@@ -91,6 +91,11 @@ jobs:
     name: E2E Tests (${{ matrix.project }})
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # desktop-webkit läuft im offiziellen Playwright-Container (Muster wie visual.yml): WebKit samt
+    # Systempaketen ist im Image bereits enthalten. Die Installation auf dem Runner (apt-get install
+    # der ~180 WebKit-Abhängigkeiten) lief wiederholt in den Timeout. Die Chromium-Projekte bleiben
+    # unverändert auf dem Runner, deshalb ist `container` nur für desktop-webkit gesetzt (null = kein Container).
+    container: ${{ matrix.container }}
     env:
       # Nur der Browser, den das Projekt braucht (siehe playwright.config.ts): desktop-webkit -> WebKit, Rest -> Chromium
       PW_BROWSER: ${{ matrix.project == 'desktop-webkit' && 'webkit' || 'chromium' }}
@@ -99,7 +104,14 @@ jobs:
       matrix:
         # Breakpoint-basierte Viewports (Primary)
         # desktop-webkit (B-17 Fixrunde 2): Desktop Safari, läuft nur die Monitor-Spec (testMatch in playwright.config.ts)
-        project: [mobile-sm, mobile-md, tablet-portrait, desktop, desktop-webkit]
+        # Image-Version = @playwright/test in package-lock.json (Pin-Check-Schritt unten prüft das).
+        include:
+          - project: mobile-sm
+          - project: mobile-md
+          - project: tablet-portrait
+          - project: desktop
+          - project: desktop-webkit
+            container: mcr.microsoft.com/playwright:v1.63.0-noble
 
     steps:
       - name: Checkout
@@ -118,7 +130,20 @@ jobs:
         id: pw-version
         run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
 
+      # Container-Lauf (desktop-webkit): Image-Version muss exakt zur installierten @playwright/test-Version passen.
+      - name: Pin-Check — Container-Image passt zur installierten @playwright/test-Version
+        if: env.PW_BROWSER == 'webkit'
+        run: |
+          INSTALLED="$(npx playwright --version | awk '{print $2}')"
+          IMAGE_VERSION="$(echo "${{ matrix.container }}" | sed -E 's#.*:v([0-9.]+)-.*#\1#')"
+          echo "Installiert (@playwright/test): $INSTALLED — Container-Image: $IMAGE_VERSION"
+          if [ "$INSTALLED" != "$IMAGE_VERSION" ]; then
+            echo "::error::Container-Image passt nicht zu @playwright/test ($INSTALLED). matrix.container in .github/workflows/ci.yml anheben." >&2
+            exit 1
+          fi
+
       - name: Playwright-Browser-Cache
+        if: env.PW_BROWSER != 'webkit'
         id: pw-cache
         uses: actions/cache@v6
         with:
@@ -127,11 +152,14 @@ jobs:
 
       # Ursache des 20-Min-Hangs: apt-get haengt beim Paket-Download (Mirror) und haelt danach das dpkg-Lock.
       # Daher: apt mit Timeout/Retries, Install mit Step-Timeout, vor der Wiederholung haengende apt-Prozesse beenden.
+      # Entfällt für desktop-webkit (Container bringt alle Systempakete und Browser mit).
       - name: apt-Haertung (Download-Timeout und Retries)
+        if: env.PW_BROWSER != 'webkit'
         run: |
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/99ci-retries >/dev/null
 
       - name: Install Playwright Browser
+        if: env.PW_BROWSER != 'webkit'
         id: pw-install
         continue-on-error: true
         timeout-minutes: 6
@@ -141,7 +169,7 @@ jobs:
           if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps "$PW_BROWSER"; else npx playwright install --with-deps "$PW_BROWSER"; fi
 
       - name: Install Playwright Browser (Wiederholung)
-        if: steps.pw-install.outcome != 'success'
+        if: env.PW_BROWSER != 'webkit' && steps.pw-install.outcome != 'success'
         timeout-minutes: 8
         env:
           CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
