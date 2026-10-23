@@ -1328,7 +1328,7 @@
         "title_other": "{{count}} matches not decided yet",
         "body": "{{matches}}. {{name}} is not closed, the places stay open.",
         "body_all": "{{matches}}. The group is not closed.",
-        "hint": "Close it as soon as all matches are decided."
+        "hint": "Close it once all matches are decided."
       },
       "already": {
         "title": "{{name}} is already closed",
