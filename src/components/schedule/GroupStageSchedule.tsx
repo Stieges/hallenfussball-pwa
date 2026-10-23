@@ -161,8 +161,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
-      // Check if click is outside any MatchCard
-      const clickedCard = target.closest('[data-match-card]');
+      // Check if click is outside any MatchCard. Der Pfad steht beim Auslösen fest: Hat React den angeklickten Knopf
+      // beim Umschalten schon aus der Seite genommen (z. B. „Spiel beenden und Ergebnis eintragen“), findet
+      // `closest` am abgetrennten Knoten keine Karte mehr (@FU-112).
+      const clickedCard = e.composedPath().some((n) => n instanceof Element && n.hasAttribute('data-match-card'))
+        || target.closest('[data-match-card]');
       if (!clickedCard) {
         setExpandedMatchId(null);
         setExpandType(null);
