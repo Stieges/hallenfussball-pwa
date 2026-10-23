@@ -84,7 +84,7 @@ export interface FollowUpChange {
 }
 
 export type CompleteGroupResult =
-  | { status: 'ok'; alreadyCompleted: boolean; changed: FollowUpChange[]; tournamentVersion?: number }
+  | { status: 'ok'; alreadyCompleted: boolean; changed: FollowUpChange[]; tournamentVersion?: number; /** A-15c: ohne Netz lokal wirksam, wird nachgereicht. */ queued?: boolean }
   | { status: 'rejected'; code: CompleteGroupRejection; open?: number; last?: ServerLast }
   | { status: 'clarification'; code: ConflictCode; clarificationId: number; last?: ServerLast }
   | { status: 'forbidden' };
