@@ -5,9 +5,9 @@
  * der Wechsel Warteschirm → „Du bist zugelassen“ ohne neuen Scan kommt mit A-17c), @HE-089 (Konto scannt → Rückfrage → der
  * Laptop-Kontext bleibt angemeldet), @HE-015 (Gegenbeispiel: Hallen-WLAN ohne Internet → „Für den Einstieg brauchst du Netz“).
  *
- * Voraussetzung: lokaler Stack MIT der Migration `20261110_008_helper_join.sql` (A-16). Dieser Stack hat sie noch nicht
- * (Einspielen = Sache des Fensters/Controllers; hier wird nie zurückgesetzt oder gesät). Darum läuft der Block erst mit
- * `E2E_STACK_HAS_008=1` und ist sonst `fixme` mit Grund. Die Leitungs-Seite (Team & Helfer, A-18a) gibt es noch nicht:
+ * Voraussetzung: lokaler Stack MIT der Migration `20261110_008_helper_join.sql` (A-16). Ein lokal älterer Stack hat sie evtl.
+ * nicht (hier wird nie zurückgesetzt oder gesät). Darum läuft der Block nur mit `E2E_STACK_HAS_008=1` und ist sonst `fixme`
+ * mit Grund. Die CI (`e2e-cloud.yml`) baut den Stack aus den Repo-Migrationen und setzt die Variable. Die Leitungs-Seite (Team & Helfer, A-18a) gibt es noch nicht:
  * Zulassen läuft deshalb über die Schnittstelle `decide_join_request` mit der Prüfzahl des Helfer-Handys (S-1).
  */
 import { test, expect } from './fixtures';
