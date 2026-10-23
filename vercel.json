@@ -76,5 +76,11 @@
       "source": "/((?!api|assets|icons|sw.js|manifest.webmanifest|favicon.svg).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "**": false
+    }
+  }
 }
