@@ -185,8 +185,6 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'components/dialogs/Dialog.tsx',
     'components/dialogs/ConsentDialog.tsx',
     'components/ui/ConfirmDialog.tsx',
-    'features/auth/components/InviteDialog.tsx',
-    'features/auth/components/InviteLinkDialog.tsx',
     'features/auth/components/RoleChangeDialog.tsx',
     'features/auth/components/TransferOwnershipDialog.tsx',
     'components/ui/LogoUploadDialog.tsx',

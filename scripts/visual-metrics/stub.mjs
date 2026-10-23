@@ -5,6 +5,7 @@
 // Zustand: { rpc: { <funktion>: { json } | { fehler: { code, message } } | { abbruch: true } },
 //            geraet: { id } (optional: anonyme Gerätesitzung eines Helfer-Handys im Speicher),
 //            einwilligung: true (Datenschutz-Abfrage vorab beantwortet), signup: "ok" | "429" (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
+//            rest: { <tabelle>: [Zeile, …] } (optional: Antworten auf /rest/v1/<tabelle>, sonst leer),
 //            ausgang: <N> (optional, nur mit konto: N wartende Einträge des Kontos in der lokalen Kopie, z. B. e4 „Erst verbinden“ @HE-092) }
 // Kein Code in src/ (Testumgebung ≠ Produktivcode). Nie gegen Produktion: die Adresse ist fest 127.0.0.1.
 import { existsSync, readFileSync } from 'node:fs'
@@ -106,6 +107,12 @@ export async function installiereStub(ctx, stub) {
     if (z.konto && pfad === '/auth/v1/token') return json(200, sitzung(z.konto.id, false, z.konto.name))
     if (z.geraet && pfad === '/auth/v1/user') return json(200, sitzung(z.geraet.id, true, '').user)
     if (z.geraet && pfad === '/auth/v1/token') return json(200, sitzung(z.geraet.id, true, ''))
+    // Tabellenzeilen aus dem Zustand (`rest: { <tabelle>: [Zeile, …] }`, A-18a): z. B. das Turnier, das ein angemeldetes Konto öffnet.
+    // Fragt die App ein einzelnes Objekt (`.single()`), liefert der Stub die erste Zeile.
+    if (pfad.startsWith('/rest/v1/') && z.rest?.[pfad.slice('/rest/v1/'.length)]) {
+      const zeilen = z.rest[pfad.slice('/rest/v1/'.length)]
+      return json(200, (req.headers().accept ?? '').includes('vnd.pgrst.object+json') ? (zeilen[0] ?? null) : zeilen)
+    }
     // Profile, Einstellungen, Sitzung auffrischen usw.: leer, damit nichts hängt
     if (pfad.startsWith('/rest/v1/')) return json(200, [])
     return json(404, { msg: 'vm-stub: nicht vorgesehen' })

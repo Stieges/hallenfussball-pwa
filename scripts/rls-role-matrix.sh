@@ -952,13 +952,13 @@ VALUES
   ('$C_DECLINED_COADMIN', '$T_MAIN', '$U_DECLINED', 'co-admin', now(), now());
 
 -- Fixrunde 2 / K2: offene (unclaimed) Einladung auf T_MAIN, exakt wie
--- invitationService.ts#createInvitation sie anlegt -- user_id NULL, invite_email gesetzt,
+-- invitationService.ts#createInvitation (bis A-18a) sie anlegt -- user_id NULL, invite_email gesetzt,
 -- accepted_at NULL, use_count 0. Wird von "eingeladener nimmt Einladung an" beansprucht.
 -- Fixrunde 1 (R6, M1): "invited_by" = U_OWNER ergänzt (vorher nicht gesetzt) — wird von den
 -- neuen R6-Zeilen "Eingeladener sieht Einladenden vor/nach Annahme" gebraucht
 -- (profile_visible_to_viewer()-Regel (ii)). Ändert an K2/L5 nichts, die lesen die Spalte nicht.
 -- R7-Fixrunde 1 (M-1, final-review-2.md): "expires_at" = now() + 7 Tage ergänzt (vorher NULL) --
--- die App setzt bei JEDER Einladung immer ein zukünftiges expires_at (invitationService.ts:183),
+-- die App setzt bei JEDER Einladung immer ein zukünftiges expires_at (invitationService.ts:183, bis A-18a),
 -- eine Fixture ohne Ablaufdatum verschleiert DB-Mutationen an der expires_at-Prüfung im
 -- Annahme-Zweig von protect_collaborator_row() (Review-Beleg DB-M2: blieb ohne diesen Fix
 -- fälschlich grün). Betrifft ALLE Zeilen, die diese geteilte Fixture nutzen (k2/l5/R6/R7) --
@@ -1593,7 +1593,7 @@ else
     "UPDATE public.tournament_collaborators SET tournament_id = '$T_ANON' WHERE tournament_id = '$T_MAIN' AND user_id = '$U_COADMIN';")"
 
   # K2-3: Eingeladener nimmt die Einladung an — exakt das Spaltenmuster der App
-  # (invitationService.ts#acceptInvitation): user_id, accepted_at, use_count. Der
+  # (invitationService.ts#acceptInvitation (bis A-18a)): user_id, accepted_at, use_count. Der
   # E-Mail-Claim ist nötig, damit die BESTEHENDE (unveränderte) collaborators_update_v3
   # die noch nicht beanspruchte Zeile überhaupt sichtbar macht (invite_email = auth.email()).
   k2_accept_invitation="$(run_write "$U_INVITEE" \
@@ -1862,7 +1862,7 @@ SQL
   n4_delete_foreign_rows="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
 
   # manageMembers (R5b): Co-Admin versucht, einen neuen Mitarbeiter in T_MAIN einzuladen (echter
-  # App-Pfad, invitationService.ts#createInvitation-Muster) → muss abgelehnt bleiben. Eigentümer
+  # App-Pfad, invitationService.ts#createInvitation (bis A-18a)-Muster) → muss abgelehnt bleiben. Eigentümer
   # dieselbe Sonde → muss gelingen.
   managemembers_coadmin_denied="$(run_write "$U_COADMIN" \
     "INSERT INTO public.tournament_collaborators (id, tournament_id, invite_code, invite_email, role, invited_by, max_uses) VALUES ('$(uuid_for invite:n4-coadmin)', '$T_MAIN', 'RLSCOADMININV', 'nobody-coadmin@rls-matrix.test', 'viewer', '$U_COADMIN', 5);")"
@@ -2231,7 +2231,7 @@ r7_declined_invite_sees_inviter="$(run_select_as authenticated "$U_DECLINED_INVI
 r7_expired_invite_sees_inviter="$(run_select_as authenticated "$U_EXPIRED_INVITEE" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';" "$EXPIRED_INVITEE_EMAIL")"
 
 # Annahme-Sonden: exakt derselbe Update-Pfad wie k2_accept_invitation oben
-# (invitationService.ts#acceptInvitation), je eigene, nie committete Transaktion (run_write()).
+# (invitationService.ts#acceptInvitation (bis A-18a)), je eigene, nie committete Transaktion (run_write()).
 r7_accept_declined_invite="$(run_write "$U_DECLINED_INVITEE" \
   "UPDATE public.tournament_collaborators SET user_id = '$U_DECLINED_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_DECLINED_INVITE';" \
   "$DECLINED_INVITEE_EMAIL")"

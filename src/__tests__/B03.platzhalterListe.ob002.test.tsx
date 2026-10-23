@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ComponentProps } from 'react';
-import { makeTournament, renderInRouter, oeffneAlleAbschnitte, expectAbsent, expectRendered, renderAdminSidebar } from './helpers/b03PlatzhalterHarness';
+import { makeTournament, renderInRouter, oeffneAlleAbschnitte, expectAbsent, expectRendered } from './helpers/b03PlatzhalterHarness';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -170,17 +170,8 @@ const OB002: FunktionFall[] = [
       expectAbsent(/visibility\.printQr/, /visibility\.downloadQr/);
     },
   },
-  {
-    kennung: '@OB-002',
-    zeile: 'AdminMenue/Team-und-Helfer',
-    funktion: 'der Bereich „Team & Helfer“',
-    ort: 'das Menü des Admin Centers',
-    pruefen: async () => {
-      const sidebar = await renderAdminSidebar();
-      expectRendered(sidebar.container);
-      expectAbsent(/Team & Helfer/);
-    },
-  },
+  // A-18a: Die Zeile „der Bereich ‚Team & Helfer‘ im Menü“ entfällt – der Bereich wirkt jetzt (QR-Einstieg gebaut) und steht
+  // nach @OB-005 im Menü (B03.platzhalterListe.ob005.test.tsx). Die Beispielzeile im Record @OB-002 ist nachzuziehen.
   {
     kennung: '@OB-002',
     zeile: 'TeamHelfer/Schiedsrichter-Zuweisung',

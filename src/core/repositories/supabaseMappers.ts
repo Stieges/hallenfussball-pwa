@@ -803,60 +803,8 @@ export function mapTournamentToSupabase(
 }
 
 // =============================================================================
-// TOURNAMENT_COLLABORATORS MAPPERS (Invitations + Memberships)
+// TOURNAMENT_COLLABORATORS MAPPERS (Memberships)
 // =============================================================================
-
-export interface InvitationInsertInput {
-  tournamentId: string;
-  inviteCode: string;
-  role: string;
-  teamIds?: string[];
-  label?: string | null;
-  maxUses?: number;
-  expiresAtIso: string;
-  invitedBy: string;
-  invitedAtIso?: string;
-}
-
-/**
- * Maps an invitation-creation request to a tournament_collaborators insert row.
- * Used by invitationService.createInvitation.
- */
-export function mapInvitationInsertToSupabase(
-  input: InvitationInsertInput
-): CollaboratorInsert {
-  return {
-    tournament_id: input.tournamentId,
-    invite_code: input.inviteCode,
-    role: input.role,
-    team_ids: input.teamIds ?? [],
-    label: input.label ?? null,
-    max_uses: input.maxUses ?? 1,
-    use_count: 0,
-    expires_at: input.expiresAtIso,
-    invited_by: input.invitedBy,
-    invited_at: input.invitedAtIso ?? new Date().toISOString(),
-  };
-}
-
-export interface InvitationAcceptUpdate {
-  userId: string;
-  acceptedAtIso: string;
-  newUseCount: number;
-}
-
-/**
- * Maps an "invitation accepted" event to the row update.
- */
-export function mapInvitationAcceptToSupabase(
-  input: InvitationAcceptUpdate
-): CollaboratorUpdate {
-  return {
-    user_id: input.userId,
-    accepted_at: input.acceptedAtIso,
-    use_count: input.newUseCount,
-  };
-}
 
 export interface MembershipInsertInput {
   tournamentId: string;

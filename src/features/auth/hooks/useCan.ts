@@ -40,7 +40,18 @@ function rememberedRole(tournamentId: string): TournamentRole | null {
   return legacy === 'helper' ? 'collaborator' : null;
 }
 
-export function useCan(permission: Permission, tournamentId: string): boolean {
+export interface CanState {
+  allowed: boolean;
+  /** Die Rolle ist noch nicht bekannt und es gibt auch kein Gedächtnis: die Anzeige wartet, statt „kein Recht“ zu zeigen. */
+  isLoading: boolean;
+}
+
+/**
+ * Wie `useCan`, dazu der Ladezustand (A-18a, Review N-4): Eine Seite, die bei fehlendem Recht „kein Recht“ zeigt, wartet,
+ * solange die Rolle noch geladen wird, statt dem Eigentümer kurz „Nur die Turnierleitung …“ zu zeigen. `allowed` ist genau
+ * der Wert von `useCan`.
+ */
+export function useCanState(permission: Permission, tournamentId: string): CanState {
   const { role, isLoading, isUnknown } = useMyTournamentRole(tournamentId);
 
   useEffect(() => {
@@ -50,17 +61,21 @@ export function useCan(permission: Permission, tournamentId: string): boolean {
   }, [tournamentId, role]);
 
   if (role !== null) {
-    return hasPermission(role, permission);
+    return { allowed: hasPermission(role, permission), isLoading: false };
   }
   if (!isLoading && !isUnknown) {
     // Online bestätigt: kein Mitglied, kein Eigentümer.
-    return false;
+    return { allowed: false, isLoading: false };
   }
   const remembered = rememberedRole(tournamentId);
   if (remembered !== null) {
-    return hasPermission(remembered, permission);
+    return { allowed: hasPermission(remembered, permission), isLoading: false };
   }
-  return UNKNOWN_ROLE_RIGHTS.has(permission);
+  return { allowed: UNKNOWN_ROLE_RIGHTS.has(permission), isLoading: isLoading && !isUnknown };
+}
+
+export function useCan(permission: Permission, tournamentId: string): boolean {
+  return useCanState(permission, tournamentId).allowed;
 }
 
 /**
