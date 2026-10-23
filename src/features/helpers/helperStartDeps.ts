@@ -19,6 +19,19 @@ export function markHelperStartHandled(): void {
   startHandled = true;
 }
 
+/**
+ * Die Start-Weiche entscheidet nur, wenn die Startseite `/` die ERSTE Adresse des Seitenaufrufs ist (@HE-096). Öffnet der
+ * Seitenaufruf zuerst etwas anderes (Feld per QR/Link, `/join/…`, `/helfer`, Spielplan), ist die Entscheidung damit getroffen:
+ * Jeder spätere Weg zur Startseite (Kopf-Pfeil, Fehlerseite, Browser-Zurück, Logo) ist bewusst und wird nicht zurückgeleitet (@HE-110).
+ * `hash` ist `window.location.hash` beim Start (die App routet über den Hash).
+ */
+export function noteHelperStartEntry(hash: string): void {
+  const route = hash.replace(/^#/, '').split('?')[0];
+  if (route !== '' && route !== '/') {
+    startHandled = true;
+  }
+}
+
 /** Nur für Tests: die Entscheidung gilt wieder als offen. */
 export function resetHelperStart(): void {
   startHandled = false;

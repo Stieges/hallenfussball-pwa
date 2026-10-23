@@ -12,6 +12,7 @@ import App from './App';
 import './styles/global.css';
 import { initInertPolyfill } from './utils/polyfills/inert';
 import { initSentry, captureBootContext } from './lib/sentry';
+import { noteHelperStartEntry } from './features/helpers/helperStartDeps';
 
 /**
  * Global handler for unhandled promise rejections
@@ -95,6 +96,9 @@ initSentry();
 // keys, navigator.onLine). Lets us correlate auth/cache bugs with specific
 // deploys and surface the stale-precache class of issues. Async, fire-and-forget.
 void captureBootContext();
+
+// Start-Weiche für Helfer-Geräte: nur entscheiden, wenn die Startseite die erste Adresse ist (@HE-096, @HE-110)
+noteHelperStartEntry(window.location.hash);
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

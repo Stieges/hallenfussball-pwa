@@ -177,6 +177,30 @@ test.describe('A-17c-2 Helfer-Wiedereinstieg (Netz-Stub)', () => {
         await expect(page).toHaveURL(/#\/$/);
         await expect(page.getByTestId(`tournament-card-${TRAINING}`)).toBeVisible();
       });
+
+      test('@HE-110 Start direkt im Turnier (Reiter Spielplan): Kopf-Pfeil „←“ (Zurück zum Dashboard) bleibt auf der Startseite', async ({ page, context }) => {
+        await oeffneApp(context, {
+          eintraege: [eintrag(CUP, 'Live-Cup', 2, 0)],
+          turniere: [turnier(CUP, 'Live-Cup', 0), turnier(TRAINING, 'Training', 10)],
+          status: zugangAntwort(CUP, 'Live-Cup', 0),
+        });
+        // Link auf den Reiter Spielplan des Turniers (wie ein geteilter Link oder Neuladen dort): die Weiche auf „/“ läuft nie
+        await page.goto(`${app.basisUrl}/#/tournament/${CUP}/schedule`);
+        await page.getByTitle('Zurück zum Dashboard').click();
+        await expect(page.getByTestId(`helper-assignment-${CUP}`)).toBeVisible({ timeout: 10000 });
+        await page.waitForTimeout(4000); // die Weiche darf nicht nachträglich ans Feld zurückleiten
+        await expect(page).toHaveURL(/#\/$/);
+      });
+
+      test('@HE-096 Gegenprobe: Adresse der App („/“ als erste Adresse) führt weiterhin direkt ans Feld', async ({ page, context }) => {
+        await oeffneApp(context, {
+          eintraege: [eintrag(CUP, 'Live-Cup', 2, 0)],
+          turniere: [turnier(CUP, 'Live-Cup', 0)],
+          status: zugangAntwort(CUP, 'Live-Cup', 0),
+        });
+        await page.goto(`${app.basisUrl}/`);
+        await expect(page).toHaveURL(/#\/tournament\/00000000-0000-4000-8000-00000000c0b1\/live\?f=2/, { timeout: 20000 });
+      });
     });
   }
 });

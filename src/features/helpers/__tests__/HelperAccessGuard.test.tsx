@@ -11,6 +11,10 @@ import { initRealDeI18n } from '../../../test/realDeI18n';
 import { AuthContext } from '../../auth/context/authContextInstance';
 import type { AuthContextValue } from '../../auth/context/authContextValue';
 import { clearHelperAccessIndex, upsertHelperAccessEntry } from '../helperAccessStore';
+import { resetHelperStart } from '../helperStartDeps';
+import type { HelperStartContextDeps } from '../helperStartContext';
+import { localDateKey } from '../runningState';
+import { HelperStartGate } from '../components/HelperStartGate';
 import type { HelperStatusDeps } from '../useHelperAccessStatus';
 import { HelperAccessGuard } from '../components/HelperAccessGuard';
 
@@ -172,6 +176,38 @@ describe('Gegenbeispiele: wer kein Helfer dieses Turniers ist, bleibt unberührt
     expect(await screen.findByTestId('inhalt')).toBeTruthy();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.getByTestId('inhalt')).toBeTruthy();
+  });
+});
+
+describe('@HE-110 „Zur Startseite“ auf der Endkarte', () => {
+  it('Zugang entzogen, Gerät hat daneben ein laufendes Turnier → „Zur Startseite“ bleibt auf „/“, die Start-Weiche leitet nicht zurück', async () => {
+    resetHelperStart(); // wie beim Start direkt an der Endkarte: die Weiche auf „/“ ist nie gelaufen
+    const today = localDateKey(new Date());
+    upsertHelperAccessEntry('anon-tom', entry({ relation: 'revoked' }));
+    upsertHelperAccessEntry('anon-tom', entry({ tournamentId: 't-niko', title: 'Nikolaus-Turnier', code: 'NIKOCODE12', field: 1, date: today }));
+    const { deps } = makeStatus([status({ relation: 'revoked' })]);
+    const startDeps: HelperStartContextDeps = {
+      readSession: async () => ({ kind: 'device', userId: 'anon-tom' }),
+      fetchStatus: vi.fn(async (id: string): Promise<HelperRpcResult<HelperAccessStatus>> => (
+        id === 't-niko' ? { ok: true, data: { state: 'open', relation: 'accepted', field: 1, closed: false, tournament: { id: 't-niko', title: 'Nikolaus-Turnier', date: today } } } : status({ relation: 'revoked' })
+      )),
+    };
+    render(
+      <AuthContext.Provider value={{ user: authState.user } as unknown as AuthContextValue}>
+        <MemoryRouter initialEntries={['/tournament/t-cup/live']}>
+          <Routes>
+            <Route path="/" element={<><HelperStartGate active tournaments={[]} deps={startDeps}><div data-testid="startseite">Startseite</div></HelperStartGate><Where /></>} />
+            <Route path="*" element={<><HelperAccessGuard tournamentId="t-cup" activeTab="management" statusDeps={deps}><div data-testid="inhalt">Cockpit</div></HelperAccessGuard><Where /></>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    );
+    expect((await screen.findByTestId('join-end-state')).textContent).toContain('Du hast keinen Zugriff mehr');
+    await userEvent.click(screen.getByText('Zur Startseite'));
+    expect(await screen.findByTestId('startseite')).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.getByTestId('where').textContent).toBe('/');
+    expect(screen.getByTestId('startseite')).toBeTruthy();
   });
 });
 
