@@ -166,6 +166,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_007_ci_schema_reader_grants.sql)
+      echo "positive-ci-schema-reader-select-field-control positive-ci-schema-reader-select-match-corrections"
+      ;;
     20261110_005_result_entry_forfeit.sql)
       echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
       ;;
@@ -605,6 +608,8 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  "positive-ci-schema-reader-select-field-control"
+  "positive-ci-schema-reader-select-match-corrections"
   # A-25b (20261110_005_result_entry_forfeit.sql): Nichtantritt -- forfeit_absent geschuetzt und vom Schreibweg (mit
   # Feldsteuerung) geschrieben.
   "matches-guard-engine-columns-forfeit-absent"

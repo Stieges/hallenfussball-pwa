@@ -706,6 +706,21 @@ SELECT 'heartbeats-select-manage-screens',
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
 
+-- 20261110_007_ci_schema_reader_grants.sql (Werkzeugkette): die Drift-Check-Rolle darf field_control lesen. Ohne diesen
+-- GRANT scheitert pg_dump --schema-only (scripts/db-drift-check.sh, Live-Dump als ci_schema_reader) mit "permission
+-- denied for table field_control" (seit A-34 live). Keine Policy fuer ci_schema_reader -- RLS liefert weiter 0 Zeilen.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-field-control',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.field_control'), 'SELECT'), false)
+
+-- 20261110_007_ci_schema_reader_grants.sql (Befund C-GRANTS-NUR-LIVE): das Leserecht auf match_corrections hat das
+-- Datenbank-Programm (21.09.) nur live vergeben; seit _007 steht es im Repo. Ohne den GRANT scheitert pg_dump
+-- --schema-only als Leserolle auf einem aus dem Repo aufgebauten Stand mit "permission denied for table
+-- match_corrections". Live schon "t"; im Container vor _007 "f".
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-match-corrections',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.match_corrections'), 'SELECT'), false)
 -- A-25b (20261110_005_result_entry_forfeit.sql, @W2A-022, @W2A-024, @W2A-026; C-NICHTANTRITT-FEHLT): forfeit_absent ist
 -- Schutzspalte (Client-Rollen aendern sie nie, INSERT neutral NULL) und append_match_events schreibt sie -- in der
 -- Fassung MIT Feldsteuerung (Review-Auflage 4: Basis 20261110_003, sonst waere A-34 zurueckgedreht).
