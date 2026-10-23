@@ -28,7 +28,7 @@ const FRESH = { fresh: true } as const;
  * ohnehin nie einen unterstuetzten Weg, ihr Ergebnis ueber `handleTournamentUpdate` zu aendern --
  * das ist ausschliesslich der RPC/`MatchCommands` (B4/PC16).
  */
-function stripEngineOverlayFields(
+export function stripEngineOverlayFields(
     updated: Tournament,
     raw: Tournament | null,
     overlaidIds: ReadonlySet<string>,
@@ -57,6 +57,7 @@ function stripEngineOverlayFields(
             matchStatus: rawMatch.matchStatus,
             decidedBy: rawMatch.decidedBy,
             finishedAt: rawMatch.finishedAt,
+            liveState: rawMatch.liveState, // C-OVERLAY-LIVESTATE-BLEIBT: das Leeren gilt nur der Anzeige, gespeichert wird der Rohstand
             kit: rawMatch.kit, // A-30a: getragene Farben kommen nur vom Server, nie aus der Ueberlagerung
         };
         if (JSON.stringify(restored) !== JSON.stringify(match)) {

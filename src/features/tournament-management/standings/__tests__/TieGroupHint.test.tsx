@@ -37,7 +37,7 @@ describe('Hinweis bei offenem Gleichstand (@ET-025, @W2A-067, @W2A-064)', () => 
     const hint = screen.getByTestId('tie-hint-choice');
     expect(within(hint).getByText('Gleichstand – Entscheidung nötig')).toBeInTheDocument();
     expect(hint).toHaveTextContent('TSV Petting und DJK Otting sind nach allen Kriterien gleich (Platz 3 und 4).');
-    expect(hint).toHaveTextContent('Strafstoßschießen eintragen oder Ergebnis so akzeptieren.');
+    expect(hint).toHaveTextContent('Strafstoßschießen eintragen oder Platz teilen.');
     expect(screen.getByTestId('tie-decide-entry')).toHaveTextContent('Gleichstand entscheiden');
     // Gegenbeispiel: die Pflicht-Form ist nicht da
     expect(screen.queryByTestId('tie-hint-mandatory')).toBeNull();
@@ -89,7 +89,7 @@ describe('Wer sieht welche Tasten (@W2A-050, @W2A-071, @W2A-062)', () => {
 
   it('@W2A-050 Helfer, Wahl-Fall: der Text nennt beide Wege, keine Taste', async () => {
     await zeige(nikolaus(), '', fakeTie({ canDecide: false }));
-    expect(screen.getByTestId('tie-hint-choice')).toHaveTextContent('Die Turnierleitung entscheidet: Strafstoßschießen oder Ergebnis so akzeptieren.');
+    expect(screen.getByTestId('tie-hint-choice')).toHaveTextContent('Die Turnierleitung entscheidet: Strafstoßschießen oder Platz teilen.');
     expect(screen.queryByRole('button')).toBeNull();
   });
 
@@ -110,11 +110,11 @@ describe('Wer sieht welche Tasten (@W2A-050, @W2A-071, @W2A-062)', () => {
 });
 
 describe('Entschieden: Ergebnis sichtbar, zurücknehmen bis zum Gruppenabschluss (@W2A-063, @W2A-070, @W2A-071, G6)', () => {
-  it('@W2A-063 nach „Ergebnis so akzeptieren“: Hinweis „Ergebnis akzeptiert“, Platz 3 geteilt, nächstes Team Platz 5, ohne Name und Zeit', async () => {
+  it('@W2A-063 nach „Platz teilen“: Hinweis „Platz geteilt“, Platz 3 geteilt, nächstes Team Platz 5, ohne Name und Zeit', async () => {
     const t = await mitEntscheidung(nikolaus(), shared(['P', 'D']));
     await zeige(t, '', fakeTie());
     const info = screen.getByTestId('tie-decided-info');
-    expect(info).toHaveTextContent('Ergebnis akzeptiert');
+    expect(info).toHaveTextContent('Platz geteilt');
     expect(info).toHaveTextContent('TSV Petting und DJK Otting teilen Platz 3. Das nächste Team steht auf Platz 5.');
     expect(info.textContent).not.toMatch(/\d{1,2}:\d{2}\s*$/); // keine Uhrzeit (Name/Zeit erst mit GA4 A-13b)
     expect(screen.queryByTestId('tie-hint-choice')).toBeNull();

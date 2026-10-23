@@ -19,6 +19,7 @@ import {
   mapLiveMatchFromSupabase,
   isMatchActive,
 } from './liveMatchMappers';
+import { RepositoryError } from '../errors';
 import {
   callAppendMatchEvents,
   callServerTime,
@@ -57,12 +58,16 @@ function isRealtimeChannelStatus(value: string): value is RealtimeChannelStatus 
   return REALTIME_CHANNEL_STATUSES.includes(value);
 }
 
+/** Cloud-Status eines angepfiffenen Spiels (`matches.match_status`); `live_state` ist bei beendeten Spielen null. */
+const STARTED_MATCH_STATUSES: string[] = ['running', 'paused', 'finished'];
+
 // ============================================================================
 // REPOSITORY
 // ============================================================================
 
 export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
   private subscriptions = new Map<string, RealtimeChannel>();
+  private channelSequence = 0;
   private teamsCache = new Map<string, Map<string, TeamRow>>();
 
   // ==========================================================================
@@ -177,6 +182,30 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
     }
   }
 
+  /**
+   * Strikte Abfrage für die Anpfiff-Sperre (@LZ-003, C-LIVE-STAND-BEENDET-FEHLT): liest den Status
+   * (nicht `live_state` -- das ist bei beendeten Spielen null) und wirft bei jedem Lesefehler.
+   * Ohne Cloud-Verbindung gibt es keine Antwort, also wirft sie ebenfalls.
+   */
+  async hasStartedMatches(tournamentId: string): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new RepositoryError('get', 'Supabase nicht konfiguriert');
+    }
+    if (!tournamentId) {
+      throw new RepositoryError('get', 'tournamentId fehlt');
+    }
+    const { data, error } = await supabase
+      .from('matches')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+      .in('match_status', STARTED_MATCH_STATUSES)
+      .limit(1);
+    if (error) {
+      throw new RepositoryError('get', error.message, error);
+    }
+    return (data?.length ?? 0) > 0;
+  }
+
   // ==========================================================================
   // Server-Schreibweg (B3b) -- noch nirgends aufgerufen, Nutzung ab PR C
   // ==========================================================================
@@ -215,7 +244,10 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
     this.unsubscribe(tournamentId);
 
     const channel = supabase
-      .channel(`live-matches-${tournamentId}`)
+      // C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG: supabase-js baut einen Kanal asynchron ab und liefert unter
+      // demselben Namen bis dahin den noch „leaving“ Kanal zurück (`.on()` wirft dann). Jeder Beitritt bekommt
+      // deshalb einen eigenen Namen und damit einen frischen Kanal.
+      .channel(`live-matches-${tournamentId}-${++this.channelSequence}`)
       .on(
         'postgres_changes',
         {

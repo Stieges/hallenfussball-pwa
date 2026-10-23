@@ -190,6 +190,9 @@ pending_assertions_for() {
     20261113_101_monitor_heartbeat_wake_lock.sql)
       echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
       ;;
+    20261110_010_standing_decision_null_version.sql)
+      # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
+      ;;
     *)
       return 1
       ;;

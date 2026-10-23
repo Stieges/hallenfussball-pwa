@@ -5,8 +5,8 @@
  *
  * Liefert das Ergebnis der GEMEINSAMEN Funktion `getMatchStartState`
  * (utils/matchStartState.ts) und speist sie mit dem Live-Stand ein, den die App
- * schon für das Cockpit liest: `ILiveMatchRepository.getAll` — derselbe Service,
- * den das Cockpit (`useCockpitExecution`) liest. Keine eigene Live-Engine.
+ * schon für das Cockpit nutzt: die strikte Abfrage `ILiveMatchRepository.hasStartedMatches`
+ * (zählt beendete Spiele mit, wirft bei Lesefehlern; C-LIVE-STAND-BEENDET-FEHLT). Keine eigene Live-Engine.
  *
  * Ohne RepositoryProvider im Baum (isolierte Komponenten-Tests, rein lokale
  * Nutzung ohne Cloud-Synchronisierung) gibt es keine Live-Quelle; dann entscheidet
@@ -77,24 +77,11 @@ export function useTournamentStartState(
     let cancelled = false;
     setLive({ status: 'loading' });
     liveRepository
-      .getAll(tournament.id)
-      .then((map) => {
+      .hasStartedMatches(tournament.id)
+      .then((anyStarted) => {
         if (cancelled) {
           return;
         }
-        let anyStarted = false;
-        map.forEach((match) => {
-          // NOT_STARTED zählt nicht; RUNNING/PAUSED/FINISHED sind der Beweis,
-          // dass seit dem Festlegen angepfiffen wurde (W1: laufend/pausiert —
-          // FINISHED mitgezählt, weil eine lokale tournament.matches-Kopie
-          // veraltet sein kann und ein beendetes Live-Spiel zwingend angepfiffen
-          // wurde). FINISHED mitgezählt stimmt nur für das lokale Repository:
-          // der Cloud-Live-Stand kennt beendete Spiele nicht — die Lücke ist
-          // Befund C-LIVE-STAND-BEENDET-FEHLT, Übergabe an Spur A.
-          if (match.status !== 'NOT_STARTED') {
-            anyStarted = true;
-          }
-        });
         setLive({ status: 'ok', anyStarted });
       })
       .catch(() => {
@@ -132,20 +119,10 @@ export function useTournamentStartState(
       return Promise.resolve(fromLocal);
     }
     return liveRepository
-      .getAll(tournament.id)
-      .then((map) => {
-        let anyStarted = false;
-        map.forEach((match) => {
-          if (match.status !== 'NOT_STARTED') {
-            anyStarted = true;
-          }
-        });
-        return getMatchStartState(
-          tournament.matches,
-          { status: 'ok', anyStarted },
-          isEstablished
-        );
-      })
+      .hasStartedMatches(tournament.id)
+      .then((anyStarted) =>
+        getMatchStartState(tournament.matches, { status: 'ok', anyStarted }, isEstablished)
+      )
       .catch(() => 'unknown');
   }, [tournament.matches, tournament.id, isEstablished, offlineInCloud, liveRepository]);
 

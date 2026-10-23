@@ -109,7 +109,6 @@
   },
   "schedule": {
     "runningMatchNoPermission": "Laufendes Spiel kann nicht bearbeitet werden.",
-    "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen.",
     "matchLabel": "Runde {{round}}",
     "conflicts": {
       "title": "Konflikte gefunden",
@@ -205,7 +204,8 @@
       "restDone_one": "{{count}} weiteres Spiel als Wertung eingetragen.",
       "restDone_other": "{{count}} weitere Spiele als Wertung eingetragen.",
       "restPartial": "{{done}} weitere Spiele gewertet, {{skipped}} nicht (schon angepfiffen oder Fehler)."
-    }
+    },
+    "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen."
   },
   "scheduleActions": {
     "share": "Teilen"
@@ -1168,26 +1168,32 @@
       "teamsEqual": "{{names}} sind nach allen Kriterien gleich ({{places}}).",
       "needSetting": "Platz {{place}} muss laut Turnierregeln ausgespielt werden.",
       "needFollowUp": "Platz {{place}} der Gruppe spielt in einem weiteren Spiel weiter – ein gleicher Platz ginge dort nicht.",
-      "openChoice": "Strafstoßschießen eintragen oder Ergebnis so akzeptieren.",
+      "openChoice": "Strafstoßschießen eintragen oder Platz teilen.",
       "helperShootout": "Die Turnierleitung trägt das Ergebnis des Strafstoßschießens ein.",
       "helperOrder": "Die Turnierleitung legt die Reihenfolge fest.",
-      "helperChoice": "Die Turnierleitung entscheidet: Strafstoßschießen oder Ergebnis so akzeptieren.",
+      "helperChoice": "Die Turnierleitung entscheidet: Strafstoßschießen oder Platz teilen.",
       "offline": "Entscheiden geht nur mit Netz – oder über „Gruppe abschließen“.",
       "decide": "Gleichstand entscheiden",
       "shootout": "Strafstoßschießen eintragen",
       "order": "Reihenfolge festlegen",
       "withdrawnBy": "Zurückgenommen von {{name}} · {{time}}",
-      "withdrawnByUnknown": "Zurückgenommen · {{time}}"
+      "withdrawnByUnknown": "Zurückgenommen · {{time}}",
+      "acceptedBy": "Platz geteilt von {{name}} · {{time}}",
+      "acceptedByUnknown": "Platz geteilt · {{time}}",
+      "shootoutBy": "Strafstoßschießen eingetragen von {{name}} · {{time}}",
+      "shootoutByUnknown": "Strafstoßschießen eingetragen · {{time}}",
+      "orderBy": "Reihenfolge festgelegt von {{name}} · {{time}}",
+      "orderByUnknown": "Reihenfolge festgelegt · {{time}}"
     },
     "decided": {
-      "sharedTitle": "Ergebnis akzeptiert",
+      "sharedTitle": "Platz geteilt",
       "sharedTitleHelper": "Gleicher Platz",
       "sharedBody": "{{names}} teilen {{places}}. Das nächste Team steht auf Platz {{next}}.",
       "shootoutTitle": "Strafstoßschießen {{winner}}:{{loser}} für {{team}}",
       "shootoutBody": "{{team}} steht in der Tabelle vor {{other}}. Die Spielergebnisse bleiben unverändert.",
       "orderTitle": "Reihenfolge festgelegt",
       "orderBody": "Reihenfolge von {{names}} nach dem Strafstoßschießen festgelegt. Die Spielergebnisse bleiben unverändert.",
-      "withdrawShared": "Annahme zurücknehmen",
+      "withdrawShared": "Teilen zurücknehmen",
       "withdrawShootout": "Strafstoßschießen zurücknehmen",
       "withdrawOrder": "Reihenfolge zurücknehmen",
       "withdrawUntil": "Möglich bis zum Abschluss der Gruppe.",
@@ -1198,7 +1204,7 @@
       "byUnknown": "Turnierleitung · {{time}}"
     },
     "dialog": {
-      "titleChoice": "Gleichstand entscheiden",
+      "titleChoice": "Gleichstand auf Platz {{place}}",
       "titleShootout": "Strafstoßschießen eintragen",
       "titleOrder": "Reihenfolge festlegen",
       "close": "Schließen",
@@ -1207,12 +1213,10 @@
       "save": "Speichern",
       "understood": "Verstanden",
       "context": "Gleichauf auf {{places}} nach allen Kriterien: {{names}}.",
-      "contextNoPlay": "{{places}} müssen laut Turnierregeln nicht ausgespielt werden.",
       "choiceGroup": "Wie willst du entscheiden?",
-      "shootoutHint": "Du trägst die Treffer beider Teams ein, der Sieger steht vorn. Der Normalfall.",
+      "shootoutHint": "Der Sieger bekommt Platz {{place}}.",
       "orderHint": "Nach dem Strafstoßschießen. Du nennst kurz den Grund.",
-      "accept": "Ergebnis so akzeptieren",
-      "acceptHint": "Ein Tipp genügt, einen Grund brauchst du nicht. {{names}} teilen dann {{places}}, das nächste Team steht auf Platz {{next}}. Bis zum Abschluss der Gruppe kannst du das zurücknehmen.",
+      "accept": "Platz teilen",
       "whyTitle": "Warum nur das Strafstoßschießen?",
       "whyRules": "Turnierregeln ansehen",
       "shootoutLegend": "Ergebnis des Strafstoßschießens",
@@ -1231,7 +1235,7 @@
         "BLOCK_CHANGED": "Der Gleichstand hat sich inzwischen geändert. Bitte schließe den Dialog und prüfe die Tabelle.",
         "STALE": "Speichern hat nicht geklappt, weil sich das Turnier gleichzeitig geändert hat. Bitte erneut versuchen.",
         "OFFLINE": "Entscheiden geht nur mit Netz – oder über „Gruppe abschließen“.",
-        "SHARED_PLACE_NOT_ALLOWED": "Dieser Platz muss ausgespielt werden. „Ergebnis so akzeptieren“ geht hier nicht.",
+        "SHARED_PLACE_NOT_ALLOWED": "Dieser Platz muss ausgespielt werden. „Platz teilen“ geht hier nicht.",
         "REASON_REQUIRED": "Bitte nenne einen Grund (höchstens 500 Zeichen).",
         "ORDER_MISMATCH": "Die Reihenfolge passt nicht zum Gleichstand. Bitte schließe den Dialog und öffne ihn neu.",
         "SHOOTOUT_NEEDS_WINNER": "Das Strafstoßschießen braucht einen Sieger.",
@@ -1246,7 +1250,12 @@
         "current": "Es gilt: {{what}}",
         "notSaved": "Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt die geltende Entscheidung.",
         "titleBy": "Schon entschieden von {{name}}"
-      }
+      },
+      "teamsEqual": "{{names}} sind nach allen Regeln gleich.",
+      "acceptHintTwo": "Beide auf Platz {{place}}, danach folgt Platz {{next}}.",
+      "acceptHintThree": "Alle drei auf Platz {{place}}, danach folgt Platz {{next}}.",
+      "acceptHintMany": "Alle {{count}} auf Platz {{place}}, danach folgt Platz {{next}}.",
+      "thenClosed": "Danach ist die Gruppe abgeschlossen."
     },
     "settings": {
       "title": "Turnierregeln: Gleichstand",
@@ -1254,12 +1263,12 @@
       "save": "Plätze übernehmen",
       "reset": "Änderung verwerfen",
       "readOnly": "Nur die Turnierleitung ändert diese Einstellung.",
-      "confirmTitle": "Annahme wird aufgehoben",
+      "confirmTitle": "Geteilter Platz wird aufgehoben",
       "confirmIntro": "Du hast die auszuspielenden Plätze geändert.",
-      "confirmBody": "Für {{names}} liegt die Annahme „Ergebnis so akzeptieren“ vor. Sie wird aufgehoben, dann ist ein Strafstoßschießen nötig.",
+      "confirmBody": "{{names}} teilen sich bisher einen Platz („Platz teilen“). Das wird aufgehoben, dann ist ein Strafstoßschießen nötig.",
       "confirmKeep": "Ein eingetragenes Strafstoßschießen oder eine festgelegte Reihenfolge bleibt bei jeder Änderung bestehen.",
       "confirmCancel": "Abbrechen",
-      "confirmOk": "Annahme aufheben",
+      "confirmOk": "Teilen aufheben",
       "errors": {
         "STALE": "Die Einstellung hat sich gleichzeitig geändert und wurde nicht gespeichert. Bitte prüfe den neuen Stand und versuche es erneut.",
         "OFFLINE": "Speichern geht nur mit Netz.",
@@ -1271,6 +1280,134 @@
       "one": "Platz {{from}}",
       "two": "Platz {{from}} und {{to}}",
       "range": "Platz {{from}} bis {{to}}"
+    }
+  },
+  "groupCompletion": {
+    "state": {
+      "open": "offen",
+      "running": "läuft",
+      "ready": "bereit zum Abschluss",
+      "completed": "abgeschlossen",
+      "checkSlots": "Besetzung prüfen",
+      "notSent": "noch nicht gesendet"
+    },
+    "phase": {
+      "label": "{{phase}}: {{state}}",
+      "groups": "Gruppenphase",
+      "finals": "Finalrunde"
+    },
+    "head": {
+      "count": "{{done}} von {{total}} Spielen entschieden",
+      "helperNote": "Die Turnierleitung schließt die Gruppe ab.",
+      "lockedWhy_one": "Noch {{count}} Spiel nicht entschieden",
+      "lockedWhy_other": "Noch {{count}} Spiele nicht entschieden"
+    },
+    "button": {
+      "close": "Gruppe abschließen",
+      "again": "Erneut abschließen",
+      "closeGroup": "{{name}} abschließen",
+      "reopen": "Gruppe wieder öffnen",
+      "decide": "Gleichstand entscheiden",
+      "shootout": "Strafstoßschießen eintragen",
+      "order": "Reihenfolge festlegen",
+      "decideGroup": "{{name}}: Gleichstand entscheiden",
+      "shootoutGroup": "{{name}}: Strafstoßschießen eintragen",
+      "orderGroup": "{{name}}: Reihenfolge festlegen"
+    },
+    "banner": {
+      "title": "{{name}} ist fertig – Tabelle prüfen und abschließen",
+      "title_all": "Alle Spiele entschieden – Tabelle prüfen und abschließen",
+      "body": "Alle {{count}} Spiele sind entschieden. Erst mit dem Abschluss werden die Plätze in der Finalrunde besetzt.",
+      "bodyNoFinals": "Alle {{count}} Spiele sind entschieden. Erst mit dem Abschluss steht die Gruppe fest.",
+      "body_all": "Alle {{count}} Spiele sind entschieden. Erst mit dem Abschluss steht der Endstand fest.",
+      "many": "{{groups}} sind fertig – Tabellen prüfen und abschließen",
+      "manyBody": "Alle Spiele dieser Gruppen sind entschieden. Schließe jede Gruppe einzeln ab; erst mit dem Abschluss werden ihre Plätze besetzt.",
+      "reopenedTitle": "{{name}} ist wieder geöffnet",
+      "reopenedTitle_all": "Die Gruppe ist wieder geöffnet",
+      "reopenedBy": "{{name}} · {{time}} · Grund: {{reason}}",
+      "reopenedByUnknown": "Grund: {{reason}}",
+      "reopenedBody": "Die Besetzung der Finalrunde bleibt bis zum erneuten Abschluss stehen. Korrigiere, was nötig ist, und schließe dann wieder ab.",
+      "reopenedBody_all": "Der Endstand bleibt bis zum erneuten Abschluss, wie er war. Korrigiere, was nötig ist, und schließe dann wieder ab.",
+      "thenClosed": "Danach ist die Gruppe abgeschlossen."
+    },
+    "stale": {
+      "title": "{{name}}: Besetzung nach Korrektur prüfen",
+      "title_all": "Besetzung nach Korrektur prüfen",
+      "body": "Ein Ergebnis wurde nach dem Abschluss korrigiert. Prüfe die Tabelle; beim erneuten Abschluss wird neu besetzt.",
+      "body_all": "Ein Ergebnis wurde nach dem Abschluss korrigiert. Prüfe die Tabelle; beim erneuten Abschluss wird der Endstand neu übergeben."
+    },
+    "done": {
+      "title": "{{name}} abgeschlossen",
+      "title_all": "Gruppe abgeschlossen",
+      "by": "{{name}} · {{time}}",
+      "effect": "{{label}}: {{team}} ({{side}}).",
+      "sideHome": "Heim",
+      "sideAway": "Gast",
+      "effectAll": "Die Tabelle ist an den Endstand übergeben.",
+      "phaseDone": "Die Gruppenphase ist abgeschlossen. Alle Plätze der Finalrunde sind besetzt."
+    },
+    "dialog": {
+      "title": "{{name}} abschließen",
+      "title_all": "Gruppe abschließen",
+      "titleAgain": "{{name}} erneut abschließen",
+      "titleAgain_all": "Gruppe erneut abschließen",
+      "intro": "Alle {{count}} Spiele von {{name}} sind entschieden. Prüfe die Tabelle, bevor du abschließt.",
+      "intro_all": "Alle {{count}} Spiele sind entschieden. Prüfe die Tabelle, bevor du abschließt.",
+      "rankAria": "Tabelle",
+      "rankLine": "{{points}} Pkt · {{goals}} · {{diff}}",
+      "effectTitle": "Danach besetzt: {{list}}.",
+      "effectItem": "{{label}} {{side}} {{team}}",
+      "effectOthers": "Die übrigen Gruppen laufen noch, ihre Plätze bleiben offen.",
+      "effectAll": "Danach ist die Tabelle an den Endstand übergeben.",
+      "effectNone": "Danach ist die Gruppe abgeschlossen.",
+      "decided": "Der Gleichstand ist schon entschieden: {{what}}. Du musst ihn nicht noch einmal eintragen.",
+      "confirm": "Gruppe abschließen",
+      "confirmAgain": "Erneut abschließen",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "understood": "Verstanden"
+    },
+    "notice": {
+      "openMatches": {
+        "title_one": "Noch {{count}} Spiel nicht entschieden",
+        "title_other": "Noch {{count}} Spiele nicht entschieden",
+        "body": "{{matches}}. {{name}} ist nicht abgeschlossen, die Plätze bleiben offen.",
+        "body_all": "{{matches}}. Die Gruppe ist nicht abgeschlossen.",
+        "hint": "Schließe ab, sobald alle Spiele entschieden sind."
+      },
+      "already": {
+        "title": "{{name}} ist schon abgeschlossen",
+        "title_all": "Die Gruppe ist schon abgeschlossen",
+        "body": "Eine andere Person hat die Gruppe mit derselben Tabelle abgeschlossen. Du musst nichts mehr tun."
+      },
+      "tableChanged": {
+        "title": "Die Tabelle hat sich geändert",
+        "body": "Während du abgeschlossen hast, hat sich etwas geändert. Dein Abschluss wurde nicht gespeichert. Prüfe die Tabelle und schließe dann erneut ab."
+      },
+      "differently": {
+        "title": "Schon anders abgeschlossen",
+        "body": "Eine andere Person hat die Gruppe mit einer anderen Rangfolge abgeschlossen. Dein Abschluss wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand."
+      }
+    },
+    "errors": {
+      "OFFLINE": "„Gruppe abschließen“ braucht eine Verbindung. Bitte versuche es mit Netz erneut.",
+      "RETRY_LATER": "Der Server war gerade belegt. Bitte erneut versuchen.",
+      "UNKNOWN": "Das hat nicht geklappt. Bitte erneut versuchen.",
+      "FORBIDDEN": "Dafür fehlt dir die Berechtigung. Nur die Turnierleitung schließt Gruppen ab."
+    },
+    "reopen": {
+      "title": "{{name}} wieder öffnen",
+      "title_all": "Gruppe wieder öffnen",
+      "body": "Solange {{name}} offen ist, bleibt die Besetzung der Finalrunde stehen. Erst der erneute Abschluss besetzt neu. Einzelne Ergebnisse korrigierst du auch ohne Wiederöffnen.",
+      "body_all": "Solange die Gruppe offen ist, bleibt der Endstand, wie er war. Erst der erneute Abschluss übergibt ihn neu. Einzelne Ergebnisse korrigierst du auch ohne Wiederöffnen.",
+      "reasonLabel": "Grund (Pflicht)",
+      "reasonCount": "{{count}} / {{max}}",
+      "reasonHint": "Bitte keine Spielernamen eintragen. Nur für die Turnierleitung sichtbar.",
+      "confirm": "Gruppe wieder öffnen",
+      "errors": {
+        "NOT_COMPLETED": "Die Gruppe ist gar nicht mehr abgeschlossen. Bitte prüfe die Tabelle.",
+        "REASON_REQUIRED": "Bitte nenne einen Grund (höchstens 500 Zeichen)."
+      }
     }
   }
 }

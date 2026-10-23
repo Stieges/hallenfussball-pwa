@@ -1,0 +1,1437 @@
+{
+ "r1": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 1
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [
+      {
+       "id": "r1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "checkNumber": 47,
+       "createdAt": "2026-11-28T13:02:00Z",
+       "sameName": 1,
+       "sameNamePending": 1,
+       "sameNameMember": null,
+       "sameNameDeclinedAt": null
+      }
+     ],
+     "members": [
+      {
+       "memberId": "m1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T12:30:00Z",
+       "controls": [
+        2
+       ]
+      },
+      {
+       "memberId": "m2",
+       "name": "Clara",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      }
+     ]
+    }
+   }
+  }
+ },
+ "r2n": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 3
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [
+      {
+       "id": "r1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "checkNumber": 47,
+       "createdAt": "2026-11-28T13:02:00Z",
+       "sameName": 3,
+       "sameNamePending": 2,
+       "sameNameMember": {
+        "deviceLabel": "phone",
+        "acceptedAt": "2026-11-28T09:00:00Z"
+       },
+       "sameNameDeclinedAt": null
+      },
+      {
+       "id": "r2",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "checkNumber": 82,
+       "createdAt": "2026-11-28T13:03:00Z",
+       "sameName": 3,
+       "sameNamePending": 2,
+       "sameNameMember": null,
+       "sameNameDeclinedAt": "2026-11-28T11:03:00Z"
+      },
+      {
+       "id": "r3",
+       "name": "Lena",
+       "deviceLabel": "phone",
+       "checkNumber": 19,
+       "createdAt": "2026-11-28T13:04:00Z",
+       "sameName": 1,
+       "sameNamePending": 1,
+       "sameNameMember": null,
+       "sameNameDeclinedAt": null
+      }
+     ],
+     "members": [
+      {
+       "memberId": "m1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T12:30:00Z",
+       "controls": [
+        2
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ "r3": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 0
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [],
+     "members": []
+    }
+   }
+  }
+ },
+ "r4": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 1
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [
+      {
+       "id": "r1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "checkNumber": 47,
+       "createdAt": "2026-11-28T13:02:00Z",
+       "sameName": 1,
+       "sameNamePending": 1,
+       "sameNameMember": null,
+       "sameNameDeclinedAt": null
+      }
+     ],
+     "members": [
+      {
+       "memberId": "m2",
+       "name": "Clara",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      }
+     ]
+    }
+   }
+  }
+ },
+ "r4b": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 1
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [
+      {
+       "id": "r1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "checkNumber": 47,
+       "createdAt": "2026-11-28T13:02:00Z",
+       "sameName": 1,
+       "sameNamePending": 1,
+       "sameNameMember": null,
+       "sameNameDeclinedAt": null
+      }
+     ],
+     "members": [
+      {
+       "memberId": "m2",
+       "name": "Clara",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      }
+     ]
+    }
+   },
+   "decide_join_request": {
+    "json": {
+     "result": "CHECK_MISMATCH"
+    }
+   }
+  }
+ },
+ "r5": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 2
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [
+      {
+       "id": "r1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "checkNumber": 47,
+       "createdAt": "2026-11-28T13:02:00Z",
+       "sameName": 1,
+       "sameNamePending": 1,
+       "sameNameMember": null,
+       "sameNameDeclinedAt": null
+      },
+      {
+       "id": "r3",
+       "name": "Lena",
+       "deviceLabel": "phone",
+       "checkNumber": 19,
+       "createdAt": "2026-11-28T13:04:00Z",
+       "sameName": 1,
+       "sameNamePending": 1,
+       "sameNameMember": null,
+       "sameNameDeclinedAt": null
+      }
+     ],
+     "members": [
+      {
+       "memberId": "m1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T12:30:00Z",
+       "controls": [
+        2
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ "r6": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 0
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [],
+     "members": [
+      {
+       "memberId": "m1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T12:30:00Z",
+       "controls": [
+        2
+       ]
+      },
+      {
+       "memberId": "m2",
+       "name": "Clara",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      }
+     ]
+    }
+   }
+  }
+ },
+ "r7": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 0
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [],
+     "members": [
+      {
+       "memberId": "m1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T12:30:00Z",
+       "controls": [
+        2
+       ]
+      },
+      {
+       "memberId": "m2",
+       "name": "Clara",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      }
+     ]
+    }
+   }
+  }
+ },
+ "r8": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 0
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [],
+     "members": [
+      {
+       "memberId": "m1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T12:30:00Z",
+       "controls": [
+        2
+       ]
+      },
+      {
+       "memberId": "m3",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:41:00Z",
+       "controls": []
+      },
+      {
+       "memberId": "m4",
+       "name": "Tom",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      }
+     ]
+    }
+   }
+  }
+ },
+ "r9": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 0
+    }
+   },
+   "list_helper_access": {
+    "abbruch": true
+   }
+  }
+ },
+ "r10": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": false
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 0
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [],
+     "members": []
+    }
+   }
+  }
+ },
+ "x1": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "OK",
+     "code": "K7MQ4X9R2P",
+     "validUntil": "2026-11-28T23:00:00Z",
+     "openRequests": 0
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [],
+     "members": [
+      {
+       "memberId": "m1",
+       "name": "Tom",
+       "deviceLabel": "phone",
+       "field": 2,
+       "mode": "helper",
+       "revokedAt": "2026-11-28T11:30:00Z",
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": null,
+       "controls": []
+      },
+      {
+       "memberId": "m2",
+       "name": "Clara",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      },
+      {
+       "memberId": "m5",
+       "name": "Max",
+       "deviceLabel": "phone",
+       "field": 1,
+       "mode": "viewer",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": null,
+       "controls": []
+      }
+     ]
+    }
+   }
+  }
+ },
+ "x2": {
+  "konto": {
+   "id": "00000000-0000-4000-8000-0000000000c1",
+   "name": "Olli"
+  },
+  "einwilligung": true,
+  "rest": {
+   "tournaments": [
+    {
+     "id": "hallencup-messlauf",
+     "owner_id": "00000000-0000-4000-8000-0000000000c1",
+     "title": "Live-Cup",
+     "sport": "football",
+     "tournament_type": "classic",
+     "status": "published",
+     "date": "2026-11-28",
+     "start_time": "09:00",
+     "location_name": "Sporthalle Nord",
+     "number_of_fields": 2,
+     "number_of_teams": 4,
+     "number_of_groups": null,
+     "group_phase_duration": 10,
+     "group_phase_break": 2,
+     "point_system": {
+      "win": 3,
+      "draw": 1,
+      "loss": 0
+     },
+     "config": {},
+     "is_public": false,
+     "version": 1,
+     "change_revision": 1,
+     "created_at": "2026-10-01T08:00:00Z",
+     "updated_at": "2026-10-01T08:00:00Z"
+    }
+   ],
+   "teams": [
+    {
+     "id": "hallencup-messlauf-t1",
+     "tournament_id": "hallencup-messlauf",
+     "name": "FC Nord",
+     "sort_order": 1,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t2",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SV Süd",
+     "sort_order": 2,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t3",
+     "tournament_id": "hallencup-messlauf",
+     "name": "TSV West",
+     "sort_order": 3,
+     "version": 1
+    },
+    {
+     "id": "hallencup-messlauf-t4",
+     "tournament_id": "hallencup-messlauf",
+     "name": "SG Ost",
+     "sort_order": 4,
+     "version": 1
+    }
+   ]
+  },
+  "rpc": {
+   "has_tournament_permission": {
+    "json": true
+   },
+   "ensure_helper_code": {
+    "json": {
+     "result": "CLOSED"
+    }
+   },
+   "list_helper_access": {
+    "json": {
+     "requests": [],
+     "members": [
+      {
+       "memberId": "m2",
+       "name": "Clara",
+       "deviceLabel": "tablet",
+       "field": null,
+       "mode": "helper",
+       "revokedAt": null,
+       "acceptedAt": "2026-11-28T09:00:00Z",
+       "lastSeenAt": "2026-11-28T11:03:00Z",
+       "controls": []
+      }
+     ]
+    }
+   }
+  }
+ }
+}

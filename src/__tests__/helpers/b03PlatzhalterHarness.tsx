@@ -19,6 +19,8 @@ import type { Tournament } from '../../types/tournament';
 vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: true,
   supabase: {
+    // A-18a: „Team & Helfer“ fragt die Helfer-Funktionen per rpc; ohne Antwort (Fehler ohne Code = Netz) bleibt die Seite leer.
+    rpc: () => Promise.resolve({ data: null, error: { message: 'kein Netz im Test' } }),
     from: () => ({
       select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }),
       delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
