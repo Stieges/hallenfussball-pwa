@@ -98,16 +98,26 @@ test('coadmin macht den Freigabe-Cup öffentlich -- Sichtbarkeit, Share-Code und
     // selbst je etwas erzeugt hätte.
     expect(before.shareCode).toBeNull();
 
-    // N17: Negativkontrolle -- der Monitor ist VOR der Freigabe für einen anonymen Betrachter
-    // nicht erreichbar (RLS lässt den privaten Freigabe-Cup nicht durch), zeigt also insbesondere
-    // NICHT den Sponsor. Ohne diesen Vorher-Zustand wäre der Nachher-Nachweis unten (Sponsor
-    // sichtbar) kein Beleg dafür, dass GENAU die Freigabe den Unterschied macht.
-    await anonPage.goto(`/#/display/${E2E_RELEASE_CUP_ID}/${E2E_RELEASE_CUP_MONITOR_ID}`);
+    // N17 (B-14, 20261117_104; Entscheidung Daniel 2026-10-23: „so lösen wie es aktuell feststeht … den Hallenmonitor
+    // steuert die Turnierleitung ja direkt“; @ZM-066, @ZM-101, Befund C-MONITOR-TEILEN): ein EINGERICHTETER Monitor zeigt
+    // das Turnier unabhängig vom öffentlichen Teilen. Die Grenzen prüft diese Kontrolle deshalb so:
+    //  (a) Negativkontrolle: ein NICHT eingerichteter (unbekannter) Monitor-Link desselben Turniers liefert vor der
+    //      Freigabe „Turnier nicht gefunden“ und zeigt den Sponsor nicht;
+    //  (b) der eingerichtete Monitor zeigt den Sponsor schon vor der Freigabe;
+    //  (c) die Zuschauer-Seite liefert ein nicht freigegebenes Turnier nicht aus (@ZM-068) -- unten nach dem
+    //      Zurücknehmen geprüft, weil der Freigabe-Cup vor der Freigabe noch keinen Code hat.
+    const unbekannterMonitor = '00000000-0000-4000-8000-00000000f17a';
+    expect(unbekannterMonitor).not.toBe(E2E_RELEASE_CUP_MONITOR_ID);
+    await anonPage.goto(`/#/display/${E2E_RELEASE_CUP_ID}/${unbekannterMonitor}`);
     await anonPage.waitForLoadState('networkidle');
     await expect(anonPage.locator('[data-testid="monitor-error-message"]')).toContainText('Turnier nicht gefunden', {
       timeout: 15000,
     });
     await expect(anonPage.getByText(E2E_RELEASE_CUP_SPONSOR_NAME)).toHaveCount(0);
+
+    await anonPage.goto(`/#/display/${E2E_RELEASE_CUP_ID}/${E2E_RELEASE_CUP_MONITOR_ID}`);
+    await anonPage.waitForLoadState('networkidle');
+    await expect(anonPage.getByText(E2E_RELEASE_CUP_SPONSOR_NAME)).toBeVisible({ timeout: 15000 });
 
     const page = await asRole('coadmin');
     await page.goto(`/#/tournament/${E2E_RELEASE_CUP_ID}/admin/visibility`);
@@ -148,11 +158,24 @@ test('coadmin macht den Freigabe-Cup öffentlich -- Sichtbarkeit, Share-Code und
     await anonPage.waitForLoadState('networkidle');
     await expect(anonPage.getByText(E2E_RELEASE_CUP_TITLE, { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-    // "Sponsor und Monitor folgen" (Brief): derselbe anonyme Monitor-Aufruf wie in der
-    // Negativkontrolle oben zeigt jetzt den Sponsor-Slide -- vorher (N17) explizit nicht.
+    // "Sponsor und Monitor folgen" (Brief): der eingerichtete Monitor zeigt den Sponsor-Slide auch nach der Freigabe.
     await anonPage.goto(`/#/display/${E2E_RELEASE_CUP_ID}/${E2E_RELEASE_CUP_MONITOR_ID}`);
     await anonPage.waitForLoadState('networkidle');
     await expect(anonPage.getByText(E2E_RELEASE_CUP_SPONSOR_NAME)).toBeVisible({ timeout: 15000 });
+
+    // N17 (c), @ZM-068: nicht freigegeben heißt für die Zuschauer-Seite „nicht gefunden“ -- auch mit vorhandenem Code.
+    // Das Teilen wird direkt in der DB zurückgenommen (Code bleibt, wie bei make_tournament_private, @ZM-067).
+    const { url, headers } = getLocalServiceRoleClient();
+    const privat = await fetch(`${url}/rest/v1/tournaments?id=eq.${E2E_RELEASE_CUP_ID}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ is_public: false }),
+    });
+    expect(privat.ok, `Teilen zurücknehmen: ${String(privat.status)}`).toBe(true);
+    await anonPage.goto(`/#/live/${after.shareCode}`);
+    await anonPage.waitForLoadState('networkidle');
+    await expect(anonPage.getByText('Turnier nicht gefunden', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(anonPage.getByText(E2E_RELEASE_CUP_TITLE, { exact: true })).toHaveCount(0);
   } finally {
     // I6/N16: unabhängig vom Ausgang zurücksetzen, per `safeCleanup()` (s. Kopfkommentar).
     await safeCleanup('Freigabe-Cup zurücksetzen (privat, kein Share-Code)', resetReleaseCupToPrivate);
