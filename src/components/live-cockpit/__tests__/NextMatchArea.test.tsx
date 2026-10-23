@@ -1,0 +1,131 @@
+/**
+ * NextMatchArea (Plan LT-3): Zeile „Nächstes“ mit Trikotfarben, Leibchen-Zeichen und Vorwarnung ab 3:00, echte deutsche Texte.
+ * Szenarien: @SL-160, @SL-161, @SL-155, @SL-156, Befunde C-COCKPIT-NAECHSTES-WIE-FEHLER, C-COCKPIT-VORWARNUNG-VERLOREN.
+ */
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { initRealDeI18n } from '../../../test/realDeI18n';
+import { NextMatchArea } from '../areas/NextMatchArea';
+import type { MatchSummary } from '../types';
+import type { CockpitPhase, CockpitZustand } from '../model/cockpitPhase';
+
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+await initRealDeI18n();
+
+afterEach(() => { vi.unstubAllGlobals(); });
+
+const phase = (zustand: CockpitZustand = 'laeuft'): CockpitPhase => ({ zustand, abschnittArt: 'regulaer', abschnitt: 2, abschnitte: 2, letzterAbschnitt: true });
+const spiel = (home: string | null, away: string | null, id = 'm13'): MatchSummary => ({
+  id, number: 13, phaseLabel: 'Gruppe', scheduledKickoff: '15:15', fieldId: 'field-1', homeTeam: { id: 'w', name: 'TSV West' }, awayTeam: { id: 'm', name: 'SG Mitte' },
+  farben: { home, away },
+});
+const zeige = (naechstes: MatchSummary | null, rest: number | null = 300_000, z: CockpitZustand = 'laeuft') =>
+  render(<NextMatchArea naechstes={naechstes} phase={phase(z)} restSpielMs={rest} />);
+const zeile = () => screen.getByTestId('cockpit-naechstes');
+// jsdom kennt keine CSS-Animationen: React hört dort auf den herstellerspezifischen Namen
+const animationEnde = (el: HTMLElement) => fireEvent(el, new Event('webkitAnimationEnd', { bubbles: true }));
+
+describe('NextMatchArea – Farben und Leibchen', () => {
+  it('@SL-160 Rot #C62828 / Weiß #FFFFFF → zwei Farbpunkte, kein Leibchen-Zeichen (Abstand 50,8)', () => {
+    zeige(spiel('#C62828', '#FFFFFF'));
+    expect(zeile()).toHaveTextContent('Nächstes: Spiel 13 · TSV West – SG Mitte · Anstoß 15:15');
+    // Farbpunkt in der Trikotfarbe des jeweiligen Teams (Heim links, Gast rechts)
+    expect(screen.getByTestId('cockpit-naechstes-punkt-0')).toHaveStyle({ background: '#C62828' });
+    expect(screen.getByTestId('cockpit-naechstes-punkt-1')).toHaveStyle({ background: '#FFFFFF' });
+    expect(screen.queryByTestId('cockpit-naechstes-leibchen')).toBeNull();
+  });
+
+  it('@SL-160 Blau #1565C0 / Navy #0D1B4C → Leibchen-Zeichen ohne Text (Abstand 26,8, unter 30)', () => {
+    zeige(spiel('#1565C0', '#0D1B4C'));
+    expect(screen.getByRole('img', { name: 'Leibchen nötig, die Farben sind zu ähnlich' })).toBeInTheDocument();
+    expect(screen.getByTestId('cockpit-naechstes-leibchen')).toHaveTextContent('');
+  });
+
+  it('@SL-173 Rot #C62828 / Blau #1565C0 → Leibchen-Zeichen nur wegen der Helligkeit (1,02:1, Farbabstand über 30)', () => {
+    zeige(spiel('#C62828', '#1565C0'));
+    expect(screen.getByRole('img', { name: 'Leibchen nötig, die Farben sind zu ähnlich' })).toBeInTheDocument();
+  });
+
+  it('@SL-173 Gegenbeispiel Gelb #FFEB3B / Blau #1565C0 (1:4,71) → kein Leibchen-Zeichen', () => {
+    zeige(spiel('#FFEB3B', '#1565C0'));
+    expect(screen.queryByTestId('cockpit-naechstes-leibchen')).toBeNull();
+  });
+
+  it('@SL-161 Rot / keine Farbe → ein Farbpunkt, der Name von SG Mitte steht da, kein Leibchen-Zeichen', () => {
+    zeige(spiel('#C62828', null));
+    expect(screen.getByTestId('cockpit-naechstes-punkt-0')).toBeInTheDocument();
+    expect(screen.queryByTestId('cockpit-naechstes-punkt-1')).toBeNull();
+    expect(zeile()).toHaveTextContent('SG Mitte');
+    expect(screen.queryByTestId('cockpit-naechstes-leibchen')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ohne nächstes Spiel keine Zeile', () => {
+    zeige(null);
+    expect(screen.queryByTestId('cockpit-naechstes')).toBeNull();
+  });
+
+  it('C-COCKPIT-NAECHSTES-WIE-FEHLER die Zeile trägt keine Fehlerfarbe', () => {
+    zeige(spiel('#C62828', '#FFFFFF'));
+    expect(zeile().getAttribute('style') ?? '').not.toContain('--color-error');
+  });
+});
+
+describe('NextMatchArea – Vorwarnung ab 3:00', () => {
+  it('@SL-155 bei 3:00 ist der Rahmen hervorgehoben und blinkt einmal, ohne zusätzlichen Hinweistext', () => {
+    const vor = zeige(spiel('#C62828', '#FFFFFF'), 300_000);
+    const textVorher = zeile().textContent;
+    expect(zeile()).toHaveAttribute('data-modus', 'normal');
+    vor.rerender(<NextMatchArea naechstes={spiel('#C62828', '#FFFFFF')} phase={phase()} restSpielMs={180_000} />);
+    expect(zeile()).toHaveAttribute('data-modus', 'vorwarnung');
+    expect(zeile()).toHaveAttribute('data-blinken', 'true');
+    expect(zeile().textContent).toBe(textVorher);
+  });
+
+  it('@SL-155 die Hervorhebung bleibt danach stehen (Restzeit 2:30), das Blinken ist nach der Animation zu Ende und wird nicht erneut ausgelöst', () => {
+    const m = spiel('#C62828', '#FFFFFF');
+    const vor = zeige(m, 180_000);
+    expect(zeile()).toHaveAttribute('data-blinken', 'true');
+    animationEnde(zeile());
+    expect(zeile()).not.toHaveAttribute('data-blinken');
+    vor.rerender(<NextMatchArea naechstes={m} phase={phase()} restSpielMs={150_000} />);
+    expect(zeile()).toHaveAttribute('data-modus', 'vorwarnung');
+    expect(zeile()).not.toHaveAttribute('data-blinken');
+  });
+
+  it('@SL-155 Uhr korrigiert über 3:00 und zurück: die Zeile blinkt nicht ein zweites Mal', () => {
+    const m = spiel('#C62828', '#FFFFFF');
+    const vor = zeige(m, 170_000);
+    animationEnde(zeile());
+    vor.rerender(<NextMatchArea naechstes={m} phase={phase()} restSpielMs={200_000} />);
+    expect(zeile()).toHaveAttribute('data-modus', 'normal');
+    vor.rerender(<NextMatchArea naechstes={m} phase={phase()} restSpielMs={170_000} />);
+    expect(zeile()).toHaveAttribute('data-modus', 'vorwarnung');
+    expect(zeile()).not.toHaveAttribute('data-blinken');
+  });
+
+  it('@SL-156 bei 3:01 ist die Zeile nicht hervorgehoben', () => {
+    zeige(spiel('#C62828', '#FFFFFF'), 181_000);
+    expect(zeile()).toHaveAttribute('data-modus', 'normal');
+    expect(zeile()).not.toHaveAttribute('data-blinken');
+  });
+
+  it('@SL-156 „Bewegung reduzieren“: ab 3:00 hervorgehoben, ohne zu blinken', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    zeige(spiel('#C62828', '#FFFFFF'), 170_000);
+    expect(zeile()).toHaveAttribute('data-modus', 'vorwarnung');
+    expect(zeile()).not.toHaveAttribute('data-blinken');
+  });
+
+  it('Gegenbeispiel: in der Halbzeitpause ist die Zeile nicht hervorgehoben, auch bei kleiner Restzeit', () => {
+    zeige(spiel('#C62828', '#FFFFFF'), 100_000, 'halbzeitpause');
+    expect(zeile()).toHaveAttribute('data-modus', 'normal');
+  });
+
+  it('@SL-155 ein neues nächstes Spiel blinkt beim Aktivwerden wieder (je Spiel einmal)', () => {
+    const vor = zeige(spiel('#C62828', '#FFFFFF', 'a'), 170_000);
+    expect(zeile()).toHaveAttribute('data-blinken', 'true');
+    vor.rerender(<NextMatchArea naechstes={spiel('#C62828', '#FFFFFF', 'b')} phase={phase()} restSpielMs={170_000} />);
+    expect(zeile()).toHaveAttribute('data-blinken', 'true');
+  });
+});

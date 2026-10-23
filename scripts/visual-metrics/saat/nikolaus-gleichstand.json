@@ -1,0 +1,522 @@
+{
+  "formatVersion": 1,
+  "name": "nikolaus-gleichstand",
+  "beschreibung": "Nikolausturnier (Paket TB-B): Jeder gegen jeden, 6 Teams, alle 15 Spiele entschieden, TSV Petting und DJK Otting gleich auf Platz 3 und 4.",
+  "datenbanken": [
+    {
+      "name": "hallenfussball",
+      "version": 1,
+      "store": "cache",
+      "eintraege": {
+        "tournaments": [
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 6,
+            "groupSystem": "roundRobin",
+            "numberOfGroups": 1,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 1,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "finals": {
+              "final": false,
+              "thirdPlace": false,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "none",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Nikolausturnier",
+            "ageClass": "U11",
+            "date": "2026-12-06",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Nikolaus"
+            },
+            "teams": [
+              {
+                "id": "00000000-0000-4000-8000-000000000008",
+                "name": "DJK Kammer"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000007",
+                "name": "TSV Waging rot"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000012",
+                "name": "TSV Petting"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000013",
+                "name": "DJK Otting"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000014",
+                "name": "TSV 1921 Fridolfing"
+              },
+              {
+                "id": "00000000-0000-4000-8000-000000000011",
+                "name": "TSV Waging blau"
+              }
+            ],
+            "matches": [
+              {
+                "id": "00000009-0000-4000-8000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000008"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000011"
+                },
+                "scoreA": 3,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000007"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000014"
+                },
+                "scoreA": 3,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:12:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 2,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000012"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000013"
+                },
+                "scoreA": 1,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:24:00.000Z",
+                "matchNumber": 3,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000014"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000008"
+                },
+                "scoreA": 0,
+                "scoreB": 2,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:36:00.000Z",
+                "matchNumber": 4,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000011"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000013"
+                },
+                "scoreA": 1,
+                "scoreB": 3,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T08:48:00.000Z",
+                "matchNumber": 5,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 5,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000007"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000012"
+                },
+                "scoreA": 4,
+                "scoreB": 0,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:00:00.000Z",
+                "matchNumber": 6,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000007",
+                "round": 7,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000013"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000008"
+                },
+                "scoreA": 2,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:12:00.000Z",
+                "matchNumber": 7,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000008",
+                "round": 8,
+                "field": 1,
+                "slot": 7,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000012"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000014"
+                },
+                "scoreA": 3,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:24:00.000Z",
+                "matchNumber": 8,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000009",
+                "round": 9,
+                "field": 1,
+                "slot": 8,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000011"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000007"
+                },
+                "scoreA": 0,
+                "scoreB": 3,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:36:00.000Z",
+                "matchNumber": 9,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000010",
+                "round": 10,
+                "field": 1,
+                "slot": 9,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000008"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000012"
+                },
+                "scoreA": 2,
+                "scoreB": 2,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T09:48:00.000Z",
+                "matchNumber": 10,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000011",
+                "round": 11,
+                "field": 1,
+                "slot": 10,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000013"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000007"
+                },
+                "scoreA": 2,
+                "scoreB": 2,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T10:00:00.000Z",
+                "matchNumber": 11,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000012",
+                "round": 12,
+                "field": 1,
+                "slot": 11,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000014"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000011"
+                },
+                "scoreA": 1,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T10:12:00.000Z",
+                "matchNumber": 12,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000013",
+                "round": 13,
+                "field": 1,
+                "slot": 12,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000007"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000008"
+                },
+                "scoreA": 1,
+                "scoreB": 2,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T10:24:00.000Z",
+                "matchNumber": 13,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000014",
+                "round": 14,
+                "field": 1,
+                "slot": 13,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000012"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000011"
+                },
+                "scoreA": 3,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T10:36:00.000Z",
+                "matchNumber": 14,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000015",
+                "round": 15,
+                "field": 1,
+                "slot": 14,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000014"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000000-0000-4000-8000-000000000013"
+                },
+                "scoreA": 4,
+                "scoreB": 1,
+                "group": "all",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-12-06T10:48:00.000Z",
+                "matchNumber": 15,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-12-06T08:00:00.000Z",
+                "timerElapsedSeconds": 600
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-10-20T16:43:48.831Z",
+            "updatedAt": "2026-10-20T16:43:48.852Z",
+            "lastVisitedStep": 6,
+            "id": "nikolaus-gleichstand",
+            "startDate": "2026-12-06",
+            "startTime": "09:00",
+            "shareCode": "NIKO26",
+            "shareCodeCreatedAt": "2026-12-06T08:00:00.000Z",
+            "publishedAt": "2026-10-20T16:43:48.831Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hallenfussball-matches",
+      "version": 2,
+      "store": "matches",
+      "eintraege": {}
+    }
+  ],
+  "localStorage": {
+    "app:consent": {
+      "errorTracking": false,
+      "sessionReplay": false,
+      "timestamp": 1794643200000,
+      "version": 1
+    }
+  },
+  "kennzahlen": {
+    "turnierId": "nikolaus-gleichstand",
+    "shareCode": "NIKO26",
+    "teams": [
+      "DJK Kammer",
+      "TSV Waging rot",
+      "TSV Petting",
+      "DJK Otting",
+      "TSV 1921 Fridolfing",
+      "TSV Waging blau"
+    ],
+    "spiele": 15
+  }
+}

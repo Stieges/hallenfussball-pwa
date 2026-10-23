@@ -44,6 +44,19 @@ export class MemoryRepo {
     return Promise.resolve();
   }
 
+  /** Schmaler Weg der Einstellung „Plätze ausspielen“: nur dieses Feld, mit Versionsprüfung (nie `standingDecisions` überschreiben). */
+  updatePlacementsToPlayOut(_id: string, places: number[], expectedVersion: number): Promise<void> {
+    if (!this.online) {
+      return Promise.reject(new NetworkError('ohne Netz', true));
+    }
+    if ((this.tournament.version ?? 0) !== expectedVersion) {
+      return Promise.reject(new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.'));
+    }
+    this.tournament = { ...this.tournament, placementsToPlayOut: [...places], version: expectedVersion + 1 };
+    this.writes++;
+    return Promise.resolve();
+  }
+
   /** Korrektur eines Spiels „H–G“ an der Attrappe vorbei (wie ein Eintrag über die Spielsteuerung). */
   correct(home: Key, away: Key, scoreA: number, scoreB: number): void {
     this.tournament = {

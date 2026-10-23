@@ -701,6 +701,20 @@ SELECT 'heartbeats-select-manage-screens',
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
 
+-- A-25b (20261110_005_result_entry_forfeit.sql, @W2A-022, @W2A-024, @W2A-026; C-NICHTANTRITT-FEHLT): forfeit_absent ist
+-- Schutzspalte (Client-Rollen aendern sie nie, INSERT neutral NULL) und append_match_events schreibt sie -- in der
+-- Fassung MIT Feldsteuerung (Review-Auflage 4: Basis 20261110_003, sonst waere A-34 zurueckgedreht).
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'matches-guard-engine-columns-forfeit-absent',
+       coalesce((SELECT position('NEW.forfeit_absent := NULL;' IN p.prosrc) > 0
+                        AND position('NEW.forfeit_absent IS DISTINCT FROM OLD.forfeit_absent' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_guard_engine_columns()')), false)
+UNION ALL
+SELECT 'append-match-events-writes-forfeit-absent',
+       coalesce((SELECT position('forfeit_absent = v_cache ->> ''forfeit_absent''' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
 -- B-48b (20261113_101_monitor_heartbeat_wake_lock.sql, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): genau
 -- eine record_monitor_heartbeat mit Kennung als Text und p_wake_lock, SECURITY DEFINER mit search_path, EXECUTE nur
 -- anon/authenticated (nicht PUBLIC), prueft gegen config -> 'monitors', den Papierkorb und tournamentSettings (Rumpf am

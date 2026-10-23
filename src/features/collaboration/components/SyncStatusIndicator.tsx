@@ -172,6 +172,7 @@ export function SyncStatusIndicator({
                 </span>
             )}
 
+
             {compact && showWaitDetails && failedChanges === 0 && waitingCount > 0 && (
                 <SyncWaitDetails pendingCount={waitingCount} waitReason={waitReason} detail={outbox.lastError ?? undefined} />
             )}

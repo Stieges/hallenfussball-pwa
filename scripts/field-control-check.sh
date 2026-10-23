@@ -15,6 +15,9 @@
 #   R  Rechte: take_field_control / field_control_state je Rolle, Tabelle direkt, Parameter, Papierkorb, Feld ohne Spiel.
 #   S  Schema: Katalogzaehlung, Rechte-Assertion (alle |t, 3 neue), Namensliste = db-drift-check.sh.
 #   W  zweites Einspielen (idempotent).  X  Rueckweg (append_match_events aus 20261028_003 + DROPs) -> Schema = vorher.
+#   N  Nachfolger (A-25b, Review GA4 Auflage 4): nach ALLEN spaeteren Migrationen (u. a. 20261110_005, das
+#      append_match_events erneut ersetzt) wirkt die Steuer je Feld weiter -- Anpfiff beansprucht, fremdes Tor und
+#      fremdes Wiedereroeffnen eines gespielten Spiels NOT_CONTROLLER, Assertion append-match-events-checks-field-control |t.
 #
 # Aufrufoptionen:
 #   bash scripts/field-control-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
@@ -24,7 +27,7 @@
 #   bash scripts/field-control-check.sh --print-rueckweg     gibt den Rueckweg (Anhang B der Freigabe) aus, ohne Container
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigener Wegwerf-Container
-# (--platform linux/amd64), wird am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
+# (nativ, per DOCKER_PLATFORM ueberschreibbar), wird am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
 #
 set -euo pipefail
 
@@ -38,7 +41,7 @@ case "${1:-}" in
 esac
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # wie event-author-names-check.sh
-DOCKER_PLATFORM="${DOCKER_PLATFORM:-linux/amd64}"
+DOCKER_PLATFORM="${DOCKER_PLATFORM:-}" # leer = Plattform des Rechners (nativ); z. B. linux/amd64 erzwingt Emulation
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
@@ -99,7 +102,7 @@ trap cleanup EXIT
 
 start_container() {
   CURRENT_CONTAINER="$CONTAINER_PREFIX-$1"
-  docker run -d --platform "$DOCKER_PLATFORM" --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
+  docker run -d ${DOCKER_PLATFORM:+--platform "$DOCKER_PLATFORM"} --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
   local ready=0
   for _ in $(seq 1 120); do
     if [[ "$(docker logs "$CURRENT_CONTAINER" 2>&1 | grep -c "database system is ready to accept connections" || true)" -ge 2 ]]; then
@@ -132,9 +135,9 @@ counts() { python3 "$REPO_ROOT/scripts/db_catalog_counts.py" /dev/stdin <<<"$1";
 count_of() { python3 -c "import json,sys; print(json.load(sys.stdin)['$2'])" <<<"$1"; }
 
 # Zaehler je Kategorie (bash 3.2: keine assoziativen Arrays).
-CATS=(K R S W X)
-DEVS=(0 0 0 0 0)
-OKS=(0 0 0 0 0)
+CATS=(K R S W X N)
+DEVS=(0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0)
 cat_index() {
   local i
   for i in "${!CATS[@]}"; do [[ "${CATS[$i]}" == "$1" ]] && { echo "$i"; return 0; }; done
@@ -150,7 +153,7 @@ check() { # check <Kategorie> <Name> <erwartet> <erhalten>
   fi
 }
 total_dev() { local s=0 d; for d in "${DEVS[@]}"; do s=$((s + d)); done; echo "$s"; }
-reset_counts() { DEVS=(0 0 0 0 0); OKS=(0 0 0 0 0); }
+reset_counts() { DEVS=(0 0 0 0 0 0); OKS=(0 0 0 0 0 0); }
 
 uuid_for() {
   local h
@@ -595,8 +598,8 @@ run_assertions() {
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
   # CA-2: die drei Zeilen der spaeteren Migration 20261110_004 sind hier f (sie laeuft erst am Ende, AFTER).
   # B-48b: die zwei Zeilen monitor-heartbeat-* der spaeteren Migration 20261113_101 sind hier f (laeuft erst am Ende).
-  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261110_004)" "" \
-    "$(grep -v '|t$' <<<"$priv" | grep -vE '^((share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens)\||monitor-heartbeat-)' || true)"
+  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261110_004, 20261110_005)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^((share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|matches-guard-engine-columns-forfeit-absent|append-match-events-writes-forfeit-absent)\||monitor-heartbeat-)' || true)"
   check S "Rechte-Assertion: die 3 A-34-Zeilen vorhanden und |t" \
     "append-match-events-checks-field-control|t,field-control-no-client-access|t,field-control-rpcs-execute-only-authenticated|t" \
     "$(grep -E '^(append-match-events-checks-field-control|field-control-)' <<<"$priv" | sort | paste -sd, -)"
@@ -760,6 +763,32 @@ for f in ${AFTER[@]+"${AFTER[@]}"}; do
   psql_stdin < "$f"
   echo "OK    spaetere Migration laeuft: $(basename "$f")" >&2
 done
+
+# --- N: Steuer je Feld nach allen spaeteren Migrationen (A-25b 20261110_005 ersetzt append_match_events erneut) --------
+if [[ ${#AFTER[@]} -gt 0 ]]; then
+  psql_stdin <<SQL
+INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, match_number, scheduled_start) VALUES
+  ('$(match "$T_RACE" 31)', '$T_RACE', 8, 3, '$(team "$T_RACE" nord)', '$(team "$T_RACE" sued)', 31, '16:00'),
+  ('$(match "$T_RACE" 32)', '$T_RACE', 8, 3, '$(team "$T_RACE" west)', '$(team "$T_RACE" mitte)', 32, '16:00');
+SQL
+  ev MATCH_START "$(E nach-start-31)" '{"clockMs":null}'
+  send "$U_TOM_HANDY" "$D_TOM_HANDY" "$(match "$T_RACE" 31)"
+  check N "nach $(basename "${AFTER[${#AFTER[@]}-1]}"): Toms Anpfiff von Spiel 31 beansprucht das freie Feld 3" "accepted|$U_TOM_HANDY|$D_TOM_HANDY|1" \
+    "$(results "$OUT")|$(holder "$T_RACE" 3)"
+  ev GOAL "$(E nach-olli-tor)" "$(goal "$(team "$T_RACE" nord)")"
+  send "$U_OLLI" "$D_OLLI_TABLET" "$(match "$T_RACE" 31)"
+  check N "@FU-026 nach den spaeteren Migrationen: Ollis Tor auf Toms Feld 3 abgelehnt (NOT_CONTROLLER)" "rejected:NOT_CONTROLLER:OTHER_DEVICE" "$(results "$OUT")"
+  ev MATCH_START "$(E nach-start-32)" '{"clockMs":null}'
+  ev MATCH_END "$(E nach-ende-32)" '{"at": 2000, "clockMs": 600000}'
+  send "$U_TOM_HANDY" "$D_TOM_HANDY" "$(match "$T_RACE" 32)"
+  ev REOPEN "$(E nach-olli-reopen)" '{"at": 3000}'
+  send "$U_OLLI" "$D_OLLI_TABLET" "$(match "$T_RACE" 32)"
+  check N "brief L5/L6 nach den spaeteren Migrationen: Olli oeffnet das gespielte Spiel 32 auf Toms Feld 3 nicht (NOT_CONTROLLER, bleibt beendet)" \
+    "rejected:NOT_CONTROLLER:OTHER_DEVICE|finished" "$(results "$OUT")|$(score "$(match "$T_RACE" 32)" | cut -d'|' -f2)"
+  priv_after="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || true
+  check N "Rechte-Assertion nach allen Migrationen: append-match-events-checks-field-control |t, keine Zeile |f" "append-match-events-checks-field-control|t|" \
+    "$(grep -E '^append-match-events-checks-field-control\|' <<<"$priv_after" || true)|$(grep -v '|t$' <<<"$priv_after" || true)"
+fi
 
 summary
 echo

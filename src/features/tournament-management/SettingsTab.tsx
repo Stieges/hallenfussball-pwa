@@ -23,15 +23,22 @@ import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
 import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
+import { PlayOutPlacesSettings } from './standings/PlayOutPlacesSettings';
+import type { PlayOutPlacesResult } from '../../core/services/PlayOutPlacesService';
 import { useTournamentStartState } from '../../hooks/useTournamentStartState';
 import { useCan } from '../auth/hooks/useCan';
 import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
+import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../core/services/tournamentMetaValidation';
 
 interface SettingsTabProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   onEditInWizard?: (tournament: Tournament, targetStep?: number) => void;
+  /** Abschnitt, den die Adresse ansteuert (`?abschnitt=gleichstand`, Paket TB-B). */
+  focusSection?: string;
+  /** Schmaler Speicherweg der Einstellung „Plätze ausspielen“; ohne ihn bleibt der Abschnitt weg. */
+  onSavePlayOutPlaces?: (places: number[]) => Promise<PlayOutPlacesResult>;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -39,6 +46,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onTournamentUpdate,
   onDirtyChange,
   onEditInWizard,
+  focusSection,
+  onSavePlayOutPlaces,
 }) => {
   const { t } = useTranslation('tournament');
   // @W5-004: „Im Wizard bearbeiten" setzt ein festgelegtes Turnier NIE auf Entwurf zurück.
@@ -64,8 +73,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     startTime: tournament.startTime ?? tournament.timeSlot,
   });
 
+  const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
+
   // Sync formData wenn sich tournament ändert (nach Speichern)
   useEffect(() => {
+    setMetaErrors({});
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
@@ -134,10 +146,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Update Handler
   const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'title' || field === 'startDate') { setMetaErrors(prev => ({ ...prev, [field]: undefined })); }
   };
 
   // Speichern Handler
   const handleSave = () => {
+    // @W5-002 / C-META-NOVALID: leerer Name oder leeres Datum werden nicht gespeichert (ein vergangenes Datum schon, @W5-003)
+    const errors = validateTournamentMeta({ title: formData.title, startDate: formData.startDate });
+    setMetaErrors(errors);
+    if (hasMetaErrors(errors)) { return; }
     const updatedTournament: Tournament = {
       ...tournament,
       title: formData.title ?? tournament.title,
@@ -165,6 +182,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       if (!confirmReset) {return;}
     }
 
+    setMetaErrors({});
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
@@ -364,6 +382,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 value={formData.title ?? ''}
                 onChange={(v) => handleUpdate('title', v)}
                 placeholder={t('settings.tournamentNamePlaceholder')}
+                errorMessage={metaErrors.title ? t('settings.tournamentNameRequired') : undefined}
                 required
               />
 
@@ -415,6 +434,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="date"
                   value={formData.startDate ?? ''}
                   onChange={(v) => handleUpdate('startDate', v)}
+                  errorMessage={metaErrors.startDate ? t('settings.startDateRequired') : undefined}
                   required
                 />
                 <Input
@@ -480,6 +500,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             onTournamentUpdate={handleAsyncTournamentUpdate}
           />
         </div>
+
+        {/* Gleichstand: welche Plätze ausgespielt werden müssen (Paket TB-B, @W2A-068) */}
+        {onSavePlayOutPlaces && <PlayOutPlacesSettings tournament={tournament} onSave={onSavePlayOutPlaces} jumpHere={focusSection === 'gleichstand'} />}
         </fieldset>
 
         {/* Wizard-Bearbeitung (Neuplanen, Teams ersetzen) — nur vor dem ersten Anpfiff (@LZ-003 / W3), nur mit restructure (@W5-017) */}

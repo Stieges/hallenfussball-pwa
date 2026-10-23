@@ -2,7 +2,8 @@
  * Teamfarben und Leibchen (A-30a, Brief A-30 + Delta 2026-10-17): Regeln als reine Funktionen.
  *
  * - `kitConflict`: gleiche oder sehr ähnliche Trikotfarben (@SL-137, @SL-139), Abstand ΔE2000, Hinweis
- *   unter `KIT_SIMILAR_DELTA_E` (Daniel 2026-10-16, Prüfpunkt „Leibchen-Grenze“ in der Generalprobe).
+ *   unter `KIT_SIMILAR_DELTA_E` (Daniel 2026-10-16, Prüfpunkt „Leibchen-Grenze“ in der Generalprobe) oder bei
+ *   Helligkeitsabstand unter `KIT_SIMILAR_LUMINANCE_RATIO` (@SL-173).
  * - `defaultKit`: Vorbelegung beim Anpfiff – bei Konflikt trägt die Heimseite Leibchen in der Leibchenfarbe
  *   des Turniers (@W3-029, sonst Gelb). Liefert immer ein Objekt; `kit` geht bei jedem Anpfiff mit (F1).
  * - `wornColors`: getragene Farbe eines Spiels. Angepfiffene Spiele nehmen NUR die beim Anpfiff
@@ -15,6 +16,7 @@ import { z } from 'zod';
 import type { Match, Team, Tournament } from '../../types/tournament';
 import { slotTeamId } from './matchSlot';
 import { hexDeltaE2000 } from './kitColorDistance';
+import { getContrastRatio } from '../../design-tokens/display';
 
 /** Seite eines Spiels: `a` = Heim, `b` = Gast (wie `kit_color_a/b`, `bib_side`). */
 export type KitSide = 'a' | 'b';
@@ -30,6 +32,13 @@ export type KitConflict = 'same' | 'similar' | 'none';
 
 /** @SL-139: unter diesem ΔE2000 gelten zwei Trikotfarben als zu ähnlich (Hinweis auf Leibchen). */
 export const KIT_SIMILAR_DELTA_E = 30;
+
+/**
+ * @SL-173: unter diesem Helligkeitsabstand (WCAG-Kontrastverhältnis der beiden Trikotfarben) gelten zwei Farben
+ * ebenfalls als zu ähnlich – ΔE2000 misst den Farbton, nicht die Helligkeit (Rot-Grün-Schwäche).
+ * Die Grenze 1,5 : 1 ist ein Vorschlag (Controller 2026-10-22), Prüfpunkt „Leibchen-Grenze“ in der Generalprobe.
+ */
+export const KIT_SIMILAR_LUMINANCE_RATIO = 1.5;
 
 /** @W3-029: Leibchenfarbe ohne Einstellung – Gelb aus der Trikot-Palette (Controller-Entscheidung F2). */
 export const DEFAULT_BIB_COLOR = '#FFCC00';
@@ -81,8 +90,25 @@ export function parseKitInput(kit: unknown): MatchKit | null {
   return compactKit({ a: normalizeKitColor(a), b: normalizeKitColor(b), bibSide });
 }
 
-/** @SL-137/@SL-139: gleiche Farbe, zu ähnlich (ΔE2000 < 30) oder kein Konflikt. Unbekannte Farbe → kein Konflikt. */
-export function kitConflict(colorA: unknown, colorB: unknown): KitConflict {
+/**
+ * `luminance`: Helligkeitsregel @SL-173 mitprüfen. Pflicht für Leibchen-Hinweis und Zeile „Nächstes“ (`kitConflictWithLuminance`);
+ * die Farben der Ergebniskästen für Zuschauer (@ZM-153, @ZM-159) prüfen ohne – dort zählt nur der Farbabstand.
+ */
+export interface KitConflictOptions {
+  luminance: boolean;
+}
+
+/**
+ * @SL-137/@SL-139: gleiche Farbe, zu ähnlich (ΔE2000 < 30) oder kein Konflikt; mit `luminance` auch Helligkeitsabstand
+ * < 1,5 : 1 (@SL-173). Unbekannte Farbe → kein Konflikt.
+ * Ohne die Option gilt nur der Farbabstand. Leibchen-Verbraucher (Anpfiff, Zeile „Nächstes“) nehmen
+ * `kitConflictWithLuminance`; die Ergebniskästen der Zuschauer bleiben bei dieser Form.
+ */
+export function kitConflict(
+  colorA: unknown,
+  colorB: unknown,
+  options: KitConflictOptions = { luminance: false },
+): KitConflict {
   const a = normalizeKitColor(colorA);
   const b = normalizeKitColor(colorB);
   if (a === undefined || b === undefined) {
@@ -91,7 +117,15 @@ export function kitConflict(colorA: unknown, colorB: unknown): KitConflict {
   if (a === b) {
     return 'same';
   }
-  return hexDeltaE2000(a, b) < KIT_SIMILAR_DELTA_E ? 'similar' : 'none';
+  if (hexDeltaE2000(a, b) < KIT_SIMILAR_DELTA_E) {
+    return 'similar';
+  }
+  return options.luminance && getContrastRatio(a, b) < KIT_SIMILAR_LUMINANCE_RATIO ? 'similar' : 'none';
+}
+
+/** @SL-173: Konflikt für Leibchen-Hinweis beim Anpfiff und Zeile „Nächstes“ – Farbabstand und Helligkeitsabstand. */
+export function kitConflictWithLuminance(colorA: unknown, colorB: unknown): KitConflict {
+  return kitConflict(colorA, colorB, { luminance: true });
 }
 
 type KitMatch = Pick<Match, 'slotA' | 'slotB'>;
@@ -127,7 +161,7 @@ export function kitWithBib(
 export function defaultKit(match: KitMatch, teams: readonly KitTeam[], tournament: KitTournament): MatchKit {
   const a = teamColor(match, 'a', teams);
   const b = teamColor(match, 'b', teams);
-  if (kitConflict(a, b) === 'none') {
+  if (kitConflictWithLuminance(a, b) === 'none') {
     return compactKit({ a, b });
   }
   return kitWithBib(match, teams, tournament, 'a');

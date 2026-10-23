@@ -485,6 +485,8 @@ export interface Tournament {
    * gilt nur Platz 1 (Daniel K10); `[]` = kein Platz.
    */
   placementsToPlayOut?: number[];
+  /** GA4 A-13a: Abschlüsse der Gruppen (`group_completions`); fehlt vor G1 – dann ist keine Gruppe abgeschlossen. */
+  groupCompletions?: GroupCompletion[];
   /** A-25c (@W2A-025): Wertung bei Nichtantritt, im `config`-JSONB; fehlt sie oder ist sie unbrauchbar, gilt 2:0. */
   forfeitScore?: ForfeitScore;
   /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
@@ -555,6 +557,19 @@ export interface Tournament {
 
   // Optimistic Locking
   version?: number;
+  /**
+   * C-VERSION-MEHRDEUTIG (@FU-106, Regel „nichts still überschreiben“): zuletzt vom Server bestätigte Version, auf der der
+   * Inhalt beruht. Gesetzt nur bei der Übernahme aus der Cloud oder nach einem bestätigten Upload; ein lokales Speichern
+   * trägt den Wert der Nutzlast weiter (nie „Nutzlast + 1“). Voll-Speichern und Metadaten prüfen am Server gegen ihn.
+   * Nie in die Cloud geschrieben.
+   */
+  serverVersion?: number;
+  /**
+   * Befund C-ZWEITES-SPEICHERN-EIGENE-VORVERSION (@FU-110): erste Basis einer ununterbrochenen Kette eigener, bestätigter
+   * Uploads dieses Geräts bis `serverVersion`. Eine Nutzlast mit Basis in dieser Kette beruht auf dem eigenen Stand und wird
+   * gegen `serverVersion` geprüft. Endet bei jeder Übernahme aus der Cloud. Nur lokal, nie in die Cloud geschrieben.
+   */
+  ownUploadsFrom?: number;
   /**
    * A-10 (@TM-027, Befund C-SLOT-UPDATE-OHNE-VERSION): Änderungszählung des Servers (`tournaments.change_revision`),
    * zählt Spielplan-Änderungen ohne Versions-CAS. Nur aus der Cloud gelesen; lokale Schreibwege ändern sie nie.
@@ -832,6 +847,25 @@ export interface StandingDecision {
   shootout?: { winner: number; loser: number };
   /** Fingerabdruck der Grundlage. */
   basis: string;
+}
+
+/**
+ * GA4 A-13a (R-GA4v2-4, @TM-046, @TM-059): Abschluss einer Gruppe durch die Turnierleitung („Gruppe abschließen“), Zeile
+ * aus `group_completions` (Server ab Migration `20261110_006`, Mapper GA4 A-13b-C). Vor G1 fehlt das Feld am Turnier –
+ * dann gilt jede Gruppe als nie abgeschlossen. Ohne Person und Grund (Verlauf `bracket_log`, @W2A-072).
+ */
+export interface GroupCompletion {
+  /** Gruppe wie `groupKeyOf` (`OVERALL_GROUP` '' bei Jeder gegen jeden). */
+  groupId: string;
+  /** Rangfolge der Gruppe beim Abschluss (Team-IDs, Platz 1 zuerst). */
+  ranking: string[];
+  /** Plätze, die nach einer Korrektur offen auf ihre Herkunft zurückgingen (@TM-145); sonst leer. */
+  openRanks: number[];
+  /** Nach dem Abschluss wurde ein Gruppenspiel geändert („Besetzung prüfen“, @TM-071). */
+  stale: boolean;
+  completedAt?: string;
+  /** Gesetzt, solange die Gruppe wieder geöffnet ist (@TM-099); dann gilt der Abschluss nicht. */
+  reopenedAt?: string;
 }
 
 // ============================================================================

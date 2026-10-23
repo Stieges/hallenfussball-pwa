@@ -16,6 +16,7 @@
 
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
+import { abpfiffHalten } from '../helpers/abpfiff';
 import {
   engineCupTarget,
   expectEngineMatchRunningUi,
@@ -86,7 +87,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expectEngineMatchRunningUi(helperPage);
 
-    await helperPage.locator('[data-testid="match-finish-button"]').click();
+    await abpfiffHalten(helperPage);
 
     await expect(ownerPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Ende', { timeout: owner3sMs });
     await expect(ownerPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
@@ -126,7 +127,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     const helperPage = await asRole('helper');
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expectEngineMatchRunningUi(helperPage);
-    await helperPage.locator('[data-testid="match-finish-button"]').click();
+    await abpfiffHalten(helperPage);
     await expect.poll(async () => (await fetchEngineRows(ids.matchId)).filter((row) => row.type === 'MATCH_END').length, { timeout: 5000 }).toBe(1);
     await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 5000 });
   });
@@ -268,7 +269,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       const ownerPage = await asRole('owner');
       await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
       await expectEngineMatchRunningUi(ownerPage);
-      await ownerPage.locator('[data-testid="match-finish-button"]').click();
+      await abpfiffHalten(ownerPage);
       await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => row.match_status), { timeout: 10000 }).toBe('finished');
 
       await helperContext.setOffline(false);

@@ -15,6 +15,7 @@ import {
   BambiniSettings,
   ValidationWarnings,
   SmartConfig,
+  PlayOutPlacesSection,
 } from './components';
 import { MatchCockpitSettingsPanel } from '../../components/match-settings/MatchCockpitSettingsPanel';
 
@@ -344,6 +345,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 onReorder={onReorderPlacementLogic}
               />
             )}
+
+            {/* Paket TB-B: welche Plätze bei Gleichstand ausgespielt werden müssen (@W2A-066) */}
+            <PlayOutPlacesSection formData={formData} onUpdate={onUpdate} />
 
             {/* Point System */}
             <PointSystemPicker

@@ -10,6 +10,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Match, Team } from '../../../types/tournament';
 import { buildSideContext, sideName, type SideSource } from '../../../components/schedule/matchSides';
+import { isMatchInProgress } from '../../../core/view';
 import { ScheduleConflict } from '../types';
 import { cssVars } from '../../../design-tokens'
 import { SkippedMatchOverlay, SkippedBadge } from './SkippedMatchOverlay';
@@ -71,7 +72,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   const canDrag =
     isEditing &&
     draggable &&
-    match.matchStatus !== 'running' &&
+    !isMatchInProgress(match.matchStatus) &&
     match.matchStatus !== 'finished' &&
     match.matchStatus !== 'skipped';
 
@@ -90,7 +91,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   // Is this match skipped?
   const isSkipped = match.matchStatus === 'skipped';
   const isFinished = match.matchStatus === 'finished';
-  const isRunning = match.matchStatus === 'running';
+  const isRunning = isMatchInProgress(match.matchStatus);
 
   // Has conflicts?
   const hasErrors = conflicts.some(c => c.severity === 'error');

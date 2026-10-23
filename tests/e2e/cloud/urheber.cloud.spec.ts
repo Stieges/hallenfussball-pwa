@@ -43,10 +43,9 @@ test.describe('UR: Urheber am Eintrag im Protokoll', () => {
         .toEqual([3, 1, 'finished']);
       expect((await fetchEngineRows(ids.matchId)).map((row) => row.type)).toEqual(['RESULT_ENTRY']);
 
-      // Und das Protokoll zeigt „Ergebnis eingetragen von Olli“ -- Einstieg: Live-Bereich, Spiel-Auswahl (ManagementTab).
-      await page.goto(`/#/tournament/${ids.tournamentId}/live`);
-      await page.waitForLoadState('networkidle');
-      await page.locator('select').filter({ has: page.locator(`option[value="${ids.matchId}"]`) }).selectOption(ids.matchId);
+      // Und das Protokoll zeigt „Ergebnis eingetragen von Olli“ -- Einstieg: Live-Bereich mit dem Spiel in der Adresse (`?matchId=`):
+      // die Spielauswahl im Cockpit gibt es nicht mehr (C-COCKPIT-SPIELAUSWAHL), einen Weg über die Spielplan-Karte noch nicht (C-PROTOKOLL-OHNE-EINSTIEG).
+      await openCockpit(page, ids.tournamentId, ids.matchId);
       const ollisProtocol = page.getByTestId('protocol-result-entry');
       await expect(ollisProtocol).toHaveText(`📝Ergebnis eingetragen von ${OLLI}`, { timeout: 15000 });
       await expect(page.getByText('Noch keine Ereignisse')).toHaveCount(0);

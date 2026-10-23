@@ -57,7 +57,7 @@
       "endstand": "Final score",
       "schuesse": "Shots",
       "anstoss": "Kick-off",
-      "spielzeit": "Match time",
+      "gespielt": "Played",
       "strafstoss": "$t(sport:events.penaltyShootout)"
     },
     "unterzeile": {
@@ -66,6 +66,7 @@
       "bisVerlaengerung": "until extra time",
       "wiederanpfiff": "Restart",
       "anpfiffVerlaengerung": "Extra time kick-off",
+      "vonGeplant": "of {{zeit}}",
       "amSchuss": "next to shoot: {{team}}"
     },
     "uhrHaelt": "Clock stops at every stoppage",
@@ -75,6 +76,10 @@
       "vonN": "Period {{nummer}} of {{gesamt}}",
       "verlaengerung": "Extra time",
       "goldenGoal": "Golden goal"
+    },
+    "nachEnde": {
+      "verlaengerung": "after extra time",
+      "strafstoss": "after $t(sport:events.penaltyShootout)"
     },
     "quittung": "Match ended · {{links}}:{{rechts}} saved",
     "keinWeiteresSpiel": "No more matches",
@@ -162,7 +167,8 @@
     "countsAsFoul": "counts as a foul"
   },
   "eventEditDialog": {
-    "title": "Edit {{label}}"
+    "title": "Edit {{label}}",
+    "numberInvalid": "Shirt number: a whole number from 1 to 99. The previous number stays."
   },
   "cardDialog": {
     "title": "Issue Card",
@@ -310,6 +316,7 @@
     "horn3": "Horn 3 (Deep)",
     "customSound": "Custom Sound",
     "notUploaded": "(not uploaded)",
+    "test": "Test",
     "testSound": "Test sound",
     "volume": "Volume",
     "volumePercent": "{{percent}}%",
@@ -461,6 +468,23 @@
       "done": "{{target}} updated"
     }
   },
+  "zusammenfassung": {
+    "tore": "Goals ({{count}})",
+    "toreKeine": "Goals (0): none",
+    "karten": "Cards ({{count}})",
+    "kartenKeine": "Cards (0): none",
+    "zeitstrafen": "Time penalties ({{count}})",
+    "zeitstrafenKeine": "Time penalties (0): none",
+    "fouls": "Fouls: {{count}}",
+    "nr": "No. {{nummer}}, {{zeit}}",
+    "ohneNr": "no No., {{zeit}}",
+    "eigentor": "$t(sport:events.ownGoal) {{text}}",
+    "karte": {
+      "YELLOW": "$t(cardDialog.yellowCard)",
+      "YELLOW_RED": "$t(cardDialog.yellowRedCard)",
+      "RED": "$t(cardDialog.redCard)"
+    }
+  },
   "spalte": {
     "heim": "Home",
     "gast": "Away",
@@ -490,6 +514,7 @@
     "andere": "Other no.",
     "uebernehmen": "Apply",
     "eingabe": "Shirt number",
+    "ungueltig": "Shirt number: a whole number from 1 to 99.",
     "titelKarte": "Shirt number – {{art}} {{team}}",
     "titelZeitstrafe": "Shirt number – time penalty {{team}}"
   },
@@ -500,5 +525,66 @@
     "rot": "Red",
     "schonGelb": "No. {{nummer}} already has a yellow",
     "trotzdemGelb": "Yellow anyway"
+  },
+  "leiste": {
+    "aria": "Match controls",
+    "rueckgaengig": "Undo",
+    "rueckgaengigAria": "Undo: {{ziel}}",
+    "anpfiff": "Kick-off",
+    "pause": "Pause",
+    "weiter": "Resume",
+    "wiederanpfiff": "Restart",
+    "anpfiffVerlaengerung": "Start extra time",
+    "entscheidung": "Choose decider",
+    "weiterNaechstes": "Next match",
+    "korrigieren": "Correct",
+    "mehr": "More",
+    "ereignisse": "Events",
+    "beendet": "Match has ended – corrections via the organisers",
+    "leitet": "{{feld}} is run by {{name}}",
+    "uebernehmen": "Take over the match",
+    "keinZugriff_one": "You no longer have access – 1 entry handed to the organisers",
+    "keinZugriff_other": "You no longer have access – {{count}} entries handed to the organisers",
+    "tasteLeertaste": "Space",
+    "tasteRueckgaengigStrg": "Ctrl+Z",
+    "tasteRueckgaengigCmd": "Cmd+Z"
+  },
+  "abpfiff": {
+    "label": "End match",
+    "halten": "hold down",
+    "beschreibung": "Press and hold for about one second",
+    "frage": "End match {{spiel}} with {{rest}} minutes still to play?",
+    "beenden": "End match",
+    "weiterspielen": "Keep playing"
+  },
+  "mehr": {
+    "titel": "More",
+    "uhrKorrigieren": "Correct clock",
+    "seitenTauschen": "Switch sides",
+    "einstellungen": "Settings",
+    "schliessen": "Close"
+  },
+  "entscheidung": {
+    "titel": "How is the match decided?",
+    "verlaengerung": "$t(sport:phases.overtime)",
+    "goldenGoal": "$t(sport:phases.goldenGoal)",
+    "strafstoss": "$t(sport:events.penaltyShootout)"
+  },
+  "rahmen": {
+    "zurueck": "Back",
+    "zurueckAria": "Back to the schedule",
+    "feldAria": "Choose field, now field {{feld}}",
+    "feld": "Field {{feld}}",
+    "online": "Connected",
+    "offline": "Offline",
+    "verbinden": "Connect",
+    "verbindet": "Connecting …",
+    "tastenkuerzel": "Shortcuts"
+  },
+  "naechstes": {
+    "label": "Next:",
+    "spiel": "Match {{nummer}}",
+    "anstoss": "Kick-off {{zeit}}",
+    "leibchen": "Bibs needed, the colours are too similar"
   }
 }

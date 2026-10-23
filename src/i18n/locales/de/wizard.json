@@ -497,7 +497,11 @@
       "goalDifference": "Tordifferenz",
       "goalsFor": "Erzielte Tore",
       "directComparison": "Direkter Vergleich"
-    }
+    },
+    "afterRow": "danach: Strafstoßschießen (Entscheidung der Turnierleitung)",
+    "afterRowHint": "Immer die letzte Stufe, kann nicht abgeschaltet werden.",
+    "bfvHelp": "Gilt, wenn Teams in der Tabelle punktgleich sind. Vorbelegt nach den BFV-Regeln für private Hallenturniere. Bleibt nach einer Stufe ein Gleichstand, gilt die nächste.",
+    "directComparisonHint": "Bei drei und mehr Teams eine Sondertabelle aus ihren Spielen untereinander."
   },
   "options": {
     "groupSystem": {
@@ -576,5 +580,20 @@
   "schedule": {
     "incomplete_one": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiel passt nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen.",
     "incomplete_other": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiele passen nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen."
+  },
+  "playOut": {
+    "title": "Diese Plätze müssen bei Gleichstand ausgespielt werden",
+    "help": "Gleichstand auf einem angehakten Platz entscheidet ein Strafstoßschießen. Auf jedem anderen Platz darf die Turnierleitung das Ergebnis so akzeptieren. Vorbelegt ist Platz 1; jeder Platz lässt sich an- und abhaken, auch Platz 1. Die Einstellung lässt sich jederzeit ändern.",
+    "followUpNote": "Ein Platz, der in ein weiteres Spiel führt (zum Beispiel ins Halbfinale), wird immer ausgespielt – auch wenn er hier nicht angehakt ist.",
+    "place": "Platz {{place}}",
+    "legend": "Auszuspielende Plätze",
+    "summary": "Gleichstand auf {{selected}}: Strafstoßschießen nötig. Auf {{others}} darf die Turnierleitung das Ergebnis so akzeptieren – dann teilen die Teams den Platz.",
+    "summaryAll": "Gleichstand auf {{selected}}: Strafstoßschießen nötig. Alle Plätze sind eingestellt, die Teams teilen keinen Platz.",
+    "summaryNone": "Kein Platz ist eingestellt: Auf jedem Platz darf die Turnierleitung das Ergebnis so akzeptieren – dann teilen die Teams den Platz.",
+    "places": {
+      "one": "Platz {{from}}",
+      "two": "Platz {{from}} und {{to}}",
+      "range": "Platz {{from}} bis {{to}}"
+    }
   }
 }

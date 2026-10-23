@@ -144,6 +144,12 @@ describe('C-COPY-AC-ID: echte UUIDs', () => {
     expect(kopie.version).toBeUndefined();
     expect(kopie.changeRevision).toBeUndefined();
   });
+
+  it('C-VERSION-MEHRDEUTIG: die vom Server bestätigte Version des Originals reist nicht mit (die Kopie ist eine neue Zeile)', () => {
+    const kopie = kopieVon({ ...hallencupOstGespielt(), version: 12, serverVersion: 12 });
+    expect(kopie.serverVersion).toBeUndefined();
+    expect(kopie.version).toBeUndefined();
+  });
 });
 
 describe('@W5-026 Helfer und Bildschirme gehören nicht zur Kopie', () => {

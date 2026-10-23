@@ -102,6 +102,7 @@ export function EntrySheets({ flows, teams, ausloeserSeite, kartenArten, t }: En
           andereNummer: t('nummer.andere'),
           uebernehmen: t('nummer.uebernehmen'),
           eingabeLabel: t('nummer.eingabe'),
+          ungueltig: t('nummer.ungueltig'),
         }}
         ausloeserSeite={ausloeserSeite(seite)}
         onWaehle={(nummer) => { void flows.waehleNummer(nummer); }}

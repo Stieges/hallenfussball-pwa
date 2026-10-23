@@ -63,3 +63,7 @@ export { ConnectionStatusBar } from './ConnectionStatusBar';
 export type { ConnectionStatusBarProps, ConnectionStatus } from './ConnectionStatusBar';
 
 // B-17: Monitor-Dauerbetrieb
+
+// Paket TB-B: Bausteine der Gleichstands-Oberfläche
+export { TieMarker, ShootoutScoreInput, OrderPicker, PlacesToPlayOutPicker } from './molecules';
+export type { TieMarkerProps, ShootoutScoreInputProps, OrderPickerProps, PlacesToPlayOutPickerProps } from './molecules';

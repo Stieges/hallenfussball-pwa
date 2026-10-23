@@ -150,6 +150,9 @@
 #                                                   # Lebenszeichen lesen ueber tournamentSettings/manageScreens) --
 #                                                   # die CA-2-Zeilen (rls-matrix.d/coadmin.sh) muessen hier die alten
 #                                                   # Werte zeigen, also ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a25b      # Alles ("nachher"), aber OHNE 20261110_005 (A-25b: Nichtantritt-Wertung,
+#                                                   # forfeit_absent als Schutzspalte) -- die A-25b-Zeilen
+#                                                   # (rls-matrix.d/spur-wertung-a25.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-b48b      # Alles ("nachher"), aber OHNE 20261113_101 (B-48b: Lebenszeichen mit
 #                                                   # Kennung als Text, Pruefung gegen config.monitors) -- die B-48b-Zeilen
 #                                                   # (rls-matrix.d/spur-b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
@@ -251,6 +254,8 @@ WITH_A27_REQ=1
 WITH_A34_REQ=1
 # CA-2: 20261110_004 im Modus "nachher" einspielen (Gegenprobe --without-coadmin laesst sie weg; braucht _001 und _002).
 WITH_CA2_REQ=1
+# A-25b: 20261110_005 im Modus "nachher" einspielen (Gegenprobe --without-a25b laesst sie weg; braucht _003 A-34).
+WITH_A25B_REQ=1
 # B-48b: 20261113_101 im Modus "nachher" einspielen (Gegenprobe --without-b48b laesst sie weg; Erwartungen setzen A-27 voraus).
 WITH_B48B_REQ=1
 
@@ -300,6 +305,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-coadmin)
       WITH_CA2_REQ=0
+      shift
+      ;;
+    --without-a25b)
+      WITH_A25B_REQ=0
       shift
       ;;
     --without-b48b)
@@ -573,6 +582,26 @@ if [[ "$WITH_A27" -eq 1 && "$WITH_CA2_REQ" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL + CA-2 (20261110_004)"
 elif [[ "$WITH_A27" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, CA-2-Gegenprobe (ohne 20261110_004)"
+fi
+
+# A-25b (20261110_005, @W2A-022, @W2A-024, @W2A-026): Nichtantritt-Wertung -- matches.forfeit_absent (Schutzspalte),
+# Rechenfunktion und Schreibweg. Setzt A-34 (_003) voraus (Fail-fast der Migration); --without-a25b ist die Gegenprobe.
+A25B_FILE="$(find_migration 20261110_005)"
+WITH_A25B=0
+if [[ "$WITH_A34" -eq 1 && "$WITH_A25B_REQ" -eq 1 ]]; then
+  WITH_A25B=1
+  # Fail-fast von _005 verlangt die juengsten Engine-Fassungen A-25a (20261028_003) und SW (20261028_007), die diese
+  # Matrix sonst nicht einspielt. A-25a ersetzt dabei append_match_events durch die Fassung ohne Steuer -- deshalb danach
+  # A-34 (_003, idempotent) erneut; _005 baut darauf auf, der Endstand der ersetzten Funktionen ist wie in Produktion.
+  for a25b_pre in 20261028_003 20261028_007 20261110_003; do
+    echo "Migration einspielen (Voraussetzung A-25b): $(basename "$(find_migration "$a25b_pre")")" >&2
+    psql_stdin < "$(find_migration "$a25b_pre")"
+  done
+  echo "Migration einspielen: $(basename "$A25B_FILE")" >&2
+  psql_stdin < "$A25B_FILE"
+  MODE_LABEL="$MODE_LABEL + A-25b (20261110_005)"
+elif [[ "$WITH_A34" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-25b-Gegenprobe (ohne 20261110_005)"
 fi
 
 # B-48b (20261113_101, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): record_monitor_heartbeat mit Kennung als
@@ -2164,7 +2193,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

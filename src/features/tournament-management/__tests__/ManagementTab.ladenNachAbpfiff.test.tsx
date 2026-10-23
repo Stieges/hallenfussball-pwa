@@ -74,6 +74,7 @@ vi.mock('../../../hooks/useCockpitExecution', () => ({
 import { ManagementTab } from '../ManagementTab';
 import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 const MATCH_ID = 'match-1';
 const HOME = { id: 'team-a', name: 'FC Alpha' };
 const AWAY = { id: 'team-b', name: 'SV Beta' };
@@ -111,7 +112,7 @@ describe('ManagementTab – @FU-004 kein dauerhaftes „Spiel wird geladen…“
   it('@FU-004 hängt das Laden und hat danach jedes Spiel des Felds ein Ergebnis, sagt die Tafel „kein Spiel mehr“ statt „wird geladen“', async () => {
     mockGetLiveMatchData.mockReturnValue(new Promise(() => undefined)); // erster Lauf hängt, wird abgebrochen
     const { rerender } = render(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />,
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper }
     );
     expect(await screen.findByText(LADEN)).toBeInTheDocument();
     rerender(
@@ -124,7 +125,7 @@ describe('ManagementTab – @FU-004 kein dauerhaftes „Spiel wird geladen…“
   it('Gegenbeispiel: solange das Spiel ohne Ergebnis noch lädt, steht der Ladehinweis', async () => {
     mockGetLiveMatchData.mockReturnValue(new Promise(() => undefined));
     render(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />,
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />, { wrapper: RouterWrapper }
     );
     expect(await screen.findByText(LADEN)).toBeInTheDocument();
   });

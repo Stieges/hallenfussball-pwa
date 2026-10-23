@@ -50,7 +50,7 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
-    currentMatch: match as never, upcomingMatches: [],
+    currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), ...handlers,
@@ -62,7 +62,7 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
 
   it('@SL-018 readOnly=true: die Spalte hat keine Tor-Taste (Zähler bleibt), onGoal wird nie gerufen', () => {
     const onGoal = vi.fn();
-    render(<LiveCockpit {...baseProps(makeMatch(), { onGoal })} readOnly />);
+    render(<LiveCockpit {...baseProps(makeMatch(), { onGoal })} kannSteuern={false} />);
 
     expect(screen.queryByTestId('goal-button-home')).toBeNull();
     expect(screen.queryByTestId('foul-button-home')).toBeNull();
@@ -73,15 +73,20 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
   });
 
   it('readOnly=true: Banner ist sichtbar', () => {
-    render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
+    render(<LiveCockpit {...baseProps(makeMatch())} kannSteuern={false} />);
     expect(screen.getByTestId('cockpit-readonly-banner')).toBeInTheDocument();
   });
 
-  it('readOnly=true: alle GameControls-Knöpfe sind disabled', () => {
-    render(<LiveCockpit {...baseProps(makeMatch({ status: 'PAUSED' }))} readOnly />);
-    expect(screen.getByTestId('match-start-button')).toBeDisabled();
-    expect(screen.getByTestId('match-edit-time-button')).toBeDisabled();
-    expect(screen.getByTestId('match-finish-button')).toBeDisabled();
+  it('readOnly=true: keine Steuer-Knöpfe der Daumenleiste (Weiter, Abpfiff, Rückgängig); in „Mehr“ fehlt „Uhr korrigieren“', async () => {
+    // Seit Aufgabe 3.6 ersetzt die Nur-Lesen-Zeile die Leiste (Spec § 4.4): die Knöpfe sind nicht mehr gesperrt, sondern nicht da.
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch({ status: 'PAUSED' }))} kannSteuern={false} />);
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    expect(screen.queryByTestId('match-resume-button')).toBeNull();
+    expect(screen.queryByTestId('match-finish-button')).toBeNull();
+    expect(screen.queryByTestId('match-undo-button')).toBeNull();
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    expect(screen.queryByTestId('mehr-uhr-korrigieren')).toBeNull();
   });
 
   it('readOnly=true: „Zeit bearbeiten“ öffnet den Zeit-Dialog NICHT (die Uhr der Tafel ist reine Anzeige)', async () => {
@@ -93,16 +98,18 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
     // unabhängig davon, ob der Dialog aufging. Jetzt über role="dialog" geprüft
     // (TimeAdjustDialog.tsx:100-102), das nur bei isOpen=true gerendert wird.
     const user = userEvent.setup();
-    render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
+    render(<LiveCockpit {...baseProps(makeMatch())} kannSteuern={false} />);
     await user.click(screen.getByTestId('scoreboard-clock'));
-    await user.click(screen.getByTestId('match-edit-time-button'));
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    expect(screen.queryByTestId('mehr-uhr-korrigieren')).toBeNull();
     expect(screen.queryByRole('dialog', { name: 'cockpit:timeAdjust.title' })).not.toBeInTheDocument();
   });
 
   it('readOnly=false: „Zeit bearbeiten“ öffnet den Zeit-Dialog — Verhalten wie vorher', async () => {
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch())} />);
-    await user.click(screen.getByTestId('match-edit-time-button'));
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    await user.click(screen.getByTestId('mehr-uhr-korrigieren'));
     expect(screen.getByRole('dialog', { name: 'cockpit:timeAdjust.title' })).toBeInTheDocument();
   });
 
@@ -111,7 +118,7 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
       status: 'PAUSED',
       events: [{ id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 30, payload: { team: 'home', delta: 1 }, scoreAfter: { home: 1, away: 0 } }],
     });
-    render(<LiveCockpit {...baseProps(match)} readOnly />);
+    render(<LiveCockpit {...baseProps(match)} kannSteuern={false} />);
     expect(screen.queryByTitle('cockpit:sidebar.edit')).not.toBeInTheDocument();
   });
 
@@ -153,7 +160,7 @@ describe('LiveCockpit — readOnly sperrt die Tiebreaker-Aktionen (Task R2, Fixr
     const onStartOvertime = vi.fn();
     const match = makeTiebreakerMatch({ tiebreakerMode: 'overtime-then-shootout' });
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartOvertime })} readOnly />);
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartOvertime })} kannSteuern={false} />);
     expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Verlängerung starten/i })).not.toBeInTheDocument();
     unmount();
@@ -168,7 +175,7 @@ describe('LiveCockpit — readOnly sperrt die Tiebreaker-Aktionen (Task R2, Fixr
     const onStartGoldenGoal = vi.fn();
     const match = makeTiebreakerMatch({ tiebreakerMode: 'goldenGoal' });
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartGoldenGoal })} readOnly />);
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartGoldenGoal })} kannSteuern={false} />);
     expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /sport:phases\.goldenGoal starten/i })).not.toBeInTheDocument();
     unmount();
@@ -183,7 +190,7 @@ describe('LiveCockpit — readOnly sperrt die Tiebreaker-Aktionen (Task R2, Fixr
     const onStartPenaltyShootout = vi.fn();
     const match = makeTiebreakerMatch({ tiebreakerMode: 'shootout' });
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartPenaltyShootout })} readOnly />);
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartPenaltyShootout })} kannSteuern={false} />);
     expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /sport:events\.penaltyShootout starten/i })).not.toBeInTheDocument();
     unmount();
@@ -198,7 +205,7 @@ describe('LiveCockpit — readOnly sperrt die Tiebreaker-Aktionen (Task R2, Fixr
     const onForceFinish = vi.fn();
     const match = makeTiebreakerMatch();
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match, { onForceFinish })} readOnly />);
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onForceFinish })} kannSteuern={false} />);
     expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Als Unentschieden beenden/i })).not.toBeInTheDocument();
     unmount();
@@ -242,7 +249,7 @@ describe('LiveCockpit — Fixrunde 2 (H1): PenaltyShootoutDialog ehrt readOnly',
     const onRecordPenaltyResult = vi.fn();
     const onAbortPenaltyShootout = vi.fn();
     render(
-      <LiveCockpit {...baseProps(makePenaltyMatch(), { onRecordPenaltyResult, onAbortPenaltyShootout })} readOnly />
+      <LiveCockpit {...baseProps(makePenaltyMatch(), { onRecordPenaltyResult, onAbortPenaltyShootout })} kannSteuern={false} />
     );
     expect(screen.queryByTestId('penalty-shootout-dialog')).not.toBeInTheDocument();
   });
@@ -271,7 +278,7 @@ describe('LiveCockpit — Fixrunde 2 (H1b/M1): Mobiles Ereignisprotokoll-Sheet',
 
   it('readOnly=true: Ereignisprotokoll-Knopf bleibt bedienbar (Regel 2: öffnen/lesen erlaubt) — Sheet zeigt KEINEN Bearbeiten-Knopf', async () => {
     const user = userEvent.setup();
-    render(<LiveCockpit {...baseProps(matchWithEvent())} readOnly />);
+    render(<LiveCockpit {...baseProps(matchWithEvent())} kannSteuern={false} />);
 
     const eventLogButton = screen.getByTestId('match-event-log-button');
     expect(eventLogButton).not.toBeDisabled();
@@ -304,23 +311,25 @@ describe('LiveCockpit — Fixrunde 2 (H1b/M1): Mobiles Ereignisprotokoll-Sheet',
 describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter readOnly', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('A-08c: ohne Engine-Ansicht gibt es keinen Rückgängig-Knopf, auch nicht unter readOnly=false (Altweg entfernt)', () => {
+  it('A-08c: ohne Engine-Ansicht ist Rückgängig gesperrt und ruft den Altweg nie, auch nicht unter readOnly=false (Altweg entfernt)', async () => {
     const onUndoLastEvent = vi.fn();
     const match = makeMatch({
       status: 'PAUSED',
       events: [{ id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 10, payload: { teamId: 'team-a' }, scoreAfter: { home: 1, away: 0 } }],
     });
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match, { onUndoLastEvent })} readOnly />);
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onUndoLastEvent })} kannSteuern={false} />);
     expect(screen.queryByTestId('match-undo-button')).toBeNull();
     unmount();
 
     render(<LiveCockpit {...baseProps(match, { onUndoLastEvent })} />);
-    expect(screen.queryByTestId('match-undo-button')).toBeNull();
+    // Der Platz bleibt stehen (die Leiste springt nicht), ohne Engine-Weg ist er gesperrt (@FU-071)
+    expect(screen.getByTestId('match-undo-button')).toBeDisabled();
+    await userEvent.click(screen.getByTestId('match-undo-button'));
     expect(onUndoLastEvent).not.toHaveBeenCalled();
   });
 
-  it('Seitenwechsel: readOnly=true disabled; readOnly=false enabled + Klick tauscht die Teams tatsächlich', async () => {
+  it('Seitenwechsel (@SL-065): bleibt auch unter readOnly=true bedienbar (nur die eigene Anzeige, darf.ts); Klick tauscht die Teams tatsächlich', async () => {
     // Review-Befund (Fixrunde 3, niedrig): nicht nur `disabled` prüfen, sondern wie die
     // Nachbartests den tatsächlichen Effekt. team-column-{home|away} bleibt inhaltlich konstant
     // (die testid folgt dem `seite`-Prop, das beim Tausch mitwandert) — was sich ändert, ist die
@@ -328,12 +337,15 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     const match = makeMatch({ status: 'PAUSED' });
     const user = userEvent.setup();
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match)} readOnly />);
-    expect(screen.getByRole('button', { name: 'Seiten tauschen' })).toBeDisabled();
-    unmount();
+    // Nur-Lesen: Seiten tauschen ändert nur die Anzeige dieses Geräts und bleibt erreichbar (`darfImZustand`: auch ohne Steuer)
+    const lesen = render(<LiveCockpit {...baseProps(match)} kannSteuern={false} />);
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    expect(screen.getByTestId('mehr-seiten-tauschen')).not.toBeDisabled();
+    lesen.unmount();
 
     const { container } = render(<LiveCockpit {...baseProps(match)} />);
-    const switchButton = screen.getByRole('button', { name: 'Seiten tauschen' });
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    const switchButton = screen.getByTestId('mehr-seiten-tauschen');
     expect(switchButton).not.toBeDisabled();
 
     const before = container.querySelectorAll('[data-testid^="team-column-"]');
@@ -358,7 +370,7 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
       expect(screen.queryByRole('button', { name: 'Halbzeit' })).not.toBeInTheDocument();
       unmount();
     }
-    render(<LiveCockpit {...baseProps(makeMatch({ status: 'RUNNING' }))} readOnly />);
+    render(<LiveCockpit {...baseProps(makeMatch({ status: 'RUNNING' }))} kannSteuern={false} />);
     expect(screen.queryByRole('button', { name: 'Halbzeit' })).not.toBeInTheDocument();
   });
 
@@ -372,8 +384,9 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     const match = makeMatch({ status: 'PAUSED' });
     const user = userEvent.setup();
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match, { onUpdateSettings })} readOnly />);
-    const settingsButtonLocked = screen.getByRole('button', { name: 'Einstellungen' });
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onUpdateSettings })} kannSteuern={false} />);
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    const settingsButtonLocked = screen.getByTestId('mehr-einstellungen');
     expect(settingsButtonLocked).not.toBeDisabled();
     await user.click(settingsButtonLocked);
     expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
@@ -385,7 +398,8 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     unmount();
 
     render(<LiveCockpit {...baseProps(match, { onUpdateSettings })} />);
-    const settingsButtonUnlocked = screen.getByRole('button', { name: 'Einstellungen' });
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    const settingsButtonUnlocked = screen.getByTestId('mehr-einstellungen');
     expect(settingsButtonUnlocked).not.toBeDisabled();
     await user.click(settingsButtonUnlocked);
     expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
@@ -401,7 +415,7 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     const match = makeMatch({ status: 'PAUSED' });
     const user = userEvent.setup();
 
-    render(<LiveCockpit {...baseProps(match)} readOnly />);
+    render(<LiveCockpit {...baseProps(match)} kannSteuern={false} />);
     const eventLogButton = screen.getByTestId('match-event-log-button');
     expect(eventLogButton).not.toBeDisabled();
     await user.click(eventLogButton);
@@ -418,7 +432,7 @@ describe('LiveCockpit — Fixrunde 2 (M1): Tor-Knopf des Gast-Teams (Team-Spalte
     const match = makeMatch();
     const user = userEvent.setup();
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match, { onGoal })} readOnly />);
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onGoal })} kannSteuern={false} />);
     expect(screen.queryByTestId('goal-button-away')).toBeNull();
     expect(onGoal).not.toHaveBeenCalled();
     unmount();
@@ -443,17 +457,20 @@ describe('LiveCockpit — Fixrunde 2 (M1): Tor-Knopf des Gast-Teams (Team-Spalte
  */
 describe('LiveCockpit — Fixrunde 2 (M2): beendetes Spiel + readOnly=false — wie vor R2 (235d947)', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => setDesktopViewport()); // auch nach dem erwartet fehlschlagenden Handy-Test wieder Laptop-Breite
 
   it('Einstellungen bleiben bedienbar', async () => {
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch({ status: 'FINISHED' }))} />);
-    const settingsButton = screen.getByRole('button', { name: 'Einstellungen' });
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    const settingsButton = screen.getByTestId('mehr-einstellungen');
     expect(settingsButton).not.toBeDisabled();
     await user.click(settingsButton);
     expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
   });
 
-  it('Ereignisprotokoll (mobil) bleibt bedienbar', async () => {
+  // Behoben in 3.6 (Fixrunde 1, K1): `leisteFuer` gibt `abgepfiffen` unter 1024 px den Platz „Ereignisse“ (Plan „Gilt nach Vorschlag (2)“).
+  it('@SL-113 @SL-061 Ereignisprotokoll (mobil) bleibt nach dem Abpfiff erreichbar', async () => {
     setMobileViewport();
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch({ status: 'FINISHED' }))} />);
@@ -482,19 +499,18 @@ describe('LiveCockpit — Fixrunde 2 (L2): ARIA-Attribute', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('Banner hat role="status"', () => {
-    render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
+    render(<LiveCockpit {...baseProps(makeMatch())} kannSteuern={false} />);
     expect(screen.getByTestId('cockpit-readonly-banner')).toHaveAttribute('role', 'status');
   });
 
-  it('Die Uhr der Tafel ist reine Anzeige (kein Knopf, kein aria-disabled); „Zeit bearbeiten“ ist unter Sperre gesperrt, sonst frei', () => {
-    const { unmount } = render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
+  it('Die Uhr der Tafel ist reine Anzeige (kein Knopf, kein aria-disabled); „Mehr“ bleibt unter Sperre und sonst bedienbar', () => {
+    const { unmount } = render(<LiveCockpit {...baseProps(makeMatch())} kannSteuern={false} />);
     expect(screen.getByTestId('scoreboard-clock')).not.toHaveAttribute('aria-disabled');
     expect(screen.getByTestId('scoreboard-clock')).not.toHaveAttribute('role');
-    expect(screen.getByTestId('match-edit-time-button')).toBeDisabled();
     unmount();
 
     render(<LiveCockpit {...baseProps(makeMatch())} />);
-    expect(screen.getByTestId('match-edit-time-button')).not.toBeDisabled();
+    expect(screen.getByTestId('cockpit-more-button')).not.toBeDisabled();
   });
 });
 
@@ -538,7 +554,7 @@ describe('LiveCockpit — Fixrunde 4 (H3, Task R4): Auto-Finish ehrt readOnly', 
   it('readOnly=true: Standard-Einstellung + läuft + Spielzeit überschritten ⇒ kein Spielende im Log', async () => {
     const { spiel, mitEngine, enden } = await laufendesSpiel();
     zu(GRENZE_MS + 100_000);
-    render(mitEngine(<LiveCockpit {...baseProps(engineSpielMatch(spiel))} readOnly />));
+    render(mitEngine(<LiveCockpit {...baseProps(engineSpielMatch(spiel))} kannSteuern={false} />));
     await wartenAuf();
     expect(enden()).toBe(0);
   });
@@ -546,7 +562,7 @@ describe('LiveCockpit — Fixrunde 4 (H3, Task R4): Auto-Finish ehrt readOnly', 
   it('readOnly=false: dieselbe Situation ⇒ genau ein Spielende im Log (Kontrolle)', async () => {
     const { spiel, mitEngine, enden } = await laufendesSpiel();
     zu(GRENZE_MS + 100_000);
-    render(mitEngine(<LiveCockpit {...baseProps(engineSpielMatch(spiel))} readOnly={false} />));
+    render(mitEngine(<LiveCockpit {...baseProps(engineSpielMatch(spiel))} kannSteuern />));
     await waitFor(() => expect(enden()).toBe(1));
     await wartenAuf();
     expect(enden()).toBe(1);
@@ -567,10 +583,10 @@ describe('LiveCockpit — Fixrunde R7 (Task R4-Review M1): readOnly wechselt dyn
     const { spiel, mitEngine, enden } = await laufendesSpiel();
     zu(GRENZE_MS + 100_000);
     const match = engineSpielMatch(spiel);
-    const { rerender } = render(mitEngine(<LiveCockpit {...baseProps(match)} readOnly />));
+    const { rerender } = render(mitEngine(<LiveCockpit {...baseProps(match)} kannSteuern={false} />));
     await wartenAuf();
     expect(enden()).toBe(0);
-    rerender(mitEngine(<LiveCockpit {...baseProps(match)} readOnly={false} />));
+    rerender(mitEngine(<LiveCockpit {...baseProps(match)} kannSteuern />));
     await waitFor(() => expect(enden()).toBe(1));
   });
 
@@ -578,12 +594,12 @@ describe('LiveCockpit — Fixrunde R7 (Task R4-Review M1): readOnly wechselt dyn
     const { spiel, mitEngine, enden } = await laufendesSpiel();
     zu(300_000);
     const match = engineSpielMatch(spiel);
-    const { rerender } = render(mitEngine(<LiveCockpit {...baseProps(match)} readOnly={false} />));
+    const { rerender } = render(mitEngine(<LiveCockpit {...baseProps(match)} kannSteuern />));
     await wartenAuf();
     expect(enden()).toBe(0);
-    rerender(mitEngine(<LiveCockpit {...baseProps(match)} readOnly />));
+    rerender(mitEngine(<LiveCockpit {...baseProps(match)} kannSteuern={false} />));
     zu(GRENZE_MS + 100_000);
-    rerender(mitEngine(<LiveCockpit {...baseProps(match)} readOnly />));
+    rerender(mitEngine(<LiveCockpit {...baseProps(match)} kannSteuern={false} />));
     await wartenAuf();
     expect(enden()).toBe(0);
   });

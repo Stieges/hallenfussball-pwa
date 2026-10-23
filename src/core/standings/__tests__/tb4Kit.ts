@@ -68,6 +68,9 @@ export function endstand(tournament: Tournament): Map<string, number> {
 export const plaetze = (ranks: Map<string, number>, ...keys: Key[]): Array<number | undefined> =>
   keys.map((key) => ranks.get(NAME[key]));
 
-/** Teamname aus dem Text einer Tabellenzelle (die Zelle trägt vor dem Namen die Initialen des Teamsymbols). */
+/**
+ * Teamname aus dem Text einer Tabellenzelle (die Zelle trägt vor dem Namen die Initialen des Teamsymbols und, in der
+ * App-Ansicht bei Gleichstand, hinter dem Namen eine Marke wie „Gleichstand – Entscheidung nötig“, Paket TB-B).
+ */
 export const teamNameIn = (cellText: string): string =>
-  Object.values(NAME).filter((name) => cellText.endsWith(name)).sort((a, b) => b.length - a.length)[0] ?? cellText;
+  Object.values(NAME).filter((name) => cellText.includes(name)).sort((a, b) => b.length - a.length)[0] ?? cellText;

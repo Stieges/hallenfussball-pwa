@@ -13,7 +13,9 @@ import { decideCloudAdoption, isCloudReadTimeout, withCloudReadTimeout } from '.
 import { ServerRevisionRegistry, type ServerRevisionListener, type ServerRevisionSource } from './serverRevisionRegistry';
 import { CloudQueueGuard } from './cloudQueueGuard';
 import { effectiveHostTeamIds } from '../models/hostTeams';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 import { mergeAccountList, offlineAccountList, readAccountRoleMemory, writeAccountRoleMemory, type AccountRoleMemory } from './accountListMerge';
+import { checkedVersion, withCheckedVersion } from './confirmedVersion';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -294,7 +296,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
         if (!read) {
-            if (this._mutationQueue.needsCloudCopy(id)) { this._mutationQueue.forgetCloudCopy(id); } // Auflage A1: Turnier weg/unsichtbar
+            // Auflage A1: Turnier weg/unsichtbar. `null` heißt nur noch „nicht gefunden“; ein Abbruch wirft und lässt die Merkung
+            // stehen (Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH, @FU-109)
+            if (this._mutationQueue.needsCloudCopy(id)) { this._mutationQueue.forgetCloudCopy(id); }
             return null;
         }
         const discarded = this._mutationQueue.needsCloudCopy(id); // @FU-106: verworfener Konflikt → ganze Kopie der Cloud
@@ -339,9 +343,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      */
     async save(tournament: Tournament): Promise<void> {
         await this.queueGuard.track(tournament.id, async () => { // A-08f3c2: Speichern + Einreihen als Einheit (Regel Q)
-            await this.localRepo.save(this.owned(tournament));
+            const base = await this.localRepo.save(this.owned(tournament));
             this.serverRevisions.retain(tournament.id, new Set(tournament.matches.map(m => m.id))); // A-08f3b: Neugenerieren
-            this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
+            // @FU-110: über die Kette eigener Uploads angehobene Basis geht mit (zweites Speichern aus dem Zustand der Ansicht)
+            this.mutationQueue.enqueue('SAVE_TOURNAMENT', base === checkedVersion(tournament) ? tournament : { ...tournament, serverVersion: base });
         });
     }
 
@@ -373,7 +378,25 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         await this.supabaseRepo.updateStandingDecisions(id, decisions, expectedVersion);
         const local = await this.localRepo.get(id);
         if (local) {
-            await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1 });
+            // C-VERSION-MEHRDEUTIG: beruhte die Kopie auf der geprüften Version, ist die neue Server-Version bestätigt
+            const serverVersion = checkedVersion(local) === expectedVersion ? expectedVersion + 1 : local.serverVersion;
+            // @FU-110: keine Kette über eine Entscheidung (die Ansicht kennt sie ggf. nicht – ein Voll-Speichern nähme sie zurück)
+            await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1, serverVersion, ownUploadsFrom: undefined });
+        }
+    }
+
+    /**
+     * Fixrunde TB-6: die Einstellung „Plätze ausspielen“ nur mit Netz und nur dieses Feld (wie die Entscheidungen); ohne Netz
+     * `NetworkError` (isOffline), nichts eingereiht. Danach lokale Kopie mit neuer Version, Entscheidungen bleiben.
+     */
+    async updatePlacementsToPlayOut(id: string, places: number[], expectedVersion: number): Promise<void> {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            throw new NetworkError('Die Einstellung braucht eine Verbindung.', true);
+        }
+        await this.supabaseRepo.updatePlacementsToPlayOut(id, places, expectedVersion);
+        const local = await this.localRepo.get(id);
+        if (local) {
+            await this.localRepo.cacheCloudCopy({ ...local, placementsToPlayOut: parsePlacementsToPlayOut(places), version: expectedVersion + 1 });
         }
     }
 
@@ -477,8 +500,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     }
                     if (!cloudT) {
                         // Not in cloud -> Full Upload (A-08f3c1: die Cloud legt mit Version 1 an)
-                        await this.supabaseRepo.save(localT);
-                        await this.localRepo.updateLocalVersion(localT.id, 1);
+                        const reached = await this.supabaseRepo.save(withCheckedVersion(localT));
+                        await this.localRepo.confirmUpload(localT.id, checkedVersion(localT), reached);
                         continue;
                     }
 
@@ -520,51 +543,33 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
 
     /**
      * Pushes changes from local to cloud using granular updates if possible.
+     *
+     * C-VERSION-MEHRDEUTIG (@FU-106, Regel „nichts still überschreiben“): Basis der Versionsprüfung ist die bestätigte
+     * Version der lokalen Kopie (`checkedVersion`), nie `remote.version` -- sonst bestünde jede veraltete Kopie die Prüfung
+     * und überschriebe einen fremden Stand. Hat sich der Server seitdem geändert, lehnt er ab (OptimisticLockError).
      */
     private async syncTournamentDelta(local: Tournament, remote: Tournament): Promise<void> {
-        // 1. Check for structural changes (requires full save)
+        const base = checkedVersion(local);
+        if (base === undefined) { return; } // ohne Basis keine Prüfung möglich -- nichts hochladen
+
+        // 1. Structural changes (teams, matches, config) require the full save
         if (this.hasStructuralChanges(local, remote)) {
-            // Be careful to pass the base version for optimistic locking
-            // We want to update 'remote' to state of 'local'.
-            // So base version is remote.version.
-            // But 'local' might have higher version. 
-            // We construct payload based on local, but with remote version as base?
-            // save() takes 'tournament'. It extracts version from it.
-            // If local.version = 5, remote.version = 4.
-            // We want to update remote to 5.
-            // SupabaseRepo.save(local) will check eq('version', local.version).
-            // But local.version is 5. It will check eq('version', 5). Remote is 4. Fail.
-
-            // Correct approach: We must update the record derived from remote.version.
-            // But local has valid data with version 5.
-            // If we blindly save(local), it checks version=5.
-            // We temporarily set version=4 for the save call so it passes optimistic lock?
-            // No, that sets new version to 5. Which matches local.
-            await this.supabaseRepo.save({ ...local, version: remote.version });
-
-            // Update local version explicitly to match the (single increment) result from save
-            // remote.version (e.g. 4) -> save -> becomes 5.
-            await this.localRepo.updateLocalVersion(local.id, (remote.version ?? 0) + 1);
+            const reached = await this.supabaseRepo.save(withCheckedVersion(local));
+            await this.localRepo.confirmUpload(local.id, base, reached);
             return;
         }
 
-        let baseVer = remote.version ?? 0;
-
-        // 2. Check Metadata
+        // 2. Metadata only
         const metadataChanges = this.getMetadataChanges(local, remote);
         if (metadataChanges) {
-            await this.supabaseRepo.updateTournamentMetadata(local.id, {
-                ...metadataChanges,
-                version: baseVer
-            });
-            baseVer++; // Version incremented after metadata update
+            await this.supabaseRepo.updateTournamentMetadata(local.id, { ...metadataChanges, version: base });
+            await this.localRepo.confirmUpload(local.id, base, base + 1);
+            return;
         }
 
-        // 3. Update local version to match the new cloud version
-        // This prevents the "Local is newer" loop
-        // PC25: bei reinem Versionsvorsprung an die Cloud angleichen, sonst Lost Update fremder
-        // Struktur-Änderungen; lokale Altspiel-Ergebnisse werden ohnehin nicht gesendet.
-        await this.localRepo.updateLocalVersion(local.id, baseVer);
+        // 3. Nothing to upload. PC25: ein reiner Versionsvorsprung wird auf die bestätigte Version zurückgesetzt, damit der
+        // nächste Abruf neuere Cloud-Stände wieder übernimmt (sonst Lost Update fremder Struktur-Änderungen).
+        await this.localRepo.updateLocalVersion(local.id, base);
     }
 
     private hasStructuralChanges(local: Tournament, remote: Tournament): boolean {
@@ -789,8 +794,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     if (!this.mayUpload(local, await this.supabaseRepo.get(tournamentId))) { // CA-5 (@HE-087)
                         return { status: 'error', error: 'Tournament is not available to this account; the local copy is not uploaded' };
                     }
-                    await this.supabaseRepo.save(local);
-                    await this.localRepo.updateLocalVersion(tournamentId, (local.version ?? 0) + 1); // A-08f3c1: wie die Cloud
+                    // C-VERSION-MEHRDEUTIG: geprüft gegen die bestätigte Version der Kopie
+                    const base = checkedVersion(local);
+                    const reached = await this.supabaseRepo.save(withCheckedVersion(local));
+                    await this.localRepo.confirmUpload(tournamentId, base, reached); // C-VERSION-NACH-ERSTANLAGE: wie die Cloud
                     return { status: 'synced', data: local };
                 }
             } else {
@@ -826,11 +833,15 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             // G7: Turnier mit Engine-Einträgen im Gastkonto nie pushen —
             // der Pull oben bleibt unberührt, es wird nur nichts hochgeladen.
             if (local && !(await hasGuestEngineEntries(local))) {
+                // review-ca67 H2 (Regel Q): eigene wartende, laufende oder gescheiterte Einträge entscheidet die Warteschlange
+                if (this.queueGuard.hasOwnChanges(tournamentId)) { return downResult; }
                 const remote = await this.supabaseRepo.get(tournamentId);
                 if (!this.mayUpload(local, remote)) { return downResult; } // CA-5 (@HE-087): nie hochladen
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
-                    await this.supabaseRepo.save(local);
-                    await this.localRepo.updateLocalVersion(tournamentId, remote ? (local.version ?? 0) + 1 : 1); // A-08f3c1
+                    // C-VERSION-MEHRDEUTIG: geprüft gegen die bestätigte Version der Kopie
+                    const base = checkedVersion(local);
+                    const reached = await this.supabaseRepo.save(withCheckedVersion(local));
+                    await this.localRepo.confirmUpload(tournamentId, base, reached); // C-VERSION-NACH-ERSTANLAGE
                 }
             }
             return { status: 'synced', data: local ?? downResult.data };

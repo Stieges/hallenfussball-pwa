@@ -32,6 +32,7 @@ vi.mock('../../../../components/ui/Toast/ToastContext', () => ({
 }));
 
 vi.mock('../../../collaboration', () => ({
+  AwaitingServerCopyLine: () => null, // @FU-109 Statuszeile – eigener Test (AwaitingServerCopyLine.test.tsx)
   SyncStatusIndicator: ({ rejectedCount, reviewCount, onShowRejected, enginePendingCount }: {
     rejectedCount?: number;
     reviewCount?: number;

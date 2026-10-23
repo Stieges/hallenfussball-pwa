@@ -11,6 +11,16 @@
 /** Kennung der einen Gruppe eines Turniers ohne Gruppen (kein Buchstabe, nie als „Gruppe …“ anzeigen). */
 export const OVERALL_GROUP = '';
 
+/**
+ * Gruppe eines Spiels oder Teams (GA4 R-GA4v2-7, Review-Auflage 1): fehlend, leer und `'all'` → `OVERALL_GROUP`, sonst
+ * der Buchstabe unverändert (Groß/Klein zählt, `'ALL'` ist ein Buchstabe). Jeder gegen jeden schreibt Spiele mit
+ * `'all'`, Teams ohne Gruppe (C-GRUPPE-ALL-UNEINHEITLICH) – diese Funktion ist die EINZIGE Stelle, die `'all'` abbildet.
+ * Zwilling am Server `match_engine.group_key`, Gleichlauf `core/standings/__fixtures__/group-key.json`.
+ */
+export function groupKeyOf(group?: string | null): string {
+  return group === undefined || group === null || group === '' || group === 'all' ? OVERALL_GROUP : group;
+}
+
 export interface StandingsGroup<T> {
   group: string;
   teams: T[];

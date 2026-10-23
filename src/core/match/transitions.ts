@@ -13,7 +13,8 @@ export const TransitionRowSchema = z.object({
   from: MatchStatusSchema,
   type: EventTypeSchema,
   actor: ActorSchema,
-  to: z.union([MatchStatusSchema, z.literal('='), z.literal('@endcheck')]),
+  // A-25n (R-GA4-4): '@reopen' = den Zielzustand legt die Wirkung von REOPEN fest (handlers/reopen.ts).
+  to: z.union([MatchStatusSchema, z.literal('='), z.literal('@endcheck'), z.literal('@reopen')]),
 });
 export type TransitionRow = z.infer<typeof TransitionRowSchema>;
 
