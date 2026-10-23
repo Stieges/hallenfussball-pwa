@@ -28,14 +28,10 @@ set -eu
 LOCAL_TERMS_FILE="${FORBIDDEN_TERMS_FILE:-.claude/local/forbidden-terms.txt}"
 IS_CI="${CI:-}"
 
-# Ausnahmeliste: nur docs/TODO.md (Daniels lokale, noch nicht eingecheckte
-# Aufgabenliste). Temporär, bis diese Datei bereinigt eingecheckt ist.
-# Diese Datei hier nennt selbst keine Anbieter-Begriffe.
+# Ausnahmeliste: leer. Diese Datei nennt selbst keine Anbieter-Begriffe.
 is_exempt() {
-  case "$1" in
-    "docs/TODO.md") return 0 ;;
-    *) return 1 ;;
-  esac
+  # Keine Ausnahmen mehr: docs/TODO.md ist seit 23.10. nicht mehr im Repo (nur lokal).
+  return 1
 }
 
 TERMS_RAW=""

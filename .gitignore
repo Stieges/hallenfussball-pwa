@@ -83,3 +83,6 @@ ci_logs.txt
 
 # Vitest coverage output (M0)
 coverage/
+
+# Persönliche Aufgabenliste – nur lokal (Daniel 23.10.)
+docs/TODO.md
