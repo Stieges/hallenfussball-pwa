@@ -43,8 +43,9 @@ export function regularResultEvents(match: TurniertagMatch, goalsA: number, goal
   return events;
 }
 
+/** Vorbedingung als Turnierleitung am Server: gibt das Feld vorher frei (B-49, das Gerät der Oberfläche kann es halten). */
 export async function appendOwner(matchId: string, events: readonly AppendAsRoleEvent[]): Promise<AppendAsRoleResult> {
-  return appendAsRole('owner', matchId, events);
+  return appendAsRole('owner', matchId, events, { feldFreigeben: true });
 }
 
 export function eventOf(type: string, at: number, start: number, extra: Partial<AppendAsRoleEvent> = {}): AppendAsRoleEvent {
