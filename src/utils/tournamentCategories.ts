@@ -2,16 +2,18 @@
  * Tournament Category Helpers
  *
  * Kategorisiert Turniere basierend auf Status, Spielstand und Datum:
- * 1. Bevorstehende Turniere - published + nicht abgeschlossen, solange das Datum nicht vergangen ist
- * 2. Beendete Turniere - published + (alle Spiele beendet ODER manuell beendet ODER Datum in Vergangenheit)
- * 3. Gespeicherte Turniere - draft status
+ * 1. Laufende Turniere - published + heute + mindestens ein Spiel angepfiffen + nicht abgeschlossen
+ * 2. Bevorstehende Turniere - published + nicht abgeschlossen, solange das Datum nicht vergangen ist
+ * 3. Beendete Turniere - published + (alle Spiele beendet ODER manuell beendet ODER Datum in Vergangenheit)
+ * 4. Gespeicherte Turniere - draft status
  *
- * „Laufend“ leitet die Startseite nicht aus der Uhr ab (@LZ-001: festgelegt, kein Spiel angepfiffen → „Festgelegt“).
- * Bis @FU-128 kam die Startzeit aus der Cloud als HH:MM:SS und war hier unlesbar; seitdem ist sie lesbar (HH:MM),
- * und die frühere Regel „heute + Startzeit vorbei → laufend“ hätte festgelegte Turniere aus „kommend“ geschoben.
+ * „Laufend“ heißt angepfiffen, nicht „Startzeit vorbei“ (@LZ-001: festgelegt, kein Spiel angepfiffen → „Festgelegt“;
+ * Spiel angepfiffen → „Läuft“). Bis @FU-128 kam die Startzeit aus der Cloud als HH:MM:SS und war hier unlesbar;
+ * seitdem ist sie lesbar (HH:MM), und die frühere Uhr-Regel hätte festgelegte Turniere aus „kommend“ geschoben.
  */
 
 import { Tournament, Match, TRASH_RETENTION_DAYS } from '../types/tournament';
+import { getMatchStartState } from './matchStartState';
 
 export type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
 
@@ -107,6 +109,23 @@ export function isTournamentCompleted(tournament: Tournament): boolean {
 }
 
 /**
+ * Laufend = heute UND mindestens ein Spiel angepfiffen UND nicht abgeschlossen (@LZ-001).
+ * Die Startzeit allein macht ein Turnier nicht laufend.
+ */
+function isTournamentRunning(tournament: Tournament, now: Date): boolean {
+  if (tournament.status !== 'published') {return false;}
+  if (isTournamentCompleted(tournament)) {return false;}
+  if (getMatchStartState(tournament.matches) !== 'started') {return false;}
+
+  const tournamentDate = getTournamentDateTime(tournament);
+  if (!tournamentDate) {return false;}
+
+  return tournamentDate.getFullYear() === now.getFullYear()
+    && tournamentDate.getMonth() === now.getMonth()
+    && tournamentDate.getDate() === now.getDate();
+}
+
+/**
  * Check if tournament is upcoming (future date/time)
  */
 function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
@@ -169,7 +188,11 @@ export function categorizeTournament(tournament: Tournament, now: Date = new Dat
     return 'draft';
   }
 
-  // Published tournaments: die Uhr allein macht kein Turnier „laufend“ (@LZ-001)
+  // Published tournaments: laufend erst mit dem Anpfiff, nicht mit der Startzeit (@LZ-001)
+  if (isTournamentRunning(tournament, now)) {
+    return 'running';
+  }
+
   if (isTournamentUpcoming(tournament, now)) {
     return 'upcoming';
   }
