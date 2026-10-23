@@ -136,7 +136,7 @@ describe('MonitorDisplayPage — Neulade-Tor (B-19b, @ZM-124, @ZM-128, @ME-012, 
   });
 
   it('Gegenbeispiel „fast richtig“: Spiel pausiert (Unterbrechung) ist nicht vorbei → 10 min kein Neuladen', async () => {
-    await starte(monitorTurnier(withMatch('match-7', { matchStatus: 'paused' as never }), programmLive(true)));
+    await starte(monitorTurnier(withMatch('match-7', { matchStatus: 'paused' as const }), programmLive(true)));
     act(() => { __fireNeedRefresh(); });
     await vorspulen(10 * 60_000, 5_000);
     expect(updateSWMock).not.toHaveBeenCalled();

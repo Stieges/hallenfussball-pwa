@@ -14,13 +14,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { Tournament } from '../../../../../types/tournament';
-import type { LiveMatch } from '../../../../../core/models/LiveMatch';
 
 const { getAllMock, liveRepositoryMock } = vi.hoisted(() => {
   const getAllMock = vi.fn();
   // Stabile Repo-Identität: ein neues Objekt je Render würde den useEffect in
   // useTournamentStartState endlos triggern (OOM).
-  return { getAllMock, liveRepositoryMock: { getAll: getAllMock } };
+  return { getAllMock, liveRepositoryMock: { hasStartedMatches: getAllMock } };
 });
 
 vi.mock('../../../../auth/hooks/useAuth', () => ({
@@ -36,10 +35,6 @@ vi.mock('../../../../../core/contexts/RepositoryContext', () => ({
 }));
 
 import { DangerZoneCategory } from '../index';
-
-function liveMatchWith(status: string): LiveMatch {
-  return { id: 'live-1', status } as unknown as LiveMatch;
-}
 
 function plannedTournament(): Tournament {
   return {
@@ -70,7 +65,7 @@ beforeEach(() => {
 
 describe('DangerZone — Anpfiff-Sperre mit Live-Stand (@LZ-003, W1)', () => {
   it('(a) Live-Stand „läuft", matches noch „geplant": „Turnier löschen" wird nicht angeboten', async () => {
-    getAllMock.mockResolvedValue(new Map([['live-1', liveMatchWith('RUNNING')]]));
+    getAllMock.mockResolvedValue(true);
 
     renderDangerZone(plannedTournament());
     await act(async () => {
@@ -94,7 +89,7 @@ describe('DangerZone — Anpfiff-Sperre mit Live-Stand (@LZ-003, W1)', () => {
   });
 
   it('(c) Gegenbeispiel: alles geplant, Live-Stand leer — „Turnier löschen" wird angeboten', async () => {
-    getAllMock.mockResolvedValue(new Map());
+    getAllMock.mockResolvedValue(false);
 
     renderDangerZone(plannedTournament());
 
