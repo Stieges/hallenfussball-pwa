@@ -53,7 +53,9 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     const decided = await restAsRole('owner', 'POST', 'rpc/decide_join_request', { p_request_id: request?.id, p_accept: true, p_field: 2, p_check_number: shown });
     expect(decided.status).toBe(200);
 
-    // Gleicher QR noch einmal: zugelassen → Feld 2, keine zweite Anfrage (@HE-095).
+    // Gleicher QR noch einmal: zugelassen → Feld 2, keine zweite Anfrage (@HE-095). Ein Scan öffnet die Seite neu; ein `goto` auf
+    // dieselbe Hash-Adresse bliebe im laufenden Dokument (kein Neuladen, kein neuer Code-Abruf), darum erst `about:blank`.
+    await helper.goto('about:blank');
     await helper.goto(`/#/join/${code}`);
     await expect(helper).toHaveURL(/\/live\?f=2/);
   });
