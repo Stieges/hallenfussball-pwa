@@ -21,6 +21,12 @@ vi.mock('../../../core/repositories/SupabaseRepository', () => ({
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { getByShareCode: localGet }; }),
 }));
+// Mit Supabase liest die Seite über die Server-Funktion (Adapter (b)), ohne Supabase über getByShareCode (Adapter (a)).
+// Diese Datei prüft die Anzeige mit Daten aus den Repository-Mocks und legt deshalb den Weg ohne Supabase fest (Adapter (a)).
+vi.mock('../../public-view/defaultPublicSource', async () => {
+  const { createLegacyPublicSource } = await import('../../public-view/legacyPublicSource');
+  return { defaultPublicTournamentSource: createLegacyPublicSource() };
+});
 
 import { LiveViewScreen } from '../../../screens/LiveViewScreen';
 import { RepositoryProvider } from '../../../core/contexts/RepositoryContext';
