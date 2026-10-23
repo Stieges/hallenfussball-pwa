@@ -46,6 +46,8 @@ export interface ScoreboardAreaProps {
   sperrHinweise?: readonly SperrHinweis[];
   /** Name des Geräts, von dem das Spiel übernommen wurde (@SL-015). */
   uebernahmeVon?: string | null;
+  /** @FU-115: wer das Spiel im Spielplan beendet hat (`useEingetragenVon`). */
+  eingetragenVon?: string | null;
 }
 
 /** Anstoßzeit als `HH:MM` (24 Stunden, auch in der englischen Anzeige) in Ortszeit; unlesbar → leer. */
@@ -77,7 +79,7 @@ function noticeIcon(stufe: NoticeStufe | undefined): ReactElement | undefined {
 }
 
 export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
-  const { match, phase, view, settings, order, size, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null } = props;
+  const { match, phase, view, settings, order, size, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null, eingetragenVon = null } = props;
   const { t, i18n } = useTranslation('cockpit');
   // Takt nur vor dem Anpfiff: „überfällig N Min“ (@OB-068) (@SL-118); sonst steht der Wert still
   const jetztMs = useNow(phase.zustand === 'vorAnpfiff' ? 30_000 : null);
@@ -86,9 +88,9 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
     () => toScoreboardModel({
       match, phase, view, links: order.links, rechts: order.rechts, uhrArt: settings.clockMode,
       schlussphaseMinuten: settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
-      vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon },
+      vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon }, eingetragenVon,
     }, alsUebersetzer(t)),
-    [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, t, i18n.language],
+    [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, t, i18n.language],
   );
   // @SL-152: solange die Quittung steht, sagt sie dasselbe genauer („Abgepfiffen · 2:1 gespeichert“); nur diese Meldung entfällt
   const meldung = notices.aktuell?.kennung === 'abgepfiffen' && model.quittungText ? null : notices.aktuell;

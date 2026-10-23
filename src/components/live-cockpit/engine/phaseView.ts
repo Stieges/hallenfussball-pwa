@@ -72,6 +72,11 @@ export interface PhaseView {
   clockAdjustments: PhaseClockAdjustment[];
   /** Entscheidungsart der K.-o.-Runde; im Gruppenspiel `null`. */
   tiebreakMode: TiebreakMode | null;
+  /**
+   * @FU-112, @FU-115: ID des Ergebnis-Eintrags, mit dem die Turnierleitung das angepfiffene Spiel im Spielplan beendet hat
+   * (Abpfiff und Ergebnis in einem Schritt); `null`, wenn das Spiel anders endete oder nicht beendet ist.
+   */
+  eingetragenImSpielplan: string | null;
 }
 
 /** Dauer der Quittung nach dem Abpfiff in ms (@SL-152): so lange steht die Zeile „Abgepfiffen · 2:1 gespeichert“. */
@@ -93,6 +98,21 @@ function plannedMsOf(state: MatchState): number {
     return 0;
   }
   return (rules.sections * rules.sectionSeconds + (state.phase === 'overtime' ? rules.overtimeSeconds : 0)) * 1000;
+}
+
+/**
+ * @FU-112: das Spiel wurde angepfiffen (Regeln aus dem Anpfiff) und endete mit einem Direkteintrag -- die letzte
+ * Überschreibung ist `direct` und trägt den Zeitpunkt des Spielendes (nach einem späteren Abpfiff nicht mehr).
+ */
+export function eingetragenImSpielplanOf(state: MatchState): string | null {
+  if (state.status !== 'finished' || !state.rules) {
+    return null;
+  }
+  const last = state.overrides.at(-1);
+  if (last?.kind !== 'direct' || last.at !== state.finishedAt) {
+    return null;
+  }
+  return last.id;
 }
 
 /** Ereignistypen, die keine Uhr-Stellung eines Eintrags sind. */
@@ -127,6 +147,7 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     shootout: shootoutOf(state, ctx),
     clockAdjustments: clockAdjustmentsOf(state),
     tiebreakMode: rules?.knockout ? state.tiebreakMode : null,
+    eingetragenImSpielplan: eingetragenImSpielplanOf(state),
   };
 }
 

@@ -706,6 +706,21 @@ SELECT 'heartbeats-select-manage-screens',
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
 
+-- 20261110_007_ci_schema_reader_grants.sql (Werkzeugkette): die Drift-Check-Rolle darf field_control lesen. Ohne diesen
+-- GRANT scheitert pg_dump --schema-only (scripts/db-drift-check.sh, Live-Dump als ci_schema_reader) mit "permission
+-- denied for table field_control" (seit A-34 live). Keine Policy fuer ci_schema_reader -- RLS liefert weiter 0 Zeilen.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-field-control',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.field_control'), 'SELECT'), false)
+
+-- 20261110_007_ci_schema_reader_grants.sql (Befund C-GRANTS-NUR-LIVE): das Leserecht auf match_corrections hat das
+-- Datenbank-Programm (21.09.) nur live vergeben; seit _007 steht es im Repo. Ohne den GRANT scheitert pg_dump
+-- --schema-only als Leserolle auf einem aus dem Repo aufgebauten Stand mit "permission denied for table
+-- match_corrections". Live schon "t"; im Container vor _007 "f".
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-match-corrections',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.match_corrections'), 'SELECT'), false)
 -- A-25b (20261110_005_result_entry_forfeit.sql, @W2A-022, @W2A-024, @W2A-026; C-NICHTANTRITT-FEHLT): forfeit_absent ist
 -- Schutzspalte (Client-Rollen aendern sie nie, INSERT neutral NULL) und append_match_events schreibt sie -- in der
 -- Fassung MIT Feldsteuerung (Review-Auflage 4: Basis 20261110_003, sonst waere A-34 zurueckgedreht).
@@ -719,6 +734,19 @@ UNION ALL
 SELECT 'append-match-events-writes-forfeit-absent',
        coalesce((SELECT position('forfeit_absent = v_cache ->> ''forfeit_absent''' IN pg_get_functiondef(p.oid)) > 0
                         AND position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+
+-- Spiel beenden (20261110_009_spiel_beenden.sql, @FU-112, @FU-115, Review M3): append_match_events laesst das Ergebnis der
+-- Turnierleitung in ein angepfiffenes Spiel ohne Feldsteuerung zu -- VOR dem c3-Block (kein Anspruch), weiter MIT
+-- Feldsteuerung und Wertungs-Ausnahme (Basis 20261110_005); RESULT_ENTRY aus running gibt es fuer die Leitung.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'append-match-events-end-by-lead-without-claim',
+       coalesce((SELECT position('IF NOT v_end_by_lead' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('v_forfeit_reopen' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
+                        AND EXISTS (SELECT 1 FROM public.match_transitions t
+                                     WHERE t.from_status = 'running' AND t.event_type = 'RESULT_ENTRY' AND t.actor = 'leitung')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
 
 -- A-13b-S (20261110_006_group_completion.sql, @TM-046, @TM-113, @W2A-070, @W2A-072; Plan § 8, Soll 12/13): Gruppe abschliessen

@@ -121,6 +121,12 @@ describe('matchTransitions.json', () => {
       { from: 'decision_pending', type: 'AMEND', actor: 'helper', to: '=' },
       { from: 'shootout', type: 'AMEND', actor: 'helper', to: '=' },
       { from: 'finished', type: 'AMEND', actor: 'helper', to: '=' },
+
+      // Spiel beenden (20261110_009, @FU-112, @FU-114): nur die Turnierleitung, nie aus 'shootout' (@FU-118).
+      { from: 'running', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
+      { from: 'paused', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
+      { from: 'section_break', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
+      { from: 'decision_pending', type: 'RESULT_ENTRY', actor: 'leitung', to: 'finished' },
     ];
 
     const sortKey = (row: TransitionRow): string => `${row.from}::${row.type}`;

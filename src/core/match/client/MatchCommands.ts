@@ -153,6 +153,17 @@ export class MatchCommands {
   }
 
   /**
+   * Spiel beenden (@FU-112, @FU-114, @FU-116): Abpfiff und Ergebnis in EINEM Eintrag (RESULT_ENTRY aus einem angepfiffenen
+   * Zustand, nur Leitung); `basedOn` = letzter Spielstand-Eintrag, den die Turnierleitung kannte (sonst STALE_BASE).
+   */
+  endWithResult(matchId: string, ctx: MatchContext, actor: Actor, scores: TeamScores, shootout: TeamScores | undefined, knockout: boolean, basedOn: string | null): CommandResult {
+    const built = resultEntryCommand(knockout, scores, shootout);
+    return built.ok
+      ? this.submit(matchId, ctx, actor, { ...built.spec, payload: { ...built.spec.payload, basedOn } })
+      : Promise.reject(new MatchCommandRejectedError(built.code, built.detail));
+  }
+
+  /**
    * B-12 (@W2A-022, @W2A-024): „nicht angetreten“ -- Wertung als Ergebniseintrag mit `forfeit.absent`; nur Leitung und nur
    * aus `scheduled` (@FU-119, wie am Server). Eine Wertung braucht nie ein Strafstoßergebnis, auch im K.-o. nicht.
    * Zurücknehmen: `reopen` (@W2A-026).

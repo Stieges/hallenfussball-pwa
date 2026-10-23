@@ -19,6 +19,7 @@ import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
 import { useCan } from '../auth/hooks/useCan';
+import { useEventAuthors } from '../match-engine/useEventAuthors';
 import { useToast } from '../../components/ui/Toast';
 import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
 import { useScheduleForfeit } from './hooks/useScheduleForfeit';
@@ -111,6 +112,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const { isInitializingMatch, engineReadyError, awaitingTeams, notOnEngineReason, handleRetryEngineReady } = useEngineMatchInit({ currentMatchData, liveMatches, getLiveMatchData });
 
   // Current match as LiveMatch (derived from state)
+  const { nameOf, ownName } = useEventAuthors(tournament.id, currentMatchData?.id ?? '');
+  // @FU-115: „Ende – eingetragen im Spielplan von Olli“ -- der Name nur, wenn ein anderes Konto beendet hat
+  const eintragAutor = useCallback((eventId: string): string | null => {
+    const name = nameOf(eventId);
+    return name !== ownName ? name : null;
+  }, [nameOf, ownName]);
   const currentMatch = useMemo(() =>
     currentMatchData ? liveMatches.get(currentMatchData.id) ?? null : null,
     [currentMatchData, liveMatches]
@@ -212,6 +219,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}
             sperrHinweise={sperrHinweise}
+            eintragAutor={eintragAutor}
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
             onStart={(matchId) => { void hookHandleStart(matchId); }}

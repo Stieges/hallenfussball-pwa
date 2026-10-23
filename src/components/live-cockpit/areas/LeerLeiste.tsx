@@ -38,7 +38,7 @@ export function LeerLeiste(p: LeerLeisteProps): ReactElement {
       />
       <MoreSheet
         isOpen={cmd.dialogs.showMore} onClose={cmd.overlayHandlers.closeMore}
-        punkte={mehrPunkteGrundgeruest(p.phase, { kannSteuern: p.kannSteuern })} aktionen={cmd.mehrAktionen}
+        punkte={mehrPunkteGrundgeruest(p.phase, { kannSteuern: p.kannSteuern })} aktionen={cmd.mehrAktionen} tournamentId={p.tournamentId}
       />
       <SettingsDialog
         isOpen={cmd.dialogs.showSettings} onClose={cmd.overlayHandlers.closeSettings} settings={p.settings}

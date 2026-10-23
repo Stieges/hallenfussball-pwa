@@ -12,7 +12,7 @@
 export type RouteName =
   | 'dashboard' | 'archive' | 'trash'
   | 'wizardNew' | 'wizardEdit' | 'admin' | 'tournament'
-  | 'publicLive' | 'monitorDisplay' | 'join'
+  | 'publicLive' | 'monitorDisplay' | 'join' | 'helperChooser'
   | 'authCallback' | 'authConfirm' | 'setPassword' | 'localTest'
   | 'login' | 'register' | 'invite' | 'settings' | 'profile'
   | 'impressum' | 'datenschutz';
@@ -106,6 +106,9 @@ const ROUTES: readonly RouteDef[] = [
   // A-17b (GA5, R-GA5-2): Beitritt per Helfer-QR-Code. Der Code hat 10 Zeichen; die Spanne 4–32 lässt Platz für spätere Längen
   // und fängt Fehlscans (zu kurz/zu lang) als „nicht gefunden“ statt als Beitritt mit offensichtlich falschem Code.
   { name: 'join', pattern: /^\/join\/([A-Za-z0-9]{4,32})$/, paramNames: ['code'] },
+
+  // A-17c (GA5, @HE-099): Auswahl, wenn ein Helfer-Gerät Zugänge zu mehreren laufenden Turnieren hat
+  { name: 'helperChooser', pattern: /^\/helfer$/, paramNames: [] },
 
   // App.tsx:299 — path === '/auth/callback'
   { name: 'authCallback', pattern: /^\/auth\/callback$/, paramNames: [] },
