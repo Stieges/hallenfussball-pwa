@@ -25,6 +25,8 @@ interface InputProps {
   errorMessage?: string;
   /** Test ID for E2E testing */
   'data-testid'?: string;
+  /** Name für Hilfsmittel, wenn das Feld keine sichtbare Beschriftung (label) trägt */
+  'aria-label'?: string;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -46,6 +48,7 @@ export const Input: React.FC<InputProps> = ({
   error = false,
   errorMessage,
   'data-testid': testId,
+  'aria-label': ariaLabel,
 }) => {
   // Auto-set error state when errorMessage is provided
   const hasError = error || !!errorMessage;
@@ -111,6 +114,7 @@ export const Input: React.FC<InputProps> = ({
         list={list}
         style={inputStyles}
         data-testid={testId}
+        aria-label={ariaLabel}
         aria-invalid={hasError || undefined}
         aria-describedby={errorId ?? describedBy}
         onFocus={(e) => {
