@@ -8,7 +8,7 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, within } from '@testing-library/react';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Standing, Team, Tournament } from '../../../types/tournament';
 
@@ -70,7 +70,8 @@ import { createFakeCloud } from '../../../test/fakeCloudRepository';
 import { MatchEngineContext } from '../../match-engine/matchEngineContextInstance';
 import { MatchCommands } from '../../../core/match/client';
 import type { MatchRules } from '../../../core/match';
-import { buildValidMatches } from '../../../hooks/engineMatchModel';
+import { buildValidMatches, type ValidMatchEntry } from '../../../hooks/engineMatchModel';
+import type { EngineEventWithSeq } from '../../../core/match/client';
 import { makeScheduleEngine, settle, type ScheduleEngine } from '../../../test/scheduleEngineHarness';
 import { ScheduleTab } from '../ScheduleTab';
 import { useTournamentManager } from '../../../hooks/useTournamentManager';
@@ -227,15 +228,33 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
 
   // @SL-174 „Dann zeigt der Dialog vor dem Eintragen ‚TSV West gewinnt 2:0 (Wertung)‘ … ‚nur dieses Spiel‘ ist vorgewählt …
   // erst ‚Wertung eintragen‘ speichert“
-  it('@SL-174 Vorschau „<Gast> gewinnt 2:0 (Wertung)“, „Nur dieses Spiel“ vorgewählt, gespeichert erst mit „Wertung eintragen“', async () => {
+  it('@SL-174 „Nur dieses Spiel“ vorgewählt, daneben „abgereist“, gespeichert erst mit „Wertung eintragen“', async () => {
     const opened = await openFirstCard();
     fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
     await opened.view.findByTestId('forfeit-dialog');
     fireEvent.click(opened.view.getByTestId('forfeit-choice-A'));
-    expect(opened.view.getByTestId('forfeit-summary').textContent).toBe(`${AWAY?.name} gewinnt 0:2 (Wertung)`);
     expect(opened.view.queryByTestId('forfeit-rest-hint')).toBeNull(); // vorgewählt: nur dieses Spiel
     expect(opened.view.getByText('Team ist abgereist – auch alle restlichen Spiele werten')).toBeTruthy();
     expect(h.api).not.toHaveBeenCalled();
+  });
+
+  // @SL-174 „Gegeben Spiel 13 SG Mitte gegen TSV West … Wenn Olli … im Dialog SG Mitte antippt / Dann zeigt der Dialog vor dem
+  // Eintragen ‚TSV West gewinnt 2:0 (Wertung)‘“ – fehlt das Heimteam, nennt die Vorschau den Sieger mit seinen Toren zuerst.
+  // Befund (Fixrunde #359): der Dialog zeigt „<Gast> gewinnt 0:2 (Wertung)“, den Stand aus Sicht des Heimteams.
+  it.fails('@SL-174 Vorschau: fehlt das Heimteam, zeigt der Dialog „<Gast> gewinnt 2:0 (Wertung)“', async () => {
+    const opened = await openFirstCard();
+    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await opened.view.findByTestId('forfeit-dialog');
+    fireEvent.click(opened.view.getByTestId('forfeit-choice-A'));
+    expect(opened.view.getByTestId('forfeit-summary').textContent).toBe(`${AWAY?.name} gewinnt 2:0 (Wertung)`);
+  });
+
+  it('@SL-174 Gegenprobe: fehlt das Gastteam, zeigt der Dialog „<Heim> gewinnt 2:0 (Wertung)“', async () => {
+    const opened = await openFirstCard();
+    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await opened.view.findByTestId('forfeit-dialog');
+    fireEvent.click(opened.view.getByTestId('forfeit-choice-B'));
+    expect(opened.view.getByTestId('forfeit-summary').textContent).toBe(`${HOME?.name} gewinnt 2:0 (Wertung)`);
   });
 
   it('@W2A-023 „Team ist abgereist“ → alle noch nicht begonnenen Spiele des Teams als Wertung, gespielte bleiben unverändert', async () => {
@@ -264,5 +283,101 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
   it('@W2A-023 Gegenbeispiel: ohne die Wahl „abgereist“ wertet nur dieses Spiel', async () => {
     await markAs('A');
     expect(h.api.mock.calls.flatMap(([, events]) => events).filter((event) => event.type === 'RESULT_ENTRY')).toHaveLength(1);
+  });
+
+  // @W2A-023 „Dann werden alle noch nicht begonnenen Spiele von Team C so gewertet / Und bereits gespielte Spiele bleiben
+  // unverändert“ – ein angepfiffenes Spiel ist begonnen: es wird nicht gewertet und läuft weiter (Review #359 M1). Die Meldung
+  // danach nennt, was wirklich gewertet wurde, und ein nicht gewertetes begonnenes Spiel.
+  const RULES: MatchRules = {
+    sections: 1, sectionSeconds: 600, breakSeconds: 0, knockout: false, tiebreak: null, overtimeSeconds: 0,
+    shootersPerTeam: 0, suddenDeathAfter: 0, penaltySeconds: 0,
+  };
+  const entryOf = (id: string) => buildValidMatches(tournament).find((candidate) => candidate.externalId === id)!;
+  const otherMatchesOfHome = () => tournament.matches
+    .filter((m) => m.id !== FIRST.id && [m.slotA, m.slotB].some((slot) => slot.kind === 'team' && slot.teamId === HOME?.id))
+    .map((m) => entryOf(m.id));
+
+  async function abgereistAb(beforeConfirm?: () => void): Promise<ReturnType<typeof render>> {
+    const opened = await openFirstCard();
+    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await opened.view.findByTestId('forfeit-dialog');
+    fireEvent.click(opened.view.getByTestId('forfeit-choice-A'));
+    fireEvent.click(opened.view.getByTestId('forfeit-scope-rest'));
+    beforeConfirm?.();
+    await act(async () => { fireEvent.click(opened.view.getByTestId('forfeit-confirm')); await settle(); });
+    return opened.view;
+  }
+  const forfeitsSent = () => h.api.mock.calls
+    .flatMap(([matchId, events]) => events.map((event) => ({ matchId, event })))
+    .filter(({ event }) => event.type === 'RESULT_ENTRY' && (event.payload as { forfeit?: unknown }).forfeit !== undefined);
+  const toastText = (view: ReturnType<typeof render>): string => view.baseElement.textContent ?? '';
+
+  /**
+   * Ein zweites Gerät (Helfer am Feld) trägt für `entry` etwas ein; dieses Gerät erfährt es erst beim Nachholen (`catchUp`),
+   * seine Turnierkopie zeigt das Spiel noch als geplant. Ab `deliver()` liefert der Server die Einträge des zweiten Geräts.
+   */
+  async function onOtherDevice(entry: ValidMatchEntry, act2: (commands: MatchCommands) => Promise<unknown>): Promise<() => void> {
+    const other = await makeScheduleEngine();
+    try {
+      await other.engine.ensureMatch(entry.matchId, entry.ctx, 'T');
+      await act2(new MatchCommands({ engine: other.engine, store: other.store, sender: other.sender, accountId: other.value.accountId }));
+      await settle();
+      const events = other.api.mock.calls.filter(([matchId]) => matchId === entry.matchId).flatMap(([, sent]) => sent);
+      expect(events.length).toBeGreaterThan(0);
+      const confirmed = events.map((event, index) => ({ ...event, seq: index + 1 })) as unknown as EngineEventWithSeq[];
+      return () => {
+        h.fetchConfirmed.mockImplementation(async (matchId: string, watermark: number) => (
+          matchId === entry.matchId && watermark < confirmed.length
+            ? { events: confirmed.slice(watermark), newWatermark: confirmed.length }
+            : { events: [], newWatermark: watermark }
+        ));
+      };
+    } finally {
+      other.engine.stop();
+    }
+  }
+
+  it('@W2A-023 „abgereist“ mit einem hier laufenden Spiel: das laufende läuft weiter, das geplante wird gewertet, die Meldung nennt 1 weiteres', async () => {
+    const [running, planned] = otherMatchesOfHome();
+    const commands = new MatchCommands({ engine: h.engine, store: h.store, sender: h.sender, accountId: h.value.accountId });
+    await h.engine.ensureMatch(running.matchId, running.ctx, 'T');
+    await commands.start(running.matchId, running.ctx, 'leitung', RULES);
+    await settle();
+    h.api.mockClear();
+
+    const view = await abgereistAb();
+
+    expect(forfeitsSent().map((sent) => sent.matchId).sort()).toEqual([entryOf(FIRST.id).matchId, planned.matchId].sort());
+    expect(h.engine.view(running.matchId)?.result.state.status).toBe('running');
+    await waitFor(() => { expect(toastText(view)).toMatch(/1 weiteres Spiel als Wertung eingetragen/); });
+  });
+
+  it('@W2A-023 „abgereist“, ein anderes Gerät hat ein weiteres Spiel gerade angepfiffen: es läuft weiter, die Meldung nennt es als nicht gewertet', async () => {
+    const [running, planned] = otherMatchesOfHome();
+    const deliver = await onOtherDevice(running, (commands) => commands.start(running.matchId, running.ctx, 'helper', RULES));
+    h.api.mockClear();
+
+    const view = await abgereistAb(deliver);
+
+    expect(forfeitsSent().map((sent) => sent.matchId).sort()).toEqual([entryOf(FIRST.id).matchId, planned.matchId].sort());
+    expect(h.engine.view(running.matchId)?.result.state.status).toBe('running');
+    await waitFor(() => { expect(toastText(view)).toMatch(/1 weitere Spiele gewertet, 1 nicht/); });
+  });
+
+  it('@W2A-023 „abgereist“, ein anderes Gerät hat ein weiteres Spiel schon beendet (1:1): es bleibt unverändert und gilt nicht als Fehler', async () => {
+    const [played, planned] = otherMatchesOfHome();
+    const deliver = await onOtherDevice(played, (commands) => commands.enterResult(
+      played.matchId, played.ctx, 'leitung', { [played.ctx.teamAId]: 1, [played.ctx.teamBId]: 1 }, undefined, false,
+    ));
+    h.api.mockClear();
+
+    const view = await abgereistAb(deliver);
+
+    expect(forfeitsSent().map((sent) => sent.matchId).sort()).toEqual([entryOf(FIRST.id).matchId, planned.matchId].sort());
+    const state = h.engine.view(played.matchId)?.result.state;
+    expect(state?.status).toBe('finished');
+    expect(state?.overrides.at(-1)?.kind).not.toBe('forfeit');
+    await waitFor(() => { expect(toastText(view)).toMatch(/1 weiteres Spiel als Wertung eingetragen/); });
+    expect(toastText(view)).not.toMatch(/nicht \(schon angepfiffen oder Fehler\)/);
   });
 });

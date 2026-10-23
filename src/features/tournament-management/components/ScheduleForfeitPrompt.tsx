@@ -3,7 +3,8 @@
  * - mark (@SL-174, ein Dialog für Spielplan und Cockpit): Auswahl Heim / Gast / beide (Tasten ≥ 44 px, gewählte Taste
  *   hervorgehoben), darunter die Vorschau „X gewinnt 2:0 (Wertung)“; bei einem fehlenden Team die Wahl „Nur dieses Spiel“
  *   (vorgewählt) oder „Team ist abgereist – auch alle restlichen Spiele werten“ (@W2A-023). Die Haupttaste
- *   „Wertung eintragen“ ist unten rechts und bleibt gesperrt, bis gewählt ist.
+ *   „Wertung eintragen“ ist unten rechts und bleibt gesperrt, bis gewählt ist. Titel und Tasten-Fuß stehen fest (Slots
+ *   `header`/`footer`), nur die Auswahl dazwischen scrollt: „Wertung eintragen“ bleibt auch bei 360×640 im Bild (T2-UI).
  * - revoke: Rückfrage „Wertung zurücknehmen“ (ConfirmDialog).
  * Fläche `DialogSurface`, Fuß `DialogActions`. Abbruch speichert nichts.
  */
@@ -23,7 +24,7 @@ export interface ScheduleForfeitPromptProps {
 }
 
 const bodyStyle: CSSProperties = { padding: cssVars.spacing.lg, display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md };
-const titleStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
+const titleStyle: CSSProperties = { margin: 0, padding: `${cssVars.spacing.lg} ${cssVars.spacing.lg} ${cssVars.spacing.sm}`, fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
 const textStyle: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textPrimary };
 const choicesStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm };
 
@@ -42,9 +43,21 @@ function MarkPrompt({ prompt, answerPrompt }: { prompt: Extract<ForfeitPrompt, {
       : t('schedule.forfeit.summaryOne', { winner: absent === 'A' ? prompt.awayName : prompt.homeName, score: prompt.scores[absent] });
 
   return (
-    <DialogSurface isOpen onClose={() => answerPrompt(null)} maxWidth={dialogWidths.md} accent={cssVars.colors.warning} labelledBy="forfeit-title">
+    <DialogSurface
+      isOpen
+      onClose={() => answerPrompt(null)}
+      maxWidth={dialogWidths.md}
+      accent={cssVars.colors.warning}
+      labelledBy="forfeit-title"
+      header={<h2 id="forfeit-title" style={titleStyle}>{t('schedule.forfeit.title', { number: prompt.matchNumber })}</h2>}
+      footer={(
+        <DialogActions
+          secondary={[{ label: t('schedule.forfeit.cancel'), onClick: () => answerPrompt(null), 'data-testid': 'forfeit-cancel' }]}
+          primary={{ label: t('schedule.forfeit.confirm'), onClick: () => answerPrompt(absent === null ? null : rest ? `${absent}:rest` : absent), disabled: absent === null, 'data-testid': 'forfeit-confirm' }}
+        />
+      )}
+    >
       <div style={bodyStyle} data-testid="forfeit-dialog">
-        <h2 id="forfeit-title" style={titleStyle}>{t('schedule.forfeit.title', { number: prompt.matchNumber })}</h2>
         <p style={textStyle}>{t('schedule.forfeit.question')}</p>
         <div style={choicesStyle} role="group" aria-labelledby="forfeit-title">
           {choices.map((choice) => (
@@ -76,10 +89,6 @@ function MarkPrompt({ prompt, answerPrompt }: { prompt: Extract<ForfeitPrompt, {
             )}
           </div>
         )}
-        <DialogActions
-          secondary={[{ label: t('schedule.forfeit.cancel'), onClick: () => answerPrompt(null), 'data-testid': 'forfeit-cancel' }]}
-          primary={{ label: t('schedule.forfeit.confirm'), onClick: () => answerPrompt(absent === null ? null : rest ? `${absent}:rest` : absent), disabled: absent === null, 'data-testid': 'forfeit-confirm' }}
-        />
       </div>
     </DialogSurface>
   );
