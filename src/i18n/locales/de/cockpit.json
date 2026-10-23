@@ -169,7 +169,8 @@
     "countsAsFoul": "zählt als Foul"
   },
   "eventEditDialog": {
-    "title": "{{label}} bearbeiten"
+    "title": "{{label}} bearbeiten",
+    "numberInvalid": "Rückennummer: ganze Zahl von 1 bis 99. Die bisherige Nummer bleibt."
   },
   "cardDialog": {
     "title": "Karte vergeben",
@@ -317,6 +318,7 @@
     "horn3": "Horn 3 (Tief)",
     "customSound": "Eigener Sound",
     "notUploaded": "(nicht hochgeladen)",
+    "test": "Test",
     "testSound": "Sound testen",
     "volume": "Lautstärke",
     "volumePercent": "{{percent}}%",
@@ -514,6 +516,7 @@
     "andere": "Andere Nr.",
     "uebernehmen": "Übernehmen",
     "eingabe": "Rückennummer",
+    "ungueltig": "Rückennummer: ganze Zahl von 1 bis 99.",
     "titelKarte": "Rückennummer – {{art}} {{team}}",
     "titelZeitstrafe": "Rückennummer – Zeitstrafe {{team}}"
   },

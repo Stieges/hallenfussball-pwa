@@ -51,8 +51,8 @@ const styles = {
   } as CSSProperties,
 
   backButtonMobile: {
-    width: 40,
-    height: 40,
+    width: ADMIN_LAYOUT.itemHeight, // @OB-022: mindestens 44 × 44
+    height: ADMIN_LAYOUT.itemHeight,
     padding: 0,
     justifyContent: 'center',
     fontSize: '1.25rem',
@@ -80,8 +80,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 40,
-    height: 40,
+    width: ADMIN_LAYOUT.itemHeight,
+    height: ADMIN_LAYOUT.itemHeight,
     background: 'transparent',
     border: 'none',
     borderRadius: cssVars.borderRadius.md,
@@ -109,7 +109,7 @@ const styles = {
   } as CSSProperties,
 
   spacer: {
-    width: 40,
+    width: ADMIN_LAYOUT.itemHeight, // so breit wie der Zurück-Pfeil, damit der Titel mittig bleibt
   } as CSSProperties,
 } as const;
 

@@ -4,17 +4,20 @@
  * Grund an -- die Entscheidung trifft der Aufrufer (`canAmendField` im Hook).
  */
 import { cssVars } from '../../../../design-tokens';
+import { InlineNotice } from '../../../ui/molecules/InlineNotice';
 
 interface EventNumberFieldProps {
   value: string;
   onChange: (value: string) => void;
   /** Gesetzt = Feld gesperrt; der Text erklaert warum. */
   lockedReason?: string;
+  /** Gesetzt = Eingabe außerhalb 1–99 abgewiesen (@SL-172); der Text sagt, was gilt. */
+  invalidHint?: string;
 }
 
 const QUICK_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-export function EventNumberField({ value, onChange, lockedReason }: EventNumberFieldProps) {
+export function EventNumberField({ value, onChange, lockedReason, invalidHint }: EventNumberFieldProps) {
   const locked = lockedReason !== undefined;
   return (
     <div style={styles.inputSection}>
@@ -22,7 +25,7 @@ export function EventNumberField({ value, onChange, lockedReason }: EventNumberF
       <div style={styles.inputContainer}>
         <input
           id="event-edit-number"
-          type="number"
+          type="text"
           inputMode="numeric"
           pattern="[0-9]*"
           placeholder="#"
@@ -30,8 +33,6 @@ export function EventNumberField({ value, onChange, lockedReason }: EventNumberF
           onChange={(e) => onChange(e.target.value)}
           style={styles.numberInput}
           autoFocus
-          min={1}
-          max={99}
           disabled={locked}
           data-testid="event-edit-number"
         />
@@ -39,6 +40,10 @@ export function EventNumberField({ value, onChange, lockedReason }: EventNumberF
 
       {locked && (
         <p style={styles.lockedText} data-testid="event-edit-locked" role="status">{lockedReason}</p>
+      )}
+
+      {invalidHint !== undefined && (
+        <InlineNotice tone="warn" data-testid="event-edit-number-invalid">{invalidHint}</InlineNotice>
       )}
 
       <div style={styles.quickNumbers}>

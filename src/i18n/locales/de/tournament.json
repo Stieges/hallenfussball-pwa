@@ -338,6 +338,8 @@
     "noChanges": "Keine Änderungen vorhanden",
     "masterData": "Stammdaten",
     "tournamentName": "Turniername",
+    "tournamentNameRequired": "Bitte gib einen Turniernamen ein.",
+    "startDateRequired": "Bitte wähle ein Startdatum.",
     "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
