@@ -156,6 +156,9 @@
 #   scripts/rls-role-matrix.sh --without-a25b      # Alles ("nachher"), aber OHNE 20261110_005 (A-25b: Nichtantritt-Wertung,
 #                                                   # forfeit_absent als Schutzspalte) -- die A-25b-Zeilen
 #                                                   # (rls-matrix.d/spur-wertung-a25.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-b48b      # Alles ("nachher"), aber OHNE 20261113_101 (B-48b: Lebenszeichen mit
+#                                                   # Kennung als Text, Pruefung gegen config.monitors) -- die B-48b-Zeilen
+#                                                   # (rls-matrix.d/spur-b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -258,6 +261,8 @@ WITH_CA2_REQ=1
 WITH_A25B_REQ=1
 # B-14: 20261117_104 im Modus "nachher" einspielen (Gegenprobe --without-b14 laesst sie weg; braucht _002 und _004).
 WITH_B14_REQ=1
+# B-48b: 20261113_101 im Modus "nachher" einspielen (Gegenprobe --without-b48b laesst sie weg; Erwartungen setzen A-27 voraus).
+WITH_B48B_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -313,6 +318,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-b14)
       WITH_B14_REQ=0
+      shift
+      ;;
+    --without-b48b)
+      WITH_B48B_REQ=0
       shift
       ;;
     -h|--help)
@@ -602,6 +611,22 @@ if [[ "$WITH_A34" -eq 1 && "$WITH_A25B_REQ" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL + A-25b (20261110_005)"
 elif [[ "$WITH_A34" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, A-25b-Gegenprobe (ohne 20261110_005)"
+fi
+
+# B-48b (20261113_101, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): record_monitor_heartbeat mit Kennung als
+# Text, Pruefung gegen config.monitors, Sichtbarkeit is_public oder tournamentSettings. Haengt technisch nur an
+# has_tournament_permission (20260924_002); eingespielt mit A-27, weil die Zeilen in rls-matrix.d/spur-b.sh die Regel
+# "anonyme Sitzung zaehlt nicht als Eigentuemer" erwarten. Unabhaengig von _004 (Lesen bleibt dort, --without-coadmin
+# misst B-48b deshalb mit). --without-b48b ist die Gegenprobe.
+B48B_FILE="$(find_migration 20261113_101)"
+WITH_B48B=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_B48B_REQ" -eq 1 ]]; then
+  WITH_B48B=1
+  echo "Migration einspielen: $(basename "$B48B_FILE")" >&2
+  psql_stdin < "$B48B_FILE"
+  MODE_LABEL="$MODE_LABEL + B-48b (20261113_101)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, B-48b-Gegenprobe (ohne 20261113_101)"
 fi
 
 # B-14 (20261117_104, E-A2, Review Focus 6, @ZM-096..@ZM-102): anon und Konten ohne Rolle lesen tournaments, teams,
@@ -2200,7 +2225,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

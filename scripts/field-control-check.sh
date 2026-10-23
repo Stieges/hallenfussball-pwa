@@ -597,8 +597,9 @@ run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
   # CA-2: die drei Zeilen der spaeteren Migration 20261110_004 sind hier f (sie laeuft erst am Ende, AFTER).
+  # B-48b: die zwei Zeilen monitor-heartbeat-* der spaeteren Migration 20261113_101 sind hier f (laeuft erst am Ende).
   check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261110_004, 20261110_005)" "" \
-    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|matches-guard-engine-columns-forfeit-absent|append-match-events-writes-forfeit-absent)\|' || true)"
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^((share-rpcs-permission-based|make-public-keeps-existing-code|heartbeats-select-manage-screens|matches-guard-engine-columns-forfeit-absent|append-match-events-writes-forfeit-absent)\||monitor-heartbeat-)' || true)"
   check S "Rechte-Assertion: die 3 A-34-Zeilen vorhanden und |t" \
     "append-match-events-checks-field-control|t,field-control-no-client-access|t,field-control-rpcs-execute-only-authenticated|t" \
     "$(grep -E '^(append-match-events-checks-field-control|field-control-)' <<<"$priv" | sort | paste -sd, -)"
