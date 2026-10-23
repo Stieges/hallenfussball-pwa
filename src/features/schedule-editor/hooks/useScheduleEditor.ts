@@ -11,6 +11,7 @@
 
 import { useReducer, useCallback, useMemo, useEffect } from 'react';
 import { Match, Tournament } from '../../../types/tournament';
+import { useMatchSkip } from './useMatchSkip';
 import {
   EditorState,
   EditorAction,
@@ -156,10 +157,10 @@ export interface UseScheduleEditorReturn {
   updateMatchField: (matchId: string, fieldId: number) => void;
   /** Update match referee */
   updateMatchReferee: (matchId: string, refereeId: number | undefined) => void;
-  /** Skip a match */
-  skipMatch: (matchId: string, reason: string) => void;
-  /** Unskip a match */
-  unskipMatch: (matchId: string) => void;
+  /** A-08f3e4: Spiel absetzen über den Server (`useMatchSkip`); Hinweistext bei Ablehnung, sonst `null` */
+  skipMatch: (matchId: string, reason: string) => Promise<string | null>;
+  /** A-08f3e4: wieder einplanen über den Server (@FU-071); Hinweistext bei Ablehnung, sonst `null` */
+  unskipMatch: (matchId: string) => Promise<string | null>;
 
   // History actions
   /** Undo last change */
@@ -182,6 +183,7 @@ export function useScheduleEditor(
   options: UseScheduleEditorOptions
 ): UseScheduleEditorReturn {
   const { tournament, onTournamentUpdate, initialMode = 'view' } = options;
+  const { skip: skipMatch, unskip: unskipMatch } = useMatchSkip(tournament);
 
   // Initialize state
   const [state, dispatch] = useReducer(editorReducer, {
@@ -295,54 +297,6 @@ export function useScheduleEditor(
     const updatedMatches = tournament.matches.map(m =>
       m.id === matchId ? { ...m, referee: refereeId } : m
     );
-
-    onTournamentUpdate({
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [tournament, onTournamentUpdate, createChange]);
-
-  const skipMatch = useCallback((matchId: string, reason: string) => {
-    const match = tournament.matches.find(m => m.id === matchId);
-    if (!match) {return;}
-
-    const change = createChange(matchId, 'matchStatus', match.matchStatus, 'skipped');
-    dispatch({ type: 'ADD_CHANGE', payload: change });
-
-    // Apply change
-    const updatedMatches = tournament.matches.map(m =>
-      m.id === matchId
-        ? {
-            ...m,
-            matchStatus: 'skipped' as const,
-            skippedReason: reason,
-            skippedAt: new Date().toISOString(),
-          }
-        : m
-    );
-
-    onTournamentUpdate({
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [tournament, onTournamentUpdate, createChange]);
-
-  const unskipMatch = useCallback((matchId: string) => {
-    const match = tournament.matches.find(m => m.id === matchId);
-    if (!match) {return;}
-
-    const change = createChange(matchId, 'matchStatus', match.matchStatus, 'scheduled');
-    dispatch({ type: 'ADD_CHANGE', payload: change });
-
-    // Apply change - remove skipped fields
-    const updatedMatches = tournament.matches.map(m => {
-      if (m.id !== matchId) {return m;}
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { skippedReason, skippedAt, ...rest } = m;
-      return { ...rest, matchStatus: 'scheduled' as const };
-    });
 
     onTournamentUpdate({
       ...tournament,

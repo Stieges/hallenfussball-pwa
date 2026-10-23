@@ -56,6 +56,8 @@ export const displaySizes = {
   md: '36px',
   /** 48px - Large display headlines */
   lg: '48px',
+  /** 64px - Extra large display (Spieluhr im Live-Cockpit, Scheibe 1) */
+  xl: '64px',
 } as const;
 
 // =============================================================================
@@ -65,6 +67,8 @@ export const displaySizes = {
 // =============================================================================
 
 export const scoreSizes = {
+  /** 32px - Uhr im Handy-Kopf (Tafel, Mockup) */
+  xs: '32px',
   /** 40px - Small scores (compact views) */
   sm: '40px',
   /** 56px - Medium scores (standard match cards) */
@@ -130,6 +134,8 @@ export const fontWeights = {
   medium: 500,
   semibold: 600,
   bold: 700,
+  /** Hervorhebung auf der Anzeige (Monitor: Sieger-Name, Daniel 18.10.) */
+  extrabold: 800,
 } as const;
 
 // =============================================================================

@@ -1,0 +1,25 @@
+{
+  "title": "Altdaten: nur finals_config.tiebreaker „shootout“, keine Runden-Regel -> shootout",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {},
+    "finalsConfig": {
+      "preset": "top-4",
+      "tiebreaker": "shootout"
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 720,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

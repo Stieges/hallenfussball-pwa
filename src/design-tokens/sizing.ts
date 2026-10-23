@@ -16,6 +16,13 @@ export const touchTargets = {
   primary: '56px',
 } as const;
 
+/** Lesebreiten von Dialogen (nur diese drei verwenden) */
+export const dialogWidths = {
+  sm: '400px',
+  md: '480px',
+  lg: '800px',
+} as const;
+
 export const touchTargetValues = {
   minimum: 44,
   comfortable: 48,
@@ -86,6 +93,28 @@ export const layoutHeightValues = {
   bottomNav: 56,
   bottomActionBar: 56,
   header: 56,
+} as const;
+
+/**
+ * Component sizes - feste Maße einzelner Bereiche (px, skalieren nicht mit der Schriftgröße).
+ */
+export const componentSizes = {
+  /** Breite der Ereignis-Spalte neben der Spielfläche (Live-Cockpit, ab Desktop) */
+  sidebarWidth: '300px',
+  /** Mindesthöhe eines Leerzustands (z. B. „Kein Spiel ausgewählt“) */
+  emptyStateMinHeight: '300px',
+  /** Haarlinie: 1 px, z. B. für unsichtbare, aber vorlesbare Bereiche */
+  hairline: '1px',
+} as const;
+
+/**
+ * Rahmenbreiten (Freigabe Daniel 18.10.): dünn, mittel, kräftig. `cssVars.borderWidth.thin` ist derselbe Wert.
+ * Ergebniskasten kleiner Größen: dezenter Rahmen `medium`, kräftiger Rahmen `strong`, Ring `medium`.
+ */
+export const borderWidths = {
+  thin: '1px',
+  medium: '2px',
+  strong: '3px',
 } as const;
 
 export type TouchTargetKey = keyof typeof touchTargets;

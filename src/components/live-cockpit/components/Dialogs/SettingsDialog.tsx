@@ -1,7 +1,7 @@
 import { CSSProperties } from 'react';
-import { cssVars } from '../../../../design-tokens';
-import { useFocusTrap } from '../../../../hooks';
-import { MatchCockpitSettingsPanel } from '../../../match-cockpit/MatchCockpitSettingsPanel';
+import { cssVars, dialogWidths } from '../../../../design-tokens';
+import { DialogSurface } from '../../../ui/molecules/DialogSurface';
+import { MatchCockpitSettingsPanel } from '../../../match-settings/MatchCockpitSettingsPanel';
 import type { MatchCockpitSettings } from '../../../../types/tournament';
 
 interface SettingsDialogProps {
@@ -26,35 +26,12 @@ export function SettingsDialog({
     onTestSound,
     readOnly = false,
 }: SettingsDialogProps) {
-    // WCAG 4.1.3: Focus trap for accessibility
-    const focusTrap = useFocusTrap({
-        isActive: isOpen,
-        onEscape: onClose,
-    });
 
     if (!isOpen) {return null;}
 
-    const overlayStyle: CSSProperties = {
-        position: 'fixed',
-        inset: 0,
-        background: cssVars.colors.overlayStrong,
-        zIndex: 200, // Higher than menu
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: cssVars.spacing.md,
-    };
-
     const dialogStyle: CSSProperties = {
-        background: cssVars.colors.surfaceSolid,
-        borderRadius: cssVars.borderRadius.lg,
-        width: '100%',
-        maxWidth: '500px',
-        maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: cssVars.shadows.xl,
-        animation: 'slideUp 0.2s ease-out',
     };
 
     const headerStyle: CSSProperties = {
@@ -103,7 +80,7 @@ export function SettingsDialog({
     const okButtonStyle: CSSProperties = {
         padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
         background: cssVars.colors.primary,
-        color: 'white',
+        color: cssVars.colors.onPrimary,
         border: 'none',
         borderRadius: cssVars.borderRadius.md,
         fontSize: cssVars.fontSizes.md,
@@ -112,10 +89,15 @@ export function SettingsDialog({
     };
 
     return (
-        <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div ref={focusTrap.containerRef} style={dialogStyle} role="dialog" aria-modal="true">
+        <DialogSurface
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth={dialogWidths.md}
+            labelledBy="cockpit-settings-dialog-title"
+        >
+            <div style={dialogStyle}>
                 <div style={headerStyle}>
-                    <h2 style={titleStyle}>Cockpit Einstellungen</h2>
+                    <h2 id="cockpit-settings-dialog-title" style={titleStyle}>Cockpit Einstellungen</h2>
                     <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">
                         ×
                     </button>
@@ -137,6 +119,6 @@ export function SettingsDialog({
                     </button>
                 </div>
             </div>
-        </div>
+        </DialogSurface>
     );
 }

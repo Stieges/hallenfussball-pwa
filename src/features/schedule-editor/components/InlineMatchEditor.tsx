@@ -10,6 +10,7 @@
 import React, { useState, useCallback } from 'react';
 import { Match, Team, RefereeConfig } from '../../../types/tournament';
 import { cssVars } from '../../../design-tokens'
+import { matchTeamIds } from '../../../core/models/matchSlot';
 import { ScheduleConflict } from '../types';
 
 // ============================================================================
@@ -82,7 +83,7 @@ const selectStyle = (hasConflict: boolean, isOpen: boolean): React.CSSProperties
   fontWeight: cssVars.fontWeights.medium,
   color: hasConflict ? cssVars.colors.error : cssVars.colors.textPrimary,
   backgroundColor: hasConflict ? cssVars.colors.editorErrorRowBg : cssVars.colors.surface,
-  border: `1px solid ${hasConflict ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.border}`,
+  border: `1px solid ${hasConflict ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.borderControl}`,
   borderRadius: cssVars.borderRadius.sm,
   cursor: 'pointer',
   minWidth: '80px',
@@ -167,7 +168,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
       }
     } else if (refereeConfig.mode === 'teams') {
       // Teams as referees - find teams not playing in this match
-      const playingTeamIds = [match.teamA, match.teamB];
+      const playingTeamIds: readonly string[] = matchTeamIds(match);
       const eligibleTeams = teams.filter(
         t => !playingTeamIds.includes(t.id) && t.name !== 'Freilos'
       );
@@ -400,7 +401,7 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
     fontWeight: cssVars.fontWeights.medium,
     color: showConflict ? cssVars.colors.error : cssVars.colors.textPrimary,
     backgroundColor: showConflict ? cssVars.colors.editorErrorRowBg : 'transparent',
-    border: `1px solid ${showConflict ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${showConflict ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     cursor: enabled ? 'pointer' : 'not-allowed',
     minWidth: size === 'sm' ? '50px' : '70px',

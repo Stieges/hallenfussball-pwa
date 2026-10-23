@@ -57,12 +57,13 @@ const styles = {
     transition: 'all 0.15s ease',
     width: '100%',
     textAlign: 'left',
+    minHeight: ADMIN_LAYOUT.itemHeight, // @OB-022: Tasten mindestens 44 hoch
   } as CSSProperties,
 
   groupLabel: {
     fontSize: cssVars.fontSizes.labelSm,
     fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textMuted,
+    color: cssVars.colors.textSecondary, // Muted erreicht 4,5 : 1 nicht (visual:metrics kontrast.text)
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     padding: `${cssVars.spacing.md} ${cssVars.spacing.sm}`,
@@ -94,12 +95,15 @@ const styles = {
     marginLeft: '-3px',
   } as CSSProperties,
 
+  // Schrift in Textfarbe: Error auf der roten Tönung erreicht 4,5 : 1 nicht (visual:metrics kontrast.text);
+  // die Gefahr zeigen Tönung und Symbol
   categoryItemDanger: {
-    color: cssVars.colors.error,
+    color: cssVars.colors.textPrimary,
   } as CSSProperties,
 
+  // wie categoryItemDanger: Warnfarbe als Schrift auf der Tönung erreicht 4,5 : 1 nicht
   categoryItemWarning: {
-    color: cssVars.colors.warning,
+    color: cssVars.colors.textPrimary,
   } as CSSProperties,
 
   categoryIcon: {
@@ -110,9 +114,8 @@ const styles = {
 
   categoryLabel: {
     flex: 1,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    minWidth: 0,
+    overflowWrap: 'anywhere', // lange Namen umbrechen statt mit Auslassungspunkten zu enden
   } as CSSProperties,
 
   badge: {
@@ -124,14 +127,6 @@ const styles = {
     borderRadius: cssVars.borderRadius.full,
     minWidth: 20,
     textAlign: 'center',
-  } as CSSProperties,
-
-  comingSoonBadge: {
-    background: cssVars.colors.surfaceHover,
-    color: cssVars.colors.textMuted,
-    fontSize: cssVars.fontSizes.labelSm,
-    padding: '2px 6px',
-    borderRadius: cssVars.borderRadius.sm,
   } as CSSProperties,
 
   separator: {
@@ -150,7 +145,7 @@ const styles = {
   dangerZoneLabel: {
     fontSize: cssVars.fontSizes.labelSm,
     fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.error,
+    color: cssVars.colors.textPrimary,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
@@ -318,9 +313,6 @@ export function AdminSidebar({
         <span style={styles.categoryLabel}>{category.label}</span>
         {category.badge && category.badge > 0 && (
           <span style={styles.badge}>{category.badge}</span>
-        )}
-        {category.isComingSoon && (
-          <span style={styles.comingSoonBadge}>{t('sidebar.comingSoon')}</span>
         )}
       </button>
     );

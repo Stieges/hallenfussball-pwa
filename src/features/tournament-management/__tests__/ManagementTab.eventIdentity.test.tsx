@@ -28,6 +28,9 @@ const liveMatches = new Map<string, LiveMatch>();
 /** Jede Übergabe an das Cockpit wird mitgeschrieben, damit Identitäten vergleichbar sind. */
 const seenEventArrays: unknown[] = [];
 
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 vi.mock('../../../components/live-cockpit', () => ({
   LiveCockpit: (props: { currentMatch?: { events?: unknown } | null }) => {
     seenEventArrays.push(props.currentMatch?.events);
@@ -42,6 +45,18 @@ vi.mock('../../../hooks/useMatchSound', () => ({
   }),
 }));
 
+// P7 (Fixrunde 3): ManagementTab braucht jetzt den App-weiten `useToast` (Fehler-Toast bei einem
+// gescheiterten `getLiveMatchData`) -- der wirft ohne `<ToastProvider>`-Vorfahren.
+vi.mock('../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
+}));
+
+// B-04 Fixrunde 1 (@W2A-030): ManagementTab löst die Spielregel-Rolle über useEffectiveTournamentRole
+// aus; das braucht useAuth. Die Mitgliedschaft liefert der Mock oben, daher nur ein angemeldeter Nutzer.
+vi.mock('../../auth/hooks/useAuth', () => ({
+  useAuth: () => ({ isAuthenticated: true, user: { id: 'user-1' } }),
+}));
+
 vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => ({
     members: [], isLoading: false, error: null,
@@ -49,8 +64,8 @@ vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   }),
 }));
 
-vi.mock('../../../hooks/useMatchExecution', () => ({
-  useMatchExecution: () => ({
+vi.mock('../../../hooks/useCockpitExecution', () => ({
+  useCockpitExecution: () => ({
     // Bei JEDEM Aufruf eine neue Map — so verhält sich der echte Hook auch
     // (`setLiveMatches(prev => new Map(prev)...)`). Gäbe die Attrappe die modulweite Map
     // zurück, bliebe deren Identität konstant, `currentMatch` würde nie neu berechnet und
@@ -71,7 +86,9 @@ vi.mock('../../../hooks/useMatchExecution', () => ({
 }));
 
 import { ManagementTab } from '../ManagementTab';
+import { testTeamSlot } from '../../../test/matchSlotFixtures';
 
+import { RouterWrapper } from './routerWrapper';
 const MATCH_ID = 'match-1';
 const HOME = { id: 'team-a', name: 'FC Alpha' };
 const AWAY = { id: 'team-b', name: 'SV Beta' };
@@ -116,6 +133,7 @@ const schedule = {
     id: MATCH_ID, matchNumber: 1, time: '10:00', field: 1, slot: 1,
     homeTeam: HOME.name, awayTeam: AWAY.name,
     originalTeamA: HOME.id, originalTeamB: AWAY.id,
+    slotA: testTeamSlot(HOME.id), slotB: testTeamSlot(AWAY.id),
     phase: 'groupStage', label: 'Gruppenphase', duration: 10,
   }],
   phases: [],
@@ -131,13 +149,13 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
   it('behält die Array-Identität, wenn sich am Match nur die Uhr ändert', () => {
     setLiveMatch({ elapsedSeconds: 30 });
     const { rerender } = render(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
-    );
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+    , { wrapper: RouterWrapper });
 
     // Neues Match-Objekt, identische Ereignisse — genau das, was ein Uhr-Tick erzeugt.
     setLiveMatch({ elapsedSeconds: 45 });
     rerender(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
     );
 
     const first = seenEventArrays[0];
@@ -149,8 +167,8 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
   it('erzeugt ein neues Array, sobald sich die Ereignisse tatsächlich ändern', () => {
     setLiveMatch();
     const { rerender } = render(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
-    );
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+    , { wrapper: RouterWrapper });
     const before = seenEventArrays[seenEventArrays.length - 1];
 
     setLiveMatch({
@@ -163,7 +181,7 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
       ],
     });
     rerender(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
     );
 
     const after = seenEventArrays[seenEventArrays.length - 1];

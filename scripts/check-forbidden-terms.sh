@@ -28,14 +28,12 @@ set -eu
 LOCAL_TERMS_FILE="${FORBIDDEN_TERMS_FILE:-.claude/local/forbidden-terms.txt}"
 IS_CI="${CI:-}"
 
-# Ausnahmeliste: genau die zwei Dateien mit Daniels eigenen, noch nicht
-# committeten Änderungen (siehe
-# .superpowers/sdd/2026-09-24-llm-gateway/task-G2-G4-report.md, lokal und
-# gitignored, für den vollen Hintergrund). Temporär, bis diese Änderungen
-# eingecheckt sind. Diese Datei hier nennt selbst keine Anbieter-Begriffe.
+# Ausnahmeliste: nur docs/TODO.md (Daniels lokale, noch nicht eingecheckte
+# Aufgabenliste). Temporär, bis diese Datei bereinigt eingecheckt ist.
+# Diese Datei hier nennt selbst keine Anbieter-Begriffe.
 is_exempt() {
   case "$1" in
-    ".claude/commands/coherence-review.md"|"docs/TODO.md") return 0 ;;
+    "docs/TODO.md") return 0 ;;
     *) return 1 ;;
   esac
 }

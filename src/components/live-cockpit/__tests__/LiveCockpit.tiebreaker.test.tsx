@@ -9,6 +9,20 @@ vi.mock('../../../hooks/useMatchSound', () => ({
   useMatchSound: () => ({ play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(), isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null }),
 }));
 
+// A4 (C-SYNC): SyncStatusIndicator (neu im Match-Header) braucht RepositoryContext via
+// useSyncStatus/useRepositories -- diese Tests rendern LiveCockpit ohne Provider. isCloudSyncAvailable
+// false spiegelt exakt den Gast/lokal-Fall wider (kein Provider = keine Cloud), Indicator rendert nichts.
+vi.mock('../../../hooks/useSyncStatus', () => ({
+  useSyncStatus: () => ({
+    status: 'synced', isSyncing: false, pendingChanges: 0, failedChanges: 0, failedMutations: [],
+    syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(),
+    isCloudSyncAvailable: false,
+  }),
+}));
+
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {
     id: 'match-1', number: 7, phaseLabel: 'Finale', fieldId: 'field-1',
@@ -23,7 +37,7 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
-    currentMatch: match as never, upcomingMatches: [],
+    currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), ...handlers,
@@ -79,7 +93,7 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
 describe('LiveCockpit — Strafstoßschießen (L1)', () => {
   beforeEach(() => vi.clearAllMocks());
   // Fixwave-Fix (Critical): pen() liefert jetzt onAbortPenaltyShootout statt des entfernten
-  // onCancelTiebreaker (das beendete das Spiel als Unentschieden — siehe MatchExecutionService.
+  // onCancelTiebreaker (das beendete das Spiel als Unentschieden — siehe frueherer Altweg
   // cancelTiebreaker). onForceFinish ist mit im Bundle, damit die Tests unten beweisen können,
   // dass Abbrechen/Escape es NICHT auslösen.
   const pen = () => ({ onRecordPenaltyResult: vi.fn(), onAbortPenaltyShootout: vi.fn(), onForceFinish: vi.fn() });

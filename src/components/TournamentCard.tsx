@@ -18,6 +18,10 @@ import { cssVars } from '../design-tokens'
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
 import { TournamentActionMenu } from './TournamentActionMenu';
+import { useTournamentStartState } from '../hooks/useTournamentStartState';
+import { canWithListedRole } from '../features/auth/hooks/useCan';
+import { TextTag } from './ui/atoms';
+import { badgeContainerStyle, headerStyle, infoGridStyle, infoItemStyle, statusBadgeColors, valueStyle } from './tournamentCardStyles';
 
 /** Map categoryLabel to TournamentActionMenu category */
 type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
@@ -46,6 +50,15 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   testId,
 }) => {
   const { t } = useTranslation('dashboard');
+  // @LZ-003 / W4: Papierkorb nur vor dem ersten Anpfiff — gleiche gemeinsame
+  // Anpfiff-Funktion wie „Turnier löschen" (DangerZone) und „Im Wizard bearbeiten".
+  // P1: Live-Abfrage nur, wenn ein Papierkorb angeboten werden könnte.
+  // CA-5 (@HE-085, Auflage 10c): „Löschen“ nur mit dem Recht deleteTournament; ohne Rolle (Gast, lokal) = eigenes Turnier.
+  const { myRole } = tournament;
+  const mayDelete = canWithListedRole(myRole, 'deleteTournament');
+  const { state: matchStartState } = useTournamentStartState(tournament, {
+    enabled: Boolean(onSoftDelete) && mayDelete,
+  });
 
   // Helper functions that need t()
   const getGroupSystemLabel = (groupSystem?: GroupSystem): string => {
@@ -93,7 +106,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   };
 
   const category = getCategory();
-  const deleteHandler = onSoftDelete;
+  const deleteHandler = mayDelete && matchStartState === 'not-started' ? onSoftDelete : undefined;
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'all 0.2s ease',
@@ -107,26 +120,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     boxShadow: cssVars.shadows.md,
   };
 
-  const headerStyle: CSSProperties = {
-    marginTop: cssVars.spacing.xl, // Space below badge
-    marginBottom: cssVars.spacing.md,
-  };
-
   const titleStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xl,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
     margin: 0,
     paddingRight: '120px', // Space for badge(s)
-  };
-
-  const badgeContainerStyle: CSSProperties = {
-    position: 'absolute',
-    top: cssVars.spacing.md,
-    right: cssVars.spacing.md,
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
   };
 
   const badgeStyle: CSSProperties = {
@@ -139,48 +138,6 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     whiteSpace: 'nowrap',
   };
 
-  const getBadgeColor = (): { background: string; color: string } => {
-    if (tournament.status === 'draft') {
-      return {
-        background: cssVars.colors.statusDraftBg,
-        color: cssVars.colors.statusDraft,
-      };
-    }
-    switch (categoryLabel) {
-      case 'running':
-        return {
-          background: cssVars.colors.statusLiveBg,
-          color: cssVars.colors.statusLive,
-        };
-      case 'upcoming':
-        return {
-          background: cssVars.colors.statusUpcomingBg,
-          color: cssVars.colors.statusUpcoming,
-        };
-      case 'finished':
-        return {
-          background: cssVars.colors.statusFinishedBg,
-          color: cssVars.colors.statusFinished,
-        };
-      default:
-        return {
-          background: cssVars.colors.surface,
-          color: cssVars.colors.textSecondary,
-        };
-    }
-  };
-
-  const infoGridStyle: CSSProperties = {
-    display: 'grid',
-    gap: cssVars.spacing.md,
-  };
-
-  const infoItemStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
-  };
-
   const labelStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
     textTransform: 'uppercase',
@@ -189,13 +146,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     fontWeight: cssVars.fontWeights.medium,
   };
 
-  const valueStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textPrimary,
-    fontWeight: cssVars.fontWeights.medium,
-  };
-
-  const badgeColors = getBadgeColor();
+  const badgeColors = statusBadgeColors(tournament.status, categoryLabel);
 
   // Check if we need to show action menu (has any action handlers)
   const hasActions = onClick !== undefined || onCopy !== undefined || onShare !== undefined || deleteHandler !== undefined;
@@ -273,6 +224,13 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
         <div style={headerStyle}>
           <h3 style={titleStyle}>{tournament.title}</h3>
+          {myRole !== undefined && myRole !== 'owner' && (
+            <div style={{ marginTop: cssVars.spacing.sm }}>
+              <TextTag testId={`tournament-role-${tournament.id}`}>
+                {t(`card.role.${myRole}`)}
+              </TextTag>
+            </div>
+          )}
         </div>
 
         <dl style={infoGridStyle}>

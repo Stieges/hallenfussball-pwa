@@ -17,11 +17,16 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import type { Tables } from '../../types/supabase';
 import {
   mapLiveMatchFromSupabase,
-  mapLiveMatchToSupabase,
   isMatchActive,
 } from './liveMatchMappers';
-import { OptimisticLockError } from '../errors';
-import { captureFeatureError } from '../../lib/sentry';
+import { RepositoryError } from '../errors';
+import {
+  callAppendMatchEvents,
+  callServerTime,
+  type AppendableEvent,
+  type AppendOptions,
+  type AppendResult,
+} from './appendMatchEventsRpc';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
@@ -37,10 +42,24 @@ export type LiveMatchChangeHandler = (
   changeType: 'INSERT' | 'UPDATE' | 'DELETE'
 ) => void;
 
+/** A-06k (@FU-025): Zustand des Realtime-Kanals (Werte von supabase-js `REALTIME_SUBSCRIBE_STATES`). */
+export type RealtimeChannelStatus = 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED';
+
 export interface SubscriptionOptions {
   onMatchChange?: LiveMatchChangeHandler;
   onError?: (error: Error) => void;
+  /** A-06k (@FU-025): meldet jeden Kanal-Zustand; Aufrufer wechselt bei != SUBSCRIBED auf Abfrage. */
+  onStatusChange?: (status: RealtimeChannelStatus) => void;
 }
+
+const REALTIME_CHANNEL_STATUSES: readonly string[] = ['SUBSCRIBED', 'CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'];
+
+function isRealtimeChannelStatus(value: string): value is RealtimeChannelStatus {
+  return REALTIME_CHANNEL_STATUSES.includes(value);
+}
+
+/** Cloud-Status eines angepfiffenen Spiels (`matches.match_status`); `live_state` ist bei beendeten Spielen null. */
+const STARTED_MATCH_STATUSES: string[] = ['running', 'paused', 'finished'];
 
 // ============================================================================
 // REPOSITORY
@@ -48,8 +67,8 @@ export interface SubscriptionOptions {
 
 export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
   private subscriptions = new Map<string, RealtimeChannel>();
+  private channelSequence = 0;
   private teamsCache = new Map<string, Map<string, TeamRow>>();
-  private eventIdsCache = new Map<string, Set<string>>();
 
   // ==========================================================================
   // ILiveMatchRepository Implementation
@@ -156,13 +175,6 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         result.set(matchRow.id, liveMatch);
       }
 
-      // Update event ID cache
-      for (const event of allEvents ?? []) {
-        const cached = this.eventIdsCache.get(event.match_id) ?? new Set();
-        cached.add(event.id);
-        this.eventIdsCache.set(event.match_id, cached);
-      }
-
       return result;
     } catch (error) {
       console.error('[SupabaseLiveMatchRepository] getAll failed:', error);
@@ -170,172 +182,50 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
     }
   }
 
-  async save(_tournamentId: string, match: LiveMatch): Promise<void> {
+  /**
+   * Strikte Abfrage für die Anpfiff-Sperre (@LZ-003, C-LIVE-STAND-BEENDET-FEHLT): liest den Status
+   * (nicht `live_state` -- das ist bei beendeten Spielen null) und wirft bei jedem Lesefehler.
+   * Ohne Cloud-Verbindung gibt es keine Antwort, also wirft sie ebenfalls.
+   */
+  async hasStartedMatches(tournamentId: string): Promise<boolean> {
     if (!isSupabaseConfigured || !supabase) {
-      return;
+      throw new RepositoryError('get', 'Supabase nicht konfiguriert');
     }
-
-    try {
-      // Get existing event IDs
-      const existingEventIds = this.eventIdsCache.get(match.id) ?? new Set();
-
-      // Map to Supabase format
-      const { matchUpdate, newEvents } = mapLiveMatchToSupabase(match, existingEventIds);
-
-      // CAS (Compare-And-Swap): Update ONLY if version matches (BUG-002)
-      // The DB trigger will auto-increment version on successful update
-      const { data: updatedRow, error: matchError } = await supabase
-        .from('matches')
-        .update(matchUpdate)
-        .eq('id', match.id)
-        .eq('version', match.version) // Optimistic lock check
-        .select('version')
-        .maybeSingle(); // Returns null if no row matched (version mismatch)
-
-      if (matchError) {
-        console.error('[SupabaseLiveMatchRepository] match update failed:', matchError);
-        throw matchError;
-      }
-
-      // No row updated = version mismatch
-      if (!updatedRow) {
-        // Fetch current version and status to determine if this is an initialization
-        const { data: currentMatch } = await supabase
-          .from('matches')
-          .select('version, match_status')
-          .eq('id', match.id)
-          .single();
-
-        // Initialization retry: if the match is not_started/scheduled, the version mismatch
-        // is caused by tournament saves bumping the version via the DB trigger.
-        // Safe to retry with the current version since there's no concurrent live modification.
-        const currentVersion = currentMatch?.version ?? 1;
-        if (currentMatch && (currentMatch.match_status === 'not_started' || currentMatch.match_status === 'scheduled')) {
-          const { data: retryRow, error: retryError } = await supabase
-            .from('matches')
-            .update(matchUpdate)
-            .eq('id', match.id)
-            .eq('version', currentVersion)
-            .select('version')
-            .maybeSingle();
-
-          if (retryError) {
-            console.error('[SupabaseLiveMatchRepository] initialization retry failed:', retryError);
-            throw retryError;
-          }
-          if (!retryRow) {
-            throw new OptimisticLockError(match.id, currentVersion, -1);
-          }
-          // Success - proceed to insert events below
-        } else {
-          // Genuine concurrent modification conflict
-          throw new OptimisticLockError(
-            match.id,
-            match.version,
-            currentMatch?.version ?? -1
-          );
-        }
-      }
-
-      // Insert new events
-      if (newEvents.length > 0) {
-        const { error: eventsError } = await supabase
-          .from('match_events')
-          .insert(newEvents);
-
-        if (eventsError) {
-          console.error('[SupabaseLiveMatchRepository] events insert failed:', eventsError);
-          // Don't throw - match was updated successfully.
-          // Don't cache the ids either - the insert never happened, so the
-          // next save() must retry these events instead of losing them forever.
-          captureFeatureError(eventsError, 'repository', 'eventsInsert', {
-            matchId: match.id,
-            count: newEvents.length,
-          });
-        } else {
-          // Update event ID cache. `event.id` is always set by mapMatchEventToSupabase,
-          // even though MatchEventInsert types it as optional.
-          for (const event of newEvents) {
-            if (event.id) {
-              existingEventIds.add(event.id);
-            }
-          }
-          this.eventIdsCache.set(match.id, existingEventIds);
-        }
-      }
-    } catch (error) {
-      // Re-throw OptimisticLockError without logging (expected case)
-      if (error instanceof OptimisticLockError) {
-        throw error;
-      }
-      console.error('[SupabaseLiveMatchRepository] save failed:', error);
-      throw error;
+    if (!tournamentId) {
+      throw new RepositoryError('get', 'tournamentId fehlt');
     }
+    const { data, error } = await supabase
+      .from('matches')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+      .in('match_status', STARTED_MATCH_STATUSES)
+      .limit(1);
+    if (error) {
+      throw new RepositoryError('get', error.message, error);
+    }
+    return (data?.length ?? 0) > 0;
   }
 
-  async saveAll(tournamentId: string, matches: Map<string, LiveMatch>): Promise<void> {
-    // Save each match individually (could be optimized with batch upsert)
-    const promises = Array.from(matches.values()).map((match) =>
-      this.save(tournamentId, match)
-    );
-    await Promise.all(promises);
+  // ==========================================================================
+  // Server-Schreibweg (B3b) -- noch nirgends aufgerufen, Nutzung ab PR C
+  // ==========================================================================
+
+  /**
+   * Hängt Ereignisse an EIN Spiel über `append_match_events` an (R12). Liefert je Ereignis ein
+   * Ergebnis, den Server-Zustand und die Serverzeit -- oder `{ error: 'CLIENT_OUTDATED' }`.
+   * Transport-/RPC-Fehler und unerwartete Antworten werfen `RepositoryError`.
+   */
+  appendMatchEvents(
+    matchId: string,
+    events: readonly AppendableEvent[],
+    options: AppendOptions
+  ): Promise<AppendResult> {
+    return callAppendMatchEvents(isSupabaseConfigured ? supabase : null, matchId, events, options);
   }
 
-  async delete(_tournamentId: string, matchId: string): Promise<void> {
-    if (!isSupabaseConfigured || !supabase) {
-      return;
-    }
-
-    try {
-      // Clear live_state (don't delete the match, just clear live state)
-      const { error } = await supabase
-        .from('matches')
-        .update({ live_state: null })
-        .eq('id', matchId);
-
-      if (error) {
-        console.error('[SupabaseLiveMatchRepository] delete failed:', error);
-        throw error;
-      }
-
-      // Clear event cache
-      this.eventIdsCache.delete(matchId);
-    } catch (error) {
-      console.error('[SupabaseLiveMatchRepository] delete failed:', error);
-      throw error;
-    }
-  }
-
-  async deleteEvent(_tournamentId: string, _matchId: string, eventId: string): Promise<void> {
-    if (!isSupabaseConfigured || !supabase) { return; }
-    const { error } = await supabase.from('match_events').update({ is_deleted: true }).eq('id', eventId);
-    if (error) { console.error('[SupabaseLiveMatchRepository] deleteEvent failed:', error); throw error; }
-  }
-
-  async clear(tournamentId: string): Promise<void> {
-    if (!isSupabaseConfigured || !supabase) {
-      return;
-    }
-
-    try {
-      // Clear live_state for all tournament matches
-      const { error } = await supabase
-        .from('matches')
-        .update({ live_state: null })
-        .eq('tournament_id', tournamentId);
-
-      if (error) {
-        console.error('[SupabaseLiveMatchRepository] clear failed:', error);
-        throw error;
-      }
-
-      // Clear caches
-      this.teamsCache.delete(tournamentId);
-      // Clear all event caches for this tournament (would need match IDs)
-    } catch (error) {
-      console.error('[SupabaseLiveMatchRepository] clear failed:', error);
-      throw error;
-    }
+  /** Serverzeit in Epoch-ms (`server_time`), Fehler als `RepositoryError`. */
+  serverTime(): Promise<number> {
+    return callServerTime(isSupabaseConfigured ? supabase : null);
   }
 
   // ==========================================================================
@@ -354,7 +244,10 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
     this.unsubscribe(tournamentId);
 
     const channel = supabase
-      .channel(`live-matches-${tournamentId}`)
+      // C-LIVE-KANAL-LEAVING-WIEDERVERWENDUNG: supabase-js baut einen Kanal asynchron ab und liefert unter
+      // demselben Namen bis dahin den noch „leaving“ Kanal zurück (`.on()` wirft dann). Jeder Beitritt bekommt
+      // deshalb einen eigenen Namen und damit einen frischen Kanal.
+      .channel(`live-matches-${tournamentId}-${++this.channelSequence}`)
       .on(
         'postgres_changes',
         {
@@ -376,8 +269,18 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
 
               if (!matchRow) { return; }
 
-            // Skip if not active
-            if (!isMatchActive(matchRow)) {
+            // Task A1 (Sofortschutz): ein FINISHED-Match ist NICHT "inaktiv" im Sinne dieses
+            // Guards, obwohl ein beendetes Spiel live_state == null hat (der Server setzt das,
+            // der Client sendet es nicht mehr) — das lässt isMatchActive() unten false zurückgeben. Ohne diese
+            // Ausnahme wurde JEDE Spielende-Aktualisierung wie eine Löschung behandelt (siehe
+            // Zweig unten) und wird bewusst NICHT als Löschung behandelt (Cockpit braucht beendete
+            // Spiele weiterhin) — ein zweites,
+            // bereits geöffnetes Cockpit (z. B. der Owner) erfuhr dadurch NIE per Realtime, dass
+            // ein Helfer das Spiel beendet hat, sondern hätte manuell neu laden müssen.
+            const isFinished = matchRow.match_status === 'finished';
+
+            // Skip if not active (außer: gerade beendet, siehe oben)
+            if (!isFinished && !isMatchActive(matchRow)) {
               // If it was active before, treat as delete
               if (payload.eventType === 'UPDATE') {
                 const oldMatch = payload.old as MatchRow | undefined;
@@ -413,9 +316,10 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         }
       )
       .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          // Successfully subscribed to realtime changes
-        } else if (status === 'CHANNEL_ERROR') {
+        if (isRealtimeChannelStatus(status)) {
+          options.onStatusChange?.(status);
+        }
+        if (status === 'CHANNEL_ERROR') {
           options.onError?.(new Error('Realtime subscription failed'));
         }
       });

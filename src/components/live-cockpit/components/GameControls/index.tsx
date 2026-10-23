@@ -2,7 +2,7 @@
  * GameControls - Match control buttons
  *
  * Based on mockup: scoreboard-desktop.html
- * Controls: Undo, Start/Pause, Zeit, Seiten, Halbzeit, Beenden
+ * Controls: Undo, Start/Pause, Zeit, Seiten, Beenden
  */
 
 import { type CSSProperties } from 'react';
@@ -20,17 +20,23 @@ export interface GameControlsProps {
   onUndo?: () => void;
   onStart: () => void;
   onPauseResume: () => void;
-  onEditTime: () => void;
+  /** Abschnittspause (Halbzeit): der Hauptknopf ist der Wiederanpfiff (B-08b, @SL-006). */
+  wiederanpfiff?: boolean;
+  /** A-08c: ohne Handler kein Zeit-Knopf (@FU-071). */
+  onEditTime?: () => void;
   onSwitchSides: () => void;
-  onHalfTime: () => void;
   onFinish: () => void;
   onSettings?: () => void;
   /** BUG-002: Event log button for mobile retroactive editing */
   onEventLog?: () => void;
   canUndo?: boolean;
+  /** C3b-1 (G1a): Beschriftung mit Ziel ("Tor Nr. 7 zurücknehmen"), sonst "Rückgängig". */
+  undoLabel?: string;
+  /** C3b-1 (G3): Grund, warum Rückgängig gerade nicht geht. */
+  undoHint?: string;
   breakpoint?: Breakpoint;
   /** Task R2: readOnly/finished lock (isLocked in LiveCockpit) — disables Undo, Start/Pause,
-   *  Zeit, Seiten, Halbzeit, Beenden. Native `disabled` on each <button>, not just visual.
+   *  Zeit, Seiten, Beenden. Native `disabled` on each <button>, not just visual.
    *  Fixrunde 2/3 (M2, Review-Befund M): does NOT cover Settings or Event-Log — both had no
    *  `disabled` at all before R2 (commit 235d947) and must stay that way, auch unter readOnly.
    *  Settings zeigt echte, synchronisierte Werte (kein Lokalzustand) — Regel 2 erlaubt "ansehen",
@@ -48,13 +54,15 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onUndo,
   onStart,
   onPauseResume,
+  wiederanpfiff = false,
   onEditTime,
   onSwitchSides,
-  onHalfTime,
   onFinish,
   onSettings,
   onEventLog,
   canUndo = false,
+  undoLabel,
+  undoHint,
   breakpoint = 'desktop',
   disabled = false,
 }) => {
@@ -119,6 +127,13 @@ export const GameControls: React.FC<GameControlsProps> = ({
     cursor: disabled || !canUndo ? 'not-allowed' : 'pointer',
   };
 
+  const undoHintStyle: CSSProperties = {
+    flexBasis: '100%',
+    textAlign: 'center',
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+  };
+
   // Task R2 Fixrunde 2/3 (M2, Review-Befund M): Settings- und Event-Log-Button sind NIE über
   // `disabled` gesperrt — öffnen/ansehen bleibt immer erlaubt (siehe `disabled`-Doc-Kommentar
   // oben). Für Settings sperrt stattdessen MatchCockpitSettingsPanel selbst die Eingaben unter
@@ -133,7 +148,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   const getMainButtonLabel = (): string => {
     if (isNotStarted) { return t('controls.start'); }
     if (isRunning) { return t('controls.pause'); }
-    if (isPaused) { return t('controls.start'); }
+    if (isPaused) { return wiederanpfiff ? t('controls.wiederanpfiff') : t('controls.start'); }
     return t('controls.start');
   };
 
@@ -158,11 +173,15 @@ export const GameControls: React.FC<GameControlsProps> = ({
           onClick={onUndo}
           disabled={disabled || !canUndo}
           type="button"
-          aria-label="Rückgängig"
+          aria-label={undoLabel ?? 'Rückgängig'}
+          title={undoLabel}
           data-testid="match-undo-button"
         >
-          ↩ {!isMobile && 'Rückgängig'}
+          ↩ {!isMobile && (undoLabel ?? 'Rückgängig')}
         </button>
+      )}
+      {onUndo && undoHint && (
+        <div style={undoHintStyle} data-testid="match-undo-hint" role="status">{undoHint}</div>
       )}
 
       {/* Start/Pause */}
@@ -171,23 +190,25 @@ export const GameControls: React.FC<GameControlsProps> = ({
         onClick={handleMainButtonClick}
         disabled={disabled || isFinished}
         type="button"
-        aria-label={isRunning ? 'Pausieren' : 'Starten'}
-        data-testid={isRunning ? 'match-pause-button' : 'match-start-button'}
+        aria-label={wiederanpfiff && isPaused ? t('controls.wiederanpfiffAria') : isRunning ? 'Pausieren' : 'Starten'}
+        data-testid={isRunning ? 'match-pause-button' : wiederanpfiff && isPaused ? 'match-wiederanpfiff-button' : 'match-start-button'}
       >
         {getMainButtonLabel()}
       </button>
 
-      {/* Edit Time */}
-      <button
-        style={btnStyle}
-        onClick={onEditTime}
-        disabled={disabled || isFinished}
-        type="button"
-        aria-label="Zeit bearbeiten"
-        data-testid="match-edit-time-button"
-      >
-        🕒 {!isMobile && 'Zeit'}
-      </button>
+      {/* Edit Time — @OB-002: „Spielzeit anpassen“ für neue Spiele ausgeblendet (Platzhalter Nr. 2) */}
+      {!isNotStarted && onEditTime && (
+        <button
+          style={btnStyle}
+          onClick={onEditTime}
+          disabled={disabled || isFinished}
+          type="button"
+          aria-label="Zeit bearbeiten"
+          data-testid="match-edit-time-button"
+        >
+          🕒 {!isMobile && 'Zeit'}
+        </button>
+      )}
 
       {/* Switch Sides */}
       <button
@@ -198,17 +219,6 @@ export const GameControls: React.FC<GameControlsProps> = ({
         aria-label="Seiten tauschen"
       >
         🔄 {!isMobile && 'Seiten'}
-      </button>
-
-      {/* Half Time */}
-      <button
-        style={btnStyle}
-        onClick={onHalfTime}
-        disabled={disabled || isFinished}
-        type="button"
-        aria-label="Halbzeit"
-      >
-        🌓 {!isMobile && 'Halbzeit'}
       </button>
 
       {/* Finish */}

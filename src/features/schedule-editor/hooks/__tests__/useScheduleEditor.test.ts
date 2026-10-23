@@ -12,8 +12,15 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+const skipMock = vi.hoisted(() => ({ skip: vi.fn(async () => null as string | null), unskip: vi.fn(async () => null as string | null) }));
+vi.mock('../useMatchSkip', () => ({ useMatchSkip: () => skipMock }));
+
 import { useScheduleEditor } from '../useScheduleEditor';
 import { Match, Tournament } from '../../../../types/tournament';
+import { vs, testUuid } from '../../../../test/matchSlotFixtures';
+
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
 
 // ============================================================================
 // Test Helpers
@@ -24,8 +31,7 @@ function createMatch(overrides: Partial<Match> = {}): Match {
     id: `match-${Math.random().toString(36).slice(2, 7)}`,
     round: 1,
     field: 1,
-    teamA: 'team-a',
-    teamB: 'team-b',
+    ...vs(TEAM_A, TEAM_B),
     scheduledTime: new Date('2024-01-15T10:00:00'),
     matchStatus: 'scheduled',
     ...overrides,
@@ -383,60 +389,33 @@ describe('Match Updates', () => {
 // Skip/Unskip Tests
 // ============================================================================
 
-describe('Skip/Unskip', () => {
-  it('should skip a match', () => {
-    const tournament = createTournament();
+// A-08f3e4 (Baustein Regel 3: umgeschrieben -- vorher pinnten diese Tests den Altweg „lokal schreiben +
+// diffMatchResultStatusUpdates → UPDATE_MATCH“). Absetzen und Wieder einplanen laufen über den Server
+// (`useMatchSkip`, eigene Tests); der Editor schreibt dafür nichts mehr ins Turnier.
+describe('Skip/Unskip (A-08f3e4: über den Server)', () => {
+  it('@FU-089 skipMatch setzt über useMatchSkip ab und schreibt nichts lokal (kein Turnier-Update, kein UPDATE_MATCHES)', async () => {
     const onUpdate = vi.fn();
+    const { result } = renderHook(() => useScheduleEditor({ tournament: createTournament(), onTournamentUpdate: onUpdate }));
 
-    const { result } = renderHook(() =>
-      useScheduleEditor({
-        tournament,
-        onTournamentUpdate: onUpdate,
-      })
-    );
+    let text: string | null = 'unberührt';
+    await act(async () => { text = await result.current.skipMatch('m1', 'Team not present'); });
 
-    act(() => {
-      result.current.skipMatch('m1', 'Team not present');
-    });
-
-    expect(onUpdate).toHaveBeenCalled();
-    const updatedTournament = onUpdate.mock.calls[0][0];
-    const updatedMatch = updatedTournament.matches.find((m: Match) => m.id === 'm1');
-    expect(updatedMatch?.matchStatus).toBe('skipped');
-    expect(updatedMatch?.skippedReason).toBe('Team not present');
-    expect(updatedMatch?.skippedAt).toBeDefined();
+    expect(skipMock.skip).toHaveBeenCalledWith('m1', 'Team not present');
+    expect(text).toBeNull();
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 
-  it('should unskip a match', () => {
-    const tournamentWithSkipped = createTournament({
-      matches: [
-        createMatch({
-          id: 'm1',
-          matchStatus: 'skipped',
-          skippedReason: 'Test reason',
-          skippedAt: new Date().toISOString(),
-        }),
-      ],
-    });
+  it('@FU-071 unskipMatch plant über useMatchSkip wieder ein und gibt dessen Ablehnungstext weiter', async () => {
+    skipMock.unskip.mockResolvedValueOnce('nur Turnierleitung');
     const onUpdate = vi.fn();
+    const { result } = renderHook(() => useScheduleEditor({ tournament: createTournament(), onTournamentUpdate: onUpdate }));
 
-    const { result } = renderHook(() =>
-      useScheduleEditor({
-        tournament: tournamentWithSkipped,
-        onTournamentUpdate: onUpdate,
-      })
-    );
+    let text: string | null = null;
+    await act(async () => { text = await result.current.unskipMatch('m1'); });
 
-    act(() => {
-      result.current.unskipMatch('m1');
-    });
-
-    expect(onUpdate).toHaveBeenCalled();
-    const updatedTournament = onUpdate.mock.calls[0][0];
-    const updatedMatch = updatedTournament.matches.find((m: Match) => m.id === 'm1');
-    expect(updatedMatch?.matchStatus).toBe('scheduled');
-    expect(updatedMatch?.skippedReason).toBeUndefined();
-    expect(updatedMatch?.skippedAt).toBeUndefined();
+    expect(skipMock.unskip).toHaveBeenCalledWith('m1');
+    expect(text).toBe('nur Turnierleitung');
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 });
 

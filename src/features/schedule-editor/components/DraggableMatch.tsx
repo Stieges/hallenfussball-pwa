@@ -9,6 +9,8 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Match, Team } from '../../../types/tournament';
+import { buildSideContext, sideName, type SideSource } from '../../../components/schedule/matchSides';
+import { isMatchInProgress } from '../../../core/view';
 import { ScheduleConflict } from '../types';
 import { cssVars } from '../../../design-tokens'
 import { SkippedMatchOverlay, SkippedBadge } from './SkippedMatchOverlay';
@@ -22,6 +24,8 @@ interface DraggableMatchProps {
   match: Match;
   /** All teams for name lookup */
   teams: Team[];
+  /** Quelle für Herkunft offener Seiten (Vorgängerspiele, Gruppen); ohne sie nur Teams */
+  tournament?: SideSource;
   /** Whether the editor is in edit mode */
   isEditing: boolean;
   /** Whether this match is currently selected */
@@ -31,7 +35,7 @@ interface DraggableMatchProps {
   /** Click handler for selection */
   onSelect?: () => void;
   /** Callback to unskip */
-  onUnskip?: () => void;
+  onUnskip?: () => Promise<string | null>;
   /** Whether the match can be dragged */
   draggable?: boolean;
   /** Compact display mode */
@@ -41,12 +45,6 @@ interface DraggableMatchProps {
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-function getTeamName(teamId: string, teams: Team[]): string {
-  const team = teams.find(t => t.id === teamId);
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
-  return team?.name || teamId;
-}
 
 function formatTime(date: Date | string | undefined): string {
   if (!date) { return '--:--'; }
@@ -61,6 +59,7 @@ function formatTime(date: Date | string | undefined): string {
 export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   match,
   teams,
+  tournament,
   isEditing,
   isSelected = false,
   conflicts = [],
@@ -73,7 +72,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   const canDrag =
     isEditing &&
     draggable &&
-    match.matchStatus !== 'running' &&
+    !isMatchInProgress(match.matchStatus) &&
     match.matchStatus !== 'finished' &&
     match.matchStatus !== 'skipped';
 
@@ -92,7 +91,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   // Is this match skipped?
   const isSkipped = match.matchStatus === 'skipped';
   const isFinished = match.matchStatus === 'finished';
-  const isRunning = match.matchStatus === 'running';
+  const isRunning = isMatchInProgress(match.matchStatus);
 
   // Has conflicts?
   const hasErrors = conflicts.some(c => c.severity === 'error');
@@ -279,8 +278,9 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   // Render
   // =========================================================================
 
-  const homeTeamName = getTeamName(match.teamA, teams);
-  const awayTeamName = getTeamName(match.teamB, teams);
+  const sideContext = buildSideContext(tournament ?? { teams }, [match]);
+  const homeTeamName = sideName(match, 'A', sideContext);
+  const awayTeamName = sideName(match, 'B', sideContext);
   const hasScore = match.scoreA !== undefined && match.scoreB !== undefined;
 
   return (
@@ -297,7 +297,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
               <span>⋮⋮</span>
             </div>
           )}
-          <span style={matchNumberStyle}>Spiel {match.round}</span>
+          <span style={matchNumberStyle}>Spiel {match.matchNumber ?? match.round}</span>
           <span style={timeStyle}>{formatTime(match.scheduledTime)}</span>
         </div>
 

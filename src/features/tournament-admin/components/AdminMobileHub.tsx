@@ -151,14 +151,6 @@ const styles = {
     borderRadius: cssVars.borderRadius.full,
   } as CSSProperties,
 
-  comingSoonBadge: {
-    background: cssVars.colors.surfaceHover,
-    color: cssVars.colors.textMuted,
-    fontSize: cssVars.fontSizes.labelSm,
-    padding: '2px 8px',
-    borderRadius: cssVars.borderRadius.sm,
-  } as CSSProperties,
-
   separator: {
     height: 1,
     background: cssVars.colors.border,
@@ -223,7 +215,7 @@ const styles = {
     width: '100%',
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     fontSize: cssVars.fontSizes.bodyMd,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     background: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
@@ -314,10 +306,7 @@ export function AdminMobileHub({
         {category.badge && category.badge > 0 && (
           <span style={styles.badge}>{category.badge}</span>
         )}
-        {category.isComingSoon && (
-          <span style={styles.comingSoonBadge}>{t('mobileHub.comingSoon')}</span>
-        )}
-        {!category.isComingSoon && !category.badge && (
+        {!category.badge && (
           <span style={styles.categoryArrow}>→</span>
         )}
       </button>

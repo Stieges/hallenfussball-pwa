@@ -8,9 +8,6 @@ export type {
   TournamentSortOption,
 } from './useUserTournaments';
 
-export { useInvitation } from './useInvitation';
-export type { UseInvitationReturn } from './useInvitation';
-
 export { useTournamentMembers } from './useTournamentMembers';
 export type {
   UseTournamentMembersReturn,
@@ -34,3 +31,5 @@ export type {
 
 export { useTournamentLimit, ANONYMOUS_TOURNAMENT_LIMIT } from './useTournamentLimit';
 export type { UseTournamentLimitReturn } from './useTournamentLimit';
+
+export { useCan } from './useCan';

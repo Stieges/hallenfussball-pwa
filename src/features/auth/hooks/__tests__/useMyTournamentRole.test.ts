@@ -8,7 +8,7 @@
  * gibt, und zementierte damit den Fehler statt ihn zu fangen.
  *
  * Diese Tests decken die vier Zweige direkt an der Quelle ab, unabhängig von den drei
- * Aufrufstellen (DangerZoneCategory, TeamHelpersCategory, MemberList).
+ * Aufrufstellen (DangerZoneCategory, TeamHelpersCategory; MemberList entfiel mit A-18a).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
@@ -108,7 +108,9 @@ describe('useEffectiveTournamentRole', () => {
     });
   });
 
-  it('Cloud-Modus, KEINE Mitgliedszeile, RPC-Fehler: role=null, kein Absturz', async () => {
+  // A-11 (useCan, L7): Vertrag erweitert -- der RPC-Fehler meldet zusätzlich isUnknown, damit useCan „Rolle unbekannt“
+  // (Gedächtnis/L7) von „kein Mitglied“ unterscheidet. role bleibt null wie bisher.
+  it('Cloud-Modus, KEINE Mitgliedszeile, RPC-Fehler: role=null, kein Absturz, Rolle als unbekannt markiert', async () => {
     useAuthMock.mockReturnValue({ isAuthenticated: true });
     rpcMock.mockResolvedValue({ data: null, error: new Error('boom') });
 
@@ -117,7 +119,7 @@ describe('useEffectiveTournamentRole', () => {
     );
 
     await waitFor(() => {
-      expect(result.current).toEqual({ role: null, isLoading: false });
+      expect(result.current).toEqual({ role: null, isLoading: false, isUnknown: true });
     });
   });
 

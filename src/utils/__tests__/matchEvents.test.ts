@@ -1,7 +1,7 @@
 /**
  * toRuntimeMatchEvent — Umrechnung Draht-Format → UI-Format.
  *
- * Hintergrund: Der MatchExecutionService schreibt `{ team, delta, durationSeconds }`,
+ * Hintergrund: Der frühere Altweg schrieb `{ team, delta, durationSeconds }`,
  * das Cockpit liest `{ teamId, teamName, direction, penaltyDuration }`. Weil beide
  * Seiten nur optionale Felder deklarieren, hat `tsc` dazu nie etwas gesagt — zur
  * Laufzeit war jedes gelesene Feld `undefined` (Foulzähler 0, falscher Teamname,

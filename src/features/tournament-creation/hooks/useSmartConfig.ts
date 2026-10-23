@@ -3,6 +3,7 @@ import { Tournament } from '../../../types/tournament';
 import { useToast } from '../../../components/ui/Toast/ToastContext';
 import {
   LockedConstraints,
+  MatchStructure,
   Recommendation,
   SmartConfigResult,
   StoredConfig,
@@ -31,13 +32,13 @@ interface UseSmartConfigReturn {
 
   // Recommendation
   recommendation: Recommendation | null;
+  /** Festgehaltene Teamzahl passt mit keiner Konfiguration in die Zeit (@W4-022) */
+  teamsKeptTimeShort: boolean;
   lastApplied: StoredConfig['lastApplied'];
 
   // Constraint locks
   lockTeams: boolean;
   setLockTeams: (locked: boolean) => void;
-  lockGroups: boolean;
-  setLockGroups: (locked: boolean) => void;
   lockFields: boolean;
   setLockFields: (locked: boolean) => void;
   lockGameDuration: boolean;
@@ -48,8 +49,6 @@ interface UseSmartConfigReturn {
   // Constraint values
   constraintTeams: number;
   setConstraintTeams: (value: number) => void;
-  constraintGroups: number;
-  setConstraintGroups: (value: number) => void;
   constraintFields: number;
   setConstraintFields: (value: number) => void;
   constraintGameDuration: number;
@@ -63,8 +62,17 @@ interface UseSmartConfigReturn {
   handleQuickApply: () => void;
 
   // Derived state
-  usesGroups: boolean;
   showTeamsWarning: boolean;
+  /** Rückmeldung „Übernommen“ nach Übernehmen, bis Eingaben oder Berechnung sich ändern (@W4-022) */
+  applied: boolean;
+}
+
+/** Setter, der vor jeder Änderung `onChange` aufruft (Rückmeldung „Übernommen“ zurücksetzen). */
+function withApplyReset<T>(set: (value: T) => void, onChange: () => void): (value: T) => void {
+  return (value: T) => {
+    onChange();
+    set(value);
+  };
 }
 
 /**
@@ -87,31 +95,50 @@ export function useSmartConfig({
   const availableHours = hours + minutes / 60;
 
   // Setters with validation
-  const setHours = (value: number) => setHoursState(Math.max(0, Math.min(12, value)));
-  const setMinutes = (value: number) => setMinutesState(Math.max(0, Math.min(59, value)));
+  // Eingaben des Nutzers setzen die Rückmeldung „Übernommen“ zurück (@W4-022).
+  // Der Sync aus formData darf das nicht (Wizard schreibt nach Übernehmen zurück).
+  const setHours = (value: number) => {
+    setApplied(false);
+    setHoursState(Math.max(0, Math.min(12, value)));
+  };
+  const setMinutes = (value: number) => {
+    setApplied(false);
+    setMinutesState(Math.max(0, Math.min(59, value)));
+  };
 
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [teamsKeptTimeShort, setTeamsKeptTimeShort] = useState(false);
+  const [applied, setApplied] = useState(false);
   const [lastApplied, setLastApplied] = useState<StoredConfig['lastApplied']>(
     () => loadStoredConfig().lastApplied
   );
 
   // Constraint locks
-  const [lockTeams, setLockTeams] = useState(true); // Teams locked by default
-  const [lockGroups, setLockGroups] = useState(false);
-  const [lockFields, setLockFields] = useState(false);
-  const [lockGameDuration, setLockGameDuration] = useState(false);
-  const [lockBreakDuration, setLockBreakDuration] = useState(false);
+  const [lockTeams, setLockTeamsState] = useState(true); // Teams locked by default
+  const [lockFields, setLockFieldsState] = useState(false);
+  const [lockGameDuration, setLockGameDurationState] = useState(false);
+  const [lockBreakDuration, setLockBreakDurationState] = useState(false);
 
   // Constraint values (use current form values as defaults)
-  const [constraintTeams, setConstraintTeams] = useState(formData.numberOfTeams ?? 6);
-  const [constraintGroups, setConstraintGroups] = useState(formData.numberOfGroups ?? 2);
-  const [constraintFields, setConstraintFields] = useState(formData.numberOfFields ?? 1);
-  const [constraintGameDuration, setConstraintGameDuration] = useState(
+  const [constraintTeams, setConstraintTeamsState] = useState(formData.numberOfTeams ?? 6);
+  const [constraintFields, setConstraintFieldsState] = useState(formData.numberOfFields ?? 1);
+  const [constraintGameDuration, setConstraintGameDurationState] = useState(
     formData.groupPhaseGameDuration ?? 10
   );
-  const [constraintBreakDuration, setConstraintBreakDuration] = useState(
+  const [constraintBreakDuration, setConstraintBreakDurationState] = useState(
     formData.groupPhaseBreakDuration ?? 2
   );
+
+  // Nutzer-Setter für Sperren und Festwerte: setzen die Rückmeldung zurück
+  const resetApplied = () => setApplied(false);
+  const setLockTeams = withApplyReset(setLockTeamsState, resetApplied);
+  const setLockFields = withApplyReset(setLockFieldsState, resetApplied);
+  const setLockGameDuration = withApplyReset(setLockGameDurationState, resetApplied);
+  const setLockBreakDuration = withApplyReset(setLockBreakDurationState, resetApplied);
+  const setConstraintTeams = withApplyReset(setConstraintTeamsState, resetApplied);
+  const setConstraintFields = withApplyReset(setConstraintFieldsState, resetApplied);
+  const setConstraintGameDuration = withApplyReset(setConstraintGameDurationState, resetApplied);
+  const setConstraintBreakDuration = withApplyReset(setConstraintBreakDurationState, resetApplied);
 
   // Derived state
   const usesGroups = formData.groupSystem === 'groupsAndFinals';
@@ -120,15 +147,14 @@ export function useSmartConfig({
   const { showWarning } = useToast();
 
   // Sync constraint values with formData when it changes
+  // (Rohe Setter, damit der Sync die Rückmeldung „Übernommen“ nicht zurücksetzt)
   useEffect(() => {
-    setConstraintTeams(formData.numberOfTeams ?? 6);
-    setConstraintGroups(formData.numberOfGroups ?? 2);
-    setConstraintFields(formData.numberOfFields ?? 1);
-    setConstraintGameDuration(formData.groupPhaseGameDuration ?? 10);
-    setConstraintBreakDuration(formData.groupPhaseBreakDuration ?? 2);
+    setConstraintTeamsState(formData.numberOfTeams ?? 6);
+    setConstraintFieldsState(formData.numberOfFields ?? 1);
+    setConstraintGameDurationState(formData.groupPhaseGameDuration ?? 10);
+    setConstraintBreakDurationState(formData.groupPhaseBreakDuration ?? 2);
   }, [
     formData.numberOfTeams,
-    formData.numberOfGroups,
     formData.numberOfFields,
     formData.groupPhaseGameDuration,
     formData.groupPhaseBreakDuration,
@@ -139,7 +165,6 @@ export function useSmartConfig({
     const stored = loadStoredConfig();
     const constraints: LockedConstraints = {};
     if (lockTeams) {constraints.teams = constraintTeams;}
-    if (lockGroups && usesGroups) {constraints.groups = constraintGroups;}
     if (lockFields) {constraints.fields = constraintFields;}
     if (lockGameDuration) {constraints.gameDuration = constraintGameDuration;}
     if (lockBreakDuration) {constraints.breakDuration = constraintBreakDuration;}
@@ -148,56 +173,69 @@ export function useSmartConfig({
   }, [
     availableHours,
     lockTeams,
-    lockGroups,
     lockFields,
     lockGameDuration,
     lockBreakDuration,
     constraintTeams,
-    constraintGroups,
     constraintFields,
     constraintGameDuration,
     constraintBreakDuration,
-    usesGroups,
   ]);
 
   // Build constraints object
   const getConstraints = useCallback((): LockedConstraints => {
     const constraints: LockedConstraints = {};
     if (lockTeams) {constraints.teams = constraintTeams;}
-    if (lockGroups && usesGroups) {constraints.groups = constraintGroups;}
     if (lockFields) {constraints.fields = constraintFields;}
     if (lockGameDuration) {constraints.gameDuration = constraintGameDuration;}
     if (lockBreakDuration) {constraints.breakDuration = constraintBreakDuration;}
     return constraints;
   }, [
     lockTeams,
-    lockGroups,
     lockFields,
     lockGameDuration,
     lockBreakDuration,
     constraintTeams,
-    constraintGroups,
     constraintFields,
     constraintGameDuration,
     constraintBreakDuration,
-    usesGroups,
   ]);
 
   const handleCalculate = useCallback(() => {
+    setApplied(false);
     const constraints = getConstraints();
     const teamsToUse = lockTeams ? constraintTeams : (formData.numberOfTeams ?? 6);
-    const result = calculateRecommendation(availableHours, teamsToUse, constraints);
+    // @W4-020: Gruppenzahl und Finalrunden-Wahl aus dem Wizard-Zustand (formData), nicht aus dem Panel-Lock
+    const structure: MatchStructure = usesGroups
+      ? {
+          groupCount: formData.numberOfGroups ?? 2,
+          finalsPlan: formData.finalsConfig?.preset ?? 'none',
+        }
+      : {};
+    const result = calculateRecommendation(availableHours, teamsToUse, constraints, structure);
 
     if (result.constraintsImpossible) {
-      const constraintsList = buildConstraintsList(constraints, usesGroups);
+      const constraintsList = buildConstraintsList(constraints);
       showWarning(
         `Mit den Einschränkungen (${constraintsList.join(', ')}) werden mindestens ${result.minRequiredHours}h benötigt. Aktuell verfügbar: ${availableHours}h.`
       );
       setRecommendation(null);
+      setTeamsKeptTimeShort(false);
     } else {
       setRecommendation(result.recommendation);
+      setTeamsKeptTimeShort(result.teamsKeptTimeShort === true);
     }
-  }, [getConstraints, lockTeams, constraintTeams, formData.numberOfTeams, availableHours, usesGroups, showWarning]);
+  }, [
+    getConstraints,
+    lockTeams,
+    constraintTeams,
+    formData.numberOfTeams,
+    formData.numberOfGroups,
+    formData.finalsConfig?.preset,
+    availableHours,
+    usesGroups,
+    showWarning,
+  ]);
 
   const handleApply = useCallback(() => {
     if (!recommendation) {return;}
@@ -210,6 +248,7 @@ export function useSmartConfig({
     };
 
     onApply(config);
+    setApplied(true);
 
     // Save applied config to localStorage
     const appliedConfig = {
@@ -221,9 +260,13 @@ export function useSmartConfig({
     saveStoredConfig({ lastHours: availableHours, lastApplied: appliedConfig });
     setLastApplied(appliedConfig);
 
+    // Solange die Zeit mit der festen Teamzahl nicht reicht, bleibt die Empfehlung mit Hinweis sichtbar (@W4-022)
+    if (teamsKeptTimeShort) {
+      return;
+    }
     setIsOpen(false);
     setRecommendation(null);
-  }, [recommendation, onApply, availableHours]);
+  }, [recommendation, onApply, availableHours, teamsKeptTimeShort]);
 
   const handleQuickApply = useCallback(() => {
     if (!lastApplied) {return;}
@@ -244,9 +287,12 @@ export function useSmartConfig({
     }
   }, [isOpen, handleCalculate]);
 
-  // Derived: show warning if recommended teams is less than current
+  // Derived: Alternative zur Wizard-Teamzahl nur, wenn die Teamzahl frei ist (@W4-022).
+  // Bei festgehaltener Teamzahl wurde nicht mit der Wizard-Zahl gerechnet.
   const showTeamsWarning =
-    recommendation !== null && recommendation.teams < (formData.numberOfTeams ?? 6);
+    recommendation !== null &&
+    !lockTeams &&
+    recommendation.teams < (formData.numberOfTeams ?? 6);
 
   return {
     isOpen,
@@ -257,11 +303,10 @@ export function useSmartConfig({
     setMinutes,
     availableHours,
     recommendation,
+    teamsKeptTimeShort,
     lastApplied,
     lockTeams,
     setLockTeams,
-    lockGroups,
-    setLockGroups,
     lockFields,
     setLockFields,
     lockGameDuration,
@@ -270,8 +315,6 @@ export function useSmartConfig({
     setLockBreakDuration,
     constraintTeams,
     setConstraintTeams,
-    constraintGroups,
-    setConstraintGroups,
     constraintFields,
     setConstraintFields,
     constraintGameDuration,
@@ -281,7 +324,7 @@ export function useSmartConfig({
     handleCalculate,
     handleApply,
     handleQuickApply,
-    usesGroups,
     showTeamsWarning,
+    applied,
   };
 }

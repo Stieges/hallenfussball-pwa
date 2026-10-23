@@ -11,7 +11,7 @@
 
 import React, { useState, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../../design-tokens';
+import { cssVars, dialogWidths } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { Dialog } from '../../../components/dialogs/Dialog';
 import { mergeAccounts, MergeResult } from '../services/mergeService';
@@ -256,7 +256,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
       isOpen={isOpen}
       onClose={state === 'merging' ? () => void 0 : handleClose}
       title={t('mergeDialog.title')}
-      maxWidth="420px"
+      maxWidth={dialogWidths.sm}
       closeOnBackdropClick={state !== 'merging'}
       data-testid="merge-account-dialog"
     >

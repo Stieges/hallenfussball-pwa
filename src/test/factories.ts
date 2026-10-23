@@ -1,3 +1,5 @@
+import { testTeamSlot } from './matchSlotFixtures'
+import { testUuid } from './testIds'
 import { Tournament, Team, Match, FinalsConfig, PointSystem, PlacementCriterion, LocationDetails, Finals } from '../types/tournament'
 
 /**
@@ -59,7 +61,7 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
   const groups = 'ABCDEFGH'.split('').slice(0, groupCount)
   return Array.from({ length: count }, (_, i) =>
     createMockTeam({
-      id: `team-${i + 1}`,
+      id: testUuid(i + 1),
       name: `Team ${i + 1}`,
       group: groups[i % groupCount],
     })
@@ -69,17 +71,23 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
 /**
  * Test Factory für Match-Objekte
  */
-export function createMockMatch(overrides?: Partial<Match>): Match {
+export function createMockMatch(overrides?: Partial<Match> & { teamA?: string; teamB?: string }): Match {
+  // Die Seiten kommen aus den Slots; `teamA/teamB` als Override ist nur Kurzschreibweise für Fixture-Kurz-IDs
+  // (`team-1`, keine UUIDs – deshalb ohne `teamSlot`, Testumgebung). Das Feld `teamA/teamB` gibt es am Spiel
+  // seit A-36a nicht mehr – die Kurzschreibweise landet nie im Ergebnis.
+  const { teamA: shortA, teamB: shortB, ...rest } = overrides ?? {}
+  const slotA = rest.slotA ?? testTeamSlot(shortA ?? testUuid(1))
+  const slotB = rest.slotB ?? testTeamSlot(shortB ?? testUuid(2))
   return {
     id: `match-${Math.random().toString(36).substring(2, 11)}`,
-    teamA: 'team-1',
-    teamB: 'team-2',
     scoreA: undefined,
     scoreB: undefined,
     group: 'A',
     round: 1,
     field: 1,
-    ...overrides,
+    ...rest,
+    slotA,
+    slotB,
   }
 }
 
@@ -116,7 +124,7 @@ export function createMockPlacementLogic(): PlacementCriterion[] {
     { id: 'points', label: 'Punkte', enabled: true },
     { id: 'goalDifference', label: 'Tordifferenz', enabled: true },
     { id: 'goalsFor', label: 'Tore', enabled: true },
-    { id: 'headToHead', label: 'Direkter Vergleich', enabled: true },
+    { id: 'directComparison', label: 'Direkter Vergleich', enabled: true },
   ]
 }
 

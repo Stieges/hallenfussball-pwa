@@ -28,21 +28,32 @@ const roleColors: Record<
     text: cssVars.colors.onPrimary,
   },
   'co-admin': {
-    background: cssVars.colors.warning,
+    background: cssVars.colors.warningSolid,
     text: cssVars.colors.onWarning,
   },
   trainer: {
-    background: cssVars.colors.info,
+    background: cssVars.colors.secondaryHover,
     text: cssVars.colors.onPrimary,
   },
   collaborator: {
     background: cssVars.colors.surfaceLight,
-    text: cssVars.colors.textSecondary,
+    text: cssVars.colors.textPrimary,
     border: cssVars.colors.border,
   },
   viewer: {
     background: cssVars.colors.surface,
-    text: cssVars.colors.textTertiary,
+    text: cssVars.colors.textSecondary,
+    border: cssVars.colors.border,
+  },
+  // A-27: Geräte-Rollen wie ihre Konto-Gegenstücke (Helfer wie collaborator, Bildschirm wie viewer).
+  helper: {
+    background: cssVars.colors.surfaceLight,
+    text: cssVars.colors.textPrimary,
+    border: cssVars.colors.border,
+  },
+  screen: {
+    background: cssVars.colors.surface,
+    text: cssVars.colors.textSecondary,
     border: cssVars.colors.border,
   },
 };
@@ -119,14 +130,14 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
   if (compact) {
     const shortLabel = role === 'co-admin' ? 'CA' : roleLabel.label.charAt(0);
     return (
-      <span style={badgeStyle} className={className} title={roleLabel.label}>
+      <span data-testid="role-badge" data-role={role} style={badgeStyle} className={className} title={roleLabel.label}>
         {shortLabel}
       </span>
     );
   }
 
   return (
-    <span style={badgeStyle} className={className}>
+    <span data-testid="role-badge" data-role={role} style={badgeStyle} className={className}>
       {text}
     </span>
   );

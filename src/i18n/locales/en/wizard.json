@@ -24,7 +24,6 @@
     },
     "minuteSuffix": "min"
   },
-
   "step2": {
     "title": "Mode & Game System",
     "structureLocked": {
@@ -46,11 +45,6 @@
     "specialRules": "Special Rules",
     "cockpitSection": "Match Cockpit Pro",
     "cockpitDescription": "Settings for the live match management cockpit: Timer, sound, haptics, and auto functions.",
-    "miniFussball": {
-      "title": "Mini-Football / Funino",
-      "description": "This feature will be available in a future version. It will support field rotation and special rules for mini-football.",
-      "comingSoon": "Coming Soon"
-    },
     "summaries": {
       "activeCriteria": "{{count}} active criteria",
       "refereeNone": "None",
@@ -69,21 +63,13 @@
       "cockpitStandard": "Standard"
     }
   },
-
   "modeSelection": {
     "label": "Tournament Mode",
     "classic": {
       "title": "Classic Indoor Tournament",
       "subtitle": "Groups + Final Round"
-    },
-    "miniFussball": {
-      "title": "Mini-Football / Funino",
-      "subtitle": "Field rotation, multiple fields",
-      "disabledTitle": "This feature will be available in a future version"
-    },
-    "comingSoon": "Coming Soon"
+    }
   },
-
   "step3": {
     "title": "Master Data",
     "tournamentName": "Tournament Name",
@@ -95,9 +81,12 @@
     "startDate": "Start Date",
     "startDatePastError": "Start date cannot be in the past",
     "startTime": "Start Time",
-    "startTimePlaceholder": "09:00"
+    "startTimePlaceholder": "09:00",
+    "rulebook": "Rulebook (optional)",
+    "rulebookPlaceholder": "e.g. BFV rules for futsal",
+    "rulebookLimit": "Up to 80 characters.",
+    "rulebookTruncated": "Cut to 80 characters."
   },
-
   "location": {
     "label": "Venue",
     "placeholder": "Sports Hall Example City",
@@ -112,7 +101,6 @@
     "countryPlaceholder": "Germany",
     "hint": "This information is optional and will be used for PDF export and detail view."
   },
-
   "contact": {
     "toggle": "Contact details (optional)",
     "name": "Contact Person",
@@ -123,9 +111,10 @@
     "phonePlaceholder": "+49 123 456789",
     "website": "Website",
     "websitePlaceholder": "www.my-club.com",
-    "hint": "This information will appear in the schedule footer and PDF export."
+    "hint": "Without the tick, only the tournament management sees these details.",
+    "showPublic": "Show contact person publicly",
+    "showPublicHint": "With the tick, name, email, phone and website appear on the spectator page and in the schedule PDF – for everyone with the spectator link. Without it, only the tournament management sees them."
   },
-
   "step4": {
     "title": "Teams",
     "addTeam": "Add Team",
@@ -136,6 +125,7 @@
     "duplicateName": "This name is already used",
     "emptyName": "Team name cannot be empty",
     "countMismatch": "{{actual}} of {{expected}} teams added — please add or remove teams",
+    "adjustTeamCount": "Adjust team count",
     "avatarExpand": "Edit logo and colors for {{name}}",
     "avatarCollapse": "Collapse logo and colors for {{name}}",
     "collapseLabel": "Collapse",
@@ -166,7 +156,6 @@
       "distribution": "Group distribution: {{distribution}}"
     }
   },
-
   "step5": {
     "title": "Summary",
     "tournamentName": "Tournament Name",
@@ -188,7 +177,6 @@
     "teamsCount": "{{count}} teams",
     "showPreview": "Show Preview"
   },
-
   "groupsAndFields": {
     "infoText": "This step is optional. You can click \"Next\" directly – the default names (Group A, B, C... and Field 1, 2...) will be used. Expand the sections below if you want to use custom names.",
     "fieldSection": {
@@ -210,14 +198,12 @@
     "roundRobinInfo": "In round robin, all matches are automatically distributed across available fields.",
     "defaultGroupName": "Group {{id}}"
   },
-
   "nameGrid": {
     "defaultHeader": "Default",
     "customNameHeader": "Custom Name",
     "shortCodeHeader": "Short Code",
     "duplicateName": "This name is already used"
   },
-
   "gameTimeConfig": {
     "groupPhaseTitle": "Group Stage - Game Time Settings",
     "finalsTitle": "Final Round - Game Time Settings",
@@ -230,7 +216,6 @@
     "finalsHint": "Game period settings also apply to the final round",
     "minuteSuffix": "min"
   },
-
   "finalsConfig": {
     "title": "Final Round",
     "recommendedHint_one": "⭐ = Recommended for {{count}} group",
@@ -258,10 +243,22 @@
       "goldenGoal": "Golden Goal",
       "goldenGoalDuration": "Golden Goal time:",
       "overtimeDuration": "Extra time:",
-      "minutes": "minutes"
+      "minutes": "minutes",
+      "byRound": {
+        "title": "Decision per knockout round",
+        "roundOf16": "Round of 16",
+        "quarterfinal": "Quarterfinal",
+        "semifinal": "Semifinal",
+        "final": "Final",
+        "placement": "Placement matches"
+      },
+      "options": {
+        "shootout": "Penalty shootout",
+        "overtime-then-shootout": "Extra time, then penalty shootout",
+        "goldenGoal": "Golden Goal"
+      }
     }
   },
-
   "finalsOptions": {
     "none": {
       "label": "No Final Round",
@@ -331,7 +328,6 @@
       "explanation8g": "Only realistic for multi-day large tournaments - very many matches"
     }
   },
-
   "referees": {
     "title": "Referees",
     "modeLabel": "Referee Mode",
@@ -368,7 +364,6 @@
       "hintNonParticipatingDescription": "Teams not currently in the final match (more flexible)."
     }
   },
-
   "validation": {
     "ariaLabel": "Configuration warnings",
     "issueCount_one": "{{count}} configuration note",
@@ -392,7 +387,6 @@
     "zeroPoints": "Point system has 0 points everywhere - table won't be meaningful",
     "zeroPointsSuggestion": "Standard point system: 3 points win, 1 point draw, 0 points loss"
   },
-
   "smartConfig": {
     "title": "Smart Configuration",
     "ariaLabel": "Smart Configuration",
@@ -410,7 +404,6 @@
       "title": "Fixed Constraints",
       "hint": "Enable values that cannot be changed",
       "teamCount": "Number of teams:",
-      "groupCount": "Number of groups:",
       "fieldCount": "Number of fields:",
       "gameDuration": "Game duration:",
       "breakDuration": "Break duration:",
@@ -423,20 +416,28 @@
       "gameDuration": "Game Duration",
       "pause": "Break",
       "minuteSuffix": "min",
+      "structure": "{{groups}}, {{finals}}",
+      "groupCount": "{{count}} groups",
+      "finalsNone": "no finals round",
+      "finalsFinalOnly": "final only",
+      "finalsTop4": "semifinals + final",
+      "finalsTop8": "quarterfinals to final",
+      "finalsTop16": "round of 16 to final",
+      "finalsAllPlaces": "all places",
       "matches": "{{count}} matches",
       "duration": "~{{hours}}h tournament duration"
     },
     "apply": "Apply Configuration",
     "applyAriaLabel": "Apply recommended configuration",
+    "applied": "Applied",
+    "teamsKeptTimeShort": "The time is not enough for {{teams}} teams. The number of teams stays fixed: plan more time or fields.",
     "teamsWarning": "{{current}} teams don't fit in {{hours}}h. Alternative: {{suggested}} teams or plan more time/fields."
   },
-
   "bambini": {
     "title": "Extended Bambini Settings",
     "hideScores": "Hide scores from spectators",
     "hideRankings": "Hide tables from spectators"
   },
-
   "pointSystem": {
     "title": "Point System",
     "presets": {
@@ -449,10 +450,10 @@
       "win": "Win",
       "draw": "Draw",
       "loss": "Loss",
-      "hint": "Positive, negative numbers, and zero are allowed. Decimals are also possible (e.g., 2.5)"
+      "hint": "Values from 0 to 99 are allowed. Decimals are also possible (e.g., 2.5)",
+      "rangeError": "Valid: 0 to 99 points"
     }
   },
-
   "dfb": {
     "checkboxLabel": "Use DFB key system",
     "description": "Uses the official DFB scheduling patterns for round-robin tournaments",
@@ -469,7 +470,6 @@
     "patternCode": "Key: {{code}} = {{days}} day, {{teams}} teams",
     "patternCodeSubgroups": ", {{subgroups}} subgroups"
   },
-
   "durationEstimate": {
     "estimatedDuration": "Estimated tournament duration: ",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
@@ -482,7 +482,6 @@
     "criticalWarning": "This tournament duration is unrealistic for one day. Recommendation: {{fields}} fields or reduce game time to {{duration}} min.",
     "durationWarning": "Tip: With {{fields}} fields approx. {{hours}}h or with {{duration}} min game time, duration decreases."
   },
-
   "placementLogic": {
     "title": "Placement Logic",
     "helpText": "Drag and drop criteria or use arrow keys",
@@ -500,9 +499,12 @@
       "goalDifference": "Goal Difference",
       "goalsFor": "Goals Scored",
       "directComparison": "Head-to-Head"
-    }
+    },
+    "afterRow": "then: penalty shootout (decision of the tournament organiser)",
+    "afterRowHint": "Always the last step, cannot be switched off.",
+    "bfvHelp": "Applies when teams are level on points in the table. Preset according to the BFV rules for private indoor tournaments. If a tie remains after one step, the next one applies.",
+    "directComparisonHint": "With three or more teams, a mini table from their matches against each other."
   },
-
   "options": {
     "groupSystem": {
       "roundRobin": "Round robin",
@@ -538,6 +540,62 @@
       "jugend": "Youth",
       "erwachsene": "Adults",
       "mixed": "Mixed"
+    }
+  },
+  "replan": {
+    "title": "Review rescheduling",
+    "endTime": "End time",
+    "newMatches_one": "{{count}} new match",
+    "newMatches_other": "{{count}} new matches",
+    "removedMatches_one": "{{count}} match is dropped",
+    "removedMatches_other": "{{count}} matches are dropped",
+    "keptHint": "Matches that have already been played are kept and will not be removed.",
+    "keptMatch": "Kept – will not be removed",
+    "conflict": "No counterpart in the new plan – the match is appended.",
+    "reason": "Reason",
+    "suggestion": "Suggested solution",
+    "notConfirmable": "The rescheduling cannot be confirmed. The current match plan remains in place.",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "reasonFieldRemoved": "A match that has already been played is on a field that no longer exists in the new schedule.",
+    "reasonOverlap": "A match that has already been played keeps its kick-off – the playing time overlaps another slot on the same field.",
+    "reasonGeneratorFailed": "The schedule could not be created.",
+    "reasonRefusedKickoff": "The tournament has already kicked off – rescheduling is only possible before the first match.",
+    "reasonRefusedUnknown": "The tournament start status cannot be determined – rescheduling is therefore not possible.",
+    "suggestionCollision": "Lower the minimum rest period, add a field, or move the retained match before rescheduling.",
+    "suggestionMinRestOrAddField": "Lower the minimum rest period or add a field.",
+    "suggestionRestoreTeam": "Restore the team or create a new one.",
+    "reasonScheduleIncomplete_one": "The schedule cannot be completed as it is: {{count}} match does not fit.",
+    "reasonScheduleIncomplete_other": "The schedule cannot be completed as it is: {{count}} matches do not fit."
+  },
+  "publish": {
+    "button": "Finalise",
+    "loading": "Finalising …",
+    "success": "Tournament successfully finalised.",
+    "explanationPrivate": "The schedule becomes fixed. Afterwards the tournament is visible only to the signed-in tournament directors.",
+    "explanationPublic": "The schedule becomes fixed. Afterwards anyone with the link can watch."
+  },
+  "preview": {
+    "hintLabel": "Note:",
+    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it does not appear in the overview. You can save the schedule as a PDF now or go back to editing."
+  },
+  "schedule": {
+    "incomplete_one": "The schedule cannot be completed as it is: {{count}} match does not fit. Please add another field or shorten the minimum break.",
+    "incomplete_other": "The schedule cannot be completed as it is: {{count}} matches do not fit. Please add another field or shorten the minimum break."
+  },
+  "playOut": {
+    "title": "These places must be played out in case of a tie",
+    "help": "A tie on a ticked place is decided by a penalty shootout. On every other place the tournament organiser may share the place. Place 1 is preset; every place can be ticked and unticked, including place 1. The setting can be changed at any time.",
+    "followUpNote": "A place that leads to a further match (for example into the semi-final) is always played out – even if it is not ticked here.",
+    "place": "Place {{place}}",
+    "legend": "Places to play out",
+    "summary": "Tie on {{selected}}: penalty shootout needed. On {{others}} the tournament organiser may share the place.",
+    "summaryAll": "Tie on {{selected}}: penalty shootout needed. All places are set, teams never share a place.",
+    "summaryNone": "No place is set: on every place the tournament organiser may share the place.",
+    "places": {
+      "one": "place {{from}}",
+      "two": "places {{from}} and {{to}}",
+      "range": "places {{from}} to {{to}}"
     }
   }
 }

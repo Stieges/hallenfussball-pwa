@@ -104,6 +104,15 @@ export const palette = {
     900: '#78350F',
   },
 
+  // Farben der Spielanzeige (Standardfarben der Ergebniskästen, Voreinstellungen der Farbauswahl; Gherkin @ZM-153/@ZM-159).
+  // Gelb = yellow[400], Weiß = neutral[0]. Abstände (ΔE2000) nur mit genau diesen Werten: 44,8 / 26,8 / 26,3 / 25,3.
+  kit: {
+    blue: '#1565C0', // Standardfarbe Heim
+    red: '#C62828', // Standardfarbe Gast (nicht red[600] #DC2626)
+    navy: '#0D1B4C',
+    black: '#000000', // Ausweichfarbe
+  },
+
   yellow: {
     400: '#FACC15',
     500: '#EAB308',
@@ -130,6 +139,7 @@ export const palette = {
   // Info/Accent - Purple
   // ---------------------------------------------------------------------------
   purple: {
+    300: '#C4B5FD', // Schlussphase Tafel + Monitor (Mockup v8)
     400: '#A78BFA',
     500: '#8B5CF6',
     600: '#7C3AED',
@@ -142,7 +152,7 @@ export const palette = {
     gold: '#FFD700',
     silver: '#C0C0C0',
     bronze: '#CD7F32',
-    live: '#DC2626', // Pulse red for LIVE indicator
+    live: '#FB7185', // Live-Rot (Rose 400, dunkles Thema): eigener Ton, nicht das Fehler-Rot (@OB-039, Aufgabe 1.1)
   },
 } as const;
 

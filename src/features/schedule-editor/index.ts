@@ -57,3 +57,4 @@ export {
   redistributeFields,
   redistributeAll,
 } from './utils/autoReassign';
+export { keepStartedPlaces, isStartedMatch } from './utils/startedGuard';

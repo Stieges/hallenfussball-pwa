@@ -11,9 +11,10 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
-import { Tournament } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { getTeamForDisplay } from '../../utils/teamHelpers';
+import { buildSideContext, matchHeading, matchViewOf, sideDisplay, type SideContext } from './matchSides';
+import { resultFigures } from './matchResult';
 import { EditableMatchCard, type MatchCardStatus, type RefereeOption } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
 
@@ -48,7 +49,9 @@ export interface SortableMobileCardProps {
   /** Whether match swapping is enabled */
   canSwap: boolean;
   /** Tournament data for group name resolution */
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
+  /** Kontext der Spielseiten-Anzeige (Teams, Vorgängerspiele); ohne Angabe aus `tournament` gebaut */
+  sideContext?: SideContext;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
   /** Show referee selector */
@@ -87,6 +90,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   editingSchedule,
   canSwap,
   tournament,
+  sideContext,
   showGroupLabel = true,
   showReferees,
   refereeOptions,
@@ -130,13 +134,13 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   const mobileSelectStyle: CSSProperties = {
     height: spacingSemantics.touchTarget, // 44px accessible touch target
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.xs,
     fontWeight: cssVars.fontWeights.semibold,
-    cursor: 'pointer',
+    cursor: isLocked ? 'not-allowed' : 'pointer',
     backgroundColor: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
+    color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     // Fix: Prevent all options from rendering at once
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -148,19 +152,21 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   // Card Props
   // ---------------------------------------------------------------------------
 
+  const sides = sideContext ?? buildSideContext(tournament, [match]);
+  const matchView = matchViewOf(sides, match.id);
   const cardProps = {
     matchId: match.id,
     matchNumber: match.matchNumber,
     scheduledTime: match.time,
     field: match.field,
-    group: match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
+    group: matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
     showGroupLabel,
-    homeTeam: getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam),
-    awayTeam: getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam),
-    homeScore: match.scoreA ?? 0,
-    awayScore: match.scoreB ?? 0,
+    homeTeam: sideDisplay(match, 'A', sides),
+    awayTeam: sideDisplay(match, 'B', sides),
+    result: resultFigures(matchView?.score, status),
     status,
-    progress: 0,
+    viewStatus: matchView?.status,
+    badge: matchView?.badge,
   };
 
   // ---------------------------------------------------------------------------
@@ -213,10 +219,12 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
             <select
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+              disabled={isLocked}
+              aria-label={t('sortable.fieldLabel')}
               style={{
                 ...mobileSelectStyle,
                 width: '100%',
-                border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}`,
+                border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}`,
               }}
             >
               {fieldOptions.map((opt) => (

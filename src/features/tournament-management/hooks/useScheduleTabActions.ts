@@ -9,9 +9,9 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
+import { getMatchStartState } from '../../../utils/matchStartState';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
-import { isMatchFinished, isMatchRunning } from '../utils';
-import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
+import { useScheduleResultEntry, type ScheduleResultEntry } from './useScheduleResultEntry';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
@@ -23,16 +23,21 @@ interface UseScheduleTabActionsProps {
   setPendingReferee: (matchId: string, referee: number | null) => void;
   setPendingField: (matchId: string, field: number) => void;
   lockFinishedResults: boolean;
+  /** B-49 (@FU-081): fremd gesteuertes Feld bei laufendem Spiel – Hinweis bzw. „Spielleitung übernehmen“. */
+  offerTakeover?: (matchId: string, field: number | null) => Promise<boolean>;
 }
 
 interface UseScheduleTabActionsResult {
   handleRedistributeSR: () => void;
   handleRedistributeFields: () => void;
-  handleMatchSwap: (matchId1: string, matchId2: string) => void;
-  handleScoreChange: (matchId: string, scoreA: number, scoreB: number) => void;
+  /** `false` = abgelehnt (angepfiffenes Spiel, @ZP-093): die Ansicht ordnet dann nicht um. */
+  handleMatchSwap: (matchId1: string, matchId2: string) => boolean;
+  handleScoreChange: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
   handleRefereeAssignment: (matchId: string, refereeNumber: number | null) => void;
   handleResetRefereeAssignments: () => void;
   handleFieldChange: (matchId: string, fieldNumber: number) => void;
+  /** A-08f3e2: Rückfrage (Grund bzw. abgesetzt) der Schnelleingabe -- ScheduleTab zeigt sie an. */
+  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt' | 'changeAuthor'>;
 }
 
 export function useScheduleTabActions({
@@ -45,85 +50,71 @@ export function useScheduleTabActions({
   setPendingReferee,
   setPendingField,
   lockFinishedResults,
+  offerTakeover,
 }: UseScheduleTabActionsProps): UseScheduleTabActionsResult {
   const { t } = useTranslation('tournament');
 
-  // Handle redistribution of SR (keeps times fixed)
-  const handleRedistributeSR = useCallback(() => {
-    if (!isEditing) { return; }
-
-    saveToHistory();
-
-    const result = autoReassignReferees(
-      tournament.matches,
-      tournament.refereeConfig,
-      { target: 'all', optimizeForFairness: true }
-    );
-
-    if (result.changes.length === 0) {
-      showSuccess(t('actions.refereesAlreadyOptimal'));
-      return;
-    }
-
-    const updatedMatches = tournament.matches.map(m => {
-      const change = result.changes.find(c => c.matchId === m.id);
-      if (change) {
-        return { ...m, referee: change.newValue as number };
+  // W11: `handleRedistributeSR`/`handleRedistributeFields` teilen sich dieselbe Form (Aenderungen
+  // berechnen, Matches damit patchen, Turnier speichern) -- ein gemeinsamer Helfer statt zweier
+  // fast identischer Bloecke.
+  const applyRedistribution = useCallback(
+    (
+      compute: () => { changes: { matchId: string; newValue: unknown }[]; message: string },
+      field: 'referee' | 'field',
+      alreadyOptimalKey: 'actions.refereesAlreadyOptimal' | 'actions.fieldsAlreadyOptimal',
+    ) => {
+      if (!isEditing) { return; }
+      saveToHistory();
+      const result = compute();
+      if (result.changes.length === 0) {
+        showSuccess(t(alreadyOptimalKey));
+        return;
       }
-      return m;
-    });
+      const updatedMatches = tournament.matches.map((m) => {
+        const change = result.changes.find((c) => c.matchId === m.id);
+        return change ? { ...m, [field]: change.newValue as number } : m;
+      });
+      onTournamentUpdate({ ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() }, false);
+      showSuccess(result.message);
+    },
+    [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t],
+  );
 
-    onTournamentUpdate({
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    }, false);
-
-    showSuccess(result.message);
-  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t]);
+  // Handle redistribution of SR (keeps times fixed)
+  const handleRedistributeSR = useCallback(
+    () => applyRedistribution(
+      () => autoReassignReferees(tournament.matches, tournament.refereeConfig, { target: 'all', optimizeForFairness: true }),
+      'referee',
+      'actions.refereesAlreadyOptimal',
+    ),
+    [applyRedistribution, tournament],
+  );
 
   // Handle redistribution of fields (keeps times fixed)
-  const handleRedistributeFields = useCallback(() => {
-    if (!isEditing) { return; }
-
-    saveToHistory();
-
-    const result = redistributeFields(
-      tournament.matches,
-      tournament.numberOfFields
-    );
-
-    if (result.changes.length === 0) {
-      showSuccess(t('actions.fieldsAlreadyOptimal'));
-      return;
-    }
-
-    const updatedMatches = tournament.matches.map(m => {
-      const change = result.changes.find(c => c.matchId === m.id);
-      if (change) {
-        return { ...m, field: change.newValue as number };
-      }
-      return m;
-    });
-
-    onTournamentUpdate({
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    }, false);
-
-    showSuccess(result.message);
-  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t]);
+  const handleRedistributeFields = useCallback(
+    () => applyRedistribution(
+      () => redistributeFields(tournament.matches, tournament.numberOfFields),
+      'field',
+      'actions.fieldsAlreadyOptimal',
+    ),
+    [applyRedistribution, tournament],
+  );
 
   // Handle match swap via DnD (apply immediately for view sync)
   // Swaps scheduledTime AND field between two matches for complete slot swap
-  const handleMatchSwap = useCallback((matchId1: string, matchId2: string) => {
+  const handleMatchSwap = useCallback((matchId1: string, matchId2: string): boolean => {
     const match1 = tournament.matches.find(m => m.id === matchId1);
     const match2 = tournament.matches.find(m => m.id === matchId2);
 
     if (!match1 || !match2 || !match1.scheduledTime || !match2.scheduledTime) {
       console.warn('Could not swap matches:', matchId1, matchId2);
-      return;
+      return false;
+    }
+
+    // @ZP-093: ein angepfiffenes Spiel (läuft, Halbzeit, beendet) tauscht nicht, auch nicht als Ablageziel
+    if (getMatchStartState([match1]) === 'started' || getMatchStartState([match2]) === 'started') {
+      showWarning(t('schedule.startedLocked'));
+      return false;
     }
 
     saveToHistory();
@@ -151,51 +142,15 @@ export function useScheduleTabActions({
     }, false);
 
     showSuccess(t('actions.matchesSwapped', { match1: match1.round, match2: match2.round }));
-  }, [tournament, onTournamentUpdate, showSuccess, saveToHistory, t]);
+    return true;
+  }, [tournament, onTournamentUpdate, showSuccess, showWarning, saveToHistory, t]);
 
-  // Handle score change with live match warning
+  // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
+  const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults, offerTakeover });
+  const { enterScore } = resultEntry;
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
-    // Block editing finished matches (if lock is enabled)
-    if (lockFinishedResults && isMatchFinished(matchId, tournament.matches, tournament.id)) {
-      showWarning(t('actions.matchAlreadyFinished'));
-      return;
-    }
-
-    // Check if match is currently live
-    if (isMatchRunning(matchId, tournament.id)) {
-      const confirmEdit = window.confirm(t('actions.liveMatchWarning'));
-
-      if (!confirmEdit) { return; }
-    }
-
-    // Save to history BEFORE making changes (for Undo)
-    saveToHistory();
-
-    // Update tournament matches
-    const updatedMatches = tournament.matches.map((match) =>
-      match.id === matchId ? { ...match, scoreA, scoreB } : match
-    );
-
-    const updatedTournament = {
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    };
-
-    onTournamentUpdate(updatedTournament, false);
-
-    // Auto-resolve playoff pairings after group match completion
-    const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
-    if (playoffResolution?.wasResolved) {
-      onTournamentUpdate(updatedTournament, false);
-    }
-
-    // Also resolve bracket placeholders after playoff matches
-    const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
-    if (bracketResolution?.wasResolved) {
-      onTournamentUpdate(updatedTournament, false);
-    }
-  }, [tournament, onTournamentUpdate, lockFinishedResults, showWarning, saveToHistory, t]);
+    return enterScore(matchId, scoreA, scoreB);
+  }, [enterScore]);
 
   // Handle referee assignment (pending in edit mode, direct otherwise)
   const handleRefereeAssignment = useCallback((matchId: string, refereeNumber: number | null) => {
@@ -248,6 +203,12 @@ export function useScheduleTabActions({
 
   // Handle field change (pending in edit mode, direct otherwise)
   const handleFieldChange = useCallback((matchId: string, fieldNumber: number) => {
+    // @ZP-093: kein Feldwechsel für ein angepfiffenes Spiel (läuft, Halbzeit, beendet)
+    const target = tournament.matches.find((m) => m.id === matchId);
+    if (target && getMatchStartState([target]) === 'started') {
+      showWarning(t('schedule.startedLocked'));
+      return;
+    }
     if (isEditing) {
       setPendingField(matchId, fieldNumber);
     } else {
@@ -259,7 +220,7 @@ export function useScheduleTabActions({
 
       onTournamentUpdate(updatedTournament, true);
     }
-  }, [isEditing, setPendingField, tournament, onTournamentUpdate]);
+  }, [isEditing, setPendingField, tournament, onTournamentUpdate, showWarning, t]);
 
   return {
     handleRedistributeSR,
@@ -269,5 +230,6 @@ export function useScheduleTabActions({
     handleRefereeAssignment,
     handleResetRefereeAssignments,
     handleFieldChange,
+    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt, changeAuthor: resultEntry.changeAuthor },
   };
 }

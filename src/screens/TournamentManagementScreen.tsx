@@ -4,33 +4,34 @@
  * Tab-Navigation für Veranstalter:
  * 1. Spielplan - Editable Spielplan mit Ergebniseingabe
  * 2. Turnierleitung - Match Cockpit (Kampfgericht)
- * 3. Monitor - Große Zuschauer-Ansicht
+ * 3. Monitor - Konfigurator für die Hallenbildschirme
  */
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CSSProperties } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { cssVars, fontSizesMd3 } from '../design-tokens'
+import { cssVars } from '../design-tokens';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { Tournament } from '../types/tournament';
-import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
+import { MatchUpdate } from '../core/models/types';
+import { useToast } from '../components/ui/Toast';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTournamentManager } from '../hooks/useTournamentManager';
-import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
-import type { BottomNavTab } from '../components/ui';
+import { ManagementHeader, ManagementMobileNav } from './ManagementChrome';
+import { useCockpitFrame } from '../components/live-cockpit/frame/cockpitFrame';
 import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
 import { TabellenTab } from '../features/tournament-management/TabellenTab';
+import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
+import { GroupCompletionProvider } from '../features/tournament-management/group-completion/GroupCompletionProvider';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
-import { MonitorTab } from '../features/tournament-management/MonitorTab';
-import { SettingsTab } from '../features/tournament-management/SettingsTab';
+import { SettingsTabConnected } from '../features/tournament-management/SettingsTabConnected';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
 import { MonitorsConfigTab } from '../features/tournament-management/MonitorsConfigTab';
 import { MonitorEditor } from '../features/tournament-management/MonitorEditor';
 
-// Auth
-import { AuthSection } from '../components/layout/AuthSection';
 
 interface TournamentManagementScreenProps {
   tournamentId: string;
@@ -56,6 +57,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   onNavigateToSettings,
 }) => {
   const navigate = useNavigate();
+  const { showError } = useToast();
   const location = useLocation();
 
   // Get active tab from URL path (e.g., /tournament/:id/schedule)
@@ -69,10 +71,12 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   // Initial match ID for cockpit navigation (passed from ScheduleTab or URL)
   const [initialMatchId, setInitialMatchId] = useState<string | null>(matchIdFromUrl);
+  // Ändert sich die Adresse im geöffneten Bildschirm (Link, Zurück/Vor), gilt die neue Spiel-Kennung (@OB-029: die Adresse nennt das Spiel)
+  useEffect(() => { if (matchIdFromUrl) { setInitialMatchId(matchIdFromUrl); } }, [matchIdFromUrl]);
 
   // Mobile Navigation
   const isMobile = useIsMobile();
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const { vollbild } = useCockpitFrame();
 
   // TOUR-EDIT-META: Dirty-State-Tracking für SettingsTab
   const [isSettingsDirty, setIsSettingsDirty] = useState(false);
@@ -87,10 +91,37 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     tournament,
     schedule,
     currentStandings,
+    overallStandings,
     isLoading,
     loadingError,
     handleTournamentUpdate,
+    applyRemote,
+    reload,
+    scheduleService,
   } = useTournamentManager(tournamentId);
+
+  // Paket TB-B: nach dem Eintragen oder Zurücknehmen einer Gleichstands-Entscheidung frisch aus der Cloud lesen
+  const reloadFresh = useCallback(() => { void reload({ fresh: true }); }, [reload]);
+
+
+  // A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): result entry in
+  // the schedule persists ONLY the touched matches (targeted update) instead of a full tournament
+  // save -- a stale local tournament state at the owner must never overwrite a helper's live
+  // match. Local state is already synced by `applyRemote` (via ScheduleTab's
+  // onLocalTournamentUpdate); this only talks to the repository.
+  const handleMatchesUpdate = useCallback((updates: MatchUpdate[]) => {
+    if (updates.length === 0) { return; }
+    const run = updates.length === 1
+      ? scheduleService.updateMatch(tournamentId, updates[0])
+      : scheduleService.updateMatches(tournamentId, updates);
+    run.catch((err: unknown) => {
+      console.error('Failed to persist match update:', err);
+      // A2 Fixrunde 1 (M6): vorher nur console.error -- über OfflineRepository unkritisch (lokal
+      // geschrieben, eingereiht), aber ein Nutzer im reinen Cloud-Pfad bekam einen gescheiterten
+      // Ergebnis-/Status-Sync NIE angezeigt.
+      showError('Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    });
+  }, [scheduleService, tournamentId, showError]);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
   const handleTabChange = (newTab: TabType) => {
@@ -117,21 +148,6 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   const handleCancelTabChange = () => {
     setPendingTab(null);
     setShowDirtyWarning(false);
-  };
-
-  // Handle mobile bottom navigation
-  const handleMobileNavChange = (tab: BottomNavTab) => {
-    if (tab === 'more') {
-      setShowMoreMenu(true);
-    } else {
-      handleTabChange(tab);
-    }
-  };
-
-  // Handle selection from "more" menu
-  const handleMoreMenuSelect = (tab: TabType) => {
-    setShowMoreMenu(false);
-    handleTabChange(tab);
   };
 
   // Handle navigation to cockpit with specific match
@@ -192,182 +208,63 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   const containerStyle: CSSProperties = {
     minHeight: 'var(--min-h-screen)',
+    ...(vollbild ? { flex: 1, minHeight: 0 } : {}),
     background: cssVars.colors.background,
     display: 'flex',
     flexDirection: 'column',
   };
 
-  const headerStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    background: cssVars.colors.surface,
-    position: 'relative',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  };
-
-  const headerContentStyle: CSSProperties = {
-    flex: 1,
-    minWidth: 0, // For text truncation
-  };
-
-  const backButtonStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: fontSizesMd3.headlineMedium,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '36px',
-    height: '36px',
-    transition: 'all 0.2s ease',
-    flexShrink: 0,
-    marginRight: cssVars.spacing.md,
-  };
-
-  const titleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xxl,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
-    marginBottom: cssVars.spacing.xs,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  };
-
-  const subtitleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  };
-
-  const tabBarStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.xs,
-    padding: `0 ${cssVars.spacing.lg}`,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    background: cssVars.colors.surface,
-    overflowX: 'auto',
-    WebkitOverflowScrolling: 'touch',
-    scrollbarWidth: 'none',
-    msOverflowStyle: 'none',
-  };
-
-  const contentStyle: CSSProperties = {
-    flex: 1,
-    overflow: 'auto',
-    paddingBottom: isMobile ? '72px' : undefined,
-  };
+  // Im Rahmen (Cockpit-Vollbild, @SL-140) füllt der Inhalt die Resthöhe und gibt sie dem Cockpit weiter (K3); sonst scrollt die Seite wie bisher
+  const contentStyle: CSSProperties = vollbild
+    ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }
+    : { flex: 1, overflow: 'auto', paddingBottom: isMobile ? '72px' : undefined };
 
   return (
     <div style={containerStyle}>
-      {/* HEADER */}
-      <header style={headerStyle}>
-        {/* Left: Back Button */}
-        {onBack && (
-          <button
-            onClick={onBack}
-            style={backButtonStyle}
-            title="Zurück zum Dashboard"
-          >
-            ←
-          </button>
-        )}
-
-        {/* Center: Title & Subtitle */}
-        <div style={headerContentStyle}>
-          <div style={titleStyle}>{tournament.title}</div>
-          <div style={subtitleStyle}>
-            {tournament.ageClass} · {formatDateGerman(tournament.date)} · {getLocationName(tournament)}
-          </div>
-        </div>
-
-        {/* Admin Center Button */}
-        <button
-          onClick={() => { void navigate(`/tournament/${tournamentId}/admin`); }}
-          style={{
-            padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-            background: cssVars.colors.primarySubtle,
-            border: `1px solid ${cssVars.colors.primaryBorder}`,
-            borderRadius: cssVars.borderRadius.md,
-            color: cssVars.colors.primary,
-            fontSize: cssVars.fontSizes.sm,
-            fontWeight: cssVars.fontWeights.medium,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: cssVars.spacing.xs,
-            marginRight: cssVars.spacing.md,
-            transition: 'all 0.15s ease',
-            flexShrink: 0,
-          }}
-          title="Admin Center öffnen"
-        >
-          <span>⚙️</span>
-          {!isMobile && <span>Admin Center</span>}
-        </button>
-
-        {/* Right: Auth Section */}
-        <AuthSection
-          onNavigateToLogin={onNavigateToLogin}
-          onNavigateToRegister={onNavigateToRegister}
-          onNavigateToProfile={onNavigateToProfile}
-          onNavigateToSettings={onNavigateToSettings}
+      {!vollbild && (
+        <ManagementHeader
+          tournament={tournament} isMobile={isMobile} activeTab={activeTab} isSettingsDirty={isSettingsDirty} onBack={onBack}
+          onTabChange={handleTabChange} onNavigateToLogin={onNavigateToLogin} onNavigateToRegister={onNavigateToRegister}
+          onNavigateToProfile={onNavigateToProfile} onNavigateToSettings={onNavigateToSettings}
         />
-      </header>
-
-      {/* TAB BAR - Desktop only */}
-      {!isMobile && (
-        <nav style={tabBarStyle}>
-          <TabButton label="Spielplan" isActive={activeTab === 'schedule'} onClick={() => handleTabChange('schedule')} />
-          <TabButton label="Tabellen" isActive={activeTab === 'tabellen'} onClick={() => handleTabChange('tabellen')} />
-          <TabButton label="Live" isActive={activeTab === 'management'} onClick={() => handleTabChange('management')} />
-          <TabButton label="Monitor" isActive={activeTab === 'monitor'} onClick={() => handleTabChange('monitor')} />
-          <TabButton label="Monitore" isActive={activeTab === 'monitors'} onClick={() => handleTabChange('monitors')} />
-          <TabButton label="Teams" isActive={activeTab === 'teams'} onClick={() => handleTabChange('teams')} />
-          <TabButton label="Einstellungen" isActive={activeTab === 'settings'} onClick={() => handleTabChange('settings')} isDirty={isSettingsDirty} />
-        </nav>
       )}
 
       {/* TAB CONTENT */}
       <div style={contentStyle}>
-        {activeTab === 'schedule' && (
-          <ScheduleTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
-            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
-            onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
-          />
-        )}
-        {activeTab === 'tabellen' && (
-          <TabellenTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
-          />
+        {(activeTab === 'schedule' || activeTab === 'tabellen') && (
+          // GA4 A-13c: Spielplan und Tabellen teilen sich Rechte, Netz und den Ablauf „Gruppe abschließen“ (Banner, Dialoge)
+          <StandingTieProvider tournamentId={tournamentId} onChanged={reloadFresh}>
+            <GroupCompletionProvider tournament={tournament}>
+              {activeTab === 'schedule' && (
+                <ScheduleTab
+                  tournament={tournament}
+                  schedule={schedule}
+                  currentStandings={currentStandings}
+                  onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+                  onLocalTournamentUpdate={applyRemote}
+                  onMatchesUpdate={handleMatchesUpdate}
+                  onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
+                />
+              )}
+              {activeTab === 'tabellen' && (
+                <TabellenTab
+                  tournament={tournament}
+                  schedule={schedule}
+                  currentStandings={currentStandings}
+                  overallStandings={overallStandings}
+                />
+              )}
+            </GroupCompletionProvider>
+          </StandingTieProvider>
         )}
         {activeTab === 'management' && (
           <ManagementTab
             tournament={tournament}
             schedule={schedule}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+            onLocalTournamentUpdate={applyRemote}
             initialMatchId={initialMatchId}
             onInitialMatchConsumed={() => setInitialMatchId(null)}
-          />
-        )}
-        {activeTab === 'monitor' && (
-          <MonitorTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
           />
         )}
         {activeTab === 'teams' && (
@@ -377,14 +274,16 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           />
         )}
         {activeTab === 'settings' && (
-          <SettingsTab
+          <SettingsTabConnected
             tournament={tournament}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
             onDirtyChange={setIsSettingsDirty}
             onEditInWizard={onEditInWizard}
+            focusSection={searchParams.get('abschnitt') ?? undefined}
+            onPlacesSaved={reloadFresh}
           />
         )}
-        {activeTab === 'monitors' && (
+        {activeTab === 'monitor' && (
           <MonitorsConfigTab
             tournament={tournament}
             onTournamentUpdate={handleAsyncTournamentUpdate}
@@ -405,121 +304,19 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
       {/* TOUR-EDIT-META: Dirty-Warning Dialog */}
       {showDirtyWarning && (
-        <div style={overlayStyle}>
-          <div style={dialogStyle}>
-            <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
-              Ungespeicherte Änderungen
-            </h3>
-            <p style={{ margin: '0 0 24px 0', color: cssVars.colors.textSecondary }}>
-              Du hast Änderungen an den Turnier-Einstellungen vorgenommen, die noch nicht gespeichert wurden.
-              Möchtest du die Änderungen verwerfen?
-            </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={handleCancelTabChange} style={dialogButtonStyle('secondary')}>
-                Abbrechen
-              </button>
-              <button onClick={handleConfirmTabChange} style={dialogButtonStyle('danger')}>
-                Verwerfen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MOBILE BOTTOM NAVIGATION */}
-      {isMobile && (
-        <BottomNavigation
-          activeTab={activeTab}
-          onTabChange={handleMobileNavChange}
+        <ConfirmDialog
+          variant="danger"
+          title="Ungespeicherte Änderungen"
+          message="Du hast Änderungen an den Turnier-Einstellungen vorgenommen, die noch nicht gespeichert wurden. Möchtest du die Änderungen verwerfen?"
+          confirmText="Verwerfen"
+          cancelText="Abbrechen"
+          onConfirm={handleConfirmTabChange}
+          onCancel={handleCancelTabChange}
         />
       )}
 
-      {/* MOBILE "MEHR" BOTTOM SHEET */}
-      <BottomSheet
-        isOpen={showMoreMenu}
-        onClose={() => setShowMoreMenu(false)}
-        title="Mehr"
-      >
-        <BottomSheetItem
-          icon={<Icons.Users size={20} color="currentColor" />}
-          label="Teams"
-          description="Teams verwalten"
-          onClick={() => handleMoreMenuSelect('teams')}
-          isActive={activeTab === 'teams'}
-        />
-        <BottomSheetItem
-          icon={<Icons.Settings size={20} color="currentColor" />}
-          label="Einstellungen"
-          description="Turnier konfigurieren"
-          onClick={() => handleMoreMenuSelect('settings')}
-          isActive={activeTab === 'settings'}
-        />
-        <BottomSheetItem
-          icon={<Icons.Monitor size={20} color="currentColor" />}
-          label="Monitor"
-          description="Großbildschirm-Ansicht"
-          onClick={() => handleMoreMenuSelect('monitor')}
-          isActive={activeTab === 'monitor'}
-        />
-        <BottomSheetItem
-          icon={<Icons.Monitor size={20} color="currentColor" />}
-          label="Monitore"
-          description="Display-Konfiguration"
-          onClick={() => handleMoreMenuSelect('monitors')}
-          isActive={activeTab === 'monitors'}
-        />
-      </BottomSheet>
+      {!vollbild && isMobile && <ManagementMobileNav activeTab={activeTab} onTabChange={handleTabChange} tournamentId={tournamentId} />}
     </div>
-  );
-};
-
-// ============================================================================
-// TAB BUTTON COMPONENT
-// ============================================================================
-
-interface TabButtonProps {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-  isDirty?: boolean;
-}
-
-const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty }) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const buttonStyle: CSSProperties = {
-    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
-    background: 'transparent',
-    border: 'none',
-    borderBottom: isActive ? `3px solid ${cssVars.colors.primary}` : '3px solid transparent',
-    color: isActive ? cssVars.colors.primary : (isHovered ? cssVars.colors.primary : cssVars.colors.textSecondary),
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: isActive ? cssVars.fontWeights.semibold : cssVars.fontWeights.normal,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    fontFamily: cssVars.fontFamilies.body,
-  };
-
-  return (
-    <button
-      style={buttonStyle}
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      data-testid={`desktop-tab-${label.toLowerCase().replace(/\s+/g, '-')}`}
-    >
-      {label}
-      {isDirty && (
-        <span style={{
-          marginLeft: '6px',
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          background: cssVars.colors.warning,
-          display: 'inline-block',
-        }} title="Ungespeicherte Änderungen" />
-      )}
-    </button>
   );
 };
 
@@ -540,36 +337,3 @@ const loadingTextStyle: CSSProperties = {
   color: cssVars.colors.textSecondary,
 };
 
-const overlayStyle: CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: 'rgba(0, 0, 0, 0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-};
-
-const dialogStyle: CSSProperties = {
-  background: cssVars.colors.surface,
-  borderRadius: cssVars.borderRadius.lg,
-  padding: cssVars.spacing.xl,
-  maxWidth: '400px',
-  width: '90%',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-};
-
-const dialogButtonStyle = (variant: 'secondary' | 'danger'): CSSProperties => ({
-  padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-  border: variant === 'secondary' ? `1px solid ${cssVars.colors.border}` : 'none',
-  borderRadius: cssVars.borderRadius.md,
-  fontSize: cssVars.fontSizes.md,
-  fontWeight: cssVars.fontWeights.semibold,
-  cursor: 'pointer',
-  background: variant === 'danger' ? cssVars.colors.error : 'transparent',
-  color: variant === 'danger' ? 'white' : cssVars.colors.textSecondary,
-  transition: 'all 0.2s ease',
-});

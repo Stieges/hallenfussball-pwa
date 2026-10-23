@@ -1,0 +1,252 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  reduceMatch,
+  type EngineEvent,
+  type MatchContext,
+  type MatchRules,
+  type MatchState,
+  ERROR_CODES,
+} from '../../';
+import { computeView, clearViewCache, viewCacheSize, VIEW_CACHE_LIMIT } from '../view';
+
+const hoisted = vi.hoisted(() => {
+  const reduceMatchLengths: number[] = [];
+  const continueLogIds: string[][] = [];
+  return { reduceMatchLengths, continueLogIds };
+});
+
+vi.mock('../../', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../')>();
+  return {
+    ...actual,
+    reduceMatch: (events: readonly EngineEvent[], matchCtx: MatchContext) => {
+      hoisted.reduceMatchLengths.push(events.length);
+      return actual.reduceMatch(events, matchCtx);
+    },
+    continueLog: (state: MatchState, events: readonly EngineEvent[], matchCtx: MatchContext) => {
+      hoisted.continueLogIds.push(events.map((entry) => entry.id));
+      return actual.continueLog(state, events, matchCtx);
+    },
+  };
+});
+
+const ctx: MatchContext = { matchId: 'match-view', teamAId: 'teamA', teamBId: 'teamB' };
+
+const RULES: MatchRules = {
+  sections: 2,
+  sectionSeconds: 600,
+  breakSeconds: 60,
+  knockout: false,
+  tiebreak: null,
+  overtimeSeconds: 0,
+  shootersPerTeam: 5,
+  suddenDeathAfter: 5,
+  penaltySeconds: 120,
+};
+
+function ev(partial: Partial<EngineEvent> & Pick<EngineEvent, 'id' | 'type' | 'at'>): EngineEvent {
+  return { actor: 'helper', section: 1, clockMs: null, payload: {}, ...partial };
+}
+
+function copyOf(
+  matchId: string,
+  confirmed: EngineEvent[],
+  acked: EngineEvent[] = [],
+  pending: EngineEvent[] = [],
+  accountId = 'acc-view',
+) {
+  return { accountId, matchId, confirmed, acked, pending };
+}
+
+const start = () => ev({ id: 's', type: 'MATCH_START', at: 1000, payload: { rules: RULES } });
+const goal = (id: string, teamId: string, at: number) => ev({ id, type: 'GOAL', at, teamId, clockMs: at - 1000 });
+
+describe('computeView', () => {
+  beforeEach(() => {
+    hoisted.reduceMatchLengths.length = 0;
+    hoisted.continueLogIds.length = 0;
+    clearViewCache();
+  });
+
+  it('rechnet fremde Ereignisse dazwischen ein (anderes Gerät hat Tore eingetragen)', () => {
+    const confirmed = [start(), goal('f1', 'teamB', 2000), goal('f2', 'teamB', 3000)];
+    const result = computeView(copyOf('view-1', confirmed, [goal('a1', 'teamA', 2500)], [goal('p1', 'teamA', 3500)]), ctx);
+
+    expect(result.localRejected).toEqual([]);
+    expect(result.needsFullReload).toBe(false);
+    expect(result.state.scores['teamA']?.regular).toBe(2);
+    expect(result.state.scores['teamB']?.regular).toBe(2);
+  });
+
+  it('meldet lokal abgelehnte pending-Einträge mit Code (Tor nach fremdem Abpfiff)', () => {
+    const confirmed = [start(), ev({ id: 'end', type: 'MATCH_END', at: 5000 })];
+    const lateGoal = goal('p-late', 'teamA', 6000);
+    const result = computeView(copyOf('view-2', confirmed, [], [lateGoal]), ctx);
+
+    expect(result.localRejected.map((entry) => entry.event.id)).toEqual(['p-late']);
+    expect(result.localRejected[0]?.code).toBe(ERROR_CODES.MATCH_FINISHED);
+    expect(result.needsFullReload).toBe(false);
+    expect(result.state.scores['teamA']?.regular).toBe(0);
+  });
+
+  it('meldet Folgeablehnungen (fremder MATCH_START vorher -> eigener MATCH_START + Tore abgelehnt)', () => {
+    const confirmed = [start()];
+    const ownStart = ev({ id: 'o1', type: 'MATCH_START', at: 1100, payload: { rules: RULES } });
+    const result = computeView(
+      copyOf('view-3', confirmed, [], [ownStart, goal('o2', 'teamA', 1200), goal('o3', 'teamA', 1300)]),
+      ctx,
+    );
+
+    expect(result.localRejected.map((entry) => entry.event.id)).toEqual(['o1', 'o2', 'o3']);
+    expect(result.localRejected.map((entry) => entry.code)).toEqual([
+      ERROR_CODES.INVALID_TRANSITION,
+      ERROR_CODES.DEPENDS_ON_REJECTED,
+      ERROR_CODES.DEPENDS_ON_REJECTED,
+    ]);
+    expect(result.needsFullReload).toBe(false);
+  });
+
+  it('setzt needsFullReload, wenn ein acked-Eintrag lokal abgelehnt wird (V3)', () => {
+    const confirmed = [start(), ev({ id: 'end', type: 'MATCH_END', at: 5000 })];
+    const ackedGoal = goal('a-late', 'teamA', 6000);
+    const result = computeView(copyOf('view-4', confirmed, [ackedGoal], []), ctx);
+
+    expect(result.needsFullReload).toBe(true);
+    expect(result.localRejected).toEqual([]);
+  });
+
+  it('zaehlt bestaetigte Duplikate aus pending nicht doppelt', () => {
+    const shared = goal('d1', 'teamA', 2000);
+    const result = computeView(copyOf('view-5', [start(), shared], [], [shared]), ctx);
+
+    expect(result.localRejected).toEqual([]);
+    expect(result.needsFullReload).toBe(false);
+    expect(result.state.scores['teamA']?.regular).toBe(1);
+  });
+
+  it('rechnet inkrementell weiter: reduceMatch nur beim kalten Aufruf, Delta über continueLog', () => {
+    const base = [start()];
+    for (let i = 0; i < 30; i++) {
+      base.push(goal(`inc-g${i}`, i % 2 === 0 ? 'teamA' : 'teamB', 2000 + i));
+    }
+    computeView(copyOf('view-warm', base, [], []), ctx);
+    expect(hoisted.reduceMatchLengths).toEqual([31]);
+    expect(hoisted.continueLogIds).toEqual([]);
+
+    const extended = [...base, goal('inc-extra', 'teamB', 9000)];
+    const warm = computeView(copyOf('view-warm', extended, [], [goal('inc-p', 'teamA', 9100)]), ctx);
+    expect(hoisted.reduceMatchLengths).toEqual([31]);
+    expect(hoisted.continueLogIds).toEqual([['inc-extra']]);
+
+    const cold = computeView(copyOf('view-cold-2', extended, [], [goal('inc-p', 'teamA', 9100)]), ctx);
+    expect(hoisted.reduceMatchLengths).toEqual([31, 32]);
+    expect(warm.state).toEqual(cold.state);
+    expect(warm.state.scores['teamB']?.regular).toBe(16);
+  });
+
+  it('rechnet 300 Ereignisse in unter 200 ms (Voll-Laufzeit und inkrementelles Update)', () => {
+    const confirmed = [start()];
+    for (let i = 0; i < 299; i++) {
+      confirmed.push(goal(`perf-g${i}`, i % 2 === 0 ? 'teamA' : 'teamB', 2000 + i));
+    }
+    const pending = [goal('perf-p1', 'teamA', 4000), goal('perf-p2', 'teamB', 4100)];
+
+    const coldStart = performance.now();
+    const cold = computeView(copyOf('view-perf', confirmed, [], pending), ctx);
+    const coldDuration = performance.now() - coldStart;
+
+    const incrementalStart = performance.now();
+    const warm = computeView(copyOf('view-perf', [...confirmed, goal('perf-next', 'teamA', 5000)], [], pending), ctx);
+    const incrementalDuration = performance.now() - incrementalStart;
+
+    expect(cold.state.scores['teamA']?.regular).toBe(151);
+    expect(warm.state.scores['teamA']?.regular).toBe(152);
+    expect(coldDuration).toBeLessThan(200);
+    expect(incrementalDuration).toBeLessThan(200);
+  });
+
+  it('meldet gleichzeitig acked- (needsFullReload) und pending-Ablehnungen (localRejected)', () => {
+    const confirmed = [start(), ev({ id: 'end', type: 'MATCH_END', at: 5000 })];
+    const result = computeView(
+      copyOf('view-7', confirmed, [goal('a-late', 'teamA', 6000)], [goal('p-late', 'teamB', 6100)]),
+      ctx,
+    );
+
+    expect(result.needsFullReload).toBe(true);
+    expect(result.localRejected.map((entry) => entry.event.id)).toEqual(['p-late']);
+  });
+
+  it('wendet offene Einträge in der Reihenfolge acked -> pending an', () => {
+    const result = computeView(
+      copyOf(
+        'view-8',
+        [start()],
+        [goal('order-a', 'teamA', 2000)],
+        [goal('order-p', 'teamB', 2100)],
+      ),
+      ctx,
+    );
+    expect(result.state.scores['teamA']?.regular).toBe(1);
+    expect(result.state.scores['teamB']?.regular).toBe(1);
+    const batchIds = Object.keys(result.state.accepted);
+    expect(batchIds.indexOf('order-a')).toBeLessThan(batchIds.indexOf('order-p'));
+  });
+
+  it('rechnet neu, wenn der bestaetigte Log nicht mehr zum Cache passt', () => {
+    computeView(copyOf('view-9', [start(), goal('old-1', 'teamA', 2000)], [], []), ctx);
+    const replaced = computeView(copyOf('view-9', [start(), goal('new-1', 'teamB', 2000)], [], []), ctx);
+    expect(replaced.state.scores['teamA']?.regular).toBe(0);
+    expect(replaced.state.scores['teamB']?.regular).toBe(1);
+    expect(hoisted.reduceMatchLengths).toEqual([2, 2]);
+  });
+
+  it('zaehlt ein MATCH_START-Duplikat mit abweichenden payload.rules nicht doppelt (V3)', () => {
+    const ownStart = ev({ id: 's', type: 'MATCH_START', at: 1100, payload: { rules: { ...RULES, sections: 4 } } });
+    const result = computeView(copyOf('view-10', [start()], [], [ownStart]), ctx);
+
+    expect(result.localRejected).toEqual([]);
+    expect(result.needsFullReload).toBe(false);
+    expect(result.state.rules?.sections).toBe(2);
+  });
+
+  it('verwendet reduceMatch als Basis (fremder bestätigter Log ist die Wahrheit)', () => {
+    const confirmed = [start(), goal('f1', 'teamB', 2000)];
+    const expected = reduceMatch(confirmed, ctx).state;
+    const result = computeView(copyOf('view-6', confirmed, [], []), ctx);
+    expect(result.state).toEqual(expected);
+  });
+
+  it('rechnet bei ctx-Wechsel neu (Platzhalter-Teams → echte Teams, N1)', () => {
+    const ctxPlaceholder: MatchContext = { matchId: 'match-view', teamAId: 'placeholder-a', teamBId: 'placeholder-b' };
+    // Erster Aufruf legt den Cache mit dem Platzhalter-ctx an (leerer bestätigter Log).
+    const before = computeView(copyOf('view-ctx', [], [], []), ctxPlaceholder);
+    expect(before.state.scores['placeholder-a']?.regular).toBe(0);
+
+    // Zweiter Aufruf mit echten Teams: der gecachte Zustand kennt teamA/teamB nicht.
+    const result = computeView(copyOf('view-ctx', [], [], [start(), goal('cg1', 'teamA', 2000)]), ctx);
+    expect(result.state.scores['teamA']?.regular).toBe(1);
+    expect(result.state.scores['teamB']?.regular).toBe(0);
+  });
+
+  it('trennt den Cache nach Konto (gleiche matchId, Gast- und Kontokopie, N1)', () => {
+    computeView(copyOf('view-konto', [start()], [], [], 'guest'), ctx);
+    computeView(copyOf('view-konto', [start(), goal('kg1', 'teamA', 2000)], [], [], 'acc-1'), ctx);
+
+    // Zwei kalte Berechnungen: ohne Konten-Schlüssel würde der zweite Aufruf
+    // den Cache des ersten treffen (genau eine reduceMatch-Ausführung).
+    expect(hoisted.reduceMatchLengths).toEqual([1, 2]);
+    expect(hoisted.continueLogIds).toEqual([]);
+  });
+
+  it('begrenzt den Cache (ältester Eintrag wird verworfen, N1)', () => {
+    for (let i = 0; i < 40; i++) {
+      computeView(copyOf(`view-lru-${i}`, [start(), goal(`lru-${i}`, 'teamA', 2000)], [], [], 'acc-lru'), ctx);
+    }
+    expect(viewCacheSize()).toBe(VIEW_CACHE_LIMIT);
+    expect(hoisted.reduceMatchLengths).toHaveLength(40);
+
+    // Der älteste Eintrag ist raus: erneutes Ansehen muss neu rechnen.
+    computeView(copyOf('view-lru-0', [start(), goal('lru-0', 'teamA', 2000)], [], [], 'acc-lru'), ctx);
+    expect(hoisted.reduceMatchLengths).toHaveLength(41);
+  });
+});

@@ -2,7 +2,7 @@
  * LiveInfoExpand - Read-only info panel for running matches
  *
  * Displays live match info without editing capability:
- * - LIVE badge with timer
+ * - Zustands-Abzeichen (MatchStatusBadge) und Restzeit (MatchClock)
  * - Large score display (read-only)
  * - Recent events (last 3-5)
  * - "Go to Cockpit" button
@@ -14,17 +14,23 @@
  *   awayTeam={{ id: '2', name: 'Team B' }}
  *   homeScore={2}
  *   awayScore={1}
- *   elapsedFormatted="07:30"
+ *   clock={clock}
  *   events={matchEvents}
  *   onNavigateToCockpit={() => navigate(`/cockpit/${matchId}`)}
  * />
  * ```
  */
 
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
+import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
+import type { MatchBadgeModel, SpectatorClock } from '../../../core/view';
+import { MatchClock } from '../../ui/molecules/MatchClock';
+import { cardKindOf } from '../../../utils/cardKind';
+import { FOUL_SYMBOL } from '../../../utils/eventSymbols';
+import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,6 +49,8 @@ export interface MatchEvent {
   timestampSeconds: number;
   playerNumber?: number;
   direction?: 'INC' | 'DEC';
+  /** F3b2 (Ruling PC30): 'YELLOW' | 'YELLOW_RED' | 'RED' -- unterschieden nur ueber cardKindOf. */
+  cardType?: string;
 }
 
 export interface LiveInfoExpandProps {
@@ -54,14 +62,18 @@ export interface LiveInfoExpandProps {
   homeScore: number;
   /** Current away score */
   awayScore: number;
-  /** Formatted elapsed time (e.g., "07:30") */
-  elapsedFormatted: string;
+  /** Restzeit beim Stand (@ZM-162); ohne Uhr steht nichts */
+  clock?: SpectatorClock | null;
+  /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe „Live“ */
+  badge?: MatchBadgeModel;
   /** Recent match events */
   events?: MatchEvent[];
   /** Maximum events to display */
   maxEvents?: number;
   /** Callback to navigate to cockpit */
   onNavigateToCockpit?: () => void;
+  /** Spiel beenden (@FU-112, @FU-114): nur für die Turnierleitung -- öffnet die Eingabe; Helfer bekommen den Weg nicht (@FU-113). */
+  onEndAndEnter?: () => void;
   /** Callback to close the expand */
   onClose?: () => void;
 }
@@ -70,26 +82,30 @@ export interface LiveInfoExpandProps {
 // Helpers
 // ---------------------------------------------------------------------------
 
+const LIVE_BADGE: MatchBadgeModel = { kind: 'badge', state: 'live' };
+
 function formatEventTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function getEventIcon(type: MatchEvent['type']): string {
-  switch (type) {
+function getEventIcon(event: MatchEvent): ReactNode {
+  switch (event.type) {
     case 'GOAL':
       return '⚽';
     case 'YELLOW_CARD':
-      return '🟨';
+      return <KartenSymbol art="YELLOW" />;
+    // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden (MatchEvent ist hier flach,
+    // cardKindOf erwartet payload.cardType -- deshalb der kleine Wrapper).
     case 'RED_CARD':
-      return '🟥';
+      return <KartenSymbol art={cardKindOf({ type: event.type, payload: { cardType: event.cardType } }) === 'YELLOW_RED' ? 'YELLOW_RED' : 'RED'} />;
     case 'TIME_PENALTY':
       return '⏱️';
     case 'SUBSTITUTION':
       return '🔄';
     case 'FOUL':
-      return '⚠️';
+      return FOUL_SYMBOL;
     default:
       return '📝';
   }
@@ -107,7 +123,13 @@ function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team, t: (ke
     case 'YELLOW_CARD':
       return t('matchExpand.liveInfo.eventYellowCard', { team: teamName, player: playerInfo });
     case 'RED_CARD':
-      return t('matchExpand.liveInfo.eventRedCard', { team: teamName, player: playerInfo });
+      // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
+      return t(
+        cardKindOf({ type: event.type, payload: { cardType: event.cardType } }) === 'YELLOW_RED'
+          ? 'matchExpand.liveInfo.eventYellowRedCard'
+          : 'matchExpand.liveInfo.eventRedCard',
+        { team: teamName, player: playerInfo },
+      );
     case 'TIME_PENALTY':
       return t('matchExpand.liveInfo.eventTimePenalty', { team: teamName, player: playerInfo });
     case 'SUBSTITUTION':
@@ -128,10 +150,12 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   awayTeam,
   homeScore,
   awayScore,
-  elapsedFormatted,
+  clock,
+  badge,
   events = [],
   maxEvents = 5,
   onNavigateToCockpit,
+  onEndAndEnter,
   onClose,
 }) => {
   const { t } = useTranslation('tournament');
@@ -156,33 +180,6 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-  };
-
-  const liveBadgeStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    backgroundColor: cssVars.colors.liveBadgeBg,
-    color: cssVars.colors.liveBadge,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.bold,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.sm,
-  };
-
-  const liveDotStyle: CSSProperties = {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    backgroundColor: cssVars.colors.liveBadge,
-    animation: 'pulse 2s ease-in-out infinite',
-  };
-
-  const timerStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.primary,
-    fontVariantNumeric: 'tabular-nums',
   };
 
   const scoreContainerStyle: CSSProperties = {
@@ -289,11 +286,8 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     <div style={containerStyle} data-testid="live-info-expand">
       {/* Header with LIVE badge and timer */}
       <div style={headerStyle}>
-        <span style={liveBadgeStyle} data-testid="live-badge">
-          <span style={liveDotStyle} />
-          LIVE
-        </span>
-        <span style={timerStyle} data-testid="live-timer">{elapsedFormatted}</span>
+        <MatchStatusBadge model={badge ?? LIVE_BADGE} size="card" />
+        {clock && <MatchClock clock={clock} size="card" />}
       </div>
 
       {/* Large Score Display */}
@@ -315,7 +309,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
         {displayableEvents.length > 0 ? (
           displayableEvents.map((event) => (
             <div key={event.id} style={eventItemStyle}>
-              <span style={eventIconStyle}>{getEventIcon(event.type)}</span>
+              <span style={eventIconStyle}>{getEventIcon(event)}</span>
               <span style={eventTextStyle}>
                 {getEventLabel(event, homeTeam, awayTeam, t)}
               </span>
@@ -338,6 +332,11 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
             onClick={onClose}
           >
             {t('matchExpand.liveInfo.close')}
+          </Button>
+        )}
+        {onEndAndEnter && (
+          <Button variant="secondary" size="md" onClick={onEndAndEnter} data-testid="end-and-enter-btn">
+            {t('matchExpand.liveInfo.endAndEnter')}
           </Button>
         )}
         {onNavigateToCockpit && (

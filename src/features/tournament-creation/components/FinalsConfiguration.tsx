@@ -1,14 +1,27 @@
 import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode } from '../../../types/tournament';
+import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode, TiebreakerRoundKey } from '../../../types/tournament';
 import { getFinalsOptions, FinalsOption } from '../../../constants/finalsOptions';
+import { knockoutRoundsForPreset, presetHasPlacementGames } from '../../../core/match/tiebreakDecision';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../../config/sports';
 
 interface FinalsConfigurationProps {
   formData: Partial<Tournament>;
   onUpdate: <K extends keyof Tournament>(field: K, value: Tournament[K]) => void;
 }
+
+const TIEBREAKER_MODES: readonly TiebreakerMode[] = ['shootout', 'overtime-then-shootout', 'goldenGoal'];
+
+const roundSelectStyle: CSSProperties = {
+  minHeight: cssVars.touchTargets.minimum,
+  padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+  background: cssVars.colors.inputBg,
+  border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
+  borderRadius: cssVars.borderRadius.sm,
+  color: cssVars.colors.textPrimary,
+  fontSize: cssVars.fontSizes.lg,
+};
 
 export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   formData,
@@ -26,7 +39,11 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   const currentPreset = formData.finalsConfig?.preset ?? 'none';
 
   const handlePresetChange = (preset: FinalsPreset) => {
+    // @W2A-008: Ein Moduswechsel setzt die Entscheidungsregel(n) bewusst NICHT zurück —
+    // sie bleiben auch über „Modus ohne K.-o.“ hinweg gespeichert und werden beim
+    // Zurückwechseln wieder angezeigt.
     const newConfig: FinalsConfig = {
+      ...formData.finalsConfig,
       preset,
       parallelSemifinals: formData.finalsConfig?.parallelSemifinals,
       parallelQuarterfinals: formData.finalsConfig?.parallelQuarterfinals,
@@ -62,6 +79,18 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
     onUpdate('finalsConfig', newConfig);
   };
 
+  const handleTiebreakerRoundChange = (round: TiebreakerRoundKey, tiebreaker: TiebreakerMode) => {
+    const newConfig: FinalsConfig = {
+      ...formData.finalsConfig,
+      preset: formData.finalsConfig?.preset ?? 'none',
+      tiebreakerByRound: {
+        ...formData.finalsConfig?.tiebreakerByRound,
+        [round]: tiebreaker,
+      },
+    };
+    onUpdate('finalsConfig', newConfig);
+  };
+
   // Get sport config for defaults
   const sportConfig = getSportConfig(formData.sportId ?? DEFAULT_SPORT_ID);
   const currentTiebreaker = formData.finalsConfig?.tiebreaker ?? sportConfig.rules.defaultTiebreaker ?? 'shootout';
@@ -92,6 +121,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           type="radio"
           name="finalsPreset"
           value={option.preset}
+          data-testid={`finals-preset-${option.preset}`}
           checked={isSelected}
           onChange={() => handlePresetChange(option.preset)}
           style={{
@@ -150,11 +180,12 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{ marginTop: '16px' }}>
           <button
             onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+            data-testid="finals-advanced-options-toggle"
             style={{
               width: '100%',
               padding: '10px 12px',
               background: cssVars.colors.surfaceDarkMedium,
-              border: `1px solid ${cssVars.colors.border}`,
+              border: `1px solid ${cssVars.colors.borderControl}`,
               borderRadius: cssVars.borderRadius.sm,
               color: cssVars.colors.textSecondary,
               fontSize: cssVars.fontSizes.sm,
@@ -306,6 +337,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               <input
                 type="radio"
                 name="tiebreaker"
+                data-testid="tiebreaker-shootout"
                 checked={currentTiebreaker === 'shootout'}
                 onChange={() => handleTiebreakerChange('shootout')}
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
@@ -324,6 +356,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               <input
                 type="radio"
                 name="tiebreaker"
+                data-testid="tiebreaker-overtime-then-shootout"
                 checked={currentTiebreaker === 'overtime-then-shootout'}
                 onChange={() => handleTiebreakerChange('overtime-then-shootout')}
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
@@ -342,6 +375,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               <input
                 type="radio"
                 name="tiebreaker"
+                data-testid="tiebreaker-goldenGoal"
                 checked={currentTiebreaker === 'goldenGoal'}
                 onChange={() => handleTiebreakerChange('goldenGoal')}
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
@@ -368,7 +402,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                   width: '60px',
                   padding: '6px 10px',
                   background: cssVars.colors.inputBg,
-                  border: `1px solid ${cssVars.colors.border}`,
+                  border: `1px solid ${cssVars.colors.borderControl}`,
                   borderRadius: cssVars.borderRadius.sm,
                   color: cssVars.colors.textPrimary,
                   fontSize: cssVars.fontSizes.md,
@@ -377,6 +411,81 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               />
               <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>{t('finalsConfig.tiebreaker.minutes')}</span>
             </div>
+          )}
+
+          {/* Entscheidung je K.-o.-Runde (@W2A-007) */}
+          {knockoutRoundsForPreset(currentPreset).map((round) => (
+            <label
+              key={round}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                marginTop: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
+                {t(`finalsConfig.tiebreaker.byRound.${round}`)}
+              </span>
+              <select
+                data-testid={`tiebreaker-round-${round}`}
+                value={formData.finalsConfig?.tiebreakerByRound?.[round] ?? currentTiebreaker}
+                onChange={(e) => {
+                  const mode = TIEBREAKER_MODES.find((m) => m === e.target.value);
+                  if (mode) {
+                    handleTiebreakerRoundChange(round, mode);
+                  }
+                }}
+                style={roundSelectStyle}
+              >
+                {TIEBREAKER_MODES.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {t(`finalsConfig.tiebreaker.options.${mode}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+
+          {/* Platzierungsspiele: eigene Entscheidungsregel, vorbelegt mit der Finale-Regel (@W2A-039) */}
+          {presetHasPlacementGames(currentPreset) && (
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: cssVars.spacing.sm,
+                marginTop: cssVars.spacing.sm,
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
+                {t('finalsConfig.tiebreaker.byRound.placement')}
+              </span>
+              <select
+                data-testid="tiebreaker-round-placement"
+                value={
+                  formData.finalsConfig?.tiebreakerByRound?.placement
+                  ?? formData.finalsConfig?.tiebreakerByRound?.final
+                  ?? currentTiebreaker
+                }
+                onChange={(e) => {
+                  const mode = TIEBREAKER_MODES.find((m) => m === e.target.value);
+                  if (mode) {
+                    handleTiebreakerRoundChange('placement', mode);
+                  }
+                }}
+                style={roundSelectStyle}
+              >
+                {TIEBREAKER_MODES.map((mode) => (
+                  <option key={mode} value={mode}>
+                    {t(`finalsConfig.tiebreaker.options.${mode}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
         </div>
       )}

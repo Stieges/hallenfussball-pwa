@@ -5,7 +5,13 @@ interface InputProps {
   type?: 'text' | 'number' | 'email' | 'tel' | 'date' | 'time';
   value: string | number;
   onChange?: (value: string) => void;
+  /** Wird beim Verlassen des Feldes ausgelöst (z. B. Regelwert-Prüfung, @W2A-034) */
+  onBlur?: () => void;
   placeholder?: string;
+  /** Höchstlänge der Eingabe (nativ über maxLength am input) */
+  maxLength?: number;
+  /** ID(s) von Hinweisen am Feld, werden als aria-describedby gesetzt (ohne errorMessage) */
+  describedBy?: string;
   min?: string | number;
   max?: string | number;
   step?: string | number;
@@ -19,6 +25,8 @@ interface InputProps {
   errorMessage?: string;
   /** Test ID for E2E testing */
   'data-testid'?: string;
+  /** Name für Hilfsmittel, wenn das Feld keine sichtbare Beschriftung (label) trägt */
+  'aria-label'?: string;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -26,7 +34,10 @@ export const Input: React.FC<InputProps> = ({
   type = 'text',
   value,
   onChange,
+  onBlur,
   placeholder,
+  maxLength,
+  describedBy,
   min,
   max,
   step,
@@ -37,11 +48,14 @@ export const Input: React.FC<InputProps> = ({
   error = false,
   errorMessage,
   'data-testid': testId,
+  'aria-label': ariaLabel,
 }) => {
   // Auto-set error state when errorMessage is provided
   const hasError = error || !!errorMessage;
   // Stable unique ID for aria-describedby (React 18+)
   const generatedId = useId();
+  // Label und Feld gehören zusammen (axe „label“, Feld ohne Namen für Screenreader)
+  const inputId = `input-${generatedId}`;
   const errorId = errorMessage ? `error-${testId ?? generatedId}` : undefined;
   const containerStyles: CSSProperties = {
     display: 'flex',
@@ -60,7 +74,7 @@ export const Input: React.FC<InputProps> = ({
   const inputStyles: CSSProperties = {
     padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${hasError ? cssVars.colors.error : cssVars.colors.border}`,
+    border: `1px solid ${hasError ? cssVars.colors.error : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     // Minimum 16px (fontSizes.lg) required to prevent iOS auto-zoom on focus
@@ -80,16 +94,18 @@ export const Input: React.FC<InputProps> = ({
   return (
     <div style={containerStyles}>
       {label && (
-        <label style={labelStyles}>
+        <label htmlFor={inputId} style={labelStyles}>
           {label}
           {required && <span style={{ color: cssVars.colors.error }}> *</span>}
         </label>
       )}
       <input
+        id={inputId}
         type={type}
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
+        maxLength={maxLength}
         min={min}
         max={max}
         step={step}
@@ -98,15 +114,17 @@ export const Input: React.FC<InputProps> = ({
         list={list}
         style={inputStyles}
         data-testid={testId}
+        aria-label={ariaLabel}
         aria-invalid={hasError || undefined}
-        aria-describedby={errorId}
+        aria-describedby={errorId ?? describedBy}
         onFocus={(e) => {
           e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.primary;
           e.target.style.boxShadow = `0 0 0 3px ${hasError ? cssVars.colors.errorGlow : cssVars.colors.focusRing}`;
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.border;
+          e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.borderControl;
           e.target.style.boxShadow = 'none';
+          onBlur?.();
         }}
       />
       {errorMessage && (

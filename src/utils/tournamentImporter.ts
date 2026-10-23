@@ -13,22 +13,42 @@ import {
   ImportValidationResult,
   ImportValidationError,
   ImportValidationWarning,
-  PlacementCriterion,
   FinalsPreset,
+  TiebreakerMode,
+  TiebreakerRoundKey,
   RefereeMode,
   FinalsRefereeMode,
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
+import { teamSlot, pendingSlot, matchSideTeamId } from '../core/models/matchSlot';
+import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
+import { FILE_SOURCE_KEY, checkImportedFinalsPlan, parseFileSource, parseFinalsPhase, type FileSide } from './importFinalsPlan';
+import { defaultPlacementLogic } from '../core/standings/placementDefaults';
+import {
+  isTiebreakerMode,
+  isTiebreakerRoundKey,
+} from '../core/match/tiebreakDecision';
 
-// Default placement criteria (same as in TournamentCreationService).
-// Keine `label`-Strings: die Anzeige löst über `id` gegen i18n auf
-// (`wizard.json` → `placementLogic.criteria.<id>`).
-const DEFAULT_PLACEMENT_CRITERIA: PlacementCriterion[] = [
-  { id: 'points', enabled: true },
-  { id: 'goalDifference', enabled: true },
-  { id: 'goalsFor', enabled: true },
-  { id: 'directComparison', enabled: false },
-];
+
+/** Feldnamen der Seiten im Dateiformat (Importvorlagen) – nicht das Spielmodell (dort `slotA/slotB`). */
+const FILE_SIDE_KEY = { A: 'teamA', B: 'teamB' } as const;
+
+/**
+ * Entscheidungsregeln je Runde (B-04c Fixrunde 3 / F3-1): nur Paare mit gültigem
+ * Rundenschlüssel UND gültigem Regelwert werden übernommen; sonst `undefined`.
+ */
+function parseTiebreakerByRound(
+  raw: unknown,
+): Partial<Record<TiebreakerRoundKey, TiebreakerMode>> | undefined {
+  if (!raw || typeof raw !== 'object') {
+    return undefined;
+  }
+  const paare = Object.entries(raw).filter(
+    (paar): paar is [TiebreakerRoundKey, TiebreakerMode] =>
+      isTiebreakerRoundKey(paar[0]) && isTiebreakerMode(paar[1]),
+  );
+  return paare.length > 0 ? Object.fromEntries(paare) : undefined;
+}
 
 /**
  * Main entry point for importing tournaments
@@ -124,45 +144,78 @@ function parseJSONTournament(content: string): ImportValidationResult {
   // Parse matches if provided
   let matches: Match[] = [];
   if (json.matches && Array.isArray(json.matches)) {
-    matches = (json.matches as Array<Record<string, unknown>>).map((m, index) => {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty mapped ID should use original
-      const teamAId = teamIdMap.get(String(m.teamA)) || String(m.teamA);
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty mapped ID should use original
-      const teamBId = teamIdMap.get(String(m.teamB)) || String(m.teamB);
+    const rawMatches = json.matches as Array<Record<string, unknown>>;
+    // A-12b: Verweise auf Spiele der Datei (`sourceX.match`) brauchen die neue Spiel-ID, deshalb vorab vergeben.
+    const matchIdMap = new Map<string, string>();
+    const newMatchIds = rawMatches.map((m) => {
+      const newId = generateUniqueId();
+      if (typeof m.id === 'string') { matchIdMap.set(m.id, newId); }
+      return newId;
+    });
 
-      // Check if team IDs are valid
-      if (!teams.find(t => t.id === teamAId)) {
-        warnings.push({
-          code: 'UNKNOWN_TEAM',
-          field: `matches[${index}].teamA`,
-          message: `Team A in Spiel ${index + 1} nicht gefunden`,
-          severity: 'warning',
-        });
+    /** Eine Seite: Team-ID der Datei (A-03) ODER Herkunft (A-12b); beides oder keins ist ein Fehler. */
+    const parseSide = (m: Record<string, unknown>, index: number, side: FileSide): MatchSlot | undefined => {
+      const rawSource = m[FILE_SOURCE_KEY[side]];
+      if (rawSource !== undefined) {
+        if (m[FILE_SIDE_KEY[side]] !== undefined) {
+          errors.push({
+            code: 'AMBIGUOUS_SIDE',
+            field: `matches[${index}].${FILE_SOURCE_KEY[side]}`,
+            message: `Seite ${side} in Spiel ${index + 1} hat ein Team und eine Herkunft – nur eins von beiden ist erlaubt`,
+          });
+          return undefined;
+        }
+        const source = parseFileSource(rawSource, matchIdMap, { index, side }, errors);
+        return source === undefined ? undefined : pendingSlot(source);
       }
-      if (!teams.find(t => t.id === teamBId)) {
-        warnings.push({
+      // A-03: Die Seiten eines Spiels sind Team-IDs aus der Datei, abgebildet auf die neuen Team-IDs.
+      // Eine ID, die in der Teamliste fehlt, ist ein Fehler – ein Slot ohne Team ist nicht darstellbar.
+      const teamId = teamIdMap.get(String(m[FILE_SIDE_KEY[side]]));
+      if (teamId === undefined) {
+        errors.push({
           code: 'UNKNOWN_TEAM',
-          field: `matches[${index}].teamB`,
-          message: `Team B in Spiel ${index + 1} nicht gefunden`,
-          severity: 'warning',
+          field: `matches[${index}].${FILE_SIDE_KEY[side]}`,
+          message: `Team ${side} in Spiel ${index + 1} nicht gefunden`,
         });
+        return undefined;
       }
+      return teamSlot(teamId);
+    };
+
+    const parsed = rawMatches.map((m, index): Match | null => {
+      const slotA = parseSide(m, index, 'A');
+      const slotB = parseSide(m, index, 'B');
+      if (slotA === undefined || slotB === undefined) {
+        return null;
+      }
+      const phase = parseFinalsPhase(m.phase);
 
       return {
-        id: generateUniqueId(),
+        id: newMatchIds[index],
         round: Number(m.round) || 1,
         field: Number(m.field) || 1,
         slot: m.slot ? Number(m.slot) : undefined,
-        teamA: teamAId,
-        teamB: teamBId,
+        slotA,
+        slotB,
         scoreA: m.scoreA !== undefined ? Number(m.scoreA) : undefined,
         scoreB: m.scoreB !== undefined ? Number(m.scoreB) : undefined,
         group: m.group ? String(m.group) : undefined,
         isFinal: Boolean(m.isFinal),
         finalType: m.finalType as Match['finalType'],
         label: m.label ? String(m.label) : undefined,
+        ...(phase === undefined ? {} : { phase }),
       };
     });
+    if (errors.length > 0) {
+      return { isValid: false, errors, warnings };
+    }
+    matches = parsed.filter((m): m is Match => m !== null);
+
+    // A-12b (@TM-013, @TM-002): eine fehlerhafte Herkunft in der Finalrunde wird nicht übernommen und nennt Spiel und Seite.
+    const planErrors = checkImportedFinalsPlan(matches, teams);
+    if (planErrors.length > 0) {
+      return { isValid: false, errors: planErrors, warnings };
+    }
   }
 
   // Check fairness warnings (non-blocking)
@@ -203,7 +256,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
         label: String(p.label),
         enabled: Boolean(p.enabled),
       }))
-    : DEFAULT_PLACEMENT_CRITERIA;
+    : defaultPlacementLogic(); // Voreinstellung BFV privat (@W2A-046), wie im Assistenten
 
   // Parse point system
   const pointSystemData = json.pointSystem as Record<string, unknown> | undefined;
@@ -223,6 +276,14 @@ function parseJSONTournament(content: string): ImportValidationResult {
         parallelSemifinals: Boolean(finalsConfigData.parallelSemifinals),
         parallelQuarterfinals: Boolean(finalsConfigData.parallelQuarterfinals),
         parallelRoundOf16: Boolean(finalsConfigData.parallelRoundOf16),
+        tiebreaker: isTiebreakerMode(finalsConfigData.tiebreaker)
+          ? finalsConfigData.tiebreaker
+          : undefined,
+        tiebreakerDuration:
+          typeof finalsConfigData.tiebreakerDuration === 'number'
+            ? finalsConfigData.tiebreakerDuration
+            : undefined,
+        tiebreakerByRound: parseTiebreakerByRound(finalsConfigData.tiebreakerByRound),
       }
     : undefined;
 
@@ -445,7 +506,7 @@ export function parseCSVTeamsToTournament(content: string): ImportValidationResu
     hideRankingsForPublic: false,
     resultMode: 'goals',
     pointSystem: { win: 3, draw: 1, loss: 0 },
-    placementLogic: DEFAULT_PLACEMENT_CRITERIA,
+    placementLogic: defaultPlacementLogic(),
     finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
 
     createdAt: new Date().toISOString(),
@@ -487,12 +548,10 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
   const teamMatches = new Map<string, number[]>();
 
   matches.forEach((match, index) => {
-    const teamAMatches = teamMatches.get(match.teamA) ?? [];
-    const teamBMatches = teamMatches.get(match.teamB) ?? [];
-    teamAMatches.push(index);
-    teamBMatches.push(index);
-    teamMatches.set(match.teamA, teamAMatches);
-    teamMatches.set(match.teamB, teamBMatches);
+    for (const teamId of [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')]) {
+      if (teamId === undefined) { continue; } // offene Seite: kein Team
+      teamMatches.set(teamId, [...(teamMatches.get(teamId) ?? []), index]);
+    }
   });
 
   // Check for back-to-back matches
@@ -514,12 +573,13 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
 
   // Check for teams playing against themselves
   for (const match of matches) {
-    if (match.teamA === match.teamB) {
-      const team = teams.find(t => t.id === match.teamA);
+    const idA = matchSideTeamId(match, 'A');
+    if (idA !== undefined && idA === matchSideTeamId(match, 'B')) {
+      const team = teams.find(t => t.id === idA);
       warnings.push({
         code: 'SELF_MATCH',
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use teamId
-        message: `Team "${team?.name || match.teamA}" spielt gegen sich selbst`,
+        message: `Team "${team?.name || idA}" spielt gegen sich selbst`,
         severity: 'warning',
       });
     }
@@ -528,8 +588,9 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
   // Check match count distribution
   const matchCounts = new Map<string, number>();
   for (const match of matches) {
-    matchCounts.set(match.teamA, (matchCounts.get(match.teamA) ?? 0) + 1);
-    matchCounts.set(match.teamB, (matchCounts.get(match.teamB) ?? 0) + 1);
+    for (const teamId of [matchSideTeamId(match, 'A'), matchSideTeamId(match, 'B')]) {
+      if (teamId !== undefined) { matchCounts.set(teamId, (matchCounts.get(teamId) ?? 0) + 1); }
+    }
   }
 
   const counts = Array.from(matchCounts.values());

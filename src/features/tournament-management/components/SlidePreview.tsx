@@ -13,7 +13,8 @@ import i18n from '../../../i18n';
 import { cssVars } from '../../../design-tokens';
 import type { MonitorSlide, SlideConfig, ColorScheme } from '../../../types/monitor';
 import { COLOR_SCHEMES } from '../../../types/monitor';
-import type { Tournament, Team } from '../../../types/tournament';
+import type { Tournament, Match } from '../../../types/tournament';
+import { slotLabel } from '../../../core/models/slotLabel';
 import { calculateStandings } from '../../../utils/calculations';
 
 // =============================================================================
@@ -92,9 +93,9 @@ function getGroupName(tournament: Tournament, groupId: string | undefined): stri
     return group?.customName || i18n.t('tournament:slidePreview.groupLabel', { defaultValue: 'Gruppe {{id}}', id: groupId });
 }
 
-function getTeamName(teams: Team[], teamIdOrName: string): string {
-    const team = teams.find(t => t.id === teamIdOrName || t.name === teamIdOrName);
-    return team?.name ?? teamIdOrName;
+/** Anzeigetext einer Spielseite (@TM-015): Team über die Team-ID, offene Seite über ihre Herkunft. */
+function getSideName(tournament: Tournament, slot: Match['slotA']): string {
+    return slotLabel(slot, { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups });
 }
 
 // =============================================================================
@@ -110,8 +111,8 @@ function LivePreview({ config, tournament }: { config: SlideConfig; tournament: 
         m.field === fieldNum && (m.scoreA === undefined || m.scoreA === null)
     );
 
-    const teamA = nextMatch ? getTeamName(tournament.teams, nextMatch.teamA) : 'Team A';
-    const teamB = nextMatch ? getTeamName(tournament.teams, nextMatch.teamB) : 'Team B';
+    const teamA = nextMatch ? getSideName(tournament, nextMatch.slotA) : 'Team A';
+    const teamB = nextMatch ? getSideName(tournament, nextMatch.slotB) : 'Team B';
 
     return (
         <div style={slideContentStyle}>
@@ -150,7 +151,7 @@ function StandingsPreview({ config, tournament }: { config: SlideConfig; tournam
                             padding: '1px 0',
                             opacity: 1 - i * 0.2,
                         }}>
-                            <span>{i + 1}. {s.team.name.slice(0, 10)}</span>
+                            <span>{s.place ?? i + 1}. {s.team.name.slice(0, 10)}</span>
                             <span style={{ fontWeight: 700 }}>{s.points}</span>
                         </div>
                     ))}
@@ -185,9 +186,9 @@ function ScheduleFieldPreview({ config, tournament }: { config: SlideConfig; tou
                             padding: '1px 0',
                             opacity: 1 - i * 0.15,
                         }}>
-                            <span>{getTeamName(tournament.teams, m.teamA).slice(0, 6)}</span>
+                            <span>{getSideName(tournament, m.slotA).slice(0, 6)}</span>
                             <span style={{ opacity: 0.5 }}>vs</span>
-                            <span>{getTeamName(tournament.teams, m.teamB).slice(0, 6)}</span>
+                            <span>{getSideName(tournament, m.slotB).slice(0, 6)}</span>
                         </div>
                     ))}
                 </div>

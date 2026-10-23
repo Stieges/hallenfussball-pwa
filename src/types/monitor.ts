@@ -1,3 +1,4 @@
+import { displayMonitor } from '../design-tokens/display';
 /**
  * Monitor Types - Monitor-Konfigurator
  *
@@ -79,7 +80,8 @@ export type SlideType =
   | 'next-matches'       // Nächste X Spiele (Phase 2)
   | 'top-scorers'        // Torschützenliste (Phase 2)
   | 'sponsor'            // Sponsor mit QR-Code
-  | 'custom-text';       // Eigener Text / Ankündigung
+  | 'custom-text'        // Eigener Text / Ankündigung
+  | 'qr-code';           // Zuschauer-QR-Folie (B-16f4)
 
 /**
  * Slide-Type Metadaten für UI
@@ -103,6 +105,7 @@ export const SLIDE_TYPES: SlideTypeMetadata[] = [
   { type: 'schedule-field', label: 'Spielplan (Feld)', icon: '📋', category: 'schedule', phase: 1, description: 'Spielplan eines Feldes' },
   { type: 'sponsor', label: 'Sponsor', icon: '📢', category: 'other', phase: 1, description: 'Sponsor mit Logo und QR-Code' },
   { type: 'custom-text', label: 'Eigener Text', icon: '📝', category: 'other', phase: 1, description: 'Individuelle Ankündigung' },
+  { type: 'qr-code', label: 'Zuschauer-QR', icon: '📱', category: 'other', phase: 1, description: 'Zuschauer-QR-Code zur Zuschauer-Seite' },
 
   // Phase 2
   { type: 'all-standings', label: 'Alle Tabellen', icon: '📊📊', category: 'standings', phase: 2, description: 'Alle Gruppentabellen' },
@@ -165,37 +168,6 @@ export const COLOR_SCHEMES: Record<ColorScheme, { background: string; text: stri
 };
 
 // =============================================================================
-// LIVE COLOR SCHEME (Positions-Farben für Live-Score)
-// =============================================================================
-
-/**
- * Preset-Namen für Live-Score Farbschemata
- */
-export type LiveColorPreset = 'classic' | 'nature' | 'contrast' | 'modern' | 'alternative' | 'custom';
-
-/**
- * Farbschema für Live-Score-Anzeige auf Monitoren
- *
- * Positions-Farben (Heim/Gast) als Default, optional Team-Farben.
- */
-export interface LiveColorScheme {
-  preset: LiveColorPreset;
-  homeColor: string;
-  awayColor: string;
-  useTeamColors: boolean;
-}
-
-/**
- * Default: Klassisch Blau/Rot
- */
-export const DEFAULT_LIVE_COLOR_SCHEME: LiveColorScheme = {
-  preset: 'classic',
-  homeColor: '#1E40AF',
-  awayColor: '#DC2626',
-  useTeamColors: false,
-};
-
-// =============================================================================
 // SLIDE CONFIGURATION
 // =============================================================================
 
@@ -232,9 +204,7 @@ export interface SlideConfig {
   body?: string;
   textAlign?: 'left' | 'center' | 'right';
   colorScheme?: ColorScheme;
-
-  // Für: live (Positions-Farben)
-  liveColorScheme?: LiveColorScheme;
+  // Live-Folie: keine eigene Farbe der Ergebniskästen mehr (@ZM-152) – sie liest die Turnier-Einstellung „Anzeige für Zuschauer“
 }
 
 /**
@@ -300,7 +270,7 @@ export interface TournamentMonitor {
   performanceMode: PerformanceMode;       // 'auto' | 'high' | 'low'
 
   // TV-Kalibrierung
-  overscanPx?: number;                    // 0-80, Default: 48
+  overscanPercent?: number;               // 0-10 % je Seite, Schritt 0,5, Default: 5 (@ME-067)
 
   // Slides
   slides: MonitorSlide[];
@@ -310,16 +280,18 @@ export interface TournamentMonitor {
   updatedAt: string;
 }
 
-/**
- * Default Monitor-Konfiguration
- */
+/** Default Monitor-Konfiguration; `MONITOR_OVERSCAN` = Grenzen und Vorbelegung des Bildrands in % (@ME-067) */
+export const MONITOR_OVERSCAN = displayMonitor.overscan;
+/** Ist `value` ein gültiger Bildrand in Prozent (Zahl, 0 bis 10)? */
+export const istGueltigerRand = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= MONITOR_OVERSCAN.minPercent && value <= MONITOR_OVERSCAN.maxPercent;
 export const DEFAULT_MONITOR: Omit<TournamentMonitor, 'id' | 'name' | 'createdAt' | 'updatedAt'> = {
   defaultSlideDuration: 15,
   transition: 'fade',
   transitionDuration: 500,
   theme: 'dark',
   performanceMode: 'auto',
-  overscanPx: 48,
+  overscanPercent: MONITOR_OVERSCAN.defaultPercent,
   slides: [],
 };
 

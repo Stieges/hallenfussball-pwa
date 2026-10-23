@@ -8,10 +8,11 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { Tournament, TournamentType, PlacementCriterion } from '../types/tournament';
-import { countMatchesWithResults } from '../utils/teamHelpers';
+import { countMatchesWithResults, deleteTeamSafely } from '../utils/teamHelpers';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 import { TournamentCreationService } from '../core/services/TournamentCreationService';
 import { useRepository } from './useRepository';
+import { useResultsReset } from '../features/tournament-admin/hooks/useResultsReset';
 import { generateTeamId } from '../utils/idGenerator';
 
 export interface WizardState {
@@ -93,7 +94,7 @@ export interface UseTournamentWizardReturn {
 
   // Persistence
   saveDraft: () => Promise<Tournament>;
-  publishTournament: () => Promise<Tournament>;
+  publishTournament: (override?: Partial<Tournament>) => Promise<Tournament>;
 }
 
 export function useTournamentWizard(
@@ -101,6 +102,7 @@ export function useTournamentWizard(
 ): UseTournamentWizardReturn {
   // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
   const repository = useRepository();
+  const resultsReset = useResultsReset(); // A-10 (@FU-090, L1, L8)
 
   // Create service with the repository (recreates if repository changes)
   const creationService = useMemo(
@@ -168,8 +170,9 @@ export function useTournamentWizard(
         updated.finalsConfig = {
           ...prev.finalsConfig,
           preset: sportConfig.defaults.defaultFinalsPreset,
-          tiebreaker: sportConfig.rules.defaultTiebreaker,
-          tiebreakerDuration: sportConfig.rules.defaultTiebreakerDuration,
+          tiebreaker: prev.finalsConfig?.tiebreaker ?? sportConfig.rules.defaultTiebreaker,
+          tiebreakerDuration:
+            prev.finalsConfig?.tiebreakerDuration ?? sportConfig.rules.defaultTiebreakerDuration,
         };
       }
 
@@ -253,9 +256,19 @@ export function useTournamentWizard(
     updateForm('teams', [...(formData.teams ?? []), newTeam]);
   }, [formData.teams, updateForm]);
 
+  // A-05 Fixrunde 1 (@FU-086): wie `deleteTeamSafely` im TeamsTab. Spiele ohne Ergebnis, die auf das Team zeigen,
+  // fallen weg; hat das Team Spiele mit Ergebnis, bleibt es als `isRemoved` stehen. Nie bleibt ein Spiel mit einer
+  // gelöschten Team-ID stehen (sonst scheitert das Speichern in der Cloud, ON DELETE SET NULL vs. Slot-Pflicht).
   const removeTeam = useCallback((id: string) => {
-    updateForm('teams', formData.teams?.filter((t) => t.id !== id) ?? []);
-  }, [formData.teams, updateForm]);
+    const teams = formData.teams ?? [];
+    const matches = formData.matches ?? [];
+    if (!teams.some((t) => t.id === id)) { return; }
+    const result = deleteTeamSafely({ teams, matches }, id);
+    updateForm('teams', result.updatedTeams);
+    if (matches.length > 0) {
+      updateForm('matches', result.updatedMatches);
+    }
+  }, [formData.teams, formData.matches, updateForm]);
 
   const updateTeam = useCallback((id: string, updates: Partial<Tournament['teams'][0]>) => {
     updateForm(
@@ -320,36 +333,18 @@ export function useTournamentWizard(
     }
   }, [formData.tournamentType]);
 
-  // Reset tournament
+  // Reset tournament -- A-08f3e4 (@FU-090): mit Einträgen nicht ausführen; A-10: Konto-Turnier erst am Server, dann lokal
   const handleResetTournament = useCallback(() => {
-    if (!formData.matches || formData.matches.length === 0) { return; }
-
-    const resultCount = countMatchesWithResults(formData.matches);
-
-    const confirmed = window.confirm(
-      `⚠️ TURNIER ZURÜCKSETZEN\n\n` +
-      `Es werden ${resultCount} Ergebnis${resultCount === 1 ? '' : 'se'} gelöscht!\n\n` +
-      `Diese Aktion kann nicht rückgängig gemacht werden.\n\n` +
-      `Möchtest du wirklich fortfahren?`
-    );
-
-    if (!confirmed) { return; }
-
-    const resetMatches = formData.matches.map(match => ({
-      ...match,
-      scoreA: undefined,
-      scoreB: undefined,
-      matchStatus: 'scheduled' as const,
-      finishedAt: undefined,
-      correctionHistory: undefined,
-    }));
-
-    setFormData(prev => ({
-      ...prev,
-      matches: resetMatches,
-      updatedAt: new Date().toISOString(),
-    }));
-  }, [formData.matches]);
+    const matches = formData.matches ?? [];
+    if (matches.length === 0) { return; }
+    void resultsReset.blocks(formData).then(async (blocked) => {
+      const resultCount = countMatchesWithResults(matches);
+      if (blocked || !window.confirm(`⚠️ TURNIER ZURÜCKSETZEN\n\nEs werden ${resultCount} Ergebnis${resultCount === 1 ? '' : 'se'} gelöscht!\n\n` +
+        `Diese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?`)) { return; }
+      const resetMatches = await resultsReset.reset(formData);
+      if (resetMatches) { setFormData(prev => ({ ...prev, matches: resetMatches, updatedAt: new Date().toISOString() })); }
+    });
+  }, [formData, resultsReset]);
 
   // Create draft tournament
   const createDraftTournament = useCallback((): Tournament => {
@@ -372,9 +367,10 @@ export function useTournamentWizard(
   }, [creationService, formData, step]);
 
   // Publish tournament
-  const publishTournament = useCallback(async (): Promise<Tournament> => {
+  const publishTournament = useCallback(async (override?: Partial<Tournament>): Promise<Tournament> => {
     const published = await creationService.publish({
       ...formData,
+      ...override,
       lastVisitedStep: step,
     });
     setFormData(published);

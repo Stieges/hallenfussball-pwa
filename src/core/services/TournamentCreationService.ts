@@ -4,6 +4,23 @@ import { generateTournamentId } from '../../utils/idGenerator';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
 import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
+import { matchOrigins } from '../models/matchOrigin';
+import { effectiveHostTeamIds } from '../models/hostTeams';
+import { defaultPlacementLogic } from '../standings/placementDefaults';
+import { DEFAULT_PLACEMENTS_TO_PLAY_OUT } from '../standings/playOutPlaces';
+
+/**
+ * @W1-020 (B-04b Fixrunde 1): Sichtbarkeit NACH dem Festlegen -- es gibt die
+ * Fallunterscheidung nur einmal, damit Ankuendigung (TournamentPreview) und
+ * Wirkung (publish) nicht auseinanderlaufen. Beim ersten Festlegen (ohne
+ * publishedAt) wird das Turnier per Link teilbar; ein bereits festgelegtes
+ * Turnier behaelt seine bewusst gesetzte Sichtbarkeit (isPublic).
+ */
+export function visibilityAfterPublish(
+    data: Pick<Tournament, 'publishedAt' | 'isPublic'>
+): 'shareable' | 'private' {
+    return !data.publishedAt || data.isPublic ? 'shareable' : 'private';
+}
 
 export class TournamentCreationService {
     constructor(private readonly repository: ITournamentRepository) { }
@@ -38,12 +55,10 @@ export class TournamentCreationService {
             // ohnehin nicht. Die Anzeige löst über `id` gegen i18n auf
             // (`wizard.json` → `placementLogic.criteria.<id>`), mit Rückfall auf `label`
             // für bereits gespeicherte Turniere ohne passenden Schlüssel.
-            placementLogic: [
-                { id: 'points', enabled: true },
-                { id: 'goalDifference', enabled: true },
-                { id: 'goalsFor', enabled: true },
-                { id: 'directComparison', enabled: false },
-            ],
+            // Voreinstellung privates Hallenturnier nach BFV Teil 3 § 20 (13) (@W2A-046, Paket TB).
+            placementLogic: defaultPlacementLogic(),
+            // „Diese Plätze müssen bei Gleichstand ausgespielt werden“: vorbelegt nur Platz 1 (Daniel K10, @W2A-066)
+            placementsToPlayOut: [...DEFAULT_PLACEMENTS_TO_PLAY_OUT],
             finals: {
                 final: false,
                 thirdPlace: false,
@@ -89,6 +104,8 @@ export class TournamentCreationService {
             // Ensure critical fields are set if they were missing in data but present in base
             finalsConfig: { ...base.finalsConfig, ...data?.finalsConfig },
             refereeConfig: { ...base.refereeConfig, ...data?.refereeConfig },
+            // @W4-044: Markierungen gelöschter Teams werden beim Speichern entfernt (Reihenfolge = Teamliste).
+            ...(data?.hostTeamIds && data.teams ? { hostTeamIds: effectiveHostTeamIds(data.hostTeamIds, data.teams) } : {}),
         } as Tournament;
     }
 
@@ -100,10 +117,12 @@ export class TournamentCreationService {
 
         switch (step) {
             case 1:
-                if (!data.title) { errors.push('Turniername erforderlich'); }
+                if (!data.title?.trim()) { errors.push('Turniername erforderlich'); }
                 if (!data.date) {
                     errors.push('Startdatum erforderlich');
-                } else if (this.isPastDate(data.date)) {
+                // @W5-003 (C-META-NOVALID): nur ein Entwurf darf nicht in der Vergangenheit liegen; ein festgelegtes
+                // Turnier bleibt nach dem Turniertag korrigierbar (Ort, Schreibweise).
+                } else if (data.status !== 'published' && this.isPastDate(data.date)) {
                     errors.push('Startdatum darf nicht in der Vergangenheit liegen');
                 }
                 if (!data.location?.name) { errors.push('Ort erforderlich'); }
@@ -145,8 +164,11 @@ export class TournamentCreationService {
                     }
                 }
                 break;
-            case 5:
-                if ((data.teams?.length ?? 0) < 2) {
+            case 5: {
+                // @W1-014 (B-04b Fixrunde 1): entfernte Teams (isRemoved) zaehlen nirgends mit --
+                // Mindestzahl, F-209 und die Fehlermeldung sehen nur die aktiven Teams.
+                const activeTeams = (data.teams ?? []).filter(t => !t.isRemoved);
+                if (activeTeams.length < 2) {
                     errors.push('Mindestens 2 Teams erforderlich');
                 }
                 if (data.teams) {
@@ -163,11 +185,20 @@ export class TournamentCreationService {
                 if (
                     typeof data.numberOfTeams === 'number' &&
                     Array.isArray(data.teams) &&
-                    data.teams.length !== data.numberOfTeams
+                    activeTeams.length !== data.numberOfTeams
                 ) {
-                    errors.push(`Anzahl Teams: ${data.teams.length} von ${data.numberOfTeams} hinzugefügt`);
+                    errors.push(`Anzahl Teams: ${activeTeams.length} von ${data.numberOfTeams} hinzugefügt`);
+                }
+                // @W1-014: Bei Gruppen braucht jedes aktive Team eine Gruppe -- sonst faellt es
+                // in generateGroupStageMatches still aus dem Spielplan (nur Teams mit Gruppe).
+                if (data.groupSystem === 'groupsAndFinals') {
+                    const withoutGroup = activeTeams.filter(t => !t.group).length;
+                    if (withoutGroup > 0) {
+                        errors.push(`${withoutGroup} Teams ohne Gruppe`);
+                    }
                 }
                 break;
+            }
         }
 
         return errors;
@@ -177,6 +208,8 @@ export class TournamentCreationService {
      * Saves the current draft state
      */
     async saveDraft(data: Partial<Tournament>): Promise<Tournament> {
+        // A-10: Ergebnis-/Status-Spalten schreibt nur der Server (append_match_events, reset_match_results) --
+        // der frühere Nachtrag per updateMatches war in der Cloud ohne Wirkung (C3a-2b) und ist entfallen.
         const tournament = this.createDraft(data, data.id);
         tournament.updatedAt = new Date().toISOString();
         await this.repository.save(tournament);
@@ -187,17 +220,23 @@ export class TournamentCreationService {
      * Publishes the tournament (generates schedule and sets status)
      */
     async publish(data: Partial<Tournament>): Promise<Tournament> {
+        const previous = data.id ? await this.repository.get(data.id) : null;
         const tournament = this.createDraft(data, data.id);
 
         // Veröffentlichen IST die Freigabe — aber nur beim ersten Mal. "Erweiterte Bearbeitung"
         // ruft publish() beim Speichern erneut auf; ohne diesen Guard würde ein bewusst privat
         // gestelltes Turnier hinter dem Rücken des Veranstalters wieder geteilt.
-        // Geprüft wird `publishedAt`, NICHT `status`: status 'draft' ist ein transienter
-        // Wizard-Marker (SettingsTab.tsx) und sagt nichts über die Freigabe aus.
+        // Geprüft wird `publishedAt`, NICHT `status`: `publishedAt` wird genau einmal beim
+        // ersten Festlegen gesetzt und überdauert die Bearbeitung (@W5-004: ein festgelegtes
+        // Turnier bleibt dabei festgelegt).
         const isFirstRelease = !data.publishedAt;
         if (isFirstRelease) {
-            tournament.isPublic = true;
             tournament.publishedAt = new Date().toISOString();
+        }
+        // @W1-020: publish() wendet dieselbe Fallunterscheidung an, die die Vorschau
+        // vor dem Klick ankündigt (visibilityAfterPublish) -- nicht das aktuelle isPublic.
+        if (visibilityAfterPublish(data) === 'shareable') {
+            tournament.isPublic = true;
         }
 
         // Generate share code if public and no share code exists
@@ -209,24 +248,71 @@ export class TournamentCreationService {
         // Generate full schedule
         const schedule = generateFullSchedule(tournament);
 
+        // A2 Fixrunde 3 (N1c, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+        // task-A2-rereview.md`): "Erweiterte Bearbeitung" (re-publishing an already-published
+        // tournament) regenerates the WHOLE schedule -- `schedule.allMatches` never carries
+        // matchStatus/timer/tiebreaker fields (see `ScheduledMatch`, which doesn't declare them).
+        // Without this, the regenerated local copy would show e.g. a running match's
+        // `matchStatus` go from `'running'` (in `previous`, the real DB state) to `undefined` (in
+        // the freshly regenerated match) and reset it -- silently ending a helper's live match
+        // from the cloud's point of view, just because the owner re-published the wizard. Carrying
+        // these fields over (by match id, from the DB state fetched above) means the diff sees NO
+        // change for matches whose id survives regeneration, so nothing gets touched.
+        const previousMatchById = new Map((previous?.matches ?? []).map((m) => [m.id, m]));
+        // A2 Fixrunde 4 (B1, `task-A2-rereview2.md`): the Wizard's own match (same id) wins over
+        // `previous` whenever it carries an explicit `matchStatus` -- that is the Wizard stating
+        // the status itself (e.g. "Turnier zurücksetzen" sets 'scheduled' and clears finishedAt,
+        // `useTournamentWizard#handleResetTournament`). Taking `previous` there left the cloud at
+        // match_status='finished' + actual_end while the scores became NULL. Only when the Wizard
+        // has no such match or never stated a status do we fall back to `previous` (N1c: a match a
+        // helper started after the Wizard loaded its copy stays protected).
+        const wizardMatchById = new Map((data.matches ?? []).map((m) => [m.id, m]));
+
         // Convert ScheduledMatch to domain Match
-        tournament.matches = schedule.allMatches.map((scheduledMatch, index) => ({
-            id: scheduledMatch.id,
-            round: Math.floor(index / tournament.numberOfFields) + 1,
-            field: scheduledMatch.field,
-            slot: scheduledMatch.slot,
-            teamA: scheduledMatch.originalTeamA,
-            teamB: scheduledMatch.originalTeamB,
-            scoreA: scheduledMatch.scoreA,
-            scoreB: scheduledMatch.scoreB,
-            group: scheduledMatch.group,
-            isFinal: scheduledMatch.phase !== 'groupStage',
-            phase: scheduledMatch.phase, // BUG-FIX: Save phase for createPhases to work on reload
-            finalType: scheduledMatch.finalType,
-            label: scheduledMatch.label,
-            scheduledTime: scheduledMatch.startTime,
-            referee: scheduledMatch.referee,
-        }));
+        tournament.matches = schedule.allMatches.map((scheduledMatch, index) => {
+            const base = {
+                id: scheduledMatch.id,
+                round: Math.floor(index / tournament.numberOfFields) + 1,
+                field: scheduledMatch.field,
+                slot: scheduledMatch.slot,
+                // A-02/A-36a: Slots und Herkunft des Platzes aus dem Generator durchreichen (Cloud-Mapper).
+                slotA: scheduledMatch.slotA, slotB: scheduledMatch.slotB, ...matchOrigins(scheduledMatch),
+                scoreA: scheduledMatch.scoreA,
+                scoreB: scheduledMatch.scoreB,
+                group: scheduledMatch.group,
+                isFinal: scheduledMatch.phase !== 'groupStage',
+                phase: scheduledMatch.phase, // BUG-FIX: Save phase for createPhases to work on reload
+                finalType: scheduledMatch.finalType,
+                label: scheduledMatch.label,
+                scheduledTime: scheduledMatch.startTime,
+                matchNumber: scheduledMatch.matchNumber, // C-SPIELNUMMER-FEHLT (@SL-049): sonst match_number NULL in der Cloud
+                referee: scheduledMatch.referee,
+            };
+
+            const wizardMatch = wizardMatchById.get(scheduledMatch.id);
+            const statusSource = wizardMatch?.matchStatus !== undefined
+                ? wizardMatch
+                : previousMatchById.get(scheduledMatch.id);
+            if (!statusSource) {
+                return base;
+            }
+
+            return {
+                ...base,
+                matchStatus: statusSource.matchStatus,
+                finishedAt: statusSource.finishedAt,
+                timerStartTime: statusSource.timerStartTime,
+                timerPausedAt: statusSource.timerPausedAt,
+                timerElapsedSeconds: statusSource.timerElapsedSeconds,
+                overtimeScoreA: statusSource.overtimeScoreA,
+                overtimeScoreB: statusSource.overtimeScoreB,
+                penaltyScoreA: statusSource.penaltyScoreA,
+                penaltyScoreB: statusSource.penaltyScoreB,
+                decidedBy: statusSource.decidedBy,
+                skippedReason: statusSource.skippedReason,
+                skippedAt: statusSource.skippedAt,
+            };
+        });
 
         // Important: scheduledTime in Match interface is likely Date or string?
         // In LiveMatch, it was string? 
@@ -236,7 +322,7 @@ export class TournamentCreationService {
         tournament.status = 'published';
         tournament.updatedAt = new Date().toISOString();
 
-        await this.repository.save(tournament);
+        await this.repository.save(tournament); // A-10: kein Ergebnis-Nachtrag mehr (nur der Server schreibt sie)
         return tournament;
     }
 

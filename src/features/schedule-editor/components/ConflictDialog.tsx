@@ -9,11 +9,12 @@
  * - "Save anyway" option for warnings
  */
 
-import React, { useMemo } from 'react';
+import React, { useId, useMemo } from 'react';
 import { ScheduleConflict, ConflictType } from '../types';
 import { Match } from '../../../types/tournament';
-import { cssVars } from '../../../design-tokens'
-import { Button } from '../../../components/ui';
+import { cssVars, dialogWidths, mediaQueries } from '../../../design-tokens';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
+import { DialogActions, type DialogAction } from '../../../components/ui/molecules/DialogActions';
 import { getConflictTypeLabel, groupConflictsByType } from '../utils/scheduleConflicts';
 
 // ============================================================================
@@ -43,37 +44,11 @@ interface ConflictDialogProps {
 // Styles
 // ============================================================================
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: cssVars.colors.overlayStrong,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: cssVars.spacing.lg,
-  zIndex: 1000,
-};
-
-const dialogStyle: React.CSSProperties = {
-  backgroundColor: cssVars.colors.surface,
-  borderRadius: cssVars.borderRadius.lg,
-  boxShadow: cssVars.shadows.lg,
-  maxWidth: '600px',
-  width: '100%',
-  maxHeight: '80vh',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
-
 const headerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: cssVars.spacing.lg,
+  padding: cssVars.spacing.xl,
   borderBottom: `1px solid ${cssVars.colors.border}`,
 };
 
@@ -84,6 +59,7 @@ const titleStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: cssVars.spacing.sm,
+  margin: 0,
 };
 
 const closeButtonStyle: React.CSSProperties = {
@@ -104,19 +80,9 @@ const closeButtonStyle: React.CSSProperties = {
   borderRadius: cssVars.borderRadius.sm,
 };
 
+// Der Inhalt scrollt im festen Rahmen des Bausteins (DialogSurface-Inhalt), nicht selbst (DA-2a, @OB-062)
 const contentStyle: React.CSSProperties = {
-  flex: 1,
-  overflow: 'auto',
-  padding: cssVars.spacing.lg,
-};
-
-const footerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: cssVars.spacing.sm,
-  padding: cssVars.spacing.lg,
-  borderTop: `1px solid ${cssVars.colors.border}`,
-  backgroundColor: cssVars.colors.background,
+  padding: cssVars.spacing.xl,
 };
 
 const summaryStyle: React.CSSProperties = {
@@ -133,7 +99,7 @@ const summaryItemStyle = (isError: boolean): React.CSSProperties => ({
   alignItems: 'center',
   gap: cssVars.spacing.xs,
   fontSize: cssVars.fontSizes.sm,
-  color: isError ? cssVars.colors.error : cssVars.colors.warning,
+  color: isError ? cssVars.colors.error : cssVars.colors.warningSolid,
   fontWeight: cssVars.fontWeights.medium,
 });
 
@@ -176,7 +142,7 @@ const conflictMessageStyle: React.CSSProperties = {
 
 const conflictSuggestionStyle: React.CSSProperties = {
   fontSize: cssVars.fontSizes.xs,
-  color: cssVars.colors.textSecondary,
+  color: cssVars.colors.textPrimary,
   fontStyle: 'italic',
 };
 
@@ -262,120 +228,134 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
   }, [conflicts]);
 
   const hasErrors = errorCount > 0;
+  const titleId = useId();
 
-  if (!isOpen) {return null;}
+  // Tasten im festen Fuß (DA-2a, @OB-061/@OB-062): Nebentasten in der Reihenfolge der Seite, „Verstanden“/„Schließen“ zuletzt
+  const secondary: DialogAction[] = [];
+  if (canAutoResolve && onAutoResolve && conflicts.length > 0) {
+    secondary.push({ label: 'Automatisch beheben', onClick: onAutoResolve, 'data-testid': 'conflict-auto-resolve' });
+  }
+  if (!hasErrors && onSaveAnyway && warningCount > 0) {
+    secondary.push({ label: 'Trotzdem speichern', onClick: onSaveAnyway, 'data-testid': 'conflict-save-anyway' });
+  }
+
+  const header = (
+    <div style={headerStyle} className="conflict-dialog-header">
+      <h2 id={titleId} style={titleStyle}>
+        <span>{hasErrors ? '⚠️' : '⚡'}</span>
+        <span>{title}</span>
+      </h2>
+      <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">
+        ×
+      </button>
+    </div>
+  );
+
+  const footer = (
+    <DialogActions
+      secondary={secondary}
+      primary={{ label: conflicts.length === 0 ? 'Schließen' : 'Verstanden', onClick: onClose, 'data-testid': 'conflict-close' }}
+      data-testid="conflict-dialog-actions"
+    />
+  );
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={dialogStyle} onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div style={headerStyle}>
-          <div style={titleStyle}>
-            <span>{hasErrors ? '⚠️' : '⚡'}</span>
-            <span>{title}</span>
+    <DialogSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth={dialogWidths.lg}
+      labelledBy={titleId}
+      testId="conflict-dialog"
+      header={header}
+      footer={footer}
+    >
+      <div style={contentStyle} className="conflict-dialog-content">
+        {conflicts.length === 0 ? (
+          <div style={emptyStateStyle}>
+            <span style={{ fontSize: '48px', marginBottom: cssVars.spacing.md }}>✅</span>
+            <p style={{ fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.medium }}>
+              Keine Konflikte gefunden
+            </p>
+            <p style={{ fontSize: cssVars.fontSizes.sm }}>
+              Der Spielplan ist konfliktfrei.
+            </p>
           </div>
-          <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">
-            ×
-          </button>
-        </div>
-
-        {/* Content */}
-        <div style={contentStyle}>
-          {conflicts.length === 0 ? (
-            <div style={emptyStateStyle}>
-              <span style={{ fontSize: '48px', marginBottom: cssVars.spacing.md }}>✅</span>
-              <p style={{ fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.medium }}>
-                Keine Konflikte gefunden
-              </p>
-              <p style={{ fontSize: cssVars.fontSizes.sm }}>
-                Der Spielplan ist konfliktfrei.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Summary */}
-              <div style={summaryStyle}>
-                {errorCount > 0 && (
-                  <div style={summaryItemStyle(true)}>
-                    <span>⚠️</span>
-                    <span>{errorCount} Fehler</span>
-                  </div>
-                )}
-                {warningCount > 0 && (
-                  <div style={summaryItemStyle(false)}>
-                    <span>⚡</span>
-                    <span>{warningCount} Warnungen</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Grouped Conflicts */}
-              {Array.from(groupedConflicts.entries()).map(([type, typeConflicts]) => (
-                <div key={type} style={groupStyle}>
-                  <div style={groupHeaderStyle}>
-                    <span>{getConflictTypeIcon(type)}</span>
-                    <span>{getConflictTypeLabel(type)}</span>
-                    <span style={{
-                      fontSize: cssVars.fontSizes.sm,
-                      color: cssVars.colors.textSecondary,
-                      fontWeight: cssVars.fontWeights.normal
-                    }}>
-                      ({typeConflicts.length})
-                    </span>
-                  </div>
-
-                  <div style={conflictListStyle}>
-                    {typeConflicts.map(conflict => (
-                      <div key={conflict.id} style={conflictItemStyle(conflict.severity)}>
-                        <div style={conflictMessageStyle}>{conflict.message}</div>
-
-                        {conflict.suggestion && (
-                          <div style={conflictSuggestionStyle}>
-                            💡 {conflict.suggestion}
-                          </div>
-                        )}
-
-                        {/* Affected matches */}
-                        <div style={conflictMatchesStyle}>
-                          {conflict.matchIds.map(matchId => {
-                            const match = matches.find(m => m.id === matchId);
-                            if (!match) {return null;}
-                            return (
-                              <span key={matchId} style={matchBadgeStyle}>
-                                {formatTime(match.scheduledTime)} - Feld {match.field}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+        ) : (
+          <>
+            {/* Summary */}
+            <div style={summaryStyle}>
+              {errorCount > 0 && (
+                <div style={summaryItemStyle(true)}>
+                  <span>⚠️</span>
+                  <span>{errorCount} Fehler</span>
                 </div>
-              ))}
-            </>
-          )}
-        </div>
+              )}
+              {warningCount > 0 && (
+                <div style={summaryItemStyle(false)}>
+                  <span>⚡</span>
+                  <span>{warningCount} Warnungen</span>
+                </div>
+              )}
+            </div>
 
-        {/* Footer */}
-        <div style={footerStyle}>
-          {canAutoResolve && onAutoResolve && conflicts.length > 0 && (
-            <Button variant="secondary" onClick={onAutoResolve}>
-              Automatisch beheben
-            </Button>
-          )}
+            {/* Grouped Conflicts */}
+            {Array.from(groupedConflicts.entries()).map(([type, typeConflicts]) => (
+              <div key={type} style={groupStyle}>
+                <div style={groupHeaderStyle}>
+                  <span>{getConflictTypeIcon(type)}</span>
+                  <span>{getConflictTypeLabel(type)}</span>
+                  <span style={{
+                    fontSize: cssVars.fontSizes.sm,
+                    color: cssVars.colors.textSecondary,
+                    fontWeight: cssVars.fontWeights.normal
+                  }}>
+                    ({typeConflicts.length})
+                  </span>
+                </div>
 
-          {!hasErrors && onSaveAnyway && warningCount > 0 && (
-            <Button variant="secondary" onClick={onSaveAnyway}>
-              Trotzdem speichern
-            </Button>
-          )}
+                <div style={conflictListStyle}>
+                  {typeConflicts.map(conflict => (
+                    <div key={conflict.id} style={conflictItemStyle(conflict.severity)}>
+                      <div style={conflictMessageStyle}>{conflict.message}</div>
 
-          <Button variant="primary" onClick={onClose}>
-            {conflicts.length === 0 ? 'Schließen' : 'Verstanden'}
-          </Button>
-        </div>
+                      {conflict.suggestion && (
+                        <div style={conflictSuggestionStyle}>
+                          💡 {conflict.suggestion}
+                        </div>
+                      )}
+
+                      {/* Affected matches */}
+                      <div style={conflictMatchesStyle}>
+                        {conflict.matchIds.map(matchId => {
+                          const match = matches.find(m => m.id === matchId);
+                          if (!match) {return null;}
+                          return (
+                            <span key={matchId} style={matchBadgeStyle}>
+                              {formatTime(match.scheduledTime)} - Feld {match.field}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
-    </div>
+
+      {/* Kopf und Inhalt fluchten mit dem Fuß des Bausteins: xl, am Handy md (wie DialogSurface-Fuß) */}
+      <style>{`
+        ${mediaQueries.tabletDown} {
+          .conflict-dialog-header,
+          .conflict-dialog-content {
+            padding-left: ${cssVars.spacing.md} !important;
+            padding-right: ${cssVars.spacing.md} !important;
+          }
+        }
+      `}</style>
+    </DialogSurface>
   );
 };
 

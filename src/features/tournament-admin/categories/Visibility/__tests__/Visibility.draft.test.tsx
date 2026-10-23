@@ -28,6 +28,11 @@ vi.mock('../../../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
 }));
 
+// 2.3: „Anzeige für Zuschauer“ fragt das Recht über useCan (A-11); hier ist die Person die Turnierleitung
+vi.mock('../../../../auth/hooks/useMyTournamentRole', () => ({
+  useMyTournamentRole: () => ({ role: 'owner', isLoading: false }),
+}));
+
 import { VisibilityCategory } from '../index';
 
 function createTournament(overrides: Partial<Tournament> = {}): Tournament {

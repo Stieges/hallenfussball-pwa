@@ -1,0 +1,583 @@
+{
+  "version": 1,
+  "saat": "hallencup-messlauf",
+  "beschreibung": "Pflicht-Ansichten der visuellen Prüfung (Skill visuelle-pruefung); npm run visual:metrics -- --ansichten pflicht. Pfade sind Hash-Routen der App (HashRouter).",
+  "ansichten": [
+    {
+      "id": "datenschutz-abfrage",
+      "titel": "Dialog Datenschutz-Abfrage",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/",
+      "erwarte": "[data-testid=\"dialog-surface\"]",
+      "profil": "app",
+      "saat": false,
+      "hinweis": "ohne Saat: die Saat setzt die Einwilligung"
+    },
+    {
+      "id": "startseite-leer",
+      "titel": "Startseite ohne Turniere (Zustand leer)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/",
+      "erwarte": "[data-testid=\"dashboard-import-trigger\"]",
+      "profil": "app",
+      "klick": [
+        "role=button[name=/notwendig|necessary/i]"
+      ],
+      "saat": false
+    },
+    {
+      "id": "startseite",
+      "titel": "Startseite mit Turnieren",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/",
+      "erwarte": "[data-testid=\"tournament-card-hallencup-messlauf\"]",
+      "profil": "app"
+    },
+    {
+      "id": "archiv-leer",
+      "titel": "Archiv (Zustand leer)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/archiv",
+      "erwarte": "[data-testid=\"dashboard-import-trigger\"]",
+      "profil": "app"
+    },
+    {
+      "id": "papierkorb-leer",
+      "titel": "Papierkorb (Zustand leer)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/papierkorb",
+      "erwarte": "[data-testid=\"dashboard-import-trigger\"]",
+      "profil": "app"
+    },
+    {
+      "id": "anmeldung",
+      "titel": "Anmeldung (Formular)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/login",
+      "erwarte": "[data-testid=\"login-submit-button\"]",
+      "profil": "app"
+    },
+    {
+      "id": "fehler-unbekanntes-turnier",
+      "titel": "Fehler: Turnier nicht gefunden",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/gibt-es-nicht/schedule",
+      "erwarte": "[data-testid=\"footer-impressum-link\"]",
+      "profil": "app"
+    },
+    {
+      "id": "impressum",
+      "titel": "Impressum",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/impressum",
+      "erwarte": "[data-testid=\"legal-back-button\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-neu-1",
+      "titel": "Assistent neues Turnier, Schritt 1",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/new",
+      "erwarte": "[data-testid=\"wizard-rulebook\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-neu-2",
+      "titel": "Assistent neues Turnier, Schritt 2",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/new?step=2",
+      "erwarte": "[data-testid=\"wizard-type-classic\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-neu-3",
+      "titel": "Assistent neues Turnier, Schritt 3",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/new?step=3",
+      "erwarte": "[data-testid=\"wizard-mode-classic\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-neu-4",
+      "titel": "Assistent neues Turnier, Schritt 4",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/new?step=4",
+      "erwarte": "input[type=\"text\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-neu-5",
+      "titel": "Assistent neues Turnier, Schritt 5",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/new?step=5",
+      "erwarte": "[data-testid=\"wizard-add-team\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-neu-6",
+      "titel": "Assistent neues Turnier, Schritt 6",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/new?step=6",
+      "erwarte": "[data-testid=\"wizard-show-preview\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-entwurf-1",
+      "titel": "Assistent Entwurf mit 8 Teams, Schritt 1",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-entwurf/edit?step=1",
+      "erwarte": "[data-testid=\"wizard-rulebook\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-entwurf-2",
+      "titel": "Assistent Entwurf mit 8 Teams, Schritt 2",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-entwurf/edit?step=2",
+      "erwarte": "[data-testid=\"wizard-type-classic\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-entwurf-3",
+      "titel": "Assistent Entwurf mit 8 Teams, Schritt 3",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-entwurf/edit?step=3",
+      "erwarte": "[data-testid=\"wizard-mode-classic\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-entwurf-4",
+      "titel": "Assistent Entwurf mit 8 Teams, Schritt 4",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-entwurf/edit?step=4",
+      "erwarte": "input[type=\"text\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-entwurf-5",
+      "titel": "Assistent Entwurf mit 8 Teams, Schritt 5",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-entwurf/edit?step=5",
+      "erwarte": "[data-testid=\"wizard-add-team\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-entwurf-6",
+      "titel": "Assistent Entwurf mit 8 Teams, Schritt 6",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-entwurf/edit?step=6",
+      "erwarte": "[data-testid=\"wizard-show-preview\"]",
+      "profil": "app"
+    },
+    {
+      "id": "wizard-bearbeiten",
+      "titel": "Assistent: veröffentlichtes Turnier bearbeiten (Übersicht)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/edit",
+      "erwarte": "[data-testid=\"wizard-show-preview\"]",
+      "profil": "app"
+    },
+    {
+      "id": "verwaltung-spielplan",
+      "titel": "Turnierverwaltung: Spielplan",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/schedule",
+      "erwarte": "[data-testid=\"schedule-view-table\"]",
+      "profil": "app"
+    },
+    {
+      "id": "verwaltung-tabellen",
+      "titel": "Turnierverwaltung: Tabellen",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/standings",
+      "erwarte": "table:visible",
+      "profil": "app"
+    },
+    {
+      "id": "verwaltung-live",
+      "titel": "Turnierverwaltung: Live (Cockpit, automatische Auswahl)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "verwaltung-monitore",
+      "titel": "Turnierverwaltung: Monitore (Konfigurator)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/monitor",
+      "erwarte": "[data-testid=\"monitors-transfer-open\"]",
+      "profil": "app"
+    },
+    {
+      "id": "verwaltung-teams",
+      "titel": "Turnierverwaltung: Teams",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/teams",
+      "erwarte": "[data-testid^=\"team-card-\"]",
+      "profil": "app"
+    },
+    {
+      "id": "verwaltung-einstellungen",
+      "titel": "Turnierverwaltung: Einstellungen",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/settings",
+      "erwarte": "h2",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-vor-anpfiff",
+      "titel": "Cockpit: vor Anpfiff (Spiel um Platz 3)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-laeuft",
+      "titel": "Cockpit: läuft (Finale)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-laptop-laeuft",
+      "titel": "Cockpit: Laptop-Ansicht, läuft (Finale, Rahmen ohne App-Kopf)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "desktop-1440"
+    },
+    {
+      "id": "cockpit-laptop-vorwarnung",
+      "titel": "Cockpit: Laptop-Ansicht, Vorwarnung (Restzeit 2:40, Rahmen der Zeile „Nächstes“ farbig)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-vorwarnung/live?matchId=00000009-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"cockpit-naechstes\"]",
+      "profil": "laptop-1280"
+    },
+    {
+      "id": "cockpit-abgepfiffen-verlaengerung",
+      "titel": "Cockpit: abgepfiffen nach Verlängerung (Halbfinale 1)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000013",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-abgepfiffen-strafstoss",
+      "titel": "Cockpit: abgepfiffen nach Strafstoßschießen (Halbfinale 2)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000014",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-halbzeitpause",
+      "titel": "Cockpit: Halbzeitpause",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-halbzeit/live?matchId=00000006-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-verlaengerung-laeuft",
+      "titel": "Cockpit: Verlängerung läuft",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-verlaengerung/live?matchId=00000007-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-strafstoss-laeuft",
+      "titel": "Cockpit: Strafstoßschießen läuft",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-strafstoss/live?matchId=00000008-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-kein-spiel",
+      "titel": "Cockpit: kein Spiel mehr (Feld 2, alle Spiele gespielt)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?f=2",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-meldung-foul",
+      "titel": "Cockpit: Meldezeile mit langem Teamnamen (Foul erfasst, Finale)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"foul-button-home\"]",
+        "[data-testid=\"scoreboard\"]"
+      ]
+    },
+    {
+      "id": "cockpit-meldung-foul-kurz",
+      "titel": "Cockpit: Meldezeile mit kurzem Teamnamen (Foul erfasst, Verlängerung)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-verlaengerung/live?matchId=00000007-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"foul-button-home\"]",
+        "[data-testid=\"scoreboard\"]"
+      ]
+    },
+    {
+      "id": "cockpit-spalten-schwer",
+      "titel": "Cockpit: Spalten im schweren Fall (Finale, 50-Zeichen-Name, zwei Zeitstrafen je Team)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"penalty-button-home\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-home\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "scroll:oben"
+      ]
+    },
+    {
+      "id": "dialog-karte",
+      "titel": "Dialog: Karte vergeben (Cockpit, Finale)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"card-button-home\"]"
+      ]
+    },
+    {
+      "id": "zuschauer-live-code",
+      "titel": "Zuschauer-Seite per Code (/live/MESS26, lokale Daten)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/live/MESS26",
+      "erwarte": "[data-testid=\"public-filter-bar\"]",
+      "profil": "app"
+    },
+    {
+      "id": "monitor-live",
+      "titel": "Monitor-Folie: Live",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-live",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-tabelle",
+      "titel": "Monitor-Folie: Tabelle",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-tabelle",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-alle-tabellen",
+      "titel": "Monitor-Folie: Alle Tabellen",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-alle-tabellen",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-plan-gruppe",
+      "titel": "Monitor-Folie: Spielplan Gruppe",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-plan-gruppe",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-plan-feld",
+      "titel": "Monitor-Folie: Spielplan Feld",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-plan-feld",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-naechste",
+      "titel": "Monitor-Folie: Nächste Spiele",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-naechste",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-torschuetzen",
+      "titel": "Monitor-Folie: Torschützen",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-torschuetzen",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-sponsor",
+      "titel": "Monitor-Folie: Sponsor (mit QR)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-sponsor",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-text",
+      "titel": "Monitor-Folie: Eigener Text",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-text",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "monitor-qr",
+      "titel": "Monitor-Folie: Zuschauer-QR",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/display/hallencup-messlauf/mon-qr",
+      "erwarte": "[data-testid=\"monitor-slide\"]",
+      "profil": "monitor"
+    },
+    {
+      "id": "admin-match-cockpit-regeln",
+      "titel": "Admin Center: Match Cockpit, Regeln Uhr-Art und Schlussphase (B-08e)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/admin/match-cockpit",
+      "erwarte": "[data-testid=\"settings-final-phase-minutes\"]",
+      "profil": "app"
+    },
+    {
+      "id": "verwaltung-sichtbarkeit",
+      "titel": "Admin Center: Sichtbarkeit, Anzeige für Zuschauer mit Vorschau (Spielanzeige 2.3)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/admin/visibility",
+      "erwarte": "[data-testid=\"spectator-display-preview\"]",
+      "profil": "app"
+    }
+  ]
+}

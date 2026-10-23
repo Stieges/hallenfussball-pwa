@@ -8,46 +8,53 @@
  * - Konfliktprüfung beim Speichern
  * - Live-Tabellen-Berechnung
  *
- * Refactored: Logic extracted to custom hooks for maintainability
- * - useScheduleHistory: Undo/Redo functionality
- * - useRunningMatches: Live match detection
- * - useCorrectionMode: Correction dialog flow
- * - usePendingChanges: Edit mode state
- * - useScheduleTabActions: Action handlers
+ * Logik in Hooks: useScheduleHistory (Undo/Redo), usePendingChanges (Bearbeiten), useScheduleTabActions (Aktionen);
+ * Status aus einer Quelle, der gemeinsamen Ansicht (`buildTournamentView`, Leitung + Engine-Status, A-36c).
+ * Rechte (A-11): nur über useCan -- Bearbeiten, Tauschen, Schiri nur mit manageSchedule (@ZP-040).
  */
 
 import { useCallback, CSSProperties, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
-import { cssVars, mediaQueries } from '../../design-tokens'
+import { cssVars, mediaQueries, layoutHeights } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
+import { MatchUpdate } from '../../core/models/types';
 import {
   useScheduleHistory,
-  useRunningMatches,
-  useCorrectionMode,
   usePendingChanges,
   useScheduleTabActions,
   useScheduleFilters,
   getFilterOptions,
 } from './hooks';
-import { isMatchFinished, getTeamName } from './utils';
+import { useScheduleView } from './hooks/useScheduleView';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
+import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
+import { useScheduleTakeover } from './hooks/useScheduleTakeover';
+import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
+import { useScheduleForfeit } from './hooks/useScheduleForfeit';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
-import { CorrectionDialog } from '../../components/dialogs';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { useAppSettings } from '../../hooks/useUserProfile';
-import { usePermissions } from '../../hooks/usePermissions';
+import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
+import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 
 interface ScheduleTabProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
   currentStandings: Standing[];
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+  /**
+   * A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): local-only state
+   * sync (no persistence) — used by result entry so the UI updates immediately without a full
+   * tournament save.
+   */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
+  /** A2: persists specific matches via a targeted update instead of a full tournament save. */
+  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   /** Callback to navigate to management tab with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
 }
@@ -57,14 +64,16 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   schedule,
   currentStandings,
   onTournamentUpdate,
+  onLocalTournamentUpdate,
+  onMatchesUpdate,
   onNavigateToCockpit,
 }) => {
   const { t } = useTranslation('tournament');
-  // App settings for result lock behavior
-  const appSettings = useAppSettings();
-  // Permission check for corrections and timer control
-  const { canCorrectResults, hasPermission } = usePermissions(tournament.id);
-  const canControlTimer = hasPermission('control_timer');
+  // A-11: Cockpit-Hinweis bei laufendem Spiel = Spielbetrieb; Spielplan ändern = manageSchedule; Aushang (@ZM-019)
+  const canControlTimer = useCan('writeMatchData', tournament.id);
+  const canSchedule = useCan('manageSchedule', tournament.id);
+  const canNotice = useCan('tournamentSettings', tournament.id);
+  const canEndRunning = useCan('leadMatches', tournament.id); // @FU-112/@FU-113: Spiel beenden nur Turnierleitung
   // Toast notifications
   const { showWarning, showSuccess } = useToast();
 
@@ -109,10 +118,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       isEditing,
     });
 
-  // Running matches (for live indicators)
-  const { runningMatchIds } = useRunningMatches({
-    tournamentId: tournament.id,
-  });
+  // Die gemeinsame Ansicht der Leitung (A-36c): eine Statusquelle für Karten, Filter und „läuft gerade“
+  const { view, locale, liveMatchIds, elapsedSeconds } = useScheduleView(tournament);
 
   // US-VIEWER-FILTERS: Schedule filtering
   const filterOptions = useMemo(() => getFilterOptions(tournament), [tournament]);
@@ -131,21 +138,14 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     hasFilters,
     getFilteredMatches,
     getMatchCount,
-  } = useScheduleFilters({
-    tournamentId: tournament.id,
-    enablePersistence: true,
-  });
+  } = useScheduleFilters({ filterOptions });
 
   // Get filtered matches for display
   // FIX: Use schedule.allMatches as source ensuring we filter what is displayed (Preview/Generated),
   // rather than potentially stale tournament.matches (Persistence).
-  // Map ScheduledMatch to Match interface (originalTeamA -> teamA)
+  // ScheduledMatch trägt slotA/slotB unverändert; der Filter liest nur Slots (A-03)
   const sourceMatchesForFiltering = useMemo(() => {
-    return schedule.allMatches.map(sm => ({
-      ...sm,
-      teamA: sm.originalTeamA,
-      teamB: sm.originalTeamB,
-    })) as unknown as Match[];
+    return schedule.allMatches as unknown as Match[];
   }, [schedule.allMatches]);
 
   const filteredMatches = useMemo(
@@ -159,33 +159,14 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     [filteredMatches]
   );
 
-  // Correction mode state and handlers
-  const {
-    correctionState,
-    showCorrectionDialog,
-    handleStartCorrection,
-    handleCancelCorrection,
-    handleConfirmCorrection,
-  } = useCorrectionMode({
-    tournament,
-    onTournamentUpdate,
-    canCorrectResults,
-  });
-
   // Running match navigation dialog state
   const [pendingCockpitMatchId, setPendingCockpitMatchId] = useState<string | null>(null);
   const [showRunningMatchDialog, setShowRunningMatchDialog] = useState(false);
 
-  // Helper to get team name
-  const getTeamNameById = useCallback((teamId: string): string => {
-    const team = tournament.teams.find(t => t.id === teamId);
-    return team?.name ?? teamId;
-  }, [tournament.teams]);
-
   // Handler for navigating to cockpit with running match check
   const handleNavigateToCockpit = useCallback((matchId: string) => {
     // Check if there's a running match (other than the target match)
-    const runningMatchArray = Array.from(runningMatchIds).filter(id => id !== matchId);
+    const runningMatchArray = Array.from(liveMatchIds).filter(id => id !== matchId);
 
     if (runningMatchArray.length > 0) {
       // There's a running match - need confirmation
@@ -201,7 +182,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       // No running match - navigate directly
       onNavigateToCockpit?.(matchId);
     }
-  }, [runningMatchIds, canControlTimer, showWarning, onNavigateToCockpit, t]);
+  }, [liveMatchIds, canControlTimer, showWarning, onNavigateToCockpit, t]);
 
   // Handler to confirm navigation (ends running match)
   const handleConfirmCockpitNavigation = useCallback(() => {
@@ -220,18 +201,23 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Get info about the currently running match for dialog
   const runningMatchInfo = useMemo(() => {
-    const runningMatchId = Array.from(runningMatchIds)[0];
+    const runningMatchId = Array.from(liveMatchIds)[0];
     if (!runningMatchId) { return null; }
     const match = tournament.matches.find(m => m.id === runningMatchId);
-    if (!match) { return null; }
+    const shown = view.byId.get(runningMatchId);
+    if (!match || !shown) { return null; }
+    // Spielseiten aus der Ansicht (@TM-015): Teamname bzw. Herkunft, nie ein gespeicherter Name
     return {
       id: runningMatchId,
-      teamA: getTeamNameById(match.teamA),
-      teamB: getTeamNameById(match.teamB),
+      homeName: shown.home.label,
+      awayName: shown.away.label,
       scoreA: match.scoreA,
       scoreB: match.scoreB,
     };
-  }, [runningMatchIds, tournament.matches, getTeamNameById]);
+  }, [liveMatchIds, tournament.matches, view]);
+
+  // B-49 (@FU-081): fremd gesteuertes Feld – „Feld 2 wird gerade von Tom gesteuert“ mit „Spielleitung übernehmen“, danach ins Cockpit
+  const takeover = useScheduleTakeover({ tournamentId: tournament.id, showWarning, onTaken: onNavigateToCockpit });
 
   // Action handlers (extracted for maintainability)
   const {
@@ -242,6 +228,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     handleRefereeAssignment,
     handleResetRefereeAssignments,
     handleFieldChange,
+    resultEntry,
   } = useScheduleTabActions({
     tournament,
     onTournamentUpdate,
@@ -251,8 +238,18 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     showWarning,
     setPendingReferee,
     setPendingField,
-    lockFinishedResults: appSettings.lockFinishedResults,
+    // Korrektur beendeter Spiele im Spielplan: Grund-Auswahl statt Sperre (@EK-063, @EK-004), wie im Cockpit (useCockpitKorrektur).
+    // Die Nutzer-Einstellung `lockFinishedResults` verwies auf einen Knopf „Ergebnis korrigieren“, den es hier nicht gibt.
+    lockFinishedResults: false,
+    offerTakeover: takeover.offerTakeover,
   });
+
+  // B-12: „nicht angetreten“ und „Wertung zurücknehmen“ -- Bedienung nur für die Turnierleitung (@SL-118)
+  const forfeit = useScheduleForfeit({ tournament, showWarning, showSuccess });
+  const forfeitActions = useMemo(
+    () => (forfeit.allowed ? { mark: (id: string) => { void forfeit.markForfeit(id); }, revoke: (id: string) => { void forfeit.revokeForfeit(id); } } : undefined),
+    [forfeit],
+  );
 
   // ==========================================================================
   // RENDER
@@ -273,15 +270,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     WebkitBackdropFilter: 'none',
   } : {};
 
-  // Build finished matches set for display
-  // Always populate this set to show proper match status (summary view on circle click)
-  // The lockFinishedResults setting only controls whether editing is prevented
-  const finishedMatchIds = new Set(
-    tournament.matches
-      .filter(m => isMatchFinished(m.id, tournament.matches, tournament.id))
-      .map(m => m.id)
-  );
-
   // Count conflicts by severity
   const criticalConflicts = detectedConflicts.filter(c =>
     c.type === 'team_double_booking' ||
@@ -295,7 +283,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   return (
     <>
       <div style={containerStyle} className="schedule-tab-container">
-        <Card style={editModeCardStyle}>
+        <Card style={editModeCardStyle} className="schedule-tab-card">
+          {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
+          <GroupCompletionTop />
           {/* Action Buttons Header */}
           <ScheduleToolbar
             isEditing={isEditing}
@@ -316,6 +306,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             tournament={tournament}
             schedule={schedule}
             standings={currentStandings}
+            canEditSchedule={canSchedule} canCreateNotice={canNotice}
           />
 
           {/* US-VIEWER-FILTERS: Filter Bar */}
@@ -358,14 +349,16 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 editingSchedule={isEditing}
                 pendingChanges={isEditing ? pendingChanges : undefined}
                 onScoreChange={handleScoreChange}
+                changeAuthorOf={resultEntry.changeAuthor}
                 onRefereeChange={handleRefereeAssignment}
                 onFieldChange={handleFieldChange}
                 onMatchSwap={isEditing ? handleMatchSwap : undefined}
-                finishedMatches={finishedMatchIds}
-                correctionMatchId={correctionState?.matchId ?? null}
-                onStartCorrection={handleStartCorrection}
-                runningMatchIds={runningMatchIds}
+                view={view}
+                locale={locale}
+                elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
+                canEndRunning={canEndRunning}
+                forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />
             )
@@ -373,14 +366,17 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             <ScheduleEditor
               tournament={tournament}
               onTournamentUpdate={(updatedTournament) => onTournamentUpdate(updatedTournament, false)}
+              onLocalTournamentUpdate={onLocalTournamentUpdate}
+              onMatchesUpdate={onMatchesUpdate}
               externalEditMode={isEditing}
               onBeforeChange={saveToHistory}
               hideToolbar={true}
+              onRejectStarted={() => showWarning(t('schedule.startedLocked'))}
             />
           )}
 
           {/* Manuelle SR-Zuweisung (wenn SR aktiv) */}
-          {tournament.refereeConfig && tournament.refereeConfig.mode !== 'none' && (
+          {canSchedule && tournament.refereeConfig && tournament.refereeConfig.mode !== 'none' && (
             <RefereeAssignmentEditor
               matches={schedule.allMatches}
               refereeConfig={tournament.refereeConfig}
@@ -390,6 +386,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           )}
         </Card>
       </div>
+
+      <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} />
+      {takeover.dialog}
+      <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
 
       {/* Conflict Warning Dialog */}
       <ConfirmDialog
@@ -408,25 +408,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         }
       />
 
-      {/* Correction Dialog */}
-      {correctionState && (() => {
-        const match = tournament.matches.find(m => m.id === correctionState.matchId);
-        if (!match) { return null; }
-
-        return (
-          <CorrectionDialog
-            isOpen={showCorrectionDialog}
-            onClose={handleCancelCorrection}
-            onConfirm={handleConfirmCorrection}
-            matchLabel={t('schedule.matchLabel', { round: match.round })}
-            teamA={getTeamName(match.teamA, tournament.teams)}
-            teamB={getTeamName(match.teamB, tournament.teams)}
-            originalScoreA={correctionState.originalScoreA}
-            originalScoreB={correctionState.originalScoreB}
-          />
-        );
-      })()}
-
       {/* Running Match Navigation Dialog */}
       {showRunningMatchDialog && runningMatchInfo && (
         <ConfirmDialog
@@ -434,7 +415,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           onClose={handleCancelCockpitNavigation}
           onConfirm={handleConfirmCockpitNavigation}
           title={t('schedule.runningMatch.title')}
-          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.teamA, teamB: runningMatchInfo.teamB, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
+          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.homeName, teamB: runningMatchInfo.awayName, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
           confirmText={t('schedule.runningMatch.confirmSwitch')}
           cancelText={t('common.cancel')}
           variant="warning"
@@ -459,6 +440,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           .schedule-tab-container .card {
             border-radius: 8px;
             padding: 12px;
+          }
+
+          /* Die schwebende Leiste sitzt im Karten-Container (backdrop-filter macht ihn zum Bezug von position: fixed):
+             die Karte reserviert Leistenhöhe plus den Abstand der Leiste zum Kartenrand, damit die letzte Zeile darüber liegt */
+          .schedule-tab-card {
+            padding-bottom: calc(var(--schedule-action-bar-h, 0px) + ${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
           }
         }
       `}</style>

@@ -16,7 +16,96 @@
     "ended": "Match ended",
     "undone": "Last action undone",
     "goalScored": "Goal for {{teamName}}",
-    "goalRemoved": "Goal removed for {{teamName}}"
+    "goalRemoved": "Goal removed for {{teamName}}",
+    "foul": "Foul for {{teamName}}",
+    "halftime": "Halftime",
+    "yellowCard": "Yellow card for {{teamName}}",
+    "yellowRedCard": "Yellow-red card for {{teamName}}",
+    "redCard": "Red card for {{teamName}}",
+    "timePenalty": "{{minutes}} min time penalty for {{teamName}}"
+  },
+  "meldung": {
+    "angepfiffen": "Match kicked off",
+    "pausiert": "Match paused",
+    "wiederangepfiffen": "Restart – the next section is running",
+    "fortgesetzt": "Match resumed",
+    "abgepfiffen": "Match ended",
+    "seitenGetauscht": "Sides swapped",
+    "zeitGesetzt": "Time set to {{zeit}}",
+    "foulGrenze": "{{teamName}}: foul {{count}} this half",
+    "schliessen": "Dismiss notice",
+    "zurueckgesetzt": "Match {{nummer}} was reset by the organisers",
+    "zeitstrafeAbgelaufen": "Time penalty {{team}} no. {{nummer}} has ended",
+    "zeitstrafeAbgelaufenOhneNr": "Time penalty {{team}} has ended",
+    "tor": "Goal for {{team}}",
+    "foul": "Foul for {{team}}",
+    "karteGelb": "Yellow card for {{team}}",
+    "karteGelbRot": "Second yellow for {{team}}",
+    "karteRot": "Red card for {{team}}",
+    "nichtErfasst": "Not recorded – the match state has changed (e.g. full time)",
+    "strafeErfasst": "Time penalty for {{team}}"
+  },
+  "tafel": {
+    "zustand": {
+      "wartet": "Waiting for teams"
+    },
+    "uhr": {
+      "restzeit": "Time left",
+      "steht": "Clock stopped",
+      "pause": "Break",
+      "pauseVorbei": "Break over",
+      "endstand": "Final score",
+      "schuesse": "Shots",
+      "anstoss": "Kick-off",
+      "gespielt": "Played",
+      "strafstoss": "$t(sport:events.penaltyShootout)"
+    },
+    "unterzeile": {
+      "spielzeit": "Played {{zeit}}",
+      "bisWiederanpfiff": "until restart",
+      "bisVerlaengerung": "until extra time",
+      "wiederanpfiff": "Restart",
+      "anpfiffVerlaengerung": "Extra time kick-off",
+      "vonGeplant": "of {{zeit}}",
+      "amSchuss": "next to shoot: {{team}}"
+    },
+    "uhrHaelt": "Clock stops at every stoppage",
+    "entscheidungOffen": "Draw – the decision follows",
+    "abschnitt": {
+      "halbzeit": "Half {{nummer}}",
+      "vonN": "Period {{nummer}} of {{gesamt}}",
+      "verlaengerung": "Extra time",
+      "goldenGoal": "Golden goal"
+    },
+    "nachEnde": {
+      "verlaengerung": "after extra time",
+      "eingetragen": "Ended – entered in the schedule",
+      "eingetragenVon": "Ended – entered in the schedule by {{name}}",
+      "strafstoss": "after $t(sport:events.penaltyShootout)"
+    },
+    "quittung": "Match ended · {{links}}:{{rechts}} saved",
+    "keinWeiteresSpiel": "No more matches",
+    "uebernahmePruefen": "Match time comes from {{name}}'s device – please check",
+    "uebernahmePruefenOhneName": "Match time comes from the previous device – please check",
+    "vor": {
+      "spielFeld": "Match {{nummer}} · {{feld}}",
+      "mindestpause": "{{teamName}} would have only {{minuten}} instead of {{mindestMinuten}} minutes break",
+      "ueberfaellig": "overdue {{minuten}} min",
+      "gesperrt": "{{team}}: no. {{nummer}} is suspended for this tournament",
+      "reihenfolgeNurLeitung": "Only the organisers can change the order",
+      "keinSpielMehr": "No more matches on {{feld}}",
+      "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server.",
+      "wartetAuf": "Waiting for: {{grund}}"
+    },
+    "wachhaltenSymbol": "Screen may lock – tap to dismiss",
+    "tonAus": "Sound off",
+    "tonAusAntippen": "Full-time sound is off – tap to turn on",
+    "eintraegeWarten_one": "1 entry waiting",
+    "eintraegeWarten_other": "{{count}} entries waiting",
+    "helferAnfragen_one": "1 helper request",
+    "helferAnfragen_other": "{{count}} helper requests",
+    "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}",
+    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}"
   },
   "ariaLive": {
     "running": "Match running",
@@ -38,6 +127,7 @@
   },
   "controls": {
     "start": "▶ Start",
+    "wiederanpfiff": "▶ Restart",
     "pause": "⏸ Pause",
     "time": "🕒 Time",
     "switchSides": "🔄 Sides",
@@ -47,6 +137,7 @@
     "events": "📋 Events",
     "undoAria": "Undo",
     "pauseAria": "Pause",
+    "wiederanpfiffAria": "Restart play",
     "startAria": "Start",
     "editTimeAria": "Edit time",
     "switchSidesAria": "Switch sides",
@@ -74,13 +165,20 @@
   },
   "foul": {
     "label": "Fouls:",
-    "display": "FOULS"
+    "display": "FOULS",
+    "hint": "Fouls count for the whole game – cards and time penalties count as a foul",
+    "countsAsFoul": "counts as a foul"
+  },
+  "eventEditDialog": {
+    "title": "Edit {{label}}",
+    "numberInvalid": "Shirt number: a whole number from 1 to 99. The previous number stays."
   },
   "cardDialog": {
     "title": "Issue Card",
     "whichCard": "Which card?",
     "forWhichTeam": "For which team?",
     "yellow": "Yellow",
+    "yellowRed": "Yellow-Red",
     "red": "Red",
     "cancel": "Cancel",
     "withoutDetails": "Without Details",
@@ -88,22 +186,25 @@
     "back": "Back",
     "jerseyNumber": "Jersey number (optional)",
     "yellowCard": "Yellow Card",
-    "redCard": "Red Card"
+    "yellowRedCard": "Yellow-Red Card",
+    "redCard": "Red Card",
+    "close": "Close"
+  },
+  "cardButtons": {
+    "yellowAria": "Yellow card for {{teamName}}",
+    "yellowRedAria": "Yellow-red card for {{teamName}}",
+    "redAria": "Red card for {{teamName}}"
   },
   "timeAdjust": {
-    "title": "Adjust Match Time",
-    "currentTime": "Current time",
-    "minutes": "Min",
-    "seconds": "Sec",
-    "reset": "00:00",
-    "halftime": "Halftime",
-    "end": "End",
+    "title": "Adjust match time",
+    "inSection": "Time in section",
+    "increase": "Add 10 seconds",
+    "decrease": "Subtract 10 seconds",
+    "limitMax": "at most {{zeit}}",
+    "limitMinGoal": "because of the goal at {{zeit}}, at least {{zeit}}",
+    "limitMinEntry": "because of an entry at {{zeit}}, at least {{zeit}}",
     "cancel": "Cancel",
-    "apply": "Apply",
-    "increaseMinute": "Increase minute",
-    "decreaseMinute": "Decrease minute",
-    "increaseSeconds": "Increase 10 seconds",
-    "decreaseSeconds": "Decrease 10 seconds"
+    "apply": "Apply"
   },
   "timePenalty": {
     "title": "Time Penalty",
@@ -141,7 +242,8 @@
     "assist1Aria": "Assist 1 jersey number",
     "assist2Aria": "Assist 2 jersey number",
     "placeholder": "—",
-    "eventDescription": "Goal"
+    "eventDescription": "Goal",
+    "close": "Close"
   },
   "sidebar": {
     "activePenalties": "Active Time Penalties",
@@ -150,6 +252,7 @@
     "noEvents": "No events yet",
     "goalEvent": "GOAL {{teamName}}",
     "yellowEvent": "Yellow {{teamName}}",
+    "yellowRedEvent": "Yellow-red {{teamName}}",
     "redEvent": "Red {{teamName}}",
     "penaltyEvent": "{{duration}} Min {{teamName}}",
     "substitutionEvent": "Sub {{teamName}}",
@@ -159,7 +262,11 @@
     "matchEnded": "Match ended",
     "assistFormat": "Assist: {{assists}}",
     "editAria": "Edit {{description}}",
-    "edit": "Edit"
+    "edit": "Edit",
+    "retractedMark": "retracted",
+    "retractedAria": "{{description}} – retracted",
+    "resultEntryBy": "Result entered by {{name}}",
+    "resultEntry": "Result entered"
   },
   "matchCockpit": {
     "title": "Referee Cockpit",
@@ -186,6 +293,14 @@
     "countdown": "Countdown (5:00 → 0:00)",
     "elapsed": "Elapsed (0:00 → 5:00)",
     "timerDescription": "How should the timer be displayed?",
+    "timePenalty": "Time penalty",
+    "timePenaltyDuration": "Time penalty duration",
+    "timePenaltyDurationDesc": "Game rule – applies from the next kick-off",
+    "penaltyShootout": "$t(sport:events.penaltyShootout)",
+    "penaltyShooters": "Number of shooters",
+    "penaltyShootersDesc": "Shooters per team in the penalty shootout",
+    "penaltyShootersRangeError": "Valid: 1 to 5 shooters",
+    "rulesOnlyByLead": "Only the tournament lead can change rules",
     "netTimeWarning": "Net Time Warning",
     "netTimeWarningDesc": "Warning when added time is reached",
     "enableNetTimeWarning": "Enable net time warning",
@@ -204,6 +319,7 @@
     "horn3": "Horn 3 (Deep)",
     "customSound": "Custom Sound",
     "notUploaded": "(not uploaded)",
+    "test": "Test",
     "testSound": "Test sound",
     "volume": "Volume",
     "volumePercent": "{{percent}}%",
@@ -222,16 +338,22 @@
     "keepScreenOn": "Keep Screen On",
     "keepScreenOnDesc": "Prevents dimming during match",
     "enableKeepScreenOn": "Keep screen on",
-    "afterMatch": "After Match End",
-    "autoEnd": "Auto End",
-    "autoEndDesc": "Automatically end match at 0:00",
-    "enableAutoEnd": "Auto-end match",
     "delay": "Delay",
     "delayDesc": "Time until next match",
     "fiveSeconds": "5 seconds",
     "tenSeconds": "10 seconds",
     "fifteenSeconds": "15 seconds",
-    "twentySeconds": "20 seconds"
+    "twentySeconds": "20 seconds",
+    "clockMode": "Clock mode",
+    "clockModeDesc": "When the clock stops on interruptions – applies from the next kick-off",
+    "clockModeLastMinute": "running, stopped in the last minute",
+    "clockModeAlwaysRunning": "always running",
+    "clockModeAlwaysStopped": "always stopped",
+    "finalPhaseMinutes": "Length of the stopped final phase (minutes)",
+    "finalPhaseDesc": "The clock stands still for this time at the end of the last section – 1 to 5 minutes, applies from the next kick-off",
+    "finalPhaseRange": "Valid are 1 to {{max}} minutes – the value was not accepted",
+    "finalPhaseRangeOne": "Valid is 1 minute – the value was not accepted",
+    "finalPhaseTooShort": "A section is shorter than one minute, a stopped final phase is not possible"
   },
   "editScore": {
     "title": "Correct Score",
@@ -289,17 +411,17 @@
     "card": "Card",
     "timePenalty": "Time Penalty",
     "substitution": "Substitution",
-    "editResult": "Edit Result",
-    "adjustTime": "Adjust Time"
+    "editResult": "Edit Result"
   },
   "readOnly": {
     "banner": "View only — you don't have permission to control this match."
   },
+  "leer": {
+    "keinSpielGewaehlt": "No match selected"
+  },
   "extended": {
     "editScoreAria": "Correct score",
     "score": "Score",
-    "adjustTimeAria": "Adjust time",
-    "time": "Time",
     "yellowCardAria": "Yellow card",
     "yellow": "Yellow",
     "redCardAria": "Red card",
@@ -310,5 +432,182 @@
     "substitution": "Sub",
     "eventLogAria": "Show event log",
     "events": "Events"
+  },
+  "engine": {
+    "notYet": "This action will be available in a later step.",
+    "invalid": "This action isn't possible right now.",
+    "invalidKit": "The jersey or bib color is invalid. Please pick a color from the palette.",
+    "storeFull": "Device storage is full. Please free up space.",
+    "retract": {
+      "hint": {
+        "finishedHelper": "Corrections only by the tournament director",
+        "finishedLeitung": "Not directly reversible after the final whistle – correction to follow",
+        "decisionPending": "Make the decision first",
+        "staleBase": "Before the last correction – can no longer be reversed",
+        "regularGoal": "Goal from regular time – can no longer be reversed",
+        "shootout": "During the $t(sport:events.penaltyShootout), reverse the shots via the log",
+        "notAllowed": "Cannot be reversed right now",
+        "goalFinished": "Match is over – corrections via the tournament director"
+      },
+      "kind": {
+        "goal": "Goal",
+        "ownGoal": "Own goal",
+        "yellowCard": "Yellow card",
+        "yellowRedCard": "Second yellow card",
+        "redCard": "Red card",
+        "timePenalty": "$t(sport:events.timePenalty)",
+        "foul": "Foul",
+        "substitution": "Substitution",
+        "shootoutKick": "$t(sport:events.penalty)"
+      },
+      "target": "{{kind}}",
+      "targetNumbered": "{{kind}} no. {{number}}",
+      "undoLabel": "Reverse {{target}}",
+      "minusAria": "Reverse {{target}} for {{teamName}}",
+      "done": "{{target}} reversed"
+    },
+    "amend": {
+      "locked": "Corrections only by the tournament director",
+      "done": "{{target}} updated"
+    }
+  },
+  "zusammenfassung": {
+    "tore": "Goals ({{count}})",
+    "toreKeine": "Goals (0): none",
+    "karten": "Cards ({{count}})",
+    "kartenKeine": "Cards (0): none",
+    "zeitstrafen": "Time penalties ({{count}})",
+    "zeitstrafenKeine": "Time penalties (0): none",
+    "fouls": "Fouls: {{count}}",
+    "nr": "No. {{nummer}}, {{zeit}}",
+    "ohneNr": "no No., {{zeit}}",
+    "eigentor": "$t(sport:events.ownGoal) {{text}}",
+    "karte": {
+      "YELLOW": "$t(cardDialog.yellowCard)",
+      "YELLOW_RED": "$t(cardDialog.yellowRedCard)",
+      "RED": "$t(cardDialog.redCard)"
+    }
+  },
+  "spalte": {
+    "heim": "Home",
+    "gast": "Away",
+    "tor": "Goal",
+    "karte": "Card",
+    "fouls": "Foul {{zaehlt}}/{{grenze}}",
+    "foulsOhneGrenze": "Foul {{zaehlt}}",
+    "strafe": "No. {{nummer}} · {{rest}}",
+    "strafeOhneNr": "no number · {{rest}}",
+    "unterzahl": "Short-handed · {{rest}}",
+    "ergaenzen": "may bring on a player",
+    "gesperrt": "No. {{nummer}} suspended",
+    "aria": {
+      "tor": "Goal {{team}}",
+      "foul": "Foul {{team}}, {{zaehler}}",
+      "karte": "Card {{team}}",
+      "strafe": "Time penalty {{team}}"
+    },
+    "strafeKnopf": "Time penalty",
+    "strafeDauer": "{{minuten}} min"
+  },
+  "nummer": {
+    "titelTor": "Shirt number – goal {{team}}",
+    "eigentor": "Own goal ({{gegner}})",
+    "titelEigentor": "Number of the {{gegner}} player",
+    "ohneNummer": "no number",
+    "andere": "Other no.",
+    "uebernehmen": "Apply",
+    "eingabe": "Shirt number",
+    "ungueltig": "Shirt number: a whole number from 1 to 99.",
+    "titelKarte": "Shirt number – {{art}} {{team}}",
+    "titelZeitstrafe": "Shirt number – time penalty {{team}}"
+  },
+  "karte": {
+    "titel": "Card for {{team}}",
+    "gelb": "Yellow",
+    "gelbRot": "Second yellow",
+    "rot": "Red",
+    "schonGelb": "No. {{nummer}} already has a yellow",
+    "trotzdemGelb": "Yellow anyway"
+  },
+  "leiste": {
+    "aria": "Match controls",
+    "rueckgaengig": "Undo",
+    "rueckgaengigAria": "Undo: {{ziel}}",
+    "anpfiff": "Kick-off",
+    "pause": "Pause",
+    "weiter": "Resume",
+    "wiederanpfiff": "Restart",
+    "anpfiffVerlaengerung": "Start extra time",
+    "entscheidung": "Choose decider",
+    "weiterNaechstes": "Next match",
+    "korrigieren": "Correct",
+    "mehr": "More",
+    "ereignisse": "Events",
+    "beendet": "Match has ended – corrections via the organisers",
+    "leitet": "{{feld}} is controlled by {{name}}",
+    "leitetOhneName": "{{feld}} is controlled by another device",
+    "uebergegangen": "{{name}} now runs the match",
+    "uebergegangenOhneName": "Another device now runs the match",
+    "uebernehmen": "Take over the match",
+    "keinZugriff_one": "You no longer have access – 1 entry handed to the organisers",
+    "keinZugriff_other": "You no longer have access – {{count}} entries handed to the organisers",
+    "tasteLeertaste": "Space",
+    "tasteRueckgaengigStrg": "Ctrl+Z",
+    "tasteRueckgaengigCmd": "Cmd+Z"
+  },
+  "abpfiff": {
+    "label": "End match",
+    "halten": "hold down",
+    "beschreibung": "Press and hold for about one second",
+    "frage": "End match {{spiel}} with {{rest}} minutes still to play?",
+    "beenden": "End match",
+    "weiterspielen": "Keep playing"
+  },
+  "mehr": {
+    "titel": "More",
+    "uhrKorrigieren": "Correct clock",
+    "seitenTauschen": "Switch sides",
+    "einstellungen": "Settings",
+    "schliessen": "Close",
+    "nichtAngetreten": "Did not show up"
+  },
+  "entscheidung": {
+    "titel": "How is the match decided?",
+    "verlaengerung": "$t(sport:phases.overtime)",
+    "goldenGoal": "$t(sport:phases.goldenGoal)",
+    "strafstoss": "$t(sport:events.penaltyShootout)"
+  },
+  "rahmen": {
+    "zurueck": "Back",
+    "zurueckAria": "Back to the schedule",
+    "feldAria": "Choose field, now field {{feld}}",
+    "feld": "Field {{feld}}",
+    "feldHalter": "Field {{feld}}: {{name}}",
+    "feldDiesesGeraet": "Field {{feld}}: this device",
+    "online": "Connected",
+    "offline": "Offline",
+    "verbinden": "Connect",
+    "verbindet": "Connecting …",
+    "tastenkuerzel": "Shortcuts"
+  },
+  "naechstes": {
+    "label": "Next:",
+    "spiel": "Match {{nummer}}",
+    "anstoss": "Kick-off {{zeit}}",
+    "leibchen": "Bibs needed, the colours are too similar"
+  },
+  "steuer": {
+    "titel": "Take over the match?",
+    "gesteuert": "{{feld}} is currently controlled by {{name}}",
+    "gesteuertOhneName": "{{feld}} is currently controlled by another device",
+    "folge": "This device will then control {{feld}}. The other device can no longer make entries.",
+    "bestaetigen": "Take over the match",
+    "abbrechen": "Cancel",
+    "nurMitNetz": "Taking over needs a connection",
+    "inzwischen": "{{feld}} is now controlled by {{name}}",
+    "inzwischenOhneName": "{{feld}} is now controlled by another device",
+    "keinRecht": "You are not allowed to take over the match",
+    "fehler": "Taking over failed – please try again",
+    "anderesGeraet": "another device"
   }
 }

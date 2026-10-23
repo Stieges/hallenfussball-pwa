@@ -16,6 +16,14 @@ Die Zähl-Patterns sind keine Vermutung — sie wurden gegen die Baseline-Datei 
 (supabase/migrations/00000000000000_baseline_live_schema.sql) und treffen dort exakt die vom
 Controller unabhängig über pg_catalog gemessenen Werte (Stand 2026-09-21):
   13 Tabellen, 233 Spalten, 44 Policies, 28 Funktionen, 23 Trigger, 57 Indizes, 13 RLS-Tabellen.
+Nach A-08h (20261028_002, Befund C-MATCH-EVENTS-DIREKTWEG) gibt es in `public` genau 3 Policies weniger als
+vorher: die drei Client-Schreib-Policies auf match_events sind entfernt (Container mit allen Migrationen:
+51 -> 48). Die Baseline-Zaehlung (44) bleibt, weil die Baseline-Datei unveraendert ist.
+Nach UR (20261028_006, Befund C-EREIGNIS-OHNE-URHEBER) gibt es in `public` genau eine Funktion mehr
+(match_event_author_names); alle anderen Dimensionen bleiben gleich (scripts/event-author-names-check.sh, Kategorie S).
+Nach B-48b (20261113_101, Befund C-HEARTBEAT) gibt es in `public` genau eine Spalte mehr (monitor_heartbeats.wake_lock);
+die Funktion record_monitor_heartbeat wechselt nur die Signatur, alle anderen Dimensionen bleiben gleich
+(scripts/monitor-heartbeat-check.sh, Kategorie S).
 
 Wichtig zu Triggern: pg_dump exportiert NIE interne/System-Trigger (z.B. für Fremdschlüssel-
 Constraints) — jedes "CREATE TRIGGER"/"CREATE OR REPLACE TRIGGER" im Dump-Text ist bereits ein

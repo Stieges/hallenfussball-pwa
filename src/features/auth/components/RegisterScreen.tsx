@@ -24,7 +24,8 @@ import { useRegisterForm } from '../hooks/useRegisterForm';
 import { validateEmail } from '../utils/emailValidation';
 import { validateRegistrationCode } from '../utils/validateRegistrationCode';
 import { registerStyles as styles } from './RegisterScreen.styles';
-import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { dialogWidths } from '../../../design-tokens';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { AUTH_ERRORS } from '../constants';
 import { RegisterEmailConfirmationDialog, RegisterSuccessDialog } from './RegisterDialogs';
 import { OfflineBanner } from './OfflineBanner';
@@ -58,12 +59,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [migratedCount, setMigratedCount] = useState(0);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
-
-  // Focus trap for main registration form
-  const formTrap = useFocusTrap({
-    isActive: !showEmailConfirmation && !showSuccess,
-    onEscape: onBack,
-  });
 
   const validateForm = async (): Promise<boolean> => {
     const newErrors: typeof errors = {};
@@ -182,10 +177,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && onBack) {
-      onBack();
-    }
+  const handleBackdropClick = () => {
+    onBack?.();
   };
 
   // Email confirmation state
@@ -210,14 +203,16 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   }
 
   return (
-    <div style={styles.backdrop} onClick={handleBackdropClick}>
-      <div
-        ref={formTrap.containerRef}
-        style={styles.card}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="register-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onBack}
+      onBackdropClick={handleBackdropClick}
+      // Kein Dialog-Verlauf: die Zurück-Taste navigiert hier über die Seite, nicht über den Dialog.
+      closeOnBack={false}
+      maxWidth={dialogWidths.sm}
+      labelledBy="register-title"
+    >
+      <div style={styles.dialogBody}>
         {/* Header with back and close buttons */}
         <div style={styles.header}>
           {onBack && (
@@ -448,7 +443,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           {t('register.legal')}
         </p>
       </div>
-    </div>
+    </DialogSurface>
   );
 };
 

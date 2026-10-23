@@ -1,0 +1,207 @@
+/**
+ * `cacheColumns` -- TS-Zwilling von `match_engine.cache_columns` (supabase/migrations/
+ * 20260928_003_append_match_events.sql, R15), erweitert um die Abschnittsuhr in `live_state`
+ * (V2/RC12: `sections`, `sectionSeconds`, `breakSeconds`, `overtimeSeconds`, `sectionStartMs`,
+ * `breakStartedAt`). Monitor und Cockpit rechnen daraus dieselbe Anzeige. Werte exakt wie SQL:
+ * Ganzzahlen, `null` statt fehlender Schlüssel.
+ *
+ * C0b-Fixrunde 1 (Review M2, Ruling PC6): `skipped_at` (Epoch-ms = `at` des SKIP, der das Spiel
+ * abgesetzt hat) und `skipped_reason` (`payload.reason` oder `null`), nur im Status `skipped`.
+ * A-25n (20261110_005): `decided_by` 'forfeit' und `forfeit_absent` für die Nichtantritt-Wertung.
+ */
+import {
+  effectiveScoreFor,
+  type EngineEvent,
+  type ForfeitAbsent,
+  type MatchContext,
+  type MatchState,
+  type MatchStatus,
+  type Phase,
+  type TiebreakMode,
+} from '../types';
+import { enteredShootoutStatus } from '../shootoutStatus';
+
+export type CacheMatchStatus = Exclude<MatchStatus, 'section_break' | 'decision_pending' | 'shootout'>;
+/** A-25n: 'forfeit' = Nichtantritt-Wertung (Spalte matches.decided_by, CHECK seit 20261110_005). */
+export type CacheDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty' | 'forfeit';
+
+export interface CacheLiveState {
+  engine: true;
+  status: MatchStatus;
+  phase: Phase;
+  section: number;
+  running: boolean;
+  elapsedMs: number;
+  anchorAt: number | null;
+  elapsedSeconds: number;
+  durationSeconds: number;
+  playPhase: 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
+  tiebreakerMode: TiebreakMode | null;
+  overtimeDurationSeconds: number | null;
+  awaitingTiebreakerChoice: boolean;
+  sections: number | null;
+  sectionSeconds: number | null;
+  breakSeconds: number | null;
+  overtimeSeconds: number | null;
+  sectionStartMs: number;
+  breakStartedAt: number | null;
+}
+
+export interface CacheColumns {
+  score_a: number | null;
+  score_b: number | null;
+  overtime_score_a: number | null;
+  overtime_score_b: number | null;
+  penalty_score_a: number | null;
+  penalty_score_b: number | null;
+  match_status: CacheMatchStatus;
+  decided_by: CacheDecidedBy | null;
+  running: boolean;
+  started: boolean;
+  anchor_at: number | null;
+  timer_elapsed_seconds: number;
+  finished_at: number | null;
+  live_state: CacheLiveState | null;
+  skipped_at: number | null;
+  skipped_reason: string | null;
+  /** A-25n (@W2A-022): wer nicht angetreten ist -- nur im beendeten Spiel mit Wertung als letzter Überschreibung. */
+  forfeit_absent: ForfeitAbsent | null;
+}
+
+function cacheStatus(status: MatchStatus): CacheMatchStatus {
+  return status === 'section_break' || status === 'decision_pending' || status === 'shootout' ? 'paused' : status;
+}
+
+/**
+ * A-25a (@FU-094, @ZM-147): Strafstoßergebnis eines nur eingetragenen Ergebnisses -- aus der LETZTEN
+ * Überschreibung, nur im beendeten Spiel. Eine spätere Korrektur ohne Strafstoß verdrängt es.
+ * SW (@EK-062): und nur bei effektivem Gleichstand (`enteredShootoutStatus`, kind `counts`) -- nach dem
+ * Wiedereröffnen und einem Ende ohne Gleichstand zählt der alte Strafstoß nirgends mehr.
+ */
+function enteredShootout(state: MatchState, ctx: MatchContext): Record<string, number> | null {
+  const status = enteredShootoutStatus(state, ctx);
+  return status?.kind === 'counts' ? status.shootout : null;
+}
+
+function cacheDecidedBy(state: MatchState, ctx: MatchContext): CacheDecidedBy | null {
+  if (state.status !== 'finished' || state.decidedBy === null) {
+    return null;
+  }
+  if (state.decidedBy === 'shootout' || enteredShootout(state, ctx) !== null) {
+    return 'penalty';
+  }
+  return state.decidedBy === 'correction' || state.decidedBy === 'direct' ? 'regular' : state.decidedBy;
+}
+
+/** A-25n (@W2A-022/@W2A-024): Fehlender der Wertung, solange sie das beendete Spiel entscheidet (sonst null). */
+function forfeitAbsent(state: MatchState): ForfeitAbsent | null {
+  const lastOverride = state.overrides[state.overrides.length - 1];
+  return state.status === 'finished' && lastOverride?.kind === 'forfeit' ? (lastOverride.absent ?? null) : null;
+}
+
+function playPhaseOf(state: MatchState): CacheLiveState['playPhase'] {
+  if (state.phase === 'shootout') {
+    return 'penalty';
+  }
+  if (state.phase === 'overtime') {
+    return state.tiebreakMode === 'goldenGoal' ? 'goldenGoal' : 'overtime';
+  }
+  return 'regular';
+}
+
+function liveStateOf(state: MatchState): CacheLiveState {
+  const { rules, clock } = state;
+  return {
+    engine: true,
+    status: state.status,
+    phase: state.phase,
+    section: state.section,
+    running: clock.running,
+    elapsedMs: clock.elapsedMs,
+    anchorAt: clock.anchorAt,
+    elapsedSeconds: Math.floor(clock.elapsedMs / 1000),
+    durationSeconds: (rules?.sections ?? 1) * (rules?.sectionSeconds ?? 0),
+    playPhase: playPhaseOf(state),
+    tiebreakerMode: state.tiebreakMode,
+    overtimeDurationSeconds: rules?.overtimeSeconds ?? null,
+    awaitingTiebreakerChoice: state.status === 'decision_pending',
+    sections: rules?.sections ?? null,
+    sectionSeconds: rules?.sectionSeconds ?? null,
+    breakSeconds: rules?.breakSeconds ?? null,
+    overtimeSeconds: rules?.overtimeSeconds ?? null,
+    sectionStartMs: state.sectionStartMs,
+    breakStartedAt: state.breakStartedAt,
+  };
+}
+
+/** Der SKIP, der das Spiel abgesetzt hat: der mit groesstem `at`, bei Gleichstand der spaeter eingefuegte. */
+function activeSkip(state: MatchState): EngineEvent | null {
+  if (state.status !== 'skipped') {
+    return null;
+  }
+  const skips = Object.values(state.accepted).filter((event) => event.type === 'SKIP');
+  // RC16 / M-1: unabhaengig von der ID-Schreibweise entscheidet `at`, bei Gleichstand
+  // die Einfuegereihenfolge (Iterationsreihenfolge von `state.accepted`).
+  let latestSkip: EngineEvent | null = null;
+  for (const skip of skips) {
+    if (latestSkip === null || skip.at >= latestSkip.at) {
+      latestSkip = skip;
+    }
+  }
+  return latestSkip;
+}
+
+export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns {
+  const { teamAId, teamBId } = ctx;
+  const scoreA = state.scores[teamAId];
+  const scoreB = state.scores[teamBId];
+  const unplayed = state.status === 'scheduled' || state.status === 'skipped';
+  const hasOverride = state.overrides.length > 0;
+  const hadOvertime =
+    state.phase === 'overtime' ||
+    scoreA.overtime + scoreB.overtime > 0 ||
+    state.baseDecidedBy === 'overtime' ||
+    state.baseDecidedBy === 'goldenGoal';
+  const inShootout = state.phase === 'shootout' && !unplayed;
+  const entered = enteredShootout(state, ctx);
+  const penaltyScore = (teamId: string, breakdown: MatchState['scores'][string]): number | null => {
+    if (inShootout) {
+      return breakdown.shootout;
+    }
+    return entered ? entered[teamId] : null;
+  };
+  const skip = activeSkip(state);
+
+  const regularScore = (teamId: string, breakdown: MatchState['scores'][string]): number | null => {
+    if (unplayed) {
+      return null;
+    }
+    return hasOverride ? effectiveScoreFor(state, teamId) : breakdown.regular;
+  };
+  const overtimeScore = (breakdown: MatchState['scores'][string]): number | null => {
+    if (unplayed || !hadOvertime) {
+      return null;
+    }
+    return hasOverride ? 0 : breakdown.overtime;
+  };
+
+  return {
+    score_a: regularScore(teamAId, scoreA),
+    score_b: regularScore(teamBId, scoreB),
+    overtime_score_a: overtimeScore(scoreA),
+    overtime_score_b: overtimeScore(scoreB),
+    penalty_score_a: penaltyScore(teamAId, scoreA),
+    penalty_score_b: penaltyScore(teamBId, scoreB),
+    match_status: cacheStatus(state.status),
+    decided_by: cacheDecidedBy(state, ctx),
+    running: state.clock.running,
+    started: !unplayed,
+    anchor_at: state.clock.running ? state.clock.anchorAt : null,
+    timer_elapsed_seconds: Math.floor(state.clock.elapsedMs / 1000),
+    finished_at: state.finishedAt,
+    live_state: unplayed || state.status === 'finished' ? null : liveStateOf(state),
+    skipped_at: skip ? skip.at : null,
+    skipped_reason: skip && typeof skip.payload.reason === 'string' ? skip.payload.reason : null,
+    forfeit_absent: forfeitAbsent(state),
+  };
+}

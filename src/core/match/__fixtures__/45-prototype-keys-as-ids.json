@@ -1,0 +1,149 @@
+{
+  "title": "Prototyp-Schlüssel als Ziel/ID (M1): targetId constructor/__proto__ -> UNKNOWN_TARGET, ID toString wird normal angenommen und zurückgenommen",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-45",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "45454545-4545-4545-8545-454545454501",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "45454545-4545-4545-8545-454545454502",
+      "type": "RETRACT",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 1000,
+      "targetId": "constructor",
+      "payload": {}
+    },
+    {
+      "id": "45454545-4545-4545-8545-454545454503",
+      "type": "RETRACT",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 2000,
+      "targetId": "__proto__",
+      "payload": {}
+    },
+    {
+      "id": "toString",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4000,
+      "section": 1,
+      "clockMs": 3000,
+      "teamId": "teamB",
+      "payload": {}
+    },
+    {
+      "id": "45454545-4545-4545-8545-454545454505",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 5000,
+      "section": 1,
+      "clockMs": 4000,
+      "teamId": "teamA",
+      "payload": {}
+    },
+    {
+      "id": "45454545-4545-4545-8545-454545454506",
+      "type": "RETRACT",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 6000,
+      "section": 1,
+      "clockMs": 5000,
+      "targetId": "toString",
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "45454545-4545-4545-8545-454545454501",
+        "status": "accepted"
+      },
+      {
+        "id": "45454545-4545-4545-8545-454545454502",
+        "status": "rejected",
+        "code": "UNKNOWN_TARGET"
+      },
+      {
+        "id": "45454545-4545-4545-8545-454545454503",
+        "status": "rejected",
+        "code": "UNKNOWN_TARGET"
+      },
+      {
+        "id": "toString",
+        "status": "accepted"
+      },
+      {
+        "id": "45454545-4545-4545-8545-454545454505",
+        "status": "accepted"
+      },
+      {
+        "id": "45454545-4545-4545-8545-454545454506",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "45454545-4545-4545-8545-454545454506",
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

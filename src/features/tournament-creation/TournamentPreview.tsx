@@ -8,14 +8,19 @@
  */
 
 import { CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament, FinalsConfig } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
+import { IncompleteScheduleError } from '../../core/generators/incompleteScheduleError';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';
 import { cssVars } from '../../design-tokens'
-import { exportScheduleToPDF } from '../../lib/pdfExporter';
+import { PreviewPdfButton } from '../../components/PreviewPdfButton';
 import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
+import { activeTeams } from './utils/replanTeams';
+import { visibilityAfterPublish } from '../../core/services/TournamentCreationService';
+import { useMatchEntryGuard } from '../../hooks/useMatchEntryGuard';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -23,6 +28,7 @@ interface TournamentPreviewProps {
   onEdit: () => void;
   onPublish: () => void;
   onTournamentChange?: (tournament: Tournament) => void;
+  isPublishing?: boolean;
 }
 
 export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
@@ -31,10 +37,13 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   onEdit,
   onPublish,
   onTournamentChange,
+  isPublishing = false,
 }) => {
+  const { t } = useTranslation('wizard');
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const entryGuard = useMatchEntryGuard();
 
   // F-211: shared regeneration helper — keeps the previous schedule visible
   // on failure and surfaces the error in the UI without crashing the wizard.
@@ -45,23 +54,24 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
       setScheduleError(null);
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = err instanceof IncompleteScheduleError
+        ? t('schedule.incomplete', { count: err.missingMatches })
+        : err instanceof Error ? err.message : String(err);
       console.error('[TournamentPreview] Schedule generation failed:', err);
       setScheduleError(message);
       return false;
     }
   };
 
+  // A-08f3e4 (@FU-090): jede Änderung erzeugt den Spielplan neu -- hat ein Spiel Einträge, nicht ausführen (Hinweis).
+  const applyChange = (updatedTournament: Tournament): void => {
+    const apply = () => { setCurrentTournament(updatedTournament); regenerateSchedule(updatedTournament); onTournamentChange?.(updatedTournament); };
+    if (updatedTournament.matches.length === 0) { apply(); return; }
+    void entryGuard.blocks(updatedTournament).then((blocked) => { if (!blocked) { apply(); } });
+  };
+
   const handleFinalsConfigChange = (config: FinalsConfig) => {
-    const updatedTournament = { ...currentTournament, finalsConfig: config };
-    setCurrentTournament(updatedTournament);
-
-    regenerateSchedule(updatedTournament);
-
-    // Notify parent if callback provided
-    if (onTournamentChange) {
-      onTournamentChange(updatedTournament);
-    }
+    applyChange({ ...currentTournament, finalsConfig: config });
   };
 
   const handleRefereeAssignment = (matchId: string, refereeNumber: number | null) => {
@@ -85,15 +95,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
       ...updatedTournament.refereeConfig,
       manualAssignments,
     };
-
-    setCurrentTournament(updatedTournament);
-
-    regenerateSchedule(updatedTournament);
-
-    // Notify parent if callback provided
-    if (onTournamentChange) {
-      onTournamentChange(updatedTournament);
-    }
+    applyChange(updatedTournament);
   };
 
   const handleResetRefereeAssignments = () => {
@@ -104,43 +106,12 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         ...updatedTournament.refereeConfig,
         manualAssignments: {},
       };
-
-      setCurrentTournament(updatedTournament);
-
-      regenerateSchedule(updatedTournament);
-
-      // Notify parent if callback provided
-      if (onTournamentChange) {
-        onTournamentChange(updatedTournament);
-      }
+      applyChange(updatedTournament);
     }
   };
 
   const handleFieldChange = (matchId: string, fieldNumber: number) => {
-    const updatedTournament = { ...currentTournament };
-
-    // Update field assignments
-    updatedTournament.fieldAssignments ??= {};
-
-    updatedTournament.fieldAssignments[matchId] = fieldNumber;
-
-    setCurrentTournament(updatedTournament);
-
-    regenerateSchedule(updatedTournament);
-
-    // Notify parent if callback provided
-    if (onTournamentChange) {
-      onTournamentChange(updatedTournament);
-    }
-  };
-
-  const handleExportPDF = async () => {
-    await exportScheduleToPDF(schedule, schedule.initialStandings, {
-      locale: 'de',
-      includeStandings: true,
-      // organizerName wird automatisch aus schedule.tournament.organizer gezogen
-      hallName: getLocationName(currentTournament),
-    });
+    applyChange({ ...currentTournament, fieldAssignments: { ...(currentTournament.fieldAssignments ?? {}), [matchId]: fieldNumber } });
   };
 
   const containerStyle: CSSProperties = {
@@ -250,7 +221,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           </div>
           <div style={infoItemStyle}>
             <span style={labelStyle}>Teams</span>
-            <span style={valueStyle}>{currentTournament.teams.length}</span>
+            <span style={valueStyle}>{activeTeams(currentTournament.teams).length}</span>
           </div>
           <div style={infoItemStyle}>
             <span style={labelStyle}>Spiele</span>
@@ -426,12 +397,27 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <Button variant="secondary" onClick={onEdit} data-testid="preview-edit">
             Bearbeiten
           </Button>
-          <Button variant="secondary" onClick={() => void handleExportPDF()} data-testid="preview-export-pdf">
-            PDF Exportieren
-          </Button>
+          <PreviewPdfButton tournament={currentTournament} schedule={schedule} />
+          <p
+            data-testid="publish-explanation"
+            style={{
+              flexBasis: '100%',
+              margin: 0,
+              fontSize: cssVars.fontSizes.sm,
+              color: cssVars.colors.textSecondary,
+              textAlign: 'center',
+            }}
+          >
+            {t(
+              visibilityAfterPublish(currentTournament) === 'shareable'
+                ? 'publish.explanationPublic'
+                : 'publish.explanationPrivate'
+            )}
+          </p>
           <Button
             variant="primary"
             onClick={onPublish}
+            disabled={isPublishing}
             style={{
               fontSize: cssVars.fontSizes.lg,
               padding: '14px 32px',
@@ -439,7 +425,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             }}
             data-testid="preview-publish"
           >
-            Turnier freigeben
+            {isPublishing ? (
+              <span data-testid="preview-publish-loading">{t('publish.loading')}</span>
+            ) : (
+              t('publish.button')
+            )}
           </Button>
         </div>
       </Card>
@@ -462,9 +452,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             lineHeight: '1.6',
           }}
         >
-          <strong>Hinweis:</strong> Dies ist eine Vorschau deines Turniers. Solange das Turnier
-          nicht freigegeben ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan
-          jetzt als PDF exportieren oder zurück zur Bearbeitung gehen.
+          <strong>{t('preview.hintLabel')}</strong> {t('preview.hintBody')}
         </p>
       </div>
 

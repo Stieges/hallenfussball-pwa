@@ -125,5 +125,14 @@
     "Ü40": "Over 40",
     "Ü45": "Over 45",
     "Ü50": "Over 50"
+  },
+  "outbox": {
+    "rejectedEntry": "not accepted",
+    "awaitingReview": "awaiting review"
+  },
+  "helpers": {
+    "access": "helper access",
+    "checkNumber": "check number",
+    "approve": "approve"
   }
 }

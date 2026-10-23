@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match, CorrectionEntry } from '../../../../types/tournament';
+import { slotLabel } from '../../../../core/models/slotLabel';
 
 // =============================================================================
 // TYPES
@@ -58,7 +59,7 @@ const styles = {
   select: {
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -181,7 +182,7 @@ const styles = {
     width: '100%',
     padding: cssVars.spacing.sm,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.primary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -194,15 +195,10 @@ const styles = {
 // HELPERS
 // =============================================================================
 
-function getTeamName(tournament: Tournament, teamId: string, unknownLabel: string): string {
-  const team = tournament.teams.find(t => t.id === teamId);
-  return team?.name ?? unknownLabel;
-}
-
-function getMatchLabel(tournament: Tournament, match: Match, unknownLabel: string): string {
-  const teamA = getTeamName(tournament, match.teamA, unknownLabel);
-  const teamB = getTeamName(tournament, match.teamB, unknownLabel);
-  return `${teamA} vs ${teamB}`;
+/** „Heim vs Gast“ über die Slots (@TM-015): Team über die Team-ID, offene Seite über ihre Herkunft. */
+function getMatchLabel(tournament: Tournament, match: Match): string {
+  const ctx = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups };
+  return `${slotLabel(match.slotA, ctx)} vs ${slotLabel(match.slotB, ctx)}`;
 }
 
 function formatDateTime(isoString: string): string {
@@ -263,7 +259,6 @@ export function ActivityLogCategory({
   // Build activity entries from tournament data
   const allEntries = useMemo(() => {
     const entries: ActivityEntry[] = [];
-    const unknownLabel = t('activityLog.unknown');
 
     // Add tournament creation
     if (tournament.createdAt) {
@@ -277,7 +272,7 @@ export function ActivityLogCategory({
 
     // Process matches for activity entries
     tournament.matches.forEach((match) => {
-      const matchLabel = getMatchLabel(tournament, match, unknownLabel);
+      const matchLabel = getMatchLabel(tournament, match);
 
       // Add match finished entries
       if (match.finishedAt) {

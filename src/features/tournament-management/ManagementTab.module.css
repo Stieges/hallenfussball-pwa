@@ -11,86 +11,18 @@
   min-height: calc(100vh - 200px);
 }
 
-.fieldSelector {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: var(--spacing-md);
+.containerVollbild {
+  /* Live-Bereich im Rahmen (Plan LT-2, A1): kein Außenabstand, nimmt die Resthöhe der Seite (K3: nie ein starres 100dvh) */
+  padding: 0;
+  min-height: 0;
+  flex: 1;
   display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
-  flex-wrap: wrap;
+  flex-direction: column;
 }
 
-.fieldButton {
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  cursor: pointer;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  transition: all 0.2s ease;
-  min-height: 44px;
-}
-
-.fieldButton:hover {
-  background: var(--color-surface-hover, rgba(255, 255, 255, 0.1));
-}
-
-.fieldButtonActive {
-  background: var(--color-primary);
-  color: var(--color-background);
-  border-color: var(--color-primary);
-}
-
-.fieldButtonActive:hover {
-  background: var(--color-primary-hover, #00b862);
-}
-
-.matchSelector {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.matchSelectorLabel {
-  display: block;
-  margin-bottom: var(--spacing-sm);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.matchSelect {
-  width: 100%;
-  height: var(--input-height-md);
-  padding: 0 var(--spacing-xl) 0 var(--spacing-md);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-md);
-  cursor: pointer;
-  /* Fix: Prevent all options from rendering at once */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: var(--input-height-md);
-  /* Fix: Customize appearance to remove default browser arrow and prevent overlap */
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right var(--spacing-md) center;
-  background-size: 16px;
-}
-
-.matchSelect:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(0, 230, 118, 0.2);
+.feldwahlLeer {
+  display: flex;
+  padding: var(--spacing-md) var(--spacing-md) 0;
 }
 
 .noMatches {
@@ -100,40 +32,36 @@
   font-size: var(--font-size-lg);
 }
 
+.retryButton {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--color-primary);
+  color: var(--color-background);
+  border: none;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  min-height: 44px;
+}
+
+.retryButton:hover {
+  background: var(--color-primary-hover);
+}
+
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .container {
     padding: var(--spacing-md);
   }
 
-  .fieldSelector {
-    padding: var(--spacing-sm);
-  }
-
-  .fieldButton {
-    padding: var(--spacing-md);
-    font-size: var(--font-size-lg);
-    min-width: 80px;
-    flex: 1 1 calc(50% - 4px);
-  }
-
-  .matchSelector {
-    padding: var(--spacing-sm);
-  }
-
-  .matchSelect {
-    font-size: var(--font-size-lg);
+  /* Im Rahmen kein Außenabstand, auch nicht am Handy: die Regel oben käme sonst wegen der Reihenfolge davor (Ansichtsprüfung P1) */
+  .containerVollbild {
+    padding: 0;
   }
 
   .noMatches {
     padding: var(--spacing-lg);
     font-size: var(--font-size-md);
-  }
-}
-
-/* Tablet Responsive Styles */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .fieldButton {
-    padding: var(--spacing-sm) var(--spacing-md);
   }
 }

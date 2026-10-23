@@ -4,20 +4,36 @@
  * Uses CSS media queries for responsive layout (no isMobile prop needed)
  */
 
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens'
-import { Standing, Tournament, TeamLogo, TeamColors } from '../../types/tournament';
+import { cssVars, breakpointValues } from '../../design-tokens'
+import { Standing, TeamLogo, TeamColors } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
+import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
 import { TeamAvatar } from '../ui/TeamAvatar';
 import styles from './GroupTables.module.css';
 
 interface GroupTablesProps {
   standings: Standing[];
   teams: Array<{ id: string; name: string; group?: string; logo?: TeamLogo; colors?: TeamColors }>;
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
   /** Set of team IDs currently involved in a running match */
   activeMatchTeamIds?: Set<string>;
+  /**
+   * Paket TB-B (TB-6b): `app` zeigt Gleichstände mit Marke und Hinweis (Turnierleitung, Helfer), `public` nur Reihenfolge und
+   * gemeinsame Platzziffer (Zuschauer, Monitor; @W2A-059). Vorgabe `public`.
+   */
+  tieDisplay?: 'app' | 'public';
+  /** Nur bei `app`: Hinweise einer Gruppe (`''` = Jeder gegen jeden) und Marke je Team. */
+  renderTieHint?: (groupId: string) => ReactNode;
+  renderTieMarker?: (teamId: string, groupId: string) => ReactNode;
+  /**
+   * GA4 A-13c: Zustandsmarken neben dem Gruppennamen (`marks`) und Zähler, gesperrte Taste und Abschluss-Hinweis darunter (`below`);
+   * nur bei `app`. `null` = nichts für diese Gruppe.
+   */
+  renderGroupState?: (groupId: string) => { marks: ReactNode; below: ReactNode } | null;
 }
 
 export const GroupTables: React.FC<GroupTablesProps> = ({
@@ -25,9 +41,14 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   teams,
   tournament,
   activeMatchTeamIds,
+  tieDisplay = 'public',
+  renderTieHint,
+  renderTieMarker,
+  renderGroupState,
 }) => {
   const { t } = useTranslation('tournament');
   const groupStandings = getGroupStandings(standings, teams);
+  const tieApp = tieDisplay === 'app';
 
   if (groupStandings.length === 0) {
     return (
@@ -58,9 +79,12 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
           <StandingsTable
             key={group}
             standings={groupTeams}
-            title={getGroupDisplayName(group, tournament)}
+            title={group === OVERALL_GROUP ? t('groupTables.overall') : getGroupDisplayName(group, tournament)}
             tournament={tournament}
             activeMatchTeamIds={activeMatchTeamIds}
+            tieHint={tieApp ? renderTieHint?.(group) : undefined}
+            tieMarker={tieApp && renderTieMarker ? (teamId) => renderTieMarker(teamId, group) : undefined}
+            groupState={tieApp ? renderGroupState?.(group) ?? undefined : undefined}
           />
         ))}
       </div>
@@ -73,7 +97,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
         }
         @media (max-width: 768px) {
           .group-tables-container {
-            padding: 12px !important;
+            padding: 0 !important;
           }
           .group-tables-empty {
             padding: 24px 12px !important;
@@ -88,11 +112,16 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
 interface StandingsTableProps {
   standings: Standing[];
   title: string;
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
   activeMatchTeamIds?: Set<string>;
+  /** TB-6b: Hinweise der Gruppe über der Tabelle und Marke unter dem Teamnamen (nur Ansicht `app`). */
+  tieHint?: ReactNode;
+  tieMarker?: (teamId: string) => ReactNode;
+  /** A-13c: Zustandsmarken neben dem Titel und Angaben darunter. */
+  groupState?: { marks: ReactNode; below: ReactNode };
 }
 
-const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds }) => {
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds, tieHint, tieMarker, groupState }) => {
   const { t } = useTranslation('tournament');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // ... (rest of logic)
@@ -144,6 +173,12 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
     color: cssVars.colors.textPrimary,
   };
 
+  // Mobil (@ZM-088): Platz/Punkte/Differenz/Pfeil nehmen nur so viel Breite wie ihr Inhalt (statt fester Pixelbreiten),
+  // der Rest gehört der Teamspalte – Teamnamen brechen nur an Leerzeichen, nie mitten im Wort.
+  const mobileThStyle: CSSProperties = { ...thStyle, paddingLeft: cssVars.spacing.xs, paddingRight: cssVars.spacing.xs };
+  const mobileTdStyle: CSSProperties = { ...tdStyle, paddingLeft: cssVars.spacing.xs, paddingRight: cssVars.spacing.xs };
+  const mobileFixedColStyle: CSSProperties = { ...mobileThStyle, textAlign: 'center', whiteSpace: 'nowrap' };
+
   // Get enabled placement criteria (with fallback if tournament is not provided)
   // Note: placementLogic can be undefined at runtime for older tournaments despite type definition
    
@@ -156,7 +191,16 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
 
   return (
     <div style={containerStyle} className="standings-table">
-      <h3 style={titleStyle}>{title}</h3>
+      {groupState === undefined ? <h3 style={titleStyle}>{title}</h3> : (
+        <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, marginBottom: cssVars.spacing.sm }}>
+            <h3 style={{ ...titleStyle, marginBottom: 0 }}>{title}</h3>
+            {groupState.marks}
+          </div>
+          <div style={{ marginBottom: cssVars.spacing.md }}>{groupState.below}</div>
+        </>
+      )}
+      {tieHint}
 
       {/* Desktop Table View - hidden on mobile via CSS */}
       <div className="desktop-view" style={{ overflowX: 'auto' }}>
@@ -176,7 +220,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
           </thead>
           <tbody>
             {standings.map((standing, index) => {
-              const rank = index + 1;
+              const rank = standing.place ?? index + 1; // Paket TB: gemeinsame Ziffer mit Sprung (2, 2, 4), @W2A-047
               const goalDiff = standing.goalsFor - standing.goalsAgainst;
 
               return (
@@ -212,6 +256,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         />
                       )}
                     </div>
+                    {tieMarker?.(standing.team.id)}
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     {standing.played}
@@ -275,20 +320,21 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
       </div>
 
       {/* Mobile Condensed View - hidden on desktop via CSS */}
-      <div className="mobile-view">
+      {/* overflowX: nur bei sehr langen Wörtern scrollt die Tabelle im Kasten; tabIndex/role/aria-label machen den Bereich per Tastatur erreichbar (axe scrollable-region-focusable) */}
+      <div className="mobile-view" style={{ overflowX: 'auto' }} tabIndex={0} role="region" aria-label={title}>
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={{ ...thStyle, width: '35px', textAlign: 'center' }}>{t('groupTables.columns.rank')}</th>
-              <th style={thStyle}>{t('groupTables.columns.team')}</th>
-              <th style={{ ...thStyle, width: '45px', textAlign: 'center' }}>{t('groupTables.columns.points')}</th>
-              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('groupTables.columns.diff')}</th>
-              <th style={{ ...thStyle, width: '30px', textAlign: 'center' }}></th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.rank')}</th>
+              <th style={mobileThStyle}>{t('groupTables.columns.team')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.points')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.diff')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}></th>
             </tr>
           </thead>
           <tbody>
             {standings.map((standing, index) => {
-              const rank = index + 1;
+              const rank = standing.place ?? index + 1; // Paket TB: gemeinsame Ziffer mit Sprung (2, 2, 4), @W2A-047
               const goalDiff = standing.goalsFor - standing.goalsAgainst;
               const teamKey = standing.team.id;
               const isExpanded = expandedRows.has(teamKey);
@@ -300,20 +346,22 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     onClick={() => toggleRowExpansion(teamKey)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: cssVars.fontWeights.bold }}>
+                    <td style={{ ...mobileTdStyle, textAlign: 'center', fontWeight: cssVars.fontWeights.bold }}>
                       {rank}
                     </td>
-                    <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
+                    <td style={{ ...mobileTdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: cssVars.spacing.xs,
-                        // MOBILE-UX: No truncation - team names must be fully visible
-                        wordBreak: 'break-word',
-                        overflowWrap: 'break-word',
+                        // MOBILE-UX / @ZM-088: keine Kürzung; Umbruch nur an Leerzeichen und Bindestrichen, nie mitten im Wort (hyphens:auto ist ausserhalb Fliesstext verboten)
+                        wordBreak: 'normal',
+                        overflowWrap: 'normal',
+                        hyphens: 'manual',
                       }}>
                         <TeamAvatar team={standing.team} size="xs" />
-                        {standing.team.name}
+                        {/* @ZM-169: nur hier Vereinskürzel nach der Monitor-Liste; Desktop-Tabelle und Spielkarten zeigen den vollen Namen */}
+                        {monitorTeamName(standing.team.name)}
                         {/* LIVE INDICATOR */}
                         {activeMatchTeamIds?.has(standing.team.id) && (
                           <span
@@ -332,7 +380,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         )}
                       </div>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <td style={{ ...mobileTdStyle, textAlign: 'center' }}>
                       <span style={{
                         fontWeight: cssVars.fontWeights.bold,
                         fontSize: cssVars.fontSizes.md,
@@ -344,7 +392,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       </span>
                     </td>
                     <td style={{
-                      ...tdStyle,
+                      ...mobileTdStyle,
                       textAlign: 'center',
                       color: goalDiff > 0 ? cssVars.colors.primary : goalDiff < 0 ? cssVars.colors.error : cssVars.colors.textSecondary,
                     }}>
@@ -358,12 +406,18 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         {goalDiff > 0 ? '+' : ''}{goalDiff}
                       </span>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
+                    <td style={{ ...mobileTdStyle, textAlign: 'center', paddingLeft: 0, paddingRight: 0 }}>
                       <span style={{ fontSize: cssVars.fontSizes.lg, color: cssVars.colors.primary }}>
                         {isExpanded ? '▼' : '▶'}
                       </span>
                     </td>
                   </tr>
+                  {/* TB-6b: auf dem Handy eigene Zeile über die volle Breite (nicht in der schmalen Teamspalte) */}
+                  {tieMarker !== undefined && tieMarker(standing.team.id) !== null && (
+                    <tr key={`${teamKey}-marke`} data-testid="tie-marker-row">
+                      <td colSpan={5} style={{ ...mobileTdStyle, textAlign: 'left' }}>{tieMarker(standing.team.id)}</td>
+                    </tr>
+                  )}
                   {isExpanded && (
                     <tr key={`${teamKey}-details`}>
                       <td colSpan={5} style={{
@@ -455,7 +509,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
         /* Mobile: Show cards, hide table */
         @media (max-width: 768px) {
           .standings-table {
-            padding: 12px !important;
+            padding: var(--spacing-xs) !important;
           }
           .standings-table h3 {
             font-size: 14px !important;
@@ -472,10 +526,18 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
           }
           .standings-table th,
           .standings-table td {
-            padding: 8px 6px;
+            padding: var(--spacing-sm) var(--spacing-xs);
           }
           .standings-table th {
             font-size: 12px;
+          }
+        }
+
+        /* Sehr schmale Handys (320-360): Teamspalte bekommt jeden Bildpunkt (@ZM-088, @OB-060) */
+        @media (max-width: ${breakpointValues.narrowPhone}px) {
+          .standings-table {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
           }
         }
 
@@ -492,18 +554,13 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   );
 };
 
+/** Eine Tabelle je Gruppe; ein Turnier ohne Gruppen ist eine Gruppe mit allen Teams (`standingsGroups`). */
 function getGroupStandings(
   allStandings: Standing[],
   teams: Array<{ id: string; name: string; group?: string }>
 ): Array<{ group: string; groupStandings: Standing[] }> {
-  const groups = new Set(teams.map(t => t.group).filter(Boolean)) as Set<string>;
-
-  return Array.from(groups)
-    .sort()
-    .map(group => ({
-      group,
-      groupStandings: allStandings.filter(s =>
-        teams.find(t => t.id === s.team.id)?.group === group
-      ),
-    }));
+  return standingsGroups(teams).map(({ group, teams: groupTeams }) => ({
+    group,
+    groupStandings: allStandings.filter(s => groupTeams.some(team => team.id === s.team.id)),
+  }));
 }

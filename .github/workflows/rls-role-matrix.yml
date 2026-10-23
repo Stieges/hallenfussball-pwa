@@ -1,0 +1,73 @@
+name: RLS Role Matrix
+
+# Rechte-Harness (scripts/rls-role-matrix.sh, entstanden im Paket "Rechte",
+# .superpowers/sdd/2026-09-22-rechte-und-cockpit-2/) in der CI (Task T6,
+# .superpowers/sdd/2026-09-24-testumgebung/task-T6-brief.md). Prüft rolePermissions.json gegen
+# eine ECHTE Postgres-Instanz mit aktivem RLS -- das Skript startet seinen eigenen Wegwerf-
+# Container (supabase/postgres:17.6.1.063), braucht dafür keinen laufenden lokalen Supabase-
+# Stack. Bindet seit A-11 die Zeilen der Spuren aus scripts/rls-matrix.d/*.sh ein.
+#
+# Pflicht-Check seit A-11 (brief-A-11.md R-A11-4): läuft bei JEDEM PR, ohne paths-Filter -- ein Pflicht-Check
+# mit Pfadfilter bliebe bei fremden PRs für immer "ausstehend" (Laufzeit 2-3,5 min). Den Branch-Schutz setzt
+# Daniel nach dem Merge; Kontextname ist der Jobname unten (nicht ändern):
+# "Rechte-Matrix gegen echtes RLS (Postgres-Wegwerfcontainer)". Ein Wächter
+# (src/__tests__/architecture/rightsOnlyViaUseCan.test.ts) hält paths-Filter und Jobnamen fest.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rls-role-matrix:
+    name: Rechte-Matrix gegen echtes RLS (Postgres-Wegwerfcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Rechte-Matrix prüfen
+        # Exit 1 bei Abweichung (Default-Modus, Skriptende "L4: CI-Gate") -- macht den Job ohne
+        # weiteres Zutun rot. Container ist eine Wegwerf-Instanz, wird per trap am Skriptende
+        # entfernt; berührt nichts außerhalb von sich selbst.
+        run: bash scripts/rls-role-matrix.sh
+
+      - name: Ereignis-Log-Schema prüfen (B2)
+        # Zweiter, unabhängiger Wegwerf-Container (eigener Skriptlauf, eigener trap) -- prüft
+        # supabase/migrations/20260928_001_match_event_log.sql: Guard-Trigger, Alt-Trigger-
+        # Entfernung, match_event_authors/match_transitions/app_config, Realtime-Publikation,
+        # seq-Backfill. Siehe scripts/match-event-log-check.sh (Kopfkommentar) und
+        # task-B2-report.md für die Gegenprobe ohne diese Migration.
+        run: bash scripts/match-event-log-check.sh
+
+      - name: Ereignis-Log-Schema — Guard-Gegenprobe (Ruling G3, Abschluss-Fixrunde M5)
+        # Dritter, unabhängiger Wegwerf-Container -- Migration vollständig einspielen, danach
+        # DROP TRIGGER match_events_guard_engine_rows: alle Guard-Proben (2a-2e, 4a-4b, 4f3, 4h)
+        # müssen auf "ok" kippen, sonst wäre im Normalmodus ein anderer Mechanismus (CHECK/FK)
+        # statt des Guards die tatsächliche Ursache der Ablehnung. Lief bisher nur lokal
+        # (final-review-B.md, M5: docs/TESTUMGEBUNG.md nannte den Modus, die CI führte ihn nicht
+        # aus).
+        # Seit A-08h (20261028_002) wird in DIESEM Modus die Migration NICHT eingespielt: der Zustand
+        # entspricht dem nach einem Rückbau, und allein der Guard muss die Client-Schreibzugriffe sperren.
+        # Die Gegenprobe ist scharf (Mutation: DROP TRIGGER auskommentiert -> exit 1, siehe task-A-08h-report.md).
+        run: bash scripts/match-event-log-check.sh --without-guard
+
+      - name: Node.js einrichten (Fixture des Slot-Beweises)
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Abhaengigkeiten installieren
+        run: npm ci
+
+      - name: Spielseiten als Slot pruefen (A-02, M1)
+        # Vierter Wegwerf-Container (eigener Skriptlauf, eigener trap): Bestandsdaten (E-A5), frisch
+        # angelegtes Turnier ueber den App-Weg, Pruefregeln slot_*_source / slot_*_present.
+        # Siehe scripts/match-slots-check.sh (Kopfkommentar).
+        run: bash scripts/match-slots-check.sh

@@ -1,17 +1,13 @@
 /**
- * useCorrectionMode - Manages correction dialog state and flow
+ * useCorrectionMode - Zustand und Start/Abbruch des Korrektur-Dialogs
  *
- * Handles:
- * - Starting correction mode (with permission check)
- * - Canceling correction
- * - Confirming correction with history logging
+ * A-08e (Frage 1 = A): Die Bestaetigung, die Spielstaende direkt schrieb (@FU-084), ist entfernt.
+ * Der Hook wird im Spielplan derzeit nicht verdrahtet; B-24 baut den Ereignisweg in diese Datei.
  */
 
 import { useState, useCallback } from 'react';
 import { useToast } from '../../../components/ui/Toast';
-import { useUserProfile } from '../../../hooks/useUserProfile';
-import { Tournament, CorrectionEntry, Match } from '../../../types/tournament';
-import { CorrectionReason } from '../../../types/userProfile';
+import { Tournament } from '../../../types/tournament';
 
 // Correction state interface
 interface CorrectionState {
@@ -22,7 +18,6 @@ interface CorrectionState {
 
 interface UseCorrectionModeOptions {
   tournament: Tournament;
-  onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
   canCorrectResults: boolean;
 }
 
@@ -31,12 +26,6 @@ export interface CorrectionModeControls {
   showCorrectionDialog: boolean;
   handleStartCorrection: (matchId: string) => void;
   handleCancelCorrection: () => void;
-  handleConfirmCorrection: (
-    newScoreA: number,
-    newScoreB: number,
-    reason: CorrectionReason,
-    note?: string
-  ) => void;
 }
 
 /**
@@ -47,11 +36,9 @@ export interface CorrectionModeControls {
  */
 export function useCorrectionMode({
   tournament,
-  onTournamentUpdate,
   canCorrectResults,
 }: UseCorrectionModeOptions): CorrectionModeControls {
   const { showWarning } = useToast();
-  const { profile } = useUserProfile();
 
   const [correctionState, setCorrectionState] = useState<CorrectionState | null>(null);
   const [showCorrectionDialog, setShowCorrectionDialog] = useState(false);
@@ -81,58 +68,10 @@ export function useCorrectionMode({
     setCorrectionState(null);
   }, []);
 
-  const handleConfirmCorrection = useCallback((
-    newScoreA: number,
-    newScoreB: number,
-    reason: CorrectionReason,
-    note?: string
-  ) => {
-    if (!correctionState) {
-      return;
-    }
-
-    // Create correction entry for match history
-    const correctionEntry: CorrectionEntry = {
-      timestamp: new Date().toISOString(),
-      previousScoreA: correctionState.originalScoreA,
-      previousScoreB: correctionState.originalScoreB,
-      newScoreA,
-      newScoreB,
-      reasonType: reason,
-      note,
-      userName: profile.name,
-    };
-
-    // Update tournament matches with correction history
-    const updatedMatches: Match[] = tournament.matches.map(m => {
-      if (m.id !== correctionState.matchId) {
-        return m;
-      }
-
-      // Add correction to history
-      const existingHistory = m.correctionHistory ?? [];
-      return {
-        ...m,
-        scoreA: newScoreA,
-        scoreB: newScoreB,
-        correctionHistory: [...existingHistory, correctionEntry],
-      };
-    });
-
-    onTournamentUpdate(
-      { ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() },
-      false // Triggers standings recalculation in parent
-    );
-
-    setShowCorrectionDialog(false);
-    setCorrectionState(null);
-  }, [correctionState, tournament, onTournamentUpdate, profile.name]);
-
   return {
     correctionState,
     showCorrectionDialog,
     handleStartCorrection,
     handleCancelCorrection,
-    handleConfirmCorrection,
   };
 }

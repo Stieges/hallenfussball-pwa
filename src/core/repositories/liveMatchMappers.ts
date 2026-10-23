@@ -5,7 +5,7 @@
  * Used by SupabaseLiveMatchRepository for real-time match state sync.
  */
 
-import type { Json, Tables, TablesInsert } from '../../types/supabase';
+import type { Tables } from '../../types/supabase';
 import type {
   LiveMatch,
   LiveTeamInfo,
@@ -24,25 +24,24 @@ import type { TeamLogo, TeamColors } from '../../types/tournament';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
-type MatchEventInsert = TablesInsert<'match_events'>;
 type TeamRow = Tables<'teams'>;
+
 
 // ============================================================================
 // STATUS MAPPING
 // ============================================================================
 
+// C-NSTART (Sofort-Fix 2026-09-25): 'not_started' verletzt matches_match_status_check
+// (erlaubt sind nur scheduled/waiting/running/paused/finished/skipped) — jeder Insert/Update
+// mit diesem Wert scheiterte, ein nie geöffnetes Spiel konnte in der Cloud nie angelegt
+// werden. NOT_STARTED wird jetzt als 'scheduled' geschrieben; 'not_started' wird beim
+// Lesen weiter toleriert (Alt-Zeilen aus der Zeit vor diesem Fix, falls es sie je gab).
 const STATUS_TO_FRONTEND: Record<string, MatchStatus> = {
   not_started: 'NOT_STARTED',
+  scheduled: 'NOT_STARTED',
   running: 'RUNNING',
   paused: 'PAUSED',
   finished: 'FINISHED',
-};
-
-const STATUS_TO_DB: Record<MatchStatus, string> = {
-  NOT_STARTED: 'not_started',
-  RUNNING: 'running',
-  PAUSED: 'paused',
-  FINISHED: 'finished',
 };
 
 const PHASE_TO_FRONTEND: Record<string, TournamentPhase> = {
@@ -112,7 +111,7 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
       delta: payload?.delta as number | undefined,
       playerNumber: payload?.playerNumber as number | undefined,
       assists: payload?.assists as number[] | undefined,
-      cardType: payload?.cardType as 'YELLOW' | 'RED' | undefined,
+      cardType: payload?.cardType as 'YELLOW' | 'YELLOW_RED' | 'RED' | undefined,
       toStatus: payload?.toStatus as MatchStatus | undefined,
       durationSeconds: payload?.durationSeconds as number | undefined,
       playersIn: payload?.playersIn as number[] | undefined,
@@ -122,29 +121,6 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
       home: row.score_home,
       away: row.score_away,
     },
-  };
-}
-
-/**
- * Maps a MatchEvent to Supabase match_events insert format
- */
-export function mapMatchEventToSupabase(
-  event: MatchEvent,
-  matchId: string
-): MatchEventInsert {
-  return {
-    id: event.id,
-    match_id: matchId,
-    timestamp_seconds: event.timestampSeconds,
-    type: event.type,
-    payload: event.payload,
-    score_home: event.scoreAfter.home,
-    score_away: event.scoreAfter.away,
-    team_id: null, // Could be mapped if we track team_id in payload
-    player_id: null, // Could be mapped if we track player_id
-    period: null,
-    incomplete: false,
-    is_deleted: false,
   };
 }
 
@@ -185,7 +161,11 @@ export function mapLiveMatchFromSupabase(
   const liveState = (matchRow as MatchRow & { live_state?: LiveStateJson }).live_state;
 
   // Map status
-  const status = STATUS_TO_FRONTEND[matchRow.match_status ?? 'not_started'] ?? 'NOT_STARTED';
+  // Fallback-Default an C-NSTART angeglichen (Review-Fix Minor 6, Fixrunde 1): 'scheduled'
+  // ist der tatsächliche DB-Default für match_status, siehe isMatchActive() unten — beide
+  // Literale ('not_started'/'scheduled') sind in STATUS_TO_FRONTEND vorhanden und ergeben
+  // dasselbe Ergebnis (NOT_STARTED), das hier war nur uneinheitlich.
+  const status = STATUS_TO_FRONTEND[matchRow.match_status ?? 'scheduled'] ?? 'NOT_STARTED';
 
   // Map tournament phase
   const tournamentPhase = matchRow.phase
@@ -249,69 +229,19 @@ export function mapLiveMatchFromSupabase(
 }
 
 /**
- * Maps a LiveMatch to Supabase match update format
- *
- * Returns both the match update and new events to insert
- */
-export function mapLiveMatchToSupabase(
-  liveMatch: LiveMatch,
-  existingEventIds: Set<string> = new Set<string>()
-): {
-  matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null };
-  newEvents: MatchEventInsert[];
-} {
-  // Build live_state JSONB
-  const liveState: LiveStateJson = {
-    elapsedSeconds: liveMatch.elapsedSeconds,
-    durationSeconds: liveMatch.durationSeconds,
-    playPhase: liveMatch.playPhase,
-    tiebreakerMode: liveMatch.tiebreakerMode,
-    overtimeDurationSeconds: liveMatch.overtimeDurationSeconds,
-    overtimeElapsedSeconds: liveMatch.overtimeElapsedSeconds,
-    awaitingTiebreakerChoice: liveMatch.awaitingTiebreakerChoice,
-    refereeName: liveMatch.refereeName,
-  };
-
-  // Match update
-  const matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null } = {
-    match_status: STATUS_TO_DB[liveMatch.status],
-    score_a: liveMatch.homeScore,
-    score_b: liveMatch.awayScore,
-    timer_start_time: liveMatch.timerStartTime ?? null,
-    timer_paused_at: liveMatch.timerPausedAt ?? null,
-    timer_elapsed_seconds: liveMatch.timerElapsedSeconds ?? null,
-    overtime_score_a: liveMatch.overtimeScoreA ?? null,
-    overtime_score_b: liveMatch.overtimeScoreB ?? null,
-    penalty_score_a: liveMatch.penaltyScoreA ?? null,
-    penalty_score_b: liveMatch.penaltyScoreB ?? null,
-    live_state: (liveMatch.status === 'FINISHED' ? null : liveState) as Json | null,
-    updated_at: new Date().toISOString(),
-  };
-
-  // Find new events (not yet in DB)
-  const newEvents = liveMatch.events
-    .filter((event) => !existingEventIds.has(event.id))
-    .map((event) => mapMatchEventToSupabase(event, liveMatch.id));
-
-  return { matchUpdate, newEvents };
-}
-
-/**
  * Checks if a match is "active" (has live state).
  * Includes running, paused, AND initialized NOT_STARTED matches
  * that have live_state set (created by initializeMatch but not yet started).
  */
 export function isMatchActive(matchRow: MatchRow): boolean {
-  const status = matchRow.match_status ?? 'not_started';
+  // Fallback-Default an C-NSTART angeglichen: 'scheduled' ist der tatsächliche DB-Default
+  // für match_status (matches_match_status_check erlaubt 'not_started' gar nicht). Ändert
+  // das Ergebnis nicht — 'not_started' wie 'scheduled' sind beides "nicht running/paused",
+  // die Unterscheidung "aktiv" fällt unten über live_state.
+  const status = matchRow.match_status ?? 'scheduled';
   if (status === 'running' || status === 'paused') { return true; }
   // Include initialized NOT_STARTED matches (have live_state set)
   const liveState = (matchRow as MatchRow & { live_state?: unknown }).live_state;
   return liveState !== null && liveState !== undefined;
 }
 
-/**
- * Clears live state when match finishes
- */
-export function clearLiveState(): { live_state: null } {
-  return { live_state: null };
-}

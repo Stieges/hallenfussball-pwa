@@ -6,21 +6,23 @@
  * - Shows animation for 3 seconds (cards need attention)
  * - Queue system for multiple rapid cards
  * - Positioned on the penalized team's side (left/right)
- * - Yellow cards: warning styling
- * - Red cards: danger styling with stronger effect
+ * - Karten in Kartenfarbe (cardYellow/cardRed, Gelb-Rot diagonal geteilt), Rot mit stärkerem Effekt
  * - Accessible: respects prefers-reduced-motion
  * - Auto-clears after animation completes
  */
 
 import { CSSProperties, useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
+import { monitorTeamName } from '../../core/models/teamNameAbbrev';
+import { KARTEN_FLAECHE, kartenFlaecheStil } from '../ui/atoms/kartenFlaeche';
 
 export interface CardEventInfo {
   matchId: string;
   teamId: string;
   teamName: string;
   side: 'home' | 'away';
-  cardType: 'YELLOW' | 'RED';
+  cardType: 'YELLOW' | 'YELLOW_RED' | 'RED';
   playerNumber?: number;
   timestamp: number;
 }
@@ -34,29 +36,33 @@ export interface CardAnimationProps {
   animationDuration?: number;
 }
 
-// Card-specific colors
-const CARD_COLORS = {
+// Kartenfarben nur aus den Karten-Tokens (Oberfläche E „Karten-Farben nur für Karten“, Befund C-KARTE-GELB-ALS-WARNFARBE).
+// Schrift: dunkel auf Kartengelb (und auf der geteilten Gelb-Rot-Fläche), hell auf Kartenrot (Tafel-Tokens, hell und dunkel gleich).
+const KARTEN_ZEICHNUNG = {
   YELLOW: {
-    primary: '#FFEB3B',
-    secondary: '#FFC107',
-    text: '#000000',
-    glow: 'rgba(255, 235, 59, 0.6)',
-    shadow: 'rgba(255, 193, 7, 0.5)',
+    text: cssVars.colors.scoreboardOnHighlight,
+    glow: `color-mix(in srgb, ${cssVars.colors.cardYellow} 60%, transparent)`,
+    shadow: `color-mix(in srgb, ${cssVars.colors.cardYellow} 50%, transparent)`,
   },
   RED: {
-    primary: '#F44336',
-    secondary: '#D32F2F',
-    text: '#FFFFFF',
-    glow: 'rgba(244, 67, 54, 0.6)',
-    shadow: 'rgba(211, 47, 47, 0.5)',
+    text: cssVars.colors.scoreboardOnLive,
+    glow: `color-mix(in srgb, ${cssVars.colors.cardRed} 60%, transparent)`,
+    shadow: `color-mix(in srgb, ${cssVars.colors.cardRed} 50%, transparent)`,
   },
-};
+  // Gelb-Rot: Fläche diagonal geteilt (KARTEN_FLAECHE), Schrift dunkel (auch auf Rot ≥ 3 : 1, große Schrift).
+  YELLOW_RED: {
+    text: cssVars.colors.scoreboardOnHighlight,
+    glow: `color-mix(in srgb, ${cssVars.colors.cardRed} 60%, transparent)`,
+    shadow: `color-mix(in srgb, ${cssVars.colors.cardRed} 50%, transparent)`,
+  },
+} as const;
 
 export const CardAnimation: React.FC<CardAnimationProps> = ({
   cardEvent,
   onAnimationComplete,
   animationDuration = 3000,
 }) => {
+  const { t } = useTranslation('monitor');
   const [isVisible, setIsVisible] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<CardEventInfo | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -130,8 +136,9 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
   }
 
   const isHomeSide = currentEvent.side === 'home';
-  const colors = CARD_COLORS[currentEvent.cardType];
-  const isRed = currentEvent.cardType === 'RED';
+  const colors = KARTEN_ZEICHNUNG[currentEvent.cardType];
+  const flaeche = KARTEN_FLAECHE[currentEvent.cardType];
+  const isRed = currentEvent.cardType === 'RED' || currentEvent.cardType === 'YELLOW_RED';
 
   const overlayStyle: CSSProperties = {
     position: 'fixed',
@@ -153,7 +160,8 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
     alignItems: 'center',
     gap: cssVars.spacing.md,
     padding: 'clamp(24px, 4vw, 48px)',
-    background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`,
+    background: flaeche,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.xl,
     boxShadow: `0 0 80px ${colors.glow}, 0 20px 60px ${colors.shadow}`,
     transformOrigin: isHomeSide ? 'left center' : 'right center',
@@ -164,14 +172,9 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
   const cardIconStyle: CSSProperties = {
     width: 'clamp(80px, 10vw, 140px)',
     height: 'clamp(110px, 14vw, 190px)',
-    background: colors.primary,
-    borderRadius: '12px',
-    boxShadow: `
-      0 4px 20px ${colors.shadow},
-      inset 0 2px 4px rgba(255, 255, 255, 0.3),
-      inset 0 -2px 4px rgba(0, 0, 0, 0.2)
-    `,
-    border: `4px solid ${colors.secondary}`,
+    ...kartenFlaecheStil(currentEvent.cardType),
+    borderRadius: cssVars.borderRadius.md,
+    boxShadow: `0 4px 20px ${colors.shadow}`,
   };
 
   const cardTextStyle: CSSProperties = {
@@ -210,9 +213,11 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
         >
           <div className="card-icon" style={cardIconStyle} />
           <div style={cardTextStyle}>
-            {isRed ? 'ROTE KARTE' : 'GELBE KARTE'}
+            {/* F3b2: Gelb-Rot zeigt "GELB-ROT" statt "ROTE KARTE" (Farben weiter ueber die
+                gemeinsame RED_CARD_COLORS-Konstante, s.o.). */}
+            {currentEvent.cardType === 'YELLOW_RED' ? t('cardAnimation.yellowRedCard') : isRed ? t('cardAnimation.redCard') : t('cardAnimation.yellowCard')}
           </div>
-          <div style={teamNameStyle}>{currentEvent.teamName}</div>
+          <div data-teamname style={teamNameStyle}>{monitorTeamName(currentEvent.teamName)}</div>
           {currentEvent.playerNumber && (
             <div style={playerNumberStyle}>#{currentEvent.playerNumber}</div>
           )}
@@ -251,12 +256,12 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
         }
 
         .flash-yellow {
-          background: linear-gradient(${isHomeSide ? '90deg' : '270deg'}, rgba(255, 235, 59, 0.3) 0%, transparent 100%);
+          background: linear-gradient(${isHomeSide ? '90deg' : '270deg'}, color-mix(in srgb, ${cssVars.colors.cardYellow} 30%, transparent) 0%, transparent 100%);
           animation: cardFlash 0.4s ease-out forwards;
         }
 
         .flash-red {
-          background: linear-gradient(${isHomeSide ? '90deg' : '270deg'}, rgba(244, 67, 54, 0.4) 0%, transparent 100%);
+          background: linear-gradient(${isHomeSide ? '90deg' : '270deg'}, color-mix(in srgb, ${cssVars.colors.cardRed} 40%, transparent) 0%, transparent 100%);
           animation: cardFlashIntense 0.5s ease-out forwards;
         }
 
@@ -386,14 +391,14 @@ export interface CardFlashProps {
   /** Which side received the card */
   side: 'home' | 'away';
   /** Card type */
-  cardType: 'YELLOW' | 'RED';
+  cardType: 'YELLOW' | 'YELLOW_RED' | 'RED';
 }
 
 export const CardFlash: React.FC<CardFlashProps> = ({ show, side, cardType }) => {
   if (!show) {return null;}
 
   const isHome = side === 'home';
-  const isRed = cardType === 'RED';
+  const isRed = cardType === 'RED' || cardType === 'YELLOW_RED';
 
   const flashStyle: CSSProperties = {
     position: 'fixed',
@@ -402,7 +407,7 @@ export const CardFlash: React.FC<CardFlashProps> = ({ show, side, cardType }) =>
     left: isHome ? 0 : '50%',
     right: isHome ? '50%' : 0,
     background: `linear-gradient(${isHome ? '90deg' : '270deg'}, ${
-      isRed ? 'rgba(244, 67, 54, 0.4)' : 'rgba(255, 235, 59, 0.4)'
+      isRed ? cssVars.colors.cardRed : cssVars.colors.cardYellow
     } 0%, transparent 100%)`,
     animation: 'cardFlashSimple 0.6s ease-out forwards',
     pointerEvents: 'none',
@@ -415,7 +420,7 @@ export const CardFlash: React.FC<CardFlashProps> = ({ show, side, cardType }) =>
       <style>{`
         @keyframes cardFlashSimple {
           0% { opacity: 0; }
-          30% { opacity: 1; }
+          30% { opacity: 0.4; }
           100% { opacity: 0; }
         }
       `}</style>

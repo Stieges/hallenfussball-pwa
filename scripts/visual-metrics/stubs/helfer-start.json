@@ -1,0 +1,23 @@
+{
+ "karte": {
+  "geraet": {
+   "id": "00000000-0000-4000-8000-0000000000aa"
+  },
+  "einwilligung": true,
+  "rpc": {
+   "helper_access_status": {
+    "json": {
+     "state": "open",
+     "relation": "accepted",
+     "field": 2,
+     "closed": false,
+     "tournament": {
+      "id": "00000000-0000-4000-8000-00000000c0b1",
+      "title": "Live-Cup",
+      "date": "2099-01-01"
+     }
+    }
+   }
+  }
+ }
+}

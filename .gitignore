@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-swcheck
 dist-ssr
 *.local
 
@@ -59,6 +60,8 @@ reviews/
 test-results/
 test-reports/
 playwright-report/
+# Playwright cloud-setup storageStates (echte, wenn auch nur lokale Test-Sessions) — Task T3
+playwright/.auth/
 
 # Vercel
 .vercel/

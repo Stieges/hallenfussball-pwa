@@ -5,7 +5,7 @@
  * This is separate from the persisted Match in tournament.matches[].
  */
 
-import { TeamLogo, TeamColors } from '../../types/tournament';
+import { TeamLogo, TeamColors, CardType } from '../../types/tournament';
 
 // ============================================================================
 // STATUS TYPES
@@ -13,7 +13,7 @@ import { TeamLogo, TeamColors } from '../../types/tournament';
 
 /**
  * Live execution status of a match (NOT_STARTED → RUNNING → PAUSED → FINISHED).
- * Note: This is different from tournament.ts MatchStatus ('scheduled'|'waiting'|'running'|'finished'|'skipped')
+ * Note: This is different from tournament.ts MatchStatus ('scheduled'|'waiting'|'running'|'paused'|'finished'|'skipped')
  * which tracks the scheduling/persistence status.
  */
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
@@ -51,7 +51,7 @@ export interface MatchEvent {
         delta?: number;
         playerNumber?: number;
         assists?: number[];
-        cardType?: 'YELLOW' | 'RED';
+        cardType?: CardType;
         toStatus?: MatchStatus;
         durationSeconds?: number;
         playersIn?: number[];
@@ -110,6 +110,11 @@ export interface LiveMatch {
 
     // Events
     events: MatchEvent[];
+    /**
+     * C3b-1 (G6): zurueckgenommene Eintraege eines Engine-Spiels -- NUR fuer die Protokoll-Anzeige
+     * (EventLog, Sidebar, EventLogBottomSheet). `events` bleibt ohne Zurueckgenommenes.
+     */
+    retractedEvents?: MatchEvent[];
 
     // Tournament Context
     tournamentPhase?: TournamentPhase;
@@ -119,9 +124,17 @@ export interface LiveMatch {
      * (rules.canDrawInGroupPhase / rules.canDrawInFinals, aufgelöst bei initializeMatch).
      * `undefined` bei älteren/mock-erzeugten Matches wird von needsTiebreaker() wie das
      * bisherige Default behandelt (Gruppenphase: Unentschieden erlaubt; Finale: über
-     * tiebreakerMode gesteuert) — siehe MatchExecutionService.needsTiebreaker.
+     * tiebreakerMode gesteuert) — siehe die Entscheidungsregel in `core/match/tiebreakDecision.ts`.
      */
     canEndInDraw?: boolean;
+
+    /**
+     * Dauer einer Zeitstrafe in Sekunden — Schnitt der Spielregel beim Anpfiff
+     * (startMatch, @W2A-029). Vor dem Anpfiff nur Vorbelegung aus initializeMatch;
+     * ein laufendes Spiel rechnet weiter mit diesem Stand, auch wenn die
+     * Turnierleitung die Regel danach ändert.
+     */
+    timePenaltyDurationSeconds?: number;
 
     // Tiebreaker
     playPhase?: PlayPhase;

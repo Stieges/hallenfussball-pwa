@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Match } from '../../../types/tournament';
+import { keepStartedPlaces } from '../../schedule-editor';
 
 /**
  * State snapshot for history tracking
@@ -104,7 +105,7 @@ export function useScheduleHistory({
     const previousState = undoStackRef.current.pop();
     if (!previousState) {return;} // Should never happen due to length check
 
-    onMatchesUpdate(previousState.matches);
+    onMatchesUpdate(keepStartedPlaces(previousState.matches, matches));
     setHistoryVersion(v => v + 1);
   }, [matches, onMatchesUpdate]);
 
@@ -124,7 +125,7 @@ export function useScheduleHistory({
     const nextState = redoStackRef.current.pop();
     if (!nextState) {return;} // Should never happen due to length check
 
-    onMatchesUpdate(nextState.matches);
+    onMatchesUpdate(keepStartedPlaces(nextState.matches, matches));
     setHistoryVersion(v => v + 1);
   }, [matches, onMatchesUpdate]);
 

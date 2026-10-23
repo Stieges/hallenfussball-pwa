@@ -12,7 +12,9 @@ import type { TournamentMembership } from '../types/auth.types';
 import { AUTH_STORAGE_KEYS } from '../types/auth.types';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { useAuth } from './useAuth';
+import { filterWithoutGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
 import type { TournamentDisplayStatus, TournamentCardData } from '../components/TournamentCard';
+import { isMatchInProgress } from '../../../core/view';
 import { useRepository } from '../../../hooks/useRepository';
 
 /**
@@ -67,7 +69,7 @@ const getTournamentDisplayStatus = (tournament: Tournament): TournamentDisplaySt
 
   // Check if any match is running (live)
   const hasRunningMatch = tournament.matches.some(
-    (match: Match) => match.matchStatus === 'running'
+    (match: Match) => isMatchInProgress(match.matchStatus)
   );
   if (hasRunningMatch) {
     return 'live';
@@ -86,7 +88,7 @@ const getTournamentDisplayStatus = (tournament: Tournament): TournamentDisplaySt
   // Has any match started?
   const hasStartedMatch = tournament.matches.some(
     (match: Match) =>
-      match.matchStatus === 'finished' || match.matchStatus === 'running'
+      match.matchStatus === 'finished' || isMatchInProgress(match.matchStatus)
   );
   if (hasStartedMatch) {
     // In progress but no running match = paused
@@ -170,11 +172,14 @@ const sortTournaments = (
 export const useUserTournaments = (
   sortBy: TournamentSortOption = 'recent'
 ): UseUserTournamentsReturn => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated, isGuest } = useAuth();
   const [tournaments, setTournaments] = useState<UserTournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const repository = useRepository();
+
+  // G7: im Konto ausgeblendet, im Gastmodus (nach Abmelden) sichtbar
+  const hideGuestTournaments = isAuthenticated && !isGuest;
 
   /**
    * Lädt Turniere für den aktuellen User
@@ -202,7 +207,11 @@ export const useUserTournaments = (
 
       // Load tournaments via Repository
       // This automatically handles Local vs Cloud vs Offline
-      const allTournaments = await repository.listForCurrentUser();
+      const loadedTournaments = await repository.listForCurrentUser();
+      // G7: Turniere mit Engine-Einträgen im Gastkonto im Konto ausblenden
+      const allTournaments = hideGuestTournaments
+        ? await filterWithoutGuestEngineEntries(loadedTournaments)
+        : loadedTournaments;
 
       // Combine memberships with tournaments
       const userTournaments: UserTournament[] = [];
@@ -217,14 +226,15 @@ export const useUserTournaments = (
           const teamNames = existingMembership.teamIds.map(tid => t.teams.find(tm => tm.id === tid)?.name ?? '').filter(Boolean);
           userTournaments.push({ tournament: toCardData(t), membership: existingMembership, teamNames });
         } else {
-          // Implicit Owner Membership (if not found in legacy memberships)
+          // CA-5: Rolle aus dem Listenobjekt; ohne Rolle (lokal angelegt, Gast) = eigenes Turnier
+          const role = t.myRole ?? 'owner';
           userTournaments.push({
             tournament: toCardData(t),
             membership: {
-              id: `owner-${t.id}`,
+              id: `${role}-${t.id}`,
               userId: user.id,
               tournamentId: t.id,
-              role: 'owner',
+              role,
               teamIds: [],
               createdAt: t.createdAt,
               updatedAt: t.updatedAt
@@ -242,7 +252,7 @@ export const useUserTournaments = (
     } finally {
       setIsLoading(false);
     }
-  }, [user, repository]);
+  }, [user, repository, hideGuestTournaments]);
 
   // Load on mount and when user changes
   useEffect(() => {

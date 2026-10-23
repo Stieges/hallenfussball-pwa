@@ -24,7 +24,6 @@
     },
     "minuteSuffix": "Min."
   },
-
   "step2": {
     "title": "Modus & Spielsystem",
     "structureLocked": {
@@ -46,11 +45,6 @@
     "specialRules": "Sonderregeln",
     "cockpitSection": "Match Cockpit Pro",
     "cockpitDescription": "Einstellungen für das Live-Spielverwaltungs-Cockpit: Timer, Sound, Haptik und Auto-Funktionen.",
-    "miniFussball": {
-      "title": "Mini-Fußball / Funino",
-      "description": "Dieses Feature wird in einer zukünftigen Version verfügbar sein. Es wird Feldrotation und spezielle Regeln für Mini-Fußball unterstützen.",
-      "comingSoon": "Coming Soon"
-    },
     "summaries": {
       "activeCriteria": "{{count}} aktive Kriterien",
       "refereeNone": "Keine",
@@ -69,21 +63,13 @@
       "cockpitStandard": "Standard"
     }
   },
-
   "modeSelection": {
     "label": "Turniermodus",
     "classic": {
       "title": "Klassisches Hallenturnier",
       "subtitle": "Gruppen + Finalrunde"
-    },
-    "miniFussball": {
-      "title": "Mini-Fußball / Funino",
-      "subtitle": "Feldrotation, mehrere Felder",
-      "disabledTitle": "Dieses Feature wird in einer zukünftigen Version verfügbar sein"
-    },
-    "comingSoon": "Coming Soon"
+    }
   },
-
   "step3": {
     "title": "Stammdaten",
     "tournamentName": "Turniername",
@@ -95,9 +81,12 @@
     "startDate": "Startdatum",
     "startDatePastError": "Startdatum darf nicht in der Vergangenheit liegen",
     "startTime": "Startzeit",
-    "startTimePlaceholder": "09:00"
+    "startTimePlaceholder": "09:00",
+    "rulebook": "Regelwerk (optional)",
+    "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
+    "rulebookLimit": "Höchstens 80 Zeichen.",
+    "rulebookTruncated": "Auf 80 Zeichen gekürzt."
   },
-
   "location": {
     "label": "Veranstaltungsort",
     "placeholder": "Sporthalle Musterstadt",
@@ -112,7 +101,6 @@
     "countryPlaceholder": "Deutschland",
     "hint": "Diese Angaben sind optional und werden für PDF-Export und Detailansicht verwendet."
   },
-
   "contact": {
     "toggle": "Kontaktdaten (optional)",
     "name": "Ansprechpartner",
@@ -123,9 +111,10 @@
     "phonePlaceholder": "+49 123 456789",
     "website": "Website",
     "websitePlaceholder": "www.mein-verein.de",
-    "hint": "Diese Angaben erscheinen in der Fußzeile des Spielplans und im PDF-Export."
+    "hint": "Ohne Häkchen sieht diese Angaben nur die Turnierleitung.",
+    "showPublic": "Ansprechpartner öffentlich zeigen",
+    "showPublicHint": "Mit Häkchen erscheinen Name, E-Mail, Telefon und Website auf der Zuschauer-Seite und im Spielplan-PDF – für alle mit dem Zuschauer-Link. Ohne Häkchen sieht sie nur die Turnierleitung."
   },
-
   "step4": {
     "title": "Teams",
     "addTeam": "Team hinzufügen",
@@ -136,6 +125,7 @@
     "duplicateName": "Dieser Name wird bereits verwendet",
     "emptyName": "Teamname darf nicht leer sein",
     "countMismatch": "{{actual}} von {{expected}} Teams hinzugefügt – bitte ergänzen oder entfernen",
+    "adjustTeamCount": "Teamzahl anpassen",
     "avatarExpand": "Logo und Farben für {{name}} bearbeiten",
     "avatarCollapse": "Logo und Farben für {{name}} einklappen",
     "collapseLabel": "Einklappen",
@@ -166,7 +156,6 @@
       "distribution": "Gruppenverteilung: {{distribution}}"
     }
   },
-
   "step5": {
     "title": "Zusammenfassung",
     "tournamentName": "Turniername",
@@ -188,7 +177,6 @@
     "teamsCount": "{{count}} Teams",
     "showPreview": "Vorschau anzeigen"
   },
-
   "groupsAndFields": {
     "infoText": "Dieser Schritt ist optional. Du kannst direkt auf \"Weiter\" klicken – die Standard-Bezeichnungen (Gruppe A, B, C... und Feld 1, 2...) werden dann verwendet. Klappe die Sektionen unten auf, wenn du eigene Namen vergeben möchtest.",
     "fieldSection": {
@@ -210,14 +198,12 @@
     "roundRobinInfo": "Bei Jeder-gegen-Jeden werden alle Spiele automatisch auf die verfügbaren Felder verteilt.",
     "defaultGroupName": "Gruppe {{id}}"
   },
-
   "nameGrid": {
     "defaultHeader": "Standard",
     "customNameHeader": "Eigener Name",
     "shortCodeHeader": "Kürzel",
     "duplicateName": "Dieser Name wird bereits verwendet"
   },
-
   "gameTimeConfig": {
     "groupPhaseTitle": "Gruppenphase - Spielzeit-Einstellungen",
     "finalsTitle": "Finalrunde - Spielzeit-Einstellungen",
@@ -230,7 +216,6 @@
     "finalsHint": "Die Spielabschnitt-Einstellungen gelten auch für die Finalrunde",
     "minuteSuffix": "Min"
   },
-
   "finalsConfig": {
     "title": "Finalrunde",
     "recommendedHint_one": "⭐ = Empfohlen für {{count}} Gruppe",
@@ -258,10 +243,22 @@
       "goldenGoal": "Golden Goal",
       "goldenGoalDuration": "Golden Goal-Zeit:",
       "overtimeDuration": "Verlängerung:",
-      "minutes": "Minuten"
+      "minutes": "Minuten",
+      "byRound": {
+        "title": "Entscheidung je K.-o.-Runde",
+        "roundOf16": "Achtelfinale",
+        "quarterfinal": "Viertelfinale",
+        "semifinal": "Halbfinale",
+        "final": "Finale",
+        "placement": "Platzierungsspiele"
+      },
+      "options": {
+        "shootout": "Strafstoßschießen",
+        "overtime-then-shootout": "Verlängerung, dann Strafstoßschießen",
+        "goldenGoal": "Golden Goal"
+      }
     }
   },
-
   "finalsOptions": {
     "none": {
       "label": "Keine Finalrunde",
@@ -331,7 +328,6 @@
       "explanation8g": "Nur bei mehrtägigen Großturnieren realistisch - sehr viele Spiele"
     }
   },
-
   "referees": {
     "title": "Schiedsrichter",
     "modeLabel": "Schiedsrichter-Modus",
@@ -368,7 +364,6 @@
       "hintNonParticipatingDescription": "Teams die aktuell nicht im Finalspiel stehen (flexibler)."
     }
   },
-
   "validation": {
     "ariaLabel": "Konfigurationswarnungen",
     "issueCount_one": "{{count}} Hinweis zur Konfiguration",
@@ -392,7 +387,6 @@
     "zeroPoints": "Punktesystem hat überall 0 Punkte - Tabelle wird nicht aussagekräftig",
     "zeroPointsSuggestion": "Standard-Punktesystem: 3 Punkte Sieg, 1 Punkt Unentschieden, 0 Punkte Niederlage"
   },
-
   "smartConfig": {
     "title": "Smart-Konfiguration",
     "ariaLabel": "Smart-Konfiguration",
@@ -410,7 +404,6 @@
       "title": "Fixe Einschränkungen",
       "hint": "Aktiviere Werte, die nicht geändert werden dürfen",
       "teamCount": "Anzahl Teams:",
-      "groupCount": "Anzahl Gruppen:",
       "fieldCount": "Anzahl Felder:",
       "gameDuration": "Spieldauer:",
       "breakDuration": "Pausendauer:",
@@ -423,20 +416,28 @@
       "gameDuration": "Spieldauer",
       "pause": "Pause",
       "minuteSuffix": "Min",
+      "structure": "{{groups}}, {{finals}}",
+      "groupCount": "{{count}} Gruppen",
+      "finalsNone": "keine Finalrunde",
+      "finalsFinalOnly": "nur Finale",
+      "finalsTop4": "Halbfinale + Finale",
+      "finalsTop8": "Viertelfinale bis Finale",
+      "finalsTop16": "Achtelfinale bis Finale",
+      "finalsAllPlaces": "Alle Plätze",
       "matches": "{{count}} Spiele",
       "duration": "~{{hours}}h Turnierdauer"
     },
     "apply": "Konfiguration übernehmen",
     "applyAriaLabel": "Empfohlene Konfiguration übernehmen",
+    "applied": "Übernommen",
+    "teamsKeptTimeShort": "Die Zeit reicht mit {{teams}} Teams nicht. Die Teamzahl bleibt fix: mehr Zeit oder Felder einplanen.",
     "teamsWarning": "{{current}} Teams passen nicht in {{hours}}h. Alternative: {{suggested}} Teams oder mehr Zeit/Felder einplanen."
   },
-
   "bambini": {
     "title": "Erweiterte Bambini-Einstellungen",
     "hideScores": "Ergebnisse für Zuschauer verbergen",
     "hideRankings": "Tabellen für Zuschauer verbergen"
   },
-
   "pointSystem": {
     "title": "Punktesystem",
     "presets": {
@@ -449,10 +450,10 @@
       "win": "Sieg",
       "draw": "Unentschieden",
       "loss": "Niederlage",
-      "hint": "Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)"
+      "hint": "Erlaubt sind Werte von 0 bis 99. Auch Kommazahlen sind möglich (z.B. 2.5)",
+      "rangeError": "Gültig: 0 bis 99 Punkte"
     }
   },
-
   "dfb": {
     "checkboxLabel": "DFB-Schlüsselsystem verwenden",
     "description": "Verwendet die offiziellen DFB-Ansetzungsmuster für Round-Robin Turniere",
@@ -469,7 +470,6 @@
     "patternCode": "Schlüssel: {{code}} = {{days}} Tag, {{teams}} Mannschaften",
     "patternCodeSubgroups": ", {{subgroups}} Untergruppen"
   },
-
   "durationEstimate": {
     "estimatedDuration": "Geschätzte Turnierdauer: ",
     "hoursAndMinutes": "{{hours}}h {{minutes}}min",
@@ -482,7 +482,6 @@
     "criticalWarning": "Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {{fields}} Felder oder Spieldauer auf {{duration}} Min reduzieren.",
     "durationWarning": "Tipp: Mit {{fields}} Feldern ca. {{hours}}h oder mit {{duration}} Min Spieldauer verkürzt sich die Dauer."
   },
-
   "placementLogic": {
     "title": "Platzierungslogik",
     "helpText": "Ziehe die Kriterien per Drag & Drop oder nutze die Pfeiltasten",
@@ -500,9 +499,12 @@
       "goalDifference": "Tordifferenz",
       "goalsFor": "Erzielte Tore",
       "directComparison": "Direkter Vergleich"
-    }
+    },
+    "afterRow": "danach: Strafstoßschießen (Entscheidung der Turnierleitung)",
+    "afterRowHint": "Immer die letzte Stufe, kann nicht abgeschaltet werden.",
+    "bfvHelp": "Gilt, wenn Teams in der Tabelle punktgleich sind. Vorbelegt nach den BFV-Regeln für private Hallenturniere. Bleibt nach einer Stufe ein Gleichstand, gilt die nächste.",
+    "directComparisonHint": "Bei drei und mehr Teams eine Sondertabelle aus ihren Spielen untereinander."
   },
-
   "options": {
     "groupSystem": {
       "roundRobin": "Jeder gegen jeden",
@@ -538,6 +540,62 @@
       "jugend": "Jugend",
       "erwachsene": "Erwachsene",
       "mixed": "Mixed"
+    }
+  },
+  "replan": {
+    "title": "Neuplanung prüfen",
+    "endTime": "Endzeit",
+    "newMatches_one": "{{count}} neues Spiel",
+    "newMatches_other": "{{count}} neue Spiele",
+    "removedMatches_one": "{{count}} Spiel entfällt",
+    "removedMatches_other": "{{count}} Spiele entfallen",
+    "keptHint": "Bereits gespielte Spiele bleiben erhalten und werden nicht entfernt.",
+    "keptMatch": "Bleibt erhalten – wird nicht entfernt",
+    "conflict": "Kein Gegenstück im neuen Plan – das Spiel wird angehängt.",
+    "reason": "Grund",
+    "suggestion": "Lösungsvorschlag",
+    "notConfirmable": "Die Neuplanung lässt sich nicht bestätigen. Der bisherige Spielplan bleibt erhalten.",
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "reasonFieldRemoved": "Ein bereits gespieltes Spiel liegt auf einem Feld, das es im neuen Plan nicht mehr gibt.",
+    "reasonOverlap": "Ein bereits gespieltes Spiel behält seinen Anstoß – die Spielzeit überlappt einen anderen Termin auf demselben Feld.",
+    "reasonGeneratorFailed": "Der Spielplan konnte nicht erstellt werden.",
+    "reasonRefusedKickoff": "Das Turnier hat bereits angepfiffen – eine Neuplanung ist nur vor dem ersten Spiel möglich.",
+    "reasonRefusedUnknown": "Der Startzustand des Turniers ist nicht feststellbar – eine Neuplanung ist deshalb nicht möglich.",
+    "suggestionCollision": "Mindestpause senken, ein Feld hinzufügen oder das behaltene Spiel vor der Neuplanung verschieben.",
+    "suggestionMinRestOrAddField": "Mindestpause senken oder ein Feld hinzufügen.",
+    "suggestionRestoreTeam": "Team wiederherstellen oder ein neues Team anlegen.",
+    "reasonScheduleIncomplete_one": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiel passt nicht hinein.",
+    "reasonScheduleIncomplete_other": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiele passen nicht hinein."
+  },
+  "publish": {
+    "button": "Festlegen",
+    "loading": "Wird festgelegt …",
+    "success": "Turnier erfolgreich festgelegt.",
+    "explanationPrivate": "Der Spielplan wird fest. Danach ist das Turnier nur für die eingeloggte Turnierleitung sichtbar.",
+    "explanationPublic": "Der Spielplan wird fest. Danach kann jeder mit dem Link zuschauen."
+  },
+  "preview": {
+    "hintLabel": "Hinweis:",
+    "hintBody": "Dies ist eine Vorschau deines Turniers. Solange das Turnier nicht festgelegt ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan jetzt als PDF speichern oder zurück zur Bearbeitung gehen."
+  },
+  "schedule": {
+    "incomplete_one": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiel passt nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen.",
+    "incomplete_other": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiele passen nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen."
+  },
+  "playOut": {
+    "title": "Diese Plätze müssen bei Gleichstand ausgespielt werden",
+    "help": "Gleichstand auf einem angehakten Platz entscheidet ein Strafstoßschießen. Auf jedem anderen Platz darf die Turnierleitung den Platz teilen. Vorbelegt ist Platz 1; jeder Platz lässt sich an- und abhaken, auch Platz 1. Die Einstellung lässt sich jederzeit ändern.",
+    "followUpNote": "Ein Platz, der in ein weiteres Spiel führt (zum Beispiel ins Halbfinale), wird immer ausgespielt – auch wenn er hier nicht angehakt ist.",
+    "place": "Platz {{place}}",
+    "legend": "Auszuspielende Plätze",
+    "summary": "Gleichstand auf {{selected}}: Strafstoßschießen nötig. Auf {{others}} darf die Turnierleitung den Platz teilen.",
+    "summaryAll": "Gleichstand auf {{selected}}: Strafstoßschießen nötig. Alle Plätze sind eingestellt, die Teams teilen keinen Platz.",
+    "summaryNone": "Kein Platz ist eingestellt: Auf jedem Platz darf die Turnierleitung den Platz teilen.",
+    "places": {
+      "one": "Platz {{from}}",
+      "two": "Platz {{from}} und {{to}}",
+      "range": "Platz {{from}} bis {{to}}"
     }
   }
 }

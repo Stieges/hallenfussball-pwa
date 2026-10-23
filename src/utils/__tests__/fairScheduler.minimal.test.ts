@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { generateGroupPhaseSchedule } from '../../core/generators';
 import { Team } from '../../types/tournament';
+import { testUuid } from '../../test/testIds';
+import { matchSideTeamId, matchTeamIds } from '../../core/models/matchSlot';
 
 describe('Fair Scheduler - Critical Tests', () => {
   const createTeams = (n: number, group = 'A'): Team[] =>
     Array.from({ length: n }, (_, i) => ({
-      id: `t${i}`,
+      id: testUuid(i),
       name: `Team ${i}`,
       group,
       players: [],
@@ -24,8 +26,8 @@ describe('Fair Scheduler - Critical Tests', () => {
 
     // 2 teams = 1 match (round-robin)
     expect(matches.length).toBe(1);
-    expect(matches[0].teamA).toBe('t0');
-    expect(matches[0].teamB).toBe('t1');
+    expect(matchSideTeamId(matches[0], 'A')).toBe(testUuid(0));
+    expect(matchSideTeamId(matches[0], 'B')).toBe(testUuid(1));
   });
 
   it('handles odd teams (13) with BYE rounds', () => {
@@ -46,8 +48,7 @@ describe('Fair Scheduler - Critical Tests', () => {
     const teamIds = teams.map(t => t.id);
     const teamsInMatches = new Set<string>();
     matches.forEach(m => {
-      teamsInMatches.add(m.teamA);
-      teamsInMatches.add(m.teamB);
+      matchTeamIds(m).forEach((id) => teamsInMatches.add(id));
     });
 
     teamIds.forEach(teamId => {

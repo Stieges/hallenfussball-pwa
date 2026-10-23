@@ -47,6 +47,7 @@
       "diff": "GD",
       "points": "Pts"
     },
+    "overall": "Overall standings",
     "currentlyPlaying": "Currently playing",
     "details": {
       "played": "Played",
@@ -88,6 +89,8 @@
     "title": "Participants"
   },
   "correctionDialog": {
+    "titleMatch": "Correct the result of match {{number}}",
+    "next": "Next",
     "title": "Correct Result",
     "currentResult": "Current Result",
     "correctedResult": "Corrected Result",
@@ -100,6 +103,7 @@
     "cancel": "Cancel",
     "confirm": "Save Correction",
     "validation": {
+      "missing": "Please enter both scores as whole numbers.",
       "mustDiffer": "The new result must be different from the original."
     }
   },
@@ -115,23 +119,172 @@
       "title": "Running Match",
       "message": "{{teamA}} vs {{teamB}} ({{scoreA}}:{{scoreB}}) is currently playing.",
       "confirmSwitch": "Switch anyway"
-    }
+    },
+    "koAfterSend": "Knockout places will be filled after sending",
+    "skip": {
+      "teamsMissing": "A match can only be called off once both teams are known",
+      "unavailable": "Calling off the match is not possible right now"
+    },
+    "entriesGuard": {
+      "blocked": "Match {{number}} has entries – only via resetting the schedule to the start",
+      "unreadable": "Entries could not be checked – nothing changed",
+      "restoreKept_one": "For {{count}} match with entries the result was not restored",
+      "restoreKept_other": "For {{count}} matches with entries the results were not restored",
+      "restoreServerLed": "Results are not taken from the backup – the server keeps them",
+      "resetOffline": "Resetting needs a connection – nothing changed",
+      "resetFailed": "Resetting is not possible right now – nothing changed"
+    },
+    "resultEntry": {
+      "running": "Match in progress – enter the result after the final whistle",
+      "shootoutRunning": "$t(sport:events.penaltyShootout) in progress – finish it in the cockpit",
+      "endOffline": "Only possible with a connection",
+      "endNotSent": "Not sent – please try again",
+      "endPending": "Pending entries must be sent first – please try again in a moment",
+      "endTitle": "End match and enter result",
+      "endQuestionRunning": "Match {{number}} is still running – the clock shows {{rest}} remaining. End it now at {{score}}?",
+      "endQuestionExpired": "Playing time is up – end it now at {{score}}?",
+      "endControlledBy": "Field {{field}} is currently controlled by {{name}}",
+      "endControlledByOther": "Field {{field}} is currently controlled by another device",
+      "teamsMissing": "Enter a result once both teams are known",
+      "unavailable": "Entering a result is not possible right now",
+      "shootoutTitle": "Penalty shootout result",
+      "shootoutQuestion": "Match {{number}} ended {{score}} – who won the $t(sport:events.penaltyShootout)?",
+      "shootoutMissing": "Please enter the penalty shootout result.",
+      "shootoutTie": "The $t(sport:events.penaltyShootout) needs a winner – please enter an unequal result.",
+      "shootoutSave": "Save result",
+      "stale": "Match {{number}} was changed by {{name}} in the meantime (now {{score}})",
+      "staleNoName": "Match {{number}} was changed in the meantime (now {{score}})",
+      "skippedTitle": "Match {{number}} called off",
+      "skippedQuestion": "This match was called off – enter a result anyway?",
+      "yes": "Yes",
+      "no": "No",
+      "reasonTitle": "Change result of match {{number}}",
+      "beforeAfter": "before {{before}} – new {{after}}",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Choose a reason",
+      "reasonRequired": "Please choose a reason from the list",
+      "noteLabel": "Describe the reason",
+      "noteRequired": "Please describe the reason",
+      "save": "Save",
+      "cancel": "Cancel",
+      "reasons": {
+        "input_error": "Input error",
+        "referee_decision": "Referee decision",
+        "protest_accepted": "Protest decision",
+        "technical_error": "Technical error",
+        "other": "Other"
+      },
+      "leadOnly": "tournament management only",
+      "correctionLeadOnly": "Correction by the tournament management only"
+    },
+    "forfeit": {
+      "mark": "Did not show up",
+      "revoke": "Withdraw forfeit",
+      "title": "Match {{number}}: did not show up",
+      "question": "Which team did not show up?",
+      "teamAbsent": "{{name}} did not show up",
+      "bothAbsent": "Both teams did not show up",
+      "summaryOne": "{{winner}} wins {{score}} (forfeit)",
+      "summaryBoth": "Both teams get 0 points and 0:{{against}} goals each, neither a win. The match counts as decided and is marked as a forfeit.",
+      "confirm": "Record forfeit",
+      "cancel": "Cancel",
+      "revokeTitle": "Match {{number}}: withdraw forfeit",
+      "revokeQuestion": "The forfeit is withdrawn. The match is open again afterwards and the table is recalculated.",
+      "revokeConfirm": "Withdraw forfeit",
+      "notScheduled": "A match that has kicked off cannot be recorded as a no-show. End it with \"End match and enter result\".",
+      "leadOnly": "Only the tournament director can record or withdraw a no-show.",
+      "notForfeit": "This match is not recorded as a no-show.",
+      "unavailable": "The no-show cannot be recorded right now.",
+      "teamsMissing": "The teams of this match are not decided yet.",
+      "scopeLabel": "How far does the no-show apply?",
+      "scopeThis": "This match only",
+      "scopeRest": "Team has left – also record all remaining matches as forfeits",
+      "scopeRestCount_one": "{{count}} more scheduled match of {{name}} will be recorded as a forfeit; matches already started or played stay unchanged.",
+      "scopeRestCount_other": "{{count}} more scheduled matches of {{name}} will be recorded as forfeits; matches already started or played stay unchanged.",
+      "restDone_one": "{{count}} more match recorded as a forfeit.",
+      "restDone_other": "{{count}} more matches recorded as forfeits.",
+      "restPartial": "{{done}} more matches recorded, {{skipped}} not (already started or error)."
+    },
+    "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped."
+  },
+  "scheduleActions": {
+    "share": "Share"
   },
   "pdfExport": {
-    "title": "Export as PDF",
-    "error": "Error exporting PDF. Please try again.",
+    "title": "As PDF",
+    "titleViewer": "Schedule as PDF",
+    "open": "As PDF",
+    "groups": {
+      "print": "What should be printed?",
+      "hang": "To put up"
+    },
+    "cards": {
+      "schedule": {
+        "title": "Schedule",
+        "description": "All matches with time, pitch and teams."
+      },
+      "blank": {
+        "title": "Schedule without results",
+        "description": "With empty fields for writing in by hand."
+      },
+      "final": {
+        "title": "Final result",
+        "description": "All places and the results, after the tournament is closed.",
+        "reason": "Only after the tournament is closed"
+      },
+      "notice": {
+        "title": "Poster with QR code",
+        "description": "Tournament name, QR code and short instructions for hanging up.",
+        "reason": "Only after sharing online"
+      }
+    },
+    "viewer": {
+      "description": "All matches with time, pitch and teams as a PDF to save or print."
+    },
+    "format": "Format: A4 portrait",
+    "hints": {
+      "title": "Before saving",
+      "notShared": "The QR code appears once the tournament is shared online.",
+      "shareOnline": "Share online",
+      "changeVisibility": "Change visibility",
+      "viewerHidden": "Results and standings are hidden – the PDF does not show them.",
+      "notice": "The poster only shows the QR code for the spectator page, no results and no standings.",
+      "visibility": {
+        "tables": "Standings are hidden from spectators – the PDF does not show them.",
+        "results": "Results are hidden from spectators – the PDF does not show them.",
+        "resultsAndTables": "Results and standings are hidden from spectators – the PDF does not show them."
+      },
+      "fontTitle": "Special characters may appear as ?",
+      "fontBody": "The font could not be loaded. The PDF is created with a substitute font, all content is included.",
+      "names_one": "One team name contains characters that are printed as “?”:",
+      "names_other": "{{count}} team names contain characters that are printed as “?”:",
+      "fields_one": "One entry contains characters that are printed as “?”:",
+      "fields_other": "{{count}} entries contain characters that are printed as “?”:",
+      "teamName": "Team name",
+      "printedAs": "is printed as",
+      "proceed": "The PDF is created anyway.",
+      "changeNames": "The tournament organizer can change the names in the tournament.",
+      "changeFields": "The tournament organizer can change the entries in the tournament.",
+      "logoLeft": "The left header graphic could not be used and is missing from the PDF.",
+      "logoRight": "The right header graphic could not be used and is missing from the PDF."
+    },
+    "offline": {
+      "title": "Offline – as of {{date}} {{time}}",
+      "body": "The PDF is created from the data on this device anyway."
+    },
+    "error": {
+      "title": "The PDF could not be created",
+      "body": "No file was saved. Please try again."
+    },
+    "done": {
+      "title": "PDF saved"
+    },
     "cancel": "Cancel",
-    "export": "Export",
-    "exporting": "Exporting...",
-    "options": {
-      "scoresLabel": "Scores",
-      "withScores": "With scores",
-      "withScoresDesc": "Shows current results in PDF",
-      "withoutScores": "Without scores",
-      "withoutScoresDesc": "Empty fields for manual entry",
-      "includeStandings": "Include tables",
-      "includeStandingsDesc": "Shows group tables in PDF"
-    }
+    "save": "Save as PDF",
+    "creating": "Creating …",
+    "saveAnyway": "Save anyway",
+    "retry": "Try again",
+    "close": "Close"
   },
   "teams": {
     "title": "Manage Teams",
@@ -177,7 +330,16 @@
       "title": "Delete team?",
       "confirmMessage": "Do you really want to delete \"{{name}}\"?",
       "markedAsRemoved": "The team will be marked as \"removed\". Results will be preserved for fairness to other teams.",
-      "markAsRemoved": "Mark as removed"
+      "markAsRemoved": "Mark as removed",
+      "warningUnprotected_one": "\"{{name}}\" has one planned match without result and without events. It will be removed from the schedule.",
+      "warningUnprotected_other": "\"{{name}}\" has {{count}} planned matches without result and without events. These will be removed from the schedule.",
+      "warningProtected_one": "\"{{name}}\" has one match with a result or events. The team will be marked as \"removed\", the match is kept.",
+      "warningProtected_other": "\"{{name}}\" has {{count}} matches with a result or events. The team will be marked as \"removed\", these matches are kept.",
+      "partKept_one": "{{count}} match with a result or events is kept",
+      "partKept_other": "{{count}} matches with a result or events are kept",
+      "partRemoved_one": "{{count}} match without result and events is removed",
+      "partRemoved_other": "{{count}} matches without result and events are removed",
+      "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• The team will be marked as \"removed\"."
     }
   },
   "settings": {
@@ -205,6 +367,8 @@
     "noChanges": "No changes",
     "masterData": "Master Data",
     "tournamentName": "Tournament Name",
+    "tournamentNameRequired": "Please enter a tournament name.",
+    "startDateRequired": "Please choose a start date.",
     "tournamentNamePlaceholder": "Club Name Indoor Cup 2025",
     "organizer": "Organizer (optional)",
     "organizerPlaceholder": "My Club",
@@ -281,6 +445,64 @@
       "deleteFailed": "Error deleting",
       "duplicateFailed": "Error duplicating",
       "copyFailed": "Could not copy URL"
+    },
+    "transfer": {
+      "openButton": "Take over monitors",
+      "exportButton": "Export settings",
+      "title": "Take over monitors",
+      "intro": "Takes over monitors, slides, order, duration and screen margin. Teams, matches and tables come from this tournament.",
+      "fromTournament": "From another tournament",
+      "loading": "Loading tournaments …",
+      "noSources": "No other tournament with monitors found.",
+      "sourceMeta_one": "{{count}} monitor",
+      "sourceMeta_other": "{{count}} monitors",
+      "fromTemplate": "Template",
+      "templateButton": "Template \"Hall standard\"",
+      "templateDescription": "One monitor with live match, next matches, tables and spectator QR code.",
+      "fromFile": "From file",
+      "chooseFile": "Choose file",
+      "fileChosen": "Chosen file: {{name}}",
+      "confirm": "Take over",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done_one": "{{count}} monitor taken over.",
+      "done_other": "{{count}} monitors taken over.",
+      "skippedSponsor": "Sponsor \"{{name}}\" is missing in this tournament – slide not taken over",
+      "noScreenChange": "Running screens stay unchanged. The new monitors are not yet assigned to any screen.",
+      "errors": {
+        "tooLarge": "The file is too large (maximum {{limit}}). Nothing was changed.",
+        "notMonitorConfig": "This file contains no monitor settings",
+        "unsupportedVersion": "This version of the monitor file is not supported. Nothing was changed.",
+        "invalid": "The file is damaged or contains invalid settings. Nothing was changed.",
+        "readFailed": "The file could not be read. Nothing was changed.",
+        "saveFailed": "The monitors could not be taken over."
+      },
+      "templateMonitorName": "Hall standard",
+      "monitorsCount_one": "{{count}} monitor",
+      "monitorsCount_other": "{{count}} monitors",
+      "slidesCount_one": "{{count}} slide",
+      "slidesCount_other": "{{count}} slides",
+      "summary": "{{monitors}} with {{slides}}",
+      "renamed": "The imported monitor is now called ‘{{name}}’",
+      "customQrCheck": "Custom link from the file: “{{url}}” – please check that the address is right",
+      "customQrRemove": "Remove link",
+      "customQrRemoved": "Link will be removed – the QR slide points to the spectator page",
+      "customQrKeep": "Keep link",
+      "customQrInvalid": "Custom link with an invalid address was not taken over (only http or https) – the QR slide points to the spectator page",
+      "issues": {
+        "title": "Slides with a missing field or group",
+        "fieldMissing": "Slide ‘{{slide}}’ – this tournament has no {{field}}",
+        "groupMissing": "Slide ‘{{slide}}’ – this tournament has no {{group}}",
+        "slideLive": "Live: {{ref}}",
+        "slideSchedule": "Schedule: {{ref}}",
+        "slideTable": "Standings: {{ref}}",
+        "fieldName": "Field {{number}}",
+        "groupName": "Group {{letter}}",
+        "reassignField": "Move to field 1",
+        "allGroups": "Show all standings",
+        "removeSlide": "Remove slide",
+        "keepHint": "If you choose nothing, the slide stays and is marked in the monitor editor."
+      }
     }
   },
   "sponsor": {
@@ -330,6 +552,7 @@
     "fullscreen": "Fullscreen",
     "placementLogic": "Placement logic:",
     "playoff": "Playoff",
+    "open": "{{match}} – open",
     "groupStage": "Group stage",
     "noResults": "No results yet.",
     "noResultsInfo": "Rankings will be shown after the first matches.",
@@ -371,7 +594,9 @@
     "selectMatch": "Select match (optional - next match is selected automatically):",
     "autoNextMatch": "Automatic (next match)",
     "matchLoading": "Loading match...",
-    "noMatchesOnField": "No matches on this field"
+    "noMatchesOnField": "No matches on this field",
+    "enginePreparing": "Match is being prepared …",
+    "engineReadyError": "Match could not be prepared — please try again"
   },
   "tables": {
     "noGroups": "This tournament has no groups.",
@@ -398,6 +623,15 @@
     "finished": "End",
     "selectReferee": "Select referee",
     "chooseReferee": "Choose referee"
+  },
+  "matchResult": {
+    "penaltyShort": "pens",
+    "overtimeShort": "a.e.t.",
+    "finishedPenalty": "ended on pens",
+    "running": "live",
+    "runningElapsed": "live {{elapsed}}",
+    "scoreAriaPenalty": "Final score {{homeScore}}:{{awayScore}}, $t(sport:events.penaltyShootout) {{homePenalty}}:{{awayPenalty}}",
+    "scoreAriaOvertime": "Final score {{homeScore}}:{{awayScore}} after extra time"
   },
   "conflict": {
     "teamDoubleBooking": "Team double booking",
@@ -428,7 +662,15 @@
       "recentEvents": "Recent Events",
       "noEvents": "No events yet",
       "close": "Close",
-      "gotoCockpit": "Go to Cockpit"
+      "gotoCockpit": "Go to Cockpit",
+      "endAndEnter": "End match and enter result",
+      "eventYellowRedCard": "Yellow-red card {{team}}{{player}}",
+      "eventGoal": "GOAL {{team}}{{player}}",
+      "eventYellowCard": "Yellow card {{team}}{{player}}",
+      "eventRedCard": "Red card {{team}}{{player}}",
+      "eventTimePenalty": "Time penalty {{team}}{{player}}",
+      "eventSubstitution": "Substitution {{team}}",
+      "eventFoul": "Foul {{team}}"
     },
     "quickScore": {
       "goalScorers": "Goal Scorers",
@@ -460,6 +702,7 @@
       "goal": "GOAL {{team}}{{player}}",
       "assist": "Assist",
       "yellowCard": "Yellow card {{team}}{{player}}",
+      "yellowRedCard": "Yellow-red card {{team}}{{player}}",
       "redCard": "Red card {{team}}{{player}}",
       "timePenalty": "{{duration}} min time penalty {{team}}{{player}}",
       "substitutionDetail": "Substitution {{team}}: {{out}} → {{in}}",
@@ -509,7 +752,14 @@
     "live": "Live"
   },
   "scoreCell": {
-    "correctResult": "Correct result"
+    "correctResult": "Correct result",
+    "goalsOf": "Goals {{team}}",
+    "homeFallback": "Home",
+    "awayFallback": "Away",
+    "invalidScore": "Enter whole numbers from 0 only",
+    "changedElsewhere": "Result was changed in the meantime by {{name}} (now {{score}})",
+    "changedElsewhereNoName": "Result was changed in the meantime on another device (now {{score}})",
+    "keepDraft": "Keep my entry"
   },
   "sortable": {
     "referee": "Referee",
@@ -554,8 +804,31 @@
       "transition": "Transition",
       "performanceLabel": "Performance",
       "themeLabel": "Color Scheme",
-      "overscan": "TV margin ({{px}}px)",
-      "noMargin": "No margin"
+      "overscan": "Screen margin ({{prozent}})",
+      "overscanValue": "{{prozent}}%",
+      "overscanHint": "The preset of {{prozent}}% suits most TVs",
+      "noMargin": "No margin",
+      "transitions": {
+        "fade": "Fade",
+        "slide": "Slide",
+        "none": "Hard cut"
+      },
+      "performance": {
+        "auto": "Automatic",
+        "autoDesc": "The device decides whether animations run",
+        "high": "Full",
+        "highDesc": "All animations, for powerful devices",
+        "low": "Economy",
+        "lowDesc": "Fewer animations, for older TVs"
+      },
+      "themes": {
+        "dark": "Dark",
+        "darkDesc": "Light text on a dark background",
+        "light": "Light",
+        "lightDesc": "Dark text on a light background",
+        "auto": "Automatic",
+        "autoDesc": "Follows the device setting"
+      }
     },
     "slides": {
       "title": "Slides ({{count}})",
@@ -563,20 +836,11 @@
       "moveDown": "Move down",
       "edit": "Edit",
       "remove": "Remove",
-      "addSlide": "Add slide"
+      "addSlide": "Add slide",
+      "qrHidden": "Without a public tournament this slide is skipped",
+      "referenceField": "Field is missing in this tournament – please adjust",
+      "referenceGroup": "Group is missing in this tournament – please adjust"
     }
-  },
-  "colorScheme": {
-    "scoreColors": "Score Colors",
-    "homeColor": "Home Color",
-    "awayColor": "Away Color",
-    "useTeamColors": "Use team colors (if available)",
-    "schemaAria": "Color scheme: {{name}}",
-    "pickColorAria": "Pick {{label}} color: {{color}}",
-    "hexValueAria": "{{label}} hex value",
-    "recentlyUsed": "Recently used",
-    "useColorAria": "Use color {{color}}",
-    "done": "Done"
   },
   "toolbar": {
     "editSchedule": "Edit schedule",
@@ -671,7 +935,7 @@
       "waiting": "Waiting",
       "running": "Running",
       "finished": "Finished",
-      "skipped": "Skipped",
+      "skipped": "Cancelled",
       "active": "(active)"
     }
   },
@@ -687,5 +951,463 @@
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving..."
+  },
+  "slot": {
+    "groupRank": "{{rankWord}} {{group}}",
+    "winnerOf": "Winner of {{match}}",
+    "loserOf": "Loser of {{match}}",
+    "matchNumber": "Match {{number}}",
+    "unknown": "?",
+    "groupRankFallback": "#{{rank}} {{group}}",
+    "groupDefault": "Group {{id}}",
+    "rank1": "1st",
+    "rank2": "2nd",
+    "rank3": "3rd",
+    "rank4": "4th",
+    "playoffFinal": "Final",
+    "playoffSemifinal": "Semifinal {{n}}",
+    "playoffQuarterfinal": "Quarterfinal {{n}}",
+    "playoffRoundOf16": "Round of 16, match {{n}}",
+    "playoffPlace": "Match for place {{n}}",
+    "awaitGroup": "Completion of {{group}}",
+    "awaitMatch": "Completion of {{match}}",
+    "undecided": "to be decided"
+  },
+  "view": {
+    "status": {
+      "scheduled": "scheduled",
+      "cancelled": "Cancelled",
+      "awarded": "awarded"
+    }
+  },
+  "matchBadge": {
+    "live": "Live",
+    "pause": "Paused",
+    "halftime": "Half-time",
+    "overtime": "Extra time",
+    "shootout": "Penalties",
+    "ended": "Full time",
+    "cancelled": "Cancelled"
+  },
+  "matchClock": {
+    "remaining": "Time left",
+    "breakPrefix": "Break",
+    "expired": "Time is up – result to follow",
+    "ariaRemaining": "Time left {{time}}",
+    "section": {
+      "firstHalf": "1st half",
+      "secondHalf": "2nd half",
+      "sectionOfN": "Period {{section}} of {{sections}}",
+      "overtime": "Extra time",
+      "breakBeforeOvertime": "Break before extra time",
+      "breakBeforeShootout": "Break before penalties",
+      "halftimeBreak": "Half-time",
+      "sectionBreak": "Break after period {{section}} of {{sections}}"
+    }
+  },
+  "pdf": {
+    "organizer": "Organizer",
+    "hall": "Hall",
+    "matchDuration": "Match duration",
+    "mode": "Format",
+    "appointment": "Date",
+    "appointmentLine": "{{day}} · Start {{start}} · Expected end {{end}} · {{fields}}",
+    "fieldOne": "1 field",
+    "fieldMany": "{{n}} fields",
+    "participants": "Teams",
+    "groupStage": "Group stage",
+    "standingsOfGroup": "Standings – {{group}}",
+    "finalRanking": "Final ranking",
+    "placementPending": {
+      "afterFinal": "The final ranking is decided after the final",
+      "afterLast": "The final ranking is decided after the last match"
+    },
+    "nr": "No.",
+    "timeHeader": "Time",
+    "field": "Pitch",
+    "group": "Grp",
+    "home": "Home",
+    "result": "Result",
+    "away": "Away",
+    "referee": "Ref.",
+    "live": "live",
+    "skipped": "not played",
+    "corrected": "corrected {{time}}",
+    "afterOvertime": "after extra time",
+    "shootout": "Penalty shootout",
+    "pos": "Pos",
+    "team": "Team",
+    "played": "P",
+    "won": "W",
+    "drawn": "D",
+    "lost": "L",
+    "goals": "Goals",
+    "diff": "Diff",
+    "points": "Pts",
+    "thirdPlace": "Match for 3rd place",
+    "fifthSixth": "Match for 5th place",
+    "seventhEighth": "Match for 7th place",
+    "sectionTables": "Standings",
+    "sectionFinals": "Final round",
+    "timesTentative": "Times expected",
+    "contact": "Contact person",
+    "contactLine": "Contact person: {{contact}}",
+    "fontFallbackNote": "Special characters may appear as ?. The font could not be loaded. The PDF is created with a substitute font, all content is included.",
+    "noDate": "No date",
+    "kicker": {
+      "plan": "Schedule"
+    },
+    "durationMinutes": "{{minutes}} min",
+    "modeGroupsAndFinals": "Groups + final round",
+    "modeRoundRobin": "Round robin",
+    "unrenderableName": "Team name “{{name}}” contains characters that are printed as “?” in the PDF",
+    "phase": {
+      "roundOf16": "Round of 16",
+      "quarterfinal": "Quarter-finals",
+      "semifinal": "Semi-finals",
+      "final": "Final"
+    },
+    "groupName": "Group {{id}}",
+    "unrenderableField": "{{field}} “{{text}}” contains characters that are printed as “?” in the PDF",
+    "tournamentTitle": "Tournament name",
+    "ageClass": "Age group",
+    "rules": {
+      "label": {
+        "mode": "Mode",
+        "tiebreak": "Tiebreakers",
+        "duration": "Match time",
+        "rulebook": "Rulebook",
+        "ko": "Knockout"
+      },
+      "modeRoundRobin": "Round robin",
+      "criterion": {
+        "points": "Points",
+        "goalDifference": "Goal difference",
+        "goalsFor": "Goals",
+        "directComparison": "head-to-head"
+      },
+      "criteriaJoin": " – ",
+      "join": " · ",
+      "pointsLine": "Win {{win}}, draw {{draw}} {{unit}}",
+      "pointsLoss": ", loss {{loss}} {{unit}}",
+      "pointOne": "point",
+      "pointMany": "points",
+      "groupDuration": "Groups {{duration}}",
+      "finalDuration": "Final round {{duration}}",
+      "penalty": "Time penalty {{duration}}",
+      "seconds": "{{seconds}} sec",
+      "round": {
+        "roundOf16": "round of 16",
+        "quarterfinal": "quarter-finals",
+        "semifinal": "semi-finals",
+        "final": "final",
+        "placement": "placement matches",
+        "thirdPlace": "match for 3rd place"
+      },
+      "koAll": "{{label}}: if drawn, {{rule}}",
+      "koRound": "{{round}}: if drawn, {{rule}}",
+      "ruleShootout": "penalty shootout, {{shooters}}",
+      "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
+      "ruleGoldenGoal": "golden goal",
+      "shooters": "{{n}} shooters per team",
+      "shootersOne": "1 shooter per team"
+    },
+    "stand": "As of {{date}} {{time}}",
+    "offlineNote": "– offline, entries from other devices may be missing",
+    "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
+    "closedAt": "Final result – closed on {{date}} at {{time}}",
+    "matches": "Matches",
+    "qrCaption": {
+      "results": "Live results",
+      "plan": "Schedule on your phone"
+    },
+    "notice": {
+      "callPlan": "Schedule on your phone",
+      "callResults": "Schedule and results on your phone",
+      "step1": "1. Open the camera app on your phone",
+      "step2": "2. Point the camera at the QR code",
+      "step3": "3. Tap the link – no sign-up, no app.",
+      "addressLabel": "Or type into your browser:"
+    },
+    "logoUnusableLeft": "The left header graphic could not be used and is missing from the PDF",
+    "logoUnusableRight": "The right header graphic could not be used and is missing from the PDF",
+    "origin": {
+      "place": {
+        "first": "1st",
+        "second": "2nd",
+        "third": "3rd",
+        "fourth": "4th"
+      },
+      "placeNth": "{{n}}th",
+      "groupPlace": "{{place}} in {{group}}",
+      "round": {
+        "r16": "Round of 16",
+        "qf": "Quarter-final",
+        "semi": "Semi-final"
+      },
+      "winner": "Winner {{round}} {{n}}",
+      "loser": "Loser {{round}} {{n}}",
+      "undecided": "to be decided"
+    },
+    "finalTable": "Final standings"
+  },
+  "rights": {
+    "leadOnlyHint": "Only the tournament management can change this"
+  },
+  "standingsTie": {
+    "marker": {
+      "need": "Penalty shootout needed",
+      "open": "Tie – decision needed",
+      "same": "Same place",
+      "shootout": "Penalty shootout {{own}}:{{other}}",
+      "ordered": "Order set"
+    },
+    "notice": {
+      "needTitle": "Penalty shootout needed",
+      "openTitle": "Tie – decision needed",
+      "teamsEqual": "{{names}} are level on all criteria ({{places}}).",
+      "needSetting": "Place {{place}} must be played out according to the tournament rules.",
+      "needFollowUp": "Place {{place}} of the group goes on to a further match – a shared place is not possible there.",
+      "openChoice": "Enter a penalty shootout or share the place.",
+      "helperShootout": "The tournament organiser enters the result of the penalty shootout.",
+      "helperOrder": "The tournament organiser sets the order.",
+      "helperChoice": "The tournament organiser decides: penalty shootout or share the place.",
+      "offline": "Deciding needs a connection – or use “Complete group”.",
+      "decide": "Decide tie",
+      "shootout": "Enter penalty shootout",
+      "order": "Set order",
+      "withdrawnBy": "Withdrawn by {{name}} · {{time}}",
+      "withdrawnByUnknown": "Withdrawn · {{time}}",
+      "acceptedBy": "place shared by {{name}} · {{time}}",
+      "acceptedByUnknown": "place shared · {{time}}",
+      "shootoutBy": "shootout entered by {{name}} · {{time}}",
+      "shootoutByUnknown": "shootout entered · {{time}}",
+      "orderBy": "order set by {{name}} · {{time}}",
+      "orderByUnknown": "order set · {{time}}"
+    },
+    "decided": {
+      "sharedTitle": "Place shared",
+      "sharedTitleHelper": "Same place",
+      "sharedBody": "{{names}} share {{places}}. The next team is in place {{next}}.",
+      "shootoutTitle": "Penalty shootout {{winner}}:{{loser}} for {{team}}",
+      "shootoutBody": "{{team}} is ahead of {{other}} in the table. The match results stay unchanged.",
+      "orderTitle": "Order set",
+      "orderBody": "Order of {{names}} set after the penalty shootout. The match results stay unchanged.",
+      "withdrawShared": "Undo sharing",
+      "withdrawShootout": "Withdraw penalty shootout",
+      "withdrawOrder": "Withdraw order",
+      "withdrawUntil": "Possible until the group is completed.",
+      "closed": "The group is completed. The decision is final. It can only be changed by a correction or by reopening the group.",
+      "withdrawFailed": "Withdrawing did not work. Please try again.",
+      "withdrawOffline": "Withdrawing needs a connection.",
+      "by": "{{name}} · {{time}}",
+      "byUnknown": "Tournament management · {{time}}"
+    },
+    "dialog": {
+      "titleChoice": "Tie for place {{place}}",
+      "titleShootout": "Enter penalty shootout",
+      "titleOrder": "Set order",
+      "close": "Close",
+      "cancel": "Cancel",
+      "back": "Back",
+      "save": "Save",
+      "understood": "Understood",
+      "context": "Level on {{places}} on all criteria: {{names}}.",
+      "choiceGroup": "How do you want to decide?",
+      "shootoutHint": "The winner gets place {{place}}.",
+      "orderHint": "After the penalty shootout. You briefly give the reason.",
+      "accept": "Share place",
+      "whyTitle": "Why only the penalty shootout?",
+      "whyRules": "View tournament rules",
+      "shootoutLegend": "Result of the penalty shootout",
+      "hits": "Hits",
+      "shootoutInfo": "The winner is placed first in the table and the final ranking. The match results stay unchanged.",
+      "needWinner": "The penalty shootout needs a winner. {{a}}:{{b}} is not possible – enter the final result.",
+      "effect": "Afterwards in the table: {{list}}",
+      "orderLegend": "Order (first = better)",
+      "orderAfter": "After the penalty shootout",
+      "moveUp": "Move {{name}} up",
+      "moveDown": "Move {{name}} down",
+      "reasonLabel": "Reason (required)",
+      "reasonCount": "{{count}} / {{max}}",
+      "reasonHint": "Please do not enter player names.",
+      "errors": {
+        "BLOCK_CHANGED": "The tie has changed in the meantime. Please close the dialog and check the table.",
+        "STALE": "Saving did not work because the tournament changed at the same time. Please try again.",
+        "OFFLINE": "Deciding needs a connection – or use “Complete group”.",
+        "SHARED_PLACE_NOT_ALLOWED": "This place must be played out. “Share place” is not possible here.",
+        "REASON_REQUIRED": "Please give a reason (at most 500 characters).",
+        "ORDER_MISMATCH": "The order does not match the tie. Please close the dialog and open it again.",
+        "SHOOTOUT_NEEDS_WINNER": "The penalty shootout needs a winner.",
+        "UNKNOWN": "That did not work. Please try again.",
+        "ALREADY_DECIDED": "This tie has already been decided. Please check the table.",
+        "WITHDRAW_NOT_ALLOWED": "The group is completed. The decision can no longer be withdrawn.",
+        "RETRY_LATER": "The server was busy. Please try again."
+      },
+      "seen": {
+        "title": "Already decided",
+        "body": "This tie has been decided in the meantime.",
+        "current": "In effect: {{what}}",
+        "notSaved": "Your entry was not saved. The table shows the decision in effect.",
+        "titleBy": "Already decided by {{name}}"
+      },
+      "teamsEqual": "{{names}} are level on all rules.",
+      "acceptHintTwo": "Both in place {{place}}, then place {{next}} follows.",
+      "acceptHintThree": "All three in place {{place}}, then place {{next}} follows.",
+      "acceptHintMany": "All {{count}} in place {{place}}, then place {{next}} follows.",
+      "thenClosed": "Afterwards the group is closed."
+    },
+    "settings": {
+      "title": "Tournament rules: ties",
+      "hint": "The setting takes effect immediately in the table and the final ranking.",
+      "save": "Apply places",
+      "reset": "Discard change",
+      "readOnly": "Only the tournament organiser changes this setting.",
+      "confirmTitle": "Shared place will be undone",
+      "confirmIntro": "You changed the places that must be played out.",
+      "confirmBody": "{{names}} currently share a place (“Share place”). This will be undone, then a penalty shootout is needed.",
+      "confirmKeep": "An entered penalty shootout or a set order stays in place whatever you change.",
+      "confirmCancel": "Cancel",
+      "confirmOk": "Undo sharing",
+      "errors": {
+        "STALE": "The setting changed at the same time and was not saved. Please check the new state and try again.",
+        "OFFLINE": "Saving needs a connection.",
+        "NOT_FOUND": "The tournament was not found.",
+        "UNKNOWN": "Saving did not work. Please try again."
+      }
+    },
+    "places": {
+      "one": "place {{from}}",
+      "two": "places {{from}} and {{to}}",
+      "range": "places {{from}} to {{to}}"
+    }
+  },
+  "groupCompletion": {
+    "state": {
+      "open": "open",
+      "running": "in progress",
+      "ready": "ready to close",
+      "completed": "closed",
+      "checkSlots": "Check placements",
+      "notSent": "not sent yet"
+    },
+    "phase": {
+      "label": "{{phase}}: {{state}}",
+      "groups": "Group stage",
+      "finals": "Final round"
+    },
+    "head": {
+      "count": "{{done}} of {{total}} matches decided",
+      "helperNote": "The tournament director closes the group.",
+      "lockedWhy_one": "{{count}} match not decided yet",
+      "lockedWhy_other": "{{count}} matches not decided yet"
+    },
+    "button": {
+      "close": "Close group",
+      "again": "Close again",
+      "closeGroup": "Close {{name}}",
+      "reopen": "Reopen group",
+      "decide": "Decide tie",
+      "shootout": "Enter penalty shootout",
+      "order": "Set order",
+      "decideGroup": "{{name}}: decide tie",
+      "shootoutGroup": "{{name}}: enter penalty shootout",
+      "orderGroup": "{{name}}: set order"
+    },
+    "banner": {
+      "title": "{{name}} is ready – check the table and close it",
+      "title_all": "All matches decided – check the table and close it",
+      "body": "All {{count}} matches are decided. Only closing the group fills the places in the final round.",
+      "bodyNoFinals": "All {{count}} matches are decided. Only closing the group makes it final.",
+      "body_all": "All {{count}} matches are decided. Only closing the group makes the final standing final.",
+      "many": "{{groups}} are ready – check the tables and close them",
+      "manyBody": "All matches of these groups are decided. Close each group on its own; only closing fills its places.",
+      "reopenedTitle": "{{name}} is open again",
+      "reopenedTitle_all": "The group is open again",
+      "reopenedBy": "{{name}} · {{time}} · Reason: {{reason}}",
+      "reopenedByUnknown": "Reason: {{reason}}",
+      "reopenedBody": "The placements in the final round stay as they are until you close the group again. Correct what is needed, then close it again.",
+      "reopenedBody_all": "The final standing stays as it was until you close the group again. Correct what is needed, then close it again.",
+      "thenClosed": "Afterwards the group is closed."
+    },
+    "stale": {
+      "title": "{{name}}: check placements after a correction",
+      "title_all": "Check placements after a correction",
+      "body": "A result was corrected after the group was closed. Check the table; closing again fills the places anew.",
+      "body_all": "A result was corrected after the group was closed. Check the table; closing again hands over the final standing anew."
+    },
+    "done": {
+      "title": "{{name}} closed",
+      "title_all": "Group closed",
+      "by": "{{name}} · {{time}}",
+      "effect": "{{label}}: {{team}} ({{side}}).",
+      "sideHome": "home",
+      "sideAway": "away",
+      "effectAll": "The table has been handed over to the final standing.",
+      "phaseDone": "The group stage is closed. All places in the final round are filled."
+    },
+    "dialog": {
+      "title": "Close {{name}}",
+      "title_all": "Close group",
+      "titleAgain": "Close {{name}} again",
+      "titleAgain_all": "Close group again",
+      "intro": "All {{count}} matches of {{name}} are decided. Check the table before you close it.",
+      "intro_all": "All {{count}} matches are decided. Check the table before you close it.",
+      "rankAria": "Table",
+      "rankLine": "{{points}} pts · {{goals}} · {{diff}}",
+      "effectTitle": "Fills afterwards: {{list}}.",
+      "effectItem": "{{label}} {{side}} {{team}}",
+      "effectOthers": "The other groups are still in progress, their places stay open.",
+      "effectAll": "Afterwards the table is handed over to the final standing.",
+      "effectNone": "Afterwards the group is closed.",
+      "decided": "The tie is already decided: {{what}}. You do not need to enter it again.",
+      "confirm": "Close group",
+      "confirmAgain": "Close again",
+      "cancel": "Cancel",
+      "close": "Close dialog",
+      "understood": "Understood"
+    },
+    "notice": {
+      "openMatches": {
+        "title_one": "{{count}} match not decided yet",
+        "title_other": "{{count}} matches not decided yet",
+        "body": "{{matches}}. {{name}} is not closed, the places stay open.",
+        "body_all": "{{matches}}. The group is not closed.",
+        "hint": "Close it once all matches are decided."
+      },
+      "already": {
+        "title": "{{name}} is already closed",
+        "title_all": "The group is already closed",
+        "body": "Someone else closed the group with the same table. You do not need to do anything."
+      },
+      "tableChanged": {
+        "title": "The table has changed",
+        "body": "Something changed while you were closing. Your closing was not saved. Check the table and close it again."
+      },
+      "differently": {
+        "title": "Already closed differently",
+        "body": "Someone else closed the group with a different ranking. Your closing was not saved. The table shows the current state."
+      }
+    },
+    "errors": {
+      "OFFLINE": "“Close group” needs a connection. Please try again with a network.",
+      "RETRY_LATER": "The server was busy. Please try again.",
+      "UNKNOWN": "That did not work. Please try again.",
+      "FORBIDDEN": "You are not allowed to do this. Only the tournament director closes groups."
+    },
+    "reopen": {
+      "title": "Reopen {{name}}",
+      "title_all": "Reopen group",
+      "body": "While {{name}} is open, the placements in the final round stay as they are. Only closing it again fills them anew. You can correct single results without reopening, too.",
+      "body_all": "While the group is open, the final standing stays as it was. Only closing it again hands it over anew. You can correct single results without reopening, too.",
+      "reasonLabel": "Reason (required)",
+      "reasonCount": "{{count}} / {{max}}",
+      "reasonHint": "Please do not enter player names. Visible to the tournament director only.",
+      "confirm": "Reopen group",
+      "errors": {
+        "NOT_COMPLETED": "The group is no longer closed. Please check the table.",
+        "REASON_REQUIRED": "Please give a reason (up to 500 characters)."
+      }
+    }
   }
 }

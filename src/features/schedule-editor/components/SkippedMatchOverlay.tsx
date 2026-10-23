@@ -7,7 +7,7 @@
  * - Option to restore the match
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Match } from '../../../types/tournament';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../../components/ui';
@@ -15,8 +15,8 @@ import { Button } from '../../../components/ui';
 interface SkippedMatchOverlayProps {
   /** The skipped match */
   match: Match;
-  /** Callback to restore the match */
-  onUnskip: () => void;
+  /** Callback to restore the match; A-08f3e4: liefert ggf. den Ablehnungstext (z. B. „nur Turnierleitung“, @FU-071) */
+  onUnskip: () => Promise<string | null>;
   /** Whether the restore button should be shown */
   showRestoreButton?: boolean;
   /** Whether the component is in compact mode */
@@ -29,6 +29,8 @@ export const SkippedMatchOverlay: React.FC<SkippedMatchOverlayProps> = ({
   showRestoreButton = true,
   compact = false,
 }) => {
+  const [notice, setNotice] = useState<string | null>(null);
+  const handleUnskip = async () => { setNotice((await onUnskip()) ?? null); };
   const containerStyle: React.CSSProperties = {
     position: 'absolute',
     top: 0,
@@ -111,7 +113,7 @@ export const SkippedMatchOverlay: React.FC<SkippedMatchOverlayProps> = ({
           <Button
             variant="ghost"
             size={compact ? 'sm' : 'md'}
-            onClick={onUnskip}
+            onClick={() => { void handleUnskip(); }}
             style={{
               color: cssVars.colors.textPrimary,
               backgroundColor: cssVars.colors.border,
@@ -120,6 +122,11 @@ export const SkippedMatchOverlay: React.FC<SkippedMatchOverlayProps> = ({
             Wiederherstellen
           </Button>
         </div>
+      )}
+
+      {/* A-08f3e4 (@FU-071): Ablehnung des Wieder-Einplanens */}
+      {notice && (
+        <span role="alert" data-testid="skipped-match-notice" style={{ ...reasonStyle, color: cssVars.colors.warning }}>{notice}</span>
       )}
     </div>
   );

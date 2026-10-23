@@ -12,8 +12,17 @@
 // =============================================================================
 
 export const breakpoints = {
+  /** Bis einschließlich dieser Breite gelten die schmalsten Handy-Maße (Gruppentabelle ohne Seitenrand, @ZM-088, @OB-060) */
+  narrowPhone: '360px',
+
+  /** Unterhalb davon zeigt die Kopfzeile der Startseite Marken nur als Symbol (@OB-021, 360–390 px ohne Überlauf) */
+  compactHeader: '400px',
+
   /** Small phones and below */
   mobile: '480px',
+
+  /** Unterhalb davon erscheinen zentrierte Dialoge als Blatt von unten (B-43b3, @OB-021) */
+  sheet: '600px',
 
   /** Tablets and large phones */
   tablet: '768px',
@@ -33,7 +42,10 @@ export const breakpoints = {
 // =============================================================================
 
 export const breakpointValues = {
+  narrowPhone: 360,
+  compactHeader: 400,
   mobile: 480,
+  sheet: 600,
   tablet: 768,
   desktop: 1024,
   wide: 1280,

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
 import { SmartConfigResult } from '../utils/smartConfigCalculator';
 import { useSmartConfig } from '../hooks/useSmartConfig';
+import { FINALS_LABEL_KEYS } from './smartConfigFinalsLabel';
 import styles from './SmartConfig.module.css';
 
 interface SmartConfigProps {
@@ -20,11 +21,10 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
     setMinutes,
     availableHours,
     recommendation,
+    teamsKeptTimeShort,
     lastApplied,
     lockTeams,
     setLockTeams,
-    lockGroups,
-    setLockGroups,
     lockFields,
     setLockFields,
     lockGameDuration,
@@ -33,8 +33,6 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
     setLockBreakDuration,
     constraintTeams,
     setConstraintTeams,
-    constraintGroups,
-    setConstraintGroups,
     constraintFields,
     setConstraintFields,
     constraintGameDuration,
@@ -44,8 +42,8 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
     handleCalculate,
     handleApply,
     handleQuickApply,
-    usesGroups,
     showTeamsWarning,
+    applied,
   } = useSmartConfig({ formData, onApply });
 
   return (
@@ -166,18 +164,6 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
                 options={[4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 24]}
               />
 
-              {/* Groups Constraint - only for groupsAndFinals */}
-              {usesGroups && (
-                <ConstraintRow
-                  label={t('smartConfig.constraints.groupCount')}
-                  checked={lockGroups}
-                  onCheckedChange={setLockGroups}
-                  value={constraintGroups}
-                  onValueChange={setConstraintGroups}
-                  options={[2, 3, 4, 5, 6, 8]}
-                />
-              )}
-
               {/* Fields Constraint */}
               <ConstraintRow
                 label={t('smartConfig.constraints.fieldCount')}
@@ -219,6 +205,15 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
                   {t('smartConfig.result.title')}
                 </div>
 
+                {recommendation.groupCount !== undefined && recommendation.finalsPlan !== undefined && (
+                  <div className={styles.resultStructure} data-testid="smart-config-structure">
+                    {t('smartConfig.result.structure', {
+                      groups: t('smartConfig.result.groupCount', { count: recommendation.groupCount }),
+                      finals: t(FINALS_LABEL_KEYS[recommendation.finalsPlan]),
+                    })}
+                  </div>
+                )}
+
                 <div className={styles.statsGrid}>
                   <StatItem label={t('smartConfig.result.teams')} value={recommendation.teams} />
                   <StatItem label={t('smartConfig.result.fields')} value={recommendation.fields} />
@@ -242,12 +237,24 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
             </>
           )}
 
+          {teamsKeptTimeShort && (
+            <p className={styles.warningText} role="alert" data-testid="smart-config-teams-short">
+              <span aria-hidden="true">⚠️</span> {t('smartConfig.teamsKeptTimeShort', { teams: recommendation?.teams })}
+            </p>
+          )}
+
           {showTeamsWarning && (
             <p className={styles.warningText} role="alert">
               <span aria-hidden="true">⚠️</span> {t('smartConfig.teamsWarning', { current: formData.numberOfTeams, hours: availableHours, suggested: recommendation?.teams })}
             </p>
           )}
         </div>
+      )}
+
+      {applied && (
+        <p className={styles.appliedText} role="status" data-testid="smart-config-applied">
+          {t('smartConfig.applied')}
+        </p>
       )}
     </div>
   );

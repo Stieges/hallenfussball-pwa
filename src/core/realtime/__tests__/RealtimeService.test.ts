@@ -107,10 +107,11 @@ describe('RealtimeService — subscription lifecycle', () => {
     service.destroy();
   });
 
-  it('idempotence — subscribing same tournament twice removes the old channel first', () => {
+  it('idempotence — subscribing same tournament twice removes the old channel first', async () => {
     const service = new RealtimeService();
     service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
     service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
+    await flushPromises(); // @FU-102: neuer Kanal erst nach fertigem Abbau des alten
 
     expect(supabaseMock.channel).toHaveBeenCalledTimes(2);
     expect(supabaseMock.removeChannel).toHaveBeenCalledTimes(1);
@@ -165,6 +166,73 @@ describe('RealtimeService — subscription lifecycle', () => {
   });
 });
 
+describe('RealtimeService — TIMED_OUT (A-08f-F2, @FU-087)', () => {
+  it('TIMED_OUT meldet error an onStatusChange und onError (loest Abfrage-Ausweichen aus)', () => {
+    const service = new RealtimeService();
+    const onStatusChange = vi.fn();
+    const onError = vi.fn();
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn(), onError, onStatusChange });
+
+    channels.at(-1)?.statusCallback?.('TIMED_OUT');
+
+    expect(onStatusChange).toHaveBeenLastCalledWith('error');
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(service.getState().status).toBe('error');
+
+    service.destroy();
+  });
+});
+
+describe('RealtimeService — Server lehnt Abos nach SUBSCRIBED ab (A-08f3b2, @FU-087)', () => {
+  beforeEach(() => {
+    resetMocks();
+  });
+
+  function systemHandler(channel: MockChannel): (payload: Record<string, unknown>) => void {
+    const call = channel.on.mock.calls.find((c: unknown[]) => c[0] === 'system');
+    if (!call) { throw new Error('keine system-Bindung'); }
+    return call[2] as (payload: Record<string, unknown>) => void;
+  }
+
+  it('System-Nachricht postgres_changes/error nach SUBSCRIBED meldet error (Abfrage-Ausweichen greift)', () => {
+    const service = new RealtimeService();
+    const onStatusChange = vi.fn();
+    const onError = vi.fn();
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn(), onError, onStatusChange });
+    channels[0].statusCallback?.('SUBSCRIBED');
+    expect(onStatusChange).toHaveBeenLastCalledWith('connected');
+
+    systemHandler(channels[0])({ status: 'error', extension: 'postgres_changes', message: 'Unable to subscribe' });
+
+    expect(onStatusChange).toHaveBeenLastCalledWith('error');
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(service.getState().status).toBe('error');
+    service.destroy();
+  });
+
+  it('Gegenbeispiel: System-Nachricht status ok ändert nichts', () => {
+    const service = new RealtimeService();
+    const onStatusChange = vi.fn();
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn(), onStatusChange });
+    channels[0].statusCallback?.('SUBSCRIBED');
+
+    systemHandler(channels[0])({ status: 'ok', extension: 'postgres_changes', message: 'Subscribed to PostgreSQL' });
+
+    expect(onStatusChange).toHaveBeenCalledTimes(1);
+    expect(service.getState().status).toBe('connected');
+    service.destroy();
+  });
+
+  it('bindet nie die Tabelle tournaments (nicht in der Publikation supabase_realtime)', () => {
+    const service = new RealtimeService();
+    service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn(), onTeamChange: vi.fn(), onMatchEventChange: vi.fn() });
+    const tables = channels[0].on.mock.calls.map((c: unknown[]) => (c[1] as { table?: string }).table);
+    expect(tables).toContain('matches');
+    expect(tables).not.toContain('tournaments');
+    service.destroy();
+  });
+});
+
 describe('RealtimeService — pause/resume + visibility', () => {
   beforeEach(() => {
     resetMocks();
@@ -183,7 +251,7 @@ describe('RealtimeService — pause/resume + visibility', () => {
     service.destroy();
   });
 
-  it('resume() recreates channels for previously subscribed tournaments', () => {
+  it('resume() recreates channels for previously subscribed tournaments', async () => {
     const service = new RealtimeService();
     service.subscribeTournament({ tournamentId: 't1', onMatchChange: vi.fn() });
     service.subscribeTournament({ tournamentId: 't2', onMatchChange: vi.fn() });
@@ -192,6 +260,7 @@ describe('RealtimeService — pause/resume + visibility', () => {
 
     service.pause();
     service.resume();
+    await flushPromises(); // @FU-102: neuer Kanal erst nach fertigem Abbau des alten
 
     expect(supabaseMock.channel.mock.calls.length).toBe(
       channelsCreatedBeforePause + 2,

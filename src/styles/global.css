@@ -118,7 +118,7 @@
      =========================================== */
   --color-on-primary: #0A1628;
   --color-on-secondary: #0A1628;
-  --color-on-error: #FFFFFF;
+  --color-on-error: #0A1628;
   --color-on-warning: #000000;
   --color-on-success: #FFFFFF;
 
@@ -126,13 +126,37 @@
      Colors - Borders
      =========================================== */
   --color-border: rgba(255, 255, 255, 0.1);
-  --color-border-light: #64748B;
   --color-border-medium: rgba(255, 255, 255, 0.2);
   --color-border-active: rgba(0, 230, 118, 0.3);
   --color-border-solid: #334155;
   --color-border-subtle: rgba(255, 255, 255, 0.06);
   --color-border-default: rgba(255, 255, 255, 0.12);
-  --color-border-strong: #64748B;
+  /* Bedien-Rand (Knopf, Eingabefeld, Auswahl): >= 3:1 gegen die Fläche (WCAG 1.4.11, @OB-055, @OB-057). */
+  --color-border-control: #64748B;
+  /* Bedien-Rand auf erhöhter Fläche (surface-light, surface-variant): neutral 300, dort reicht neutral 500 nicht (1,6 : 1) */
+  --color-border-control-raised: #CBD5E1;
+
+  /* Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.): dunkel = eine Stufe dunkler als die Seite */
+  --color-scoreboard-bg: #050E1F;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #A3B8D4;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.08);
+  --color-scoreboard-divider: rgba(255, 255, 255, 0.22);
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
+  --color-hold-fill: var(--color-error);
+  --color-next-warn-border: var(--color-warning); /* Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (@SL-155) */
+  --color-card-yellow: #FACC15;
+  --color-card-red: #DC2626;
 
   /* ===========================================
      Colors - Error
@@ -149,7 +173,8 @@
      Colors - Warning
      =========================================== */
   --color-warning: #FF9100;
-  --color-warning-hover: #FF6D00;
+  --color-warning-hover: #FF9100;
+  --color-warning-solid: #FF6D00;
   --color-warning-subtle: rgba(255, 145, 0, 0.08);
   --color-warning-light: rgba(255, 145, 0, 0.15);
   --color-warning-medium: rgba(255, 145, 0, 0.1);
@@ -177,8 +202,9 @@
   /* ===========================================
      Colors - Status (Tournament States)
      =========================================== */
-  --color-status-live: #DC2626;
-  --color-status-live-bg: rgba(220, 38, 38, 0.15);
+  --color-status-live: #FB7185;
+  --color-status-live-bg: rgba(251, 113, 133, 0.15);
+  --color-status-live-on: #0A1628;
   --color-status-live-row-bg: rgba(220, 38, 38, 0.08);
 
   --color-status-upcoming: #4CAF50;
@@ -199,9 +225,9 @@
   /* ===========================================
      Colors - Live Cockpit
      =========================================== */
-  --color-live-badge: #DC2626;
-  --color-live-badge-bg: rgba(220, 38, 38, 0.2);
-  --color-live-badge-pulse: rgba(220, 38, 38, 0.4);
+  --color-live-badge: #FB7185;
+  --color-live-badge-bg: rgba(251, 113, 133, 0.2);
+  --color-live-badge-pulse: rgba(251, 113, 133, 0.4);
 
   /* ===========================================
      Colors - Correction/Warning Banner
@@ -362,6 +388,31 @@
   --input-height-md: 44px;
   --input-height-lg: 56px;
 
+  /* Component Sizes (px - FIXED) */
+  --sizing-sidebar-width: 300px;
+  /* Cockpit Laptop (Mockup laptop.html, Daniel 18.10.): Ereignisspalte, Tor-Höhe, Leiste, Mehr-Knopf, Feldwahl */
+  --sizing-cockpit-ereignisspalte: 25rem;
+  --sizing-cockpit-tor-breit: calc(var(--touch-target-minimum) * 2);
+  --sizing-cockpit-leiste-breit: calc(var(--touch-target-primary) + var(--spacing-sm));
+  --sizing-cockpit-mehr-breit: 6rem;
+  --sizing-feldwahl-max: 26.25rem;
+  /* Rahmenbreiten: dünn, mittel, kräftig (eine Quelle für `borderWidths` und `cssVars.borderWidth`) */
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-strong: 3px;
+  --sizing-empty-state-min-height: 300px;
+  --sizing-hairline: 1px;
+  /* Tafel Live-Cockpit (Mockup, fest): Uhr und Stand über Schrift-Tokens, Meldezeile reine Anzeige */
+  --sizing-team-stripe-width: var(--spacing-xs);
+  /* Spaltenkopf im Cockpit: Streifenzeile + drei Namenszeilen, beide Köpfe gleich hoch (@OB-025, Altplan 3.3) */
+  --sizing-qr-placeholder: 150px;
+  /* Vorschau-Kästen „Anzeige für Zuschauer“ (Mockup `.sb.v`: 112 × 84) aus der Primär-Touchgröße */
+  --sizing-score-preview-width: calc(var(--touch-target-primary) * 2);
+  --sizing-score-preview-height: calc(var(--touch-target-primary) * 1.5);
+  --opacity-disabled: 0.5;
+  --sizing-notice-line-height-compact: 24px;
+  --sizing-notice-line-height-regular: 32px;
+
   /* Layout Heights */
   --layout-height-bottom-nav: 56px;
   --layout-height-bottom-action-bar: 56px;
@@ -390,6 +441,7 @@
   --font-size-display-lg: 48px;
   --font-size-display-md: 36px;
   --font-size-display-sm: 28px;
+  --font-size-display-xl: 64px;
 
   --font-size-headline-lg: 24px;
   --font-size-headline-md: 20px;
@@ -426,6 +478,7 @@
      Used for match scores, must stay readable
      on sports fields regardless of preferences.
      =========================================== */
+  --font-size-score-xs: 32px;
   --font-size-score-sm: 40px;
   --font-size-score-md: 56px;
   --font-size-score-lg: 72px;
@@ -449,11 +502,15 @@
   --line-height-body-sm: 16px;
   --line-height-label: 16px;
 
+  /* Letter Spacing (px - FIXED) */
+  --letter-spacing-wider: 1px;
+
   /* Font Weights */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
   /* Shadows - Synced with theme.ts */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -578,7 +635,7 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Accent
      =========================================== */
-  --color-accent: #D97706;
+  --color-accent: #B45309;
   --color-accent-light: rgba(217, 119, 6, 0.15);
   --color-accent-medium: rgba(217, 119, 6, 0.08);
   --color-accent-subtle: rgba(217, 119, 6, 0.05);
@@ -610,8 +667,8 @@ html[data-font-size="x-large"] {
      Colors - Text
      =========================================== */
   --color-text-primary: #1A1A2E;
-  --color-text-secondary: #6B7280;
-  --color-text-muted: rgba(0, 0, 0, 0.5);
+  --color-text-secondary: #4B5563;
+  --color-text-muted: rgba(0, 0, 0, 0.6);
   --color-text-placeholder: #9CA3AF;
   --color-text-disabled: #9CA3AF;
   --color-text-tertiary: #9CA3AF;
@@ -630,13 +687,35 @@ html[data-font-size="x-large"] {
      Colors - Borders
      =========================================== */
   --color-border: #E2E8F0;
-  --color-border-light: #E2E8F0;
   --color-border-medium: #CBD5E1;
   --color-border-active: rgba(5, 150, 105, 0.4);
   --color-border-solid: #CBD5E1;
   --color-border-subtle: #F1F5F9;
   --color-border-default: #E2E8F0;
-  --color-border-strong: #94A3B8;
+  --color-border-control: #64748B;
+  --color-border-control-raised: #64748B;
+
+  /* Tafel Live-Cockpit (Spec § 8.2): hell = dunkel, eigene Fläche */
+  --color-scoreboard-bg: #0F1B33;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #A3B8D4;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #A3B8D4;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.08);
+  --color-scoreboard-divider: rgba(255, 255, 255, 0.22);
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
+  --color-hold-fill: var(--color-error);
+  --color-next-warn-border: var(--color-warning); /* Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (@SL-155) */
+  --color-card-yellow: #FACC15;
+  --color-card-red: #DC2626;
 
   /* ===========================================
      Colors - Error
@@ -652,8 +731,9 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Warning
      =========================================== */
-  --color-warning: #D97706;
-  --color-warning-hover: #B45309;
+  --color-warning: #B45309;
+  --color-warning-hover: #92400E;
+  --color-warning-solid: #B45309;
   --color-warning-subtle: rgba(217, 119, 6, 0.05);
   --color-warning-light: rgba(217, 119, 6, 0.1);
   --color-warning-medium: rgba(217, 119, 6, 0.15);
@@ -681,8 +761,9 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Status (Tournament States)
      =========================================== */
-  --color-status-live: #DC2626;
-  --color-status-live-bg: rgba(220, 38, 38, 0.1);
+  --color-status-live: #BE123C;
+  --color-status-live-bg: rgba(190, 18, 60, 0.1);
+  --color-status-live-on: #FFFFFF;
   --color-status-live-row-bg: rgba(220, 38, 38, 0.05);
 
   --color-status-upcoming: #059669;
@@ -703,9 +784,9 @@ html[data-font-size="x-large"] {
   /* ===========================================
      Colors - Live Cockpit
      =========================================== */
-  --color-live-badge: #DC2626;
-  --color-live-badge-bg: rgba(220, 38, 38, 0.12);
-  --color-live-badge-pulse: rgba(220, 38, 38, 0.25);
+  --color-live-badge: #BE123C;
+  --color-live-badge-bg: rgba(190, 18, 60, 0.12);
+  --color-live-badge-pulse: rgba(190, 18, 60, 0.25);
 
   /* ===========================================
      Colors - Correction/Warning Banner
@@ -921,11 +1002,33 @@ html[data-font-size="x-large"] {
      Colors - Borders (Stronger)
      =========================================== */
   --color-border: rgba(255, 255, 255, 0.3);
-  --color-border-light: #888888;
   --color-border-solid: #666666;
   --color-border-subtle: rgba(255, 255, 255, 0.15);
   --color-border-default: rgba(255, 255, 255, 0.25);
-  --color-border-strong: #AAAAAA;
+  --color-border-control: #AAAAAA;
+  --color-border-control-raised: #AAAAAA;
+
+  /* Tafel Live-Cockpit, hoher Kontrast: Platzhalter, nicht MVP (Werte schwarz/gelb/weiß, nur vorläufig) */
+  --color-scoreboard-bg: #000000;
+  --color-scoreboard-text: #FFFFFF;
+  --color-scoreboard-text-muted: #FFFF00;
+  --color-scoreboard-live: #DC2626;
+  --color-scoreboard-highlight: #FF9100;
+  --color-scoreboard-final-phase: #C4B5FD;
+  --color-scoreboard-border: #FFFFFF;
+  --color-scoreboard-surface: rgba(255, 255, 255, 0.12);
+  --color-scoreboard-divider: #FFFFFF;
+  --color-scoreboard-on-live: #FFFFFF;
+  --color-scoreboard-on-highlight: #000000;
+  --color-scoreboard-ok: #00E676;
+  --color-scoreboard-info: #00B0FF;
+  --color-scoreboard-neutral: #64748B;
+  --color-notice-line-bg: var(--color-scoreboard-surface);
+  --color-notice-line-text: var(--color-scoreboard-text);
+  --color-hold-fill: var(--color-error);
+  --color-next-warn-border: var(--color-warning); /* Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (@SL-155) */
+  --color-card-yellow: #FACC15;
+  --color-card-red: #DC2626;
 
   /* ===========================================
      Colors - Primary (Brighter Green)

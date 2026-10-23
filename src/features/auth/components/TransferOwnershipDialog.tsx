@@ -6,9 +6,9 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 5.5
  */
 
-import React, { useState, CSSProperties } from 'react';
+import React, { useState, useEffect, useRef, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
-import { useFocusTrap } from '../../../hooks';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { Button } from '../../../components/ui/Button';
 import { RoleBadge } from './RoleBadge';
 import type { TournamentMembership, User } from '../types/auth.types';
@@ -40,12 +40,13 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
 }) => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [confirmationStep, setConfirmationStep] = useState(false);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
 
-  // WCAG 4.1.3: Focus trap for accessibility
-  const focusTrap = useFocusTrap({
-    isActive: true, // Always active when rendered
-    onEscape: onClose,
-  });
+  // Nach „Weiter“ liegt der Fokus auf „Zurück“, damit Enter nichts Endgültiges auslöst.
+  useEffect(() => {
+    if (confirmationStep) {backButtonRef.current?.focus();}
+  }, [confirmationStep]);
+
 
   const selectedCoAdmin = coAdmins.find((c) => c.membership.userId === selectedUserId);
 
@@ -58,129 +59,7 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
   // No co-admins available
   if (coAdmins.length === 0) {
     return (
-      <div style={styles.overlay} onClick={onClose}>
-        <div
-          ref={focusTrap.containerRef}
-          style={styles.dialog}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="transfer-ownership-dialog-title"
-        >
-          <div style={styles.header}>
-            <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership übertragen</h2>
-            <button style={styles.closeButton} onClick={onClose}>
-              &times;
-            </button>
-          </div>
-
-          <div style={styles.content}>
-            <div style={styles.warningBox}>
-              <p style={styles.warningText}>
-                Keine Co-Admins vorhanden. Du kannst Ownership nur an Co-Admins
-                übertragen.
-              </p>
-              <p style={styles.hintText}>
-                Ernenne zuerst ein Mitglied zum Co-Admin, bevor du Ownership
-                überträgst.
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.footer}>
-            <Button variant="primary" onClick={onClose}>
-              Verstanden
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Confirmation step
-  if (confirmationStep && selectedCoAdmin) {
-    return (
-      <div style={styles.overlay} onClick={onClose}>
-        <div
-          ref={focusTrap.containerRef}
-          style={styles.dialog}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="transfer-ownership-dialog-title"
-        >
-          <div style={styles.header}>
-            <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership bestätigen</h2>
-            <button style={styles.closeButton} onClick={onClose}>
-              &times;
-            </button>
-          </div>
-
-          <div style={styles.content}>
-            <div style={styles.confirmationBox}>
-              <p style={styles.confirmationText}>
-                Bist du sicher, dass du die Ownership von
-              </p>
-              <p style={styles.tournamentNameHighlight}>&quot;{tournamentName}&quot;</p>
-              <p style={styles.confirmationText}>übertragen möchtest an:</p>
-              <div style={styles.selectedUserBox}>
-                <div style={styles.avatar}>
-                  {selectedCoAdmin.user?.name
-                    ? selectedCoAdmin.user.name.charAt(0).toUpperCase()
-                    : '?'}
-                </div>
-                <div style={styles.userDetails}>
-                  <p style={styles.userName}>
-                    {selectedCoAdmin.user?.name ?? 'Unbekannt'}
-                  </p>
-                  <p style={styles.userEmail}>
-                    {selectedCoAdmin.user?.email ?? 'Keine E-Mail'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.warningBox}>
-              <p style={styles.warningTitle}>Achtung!</p>
-              <p style={styles.warningText}>
-                Nach der Übertragung wirst du zum Co-Admin herabgestuft. Nur der
-                neue Owner kann dies rückgängig machen.
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.footer}>
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmationStep(false)}
-              disabled={isLoading}
-            >
-              Zurück
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleTransfer}
-              loading={isLoading}
-            >
-              Ownership übertragen
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Selection step
-  return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div
-        ref={focusTrap.containerRef}
-        style={styles.dialog}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="transfer-ownership-dialog-title"
-      >
+      <DialogSurface isOpen onClose={onClose} labelledBy="transfer-ownership-dialog-title">
         <div style={styles.header}>
           <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership übertragen</h2>
           <button style={styles.closeButton} onClick={onClose}>
@@ -189,81 +68,154 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
         </div>
 
         <div style={styles.content}>
-          <p style={styles.description}>
-            Wähle einen Co-Admin aus, der die Ownership von &quot;{tournamentName}&quot;
-            übernehmen soll.
-          </p>
-
-          <div style={styles.coAdminList}>
-            {coAdmins.map(({ membership, user }) => {
-              const isSelected = membership.userId === selectedUserId;
-
-              return (
-                <button
-                  key={membership.id}
-                  style={{
-                    ...styles.coAdminOption,
-                    ...(isSelected ? styles.coAdminOptionSelected : {}),
-                  }}
-                  onClick={() => setSelectedUserId(membership.userId)}
-                >
-                  <div style={styles.avatar}>
-                    {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
-                  </div>
-                  <div style={styles.userDetails}>
-                    <p style={styles.userName}>{user?.name ?? 'Unbekannt'}</p>
-                    <p style={styles.userEmail}>
-                      {user?.email ?? 'Keine E-Mail'}
-                    </p>
-                  </div>
-                  <RoleBadge role="co-admin" size="sm" />
-                </button>
-              );
-            })}
+          <div style={styles.warningBox}>
+            <p style={styles.warningText}>
+              Keine Co-Admins vorhanden. Du kannst Ownership nur an Co-Admins
+              übertragen.
+            </p>
+            <p style={styles.hintText}>
+              Ernenne zuerst ein Mitglied zum Co-Admin, bevor du Ownership
+              überträgst.
+            </p>
           </div>
         </div>
 
         <div style={styles.footer}>
-          <Button variant="ghost" onClick={onClose}>
-            Abbrechen
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => setConfirmationStep(true)}
-            disabled={!selectedUserId}
-          >
-            Weiter
+          <Button variant="primary" onClick={onClose}>
+            Verstanden
           </Button>
         </div>
+      </DialogSurface>
+    );
+  }
+
+  // Confirmation step
+  if (confirmationStep && selectedCoAdmin) {
+    return (
+      <DialogSurface isOpen onClose={onClose} labelledBy="transfer-ownership-dialog-title">
+        <div style={styles.header}>
+          <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership bestätigen</h2>
+          <button style={styles.closeButton} onClick={onClose}>
+            &times;
+          </button>
+        </div>
+
+        <div style={styles.content}>
+          <div style={styles.confirmationBox}>
+            <p style={styles.confirmationText}>
+              Bist du sicher, dass du die Ownership von
+            </p>
+            <p style={styles.tournamentNameHighlight}>&quot;{tournamentName}&quot;</p>
+            <p style={styles.confirmationText}>übertragen möchtest an:</p>
+            <div style={styles.selectedUserBox}>
+              <div style={styles.avatar}>
+                {selectedCoAdmin.user?.name
+                  ? selectedCoAdmin.user.name.charAt(0).toUpperCase()
+                  : '?'}
+              </div>
+              <div style={styles.userDetails}>
+                <p style={styles.userName}>
+                  {selectedCoAdmin.user?.name ?? 'Unbekannt'}
+                </p>
+                <p style={styles.userEmail}>
+                  {selectedCoAdmin.user?.email ?? 'Keine E-Mail'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.warningBox}>
+            <p style={styles.warningTitle}>Achtung!</p>
+            <p style={styles.warningText}>
+              Nach der Übertragung wirst du zum Co-Admin herabgestuft. Nur der
+              neue Owner kann dies rückgängig machen.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.footer}>
+          <Button
+            ref={backButtonRef}
+            variant="ghost"
+            onClick={() => setConfirmationStep(false)}
+            disabled={isLoading}
+          >
+            Zurück
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleTransfer}
+            loading={isLoading}
+          >
+            Ownership übertragen
+          </Button>
+        </div>
+      </DialogSurface>
+    );
+  }
+
+  // Selection step
+  return (
+    <DialogSurface isOpen onClose={onClose} labelledBy="transfer-ownership-dialog-title">
+      <div style={styles.header}>
+        <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership übertragen</h2>
+        <button style={styles.closeButton} onClick={onClose}>
+          &times;
+        </button>
       </div>
-    </div>
+
+      <div style={styles.content}>
+        <p style={styles.description}>
+          Wähle einen Co-Admin aus, der die Ownership von &quot;{tournamentName}&quot;
+          übernehmen soll.
+        </p>
+
+        <div style={styles.coAdminList}>
+          {coAdmins.map(({ membership, user }) => {
+            const isSelected = membership.userId === selectedUserId;
+
+            return (
+              <button
+                key={membership.id}
+                style={{
+                  ...styles.coAdminOption,
+                  ...(isSelected ? styles.coAdminOptionSelected : {}),
+                }}
+                onClick={() => setSelectedUserId(membership.userId)}
+              >
+                <div style={styles.avatar}>
+                  {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
+                </div>
+                <div style={styles.userDetails}>
+                  <p style={styles.userName}>{user?.name ?? 'Unbekannt'}</p>
+                  <p style={styles.userEmail}>
+                    {user?.email ?? 'Keine E-Mail'}
+                  </p>
+                </div>
+                <RoleBadge role="co-admin" size="sm" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={styles.footer}>
+        <Button variant="ghost" onClick={onClose}>
+          Abbrechen
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => setConfirmationStep(true)}
+          disabled={!selectedUserId}
+        >
+          Weiter
+        </Button>
+      </div>
+    </DialogSurface>
   );
 };
 
 const styles: Record<string, CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: cssVars.colors.overlay,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.md,
-  },
-  dialog: {
-    width: '100%',
-    maxWidth: '480px',
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.lg,
-    overflow: 'hidden',
-    maxHeight: '90vh',
-    display: 'flex',
-    flexDirection: 'column',
-  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -320,7 +272,7 @@ const styles: Record<string, CSSProperties> = {
     gap: cssVars.spacing.md,
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `2px solid ${cssVars.colors.border}`,
+    border: `2px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     textAlign: 'left',
@@ -356,7 +308,7 @@ const styles: Record<string, CSSProperties> = {
   userEmail: {
     margin: 0,
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
+    color: cssVars.colors.textPrimary,
   },
   confirmationBox: {
     textAlign: 'center',

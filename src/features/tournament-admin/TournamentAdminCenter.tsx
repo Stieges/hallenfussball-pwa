@@ -14,8 +14,11 @@ import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../design-tokens';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useTournamentManager } from '../../hooks/useTournamentManager';
+import type { MatchUpdate } from '../../core/models/types';
+import { useToast } from '../../components/ui/Toast';
 import type { AdminCategoryId, AdminWarning } from './types/admin.types';
 import { ADMIN_LAYOUT, getAdminCategory } from './constants/admin.constants';
+import { CategoryRightGate } from './components/CategoryRightGate';
 
 // Components
 import { AdminSidebar } from './components/AdminSidebar';
@@ -56,16 +59,8 @@ const MatchCockpitCategory = lazy(() =>
 const VisibilityCategory = lazy(() =>
   import('./categories/Visibility').then((m) => ({ default: m.VisibilityCategory }))
 );
-const NotificationsCategory = lazy(() =>
-  import('./categories/Notifications').then((m) => ({ default: m.NotificationsCategory }))
-);
 const MetadataCategory = lazy(() =>
   import('./categories/Metadata').then((m) => ({ default: m.MetadataCategory }))
-);
-
-// Support
-const HelpCategory = lazy(() =>
-  import('./categories/Help').then((m) => ({ default: m.HelpCategory }))
 );
 
 // Danger Zone
@@ -105,21 +100,11 @@ const styles = {
     maxWidth: 'none',
   } as CSSProperties,
 
-  loadingContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 200,
-    color: cssVars.colors.textSecondary,
-  } as CSSProperties,
+  loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200, color: cssVars.colors.textSecondary } as CSSProperties,
 
   errorContainer: {
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.errorSubtle,
-    border: `1px solid ${cssVars.colors.errorBorder}`,
-    borderRadius: cssVars.borderRadius.lg,
-    color: cssVars.colors.error,
-    textAlign: 'center',
+    padding: cssVars.spacing.lg, background: cssVars.colors.errorSubtle, border: `1px solid ${cssVars.colors.errorBorder}`,
+    borderRadius: cssVars.borderRadius.lg, color: cssVars.colors.error, textAlign: 'center',
   } as CSSProperties,
 } as const;
 
@@ -144,8 +129,12 @@ export function TournamentAdminCenter({
   onBackToTournament,
 }: TournamentAdminCenterProps) {
   const { t } = useTranslation('admin');
+  const { showError } = useToast();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
+  // A4 (C-SYNC): AdminHeader schaltet SyncStatusIndicator frei, das intern selbst nichts rendert
+  // außerhalb des Cloud-Modus (isCloudSyncAvailable in useSyncStatus) -- kein Auth-Check hier nötig.
+  const showSyncStatus = true;
 
   // Category from URL is now passed as prop from App.tsx (single source of truth)
   const categoryFromUrl = initialCategory;
@@ -155,7 +144,25 @@ export function TournamentAdminCenter({
   const [showMobileHub, setShowMobileHub] = useState(true);
 
   // Tournament data
-  const { tournament, handleTournamentUpdate, loadingError } = useTournamentManager(tournamentId);
+  const { tournament, handleTournamentUpdate, applyRemote, scheduleService, loadingError } =
+    useTournamentManager(tournamentId);
+
+  // A2 Fixrunde 1 (Ruling AJ, I1: .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+  // task-A2-review.md): actions that deliberately change a match's RESULT/STATUS (reset
+  // results/schedule in DangerZone, restore a backup in Exports, ...) must persist that through a
+  // targeted update -- a full save() skips result/status columns for existing matches (A2).
+  const handleMatchesUpdate = useCallback((updates: MatchUpdate[]) => {
+    if (updates.length === 0 || !scheduleService) { return; }
+    const run = updates.length === 1
+      ? scheduleService.updateMatch(tournamentId, updates[0])
+      : scheduleService.updateMatches(tournamentId, updates);
+    run.catch((err: unknown) => {
+      console.error('Failed to persist match update:', err);
+      // A2 Fixrunde 1 (M6): sichtbares Feedback statt nur console.error, gleiches Muster wie
+      // TournamentManagementScreen.tsx.
+      showError('Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    });
+  }, [scheduleService, tournamentId, showError]);
 
   // Warnings (placeholder - will be computed from tournament state)
   const [warnings] = useState<AdminWarning[]>([]);
@@ -213,6 +220,11 @@ export function TournamentAdminCenter({
       tournamentId,
       tournament,
       onTournamentUpdate: handleTournamentUpdate,
+      // A2 Fixrunde 1: DangerZone (Ergebnisse/Spielplan zurücksetzen) und Exports (Backup
+      // wiederherstellen) brauchen diese beiden für den Ergebnis-/Status-Pfad -- andere
+      // Kategorien ignorieren die zusätzlichen Props einfach.
+      onLocalTournamentUpdate: applyRemote,
+      onMatchesUpdate: handleMatchesUpdate,
     };
 
     switch (activeCategory) {
@@ -222,6 +234,7 @@ export function TournamentAdminCenter({
         return <ActivityLogCategory {...categoryProps} />;
       case 'exports':
         return <ExportsCategory {...categoryProps} />;
+      // @OB-005: „Team & Helfer" bleibt vorbereitet — sichtbar erst mit dem Einstieg per QR-Code.
       case 'team-helpers':
         return <TeamHelpersCategory {...categoryProps} />;
       case 'sponsors':
@@ -232,12 +245,8 @@ export function TournamentAdminCenter({
         return <MatchCockpitCategory {...categoryProps} />;
       case 'visibility':
         return <VisibilityCategory {...categoryProps} />;
-      case 'notifications':
-        return <NotificationsCategory {...categoryProps} />;
       case 'metadata':
         return <MetadataCategory {...categoryProps} />;
-      case 'help':
-        return <HelpCategory {...categoryProps} />;
       case 'danger-zone':
         return <DangerZoneCategory {...categoryProps} />;
       default:
@@ -284,11 +293,13 @@ export function TournamentAdminCenter({
             showBackToHub
             onBackToHub={handleBackToHub}
             onBackToTournament={onBackToTournament}
+            tournamentId={tournamentId}
+            showSyncStatus={showSyncStatus}
           />
           <div style={{ ...styles.contentArea, ...styles.contentAreaMobile }}>
             <ErrorBoundary onReset={handleErrorReset}>
               <Suspense fallback={<CategorySkeleton />}>
-                {renderCategoryContent()}
+                <CategoryRightGate category={activeCategory} tournamentId={tournamentId}>{renderCategoryContent()}</CategoryRightGate>
               </Suspense>
             </ErrorBoundary>
           </div>
@@ -318,11 +329,13 @@ export function TournamentAdminCenter({
           title={categoryTitle}
           hideBackButton // Desktop: sidebar already has back button
           onBackToTournament={onBackToTournament}
+          tournamentId={tournamentId}
+          showSyncStatus={showSyncStatus}
         />
         <div style={styles.contentArea}>
           <ErrorBoundary onReset={handleErrorReset}>
             <Suspense fallback={<CategorySkeleton />}>
-              {renderCategoryContent()}
+              <CategoryRightGate category={activeCategory} tournamentId={tournamentId}>{renderCategoryContent()}</CategoryRightGate>
             </Suspense>
           </ErrorBoundary>
         </div>

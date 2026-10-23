@@ -1,0 +1,75 @@
+{
+  "title": "Beide treten im Gruppenspiel nicht an: Wertung 0:0, beendet (entschieden), forfeit_absent both",
+  "szenario": "Beide Teams treten nicht an (@W2A-024, @TM-063)",
+  "ctx": {
+    "matchId": "match-000069c",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000069c-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 0
+        },
+        "forfeit": {
+          "absent": "both"
+        }
+      },
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000069c-0000-4000-8000-000000000001",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000069c-0000-4000-8000-000000000001",
+      "decidedBy": "forfeit",
+      "finishedAt": 1000
+    },
+    "cacheColumns": {
+      "match_status": "finished",
+      "score_a": 0,
+      "score_b": 0,
+      "decided_by": "forfeit",
+      "forfeit_absent": "both"
+    }
+  }
+}

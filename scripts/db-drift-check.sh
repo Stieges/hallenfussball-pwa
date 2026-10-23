@@ -9,6 +9,16 @@
 # genau die Lücke, die von Mai bis September 2026 niemand bemerkt hat. Dieses Skript
 # vergleicht das tatsächliche Schema, nicht Typen.
 #
+# Abschluss-Fixrunde (final-review-B.md, I3): beide pg_dump-Aufrufe (rekonstruiert UND live,
+# plus der --linked-Fallback) laufen jetzt mit `--schema=public --schema=match_engine` statt nur
+# `--schema=public` — die 47 Funktionen der SQL-Rechenfunktion (B3a, 20260928_002_match_engine.sql)
+# liegen in einem eigenen, nicht über die API exponierten Schema (Ruling S12) und wären sonst für
+# diesen Check unsichtbar gewesen: ein Hotfix am Funktionsrumpf im Dashboard hätte den Drift-Check
+# nie rot gemacht. db_catalog_counts.py braucht dafür keine Änderung — seine Regex-Zählung für
+# Funktionen ist bereits schema-unabhängig (`^CREATE (?:OR REPLACE )?FUNCTION\b`, siehe dortiger
+# Kopfkommentar), match_engine enthält keine Tabellen/Policies/Trigger/Indizes/RLS-Zeilen, die die
+# öffentlich-schema-spezifischen Regex-Muster (TABLE_RE u.a.) falsch zählen könnten.
+#
 # Vergleichsziel ist NUR die Baseline (supabase/migrations/00000000000000_baseline_live_schema.sql)
 # plus die Migrationsdateien, die nach ihr hinzukommen — NICHT alle 23 Bestandsmigrationen.
 # Grund: Drei Bestandsdateien (20260121_005_anonymous_limit.sql,
@@ -65,6 +75,17 @@
 #
 # Ändert NICHTS an der Live-Datenbank (nur `supabase db dump`, ein reiner Lesevorgang).
 #
+# PENDING-LIVE (A-11 Fixrunde A6): supabase/migrations/PENDING-LIVE.txt listet Migrationen, deren Code schon auf `main`
+# ist, die aber erst in einem späteren DB-Fenster live gehen (eine Zeile je Migration:
+# `<dateiname> <frist YYYY-MM-DD> <commit-vorher>`). NUR dieses Skript liest die Datei – rls-role-matrix.sh,
+# local-db-apply.sh und die CI-Tests spielen jede Migration weiter ein. Für jede gelistete Migration:
+#   (a) sie wird beim Nachspielen übersprungen,
+#   (b) ihre Rechte-Assertions (Zuordnung fest in pending_assertions_for() unten, kein Namensraten) werden ausgelassen,
+#   (c) role_permissions live wird gegen rolePermissions.json aus <commit-vorher> verglichen (`git show`),
+#   (d) ist die Frist überschritten (heute > Frist, UTC), bricht der Lauf hart ab,
+#   (e) jeder Lauf druckt, was ausgenommen ist.
+# Nach dem Einspielen entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
+#
 set -euo pipefail
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # muss zur Live-Postgres-Version passen (siehe Baseline-Kopfkommentar)
@@ -75,6 +96,7 @@ BASELINE_BASENAME="$(basename "$BASELINE_FILE")"
 WORKDIR="$(mktemp -d)"
 CONTAINER_NAME="db-drift-check-$$"
 LIVE_DUMP_OVERRIDE=""
+PUBLICATION_ONLY_FILE=""
 HOST_PORT=""
 
 cleanup() {
@@ -87,6 +109,12 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --live-dump-file)
       LIVE_DUMP_OVERRIDE="$2"
+      shift 2
+      ;;
+    --realtime-publication-from)
+      # Testmodus (A-13b-S M1): nur Abschnitt 4d gegen eine Datei mit `schema.tabelle` je Zeile (statt live), nach dem
+      # Lesen von PENDING-LIVE; kein Container, kein Dump. Für Gegenproben der Publikationsliste.
+      PUBLICATION_ONLY_FILE="$2"
       shift 2
       ;;
     -h|--help)
@@ -106,23 +134,205 @@ if [[ ! -f "$BASELINE_FILE" ]]; then
 fi
 
 # --- 1. Marker aus der Baseline lesen, neuere Migrationsdateien bestimmen -----------------
-MARKER="$(grep -m1 -- '--   baseline-includes-through:' "$BASELINE_FILE" | sed -E 's/^--   baseline-includes-through:[[:space:]]*//')"
-if [[ -z "$MARKER" ]]; then
-  echo "::error::Marker 'baseline-includes-through' fehlt im Kopf von $BASELINE_BASENAME." >&2
-  echo "::error::Ohne ihn kann dieses Skript nicht wissen, welche Migrationen bereits in der Baseline stecken." >&2
-  exit 1
+# Gemeinsame Logik mit scripts/rls-role-matrix.sh und scripts/local-db-apply.sh — siehe
+# scripts/lib/migrations-since-baseline.sh (T1, "die Liste darf es nur EINMAL geben").
+source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
+NEWER_MIGRATIONS_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
+NEWER_MIGRATIONS=()
+if [[ -n "$NEWER_MIGRATIONS_RAW" ]]; then
+  # bash 3.2 (macOS-Standard) kennt kein mapfile — portable while-read-Schleife.
+  while IFS= read -r line; do
+    NEWER_MIGRATIONS+=("$line")
+  done <<< "$NEWER_MIGRATIONS_RAW"
 fi
 
-NEWER_MIGRATIONS=()
-for f in "$MIGRATIONS_DIR"/*.sql; do
-  base="$(basename "$f")"
-  [[ "$base" == "$BASELINE_BASENAME" ]] && continue
-  if [[ "$base" > "$MARKER" ]]; then
-    NEWER_MIGRATIONS+=("$f")
-  fi
-done
+# --- 1b. PENDING-LIVE (A-11 Fixrunde A6, siehe Kopfkommentar) ----------------------------
+PENDING_FILE="$MIGRATIONS_DIR/PENDING-LIVE.txt"
+JSON_REL_PATH="src/features/auth/permissions/rolePermissions.json"
 
-echo "Baseline enthält bereits bis einschließlich: $MARKER"
+# (b) Welche Rechte-Assertions gehören zu welcher noch nicht eingespielten Migration -- fest zugeordnet.
+# Eine gelistete Migration ohne Eintrag hier ist ein harter Fehler (nie still alles auslassen).
+pending_assertions_for() {
+  case "$1" in
+    20261110_001_role_permissions_mvp.sql)
+      echo "role-permissions-check-mvp-rights matches-update-only-manage-schedule monitors-writes-manage-screens"
+      ;;
+    20261110_002_device_roles.sql)
+      echo "role-checks-device-roles has-permission-device-roles-for-anonymous tournaments-insert-real-account-only anon-no-write-public-tables device-roles-guard-trigger hook-before-user-created-auth-admin-only auth-users-block-anonymous-upgrade"
+      ;;
+    20261110_003_field_control.sql)
+      echo "field-control-no-client-access field-control-rpcs-execute-only-authenticated append-match-events-checks-field-control"
+      ;;
+    20261110_004_coadmin_einsatz.sql)
+      echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
+      ;;
+    20261110_007_ci_schema_reader_grants.sql)
+      echo "positive-ci-schema-reader-select-field-control positive-ci-schema-reader-select-match-corrections"
+      ;;
+    20261110_005_result_entry_forfeit.sql)
+      echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
+      ;;
+    20261110_006_group_completion.sql)
+      echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers ci-schema-reader-select-group-completion"
+      ;;
+    20261110_008_helper_join.sql)
+      echo "helper-join-tables-no-client-access helper-join-ci-schema-reader-select helper-join-ci-schema-reader-no-bypassrls helper-join-rpcs-definer-owner-search-path helper-join-rpcs-execute-authenticated-only helper-join-internal-no-client-execute helper-join-definer-writers-tournament-collaborators helper-join-collaborators-delete-no-device-rows helper-join-protect-collaborator-row-a16 helper-join-decide-checks-check-number helper-join-device-role-guard-trigger helper-join-names-without-hidden-chars"
+      ;;
+    20261113_003_tournament_lifecycle.sql)
+      echo "lifecycle-columns-check lifecycle-tables-rls-no-client-writes lifecycle-select-policies lifecycle-ci-schema-reader-select lifecycle-rpcs-definer-authenticated-only lifecycle-public-reads lifecycle-helpers-no-client-execute lifecycle-append-closed-intake-before-field-control lifecycle-guard-triggers-complete lifecycle-guard-triggers-shape lifecycle-tournaments-triggers lifecycle-switch-outside-client-roles lifecycle-finish-locks-matches-before-tournament lifecycle-closed-for-helpers-single-source lifecycle-late-entries-unique-event lifecycle-log-request-id-unique"
+      ;;
+    20261110_009_spiel_beenden.sql)
+      echo "append-match-events-end-by-lead-without-claim"
+      ;;
+    20261117_104_public_payload.sql)
+      echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
+      ;;
+    20261113_101_monitor_heartbeat_wake_lock.sql)
+      echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
+      ;;
+    20261110_010_standing_decision_null_version.sql)
+      # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# (f) Welche Tabellen eine noch nicht eingespielte Migration in supabase_realtime aufnimmt -- fest zugeordnet wie (b).
+# Abschnitt 4d erwartet live die volle Liste REALTIME_PUBLICATION_TABLES OHNE diese Tabellen, solange die Migration in
+# PENDING-LIVE.txt steht. Migrationen ohne Publikationsänderung geben nichts aus.
+pending_publication_tables_for() {
+  case "$1" in
+    20261110_006_group_completion.sql)
+      echo "public.group_completions public.bracket_notices public.clarifications"
+      ;;
+  esac
+}
+
+PENDING_NAMES=()
+PENDING_ASSERTIONS=()
+PENDING_PUBLICATION_TABLES=()
+PENDING_JSON_COMMIT=""
+TODAY_UTC="$(date -u +%Y-%m-%d)"
+if [[ -f "$PENDING_FILE" ]]; then
+  while IFS= read -r pending_raw || [[ -n "$pending_raw" ]]; do
+    pending_line="${pending_raw%%#*}"
+    pending_line="$(echo "$pending_line" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+    [[ -z "$pending_line" ]] && continue
+    read -r p_name p_due p_commit p_extra <<< "$pending_line"
+    if [[ -z "${p_commit:-}" || -n "${p_extra:-}" ]] \
+      || ! [[ "$p_due" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
+      || ! [[ "$p_commit" =~ ^[0-9a-f]{7,40}$ ]]; then
+      echo "::error::PENDING-LIVE.txt: Zeile nicht im Format '<dateiname> <frist YYYY-MM-DD> <commit-vorher>': '$pending_raw'" >&2
+      exit 1
+    fi
+    if [[ ! -f "$MIGRATIONS_DIR/$p_name" ]]; then
+      echo "::error::PENDING-LIVE.txt nennt $p_name, die Datei gibt es in supabase/migrations nicht (Zeile veraltet?)." >&2
+      exit 1
+    fi
+    if [[ "$TODAY_UTC" > "$p_due" ]]; then
+      echo "::error::PENDING-LIVE: Frist $p_due für $p_name überschritten (heute $TODAY_UTC). Die Migration ist nicht live eingespielt oder die Zeile wurde nach dem Einspielen nicht entfernt -- einspielen bzw. Zeile entfernen, dann neu laufen lassen." >&2
+      exit 1
+    fi
+    if ! p_assertions="$(pending_assertions_for "$p_name")"; then
+      echo "::error::PENDING-LIVE: für $p_name ist in scripts/db-drift-check.sh (pending_assertions_for) keine Zuordnung der Rechte-Assertions hinterlegt." >&2
+      exit 1
+    fi
+    if [[ -n "$PENDING_JSON_COMMIT" && "$PENDING_JSON_COMMIT" != "$p_commit" ]]; then
+      echo "::error::PENDING-LIVE: alle Zeilen brauchen denselben <commit-vorher> (Vergleichsstand der rolePermissions.json): $PENDING_JSON_COMMIT vs. $p_commit." >&2
+      exit 1
+    fi
+    PENDING_JSON_COMMIT="$p_commit"
+    PENDING_NAMES+=("$p_name")
+    for a in $p_assertions; do PENDING_ASSERTIONS+=("$a"); done
+    p_pub_tables="$(pending_publication_tables_for "$p_name")"
+    for a in $p_pub_tables; do PENDING_PUBLICATION_TABLES+=("$a"); done
+    echo "PENDING-LIVE: ausgenommen bis $p_due (noch nicht live): $p_name"
+    echo "PENDING-LIVE:   nicht nachgespielt; Rechte-Assertions ausgelassen: $p_assertions"
+    [[ -n "$p_pub_tables" ]] && echo "PENDING-LIVE:   Realtime-Publikation live noch ohne: $p_pub_tables"
+    echo "PENDING-LIVE:   role_permissions live wird gegen $JSON_REL_PATH aus Commit $p_commit verglichen"
+  done < "$PENDING_FILE"
+fi
+if [[ ${#PENDING_NAMES[@]} -eq 0 ]]; then
+  echo "PENDING-LIVE: keine Ausnahmen -- alle Migrationen werden geprüft."
+fi
+
+is_pending() {
+  local candidate="$1" pending
+  for pending in "${PENDING_NAMES[@]:-}"; do
+    [[ -n "$pending" && "$candidate" == "$pending" ]] && return 0
+  done
+  return 1
+}
+is_pending_assertion() {
+  local candidate="$1" pending
+  for pending in "${PENDING_ASSERTIONS[@]:-}"; do
+    [[ -n "$pending" && "$candidate" == "$pending" ]] && return 0
+  done
+  return 1
+}
+
+# --- 4d (Liste + Vergleich, Aufruf unten in Abschnitt 4d) -----------------------------------
+# A-13b-S M1 (Review #330): 20261110_006 nimmt public.group_completions, public.bracket_notices und public.clarifications
+# in supabase_realtime auf (DO-Block am Ende der Migration) -- die Liste nennt deshalb 7 Tabellen, gleich mit
+# scripts/local-db-apply.sh. Solange eine Migration in PENDING-LIVE.txt steht, fehlen ihre Tabellen live noch
+# (pending_publication_tables_for, oben); erwartet wird dann die Liste ohne sie (vor dem Fenster G1: die 4 bisherigen).
+REALTIME_PUBLICATION_TABLES=(
+  "public.bracket_notices"
+  "public.clarifications"
+  "public.group_completions"
+  "public.match_events"
+  "public.matches"
+  "public.monitor_heartbeats"
+  "public.teams"
+)
+expected_realtime_publication_tables() {
+  local t p skip
+  for t in "${REALTIME_PUBLICATION_TABLES[@]}"; do
+    skip=""
+    for p in "${PENDING_PUBLICATION_TABLES[@]:-}"; do
+      [[ -n "$p" && "$t" == "$p" ]] && skip=1
+    done
+    [[ -z "$skip" ]] && echo "$t"
+  done
+  return 0
+}
+# $1 = Datei mit `schema.tabelle` je Zeile (live gelesen). Exit 0 = gleich, 1 = Abweichung (Diff auf stderr).
+check_realtime_publication() {
+  local actual expected row_count
+  actual="$(grep -v '^[[:space:]]*$' "$1" | sort || true)"
+  expected="$(expected_realtime_publication_tables | sort)"
+  if [[ "$actual" == "$expected" ]]; then
+    row_count="$(echo "$expected" | grep -c . || true)"
+    echo "Realtime-Publikation grün: supabase_realtime enthält genau die erwarteten $row_count Tabellen."
+    return 0
+  fi
+  echo "::error::supabase_realtime weicht von der erwarteten Tabellenliste ab:" >&2
+  echo "### Diff (links: erwartet, rechts: live)" >&2
+  diff <(echo "$expected") <(echo "$actual") >&2 || true
+  return 1
+}
+
+if [[ -n "$PUBLICATION_ONLY_FILE" ]]; then
+  echo "Testmodus --realtime-publication-from: nur Abschnitt 4d gegen $PUBLICATION_ONLY_FILE."
+  check_realtime_publication "$PUBLICATION_ONLY_FILE"
+  exit $?
+fi
+
+if [[ ${#PENDING_NAMES[@]} -gt 0 && ${#NEWER_MIGRATIONS[@]} -gt 0 ]]; then
+  KEPT_MIGRATIONS=()
+  for f in "${NEWER_MIGRATIONS[@]}"; do
+    if is_pending "$(basename "$f")"; then
+      continue
+    fi
+    KEPT_MIGRATIONS+=("$f")
+  done
+  NEWER_MIGRATIONS=("${KEPT_MIGRATIONS[@]:-}")
+  [[ -z "${NEWER_MIGRATIONS[0]:-}" ]] && NEWER_MIGRATIONS=()
+fi
+
+echo "Baseline enthält bereits bis einschließlich: $(grep -m1 -- '--   baseline-includes-through:' "$BASELINE_FILE" | sed -E 's/^--   baseline-includes-through:[[:space:]]*//')"
 if [[ ${#NEWER_MIGRATIONS[@]} -eq 0 ]]; then
   echo "Keine neueren Migrationsdateien nachzuspielen."
 else
@@ -198,7 +408,7 @@ DUMP_OK=0
 for attempt in 1 2 3 4 5; do
   if docker exec -e PGPASSWORD=postgres "$CONTAINER_NAME" \
     pg_dump -U postgres -h 127.0.0.1 -d postgres \
-    --schema=public --schema-only --no-owner --no-privileges \
+    --schema=public --schema=match_engine --schema-only --no-owner --no-privileges \
     > "$RECON_RAW" 2>"$WORKDIR/recon_dump.log"; then
     DUMP_OK=1
     break
@@ -231,7 +441,7 @@ elif [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   echo "Live-Schema ueber die nur-lesende Rolle (SUPABASE_DB_READONLY_URL)."
   docker exec "$CONTAINER_NAME" \
     pg_dump --dbname="$SUPABASE_DB_READONLY_URL" \
-    --schema=public --schema-only --no-owner --no-privileges \
+    --schema=public --schema=match_engine --schema-only --no-owner --no-privileges \
     > "$LIVE_RAW" 2>"$WORKDIR/live_dump.log" \
     || { echo "::error::Konnte Live-Schema nicht dumpen (nur-lesende Rolle):" >&2
          echo "::error::Faellt hier 'permission denied for table X' auf, ist X neu und die Rolle" >&2
@@ -248,7 +458,7 @@ else
   fi
   echo "Hinweis: SUPABASE_DB_READONLY_URL nicht gesetzt, weiche auf --linked aus."
   echo "Hinweis: Das braucht einen Token mit weitergehenden Rechten als der Zweck verlangt."
-  (cd "$REPO_ROOT" && supabase db dump --schema public --linked -f "$LIVE_RAW") \
+  (cd "$REPO_ROOT" && supabase db dump --schema public --schema match_engine --linked -f "$LIVE_RAW") \
     >"$WORKDIR/live_dump.log" 2>&1 \
     || { echo "::error::Konnte Live-Schema nicht dumpen:" >&2; cat "$WORKDIR/live_dump.log" >&2; exit 1; }
 fi
@@ -304,6 +514,163 @@ PRIVILEGE_ASSERTION_NAMES=(
   "positive-ci-schema-reader-select-role-permissions"
   "positive-anon-execute-is-active-tournament-member"
   "positive-anon-execute-has-tournament-permission"
+  "anon-no-select-match-event-authors"
+  "authenticated-no-insert-match-event-authors"
+  "authenticated-no-update-match-event-authors"
+  "authenticated-no-delete-match-event-authors"
+  "authenticated-no-insert-match-transitions"
+  "authenticated-no-update-match-transitions"
+  "authenticated-no-delete-match-transitions"
+  "authenticated-no-insert-app-config"
+  "authenticated-no-update-app-config"
+  "authenticated-no-delete-app-config"
+  "positive-authenticated-select-match-event-authors"
+  "positive-ci-schema-reader-select-match-event-authors"
+  "positive-anon-select-match-transitions"
+  "positive-ci-schema-reader-select-match-transitions"
+  "positive-anon-select-app-config"
+  "positive-ci-schema-reader-select-app-config"
+  "compute-match-state-security-invoker"
+  "compute-match-state-stable"
+  "match-apply-event-immutable"
+  "match-engine-function-count-52"
+  "match-engine-immutable-count-51"
+  "match-engine-no-security-definer"
+  "match-engine-search-path-all-52"
+  "match-engine-functions-no-public-execute"
+  "match-engine-schema-no-public-usage"
+  "no-match-helpers-in-public"
+  "positive-anon-execute-compute-match-state"
+  "positive-authenticated-execute-compute-match-state"
+  "positive-authenticated-execute-match-apply-event"
+  "positive-anon-usage-match-engine"
+  "positive-anon-execute-match-engine-payload-valid"
+  "append-match-events-security-definer"
+  "append-match-events-search-path"
+  "append-match-events-no-public-execute"
+  "anon-no-execute-append-match-events"
+  "server-time-stable"
+  "b3b-helpers-no-execute-anon-authenticated-service-role"
+  "service-role-no-execute-append-match-events"
+  "positive-authenticated-execute-append-match-events"
+  "positive-anon-execute-server-time"
+  "positive-authenticated-execute-server-time"
+  "no-enter-decision-without-at"
+  "match-engine-non-b3b-executable-anon-authenticated"
+  "positive-anon-execute-match-engine-apply-amend"
+  "matches-guard-engine-columns-trigger-active"
+  "matches-guard-engine-columns-invoker-search-path"
+  "matches-guard-engine-columns-no-public-execute"
+  "match-has-engine-events-definer-search-path"
+  "match-has-engine-events-execute-only-anon-authenticated"
+  "matches-keep-origin-trigger-active"
+  "matches-keep-origin-no-public-execute"
+  # A-30a (20261028_004, @W3-028/@SL-137): getragene Farben schreibt nur der Anpfiff-Trigger (HF003).
+  "match-events-kit-from-match-start-trigger-active"
+  "matches-guard-kit-columns-trigger-active"
+  "matches-kit-from-match-start-definer-no-client-execute"
+  "matches-guard-kit-columns-invoker-no-client-execute"
+  # A-08h (20261028_002, @FU-084/@FU-085): Client-Schreibrechte auf match_events entzogen, nur SELECT.
+  "anon-no-insert-match-events"
+  "anon-no-update-match-events"
+  "anon-no-delete-match-events"
+  "authenticated-no-insert-match-events"
+  "authenticated-no-update-match-events"
+  "authenticated-no-delete-match-events"
+  "authenticated-select-match-events"
+  "match-events-only-select-policy"
+  # A-10 (20261028_005, @EK-060/@FU-090/@TM-027): Spalten-Schutz fuer alle Spiele, reset_match_results, change_revision.
+  "matches-guard-engine-columns-insert-and-update"
+  "matches-guard-engine-columns-unconditional"
+  "reset-match-results-definer-search-path"
+  "reset-match-results-execute-only-authenticated"
+  "matches-bump-change-revision-trigger-active"
+  "matches-bump-change-revision-definer-no-client-execute"
+  "tournaments-guard-change-revision-trigger-active"
+  "tournaments-guard-change-revision-invoker-no-client-execute"
+  # UR (20261028_006, @FU-080/@FU-082/@FU-065): Lesefunktion fuer die Namen der Urheber von Spiel-Eintraegen.
+  "match-event-author-names-definer-search-path"
+  "match-event-author-names-execute-only-authenticated"
+  # SW (20261028_007, @EK-062): cache_columns bleibt IMMUTABLE, definer-only (Regressionswache).
+  "cache-columns-immutable-no-client-execute"
+  # A-11 (20261110_001, @ZP-041, @ZM-019): MVP-Rechte im CHECK, matches-UPDATE nur manageSchedule, monitors ueber manageScreens.
+  "role-permissions-check-mvp-rights"
+  "matches-update-only-manage-schedule"
+  "monitors-writes-manage-screens"
+  # A-27 (20261110_002, @HE-082/@AN-045/@AN-006/@HE-062): Geraete-Rollen, anonym nur mit Geraete-Rolle, anon schreibt nie.
+  "role-checks-device-roles"
+  "has-permission-device-roles-for-anonymous"
+  "tournaments-insert-real-account-only"
+  "anon-no-write-public-tables"
+  "device-roles-guard-trigger"
+  "hook-before-user-created-auth-admin-only"
+  # A-27 Fixrunde 1 (Review K1): anonyme Sitzung wird nie zum Konto.
+  "auth-users-block-anonymous-upgrade"
+  # A-34 (20261110_003_field_control.sql): Steuer je Feld.
+  "field-control-no-client-access"
+  "field-control-rpcs-execute-only-authenticated"
+  "append-match-events-checks-field-control"
+  # CA-2 (20261110_004_coadmin_einsatz.sql): Co-Admin teilt online und liest die Lebenszeichen der Monitore.
+  "share-rpcs-permission-based"
+  "make-public-keeps-existing-code"
+  "heartbeats-select-manage-screens"
+  "positive-ci-schema-reader-select-field-control"
+  "positive-ci-schema-reader-select-match-corrections"
+  # A-25b (20261110_005_result_entry_forfeit.sql): Nichtantritt -- forfeit_absent geschuetzt und vom Schreibweg (mit
+  # Feldsteuerung) geschrieben.
+  "matches-guard-engine-columns-forfeit-absent"
+  "append-match-events-writes-forfeit-absent"
+  "append-match-events-end-by-lead-without-claim"
+  # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
+  # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
+  "group-completion-tables-no-client-writes"
+  "group-completion-rpcs-definer-authenticated-only"
+  "group-completion-helpers-no-client-execute"
+  "complete-group-locks-matches-before-tournament"
+  "group-completion-triggers"
+  # A-13b-S: Leserolle des Drift-Checks liest die vier neuen Tabellen (Daniel 21.10.).
+  "ci-schema-reader-select-group-completion"
+  # A-16 (20261110_008_helper_join.sql): Helfer-Beitritt per QR ohne Konto.
+  "helper-join-tables-no-client-access"
+  "helper-join-ci-schema-reader-select"
+  "helper-join-ci-schema-reader-no-bypassrls"
+  "helper-join-rpcs-definer-owner-search-path"
+  "helper-join-rpcs-execute-authenticated-only"
+  "helper-join-internal-no-client-execute"
+  "helper-join-definer-writers-tournament-collaborators"
+  "helper-join-collaborators-delete-no-device-rows"
+  "helper-join-protect-collaborator-row-a16"
+  "helper-join-decide-checks-check-number"
+  "helper-join-device-role-guard-trigger"
+  "helper-join-names-without-hidden-chars"
+  # A-21a-S (20261113_003_tournament_lifecycle.sql): Lebenszyklus, Abschluss-Sperre, Endstand, spaete Eintraege.
+  "lifecycle-columns-check"
+  "lifecycle-tables-rls-no-client-writes"
+  "lifecycle-select-policies"
+  "lifecycle-ci-schema-reader-select"
+  "lifecycle-rpcs-definer-authenticated-only"
+  "lifecycle-public-reads"
+  "lifecycle-helpers-no-client-execute"
+  "lifecycle-append-closed-intake-before-field-control"
+  "lifecycle-guard-triggers-complete"
+  "lifecycle-guard-triggers-shape"
+  "lifecycle-tournaments-triggers"
+  "lifecycle-switch-outside-client-roles"
+  "lifecycle-finish-locks-matches-before-tournament"
+  "lifecycle-closed-for-helpers-single-source"
+  "lifecycle-late-entries-unique-event"
+  "lifecycle-log-request-id-unique"
+  # B-14 (20261117_104_public_payload.sql, E-A2): oeffentliche Daten nur ueber die Positivliste.
+  "public-read-functions-definer-execute-anon"
+  "public-read-no-anon-select-policies"
+  "public-read-view-schema-no-client-access"
+  "public-read-reading-member-execute-only-authenticated"
+  "public-read-default-privileges-no-anon"
+  "public-read-reshare-keeps-code"
+  "public-read-core-unchanged"
+  # B-48b (20261113_101_monitor_heartbeat_wake_lock.sql): Lebenszeichen mit Kennung als Text, Pruefung gegen config.monitors.
+  "monitor-heartbeat-rpc-checks-config-monitors"
+  "monitor-heartbeat-key-per-tournament-wake-lock"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
@@ -318,6 +685,22 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
     exit 1
   fi
   cat "$PRIV_OUT"
+
+  # PENDING-LIVE (b): Zeilen der noch nicht eingespielten Migrationen sichtbar auslassen.
+  CHECKED_ASSERTION_NAMES=()
+  for expected_name in "${PRIVILEGE_ASSERTION_NAMES[@]}"; do
+    if is_pending_assertion "$expected_name"; then
+      echo "PENDING-LIVE: Rechte-Assertion ausgelassen: $(grep -E "^${expected_name}\|" "$PRIV_OUT" || echo "${expected_name}|(keine Zeile)")"
+      continue
+    fi
+    CHECKED_ASSERTION_NAMES+=("$expected_name")
+  done
+  if [[ ${#PENDING_ASSERTIONS[@]} -gt 0 ]]; then
+    PENDING_PATTERN="^($(IFS='|'; echo "${PENDING_ASSERTIONS[*]}"))\|"
+    grep -vE "$PENDING_PATTERN" "$PRIV_OUT" > "$PRIV_OUT.checked" || true
+    mv "$PRIV_OUT.checked" "$PRIV_OUT"
+  fi
+  PRIVILEGE_ASSERTION_NAMES=("${CHECKED_ASSERTION_NAMES[@]}")
 
   PRIV_ASSERTION_FAILED=0
 
@@ -375,8 +758,22 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
     2>"$WORKDIR/role_permissions_live.log" | sort)" \
     || { echo "::error::Konnte public.role_permissions nicht live lesen (ci_schema_reader):" >&2
          cat "$WORKDIR/role_permissions_live.log" >&2; exit 1; }
+  JSON_SOURCE_FILE="$REPO_ROOT/$JSON_REL_PATH"
+  if [[ -n "$PENDING_JSON_COMMIT" ]]; then
+    # PENDING-LIVE (c): live steht noch der Stand VOR der Migration -- Vergleich gegen die JSON aus diesem Commit.
+    if ! git -C "$REPO_ROOT" cat-file -e "$PENDING_JSON_COMMIT^{commit}" 2>/dev/null; then
+      git -C "$REPO_ROOT" fetch --quiet --no-tags --depth=1 origin "$PENDING_JSON_COMMIT" >/dev/null 2>&1 || true
+    fi
+    JSON_SOURCE_FILE="$WORKDIR/rolePermissions.pending-base.json"
+    if ! git -C "$REPO_ROOT" show "$PENDING_JSON_COMMIT:$JSON_REL_PATH" > "$JSON_SOURCE_FILE" 2>"$WORKDIR/git_show.log"; then
+      echo "::error::PENDING-LIVE: $JSON_REL_PATH aus Commit $PENDING_JSON_COMMIT nicht lesbar:" >&2
+      cat "$WORKDIR/git_show.log" >&2
+      exit 1
+    fi
+    echo "PENDING-LIVE: Vergleichsstand $JSON_REL_PATH aus Commit $PENDING_JSON_COMMIT"
+  fi
   JSON_ROLE_PERMISSIONS="$(jq -r '.roles | to_entries[] | .key as $role | .value[] | $role + "|" + .' \
-    "$REPO_ROOT/src/features/auth/permissions/rolePermissions.json" | sort)"
+    "$JSON_SOURCE_FILE" | sort)"
   if [[ "$DB_ROLE_PERMISSIONS_LIVE" == "$JSON_ROLE_PERMISSIONS" ]]; then
     ROW_COUNT="$(wc -l <<<"$JSON_ROLE_PERMISSIONS" | tr -d ' ')"
     echo "Gleichlauf grün: role_permissions (live) und rolePermissions.json stimmen überein ($ROW_COUNT Zeilen)."
@@ -389,6 +786,70 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
 else
   echo ""
   echo "Gleichlauf role_permissions vs. rolePermissions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
+# --- 4c2. B2 (task-B2-brief.md, Abschnitt 2): match_transitions-Inhalt vs.
+# src/core/match/matchTransitions.json -- analog zu 4c (role_permissions), gleiches Muster:
+# Textdiff/Katalogzählung sehen nur die Schema-Definition der Tabelle, nie ihren Zeileninhalt.
+# ci_schema_reader braucht dafür die eigene Policy "match_transitions_select_ci_schema_reader"
+# (supabase/migrations/20260928_001_match_event_log.sql).
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Gleichlauf match_transitions (DB, live) vs. matchTransitions.json ---"
+  DB_MATCH_TRANSITIONS_LIVE="$(docker exec -i "$CONTAINER_NAME" psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;" \
+    2>"$WORKDIR/match_transitions_live.log" | sort)" \
+    || { echo "::error::Konnte public.match_transitions nicht live lesen (ci_schema_reader):" >&2
+         cat "$WORKDIR/match_transitions_live.log" >&2; exit 1; }
+  JSON_MATCH_TRANSITIONS="$(jq -r '.transitions[] | [.from,.type,.actor,.to] | join("|")' \
+    "$REPO_ROOT/src/core/match/matchTransitions.json" | sort)"
+  if [[ "$DB_MATCH_TRANSITIONS_LIVE" == "$JSON_MATCH_TRANSITIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_MATCH_TRANSITIONS" | tr -d ' ')"
+    echo "Gleichlauf grün: match_transitions (live) und matchTransitions.json stimmen überein ($ROW_COUNT Zeilen)."
+  else
+    echo "::error::match_transitions (live) weicht von matchTransitions.json ab:" >&2
+    echo "### Diff (links: matchTransitions.json, rechts: DB live)" >&2
+    diff <(echo "$JSON_MATCH_TRANSITIONS") <(echo "$DB_MATCH_TRANSITIONS_LIVE") >&2 || true
+    exit 1
+  fi
+else
+  echo ""
+  echo "Gleichlauf match_transitions vs. matchTransitions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
+# --- 4d. Realtime-Publikation (Ruling W, .superpowers/sdd/2026-09-24-testumgebung/
+# task-T4-review.md Fixrunde 1) ------------------------------------------------------------
+# `supabase_realtime` ist eine Publication, kein Schema-Objekt in `public` -- Textdiff und
+# Katalogzählung unten (beide --schema=public/match_engine, aber keine Publication-Katalogobjekte) sehen sie nie, ein fehlender oder zusätzlicher
+# Tabelleneintrag wäre für den Rest dieses Skripts unsichtbar. Erwartete Liste ist die vom
+# Auftraggeber gelieferte Live-Abfrage (2026-09-25, NICHT von diesem Skript selbst erhoben --
+# Ruling W verbietet eine neue Live-Abfrage durch die Automatisierung): Produktion enthält
+# GENAU public.match_events, public.matches, public.monitor_heartbeats, public.teams; mit 20261110_006 (A-13b-S M1)
+# kommen public.group_completions, public.bracket_notices, public.clarifications dazu (Liste und Vergleich:
+# REALTIME_PUBLICATION_TABLES/check_realtime_publication oben, PENDING-LIVE-gekoppelt).
+# scripts/local-db-apply.sh setzt denselben Satz lokal (idempotent), dieser Abschnitt prüft,
+# dass Produktion nicht abgewichen ist.
+#
+# Fixrunde 2 (N10): Liste UND Abfrage jetzt schema-QUALIFIZIERT (`schema.tabelle`), OHNE
+# `WHERE schemaname = 'public'`-Filter -- Ruling W verlangt wörtlich "Publikation = genau diese
+# vier Tabellen". Der vorherige Filter blendete jede Tabelle aus einem ANDEREN Schema (z.B.
+# `auth.users`), die zusätzlich zur Publikation hinzugefügt worden wäre, VOR dem Vergleich aus --
+# genau so eine Abweichung wäre unsichtbar geblieben, nicht "grün, weil geprüft", sondern
+# "grün, weil nie hingeschaut".
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Realtime-Publikation supabase_realtime (live) ---"
+  PUB_OUT="$WORKDIR/realtime_publication.out"
+  docker exec "$CONTAINER_NAME" \
+    psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT schemaname || '.' || tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime' ORDER BY 1;" \
+    > "$PUB_OUT" 2>"$WORKDIR/realtime_publication.log" \
+    || { echo "::error::Konnte supabase_realtime nicht live lesen:" >&2
+         cat "$WORKDIR/realtime_publication.log" >&2; exit 1; }
+  check_realtime_publication "$PUB_OUT" || exit 1
+else
+  echo ""
+  echo "Realtime-Publikation (supabase_realtime) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
 # --- 5. Beide Dumps normalisieren (Plattform-Boilerplate entfernen) -----------------------

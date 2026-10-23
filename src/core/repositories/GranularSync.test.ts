@@ -1,7 +1,10 @@
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import 'fake-indexeddb/auto';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OfflineRepository } from './OfflineRepository';
 import { SupabaseRepository } from './SupabaseRepository';
+import { readWithRevisions } from '../../test/fakeCloudRepository';
+import type { CloudAdoption } from './cloudAdoption';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { Tournament } from '../models/types';
 
@@ -42,6 +45,13 @@ describe('OfflineRepository - Granular Sync', () => {
         mockLocal.updateLocalVersion.mockResolvedValue(undefined); // Critical for Phase 2 fix verification
 
         mockSupabase.get.mockResolvedValue(null);
+        mockSupabase.getWithMatchRevisions.mockImplementation(readWithRevisions((id: string) => mockSupabase.get(id)));
+        // A-08f3b: Kettenschritt des lokalen Speichers nachgebildet (Entscheidung echt, Revisionen leer).
+        mockLocal.adoptCloudRead.mockImplementation(async (id: string, decide: (l: Tournament | null, r: Map<string, number>) => CloudAdoption) => {
+            const adoption = decide(await mockLocal.get(id) ?? null, new Map());
+            if (adoption.save) { await mockLocal.save(adoption.save); }
+            return adoption;
+        });
         mockSupabase.save.mockResolvedValue(undefined);
         mockSupabase.updateTournamentMetadata.mockResolvedValue(undefined);
         mockSupabase.updateMatches.mockResolvedValue(undefined);
@@ -49,8 +59,13 @@ describe('OfflineRepository - Granular Sync', () => {
         offlineRepo = new OfflineRepository(mockLocal, mockSupabase);
     });
 
+    afterEach(() => {
+        offlineRepo.mutationQueue.dispose();
+    });
+
     it('should perform granular metadata update when only title changes', async () => {
-        const localT = { ...baseTournament, title: 'New Title', version: 2 };
+        // C-VERSION-MEHRDEUTIG: lokale Änderung auf der bestätigten Version 1 (lokal gestempelt 2)
+        const localT = { ...baseTournament, title: 'New Title', version: 2, serverVersion: 1 };
         const remoteT = { ...baseTournament, title: 'Old Title', version: 1 };
 
         // Setup
@@ -64,12 +79,12 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockSupabase.save).not.toHaveBeenCalled(); // Should NOT be full save
         expect(mockSupabase.updateTournamentMetadata).toHaveBeenCalledWith(
             't1',
-            expect.objectContaining({ title: 'New Title', version: 1 }) // Base version passed!
+            expect.objectContaining({ title: 'New Title', version: 1 }) // Basis = bestätigte Version der Kopie
         );
-        expect(mockLocal.updateLocalVersion).toHaveBeenCalled(); // Phase 2 Fix Check
+        expect(mockLocal.confirmUpload).toHaveBeenCalledWith('t1', 1, 2); // Phase 2 Fix Check: Upload bestätigt
     });
 
-    it('should perform granular match update when only score changes', async () => {
+    it('Delta-Sync sendet kein updateMatches bei reiner Score-Änderung', async () => {
         const localMatch = { ...baseTournament.matches[0], scoreA: 1, scoreB: 0 };
         const localT = { ...baseTournament, matches: [localMatch], version: 2 };
         const remoteT = { ...baseTournament, version: 1 };
@@ -83,12 +98,50 @@ describe('OfflineRepository - Granular Sync', () => {
 
         // Assert
         expect(mockSupabase.save).not.toHaveBeenCalled();
-        expect(mockSupabase.updateMatches).toHaveBeenCalledWith(
-            't1',
-            expect.arrayContaining([expect.objectContaining({ id: 'm1', scoreA: 1 })]),
-            1 // Base version
-        );
-        expect(mockLocal.updateLocalVersion).toHaveBeenCalled(); // Phase 2 Fix Check
+        expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
+    });
+
+    // C3a-2b (V4) ersetzt A2 Fixrunde 3 (N2b): Nicht nur der Null-Flush unbekannter Felder bleibt
+    // weg -- lokale Ergebnis-Änderungen erzeugen grundsätzlich KEINEN Server-Diff mehr.
+    // N2b-Historie: `getMatchUpdates()` setzte früher `update.scoreA = lMatch.scoreA` auch bei
+    // `undefined`; durch das Key-Präsenz-Mapping löschte das beim Reconnect eine Live-Punktzahl
+    // in der Cloud.
+    it('lokale Ergebnis-Änderungen erzeugen keinen Server-Diff (grundsätzlich, nicht nur kein Null-Flush)', async () => {
+        // Phase 1: lokale Kopie kennt abweichende Ergebnis-/Statuswerte
+        const localMatchKnown = {
+            ...baseTournament.matches[0],
+            scoreA: 1,
+            scoreB: 0,
+            matchStatus: 'finished' as const,
+            timerElapsedSeconds: 300,
+        };
+        const remoteMatch = {
+            ...baseTournament.matches[0],
+            scoreA: 5,
+            scoreB: 2,
+            matchStatus: 'running' as const,
+            timerElapsedSeconds: 120,
+        };
+        mockLocal.listForCurrentUser.mockResolvedValue([{ ...baseTournament, matches: [localMatchKnown], version: 2 }]);
+        mockSupabase.get.mockResolvedValue({ ...baseTournament, matches: [remoteMatch], version: 1 });
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
+
+        // Phase 2 (N2b-Regression): lokale Kopie ohne Ergebniswissen darf eine Live-Punktzahl
+        // nicht anfassen -- der Titel-Abgleich löst weiterhin einen Metadaten-Sync aus.
+        mockSupabase.updateMatches.mockClear();
+        mockSupabase.updateTournamentMetadata.mockClear();
+        const localMatchUnknown = { ...baseTournament.matches[0] };
+        const localT = { ...baseTournament, title: 'New Title', matches: [localMatchUnknown], version: 2 };
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue({ ...baseTournament, matches: [remoteMatch], version: 1 });
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.updateTournamentMetadata).toHaveBeenCalled();
+        expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
     });
 
     it('should perform full save when structural changes occur (teams added)', async () => {
@@ -159,7 +212,7 @@ describe('OfflineRepository - Granular Sync', () => {
     });
 
     it('should update local version after successful sync', async () => {
-        const localT = { ...baseTournament, title: 'Updated', version: 2 };
+        const localT = { ...baseTournament, title: 'Updated', version: 2, serverVersion: 1 };
         const remoteT = { ...baseTournament, version: 1 }; // Remote is behind
 
         mockLocal.listForCurrentUser.mockResolvedValue([localT]);
@@ -167,9 +220,45 @@ describe('OfflineRepository - Granular Sync', () => {
 
         await offlineRepo.syncUp();
 
-        // Expectation: After syncing (delta), we update local version to match what remote becomes (ver 2)
-        // Note: Logic in code is: baseVer(1) -> update -> baseVer++ (2) -> updateLocal(2)
-        expect(mockLocal.updateLocalVersion).toHaveBeenCalledWith('t1', 2);
+        // Expectation: After syncing (delta), the confirmed upload sets the local version to what remote becomes (ver 2)
+        expect(mockLocal.confirmUpload).toHaveBeenCalledWith('t1', 1, 2);
+    });
+
+    it('bei reinem Versionsvorsprung ohne sendbare Änderung gleicht sich die lokale Version an die Cloud an', async () => {
+        const localMatch = { ...baseTournament.matches[0], scoreA: 1, scoreB: 0 };
+        const localT = { ...baseTournament, matches: [localMatch], version: 5, serverVersion: 4 };
+        const remoteT = { ...baseTournament, version: 4 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        // Ergebnis-Felder sind sendbar nicht mehr -- es geht nichts raus ...
+        expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
+        // ... und die lokale Version (5) wird an die Cloud (4) angeglichen (PC25).
+        expect(mockLocal.updateLocalVersion).toHaveBeenCalledTimes(1);
+        expect(mockLocal.updateLocalVersion).toHaveBeenCalledWith('t1', 4);
+    });
+
+    it('detectMatchConflicts meldet keine Score-Konflikte (syncDown auto-pullt trotz abweichender Ergebnisse)', async () => {
+        const localT = {
+            ...baseTournament,
+            matches: [{ ...baseTournament.matches[0], scoreA: 1, scoreB: 0 }],
+            updatedAt: '2026-01-01T10:00:00.000Z',
+        };
+        const remoteT = {
+            ...baseTournament,
+            matches: [{ ...baseTournament.matches[0], scoreA: 5, scoreB: 2 }],
+            updatedAt: '2026-01-02T10:00:00.000Z',
+        };
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        const result = await offlineRepo.syncDown('t1');
+
+        expect(result.status).toBe('updated');
+        expect(result.conflicts ?? []).toHaveLength(0);
     });
 
     it('should perform full save when team is renamed', async () => {
@@ -210,7 +299,7 @@ describe('OfflineRepository - Granular Sync', () => {
         await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
             .refreshFromCloudInBackground('t1');
 
-        expect(mockLocal.save).toHaveBeenCalledWith(cloudT);
+        expect(mockLocal.save).toHaveBeenCalledWith({ ...cloudT, serverVersion: 1 }); // C-VERSION-MEHRDEUTIG: mit bestätigter Version
     });
 
     it('Fix 2 (Kontrolle): refreshFromCloudInBackground schreibt NICHT, wenn Version UND isPublic gleich sind', async () => {

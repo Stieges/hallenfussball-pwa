@@ -9,7 +9,9 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
  * This ensures tournaments are categorized as "upcoming" not "finished"
@@ -30,6 +32,7 @@ function createTestTournament() {
     id: 'e2e-test-tournament',
     status: 'published',
     sport: 'football',
+    sportId: 'football-indoor', // Pflichtfeld im TournamentSchema (A-08f3b2)
     tournamentType: 'classic',
     mode: 'classic',
     numberOfFields: 1,
@@ -54,11 +57,12 @@ function createTestTournament() {
     startDate: futureDate,
     startTime: '10:00',
     location: { name: 'Test-Halle' },
+    // Team-IDs als UUID (TeamIdSchema seit A-01)
     teams: [
-      { id: 'team-1', name: 'FC Test A' },
-      { id: 'team-2', name: 'FC Test B' },
-      { id: 'team-3', name: 'FC Test C' },
-      { id: 'team-4', name: 'FC Test D' },
+      { id: '00000000-0000-4000-8000-0000000000e1', name: 'FC Test A' },
+      { id: '00000000-0000-4000-8000-0000000000e2', name: 'FC Test B' },
+      { id: '00000000-0000-4000-8000-0000000000e3', name: 'FC Test C' },
+      { id: '00000000-0000-4000-8000-0000000000e4', name: 'FC Test D' },
     ],
     // Let the app generate matches from the schedule
     matches: [],
@@ -111,7 +115,7 @@ test.describe('Live Cockpit', () => {
     await page.getByText('Live').click({ force: true });
 
     // THEN - Should see the Live Cockpit with timer and team names
-    await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('team-name-home')).toBeVisible();
     await expect(page.getByTestId('team-name-away')).toBeVisible();
   });
@@ -135,7 +139,7 @@ test.describe('Live Cockpit', () => {
     // THEN - Status should change to RUNNING and timer should start
     // The button should now show Pause
     await expect(page.getByTestId('match-pause-button')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId('match-status-badge')).toContainText(/Läuft|RUNNING/i);
+    await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
   });
 
   test('Can score a goal', async ({ page }) => {
@@ -148,19 +152,16 @@ test.describe('Live Cockpit', () => {
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
 
     // Get initial score
-    const homeScoreBefore = await page.getByTestId('score-home').textContent();
+    const homeScoreBefore = await page.getByTestId('scoreboard-box-links').textContent();
 
     // WHEN - Click goal button for home team
     await page.getByTestId('goal-button-home').click();
 
     // Handle goal scorer dialog if it appears
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // THEN - Home score should increase
-    await expect(page.getByTestId('score-home')).not.toHaveText(homeScoreBefore ?? '0');
+    await expect(page.getByTestId('scoreboard-box-links')).not.toHaveText(homeScoreBefore ?? '0');
   });
 
   test('Can pause and resume a match', async ({ page }) => {
@@ -175,16 +176,18 @@ test.describe('Live Cockpit', () => {
     // WHEN - Click pause
     await page.getByTestId('match-pause-button').click();
 
-    // THEN - Should show Start button again and status should be PAUSED
-    await expect(page.getByTestId('match-start-button')).toBeVisible();
-    await expect(page.getByTestId('match-status-badge')).toContainText(/Pause|PAUSED|PAUSIERT/i);
+    // THEN - Should show the resume button again and status should be PAUSED
+    await expect(page.getByTestId('match-resume-button')).toBeVisible();
+    // Pause: Zustand bleibt „Live“ (Matrix § 6), die Uhr steht und ist markiert
+    await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
 
-    // WHEN - Click start to resume
-    await page.getByTestId('match-start-button').click();
+    // WHEN - Click resume
+    await page.getByTestId('match-resume-button').click();
 
     // THEN - Should show Pause button and status RUNNING
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
-    await expect(page.getByTestId('match-status-badge')).toContainText(/Läuft|RUNNING|LAUFEND/i);
+    await expect(page.getByTestId('scoreboard-state')).toContainText(/Live/i);
+    await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
   });
 
   test('Can finish a match', async ({ page }) => {
@@ -202,18 +205,13 @@ test.describe('Live Cockpit', () => {
 
     // Pause first (required before finish - button is disabled while running)
     await page.getByTestId('match-pause-button').click();
-    await expect(page.getByTestId('match-start-button')).toBeVisible();
+    await expect(page.getByTestId('match-resume-button')).toBeVisible();
 
     // WHEN - Click finish button
     const finishButton = page.getByTestId('match-finish-button');
     await expect(finishButton).toBeEnabled();
-    await finishButton.click();
-
-    // Handle confirmation dialog if present (look for dialog-specific confirm button)
-    const dialogConfirmButton = page.locator('[role="dialog"] button, [data-testid="dialog-confirm"], [data-testid*="confirm"]').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await dialogConfirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await dialogConfirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
 
     // THEN - After finishing, the app auto-selects the next match
     // Verify that either:
@@ -223,9 +221,9 @@ test.describe('Live Cockpit', () => {
     // Use robust expect polling instead of hard timeout
     await expect(async () => {
       const homeTeamAfter = await page.getByTestId('team-name-home').textContent();
-      const statusBadge = await page.getByTestId('match-status-badge').textContent();
+      const statusBadge = await page.getByTestId('scoreboard-state').textContent();
 
-      const isFinished = Boolean(statusBadge?.match(/Beendet|FINISHED|ABGESCHLOSSEN/i));
+      const isFinished = Boolean(statusBadge?.match(/Ende|FINISHED|ABGESCHLOSSEN/i));
       const hasNavigated = homeTeamAfter !== homeTeamBefore;
 
       expect(isFinished || hasNavigated).toBeTruthy();
@@ -241,7 +239,7 @@ test.describe('Live Cockpit', () => {
     await page.getByTestId('match-start-button').click();
 
     // Get initial timer value
-    const timerElement = page.getByTestId('match-timer-display');
+    const timerElement = page.getByTestId('scoreboard-clock-rest');
     const initialTime = await timerElement.textContent();
 
     // WHEN - Wait for 2 seconds
@@ -254,6 +252,7 @@ test.describe('Live Cockpit', () => {
     }).toPass({ timeout: 5000 });
   });
 
+  // C3b-1: Rueckgaengig (RETRACT) laeuft fuer Engine-Spiele ueber useEngineEventEditing.
   test('Can undo last event', async ({ page }) => {
     // GIVEN - Navigate to Live Cockpit, start match and score a goal
     await page.getByText('E2E Test Turnier').click();
@@ -264,13 +263,10 @@ test.describe('Live Cockpit', () => {
     await page.getByTestId('goal-button-home').click();
 
     // Handle goal scorer dialog
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Verify goal was scored
-    await expect(page.getByTestId('score-home')).toContainText('1');
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
 
     // WHEN - Click undo button
     const undoButton = page.getByTestId('match-undo-button');
@@ -284,7 +280,7 @@ test.describe('Live Cockpit', () => {
       }
 
       // THEN - Score should be back to 0
-      await expect(page.getByTestId('score-home')).toContainText('0');
+      await expect(page.getByTestId('scoreboard-box-links')).toContainText('0');
     }
   });
 
@@ -300,21 +296,17 @@ test.describe('Live Cockpit', () => {
     // WHEN - Click goal button to open dialog
     await page.getByTestId('goal-button-home').click();
 
-    // THEN - Dialog should appear with countdown timer on skip button
-    const skipButton = page.getByTestId('dialog-skip-button');
-    await expect(skipButton).toBeVisible({ timeout: 2000 });
-
-    // Skip button should show countdown (e.g., "Ohne Nr. (10s)" or "(9s)")
-    await expect(async () => {
-      const buttonText = await skipButton.textContent();
-      expect(buttonText).toMatch(/\(\d+s\)/);
-    }).toPass({ timeout: 3000 });
+    // THEN - Das Tor zählt mit dem ersten Tipp (@SL-083); die Nummernauswahl bietet „ohne Nummer“ an
+    // (Gherkin: kein Zähler im Knopf, der Zeitablauf von 10 s schließt die Auswahl ohne Nummer).
+    await expect(page.getByTestId('number-picker')).toBeVisible({ timeout: 2000 });
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
+    await expect(page.getByTestId('number-picker').getByRole('button', { name: 'ohne Nummer' })).toBeVisible();
 
     // Close dialog
-    await skipButton.click();
+    await schliesseTorAuswahl(page);
   });
 
-  test('GoalScorerDialog auto-dismisses after timeout', async ({ page }) => {
+  test('Nummernauswahl des Tors schließt nach dem Zeitablauf von selbst, das Tor bleibt', async ({ page }) => {
     // Note: This test uses a shorter timeout for faster execution
     // The actual app uses 10 seconds, but we'll verify the mechanism works
 
@@ -329,16 +321,15 @@ test.describe('Live Cockpit', () => {
     // WHEN - Click goal button to open dialog
     await page.getByTestId('goal-button-home').click();
 
-    // THEN - Dialog should appear
-    const skipButton = page.getByTestId('dialog-skip-button');
-    await expect(skipButton).toBeVisible({ timeout: 2000 });
+    // THEN - Nummernauswahl erscheint
+    await expect(page.getByTestId('number-picker')).toBeVisible({ timeout: 2000 });
 
     // Wait for auto-dismiss (10 seconds + buffer)
-    // Note: Goal is still recorded even when dialog auto-dismisses
-    await expect(skipButton).toBeHidden({ timeout: 15000 });
+    // Note: Goal is still recorded (counted with the first tap, @SL-083)
+    await expect(page.getByTestId('number-picker')).toBeHidden({ timeout: 15000 });
 
-    // Verify goal was recorded (auto-dismiss saves as "incomplete")
-    await expect(page.getByTestId('score-home')).toContainText('1');
+    // Verify goal was recorded (zählt ohne Nummer)
+    await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
   });
 
   test('Results are persisted to tournament after finish', async ({ page }) => {
@@ -355,32 +346,21 @@ test.describe('Live Cockpit', () => {
     // Score 2 goals for home team
     for (let i = 0; i < 2; i++) {
       await page.getByTestId('goal-button-home').click();
-      const skipButton = page.getByTestId('dialog-skip-button');
-      if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await skipButton.click();
-      }
+      await schliesseTorAuswahl(page);
       // Wait for score to update in UI before firing next goal
-      await expect(page.getByTestId('score-home')).toContainText(`${i + 1}`);
+      await expect(page.getByTestId('scoreboard-box-links')).toContainText(`${i + 1}`);
     }
 
     // Score 1 goal for away team
     await page.getByTestId('goal-button-away').click();
-    const skipButtonAway = page.getByTestId('dialog-skip-button');
-    if (await skipButtonAway.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButtonAway.click();
-    }
-    await expect(page.getByTestId('score-away')).toContainText('1');
+    await schliesseTorAuswahl(page);
+    await expect(page.getByTestId('scoreboard-box-rechts')).toContainText('1');
 
     // Pause and finish the match
     await page.getByTestId('match-pause-button').click();
     await expect(page.getByTestId('match-finish-button')).toBeEnabled();
-    await page.getByTestId('match-finish-button').click();
-
-    // Handle confirmation dialog if present
-    const dialogConfirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja|Confirm/i });
-    if (await dialogConfirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await dialogConfirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
 
     // Wait for state to settle
     await page.waitForTimeout(1000);
@@ -424,6 +404,8 @@ test.describe('Live Cockpit - Mobile', () => {
     const liveNavItem = page.getByText('Live').first();
     await liveNavItem.click({ force: true });
 
+    // Seit Scheibe 3 bietet die Team-Spalte die Tor-Taste erst nach dem Anpfiff an (Spec § 6 Matrix „Vor Anpfiff: Köpfe sichtbar, Knöpfe ausgeblendet“, darfAktion)
+    await page.getByTestId('match-start-button').click({ timeout: 10000 });
     await page.waitForSelector('[data-testid="goal-button-home"]', { timeout: 10000 });
 
     // THEN - Goal buttons should be at least 44x44 (WCAG minimum)

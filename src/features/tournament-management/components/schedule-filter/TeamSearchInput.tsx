@@ -118,7 +118,7 @@ export const TeamSearchInput: React.FC<TeamSearchInputProps> = ({
     paddingLeft: '36px',
     paddingRight: value ? '44px' : cssVars.spacing.md,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${value.length >= 2 ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${value.length >= 2 ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md, // 16px for iOS zoom prevention
@@ -164,7 +164,7 @@ export const TeamSearchInput: React.FC<TeamSearchInputProps> = ({
             e.target.style.borderColor = cssVars.colors.primary;
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = value.length >= 2 ? cssVars.colors.primary : cssVars.colors.border;
+            e.target.style.borderColor = value.length >= 2 ? cssVars.colors.primary : cssVars.colors.borderControl;
           }}
         />
         <button

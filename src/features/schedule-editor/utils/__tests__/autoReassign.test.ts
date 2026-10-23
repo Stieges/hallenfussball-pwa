@@ -15,8 +15,13 @@ import {
   redistributeAfterSkip,
   balanceRefereeWorkloads,
   getRefereeStats,
+  redistributeFields,
 } from '../autoReassign';
 import { Match, RefereeConfig } from '../../../../types/tournament';
+import { vs, testUuid } from '../../../../test/matchSlotFixtures';
+
+const TEAM_A = testUuid(1);
+const TEAM_B = testUuid(2);
 
 // ============================================================================
 // Test Helpers
@@ -27,8 +32,7 @@ function createMatch(overrides: Partial<Match> = {}): Match {
     id: `match-${Math.random().toString(36).slice(2, 7)}`,
     round: 1,
     field: 1,
-    teamA: 'team-a',
-    teamB: 'team-b',
+    ...vs(TEAM_A, TEAM_B),
     scheduledTime: new Date('2024-01-15T10:00:00'),
     matchStatus: 'scheduled',
     ...overrides,
@@ -581,5 +585,26 @@ describe('Negative Test Cases', () => {
     const result = autoReassignReferees(matches, config, { target: 'referee', optimizeForFairness: true });
 
     expect(result.changes).toHaveLength(0);
+  });
+});
+
+describe('@ZP-093 redistributeFields lässt angepfiffene Spiele stehen (C-ANGEPFIFFEN-TAUSCHZIEL)', () => {
+  const at = new Date('2026-10-23T10:00:00');
+  it.each(['running', 'paused', 'finished'] as const)('@ZP-093 Spiel mit Status %s behält sein Feld und belegt es für die übrigen', (status) => {
+    const matches = [
+      createMatch({ id: 'a', field: 1, scheduledTime: at, matchStatus: status as Match['matchStatus'] }),
+      createMatch({ id: 'b', field: 1, scheduledTime: at, matchStatus: 'scheduled' }),
+    ];
+    const result = redistributeFields(matches, 2);
+    expect(result.changes.map((c) => c.matchId)).toEqual(['b']);
+    expect(result.changes[0].newValue).toBe(2);
+  });
+
+  it('@ZP-093 Gegenbeispiel: zwei geplante Spiele auf Feld 1 werden weiter verteilt', () => {
+    const matches = [
+      createMatch({ id: 'a', field: 1, scheduledTime: at }),
+      createMatch({ id: 'b', field: 1, scheduledTime: at }),
+    ];
+    expect(redistributeFields(matches, 2).changes.map((c) => c.matchId)).toEqual(['b']);
   });
 });

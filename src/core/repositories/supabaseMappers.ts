@@ -21,6 +21,25 @@ import type {
   MatchDecidedBy,
   TournamentStatus,
 } from '../../types/tournament';
+import { completeMatchCockpitSettings } from '../../types/tournament';
+// Renamed on import: this file already has its own `MatchUpdate` (the Supabase table's Update
+// shape, below) -- `DomainMatchUpdate` is the frontend/domain DTO (`core/models/types.ts`), which
+// (since A2 Fixrunde 3, N2) allows `null` on result/status fields to survive the offline mutation
+// queue's JSON round-trip.
+import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
+import { RepositoryError } from '../errors';
+import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
+import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
+import { ensureMatchNumbers, sortByMatchNumber } from '../models/matchNumbers';
+import { originFromRow, originToColumns, type MatchOriginColumns } from './matchOriginColumns';
+import { kitFromRow } from './matchKitRow';
+import { bibColorFromConfig, bibColorToConfig } from './tournamentBibColor';
+import { spectatorDisplayFromConfig, spectatorDisplayToConfig } from './tournamentSpectatorDisplay';
+import { hostTeamsFromConfig, hostTeamsToConfig } from './tournamentHostTeams';
+import { changeRevisionFromRow } from './tournamentChangeRevisionRow';
+import { effectivePlacementLogic } from '../standings/placementDefaults';
+import { standingDecisionsFromConfig, standingDecisionsToConfig } from './standingDecisionsConfig';
+import { forfeitFromRow, forfeitScoreFromConfig, forfeitScoreToConfig, type MatchForfeitColumns } from './matchForfeitRow';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -28,8 +47,9 @@ type TournamentInsert = Database['public']['Tables']['tournaments']['Insert'];
 type TournamentUpdate = Database['public']['Tables']['tournaments']['Update'];
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 type TeamInsert = Database['public']['Tables']['teams']['Insert'];
-type MatchRow = Database['public']['Tables']['matches']['Row'];
-type MatchInsert = Database['public']['Tables']['matches']['Insert'];
+// A-36a: `origin_a/origin_b` (20261026_001_match_origin.sql) bis zur Neuerzeugung von supabase.ts von Hand ergänzt.
+type MatchRow = Database['public']['Tables']['matches']['Row'] & MatchOriginColumns & MatchForfeitColumns;
+type MatchInsert = Database['public']['Tables']['matches']['Insert'] & MatchOriginColumns;
 type MatchUpdate = Database['public']['Tables']['matches']['Update'];
 type CollaboratorInsert = Database['public']['Tables']['tournament_collaborators']['Insert'];
 type CollaboratorUpdate = Database['public']['Tables']['tournament_collaborators']['Update'];
@@ -111,43 +131,81 @@ export function mapTeamToSupabase(
 // MATCH MAPPERS
 // =============================================================================
 
+type Side = 'A' | 'B';
+
 /**
- * Maps a Supabase match row to frontend Match type
- * Note: teamA/teamB are stored as UUIDs in Supabase, but frontend uses team names
- * The teamIdToName map is used for conversion
+ * A-02: Spielseite aus der Zeile – `team_x_id` gesetzt → Team-Slot (Herkunft, falls vorhanden, als
+ * `resolvedFrom`); sonst offener Slot mit Herkunft. Keine Namens-Map, kein Platzhalter-Text.
+ * Weder Team-ID noch Herkunft oder eine ungültige Herkunft → lautes Scheitern (die DB-Prüfung
+ * `matches_slot_x_present`/`matches_slot_x_source_valid` macht das unerreichbar; tritt es doch auf,
+ * ist die Zeile kaputt und darf nicht still als „TBD“ weiterleben).
  */
-export function mapMatchFromSupabase(
-  row: MatchRow,
-  teamIdToName: Map<string, string>
-): Match {
-  // Get team names from IDs, fallback to placeholder or 'TBD'
-  const teamA = row.team_a_id
-    ? teamIdToName.get(row.team_a_id) ?? row.team_a_placeholder ?? 'TBD'
-    : row.team_a_placeholder ?? 'TBD';
-  const teamB = row.team_b_id
-    ? teamIdToName.get(row.team_b_id) ?? row.team_b_placeholder ?? 'TBD'
-    : row.team_b_placeholder ?? 'TBD';
+function slotFromRow(matchId: string, side: Side, teamId: string | null, source: Json | null | undefined): MatchSlot {
+  let origin: SlotSource | undefined;
+  if (source !== null && source !== undefined) {
+    const parsed = SlotSourceSchema.safeParse(source);
+    if (!parsed.success) {
+      throw new RepositoryError('mapMatch', `Spiel ${matchId}, Seite ${side}: Herkunft ungültig (${JSON.stringify(source)})`);
+    }
+    origin = parsed.data;
+  }
+  if (teamId !== null) {
+    if (!TeamIdSchema.safeParse(teamId).success) {
+      throw new RepositoryError('mapMatch', `Spiel ${matchId}, Seite ${side}: Team-ID ist keine UUID (${teamId})`);
+    }
+    return teamSlot(teamId, origin);
+  }
+  if (origin === undefined) {
+    throw new RepositoryError('mapMatch', `Spiel ${matchId}, Seite ${side}: weder Team-ID noch Herkunft`);
+  }
+  return pendingSlot(origin);
+}
+
+/**
+ * Anstoß eines Spiels = Turnierdatum + Anstoßzeit (C-ANSTOSS-OHNE-DATUM, @SL-118). `matches.scheduled_start` ist nur
+ * eine Uhrzeit (`time`); ohne das Datum des Turniers rechnete das Cockpit ab dem 1.1.1970. Die Wanduhr gilt wie im
+ * Erzeuger (`parseStartTime`), in `kickoffLocal` und beim Rückschreiben (`toTimeString`) als Ortszeit des Geräts.
+ */
+function kickoffOf(tournamentDate: string, startTime: string | null): Date | undefined {
+  if (!startTime) {
+    return undefined;
+  }
+  const kickoff = new Date(`${tournamentDate.slice(0, 10)}T${startTime}`);
+  return Number.isNaN(kickoff.getTime()) ? undefined : kickoff;
+}
+
+/**
+ * Maps a Supabase match row to frontend Match type.
+ *
+ * `tournamentDate`: Turnierdatum (`tournaments.date`, YYYY-MM-DD) – der Tag, an dem die Anstoßzeit liegt.
+ *
+ * A-02: `slotA/slotB` aus Team-ID bzw. Herkunft (siehe `slotFromRow`); A-36a: `originA/originB` aus
+ * `origin_a/origin_b` (Herkunft des Platzes, `originFromRow`).
+ */
+export function mapMatchFromSupabase(row: MatchRow, tournamentDate: string): Match {
+  const slotA = slotFromRow(row.id, 'A', row.team_a_id, row.slot_a_source);
+  const slotB = slotFromRow(row.id, 'B', row.team_b_id, row.slot_b_source);
 
   return {
     id: row.id,
     round: row.round,
     field: row.field,
     slot: row.slot ?? undefined,
-    teamA,
-    teamB,
+    slotA,
+    slotB,
+    ...originFromRow(row), ...kitFromRow(row), // A-36a: Herkunft des Platzes; A-30a: getragene Farben (nur lesen)
     scoreA: row.score_a ?? undefined,
     scoreB: row.score_b ?? undefined,
     group: row.group_letter ?? undefined,
     isFinal: row.is_final ?? undefined,
     finalType: row.final_type as Match['finalType'],
     label: row.label ?? undefined,
-    scheduledTime: row.scheduled_start
-      ? new Date(`1970-01-01T${row.scheduled_start}`)
-      : undefined,
+    scheduledTime: kickoffOf(tournamentDate, row.scheduled_start),
     matchNumber: row.match_number ?? undefined,
     phase: row.phase ?? undefined,
     referee: row.referee_number ?? undefined,
     matchStatus: (row.match_status as MatchStatus | null) ?? 'scheduled',
+    liveState: row.live_state ?? undefined,
     finishedAt: row.actual_end ?? undefined,
     timerStartTime: row.timer_start_time ?? undefined,
     timerPausedAt: row.timer_paused_at ?? undefined,
@@ -157,6 +215,7 @@ export function mapMatchFromSupabase(
     penaltyScoreA: row.penalty_score_a ?? undefined,
     penaltyScoreB: row.penalty_score_b ?? undefined,
     decidedBy: row.decided_by as MatchDecidedBy | undefined,
+    ...forfeitFromRow(row), // A-25c: wer bei einer Wertung fehlte (nur aus select('*'), ab 20261110_005)
     skippedReason: row.skipped_reason ?? undefined,
     skippedAt: row.skipped_at ?? undefined,
   };
@@ -171,25 +230,54 @@ type MatchInsertWithOwner = MatchInsert & {
   is_public?: boolean | null;
 };
 
+/** A-02: Slot einer Seite – fehlt er, scheitert das Schreiben laut (kein Rückfall auf `teamA`). */
+function requireSlot(match: Pick<Match, 'id' | 'slotA' | 'slotB'>, side: Side): MatchSlot {
+  const slot = side === 'A' ? match.slotA : match.slotB;
+  if (slot === undefined) {
+    throw new RepositoryError('mapMatch', `Spiel ${match.id}: Seite ${side} ohne Slot (Team-ID oder Herkunft)`);
+  }
+  return slot;
+}
+
+/** Spalten einer Seite: Team-ID (offen → NULL) und Herkunft (direkt besetzt → NULL). */
+function slotColumns(slot: MatchSlot): { teamId: string | null; source: Json | null } {
+  return { teamId: slotTeamId(slot) ?? null, source: slotSource(slot) ?? null };
+}
+
+/** C2 (@TM-027): lokal offene Seite (keine Team-ID) + in der Cloud besetzt → die Cloud-Seite bleibt. */
+function keepsRemoteSide(localTeamId: string | null, remoteTeamId: string | null | undefined): boolean {
+  return localTeamId === null && (remoteTeamId ?? null) !== null;
+}
+
 /**
- * Maps a frontend Match to Supabase insert format
- * Note: teamA/teamB names need to be resolved to UUIDs
- * The teamNameToId map is used for conversion
+ * Maps a frontend Match to Supabase insert format.
+ *
+ * A-02 (MVP-Bauplan Spur A, C-TEAMREF): die Spielseiten kommen AUSSCHLIESSLICH aus `slotA/slotB` –
+ * `team_x_id` = Team-ID, `slot_x_source` = Herkunft. Keine Namenssuche mehr: vorher suchte der
+ * Mapper das Übergangsfeld `teamA` (eine Team-ID) in einer Name→ID-Map, fand nichts, schrieb die ID als Text in
+ * `team_x_placeholder` und `team_x_id = NULL` – `append_match_events` lehnte jedes Spiel mit 22023 ab.
+ * `team_x_placeholder` wird nicht mehr befüllt (Altspalte, nur noch NULL).
+ *
+ * C3a-2b (V4b/F2/R1): the INSERT carries only NEUTRAL initial values for result/status/timer
+ * columns — score_a/score_b are hard-set to `null` (NOT `match.scoreA ?? null`: the DB default
+ * is `0`, which would fake a played 0:0), match_status hard 'scheduled', timer_elapsed_seconds
+ * hard `0`. Every other result/status/timer/skip column (actual_end, timer_start_time,
+ * timer_paused_at, overtime_*, penalty_*, decided_by, skipped_reason, skipped_at) is not sent at
+ * all. Guest migration therefore loses local results honestly instead of faking them.
+ *
  * @param match - The match to map
  * @param tournamentId - The tournament ID
- * @param teamNameToId - Map from team names to IDs
  * @param ownerId - Optional owner ID for RLS denormalization
  * @param isPublic - Optional public visibility flag
  */
 export function mapMatchToSupabase(
   match: Match,
   tournamentId: string,
-  teamNameToId: Map<string, string>,
   ownerId?: string,
   isPublic?: boolean
 ): MatchInsertWithOwner {
-  const teamAId = teamNameToId.get(match.teamA);
-  const teamBId = teamNameToId.get(match.teamB);
+  const a = slotColumns(requireSlot(match, 'A'));
+  const b = slotColumns(requireSlot(match, 'B'));
 
   return {
     id: match.id,
@@ -197,12 +285,15 @@ export function mapMatchToSupabase(
     round: match.round,
     field: match.field,
     slot: match.slot ?? null,
-    team_a_id: teamAId ?? null,
-    team_b_id: teamBId ?? null,
-    team_a_placeholder: teamAId ? null : match.teamA,
-    team_b_placeholder: teamBId ? null : match.teamB,
-    score_a: match.scoreA ?? null,
-    score_b: match.scoreB ?? null,
+    team_a_id: a.teamId,
+    team_b_id: b.teamId,
+    slot_a_source: a.source,
+    slot_b_source: b.source,
+    ...originToColumns(match), // A-36a: nur beim Anlegen, Update-Wege senden sie nie
+    team_a_placeholder: null,
+    team_b_placeholder: null,
+    score_a: null,
+    score_b: null,
     group_letter: match.group ?? null,
     is_final: match.isFinal ?? false,
     final_type: match.finalType ?? null,
@@ -215,18 +306,8 @@ export function mapMatchToSupabase(
     match_number: match.matchNumber ?? null,
     phase: match.phase ?? 'groupStage',
     referee_number: match.referee ?? null,
-    match_status: match.matchStatus ?? 'scheduled',
-    actual_end: match.finishedAt ?? null,
-    timer_start_time: match.timerStartTime ?? null,
-    timer_paused_at: match.timerPausedAt ?? null,
-    timer_elapsed_seconds: match.timerElapsedSeconds ?? 0,
-    overtime_score_a: match.overtimeScoreA ?? null,
-    overtime_score_b: match.overtimeScoreB ?? null,
-    penalty_score_a: match.penaltyScoreA ?? null,
-    penalty_score_b: match.penaltyScoreB ?? null,
-    decided_by: match.decidedBy ?? null,
-    skipped_reason: match.skippedReason ?? null,
-    skipped_at: match.skippedAt ?? null,
+    match_status: 'scheduled',
+    timer_elapsed_seconds: 0,
     // Denormalized fields for RLS performance
     owner_id: ownerId ?? null,
     is_public: isPublic ?? false,
@@ -234,67 +315,101 @@ export function mapMatchToSupabase(
 }
 
 /**
+ * Extracts ONLY the schedule columns from a full match insert row — used by
+ * SupabaseRepository.save() when updating an EXISTING match (A2,
+ * .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md).
+ *
+ * Deliberately excludes every live/result column: score_a, score_b, match_status,
+ * actual_end/actual_start, timer_start_time, timer_paused_at, timer_elapsed_seconds,
+ * overtime_score_a/b, penalty_score_a/b, decided_by, skipped_reason, skipped_at, live_state,
+ * last_modified_by, version, owner_id, is_public. A full-save from a stale local state (e.g. the
+ * tournament owner editing a team name) must never overwrite a helper's in-progress live match.
+ *
+ * Included ("schedule columns"): team_a_id/team_b_id + slot_a_source/slot_b_source (A-02),
+ * team_a/b_placeholder (always NULL since A-02), round, field, slot,
+ * group_letter, is_final, final_type, label, scheduled_start, match_number, phase,
+ * referee_number — everything the Schedule Editor / Wizard can change about WHEN/WHERE/WHO
+ * plays, never the running result.
+ *
+ * A-02 (V-TEAM-Review C2, @TM-027): `remote` = Team-Spalten der Cloud-Zeile. Ist eine Seite lokal
+ * OFFEN (`team_x_id` NULL), in der Cloud aber schon BESETZT (ein anderes Gerät hat aufgelöst), werden
+ * `team_x_id`/`slot_x_source` dieser Seite NICHT gesendet – ein veralteter lokaler Stand setzt eine
+ * Auflösung nie zurück (die Turnierversion schützt hier nicht: Slot-Updates zählen sie nicht hoch).
+ * Lokal besetzte Seiten werden immer gesendet (Tausch/Ersatz durch die Leitung).
+ * Server-seitige Auflösung: A-13/A-14, Befund C-DELTA-LOKALE-AUFLOESUNG.
+ */
+export function mapMatchToScheduleUpdate(
+  row: MatchInsert,
+  remote?: Pick<MatchRow, 'team_a_id' | 'team_b_id'>
+): MatchUpdate {
+  const keepRemoteA = keepsRemoteSide(row.team_a_id ?? null, remote?.team_a_id);
+  const keepRemoteB = keepsRemoteSide(row.team_b_id ?? null, remote?.team_b_id);
+  return {
+    ...(keepRemoteA ? {} : { team_a_id: row.team_a_id, slot_a_source: row.slot_a_source ?? null }),
+    ...(keepRemoteB ? {} : { team_b_id: row.team_b_id, slot_b_source: row.slot_b_source ?? null }),
+    team_a_placeholder: row.team_a_placeholder,
+    team_b_placeholder: row.team_b_placeholder,
+    round: row.round,
+    field: row.field,
+    slot: row.slot,
+    group_letter: row.group_letter,
+    is_final: row.is_final,
+    final_type: row.final_type,
+    label: row.label,
+    scheduled_start: row.scheduled_start,
+    match_number: row.match_number,
+    phase: row.phase,
+    referee_number: row.referee_number,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
  * Maps a frontend Match update to Supabase update format
+ *
+ * C3a-2b (V4/R1): the client no longer sends ANY result/status/timer/skip column — score_a,
+ * score_b, match_status, actual_end, timer_start_time, timer_paused_at, timer_elapsed_seconds,
+ * overtime_score_a/b, penalty_score_a/b, decided_by, skipped_reason, skipped_at are never written
+ * here, regardless of key presence in the incoming update. Skip/unskip is silenced completely
+ * (R1): no value writes AND no explicit NULL clears — the row stays cleanly stale until C3d.
+ * Local storage is unaffected (LocalStorageRepository keeps all fields).
+ *
+ * The A2 key-presence rule now applies ONLY to the match sides. A-02: the sides come from
+ * `slotA`/`slotB` (never from `teamA`/`teamB`, never via a name lookup) – a caller that includes a
+ * slot gets `team_x_id` + `slot_x_source` written, a caller that omits it (or sends `null`, the
+ * queue's JSON form of a present `undefined`) leaves both columns untouched. `teamA`/`teamB` alone
+ * (A-01 Übergangsfeld) reach the cloud no more. An update that mentions no side still carries
+ * `updated_at` (see AP4's only-updated_at-guard in SupabaseRepository.updateMatches for the
+ * skip-if-empty rule).
+ *
+ * A-03 (M3): `remote` = Team-Spalten der Cloud-Zeile (`SupabaseRepository.updateMatches` liest sie, sobald
+ * ein Update eine offene Seite enthält). Offene lokale Seite + besetzte Cloud-Seite → die Spalten dieser
+ * Seite werden nicht gesendet (C2, siehe `mapMatchToScheduleUpdate`).
  */
 export function mapMatchUpdateToSupabase(
-  match: Partial<Match>,
-  teamNameToId?: Map<string, string>
+  match: DomainMatchUpdate | Partial<Match>,
+  remote?: Pick<MatchRow, 'team_a_id' | 'team_b_id'>
 ): MatchUpdate {
   const update: MatchUpdate = {};
 
-  if (match.scoreA !== undefined) {
-    update.score_a = match.scoreA;
+  // `null` kann nur aus der Warteschlange kommen (normalizeMatchUpdateForQueue) – nie ein gültiger Slot.
+  const slotA = match.slotA;
+  const slotB = match.slotB;
+  if (slotA !== undefined && slotA !== null) {
+    const a = slotColumns(slotA);
+    // A-03 (M3, @TM-027): C2-Schutz wie im Voll-Speichern – eine lokal OFFENE Seite setzt eine in der
+    // Cloud schon besetzte nie zurück (der Stand dieses Geräts ist veraltet).
+    if (!keepsRemoteSide(a.teamId, remote?.team_a_id)) {
+      update.team_a_id = a.teamId;
+      update.slot_a_source = a.source;
+    }
   }
-  if (match.scoreB !== undefined) {
-    update.score_b = match.scoreB;
-  }
-  if (match.matchStatus !== undefined) {
-    update.match_status = match.matchStatus;
-  }
-  if (match.finishedAt !== undefined) {
-    update.actual_end = match.finishedAt;
-  }
-  if (match.timerStartTime !== undefined) {
-    update.timer_start_time = match.timerStartTime;
-  }
-  if (match.timerPausedAt !== undefined) {
-    update.timer_paused_at = match.timerPausedAt;
-  }
-  if (match.timerElapsedSeconds !== undefined) {
-    update.timer_elapsed_seconds = match.timerElapsedSeconds;
-  }
-  if (match.overtimeScoreA !== undefined) {
-    update.overtime_score_a = match.overtimeScoreA;
-  }
-  if (match.overtimeScoreB !== undefined) {
-    update.overtime_score_b = match.overtimeScoreB;
-  }
-  if (match.penaltyScoreA !== undefined) {
-    update.penalty_score_a = match.penaltyScoreA;
-  }
-  if (match.penaltyScoreB !== undefined) {
-    update.penalty_score_b = match.penaltyScoreB;
-  }
-  if (match.decidedBy !== undefined) {
-    update.decided_by = match.decidedBy;
-  }
-  if (match.skippedReason !== undefined) {
-    update.skipped_reason = match.skippedReason;
-  }
-  if (match.skippedAt !== undefined) {
-    update.skipped_at = match.skippedAt;
-  }
-
-  // Handle team changes if teamNameToId is provided
-  if (teamNameToId && match.teamA !== undefined) {
-    const teamAId = teamNameToId.get(match.teamA);
-    update.team_a_id = teamAId ?? null;
-    update.team_a_placeholder = teamAId ? null : match.teamA;
-  }
-  if (teamNameToId && match.teamB !== undefined) {
-    const teamBId = teamNameToId.get(match.teamB);
-    update.team_b_id = teamBId ?? null;
-    update.team_b_placeholder = teamBId ? null : match.teamB;
+  if (slotB !== undefined && slotB !== null) {
+    const b = slotColumns(slotB);
+    if (!keepsRemoteSide(b.teamId, remote?.team_b_id)) {
+      update.team_b_id = b.teamId;
+      update.slot_b_source = b.source;
+    }
   }
 
   update.updated_at = new Date().toISOString();
@@ -343,6 +458,7 @@ interface TournamentConfig {
   tournamentType?: string;
   ageClass?: string;
   organizer?: string;
+  rulebook?: string;
 
   // Time settings
   gamePeriods?: number;
@@ -385,6 +501,16 @@ interface TournamentConfig {
   useDFBKeys?: boolean;
   dfbKeyPattern?: string;
 
+  // Mannschaften des Veranstalters, Eröffnung (@W4-034)
+  hostTeamIds?: string[];
+  openingMode?: string;
+
+  // Paket TB: Gleichstands-Entscheidungen der Turnierleitung, auszuspielende Plätze (standingDecisionsConfig.ts)
+  standingDecisions?: unknown[];
+  placementsToPlayOut?: unknown;
+  // A-25c: Wertung bei Nichtantritt (matchForfeitRow.ts)
+  forfeitScore?: unknown;
+
   // Wizard state
   lastVisitedStep?: number;
 
@@ -407,14 +533,14 @@ export function mapTournamentFromSupabase(
   matchRows: MatchRow[]
 ): Tournament {
   // Build team ID to name map for match conversion
-  const teamIdToName = new Map<string, string>();
-  teamRows.forEach((t) => teamIdToName.set(t.id, t.name));
 
   // Map teams
   const teams = teamRows.map(mapTeamFromSupabase);
 
-  // Map matches
-  const matches = matchRows.map((m) => mapMatchFromSupabase(m, teamIdToName));
+  // Map matches. C-SPIELNUMMER-FEHLT (@SL-049, @ZM-007): fehlt `match_number` (Altdaten NULL), zählt die
+  // Rückfallregel in Spielplan-Reihenfolge; die Liste steht danach nach Spielnummer (die Abfrage sortiert nach
+  // der Spalte, bei NULL in beliebiger Reihenfolge).
+  const matches = sortByMatchNumber(ensureMatchNumbers(matchRows.map((m) => mapMatchFromSupabase(m, row.date))));
 
   // Parse config JSON
   const config = (row.config as TournamentConfig | null) ?? {};
@@ -465,8 +591,8 @@ export function mapTournamentFromSupabase(
     breakDuration: config.breakDuration,
     roundLogic: config.roundLogic as Tournament['roundLogic'],
     numberOfRounds: config.numberOfRounds,
-    placementLogic: (config.placementLogic ??
-      []) as Tournament['placementLogic'],
+    // C-WERTUNG-LEER: fehlende oder leere Reihenfolge ⇒ Voreinstellung BFV privat (@W2A-046)
+    placementLogic: effectivePlacementLogic(config.placementLogic as Tournament['placementLogic'] | undefined),
     finalsConfig: finalsConfig ?? undefined,
     refereeConfig: refereeConfig ?? undefined,
     fieldAssignments: config.fieldAssignments,
@@ -488,11 +614,12 @@ export function mapTournamentFromSupabase(
     title: row.title,
     ageClass: config.ageClass ?? '',
     date: row.date,
-    timeSlot: row.start_time ?? '',
+    timeSlot: timeFromDb(row.start_time) ?? '',
     startDate: row.date,
-    startTime: row.start_time ?? undefined,
+    startTime: timeFromDb(row.start_time),
     location,
     organizer: config.organizer,
+    rulebook: config.rulebook, ...bibColorFromConfig(config), ...spectatorDisplayFromConfig(config), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
     contactInfo: config.contactInfo as Tournament['contactInfo'],
     teams,
     matches,
@@ -508,15 +635,15 @@ export function mapTournamentFromSupabase(
     cancelledReason: config.cancelledReason,
     cancelledAt: config.cancelledAt,
     adminNotes: config.adminNotes,
-    matchCockpitSettings:
-      config.matchCockpitSettings as Tournament['matchCockpitSettings'],
+    matchCockpitSettings: completeMatchCockpitSettings(config.matchCockpitSettings),
     isExternal: config.isExternal,
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
-    dfbKeyPattern: config.dfbKeyPattern,
+    dfbKeyPattern: config.dfbKeyPattern, ...hostTeamsFromConfig(config, teams), ...standingDecisionsFromConfig(config), // @W4-034/@W4-044, Paket TB
+    ...forfeitScoreFromConfig(config), // A-25c @W2A-025: Wertung bei Nichtantritt
     monitors: config.monitors as Tournament['monitors'],
     sponsors: config.sponsors as Tournament['sponsors'],
-    version: row.version ?? undefined,
+    version: row.version ?? undefined, ...changeRevisionFromRow(row), // A-10: Änderungszählung (@TM-027)
     // K2: is_public/share_code müssen rundreisen — sonst sieht mapTournamentToSupabase
     // immer `undefined`, denormalisiert `false` auf alle Team-/Match-Zeilen (K1), und
     // OfflineRepository.getMetadataChanges meldet bei jedem Delta-Sync eine Phantom-Änderung.
@@ -552,6 +679,27 @@ export function mapTournamentFromSupabase(
  * Maps frontend Tournament to Supabase insert format
  * Returns tournament row, team rows, and match rows
  */
+/**
+ * @FU-128 (C-STARTTIME): `start_time` ist vom Typ time. Eine leere Zeichenkette oder ein Anzeigetext wie
+ * „09:00 - 16:00“ lehnt Postgres ab; ohne gültige Uhrzeit geht NULL.
+ */
+export function startTimeForDb(value: string | undefined): string | null {
+  const time = value?.trim();
+  return time && /^\d{1,2}:\d{2}(:\d{2})?$/.test(time) ? time : null;
+}
+
+/** Erste Uhrzeit eines Anzeigetexts („09:00 - 16:00“ -> „09:00“), z. B. aus einem JSON-Import; sonst NULL. */
+function firstTimeOf(text: string | undefined): string | null {
+  const match = /(\d{1,2}:\d{2})/.exec(text ?? '');
+  return match ? match[1] : null;
+}
+
+/** Der Server liefert time-Spalten als HH:MM:SS; die Anzeige zeigt HH:MM (@FU-128). */
+function timeFromDb(value: string | null): string | undefined {
+  const match = value ? /^(\d{1,2}):(\d{2})/.exec(value) : null;
+  return match ? `${match[1].padStart(2, '0')}:${match[2]}` : undefined;
+}
+
 export function mapTournamentToSupabase(
   tournament: Tournament,
   ownerId: string
@@ -585,6 +733,7 @@ export function mapTournamentToSupabase(
     fields: tournament.fields,
     ageClass: tournament.ageClass,
     organizer: tournament.organizer,
+    rulebook: tournament.rulebook, ...bibColorToConfig(tournament), ...spectatorDisplayToConfig(tournament), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
     contactInfo: tournament.contactInfo,
     dashboardStatus: tournament.dashboardStatus,
     tournamentSystem: tournament.tournamentSystem,
@@ -599,7 +748,8 @@ export function mapTournamentToSupabase(
     externalSource: tournament.externalSource,
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
-    dfbKeyPattern: tournament.dfbKeyPattern,
+    dfbKeyPattern: tournament.dfbKeyPattern, ...hostTeamsToConfig(tournament), ...standingDecisionsToConfig(tournament), // @W4-034/@W4-044, Paket TB
+    ...forfeitScoreToConfig(tournament), // A-25c @W2A-025
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
     publishedAt: tournament.publishedAt,
@@ -613,7 +763,7 @@ export function mapTournamentToSupabase(
     sport: tournament.sport,
     tournament_type: tournament.tournamentType,
     date: tournament.startDate ?? tournament.date,
-    start_time: tournament.startTime ?? tournament.timeSlot ?? null,
+    start_time: startTimeForDb(tournament.startTime) ?? firstTimeOf(tournament.timeSlot), // @FU-128
     location_name: tournament.location.name ?? null,
     location_street: tournament.location.street ?? null,
     location_city: tournament.location.city ?? null,
@@ -632,7 +782,7 @@ export function mapTournamentToSupabase(
     config: config as unknown as Json,
     deleted_at: tournament.deletedAt ?? null,
     completed_at: tournament.completedAt ?? null,
-    version: tournament.version ?? null,
+    version: tournament.version ?? 1, // BP-1 C-TURNIER-VERSION-NULL: nie eine Zeile ohne Version (Backfill + NOT NULL: DB-Fenster)
   };
 
   // K1: is_public muss den echten Sichtbarkeitszustand tragen. SupabaseRepository.save()
@@ -644,70 +794,17 @@ export function mapTournamentToSupabase(
   const teamRows = tournament.teams.map((team) =>
     mapTeamToSupabase(team, tournament.id, ownerId, isPublic)
   );
-  const teamNameToId = new Map<string, string>();
-  tournament.teams.forEach((t) => teamNameToId.set(t.name, t.id));
-  const matchRows = tournament.matches.map((match) =>
-    mapMatchToSupabase(match, tournament.id, teamNameToId, ownerId, isPublic)
+  // C-SPIELNUMMER-FEHLT: nie `match_number = NULL` schreiben – fehlt die Nummer lokal, gilt die Rückfallregel.
+  const matchRows = ensureMatchNumbers(tournament.matches).map((match) =>
+    mapMatchToSupabase(match, tournament.id, ownerId, isPublic)
   );
 
   return { tournamentRow, teamRows, matchRows };
 }
 
 // =============================================================================
-// TOURNAMENT_COLLABORATORS MAPPERS (Invitations + Memberships)
+// TOURNAMENT_COLLABORATORS MAPPERS (Memberships)
 // =============================================================================
-
-export interface InvitationInsertInput {
-  tournamentId: string;
-  inviteCode: string;
-  role: string;
-  teamIds?: string[];
-  label?: string | null;
-  maxUses?: number;
-  expiresAtIso: string;
-  invitedBy: string;
-  invitedAtIso?: string;
-}
-
-/**
- * Maps an invitation-creation request to a tournament_collaborators insert row.
- * Used by invitationService.createInvitation.
- */
-export function mapInvitationInsertToSupabase(
-  input: InvitationInsertInput
-): CollaboratorInsert {
-  return {
-    tournament_id: input.tournamentId,
-    invite_code: input.inviteCode,
-    role: input.role,
-    team_ids: input.teamIds ?? [],
-    label: input.label ?? null,
-    max_uses: input.maxUses ?? 1,
-    use_count: 0,
-    expires_at: input.expiresAtIso,
-    invited_by: input.invitedBy,
-    invited_at: input.invitedAtIso ?? new Date().toISOString(),
-  };
-}
-
-export interface InvitationAcceptUpdate {
-  userId: string;
-  acceptedAtIso: string;
-  newUseCount: number;
-}
-
-/**
- * Maps an "invitation accepted" event to the row update.
- */
-export function mapInvitationAcceptToSupabase(
-  input: InvitationAcceptUpdate
-): CollaboratorUpdate {
-  return {
-    user_id: input.userId,
-    accepted_at: input.acceptedAtIso,
-    use_count: input.newUseCount,
-  };
-}
 
 export interface MembershipInsertInput {
   tournamentId: string;

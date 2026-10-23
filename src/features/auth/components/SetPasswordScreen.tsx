@@ -87,7 +87,7 @@ export const SetPasswordScreen: React.FC = () => {
   if (sessionError) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card} role="dialog" aria-modal="true" aria-label={t('setPassword.sessionExpired')}>
+        <div style={styles.card} role="main" aria-label={t('setPassword.sessionExpired')}>
           <div style={styles.errorIcon}>!</div>
           <h1 style={styles.title}>{t('setPassword.sessionExpired')}</h1>
           <p style={styles.subtitle}>
@@ -110,7 +110,7 @@ export const SetPasswordScreen: React.FC = () => {
   if (authLoading) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card} role="dialog" aria-modal="true" aria-label={t('setPassword.loadingAriaLabel')}>
+        <div style={styles.card} role="main" aria-label={t('setPassword.loadingAriaLabel')}>
           <div style={styles.spinner} />
           <p style={styles.subtitle}>{t('setPassword.loading')}</p>
         </div>
@@ -122,7 +122,7 @@ export const SetPasswordScreen: React.FC = () => {
   if (showSuccess) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card} role="dialog" aria-modal="true" aria-label={t('setPassword.success.title')}>
+        <div style={styles.card} role="main" aria-label={t('setPassword.success.title')}>
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.successTitle}>{t('setPassword.success.title')}</h2>
           <p style={styles.successText}>
@@ -143,7 +143,7 @@ export const SetPasswordScreen: React.FC = () => {
 
   return (
     <div style={styles.backdrop}>
-      <div style={styles.card} role="dialog" aria-modal="true" aria-labelledby="set-password-title">
+      <div style={styles.card} role="main" aria-labelledby="set-password-title">
         <h1 id="set-password-title" style={styles.title}>{t('setPassword.title')}</h1>
         <p style={styles.subtitle}>
           {t('setPassword.subtitle')}
@@ -284,7 +284,7 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.lg,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     boxSizing: 'border-box',
     transition: 'border-color 0.2s ease',

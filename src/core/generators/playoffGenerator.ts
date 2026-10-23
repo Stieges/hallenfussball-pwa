@@ -4,7 +4,7 @@
  * Generiert Finalrunden-Spiele basierend auf Presets:
  * - none: Keine Finalrunde
  * - final-only: Nur Finale (direkt)
- * - top-4: Halbfinale + Finale + Platz 3
+ * - top-4: Halbfinale + Spiel um Platz 3 + Finale
  * - top-8: Viertelfinale + alles darüber + Platzierungen 5-8
  * - top-16: Achtelfinale + Viertelfinale + Halbfinale + Finale (8+ Gruppen)
  * - all-places: Alle Plätze ausspielen
@@ -17,7 +17,7 @@ import { FinalsPreset, FinalsConfig } from '../../types/tournament';
 export interface PlayoffMatch {
   id: string;
   label: string;
-  home: string;        // z.B. "1A", "2B", "winner-semi1", "loser-qf2"
+  home: string;        // z.B. "group-a-1st", "semi1-winner", "qf2-loser"
   away: string;
   rank?: number | [number, number]; // Platzierung(en), die ausgespielt werden
   dependsOn?: string[]; // IDs von Spielen, die vorher stattfinden müssen
@@ -43,11 +43,16 @@ export function generatePlayoffMatches(
 ): PlayoffMatch[] {
   const { preset } = config;
 
-  if (preset === 'none' || numberOfGroups < 2) {
+  if (preset === 'none') {
+    return [];
+  }
+  // Top 4 mit einer Gruppe (@TM-142, Vorlage „Top 4“): die einzige Vorlage ohne zweite Gruppe.
+  if (numberOfGroups < 1 || (numberOfGroups < 2 && preset !== 'top-4')) {
     return [];
   }
 
   const matches: PlayoffMatch[] = [];
+  const places = placementsOf(config, groupSizes);
 
   switch (preset) {
     case 'final-only':
@@ -55,23 +60,79 @@ export function generatePlayoffMatches(
       break;
 
     case 'top-4':
-      matches.push(...generateTop4(numberOfGroups));
+      matches.push(...generateTop4(numberOfGroups, places, groupSizes));
       break;
 
     case 'top-8':
-      matches.push(...generateTop8(numberOfGroups));
+      matches.push(...generateTop8(numberOfGroups, places));
       break;
 
     case 'top-16':
-      matches.push(...generateTop16(numberOfGroups));
+      matches.push(...generateTop16(numberOfGroups, places));
       break;
 
     case 'all-places':
-      matches.push(...generateAllPlaces(numberOfGroups, groupSizes));
+      matches.push(...generateAllPlaces(numberOfGroups, places));
       break;
   }
 
+  return withFinalLast(matches);
+}
+
+/** Plätze, die eine Vorlage ohne eigene Auswahl ausspielt (@TM-004: „Top 4“ → 3, „Alle Plätze“ → 3, 5, 7). */
+export function defaultPlacements(preset: FinalsPreset): number[] {
+  switch (preset) {
+    case 'all-places': return [3, 5, 7];
+    case 'top-4':
+    case 'top-8':
+    case 'top-16': return [3];
+    default: return [];
+  }
+}
+
+/**
+ * Ausgespielte Plätze (@TM-004). Eine eigene Auswahl (`config.placements`) gilt genau so – passt sie nicht zu den
+ * Gruppengrößen, meldet das `buildFinalsTemplate` sichtbar. Die Vorbelegung der Vorlage lässt wie bisher weg, wofür
+ * eine Gruppe zu klein ist: Platz 5 braucht 3, Platz 7 braucht 4 Teams in jeder Gruppe.
+ */
+function placementsOf(config: FinalsConfig, groupSizes?: GroupSizeInfo): ReadonlySet<number> {
+  if (config.placements !== undefined) {
+    return new Set(config.placements);
+  }
+  const minGroupSize = groupSizes ? Math.min(groupSizes['A'] || 2, groupSizes['B'] || 2) : 4;
+  return new Set(defaultPlacements(config.preset).filter((place) =>
+    place === 3 || (place === 5 && minGroupSize >= 3) || (place === 7 && minGroupSize >= 4)));
+}
+
+/**
+ * Halbfinale plus gewählte Platzierungsspiele plus Finale (1 und 2 Gruppen). Reihenfolge nach @TM-144: Platz 7, 5, 3,
+ * dann das Finale. Platz 5/7 gibt es nur bei 2 Gruppen (Dritte bzw. Vierte gegeneinander), Platz 3 = Verlierer HF1
+ * gegen Verlierer HF2 (@TM-005).
+ */
+function semifinalsWithPlacements(semis: PlayoffMatch[], places: ReadonlySet<number>, twoGroups: boolean): PlayoffMatch[] {
+  const matches = [...semis];
+  const afterSemis = ['semi1', 'semi2'];
+  if (twoGroups && places.has(7)) {
+    matches.push({ id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: afterSemis });
+  }
+  if (twoGroups && places.has(5)) {
+    matches.push({ id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: afterSemis });
+  }
+  if (places.has(3)) {
+    matches.push({ id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: afterSemis });
+  }
+  // Finale zuletzt (withFinalLast, @TM-144)
+  matches.push({ id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: afterSemis });
   return matches;
+}
+
+/**
+ * @TM-144: Das Finale ist das letzte Spiel des Turniers – es hängt an allen anderen Spielen der Finalrunde, damit
+ * der Scheduler jedes Platzierungsspiel (Platz 7, 5, 3 …) vorher ansetzt, auch bei mehreren Feldern.
+ */
+function withFinalLast(matches: PlayoffMatch[]): PlayoffMatch[] {
+  const others = matches.filter((m) => m.id !== 'final').map((m) => m.id);
+  return matches.map((m) => (m.id === 'final' ? { ...m, dependsOn: others } : m));
 }
 
 // ============================================================================
@@ -108,84 +169,41 @@ function generateFinalOnly(numberOfGroups: number): PlayoffMatch[] {
 }
 
 /**
- * Top 4: Halbfinale + Finale + Platz 3
+ * Top 4: Halbfinale + gewählte Platzierungsspiele (Vorbelegung Platz 3) + Finale
  * Standard bei 2 Gruppen
  */
-function generateTop4(numberOfGroups: number): PlayoffMatch[] {
-  const matches: PlayoffMatch[] = [];
-
-  if (numberOfGroups === 2) {
-    // Halbfinale mit Kreuzspiel
-    matches.push(
-      {
-        id: 'semi1',
-        label: '1. Halbfinale',
-        home: 'group-a-2nd',
-        away: 'group-b-1st',
-        dependsOn: [],
-      },
-      {
-        id: 'semi2',
-        label: '2. Halbfinale',
-        home: 'group-a-1st',
-        away: 'group-b-2nd',
-        dependsOn: [],
-      }
-    );
-  } else {
-    // Bei 3+ Gruppen: beste 4 Teams
-    matches.push(
-      {
-        id: 'semi1',
-        label: '1. Halbfinale',
-        home: 'group-a-1st',
-        away: 'group-b-2nd',
-        dependsOn: [],
-      },
-      {
-        id: 'semi2',
-        label: '2. Halbfinale',
-        home: 'group-b-1st',
-        away: 'group-a-2nd',
-        dependsOn: [],
-      }
-    );
-  }
-
-  // Finale und Platz 3
-  matches.push(
-    {
-      id: 'third-place',
-      label: 'Spiel um Platz 3',
-      home: 'semi1-loser',
-      away: 'semi2-loser',
-      rank: 3,
-      dependsOn: ['semi1', 'semi2'],
-    },
-    {
-      id: 'final',
-      label: 'Finale',
-      home: 'semi1-winner',
-      away: 'semi2-winner',
-      rank: 1,
-      dependsOn: ['semi1', 'semi2'],
+function generateTop4(numberOfGroups: number, places: ReadonlySet<number>, groupSizes?: GroupSizeInfo): PlayoffMatch[] {
+  if (numberOfGroups === 1) {
+    // @TM-142: eine Gruppe – Erster gegen Vierter, Zweiter gegen Dritter. Braucht vier Teams in der Gruppe;
+    // ist die Größe bekannt und kleiner, bricht die Erzeugung sichtbar ab statt Herkünfte ins Leere zu setzen.
+    const size = groupSizes?.['A'];
+    if (size !== undefined && size < 4) {
+      throw new Error(`Top 4 mit einer Gruppe braucht mindestens 4 Teams (Gruppe A hat ${size})`);
     }
-  );
-
-  return matches;
+    return semifinalsWithPlacements([
+      { id: 'semi1', label: '1. Halbfinale', home: 'group-a-1st', away: 'group-a-4th', dependsOn: [] },
+      { id: 'semi2', label: '2. Halbfinale', home: 'group-a-2nd', away: 'group-a-3rd', dependsOn: [] },
+    ], places, false);
+  }
+  // Halbfinale über Kreuz (@TM-015, @TM-142, Vorlage „Top 4“): HF1 = Erster A gegen Zweiter B, HF2 = Erster B gegen
+  // Zweiter A. Ab 3 Gruppen (nur noch Zähl-Helfer des Assistenten, A-12a) dieselbe Paarung.
+  return semifinalsWithPlacements([
+    { id: 'semi1', label: '1. Halbfinale', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] },
+    { id: 'semi2', label: '2. Halbfinale', home: 'group-b-1st', away: 'group-a-2nd', dependsOn: [] },
+  ], places, numberOfGroups === 2);
 }
 
 /**
  * Top 8: Viertelfinale + Halbfinale + Finale + Platzierungen 5-8
  */
-function generateTop8(numberOfGroups: number): PlayoffMatch[] {
+function generateTop8(numberOfGroups: number, places: ReadonlySet<number>): PlayoffMatch[] {
   const matches: PlayoffMatch[] = [];
 
   // Viertelfinale
   if (numberOfGroups === 2) {
     // Bei 2 Gruppen: Nur Top 4 möglich (kein echtes Top 8)
     // Verwende einfach Top 4 Logik
-    return generateTop4(numberOfGroups);
+    return generateTop4(numberOfGroups, places);
   } else if (numberOfGroups >= 4) {
     // Bei 4+ Gruppen: klassische Paarungen
     matches.push(
@@ -204,13 +222,14 @@ function generateTop8(numberOfGroups: number): PlayoffMatch[] {
 
   // Platz 5-8 (nur wenn genug Viertelfinale)
   if (matches.filter(m => m.id.startsWith('qf')).length >= 4) {
+    // @TM-144: aufsteigend vor dem Finale – Platz 7 vor Platz 5
     matches.push(
-      { id: 'place56', label: 'Spiel um Platz 5', home: 'qf1-loser', away: 'qf2-loser', rank: [5, 6], dependsOn: ['qf1', 'qf2'] },
-      { id: 'place78', label: 'Spiel um Platz 7', home: 'qf3-loser', away: 'qf4-loser', rank: [7, 8], dependsOn: ['qf3', 'qf4'] }
+      { id: 'place78', label: 'Spiel um Platz 7', home: 'qf3-loser', away: 'qf4-loser', rank: [7, 8], dependsOn: ['qf3', 'qf4'] },
+      { id: 'place56', label: 'Spiel um Platz 5', home: 'qf1-loser', away: 'qf2-loser', rank: [5, 6], dependsOn: ['qf1', 'qf2'] }
     );
   }
 
-  // Finale + Platz 3
+  // Platz 3, dann Finale (Finale zuletzt: withFinalLast, @TM-144)
   matches.push(
     { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['semi1', 'semi2'] },
     { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['semi1', 'semi2'] }
@@ -223,12 +242,12 @@ function generateTop8(numberOfGroups: number): PlayoffMatch[] {
  * Top 16: Achtelfinale + Viertelfinale + Halbfinale + Finale
  * Bei 8+ Gruppen: Top 2 pro Gruppe = 16 Teams
  */
-function generateTop16(numberOfGroups: number): PlayoffMatch[] {
+function generateTop16(numberOfGroups: number, places: ReadonlySet<number>): PlayoffMatch[] {
   const matches: PlayoffMatch[] = [];
 
   // Bei weniger als 8 Gruppen: Fallback auf Top-8
   if (numberOfGroups < 8) {
-    return generateTop8(numberOfGroups);
+    return generateTop8(numberOfGroups, places);
   }
 
   // Achtelfinale (Round of 16)
@@ -258,7 +277,7 @@ function generateTop16(numberOfGroups: number): PlayoffMatch[] {
     { id: 'semi2', label: '2. Halbfinale', home: 'qf2-winner', away: 'qf3-winner', dependsOn: ['qf2', 'qf3'] }
   );
 
-  // Finale + Platz 3
+  // Platz 3, dann Finale (Finale zuletzt: withFinalLast, @TM-144)
   matches.push(
     { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['semi1', 'semi2'] },
     { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['semi1', 'semi2'] }
@@ -268,68 +287,40 @@ function generateTop16(numberOfGroups: number): PlayoffMatch[] {
 }
 
 /**
- * Alle Plätze: Top 4 + zusätzliche direkte Platzierungsspiele
- * Bei 2 Gruppen: Plätze 5-8 werden ausgespielt (falls genug Teams vorhanden)
- *
+ * Alle Plätze: Halbfinale + Platz 7, 5, 3 + Finale (Vorbelegung, @TM-004); bei 2 Gruppen wie „Top 4“ mit allen Plätzen.
  * Reihenfolge: Halbfinale → Platz 7 → Platz 5 → Platz 3 → Finale
- *
- * @param numberOfGroups - Anzahl der Gruppen
- * @param groupSizes - Optional: Tatsächliche Größe jeder Gruppe
  */
-function generateAllPlaces(numberOfGroups: number, groupSizes?: GroupSizeInfo): PlayoffMatch[] {
-  if (numberOfGroups === 2) {
-    // Bei 2 Gruppen: Eigene Struktur mit korrekter Reihenfolge
-    const matches: PlayoffMatch[] = [];
-
-    // Determine minimum group size (for deciding which placement matches are possible)
-    const minGroupSize = groupSizes
-      ? Math.min(groupSizes['A'] || 2, groupSizes['B'] || 2)
-      : 4; // Default to 4 if no size info (legacy behavior)
-
-    // 1. Halbfinale (parallel möglich bei mehreren Feldern)
-    matches.push(
-      { id: 'semi1', label: '1. Halbfinale', home: 'group-a-2nd', away: 'group-b-1st', dependsOn: [] },
-      { id: 'semi2', label: '2. Halbfinale', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] }
-    );
-
-    // 2. Platzierungsspiele - nur wenn beide Gruppen genug Teams haben
-    const placementDependencies: string[] = ['semi1', 'semi2'];
-
-    // Platz 7/8: Nur wenn beide Gruppen mindestens 4 Teams haben
-    if (minGroupSize >= 4) {
-      matches.push(
-        { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: ['semi1', 'semi2'] }
-      );
-      placementDependencies.push('place78-direct');
-    }
-
-    // Platz 5/6: Nur wenn beide Gruppen mindestens 3 Teams haben
-    if (minGroupSize >= 3) {
-      matches.push(
-        { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: ['semi1', 'semi2'] }
-      );
-      placementDependencies.push('place56-direct');
-    }
-
-    // Platz 3: Immer möglich (Halbfinal-Verlierer)
-    matches.push(
-      { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['semi1', 'semi2'] }
-    );
-    placementDependencies.push('third-place');
-
-    // 3. Finale (muss nach allen Platzierungsspielen kommen)
-    matches.push(
-      { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: placementDependencies }
-    );
-
-    return matches;
-  } else if (numberOfGroups >= 4) {
-    // Bei 4+ Gruppen: Verwende Top-8 als Basis
-    return generateTop8(numberOfGroups);
+function generateAllPlaces(numberOfGroups: number, places: ReadonlySet<number>): PlayoffMatch[] {
+  if (numberOfGroups >= 4) {
+    // Bei 4+ Gruppen: Verwende Top-8 als Basis (nur noch Zähl-Helfer des Assistenten, A-12a)
+    return generateTop8(numberOfGroups, places);
   }
+  return generateTop4(numberOfGroups, places);
+}
 
-  // Fallback: Standard Top-4
-  return generateTop4(numberOfGroups);
+/** Runde eines Finalspiels (Spalte `matches.phase`). */
+export type FinalsPhase = 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+
+/** Runde aus der Kennung der Vorlage (`semi1`, `qf2`, `r16-3`, `third-place`, `final` …), nie aus der Spiel-ID. */
+export function finalsPhaseOfTemplateId(templateId: string): FinalsPhase {
+  if (templateId.startsWith('r16')) { return 'roundOf16'; }
+  if (templateId.startsWith('qf')) { return 'quarterfinal'; }
+  if (templateId.startsWith('semi')) { return 'semifinal'; }
+  return 'final';
+}
+
+export interface LegacyFinals {
+  final: boolean;
+  thirdPlace: boolean;
+  fifthSixth: boolean;
+  seventhEighth: boolean;
+}
+
+/** Vorlage zu den alten Schaltern (`tournament.finals`) für Turniere ohne `finalsConfig`. */
+export function legacyFinalsPreset(finals: LegacyFinals): FinalsConfig['preset'] {
+  if (!finals.final) { return 'none'; }
+  if (!finals.thirdPlace) { return 'final-only'; }
+  return finals.fifthSixth || finals.seventhEighth ? 'all-places' : 'top-4';
 }
 
 /**

@@ -1,13 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion, MatchCockpitSettings, DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
-import { cssVars, displaySizes } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { getGroupSystemOptions } from '../../constants/tournamentOptions';
-import { getDFBPattern } from '../../constants/dfbMatchPatterns';
 import styles from './Step2_ModeAndSystem.module.css';
 import {
   ModeSelection,
-  DFBKeySystem,
   DurationEstimate,
   GameTimeConfig,
   PlacementLogicEditor,
@@ -17,8 +15,9 @@ import {
   BambiniSettings,
   ValidationWarnings,
   SmartConfig,
+  PlayOutPlacesSection,
 } from './components';
-import { MatchCockpitSettingsPanel } from '../../components/match-cockpit/MatchCockpitSettingsPanel';
+import { MatchCockpitSettingsPanel } from '../../components/match-settings/MatchCockpitSettingsPanel';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -43,22 +42,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 }) => {
   const { t } = useTranslation('wizard');
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
-  const useDFBKeys = formData.useDFBKeys ?? false;
 
   // TOUR-EDIT-STRUCTURE: Strukturfelder sind gesperrt wenn Ergebnisse vorhanden
   const structureFieldsLocked = hasResults;
-
-  const handleTeamCountChange = (newCount: number) => {
-    onUpdate('numberOfTeams', newCount);
-
-    // Auto-select matching DFB pattern if DFB mode is enabled
-    if (useDFBKeys) {
-      const pattern = getDFBPattern(newCount);
-      if (pattern) {
-        onUpdate('dfbKeyPattern', pattern.code);
-      }
-    }
-  };
 
   // Helper to get placement logic summary
   const getPlacementSummary = (): string => {
@@ -115,7 +101,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
     const features: string[] = [];
     if (settings.soundEnabled) {features.push('Sound');}
     if (settings.hapticEnabled) {features.push('Haptik');}
-    if (settings.autoFinishEnabled) {features.push('Auto');}
     if (features.length === 0) {return t('step2.summaries.cockpitStandard');}
     return features.join(' + ');
   };
@@ -215,18 +200,14 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               disabled={structureFieldsLocked}
             />
 
-            {/* DFB Key System */}
-            <DFBKeySystem
-              formData={formData}
-              onUpdate={onUpdate}
-            />
+            {/* @W4-028: DFB-Schlüssel im MVP aus (Tabelle fehlerhaft, C-DFB-SCHLUESSEL-LUECKEN) */}
 
             {/* Basic Tournament Parameters - Responsive Grid */}
             <div className={`${styles.configGrid} ${canUseGroups ? styles.threeColumns : ''}`}>
               <NumberStepper
                 label={t('step2.teamCount')}
                 value={formData.numberOfTeams ?? 4}
-                onChange={handleTeamCountChange}
+                onChange={(v) => onUpdate('numberOfTeams', v)}
                 min={2}
                 max={24}
                 mode="stepper"
@@ -365,6 +346,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               />
             )}
 
+            {/* Paket TB-B: welche Plätze bei Gleichstand ausgespielt werden müssen (@W2A-066) */}
+            <PlayOutPlacesSection formData={formData} onUpdate={onUpdate} />
+
             {/* Point System */}
             <PointSystemPicker
               formData={formData}
@@ -440,49 +424,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             />
           </CollapsibleSection>
         </>
-      )}
-
-      {/* Mini-Fußball Mode - Coming Soon */}
-      {formData.mode === 'miniFussball' && (
-        <div style={{
-          padding: '32px',
-          textAlign: 'center',
-          background: cssVars.colors.secondaryBadge,
-          borderRadius: cssVars.borderRadius.md,
-          border: `1px solid ${cssVars.colors.secondaryBorder}`,
-          marginTop: '16px',
-        }}>
-          <div style={{ fontSize: displaySizes.lg, marginBottom: '16px' }}>🚧</div>
-          <h3 style={{
-            color: cssVars.colors.textPrimary,
-            fontSize: cssVars.fontSizes.xl,
-            margin: '0 0 8px 0'
-          }}>
-            {t('step2.miniFussball.title')}
-          </h3>
-          <p style={{
-            color: cssVars.colors.textSecondary,
-            fontSize: cssVars.fontSizes.md,
-            margin: '0 0 16px 0',
-            lineHeight: '1.5'
-          }}>
-            {t('step2.miniFussball.description')}
-          </p>
-          <span style={{
-            display: 'inline-block',
-            padding: '6px 16px',
-            background: cssVars.colors.secondarySelected,
-            border: `1px solid ${cssVars.colors.secondaryBorderStrong}`,
-            borderRadius: '16px',
-            fontSize: cssVars.fontSizes.sm,
-            fontWeight: cssVars.fontWeights.semibold,
-            color: cssVars.colors.secondary,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}>
-            {t('step2.miniFussball.comingSoon')}
-          </span>
-        </div>
       )}
     </Card>
   );

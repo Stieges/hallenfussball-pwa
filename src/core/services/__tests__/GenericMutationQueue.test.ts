@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GenericMutationQueue, MAX_RETRIES } from '../GenericMutationQueue';
 import type { GenericMutationItem, FailedMutationItem } from '../GenericMutationQueue';
+import { RepositoryError } from '../../errors';
 
 // =============================================================================
 // Mocks (mirrored from MutationQueue.test.ts — same infra, generic payloads)
@@ -9,6 +10,7 @@ import type { GenericMutationItem, FailedMutationItem } from '../GenericMutation
 const mockStorage = new Map<string, string>();
 vi.mock('../../utils/safeStorage', () => ({
   safeLocalStorage: {
+    setItemPersisted: vi.fn((key: string, value: string) => { mockStorage.set(key, value); return true; }),
     getItem: vi.fn((key: string) => mockStorage.get(key) ?? null),
     setItem: vi.fn((key: string, value: string) => { mockStorage.set(key, value); }),
     removeItem: vi.fn((key: string) => { mockStorage.delete(key); }),
@@ -27,11 +29,17 @@ vi.mock('../../../utils/idGenerator', () => ({
 type TestType = 'SAVE_THING' | 'DELETE_THING';
 
 let onlineSpy: ReturnType<typeof vi.spyOn>;
+let created: GenericMutationQueue<TestType>[] = [];
 
 beforeEach(() => {
   mockStorage.clear();
   idCounter = 0;
+  created = [];
   onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+});
+
+afterEach(() => {
+  created.forEach(q => q.dispose());
 });
 
 function makeQueue(opts?: {
@@ -54,6 +62,7 @@ function makeQueue(opts?: {
     sentryFeature: 'sync',
     ...(opts?.isKnownType ? { isKnownType: opts.isKnownType } : {}),
   });
+  created.push(queue);
   return { queue, execute };
 }
 
@@ -258,6 +267,142 @@ describe('GenericMutationQueue', () => {
     expect(status.failedCount).toBe(0);
   });
 
+  // ===========================================================================
+  // Task A3: Netzfehler (kein echtes Internet trotz navigator.onLine) zählt
+  // nicht als Fehlversuch — Eintrag bleibt wartend statt in der Fehlerliste.
+  // ===========================================================================
+
+  it('Netzfehler (Failed to fetch) zählt auch nach 20 Anstößen nicht als Fehlversuch', async () => {
+    const execute = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 20; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(20);
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+    const stored = JSON.parse(mockStorage.get('test_queue_v1') ?? '[]') as GenericMutationItem<TestType>[];
+    expect(stored[0].retryCount).toBe(0);
+  });
+
+  it('RLS-Fehler (dauerhaft) landet wie bisher nach 5 Anstößen in der Fehlerliste', async () => {
+    const rlsError = Object.assign(new Error('new row violates row-level security policy'), {
+      code: '42501',
+    });
+    const execute = vi.fn().mockRejectedValue(rlsError);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(MAX_RETRIES);
+    expect(queue.getPendingCount()).toBe(0);
+    expect(queue.getFailedCount()).toBe(1);
+  });
+
+  it('HTTP 5xx zählt nicht als Fehlversuch — Eintrag bleibt wartend', async () => {
+    const serverError = Object.assign(new Error('Service Unavailable'), { status: 503 });
+    const execute = vi.fn().mockRejectedValue(serverError);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 5; i++) {
+      await queue.process();
+    }
+
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+  });
+
+  it('Safari-Netzfehler ("Load failed") über die reale SupabaseRepository-Wrapping-Form zählt nicht als Fehlversuch', async () => {
+    // Nachgebaut wie SupabaseRepository.updateMatches ihn tatsächlich wirft
+    // (task-A3-review.md, Critical #1): postgrest-js liefert bei
+    // fehlgeschlagenem fetch() (kein .throwOnError()) ein Plain-Object OHNE
+    // .name-Feld; SupabaseRepository sammelt pro Match einen Error und wirft
+    // am Ende EIN RepositoryError mit einem Error[]-originalError.
+    const postgrestError = { message: 'TypeError: Load failed', details: '', hint: '', code: '' };
+    const perMatchErrors = [new Error(`Match a: ${postgrestError.message}`)];
+    const realError = new RepositoryError(
+      'updateMatches',
+      `Failed to update matches/tournament: ${perMatchErrors.map((e) => e.message).join('; ')}`,
+      perMatchErrors
+    );
+    const execute = vi.fn().mockRejectedValue(realError);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 20; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(20);
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+    const stored = JSON.parse(mockStorage.get('test_queue_v1') ?? '[]') as GenericMutationItem<TestType>[];
+    expect(stored[0].retryCount).toBe(0);
+  });
+
+  it('HTTP 429 zählt nicht als Fehlversuch — Eintrag bleibt wartend', async () => {
+    const rateLimited = Object.assign(new Error('Too Many Requests'), { status: 429 });
+    const execute = vi.fn().mockRejectedValue(rateLimited);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 5; i++) {
+      await queue.process();
+    }
+
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+  });
+
+  // ===========================================================================
+  // A-Final-Fix 2 (final-review-A.md, Important 2): ein echter Programmfehler-TypeError
+  // (kein Netz-Muster in der Meldung) darf die Warteschlange nicht ewig blockieren -- er muss
+  // wie jeder andere dauerhafte Fehler nach MAX_RETRIES in die Fehlerliste wandern, und der
+  // NÄCHSTE Eintrag muss danach verarbeitet werden.
+  // ===========================================================================
+
+  it('ProgrammFehler-TypeError landet nach MAX_RETRIES in der Fehlerliste, statt die Warteschlange zu blockieren', async () => {
+    const programmingError = new TypeError("Cannot read properties of undefined (reading 'x')");
+    const execute = vi.fn()
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockResolvedValue(undefined);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'poisoned' });
+    queue.enqueue('SAVE_THING', { id: 'next' });
+
+    onlineSpy.mockReturnValue(true);
+    // Same pattern as the "RLS-Fehler (dauerhaft)" test above: process() handles ONE failed
+    // attempt per call for a non-transient error (retryCount++, then breaks to retry later) --
+    // so MAX_RETRIES calls are needed for the poisoned entry to reach the dead-letter queue. On
+    // the MAX_RETRIES-th call the `while` loop continues within the SAME process() invocation
+    // once the poisoned item is dead-lettered, and picks up the next item right away.
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(queue.getFailedCount()).toBe(1);
+    expect(queue.getFailedMutations()[0].payload).toEqual({ id: 'poisoned' });
+    // The next item was no longer blocked once the poisoned one left the head of the queue.
+    expect(queue.getPendingCount()).toBe(0);
+  });
+
   it('nutzt den konfigurierten execute-Callback statt eines Switch auf Mutation-Typen', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const { queue } = makeQueue({ execute, online: false });
@@ -269,5 +414,34 @@ describe('GenericMutationQueue', () => {
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'DELETE_THING', payload: 'thing-1' })
     );
+  });
+});
+
+// =============================================================================
+// A-06d: dispose() meldet den online-Listener ab
+// =============================================================================
+
+describe('GenericMutationQueue dispose/online (A-06d)', () => {
+  it('dispose() → window-Ereignis online ruft execute nicht mehr auf (Gegenbeispiel ohne dispose: aufgerufen)', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+    expect(execute).not.toHaveBeenCalled();
+
+    queue.dispose();
+    onlineSpy.mockReturnValue(true);
+    window.dispatchEvent(new Event('online'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(execute).not.toHaveBeenCalled();
+
+    const execute2 = vi.fn().mockResolvedValue(undefined);
+    const { queue: queue2 } = makeQueue({ execute: execute2, online: false });
+    queue2.enqueue('SAVE_THING', { id: 'b' });
+    onlineSpy.mockReturnValue(true);
+    window.dispatchEvent(new Event('online'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(execute2).toHaveBeenCalled();
   });
 });

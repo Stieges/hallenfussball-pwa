@@ -17,11 +17,13 @@ import { useState, useCallback, useEffect, useRef, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { Tournament } from '../../types/tournament';
-import type { TournamentMonitor } from '../../types/monitor';
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors } from '../../hooks';
 import { useMonitorHeartbeats } from '../../hooks/useMonitorHeartbeats';
-import type { HeartbeatStatus } from '../../hooks/useMonitorHeartbeats';
+import { useCan } from '../auth/hooks/useCan';
+import { MonitorCard } from './components/MonitorCard';
+import { MonitorTransferSheet } from './MonitorTransferSheet';
+import { downloadMonitorConfig } from './monitorConfigDownload';
 
 // =============================================================================
 // TYPES
@@ -51,6 +53,7 @@ export function MonitorsConfigTab({
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
 
   // Ref for timeout cleanup
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,10 +74,16 @@ export function MonitorsConfigTab({
     deleteMonitor,
     duplicateMonitor,
     getDisplayUrl,
+    addMonitors,
   } = useMonitors(tournament, onTournamentUpdate);
 
-  // Heartbeat status for all monitors in this tournament
-  const heartbeats = useMonitorHeartbeats(tournament.id);
+  // A-11 (@ZM-019, @ME-043): Monitore und Folienprogramme anlegen, ändern, übernehmen, exportieren nur mit manageScreens.
+  const canTransfer = useCan('manageScreens', tournament.id);
+
+  // Heartbeat status for all monitors in this tournament.
+  // CA-4 (@ME-070): Den Verbindungsstatus liefert der Server nur mit manageScreens (Eigentuemer, Co-Admin; Policy
+  // heartbeats_select_v2). Wer das Recht nicht hat, fragt gar nicht erst ab und abonniert nichts.
+  const heartbeats = useMonitorHeartbeats(canTransfer ? tournament.id : undefined);
 
   // ==========================================================================
   // HANDLERS
@@ -345,7 +354,7 @@ export function MonitorsConfigTab({
         ? cssVars.colors.error
         : 'transparent',
     color: variant === 'primary' || variant === 'danger' ? 'white' : cssVars.colors.textSecondary,
-    border: variant === 'secondary' ? `1px solid ${cssVars.colors.border}` : 'none',
+    border: variant === 'secondary' ? `1px solid ${cssVars.colors.borderControl}` : 'none',
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.medium,
     cursor: 'pointer',
@@ -366,7 +375,7 @@ export function MonitorsConfigTab({
     width: '100%',
     padding: cssVars.spacing.md,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     background: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
@@ -418,10 +427,30 @@ export function MonitorsConfigTab({
             </p>
           </div>
           {!isCreating && (
-            <button style={addButtonStyle} onClick={handleStartCreate}>
-              <span>+</span>
-              <span>{t('monitors.addMonitor')}</span>
-            </button>
+            <div style={{ display: 'flex', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
+              {canTransfer && (
+                <button
+                  style={actionButtonStyle('secondary')}
+                  onClick={() => setIsTransferOpen(true)}
+                  data-testid="monitors-transfer-open"
+                >
+                  {t('monitors.transfer.openButton')}
+                </button>
+              )}
+              {canTransfer && monitors.length > 0 && (
+                <button
+                  style={actionButtonStyle('secondary')}
+                  onClick={() => downloadMonitorConfig(tournament)}
+                  data-testid="monitors-transfer-export"
+                >
+                  {t('monitors.transfer.exportButton')}
+                </button>
+              )}
+              {canTransfer && <button style={addButtonStyle} onClick={handleStartCreate}>
+                <span>+</span>
+                <span>{t('monitors.addMonitor')}</span>
+              </button>}
+            </div>
           )}
         </div>
 
@@ -481,10 +510,10 @@ export function MonitorsConfigTab({
                 heartbeatStatus={heartbeats.get(monitor.id)?.status ?? null}
                 isDeleting={deleteConfirmId === monitor.id}
                 isCopied={copiedId === monitor.id}
-                onEdit={() => handleEdit(monitor.id)}
-                onDelete={() => void handleDelete(monitor.id)}
+                onEdit={canTransfer ? () => handleEdit(monitor.id) : undefined}
+                onDelete={canTransfer ? () => void handleDelete(monitor.id) : undefined}
                 onCancelDelete={handleCancelDelete}
-                onDuplicate={() => void handleDuplicate(monitor.id)}
+                onDuplicate={canTransfer ? () => void handleDuplicate(monitor.id) : undefined}
                 onCopyUrl={() => void handleCopyUrl(monitor.id)}
                 onOpenDisplay={() => handleOpenDisplay(monitor.id)}
                 getSlideTypeIcon={getSlideTypeIcon}
@@ -504,6 +533,16 @@ export function MonitorsConfigTab({
               />
             ))}
           </div>
+        )}
+
+        {isTransferOpen && (
+          <MonitorTransferSheet
+            tournament={tournament}
+            onClose={() => setIsTransferOpen(false)}
+            onApply={async (newMonitors) => {
+              await addMonitors(newMonitors);
+            }}
+          />
         )}
 
         {/* L2-Vorbedingung: Auf fremden Geräten kommt die Anzeige nur an öffentliche Turniere (RLS tournaments_select_v3). */}
@@ -531,175 +570,6 @@ export function MonitorsConfigTab({
           </p>
         )}
       </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// SUB-COMPONENT: MonitorCard
-// =============================================================================
-
-interface MonitorCardProps {
-  monitor: TournamentMonitor;
-  heartbeatStatus: HeartbeatStatus | null;
-  isDeleting: boolean;
-  isCopied: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onCancelDelete: () => void;
-  onDuplicate: () => void;
-  onCopyUrl: () => void;
-  onOpenDisplay: () => void;
-  getSlideTypeIcon: (type: string) => string;
-  getSlideTypeLabel: (type: string) => string;
-  formatDuration: (seconds: number) => string;
-  styles: Record<string, CSSProperties | ((variant?: 'primary' | 'secondary' | 'danger') => CSSProperties)>;
-}
-
-function MonitorCard({
-  monitor,
-  heartbeatStatus,
-  isDeleting,
-  isCopied,
-  onEdit,
-  onDelete,
-  onCancelDelete,
-  onDuplicate,
-  onCopyUrl,
-  onOpenDisplay,
-  getSlideTypeIcon,
-  getSlideTypeLabel,
-  formatDuration,
-  styles,
-}: MonitorCardProps) {
-  const { t } = useTranslation('tournament');
-  const actionButtonStyle = styles.actionButtonStyle as (variant?: 'primary' | 'secondary' | 'danger') => CSSProperties;
-
-  return (
-    <div style={styles.monitorCardStyle as CSSProperties}>
-      {/* Header */}
-      <div style={styles.monitorHeaderStyle as CSSProperties}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-            <h3 style={{ ...(styles.monitorNameStyle as CSSProperties), margin: 0 }}>{monitor.name}</h3>
-            {heartbeatStatus && (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: cssVars.spacing.xs,
-                  fontSize: cssVars.fontSizes.xs,
-                  color: heartbeatStatus === 'online'
-                    ? cssVars.colors.success
-                    : heartbeatStatus === 'stale'
-                      ? cssVars.colors.warning
-                      : cssVars.colors.error,
-                }}
-                title={heartbeatStatus === 'online' ? t('monitors.heartbeat.online') : heartbeatStatus === 'stale' ? t('monitors.heartbeat.stale') : t('monitors.heartbeat.offline')}
-              >
-                <span style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: 'currentColor',
-                  flexShrink: 0,
-                }} />
-                {heartbeatStatus === 'online' ? t('monitors.heartbeat.online') : heartbeatStatus === 'stale' ? t('monitors.heartbeat.staleShort') : t('monitors.heartbeat.offline')}
-              </span>
-            )}
-          </div>
-          <div style={styles.monitorMetaStyle as CSSProperties}>
-            <span>{t('monitors.slidesCount', { count: monitor.slides.length })}</span>
-            <span>•</span>
-            <span>{t('monitors.perSlide', { duration: formatDuration(monitor.defaultSlideDuration) })}</span>
-            <span>•</span>
-            <span>{monitor.transition}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Slides Preview */}
-      {monitor.slides.length > 0 && (
-        <div style={styles.slidesPreviewStyle as CSSProperties}>
-          {monitor.slides.slice(0, 8).map((slide) => (
-            <span key={slide.id} style={styles.slideChipStyle as CSSProperties}>
-              <span>{getSlideTypeIcon(slide.type)}</span>
-              <span>{getSlideTypeLabel(slide.type)}</span>
-            </span>
-          ))}
-          {monitor.slides.length > 8 && (
-            <span style={styles.slideChipStyle as CSSProperties}>
-              {t('monitors.moreSlides', { count: monitor.slides.length - 8 })}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div style={styles.actionsStyle as CSSProperties}>
-        <button
-          style={actionButtonStyle('primary')}
-          onClick={onEdit}
-          aria-label={t('monitors.editAria', { name: monitor.name })}
-        >
-          ✏️ {t('monitors.edit')}
-        </button>
-        <button
-          style={actionButtonStyle()}
-          onClick={onOpenDisplay}
-          aria-label={t('monitors.openAria', { name: monitor.name })}
-        >
-          🖥️ {t('monitors.open')}
-        </button>
-        <button
-          style={actionButtonStyle()}
-          onClick={onCopyUrl}
-          aria-label={isCopied ? t('monitors.urlCopied') : t('monitors.copyUrlAria', { name: monitor.name })}
-        >
-          {isCopied ? t('monitors.copied') : t('monitors.copyUrl')}
-        </button>
-        <button
-          style={actionButtonStyle()}
-          onClick={onDuplicate}
-          aria-label={t('monitors.duplicateAria', { name: monitor.name })}
-        >
-          📋 {t('monitors.duplicate')}
-        </button>
-        <button
-          style={actionButtonStyle(isDeleting ? 'danger' : 'secondary')}
-          onClick={onDelete}
-          aria-label={isDeleting ? t('monitors.confirmDeleteAria', { name: monitor.name }) : t('monitors.deleteAria', { name: monitor.name })}
-        >
-          🗑️ {isDeleting ? t('monitors.confirm') : t('monitors.delete')}
-        </button>
-      </div>
-
-      {/* Delete Confirmation */}
-      {isDeleting && (
-        <div
-          role="alert"
-          aria-live="polite"
-          style={styles.deleteConfirmStyle as CSSProperties}
-        >
-          <span style={{ flex: 1, color: cssVars.colors.error }}>
-            {t('monitors.deleteConfirmMessage', { name: monitor.name })}
-          </span>
-          <button
-            style={actionButtonStyle('danger')}
-            onClick={onDelete}
-            aria-label={t('monitors.permanentDeleteAria', { name: monitor.name })}
-          >
-            {t('monitors.confirmDelete')}
-          </button>
-          <button
-            style={actionButtonStyle()}
-            onClick={onCancelDelete}
-            aria-label={t('monitors.cancelDeleteAria')}
-          >
-            {t('monitors.cancel')}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

@@ -7,7 +7,9 @@ import { LocalStorageLiveMatchRepository } from '../repositories/LocalStorageLiv
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { SupabaseLiveMatchRepository } from '../repositories/SupabaseLiveMatchRepository';
 import { OfflineRepository } from '../repositories/OfflineRepository';
+import { setActiveTournamentSyncSource } from '../repositories/activeTournamentSyncSource';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
 
 // ============================================================================
 // TYPES
@@ -19,6 +21,8 @@ import { isSupabaseConfigured } from '../../lib/supabase';
  */
 interface RepositoryUser {
     globalRole: string;
+    /** A-07b (@FU-006): Konto, dem die Warteschlange gehoert (Pflicht: jede Queue hat ein Konto). */
+    id: string;
 }
 
 interface RepositoryContextValue {
@@ -48,6 +52,12 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
     const supabaseLiveMatchRepoRef = useRef<SupabaseLiveMatchRepository | null>(null);
     const publicLiveMatchRepoRef = useRef<SupabaseLiveMatchRepository | null>(null);
 
+    // A-07b Fixrunde 1 (@FU-006, @FU-013): Repos nur bei Konto- oder Rollenwechsel neu bauen.
+    // TOKEN_REFRESHED liefert ein neues user-Objekt mit gleicher id; daran darf die Queue nicht wechseln.
+    const isSignedIn = Boolean(user);
+    const userId = user?.id;
+    const userRole = user?.globalRole;
+
     const value = useMemo(() => {
         // Always need local repos
         const localTournamentRepo = new LocalStorageRepository();
@@ -69,12 +79,12 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
         //
         // Excludes:
         // - Local guests (globalRole='guest', localStorage only)
-        const canUseSupabase = user && isSupabaseConfigured && user.globalRole !== 'guest';
+        const canUseSupabase = isSignedIn && isSupabaseConfigured && userRole !== 'guest';
 
         if (canUseSupabase) {
             try {
                 const supabaseTournamentRepo = new SupabaseRepository();
-                const offlineTournamentRepo = new OfflineRepository(localTournamentRepo, supabaseTournamentRepo);
+                const offlineTournamentRepo = new OfflineRepository(localTournamentRepo, supabaseTournamentRepo, userId);
 
                 // Create Supabase live match repo
                 const supabaseLiveMatchRepo = new SupabaseLiveMatchRepository();
@@ -103,13 +113,32 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
         // Fallback / Guest -> Local Only
         supabaseLiveMatchRepoRef.current = null;
         return {
-            tournamentRepository: localTournamentRepo,
+            tournamentRepository: new LocalStorageRepository({ viewer: 'guest' }),
             liveMatchRepository: localLiveMatchRepo,
             isRealtimeEnabled: false,
             supabaseLiveMatchRepo: null,
             publicLiveMatchRepo,
         };
-    }, [user]);
+    }, [isSignedIn, userId, userRole]);
+
+    // A-06f Teil 1 (Brief A7): Bei Objektwechsel (Konto/Abmeldung) die Queue des alten Repos abraeumen.
+    // Kein Cleanup beim Unmount; StrictMode loest im Mount keinen dispose aus (gleiches Objekt).
+    const activeQueueRef = useRef<OfflineRepository['mutationQueue'] | null>(null);
+    useEffect(() => {
+        const queue = value.tournamentRepository instanceof OfflineRepository
+            ? value.tournamentRepository.mutationQueue
+            : null;
+        const previous = activeQueueRef.current;
+        if (previous && previous !== queue) {
+            previous.dispose();
+        }
+        activeQueueRef.current = queue;
+        // Review A-11 A4 (@FU-098): Rechte-Frage erkennt „angelegt, noch nicht in der Cloud“ über das Konto-Repo.
+        const repo = value.tournamentRepository;
+        setActiveTournamentSyncSource(repo instanceof OfflineRepository
+            ? { isAwaitingFirstUpload: (id) => repo.isAwaitingFirstUpload(id), subscribe: (listener) => repo.subscribeSync(listener) }
+            : null);
+    }, [value]);
 
     // Cleanup subscriptions on unmount
     useEffect(() => {
@@ -121,7 +150,9 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
 
     return (
         <RepositoryContext.Provider value={value}>
-            {children}
+            <RealtimeEnabledContext.Provider value={value.isRealtimeEnabled}>
+                {children}
+            </RealtimeEnabledContext.Provider>
         </RepositoryContext.Provider>
     );
 };
@@ -165,4 +196,15 @@ export const useLiveMatchRepository = () => {
         throw new Error('useLiveMatchRepository must be used within a RepositoryProvider');
     }
     return context.liveMatchRepository;
+};
+
+/**
+ * Null-sicherer Zugriff auf dasselbe Live-Repo-Service, das auch das Cockpit liest
+ * (ILiveMatchRepository.getAll). Ohne RepositoryProvider im Baum (isolierte
+ * Komponenten-Tests, rein lokale Nutzung) wird `null` geliefert statt zu werfen —
+ * dann entscheidet die lokale Match-Liste allein (Ruling W1).
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const useOptionalLiveMatchRepository = (): ILiveMatchRepository | null => {
+    return useContext(RepositoryContext)?.liveMatchRepository ?? null;
 };

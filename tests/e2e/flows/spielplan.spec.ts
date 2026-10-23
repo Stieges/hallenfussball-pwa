@@ -21,7 +21,9 @@
 import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
+import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
+import { abpfiffHalten } from '../helpers/abpfiff';
 // CI skip removed - using reliable seeding fixture
 
 /**
@@ -43,6 +45,7 @@ function createTestTournament() {
     id: 'spielplan-test-tournament',
     status: 'published',
     sport: 'football',
+    sportId: 'football-indoor', // Pflichtfeld im TournamentSchema
     tournamentType: 'classic',
     mode: 'classic',
     numberOfFields: 2,
@@ -68,12 +71,12 @@ function createTestTournament() {
     startTime: '10:00',
     location: { name: 'Test-Halle' },
     teams: [
-      { id: 'team-1', name: 'FC Bayern' },
-      { id: 'team-2', name: 'BVB Dortmund' },
-      { id: 'team-3', name: 'RB Leipzig' },
-      { id: 'team-4', name: 'VfB Stuttgart' },
-      { id: 'team-5', name: '1. FC Nürnberg' },
-      { id: 'team-6', name: 'SpVgg Fürth' },
+      { id: '00000000-0000-4000-8000-0000000000a1', name: 'FC Bayern' },
+      { id: '00000000-0000-4000-8000-0000000000a2', name: 'BVB Dortmund' },
+      { id: '00000000-0000-4000-8000-0000000000a3', name: 'RB Leipzig' },
+      { id: '00000000-0000-4000-8000-0000000000a4', name: 'VfB Stuttgart' },
+      { id: '00000000-0000-4000-8000-0000000000a5', name: '1. FC Nürnberg' },
+      { id: '00000000-0000-4000-8000-0000000000a6', name: 'SpVgg Fürth' },
     ],
     matches: [],
     createdAt: new Date().toISOString(),
@@ -128,9 +131,18 @@ async function startMatchInCockpit(page: Page) {
 
 // Helper: Click on Spielplan tab (uses aria-label for reliability)
 async function clickSpielplanTab(page: Page) {
+  // Handy: untere Leiste (aria-label); Tablet/Desktop: Reiter bzw. Link „Spielplan“ in der Kopfzeile.
   const spielplanButton = page.locator('button[aria-label="Spielplan"]');
   if (await spielplanButton.isVisible({ timeout: 3000 })) {
     await spielplanButton.click();
+  } else {
+    await page
+      .getByRole('tab', { name: 'Spielplan' })
+      .or(page.getByRole('link', { name: 'Spielplan' }))
+      .or(page.getByRole('button', { name: 'Spielplan' }))
+      .filter({ visible: true })
+      .first()
+      .click();
   }
   await page.waitForTimeout(500);
 }
@@ -342,19 +354,34 @@ test.describe('Spielplan 2.0 - Progress-Ring', () => {
     // Note: The exact selector depends on implementation
   });
 
-  test('Live-Badge zeigt "LIVE" mit pulsierendem Dot', async ({ page }) => {
-    // GIVEN - Start a match
+  test('@OB-039 Live-Abzeichen im Live-Rot, nicht im Fehler-Rot', async ({ page }) => {
+    // GIVEN - ein gestartetes Spiel
     await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
 
-    // WHEN - Navigate to Spielplan
+    // WHEN - im Spielplan
     await clickSpielplanTab(page);
-    await page.waitForTimeout(500);
 
-    // THEN - Live badge should be visible
-    // Test documents expected behavior - LIVE badge should appear
+    // THEN - das Abzeichen „Live“ trägt das Live-Rot (statusLive), nicht die Farbe einer Fehlermeldung (error)
+    // Desktop-Zeile vergibt eine eigene Kennung (match-row-live-<id>); das Abzeichen ist überall data-state="live".
+    const abzeichen = page.locator('[data-state="live"]').filter({ visible: true }).first();
+    await expect(abzeichen).toBeVisible();
+    await expect(abzeichen).toHaveText('Live');
+    const farben = await abzeichen.evaluate((el) => {
+      const aufgeloest = (variable: string): string => {
+        const probe = document.createElement('span');
+        probe.style.background = `var(${variable})`;
+        document.body.appendChild(probe);
+        const farbe = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return farbe;
+      };
+      return { ist: getComputedStyle(el).backgroundColor, live: aufgeloest('--color-status-live'), fehler: aufgeloest('--color-error') };
+    });
+    expect(farben.ist).toBe(farben.live);
+    expect(farben.ist).not.toBe(farben.fehler);
   });
 });
 
@@ -442,20 +469,12 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
 
     // Score a goal
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Pause and finish
     await page.getByTestId('match-pause-button').click();
-    await page.getByTestId('match-finish-button').click();
-
-    // Handle confirmation dialog
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan
@@ -659,7 +678,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
         await page.waitForTimeout(500);
 
         // THEN - Should navigate to Live Cockpit with the match loaded
-        await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 5000 });
+        await expect(page.getByTestId('scoreboard')).toBeVisible({ timeout: 5000 });
         await expect(page.getByTestId('match-pause-button')).toBeVisible();
       }
     }
@@ -674,18 +693,12 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
     // Score a goal
     await page.getByTestId('goal-button-home').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
-    }
+    await schliesseTorAuswahl(page);
 
     // Finish match
     await page.getByTestId('match-pause-button').click();
-    await page.getByTestId('match-finish-button').click();
-    const confirmButton = page.locator('[role="dialog"] button').filter({ hasText: /Beenden|Bestätigen|Ja/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click();
-    }
+    await abpfiffHalten(page);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0); // die Rückfrage ist beantwortet
     await page.waitForTimeout(500);
 
     // Navigate to Spielplan
@@ -745,21 +758,18 @@ test.describe('Spielplan 2.0 - Design Tokens', () => {
     }
   });
 
-  test('Score-Circle hat korrekte Größe (56×56px laut Konzept)', async ({ page }) => {
+  test('Ergebnis-Fläche ist ein Touch-Ziel von mindestens 44×44 px (@OB-064: der Kreis entfällt)', async ({ page }) => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
-    // THEN - Score circle should be 56×56px (or close to it)
+    // THEN - Das Klickziel ins Cockpit (Torzahl bzw. Ergebnis) bleibt mindestens 44×44 px groß; 56×56 px galt dem Kreis (Variante D)
     const scoreCircle = page.locator('[data-score-circle]').first();
     if (await scoreCircle.isVisible()) {
       const boundingBox = await scoreCircle.boundingBox();
       expect(boundingBox).not.toBeNull();
       if (boundingBox) {
-        // Allow some tolerance for borders
-        expect(boundingBox.width).toBeGreaterThanOrEqual(52);
-        expect(boundingBox.width).toBeLessThanOrEqual(64);
-        expect(boundingBox.height).toBeGreaterThanOrEqual(52);
-        expect(boundingBox.height).toBeLessThanOrEqual(64);
+        expect(boundingBox.width).toBeGreaterThanOrEqual(44);
+        expect(boundingBox.height).toBeGreaterThanOrEqual(44);
       }
     }
   });
@@ -910,10 +920,10 @@ test.describe('Spielplan 2.0 - Edge Cases', () => {
       id: 'long-names-tournament',
       title: 'Turnier mit langen Namen',
       teams: [
-        { id: 'team-1', name: 'FC Bayern München e.V. Jugendabteilung' },
-        { id: 'team-2', name: 'Borussia Dortmund Nachwuchsleistungszentrum' },
-        { id: 'team-3', name: 'RB Leipzig' },
-        { id: 'team-4', name: 'VfB Stuttgart' },
+        { id: '00000000-0000-4000-8000-0000000000a1', name: 'FC Bayern München e.V. Jugendabteilung' },
+        { id: '00000000-0000-4000-8000-0000000000a2', name: 'Borussia Dortmund Nachwuchsleistungszentrum' },
+        { id: '00000000-0000-4000-8000-0000000000a3', name: 'RB Leipzig' },
+        { id: '00000000-0000-4000-8000-0000000000a4', name: 'VfB Stuttgart' },
       ],
     };
 

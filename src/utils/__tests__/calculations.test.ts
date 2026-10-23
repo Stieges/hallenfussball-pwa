@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateStandings, getQualifiedTeams } from '../calculations';
 import { Team, Match, Tournament, Standing } from '../../types/tournament';
+import { vs, slots, groupRank, testUuid, withStaleSides } from '../../test/matchSlotFixtures';
 
 // Helper to create a minimal tournament config
 const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
@@ -40,7 +41,7 @@ const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
 // Helper to create teams
 const createTeams = (count: number, group?: string): Team[] =>
   Array.from({ length: count }, (_, i) => ({
-    id: `team-${i + 1}`,
+    id: testUuid(i + 1),
     name: `Team ${i + 1}`,
     group,
   }));
@@ -54,8 +55,7 @@ describe('calculateStandings', () => {
           id: 'm1',
           round: 1,
           field: 1,
-          teamA: 'Team 1',
-          teamB: 'Team 2',
+          ...vs(testUuid(1), testUuid(2)),
           scoreA: 2,
           scoreB: 1,
         },
@@ -80,8 +80,7 @@ describe('calculateStandings', () => {
           id: 'm1',
           round: 1,
           field: 1,
-          teamA: 'Team 1',
-          teamB: 'Team 2',
+          ...vs(testUuid(1), testUuid(2)),
           scoreA: 1,
           scoreB: 1,
         },
@@ -103,8 +102,7 @@ describe('calculateStandings', () => {
           id: 'm1',
           round: 1,
           field: 1,
-          teamA: 'Team 1',
-          teamB: 'Team 2',
+          ...vs(testUuid(1), testUuid(2)),
           scoreA: 5,
           scoreB: 2,
         },
@@ -126,19 +124,11 @@ describe('calculateStandings', () => {
     });
   });
 
-  describe('Team Matching (BUG-001 Fix)', () => {
-    it('matches teams by name', () => {
+  describe('Team Matching (A-03: nur über die Team-ID aus dem Slot)', () => {
+    it('A-03 matches teams by the team ID of the slot', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
-        {
-          id: 'm1',
-          round: 1,
-          field: 1,
-          teamA: 'Team 1', // Using name
-          teamB: 'Team 2',
-          scoreA: 1,
-          scoreB: 0,
-        },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0 },
       ];
       const tournament = createTournament({ teams, matches });
 
@@ -148,47 +138,49 @@ describe('calculateStandings', () => {
       expect(standings[1].played).toBe(1);
     });
 
-    it('matches teams by ID (edge case)', () => {
-      const teams = createTeams(2);
+    it('A-03 Gegenbeispiel: Name im Übergangsfeld teamA zählt nicht – Team {id:t2, name:t1} bekommt keine Punkte', () => {
+      // Ersatz für „matches teams by name“ / „mixed ID and name references“: der Name ist keine Zuordnung mehr.
+      const t1 = testUuid(1);
+      const t2 = testUuid(2);
+      const teams: Team[] = [
+        { id: t1, name: 'Team 1' },
+        { id: t2, name: t1 }, // heißt wie die ID des anderen Teams
+      ];
       const matches: Match[] = [
-        {
-          id: 'm1',
-          round: 1,
-          field: 1,
-          teamA: 'team-1', // Using ID instead of name
-          teamB: 'team-2',
-          scoreA: 1,
-          scoreB: 0,
-        },
+        withStaleSides({ id: 'm1', round: 1, field: 1, slotA: vs(t1, t2).slotA, slotB: vs(t1, t2).slotB, scoreA: 3, scoreB: 0 }, 'Team 1', 'Team 2'),
       ];
       const tournament = createTournament({ teams, matches });
 
       const standings = calculateStandings(teams, matches, tournament);
 
-      // Should still find teams by ID
-      expect(standings[0].played).toBe(1);
-      expect(standings[1].played).toBe(1);
+      expect(standings.find((s) => s.team.id === t1)?.points).toBe(3);
+      expect(standings.find((s) => s.team.id === t2)?.points).toBe(0);
+      expect(standings.find((s) => s.team.id === t2)?.played).toBe(1);
     });
 
-    it('handles mixed ID and name references', () => {
+    it('A-03 Gegenbeispiel: Spiel mit Teamnamen im Übergangsfeld und OFFENEN Seiten zählt in keiner Tabelle', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
-        {
-          id: 'm1',
-          round: 1,
-          field: 1,
-          teamA: 'Team 1', // Name
-          teamB: 'team-2', // ID
-          scoreA: 2,
-          scoreB: 1,
-        },
+        withStaleSides({ id: 'm1', round: 1, field: 1, ...slots(groupRank('A', 1), groupRank('A', 2)), scoreA: 1, scoreB: 0 }, 'Team 1', 'Team 2'),
       ];
       const tournament = createTournament({ teams, matches });
 
       const standings = calculateStandings(teams, matches, tournament);
 
-      expect(standings[0].played).toBe(1);
-      expect(standings[1].played).toBe(1);
+      expect(standings.every((s) => s.played === 0)).toBe(true);
+    });
+
+    it('A-03 Gegenbeispiel: ein Spiel mit offener Seite zählt nicht für das besetzte Team', () => {
+      const teams = createTeams(2);
+      const pending = { kind: 'pending', source: { kind: 'groupRank', group: 'A', rank: 1 } } as const;
+      const matches: Match[] = [
+        withStaleSides({ id: 'm1', round: 1, field: 1, slotA: vs(testUuid(1), testUuid(2)).slotA, slotB: pending, scoreA: 1, scoreB: 0 }, testUuid(1), 'TBD'),
+      ];
+      const tournament = createTournament({ teams, matches });
+
+      const standings = calculateStandings(teams, matches, tournament);
+
+      expect(standings.every((s) => s.played === 0)).toBe(true);
     });
   });
 
@@ -196,9 +188,9 @@ describe('calculateStandings', () => {
     it('sorts by points first', () => {
       const teams = createTeams(3);
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
-        { id: 'm2', round: 2, field: 1, teamA: 'Team 1', teamB: 'Team 3', scoreA: 1, scoreB: 0 },
-        { id: 'm3', round: 3, field: 1, teamA: 'Team 2', teamB: 'Team 3', scoreA: 1, scoreB: 0 },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0 },
+        { id: 'm2', round: 2, field: 1, ...vs(testUuid(1), testUuid(3)), scoreA: 1, scoreB: 0 },
+        { id: 'm3', round: 3, field: 1, ...vs(testUuid(2), testUuid(3)), scoreA: 1, scoreB: 0 },
       ];
       const tournament = createTournament({ teams, matches });
 
@@ -212,9 +204,9 @@ describe('calculateStandings', () => {
     it('sorts by goal difference when points are equal', () => {
       const teams = createTeams(3);
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 3, scoreB: 0 },
-        { id: 'm2', round: 2, field: 1, teamA: 'Team 2', teamB: 'Team 3', scoreA: 3, scoreB: 0 },
-        { id: 'm3', round: 3, field: 1, teamA: 'Team 3', teamB: 'Team 1', scoreA: 1, scoreB: 0 },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 3, scoreB: 0 },
+        { id: 'm2', round: 2, field: 1, ...vs(testUuid(2), testUuid(3)), scoreA: 3, scoreB: 0 },
+        { id: 'm3', round: 3, field: 1, ...vs(testUuid(3), testUuid(1)), scoreA: 1, scoreB: 0 },
       ];
       const tournament = createTournament({ teams, matches });
 
@@ -233,9 +225,9 @@ describe('calculateStandings', () => {
       // Create a scenario with equal goal difference but different goals scored
       const teams3 = createTeams(3);
       const matches3: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 3, scoreB: 1 }, // T1: +2
-        { id: 'm2', round: 2, field: 1, teamA: 'Team 2', teamB: 'Team 3', scoreA: 4, scoreB: 0 }, // T2: +2
-        { id: 'm3', round: 3, field: 1, teamA: 'Team 1', teamB: 'Team 3', scoreA: 0, scoreB: 2 }, // T1: 0
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 3, scoreB: 1 }, // T1: +2
+        { id: 'm2', round: 2, field: 1, ...vs(testUuid(2), testUuid(3)), scoreA: 4, scoreB: 0 }, // T2: +2
+        { id: 'm3', round: 3, field: 1, ...vs(testUuid(1), testUuid(3)), scoreA: 0, scoreB: 2 }, // T1: 0
       ];
       const tournament = createTournament({ teams: teams3, matches: matches3 });
 
@@ -255,9 +247,9 @@ describe('calculateStandings', () => {
       // Scenario: All teams beat each other in a circle
       // T1 beats T2, T2 beats T3, T3 beats T1 (all 1:0)
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
-        { id: 'm2', round: 2, field: 1, teamA: 'Team 2', teamB: 'Team 3', scoreA: 1, scoreB: 0 },
-        { id: 'm3', round: 3, field: 1, teamA: 'Team 3', teamB: 'Team 1', scoreA: 1, scoreB: 0 },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0 },
+        { id: 'm2', round: 2, field: 1, ...vs(testUuid(2), testUuid(3)), scoreA: 1, scoreB: 0 },
+        { id: 'm3', round: 3, field: 1, ...vs(testUuid(3), testUuid(1)), scoreA: 1, scoreB: 0 },
       ];
       const tournament = createTournament({ teams, matches });
 
@@ -277,8 +269,7 @@ describe('calculateStandings', () => {
           id: 'm1',
           round: 1,
           field: 1,
-          teamA: 'team-1', // Using IDs
-          teamB: 'team-2',
+          ...vs(testUuid(1), testUuid(2)),
           scoreA: 2,
           scoreB: 1,
         },
@@ -288,19 +279,19 @@ describe('calculateStandings', () => {
       const standings = calculateStandings(teams, matches, tournament);
 
       // Direct comparison should still work
-      expect(standings[0].team.id).toBe('team-1');
+      expect(standings[0].team.id).toBe(testUuid(1));
     });
   });
 
   describe('Group Filtering', () => {
     it('calculates standings for specific group only', () => {
-      const teamsA = createTeams(2, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}` }));
-      const teamsB = createTeams(2, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}` }));
+      const teamsA = createTeams(2, 'A').map((t, i) => ({ ...t, id: testUuid(10 + i), name: `Team A${i + 1}` }));
+      const teamsB = createTeams(2, 'B').map((t, i) => ({ ...t, id: testUuid(20 + i), name: `Team B${i + 1}` }));
       const allTeams = [...teamsA, ...teamsB];
 
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team A1', teamB: 'Team A2', scoreA: 2, scoreB: 0, group: 'A' },
-        { id: 'm2', round: 1, field: 2, teamA: 'Team B1', teamB: 'Team B2', scoreA: 1, scoreB: 1, group: 'B' },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(10), testUuid(11)), scoreA: 2, scoreB: 0, group: 'A' },
+        { id: 'm2', round: 1, field: 2, ...vs(testUuid(20), testUuid(21)), scoreA: 1, scoreB: 1, group: 'B' },
       ];
       const tournament = createTournament({ teams: allTeams, matches });
 
@@ -338,8 +329,7 @@ describe('calculateStandings', () => {
           id: 'm1',
           round: 1,
           field: 1,
-          teamA: 'Team 1',
-          teamB: 'Team 2',
+          ...vs(testUuid(1), testUuid(2)),
           // No scoreA/scoreB
         },
       ];
@@ -358,8 +348,7 @@ describe('calculateStandings', () => {
           id: 'm1',
           round: 1,
           field: 1,
-          teamA: 'Team 1',
-          teamB: 'Team 2',
+          ...vs(testUuid(1), testUuid(2)),
           scoreA: 0,
           scoreB: 0,
         },
@@ -380,8 +369,7 @@ describe('calculateStandings', () => {
           id: 'm1',
           round: 1,
           field: 1,
-          teamA: 'Team 1',
-          teamB: 'Team 2',
+          ...vs(testUuid(1), testUuid(2)),
           scoreA: 15,
           scoreB: 0,
         },
@@ -398,8 +386,8 @@ describe('calculateStandings', () => {
     it('excludes final matches from group standings', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
-        { id: 'm2', round: 2, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 2, scoreB: 0, isFinal: true },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0 },
+        { id: 'm2', round: 2, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 2, scoreB: 0, isFinal: true },
       ];
       const tournament = createTournament({ teams, matches });
 
@@ -415,7 +403,7 @@ describe('calculateStandings', () => {
     it('supports 2-1-0 point system', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0 },
       ];
       const tournament = createTournament({
         teams,
@@ -431,7 +419,7 @@ describe('calculateStandings', () => {
     it('supports point system with loss points', () => {
       const teams = createTeams(2);
       const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 1, scoreB: 0 },
+        { id: 'm1', round: 1, field: 1, ...vs(testUuid(1), testUuid(2)), scoreA: 1, scoreB: 0 },
       ];
       const tournament = createTournament({
         teams,
@@ -444,6 +432,71 @@ describe('calculateStandings', () => {
       expect(standings[0].points).toBe(3);
       expect(standings[1].points).toBe(-1); // Loss penalty
     });
+  });
+});
+
+describe('@TM-143 Nur abgepfiffene Spiele zählen für die Tabelle', () => {
+  const teams = createTeams(2, 'A');
+  const spiel7 = (matchStatus: Match['matchStatus']): Match => ({
+    id: 'm7',
+    round: 3,
+    field: 1,
+    group: 'A',
+    ...vs(testUuid(1), testUuid(2)),
+    scoreA: 1,
+    scoreB: 0,
+    matchStatus,
+  });
+
+  it('Pflicht: Spiel 7 läuft 1:0 → nicht gezählt (0 Punkte, 0 gespielt)', () => {
+    const matches = [spiel7('running')];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament);
+
+    expect(standings[0].points).toBe(0);
+    expect(standings[0].played).toBe(0);
+    expect(standings[1].played).toBe(0);
+  });
+
+  it('Pflicht: Spiel 7 abgepfiffen 1:0 → +3 Punkte', () => {
+    const matches = [spiel7('finished')];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament);
+
+    expect(standings[0].points).toBe(3);
+    expect(standings[0].won).toBe(1);
+    expect(standings[1].lost).toBe(1);
+  });
+
+  it('Gegenbeispiel: unterbrochenes Spiel (paused) zählt nicht', () => {
+    // Die DB kennt 'paused' (matches_match_status_check), ebenso der TS-Typ MatchStatus.
+    const matches = [spiel7('paused')];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament);
+
+    expect(standings[0].points).toBe(0);
+    expect(standings[0].played).toBe(0);
+  });
+
+  it('Gegenbeispiel: laufendes Spiel fällt auch bei der Gruppenabfrage heraus', () => {
+    const matches = [spiel7('running')];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament, 'A');
+
+    expect(standings.every((s) => s.played === 0 && s.points === 0)).toBe(true);
+  });
+
+  it('Gegenbeispiel: Spiel ohne gesetzten Status zählt wie bisher', () => {
+    const matches = [spiel7(undefined)];
+    const tournament = createTournament({ teams, matches });
+
+    const standings = calculateStandings(teams, matches, tournament, 'A');
+
+    expect(standings[0].points).toBe(3);
   });
 });
 

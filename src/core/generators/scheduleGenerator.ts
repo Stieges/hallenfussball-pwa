@@ -9,15 +9,16 @@
  */
 
 import { Team, Match, Tournament } from '../../types/tournament';
-import { generateGroupPhaseSchedule } from './fairScheduler'
-import {
-  generatePlayoffSchedule,
-  generatePlayoffDefinitions,
-  generatePlayoffDefinitionsLegacy,
-} from './playoffScheduler'
+import { generateGroupPhaseScheduleWithReport } from './fairScheduler'
+import { effectiveHostTeamIds } from '../models/hostTeams'
+import { generatePlayoffSchedule } from './playoffScheduler'
+import { legacyFinalsPreset } from './playoffGenerator'
+import { assertValidFinalsPlan, buildFinalsTemplate, isFinalsPlanError } from './finalsTemplates'
 import { getUniqueGroups } from '../../utils/groupHelpers'
 import { assignReferees } from './refereeAssigner'
-import { GroupSizeInfo } from './playoffGenerator'
+import { transitionalTeamRef } from '../models/matchSlot'
+import { slotLabel } from '../models/slotLabel'
+import { ensureMatchNumbers } from '../models/matchNumbers'
 import sportGlossary from '../../i18n/glossary.json'
 
 // Re-export types for backwards compatibility
@@ -25,7 +26,7 @@ export type { ScheduledMatch, SchedulePhase, GeneratedSchedule } from './schedul
 export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from '../../lib/scheduleRenderer'
 
 // Import internal helpers
-import { SchedulePhase, GeneratedSchedule, ScheduledMatch } from './scheduleTypes'
+import { SchedulePhase, GeneratedSchedule, ScheduledMatch, ScheduleNotice } from './scheduleTypes'
 import {
   parseStartTime,
   addMinutes,
@@ -50,22 +51,16 @@ export function generateFullSchedule(
   // Parse Start-Zeit
   const startTime = parseStartTime(tournament.date, tournament.timeSlot)
 
-  // Team-Lookup erstellen
-  const teamMap = new Map<string, string>()
-  tournament.teams.forEach((team) => {
-    teamMap.set(team.id, team.name)
-  })
-
   let allMatches: ScheduledMatch[]
   let groupStageMatches: Match[]
   let finalMatches: Match[]
+  let scheduleNotices: ScheduleNotice[] = []
+  let roundsPlan = false
 
   // Helper interfaces for imported data - separate from strict Match/Tournament interfaces
   // to avoid inheritance conflicts with different property types
   interface ExtendedMatchInput {
     id: string;
-    teamA: string;
-    teamB: string;
     phase?: string;
     isFinal?: boolean;
     scheduledTime?: Date | string;
@@ -109,6 +104,13 @@ export function generateFullSchedule(
       matchTimeMap.set(m.id, { startTime: currentSlotStartTime, endTime: matchEnd });
     }
 
+    // Anzeigetexte der Seiten: eine Funktion (slotLabel), Namen nur über die Team-ID
+    const labelContext = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups, locale }
+
+    // C-SPIELNUMMER-FEHLT (@SL-049, @ZM-007): gespeicherte Nummer, sonst die Rückfallregel (Spielplan-Reihenfolge),
+    // nie der Platz in der Liste (die Cloud liefert Spiele ohne Nummer in beliebiger Reihenfolge).
+    const numberById = new Map(ensureMatchNumbers(tournament.matches).map((m) => [m.id, m.matchNumber]))
+
     // First, map all existing matches to ScheduledMatch format
     const mappedMatches = tournament.matches.map((m, index) => {
       const extMatch = m as unknown as ExtendedMatchInput;
@@ -128,17 +130,17 @@ export function generateFullSchedule(
       return {
         ...m,
         id: m.id,
-        matchNumber: m.matchNumber ?? index + 1,
+        matchNumber: numberById.get(m.id) ?? index + 1,
         startTime: matchStart,
         endTime: matchEnd,
         // Properties required by ScheduledMatch interface
         time: formatTime(matchStart),
-        originalTeamA: m.teamA,
-        originalTeamB: m.teamB,
+        originalTeamA: transitionalTeamRef(m.slotA),
+        originalTeamB: transitionalTeamRef(m.slotB),
         duration: gameDuration,
 
-        homeTeam: teamMap.get(m.teamA) ?? m.teamA,
-        awayTeam: teamMap.get(m.teamB) ?? m.teamB,
+        homeTeam: slotLabel(m.slotA, labelContext),
+        awayTeam: slotLabel(m.slotB, labelContext),
         phase: phase as ScheduledMatch['phase'],
         isFinal: !!m.isFinal || !!extMatch.isFinal,
         // Ensure scores are preserved
@@ -170,7 +172,10 @@ export function generateFullSchedule(
     if (shouldGeneratePlayoffs && !hasExistingFinals && groupStageMatches.length > 0) {
 
       // Generate Finals dynamically even though we are in "Persisted Mode"
-      const generatedFinals = generateFinalMatches(tournament, groupStageMatches, startTime)
+      // A-12a: Lesepfad (Public View, Export, Turnier-Manager) – eine nicht erzeugbare Vorlage (ab 3 Gruppen, fehlende
+      // Gruppenzahl, fehlerhafte Herkunft) zeigt die gespeicherten Spiele statt abzustürzen. Sichtbar gemeldet wird der
+      // Fehler beim Erzeugen bzw. Anlegen (Zweig „GENERATE MATCHES“).
+      const generatedFinals = finalMatchesOrNone(tournament, groupStageMatches, startTime)
 
 
       // Schedule the finals (time slots)
@@ -180,7 +185,6 @@ export function generateFullSchedule(
         mappedMatches.filter(m => !m.isFinal && m.phase === 'groupStage'),
         startTime,
         tournament,
-        teamMap,
         locale
       )
 
@@ -197,6 +201,8 @@ export function generateFullSchedule(
     const generated = generateMatches(tournament, startTime)
     groupStageMatches = generated.groupStageMatches
     finalMatches = generated.finalMatches
+    scheduleNotices = generated.notices
+    roundsPlan = generated.roundsPlan
 
     // Scheduliere Gruppenphase
     const scheduledGroupStage = scheduleMatches({
@@ -208,7 +214,7 @@ export function generateFullSchedule(
       gamePeriods: tournament.gamePeriods ?? 1,
       halftimeBreak: tournament.halftimeBreak ?? 0,
       phase: 'groupStage',
-      teamMap,
+      teams: tournament.teams,
       locale,
       startMatchNumber: 1,
       groups: tournament.groups,
@@ -220,7 +226,6 @@ export function generateFullSchedule(
       scheduledGroupStage,
       startTime,
       tournament,
-      teamMap,
       locale
     )
 
@@ -263,6 +268,8 @@ export function generateFullSchedule(
     })),
     initialStandings: createInitialStandings(tournament.teams),
     refereeConfig: tournament.refereeConfig,
+    scheduleNotices,
+    roundsPlan,
   }
 }
 
@@ -273,13 +280,18 @@ export function generateFullSchedule(
 function generateMatches(
   tournament: Tournament,
   startTime: Date
-): { groupStageMatches: Match[]; finalMatches: Match[] } {
+): { groupStageMatches: Match[]; finalMatches: Match[]; notices: ScheduleNotice[]; roundsPlan: boolean } {
   let groupStageMatches: Match[] = []
   let finalMatches: Match[] = []
+  let notices: ScheduleNotice[] = []
+  let roundsPlan = false
 
   // 1. Generiere Gruppenphase
   if (tournament.groupSystem === 'roundRobin' || tournament.groupSystem === 'groupsAndFinals') {
-    groupStageMatches = generateGroupStageMatches(tournament, startTime)
+    const groupPhase = generateGroupStageMatches(tournament, startTime)
+    groupStageMatches = groupPhase.matches
+    notices = groupPhase.notices
+    roundsPlan = groupPhase.roundsPlan
   }
 
   // 2. Generiere Playoffs
@@ -293,10 +305,10 @@ function generateMatches(
     finalMatches = generateFinalMatches(tournament, groupStageMatches, startTime)
   }
 
-  return { groupStageMatches, finalMatches }
+  return { groupStageMatches, finalMatches, notices, roundsPlan }
 }
 
-function generateGroupStageMatches(tournament: Tournament, startTime: Date): Match[] {
+function generateGroupStageMatches(tournament: Tournament, startTime: Date): ReturnType<typeof generateGroupPhaseScheduleWithReport> {
   const groupsMap = new Map<string, Team[]>()
 
   if (tournament.groupSystem === 'roundRobin') {
@@ -311,14 +323,17 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Mat
     }
   }
 
-  return generateGroupPhaseSchedule({
+  return generateGroupPhaseScheduleWithReport({
     groups: groupsMap,
     numberOfFields: tournament.numberOfFields,
     slotDurationMinutes: tournament.groupPhaseGameDuration,
     breakBetweenSlotsMinutes: tournament.groupPhaseBreakDuration ?? 0,
     minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
     startTime,
-    dfbPatternCode: tournament.useDFBKeys ? tournament.dfbKeyPattern : undefined,
+    // @W4-028: DFB-Schlüssel im MVP aus (Tabelle fehlerhaft, C-DFB-SCHLUESSEL-LUECKEN)
+    dfbPatternCode: undefined,
+    hostTeamIds: effectiveHostTeamIds(tournament.hostTeamIds, tournament.teams), // @W4-027, Reihenfolge = Teamliste
+    openingMode: tournament.openingMode,
   })
 }
 
@@ -327,21 +342,14 @@ function generateFinalMatches(
   groupStageMatches: Match[],
   startTime: Date
 ): Match[] {
-  const numberOfGroups = tournament.numberOfGroups ?? 2
+  // A-12a: echte Gruppen des Turniers (wie die Gruppenphase, `generateGroupStageMatches`) – die Vorlage nennt sie über
+  // ihren Platz („erste Gruppe“), die Herkunft trägt die echte Gruppe (C-GENERATOR-HERKUNFT-GRUPPENNAMEN).
+  const groupIds = getUniqueGroups(tournament.teams)
+  const teamsPerGroup = groupIds.map((id) => tournament.teams.filter((t) => t.group === id).length)
+  const finalsConfig = tournament.finalsConfig ?? { preset: legacyFinalsPreset(tournament.finals) }
 
-  // Calculate group sizes
-  const groupSizes: GroupSizeInfo = {}
-  const groupLabels = getUniqueGroups(tournament.teams)
-  for (const label of groupLabels) {
-    const teamsInGroup = tournament.teams.filter((t) => t.group === label)
-    groupSizes[label] = teamsInGroup.length
-  }
-
-  // Generate playoff definitions
-  const playoffDefinitions = tournament.finalsConfig
-    ? generatePlayoffDefinitions(numberOfGroups, tournament.finalsConfig, groupSizes)
-    : // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for old tournaments without finalsConfig
-      generatePlayoffDefinitionsLegacy(numberOfGroups, tournament.finals)
+  // Strenger Eingang: fehlende Gruppenzahl, ab 3 Gruppen, unbekannte Plätze → sichtbarer Fehler (kein `?? 2` mehr)
+  const playoffDefinitions = buildFinalsTemplate(tournament.numberOfGroups, teamsPerGroup, finalsConfig)
 
   // Calculate start slot
   const lastGroupSlot =
@@ -358,7 +366,7 @@ function generateFinalMatches(
   const playoffStartSlot = lastGroupSlot + 1 + breakSlots
   const playoffStartTime = new Date(startTime.getTime() + playoffStartSlot * slotDuration * 60000)
 
-  return generatePlayoffSchedule({
+  const finalMatches = generatePlayoffSchedule({
     playoffDefinitions,
     numberOfFields: tournament.numberOfFields,
     slotDurationMinutes: tournament.finalRoundGameDuration ?? tournament.groupPhaseGameDuration,
@@ -368,7 +376,27 @@ function generateFinalMatches(
     startSlot: playoffStartSlot,
     startTime: playoffStartTime,
     breakBetweenPhases: tournament.breakBetweenPhases,
+    groupIds,
   })
+
+  // A-12b-Prüfung auf dem fertigen Plan (@TM-013, @TM-002): jede Herkunft zeigt auf eine echte Gruppe mit genug Teams
+  assertValidFinalsPlan(finalMatches, groupIds.map((id, index) => ({ id, teamCount: teamsPerGroup[index] })))
+  return finalMatches
+}
+
+/**
+ * Lesepfad: Finalrunde nachträglich erzeugen, bei einer nicht erzeugbaren Vorlage keine (gespeicherte Spiele bleiben).
+ * Nur Vorlagen- und Prüffehler werden abgefangen; ein Programmfehler bleibt sichtbar.
+ */
+function finalMatchesOrNone(tournament: Tournament, groupStageMatches: Match[], startTime: Date): Match[] {
+  try {
+    return generateFinalMatches(tournament, groupStageMatches, startTime)
+  } catch (error) {
+    if (isFinalsPlanError(error)) {
+      return []
+    }
+    throw error
+  }
 }
 
 // ============================================================================
@@ -380,7 +408,6 @@ function scheduleFinalMatches(
   scheduledGroupStage: ScheduledMatch[],
   startTime: Date,
   tournament: Tournament,
-  teamMap: Map<string, string>,
   locale: 'de' | 'en'
 ): ScheduledMatch[] {
   if (finalMatches.length === 0) {
@@ -391,10 +418,8 @@ function scheduleFinalMatches(
   const breakBetweenPhases = tournament.breakBetweenPhases ?? 0
   const finalStartTime = addMinutes(groupStageEnd, breakBetweenPhases)
 
-  const startMatchNumber =
-    scheduledGroupStage.length > 0
-      ? scheduledGroupStage[scheduledGroupStage.length - 1].matchNumber + 1
-      : 1
+  // höchste Nummer der Gruppenphase, nicht die des letzten Listeneintrags (gespeicherte Spiele in beliebiger Reihenfolge)
+  const startMatchNumber = Math.max(0, ...scheduledGroupStage.map((m) => m.matchNumber)) + 1
 
   return scheduleMatches({
     matches: finalMatches,
@@ -405,7 +430,7 @@ function scheduleFinalMatches(
     gamePeriods: tournament.gamePeriods ?? 1,
     halftimeBreak: tournament.halftimeBreak ?? 0,
     phase: 'final',
-    teamMap,
+    teams: tournament.teams,
     locale,
     startMatchNumber,
     groups: tournament.groups,
@@ -419,7 +444,9 @@ function scheduleFinalMatches(
 function createPhases(allMatches: ScheduledMatch[], groupStageCount: number): SchedulePhase[] {
   const phases: SchedulePhase[] = []
   const groupStageMatches = allMatches.slice(0, groupStageCount)
-  const finalMatches = allMatches.slice(groupStageCount)
+  // A-12a: die Finalrunde ist EIN Abschnitt in Spielplan-Reihenfolge, auch wenn Halbfinale/Viertelfinale ihre eigene
+  // Phase tragen (Spielplan, PDF und Public View reißen sie sonst auseinander; Auflage 15 Review GA4 v2).
+  const finalMatches = allMatches.slice(groupStageCount).filter((m) => m.phase !== 'groupStage')
 
   if (groupStageMatches.length > 0) {
     phases.push({
@@ -432,50 +459,13 @@ function createPhases(allMatches: ScheduledMatch[], groupStageCount: number): Sc
   }
 
   if (finalMatches.length > 0) {
-    const roundOf16 = finalMatches.filter((m) => m.phase === 'roundOf16')
-    const quarterfinals = finalMatches.filter((m) => m.phase === 'quarterfinal')
-    const semifinals = finalMatches.filter((m) => m.phase === 'semifinal')
-    const finals = finalMatches.filter((m) => m.phase === 'final')
-
-    if (roundOf16.length > 0) {
-      phases.push({
-        name: 'roundOf16',
-        label: 'Achtelfinale',
-        matches: roundOf16,
-        startTime: roundOf16[0].startTime,
-        endTime: roundOf16[roundOf16.length - 1].endTime,
-      })
-    }
-
-    if (quarterfinals.length > 0) {
-      phases.push({
-        name: 'quarterfinal',
-        label: 'Viertelfinale',
-        matches: quarterfinals,
-        startTime: quarterfinals[0].startTime,
-        endTime: quarterfinals[quarterfinals.length - 1].endTime,
-      })
-    }
-
-    if (semifinals.length > 0) {
-      phases.push({
-        name: 'semifinal',
-        label: 'Halbfinale',
-        matches: semifinals,
-        startTime: semifinals[0].startTime,
-        endTime: semifinals[semifinals.length - 1].endTime,
-      })
-    }
-
-    if (finals.length > 0) {
-      phases.push({
-        name: 'final',
-        label: 'Finalspiele',
-        matches: finals,
-        startTime: finals[0].startTime,
-        endTime: finals[finals.length - 1].endTime,
-      })
-    }
+    phases.push({
+      name: 'final',
+      label: 'Finalspiele',
+      matches: finalMatches,
+      startTime: finalMatches[0].startTime,
+      endTime: finalMatches[finalMatches.length - 1].endTime,
+    })
   }
 
   return phases

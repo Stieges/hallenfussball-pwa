@@ -1,16 +1,114 @@
 import { ITournamentRepository } from './ITournamentRepository';
-import { Tournament, MatchUpdate } from '../models/types';
+import { Tournament, Match, MatchUpdate } from '../models/types';
+import type {
+    CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
+} from './groupCompletionCloud';
+import { applyCompleteGroup, applyRecordDecision, applyReopenGroup, type LocalChange } from './localGroupCompletion';
+import { OptimisticLockError } from '../errors';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { hydrateTournament } from './hydration';
 import { createStorage } from '../storage/StorageFactory';
+import type { IStorageAdapter } from '../storage/IStorageAdapter';
 import { captureFeatureError } from '../../lib/sentry';
+import { isLegacyTournamentShape } from '../models/legacyFormat';
+import { quarantineLegacyTournaments, LEGACY_TOURNAMENTS_NOTICE_EVENT } from '../storage/legacyTournamentStore';
+import { applyServerLedPatch, type ServerLedMatchPatch } from './serverLedMatchFields';
+import { readServerRevisions, writeServerRevisions, type CloudAdoption, type ServerTables } from './cloudAdoption';
+import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
+import { generateShareCode } from '../models/shareCode';
+import { checkedVersion, ownChainBase } from './confirmedVersion';
+
+/**
+ * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
+ * merges a `MatchUpdate` into a local `Match`, translating `null` (the wire-safe "explicitly
+ * clear this field" sentinel used for the offline mutation queue, see `core/models/types.ts`)
+ * back to `undefined` -- `Match`'s own fields stay `T | undefined`, never `null`, so the rest of
+ * the app (`isMatchFinished`, etc.) keeps working on the local copy exactly as before.
+ */
+function mergeMatchUpdate(match: Match, update: MatchUpdate): Match {
+    const merged: Record<string, unknown> = { ...match };
+    for (const [key, value] of Object.entries(update)) {
+        merged[key] = value ?? undefined;
+    }
+    return merged as unknown as Match;
+}
+
+/**
+ * A-07e: Konto-Marker `Tournament.ownerId` der lokalen Kopie. `'guest'` = im Gastmodus angelegt.
+ * Ohne Marker = Altbestand: im Gastmodus wie `'guest'` gezeigt, beim naechsten Laden eines Kontos
+ * anhand der Cloud-Liste markiert (`assignUnmarkedOwners`). Gleicher Wert wie GUEST_ACCOUNT_ID
+ * in `match/client/guestEngineEntries.ts`, dort nicht importiert (Zyklusvermeidung).
+ */
+const GUEST_OWNER = 'guest';
+
+export interface LocalStorageRepositoryOptions {
+    /** A-07e: 'guest' = Gastmodus. `get` und `delete` sehen nur 'guest'-Kopien und Altbestand. Ohne Angabe roh. */
+    viewer?: 'guest';
+}
 
 export class LocalStorageRepository implements ITournamentRepository {
 
+    /** A-08f3a: Ende der Schreibkette dieser Instanz (Fehler brechen die Kette nicht). */
+    private writeChain: Promise<unknown> = Promise.resolve();
+
+    constructor(private readonly options: LocalStorageRepositoryOptions = {}) {}
+
+    /** A-08f3a: Schreibkette – jede Schreibmethode liest und speichert die ganze Liste; wirkt je Instanz. */
+    private serialize<T>(write: () => Promise<T>): Promise<T> {
+        const run = this.writeChain.then(write, write);
+        this.writeChain = run.catch(() => undefined);
+        return run;
+    }
+
+    /** A-08f3a: server-geführte Spielfelder (Feldweg) übernehmen – ohne Änderung an version, updatedAt, ownerId. */
+    applyServerMatchFields(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>): Promise<void> {
+        return this.serialize(() => this.patchNow(id, patch));
+    }
+
+    private async patchNow(id: string, patch: ReadonlyMap<string, ServerLedMatchPatch>, confirmedVersion?: number, serverTables?: ServerTables): Promise<void> {
+        const list = await this.loadList();
+        const index = list.findIndex(t => t.id === id);
+        if (index === -1) { return; }
+        const confirmed = confirmedVersion === undefined ? {} : { serverVersion: confirmedVersion }; // C-VERSION-MEHRDEUTIG
+        list[index] = { ...list[index], matches: applyServerLedPatch(list[index].matches, patch), ...confirmed, ...serverTables }; // A-13b-C: Abschlüsse und Verlauf folgen der Cloud
+        await this.saveList(list);
+    }
+
+    /** A-08f3b-F F3: gespeicherte Revisionen je Spiel (für die Sperre nach Neuladen ohne Netz). */
+    async readServerRevisions(id: string): Promise<Map<string, number>> {
+        return readServerRevisions(await createStorage(), id);
+    }
+
+    /** A-08f3b: Cloud-Stand in einem Kettenschritt übernehmen; Revisionen je Spiel liegen in der lokalen Kopie (zwei Tabs). */
+    adoptCloudRead(id: string, decide: (local: Tournament | null, stored: ReadonlyMap<string, number>) => CloudAdoption): Promise<CloudAdoption> {
+        return this.serialize(async () => {
+            const storage = await createStorage();
+            const adoption = decide(await this.get(id), await readServerRevisions(storage, id));
+            if (adoption.save) {
+                await this.saveNow(adoption.save, true);
+            } else if (adoption.patch?.size || adoption.confirmedVersion !== undefined || adoption.serverTables !== undefined) {
+                await this.patchNow(id, adoption.patch ?? new Map(), adoption.confirmedVersion, adoption.serverTables);
+            }
+            await writeServerRevisions(storage, id, adoption.revisions, adoption.save && new Set(adoption.save.matches.map(m => m.id)));
+            return adoption;
+        });
+    }
+
+    /** N-3 (S-2): Im Gastmodus bekommt jede gespeicherte Kopie den Gast-Marker, auch eine Sicherung mit fremdem Marker. */
+    private guestOr(owner: string | undefined): string | undefined {
+        return this.options.viewer === 'guest' ? GUEST_OWNER : owner;
+    }
+
+    /** A-07e: im Gastmodus nur 'guest'-Kopien und Altbestand sichtbar; sonst alles. */
+    private visibleHere(tournament: Tournament): boolean {
+        return this.options.viewer !== 'guest' || (tournament.ownerId ?? GUEST_OWNER) === GUEST_OWNER;
+    }
+
+    /** Ohne `viewer` roh (Konto-Bindung in OfflineRepository.get); mit `viewer: 'guest'` nur Gast-Sicht. */
     async get(id: string): Promise<Tournament | null> {
         const list = await this.loadList();
-        return list.find(t => t.id === id) ?? null;
+        return list.find(t => t.id === id && this.visibleHere(t)) ?? null;
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
@@ -20,92 +118,221 @@ export class LocalStorageRepository implements ITournamentRepository {
         return list.find(t => t.shareCode?.toUpperCase() === normalizedCode && t.isPublic) ?? null;
     }
 
-    async save(tournament: Tournament): Promise<void> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournament.id);
-
-        if (index >= 0) {
-            const currentVersion = list[index].version ?? 0;
-            list[index] = { ...tournament, version: currentVersion + 1, updatedAt: new Date().toISOString() };
-        } else {
-            list.push({ ...tournament, version: 1, updatedAt: new Date().toISOString() });
-        }
-
-        await this.saveList(list);
+    /**
+     * A-08f3c1: Version = Version der Nutzlast + 1 (Anzeige, wie die Cloud beim Speichern; ohne Version setzt sie 1).
+     * C-VERSION-MEHRDEUTIG: die bestätigte Version ist die Basis der Nutzlast (`checkedVersion`), nie die gestempelte.
+     */
+    /** @FU-110: liefert die Basis, auf der der gespeicherte Inhalt beruht (ggf. über die Kette eigener Uploads angehoben). */
+    save(tournament: Tournament): Promise<number | undefined> {
+        return this.serialize(() => this.saveNow(tournament));
     }
 
-    async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
+    /** A-08f3c1: Cloud-Kopie (oder lokale Kopie ohne Zählen) übernehmen -- Version und `updatedAt` wie übergeben. */
+    cacheCloudCopy(tournament: Tournament): Promise<void> {
+        return this.serialize(async () => { await this.saveNow(tournament, true); });
+    }
+
+    private async saveNow(tournament: Tournament, cached = false): Promise<number | undefined> {
         const list = await this.loadList();
-        const index = list.findIndex(t => t.id === id);
-
-        if (index === -1) {
-            throw new Error(`Tournament ${id} not found`);
-        }
-
-        list[index] = {
-            ...list[index],
-            ...metadata,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: new Date().toISOString()
+        const index = list.findIndex(t => t.id === tournament.id);
+        // A-10: die Änderungszählung kommt nur aus der Cloud (cacheCloudCopy); lokale Schreibwege behalten den gespeicherten Wert.
+        // C-VERSION-MEHRDEUTIG: der Inhalt beruht auf der bestätigten Version der Nutzlast -- sie geht mit, die gestempelte Zahl nicht.
+        // @FU-110: liegt sie in der Kette eigener Uploads, beruht er auf der aktuellen bestätigten Version (Kette bleibt).
+        const existing = index >= 0 ? list[index] : undefined;
+        const base = ownChainBase(checkedVersion(tournament), existing);
+        const chain = existing?.ownUploadsFrom !== undefined && base === existing.serverVersion ? existing.ownUploadsFrom : undefined;
+        const stamp = cached ? {} : {
+            version: (tournament.version ?? 0) + 1, serverVersion: base, ownUploadsFrom: chain,
+            updatedAt: new Date().toISOString(), changeRevision: existing?.changeRevision,
         };
 
+        if (index >= 0) {
+            // A-07e: bestehender Konto-Marker bleibt, wenn der Aufrufer keinen setzt
+            list[index] = { ...tournament, ownerId: this.guestOr(tournament.ownerId ?? list[index].ownerId), ...stamp };
+        } else {
+            list.push({ ...tournament, ownerId: this.guestOr(tournament.ownerId ?? GUEST_OWNER), ...stamp });
+        }
+
         await this.saveList(list);
+        // A-08f3b: Neugenerieren (neue Spiele) verwirft die Revisionen der alten Spiele.
+        const storage = await createStorage();
+        const stored = await readServerRevisions(storage, tournament.id);
+        if (stored.size > 0) { await writeServerRevisions(storage, tournament.id, stored, new Set(tournament.matches.map(m => m.id))); }
+        return base;
+    }
+
+    updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+
+            if (index === -1) {
+                throw new Error(`Tournament ${id} not found`);
+            }
+
+            // A-08f3c1: wie die Cloud -- +1 nur mit `metadata.version` (CAS), sonst bleibt die Version.
+            list[index] = {
+                ...list[index],
+                ...metadata,
+                version: metadata.version === undefined ? list[index].version : metadata.version + 1,
+                changeRevision: list[index].changeRevision, // A-10: nur aus der Cloud
+                updatedAt: new Date().toISOString()
+            };
+
+            await this.saveList(list);
+        });
+    }
+
+    /**
+     * GA4 A-13b-C: Entscheidung eintragen/zurücknehmen (lokal, Versionsprüfung wie die Cloud; Konflikt → `rejected STALE`).
+     * Rechenregeln in `localGroupCompletion.ts`; Person und Zeit gibt es lokal nicht.
+     */
+    recordStandingDecision(id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> {
+        return this.changeTournament(id, (t) => applyRecordDecision(t, request, expectedVersion));
+    }
+
+    /** GA4 A-13b-C: „Gruppe abschließen“ im lokalen Speicher (Gast). */
+    completeGroup(id: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+        return this.changeTournament(id, (t) => applyCompleteGroup(t, request));
+    }
+
+    /** GA4 A-13b-C: Gruppe lokal wieder öffnen. */
+    reopenGroup(id: string, groupId: string, _reason: string): Promise<ReopenGroupResult> {
+        return this.changeTournament(id, (t) => applyReopenGroup(t, groupId));
+    }
+
+    /** Ändert ein Turnier in einem Kettenschritt; `tournament` im Ergebnis fehlt, wenn nichts zu schreiben ist. */
+    private changeTournament<R>(id: string, change: (tournament: Tournament) => LocalChange<R>): Promise<R> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1) {
+                throw new Error(`Tournament ${id} not found`);
+            }
+            const { tournament, result } = change(list[index]);
+            if (tournament !== undefined) {
+                list[index] = { ...tournament, updatedAt: new Date().toISOString() };
+                await this.saveList(list);
+            }
+            return result;
+        });
+    }
+
+    /** Fixrunde TB-6: nur die Einstellung „Plätze ausspielen“, mit Versionsprüfung (lokal); `standingDecisions` bleiben. */
+    updatePlacementsToPlayOut(id: string, places: number[], expectedVersion: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1) {
+                throw new Error(`Tournament ${id} not found`);
+            }
+            if ((list[index].version ?? 0) !== expectedVersion) {
+                throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
+            }
+            list[index] = { ...list[index], placementsToPlayOut: parsePlacementsToPlayOut(places), version: expectedVersion + 1, updatedAt: new Date().toISOString() };
+            await this.saveList(list);
+        });
     }
 
     async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
         return this.updateMatches(tournamentId, [update]);
     }
 
-    async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
-        const list = await this.loadList();
-        const tournamentIndex = list.findIndex(t => t.id === tournamentId);
+    updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const tournamentIndex = list.findIndex(t => t.id === tournamentId);
 
-        if (tournamentIndex === -1) {
-            throw new Error(`Tournament ${tournamentId} not found`);
-        }
-
-        const tournament = list[tournamentIndex];
-        const updateMap = new Map(updates.map(u => [u.id, u]));
-
-        const updatedMatches = tournament.matches.map(m => {
-            const update = updateMap.get(m.id);
-            if (update) {
-                return { ...m, ...update };
+            if (tournamentIndex === -1) {
+                throw new Error(`Tournament ${tournamentId} not found`);
             }
-            return m;
+
+            const tournament = list[tournamentIndex];
+            const updateMap = new Map(updates.map(u => [u.id, u]));
+
+            const updatedMatches = tournament.matches.map(m => {
+                const update = updateMap.get(m.id);
+                if (update) {
+                    return mergeMatchUpdate(m, update);
+                }
+                return m;
+            });
+
+            // A-08f3c1: ohne +1 -- die Cloud zählt `updateMatches` ohne `baseVersion` auch nicht (C-LOKALVERSION-DRIFT).
+            list[tournamentIndex] = { ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() };
+
+            await this.saveList(list);
         });
-
-        list[tournamentIndex] = {
-            ...tournament,
-            matches: updatedMatches,
-            version: (tournament.version ?? 0) + 1,
-            updatedAt: new Date().toISOString()
-        };
-
-        await this.saveList(list);
     }
 
-    async delete(id: string): Promise<void> {
-        const list = await this.loadList();
-        const filtered = list.filter(t => t.id !== id);
-        await this.saveList(filtered);
+    delete(id: string): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const filtered = list.filter(t => !(t.id === id && this.visibleHere(t)));
+            await this.saveList(filtered);
+            await writeServerRevisions(await createStorage(), id, new Map()); // A-08f3b: Ablage leeren
+        });
     }
 
+    /** Gastmodus: nur Kopien ohne Konto (Altbestand ohne Marker zaehlt als 'guest'). */
     async listForCurrentUser(): Promise<Tournament[]> {
-        return this.loadList();
+        const list = await this.loadList();
+        return list.filter(t => (t.ownerId ?? GUEST_OWNER) === GUEST_OWNER);
+    }
+
+    /** A-07e: lokale Kopien eines Kontos (Marker = accountId). */
+    async listOwnedBy(accountId: string): Promise<Tournament[]> {
+        const list = await this.loadList();
+        return list.filter(t => t.ownerId === accountId);
+    }
+
+    /**
+     * A-07e Grenzfall Altbestand: unmarkierte Kopien anhand der Cloud-Liste dieses Kontos markieren
+     * (ID in der Cloud-Liste -> Konto), alles danach Unmarkierte wird 'guest'.
+     * H-1 (Opus A-07e): Die Cloud-Liste enthaelt nur `owner_id = user.id`. Turniere, bei denen das
+     * Konto nur Helfer oder Mitwirkender ist, und Altbestand fremder Konten werden hier 'guest'.
+     * Das gilt nur einmal beim Uebergang von Altbestand (Plattform nicht produktiv, Kurswechsel 01.10.).
+     */
+    assignUnmarkedOwners(accountId: string, cloudIds: ReadonlySet<string>): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            if (list.every(t => t.ownerId !== undefined)) { return; }
+            await this.saveList(list.map(t => t.ownerId !== undefined
+                ? t
+                : { ...t, ownerId: cloudIds.has(t.id) ? accountId : GUEST_OWNER }));
+        });
+    }
+
+    /**
+     * C-VERSION-MEHRDEUTIG: bestätigter Upload. Beruht die Kopie noch auf der geprüften Basis `base` (nichts anderes kam
+     * dazwischen), tragen Version und bestätigte Version danach `confirmed`. Sonst bleibt sie unverändert.
+     */
+    confirmUpload(id: string, base: number | undefined, confirmed: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index === -1 || checkedVersion(list[index]) !== base) { return; }
+            // @FU-110: die Kette eigener Uploads beginnt beim ersten bestätigten eigenen Upload und wächst mit jedem weiteren
+            const ownUploadsFrom = list[index].ownUploadsFrom ?? base ?? confirmed;
+            list[index] = { ...list[index], version: confirmed, serverVersion: confirmed, ownUploadsFrom };
+            await this.saveList(list);
+        });
     }
 
     /**
      * Updates the local version number after a successful cloud sync.
      * Does NOT increment - sets it to the exact value from cloud.
+     * C-VERSION-MEHRDEUTIG: nur die angezeigte Version; die bestätigte setzt `confirmUpload`.
      */
-    async updateLocalVersion(id: string, version: number): Promise<void> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === id);
-        if (index !== -1) {
-            list[index] = { ...list[index], version };
-            await this.saveList(list);
-        }
+    updateLocalVersion(id: string, version: number): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === id);
+            if (index !== -1) {
+                list[index] = { ...list[index], version };
+                await this.saveList(list);
+            }
+        });
     }
 
     // ==========================================================================
@@ -116,96 +343,107 @@ export class LocalStorageRepository implements ITournamentRepository {
      * Makes a tournament publicly accessible by generating a local share code.
      * Note: Local share codes are only valid within this browser instance.
      */
-    async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournamentId);
+    makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === tournamentId);
 
-        if (index === -1) {
-            return null;
-        }
+            if (index === -1) {
+                return null;
+            }
 
-        const shareCode = this.generateLocalShareCode();
-        const createdAt = new Date().toISOString();
+            // CA-3 (Auflage 5): ein schon geteiltes Turnier behaelt seinen Code -- auch der Rueckfall wuerfelt
+            // keinen neuen (sonst waere ein gedruckter Aushang/QR tot und ein Cloud-Code ueberschrieben).
+            const existing = list[index];
+            if (existing.isPublic && existing.shareCode) {
+                return { shareCode: existing.shareCode, createdAt: existing.shareCodeCreatedAt ?? existing.updatedAt };
+            }
 
-        list[index] = {
-            ...list[index],
-            isPublic: true,
-            shareCode,
-            shareCodeCreatedAt: createdAt,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: createdAt
-        };
+            const shareCode = this.generateLocalShareCode(list, tournamentId);
+            const createdAt = new Date().toISOString();
 
-        await this.saveList(list);
+            list[index] = {
+                ...list[index],
+                isPublic: true,
+                shareCode,
+                shareCodeCreatedAt: createdAt,
+                updatedAt: createdAt
+            };
 
-        return { shareCode, createdAt };
+            await this.saveList(list);
+
+            return { shareCode, createdAt };
+        });
     }
 
     /**
      * Makes a tournament private by removing the share code.
      */
-    async makeTournamentPrivate(tournamentId: string): Promise<void> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournamentId);
+    makeTournamentPrivate(tournamentId: string): Promise<void> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === tournamentId);
 
-        if (index === -1) {
-            throw new Error(`Tournament ${tournamentId} not found`);
-        }
+            if (index === -1) {
+                throw new Error(`Tournament ${tournamentId} not found`);
+            }
 
-        list[index] = {
-            ...list[index],
-            isPublic: false,
-            shareCode: undefined,
-            shareCodeCreatedAt: undefined,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: new Date().toISOString()
-        };
+            list[index] = {
+                ...list[index],
+                isPublic: false,
+                shareCode: undefined,
+                shareCodeCreatedAt: undefined,
+                updatedAt: new Date().toISOString()
+            };
 
-        await this.saveList(list);
+            await this.saveList(list);
+        });
     }
 
     /**
      * Regenerates the share code for a public tournament.
      */
-    async regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
-        const list = await this.loadList();
-        const index = list.findIndex(t => t.id === tournamentId);
+    regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        return this.serialize(async () => {
+            const list = await this.loadList();
+            const index = list.findIndex(t => t.id === tournamentId);
 
-        if (index === -1) {
-            return null;
-        }
+            if (index === -1) {
+                return null;
+            }
 
-        const tournament = list[index];
-        if (!tournament.isPublic) {
-            return null;
-        }
+            const tournament = list[index];
+            if (!tournament.isPublic) {
+                return null;
+            }
 
-        const shareCode = this.generateLocalShareCode();
-        const createdAt = new Date().toISOString();
+            const shareCode = this.generateLocalShareCode(list, tournamentId);
+            const createdAt = new Date().toISOString();
 
-        list[index] = {
-            ...list[index],
-            shareCode,
-            shareCodeCreatedAt: createdAt,
-            version: (list[index].version ?? 0) + 1,
-            updatedAt: createdAt
-        };
+            list[index] = {
+                ...list[index],
+                shareCode,
+                shareCodeCreatedAt: createdAt,
+                updatedAt: createdAt
+            };
 
-        await this.saveList(list);
+            await this.saveList(list);
 
-        return { shareCode, createdAt };
+            return { shareCode, createdAt };
+        });
     }
 
     /**
-     * Generates a 6-character alphanumeric share code for local use.
+     * Freigabe-Code im Format des Servers (core/models/shareCode.ts). Ein Code, den ein ANDERES lokales Turnier
+     * schon traegt, wird nicht vergeben (der Server hat dafuer einen UNIQUE-Schluessel).
      */
-    private generateLocalShareCode(): string {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let code = '';
-        for (let i = 0; i < 6; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
+    private generateLocalShareCode(list: Tournament[], ownId: string): string {
+        const taken = new Set(list.filter(t => t.id !== ownId).map(t => t.shareCode?.toUpperCase()));
+        for (let attempt = 0; attempt < 50; attempt++) {
+            const code = generateShareCode();
+            if (!taken.has(code)) { return code; }
         }
-        return code;
+        throw new Error('Could not generate a unique share code after 50 attempts');
     }
 
     // --- Private Helpers ---
@@ -218,7 +456,9 @@ export class LocalStorageRepository implements ITournamentRepository {
             if (!raw) { return []; }
             if (!Array.isArray(raw)) { return []; }
 
-            return raw.map((item) => {
+            const current = await this.setLegacyAside(raw, storage);
+
+            return current.map((item) => {
                 const itemData = item as Record<string, unknown>;
                 // Validate each item
                 const result = TournamentSchema.safeParse(itemData);
@@ -244,6 +484,35 @@ export class LocalStorageRepository implements ITournamentRepository {
             }
             return [];
         }
+    }
+
+    /**
+     * A-05 (@FU-007): Altformat (Spiel ohne slotA/slotB) wird nicht gelesen. Es wird unter
+     * `tournaments_legacy_v1` beiseitegelegt, aus der Liste genommen, gemeldet und der Oberflaeche
+     * angezeigt. Die Liste wird erst bereinigt, wenn das Beiseitelegen gelungen ist.
+     */
+    private async setLegacyAside(raw: unknown[], storage: IStorageAdapter): Promise<unknown[]> {
+        const legacy = raw.filter(isLegacyTournamentShape);
+        if (legacy.length === 0) { return raw; }
+        const current = raw.filter((item) => !isLegacyTournamentShape(item));
+        for (const item of legacy) {
+            const id = (item as { id?: unknown }).id;
+            captureFeatureError(
+                new Error(`Tournament ${String(id)} hat das Altformat (Spiel ohne slotA/slotB) und wurde beiseitegelegt`),
+                'repository', 'loadList:legacyFormat',
+                { tournamentId: String(id) }
+            );
+        }
+        try {
+            await quarantineLegacyTournaments(legacy);
+            await storage.set(STORAGE_KEYS.TOURNAMENTS, current);
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LEGACY_TOURNAMENTS_NOTICE_EVENT, { detail: { count: legacy.length } }));
+            }
+        } catch (e) {
+            captureFeatureError(e instanceof Error ? e : new Error(String(e)), 'repository', 'loadList:legacyQuarantine');
+        }
+        return current;
     }
 
     /**

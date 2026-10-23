@@ -12,8 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { AdminHeaderProps } from '../types/admin.types';
 import { ADMIN_LAYOUT } from '../constants/admin.constants';
-import { SyncStatusBar } from '../../collaboration';
-import { useSyncStatus } from '../../../hooks/useSyncStatus';
+import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../collaboration';
+import { useRejectedOutboxDialog } from '../../collaboration/outbox/useRejectedOutboxDialog';
+import { RejectedOutboxDialog } from '../../collaboration/outbox/RejectedOutboxDialog';
+import { useToast } from '../../../components/ui/Toast/ToastContext';
 
 // =============================================================================
 // STYLES
@@ -49,8 +51,8 @@ const styles = {
   } as CSSProperties,
 
   backButtonMobile: {
-    width: 40,
-    height: 40,
+    width: ADMIN_LAYOUT.itemHeight, // @OB-022: mindestens 44 × 44
+    height: ADMIN_LAYOUT.itemHeight,
     padding: 0,
     justifyContent: 'center',
     fontSize: '1.25rem',
@@ -78,8 +80,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 40,
-    height: 40,
+    width: ADMIN_LAYOUT.itemHeight,
+    height: ADMIN_LAYOUT.itemHeight,
     background: 'transparent',
     border: 'none',
     borderRadius: cssVars.borderRadius.md,
@@ -93,7 +95,7 @@ const styles = {
     width: 200,
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -107,7 +109,7 @@ const styles = {
   } as CSSProperties,
 
   spacer: {
-    width: 40,
+    width: ADMIN_LAYOUT.itemHeight, // so breit wie der Zurück-Pfeil, damit der Titel mittig bleibt
   } as CSSProperties,
 } as const;
 
@@ -126,15 +128,14 @@ export function AdminHeader({
   showSyncStatus = false,
 }: AdminHeaderProps) {
   const { t } = useTranslation('admin');
+  const { showError: showToastError } = useToast();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { status, isSyncing, lastSyncedAt, syncTournament } = useSyncStatus();
-
-  const handleSyncClick = () => {
-    if (tournamentId) {
-      void syncTournament(tournamentId);
-    }
-  };
+  // W1 (Nachtrag C3a-2a): rejectedCount/reviewCount aus dem echten Sender statt der bisherigen
+  // Default-Nullen -- "onShowRejected" oeffnet den Dialog mit der Liste, "Verstanden" nimmt einen
+  // Eintrag ueber `dismiss` (store.dismissRejected + m7-Benachrichtigung) heraus. P8/Fixrunde 3:
+  // gemeinsamer Hook statt doppeltem Code (s. LiveCockpit.tsx).
+  const rejectedOutbox = useRejectedOutboxDialog(tournamentId, showToastError);
 
   const handleSearchToggle = () => {
     if (isSearchExpanded && searchQuery) {
@@ -162,6 +163,7 @@ export function AdminHeader({
   // Mobile layout: back arrow, centered title, search icon
 
   return (
+    <>
     <header style={styles.header}>
       {/* Back Button - hidden on desktop (sidebar has the back button) */}
       {!hideBackButton && (
@@ -195,12 +197,21 @@ export function AdminHeader({
 
       {/* Sync Status */}
       {showSyncStatus && (
-        <SyncStatusBar
-          status={status}
-          isSyncing={isSyncing}
-          lastSyncedAt={lastSyncedAt}
-          onSyncClick={handleSyncClick}
+        <SyncStatusIndicator
+          tournamentId={tournamentId}
           compact
+          rejectedCount={rejectedOutbox.rejectedCount}
+          reviewCount={rejectedOutbox.reviewCount}
+          onShowRejected={rejectedOutbox.show}
+          enginePendingCount={rejectedOutbox.pendingCount}
+        />
+      )}
+      {showSyncStatus && (
+        <RejectedOutboxDialog
+          isOpen={rejectedOutbox.isOpen}
+          onClose={rejectedOutbox.close}
+          entries={rejectedOutbox.entries}
+          onDismiss={rejectedOutbox.handleDismiss}
         />
       )}
 
@@ -251,6 +262,11 @@ export function AdminHeader({
       {/* Spacer for mobile layout balance (when no search) */}
       {!onSearch && showBackToHub && <div style={styles.spacer} />}
     </header>
+    {/* @FU-109: Statuszeile im normalen Fluss unter dem Kopf – der Inhalt rückt nach, nichts wird verdeckt (R1) */}
+    {showSyncStatus && tournamentId && (
+      <AwaitingServerCopyLine tournamentId={tournamentId} stickyTop={ADMIN_LAYOUT.headerHeight} zIndex={cssVars.zIndex.raised} />
+    )}
+    </>
   );
 }
 

@@ -57,10 +57,11 @@ export const JSON_TEMPLATE = {
 
   // === PLATZIERUNGSLOGIK ===
   placementLogic: [
+    // Voreinstellung privates Hallenturnier (BFV Teil 3 § 20 (13), @W2A-046) – wie DEFAULT_PLACEMENT_LOGIC
     { id: "points", label: "Punkte", enabled: true },
+    { id: "directComparison", label: "Direkter Vergleich", enabled: true },
     { id: "goalDifference", label: "Tordifferenz", enabled: true },
-    { id: "goalsFor", label: "Erzielte Tore", enabled: true },
-    { id: "directComparison", label: "Direkter Vergleich", enabled: false }
+    { id: "goalsFor", label: "Erzielte Tore", enabled: true }
   ],
 
   // === PUNKTESYSTEM ===

@@ -1,25 +1,10 @@
 /**
- * LiveCockpit — Minus-Button-Guard in der Verlängerung (M2-Cockpit-Abschluss, 2026-09-17)
+ * LiveCockpit — Effektiver Spielstand (getEffectiveScore) und kein Minus-Knopf (@SL-037).
  *
- * Vorher: `handleMinusHome`/`handleMinusAway` prüften unabhängig von der Phase
- * `currentMatch.homeScore`/`awayScore` (die reguläre Anzeige). Während der
- * Verlängerung ist aber `overtimeScoreA`/`overtimeScoreB` maßgeblich. Bei
- * `homeScore: 1` (Tor in der regulären Spielzeit) und `overtimeScoreA: 0` blieb
- * der "−1"-Button aktiv (das Button-`disabled`-Attribut selbst — gesteuert über
- * `canDecrementHome`/`canDecrementAway`, LiveCockpit.tsx ~Zeile 661f. — richtete
- * sich vorher unabhängig von der Phase nach dem regulären Spielstand): ein Klick
- * rief `onGoal(..., -1)` auf und setzte (vor dem Floor-Fix in
- * MatchExecutionService.recordGoal) `overtimeScoreA` auf -1 — ein einzelner
- * Fehlklick ohne Löschung/Undo. Der Fix (Commit ef5833a) macht sowohl das
- * `disabled`-Attribut als auch den Klick-Handler selbst phasenbewusst: in der
- * Verlängerung zählt `overtimeScoreA`/`overtimeScoreB`, nicht `homeScore`/`awayScore`
- * — der Button ist jetzt gesperrt UND der Klick bliebe zusätzlich wirkungslos,
- * falls die Sperre je wegfiele.
- *
- * Selektor: TeamBlock/index.tsx setzt `data-testid={`goal-minus-button-${teamSide}`}`
- * (index.tsx:216) — stabil, unabhängig von i18n. Das "−1"-Label selbst ist kein
- * `t()`-Aufruf (index.tsx:218: literaler Text "−1"), aber wir verwenden trotzdem
- * die data-testid, weil sie eindeutig pro Seite (home/away) ist.
+ * Bis Aufgabe 3.3 stand hier der Minus-Button-Guard der Verlängerung (M2-Cockpit-Abschluss, 2026-09-17): „−1“ durfte in der
+ * Verlängerung nicht auf `homeScore` wirken. Seit der Team-Spalte gibt es den Knopf nicht mehr (Spec § 4.2); Tor
+ * zurücknehmen läuft nur über „Rückgängig“ (RETRACT). Der Guard wird deshalb durch den Fall „kein Minus-Knopf“ ersetzt.
+ * Der Spielstand steht in der Tafel (`scoreboard-score`, „links:rechts“ in Anzeige-Reihenfolge) und kommt aus `getEffectiveScore`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -30,6 +15,20 @@ import type { LiveCockpitProps } from '../types';
 vi.mock('../../../hooks/useMatchSound', () => ({
   useMatchSound: () => ({ play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(), isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null }),
 }));
+
+// A4 (C-SYNC): SyncStatusIndicator (neu im Match-Header) braucht RepositoryContext via
+// useSyncStatus/useRepositories -- diese Tests rendern LiveCockpit ohne Provider. isCloudSyncAvailable
+// false spiegelt exakt den Gast/lokal-Fall wider (kein Provider = keine Cloud), Indicator rendert nichts.
+vi.mock('../../../hooks/useSyncStatus', () => ({
+  useSyncStatus: () => ({
+    status: 'synced', isSyncing: false, pendingChanges: 0, failedChanges: 0, failedMutations: [],
+    syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(),
+    isCloudSyncAvailable: false,
+  }),
+}));
+
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {
@@ -45,127 +44,64 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
-    currentMatch: match as never, upcomingMatches: [],
+    currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),
     onUndoLastEvent: vi.fn(), onManualEditResult: vi.fn(), onAdjustTime: vi.fn(),
     onLoadNextMatch: vi.fn(), onReopenLastMatch: vi.fn(), ...handlers,
   };
 }
 
-describe('LiveCockpit — Minus-Button-Guard in der Verlängerung', () => {
+describe('LiveCockpit — kein Minus-Knopf (@SL-037)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('PIN: overtime, homeScore 1 / overtimeScoreA 0 — "−1" ruft onGoal NICHT auf (der gemeldete Fehlklick)', async () => {
+  it('@SL-037 in der Verlängerung (homeScore 1 / overtimeScoreA 0) gibt es keinen Minus-Knopf und keinen Wechsel; ein Tipp auf die Spalte ruft onGoal nicht mit −1', async () => {
     const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 1, overtimeScoreA: 0 }), { onGoal })}
-      />
-    );
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 1, overtimeScoreA: 0 }), { onGoal })} />);
 
-    const minusHome = screen.getByTestId('goal-minus-button-home');
-    // Zwei Absicherungen, bewusst beide: Der Knopf ist gesperrt (es gibt kein
-    // Verlängerungstor zu entfernen), UND der Klick-Handler bliebe wirkungslos,
-    // falls die Sperre je wegfiele.
-    expect(minusHome).toBeDisabled();
-    await user.click(minusHome);
-
-    expect(onGoal).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('goal-minus-button-home')).toBeNull();
+    expect(screen.queryByRole('button', { name: /−|Minus|Tor zurück|Wechsel/ })).toBeNull();
+    expect(onGoal).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), -1, expect.anything());
   });
 
-  it('Regression: overtime, homeScore 1 / overtimeScoreA 2 — "−1" ruft onGoal weiterhin auf', async () => {
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 1, overtimeScoreA: 2 }), { onGoal })}
-      />
-    );
+  it('@SL-037 Gegenbeispiel: in der regulären Phase ebenfalls kein Minus-Knopf, der Tor-Knopf der Spalte bleibt', () => {
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'regular', homeScore: 0 }))} />);
 
-    await user.click(screen.getByTestId('goal-minus-button-home'));
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
-  });
-
-  it('Regression: reguläre Phase unverändert — homeScore 1 erlaubt "−1"', async () => {
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'regular', homeScore: 1 }), { onGoal })}
-      />
-    );
-
-    await user.click(screen.getByTestId('goal-minus-button-home'));
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
-  });
-
-  it('PIN: 0:0-Finale in der Verlängerung — "−1" ist bedienbar, obwohl der reguläre Stand 0 ist', async () => {
-    // Der gefährlichere Zwilling des gemeldeten Fehlklicks: So entsteht eine Verlängerung
-    // überhaupt am häufigsten. Mit der alten Sperre (`homeScore > 0`) war der Knopf hier
-    // dauerhaft gesperrt — ein irrtümlich erfasstes Golden Goal war damit nicht zurücknehmbar.
-    const onGoal = vi.fn();
-    const user = userEvent.setup();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'goldenGoal', homeScore: 0, overtimeScoreA: 2 }), { onGoal })}
-      />
-    );
-
-    const minusHome = screen.getByTestId('goal-minus-button-home');
-    expect(minusHome).not.toBeDisabled();
-    await user.click(minusHome);
-
-    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
-  });
-
-  it('Regression: reguläre Phase unverändert — homeScore 0 bleibt gesperrt (Button disabled, kein onGoal)', async () => {
-    const onGoal = vi.fn();
-    render(
-      <LiveCockpit
-        {...baseProps(makeMatch({ playPhase: 'regular', homeScore: 0 }), { onGoal })}
-      />
-    );
-
-    expect(screen.getByTestId('goal-minus-button-home')).toBeDisabled();
+    expect(screen.queryByTestId('goal-minus-button-home')).toBeNull();
+    expect(screen.getByTestId('goal-button-home')).toBeInTheDocument();
   });
 });
 
 describe('LiveCockpit — Effektiver Spielstand (getEffectiveScore)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('Golden Goal: homeScore 1 + overtimeScoreA 1 → score-home zeigt "2"', () => {
+  it('Golden Goal: homeScore 1 + overtimeScoreA 1, awayScore 1 → Tafel zeigt 2:1', () => {
     render(
       <LiveCockpit
         {...baseProps(makeMatch({ playPhase: 'goldenGoal', homeScore: 1, awayScore: 1, overtimeScoreA: 1, overtimeScoreB: 0 }))}
       />
     );
 
-    expect(screen.getByTestId('score-home')).toHaveTextContent('2');
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('2:1');
   });
 
-  it('Verlängerung beide Seiten: 1 + 1 : 1 + 2 → score-home zeigt "2", score-away zeigt "3"', () => {
+  it('Verlängerung beide Seiten: 1 + 1 : 1 + 2 → Tafel zeigt 2:3', () => {
     render(
       <LiveCockpit
         {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 1, awayScore: 1, overtimeScoreA: 1, overtimeScoreB: 2 }))}
       />
     );
 
-    expect(screen.getByTestId('score-home')).toHaveTextContent('2');
-    expect(screen.getByTestId('score-away')).toHaveTextContent('3');
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('2:3');
   });
 
-  it('Regression: reguläre Phase — homeScore 2, awayScore 1 → zeigt "2" und "1" (keine overtime)', () => {
+  it('Regression: reguläre Phase — homeScore 2, awayScore 1 → Tafel zeigt 2:1 (keine overtime)', () => {
     render(
       <LiveCockpit
         {...baseProps(makeMatch({ playPhase: 'regular', homeScore: 2, awayScore: 1 }))}
       />
     );
 
-    expect(screen.getByTestId('score-home')).toHaveTextContent('2');
-    expect(screen.getByTestId('score-away')).toHaveTextContent('1');
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('2:1');
   });
 
   it('Regression: nach „Seiten tauschen" bleibt Spielstand korrekt (Effektivstand)', async () => {
@@ -176,16 +112,13 @@ describe('LiveCockpit — Effektiver Spielstand (getEffectiveScore)', () => {
       />
     );
 
-    // Vor dem Tausch: score-home zeigt 1+2=3 (Heim-Effektivstand), score-away zeigt 0 (Gast-Effektivstand)
-    expect(screen.getByTestId('score-home')).toHaveTextContent('3');
-    expect(screen.getByTestId('score-away')).toHaveTextContent('0');
+    // Vor dem Tausch: links der Heim-Effektivstand 1+2=3, rechts der Gast-Effektivstand 0
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('3:0');
 
-    // Seiten tauschen
-    await user.click(screen.getByRole('button', { name: 'Seiten tauschen' }));
+    await user.click(screen.getByTestId('cockpit-more-button'));
+    await user.click(screen.getByTestId('mehr-seiten-tauschen'));
 
-    // Nach dem Tausch: Testids ändern sich nicht, aber die visuellen Positionen sind getauscht.
-    // Die Effektivstände bleiben erhalten (sie hängen vom teamSide ab, nicht vom sidesSwapped).
-    expect(screen.getByTestId('score-home')).toHaveTextContent('3');
-    expect(screen.getByTestId('score-away')).toHaveTextContent('0');
+    // Nach dem Tausch stehen die Effektivstände auf den getauschten Seiten: 0:3
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('0:3');
   });
 });

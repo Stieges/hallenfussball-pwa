@@ -9,8 +9,17 @@
  */
 
 import { Match, FinalsConfig } from '../../types/tournament';
-import { generatePlayoffMatches as generatePlayoffMatchesFromPreset, GroupSizeInfo } from './playoffGenerator';
+import {
+  finalsPhaseOfTemplateId,
+  generatePlayoffMatches as generatePlayoffMatchesFromPreset,
+  legacyFinalsPreset,
+  type FinalsPhase,
+  type GroupSizeInfo,
+  type LegacyFinals,
+} from './playoffGenerator';
 import { generateFinalsMatchId } from '../../utils/idGenerator';
+import { pendingSlot } from '../models/matchSlot';
+import type { SlotSource } from '../models/schemas/MatchSlotSchema';
 
 /**
  * Playoff match definition before scheduling
@@ -21,6 +30,11 @@ export interface PlayoffMatchDefinition {
   teamASource: string; // e.g., "group-a-1st", "semi1-winner"
   teamBSource: string;
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
+  /**
+   * A-12a (C-FINALPHASE-AUS-ID): Runde aus der Vorlage – Halbfinale `semifinal`, Viertelfinale `quarterfinal`,
+   * Achtelfinale `roundOf16`, Platzierungsspiele und Finale `final`. Fehlt sie, gilt `final`.
+   */
+  phase?: FinalsPhase;
   parallelMode: 'sequentialOnly' | 'parallelAllowed';
   dependencies: string[]; // IDs of matches that must be completed first
 }
@@ -38,16 +52,58 @@ export interface PlayoffScheduleOptions {
   startTime?: Date;
   groupPhaseEndTime?: Date;
   breakBetweenPhases?: number; // Minutes
+  /**
+   * A-12a (C-GENERATOR-HERKUNFT-GRUPPENNAMEN): echte Gruppen des Turniers in Vorlagen-Reihenfolge. Der Platzhalter
+   * „group-a-…“ meint die erste, „group-b-…“ die zweite Gruppe. Fehlt die Liste, gilt der Buchstabe selbst (A, B …).
+   */
+  groupIds?: readonly string[];
 }
 
 /**
- * Scheduled playoff match with slot information
+ * Geplantes Playoff-Spiel (Durchgang 1: Zeit, Feld, echte Spiel-ID; Slots folgen in Durchgang 2)
  */
-interface ScheduledPlayoffMatch {
+interface PlannedPlayoffMatch {
   definition: PlayoffMatchDefinition;
+  id: string;
   slot: number;
   field: number;
-  match: Match;
+  scheduledTime?: Date;
+}
+
+const GROUP_RANK_REF = /^group-([a-z])-([1-9][0-9]?)(?:st|nd|rd|th)$/;
+const MATCH_RESULT_REF = /^(.+)-(winner|loser)$/;
+
+/**
+ * Übersetzt eine Platzhalter-Referenz der Playoff-Definition in eine strukturierte Herkunft (@TM-015).
+ * `group-a-1st` → Gruppenrang; `<defId>-winner|loser` → Ergebnis des ECHTEN Spiels (UUID, nicht `'semi1'`).
+ * Unbekanntes Format oder nicht geplantes Vorgängerspiel → Error (Generator-Invariante).
+ */
+function toSlotSource(ref: string, defIdToMatchId: ReadonlyMap<string, string>, groupIds?: readonly string[]): SlotSource {
+  const groupRank = GROUP_RANK_REF.exec(ref);
+  if (groupRank) {
+    return { kind: 'groupRank', group: groupOfLetter(groupRank[1], groupIds), rank: Number(groupRank[2]) };
+  }
+  const matchResult = MATCH_RESULT_REF.exec(ref);
+  if (matchResult) {
+    const matchId = defIdToMatchId.get(matchResult[1]);
+    if (matchId === undefined) {
+      throw new Error(`Playoff-Herkunft „${ref}“ verweist auf kein geplantes Spiel`);
+    }
+    return { kind: 'matchResult', matchId, role: matchResult[2] === 'winner' ? 'winner' : 'loser' };
+  }
+  throw new Error(`Unbekanntes Format der Playoff-Herkunft: „${ref}“`);
+}
+
+/** Gruppe zum Vorlagen-Buchstaben: `a` = erste Gruppe des Turniers usw.; ohne Liste der Buchstabe selbst. */
+function groupOfLetter(letter: string, groupIds?: readonly string[]): string {
+  if (groupIds === undefined) {
+    return letter.toUpperCase();
+  }
+  const group = groupIds[letter.charCodeAt(0) - 'a'.charCodeAt(0)];
+  if (group === undefined) {
+    throw new Error(`Playoff-Herkunft verweist auf Gruppe ${letter.toUpperCase()}, die es im Turnier nicht gibt`);
+  }
+  return group;
 }
 
 /**
@@ -98,6 +154,7 @@ export function generatePlayoffDefinitions(
       teamASource: match.home,
       teamBSource: match.away,
       finalType,
+      phase: finalsPhaseOfTemplateId(match.id),
       parallelMode,
       dependencies: match.dependsOn ?? [],
     };
@@ -111,29 +168,9 @@ export function generatePlayoffDefinitions(
  */
 export function generatePlayoffDefinitionsLegacy(
   numberOfGroups: number,
-  finals: {
-    final: boolean;
-    thirdPlace: boolean;
-    fifthSixth: boolean;
-    seventhEighth: boolean;
-  }
+  finals: LegacyFinals
 ): PlayoffMatchDefinition[] {
-  // Migrate old finals structure to new preset
-  let preset: FinalsConfig['preset'] = 'none';
-
-  if (finals.final) {
-    if (finals.thirdPlace) {
-      if (finals.fifthSixth || finals.seventhEighth) {
-        preset = 'all-places';
-      } else {
-        preset = 'top-4';
-      }
-    } else {
-      preset = 'final-only';
-    }
-  }
-
-  return generatePlayoffDefinitions(numberOfGroups, { preset });
+  return generatePlayoffDefinitions(numberOfGroups, { preset: legacyFinalsPreset(finals) });
 }
 
 /**
@@ -147,14 +184,15 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
     breakBetweenSlotsMinutes,
     startSlot,
     startTime,
+    groupIds,
   } = options;
 
   if (playoffDefinitions.length === 0) {
     return [];
   }
 
-  const matches: Match[] = [];
-  const scheduledMatches: ScheduledPlayoffMatch[] = [];
+  // Durchgang 1: Zeit, Feld und echte Spiel-ID je Definition
+  const planned: PlannedPlayoffMatch[] = [];
 
   // Track which matches have been scheduled
   const completedMatchIds = new Set<string>();
@@ -165,7 +203,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
   let currentSlot = startSlot;
 
   // Schedule each wave of matches
-  while (scheduledMatches.length < sortedDefinitions.length) {
+  while (planned.length < sortedDefinitions.length) {
     // Find matches that can be scheduled now (dependencies met)
     const readyMatches = sortedDefinitions.filter(def => {
       if (completedMatchIds.has(def.id)) { return false; }
@@ -191,21 +229,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
       const field = 1; // Always use field 1 for sequential matches
       const scheduledTime = startTime ? new Date(startTime.getTime() + currentSlot * (slotDurationMinutes + breakBetweenSlotsMinutes) * 60000) : undefined;
 
-      const match: Match = {
-        id: generateFinalsMatchId(),
-        round: currentSlot + 1,
-        field,
-        slot: currentSlot,
-        teamA: def.teamASource,
-        teamB: def.teamBSource,
-        isFinal: true,
-        finalType: def.finalType,
-        label: def.label,
-        scheduledTime,
-      };
-
-      scheduledMatches.push({ definition: def, slot: currentSlot, field, match });
-      matches.push(match);
+      planned.push({ definition: def, id: generateFinalsMatchId(), slot: currentSlot, field, scheduledTime });
       completedMatchIds.add(def.id);
 
       currentSlot++; // Each sequential match gets its own slot
@@ -218,21 +242,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
       for (const def of parallelMatches) {
         const scheduledTime = startTime ? new Date(startTime.getTime() + currentSlot * (slotDurationMinutes + breakBetweenSlotsMinutes) * 60000) : undefined;
 
-        const match: Match = {
-          id: generateFinalsMatchId(),
-          round: currentSlot + 1,
-          field,
-          slot: currentSlot,
-          teamA: def.teamASource,
-          teamB: def.teamBSource,
-          isFinal: true,
-          finalType: def.finalType,
-          label: def.label,
-          scheduledTime,
-        };
-
-        scheduledMatches.push({ definition: def, slot: currentSlot, field, match });
-        matches.push(match);
+        planned.push({ definition: def, id: generateFinalsMatchId(), slot: currentSlot, field, scheduledTime });
         completedMatchIds.add(def.id);
 
         field++;
@@ -249,7 +259,25 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
     }
   }
 
-  return matches;
+  // Durchgang 2: Slots aus den Definitionen – Verweise zeigen auf die echten Spiel-IDs aus Durchgang 1
+  const defIdToMatchId = new Map(planned.map((p) => [p.definition.id, p.id]));
+
+  return planned.map(({ definition: def, id, slot, field, scheduledTime }): Match => {
+    const [originA, originB] = [toSlotSource(def.teamASource, defIdToMatchId, groupIds), toSlotSource(def.teamBSource, defIdToMatchId, groupIds)];
+    const [slotA, slotB] = [pendingSlot(originA), pendingSlot(originB)]; // A-36a: Platz-Herkunft unveränderlich, Slot offen
+    return {
+      id,
+      round: slot + 1,
+      field,
+      slot,
+      slotA, slotB, originA, originB,
+      isFinal: true,
+      finalType: def.finalType,
+      phase: def.phase ?? 'final', // A-12a: Phase aus der Vorlage (C-FINALPHASE-AUS-ID)
+      label: def.label,
+      scheduledTime,
+    };
+  });
 }
 
 /**

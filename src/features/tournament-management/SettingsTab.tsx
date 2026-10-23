@@ -23,12 +23,22 @@ import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
 import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
+import { PlayOutPlacesSettings } from './standings/PlayOutPlacesSettings';
+import type { PlayOutPlacesResult } from '../../core/services/PlayOutPlacesService';
+import { useTournamentStartState } from '../../hooks/useTournamentStartState';
+import { useCan } from '../auth/hooks/useCan';
+import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
+import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../core/services/tournamentMetaValidation';
 
 interface SettingsTabProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
   onDirtyChange?: (isDirty: boolean) => void;
   onEditInWizard?: (tournament: Tournament, targetStep?: number) => void;
+  /** Abschnitt, den die Adresse ansteuert (`?abschnitt=gleichstand`, Paket TB-B). */
+  focusSection?: string;
+  /** Schmaler Speicherweg der Einstellung „Plätze ausspielen“; ohne ihn bleibt der Abschnitt weg. */
+  onSavePlayOutPlaces?: (places: number[]) => Promise<PlayOutPlacesResult>;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -36,8 +46,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onTournamentUpdate,
   onDirtyChange,
   onEditInWizard,
+  focusSection,
+  onSavePlayOutPlaces,
 }) => {
   const { t } = useTranslation('tournament');
+  // @W5-004: „Im Wizard bearbeiten" setzt ein festgelegtes Turnier NIE auf Entwurf zurück.
+  // @LZ-003 / W3: nach dem ersten Anpfiff nicht anbieten (gleiche Sperre wie „Turnier löschen",
+  // gemeinsame Funktion statt Kopie).
+  const { state: matchStartState } = useTournamentStartState(tournament);
+  const canEditInWizard = matchStartState === 'not-started';
+  // A-11 (@W5-017, @HE-042, L6): Einstellungen ändern = tournamentSettings (sonst lesend mit Hinweis); Neuplanen und
+  // Teams ersetzen (Erweiterte Bearbeitung) = restructure. Rechte nur über useCan.
+  const canChangeRules = useCan('tournamentSettings', tournament.id);
+  const canRestructure = useCan('restructure', tournament.id);
   // Collapse-State für Formular-Bereich
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
 
@@ -52,8 +73,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     startTime: tournament.startTime ?? tournament.timeSlot,
   });
 
+  const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
+
   // Sync formData wenn sich tournament ändert (nach Speichern)
   useEffect(() => {
+    setMetaErrors({});
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
@@ -122,10 +146,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Update Handler
   const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'title' || field === 'startDate') { setMetaErrors(prev => ({ ...prev, [field]: undefined })); }
   };
 
   // Speichern Handler
   const handleSave = () => {
+    // @W5-002 / C-META-NOVALID: leerer Name oder leeres Datum werden nicht gespeichert (ein vergangenes Datum schon, @W5-003)
+    const errors = validateTournamentMeta({ title: formData.title, startDate: formData.startDate });
+    setMetaErrors(errors);
+    if (hasMetaErrors(errors)) { return; }
     const updatedTournament: Tournament = {
       ...tournament,
       title: formData.title ?? tournament.title,
@@ -153,6 +182,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       if (!confirmReset) {return;}
     }
 
+    setMetaErrors({});
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
@@ -188,13 +218,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     );
 
     if (confirmWizard && onEditInWizard) {
-      // Set tournament back to draft status for wizard editing
-      const draftTournament: Tournament = {
+      // @W5-004/@LZ-004: Bearbeiten setzt ein Turnier NIE auf Entwurf zurück.
+      const wizardTournament: Tournament = {
         ...tournament,
-        status: 'draft',
         lastVisitedStep: targetStep,
       };
-      onEditInWizard(draftTournament, targetStep);
+      onEditInWizard(wizardTournament, targetStep);
     }
   };
 
@@ -254,7 +283,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       variant === 'primary' || variant === 'danger'
         ? 'white'
         : cssVars.colors.textSecondary,
-    border: variant === 'secondary' ? `1px solid ${cssVars.colors.border}` : 'none',
+    border: variant === 'secondary' ? `1px solid ${cssVars.colors.borderControl}` : 'none',
   });
 
   const dirtyIndicatorStyle: CSSProperties = {
@@ -291,6 +320,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   return (
     <div style={containerStyle}>
       <div style={contentStyle}>
+        {!canChangeRules && <div style={{ marginBottom: cssVars.spacing.md }}><LeadOnlyHint /></div>}
         {/* Collapsible Header für Metadaten-Bearbeitung */}
         <div
           style={collapsibleHeaderStyle}
@@ -312,7 +342,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </span>
         </div>
 
-        {/* Collapsible Form Content */}
+        {/* Collapsible Form Content (ohne tournamentSettings lesend: alle Eingaben gesperrt, L6) */}
+        <fieldset disabled={!canChangeRules} style={{ border: 0, padding: 0, margin: 0, minInlineSize: 0 }}>
         {!isFormCollapsed && (
           <>
             {/* Header mit Buttons */}
@@ -351,6 +382,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 value={formData.title ?? ''}
                 onChange={(v) => handleUpdate('title', v)}
                 placeholder={t('settings.tournamentNamePlaceholder')}
+                errorMessage={metaErrors.title ? t('settings.tournamentNameRequired') : undefined}
                 required
               />
 
@@ -402,6 +434,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="date"
                   value={formData.startDate ?? ''}
                   onChange={(v) => handleUpdate('startDate', v)}
+                  errorMessage={metaErrors.startDate ? t('settings.startDateRequired') : undefined}
                   required
                 />
                 <Input
@@ -468,8 +501,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           />
         </div>
 
-        {/* Wizard-Bearbeitung Buttons - IMMER SICHTBAR */}
-        {onEditInWizard && (
+        {/* Gleichstand: welche Plätze ausgespielt werden müssen (Paket TB-B, @W2A-068) */}
+        {onSavePlayOutPlaces && <PlayOutPlacesSettings tournament={tournament} onSave={onSavePlayOutPlaces} jumpHere={focusSection === 'gleichstand'} />}
+        </fieldset>
+
+        {/* Wizard-Bearbeitung (Neuplanen, Teams ersetzen) — nur vor dem ersten Anpfiff (@LZ-003 / W3), nur mit restructure (@W5-017) */}
+        {onEditInWizard && canEditInWizard && canRestructure && (
           <Card style={{ marginTop: cssVars.spacing.lg, background: cssVars.colors.warningBannerBg, border: `1px solid ${cssVars.colors.warningBannerBorder}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
               <span style={{ fontSize: cssVars.fontSizes.xxl }}>⚠️</span>
@@ -485,6 +522,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   <button
+                    data-testid="wizard-edit-edit-teams"
                     onClick={() => handleEditInWizard(5)}
                     style={{
                       padding: '10px 16px',
@@ -501,6 +539,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     {t('settings.advancedEditing.editTeams')}
                   </button>
                   <button
+                    data-testid="wizard-edit-change-game-mode"
                     onClick={() => handleEditInWizard(3)}
                     style={{
                       padding: '10px 16px',
@@ -517,6 +556,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     {t('settings.advancedEditing.changeGameMode')}
                   </button>
                   <button
+                    data-testid="wizard-edit-groups-and-fields"
                     onClick={() => handleEditInWizard(4)}
                     style={{
                       padding: '10px 16px',

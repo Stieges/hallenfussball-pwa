@@ -18,6 +18,9 @@ import type { RuntimeMatchEvent } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import type { LiveMatch as CoreLiveMatch } from '../core/models/LiveMatch';
 import { toRuntimeMatchEvents } from '../utils/matchEvents';
+import { cardKindOf } from '../utils/cardKind';
+import { trackRealtimeChannelStatus } from './realtimeChannelStatus';
+import { useRealtimePollFallback } from './realtimePollFallback';
 
 // Types - MatchEvent is re-exported from tournament.ts
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
@@ -80,9 +83,18 @@ export interface CardEventInfo {
   teamId: string;
   teamName: string;
   side: 'home' | 'away';
-  cardType: 'YELLOW' | 'RED';
+  cardType: 'YELLOW' | 'YELLOW_RED' | 'RED';
   playerNumber?: number;
   timestamp: number;
+}
+
+/**
+ * F3b2 (Ruling PC30, Monitor-Kartenanimation): Kartentyp NUR ueber `cardKindOf` ableiten, nicht
+ * nur aus `event.type` (das bildete Gelb-Rot bisher faelschlich auf 'RED' ab). Exportiert fuer
+ * einen fokussierten Unit-Test ohne die localStorage-Polling-Maschinerie dieses Hooks.
+ */
+export function detectedCardKind(event: RuntimeMatchEvent): 'YELLOW' | 'YELLOW_RED' | 'RED' {
+  return cardKindOf(event) ?? 'YELLOW';
 }
 
 export interface UseLiveMatchesReturn {
@@ -319,7 +331,7 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
             teamName: event.payload.teamName || (isHome ? match.homeTeam.name : match.awayTeam.name),
             side: isHome ? 'home' : 'away',
-            cardType: event.type === 'RED_CARD' ? 'RED' : 'YELLOW',
+            cardType: detectedCardKind(event),
             playerNumber: event.payload.playerNumber,
             timestamp: Date.now(),
           };
@@ -400,6 +412,9 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
     setLiveMatches(converted);
   }, [readRepo, tournamentId, markAllEventsAsSeen, detectGoalEvent, detectCardEvent]);
 
+  // A-08f1 (@FU-087): Realtime unterbrochen -> Abfrage alle 5 s, ohne Hinweis
+  useRealtimePollFallback(tournamentId, realtimeRepo !== null, loadFromRepository);
+
   // Realtime subscription handler
   const handleRealtimeChange = useCallback((matchId: string, match: CoreLiveMatch | null) => {
     if (!match) {
@@ -442,11 +457,12 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
       // Realtime mode: Subscribe to changes
       void loadFromRepository();
 
+      const tracker = trackRealtimeChannelStatus(tournamentId); // A-06k (@FU-025)
       realtimeRepo.subscribe(tournamentId, {
         onMatchChange: handleRealtimeChange,
+        onStatusChange: tracker.onStatusChange,
         onError: (error) => {
           console.error('Realtime subscription error:', error);
-          // Could fall back to polling here if needed
         },
       });
 
@@ -468,6 +484,7 @@ export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOpt
       }, REALTIME_TIMER_INTERVAL);
 
       return () => {
+        tracker.stop();
         realtimeRepo.unsubscribe(tournamentId);
         clearInterval(timerInterval);
       };

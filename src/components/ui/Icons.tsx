@@ -1,5 +1,6 @@
 interface IconProps {
-  size?: number;
+  /** Pixel oder CSS-Länge (z. B. '1em', B-44b: Symbol so groß wie die Überschrift-Schrift) */
+  size?: number | string;
   color?: string;
 }
 
@@ -118,9 +119,10 @@ export const Icons = {
     </svg>
   ),
 
-  Trophy: ({ size = 20, color = 'currentColor' }: IconProps) => (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <path d="M6 9H2v4h4M14 9h4v4h-4M10 16v2M7 18h6M10 2v8a3 3 0 01-3 3 3 3 0 003 3 3 3 0 003-3 3 3 0 01-3-3V2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  /** Pokal (Lucide „trophy“, wie im Mockup K5g); viewBox 24, Strichstärke 2 (Monitor-Pokal-Kreis: 2,4) */
+  Trophy: ({ size = 20, color = 'currentColor', strokeWidth = 2 }: IconProps & { strokeWidth?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" data-icon="trophy">
+      <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
 
@@ -250,6 +252,29 @@ export const Icons = {
   ExternalLink: ({ size = 20, color = 'currentColor' }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
       <path d="M15 11v5a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2h5M12 3h5v5M10 10l8-8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+
+  Info: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8" stroke={color} strokeWidth="2" />
+      <path d="M10 9v5M10 6v1" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  WifiOff: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M2 2l16 16M5 8.5a8 8 0 013-1.8M15 8.5a8 8 0 00-3.5-2M7.5 12a4 4 0 015 0" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <circle cx="10" cy="16" r="1" fill={color} />
+    </svg>
+  ),
+
+  QrCode: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="2" width="6" height="6" rx="1" stroke={color} strokeWidth="2" />
+      <rect x="12" y="2" width="6" height="6" rx="1" stroke={color} strokeWidth="2" />
+      <rect x="2" y="12" width="6" height="6" rx="1" stroke={color} strokeWidth="2" />
+      <path d="M12 12h2v2h-2zM16 12h2v6h-4M12 16v2" stroke={color} strokeWidth="2" strokeLinejoin="round" />
     </svg>
   ),
 

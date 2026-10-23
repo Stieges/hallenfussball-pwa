@@ -82,13 +82,15 @@ export const semanticColorsDark = {
   // Border Colors
   // ---------------------------------------------------------------------------
   border: 'rgba(255, 255, 255, 0.1)',
-  borderLight: palette.neutral[600],
   borderMedium: 'rgba(255, 255, 255, 0.2)', // For medium-strength light borders
   borderActive: 'rgba(0, 230, 118, 0.3)',
   borderSolid: palette.neutral[700],
   borderSubtle: 'rgba(255, 255, 255, 0.06)',
   borderDefault: 'rgba(255, 255, 255, 0.12)',
-  borderStrong: palette.neutral[500],
+  /** Bedien-Rand (Knopf, Eingabefeld, Auswahl) >= 3:1 gegen Fläche – @OB-055, @OB-057 */
+  borderControl: palette.neutral[500],
+  /** Bedien-Rand auf erhöhter Fläche (surfaceLight) */
+  borderControlRaised: palette.neutral[300],
 
   // ---------------------------------------------------------------------------
   // Semantic/Status Colors
@@ -101,7 +103,10 @@ export const semanticColorsDark = {
   errorBorder: 'rgba(255, 82, 82, 0.3)',
 
   warning: palette.orange[400],
-  warningHover: palette.orange[500],
+  /** Hover der Warn-Knöpfe: heller als warningSolid (B-43b3), schwarze Schrift hält ≥ 4,5 : 1 */
+  warningHover: palette.orange[400],
+  /** Füllfarbe für Warn-Flächen (Rückfrage-Knopf, Abzeichen) */
+  warningSolid: palette.orange[500],
   warningLight: 'rgba(255, 145, 0, 0.15)',
   warningSubtle: 'rgba(255, 145, 0, 0.08)',
   warningMedium: 'rgba(255, 145, 0, 0.1)',
@@ -123,15 +128,18 @@ export const semanticColorsDark = {
   // ---------------------------------------------------------------------------
   onPrimary: '#0A1628',
   onSecondary: '#0A1628',
-  onError: palette.neutral[0],
+  /** C-DANGER-KONTRAST: dunkle Schrift auf #FF5252 = 5,7 : 1 (weiß hatte 3,2 : 1) */
+  onError: '#0A1628',
   onWarning: '#000000',
   onSuccess: palette.neutral[0],
 
   // ---------------------------------------------------------------------------
   // Status Colors (for tournament states)
   // ---------------------------------------------------------------------------
-  statusLive: palette.special.live, // Red for LIVE indicator
-  statusLiveBg: 'rgba(220, 38, 38, 0.15)',
+  statusLive: palette.special.live, // Live-Rot (Rose 400), Fläche des Abzeichens
+  statusLiveBg: 'rgba(251, 113, 133, 0.15)',
+  /** Schrift auf statusLive: dunkel (Hintergrund-Ton), 7,8 : 1; Weiß hätte nur 2,7 : 1 */
+  statusLiveOn: palette.neutral[950],
   statusLiveRowBg: 'rgba(220, 38, 38, 0.08)',
 
   statusUpcoming: '#4CAF50',
@@ -154,8 +162,8 @@ export const semanticColorsDark = {
   // Live Cockpit Specific
   // ---------------------------------------------------------------------------
   liveBadge: palette.special.live,
-  liveBadgeBg: 'rgba(220, 38, 38, 0.2)',
-  liveBadgePulse: 'rgba(220, 38, 38, 0.4)',
+  liveBadgeBg: 'rgba(251, 113, 133, 0.2)',
+  liveBadgePulse: 'rgba(251, 113, 133, 0.4)',
 
   // ---------------------------------------------------------------------------
   // Correction/Warning Banner
@@ -282,6 +290,34 @@ export const semanticColorsDark = {
   eventEditBorder: 'rgba(251, 191, 36, 0.3)',
 
   gradientNextMatch: 'linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1))',
+
+  // ---------------------------------------------------------------------------
+  // Tafel Live-Cockpit (Spec § 8.2, Mockup-Freigabe 16.10.). Eigene Tokens, nie `surface`.
+  // Hoher Kontrast: nicht MVP, Werte nur Platzhalter (eigene Fassung in global.css).
+  // ---------------------------------------------------------------------------
+  scoreboardBg: '#050E1F',
+  scoreboardText: palette.neutral[0],
+  scoreboardTextMuted: '#A3B8D4',
+  scoreboardLive: palette.red[600], // Tafel bleibt im bisherigen Rot (weiße Schrift 4,83 : 1) bis 1.3 sie auf das Abzeichen umstellt
+  scoreboardHighlight: palette.orange[400],
+  scoreboardFinalPhase: palette.purple[300],
+  scoreboardBorder: '#A3B8D4',
+  scoreboardSurface: 'rgba(255, 255, 255, 0.08)',
+  scoreboardDivider: 'rgba(255, 255, 255, 0.22)',
+  scoreboardOnLive: palette.neutral[0],
+  scoreboardOnHighlight: '#000000',
+  scoreboardOk: palette.green[400],
+  scoreboardInfo: '#00B0FF',
+  scoreboardNeutral: palette.neutral[500],
+  noticeLineBg: 'rgba(255, 255, 255, 0.08)',
+  noticeLineText: palette.neutral[0],
+  // Halteknopf (Cockpit Scheibe 3, 3.1): Füllung beim Gedrückthalten, gleiche Farbe wie der Abpfiff-Rand (error)
+  holdFill: palette.red[400],
+  // Rahmen der Zeile „Nächstes“ ab 3:00 Restzeit (Cockpit LT-3, @SL-155): Warnfarbe, kein Fehler-Rot (C-COCKPIT-NAECHSTES-WIE-FEHLER)
+  nextWarnBorder: palette.orange[400],
+  // Karten (Cockpit, Entscheidung Daniel 19.10.): eigene Farben nur für Karten, in hell und dunkel gleich; Befund C-KARTE-GELB-ALS-WARNFARBE
+  cardYellow: palette.yellow[400],
+  cardRed: palette.red[600],
 } as const;
 
 export type SemanticColorToken = keyof typeof semanticColorsDark;

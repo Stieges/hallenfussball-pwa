@@ -11,7 +11,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
-import { Tournament } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
+import { buildSideContext, matchHeading, sideName, type SideContext } from './matchSides';
 import { getGroupShortCode } from '../../utils/displayNames';
 import type { MatchCardStatus } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
@@ -52,7 +53,9 @@ export interface SortableDesktopCardProps {
   /** Whether match swapping is enabled */
   canSwap: boolean;
   /** Tournament data for group name resolution */
-  tournament?: Tournament;
+  tournament?: ScheduleSource;
+  /** Kontext der Spielseiten-Anzeige (Teams, Vorgängerspiele); ohne Angabe aus `tournament` gebaut */
+  sideContext?: SideContext;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
   /** Show referee selector */
@@ -85,6 +88,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   editingSchedule,
   canSwap,
   tournament,
+  sideContext,
   showReferees,
   refereeOptions,
   showFields,
@@ -94,6 +98,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   showGroupLabel = true,
 }) => {
   const { t } = useTranslation('tournament');
+  const sides = sideContext ?? buildSideContext(tournament, [match]);
   const isLocked = status === 'running' || status === 'finished';
   const canDrag = editingSchedule && canSwap && !isLocked;
   const hasConflicts = conflicts.length > 0;
@@ -199,7 +204,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   const srSelectStyle: CSSProperties = {
     height: spacingSemantics.touchTarget, // 44px touch target
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
@@ -217,13 +222,13 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   const fieldSelectStyle: CSSProperties = {
     height: spacingSemantics.touchTarget, // 44px touch target
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
     backgroundColor: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-    cursor: 'pointer',
+    color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
+    cursor: isLocked ? 'not-allowed' : 'pointer',
     minWidth: 60,
     // Fix: Prevent all options from rendering at once
     overflow: 'hidden',
@@ -312,19 +317,20 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
           <div style={timeStyle}>{isDragging ? '↕️' : match.time}</div>
 
           {/* Home Team */}
-          <div style={{ ...teamNameStyle, textAlign: 'right' }}>{match.homeTeam}</div>
+          <div style={{ ...teamNameStyle, textAlign: 'right' }}>{sideName(match, 'A', sides)}</div>
 
           {/* VS */}
           <div style={vsStyle}>vs</div>
 
           {/* Away Team */}
-          <div style={teamNameStyle}>{match.awayTeam}</div>
+          <div style={teamNameStyle}>{sideName(match, 'B', sides)}</div>
 
           {/* Field Selector */}
           {showFields && onFieldChange && (
             <select
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+              disabled={isLocked}
               style={fieldSelectStyle}
               aria-label={t('sortable.fieldLabel')}
             >
@@ -338,8 +344,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
 
           {/* Group */}
           <div style={groupStyle}>
-            {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use group fallback */}
-            {showGroupLabel && (match.label || (match.group && match.group !== 'all' ? t('matchCard.groupShort', { group: getGroupShortCode(match.group, tournament) }) : ''))}
+            {showGroupLabel && ((match.label === undefined || match.label === '' ? '' : (matchHeading(match, sides) ?? '')) || (match.group && match.group !== 'all' ? t('matchCard.groupShort', { group: getGroupShortCode(match.group, tournament) }) : ''))}
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Card, Combobox, Input } from '../../components/ui';
+import { RulebookField } from '../../components/ui/molecules/RulebookField';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
@@ -18,8 +19,10 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const currentStartDate = formData.startDate ?? formData.date ?? '';
+  // @W5-003 (C-META-NOVALID): nur ein Entwurf darf nicht in der Vergangenheit liegen; ein festgelegtes Turnier bleibt korrigierbar.
+  const pastDateChecked = formData.status !== 'published';
   const startDateInPast =
-    !!currentStartDate && /^\d{4}-\d{2}-\d{2}$/.test(currentStartDate) && currentStartDate < todayIso;
+    pastDateChecked && !!currentStartDate && /^\d{4}-\d{2}-\d{2}$/.test(currentStartDate) && currentStartDate < todayIso;
 
   return (
     <Card>
@@ -41,6 +44,17 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         onChange={(v) => onUpdate('organizer', v)}
         placeholder={t('step3.organizerPlaceholder')}
         style={{ marginTop: '16px' }}
+      />
+
+      <RulebookField
+        label={t('step3.rulebook')}
+        placeholder={t('step3.rulebookPlaceholder')}
+        limitHint={t('step3.rulebookLimit')}
+        truncatedHint={t('step3.rulebookTruncated')}
+        value={formData.rulebook}
+        onChange={(v) => onUpdate('rulebook', v)}
+        testId="wizard-rulebook"
+        style={{ marginTop: cssVars.spacing.md }}
       />
 
       <Combobox
@@ -70,7 +84,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
           label={t('step3.startDate')}
           type="date"
           value={currentStartDate}
-          min={todayIso}
+          min={pastDateChecked ? todayIso : undefined}
           onChange={(v) => {
             onUpdate('startDate', v);
             // Keep legacy field in sync

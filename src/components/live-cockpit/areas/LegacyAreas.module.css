@@ -1,0 +1,78 @@
+/**
+ * Altbereich des Live-Cockpits (Spielfläche) – Scheibe 1, ohne Sichtänderung.
+ *
+ * Die Klassen ersetzen die Inline-Stilobjekte aus `LiveCockpit.tsx` 1 : 1. Nur Design-Tokens.
+ * Der Gerätetyp läuft über Modifikator-Klassen (Quelle bleibt `useBreakpoint`).
+ * Fällt mit `LegacyPlayArea` (Aufgabe 4.3) weg; der alte Spielkopf ist seit Aufgabe 2.4 die Tafel (`ScoreboardArea`).
+ */
+
+/* ---------------------------------------------------------------------------
+   Spielfläche
+   --------------------------------------------------------------------------- */
+
+/* Fläche: Tafel, Spalten und (ab 1024 px) die Liste der Einträge daneben. `breit` hat eine Quelle: `data-layout` der Hülle (Plan LT-2). */
+.flaeche {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  flex: 1;
+  min-height: 0;
+}
+
+.flaecheBreit {
+  display: grid;
+  /* Die Liste ist so breit wie die Spalte des Mockups, höchstens aber ein Drittel: bei 1024 px bleibt der Tafel mehr Breite (kein Wortbruch im Teamnamen) */
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(var(--sizing-cockpit-ereignisspalte), 33%));
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  min-width: 0;
+}
+
+.linksBreit {
+  gap: var(--spacing-md);
+  min-height: 0;
+}
+
+.ereignisse {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.scoreboard {
+  background: var(--color-surface-solid);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-xl);
+}
+
+.scoreboardBreit {
+  flex: 1;
+  padding: 0;
+  background: none;
+}
+
+/* Handy: wie im Mockup kein Kasten mit Polsterung um die Spalten; so bleibt Platz für lange Teamnamen (höchstens drei Zeilen, @OB-025) */
+.scoreboardMobile {
+  padding: 0;
+  background: none;
+}
+
+.scoreRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--spacing-lg);
+  row-gap: var(--spacing-sm);
+  align-items: start;
+}
+
+.linksMobile {
+  gap: var(--spacing-sm);
+}
+
+.scoreRowMobile {
+  column-gap: var(--spacing-sm); /* Mockup `column-gap`: genug Abstand zwischen den Tor-Knöpfen der Gegner (VISUAL § 9) */
+}

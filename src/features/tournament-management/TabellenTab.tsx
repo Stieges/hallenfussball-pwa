@@ -14,7 +14,7 @@
 
 import React, { CSSProperties, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, fontSizesMd3 } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { Card } from '../../components/ui';
 import { GroupTables } from '../../components/schedule';
 import { HighlightedCell } from './components';
@@ -23,23 +23,39 @@ import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../core/generators';
 import {
   calculateStandings,
-  getMergedFinalRanking,
+  getMergedFinalRanking, hasFinalRound, placementBadgeText, placementRankText,
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
+import { computeFinalStandings } from '../../core/standings/finalStandings';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
+import { useTieRenderers } from './standings/useTieRenderers';
+import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
+import { GroupStateDetails, GroupStateMarks } from './group-completion/GroupStateHead';
 
 interface TabellenTabProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
+  /** Tabelle je Gruppe hintereinander (Platzziffer `place` aus der Rechnung, Paket TB). */
   currentStandings: Standing[];
+  /** Gruppenübergreifende Gesamtwertung für den Endstand; fehlt sie, rechnet der Tab sie selbst (Paket TB, Plan 3.3). */
+  overallStandings?: Standing[];
 }
 
 type ViewMode = 'groups' | 'ranking';
+
+/** Volle Zeile unter einer Tabellenzeile für die Marke (Handy); ohne Marke keine Zeile. */
+const tieMarkerRow = (marker: React.ReactNode, columns: number): React.ReactNode =>
+  marker === null ? null : (
+    <tr data-testid="tie-marker-row">
+      <td colSpan={columns} style={{ padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}`, borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}` }}>{marker}</td>
+    </tr>
+  );
 
 export const TabellenTab: React.FC<TabellenTabProps> = ({
   tournament,
   schedule,
   currentStandings,
+  overallStandings,
 }) => {
   const { t } = useTranslation('tournament');
   const { t: tWizard } = useTranslation('wizard');
@@ -48,12 +64,9 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  const tieUi = useTieRenderers(tournament); // Paket TB-B: Hinweis und Marke bei Gleichstand (nur App-Ansicht)
   const hasGroups = tournament.teams.some(t => t.group);
-  const hasPlayoffs: boolean = Boolean(
-    typeof tournament.finals === 'object' &&
-    'enabled' in tournament.finals &&
-    tournament.finals.enabled
-  );
+  const hasPlayoffs = hasFinalRound(tournament); // Nachzug F1 A-36b: aus dem Turniermodell, nicht finals.enabled
 
   const containerStyle: CSSProperties = {
     maxWidth: '1400px',
@@ -76,7 +89,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.lg,
     padding: '4px',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
   };
 
   const getSegmentButtonStyle = (isActive: boolean): CSSProperties => ({
@@ -119,6 +132,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         standings={currentStandings}
         teams={schedule.teams}
         tournament={tournament}
+        tieDisplay="app"
+        renderTieHint={tieUi.hint}
+        renderTieMarker={tieUi.marker}
+        renderGroupState={(groupId) => ({ marks: <GroupStateMarks groupId={groupId} />, below: <GroupStateDetails groupId={groupId} /> })}
       />
     );
   };
@@ -132,10 +149,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     return getMergedFinalRanking(
       tournament.teams,
       tournament.matches,
-      currentStandings,
+      overallStandings ?? calculateStandings(tournament.teams, tournament.matches, tournament),
       tournament
     );
-  }, [currentStandings, tournament]);
+  }, [overallStandings, tournament]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -157,12 +174,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     setExpandedRows(newExpanded);
   };
 
+  const roundRobinRanking = useMemo(() => computeFinalStandings(tournament).ranking, [tournament]);
+
   // Berechne finale Platzierung (Legacy-Funktion für Fallback)
   const getGroupBasedRanking = (): Standing[] => {
-    if (!hasGroups) {
-      return currentStandings;
-    }
-
     const groups = Array.from(new Set(tournament.teams.map(t => t.group).filter(Boolean)));
     const ranking: Standing[] = [];
 
@@ -229,11 +244,11 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     return ranking;
   };
 
-  const finalRanking = hasPlayoffs ? mergedRanking : getGroupBasedRanking().map((standing, index) => ({
-    rank: index + 1,
-    team: standing.team,
-    decidedBy: 'groupStage' as const,
-  }));
+  // A-19a: Jeder gegen jeden zeigt den Endstand (Gruppenabschluss, Platzziffern mit Sprung, ohne entfernte Teams, @ET-022/@ET-058)
+  const finalRanking = hasPlayoffs ? mergedRanking : hasGroups
+    ? getGroupBasedRanking().map((standing, index) => ({ rank: index + 1, team: standing.team, decidedBy: 'groupStage' as const }))
+    : roundRobinRanking.flatMap((row) => tournament.teams.filter((team) => team.id === row.teamId)
+      .map((team) => ({ rank: row.place, team, decidedBy: 'groupStage' as const })));
 
   const standingsMap = useMemo(() => {
     const map = new Map<string, Standing>();
@@ -345,6 +360,16 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const renderRankingView = () => {
     return (
       <div style={{ padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
+        {/* Gleichstand bei Jeder gegen jeden (eine Tabelle ohne Gruppen), Paket TB-B: ganz oben, die Taste bleibt ohne Scrollen erreichbar */}
+        {!hasGroups && (
+          <div style={{ marginBottom: cssVars.spacing.md }} data-testid="group-head-all">
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, marginBottom: cssVars.spacing.sm }}>
+              <GroupStateMarks groupId="" />
+            </div>
+            <GroupStateDetails groupId="" />
+          </div>
+        )}
+        {!hasGroups && tieUi.hint('')}
         <h2 style={titleStyle}>{t('ranking.title')}</h2>
 
         {/* Platzierungslogik Anzeige */}
@@ -402,7 +427,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
             <span style={{ fontSize: isMobile ? '16px' : '20px' }}>{playoffStatusInfo.icon}</span>
             <span style={{
               fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
-              color: playoffStatusInfo.color,
+              color: cssVars.colors.textPrimary, // F1-W3b: Kontrast ≥ 4,5:1, Farbe nur an Symbol und Rand
               fontWeight: cssVars.fontWeights.semibold,
             }}>
               {playoffStatusInfo.text}
@@ -443,14 +468,15 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                 return (
                   <tr key={`${placement.team.id}-${placement.rank}`}>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={medalStyle(placement.rank)}>{placement.rank}</div>
+                      <div style={medalStyle(placement.rank)}>{placementRankText(placement)}</div>
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                       {placement.team.name}
+                      {!hasGroups && tieUi.marker(placement.team.id, '')}
                     </td>
                     {hasPlayoffs && (
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        {placement.decidedBy === 'playoff' ? (
+                        {placement.decidedBy !== 'groupStage' ? (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -462,7 +488,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                             color: cssVars.colors.primary,
                             fontWeight: cssVars.fontWeights.semibold,
                           }}>
-                            {placement.matchLabel ?? t('ranking.playoff')}
+                            {placementBadgeText(placement, t)}
                           </span>
                         ) : (
                           <span style={{
@@ -549,20 +575,20 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                       style={{ cursor: 'pointer' }}
                     >
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <div style={medalStyle(placement.rank)}>{placement.rank}</div>
+                        <div style={medalStyle(placement.rank)}>{placementRankText(placement)}</div>
                       </td>
                       <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                         {placement.team.name}
-                        {placement.decidedBy === 'playoff' ? (
+                        {placement.decidedBy !== 'groupStage' ? (
                           <div style={{
-                            fontSize: fontSizesMd3.statLabel,
+                            fontSize: cssVars.fontSizes.xs, // F1-W3a: ≥ 11 px (grenzwerte schrift.min)
                             color: cssVars.colors.primary,
                             marginTop: '2px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '2px',
                           }}>
-                            {placement.matchLabel ?? t('ranking.playoff')}
+                            {placementBadgeText(placement, t)}
                           </div>
                         ) : hasGroups && placement.team.group ? (
                           <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>
@@ -590,6 +616,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                         </span>
                       </td>
                     </tr>
+                    {/* Paket TB-B: auf dem Handy steht die Marke als eigene Zeile über die volle Breite, nie in der schmalen Teamspalte */}
+                    {!hasGroups && tieMarkerRow(tieUi.marker(placement.team.id, ''), 5)}
                     {isExpanded && standing && (
                       <tr key={`${teamKey}-details`}>
                         <td colSpan={5} style={{
@@ -680,6 +708,8 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
       )}
 
       <Card>
+        {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
+        <GroupCompletionTop />
         {/* Segment Control */}
         <div style={segmentContainerStyle}>
           <div style={segmentGroupStyle}>

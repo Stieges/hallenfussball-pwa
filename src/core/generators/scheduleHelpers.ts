@@ -3,7 +3,9 @@
  */
 
 import { Match, Team, Standing, TournamentGroup } from '../../types/tournament'
-import { getGroupDisplayName } from '../../utils/displayNames'
+import { transitionalTeamRef } from '../models/matchSlot'
+import { matchOrigins } from '../models/matchOrigin'
+import { slotLabel } from '../models/slotLabel'
 import { ScheduledMatch, SchedulePhaseType } from './scheduleTypes'
 
 // ============================================================================
@@ -83,162 +85,19 @@ export function calculateTotalMatchDuration(
 // PHASE DETECTION
 // ============================================================================
 
+type KnockoutPhase = Exclude<SchedulePhaseType, 'groupStage'>
+
+function isKnockoutPhase(phase: string | undefined): phase is KnockoutPhase {
+  return phase === 'roundOf16' || phase === 'quarterfinal' || phase === 'semifinal' || phase === 'final'
+}
+
 /**
- * Bestimmt Final-Phase aus Match
+ * Phase eines Finalspiels: die Phase, die der Generator am Spiel gesetzt hat (A-12a, aus der Vorlage), sonst `final`.
+ * Früher wurde sie aus der Spiel-ID geraten – seit die IDs UUIDs sind, wurden so Halbfinale als `final` gespeichert
+ * (C-FINALPHASE-AUS-ID).
  */
 export function determineFinalPhase(match: Match): SchedulePhaseType {
-  if (match.finalType) {
-    return 'final'
-  }
-
-  // Heuristik: Basierend auf Match-ID oder Round
-  const matchId = match.id.toLowerCase()
-  if (matchId.includes('r16') || matchId.startsWith('r16-')) { return 'roundOf16' }
-  if (matchId.includes('qf')) { return 'quarterfinal' }
-  if (matchId.includes('sf') || matchId.includes('semi')) { return 'semifinal' }
-
-  return 'final'
-}
-
-// ============================================================================
-// TEAM NAME RESOLUTION
-// ============================================================================
-
-/**
- * Löst Team-Namen auf (mit i18n für Platzhalter)
- */
-export function resolveTeamName(
-  teamId: string,
-  teamMap: Map<string, string>,
-  locale: 'de' | 'en',
-  groups?: TournamentGroup[]
-): string {
-  // Wenn Team-Name existiert, verwende ihn
-  const teamName = teamMap.get(teamId)
-  if (teamName) {
-    return teamName
-  }
-
-  // Ansonsten: Übersetze Platzhalter (mit custom Gruppennamen)
-  return translatePlaceholder(teamId, locale, groups)
-}
-
-/**
- * Gibt das englische Ordinal-Suffix zurück (1st, 2nd, 3rd, 4th)
- */
-function getOrdinalSuffix(n: number): string {
-  if (n === 1) { return 'st' }
-  if (n === 2) { return 'nd' }
-  if (n === 3) { return 'rd' }
-  return 'th'
-}
-
-/**
- * Übersetzt Platzhalter-Namen
- * Nutzt custom Gruppennamen wenn vorhanden (US-GROUPS-AND-FIELDS)
- */
-export function translatePlaceholder(
-  placeholder: string,
-  locale: 'de' | 'en',
-  groups?: TournamentGroup[]
-): string {
-  // Prüfe auf Gruppen-Platzhalter wie 'group-a-1st', 'group-b-2nd', etc.
-  const groupMatch = placeholder.toLowerCase().match(/^group-([a-h])-(\d+)(st|nd|rd|th)$/)
-  if (groupMatch) {
-    const groupLetter = groupMatch[1].toUpperCase()
-    const position = parseInt(groupMatch[2])
-
-    // Hole custom Gruppenname (oder Fallback zu "Gruppe X")
-    const groupName = getGroupDisplayName(groupLetter, { groups })
-
-    // Generiere Platzierungs-Suffix
-    const positionSuffix =
-      locale === 'de' ? `${position}. Platz` : `${position}${getOrdinalSuffix(position)} Place`
-
-    return `${groupName} - ${positionSuffix}`
-  }
-
-  // Finale-Platzhalter (keine Gruppen-Referenzen)
-  const translated = FINAL_TRANSLATIONS[locale][placeholder.toLowerCase()]
-  return translated || placeholder
-}
-
-/**
- * Übersetzungstabelle für Finale-Platzhalter
- */
-const FINAL_TRANSLATIONS: Record<'de' | 'en', Record<string, string>> = {
-  de: {
-    // Finalrunden Platzhalter (Legacy-Format)
-    'winner-qf-1': 'Sieger VF 1',
-    'winner-qf-2': 'Sieger VF 2',
-    'winner-qf-3': 'Sieger VF 3',
-    'winner-qf-4': 'Sieger VF 4',
-    'loser-qf-1': 'Verlierer VF 1',
-    'loser-qf-2': 'Verlierer VF 2',
-    'loser-qf-3': 'Verlierer VF 3',
-    'loser-qf-4': 'Verlierer VF 4',
-    'winner-sf-1': 'Sieger HF 1',
-    'winner-sf-2': 'Sieger HF 2',
-    'loser-sf-1': 'Verlierer HF 1',
-    'loser-sf-2': 'Verlierer HF 2',
-    // Neue Playoff-Platzhalter (aktuelles Format)
-    'r16-1-winner': 'Sieger AF 1',
-    'r16-2-winner': 'Sieger AF 2',
-    'r16-3-winner': 'Sieger AF 3',
-    'r16-4-winner': 'Sieger AF 4',
-    'r16-5-winner': 'Sieger AF 5',
-    'r16-6-winner': 'Sieger AF 6',
-    'r16-7-winner': 'Sieger AF 7',
-    'r16-8-winner': 'Sieger AF 8',
-    'qf1-winner': 'Sieger VF 1',
-    'qf2-winner': 'Sieger VF 2',
-    'qf3-winner': 'Sieger VF 3',
-    'qf4-winner': 'Sieger VF 4',
-    'qf1-loser': 'Verlierer VF 1',
-    'qf2-loser': 'Verlierer VF 2',
-    'qf3-loser': 'Verlierer VF 3',
-    'qf4-loser': 'Verlierer VF 4',
-    'semi1-winner': 'Sieger HF 1',
-    'semi2-winner': 'Sieger HF 2',
-    'semi1-loser': 'Verlierer HF 1',
-    'semi2-loser': 'Verlierer HF 2',
-  },
-  en: {
-    // Finals Placeholders (Legacy)
-    'winner-qf-1': 'Winner QF 1',
-    'winner-qf-2': 'Winner QF 2',
-    'winner-qf-3': 'Winner QF 3',
-    'winner-qf-4': 'Winner QF 4',
-    'loser-qf-1': 'Loser QF 1',
-    'loser-qf-2': 'Loser QF 2',
-    'loser-qf-3': 'Loser QF 3',
-    'loser-qf-4': 'Loser QF 4',
-    'winner-sf-1': 'Winner SF 1',
-    'winner-sf-2': 'Winner SF 2',
-    'loser-sf-1': 'Loser SF 1',
-    'loser-sf-2': 'Loser SF 2',
-    // New Playoff Placeholders
-    'r16-1-winner': 'Winner R16-1',
-    'r16-2-winner': 'Winner R16-2',
-    'r16-3-winner': 'Winner R16-3',
-    'r16-4-winner': 'Winner R16-4',
-    'r16-5-winner': 'Winner R16-5',
-    'r16-6-winner': 'Winner R16-6',
-    'r16-7-winner': 'Winner R16-7',
-    'r16-8-winner': 'Winner R16-8',
-    'qf1-winner': 'Winner QF 1',
-    'qf2-winner': 'Winner QF 2',
-    'qf3-winner': 'Winner QF 3',
-    'qf4-winner': 'Winner QF 4',
-    'qf1-loser': 'Loser QF 1',
-    'qf2-loser': 'Loser QF 2',
-    'qf3-loser': 'Loser QF 3',
-    'qf4-loser': 'Loser QF 4',
-    'semi1-winner': 'Winner SF 1',
-    'semi2-winner': 'Winner SF 2',
-    'semi1-loser': 'Loser SF 1',
-    'semi2-loser': 'Loser SF 2',
-  },
+  return isKnockoutPhase(match.phase) ? match.phase : 'final'
 }
 
 // ============================================================================
@@ -275,7 +134,8 @@ export interface ScheduleMatchesOptions {
   gamePeriods: number
   halftimeBreak: number
   phase: 'groupStage' | 'final'
-  teamMap: Map<string, string>
+  /** Teams des Turniers – Namen werden NUR über `team.id` gefunden (slotLabel). */
+  teams: Team[]
   locale: 'de' | 'en'
   startMatchNumber: number
   groups?: TournamentGroup[]
@@ -292,11 +152,12 @@ export function scheduleMatches(options: ScheduleMatchesOptions): ScheduledMatch
     breakDuration,
     gamePeriods,
     halftimeBreak,
-    teamMap,
+    teams,
     locale,
     startMatchNumber,
     groups,
   } = options
+  const labelContext = { teams, matches, groups, locale }
 
   const scheduled: ScheduledMatch[] = []
   let currentTime = new Date(startTime)
@@ -333,10 +194,13 @@ export function scheduleMatches(options: ScheduleMatchesOptions): ScheduledMatch
         matchNumber: matchNumber++,
         time: formatTime(matchStartTime),
         field: match.field,
-        homeTeam: resolveTeamName(match.teamA, teamMap, locale, groups),
-        awayTeam: resolveTeamName(match.teamB, teamMap, locale, groups),
-        originalTeamA: match.teamA,
-        originalTeamB: match.teamB,
+        homeTeam: slotLabel(match.slotA, labelContext),
+        awayTeam: slotLabel(match.slotB, labelContext),
+        originalTeamA: transitionalTeamRef(match.slotA),
+        originalTeamB: transitionalTeamRef(match.slotB),
+        slotA: match.slotA,
+        slotB: match.slotB,
+        ...matchOrigins(match), // A-36a: Herkunft des Platzes durchreichen
         group: match.group,
         phase: match.isFinal ? determineFinalPhase(match) : 'groupStage',
         finalType: match.finalType,

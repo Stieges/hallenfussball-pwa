@@ -2,11 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   mapTeamToLiveTeamInfo,
   mapMatchEventFromSupabase,
-  mapMatchEventToSupabase,
   mapLiveMatchFromSupabase,
-  mapLiveMatchToSupabase,
   isMatchActive,
-  clearLiveState,
 } from '../liveMatchMappers';
 import {
   createTeamRow,
@@ -119,36 +116,6 @@ describe('mapMatchEventFromSupabase', () => {
   });
 });
 
-describe('mapMatchEventToSupabase', () => {
-  it('maps event to DB row', () => {
-    const event = {
-      id: 'event-1',
-      matchId: 'match-1',
-      timestampSeconds: 120,
-      type: 'GOAL' as const,
-      payload: { team: 'home' as const, delta: 1 },
-      scoreAfter: { home: 1, away: 0 },
-    };
-    const row = mapMatchEventToSupabase(event, 'match-1');
-
-    expect(row.id).toBe('event-1');
-    expect(row.match_id).toBe('match-1');
-    expect(row.timestamp_seconds).toBe(120);
-    expect(row.type).toBe('GOAL');
-    expect(row.score_home).toBe(1);
-    expect(row.score_away).toBe(0);
-    expect(row.team_id).toBeNull();
-    expect(row.player_id).toBeNull();
-    expect(row.period).toBeNull();
-    expect(row.incomplete).toBe(false);
-    expect(row.is_deleted).toBe(false);
-  });
-});
-
-// =============================================================================
-// LIVE MATCH MAPPERS
-// =============================================================================
-
 describe('mapLiveMatchFromSupabase', () => {
   it('maps minimal match', () => {
     const matchRow = createMatchRow({
@@ -172,7 +139,11 @@ describe('mapLiveMatchFromSupabase', () => {
 
   it('maps status correctly (all variants)', () => {
     const statuses = [
+      // 'not_started' ist die Alt-Kennung von vor dem C-NSTART-Fix (wird nie mehr
+      // geschrieben, aber beim Lesen weiter toleriert). 'scheduled' ist der neue,
+      // vom CHECK-Constraint erlaubte Wert für "noch nicht gestartet".
       ['not_started', 'NOT_STARTED'],
+      ['scheduled', 'NOT_STARTED'],
       ['running', 'RUNNING'],
       ['paused', 'PAUSED'],
       ['finished', 'FINISHED'],
@@ -265,82 +236,6 @@ describe('mapLiveMatchFromSupabase', () => {
   });
 });
 
-describe('mapLiveMatchToSupabase', () => {
-  it('maps status to DB format', () => {
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'running', score_a: 2, score_b: 1 }),
-      [],
-      new Map()
-    );
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.match_status).toBe('running');
-    expect(matchUpdate.score_a).toBe(2);
-    expect(matchUpdate.score_b).toBe(1);
-    expect(matchUpdate.updated_at).toBeDefined();
-  });
-
-  it('clears live_state when FINISHED', () => {
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'finished' }),
-      [],
-      new Map()
-    );
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.live_state).toBeNull();
-  });
-
-  it('preserves live_state when not finished', () => {
-    const matchRow = createMatchRow({
-      match_status: 'running',
-      live_state: { elapsedSeconds: 120, durationSeconds: 600 },
-    });
-    const liveMatch = mapLiveMatchFromSupabase(matchRow, [], new Map());
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.live_state).not.toBeNull();
-    expect(matchUpdate.live_state?.elapsedSeconds).toBe(120);
-    expect(matchUpdate.live_state?.durationSeconds).toBe(600);
-  });
-
-  it('filters new events not in existingEventIds', () => {
-    const events = [
-      createEventRow({ id: 'old-event', timestamp_seconds: 60 }),
-      createEventRow({ id: 'new-event', timestamp_seconds: 120 }),
-    ];
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'running' }),
-      events,
-      new Map()
-    );
-    const existingIds = new Set(['old-event']);
-    const { newEvents } = mapLiveMatchToSupabase(liveMatch, existingIds);
-
-    expect(newEvents).toHaveLength(1);
-    expect(newEvents[0].id).toBe('new-event');
-  });
-
-  it('returns all events as new when no existingEventIds', () => {
-    const events = [
-      createEventRow({ id: 'e1', timestamp_seconds: 60 }),
-      createEventRow({ id: 'e2', timestamp_seconds: 120 }),
-    ];
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'running' }),
-      events,
-      new Map()
-    );
-    const { newEvents } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(newEvents).toHaveLength(2);
-  });
-});
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
 describe('isMatchActive', () => {
   it('returns true for running match', () => {
     expect(isMatchActive(createMatchRow({ match_status: 'running' }))).toBe(true);
@@ -364,11 +259,5 @@ describe('isMatchActive', () => {
       live_state: { elapsedSeconds: 0 },
     });
     expect(isMatchActive(row)).toBe(true);
-  });
-});
-
-describe('clearLiveState', () => {
-  it('returns object with null live_state', () => {
-    expect(clearLiveState()).toEqual({ live_state: null });
   });
 });

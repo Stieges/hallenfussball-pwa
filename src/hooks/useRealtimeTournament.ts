@@ -18,6 +18,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { realtimeService, type RealtimeConnectionStatus, type RealtimePayload } from '../core/realtime';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { trackRealtimeChannelStatus, tournamentChannelStatusKey } from './realtimeChannelStatus';
+import type { RealtimeChannelStatus } from '../core/repositories/SupabaseLiveMatchRepository';
+
+/** A-08f-F: Verbindungsstatus des Turnier-Kanals -> Kanal-Status (connecting/paused = unbekannt, nicht gemeldet). */
+const CHANNEL_STATUS_BY_CONNECTION: Partial<Record<RealtimeConnectionStatus, RealtimeChannelStatus>> = {
+  connected: 'SUBSCRIBED',
+  disconnected: 'CLOSED',
+  error: 'CHANNEL_ERROR',
+};
 
 export interface UseRealtimeTournamentOptions {
   /** Enable/disable the subscription (default: true) */
@@ -25,9 +34,6 @@ export interface UseRealtimeTournamentOptions {
 
   /** Callback when any tournament data changes */
   onUpdate?: (payload: RealtimePayload) => void;
-
-  /** Callback for tournament table changes specifically */
-  onTournamentChange?: (payload: RealtimePayload) => void;
 
   /** Callback for team changes */
   onTeamChange?: (payload: RealtimePayload) => void;
@@ -37,6 +43,9 @@ export interface UseRealtimeTournamentOptions {
 
   /** Callback for match event changes */
   onMatchEventChange?: (payload: RealtimePayload) => void;
+
+  /** Callback when a group completion, a follow-up notice or a clarification changes (GA4 A-13b-C) */
+  onBracketChange?: (payload: RealtimePayload) => void;
 
   /** Callback when connection status changes */
   onStatusChange?: (status: RealtimeConnectionStatus) => void;
@@ -81,10 +90,10 @@ export function useRealtimeTournament(
   const {
     enabled = true,
     onUpdate,
-    onTournamentChange,
     onTeamChange,
     onMatchChange,
     onMatchEventChange,
+    onBracketChange,
     onStatusChange,
     onError,
   } = options;
@@ -95,10 +104,10 @@ export function useRealtimeTournament(
   // Use refs for callbacks to avoid re-subscriptions on callback changes
   const callbacksRef = useRef({
     onUpdate,
-    onTournamentChange,
     onTeamChange,
     onMatchChange,
     onMatchEventChange,
+    onBracketChange,
     onStatusChange,
     onError,
   });
@@ -107,14 +116,14 @@ export function useRealtimeTournament(
   useEffect(() => {
     callbacksRef.current = {
       onUpdate,
-      onTournamentChange,
       onTeamChange,
       onMatchChange,
       onMatchEventChange,
+      onBracketChange,
       onStatusChange,
       onError,
     };
-  }, [onUpdate, onTournamentChange, onTeamChange, onMatchChange, onMatchEventChange, onStatusChange, onError]);
+  }, [onUpdate, onTeamChange, onMatchChange, onMatchEventChange, onBracketChange, onStatusChange, onError]);
 
   // Subscribe/unsubscribe effect
   useEffect(() => {
@@ -128,11 +137,6 @@ export function useRealtimeTournament(
     }
 
     // Create wrapper callbacks that call both specific and generic handlers
-    const handleTournamentChange = (payload: RealtimePayload) => {
-      callbacksRef.current.onTournamentChange?.(payload);
-      callbacksRef.current.onUpdate?.(payload);
-    };
-
     const handleTeamChange = (payload: RealtimePayload) => {
       callbacksRef.current.onTeamChange?.(payload);
       callbacksRef.current.onUpdate?.(payload);
@@ -148,12 +152,20 @@ export function useRealtimeTournament(
       callbacksRef.current.onUpdate?.(payload);
     };
 
+    const handleBracketChange = (payload: RealtimePayload) => {
+      callbacksRef.current.onBracketChange?.(payload);
+      callbacksRef.current.onUpdate?.(payload);
+    };
+
     const handleError = (error: Error) => {
       setLastError(error);
       callbacksRef.current.onError?.(error);
     };
 
+    const tracker = trackRealtimeChannelStatus(tournamentChannelStatusKey(tournamentId));
     const handleStatusChange = (newStatus: RealtimeConnectionStatus) => {
+      const channelStatus = CHANNEL_STATUS_BY_CONNECTION[newStatus];
+      if (channelStatus) { tracker.onStatusChange(channelStatus); }
       setStatus(newStatus);
       if (newStatus !== 'error') {
         setLastError(null);
@@ -169,10 +181,10 @@ export function useRealtimeTournament(
 
     realtimeService.subscribeTournament({
       tournamentId,
-      onTournamentChange: handleTournamentChange,
       onTeamChange: handleTeamChange,
       onMatchChange: handleMatchChange,
       onMatchEventChange: handleMatchEventChange,
+      onBracketChange: handleBracketChange,
       onError: handleError,
       onStatusChange: handleStatusChange,
     });
@@ -184,6 +196,7 @@ export function useRealtimeTournament(
         console.log('[useRealtimeTournament] Unsubscribing from:', tournamentId);
       }
       realtimeService.unsubscribeTournament(tournamentId);
+      tracker.stop();
     };
   }, [tournamentId, enabled]);
 

@@ -56,6 +56,9 @@ export interface UseMonitorsResult {
 
   /** Display-URL für einen Monitor generieren */
   getDisplayUrl: (monitorId: string) => string;
+
+  /** Fertige Monitore (z. B. übernommen, B-22) in einem Speichervorgang anhängen */
+  addMonitors: (newMonitors: TournamentMonitor[]) => Promise<void>;
 }
 
 export interface CreateMonitorOptions {
@@ -71,7 +74,7 @@ export interface MonitorUpdate {
   transition: TransitionType;
   transitionDuration: number;
   performanceMode: PerformanceMode;
-  overscanPx?: number;
+  overscanPercent?: number;
   templateId?: string;
   templateVariables?: Record<string, string>;
 }
@@ -207,7 +210,7 @@ export function useMonitors(
         transition: updates.transition ?? existingMonitor.transition,
         transitionDuration: updates.transitionDuration ?? existingMonitor.transitionDuration,
         performanceMode: updates.performanceMode ?? existingMonitor.performanceMode,
-        overscanPx: updates.overscanPx ?? existingMonitor.overscanPx,
+        overscanPercent: updates.overscanPercent ?? existingMonitor.overscanPercent,
         templateId: updates.templateId ?? existingMonitor.templateId,
         templateVariables: updates.templateVariables ?? existingMonitor.templateVariables,
         updatedAt: now,
@@ -291,6 +294,28 @@ export function useMonitors(
 
       await saveTournament(updatedTournament);
       return duplicatedMonitor;
+    },
+    [tournament, monitors, saveTournament]
+  );
+
+  // Fertige Monitore anhängen (Übernehmen, B-22) – ändert keine bestehenden Monitore
+  const addMonitors = useCallback(
+    async (newMonitors: TournamentMonitor[]): Promise<void> => {
+      if (!tournament) {
+        throw new Error('Kein Turnier ausgewählt');
+      }
+      if (newMonitors.length === 0) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const updatedTournament: Tournament = {
+        ...tournament,
+        monitors: [...monitors, ...newMonitors],
+        updatedAt: now,
+      };
+
+      await saveTournament(updatedTournament);
     },
     [tournament, monitors, saveTournament]
   );
@@ -511,6 +536,7 @@ export function useMonitors(
     removeSlide,
     reorderSlides,
     getDisplayUrl,
+    addMonitors,
   };
 }
 

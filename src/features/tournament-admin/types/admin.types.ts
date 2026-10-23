@@ -135,7 +135,6 @@ export interface ActivityLogFilter {
  * Dangerous actions requiring confirmation
  */
 export type DangerAction =
-  | 'regenerate_schedule'
   | 'reset_schedule'
   | 'end_tournament'
   | 'archive_tournament'

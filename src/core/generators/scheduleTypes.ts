@@ -3,6 +3,7 @@
  */
 
 import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField, RuntimeMatchEvent } from '../../types/tournament'
+import type { MatchSlot, SlotSource } from '../models/schemas/MatchSlotSchema'
 
 // ============================================================================
 // SCHEDULED MATCH
@@ -21,10 +22,21 @@ export interface ScheduledMatch {
   homeTeam: string
   /** Auswärts-Team Name (übersetzt für Anzeige) */
   awayTeam: string
-  /** Original Team-ID oder Platzhalter (z.B. "group-a-1st" für Playoffs) */
+  /**
+   * ÜBERGANG (Übergangsfeld `teamA` am Spiel seit A-36a gelöscht): Team-ID oder `'TBD'` für eine offene Seite,
+   * abgeleitet aus `slotA` (`transitionalTeamRef`). Gelesen nur von `LiveViewScreen` (Spur B); neue Leser nutzen `slotA`.
+   */
   originalTeamA: string
-  /** Original Team-ID oder Platzhalter (z.B. "group-b-2nd" für Playoffs) */
+  /** ÜBERGANG, siehe `originalTeamA` (aus `slotB`). */
   originalTeamB: string
+  /** Spielseite Heim als Slot (A-01), unverändert vom Spiel durchgereicht (A-02) */
+  slotA: MatchSlot
+  /** Spielseite Gast als Slot (A-01), unverändert vom Spiel durchgereicht (A-02) */
+  slotB: MatchSlot
+  /** A-36a: Herkunft des Heim-Platzes, unverändert vom Spiel durchgereicht (nur Finalrunde) */
+  originA?: SlotSource
+  /** A-36a: Herkunft des Gast-Platzes, siehe `originA` */
+  originB?: SlotSource
   /** Gruppe oder undefined für Finalspiele */
   group?: string
   /** Phase: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final' */
@@ -77,6 +89,27 @@ export interface SchedulePhase {
 // GENERATED SCHEDULE
 // ============================================================================
 
+/**
+ * Meldung des Generators zum Spielplan (Rückgabe-Feld; die Anzeige baut der Assistent).
+ * - `dfbGapShortfall` (@W4-039): zwischen zwei Spielen von `teamId` liegen weniger Spiele als im DFB-Schlüssel;
+ *   `matchNumber` = Spielnummer des späteren Spiels.
+ * - `hostOpeningCosts` (@W4-045): die Mannschaft des Veranstalters eröffnet, das kostet etwas. Genannt wird nur, was
+ *   wirklich schlechter wird: `duration` (zusätzliche Zeitfenster, Minuten, neues Ende der Gruppenphase; das Ende des
+ *   ganzen Turniers steht in `GeneratedSchedule.endTime`), `longestPause` (Zeitfenster zwischen zwei eigenen Spielen,
+ *   auf einem Feld = Spiele), `playedDiff` (größter Unterschied gespielter Spiele).
+ * - `hostOpeningNotPossible`: Restfall ohne Szenario – kein Tausch hält die harte Mindestpause; Plan unverändert.
+ */
+export type ScheduleNotice =
+  | { kind: 'dfbGapShortfall'; teamId: string; matchNumber: number; gamesBetween: number; required: number }
+  | {
+      kind: 'hostOpeningCosts'
+      teamId: string
+      duration?: { slotsBefore: number; slotsAfter: number; extraMinutes: number; groupPhaseEndAfter?: Date }
+      longestPause?: { before: number; after: number }
+      playedDiff?: { before: number; after: number }
+    }
+  | { kind: 'hostOpeningNotPossible'; teamId: string }
+
 export interface GeneratedSchedule {
   /** Turnier-Metadaten */
   tournament: {
@@ -121,4 +154,10 @@ export interface GeneratedSchedule {
 
   /** Schiedsrichter-Konfiguration */
   refereeConfig?: RefereeConfig
+
+  /** Meldungen des Generators zur Gruppenphase (@W4-039); leer, wenn es nichts zu melden gibt. */
+  scheduleNotices: ScheduleNotice[]
+
+  /** Die Gruppenphase ist ein Runden-Spielplan (@W4-041: nur dann ist die Eröffnungswahl wirksam). */
+  roundsPlan: boolean
 }

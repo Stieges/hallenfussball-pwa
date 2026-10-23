@@ -24,9 +24,13 @@ import {
 } from '@dnd-kit/sortable';
 import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
-import { RefereeConfig, Tournament, RuntimeMatchEvent } from '../../types/tournament';
+import { RefereeConfig, RuntimeMatchEvent } from '../../types/tournament';
+import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { getTeamForDisplay } from '../../utils/teamHelpers';
+import { buildSideContext, matchHeading, matchViewOf, sideDisplay, sideName } from './matchSides';
+import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitAction';
+import { cardStatusOf, resultFigures } from './matchResult';
+import type { SpectatorClock } from '../../core/view';
 import {
   MatchCard,
   type MatchCardStatus,
@@ -34,7 +38,7 @@ import {
 } from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand, SummaryExpand } from './MatchExpand';
 import { MatchSummary } from './MatchSummary';
-import { useMatchConflictsFromTournament } from '../../features/schedule-editor/hooks/useMatchConflicts';
+import { useMatchConflictsFromTournament, type ConflictSource } from '../../features/schedule-editor/hooks/useMatchConflicts';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
 import { SortableMobileCard } from './SortableMobileCard';
 import { SortableDesktopCard } from './SortableDesktopCard';
@@ -59,19 +63,28 @@ interface GroupStageScheduleProps {
   editingSchedule?: boolean;
   /** Pending changes during edit mode (not yet saved) */
   pendingChanges?: PendingChanges;
-  finishedMatches?: Set<string>;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
-  /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
-  runningMatchIds?: Set<string>;
-  /** Tournament data for group name resolution */
-  tournament?: Tournament;
+  /** Gespielte Sekunden eines laufenden Spiels (Kopfzeile der Karte, @OB-064); ohne Angabe steht nur „läuft“ */
+  /** Restzeit eines laufenden Spiels (`useSpectatorClocks`, @ZM-162); ohne Angabe keine Uhr */
+  clockOf?: (matchId: string) => SpectatorClock | null;
+  /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
+  tournament?: ScheduleSource;
+  /**
+   * Turnierdaten für die Konflikterkennung im Bearbeitungsmodus. Ohne Angabe gibt es keine Konflikt-Markierung
+   * (ScheduleDisplay kennt weder Spieldauer noch Pause und gibt sie nicht an).
+   */
+  conflictSource?: ConflictSource;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
-  onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
+  /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ (nur Turnierleitung); ohne Angabe keine Taste */
+  forfeit?: MatchForfeitActions;
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
+  /** Spiel beenden (@FU-112): die Turnierleitung darf ein laufendes Spiel im Spielplan beenden (sonst nicht angeboten, @FU-113). */
+  canEndRunning?: boolean;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -86,14 +99,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   editable: _editable = false,
   editingSchedule = false,
   pendingChanges,
-  finishedMatches,
   correctionMatchId: _correctionMatchId,
   onStartCorrection: _onStartCorrection,
-  runningMatchIds,
+  clockOf,
   tournament,
+  conflictSource,
   onMatchSwap,
   onNavigateToCockpit,
+  forfeit,
   showTitle = true,
+  canEndRunning = false,
 }) => {
   const { t } = useTranslation('tournament');
   // DnD State
@@ -150,8 +165,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
-      // Check if click is outside any MatchCard
-      const clickedCard = target.closest('[data-match-card]');
+      // Check if click is outside any MatchCard. Der Pfad steht beim Auslösen fest: Hat React den angeklickten Knopf
+      // beim Umschalten schon aus der Seite genommen (z. B. „Spiel beenden und Ergebnis eintragen“), findet
+      // `closest` am abgetrennten Knoten keine Karte mehr (@FU-112).
+      const clickedCard = e.composedPath().some((n) => n instanceof Element && n.hasAttribute('data-match-card'))
+        || target.closest('[data-match-card]');
       if (!clickedCard) {
         setExpandedMatchId(null);
         setExpandType(null);
@@ -173,7 +191,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Conflict detection for edit mode
   const { getMatchConflicts } = useMatchConflictsFromTournament(
-    tournament ?? null,
+    conflictSource ?? null,
     editingSchedule // Only detect when in edit mode
   );
 
@@ -201,18 +219,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const sourceMatchId = active.id as string;
     const targetMatchId = over.id as string;
 
-    // Immediately update visual order using arrayMove
+    // Call the swap handler to persist change; `false` = abgelehnt (@ZP-093), dann bleibt die Anzeige stehen
+    if (onMatchSwap?.(sourceMatchId, targetMatchId) === false) { return; }
+
+    // Update visual order using arrayMove
     setDisplayOrder(prevOrder => {
       const oldIndex = prevOrder.indexOf(sourceMatchId);
       const newIndex = prevOrder.indexOf(targetMatchId);
       if (oldIndex === -1 || newIndex === -1) { return prevOrder; }
       return arrayMove(prevOrder, oldIndex, newIndex);
     });
-
-    // Call the swap handler to persist change
-    if (onMatchSwap) {
-      onMatchSwap(sourceMatchId, targetMatchId);
-    }
   };
 
   // ============================================================================
@@ -222,19 +238,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   /**
    * Convert match state to MatchCardStatus
    */
-  const getMatchStatus = (match: ScheduledMatch): MatchCardStatus => {
-    if (runningMatchIds?.has(match.id)) {
-      return 'running';
-    }
-    if (finishedMatches?.has(match.id)) {
-      return 'finished';
-    }
-    // Check if match has a score (started but paused would still show as finished)
-    if (match.scoreA !== undefined && match.scoreB !== undefined) {
-      return 'finished';
-    }
-    return 'scheduled';
-  };
+  const view = tournament?.view;
+  const getMatchStatus = useCallback(
+    (match: ScheduledMatch): MatchCardStatus => cardStatusOf(view?.byId.get(match.id)),
+    [view],
+  );
 
   /*
    * Handle card body click - opens QuickScore expand for non-live matches
@@ -313,11 +321,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         setExpandType('summary');
         break;
       default:
-        // Fallback: If match has scores, treat as finished and show summary
-        if (match.scoreA !== undefined && match.scoreB !== undefined) {
-          setExpandedMatchId(matchId);
-          setExpandType('summary');
-        }
+        // Ausgefallen: kein Ergebnis, nichts zu öffnen
         break;
     }
   };
@@ -330,26 +334,24 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }
 
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: finished if in Set OR has scores
-    const isFinished = finishedMatches?.has(matchId) || (match.scoreA !== undefined && match.scoreB !== undefined);
+    const isFinished = getMatchStatus(match) === 'finished';
 
     if (isFinished) {
-      // If finished, redirect to correction flow logic
-      // We can't just apply the score because it's locked.
-      // We should close the quick expand and open correction flow.
+      // Beendet: nie still verwerfen (C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL, @EK-063). Der Korrektur-Weg mit Grund ist
+      // entweder der übergebene Handler (Korrektur-Dialog) oder die Schnelleingabe selbst: `onScoreChange` fragt bei
+      // einem beendeten Spiel den Grund ab (@EK-004), Helfer bekommen den Hinweis „nur Turnierleitung“ (@HE-042).
       setExpandedMatchId(null);
       setExpandType(null);
-
-      // Open correction dialog logic
       if (_onStartCorrection) {
         _onStartCorrection(matchId);
-      } else {
-        const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
-        const correctionHandler = matchWithHandler.onStartCorrection;
-        if (typeof correctionHandler === 'function') {
-          correctionHandler(matchId);
-        }
+        return;
       }
+      const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
+      if (typeof matchWithHandler.onStartCorrection === 'function') {
+        matchWithHandler.onStartCorrection(matchId);
+        return;
+      }
+      onScoreChange?.(matchId, homeScore, awayScore);
       return;
     }
 
@@ -358,7 +360,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     }
     setExpandedMatchId(null);
     setExpandType(null);
-  }, [matches, finishedMatches, onScoreChange, _onStartCorrection]);
+  }, [matches, getMatchStatus, onScoreChange, _onStartCorrection]);
 
   /**
    * Handle expand cancel/close
@@ -381,6 +383,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     onNavigateToCockpit?.(matchId);
   }, [onNavigateToCockpit]);
 
+  // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext
+  const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
+
   /**
    * Unified render function for expand content (used by both mobile and desktop)
    */
@@ -389,8 +394,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       return null;
     }
 
-    const homeTeam = getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam);
-    const awayTeam = getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam);
+    const homeTeam = sideDisplay(match, 'A', sides);
+    const awayTeam = sideDisplay(match, 'B', sides);
+    const forfeitAction = <MatchForfeitAction matchId={match.id} viewStatus={matchViewOf(sides, match.id)?.status} forfeit={forfeit} />;
 
     switch (expandType) {
       case 'quick':
@@ -402,12 +408,12 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayScore={match.scoreB ?? 0}
             onSave={(home, away) => handleExpandSave(match.id, home, away)}
             onCancel={handleExpandClose}
+            extraAction={forfeitAction}
           />
         );
       case 'live': {
         const liveMatch = liveMatches.get(match.id);
-        const liveEvents = liveMatch?.events;
-        const sourceEvents = match.events ?? liveEvents;
+        const sourceEvents = match.events ?? liveMatch?.events;
 
         // Flatten events for LiveInfoExpand (expects params at top level, not in payload)
         const events = sourceEvents?.map((e: RuntimeMatchEvent) => ({
@@ -422,9 +428,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayTeam={awayTeam}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
-            elapsedFormatted={match.time || '00:00'}
+            clock={clockOf?.(match.id) ?? null}
+            badge={matchViewOf(sides, match.id)?.badge}
             events={events}
             onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
+            onEndAndEnter={_editable && canEndRunning && onScoreChange ? () => setExpandType('quick') : undefined}
             onClose={handleExpandClose}
           />
         );
@@ -439,6 +447,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             field={match.field}
             onConfirm={() => handleNavigateToCockpit(match.id)}
             onCancel={handleExpandClose}
+            extraAction={forfeitAction}
           />
         );
       case 'summary': {
@@ -460,34 +469,31 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayTeamName={awayTeam.name}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
-            homeTeamId={match.originalTeamA}
-            awayTeamId={match.originalTeamB}
+            homeTeamId={homeTeam.id}
+            awayTeamId={awayTeam.id}
             events={events} // Pass events
             onEditScore={_editable ? () => {
-              setExpandedMatchId(null);
-              setExpandType(null);
-              // Fallback correction or emit event?
-              // The old logic was using Quick expand or Correction Dialog.
-              // User wants to see result, then events, then maybe correct?
-              // Let's call onStartCorrection if available.
-              if (_onStartCorrection) {
-                _onStartCorrection(match.id);
+              // Ohne Korrektur-Handler öffnet „Ergebnis ändern“ die Schnelleingabe, deren Speichern den Grund abfragt
+              // (C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL, @EK-063) -- nie still schließen.
+              const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
+              const correctionHandler = _onStartCorrection ?? matchWithHandler.onStartCorrection;
+              if (typeof correctionHandler === 'function') {
+                setExpandedMatchId(null);
+                setExpandType(null);
+                correctionHandler(match.id);
               } else {
-                const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
-                const correctionHandler = matchWithHandler.onStartCorrection;
-                if (typeof correctionHandler === 'function') {
-                  correctionHandler(match.id);
-                }
+                setExpandType('quick');
               }
             } : undefined}
             onClose={handleExpandClose}
+            extraAction={forfeitAction}
           />
         );
       }
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, tournament?.teams, liveMatches, _onStartCorrection, _editable]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable, canEndRunning, onScoreChange, forfeit]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -588,11 +594,13 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             status={status}
             isExpanded={isExpanded}
             tournament={tournament}
+            sideContext={sides}
             showGroupLabel={showGroupLabel}
             onCardClick={handleCardClick}
             onCircleClick={handleCircleClick}
             renderExpandContent={renderExpandContent}
             hasEvents={hasEvents}
+            clock={clockOf?.(match.id) ?? null}
           />
         );
       })}
@@ -630,6 +638,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             editingSchedule={editingSchedule}
             canSwap={!!onMatchSwap}
             tournament={tournament}
+            sideContext={sides}
             showGroupLabel={showGroupLabel}
             showReferees={showReferees}
             refereeOptions={refereeOptions}
@@ -690,9 +699,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   {activeMatch.time}
                 </span>
                 <span style={{ fontWeight: cssVars.fontWeights.bold, flex: 1 }}>
-                  {activeMatch.homeTeam}
+                  {sideName(activeMatch, 'A', sides)}
                   <span style={{ color: cssVars.colors.textMuted, padding: `0 ${cssVars.spacing.sm}` }}>vs</span>
-                  {activeMatch.awayTeam}
+                  {sideName(activeMatch, 'B', sides)}
                 </span>
                 {hasGroups && (
                   <span style={{
@@ -760,6 +769,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     editingSchedule={editingSchedule}
                     canSwap={!!onMatchSwap}
                     tournament={tournament}
+                    sideContext={sides}
                     showGroupLabel={showGroupLabel}
                     showReferees={showReferees}
                     refereeOptions={editableRefereeOptions}
@@ -803,7 +813,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   {activeMatch.time}
                 </span>
                 <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1, fontSize: cssVars.fontSizes.sm }}>
-                  {activeMatch.homeTeam} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {activeMatch.awayTeam}
+                  {sideName(activeMatch, 'A', sides)} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {sideName(activeMatch, 'B', sides)}
                 </span>
               </div>
             )}
@@ -825,14 +835,15 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               matchNumber: match.matchNumber,
               scheduledTime: match.time,
               field: match.field,
-              group: match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
+              group: matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
               showGroupLabel,
-              homeTeam: getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam),
-              awayTeam: getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam),
-              homeScore: match.scoreA ?? 0,
-              awayScore: match.scoreB ?? 0,
+              homeTeam: sideDisplay(match, 'A', sides),
+              awayTeam: sideDisplay(match, 'B', sides),
+              result: resultFigures(matchViewOf(sides, match.id)?.score, status),
               status: status,
-              progress: 0,
+              viewStatus: matchViewOf(sides, match.id)?.status,
+              badge: matchViewOf(sides, match.id)?.badge,
+              clock: clockOf?.(match.id) ?? null,
             };
 
             return (
@@ -881,10 +892,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             }}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
-            homeTeamId={match.originalTeamA}
-            awayTeamId={match.originalTeamB}
-            homeTeamName={match.homeTeam}
-            awayTeamName={match.awayTeam}
+            homeTeamId={sideDisplay(match, 'A', sides).id}
+            awayTeamId={sideDisplay(match, 'B', sides).id}
+            homeTeamName={sideName(match, 'A', sides)}
+            awayTeamName={sideName(match, 'B', sides)}
             events={events}
             onEditScore={_editable ? () => {
               // Close summary and start correction flow

@@ -10,7 +10,12 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens'
 import { checkStorageHealth } from '../utils/storageCleanup';
 
-export const StorageWarningBanner: React.FC = () => {
+interface StorageWarningBannerProps {
+  /** Im Fluss statt fest am oberen Rand (Cockpit-Rahmen, @SL-140: verdeckt weder Kopf noch Leiste, die Meldung geht nicht verloren). */
+  imFluss?: boolean;
+}
+
+export const StorageWarningBanner: React.FC<StorageWarningBannerProps> = ({ imFluss = false }) => {
   const { t } = useTranslation('common');
   // Initialize warning from health check (runs once on mount)
   const [warning, setWarning] = useState<string | null>(() => {
@@ -38,14 +43,14 @@ export const StorageWarningBanner: React.FC = () => {
     return null;
   }
 
-  const bannerStyle: CSSProperties = {
+  const festerStil: CSSProperties = {
     position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     background: cssVars.colors.error,
-    color: 'white',
+    color: cssVars.colors.onError,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -54,6 +59,9 @@ export const StorageWarningBanner: React.FC = () => {
     fontSize: cssVars.fontSizes.sm,
     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
   };
+
+  // Im Rahmen: im Fluss statt fest, ohne Schatten
+  const bannerStyle: CSSProperties = imFluss ? { ...festerStil, position: 'static', flex: 'none', boxShadow: 'none' } : festerStil;
 
   const iconStyle: CSSProperties = {
     fontSize: '20px',

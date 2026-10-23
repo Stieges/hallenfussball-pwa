@@ -72,6 +72,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # A-09: der Ratchet vergleicht coverage-floors.json mit dem Hauptzweig (git show origin/main:...)
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -94,9 +97,42 @@ jobs:
       - name: Run Tests
         run: npm test -- --run --reporter=verbose
 
-      - name: Coverage report (non-blocking)
+      # Abschluss-Review (final-review.md, M7): der Kommentar in vitest.config.ts kündigt eine
+      # echte Untergrenze an ("schützt nur vor Regression unter das heute gemessene Niveau") --
+      # `continue-on-error: true` widersprach dem, der Schritt lief immer grün, egal was
+      # `test:coverage` (bzw. der darunterliegende `vitest run --coverage`, das die
+      # `coverage.thresholds` aus vitest.config.ts auswertet und bei Unterschreitung selbst mit
+      # Exit ≠ 0 endet) tatsächlich meldete. Lokal geprüft (final-fix-report.md, C1/I1/I2-Runde):
+      # Statements 43.08 %, Branches 35.42 %, Functions 35.63 %, Lines 43.98 % -- alle über den
+      # Schwellen (41/34/34/42), Exit 0.
+      # Nach-Review (final-rereview.md, I-N2): Ohne `shell:` nutzt GitHub `bash -e {0}`, also ohne
+      # `pipefail` -- der Exit-Code der Pipeline kam dann von `tail`, nicht von `test:coverage`,
+      # und der Schritt konnte nie rot werden (belegt per `bash -e -c 'false | tee … | tail -1'`
+      # → 0, mit `-o pipefail` → 1). `shell: bash` lässt GitHub den Schritt mit
+      # `bash --noprofile --norc -eo pipefail {0}` ausführen, damit macht ein Fehlschlag von
+      # `test:coverage` den Schritt trotz `tee`/`tail` tatsächlich rot.
+      - name: Coverage report (blockierend, Untergrenze aus vitest.config.ts)
+        shell: bash
         run: npm run test:coverage -- --reporter=dot 2>&1 | tee coverage-summary.txt | tail -40
-        continue-on-error: true
+
+      # A-09 (@TA-002..@TA-005): Untergrenzen je Bereich + Ratchet gegen den Hauptzweig.
+      # Wird rot, wenn ein Bereich unter seiner Untergrenze liegt oder eine Untergrenze
+      # gegenueber origin/main gesenkt wurde.
+      - name: Coverage-Untergrenzen je Bereich und Ratchet (blockierend)
+        shell: bash
+        run: node scripts/coverage-report.mjs --base origin/main
+
+      # A-09 (@TA-006..@TA-008) + TA-CI (@TA-010): Szenario-Abdeckung blockierend. Rot bei Abweichung von der
+      # Soll-Zahl, mehr als 15 Nachweisen aus der Generalprobe oder wenn die Zahl der MVP-Kennungen mit
+      # regulaerem Test (kein skip/todo/fails, `:teil` zaehlt nicht) unter den GEMESSENEN Stand von origin/main
+      # oder unter tests/meta/szenario-floor.json faellt. PRs gegen develop vergleichen ebenfalls mit main.
+      # TM-1 (@TA-013..@TA-015): im selben Schritt: erwartet rote Tests (it.fails/test.fail) ohne Verweis auf Befund oder
+      # Defekt duerfen nicht mehr werden als auf origin/main; jeder Verweis in einem Testnamen muss in
+      # tests/meta/befund-kennungen.json stehen (Tippfehler sind sofort rot).
+      # Job-Summary ueber $GITHUB_STEP_SUMMARY (setzt das Skript selbst).
+      - name: Szenario-Abdeckung (blockierend, Ratchet gegen origin/main)
+        shell: bash
+        run: npm run test:scenarios -- --base origin/main 2>&1 | tee scenario-bericht.txt
 
       - name: Upload coverage artifact
         if: always()
@@ -106,17 +142,34 @@ jobs:
           path: |
             coverage/
             coverage-summary.txt
+            scenario-bericht.txt
           retention-days: 14
 
   e2e-tests:
     name: E2E Tests (${{ matrix.project }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    # desktop-webkit läuft im offiziellen Playwright-Container (Muster wie visual.yml): WebKit samt
+    # Systempaketen ist im Image bereits enthalten. Die Installation auf dem Runner (apt-get install
+    # der ~180 WebKit-Abhängigkeiten) lief wiederholt in den Timeout. Die Chromium-Projekte bleiben
+    # unverändert auf dem Runner, deshalb ist `container` nur für desktop-webkit gesetzt (null = kein Container).
+    container: ${{ matrix.container }}
+    env:
+      # Nur der Browser, den das Projekt braucht (siehe playwright.config.ts): desktop-webkit -> WebKit, Rest -> Chromium
+      PW_BROWSER: ${{ matrix.project == 'desktop-webkit' && 'webkit' || 'chromium' }}
     strategy:
       fail-fast: false
       matrix:
         # Breakpoint-basierte Viewports (Primary)
-        project: [mobile-sm, mobile-md, tablet-portrait, desktop]
+        # desktop-webkit (B-17 Fixrunde 2): Desktop Safari, läuft nur die Monitor-Spec (testMatch in playwright.config.ts)
+        # Image-Version = @playwright/test in package-lock.json (Pin-Check-Schritt unten prüft das).
+        include:
+          - project: mobile-sm
+          - project: mobile-md
+          - project: tablet-portrait
+          - project: desktop
+          - project: desktop-webkit
+            container: mcr.microsoft.com/playwright:v1.63.0-noble
 
     steps:
       - name: Checkout
@@ -131,8 +184,59 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+      - name: Playwright-Version ermitteln
+        id: pw-version
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")" >> "$GITHUB_OUTPUT"
+
+      # Container-Lauf (desktop-webkit): Image-Version muss exakt zur installierten @playwright/test-Version passen.
+      - name: Pin-Check — Container-Image passt zur installierten @playwright/test-Version
+        if: env.PW_BROWSER == 'webkit'
+        run: |
+          INSTALLED="$(npx playwright --version | awk '{print $2}')"
+          IMAGE_VERSION="$(echo "${{ matrix.container }}" | sed -E 's#.*:v([0-9.]+)-.*#\1#')"
+          echo "Installiert (@playwright/test): $INSTALLED — Container-Image: $IMAGE_VERSION"
+          if [ "$INSTALLED" != "$IMAGE_VERSION" ]; then
+            echo "::error::Container-Image passt nicht zu @playwright/test ($INSTALLED). matrix.container in .github/workflows/ci.yml anheben." >&2
+            exit 1
+          fi
+
+      - name: Playwright-Browser-Cache
+        if: env.PW_BROWSER != 'webkit'
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ env.ImageOS }}-${{ env.PW_BROWSER }}-${{ steps.pw-version.outputs.version }}
+
+      # Ursache des 20-Min-Hangs: apt-get haengt beim Paket-Download (Mirror) und haelt danach das dpkg-Lock.
+      # Daher: apt mit Timeout/Retries, Install mit Step-Timeout, vor der Wiederholung haengende apt-Prozesse beenden.
+      # Entfällt für desktop-webkit (Container bringt alle Systempakete und Browser mit).
+      - name: apt-Haertung (Download-Timeout und Retries)
+        if: env.PW_BROWSER != 'webkit'
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' | sudo tee /etc/apt/apt.conf.d/99ci-retries >/dev/null
+
+      - name: Install Playwright Browser
+        if: env.PW_BROWSER != 'webkit'
+        id: pw-install
+        continue-on-error: true
+        timeout-minutes: 6
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps "$PW_BROWSER"; else npx playwright install --with-deps "$PW_BROWSER"; fi
+
+      - name: Install Playwright Browser (Wiederholung)
+        if: env.PW_BROWSER != 'webkit' && steps.pw-install.outcome != 'success'
+        timeout-minutes: 8
+        env:
+          CACHE_HIT: ${{ steps.pw-cache.outputs.cache-hit }}
+        run: |
+          sudo pkill -KILL -x apt-get || true
+          sudo pkill -KILL -x dpkg || true
+          sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock
+          sudo dpkg --configure -a || true
+          if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps "$PW_BROWSER"; else npx playwright install --with-deps "$PW_BROWSER"; fi
 
       - name: Build for E2E tests
         run: npm run build
@@ -141,6 +245,12 @@ jobs:
         run: npx playwright test --project="${{ matrix.project }}"
         env:
           CI_E2E_USE_PREVIEW: 'true'
+
+      # Haertetest der visuellen Messung (scripts/visual-metrics, Skill visuelle-pruefung): braucht
+      # Chromium und baut die App selbst (ohne .env); einmal je CI-Lauf genuegt (Review B-17).
+      - name: Haertetest visuelle Messung
+        if: matrix.project == 'desktop'
+        run: npm run test:visual-metrics
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
@@ -170,6 +280,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Service-Worker-Precache pruefen
+        run: npm run test:sw-precache
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7

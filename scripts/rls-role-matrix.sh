@@ -131,6 +131,54 @@
 #                                                   # Follow-up aus task-R5b-report.md "Fixrunde
 #                                                   # 1", M3), sonst misst der Harness die R7-
 #                                                   # Lücken nicht.
+#   scripts/rls-role-matrix.sh --without-a11       # Alles ("nachher"), aber OHNE 20261110_001 (A-11:
+#                                                   # manageSchedule/manageScreens, Helfer ohne teams) --
+#                                                   # die A-11-Zeilen (scripts/rls-matrix.d/spur-a.sh)
+#                                                   # und die Vollmatrix-Zellen matches_update/teams_update/
+#                                                   # monitors_* muessen hier ROT sein (Gegenprobe, Exit 0).
+#                                                   # Laesst auch 20261110_002 (A-27) weg, das an _001 haengt.
+#   scripts/rls-role-matrix.sh --without-b14       # Alles ("nachher"), aber OHNE 20261117_104 (B-14: oeffentliche
+#                                                   # Daten nur ueber die Positivliste) -- die B-14-Zeilen
+#                                                   # (rls-matrix.d/spur-b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a27       # Alles ("nachher") mit A-11, aber OHNE 20261110_002 (A-27:
+#                                                   # Geraete-Rollen helper/screen, anonyme Sitzungen nur mit
+#                                                   # Geraete-Rolle, Guard, anon ohne Schreibrecht) -- die A-27-Zeilen
+#                                                   # (rls-matrix.d/spur-geraete-a27.sh) und die Vollmatrix-Zellen der
+#                                                   # anonymen Identitaeten muessen hier ROT sein (Gegenprobe, Exit 0).
+#                                                   # Laesst auch 20261110_003 (A-34) weg, das an _002 haengt.
+#   scripts/rls-role-matrix.sh --without-a34       # Alles ("nachher") mit A-11 und A-27, aber OHNE 20261110_003 (A-34:
+#                                                   # Steuer je Feld) -- die A-34-Zeilen (rls-matrix.d/spur-steuer-a34.sh)
+#                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-coadmin   # Alles ("nachher"), aber OHNE 20261110_004 (CA-2: teilen und
+#                                                   # Lebenszeichen lesen ueber tournamentSettings/manageScreens) --
+#                                                   # die CA-2-Zeilen (rls-matrix.d/coadmin.sh) muessen hier die alten
+#                                                   # Werte zeigen, also ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a25b      # Alles ("nachher"), aber OHNE 20261110_005 (A-25b: Nichtantritt-Wertung,
+#                                                   # forfeit_absent als Schutzspalte) -- die A-25b-Zeilen
+#                                                   # (rls-matrix.d/spur-wertung-a25.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-sb        # Alles ("nachher"), aber OHNE 20261110_009 (Spiel beenden im Spielplan)
+#                                                   # -- die Zeilen (rls-matrix.d/spur-x-spiel-beenden.sh) muessen hier
+#                                                   # ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a13bs     # Alles ("nachher"), aber OHNE 20261110_006 (A-13b-S: Gruppe abschliessen,
+#                                                   # Verlauf, Hinweise, Klaerungen) -- die A-13b-S-Zeilen
+#                                                   # (rls-matrix.d/spur-gruppe-a13b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a21as     # Alles ("nachher"), aber OHNE 20261113_003 (A-21a-S: Lebenszyklus und
+#                                                   # Abschluss-Sperre) -- die A-21a-Zeilen (rls-matrix.d/spur-lebenszyklus-a21a.sh
+#                                                   # und @LZ-023 in spur-a.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-a16       # Alles ("nachher"), aber OHNE 20261110_008 (A-16: Helfer-Beitritt per
+#                                                   # QR) -- die A-16-Zeilen (rls-matrix.d/spur-helfer-a16.sh) muessen
+#                                                   # hier ROT sein (Gegenprobe, Exit 0). Ohne A-34 (_003) entfaellt A-16
+#                                                   # ebenfalls (Fail-fast der Migration braucht field_control).
+#   scripts/rls-role-matrix.sh --without-b48b      # Alles ("nachher"), aber OHNE 20261113_101 (B-48b: Lebenszeichen mit
+#                                                   # Kennung als Text, Pruefung gegen config.monitors) -- die B-48b-Zeilen
+#                                                   # (rls-matrix.d/spur-b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#
+# A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
+# screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
+# claims_line()); alle anderen nur claim.sub -- ein fehlender Claim zaehlt als echtes Konto.
+#
+# A-11 (brief-A-11.md, R-A11-4): Vor dem L4-Gate werden alle scripts/rls-matrix.d/*.sh eingebunden
+# (source, gleiche Hilfsfunktionen; Abweichungen zaehlen in MISMATCHES). Je Spur eine Datei.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -141,16 +189,71 @@ POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # muss zur Live-Postgres-Version p
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
+
+# T1 (Testumgebung, task-T1-brief.md): "die Liste welche Dateien in welcher Reihenfolge darf es
+# nur EINMAL geben" — die Pfade unten werden nicht mehr fest verdrahtet, sondern aus der
+# gemeinsamen, nach dem Baseline-Marker sortierten Liste herausgesucht (dieselbe Quelle wie
+# scripts/db-drift-check.sh und scripts/local-db-apply.sh). Die Gruppierung/Toggle-Logik dieses
+# Skripts (WITH_HARDENING, WITH_R6, ...) bleibt eigenständig — das ist Testszenario, keine
+# Dateiliste.
+source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
+ALL_NEWER_MIGRATIONS_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
+ALL_NEWER_MIGRATIONS=()
+if [[ -n "$ALL_NEWER_MIGRATIONS_RAW" ]]; then
+  # bash 3.2 (macOS-Standard) kennt kein mapfile — portable while-read-Schleife.
+  while IFS= read -r line; do
+    ALL_NEWER_MIGRATIONS+=("$line")
+  done <<< "$ALL_NEWER_MIGRATIONS_RAW"
+fi
+
+find_migration() {
+  local prefix="$1" f
+  for f in "${ALL_NEWER_MIGRATIONS[@]}"; do
+    [[ "$(basename "$f")" == "$prefix"* ]] && { echo "$f"; return 0; }
+  done
+  echo "::error::Migration mit Präfix '$prefix' nicht in der Liste 'neuer als Baseline' gefunden." >&2
+  return 1
+}
+
 MIGRATION_FILES=(
-  "$MIGRATIONS_DIR/20260922_001_role_based_write_policies.sql"
-  "$MIGRATIONS_DIR/20260922_002_fix_match_event_version_trigger.sql"
+  "$(find_migration 20260922_001)"
+  "$(find_migration 20260922_002)"
 )
-HARDENING_FILE="$MIGRATIONS_DIR/20260922_003_protect_owner_and_roles.sql"
-PARENT_KEYS_FILE="$MIGRATIONS_DIR/20260923_001_protect_parent_keys.sql"
-MERGE_RESTRICT_FILE="$MIGRATIONS_DIR/20260923_002_restrict_merge_user_data.sql"
-PROFILES_FILE="$MIGRATIONS_DIR/20260924_001_restrict_profiles.sql"
-CENTRAL_PERMISSIONS_FILE="$MIGRATIONS_DIR/20260924_002_central_role_permissions.sql"
-DECLINED_EXPIRED_FILE="$MIGRATIONS_DIR/20260924_003_declined_and_expired.sql"
+HARDENING_FILE="$(find_migration 20260922_003)"
+PARENT_KEYS_FILE="$(find_migration 20260923_001)"
+MERGE_RESTRICT_FILE="$(find_migration 20260923_002)"
+PROFILES_FILE="$(find_migration 20260924_001)"
+CENTRAL_PERMISSIONS_FILE="$(find_migration 20260924_002)"
+DECLINED_EXPIRED_FILE="$(find_migration 20260924_003)"
+# T1: löst den früheren Behelf ab (siehe weiter unten) — der Trigger auf auth.users kommt jetzt
+# aus einer echten Migration, wird unconditional (wie der Behelf vorher) angewendet.
+AUTH_TRIGGER_FILE="$(find_migration 20260925_001)"
+# B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md): fügt u.a. die Berechtigung
+# 'leadMatches' zu role_permissions hinzu (INSERT ('co-admin','leadMatches')) und seedet
+# public.match_transitions aus src/core/match/matchTransitions.json. ANDERS als AUTH_TRIGGER_FILE
+# NICHT unconditional -- an WITH_R5 gebunden (siehe deren Anwendung weiter unten), weil diese
+# Migration selbst ein ALTER/INSERT auf role_permissions enthält und ohne CENTRAL_PERMISSIONS_FILE
+# (WITH_R5) scheitern würde (Review M3, task-B2-review.md). Bei WITH_R5=0 (z. B. --without-r5)
+# prüft dieser Lauf 20260928_001 also GAR NICHT -- die Gleichlauf-Prüfungen unten
+# (role_permissions/match_transitions vs. JSON) sind entsprechend ebenfalls an WITH_R5 gebunden.
+MATCH_EVENT_LOG_FILE="$(find_migration 20260928_001)"
+# C0b (.superpowers/sdd/2026-09-26-pr-c-ausgang/task-C0b-brief.md): 20261001_001 ergaenzt
+# public.match_transitions um die AMEND-Zeilen aus matchTransitions.json -- ohne sie weicht der
+# Gleichlauf-Check 7c4 unten seit C0a ab. Sie setzt die SQL-Rechenfunktion und den Schreibweg
+# voraus (Fail-fast), deshalb die ganze Kette 002 -> 003 -> 20261001, an WITH_R5 gebunden wie
+# MATCH_EVENT_LOG_FILE (dieselbe Abhaengigkeit ueber 20260928_001).
+MATCH_ENGINE_CHAIN_FILES=(
+  "$(find_migration 20260928_002)"
+  "$(find_migration 20260928_003)"
+  "$(find_migration 20261001_001)"
+  # A-05 (M2, Controller-Zusatz aus dem A-02-Review): Spielseiten als Slot. Ab hier braucht jedes eingefuegte
+  # Spiel je Seite Team-ID oder Herkunft (matches_slot_*_present) -- die Sonde matches_insert traegt sie.
+  "$(find_migration 20261003_001)"
+  # ZA-3 (brief-ZA-0-3.md): ergaenzt match_transitions (paused + GOAL/OWN_GOAL/FOUL, section_break +
+  # TIME_PENALTY, finished/REOPEN helper) -- ohne sie weicht der Gleichlauf-Check 7c4 ab.
+  "$(find_migration 20261028_001)"
+)
+MATCH_TRANSITIONS_FILE="$REPO_ROOT/src/core/match/matchTransitions.json"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
@@ -159,6 +262,28 @@ WITH_PARENT_KEYS=1
 WITH_R6=1
 WITH_R5=1
 WITH_R7=1
+# A-11: 20261110_001 im Modus "nachher" einspielen (Gegenprobe --without-a11 laesst sie weg).
+WITH_A11_REQ=1
+# A-27: 20261110_002 im Modus "nachher" einspielen (Gegenprobe --without-a27 laesst sie weg; braucht _001).
+WITH_A27_REQ=1
+# A-34: 20261110_003 im Modus "nachher" einspielen (Gegenprobe --without-a34 laesst sie weg; braucht _002).
+WITH_A34_REQ=1
+# CA-2: 20261110_004 im Modus "nachher" einspielen (Gegenprobe --without-coadmin laesst sie weg; braucht _001 und _002).
+WITH_CA2_REQ=1
+# A-25b: 20261110_005 im Modus "nachher" einspielen (Gegenprobe --without-a25b laesst sie weg; braucht _003 A-34).
+WITH_A25B_REQ=1
+# Spiel beenden: 20261110_009 im Modus "nachher" einspielen (Gegenprobe --without-sb laesst sie weg; braucht _005 A-25b).
+WITH_SB_REQ=1
+# A-13b-S: 20261110_006 im Modus "nachher" einspielen (Gegenprobe --without-a13bs laesst sie weg; braucht _005).
+WITH_A13BS_REQ=1
+# A-16: 20261110_008 im Modus "nachher" einspielen (Gegenprobe --without-a16 laesst sie weg; braucht _002 und _003).
+WITH_A16_REQ=1
+# A-21a-S: 20261113_003 im Modus "nachher" einspielen (Gegenprobe --without-a21as laesst sie weg; braucht _006).
+WITH_A21AS_REQ=1
+# B-14: 20261117_104 im Modus "nachher" einspielen (Gegenprobe --without-b14 laesst sie weg; braucht _002 und _004).
+WITH_B14_REQ=1
+# B-48b: 20261113_101 im Modus "nachher" einspielen (Gegenprobe --without-b48b laesst sie weg; Erwartungen setzen A-27 voraus).
+WITH_B48B_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -192,6 +317,50 @@ while [[ $# -gt 0 ]]; do
       WITH_R7=0
       shift
       ;;
+    --without-a11)
+      WITH_A11_REQ=0
+      shift
+      ;;
+    --without-a27)
+      WITH_A27_REQ=0
+      shift
+      ;;
+    --without-a34)
+      WITH_A34_REQ=0
+      shift
+      ;;
+    --without-coadmin)
+      WITH_CA2_REQ=0
+      shift
+      ;;
+    --without-a25b)
+      WITH_A25B_REQ=0
+      shift
+      ;;
+    --without-sb)
+      WITH_SB_REQ=0
+      shift
+      ;;
+    --without-a13bs)
+      WITH_A13BS_REQ=0
+      shift
+      ;;
+    --without-a21as)
+      WITH_A21AS_REQ=0
+      shift
+      ;;
+    --without-a16)
+      WITH_A16_REQ=0
+      shift
+      ;;
+    --without-b14)
+      WITH_B14_REQ=0
+      shift
+      ;;
+    --without-b48b)
+      WITH_B48B_REQ=0
+      shift
+      ;;
     -h|--help)
       grep '^#' "$0" | sed 's/^#//'
       exit 0
@@ -202,6 +371,17 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# A-05: Mit WITH_R5 ist 20261003_001 eingespielt -- jedes Spiel braucht dann je Seite Team-ID oder Herkunft
+# (matches_slot_*_present). Alle Fixture-/Sonden-Spiele tragen deshalb slot_a/b_source; ohne die Migration
+# fehlen die Spalten.
+if [[ "$WITH_R5" -eq 1 ]]; then
+  SLOT_COLS=",slot_a_source,slot_b_source"
+  SLOT_VALS=",'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":1}'::jsonb,'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":2}'::jsonb"
+else
+  SLOT_COLS=""
+  SLOT_VALS=""
+fi
 
 command -v jq >/dev/null 2>&1 || { echo "::error::jq wird benötigt." >&2; exit 1; }
 [[ -f "$ROLE_PERMISSIONS_FILE" ]] || { echo "::error::Rechtetabelle fehlt: $ROLE_PERMISSIONS_FILE" >&2; exit 1; }
@@ -215,6 +395,12 @@ done
 [[ -f "$PROFILES_FILE" ]] || { echo "::error::Migration fehlt: $PROFILES_FILE" >&2; exit 1; }
 [[ -f "$CENTRAL_PERMISSIONS_FILE" ]] || { echo "::error::Migration fehlt: $CENTRAL_PERMISSIONS_FILE" >&2; exit 1; }
 [[ -f "$DECLINED_EXPIRED_FILE" ]] || { echo "::error::Migration fehlt: $DECLINED_EXPIRED_FILE" >&2; exit 1; }
+[[ -f "$AUTH_TRIGGER_FILE" ]] || { echo "::error::Migration fehlt: $AUTH_TRIGGER_FILE" >&2; exit 1; }
+[[ -f "$MATCH_EVENT_LOG_FILE" ]] || { echo "::error::Migration fehlt: $MATCH_EVENT_LOG_FILE" >&2; exit 1; }
+for f in "${MATCH_ENGINE_CHAIN_FILES[@]}"; do
+  [[ -f "$f" ]] || { echo "::error::Migration fehlt: $f" >&2; exit 1; }
+done
+[[ -f "$MATCH_TRANSITIONS_FILE" ]] || { echo "::error::Übergangstabelle fehlt: $MATCH_TRANSITIONS_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -277,17 +463,17 @@ if [[ "$WITH_PARENT_KEYS" -eq 1 ]]; then
   psql_stdin < "$MERGE_RESTRICT_FILE"
 fi
 
-# R6-Testaufbau (siehe Kopfkommentar): Trigger auf auth.users existiert live, fehlt aber in
-# JEDEM aus der (public-schema-only) Baseline rekonstruierten Container — unabhängig von R6.
-# Ohne ihn bliebe public.profiles nach den Fixture-Inserts in auth.users unten leer, und jede
-# R6-Profile-Zeile würde etwas anderes messen als beabsichtigt (fehlende Zeile statt Rechte-
-# Verweigerung). Kein Teil einer committeten Migration, siehe Kopfkommentar. Läuft in JEDEM
-# Modus, unabhängig von WITH_R6 — die auth.users→profiles-Kopplung ist orthogonal zu R6.
-psql_stdin <<'SQL'
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-SQL
+# T1 (Testumgebung, task-T1-brief.md): Der frühere Testaufbau-Behelf hier ist ENTFALLEN.
+# 20260925_001_auth_user_created_trigger.sql legt den Trigger jetzt als echte, eingecheckte
+# Migration an (CREATE OR REPLACE TRIGGER — auf der Live-DB ein No-op, siehe Kopfkommentar der
+# Datei). Grund, warum er hier überhaupt fehlte: Die Baseline wurde mit
+# `--schema public` gedumpt und enthält deshalb keine Objekte im Schema "auth" — ohne diesen
+# Trigger bliebe public.profiles nach den Fixture-Inserts in auth.users unten leer, und jede
+# rollenabhängige profiles-Zeile würde etwas anderes messen als beabsichtigt (fehlende Zeile statt
+# Rechte-Verweigerung). Läuft in JEDEM Modus, unabhängig von allen WITH_*-Schaltern — die
+# auth.users→profiles-Kopplung ist orthogonal zu jeder einzelnen Migration.
+echo "Migration einspielen: $(basename "$AUTH_TRIGGER_FILE")" >&2
+psql_stdin < "$AUTH_TRIGGER_FILE"
 
 # R5b-Fixrunde 1 (M2): Der frühere Nachbau der Rolle ci_schema_reader hier ist ENTFALLEN --
 # 20260924_002_central_role_permissions.sql legt sie jetzt selbst bedingt an (Abschnitt 0 der
@@ -336,6 +522,21 @@ if [[ "$WITH_R7" -eq 1 ]]; then
   psql_stdin < "$DECLINED_EXPIRED_FILE"
 fi
 
+# B2 (siehe Kommentar an MATCH_EVENT_LOG_FILE oben): braucht has_tournament_permission()/
+# role_permissions aus CENTRAL_PERMISSIONS_FILE (WITH_R5) -- deshalb erst HIER, nach allen
+# R5/R6/R7-Bloecken, additiv und unabhaengig von WITH_R6/WITH_R7 (nur role_permissions-Zeile
+# 'leadMatches' braucht die Tabelle, match_transitions/app_config/match_events-Aenderungen sind
+# davon unabhaengig). Ohne WITH_R5 existiert public.role_permissions nicht -- die Migration
+# scheitert dann an ihrem eigenen ALTER/INSERT auf role_permissions, deshalb an WITH_R5 gebunden.
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo "Migration einspielen: $(basename "$MATCH_EVENT_LOG_FILE")" >&2
+  psql_stdin < "$MATCH_EVENT_LOG_FILE"
+  for f in "${MATCH_ENGINE_CHAIN_FILES[@]}"; do
+    echo "Migration einspielen: $(basename "$f")" >&2
+    psql_stdin < "$f"
+  done
+fi
+
 if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 ]]; then
   MODE_LABEL="nachher (Baseline + alle acht Migrationen)"
 elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 ]]; then
@@ -352,6 +553,192 @@ else
   MODE_LABEL="vorher/R1-Gegenprobe (nur Baseline)"
 fi
 
+# A-08h (20261028_002, Befund C-MATCH-EVENTS-DIREKTWEG, @FU-084/@FU-085): nur im Modus "nachher"
+# (alle Migrationen). Entfernt die drei Client-Schreib-Policies auf match_events und entzieht
+# anon/authenticated INSERT/UPDATE/DELETE/TRUNCATE. Danach schreiben Clients die Tabelle nie mehr.
+A08H_FILE="$REPO_ROOT/supabase/migrations/20261028_002_match_events_only_rpc.sql"
+WITH_A08H=0
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 ]]; then
+  WITH_A08H=1
+  echo "Migration einspielen: $(basename "$A08H_FILE")" >&2
+  psql_stdin < "$A08H_FILE"
+fi
+
+# A-10 (20261028_005, @EK-060, C-RECHTE-ERGEBNIS-DIREKT): Spalten-Schutz fuer alle Spiele, nur im Modus "nachher".
+# Setzt 20261001_001 (Spalten-Schutz, Engine-Kette) voraus -- die steckt in MATCH_ENGINE_CHAIN_FILES (WITH_R5).
+A10_FILE="$REPO_ROOT/supabase/migrations/20261028_005_guard_all_matches.sql"
+WITH_A10=0
+if [[ "$WITH_A08H" -eq 1 ]]; then
+  WITH_A10=1
+  echo "Migration einspielen: $(basename "$A10_FILE")" >&2
+  psql_stdin < "$A10_FILE"
+fi
+
+# A-11 (20261110_001, @ZP-041, @ZM-019, @HE-042): Rechte fuer den MVP -- matches_update_v4 (manageSchedule),
+# monitors_*_v3/select_v4 (manageScreens), Helfer ohne teams/correctEvents. Nur im Modus "nachher" (setzt A-10
+# voraus: reset_match_results, Fail-fast der Migration); --without-a11 ist die Gegenprobe.
+A11_FILE="$(find_migration 20261110_001)"
+WITH_A11=0
+if [[ "$WITH_A10" -eq 1 && "$WITH_A11_REQ" -eq 1 ]]; then
+  WITH_A11=1
+  echo "Migration einspielen: $(basename "$A11_FILE")" >&2
+  psql_stdin < "$A11_FILE"
+  MODE_LABEL="$MODE_LABEL + A-11 (20261110_001)"
+elif [[ "$WITH_A10" -eq 1 ]]; then
+  MODE_LABEL="vorher/A-11-Gegenprobe (alles ohne 20261110_001)"
+fi
+
+# A-27 (20261110_002, @HE-082, @AN-045, @ME-059, @HE-062, @HE-084, @ME-069): Geraete-Rollen, anonyme Sitzungen nur mit
+# Geraete-Rolle, Guard protect_device_roles, anon ohne Schreibrecht, Registrierungs-Hook. Setzt _001 voraus (Fail-fast
+# der Migration); --without-a27 ist die Gegenprobe.
+A27_FILE="$(find_migration 20261110_002)"
+WITH_A27=0
+if [[ "$WITH_A11" -eq 1 && "$WITH_A27_REQ" -eq 1 ]]; then
+  WITH_A27=1
+  echo "Migration einspielen: $(basename "$A27_FILE")" >&2
+  psql_stdin < "$A27_FILE"
+  MODE_LABEL="$MODE_LABEL + A-27 (20261110_002)"
+elif [[ "$WITH_A11" -eq 1 ]]; then
+  MODE_LABEL="vorher/A-27-Gegenprobe (alles mit A-11, ohne 20261110_002)"
+fi
+
+# A-34 (20261110_003, @FU-026, @FU-027, @FU-030, @HE-049): Steuer je Feld -- Tabelle field_control (RLS, keine Policy),
+# take_field_control/field_control_state, Pruefung in append_match_events. Setzt _002 voraus (Fail-fast der Migration);
+# --without-a34 ist die Gegenprobe.
+A34_FILE="$(find_migration 20261110_003)"
+WITH_A34=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_A34_REQ" -eq 1 ]]; then
+  WITH_A34=1
+  echo "Migration einspielen: $(basename "$A34_FILE")" >&2
+  psql_stdin < "$A34_FILE"
+  MODE_LABEL="$MODE_LABEL + A-34 (20261110_003)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="vorher/A-34-Gegenprobe (alles mit A-11 und A-27, ohne 20261110_003)"
+fi
+
+# CA-2 (20261110_004, @HE-085, @BM-070, @ME-070): make_tournament_public/_private, regenerate_share_code ueber
+# tournamentSettings, Lebenszeichen lesen ueber manageScreens. Setzt _001 und _002 voraus (Fail-fast der Migration),
+# nicht _003; --without-coadmin ist die Gegenprobe.
+CA2_FILE="$(find_migration 20261110_004)"
+WITH_CA2=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_CA2_REQ" -eq 1 ]]; then
+  WITH_CA2=1
+  echo "Migration einspielen: $(basename "$CA2_FILE")" >&2
+  psql_stdin < "$CA2_FILE"
+  MODE_LABEL="$MODE_LABEL + CA-2 (20261110_004)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, CA-2-Gegenprobe (ohne 20261110_004)"
+fi
+
+# A-25b (20261110_005, @W2A-022, @W2A-024, @W2A-026): Nichtantritt-Wertung -- matches.forfeit_absent (Schutzspalte),
+# Rechenfunktion und Schreibweg. Setzt A-34 (_003) voraus (Fail-fast der Migration); --without-a25b ist die Gegenprobe.
+A25B_FILE="$(find_migration 20261110_005)"
+WITH_A25B=0
+if [[ "$WITH_A34" -eq 1 && "$WITH_A25B_REQ" -eq 1 ]]; then
+  WITH_A25B=1
+  # Fail-fast von _005 verlangt die juengsten Engine-Fassungen A-25a (20261028_003) und SW (20261028_007), die diese
+  # Matrix sonst nicht einspielt. A-25a ersetzt dabei append_match_events durch die Fassung ohne Steuer -- deshalb danach
+  # A-34 (_003, idempotent) erneut; _005 baut darauf auf, der Endstand der ersetzten Funktionen ist wie in Produktion.
+  for a25b_pre in 20261028_003 20261028_007 20261110_003; do
+    echo "Migration einspielen (Voraussetzung A-25b): $(basename "$(find_migration "$a25b_pre")")" >&2
+    psql_stdin < "$(find_migration "$a25b_pre")"
+  done
+  echo "Migration einspielen: $(basename "$A25B_FILE")" >&2
+  psql_stdin < "$A25B_FILE"
+  MODE_LABEL="$MODE_LABEL + A-25b (20261110_005)"
+elif [[ "$WITH_A34" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-25b-Gegenprobe (ohne 20261110_005)"
+fi
+
+# A-13b-S (20261110_006, @TM-046, @TM-113, @W2A-070, @W2A-072): Gruppe abschliessen am Server -- vier Tabellen (RLS, keine
+# Client-Schreibrechte), sechs RPCs, Trigger. Setzt _005 voraus (Fail-fast); --without-a13bs ist die Gegenprobe.
+A13BS_FILE="$(find_migration 20261110_006)"
+WITH_A13BS=0
+if [[ "$WITH_A25B" -eq 1 && "$WITH_A13BS_REQ" -eq 1 ]]; then
+  WITH_A13BS=1
+  # Fail-fast von _006 verlangt matches.origin_a (A-36a, 20261026_001), das diese Matrix sonst nicht einspielt
+  # (idempotent: Spalten, CHECKs und Trigger nur, falls sie fehlen).
+  echo "Migration einspielen (Voraussetzung A-13b-S): $(basename "$(find_migration 20261026_001)")" >&2
+  psql_stdin < "$(find_migration 20261026_001)"
+  echo "Migration einspielen: $(basename "$A13BS_FILE")" >&2
+  psql_stdin < "$A13BS_FILE"
+  MODE_LABEL="$MODE_LABEL + A-13b-S (20261110_006)"
+elif [[ "$WITH_A25B" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-13b-S-Gegenprobe (ohne 20261110_006)"
+fi
+
+# A-16 (20261110_008, Plan GA5 v2.1): Helfer-Beitritt per QR -- zwei Tabellen (RLS, keine Policy), Beitritts-Funktionen,
+# Loesch-Policy collaborators_delete_v4 (ersetzt _v3), Trigger protect_helper_access_row. Setzt _002 und _003 voraus
+# (Fail-fast der Migration); --without-a16 ist die Gegenprobe.
+A16_FILE="$(find_migration 20261110_008)"
+WITH_A16=0
+if [[ "$WITH_A34" -eq 1 && "$WITH_A16_REQ" -eq 1 ]]; then
+  WITH_A16=1
+  echo "Migration einspielen: $(basename "$A16_FILE")" >&2
+  psql_stdin < "$A16_FILE"
+  MODE_LABEL="$MODE_LABEL + A-16 (20261110_008)"
+elif [[ "$WITH_A34" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-16-Gegenprobe (ohne 20261110_008)"
+fi
+
+# Spiel beenden (20261110_009, @FU-112, @FU-113, @FU-115): RESULT_ENTRY der Turnierleitung aus einem angepfiffenen Spiel,
+# ohne Feldsteuerung und ohne Anspruch. Setzt A-25b (_005) voraus (Fail-fast); --without-sb ist die Gegenprobe.
+SB_FILE="$(find_migration 20261110_009)"
+WITH_SB=0
+if [[ "$WITH_A25B" -eq 1 && "$WITH_SB_REQ" -eq 1 ]]; then
+  WITH_SB=1
+  echo "Migration einspielen: $(basename "$SB_FILE")" >&2
+  psql_stdin < "$SB_FILE"
+  MODE_LABEL="$MODE_LABEL + Spiel beenden (20261110_009)"
+elif [[ "$WITH_A25B" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, Spiel-beenden-Gegenprobe (ohne 20261110_009)"
+fi
+
+# A-21a-S (20261113_003, plan-endstand-abschluss.md): Lebenszyklus und Abschluss-Sperre am Server -- vier Tabellen (RLS,
+# drei Lese-Policies), Sperr-Trigger, Abschluss-RPCs. Setzt _006 (A-13b-S) voraus (Fail-fast); --without-a21as ist die
+# Gegenprobe. Laeuft nach _008, damit der Rumpf von tournament_closed_for_helpers ersetzt wird (Fenster-Reihenfolge).
+A21AS_FILE="$(find_migration 20261113_003)"
+WITH_A21AS=0
+if [[ "$WITH_A13BS" -eq 1 && "$WITH_A21AS_REQ" -eq 1 ]]; then
+  WITH_A21AS=1
+  echo "Migration einspielen: $(basename "$A21AS_FILE")" >&2
+  psql_stdin < "$A21AS_FILE"
+  MODE_LABEL="$MODE_LABEL + A-21a-S (20261113_003)"
+elif [[ "$WITH_A13BS" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, A-21a-S-Gegenprobe (ohne 20261113_003)"
+fi
+
+# B-48b (20261113_101, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): record_monitor_heartbeat mit Kennung als
+# Text, Pruefung gegen config.monitors, Sichtbarkeit is_public oder tournamentSettings. Haengt technisch nur an
+# has_tournament_permission (20260924_002); eingespielt mit A-27, weil die Zeilen in rls-matrix.d/spur-b.sh die Regel
+# "anonyme Sitzung zaehlt nicht als Eigentuemer" erwarten. Unabhaengig von _004 (Lesen bleibt dort, --without-coadmin
+# misst B-48b deshalb mit). --without-b48b ist die Gegenprobe.
+B48B_FILE="$(find_migration 20261113_101)"
+WITH_B48B=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_B48B_REQ" -eq 1 ]]; then
+  WITH_B48B=1
+  echo "Migration einspielen: $(basename "$B48B_FILE")" >&2
+  psql_stdin < "$B48B_FILE"
+  MODE_LABEL="$MODE_LABEL + B-48b (20261113_101)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, B-48b-Gegenprobe (ohne 20261113_101)"
+fi
+
+# B-14 (20261117_104, E-A2, Review Focus 6, @ZM-096..@ZM-102): anon und Konten ohne Rolle lesen tournaments, teams,
+# team_players, matches, match_events, monitors, sponsors, match_corrections nicht mehr direkt; oeffentlich nur ueber
+# public_tournament/display_tournament. Setzt _002 (Rolle screen) und _004 (Freigabe-Funktionen) voraus; --without-b14
+# ist die Gegenprobe (die B-14-Zeilen in rls-matrix.d/spur-b.sh muessen dann ROT sein).
+B14_FILE="$(find_migration 20261117_104)"
+WITH_B14=0
+if [[ "$WITH_CA2" -eq 1 && "$WITH_B14_REQ" -eq 1 ]]; then
+  WITH_B14=1
+  echo "Migration einspielen: $(basename "$B14_FILE")" >&2
+  psql_stdin < "$B14_FILE"
+  MODE_LABEL="$MODE_LABEL + B-14 (20261117_104)"
+elif [[ "$WITH_CA2" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, B-14-Gegenprobe (ohne 20261117_104)"
+fi
+
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
 EXPECTED_POLICY_COUNT=44
@@ -361,6 +748,38 @@ if [[ "$WITH_R5" -eq 1 ]]; then
   # role_permissions_select_ci_schema_reader für die CI-Leserolle) und ist selbst RLS-aktiv.
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 2))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
+  # B2 (MATCH_EVENT_LOG_FILE, an WITH_R5 gebunden -- siehe Kommentar an dessen Anwendung oben):
+  # drei neue RLS-aktive Tabellen -- match_event_authors (1 Policy: match_event_authors_select),
+  # match_transitions (2 Policies: match_transitions_select, match_transitions_select_ci_schema_reader),
+  # app_config (2 Policies: app_config_select, app_config_select_ci_schema_reader).
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 5))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 3))
+fi
+# A-08h entfernt drei Policies auf match_events (INSERT/UPDATE/DELETE v3/v2).
+if [[ "$WITH_A08H" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT - 3))
+fi
+# A-34: field_control ist RLS-aktiv, ohne Policy.
+if [[ "$WITH_A34" -eq 1 ]]; then
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
+fi
+# A-13b-S: group_completions, bracket_log, bracket_notices, clarifications sind RLS-aktiv; Policies nur zum Lesen
+# (group_completions_select, bracket_notices_select, clarifications_select), bracket_log ohne Policy.
+if [[ "$WITH_A13BS" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 3))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 4))
+fi
+
+# A-16: tournament_join_codes und tournament_join_requests sind RLS-aktiv, ohne Policy; die Loesch-Policy der
+# Mitglieder wird ersetzt (v3 -> v4), die Zahl der Policies bleibt.
+if [[ "$WITH_A16" -eq 1 ]]; then
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 2))
+fi
+# A-21a-S: tournament_final_standings, tournament_lifecycle_log, late_entries (je eine Lese-Policy), device_outbox_reports
+# (ohne Policy) sind RLS-aktiv.
+if [[ "$WITH_A21AS" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 3))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 4))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -428,6 +847,30 @@ MEMBERSHIP_VIEWER_MAIN="$(uuid_for membership:viewer-main)"
 # Dummy-Mitgliedszeile in T_ANON, ausschließlich als Ziel für die manageMembers-UPDATE/DELETE-
 # Sonden der Identität "owner-anonymous" (T_ANON hat sonst keine Mitarbeiter-Zeile).
 U_DUMMY_ANON_MEMBER="$(uuid_for user:dummy-anon-member)"
+# A-27: Geraetesitzungen (anonym). anon-device = Lena (gescannt, nicht zugelassen, keine Mitgliedschaft),
+# helper-device = Tom (zugelassen, Rolle helper), screen-device = Hallen-Rechner (Rolle screen), anon-coadmin = anonyme
+# Sitzung mit (Altbestand-)Zeile co-admin -- zaehlt nach R-A27-3 nicht.
+U_ANON_DEVICE="$(uuid_for user:anon-device)"
+U_HELPER_DEVICE="$(uuid_for user:helper-device)"
+U_SCREEN_DEVICE="$(uuid_for user:screen-device)"
+U_ANON_COADMIN="$(uuid_for user:anon-coadmin)"
+MEMBERSHIP_HELPER_DEVICE="$(uuid_for membership:helper-device)"
+MEMBERSHIP_SCREEN_DEVICE="$(uuid_for membership:screen-device)"
+MEMBERSHIP_ANON_COADMIN="$(uuid_for membership:anon-coadmin)"
+ANONYMOUS_UIDS=" $(uuid_for user:owner-anonymous) $U_ANON_DEVICE $U_HELPER_DEVICE $U_SCREEN_DEVICE $U_ANON_COADMIN "
+
+# A-27 (R-A27-3): Claims der Sitzung. Anonyme Identitaeten bekommen is_anonymous=true in request.jwt.claims
+# (wie PostgREST; auth.uid() dieses Images liest weiter claim.sub). A27_AS_REAL=1 erzwingt is_anonymous=false
+# (Zeilen, deren Zweck ein echter Fremd-Eigentuemer ist, z. B. K3/N4 -- sonst bewiesen sie nur die Anonym-Regel).
+claims_line() {
+  local uid="$1"
+  [[ -z "$uid" ]] && return 0
+  if [[ "${A27_AS_REAL:-0}" == "1" ]]; then
+    echo "SET LOCAL request.jwt.claims = '{\"sub\":\"$uid\",\"role\":\"authenticated\",\"is_anonymous\":false}';"
+  elif [[ "$ANONYMOUS_UIDS" == *" $uid "* ]]; then
+    echo "SET LOCAL request.jwt.claims = '{\"sub\":\"$uid\",\"role\":\"authenticated\",\"is_anonymous\":true}';"
+  fi
+}
 MEMBERSHIP_VIEWER_ANON="$(uuid_for membership:viewer-anon)"
 
 T_MAIN="$(uuid_for tournament:main)"
@@ -455,6 +898,9 @@ TEAM_ANON="$(uuid_for team:anon)"
 TEAM_N4_INSERT="$(uuid_for team:n4-attacker-insert-foreign-tournament)"
 SPONSOR_MAIN="$(uuid_for sponsor:main)"
 MONITOR_MAIN="$(uuid_for monitor:main)"
+# A-11: Gegenstueck im owner-anonymous-Turnier (Ziel der Vollmatrix-Operationen monitors_update/_delete der
+# Zeile "owner-anonymous", die immer gegen T_ANON misst).
+MONITOR_ANON="$(uuid_for monitor:anon)"
 
 E_MAIN="$(uuid_for event:main)"
 E_ANON="$(uuid_for event:anon)"
@@ -486,7 +932,11 @@ VALUES
   ('00000000-0000-0000-0000-000000000000', '$U_DECLINED', 'authenticated', 'authenticated', 'declined-membership@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_DUMMY_ANON_MEMBER', 'authenticated', 'authenticated', 'dummy-anon-member@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_DECLINED_INVITEE', 'authenticated', 'authenticated', '$DECLINED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '$U_EXPIRED_INVITEE', 'authenticated', 'authenticated', '$EXPIRED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+  ('00000000-0000-0000-0000-000000000000', '$U_EXPIRED_INVITEE', 'authenticated', 'authenticated', '$EXPIRED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_ANON_DEVICE', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_HELPER_DEVICE', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_SCREEN_DEVICE', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_ANON_COADMIN', 'authenticated', 'authenticated', NULL, 'x', now(), '{"provider":"anonymous","providers":["anonymous"]}', '{}', now(), now());
 
 -- R5 (M4-Beweis "Co-Admin veröffentlicht"): T_MAIN bekommt von Anfang an einen publishedAt-
 -- Marker im config (is_public bleibt false) -- enforce_release_before_public (20260921_001,
@@ -531,13 +981,13 @@ VALUES
   ('$C_DECLINED_COADMIN', '$T_MAIN', '$U_DECLINED', 'co-admin', now(), now());
 
 -- Fixrunde 2 / K2: offene (unclaimed) Einladung auf T_MAIN, exakt wie
--- invitationService.ts#createInvitation sie anlegt -- user_id NULL, invite_email gesetzt,
+-- invitationService.ts#createInvitation (bis A-18a) sie anlegt -- user_id NULL, invite_email gesetzt,
 -- accepted_at NULL, use_count 0. Wird von "eingeladener nimmt Einladung an" beansprucht.
 -- Fixrunde 1 (R6, M1): "invited_by" = U_OWNER ergänzt (vorher nicht gesetzt) — wird von den
 -- neuen R6-Zeilen "Eingeladener sieht Einladenden vor/nach Annahme" gebraucht
 -- (profile_visible_to_viewer()-Regel (ii)). Ändert an K2/L5 nichts, die lesen die Spalte nicht.
 -- R7-Fixrunde 1 (M-1, final-review-2.md): "expires_at" = now() + 7 Tage ergänzt (vorher NULL) --
--- die App setzt bei JEDER Einladung immer ein zukünftiges expires_at (invitationService.ts:183),
+-- die App setzt bei JEDER Einladung immer ein zukünftiges expires_at (invitationService.ts:183, bis A-18a),
 -- eine Fixture ohne Ablaufdatum verschleiert DB-Mutationen an der expires_at-Prüfung im
 -- Annahme-Zweig von protect_collaborator_row() (Review-Beleg DB-M2: blieb ohne diesen Fix
 -- fälschlich grün). Betrifft ALLE Zeilen, die diese geteilte Fixture nutzen (k2/l5/R6/R7) --
@@ -563,11 +1013,11 @@ INSERT INTO public.tournament_collaborators
 VALUES
   ('$C_EXPIRED_INVITE', '$T_MAIN', NULL, 'RLSEXPIREDCODE', '$EXPIRED_INVITEE_EMAIL', 'viewer', '$U_OWNER', NULL, now() - interval '7 days', 0, 5);
 
-INSERT INTO public.matches (id, tournament_id, round, field)
+INSERT INTO public.matches (id, tournament_id, round, field${SLOT_COLS})
 VALUES
-  ('$M_MAIN', '$T_MAIN', 1, 1),
-  ('$M_ANON', '$T_ANON', 1, 1),
-  ('$M_PUBLIC', '$T_PUBLIC', 1, 1);
+  ('$M_MAIN', '$T_MAIN', 1, 1${SLOT_VALS}),
+  ('$M_ANON', '$T_ANON', 1, 1${SLOT_VALS}),
+  ('$M_PUBLIC', '$T_PUBLIC', 1, 1${SLOT_VALS});
 
 -- Fixrunde 3 (K3/H5-Beweise, 20260923_001): ein Team im Haupt-Turnier, damit der
 -- Eigentuemer-Upsert-Regressionscheck und der H5-Team-Angriff eine echte Zeile zum Umhaengen
@@ -592,7 +1042,8 @@ VALUES
 
 INSERT INTO public.monitors (id, tournament_id, name)
 VALUES
-  ('$MONITOR_MAIN', '$T_MAIN', 'RLS Matrix Monitor');
+  ('$MONITOR_MAIN', '$T_MAIN', 'RLS Matrix Monitor'),
+  ('$MONITOR_ANON', '$T_ANON', 'RLS Matrix Monitor (anon owner)');
 
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES
@@ -610,6 +1061,20 @@ VALUES
 
 COMMIT;
 SQL
+
+# A-27: Mitgliedschaften der Geraetesitzungen (als Superuser = Definer-Pfad, wie A-16/B-20 sie anlegen werden).
+# anon-coadmin immer (co-admin gibt es in jedem Modus); helper/screen nur mit 20261110_002 (Rollen-CHECK).
+psql_stdin <<SQL
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
+VALUES ('$MEMBERSHIP_ANON_COADMIN', '$T_MAIN', '$U_ANON_COADMIN', 'co-admin', now());
+SQL
+if [[ "$WITH_A27" -eq 1 ]]; then
+  psql_stdin <<SQL
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at) VALUES
+  ('$MEMBERSHIP_HELPER_DEVICE', '$T_MAIN', '$U_HELPER_DEVICE', 'helper', now()),
+  ('$MEMBERSHIP_SCREEN_DEVICE', '$T_MAIN', '$U_SCREEN_DEVICE', 'screen', now());
+SQL
+fi
 
 # Fixrunde 2 / K1-Beleg "Eigentümer-Übertragung über die SECURITY-DEFINER-Funktion muss
 # funktionieren": Die tatsächliche Produktionsfunktion merge_user_data() (Baseline ab Zeile
@@ -669,6 +1134,7 @@ run_write() {
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '$user_id';
+$(claims_line "$user_id")
 $email_line
 $sql
 SQL
@@ -720,6 +1186,7 @@ run_write_then_select() {
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '$user_id';
+$(claims_line "$user_id")
 $update_sql
 $select_sql
 SQL
@@ -748,13 +1215,25 @@ SQL
 # Fall) und 'declined-membership' (accepted_at UND declined_at gesetzt -- der M3-Fall) sind IMMER
 # false, UNABHÄNGIG von ihrer role-Spalte in tournament_collaborators -- das ist der Kern dessen,
 # was M1/M3 beweisen sollen.
-MATRIX_IDS=(owner owner-anonymous co-admin collaborator trainer viewer non-member open-invitation declined-membership)
+# A-27: + anon-device, helper-device, screen-device (anonyme Geraetesitzungen). owner-anonymous ist seit A-27 eine
+# anonyme Sitzung ohne Geraete-Rolle -> keine Rechte (R-A27-3, L9), nicht mehr "owner".
+MATRIX_IDS=(owner owner-anonymous co-admin collaborator trainer viewer non-member open-invitation declined-membership anon-device helper-device screen-device)
 
 role_for_id() {
   case "$1" in
-    owner|owner-anonymous) echo "owner" ;;
-    non-member|open-invitation|declined-membership) echo "" ;;
+    owner) echo "owner" ;;
+    owner-anonymous|anon-device|non-member|open-invitation|declined-membership) echo "" ;;
+    helper-device) echo "helper" ;;
+    screen-device) echo "screen" ;;
     *) echo "$1" ;;
+  esac
+}
+
+# A-27: Identitaet einer anonymen Sitzung (fuer den Sonderwert "realAccount" in right_for_op).
+is_anonymous_id() {
+  case "$1" in
+    owner-anonymous|anon-device|helper-device|screen-device) return 0 ;;
+    *) return 1 ;;
   esac
 }
 
@@ -815,18 +1294,28 @@ OPERATIONS=(
   match_events_insert match_events_update match_events_delete
   tournaments_settings_update tournaments_deleted_at_update tournaments_hard_delete
   collaborators_insert collaborators_update collaborators_delete
+  monitors_insert monitors_update monitors_delete
+  tournaments_insert templates_insert team_players_insert profiles_update_own
 )
 
 right_for_op() {
   case "$1" in
     teams_insert|teams_delete|matches_insert|matches_delete) echo "restructure" ;;
     teams_update) echo "teams" ;;
-    matches_update|match_events_insert) echo "writeMatchData" ;;
+    # A-11 (20261110_001, @ZP-041): matches UPDATE aendert seit A-10 nur noch Spielplan-Spalten -> manageSchedule.
+    matches_update) echo "manageSchedule" ;;
+    match_events_insert) echo "writeMatchData" ;;
     match_events_update|match_events_delete) echo "correctEvents" ;;
     tournaments_settings_update) echo "tournamentSettings" ;;
     tournaments_deleted_at_update) echo "deleteTournament" ;;
     tournaments_hard_delete) echo "ownerOnly" ;;
     collaborators_insert|collaborators_update|collaborators_delete) echo "manageMembers" ;;
+    # A-11 (@ZM-019 "Folienprogramm aendern"): Monitore verwaltet, wer manageScreens hat.
+    monitors_insert|monitors_update|monitors_delete) echo "manageScreens" ;;
+    # A-27 (@AN-045, @HE-082, T5-T8): eigene Zeilen anlegen bzw. aendern darf nur ein echtes Konto (Sonderwert
+    # "realAccount": wahr fuer jede nicht-anonyme Identitaet, auch ohne Turnier-Bezug). Kader ueber das Recht teams.
+    tournaments_insert|templates_insert|profiles_update_own) echo "realAccount" ;;
+    team_players_insert) echo "teams" ;;
   esac
 }
 
@@ -838,6 +1327,7 @@ right_for_op() {
 op_sql() {
   local op="$1" tournament_id="$2" match_id="$3" team_id="$4" event_id="$5"
   local ins_team="$6" ins_match="$7" ins_invite="$8" target_membership="$9"
+  local monitor_id="${10}" ins_monitor="${11}" acting_user="${12:-}"
   case "$op" in
     teams_insert)
       echo "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$ins_team','$tournament_id','Vollmatrix Team');" ;;
@@ -846,9 +1336,14 @@ op_sql() {
     teams_delete)
       echo "DELETE FROM public.teams WHERE id='$team_id';" ;;
     matches_insert)
-      echo "INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$ins_match','$tournament_id',9,9);" ;;
+      # A-05: mit WITH_R5 traegt das Spiel je Seite eine Herkunft (slot_a/b_source), wie es die App schreibt
+      # (mapMatchToSupabase); SLOT_COLS/SLOT_VALS sind ohne die Migration leer.
+      echo "INSERT INTO public.matches (id,tournament_id,round,field${SLOT_COLS}) VALUES ('$ins_match','$tournament_id',9,9${SLOT_VALS});" ;;
     matches_update)
-      echo "UPDATE public.matches SET score_a = score_a + 1 WHERE id='$match_id';" ;;
+      # A-10 (Baustein Regel 3, umgeschrieben): misst writeMatchData an einer Spielplan-Spalte. Vorher
+      # "SET score_a = score_a + 1" -- seit 20261028_005 lehnt der Spalten-Schutz das fuer JEDE Identitaet ab
+      # (@EK-060); das belegen die eigenen Zeilen "a10-schutzspalte-score-a-*" weiter unten.
+      echo "UPDATE public.matches SET referee_number = coalesce(referee_number, 0) + 1 WHERE id='$match_id';" ;;
     matches_delete)
       echo "DELETE FROM public.matches WHERE id='$match_id';" ;;
     match_events_insert)
@@ -869,6 +1364,20 @@ op_sql() {
       echo "UPDATE public.tournament_collaborators SET role='trainer' WHERE id='$target_membership';" ;;
     collaborators_delete)
       echo "DELETE FROM public.tournament_collaborators WHERE id='$target_membership';" ;;
+    monitors_insert)
+      echo "INSERT INTO public.monitors (id,tournament_id,name) VALUES ('$ins_monitor','$tournament_id','Vollmatrix Monitor');" ;;
+    monitors_update)
+      echo "UPDATE public.monitors SET config = '{\"slides\":[{\"type\":\"live\"}]}'::jsonb WHERE id='$monitor_id';" ;;
+    monitors_delete)
+      echo "DELETE FROM public.monitors WHERE id='$monitor_id';" ;;
+    tournaments_insert)
+      echo "INSERT INTO public.tournaments (id,owner_id,title,date,number_of_teams,group_phase_duration) VALUES ('$ins_match','$acting_user','Vollmatrix Turnier','2026-11-10',4,10);" ;;
+    templates_insert)
+      echo "INSERT INTO public.tournament_templates (id,owner_id,name,config) VALUES ('$ins_match','$acting_user','Vollmatrix Vorlage','{}'::jsonb);" ;;
+    team_players_insert)
+      echo "INSERT INTO public.team_players (id,team_id,number,name) VALUES ('$ins_team','$team_id',7,'Vollmatrix Spieler');" ;;
+    profiles_update_own)
+      echo "UPDATE public.profiles SET display_name='Vollmatrix Profil' WHERE id='$acting_user';" ;;
   esac
 }
 
@@ -885,24 +1394,35 @@ for id in "${MATRIX_IDS[@]}"; do
   target_membership="$(target_membership_for_id "$id")"
 
   if [[ "$id" == "owner-anonymous" ]]; then
-    tournament_id="$T_ANON"; match_id="$M_ANON"; event_id="$E_ANON"; team_id="$TEAM_ANON"
+    tournament_id="$T_ANON"; match_id="$M_ANON"; event_id="$E_ANON"; team_id="$TEAM_ANON"; monitor_id="$MONITOR_ANON"
   else
-    tournament_id="$T_MAIN"; match_id="$M_MAIN"; event_id="$E_MAIN"; team_id="$TEAM_MAIN"
+    tournament_id="$T_MAIN"; match_id="$M_MAIN"; event_id="$E_MAIN"; team_id="$TEAM_MAIN"; monitor_id="$MONITOR_MAIN"
   fi
 
   for op in "${OPERATIONS[@]}"; do
     right="$(right_for_op "$op")"
     if [[ "$right" == "ownerOnly" ]]; then
       exp="$([[ "$role" == "owner" ]] && echo true || echo false)"
+      # A-27 (L9-Rest, Brief § 4.2): tournaments_delete_v2 prueft nur owner_id -- ein anonymer Alt-Eigentuemer loescht
+      # sein eigenes Alt-Turnier weiter. Nicht Teil von _002 (kein Neuanlegen unveraenderter Policies, R11); Befund-
+      # Vorschlag C-ANON-ALTEIGENTUEMER-RESTRECHTE (Report). Gemessen wird der Bestand.
+      [[ "$id" == "owner-anonymous" ]] && exp="true"
+    elif [[ "$right" == "realAccount" ]]; then
+      exp="$(is_anonymous_id "$id" && echo false || echo true)"
     else
       exp="$(perm_expected "$role" "$right")"
+    fi
+    # A-08h: Clients schreiben match_events nie direkt -- auch der Eigentuemer nicht.
+    if [[ "$WITH_A08H" -eq 1 && "$op" == match_events_* ]]; then
+      exp="false"
     fi
 
     ins_team="$(uuid_for "vollmatrix-team:$id:$op")"
     ins_match="$(uuid_for "vollmatrix-match:$id:$op")"
     ins_invite="$(uuid_for "vollmatrix-invite:$id:$op")"
+    ins_monitor="$(uuid_for "vollmatrix-monitor:$id:$op")"
 
-    sql="$(op_sql "$op" "$tournament_id" "$match_id" "$team_id" "$event_id" "$ins_team" "$ins_match" "$ins_invite" "$target_membership")"
+    sql="$(op_sql "$op" "$tournament_id" "$match_id" "$team_id" "$event_id" "$ins_team" "$ins_match" "$ins_invite" "$target_membership" "$monitor_id" "$ins_monitor" "$user_id")"
     result="$(run_write "$user_id" "$sql")"
     got="$([[ "$result" == "allowed" ]] && echo true || echo false)"
 
@@ -916,7 +1436,80 @@ for id in "${MATRIX_IDS[@]}"; do
   done
 done
 
-echo "Vollmatrix: $((${#MATRIX_IDS[@]} * ${#OPERATIONS[@]})) Zellen geprüft (9 Identitäten × 15 Operationen), $VOLLMATRIX_MISMATCHES Abweichung(en) — nur abweichende Zellen werden einzeln aufgelistet (siehe oben), der Rest ist grün."
+echo "Vollmatrix: $((${#MATRIX_IDS[@]} * ${#OPERATIONS[@]})) Zellen geprüft (${#MATRIX_IDS[@]} Identitäten × ${#OPERATIONS[@]} Operationen), $VOLLMATRIX_MISMATCHES Abweichung(en) — nur abweichende Zellen werden einzeln aufgelistet (siehe oben), der Rest ist grün."
+
+# --- 6b. A-05 (M2): Spiel mit slot_source einfuegen (Turnierleitung) --------------------------
+# Eigene, klar beschriftete Zeilen (die Vollmatrix-Zelle matches_insert traegt dasselbe, geht aber in
+# einer Sammelzahl unter). Nur mit WITH_R5 (dann ist 20261003_001 eingespielt).
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo ""
+  echo "=== A-05 (M2): Spiel mit slot_source einfuegen — $MODE_LABEL ==="
+  SLOT_SQL_PREFIX="INSERT INTO public.matches (id,tournament_id,round,field"
+  SLOT_SRC_A="'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":1}'::jsonb"
+  SLOT_SRC_B="'{\"kind\":\"groupRank\",\"group\":\"A\",\"rank\":2}'::jsonb"
+  m2_owner_with="$(run_write "$U_OWNER" "$SLOT_SQL_PREFIX,slot_a_source,slot_b_source) VALUES ('$(uuid_for m2:owner-with)','$T_MAIN',8,8,$SLOT_SRC_A,$SLOT_SRC_B);")"
+  m2_coadmin_with="$(run_write "$U_COADMIN" "$SLOT_SQL_PREFIX,slot_a_source,slot_b_source) VALUES ('$(uuid_for m2:coadmin-with)','$T_MAIN',8,8,$SLOT_SRC_A,$SLOT_SRC_B);")"
+  m2_nonmember_with="$(run_write "$U_NONMEMBER" "$SLOT_SQL_PREFIX,slot_a_source,slot_b_source) VALUES ('$(uuid_for m2:nonmember-with)','$T_MAIN',8,8,$SLOT_SRC_A,$SLOT_SRC_B);")"
+  # Gegenbeispiel: die Turnierleitung DARF, aber ohne Herkunft/Team lehnt die Datenbank ab -- und zwar
+  # an der Pruefregel matches_slot_a_present, nicht an RLS.
+  m2_owner_without_out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1 || true
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_OWNER';
+INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$(uuid_for m2:owner-without)','$T_MAIN',8,8);
+SQL
+)"
+  m2_owner_without="rls-oder-anderer-fehler"
+  if grep -q 'matches_slot_a_present' <<<"$m2_owner_without_out"; then m2_owner_without="pruefregel"; fi
+  for check in \
+    "m2-turnierleitung-owner-fuegt-spiel-mit-slot-source-ein:$m2_owner_with:allowed" \
+    "m2-turnierleitung-coadmin-fuegt-spiel-mit-slot-source-ein:$m2_coadmin_with:allowed" \
+    "m2-konto-ohne-rolle-fuegt-spiel-mit-slot-source-ein:$m2_nonmember_with:denied" \
+    "m2-gegenbeispiel-owner-ohne-slot-source-scheitert-an-pruefregel:$m2_owner_without:pruefregel"; do
+    label="${check%%:*}"; rest="${check#*:}"; got="${rest%%:*}"; exp="${rest#*:}"
+    TOTAL=$((TOTAL + 1))
+    if [[ "$got" == "$exp" ]]; then
+      echo "$label: $got"
+    else
+      echo "$label: ${got}!=${exp}"
+      MISMATCHES=$((MISMATCHES + 1))
+    fi
+  done
+fi
+
+# --- 6c. A-10 (20261028_005, @EK-060, C-RECHTE-ERGEBNIS-DIREKT): Schutzspalte score_a fuer jede Identitaet verweigert --
+# Acht Zeilen (owner, owner-anonymous, co-admin, collaborator, trainer, viewer, non-member, anon). Das Spiel hat keine
+# Engine-Ereignisse (Altspiel, score_a = 0) -- vor A-10 haetten owner/co-admin/collaborator hier geschrieben. Nur im
+# Modus "nachher" (WITH_A10).
+if [[ "$WITH_A10" -eq 1 ]]; then
+  echo ""
+  echo "=== A-10: Schutzspalte score_a — $MODE_LABEL ==="
+  run_write_anon() {
+    local out ec
+    set +e
+    out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE anon;
+$1
+SQL
+)"
+    ec=$?
+    set -e
+    if [[ $ec -eq 0 ]] && grep -qE '^UPDATE [1-9][0-9]*$' <<<"$out"; then echo "allowed"; else echo "denied"; fi
+  }
+  for id in owner owner-anonymous co-admin collaborator trainer viewer non-member anon; do
+    match_id="$M_MAIN"; [[ "$id" == "owner-anonymous" ]] && match_id="$M_ANON"
+    sql="UPDATE public.matches SET score_a = coalesce(score_a, 0) + 1 WHERE id = '$match_id';"
+    if [[ "$id" == "anon" ]]; then got="$(run_write_anon "$sql")"; else got="$(run_write "$(user_id_for_id "$id")" "$sql")"; fi
+    TOTAL=$((TOTAL + 1))
+    if [[ "$got" == "denied" ]]; then
+      echo "a10-schutzspalte-score-a-$id: $got"
+    else
+      echo "a10-schutzspalte-score-a-$id: ${got}!=denied"
+      MISMATCHES=$((MISMATCHES + 1))
+    fi
+  done
+fi
 
 # --- 7. Dedizierte Regressionsprüfung: Eigentümer bearbeitet/löscht ein Ereignis ------
 # Unabhängig vom Rollen-Loop oben (dort in "correctEvents" für die Zeile "owner" mit
@@ -939,6 +1532,8 @@ echo "=== Dedizierte Prüfung — $MODE_LABEL ==="
 for check in "owner-events-soft-delete-app-pfad:$owner_event_update" "owner-events-hard-delete-rls-ungenutzt-von-app:$owner_event_delete"; do
   label="${check%%:*}"; got="${check#*:}"
   exp="allowed"
+  # A-08h: Eigentuemer-Schreibweg auf match_events ist zu (42501/0 Zeilen -> denied).
+  [[ "$WITH_A08H" -eq 1 ]] && exp="denied"
   TOTAL=$((TOTAL + 1))
   if [[ "$got" == "$exp" ]]; then
     echo "$label: $got"
@@ -1000,8 +1595,10 @@ else
 
   # K1-2: Mitarbeiter setzt owner_id auf matches per direktem UPDATE (kein Upsert, kein
   # *_sync_owner-Trigger beteiligt — der läuft nur BEFORE INSERT).
+  # A-10: Begleitspalte referee_number statt score_a (der Spalten-Schutz lehnt score_a seit 20261028_005 ab und
+  # wuerde die Zeile mit einem Fehler statt mit dem K1-Befund beenden).
   k1_matches_owner_id="$(run_write_then_select "$U_COADMIN" \
-    "UPDATE public.matches SET owner_id = '$U_COADMIN', score_a = score_a + 1 WHERE id = '$M_MAIN';" \
+    "UPDATE public.matches SET owner_id = '$U_COADMIN', referee_number = coalesce(referee_number, 0) + 1 WHERE id = '$M_MAIN';" \
     "SELECT owner_id FROM public.matches WHERE id = '$M_MAIN';")"
 
   # K1-3: Eigentümer-Übertragung über eine SECURITY-DEFINER-Funktion (Nachbau, siehe Fixtures-
@@ -1025,7 +1622,7 @@ else
     "UPDATE public.tournament_collaborators SET tournament_id = '$T_ANON' WHERE tournament_id = '$T_MAIN' AND user_id = '$U_COADMIN';")"
 
   # K2-3: Eingeladener nimmt die Einladung an — exakt das Spaltenmuster der App
-  # (invitationService.ts#acceptInvitation): user_id, accepted_at, use_count. Der
+  # (invitationService.ts#acceptInvitation (bis A-18a)): user_id, accepted_at, use_count. Der
   # E-Mail-Claim ist nötig, damit die BESTEHENDE (unveränderte) collaborators_update_v3
   # die noch nicht beanspruchte Zeile überhaupt sichtbar macht (invite_email = auth.email()).
   k2_accept_invitation="$(run_write "$U_INVITEE" \
@@ -1080,7 +1677,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   # Abschluss-Reviewers, hier als Harness-Zeile. INSERT + Hijack-UPDATE in EINER Transaktion —
   # bricht die Exception im nachher-Modus die Transaktion ab (ON_ERROR_STOP=1, run_write() liest
   # das als "denied"), bestätigen im ohne-004-Modus beide Befehls-Tags "allowed".
-  k3_hijack="$(run_write "$U_OWNER_ANON" "
+  k3_hijack="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "
     INSERT INTO public.tournament_collaborators (tournament_id,user_id,role,accepted_at) VALUES ('$T_ANON','$U_OWNER_ANON','co-admin',now());
     UPDATE public.tournament_collaborators SET tournament_id='$T_MAIN' WHERE tournament_id='$T_ANON' AND user_id='$U_OWNER_ANON';
   ")"
@@ -1088,7 +1685,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   # K3-Folge: dieselbe Sequenz, plus der eigentliche Übernahme-Schritt (UPDATE tournaments).
   # Eigene Zeile statt Wiederverwendung von k3_hijack, weil jeder run_write()-Aufruf in einer
   # eigenen, isolierten Transaktion läuft (Fixtures bleiben zwischen Zeilen unverändert).
-  k3_followup="$(run_write "$U_OWNER_ANON" "
+  k3_followup="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "
     INSERT INTO public.tournament_collaborators (tournament_id,user_id,role,accepted_at) VALUES ('$T_ANON','$U_OWNER_ANON','co-admin',now());
     UPDATE public.tournament_collaborators SET tournament_id='$T_MAIN' WHERE tournament_id='$T_ANON' AND user_id='$U_OWNER_ANON';
     UPDATE public.tournaments SET location_name='RLS K3 Test' WHERE id='$T_MAIN';
@@ -1115,7 +1712,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   # P3a/P3b) und Eigentümer ändert eine Mitarbeiter-Rolle müssen in BEIDEN Modi weiter gelingen.
   owner_upsert="$(run_write "$U_OWNER" "
     INSERT INTO public.teams (id,tournament_id,name,owner_id) VALUES ('$TEAM_MAIN','$T_MAIN','RLS Matrix Team (upsert)','$U_OWNER') ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
-    INSERT INTO public.matches (id,tournament_id,round,field,owner_id) VALUES ('$M_MAIN','$T_MAIN',1,2,'$U_OWNER') ON CONFLICT (id) DO UPDATE SET field=EXCLUDED.field;
+    INSERT INTO public.matches (id,tournament_id,round,field,owner_id${SLOT_COLS}) VALUES ('$M_MAIN','$T_MAIN',1,2,'$U_OWNER'${SLOT_VALS}) ON CONFLICT (id) DO UPDATE SET field=EXCLUDED.field;
   ")"
   owner_role_change="$(run_write "$U_OWNER" "UPDATE public.tournament_collaborators SET role='trainer' WHERE tournament_id='$T_MAIN' AND user_id='$U_VIEWER';")"
 
@@ -1123,6 +1720,8 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   echo "=== Fixrunde 3 — K3/H5/L5 — $MODE_LABEL ==="
   k1k2_mark_value "k3-eigentuemer-haengt-eigene-zeile-auf-fremdes-turnier   " "$k3_hijack" "$exp_k3_hijack"
   k1k2_mark_value "k3-folge-update-tournaments-nach-hijack                 " "$k3_followup" "$exp_k3_followup"
+  # A-08h: der Eigentuemer-UPDATE auf eine Ereigniszeile ist abgelehnt (Tabellenrecht entzogen).
+  [[ "$WITH_A08H" -eq 1 ]] && exp_h5_event="denied"
   k1k2_mark_value "h5-eigentuemer-haengt-eigenes-match-um                  " "$h5_match" "$exp_h5_match"
   k1k2_mark_value "h5-eigentuemer-haengt-eigenes-team-um                   " "$h5_team" "$exp_h5_team"
   k1k2_mark_value "h5-eigentuemer-haengt-eigenes-ereignis-um               " "$h5_event" "$exp_h5_event"
@@ -1179,6 +1778,9 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" 
   # Regressionen, in BEIDEN Modi gleich (M3 lässt collaborator UPDATE unverändert zu — das war
   # schon vor R5 so, siehe Baseline-Bug oben):
   exp_m3_collab_update="allowed"
+  # A-11 (Baustein Regel 3, umgeschrieben statt geloescht; @HE-042 "ein Team umbenennen -> nur Turnierleitung"):
+  # mit 20261110_001 hat der Helfer (collaborator) das Recht 'teams' nicht mehr -- dieselbe Sonde ist dann verweigert.
+  [[ "$WITH_A11" -eq 1 ]] && exp_m3_collab_update="denied"
   exp_m5_coadmin_unchanged_deleted_at="allowed"
   exp_m5_owner_sets_deleted_at="allowed"
   # R5-H1-Regression: Collaborator durfte NIE löschen — weder vor noch nach R5b (kein
@@ -1201,7 +1803,7 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" 
   h4_team_upsert="$(run_write "$U_COADMIN" \
     "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_MAIN','$T_MAIN','RLS Matrix Team (coadmin upsert)') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;")"
   h4_match_upsert="$(run_write "$U_COADMIN" \
-    "INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$M_MAIN','$T_MAIN',1,1) ON CONFLICT (id) DO UPDATE SET field = EXCLUDED.field;")"
+    "INSERT INTO public.matches (id,tournament_id,round,field${SLOT_COLS}) VALUES ('$M_MAIN','$T_MAIN',1,1${SLOT_VALS}) ON CONFLICT (id) DO UPDATE SET field = EXCLUDED.field;")"
 
   # H4-3: Co-Admin legt ein NEUES Team an (reiner INSERT-Zweig, TEAM_NEW existiert vorher nicht)
   # und der tatsächlich gespeicherte owner_id-Wert wird gelesen — teams_select_v3 hat einen
@@ -1282,14 +1884,14 @@ SQL
   #     tournament_id im Payload sogar durchginge), siehe R5-Review Sonde A1/A2.
   #   - INSERT mit fremder tournament_id: eine NEUE Zeile, direkt gegen T_MAIN gerichtet.
   #   - DELETE fremder Zeilen: dieselbe Opfer-Zeile TEAM_MAIN.
-  n4_upsert_foreign_id="$(run_write "$U_OWNER_ANON" \
+  n4_upsert_foreign_id="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" \
     "INSERT INTO public.teams (id,tournament_id,name,owner_id) VALUES ('$TEAM_MAIN','$T_ANON','RLS Matrix N4 Hijack','$U_OWNER_ANON') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;")"
-  n4_insert_foreign_tournament="$(run_write "$U_OWNER_ANON" \
+  n4_insert_foreign_tournament="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" \
     "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_N4_INSERT','$T_MAIN','RLS Matrix N4 Insert');")"
-  n4_delete_foreign_rows="$(run_write "$U_OWNER_ANON" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
+  n4_delete_foreign_rows="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
 
   # manageMembers (R5b): Co-Admin versucht, einen neuen Mitarbeiter in T_MAIN einzuladen (echter
-  # App-Pfad, invitationService.ts#createInvitation-Muster) → muss abgelehnt bleiben. Eigentümer
+  # App-Pfad, invitationService.ts#createInvitation (bis A-18a)-Muster) → muss abgelehnt bleiben. Eigentümer
   # dieselbe Sonde → muss gelingen.
   managemembers_coadmin_denied="$(run_write "$U_COADMIN" \
     "INSERT INTO public.tournament_collaborators (id, tournament_id, invite_code, invite_email, role, invited_by, max_uses) VALUES ('$(uuid_for invite:n4-coadmin)', '$T_MAIN', 'RLSCOADMININV', 'nobody-coadmin@rls-matrix.test', 'viewer', '$U_COADMIN', 5);")"
@@ -1345,6 +1947,28 @@ if [[ "$WITH_R5" -eq 1 ]]; then
   fi
 fi
 
+# --- 7c4. B2 (task-B2-brief.md, Abschnitt 2) — Gleichlauf: public.match_transitions (DB) MUSS
+# byte-/zeilengleich zu src/core/match/matchTransitions.json sein. Analog 7c3. Nur sinnvoll, wenn
+# MATCH_EVENT_LOG_FILE eingespielt wurde (an WITH_R5 gebunden, siehe Kommentar an dessen
+# Anwendung oben).
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo ""
+  echo "=== Gleichlauf match_transitions (DB) vs. matchTransitions.json — $MODE_LABEL ==="
+  DB_MATCH_TRANSITIONS="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
+    "SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;" | sort)"
+  JSON_MATCH_TRANSITIONS="$(jq -r '.transitions[] | [.from,.type,.actor,.to] | join("|")' "$MATCH_TRANSITIONS_FILE" | sort)"
+  TOTAL=$((TOTAL + 1))
+  if [[ "$DB_MATCH_TRANSITIONS" == "$JSON_MATCH_TRANSITIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_MATCH_TRANSITIONS" | tr -d ' ')"
+    echo "gleichlauf-match_transitions-vs-json: allowed (identisch, $ROW_COUNT Zeilen)"
+  else
+    echo "gleichlauf-match_transitions-vs-json: denied (weicht ab)"
+    echo "--- Diff (links: matchTransitions.json, rechts: DB) ---"
+    diff <(echo "$JSON_MATCH_TRANSITIONS") <(echo "$DB_MATCH_TRANSITIONS") || true
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+fi
+
 # --- 7d. R6 (task-R6-brief.md) — F3 (E-Mail-Adressen öffentlich lesbar) und F7 (Rolle selbst
 # änderbar). Läuft IMMER (unabhängig von WITH_MIGRATION/WITH_HARDENING/WITH_PARENT_KEYS) — die
 # Profile-Rechte sind orthogonal zur Tournament-/Collaborator-Härtung der Fixrunden 1-3. Nutzt
@@ -1354,7 +1978,7 @@ run_select_as() {
   local role="$1" user_id="$2" sql="$3" email_claim="${4:-}"
   local out ec
   local sub_line="" email_line=""
-  [[ -n "$user_id" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$user_id';"
+  [[ -n "$user_id" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$user_id'; $(claims_line "$user_id")"
   [[ -n "$email_claim" ]] && email_line="SET LOCAL request.jwt.claim.email = '$email_claim';"
   set +e
   out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
@@ -1598,6 +2222,10 @@ fi
 exp_r7_active="allowed"
 exp_r7_accept_valid="allowed"
 exp_r7_public_nonmember="allowed"
+# B-14: ein Konto ohne Rolle liest ein oeffentliches Turnier nicht mehr direkt (nur ueber public_tournament).
+if [[ "${WITH_B14:-0}" -eq 1 ]]; then
+  exp_r7_public_nonmember="denied"
+fi
 # R7-Fixrunde 1 (N-3, final-review-2.md): "accepted_at IS NOT NULL" ist NICHT Teil von R7 selbst
 # (das prüften schon die alten Baseline-Select-Policies) -- eine offene, nie angenommene
 # Mitgliedschaft (U_PENDING/C_OPEN_COADMIN, role='co-admin', accepted_at IS NULL) darf in BEIDEN
@@ -1632,7 +2260,7 @@ r7_declined_invite_sees_inviter="$(run_select_as authenticated "$U_DECLINED_INVI
 r7_expired_invite_sees_inviter="$(run_select_as authenticated "$U_EXPIRED_INVITEE" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';" "$EXPIRED_INVITEE_EMAIL")"
 
 # Annahme-Sonden: exakt derselbe Update-Pfad wie k2_accept_invitation oben
-# (invitationService.ts#acceptInvitation), je eigene, nie committete Transaktion (run_write()).
+# (invitationService.ts#acceptInvitation (bis A-18a)), je eigene, nie committete Transaktion (run_write()).
 r7_accept_declined_invite="$(run_write "$U_DECLINED_INVITEE" \
   "UPDATE public.tournament_collaborators SET user_id = '$U_DECLINED_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_DECLINED_INVITE';" \
   "$DECLINED_INVITEE_EMAIL")"
@@ -1668,6 +2296,10 @@ k1k2_mark_value "n2-abgelaufene-offene-einladung-sieht-einladenden-nicht" "$r7_e
 # unabhängige Regressions-Stichprobe für anonymes LESEN öffentlicher Turniere (siehe Fixrunde-1-
 # Kommentar oben). Immer "true" erwartet.
 pub_expect="true"
+# B-14 (E-A2): ab 20261117_104 liest anon kein Turnier mehr direkt -- dieselbe Stichprobe muss dann "false" sein.
+if [[ "${WITH_B14:-0}" -eq 1 ]]; then
+  pub_expect="false"
+fi
 pub_tournament="$(run_read_as_anon "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
 pub_match="$(run_read_as_anon "SELECT id FROM public.matches WHERE id = '$M_PUBLIC';")"
 pub_event="$(run_read_as_anon "SELECT id FROM public.match_events WHERE id = '$E_PUBLIC';")"
@@ -1677,6 +2309,23 @@ echo "Stichprobe — anonymes Lesen eines öffentlichen Turniers: erwartet=$pub_
 TOTAL=$((TOTAL + 1))
 if [[ "$pub_got" != "$pub_expect" ]]; then
   MISMATCHES=$((MISMATCHES + 1))
+fi
+
+# --- 8b. A-11 (R-A11-4): Zeilen je Spur aus scripts/rls-matrix.d/*.sh -- gleiche Hilfsfunktionen
+# (run_write, run_select_as, uuid_for, user_id_for_id, perm_expected, MATRIX_IDS ...) und dieselben Zaehler
+# TOTAL/MISMATCHES. Die Dateien laufen im Hauptprozess (source, keine Subshell), damit ihre Zaehlungen zaehlen.
+RLS_MATRIX_D="$REPO_ROOT/scripts/rls-matrix.d"
+if [[ -d "$RLS_MATRIX_D" ]]; then
+  for rls_matrix_part in "$RLS_MATRIX_D"/*.sh; do
+    [[ -f "$rls_matrix_part" ]] || continue
+    # _*.sh: gemeinsame Hilfen ohne eigene Zeilen (Glob-Reihenfolge: vor spur-*.sh).
+    if [[ "$(basename "$rls_matrix_part")" != _* ]]; then
+      echo ""
+      echo "=== rls-matrix.d/$(basename "$rls_matrix_part") — $MODE_LABEL ==="
+    fi
+    # shellcheck source=/dev/null
+    source "$rls_matrix_part"
+  done
 fi
 
 echo ""
@@ -1689,7 +2338,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

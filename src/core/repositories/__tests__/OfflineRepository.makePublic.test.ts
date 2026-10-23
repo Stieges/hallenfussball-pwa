@@ -6,7 +6,7 @@
  * wäre das falsch: Das Turnier würde lokal öffentlich, eine Mutation eingereiht, die der
  * Server dauerhaft ablehnt — und der Nutzer sähe nichts davon.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
 import type { LocalStorageRepository } from '../LocalStorageRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
@@ -14,6 +14,7 @@ import { RepositoryError } from '../../errors';
 
 const cloudMakePublic = vi.fn<(id: string) => Promise<{ shareCode: string; createdAt: string } | null>>();
 const localMakePublic = vi.fn<(id: string) => Promise<{ shareCode: string; createdAt: string } | null>>();
+let created: Array<{ dispose(): void }> = [];
 
 function createRepository() {
   const localRepo = {
@@ -24,13 +25,20 @@ function createRepository() {
   const supabaseRepo = {
     makeTournamentPublic: cloudMakePublic,
   } as unknown as SupabaseRepository;
-  return new OfflineRepository(localRepo, supabaseRepo);
+  const repo = new OfflineRepository(localRepo, supabaseRepo);
+  created.push(repo.mutationQueue);
+  return repo;
 }
 
 describe('OfflineRepository.makeTournamentPublic — Freigabe-Ablehnung', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    created = [];
     localMakePublic.mockResolvedValue({ shareCode: 'LOCAL1', createdAt: '2026-02-01T10:00:00.000Z' });
+  });
+
+  afterEach(() => {
+    created.forEach(q => q.dispose());
   });
 
   it('reicht die Ablehnung des RPC durch statt lokal zu teilen', async () => {

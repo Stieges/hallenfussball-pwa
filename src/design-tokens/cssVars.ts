@@ -105,13 +105,35 @@ export const cssColors = {
   // Border Colors
   // ---------------------------------------------------------------------------
   border: 'var(--color-border)',
-  borderLight: 'var(--color-border-light)',
   borderMedium: 'var(--color-border-medium)',
   borderActive: 'var(--color-border-active)',
   borderSolid: 'var(--color-border-solid)',
   borderSubtle: 'var(--color-border-subtle)',
   borderDefault: 'var(--color-border-default)',
-  borderStrong: 'var(--color-border-strong)',
+  borderControl: 'var(--color-border-control)',
+  borderControlRaised: 'var(--color-border-control-raised)',
+
+  // Tafel Live-Cockpit (Spec § 8.2)
+  scoreboardBg: 'var(--color-scoreboard-bg)',
+  scoreboardText: 'var(--color-scoreboard-text)',
+  scoreboardTextMuted: 'var(--color-scoreboard-text-muted)',
+  scoreboardLive: 'var(--color-scoreboard-live)',
+  scoreboardHighlight: 'var(--color-scoreboard-highlight)',
+  scoreboardFinalPhase: 'var(--color-scoreboard-final-phase)',
+  scoreboardBorder: 'var(--color-scoreboard-border)',
+  scoreboardSurface: 'var(--color-scoreboard-surface)',
+  scoreboardDivider: 'var(--color-scoreboard-divider)',
+  scoreboardOnLive: 'var(--color-scoreboard-on-live)',
+  scoreboardOnHighlight: 'var(--color-scoreboard-on-highlight)',
+  scoreboardOk: 'var(--color-scoreboard-ok)',
+  scoreboardInfo: 'var(--color-scoreboard-info)',
+  scoreboardNeutral: 'var(--color-scoreboard-neutral)',
+  noticeLineBg: 'var(--color-notice-line-bg)',
+  noticeLineText: 'var(--color-notice-line-text)',
+  holdFill: 'var(--color-hold-fill)',
+  nextWarnBorder: 'var(--color-next-warn-border)',
+  cardYellow: 'var(--color-card-yellow)',
+  cardRed: 'var(--color-card-red)',
 
   // ---------------------------------------------------------------------------
   // Semantic: Error
@@ -129,6 +151,7 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   warning: 'var(--color-warning)',
   warningHover: 'var(--color-warning-hover)',
+  warningSolid: 'var(--color-warning-solid)',
   warningSubtle: 'var(--color-warning-subtle)',
   warningLight: 'var(--color-warning-light)',
   warningMedium: 'var(--color-warning-medium)',
@@ -158,6 +181,7 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   statusLive: 'var(--color-status-live)',
   statusLiveBg: 'var(--color-status-live-bg)',
+  statusLiveOn: 'var(--color-status-live-on)',
   statusLiveRowBg: 'var(--color-status-live-row-bg)',
 
   statusUpcoming: 'var(--color-status-upcoming)',
@@ -347,6 +371,16 @@ export const cssBorderRadius = {
 } as const;
 
 // =============================================================================
+// Border Width (fixed px token)
+// =============================================================================
+
+// Eine Quelle: `borderWidths` (sizing.ts); die CSS-Variablen `--border-width-*` stehen in global.css (Gleichheitstest)
+export const cssBorderWidth = {
+  thin: borderWidths.thin,
+  medium: borderWidths.medium,
+} as const;
+
+// =============================================================================
 // Shadows
 // =============================================================================
 
@@ -377,6 +411,7 @@ export const cssFontSizes = {
   displayLg: 'var(--font-size-display-lg)',
   displayMd: 'var(--font-size-display-md)',
   displaySm: 'var(--font-size-display-sm)',
+  displayXl: 'var(--font-size-display-xl)',
 
   // Headlines
   headlineLg: 'var(--font-size-headline-lg)',
@@ -417,6 +452,7 @@ export const cssFontSizes = {
 // =============================================================================
 
 export const cssScoreSizes = {
+  xs: 'var(--font-size-score-xs)',
   sm: 'var(--font-size-score-sm)',
   md: 'var(--font-size-score-md)',
   lg: 'var(--font-size-score-lg)',
@@ -456,6 +492,7 @@ export const cssFontWeights = {
   medium: 'var(--font-weight-medium)',
   semibold: 'var(--font-weight-semibold)',
   bold: 'var(--font-weight-bold)',
+  extrabold: 'var(--font-weight-extrabold)',
 } as const;
 
 // =============================================================================
@@ -501,6 +538,43 @@ export const cssLayoutHeights = {
 } as const;
 
 // =============================================================================
+// Component Sizes & Letter Spacing
+// =============================================================================
+
+/** Deckkraft (Faktor): gesperrte Fläche */
+export const cssOpacity = {
+  disabled: 'var(--opacity-disabled)',
+} as const;
+
+export const cssSizing = {
+  sidebarWidth: 'var(--sizing-sidebar-width)',
+  // Cockpit Laptop (Mockup laptop.html)
+  cockpitEreignisspalte: 'var(--sizing-cockpit-ereignisspalte)',
+  cockpitTorBreit: 'var(--sizing-cockpit-tor-breit)',
+  cockpitLeisteBreit: 'var(--sizing-cockpit-leiste-breit)',
+  cockpitMehrBreit: 'var(--sizing-cockpit-mehr-breit)',
+  feldwahlMax: 'var(--sizing-feldwahl-max)',
+  emptyStateMinHeight: 'var(--sizing-empty-state-min-height)',
+  hairline: 'var(--sizing-hairline)',
+  // Tafel Live-Cockpit (Spec § 8.2)
+  scoreboardClockCompact: 'var(--font-size-score-xs)',
+  scoreboardClockRegular: 'var(--font-size-display-xl)',
+  scoreboardClockWide: 'var(--font-size-score-md)',
+  scoreboardScoreCompact: 'var(--font-size-score-sm)',
+  scoreboardScoreRegular: 'var(--font-size-display-xl)',
+  noticeLineHeightCompact: 'var(--sizing-notice-line-height-compact)',
+  noticeLineHeightRegular: 'var(--sizing-notice-line-height-regular)',
+  teamStripeWidth: 'var(--sizing-team-stripe-width)',
+  qrPlaceholder: 'var(--sizing-qr-placeholder)',
+  scorePreviewWidth: 'var(--sizing-score-preview-width)',
+  scorePreviewHeight: 'var(--sizing-score-preview-height)',
+} as const;
+
+export const cssLetterSpacing = {
+  wider: 'var(--letter-spacing-wider)',
+} as const;
+
+// =============================================================================
 // Theme Variables (Corporate Colors)
 // =============================================================================
 
@@ -524,6 +598,7 @@ export const cssTheme = {
 // =============================================================================
 
 import { zIndex as zIndexTokens } from './elevation';
+import { borderWidths } from './sizing';
 
 const cssZIndex = zIndexTokens;
 
@@ -536,6 +611,7 @@ export const cssVars = {
   gradients: cssGradients,
   spacing: cssSpacing,
   borderRadius: cssBorderRadius,
+  borderWidth: cssBorderWidth,
   shadows: cssShadows,
   fontFamilies: cssFontFamilies,
   fontSizes: cssFontSizes,
@@ -548,6 +624,9 @@ export const cssVars = {
   iconSizes: cssIconSizes,
   inputHeights: cssInputHeights,
   layoutHeights: cssLayoutHeights,
+  sizing: cssSizing,
+  opacity: cssOpacity,
+  letterSpacing: cssLetterSpacing,
   theme: cssTheme,
   zIndex: cssZIndex,
 } as const;
@@ -560,6 +639,7 @@ export type CssVarColors = keyof typeof cssColors;
 export type CssVarGradients = keyof typeof cssGradients;
 export type CssVarSpacing = keyof typeof cssSpacing;
 export type CssVarBorderRadius = keyof typeof cssBorderRadius;
+export type CssVarBorderWidth = keyof typeof cssBorderWidth;
 export type CssVarShadows = keyof typeof cssShadows;
 export type CssVarFontFamilies = keyof typeof cssFontFamilies;
 export type CssVarFontSizes = keyof typeof cssFontSizes;

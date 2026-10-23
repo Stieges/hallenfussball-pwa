@@ -11,32 +11,9 @@ import type { CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 
 export const registerStyles: Record<string, CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.backdrop,
-    backdropFilter: 'blur(4px)',
-    WebkitBackdropFilter: 'blur(4px)',
-    zIndex: 1000,
-  },
-  card: {
-    position: 'relative',
-    width: '100%',
-    maxWidth: '400px',
-    maxHeight: '90vh',
-    overflowY: 'auto',
+  /** Innenabstand der Dialogfläche (die Fläche selbst liefert DialogSurface, B-43b3) */
+  dialogBody: {
     padding: cssVars.spacing.xl,
-    background: cssVars.colors.surfaceSolid,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `1px solid ${cssVars.colors.border}`,
-    boxShadow: `0 8px 32px ${cssVars.colors.shadowModal}`,
   },
   header: {
     display: 'flex',
@@ -113,7 +90,7 @@ export const registerStyles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.lg,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     boxSizing: 'border-box',
     transition: 'border-color 0.2s ease',
@@ -127,7 +104,7 @@ export const registerStyles: Record<string, CSSProperties> = {
   },
   hint: {
     fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textMuted,
+    color: cssVars.colors.textSecondary,
     marginTop: cssVars.spacing.xs,
   },
   suggestionButton: {
@@ -207,7 +184,7 @@ export const registerStyles: Record<string, CSSProperties> = {
   legal: {
     marginTop: cssVars.spacing.md,
     fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textMuted,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
     lineHeight: '1.5',
   },

@@ -7,20 +7,26 @@
  * - Teams (12%):  Team names centered below score blocks
  * - Timer (17%):  Large centered timer with progress bar
  * - Footer (8%):  Referee info
- *
- * @see MONITOR-LIVE-SCORE-REDESIGN.md
  */
 
-import { CSSProperties, useState, useCallback } from 'react';
-import { cssVars, displayLayout, criticalPhaseColors, type MonitorThemeColors } from '../../design-tokens';
-import type { CriticalPhase } from '../../design-tokens/display';
-import type { MonitorTheme, LiveColorScheme } from '../../types/monitor';
-import { DEFAULT_LIVE_COLOR_SCHEME } from '../../types/monitor';
-import { LiveMatch, MatchStatus } from '../../hooks/useLiveMatches';
+import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
+import { cssVars, displayFontSizes, displayLayout, getBlockFrames } from '../../design-tokens';
+import type { MonitorTheme } from '../../types/monitor';
+import { DEFAULT_SPECTATOR_DISPLAY } from '../../core/models/spectatorDisplay';
+import { resolveBoxColors, type BoxFill } from '../../core/models/scoreBoxColors';
+import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer } from './MatchTimer';
-import { ScoreBlock } from './ScoreBlock';
-import { TeamNameDisplay } from './TeamNameDisplay';
+import type { ClockMode } from '../../core/match/clockDisplay';
+import { LiveScoreGrid } from './LiveScoreGrid';
+import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
+import { LiveHeader } from './LiveHeader';
+import { badgeOfLiveMatch } from './liveBadge';
+import type { MatchBadgeModel, MatchView } from '../../core/view';
+
+export { NoMatchDisplay } from './NoMatchDisplay';
+export type { NoMatchDisplayProps } from './NoMatchDisplay';
 
 export interface LiveMatchDisplayProps {
   /** The live match to display */
@@ -33,43 +39,28 @@ export interface LiveMatchDisplayProps {
   fullscreen?: boolean;
   /** Theme (dark/light/auto) */
   theme?: MonitorTheme;
-  /** Color scheme for position colors (home/away blocks) */
-  colorScheme?: LiveColorScheme;
+  /** Kastenfarben der Ansicht (`MatchView.boxes`, 2.3): die Folie hat keine eigene Farbe mehr; ohne Angabe die Standardfarben */
+  boxes?: MatchView['boxes'];
+  /** Kindermodus (B-16e2, @W2A-031): ohne Stand, Paarung/Uhr/Phase bleiben */
+  hideScore?: boolean;
+  /** Uhr-Art des Turniers (@ZM-137) */
+  clockMode?: ClockMode;
+  finalScore?: LiveFinalScoreProps['finalScore']; // Endstand der Ansicht (A-36c, @ZM-147)
+  /** Finalrunde (K.-o., Platzierungsspiel, Finale; `MatchView.phase === 'final'`): nur dort trägt der Sieger den Pokal, den Ring jeder Sieger (@ZM-049) */
+  finalRound?: boolean;
+  /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe aus Status und Anstoß des Spiels (@OB-066) */
+  badge?: MatchBadgeModel;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getStatusInfo(
-  status: MatchStatus,
-  themeColors: MonitorThemeColors
-): { label: string; color: string; bgColor: string } {
-  switch (status) {
-    case 'RUNNING':
-      return { label: 'LIVE', color: themeColors.liveBadgeText, bgColor: themeColors.liveBadgeBg };
-    case 'PAUSED':
-      return { label: 'PAUSE', color: themeColors.pauseBadgeText, bgColor: themeColors.pauseBadgeBg };
-    case 'FINISHED':
-      return { label: 'BEENDET', color: themeColors.textSecondary, bgColor: themeColors.border };
-    case 'NOT_STARTED':
-    default:
-      return { label: 'WARTET', color: themeColors.textSecondary, bgColor: themeColors.border };
-  }
+/** Fläche als eine Farbe: bei der Weste die Mitte (die Ziffer steht darauf, @ZM-156). */
+function flatColorOf(fill: BoxFill): string {
+  return fill.kind === 'solid' ? fill.color : fill.center;
 }
 
-/**
- * Resolve team color: team color (if enabled + available) → scheme color
- */
-function resolveColor(
-  position: 'home' | 'away',
-  scheme: LiveColorScheme,
-  team?: { colors?: { primary?: string } },
-): string {
-  if (scheme.useTeamColors && team?.colors?.primary) {
-    return team.colors.primary;
-  }
-  return position === 'home' ? scheme.homeColor : scheme.awayColor;
+/** Ohne Ansicht (z. B. Vorschau): keine Seite trägt eine Farbe, also Standardfarben Heim/Gast (@ZM-159 Fall A). */
+function standardBoxes(): NonNullable<LiveMatchDisplayProps['boxes']> {
+  const { a, b } = resolveBoxColors({ worn: {}, settings: DEFAULT_SPECTATOR_DISPLAY });
+  return { home: a, away: b };
 }
 
 // ---------------------------------------------------------------------------
@@ -82,27 +73,25 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   size = 'xl',
   fullscreen = false,
   theme = 'dark',
-  colorScheme,
+  boxes,
+  hideScore = false,
+  clockMode,
+  finalScore,
+  finalRound = false,
+  badge,
 }) => {
+  const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
-  const scheme = colorScheme ?? DEFAULT_LIVE_COLOR_SCHEME;
-  const statusInfo = getStatusInfo(match.status, themeColors);
   const isRunning = match.status === 'RUNNING';
   const isPaused = match.status === 'PAUSED';
 
-  // Critical phase for pulsing border
-  const [criticalPhase, setCriticalPhase] = useState<CriticalPhase>('normal');
-  const handleCriticalPhaseChange = useCallback((phase: CriticalPhase) => {
-    setCriticalPhase(phase);
-  }, []);
-  const isPulsing = criticalPhase === 'final' || criticalPhase === 'countdown';
-
-  const homeColor = resolveColor('home', scheme, match.homeTeam);
-  const awayColor = resolveColor('away', scheme, match.awayTeam);
+  // Bis 3.2 (ScoreBox am Monitor) trägt die Weste ihre Mitte als Fläche
+  const shown = boxes ?? standardBoxes();
+  const homeColor = flatColorOf(shown.home.fill);
+  const awayColor = flatColorOf(shown.away.fill);
 
   const layout = displayLayout.scoreArea;
-
-  // --- Styles ---------------------------------------------------------------
+  const frames = getBlockFrames(homeColor, awayColor, themeColors.background, themeColors.text);
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -112,114 +101,27 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     width: '100%',
     height: fullscreen ? '100%' : 'auto',
     minHeight: fullscreen ? '100%' : size === 'xl' ? '70vh' : '50vh',
-    padding: fullscreen ? 'clamp(24px, 3vw, 48px)' : cssVars.spacing.xxl,
+    padding: fullscreen ? `${layout.paddingY} ${layout.paddingX}` : cssVars.spacing.xxl,
     background: themeColors.backgroundGradient,
     borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
-    border: fullscreen
-      ? isPulsing ? `4px solid ${criticalPhaseColors.critical}` : 'none'
-      : `4px solid ${isPulsing ? criticalPhaseColors.critical : isRunning ? themeColors.borderActive : themeColors.border}`,
-    boxShadow: isPulsing
-      ? `0 0 30px ${criticalPhaseColors.pulseGlow}, 0 0 60px ${criticalPhaseColors.pulseGlow}`
-      : fullscreen ? 'none' : isRunning ? themeColors.glowActive : cssVars.shadows.lg,
-    animation: isPulsing
-      ? 'borderPulse 0.8s ease-in-out infinite'
-      : isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
+    border: fullscreen ? 'none' : `4px solid ${isRunning ? themeColors.borderActive : themeColors.border}`,
+    boxShadow: fullscreen ? 'none' : isRunning ? themeColors.glowActive : cssVars.shadows.lg,
+    animation: isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
     position: 'relative',
     overflow: 'hidden',
   };
 
-  const headerStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    height: layout.header,
-    flexShrink: 0,
-  };
-
-  const scoreAreaStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: layout.blockGap,
-    width: '100%',
-    flex: `0 0 ${layout.score}`,
-    minHeight: 0,
-  };
-
-  const separatorStyle: CSSProperties = {
-    fontSize: size === 'xl' ? 'clamp(80px, 10vw, 140px)' : '64px',
-    fontWeight: 700,
-    color: themeColors.text,
-    opacity: 0.8,
-    userSelect: 'none',
-    flexShrink: 0,
-  };
-
-  const teamsAreaStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    gap: layout.blockGap,
-    width: '100%',
-    height: layout.teamNames,
-    flexShrink: 0,
-    paddingTop: cssVars.spacing.md,
-  };
-
-  const teamNameContainerStyle: CSSProperties = {
-    width: layout.blockWidth,
-    display: 'flex',
-    justifyContent: 'center',
-  };
-
+  // B-44a2: unterer Bereich (Uhr, Balken, Hinweise) hat in jedem Zustand dieselbe Höhe, der Block verschiebt sich nicht
   const timerAreaStyle: CSSProperties = {
     width: '100%',
-    maxWidth: '700px',
-    height: layout.timer,
+    boxSizing: 'border-box',
+    height: layout.lowerHeight, // fest (nicht min): Inhalt kann die Lage nie verschieben
+    paddingTop: layout.lowerPaddingTop,
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'flex-start',
     flexShrink: 0,
-  };
-
-  const footerStyle: CSSProperties = {
-    height: layout.footer,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  };
-
-  const badgeStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.xl}`,
-    borderRadius: cssVars.borderRadius.md,
-    backgroundColor: statusInfo.bgColor,
-    color: statusInfo.color,
-    fontSize: size === 'xl' ? '20px' : '16px',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    animation: isRunning ? 'livePulse 1.5s ease-in-out infinite' : undefined,
-  };
-
-  const liveDotStyle: CSSProperties = {
-    width: '14px',
-    height: '14px',
-    borderRadius: '50%',
-    backgroundColor: statusInfo.color,
-    boxShadow: isRunning ? `0 0 8px ${statusInfo.color}` : undefined,
-    animation: isRunning ? 'liveDotPulse 1s ease-in-out infinite' : undefined,
-  };
-
-  const infoStyle: CSSProperties = {
-    fontSize: size === 'xl' ? 'clamp(24px, 2.5vw, 36px)' : '20px',
-    fontWeight: 600,
-    color: themeColors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
   };
 
   // --- Render ---------------------------------------------------------------
@@ -227,63 +129,33 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   return (
     <>
       <div style={containerStyle}>
-        {/* Header: LIVE badge | Field | Group */}
-        <div style={headerStyle}>
-          <div style={badgeStyle}>
-            {isRunning && <span style={liveDotStyle} />}
-            {statusInfo.label}
-          </div>
-          <div style={infoStyle}>
-            Feld {match.field ?? 1} — Spiel {match.number}
-          </div>
-          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if either has value */}
-          {(group || match.group) && (
-            <div style={{ ...infoStyle, color: themeColors.text }}>
-              Gruppe {group ?? match.group}
-            </div>
-          )}
-        </div>
+        <LiveHeader
+          badge={badge ?? badgeOfLiveMatch(match)}
+          field={match.field ?? 1}
+          matchNumber={match.number}
+          group={group ?? match.group}
+          size={size}
+          themeColors={themeColors}
+        />
 
-        {/* Score Area: [Home Block] : [Away Block] */}
-        <div style={scoreAreaStyle}>
-          <ScoreBlock
-            score={match.homeScore}
-            backgroundColor={homeColor}
-            position="home"
-            size={size}
-          />
-          <span style={separatorStyle}>:</span>
-          <ScoreBlock
-            score={match.awayScore}
-            backgroundColor={awayColor}
-            position="away"
-            size={size}
-          />
-        </div>
+        {/* Raster: Kästen, Trenner, Namen (@ZM-140); Kindermodus ohne Kästen; Ende nach Mockup K5g */}
+        <LiveScoreGrid
+          match={match}
+          size={size}
+          theme={theme}
+          themeColors={themeColors}
+          hideScore={hideScore}
+          homeColor={homeColor}
+          awayColor={awayColor}
+          frames={frames}
+          finalScore={finalScore}
+          finalRound={finalRound}
+        />
 
-        {/* Team Names */}
-        <div style={teamsAreaStyle}>
-          <div style={teamNameContainerStyle}>
-            <TeamNameDisplay
-              name={match.homeTeam.name}
-              size={size}
-              theme={theme}
-              maxWidth="100%"
-            />
-          </div>
-          <div style={teamNameContainerStyle}>
-            <TeamNameDisplay
-              name={match.awayTeam.name}
-              size={size}
-              theme={theme}
-              maxWidth="100%"
-            />
-          </div>
-        </div>
-
-        {/* Timer */}
-        {(isRunning || isPaused || match.status === 'FINISHED') && (
-          <div style={timerAreaStyle}>
+        {/* Unterer Bereich: feste Höhe in jedem Zustand (B-44a2); H2: nach dem Abpfiff keine Uhr, nur das Endergebnis */}
+        <div style={timerAreaStyle} data-testid="live-lower">
+          {match.status === 'FINISHED' && <LiveFinalScore color={themeColors.text} accent={themeColors.progressBar} finalScore={hideScore ? undefined : finalScore} names={{ home: match.homeTeam.name, away: match.awayTeam.name }} />}
+          {(isRunning || isPaused) && (
             <MatchTimer
               elapsedSeconds={match.elapsedSeconds}
               durationSeconds={match.durationSeconds}
@@ -293,19 +165,26 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
               timerStartTime={match.timerStartTime}
               timerElapsedSeconds={match.timerElapsedSeconds}
               theme={theme}
-              onCriticalPhaseChange={handleCriticalPhaseChange}
+              clockMode={clockMode}
             />
-          </div>
-        )}
-
-        {/* Footer: Referee */}
-        {match.refereeName && (
-          <div style={footerStyle}>
-            <span style={{ ...infoStyle, fontWeight: 500, textTransform: 'none', letterSpacing: 'normal' }}>
-              Schiedsrichter: {match.refereeName}
-            </span>
-          </div>
-        )}
+          )}
+          {/* B1: Schiedsrichter-Zeile im reservierten unteren Bereich, immer an derselben Stelle (unten) */}
+          {match.refereeName && (
+            <div
+              data-testid="live-referee"
+              style={{
+                marginTop: 'auto',
+                fontSize: displayFontSizes.clockHint,
+                lineHeight: layout.hintLineHeight,
+                color: themeColors.text,
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {t('liveMatch.referee', { name: match.refereeName })}
+            </div>
+          )}
+        </div>
       </div>
 
       <style>{`
@@ -321,10 +200,6 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.3); opacity: 0.8; }
         }
-        @keyframes borderPulse {
-          0%, 100% { box-shadow: 0 0 30px rgba(253, 224, 71, 0.6), 0 0 60px rgba(253, 224, 71, 0.3); }
-          50% { box-shadow: 0 0 50px rgba(253, 224, 71, 0.9), 0 0 100px rgba(253, 224, 71, 0.5); }
-        }
         @media (prefers-reduced-motion: reduce) {
           * {
             animation-duration: 0.01ms !important;
@@ -336,64 +211,3 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   );
 };
 
-// ---------------------------------------------------------------------------
-// No Match Display (unchanged)
-// ---------------------------------------------------------------------------
-
-export interface NoMatchDisplayProps {
-  message?: string;
-  size?: 'md' | 'lg' | 'xl';
-  fullscreen?: boolean;
-  theme?: MonitorTheme;
-}
-
-export const NoMatchDisplay: React.FC<NoMatchDisplayProps> = ({
-  message = 'Kein laufendes Spiel',
-  size = 'xl',
-  fullscreen = false,
-  theme = 'dark',
-}) => {
-  const { themeColors } = useMonitorTheme(theme);
-
-  const containerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: fullscreen ? 'clamp(32px, 4vw, 64px)' : size === 'xl' ? '64px' : cssVars.spacing.xxl,
-    background: themeColors.backgroundGradient,
-    borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
-    border: fullscreen ? 'none' : `3px solid ${themeColors.border}`,
-    minHeight: fullscreen ? '100%' : size === 'xl' ? '50vh' : '35vh',
-    height: fullscreen ? '100%' : 'auto',
-    width: '100%',
-    maxWidth: fullscreen ? 'none' : '1200px',
-    margin: '0 auto',
-    boxShadow: fullscreen ? 'none' : cssVars.shadows.lg,
-  };
-
-  return (
-    <div style={containerStyle}>
-      <div style={{ fontSize: size === 'xl' ? '100px' : '72px', marginBottom: cssVars.spacing.xl, opacity: 0.6 }}>
-        ⏸️
-      </div>
-      <div style={{
-        fontSize: size === 'xl' ? 'clamp(36px, 4vw, 48px)' : '28px',
-        fontWeight: 600,
-        color: themeColors.text,
-        textAlign: 'center',
-        textShadow: themeColors.textShadowLight,
-      }}>
-        {message}
-      </div>
-      <div style={{
-        fontSize: size === 'xl' ? 'clamp(18px, 2vw, 24px)' : '18px',
-        color: themeColors.textSecondary,
-        marginTop: cssVars.spacing.lg,
-        textAlign: 'center',
-      }}>
-        Die Tabellen werden angezeigt, bis ein Spiel gestartet wird
-      </div>
-    </div>
-  );
-};

@@ -1,8 +1,8 @@
 // Services
 export { TournamentService } from './TournamentService';
 export { ScheduleService } from './ScheduleService';
-export { MatchExecutionService } from './MatchExecutionService';
 export { TournamentCreationService } from './TournamentCreationService';
+export { diffMatchResultStatusUpdates } from './matchResultStatusDiff';
 
 // Retry Service
 export {

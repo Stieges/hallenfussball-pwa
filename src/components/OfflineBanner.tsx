@@ -12,7 +12,7 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { useAuth } from '../features/auth/hooks/useAuth';
+import { useVerbinden } from '../features/match-engine/useVerbinden';
 import { cssVars } from '../design-tokens'
 interface OfflineBannerProps {
   /** Optional: Number of pending changes waiting to sync (Phase 3) */
@@ -23,7 +23,9 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   pendingSyncCount = 0,
 }) => {
   const { isOnline, wasOffline } = useOnlineStatus();
-  const { reconnect } = useAuth();
+  // A-06h (Brief A9): Verbinden stoesst zusaetzlich die Uebertragung an (gemeinsamer Hook, auch im Cockpit-Kopf). Oben bei den
+  // anderen Hooks, vor jedem fruehen return (Rules of Hooks).
+  const verbinden = useVerbinden();
   const { t } = useTranslation('common');
 
   // Don't render if online and not recently reconnected and no pending syncs
@@ -70,20 +72,22 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   // Offline state
   if (!isOnline) {
     return (
-      <div style={bannerStyle} role="status" aria-live="polite">
+      <div style={bannerStyle} role="status" aria-live="polite" data-testid="offline-banner">
         <span role="img" aria-label="Offline">📡</span>
         <span>{t('offlineBanner.message')}</span>
         <button
-          onClick={() => void reconnect()}
+          onClick={verbinden}
+          data-testid="offline-banner-connect"
           style={{
             background: 'transparent',
             border: '1px solid currentColor',
-            borderRadius: '4px',
-            padding: '2px 8px',
+            borderRadius: cssVars.borderRadius.sm,
+            padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
             color: 'inherit',
             fontSize: 'inherit',
             cursor: 'pointer',
-            marginLeft: '8px'
+            marginLeft: cssVars.spacing.sm,
+            minHeight: cssVars.touchTargets.minimum,
           }}
         >
           {t('actions.connect')}
@@ -100,7 +104,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   // Just reconnected
   if (wasOffline) {
     return (
-      <div style={bannerStyle} role="status" aria-live="polite">
+      <div style={bannerStyle} role="status" aria-live="polite" data-testid="offline-banner">
         <span role="img" aria-label="Connected">✓</span>
         <span>{t('offlineBanner.reconnected')}</span>
         {pendingSyncCount > 0 && (
@@ -117,7 +121,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   // Online with pending syncs (Phase 3)
   if (pendingSyncCount > 0) {
     return (
-      <div style={bannerStyle} role="status" aria-live="polite">
+      <div style={bannerStyle} role="status" aria-live="polite" data-testid="offline-banner">
         <span role="img" aria-label="Syncing">🔄</span>
         <span>
           {t('offlineBanner.syncing', { count: pendingSyncCount })}

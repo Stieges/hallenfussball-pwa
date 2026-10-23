@@ -19,8 +19,13 @@ import React, { useState, useRef, useEffect, useMemo, CSSProperties } from 'reac
 import { useTranslation } from 'react-i18next';
 import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { useAuth } from '../../features/auth/hooks/useAuth';
+import { useResyncNow } from '../../features/match-engine/useResyncNow';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useCompactHeader } from '../../hooks/useCompactHeader';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
+import type { WaitingEntriesSource } from '../../features/collaboration/outbox/countWaitingEntries';
+import { useGuardedLogout } from '../../features/collaboration/outbox/useGuardedLogout';
+import { LogoutWarningDialog } from '../../features/collaboration/outbox/LogoutWarningDialog';
 import { Button } from '../ui/Button';
 import { cssVars } from '../../design-tokens';
 import { Icons } from '../ui/Icons';
@@ -30,6 +35,9 @@ interface AuthSectionProps {
   onNavigateToRegister: () => void;
   onNavigateToProfile: () => void;
   onNavigateToSettings?: () => void;
+  /** Fixrunde 1 (Review I3): injizierbare Fabrik fuer die Abmelde-Warnung (D-C2), wie in
+   *  UserProfileScreen. Standard: neue LocalMatchStore-Instanz (siehe useGuardedLogout). */
+  createMatchStore?: () => WaitingEntriesSource;
 }
 
 /**
@@ -76,30 +84,38 @@ const VisuallyHidden: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 /**
  * HeaderOfflineBadge - Compact offline indicator for header placement
- * Shows when connectionState is 'offline' with a reconnect button
+ * Shows when connectionState is 'offline' with a reconnect button.
+ * @OB-021: Unter 400 px nur das Symbol (Touch-Ziel ≥ 44 px, Text als aria-label und Tooltip), damit die Kopfzeile
+ * bei 360–390 px ohne Überlauf und mit einzeiligem Titel passt.
  */
 const HeaderOfflineBadge: React.FC<{
   onReconnect: () => void;
 }> = ({ onReconnect }) => {
   const { t } = useTranslation('common');
+  const kompakt = useCompactHeader();
   return (
     <Button
       variant="secondary"
       size="sm"
       onClick={onReconnect}
       aria-label={t('authSection.offlineAriaLabel')}
+      title={t('authSection.offlineHint')}
       data-testid="auth-offline-badge"
       style={{
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: cssVars.spacing.xs,
         backgroundColor: cssVars.colors.correctionBg,
         borderColor: cssVars.colors.correctionBorder,
         color: cssVars.colors.correctionText,
+        ...(kompakt
+          ? { minWidth: cssVars.touchTargets.minimum, minHeight: cssVars.touchTargets.minimum, paddingLeft: 0, paddingRight: 0 }
+          : {}),
       }}
     >
       <span role="img" aria-hidden="true">📡</span>
-      <span>{t('authSection.offline')}</span>
+      {!kompakt && <span>{t('authSection.offline')}</span>}
     </Button>
   );
 };
@@ -109,14 +125,31 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   onNavigateToRegister,
   onNavigateToProfile,
   onNavigateToSettings,
+  createMatchStore,
 }) => {
   const { user, isAuthenticated, isGuest, isLoading, logout, connectionState, reconnect } = useAuth();
+  const resyncNow = useResyncNow();
+  const handleReconnect = () => { void reconnect(); void resyncNow(); };
   const isMobile = useIsMobile();
   const { t } = useTranslation('common');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const menuItemsRef = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Fixrunde 1 (Review I3): D-C2-Abmelde-Warnung auch fuer das Konto-Dropdown, nicht nur
+  // UserProfileScreen -- derselbe Hook wie dort, damit beide Wege dasselbe Verhalten zeigen.
+  const {
+    waitingCount: logoutWaiting,
+    handleLogout: guardedLogout,
+    cancel: cancelLogoutWarning,
+    confirm: confirmLogoutWarning,
+  } = useGuardedLogout({
+    isGuest,
+    accountId: user?.id ?? '',
+    logout,
+    createMatchStore,
+  });
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -189,33 +222,16 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     };
   }, [dropdownOpen]);
 
-  // Check if we have a cached authenticated user (for optimistic UI during loading)
-  // This allows us to show avatar skeleton only when we expect a logged-in user
-  // We use state instead of memo so we can clear it after a timeout
-  const [showSkeleton, setShowSkeleton] = useState(() => {
+  // Nutzerkopie vorhanden = auf diesem Gerät angemeldet (optimistische Anzeige während des Starts).
+  // @AN-019: Ein langsamer Start löscht die Kopie NICHT und zeigt kein „Anmelden“. Die Kopie endet nur mit
+  // dem Ende der Sitzung (SIGNED_OUT, eigenes Abmelden, Ablehnung durch den Server – siehe AuthContext).
+  const [hasCachedUser] = useState(() => {
     try {
       return safeLocalStorage.getItem('auth:cachedUser') !== null;
     } catch {
       return false;
     }
   });
-
-  // Skeleton timeout: If auth takes longer than 3s, show buttons instead of skeleton
-  // This prevents users from being stuck on skeleton if session is stale
-  useEffect(() => {
-    if (isLoading && showSkeleton) {
-      const timer = setTimeout(() => {
-        setShowSkeleton(false);
-        // Also clear the stale cache so next page load doesn't have this issue
-        try {
-          safeLocalStorage.removeItem('auth:cachedUser');
-        } catch {
-          // localStorage not available
-        }
-      }, 3000); // 3 seconds max skeleton time
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, showSkeleton]);
 
   // Aria-Live Status Text für Screenreader
   // Wird bei Auth-Zustandsänderungen angekündigt
@@ -233,15 +249,14 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   }, [isLoading, isAuthenticated, isGuest, user, t]);
 
   // Loading State - Optimistic UI:
-  // Only show skeleton if we expect a logged-in user (cached user exists).
-  // Skeleton auto-clears after 3s to prevent stuck UI on stale sessions.
-  // Otherwise, show login/register buttons immediately for instant interactivity.
-  if (isLoading && showSkeleton) {
+  // Skeleton nur, solange eine Nutzerkopie da ist, aber noch kein Nutzer gesetzt (AuthProvider setzt die Kopie
+  // nach spätestens 5 s, der Start endet nach spätestens 15 s). Ohne Kopie sofort Anmelden/Registrieren.
+  if (isLoading && hasCachedUser && !(isAuthenticated && user)) {
     return (
       <div style={styles.container}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
         {connectionState === 'offline' && (
-          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+          <HeaderOfflineBadge onReconnect={handleReconnect} />
         )}
         {/* Show avatar skeleton only - expecting authenticated user */}
         <div style={styles.avatarSkeleton} aria-hidden="true" />
@@ -259,7 +274,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
         <VisuallyHidden>{statusText}</VisuallyHidden>
         {/* Offline Badge */}
         {connectionState === 'offline' && (
-          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+          <HeaderOfflineBadge onReconnect={handleReconnect} />
         )}
         {/* Name (nur Desktop) */}
         {!isMobile && (
@@ -334,7 +349,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               role="menuitem"
               onClick={() => {
                 setDropdownOpen(false);
-                void logout();
+                guardedLogout();
               }}
               style={{ ...styles.dropdownItem, ...styles.dropdownItemDanger }}
               data-testid="auth-logout-button"
@@ -344,6 +359,13 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
             </button>
           </div>
         )}
+
+        <LogoutWarningDialog
+          isOpen={logoutWaiting !== null}
+          count={logoutWaiting ?? 0}
+          onCancel={cancelLogoutWarning}
+          onConfirm={confirmLogoutWarning}
+        />
       </div>
     );
   }
@@ -356,7 +378,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
           <VisuallyHidden>{statusText}</VisuallyHidden>
           {/* Offline Badge */}
           {connectionState === 'offline' && (
-            <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+            <HeaderOfflineBadge onReconnect={handleReconnect} />
           )}
           {/* Gast-Badge (nur Desktop) */}
           {!isMobile && (
@@ -414,7 +436,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
         <VisuallyHidden>{statusText}</VisuallyHidden>
         {/* Offline Badge */}
         {connectionState === 'offline' && (
-          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+          <HeaderOfflineBadge onReconnect={handleReconnect} />
         )}
         {/* Mobile: Single Icon - öffnet BottomSheet */}
         {isMobile ? (

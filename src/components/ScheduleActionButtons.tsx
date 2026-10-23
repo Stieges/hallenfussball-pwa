@@ -1,4 +1,6 @@
-import { useState, CSSProperties } from 'react';
+import { useEffect, useRef, useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/Button';
 import { Icons } from './ui/Icons';
 import { ShareDialog } from './dialogs/ShareDialog';
@@ -12,6 +14,8 @@ export interface ScheduleActionButtonsProps {
   schedule: GeneratedSchedule;
   standings: Standing[];
   variant?: 'organizer' | 'public';
+  /** A-11 @ZM-019: „Aushang mit QR-Code“ im PDF-Dialog anbieten (Recht tournamentSettings). Vorgabe: ja. */
+  canCreateNotice?: boolean;
 }
 
 export const ScheduleActionButtons = ({
@@ -19,9 +23,26 @@ export const ScheduleActionButtons = ({
   schedule,
   standings,
   variant = 'organizer',
+  canCreateNotice,
 }: ScheduleActionButtonsProps) => {
+  const { t } = useTranslation('tournament');
+  const navigate = useNavigate();
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showPDFDialog, setShowPDFDialog] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Die Höhe der Leiste steht als CSS-Variable bereit; die Spielplan-Karte reserviert damit den Platz unten (ScheduleTab)
+  useEffect(() => {
+    const leiste = barRef.current;
+    if (variant !== 'organizer' || !leiste || typeof ResizeObserver === 'undefined') { return; }
+    const wurzel = document.documentElement;
+    const beobachter = new ResizeObserver(() => wurzel.style.setProperty('--schedule-action-bar-h', `${leiste.offsetHeight}px`));
+    beobachter.observe(leiste);
+    return () => {
+      beobachter.disconnect();
+      wurzel.style.removeProperty('--schedule-action-bar-h');
+    };
+  }, [variant]);
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -29,24 +50,19 @@ export const ScheduleActionButtons = ({
     flexWrap: 'wrap',
   };
 
-  // Responsive styles for mobile FAB buttons - positioned above bottom nav
-  const fabContainerStyle: CSSProperties = {
-    position: 'fixed',
-    bottom: `calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px))`,
-    right: cssVars.spacing.lg,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-    zIndex: 100,
-  };
+  // Öffentliche Seite: der Knopf steht im Fluss unter dem Spielplan, rechtsbündig mit Abstand – nie schwebend über einer Karte (@OB-021)
+  const publicStyle: CSSProperties = { ...containerStyle, justifyContent: 'flex-end', marginTop: cssVars.spacing.lg };
 
-  const isMobile = variant === 'public'; // Public view uses FAB style on mobile
+  const isPublic = variant === 'public';
+  // Über die alte Zuschauer-Adresse gibt es kein PDF (@BM-057); das PDF der Zuschauer-Seite kommt über `PublicPdfButton`
+  const withPdf = variant === 'organizer';
 
   return (
     <>
       {/* Action Buttons */}
       <div
-        style={isMobile ? fabContainerStyle : containerStyle}
+        ref={barRef}
+        style={isPublic ? publicStyle : containerStyle}
         className="schedule-action-buttons"
       >
         <Button
@@ -55,17 +71,20 @@ export const ScheduleActionButtons = ({
           icon={<Icons.Share />}
           onClick={() => setShowShareDialog(true)}
         >
-          Teilen
+          {t('scheduleActions.share')}
         </Button>
 
-        <Button
-          variant="secondary"
-          size="md"
-          icon={<Icons.Download />}
-          onClick={() => setShowPDFDialog(true)}
-        >
-          Als PDF
-        </Button>
+        {withPdf ? (
+          <Button
+            variant="secondary"
+            size="md"
+            icon={<Icons.Download />}
+            onClick={() => setShowPDFDialog(true)}
+            data-testid="schedule-action-pdf"
+          >
+            {t('pdfExport.open')}
+          </Button>
+        ) : null}
       </div>
 
       {/* Share Dialog */}
@@ -78,38 +97,41 @@ export const ScheduleActionButtons = ({
         isPublic={tournament.isPublic}
       />
 
-      {/* PDF Export Dialog */}
-      <PDFExportDialog
-        isOpen={showPDFDialog}
-        onClose={() => setShowPDFDialog(false)}
-        tournament={tournament}
-        schedule={schedule}
-        standings={standings}
-      />
+      {/* PDF-Dialog (Veranstalter); die Wege „Online teilen“ und „Sichtbarkeit ändern“ führen zu den Schaltern der Verwaltung */}
+      {withPdf ? (
+        <PDFExportDialog
+          isOpen={showPDFDialog}
+          onClose={() => setShowPDFDialog(false)}
+          tournament={tournament}
+          schedule={schedule}
+          standings={standings}
+          canCreateNotice={canCreateNotice}
+          onOpenVisibility={() => {
+            setShowPDFDialog(false);
+            void navigate(`/tournament/${tournament.id}/admin/visibility`);
+          }}
+        />
+      ) : null}
 
-      {/* Responsive Styles */}
-      <style>{`
-        ${mediaQueries.tabletDown} {
-          .schedule-action-buttons {
-            position: fixed !important;
-            bottom: calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
-            right: ${cssVars.spacing.lg} !important;
-            flex-direction: column !important;
-            z-index: 100 !important;
-          }
+      {/* Verwaltung: mobil schwebende Leiste (die Karte reserviert den Platz, ScheduleTab); öffentlich im Fluss */}
+      {isPublic ? null : (
+        <style>{`
+          ${mediaQueries.tabletDown} {
+            .schedule-action-buttons {
+              position: fixed !important;
+              bottom: calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
+              right: ${cssVars.spacing.lg} !important;
+              flex-direction: column !important;
+              z-index: 100 !important;
+            }
 
-          .schedule-action-buttons button {
-            min-width: 120px;
-            box-shadow: ${cssVars.shadows.lg};
+            .schedule-action-buttons button {
+              min-width: 120px;
+              box-shadow: ${cssVars.shadows.lg};
+            }
           }
-        }
-
-        @media (min-width: 768px) {
-          .schedule-action-buttons {
-            ${variant === 'organizer' ? '' : 'justify-content: flex-end;'}
-          }
-        }
-      `}</style>
+        `}</style>
+      )}
     </>
   );
 };

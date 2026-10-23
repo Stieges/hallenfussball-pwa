@@ -15,10 +15,12 @@
 
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { bindServerTables } from './realtimeServerTables';
 import type {
   RealtimeConnectionStatus,
   RealtimePayload,
   RealtimeState,
+  RealtimeTable,
   TournamentSubscriptionOptions,
 } from './types';
 
@@ -29,6 +31,16 @@ import type {
 export class RealtimeService {
   private channels = new Map<string, RealtimeChannel>();
   private subscriptionOptions = new Map<string, TournamentSubscriptionOptions>();
+  /**
+   * @FU-102: realtime-js baut Kanaele asynchron ab und liefert `channel(topic)` den alten Kanal
+   * zurueck, solange er nicht fertig abgebaut ist (dann wirft `.on()` nach `subscribe()`); ein spaet
+   * fertiger Abbau entfernt zudem ueber das Thema auch einen neueren Kanal. Darum: je Turnier den
+   * laufenden Abbau merken und erst danach neu anlegen.
+   */
+  private pendingRemovals = new Map<string, Promise<void>>();
+  /** Gueltigkeitsmarke je Turnier: nur das jeweils letzte Neuabo darf anlegen. */
+  private subscriptionTokens = new Map<string, number>();
+  private tokenSeq = 0;
   private state: RealtimeState = {
     status: 'disconnected',
     lastConnectedAt: null,
@@ -62,7 +74,7 @@ export class RealtimeService {
 
     const { tournamentId } = options;
 
-    // Unsubscribe if already subscribed
+    // Unsubscribe if already subscribed (Abbau laeuft ggf. noch -> startSubscription wartet darauf)
     this.unsubscribeTournament(tournamentId);
 
     // Store options for reconnection
@@ -78,18 +90,15 @@ export class RealtimeService {
       return;
     }
 
-    this.createSubscription(tournamentId, options);
+    this.startSubscription(tournamentId);
   }
 
   /**
    * Unsubscribe from tournament changes
    */
   unsubscribeTournament(tournamentId: string): void {
-    const channel = this.channels.get(tournamentId);
-    if (channel && supabase) {
-      void supabase.removeChannel(channel);
-      this.channels.delete(tournamentId);
-    }
+    this.subscriptionTokens.delete(tournamentId);
+    this.removeTournamentChannel(tournamentId);
 
     this.subscriptionOptions.delete(tournamentId);
     this.state.subscribedTournaments.delete(tournamentId);
@@ -104,7 +113,7 @@ export class RealtimeService {
    * Unsubscribe from all tournaments
    */
   unsubscribeAll(): void {
-    for (const tournamentId of this.channels.keys()) {
+    for (const tournamentId of [...this.subscriptionOptions.keys()]) {
       this.unsubscribeTournament(tournamentId);
     }
   }
@@ -227,21 +236,23 @@ export class RealtimeService {
       );
     }
 
-    // Subscribe to tournament itself
-    if (options.onTournamentChange) {
-      channel.on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tournaments',
-          filter: `id=eq.${tournamentId}`,
-        },
-        (payload) => {
-          options.onTournamentChange?.(this.normalizePayload(payload, 'tournaments'));
-        }
-      );
-    }
+    // GA4 A-13b-C: Abschlüsse, Folgen-Hinweise und Klärungen (Tabellen aus Migration 20261110_006, in der Publikation)
+    bindServerTables(channel, tournamentId, options.onBracketChange === undefined ? undefined : (table, raw) => {
+      options.onBracketChange?.(this.normalizePayload(raw, table));
+    });
+
+    // A-08f3b2 (C-SPIELPLAN-PUSH-KANAL-OFFEN, @FU-087): KEINE Bindung auf `tournaments` -- die Tabelle steht
+    // nicht in der Publikation `supabase_realtime` (Migration 20260928_001 § 9). Eine solche Bindung lässt den
+    // Server den GANZEN Kanal ablehnen (System-Nachricht status 'error'), der Kanal bleibt aber SUBSCRIBED:
+    // keine Pushes, und das Abfrage-Ausweichen greift nicht.
+
+    // A-08f3b2: Lehnt der Server die postgres_changes-Abos nach dem Beitritt ab, zählt das wie CHANNEL_ERROR
+    // (realtime-js meldet das nicht über den subscribe-Rückruf) -> Abfrage-Ausweichen greift.
+    channel.on('system', {}, (payload: { status?: string; extension?: string; message?: string }) => {
+      if (payload.extension === 'postgres_changes' && payload.status === 'error') {
+        this.reportChannelError(tournamentId, options, payload.message);
+      }
+    });
 
     // Handle subscription status
     channel.subscribe((status: string) => {
@@ -252,11 +263,10 @@ export class RealtimeService {
           // eslint-disable-next-line no-console
           console.log('[RealtimeService] Subscribed to:', tournamentId);
         }
-      } else if (status === 'CHANNEL_ERROR') {
-        const error = new Error(`Subscription failed for ${tournamentId}`);
-        this.state.lastError = error;
-        this.updateStatus('error');
-        options.onError?.(error);
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        // A-08f-F2: TIMED_OUT (Beitritt laeuft in den Timeout) zaehlt wie CHANNEL_ERROR -> Abfrage-Ausweichen greift
+        this.reportChannelError(tournamentId, options);
+        return;
       } else if (status === 'CLOSED') {
         if (!this.state.isPaused) {
           this.updateStatus('disconnected');
@@ -270,9 +280,17 @@ export class RealtimeService {
     this.updateStatus('connecting');
   }
 
+  private reportChannelError(tournamentId: string, options: TournamentSubscriptionOptions, detail?: string): void {
+    const error = new Error(`Subscription failed for ${tournamentId}${detail ? `: ${detail}` : ''}`);
+    this.state.lastError = error;
+    this.updateStatus('error');
+    options.onError?.(error);
+    options.onStatusChange?.(this.state.status);
+  }
+
   private normalizePayload(
     raw: { eventType: string; new: unknown; old: unknown },
-    table: 'tournaments' | 'teams' | 'matches' | 'match_events'
+    table: Exclude<RealtimeTable, 'tournaments'>
   ): RealtimePayload {
     return {
       eventType: raw.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
@@ -283,18 +301,72 @@ export class RealtimeService {
     };
   }
 
-  private removeAllChannels(): void {
-    if (!supabase) { return; }
+  /**
+   * Baut den Kanal eines Turniers ab (sofort aus der Verwaltung, der Abbau selbst ist asynchron und
+   * wird je Turnier in `pendingRemovals` festgehalten). Wirft nie.
+   */
+  private removeTournamentChannel(tournamentId: string): void {
+    const channel = this.channels.get(tournamentId);
+    if (!channel || !supabase) { return; }
+    this.channels.delete(tournamentId);
 
-    for (const channel of this.channels.values()) {
-      void supabase.removeChannel(channel);
+    const previous = this.pendingRemovals.get(tournamentId) ?? Promise.resolve();
+    let removal: Promise<void>;
+    try {
+      removal = Promise.resolve(supabase.removeChannel(channel)).then(() => undefined, () => undefined);
+    } catch {
+      removal = Promise.resolve();
     }
-    this.channels.clear();
+    const settled: Promise<void> = Promise.all([previous, removal]).then(() => {
+      if (this.pendingRemovals.get(tournamentId) === settled) {
+        this.pendingRemovals.delete(tournamentId);
+      }
+    });
+    this.pendingRemovals.set(tournamentId, settled);
+  }
+
+  /**
+   * Legt das Abo eines Turniers neu an: erst alten Kanal abbauen, dann (nach fertigem Abbau) genau
+   * einen neuen anlegen. Ein spaeteres Neuabo, Abmelden oder Pausieren macht ein wartendes ungueltig.
+   */
+  private startSubscription(tournamentId: string): void {
+    const token = ++this.tokenSeq;
+    this.subscriptionTokens.set(tournamentId, token);
+    this.removeTournamentChannel(tournamentId);
+
+    const pending = this.pendingRemovals.get(tournamentId);
+    if (!pending) {
+      this.createIfCurrent(tournamentId, token);
+      return;
+    }
+    void pending.then(() => this.createIfCurrent(tournamentId, token));
+  }
+
+  private createIfCurrent(tournamentId: string, token: number): void {
+    if (this.subscriptionTokens.get(tournamentId) !== token) { return; }
+    if (this.state.isPaused || this.channels.has(tournamentId)) { return; }
+    const options = this.subscriptionOptions.get(tournamentId);
+    if (!options) { return; }
+    try {
+      this.createSubscription(tournamentId, options);
+    } catch (error) {
+      // Laeuft meist verzoegert (nach dem Abbau) und hat keinen Aufrufer, der den Wurf sieht:
+      // als Kanal-Fehler melden, damit das Abfrage-Ausweichen (@FU-025) greift.
+      this.channels.delete(tournamentId);
+      this.reportChannelError(tournamentId, options, error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  private removeAllChannels(): void {
+    this.subscriptionTokens.clear();
+    for (const tournamentId of [...this.channels.keys()]) {
+      this.removeTournamentChannel(tournamentId);
+    }
   }
 
   private resubscribeAll(): void {
-    for (const [tournamentId, options] of this.subscriptionOptions) {
-      this.createSubscription(tournamentId, options);
+    for (const tournamentId of [...this.subscriptionOptions.keys()]) {
+      this.startSubscription(tournamentId);
     }
   }
 

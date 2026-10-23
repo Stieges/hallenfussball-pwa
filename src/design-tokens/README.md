@@ -83,6 +83,39 @@ colors.warning      // #FF9100
 colors.success      // #4CAF50
 ```
 
+#### Rand-Rollen: Bedien-Rand oder Trennlinie
+
+| Rolle | Token | Wann | Kontrast |
+|---|---|---|---|
+| Bedien-Rand | `colors.borderControl` | Rand von Knopf, Eingabefeld, Auswahl, Chip, Schalter, Radio, Stepper, Farbwähler-Auslöser | mindestens 3 : 1 gegen die Fläche (WCAG 1.4.11, @OB-055, @OB-057) |
+| Bedien-Rand auf erhöhter Fläche | `colors.borderControlRaised` | Bedienelement auf `surfaceLight` (im dunklen Thema heller als `borderControl`) | mindestens 3 : 1 gegen `surfaceLight` |
+| Trennlinie / Kartenrand | `colors.border` (auch `borderDefault`, `borderMedium`, `borderSolid`, `borderSubtle`) | dekorativ: Karten, Kopf-/Fußlinien, Trenner, Tabellenlinien | bewusst unter 3 : 1 |
+| Zustand | `colors.borderActive`, `primary`, `error` | gewählt, Fehler, live | eigene Farbe |
+
+`borderLight` und `borderStrong` gibt es nicht mehr (B-51). Ein neuer Rand eines Bedienelements nimmt `borderControl`, nie `border`.
+Die Prüfung `src/design-tokens/__tests__/borderControl.contrast.test.ts` rechnet beide Themen und den hohen Kontrast gegen die Flächen.
+
+#### Tafel (Live-Cockpit)
+
+Die Tafel (Spielstand, Uhr, Meldezeile) hat eigene Tokens, nie `surface`. Hell und dunkel: dunkle Tafel (Mockup-Freigabe 16.10.). Hoher Kontrast ist nicht MVP: schwarze Fläche, gelbe Zweitschrift, weißer Rand sind nur Platzhalter.
+
+| Rolle | Token | Kontrast |
+|---|---|---|
+| Fläche | `colors.scoreboardBg` | deckend |
+| Schrift / gedämpft (Zweitschrift) | `colors.scoreboardText` / `scoreboardTextMuted` | mindestens 4,5 : 1 |
+| Live / Hervorhebung | `colors.scoreboardLive` / `scoreboardHighlight` | mindestens 3 : 1 |
+| Schrift auf Live / auf Hervorhebung | `colors.scoreboardOnLive` / `scoreboardOnHighlight` | mindestens 4,5 : 1 |
+| Schlussphase der Uhr (Violett #C4B5FD) | `colors.scoreboardFinalPhase` | mindestens 4,5 : 1, nie Live-Rot |
+| Rand / Trennlinie | `colors.scoreboardBorder` / `scoreboardDivider` | Rand der Stand-Kästen |
+| Meldezeile | `colors.noticeLineBg` (Fläche `scoreboardSurface`) / `noticeLineText` | mindestens 4,5 : 1 |
+| Abzeichen | `colors.scoreboardOk`, `scoreboardInfo`, `scoreboardNeutral` | Füllung, Schrift über `scoreboardOnHighlight` oder Fläche |
+
+**Regel:** Live-Rot (`scoreboardLive`, #DC2626) ist nur Fläche. Schrift darauf ist `scoreboardOnLive` (weiß, 4,83 : 1). Live-Rot als Schrift auf der Tafel ist verboten (hell nur 3,55 : 1).
+
+Größen (`cssVars.sizing`, fest in px wie die Score-Regel): `scoreboardClockCompact` 32 px (Handy), `scoreboardClockRegular` 64 px (Tablet), `scoreboardClockWide` 56 px (ab 1024), `scoreboardScoreCompact` 40 px, `scoreboardScoreRegular` 64 px, `noticeLineHeightCompact` 24 px, `noticeLineHeightRegular` 32 px (reine Anzeige; nur das Kreuz hat 44 px). Prüfung: `src/design-tokens/__tests__/scoreboard-tokens.test.ts`.
+
+**Spielanzeige 2.3 (Daniel 19.10. „Tokens passen“):** `palette.kit` = Standardfarben und Voreinstellungen der Farbauswahl (`blue` #1565C0 Heim, `red` #C62828 Gast, `navy` #0D1B4C, `black` #000000; Gelb ist `palette.yellow[400]`, Weiß `palette.neutral[0]`, keine Duplikate). Nur `core/models` und Tests importieren sie direkt (`design-tokens/colors/palette`), Oberflächen nehmen Farben über die Ansicht. `cssVars.sizing.qrPlaceholder` 150 px (quadratischer QR-Platzhalter), `scorePreviewWidth` / `scorePreviewHeight` (2 × / 1,5 × `touchTargets.primary` = 112 × 84, Vorschau-Kästen), `cssVars.opacity.disabled` 0,5 (gesperrte Fläche). Prüfung: `src/design-tokens/__tests__/spielanzeige-tokens.test.ts`.
+
 ### Spacing (8pt Grid)
 
 ```typescript
@@ -143,6 +176,22 @@ easings.accelerate // Exit animations
 
 transitions.buttonPress // transform 100ms
 transitions.fadeIn      // opacity 150ms
+```
+
+### Monitor-Folien (`displayMonitor`)
+
+Feste Werte der Monitor-Folien (B-16d2), benannt nach Verwendung. Theme-abhängige Farben bleiben in `monitorThemes`.
+
+```typescript
+displayMonitor.overlay              // 'rgba(0, 0, 0, 0.7)' (Pause-Badge, Cache-Anzeige, theme-unabhängig)
+displayMonitor.qr.foreground        // '#000000' (QR-Vordergrund, SVG-Attribut)
+displayMonitor.qr.background        // '#ffffff' (QR-Hintergrund, SVG-Attribut)
+displayMonitor.qr.sizeLarge         // 220 (QR-Folie)
+displayMonitor.qr.sizeSmall         // 150 (Sponsor-Folie)
+displayMonitor.overscan            // { defaultPercent: 5, minPercent: 0, maxPercent: 10, stepPercent: 0.5, urlParam: 'rand' } (Bildrand in % je Seite)
+displayMonitor.radius.card          // '12px'
+displayMonitor.marker.indicatorSize // '10px'
+displayMonitor.size.*               // Logo-, Text-, Tabellen- und Spielplan-Maße
 ```
 
 ### Breakpoints

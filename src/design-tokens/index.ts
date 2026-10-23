@@ -114,14 +114,13 @@ export {
   displaySpacing,
   displayTransitions,
   displayLayout,
+  displayNoMatch,
   displayEffects,
+  displayMonitor,
   displayColorSchemes,
   monitorThemes,
-  monitorColorSchemes,
   getScoreTextColor,
   criticalPhaseColors,
-  criticalPhaseThresholds,
-  getCriticalPhase,
   type DisplayTokens,
   type DisplayFontSizeKey,
   type DisplayColorKey,
@@ -129,12 +128,13 @@ export {
   type DisplayColorSchemeKey,
   type MonitorThemeKey,
   type MonitorThemeColors,
-  type MonitorColorPresetKey,
-  type CriticalPhase,
 } from './display';
+export { displayList } from './displayList';
+export { mixHex, getBlockFrame, getBlockFrames, type BlockFrame, type BlockFrameWidths } from './displayColor';
 
 export {
   touchTargets,
+  dialogWidths,
   touchTargetValues,
   iconSizes,
   iconSizeValues,
@@ -142,6 +142,8 @@ export {
   buttonHeights,
   layoutHeights,
   layoutHeightValues,
+  componentSizes,
+  borderWidths,
   type TouchTargetKey,
   type IconSizeKey,
   type InputHeightKey,

@@ -46,7 +46,7 @@ export const SelectStep = ({
 }: SelectStepProps) => {
   const { t } = useTranslation('dashboard');
   const dropZoneStyle: CSSProperties = {
-    border: `2px dashed ${isDragging ? cssVars.colors.primary : cssVars.colors.border}`,
+    border: `2px dashed ${isDragging ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     padding: cssVars.spacing.xxl,
     textAlign: 'center',

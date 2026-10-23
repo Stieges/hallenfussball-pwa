@@ -11,11 +11,11 @@
  * - Teams mit Matches MIT Ergebnissen: Team wird als "entfernt" markiert
  */
 
-import { useState, CSSProperties, useCallback } from 'react';
+import { useState, CSSProperties, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
-import { cssVars } from '../../design-tokens'
+import { cssVars, dialogWidths } from '../../design-tokens'
 import {
   analyzeTeamMatches,
   deleteTeamSafely,
@@ -27,7 +27,9 @@ import {
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
-import { createPortal } from 'react-dom';
+import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
+import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
+import { useCan } from '../auth/hooks/useCan';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -39,6 +41,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   onTournamentUpdate,
 }) => {
   const { t } = useTranslation('tournament');
+  // A-11 (@HE-042, L6): Umbenennen, Logo, Farbe = teams; Löschen, Wiederherstellen = restructure. Ohne Recht lesend + Hinweis.
+  const canEditTeams = useCan('teams', tournament.id);
+  const canRestructure = useCan('restructure', tournament.id);
   // State für Bearbeitung
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -56,9 +61,19 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     analysis: TeamMatchAnalysis;
   } | null>(null);
 
+  // @OB-014: Fokus der Rückfrage liegt zuerst auf „Abbrechen", Enter löst nichts aus.
+  // G2: explizites Start-Ziel statt DOM-Reihenfolge.
+  const closeDeleteDialog = useCallback(() => setDeleteConfirmTeam(null), []);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
+
   // Aktive und entfernte Teams
   const activeTeams = getActiveTeams(tournament.teams);
   const removedTeams = getRemovedTeams(tournament.teams);
+
+  // @W5-009: Warnung im Lösch-Dialog (i18n-Schlüssel), gleiche Aufteilung wie deleteTeamSafely.
+  const deletionWarning = deleteConfirmTeam
+    ? getTeamDeletionWarning(deleteConfirmTeam.analysis, (key, values) => t(key as never, values))
+    : null;
 
   // Team-Analyse für alle Teams
   const teamAnalyses: Record<string, TeamMatchAnalysis> = {};
@@ -222,11 +237,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // STYLES
   // ============================================================================
 
-  const containerStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.background,
-    minHeight: 'calc(100vh - 200px)',
-  };
+  const containerStyle: CSSProperties = { padding: cssVars.spacing.lg, background: cssVars.colors.background, minHeight: 'calc(100vh - 200px)' };
 
   const titleStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xl,
@@ -267,10 +278,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     fontWeight: cssVars.fontWeights.medium,
   });
 
-  const buttonGroupStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.sm,
-  };
+  const buttonGroupStyle: CSSProperties = { display: 'flex', gap: cssVars.spacing.sm };
 
   const actionButtonStyle = (variant: 'edit' | 'delete'): CSSProperties => ({
     padding: '6px 12px',
@@ -284,22 +292,11 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     transition: 'all 0.2s ease',
   });
 
-  const editInputStyle: CSSProperties = {
-    flex: 1,
-    maxWidth: '300px',
-  };
+  const editInputStyle: CSSProperties = { flex: 1, maxWidth: '300px' };
 
-  const removedTeamStyle: CSSProperties = {
-    ...teamRowStyle,
-    opacity: 0.6,
-    background: cssVars.colors.neutralRowBg,
-  };
+  const removedTeamStyle: CSSProperties = { ...teamRowStyle, opacity: 0.6, background: cssVars.colors.neutralRowBg };
 
-  const removedTeamNameStyle: CSSProperties = {
-    ...teamNameStyle,
-    textDecoration: 'line-through',
-    color: cssVars.colors.textSecondary,
-  };
+  const removedTeamNameStyle: CSSProperties = { ...teamNameStyle, textDecoration: 'line-through', color: cssVars.colors.textSecondary };
 
   // New card-based styles
   const teamCardStyle: CSSProperties = {
@@ -347,11 +344,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     transition: 'transform 0.2s ease',
   };
 
-  const expandedSectionStyle: CSSProperties = {
-    borderTop: `1px solid ${cssVars.colors.border}`,
-    padding: cssVars.spacing.lg,
-    background: cssVars.colors.surfaceVariant,
-  };
+  const expandedSectionStyle: CSSProperties = { borderTop: `1px solid ${cssVars.colors.border}`, padding: cssVars.spacing.lg, background: cssVars.colors.surfaceVariant };
 
   const expandedRowStyle: CSSProperties = {
     display: 'flex',
@@ -401,8 +394,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
         </Card>
       )}
 
-      {/* Info Box */}
-      <Card style={{ marginBottom: cssVars.spacing.lg, background: cssVars.colors.infoBannerBg }}>
+      {/* Info Box (nur wer ändern darf); sonst „Ändern nur durch die Turnierleitung“ */}
+      {!canEditTeams && <div style={{ marginBottom: cssVars.spacing.lg }}><LeadOnlyHint /></div>}
+      {canEditTeams && <Card style={{ marginBottom: cssVars.spacing.lg, background: cssVars.colors.infoBannerBg }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
           <span style={{ fontSize: cssVars.fontSizes.xxl }}>ℹ️</span>
           <div>
@@ -416,7 +410,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             </ul>
           </div>
         </div>
-      </Card>
+      </Card>}
 
       {/* Active Teams */}
       <Card>
@@ -439,6 +433,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             return (
               <div
                 key={team.id}
+                data-testid={`team-card-${team.id}`}
                 style={{
                   ...teamCardStyle,
                   borderColor: isExpanded ? cssVars.colors.primary : cssVars.colors.border,
@@ -446,6 +441,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               >
                 {/* Card Header */}
                 <div
+                  data-testid={`team-expand-toggle-${team.id}`}
                   style={teamCardHeaderStyle}
                   onClick={() => !isEditing && toggleExpanded(team.id)}
                 >
@@ -454,9 +450,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        setLogoUploadTeamId(team.id);
+                        if (canEditTeams) { setLogoUploadTeamId(team.id); }
                       }}
-                      style={{ cursor: 'pointer' }}
+                      style={{ cursor: canEditTeams ? 'pointer' : 'default' }}
                     >
                       <TeamAvatar team={team} size="lg" showColorRing />
                     </div>
@@ -512,6 +508,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               value={editingName}
                               onChange={setEditingName}
                               placeholder={t('teams.teamName')}
+                              data-testid={`team-rename-input-${team.id}`}
                             />
                           </div>
                           <div style={buttonGroupStyle}>
@@ -522,6 +519,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               variant="primary"
                               onClick={handleSaveRename}
                               disabled={!editingName.trim() || editingName.trim() === team.name}
+                              data-testid={`team-rename-save-${team.id}`}
                             >
                               {t('common.save')}
                             </Button>
@@ -530,8 +528,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       ) : (
                         // View Mode - Expanded Details
                         <>
-                          {/* Logo Section */}
-                          <div style={expandedRowStyle}>
+                          {/* Logo und Farbe: nur mit Recht teams */}
+                          {canEditTeams && <><div style={expandedRowStyle}>
                             <span style={expandedLabelStyle}>{t('teams.logo.label')}</span>
                             <Button
                               variant="secondary"
@@ -558,22 +556,23 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               value={primaryColor}
                               onChange={(color) => handleColorChange(team.id, color)}
                             />
-                          </div>
+                          </div></>}
 
                           {/* Action Buttons */}
                           <div style={{ ...expandedRowStyle, marginTop: cssVars.spacing.lg, marginBottom: 0 }}>
-                            <button
+                            {canEditTeams && <button
                               style={actionButtonStyle('edit')}
                               onClick={() => handleStartEdit(team)}
+                              data-testid={`team-edit-button-${team.id}`}
                             >
                               ✏️ {t('teams.rename')}
-                            </button>
-                            <button
+                            </button>}
+                            {canRestructure && <button
                               style={actionButtonStyle('delete')}
                               onClick={() => handleDeleteClick(team)}
                             >
                               🗑️ {t('teams.delete')}
-                            </button>
+                            </button>}
                           </div>
                         </>
                       )}
@@ -616,12 +615,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       </span>
                     )}
                   </div>
-                  <button
+                  {canRestructure && <button
                     style={{
                       padding: '6px 12px',
                       fontSize: cssVars.fontSizes.sm,
                       borderRadius: cssVars.borderRadius.sm,
-                      border: `1px solid ${cssVars.colors.border}`,
+                      border: `1px solid ${cssVars.colors.borderControl}`,
                       cursor: 'pointer',
                       background: 'transparent',
                       color: cssVars.colors.textSecondary,
@@ -629,7 +628,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     onClick={() => handleRestoreTeam(team.id)}
                   >
                     ↩️ {t('teams.restore')}
-                  </button>
+                  </button>}
                 </div>
               );
             })}
@@ -640,20 +639,27 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {/* Delete Confirmation Dialog */}
       {
         deleteConfirmTeam && (
-          <div style={overlayStyle}>
+          <DialogSurface
+            isOpen
+            onClose={closeDeleteDialog}
+            closeOnBackdropClick={false}
+            maxWidth={dialogWidths.md}
+            labelledBy="team-delete-dialog-title"
+            testId="team-delete-dialog"
+            initialFocusRef={deleteCancelRef}
+            suppressEnter
+          >
             <div style={dialogStyle}>
-              <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
+              <h3 id="team-delete-dialog-title" style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
                 {t('teams.deleteDialog.title')}
               </h3>
 
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
-                  {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty warning should use default question */}
-                  {getTeamDeletionWarning(deleteConfirmTeam.analysis) ||
-                    t('teams.deleteDialog.confirmMessage', { name: deleteConfirmTeam.team.name })}
+                  {deletionWarning ?? t('teams.deleteDialog.confirmMessage', { name: deleteConfirmTeam.team.name })}
                 </p>
 
-                {deleteConfirmTeam.analysis.matchesWithResults > 0 && (
+                {deleteConfirmTeam.analysis.matchesProtected > 0 && (
                   <div style={{
                     padding: cssVars.spacing.md,
                     background: cssVars.colors.warningBannerBgStrong,
@@ -668,7 +674,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <Button variant="secondary" onClick={() => setDeleteConfirmTeam(null)}>
+                <Button ref={deleteCancelRef} variant="secondary" onClick={closeDeleteDialog}>
                   {t('common.cancel')}
                 </Button>
                 <Button
@@ -682,13 +688,13 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 </Button>
               </div>
             </div>
-          </div>
+          </DialogSurface>
         )
       }
 
-      {/* Logo Upload Dialog */}
+      {/* Logo Upload Dialog (DialogSurface bringt das Portal selbst mit) */}
       {
-        logoUploadTeam && createPortal(
+        logoUploadTeam && (
           <LogoUploadDialog
             teamName={logoUploadTeam.name}
             currentLogo={logoUploadTeam.logo}
@@ -698,8 +704,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               handleLogoRemove(logoUploadTeam.id);
               setLogoUploadTeamId(null);
             } : undefined}
-          />,
-          document.body
+          />
         )
       }
     </div >
@@ -710,24 +715,6 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 // DIALOG STYLES
 // ============================================================================
 
-const overlayStyle: CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: cssVars.colors.overlay,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-};
-
 const dialogStyle: CSSProperties = {
-  background: cssVars.colors.surface,
-  borderRadius: cssVars.borderRadius.lg,
   padding: cssVars.spacing.xl,
-  maxWidth: '500px',
-  width: '90%',
-  boxShadow: cssVars.shadows.xl,
 };

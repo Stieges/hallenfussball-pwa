@@ -1,20 +1,20 @@
-import { useState, useEffect, useRef, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useTournaments } from './hooks/useTournaments';
-import { Tournament, TournamentStatus } from './types/tournament';
-import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
+import { Tournament } from './types/tournament';
+import { useCopyTournament } from './hooks/useCopyTournament';
 import { cssVars } from './design-tokens';
-import { ToastProvider, useToast } from './components/ui/Toast';
+import { useToast } from './components/ui/Toast';
+import { CopyTournamentDialog } from './components/dialogs/CopyTournamentDialog';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
-import { StorageWarningBanner } from './components/StorageWarningBanner';
-import { OfflineBanner } from './components/OfflineBanner';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
-import { useInitialSync } from './hooks/useInitialSync';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { useSwAutoReload } from './hooks/useSwAutoReload';
+import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
+import { useGuestTournamentNotices } from './hooks/useGuestTournamentNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
@@ -25,18 +25,17 @@ import {
   LoginScreen,
   RegisterScreen,
   UserProfileScreen,
-  InviteAcceptScreen,
   AuthCallback,
   AuthConfirmPage,
   SetPasswordScreen,
   AuthGuard,
 } from './features/auth/components';
-import { Footer } from './components/layout';
-import { ConsentDialog } from './components/dialogs/ConsentDialog';
-import { hasConsent } from './lib/consent';
-import { reinitializeSentry, captureFeatureError } from './lib/sentry';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppFooter } from './components/layout/AppFooter';
+import { useRahmenWurzelStil } from './components/live-cockpit/frame/cockpitFrame';
+import { captureFeatureError } from './lib/sentry';
+import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
+import { HelperStartGate } from './features/helpers/components/HelperStartGate'; // A-17c: Wiedereinstieg @HE-096
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazyWithRetry(
@@ -48,18 +47,27 @@ const TournamentCreationScreen = lazyWithRetry(
   'TournamentCreationScreen'
 );
 const TournamentManagementScreen = lazyWithRetry(
-  () => import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen })),
+  () => import('./screens/GuardedTournamentManagementScreen').then(m => ({ default: m.GuardedTournamentManagementScreen })),
   'TournamentManagementScreen'
-);
-const PublicTournamentViewScreen = lazyWithRetry(
-  () => import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen })),
-  'PublicTournamentViewScreen'
 );
 const LiveViewScreen = lazyWithRetry(
   () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
   'LiveViewScreen'
 );
-// NOTE: PublicLiveViewScreen removed - LiveViewScreen handles /live/:code
+// A-17c: Auswahl bei mehreren Helfer-Zugängen (/helfer, @HE-099)
+const HelperChooserScreen = lazyWithRetry(
+  () => import('./features/helpers/components/HelperTournamentChooser').then(m => ({ default: m.HelperTournamentChooser })),
+  'HelperChooserScreen'
+);
+// A-17b: Beitritt per Helfer-QR-Code (/join/:code) und Hinweis für alte Einladungslinks (/invite)
+const JoinScreen = lazyWithRetry(
+  () => import('./screens/JoinScreen').then(m => ({ default: m.JoinScreen })),
+  'JoinScreen'
+);
+const LegacyInviteScreen = lazyWithRetry(
+  () => import('./screens/JoinScreen').then(m => ({ default: m.LegacyInviteScreen })),
+  'LegacyInviteScreen'
+);
 const ImpressumScreen = lazyWithRetry(
   () => import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen })),
   'ImpressumScreen'
@@ -71,12 +79,6 @@ const DatenschutzScreen = lazyWithRetry(
 const SettingsScreen = lazyWithRetry(
   () => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })),
   'SettingsScreen'
-);
-
-// Local Test Screen (DEV only)
-const LocalTestScreen = lazyWithRetry(
-  () => import('./screens/LocalTestScreen').then(m => ({ default: m.LocalTestScreen })),
-  'LocalTestScreen'
 );
 
 // MON-KONF-01: Monitor Display für TVs/Beamer
@@ -128,7 +130,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'local-test' | 'not-found';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'join' | 'helper-chooser' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -140,16 +142,24 @@ function AppContent() {
   // QW-002: Show toast if auth initialization timed out
   useAuthTimeoutToast();
 
-  // Sub-Spec 1 C1: register the service worker with explicit "new version
-  // available → toast + hard reload" semantics so users never linger on a
-  // stale precached bundle (root cause of the 2026-05-24 login-bug).
-  useSwAutoReload();
+  // Sub-Spec 1 C1 + C3b-2d (G8): service worker with "new version available →
+  // persistenter Hinweis; automatisch nur im Leerlauf neu laden" semantics so
+  // users never linger on a stale precached bundle (root cause of the
+  // 2026-05-24 login-bug).
+  const { updateNow } = useSwAutoReload();
 
-  // Central route match — replaces the individual location.pathname regex
-  // matchers below (derivations only; render blocks stay untouched).
+  // A6 (task-A6-review.md, I2/Ruling AN): toast when save() kept a protected match instead of
+  // silently deleting it -- see core/services/matchProtectionNotices.ts for why this can't just
+  // be a return value or thrown error.
+  useMatchProtectionNotices();
+
+  // C3b-2c (G7): einmaliger Hinweis für im Konto ausgeblendete Gast-Turniere
+  useGuestTournamentNotices();
+
+  // Central route match — replaces the individual pathname matchers (render blocks stay untouched).
   const route = useRouteMatch();
+  const rahmenStil = useRahmenWurzelStil(); // Cockpit-Rahmen (@SL-140, K3)
 
-  // Check if current path is a dashboard path
   const isDashboardPath = route?.name === 'dashboard' || route?.name === 'archive' || route?.name === 'trash';
 
   // Check if current path is a legal page path
@@ -204,6 +214,9 @@ function AppContent() {
     restoreTournament,
     permanentDeleteTournament,
   } = useTournaments();
+  const copyTournament = useCopyTournament(saveTournament);
+  // @W5-028: Name der Kopie vor dem Speichern bestätigen
+  const [copySource, setCopySource] = useState<Tournament | null>(null);
 
   // ============================================================================
   // CONFIRM DIALOG HOOKS (must be called unconditionally before any returns)
@@ -275,11 +288,8 @@ function AppContent() {
   }, [permanentDeleteDialog, permanentDeleteTournament, showError, t]);
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
-  const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
-  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
-  const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
   // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
   // Removed monitorDisplayParams state in favor of monitorDisplayParamsFromUrl
@@ -289,7 +299,6 @@ function AppContent() {
   // because HashRouter puts routes in the hash fragment, not pathname
   useEffect(() => {
     const path = location.pathname; // Use React Router's parsed pathname
-    const search = location.search; // Use React Router's parsed search params
     // Local, effect-scoped route match (derived purely from `path`, which is
     // already a dependency below) — deliberately NOT the render-scope `route`
     // from useRouteMatch() above, so this effect doesn't need `route` itself in
@@ -314,29 +323,20 @@ function AppContent() {
       // Live View via share code (e.g., /live/ABC123)
       setLiveShareCode(liveMatch[1].toUpperCase());
       setScreen('live');
-    } else if (matchedRoute?.name === 'public') {
-      // public's tournamentId capture group is mandatory, so this is always
-      // defined for a real match; `?? null` only satisfies setPublicTournamentId's
-      // `string | null` type honestly (RouteMatch.params is now Partial) and
-      // never actually changes what gets set.
-      setPublicTournamentId(matchedRoute.params.tournamentId ?? null);
-      setScreen('public');
+    } else if (matchedRoute?.name === 'join') {
+      // A-17b: Helfer-QR-Code; der Bildschirm liest den Code aus der Adresse (siehe Render unten)
+      setScreen('join');
+    } else if (matchedRoute?.name === 'helperChooser') {
+      setScreen('helper-chooser'); // A-17c (@HE-099)
     } else if (matchedRoute?.name === 'invite') {
-      const params = new URLSearchParams(search);
-      const token = params.get('token');
-      if (token) {
-        setInviteToken(token);
-        setScreen('invite');
-      }
+      // A-17b (@HE-063): alte Einladungslinks (/invite?token=…) führen zum Hinweis, nie zu einer Anfrage
+      setScreen('invite');
     } else if (matchedRoute?.name === 'authCallback') {
       // Handle OAuth/Magic Link callback
       setScreen('auth-callback');
     } else if (matchedRoute?.name === 'authConfirm') {
       // Handle email confirmation with button click (defeats email scanners)
       setScreen('auth-confirm');
-    } else if (matchedRoute?.name === 'localTest') {
-      // Local test screen (DEV only)
-      setScreen('local-test');
     } else if (matchedRoute?.name === 'settings') {
       setScreen('settings');
     } else if (matchedRoute?.name === 'profile') {
@@ -370,7 +370,7 @@ function AppContent() {
   // Don't block public/display screens with global loading state
   // These screens have their own data loading logic
   // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
-  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname.startsWith('/public/') || location.pathname === '/test-live';
+  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || route?.name === 'join' || route?.name === 'helperChooser' || route?.name === 'invite' || location.pathname === '/test-live';
 
   // Auth screens should not be blocked by tournament loading
   const isAuthScreen = ['login', 'register', 'auth-callback', 'auth-confirm', 'set-password'].includes(screen);
@@ -437,59 +437,10 @@ function AppContent() {
   };
 
   // Handler for copying/duplicating a tournament
-  const handleCopyTournament = async (tournament: Tournament) => {
+  const handleCopyTournament = async (tournament: Tournament, title: string, startDate: string) => {
     try {
-      const now = new Date().toISOString();
-      const newId = generateTournamentId();
-
-      // Create a deep copy with new IDs
-      const copiedTournament: Tournament = {
-        ...tournament,
-        id: newId,
-        title: `${tournament.title} ${t('tournament.copySuffix')}`,
-        status: 'draft',
-        createdAt: now,
-        updatedAt: now,
-        lastVisitedStep: 1, // Start at Step 1 so user can review
-        // Generate new IDs for teams
-        teams: tournament.teams.map(team => ({
-          ...team,
-          id: generateUniqueId(),
-        })),
-        // Generate new IDs for matches and update team references
-        matches: tournament.matches.map(match => {
-          const newMatchId = generateUniqueId();
-          return {
-            ...match,
-            id: newMatchId,
-            matchStatus: 'scheduled' as const,
-            scoreA: 0,
-            scoreB: 0,
-            events: [],
-          };
-        }),
-        // Reset soft-delete state
-        deletedAt: undefined,
-      };
-
-      // Update match team IDs to use new team IDs
-      const teamIdMap = new Map<string, string>();
-      tournament.teams.forEach((oldTeam, index) => {
-        teamIdMap.set(oldTeam.id, copiedTournament.teams[index]?.id ?? oldTeam.id);
-      });
-
-      copiedTournament.matches = copiedTournament.matches.map((match, index) => {
-        const originalMatch = tournament.matches[index];
-        const newTeamA = teamIdMap.get(originalMatch.teamA) ?? match.teamA;
-        const newTeamB = teamIdMap.get(originalMatch.teamB) ?? match.teamB;
-        return {
-          ...match,
-          teamA: newTeamA,
-          teamB: newTeamB,
-        };
-      });
-
-      await saveTournament(copiedTournament);
+      // Eine gemeinsame Kopierlogik mit dem Admin Center (core/models/tournamentCopy, Paket KP)
+      await copyTournament(tournament, title, startDate);
       // Stay on dashboard - user can see the new tournament
     } catch (error) {
       console.error('[App] Failed to copy tournament:', error);
@@ -501,16 +452,12 @@ function AppContent() {
   // Handler for editing a published tournament in the wizard
   const handleEditInWizard = async (tournament: Tournament, targetStep?: number) => {
     try {
-      // "Erweiterte Bearbeitung" is only available for published tournaments
-      // SettingsTab already sets status to 'draft', so we always restore to 'published'
-      originalStatusRef.current = 'published';
-
       // Update lastVisitedStep if targetStep is provided
       const tournamentToEdit = targetStep
         ? { ...tournament, lastVisitedStep: targetStep }
         : tournament;
 
-      // Save the tournament with draft status (already set by SettingsTab)
+      // Der Zustand bleibt, wie er ist (@W5-004, @LZ-001): kein Setzen auf Entwurf und, beim Abbrechen, kein Setzen auf festgelegt
       await saveTournament(tournamentToEdit);
 
       // Enable quick edit mode and navigate to wizard via URL
@@ -525,23 +472,11 @@ function AppContent() {
     }
   };
 
-  // Helper to navigate to tournament after accepting invite
-  const handleInviteAccepted = (tournamentId: string) => {
-    setInviteToken(null);
-    // Navigate to the tournament
-    const tournament = tournaments.find(t => t.id === tournamentId);
-    if (tournament) {
-      setSelectedTournament(tournament);
-      setScreen('view');
-    } else {
-      void navigate('/');
-    }
-  };
-
   return (
     <div
       style={{
         minHeight: 'var(--min-h-screen)',
+        ...rahmenStil,
         background: cssVars.colors.background,
         color: cssVars.colors.textPrimary,
         fontFamily: cssVars.fontFamilies.body,
@@ -549,6 +484,9 @@ function AppContent() {
     >
       {/* Scroll to top on route changes */}
       <ScrollToTop />
+
+      {/* C3b-2d (G8): persistenter Update-Hinweis, bleibt bis zum Neuladen stehen */}
+      <SwUpdateNoticeSlot updateNow={updateNow} />
 
       {/* Guest Banner - shows registration prompt for guests */}
       {isGuest && isDashboardPath && (
@@ -560,7 +498,6 @@ function AppContent() {
       )}
 
       <Suspense fallback={<ScreenLoader />}>
-        {/* Auth Screens */}
         {/* Auth Screens */}
         {screen === 'login' && (
           <LoginScreen
@@ -603,20 +540,14 @@ function AppContent() {
           />
         )}
 
-        {screen === 'invite' && inviteToken && (
-          <InviteAcceptScreen
-            token={inviteToken}
-            onAccepted={handleInviteAccepted}
-            onNeedLogin={() => setScreen('login')}
-            onCancel={() => {
-              setInviteToken(null);
-              void navigate('/');
-            }}
-          />
-        )}
+        {/* A-17b: Helfer-QR-Code (Adresse trägt den Code) und Hinweis für alte Einladungslinks */}
+        {route?.name === 'join' && route.params.code && <JoinScreen key={route.params.code} code={route.params.code} />}
+        {route?.name === 'invite' && <LegacyInviteScreen />}
+        {route?.name === 'helperChooser' && <HelperChooserScreen tournaments={tournaments} />}
 
         {/* Main App Screens */}
         {isDashboardPath && (
+          <HelperStartGate active={route?.name === 'dashboard'} tournaments={tournaments}>
           <DashboardScreen
             tournaments={tournaments}
             onCreateNew={() => void navigate('/tournament/new')}
@@ -626,22 +557,23 @@ function AppContent() {
             onSoftDelete={(id, title) => void handleSoftDelete(id, title)}
             onRestore={(id, title) => void handleRestore(id, title)}
             onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
-            onCopyTournament={(tournament) => void handleCopyTournament(tournament)}
+            onCopyTournament={setCopySource}
             onNavigateToLogin={() => void navigate('/login')}
             onNavigateToRegister={() => void navigate('/register')}
             onNavigateToProfile={() => void navigate('/profile')}
             onNavigateToSettings={() => void navigate('/settings')}
           />
+          </HelperStartGate>
         )}
 
         {(isWizardPath || screen === 'create') && (
           <TournamentCreationScreen
             onBack={() => {
-              // If in quickEditMode and user cancels, restore original status
-              if (quickEditMode && selectedTournament && originalStatusRef.current) {
+              // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher
+              // (C-ENTWURF-KIPPT-BEIM-ABBRECHEN: ein Entwurf wurde sonst „festgelegt“ gespeichert)
+              if (quickEditMode && selectedTournament) {
                 const restoredTournament: Tournament = {
                   ...selectedTournament,
-                  status: originalStatusRef.current,
                   updatedAt: new Date().toISOString(),
                 };
                 // Fire-and-forget: Don't await, just trigger the save
@@ -651,14 +583,12 @@ function AppContent() {
                     if (err instanceof Error) { captureFeatureError(err, 'tournament', 'restoreStatus'); }
                   });
               }
-              originalStatusRef.current = null; // Reset ref
               setSelectedTournament(null); // Clear selection when going back
               setQuickEditMode(false); // Reset quick edit mode
               void navigate('/');
             }}
             onSave={async (tournament) => {
               await saveTournament(tournament);
-              originalStatusRef.current = null; // Reset ref after successful save
               setSelectedTournament(null); // Clear selection after save
               setQuickEditMode(false); // Reset quick edit mode
               // Small delay to ensure state updates propagate
@@ -703,21 +633,9 @@ function AppContent() {
           />
         )}
 
-        {/* NOTE: Public Live View removed - LiveViewScreen handles /live/:code
-            PublicLiveViewScreen was causing duplicate rendering with LiveViewScreen */}
-
-        {screen === 'public' && publicTournamentId && (
-          <PublicTournamentViewScreen tournamentId={publicTournamentId} />
-        )}
-
         {/* Live View via Share Code (e.g., /live/ABC123) */}
         {screen === 'live' && liveShareCode && (
-          <LiveViewScreen shareCode={liveShareCode} />
-        )}
-
-        {/* Local Test Screen (DEV only) */}
-        {screen === 'local-test' && (
-          <LocalTestScreen />
+          <LiveViewScreen key={liveShareCode} shareCode={liveShareCode} />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}
@@ -787,7 +705,7 @@ function AppContent() {
 
       {/* Footer - shown on main screens (not on public/invite flows or legal pages) */}
       {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && !isLegalPath && (
-        <Footer
+        <AppFooter
           onOpenCookieSettings={() => {
             // TODO: Integrate with Cookie Banner when implemented
             // Cookie banner will be added in a future commit
@@ -796,6 +714,15 @@ function AppContent() {
       )}
 
       {/* Confirm Dialogs */}
+      <CopyTournamentDialog
+        tournament={copySource}
+        onCancel={() => setCopySource(null)}
+        onConfirm={(title, startDate) => {
+          const source = copySource;
+          setCopySource(null);
+          if (source) { void handleCopyTournament(source, title, startDate); }
+        }}
+      />
       <ConfirmDialog {...softDeleteDialog.dialogProps} />
       <ConfirmDialog {...permanentDeleteDialog.dialogProps} />
     </div>
@@ -804,6 +731,7 @@ function AppContent() {
 
 // Providers
 import { RepositoryProvider, useRepositories } from './core/contexts/RepositoryContext';
+import { MatchEngineProvider } from './features/match-engine/MatchEngineProvider';
 import { OfflineRepository } from './core/repositories/OfflineRepository';
 
 /**
@@ -814,17 +742,6 @@ import { OfflineRepository } from './core/repositories/OfflineRepository';
  */
 function SyncManager(): null {
   useSyncOnReconnect();
-  return null;
-}
-
-/**
- * InitialSyncManager - Syncs localStorage tournaments to Supabase on login
- * Triggers once per session when:
- * - User logs in (not as guest)
- * - There are local tournaments without an owner
- */
-function InitialSyncManager(): null {
-  useInitialSync();
   return null;
 }
 
@@ -874,35 +791,25 @@ function PendingChangesWarning(): null {
  */
 function AuthRepositoryBridge({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  return <RepositoryProvider user={user}>{children}</RepositoryProvider>;
+  return (
+    <RepositoryProvider user={user}>
+      {/* C3a-1 (1.2): unterhalb von Auth/Repository (braucht useAuth()/useRepositories()) --
+          Lesepfad in useEngineMatches/useMatchExecution, Schreibweg folgt in C3a-2a. */}
+      <MatchEngineProvider>{children}</MatchEngineProvider>
+    </RepositoryProvider>
+  );
 }
 
 function App() {
-  // DSGVO Consent Dialog - shows on first visit
-  const [showConsentDialog, setShowConsentDialog] = useState(() => !hasConsent());
-
-  const handleConsent = useCallback(() => {
-    setShowConsentDialog(false);
-    // Re-initialize Sentry with new consent status
-    void reinitializeSentry();
-  }, []);
-
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
         <AuthRepositoryBridge>
           <SyncManager />
-          <InitialSyncManager />
           <PendingChangesWarning />
-          <ToastProvider>
-            <ErrorBoundary onReset={() => { window.location.hash = '#/'; }}>
-              <StorageWarningBanner />
-              <OfflineBanner />
-              <AppContent />
-            </ErrorBoundary>
-            {/* DSGVO Consent Dialog - OUTSIDE ErrorBoundary for crash recovery */}
-            <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />
-          </ToastProvider>
+          <AppChrome>
+            <AppContent />
+          </AppChrome>
         </AuthRepositoryBridge>
       </AuthProvider>
     </ThemeProvider>

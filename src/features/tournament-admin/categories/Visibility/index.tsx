@@ -8,7 +8,7 @@
  * @see docs/concepts/PUBLIC-PAGE-KONZEPT-v4-FINAL.md
  */
 
-import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
@@ -18,6 +18,9 @@ import { useToast } from '../../../../components/ui/Toast';
 import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareUtils';
 import { isSupabaseConfigured } from '../../../../lib/supabase';
 import { isReleaseRefusal } from '../../../../core/repositories/OfflineRepository';
+import { useCan } from '../../../auth/hooks/useCan';
+import { visibilityStyles as styles } from './visibilityStyles';
+import { SpectatorDisplaySection } from './SpectatorDisplaySection';
 
 // =============================================================================
 // PROPS
@@ -28,174 +31,6 @@ interface VisibilityCategoryProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void;
 }
-
-// =============================================================================
-// STYLES
-// =============================================================================
-
-const styles = {
-  radioGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-  } as CSSProperties,
-
-  radioOption: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  } as CSSProperties,
-
-  radioOptionSelected: {
-    borderColor: cssVars.colors.primary,
-    background: cssVars.colors.primarySubtle,
-  } as CSSProperties,
-
-  radioLabel: {
-    fontSize: cssVars.fontSizes.bodyMd,
-    fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  radioDescription: {
-    fontSize: cssVars.fontSizes.labelSm,
-    color: cssVars.colors.textSecondary,
-    marginTop: 2,
-  } as CSSProperties,
-
-  checkboxGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  checkbox: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.bodyMd,
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  qrContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.lg,
-  } as CSSProperties,
-
-  linkRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    flexWrap: 'wrap',
-  } as CSSProperties,
-
-  linkInput: {
-    flex: 1,
-    minWidth: 200,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodySm,
-  } as CSSProperties,
-
-  copyButton: {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: cssVars.colors.primarySubtle,
-    border: `1px solid ${cssVars.colors.primaryBorder}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.primary,
-    fontSize: cssVars.fontSizes.bodySm,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  } as CSSProperties,
-
-  copyButtonSuccess: {
-    background: cssVars.colors.successLight,
-    borderColor: cssVars.colors.successHover,
-    color: cssVars.colors.success,
-  } as CSSProperties,
-
-  qrPreview: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: cssVars.spacing.lg,
-    flexWrap: 'wrap',
-  } as CSSProperties,
-
-  qrPlaceholder: {
-    width: 150,
-    height: 150,
-    background: cssVars.colors.surfaceHover,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 48,
-    color: cssVars.colors.textMuted,
-    flexShrink: 0,
-  } as CSSProperties,
-
-  qrActions: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  actionButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodySm,
-    cursor: 'pointer',
-    textAlign: 'left',
-    transition: 'all 0.15s ease',
-  } as CSSProperties,
-
-  tip: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.infoLight,
-    border: `1px solid ${cssVars.colors.infoBorder}`,
-    borderRadius: cssVars.borderRadius.md,
-    fontSize: cssVars.fontSizes.bodySm,
-    color: cssVars.colors.info,
-  } as CSSProperties,
-
-  disabledSection: {
-    opacity: 0.5,
-    pointerEvents: 'none',
-  } as CSSProperties,
-
-  saveIndicator: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    background: cssVars.colors.successLight,
-    color: cssVars.colors.success,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.labelSm,
-    marginLeft: cssVars.spacing.sm,
-  } as CSSProperties,
-} as const;
 
 // =============================================================================
 // COMPONENT
@@ -213,14 +48,16 @@ export function VisibilityCategory({
 
   // Ein Entwurf ist nicht öffentlich erreichbar — Teilen ist erst nach der Freigabe möglich.
   //
-  // Gate auf publishedAt, NICHT status: status='draft' ist ein transienter Wizard-Marker
-  // (SettingsTab.tsx setzt ein veröffentlichtes Turnier beim Öffnen des Bearbeiten-Wizards
-  // zurück auf 'draft'; ein Reload mitten in der Bearbeitung lässt es dauerhaft dort stehen).
+  // Gate auf publishedAt, NICHT status: `publishedAt` wird genau einmal beim ersten
+  // Festlegen gesetzt und überdauert die Bearbeitung (@W5-004: ein festgelegtes Turnier
+  // bleibt dabei festgelegt).
   // Mit status als Gate verlöre der Organisator mitten im laufenden Turnier den Link/QR-Code
   // und könnte ihn nicht mehr nachdrucken, obwohl das Turnier nachweislich online ist. Dasselbe
   // Prädikat wie im Service und in der Datenbankfunktion make_tournament_public — damit stimmen
   // alle drei Schichten überein.
   const isDraft = !tournament.publishedAt;
+  // @ZM-019 (A-11): „Anzeige für Zuschauer“ stellen nur Turnierleitung und Co-Admin
+  const canEditDisplay = useCan('tournamentSettings', tournamentId);
 
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -387,14 +224,6 @@ export function VisibilityCategory({
     updateTournament({ hideRankingsForPublic: !checked });
   };
 
-  const handleBambiniMode = (checked: boolean) => {
-    updateTournament({
-      isKidsTournament: checked,
-      // Bambini mode automatically hides rankings
-      hideRankingsForPublic: checked ? true : tournament.hideRankingsForPublic,
-    });
-  };
-
   return (
     <CategoryPage
       icon="👁"
@@ -498,14 +327,6 @@ export function VisibilityCategory({
                   >
                     <span>🔄</span>
                     <span>{isUpdating ? t('visibility.generating') : t('visibility.generateNewCode')}</span>
-                  </button>
-                  <button style={styles.actionButton}>
-                    <span>🖨️</span>
-                    <span>{t('visibility.printQr')}</span>
-                  </button>
-                  <button style={styles.actionButton}>
-                    <span>📥</span>
-                    <span>{t('visibility.downloadQr')}</span>
                   </button>
                 </div>
               </div>
@@ -626,30 +447,6 @@ export function VisibilityCategory({
         </div>
       </CollapsibleSection>
 
-      {/* Bambini Mode */}
-      <CollapsibleSection icon="👶" title={t('visibility.bambiniMode')} defaultOpen>
-        <label style={styles.checkbox}>
-          <input
-            type="checkbox"
-            checked={tournament.isKidsTournament || false}
-            onChange={(e) => handleBambiniMode(e.target.checked)}
-          />
-          <span>{t('visibility.enableBambiniMode')}</span>
-        </label>
-        <p style={{ color: cssVars.colors.textSecondary, marginTop: cssVars.spacing.md }}>
-          {t('visibility.whenEnabled')}:
-        </p>
-        <ul style={{ color: cssVars.colors.textSecondary, paddingLeft: cssVars.spacing.lg, margin: `${cssVars.spacing.sm} 0` }}>
-          <li>{t('visibility.noTables')}</li>
-          <li>{t('visibility.noPlacements')}</li>
-          <li>{t('visibility.focusOnFun')}</li>
-        </ul>
-        <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
-          <span>💡</span>
-          <span>{t('visibility.bambiniIdeal')}</span>
-        </div>
-      </CollapsibleSection>
-
       {/* Visibility Level */}
       <CollapsibleSection icon="🔒" title={t('visibility.tournamentVisibility')}>
         {isDraft && (
@@ -722,17 +519,6 @@ export function VisibilityCategory({
               </div>
             </div>
           </label>
-
-          {/* Public Listed Option (future) */}
-          <label style={{ ...styles.radioOption, opacity: 0.5, cursor: 'not-allowed' }}>
-            <input type="radio" name="visibility" disabled />
-            <div>
-              <div style={styles.radioLabel}>{t('visibility.publicListed')}</div>
-              <div style={styles.radioDescription}>
-                {t('visibility.publicListedDesc')}
-              </div>
-            </div>
-          </label>
         </div>
 
         {!isSupabaseConfigured && (
@@ -757,6 +543,8 @@ export function VisibilityCategory({
           </span>
         </div>
       </CollapsibleSection>
+      {/* Anzeige für Zuschauer: Teamfarben und Standardfarben der Ergebniskästen mit Vorschau (@ZM-152) */}
+      <SpectatorDisplaySection tournament={tournament} onTournamentUpdate={onTournamentUpdate} canEdit={canEditDisplay} />
     </CategoryPage>
   );
 }

@@ -23,12 +23,14 @@ import { useLoginForm } from '../hooks/useLoginForm';
 import { checkOAuthOnlyUser, getOAuthPasswordResetMessage } from '../utils/authHelpers';
 import { AUTH_ERRORS } from '../constants';
 import { loginStyles as styles } from './LoginScreen.styles';
-import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { dialogWidths } from '../../../design-tokens';
+import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { LoginResetPasswordDialog, LoginMagicLinkDialog, LoginSuccessDialog } from './LoginDialogs';
 import { OfflineBanner } from './OfflineBanner';
 import { ConnectingIndicator } from './ConnectingIndicator';
 import { clearCachesAndReload } from '../../../lib/cacheRecovery';
 import { useBrowserOnlineStatus } from '../hooks/useBrowserOnlineStatus';
+import { hasSignedOutElsewhere } from '../context/remoteSignOut';
 
 /** Soft threshold (ms) after which the subtle "connecting…" pill surfaces. */
 const CONNECTING_HINT_DELAY_MS = 3000;
@@ -95,13 +97,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [migratedCount, setMigratedCount] = useState(0);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  // Hinweis, wenn ein anderes Gerät dieses Gerät abgemeldet hat (A-07d2, @AN-024).
+  const [signedOutElsewhere] = useState(hasSignedOutElsewhere);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
-
-  // Focus trap for main login form
-  const formTrap = useFocusTrap({
-    isActive: !resetPasswordSent && !magicLinkSent && !showSuccess,
-    onEscape: onBack,
-  });
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -211,10 +209,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && onBack) {
-      onBack();
-    }
+  const handleBackdropClick = () => {
+    onBack?.();
   };
 
   // Reset Password Sent State
@@ -250,14 +246,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   }
 
   return (
-    <div style={styles.backdrop} onClick={handleBackdropClick}>
-      <div
-        ref={formTrap.containerRef}
-        style={styles.card}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="login-title"
-      >
+    <DialogSurface
+      isOpen
+      onClose={onBack}
+      onBackdropClick={handleBackdropClick}
+      // Kein Dialog-Verlauf: die Zurück-Taste navigiert hier über die Seite, nicht über den Dialog.
+      closeOnBack={false}
+      maxWidth={dialogWidths.sm}
+      labelledBy="login-title"
+    >
+      <div style={styles.dialogBody}>
         {/* Header with back and close buttons */}
         <div style={styles.header}>
           {onBack && (
@@ -314,8 +312,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <ConnectingIndicator
             variant="connecting"
             label={t('login.connectingHint')}
+            retryLabel={t('login.retryConnection')}
+            onRetry={() => void reconnect()}
             data-testid="connecting-indicator"
           />
+        )}
+
+        {signedOutElsewhere && (
+          <p role="status" data-testid="signed-out-elsewhere" style={styles.signedOutHint}>
+            {t('login.signedOutElsewhere')}
+          </p>
         )}
 
         <p style={styles.subtitle}>
@@ -447,7 +453,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </button>
         </p>
       </div>
-    </div>
+    </DialogSurface>
   );
 };
 

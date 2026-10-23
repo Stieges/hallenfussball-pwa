@@ -41,7 +41,27 @@ export const displayFontSizes = {
   bodySM: '16px',        // Kleine Infos, Labels
 
   // Team Names (Stadium-Grade)
-  teamName: 'clamp(48px, 5vw, 72px)',   // Team-Name unter Score-Block
+  // @ZM-125: Uhr deutlich größer als die Teamnamen (mindestens 1,5 ×)
+  // B-44a3 (B2): Live-Folie ohne feste Pixel-Deckel, alles wächst mit der Bildhöhe (Auflösung egal, Anteil gleich)
+  // B-44a4 (@ME-020): Größen der Live-Folie in Container-Einheiten der Folienfläche (innerhalb des Bildrands);
+  // außerhalb eines Containers rechnet der Browser cqh wie die Bildhöhe (svh)
+  clockXL: '11cqh',
+  // Fixrunde 3 (Mockup K5g, Entscheidung Daniel 18.10.): Siegerzeile nach dem Strafstoßschießen
+  monitorWinner: '4.3cqh',
+  teamName: '6.2cqh',   // Team-Name unter Score-Block
+  // B-44a2 (@ZM-137, @ZM-125): Hinweistexte unter der Uhr, mindestens 3 % der Bildhöhe (lesbar aus 10 m)
+  // B-44a4: an der Folienfläche, aber nie unter 3 % der Bildschirmhöhe (@ZM-125 gilt an der Bildschirmhöhe)
+  clockHint: 'max(3.2cqh, 3vh)',
+  // B-44a2: Namen im Kindermodus stehen in der Kastenreihe und sind größer (kein Stand)
+  teamNameKids: '11cqh',
+  // B-44a3 (B2): Kopfzeile (Feld/Spiel, Gruppe), Statusmarke und Doppelpunkt, je mindestens 3 % der Bildhöhe
+  liveInfo: 'max(3.4cqh, 3vh)',
+  liveBadge: 'max(3.2cqh, 3vh)',
+  liveSeparator: '14cqh',
+
+  // B-48a: Hinweis oben rechts, nie unter 3 % der Bildhöhe (@ZM-125, HART)
+  notice: '3vh',
+  noticeIcon: '3vh',
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -98,9 +118,6 @@ export type DisplayColorKey = keyof typeof displayColors;
  * TVs können an den Rändern abschneiden
  */
 export const displaySpacing = {
-  // Overscan-Safe Area (für alte TVs)
-  overscan: '48px',
-
   // Section Spacing
   sectionXL: '64px',
   sectionLG: '48px',
@@ -165,12 +182,22 @@ export const displayTransitions = {
 // DISPLAY LAYOUT
 // =============================================================================
 
+/** Maße der Hinweis-Ecke (B-48a); die Höhe daraus ist ein Token, damit die Folie genau so weit nach unten rückt. */
+const NOTICE_PAD_Y = '0.4cqh';
+const NOTICE_BORDER = '0.3cqh';
+const NOTICE_LINE_HEIGHT = 1.2;
+
 /**
  * Display-Layout Konfigurationen
  */
 export const displayLayout = {
   // Max Content Width
   maxContentWidth: '1600px',
+
+
+  // Hinweis als Ecke oben rechts im sicheren Bereich (B-48a, @ME-006): eine Zeile, feste Höhe.
+  // Die Folie rückt um genau diese Höhe nach unten, solange der Hinweis steht (er verdeckt nichts).
+  noticeHeight: `calc(${displayFontSizes.notice} * ${NOTICE_LINE_HEIGHT} + 2 * (${NOTICE_PAD_Y} + ${NOTICE_BORDER}))`,
 
   // Slide Aspect Ratios
   aspectRatio: {
@@ -188,14 +215,88 @@ export const displayLayout = {
 
   // Stadium-Grade Score Layout (prozentuale Bildschirmaufteilung)
   scoreArea: {
-    header: '8%',
-    score: '55%',
-    teamNames: '12%',
-    timer: '17%',
-    footer: '8%',
-    blockWidth: '35%',
-    blockGap: '10%',
+    header: '6%',
+    // B-44a2: Abstand zwischen Kopfzeile (LIVE, Feld, Gruppe) und Kästen
+    headerGap: '1.5cqh',
+    // B-44a2: Marke gleich breit für LIVE, PAUSE, BEENDET
+    badgeWidth: '11em',
+    // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
+    kidsNamesOffset: '8cqh',
+    // H3 @ZM-125: Kasten = 70 % einer Spalte; zwei Spalten teilen die Breite abzüglich seitlichem Polster (paddingX) = ca. 33 % Bildbreite
+    blockWidth: '70%',
+    blockGap: '0%',
+    // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
+    // B-44a2: Namensspalte = Kastenbreite; B-44a4 (Ruling 16.10.): wieder breiter als der Kasten, damit 50 Zeichen bei
+    // 800×600 und 1024×768 voll und zweizeilig über 3 % der Bildschirmhöhe stehen (@ZM-087, @ZM-125)
+    teamNameWidth: '92%',
+    teamNamesGap: '1cqh',
+    // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
+    separatorWidth: '0%',
+    // B-44a2 (@ZM-125): Kasten hoch, annähernd quadratisch (Breite 33 % der Bildbreite); der Stand ist das Größte
+    blockHeight: '42cqh',
+    // B-44a2: Namen bis zu zwei Zeilen
+    nameLines: 2,
+    // B-44a2: Platz unter den Namen für Uhr, Balken und Hinweise; bleibt in jedem Zustand reserviert (gleiche Lage)
+    // B-44a3: fasst Uhr, Balken, Hinweiszeile und Schiedsrichter-Zeile
+    lowerHeight: '30cqh',
+    // B-44a2: Abstand zwischen Namen und Uhr (liegt innerhalb von lowerHeight)
+    lowerPaddingTop: '2cqh',
+    // B-44a2: Abstand zwischen Uhr und Hinweisen sowie zwischen Hinweisen
+    hintGap: '1cqh',
+    hintGapAbove: '1.6cqh',
+    // B-44a2: senkrechter Innenabstand der Folie (Höhe ist knapp, vorher clamp(24px, 3vw, 48px) auch senkrecht)
+    paddingY: '1.5cqh',
+    // B-44a3: seitliches Polster der Folie
+    paddingX: '3cqw',
+    // B-48a (@ME-006): Hinweis-Ecke oben rechts auf dem Feld ohne laufendes Spiel (Mockup v8)
+    noticePadY: NOTICE_PAD_Y,
+    noticePadX: '0.8cqh',
+    noticeBorderWidth: NOTICE_BORDER,
+    noticeRadius: '1cqh',
+    noticeLineHeight: NOTICE_LINE_HEIGHT,
+    noticeGap: '0.6cqh',
+    // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
+    progressHeight: '1.2cqh',
+    clockGap: '1.2cqh',
+    clockPadY: '0.8cqh',
+    clockPadX: '2cqh',
+    clockInnerGap: '1cqh',
+    clockLineHeight: 1,
+    hintLineHeight: 1.2,
+    hintColumnGap: '3cqh',
+    // B-44a3: Statusmarke (vorher feste Pixel)
+    badgePadY: '0.8cqh',
+    badgePadX: '2cqh',
+    badgeGap: '1cqh',
+    badgeDot: '1.4cqh',
+    // Kompakte Kopfzeile (Größe nicht xl): Punkt der Statusmarke
+    badgeDotCompact: '14px',
+    // B-44a2: Balkenbreite (vorher 700px fest)
+    progressWidth: '36cqw',
+    // B-44a2: Rahmen der Kästen, einheitlich in beiden: dezent, bei Kontrast unter 3 : 1 kräftig
+    frameWidthSubtle: '2px',
+    frameWidthStrong: '4px',
+    frameSubtleMix: '45%',
+    // Fixrunde 3 (Mockup K5g): Pokal-Kreis am Sieger-Kasten
+    monitorCup: '8.4cqh',
+    // Fixrunde 4: Verlierer-Kasten nur mit dezentem Schleier (Anteil der Hintergrundfarbe), Teamfarbe bleibt erkennbar
+    loserDimShare: '30%',
+    // Spielanzeige 2.2 (Spec § 8, Mockup --vest: 14 %): Breite je Streifen der Weste als Anteil der Kastenbreite
+    vestStripeShare: 0.14,
   },
+} as const;
+
+/**
+ * B-44a3: Anzeige ohne laufendes Spiel (NoMatchDisplay), vorher feste Werte im Bauteil.
+ * xl für den Monitor, lg für die Vorschau im Turnier-Management.
+ */
+export const displayNoMatch = {
+  xl: { icon: '10vh', title: '5vh', text: '2.6vh', padding: '6vh' },
+  lg: { icon: '72px', title: '28px', text: '18px', padding: '32px' },
+  minHeightXl: '50vh',
+  minHeightLg: '35vh',
+  maxWidth: '1200px',
+  borderWidth: '3px',
 } as const;
 
 // =============================================================================
@@ -217,6 +318,56 @@ export const displayEffects = {
   // Gradient Overlays
   fadeToBlack: 'linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.8))',
   fadeFromBlack: 'linear-gradient(to top, transparent, rgba(0, 0, 0, 0.8))',
+} as const;
+
+// =============================================================================
+// DISPLAY MONITOR (B-16d2: Literale der Monitor-Folien als Tokens)
+// =============================================================================
+
+/**
+ * Feste Werte der Monitor-Folien. Die Werte entsprechen den früheren Literalen (keine Sichtänderung),
+ * benannt nach Verwendung. Theme-abhängige Farben bleiben in monitorThemes.
+ */
+export const displayMonitor = {
+  /** Abdunkelung hinter Hinweisen (Pause-Badge, Cache-Anzeige); bewusst theme-unabhängig */
+  overlay: 'rgba(0, 0, 0, 0.7)',
+
+  /** QR-Codes: SVG-Attributwerte (QRCodeSVG löst keine CSS-Variablen auf) */
+  qr: {
+    foreground: '#000000',
+    background: '#ffffff',
+    sizeLarge: 220,
+    sizeSmall: 150,
+  },
+
+  /** Text */
+  text: {
+    /** Zeilenabstand ungeteilter Fließtexte (unitlos, wie bisher 1.5) */
+    lineHeight: 1.5,
+  },
+
+  /** Bildrand in % je Seite (@ME-067): links/rechts von der Breite, oben/unten von der Höhe der Folie; `?rand=` gilt je Sitzung */
+  overscan: { defaultPercent: 5, minPercent: 0, maxPercent: 10, stepPercent: 0.5, urlParam: 'rand' },
+
+  /** Ecken */
+  radius: {
+    card: '12px',
+  },
+
+  /** Punkte und Markierungen */
+  marker: {
+    /** Positions-Punkt unten und Cache-Status-Punkt */
+    indicatorSize: '10px',
+    /** Rahmen einer laufenden Spielzeile */
+    liveBorderWidth: '2px',
+  },
+
+  /** Maße einzelner Folien */
+  size: {
+    sponsorLogoMaxWidth: '400px',
+    sponsorLogoMaxHeight: '300px',
+    textMaxWidth: '800px',
+  },
 } as const;
 
 // =============================================================================
@@ -250,10 +401,15 @@ export const monitorThemes = {
     timerOvertime: '#ff5252',
     timerWarning: '#ffb300',
     timerPaused: '#fbbf24',
+    // B-48a (@ME-006): Warnsymbol des Wachhalten-Hinweises, Kontrast mindestens 3 : 1 zum Thema
+    warningSymbol: '#ffb300',
 
     // Status Badges
     liveBadgeBg: 'rgba(0, 230, 118, 0.2)',
-    liveBadgeText: '#00E676',
+    liveBadgeText: '#00E676', // Endfarbe des Fortschrittsbalkens (MatchTimer): bleibt grün, Live-Rot gehört nur dem Abzeichen
+    // Aufgabe 1.1: Live-Rot des Abzeichens (Rose 400, Schrift dunkel) – eigene Tokens, damit der Balken unverändert bleibt
+    liveBadgeFill: '#FB7185',
+    liveBadgeOn: '#000000', // Schwarz: 7,8 : 1 auf Rose 400 (die Messung verlangt am Monitor ≥ 7 : 1, kontrast.monitor)
     liveDot: '#00E676',
     pauseBadgeBg: 'rgba(251, 191, 36, 0.2)',
     pauseBadgeText: '#fbbf24',
@@ -319,10 +475,15 @@ export const monitorThemes = {
     timerOvertime: '#dc2626',
     timerWarning: '#d97706',
     timerPaused: '#d97706',
+    // B-48a (@ME-006): Warnsymbol des Wachhalten-Hinweises, Kontrast mindestens 3 : 1 zum Thema (Freigabe Daniel)
+    warningSymbol: '#B45309',
 
     // Status Badges
     liveBadgeBg: 'rgba(4, 120, 87, 0.15)',
-    liveBadgeText: '#047857',
+    liveBadgeText: '#047857', // Endfarbe des Fortschrittsbalkens (MatchTimer): bleibt grün
+    // Aufgabe 1.1: Live-Rot des Abzeichens (Rose 700, Schrift weiß)
+    liveBadgeFill: '#BE123C',
+    liveBadgeOn: '#FFFFFF',
     liveDot: '#047857',
     pauseBadgeBg: 'rgba(217, 119, 6, 0.15)',
     pauseBadgeText: '#d97706',
@@ -403,29 +564,6 @@ export const displayColorSchemes = {
 
 export type DisplayColorSchemeKey = keyof typeof displayColorSchemes;
 
-// =============================================================================
-// MONITOR COLOR SCHEMES (Positions-Farben für Live-Score)
-// =============================================================================
-
-/**
- * Farb-Presets für Heim/Gast Positions-Farben auf Monitor-Scoreboards.
- *
- * Diese Farben werden als Hintergrund der Score-Blöcke verwendet.
- * Text-Farbe wird automatisch per Luminance berechnet.
- */
-export const monitorColorSchemes = {
-  presets: {
-    classic:     { home: '#1E40AF', away: '#DC2626' },
-    nature:      { home: '#059669', away: '#EA580C' },
-    contrast:    { home: '#171717', away: '#FAFAFA' },
-    modern:      { home: '#7C3AED', away: '#EAB308' },
-    alternative: { home: '#F97316', away: '#0891B2' },
-  },
-  defaults: { home: '#1E40AF', away: '#DC2626' },
-} as const;
-
-export type MonitorColorPresetKey = keyof typeof monitorColorSchemes.presets;
-
 /**
  * Calculate relative luminance of a hex color (sRGB).
  * Returns a value between 0 (black) and 1 (white).
@@ -445,7 +583,24 @@ function calculateLuminance(hex: string): number {
  * Returns white text on dark backgrounds, dark text on light backgrounds.
  */
 export function getScoreTextColor(backgroundHex: string): string {
-  return calculateLuminance(backgroundHex) > 0.4 ? '#171717' : '#FFFFFF';
+  // @ZM-140: die Ziffernfarbe mit dem höheren Kontrast (mindestens 4,5 : 1 bei Schwarz oder Weiß)
+  return getContrastRatio(backgroundHex, '#171717') >= getContrastRatio(backgroundHex, '#FFFFFF')
+    ? '#171717'
+    : '#FFFFFF';
+}
+
+/** Kontrastverhältnis nach WCAG (1 bis 21) zweier Hex-Farben. */
+export function getContrastRatio(colorHex: string, otherHex: string): number {
+  const a = calculateLuminance(colorHex);
+  const b = calculateLuminance(otherHex);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+/**
+ * @ZM-140: Der Kasten braucht einen hellen Rahmen, wenn er sich mit weniger als 3 : 1 vom Hintergrund abhebt.
+ */
+export function needsContrastFrame(blockHex: string, backgroundHex: string): boolean {
+  return getContrastRatio(blockHex, backgroundHex) < 3;
 }
 
 // =============================================================================
@@ -453,56 +608,13 @@ export function getScoreTextColor(backgroundHex: string): string {
 // =============================================================================
 
 /**
- * Farben für die Last-Minute-Eskalation im Timer.
- *
- * Stufen: warning (< 5 min) → danger (< 2 min) → critical (< 60s)
- *       → final (< 30s, pulsierender Rahmen) → countdown (< 10s, Millisekunden)
+ * Hervorhebung der Uhr in der angehaltenen Schlussphase (@ZM-137).
+ * Keine Teamfarbe, keine Eskalation (keine Stufen, kein Pulsieren, keine Hundertstel).
  */
 export const criticalPhaseColors = {
-  warning: '#F97316',      // Orange (< 5 min)
-  danger: '#EF4444',       // Rot (< 2 min)
-  critical: '#FDE047',     // Signal-Gelb (< 60s)
+  critical: '#FDE047',     // Signal-Gelb: Hervorhebung der Uhr
   criticalText: '#171717', // Schwarz auf Signal-Gelb
-  pulseGlow: 'rgba(253, 224, 71, 0.6)',  // Gelber Glow für Rahmen-Pulse
 } as const;
-
-/**
- * Schwellenwerte in Sekunden für Eskalationsstufen.
- */
-export const criticalPhaseThresholds = {
-  warning: 300,   // 5 min — Progress-Bar orange
-  danger: 120,    // 2 min — Timer-Text orange
-  critical: 60,   // 1 min — Signal-Gelb Hintergrund
-  final: 30,      // 30s  — Pulsierender Rahmen
-  countdown: 10,  // 10s  — Millisekunden-Anzeige
-} as const;
-
-export type CriticalPhase = 'normal' | 'warning' | 'danger' | 'critical' | 'final' | 'countdown';
-
-/**
- * Determine the current escalation phase based on remaining seconds.
- */
-export function getCriticalPhase(remainingSeconds: number, isOvertime: boolean): CriticalPhase {
-  if (isOvertime || remainingSeconds <= 0) {
-    return 'normal';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.countdown) {
-    return 'countdown';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.final) {
-    return 'final';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.critical) {
-    return 'critical';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.danger) {
-    return 'danger';
-  }
-  if (remainingSeconds <= criticalPhaseThresholds.warning) {
-    return 'warning';
-  }
-  return 'normal';
-}
 
 // =============================================================================
 // COMBINED EXPORT
@@ -518,11 +630,10 @@ export const displayTokens = {
   transitions: displayTransitions,
   layout: displayLayout,
   effects: displayEffects,
+  monitor: displayMonitor,
   colorSchemes: displayColorSchemes,
   themes: monitorThemes,
-  monitorColorSchemes,
   criticalPhaseColors,
-  criticalPhaseThresholds,
 } as const;
 
 export type DisplayTokens = typeof displayTokens;

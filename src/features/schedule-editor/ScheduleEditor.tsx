@@ -12,7 +12,9 @@
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { DndContext, closestCenter, DragOverlay, Announcements } from '@dnd-kit/core';
+import { buildSideContext, sideName } from '../../components/schedule/matchSides';
 import { Tournament, Match } from '../../types/tournament';
+import type { MatchUpdate } from '../../core/models/types';
 
 // ============================================================================
 // History Types for Undo/Redo
@@ -27,6 +29,8 @@ import { cssVars } from '../../design-tokens'
 import { Button } from '../../components/ui';
 
 // Hooks
+import { getMatchStartState } from '../../utils/matchStartState';
+import { keepStartedPlaces } from './utils/startedGuard';
 import { useScheduleEditor } from './hooks/useScheduleEditor';
 import { useMatchConflicts } from './hooks/useMatchConflicts';
 import { useDragDrop, createSlotId } from './hooks/useDragDrop';
@@ -49,6 +53,9 @@ interface ScheduleEditorProps {
   tournament: Tournament;
   /** Callback when tournament is updated */
   onTournamentUpdate: (tournament: Tournament) => void;
+  /** A-08f3e4: ungenutzt (Absetzen läuft über den Server, `useMatchSkip`); Weiterleitung entfällt mit dem Aufräumen. */
+  onLocalTournamentUpdate?: (tournament: Tournament) => void;
+  onMatchesUpdate?: (updates: MatchUpdate[]) => void;
   /** Whether editing is allowed */
   readOnly?: boolean;
   /** Show only specific match phase */
@@ -65,6 +72,8 @@ interface ScheduleEditorProps {
   onBeforeChange?: () => void;
   /** Hide internal toolbar (when parent shows unified toolbar) */
   hideToolbar?: boolean;
+  /** @ZP-093: Rückmeldung, wenn ein Ablegen wegen eines angepfiffenen Spiels abgelehnt wurde */
+  onRejectStarted?: () => void;
 }
 
 // ============================================================================
@@ -225,6 +234,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   externalEditMode,
   onBeforeChange,
   hideToolbar = false,
+  onRejectStarted,
 }) => {
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
 
@@ -268,7 +278,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     if (!previousState) { return; } // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
-      matches: previousState.matches,
+      matches: keepStartedPlaces(previousState.matches, tournament.matches),
       updatedAt: new Date().toISOString(),
     });
     setHistoryVersion(v => v + 1);
@@ -289,7 +299,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     if (!nextState) { return; } // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
-      matches: nextState.matches,
+      matches: keepStartedPlaces(nextState.matches, tournament.matches),
       updatedAt: new Date().toISOString(),
     });
     setHistoryVersion(v => v + 1);
@@ -343,10 +353,29 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     enabled: isEditing,
   });
 
+  // @ZP-093: Ein Ablegen berührt ein angepfiffenes Spiel, wenn die Quelle oder das Spiel auf dem Zielplatz angepfiffen ist.
+  const startedInDrop = useCallback(
+    (matchId: string, targetSlot: TimeSlotType): boolean => {
+      const isStarted = (m: Match | undefined): boolean => m !== undefined && getMatchStartState([m]) === 'started';
+      const source = tournament.matches.find(m => m.id === matchId);
+      const occupant = tournament.matches.find(
+        m =>
+          formatTime(m.scheduledTime) === targetSlot.startTime &&
+          m.field === targetSlot.fieldId &&
+          m.id !== matchId
+      );
+      return isStarted(source) || isStarted(occupant);
+    },
+    [tournament.matches]
+  );
+
   // Drag and drop - now supports SWAPPING when dropping on occupied slot
   // Uses ATOMIC UPDATE to avoid race conditions
   const handleMoveMatch = useCallback(
     (matchId: string, targetSlot: TimeSlotType) => {
+      // @ZP-093: angepfiffene Spiele (läuft, Halbzeit, beendet) bleiben stehen, auch als Tauschziel
+      if (startedInDrop(matchId, targetSlot)) { return; }
+
       // SAVE TO HISTORY BEFORE MAKING CHANGES (for undo)
       saveToHistory();
 
@@ -413,16 +442,19 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         updatedAt: new Date().toISOString(),
       });
     },
-    [tournament, onTournamentUpdate, saveToHistory]
+    [tournament, onTournamentUpdate, saveToHistory, startedInDrop]
   );
 
-  // Always allow drop - we handle swapping in handleMoveMatch
+  // Swapping is handled in handleMoveMatch; angepfiffene Spiele sind weder Quelle noch Tauschziel (@ZP-093)
   const validateDrop = useCallback(
-    (_matchId: string, _targetSlot: TimeSlotType): boolean => {
-      // Always allow - swapping is handled in handleMoveMatch
+    (matchId: string, targetSlot: TimeSlotType): boolean => {
+      if (startedInDrop(matchId, targetSlot)) {
+        onRejectStarted?.();
+        return false;
+      }
       return true;
     },
-    []
+    [startedInDrop, onRejectStarted]
   );
 
   const {
@@ -444,12 +476,10 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       if (!match) {
         return `Spiel ${matchId}`;
       }
-      const teams = tournament.teams;
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
-      const homeTeam = teams.find(t => t.id === match.teamA)?.name || match.teamA;
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
-      const awayTeam = teams.find(t => t.id === match.teamB)?.name || match.teamB;
-      return `Spiel ${match.round}: ${homeTeam} gegen ${awayTeam}`;
+      const sideContext = buildSideContext(tournament, [match]);
+      const homeTeam = sideName(match, 'A', sideContext);
+      const awayTeam = sideName(match, 'B', sideContext);
+      return `Spiel ${match.matchNumber ?? match.round}: ${homeTeam} gegen ${awayTeam}`;
     };
 
     const getSlotLabel = (slotId: string | number): string => {
@@ -480,7 +510,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         return `Verschieben von ${getMatchLabel(active.id)} abgebrochen.`;
       },
     };
-  }, [tournament.matches, tournament.teams]);
+  }, [tournament]);
 
   // Build schedule grid
   const scheduleGrid = useMemo(
@@ -530,9 +560,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
   // Handle unskip match
   const handleUnskip = useCallback(
-    (matchId: string) => {
-      unskipMatch(matchId);
-    },
+    (matchId: string) => unskipMatch(matchId), // A-08f3e4: Hinweistext (@FU-071) zeigt die Karte
     [unskipMatch]
   );
 
@@ -655,6 +683,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                         <DraggableMatch
                           match={match}
                           teams={tournament.teams}
+                          tournament={tournament}
                           isEditing={isEditing}
                           isSelected={state.selectedMatchId === match.id}
                           conflicts={conflictResult.getMatchConflicts(match.id)}
@@ -703,6 +732,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                 <DraggableMatch
                   match={activeMatch}
                   teams={tournament.teams}
+                  tournament={tournament}
                   isEditing={true}
                   isSelected={true}
                   compact={compact}

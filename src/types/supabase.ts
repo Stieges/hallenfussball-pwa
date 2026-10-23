@@ -1,8 +1,15 @@
 /**
  * Supabase Database Types
  *
- * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-24
+ * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm).
+ * Letzte Regeneration: 2026-10-20, nach DB-Fenster 20.10. (Migrationen 20261110_001-_004:
+ * is_real_account, field_control inkl. take_field_control/field_control_state, Entfernung von
+ * can_create_tournament, tournament_limit_error_message, anonymous_tournament_limit,
+ * count_active_tournaments, is_anonymous_user) -- aus Produktion per Supabase-MCP
+ * (generate_typescript_types), nicht aus einem Wegwerf-Container. Damit ist die Datei wieder
+ * deckungsgleich mit der Produktion; die frueheren Vorgriffs-Nachtraege (B2/B3a/B3b/C0b) sind
+ * aufgegangen. Hinweis: das MCP-Werkzeug liefert PostgrestVersion "14.1", die CLI "14.5"; hier
+ * bleibt "14.5" stehen, weil der Typ-Drift-Check (CLI) damit vergleicht.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -25,6 +32,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          key: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      field_control: {
+        Row: {
+          claimed_at: string
+          epoch: number
+          field: number
+          holder_device_id: string | null
+          holder_device_label: string | null
+          holder_user_id: string | null
+          tournament_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          epoch?: number
+          field: number
+          holder_device_id?: string | null
+          holder_device_label?: string | null
+          holder_user_id?: string | null
+          tournament_id: string
+        }
+        Update: {
+          claimed_at?: string
+          epoch?: number
+          field?: number
+          holder_device_id?: string | null
+          holder_device_label?: string | null
+          holder_user_id?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_control_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_corrections: {
         Row: {
           corrected_at: string | null
@@ -78,9 +138,56 @@ export type Database = {
           },
         ]
       }
+      match_event_authors: {
+        Row: {
+          base_state: Json | null
+          created_at: string | null
+          device_id: string | null
+          event_id: string
+          tournament_id: string
+          user_id: string | null
+        }
+        Insert: {
+          base_state?: Json | null
+          created_at?: string | null
+          device_id?: string | null
+          event_id: string
+          tournament_id: string
+          user_id?: string | null
+        }
+        Update: {
+          base_state?: Json | null
+          created_at?: string | null
+          device_id?: string | null
+          event_id?: string
+          tournament_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_event_authors_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_event_authors_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_events: {
         Row: {
+          base_seq: number | null
+          client_time: string | null
+          clock_ms: number | null
+          control_epoch: number | null
           created_at: string | null
+          event_format: number | null
           id: string
           incomplete: boolean | null
           is_deleted: boolean | null
@@ -90,15 +197,25 @@ export type Database = {
           payload: Json
           period: string | null
           player_id: string | null
+          recorded_at: string | null
+          review_state: string | null
           score_away: number
           score_home: number
+          section: number | null
+          seq: number
+          target_event_id: string | null
           team_id: string | null
           timestamp_seconds: number
           type: string
           version: number
         }
         Insert: {
+          base_seq?: number | null
+          client_time?: string | null
+          clock_ms?: number | null
+          control_epoch?: number | null
           created_at?: string | null
+          event_format?: number | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
@@ -108,15 +225,25 @@ export type Database = {
           payload?: Json
           period?: string | null
           player_id?: string | null
+          recorded_at?: string | null
+          review_state?: string | null
           score_away: number
           score_home: number
+          section?: number | null
+          seq?: never
+          target_event_id?: string | null
           team_id?: string | null
           timestamp_seconds: number
           type: string
           version?: number
         }
         Update: {
+          base_seq?: number | null
+          client_time?: string | null
+          clock_ms?: number | null
+          control_epoch?: number | null
           created_at?: string | null
+          event_format?: number | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
@@ -126,8 +253,13 @@ export type Database = {
           payload?: Json
           period?: string | null
           player_id?: string | null
+          recorded_at?: string | null
+          review_state?: string | null
           score_away?: number
           score_home?: number
+          section?: number | null
+          seq?: never
+          target_event_id?: string | null
           team_id?: string | null
           timestamp_seconds?: number
           type?: string
@@ -149,6 +281,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_events_target_event_id_fkey"
+            columns: ["target_event_id"]
+            isOneToOne: false
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "match_events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -157,10 +296,32 @@ export type Database = {
           },
         ]
       }
+      match_transitions: {
+        Row: {
+          actor: string
+          event_type: string
+          from_status: string
+          to_status: string
+        }
+        Insert: {
+          actor: string
+          event_type: string
+          from_status: string
+          to_status: string
+        }
+        Update: {
+          actor?: string
+          event_type?: string
+          from_status?: string
+          to_status?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           actual_end: string | null
           actual_start: string | null
+          bib_side: string | null
           created_at: string | null
           decided_by: string | null
           duration_minutes: number | null
@@ -170,11 +331,15 @@ export type Database = {
           id: string
           is_final: boolean | null
           is_public: boolean | null
+          kit_color_a: string | null
+          kit_color_b: string | null
           label: string | null
           last_modified_by: string | null
           live_state: Json | null
           match_number: number | null
           match_status: string | null
+          origin_a: Json | null
+          origin_b: Json | null
           overtime_score_a: number | null
           overtime_score_b: number | null
           owner_id: string | null
@@ -190,6 +355,8 @@ export type Database = {
           skipped_at: string | null
           skipped_reason: string | null
           slot: number | null
+          slot_a_source: Json | null
+          slot_b_source: Json | null
           team_a_id: string | null
           team_a_placeholder: string | null
           team_b_id: string | null
@@ -204,6 +371,7 @@ export type Database = {
         Insert: {
           actual_end?: string | null
           actual_start?: string | null
+          bib_side?: string | null
           created_at?: string | null
           decided_by?: string | null
           duration_minutes?: number | null
@@ -213,11 +381,15 @@ export type Database = {
           id?: string
           is_final?: boolean | null
           is_public?: boolean | null
+          kit_color_a?: string | null
+          kit_color_b?: string | null
           label?: string | null
           last_modified_by?: string | null
           live_state?: Json | null
           match_number?: number | null
           match_status?: string | null
+          origin_a?: Json | null
+          origin_b?: Json | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
           owner_id?: string | null
@@ -233,6 +405,8 @@ export type Database = {
           skipped_at?: string | null
           skipped_reason?: string | null
           slot?: number | null
+          slot_a_source?: Json | null
+          slot_b_source?: Json | null
           team_a_id?: string | null
           team_a_placeholder?: string | null
           team_b_id?: string | null
@@ -247,6 +421,7 @@ export type Database = {
         Update: {
           actual_end?: string | null
           actual_start?: string | null
+          bib_side?: string | null
           created_at?: string | null
           decided_by?: string | null
           duration_minutes?: number | null
@@ -256,11 +431,15 @@ export type Database = {
           id?: string
           is_final?: boolean | null
           is_public?: boolean | null
+          kit_color_a?: string | null
+          kit_color_b?: string | null
           label?: string | null
           last_modified_by?: string | null
           live_state?: Json | null
           match_number?: number | null
           match_status?: string | null
+          origin_a?: Json | null
+          origin_b?: Json | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
           owner_id?: string | null
@@ -276,6 +455,8 @@ export type Database = {
           skipped_at?: string | null
           skipped_reason?: string | null
           slot?: number | null
+          slot_a_source?: Json | null
+          slot_b_source?: Json | null
           team_a_id?: string | null
           team_a_placeholder?: string | null
           team_b_id?: string | null
@@ -864,6 +1045,7 @@ export type Database = {
       }
       tournaments: {
         Row: {
+          change_revision: number
           completed_at: string | null
           config: Json
           created_at: string | null
@@ -899,6 +1081,7 @@ export type Database = {
           version: number | null
         }
         Insert: {
+          change_revision?: number
           completed_at?: string | null
           config?: Json
           created_at?: string | null
@@ -934,6 +1117,7 @@ export type Database = {
           version?: number | null
         }
         Update: {
+          change_revision?: number
           completed_at?: string | null
           config?: Json
           created_at?: string | null
@@ -975,20 +1159,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      anonymous_tournament_limit: { Args: never; Returns: number }
+      append_match_events: {
+        Args: {
+          p_client_format: number
+          p_device_id?: string
+          p_events: Json
+          p_match_id: string
+        }
+        Returns: Json
+      }
       auth_provider_for_email: { Args: { p_email: string }; Returns: string }
-      can_create_tournament: { Args: never; Returns: Json }
-      count_active_tournaments: { Args: { user_id: string }; Returns: number }
+      compute_match_state: { Args: { p_match_id: string }; Returns: Json }
+      field_control_info: {
+        Args: { p_device_id: string; p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
+      field_control_state: {
+        Args: { p_device_id?: string; p_tournament_id: string }
+        Returns: Json
+      }
       generate_share_code: { Args: never; Returns: string }
       has_tournament_permission: {
         Args: { p_permission: string; p_tournament_id: string }
         Returns: boolean
       }
+      hook_before_user_created: { Args: { event: Json }; Returns: Json }
       is_active_tournament_member: {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
-      is_anonymous_user: { Args: never; Returns: boolean }
+      is_real_account: { Args: never; Returns: boolean }
       is_tournament_admin: {
         Args: { p_tournament_id: string }
         Returns: boolean
@@ -1012,6 +1212,38 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
+      match_apply_event: {
+        Args: { ctx: Json; event: Json; state: Json; transitions: Json }
+        Returns: Json
+      }
+      match_continue: {
+        Args: {
+          ctx: Json
+          events: Json
+          mode?: string
+          state: Json
+          transitions: Json
+        }
+        Returns: Json
+      }
+      match_event_author_names: {
+        Args: { p_match_id: string }
+        Returns: {
+          author_name: string
+          author_role: string
+          event_id: string
+        }[]
+      }
+      match_has_engine_events: {
+        Args: { p_match_id: string }
+        Returns: boolean
+      }
+      match_initial_state: { Args: { ctx: Json }; Returns: Json }
+      match_reduce: {
+        Args: { ctx: Json; events: Json; mode?: string; transitions: Json }
+        Returns: Json
+      }
+      match_server_state: { Args: { state: Json }; Returns: Json }
       merge_user_data: {
         Args: { p_source_user_id: string; p_target_user_id: string }
         Returns: Json
@@ -1037,7 +1269,25 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
-      tournament_limit_error_message: { Args: never; Returns: string }
+      reset_match_results: {
+        Args: { p_match_ids: string[]; p_tournament_id: string }
+        Returns: Json
+      }
+      server_time: { Args: never; Returns: Json }
+      take_field_control: {
+        Args: {
+          p_device_id: string
+          p_device_label?: string
+          p_expected_epoch?: number
+          p_field: number
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      tournament_has_started: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       user_owns_tournament: {
         Args: { p_tournament_id: string }
         Returns: boolean

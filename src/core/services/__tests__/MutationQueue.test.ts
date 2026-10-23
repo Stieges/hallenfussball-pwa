@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MutationQueue } from '../MutationQueue';
 import type { MutationItem, FailedMutationItem } from '../MutationQueue';
+import { RepositoryError, isTransientMutationError } from '../../errors';
 
 // =============================================================================
 // Mocks
@@ -10,6 +11,7 @@ import type { MutationItem, FailedMutationItem } from '../MutationQueue';
 const mockStorage = new Map<string, string>();
 vi.mock('../../utils/safeStorage', () => ({
   safeLocalStorage: {
+    setItemPersisted: vi.fn((key: string, value: string) => { mockStorage.set(key, value); return true; }),
     getItem: vi.fn((key: string) => mockStorage.get(key) ?? null),
     setItem: vi.fn((key: string, value: string) => { mockStorage.set(key, value); }),
     removeItem: vi.fn((key: string) => { mockStorage.delete(key); }),
@@ -48,13 +50,19 @@ function createMockRepo() {
 
 let mockRepo: ReturnType<typeof createMockRepo>;
 let onlineSpy: ReturnType<typeof vi.spyOn>;
+let created: MutationQueue[] = [];
 
 beforeEach(() => {
   mockStorage.clear();
   idCounter = 0;
+  created = [];
   mockRepo = createMockRepo();
   // Default: navigator.onLine = true
   onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+});
+
+afterEach(() => {
+  created.forEach(q => q.dispose());
 });
 
 // Helper to create a queue without auto-processing
@@ -69,7 +77,9 @@ function createQueue(opts?: { online?: boolean; preloadQueue?: MutationItem[]; p
     mockStorage.set('mutation_queue_failed_v1', JSON.stringify(opts.preloadFailed));
   }
    
-  return new MutationQueue(mockRepo as any);
+  const queue = new MutationQueue(mockRepo as any);
+  created.push(queue);
+  return queue;
 }
 
 // =============================================================================
@@ -259,6 +269,59 @@ describe('MutationQueue process', () => {
 });
 
 // =============================================================================
+// A2 Fixrunde 3 (N2, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md):
+// an explicit "clear this field" must survive save -> app restart (new queue instance re-reading
+// the SAME, now-stringified, localStorage) -> process -- not just an in-memory session.
+// =============================================================================
+
+describe('MutationQueue — explicit clear survives the JSON round-trip (N2)', () => {
+  it('null (not undefined) for a cleared field reaches the executor after save, reload, and process', async () => {
+    // 1. Enqueue OFFLINE -- persisted to (string!) storage, not processed yet.
+    const queue1 = createQueue({ online: false });
+    queue1.enqueue('UPDATE_MATCH', {
+      tournamentId: 't1',
+      update: { id: 'm1', skippedReason: null, skippedAt: null, matchStatus: 'scheduled' },
+    });
+    expect(queue1.getPendingCount()).toBe(1);
+
+    // 2. Simulate an app restart: a BRAND NEW queue instance, still offline so its own
+    // constructor doesn't race the explicit process() call below, reads the SAME storage.
+    const queue2 = createQueue({ online: false });
+    expect(queue2.getPendingCount()).toBe(1);
+
+    // 3. Now go online and process -- the executor must receive `null` for the cleared fields,
+    // exactly as enqueued; JSON.stringify/parse must not have dropped anything.
+    onlineSpy.mockReturnValue(true);
+    await queue2.process();
+
+    expect(mockRepo.updateMatch).toHaveBeenCalledWith('t1', {
+      id: 'm1',
+      skippedReason: null,
+      skippedAt: null,
+      matchStatus: 'scheduled',
+    });
+  });
+
+  // RED-GUARD (documents WHY null is required, not a fix in itself): `undefined` never makes it
+  // into storage at all -- `JSON.stringify` drops a present-but-undefined-valued key. This is
+  // the bug N2 fixes for every real MatchUpdate producer (OfflineRepository normalizes
+  // undefined -> null right before enqueue, matchResultStatusDiff never emits undefined for a
+  // changed field to begin with).
+  it('RED-GUARD: undefined for a cleared field does NOT survive JSON.stringify -- the key is gone', () => {
+    const queue1 = createQueue({ online: false });
+    queue1.enqueue('UPDATE_MATCH', {
+      tournamentId: 't1',
+      update: { id: 'm1', skippedReason: undefined, skippedAt: undefined, matchStatus: 'scheduled' },
+    });
+
+    const stored = JSON.parse(mockStorage.get('mutation_queue_v1') ?? '[]') as MutationItem[];
+    const storedUpdate = stored[0].payload.update as Record<string, unknown>;
+    expect('skippedReason' in storedUpdate).toBe(false);
+    expect('skippedAt' in storedUpdate).toBe(false);
+  });
+});
+
+// =============================================================================
 // Error handling & Dead Letter
 // =============================================================================
 
@@ -292,6 +355,111 @@ describe('MutationQueue error handling', () => {
     expect(queue.getFailedCount()).toBe(1);
     const failed = queue.getFailedMutations();
     expect(failed[0].lastError).toBe('permanent');
+  });
+
+  it('@LZ-003 Server lehnt Löschen ab → Fehler nicht transient, Eintrag sichtbar gescheitert', async () => {
+    // Gemockter Supabase/PostgREST-Fehler der Sperre "Turnier nach dem ersten
+    // Anpfiff nicht loeschbar" (Migration 20261004_101_protect_deleted_at.sql,
+    // RAISE EXCEPTION 'tournament_started: ...' ERRCODE P0001) -- genau so, wie
+    // SupabaseRepository.delete()/softDelete()/save() ihn als RepositoryError
+    // an die Mutations-Queue weiterreichen.
+    const supabaseError = {
+      message: 'tournament_started: Turnier kann nach dem ersten Anpfiff nicht geloescht werden.',
+      details: null,
+      hint: null,
+      code: 'P0001',
+    };
+    const repoError = new RepositoryError('delete', supabaseError.message, supabaseError);
+
+    // (1) Einordnung: NICHT transient -- kein Muster aus
+    // TRANSIENT_NETWORK_MESSAGE_PATTERNS (fetch/networkerror/network error/
+    // load failed/timeout) trifft die Meldung, kein HTTP-Status 408/429/5xx,
+    // auch nicht im originalError. Der Default ist "dauerhaft".
+    expect(isTransientMutationError(repoError)).toBe(false);
+
+    // (2) Damit zaehlt der Fehlversuch (kein Stillstand an der Queue-Spitze
+    // wie bei transienten Fehlern) und der Eintrag bleibt waehrend der
+    // Wiederholungen sichtbar geparkt -- kein stilles Verwerfen.
+    const queueRetry = createQueue({ online: false });
+    queueRetry.enqueue('DELETE_TOURNAMENT', 't-lz003');
+    mockRepo.delete.mockRejectedValueOnce(repoError);
+    onlineSpy.mockReturnValue(true);
+    await queueRetry.process();
+
+    expect(queueRetry.getPendingCount()).toBe(1);
+    expect(queueRetry.getFailedCount()).toBe(0);
+    const pending = JSON.parse(mockStorage.get('mutation_queue_v1') ?? '[]') as MutationItem[];
+    expect(pending[0].retryCount).toBe(1);
+
+    // (3) Nach MAX_RETRIES steht der Eintrag als gescheitert in der
+    // Fehlerliste -- ueber den vorhandenen Übertragungsstatus (failedCount)
+    // sichtbar, statt still verloren zu gehen.
+    const items: MutationItem[] = [
+      { id: 'item-lz003', type: 'DELETE_TOURNAMENT', payload: 't-lz003', timestamp: 1000, retryCount: 4 },
+    ];
+    const queueDead = createQueue({ online: false, preloadQueue: items });
+    mockRepo.delete.mockRejectedValueOnce(repoError);
+    onlineSpy.mockReturnValue(true);
+    await queueDead.process();
+
+    expect(queueDead.getPendingCount()).toBe(0);
+    expect(queueDead.getFailedCount()).toBe(1);
+    const failed = queueDead.getFailedMutations();
+    expect(failed[0].type).toBe('DELETE_TOURNAMENT');
+    expect(failed[0].lastError).toContain('tournament_started');
+  });
+
+  it('@LZ-003 SAVE_TOURNAMENT (Soft-Delete) → gleiche Fehlerform, nicht transient, sichtbar gescheitert', async () => {
+    // Derselbe Sperre-Fehler wie oben, aber ueber den Soft-Delete-Pfad:
+    // save() mit neu gesetztem deleted_at stoesst auf denselben Trigger
+    // (protect_deleted_at, Block 2) und SupabaseRepository.save() reicht ihn
+    // als RepositoryError('save', ...) weiter -- gleiche Fehlerform wie der
+    // Delete-Fall (VR7).
+    const supabaseError = {
+      message: 'tournament_started: Turnier kann nach dem ersten Anpfiff nicht geloescht werden.',
+      details: null,
+      hint: null,
+      code: 'P0001',
+    };
+    const repoError = new RepositoryError('save', supabaseError.message, supabaseError);
+
+    // (1) Einordnung: NICHT transient -- wie beim Delete-Fall.
+    expect(isTransientMutationError(repoError)).toBe(false);
+
+    // (2) Fehlversuch zaehlt, Eintrag bleibt waehrend der Wiederholungen
+    // sichtbar geparkt -- kein stilles Verwerfen.
+    const queueRetry = createQueue({ online: false });
+    queueRetry.enqueue('SAVE_TOURNAMENT', { id: 't-lz003-soft', deletedAt: '2026-10-04T10:00:00Z' });
+    mockRepo.save.mockRejectedValueOnce(repoError);
+    onlineSpy.mockReturnValue(true);
+    await queueRetry.process();
+
+    expect(queueRetry.getPendingCount()).toBe(1);
+    expect(queueRetry.getFailedCount()).toBe(0);
+    const pending = JSON.parse(mockStorage.get('mutation_queue_v1') ?? '[]') as MutationItem[];
+    expect(pending[0].retryCount).toBe(1);
+
+    // (3) Nach MAX_RETRIES steht der Eintrag als gescheitert in der
+    // Fehlerliste -- ueber failedCount sichtbar, lastError traegt die Sperre.
+    const items: MutationItem[] = [
+      {
+        id: 'item-lz003-soft',
+        type: 'SAVE_TOURNAMENT',
+        payload: { id: 't-lz003-soft', deletedAt: '2026-10-04T10:00:00Z' },
+        timestamp: 1000,
+        retryCount: 4,
+      },
+    ];
+    const queueDead = createQueue({ online: false, preloadQueue: items });
+    mockRepo.save.mockRejectedValueOnce(repoError);
+    onlineSpy.mockReturnValue(true);
+    await queueDead.process();
+
+    expect(queueDead.getPendingCount()).toBe(0);
+    expect(queueDead.getFailedCount()).toBe(1);
+    const failed = queueDead.getFailedMutations();
+    expect(failed[0].type).toBe('SAVE_TOURNAMENT');
+    expect(failed[0].lastError).toContain('tournament_started');
   });
 });
 

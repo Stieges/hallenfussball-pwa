@@ -1,0 +1,1689 @@
+#!/usr/bin/env bash
+#
+# append-match-events-check.sh — Container-Beweis fuer den Server-Schreibweg
+# public.append_match_events + public.server_time (B3b,
+# supabase/migrations/20260928_003_append_match_events.sql,
+# .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md, Abschnitt 3).
+#
+# Wegwerf-Postgres (supabase/postgres), Baseline + ALLE neueren Migrationen (die B3b-Migration
+# zweimal -- Idempotenz). Testnutzer je Rolle: owner, coadmin (co-admin), helper (collaborator),
+# trainer, stranger (kein Mitglied) + anon.
+#
+# Kategorien (jede Probe zaehlt in genau eine):
+#   Fixtures    Jede Fixture unter src/core/match/__fixtures__/ laeuft durch die RPC: Turnier,
+#               Teams, Spiel werden so angelegt, dass die SERVERGESETZTEN Regeln (Brief 5d) den
+#               Fixture-Regeln entsprechen (Umkehrung der Regelableitung). `prior` als owner (je
+#               Ereignis ein Aufruf), `events` im Modus log je Ereignis ein Aufruf als actorUser,
+#               im Modus batch ein Aufruf. Verlangt: results (id, status, code; detail wenn
+#               erwartet) == expect.results, compute_match_state (als owner) == expect.serverState
+#               == Zustand der letzten RPC-Antwort (S11: Anhaengen == Nachrechnen), und der
+#               Zwischenspeicher auf matches passt zum Zustand.
+#               IDs: Fixture-Team-IDs ("teamA") und Nicht-UUID-Kennungen sind keine uuids, und
+#               Ereignis-IDs wiederholen sich zwischen Fixtures (match_events.id ist global
+#               eindeutig) -- deshalb bildet der Harness je Fixture JEDE Kennung (ctx-Teams, id,
+#               targetId, teamId, payload.basedOn) bijektiv auf eine fixture-eigene uuid ab, auch
+#               in expect (Schluessel und Werte). Dass Nicht-UUID-Kennungen am Server
+#               INVALID_PAYLOAD sind, belegt die Probe S10 separat.
+#               Ausnahmen: actorUser trainer/stranger -> erwartet FORBIDDEN_ACTOR (kein Recht;
+#               B1c-Allowlist 07-idempotency.json#2500). Fixtures, deren Regeln nicht ueber die
+#               Konfiguration herstellbar sind, werden mit Grund gelistet (Ziel: keine).
+#   Rechte      Helfer: Spielbetrieb ja, CORRECTION/SKIP/UNSKIP/RESULT_ENTRY nein, REOPEN nur als
+#               "Spiel fortsetzen" (ZA-3: <= 120 s, einmal) -- spaeter FORBIDDEN_ACTOR
+#               (FORBIDDEN_ACTOR), mitgesendetes actor wird ignoriert; Co-Admin/Owner duerfen;
+#               Trainer/Fremder und widerrufene/offene/viewer-Mitgliedschaften: alles FORBIDDEN_ACTOR,
+#               nichts gespeichert, kein Zustand; nicht existierendes Spiel und soft-geloeschtes
+#               Turnier: dieselbe Antwort (M6, M3); anon: kein EXECUTE; ohne auth.uid() Fehler;
+#               Autorenzeile (user_id, device_id, base_state).
+#   Idempotenz  gleicher Aufruf zweimal -> alle duplicate mit seq des Originals, 1 Zeile je ID;
+#               gleiche ID anderer Inhalt -> ID_CONFLICT; gleiche ID anderes Spiel -> ID_CONFLICT;
+#               MATCH_START-Wiederholung mit anderen Client-Regeln -> duplicate; noop nie gespeichert.
+#   Kaskade     log: Ablehnung haelt die anderen nicht auf; batch: DEPENDS_ON_REJECTED (R12),
+#               auch nach Umschlag-Ablehnung.
+#   Nebenlaeufig zwei Sitzungen senden gleichzeitig MATCH_START (erste haelt die Sperre per
+#               pg_sleep) -> genau eine angenommen, seq lueckenlos steigend; zwei gleichzeitige
+#               Tore -> beide angenommen, Stand 2.
+#   Sonstiges   CLIENT_OUTDATED (p_client_format = 0), server_time() fuer anon, Guard aus B2
+#               (Engine-Zeilen der RPC per Client weder aenderbar noch loeschbar), S10
+#               (Grossbuchstaben-IDs), S11 (echte Epoch-ms, Klemmung), Umschlag (S9), Fehler bei
+#               ungueltigem p_events, servergesetzte Regeln (5d, S14), Zwischenspeicher (I1: nicht
+#               gespielt -> NULL; M4: live_state zusammengefuehrt), section 5 in der Verlaengerung
+#               (S13) mit spaltenweisem R14-Vergleich, Groessen- und Anzahlgrenzen (M1).
+#               Fixtures mit K.o.-Regeln und tiebreak null sind ueber die Konfiguration nicht
+#               herstellbar (S14: der Server setzt tiebreak nie null) -- nur dieser Grund ist als
+#               Auslassung erlaubt, jeder andere zaehlt als Abweichung.
+#   Nachtrag    C0b (task-C0b-brief.md, 20261001_001_amend_event.sql): AMEND durch die RPC --
+#               Helfer ergaenzt ein leeres Feld nach dem Abpfiff -> accepted; Helfer aendert ein
+#               gesetztes Feld -> FORBIDDEN_ACTOR; Turnierleitung aendert -> accepted; targetId bei
+#               AMEND angenommen (als target_event_id gespeichert), bei anderen Typen weiter
+#               INVALID_PAYLOAD; compute_match_state == Zustand beim Anhaengen.
+#   Spaltenschutz  C0b (V4, Ruling PC2, Trigger matches_guard_engine_columns): Helfer/Eigentuemer
+#               aendern Ergebnis-/Status-/Uhr-/live_state-Spalten eines Spiels MIT Engine-Ereignis
+#               -> abgelehnt (Guard-Meldung); seit A-10 (20261028_005, @EK-060) auch Spiel OHNE
+#               Engine-Ereignis (Altspiel) -> abgelehnt; freie Spalte (referee_number) am Engine-Spiel -> erlaubt; der RPC-
+#               Zwischenspeicher schreibt weiter; is_public-Kaskade des Turniers erreicht das Spiel;
+#               Reihenfolge der BEFORE-UPDATE-Trigger auf matches (pg_trigger).
+#   Rechte-Assertion  scripts/db_privilege_assertions.sql gegen den migrierten Container.
+# Zusaetzlich (nur Ausgabe): Laufzeit eines Aufrufs mit 1 Ereignis bei 100 gespeicherten.
+#
+# Aufrufoptionen:
+#   bash scripts/append-match-events-check.sh                     normaler Lauf, Exit 0 nur ohne
+#                                                                 Abweichung
+#   bash scripts/append-match-events-check.sh --without-migration Gegenprobe A: ohne die
+#                                                                 B3b-Migration (und ohne die von
+#                                                                 ihr abhaengige C0b-Migration) ->
+#                                                                 JEDE Kategorie muss ROT sein
+#                                                                 (Exit 0 nur dann)
+#   bash scripts/append-match-events-check.sh --gegenprobe        Gegenprobe B: B3b-Migration mit
+#                                                                 bewusst falscher Akteursermittlung
+#                                                                 ('leadMatches' -> 'writeMatchData',
+#                                                                 Helfer wird Turnierleitung) ->
+#                                                                 Fixtures und Rechte muessen ROT
+#                                                                 sein (Exit 0 nur dann)
+#   bash scripts/append-match-events-check.sh --without-column-guard
+#                                                                 Gegenprobe C (C0b): alles
+#                                                                 eingespielt, danach DROP TRIGGER
+#                                                                 matches_guard_engine_columns ->
+#                                                                 Spaltenschutz muss ROT sein
+#                                                                 (Exit 0 nur dann)
+#   bash scripts/append-match-events-check.sh --without-sw       Gegenprobe D (SW, @EK-062): alles
+#                                                                 ausser 20261028_007 eingespielt ->
+#                                                                 9i Fall 1 (Sonstiges) und Fixture
+#                                                                 68a (Fixtures) muessen ROT sein
+#                                                                 (Exit 0 nur dann)
+#
+# Aendert NICHTS an der Produktionsdatenbank -- Wegwerf-Container, wird am Ende entfernt (trap).
+#
+set -euo pipefail
+
+MODE="normal"
+case "${1:-}" in
+  "") ;;
+  --without-migration) MODE="without-migration" ;;
+  --gegenprobe) MODE="gegenprobe" ;;
+  --without-column-guard) MODE="without-column-guard" ;;
+  --without-sw) MODE="without-sw" ;;
+  *) echo "::error::Unbekannte Option: $1 (erlaubt: --without-migration, --gegenprobe, --without-column-guard, --without-sw)" >&2; exit 2 ;;
+esac
+
+POSTGRES_IMAGE="supabase/postgres:17.6.1.063"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
+BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
+TARGET_MIGRATION="20260928_003_append_match_events.sql"
+AMEND_MIGRATION="20261001_001_amend_event.sql"
+# ZA-3: juengste Fassung von append_match_events/apply_effect/apply_retract/server_rules.
+ZA3_MIGRATION="20261028_001_transitions_za3.sql"
+# A-25a: juengste Fassung von append_match_events/payload_valid/apply_result_entry/cache_columns (stapelt auf ZA-3).
+A25A_MIGRATION="20261028_003_result_entry_shootout.sql"
+# A-10: juengste Fassung von matches_guard_engine_columns (unbedingt, BEFORE INSERT OR UPDATE) -- 20261001_001 erneut
+# einzuspielen stellte die alte Bedingung wieder her, deshalb ans Ende der Idempotenz-Kette.
+A10_MIGRATION="20261028_005_guard_all_matches.sql"
+# UR: additive Lesefunktion match_event_author_names -- am Ende der Idempotenz-Kette ein zweites Mal.
+UR_MIGRATION="20261028_006_event_author_names.sql"
+# SW (@EK-062): juengste Fassung von match_engine.cache_columns (Strafstoss aus dem Direkteintrag nur bei
+# Gleichstand) -- jedes erneute Einspielen von 20261028_003 stellte die alte Fassung wieder her, deshalb ans
+# Ende der Idempotenz-Kette. --without-sw laesst genau diese Datei aus (Gegenprobe D).
+SW_MIGRATION="20261028_007_entered_shootout_needs_draw.sql"
+# A-34 (Steuer je Feld): juengste Fassung von append_match_events (Pruefung c3) -- jedes erneute Einspielen von
+# 20261028_003 stellte die Fassung ohne Steuer wieder her (Assertion append-match-events-checks-field-control f),
+# deshalb ans Ende der Idempotenz-Kette. Die Proben hier senden keine Geraete-ID -> kein Anspruch, Verhalten gleich.
+# Pflicht (A-34 Fixrunde 2): fehlt die Datei (z. B. umbenannt), bricht das Skript ab statt still die Fassung ohne Steuer
+# zu pruefen.
+A34_MIGRATION="20261110_003_field_control.sql"
+A34_FILE=""
+# A-25b (Nichtantritt): juengste Fassung von append_match_events und der Rechenfunktion (payload_valid, apply_result_entry,
+# decided_by, apply_effect, match_apply_event, cache_columns) -- ans Ende der Idempotenz-Kette. Setzt SW voraus
+# (Fail-fast), --without-sw laesst sie deshalb ebenfalls aus (und die Wertungs-Fixtures 69*).
+A25B_MIGRATION="20261110_005_result_entry_forfeit.sql"
+A25B_FILE=""
+# Spiel beenden (20261110_009): juengste Fassung von append_match_events, payload_valid, apply_result_entry, apply_effect
+# (Fixtures 40, 70a-70k) -- nach A-25b ans Ende der Kette; setzt A-25b voraus, --without-sw laesst sie deshalb aus.
+SB_MIGRATION="20261110_009_spiel_beenden.sql"
+SB_FILE=""
+FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
+CONTAINER_NAME="append-match-events-check-$$"
+WORKDIR="$(mktemp -d)"
+
+cleanup() {
+  docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  docker rm -f "$CONTAINER_NAME-a" "$CONTAINER_NAME-b" >/dev/null 2>&1 || true
+  rm -rf "$WORKDIR"
+}
+trap cleanup EXIT
+
+source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
+NEWER_MIGRATIONS_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
+NEWER_MIGRATIONS=()
+TARGET_FILE=""
+AMEND_FILE=""
+ZA3_FILE=""
+A25A_FILE=""
+A10_FILE=""
+UR_FILE=""
+SW_FILE=""
+AFTER_TARGET=0
+A13BS_APPLIED=0
+A21AS_FILE=""
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
+    TARGET_FILE="$line"
+    AFTER_TARGET=1
+    [[ "$MODE" == "without-migration" ]] && continue
+  elif [[ "$AFTER_TARGET" -eq 1 && "$MODE" == "without-migration" ]]; then
+    # C0b: neuere Migrationen bauen auf B3b auf (20261001 bricht per Fail-fast ohne sie ab) --
+    # ohne die B3b-Migration werden sie deshalb ebenfalls ausgelassen.
+    continue
+  fi
+  [[ "$(basename "$line")" == "$AMEND_MIGRATION" ]] && AMEND_FILE="$line"
+  [[ "$(basename "$line")" == "$ZA3_MIGRATION" ]] && ZA3_FILE="$line"
+  [[ "$(basename "$line")" == "$A25A_MIGRATION" ]] && A25A_FILE="$line"
+  [[ "$(basename "$line")" == "$A10_MIGRATION" ]] && A10_FILE="$line"
+  [[ "$(basename "$line")" == "$UR_MIGRATION" ]] && UR_FILE="$line"
+  [[ "$(basename "$line")" == "$A34_MIGRATION" ]] && A34_FILE="$line"
+  if [[ "$(basename "$line")" == "$A25B_MIGRATION" ]]; then
+    A25B_FILE="$line"
+    [[ "$MODE" == "without-sw" ]] && continue
+  fi
+  if [[ "$(basename "$line")" == "$SB_MIGRATION" ]]; then
+    SB_FILE="$line"
+    [[ "$MODE" == "without-sw" ]] && continue
+  fi
+  # A-13b-S: 20261110_006 setzt 20261110_005 voraus (Fail-fast) -- ohne SW (und damit ohne _005) faellt sie ebenfalls weg.
+  if [[ "$(basename "$line")" == "20261110_006_group_completion.sql" && "$MODE" == "without-sw" ]]; then
+    continue
+  fi
+  if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
+    SW_FILE="$line"
+    [[ "$MODE" == "without-sw" ]] && continue
+  fi
+  # A-21a-S: 20261113_003 setzt 20261110_006 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg. Sie fasst
+  # append_match_events zuletzt (closed_intake) und bringt den Trigger matches_guard_closed.
+  if [[ "$(basename "$line")" == "20261113_003_tournament_lifecycle.sql" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    A21AS_FILE="$line"
+  fi
+  # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
+  [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
+  NEWER_MIGRATIONS+=("$line")
+done <<< "$NEWER_MIGRATIONS_RAW"
+if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" || -z "$UR_FILE" || -z "$SW_FILE" ) ]]; then
+  echo "::error::$TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION, $A25A_MIGRATION, $A10_MIGRATION, $UR_MIGRATION oder $SW_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+  exit 1
+fi
+
+if [[ -z "$A25B_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$A25B_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Fixtures 69* gegen einen Schreibweg ohne Nichtantritt." >&2
+  exit 1
+fi
+if [[ -z "$SB_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$SB_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Fixtures 40 und 70* gegen einen Schreibweg ohne Spiel beenden." >&2
+  exit 1
+fi
+if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$A34_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still append_match_events ohne Steuer je Feld." >&2
+  exit 1
+fi
+
+# --- 1. Wegwerf-Postgres ----------------------------------------------------------------------
+docker run -d --name "$CONTAINER_NAME" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
+READY=0
+for _ in $(seq 1 90); do
+  READY_COUNT="$(docker logs "$CONTAINER_NAME" 2>&1 | grep -c "database system is ready to accept connections" || true)"
+  if [[ "$READY_COUNT" -ge 2 ]]; then READY=1; break; fi
+  sleep 1
+done
+if [[ "$READY" -ne 1 ]]; then
+  echo "::error::Container wurde nach 90s nicht vollstaendig bereit." >&2
+  docker logs "$CONTAINER_NAME" 2>&1 | tail -30 >&2
+  exit 1
+fi
+for _ in $(seq 1 30); do
+  docker exec "$CONTAINER_NAME" pg_isready -U postgres >/dev/null 2>&1 && break
+  sleep 1
+done
+
+psql_stdin() {
+  docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q
+}
+psql_value() {
+  docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q -tA
+}
+
+echo "[$MODE] Baseline + ${#NEWER_MIGRATIONS[@]} neuere Migration(en) einspielen..." >&2
+psql_stdin < "$BASELINE_FILE"
+for f in "${NEWER_MIGRATIONS[@]}"; do
+  psql_stdin < "$f"
+done
+if [[ "$MODE" != "without-migration" ]]; then
+  # C0b: 003 allein erneut einzuspielen ersetzte die in 20261001 geaenderten Helfer (cfg_num,
+  # envelope, cache_columns) durch den PR-B-Stand -- deshalb die Kette 003 -> 20261001.
+  # ZA-3: 20261028 ersetzt Teile davon erneut -- Kette 003 -> 20261001 -> 20261028.
+  # A-25a: 20261028_003 ersetzt payload_valid/cache_columns/append_match_events erneut -- ans Ende der Kette.
+  echo "Idempotenz: $TARGET_MIGRATION, $AMEND_MIGRATION, $ZA3_MIGRATION und $A25A_MIGRATION ein zweites Mal einspielen..." >&2
+  psql_stdin < "$TARGET_FILE"
+  psql_stdin < "$AMEND_FILE"
+  psql_stdin < "$ZA3_FILE"
+  psql_stdin < "$A25A_FILE"
+  psql_stdin < "$A10_FILE"
+  psql_stdin < "$UR_FILE"
+  [[ "$MODE" != "without-sw" ]] && psql_stdin < "$SW_FILE"
+  if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
+  if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$A25B_FILE"; psql_stdin < "$SB_FILE"; fi
+  # A-21a-S: seit 20261113_003 steht die juengste Fassung von append_match_events dort (Basis _009 + closed_intake).
+  if [[ -n "$A21AS_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A21AS_FILE"; fi
+fi
+if [[ "$MODE" == "gegenprobe" ]]; then
+  # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
+  # C0b-Fixrunde 1: 20261001 definiert append_match_events neu (skipped_at/-reason) -- die
+  # juengste Fassung steht dort, deshalb wird DIESE Datei mutiert (und nach 003 eingespielt).
+  # ZA-3: seit 20261028 steht die juengste Fassung dort -- diese Datei wird mutiert.
+  # A-25a: seit 20261028_003 steht die juengste Fassung dort -- diese Datei wird mutiert.
+  # A-34: seit 20261110_003 steht die juengste Fassung dort -- diese Datei wird mutiert (falls vorhanden).
+  # A-25b: seit 20261110_005 steht die juengste Fassung dort -- diese Datei wird mutiert.
+  NEWEST_APPEND_FILE="$A25A_FILE"
+  [[ -n "$A34_FILE" ]] && NEWEST_APPEND_FILE="$A34_FILE"
+  [[ -n "$A25B_FILE" ]] && NEWEST_APPEND_FILE="$A25B_FILE"
+  # Spiel beenden: seit 20261110_009 steht die juengste Fassung dort -- diese Datei wird mutiert.
+  [[ -n "$SB_FILE" ]] && NEWEST_APPEND_FILE="$SB_FILE"
+  # A-21a-S: seit 20261113_003 steht die juengste Fassung dort -- diese Datei wird mutiert.
+  [[ -n "$A21AS_FILE" ]] && NEWEST_APPEND_FILE="$A21AS_FILE"
+  HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$NEWEST_APPEND_FILE" || true)"
+  if [[ "$HITS" -ne 1 ]]; then
+    echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
+    exit 1
+  fi
+  echo "GEGENPROBE: Akteursermittlung leadMatches -> writeMatchData" >&2
+  sed "s/has_tournament_permission(v_tournament_id, 'leadMatches')/has_tournament_permission(v_tournament_id, 'writeMatchData')/" "$NEWEST_APPEND_FILE" | psql_stdin
+fi
+if [[ "$MODE" == "without-column-guard" ]]; then
+  echo "GEGENPROBE C: DROP TRIGGER matches_guard_engine_columns" >&2
+  psql_stdin <<<"DROP TRIGGER matches_guard_engine_columns ON public.matches;"
+fi
+
+# --- 2. Harness-Hilfen (nur im Wegwerf-Container) --------------------------------------------
+# __b3b_call: ein RPC-Aufruf als echte Client-Rolle (SET LOCAL role + request.jwt.claim.sub, wie
+# PostgREST), Fehler werden als {"exception": SQLSTATE} zurueckgegeben statt den Lauf abzubrechen.
+psql_stdin <<'SQL'
+CREATE FUNCTION public.__b3b_call(p_user uuid, p_match uuid, p_events jsonb, p_format integer DEFAULT 1,
+                                  p_device uuid DEFAULT NULL, p_role text DEFAULT 'authenticated')
+RETURNS jsonb LANGUAGE plpgsql AS $fn$
+DECLARE
+  v jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', coalesce(p_user::text, ''), true);
+  PERFORM set_config('role', p_role, true);
+  BEGIN
+    v := public.append_match_events(p_match, p_events, p_format, p_device);
+  EXCEPTION WHEN OTHERS THEN
+    v := jsonb_build_object('exception', SQLSTATE, 'message', SQLERRM);
+  END;
+  PERFORM set_config('role', 'postgres', true);
+  RETURN v;
+END;
+$fn$;
+
+-- compute_match_state als echte Rolle (RLS gilt, R17).
+CREATE FUNCTION public.__b3b_state(p_user uuid, p_match uuid) RETURNS jsonb LANGUAGE plpgsql AS $fn$
+DECLARE
+  v jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', coalesce(p_user::text, ''), true);
+  PERFORM set_config('role', 'authenticated', true);
+  BEGIN
+    v := public.compute_match_state(p_match);
+  EXCEPTION WHEN OTHERS THEN
+    v := jsonb_build_object('exception', SQLSTATE, 'message', SQLERRM);
+  END;
+  PERFORM set_config('role', 'postgres', true);
+  RETURN v;
+END;
+$fn$;
+
+-- Beliebige SQL als Client-Rolle; liefert 'ok:<Zeilen>' oder 'error:<SQLSTATE>'.
+CREATE FUNCTION public.__b3b_exec(p_user uuid, p_sql text, p_role text DEFAULT 'authenticated')
+RETURNS text LANGUAGE plpgsql AS $fn$
+DECLARE
+  v_rows bigint;
+  v text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', coalesce(p_user::text, ''), true);
+  PERFORM set_config('role', p_role, true);
+  BEGIN
+    EXECUTE p_sql;
+    GET DIAGNOSTICS v_rows = ROW_COUNT;
+    v := 'ok:' || v_rows;
+  EXCEPTION WHEN OTHERS THEN
+    v := 'error:' || SQLSTATE;
+  END;
+  PERFORM set_config('role', 'postgres', true);
+  RETURN v;
+END;
+$fn$;
+
+-- Wie __b3b_exec, liefert bei Fehler zusaetzlich die Meldung: 'error:<SQLSTATE>:<Meldung>' (C0b,
+-- Spaltenschutz -- belegt, dass die Ablehnung vom Guard kommt, nicht von RLS/CHECK).
+CREATE FUNCTION public.__b3b_exec_msg(p_user uuid, p_sql text, p_role text DEFAULT 'authenticated')
+RETURNS text LANGUAGE plpgsql AS $fn$
+DECLARE
+  v_rows bigint;
+  v text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', coalesce(p_user::text, ''), true);
+  PERFORM set_config('role', p_role, true);
+  BEGIN
+    EXECUTE p_sql;
+    GET DIAGNOSTICS v_rows = ROW_COUNT;
+    v := 'ok:' || v_rows;
+  EXCEPTION WHEN OTHERS THEN
+    v := 'error:' || SQLSTATE || ':' || SQLERRM;
+  END;
+  PERFORM set_config('role', 'postgres', true);
+  RETURN v;
+END;
+$fn$;
+
+-- Zwischenspeicher eines Spiels als jsonb (timer_start_time/actual_end als Epoch-ms).
+CREATE FUNCTION public.__b3b_cache(p_match uuid) RETURNS jsonb LANGUAGE sql AS $fn$
+  SELECT jsonb_build_object(
+    'score_a', m.score_a, 'score_b', m.score_b,
+    'overtime_score_a', m.overtime_score_a, 'overtime_score_b', m.overtime_score_b,
+    'penalty_score_a', m.penalty_score_a, 'penalty_score_b', m.penalty_score_b,
+    'match_status', m.match_status, 'decided_by', m.decided_by,
+    'timer_elapsed_seconds', m.timer_elapsed_seconds,
+    'timer_start_ms', floor(extract(epoch FROM m.timer_start_time) * 1000)::bigint,
+    'timer_paused_at', m.timer_paused_at, 'actual_start', m.actual_start,
+    'actual_end_ms', floor(extract(epoch FROM m.actual_end) * 1000)::bigint,
+    'live_state', m.live_state, 'version', m.version, 'last_modified_by', m.last_modified_by,
+    'skipped_at_ms', floor(extract(epoch FROM m.skipped_at) * 1000)::bigint, 'skipped_reason', m.skipped_reason,
+    'team_a', m.team_a_id, 'team_b', m.team_b_id,
+    -- A-25b (20261110_005): wer nicht angetreten ist; ueber to_jsonb, damit der Lauf ohne die Migration (ohne Spalte) laeuft.
+    'forfeit_absent', to_jsonb(m) -> 'forfeit_absent')
+  FROM public.matches m WHERE m.id = p_match;
+$fn$;
+SQL
+
+uuid_for() {
+  local h
+  h="$(printf '%s' "append-match-events-check:$1" | shasum -a 256 | cut -c1-32)"
+  echo "${h:0:8}-${h:8:4}-${h:12:4}-${h:16:4}-${h:20:12}"
+}
+U_OWNER="$(uuid_for user:owner)"
+U_COADMIN="$(uuid_for user:coadmin)"
+U_HELPER="$(uuid_for user:helper)"
+U_TRAINER="$(uuid_for user:trainer)"
+U_STRANGER="$(uuid_for user:stranger)"
+U_DECLINED="$(uuid_for user:declined)"
+U_PENDING="$(uuid_for user:pending)"
+U_VIEWER="$(uuid_for user:viewer)"
+
+psql_stdin <<SQL
+INSERT INTO auth.users
+  (instance_id, id, aud, role, email, encrypted_password, confirmed_at,
+   raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+SELECT '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', u.email, 'x', now(),
+       '{"provider":"email","providers":["email"]}', '{}', now(), now()
+FROM (VALUES ('$U_OWNER'::uuid, 'owner@b3b.test'), ('$U_COADMIN'::uuid, 'coadmin@b3b.test'),
+             ('$U_HELPER'::uuid, 'helper@b3b.test'), ('$U_TRAINER'::uuid, 'trainer@b3b.test'),
+             ('$U_STRANGER'::uuid, 'stranger@b3b.test'), ('$U_DECLINED'::uuid, 'declined@b3b.test'),
+             ('$U_PENDING'::uuid, 'pending@b3b.test'), ('$U_VIEWER'::uuid, 'viewer@b3b.test')) AS u(id, email);
+SQL
+
+# Legt ein Turnier (Eigentuemer owner) mit den drei Mitgliedschaften an.
+# $1 Turnier-ID, $2 config (jsonb), $3 finals_config (jsonb oder NULL), $4 group_phase_duration
+tournament_sql() {
+  local finals="NULL"
+  [[ "$3" != "null" ]] && finals="\$J\$$3\$J\$::jsonb"
+  cat <<SQL
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config, finals_config)
+VALUES ('$1', '$U_OWNER', 'B3b-Harness', '2026-09-28', 2, $4, \$J\$$2\$J\$::jsonb, $finals);
+INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accepted_at)
+VALUES ('$1', '$U_COADMIN', 'co-admin', now()), ('$1', '$U_HELPER', 'collaborator', now()),
+       ('$1', '$U_TRAINER', 'trainer', now()), ('$1', '$U_VIEWER', 'viewer', now()),
+       ('$1', '$U_PENDING', 'collaborator', NULL);
+INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accepted_at, declined_at)
+VALUES ('$1', '$U_DECLINED', 'co-admin', now(), now());
+SQL
+}
+
+# Zaehler je Kategorie (indexierte Arrays -- macOS liefert bash 3.2 ohne assoziative Arrays).
+CATS=(Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Nachtrag Spaltenschutz Rechte-Assertion A-08h)
+DEV=(0 0 0 0 0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0 0 0 0 0)
+KNOWN=(0 0 0 0 0 0 0 0 0 0)
+KNOWN_LINES=()
+cat_index() {
+  local i
+  for i in "${!CATS[@]}"; do
+    if [[ "${CATS[$i]}" == "$1" ]]; then echo "$i"; return 0; fi
+  done
+  echo "::error::Unbekannte Kategorie: $1" >&2
+  exit 2
+}
+count_ok() { local i; i="$(cat_index "$1")"; OKS[i]=$((OKS[i] + 1)); }
+count_dev() { local i; i="$(cat_index "$1")"; DEV[i]=$((DEV[i] + 1)); }
+count_known() { local i; i="$(cat_index "$1")"; KNOWN[i]=$((KNOWN[i] + 1)); }
+
+# check <Kategorie> <Name> <jq-Ausdruck (liefert true)> <JSON>
+check() {
+  local cat="$1" name="$2" expr="$3" json="$4"
+  if [[ -n "$json" ]] && jq -e "$expr" <<<"$json" >/dev/null 2>&1; then
+    count_ok "$cat"
+    echo "OK          [$cat] $name"
+  else
+    count_dev "$cat"
+    echo "ABWEICHUNG  [$cat] $name"
+    echo "    erwartet: $expr"
+    echo "    erhalten: $(printf '%s' "$json" | head -c 1500)"
+  fi
+}
+
+# check_known <Kategorie> <Name> <expected-JSON> <serverHeute-merged-JSON> <out-JSON> <befund>
+# Vertragsfall mit Block `bekannteAbweichung` (feste Vertrags-Fixture):
+#   out == expected    -> die Abweichung ist behoben, die Markierung muss aus der Fixture
+#                        entfernt werden (Fehler -- der Schalter bleibt scharf)
+#   out == serverHeute -> BEKANNT (GitHub-Warnung, zaehlt NICHT in TOTAL_DEV)
+#   sonst              -> ABWEICHUNG (eine dritte, unbekannte Abweichung wird nicht verschluckt)
+check_known() {
+  local cat="$1" name="$2" expected="$3" server_heute="$4" out="$5" befund="$6"
+  if [[ -n "$out" ]] && jq -e --argjson e "$expected" '. == $e' <<<"$out" >/dev/null 2>&1; then
+    count_dev "$cat"
+    echo "ABWEICHUNG  [$cat] $name: bekannte Abweichung $befund ist behoben – „bekannteAbweichung“ aus der Fixture entfernen"
+  elif [[ -n "$out" ]] && jq -e --argjson s "$server_heute" '. == $s' <<<"$out" >/dev/null 2>&1; then
+    count_known "$cat"
+    local line="$name (Befund $befund, Übergabe A-27): Client erwartet $(jq -c '.tiebreak' <<<"$expected"), Server liefert $(jq -c '.tiebreak' <<<"$server_heute")"
+    echo "BEKANNT     [$cat] $line"
+    echo "::warning::[$cat] $line"
+    KNOWN_LINES+=("[$cat] $line")
+  else
+    count_dev "$cat"
+    echo "ABWEICHUNG  [$cat] $name"
+    echo "    erwartet: $expected"
+    echo "    serverHeute: $server_heute"
+    echo "    erhalten: $(printf '%s' "$out" | head -c 1500)"
+  fi
+}
+
+# call <Rolle> <Nutzer-ID|leer> <Spiel-ID> <Ereignisse-JSON> [client_format] [device_id]
+call() {
+  local role="$1" user="$2" match="$3" events="$4" fmt="${5:-1}" device="${6:-}"
+  local u="NULL" d="NULL"
+  [[ -n "$user" ]] && u="'$user'::uuid"
+  [[ -n "$device" ]] && d="'$device'::uuid"
+  psql_value <<SQL
+SELECT public.__b3b_call($u, '$match'::uuid, \$J\$$events\$J\$::jsonb, $fmt, $d, '$role');
+SQL
+}
+state_of() { psql_value <<<"SELECT public.__b3b_state('$U_OWNER'::uuid, '$1'::uuid);"; }
+cache_of() { psql_value <<<"SELECT public.__b3b_cache('$1'::uuid);"; }
+q() { psql_value <<<"$1" 2>&1 || true; }
+
+# ev <typ> <id> [weitere Felder als JSON] -- Ereignis mit at/section/clockMs-Standardwerten.
+# Platzhalter im JSON (statt \"-Escapes in verschachtelten $(...), an denen bash 3.2 scheitert):
+#   @V:NAME@ Wert der Shell-Variablen NAME, @U:NAME@ derselbe in Grossbuchstaben,
+#   @E:key@ uuid_for event:key, @T:key@ uuid_for team:key.
+ev() {
+  local extra="${3:-}" re='@([VEUT]):([A-Za-z0-9_:-]+)@' key val
+  [[ -z "$extra" ]] && extra='{}'
+  while [[ "$extra" =~ $re ]]; do
+    key="${BASH_REMATCH[2]}"
+    case "${BASH_REMATCH[1]}" in
+      V) val="${!key}" ;;
+      U) val="$(tr '[:lower:]' '[:upper:]' <<<"${!key}")" ;;
+      E) val="$(uuid_for "event:$key")" ;;
+      T) val="$(uuid_for "team:$key")" ;;
+    esac
+    extra="${extra/"${BASH_REMATCH[0]}"/$val}"
+  done
+  jq -cn --arg type "$1" --arg id "$2" --argjson extra "$extra" \
+    '{id: $id, type: $type, at: 1000, section: 1, clockMs: 0, payload: {}} + $extra'
+}
+arr() { jq -cs '.' <<<"$(printf '%s\n' "$@")"; }
+
+# --- 3. Fixtures durch die RPC ----------------------------------------------------------------
+echo "Fixtures durch die RPC..." >&2
+FIX_INDEX=0
+: > "$WORKDIR/plans.jsonl"
+for f in "$FIXTURES_DIR"/*.json; do
+  # A-25b: ohne SW faellt auch 20261110_005 weg (Fail-fast) -- die Wertungs-Fixtures 69* bleiben dann aussen vor, damit
+  # Gegenprobe D nur an der SW-Luecke (68a) rot wird.
+  if [[ "$MODE" == "without-sw" && "$(basename "$f")" == 69* ]]; then continue; fi
+  # Spiel beenden (20261110_009) faellt ohne SW ebenfalls weg -- ihre Fixtures (40, 70*) bleiben dann aussen vor.
+  if [[ "$MODE" == "without-sw" && ( "$(basename "$f")" == 70* || "$(basename "$f")" == 40-* ) ]]; then continue; fi
+  FIX_INDEX=$((FIX_INDEX + 1))
+  jq -c --arg file "$(basename "$f")" --argjson idx "$FIX_INDEX" \
+     --arg owner "$U_OWNER" --arg coadmin "$U_COADMIN" --arg helper "$U_HELPER" \
+     --arg trainer "$U_TRAINER" --arg stranger "$U_STRANGER" '
+    def pad($n; $w): ("000000000000" + ($n | tostring))[-$w:];
+    . as $f
+    | pad($idx; 8) as $fx
+    | ([(.prior // [])[], .events[]]) as $all
+    # Alle Kennungen der Fixture -> fixture-eigene uuids (bijektiv).
+    | ([.ctx.teamAId, .ctx.teamBId]
+       + [$all[] | .id, .targetId, .teamId,
+          (.payload | if type == "object" then .basedOn else null end)]
+       | map(strings) | unique) as $keys
+    | ([range(0; $keys | length) as $i | {key: $keys[$i], value: ($fx + "-0000-4000-8000-" + pad($i + 1; 12))}]
+       | from_entries) as $m
+    | def mp: . as $s | if type == "string" and ($m | has($s)) then $m[$s] else . end;
+      (walk(if type == "object" then with_entries(.key |= mp) elif type == "string" then mp else . end)) as $mf
+    # C0b (Fixture 56): je MATCH_START-ID zaehlt nur das erste Vorkommen -- Wiederholungen derselben
+    # ID sind Duplikate bzw. ID_CONFLICT, ihre Geraete-Regeln setzt der Server ohnehin nicht (R4).
+    | ([$all[] | select(.type == "MATCH_START")] | unique_by(.id)
+       | map(.payload.rules | select(type == "object"))) as $rs
+    | ($rs[0] // null) as $r
+    | ([$rs[] | . == $r] | all) as $same
+    | (if $r == null then null
+       elif ($same | not) then "mehrere MATCH_START mit unterschiedlichen Regeln"
+       elif $r.penaltySeconds != 120 then "penaltySeconds != 120 (fest am Server)"
+       elif ($r.breakSeconds % 60) != 0 then "breakSeconds kein Minutenvielfaches"
+       elif ($r.overtimeSeconds % 60) != 0 then "overtimeSeconds kein Minutenvielfaches"
+       elif (($r.sections * $r.sectionSeconds) % 60) != 0 then "Gesamtdauer kein Minutenvielfaches"
+       elif $r.knockout and $r.tiebreak == null then "S14: der Server setzt tiebreak nie null (fehlender/ungueltiger tiebreaker -> overtime-then-shootout, ZA-3 E1); decision_pending bleibt reine Engine-Semantik (match-engine-parity.sh)"
+       else null end) as $not_derivable
+    | {users: {owner: $owner, coadmin: $coadmin, helper: $helper, trainer: $trainer, stranger: $stranger}} as $u
+    | (if $f.mode == "batch" then ([$f.events[] | .actorUser] | unique) else [] end) as $batch_users
+    | {
+        file: $file,
+        tournament: ($fx + "-0000-4000-b000-000000000001"),
+        match: ($fx + "-0000-4000-a000-000000000001"),
+        team_a: $m[$f.ctx.teamAId], team_b: $m[$f.ctx.teamBId],
+        not_derivable: (if $not_derivable != null then $not_derivable
+                        elif ($batch_users | length) > 1 then "Stapel mit mehreren actorUser"
+                        else null end),
+        config: (if $r == null then {} else {gamePeriods: $r.sections, halftimeBreak: ($r.breakSeconds / 60),
+                  matchCockpitSettings: {penaltyShootersPerTeam: $r.shootersPerTeam,
+                                         penaltySuddenDeathAfter: $r.suddenDeathAfter}} end),
+        finals: (if $r == null then null else ({tiebreakerDuration: ($r.overtimeSeconds / 60)}
+                  + (if $r.tiebreak != null then {tiebreaker: $r.tiebreak} else {} end)) end),
+        # A-25a: ein Direkteintrag kennt keine Regeln -- `knockout: true` auf Fixture-Ebene legt ein K.-o.-Spiel an.
+        phase: (if ($r != null and $r.knockout) or $f.knockout == true then "final" else "groupStage" end),
+        # A-25a: expect.cacheColumns (falls vorhanden) ersetzt die Ableitung von penalty_score_*/decided_by.
+        expected_cache: ($mf.expect.cacheColumns // null),
+        duration: (if $r == null then 10 else ($r.sections * $r.sectionSeconds / 60) end),
+        calls: ([($mf.prior // [])[] | {kind: "prior", user: $u.users.owner, events: [.]}]
+                + (if $f.mode == "log"
+                   then [$mf.events[] | {kind: "event", user: $u.users[.actorUser], events: [.]}]
+                   else [{kind: "event", user: $u.users[$mf.events[0].actorUser], events: $mf.events}] end)),
+        expected_results: ([range(0; $mf.events | length) as $i
+          | ($f.events[$i].actorUser) as $au
+          | (if $f.mode == "batch" then $f.events[0].actorUser else $au end) as $caller
+          | if ($caller == "trainer" or $caller == "stranger")
+            then {id: $mf.events[$i].id, status: "rejected", code: "FORBIDDEN_ACTOR"}
+            else $mf.expect.results[$i] end]),
+        forbidden_override: ([$f.events[] | .actorUser] | map(select(. == "trainer" or . == "stranger")) | length > 0),
+        expected_state: $mf.expect.serverState,
+        # C0b (PC4): expect.liveState (falls vorhanden) gegen matches.live_state -- null exakt, sonst
+        # Teilvergleich je Schluessel (live_state wird mit fremden Schluesseln zusammengefuehrt, M4).
+        # S14: Fixture-Regeln mit tiebreak null setzt der Server als "shootout" -- tiebreakerMode ist
+        # dann nicht herstellbar und faellt aus dem Teilvergleich (nur bei Nicht-K.o.-Fixtures
+        # erreichbar, K.o. mit tiebreak null wird oben ganz ausgelassen).
+        expected_live: (if ($mf.expect | has("liveState")) | not then null
+                        elif $r != null and $r.tiebreak == null and ($mf.expect.liveState | type) == "object"
+                        then {v: ($mf.expect.liveState | del(.tiebreakerMode))}
+                        else {v: $mf.expect.liveState} end)
+      }' "$f" >> "$WORKDIR/plans.jsonl"
+done
+
+# Ein SQL-Skript fuer alle Fixtures; jede Ausgabezeile traegt Art|Datei|Nummer|JSON.
+: > "$WORKDIR/fixtures.sql"
+SKIPPED=()
+while IFS= read -r plan; do
+  file="$(jq -r '.file' <<<"$plan")"
+  reason="$(jq -r '.not_derivable // empty' <<<"$plan")"
+  if [[ -n "$reason" ]]; then
+    SKIPPED+=("$file: $reason")
+    continue
+  fi
+  t="$(jq -r '.tournament' <<<"$plan")"; m="$(jq -r '.match' <<<"$plan")"
+  ta="$(jq -r '.team_a' <<<"$plan")"; tb="$(jq -r '.team_b' <<<"$plan")"
+  dur="$(jq -r '.duration' <<<"$plan")"; phase="$(jq -r '.phase' <<<"$plan")"
+  tournament_sql "$t" "$(jq -c '.config' <<<"$plan")" "$(jq -c '.finals' <<<"$plan")" "$dur" >> "$WORKDIR/fixtures.sql"
+  cat >> "$WORKDIR/fixtures.sql" <<SQL
+INSERT INTO public.teams (id, tournament_id, name) VALUES ('$ta', '$t', 'A'), ('$tb', '$t', 'B');
+INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id, duration_minutes, score_a, score_b)
+VALUES ('$m', '$t', 1, 1, '$phase', '$ta', '$tb', $dur, NULL, NULL);
+SQL
+  k=0
+  while IFS= read -r c; do
+    k=$((k + 1))
+    kind="$(jq -r '.kind' <<<"$c")"; user="$(jq -r '.user' <<<"$c")"; evs="$(jq -c '.events' <<<"$c")"
+    echo "SELECT '$kind|$file|$k|' || public.__b3b_call('$user'::uuid, '$m'::uuid, \$J\$$evs\$J\$::jsonb)::text;" >> "$WORKDIR/fixtures.sql"
+  done < <(jq -c '.calls[]' <<<"$plan")
+  echo "SELECT 'state|$file|0|' || coalesce(public.__b3b_state('$U_OWNER'::uuid, '$m'::uuid)::text, 'null');" >> "$WORKDIR/fixtures.sql"
+  echo "SELECT 'cache|$file|0|' || public.__b3b_cache('$m'::uuid)::text;" >> "$WORKDIR/fixtures.sql"
+done < "$WORKDIR/plans.jsonl"
+psql_value < "$WORKDIR/fixtures.sql" > "$WORKDIR/fixtures.out"
+
+FIXTURE_COUNT="$(wc -l < "$WORKDIR/plans.jsonl" | tr -d ' ')"
+while IFS= read -r plan; do
+  file="$(jq -r '.file' <<<"$plan")"
+  [[ -n "$(jq -r '.not_derivable // empty' <<<"$plan")" ]] && continue
+  lines="$(grep -F "|$file|" "$WORKDIR/fixtures.out" | grep -E "^(prior|event|state|cache)\|" || true)"
+  outcome="$(jq -cRs --argjson plan "$plan" '
+    split("\n") | map(select(length > 0) | capture("^(?<kind>[a-z]+)\\|[^|]*\\|(?<n>[0-9]+)\\|(?<json>.*)$")
+                      | {kind, json: (.json | fromjson)}) as $rows
+    | ([$rows[] | select(.kind == "prior" or .kind == "event") | .json]) as $calls
+    | ([$rows[] | select(.kind == "event") | .json.results // [] | .[]]) as $results
+    | ([$calls[] | select(.exception != null)]) as $exc
+    | ([$calls[] | .state | select(. != null)] | last) as $rpc_state
+    | ([$rows[] | select(.kind == "state") | .json][0]) as $state
+    | ([$rows[] | select(.kind == "cache") | .json][0]) as $cache
+    | $plan.expected_results as $exp
+    | {
+        exceptions: $exc,
+        results_ok: (($results | length) == ($exp | length)
+          and ([range(0; $exp | length) as $i | ($exp[$i]) as $x | ($results[$i]) as $a
+                | {id: $a.id, status: $a.status, code: $a.code} + (if $x | has("detail") then {detail: $a.detail} else {} end)]
+               == [$exp[] | {id, status, code} + (if has("detail") then {detail} else {} end)])),
+        state_ok: ($state == $plan.expected_state),
+        s11_ok: ($rpc_state == $state),
+        cache_ok: (
+          ($state.status) as $st
+          | ($cache.match_status == ({"running": "running", "paused": "paused", "section_break": "paused",
+                                      "decision_pending": "paused", "shootout": "paused", "finished": "finished",
+                                      "scheduled": "scheduled", "skipped": "skipped"}[$st]))
+          # I1 (Fixrunde 1): nicht gespielt (scheduled/skipped) -> kein Stand (NULL), wie der alte Weg.
+          and (if ($st == "scheduled" or $st == "skipped")
+               then ([$cache.score_a, $cache.score_b, $cache.overtime_score_a, $cache.overtime_score_b,
+                      $cache.penalty_score_a, $cache.penalty_score_b] | all(. == null))
+               else (($cache.score_a + ($cache.overtime_score_a // 0) == $state.effectiveScores[$plan.team_a])
+                 and ($cache.score_b + ($cache.overtime_score_b // 0) == $state.effectiveScores[$plan.team_b])
+                 and ($plan.expected_cache != null
+                      or ((($cache.penalty_score_a // 0) == $state.scores[$plan.team_a].shootout)
+                          and (($cache.penalty_score_b // 0) == $state.scores[$plan.team_b].shootout)))) end)
+          and (if $plan.expected_cache != null
+               then ([$plan.expected_cache | to_entries[] | $cache[.key] == .value] | all)
+               else ($cache.decided_by == (if $st == "finished"
+                 then ({"shootout": "penalty", "correction": "regular", "direct": "regular"}[$state.decidedBy // ""] // $state.decidedBy)
+                 else null end)) end)
+          and ($cache.timer_elapsed_seconds == ($state.clock.elapsedMs / 1000 | floor))
+          and ($cache.timer_start_ms == (if $state.clock.running then $state.clock.anchorAt else null end))
+          and (if ($st == "scheduled" or $st == "skipped" or $st == "finished") then $cache.live_state == null
+               else ($cache.live_state.engine == true and $cache.live_state.phase == $state.phase
+                     and $cache.live_state.status == $st and $cache.live_state.elapsedMs == $state.clock.elapsedMs) end)
+          and (if $plan.expected_live == null then true
+               elif $plan.expected_live.v == null then $cache.live_state == null
+               else ($cache.live_state as $l | $l != null
+                     and ([$plan.expected_live.v | to_entries[] | $l[.key] == .value] | all)) end)),
+        results: $results, expected: $exp, state: $state, rpc_state: $rpc_state, cache: $cache
+      }' <<<"$lines")"
+  label="$file"
+  [[ "$(jq -r '.forbidden_override' <<<"$plan")" == "true" ]] && label="$file (trainer/stranger -> FORBIDDEN_ACTOR)"
+  check Fixtures "$label" '(.exceptions | length) == 0 and .results_ok and .state_ok and .s11_ok and .cache_ok' "$outcome"
+  if ! jq -e '(.exceptions | length) == 0 and .results_ok and .state_ok and .s11_ok and .cache_ok' <<<"$outcome" >/dev/null 2>&1; then
+    jq -c '{exceptions: (.exceptions[:2]), results_ok, state_ok, s11_ok, cache_ok}' <<<"$outcome" | sed 's/^/    /'
+    if ! jq -e '.results_ok' <<<"$outcome" >/dev/null 2>&1; then
+      jq -c '{results: [.results[] | {id, status, code, detail}], expected}' <<<"$outcome" | head -c 3000 | sed 's/^/    /'; echo
+    fi
+    if ! jq -e '.state_ok and .s11_ok' <<<"$outcome" >/dev/null 2>&1; then
+      diff -u --label expect --label compute_match_state <(jq -S '.state' <<<"$outcome") <(jq -S . <<<"$(jq -c '.state' <<<"$outcome")") >/dev/null || true
+      jq -c '{state, rpc_state}' <<<"$outcome" | head -c 3000 | sed 's/^/    /'; echo
+      jq -c '.expected_state' <<<"$plan" | sed 's/^/    expected_state: /'
+    fi
+    if ! jq -e '.cache_ok' <<<"$outcome" >/dev/null 2>&1; then
+      jq -c '.cache' <<<"$outcome" | sed 's/^/    cache: /'
+    fi
+  fi
+done < "$WORKDIR/plans.jsonl"
+if [[ "${#SKIPPED[@]}" -gt 0 ]]; then
+  echo "Nicht ueber die Konfiguration herstellbar (uebersprungen, ${#SKIPPED[@]}):"
+  printf '    %s\n' "${SKIPPED[@]}"
+  # Nur S14 ist ein erlaubter Grund -- jeder andere Ausfall zaehlt als Abweichung.
+  OTHER_SKIPS="$(printf '%s\n' "${SKIPPED[@]}" | grep -vc ': S14: ' || true)"
+  check Fixtures "uebersprungen nur aus Grund S14 (andere: $OTHER_SKIPS)" '. == 0' "$OTHER_SKIPS"
+else
+  echo "Alle $FIXTURE_COUNT Fixtures ueber die Konfiguration herstellbar (keine uebersprungen)."
+fi
+
+# --- 4. Proben-Turnier ------------------------------------------------------------------------
+T_P="$(uuid_for tournament:probe)"
+TA="$(uuid_for team:a)"
+TB="$(uuid_for team:b)"
+{
+  tournament_sql "$T_P" '{}' 'null' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TA', '$T_P', 'A'), ('$TB', '$T_P', 'B');"
+  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1 w1a w1b w1c w1d w1e w1f; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:$name")', '$T_P', 1, 1, '$TA', '$TB', NULL, NULL);"
+  done
+  # A-34: Autorenzeile mit Geraete-ID auf eigenem Feld 2 -- ein Aufruf mit Geraete-ID beansprucht das Feld (Steuer je
+  # Feld); die uebrigen Proben (Feld 1, ohne Geraete-ID) pruefen Rechte und Uebergaenge, nicht die Steuer.
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:rdev")', '$T_P', 1, 2, '$TA', '$TB', NULL, NULL);"
+} | psql_stdin
+M() { uuid_for "match:$1"; }
+E() { uuid_for "event:$1"; }
+DEVICE="$(uuid_for device:1)"
+
+# K.o.-Turnier ohne tiebreaker (S14) und K.o.-Turnier mit 4 Abschnitten + Verlaengerung (S13/R14).
+T_KO0="$(uuid_for tournament:ko-default)"
+T_KO4="$(uuid_for tournament:ko-4)"
+{
+  tournament_sql "$T_KO0" '{}' 'null' 10
+  tournament_sql "$T_KO4" '{"gamePeriods":4,"halftimeBreak":1}' '{"tiebreaker":"overtime-then-shootout","tiebreakerDuration":5}' 20
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:ko0-a)', '$T_KO0', 'A'), ('$(uuid_for team:ko0-b)', '$T_KO0', 'B');"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M s14)', '$T_KO0', 1, 1, 'final', '$(uuid_for team:ko0-a)', '$(uuid_for team:ko0-b)');"
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:ko4-a)', '$T_KO4', 'A'), ('$(uuid_for team:ko4-b)', '$T_KO4', 'B');"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M ko)', '$T_KO4', 1, 1, 'final', '$(uuid_for team:ko4-a)', '$(uuid_for team:ko4-b)');"
+} | psql_stdin
+
+# --- 5. Rechte --------------------------------------------------------------------------------
+echo "Rechte..." >&2
+out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev MATCH_START "$(E r1-start)" '{"baseState":{"v":1}}')")")"
+check Rechte "Helfer: MATCH_START angenommen" '.results[0].status == "accepted" and (.results[0].seq | type) == "number"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M rdev)" "$(arr "$(ev MATCH_START "$(E rdev-start)" '{"baseState":{"v":1}}')")" 1 "$DEVICE")"
+check Rechte "Helfer mit Geraete-ID: MATCH_START angenommen (Feld 2)" '.results[0].status == "accepted"' "$out"
+out="$(q "SELECT jsonb_build_object('user', a.user_id, 'device', a.device_id, 'base', a.base_state, 'tournament', a.tournament_id) FROM public.match_event_authors a WHERE a.event_id = '$(E rdev-start)';")"
+check Rechte "Autorenzeile: user_id = Helfer, device_id, base_state" ".user == \"$U_HELPER\" and .device == \"$DEVICE\" and .base == {\"v\":1} and .tournament == \"$T_P\"" "$out"
+out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev GOAL "$(E r1-goal)" '{"at":2000,"clockMs":1000,"teamId":"@V:TA@"}')" "$(ev MATCH_END "$(E r1-end)" '{"at":3000,"clockMs":600000}')")")"
+check Rechte "Helfer: GOAL + MATCH_END angenommen" '[.results[].status] == ["accepted","accepted"] and .state.status == "finished"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev CORRECTION "$(E r1-corr-h)" '{"at":4000,"actor":"leitung","payload":{"scores":{"@V:TA@":3,"@V:TB@":0},"reason":"x","basedOn":"@E:r1-goal@"}}')")")"
+check Rechte "Helfer: CORRECTION (mit mitgesendetem actor=leitung) -> FORBIDDEN_ACTOR" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+# ZA-3 (@SL-075): Abpfiff bei at 3000, Helfer will 121 s spaeter fortsetzen -> nur die Turnierleitung.
+out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev REOPEN "$(E r1-reopen-h)" '{"at":124000}')")")"
+check Rechte "Helfer: REOPEN 121 s nach dem Abpfiff -> FORBIDDEN_ACTOR (CONTINUE_WINDOW_EXPIRED)" '.results[0].code == "FORBIDDEN_ACTOR" and .results[0].detail.reason == "CONTINUE_WINDOW_EXPIRED"' "$out"
+out="$(call authenticated "$U_COADMIN" "$(M r1)" "$(arr "$(ev CORRECTION "$(E r1-corr-c)" '{"at":4000,"payload":{"scores":{"@V:TA@":3,"@V:TB@":0},"reason":"x","basedOn":"@E:r1-goal@"}}')")")"
+check Rechte "Co-Admin: CORRECTION angenommen" ".results[0].status == \"accepted\" and .state.effectiveScores[\"$TA\"] == 3 and .state.decidedBy == \"correction\"" "$out"
+out="$(call authenticated "$U_HELPER" "$(M r1)" "$(arr "$(ev RETRACT "$(E r1-retract-h)" '{"at":5000,"targetId":"@E:r1-corr-c@"}')")")"
+check Rechte "Helfer: RETRACT der Korrektur (finished) -> FORBIDDEN_ACTOR" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+cache="$(cache_of "$(M r1)")"
+check Sonstiges "Zwischenspeicher nach Korrektur: finished, regular, 3:0, actual_end, live_state NULL, version 4" \
+  ".match_status == \"finished\" and .decided_by == \"regular\" and .score_a == 3 and .score_b == 0 and .actual_end_ms != null and .actual_start != null and .live_state == null and .version == 4 and .last_modified_by == \"$U_COADMIN\"" "$cache"
+out="$(call authenticated "$U_OWNER" "$(M r1)" "$(arr "$(ev REOPEN "$(E r1-reopen-o)" '{"at":6000,"clockMs":600000}')")")"
+check Rechte "Owner: REOPEN angenommen" '.results[0].status == "accepted" and .state.status == "running"' "$out"
+cache="$(cache_of "$(M r1)")"
+check Sonstiges "Zwischenspeicher nach REOPEN: running, Uhr laeuft, live_state engine, actual_end NULL" \
+  '.match_status == "running" and .timer_start_ms == 6000 and .timer_elapsed_seconds == 600 and .live_state.engine == true and .live_state.running == true and .live_state.elapsedSeconds == 600 and .actual_end_ms == null and .decided_by == null' "$cache"
+
+out="$(call authenticated "$U_HELPER" "$(M r2)" "$(arr "$(ev SKIP "$(E r2-skip-h)")")")"
+check Rechte "Helfer: SKIP -> FORBIDDEN_ACTOR" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+out="$(call authenticated "$U_COADMIN" "$(M r2)" "$(arr "$(ev SKIP "$(E r2-skip-c)")")")"
+check Rechte "Co-Admin: SKIP angenommen" '.results[0].status == "accepted" and .state.status == "skipped"' "$out"
+cache="$(cache_of "$(M r2)")"
+check Sonstiges "I1: Zwischenspeicher nach SKIP: skipped, kein Stand (NULL)" \
+  '.match_status == "skipped" and .score_a == null and .score_b == null and .overtime_score_a == null and .penalty_score_a == null and .live_state == null' "$cache"
+out="$(call authenticated "$U_HELPER" "$(M r2)" "$(arr "$(ev UNSKIP "$(E r2-unskip-h)" '{"at":2000}')")")"
+check Rechte "Helfer: UNSKIP -> FORBIDDEN_ACTOR" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M r2)" "$(arr "$(ev UNSKIP "$(E r2-unskip-o)" '{"at":2000}')")")"
+check Rechte "Owner: UNSKIP angenommen" '.results[0].status == "accepted" and .state.status == "scheduled"' "$out"
+cache="$(cache_of "$(M r2)")"
+check Sonstiges "I1: Zwischenspeicher nach UNSKIP: scheduled, kein Stand (NULL)" \
+  '.match_status == "scheduled" and .score_a == null and .score_b == null and .live_state == null' "$cache"
+out="$(call authenticated "$U_HELPER" "$(M r3)" "$(arr "$(ev RESULT_ENTRY "$(E r3-re-h)" '{"payload":{"scores":{"@V:TA@":1,"@V:TB@":2}}}')")")"
+check Rechte "Helfer: RESULT_ENTRY -> FORBIDDEN_ACTOR" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M r3)" "$(arr "$(ev RESULT_ENTRY "$(E r3-re-o)" '{"payload":{"scores":{"@V:TA@":1,"@V:TB@":2}}}')")")"
+check Rechte "Owner: RESULT_ENTRY angenommen" ".results[0].status == \"accepted\" and .state.status == \"finished\" and .state.effectiveScores[\"$TB\"] == 2" "$out"
+cache="$(cache_of "$(M r3)")"
+check Sonstiges "Zwischenspeicher nach Direkteintrag: finished, regular (direct), 1:2" \
+  '.match_status == "finished" and .decided_by == "regular" and .score_a == 1 and .score_b == 2 and .live_state == null' "$cache"
+for who in trainer stranger; do
+  uid="$U_TRAINER"; [[ "$who" == "stranger" ]] && uid="$U_STRANGER"
+  out="$(call authenticated "$uid" "$(M r4)" "$(arr "$(ev MATCH_START "$(E "r4-$who")")" "$(ev GOAL "$(E "r4-$who-goal")" '{"teamId":"@V:TA@"}')")")"
+  check Rechte "$who: alle Ereignisse FORBIDDEN_ACTOR, kein Zustand" '[.results[].code] == ["FORBIDDEN_ACTOR","FORBIDDEN_ACTOR"] and .state == null' "$out"
+done
+for who in declined pending viewer; do
+  case "$who" in declined) uid="$U_DECLINED" ;; pending) uid="$U_PENDING" ;; *) uid="$U_VIEWER" ;; esac
+  out="$(call authenticated "$uid" "$(M r4)" "$(arr "$(ev MATCH_START "$(E "r4-$who")")")")"
+  check Rechte "M2: $who-Mitgliedschaft: FORBIDDEN_ACTOR, kein Zustand" '[.results[].code] == ["FORBIDDEN_ACTOR"] and .state == null' "$out"
+done
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M r4)';")"
+check Rechte "trainer/stranger/declined/pending/viewer: nichts gespeichert" '. == 0' "$out"
+out="$(call authenticated "$U_OWNER" "$(uuid_for match:gibt-es-nicht)" "$(arr "$(ev MATCH_START "$(E r4-nomatch)")")")"
+check Rechte "M6: Spiel existiert nicht -> dieselbe Antwort wie fehlendes Recht (FORBIDDEN_ACTOR, state null)" \
+  '[.results[].code] == ["FORBIDDEN_ACTOR"] and .state == null and .exception == null' "$out"
+T_DEL="$(uuid_for tournament:deleted)"
+{
+  tournament_sql "$T_DEL" '{}' 'null' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:del-a)', '$T_DEL', 'A'), ('$(uuid_for team:del-b)', '$T_DEL', 'B');"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id) VALUES ('$(M del)', '$T_DEL', 1, 1, '$(uuid_for team:del-a)', '$(uuid_for team:del-b)');"
+  echo "UPDATE public.tournaments SET deleted_at = now() WHERE id = '$T_DEL';"
+} | psql_stdin
+for who in owner helper; do
+  uid="$U_OWNER"; [[ "$who" == "helper" ]] && uid="$U_HELPER"
+  out="$(call authenticated "$uid" "$(M del)" "$(arr "$(ev MATCH_START "$(E "del-$who")")")")"
+  check Rechte "M3: soft-geloeschtes Turnier ($who) -> FORBIDDEN_ACTOR, state null" '[.results[].code] == ["FORBIDDEN_ACTOR"] and .state == null' "$out"
+done
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M del)';")"
+check Rechte "M3: soft-geloeschtes Turnier: nichts gespeichert" '. == 0' "$out"
+out="$(call anon "" "$(M r4)" "$(arr "$(ev MATCH_START "$(E r4-anon)")")")"
+check Rechte "anon: kein EXECUTE (42501)" '.exception == "42501"' "$out"
+out="$(call authenticated "" "$(M r4)" "$(arr "$(ev MATCH_START "$(E r4-nouid)")")")"
+check Rechte "authenticated ohne auth.uid(): Fehler 42501 (auth.uid)" '.exception == "42501" and (.message | test("auth\\.uid"))' "$out"
+
+# --- 6. Idempotenz ----------------------------------------------------------------------------
+echo "Idempotenz..." >&2
+call authenticated "$U_OWNER" "$(M i1)" "$(arr "$(ev MATCH_START "$(E i1-start)")")" >/dev/null
+call authenticated "$U_OWNER" "$(M i2)" "$(arr "$(ev MATCH_START "$(E i2-start)")")" >/dev/null
+BATCH="$(arr "$(ev GOAL "$(E i1-g1)" '{"at":2000,"clockMs":1000,"teamId":"@V:TA@"}')" "$(ev FOUL "$(E i1-f1)" '{"at":2100,"clockMs":1100,"teamId":"@V:TB@","payload":{"playerNumber":4}}')")"
+first="$(call authenticated "$U_HELPER" "$(M i1)" "$BATCH")"
+check Idempotenz "erster Aufruf: accepted, accepted" '[.results[].status] == ["accepted","accepted"]' "$first"
+second="$(call authenticated "$U_HELPER" "$(M i1)" "$BATCH")"
+first_seqs="$(jq -c '[.results[]?.seq]' <<<"$first" 2>/dev/null || echo '[]')"
+check Idempotenz "gleicher Aufruf zweimal: duplicate mit seq des Originals" \
+  "[.results[].status] == [\"duplicate\",\"duplicate\"] and [.results[].seq] == $first_seqs" "$second"
+out="$(q "SELECT count(*) FROM public.match_events WHERE id IN ('$(E i1-g1)', '$(E i1-f1)');")"
+check Idempotenz "1 Zeile je ID" '. == 2' "$out"
+out="$(call authenticated "$U_HELPER" "$(M i1)" "$(arr "$(ev GOAL "$(E i1-g1)" '{"at":2000,"clockMs":9999,"teamId":"@V:TA@"}')")")"
+check Idempotenz "gleiche ID, anderer Inhalt -> ID_CONFLICT" '.results[0].code == "ID_CONFLICT"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M i2)" "$(arr "$(ev GOAL "$(E i1-g1)" '{"at":2000,"clockMs":1000,"teamId":"@V:TA@"}')")")"
+check Idempotenz "gleiche ID, anderes Spiel -> ID_CONFLICT" '.results[0].code == "ID_CONFLICT"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M i1)" "$(arr "$(ev MATCH_START "$(E i1-start)" '{"payload":{"rules":{"sections":4,"sectionSeconds":1}}}')")")"
+check Idempotenz "MATCH_START-Wiederholung mit anderen Client-Regeln -> duplicate" '.results[0].status == "duplicate"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M i1)" "$(arr "$(ev MATCH_END "$(E i1-end1)" '{"at":3000,"clockMs":600000}')" "$(ev MATCH_END "$(E i1-end2)" '{"at":3100,"clockMs":600000}')")")"
+check Idempotenz "zweites MATCH_END -> noop" '[.results[].status] == ["accepted","noop"]' "$out"
+out="$(call authenticated "$U_HELPER" "$(M i1)" "$(arr "$(ev MATCH_END "$(E i1-end2)" '{"at":3100,"clockMs":600000}')")")"
+rows="$(q "SELECT count(*) FROM public.match_events WHERE id = '$(E i1-end2)';")"
+check Idempotenz "noop nie gespeichert (Wiederholung wieder noop, 0 Zeilen)" \
+  "(.results[0].status == \"noop\") and ($rows == 0)" "$out"
+
+# --- 7. Kaskade -------------------------------------------------------------------------------
+echo "Kaskade..." >&2
+call authenticated "$U_OWNER" "$(M c1)" "$(arr "$(ev MATCH_START "$(E c1-start)")")" >/dev/null
+out="$(call authenticated "$U_HELPER" "$(M c1)" "$(arr "$(ev GOAL "$(E c1-bad)" '{"at":2000,"teamId":"@T:fremd@"}')" "$(ev GOAL "$(E c1-good)" '{"at":2100,"teamId":"@V:TA@"}')")")"
+check Kaskade "abgelehnter Eintrag haelt die anderen nicht auf" '[.results[] | [.status, .code]] == [["rejected","INVALID_PAYLOAD"],["accepted",null]]' "$out"
+out="$(call authenticated "$U_HELPER" "$(M c1)" "$(arr "$(ev RESUME "$(E c1-resume)" '{"at":2200}')" "$(ev GOAL "$(E c1-after)" '{"at":2300,"teamId":"@V:TA@"}')")")"
+rows="$(q "SELECT count(*) FROM public.match_events WHERE id = '$(E c1-after)';")"
+check Kaskade "abgelehnter RESUME -> Folge DEPENDS_ON_REJECTED, nicht gespeichert" \
+  "([.results[] | [.status, .code]] == [[\"rejected\",\"INVALID_TRANSITION\"],[\"rejected\",\"DEPENDS_ON_REJECTED\"]]) and ($rows == 0)" "$out"
+out="$(call authenticated "$U_HELPER" "$(M c2)" "$(arr "$(ev MATCH_START "kein-uuid")" "$(ev GOAL "$(E c2-goal)" '{"teamId":"@V:TA@"}')")")"
+check Kaskade "Umschlag-Ablehnung eines MATCH_START kaskadiert" '[.results[] | [.id, .code]] == [["kein-uuid","INVALID_PAYLOAD"],[.results[1].id,"DEPENDS_ON_REJECTED"]]' "$out"
+
+# --- 8. Nebenlaeufigkeit ----------------------------------------------------------------------
+echo "Nebenlaeufigkeit..." >&2
+conc_session() {
+  # $1 Ausgabedatei, $2 Nutzer, $3 Spiel, $4 Ereignisse, $5 Schlafdauer (s) nach dem Aufruf
+  docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CONTAINER_NAME" psql -U postgres -X -q -tA > "$1" 2>&1 <<SQL
+BEGIN;
+SELECT public.__b3b_call('$2'::uuid, '$3'::uuid, \$J\$$4\$J\$::jsonb);
+SELECT pg_sleep($5);
+COMMIT;
+SQL
+}
+conc_session "$WORKDIR/k1a.out" "$U_HELPER" "$(M k1)" "$(arr "$(ev MATCH_START "$(E k1-a)")" "$(ev GOAL "$(E k1-a-goal)" '{"at":1500,"teamId":"@V:TA@"}')")" 3 &
+PID_A=$!
+sleep 1
+conc_session "$WORKDIR/k1b.out" "$U_COADMIN" "$(M k1)" "$(arr "$(ev MATCH_START "$(E k1-b)")" "$(ev GOAL "$(E k1-b-goal)" '{"at":1500,"teamId":"@V:TB@"}')")" 0 &
+PID_B=$!
+wait "$PID_A" "$PID_B"
+a="$(grep '^{' "$WORKDIR/k1a.out" | head -1)"; b="$(grep '^{' "$WORKDIR/k1b.out" | head -1)"
+check Nebenlaeufig "gleichzeitiger Anpfiff: erste Sitzung angenommen" '[.results[].status] == ["accepted","accepted"]' "$a"
+check Nebenlaeufig "gleichzeitiger Anpfiff: zweite Sitzung INVALID_TRANSITION + DEPENDS_ON_REJECTED" \
+  '[.results[].code] == ["INVALID_TRANSITION","DEPENDS_ON_REJECTED"]' "$b"
+out="$(q "SELECT jsonb_agg(seq ORDER BY seq) FROM public.match_events WHERE match_id = '$(M k1)';")"
+check Nebenlaeufig "genau 2 Zeilen, seq lueckenlos steigend" 'length == 2 and .[1] == .[0] + 1' "$out"
+call authenticated "$U_OWNER" "$(M k2)" "$(arr "$(ev MATCH_START "$(E k2-start)")")" >/dev/null
+conc_session "$WORKDIR/k2a.out" "$U_HELPER" "$(M k2)" "$(arr "$(ev GOAL "$(E k2-a)" '{"at":2000,"teamId":"@V:TA@"}')")" 2 &
+PID_A=$!
+sleep 1
+conc_session "$WORKDIR/k2b.out" "$U_COADMIN" "$(M k2)" "$(arr "$(ev GOAL "$(E k2-b)" '{"at":2000,"teamId":"@V:TA@"}')")" 0 &
+PID_B=$!
+wait "$PID_A" "$PID_B"
+b="$(grep '^{' "$WORKDIR/k2b.out" | head -1)"
+check Nebenlaeufig "zwei gleichzeitige Tore: beide angenommen, zweite Sitzung sieht Stand 2" ".results[0].status == \"accepted\" and .state.effectiveScores[\"$TA\"] == 2" "$b"
+out="$(q "SELECT jsonb_agg(id ORDER BY seq) FROM public.match_events WHERE match_id = '$(M k2)' AND type = 'GOAL';")"
+check Nebenlaeufig "Tore in Commit-Reihenfolge (seq)" ". == [\"$(E k2-a)\", \"$(E k2-b)\"]" "$out"
+
+# --- 9. Sonstiges -----------------------------------------------------------------------------
+echo "Sonstiges..." >&2
+out="$(call authenticated "$U_OWNER" "$(M o1)" "$(arr "$(ev MATCH_START "$(E o1-start)")")" 0)"
+check Sonstiges "p_client_format = 0 -> CLIENT_OUTDATED" '.error == "CLIENT_OUTDATED" and .minClientFormat == 1 and (.results == null)' "$out"
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M o1)';")"
+check Sonstiges "CLIENT_OUTDATED ohne Wirkung" '. == 0' "$out"
+out="$(q "SELECT public.__b3b_exec(NULL, 'SELECT public.server_time()', 'anon');")"
+check Sonstiges "server_time() fuer anon ausfuehrbar" '. == "ok:1"' "\"$out\""
+out="$(q "SELECT jsonb_build_object('diff', abs((public.server_time()->>'serverTime')::bigint - floor(extract(epoch FROM now()) * 1000)::bigint));")"
+check Sonstiges "server_time() liefert Epoch-ms" '.diff < 5000' "$out"
+
+GUARD_ID="$(E r1-goal)"
+for who in owner helper; do
+  uid="$U_OWNER"; [[ "$who" == "helper" ]] && uid="$U_HELPER"
+  out="$(q "SELECT public.__b3b_exec('$uid', \$S\$UPDATE public.match_events SET payload = '{\"x\":1}'::jsonb WHERE id = '$GUARD_ID'\$S\$);")"
+  check Sonstiges "Guard: $who kann RPC-Zeile nicht aendern" '. == "error:42501"' "\"$out\""
+  out="$(q "SELECT public.__b3b_exec('$uid', \$S\$DELETE FROM public.match_events WHERE id = '$GUARD_ID'\$S\$);")"
+  check Sonstiges "Guard: $who kann RPC-Zeile nicht loeschen" '. == "error:42501"' "\"$out\""
+done
+out="$(q "SELECT count(*) FROM public.match_events WHERE id = '$GUARD_ID' AND payload = '{}'::jsonb AND event_format = 1;")"
+check Sonstiges "Guard: RPC-Zeile unveraendert" '. == 1' "$out"
+
+# S10: Grossbuchstaben-IDs werden kanonisch klein gespeichert; Nachrechnen == Anhaengen.
+UP() { tr '[:lower:]' '[:upper:]' <<<"$1"; }
+S_START="$(E s10-start)"; S_GOAL="$(E s10-goal)"; S_END="$(E s10-end)"; S_CORR="$(E s10-corr)"
+out="$(call authenticated "$U_HELPER" "$(M s10)" "$(arr "$(ev MATCH_START "$(UP "$S_START")")" \
+  "$(ev GOAL "$(UP "$S_GOAL")" '{"at":2000,"clockMs":1000,"teamId":"@U:TA@"}')" \
+  "$(ev MATCH_END "$(UP "$S_END")" '{"at":3000,"clockMs":600000}')")")"
+check Sonstiges "S10: Grossbuchstaben-IDs angenommen, Ergebnis-IDs klein" \
+  "[.results[].status] == [\"accepted\",\"accepted\",\"accepted\"] and [.results[].id] == [\"$S_START\",\"$S_GOAL\",\"$S_END\"]" "$out"
+out="$(call authenticated "$U_OWNER" "$(M s10)" "$(arr "$(ev CORRECTION "$(UP "$S_CORR")" '{"at":4000,"payload":{"scores":{"@V:TA@":2,"@V:TB@":0},"reason":"x","basedOn":"@U:S_GOAL@"}}')")")"
+check Sonstiges "S10: Korrektur mit basedOn in Grossbuchstaben angenommen (nicht STALE_BASE)" '.results[0].status == "accepted"' "$out"
+rpc_state="$(jq -c '.state' <<<"$out")"
+check Sonstiges "S10: compute_match_state == Zustand beim Anhaengen" ". == $rpc_state" "$(state_of "$(M s10)")"
+out="$(q "SELECT jsonb_agg(jsonb_build_object('id', id, 'team', team_id, 'basedOn', payload->>'basedOn') ORDER BY seq) FROM public.match_events WHERE match_id = '$(M s10)';")"
+check Sonstiges "S10: gespeichert klein (id, team_id, payload.basedOn)" \
+  ".[1].id == \"$S_GOAL\" and .[1].team == \"$TA\" and .[3].basedOn == \"$S_GOAL\"" "$out"
+out="$(call authenticated "$U_HELPER" "$(M s10)" "$(arr "$(ev GOAL "$(UP "$S_GOAL")" '{"at":2000,"clockMs":1000,"teamId":"@U:TA@"}')")")"
+check Sonstiges "S10: erneutes Senden in Grossbuchstaben -> duplicate" '.results[0].status == "duplicate"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M s10)" "$(arr "$(ev RETRACT "$(E s10-r1)" '{"at":5000,"targetId":"constructor"}')" \
+  "$(ev GOAL "g-kein-uuid" '{"teamId":"@V:TA@"}')" "$(ev CORRECTION "$(E s10-c2)" '{"at":5000,"payload":{"scores":{"@V:TA@":2,"@V:TB@":0},"reason":"x","basedOn":"nicht-uuid"}}')")")"
+check Sonstiges "S10: Nicht-UUID in targetId/id/basedOn -> INVALID_PAYLOAD" '[.results[].code] == ["INVALID_PAYLOAD","INVALID_PAYLOAD","INVALID_PAYLOAD"]' "$out"
+
+# S11 + R2: echte Epoch-ms (Rundreise ueber to_timestamp), Klemmung nach oben und unten.
+NOW_MS="$(q "SELECT floor(extract(epoch FROM now()) * 1000)::bigint;")"
+A1=$((NOW_MS - 600123))
+A2=$((NOW_MS - 300457))
+# FUTURE/A1M werden nur ueber @V:...@-Platzhalter in ev() gelesen.
+# shellcheck disable=SC2034
+FUTURE=$((NOW_MS + 3600000))
+# shellcheck disable=SC2034
+A1M=$((A1 - 5000))
+out="$(call authenticated "$U_HELPER" "$(M s11)" "$(arr "$(ev MATCH_START "$(E s11-start)" '{"at":@V:A1@,"clockMs":null}')" \
+  "$(ev PAUSE "$(E s11-pause)" '{"at":@V:A2@,"clockMs":299999}')" "$(ev RESUME "$(E s11-resume)" '{"at":@V:A1M@,"clockMs":299999}')")")"
+check Sonstiges "S11/R2: at vor dem Vorgaenger wird auf dessen at geklemmt" \
+  "[.results[].status] == [\"accepted\",\"accepted\",\"accepted\"] and .state.clock.anchorAt == $A2" "$out"
+out="$(call authenticated "$U_HELPER" "$(M s11)" "$(arr "$(ev CLOCK_ADJUST "$(E s11-adj)" '{"at":@V:FUTURE@,"clockMs":300001}')")")"
+check Sonstiges "S11/R2: at in der Zukunft wird auf die Serverzeit geklemmt" \
+  '.results[0].status == "accepted" and .state.clock.anchorAt <= .serverTime and .state.clock.anchorAt > (.serverTime - 60000)' "$out"
+rpc_state="$(jq -c '.state' <<<"$out")"
+check Sonstiges "S11: compute_match_state == Zustand beim Anhaengen (echte Epoch-ms)" ". == $rpc_state" "$(state_of "$(M s11)")"
+
+# S9: Umschlag.
+out="$(call authenticated "$U_OWNER" "$(M e1)" "$(arr '"kein Objekt"' \
+  "$(ev MATCH_START "$(E e1-at)" '{"at":1.5}')" "$(ev FOO "$(E e1-type)")" \
+  "$(ev PAUSE "$(E e1-sec0)" '{"section":0}')" "$(ev PAUSE "$(E e1-sec6)" '{"section":6}')" \
+  "$(ev PAUSE "$(E e1-clock)" '{"clockMs":-1}')" "$(ev PAUSE "$(E e1-clockbig)" '{"clockMs":2147483648}')" \
+  "$(ev PAUSE "$(E e1-payload)" '{"payload":[]}')" "$(ev PAUSE "$(E e1-epoch)" '{"controlEpoch":"x"}')" \
+  "$(ev PAUSE "$(E e1-target)" '{"targetId":"@E:e1-at@"}')")")"
+check Sonstiges "S9: kein Objekt -> INVALID_PAYLOAD (id null); MATCH_START mit at 1.5 -> INVALID_PAYLOAD und Kaskade" \
+  '[.results[].code] == ["INVALID_PAYLOAD","INVALID_PAYLOAD","DEPENDS_ON_REJECTED","DEPENDS_ON_REJECTED","DEPENDS_ON_REJECTED","DEPENDS_ON_REJECTED","DEPENDS_ON_REJECTED","DEPENDS_ON_REJECTED","DEPENDS_ON_REJECTED","DEPENDS_ON_REJECTED"] and .results[0].id == null' "$out"
+call authenticated "$U_OWNER" "$(M e1)" "$(arr "$(ev MATCH_START "$(E e1-start)")")" >/dev/null
+out="$(call authenticated "$U_OWNER" "$(M e1)" "$(arr "$(ev FOO "$(E e1-type2)")" \
+  "$(ev PAUSE "$(E e1-sec0b)" '{"section":0}')" "$(ev PAUSE "$(E e1-sec6b)" '{"section":6}')" \
+  "$(ev PAUSE "$(E e1-clockb)" '{"clockMs":-1}')" "$(ev PAUSE "$(E e1-clockbigb)" '{"clockMs":2147483648}')" \
+  "$(ev PAUSE "$(E e1-payloadb)" '{"payload":[]}')" "$(ev PAUSE "$(E e1-epochb)" '{"controlEpoch":"x"}')" \
+  "$(ev PAUSE "$(E e1-targetb)" '{"targetId":"@E:e1-start@"}')" "$(ev PAUSE "$(E e1-atb)" '{"at":"1000"}')")")"
+check Sonstiges "S9: Typ/section/clockMs/payload/controlEpoch/targetId/at ungueltig -> je INVALID_PAYLOAD" \
+  '[.results[].code] | length == 9 and all(. == "INVALID_PAYLOAD")' "$out"
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M e1)';")"
+check Sonstiges "S9: nur der gueltige MATCH_START gespeichert" '. == 1' "$out"
+
+for bad in '{}' '[]' "$(jq -cn '[range(0; 201) | {}]')" 'null'; do
+  out="$(call authenticated "$U_OWNER" "$(M e1)" "$bad")"
+  check Sonstiges "p_events $(head -c 12 <<<"$bad")...: Fehler 22023" '.exception == "22023"' "$out"
+done
+
+# 5d: servergesetzte Regeln (Client-Regeln verworfen) + Ableitung inkl. Standardwerten.
+out="$(q "SELECT payload FROM public.match_events WHERE id = '$(E i1-start)';")"
+check Sonstiges "5d: MATCH_START speichert Server-Regeln (Standard: 1 Abschnitt, Turnierdauer, Pause 60, Rueckfall overtime-then-shootout (ZA-3 E1), 300, 5, 6, 120)" \
+  '.rules == {"sections":1,"sectionSeconds":600,"breakSeconds":60,"knockout":false,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":5,"suddenDeathAfter":6,"penaltySeconds":120}' "$out"
+out="$(q "SELECT jsonb_build_array(
+  match_engine.server_rules(NULL, 'groupStage', 12, 20, '{}'::jsonb, NULL),
+  match_engine.server_rules(NULL, 'final', 12, 20, '{\"gamePeriods\":9,\"halftimeBreak\":\"2\"}'::jsonb, '{\"tiebreaker\":\"goldenGoal\",\"tiebreakerDuration\":3}'::jsonb),
+  match_engine.server_rules(7, 'semifinal', 12, NULL, '{\"gamePeriods\":\"2\",\"matchCockpitSettings\":{\"penaltyShootersPerTeam\":3,\"penaltySuddenDeathAfter\":4}}'::jsonb, '{\"tiebreaker\":\"bogus\"}'::jsonb),
+  match_engine.server_rules(NULL, NULL, 12, 20, '{\"gamePeriods\":0}'::jsonb, NULL));" 2>&1 || true)"
+check Sonstiges "5d: Regelableitung (Standard, Begrenzung 1-4, Zahl als Text, duration_minutes vor Turnierdauer, K.o., fehlender/ungueltiger tiebreaker -> overtime-then-shootout (ZA-3 E1, @SL-145))" \
+  '.[0] == {"sections":1,"sectionSeconds":720,"breakSeconds":60,"knockout":false,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":5,"suddenDeathAfter":6,"penaltySeconds":120}
+   and .[1] == {"sections":4,"sectionSeconds":300,"breakSeconds":120,"knockout":true,"tiebreak":"goldenGoal","overtimeSeconds":180,"shootersPerTeam":5,"suddenDeathAfter":6,"penaltySeconds":120}
+   and .[2] == {"sections":2,"sectionSeconds":210,"breakSeconds":60,"knockout":true,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":3,"suddenDeathAfter":4,"penaltySeconds":120}
+   and .[3].sections == 1 and .[3].knockout == false and .[3].sectionSeconds == 720' "$out"
+
+# 5e: @W1-004 (B-04b Fixrunde 1) -- gemeinsamer Vertrag Schnellstart -> Server-Regeln.
+# Jeden Fall des Vertrags-Fixtures (src/core/match/__contracts__/server-rules-schnellstart.json)
+# durch match_engine.server_rules laufen lassen und == expected verlangen (dieselbe Datei
+# prueft die TS-Seite in B-04b-w1-004-default-rules.test.tsx gegen mapTournamentToSupabase).
+SCHNELLSTART_FIXTURE="$REPO_ROOT/src/core/match/__contracts__/server-rules-schnellstart.json"
+check Sonstiges "@W1-004: Vertrags-Fixture hat ≥ 2 Fälle" '. >= 2' "$(jq '.cases | length' "$SCHNELLSTART_FIXTURE" 2>/dev/null)"
+while IFS= read -r schnellstart_case; do
+  ss_name="$(jq -r '.name' <<<"$schnellstart_case")"
+  ss_expected="$(jq -c '.expected' <<<"$schnellstart_case")"
+  ss_phase="$(jq -r '.input.phase' <<<"$schnellstart_case")"
+  ss_gdur="$(jq -r '.input.groupDuration' <<<"$schnellstart_case")"
+  ss_fdur="$(jq -r '.input.finalDuration' <<<"$schnellstart_case")"
+  ss_dmin="$(jq -r '.input.durationMinutes' <<<"$schnellstart_case")"
+  if [[ "$ss_dmin" == "null" ]]; then ss_dmin_sql="NULL"; else ss_dmin_sql="$ss_dmin"; fi
+  ss_cfg="$(jq -c '.input.config' <<<"$schnellstart_case")"
+  ss_fin="$(jq -c '.input.finals' <<<"$schnellstart_case")"
+  if [[ "$ss_fin" == "null" ]]; then ss_fin_sql="NULL"; else ss_fin_sql="\$J\$${ss_fin}\$J\$::jsonb"; fi
+  out="$(q "SELECT match_engine.server_rules($ss_dmin_sql, '$ss_phase', $ss_gdur, $ss_fdur, \$J\$${ss_cfg}\$J\$::jsonb, $ss_fin_sql);")"
+  check Sonstiges "@W1-004: server_rules Schnellstart-Fall $ss_name == Fixture (Vertrag Schnellstart -> Anpfiff-Regeln)" \
+    ". == $ss_expected" "$out"
+done < <(jq -c '.cases[]' "$SCHNELLSTART_FIXTURE")
+
+# 5f: @W2A-009 (B-04c Paket c) -- K.o.-Entscheidung je Runde: expected == Client-Regel
+# (resolveTiebreakMode); bekannte Server-Abweichungen nur mit Befund-Kennung (Block
+# `bekannteAbweichung` in der Fixture, Befund C-KO-RUNDENREGEL-SERVER -- der Server liest
+# derzeit nur die globale `tiebreaker`, die Runden-Regel `tiebreakerByRound` nicht,
+# Uebergabe an Spur A, siehe task-B-04-report.md). Markierte Faelle laufen ueber
+# check_known (BEKANNT mit ::warning::, solange der Server abweicht; Fehler, sobald er
+# es nicht mehr tut und die Markierung noch steht). Unmarkierte Faelle sind normale
+# Vertrags-Faelle ueber check (OK bzw. ABWEICHUNG).
+KO_FIXTURE="$REPO_ROOT/src/core/match/__contracts__/server-rules-ko-entscheidung.json"
+check Sonstiges "@W2A-009: K.o.-Entscheidungs-Fixture hat ≥ 1 Fall" '. >= 1' "$(jq '.cases | length' "$KO_FIXTURE" 2>/dev/null)"
+while IFS= read -r ko_case; do
+  ko_name="$(jq -r '.name' <<<"$ko_case")"
+  ko_expected="$(jq -c '.expected' <<<"$ko_case")"
+  ko_befund="$(jq -r '.bekannteAbweichung.befund // empty' <<<"$ko_case")"
+  ko_phase="$(jq -r '.input.phase' <<<"$ko_case")"
+  ko_gdur="$(jq -r '.input.groupDuration' <<<"$ko_case")"
+  ko_fdur="$(jq -r '.input.finalDuration' <<<"$ko_case")"
+  ko_dmin="$(jq -r '.input.durationMinutes' <<<"$ko_case")"
+  if [[ "$ko_dmin" == "null" ]]; then ko_dmin_sql="NULL"; else ko_dmin_sql="$ko_dmin"; fi
+  ko_cfg="$(jq -c '.input.config' <<<"$ko_case")"
+  ko_fin="$(jq -c '.input.finals' <<<"$ko_case")"
+  ko_ft="$(jq -r '.input.finalType // empty' <<<"$ko_case")"
+  if [[ -z "$ko_ft" ]]; then ko_ft_sql="NULL"; else ko_ft_sql="'$ko_ft'"; fi
+  if [[ "$ko_fin" == "null" ]]; then ko_fin_sql="NULL"; else ko_fin_sql="\$J\$${ko_fin}\$J\$::jsonb"; fi
+  out="$(q "SELECT match_engine.server_rules($ko_dmin_sql, '$ko_phase', $ko_gdur, $ko_fdur, \$J\$${ko_cfg}\$J\$::jsonb, $ko_fin_sql, $ko_ft_sql);")"
+  if [[ -n "$ko_befund" ]]; then
+    ko_server_heute="$(jq -c '.expected * .bekannteAbweichung.serverHeute' <<<"$ko_case")"
+    check_known Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
+      "$ko_expected" "$ko_server_heute" "$out" "$ko_befund"
+  else
+    check Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
+      ". == $ko_expected" "$out"
+  fi
+done < <(jq -c '.cases[]' "$KO_FIXTURE")
+
+# --- 9b. Fixrunde 1: S14, S13 + R14-Spalten, M4, M1 ------------------------------------------
+echo "Fixrunde 1 (S13, S14, R14, M1, M4)..." >&2
+# S14 / ZA-3 (@SL-145, E1): K.o.-Spiel ohne Entscheidungsart -> Remis nach Spielende geht in die
+# Verlaengerung (Pause davor), nicht ins Strafstossschiessen.
+out="$(call authenticated "$U_HELPER" "$(M s14)" "$(arr "$(ev MATCH_START "$(E s14-start)")" "$(ev MATCH_END "$(E s14-end)" '{"at":2000,"clockMs":600000}')")")"
+check Sonstiges "@SL-145: K.o.-Remis ohne Entscheidungsart -> Pause vor der Verlaengerung (nicht Schiessen, nicht decision_pending)" \
+  '[.results[].status] == ["accepted","accepted"] and .state.status == "section_break" and .state.phase == "overtime"' "$out"
+
+# S13 + R14: K.o.-Spiel mit 4 Abschnitten -- Verlaengerung ist Abschnitt 5; Spaltenvergleich je Zeile.
+R14_1="$(arr "$(ev MATCH_START "$(E ko-01)" '{"at":1000,"clockMs":null}')" \
+  "$(ev GOAL "$(E ko-02)" '{"at":2000,"clockMs":61500,"teamId":"@T:ko4-a@","controlEpoch":3}')" \
+  "$(ev SECTION_END "$(E ko-03)" '{"at":3000,"clockMs":300000}')" "$(ev SECTION_START "$(E ko-04)" '{"at":3100,"section":2,"clockMs":300000}')" \
+  "$(ev SECTION_END "$(E ko-05)" '{"at":4000,"section":2,"clockMs":600000}')" "$(ev SECTION_START "$(E ko-06)" '{"at":4100,"section":3,"clockMs":600000}')" \
+  "$(ev SECTION_END "$(E ko-07)" '{"at":5000,"section":3,"clockMs":900000}')" "$(ev SECTION_START "$(E ko-08)" '{"at":5100,"section":4,"clockMs":900000}')" \
+  "$(ev GOAL "$(E ko-09)" '{"at":5500,"section":4,"clockMs":1000000,"teamId":"@T:ko4-b@"}')" \
+  "$(ev MATCH_END "$(E ko-10)" '{"at":6000,"section":4,"clockMs":1200000}')")"
+out="$(call authenticated "$U_HELPER" "$(M ko)" "$R14_1")"
+check Sonstiges "S13: 4 Abschnitte, Remis -> Pause vor der Verlaengerung in Abschnitt 5" \
+  '([.results[].status] | all(. == "accepted")) and .state.status == "section_break" and .state.phase == "overtime" and .state.section == 5' "$out"
+R14_2="$(arr "$(ev SECTION_START "$(E ko-11)" '{"at":7000,"section":5,"clockMs":1200000}')" \
+  "$(ev GOAL "$(E ko-12)" '{"at":7100,"section":5,"clockMs":1260000,"teamId":"@T:ko4-a@"}')" \
+  "$(ev GOAL "$(E ko-13)" '{"at":7200,"section":5,"clockMs":1320000,"teamId":"@T:ko4-b@"}')" \
+  "$(ev MATCH_END "$(E ko-14)" '{"at":7300,"section":5,"clockMs":1500000}')" \
+  "$(ev SHOOTOUT_KICK "$(E ko-15)" '{"at":7400,"section":null,"clockMs":null,"teamId":"@T:ko4-a@","payload":{"scored":true}}')")"
+out="$(call authenticated "$U_HELPER" "$(M ko)" "$R14_2")"
+check Sonstiges "S13: Ereignisse mit section 5 in der Verlaengerung angenommen, danach Strafstossschiessen" \
+  '([.results[].status] | all(. == "accepted")) and .state.status == "shootout" and .state.section == 5' "$out"
+out="$(q "SELECT jsonb_agg(jsonb_build_array(type, period, score_home, score_away, section, timestamp_seconds, base_seq > 0, control_epoch) ORDER BY seq) FROM public.match_events WHERE match_id = '$(M ko)';")"
+check Sonstiges "R14: period/score_home/score_away/section/timestamp_seconds/base_seq/control_epoch je Zeile" \
+  '. == [["MATCH_START","regular",0,0,1,0,false,null],["GOAL","regular",1,0,1,61.5,false,3],
+         ["SECTION_END","regular",1,0,1,300,false,null],["SECTION_START","regular",1,0,2,300,false,null],
+         ["SECTION_END","regular",1,0,2,600,false,null],["SECTION_START","regular",1,0,3,600,false,null],
+         ["SECTION_END","regular",1,0,3,900,false,null],["SECTION_START","regular",1,0,4,900,false,null],
+         ["GOAL","regular",1,1,4,1000,false,null],["MATCH_END","regular",1,1,4,1200,false,null],
+         ["SECTION_START","overtime",1,1,5,1200,true,null],["GOAL","overtime",2,1,5,1260,true,null],
+         ["GOAL","overtime",2,2,5,1320,true,null],["MATCH_END","overtime",2,2,5,1500,true,null],
+         ["SHOOTOUT_KICK","penalty",2,2,null,0,true,null]]' "$out"
+out="$(q "SELECT count(DISTINCT base_seq) = 2 AND min(base_seq) = 0 AND max(base_seq) = (SELECT max(seq) FROM public.match_events WHERE match_id = '$(M ko)' AND id IN ('$(E ko-01)','$(E ko-02)','$(E ko-03)','$(E ko-04)','$(E ko-05)','$(E ko-06)','$(E ko-07)','$(E ko-08)','$(E ko-09)','$(E ko-10)')) FROM public.match_events WHERE match_id = '$(M ko)';")"
+check Sonstiges "R14: base_seq = max(seq) des Spiels vor dem Aufruf (0, dann letzte seq des ersten Aufrufs)" '. == "t"' "\"$out\""
+
+# M4: live_state wird zusammengefuehrt -- fremde Schluessel (refereeName) bleiben.
+psql_stdin <<<"UPDATE public.matches SET live_state = '{\"refereeName\":\"Anna\",\"engine\":false}'::jsonb WHERE id = '$(M m4)';"
+call authenticated "$U_HELPER" "$(M m4)" "$(arr "$(ev MATCH_START "$(E m4-start)")")" >/dev/null
+cache="$(cache_of "$(M m4)")"
+check Sonstiges "M4: live_state zusammengefuehrt (refereeName bleibt, Engine-Schluessel gesetzt)" \
+  '.live_state.refereeName == "Anna" and .live_state.engine == true and .live_state.status == "running"' "$cache"
+
+# M1: payload/baseState je Ereignis hoechstens 16 KB; hoechstens 2000 gespeicherte Engine-Ereignisse.
+# BIG/OKSIZE werden nur ueber @V:...@-Platzhalter in ev() gelesen.
+# shellcheck disable=SC2034
+BIG="$(head -c 17000 /dev/zero | tr '\0' 'x')"
+# shellcheck disable=SC2034
+OKSIZE="$(head -c 15000 /dev/zero | tr '\0' 'x')"
+call authenticated "$U_HELPER" "$(M m1)" "$(arr "$(ev MATCH_START "$(E m1-start)")")" >/dev/null
+out="$(call authenticated "$U_HELPER" "$(M m1)" "$(arr "$(ev FOUL "$(E m1-bigp)" '{"at":2000,"teamId":"@V:TA@","payload":{"junk":"@V:BIG@"}}')" \
+  "$(ev FOUL "$(E m1-bigb)" '{"at":2000,"teamId":"@V:TA@","baseState":{"junk":"@V:BIG@"}}')" \
+  "$(ev FOUL "$(E m1-okp)" '{"at":2000,"teamId":"@V:TA@","payload":{"junk":"@V:OKSIZE@"},"baseState":{"junk":"@V:OKSIZE@"}}')")")"
+check Sonstiges "M1: payload bzw. baseState > 16 KB -> INVALID_PAYLOAD, 15 KB angenommen" \
+  '[.results[] | .status + ":" + (.code // "")] == ["rejected:INVALID_PAYLOAD","rejected:INVALID_PAYLOAD","accepted:"]' "$out"
+psql_stdin <<SQL
+INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away, event_format, client_time, clock_ms, section)
+SELECT gen_random_uuid(), '$(M m1)', 'FOUL', '$TA', 1, 0, 0, 1, to_timestamp(3), 1000, 1 FROM generate_series(1, 1998);
+SQL
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M m1)' AND event_format IS NOT NULL AND review_state IS NULL;")"
+check Sonstiges "M1: Vorbereitung 2000 gespeicherte Engine-Ereignisse" '. == 2000' "$out"
+out="$(call authenticated "$U_HELPER" "$(M m1)" "$(arr "$(ev FOUL "$(E m1-over)" '{"at":4000,"teamId":"@V:TA@"}')")")"
+rows="$(q "SELECT count(*) FROM public.match_events WHERE id = '$(E m1-over)';")"
+check Sonstiges "M1: 2001. Ereignis -> Aufruf-Fehler 54000, nichts gespeichert" \
+  ".exception == \"54000\" and ($rows == 0)" "$out"
+out="$(call authenticated "$U_HELPER" "$(M m1)" "$(arr "$(ev FOUL "$(E m1-okp)" '{"at":2000,"teamId":"@V:TA@","payload":{"junk":"@V:OKSIZE@"},"baseState":{"junk":"@V:OKSIZE@"}}')")")"
+check Sonstiges "M1: Wiederholung am Limit bleibt duplicate (kein Fehler)" '.results[0].status == "duplicate"' "$out"
+
+# --- 9c. C0b: AMEND durch die RPC (Nachtrag) --------------------------------------------------
+echo "Nachtrag (AMEND)..." >&2
+call authenticated "$U_OWNER" "$(M a1)" "$(arr "$(ev MATCH_START "$(E a1-start)")" \
+  "$(ev GOAL "$(E a1-goal)" '{"at":2000,"clockMs":1000,"teamId":"@V:TA@","payload":{"playerNumber":7}}')" \
+  "$(ev FOUL "$(E a1-foul)" '{"at":2100,"clockMs":1100,"teamId":"@V:TB@"}')" \
+  "$(ev MATCH_END "$(E a1-end)" '{"at":3000,"clockMs":600000}')")" >/dev/null
+out="$(call authenticated "$U_HELPER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am1)" '{"at":4000,"targetId":"@E:a1-foul@","payload":{"playerNumber":4}}')")")"
+check Nachtrag "Helfer ergaenzt leeres Feld nach dem Abpfiff -> accepted (targetId bei AMEND angenommen)" \
+  '.results[0].status == "accepted" and .state.status == "finished"' "$out"
+out="$(q "SELECT jsonb_build_object('type', type, 'target', target_event_id, 'format', event_format, 'payload', payload) FROM public.match_events WHERE id = '$(E a1-am1)';")"
+check Nachtrag "AMEND gespeichert: type AMEND, target_event_id = Ziel, event_format 1" \
+  ".type == \"AMEND\" and .target == \"$(E a1-foul)\" and .format == 1 and .payload == {\"playerNumber\":4}" "$out"
+out="$(call authenticated "$U_HELPER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am2)" '{"at":4100,"targetId":"@E:a1-goal@","payload":{"playerNumber":9}}')")")"
+check Nachtrag "Helfer aendert gesetztes Feld nach dem Abpfiff -> FORBIDDEN_ACTOR" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am3)" '{"at":4200,"targetId":"@E:a1-foul@","payload":{"clear":["playerNumber"]}}')")")"
+check Nachtrag "Helfer clear nach dem Abpfiff -> FORBIDDEN_ACTOR" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am4)" '{"at":4300,"targetId":"@E:a1-goal@","payload":{"playerNumber":7,"incomplete":true}}')")")"
+check Nachtrag "Helfer: gleicher Wert + leeres Feld nach dem Abpfiff -> accepted" '.results[0].status == "accepted"' "$out"
+out="$(call authenticated "$U_COADMIN" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am5)" '{"at":4400,"targetId":"@E:a1-goal@","payload":{"playerNumber":9,"clear":["incomplete"]}}')")")"
+check Nachtrag "Turnierleitung (Co-Admin) aendert gesetztes Feld und nutzt clear -> accepted" '.results[0].status == "accepted"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am6)" '{"at":4500,"targetId":"@E:a1-foul@","payload":{"playerNumber":5}}')")")"
+check Nachtrag "Turnierleitung (Eigentuemer) aendert -> accepted, Stand unveraendert" \
+  ".results[0].status == \"accepted\" and .state.effectiveScores[\"$TA\"] == 1 and .state.lastScoreEventId == \"$(E a1-goal)\"" "$out"
+rpc_state="$(jq -c '.state' <<<"$out")"
+check Nachtrag "compute_match_state == Zustand beim Anhaengen (nach AMEND)" ". == $rpc_state" "$(state_of "$(M a1)")"
+# details aus den GESPEICHERTEN Zeilen nachgerechnet (wie compute_match_state: actor leitung, seq).
+out="$(q "SELECT public.match_reduce(
+  (SELECT jsonb_agg(jsonb_build_object('id', e.id::text, 'type', e.type, 'actor', 'leitung',
+            'at', floor(extract(epoch FROM coalesce(e.client_time, e.recorded_at)) * 1000)::bigint,
+            'section', e.section, 'clockMs', e.clock_ms, 'teamId', e.team_id::text,
+            'targetId', e.target_event_id::text, 'payload', e.payload) ORDER BY e.seq)
+     FROM public.match_events e WHERE e.match_id = '$(M a1)' AND e.event_format IS NOT NULL AND e.review_state IS NULL),
+  jsonb_build_object('matchId', '$(M a1)', 'teamAId', '$TA', 'teamBId', '$TB'),
+  (SELECT jsonb_agg(jsonb_build_object('from', from_status, 'type', event_type, 'actor', actor, 'to', to_status)) FROM public.match_transitions),
+  'log') -> 'state' -> 'details';" 2>&1 || true)"
+check Nachtrag "details aus dem gespeicherten Log: Tor {playerNumber 9}, Foul {playerNumber 5}" \
+  ".[\"$(E a1-goal)\"] == {\"playerNumber\":9} and .[\"$(E a1-foul)\"] == {\"playerNumber\":5}" "$out"
+out="$(call authenticated "$U_OWNER" "$(M a1)" "$(arr "$(ev CORRECTION "$(E a1-corr)" '{"at":4600,"targetId":"@E:a1-goal@","payload":{"scores":{"@V:TA@":1,"@V:TB@":0},"reason":"x","basedOn":"@E:a1-goal@"}}')" \
+  "$(ev GOAL "$(E a1-goal-t)" '{"at":4600,"teamId":"@V:TA@","targetId":"@E:a1-goal@"}')")")"
+check Nachtrag "targetId bei anderen Typen (CORRECTION, GOAL) weiter INVALID_PAYLOAD" '[.results[].code] == ["INVALID_PAYLOAD","INVALID_PAYLOAD"]' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a1)" "$(arr "$(ev AMEND "$(E a1-am7)" '{"at":4700,"targetId":"@E:a1-goal@","teamId":"@T:fremd@","payload":{"playerNumber":1}}')" \
+  "$(ev AMEND "$(E a1-am8)" '{"at":4700,"targetId":"kein-uuid","payload":{"playerNumber":1}}')" \
+  "$(ev AMEND "$(E a1-am9)" '{"at":4700,"payload":{"playerNumber":1}}')")")"
+check Nachtrag "AMEND mit fremdem teamId / Nicht-UUID-targetId / ohne targetId -> INVALID_PAYLOAD" '[.results[].code] == ["INVALID_PAYLOAD","INVALID_PAYLOAD","INVALID_PAYLOAD"]' "$out"
+out="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, payload) VALUES ('$(E a1-direct)', '$(M a1)', 'AMEND', 1, 0, 0, '{\"playerNumber\":1}')\$S\$);")"
+check Nachtrag "Direktweg: Client-INSERT eines AMEND (neuer Typ) -> abgelehnt mit 42501 (A-08h: kein Tabellenrecht auf match_events)" \
+  'startswith("error:42501:") and contains("permission denied for table match_events")' "$(jq -Rn --arg v "$out" '$v')"
+
+# --- 9d. C0b: Spalten-Schutz auf matches (V4, Ruling PC2) ------------------------------------
+echo "Spaltenschutz..." >&2
+T_CG="$(uuid_for tournament:column-guard)"
+{
+  tournament_sql "$T_CG" '{}' 'null' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:cg-a)', '$T_CG', 'A'), ('$(uuid_for team:cg-b)', '$T_CG', 'B');"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(M cg-engine)', '$T_CG', 1, 1, '$(uuid_for team:cg-a)', '$(uuid_for team:cg-b)', NULL, NULL);"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(M cg-legacy)', '$T_CG', 1, 2, '$(uuid_for team:cg-a)', '$(uuid_for team:cg-b)', 0, 0);"
+} | psql_stdin
+out="$(call authenticated "$U_HELPER" "$(M cg-engine)" "$(arr "$(ev MATCH_START "$(E cg-start)")")")"
+check Spaltenschutz "Vorbereitung: Engine-Spiel per RPC angepfiffen" '.results[0].status == "accepted"' "$out"
+GUARD_COLUMNS=(
+  "score_a = 5" "score_b = 5" "overtime_score_a = 1" "overtime_score_b = 1" "penalty_score_a = 1"
+  "penalty_score_b = 1" "match_status = 'finished'" "decided_by = 'regular'"
+  "timer_start_time = '2020-01-01T00:00:00Z'" "timer_paused_at = '2020-01-01T00:00:00Z'"
+  "timer_elapsed_seconds = 99" "live_state = '{\"x\":1}'" "actual_start = '2020-01-01T00:00:00Z'"
+  "actual_end = '2020-01-01T00:00:00Z'" "skipped_at = '2020-01-01T00:00:00Z'" "skipped_reason = 'x'"
+)
+GUARD_DENIED=0
+GUARD_DETAIL=""
+# A-11 (20261110_001, Baustein Regel 3 -- umgeschrieben, nicht geloescht): seit matches_update_v4 (manageSchedule)
+# erreicht der Helfer den Spalten-Schutz gar nicht mehr -- RLS filtert sein UPDATE vorher (0 Zeilen, eigene Zeile
+# unten). Damit diese Zeilen weiter den GUARD messen, schreibt hier der Co-Admin (passiert RLS, ist Client-Rolle).
+for assignment in "${GUARD_COLUMNS[@]}"; do
+  res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET $assignment WHERE id = '$(M cg-engine)'\$S\$);")"
+  if [[ "$res" == error:42501:*append_match_events* ]]; then
+    GUARD_DENIED=$((GUARD_DENIED + 1))
+  else
+    GUARD_DETAIL+="[$assignment -> $res] "
+  fi
+done
+check Spaltenschutz "@FU-005 Co-Admin (Client-Rolle mit Schreibrecht): jede der 16 geschuetzten Spalten am Engine-Spiel -> 42501 mit Guard-Meldung ($GUARD_DETAIL)" \
+  ". == ${#GUARD_COLUMNS[@]}" "$GUARD_DENIED"
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 7, score_b = 7 WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "@FU-005 Eigentuemer: score_a am Engine-Spiel -> 42501 mit Guard-Meldung" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+cache="$(cache_of "$(M cg-engine)")"
+check Spaltenschutz "@FU-005 Zwischenspeicher nach den abgelehnten Versuchen unveraendert (0:0, running, live_state engine)" \
+  '.score_a == 0 and .score_b == 0 and .match_status == "running" and .live_state.engine == true and .live_state.x == null' "$cache"
+res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET referee_number = 3, score_a = score_a WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "Co-Admin: freie Spalte (referee_number) am Engine-Spiel, geschuetzte unveraendert -> erlaubt" '. == "ok:1"' "$(jq -Rn --arg v "$res" '$v')"
+# A-11 @ZP-041: der Helfer aendert keine Spielplan-Spalte mehr (RLS matches_update_v4 -> 0 Zeilen, kein Fehler).
+res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET referee_number = 4 WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "@ZP-041 Helfer: freie Spalte (referee_number) am Engine-Spiel -> 0 Zeilen (RLS manageSchedule)" '. == "ok:0"' "$(jq -Rn --arg v "$res" '$v')"
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 3, score_b = 1, match_status = 'finished' WHERE id = '$(M cg-legacy)'\$S\$);")"
+# A-10 (20261028_005, @EK-060): umgeschrieben (Baustein Regel 3) -- vorher "Altspiel ohne Engine-Ereignis -> erlaubt".
+# Der Spalten-Schutz gilt jetzt fuer ALLE Spiele; die Turnierleitung setzt Altbestand ueber reset_match_results zurueck.
+check Spaltenschutz "@EK-060 Eigentuemer: Altspiel ohne Engine-Ereignis -> 42501 (Guard, unbedingt)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET score_a = 4 WHERE id = '$(M cg-legacy)'\$S\$);")"
+check Spaltenschutz "@EK-060 Co-Admin: Altspiel ohne Engine-Ereignis -> 42501 (Guard, unbedingt)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+cache="$(cache_of "$(M cg-legacy)")"
+check Spaltenschutz "@EK-060 Altspiel nach beiden Versuchen unveraendert (0:0)" '.score_a == 0 and .score_b == 0' "$cache"
+out="$(call authenticated "$U_HELPER" "$(M cg-engine)" "$(arr "$(ev GOAL "$(E cg-goal)" '{"at":2000,"clockMs":1000,"teamId":"@T:cg-a@"}')")")"
+cache="$(cache_of "$(M cg-engine)")"
+check Spaltenschutz "RPC-Zwischenspeicher schreibt weiter (GOAL -> score_a 1, referee_number bleibt)" \
+  '.score_a == 1 and .score_b == 0' "$cache"
+check Spaltenschutz "RPC-Antwort nach dem Schutz: GOAL accepted" '.results[0].status == "accepted"' "$out"
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.tournaments SET config = config || '{\"publishedAt\":\"2026-09-28T00:00:00Z\"}'::jsonb, is_public = true WHERE id = '$T_CG'\$S\$);")"
+vis="$(q "SELECT jsonb_build_object('match', (SELECT is_public FROM public.matches WHERE id = '$(M cg-engine)'), 'events', (SELECT bool_and(is_public) FROM public.match_events WHERE match_id = '$(M cg-engine)'), 'ref', (SELECT referee_number FROM public.matches WHERE id = '$(M cg-engine)'));")"
+check Spaltenschutz "is_public-Kaskade des Turniers erreicht Engine-Spiel und seine Ereignisse ($res)" \
+  '.match == true and .events == true and .ref == 3' "$vis"
+# C0b-Fixrunde 1 (Review M1): der Schutz haengt NICHT an der Lese-RLS von match_events. Eine
+# zusaetzliche RESTRICTIVE-SELECT-Policy USING (false) versteckt dem Eigentuemer alle Ereignisse
+# (belegt: count = 0) -- der Trigger lehnt trotzdem ab, weil public.match_has_engine_events()
+# als SECURITY DEFINER zaehlt. Vor Fixrunde 1 (EXISTS als Aufrufer) ging das UPDATE durch.
+psql_stdin <<'SQL'
+CREATE POLICY "__c0b_hide_events" ON public.match_events AS RESTRICTIVE FOR SELECT TO authenticated, anon USING (false);
+SQL
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$SELECT 1 FROM public.match_events WHERE match_id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "M1-Vorbedingung: RESTRICTIVE-Policy versteckt dem Eigentuemer alle Ereignisse des Engine-Spiels" '. == "ok:0"' "$(jq -Rn --arg v "$res" '$v')"
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 9 WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "M1: Eigentuemer ohne Leserecht auf die Ereignisse: score_a am Engine-Spiel -> trotzdem 42501 (Guard)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+res="$(q "SELECT public.__b3b_exec_msg('$U_COADMIN', \$S\$UPDATE public.matches SET match_status = 'finished' WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "M1: Co-Admin ohne Leserecht auf die Ereignisse: match_status am Engine-Spiel -> trotzdem 42501 (Guard)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
+
+# A-36a (20261026_001_match_origin.sql): matches_keep_origin feuert nach dem Guard und fasst nur
+# origin_a/origin_b an (keine der geschuetzten Engine-Spalten) -- der Guard bleibt der erste Trigger.
+# A-30a (20261028_004_match_kit_colors.sql): matches_guard_kit_columns prueft nur kit_color_a/kit_color_b/bib_side
+# und aendert keine Engine-Spalte -- die Reihenfolge bleibt fuer das Ergebnis unerheblich.
+# A-13b-S (20261110_006): matches_guard_ga4_columns (nur reassigned_at, keine Engine-Spalte) kommt dazu, wenn dieser Lauf
+# _006 einspielt (A13BS_APPLIED, oben aus der Migrationsliste -- dieses Skript spielt jede Datei des Repos ein, die
+# Ausnahmeliste des Drift-Checks gilt hier nicht). Auf main vor dem Merge von G1b fehlt die Datei und damit der Trigger.
+A13BS_TRIGGER=""
+[[ "$A13BS_APPLIED" -eq 1 ]] && A13BS_TRIGGER="matches_guard_ga4_columns,"
+# A-21a-S (20261113_003): matches_guard_closed (Abschluss-Sperre) feuert alphabetisch zuerst (Unterlage A-21a, W5).
+A21AS_TRIGGER=""
+[[ -n "$A21AS_FILE" ]] && A21AS_TRIGGER="matches_guard_closed,"
+out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
+check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
+  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
+# A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
+out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
+# B-14 (20261117_104): matches_updated_at_insert setzt updated_at auch beim INSERT; er
+# feuert nach den Schutz-Triggern (Name) und ändert keine Engine-Spalte.
+check Spaltenschutz "BEFORE-INSERT-Trigger auf matches (Feuerreihenfolge = Name): $out" \
+  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_sync_owner,matches_updated_at_insert\"" "$(jq -Rn --arg v "$out" '$v')"
+
+# --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
+echo "Absetzen (skipped_at/skipped_reason)..." >&2
+out="$(call authenticated "$U_OWNER" "$(M sk1)" "$(arr "$(ev SKIP "$(E sk1-skip)" '{"at":1234,"payload":{"reason":"Halle gesperrt"}}')")")"
+check Spaltenschutz "SKIP mit Grund angenommen" '.results[0].status == "accepted"' "$out"
+cache="$(cache_of "$(M sk1)")"
+check Spaltenschutz "SKIP: skipped_at = at-Zeitpunkt (1234 ms), skipped_reason = payload.reason" \
+  '.match_status == "skipped" and .skipped_at_ms == 1234 and .skipped_reason == "Halle gesperrt"' "$cache"
+out="$(q "SELECT floor(extract(epoch FROM client_time) * 1000)::bigint FROM public.match_events WHERE id = '$(E sk1-skip)';")"
+check Spaltenschutz "skipped_at == client_time des gespeicherten SKIP (at_server)" ". == $(jq -r '.skipped_at_ms' <<<"$cache")" "$out"
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET skipped_reason = 'x' WHERE id = '$(M sk1)'\$S\$);")"
+check Spaltenschutz "Eigentuemer: skipped_reason am abgesetzten Engine-Spiel direkt -> 42501 (Guard)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+call authenticated "$U_OWNER" "$(M sk1)" "$(arr "$(ev UNSKIP "$(E sk1-unskip)" '{"at":2000}')")" >/dev/null
+cache="$(cache_of "$(M sk1)")"
+check Spaltenschutz "UNSKIP: skipped_at und skipped_reason NULL" '.match_status == "scheduled" and .skipped_at_ms == null and .skipped_reason == null' "$cache"
+call authenticated "$U_OWNER" "$(M sk2)" "$(arr "$(ev SKIP "$(E sk2-skip)" '{"at":1500}')")" >/dev/null
+cache="$(cache_of "$(M sk2)")"
+check Spaltenschutz "SKIP ohne Grund: skipped_at gesetzt, skipped_reason NULL" '.match_status == "skipped" and .skipped_at_ms == 1500 and .skipped_reason == null' "$cache"
+
+# --- 9f. ZA-3: Anpfiff zuruecknehmen ueber die RPC setzt auch den Zwischenspeicher zurueck -------
+echo "ZA-3 (Anpfiff zuruecknehmen)..." >&2
+out="$(call authenticated "$U_HELPER" "$(M z1)" "$(arr "$(ev MATCH_START "$(E z1-start)" '{"at":1000,"clockMs":null}')")")"
+check Sonstiges "@SL-066: Helfer pfeift an" '.results[0].status == "accepted" and .state.status == "running"' "$out"
+out="$(call authenticated "$U_HELPER" "$(M z1)" "$(arr "$(ev RETRACT "$(E z1-undo)" '{"at":11000,"clockMs":null,"targetId":"@E:z1-start@"}')")")"
+check Sonstiges "@SL-066: Rueckgaengig 10 s danach -> Spiel wieder geplant, Uhr 0" '.results[0].status == "accepted" and .state.status == "scheduled" and .state.clock.elapsedMs == 0 and .state.clock.running == false' "$out"
+cache="$(cache_of "$(M z1)")"
+check Sonstiges "@SL-066: Zwischenspeicher nach zurueckgenommenem Anpfiff: scheduled, actual_start NULL, live_state NULL" \
+  '.match_status == "scheduled" and .actual_start == null and .live_state == null and .score_a == null' "$cache"
+out="$(call authenticated "$U_HELPER" "$(M z1)" "$(arr "$(ev MATCH_START "$(E z1-start2)" '{"at":20000,"clockMs":null}')")")"
+cache="$(cache_of "$(M z1)")"
+check Sonstiges "@SL-066: neuer Anpfiff danach angenommen, actual_start wieder gesetzt" '.match_status == "running" and .actual_start != null' "$cache"
+
+# --- 9g. ZA-3 Fixrunde 1 (W1, @SL-147): Fristen an der Serveruhr -----------------------------------
+# Das Eintreffen des Abpfiffs/Anpfiffs (recorded_at) wird im Wegwerf-Container zurueckgestellt -- so
+# "kommt" die Fortsetzung bzw. das Rueckgaengig N Minuten nach dem Abpfiff an. Das `at` der Meldung
+# bleibt rechtzeitig (1 Minute bzw. 10 s nach dem Abpfiff/Anpfiff).
+echo "ZA-3 Fixrunde 1 (Serveruhr)..." >&2
+w1_end() { # $1 Spiel, $2 Minuten seit dem Eintreffen des Abpfiffs (Dezimal)
+  call authenticated "$U_HELPER" "$(M "$1")" "$(arr "$(ev MATCH_START "$(E "$1-start")" '{"at":1000,"clockMs":null}')" "$(ev MATCH_END "$(E "$1-end")" '{"at":601000,"clockMs":600000}')")" >/dev/null
+  # Der B2-Guard haelt Engine-Zeilen unveraenderlich -- nur hier im Wegwerf-Container kurz aus (eine Transaktion).
+  psql_stdin <<<"BEGIN; ALTER TABLE public.match_events DISABLE TRIGGER match_events_guard_engine_rows; UPDATE public.match_events SET recorded_at = now() - interval '$2 minutes' WHERE id = '$(E "$1-end")'; ALTER TABLE public.match_events ENABLE TRIGGER match_events_guard_engine_rows; COMMIT;"
+}
+w1_end w1a 5
+out="$(call authenticated "$U_HELPER" "$(M w1a)" "$(arr "$(ev REOPEN "$(E w1a-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147: 1 Minute nach dem Abpfiff ohne Netz gewaehlt, nach 5 Minuten angekommen -> Spiel 11 laeuft weiter" \
+  '.results[0].status == "accepted" and .state.status == "running"' "$out"
+w1_end w1b 15
+out="$(call authenticated "$U_HELPER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147: Geraetezeit zurueckgestellt, nach 15 Minuten angekommen -> Datenbank lehnt ab, Spiel bleibt beendet" \
+  '.results[0].code == "FORBIDDEN_ACTOR" and .results[0].detail.reason == "CONTINUE_WINDOW_EXPIRED" and .state.status == "finished"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reopen-o)" '{"at":662000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Gegenstueck: die Turnierleitung oeffnet auch nach 15 Minuten wieder" '.results[0].status == "accepted"' "$out"
+w1_end w1c 11.6
+out="$(call authenticated "$U_HELPER" "$(M w1c)" "$(arr "$(ev REOPEN "$(E w1c-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Grenze: 2 min + 10 min Spielraum, nach 11:36 angekommen -> angenommen" '.results[0].status == "accepted"' "$out"
+w1_end w1d 12.4
+out="$(call authenticated "$U_HELPER" "$(M w1d)" "$(arr "$(ev REOPEN "$(E w1d-reopen)" '{"at":661000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Grenze: nach 12:24 angekommen -> abgelehnt" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"
+# Anpfiff zuruecknehmen (@SL-067 an der Serveruhr): 30 s + 10 min Spielraum.
+w1_start() { # $1 Spiel, $2 Minuten seit dem Eintreffen des Anpfiffs
+  call authenticated "$U_HELPER" "$(M "$1")" "$(arr "$(ev MATCH_START "$(E "$1-start")" '{"at":1000,"clockMs":null}')")" >/dev/null
+  # Der B2-Guard haelt Engine-Zeilen unveraenderlich -- nur hier im Wegwerf-Container kurz aus (eine Transaktion).
+  psql_stdin <<<"BEGIN; ALTER TABLE public.match_events DISABLE TRIGGER match_events_guard_engine_rows; UPDATE public.match_events SET recorded_at = now() - interval '$2 minutes' WHERE id = '$(E "$1-start")'; ALTER TABLE public.match_events ENABLE TRIGGER match_events_guard_engine_rows; COMMIT;"
+}
+w1_start w1e 10.2
+out="$(call authenticated "$U_HELPER" "$(M w1e)" "$(arr "$(ev RETRACT "$(E w1e-undo)" '{"at":11000,"clockMs":null,"targetId":"@E:w1e-start@"}')")")"
+check Sonstiges "@SL-067 Serveruhr: Anpfiff vor 10 s gewaehlt, nach 10:12 angekommen -> zurueckgenommen" '.results[0].status == "accepted" and .state.status == "scheduled"' "$out"
+w1_start w1f 10.8
+out="$(call authenticated "$U_HELPER" "$(M w1f)" "$(arr "$(ev RETRACT "$(E w1f-undo)" '{"at":11000,"clockMs":null,"targetId":"@E:w1f-start@"}')")")"
+check Sonstiges "@SL-067 Serveruhr: zurueckdatiert, nach 10:48 angekommen -> abgelehnt, Spiel laeuft weiter" '.results[0].code == "INVALID_PAYLOAD" and .state.status == "running"' "$out"
+
+# --- 9h. A-25a (@FU-094, R-A25a-1): Direkteintrag mit Strafstossergebnis, K.-o.-Regel am Server ----
+# Turnierregel fuer K.o.-Spiele "Strafstossschiessen"; Halbfinale 1 (semifinal) und ein Gruppenspiel.
+echo "A-25a (Direkteintrag mit Strafstoss)..." >&2
+T_HF="$(uuid_for tournament:a25a)"
+{
+  tournament_sql "$T_HF" '{}' '{"tiebreaker":"shootout"}' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:a25a-nord)', '$T_HF', 'FC Nord'), ('$(uuid_for team:a25a-sued)', '$T_HF', 'SV Sued');"
+  for name in a25a-hf1 a25a-hf2 a25a-hf3 a25a-hf4 a25a-hf5; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_HF', 1, 1, 'semifinal', '$(uuid_for team:a25a-nord)', '$(uuid_for team:a25a-sued)');"
+  done
+  for name in a25a-g1 a25a-g2; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_HF', 1, 1, 'groupStage', '$(uuid_for team:a25a-nord)', '$(uuid_for team:a25a-sued)');"
+  done
+} | psql_stdin
+a25a_entry() { # $1 Ereignis-Schluessel, $2 Payload-JSON (Platzhalter erlaubt)
+  ev RESULT_ENTRY "$(E "$1")" "{\"at\":1000,\"section\":null,\"clockMs\":null,\"payload\":$2}"
+}
+A25A_22='{"scores":{"@T:a25a-nord@":2,"@T:a25a-sued@":2}}'
+A25A_22_43='{"scores":{"@T:a25a-nord@":2,"@T:a25a-sued@":2},"shootout":{"@T:a25a-nord@":4,"@T:a25a-sued@":3}}'
+rows_of() { q "SELECT count(*) FROM public.match_events WHERE match_id = '$1';"; }
+A25A_HF1_BEFORE="$(cache_of "$(M a25a-hf1)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf1)" "$(arr "$(a25a_entry a25a-hf1 "$A25A_22")")")"
+check Sonstiges "@FU-094 K.-o. 2:2 ohne Strafstoss -> abgelehnt (SHOOTOUT_REQUIRED), Spiel bleibt geplant" \
+  '.results[0].status == "rejected" and .results[0].code == "INVALID_PAYLOAD" and .results[0].detail.reason == "SHOOTOUT_REQUIRED" and .state.status == "scheduled"' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 ohne Strafstoss: keine Zeile gespeichert" '. == 0' "$(rows_of "$(M a25a-hf1)")"
+check Sonstiges "@FU-094 K.-o. 2:2 ohne Strafstoss: Spielzeile unveraendert (geplant, kein Strafstoss, version gleich)" \
+  '.same and .b.match_status == "scheduled" and .b.penalty_score_a == null and .b.decided_by == null' \
+  "$(jq -cn --argjson a "$A25A_HF1_BEFORE" --argjson b "$(cache_of "$(M a25a-hf1)")" '{same: ($a == $b), b: $b}')"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf2)" "$(arr "$(a25a_entry a25a-hf2 "$A25A_22_43")")")"
+check Sonstiges "@FU-094 K.-o. 2:2 + Strafstoss 4:3 fuer das Heimteam -> angenommen, beendet" \
+  '.results[0].status == "accepted" and .state.status == "finished" and .state.effectiveScores == {"'"$(uuid_for team:a25a-nord)"'": 2, "'"$(uuid_for team:a25a-sued)"'": 2}' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 + 4:3: matches score 2/2, penalty 4/3, decided_by penalty, finished" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 2 and .penalty_score_a == 4 and .penalty_score_b == 3 and .decided_by == "penalty" and .overtime_score_a == null' "$(cache_of "$(M a25a-hf2)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf2)" "$(arr "$(a25a_entry a25a-hf2 "$A25A_22_43")")")"
+check Sonstiges "@FU-094 K.-o. 2:2 + 4:3 erneut gesendet -> duplicate (Payload unveraendert gespeichert, dedupe_key)" \
+  '.results[0].status == "duplicate"' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 + 4:3: genau eine Zeile, Payload mit shootout" '. == 1' \
+  "$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M a25a-hf2)' AND payload ? 'shootout';")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf3)" "$(arr "$(a25a_entry a25a-hf3 '{"scores":{"@T:a25a-nord@":3,"@T:a25a-sued@":2}}')")")"
+check Sonstiges "@FU-094 Gegenbeispiel: K.-o. 3:2 ohne Strafstoss -> angenommen, decided_by regular" \
+  '.results[0].status == "accepted" and .state.status == "finished"' "$out"
+check Sonstiges "@FU-094 Gegenbeispiel: K.-o. 3:2 Zwischenspeicher regular ohne Strafstoss" \
+  '.decided_by == "regular" and .penalty_score_a == null and .score_a == 3' "$(cache_of "$(M a25a-hf3)")"
+out="$(call authenticated "$U_HELPER" "$(M a25a-hf4)" "$(arr "$(a25a_entry a25a-hf4 "$A25A_22")")")"
+check Sonstiges "@FU-094 Vorrang: Helfer-Direkteintrag K.-o. 2:2 ohne Strafstoss -> FORBIDDEN_ACTOR (Rechte vor der Strafstoss-Regel)" \
+  '.results[0].code == "FORBIDDEN_ACTOR" and .state.status == "scheduled"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a25a-hf5)" "$(arr "$(a25a_entry a25a-hf5 '{"scores":{"@T:a25a-nord@":2,"@T:a25a-sued@":2},"shootout":{"@T:a25a-nord@":3,"@T:a25a-sued@":3}}')")")"
+check Sonstiges "@FU-094 Gegenbeispiel: K.-o. 2:2 + Strafstoss 3:3 -> INVALID_PAYLOAD (Form), nichts gespeichert" \
+  '.results[0].code == "INVALID_PAYLOAD" and .state.status == "scheduled"' "$out"
+check Sonstiges "@FU-094 K.-o. 2:2 + 3:3: keine Zeile gespeichert" '. == 0' "$(rows_of "$(M a25a-hf5)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-g1)" "$(arr "$(a25a_entry a25a-g1 "$A25A_22")")")"
+check Sonstiges "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 ohne Strafstoss -> angenommen, decided_by regular" \
+  '.results[0].status == "accepted" and .state.status == "finished"' "$out"
+check Sonstiges "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 Zwischenspeicher regular, kein Strafstoss-Stand" \
+  '.decided_by == "regular" and .penalty_score_a == null and .penalty_score_b == null and .score_a == 2 and .score_b == 2' "$(cache_of "$(M a25a-g1)")"
+out="$(call authenticated "$U_OWNER" "$(M a25a-g2)" "$(arr "$(a25a_entry a25a-g2 "$A25A_22_43")")")"
+check Sonstiges "@FU-094 Gegenbeispiel: Gruppenspiel 2:2 mit Strafstoss -> abgelehnt (SHOOTOUT_NOT_ALLOWED), Spiel bleibt geplant" \
+  '.results[0].status == "rejected" and .results[0].code == "INVALID_PAYLOAD" and .results[0].detail.reason == "SHOOTOUT_NOT_ALLOWED" and .state.status == "scheduled"' "$out"
+check Sonstiges "@FU-094 Gruppenspiel 2:2 mit Strafstoss: keine Zeile gespeichert" '. == 0' "$(rows_of "$(M a25a-g2)")"
+
+# --- 9i. SW (@EK-062): Strafstoss aus dem Direkteintrag zaehlt nach dem Wiedereroeffnen nur bei Gleichstand ---
+# Halbfinale 1 FC Nord gegen DJK Berg: Direkteintrag 2:2 + Strafstoss 4:3 fuer FC Nord, Turnierleitung (Owner)
+# eroeffnet wieder, Tor DJK Berg, Abpfiff -- alles ueber append_match_events, geprueft an der Spielzeile.
+# Ohne 20261028_007 (--without-sw) ist Fall 1 rot (Beleg der Luecke C-STRAFSTOSS-NACH-WIEDEREROEFFNEN).
+echo "SW (@EK-062, Strafstoss nach Wiedereroeffnen)..." >&2
+T_SW="$(uuid_for tournament:sw)"
+{
+  tournament_sql "$T_SW" '{}' '{"tiebreaker":"shootout"}' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:sw-nord)', '$T_SW', 'FC Nord'), ('$(uuid_for team:sw-berg)', '$T_SW', 'DJK Berg');"
+  for name in sw-hf1 sw-hf2 sw-hf3; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_SW', 1, 1, 'semifinal', '$(uuid_for team:sw-nord)', '$(uuid_for team:sw-berg)');"
+  done
+  for name in sw-g1 sw-g2; do
+    echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_SW', 1, 1, 'groupStage', '$(uuid_for team:sw-nord)', '$(uuid_for team:sw-berg)');"
+  done
+} | psql_stdin
+SW_22='{"scores":{"@T:sw-nord@":2,"@T:sw-berg@":2}}'
+SW_22_43='{"scores":{"@T:sw-nord@":2,"@T:sw-berg@":2},"shootout":{"@T:sw-nord@":4,"@T:sw-berg@":3}}'
+# \"-Escapes nur auf oberster Ebene einer Funktion (bash 3.2 scheitert an ihnen in verschachtelten $(...)).
+sw_entry_ev() { ev RESULT_ENTRY "$(E "$1-entry")" "{\"at\":1000,\"section\":null,\"clockMs\":null,\"payload\":$2}"; }
+sw_entry() { # $1 Spiel-Schluessel, $2 Payload-JSON
+  call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(sw_entry_ev "$1" "$2")")"
+}
+sw_kick() { # $1 Ereignis-Schluessel, $2 at, $3 Team-Schluessel, $4 scored
+  ev SHOOTOUT_KICK "$(E "$1")" "{\"at\":$2,\"section\":null,\"clockMs\":null,\"teamId\":\"@T:$3@\",\"payload\":{\"scored\":$4}}"
+}
+sw_reopen() { call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(ev REOPEN "$(E "$1-reopen")" '{"at":2000,"section":null,"clockMs":null}')")"; }
+sw_goal_berg() { call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(ev GOAL "$(E "$1-goal")" '{"at":3000,"teamId":"@T:sw-berg@"}')")"; }
+sw_end() { call authenticated "$U_OWNER" "$(M "$1")" "$(arr "$(ev MATCH_END "$(E "$1-end")" '{"at":5000}')")"; }
+sw_accepted() { # $1 Name, $2 Ausgabe
+  check Sonstiges "$1" '[.results[].status] | all(. == "accepted")' "$2"
+}
+# Fall 1 (@EK-062 Dann 1): 2:2 + 4:3 -> wiedereroeffnet -> Tor DJK Berg -> Ende 2:3.
+sw_accepted "@EK-062 Halbfinale 1: Direkteintrag 2:2 + 4:3 angenommen" "$(sw_entry sw-hf1 "$SW_22_43")"
+sw_accepted "@EK-062 Halbfinale 1: Owner eroeffnet wieder" "$(sw_reopen sw-hf1)"
+sw_accepted "@EK-062 Halbfinale 1: Tor DJK Berg angenommen" "$(sw_goal_berg sw-hf1)"
+out="$(sw_end sw-hf1)"
+check Sonstiges "@EK-062 Halbfinale 1: Abpfiff -> beendet 2:3" \
+  '.results[0].status == "accepted" and .state.status == "finished" and .state.effectiveScores == {"'"$(uuid_for team:sw-nord)"'": 2, "'"$(uuid_for team:sw-berg)"'": 3}' "$out"
+check Sonstiges "@EK-062 wiedereroeffnet und 2:3 beendet: matches finished, 2/3, penalty null/null, decided_by regular (DJK Berg Sieger, 4:3 zaehlt nirgends)" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 3 and .penalty_score_a == null and .penalty_score_b == null and .decided_by == "regular"' "$(cache_of "$(M sw-hf1)")"
+# Fall 2 (@EK-062 Aber): 2:2 + 4:3 -> wiedereroeffnet -> Ende erneut 2:2.
+sw_accepted "@EK-062 Halbfinale 2: Direkteintrag 2:2 + 4:3 angenommen" "$(sw_entry sw-hf2 "$SW_22_43")"
+sw_accepted "@EK-062 Halbfinale 2: Owner eroeffnet wieder" "$(sw_reopen sw-hf2)"
+sw_accepted "@EK-062 Halbfinale 2: Abpfiff angenommen" "$(sw_end sw-hf2)"
+check Sonstiges "@EK-062 erneut 2:2 nach dem Wiedereroeffnen: matches finished, 2/2, penalty 4/3, decided_by penalty" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 2 and .penalty_score_a == 4 and .penalty_score_b == 3 and .decided_by == "penalty"' "$(cache_of "$(M sw-hf2)")"
+# Fall 3 (Gegenbeispiel Gruppe): 2:2 ohne Strafstoss -> wiedereroeffnet -> Tor -> 2:3; Strafstoss im Gruppenspiel abgelehnt.
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: Direkteintrag 2:2 angenommen" "$(sw_entry sw-g1 "$SW_22")"
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: wiedereroeffnet" "$(sw_reopen sw-g1)"
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: Tor DJK Berg" "$(sw_goal_berg sw-g1)"
+sw_accepted "@EK-062 Gegenbeispiel Gruppe: Abpfiff" "$(sw_end sw-g1)"
+check Sonstiges "@EK-062 Gegenbeispiel Gruppe 2:3: regular, kein Strafstoss-Stand" \
+  '.match_status == "finished" and .score_a == 2 and .score_b == 3 and .penalty_score_a == null and .penalty_score_b == null and .decided_by == "regular"' "$(cache_of "$(M sw-g1)")"
+out="$(sw_entry sw-g2 "$SW_22_43")"
+check Sonstiges "@EK-062 Gegenbeispiel Gruppe 2:2 mit Strafstoss -> SHOOTOUT_NOT_ALLOWED (Bestand 9h)" \
+  '.results[0].code == "INVALID_PAYLOAD" and .results[0].detail.reason == "SHOOTOUT_NOT_ALLOWED" and .state.status == "scheduled"' "$out"
+# Fall 4 (Gegenbeispiel B-U11): geleitetes Strafstossschiessen 3:0 -> REOPEN abgelehnt, Spielzeile unveraendert.
+SW_KICKS=()
+for i in 1 2 3; do
+  SW_KICKS+=("$(sw_kick "sw-hf3-ka$i" "$((700000 + i * 10))" sw-nord true)")
+  SW_KICKS+=("$(sw_kick "sw-hf3-kb$i" "$((700005 + i * 10))" sw-berg false)")
+done
+out="$(call authenticated "$U_HELPER" "$(M sw-hf3)" "$(arr "$(ev MATCH_START "$(E sw-hf3-start)" '{"clockMs":null}')" \
+  "$(ev MATCH_END "$(E sw-hf3-end)" '{"at":601000,"clockMs":600000}')" "${SW_KICKS[@]}" \
+  "$(ev SHOOTOUT_END "$(E sw-hf3-send)" '{"at":702000,"section":null,"clockMs":null}')")")"
+check Sonstiges "@EK-062 Gegenbeispiel B-U11: geleitetes Strafstossschiessen 3:0 beendet" \
+  '([.results[].status] | all(. == "accepted")) and .state.status == "finished"' "$out"
+SW_HF3_BEFORE="$(cache_of "$(M sw-hf3)")"
+out="$(call authenticated "$U_OWNER" "$(M sw-hf3)" "$(arr "$(ev REOPEN "$(E sw-hf3-reopen)" '{"at":710000,"clockMs":null}')")")"
+check Sonstiges "@EK-062 Gegenbeispiel B-U11: REOPEN nach dem Strafstossschiessen -> INVALID_TRANSITION (SHOOTOUT_FINISHED)" \
+  '.results[0].status == "rejected" and .results[0].code == "INVALID_TRANSITION" and .results[0].detail.reason == "SHOOTOUT_FINISHED"' "$out"
+check Sonstiges "@EK-062 Gegenbeispiel B-U11: Spielzeile unveraendert (penalty 3/0 aus den Schuessen, decided_by penalty)" \
+  '.same and .b.match_status == "finished" and .b.penalty_score_a == 3 and .b.penalty_score_b == 0 and .b.decided_by == "penalty"' \
+  "$(jq -cn --argjson a "$SW_HF3_BEFORE" --argjson b "$(cache_of "$(M sw-hf3)")" '{same: ($a == $b), b: $b}')"
+
+# --- 10. Laufzeit: 1 Ereignis bei 100 gespeicherten (nur Ausgabe) -----------------------------
+if [[ "$MODE" == "normal" ]]; then
+  PERF_EVENTS="$(jq -cn --arg a "$TA" --arg p "$(E perf)" '
+    [{id: ($p[0:24] + "000000000000"), type: "MATCH_START", at: 1000, section: 1, clockMs: null, payload: {}}]
+    + [range(1; 100) as $i | {id: ($p[0:24] + ("000000000000" + ($i | tostring))[-12:]), type: "FOUL",
+       at: (1000 + $i), section: 1, clockMs: ($i * 1000), teamId: $a, payload: {playerNumber: ($i % 10)}}]')"
+  call authenticated "$U_HELPER" "$(M perf)" "$PERF_EVENTS" >/dev/null
+  STORED="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M perf)';")"
+  PERF_OUT="$(psql_value <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', '$U_HELPER', true), set_config('role', 'authenticated', true);
+EXPLAIN (ANALYZE, TIMING OFF, SUMMARY ON) SELECT public.append_match_events('$(M perf)'::uuid,
+  \$J\$[{"id":"$(E perf-goal)","type":"GOAL","at":5000,"section":1,"clockMs":200000,"teamId":"$TA","payload":{}}]\$J\$::jsonb, 1);
+ROLLBACK;
+SQL
+)"
+  echo "Laufzeit: $STORED gespeicherte Ereignisse, 1 neues: $(grep -E 'Execution Time' <<<"$PERF_OUT" | sed 's/^ *//')"
+fi
+
+# --- 11. Rechte-Assertion ---------------------------------------------------------------------
+# Abschluss-Fixrunde (final-review-B.md, I2): SET ROLE ci_schema_reader statt als postgres
+# einzuspielen -- sonst faellt ein fehlendes GRANT USAGE ON SCHEMA match_engine TO ci_schema_reader
+# hier nie auf, obwohl es den Drift-Check live rot machen wuerde (regprocedure-Aufloesung der
+# match_engine.*-Signaturen prueft USAGE fuer den aufrufenden Nutzer). `postgres` ist im
+# Supabase-Image kein echter Superuser (rolsuper=false) -- GRANT ci_schema_reader TO postgres vor
+# dem SET ROLE gibt die noetige Mitgliedschaft (postgres hat ADMIN OPTION, weil es die Rolle
+# selbst angelegt hat, 20260924_002). Siehe match-engine-parity.sh fuer denselben Fix und die
+# ausfuehrliche Begruendung.
+PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || {
+  count_dev Rechte-Assertion
+  echo "ABWEICHUNG  [Rechte-Assertion] nicht ausfuehrbar: $(head -c 300 <<<"$PRIV_OUT")"
+  PRIV_OUT=""
+}
+if [[ -n "$PRIV_OUT" ]]; then
+  PRIV_FAILED="$(grep -v '|t$' <<<"$PRIV_OUT" || true)"
+  if [[ -n "$PRIV_FAILED" ]]; then
+    count_dev Rechte-Assertion
+    echo "ABWEICHUNG  [Rechte-Assertion] $PRIV_FAILED"
+  else
+    count_ok Rechte-Assertion
+    echo "OK          [Rechte-Assertion] $(wc -l <<<"$PRIV_OUT" | tr -d ' ') Zeilen |t"
+  fi
+fi
+
+# --- 11. A-08h (Befund C-MATCH-EVENTS-DIREKTWEG; @FU-084, @FU-085) ----------------------------
+# Direktweg in match_events geschlossen: anon und authenticated haben kein INSERT/UPDATE/DELETE
+# mehr auf der Tabelle (Policies entfernt, Tabellenrecht entzogen) -> 42501. Schreiben laeuft nur
+# ueber append_match_events. Gegenbeispiele: RPC-Schreiben, Ruecknahme per RETRACT, Lesen (Rechte-
+# Assertion), Turnier-Kaskade.
+echo "A-08h Direktweg..." >&2
+T_A8="$(uuid_for tournament:a08h)"
+T_A8D="$(uuid_for tournament:a08h-delete)"
+{
+  tournament_sql "$T_A8" '{}' 'null' 10
+  tournament_sql "$T_A8D" '{}' 'null' 10
+  echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:a8-a)', '$T_A8', 'A'), ('$(uuid_for team:a8-b)', '$T_A8', 'B'), ('$(uuid_for team:a8-da)', '$T_A8D', 'A'), ('$(uuid_for team:a8-db)', '$T_A8D', 'B');"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, match_status, score_a, score_b) VALUES ('$(M a8-fin)', '$T_A8', 1, 1, '$(uuid_for team:a8-a)', '$(uuid_for team:a8-b)', 'finished', 2, 1), ('$(M a8-del)', '$T_A8D', 1, 1, '$(uuid_for team:a8-da)', '$(uuid_for team:a8-db)', 'finished', 2, 1);"
+  echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(M a8-run)', '$T_A8', 1, 2, '$(uuid_for team:a8-a)', '$(uuid_for team:a8-b)', NULL, NULL);"
+  echo "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away) VALUES ('$(E a8-legacy)', '$(M a8-fin)', 'GOAL', '$(uuid_for team:a8-a)', 10, 2, 1), ('$(E a8-del-legacy)', '$(M a8-del)', 'GOAL', '$(uuid_for team:a8-da)', 10, 2, 1);"
+} | psql_stdin
+
+# a8_exec <anon|auth> <Nutzer-ID> <SQL> -> 'ok:<Zeilen>' bzw. 'error:<SQLSTATE>:<Meldung>'
+a8_exec() {
+  local role="$1" uid="$2" sql="$3"
+  if [[ "$role" == "anon" ]]; then
+    q "SELECT public.__b3b_exec_msg(NULL, \$S\$$sql\$S\$, 'anon');"
+  else
+    q "SELECT public.__b3b_exec_msg('$uid', \$S\$$sql\$S\$, 'authenticated');"
+  fi
+}
+# a8_denied <Name> <Ausgabe>: 42501 MIT der Meldung des entzogenen Tabellenrechts (nicht RLS, nicht Guard).
+a8_denied() { check A-08h "$1" 'startswith("error:42501:") and contains("permission denied for table match_events")' "$(jq -Rn --arg v "$2" '$v')"; }
+# a8_eq <Name> <vorher> <nachher>
+a8_eq() { local v=false; [[ "$2" == "$3" ]] && v=true; check A-08h "$1" '. == true' "$v"; }
+a8_snap() {
+  q "SELECT coalesce((SELECT jsonb_agg(jsonb_build_array(id, type, payload, score_home, score_away) ORDER BY id) FROM public.match_events WHERE match_id = '$(M a8-fin)'), '[]'::jsonb)::text || '|' || (SELECT jsonb_build_array(score_a, score_b, match_status)::text FROM public.matches WHERE id = '$(M a8-fin)');"
+}
+
+SNAP_VORHER="$(a8_snap)"
+A8_LEG="$(E a8-legacy)"
+for who in anon owner coadmin helper; do
+  case "$who" in
+    anon)    role=anon; uid="" ;;
+    owner)   role=auth; uid="$U_OWNER" ;;
+    coadmin) role=auth; uid="$U_COADMIN" ;;
+    helper)  role=auth; uid="$U_HELPER" ;;
+  esac
+  out="$(a8_exec "$role" "$uid" "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away) VALUES ('$(uuid_for "a8-insert:$who")', '$(M a8-fin)', 'GOAL', '$(uuid_for team:a8-a)', 60, 3, 1)")"
+  a8_denied "@FU-084 $who: Direktweg-INSERT eines Altformat-Tors auf das beendete Spiel -> 42501" "$out"
+done
+for who in anon owner; do
+  role=auth; uid="$U_OWNER"; [[ "$who" == "anon" ]] && { role=anon; uid=""; }
+  out="$(a8_exec "$role" "$uid" "UPDATE public.match_events SET payload = '{\"x\":1}'::jsonb WHERE id = '$A8_LEG'")"
+  a8_denied "@FU-085 $who: UPDATE (payload) einer Altformat-Zeile -> 42501" "$out"
+  out="$(a8_exec "$role" "$uid" "DELETE FROM public.match_events WHERE id = '$A8_LEG'")"
+  a8_denied "@FU-085 $who: DELETE einer Altformat-Zeile -> 42501" "$out"
+done
+a8_eq "@FU-084/@FU-085: nach allen abgelehnten Direktweg-Versuchen Ereignisse und Spielstand unverändert" "$SNAP_VORHER" "$(a8_snap)"
+# Gegenbeispiel Lesen: der Eigentuemer sieht die Zeile weiter (RLS-SELECT, match_events_select_v3).
+# Verhaltensprobe statt has_table_privilege, weil dieses die RLS-Policy nicht sieht.
+out="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$DO \$\$BEGIN IF NOT EXISTS (SELECT 1 FROM public.match_events WHERE id = '$A8_LEG') THEN RAISE EXCEPTION 'unsichtbar'; END IF; END\$\$ \$S\$);")"
+check A-08h "Gegenbeispiel Lesen: Eigentümer sieht die Ereigniszeile weiter (SELECT über RLS)" 'startswith("ok:")' "$(jq -Rn --arg v "$out" '$v')"
+
+# Gegenbeispiele ueber append_match_events (RPC bleibt Schreibweg).
+out="$(call authenticated "$U_OWNER" "$(M a8-run)" "$(arr "$(ev MATCH_START "$(E a8-start)")")")"
+check A-08h "Vorbereitung: laufendes Spiel über die RPC angepfiffen" '.results[0].status == "accepted"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a8-run)" "$(arr "$(ev GOAL "$(E a8-goal)" '{"at":2000,"teamId":"@T:a8-a@"}')")")"
+check A-08h "@FU-084 Gegenbeispiel: append_match_events nimmt ein Tor im laufenden Spiel an" '.results[0].status == "accepted"' "$out"
+out="$(call authenticated "$U_OWNER" "$(M a8-run)" "$(arr "$(ev RETRACT "$(E a8-retract)" '{"at":5000,"targetId":"@E:a8-goal@"}')")")"
+check A-08h "@FU-085 Gegenbeispiel: Rücknahme als neuer Eintrag (RETRACT) über append_match_events angenommen" '.results[0].status == "accepted"' "$out"
+
+# Engine-Zeile (per RPC angelegt) ist auch fuer den Eigentuemer nicht aenderbar/loeschbar.
+A8_ENG="$(E a8-start)"
+ENG_VORHER="$(q "SELECT count(*) || '|' || coalesce(max(payload::text), '') FROM public.match_events WHERE id = '$A8_ENG';")"
+out="$(a8_exec auth "$U_OWNER" "UPDATE public.match_events SET payload = '{\"x\":1}'::jsonb WHERE id = '$A8_ENG'")"
+a8_denied "@FU-085 owner: UPDATE einer Engine-Zeile (RPC) -> 42501" "$out"
+out="$(a8_exec auth "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$A8_ENG'")"
+a8_denied "@FU-085 owner: DELETE einer Engine-Zeile (RPC) -> 42501" "$out"
+a8_eq "@FU-085: Engine-Zeile nach Direktweg-Versuchen unverändert" "$ENG_VORHER" "$(q "SELECT count(*) || '|' || coalesce(max(payload::text), '') FROM public.match_events WHERE id = '$A8_ENG';")"
+
+# Gegenbeispiel L3 (Kaskade): ein Turnier mit Ereignissen gilt als gestartet (protect_tournament_delete_started,
+# @LZ-003) -- der Eigentuemer kann es nicht hart loeschen. Die Kaskade auf match_events laeuft ueber die
+# Fremdschluessel (RI-Trigger: ohne RLS, ohne Tabellenrecht) und wird nur von der Wartungsrolle
+# (current_user nicht authenticated/anon) ausgeloest.
+out="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$DELETE FROM public.tournaments WHERE id = '$T_A8D'\$S\$);")"
+check A-08h "L3: Eigentümer kann das gestartete Turnier nicht hart löschen (bestehende Sperre, P0001)" 'startswith("error:P0001:tournament_started")' "$(jq -Rn --arg v "$out" '$v')"
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M a8-del)';")"
+check A-08h "L3: vor der Wartungslöschung noch 1 Ereignis da (Vorbedingung)" '. == 1' "$out"
+q "DELETE FROM public.tournaments WHERE id = '$T_A8D';" >/dev/null
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M a8-del)';")"
+check A-08h "L3 Gegenbeispiel: Wartungslöschung des Turniers entfernt seine Ereignisse (Kaskade bleibt)" '. == 0' "$out"
+
+# Schritt 0 (Katalog): jede Funktion, die match_events schreibt, ist SECURITY DEFINER.
+out="$(q "SELECT count(*) FROM pg_proc p WHERE p.pronamespace IN ('public'::regnamespace, 'match_engine'::regnamespace) AND NOT p.prosecdef AND p.prosrc ~* '(insert[[:space:]]+into|update|delete[[:space:]]+from)[[:space:]]+[^;]{0,30}match_events';")"
+check A-08h "Schritt 0: keine SECURITY-INVOKER-Funktion schreibt match_events (erwartet 0)" '. == 0' "$out"
+
+# --- 12. Ergebnis -----------------------------------------------------------------------------
+echo ""
+TOTAL_DEV=0
+TOTAL_KNOWN=0
+SUMMARY=""
+for i in "${!CATS[@]}"; do
+  TOTAL_DEV=$((TOTAL_DEV + DEV[i]))
+  TOTAL_KNOWN=$((TOTAL_KNOWN + KNOWN[i]))
+  SUMMARY+="${CATS[$i]}=${OKS[$i]}ok/${DEV[i]}rot/${KNOWN[i]}bekannt "
+done
+echo "Ergebnis je Kategorie: $SUMMARY (bekannt=$TOTAL_KNOWN)"
+if [[ "${#KNOWN_LINES[@]}" -gt 0 ]]; then
+  echo "Bekannte Abweichungen (BEKANNT, kein Fehler, $TOTAL_KNOWN):"
+  printf '    %s\n' "${KNOWN_LINES[@]}"
+fi
+
+red_required() {
+  local missing=()
+  local cat
+  for cat in "$@"; do
+    [[ "${DEV[$(cat_index "$cat")]}" -gt 0 ]] || missing+=("$cat")
+  done
+  if [[ "${#missing[@]}" -eq 0 ]]; then
+    echo "Gegenprobe ($MODE) wie erwartet ROT in: $*"
+    exit 0
+  fi
+  echo "::error::Gegenprobe ($MODE): Mutation blieb UNBEMERKT in: ${missing[*]} -- dieser Teil ist zahnlos." >&2
+  exit 1
+}
+case "$MODE" in
+  without-migration) red_required Fixtures Rechte Idempotenz Kaskade Nebenlaeufig Sonstiges Nachtrag Spaltenschutz Rechte-Assertion A-08h ;;
+  gegenprobe) red_required Fixtures Rechte ;;
+  without-column-guard) red_required Spaltenschutz ;;
+  without-sw) red_required Sonstiges Fixtures ;;
+esac
+if [[ "$TOTAL_DEV" -gt 0 ]]; then
+  echo "::error::$TOTAL_DEV Abweichung(en) im Schreibweg-Harness." >&2
+  exit 1
+fi
+echo "Schreibweg-Harness gruen: alle Proben wie erwartet."
+exit 0

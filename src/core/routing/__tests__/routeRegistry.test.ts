@@ -21,6 +21,10 @@ describe('matchRoute', () => {
     ['/login', 'login', {}],
     ['/register', 'register', {}],
     ['/invite', 'invite', {}],
+    // A-17b (@HE-001): Beitritt per Helfer-QR-Code, 10 Zeichen
+    ['/join/ABCDEFGH23', 'join', { code: 'ABCDEFGH23' }],
+    // A-17c (@HE-099): Auswahl bei mehreren Helfer-Zugängen
+    ['/helfer', 'helperChooser', {}],
     ['/settings', 'settings', {}],
     ['/profile', 'profile', {}],
     ['/impressum', 'impressum', {}],
@@ -28,7 +32,6 @@ describe('matchRoute', () => {
     // Zusätzlich in App.tsx gefunden (grep -n 'location.pathname' src/App.tsx,
     // Zeilen 275-320) — nicht im Drift-Check-Ausgangs-Testlisten, aber
     // App.tsx-Matcher, daher pflicht laut Task-Brief:
-    ['/public/xyz-789', 'public', { tournamentId: 'xyz-789' }],
     ['/auth/callback', 'authCallback', {}],
     ['/auth/confirm', 'authConfirm', {}],
     ['/set-password', 'setPassword', {}],
@@ -41,6 +44,20 @@ describe('matchRoute', () => {
 
   it('gibt null für unbekannte Pfade', () => {
     expect(matchRoute('/gibt-es-nicht')).toBeNull();
+  });
+
+  // Paket 1: Die alte Zuschauer-Seite /public/:tournamentId ist entfernt. Die Adresse ist
+  // eine unbekannte Route und landet in App.tsx auf „Seite nicht gefunden".
+  it.each(['/public/xyz-789', '/public/public-test-tournament'])(
+    'Gegenbeispiel: %s ist keine Route mehr (unbekannt → „Seite nicht gefunden")',
+    (path) => {
+      expect(matchRoute(path)).toBeNull();
+    },
+  );
+
+  // Gegenbeispiel: die Live-Ansicht per Teilnahmecode bleibt erreichbar.
+  it('/live/E2EPUB bleibt die Live-Ansicht (publicLive)', () => {
+    expect(matchRoute('/live/E2EPUB')).toEqual({ name: 'publicLive', params: { shareCode: 'E2EPUB' } });
   });
 
   // Reihenfolge-Fallen (Bestandssemantik App.tsx:158-161):
@@ -67,5 +84,20 @@ describe('matchRoute', () => {
 
   it('matcht /tournament/edit NICHT als tournament (zweisegmentig, endsWith /edit)', () => {
     expect(matchRoute('/tournament/edit')).toBeNull();
+  });
+});
+
+describe('matchRoute: /join/:code (A-17b)', () => {
+  it.each(['/join', '/join/', '/join/ABC', '/join/ABC DEF', '/join/AB-CDEFGH23', '/join/ABCDEFGH23/x', `/join/${'A'.repeat(33)}`])(
+    'Gegenbeispiel %s ist kein Beitritt',
+    (path) => {
+      expect(matchRoute(path)?.name).not.toBe('join');
+    },
+  );
+});
+
+describe('matchRoute: /helfer (A-17c)', () => {
+  it.each(['/helfer/', '/helfer/x', '/Helfer', '/helfers'])('Gegenbeispiel %s ist keine Auswahl', (path) => {
+    expect(matchRoute(path)?.name).not.toBe('helperChooser');
   });
 });

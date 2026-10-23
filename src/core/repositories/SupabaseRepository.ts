@@ -11,15 +11,29 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { OptimisticLockError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
+import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, TournamentGoneError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
+import { notifyMatchesProtected } from '../services/matchProtectionNotices';
+import type { Database } from '../../types/supabase';
+import type { BracketLogEntry } from '../../types/tournament';
+import { writePlacementsToPlayOutToCloud } from './standingDecisionsCloud';
+import {
+  callCompleteGroup, callRecordStandingDecision, callReopenGroup, readGroupCompletions,
+  type CompleteGroupRequest, type CompleteGroupResult, type RecordDecisionRequest, type RecordDecisionResult, type ReopenGroupResult,
+} from './groupCompletionCloud';
+import { readBracketLog } from './bracketLogCloud';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
+  startTimeForDb,
   mapMatchUpdateToSupabase,
+  mapMatchToScheduleUpdate,
   mapTeamToSupabase,
-  mapMatchToSupabase,
   type TournamentUpdate,
 } from './supabaseMappers';
+import { readAccountTournamentList, type CloudTournamentList } from './accountTournamentList';
+import { shareIfUnshared, type ShareIfUnsharedResult } from './shareIfUnshared';
+import { callDisplayTournament, callPublicTournament } from './publicPayloadRpc';
+import type { PublicReply } from './publicPayload';
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -35,6 +49,31 @@ function getSupabase() {
   return supabase;
 }
 
+/**
+ * BP-1 (C-AUTH-ABGELAUFEN-ANDERE-MUTATIONEN, C-ENDGUELTIG-SOFORT-MELDEN): der Code der Server-Antwort (PGRST301, 23505 …)
+ * bleibt am eingepackten Fehler je Spiel, damit die Warteschlange „Anmeldung abgelaufen“ und eindeutige Ablehnungen erkennt.
+ */
+function withPostgrestCode(wrapped: Error, original: { code?: string }): Error {
+  return original.code ? Object.assign(wrapped, { code: original.code }) : wrapped;
+}
+
+/**
+ * BP-1 Review A1 (@FU-123, @FU-127, @FU-009): Fehler der Prüfung „gibt es das Turnier noch?“. Nur PGRST116 (0 Zeilen) heißt
+ * „gibt es nicht“; jeder andere Fehler (Netz, Zeitlimit, abgelaufene Anmeldung) wird als `RepositoryError` geworfen, damit
+ * die Warteschlange ihn als unklar wiederholt bzw. bei 401 anhält – nie als „Turnier gibt es nicht mehr“.
+ */
+function throwUnlessNotFound(error: { code?: string; message: string } | null): void {
+  if (error && error.code !== 'PGRST116') {
+    throw new RepositoryError('save', error.message, error);
+  }
+}
+
+/** A-08f3a: Cloud-Stand eines Turniers mit Revision je Spiel. */
+export interface CloudReadWithRevisions {
+  tournament: Tournament;
+  matchRevisions: Map<string, number>;
+}
+
 export class SupabaseRepository implements ITournamentRepository {
   constructor() {
     if (!isSupabaseConfigured) {
@@ -48,6 +87,21 @@ export class SupabaseRepository implements ITournamentRepository {
    * Loads a tournament by ID with all related data (teams, matches)
    */
   async get(id: string): Promise<Tournament | null> {
+    try {
+      return (await this.getWithMatchRevisions(id))?.tournament ?? null;
+    } catch (error) {
+      if (error instanceof CloudReadAbortedError) { return null; } // Abbruch ist hier wie bisher „kein Ergebnis“
+      throw error;
+    }
+  }
+
+  /**
+   * A-08f3a: wie `get`, dazu die Server-Revision je Spiel (`matches.version`, nur durch Einträge erhöht).
+   * Grundlage für den Feldweg in `OfflineRepository` (Regel S, Monotonie je Spiel).
+   * `null` heißt nur „nicht gefunden“ (PGRST116, auch unsichtbar); ein Abbruch wirft `CloudReadAbortedError`
+   * (Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH, @FU-109).
+   */
+  async getWithMatchRevisions(id: string): Promise<CloudReadWithRevisions | null> {
     // Fetch tournament
     const { data: tournamentRow, error: tournamentError } = await getSupabase()
       .from('tournaments')
@@ -60,9 +114,9 @@ export class SupabaseRepository implements ITournamentRepository {
         // Not found
         return null;
       }
-      // AbortError is expected during navigation, StrictMode unmount, etc.
+      // AbortError is expected during navigation, StrictMode unmount, etc. -- kein „nicht gefunden“
       if (isAbortError(tournamentError)) {
-        return null;
+        throw new CloudReadAbortedError(tournamentError);
       }
       console.error('Failed to fetch tournament:', tournamentError);
       throw new RepositoryError('get', tournamentError.message, tournamentError);
@@ -77,7 +131,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (teamsError) {
       if (isAbortError(teamsError)) {
-        return null;
+        throw new CloudReadAbortedError(teamsError);
       }
       console.error('Failed to fetch teams:', teamsError);
       throw new RepositoryError('get', teamsError.message, teamsError);
@@ -92,18 +146,31 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (matchesError) {
       if (isAbortError(matchesError)) {
-        return null;
+        throw new CloudReadAbortedError(matchesError);
       }
       console.error('Failed to fetch matches:', matchesError);
       throw new RepositoryError('get', matchesError.message, matchesError);
     }
 
-    // Convert to frontend types
-    return mapTournamentFromSupabase(
-      tournamentRow,
-      teamRows,
-      matchRows
-    );
+    // GA4 A-13b-C: Abschlüsse der Gruppen und Verlauf der Entscheidungen (Server-Tabellen, nie vom Gerät geschrieben). Der Verlauf
+    // ist Zusatzwissen und verhindert das Laden nie; die Abschlüsse fehlen vor `_006` ganz (dann gilt keine Gruppe als abgeschlossen).
+    const groupCompletions = await readGroupCompletions(getSupabase(), id);
+    const decisionLog = await readBracketLog(getSupabase(), id);
+
+    // Convert to frontend types. B-19b (@ME-032): lässt sich die empfangene Antwort nicht abbilden, ist sie
+    // „unlesbar“ (kein Netzfehler); der Monitor lädt dann neu.
+    try {
+      return {
+        tournament: {
+          ...mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
+          ...(groupCompletions !== undefined ? { groupCompletions } : {}),
+          ...(decisionLog !== undefined ? { decisionLog } : {}),
+        },
+        matchRevisions: new Map(matchRows.map((row) => [row.id, row.version ?? 1])),
+      };
+    } catch (err) {
+      throw new UnreadableResponseError('get', err);
+    }
   }
 
   /**
@@ -117,7 +184,7 @@ export class SupabaseRepository implements ITournamentRepository {
     if (metadata.title !== undefined) {updatePayload.title = metadata.title;}
     if (metadata.date !== undefined) {updatePayload.date = metadata.date;}
     if (metadata.status !== undefined) {updatePayload.status = metadata.status;}
-    if (metadata.startTime !== undefined) {updatePayload.start_time = metadata.startTime;}
+    if (metadata.startTime !== undefined) {updatePayload.start_time = startTimeForDb(metadata.startTime);} // @FU-128
      
     if (metadata.location) {
       if (metadata.location.name !== undefined) {updatePayload.location_name = metadata.location.name;}
@@ -129,6 +196,8 @@ export class SupabaseRepository implements ITournamentRepository {
      
     if (metadata.isPublic !== undefined) {updatePayload.is_public = metadata.isPublic;}
     if (metadata.shareCode !== undefined) {updatePayload.share_code = metadata.shareCode;}
+    // CA-3: der Zeitpunkt, zu dem der Code entstand, geht mit (@BM-071); der Server setzt ihn sonst nur in den RPCs.
+    if (metadata.shareCodeCreatedAt !== undefined) {updatePayload.share_code_created_at = metadata.shareCodeCreatedAt;}
 
     // Only update if there are fields to update
     if (Object.keys(updatePayload).length === 0) {
@@ -165,6 +234,11 @@ export class SupabaseRepository implements ITournamentRepository {
     }
   }
 
+  /** CA-3 (@BM-070): Teilen-Rückfall – Code nur setzen, wenn die Zeile noch keinen hat (`shareIfUnshared.ts`). */
+  shareIfUnshared(id: string, share: { shareCode: string; shareCodeCreatedAt?: string }): Promise<ShareIfUnsharedResult> {
+    return shareIfUnshared(getSupabase(), id, share);
+  }
+
   /**
    * Saves a full tournament object (create or update)
    * Uses upsert for tournament, teams, and matches
@@ -172,12 +246,26 @@ export class SupabaseRepository implements ITournamentRepository {
    * WARNING: This replaces all teams and matches. For granular updates,
    * use updateMatch() or updateMatches() instead.
    */
-  async save(tournament: Tournament): Promise<void> {
+  /**
+   * Befund C-VERSION-NACH-ERSTANLAGE (@FU-110): liefert die Version, die die Zeile danach am Server trägt (Update: Basis + 1,
+   * Neuanlage: 1, Upsert ohne Version: die geschriebene) – das Gerät vermerkt genau sie als bestätigt.
+   */
+  /**
+   * BP-1 (@FU-123, Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN): `mustExist` – das Gerät kennt das Turnier aus der Cloud.
+   * Fehlt die Zeile dort, legt save() sie nicht neu an, sondern wirft `TournamentGoneError` (eindeutige Ablehnung).
+   * Ohne `mustExist` (noch nie in der Cloud, @FU-124) legt die erste Übertragung das Turnier an.
+   */
+  async save(tournament: Tournament, options: { mustExist?: boolean } = {}): Promise<number> {
     // Get current user for owner_id
     const {
       data: { user },
+      error,
     } = await getSupabase().auth.getUser();
     if (!user) {
+      // A-06a (Brief A1b): Netzfehler bei auth.getUser() ist vorübergehend, kein Fehlversuch.
+      if (error && error.name !== 'AuthSessionMissingError') {
+        throw new RepositoryError('save', error.message, error);
+      }
       throw new AuthenticationError('Not authenticated', 'save');
     }
 
@@ -187,17 +275,128 @@ export class SupabaseRepository implements ITournamentRepository {
       user.id
     );
 
+    // =========================================================================================
+    // A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md, C-K6; Fixrunde 1,
+    // task-A6-review.md I1/I2, Ruling AN): find PROTECTED matches -- missing from the local
+    // tournament (stale device, a regenerated schedule, ...) but already having match_events, or
+    // a match_status other than 'scheduled'/NULL -- BEFORE any write happens.
+    //
+    // I1: this must run before the tournament row, teams, AND matches are touched. The earlier
+    // version (Fixrunde 0) ran this check only inside step 3 (matches), AFTER step 2 had already
+    // deleted teams missing from the local state. If a protected match's own team was ALSO
+    // missing locally, that team was deleted before the match-level check ever ran -- the match
+    // row itself survived, but `matches.team_a_id`/`team_b_id` (ON DELETE SET NULL, baseline
+    // :1485/:1489) were wiped by the team deletion anyway, silently losing the pairing (and, via
+    // `match_events.team_id`/`team_players`, the scorer attribution) despite the match "surviving".
+    // Fix: compute `protectedTeamIds` here too and exclude them from `teamsToDelete` below.
+    //
+    // I2 (Ruling AN): a protected match no longer makes save() THROW. `save()` completes the
+    // rest of the tournament normally; only the protected match(es) are excluded from
+    // `matchesToDelete`. The caller (MutationQueue) sees this SAVE_TOURNAMENT mutation as a
+    // SUCCESS -- throwing here would count as a failed attempt and, after MAX_RETRIES, dead-letter
+    // the mutation, permanently blocking every later save of this tournament (the queue is FIFO
+    // and keeps re-trying the SAME stale payload). The caller instead learns about the kept
+    // match(es) via `notifyMatchesProtected()` (see `core/services/matchProtectionNotices.ts` for
+    // why this needs its own channel instead of a return value or thrown error) once the save
+    // actually succeeds, below.
+    const { data: existingMatches, error: existingMatchesError } = await getSupabase()
+      .from('matches')
+      .select('id, match_status, match_number, team_a_id, team_b_id')
+      .eq('tournament_id', tournament.id);
+
+    if (existingMatchesError) {
+      console.error('Failed to read existing matches:', existingMatchesError);
+      throw new RepositoryError('saveMatches', existingMatchesError.message, existingMatchesError);
+    }
+
+    const existingMatchIds = new Set((existingMatches ?? []).map((m) => m.id));
+    const newMatchIds = new Set(matchRows.map((m) => m.id));
+    const candidateMatchesToDelete = [...existingMatchIds].filter((id) => !newMatchIds.has(id));
+
+    const matchNumberById = new Map(
+      (existingMatches ?? []).map((m) => [m.id, m.match_number] as const)
+    );
+    let blockedMatchIds: string[] = [];
+    const protectedTeamIds = new Set<string>();
+
+    if (candidateMatchesToDelete.length > 0) {
+      const matchStatusById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, m.match_status] as const)
+      );
+      const matchTeamsById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, [m.team_a_id, m.team_b_id] as const])
+      );
+
+      const { data: eventRows, error: eventsError } = await getSupabase()
+        .from('match_events')
+        .select('match_id')
+        .in('match_id', candidateMatchesToDelete);
+
+      if (eventsError) {
+        console.error('Failed to check match_events before deleting matches:', eventsError);
+        throw new RepositoryError('saveMatches', eventsError.message, eventsError);
+      }
+
+      const matchIdsWithEvents = new Set((eventRows ?? []).map((e) => e.match_id));
+      blockedMatchIds = candidateMatchesToDelete.filter((id) => {
+        const status = matchStatusById.get(id);
+        const isScheduledOrNull = status === 'scheduled' || status === null || status === undefined;
+        return matchIdsWithEvents.has(id) || !isScheduledOrNull;
+      });
+
+      for (const id of blockedMatchIds) {
+        const [teamAId, teamBId] = matchTeamsById.get(id) ?? [null, null];
+        if (teamAId) { protectedTeamIds.add(teamAId); }
+        if (teamBId) { protectedTeamIds.add(teamBId); }
+      }
+    }
+
+    const matchesToDelete = candidateMatchesToDelete.filter((id) => !blockedMatchIds.includes(id));
+
+    const { data: existingTeams, error: existingTeamsError } = await getSupabase()
+      .from('teams')
+      .select('id, name')
+      .eq('tournament_id', tournament.id);
+
+    if (existingTeamsError) {
+      console.error('Failed to read existing teams:', existingTeamsError);
+      throw new RepositoryError('saveTeams', existingTeamsError.message, existingTeamsError);
+    }
+
+    const newTeamIds = new Set(teamRows.map((t) => t.id));
+    const teamsToDelete = (existingTeams ?? [])
+      .map((t) => t.id)
+      .filter((id) => !newTeamIds.has(id) && !protectedTeamIds.has(id));
+
+    // A-05 Fixrunde 1 (@FU-086): Zeigt ein zu speicherndes Spiel noch auf ein Team, das gelöscht würde, setzt
+    // ON DELETE SET NULL die Seite leer, und matches_slot_*_present lehnt mit 23514 ab -- NACH halb
+    // geschriebenem Stand. Der Zustand ist ein Fehler des Aufrufers (Spiele passen nicht zu den Teams):
+    // laut abbrechen, bevor irgendetwas geschrieben wird. TeamStillReferencedError ist nicht transient
+    // (isTransientMutationError), die Warteschlange zählt ihn als Fehlversuch und legt den Eintrag nach
+    // MAX_RETRIES im Dead-Letter ab, statt ihn endlos zu wiederholen.
+    {
+      const doomed = new Set(teamsToDelete);
+      const stillReferenced = matchRows.find(
+        (m) => doomed.has(m.team_a_id ?? '') || doomed.has(m.team_b_id ?? '')
+      );
+      if (stillReferenced) {
+        throw new TeamStillReferencedError(stillReferenced.id ?? '');
+      }
+    }
+
     // Start transaction-like operation
     // Note: Supabase doesn't support true transactions in the client,
     // but we can use RPC for atomic operations if needed
 
     // 1. Persist Tournament (with Optimistic Locking)
     let saveError = null;
+    let reachedVersion: number;
 
      
     if (tournament.version !== undefined && tournament.version !== null) {
       // Optimistic Locking: Only update if version matches
       const nextVersion = tournament.version + 1;
+      reachedVersion = nextVersion;
 
       // Try update first
       const { data, error } = await getSupabase()
@@ -212,28 +411,39 @@ export class SupabaseRepository implements ITournamentRepository {
        
       } else if (!data || data.length === 0) {
         // No update happened - check if it exists (Conflict) or is new (Insert)
-        const { data: existing } = await getSupabase()
+        const { data: existing, error: existingError } = await getSupabase()
           .from('tournaments')
           .select('id')
           .eq('id', tournament.id)
           .single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: nur PGRST116 heißt „gibt es nicht“
 
         if (existing) {
           throw new OptimisticLockError('Turnier wurde zwischenzeitlich verändert. Bitte neu laden.');
+        } else if (options.mustExist) {
+          throw new TournamentGoneError(tournament.id); // @FU-123: gelöscht – nicht neu anlegen
         } else {
           // New tournament with predefined version? Treat as insert
           const { error: insertError } = await getSupabase()
             .from('tournaments')
             .insert({ ...tournamentRow, version: 1 }); // Start at version 1
           saveError = insertError;
+          reachedVersion = 1;
         }
       }
     } else {
       // Legacy/Fallback: Upsert (Blind Overwrite)
       // If version is missing, we initialize it to 1 if inserting
+      if (options.mustExist) {
+        // @FU-123: der Upsert legte eine fehlende Zeile still neu an – vorher prüfen, ob es sie noch gibt
+        const { data: existing, error: existingError } = await getSupabase().from('tournaments').select('id').eq('id', tournament.id).single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: Netz/Anmeldung bleiben unklar bzw. halten an
+        if (!existing) { throw new TournamentGoneError(tournament.id); }
+      }
+      reachedVersion = tournamentRow.version ?? 1;
       const { error } = await getSupabase()
         .from('tournaments')
-        .upsert({ ...tournamentRow, version: tournamentRow.version ?? 1 }, { onConflict: 'id' });
+        .upsert({ ...tournamentRow, version: reachedVersion }, { onConflict: 'id' });
       saveError = error;
     }
 
@@ -242,49 +452,35 @@ export class SupabaseRepository implements ITournamentRepository {
       throw new RepositoryError('save', saveError.message, saveError);
     }
 
-    // 2. Handle teams - delete removed, upsert existing
-    // First, get existing team IDs
-    const { data: existingTeams } = await getSupabase()
-      .from('teams')
-      .select('id')
-      .eq('tournament_id', tournament.id);
+    // 2. Teams anlegen/aktualisieren -- VOR den Spielen (A-02, V-TEAM-Review I6): ein neues Spiel
+    // darf nur auf ein Team zeigen, das es in der Cloud schon gibt (FK team_a_id/team_b_id).
+    // Zu löschende Teams (lokal entfernt, nicht von einem geschützten Spiel gebraucht) werden erst in
+    // Schritt 4 gelöscht -- hier schon berechnet, weil sie den Upsert blockieren können (s. u.).
 
-    const existingTeamIds = new Set(existingTeams?.map((t) => t.id) ?? []);
-    const newTeamIds = new Set(teamRows.map((t) => t.id));
-
-    // Delete teams that are no longer in the tournament
-    //
-    // R5b/R5-H1 (.superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R5b-brief.md): teams_delete_v2
-    // (DB) allows this only for callers with the 'restructure' permission (owner/co-admin) -- a
-    // caller WITHOUT it (e.g. a collaborator, who never has 'restructure') hits 0 matching rows,
-    // NOT an error. Before this fix the mismatch was silently swallowed: the app believed the
-    // delete had happened, left stale rows in the cloud, and the schedule ended up duplicated
-    // once the subsequent upsert (INSERT ... ON CONFLICT DO UPDATE) succeeded for that same
-    // caller. Counting the actually-deleted rows and throwing on a mismatch converts this into a
-    // loud error that reaches the existing MutationQueue retry/dead-letter path instead.
-    const teamsToDelete = [...existingTeamIds].filter(
-      (id) => !newTeamIds.has(id)
+    // A-02 Fixrunde 1 (Review I3): Ein lokal entferntes Team, dessen Name ein eingehendes (neues)
+    // Team trägt („FC Nord“ raus, neues „FC Nord“ rein), existiert beim Upsert noch -- teams
+    // UNIQUE(tournament_id, name) würde mit 23505 ablehnen und die SAVE_TOURNAMENT-Mutation dauerhaft
+    // blockieren. Deshalb NUR diese Teams vorher umbenennen (Name + „ ~“ + ID-Anfang); gelöscht werden
+    // sie wie bisher in Schritt 4. Zähl-Prüfung wie R5-H1: 0 Zeilen (RLS) scheitert laut.
+    const incomingNames = new Set(teamRows.map((t) => t.name));
+    const deleteIds = new Set(teamsToDelete);
+    const collidingTeams = (existingTeams ?? []).filter(
+      (t) => deleteIds.has(t.id) && typeof t.name === 'string' && incomingNames.has(t.name)
     );
-    if (teamsToDelete.length > 0) {
-      const { data: deletedTeams, error: deleteError } = await getSupabase()
+    for (const team of collidingTeams) {
+      const { data: renamed, error: renameError } = await getSupabase()
         .from('teams')
-        .delete()
-        .in('id', teamsToDelete)
+        .update({ name: `${team.name} ~${team.id.slice(0, 8)}` })
+        .eq('id', team.id)
         .select('id');
 
-      if (deleteError) {
-        console.error('Failed to delete teams:', deleteError);
-        throw new RepositoryError('saveTeams', deleteError.message, deleteError);
-      }
-
-      if ((deletedTeams?.length ?? 0) !== teamsToDelete.length) {
-        const message = `Expected to delete ${teamsToDelete.length} team(s), but only ${deletedTeams?.length ?? 0} were actually deleted (permission denied for the rest).`;
+      if (renameError || (renamed?.length ?? 0) !== 1) {
+        const message = `Failed to rename team ${team.id} before replacing it: ${renameError?.message ?? '0 rows updated (RLS?), expected 1'}`;
         console.error(message);
-        throw new RepositoryError('saveTeams', message);
+        throw new RepositoryError('saveTeams', message, renameError ?? undefined);
       }
     }
 
-    // Upsert teams
     if (teamRows.length > 0) {
       const { error: teamsError } = await getSupabase()
         .from('teams')
@@ -296,20 +492,9 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // 3. Handle matches - delete removed, upsert existing
-    const { data: existingMatches } = await getSupabase()
-      .from('matches')
-      .select('id')
-      .eq('tournament_id', tournament.id);
-
-    const existingMatchIds = new Set(existingMatches?.map((m) => m.id) ?? []);
-    const newMatchIds = new Set(matchRows.map((m) => m.id));
-
-    // Delete matches that are no longer in the tournament (R5b/R5-H1, same reasoning as teams
-    // above -- matches_delete_v2 gates on 'restructure' too).
-    const matchesToDelete = [...existingMatchIds].filter(
-      (id) => !newMatchIds.has(id)
-    );
+    // 3. Handle matches - delete removed (excluding protected, computed above), upsert existing.
+    // R5b/R5-H1, same reasoning as the teams delete (step 4) -- matches_delete_v2 gates on 'restructure' too.
+    // `matchesToDelete` already excludes `blockedMatchIds` (A6, computed before any write above).
     if (matchesToDelete.length > 0) {
       const { data: deletedMatches, error: deleteError } = await getSupabase()
         .from('matches')
@@ -329,17 +514,137 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // Upsert matches
-    if (matchRows.length > 0) {
-      const { error: matchesError } = await getSupabase()
-        .from('matches')
-        .upsert(matchRows, { onConflict: 'id' });
+    // Insert new matches, update existing matches -- SEPARATELY (A2, task-A2-brief.md). Before this fix, a single `.upsert(matchRows)` wrote EVERY column of `mapMatchToSupabase`
+    // for EVERY match, including a helper's live/result columns (score_a/b, match_status, timer,
+    // overtime/penalty, decided_by, ...). If the tournament owner still had an older local
+    // tournament state (e.g. after only renaming a team) and saved the whole tournament while a
+    // helper was running a live match, the owner's stale row overwrote the helper's current
+    // match state in the cloud. A NEW match has no live state yet, so it is still fully inserted;
+    // an EXISTING match is updated with ONLY the schedule columns via
+    // `mapMatchToScheduleUpdate` -- never the live/result ones.
+    const newMatchRows = matchRows.filter(
+      (m) => typeof m.id !== 'string' || !existingMatchIds.has(m.id)
+    );
+    const existingMatchRows = matchRows.filter(
+      (m): m is typeof m & { id: string } => typeof m.id === 'string' && existingMatchIds.has(m.id)
+    );
 
-      if (matchesError) {
-        console.error('Failed to save matches:', matchesError);
-        throw new RepositoryError('saveMatches', matchesError.message, matchesError);
+    if (newMatchRows.length > 0) {
+      // A-36a: origin_a/b (Migration 20261026_001) fehlen in supabase.ts bis zur Regeneration -- Hochcast per Zuweisung.
+      const insertRows: Database['public']['Tables']['matches']['Insert'][] = newMatchRows;
+      const { error: insertError } = await getSupabase()
+        .from('matches')
+        // ON CONFLICT DO NOTHING: an insert must never overwrite an existing row with neutral initial values.
+        .upsert(insertRows, { onConflict: 'id', ignoreDuplicates: true });
+
+      if (insertError) {
+        console.error('Failed to insert matches:', insertError);
+        throw new RepositoryError('saveMatches', insertError.message, insertError);
       }
     }
+
+    if (existingMatchRows.length > 0) {
+      const matchTeamsByIdForUpdate = new Map(
+        (existingMatches ?? []).map((m) => [m.id, { team_a_id: m.team_a_id, team_b_id: m.team_b_id }] as const)
+      );
+      // A2 Fixrunde 1 (I3, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-review.md):
+      // the review's OWN suggested fix -- a single batch `upsert()` with only the schedule
+      // columns -- turned out to be UNSAFE, not just "geht nicht direkt" for NOT-NULL reasons.
+      // `matches_insert_v2` requires the 'restructure' permission, `matches_update_v3` only
+      // 'writeMatchData' (`supabase/migrations/20260924_002_central_role_permissions.sql:325-353`,
+      // `rolePermissions.json`). An `INSERT ... ON CONFLICT (id) DO UPDATE` statement is
+      // evaluated against BOTH the INSERT and the UPDATE RLS policy by Postgres, even when every
+      // row already exists and only the UPDATE branch actually fires. A `collaborator` (Helfer)
+      // has `writeMatchData` and `teams` but NOT `restructure` (`rolePermissions.json`) and can
+      // reach this exact path today (e.g. renaming a team via `TeamsTab`, permission `teams`) --
+      // switching to a batch upsert would silently lock every collaborator out of a full save
+      // that touches ANY existing match row, a regression this task must not introduce.
+      // Verifying this against a real RLS-enforced Postgres needs the local stack, which was busy
+      // with another task during this fix round -- documented instead of merged untested.
+      //
+      // Kept per-row `.update()` (same RLS shape as before A2), but PARALLELIZED via
+      // `Promise.all` instead of a sequential `for` loop -- this removes the actual complaint (N
+      // *sequential* round-trips) without touching the RLS-relevant statement shape at all.
+      // A2 Fixrunde 1 (M3): `.select('id')` so a silently RLS-filtered 0-row UPDATE surfaces as an
+      // error instead of a no-op -- same reasoning as the R5-H1 delete-count check above (a
+      // plain `.update()` without `.select()` reports no Postgres `error` even when RLS's USING
+      // clause matched nothing).
+      const results = await Promise.all(
+        existingMatchRows.map(async (row) => {
+          // A-02 (C2, @TM-027): Cloud-Besetzung mitgeben -- eine lokal offene Seite setzt eine in
+          // der Cloud bereits aufgelöste Seite nicht zurück.
+          const scheduleUpdate = mapMatchToScheduleUpdate(row, matchTeamsByIdForUpdate.get(row.id));
+          const { data, error: updateError } = await getSupabase()
+            .from('matches')
+            .update(scheduleUpdate)
+            .eq('id', row.id)
+            .eq('tournament_id', tournament.id)
+            .select('id');
+          return { id: row.id, error: updateError, updatedCount: data?.length ?? 0 };
+        })
+      );
+
+      const errors = results.filter((r) => r.error !== null || r.updatedCount === 0);
+      if (errors.length > 0) {
+        for (const { id, error } of errors) { console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1'); }
+        const immutable = errors.map((r) => toOriginImmutableError(r.id, r.error)).find((e) => e !== undefined);
+        if (immutable) { throw immutable; } // A-36a: HF002 nicht transient, Muster TeamStillReferencedError
+        throw new RepositoryError(
+          'saveMatches',
+          `Failed to update ${errors.length} match(es): ${errors
+            .map((e) => `${e.id}: ${e.error?.message ?? `0 rows updated (expected 1, got ${e.updatedCount})`}`)
+            .join('; ')}`
+        );
+      }
+    }
+
+    // 4. Teams löschen -- NACH den Spielen (A-02, V-TEAM-Review I6): zeigt ein bleibendes Spiel
+    // noch auf ein Team, das lokal fehlt, scheitert das Löschen laut (FK/Pflicht-Besetzung) statt die
+    // Paarung still zu verlieren; Spiele, die das Team nicht mehr brauchen, sind hier schon weg/umgestellt.
+    // Delete teams that are no longer in the tournament
+    //
+    // R5b/R5-H1 (.superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R5b-brief.md): teams_delete_v2
+    // (DB) allows this only for callers with the 'restructure' permission (owner/co-admin) -- a
+    // caller WITHOUT it (e.g. a collaborator, who never has 'restructure') hits 0 matching rows,
+    // NOT an error. Before this fix the mismatch was silently swallowed: the app believed the
+    // delete had happened, left stale rows in the cloud, and the schedule ended up duplicated
+    // once the subsequent upsert (INSERT ... ON CONFLICT DO UPDATE) succeeded for that same
+    // caller. Counting the actually-deleted rows and throwing on a mismatch converts this into a
+    // loud error that reaches the existing MutationQueue retry/dead-letter path instead.
+    // I1 (task-A6-review.md, Fixrunde 1): a team referenced by a PROTECTED match (computed above,
+    // before any write) is excluded here too -- otherwise the team gets deleted (missing locally,
+    // same as the match), and `matches.team_a_id`/`team_b_id` (ON DELETE SET NULL) silently loses
+    // the pairing on the match that was supposedly "kept".
+    // `teamsToDelete` wird vor Schritt 2 berechnet (A-02 Fixrunde 1, Umbenennen bei Namenskollision).
+    if (teamsToDelete.length > 0) {
+      const { data: deletedTeams, error: deleteError } = await getSupabase()
+        .from('teams')
+        .delete()
+        .in('id', teamsToDelete)
+        .select('id');
+
+      if (deleteError) {
+        console.error('Failed to delete teams:', deleteError);
+        throw new RepositoryError('saveTeams', deleteError.message, deleteError);
+      }
+
+      if ((deletedTeams?.length ?? 0) !== teamsToDelete.length) {
+        const message = `Expected to delete ${teamsToDelete.length} team(s), but only ${deletedTeams?.length ?? 0} were actually deleted (permission denied for the rest).`;
+        console.error(message);
+        throw new RepositoryError('saveTeams', message);
+      }
+    }
+
+    // A6 (I2, Ruling AN): the save succeeded in full -- if any match was kept instead of deleted,
+    // tell whoever is listening (see core/services/matchProtectionNotices.ts for why this can't
+    // be the return value or a thrown error).
+    if (blockedMatchIds.length > 0) {
+      notifyMatchesProtected({
+        tournamentId: tournament.id,
+        matches: blockedMatchIds.map((id) => ({ id, matchNumber: matchNumberById.get(id) ?? null })),
+      });
+    }
+    return reachedVersion;
   }
 
   /**
@@ -348,6 +653,35 @@ export class SupabaseRepository implements ITournamentRepository {
    */
   async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
     return this.updateMatches(tournamentId, [update]);
+  }
+
+  /**
+   * Team-Spalten der Cloud-Zeilen für Updates mit offener Seite (M3). Nur bei Bedarf gelesen; ein
+   * Lesefehler bricht das Update laut ab (kein Schreiben auf Verdacht).
+   */
+  private async readRemoteSides(
+    tournamentId: string,
+    updates: MatchUpdate[]
+  ): Promise<Map<string, { team_a_id: string | null; team_b_id: string | null }>> {
+    const ids = updates
+      .filter((u) => [u.slotA, u.slotB].some((slot) => slot?.kind === 'pending'))
+      .map((u) => u.id);
+    const sides = new Map<string, { team_a_id: string | null; team_b_id: string | null }>();
+    if (ids.length === 0) {
+      return sides;
+    }
+    const { data, error } = await getSupabase()
+      .from('matches')
+      .select('id, team_a_id, team_b_id')
+      .eq('tournament_id', tournamentId)
+      .in('id', ids);
+    if (error) {
+      throw new RepositoryError('updateMatches', `Cloud-Besetzung nicht lesbar: ${error.message}`, error);
+    }
+    for (const row of data ?? []) {
+      sides.set(row.id, { team_a_id: row.team_a_id, team_b_id: row.team_b_id });
+    }
+    return sides;
   }
 
   /**
@@ -362,57 +696,62 @@ export class SupabaseRepository implements ITournamentRepository {
       return;
     }
 
-    // Get team name to ID mapping for this tournament
-    const { data: teams } = await getSupabase()
-      .from('teams')
-      .select('id, name')
-      .eq('tournament_id', tournamentId);
-
-    const teamNameToId = new Map<string, string>();
-    teams?.forEach((t) => teamNameToId.set(t.name, t.id));
-
-    // Update each match
-    // Note: For better performance, we could use a batch update RPC
+    // Update each match (besser: Batch-RPC)
     const errors: Error[] = [];
+    let sent = 0;
+
+    // A-03 (M3, C2): enthält ein Update eine OFFENE Seite, die Cloud-Besetzung vorher lesen – ein veralteter
+    // Stand dieses Geräts setzt eine aufgelöste Seite nie zurück.
+    const remoteSides = await this.readRemoteSides(tournamentId, updates);
 
     for (const update of updates) {
-      const supabaseUpdate = mapMatchUpdateToSupabase(update, teamNameToId);
+      // A-02: Spielseiten aus dem Slot, keine Name→ID-Suche über die Teams-Tabelle.
+      const supabaseUpdate = mapMatchUpdateToSupabase(update, remoteSides.get(update.id));
 
-      const { error } = await getSupabase()
+      // V4/F6: nur updated_at (reine Ergebnis-Änderung) → Zeile nicht touchen (syncDown
+      // meldete sonst dauerhaft "remote is newer"), kein Zähler++, kein tournaments-Bump.
+      if (Object.keys(supabaseUpdate).every((k) => k === 'updated_at')) { continue; }
+      sent++;
+
+      // `.select('id')` meldet still gefilterte 0-Zeilen-Updates als Fehler statt No-op
+      // (Risiko 4, wie save()/delete-count). Bewusst NUR hier: Helfer haben writeMatchData,
+      // aber nicht zwingend tournaments-Schreibrecht — dort würde die Prüfung jeden Edit melden.
+      const { data, error } = await getSupabase()
         .from('matches')
         .update(supabaseUpdate)
         .eq('id', update.id)
-        .eq('tournament_id', tournamentId);
+        .eq('tournament_id', tournamentId)
+        .select('id');
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
-        errors.push(new Error(`Match ${update.id}: ${error.message}`));
+        errors.push(toOriginImmutableError(update.id, error) ?? withPostgrestCode(new Error(`Match ${update.id}: ${error.message}`), error)); // A-36a: HF002
+      } else if (!data || data.length === 0) {
+        console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
+        errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));
       }
     }
 
-    // Update tournament's updated_at timestamp AND version if provided
-    const updatePayload: TournamentUpdate = { updated_at: new Date().toISOString() };
-    if (baseVersion !== undefined) {
-      updatePayload.version = baseVersion + 1;
-    }
+    // Update tournament's updated_at timestamp AND version if provided (nur bei sent > 0, F6)
+    if (sent > 0) {
+      const updatePayload: TournamentUpdate = { updated_at: new Date().toISOString() };
+      if (baseVersion !== undefined) { updatePayload.version = baseVersion + 1; }
 
-    let query = getSupabase()
-      .from('tournaments')
-      .update(updatePayload)
-      .eq('id', tournamentId);
+      let query = getSupabase()
+        .from('tournaments')
+        .update(updatePayload)
+        .eq('id', tournamentId);
 
-    if (baseVersion !== undefined) {
-      query = query.eq('version', baseVersion);
-    }
+      if (baseVersion !== undefined) { query = query.eq('version', baseVersion); }
 
-    // We utilize the version check here too
-    const { data: updatedT, error: tError } = await query.select('id');
+      // We utilize the version check here too
+      const { data: updatedT, error: tError } = await query.select('id');
 
-    if (tError) {
-      errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
-     
-    } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
-      errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
+      if (tError) {
+        errors.push(withPostgrestCode(new Error(`Failed to update tournament timestamp: ${tError.message}`), tError));
+      } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
+        errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
+      }
     }
 
     if (errors.length > 0) {
@@ -425,17 +764,50 @@ export class SupabaseRepository implements ITournamentRepository {
   }
 
   /**
-   * Deletes a tournament and all related data
-   * Note: Teams and matches should cascade delete via foreign keys
+   * Deletes a tournament and all related data.
+   *
+   * A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md): this used to
+   * delete matches and teams via two SEPARATE, direct DELETE statements BEFORE deleting the
+   * tournament row itself ("in case cascade isn't set up"). The baseline schema proves that
+   * assumption wrong -- `matches_tournament_id_fkey` and `teams_tournament_id_fkey` (and every
+   * other tournament_id/match_id foreign key: teams, sponsors, monitors, monitor_heartbeats,
+   * tournament_collaborators, match_events, match_corrections) are all `ON DELETE CASCADE`
+   * (supabase/migrations/00000000000000_baseline_live_schema.sql:1461-1533). Deleting matches
+   * as a standalone statement is not just redundant, it is actively harmful now that
+   * `matches_protect_events_before_delete` (supabase/migrations/20260925_002_...) exists: a
+   * direct `DELETE FROM matches WHERE tournament_id = ...` is NOT a cascade (the tournament row
+   * still exists at that point), so the trigger would reject it for every match that already has
+   * match_events -- blocking a legitimate whole-tournament deletion. Deleting ONLY the tournament
+   * row and letting the foreign keys cascade keeps the trigger's cascade exception
+   * (`pg_trigger_depth() > 1`) true, so a tournament with matches AND events can still be deleted
+   * in one step, exactly as intended.
    */
+  /** GA4 A-13b-C: Entscheidung eintragen/zurücknehmen über `record_standing_decision` (`groupCompletionCloud.ts`), nie über REST. */
+  recordStandingDecision(tournamentId: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> {
+    return callRecordStandingDecision(getSupabase(), tournamentId, request, expectedVersion);
+  }
+
+  /** GA4 A-13b-C: „Gruppe abschließen“ über `complete_group`. */
+  completeGroup(tournamentId: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+    return callCompleteGroup(getSupabase(), tournamentId, request);
+  }
+
+  /** GA4 A-13b-C: Gruppe wieder öffnen über `reopen_group`. */
+  reopenGroup(tournamentId: string, groupId: string, reason: string): Promise<ReopenGroupResult> {
+    return callReopenGroup(getSupabase(), tournamentId, groupId, reason);
+  }
+
+  /** GA4 A-13b-C: Verlauf über `bracket_log_read`. */
+  readBracketLog(tournamentId: string): Promise<BracketLogEntry[] | undefined> {
+    return readBracketLog(getSupabase(), tournamentId);
+  }
+
+  /** Fixrunde TB-6: nur `config.placementsToPlayOut`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
+  updatePlacementsToPlayOut(tournamentId: string, places: number[], expectedVersion: number): Promise<void> {
+    return writePlacementsToPlayOutToCloud(getSupabase(), tournamentId, places, expectedVersion);
+  }
+
   async delete(id: string): Promise<void> {
-    // Delete matches first (in case cascade isn't set up)
-    await getSupabase().from('matches').delete().eq('tournament_id', id);
-
-    // Delete teams
-    await getSupabase().from('teams').delete().eq('tournament_id', id);
-
-    // Delete tournament
     const { error } = await getSupabase().from('tournaments').delete().eq('id', id);
 
     if (error) {
@@ -449,33 +821,16 @@ export class SupabaseRepository implements ITournamentRepository {
   // =============================================================================
 
   /**
-   * Lists all tournaments for the current user
+   * Lists the current user's tournaments for the start page: own ones plus active memberships, each with `myRole`
+   * (CA-5, Befund C-LISTE-NUR-EIGENTUEMER, `accountTournamentList.ts`).
    */
   async listForCurrentUser(): Promise<Tournament[]> {
-    const {
-      data: { user },
-    } = await getSupabase().auth.getUser();
-    if (!user) {
-      return [];
-    }
+    return (await this.listWithMemberships()).tournaments;
+  }
 
-    const { data: tournamentRows, error } = await getSupabase()
-      .from('tournaments')
-      .select('*')
-      .eq('owner_id', user.id)
-      .is('deleted_at', null)
-      .order('updated_at', { ascending: false });
-
-    if (error) {
-      console.error('Failed to list tournaments:', error);
-      throw new RepositoryError('list', error.message, error);
-    }
-
-    // For listing, we don't need full team/match data
-    // Return minimal tournament objects
-    return tournamentRows.map((row) =>
-      mapTournamentFromSupabase(row, [], [])
-    );
+  /** CA-5: Startseiten-Liste mit den Angaben, die `OfflineRepository` zum Zusammenführen braucht. */
+  listWithMemberships(): Promise<CloudTournamentList> {
+    return readAccountTournamentList(getSupabase());
   }
 
   /**
@@ -528,109 +883,37 @@ export class SupabaseRepository implements ITournamentRepository {
     }
   }
 
-  /**
-   * Adds a match to an existing tournament
-   */
-  async addMatch(
-    tournamentId: string,
-    match: {
-      id: string;
-      round: number;
-      field: number;
-      teamA: string;
-      teamB: string;
-      group?: string;
-    }
-  ): Promise<void> {
-    // Get team name to ID mapping
-    const { data: teams } = await getSupabase()
-      .from('teams')
-      .select('id, name')
-      .eq('tournament_id', tournamentId);
-
-    const teamNameToId = new Map<string, string>();
-    teams?.forEach((t) => teamNameToId.set(t.name, t.id));
-
-    const matchRow = mapMatchToSupabase(
-      {
-        ...match,
-        scoreA: undefined,
-        scoreB: undefined,
-        slot: undefined,
-      },
-      tournamentId,
-      teamNameToId
-    );
-
-    const { error } = await getSupabase().from('matches').insert(matchRow);
-
-    if (error) {
-      console.error('Failed to add match:', error);
-      throw new RepositoryError('addMatch', error.message, error);
-    }
-  }
-
   // =============================================================================
   // PUBLIC VIEW METHODS
   // =============================================================================
 
   /**
-   * Fetches a public tournament by share code (for anonymous access)
-   * Returns null if not found or not public
+   * Öffentliches Turnier per Teilen-Code (B-14, E-A2): nur über die Server-Funktion `public_tournament` mit fester
+   * Positivliste -- anon liest die Tabellen nicht mehr direkt. `null` heißt sicher „nicht geteilt oder unbekannt“
+   * (@ZM-068); jede Störung (Netz, Serverfehler, unlesbare Antwort) wirft und ist nie „nicht gefunden“ (@ZM-109).
    */
   async getByShareCode(shareCode: string): Promise<Tournament | null> {
-    // Normalize to uppercase
     const normalizedCode = shareCode.toUpperCase().trim();
-
-    // Validate format
     if (!/^[A-Z0-9]{6}$/.test(normalizedCode)) {
       return null;
     }
-
-    // Fetch tournament by share_code (RLS policy allows this for public tournaments)
-    const { data: tournamentRow, error: tournamentError } = await getSupabase()
-      .from('tournaments')
-      .select('*')
-      .eq('share_code', normalizedCode)
-      .eq('is_public', true)
-      .single();
-
-    if (tournamentError) {
-      if (tournamentError.code === 'PGRST116') {
-        // Not found
-        return null;
-      }
-      console.error('Failed to fetch public tournament:', tournamentError);
+    const reply = await callPublicTournament(getSupabase(), normalizedCode, null);
+    if (reply.kind === 'not-found') {
       return null;
     }
-
-    // Fetch teams
-    const { data: teamRows, error: teamsError } = await getSupabase()
-      .from('teams')
-      .select('*')
-      .eq('tournament_id', tournamentRow.id)
-      .order('sort_order', { ascending: true });
-
-    if (teamsError) {
-      console.error('Failed to fetch teams:', teamsError);
-      return null;
+    if (reply.kind !== 'full') {
+      throw new UnreadableResponseError('getByShareCode', new Error(`Antwort ${reply.kind} ohne since_version`));
     }
+    return reply.tournament;
+  }
 
-    // Fetch matches
-    const { data: matchRows, error: matchesError } = await getSupabase()
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', tournamentRow.id)
-      .order('match_number', { ascending: true });
-
-    if (matchesError) {
-      console.error('Failed to fetch matches:', matchesError);
-      return null;
-    }
-
-    // Convert to frontend types (database may return null for empty arrays)
-     
-    return mapTournamentFromSupabase(tournamentRow, teamRows ?? [], matchRows ?? []);
+  /**
+   * Monitor-Link `/display/:tournamentId/:monitorId` (B-14, Übergang bis B-20/B-21): Server-Funktion
+   * `display_tournament` mit Positivliste, Schiedsrichtern und nur dem eigenen Monitor; mit `sinceVersion` nur Änderungen.
+   * Störungen werfen (`RepositoryError`), eine Antwort außerhalb des Vertrags wirft `UnreadableResponseError`.
+   */
+  getForDisplay(tournamentId: string, monitorId: string, sinceVersion: number | null): Promise<PublicReply> {
+    return callDisplayTournament(getSupabase(), tournamentId, monitorId, sinceVersion);
   }
 
   /**

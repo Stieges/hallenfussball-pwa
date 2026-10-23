@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match } from '../../../../types/tournament';
+import { slotLabel } from '../../../../core/models/slotLabel';
 
 // =============================================================================
 // PROPS
@@ -141,7 +142,7 @@ const styles = {
     gap: cssVars.spacing.sm,
     padding: cssVars.spacing.md,
     background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,
@@ -242,9 +243,9 @@ const styles = {
 // HELPERS
 // =============================================================================
 
-function getTeamName(tournament: Tournament, teamId: string, unknownLabel: string): string {
-  const team = tournament.teams.find(t => t.id === teamId);
-  return team?.name ?? unknownLabel;
+/** Anzeigetext einer Spielseite (@TM-015): Team über die Team-ID, offene Seite über ihre Herkunft. */
+function getSideName(tournament: Tournament, slot: Match['slotA']): string {
+  return slotLabel(slot, { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups });
 }
 
 function getFieldName(tournament: Tournament, fieldNumber: number): string {
@@ -271,8 +272,10 @@ export function DashboardCategory({
   tournamentId,
   tournament,
 }: DashboardCategoryProps) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const navigate = useNavigate();
+  // @OB-069: „Jeder gegen jeden“ ist immer eine Gruppe, auch wenn die Gruppenzahl aus dem Anlegen etwas anderes trägt
+  const groupCount = tournament.groupSystem === 'roundRobin' ? 1 : (tournament.numberOfGroups ?? 1);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -287,11 +290,10 @@ export function DashboardCategory({
       (m) => m.matchStatus === 'scheduled'
     );
 
-    // Calculate total goals
-    const totalGoals = tournament.matches.reduce(
-      (sum, m) => sum + (m.scoreA ?? 0) + (m.scoreB ?? 0),
-      0
-    );
+    // @OB-069: Tore zählen nur aus beendeten Spielen (ein laufendes Spiel steht noch nicht fest)
+    const totalGoals = tournament.matches
+      .filter((m) => m.matchStatus === 'finished')
+      .reduce((sum, m) => sum + (m.scoreA ?? 0) + (m.scoreB ?? 0), 0);
 
     // Find next scheduled match (sort by slot, then by scheduledTime)
     const sortedScheduled = scheduledMatches.sort((a, b) => {
@@ -416,7 +418,7 @@ export function DashboardCategory({
           <div style={styles.statLabel}>{t('dashboard.teams')}</div>
           <div style={styles.statValue}>{tournament.teams.length}</div>
           <div style={styles.statSubvalue}>
-            {t('dashboard.groups', { count: tournament.numberOfGroups ?? 1 })}
+            {t('dashboard.groups', { count: groupCount })}
           </div>
         </div>
 
@@ -424,7 +426,9 @@ export function DashboardCategory({
           <div style={styles.statLabel}>{t('dashboard.goals')}</div>
           <div style={styles.statValue}>{stats.totalGoals}</div>
           <div style={styles.statSubvalue}>
-            {t('dashboard.goalsPerMatch', { avg: stats.completedMatches > 0 ? (stats.totalGoals / stats.completedMatches).toFixed(1) : '0' })}
+            {stats.completedMatches > 0
+              ? t('dashboard.goalsPerMatch', { avg: (stats.totalGoals / stats.completedMatches).toLocaleString(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })
+              : null}
           </div>
         </div>
       </div>
@@ -437,7 +441,7 @@ export function DashboardCategory({
               <div key={match.id} style={styles.runningMatchItem}>
                 <div>
                   <div style={styles.runningMatchTeams}>
-                    {getTeamName(tournament, match.teamA, t('dashboard.unknownTeam'))} vs {getTeamName(tournament, match.teamB, t('dashboard.unknownTeam'))}
+                    {getSideName(tournament, match.slotA)} vs {getSideName(tournament, match.slotB)}
                   </div>
                   <div style={styles.runningMatchField}>
                     {getFieldName(tournament, match.field)}
@@ -465,9 +469,9 @@ export function DashboardCategory({
               )}
             </div>
             <div style={styles.nextMatchTeams}>
-              <span>{getTeamName(tournament, stats.nextMatch.teamA, t('dashboard.unknownTeam'))}</span>
+              <span>{getSideName(tournament, stats.nextMatch.slotA)}</span>
               <span style={styles.nextMatchVs}>vs</span>
-              <span>{getTeamName(tournament, stats.nextMatch.teamB, t('dashboard.unknownTeam'))}</span>
+              <span>{getSideName(tournament, stats.nextMatch.slotB)}</span>
             </div>
             <div style={styles.nextMatchField}>
               {getFieldName(tournament, stats.nextMatch.field)}
@@ -485,13 +489,6 @@ export function DashboardCategory({
           >
             <span style={styles.actionIcon}>📋</span>
             <span>{t('dashboard.openSchedule')}</span>
-          </button>
-          <button
-            style={styles.actionButton}
-            onClick={() => { void navigate(`/tournament/${tournamentId}/admin/settings`); }}
-          >
-            <span style={styles.actionIcon}>⏸️</span>
-            <span>{t('dashboard.pauseSettings')}</span>
           </button>
           <button
             style={styles.actionButton}

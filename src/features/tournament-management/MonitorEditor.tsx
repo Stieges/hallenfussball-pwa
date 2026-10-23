@@ -12,9 +12,9 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-05
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef, CSSProperties } from 'react';
+import { useState, useCallback, useMemo, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens';
+import { cssVars, dialogWidths } from '../../design-tokens';
 import type { Tournament, TournamentGroup } from '../../types/tournament';
 import type {
   MonitorSlide,
@@ -25,9 +25,13 @@ import type {
   MonitorTheme,
 } from '../../types/monitor';
 import { SLIDE_TYPES } from '../../types/monitor';
-import { useMonitors, useSponsors, useFields } from '../../hooks';
+import { useMonitors, useSponsors } from '../../hooks';
+import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { SlideConfigEditor } from './components/SlideConfigEditor';
 import { SlidePreview } from './components/SlidePreview';
+import { MonitorOverscanField } from './components/MonitorOverscanField';
+import { SlideReferenceWarning } from './components/SlideReferenceWarning';
+import { useSlotFields } from './hooks/useSlotFields';
 
 // =============================================================================
 // TYPES
@@ -71,6 +75,21 @@ const THEME_OPTIONS: { value: MonitorTheme; labelKey: string; descriptionKey: st
 
 const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
 
+/**
+ * Positivliste der Folien-Typen im Editor (@OB-002: Funktion erst anbieten, wenn sie wirkt).
+ * Schedule-group und top-scorers haben keinen Renderer im Monitor und bleiben verborgen.
+ */
+const MONITOR_SLIDE_TYPES_OFFERED: readonly SlideType[] = [
+  'live',
+  'standings',
+  'schedule-field',
+  'sponsor',
+  'custom-text',
+  'qr-code',
+  'all-standings',
+  'next-matches',
+];
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -94,7 +113,8 @@ export function MonitorEditor({
   } = useMonitors(tournament, onTournamentUpdate);
 
   const { sponsors } = useSponsors(tournament, onTournamentUpdate);
-  const { fields, getFieldDisplayName } = useFields(tournament, onTournamentUpdate);
+  // Felder wie die Übernahme-Prüfung; slotTargets für den Warnhinweis an Folien (K4, @ME-061)
+  const { fields, getFieldDisplayName, slotTargets } = useSlotFields(tournament, onTournamentUpdate);
 
   // Get monitor
   const monitor = getMonitorById(monitorId);
@@ -105,30 +125,7 @@ export function MonitorEditor({
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
   const [isAddingSlide, setIsAddingSlide] = useState(false);
 
-  // Focus management: Remember what was focused before opening
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    // Store the currently focused element when modal opens
-    previousFocusRef.current = document.activeElement as HTMLElement;
-
-    // Return focus when modal closes (cleanup)
-    return () => {
-      previousFocusRef.current?.focus();
-    };
-  }, []);
-
-  // Handle escape key to close modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  // Esc, Fokusfalle und Fokus-Rückgabe liefert DialogSurface (useFocusTrap).
 
   // Unique ID for aria-labelledby
   const titleId = `monitor-editor-title-${monitorId}`;
@@ -160,10 +157,13 @@ export function MonitorEditor({
     }));
   }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem, t]);
 
-  // Available slide types (Phase 1 only)
+  // Ohne öffentliches Turnier mit Share-Code entfällt die Zuschauer-QR-Folie im Monitor (@ZM-071, F-04)
+  const zuschauerQrMoeglich = tournament.isPublic === true && Boolean(tournament.shareCode);
+
+  // Angebotene Folien-Typen: nur was der Monitor darstellt (@OB-002)
   const availableSlideTypes: SlideTypeOption[] = useMemo(() => {
     return SLIDE_TYPES
-      .filter(s => s.phase === 1)
+      .filter(s => MONITOR_SLIDE_TYPES_OFFERED.includes(s.type))
       .map(s => ({
         type: s.type,
         label: s.label,
@@ -183,7 +183,7 @@ export function MonitorEditor({
     transitionDuration?: number;
     performanceMode?: PerformanceMode;
     theme?: MonitorTheme;
-    overscanPx?: number;
+    overscanPercent?: number;
   }) => {
     if (!monitor) {return;}
 
@@ -204,7 +204,7 @@ export function MonitorEditor({
     setError(null);
 
     try {
-      const newSlide = await addSlide(monitorId, type);
+      const newSlide = await addSlide(monitorId, type, type === 'live' && fields[0] ? { fieldId: fields[0].id } : undefined); // @ME-066
       if (newSlide) {
         setEditingSlideId(newSlide.id);
       }
@@ -214,7 +214,7 @@ export function MonitorEditor({
     } finally {
       setIsLoading(false);
     }
-  }, [monitorId, addSlide, t]);
+  }, [monitorId, addSlide, fields, t]);
 
   const handleUpdateSlide = useCallback(async (
     slideId: string,
@@ -312,23 +312,8 @@ export function MonitorEditor({
   // STYLES
   // ==========================================================================
 
-  const overlayStyle: CSSProperties = {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0, 0, 0, 0.6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: cssVars.spacing.lg,
-  };
-
   const editorStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: '800px',
     maxHeight: '90vh',
-    background: cssVars.colors.background,
-    borderRadius: cssVars.borderRadius.lg,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -420,7 +405,7 @@ export function MonitorEditor({
   const inputStyle: CSSProperties = {
     padding: cssVars.spacing.sm,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
@@ -482,7 +467,7 @@ export function MonitorEditor({
     minHeight: '36px',
     padding: cssVars.spacing.xs,
     background: 'transparent',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.sm,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
@@ -492,11 +477,11 @@ export function MonitorEditor({
     width: '100%',
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `2px dashed ${cssVars.colors.border}`,
+    border: `2px dashed ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
+    color: cssVars.colors.textPrimary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -511,13 +496,13 @@ export function MonitorEditor({
     padding: cssVars.spacing.md,
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
   };
 
   const slideTypeButtonStyle: CSSProperties = {
     padding: cssVars.spacing.md,
     background: cssVars.colors.surfaceLight,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     textAlign: 'center',
@@ -545,14 +530,8 @@ export function MonitorEditor({
 
   if (!monitor) {
     return (
-      <div
-        style={overlayStyle}
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('monitorEditor.notFound')}
-      >
-        <div style={editorStyle} onClick={e => e.stopPropagation()}>
+      <DialogSurface isOpen onClose={onClose} maxWidth={dialogWidths.lg} ariaLabel={t('monitorEditor.notFound')}>
+        <div style={editorStyle}>
           <div style={headerStyle}>
             <h2 style={titleStyle}>{t('monitorEditor.notFound')}</h2>
             <button style={closeButtonStyle} onClick={onClose} aria-label={t('monitorEditor.close')}>✕</button>
@@ -561,19 +540,13 @@ export function MonitorEditor({
             <p>{t('monitorEditor.notFoundMessage', { id: monitorId })}</p>
           </div>
         </div>
-      </div>
+      </DialogSurface>
     );
   }
 
   return (
-    <div
-      style={overlayStyle}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-    >
-      <div style={editorStyle} onClick={e => e.stopPropagation()}>
+    <DialogSurface isOpen onClose={onClose} maxWidth={dialogWidths.lg} labelledBy={titleId}>
+      <div style={editorStyle}>
         {/* Header */}
         <div style={headerStyle}>
           <h2 id={titleId} style={titleStyle}>{monitor.name}</h2>
@@ -663,30 +636,11 @@ export function MonitorEditor({
                 </select>
               </div>
 
-              {/* Overscan */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>
-                  {t('monitorEditor.settings.overscan', { px: monitor.overscanPx ?? 48 })}
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={80}
-                  step={4}
-                  value={monitor.overscanPx ?? 48}
-                  onChange={(e) => void handleUpdateSettings({ overscanPx: Number(e.target.value) })}
-                  style={{ width: '100%', accentColor: cssVars.colors.primary }}
-                />
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: cssVars.fontSizes.xs,
-                  color: cssVars.colors.textMuted,
-                }}>
-                  <span>{t('monitorEditor.settings.noMargin')}</span>
-                  <span>80px</span>
-                </div>
-              </div>
+              {/* Bildrand in Prozent (@ME-067) */}
+              <MonitorOverscanField
+                value={monitor.overscanPercent}
+                onChange={(overscanPercent) => void handleUpdateSettings({ overscanPercent })}
+              />
             </div>
           </div>
 
@@ -745,6 +699,7 @@ export function MonitorEditor({
                         </button>
                       </div>
                     </div>
+                    <SlideReferenceWarning slide={slide} targets={slotTargets} />
 
                     {/* Slide Preview + Config (wenn bearbeitet) */}
                     {isEditing && (
@@ -787,6 +742,11 @@ export function MonitorEditor({
                     >
                       <div style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: '4px' }}>{st.icon}</div>
                       <div style={{ fontSize: cssVars.fontSizes.sm }}>{st.label}</div>
+                      {st.type === 'qr-code' && !zuschauerQrMoeglich && (
+                        <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
+                          {t('monitorEditor.slides.qrHidden')}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -795,7 +755,7 @@ export function MonitorEditor({
           </div>
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }
 
