@@ -159,6 +159,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_005_result_entry_forfeit.sql)
+      echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
+      ;;
     20261117_104_public_payload.sql)
       echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
       ;;
@@ -521,6 +524,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  # A-25b (20261110_005_result_entry_forfeit.sql): Nichtantritt -- forfeit_absent geschuetzt und vom Schreibweg (mit
+  # Feldsteuerung) geschrieben.
+  "matches-guard-engine-columns-forfeit-absent"
+  "append-match-events-writes-forfeit-absent"
   # B-14 (20261117_104_public_payload.sql, E-A2): oeffentliche Daten nur ueber die Positivliste.
   "public-read-functions-definer-execute-anon"
   "public-read-no-anon-select-policies"
