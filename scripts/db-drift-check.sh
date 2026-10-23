@@ -175,6 +175,9 @@ pending_assertions_for() {
     20261113_101_monitor_heartbeat_wake_lock.sql)
       echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
       ;;
+    20261110_010_standing_decision_null_version.sql)
+      # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
+      ;;
     20261110_006_group_completion.sql)
       echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers ci-schema-reader-select-group-completion"
       ;;
