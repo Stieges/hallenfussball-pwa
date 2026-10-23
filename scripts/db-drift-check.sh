@@ -159,6 +159,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_005_result_entry_forfeit.sql)
+      echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
+      ;;
     *)
       return 1
       ;;
@@ -518,6 +521,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  # A-25b (20261110_005_result_entry_forfeit.sql): Nichtantritt -- forfeit_absent geschuetzt und vom Schreibweg (mit
+  # Feldsteuerung) geschrieben.
+  "matches-guard-engine-columns-forfeit-absent"
+  "append-match-events-writes-forfeit-absent"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

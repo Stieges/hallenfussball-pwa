@@ -21,6 +21,7 @@ import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { PublicBottomNav } from '../components/ui/PublicBottomNav';
+import { NowSourceContext } from '../components/schedule/useTickingNow';
 import { usePublicTournament } from '../features/public-view/usePublicTournament';
 import { usePublicView } from '../features/public-view/usePublicView';
 import { usePublicViewFilters } from '../features/public-view/usePublicViewFilters';
@@ -39,6 +40,7 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { PublicStandingsTab } from '../features/public-view/components/PublicStandingsTab';
 import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab';
+import { PublicConnectionHint } from '../features/public-view/components/PublicConnectionHint';
 import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
 import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
 import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
@@ -49,7 +51,7 @@ export interface LiveViewScreenProps {
 
 const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
   const { t } = useTranslation('publicView');
-  const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh } =
+  const { tournament, schedule, standings: currentStandings, loadingState, errorMessage, refresh, connectionHint, fetchedAtMs, nowMs } =
     usePublicTournament(shareCode);
 
   // Theme hook
@@ -75,7 +77,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
 
 
   // Die gemeinsame Ansicht der Zuschauer (A-36c): Status, Seitentexte, Endstand und Sichtbarkeit nur von hier
-  const view = usePublicView(tournament, schedule);
+  const view = usePublicView(tournament, schedule, fetchedAtMs);
 
   // Styles
   const headerStyle: CSSProperties = {
@@ -131,6 +133,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const groups = uniqueGroups(tournament);
 
   return (
+    <NowSourceContext.Provider value={nowMs}>
     <div
       ref={containerRef}
       style={{ ...publicPageContainerStyle, position: 'relative', overflowY: 'auto' }}
@@ -163,6 +166,13 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
             {t('liveView.badge', { code: shareCode })}
           </div>
         </div>
+
+        {/* Ohne Netz bleibt der letzte Stand stehen, mit Hinweis (B-15, @ZM-032) */}
+        {connectionHint !== null && (
+          <div style={{ marginBottom: cssVars.spacing.md }}>
+            <PublicConnectionHint hint={connectionHint} />
+          </div>
+        )}
 
         {/* "Mein Team" Bar - only on schedule tab */}
         {tab === 'schedule' && (
@@ -252,6 +262,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         hiddenTabs={standingsTabAvailable(view.rules) ? [] : ['standings']}
       />
     </div>
+    </NowSourceContext.Provider>
   );
 };
 

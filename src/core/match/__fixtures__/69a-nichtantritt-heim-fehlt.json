@@ -1,0 +1,98 @@
+{
+  "title": "Heim (Team C) tritt nicht an: Helfer darf nicht werten, die Turnierleitung wertet 0:2 – beendet, decided_by forfeit, forfeit_absent A",
+  "szenario": "Nichtantritt wird gewertet (@W2A-022)",
+  "ctx": {
+    "matchId": "match-000069a",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000069a-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "helper",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 2
+        },
+        "forfeit": {
+          "absent": "A"
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000069a-0000-4000-8000-000000000002",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 2
+        },
+        "forfeit": {
+          "absent": "A"
+        }
+      },
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000069a-0000-4000-8000-000000000001",
+        "status": "rejected",
+        "code": "FORBIDDEN_ACTOR"
+      },
+      {
+        "id": "0000069a-0000-4000-8000-000000000002",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 2
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000069a-0000-4000-8000-000000000002",
+      "decidedBy": "forfeit",
+      "finishedAt": 2000
+    },
+    "cacheColumns": {
+      "match_status": "finished",
+      "score_a": 0,
+      "score_b": 2,
+      "decided_by": "forfeit",
+      "forfeit_absent": "A"
+    }
+  }
+}
