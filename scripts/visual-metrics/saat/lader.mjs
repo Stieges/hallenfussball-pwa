@@ -40,7 +40,7 @@ function ladeImBrowser(saat) {
   }
   try {
     for (const [k, v] of Object.entries(saat.localStorage)) {
-      if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(v))
+      if (localStorage.getItem(k) === null) localStorage.setItem(k, JSON.stringify(loese(v)))
     }
   } catch { /* localStorage gesperrt: die Messung meldet dann die leere Ansicht */ }
   for (const { name, version, store, eintraege } of saat.datenbanken) {

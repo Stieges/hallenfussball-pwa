@@ -72,6 +72,8 @@ export interface LiveInfoExpandProps {
   maxEvents?: number;
   /** Callback to navigate to cockpit */
   onNavigateToCockpit?: () => void;
+  /** Spiel beenden (@FU-112, @FU-114): nur für die Turnierleitung -- öffnet die Eingabe; Helfer bekommen den Weg nicht (@FU-113). */
+  onEndAndEnter?: () => void;
   /** Callback to close the expand */
   onClose?: () => void;
 }
@@ -153,6 +155,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   events = [],
   maxEvents = 5,
   onNavigateToCockpit,
+  onEndAndEnter,
   onClose,
 }) => {
   const { t } = useTranslation('tournament');
@@ -329,6 +332,11 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
             onClick={onClose}
           >
             {t('matchExpand.liveInfo.close')}
+          </Button>
+        )}
+        {onEndAndEnter && (
+          <Button variant="secondary" size="md" onClick={onEndAndEnter} data-testid="end-and-enter-btn">
+            {t('matchExpand.liveInfo.endAndEnter')}
           </Button>
         )}
         {onNavigateToCockpit && (

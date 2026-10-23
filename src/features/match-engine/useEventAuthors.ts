@@ -22,6 +22,8 @@ import { useMatchEngineContextOptional } from './useMatchEngineContext';
 export interface EventAuthors {
   /** Name des Urhebers oder `null` (kein Recht, Gast, unbekannt, ohne Namen). */
   nameOf: (eventId: string) => string | null;
+  /** Eigener Name nach derselben Regel (ohne Einladungs-Namen); `null` ohne Anmeldung/Namen (@FU-115: „von …“ nur für andere). */
+  ownName: string | null;
 }
 
 interface Snapshot {
@@ -121,5 +123,5 @@ export function useEventAuthors(tournamentId: string, matchId: string): EventAut
     return names.get(eventId)?.name ?? null;
   }, [isAuthenticated, canSee, ownIds, ownName, names]);
 
-  return { nameOf };
+  return { nameOf, ownName: isAuthenticated ? ownName : null };
 }

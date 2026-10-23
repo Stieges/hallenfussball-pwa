@@ -79,6 +79,8 @@
     },
     "nachEnde": {
       "verlaengerung": "after extra time",
+      "eingetragen": "Ended – entered in the schedule",
+      "eingetragenVon": "Ended – entered in the schedule by {{name}}",
       "strafstoss": "after $t(sport:events.penaltyShootout)"
     },
     "quittung": "Match ended · {{links}}:{{rechts}} saved",

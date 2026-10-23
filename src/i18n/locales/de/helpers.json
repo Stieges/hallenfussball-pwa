@@ -123,6 +123,45 @@
       "oldInvite": {
         "title": "Dieser Einladungsweg gilt nicht mehr – bitte den Helfer-QR-Code der Turnierleitung nutzen"
       }
+    },
+    "approved": {
+      "title": "Du bist zugelassen",
+      "textField": "Die Turnierleitung hat dich für Feld {{field}} zugelassen.",
+      "textNoField": "Die Turnierleitung hat dich zugelassen.",
+      "openField": "Feld {{field}} öffnen",
+      "openTournament": "Turnier öffnen"
+    },
+    "homeHint": {
+      "title": "Zum Startbildschirm hinzufügen",
+      "textField": "So öffnest du Feld {{field}} beim nächsten Mal mit einem Tipp, auch ohne QR-Code.",
+      "textNoField": "So öffnest du das Turnier beim nächsten Mal mit einem Tipp, auch ohne QR-Code.",
+      "dismiss": "Hinweis schließen"
+    },
+    "offlineReady": {
+      "title": "Offline bereit",
+      "textField": "Spielplan und Feld {{field}} sind auf diesem Gerät gespeichert. In der Halle ohne Netz kannst du trotzdem anpfeifen.",
+      "textNoField": "Der Spielplan ist auf diesem Gerät gespeichert. In der Halle ohne Netz kannst du ihn trotzdem öffnen."
+    },
+    "chooser": {
+      "title": "Wohin geht es?",
+      "field": "Feld {{field}}",
+      "noField": "ohne Feld",
+      "fieldAndDate": "{{field}} · {{date}}",
+      "home": "Zur Startseite",
+      "checking": "Dein Zugang wird geprüft …",
+      "own": "Eigenes Turnier · {{date}}"
+    },
+    "guard": {
+      "pending": {
+        "title": "Wartet auf Freigabe durch die Turnierleitung",
+        "text": "Du kannst nichts eintragen, bis die Turnierleitung dich zulässt."
+      }
+    },
+    "assignment": {
+      "card": "Du hilfst beim {{title}} · {{field}} · {{weekday}}"
     }
+  },
+  "mehr": {
+    "meineTurniere": "Meine Turniere auf diesem Handy"
   }
 }

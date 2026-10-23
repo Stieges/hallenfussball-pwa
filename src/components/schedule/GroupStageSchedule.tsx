@@ -83,6 +83,8 @@ interface GroupStageScheduleProps {
   forfeit?: MatchForfeitActions;
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
+  /** Spiel beenden (@FU-112): die Turnierleitung darf ein laufendes Spiel im Spielplan beenden (sonst nicht angeboten, @FU-113). */
+  canEndRunning?: boolean;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -106,6 +108,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onNavigateToCockpit,
   forfeit,
   showTitle = true,
+  canEndRunning = false,
 }) => {
   const { t } = useTranslation('tournament');
   // DnD State
@@ -162,8 +165,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
-      // Check if click is outside any MatchCard
-      const clickedCard = target.closest('[data-match-card]');
+      // Check if click is outside any MatchCard. Der Pfad steht beim Auslösen fest: Hat React den angeklickten Knopf
+      // beim Umschalten schon aus der Seite genommen (z. B. „Spiel beenden und Ergebnis eintragen“), findet
+      // `closest` am abgetrennten Knoten keine Karte mehr (@FU-112).
+      const clickedCard = e.composedPath().some((n) => n instanceof Element && n.hasAttribute('data-match-card'))
+        || target.closest('[data-match-card]');
       if (!clickedCard) {
         setExpandedMatchId(null);
         setExpandType(null);
@@ -426,6 +432,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             badge={matchViewOf(sides, match.id)?.badge}
             events={events}
             onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
+            onEndAndEnter={_editable && canEndRunning && onScoreChange ? () => setExpandType('quick') : undefined}
             onClose={handleExpandClose}
           />
         );
@@ -486,7 +493,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable, forfeit]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable, canEndRunning, onScoreChange, forfeit]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
