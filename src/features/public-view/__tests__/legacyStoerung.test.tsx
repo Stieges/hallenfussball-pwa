@@ -1,37 +1,20 @@
 /**
- * B-15 Review M1: der echte Adapter (a) mit dem echten SupabaseRepository unterscheidet eine Störung von „0 Zeilen“.
- * Nur der Supabase-Client ist ein Stub: Netzfehler liefern wie bei postgrest-js `{ error }`, nie eine Ausnahme.
+ * B-15 Review M1: der echte Adapter (a) mit dem echten SupabaseRepository unterscheidet eine Störung von „nicht gefunden“.
+ * Seit B-14 liest `getByShareCode` über die Server-Funktion `public_tournament`; nur der Supabase-Client ist ein Stub.
+ * Netzfehler liefern wie bei postgrest-js `{ error }`, nie eine Ausnahme.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 
 interface Answer { data: unknown; error: { code?: string; message: string } | null }
-const { state } = vi.hoisted<{ state: { single: Answer; probe: Answer } }>(() => ({
-  state: {
-    single: { data: null, error: { code: 'PGRST116', message: 'no rows' } },
-    probe: { data: [], error: null },
-  },
+const NOT_FOUND: Answer = { data: { state: 'not_found' }, error: null };
+const { state } = vi.hoisted<{ state: { rpc: Answer } }>(() => ({
+  state: { rpc: { data: { state: 'not_found' }, error: null } },
 }));
-vi.mock('../../../lib/supabase', () => {
-  const query = (): Record<string, unknown> => {
-    const q: Record<string, unknown> = {
-      select: (columns: string) => { q.columns = columns; return q; },
-      eq: () => q,
-      order: () => q,
-      single: () => Promise.resolve(state.single),
-      limit: () => Promise.resolve(state.probe),
-    };
-    return q;
-  };
-  // Seit B-14 liest getByShareCode über die Server-Funktion public_tournament: „0 Zeilen“ (PGRST116) entspricht dort
-  // {state:'not_found'}, jeder andere Fehler bleibt ein Fehler der Anfrage (@ZM-068, @ZM-109).
-  const rpc = (): Promise<Answer> => Promise.resolve(
-    state.single.error?.code === 'PGRST116'
-      ? { data: { state: 'not_found' }, error: null }
-      : { data: null, error: state.single.error },
-  );
-  return { isSupabaseConfigured: true, supabase: { from: () => query(), rpc } };
-});
+vi.mock('../../../lib/supabase', () => ({
+  isSupabaseConfigured: true,
+  supabase: { rpc: () => Promise.resolve(state.rpc) },
+}));
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { getByShareCode: () => Promise.resolve(null) }; }),
 }));
@@ -46,26 +29,17 @@ const source = createLegacyPublicSource(undefined, { clock: { nowMs: () => Date.
 
 describe('Adapter (a) mit dem echten Repository', () => {
   it('@ZM-109 Netzfehler beim ersten Laden ist „nicht erreichbar“, nicht „nicht gefunden“', async () => {
-    state.single = { data: null, error: { code: '', message: 'TypeError: Failed to fetch' } };
-    state.probe = { data: null, error: { message: 'TypeError: Failed to fetch' } };
+    state.rpc = { data: null, error: { message: 'TypeError: Failed to fetch' } };
     expect(await source.fetch('ABC123', null)).toEqual({ kind: 'unreachable' });
   });
 
   it('@ZM-109 Serverfehler 5xx beim ersten Laden ist „nicht erreichbar“', async () => {
-    state.single = { data: null, error: { code: '', message: 'upstream request timeout' } };
-    state.probe = { data: null, error: { message: 'upstream request timeout' } };
+    state.rpc = { data: null, error: { message: 'upstream request timeout' } };
     expect(await source.fetch('ABC123', null)).toEqual({ kind: 'unreachable' });
   });
 
-  it('@ZM-109 getByShareCode liefert null, die Zusatzabfrage aber 1 Zeile: nur kurz gestört, also „nicht erreichbar“', async () => {
-    state.single = { data: null, error: { code: '', message: 'Failed to fetch' } };
-    state.probe = { data: [{ id: 'abc' }], error: null };
-    expect(await source.fetch('ABC123', null)).toEqual({ kind: 'unreachable' });
-  });
-
-  it('@ZM-109 Gegenbeispiel: 0 Zeilen (Turnier nicht freigegeben) bleibt „nicht gefunden“', async () => {
-    state.single = { data: null, error: { code: 'PGRST116', message: 'no rows' } };
-    state.probe = { data: [], error: null };
+  it('@ZM-068 Gegenbeispiel: Turnier nicht freigegeben (Server: not_found) bleibt „nicht gefunden“', async () => {
+    state.rpc = NOT_FOUND;
     expect(await source.fetch('ABC123', null)).toEqual({ kind: 'not-found' });
   });
 });
@@ -83,9 +57,8 @@ describe('Adapter (a) mit gespeichertem Stand (@ZM-036, @ZM-109)', () => {
     return storage;
   };
 
-  it('@ZM-036 Teilen zurückgenommen (Zusatzabfrage 0 Zeilen): „nicht gefunden“, der gespeicherte Stand ist gelöscht', async () => {
-    state.single = { data: null, error: { code: 'PGRST116', message: 'no rows' } };
-    state.probe = { data: [], error: null };
+  it('@ZM-036 Teilen zurückgenommen (Server: not_found): „nicht gefunden“, der gespeicherte Stand ist gelöscht', async () => {
+    state.rpc = NOT_FOUND;
     const storage = withStand();
     expect(await source.fetch('ABC123', 'v')).toEqual({ kind: 'not-found' });
     const { result } = renderHook(() => usePublicTournament('ABC123', source, { storage }));
@@ -94,8 +67,7 @@ describe('Adapter (a) mit gespeichertem Stand (@ZM-036, @ZM-109)', () => {
   });
 
   it('@ZM-109 Gegenbeispiel: mit Stand und Netzfehler bleibt der Stand stehen, mit Hinweis statt „nicht gefunden“', async () => {
-    state.single = { data: null, error: { code: '', message: 'Failed to fetch' } };
-    state.probe = { data: null, error: { message: 'Failed to fetch' } };
+    state.rpc = { data: null, error: { message: 'Failed to fetch' } };
     const storage = withStand();
     const { result } = renderHook(() => usePublicTournament('ABC123', source, { storage }));
     await waitFor(() => expect(result.current.tournament).not.toBeNull());
