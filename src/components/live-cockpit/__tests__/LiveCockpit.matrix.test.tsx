@@ -37,11 +37,11 @@ beforeEach(() => { aktuelleView = makePhaseView(); breite(1280); });
 afterEach(() => { breite(1280); });
 
 describe('Hülle – Nur-Lesen (@SL-018, @SL-046)', () => {
-  it('@SL-018 @SL-046 Nur-Lesen: keine Daumenleiste, Zeile „Feld 1 leitet: Tom“ mit „Spielleitung übernehmen“, Zähler sichtbar', async () => {
+  it('@SL-018 @SL-046 Nur-Lesen: keine Daumenleiste, Zeile „Feld 1 wird von Tom gesteuert“ mit „Spielleitung übernehmen“, Zähler sichtbar', async () => {
     const onUebernehmen = vi.fn();
     render(<LiveCockpit {...makeProps(makeLiveMatch(), { kannSteuern: false, steuerung: { leitetName: 'Tom', onUebernehmen } })} />);
     expect(screen.queryByRole('toolbar')).toBeNull();
-    expect(screen.getByText('Feld 1 leitet: Tom')).toBeInTheDocument();
+    expect(screen.getByText('Feld 1 wird von Tom gesteuert')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Spielleitung übernehmen' }));
     expect(onUebernehmen).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('team-fouls-home')).toBeInTheDocument();
@@ -49,9 +49,26 @@ describe('Hülle – Nur-Lesen (@SL-018, @SL-046)', () => {
     expect(screen.queryByTestId('match-pause-button')).toBeNull();
   });
 
-  it('@SL-046 Gegenbeispiel: ohne Übernahme-Handler (B-49 noch offen) steht kein Knopf „Spielleitung übernehmen“', () => {
+  it('@FU-026 @FU-027 B-49: fremd gesteuertes Feld – kein Berechtigungs-Banner, nach dem Verlust „Die Spielleitung hat jetzt Olli“', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch(), { kannSteuern: false, steuerung: { leitetName: 'Olli', verloren: true } })} />);
+    expect(screen.getByText('Die Spielleitung hat jetzt Olli')).toBeInTheDocument();
+    expect(screen.queryByTestId('cockpit-readonly-banner')).toBeNull();
+    expect(screen.queryByTestId('goal-button-home')).toBeNull();
+  });
+
+  it('@FU-026 B-49: Halter ohne Namen – „Feld 1 wird von einem anderen Gerät gesteuert“', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch(), { kannSteuern: false, steuerung: { leitetName: null } })} />);
+    expect(screen.getByText('Feld 1 wird von einem anderen Gerät gesteuert')).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: ohne Recht (keine Steuer-Angabe) steht das Berechtigungs-Banner', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch(), { kannSteuern: false })} />);
+    expect(screen.getByTestId('cockpit-readonly-banner')).toBeInTheDocument();
+  });
+
+  it('@SL-046 Gegenbeispiel: ohne Übernahme-Handler (Helfer – nur die Turnierleitung übernimmt) steht kein Knopf „Spielleitung übernehmen“', () => {
     render(<LiveCockpit {...makeProps(makeLiveMatch(), { kannSteuern: false, steuerung: { leitetName: 'Tom' } })} />);
-    expect(screen.getByText('Feld 1 leitet: Tom')).toBeInTheDocument();
+    expect(screen.getByText('Feld 1 wird von Tom gesteuert')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Spielleitung übernehmen' })).toBeNull();
   });
 

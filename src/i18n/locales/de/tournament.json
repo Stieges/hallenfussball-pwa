@@ -195,7 +195,8 @@
       "restDone_one": "{{count}} weiteres Spiel als Wertung eingetragen.",
       "restDone_other": "{{count}} weitere Spiele als Wertung eingetragen.",
       "restPartial": "{{done}} weitere Spiele gewertet, {{skipped}} nicht (schon angepfiffen oder Fehler)."
-    }
+    },
+    "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen."
   },
   "scheduleActions": {
     "share": "Teilen"

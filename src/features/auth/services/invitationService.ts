@@ -10,18 +10,11 @@
 import type {
   Invitation,
   TournamentRole,
-  TournamentMembership,
-  InvitationValidationResult,
 } from '../types/auth.types';
-// Re-export for consumers
-export type { InvitationValidationResult } from '../types/auth.types';
 import { generateToken } from '../utils/tokenGenerator';
 // getCurrentUser removed - user now passed as parameter
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
-import {
-  mapInvitationAcceptToSupabase,
-  mapInvitationInsertToSupabase,
-} from '../../../core/repositories/supabaseMappers';
+import { mapInvitationInsertToSupabase } from '../../../core/repositories/supabaseMappers';
 
 // ============================================
 // TYPES
@@ -54,15 +47,6 @@ export interface CreateInvitationResult {
   success: boolean;
   invitation?: Invitation;
   inviteLink?: string;
-  error?: string;
-}
-
-/**
- * Ergebnis der Einladungs-Annahme
- */
-export interface AcceptInvitationResult {
-  success: boolean;
-  membership?: TournamentMembership;
   error?: string;
 }
 
@@ -113,24 +97,6 @@ function mapRowToInvitation(row: CollaboratorRow): Invitation {
     useCount: row.use_count ?? 0,
     usedBy: [], // Not stored in DB, could add if needed
     isActive: !row.accepted_at && !row.declined_at && row.invite_code !== null,
-  };
-}
-
-/**
- * Maps DB row to Membership type
- */
-function mapRowToMembership(row: CollaboratorRow): TournamentMembership {
-  return {
-    id: row.id,
-    userId: row.user_id ?? '',
-    tournamentId: row.tournament_id,
-    role: row.role as TournamentRole,
-    teamIds: row.team_ids ?? [],
-    invitedBy: row.invited_by ?? undefined,
-    invitedAt: row.invited_at ?? undefined,
-    acceptedAt: row.accepted_at ?? undefined,
-    createdAt: row.created_at ?? new Date().toISOString(),
-    updatedAt: row.created_at ?? new Date().toISOString(),
   };
 }
 
@@ -209,147 +175,6 @@ export const createInvitation = async (
 };
 
 /**
- * Validiert einen Einladungs-Token
- *
- * @param token - Der zu validierende Token
- * @returns Validierungs-Ergebnis
- */
-export const validateInvitation = async (token: string): Promise<InvitationValidationResult> => {
-  if (!isSupabaseConfigured || !supabase) {
-    return { valid: false, error: 'not_found' };
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('tournament_collaborators')
-      .select('*, tournaments(id, title)')
-      .eq('invite_code', token)
-      .single();
-
-     
-    if (error || !data) {
-      return { valid: false, error: 'not_found' };
-    }
-
-    const row = data as CollaboratorRow & { tournaments?: { id: string; title: string } };
-
-    // Check if already used (has user_id = accepted)
-    if (row.user_id) {
-      return { valid: false, error: 'already_used' };
-    }
-
-    // Check if deactivated
-    if (row.declined_at) {
-      return { valid: false, error: 'deactivated' };
-    }
-
-    // Check expiry
-    if (row.expires_at && new Date(row.expires_at) < new Date()) {
-      return { valid: false, error: 'expired' };
-    }
-
-    // Check max uses
-    const maxUses = row.max_uses ?? 1;
-    const useCount = row.use_count ?? 0;
-    if (maxUses > 0 && useCount >= maxUses) {
-      return { valid: false, error: 'max_uses_reached' };
-    }
-
-    const invitation = mapRowToInvitation(row);
-
-    // Get inviter info
-    let inviter: { id: string; name: string } | undefined;
-    if (row.invited_by) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .eq('id', row.invited_by)
-        .single();
-
-      if (profileData) {
-        inviter = {
-          id: profileData.id,
-          name: profileData.display_name ?? 'Unknown',
-        };
-      }
-    }
-
-    return {
-      valid: true,
-      invitation,
-      tournament: row.tournaments ? { id: row.tournaments.id, name: row.tournaments.title } : undefined,
-      inviter,
-    };
-  } catch (err) {
-    if (import.meta.env.DEV) { console.error('Validate invitation error:', err); }
-    return { valid: false, error: 'not_found' };
-  }
-};
-
-/**
- * Nimmt eine Einladung an
- *
- * @param token - Der Einladungs-Token
- * @param userId - ID des annehmenden Users
- * @returns Ergebnis mit Membership
- */
-export const acceptInvitation = async (token: string, userId: string): Promise<AcceptInvitationResult> => {
-  if (!isSupabaseConfigured || !supabase) {
-    return { success: false, error: 'Cloud-Funktionen sind nicht verfügbar' };
-  }
-
-  const validation = await validateInvitation(token);
-
-  if (!validation.valid || !validation.invitation) {
-    return { success: false, error: validation.error ?? 'Einladung nicht gefunden' };
-  }
-
-  const invitation = validation.invitation;
-
-  try {
-    // Check if user is already a member
-    const { data: existingMember } = await supabase
-      .from('tournament_collaborators')
-      .select('id')
-      .eq('tournament_id', invitation.tournamentId)
-      .eq('user_id', userId)
-      .single();
-
-    if (existingMember) {
-      return { success: false, error: 'already_member' };
-    }
-
-    const now = new Date().toISOString();
-
-    // Update the invitation row: set user_id and accepted_at
-    const { data, error } = await supabase
-      .from('tournament_collaborators')
-      .update(
-        mapInvitationAcceptToSupabase({
-          userId,
-          acceptedAtIso: now,
-          newUseCount: invitation.useCount + 1,
-        })
-      )
-      .eq('id', invitation.id)
-      .select()
-      .single();
-
-    if (error) {
-      if (import.meta.env.DEV) { console.error('Accept invitation error:', error); }
-      return { success: false, error: error.message };
-    }
-
-    const membership = mapRowToMembership(data);
-
-    return { success: true, membership };
-  } catch (err) {
-    if (import.meta.env.DEV) { console.error('Accept invitation error:', err); }
-    return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
-  }
-};
-
-/**
  * Deaktiviert eine Einladung
  *
  * @param invitationId - ID der Einladung
@@ -409,33 +234,3 @@ export const getActiveInvitationsForTournament = async (tournamentId: string): P
     return [];
   }
 };
-
-/**
- * Lädt eine Einladung anhand des Tokens
- *
- * @param token - Der Token
- * @returns Die Einladung oder undefined
- */
-export const getInvitationByToken = async (token: string): Promise<Invitation | undefined> => {
-  if (!isSupabaseConfigured || !supabase) {
-    return undefined;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('tournament_collaborators')
-      .select('*')
-      .eq('invite_code', token)
-      .single();
-
-     
-    if (error || !data) {
-      return undefined;
-    }
-
-    return mapRowToInvitation(data);
-  } catch {
-    return undefined;
-  }
-};
-

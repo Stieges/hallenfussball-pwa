@@ -96,11 +96,17 @@ describe('SupabaseRepository.get / getByShareCode – Besetzung als Slots (@TM-0
     enqueue('tournaments', { data: TOURNAMENT, error: null });
     enqueue('teams', { data: TEAMS, error: null });
     enqueue('matches', { data: MATCHES, error: null });
+    // Nach Name: get() ruft vorher bracket_log_read (A-13b-C) über dieselbe rpc-Attrappe auf.
+    rpc.mockImplementation((name: string) =>
+      Promise.resolve(
+        name === 'public_tournament'
+          ? { data: { state: 'full', version: 1, server_now: 1, tournament: TOURNAMENT, teams: TEAMS, matches: MATCHES }, error: null }
+          : { data: [], error: null },
+      ),
+    );
     const repo = new SupabaseRepository();
 
     const leitung = await repo.get('tournament-1');
-    // erst nach get(): get() liest den Verlauf über bracket_log_read (GA4 A-13b-C) und verbraucht sonst die Antwort
-    rpc.mockResolvedValueOnce({ data: { state: 'full', version: 1, server_now: 1, tournament: TOURNAMENT, teams: TEAMS, matches: MATCHES }, error: null });
     const zuschauer = await repo.getByShareCode(' abc123 ');
 
     expect(zuschauer?.matches.map((m) => [m.slotA, m.slotB])).toEqual(leitung?.matches.map((m) => [m.slotA, m.slotB]));

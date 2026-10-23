@@ -195,7 +195,8 @@
       "restDone_one": "{{count}} more match recorded as a forfeit.",
       "restDone_other": "{{count}} more matches recorded as forfeits.",
       "restPartial": "{{done}} more matches recorded, {{skipped}} not (already started or error)."
-    }
+    },
+    "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped."
   },
   "scheduleActions": {
     "share": "Share"

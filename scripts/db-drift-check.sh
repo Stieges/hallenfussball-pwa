@@ -169,6 +169,12 @@ pending_assertions_for() {
     20261110_005_result_entry_forfeit.sql)
       echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
       ;;
+    20261110_006_group_completion.sql)
+      echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers ci-schema-reader-select-group-completion"
+      ;;
+    20261110_008_helper_join.sql)
+      echo "helper-join-tables-no-client-access helper-join-ci-schema-reader-select helper-join-ci-schema-reader-no-bypassrls helper-join-rpcs-definer-owner-search-path helper-join-rpcs-execute-authenticated-only helper-join-internal-no-client-execute helper-join-definer-writers-tournament-collaborators helper-join-collaborators-delete-no-device-rows helper-join-protect-collaborator-row-a16 helper-join-decide-checks-check-number helper-join-device-role-guard-trigger helper-join-names-without-hidden-chars"
+      ;;
     20261117_104_public_payload.sql)
       echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
       ;;
@@ -177,9 +183,6 @@ pending_assertions_for() {
       ;;
     20261110_010_standing_decision_null_version.sql)
       # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
-      ;;
-    20261110_006_group_completion.sql)
-      echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers ci-schema-reader-select-group-completion"
       ;;
     *)
       return 1
@@ -606,6 +609,28 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Feldsteuerung) geschrieben.
   "matches-guard-engine-columns-forfeit-absent"
   "append-match-events-writes-forfeit-absent"
+  # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
+  # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
+  "group-completion-tables-no-client-writes"
+  "group-completion-rpcs-definer-authenticated-only"
+  "group-completion-helpers-no-client-execute"
+  "complete-group-locks-matches-before-tournament"
+  "group-completion-triggers"
+  # A-13b-S: Leserolle des Drift-Checks liest die vier neuen Tabellen (Daniel 21.10.).
+  "ci-schema-reader-select-group-completion"
+  # A-16 (20261110_008_helper_join.sql): Helfer-Beitritt per QR ohne Konto.
+  "helper-join-tables-no-client-access"
+  "helper-join-ci-schema-reader-select"
+  "helper-join-ci-schema-reader-no-bypassrls"
+  "helper-join-rpcs-definer-owner-search-path"
+  "helper-join-rpcs-execute-authenticated-only"
+  "helper-join-internal-no-client-execute"
+  "helper-join-definer-writers-tournament-collaborators"
+  "helper-join-collaborators-delete-no-device-rows"
+  "helper-join-protect-collaborator-row-a16"
+  "helper-join-decide-checks-check-number"
+  "helper-join-device-role-guard-trigger"
+  "helper-join-names-without-hidden-chars"
   # B-14 (20261117_104_public_payload.sql, E-A2): oeffentliche Daten nur ueber die Positivliste.
   "public-read-functions-definer-execute-anon"
   "public-read-no-anon-select-policies"
@@ -617,15 +642,6 @@ PRIVILEGE_ASSERTION_NAMES=(
   # B-48b (20261113_101_monitor_heartbeat_wake_lock.sql): Lebenszeichen mit Kennung als Text, Pruefung gegen config.monitors.
   "monitor-heartbeat-rpc-checks-config-monitors"
   "monitor-heartbeat-key-per-tournament-wake-lock"
-  # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
-  # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
-  "group-completion-tables-no-client-writes"
-  "group-completion-rpcs-definer-authenticated-only"
-  "group-completion-helpers-no-client-execute"
-  "complete-group-locks-matches-before-tournament"
-  "group-completion-triggers"
-  # A-13b-S: Leserolle des Drift-Checks liest die vier neuen Tabellen (Daniel 21.10.).
-  "ci-schema-reader-select-group-completion"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

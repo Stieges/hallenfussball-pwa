@@ -84,6 +84,7 @@
     "quittung": "Match ended · {{links}}:{{rechts}} saved",
     "keinWeiteresSpiel": "No more matches",
     "uebernahmePruefen": "Match time comes from {{name}}'s device – please check",
+    "uebernahmePruefenOhneName": "Match time comes from the previous device – please check",
     "vor": {
       "spielFeld": "Match {{nummer}} · {{feld}}",
       "mindestpause": "{{teamName}} would have only {{minuten}} instead of {{mindestMinuten}} minutes break",
@@ -541,7 +542,10 @@
     "mehr": "More",
     "ereignisse": "Events",
     "beendet": "Match has ended – corrections via the organisers",
-    "leitet": "{{feld}} is run by {{name}}",
+    "leitet": "{{feld}} is controlled by {{name}}",
+    "leitetOhneName": "{{feld}} is controlled by another device",
+    "uebergegangen": "{{name}} now runs the match",
+    "uebergegangenOhneName": "Another device now runs the match",
     "uebernehmen": "Take over the match",
     "keinZugriff_one": "You no longer have access – 1 entry handed to the organisers",
     "keinZugriff_other": "You no longer have access – {{count}} entries handed to the organisers",
@@ -576,6 +580,8 @@
     "zurueckAria": "Back to the schedule",
     "feldAria": "Choose field, now field {{feld}}",
     "feld": "Field {{feld}}",
+    "feldHalter": "Field {{feld}}: {{name}}",
+    "feldDiesesGeraet": "Field {{feld}}: this device",
     "online": "Connected",
     "offline": "Offline",
     "verbinden": "Connect",
@@ -587,5 +593,19 @@
     "spiel": "Match {{nummer}}",
     "anstoss": "Kick-off {{zeit}}",
     "leibchen": "Bibs needed, the colours are too similar"
+  },
+  "steuer": {
+    "titel": "Take over the match?",
+    "gesteuert": "{{feld}} is currently controlled by {{name}}",
+    "gesteuertOhneName": "{{feld}} is currently controlled by another device",
+    "folge": "This device will then control {{feld}}. The other device can no longer make entries.",
+    "bestaetigen": "Take over the match",
+    "abbrechen": "Cancel",
+    "nurMitNetz": "Taking over needs a connection",
+    "inzwischen": "{{feld}} is now controlled by {{name}}",
+    "inzwischenOhneName": "{{feld}} is now controlled by another device",
+    "keinRecht": "You are not allowed to take over the match",
+    "fehler": "Taking over failed – please try again",
+    "anderesGeraet": "another device"
   }
 }

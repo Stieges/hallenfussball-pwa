@@ -713,10 +713,10 @@ run_schema() {
   check S "Sperrreihenfolge (R-GA4v2-8): reopen_group sperrt Spiele vor dem Abschluss, record_standing_decision nur das Turnier" "ja|ja" \
     "$(q "SELECT CASE WHEN position('ORDER BY m.id FOR UPDATE' IN prosrc) BETWEEN 1 AND position('FROM public.group_completions' IN prosrc) THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.reopen_group(uuid,text,text,boolean)');")|$(q "SELECT CASE WHEN position('public.matches' IN prosrc) = 0 THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.record_standing_decision(uuid,text,jsonb,text,integer)');")"
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  # B-14 (20261117_104) und B-48b (20261113_101) laufen hier erst am Ende (AFTER) -- ihre Zeilen public-read-* und
-  # monitor-heartbeat-* sind an dieser Stelle f (wie in den uebrigen Container-Skripten).
-  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261113_101, 20261117_104)" "" \
-    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(public-read-|monitor-heartbeat-)' || true)"
+  # A-16 (20261110_008), B-48b (20261113_101) und B-14 (20261117_104) laufen hier erst am Ende (AFTER) -- ihre Zeilen
+  # helper-join-*, monitor-heartbeat-* und public-read-* sind an dieser Stelle f (wie in den uebrigen Container-Skripten).
+  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261110_008, 20261113_101, 20261117_104)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(helper-join-|public-read-|monitor-heartbeat-)' || true)"
   check S "Rechte-Assertion: die 6 A-13b-S-Zeilen vorhanden und |t" "$(tr ' ' '\n' <<<"$G1_ASSERTIONS" | sed 's/$/|t/' | sort | paste -sd, -)" \
     "$(grep -E "^($(tr ' ' '|' <<<"$G1_ASSERTIONS"))\|" <<<"$priv" | sort | paste -sd, -)"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
