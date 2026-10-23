@@ -3,11 +3,16 @@
  * Geräts gegen den Turniertag) oder angepfiffen ist, und nicht abgeschlossen ist. Gilt für Helfer-Zugänge (Zugangs-Index) und
  * für eigene Turniere auf dem Gerät. Reine Funktionen ohne React und ohne Netz.
  *
- * - Helfer-Zugang: zugelassen, nicht abgeschlossen und Turniertag heute oder schon vorbei (läuft noch; der Zugang endet erst mit
- *   dem Turnier, @HE-098 Zeile 3). Ein Turniertag in der Zukunft läuft nicht (→ Einsatz-Karte, @HE-109).
+ * - Helfer-Zugang: zugelassen, nicht abgeschlossen und Turniertag heute oder vorbei, aber höchstens bis einschließlich zum Tag
+ *   danach (läuft noch; der Zugang endet erst mit dem Turnier, @HE-098 Zeile 3; ein nie abgeschlossenes Turnier zieht den Start
+ *   nicht dauerhaft an sich, @HE-111). Ein Turniertag in der Zukunft läuft nicht (→ Einsatz-Karte, @HE-109).
  * - Eigenes Turnier: veröffentlicht, nicht im Papierkorb, nicht abgeschlossen oder abgebrochen und (Turniertag heute oder ein
- *   Spiel angepfiffen).
+ *   Spiel angepfiffen, Letzteres ebenfalls nur bis einschließlich zum Tag nach dem Turniertag, @HE-111).
+ * Der Turniertag ist der letzte bekannte Turniertag (bei mehrtägigen Turnieren zählt der letzte).
  */
+/** Tage Nachlauf nach dem letzten Turniertag, in denen ein nie abgeschlossenes Turnier noch als laufend gilt (@HE-111). */
+export const RUNNING_GRACE_DAYS = 1;
+
 import type { HelperAccessEntry } from '../../core/repositories/helperAccessRpc';
 import type { Tournament } from '../../types/tournament';
 import { isTournamentCompleted } from '../../utils/tournamentCategories';
@@ -32,6 +37,12 @@ export function toDateKey(value: string | undefined): string | null {
   return german ? `${german[3]}-${german[2].padStart(2, '0')}-${german[1].padStart(2, '0')}` : null;
 }
 
+/** `YYYY-MM-DD` plus Tage (Ortszeit, ohne Zeitzonen-Sprung). */
+function addDaysKey(dayKey: string, days: number): string {
+  const [year, month, day] = dayKey.split('-').map(Number);
+  return localDateKey(new Date(year, month - 1, day + days));
+}
+
 /** Zugelassen und nicht abgeschlossen: Toms Einsatz (läuft jetzt oder kommt noch). */
 export function isOpenAssignment(entry: HelperAccessEntry): boolean {
   return entry.relation === 'accepted' && !entry.closed;
@@ -43,7 +54,7 @@ export function isRunningHelperEntry(entry: HelperAccessEntry, now: Date): boole
     return false;
   }
   const day = toDateKey(entry.date);
-  return day === null || day <= localDateKey(now);
+  return day === null || (day <= localDateKey(now) && localDateKey(now) <= addDaysKey(day, RUNNING_GRACE_DAYS));
 }
 
 function wasKickedOff(tournament: Tournament): boolean {
@@ -56,5 +67,6 @@ export function isRunningOwnTournament(tournament: Tournament, now: Date): boole
     return false;
   }
   const day = toDateKey(tournament.startDate ?? tournament.date);
-  return day === localDateKey(now) || wasKickedOff(tournament);
+  const today = localDateKey(now);
+  return day === today || (wasKickedOff(tournament) && (day === null || today <= addDaysKey(day, RUNNING_GRACE_DAYS)));
 }

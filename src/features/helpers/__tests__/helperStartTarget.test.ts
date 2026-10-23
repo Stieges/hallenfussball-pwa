@@ -141,6 +141,16 @@ describe('@HE-109 Vor dem Turniertag: Startseite mit Einsatz-Karte', () => {
   });
 });
 
+describe('@HE-111 nie abgeschlossenes Turnier', () => {
+  const freitag = entry({ date: '2026-11-27' });
+  it('Sonntag: Startseite (die Karte zeigt der Gate) statt Feld 2', () => {
+    expect(decideHelperStart({ sessionKind: 'device', entries: [freitag], now: new Date(2026, 10, 29, 9, 0) })).toEqual({ kind: 'stay' });
+  });
+  it('Aber Samstag: Feld 2 öffnet sich noch', () => {
+    expect(decideHelperStart({ sessionKind: 'device', entries: [freitag], now: new Date(2026, 10, 28, 9, 0) })).toEqual({ kind: 'field', tournamentId: 't-cup', field: 2 });
+  });
+});
+
 describe('Pflichtzeile GA5: eigene Turniere bleiben sichtbar', () => {
   it('kein laufender Zugang (entzogen), aber lokale Turniere → Startseite bleibt', () => {
     expect(decide([entry({ relation: 'revoked' })], { hasOwn: true })).toEqual({ kind: 'stay' });

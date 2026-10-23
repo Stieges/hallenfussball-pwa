@@ -39,8 +39,31 @@ describe('Helfer-Zugang läuft', () => {
     expect(isRunningHelperEntry(entry({ relation: 'viewer' }), NOW)).toBe(false);
     expect(isRunningHelperEntry(entry({ relation: 'pending' }), NOW)).toBe(false);
   });
-  it('Turniertag liegt zurück, Turnier nicht abgeschlossen → läuft noch (der Zugang endet mit dem Turnier)', () => {
-    expect(isRunningHelperEntry(entry({ date: '2026-11-20' }), NOW)).toBe(true);
+  it('Turniertag war gestern, Turnier nicht abgeschlossen → läuft noch (der Zugang endet mit dem Turnier, @HE-098 Zeile 3)', () => {
+    expect(isRunningHelperEntry(entry({ date: '2026-11-27' }), NOW)).toBe(true);
+  });
+});
+
+describe('@HE-111 Nachlauf: ein nie abgeschlossenes Turnier gilt ab dem übernächsten Tag nicht mehr als laufend', () => {
+  // Live-Cup am Freitag 27.11.2026, Olli hat ihn nie abgeschlossen
+  const live = entry({ date: '2026-11-27' });
+  it('Samstag, der Tag nach dem Turnier → Feld 2 öffnet sich noch', () => {
+    expect(isRunningHelperEntry(live, new Date(2026, 10, 28, 9, 0))).toBe(true);
+  });
+  it('Sonntag → läuft nicht mehr (Startseite mit Karte)', () => {
+    expect(isRunningHelperEntry(live, new Date(2026, 10, 29, 9, 0))).toBe(false);
+  });
+  it('Gegenbeispiel: am Turniertag selbst, spätabends → läuft', () => {
+    expect(isRunningHelperEntry(live, new Date(2026, 10, 27, 23, 59))).toBe(true);
+  });
+  it('Der Nachlauf endet an der Tagesgrenze, auch am Monatsende', () => {
+    expect(isRunningHelperEntry(entry({ date: '2026-11-30' }), new Date(2026, 11, 1, 8, 0))).toBe(true);
+    expect(isRunningHelperEntry(entry({ date: '2026-11-30' }), new Date(2026, 11, 2, 8, 0))).toBe(false);
+  });
+  it('eigenes, angepfiffenes, nie abgeschlossenes Turnier: gleiche Obergrenze', () => {
+    const angepfiffen = createMockTournament({ status: 'published', startDate: '2026-11-27', date: '2026-11-27', matches: [createMockMatch({ id: 'm1', matchStatus: 'running' })] });
+    expect(isRunningOwnTournament(angepfiffen, new Date(2026, 10, 28, 9, 0))).toBe(true);
+    expect(isRunningOwnTournament(angepfiffen, new Date(2026, 10, 29, 9, 0))).toBe(false);
   });
 });
 
@@ -51,7 +74,7 @@ describe('Eigenes Turnier läuft', () => {
   it('Turniertag heute, nicht abgeschlossen → läuft', () => {
     expect(isRunningOwnTournament(own(), NOW)).toBe(true);
   });
-  it('angepfiffen (ein Spiel läuft), Turniertag liegt zurück → läuft', () => {
+  it('angepfiffen (ein Spiel läuft), Turniertag war gestern → läuft', () => {
     const t = own({ startDate: '2026-11-27', date: '2026-11-27', matches: [createMockMatch({ id: 'm1', matchStatus: 'running' })] });
     expect(isRunningOwnTournament(t, NOW)).toBe(true);
   });
