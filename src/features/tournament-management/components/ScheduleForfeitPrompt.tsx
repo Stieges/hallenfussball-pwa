@@ -8,7 +8,7 @@
  * - revoke: Rückfrage „Wertung zurücknehmen“ (ConfirmDialog).
  * Fläche `DialogSurface`, Fuß `DialogActions`. Abbruch speichert nichts.
  */
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
@@ -32,6 +32,10 @@ function MarkPrompt({ prompt, answerPrompt }: { prompt: Extract<ForfeitPrompt, {
   const { t } = useTranslation('tournament');
   const [absent, setAbsent] = useState<ForfeitAbsent | null>(null);
   const [rest, setRest] = useState(false);
+  const hintRef = useRef<HTMLParagraphElement>(null);
+  const showRestHint = rest && absent !== null && absent !== 'both';
+  // A2: der Hinweis „x weitere Spiele …“ liegt sonst unter dem sichtbaren Bereich – er rollt ins Bild
+  useEffect(() => { if (showRestHint) { hintRef.current?.scrollIntoView({ block: 'nearest' }); } }, [showRestHint]);
   const choices: { value: ForfeitAbsent; label: string }[] = [
     { value: 'A', label: t('schedule.forfeit.teamAbsent', { name: prompt.homeName }) },
     { value: 'B', label: t('schedule.forfeit.teamAbsent', { name: prompt.awayName }) },
@@ -82,8 +86,8 @@ function MarkPrompt({ prompt, answerPrompt }: { prompt: Extract<ForfeitPrompt, {
             <Button variant={rest ? 'primary' : 'secondary'} size="lg" fullWidth onClick={() => setRest(true)} data-testid="forfeit-scope-rest">
               {t('schedule.forfeit.scopeRest')}
             </Button>
-            {rest && (
-              <p role="status" style={textStyle} data-testid="forfeit-rest-hint">
+            {showRestHint && (
+              <p ref={hintRef} role="status" style={textStyle} data-testid="forfeit-rest-hint">
                 {t('schedule.forfeit.scopeRestCount', { count: prompt.rest[absent], name: absent === 'A' ? prompt.homeName : prompt.awayName })}
               </p>
             )}

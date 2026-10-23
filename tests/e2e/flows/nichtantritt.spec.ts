@@ -73,9 +73,7 @@ test.describe('B-12 Nichtantritt (Turnierleitung, lokal)', () => {
   });
 
   // @SL-174 „Dann zeigt der Dialog vor dem Eintragen ‚TSV West gewinnt 2:0 (Wertung)‘“ (SG Mitte, das Heimteam, fehlt).
-  // Befund: der Dialog zeigt „SV Süd gewinnt 0:2 (Wertung)“ – den Stand aus Sicht des Heimteams statt des Siegers.
   test('@SL-174 Vorschau: fehlt das Heimteam, zeigt der Dialog „<Gast> gewinnt 2:0 (Wertung)“', async ({ page }) => {
-    test.fail(true, 'Befund B-12-VORSCHAU: Vorschau zeigt den Stand aus Heimsicht („gewinnt 0:2“) statt „gewinnt 2:0“');
     await dialogAusSpielplan(page);
     await page.getByTestId('forfeit-choice-A').click();
     await expect(page.getByTestId('forfeit-summary')).toHaveText(`${GAST} gewinnt 2:0 (Wertung)`, { timeout: 3000 });
@@ -160,7 +158,12 @@ test.describe('B-12 Nichtantritt – Bildschirmprüfung (T2-UI)', () => {
       // höchster Zustand: Team gewählt, „abgereist“ gewählt (Vorschau, Umfang und Hinweis sichtbar)
       for (const schritt of ['anfang', 'team', 'abgereist'] as const) {
         if (schritt === 'team') { await page.getByTestId('forfeit-choice-A').click(); }
-        if (schritt === 'abgereist') { await page.getByTestId('forfeit-scope-rest').click(); await expect(page.getByTestId('forfeit-rest-hint')).toBeVisible(); }
+        if (schritt === 'abgereist') {
+          await page.getByTestId('forfeit-scope-rest').click();
+          await expect(page.getByTestId('forfeit-rest-hint')).toBeVisible();
+          // A2: der Hinweis rollt ins Bild und ist dann vollständig sichtbar
+          await expect(page.getByTestId('forfeit-rest-hint'), 'Hinweis ganz im Bild').toBeInViewport({ ratio: 1 });
+        }
         // das Blatt fährt am Handy von unten ein: warten, bis es steht
         await expect.poll(() => unterkante(page, 'forfeit-confirm'), { message: `${schritt}: „Wertung eintragen“ im Bild` }).toBeLessThanOrEqual(groesse.height);
         await expect(page.getByTestId('forfeit-confirm')).toBeInViewport({ ratio: 1 });

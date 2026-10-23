@@ -157,14 +157,18 @@ export function useScheduleForfeit({ tournament, showWarning, showSuccess }: Use
         showWarning(t('schedule.forfeit.notScheduled')); // @FU-119: nur aus „geplant“
         return false;
       }
+      const { winner, loser } = effectiveForfeitScore(tournament);
+      const winnerScore = `${winner}:${loser}`;
       const answer = await ask({
         kind: 'mark',
         matchNumber: entry.meta.number,
         homeName: entry.meta.homeTeam.name,
         awayName: entry.meta.awayTeam.name,
+        // @SL-174: die Vorschau nennt den Sieger zuerst mit seinen Toren („<Gast> gewinnt 2:0“). Nur der Text,
+        // gespeichert wird weiter `forfeitResultFor(tournament, absent)`.
         scores: {
-          A: `${forfeitResultFor(tournament, 'A').a}:${forfeitResultFor(tournament, 'A').b}`,
-          B: `${forfeitResultFor(tournament, 'B').a}:${forfeitResultFor(tournament, 'B').b}`,
+          A: winnerScore,
+          B: winnerScore,
           both: '0:0',
         },
         against: effectiveForfeitScore(tournament).winner,

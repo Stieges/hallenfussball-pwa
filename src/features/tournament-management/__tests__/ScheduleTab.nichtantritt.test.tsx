@@ -115,6 +115,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
 
   beforeEach(async () => {
     role.current = 'leitung';
+    Element.prototype.scrollIntoView = vi.fn(); // jsdom kennt es nicht; der Hinweis rollt im Dialog ins Bild (A2)
     vi.stubGlobal('indexedDB', new IDBFactory());
     vi.mocked(localStorage.getItem).mockReturnValue(null);
     stores.raw.clear();
@@ -240,8 +241,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
 
   // @SL-174 „Gegeben Spiel 13 SG Mitte gegen TSV West … Wenn Olli … im Dialog SG Mitte antippt / Dann zeigt der Dialog vor dem
   // Eintragen ‚TSV West gewinnt 2:0 (Wertung)‘“ – fehlt das Heimteam, nennt die Vorschau den Sieger mit seinen Toren zuerst.
-  // Befund (Fixrunde #359): der Dialog zeigt „<Gast> gewinnt 0:2 (Wertung)“, den Stand aus Sicht des Heimteams.
-  it.fails('@SL-174 Vorschau: fehlt das Heimteam, zeigt der Dialog „<Gast> gewinnt 2:0 (Wertung)“', async () => {
+  it('@SL-174 Vorschau: fehlt das Heimteam, zeigt der Dialog „<Gast> gewinnt 2:0 (Wertung)“', async () => {
     const opened = await openFirstCard();
     fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
     await opened.view.findByTestId('forfeit-dialog');
