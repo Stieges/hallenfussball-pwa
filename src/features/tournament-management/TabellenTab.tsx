@@ -26,6 +26,7 @@ import {
   getMergedFinalRanking, hasFinalRound, placementBadgeText, placementRankText,
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
+import { computeFinalStandings } from '../../core/standings/finalStandings';
 import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
 import { useTieRenderers } from './standings/useTieRenderers';
 
@@ -170,12 +171,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     setExpandedRows(newExpanded);
   };
 
+  const roundRobinRanking = useMemo(() => computeFinalStandings(tournament).ranking, [tournament]);
+
   // Berechne finale Platzierung (Legacy-Funktion für Fallback)
   const getGroupBasedRanking = (): Standing[] => {
-    if (!hasGroups) {
-      return currentStandings;
-    }
-
     const groups = Array.from(new Set(tournament.teams.map(t => t.group).filter(Boolean)));
     const ranking: Standing[] = [];
 
@@ -242,12 +241,11 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     return ranking;
   };
 
-  const finalRanking = hasPlayoffs ? mergedRanking : getGroupBasedRanking().map((standing, index) => ({
-    // Paket TB: Jeder gegen jeden übernimmt die Platzziffer der Rechnung (2, 2, 4); mit Gruppen ist `place` der Gruppenplatz
-    rank: hasGroups ? index + 1 : standing.place ?? index + 1,
-    team: standing.team,
-    decidedBy: 'groupStage' as const,
-  }));
+  // A-19a: Jeder gegen jeden zeigt den Endstand (Gruppenabschluss, Platzziffern mit Sprung, ohne entfernte Teams, @ET-022/@ET-058)
+  const finalRanking = hasPlayoffs ? mergedRanking : hasGroups
+    ? getGroupBasedRanking().map((standing, index) => ({ rank: index + 1, team: standing.team, decidedBy: 'groupStage' as const }))
+    : roundRobinRanking.flatMap((row) => tournament.teams.filter((team) => team.id === row.teamId)
+      .map((team) => ({ rank: row.place, team, decidedBy: 'groupStage' as const })));
 
   const standingsMap = useMemo(() => {
     const map = new Map<string, Standing>();

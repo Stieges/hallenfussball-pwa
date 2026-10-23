@@ -23,7 +23,7 @@ import {
 } from './engineHelpers';
 import { fetchMatchRow } from './helpers';
 import { E2E_USERS, engineCupIds, engineEventId, type EngineCupSlug } from './testData';
-import { tippeKarte } from '../helpers/cockpitNeu';
+import { tippeKarte, wartePicker } from '../helpers/cockpitNeu';
 
 function cup(slug: EngineCupSlug) {
   return { ids: engineCupIds(slug), target: engineCupTarget(slug) };
@@ -53,13 +53,39 @@ test.describe('Engine-Einträge über Geräte', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Sidebar-Protokoll nur auf cloud-desktop.');
   });
 
-  test('AMEND übersteht Neuladen: Nummer 7 -> 9 steht nach Neuladen bei Owner und frisch geladenem Helfer, Stand unverändert', async ({ asRole }) => {
+  test('AMEND übersteht Neuladen (davor @SL-172: Hinweis bei 100 im Picker und 7a im Bearbeiten-Dialog): Nummer 7 -> 9 steht nach Neuladen bei Owner und frisch geladenem Helfer, Stand unverändert', async ({ asRole }) => {
     const { ids, target } = cup('AMEND');
     const seededRows = await expectSeededEngineMatch(target);
     const goalId = engineEventId('AMEND', 'goal-home');
     const ownerPage = await asRole('owner');
     await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
     await expectEngineMatchRunningUi(ownerPage);
+
+    // @SL-172 (Bildschirmfotos): Eingaben außerhalb 1–99 zeigen den Hinweis. Beides ohne Schreiben, der Seed bleibt unverbraucht;
+    // die Schritte stehen im AMEND-Test, weil der Cup nur einmal verbraucht werden darf (Tests laufen parallel).
+    // Picker über den Kartenablauf (Esc verwirft die Karte: es entsteht keine Zeile, der Seed bleibt unverbraucht).
+    await ownerPage.getByTestId('card-button-home').click();
+    await ownerPage.getByTestId('card-kind-step').getByRole('button', { name: 'Gelb', exact: true }).click();
+    await wartePicker(ownerPage);
+    const picker = ownerPage.getByTestId('number-picker');
+    // Mit feinem Zeiger (Desktop) ist das Feld schon offen und fokussiert (`tastatur`), sonst erst über „Andere Nr.“.
+    const andere = picker.getByRole('button', { name: 'Andere Nr.' });
+    if (await andere.count() > 0) { await andere.click(); }
+    await picker.getByRole('textbox').fill('100');
+    await expect(ownerPage.getByTestId('number-picker-ungueltig')).toBeVisible();
+    await expect(picker.getByRole('button', { name: 'Übernehmen' })).toBeDisabled();
+    await ownerPage.screenshot({ path: test.info().outputPath('sl172-picker-100.png') });
+    await ownerPage.keyboard.press('Escape');
+    await expect(picker).toBeHidden();
+
+    // Bearbeiten-Dialog: „7a“ -> Hinweis, Speichern gesperrt, die Nummer 7 bleibt (Esc schließt ohne Schreiben).
+    await ownerPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
+    await ownerPage.getByTestId('event-edit-number').fill('7a');
+    await expect(ownerPage.getByTestId('event-edit-number-invalid')).toBeVisible();
+    await expect(ownerPage.getByTestId('event-edit-save')).toBeDisabled();
+    await ownerPage.screenshot({ path: test.info().outputPath('sl172-bearbeiten-7a.png') });
+    await ownerPage.keyboard.press('Escape');
+    await expect(ownerPage.getByTestId('event-edit-number')).toBeHidden();
 
     await ownerPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
     await ownerPage.locator('[data-testid="event-edit-number"]').fill('9');

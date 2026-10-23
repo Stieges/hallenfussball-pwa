@@ -22,6 +22,7 @@ import { FOUL_SYMBOL } from '../../../../utils/eventSymbols';
 import { KartenSymbol } from '../../../ui/atoms/KartenSymbol';
 import type { EditableMatchEvent } from '../../../../types/tournament';
 import type { EventFieldChanges } from '../../../../hooks/engineEventEditingSupport';
+import { parseJerseyNumberInput } from '../../../../core/match/jerseyNumber';
 import { EventNumberField } from './EventNumberField';
 import moduleStyles from '../../LiveCockpit.module.css';
 import sportGlossary from '../../../../i18n/glossary.json';
@@ -135,12 +136,20 @@ export function EventEditDialog({
 
     // G10: nur senden, was sich geaendert hat; keine Aenderung -> nichts senden.
     const original = event.playerNumber ?? event.payload?.playerNumber;
-    const next = playerNumber.trim() ? parseInt(playerNumber, 10) : undefined;
-    if (next !== original && !(next !== undefined && Number.isNaN(next))) {
+    const parsed = parseJerseyNumberInput(playerNumber);
+    if (parsed === 'ungueltig') { // @SL-172: außerhalb 1–99 nie senden; eine unveränderte Altdaten-Nummer lässt der Dialog stehen
+      if (playerNumber === original?.toString()) {onClose();}
+      return;
+    }
+    const next = parsed ?? undefined;
+    if (next !== original) {
       onUpdate(event.id, next === undefined ? { clearPlayerNumber: true } : { playerNumber: next });
     }
     onClose();
   }, [event, playerNumber, onUpdate, onClose]);
+  // Eine unveränderte Altdaten-Nummer außerhalb 1–99 ist kein Tippfehler dieser Eingabe: kein Hinweis, Speichern bleibt möglich.
+  const originalNumber = event ? (event.playerNumber ?? event.payload?.playerNumber) : undefined;
+  const numberInvalid = parseJerseyNumberInput(playerNumber) === 'ungueltig' && playerNumber !== originalNumber?.toString();
 
   const handleDelete = useCallback(() => {
     if (!event) {return;}
@@ -183,7 +192,12 @@ export function EventEditDialog({
         )}
 
         {/* Player Number Input (G5: gesperrt mit Grund, wenn amendLocked) */}
-        <EventNumberField value={playerNumber} onChange={setPlayerNumber} lockedReason={amendLocked} />
+        <EventNumberField
+          value={playerNumber}
+          onChange={setPlayerNumber}
+          lockedReason={amendLocked}
+          invalidHint={numberInvalid ? t('eventEditDialog.numberInvalid') : undefined}
+        />
 
         {/* Actions */}
         {showDeleteConfirm ? (
@@ -217,7 +231,7 @@ export function EventEditDialog({
             <button
               style={{ ...styles.saveButton, ...(amendLocked ? styles.blocked : {}) }}
               onClick={handleSave}
-              disabled={amendLocked !== undefined}
+              disabled={amendLocked !== undefined || numberInvalid}
               data-testid="event-edit-save"
             >
               Speichern

@@ -577,6 +577,10 @@ export function ExportsCategory({
                     let eventTypeLabel = event.type as string;
                     let player = event.payload.playerNumber ? `#${event.payload.playerNumber}` : '';
                     const teamName = getTeamName(event.payload.teamId);
+                    // @SL-022: Ein Eigentor nennt in der CSV-Zeile das schiessende Team (ownGoalTeamId); die Zaehlung bleibt beim beguenstigten Team.
+                    const csvTeamName = event.type === 'GOAL' && event.payload.ownGoal
+                      ? getTeamName(event.payload.ownGoalTeamId)
+                      : teamName;
 
                     // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
                     const cardKind = cardKindOf(event);
@@ -592,7 +596,8 @@ export function ExportsCategory({
 
                     // Formatting details for CSV
                     if (event.type === 'GOAL') {
-                      eventTypeLabel = 'Tor';
+                      // @SL-022 / Befund C-EXPORT-EIGENTOR-ALS-TOR: Eigentor ist eine eigene Art, nicht „Tor“.
+                      eventTypeLabel = event.payload.ownGoal ? 'Eigentor' : 'Tor';
                       details = `Stand: ${event.scoreAfter.home}:${event.scoreAfter.away}`;
                       if (event.payload.assists && event.payload.assists.length > 0) {
                         details += ` (Vorlage: ${event.payload.assists.map(a => '#' + a).join(', ')})`;
@@ -650,7 +655,7 @@ export function ExportsCategory({
                         guestTeamName,
                         Math.floor(event.timestampSeconds / 60) + 1 + "'",
                         eventTypeLabel,
-                        teamName,
+                        csvTeamName,
                         player,
                         details
                       ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'));
