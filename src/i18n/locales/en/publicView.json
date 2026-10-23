@@ -19,6 +19,9 @@
     "badge": "LIVE: {{code}}",
     "footer": "Created with Hallenfußball App"
   },
+  "connection": {
+    "stale": "Last update {{time}} – no connection"
+  },
   "myTeam": {
     "label": "My team:",
     "none": "Not selected",

@@ -32,8 +32,17 @@ const CorrectionPayloadSchema = z.object({
   reason: z.string().min(1),
   basedOn: z.string().nullable(),
 });
-/** A-25a (@FU-094): optional das Strafstoßergebnis eines nur eingetragenen K.-o.-Unentschiedens. */
-const ResultEntryPayloadSchema = z.object({ scores: TeamScoresSchema, shootout: TeamScoresSchema.optional() });
+/**
+ * A-25n (@W2A-022/@W2A-024): Nichtantritt-Wertung -- genau der Schlüssel `absent` (strikt, wie `forfeit_valid` im
+ * SQL-Zwilling: genau ein Schlüssel). Die Stand-Regel je Seite prüft `isPayloadValid`.
+ */
+export const ForfeitSchema = z.object({ absent: z.enum(['A', 'B', 'both']) }).strict();
+/** A-25a (@FU-094): optional das Strafstoßergebnis eines nur eingetragenen K.-o.-Unentschiedens; A-25n: optional `forfeit`. */
+const ResultEntryPayloadSchema = z.object({
+  scores: TeamScoresSchema,
+  shootout: TeamScoresSchema.optional(),
+  forfeit: ForfeitSchema.optional(),
+});
 const SkipPayloadSchema = z.object({ reason: z.string().optional() });
 const ClockAdjustPayloadSchema = z.object({});
 const TiebreakChoicePayloadSchema = z.object({ choice: z.enum(['overtime', 'goldenGoal', 'shootout']) });
@@ -160,8 +169,15 @@ export function isPayloadValid(event: EngineEvent, ctx: MatchContext): boolean {
   }
 
   if (TEAM_SCORES_EVENT_TYPES.has(event.type)) {
-    const { scores, shootout } = parsed.data as { scores: Record<string, number>; shootout?: Record<string, number> };
+    const { scores, shootout, forfeit } = parsed.data as {
+      scores: Record<string, number>;
+      shootout?: Record<string, number>;
+      forfeit?: z.infer<typeof ForfeitSchema>;
+    };
     if (!coversBothTeams(scores, ctx)) {
+      return false;
+    }
+    if (forfeit !== undefined && !forfeitScoresValid(forfeit.absent, scores, ctx, shootout !== undefined)) {
       return false;
     }
     // A-25a (@FU-094): ein Strafstoßergebnis nur bei Gleichstand und nur, wenn es entscheidet.
@@ -174,6 +190,22 @@ export function isPayloadValid(event: EngineEvent, ctx: MatchContext): boolean {
   }
 
   return true;
+}
+
+/**
+ * A-25n (@W2A-022/@W2A-024): Stand einer Wertung -- `both` nur 0:0, `A` fehlt → B gewinnt, `B` fehlt → A gewinnt; nie
+ * zusammen mit einem Strafstoßergebnis (eine Wertung wird nicht im Strafstoßschießen entschieden).
+ */
+function forfeitScoresValid(absent: 'A' | 'B' | 'both', scores: Record<string, number>, ctx: MatchContext, withShootout: boolean): boolean {
+  const a = scores[ctx.teamAId];
+  const b = scores[ctx.teamBId];
+  if (withShootout) {
+    return false;
+  }
+  if (absent === 'both') {
+    return a === 0 && b === 0;
+  }
+  return absent === 'A' ? b > a : a > b;
 }
 
 /** Genau die zwei Team-IDs des Spiels als Schlüssel. */

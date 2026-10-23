@@ -172,7 +172,7 @@ describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
   it('Tor-Ablauf (NumberPicker): Esc ruft onSchliesse genau einmal auf, wählt aber keine Nummer', () => {
     const onSchliesse = vi.fn();
     const onWaehle = vi.fn();
-    const texte = { titel: 'Rückennummer – Tor VfB Ufer', ohneNummer: 'ohne Nummer', andereNummer: 'Andere Nr.', uebernehmen: 'Übernehmen', eingabeLabel: 'Rückennummer' };
+    const texte = { titel: 'Rückennummer – Tor VfB Ufer', ohneNummer: 'ohne Nummer', andereNummer: 'Andere Nr.', uebernehmen: 'Übernehmen', eingabeLabel: 'Rückennummer', ungueltig: 'Rückennummer: ganze Zahl von 1 bis 99.' };
     render(<NumberPicker isOpen texte={texte} ausloeserSeite="links" onWaehle={onWaehle} onSchliesse={onSchliesse} />);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onSchliesse).toHaveBeenCalledTimes(1);

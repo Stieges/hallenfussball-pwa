@@ -42,6 +42,21 @@ export class RepositoryError extends AppError {
 }
 
 /**
+ * GA4 A-13b-C (R-GA4v2-8, Review-Auflage 2): der Server hat eine Verklemmung (`40P01`) oder eine Sperr-Wartezeit (`55P03`)
+ * gemeldet. Nichts wurde geschrieben; ein neuer Versuch ist erlaubt. Die Oberfläche sagt „Bitte erneut versuchen“,
+ * nie stiller Fehlschlag.
+ */
+export class RetryLaterError extends AppError {
+  public readonly sqlState: '40P01' | '55P03';
+
+  constructor(operation: string, sqlState: '40P01' | '55P03') {
+    super(`${operation}: Server gerade belegt (${sqlState}), bitte erneut versuchen`, 'repository', operation, { sqlState });
+    this.name = 'RetryLaterError';
+    this.sqlState = sqlState;
+  }
+}
+
+/**
  * Eine empfangene Antwort lässt sich nicht in die Turnierform abbilden (B-19b, @ME-032). Unterklasse von
  * RepositoryError (Vertrag: fehlerhafte Zeile scheitert als RepositoryError), wird nur beim Abbilden geworfen –
  * nicht bei Netz- oder Abfragefehlern.

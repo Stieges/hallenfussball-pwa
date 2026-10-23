@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useTournaments } from './hooks/useTournaments';
-import { Tournament, TournamentStatus } from './types/tournament';
+import { Tournament } from './types/tournament';
 import { useCopyTournament } from './hooks/useCopyTournament';
 import { cssVars } from './design-tokens';
 import { useToast } from './components/ui/Toast';
@@ -284,7 +284,6 @@ function AppContent() {
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
-  const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
   // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
   // Removed monitorDisplayParams state in favor of monitorDisplayParamsFromUrl
@@ -445,16 +444,12 @@ function AppContent() {
   // Handler for editing a published tournament in the wizard
   const handleEditInWizard = async (tournament: Tournament, targetStep?: number) => {
     try {
-      // "Erweiterte Bearbeitung" is only available for published tournaments
-      // SettingsTab already sets status to 'draft', so we always restore to 'published'
-      originalStatusRef.current = 'published';
-
       // Update lastVisitedStep if targetStep is provided
       const tournamentToEdit = targetStep
         ? { ...tournament, lastVisitedStep: targetStep }
         : tournament;
 
-      // Save the tournament with draft status (already set by SettingsTab)
+      // Der Zustand bleibt, wie er ist (@W5-004, @LZ-001): kein Setzen auf Entwurf und, beim Abbrechen, kein Setzen auf festgelegt
       await saveTournament(tournamentToEdit);
 
       // Enable quick edit mode and navigate to wizard via URL
@@ -563,11 +558,11 @@ function AppContent() {
         {(isWizardPath || screen === 'create') && (
           <TournamentCreationScreen
             onBack={() => {
-              // If in quickEditMode and user cancels, restore original status
-              if (quickEditMode && selectedTournament && originalStatusRef.current) {
+              // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher
+              // (C-ENTWURF-KIPPT-BEIM-ABBRECHEN: ein Entwurf wurde sonst „festgelegt“ gespeichert)
+              if (quickEditMode && selectedTournament) {
                 const restoredTournament: Tournament = {
                   ...selectedTournament,
-                  status: originalStatusRef.current,
                   updatedAt: new Date().toISOString(),
                 };
                 // Fire-and-forget: Don't await, just trigger the save
@@ -577,14 +572,12 @@ function AppContent() {
                     if (err instanceof Error) { captureFeatureError(err, 'tournament', 'restoreStatus'); }
                   });
               }
-              originalStatusRef.current = null; // Reset ref
               setSelectedTournament(null); // Clear selection when going back
               setQuickEditMode(false); // Reset quick edit mode
               void navigate('/');
             }}
             onSave={async (tournament) => {
               await saveTournament(tournament);
-              originalStatusRef.current = null; // Reset ref after successful save
               setSelectedTournament(null); // Clear selection after save
               setQuickEditMode(false); // Reset quick edit mode
               // Small delay to ensure state updates propagate
@@ -631,7 +624,7 @@ function AppContent() {
 
         {/* Live View via Share Code (e.g., /live/ABC123) */}
         {screen === 'live' && liveShareCode && (
-          <LiveViewScreen shareCode={liveShareCode} />
+          <LiveViewScreen key={liveShareCode} shareCode={liveShareCode} />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}
