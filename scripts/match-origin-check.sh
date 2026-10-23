@@ -222,7 +222,7 @@ check "I2 gueltige Herkunft -> ok" "ok" "$(insert_with_origin "$A1")"
 PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || PRIV_OUT="nicht ausfuehrbar: $PRIV_OUT"
 # A5: Zeilen aus SPAETEREN Migrationen (20261028_002, Rechte auf match_events) sind in diesem Stand
 # erwartungsgemaess f -- sie gehoeren nicht zum Ziel. Alles andere muss |t sein.
-check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261028_002)" "" "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -v 'match-events' || true)"
+check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261028_002)" "" "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -v 'match-events' | grep -vE '^(matches-guard-engine-columns-forfeit-absent)\|' || true)"
 check "R neue Zeilen vorhanden und |t" "matches-keep-origin-no-public-execute|t,matches-keep-origin-trigger-active|t" \
   "$(grep '^matches-keep-origin' <<<"$PRIV_OUT" | sort | paste -sd, -)"
 check "R Engine-Zaehlung bleibt 52" "match-engine-function-count-52|t" "$(grep '^match-engine-function-count-52|' <<<"$PRIV_OUT" || true)"

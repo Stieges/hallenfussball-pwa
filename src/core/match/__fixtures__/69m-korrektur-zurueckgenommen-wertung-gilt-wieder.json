@@ -1,0 +1,125 @@
+{
+  "title": "Korrektur über einer Wertung zurückgenommen: die Wertung gilt wieder (both); danach nimmt REOPEN sie zurück (geplant)",
+  "szenario": "Nichtantritt zurücknehmen (@W2A-026)",
+  "ctx": {
+    "matchId": "match-000069m",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000069m-0000-4000-8000-000000000001",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 0,
+          "teamB": 0
+        },
+        "forfeit": {
+          "absent": "both"
+        }
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000069m-0000-4000-8000-000000000002",
+      "type": "CORRECTION",
+      "actor": "leitung",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 1,
+          "teamB": 0
+        },
+        "reason": "Tippfehler",
+        "basedOn": "0000069m-0000-4000-8000-000000000001"
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "0000069m-0000-4000-8000-000000000003",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 3000,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "owner",
+      "targetId": "0000069m-0000-4000-8000-000000000002"
+    },
+    {
+      "id": "0000069m-0000-4000-8000-000000000004",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "at": 4000,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000069m-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000069m-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000069m-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "0000069m-0000-4000-8000-000000000004",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "scheduled",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000069m-0000-4000-8000-000000000004",
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "cacheColumns": {
+      "match_status": "scheduled",
+      "score_a": null,
+      "score_b": null,
+      "decided_by": null,
+      "forfeit_absent": null
+    }
+  }
+}
