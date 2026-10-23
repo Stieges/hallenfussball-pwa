@@ -471,6 +471,18 @@ describe('Team & Helfer', () => {
     });
   });
 
+  describe('Rechte, nur die Liste meldet „kein Recht“ (@HE-062)', () => {
+    it('Gegenbeispiel: liefert nur die Liste 42501 und die Code-Abfrage gelingt, zeigt die Seite weder QR noch Liste, sondern den Hinweis „kein Recht“', async () => {
+      rpc.list.mockResolvedValue({ ok: false, error: { kind: 'notAuthorized' } });
+      render(<TeamHelpersCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
+      expect(await screen.findByTestId('no-right')).toBeInTheDocument();
+      expect(screen.queryByTestId('helper-qr')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('helper-code')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('join-requests')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('request-approve')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Alte Einladungswege (@OB-005, @HE-063)', () => {
     it('die Seite bietet keinen Einladungslink an, nur den QR-Code', async () => {
       await open();

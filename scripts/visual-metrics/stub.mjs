@@ -5,7 +5,7 @@
 // Zustand: { rpc: { <funktion>: { json } | { fehler: { code, message } } | { abbruch: true } },
 //            geraet: { id } (optional: anonyme Gerätesitzung eines Helfer-Handys im Speicher),
 //            einwilligung: true (Datenschutz-Abfrage vorab beantwortet), signup: "ok" | "429" (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
-//            rest: { <tabelle>: [Zeile, …] } (optional: Antworten auf /rest/v1/<tabelle>, sonst leer) }
+//            rest: { <tabelle>: [Zeile, …] } (optional: Antworten auf /rest/v1/<tabelle>, sonst leer),
 //            ausgang: <N> (optional, nur mit konto: N wartende Einträge des Kontos in der lokalen Kopie, z. B. e4 „Erst verbinden“ @HE-092) }
 // Kein Code in src/ (Testumgebung ≠ Produktivcode). Nie gegen Produktion: die Adresse ist fest 127.0.0.1.
 import { existsSync, readFileSync } from 'node:fs'

@@ -14,19 +14,25 @@
 import { test, expect } from './fixtures';
 import { restAsRole } from './restAsRole';
 import { loginAsRole } from './helpers';
-import { E2E_LIVE_CUP_ID } from './testData';
+import { E2E_TEAM_HELFER_CUP_ID } from './testData';
 
 const HAS_008 = process.env.E2E_STACK_HAS_008 === '1';
-// Der Cup ist für alle Specs derselbe und wird nie zurückgesetzt: Namen je Lauf eindeutig, offene Anfragen vor jedem Test abgelehnt.
+// Eigener Cup (nur diese Datei), der nie zurückgesetzt wird: Namen je Lauf UND je Test eindeutig, Tests nacheinander,
+// offene Anfragen vor jedem Test abgelehnt.
 const RUN = String(Date.now() % 100000);
-const nm = (name: string) => `${name}${RUN}`;
-const ADMIN = `/#/tournament/${E2E_LIVE_CUP_ID}/admin/team-helpers`;
+let current = '';
+let counter = 0;
+/** Name je Test eindeutig: Vorname + Lauf + laufende Nummer des Tests + Wiederholung (`serial`: ein Worker, feste Reihenfolge). */
+const nm = (name: string) => `${name}${RUN}${current}`;
+const ADMIN = `/#/tournament/${E2E_TEAM_HELFER_CUP_ID}/admin/team-helpers`;
 
 test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
+  test.describe.configure({ mode: 'serial' });
+  test.beforeEach((_fixtures, testInfo) => { counter += 1; current = `${counter}${testInfo.retry}`; });
   test.fixme(!HAS_008, 'Lokaler Stack ohne Migration _008 (helper_join). Mit E2E_STACK_HAS_008=1 gegen einen Stack mit _008 und mit A-17b/A-17c starten.');
   test.beforeEach(async () => {
     if (!HAS_008) { return; }
-    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_LIVE_CUP_ID });
+    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_TEAM_HELFER_CUP_ID });
     for (const r of (list.json as { requests?: { id: string }[] } | null)?.requests ?? []) {
       await restAsRole('owner', 'POST', 'rpc/decide_join_request', { p_request_id: r.id, p_accept: false });
     }
@@ -81,7 +87,7 @@ test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
     const wrong = olli.locator('[data-testid^="approve-number-"]').filter({ hasNotText: String(shown) }).first();
     await wrong.click();
     await expect(olli.getByTestId('check-number-mismatch')).toContainText('Zahl stimmt nicht – frag nach der Zahl auf dem Handy');
-    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_LIVE_CUP_ID });
+    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_TEAM_HELFER_CUP_ID });
     expect((list.json as { members: { name: string }[] }).members.filter((m) => m.name === nm('Tom'))).toHaveLength(0);
   });
 

@@ -58,6 +58,8 @@ import {
   E2E_DRAFT_CUP_ID,
   E2E_STRANGER_CUP_ID,
   E2E_RELEASE_CUP_ID,
+  E2E_TEAM_HELFER_CUP_ID,
+  E2E_TEAM_HELFER_CUP_TITLE,
   E2E_LIVE_CUP_TITLE,
   E2E_PUBLIC_CUP_TITLE,
   E2E_DRAFT_CUP_TITLE,
@@ -353,6 +355,7 @@ async function main(): Promise<void> {
     E2E_DRAFT_CUP_ID,
     E2E_STRANGER_CUP_ID,
     E2E_RELEASE_CUP_ID,
+    E2E_TEAM_HELFER_CUP_ID,
     E2E_TURNIERTAG_CUP_ID,
     ...Object.values(E2E_NIKOLAUS_CUPS).map((cup) => cup.tournamentId),
     ...E2E_ENGINE_CUPS.map((cup) => engineCupIds(cup.slug).tournamentId),
@@ -776,6 +779,40 @@ async function main(): Promise<void> {
   );
   if (releaseCoadminError) {
     throw new Error(`Mitgliedschaft coadmin (Freigabe-Cup): ${releaseCoadminError.message}`);
+  }
+
+  // Team-Helfer-Cup (A-18a): eigener Cup für helfer-team.cloud.spec.ts, Owner olli, coadmin als Co-Admin.
+  log('Lege Team-Helfer-Cup an…');
+  const teamHelferCup = buildScheduledTournament(
+    service,
+    {
+      id: E2E_TEAM_HELFER_CUP_ID,
+      title: E2E_TEAM_HELFER_CUP_TITLE,
+      ageClass: 'U15',
+      date: new Date().toISOString().split('T')[0],
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Sporthalle Testumgebung' },
+      numberOfTeams: 2,
+      teams: [
+        { id: e2eUuid('team:team-helfer-cup:1'), name: 'Team-Helfer Team 1' },
+        { id: e2eUuid('team:team-helfer-cup:2'), name: 'Team-Helfer Team 2' },
+      ],
+    },
+    /* isPublic */ false
+  );
+  teamHelferCup.publishedAt = nowIso;
+  await ownerRepo.save(teamHelferCup);
+  const { error: teamHelferCoadminError } = await admin.from('tournament_collaborators').insert(
+    mapMembershipInsertToSupabase({
+      tournamentId: E2E_TEAM_HELFER_CUP_ID,
+      userId: userIds.coadmin,
+      role: 'co-admin',
+      teamIds: [],
+    })
+  );
+  if (teamHelferCoadminError) {
+    throw new Error(`Mitgliedschaft coadmin (Team-Helfer-Cup): ${teamHelferCoadminError.message}`);
   }
 
   // ---------------------------------------------------------------------------
