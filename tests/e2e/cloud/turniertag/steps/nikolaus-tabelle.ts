@@ -147,7 +147,7 @@ async function entscheidungNichtOeffentlich(): Promise<void> {
  * N7a: der Abschluss der Gruppe (GA4 A-13c, Mockup A-13c): die App schlägt ihn im Spielplan vor (@TM-044), die Turnierleitung wählt „Gruppe abschließen“.
  * Der Gleichstand von Petting und Otting ist seit N6d entschieden (Strafstoßschießen 4:3): der Dialog fragt nicht erneut (@W2A-058), zeigt Tabelle und
  * Übergabe an den Endstand und schließt mit einer Taste ab (@TM-046, @TM-057). Danach zeigt die Tabelle „abgeschlossen“ und „Gruppe wieder öffnen“ (Test-ID
- * über `groupTestId`: `''` → `all`). Läuft erst nach dem Fenster am 10.11. (`complete_group` am Server) grün.
+ * über `groupTestId`: `''` → `all`). Grün, seit `complete_group` (20261110_006) live ist und N6d die Entscheidung speichert.
  */
 async function gruppeAbschliessen({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
@@ -198,7 +198,7 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N6d', title: 'Tabelle: Strafstoßschießen 4:3 für Otting über „Gleichstand entscheiden“ eintragen, Sieger steht vorn', scenarios: ['@ET-055', '@W2A-067'], owner: 'Paket TB', expectedFail: false, run: strafstossEintragen },
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB (TB-2)', expectedFail: false, run: vorbelegungPrivat },
   { id: 'N6f', title: 'Entscheidung öffentlich ohne Person, Zeit und Grund; Entscheidungsverlauf nicht anonym lesbar', scenarios: ['@W2A-072'], owner: 'Paket TB (TB-3\')', expectedFail: false, run: entscheidungNichtOeffentlich },
-  { id: 'N7a', title: 'Gruppe abschließen: Vorschlag, Dialog ohne erneute Frage nach der Entscheidung, abgeschlossen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-058'], owner: 'A-13c', expectedFail: true, run: gruppeAbschliessen },
+  { id: 'N7a', title: 'Gruppe abschließen: Vorschlag, Dialog ohne erneute Frage nach der Entscheidung, abgeschlossen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-058'], owner: 'A-13c', expectedFail: false, run: gruppeAbschliessen },
   { id: 'N7b', title: 'Turnier abschließen: abgeschlossen und gesperrt', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a / B-33', expectedFail: true, run: turnierAbschliessen },
   { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
 ];
