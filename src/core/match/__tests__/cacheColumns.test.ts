@@ -59,6 +59,8 @@ const COLUMN_KEYS = [
   'live_state',
   'skipped_at',
   'skipped_reason',
+  // A-25n (20261110_005): Nichtantritt-Wertung, wer fehlte.
+  'forfeit_absent',
 ].sort();
 
 const LIVE_STATE_KEYS = [
@@ -128,6 +130,7 @@ describe('cacheColumns', () => {
       live_state: null,
       skipped_at: null,
       skipped_reason: null,
+      forfeit_absent: null,
     });
   });
 
@@ -175,6 +178,7 @@ describe('cacheColumns', () => {
       },
       skipped_at: null,
       skipped_reason: null,
+      forfeit_absent: null,
     });
   });
 
@@ -208,6 +212,7 @@ describe('cacheColumns', () => {
       live_state: null,
       skipped_at: null,
       skipped_reason: null,
+      forfeit_absent: null,
     });
   });
 
@@ -266,6 +271,7 @@ describe('cacheColumns', () => {
       live_state: null,
       skipped_at: null,
       skipped_reason: null,
+      forfeit_absent: null,
     });
   });
 

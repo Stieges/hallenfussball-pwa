@@ -99,6 +99,11 @@ SW_MIGRATION="20261028_007_entered_shootout_needs_draw.sql"
 # append-match-events-checks-field-control f), deshalb nach jedem SW-Einspielen erneut. Pflicht (A-34 Fixrunde 2): fehlt die Datei, bricht das Skript ab.
 A34_MIGRATION="20261110_003_field_control.sql"
 A34_FILE=""
+# A-25b (Nichtantritt, 20261110_005): juengste Fassung von payload_valid/apply_result_entry/decided_by/apply_effect/
+# match_apply_event/cache_columns/append_match_events (Ziel '@reopen' in match_transitions) -- jedes erneute Einspielen
+# einer aelteren Datei stellte die Fassung ohne Wertung wieder her, deshalb ans Ende jeder Kette. Pflicht wie A-34.
+A25B_MIGRATION="20261110_005_result_entry_forfeit.sql"
+A25B_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -144,8 +149,13 @@ while IFS= read -r line; do
     "$UR_MIGRATION") UR_FILE="$line" ;;
     "$SW_MIGRATION") SW_FILE="$line" ;;
     "$A34_MIGRATION") A34_FILE="$line" ;;
+    "$A25B_MIGRATION") A25B_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
+if [[ -z "$A25B_FILE" ]]; then
+  echo "::error::$A25B_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Rechenfunktion ohne Nichtantritt (Fixtures 69a-69n)." >&2
+  exit 1
+fi
 if [[ -z "$A34_FILE" && true ]]; then
   echo "::error::$A34_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still append_match_events ohne Steuer je Feld." >&2
   exit 1
@@ -219,6 +229,7 @@ psql_stdin < "$A10_FILE"
 psql_stdin < "$UR_FILE"
 psql_stdin < "$SW_FILE"
 if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
+psql_stdin < "$A25B_FILE"
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
@@ -286,6 +297,23 @@ s = sys.stdin.read()
 for k in os.environ["MUT_KEYS"].split():
     s = s.replace(os.environ[k], os.environ[k + "_TO"])
 sys.stdout.write(s)' < "$SW_FILE" | psql_stdin
+  # A-34 und A-25b liegen ueber SW: A-34 unveraendert, A-25b (juengstes cache_columns/apply_effect/match_apply_event)
+  # mit denselben Mutationen (Zeile (5) genau einmal), sonst stuende ZA-3s apply_effect ohne '@reopen'-Zielzustand im
+  # Container und die REOPEN-Fixtures waeren aus dem falschen Grund rot. Vorher A-10: 20261001_001 hat den alten
+  # Spalten-Schutz zurueckgebracht, den der Fail-fast von A-25b ablehnt.
+  psql_stdin < "$A10_FILE"
+  if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
+  if [[ " $* " == *" MUT_CACHE "* && "$(grep -cF -- "$MUT_CACHE" "$A25B_FILE" || true)" -ne 1 ]]; then
+    echo "::error::Gegenprobe: Mutationszeile (5) nicht genau einmal in $A25B_MIGRATION" >&2
+    exit 1
+  fi
+  MUT_KEYS="$*" MUT_DETAILS="$MUT_DETAILS" MUT_DETAILS_TO="$MUT_DETAILS_TO" MUT_CACHE="$MUT_CACHE" MUT_CACHE_TO="$MUT_CACHE_TO" \
+  MUT_RULES="$MUT_RULES" MUT_RULES_TO="$MUT_RULES_TO" MUT_ORDER="$MUT_ORDER" MUT_ORDER_TO="$MUT_ORDER_TO" python3 -c '
+import os, sys
+s = sys.stdin.read()
+for k in os.environ["MUT_KEYS"].split():
+    s = s.replace(os.environ[k], os.environ[k + "_TO"])
+sys.stdout.write(s)' < "$A25B_FILE" | psql_stdin
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
@@ -545,7 +573,9 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   psql_stdin < "$ZA3_FILE"
   psql_stdin < "$A25A_FILE"
   psql_stdin < "$SW_FILE"
+  psql_stdin < "$A10_FILE"
   if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
+  psql_stdin < "$A25B_FILE"
   psql_stdin <<'SQL'
 UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
 GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;
