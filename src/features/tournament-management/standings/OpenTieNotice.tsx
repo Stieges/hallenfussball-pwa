@@ -10,7 +10,8 @@ import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import type { OpenTieBlock } from '../../../core/standings/tieViews';
-import { listText, placeText } from './tieFormat';
+import type { DecisionAuthor } from '../../../core/standings/decisionLog';
+import { listText, placeText, timeText } from './tieFormat';
 import { useTiePlaceTexts } from './useTiePlaceTexts';
 
 export interface OpenTieNoticeProps {
@@ -18,6 +19,8 @@ export interface OpenTieNoticeProps {
   names: string[];
   canDecide: boolean;
   online: boolean;
+  /** Wer wann die Entscheidung zurückgenommen hat (nur Turnierleitung, aus dem Verlauf, @W2A-070). */
+  withdrawn?: DecisionAuthor;
   onEntry: () => void;
 }
 
@@ -33,7 +36,7 @@ const lockedButton: CSSProperties = {
   border: `${cssVars.borderWidth.thin} dashed ${cssVars.colors.borderControl}`,
 };
 
-export const OpenTieNotice = ({ block, names, canDecide, online, onEntry }: OpenTieNoticeProps) => {
+export const OpenTieNotice = ({ block, names, canDecide, online, withdrawn, onEntry }: OpenTieNoticeProps) => {
   const { t, i18n } = useTranslation('tournament');
   const placeTexts = useTiePlaceTexts();
   const choice = block.mayShare;
@@ -67,6 +70,13 @@ export const OpenTieNotice = ({ block, names, canDecide, online, onEntry }: Open
     >
       <span style={title}>{choice ? t('standingsTie.notice.openTitle') : t('standingsTie.notice.needTitle')}</span>
       <p style={line}>{t('standingsTie.notice.teamsEqual', { names: listText(names, i18n.language), places })}</p>
+      {canDecide && withdrawn !== undefined ? (
+        <p style={line} data-testid="tie-withdrawn-by">
+          {withdrawn.name !== undefined
+            ? t('standingsTie.notice.withdrawnBy', { name: withdrawn.name, time: timeText(withdrawn.at, i18n.language) })
+            : t('standingsTie.notice.withdrawnByUnknown', { time: timeText(withdrawn.at, i18n.language) })}
+        </p>
+      ) : null}
       {reason?.kind === 'setting' ? <p style={line}>{t('standingsTie.notice.needSetting', { place: reason.place })}</p> : null}
       {reason?.kind === 'followUp' ? <p style={line}>{t('standingsTie.notice.needFollowUp', { place: reason.place })}</p> : null}
       {choice && canDecide ? <p style={line}>{t('standingsTie.notice.openChoice')}</p> : null}

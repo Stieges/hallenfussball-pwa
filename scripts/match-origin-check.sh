@@ -222,7 +222,7 @@ check "I2 gueltige Herkunft -> ok" "ok" "$(insert_with_origin "$A1")"
 PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || PRIV_OUT="nicht ausfuehrbar: $PRIV_OUT"
 # A5: Zeilen aus SPAETEREN Migrationen (20261028_002, Rechte auf match_events) sind in diesem Stand
 # erwartungsgemaess f -- sie gehoeren nicht zum Ziel. Alles andere muss |t sein.
-check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261028_002)" "" "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -v 'match-events' | grep -vE '^(matches-guard-engine-columns-forfeit-absent)\|' || true)"
+check "R Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migration 20261028_002)" "" "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -v 'match-events' | grep -vE '^(matches-guard-engine-columns-forfeit-absent|group-completion-[a-z-]+|complete-group-locks-matches-before-tournament|ci-schema-reader-select-group-completion)\|' || true)"
 check "R neue Zeilen vorhanden und |t" "matches-keep-origin-no-public-execute|t,matches-keep-origin-trigger-active|t" \
   "$(grep '^matches-keep-origin' <<<"$PRIV_OUT" | sort | paste -sd, -)"
 check "R Engine-Zaehlung bleibt 52" "match-engine-function-count-52|t" "$(grep '^match-engine-function-count-52|' <<<"$PRIV_OUT" || true)"
@@ -251,7 +251,22 @@ fi
 
 # A5: spaetere Migrationen auf dem Zustand NACH dem Rueckbau einspielen -- nur als Lauffaehigkeits-
 # Nachweis (psql_stdin bricht bei einem Fehler ab). Die Messungen oben sind davon unabhaengig.
+# Ausnahme: Migrationen, die 20261026_001 per Fail-fast VORAUSSETZEN (fest gelistet, heute nur 20261110_006), koennen nach dem
+# Rueckbau nicht laufen. Sie werden nicht eingespielt, sondern sichtbar gemeldet; geprueft wird, dass ihr Fail-fast
+# greift (Abbruch mit „Voraussetzungen fehlen“) und das Schema unveraendert laesst.
+A5_NEEDS_TARGET=" 20261110_006_group_completion.sql "
 for f in ${AFTER[@]+"${AFTER[@]}"}; do
+  if [[ "$A5_NEEDS_TARGET" == *" $(basename "$f") "* ]]; then
+    echo "UEBERSPRUNGEN A5 $(basename "$f"): setzt $TARGET_NAME voraus (Fail-fast), nach dem Rueckbau nicht einspielbar" >&2
+    a5_dump_vorher="$(schema_dump)"
+    set +e
+    a5_out="$(psql_stdin < "$f" 2>&1)"
+    a5_exit=$?
+    set -e
+    check "A5 $(basename "$f") nach dem Rueckbau: Fail-fast greift, Schema unveraendert" "abbruch|Voraussetzungen fehlen|identisch" \
+      "$([[ "$a5_exit" -ne 0 ]] && echo abbruch || echo "exit $a5_exit")|$(grep -o 'Voraussetzungen fehlen' <<<"$a5_out" | head -1)|$([[ "$(schema_dump)" == "$a5_dump_vorher" ]] && echo identisch || echo verschieden)"
+    continue
+  fi
   psql_stdin < "$f"
   echo "OK    A5 spaetere Migration laeuft nach dem Rueckbau: $(basename "$f")" >&2
 done

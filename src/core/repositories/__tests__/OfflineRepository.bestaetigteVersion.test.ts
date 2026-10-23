@@ -12,7 +12,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Tournament } from '../../models/types';
-import type { StandingDecision } from '../../../types/tournament';
+import type { RecordDecisionRequest, RecordDecisionResult } from '../groupCompletionCloud';
 import { OptimisticLockError } from '../../errors';
 
 const session = vi.hoisted(() => ({ userId: null as string | null }));
@@ -206,18 +206,20 @@ describe('Befund C-VERSION-MEHRDEUTIG: geprüft wird gegen die zuletzt vom Serve
       session.userId = OLLI;
       stores.raw.set('tournaments', [{ ...liveCup(7), ownerId: OLLI }]);
       const cloud = createFakeCloud({ tournament: liveCup(7), revisions: revisions() });
-      const decisions: StandingDecision[] = [];
       Object.assign(cloud.fake, {
-        updateStandingDecisions: vi.fn(async (_id: string, standingDecisions: StandingDecision[], expectedVersion: number) => {
+        recordStandingDecision: vi.fn(async (_id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> => {
           const current = (await cloud.fake.get('T'))!;
-          if ((current.version ?? 0) !== expectedVersion) { throw new OptimisticLockError('T', current.version ?? 0, expectedVersion); }
+          if ((current.version ?? 0) !== expectedVersion) { return { status: 'rejected', code: 'STALE', version: current.version ?? 0 }; }
+          const standingDecisions = request.action === 'decide' ? [...(current.standingDecisions ?? []), request.decision] : [];
           cloud.setState({ tournament: { ...current, standingDecisions, version: expectedVersion + 1 }, revisions: revisions() });
+          return { status: 'ok', alreadyApplied: false, version: expectedVersion + 1 };
         }),
+        readBracketLog: vi.fn(async () => undefined),
       });
       const olli = device(OLLI, cloud);
       await olli.get('T', { fresh: true });
 
-      await olli.updateStandingDecisions('T', decisions, 7);
+      await olli.recordStandingDecision('T', { action: 'decide', decision: { id: 'e-1', groupId: '', teamIds: ['a', 'b'], order: ['a', 'b'], kind: 'shared', basis: 'x' } }, 7);
       const ansicht = stored();
       await olli.save({ ...ansicht, title: 'Nach der Entscheidung' });
       await flush();

@@ -158,6 +158,7 @@ A10_FILE=""
 UR_FILE=""
 SW_FILE=""
 AFTER_TARGET=0
+A13BS_APPLIED=0
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -179,10 +180,16 @@ while IFS= read -r line; do
     A25B_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
   fi
+  # A-13b-S: 20261110_006 setzt 20261110_005 voraus (Fail-fast) -- ohne SW (und damit ohne _005) faellt sie ebenfalls weg.
+  if [[ "$(basename "$line")" == "20261110_006_group_completion.sql" && "$MODE" == "without-sw" ]]; then
+    continue
+  fi
   if [[ "$(basename "$line")" == "$SW_MIGRATION" ]]; then
     SW_FILE="$line"
     [[ "$MODE" == "without-sw" ]] && continue
   fi
+  # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
+  [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
   NEWER_MIGRATIONS+=("$line")
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ "$MODE" != "without-migration" && ( -z "$TARGET_FILE" || -z "$AMEND_FILE" || -z "$ZA3_FILE" || -z "$A25A_FILE" || -z "$A10_FILE" || -z "$UR_FILE" || -z "$SW_FILE" ) ]]; then
@@ -1251,13 +1258,18 @@ psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
 # origin_a/origin_b an (keine der geschuetzten Engine-Spalten) -- der Guard bleibt der erste Trigger.
 # A-30a (20261028_004_match_kit_colors.sql): matches_guard_kit_columns prueft nur kit_color_a/kit_color_b/bib_side
 # und aendert keine Engine-Spalte -- die Reihenfolge bleibt fuer das Ergebnis unerheblich.
+# A-13b-S (20261110_006): matches_guard_ga4_columns (nur reassigned_at, keine Engine-Spalte) kommt dazu, wenn dieser Lauf
+# _006 einspielt (A13BS_APPLIED, oben aus der Migrationsliste -- dieses Skript spielt jede Datei des Repos ein, die
+# Ausnahmeliste des Drift-Checks gilt hier nicht). Auf main vor dem Merge von G1b fehlt die Datei und damit der Trigger.
+A13BS_TRIGGER=""
+[[ "$A13BS_APPLIED" -eq 1 ]] && A13BS_TRIGGER="matches_guard_ga4_columns,"
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
 check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at"' "$(jq -Rn --arg v "$out" '$v')"
+  ". == \"matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
 # A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
 check Spaltenschutz "BEFORE-INSERT-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  '. == "matches_guard_engine_columns,matches_guard_kit_columns,matches_sync_owner"' "$(jq -Rn --arg v "$out" '$v')"
+  ". == \"matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_sync_owner\"" "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
 echo "Absetzen (skipped_at/skipped_reason)..." >&2

@@ -59,7 +59,7 @@ describe('Auflagen TB-A', () => {
 
     for (const gruppe of ['', 'A']) {
       expect(await repo.service().decide(repo.tournament.id, shootout('W', 'O', 5, 4, gruppe)))
-        .toEqual({ ok: false, code: 'ALREADY_DECIDED' }); // „von wem“: Verlaufsprotokoll (GA4 A-13b), C-ENTSCHEIDUNG-PERSON-OEFFENTLICH
+        .toEqual({ ok: false, code: 'ALREADY_DECIDED', by: 'Olli' }); // „von wem“ aus dem Verlauf (GA4 A-13b-C)
     }
     expect(repo.writes).toBe(1);
   });
