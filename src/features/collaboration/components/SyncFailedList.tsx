@@ -125,12 +125,16 @@ const styles = {
     } as CSSProperties,
 };
 
-/** @FU-108/@FU-109: ein neuer Versuch schickte denselben Stand und scheiterte erneut – nur Verwerfen hilft. */
-const retryUseless = (item: FailedMutationItem): boolean => item.conflict === true || item.discardedCopy === true;
+/** @FU-108/@FU-109/@FU-126: ein neuer Versuch schickte denselben Stand und scheiterte erneut – nur Verwerfen hilft. */
+const retryUseless = (item: FailedMutationItem): boolean => item.conflict === true || item.discardedCopy === true || item.rejection !== undefined;
 
-/** Grund je Eintrag: Konflikt mit anderem Gerät, verworfener Stand (eigener Text) oder der letzte Fehler. */
-function reasonKey(item: FailedMutationItem): 'syncStatus.discardedCopyReason' | 'syncStatus.conflictReason' | null {
+type ReasonKey = 'syncStatus.discardedCopyReason' | 'syncStatus.conflictReason' | 'syncStatus.invalidValueReason' | 'syncStatus.tournamentGoneReason';
+
+/** Grund je Eintrag: Konflikt, verworfener Stand, eindeutige Ablehnung (@FU-126) – je eigener Text – oder der letzte Fehler. */
+function reasonKey(item: FailedMutationItem): ReasonKey | null {
     if (item.discardedCopy) { return 'syncStatus.discardedCopyReason'; }
+    if (item.rejection === 'invalidValue') { return 'syncStatus.invalidValueReason'; }
+    if (item.rejection === 'tournamentGone') { return 'syncStatus.tournamentGoneReason'; } // @FU-123
     return item.conflict ? 'syncStatus.conflictReason' : null;
 }
 

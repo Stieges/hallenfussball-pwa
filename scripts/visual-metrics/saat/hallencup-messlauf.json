@@ -2294,6 +2294,429 @@
             "sportId": "football-indoor",
             "tournamentType": "classic",
             "mode": "classic",
+            "numberOfFields": 1,
+            "numberOfTeams": 4,
+            "groupSystem": "groupsAndFinals",
+            "numberOfGroups": 2,
+            "groupPhaseGameDuration": 10,
+            "groupPhaseBreakDuration": 2,
+            "finalRoundGameDuration": 10,
+            "finalRoundBreakDuration": 2,
+            "breakBetweenPhases": 5,
+            "gamePeriods": 2,
+            "halftimeBreak": 1,
+            "placementLogic": [
+              {
+                "id": "points",
+                "enabled": true
+              },
+              {
+                "id": "directComparison",
+                "enabled": true
+              },
+              {
+                "id": "goalDifference",
+                "enabled": true
+              },
+              {
+                "id": "goalsFor",
+                "enabled": true
+              }
+            ],
+            "placementsToPlayOut": [
+              1
+            ],
+            "finals": {
+              "final": true,
+              "thirdPlace": true,
+              "fifthSixth": false,
+              "seventhEighth": false
+            },
+            "finalsConfig": {
+              "preset": "top-4",
+              "tiebreaker": "overtime-then-shootout",
+              "tiebreakerDuration": 5
+            },
+            "refereeConfig": {
+              "mode": "none"
+            },
+            "isKidsTournament": false,
+            "hideScoresForPublic": false,
+            "hideRankingsForPublic": false,
+            "resultMode": "goals",
+            "pointSystem": {
+              "win": 3,
+              "draw": 1,
+              "loss": 0
+            },
+            "isPublic": true,
+            "title": "Hallencup Phase Vorwarnung",
+            "ageClass": "U11",
+            "date": "2026-11-14",
+            "timeSlot": "09:00 - 16:00",
+            "location": {
+              "name": "Sporthalle Nordheim"
+            },
+            "teams": [
+              {
+                "id": "00000005-0000-4000-8000-000000000041",
+                "name": "TSV Westtal",
+                "group": "A"
+              },
+              {
+                "id": "00000005-0000-4000-8000-000000000042",
+                "name": "FC Nordstadt",
+                "group": "A"
+              },
+              {
+                "id": "00000005-0000-4000-8000-000000000043",
+                "name": "BSC Ostring",
+                "group": "B"
+              },
+              {
+                "id": "00000005-0000-4000-8000-000000000044",
+                "name": "SV Südpark",
+                "group": "B"
+              }
+            ],
+            "matches": [
+              {
+                "id": "00000009-0000-4000-8000-000000000001",
+                "round": 1,
+                "field": 1,
+                "slot": 0,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000041"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000042"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "A",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:00:00.000Z",
+                "matchNumber": 1,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T08:11:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000002",
+                "round": 2,
+                "field": 1,
+                "slot": 1,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000043"
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000044"
+                },
+                "scoreA": 1,
+                "scoreB": 0,
+                "group": "B",
+                "isFinal": false,
+                "phase": "groupStage",
+                "scheduledTime": "2026-11-14T08:13:00.000Z",
+                "matchNumber": 2,
+                "matchStatus": "finished",
+                "decidedBy": "regular",
+                "finishedAt": "2026-11-14T08:26:00.000Z",
+                "timerElapsedSeconds": 600
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000003",
+                "round": 3,
+                "field": 1,
+                "slot": 3,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000041",
+                  "resolvedFrom": {
+                    "kind": "groupRank",
+                    "group": "A",
+                    "rank": 1
+                  }
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000044",
+                  "resolvedFrom": {
+                    "kind": "groupRank",
+                    "group": "B",
+                    "rank": 2
+                  }
+                },
+                "originA": {
+                  "kind": "groupRank",
+                  "group": "A",
+                  "rank": 1
+                },
+                "originB": {
+                  "kind": "groupRank",
+                  "group": "B",
+                  "rank": 2
+                },
+                "scoreA": 1,
+                "scoreB": 1,
+                "isFinal": true,
+                "phase": "semifinal",
+                "label": "1. Halbfinale",
+                "scheduledTime": "2026-11-14T08:29:00.000Z",
+                "matchNumber": 3,
+                "matchStatus": "running",
+                "timerElapsedSeconds": 0,
+                "timerStartTime": "@jetzt-500s",
+                "liveState": {
+                  "engine": true,
+                  "status": "running",
+                  "phase": "regular",
+                  "section": 2,
+                  "running": true,
+                  "elapsedMs": 300000,
+                  "anchorAt": "@jetzt-ms-140000",
+                  "elapsedSeconds": 300,
+                  "durationSeconds": 600,
+                  "playPhase": "regular",
+                  "tiebreakerMode": "overtime-then-shootout",
+                  "overtimeDurationSeconds": 300,
+                  "awaitingTiebreakerChoice": false,
+                  "sections": 2,
+                  "sectionSeconds": 300,
+                  "breakSeconds": 60,
+                  "overtimeSeconds": 300,
+                  "sectionStartMs": 300000,
+                  "breakStartedAt": null
+                }
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000004",
+                "round": 4,
+                "field": 1,
+                "slot": 4,
+                "slotA": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000043",
+                  "resolvedFrom": {
+                    "kind": "groupRank",
+                    "group": "B",
+                    "rank": 1
+                  }
+                },
+                "slotB": {
+                  "kind": "team",
+                  "teamId": "00000005-0000-4000-8000-000000000042",
+                  "resolvedFrom": {
+                    "kind": "groupRank",
+                    "group": "A",
+                    "rank": 2
+                  }
+                },
+                "originA": {
+                  "kind": "groupRank",
+                  "group": "B",
+                  "rank": 1
+                },
+                "originB": {
+                  "kind": "groupRank",
+                  "group": "A",
+                  "rank": 2
+                },
+                "isFinal": true,
+                "phase": "semifinal",
+                "label": "2. Halbfinale",
+                "scheduledTime": "2026-11-14T08:42:00.000Z",
+                "matchNumber": 4
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000005",
+                "round": 5,
+                "field": 1,
+                "slot": 5,
+                "slotA": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000009-0000-4000-8000-000000000003",
+                    "role": "loser"
+                  }
+                },
+                "slotB": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000009-0000-4000-8000-000000000004",
+                    "role": "loser"
+                  }
+                },
+                "originA": {
+                  "kind": "matchResult",
+                  "matchId": "00000009-0000-4000-8000-000000000003",
+                  "role": "loser"
+                },
+                "originB": {
+                  "kind": "matchResult",
+                  "matchId": "00000009-0000-4000-8000-000000000004",
+                  "role": "loser"
+                },
+                "isFinal": true,
+                "phase": "final",
+                "finalType": "thirdPlace",
+                "label": "Spiel um Platz 3",
+                "scheduledTime": "2026-11-14T08:55:00.000Z",
+                "matchNumber": 5
+              },
+              {
+                "id": "00000009-0000-4000-8000-000000000006",
+                "round": 6,
+                "field": 1,
+                "slot": 6,
+                "slotA": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000009-0000-4000-8000-000000000003",
+                    "role": "winner"
+                  }
+                },
+                "slotB": {
+                  "kind": "pending",
+                  "source": {
+                    "kind": "matchResult",
+                    "matchId": "00000009-0000-4000-8000-000000000004",
+                    "role": "winner"
+                  }
+                },
+                "originA": {
+                  "kind": "matchResult",
+                  "matchId": "00000009-0000-4000-8000-000000000003",
+                  "role": "winner"
+                },
+                "originB": {
+                  "kind": "matchResult",
+                  "matchId": "00000009-0000-4000-8000-000000000004",
+                  "role": "winner"
+                },
+                "isFinal": true,
+                "phase": "final",
+                "finalType": "final",
+                "label": "Finale",
+                "scheduledTime": "2026-11-14T09:08:00.000Z",
+                "matchNumber": 6
+              }
+            ],
+            "status": "published",
+            "createdAt": "2026-11-14T08:00:00.000Z",
+            "updatedAt": "2026-11-14T08:00:00.000Z",
+            "lastVisitedStep": 6,
+            "id": "hallencup-phase-vorwarnung",
+            "startDate": "2026-11-14",
+            "startTime": "09:00",
+            "groups": [
+              {
+                "id": "A",
+                "customName": "Gruppe A"
+              },
+              {
+                "id": "B",
+                "customName": "Gruppe B"
+              }
+            ],
+            "fields": [
+              {
+                "id": "field-1",
+                "defaultName": "Feld 1"
+              }
+            ],
+            "shareCode": "PHASEW",
+            "shareCodeCreatedAt": "2026-11-14T08:00:00.000Z",
+            "monitors": [
+              {
+                "id": "mon-live",
+                "name": "Folie Live",
+                "defaultSlideDuration": 15,
+                "transition": "none",
+                "transitionDuration": 0,
+                "theme": "dark",
+                "performanceMode": "auto",
+                "slides": [
+                  {
+                    "id": "s-live",
+                    "type": "live",
+                    "config": {
+                      "fieldId": "field-1"
+                    },
+                    "order": 0,
+                    "duration": null
+                  }
+                ],
+                "createdAt": "2026-11-14T07:00:00.000Z",
+                "updatedAt": "2026-11-14T07:00:00.000Z"
+              }
+            ],
+            "matchCockpitSettings": {
+              "timerDirection": "countdown",
+              "nettoWarningEnabled": true,
+              "nettoWarningSeconds": 120,
+              "autoFinishEnabled": true,
+              "autoAdvanceSeconds": 10,
+              "finalDecider": "penalty",
+              "penaltyShootersPerTeam": 5,
+              "penaltySuddenDeathAfter": 6,
+              "timePenaltyDurationSeconds": 120,
+              "clockMode": "durchlaufend-letzte-minute-angehalten",
+              "foulLimit": 5,
+              "enabledCards": {
+                "yellow": true,
+                "yellowRed": true,
+                "red": true,
+                "timePenalty": true
+              },
+              "penaltyEndsOnGoal": true,
+              "shortHandedSeconds": 120,
+              "finalPhaseMinutes": 1,
+              "soundEnabled": true,
+              "soundId": "horn-1",
+              "soundVolume": 80,
+              "hasCustomSound": false,
+              "hapticEnabled": true,
+              "wakeLockEnabled": true
+            },
+            "publishedAt": "2026-11-14T08:00:00.000Z",
+            "groupCompletions": [
+              {
+                "groupId": "A",
+                "ranking": [
+                  "00000005-0000-4000-8000-000000000041",
+                  "00000005-0000-4000-8000-000000000042"
+                ],
+                "openRanks": [],
+                "stale": false,
+                "completedAt": "2026-11-14T08:00:00.000Z"
+              },
+              {
+                "groupId": "B",
+                "ranking": [
+                  "00000005-0000-4000-8000-000000000043",
+                  "00000005-0000-4000-8000-000000000044"
+                ],
+                "openRanks": [],
+                "stale": false,
+                "completedAt": "2026-11-14T08:00:00.000Z"
+              }
+            ]
+          },
+          {
+            "sport": "football",
+            "sportId": "football-indoor",
+            "tournamentType": "classic",
+            "mode": "classic",
             "numberOfFields": 2,
             "numberOfTeams": 8,
             "groupSystem": "groupsAndFinals",
@@ -4496,6 +4919,20 @@
               "seq": 1
             },
             {
+              "id": "00000002-0000-4000-8000-000000001502",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-260000",
+              "section": 1,
+              "clockMs": 60000,
+              "payload": {
+                "playerNumber": 9
+              },
+              "teamId": "00000001-0000-4000-8000-000000000001",
+              "seq": 2
+            },
+            {
               "id": "00000002-0000-4000-8000-000000001505",
               "type": "YELLOW_CARD",
               "actor": "helper",
@@ -4507,19 +4944,21 @@
                 "playerNumber": 7
               },
               "teamId": "00000001-0000-4000-8000-000000000001",
-              "seq": 2
+              "seq": 3
             },
             {
-              "id": "00000002-0000-4000-8000-000000001502",
+              "id": "00000002-0000-4000-8000-000000001503",
               "type": "GOAL",
               "actor": "helper",
               "actorUser": "helper",
-              "at": "@jetzt-ms-190000",
+              "at": "@jetzt-ms-180000",
               "section": 1,
-              "clockMs": 130000,
-              "payload": {},
-              "teamId": "00000001-0000-4000-8000-000000000001",
-              "seq": 3
+              "clockMs": 140000,
+              "payload": {
+                "playerNumber": 11
+              },
+              "teamId": "00000001-0000-4000-8000-000000000006",
+              "seq": 4
             },
             {
               "id": "00000002-0000-4000-8000-000000001506",
@@ -4533,7 +4972,19 @@
                 "playerNumber": 5
               },
               "teamId": "00000001-0000-4000-8000-000000000006",
-              "seq": 4
+              "seq": 5
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000001504",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-100000",
+              "section": 1,
+              "clockMs": 220000,
+              "payload": {},
+              "teamId": "00000001-0000-4000-8000-000000000001",
+              "seq": 6
             },
             {
               "id": "00000002-0000-4000-8000-000000001507",
@@ -4547,30 +4998,6 @@
                 "playerNumber": 3
               },
               "teamId": "00000001-0000-4000-8000-000000000001",
-              "seq": 5
-            },
-            {
-              "id": "00000002-0000-4000-8000-000000001503",
-              "type": "GOAL",
-              "actor": "helper",
-              "actorUser": "helper",
-              "at": "@jetzt-ms-40000",
-              "section": 1,
-              "clockMs": 280000,
-              "payload": {},
-              "teamId": "00000001-0000-4000-8000-000000000006",
-              "seq": 6
-            },
-            {
-              "id": "00000002-0000-4000-8000-000000001504",
-              "type": "GOAL",
-              "actor": "helper",
-              "actorUser": "helper",
-              "at": "@jetzt-ms+110000",
-              "section": 1,
-              "clockMs": 430000,
-              "payload": {},
-              "teamId": "00000001-0000-4000-8000-000000000001",
               "seq": 7
             }
           ],
@@ -4579,7 +5006,7 @@
           "pending": [],
           "rejected": [],
           "review": [],
-          "updatedAt": "@jetzt-ms+110000"
+          "updatedAt": "@jetzt-ms-90000"
         },
         "guest|00000006-0000-4000-8000-000000000001": {
           "formatVersion": 2,
@@ -4797,7 +5224,9 @@
               "at": "@jetzt-ms-190000",
               "section": 1,
               "clockMs": 130000,
-              "payload": {},
+              "payload": {
+                "playerNumber": 8
+              },
               "teamId": "00000005-0000-4000-8000-000000000011",
               "seq": 2
             },
@@ -5036,7 +5465,9 @@
               "at": "@jetzt-ms-560000",
               "section": 1,
               "clockMs": 180000,
-              "payload": {},
+              "payload": {
+                "playerNumber": 8
+              },
               "teamId": "00000005-0000-4000-8000-000000000021",
               "seq": 2
             },
@@ -5070,7 +5501,9 @@
               "at": "@jetzt-ms-300000",
               "section": 2,
               "clockMs": 380000,
-              "payload": {},
+              "payload": {
+                "playerNumber": 4
+              },
               "teamId": "00000005-0000-4000-8000-000000000024",
               "seq": 5
             },
@@ -5434,6 +5867,272 @@
           "rejected": [],
           "review": [],
           "updatedAt": "@jetzt-ms-20000"
+        },
+        "guest|00000009-0000-4000-8000-000000000001": {
+          "formatVersion": 2,
+          "accountId": "guest",
+          "matchId": "00000009-0000-4000-8000-000000000001",
+          "tournamentId": "hallencup-phase-vorwarnung",
+          "ctx": {
+            "matchId": "00000009-0000-4000-8000-000000000001",
+            "teamAId": "00000005-0000-4000-8000-000000000041",
+            "teamBId": "00000005-0000-4000-8000-000000000042"
+          },
+          "confirmed": [
+            {
+              "id": "00000002-0000-4000-8000-000000002501",
+              "type": "MATCH_START",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794643200000,
+              "section": 1,
+              "clockMs": null,
+              "payload": {
+                "rules": {
+                  "sections": 2,
+                  "sectionSeconds": 300,
+                  "breakSeconds": 60,
+                  "knockout": false,
+                  "tiebreak": "overtime-then-shootout",
+                  "overtimeSeconds": 300,
+                  "shootersPerTeam": 5,
+                  "suddenDeathAfter": 6,
+                  "penaltySeconds": 120
+                }
+              },
+              "seq": 1
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002502",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794643480000,
+              "section": 1,
+              "clockMs": 280000,
+              "payload": {},
+              "teamId": "00000005-0000-4000-8000-000000000041",
+              "seq": 2
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002503",
+              "type": "SECTION_END",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794643500000,
+              "section": 1,
+              "clockMs": 300000,
+              "payload": {},
+              "seq": 3
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002504",
+              "type": "SECTION_START",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794643560000,
+              "section": 2,
+              "clockMs": 300000,
+              "payload": {},
+              "seq": 4
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002505",
+              "type": "MATCH_END",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794643860000,
+              "section": 2,
+              "clockMs": 600000,
+              "payload": {},
+              "seq": 5
+            }
+          ],
+          "watermarkSeq": 5,
+          "acked": [],
+          "pending": [],
+          "rejected": [],
+          "review": [],
+          "updatedAt": 1794643860000
+        },
+        "guest|00000009-0000-4000-8000-000000000002": {
+          "formatVersion": 2,
+          "accountId": "guest",
+          "matchId": "00000009-0000-4000-8000-000000000002",
+          "tournamentId": "hallencup-phase-vorwarnung",
+          "ctx": {
+            "matchId": "00000009-0000-4000-8000-000000000002",
+            "teamAId": "00000005-0000-4000-8000-000000000043",
+            "teamBId": "00000005-0000-4000-8000-000000000044"
+          },
+          "confirmed": [
+            {
+              "id": "00000002-0000-4000-8000-000000002601",
+              "type": "MATCH_START",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794644100000,
+              "section": 1,
+              "clockMs": null,
+              "payload": {
+                "rules": {
+                  "sections": 2,
+                  "sectionSeconds": 300,
+                  "breakSeconds": 60,
+                  "knockout": false,
+                  "tiebreak": "overtime-then-shootout",
+                  "overtimeSeconds": 300,
+                  "shootersPerTeam": 5,
+                  "suddenDeathAfter": 6,
+                  "penaltySeconds": 120
+                }
+              },
+              "seq": 1
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002602",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794644380000,
+              "section": 1,
+              "clockMs": 280000,
+              "payload": {},
+              "teamId": "00000005-0000-4000-8000-000000000043",
+              "seq": 2
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002603",
+              "type": "SECTION_END",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794644400000,
+              "section": 1,
+              "clockMs": 300000,
+              "payload": {},
+              "seq": 3
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002604",
+              "type": "SECTION_START",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794644460000,
+              "section": 2,
+              "clockMs": 300000,
+              "payload": {},
+              "seq": 4
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002605",
+              "type": "MATCH_END",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": 1794644760000,
+              "section": 2,
+              "clockMs": 600000,
+              "payload": {},
+              "seq": 5
+            }
+          ],
+          "watermarkSeq": 5,
+          "acked": [],
+          "pending": [],
+          "rejected": [],
+          "review": [],
+          "updatedAt": 1794644760000
+        },
+        "guest|00000009-0000-4000-8000-000000000003": {
+          "formatVersion": 2,
+          "accountId": "guest",
+          "matchId": "00000009-0000-4000-8000-000000000003",
+          "tournamentId": "hallencup-phase-vorwarnung",
+          "ctx": {
+            "matchId": "00000009-0000-4000-8000-000000000003",
+            "teamAId": "00000005-0000-4000-8000-000000000041",
+            "teamBId": "00000005-0000-4000-8000-000000000044"
+          },
+          "confirmed": [
+            {
+              "id": "00000002-0000-4000-8000-000000002701",
+              "type": "MATCH_START",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-500000",
+              "section": 1,
+              "clockMs": null,
+              "payload": {
+                "rules": {
+                  "sections": 2,
+                  "sectionSeconds": 300,
+                  "breakSeconds": 60,
+                  "knockout": true,
+                  "tiebreak": "overtime-then-shootout",
+                  "overtimeSeconds": 300,
+                  "shootersPerTeam": 5,
+                  "suddenDeathAfter": 6,
+                  "penaltySeconds": 120
+                }
+              },
+              "seq": 1
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002702",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-373333",
+              "section": 1,
+              "clockMs": 126667,
+              "payload": {
+                "playerNumber": 8
+              },
+              "teamId": "00000005-0000-4000-8000-000000000041",
+              "seq": 2
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002703",
+              "type": "GOAL",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-226667",
+              "section": 1,
+              "clockMs": 273333,
+              "payload": {
+                "playerNumber": 4
+              },
+              "teamId": "00000005-0000-4000-8000-000000000044",
+              "seq": 3
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002704",
+              "type": "SECTION_END",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-200000",
+              "section": 1,
+              "clockMs": 300000,
+              "payload": {},
+              "seq": 4
+            },
+            {
+              "id": "00000002-0000-4000-8000-000000002705",
+              "type": "SECTION_START",
+              "actor": "helper",
+              "actorUser": "helper",
+              "at": "@jetzt-ms-140000",
+              "section": 2,
+              "clockMs": 300000,
+              "payload": {},
+              "seq": 5
+            }
+          ],
+          "watermarkSeq": 5,
+          "acked": [],
+          "pending": [],
+          "rejected": [],
+          "review": [],
+          "updatedAt": "@jetzt-ms-140000"
         }
       }
     }
@@ -5461,7 +6160,7 @@
       "Sportvereinigung Nordheim"
     ],
     "spiele": 16,
-    "engineKopien": 24,
+    "engineKopien": 27,
     "laufendesSpiel": "00000003-0000-4000-8000-000000000016",
     "mitVerlaengerung": "00000003-0000-4000-8000-000000000013",
     "mitStrafstossschiessen": "00000003-0000-4000-8000-000000000014",
@@ -5478,6 +6177,10 @@
       "strafstoss": {
         "turnierId": "hallencup-phase-strafstoss",
         "spielId": "00000008-0000-4000-8000-000000000003"
+      },
+      "vorwarnung": {
+        "turnierId": "hallencup-phase-vorwarnung",
+        "spielId": "00000009-0000-4000-8000-000000000003"
       }
     },
     "monitore": [

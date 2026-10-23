@@ -14,6 +14,8 @@ name: RLS Role Matrix
 # (src/__tests__/architecture/rightsOnlyViaUseCan.test.ts) hält paths-Filter und Jobnamen fest.
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 permissions:

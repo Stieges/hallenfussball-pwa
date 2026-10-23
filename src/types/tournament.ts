@@ -1160,6 +1160,9 @@ export interface ContactInfo {
   email?: string;       // E-Mail
   phone?: string;       // Telefon
   website?: string;     // Website
+  /** Häkchen „Ansprechpartner öffentlich zeigen“ (@W1-031): nur dann liefert der Server den Kontakt an Zuschauer aus
+   *  (B-14) und das Spielplan-PDF druckt ihn (@W1-032). Fehlt es, bleibt der Kontakt intern (@W1-030). */
+  showPublic?: boolean;
 }
 
 /**

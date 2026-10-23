@@ -101,16 +101,27 @@ async function vorbelegungPrivat({ asRole }: StepContext): Promise<void> {
 }
 
 /**
- * N6f: der öffentlich lesbare Datensatz nennt keine Person, keine Zeit und keinen Grund der Entscheidung (@W2A-072; Nachtrag 4): anonymer REST-Abruf
- * des Turnier-Datensatzes ohne die App, und ein Entscheidungsverlauf (`bracket_log`) ist für `anon` nicht lesbar. Läuft nach N6d (dort entsteht die Entscheidung).
+ * N6f: der öffentlich lesbare Datensatz nennt keine Person, keine Zeit und keinen Grund der Entscheidung (@W2A-072; Nachtrag 4): anonymer Abruf
+ * ohne die App. Seit B-14 (`20261117_104`) liest anon die Tabelle `tournaments` nicht mehr; öffentlich ist nur die Antwort der
+ * Server-Funktion `public_tournament` (Positivliste, @ZM-068). Ein Entscheidungsverlauf (`bracket_log`) ist für `anon` nicht lesbar.
+ * Läuft nach N6d (dort entsteht die Entscheidung).
  */
 async function entscheidungNichtOeffentlich(): Promise<void> {
   const { url, anonKey } = getLocalServiceRoleClient();
   const anon = { apikey: anonKey, Authorization: `Bearer ${anonKey}` };
-  const antwort = await fetch(`${url}/rest/v1/tournaments?id=eq.${NIKOLAUS.tournamentId}&select=id,config`, { headers: anon });
+  const tabelle = await fetch(`${url}/rest/v1/tournaments?id=eq.${NIKOLAUS.tournamentId}&select=id,config`, { headers: anon });
+  if (tabelle.ok) {
+    expect(await tabelle.json(), 'anon liest die Tabelle tournaments nicht direkt (B-14)').toEqual([]);
+  }
+  const antwort = await fetch(`${url}/rest/v1/rpc/public_tournament`, {
+    method: 'POST',
+    headers: { ...anon, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ share_code: NIKOLAUS.shareCode, since_version: null }),
+  });
   expect(antwort.ok, `anonymer Abruf: ${String(antwort.status)}`).toBe(true);
-  const zeilen = (await antwort.json()) as Array<{ id: string; config: { standingDecisions?: Array<Record<string, unknown>> } }>;
-  expect(zeilen, 'das Nikolaus-Turnier ist öffentlich lesbar (sonst beweist der Abruf nichts)').toHaveLength(1);
+  const reply = (await antwort.json()) as { state: string; tournament?: { config?: { standingDecisions?: Array<Record<string, unknown>> } } };
+  expect(reply.state, 'das Nikolaus-Turnier ist öffentlich lesbar (sonst beweist der Abruf nichts)').toBe('full');
+  const zeilen = [{ config: reply.tournament?.config ?? {} }];
   const entscheidungen = zeilen[0].config.standingDecisions ?? [];
   expect(entscheidungen.length, 'N6d hat eine Entscheidung eingetragen').toBeGreaterThan(0);
   const erlaubt = new Set(['id', 'groupId', 'teamIds', 'order', 'kind', 'shootout', 'basis']);

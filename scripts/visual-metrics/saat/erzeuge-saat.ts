@@ -89,6 +89,10 @@ function regelnFuer(t: Tournament, phase: string): MatchRules {
 interface EreignisPlan {
   /** Tore der regulaeren Spielzeit in Reihenfolge (Team-ID); sie verteilen sich gleichmaessig ueber die Spielzeit. */
   tore: string[]
+  /** Rueckennummer je Tor (gleicher Index wie `tore`); `undefined` = Nummer fehlt (die Ereignisliste zeigt dann das Warnzeichen). */
+  nummern?: (number | undefined)[]
+  /** Bis zu welcher Spielzeit (ms) sich die Tore verteilen; Vorgabe: die ganze Spielzeit (bzw. ein Abschnitt in der Halbzeitpause). */
+  toreBisMs?: number
   /** Karten der regulaeren Spielzeit (Abschnitt 1): Art, Team-ID, Spieluhr (ms), Rueckennummer. */
   karten?: Array<{ art: 'YELLOW_CARD' | 'YELLOW_RED_CARD' | 'RED_CARD'; teamId: string; clockMs: number; nummer: number }>
   /** Wie weit die Regelspielzeit gespielt ist: laeuft, in der Halbzeitpause oder beendet. */
@@ -116,11 +120,12 @@ function baueEreignisse(ctx: MatchContext, rules: MatchRules, plan: EreignisPlan
   })
   const log: EngineEvent[] = [e('MATCH_START', 1, null, { payload: { rules } })]
   // Tore: gleichmaessig verteilt, 20 s vor der Gleichverteilung (nie genau auf einer Abschnittsgrenze).
-  const spanne = plan.bis === 'halbzeitpause' ? secMs : gesamt
+  const spanne = plan.toreBisMs ?? (plan.bis === 'halbzeitpause' ? secMs : gesamt)
   plan.tore.forEach((teamId, i) => {
     const clockMs = Math.round(((i + 1) * spanne) / (plan.tore.length + 1)) - 20_000
     const section = Math.min(rules.sections, Math.floor(clockMs / secMs) + 1)
-    log.push(e('GOAL', section, clockMs, { teamId }))
+    const nummer = plan.nummern?.[i]
+    log.push(e('GOAL', section, clockMs, nummer === undefined ? { teamId } : { teamId, payload: { playerNumber: nummer } }))
   })
   // Karten (Abschnitt 1): fuer die Ansichten mit Kartenzeichen (Verlauf im Cockpit, Zuschauer-Seite)
   for (const k of plan.karten ?? []) {
@@ -346,6 +351,8 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
   ersetze(finale, wendeEngineAn(t, finale, seiteId(finale, 'slotA'), seiteId(finale, 'slotB'),
     {
       tore: [seiteId(finale, 'slotA'), seiteId(finale, 'slotB'), seiteId(finale, 'slotA')], bis: 'laeuft', jetztNachAnpfiffMs: 320_000,
+      // Die Tore liegen vor "jetzt" (5:20) und tragen echte Spielminuten; Nummer 9, 11 und beim dritten Tor bewusst keine (Warnzeichen als Beispiel)
+      toreBisMs: 320_000, nummern: [9, 11, undefined],
       // Gelb, Gelb-Rot und Rot im laufenden Finale (Karten-Farben nur fuer Karten, Oberflaeche E)
       karten: [
         { art: 'YELLOW_CARD', teamId: seiteId(finale, 'slotA'), clockMs: 90_000, nummer: 7 },
@@ -356,11 +363,12 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
   return { turnier: t, kopien }
 }
 
-export type PhasenArt = 'halbzeitpause' | 'verlaengerung' | 'strafstoss'
+export type PhasenArt = 'halbzeitpause' | 'verlaengerung' | 'strafstoss' | 'vorwarnung'
 export const PHASEN: Record<PhasenArt, { id: string; titel: string; code: string; name: string }> = {
   halbzeitpause: { id: 'hallencup-phase-halbzeit', titel: 'Hallencup Phase Halbzeit', code: 'PHASEH', name: 'Halbzeitpause' },
   verlaengerung: { id: 'hallencup-phase-verlaengerung', titel: 'Hallencup Phase Verlängerung', code: 'PHASEV', name: 'Verlängerung läuft' },
   strafstoss: { id: 'hallencup-phase-strafstoss', titel: 'Hallencup Phase Strafstoß', code: 'PHASES', name: 'Strafstoßschießen läuft' },
+  vorwarnung: { id: 'hallencup-phase-vorwarnung', titel: 'Hallencup Phase Vorwarnung', code: 'PHASEW', name: 'Spiel kurz vor dem Ende (Restzeit 2:40, nächstes Spiel steht an)' },
 }
 
 /**
@@ -401,8 +409,11 @@ async function erzeugePhasenturnier(art: PhasenArt, nr: number): Promise<Erzeugt
   const [hf1] = halbfinaleVon(t)
   const [a, b] = [seiteId(hf1, 'slotA'), seiteId(hf1, 'slotB')]
   const plan: EreignisPlan =
-    art === 'halbzeitpause' ? { tore: [a], bis: 'halbzeitpause' }
-    : art === 'verlaengerung' ? { tore: [a, b], bis: 'ende', verlaengerung: { laeuft: true } }
+    art === 'halbzeitpause' ? { tore: [a], nummern: [8], bis: 'halbzeitpause' }
+    // Vorwarnung (@SL-155): zweiter und letzter Abschnitt, Restzeit 2:40 (unter 3:00); die Uhr steht 7:20 nach dem Anpfiff
+    // (10:00 Spielzeit, 1 Minute Halbzeitpause), das 2. Halbfinale ist das "Nächste" auf Feld 1.
+    : art === 'vorwarnung' ? { tore: [a, b], nummern: [8, 4], bis: 'laeuft', toreBisMs: 440_000, jetztNachAnpfiffMs: 440_000 + 60_000 }
+    : art === 'verlaengerung' ? { tore: [a, b], nummern: [8, 4], bis: 'ende', verlaengerung: { laeuft: true } }
     : { tore: [], bis: 'ende', verlaengerung: {}, elfmeter: { a: [true, false], b: [false, true], beendet: false } }
   ersetze(hf1, wendeEngineAn(t, hf1, a, b, plan, start + 20_000_000))
   // 2. Halbfinale, Platz 3 und Finale bleiben ungespielt.

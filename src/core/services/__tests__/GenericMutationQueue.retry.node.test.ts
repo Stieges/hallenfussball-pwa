@@ -393,7 +393,8 @@ describe('GenericMutationQueue Weg B (A-06d, @FU-013/@FU-004)', () => {
     qp.dispose();
   });
 
-  it('Gegenbeispiel (c) (@FU-004): TeamStillReferencedError bleibt permanent – retryCount 1, delays [30000]', async () => {
+  // BP-1 (@FU-126, Befund C-ENDGUELTIG-SOFORT-MELDEN): nicht vorübergehend und eindeutig – sofort ablegen statt 30-s-Pause
+  it('Gegenbeispiel (c) (@FU-004, @FU-126): TeamStillReferencedError ist nicht vorübergehend – sofort im Dead-Letter, kein Zeitgeber', async () => {
     const execute = vi.fn().mockRejectedValue(new TeamStillReferencedError('m1'));
     q = makeQ(execute as (item: GenericMutationItem<QType>) => Promise<void>);
     setOnLine(false);
@@ -401,10 +402,10 @@ describe('GenericMutationQueue Weg B (A-06d, @FU-013/@FU-004)', () => {
     setOnLine(true);
 
     await q.process();
-    expect(delays).toEqual([30000]);
-    expect(storedRetryCount()).toBe(1);
-    expect(q.getFailedCount()).toBe(0);
-    expect(q.getPendingCount()).toBe(1);
+    expect(delays).toEqual([]);
+    expect(q.getFailedCount()).toBe(1);
+    expect(q.getFailedMutations()[0].rejection).toBe('invalidValue');
+    expect(q.getPendingCount()).toBe(0);
   });
 
   it('Review-Fall (@FU-013): AuthRetryableFetchError mit status 503 → transient, retryCount 0', async () => {

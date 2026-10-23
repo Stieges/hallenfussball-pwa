@@ -26,6 +26,11 @@ const WRITE_METHODS = new Set(['insert', 'upsert', 'update', 'delete']);
  * Schreibstelle in einer erlaubten Datei aendert die Anzahl und macht den Test rot. Gruppen aus Plan A-08 § 1.2.
  */
 const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
+  'core/repositories/publicPayload.ts': {
+    count: 2,
+    reason:
+      'B-14 Zod-Schema der öffentlichen Antwort (public_tournament/display_tournament, Positivliste): prüft die Spalten score_a/score_b, setzt keinen Stand',
+  },
   'core/generators/scheduleGenerator.ts': {
     count: 2,
     reason:

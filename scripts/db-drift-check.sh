@@ -169,6 +169,12 @@ pending_assertions_for() {
     20261110_005_result_entry_forfeit.sql)
       echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
       ;;
+    20261117_104_public_payload.sql)
+      echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
+      ;;
+    20261113_101_monitor_heartbeat_wake_lock.sql)
+      echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
+      ;;
     20261110_006_group_completion.sql)
       echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers ci-schema-reader-select-group-completion"
       ;;
@@ -597,6 +603,17 @@ PRIVILEGE_ASSERTION_NAMES=(
   # Feldsteuerung) geschrieben.
   "matches-guard-engine-columns-forfeit-absent"
   "append-match-events-writes-forfeit-absent"
+  # B-14 (20261117_104_public_payload.sql, E-A2): oeffentliche Daten nur ueber die Positivliste.
+  "public-read-functions-definer-execute-anon"
+  "public-read-no-anon-select-policies"
+  "public-read-view-schema-no-client-access"
+  "public-read-reading-member-execute-only-authenticated"
+  "public-read-default-privileges-no-anon"
+  "public-read-reshare-keeps-code"
+  "public-read-core-unchanged"
+  # B-48b (20261113_101_monitor_heartbeat_wake_lock.sql): Lebenszeichen mit Kennung als Text, Pruefung gegen config.monitors.
+  "monitor-heartbeat-rpc-checks-config-monitors"
+  "monitor-heartbeat-key-per-tournament-wake-lock"
   # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
   # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
   "group-completion-tables-no-client-writes"

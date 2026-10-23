@@ -1,5 +1,6 @@
 /**
- * D7 Zuschauer live: @ZM-021 "Änderungen erscheinen ohne Neuladen nach höchstens 10 Sekunden" (C-ZUSCHAUER-OHNE-NEULADEN).
+ * D7 Zuschauer live: @ZM-021 "Änderungen erscheinen ohne Neuladen nach höchstens 10 Sekunden" (Befund C-ZUSCHAUER-OHNE-NEULADEN,
+ * behoben mit dem B-15-Anschluss: die Seite liest standardmäßig über public_tournament).
  * Besitzer: B-14 (Server `public_tournament`) / B-15 (Zuschauer-Seite). Soll: ein Tor, das die Turnierleitung einträgt, steht
  * nach höchstens 10 Sekunden auf der offenen Zuschauer-Seite, OHNE Neuladen, und die Seite holt es über die Server-Funktion
  * `public_tournament` (nicht mehr direkt aus den Tabellen).
@@ -31,6 +32,6 @@ async function zuschauerLive({ anonPage }: StepContext): Promise<void> {
 export const steps: readonly TurniertagStep[] = [
   {
     id: 'D7', title: 'Tor erscheint auf der Zuschauer-Seite ohne Neuladen innerhalb von 10 s', scenarios: ['@ZM-021'],
-    befunde: ['C-ZUSCHAUER-OHNE-NEULADEN'], owner: 'B-14/B-15', expectedFail: true, run: zuschauerLive,
+    owner: 'B-14/B-15 (gebaut, B-15-Anschluss #360)', expectedFail: false, run: zuschauerLive,
   },
 ];

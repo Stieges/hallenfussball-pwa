@@ -36,6 +36,8 @@ name: Visual Regression
 # "CI".
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, labeled]
