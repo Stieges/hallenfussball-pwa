@@ -15,6 +15,11 @@ on:
   schedule:
     # Daily at 03:00 UTC (off-peak)
     - cron: '0 3 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'src/types/supabase.ts'
+      - 'supabase/migrations/**'
   pull_request:
     paths:
       - 'src/types/supabase.ts'

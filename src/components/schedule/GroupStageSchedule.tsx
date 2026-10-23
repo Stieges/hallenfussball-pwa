@@ -28,6 +28,7 @@ import { RefereeConfig, RuntimeMatchEvent } from '../../types/tournament';
 import type { ScheduleSource } from './scheduleSource';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { buildSideContext, matchHeading, matchViewOf, sideDisplay, sideName } from './matchSides';
+import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitAction';
 import { cardStatusOf, resultFigures } from './matchResult';
 import type { SpectatorClock } from '../../core/view';
 import {
@@ -78,6 +79,8 @@ interface GroupStageScheduleProps {
   onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
+  /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ (nur Turnierleitung); ohne Angabe keine Taste */
+  forfeit?: MatchForfeitActions;
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
   // Note: Permission check is now handled in ScheduleTab
@@ -101,6 +104,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   conflictSource,
   onMatchSwap,
   onNavigateToCockpit,
+  forfeit,
   showTitle = true,
 }) => {
   const { t } = useTranslation('tournament');
@@ -386,6 +390,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     const homeTeam = sideDisplay(match, 'A', sides);
     const awayTeam = sideDisplay(match, 'B', sides);
+    const forfeitAction = <MatchForfeitAction matchId={match.id} viewStatus={matchViewOf(sides, match.id)?.status} forfeit={forfeit} />;
 
     switch (expandType) {
       case 'quick':
@@ -397,6 +402,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayScore={match.scoreB ?? 0}
             onSave={(home, away) => handleExpandSave(match.id, home, away)}
             onCancel={handleExpandClose}
+            extraAction={forfeitAction}
           />
         );
       case 'live': {
@@ -434,6 +440,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             field={match.field}
             onConfirm={() => handleNavigateToCockpit(match.id)}
             onCancel={handleExpandClose}
+            extraAction={forfeitAction}
           />
         );
       case 'summary': {
@@ -472,13 +479,14 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               }
             } : undefined}
             onClose={handleExpandClose}
+            extraAction={forfeitAction}
           />
         );
       }
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable, forfeit]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {

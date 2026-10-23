@@ -30,7 +30,7 @@ describe('Startseite: festgelegtes Turnier aus der Cloud (@LZ-001, @FU-128)', ()
     expect(categorizeTournament(ausDerCloud('2026-11-26'), new Date(2026, 10, 26, 9, 1))).toBe('upcoming');
   });
 
-  it('@LZ-001 Gegenbeispiel: Tom hat das erste Spiel angepfiffen, dann läuft das Turnier', () => {
+  it('@LZ-001 Gegenbeispiel: das erste Spiel steht auf „läuft“ (Spiele hier von Hand angehängt, keine Cloud-Liste), dann läuft das Turnier', () => {
     const t = ausDerCloud('2026-11-26');
     const angepfiffen = { ...t, matches: [{ id: 'm1', matchStatus: 'running' }, { id: 'm2', matchStatus: 'scheduled' }] } as unknown as typeof t;
     expect(categorizeTournament(angepfiffen, JETZT)).toBe('running');
