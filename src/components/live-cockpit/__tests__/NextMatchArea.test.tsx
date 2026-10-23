@@ -42,6 +42,16 @@ describe('NextMatchArea – Farben und Leibchen', () => {
     expect(screen.getByTestId('cockpit-naechstes-leibchen')).toHaveTextContent('');
   });
 
+  it('@SL-173 Rot #C62828 / Blau #1565C0 → Leibchen-Zeichen nur wegen der Helligkeit (1,02:1, Farbabstand über 30)', () => {
+    zeige(spiel('#C62828', '#1565C0'));
+    expect(screen.getByRole('img', { name: 'Leibchen nötig, die Farben sind zu ähnlich' })).toBeInTheDocument();
+  });
+
+  it('@SL-173 Gegenbeispiel Gelb #FFEB3B / Blau #1565C0 (1:4,71) → kein Leibchen-Zeichen', () => {
+    zeige(spiel('#FFEB3B', '#1565C0'));
+    expect(screen.queryByTestId('cockpit-naechstes-leibchen')).toBeNull();
+  });
+
   it('@SL-161 Rot / keine Farbe → ein Farbpunkt, der Name von SG Mitte steht da, kein Leibchen-Zeichen', () => {
     zeige(spiel('#C62828', null));
     expect(screen.getByTestId('cockpit-naechstes-punkt-0')).toBeInTheDocument();
