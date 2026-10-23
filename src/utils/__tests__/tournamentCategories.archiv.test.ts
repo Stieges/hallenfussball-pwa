@@ -1,6 +1,6 @@
 /** @W5-027: ein abgeschlossenes (archiviertes) Turnier gehört ins Archiv, auch wenn sein Datum noch in der Zukunft liegt. */
 import { describe, it, expect } from 'vitest';
-import { categorizeTournament } from '../tournamentCategories';
+import { categorizeTournament, categorizeTournaments } from '../tournamentCategories';
 import type { Tournament } from '../../types/tournament';
 import { mapTournamentFromSupabase } from '../../core/repositories/supabaseMappers';
 import { createTournamentRow } from '../../../tests/factories/supabase';
@@ -63,5 +63,24 @@ describe('@LZ-001/@LZ-005/@LZ-006 Archiv nur nach Abschluss, nicht nach Datum', 
   });
   it('@LZ-001 heute, Startzeit vorbei, nichts angepfiffen: kommend (vorhandene Regel)', () => {
     expect(categorizeTournament(turnier('2026-10-23', nichtAngepfiffen), HEUTE)).toBe('upcoming');
+  });
+  it('@LZ-001 abgebrochen mit Grund „Hallenzeit vorbei“, ein Spiel angepfiffen: Archiv, nicht laufend', () => {
+    const t = turnier('2026-10-23', angepfiffen, { cancelledAt: '2026-10-23T10:00:00.000Z', cancelledReason: 'Hallenzeit vorbei' });
+    expect(categorizeTournament(t, HEUTE)).toBe('finished');
+    // isTournamentRunning ist nicht exportiert: „Läuft“ über categorizeTournaments prüfen
+    const kat = categorizeTournaments([t], HEUTE);
+    expect(kat.running).toHaveLength(0);
+    expect(kat.finished).toHaveLength(1);
+  });
+  it('@LZ-001 abgebrochen, Datum in der Zukunft: Archiv, nicht kommend', () => {
+    const t = turnier('2026-11-26', nichtAngepfiffen, { cancelledAt: '2026-10-23T10:00:00.000Z', cancelledReason: 'Hallenzeit vorbei' });
+    expect(categorizeTournament(t, HEUTE)).toBe('finished');
+  });
+  it.fails('@LZ-006 alle Ergebnisse da, nicht abgeschlossen → bleibt „Läuft“ (Befund C-ZUSTAND-ABGELEITET)', () => {
+    const alleErgebnisse = [
+      { id: 'm1', matchStatus: 'finished', scoreA: 2, scoreB: 1 },
+      { id: 'm2', matchStatus: 'finished', scoreA: 0, scoreB: 0 },
+    ];
+    expect(categorizeTournament(turnier('2026-10-23', alleErgebnisse), HEUTE)).toBe('running');
   });
 });

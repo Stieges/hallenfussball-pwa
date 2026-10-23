@@ -48,7 +48,7 @@ describe('@W5-025 Datum der Probe', () => {
   });
   // KB-3c: Archiv nur nach Abschluss (@LZ-001, @LZ-006, Befund C-ARCHIV-NACH-DATUM). Die Kopie ist weder abgeschlossen
   // noch abgebrochen und nichts ist angepfiffen, also „Festgelegt“ (kommend); das alte Datum allein archiviert nicht.
-  it('Gegenbeispiel: ohne neues Datum bleibt die Kopie des vergangenen Originals „Festgelegt“, nicht im Archiv (@LZ-001)', () => {
+  it('ohne neues Datum: Kopie trotzdem bei kommend, nicht im Archiv (@W5-025, @LZ-001)', () => {
     const ohne = buildCopiedTournament({ ...hallencupOstGespielt(), startDate: '2026-11-14', date: '2026-11-14' }, {
       newId: crypto.randomUUID(), title: 'x', now: HEUTE.toISOString(), makeId: () => crypto.randomUUID(),
     });
