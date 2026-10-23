@@ -71,7 +71,8 @@ describe('A-13b-S Rechte-Assertions und Drift-Check', () => {
   ];
 
   it('die sechs Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
-    const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/\./g, '\\.')}\\)\\n\\s+echo "([^"]+)"`));
+    const escaped = MIGRATION_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const mapping = drift.match(new RegExp(`    ${escaped}\\)\\n\\s+echo "([^"]+)"`));
     expect(mapping?.[1].split(' ').sort()).toEqual([...NAMES].sort());
     for (const name of NAMES) {
       expect(assertions).toContain(`SELECT '${name}',`);
