@@ -29,6 +29,11 @@ interface GroupTablesProps {
   /** Nur bei `app`: Hinweise einer Gruppe (`''` = Jeder gegen jeden) und Marke je Team. */
   renderTieHint?: (groupId: string) => ReactNode;
   renderTieMarker?: (teamId: string, groupId: string) => ReactNode;
+  /**
+   * GA4 A-13c: Zustandsmarken neben dem Gruppennamen (`marks`) und Zähler, gesperrte Taste und Abschluss-Hinweis darunter (`below`);
+   * nur bei `app`. `null` = nichts für diese Gruppe.
+   */
+  renderGroupState?: (groupId: string) => { marks: ReactNode; below: ReactNode } | null;
 }
 
 export const GroupTables: React.FC<GroupTablesProps> = ({
@@ -39,6 +44,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   tieDisplay = 'public',
   renderTieHint,
   renderTieMarker,
+  renderGroupState,
 }) => {
   const { t } = useTranslation('tournament');
   const groupStandings = getGroupStandings(standings, teams);
@@ -78,6 +84,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
             activeMatchTeamIds={activeMatchTeamIds}
             tieHint={tieApp ? renderTieHint?.(group) : undefined}
             tieMarker={tieApp && renderTieMarker ? (teamId) => renderTieMarker(teamId, group) : undefined}
+            groupState={tieApp ? renderGroupState?.(group) ?? undefined : undefined}
           />
         ))}
       </div>
@@ -110,9 +117,11 @@ interface StandingsTableProps {
   /** TB-6b: Hinweise der Gruppe über der Tabelle und Marke unter dem Teamnamen (nur Ansicht `app`). */
   tieHint?: ReactNode;
   tieMarker?: (teamId: string) => ReactNode;
+  /** A-13c: Zustandsmarken neben dem Titel und Angaben darunter. */
+  groupState?: { marks: ReactNode; below: ReactNode };
 }
 
-const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds, tieHint, tieMarker }) => {
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds, tieHint, tieMarker, groupState }) => {
   const { t } = useTranslation('tournament');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // ... (rest of logic)
@@ -182,7 +191,15 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
 
   return (
     <div style={containerStyle} className="standings-table">
-      <h3 style={titleStyle}>{title}</h3>
+      {groupState === undefined ? <h3 style={titleStyle}>{title}</h3> : (
+        <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, marginBottom: cssVars.spacing.sm }}>
+            <h3 style={{ ...titleStyle, marginBottom: 0 }}>{title}</h3>
+            {groupState.marks}
+          </div>
+          <div style={{ marginBottom: cssVars.spacing.md }}>{groupState.below}</div>
+        </>
+      )}
       {tieHint}
 
       {/* Desktop Table View - hidden on mobile via CSS */}

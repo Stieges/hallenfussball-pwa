@@ -58,6 +58,29 @@ describe('Person und Zeit der Entscheidung (Verlauf der Turnierleitung, GA4 A-13
     expect(screen.getByTestId('tie-withdrawn-by')).toHaveTextContent(/Zurückgenommen von Maria · \d{2}:\d{2}/);
   });
 
+  it('@W2A-070 N2: nach dem Zurücknehmen steht in einer Zeile, wer den Platz geteilt und wer zurückgenommen hat („Platz geteilt von Olli · Zeit · Zurückgenommen von Maria · Zeit“, nur Turnierleitung)', async () => {
+    const repo = await mitRuecknahme();
+    await zeigeHinweis(repo.tournament, true);
+    const zeile = screen.getByTestId('tie-withdrawn-by');
+    expect(zeile).toHaveTextContent(/^Platz geteilt von Olli · \d{2}:\d{2} · Zurückgenommen von Maria · \d{2}:\d{2}$/);
+  });
+
+  it('@W2A-070 N2: war es ein Strafstoßschießen, nennt die Zeile die Art der zurückgenommenen Entscheidung', async () => {
+    const repo = new MemoryRepo(nikolaus());
+    expect((await repo.service(['e-1']).decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
+    repo.author = 'Maria';
+    expect((await repo.service().withdraw(repo.tournament.id, 'e-1')).ok).toBe(true);
+    await zeigeHinweis(repo.tournament, true);
+    expect(screen.getByTestId('tie-withdrawn-by')).toHaveTextContent(/^Strafstoßschießen eingetragen von Olli · \d{2}:\d{2} · Zurückgenommen von Maria/);
+  });
+
+  it('@W2A-070 N2 Gegenbeispiel: ohne Verlauf der Entscheidung bleibt es bei „Zurückgenommen von …“', async () => {
+    const repo = await mitRuecknahme();
+    const ohneEintragung = { ...repo.tournament, decisionLog: repo.tournament.decisionLog?.filter((e) => e.kind !== 'standing_decision') };
+    await zeigeHinweis(ohneEintragung, true);
+    expect(screen.getByTestId('tie-withdrawn-by')).toHaveTextContent(/^Zurückgenommen von Maria · \d{2}:\d{2}$/);
+  });
+
   it('@W2A-070 entscheiden, zurücknehmen, neu entscheiden, Entscheidung verfällt: der offene Hinweis zeigt keine „Zurückgenommen“-Zeile mehr', async () => {
     const repo = await mitRuecknahme();
     expect((await repo.service(['e-2']).decide(repo.tournament.id, shared(['P', 'D']))).ok).toBe(true);

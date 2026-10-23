@@ -2,7 +2,7 @@
  * A-36a (MVP-Bauplan § 23, Brief Schritt 3): Herkunft des Platzes bleibt am Spiel.
  *
  * - Mapper-Rundlauf `mapMatchToSupabase → mapMatchFromSupabase` und lokale Ablage (Zod) erhalten sie.
- * - Automatisches Besetzen (`resolvePlayoffPairings`) und „Neu besetzen“ (`assignTeamToSide`) lassen sie
+ * - Automatisches Besetzen (`placeFollowUps`) und „Neu besetzen“ (`assignTeamToSide`) lassen sie
  *   unverändert – die Herkunft gehört zum PLATZ, nicht zum Team (@BM-014, Regel „Neu besetzen“
  *   Turniermodi Z.106/128, Szenario L2 folgt per Record-Nachzug).
  * - Die Turnier-Kopie lässt sie auf die NEUEN Spiel-IDs zeigen.
@@ -15,7 +15,8 @@ const captureFeatureError = vi.hoisted(() => vi.fn());
 vi.mock('../../../lib/sentry', () => ({ captureFeatureError }));
 
 import type { Match, Team, Tournament } from '../../../types/tournament';
-import { resolvePlayoffPairings } from '../../generators';
+import { activeRanking } from '../../services/GroupCompletionService';
+import { placeFollowUps } from '../../services/followUpPlacement';
 import { assignTeamToSide } from '../matchAssignment';
 import { copyTeamsAndMatches } from '../tournamentCopy';
 import { MatchSchema } from '../schemas/TournamentSchema';
@@ -80,10 +81,14 @@ beforeEach(() => {
 
 describe('A-36a Herkunft des Platzes bleibt nach dem Besetzen', () => {
   it('@BM-014 automatisches Besetzen (F-HF): HF1-Heim ist FC Nord, originA bleibt „Erster Gruppe A“', () => {
-    const t = hallencup();
-    const result = resolvePlayoffPairings(t);
+    const start = hallencup();
+    const result = ['A', 'B'].reduce((acc, group) => {
+      const placed = placeFollowUps(acc.tournament, group, activeRanking(acc.tournament, group));
+      return { tournament: placed.tournament, changed: [...acc.changed, ...placed.changed] };
+    }, { tournament: start, changed: [] as unknown[] });
 
-    expect(result.wasResolved).toBe(true);
+    expect(result.changed.length).toBeGreaterThan(0);
+    const t = result.tournament;
     const hf1 = byId(t, SEMI1);
     expect(hf1.slotA).toEqual({ kind: 'team', teamId: A1, resolvedFrom: groupRank('A', 1) });
     expect(hf1.originA).toEqual(groupRank('A', 1));

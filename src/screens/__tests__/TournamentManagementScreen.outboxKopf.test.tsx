@@ -15,6 +15,9 @@ vi.mock('../../hooks/useTournamentManager', () => ({
     handleTournamentUpdate: vi.fn(), applyRemote: vi.fn(), scheduleService: {},
   }),
 }));
+// GA4 A-13c: Spielplan und Tabellen liegen unter den Anbietern für „Gruppe abschließen“ (Rechte, Repositories); hier nur die Hülle des Bildschirms
+vi.mock('../../features/tournament-management/standings/StandingTieProvider', () => ({ StandingTieProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
+vi.mock('../../features/tournament-management/group-completion/GroupCompletionProvider', () => ({ GroupCompletionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({

@@ -104,7 +104,7 @@ describe('Assistent: Auswahl der auszuspielenden Plätze (@W2A-066, @W2A-073)', 
     for (const place of [2, 3, 4, 5, 6]) {
       expect(screen.getByTestId(`playout-place-${String(place)}`)).not.toBeChecked();
     }
-    expect(screen.getByTestId('playout-summary')).toHaveTextContent('Gleichstand auf Platz 1: Strafstoßschießen nötig. Auf Platz 2 bis 6 darf die Turnierleitung das Ergebnis so akzeptieren – dann teilen die Teams den Platz.');
+    expect(screen.getByTestId('playout-summary')).toHaveTextContent('Gleichstand auf Platz 1: Strafstoßschießen nötig. Auf Platz 2 bis 6 darf die Turnierleitung den Platz teilen.') // Wortlaut „Platz teilen“ (Daniel 23.10.);
   });
 
   it('@W2A-066 Platz 3 anhaken: die Einstellung wird [1, 3], die Zeile nennt beide Bereiche; Platz 1 abhaken: nur Platz 3', async () => {
