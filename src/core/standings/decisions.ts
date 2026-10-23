@@ -24,12 +24,15 @@ export type DecisionErrorCode =
   | 'BLOCK_CHANGED'
   | 'STALE'
   | 'OFFLINE'
+  /** GA4 A-13b-C: Verklemmung/Wartezeit am Server (`40P01`/`55P03`) – nichts geschrieben, „Bitte erneut versuchen“. */
+  | 'RETRY_LATER'
   | 'SHARED_PLACE_NOT_ALLOWED'
   | 'WITHDRAW_NOT_ALLOWED';
 
 /**
  * Was die Turnierleitung einträgt; Kennung und Grundlage ergänzt der Dienst. Der Grund einer Reihenfolge wird geprüft,
- * aber nicht im öffentlich lesbaren `config` gespeichert (@W2A-072); er gehört ins Verlaufsprotokoll (GA4 A-13b).
+ * aber nicht im öffentlich lesbaren `config` gespeichert (@W2A-072); er geht an `record_standing_decision` und steht nur im
+ * Verlauf (GA4 A-13b-C).
  */
 export type DecisionDraft = Pick<StandingDecision, 'groupId' | 'teamIds' | 'order' | 'kind' | 'shootout'> & { reason?: string };
 

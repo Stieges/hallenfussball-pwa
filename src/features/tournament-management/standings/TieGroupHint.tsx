@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
+import { decidedBy, withdrawnForBlock } from '../../../core/standings/decisionLog';
 import { groupTieView, type OpenTieBlock } from '../../../core/standings/tieViews';
 import { DecidedInfo } from './DecidedInfo';
 import { OpenTieNotice } from './OpenTieNotice';
@@ -66,6 +67,7 @@ export const TieGroupHint = ({ tournament, groupId }: TieGroupHintProps) => {
           names={block.teamIds.map(nameOf)}
           canDecide={canDecide}
           online={tie?.online ?? true}
+          withdrawn={canDecide ? withdrawnForBlock(tournament, block.teamIds) : undefined}
           onEntry={() => setDialogBlock(block)}
         />
       ))}
@@ -75,6 +77,7 @@ export const TieGroupHint = ({ tournament, groupId }: TieGroupHintProps) => {
           block={block}
           nameOf={nameOf}
           canDecide={canDecide}
+          author={canDecide ? decidedBy(tournament, block.decision.id) : undefined}
           closed={view.closed}
           busy={busyId === block.decision.id}
           failed={failed[block.decision.id] ?? null}

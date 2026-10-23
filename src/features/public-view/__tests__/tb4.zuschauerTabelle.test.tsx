@@ -6,7 +6,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
-import { usePublicTournament, type PublicTournamentSource } from '../usePublicTournament';
+import { usePublicTournament } from '../usePublicTournament';
+import { createLegacyPublicSource } from '../legacyPublicSource';
 import { PublicStandingsTab } from '../components/PublicStandingsTab';
 import { SHARE_CODE } from '../../../screens/__tests__/liveViewFixture';
 import { DATA, GD_FIRST_ORDER, NAME } from '../../../core/standings/__tests__/fixtures';
@@ -14,7 +15,7 @@ import { teamNameIn, zweiGruppenWaging } from '../../../core/standings/__tests__
 
 async function zuschauerTabelle(tournament: Tournament) {
   const oeffentlich: Tournament = { ...tournament, shareCode: SHARE_CODE, isPublic: true, hideRankingsForPublic: false };
-  const source: PublicTournamentSource = { getByShareCode: vi.fn().mockResolvedValue(oeffentlich) };
+  const source = createLegacyPublicSource({ getByShareCode: vi.fn().mockResolvedValue(oeffentlich) });
   const { result } = renderHook(() => usePublicTournament(SHARE_CODE, source));
   await waitFor(() => expect(result.current.loadingState).toBe('success'));
   return render(<PublicStandingsTab tournament={result.current.tournament!} standings={result.current.standings} />);

@@ -338,6 +338,8 @@
     "noChanges": "Keine Änderungen vorhanden",
     "masterData": "Stammdaten",
     "tournamentName": "Turniername",
+    "tournamentNameRequired": "Bitte gib einen Turniernamen ein.",
+    "startDateRequired": "Bitte wähle ein Startdatum.",
     "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
@@ -1144,7 +1146,9 @@
       "offline": "Entscheiden geht nur mit Netz – oder über „Gruppe abschließen“.",
       "decide": "Gleichstand entscheiden",
       "shootout": "Strafstoßschießen eintragen",
-      "order": "Reihenfolge festlegen"
+      "order": "Reihenfolge festlegen",
+      "withdrawnBy": "Zurückgenommen von {{name}} · {{time}}",
+      "withdrawnByUnknown": "Zurückgenommen · {{time}}"
     },
     "decided": {
       "sharedTitle": "Ergebnis akzeptiert",
@@ -1160,7 +1164,9 @@
       "withdrawUntil": "Möglich bis zum Abschluss der Gruppe.",
       "closed": "Die Gruppe ist abgeschlossen. Die Entscheidung steht fest. Ändern geht nur über eine Korrektur oder das Wiederöffnen der Gruppe.",
       "withdrawFailed": "Zurücknehmen hat nicht geklappt. Bitte erneut versuchen.",
-      "withdrawOffline": "Zurücknehmen geht nur mit Netz."
+      "withdrawOffline": "Zurücknehmen geht nur mit Netz.",
+      "by": "{{name}} · {{time}}",
+      "byUnknown": "Turnierleitung · {{time}}"
     },
     "dialog": {
       "titleChoice": "Gleichstand entscheiden",
@@ -1202,13 +1208,15 @@
         "SHOOTOUT_NEEDS_WINNER": "Das Strafstoßschießen braucht einen Sieger.",
         "UNKNOWN": "Das hat nicht geklappt. Bitte erneut versuchen.",
         "ALREADY_DECIDED": "Dieser Gleichstand ist schon entschieden. Bitte prüfe die Tabelle.",
-        "WITHDRAW_NOT_ALLOWED": "Die Gruppe ist abgeschlossen. Die Entscheidung lässt sich nicht mehr zurücknehmen."
+        "WITHDRAW_NOT_ALLOWED": "Die Gruppe ist abgeschlossen. Die Entscheidung lässt sich nicht mehr zurücknehmen.",
+        "RETRY_LATER": "Der Server war gerade belegt. Bitte erneut versuchen."
       },
       "seen": {
         "title": "Schon entschieden",
         "body": "Dieser Gleichstand wurde inzwischen entschieden.",
         "current": "Es gilt: {{what}}",
-        "notSaved": "Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt die geltende Entscheidung."
+        "notSaved": "Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt die geltende Entscheidung.",
+        "titleBy": "Schon entschieden von {{name}}"
       }
     },
     "settings": {

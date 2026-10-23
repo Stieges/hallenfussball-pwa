@@ -162,6 +162,10 @@ export function buildCopiedTournament(
     serverVersion: undefined,
     ownUploadsFrom: undefined,
     changeRevision: undefined,
+    // Abschlüsse und Verlauf gehören zum Original (GA4 A-13b-C): die Kopie hat neue Team-IDs, nichts ist abgeschlossen, und Namen
+    // und Gründe der Turnierleitung wandern nicht mit
+    groupCompletions: undefined,
+    decisionLog: undefined,
     // Keine Bildschirme (@W5-026)
     monitors: undefined,
   };

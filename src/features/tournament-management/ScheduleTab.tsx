@@ -35,7 +35,6 @@ import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { useAppSettings } from '../../hooks/useUserProfile';
 import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
 
@@ -66,8 +65,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   onNavigateToCockpit,
 }) => {
   const { t } = useTranslation('tournament');
-  // App settings for result lock behavior
-  const appSettings = useAppSettings();
   // A-11: Cockpit-Hinweis bei laufendem Spiel = Spielbetrieb; Spielplan ändern = manageSchedule; Aushang (@ZM-019)
   const canControlTimer = useCan('writeMatchData', tournament.id);
   const canSchedule = useCan('manageSchedule', tournament.id);
@@ -234,7 +231,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     showWarning,
     setPendingReferee,
     setPendingField,
-    lockFinishedResults: appSettings.lockFinishedResults,
+    // Korrektur beendeter Spiele im Spielplan: Grund-Auswahl statt Sperre (@EK-063, @EK-004), wie im Cockpit (useCockpitKorrektur).
+    // Die Nutzer-Einstellung `lockFinishedResults` verwies auf einen Knopf „Ergebnis korrigieren“, den es hier nicht gibt.
+    lockFinishedResults: false,
   });
 
   // ==========================================================================

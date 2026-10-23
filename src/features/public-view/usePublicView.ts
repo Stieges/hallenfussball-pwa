@@ -10,16 +10,20 @@ import type { GeneratedSchedule } from '../../core/generators';
 import { ANZEIGE_SPRACHE } from '../../i18n/anzeigeSprache';
 import type { Tournament } from '../../types/tournament';
 
-export function usePublicView(tournament: Tournament | null, schedule: GeneratedSchedule | null): TournamentView | null {
+/**
+ * `fetchedAtMs`: Serverzeit, zu der der Stand abgerufen wurde (B-15, @ZM-026): auf sie beziehen sich die Uhren der laufenden
+ * Spiele. Ohne Angabe die Geräteuhr zum Zeitpunkt der Berechnung.
+ */
+export function usePublicView(tournament: Tournament | null, schedule: GeneratedSchedule | null, fetchedAtMs?: number | null): TournamentView | null {
   return useMemo(
     () => (tournament === null || schedule === null
       ? null
-      : buildTournamentView({ ...tournament, engineDetail: engineDetailFromMatches(tournament.matches, new Date().getTime()) }, {
+      : buildTournamentView({ ...tournament, engineDetail: engineDetailFromMatches(tournament.matches, fetchedAtMs ?? new Date().getTime()) }, {
         audience: 'viewer',
         medium: 'app',
         locale: ANZEIGE_SPRACHE,
         now: toTournamentLocal(new Date(), TOURNAMENT_TIME_ZONE),
       })),
-    [tournament, schedule],
+    [tournament, schedule, fetchedAtMs],
   );
 }

@@ -199,7 +199,10 @@ describe('RL2 Spielende von selbst bei offener Rückfrage', () => {
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
     zu(420_000 + 360_000 + 300_000);
     await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
-    expect(screen.queryByRole('button', { name: 'Beenden' })).toBeNull();
+    // Die Rückfrage schließt über einen Effekt (useCockpitCommands), also einen Renderschritt NACH dem Abzeichen „Ende“:
+    // auf den Zielzustand warten, nicht auf den Augenblick, in dem das Abzeichen erscheint (Coverage-Lauf: langsamer).
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Beenden' })).toBeNull());
+    expect(rueckfrage()).toBeNull();
     expect(matchEnds()).toBe(1);
   });
 });
