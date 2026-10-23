@@ -1,4 +1,4 @@
--- supabase/migrations/20261110_007_standing_decision_null_version.sql
+-- supabase/migrations/20261110_010_standing_decision_null_version.sql
 -- Fehlerbehebung zu 20261110_006_group_completion (record_standing_decision), Cloud-E2E N6d (@ET-055, @W2A-067).
 --
 -- Befund: record_standing_decision prueft die Turnierversion mit `v_t.version IS DISTINCT FROM p_expected_version`.
@@ -19,7 +19,7 @@
 DO $$
 BEGIN
   IF to_regprocedure('public.record_standing_decision(uuid,text,jsonb,text,integer)') IS NULL THEN
-    RAISE EXCEPTION '20261110_007_standing_decision_null_version: Voraussetzung fehlt – zuerst 20261110_006 einspielen';
+    RAISE EXCEPTION '20261110_010_standing_decision_null_version: Voraussetzung fehlt – zuerst 20261110_006 einspielen';
   END IF;
 END;
 $$;
@@ -72,7 +72,7 @@ BEGIN
     RETURN jsonb_build_object('status', 'rejected', 'code', 'NOT_FOUND');
   END IF;
 
-  -- 20261110_007: eine Zeile ohne Version (version IS NULL) gilt als Version 0 – wie beim Schreiben unten und im
+  -- 20261110_010: eine Zeile ohne Version (version IS NULL) gilt als Version 0 – wie beim Schreiben unten und im
   -- frueheren REST-Schreibweg (standingDecisionsCloud.ts); vorher lehnte die Pruefung sie IMMER als STALE ab.
   IF coalesce(v_t.version, 0) IS DISTINCT FROM p_expected_version THEN
     RETURN jsonb_build_object('status', 'rejected', 'code', 'STALE', 'version', coalesce(v_t.version, 0));

@@ -58,7 +58,7 @@ function ohneVersion(): MemoryRepo {
 }
 
 describe('Turnier ohne Version (Zeile mit version IS NULL) – Cloud-E2E N6d (@ET-055, @W2A-067)', () => {
-  it('@ET-055 ohne Version schickt der Dienst die erwartete Version 0 (Vertrag mit record_standing_decision ab 20261110_007: NULL gilt als 0)', async () => {
+  it('@ET-055 ohne Version schickt der Dienst die erwartete Version 0 (Vertrag mit record_standing_decision ab 20261110_010: NULL gilt als 0)', async () => {
     const base = ohneVersion();
     const { service, calls } = spyRepo(base);
     expect((await service.decide(base.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);

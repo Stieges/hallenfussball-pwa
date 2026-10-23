@@ -953,9 +953,9 @@ for f in ${AFTER[@]+"${AFTER[@]}"}; do
   echo "OK    spaetere Migration laeuft: $(basename "$f")" >&2
 done
 
-# --- 20261110_007 (Cloud-E2E N6d, @ET-055, @W2A-067): ein Turnier ohne Version (version IS NULL, etwa vom Seed) gilt als
+# --- 20261110_010 (Cloud-E2E N6d, @ET-055, @W2A-067): ein Turnier ohne Version (version IS NULL, etwa vom Seed) gilt als
 # Version 0. Vorher lehnte record_standing_decision jede Entscheidung dafuer als STALE ab (NULL IS DISTINCT FROM 0).
-if [[ -f "$MIGRATIONS_DIR/20261110_007_standing_decision_null_version.sql" ]]; then
+if [[ -f "$MIGRATIONS_DIR/20261110_010_standing_decision_null_version.sql" ]]; then
   t="$(clone "$TPL_NIKO")"
   q "UPDATE public.tournaments SET version = NULL WHERE id = '$t';" >/dev/null
   dn="$(dec ohne-version "$t" '' shootout "TSV Petting,DJK Otting" "DJK Otting,TSV Petting" 4 3)"
