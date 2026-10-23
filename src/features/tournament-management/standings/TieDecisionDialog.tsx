@@ -3,7 +3,7 @@
  * @W2A-064, @W2A-067). Aus der Tabelle (Modus „table“) speichert der Dialog über `StandingDecisionService`; aus „Gruppe
  * abschließen“ (GA4 A-13c, Modus „withClose“) gibt er den geprüften Entwurf zurück. Zwei Teams: Ergebnis des
  * Strafstoßschießens, drei und mehr: Reihenfolge mit Grund. Ist der Platz nicht auszuspielen, steht daneben „Ergebnis so
- * akzeptieren“ – ein Tipp, ohne Grund, ohne Rückfrage. Mehr Datenbezug gibt es hier nicht: Wer/wann erst mit GA4 A-13b.
+ * akzeptieren“ – ein Tipp, ohne Grund, ohne Rückfrage. Bei „schon entschieden“ nennt der Dialog die Person aus dem Verlauf (GA4 A-13b-C, @W2A-060).
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +41,8 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   const nameOf = (teamId: string): string => tournament.teams.find((team) => team.id === teamId)?.name ?? '';
   const { step } = draft;
   const titleKey = step === 'order' ? 'titleOrder' : step === 'shootout' ? 'titleShootout' : 'titleChoice';
-  const title = step === 'seen' ? t('standingsTie.dialog.seen.title') : t(`standingsTie.dialog.${titleKey}`);
+  const seenTitle = draft.seenBy === undefined ? t('standingsTie.dialog.seen.title') : t('standingsTie.dialog.seen.titleBy', { name: draft.seenBy });
+  const title = step === 'seen' ? seenTitle : t(`standingsTie.dialog.${titleKey}`);
 
   const effect = useMemo(() => {
     if (draft.shootoutDraft === null) {
@@ -114,7 +115,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
         {step === 'seen' ? (
           <>
             <InlineNotice tone="warn" data-testid="tie-seen">
-              <span style={{ fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>{t('standingsTie.dialog.seen.title')}</span>
+              <span style={{ fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>{seenTitle}</span>
               <p style={stepText}>{t('standingsTie.dialog.seen.body')}</p>
             </InlineNotice>
             {current !== undefined ? (

@@ -32,6 +32,7 @@ import { finalMatchLabel } from './finalMatchLabel';
 import { MatchScoreCell } from './MatchScoreCell';
 import { FinalSortableRow } from './FinalSortableRow';
 import { FinalStageMobileCard } from './FinalStageMobileCard';
+import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitAction';
 import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 
@@ -58,11 +59,13 @@ interface FinalStageScheduleProps {
   changeAuthorOf?: (matchId: string) => Promise<string | null>;
   clockOf?: (matchId: string) => SpectatorClock | null; // Restzeit laufender Spiele (@ZM-162)
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
-  onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
   /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
   tournament?: SideSource;
+  /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ (nur Turnierleitung); ohne Angabe keine Taste */
+  forfeit?: MatchForfeitActions;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -83,6 +86,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   onMatchSwap,
   showTitle = true,
   tournament,
+  forfeit,
 }) => {
   const { t } = useTranslation('tournament');
   // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams), nie aus gespeichertem Anzeigetext
@@ -131,17 +135,15 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     const sourceMatchId = active.id as string;
     const targetMatchId = over.id as string;
 
-    // Immediately update visual order using arrayMove
+    // `false` = abgelehnt (@ZP-093): die Anzeige ordnet dann nicht um
+    if (onMatchSwap?.(sourceMatchId, targetMatchId) === false) { return; }
+
     setDisplayOrder(prevOrder => {
       const oldIndex = prevOrder.indexOf(sourceMatchId);
       const newIndex = prevOrder.indexOf(targetMatchId);
       if (oldIndex === -1 || newIndex === -1) { return prevOrder; }
       return arrayMove(prevOrder, oldIndex, newIndex);
     });
-
-    if (onMatchSwap) {
-      onMatchSwap(sourceMatchId, targetMatchId);
-    }
   };
 
   // Sort matches by displayOrder for rendering
@@ -345,6 +347,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
                       changeAuthorOf={changeAuthorOf}
                     />
+                    <MatchForfeitAction matchId={match.id} viewStatus={rowView?.status} forfeit={forfeit} />
                   </td>
                   <td style={{
                     ...teamCellStyle,
@@ -513,6 +516,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               fieldOptions={fieldOptions}
               onRefereeChange={onRefereeChange}
               onFieldChange={onFieldChange}
+              extraAction={<MatchForfeitAction matchId={match.id} viewStatus={matchView?.status} forfeit={forfeit} />}
             />
           );
         })}

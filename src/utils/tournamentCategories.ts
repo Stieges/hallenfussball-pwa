@@ -1,14 +1,24 @@
 /**
  * Tournament Category Helpers
  *
- * Kategorisiert Turniere basierend auf Status, Spielstand und Zeitpunkt:
- * 1. Aktuell laufende Turniere - published + datum ist heute + aktuelle Zeit > Startzeit + nicht alle Spiele beendet
- * 2. Bevorstehende Turniere - published + Datum+Zeit in der Zukunft
- * 3. Beendete Turniere - published + (alle Spiele beendet ODER manuell beendet ODER Datum in Vergangenheit)
- * 4. Gespeicherte Turniere - draft status
+ * Kategorisiert Turniere nach gespeichertem Zustand und Spielstand, NIE nach dem Datum allein:
+ * 1. Läuft (@LZ-001) - published + mindestens ein Spiel angepfiffen + nicht abgeschlossen/abgebrochen.
+ *    Keine Tagesprüfung: ein Turnier über Mitternacht oder mit vergessenem Abschluss bleibt „Läuft“ (@LZ-005, @LZ-006).
+ * 2. Festgelegt/kommend (@LZ-001) - published + kein Spiel angepfiffen + nicht abgeschlossen/abgebrochen,
+ *    auch wenn Datum oder Startzeit vorbei sind.
+ * 3. Archiv (@LZ-001, @LZ-006) - NUR abgeschlossen (manuallyCompleted) oder abgebrochen (cancelledAt);
+ *    ein vergangenes Datum verschiebt nichts (Befund C-ARCHIV-NACH-DATUM).
+ *    Offen: die Ableitung „alle Ergebnisse da -> abgeschlossen“ (isTournamentCompleted) widerspricht @LZ-006
+ *    und bleibt bis zum Befund C-ZUSTAND-ABGELEITET bestehen.
+ * 4. Entwurf - draft status
+ *
+ * „Laufend“ heißt angepfiffen, nicht „Startzeit vorbei“ (@LZ-001: festgelegt, kein Spiel angepfiffen → „Festgelegt“;
+ * Spiel angepfiffen → „Läuft“). Bis @FU-128 kam die Startzeit aus der Cloud als HH:MM:SS und war hier unlesbar;
+ * seitdem ist sie lesbar (HH:MM), und die frühere Uhr-Regel hätte festgelegte Turniere aus „kommend“ geschoben.
  */
 
 import { Tournament, Match, TRASH_RETENTION_DAYS } from '../types/tournament';
+import { getMatchStartState } from './matchStartState';
 
 export type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
 
@@ -104,31 +114,14 @@ export function isTournamentCompleted(tournament: Tournament): boolean {
 }
 
 /**
- * Check if tournament is currently running
- * Running = datum ist heute UND aktuelle Zeit > Startzeit UND nicht beendet
+ * Läuft = mindestens ein Spiel angepfiffen UND nicht abgeschlossen/abgebrochen (@LZ-001).
+ * Keine Tagesprüfung: das Datum allein beendet kein laufendes Turnier (@LZ-005, @LZ-006).
  */
-function isTournamentRunning(tournament: Tournament, now: Date): boolean {
+function isTournamentRunning(tournament: Tournament): boolean {
   if (tournament.status !== 'published') {return false;}
-
-  // If tournament is completed (all matches done or manually marked), it's not running
+  if (isTournamentCancelled(tournament)) {return false;}
   if (isTournamentCompleted(tournament)) {return false;}
-
-  const tournamentDate = getTournamentDateTime(tournament);
-  if (!tournamentDate) {return false;}
-
-  const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tournamentDateOnly = new Date(
-    tournamentDate.getFullYear(),
-    tournamentDate.getMonth(),
-    tournamentDate.getDate()
-  );
-
-  // Check if tournament date is today
-  const isToday = nowDateOnly.getTime() === tournamentDateOnly.getTime();
-  if (!isToday) {return false;}
-
-  // Check if current time is after tournament start time
-  return now >= tournamentDate;
+  return getMatchStartState(tournament.matches) === 'started';
 }
 
 /**
@@ -139,7 +132,7 @@ function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
 
   // Archiviert/manuell abgeschlossen heißt „nicht mehr kommend“, auch bei Datum in der Zukunft (@W5-027: Generalprobe
   // vor dem Turniertag). Nur das Flag, nicht „alle Ergebnisse da“: ein laufendes Turnier mit Zwischenstand bleibt sichtbar.
-  if (tournament.manuallyCompleted) {return false;}
+  if (tournament.manuallyCompleted || isTournamentCancelled(tournament)) {return false;}
 
   const tournamentDate = getTournamentDateTime(tournament);
   if (!tournamentDate) {return false;}
@@ -148,29 +141,17 @@ function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
 }
 
 /**
- * Check if tournament is finished
- * Finished = completed (all matches done OR manually marked) OR date in past
+ * Archiv = abgeschlossen (manuell oder, bis C-ZUSTAND-ABGELEITET, aus den Ergebnissen) oder abgebrochen.
+ * Das Datum verschiebt nichts (@LZ-001, @LZ-005, @LZ-006).
  */
-function isTournamentFinished(tournament: Tournament, now: Date): boolean {
+function isTournamentFinished(tournament: Tournament): boolean {
   if (tournament.status !== 'published') {return false;}
+  return isTournamentCancelled(tournament) || isTournamentCompleted(tournament);
+}
 
-  // Primary: Check if tournament is completed (match-based or manual)
-  if (isTournamentCompleted(tournament)) {return true;}
-
-  const tournamentDate = getTournamentDateTime(tournament);
-  if (!tournamentDate) {return false;}
-
-  const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tournamentDateOnly = new Date(
-    tournamentDate.getFullYear(),
-    tournamentDate.getMonth(),
-    tournamentDate.getDate()
-  );
-
-  // Fallback: If date is in the past (before today), it's finished
-  if (tournamentDateOnly < nowDateOnly) {return true;}
-
-  return false;
+/** Abgebrochen (@LZ-001): der Abbruch wird mit Zeitpunkt gespeichert. */
+function isTournamentCancelled(tournament: Tournament): boolean {
+  return !!tournament.cancelledAt;
 }
 
 /**
@@ -194,8 +175,8 @@ export function categorizeTournament(tournament: Tournament, now: Date = new Dat
     return 'draft';
   }
 
-  // Published tournaments - check timing
-  if (isTournamentRunning(tournament, now)) {
+  // Published tournaments: laufend erst mit dem Anpfiff, nicht mit der Startzeit (@LZ-001)
+  if (isTournamentRunning(tournament)) {
     return 'running';
   }
 
@@ -203,7 +184,7 @@ export function categorizeTournament(tournament: Tournament, now: Date = new Dat
     return 'upcoming';
   }
 
-  if (isTournamentFinished(tournament, now)) {
+  if (isTournamentFinished(tournament)) {
     return 'finished';
   }
 

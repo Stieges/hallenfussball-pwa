@@ -1,5 +1,8 @@
 import { Tournament, MatchUpdate } from '../models/types';
-import type { StandingDecision } from '../../types/tournament';
+import type { BracketLogEntry } from '../../types/tournament';
+import type {
+  CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
+} from './groupCompletionCloud';
 
 /**
  * Interface for Data Access
@@ -35,15 +38,32 @@ export interface ITournamentRepository {
     updateMatches(tournamentId: string, updates: MatchUpdate[], baseVersion?: number): Promise<void>;
 
     /**
-     * Paket TB (Plan v2 § 3.2, R-TB-5): schreibt NUR `standingDecisions` im Turnier-`config`, mit Versionsprüfung
-     * (`expectedVersion` = gelesene Version). Konflikt → `OptimisticLockError`; ohne Netz (Cloud) → `NetworkError`
-     * mit `isOffline`. Kein Voll-Speichern. Optional wie `syncUp` (alle drei Repositories haben sie).
+     * GA4 A-13b-C (R-GA4v2-1, `record_standing_decision`): trägt eine Gleichstands-Entscheidung ein oder nimmt sie zurück –
+     * `config.standingDecisions` und Verlauf (Person, Zeit, Grund einer Reihenfolge) in EINER Transaktion am Server, mit
+     * Versionsprüfung (`expectedVersion` = gelesene Version; `STALE` bei Konflikt). Ersetzt den REST-Schreibweg. Ohne Netz
+     * (Cloud) → `NetworkError` mit `isOffline`; Verklemmung/Wartezeit → `RetryLaterError`. Online-only bis A-15c.
      */
-    updateStandingDecisions?(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void>;
+    recordStandingDecision?(tournamentId: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult>;
+
+    /**
+     * GA4 A-13b-C (`complete_group`): „Gruppe abschließen“. Rangfolge, Entscheidungen und Stand kommen vom Gerät
+     * (`GroupCompletionService.prepareGroupCompletion`), der Server prüft sie und besetzt die Folgespiele. Ohne Netz →
+     * `NetworkError` mit `isOffline` (Warteschlange erst A-15c); Verklemmung/Wartezeit → `RetryLaterError`.
+     */
+    completeGroup?(tournamentId: string, request: CompleteGroupRequest): Promise<CompleteGroupResult>;
+
+    /** GA4 A-13b-C (`reopen_group`, @TM-099): Gruppe wieder öffnen, Grund Pflicht. Fehler wie `completeGroup`. */
+    reopenGroup?(tournamentId: string, groupId: string, reason: string): Promise<ReopenGroupResult>;
+
+    /**
+     * GA4 A-13b-C (`bracket_log_read`): Verlauf der Besetzung und der Entscheidungen. Nur die Turnierleitung bekommt Zeilen
+     * (sonst leer); `undefined`, wenn er nicht gelesen werden konnte. Im Turnier steht er als `decisionLog`.
+     */
+    readBracketLog?(tournamentId: string): Promise<BracketLogEntry[] | undefined>;
 
     /**
      * Fixrunde TB-6: schreibt NUR die Einstellung `placementsToPlayOut` (Plätze, die bei Gleichstand ausgespielt werden müssen),
-     * mit Versionsprüfung wie `updateStandingDecisions`; `standingDecisions` und alles andere bleiben unberührt. Konflikt →
+     * mit Versionsprüfung wie `recordStandingDecision`; `standingDecisions` und alles andere bleiben unberührt. Konflikt →
      * `OptimisticLockError`; ohne Netz (Cloud) → `NetworkError` mit `isOffline`.
      */
     updatePlacementsToPlayOut?(tournamentId: string, places: number[], expectedVersion: number): Promise<void>;

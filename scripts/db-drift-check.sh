@@ -96,6 +96,7 @@ BASELINE_BASENAME="$(basename "$BASELINE_FILE")"
 WORKDIR="$(mktemp -d)"
 CONTAINER_NAME="db-drift-check-$$"
 LIVE_DUMP_OVERRIDE=""
+PUBLICATION_ONLY_FILE=""
 HOST_PORT=""
 
 cleanup() {
@@ -108,6 +109,12 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --live-dump-file)
       LIVE_DUMP_OVERRIDE="$2"
+      shift 2
+      ;;
+    --realtime-publication-from)
+      # Testmodus (A-13b-S M1): nur Abschnitt 4d gegen eine Datei mit `schema.tabelle` je Zeile (statt live), nach dem
+      # Lesen von PENDING-LIVE; kein Container, kein Dump. Für Gegenproben der Publikationsliste.
+      PUBLICATION_ONLY_FILE="$2"
       shift 2
       ;;
     -h|--help)
@@ -159,8 +166,20 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_005_result_entry_forfeit.sql)
+      echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
+      ;;
+    20261110_006_group_completion.sql)
+      echo "group-completion-tables-no-client-writes group-completion-rpcs-definer-authenticated-only group-completion-helpers-no-client-execute complete-group-locks-matches-before-tournament group-completion-triggers ci-schema-reader-select-group-completion"
+      ;;
     20261110_008_helper_join.sql)
       echo "helper-join-tables-no-client-access helper-join-ci-schema-reader-select helper-join-ci-schema-reader-no-bypassrls helper-join-rpcs-definer-owner-search-path helper-join-rpcs-execute-authenticated-only helper-join-internal-no-client-execute helper-join-definer-writers-tournament-collaborators helper-join-collaborators-delete-no-device-rows helper-join-protect-collaborator-row-a16 helper-join-decide-checks-check-number helper-join-device-role-guard-trigger helper-join-names-without-hidden-chars"
+      ;;
+    20261117_104_public_payload.sql)
+      echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
+      ;;
+    20261113_101_monitor_heartbeat_wake_lock.sql)
+      echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
       ;;
     *)
       return 1
@@ -168,8 +187,20 @@ pending_assertions_for() {
   esac
 }
 
+# (f) Welche Tabellen eine noch nicht eingespielte Migration in supabase_realtime aufnimmt -- fest zugeordnet wie (b).
+# Abschnitt 4d erwartet live die volle Liste REALTIME_PUBLICATION_TABLES OHNE diese Tabellen, solange die Migration in
+# PENDING-LIVE.txt steht. Migrationen ohne Publikationsänderung geben nichts aus.
+pending_publication_tables_for() {
+  case "$1" in
+    20261110_006_group_completion.sql)
+      echo "public.group_completions public.bracket_notices public.clarifications"
+      ;;
+  esac
+}
+
 PENDING_NAMES=()
 PENDING_ASSERTIONS=()
+PENDING_PUBLICATION_TABLES=()
 PENDING_JSON_COMMIT=""
 TODAY_UTC="$(date -u +%Y-%m-%d)"
 if [[ -f "$PENDING_FILE" ]]; then
@@ -203,8 +234,11 @@ if [[ -f "$PENDING_FILE" ]]; then
     PENDING_JSON_COMMIT="$p_commit"
     PENDING_NAMES+=("$p_name")
     for a in $p_assertions; do PENDING_ASSERTIONS+=("$a"); done
+    p_pub_tables="$(pending_publication_tables_for "$p_name")"
+    for a in $p_pub_tables; do PENDING_PUBLICATION_TABLES+=("$a"); done
     echo "PENDING-LIVE: ausgenommen bis $p_due (noch nicht live): $p_name"
     echo "PENDING-LIVE:   nicht nachgespielt; Rechte-Assertions ausgelassen: $p_assertions"
+    [[ -n "$p_pub_tables" ]] && echo "PENDING-LIVE:   Realtime-Publikation live noch ohne: $p_pub_tables"
     echo "PENDING-LIVE:   role_permissions live wird gegen $JSON_REL_PATH aus Commit $p_commit verglichen"
   done < "$PENDING_FILE"
 fi
@@ -226,6 +260,53 @@ is_pending_assertion() {
   done
   return 1
 }
+
+# --- 4d (Liste + Vergleich, Aufruf unten in Abschnitt 4d) -----------------------------------
+# A-13b-S M1 (Review #330): 20261110_006 nimmt public.group_completions, public.bracket_notices und public.clarifications
+# in supabase_realtime auf (DO-Block am Ende der Migration) -- die Liste nennt deshalb 7 Tabellen, gleich mit
+# scripts/local-db-apply.sh. Solange eine Migration in PENDING-LIVE.txt steht, fehlen ihre Tabellen live noch
+# (pending_publication_tables_for, oben); erwartet wird dann die Liste ohne sie (vor dem Fenster G1: die 4 bisherigen).
+REALTIME_PUBLICATION_TABLES=(
+  "public.bracket_notices"
+  "public.clarifications"
+  "public.group_completions"
+  "public.match_events"
+  "public.matches"
+  "public.monitor_heartbeats"
+  "public.teams"
+)
+expected_realtime_publication_tables() {
+  local t p skip
+  for t in "${REALTIME_PUBLICATION_TABLES[@]}"; do
+    skip=""
+    for p in "${PENDING_PUBLICATION_TABLES[@]:-}"; do
+      [[ -n "$p" && "$t" == "$p" ]] && skip=1
+    done
+    [[ -z "$skip" ]] && echo "$t"
+  done
+  return 0
+}
+# $1 = Datei mit `schema.tabelle` je Zeile (live gelesen). Exit 0 = gleich, 1 = Abweichung (Diff auf stderr).
+check_realtime_publication() {
+  local actual expected row_count
+  actual="$(grep -v '^[[:space:]]*$' "$1" | sort || true)"
+  expected="$(expected_realtime_publication_tables | sort)"
+  if [[ "$actual" == "$expected" ]]; then
+    row_count="$(echo "$expected" | grep -c . || true)"
+    echo "Realtime-Publikation grün: supabase_realtime enthält genau die erwarteten $row_count Tabellen."
+    return 0
+  fi
+  echo "::error::supabase_realtime weicht von der erwarteten Tabellenliste ab:" >&2
+  echo "### Diff (links: erwartet, rechts: live)" >&2
+  diff <(echo "$expected") <(echo "$actual") >&2 || true
+  return 1
+}
+
+if [[ -n "$PUBLICATION_ONLY_FILE" ]]; then
+  echo "Testmodus --realtime-publication-from: nur Abschnitt 4d gegen $PUBLICATION_ONLY_FILE."
+  check_realtime_publication "$PUBLICATION_ONLY_FILE"
+  exit $?
+fi
 
 if [[ ${#PENDING_NAMES[@]} -gt 0 && ${#NEWER_MIGRATIONS[@]} -gt 0 ]]; then
   KEPT_MIGRATIONS=()
@@ -521,6 +602,19 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  # A-25b (20261110_005_result_entry_forfeit.sql): Nichtantritt -- forfeit_absent geschuetzt und vom Schreibweg (mit
+  # Feldsteuerung) geschrieben.
+  "matches-guard-engine-columns-forfeit-absent"
+  "append-match-events-writes-forfeit-absent"
+  # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
+  # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
+  "group-completion-tables-no-client-writes"
+  "group-completion-rpcs-definer-authenticated-only"
+  "group-completion-helpers-no-client-execute"
+  "complete-group-locks-matches-before-tournament"
+  "group-completion-triggers"
+  # A-13b-S: Leserolle des Drift-Checks liest die vier neuen Tabellen (Daniel 21.10.).
+  "ci-schema-reader-select-group-completion"
   # A-16 (20261110_008_helper_join.sql): Helfer-Beitritt per QR ohne Konto.
   "helper-join-tables-no-client-access"
   "helper-join-ci-schema-reader-select"
@@ -534,6 +628,17 @@ PRIVILEGE_ASSERTION_NAMES=(
   "helper-join-decide-checks-check-number"
   "helper-join-device-role-guard-trigger"
   "helper-join-names-without-hidden-chars"
+  # B-14 (20261117_104_public_payload.sql, E-A2): oeffentliche Daten nur ueber die Positivliste.
+  "public-read-functions-definer-execute-anon"
+  "public-read-no-anon-select-policies"
+  "public-read-view-schema-no-client-access"
+  "public-read-reading-member-execute-only-authenticated"
+  "public-read-default-privileges-no-anon"
+  "public-read-reshare-keeps-code"
+  "public-read-core-unchanged"
+  # B-48b (20261113_101_monitor_heartbeat_wake_lock.sql): Lebenszeichen mit Kennung als Text, Pruefung gegen config.monitors.
+  "monitor-heartbeat-rpc-checks-config-monitors"
+  "monitor-heartbeat-key-per-tournament-wake-lock"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
@@ -687,7 +792,9 @@ fi
 # Tabelleneintrag wäre für den Rest dieses Skripts unsichtbar. Erwartete Liste ist die vom
 # Auftraggeber gelieferte Live-Abfrage (2026-09-25, NICHT von diesem Skript selbst erhoben --
 # Ruling W verbietet eine neue Live-Abfrage durch die Automatisierung): Produktion enthält
-# GENAU public.match_events, public.matches, public.monitor_heartbeats, public.teams.
+# GENAU public.match_events, public.matches, public.monitor_heartbeats, public.teams; mit 20261110_006 (A-13b-S M1)
+# kommen public.group_completions, public.bracket_notices, public.clarifications dazu (Liste und Vergleich:
+# REALTIME_PUBLICATION_TABLES/check_realtime_publication oben, PENDING-LIVE-gekoppelt).
 # scripts/local-db-apply.sh setzt denselben Satz lokal (idempotent), dieser Abschnitt prüft,
 # dass Produktion nicht abgewichen ist.
 #
@@ -697,12 +804,6 @@ fi
 # `auth.users`), die zusätzlich zur Publikation hinzugefügt worden wäre, VOR dem Vergleich aus --
 # genau so eine Abweichung wäre unsichtbar geblieben, nicht "grün, weil geprüft", sondern
 # "grün, weil nie hingeschaut".
-REALTIME_PUBLICATION_TABLES=(
-  "public.match_events"
-  "public.matches"
-  "public.monitor_heartbeats"
-  "public.teams"
-)
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   echo ""
   echo "--- Realtime-Publikation supabase_realtime (live) ---"
@@ -713,17 +814,7 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
     > "$PUB_OUT" 2>"$WORKDIR/realtime_publication.log" \
     || { echo "::error::Konnte supabase_realtime nicht live lesen:" >&2
          cat "$WORKDIR/realtime_publication.log" >&2; exit 1; }
-  ACTUAL_PUB_TABLES="$(sort "$PUB_OUT")"
-  EXPECTED_PUB_TABLES="$(printf '%s\n' "${REALTIME_PUBLICATION_TABLES[@]}" | sort)"
-  if [[ "$ACTUAL_PUB_TABLES" == "$EXPECTED_PUB_TABLES" ]]; then
-    ROW_COUNT="$(printf '%s\n' "${REALTIME_PUBLICATION_TABLES[@]}" | wc -l | tr -d ' ')"
-    echo "Realtime-Publikation grün: supabase_realtime enthält genau die erwarteten $ROW_COUNT Tabellen."
-  else
-    echo "::error::supabase_realtime weicht von der erwarteten Tabellenliste ab:" >&2
-    echo "### Diff (links: erwartet, rechts: live)" >&2
-    diff <(echo "$EXPECTED_PUB_TABLES") <(echo "$ACTUAL_PUB_TABLES") >&2 || true
-    exit 1
-  fi
+  check_realtime_publication "$PUB_OUT" || exit 1
 else
   echo ""
   echo "Realtime-Publikation (supabase_realtime) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2

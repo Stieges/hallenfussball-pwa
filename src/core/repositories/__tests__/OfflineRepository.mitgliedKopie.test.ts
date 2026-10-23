@@ -115,9 +115,13 @@ describe('@FU-105 CA-6 Marias Gerät (Mitglied) bleibt über viele Änderungen v
 
   const cloudNow = async (cloud: ReturnType<typeof setup>['cloud']): Promise<Tournament> => (await cloud.fake.get('T'))!;
 
-  /** Sichtbarer Konflikt: der Eintrag wartet, die letzte Störung ist „permanent“ (nicht „vorübergehend“), nichts im Gerät verworfen. */
+  /**
+   * Sichtbarer Konflikt: seit BP-1 (@FU-126, Befund C-ENDGUELTIG-SOFORT-MELDEN) beim ersten Versuch „nicht übernommen“ mit dem
+   * Grund Konflikt (Dead-Letter, Merkmal `conflict`), ohne Wiederholung; die letzte Störung ist „permanent“, nichts im Gerät verworfen.
+   */
   function expectConflictVisible(r: OfflineRepository): void {
-    expect(r.mutationQueue.getPendingCount()).toBe(1);
+    expect(r.mutationQueue.getPendingCount()).toBe(0);
+    expect(r.mutationQueue.getFailedMutations().map((f) => f.conflict)).toEqual([true]);
     expect(r.mutationQueue.getLastFailure()).toBe('permanent');
   }
 
@@ -218,17 +222,16 @@ describe('@FU-105 CA-6 Marias Gerät (Mitglied) bleibt über viele Änderungen v
       await flush();
       // 1. kein stilles Überschreiben von Ollis Änderung
       expect(await cloudNow(cloud)).toMatchObject({ title: 'Ollis Titel', version: 8 });
-      // 2. der Konflikt ist sichtbar (Eintrag wartet, Störung „permanent“)
+      // 2. der Konflikt ist sichtbar (@FU-126: Eintrag sofort „nicht übernommen“ im Dead-Letter, Störung „permanent“)
       expectConflictVisible(maria);
-      // 3. der nächste Abruf überschreibt Marias wartende Änderung nicht (Regel Q)
+      // 3. der nächste Abruf überschreibt Marias abgelegte Änderung nicht (Regel Q)
       await maria.get('T', { fresh: true });
       expect(stored().title).toBe('Marias Titel');
 
-      // 4. nach MAX_RETRIES Fehlversuchen liegt der Eintrag im Dead-Letter (@FU-004: „Übertragung gestört“) und schützt die Kopie weiter
-      for (let versuch = 1; versuch < MAX_RETRIES; versuch++) {
-        await vi.advanceTimersByTimeAsync(FAILURE_HOLD_MS);
-        await flush();
-      }
+      // 4. @FU-126: der Eintrag liegt ohne Wiederholung im Dead-Letter (@FU-004: „Übertragung gestört“) und schützt die Kopie weiter
+      await vi.advanceTimersByTimeAsync(FAILURE_HOLD_MS * MAX_RETRIES);
+      await flush();
+      expect(cloud.fake.save).toHaveBeenCalledTimes(2); // Olli + Marias einziger Versuch
       expect(maria.mutationQueue.getFailedCount()).toBe(1);
       expect(maria.mutationQueue.getPendingCount()).toBe(0);
       await maria.get('T', { fresh: true });

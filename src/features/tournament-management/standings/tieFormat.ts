@@ -43,3 +43,8 @@ export function placeText(texts: PlaceTexts, from: number, to: number): string {
 export function placesListText(texts: PlaceTexts, places: readonly number[], language: string): string {
   return listText(placeRuns(places).map(([from, to]) => placeText(texts, from, to)), language);
 }
+
+/** Uhrzeit „14:32“ in der Sprache der App (Zeitpunkt der Eintragung im Verlauf, @W2A-063). */
+export function timeText(isoTime: string, language: string): string {
+  return new Date(isoTime).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' });
+}

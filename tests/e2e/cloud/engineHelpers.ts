@@ -60,12 +60,43 @@ export interface AppendAsRoleResult {
   results: Array<{ id: string | null; status: string; code?: string }>;
 }
 
-/** Ruft `append_match_events` MIT dem JWT der Rolle auf (Muster `serverHasTournamentPermission`). */
+/**
+ * B-49 (A-34 Steuer je Feld): Seit die App ihre Geräte-ID sendet, hält das Gerät, das im Test über die Oberfläche anpfeift, das
+ * Feld. Eine Vorbedingung, die als „Server“ ohne Geräte-ID nachschreibt (`appendAsRole`), wäre dann abgelehnt (NOT_CONTROLLER,
+ * brief-A-34 L7: ohne Geräte-ID kein Umgehen eines bestehenden Anspruchs). Für solche Vorbedingungen gibt die Testumgebung das
+ * Feld vorher frei (Service-Rolle, Zeile in `field_control` löschen) – das Gerät der Oberfläche beansprucht es mit dem nächsten
+ * Eintrag wieder. Nur Testumgebung, nie Produktion; die Sperre selbst belegt `feldsteuerung.cloud.spec.ts` ohne Freigabe.
+ */
+export async function releaseFieldControlOf(matchId: string): Promise<void> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/rest/v1/matches?id=eq.${matchId}&select=tournament_id,field`, { headers });
+  if (!res.ok) {
+    throw new Error(`releaseFieldControlOf(${matchId}): Spiel nicht lesbar: ${res.status} ${await res.text()}`);
+  }
+  const [row] = (await res.json()) as Array<{ tournament_id: string; field: number }>;
+  if (!row) {
+    return;
+  }
+  const del = await fetch(`${url}/rest/v1/field_control?tournament_id=eq.${row.tournament_id}&field=eq.${row.field}`, { method: 'DELETE', headers });
+  if (!del.ok) {
+    throw new Error(`releaseFieldControlOf(${matchId}): Freigabe fehlgeschlagen: ${del.status} ${await del.text()}`);
+  }
+}
+
+/**
+ * Ruft `append_match_events` MIT dem JWT der Rolle auf (Muster `serverHasTournamentPermission`), ohne Geräte-ID.
+ * Standard: keine Freigabe (die Sperre gilt). Vorbedingungen, die auf einem vom Gerät der Oberfläche gehaltenen Feld nachschreiben,
+ * setzen `{ feldFreigeben: true }` ausdrücklich (`releaseFieldControlOf`, Review #341 N9).
+ */
 export async function appendAsRole(
   role: LoggedInRole,
   matchId: string,
-  events: readonly AppendAsRoleEvent[]
+  events: readonly AppendAsRoleEvent[],
+  options: { feldFreigeben?: boolean } = {},
 ): Promise<AppendAsRoleResult> {
+  if (options.feldFreigeben === true) {
+    await releaseFieldControlOf(matchId);
+  }
   const { url, anonKey } = getLocalServiceRoleClient();
   const res = await fetch(`${url}/rest/v1/rpc/append_match_events`, {
     method: 'POST',

@@ -15,6 +15,21 @@ import { buildSchedulePdf } from '../../../lib/pdf/schedulePdf';
 import { withTournamentState } from '../../../lib/pdf/tournamentState';
 import type { PdfAudience } from '../../../lib/pdf/visibility';
 
+/**
+ * Ansprechpartner fürs PDF nur mit Häkchen „Ansprechpartner öffentlich zeigen“ (@W1-031, @W1-032): Name, Telefon, E-Mail
+ * und Website in einer Zeile; ohne Häkchen oder ohne Angaben keine Zeile.
+ */
+export function publicContactOption(tournament: Pick<Tournament, 'contactInfo'>): Pick<PDFExportOptions, 'contact'> {
+  const info = tournament.contactInfo;
+  if (info?.showPublic !== true) {
+    return {};
+  }
+  const parts = [info.name, info.phone, info.email, info.website]
+    .map((part) => part?.trim() ?? '')
+    .filter((part) => part !== '');
+  return parts.length === 0 ? {} : { contact: parts.join(' · ') };
+}
+
 /** Was der Dialog anbietet: Spielplan, Spielplan ohne Ergebnisse, Endstand (nach dem Abschluss), Aushang mit QR-Code. */
 export type PdfChoice = 'schedule' | 'blank' | 'final' | 'notice';
 
@@ -50,6 +65,7 @@ export async function buildChoice(choice: PdfChoice, ctx: BuildContext): Promise
     edition: choice === 'blank' ? 'blank' : 'plan',
     viewerResultsHidden: tournament.hideScoresForPublic,
     ...(tournament.organizer?.trim() ? { organizerName: tournament.organizer } : {}),
+    ...publicContactOption(tournament),
     hallName: getLocationName(tournament),
   };
 

@@ -1,17 +1,15 @@
 /**
  * Paket TB-B, Task TB-3' (Kern): Gleichstands-Entscheidung zurücknehmen (Daniel „K6 ja“): jede Art – Annahme,
  * Strafstoßschießen, Reihenfolge – bis zum Abschluss der Gruppe, danach nicht mehr (WITHDRAW_NOT_ALLOWED). Schreibweg wie
- * `decide`: frisch lesen, nur `standingDecisions` mit Versionsprüfung, ohne Netz OFFLINE. Den Zustand „Gruppe
- * abgeschlossen“ liefert GA4 A-13; bis dahin ist er eine Pflicht-Abhängigkeit des Dienstes (kein Voreinstellungswert),
- * in der App die Zwischenregel `groupClosedByFollowUp`.
+ * `decide`: frisch lesen, über `record_standing_decision` mit Versionsprüfung, ohne Netz OFFLINE. Den Zustand „Gruppe
+ * abgeschlossen“ liefert GA4 A-13; er ist eine Pflicht-Abhängigkeit des Dienstes (kein Voreinstellungswert), in der App
+ * der echte Abschluss (`groupClosedFromCompletions`, A-13b-C).
  * Record `2026-09-27_wizard-regelinhalte` (@W2A-070; „wer wann“ → `entscheidung.personZeit.test.ts`).
  */
 import { describe, expect, it, vi } from 'vitest';
 import { rankTournamentGroup } from '../../standings/tournamentTable';
 import { DATA, id } from '../../standings/__tests__/fixtures';
-import { jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from '../../standings/__tests__/decisionTestKit';
-import { groupClosedByFollowUp } from '../../standings/groupClosure';
-import { slotSource, teamSlot } from '../../models/matchSlot';
+import { closeGroup, jgj, lage048, MemoryRepo, nikolaus, order, shared, shootout } from '../../standings/__tests__/decisionTestKit';
 import { resolvePlayoffPairings } from '../../generators/playoffResolver';
 import { StandingDecisionService } from '../StandingDecisionService';
 import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
@@ -85,78 +83,37 @@ describe("TB-3' Entscheidung zurücknehmen (@W2A-070)", () => {
   });
 });
 
-describe("TB-3' Fixrunde: Zwischenregel „Gruppe abgeschlossen“ bis GA4 A-13 (Review A1) und Lesefehler (A5)", () => {
-  it('@W2A-070 Zwischenregel: geschlossen, sobald ein Spiel mit Herkunft aus der Gruppe besetzt oder angepfiffen ist; Gegenbeispiel: andere Gruppe, nichts besetzt', () => {
-    const t = lage048();
-    expect([groupClosedByFollowUp(t, 'A'), groupClosedByFollowUp(t, 'B')]).toEqual([false, false]);
-    // Gruppe B hat keinen Gleichstand → Halbfinals bekommen ihre B-Seiten; Gruppe A (Süd/West offen) bleibt offen.
-    resolvePlayoffPairings(t);
-    expect([groupClosedByFollowUp(t, 'A'), groupClosedByFollowUp(t, 'B')]).toEqual([false, true]);
-    // Angepfiffen, obwohl die A-Seite noch offen ist: Halbfinale 2 („Zweiter Gruppe A“) läuft.
-    const laeuft = { ...t, matches: t.matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'running' as const } : m)) };
-    expect(groupClosedByFollowUp(laeuft, 'A')).toBe(true);
-  });
-
-  // N-A1 (Nachreview): eine von Hand besetzte Seite (`resolvedFrom` fällt weg, `originX` bleibt) schließt die Gruppe;
-  // ein angepfiffenes Spiel zählt auch im Laufzeitwert `paused` (der Typ kennt ihn nicht).
-  const handBesetzt = (t: Tournament, matchId: string, side: 'A' | 'B', status?: 'running'): Tournament => ({
-    ...t,
-    matches: t.matches.map((m) => {
-      if (m.id !== matchId) {
-        return m;
-      }
-      const slot = side === 'A' ? m.slotA : m.slotB;
-      const origin = slotSource(slot);
-      return {
-        ...m,
-        ...(side === 'A' ? { originA: origin, slotA: teamSlot(id('S')) } : { originB: origin, slotB: teamSlot(id('S')) }),
-        ...(status !== undefined ? { matchStatus: status } : {}),
-      };
-    }),
-  });
-
-  it('@W2A-070 Zwischenregel: von Hand besetzte Seite aus der Gruppe schließt sie, auch geplant; Gegenbeispiel: Seite aus anderer Gruppe', () => {
-    const t = handBesetzt(lage048(), 'hf-2', 'B');
-    expect(groupClosedByFollowUp(t, 'A')).toBe(true);
-    expect(groupClosedByFollowUp(t, 'B')).toBe(false);
-    // Gegenbeispiel: dieselbe Handbesetzung auf der B-Seite von HF1 (Herkunft „Zweiter Gruppe B“) schließt nur Gruppe B.
-    const anders = handBesetzt(lage048(), 'hf-1', 'B');
-    expect([groupClosedByFollowUp(anders, 'A'), groupClosedByFollowUp(anders, 'B')]).toEqual([false, true]);
-    // Gegenbeispiel: Team ohne bekannte Herkunft (kein origin, kein resolvedFrom) schließt keine Gruppe.
-    const ohneHerkunft = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, slotB: teamSlot(id('S')) } : m)) };
-    expect(groupClosedByFollowUp(ohneHerkunft, 'A')).toBe(false);
-  });
-
-  it('@W2A-070 Zwischenregel: von Hand besetzt und pausiert (Laufzeitwert paused) ist geschlossen; geplant/wartend/ausgefallen allein nicht', () => {
-    const paused = handBesetzt(lage048(), 'hf-2', 'B', 'paused' as 'running');
-    expect(groupClosedByFollowUp(paused, 'A')).toBe(true);
-    // pausiert, Seite noch offen (angepfiffen über die andere, besetzte Seite aus Gruppe A)
-    const pausedOffen = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'paused' as never } : m)) };
-    expect(groupClosedByFollowUp(pausedOffen, 'A')).toBe(true);
-    for (const status of ['scheduled', 'waiting', 'skipped'] as const) {
-      const offen = { ...lage048(), matches: lage048().matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: status } : m)) };
-      expect(groupClosedByFollowUp(offen, 'A')).toBe(false);
-    }
-  });
-
-  it('@W2A-070 Zwischenregel im Dienst: nach dem Besetzen des Halbfinales ist das Strafstoßschießen nicht mehr zurücknehmbar, davor schon', async () => {
+describe("A-13b-C: echter Zustand „Gruppe abgeschlossen“ (löst die Zwischenregel ab, Review TB-3' A1) und Lesefehler (A5)", () => {
+  it('@W2A-070 nach „Gruppe abschließen“ ist das Strafstoßschießen nicht mehr zurücknehmbar (WITHDRAW_NOT_ALLOWED, nichts geschrieben), vorher und nach dem Wiederöffnen schon', async () => {
     const repo = new MemoryRepo(lage048());
     expect((await repo.service(['e-west']).decide(repo.tournament.id, shootout('W', 'S', 4, 3, 'A'))).ok).toBe(true);
-    // Gegenbeispiel: vor dem Besetzen geht das Zurücknehmen (Standardregel des Kits = Zwischenregel).
+    // Gegenbeispiel: vor dem Abschluss geht das Zurücknehmen.
     const vorher = new MemoryRepo(repo.tournament);
     expect(await vorher.service().withdraw(vorher.tournament.id, 'e-west')).toEqual({ ok: true });
 
-    resolvePlayoffPairings(repo.tournament);
-    expect(groupClosedByFollowUp(repo.tournament, 'A')).toBe(true);
+    await closeGroup(repo, 'A');
+    const writes = repo.writes;
     expect(await repo.service().withdraw(repo.tournament.id, 'e-west')).toEqual({ ok: false, code: 'WITHDRAW_NOT_ALLOWED' });
+    expect(repo.writes).toBe(writes);
     expect(repo.tournament.standingDecisions?.map((d) => d.id)).toEqual(['e-west']);
+
+    expect((await repo.reopenGroup(repo.tournament.id, 'A', 'Ergebnis falsch eingetragen')).status).toBe('ok');
+    expect(await repo.service().withdraw(repo.tournament.id, 'e-west')).toEqual({ ok: true });
+  });
+
+  it('@W2A-070 ein besetztes oder angepfiffenes Folgespiel allein macht die Gruppe nicht „abgeschlossen“ (Zwischenregel abgelöst)', async () => {
+    const repo = new MemoryRepo(lage048());
+    expect((await repo.service(['e-west']).decide(repo.tournament.id, shootout('W', 'S', 4, 3, 'A'))).ok).toBe(true);
+    resolvePlayoffPairings(repo.tournament);
+    repo.tournament = { ...repo.tournament, matches: repo.tournament.matches.map((m) => (m.id === 'hf-2' ? { ...m, matchStatus: 'running' as const } : m)) };
+    expect(await repo.service().withdraw(repo.tournament.id, 'e-west')).toEqual({ ok: true });
   });
 
   it('@W2A-070 liefert das frische Lesen kein Turnier, meldet die App einen Fehler statt eines Zurücknehmens (STALE)', async () => {
-    const update = vi.fn();
-    const repo = { get: () => Promise.resolve(null), updateStandingDecisions: update } as unknown as ITournamentRepository;
+    const record = vi.fn();
+    const repo = { get: () => Promise.resolve(null), recordStandingDecision: record } as unknown as ITournamentRepository;
     const service = new StandingDecisionService(repo, { groupClosed: () => false });
     expect(await service.withdraw('t-weg', 'e-1')).toEqual({ ok: false, code: 'STALE' });
-    expect(update).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
   });
 });

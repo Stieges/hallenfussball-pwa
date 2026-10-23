@@ -27,9 +27,10 @@ export interface MoreSheetProps {
 const flaecheStil: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md, padding: cssVars.spacing.lg };
 const knopfStil: CSSProperties = { minHeight: cssVars.touchTargets.primary, width: '100%' };
 
-const TEXT: Record<MehrPunkt, { key: 'mehr.uhrKorrigieren' | 'mehr.seitenTauschen' | 'mehr.einstellungen'; testId: string }> = {
+const TEXT: Record<MehrPunkt, { key: 'mehr.uhrKorrigieren' | 'mehr.seitenTauschen' | 'mehr.einstellungen' | 'mehr.nichtAngetreten'; testId: string }> = {
   uhrKorrigieren: { key: 'mehr.uhrKorrigieren', testId: 'mehr-uhr-korrigieren' },
   seitenTauschen: { key: 'mehr.seitenTauschen', testId: 'mehr-seiten-tauschen' },
+  nichtAngetreten: { key: 'mehr.nichtAngetreten', testId: 'mehr-nicht-angetreten' },
   einstellungen: { key: 'mehr.einstellungen', testId: 'mehr-einstellungen' },
 };
 

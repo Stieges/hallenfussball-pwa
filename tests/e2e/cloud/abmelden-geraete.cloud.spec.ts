@@ -72,21 +72,32 @@ test.describe('Abmelden und andere Geräte', () => {
     try {
       await loginAsRole(handy.page, 'abmelden');
       await loginAsRole(tablet.page, 'abmelden');
-      for (const { page } of [handy, tablet]) {
-        await openCockpit(page, ids.tournamentId, ids.matchId);
-        await expectEngineMatchRunningUi(page);
-        await expectOutboxSettled(page);
-      }
-      const tabletToken = await readSessionAccessToken(tablet.page);
+      // B-49 (Steuer je Feld, @FU-026): je Feld darf nur ein Gerät eintragen. Das Handy öffnet das Spiel zuerst und
+      // trägt zuerst ein -- damit steuert es das Feld. @AN-023 verlangt nicht, dass beide Geräte gleichzeitig eintragen.
+      await openCockpit(handy.page, ids.tournamentId, ids.matchId);
+      await expectEngineMatchRunningUi(handy.page);
+      await expectOutboxSettled(handy.page);
       const handyToken = await readSessionAccessToken(handy.page);
-      if (!tabletToken || !handyToken) {
-        throw new Error('Beide Geräte müssen eine Sitzung haben (sb-*-auth-token fehlt).');
+      if (!handyToken) {
+        throw new Error('Das Handy muss eine Sitzung haben (sb-*-auth-token fehlt).');
+      }
+      // Kontrolle (Gegenbeispiel 1): das Steuer-Gerät trägt ein -> Zeile in der DB.
+      await enterGoal(handy.page, 'home');
+      await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 10000 }).toBe(baseRows + 1);
+      await expectOutboxSettled(handy.page);
+
+      // Das Tablet öffnet danach dasselbe Spiel: angemeldet, aber nur lesend (kein Tor-Knopf, kein Pause-Knopf), mit Übernahme-Knopf.
+      await openCockpit(tablet.page, ids.tournamentId, ids.matchId);
+      await expect(tablet.page.locator('[data-testid="scoreboard-state"]')).toHaveText('Live', { timeout: 15000 });
+      await expect(tablet.page.getByTestId('leiste-leitet')).toBeVisible({ timeout: 15000 });
+      await expect(tablet.page.locator('[data-testid="goal-button-home"]')).toHaveCount(0);
+      await expect(tablet.page.locator('[data-testid="goal-button-away"]')).toHaveCount(0);
+      await expect(tablet.page.getByTestId('leiste-uebernehmen')).toBeVisible();
+      const tabletToken = await readSessionAccessToken(tablet.page);
+      if (!tabletToken) {
+        throw new Error('Das Tablet muss eine Sitzung haben (sb-*-auth-token fehlt).');
       }
       expect(await fetchAuthUserStatus(handyToken)).toBe(200);
-
-      // Kontrolle (Gegenbeispiel 1): auch ohne Abmelden trägt das Tablet ein -> Zeile in der DB.
-      await enterGoal(tablet.page, 'home');
-      await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 10000 }).toBe(baseRows + 1);
 
       // Handy: ein Eintrag wartet (Übertragung abgefangen), dann abmelden mit Warnung.
       await handy.page.route('**/rest/v1/rpc/append_match_events', (route) => route.abort('internetdisconnected'));
@@ -101,7 +112,7 @@ test.describe('Abmelden und andere Geräte', () => {
       await handy.page.waitForLoadState('networkidle');
       await expect(handy.page.locator('[data-testid="auth-avatar-button"]')).toHaveCount(0);
       expect(await fetchAuthUserStatus(handyToken)).toBe(403);
-      // Das wartende Handy-Tor ist nicht in der DB (kein Konto, kein Senden).
+      // Das wartende Handy-Tor ist nicht in der DB (kein Konto, kein Senden); in der DB steht nur das erste Tor.
       expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows + 1);
 
       // Tablet bleibt: Sitzung gilt am Server, nach Rückkehr in den Vordergrund weiter angemeldet
@@ -113,6 +124,10 @@ test.describe('Abmelden und andere Geräte', () => {
       await expect(tablet.page.locator('[data-testid="auth-avatar-button"]')).toBeVisible();
       await expect(tablet.page.locator('[data-testid="signed-out-elsewhere"]')).toHaveCount(0);
       await tablet.page.locator('[data-testid="desktop-tab-live"]').click();
+      // Das Handy ist weg, das Tablet trägt weiter ein: Olli (Turnierleitung) übernimmt die Spielleitung auf dem Tablet (@FU-027).
+      await expect(tablet.page.getByTestId('leiste-uebernehmen')).toBeVisible({ timeout: 15000 });
+      await tablet.page.getByTestId('leiste-uebernehmen').click();
+      await tablet.page.getByTestId('takeover-confirm').click();
       await expectEngineMatchRunningUi(tablet.page);
       await enterGoal(tablet.page, 'away');
       await expect.poll(async () => (await fetchEngineRows(ids.matchId)).length, { timeout: 10000 }).toBe(baseRows + 2);

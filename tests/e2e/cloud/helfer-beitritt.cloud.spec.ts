@@ -5,11 +5,12 @@
  * der Wechsel Warteschirm → „Du bist zugelassen“ ohne neuen Scan kommt mit A-17c), @HE-089 (Konto scannt → Rückfrage → der
  * Laptop-Kontext bleibt angemeldet), @HE-015 (Gegenbeispiel: Hallen-WLAN ohne Internet → „Für den Einstieg brauchst du Netz“).
  *
- * Voraussetzung: lokaler Stack MIT der Migration `20261110_008_helper_join.sql` (A-16). Dieser Stack hat sie noch nicht
- * (Einspielen = Sache des Fensters/Controllers; hier wird nie zurückgesetzt oder gesät). Darum läuft der Block erst mit
- * `E2E_STACK_HAS_008=1` und ist sonst `fixme` mit Grund. Die Leitungs-Seite (Team & Helfer, A-18a) gibt es noch nicht:
+ * Voraussetzung: lokaler Stack MIT der Migration `20261110_008_helper_join.sql` (A-16). Ein lokal älterer Stack hat sie evtl.
+ * nicht (hier wird nie zurückgesetzt oder gesät). Darum läuft der Block nur mit `E2E_STACK_HAS_008=1` und ist sonst `fixme`
+ * mit Grund. Die CI (`e2e-cloud.yml`) baut den Stack aus den Repo-Migrationen und setzt die Variable. Die Leitungs-Seite (Team & Helfer, A-18a) gibt es noch nicht:
  * Zulassen läuft deshalb über die Schnittstelle `decide_join_request` mit der Prüfzahl des Helfer-Handys (S-1).
  */
+import type { Browser, BrowserContext } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { restAsRole } from './restAsRole';
 import { loginAsRole } from './helpers';
@@ -29,9 +30,17 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     return (res.json as { code: string }).code;
   }
 
+  // Frischer Kontext je Gerät, die Datenschutz-Abfrage vorab beantwortet (wie `fixtures.ts`): sonst deckt ihr Dialog die Seite zu.
+  async function newDevice(browser: Browser): Promise<BrowserContext> {
+    const context = await browser.newContext();
+    const consent = { errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 };
+    await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
+    return context;
+  }
+
   test('@HE-095 Scan → Name → Prüfzahl → Zulassen mit Feld 2 → gleicher QR öffnet Feld 2', async ({ browser }) => {
     const code = await helperCode();
-    const helper = await (await browser.newContext()).newPage();
+    const helper = await (await newDevice(browser)).newPage();
     await helper.goto(`/#/join/${code}`);
     await helper.getByTestId('join-name').fill('Tom');
     await helper.getByTestId('join-submit').click();
@@ -44,7 +53,9 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     const decided = await restAsRole('owner', 'POST', 'rpc/decide_join_request', { p_request_id: request?.id, p_accept: true, p_field: 2, p_check_number: shown });
     expect(decided.status).toBe(200);
 
-    // Gleicher QR noch einmal: zugelassen → Feld 2, keine zweite Anfrage (@HE-095).
+    // Gleicher QR noch einmal: zugelassen → Feld 2, keine zweite Anfrage (@HE-095). Ein Scan öffnet die Seite neu; ein `goto` auf
+    // dieselbe Hash-Adresse bliebe im laufenden Dokument (kein Neuladen, kein neuer Code-Abruf), darum erst `about:blank`.
+    await helper.goto('about:blank');
     await helper.goto(`/#/join/${code}`);
     await expect(helper).toHaveURL(/\/live\?f=2/);
   });
@@ -53,11 +64,8 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     const code = await helperCode();
     // Greta = `stranger` leitet den Live-Cup nicht (sonst @HE-091). Handy und Laptop melden sich je selbst an: getrennte Sitzungen,
     // denn `signOut({ scope: 'local' })` beendet genau die Sitzung des Handys.
-    const consent = { errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 };
     const open = async () => {
-      const context = await browser.newContext();
-      await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
-      const page = await context.newPage();
+      const page = await (await newDevice(browser)).newPage();
       await loginAsRole(page, 'stranger');
       return page;
     };
@@ -74,7 +82,7 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
 
   test('@HE-015 Gegenbeispiel: ohne Internet „Für den Einstieg brauchst du Netz“, nicht „Code ungültig“, Name bleibt', async ({ browser }) => {
     const code = await helperCode();
-    const context = await browser.newContext();
+    const context = await newDevice(browser);
     const helper = await context.newPage();
     await helper.goto(`/#/join/${code}`);
     await helper.getByTestId('join-name').fill('Tom');

@@ -230,15 +230,17 @@ SELECT 'match-apply-event-immutable',
        (SELECT p.provolatile = 'i' FROM pg_proc p
          WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
 UNION ALL
+-- A-13b-S (20261110_006): Zaehlung und Eigenschaften gelten fuer die Rechenfunktion; die zehn Hilfen fuer „Gruppe
+-- abschliessen“ (group_key ... conflict_or_reject) im selben Schema sind ausgenommen und eigens geprueft.
 SELECT 'match-engine-function-count-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE (n.nspname = 'match_engine'
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
 SELECT 'match-engine-immutable-count-51',
        (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE (n.nspname = 'match_engine'
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
 UNION ALL
@@ -250,7 +252,7 @@ SELECT 'match-engine-no-security-definer',
 UNION ALL
 SELECT 'match-engine-search-path-all-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE (n.nspname = 'match_engine'
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
 UNION ALL
@@ -349,7 +351,10 @@ SELECT 'match-engine-non-b3b-executable-anon-authenticated',
                                           AND has_function_privilege('authenticated', p.oid, 'EXECUTE'))
           FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'match_engine'
-           AND p.proname NOT IN ('normalize_uuid', 'cfg_num', 'envelope', 'dedupe_key', 'server_rules', 'cache_columns'))
+           AND p.proname NOT IN ('normalize_uuid', 'cfg_num', 'envelope', 'dedupe_key', 'server_rules', 'cache_columns')
+           -- A-13b-S (20261110_006): die Hilfen fuer „Gruppe abschliessen“ liegen in match_engine, sind aber nur aus den
+           -- Server-Funktionen erreichbar (eigene Assertion group-completion-helpers-no-client-execute).
+           AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
 UNION ALL
 SELECT 'positive-anon-execute-match-engine-apply-amend',
        coalesce(has_function_privilege('anon', to_regprocedure('match_engine.apply_amend(jsonb,jsonb)'), 'EXECUTE'), false)
@@ -701,6 +706,94 @@ SELECT 'heartbeats-select-manage-screens',
                    FROM pg_policies p
                   WHERE p.schemaname = 'public' AND p.tablename = 'monitor_heartbeats'), false)
 
+-- A-25b (20261110_005_result_entry_forfeit.sql, @W2A-022, @W2A-024, @W2A-026; C-NICHTANTRITT-FEHLT): forfeit_absent ist
+-- Schutzspalte (Client-Rollen aendern sie nie, INSERT neutral NULL) und append_match_events schreibt sie -- in der
+-- Fassung MIT Feldsteuerung (Review-Auflage 4: Basis 20261110_003, sonst waere A-34 zurueckgedreht).
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'matches-guard-engine-columns-forfeit-absent',
+       coalesce((SELECT position('NEW.forfeit_absent := NULL;' IN p.prosrc) > 0
+                        AND position('NEW.forfeit_absent IS DISTINCT FROM OLD.forfeit_absent' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_guard_engine_columns()')), false)
+UNION ALL
+SELECT 'append-match-events-writes-forfeit-absent',
+       coalesce((SELECT position('forfeit_absent = v_cache ->> ''forfeit_absent''' IN pg_get_functiondef(p.oid)) > 0
+                        AND position('public.field_control' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+
+-- A-13b-S (20261110_006_group_completion.sql, @TM-046, @TM-113, @W2A-070, @W2A-072; Plan § 8, Soll 12/13): Gruppe abschliessen
+-- am Server. Vor dem Live-Einspielen: "f".
+--  (1) Die vier Tabellen haben keine Client-Schreibrechte; anon liest keine; bracket_log hat gar kein Tabellenrecht
+--      (Lesen nur ueber bracket_log_read); authenticated liest group_completions, bracket_notices, clarifications.
+UNION ALL
+SELECT 'group-completion-tables-no-client-writes',
+       coalesce((SELECT bool_and(to_regclass('public.' || t) IS NOT NULL
+                                 AND NOT has_table_privilege('anon', 'public.' || t, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                                 AND NOT has_table_privilege('authenticated', 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                                 AND has_table_privilege('authenticated', 'public.' || t, 'SELECT') = (t <> 'bracket_log'))
+                   FROM unnest(ARRAY['group_completions', 'bracket_log', 'bracket_notices', 'clarifications']) AS t), false)
+--  (2) Die sechs RPCs: SECURITY DEFINER mit festem search_path, nur authenticated darf sie ausfuehren.
+UNION ALL
+SELECT 'group-completion-rpcs-definer-authenticated-only',
+       coalesce((SELECT count(*) = 6
+                        AND bool_and(p.prosecdef AND p.proconfig IS NOT NULL
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.record_standing_decision(uuid,text,jsonb,text,integer)'),
+                                  to_regprocedure('public.complete_group(uuid,text,uuid[],integer[],jsonb,text[],jsonb,boolean)'),
+                                  to_regprocedure('public.reopen_group(uuid,text,text,boolean)'),
+                                  to_regprocedure('public.resolve_bracket_notice(bigint)'),
+                                  to_regprocedure('public.resolve_clarification(bigint)'),
+                                  to_regprocedure('public.bracket_log_read(uuid)'))), false)
+--  (3) Die Hilfen in match_engine sind nur aus den Server-Funktionen erreichbar (kein EXECUTE fuer Client-Rollen) und
+--      haben einen festen search_path (Review A-13b-S, Soll).
+UNION ALL
+SELECT 'group-completion-helpers-no-client-execute',
+       coalesce((SELECT count(*) = 10
+                        AND bool_and(NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND p.proconfig = ARRAY['search_path=public, pg_temp'])
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('match_engine.group_key(text)'),
+                                  to_regprocedure('match_engine.group_state(uuid,text)'),
+                                  to_regprocedure('match_engine.places_to_play_out(jsonb)'),
+                                  to_regprocedure('match_engine.same_team_set(jsonb,jsonb)'),
+                                  to_regprocedure('match_engine.standing_decision_valid(jsonb)'),
+                                  to_regprocedure('match_engine.shared_allowed(uuid,text,integer[],jsonb)'),
+                                  to_regprocedure('match_engine.write_side(uuid,text,uuid,jsonb,boolean)'),
+                                  to_regprocedure('match_engine.add_notice(uuid,uuid,text,text,uuid,uuid)'),
+                                  to_regprocedure('match_engine.apply_follow_up(uuid,uuid,text,uuid,uuid,jsonb,jsonb,text,uuid,jsonb)'),
+                                  to_regprocedure('match_engine.conflict_or_reject(boolean,uuid,uuid,text,text,jsonb,text,uuid)'))), false)
+--  (4) Sperrreihenfolge R-GA4v2-8 (MG14): complete_group sperrt die Spiele vor der Turnierzeile.
+UNION ALL
+SELECT 'complete-group-locks-matches-before-tournament',
+       coalesce((SELECT position('ORDER BY m.id' IN p.prosrc) > 0
+                        AND position('ORDER BY m.id' IN p.prosrc)
+                            < position('FROM public.tournaments WHERE id = p_tournament_id' IN p.prosrc)
+                   FROM pg_proc p
+                  WHERE p.oid = to_regprocedure('public.complete_group(uuid,text,uuid[],integer[],jsonb,text[],jsonb,boolean)')), false)
+--  (5) Trigger: Korrektur macht einen Abschluss stale (SECURITY DEFINER, MG10); Voll-Speichern behaelt die Entscheidungen
+--      (Soll 12, MG15); reassigned_at schreibt nur der Server (Soll 13).
+UNION ALL
+SELECT 'group-completion-triggers',
+       coalesce((SELECT count(*) = 3 FROM pg_trigger tg
+                  WHERE NOT tg.tgisinternal AND tg.tgenabled <> 'D'
+                    AND ((tg.tgrelid = 'public.matches'::regclass AND tg.tgname = 'matches_mark_group_stale'
+                          AND tg.tgqual IS NOT NULL
+                          AND (SELECT prosecdef FROM pg_proc WHERE oid = tg.tgfoid))
+                      OR (tg.tgrelid = 'public.matches'::regclass AND tg.tgname = 'matches_guard_ga4_columns'
+                          AND position('reassigned_at' IN (SELECT prosrc FROM pg_proc WHERE oid = tg.tgfoid)) > 0)
+                      OR (tg.tgrelid = 'public.tournaments'::regclass AND tg.tgname = 'tournaments_keep_standing_decisions'
+                          AND position('standingDecisions' IN (SELECT prosrc FROM pg_proc WHERE oid = tg.tgfoid)) > 0))), false)
+--  (6) Leserolle des Drift-Checks (Daniel 21.10., ci-grants-sql-freigabe.md § 8): ci_schema_reader liest die vier Tabellen
+--      (pg_dump --schema-only sperrt jede Tabelle und braucht SELECT), und NUR lesen.
+UNION ALL
+SELECT 'ci-schema-reader-select-group-completion',
+       coalesce((SELECT bool_and(to_regclass('public.' || t) IS NOT NULL
+                                 AND has_table_privilege('ci_schema_reader', 'public.' || t, 'SELECT')
+                                 AND NOT has_table_privilege('ci_schema_reader', 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
+                   FROM unnest(ARRAY['group_completions', 'bracket_log', 'bracket_notices', 'clarifications']) AS t), false)
 -- A-16 (20261110_008_helper_join.sql, @HE-004 @HE-062 @HE-073 @HE-084 @HE-104 @HE-105; C-HELFER-OHNE-KONTO): Helfer-Beitritt
 -- per QR. Zwei Tabellen ohne Client-Rechte (RLS an, keine Policy; ci_schema_reader liest fuer den Schema-Dump, ohne
 -- BYPASSRLS); zehn Client-Funktionen SECURITY DEFINER mit search_path und Eigentuemer postgres, EXECUTE nur authenticated
@@ -815,4 +908,113 @@ SELECT 'helper-join-names-without-hidden-chars',
                    FROM pg_constraint c
                   WHERE c.conrelid = to_regclass('public.tournament_join_requests') AND c.contype = 'c'
                     AND (pg_get_constraintdef(c.oid) LIKE '%display_name%' OR pg_get_constraintdef(c.oid) LIKE '%device_label%')), false)
+
+-- B-14 (20261117_104_public_payload.sql, E-A2, @ZM-096..@ZM-102, @ME-018, Review Focus 6): oeffentliche Daten nur ueber
+-- public_tournament/display_tournament (SECURITY DEFINER, EXECUTE anon+authenticated, nie PUBLIC); keine SELECT-Policy
+-- fuer anon/public und keine mit is_public auf den acht Tabellen; Baustein public_view ohne Client-Rechte;
+-- is_reading_member nur fuer authenticated; neue Tabellen in public ohne Standardrechte fuer anon
+-- (C-ANON-STANDARDRECHTE-NEUE-TABELLEN). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'public-read-functions-definer-execute-anon',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
+                                  to_regprocedure('public.display_tournament(uuid,text,bigint)'))), false)
+UNION ALL
+SELECT 'public-read-no-anon-select-policies',
+       coalesce((SELECT count(*) = 8
+                        AND NOT bool_or(p.roles && ARRAY['anon', 'public']::name[])
+                        AND NOT bool_or(position('is_public' IN coalesce(p.qual, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.cmd IN ('SELECT', 'ALL')
+                    AND p.tablename IN ('tournaments', 'teams', 'team_players', 'matches', 'match_events', 'monitors',
+                                        'sponsors', 'match_corrections')), false)
+UNION ALL
+SELECT 'public-read-view-schema-no-client-access',
+       coalesce(to_regnamespace('public_view') IS NOT NULL
+                AND NOT has_schema_privilege('anon', 'public_view', 'USAGE')
+                AND NOT has_schema_privilege('authenticated', 'public_view', 'USAGE')
+                AND NOT EXISTS (SELECT 1 FROM pg_proc p
+                                 WHERE p.pronamespace = to_regnamespace('public_view')
+                                   AND (has_function_privilege('anon', p.oid, 'EXECUTE')
+                                        OR has_function_privilege('authenticated', p.oid, 'EXECUTE'))), false)
+UNION ALL
+SELECT 'public-read-reading-member-execute-only-authenticated',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND position('''screen''' IN pg_get_functiondef(p.oid)) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.is_reading_member(uuid)')), false)
+UNION ALL
+SELECT 'public-read-default-privileges-no-anon',
+       NOT EXISTS (SELECT 1 FROM pg_default_acl d, aclexplode(d.defaclacl) a
+                    WHERE d.defaclrole = 'postgres'::regrole AND d.defaclnamespace = 'public'::regnamespace
+                      AND d.defaclobjtype = 'r' AND a.grantee = 'anon'::regrole)
+UNION ALL
+SELECT 'public-read-reshare-keeps-code',
+       coalesce((SELECT position('share_code = NULL' IN pg_get_functiondef(p.oid)) = 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_private(uuid)')), false)
+       AND coalesce((SELECT position('IF v_existing_code IS NOT NULL THEN' IN pg_get_functiondef(p.oid)) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.make_tournament_public(uuid)')), false)
+-- B-14 NB-1 (Review #346 Nachblick): Sicherheitskern unveraendert -- md5 der Funktionstexte (public_view.*,
+-- public_tournament, display_tournament, is_reading_member; Reihenfolge Schema, Name, Argumente) wie in
+-- 20261117_104_public_payload.sql, und die vier Trigger aus A1 aktiv. Aendert eine spaetere Migration eine dieser
+-- Funktionen, muss der Wert hier mitgezogen werden (bewusst). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'public-read-core-unchanged',
+       coalesce((SELECT count(*) = 12
+                        AND md5(string_agg(pg_get_functiondef(p.oid), E'\n'
+                                           ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
+                            = 'b066d903d80edc87778e7e65b2958366'
+                   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                  WHERE n.nspname = 'public_view'
+                     OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
+                                  to_regprocedure('public.display_tournament(uuid,text,bigint)'),
+                                  to_regprocedure('public.is_reading_member(uuid)'))), false)
+       AND (SELECT count(*) = 4 FROM pg_trigger t
+             WHERE NOT t.tgisinternal AND t.tgenabled = 'O'
+               AND (t.tgrelid, t.tgname) IN (('public.matches'::regclass, 'matches_updated_at_insert'),
+                                             ('public.teams'::regclass, 'teams_updated_at_insert'),
+                                             ('public.matches'::regclass, 'matches_public_structure_delete'),
+                                             ('public.teams'::regclass, 'teams_public_structure_delete')))
+-- B-48b (20261113_101_monitor_heartbeat_wake_lock.sql, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): genau
+-- eine record_monitor_heartbeat mit Kennung als Text und p_wake_lock, SECURITY DEFINER mit search_path, EXECUTE nur
+-- anon/authenticated (nicht PUBLIC), prueft gegen config -> 'monitors', den Papierkorb und tournamentSettings (Rumpf am
+-- Text, sonst blieben M1/M2-Mutanten der Matrix im Katalog unsichtbar); monitor_heartbeats mit Kennung als Text,
+-- Schluessel (tournament_id, monitor_id), ohne FK auf die unbenutzte Tabelle monitors, Pruefregel wake_lock aktiv.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'monitor-heartbeat-rpc-checks-config-monitors',
+       coalesce((SELECT count(*) = 1
+                        AND bool_and(pg_get_function_identity_arguments(p.oid) = 'p_monitor_key text, p_tournament_id uuid, p_slide_index integer, p_cache_status text, p_user_agent text, p_wake_lock text'
+                                     AND p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0)
+                                     AND position('t.config -> ''monitors''' IN p.prosrc) > 0
+                                     AND position('m.item ->> ''id'' = p_monitor_key' IN p.prosrc) > 0
+                                     AND position('t.deleted_at IS NULL' IN p.prosrc) > 0
+                                     AND position('public.has_tournament_permission(t.id, ''tournamentSettings'')' IN p.prosrc) > 0)
+                   FROM pg_proc p
+                  WHERE p.pronamespace = 'public'::regnamespace AND p.proname = 'record_monitor_heartbeat'), false)
+UNION ALL
+SELECT 'monitor-heartbeat-key-per-tournament-wake-lock',
+       coalesce((SELECT format_type(a.atttypid, a.atttypmod) = 'text'
+                   FROM pg_attribute a
+                  WHERE a.attrelid = to_regclass('public.monitor_heartbeats') AND a.attname = 'monitor_id' AND NOT a.attisdropped), false)
+       AND coalesce((SELECT pg_get_constraintdef(c.oid) = 'PRIMARY KEY (tournament_id, monitor_id)'
+                       FROM pg_constraint c WHERE c.conrelid = to_regclass('public.monitor_heartbeats') AND c.contype = 'p'), false)
+       AND NOT EXISTS (SELECT 1 FROM pg_constraint c
+                        WHERE c.conrelid = to_regclass('public.monitor_heartbeats') AND c.contype = 'f'
+                          AND c.confrelid = to_regclass('public.monitors'))
+       AND EXISTS (SELECT 1 FROM pg_constraint c
+                    WHERE c.conrelid = to_regclass('public.monitor_heartbeats') AND c.contype = 'c' AND c.convalidated
+                      AND c.conname = 'monitor_heartbeats_wake_lock_check'
+                      AND position('''not_applicable''' IN pg_get_constraintdef(c.oid)) > 0)
 ;
