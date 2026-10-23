@@ -1,26 +1,37 @@
 /**
- * Test-Hilfen Paket TB, Task TB-3/TB-3': Repository-Attrappe mit echter Versionslogik (Optimistic Lock wie
- * `SupabaseRepository`), Lage aus @W2A-048 mit zwei Gruppen und Halbfinals, Nikolaus-Lage (@W2A-067) mit Einstellung
- * „Diese Plätze müssen bei Gleichstand ausgespielt werden“. Nur Testumgebung.
+ * Test-Hilfen Paket TB, Task TB-3/TB-3' und GA4 A-13b-C: Repository-Attrappe mit echter Versionslogik (Entscheidungen wie
+ * `record_standing_decision`: Versionsprüfung `STALE`, Verlauf mit Person und Zeit, Abschluss `complete_group`), Lage aus
+ * @W2A-048 mit zwei Gruppen und Halbfinals, Nikolaus-Lage (@W2A-067) mit Einstellung „Diese Plätze müssen bei Gleichstand
+ * ausgespielt werden“. Nur Testumgebung.
  */
-import type { Match, StandingDecision, Tournament } from '../../../types/tournament';
+import type { BracketLogEntry, Match, Tournament } from '../../../types/tournament';
 import type { ITournamentRepository } from '../../repositories/ITournamentRepository';
+import type {
+  CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
+} from '../../repositories/groupCompletionCloud';
+import { applyCompleteGroup, applyRecordDecision, applyReopenGroup } from '../../repositories/localGroupCompletion';
 import { NetworkError, OptimisticLockError } from '../../errors';
 import { StandingDecisionService } from '../../services/StandingDecisionService';
-import { groupClosedByFollowUp } from '../groupClosure';
+import { prepareGroupCompletion } from '../../services/GroupCompletionService';
+import { groupClosedFromCompletions } from '../groupCompletions';
 import { createMockTournament } from '../../../test/factories';
 import { groupRank, slots } from '../../../test/matchSlotFixtures';
 import { BFV_ORDER, DATA, id, league, parseMatches, POINTS_310, teamsOf, type Key } from './fixtures';
 
 const copy = (t: Tournament): Tournament => JSON.parse(JSON.stringify(t)) as Tournament;
 
-/** Repository-Attrappe: hält ein Turnier, schreibt `standingDecisions` nur bei passender Version. */
+/** Repository-Attrappe: hält ein Turnier, schreibt Entscheidungen nur bei passender Version und führt den Verlauf wie der Server. */
 export class MemoryRepo {
   tournament: Tournament;
   online = true;
   writes = 0;
   /** Vorab eingereihte (veraltete) Lesestände – simuliert „hat Version v gelesen, bevor jemand schrieb“. */
   staleReads: Tournament[] = [];
+  /** Person, die der Server aus der Anmeldung liest und im Verlauf nennt. */
+  author: string | undefined = 'Olli';
+  private idSeq = 0;
+  /** Fehler, den der nächste Schreibversuch wirft (etwa `RetryLaterError`), einmalig. */
+  failNextWith: Error | undefined;
 
   constructor(tournament: Tournament) {
     this.tournament = copy({ ...tournament, version: tournament.version ?? 1 });
@@ -31,17 +42,75 @@ export class MemoryRepo {
     return Promise.resolve(copy(stale ?? this.tournament));
   }
 
-  updateStandingDecisions(_id: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
+  /** Fehler, der den Schreibversuch trifft (kein Netz oder der vorgegebene), sonst `undefined`. */
+  private blocked(): Error | undefined {
     if (!this.online) {
-      return Promise.reject(new NetworkError('ohne Netz', true));
+      return new NetworkError('ohne Netz', true);
     }
-    if ((this.tournament.version ?? 0) !== expectedVersion) {
-      return Promise.reject(new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.'));
+    const error = this.failNextWith;
+    this.failNextWith = undefined;
+    return error;
+  }
+
+  private log(entry: Omit<BracketLogEntry, 'id' | 'at' | 'actorName'>): void {
+    const log = this.tournament.decisionLog ?? [];
+    this.tournament = {
+      ...this.tournament,
+      decisionLog: [...log, { ...entry, id: log.length + 1, at: new Date().toISOString(), ...(this.author !== undefined ? { actorName: this.author } : {}) }],
+    };
+  }
+
+  /** Wie `record_standing_decision`: Entscheidung (ohne Person/Zeit/Grund) im Turnier, Person, Zeit und Grund im Verlauf. */
+  recordStandingDecision(_id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> {
+    const blocked = this.blocked();
+    if (blocked !== undefined) {
+      return Promise.reject(blocked);
     }
-    const stored = JSON.parse(JSON.stringify(decisions)) as StandingDecision[];
-    this.tournament = { ...this.tournament, standingDecisions: stored, version: expectedVersion + 1 };
-    this.writes++;
-    return Promise.resolve();
+    const before = this.tournament.standingDecisions ?? [];
+    const { tournament, result } = applyRecordDecision(this.tournament, request, expectedVersion);
+    if (tournament !== undefined) {
+      this.tournament = copy(tournament);
+      this.writes++;
+      if (request.action === 'decide') {
+        const { basis: _basis, ...detail } = request.decision;
+        this.log({ kind: 'standing_decision', groupId: request.decision.groupId, detail, ...(request.decision.kind === 'order' && request.reason !== undefined ? { reason: request.reason } : {}) });
+      } else {
+        const gone = before.find((d) => d.id === request.decision.id);
+        this.log({ kind: 'standing_withdraw', ...(gone !== undefined ? { groupId: gone.groupId } : {}), detail: { id: request.decision.id, ...(gone !== undefined ? { teamIds: gone.teamIds } : {}) } });
+      }
+    }
+    return Promise.resolve(result);
+  }
+
+  /** Wie `complete_group` (ohne Besetzung der Folgespiele): Abschluss eintragen, Verlauf führen. */
+  completeGroup(_id: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+    const blocked = this.blocked();
+    if (blocked !== undefined) {
+      return Promise.reject(blocked);
+    }
+    const { tournament, result } = applyCompleteGroup(this.tournament, request);
+    if (tournament !== undefined) {
+      this.tournament = copy(tournament);
+      this.log({ kind: 'complete_group', groupId: request.groupId, detail: { ranking: [...request.ranking], openRanks: [...request.openRanks] } });
+    }
+    return Promise.resolve(result);
+  }
+
+  reopenGroup(_id: string, groupId: string, reason: string): Promise<ReopenGroupResult> {
+    const blocked = this.blocked();
+    if (blocked !== undefined) {
+      return Promise.reject(blocked);
+    }
+    const { tournament, result } = applyReopenGroup(this.tournament, groupId);
+    if (tournament !== undefined) {
+      this.tournament = copy(tournament);
+      this.log({ kind: 'reopen_group', groupId, detail: {}, reason });
+    }
+    return Promise.resolve(result);
+  }
+
+  readBracketLog(): Promise<BracketLogEntry[] | undefined> {
+    return Promise.resolve(this.tournament.decisionLog);
   }
 
   /** Schmaler Weg der Einstellung „Plätze ausspielen“: nur dieses Feld, mit Versionsprüfung (nie `standingDecisions` überschreiben). */
@@ -71,12 +140,13 @@ export class MemoryRepo {
     this.tournament = { ...this.tournament, placementsToPlayOut: [...places], version: (this.tournament.version ?? 0) + 1 };
   }
 
-  /** `groupClosed`: ob die Gruppe abgeschlossen ist; ohne Angabe die Zwischenregel bis GA4 A-13 (`groupClosedByFollowUp`). */
+  /** `groupClosed`: ob die Gruppe abgeschlossen ist; ohne Angabe der echte Zustand aus den Abschlüssen (`groupClosedFromCompletions`). */
   service(ids: string[] = [], groupClosed?: (groupId: string) => boolean): StandingDecisionService {
     let n = 0;
+    // Kennungen sind je Attrappe eindeutig (der Server lehnt eine doppelte Kennung ab, DUPLICATE_ID)
     return new StandingDecisionService(this as unknown as ITournamentRepository, {
-      newId: () => ids[n++] ?? `entscheidung-${String(n)}`,
-      groupClosed: groupClosed === undefined ? groupClosedByFollowUp : (_t: Tournament, groupId: string) => groupClosed(groupId),
+      newId: () => ids[n++] ?? `entscheidung-${String(++this.idSeq)}`,
+      groupClosed: groupClosed === undefined ? groupClosedFromCompletions : (_t: Tournament, groupId: string) => groupClosed(groupId),
     });
   }
 }
@@ -124,3 +194,22 @@ export const jgj = (keys: string, results: string, places?: number[]): Tournamen
 
 /** Nikolaus-Lage (@W2A-067): eine Gruppe, 6 Teams, alle 15 Spiele entschieden; Petting und Otting gleich auf Platz 3. */
 export const nikolaus = (places?: number[]): Tournament => jgj('KRPDFX', DATA.NIKOLAUS, places);
+
+/** „Gruppe abschließen“ über die Attrappe, wie die Oberfläche es aus `prepareGroupCompletion` täte (A-13c). Wirft, wenn die Gruppe nicht bereit ist. */
+export async function closeGroup(repo: MemoryRepo, groupId: string): Promise<void> {
+  const prepared = prepareGroupCompletion(repo.tournament, groupId);
+  if (prepared.code !== 'READY') {
+    throw new Error(`Gruppe '${groupId}' nicht abschließbar: ${prepared.code}`);
+  }
+  const result = await repo.completeGroup(repo.tournament.id, {
+    groupId,
+    ranking: prepared.ranking,
+    openRanks: prepared.openRanks,
+    tieDecisions: prepared.tieDecisions,
+    knownDecisionIds: (repo.tournament.standingDecisions ?? []).map((d) => d.id),
+    expectedState: prepared.expectedState,
+  });
+  if (result.status !== 'ok') {
+    throw new Error(`Abschluss abgelehnt: ${result.status}`);
+  }
+}

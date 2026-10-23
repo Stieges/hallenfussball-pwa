@@ -113,6 +113,10 @@ jobs:
         # ohne Zutun: assertLocalSupabaseTarget prüft die Ziel-URL/den Key vor jedem
         # Service-Role-Zugriff, und dieser Job setzt nirgends eine Produktions-URL oder
         # -Keys -- der lokale Stack ist die einzige konfigurierte Quelle.
+        env:
+          # Der Stack oben entsteht aus den Migrationen des Repos, also mit 20261110_008_helper_join.sql (A-16):
+          # die Helfer-Beitritts-Specs (helfer-beitritt.cloud.spec.ts, A-17b) laufen hier statt fixme.
+          E2E_STACK_HAS_008: '1'
         run: npm run test:e2e:cloud
 
       - name: Supabase-Diagnose einsammeln

@@ -3,7 +3,7 @@
  * nicht erreichbar sind (Helfer: lokal gilt jeder als Eigentümer; Zuschauer-Link), und feste Zustände für Bilder gegen das
  * Mockup v3. Echte Komponenten (`TabellenTab`, `PublicStandingsTab`), echte Tokens, i18n und Thema; der Dienst arbeitet auf
  * einem Speicher im Fenster, nichts verlässt die Seite. Adresse: `?rolle=leitung|helfer|zuschauer`, `&plaetze=1,2,3`,
- * `&zustand=offen|annahme|schiessen|abgeschlossen`, `&netz=aus`, `&sprache=en`. Nur Testumgebung, nicht Teil des Builds.
+ * `&zustand=offen|annahme|schiessen|abgeschlossen` (abgeschlossen = „Gruppe abschließen“ gewählt), `&netz=aus`, `&sprache=en`. Nur Testumgebung, nicht Teil des Builds.
  */
 import { useCallback, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
@@ -17,9 +17,10 @@ import { StandingTieContext, type StandingTieContextValue } from '../../../src/f
 import { generateFullSchedule } from '../../../src/core/generators';
 import { calculateStandings, calculateStandingsPerGroup } from '../../../src/utils/calculations';
 import { StandingDecisionService } from '../../../src/core/services/StandingDecisionService';
-import { groupClosedByFollowUp } from '../../../src/core/standings/groupClosure';
+import { groupClosedFromCompletions } from '../../../src/core/standings/groupCompletions';
+import type { RecordDecisionRequest, RecordDecisionResult } from '../../../src/core/repositories/groupCompletionCloud';
 import type { ITournamentRepository } from '../../../src/core/repositories/ITournamentRepository';
-import type { StandingDecision, Tournament } from '../../../src/types/tournament';
+import type { Tournament } from '../../../src/types/tournament';
 import { id } from '../../../src/core/standings/__tests__/fixtures';
 import saat from '../../../scripts/visual-metrics/saat/nikolaus-gleichstand.json';
 
@@ -36,12 +37,13 @@ let current: Tournament = { ...grund, version: 1, placementsToPlayOut: plaetze }
 /** Speicher im Fenster mit echter Versionslogik (wie `MemoryRepo` der Tests). */
 const repository = {
   get: () => Promise.resolve(JSON.parse(JSON.stringify(current)) as Tournament),
-  updateStandingDecisions: (_id: string, decisions: StandingDecision[], expectedVersion: number) => {
-    current = { ...current, standingDecisions: decisions, version: expectedVersion + 1 };
-    return Promise.resolve();
+  recordStandingDecision: (_id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> => {
+    const others = (current.standingDecisions ?? []).filter((d) => d.id !== request.decision.id);
+    current = { ...current, standingDecisions: request.action === 'decide' ? [...others, request.decision] : others, version: expectedVersion + 1 };
+    return Promise.resolve({ status: 'ok', alreadyApplied: false, version: expectedVersion + 1 });
   },
 } as unknown as ITournamentRepository;
-const service = new StandingDecisionService(repository, { groupClosed: (t, g) => groupClosedByFollowUp(t, g) });
+const service = new StandingDecisionService(repository, { groupClosed: groupClosedFromCompletions });
 
 const P = id('P');
 const D = id('D');
@@ -51,8 +53,8 @@ if (zustand === 'annahme') {
   await service.decide(current.id, { groupId: '', teamIds: [D, P], order: [D, P], kind: 'shootout', shootout: { winner: 4, loser: 3 } });
 } else if (zustand === 'abgeschlossen') {
   await service.decide(current.id, { groupId: '', teamIds: [P, D], order: [P, D], kind: 'shared' });
-  // Zwischenregel „Gruppe abgeschlossen“: ein Folgespiel mit Herkunft aus der Gruppe ist besetzt
-  current = { ...current, matches: [...current.matches, { id: 'finale', round: 99, field: 1, isFinal: true, phase: 'final', label: 'Finale', slotA: { kind: 'team', teamId: id('K') as never }, slotB: { kind: 'pending', source: { kind: 'groupRank', group: '', rank: 2 } } as never, originA: { kind: 'groupRank', group: '', rank: 1 }, originB: { kind: 'groupRank', group: '', rank: 2 } } as never] };
+  // „Gruppe abschließen“ (A-13b-C): der echte Abschluss, nicht mehr die Zwischenregel über Folgespiele
+  current = { ...current, groupCompletions: [{ groupId: '', ranking: current.teams.map((t) => t.id), openRanks: [], stale: false, completedAt: '2026-12-06T10:00:00Z' }] };
 }
 
 declare global { interface Window { __harness: { tournament: () => Tournament } } }
