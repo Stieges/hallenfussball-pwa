@@ -969,6 +969,16 @@ if [[ -f "$MIGRATIONS_DIR/20261110_010_standing_decision_null_version.sql" ]]; t
     "$(decide olli "$t" decide "$dn" "" 0)|$(ndec "$t")|$(version "$t")"
   check P "P-12 @ET-055 Wiederholung nach verlorener Antwort: ALREADY_APPLIED mit Zahl als Version" "ok:ALREADY_APPLIED|1" \
     "$(decide olli "$t" decide "$dn" "" 0)|$(lastres | jq -r '.version')"
+  # Review #361 (Luecke P-12): beide ALREADY_APPLIED-Zweige auch auf einer Zeile OHNE Version -- die Antwort traegt die Zahl 0
+  # (coalesce), nie null (der Client verlangt eine Zahl).
+  q "UPDATE public.tournaments SET version = NULL WHERE id = '$t';" >/dev/null
+  check P "P-12 @ET-055 ohne Version: Wiederholung des Eintragens -> ALREADY_APPLIED mit Version 0 (Zahl)" "ok:ALREADY_APPLIED|0|number" \
+    "$(decide olli "$t" decide "$dn" "" 0)|$(lastres | jq -r '.version')|$(lastres | jq -r '.version | type')"
+  check P "P-12 @ET-055 ohne Version: Zuruecknehmen mit erwarteter Version 0 wird angenommen" "ok|0" \
+    "$(decide olli "$t" withdraw "$dn" "" 0)|$(ndec "$t")"
+  q "UPDATE public.tournaments SET version = NULL WHERE id = '$t';" >/dev/null
+  check P "P-12 @ET-055 ohne Version: Wiederholung des Zuruecknehmens -> ALREADY_APPLIED mit Version 0 (Zahl)" "ok:ALREADY_APPLIED|0|number" \
+    "$(decide olli "$t" withdraw "$dn" "" 0)|$(lastres | jq -r '.version')|$(lastres | jq -r '.version | type')"
 fi
 
 summary
