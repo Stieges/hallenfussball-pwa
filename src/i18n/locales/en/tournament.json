@@ -1282,13 +1282,10 @@
     "zurueck": "Back",
     "nurVerwerfen": "can only be discarded",
     "vorschau": {
-      "titel": "Preview",
       "stand": "New score: {{home}} {{score}} {{away}}",
       "uebernommen": "Accepted: {{list}}",
-      "verworfen": "Discarded: {{list}}",
       "nichts": "nothing will be accepted",
-      "koBeendet": "Not possible: the knockout match is finished – please correct the result",
-      "nichtMoeglich": "Not possible: {{reason}}"
+      "koBeendet": "Not possible: the knockout match is finished – please correct the result"
     },
     "ergebnis": {
       "gespeichert": "Decision saved",
@@ -1300,7 +1297,16 @@
       "veraltet": "Update the app",
       "schonEntschieden": "Already decided – reloading the list",
       "spielFehlt": "Match {{number}} is not loaded on this device yet",
-      "sonst": "Not accepted – {{reason}}"
+      "nieAngepfiffen": "The match was never kicked off – the entry can only be discarded",
+      "nichtUebernehmbar": "This entry cannot be accepted – only discarded",
+      "unbekannt": "Not saved – please reload the list and try again",
+      "keinRecht": "You can no longer decide – your access has been revoked"
+    },
+    "verlauf": {
+      "titel": "History",
+      "uebernommen": "{{what}} – accepted by {{by}}, {{time}}",
+      "verworfen": "{{what}} – discarded by {{by}}, {{time}}",
+      "turnierleitung": "the organisers"
     }
   }
 }

@@ -60,28 +60,54 @@ export function noticeText(t: TFunction, notice: ReviewNotice): string {
   return t(`tournament:klaerung.hinweis.${key}`, { count: notice.count, author: authorOf(t, notice.author), field: notice.field ?? '–' });
 }
 
-/** Rückmeldung nach dem Senden; `null` = gespeichert ohne Zusatz. */
-export function outcomeText(t: TFunction, outcome: DecisionOutcome | { status: 'unknownMatch' }, matchNumber: number | null): string | null {
+/** Sprechender Text zu einem Grund des Servers – nie der technische Code (Review m1). */
+export function reasonText(t: TFunction, reason: string | null): string {
+  switch (reason) {
+    case 'ALREADY_DECIDED':
+      return t('tournament:klaerung.fehler.schonEntschieden');
+    case 'KNOCKOUT_FINISHED':
+      return t('tournament:klaerung.vorschau.koBeendet');
+    case 'NOT_STARTED':
+      return t('tournament:klaerung.fehler.nieAngepfiffen');
+    case 'NOT_ACCEPTABLE':
+      return t('tournament:klaerung.fehler.nichtUebernehmbar');
+    default:
+      return t('tournament:klaerung.fehler.unbekannt');
+  }
+}
+
+export type OutboxTone = 'ok' | 'info' | 'warn';
+
+/** Rückmeldung nach dem Senden (Statuszeile über der Liste, Review M1). */
+export function outcomeText(t: TFunction, outcome: DecisionOutcome | { status: 'unknownMatch' }, matchNumber: number | null): { text: string; tone: OutboxTone } {
   switch (outcome.status) {
     case 'saved':
       return outcome.accepted > 0 && outcome.matchFinished
-        ? t('tournament:klaerung.ergebnis.gruppeVeraltet', { number: matchNumber ?? '–' })
-        : null;
+        ? { text: t('tournament:klaerung.ergebnis.gruppeVeraltet', { number: matchNumber ?? '–' }), tone: 'info' }
+        : { text: t('tournament:klaerung.ergebnis.gespeichert'), tone: 'ok' };
     case 'offline':
-      return t('tournament:klaerung.fehler.offline');
+      return { text: t('tournament:klaerung.fehler.offline'), tone: 'warn' };
     case 'notSent':
-      return t('tournament:klaerung.fehler.nichtGesendet');
+      return { text: t('tournament:klaerung.fehler.nichtGesendet'), tone: 'warn' };
     case 'outdated':
-      return t('tournament:klaerung.fehler.veraltet');
+      return { text: t('tournament:klaerung.fehler.veraltet'), tone: 'warn' };
+    case 'notAllowed':
+      return { text: t('tournament:klaerung.fehler.keinRecht'), tone: 'warn' };
     case 'unknownMatch':
-      return t('tournament:klaerung.fehler.spielFehlt', { number: matchNumber ?? '–' });
+      return { text: t('tournament:klaerung.fehler.spielFehlt', { number: matchNumber ?? '–' }), tone: 'warn' };
     case 'rejected':
-      if (outcome.reason === 'ALREADY_DECIDED') {
-        return t('tournament:klaerung.fehler.schonEntschieden');
-      }
-      if (outcome.reason === 'KNOCKOUT_FINISHED') {
-        return t('tournament:klaerung.vorschau.koBeendet');
-      }
-      return t('tournament:klaerung.fehler.sonst', { reason: outcome.reason ?? outcome.code });
+      return { text: reasonText(t, outcome.reason), tone: 'warn' };
   }
+}
+
+/** Verlauf (@FU-095 „stehen als verworfen im Verlauf“): „Tor FC Nord · Abschnitt 1, 2. Minute – verworfen von Olli, 12:10“. */
+export function decisionLine(t: TFunction, review: MatchReview, teamName: TeamNameOf): string {
+  const decision = review.decision;
+  const what = entryLine(t, review, teamName);
+  if (decision === null) {
+    return what;
+  }
+  const time = new Date(decision.at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const key = decision.type === 'REVIEW_ACCEPT' ? 'uebernommen' : 'verworfen';
+  return t(`tournament:klaerung.verlauf.${key}`, { what, by: decision.by ?? t('tournament:klaerung.verlauf.turnierleitung'), time });
 }

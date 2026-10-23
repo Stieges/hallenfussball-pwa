@@ -4,6 +4,7 @@
  * Engine und Senden sind ersetzt (`useReviewDecision`): geprüft wird, was Olli sieht und welche Entscheidungen gehen.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -157,20 +158,115 @@ describe('@FU-037 Eindeutiger Offline-Eintrag wird automatisch einsortiert – H
   });
 });
 
-describe('Rückmeldungen (A-35 Übergabe)', () => {
-  it('schon entschieden: „Bereits entschieden – die Liste wird neu geladen“', async () => {
-    decide.mockResolvedValue({ status: 'rejected', code: 'UNKNOWN_TARGET', reason: 'ALREADY_DECIDED' });
-    show([review({ eventId: 'x' })]);
-    fireEvent.click(screen.getByTestId('klaerung-fall-x-verwerfen'));
-    expect(await screen.findByTestId('klaerung-fall-x-meldung')).toHaveTextContent('Bereits entschieden');
-  });
+/** Echter Zustand (Review M1): `refresh` ersetzt die Liste wie der Server danach – der Fall fällt heraus. */
+function Live({ initial, after }: { initial: MatchReview[]; after: MatchReview[] }) {
+  const [reviews, setReviews] = useState(initial);
+  return <KlaerungslisteDialog isOpen onClose={vi.fn()} tournament={tournament} reviews={reviews} refresh={() => { setReviews(after); return Promise.resolve(); }} />;
+}
+const decidedAs = (r: MatchReview, type: 'REVIEW_ACCEPT' | 'REVIEW_DISCARD', by: string): MatchReview =>
+  ({ ...r, decision: { type, eventId: `d-${r.eventId}`, at: Date.UTC(2026, 10, 28, 11, 10), by } });
 
-  it('Übernehmen in ein beendetes Gruppenspiel: Hinweis, die Gruppe neu abzuschließen', async () => {
+describe('Review M1: Rückmeldungen bleiben sichtbar, auch wenn der Fall aus der Liste fällt', () => {
+  it('Übernehmen in ein beendetes Gruppenspiel: Fall weg, Hinweis „bitte neu abschließen“ bleibt stehen', async () => {
     decide.mockResolvedValue({ status: 'saved', accepted: 1, matchFinished: true });
-    show([review({ eventId: 'x', reason: 'AFTER_END', detail: {} })]);
+    const tor = review({ eventId: 'x', reason: 'AFTER_END', detail: {} });
+    render(<Live initial={[tor]} after={[decidedAs(tor, 'REVIEW_ACCEPT', 'Olli')]} />);
     fireEvent.click(screen.getByTestId('klaerung-fall-x-uebernehmen'));
     fireEvent.click(screen.getByTestId('klaerung-fall-x-speichern'));
-    expect(await screen.findByTestId('klaerung-fall-x-meldung')).toHaveTextContent('Spiel 9 war schon beendet – ist die Gruppe abgeschlossen, bitte neu abschließen.');
+    await waitFor(() => expect(screen.queryByTestId('klaerung-fall-x')).toBeNull());
+    expect(screen.getByTestId('klaerungsliste-meldung')).toHaveTextContent('Spiel 9 war schon beendet – ist die Gruppe abgeschlossen, bitte neu abschließen.');
+  });
+
+  it('schon entschieden (Maria war schneller): Fall weg, „Bereits entschieden“ bleibt stehen, Verlauf nennt Maria', async () => {
+    decide.mockResolvedValue({ status: 'rejected', code: 'UNKNOWN_TARGET', reason: 'ALREADY_DECIDED' });
+    const tor = review({ eventId: 'x' });
+    render(<Live initial={[tor]} after={[decidedAs(tor, 'REVIEW_DISCARD', 'Maria')]} />);
+    fireEvent.click(screen.getByTestId('klaerung-fall-x-verwerfen'));
+    await waitFor(() => expect(screen.queryByTestId('klaerung-fall-x')).toBeNull());
+    expect(screen.getByTestId('klaerungsliste-meldung')).toHaveTextContent('Bereits entschieden');
+    expect(screen.getByTestId('klaerung-verlauf-x')).toHaveTextContent('verworfen von Maria');
+  });
+
+  it('Gegenbeispiel: ohne Entscheidung keine Statuszeile', () => {
+    show([review()]);
+    expect(screen.queryByTestId('klaerungsliste-meldung')).toBeNull();
+  });
+});
+
+describe('@FU-095 „die beiden Tore stehen als verworfen im Verlauf“ (Review M5)', () => {
+  it('nach dem Speichern: Gelbe Karte übernommen, beide Tore verworfen – im Verlauf mit Name', async () => {
+    decide.mockResolvedValue({ status: 'saved', accepted: 1, matchFinished: false });
+    const nord = review({ eventId: 'tor-nord', entry: { type: 'GOAL', teamId: NORD, clockMs: 60_000 } });
+    const sued = review({ eventId: 'tor-sued', entry: { type: 'GOAL', teamId: SUED, clockMs: 70_000 } });
+    const gelb = review({ eventId: 'gelb-5', entry: { type: 'YELLOW_CARD', teamId: SUED, clockMs: 80_000, payload: { playerNumber: 5 } } });
+    render(<Live initial={[nord, sued, gelb]} after={[decidedAs(nord, 'REVIEW_DISCARD', 'Olli'), decidedAs(sued, 'REVIEW_DISCARD', 'Olli'), decidedAs(gelb, 'REVIEW_ACCEPT', 'Olli')]} />);
+    fireEvent.click(screen.getByTestId('klaerung-fall-tor-nord-aufklappen'));
+    fireEvent.click(screen.getByTestId('klaerung-haken-tor-nord'));
+    fireEvent.click(screen.getByTestId('klaerung-haken-tor-sued'));
+    fireEvent.click(screen.getByTestId('klaerung-fall-tor-nord-uebernehmen'));
+    fireEvent.click(screen.getByTestId('klaerung-fall-tor-nord-speichern'));
+    const verlauf = await screen.findByTestId('klaerungsliste-verlauf');
+    expect(screen.getByTestId('klaerung-verlauf-tor-nord')).toHaveTextContent('Tor FC Nord · Abschnitt 1, 2. Minute – verworfen von Olli');
+    expect(screen.getByTestId('klaerung-verlauf-tor-sued')).toHaveTextContent('Tor SV Süd · Abschnitt 1, 2. Minute – verworfen von Olli');
+    expect(screen.getByTestId('klaerung-verlauf-gelb-5')).toHaveTextContent('Gelbe Karte SV Süd, Nr. 5 · Abschnitt 1, 2. Minute – übernommen von Olli');
+    expect(within(verlauf).queryByText(/offen/)).toBeNull();
+  });
+
+  it('Gegenbeispiel: offene Einträge stehen nicht im Verlauf', () => {
+    show([review({ eventId: 'x' })]);
+    expect(screen.queryByTestId('klaerungsliste-verlauf')).toBeNull();
+  });
+});
+
+describe('Review M4: Negationspfade in der Oberfläche', () => {
+  it('„Zurück“ in der Vorschau speichert nichts, die Knöpfe sind wieder da', () => {
+    show([review({ eventId: 'x' })]);
+    fireEvent.click(screen.getByTestId('klaerung-fall-x-uebernehmen'));
+    fireEvent.click(screen.getByTestId('klaerung-fall-x-zurueck'));
+    expect(decide).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('klaerung-fall-x-speichern')).toBeNull();
+    expect(screen.getByTestId('klaerung-fall-x-uebernehmen')).toBeInTheDocument();
+  });
+
+  it('ohne Netz: „Geht nur mit Netz“, kein „gespeichert“, der Fall bleibt', async () => {
+    decide.mockResolvedValue({ status: 'offline' });
+    render(<Live initial={[review({ eventId: 'x' })]} after={[review({ eventId: 'x' })]} />);
+    fireEvent.click(screen.getByTestId('klaerung-fall-x-verwerfen'));
+    expect(await screen.findByTestId('klaerungsliste-meldung')).toHaveTextContent('Geht nur mit Netz');
+    expect(screen.getByTestId('klaerungsliste-meldung')).not.toHaveTextContent('gespeichert');
+    expect(screen.getByTestId('klaerung-fall-x')).toBeInTheDocument();
+  });
+
+  it('Review M3: Recht inzwischen entzogen → „Du darfst nicht mehr entscheiden“', async () => {
+    decide.mockResolvedValue({ status: 'notAllowed' });
+    show([review({ eventId: 'x' })]);
+    fireEvent.click(screen.getByTestId('klaerung-fall-x-verwerfen'));
+    expect(await screen.findByTestId('klaerungsliste-meldung')).toHaveTextContent('Du darfst nicht mehr entscheiden');
+  });
+
+  it('Review m1: ein unbekannter Server-Grund zeigt keinen technischen Code', async () => {
+    decide.mockResolvedValue({ status: 'rejected', code: 'INVALID_TRANSITION', reason: 'IRGENDWAS_NEUES' });
+    show([review({ eventId: 'x' })]);
+    fireEvent.click(screen.getByTestId('klaerung-fall-x-verwerfen'));
+    const meldung = await screen.findByTestId('klaerungsliste-meldung');
+    expect(meldung).toHaveTextContent('Nicht gespeichert – bitte die Liste neu laden');
+    expect(meldung.textContent).not.toMatch(/INVALID_TRANSITION|IRGENDWAS_NEUES/);
+  });
+});
+
+describe('Review m2 / m6', () => {
+  it('m2: ein Fall nur aus einer Pause bietet kein „Übernehmen“, nur „Verwerfen“', () => {
+    show([review({ eventId: 'p', entry: { type: 'PAUSE', teamId: null } })]);
+    expect(screen.queryByTestId('klaerung-fall-p-uebernehmen')).toBeNull();
+    expect(screen.getByTestId('klaerung-fall-p-verwerfen')).toBeInTheDocument();
+  });
+
+  it('m6: höchstens eine Vorschau und damit eine Haupttaste im Dialog', () => {
+    show([review({ eventId: 'a', author: 'Tom' }), review({ eventId: 'b', author: 'Clara' })]);
+    fireEvent.click(screen.getByTestId('klaerung-fall-a-uebernehmen'));
+    fireEvent.click(screen.getByTestId('klaerung-fall-b-uebernehmen'));
+    expect(screen.queryByTestId('klaerung-fall-a-speichern')).toBeNull();
+    expect(document.querySelectorAll('[data-primary]')).toHaveLength(1);
   });
 });
 
@@ -183,5 +279,9 @@ describe('T2-UI: Bedienbarkeit', () => {
     const knopfZeile = screen.getByTestId('klaerung-fall-a-uebernehmen').parentElement;
     expect(knopfZeile).toHaveStyle({ flexWrap: 'wrap' });
     expect(screen.getByTestId('klaerung-fall-a')).toHaveStyle({ minWidth: '0' });
+    fireEvent.click(screen.getByTestId('klaerung-fall-a-uebernehmen'));
+    const speichern = screen.getByTestId('klaerung-fall-a-speichern');
+    expect(speichern).toHaveAttribute('data-primary');
+    expect(speichern).toHaveStyle({ minHeight: cssVars.touchTargets.primary });
   });
 });

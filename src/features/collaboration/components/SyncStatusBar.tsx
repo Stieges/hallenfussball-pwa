@@ -46,7 +46,7 @@ export interface SyncStatusBarProps {
     failedCount?: number;
     /** C2b: Eintraege, die der Server nicht uebernommen hat (nicht uebernommen) */
     rejectedCount?: number;
-    /** C2b: Eintraege, die auf die Turnierleitung warten (wartet auf Turnierleitung) */
+    /** C2b: Eintraege, die auf die Turnierleitung warten („wird geprüft“, Glossar awaitingReview) */
     reviewCount?: number;
     /** C2b: zeigt die Ablehnungsliste an (RejectedEntriesPanel) */
     onShowRejected?: () => void;
@@ -361,7 +361,7 @@ export function SyncStatusBar({
                 )}
 
                 {/* Fixrunde 1 (Review m5): AdminHeader/LiveCockpit nutzen beide `compact` --
-                    ohne dieses Badge war "wartet auf Turnierleitung" dort nie sichtbar. Eigene
+                    ohne dieses Badge war „wird geprüft“ dort nie sichtbar. Eigene
                     Ecke (unten rechts), damit es sich nicht mit dem Pending/Failed-Badge oben
                     rechts ueberlappt. */}
                 {compact && hasReview && !isSyncing && (

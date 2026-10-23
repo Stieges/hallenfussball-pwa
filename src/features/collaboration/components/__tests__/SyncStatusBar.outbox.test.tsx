@@ -52,7 +52,7 @@ describe('SyncStatusBar — nicht uebernommene Eintraege (C2b, additiv)', () => 
     expect(screen.queryByTestId('sync-status-rejected')).toBeNull();
   });
 
-  it('reviewCount zeigt den Hinweis wartet auf Turnierleitung', () => {
+  it('reviewCount zeigt den Hinweis „wird geprüft“', () => {
     render(<SyncStatusBar status="synced" reviewCount={3} />);
     expect(screen.getByTestId('sync-status')).toHaveTextContent('common:outbox.notice.review');
   });

@@ -1282,13 +1282,10 @@
     "zurueck": "Zurück",
     "nurVerwerfen": "nur Verwerfen möglich",
     "vorschau": {
-      "titel": "Vorschau",
       "stand": "Neuer Stand: {{home}} {{score}} {{away}}",
       "uebernommen": "Übernommen: {{list}}",
-      "verworfen": "Verworfen: {{list}}",
       "nichts": "nichts wird übernommen",
-      "koBeendet": "Nicht möglich: Das K.-o.-Spiel ist beendet – bitte das Ergebnis korrigieren",
-      "nichtMoeglich": "Nicht möglich: {{reason}}"
+      "koBeendet": "Nicht möglich: Das K.-o.-Spiel ist beendet – bitte das Ergebnis korrigieren"
     },
     "ergebnis": {
       "gespeichert": "Entscheidung gespeichert",
@@ -1300,7 +1297,16 @@
       "veraltet": "App aktualisieren",
       "schonEntschieden": "Bereits entschieden – die Liste wird neu geladen",
       "spielFehlt": "Spiel {{number}} ist auf diesem Gerät noch nicht geladen",
-      "sonst": "Nicht übernommen – {{reason}}"
+      "nieAngepfiffen": "Das Spiel wurde nie angepfiffen – der Eintrag lässt sich nur verwerfen",
+      "nichtUebernehmbar": "Dieser Eintrag lässt sich nicht übernehmen – nur verwerfen",
+      "unbekannt": "Nicht gespeichert – bitte die Liste neu laden und erneut versuchen",
+      "keinRecht": "Du darfst nicht mehr entscheiden – die Turnierleitung hat dir das Recht entzogen"
+    },
+    "verlauf": {
+      "titel": "Verlauf",
+      "uebernommen": "{{what}} – übernommen von {{by}}, {{time}}",
+      "verworfen": "{{what}} – verworfen von {{by}}, {{time}}",
+      "turnierleitung": "der Turnierleitung"
     }
   }
 }
