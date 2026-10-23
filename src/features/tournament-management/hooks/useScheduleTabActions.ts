@@ -9,6 +9,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
+import { getMatchStartState } from '../../../utils/matchStartState';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { useScheduleResultEntry, type ScheduleResultEntry } from './useScheduleResultEntry';
 
@@ -27,7 +28,8 @@ interface UseScheduleTabActionsProps {
 interface UseScheduleTabActionsResult {
   handleRedistributeSR: () => void;
   handleRedistributeFields: () => void;
-  handleMatchSwap: (matchId1: string, matchId2: string) => void;
+  /** `false` = abgelehnt (angepfiffenes Spiel, @ZP-093): die Ansicht ordnet dann nicht um. */
+  handleMatchSwap: (matchId1: string, matchId2: string) => boolean;
   handleScoreChange: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
   handleRefereeAssignment: (matchId: string, refereeNumber: number | null) => void;
   handleResetRefereeAssignments: () => void;
@@ -97,13 +99,19 @@ export function useScheduleTabActions({
 
   // Handle match swap via DnD (apply immediately for view sync)
   // Swaps scheduledTime AND field between two matches for complete slot swap
-  const handleMatchSwap = useCallback((matchId1: string, matchId2: string) => {
+  const handleMatchSwap = useCallback((matchId1: string, matchId2: string): boolean => {
     const match1 = tournament.matches.find(m => m.id === matchId1);
     const match2 = tournament.matches.find(m => m.id === matchId2);
 
     if (!match1 || !match2 || !match1.scheduledTime || !match2.scheduledTime) {
       console.warn('Could not swap matches:', matchId1, matchId2);
-      return;
+      return false;
+    }
+
+    // @ZP-093: ein angepfiffenes Spiel (läuft, Halbzeit, beendet) tauscht nicht, auch nicht als Ablageziel
+    if (getMatchStartState([match1]) === 'started' || getMatchStartState([match2]) === 'started') {
+      showWarning(t('schedule.startedLocked'));
+      return false;
     }
 
     saveToHistory();
@@ -131,7 +139,8 @@ export function useScheduleTabActions({
     }, false);
 
     showSuccess(t('actions.matchesSwapped', { match1: match1.round, match2: match2.round }));
-  }, [tournament, onTournamentUpdate, showSuccess, saveToHistory, t]);
+    return true;
+  }, [tournament, onTournamentUpdate, showSuccess, showWarning, saveToHistory, t]);
 
   // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
   const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults });
@@ -191,6 +200,12 @@ export function useScheduleTabActions({
 
   // Handle field change (pending in edit mode, direct otherwise)
   const handleFieldChange = useCallback((matchId: string, fieldNumber: number) => {
+    // @ZP-093: kein Feldwechsel für ein angepfiffenes Spiel (läuft, Halbzeit, beendet)
+    const target = tournament.matches.find((m) => m.id === matchId);
+    if (target && getMatchStartState([target]) === 'started') {
+      showWarning(t('schedule.startedLocked'));
+      return;
+    }
     if (isEditing) {
       setPendingField(matchId, fieldNumber);
     } else {
@@ -202,7 +217,7 @@ export function useScheduleTabActions({
 
       onTournamentUpdate(updatedTournament, true);
     }
-  }, [isEditing, setPendingField, tournament, onTournamentUpdate]);
+  }, [isEditing, setPendingField, tournament, onTournamentUpdate, showWarning, t]);
 
   return {
     handleRedistributeSR,

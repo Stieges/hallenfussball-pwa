@@ -14,6 +14,7 @@ import type { Tournament } from '../types/tournament';
 import type { ScheduledMatch } from '../core/generators';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { matchSideTeamId } from '../core/models/matchSlot';
+import { isMatchInProgress } from '../core/view';
 import {
   MatchAwaitingTeamsError,
   MatchNotOnEngineError,
@@ -36,14 +37,15 @@ export type UseCockpitExecutionReturn = EngineCommandHandlers & {
 /** Konstante leere Map: das Cockpit hat keinen lokalen Altzustand mehr (A-08a). */
 const LEERE_MAP = new Map<string, LiveMatch>();
 
-function notOnEngineReason(tournament: Tournament, matchId: string): MatchNotOnEngineReason {
+/** Exportiert für den Test (@ZP-093). */
+export function notOnEngineReason(tournament: Tournament, matchId: string): MatchNotOnEngineReason {
   const source = tournament.matches.find((m) => m.id === matchId);
   const status = source?.matchStatus;
   if (status === 'skipped') { return 'skipped'; }
   if (status === 'finished') { return 'resultEntered'; }
-  // A3: ein laufendes Spiel hat einen Projektionsstand (anderes Gerät), kein Altergebnis.
-  // (`MatchStatus` kennt kein 'paused'; Pausen laufen als 'running'.)
-  if (status === 'running') { return 'other'; }
+  // A3: ein laufendes oder unterbrochenes Spiel hat einen Projektionsstand (anderes Gerät), kein Altergebnis.
+  // Die Kopie kennt `'paused'` nicht im Typ, andere Geräte liefern es in der Halbzeit aber (@ZP-093).
+  if (isMatchInProgress(status)) { return 'other'; }
   const hasResult = (source?.scoreA ?? 0) > 0 || (source?.scoreB ?? 0) > 0;
   return hasResult ? 'resultEntered' : 'other';
 }
