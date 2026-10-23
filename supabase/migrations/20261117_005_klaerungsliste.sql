@@ -389,7 +389,11 @@ BEGIN
           || CASE WHEN p_event ->> 'targetId' IS NOT NULL THEN jsonb_build_object('targetId', p_event -> 'targetId')
                   ELSE '{}'::jsonb END,
           clock_timestamp());
-  RETURN jsonb_build_object('id', p_event -> 'id', 'status', 'review', 'code', p_reason);
+  -- B-50 Review M2: die Art der Rechteänderung (revoked/removed/watch_only) geht an das Gerät, damit ein Zuschauer seine
+  -- Lesesicht behält; sonst keine Angaben aus match_reviews an das Gerät.
+  RETURN jsonb_build_object('id', p_event -> 'id', 'status', 'review', 'code', p_reason)
+         || CASE WHEN p_detail ? 'change' THEN jsonb_build_object('detail', jsonb_build_object('change', p_detail -> 'change'))
+                 ELSE '{}'::jsonb END;
 END;
 $$;
 
@@ -399,6 +403,8 @@ LANGUAGE sql STABLE
 SET search_path = public, pg_temp
 AS $$
   SELECT jsonb_build_object('id', p_event -> 'id', 'status', 'review', 'code', r.reason)
+         || CASE WHEN r.detail ? 'change' THEN jsonb_build_object('detail', jsonb_build_object('change', r.detail -> 'change'))
+                 ELSE '{}'::jsonb END
     FROM public.match_reviews r
     JOIN public.match_events e ON e.id = r.event_id
    WHERE r.event_id = (p_event ->> 'id')::uuid AND r.kind = 'review' AND e.review_state = 'pending';
@@ -590,6 +596,10 @@ BEGIN
         ELSE
           v_result := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'ID_CONFLICT');
         END IF;
+      ELSIF v_event ->> 'type' IN ('REVIEW_ACCEPT', 'REVIEW_DISCARD') THEN
+        -- B-50 Review M3: eine Entscheidung ohne Recht ist nie selbst ein Klärungseintrag – glatt nicht angenommen.
+        v_result := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'FORBIDDEN_ACTOR',
+                                       'detail', '{"reason": "RIGHTS_REVOKED"}'::jsonb);
       ELSIF (v_event ->> 'at')::numeric > v_limit_ms THEN
         v_result := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'FORBIDDEN_ACTOR',
                                        'detail', '{"reason": "RIGHTS_REVOKED"}'::jsonb);

@@ -254,6 +254,7 @@ revoke() { as_json "$U_OLLI" "SELECT public.change_helper_access('$1', 'revoke')
 review_list() { q "SELECT harness.list('$1'::uuid, $(is_anon "$1"));"; }
 # Klaerungsliste als Text: je Eintrag kind:reason:Typ:Autor:Entscheidung (Turnierleitung, Reihenfolge des Eingangs)
 list_for() { jq -r --arg ev "$2" '[.[]? | select($ev == "" or .eventId == $ev) | .kind + ":" + .reason + ":" + .entry.type + ":" + (.author // "-") + ":" + (if .decision then .decision.type + "/" + (.decision.by // "-") else "offen" end)] | join(",")' <<<"$1" 2>/dev/null || echo "keine-json:$1"; }
+pending_count_id() { q "SELECT count(*) FROM public.match_events WHERE id = '$1' AND review_state = 'pending';"; }
 pending_count() { q "SELECT count(*) FROM public.match_events WHERE match_id = '$1' AND review_state = 'pending';"; }
 copies() { q "SELECT count(*) || '|' || coalesce(string_agg(type || ':' || coalesce(payload ->> 'playerNumber', '-'), ',' ORDER BY seq), '-') FROM public.match_events WHERE match_id = '$1' AND target_event_id IS NOT NULL AND type NOT IN ('REVIEW_ACCEPT', 'REVIEW_DISCARD', 'RETRACT', 'AMEND');"; }
 
@@ -634,7 +635,19 @@ run_probes() {
     check K "@FU-017 ($label): beide wartenden Einträge „von Tom, Recht entzogen“ in Ollis Klärungsliste, nichts zählt (1:0), Toms Gerät: übergeben" \
       "review:RIGHTS_REVOKED,review:RIGHTS_REVOKED|1:0|review:RIGHTS_REVOKED:GOAL:Tom:offen,review:RIGHTS_REVOKED:YELLOW_CARD:Tom:offen|null" \
       "$(results "$OUT")|$(row "$m" | cut -d'|' -f1)|$(jq -r --arg m "$m" '[.[] | select(.matchId == $m) | .kind + ":" + .reason + ":" + .entry.type + ":" + (.author // "-") + ":" + (if .decision then "entschieden" else "offen" end)] | join(",")' <<<"$list" 2>/dev/null || echo fehlt)|$(jq -c '.state' <<<"$OUT" 2>/dev/null || echo fehlt)"
+    # B-50 Review M2: Toms Gerät erfährt die Art der Änderung (Zuschauer behält die Lesesicht), sonst nichts aus match_reviews
+    case "$i" in 1) exp="revoked" ;; 2) exp="removed" ;; 3) exp="watch_only" ;; esac
+    check K "B-50 M2 @FU-017 ($label): Antwort an Toms Gerät nennt die Art der Änderung ($exp), keine weiteren Angaben" \
+      "$exp,$exp|change" "$(jq -r '[.results[].detail.change // "-"] | join(",")' <<<"$OUT" 2>/dev/null)|$(jq -r '[.results[0].detail // {} | keys[]] | join(",")' <<<"$OUT" 2>/dev/null)"
   done
+
+  # --- B-50 Review M3: Tom (Recht entzogen, früherer Schreiber) sendet eine Entscheidung zu einem offenen Klärungseintrag ->
+  #     glatt nicht angenommen, kein neuer Klärungseintrag (vorher lag sie selbst als Klärungseintrag „Recht entzogen“ in der Liste)
+  ev REVIEW_DISCARD "$(E m3-entscheidung-ohne-recht)" "$(jq -cn --arg tg "$(E r1-offline-1)" --argjson at "$(at_rel -250000)" '{at: $at, clockMs: null, section: null, targetId: $tg}')"
+  send "$U_TOM_A" "$D_TOM_A" "$M_R1"
+  check G "B-50 M3: Entscheidung ohne Recht (Tom, entzogen) -> nicht angenommen (FORBIDDEN_ACTOR RIGHTS_REVOKED), nichts gespeichert, Eintrag bleibt offen" \
+    "rejected:FORBIDDEN_ACTOR:RIGHTS_REVOKED|0|1" \
+    "$(results "$OUT")|$(q "SELECT count(*) FROM public.match_events WHERE id = '$(E m3-entscheidung-ohne-recht)';")|$(pending_count_id "$(E r1-offline-1)")"
 
   # --- Review m2: Grenze je Absender und Spiel (100) -- das entzogene Handy fuellt nur seinen Anteil ---------------------
   q "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, payload, score_home, score_away, event_format,
@@ -771,7 +784,7 @@ setup_before() {
 
 # ---------------------------------------------------------------------------------------------------------
 if [[ "$MODE" == "gegenprobe" ]]; then
-  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19)
+  MUTATIONS=(M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21)
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then read -r -a MUTATIONS <<<"$GEGENPROBE_NUR"; fi
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
@@ -814,6 +827,10 @@ M = {
   "M19": [("         AND r.user_id IS NOT DISTINCT FROM p_uid) >= 100 THEN", "         AND r.user_id IS NOT DISTINCT FROM p_uid AND r.device_id IS NOT DISTINCT FROM p_device_id) >= 100 THEN"),
           ("   WHERE public.revoked_device_contacts.revoked_since IS DISTINCT FROM EXCLUDED.revoked_since;",
            "   WHERE public.revoked_device_contacts.revoked_since IS DISTINCT FROM EXCLUDED.revoked_since\n      OR public.revoked_device_contacts.first_device_id IS DISTINCT FROM EXCLUDED.first_device_id;")],
+  # M20 (B-50 Review M3) Entscheidung ohne Recht wird wieder als Klaerungseintrag abgelegt
+  "M20": [("      ELSIF v_event ->> '\''type'\'' IN ('\''REVIEW_ACCEPT'\'', '\''REVIEW_DISCARD'\'') THEN", "      ELSIF false THEN")],
+  # M21 (B-50 Review M2) Art der Aenderung nicht an das Geraet
+  "M21": [("         || CASE WHEN p_detail ? '\''change'\'' THEN", "         || CASE WHEN false THEN")],
   # M16 (Review m3) keine Untergrenze beim Einsortieren
   "M16": [("  IF p_device_at < floor(extract(epoch FROM v_own_start) * 1000)::bigint THEN", "  IF false THEN")],
   # M17 (@FU-130) nach dem Abpfiff angekommen bleibt CONTROL_LOST statt AFTER_END
