@@ -67,4 +67,25 @@ describe('@FU-095 / @FU-038 Entscheidungen eines Falls senden', () => {
     const sendNow = vi.fn().mockRejectedValue(new Error('fetch failed'));
     expect(await sendReviewDecisions(input(runningState(), sendNow))).toEqual({ status: 'notSent' });
   });
+
+  it('Review M3: Recht entzogen (Server legt die Entscheidung zur Klärung) → „nicht erlaubt“, nicht „gespeichert“', async () => {
+    const sendNow = vi.fn().mockResolvedValue({ results: [
+      { status: 'review', code: 'RIGHTS_REVOKED' }, { status: 'review', code: 'RIGHTS_REVOKED' }, { status: 'review', code: 'RIGHTS_REVOKED' },
+    ] });
+    expect(await sendReviewDecisions(input(runningState(), sendNow))).toEqual({ status: 'notAllowed' });
+  });
+
+  it('Review M3: Server lehnt ab (FORBIDDEN_ACTOR) → „nicht erlaubt“', async () => {
+    const sendNow = vi.fn().mockResolvedValue({ results: [
+      { status: 'rejected', code: 'FORBIDDEN_ACTOR', detail: { reason: 'RIGHTS_REVOKED' } }, { status: 'rejected' }, { status: 'rejected' },
+    ] });
+    expect(await sendReviewDecisions(input(runningState(), sendNow))).toEqual({ status: 'notAllowed' });
+  });
+
+  it('Review M3 Gegenbeispiel: „noop“ oder eine fehlende Antwort gilt nicht als entschieden', async () => {
+    const noop = vi.fn().mockResolvedValue({ results: [{ status: 'accepted' }, { status: 'noop' }, { status: 'accepted' }] });
+    expect(await sendReviewDecisions(input(runningState(), noop))).toEqual({ status: 'notSent' });
+    const kurz = vi.fn().mockResolvedValue({ results: [{ status: 'accepted' }] });
+    expect(await sendReviewDecisions(input(runningState(), kurz))).toEqual({ status: 'notSent' });
+  });
 });

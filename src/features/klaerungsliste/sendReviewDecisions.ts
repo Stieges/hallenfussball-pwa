@@ -4,8 +4,10 @@
  *  2. Spiel in die Engine holen und abgleichen (`ensureMatch`, `catchUp`), Einträge `REVIEW_ACCEPT`/`REVIEW_DISCARD` mit
  *     `targetId` bauen (`buildEvents`, Akteur `leitung`, keine Feldsteuerung nötig – A-35 D8);
  *  3. alle Entscheidungen des Falls in EINEM Aufruf am Ausgang vorbei senden (`OutboxSender.sendNow`, ein Stapel);
- *  4. Ergebnis: angenommen → abgleichen (die Server-Kopie kommt über das normale Nachladen); abgelehnt → Grund
- *     (`ALREADY_DECIDED`, `KNOCKOUT_FINISHED`, `NOT_ACCEPTABLE` …), es bleibt nichts halb gespeichert (Server-Transaktion).
+ *  4. Ergebnis: nur „angenommen“/„doppelt“ für ALLE Einträge zählt als entschieden (Review M3) → abgleichen (die Server-
+ *     Kopie kommt über das normale Nachladen). Abgelehnt → Grund (`ALREADY_DECIDED`, `KNOCKOUT_FINISHED` …), Recht entzogen
+ *     (`FORBIDDEN_ACTOR` oder `review RIGHTS_REVOKED`) → `notAllowed`, jedes andere Ergebnis → `notSent`. Es bleibt nichts
+ *     halb gespeichert (Server-Transaktion).
  * Rein bis auf die übergebenen Abhängigkeiten (kein React).
  */
 import { MatchCommandRejectedError, type MatchEngine, type OutboxSender } from '../../core/match/client';
@@ -19,6 +21,7 @@ export type DecisionOutcome =
   | { status: 'offline' }
   | { status: 'notSent' }
   | { status: 'outdated' }
+  | { status: 'notAllowed' }
   | { status: 'rejected'; code: string; reason: string | null };
 
 export interface SendDecisionsInput {
@@ -33,6 +36,17 @@ export interface SendDecisionsInput {
 
 const reasonOf = (detail: unknown): string | null =>
   typeof detail === 'object' && detail !== null && 'reason' in detail && typeof detail.reason === 'string' ? detail.reason : null;
+
+/** Review M3: ein Ergebnis, das die Entscheidung nicht gespeichert hat. */
+function notDecided(entry: { status: string; code?: string; detail?: unknown } | undefined): DecisionOutcome {
+  if (!entry) {
+    return { status: 'notSent' };
+  }
+  if (entry.code === 'FORBIDDEN_ACTOR' || (entry.status === 'review' && entry.code === 'RIGHTS_REVOKED')) {
+    return { status: 'notAllowed' };
+  }
+  return entry.status === 'rejected' ? { status: 'rejected', code: entry.code ?? 'UNKNOWN', reason: reasonOf(entry.detail) } : { status: 'notSent' };
+}
 
 export async function sendReviewDecisions(input: SendDecisionsInput): Promise<DecisionOutcome> {
   const { engine, matchId } = input;
@@ -69,9 +83,9 @@ export async function sendReviewDecisions(input: SendDecisionsInput): Promise<De
   if (isClientOutdated(result)) {
     return { status: 'outdated' };
   }
-  const rejected = result.results.find((entry) => entry.status === 'rejected');
-  if (rejected) {
-    return { status: 'rejected', code: rejected.code ?? 'UNKNOWN', reason: reasonOf(rejected.detail) };
+  const open = result.results.find((entry) => entry.status !== 'accepted' && entry.status !== 'duplicate');
+  if (open || result.results.length !== built.events.length) {
+    return notDecided(open);
   }
   await engine.catchUp(matchId).catch(() => undefined);
   return {
