@@ -36,11 +36,11 @@ export const GroupReopenDialog = ({ api, groupId, reason, busy, error }: GroupRe
     : error === 'NOT_COMPLETED' || error === 'REASON_REQUIRED' ? t(`groupCompletion.reopen.errors.${error}`) : t(`groupCompletion.errors.${error}`);
   const footer = (
     <>
-      <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={!canSave} onClick={api.confirmReopen} data-primary data-testid="group-reopen-confirm">
-        {t('groupCompletion.reopen.confirm')}
-      </Button>
       <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={busy} onClick={api.close} data-testid="group-reopen-cancel">
         {t('groupCompletion.dialog.cancel')}
+      </Button>
+      <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={!canSave} onClick={api.confirmReopen} data-primary data-testid="group-reopen-confirm">
+        {t('groupCompletion.reopen.confirm')}
       </Button>
     </>
   );

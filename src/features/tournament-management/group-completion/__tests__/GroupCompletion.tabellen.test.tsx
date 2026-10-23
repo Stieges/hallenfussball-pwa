@@ -28,7 +28,8 @@ import { calculateStandings, calculateStandingsPerGroup } from '../../../../util
 import type { CompleteGroupRequest, CompleteGroupResult, ReopenGroupResult } from '../../../../core/repositories/groupCompletionCloud';
 import { RetryLaterError } from '../../../../core/errors';
 import { completion, HC, matchOf, NK, tournamentFromFixture, withMatch } from '../../../../core/standings/__tests__/groupCompletionKit';
-import { MemoryRepo } from '../../../../core/standings/__tests__/decisionTestKit';
+import { jgj, MemoryRepo } from '../../../../core/standings/__tests__/decisionTestKit';
+import { DATA } from '../../../../core/standings/__tests__/fixtures';
 import { ET021_GRUPPE_A, ET021_GRUPPE_B, zweiGruppen } from '../../../../core/standings/__tests__/tb4Kit';
 import { teamSlot } from '../../../../core/models/matchSlot';
 import { placeFollowUps } from '../../../../core/services/followUpPlacement';
@@ -605,5 +606,50 @@ describe('Ein Kasten, eine Haupttaste (Daniel 23.10., @W2A-067 @W2A-064 @TM-044)
     await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
     expect(screen.queryByTestId('group-close-button-all')).toBeNull();
     expect(screen.getByTestId('tie-hint-choice')).toHaveTextContent('Die Turnierleitung entscheidet: Strafstoßschießen oder Platz teilen.');
+  });
+});
+
+describe('Reihenfolge der Tasten und Beschriftung bei drei Teams (Review #361 A2, A4)', () => {
+  /** Beschriftungen im Tasten-Fuß in DOM-Reihenfolge; die Haupttaste (`data-primary`) muss die letzte sein (VISUAL-DESIGN § 6, Daniel 22.10.). */
+  const fuss = (dialog: HTMLElement): { labels: string[]; primaryLast: boolean } => {
+    const actions = dialog.querySelector('[data-dialog-actions]');
+    const buttons = Array.from(actions?.querySelectorAll('button') ?? []);
+    return { labels: buttons.map((b) => b.textContent ?? ''), primaryLast: buttons.length > 1 && buttons[buttons.length - 1].hasAttribute('data-primary') };
+  };
+
+  it('A2 Abschluss-Dialog ohne Gleichstand: „Abbrechen“ vor „Gruppe abschließen“, die Haupttaste steht zuletzt', async () => {
+    const repo = new MemoryRepo({ ...nikolaus([1]), version: 1 });
+    expect((await repo.service(['e-1']).decide(repo.tournament.id, { groupId: '', teamIds: [NK.petting, NK.otting], order: [NK.petting, NK.otting], kind: 'shared' })).ok).toBe(true);
+    await zeige(repo.tournament);
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    await userEvent.click(screen.getByTestId('group-close-button-all'));
+    const { labels, primaryLast } = fuss(await screen.findByTestId('group-close-dialog'));
+    expect(labels).toEqual(['Abbrechen', 'Gruppe abschließen']);
+    expect(primaryLast).toBe(true);
+  });
+
+  it('A2 Gleichstand im Abschluss (Strafstoßschießen): „Abbrechen“ vor „Gruppe abschließen“', async () => {
+    await zeige(nikolaus([1, 2, 3]));
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    await userEvent.click(screen.getByTestId('group-close-button-all'));
+    const { labels, primaryLast } = fuss(await screen.findByTestId('tie-decision-dialog'));
+    expect(labels).toEqual(['Abbrechen', 'Gruppe abschließen']);
+    expect(primaryLast).toBe(true);
+  });
+
+  it('A2 Gruppe wieder öffnen: „Abbrechen“ vor der Haupttaste', async () => {
+    await zeige({ ...hallencup(), groupCompletions: [completion('A', [HC.nord, HC.sued, HC.west, HC.ost])] });
+    await userEvent.click(screen.getByTestId('group-reopen-A'));
+    const { labels, primaryLast } = fuss(await screen.findByTestId('group-reopen-dialog'));
+    expect(labels[0]).toBe('Abbrechen');
+    expect(primaryLast).toBe(true);
+  });
+
+  it('A4 drei Teams auf einem auszuspielenden Platz: die Haupttaste im Kasten heißt „Reihenfolge festlegen“ (nicht „Strafstoßschießen eintragen“)', async () => {
+    await zeige(jgj('WOUMNB', DATA.W2A_044, [1, 2, 3, 4, 5, 6]));
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    expect(screen.getByTestId('group-close-button-all')).toHaveTextContent('Reihenfolge festlegen');
+    expect(screen.getByTestId('group-close-button-all')).not.toHaveTextContent('Strafstoßschießen eintragen');
+    expect(screen.getByTestId('group-close-then-all')).toHaveTextContent('Danach ist die Gruppe abgeschlossen.');
   });
 });

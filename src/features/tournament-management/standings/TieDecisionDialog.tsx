@@ -33,7 +33,7 @@ export interface TieDecisionDialogProps {
   /**
    * Modus „withClose“ (GA4 A-13c): Name der Gruppe (`undefined` bei Jeder gegen jeden) und ob sie schon einmal abgeschlossen war.
    * Der Dialog endet dann einmal mit „Danach ist die Gruppe abgeschlossen.“ (Daniel 23.10.), die Haupttaste heißt „Gruppe
-   * abschließen“ (bzw. „Erneut abschließen“) und die Tasten stehen untereinander, Haupttaste oben (Mockup A-13c).
+   * abschließen“ (bzw. „Erneut abschließen“) und die Tasten stehen untereinander, Haupttaste zuletzt (VISUAL-DESIGN § 6, Daniel 22.10.).
    */
   closeFlow?: { name: string | undefined; again: boolean };
 }
@@ -90,10 +90,10 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   const closing = mode === 'withClose' && closeFlow !== undefined;
   const stackedFooter = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }} data-dialog-actions>
+      <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={draft.busy} onClick={cancel.onClick} data-testid="tie-dialog-cancel">{cancel.label}</Button>
       <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={draft.busy || !draft.canSave} onClick={() => { void draft.submit(step === 'order' ? 'order' : 'shootout'); }} data-primary data-testid="group-close-confirm">
         {t(closeFlow?.again === true ? 'groupCompletion.dialog.confirmAgain' : 'groupCompletion.dialog.confirm')}
       </Button>
-      <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={draft.busy} onClick={cancel.onClick} data-testid="tie-dialog-cancel">{cancel.label}</Button>
     </div>
   );
   const footer = step === 'choice' ? (

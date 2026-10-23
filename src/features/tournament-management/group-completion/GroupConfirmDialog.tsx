@@ -58,11 +58,11 @@ export const GroupConfirmDialog = ({ api, groupId, plan, busy, error }: GroupCon
 
   const footer = (
     <>
-      <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={busy || offline} onClick={api.confirm} data-primary data-testid="group-close-confirm">
-        {t(plan.again ? 'groupCompletion.dialog.confirmAgain' : 'groupCompletion.dialog.confirm')}
-      </Button>
       <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.minimum }} disabled={busy} onClick={api.close} data-testid="group-close-cancel">
         {t('groupCompletion.dialog.cancel')}
+      </Button>
+      <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={busy || offline} onClick={api.confirm} data-primary data-testid="group-close-confirm">
+        {t(plan.again ? 'groupCompletion.dialog.confirmAgain' : 'groupCompletion.dialog.confirm')}
       </Button>
     </>
   );

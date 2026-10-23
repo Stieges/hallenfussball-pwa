@@ -1,7 +1,7 @@
 /**
  * Gemeinsame Hülle der Dialoge von „Gruppe abschließen“ (GA4 A-13c): Titel mit Schließen-Taste (44 px), scrollender Inhalt
- * (`tabindex=0`, damit er mit der Tastatur erreichbar ist), Tasten-Fuß mit `data-dialog-actions`, Haupttaste oben, alle Tasten
- * untereinander in voller Breite (Mockup A-13c: nie zweizeilige Tasten, auch nicht auf dem Laptop).
+ * (`tabindex=0`, damit er mit der Tastatur erreichbar ist), Tasten-Fuß mit `data-dialog-actions`, alle Tasten untereinander in voller
+ * Breite (Mockup A-13c: nie zweizeilige Tasten); die Haupttaste steht immer zuletzt, also unten (VISUAL-DESIGN § 6, Daniel 22.10.).
  */
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +28,7 @@ const closeStyle: CSSProperties = {
   background: 'none', border: 0, color: cssVars.colors.textPrimary, cursor: 'pointer', flex: 'none',
 };
 const dialogBody: CSSProperties = { display: 'grid', gap: cssVars.spacing.sm, padding: `0 ${cssVars.spacing.md} ${cssVars.spacing.md}` };
-/** Fuß: untereinander, Haupttaste zuerst (oben, auch in der Tab-Reihenfolge). */
+/** Fuß: untereinander; die Aufrufer setzen die Haupttaste zuletzt (unten, auch in der Tab-Reihenfolge; VISUAL-DESIGN § 6). */
 const dialogFooterStack: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm };
 
 export const GroupDialogShell = ({ title, onClose, footer, children, 'data-testid': testId, alert = false }: GroupDialogShellProps) => {
