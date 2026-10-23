@@ -166,6 +166,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_007_ci_schema_reader_grants.sql)
+      echo "positive-ci-schema-reader-select-field-control positive-ci-schema-reader-select-match-corrections"
+      ;;
     20261110_005_result_entry_forfeit.sql)
       echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
       ;;
@@ -175,11 +178,17 @@ pending_assertions_for() {
     20261110_008_helper_join.sql)
       echo "helper-join-tables-no-client-access helper-join-ci-schema-reader-select helper-join-ci-schema-reader-no-bypassrls helper-join-rpcs-definer-owner-search-path helper-join-rpcs-execute-authenticated-only helper-join-internal-no-client-execute helper-join-definer-writers-tournament-collaborators helper-join-collaborators-delete-no-device-rows helper-join-protect-collaborator-row-a16 helper-join-decide-checks-check-number helper-join-device-role-guard-trigger helper-join-names-without-hidden-chars"
       ;;
+    20261110_009_spiel_beenden.sql)
+      echo "append-match-events-end-by-lead-without-claim"
+      ;;
     20261117_104_public_payload.sql)
       echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
       ;;
     20261113_101_monitor_heartbeat_wake_lock.sql)
       echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
+      ;;
+    20261110_010_standing_decision_null_version.sql)
+      # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
       ;;
     *)
       return 1
@@ -602,10 +611,13 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  "positive-ci-schema-reader-select-field-control"
+  "positive-ci-schema-reader-select-match-corrections"
   # A-25b (20261110_005_result_entry_forfeit.sql): Nichtantritt -- forfeit_absent geschuetzt und vom Schreibweg (mit
   # Feldsteuerung) geschrieben.
   "matches-guard-engine-columns-forfeit-absent"
   "append-match-events-writes-forfeit-absent"
+  "append-match-events-end-by-lead-without-claim"
   # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
   # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
   "group-completion-tables-no-client-writes"

@@ -189,14 +189,14 @@ describe('A-13a @TM-145 erneuter Abschluss nach Korrektur: offene Plätze mit Fo
     expect(prepareGroupCompletion(stale, 'A').code).toBe('DECISION_REQUIRED');
   });
 
-  it('@TM-145 Gegenbeispiele: nicht veraltet → wie der erste Abschluss; offener Block ohne Folgespiel bleibt außerhalb von openRanks', async () => {
+  it('@TM-145 @TM-150 Gegenbeispiele: nicht veraltet → wie der erste Abschluss; Pflicht-Block nur aus der Einstellung (ohne Folgespiel) wird nie still festgelegt', async () => {
     const t = await abgeschlossen();
     expect(prepareRecompletion(t, 'A')).toEqual(prepareGroupCompletion(t, 'A'));
 
-    // ANNAHME, kein Szenario: offener Pflicht-Block nur aus der Einstellung (ohne Folgespiel) wird beim Neu-Abschluss
-    // nicht nach openRanks gelegt – Befund C-NEUABSCHLUSS-PFLICHTBLOCK-STILL (Review #326 M1), Entscheidung vor A-15b.
+    // @TM-150 (Entscheidung Daniel 2026-10-22, Befund C-NEUABSCHLUSS-PFLICHTBLOCK-STILL): kein Folgespiel, aber Platz 3 auszuspielen
+    // → die Turnierleitung entscheidet; „Besetzung prüfen“ bleibt stehen, nichts geht still nach openRanks.
     const ohneFolgespiel = { ...lage060([1, 2, 3], false), groupCompletions: [completion('A', [id('N'), id('S'), id('W'), id('O')], { stale: true })] };
-    expect(prepareRecompletion(ohneFolgespiel, 'A')).toMatchObject({ code: 'READY', openRanks: [] });
+    expect(prepareRecompletion(ohneFolgespiel, 'A')).toMatchObject({ code: 'DECISION_REQUIRED', blocks: [{ mandatory: { kind: 'setting', place: 3 } }] });
     const mitFolgespiel = { ...lage060([1, 2], true), groupCompletions: [completion('A', [id('N'), id('S'), id('W'), id('O')], { stale: true })] };
     expect(prepareRecompletion(mitFolgespiel, 'A')).toMatchObject({ code: 'READY', openRanks: [3, 4] });
   });

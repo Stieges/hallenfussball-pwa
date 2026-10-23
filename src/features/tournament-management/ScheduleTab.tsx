@@ -40,6 +40,7 @@ import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEdito
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
+import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -72,6 +73,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const canControlTimer = useCan('writeMatchData', tournament.id);
   const canSchedule = useCan('manageSchedule', tournament.id);
   const canNotice = useCan('tournamentSettings', tournament.id);
+  const canEndRunning = useCan('leadMatches', tournament.id); // @FU-112/@FU-113: Spiel beenden nur Turnierleitung
   // Toast notifications
   const { showWarning, showSuccess } = useToast();
 
@@ -282,6 +284,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     <>
       <div style={containerStyle} className="schedule-tab-container">
         <Card style={editModeCardStyle} className="schedule-tab-card">
+          {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
+          <GroupCompletionTop />
           {/* Action Buttons Header */}
           <ScheduleToolbar
             isEditing={isEditing}
@@ -353,6 +357,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 locale={locale}
                 elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
+                canEndRunning={canEndRunning}
                 forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />

@@ -15,10 +15,10 @@ import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 
-type ConfirmType = 'signup' | 'recovery' | 'magiclink' | 'invite';
+type ConfirmType = 'signup' | 'recovery' | 'magiclink';
 
 /** Valid confirm types for type-safe URL parameter parsing */
-const VALID_CONFIRM_TYPES: readonly ConfirmType[] = ['signup', 'recovery', 'magiclink', 'invite'];
+const VALID_CONFIRM_TYPES: readonly ConfirmType[] = ['signup', 'recovery', 'magiclink'];
 
 export const AuthConfirmPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -54,12 +54,6 @@ export const AuthConfirmPage: React.FC = () => {
           title: 'Anmeldung bestätigen',
           description: 'Klicke auf den Button um dich anzumelden.',
           buttonText: 'Anmelden',
-        };
-      case 'invite':
-        return {
-          title: 'Einladung annehmen',
-          description: 'Klicke auf den Button um die Einladung anzunehmen.',
-          buttonText: 'Einladung annehmen',
         };
       default:
         return {
@@ -129,12 +123,6 @@ export const AuthConfirmPage: React.FC = () => {
             throw magicError;
           }
           void navigate(redirectTo, { replace: true });
-          break;
-        }
-
-        case 'invite': {
-          // Tournament Invite - redirect to invite page with token
-          void navigate(`/invite?token=${encodeURIComponent(token)}`, { replace: true });
           break;
         }
 

@@ -153,6 +153,15 @@ export async function fPAUSE(): Promise<Hallencup> {
   return playMatch(paused, GAME[8], () => play.kickedOff(8));
 }
 
+/**
+ * F-BEENDEN (@FU-112, @FU-114): Spiele 1–6 beendet; Spiel 7 angepfiffen, 1:0, Spielzeit abgelaufen ohne Abpfiff -- mit
+ * `beendet` danach im Spielplan mit 2:2 beendet (ein Eintrag, Abpfiff und Ergebnis).
+ */
+export async function fBEENDEN(beendet: boolean): Promise<Hallencup> {
+  const firstSix = Object.fromEntries(Object.entries(FIRST_EIGHT).filter(([i]) => Number(i) < 6));
+  return playMatch(results(await publishHallencup(), firstSix), GAME[7], (a, b) => play.endedInSchedule(7, a, b, 2, 2, !beendet));
+}
+
 /** F-AUS: Spiele 1–8 beendet, Spiel 9 per Engine abgesetzt. */
 export async function fAUS(): Promise<Hallencup> {
   return playMatch(results(await publishHallencup(), FIRST_EIGHT), GAME[9], () => play.skipped(9));

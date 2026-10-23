@@ -84,7 +84,7 @@ function usableDetail(match: Match, input: TournamentViewInput): MatchBadgeEngin
   if (detail === undefined || input.engineStatus?.(match.id) !== undefined) {
     return detail;
   }
-  return match.matchStatus === 'running' || (match.matchStatus as string | undefined) === 'paused' ? detail : undefined;
+  return match.matchStatus === 'running' || match.matchStatus === 'paused' ? detail : undefined;
 }
 
 /** Abschnitte und Längen wie beim Anpfiff (`serverRules`, gleiche Eingabe wie die Engine), für die Restzeit ohne Feinstatus. */

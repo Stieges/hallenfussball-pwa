@@ -57,6 +57,7 @@ const ERWARTET: Record<MatchStatus, { overrides: Partial<Match>; zustand: Result
   scheduled: { overrides: {}, zustand: { kind: 'empty' } },
   waiting: { overrides: { matchStatus: 'waiting' }, zustand: { kind: 'empty' } },
   running: { overrides: { matchStatus: 'running', scoreA: 1, scoreB: 0 }, zustand: { kind: 'live' } },
+  paused: { overrides: { matchStatus: 'paused', scoreA: 1, scoreB: 0 }, zustand: { kind: 'live' } },
   finished: { overrides: { matchStatus: 'finished', scoreA: 2, scoreB: 1 }, zustand: { kind: 'final', scoreA: 2, scoreB: 1 } },
   skipped: { overrides: { matchStatus: 'skipped' }, zustand: { kind: 'skipped' } },
 };

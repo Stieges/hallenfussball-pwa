@@ -30,11 +30,17 @@ export interface TieDecisionDialogProps {
   mode?: TieDialogMode;
   /** Modus „withClose“: bekommt den geprüften Entwurf statt eines Speicherns. */
   onDraft?: (draft: DecisionDraft) => void;
+  /**
+   * Modus „withClose“ (GA4 A-13c): Name der Gruppe (`undefined` bei Jeder gegen jeden) und ob sie schon einmal abgeschlossen war.
+   * Der Dialog endet dann einmal mit „Danach ist die Gruppe abgeschlossen.“ (Daniel 23.10.), die Haupttaste heißt „Gruppe
+   * abschließen“ (bzw. „Erneut abschließen“) und die Tasten stehen untereinander, Haupttaste zuletzt (VISUAL-DESIGN § 6, Daniel 22.10.).
+   */
+  closeFlow?: { name: string | undefined; again: boolean };
 }
 
 const bodyStack: CSSProperties = { display: 'grid', gap: cssVars.spacing.md, padding: `0 ${cssVars.spacing.md} ${cssVars.spacing.md}` };
 
-export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', onDraft }: TieDecisionDialogProps) => {
+export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', onDraft, closeFlow }: TieDecisionDialogProps) => {
   const { t, i18n } = useTranslation('tournament');
   const tie = useStandingTie();
   const draft = useTieDraft({ tournament, block, mode, onDraft, onClose });
@@ -42,7 +48,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
   const { step } = draft;
   const titleKey = step === 'order' ? 'titleOrder' : step === 'shootout' ? 'titleShootout' : 'titleChoice';
   const seenTitle = draft.seenBy === undefined ? t('standingsTie.dialog.seen.title') : t('standingsTie.dialog.seen.titleBy', { name: draft.seenBy });
-  const title = step === 'seen' ? seenTitle : t(`standingsTie.dialog.${titleKey}`);
+  const title = step === 'seen' ? seenTitle : t(`standingsTie.dialog.${titleKey}`, { place: block.place });
 
   const effect = useMemo(() => {
     if (draft.shootoutDraft === null) {
@@ -70,6 +76,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
       <button
         type="button"
         onClick={onClose}
+        disabled={draft.busy}
         aria-label={t('standingsTie.dialog.close')}
         data-testid="tie-dialog-close"
         style={{ width: cssVars.touchTargets.minimum, height: cssVars.touchTargets.minimum, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 0, color: cssVars.colors.textPrimary, cursor: 'pointer', flex: 'none' }}
@@ -79,12 +86,21 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
     </div>
   );
 
-  const cancel = { label: t(block.mayShare && step !== 'choice' && step !== 'seen' ? 'standingsTie.dialog.back' : 'standingsTie.dialog.cancel'), onClick: block.mayShare && step !== 'choice' && step !== 'seen' ? () => draft.setStep('choice') : onClose, 'data-testid': 'tie-dialog-cancel' };
+  const cancel = { label: t(block.mayShare && step !== 'choice' && step !== 'seen' ? 'standingsTie.dialog.back' : 'standingsTie.dialog.cancel'), onClick: block.mayShare && step !== 'choice' && step !== 'seen' ? () => draft.setStep('choice') : onClose, disabled: draft.busy, 'data-testid': 'tie-dialog-cancel' };
+  const closing = mode === 'withClose' && closeFlow !== undefined;
+  const stackedFooter = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }} data-dialog-actions>
+      <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={draft.busy} onClick={cancel.onClick} data-testid="tie-dialog-cancel">{cancel.label}</Button>
+      <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={draft.busy || !draft.canSave} onClick={() => { void draft.submit(step === 'order' ? 'order' : 'shootout'); }} data-primary data-testid="group-close-confirm">
+        {t(closeFlow?.again === true ? 'groupCompletion.dialog.confirmAgain' : 'groupCompletion.dialog.confirm')}
+      </Button>
+    </div>
+  );
   const footer = step === 'choice' ? (
-    <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} onClick={onClose} data-testid="tie-dialog-cancel">{t('standingsTie.dialog.cancel')}</Button>
+    <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={draft.busy} onClick={onClose} data-testid="tie-dialog-cancel">{t('standingsTie.dialog.cancel')}</Button>
   ) : step === 'seen' ? (
     <DialogActions primary={{ label: t('standingsTie.dialog.understood'), onClick: onClose, 'data-testid': 'tie-dialog-understood' }} />
-  ) : (
+  ) : closing ? stackedFooter : (
     <DialogActions
       secondary={[cancel]}
       primary={{ label: t('standingsTie.dialog.save'), onClick: () => { void draft.submit(step === 'order' ? 'order' : 'shootout'); }, disabled: draft.busy || draft.needsNet || !draft.canSave, 'data-testid': 'tie-decision-save' }}
@@ -93,8 +109,16 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
 
   const errorText = draft.error === null ? null : t(`standingsTie.dialog.errors.${draft.error}`);
 
+  // Kein stiller Fehler: solange gespeichert wird, schließen weder Esc, Zurück, Abdunkelung noch Tasten den Dialog –
+  // sonst ginge eine Ablehnung des Servers (etwa STALE) ungesehen verloren (Cloud-E2E N6d, @ET-055). Bewusst nicht über
+  // `dismissible`: ein Umschalten legte den Verlaufseintrag des Dialogs neu an (Zurück-Navigation mitten im Speichern).
+  const dismiss = (): void => {
+    if (!draft.busy) {
+      onClose();
+    }
+  };
   return (
-    <DialogSurface isOpen onClose={onClose} labelledBy="tie-dialog-title" header={header} footer={footer} testId="tie-decision-dialog" maxWidth={dialogWidths.md}>
+    <DialogSurface isOpen onClose={dismiss} labelledBy="tie-dialog-title" header={header} footer={footer} testId="tie-decision-dialog" maxWidth={dialogWidths.md}>
       <div style={bodyStack}>
         {step === 'choice' ? (
           <ChoiceStep
@@ -110,7 +134,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
           <ShootoutStep block={block} nameOf={nameOf} scores={draft.scores} onScore={draft.setScore} fieldError={draft.shootoutFieldError} effect={effect} onRules={goRules} />
         ) : null}
         {step === 'order' ? (
-          <OrderStep block={block} nameOf={nameOf} order={draft.order} onMove={draft.move} reason={draft.reason} onReason={draft.setReason} onRules={goRules} />
+          <OrderStep block={block} nameOf={nameOf} order={draft.order} onMove={draft.move} reason={draft.reason} onReason={draft.setReason} onRules={goRules} reasonTestId={closing ? 'group-close-reason' : 'tie-reason'} />
         ) : null}
         {step === 'seen' ? (
           <>
@@ -129,6 +153,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
         {draft.needsNet && step !== 'seen' ? (
           <p style={{ ...stepText, fontWeight: cssVars.fontWeights.semibold }} data-testid="tie-offline-hint">{t('standingsTie.dialog.errors.OFFLINE')}</p>
         ) : null}
+        {closing && step !== 'seen' ? <p style={stepText} data-testid="tie-then-closed">{t('standingsTie.dialog.thenClosed')}</p> : null}
         {errorText !== null ? <InlineNotice tone="error" data-testid="tie-error"><span>{errorText}</span></InlineNotice> : null}
       </div>
     </DialogSurface>

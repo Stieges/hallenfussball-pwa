@@ -40,7 +40,7 @@ vi.mock('../../../../core/utils/safeStorage', () => ({
   },
 }));
 
-import { useCan } from '../useCan';
+import { useCan, useCanState } from '../useCan';
 
 /** Die 13 Rechte laut Brief (R-A11-1 + Bestand) -- bewusst hier ausgeschrieben, nicht aus PermissionSchema. */
 const RIGHTS = [
@@ -220,5 +220,30 @@ describe('useCan – Gedächtnis je Turnier und L7 (F2)', () => {
     const { result } = renderHook(() => useCan('manageSchedule', 't-weg'));
     await waitFor(() => expect(rpcMock).toHaveBeenCalled());
     await waitFor(() => expect(result.current).toBe(false));
+  });
+});
+
+describe('useCanState – Ladezustand (A-18a, Review N-4)', () => {
+  it('Rolle lädt noch, kein Gedächtnis: isLoading = true (die Seite wartet statt „kein Recht“ zu zeigen), allowed wie useCan', () => {
+    useAuthMock.mockReturnValue({ isAuthenticated: true });
+    useTournamentMembersMock.mockReturnValue({ myMembership: null, isLoading: true });
+    const { result } = renderHook(() => useCanState('manageHelpers', 't-neu'));
+    expect(result.current).toEqual({ allowed: false, isLoading: true });
+    expect(renderHook(() => useCan('manageHelpers', 't-neu')).result.current).toBe(result.current.allowed);
+  });
+
+  it('Gegenbeispiel: mit Gedächtnis wartet niemand (isLoading = false, Recht aus der gemerkten Rolle)', () => {
+    useAuthMock.mockReturnValue({ isAuthenticated: true });
+    useTournamentMembersMock.mockReturnValue({ myMembership: null, isLoading: true });
+    fakeStorage.set('tournament-role:t-bekannt', 'co-admin');
+    expect(renderHook(() => useCanState('manageHelpers', 't-bekannt')).result.current).toEqual({ allowed: true, isLoading: false });
+  });
+
+  it('Gegenbeispiel: bekannte Rolle oder online bestätigtes Nicht-Mitglied lädt nicht', async () => {
+    asMember('collaborator');
+    expect(renderHook(() => useCanState('manageHelpers', 't-1')).result.current).toEqual({ allowed: false, isLoading: false });
+    asNonMemberOnline();
+    const { result } = renderHook(() => useCanState('manageHelpers', 't-2'));
+    await waitFor(() => expect(result.current).toEqual({ allowed: false, isLoading: false }));
   });
 });

@@ -10,7 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { rankTournamentGroup } from '../tournamentTable';
 import { sharedPlaceAllowed } from '../decisions';
 import { validateDraft } from '../validateDraft';
-import { resolvePlayoffPairings } from '../../generators/playoffResolver';
+import { activeRanking } from '../../services/GroupCompletionService';
+import { placeFollowUps } from '../../services/followUpPlacement';
 import { createMockTournament } from '../../../test/factories';
 import { groupRank, slots } from '../../../test/matchSlotFixtures';
 import type { Match, Standing, Tournament } from '../../../types/tournament';
@@ -155,8 +156,10 @@ describe("TB-3' Verfall: Herkunft geändert (@W2A-069)", () => {
     expect([row(entschieden.rows, 'O').place, row(entschieden.rows, 'H').place]).toEqual([4, 5]);
     expect(entschieden.openTies).toEqual([]);
     expect(await repo.service().decide(repo.tournament.id, shootout('H', 'O', 5, 4, 'A'))).toEqual({ ok: false, code: 'ALREADY_DECIDED', by: 'Olli' });
-    const turnier = repo.tournament;
-    expect(resolvePlayoffPairings(turnier).wasResolved).toBe(true);
+    // „Gruppe abschließen“ besetzt die Finalrunde (lokale Entsprechung von `apply_follow_up`, A-13c)
+    const placed = placeFollowUps(repo.tournament, 'A', activeRanking(repo.tournament, 'A'));
+    expect(placed.changed.length).toBeGreaterThan(0);
+    const turnier = placed.tournament;
     const seite = (matchId: string, s: 'slotA' | 'slotB'): string | undefined => {
       const slot = turnier.matches.find((m) => m.id === matchId)?.[s];
       return slot?.kind === 'team' ? slot.teamId : undefined;

@@ -1,6 +1,6 @@
 /**
- * Schritte des Entscheidungs-Dialogs (Paket TB-B, TB-6c; Mockup v3): Wahl (Strafstoßschießen/Reihenfolge oder „Ergebnis so
- * akzeptieren“, kein Grundfeld), Strafstoßschießen mit zwei Zahlenfeldern, Reihenfolge von drei und mehr Teams mit Grund.
+ * Schritte des Entscheidungs-Dialogs (Paket TB-B, TB-6c; Mockup v3, Wortlaut Daniel 23.10.): Wahl (Strafstoßschießen/Reihenfolge oder „Platz
+ * teilen“, kein Grundfeld), Strafstoßschießen mit zwei Zahlenfeldern, Reihenfolge von drei und mehr Teams mit Grund.
  * Nur Darstellung; Zustand und Speichern liegen in `useTieDraft`.
  */
 import { useTranslation } from 'react-i18next';
@@ -60,30 +60,37 @@ export interface ChoiceStepProps extends BlockProps {
   onAccept: () => void;
 }
 
-/** Wahl: „Strafstoßschießen eintragen“ (bzw. „Reihenfolge festlegen“) als Normalweg, daneben „Ergebnis so akzeptieren“. */
+
+/**
+ * Wahl (Wortlaut Daniel 23.10.): „{Teams} sind nach allen Regeln gleich.“, Haupttaste „Strafstoßschießen eintragen“ (bei drei und mehr
+ * „Reihenfolge festlegen“) mit „Der Sieger bekommt Platz n.“, Zweittaste „Platz teilen“ mit „Beide auf Platz n, danach folgt Platz n+k.“
+ */
 export const ChoiceStep = ({ block, nameOf, busy, needsNet, onPick, onAccept }: ChoiceStepProps) => {
   const { t, i18n } = useTranslation('tournament');
-  const placeTexts = useTiePlaceTexts();
-  const places = placeText(placeTexts, block.place, block.place + block.size - 1);
   const two = block.size === 2;
   const group: CSSProperties = { display: 'grid', gap: cssVars.spacing.md };
   const primary: CSSProperties = { minHeight: cssVars.touchTargets.primary };
   return (
     <>
-      <TieContext block={block} nameOf={nameOf} extra={t('standingsTie.dialog.contextNoPlay', { places })} />
+      <p style={stepText} data-testid="tie-dialog-context">
+        {t('standingsTie.dialog.teamsEqual', { names: listText(block.teamIds.map(nameOf), i18n.language) })}
+      </p>
       <div style={{ ...group, marginTop: cssVars.spacing.md }} role="group" aria-label={t('standingsTie.dialog.choiceGroup')}>
         <div>
           <Button variant="primary" size="lg" fullWidth style={primary} onClick={onPick} data-primary data-testid="tie-pick-shootout">
             {two ? t('standingsTie.notice.shootout') : t('standingsTie.notice.order')}
           </Button>
-          <p style={hint}>{two ? t('standingsTie.dialog.shootoutHint') : t('standingsTie.dialog.orderHint')}</p>
+          <p style={hint}>{two ? t('standingsTie.dialog.shootoutHint', { place: block.place }) : t('standingsTie.dialog.orderHint')}</p>
         </div>
         <div>
           <Button variant="secondary" size="lg" fullWidth style={primary} disabled={busy || needsNet} onClick={onAccept} data-testid="tie-accept-result">
             {t('standingsTie.dialog.accept')}
           </Button>
           <p style={strongHint}>
-            {t('standingsTie.dialog.acceptHint', { names: listText(block.teamIds.map(nameOf), i18n.language), places: t('standingsTie.places.one', { from: block.place }), next: block.place + block.size })}
+            {/* „Beide …“, „Alle drei …“, sonst „Alle n …“ (Daniel 23.10.) */}
+            {block.size === 2 ? t('standingsTie.dialog.acceptHintTwo', { place: block.place, next: block.place + block.size })
+              : block.size === 3 ? t('standingsTie.dialog.acceptHintThree', { place: block.place, next: block.place + block.size })
+                : t('standingsTie.dialog.acceptHintMany', { place: block.place, next: block.place + block.size, count: block.size })}
           </p>
         </div>
       </div>
@@ -126,9 +133,11 @@ export interface OrderStepProps extends BlockProps {
   reason: string;
   onReason: (value: string) => void;
   onRules: () => void;
+  /** Kennung des Grund-Feldes (Standard `tie-reason`; im Abschluss `group-close-reason`). */
+  reasonTestId?: string;
 }
 
-export const OrderStep = ({ block, nameOf, order, onMove, reason, onReason, onRules }: OrderStepProps) => {
+export const OrderStep = ({ block, nameOf, order, onMove, reason, onReason, onRules, reasonTestId = 'tie-reason' }: OrderStepProps) => {
   const { t } = useTranslation('tournament');
   const area: CSSProperties = {
     display: 'block',
@@ -168,7 +177,7 @@ export const OrderStep = ({ block, nameOf, order, onMove, reason, onReason, onRu
         </div>
         <textarea
           id="tie-reason"
-          data-testid="tie-reason"
+          data-testid={reasonTestId}
           style={area}
           value={reason}
           maxLength={DECISION_REASON_MAX_LENGTH}

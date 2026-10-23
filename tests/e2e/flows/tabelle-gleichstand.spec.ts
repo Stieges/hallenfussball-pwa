@@ -1,6 +1,6 @@
 /**
  * Paket TB-B, TB-6b/c/d (Regel T2-UI): der Gleichstand in der Tabelle im echten Ablauf – Hinweis und Marken, Wahl-Dialog,
- * Strafstoßschießen eintragen, „Ergebnis so akzeptieren“ und zurücknehmen, Fehler ohne Sieger, Assistent (Reihenfolge, feste
+ * Strafstoßschießen eintragen, „Platz teilen“ (Wortlaut Daniel 23.10.), Fehler ohne Sieger, Assistent (Reihenfolge, feste
  * Zeile, Auswahl der Plätze), Einstellung mit Rückfrage – auf Desktop und 360 px. Helfer und Zuschauer (offline nicht
  * erreichbar) über den Prüfstand `tests/e2e/harness/gleichstand.html`. Daten: Saat `nikolaus-gleichstand` (Nikolausturnier,
  * Plan Abschnitt 6). Gherkin: @ET-025, @ET-055, @W2A-044, @W2A-047, @W2A-050, @W2A-056, @W2A-059, @W2A-061, @W2A-063,
@@ -31,7 +31,8 @@ async function oeffne(page: Page, breite: number, hoehe: number, plaetze: number
   await installiereSaat(page.context(), saat);
   await page.goto(`/#/tournament/${ID}/standings`);
   await page.getByRole('button', { name: 'Gesamtplatzierung' }).click();
-  await expect(page.getByTestId('tie-hints')).toBeVisible({ timeout: 25000 });
+  // die Marken in der Tabelle; der eigene Hinweis-Kasten entfällt bei fertiger Gruppe (Daniel 23.10.)
+  await expect(page.getByTestId('tie-marker').first()).toBeVisible({ timeout: 25000 });
 }
 
 async function bild(page: Page, name: string, breite: number): Promise<void> {
@@ -89,80 +90,88 @@ async function keinWortgebrochen(page: Page, selektor: string): Promise<void> {
 const zeilen = (page: Page) => page.locator('tbody tr:not([data-testid="tie-marker-row"])'); // ohne die Markenzeilen des Handys
 const teamReihenfolge = async (page: Page): Promise<string[]> => zeilen(page).evaluateAll((els) => els.map((tr) => (tr.querySelectorAll('td')[1] as HTMLElement).innerText));
 
+// Daniel 23.10. (Ansicht und Wortlaut): bei fertiger Gruppe EIN Kasten mit EINER Haupttaste oben – „Gleichstand entscheiden“ (Wahl),
+// „Strafstoßschießen eintragen“ (auszuspielender Platz), sonst „Gruppe abschließen“; die Entscheidung schließt die Gruppe in einem Zug ab.
+const HAUPTTASTE = '[data-testid="group-close-button-all"]';
+
 for (const g of GROESSEN) {
   test.describe(`${g.name} ${g.breite} px`, () => {
     test(`@ET-025 @W2A-067 Wahl-Fall (nur Platz 1): zwei Marken „Gleichstand – Entscheidung nötig“ und die Taste „Gleichstand entscheiden“`, async ({ page }) => {
       await oeffne(page, g.breite, g.hoehe);
-      await expect(page.getByTestId('tie-hint-choice')).toContainText('TSV Petting und DJK Otting sind nach allen Kriterien gleich (Platz 3 und 4).');
       await expect(page.getByTestId('tie-marker')).toHaveCount(2);
       await expect(page.getByTestId('tie-marker').first()).toContainText('Gleichstand – Entscheidung nötig');
-      await expect(page.getByTestId('tie-decide-entry')).toBeVisible();
-      await expect(page.getByTestId('tie-decide-entry')).toBeInViewport(); // Haupttaste ohne Scrollen sichtbar
-      await pruefeMasse(page, ['[data-testid="tie-decide-entry"]']);
+      const taste = page.locator(HAUPTTASTE);
+      await expect(taste).toHaveText('Gleichstand entscheiden');
+      await expect(taste).toBeInViewport(); // Haupttaste ohne Scrollen sichtbar
+      await expect(page.getByTestId('group-close-then-all')).toHaveText('Danach ist die Gruppe abgeschlossen.');
+      await expect(page.getByTestId('tie-hint-choice'), 'kein zweiter Kasten').toHaveCount(0);
+      await expect(page.locator('[data-primary]'), 'eine Haupttaste je Ansicht (VISUAL-DESIGN § 8)').toHaveCount(1);
+      await pruefeMasse(page, [HAUPTTASTE]);
       await bild(page, 'wahl-fall', g.breite);
       await page.getByTestId('tie-marker').first().scrollIntoViewIfNeeded();
       await bild(page, 'gesamtplatzierung', g.breite);
     });
 
-    test(`@W2A-064 Pflicht-Fall (Plätze 1 bis 3): „Strafstoßschießen nötig“ mit Grund, nur die Taste „Strafstoßschießen eintragen“`, async ({ page }) => {
+    test(`@W2A-064 Pflicht-Fall (Plätze 1 bis 3): „Strafstoßschießen nötig“, nur die Taste „Strafstoßschießen eintragen“`, async ({ page }) => {
       await oeffne(page, g.breite, g.hoehe, [1, 2, 3]);
-      await expect(page.getByTestId('tie-hint-mandatory')).toContainText('Platz 3 muss laut Turnierregeln ausgespielt werden.');
       await expect(page.getByTestId('tie-marker').first()).toContainText('Strafstoßschießen nötig');
-      await expect(page.getByTestId('tie-decide-entry')).toHaveCount(0);
-      await pruefeMasse(page, ['[data-testid="tie-shootout-entry"]']);
+      await expect(page.locator(HAUPTTASTE)).toHaveText('Strafstoßschießen eintragen');
+      await expect(page.locator(HAUPTTASTE)).toBeInViewport();
+      await expect(page.locator('[data-primary]')).toHaveCount(1);
+      await pruefeMasse(page, [HAUPTTASTE]);
       await bild(page, 'pflicht-fall', g.breite);
     });
 
-    test(`@ET-055 @W2A-061 Strafstoßschießen: 4:4 wird am Feld abgelehnt, 4:3 für Otting stellt Otting vor Petting; zurücknehmen stellt es wieder her`, async ({ page }) => {
+    test(`@ET-055 @W2A-061 Strafstoßschießen: 4:4 wird am Feld abgelehnt, 4:3 für Otting stellt Otting vor Petting, danach ist die Gruppe abgeschlossen`, async ({ page }) => {
       await oeffne(page, g.breite, g.hoehe, [1, 2, 3]);
-      await page.getByTestId('tie-shootout-entry').click();
+      await page.locator(HAUPTTASTE).click();
       const dialog = page.getByTestId('tie-decision-dialog');
       await expect(dialog).toBeVisible();
       await expect(dialog.getByTestId('tie-why')).toContainText('Warum nur das Strafstoßschießen?');
-      await expect(dialog.getByTestId('tie-open-rules')).toBeVisible();
+      await expect(dialog.getByTestId('tie-accept-result'), 'Gegenbeispiel: kein „Platz teilen“ auf einem auszuspielenden Platz').toHaveCount(0);
+      await expect(dialog.getByTestId('tie-then-closed')).toHaveText('Danach ist die Gruppe abgeschlossen.');
       await dialog.getByLabel(/DJK Otting/).fill('4');
       await dialog.getByLabel(/TSV Petting/).fill('4');
-      await page.getByTestId('tie-decision-save').click();
+      await page.getByTestId('group-close-confirm').click();
       await expect(dialog.getByRole('alert')).toContainText('braucht einen Sieger');
       await bild(page, 'dialog-fehler', g.breite);
       await dialog.getByLabel(/DJK Otting/).fill('4');
       await dialog.getByLabel(/TSV Petting/).fill('3');
       await expect(dialog.getByTestId('tie-effect')).toContainText('3. DJK Otting, 4. TSV Petting');
-      await pruefeMasse(page, ['[data-testid="tie-decision-save"]', '[data-testid="tie-shootout-score-0"]']);
+      await pruefeMasse(page, ['[data-testid="group-close-confirm"]', '[data-testid="tie-shootout-score-0"]']);
       const feldGroesse = await page.getByTestId('tie-shootout-score-0').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
       expect(feldGroesse, 'Eingabeschrift mindestens 16 px').toBeGreaterThanOrEqual(16);
       await bild(page, 'dialog', g.breite);
-      await page.getByTestId('tie-decision-save').click();
+      await page.getByTestId('group-close-confirm').click();
       await expect(dialog).toHaveCount(0);
+      await expect(page.getByTestId('group-state-all')).toHaveText('abgeschlossen');
       await expect(page.getByTestId('tie-decided-info')).toContainText('Strafstoßschießen');
       const reihenfolge = await teamReihenfolge(page);
-      const otting = reihenfolge.findIndex((r) => r.includes('DJK Otting'));
-      const petting = reihenfolge.findIndex((r) => r.includes('TSV Petting'));
-      expect(otting).toBeLessThan(petting);
+      expect(reihenfolge.findIndex((r) => r.includes('DJK Otting'))).toBeLessThan(reihenfolge.findIndex((r) => r.includes('TSV Petting')));
       expect(await page.getByTestId('tie-marker').allInnerTexts()).toEqual(['Strafstoßschießen 4:3', 'Strafstoßschießen 3:4']);
-      await pruefeMasse(page, ['[data-testid="tie-accept-withdraw"]']);
+      await expect(page.getByTestId('tie-accept-withdraw'), 'nach dem Abschluss kein Zurücknehmen (@W2A-070)').toHaveCount(0);
       await bild(page, 'nach-strafstossschiessen', g.breite);
-      await page.getByTestId('tie-accept-withdraw').click(); // ohne Rückfrage (G6)
-      await expect(page.getByTestId('tie-hint-mandatory')).toBeVisible();
     });
 
-    test(`@W2A-063 @W2A-070 Wahl-Dialog: „Ergebnis so akzeptieren“ in einem Tipp ohne Grundfeld; beide teilen Platz 3, das nächste Team steht auf 5; zurücknehmen`, async ({ page }) => {
+    test(`@W2A-063 Wahl-Dialog: „Gleichstand auf Platz 3“, „Platz teilen“ in einem Tipp ohne Grundfeld; beide auf Platz 3, das nächste Team auf 5, Gruppe abgeschlossen`, async ({ page }) => {
       await oeffne(page, g.breite, g.hoehe);
-      await page.getByTestId('tie-decide-entry').click();
+      await page.locator(HAUPTTASTE).click();
       const dialog = page.getByTestId('tie-decision-dialog');
-      await expect(dialog.getByTestId('tie-accept-result')).toBeVisible();
+      await expect(dialog.getByRole('heading', { name: 'Gleichstand auf Platz 3' })).toBeVisible();
+      await expect(dialog.getByTestId('tie-dialog-context')).toHaveText('TSV Petting und DJK Otting sind nach allen Regeln gleich.');
+      await expect(dialog.getByTestId('tie-accept-result')).toHaveText('Platz teilen');
+      await expect(dialog).toContainText('Beide auf Platz 3, danach folgt Platz 5.');
       await expect(dialog.getByTestId('tie-reason')).toHaveCount(0);
       await pruefeMasse(page, ['[data-testid="tie-pick-shootout"]', '[data-testid="tie-accept-result"]']);
       await bild(page, 'dialog-wahl', g.breite);
       await dialog.getByTestId('tie-accept-result').click();
       await expect(dialog).toHaveCount(0);
-      await expect(page.getByTestId('tie-decided-info')).toContainText('Ergebnis akzeptiert');
+      await expect(page.getByTestId('group-state-all')).toHaveText('abgeschlossen');
+      await expect(page.getByTestId('tie-decided-info')).toContainText('Platz geteilt');
       expect(await page.getByTestId('tie-marker').allInnerTexts()).toEqual(['Gleicher Platz', 'Gleicher Platz']);
       const plaetze = await zeilen(page).evaluateAll((els) => els.map((tr) => (tr.querySelectorAll('td')[0] as HTMLElement).innerText.trim()));
       expect(plaetze.slice(2, 5)).toEqual(['3', '3', '5']);
       await bild(page, 'nach-annahme', g.breite);
-      await page.getByTestId('tie-accept-withdraw').click();
-      await expect(page.getByTestId('tie-hint-choice')).toBeVisible();
     });
   });
 }
@@ -240,9 +249,9 @@ for (const g of GROESSEN) {
   });
 }
 
-test('@W2A-068 Einstellungen: Platz 3 anhaken hebt die Annahme auf – die App fragt vor dem Speichern (Desktop)', async ({ page }) => {
+test('@W2A-068 Einstellungen: Platz 3 anhaken hebt den geteilten Platz auf – die App fragt vor dem Speichern (Desktop)', async ({ page }) => {
   await oeffne(page, 1280, 900);
-  await page.getByTestId('tie-decide-entry').click();
+  await page.locator(HAUPTTASTE).click();
   await page.getByTestId('tie-accept-result').click();
   await expect(page.getByTestId('tie-decided-info')).toBeVisible();
   await page.getByRole('button', { name: 'Einstellungen', exact: true }).first().click();
@@ -250,7 +259,7 @@ test('@W2A-068 Einstellungen: Platz 3 anhaken hebt die Annahme auf – die App f
   await page.getByTestId('playout-place-3').check();
   await page.getByTestId('playout-save').click();
   const rueckfrage = page.getByTestId('tie-places-confirm');
-  await expect(rueckfrage).toContainText('Annahme wird aufgehoben');
+  await expect(rueckfrage).toContainText('Geteilter Platz wird aufgehoben');
   await expect(rueckfrage).toContainText('TSV Petting und DJK Otting');
   await bild(page, 'einstellung-rueckfrage', 1280);
   await page.getByTestId('playout-confirm-ok').click();

@@ -13,15 +13,20 @@ import { JoinEndState } from '../features/helpers/components/JoinEndState';
 import { JoinInfoCard } from '../features/helpers/components/JoinInfoCard';
 import { JoinEntryForm } from '../features/helpers/components/JoinEntryForm';
 import { JoinShell } from '../features/helpers/components/JoinShell';
-import { JoinWaitingCard } from '../features/helpers/components/JoinWaitingCard';
+import { JoinWaitingWatcher } from '../features/helpers/components/JoinWaitingWatcher';
 import { helperFieldPath, spectatorPath } from '../features/helpers/joinPaths';
 import { useJoinFlow } from '../features/helpers/useJoinFlow';
 import type { JoinFlowDeps } from '../features/helpers/joinFlowSteps';
+import type { HelperStatusDeps } from '../features/helpers/useHelperAccessStatus';
 
 export interface JoinScreenProps {
   code: string;
   /** Nur für Tests: statt der echten Server-Aufrufe. */
   deps?: JoinFlowDeps;
+  /** Nur für Tests: statt der echten Abfrage des Zugangsstatus (A-17c). */
+  statusDeps?: HelperStatusDeps;
+  /** Nur für Tests: statt des echten Ladens der lokalen Kopie („Offline bereit“, A-17c). */
+  loadOfflineCopy?: (tournamentId: string) => Promise<boolean>;
 }
 
 /** `/invite`: alte Einladungslinks führen zu diesem Hinweis statt zu einer Anfrage (@HE-063). */
@@ -39,7 +44,7 @@ export const LegacyInviteScreen = () => {
   );
 };
 
-export const JoinScreen = ({ code, deps }: JoinScreenProps) => {
+export const JoinScreen = ({ code, deps, statusDeps, loadOfflineCopy }: JoinScreenProps) => {
   const { t } = useTranslation('helpers');
   const navigate = useNavigate();
   const flow = useJoinFlow(code, deps);
@@ -102,7 +107,17 @@ export const JoinScreen = ({ code, deps }: JoinScreenProps) => {
         return null;
       case 'show':
         return state.view.view === 'waiting' ? (
-          <JoinWaitingCard tournament={meta.tournament} name={meta.name} checkNumber={state.view.checkNumber} />
+          <JoinWaitingWatcher
+            tournament={meta.tournament}
+            name={meta.name}
+            checkNumber={state.view.checkNumber}
+            deviceUserId={flow.deviceUserId}
+            statusDeps={statusDeps}
+            loadOfflineCopy={loadOfflineCopy}
+            onNavigate={go}
+            onHome={() => go('/')}
+            onRecheck={flow.recheck}
+          />
         ) : openField ? null : (
           <>
             {/* e5: die Leitung sieht die Turnierkarte; alle anderen Endkarten zeigen kein Turnier (@HE-004) */}

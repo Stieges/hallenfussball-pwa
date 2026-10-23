@@ -128,6 +128,13 @@ export const E2E_STRANGER_CUP_ID = e2eUuid('tournament:stranger-cup');
  * Monitor.
  */
 export const E2E_RELEASE_CUP_ID = e2eUuid('tournament:release-cup');
+/**
+ * Eigener Cup NUR für `helfer-team.cloud.spec.ts` (A-18a, Auflage B-1): Der Live-Cup wird auch von
+ * `helfer-beitritt.cloud.spec.ts` genutzt; dessen Helfer-Code und offene Anfragen kamen den Team-Tests in
+ * die Quere. Owner olli, coadmin als Co-Admin, zwei Teams, kein Sponsor/Monitor.
+ */
+export const E2E_TEAM_HELFER_CUP_ID = e2eUuid('tournament:team-helfer-cup');
+export const E2E_TEAM_HELFER_CUP_TITLE = 'Team-Helfer-Cup';
 
 /** Titel der Testturniere (`scripts/e2e-seed.ts` UND `tests/e2e/cloud/smoke.spec.ts`
  *  importieren von hier — keine literale Zweitstelle). */

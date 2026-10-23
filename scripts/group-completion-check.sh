@@ -713,7 +713,11 @@ run_schema() {
   check S "Sperrreihenfolge (R-GA4v2-8): reopen_group sperrt Spiele vor dem Abschluss, record_standing_decision nur das Turnier" "ja|ja" \
     "$(q "SELECT CASE WHEN position('ORDER BY m.id FOR UPDATE' IN prosrc) BETWEEN 1 AND position('FROM public.group_completions' IN prosrc) THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.reopen_group(uuid,text,text,boolean)');")|$(q "SELECT CASE WHEN position('public.matches' IN prosrc) = 0 THEN 'ja' ELSE 'nein' END FROM pg_proc WHERE oid = to_regprocedure('public.record_standing_decision(uuid,text,jsonb,text,integer)');")"
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # A-16 (20261110_008), Spiel beenden (20261110_009), B-48b (20261113_101) und B-14 (20261117_104) laufen hier erst am Ende
+  # (AFTER) -- ihre Zeilen helper-join-*, append-match-events-end-by-lead-without-claim, monitor-heartbeat-* und public-read-*
+  # sind an dieser Stelle f (wie in den uebrigen Container-Skripten).
+  check S "Rechte-Assertion: keine Zeile |f (ausser Zeilen der spaeteren Migrationen 20261110_008, 20261110_009, 20261113_101, 20261117_104)" "" \
+    "$(grep -v '|t$' <<<"$priv" | grep -vE '^(helper-join-|append-match-events-end-by-lead-without-claim\||public-read-|monitor-heartbeat-)' || true)"
   check S "Rechte-Assertion: die 6 A-13b-S-Zeilen vorhanden und |t" "$(tr ' ' '\n' <<<"$G1_ASSERTIONS" | sed 's/$/|t/' | sort | paste -sd, -)" \
     "$(grep -E "^($(tr ' ' '|' <<<"$G1_ASSERTIONS"))\|" <<<"$priv" | sort | paste -sd, -)"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
@@ -952,6 +956,30 @@ for f in ${AFTER[@]+"${AFTER[@]}"}; do
   psql_stdin < "$f"
   echo "OK    spaetere Migration laeuft: $(basename "$f")" >&2
 done
+
+# --- 20261110_010 (Cloud-E2E N6d, @ET-055, @W2A-067): ein Turnier ohne Version (version IS NULL, etwa vom Seed) gilt als
+# Version 0. Vorher lehnte record_standing_decision jede Entscheidung dafuer als STALE ab (NULL IS DISTINCT FROM 0).
+if [[ -f "$MIGRATIONS_DIR/20261110_010_standing_decision_null_version.sql" ]]; then
+  t="$(clone "$TPL_NIKO")"
+  q "UPDATE public.tournaments SET version = NULL WHERE id = '$t';" >/dev/null
+  dn="$(dec ohne-version "$t" '' shootout "TSV Petting,DJK Otting" "DJK Otting,TSV Petting" 4 3)"
+  check P "P-12 @ET-055 Nikolaus ohne Version: Gegenbeispiel erwartete Version 5 -> STALE (gemeldete Version 0), nichts geschrieben" "rejected:STALE|0|0" \
+    "$(decide olli "$t" decide "$dn" "" 5)|$(lastres | jq -r '.version')|$(ndec "$t")"
+  check P "P-12 @ET-055 Nikolaus ohne Version: 4:3 fuer Otting mit erwarteter Version 0 wird angenommen, danach Version 1" "ok|1|1" \
+    "$(decide olli "$t" decide "$dn" "" 0)|$(ndec "$t")|$(version "$t")"
+  check P "P-12 @ET-055 Wiederholung nach verlorener Antwort: ALREADY_APPLIED mit Zahl als Version" "ok:ALREADY_APPLIED|1" \
+    "$(decide olli "$t" decide "$dn" "" 0)|$(lastres | jq -r '.version')"
+  # Review #361 (Luecke P-12): beide ALREADY_APPLIED-Zweige auch auf einer Zeile OHNE Version -- die Antwort traegt die Zahl 0
+  # (coalesce), nie null (der Client verlangt eine Zahl).
+  q "UPDATE public.tournaments SET version = NULL WHERE id = '$t';" >/dev/null
+  check P "P-12 @ET-055 ohne Version: Wiederholung des Eintragens -> ALREADY_APPLIED mit Version 0 (Zahl)" "ok:ALREADY_APPLIED|0|number" \
+    "$(decide olli "$t" decide "$dn" "" 0)|$(lastres | jq -r '.version')|$(lastres | jq -r '.version | type')"
+  check P "P-12 @ET-055 ohne Version: Zuruecknehmen mit erwarteter Version 0 wird angenommen" "ok|0" \
+    "$(decide olli "$t" withdraw "$dn" "" 0)|$(ndec "$t")"
+  q "UPDATE public.tournaments SET version = NULL WHERE id = '$t';" >/dev/null
+  check P "P-12 @ET-055 ohne Version: Wiederholung des Zuruecknehmens -> ALREADY_APPLIED mit Version 0 (Zahl)" "ok:ALREADY_APPLIED|0|number" \
+    "$(decide olli "$t" withdraw "$dn" "" 0)|$(lastres | jq -r '.version')|$(lastres | jq -r '.version | type')"
+fi
 
 summary
 echo

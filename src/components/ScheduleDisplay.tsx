@@ -80,6 +80,8 @@ interface ScheduleDisplayProps {
   onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
+  /** Spiel beenden (@FU-112): Turnierleitung darf ein laufendes Gruppenspiel im Spielplan beenden (@FU-113: Helfer nicht). */
+  canEndRunning?: boolean;
   /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ an den Spielkarten (nur Turnierleitung) */
   forfeit?: MatchForfeitActions;
   /** US-VIEWER-FILTERS: Set of visible match IDs (for filtering). If undefined, all matches are visible. */
@@ -115,6 +117,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onStartCorrection,
   onMatchSwap,
   onNavigateToCockpit,
+  canEndRunning,
   forfeit,
   visibleMatchIds,
   tournamentTeams,
@@ -225,6 +228,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           tournament={sideSource}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
+          canEndRunning={canEndRunning}
           forfeit={forfeit}
         />
       )}

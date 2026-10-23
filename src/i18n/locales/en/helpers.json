@@ -123,6 +123,45 @@
       "oldInvite": {
         "title": "This invitation route no longer works – please use the helper QR code of the tournament organisers"
       }
+    },
+    "approved": {
+      "title": "You are approved",
+      "textField": "The tournament organisers have approved you for field {{field}}.",
+      "textNoField": "The tournament organisers have approved you.",
+      "openField": "Open field {{field}}",
+      "openTournament": "Open tournament"
+    },
+    "homeHint": {
+      "title": "Add to home screen",
+      "textField": "That way you open field {{field}} with one tap next time, even without the QR code.",
+      "textNoField": "That way you open the tournament with one tap next time, even without the QR code.",
+      "dismiss": "Close hint"
+    },
+    "offlineReady": {
+      "title": "Ready offline",
+      "textField": "The schedule and field {{field}} are saved on this device. In the hall without a connection you can still kick off.",
+      "textNoField": "The schedule is saved on this device. In the hall without a connection you can still open it."
+    },
+    "chooser": {
+      "title": "Where to?",
+      "field": "Field {{field}}",
+      "noField": "no field",
+      "fieldAndDate": "{{field}} · {{date}}",
+      "home": "Go to start page",
+      "checking": "Checking your access …",
+      "own": "Own tournament · {{date}}"
+    },
+    "guard": {
+      "pending": {
+        "title": "Waiting for approval by the tournament organisers",
+        "text": "You cannot enter anything until the tournament organisers approve you."
+      }
+    },
+    "assignment": {
+      "card": "You are helping at {{title}} · {{field}} · {{weekday}}"
     }
+  },
+  "mehr": {
+    "meineTurniere": "My tournaments on this phone"
   }
 }

@@ -25,6 +25,7 @@ import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../featur
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
 import { TabellenTab } from '../features/tournament-management/TabellenTab';
 import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
+import { GroupCompletionProvider } from '../features/tournament-management/group-completion/GroupCompletionProvider';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
 import { SettingsTabConnected } from '../features/tournament-management/SettingsTabConnected';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
@@ -230,25 +231,30 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
       {/* TAB CONTENT */}
       <div style={contentStyle}>
-        {activeTab === 'schedule' && (
-          <ScheduleTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
-            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
-            onLocalTournamentUpdate={applyRemote}
-            onMatchesUpdate={handleMatchesUpdate}
-            onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
-          />
-        )}
-        {activeTab === 'tabellen' && (
+        {(activeTab === 'schedule' || activeTab === 'tabellen') && (
+          // GA4 A-13c: Spielplan und Tabellen teilen sich Rechte, Netz und den Ablauf „Gruppe abschließen“ (Banner, Dialoge)
           <StandingTieProvider tournamentId={tournamentId} onChanged={reloadFresh}>
-            <TabellenTab
-              tournament={tournament}
-              schedule={schedule}
-              currentStandings={currentStandings}
-              overallStandings={overallStandings}
-            />
+            <GroupCompletionProvider tournament={tournament}>
+              {activeTab === 'schedule' && (
+                <ScheduleTab
+                  tournament={tournament}
+                  schedule={schedule}
+                  currentStandings={currentStandings}
+                  onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+                  onLocalTournamentUpdate={applyRemote}
+                  onMatchesUpdate={handleMatchesUpdate}
+                  onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
+                />
+              )}
+              {activeTab === 'tabellen' && (
+                <TabellenTab
+                  tournament={tournament}
+                  schedule={schedule}
+                  currentStandings={currentStandings}
+                  overallStandings={overallStandings}
+                />
+              )}
+            </GroupCompletionProvider>
           </StandingTieProvider>
         )}
         {activeTab === 'management' && (
@@ -309,7 +315,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         />
       )}
 
-      {!vollbild && isMobile && <ManagementMobileNav activeTab={activeTab} onTabChange={handleTabChange} />}
+      {!vollbild && isMobile && <ManagementMobileNav activeTab={activeTab} onTabChange={handleTabChange} tournamentId={tournamentId} />}
     </div>
   );
 };

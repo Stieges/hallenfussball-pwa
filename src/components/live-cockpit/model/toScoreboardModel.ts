@@ -40,6 +40,8 @@ export interface ScoreboardInput {
   tournamentName?: string;
   /** Vor dem Anpfiff, zwischen den Spielen und nach der Übernahme (Aufgabe 2.5). */
   vor?: ScoreboardVorInput;
+  /** @FU-115: wer das Spiel im Spielplan beendet hat (Name aus dem Protokoll); `null`/fehlt = ohne Namen. */
+  eingetragenVon?: string | null;
 }
 
 /** Sekunden als `m:ss` (Minuten ohne führende Null, nie negativ). */
@@ -76,8 +78,14 @@ function nachEndeTextOf(view: PhaseView | null, t: Uebersetzer): string | null {
   return view?.phase === 'overtime' ? t('tafel.nachEnde.verlaengerung') : null;
 }
 
-function abschnittTextOf(phase: CockpitPhase, view: PhaseView | null, t: Uebersetzer): string | null {
-  if (phase.zustand === 'abgepfiffen') { return nachEndeTextOf(view, t); }
+/** @FU-112, @FU-115: im Spielplan beendet -- „Ende – eingetragen im Spielplan“ (mit Namen: „… von Olli“) statt einer Zeit. */
+function eingetragenTextOf(view: PhaseView | null, von: string | null | undefined, t: Uebersetzer): string | null {
+  if (!view?.eingetragenImSpielplan) { return null; }
+  return von ? t('tafel.nachEnde.eingetragenVon', { name: von }) : t('tafel.nachEnde.eingetragen');
+}
+
+function abschnittTextOf(phase: CockpitPhase, view: PhaseView | null, von: string | null | undefined, t: Uebersetzer): string | null {
+  if (phase.zustand === 'abgepfiffen') { return eingetragenTextOf(view, von, t) ?? nachEndeTextOf(view, t); }
   if (phase.zustand !== 'laeuft' && phase.zustand !== 'pausiert') { return null; }
   if (phase.abschnittArt === 'goldenGoal') { return t('tafel.abschnitt.goldenGoal'); }
   if (phase.abschnittArt === 'verlaengerung') { return t('tafel.abschnitt.verlaengerung'); }
@@ -154,6 +162,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
       };
     }
     if (view.status === 'skipped') { return { uhr: null, hinweise }; } // ausgefallen: nichts gespielt, keine Zeit
+    if (view.eingetragenImSpielplan) { return { uhr: null, hinweise }; } // @FU-112: im Spielplan beendet, keine gespielte Zeit
     // @SL-169: die ganze gespielte Zeit aller Abschnitte; „von 14:00“ nur bei vorzeitigem Abpfiff der regulären Spielzeit
     const gespielt = Math.min(view.playedMs, view.plannedMs);
     const vorzeitig = view.phase === 'regular' && gespielt < view.plannedMs;
@@ -171,7 +180,8 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
 /** Quittung nach dem Abpfiff (@SL-152): „Abgepfiffen · 2:1 gespeichert“, nur in den 30 Sekunden danach und nur für ein beendetes Spiel. */
 function quittungTextOf(input: ScoreboardInput, links: ScoreboardSeite, rechts: ScoreboardSeite, t: Uebersetzer): string | null {
   const { view, match } = input;
-  if (!match || view?.status !== 'finished' || (view.quittungRestMs ?? 0) <= 0) { return null; }
+  // @FU-112: nach dem Beenden im Spielplan kein „Abgepfiffen“ -- die Tafel nennt den Weg
+  if (!match || view?.status !== 'finished' || (view.quittungRestMs ?? 0) <= 0 || view.eingetragenImSpielplan) { return null; }
   return t('tafel.quittung', { links: links.tore, rechts: rechts.tore });
 }
 
@@ -197,7 +207,7 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const vor = scoreboardVor(input, t);
   return {
     badge: badgeOf(input), links, rechts,
-    uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, input.view, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
+    uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, input.view, input.eingetragenVon, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
     ueberfaelligText: vor.ueberfaelligText, quittungText: quittungTextOf(input, links, rechts, t),
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     eintraegeWartenKurz: input.eintraegeWarten > 0 ? String(input.eintraegeWarten) : null,

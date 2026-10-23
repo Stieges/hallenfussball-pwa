@@ -8,8 +8,6 @@ import {
   mapMatchToScheduleUpdate,
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
-  mapInvitationInsertToSupabase,
-  mapInvitationAcceptToSupabase,
   mapMembershipInsertToSupabase,
   mapMembershipRoleUpdateToSupabase,
   mapMembershipTeamsUpdateToSupabase,
@@ -763,64 +761,6 @@ describe('mapTournamentToSupabase', () => {
 // =============================================================================
 // TOURNAMENT_COLLABORATORS + PROFILE MAPPER TESTS (Supabase 2.105 upgrade)
 // =============================================================================
-
-describe('mapInvitationInsertToSupabase', () => {
-  it('maps an invitation creation with defaults', () => {
-    const result = mapInvitationInsertToSupabase({
-      tournamentId: 't1',
-      inviteCode: 'CODE123',
-      role: 'trainer',
-      expiresAtIso: '2026-12-31T00:00:00Z',
-      invitedBy: 'user-1',
-    });
-
-    expect(result.tournament_id).toBe('t1');
-    expect(result.invite_code).toBe('CODE123');
-    expect(result.role).toBe('trainer');
-    expect(result.team_ids).toEqual([]);
-    expect(result.max_uses).toBe(1);
-    expect(result.use_count).toBe(0);
-    expect(result.expires_at).toBe('2026-12-31T00:00:00Z');
-    expect(result.invited_by).toBe('user-1');
-    expect(result.invited_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(result.label).toBeNull();
-  });
-
-  it('passes through provided teamIds, label, maxUses', () => {
-    const result = mapInvitationInsertToSupabase({
-      tournamentId: 't1',
-      inviteCode: 'C',
-      role: 'co-admin',
-      teamIds: ['team-1', 'team-2'],
-      label: 'Trainer-Einladung',
-      maxUses: 5,
-      expiresAtIso: '2026-12-31T00:00:00Z',
-      invitedBy: 'user-1',
-      invitedAtIso: '2026-05-23T10:00:00Z',
-    });
-
-    expect(result.team_ids).toEqual(['team-1', 'team-2']);
-    expect(result.label).toBe('Trainer-Einladung');
-    expect(result.max_uses).toBe(5);
-    expect(result.invited_at).toBe('2026-05-23T10:00:00Z');
-  });
-});
-
-describe('mapInvitationAcceptToSupabase', () => {
-  it('produces an update payload with user_id, accepted_at, use_count', () => {
-    const result = mapInvitationAcceptToSupabase({
-      userId: 'user-42',
-      acceptedAtIso: '2026-05-23T10:00:00Z',
-      newUseCount: 3,
-    });
-
-    expect(result).toEqual({
-      user_id: 'user-42',
-      accepted_at: '2026-05-23T10:00:00Z',
-      use_count: 3,
-    });
-  });
-});
 
 describe('mapMembershipInsertToSupabase', () => {
   it('maps an owner membership with defaults', () => {

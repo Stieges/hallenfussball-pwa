@@ -83,6 +83,20 @@ export function readHelperAccessIndex(
   return index;
 }
 
+/**
+ * Index ohne Prüfung der Sitzung – nur für den Start ohne lesbare Sitzung (Offline, abgelaufenes Token, @HE-028). Er ist
+ * ein Wegweiser; das Recht prüft der Server, sobald Netz da ist. Kaputt/fremde Version → `null` (nichts wird gelöscht).
+ */
+export function peekHelperAccessIndex(storage: HelperAccessStorage = defaultStorage): HelperAccessIndexV1 | null {
+  const raw = storage.getItem(HELPER_ACCESS_STORAGE_KEY);
+  if (raw === null) {
+    return null;
+  }
+  const json = parseJson(raw);
+  const owner = typeof json === 'object' && json !== null && 'deviceUserId' in json ? json.deviceUserId : null;
+  return typeof owner === 'string' ? parseHelperAccessIndex(json, owner) : null;
+}
+
 function currentEntries(deviceUserId: string, storage: HelperAccessStorage): HelperAccessEntry[] {
   return readHelperAccessIndex(deviceUserId, storage)?.entries ?? [];
 }
@@ -177,4 +191,29 @@ export function syncHelperAccessEntry(
     removeHelperAccessEntry(deviceUserId, tournamentId, storage);
   }
   return null;
+}
+
+function updateEntry(
+  deviceUserId: string,
+  tournamentId: string,
+  change: (entry: HelperAccessEntry) => HelperAccessEntry,
+  storage: HelperAccessStorage,
+): boolean {
+  const entry = findHelperAccessEntry(deviceUserId, tournamentId, storage);
+  return entry ? upsertHelperAccessEntry(deviceUserId, change(entry), storage) : false;
+}
+
+/** @HE-097: Hinweis „Zum Startbildschirm hinzufügen“ weggeklickt – für dieses Turnier auf diesem Gerät nie wieder. */
+export function setHomeHintDismissed(deviceUserId: string, tournamentId: string, storage: HelperAccessStorage = defaultStorage): boolean {
+  return updateEntry(deviceUserId, tournamentId, (e) => ({ ...e, homeHintDismissed: true }), storage);
+}
+
+/** @HE-028: Spielplan und Feld liegen auf dem Gerät („Offline bereit“). */
+export function setOfflineReady(
+  deviceUserId: string,
+  tournamentId: string,
+  storage: HelperAccessStorage = defaultStorage,
+  now: Date = new Date(),
+): boolean {
+  return updateEntry(deviceUserId, tournamentId, (e) => ({ ...e, offlineReadyAt: now.toISOString() }), storage);
 }

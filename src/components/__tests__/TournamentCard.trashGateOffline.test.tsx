@@ -20,8 +20,8 @@ vi.mock('../../hooks/useIsMobile', () => ({
 
 const { isOnline, liveRepository } = vi.hoisted(() => {
   const isOnline = { value: true };
-  const getAll = vi.fn(() => Promise.resolve(new Map()));
-  return { isOnline, liveRepository: { getAll } };
+  const getAll = vi.fn(() => Promise.resolve(false));
+  return { isOnline, liveRepository: { hasStartedMatches: getAll } };
 });
 
 vi.mock('../../hooks/useOnlineStatus', () => ({
