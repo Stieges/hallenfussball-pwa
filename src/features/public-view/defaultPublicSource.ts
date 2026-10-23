@@ -1,15 +1,9 @@
 /**
- * Die Quelle der Zuschauer-Seite (B-15): heute der Weg über `getByShareCode` (Adapter (a)); die Server-Funktion
- * `public_tournament` (Adapter (b)) erst, wenn der Schalter `PUBLIC_TOURNAMENT_RPC` gesetzt ist – nach dem
- * Datenbank-Fenster von B-14.
+ * Die Quelle der Zuschauer-Seite (B-15): die Server-Funktion `public_tournament` (Adapter (b)). Seit dem Einspielen von
+ * B-14 (`20261117_104`, live 23.10.) liest anon die Tabellen nicht mehr; der frühere Schalter `PUBLIC_TOURNAMENT_RPC`
+ * entfällt (@ZM-021, @ZM-068, @ZM-109).
  */
-import { FEATURE_FLAGS } from '../../config/featureFlags';
-import { createLegacyPublicSource } from './legacyPublicSource';
 import { createRpcPublicSource } from './rpcPublicSource';
 import type { PublicTournamentSource } from './publicSource';
 
-export function selectPublicSource(rpcEnabled: boolean): PublicTournamentSource {
-  return rpcEnabled ? createRpcPublicSource() : createLegacyPublicSource();
-}
-
-export const defaultPublicTournamentSource: PublicTournamentSource = selectPublicSource(FEATURE_FLAGS.PUBLIC_TOURNAMENT_RPC);
+export const defaultPublicTournamentSource: PublicTournamentSource = createRpcPublicSource();

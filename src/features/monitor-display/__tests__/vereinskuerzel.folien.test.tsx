@@ -21,6 +21,12 @@ vi.mock('../../../core/repositories/SupabaseRepository', () => ({
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { getByShareCode: localGet }; }),
 }));
+// Seit dem B-15-Anschluss liest die Seite standardmäßig über die Server-Funktion (Adapter (b)). Diese Datei prüft die
+// Anzeige mit Daten aus den Repository-Mocks und nimmt deshalb ausdrücklich den Weg über getByShareCode (Adapter (a)).
+vi.mock('../../public-view/defaultPublicSource', async () => {
+  const { createLegacyPublicSource } = await import('../../public-view/legacyPublicSource');
+  return { defaultPublicTournamentSource: createLegacyPublicSource() };
+});
 
 import { LiveViewScreen } from '../../../screens/LiveViewScreen';
 import { RepositoryProvider } from '../../../core/contexts/RepositoryContext';

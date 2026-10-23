@@ -2,9 +2,8 @@
  * Adapter (b) der Zuschauer-Seite: die Server-Funktion `public_tournament(share_code, since_version)` (B-14, B-15).
  *
  * Antwortet der Server mit „nichts geändert“ (wenige Byte) oder nur mit den Änderungen, spart das Egress gegenüber dem
- * Voll-Abruf. Die Serverzeit jeder Antwort gleicht die Uhr des Handys ab (@ZM-026). Der Adapter ist hinter dem Schalter
- * `PUBLIC_TOURNAMENT_RPC` (`config/featureFlags.ts`); die Funktion existiert erst nach dem Datenbank-Fenster von B-14.
- * Getestet wird er gegen einen Stub des Vertrags (`publicTournamentWire.ts`).
+ * Voll-Abruf. Die Serverzeit jeder Antwort gleicht die Uhr des Handys ab (@ZM-026). Seit B-14 live ist, ist er der
+ * Standardweg der Zuschauer-Seite (`defaultPublicSource.ts`). Die Antwort prüft der B-14-Parser (`publicTournamentWire.ts`).
  */
 import { supabase } from '../../lib/supabase';
 import { PUBLIC_POLL_INTERVAL_MS, type PublicFetchResult, type PublicTournamentSource } from './publicSource';
@@ -23,7 +22,7 @@ export interface PublicRpcResponse {
 
 export type PublicRpcCall = (args: PublicRpcArgs) => Promise<PublicRpcResponse>;
 
-/** Aufruf über den Supabase-Client; die generierten Typen kennen die Funktion noch nicht (B-14). */
+/** Aufruf über den Supabase-Client; die generierten Typen kennen die Funktion erst mit dem Typen-PR nach B-14. */
 const supabaseCall: PublicRpcCall = async (args) => {
   if (supabase === null) {
     return { data: null, error: { message: 'supabase not configured' } };
