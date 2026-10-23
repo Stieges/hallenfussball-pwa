@@ -85,7 +85,7 @@ export function legacyResponses(): { tournament: string; teams: string; matches:
   };
 }
 
-// --- Weg (b): Antworten von `public_tournament` nach dem Vertrag (Positivliste, E-A2) ------------------------------------
+// --- Weg (b): Antworten von `public_tournament` nach dem B-14-Vertrag (Positivliste, E-A2) -------------------------------
 
 const TOURNAMENT_PUBLIC_COLUMNS = [
   'id', 'title', 'date', 'start_time', 'status', 'sport', 'tournament_type', 'location_name', 'location_city',
@@ -104,24 +104,20 @@ function pick(row: Row, columns: readonly string[]): Row {
   return Object.fromEntries(columns.filter((column) => column in row).map((column) => [column, row[column]]));
 }
 
-/** Tore eines beendeten oder laufenden Spiels als Ereignisse (Form `RuntimeMatchEvent`, Vorbelegung: Ereignisse eingeschaltet). */
+/** Tore eines beendeten oder laufenden Spiels als Ereignisse in der öffentlichen Form des B-14-Vertrags. */
 function eventsOf(row: Row, index: number): Row[] {
   const home = Number(row.score_a ?? 0);
   const away = Number(row.score_b ?? 0);
   const events: Row[] = [];
-  let scoreHome = 0;
-  let scoreAway = 0;
   for (let goal = 0; goal < home + away; goal += 1) {
     const forHome = goal < home;
-    scoreHome += forHome ? 1 : 0;
-    scoreAway += forHome ? 0 : 1;
     events.push({
       id: testUuid(5000 + index * 20 + goal),
-      matchId: row.id,
-      timestampSeconds: 40 + goal * 70,
       type: 'GOAL',
-      payload: { teamId: forHome ? row.team_a_id : row.team_b_id, direction: 'INC', playerNumber: 3 + goal, newHomeScore: scoreHome, newAwayScore: scoreAway },
-      scoreAfter: { home: scoreHome, away: scoreAway },
+      team_id: forHome ? row.team_a_id : row.team_b_id,
+      section: 1,
+      clock_ms: (40 + goal * 70) * 1000,
+      number: 3 + goal,
     });
   }
   return events;

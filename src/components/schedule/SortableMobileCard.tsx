@@ -138,9 +138,9 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.xs,
     fontWeight: cssVars.fontWeights.semibold,
-    cursor: 'pointer',
+    cursor: isLocked ? 'not-allowed' : 'pointer',
     backgroundColor: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
+    color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     // Fix: Prevent all options from rendering at once
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -219,6 +219,8 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
             <select
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+              disabled={isLocked}
+              aria-label={t('sortable.fieldLabel')}
               style={{
                 ...mobileSelectStyle,
                 width: '100%',

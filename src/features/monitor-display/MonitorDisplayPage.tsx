@@ -43,7 +43,7 @@ import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
 import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
 import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
-import { createLegacyMonitorSource } from './monitorDataSource';
+import { createMonitorSource } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
 import { useMonitorEvents } from './useMonitorEvents';
 import { useMonitorHeartbeat } from './useMonitorHeartbeat';
@@ -79,7 +79,7 @@ function MonitorDisplayPageContent({
 }: MonitorDisplayPageProps) {
   // Datenquelle (stabil je Ziel) und Abruf-/Zustandsregeln in den Bausteinen (B-16b2)
   const displaySource = useMemo(
-    () => createLegacyMonitorSource(tournamentId, monitorId),
+    () => createMonitorSource(tournamentId, monitorId),
     [tournamentId, monitorId]
   );
   const { tournament, monitor, origin, loading, error, lastFetch } = useMonitorDisplayData(
@@ -177,8 +177,8 @@ function MonitorDisplayPageContent({
   const hinweisPhase = useWakeLockHinweis(wakeLock.status, ansichtBereit, spielLaeuft);
   const hinweisZeigt = hinweisPhase && istHinweisFolie(currentSlide, monitor?.slides.length === 0 ? slides : monitor?.slides ?? []);
 
-  // Heartbeat alle 30 s (Takt und Deps in useMonitorHeartbeat)
-  useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status);
+  // Lebenszeichen alle 30 s und bei jedem neuen Wachhalten-Zustand (B-48b, @ME-064; Takt in useMonitorHeartbeat)
+  useMonitorHeartbeat(monitor?.id ?? null, tournament?.id ?? null, slideState.currentIndex, cacheStatus.status, wakeLock.status);
 
   // ==========================================================================
   // KEYBOARD (f = Vollbild, c = Cache-Anzeige; Pfeile und Leertaste ohne Wirkung, @ME-022;

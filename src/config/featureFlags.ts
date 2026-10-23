@@ -45,13 +45,6 @@ export const FEATURE_FLAGS = {
    * when they try to register with an email that already exists.
    */
   MERGE_ACCOUNTS: import.meta.env.VITE_FF_MERGE === 'true',
-
-  /**
-   * Zuschauer-Seite liest über die Server-Funktion `public_tournament(share_code, since_version)` (B-14/B-15) statt über
-   * den Voll-Abruf `getByShareCode`. Erst nach dem Datenbank-Fenster von B-14 auf `true` stellen (Build-Variable
-   * `VITE_FF_PUBLIC_RPC=true`); die Funktion gibt es vorher nicht.
-   */
-  PUBLIC_TOURNAMENT_RPC: import.meta.env.VITE_FF_PUBLIC_RPC === 'true',
 } as const;
 
 /**

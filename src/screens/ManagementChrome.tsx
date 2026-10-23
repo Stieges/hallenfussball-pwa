@@ -12,6 +12,7 @@ import type { Tournament } from '../types/tournament';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import type { TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
 import { AuthSection } from '../components/layout/AuthSection';
+import { OwnTournamentsMoreItem } from '../features/helpers/components/OwnTournamentsMoreItem';
 import { EngineOutboxHeaderStatus } from '../features/tournament-management/components/EngineOutboxHeaderStatus';
 
 export interface ManagementHeaderProps {
@@ -142,11 +143,13 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
 }
 
 export interface ManagementMobileNavProps {
+  /** Für „Meine Turniere auf diesem Handy“ (Helfer-Gerät, @HE-110). */
+  tournamentId?: string;
   activeTab: TournamentTab;
   onTabChange: (tab: TournamentTab) => void;
 }
 
-export function ManagementMobileNav({ activeTab, onTabChange }: ManagementMobileNavProps): ReactElement {
+export function ManagementMobileNav({ activeTab, onTabChange, tournamentId }: ManagementMobileNavProps): ReactElement {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const wechsle = (tab: BottomNavTab) => {
     if (tab === 'more') { setShowMoreMenu(true); } else { onTabChange(tab); }
@@ -159,6 +162,7 @@ export function ManagementMobileNav({ activeTab, onTabChange }: ManagementMobile
         <BottomSheetItem icon={<Icons.Users size={20} color="currentColor" />} label="Teams" description="Teams verwalten" onClick={() => ausMehr('teams')} isActive={activeTab === 'teams'} />
         <BottomSheetItem icon={<Icons.Settings size={20} color="currentColor" />} label="Einstellungen" description="Turnier konfigurieren" onClick={() => ausMehr('settings')} isActive={activeTab === 'settings'} />
         <BottomSheetItem icon={<Icons.Monitor size={20} color="currentColor" />} label="Monitor" description="Display-Konfiguration" onClick={() => ausMehr('monitor')} isActive={activeTab === 'monitor'} />
+        {showMoreMenu && tournamentId && <OwnTournamentsMoreItem tournamentId={tournamentId} onBeforeNavigate={() => setShowMoreMenu(false)} />}
       </BottomSheet>
     </>
   );

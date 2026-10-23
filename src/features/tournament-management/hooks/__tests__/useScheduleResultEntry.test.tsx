@@ -21,6 +21,13 @@ vi.mock('../../../../core/repositories/eventAuthorNamesRpc', async (importOrigin
   readEventAuthorNames: authors.read,
 }));
 
+// @FU-081 (B-49): Stand der Feldsteuerung am Server (field_control_state), je Test gesetzt; Standard: niemand sonst steuert.
+const holder = vi.hoisted(() => ({ read: vi.fn() }));
+vi.mock('../../../../core/repositories/fieldControlStateRpc', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../core/repositories/fieldControlStateRpc')>()),
+  readForeignFieldHolder: holder.read,
+}));
+
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { MatchEngineContext } from '../../../match-engine/matchEngineContextInstance';
 import { MatchCommands, rowToEngineEvent, type EngineEventWithSeq } from '../../../../core/match/client';
@@ -42,13 +49,13 @@ const correction = (id: string, scores: Record<string, number>, basedOn: string)
 const anpfiff: EngineEvent = { id: 'start', type: 'MATCH_START', actor: 'helper', at: NOW - 120_000, section: 1, clockMs: 0, teamId: null, payload: { rules: RULES } };
 const seq = (event: EngineEvent, n: number): EngineEventWithSeq => ({ ...event, seq: n });
 
-function render(h: ScheduleEngine, options: { lockFinishedResults?: boolean; matches?: Parameters<typeof scheduleTournament>[0] } = {}) {
+function render(h: ScheduleEngine, options: { lockFinishedResults?: boolean; matches?: Parameters<typeof scheduleTournament>[0]; offerTakeover?: (matchId: string, field: number | null) => Promise<boolean> } = {}) {
   const showWarning = vi.fn();
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MatchEngineContext.Provider value={h.value}>{children}</MatchEngineContext.Provider>
   );
   const hook = renderHook(
-    () => useScheduleResultEntry({ tournament: scheduleTournament(options.matches), showWarning, lockFinishedResults: options.lockFinishedResults ?? false }),
+    () => useScheduleResultEntry({ tournament: scheduleTournament(options.matches), showWarning, lockFinishedResults: options.lockFinishedResults ?? false, offerTakeover: options.offerTakeover }),
     { wrapper },
   );
   /** Startet die Eingabe; Rückfragen beantwortet der Test selbst. */
@@ -79,6 +86,8 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     vi.stubGlobal('indexedDB', new IDBFactory());
     authors.read.mockReset();
     authors.read.mockResolvedValue(new Map());
+    holder.read.mockReset();
+    holder.read.mockResolvedValue(null);
     h = await makeScheduleEngine();
   });
   afterEach(() => {
@@ -119,16 +128,39 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     expect(await done).toBe(false);
   });
 
-  // Rest von @FU-081 („Spielleitung übernehmen“ neben dem Notweg) gehört zu B-49 (Übernahme aus dem Spielplan).
-  it.fails('@FU-081 Rest (B-49): Olli sieht in der Rückfrage zusätzlich „Spielleitung übernehmen“ (C-SPIELPLAN-UEBERNEHMEN-FEHLT)', async () => {
+  // Rest von @FU-081 („Spielleitung übernehmen“ neben dem Notweg), mit B-49 eingelöst: das Feld von Spiel 9 steuert Toms Gerät.
+  it('@FU-081 Rest (B-49): Olli sieht in der Rückfrage zusätzlich „Spielleitung übernehmen“; die Wahl öffnet die Übernahme, das Spiel bleibt unverändert', async () => {
     h.fetchConfirmed.mockResolvedValueOnce({
       events: [seq(anpfiff, 1)],
       newWatermark: 1,
     });
-    const { hook, enter } = render(h);
-    void enter(SPIEL_9, 3, 1);
+    holder.read.mockImplementation((_client: unknown, _tournamentId: string, field: number) => Promise.resolve({ field, holderName: 'Tom', holderDeviceLabel: null }));
+    const offerTakeover = vi.fn(() => Promise.resolve(true));
+    const { hook, enter, answer } = render(h, { offerTakeover });
+    const done = enter(SPIEL_9, 3, 1);
     await act(async () => { await settle(); });
-    expect(hook.result.current.prompt).toMatchObject({ kind: 'end', takeOver: true });
+    const feld = holder.read.mock.calls[0][2] as number;
+    expect(hook.result.current.prompt).toMatchObject({ kind: 'end', takeOver: true, controlledBy: { field: feld, holder: 'Tom' } });
+
+    await answer('takeover');
+    expect(await done).toBe(false);
+    expect(offerTakeover).toHaveBeenCalledWith(SPIEL_9, feld);
+    expect((await outbox(h, SPIEL_9))?.pending).toEqual([]);
+    expect(h.api).not.toHaveBeenCalled();
+  });
+
+  it('@FU-081 Gegenbeispiel: kein anderes Gerät steuert das Feld → keine Taste „Spielleitung übernehmen“', async () => {
+    h.fetchConfirmed.mockResolvedValueOnce({
+      events: [seq(anpfiff, 1)],
+      newWatermark: 1,
+    });
+    const { hook, enter, answer } = render(h, { offerTakeover: vi.fn(() => Promise.resolve(true)) });
+    const done = enter(SPIEL_9, 3, 1);
+    await act(async () => { await settle(); });
+    expect(hook.result.current.prompt).toMatchObject({ kind: 'end', controlledBy: null });
+    expect(hook.result.current.prompt).not.toHaveProperty('takeOver');
+    await answer(null);
+    expect(await done).toBe(false);
   });
 
   // Fixrunde 1 (M-1): Die Turnierleitung kannte das 2:1 nicht -- statt einer Grund-Rückfrage, die sicher scheitert,

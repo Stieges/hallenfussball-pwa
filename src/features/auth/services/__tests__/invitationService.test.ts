@@ -1,5 +1,5 @@
 /**
- * invitationService — Einladungen erstellen, prüfen, annehmen, deaktivieren (A-07h, Abdeckung features/auth).
+ * invitationService — Einladungen erstellen, deaktivieren, auflisten (Annehmen/Prüfen entfällt seit A-17b) (A-07h, Abdeckung features/auth).
  *
  * Supabase wird durch einen Query-Builder ersetzt, der Ergebnisse in Aufrufreihenfolge liefert.
  * Jeder Fall hat ein Gegenbeispiel (abgelaufen, verbraucht, Gast, Owner-Einladung, ...).
@@ -60,15 +60,11 @@ function makeBuilder(): Builder {
 
 import {
   createInvitation,
-  validateInvitation,
-  acceptInvitation,
   deactivateInvitation,
   getActiveInvitationsForTournament,
-  getInvitationByToken,
 } from '../invitationService';
 
 const FUTURE = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
-const PAST = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
 function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -167,155 +163,6 @@ describe('invitationService', () => {
     });
   });
 
-  describe('validateInvitation', () => {
-    it('meldet not_found ohne Supabase', async () => {
-      state.configured = false;
-
-      expect(await validateInvitation('x')).toEqual({ valid: false, error: 'not_found' });
-    });
-
-    it('meldet not_found für einen unbekannten Code', async () => {
-      state.queue = [{ data: null, error: { message: 'PGRST116' } }];
-
-      expect(await validateInvitation('x')).toEqual({ valid: false, error: 'not_found' });
-    });
-
-    it('meldet already_used, wenn die Einladung schon einem Konto gehört', async () => {
-      state.queue = [{ data: row({ user_id: 'u-9' }), error: null }];
-
-      expect(await validateInvitation('TOKEN-1')).toEqual({ valid: false, error: 'already_used' });
-    });
-
-    it('meldet deactivated für eine zurückgezogene Einladung', async () => {
-      state.queue = [{ data: row({ declined_at: '2026-10-11T00:00:00Z' }), error: null }];
-
-      expect(await validateInvitation('TOKEN-1')).toEqual({ valid: false, error: 'deactivated' });
-    });
-
-    it('meldet expired für eine abgelaufene Einladung', async () => {
-      state.queue = [{ data: row({ expires_at: PAST }), error: null }];
-
-      expect(await validateInvitation('TOKEN-1')).toEqual({ valid: false, error: 'expired' });
-    });
-
-    it('meldet max_uses_reached, wenn alle Verwendungen aufgebraucht sind', async () => {
-      state.queue = [{ data: row({ max_uses: 2, use_count: 2 }), error: null }];
-
-      expect(await validateInvitation('TOKEN-1')).toEqual({ valid: false, error: 'max_uses_reached' });
-    });
-
-    it('liefert Einladung, Turnier und Einlader für eine gültige Einladung', async () => {
-      state.queue = [
-        { data: { ...row(), tournaments: { id: 't-1', title: 'Hallencup Ost' } }, error: null },
-        { data: { id: 'owner-1', display_name: 'Anna' }, error: null },
-      ];
-
-      const result = await validateInvitation('TOKEN-1');
-
-      expect(result).toMatchObject({
-        valid: true,
-        invitation: { id: 'inv-1', token: 'TOKEN-1', isActive: true },
-        tournament: { id: 't-1', name: 'Hallencup Ost' },
-        inviter: { id: 'owner-1', name: 'Anna' },
-      });
-    });
-
-    it('Gegenbeispiel: ohne Einlader-Profil fehlt nur der Einlader, die Einladung bleibt gültig', async () => {
-      state.queue = [
-        { data: row(), error: null },
-        { data: null, error: { message: 'nf' } },
-      ];
-
-      const result = await validateInvitation('TOKEN-1');
-
-      expect(result.valid).toBe(true);
-      expect(result.inviter).toBeUndefined();
-      expect(result.tournament).toBeUndefined();
-    });
-
-    it('Gegenbeispiel: ohne Anzeigenamen des Einladers wird „Unknown“ eingesetzt', async () => {
-      state.queue = [
-        { data: row(), error: null },
-        { data: { id: 'owner-1', display_name: null }, error: null },
-      ];
-
-      expect((await validateInvitation('TOKEN-1')).inviter).toEqual({ id: 'owner-1', name: 'Unknown' });
-    });
-
-    it('meldet not_found bei einer Ausnahme', async () => {
-      state.queue = ['throw'];
-
-      expect(await validateInvitation('TOKEN-1')).toEqual({ valid: false, error: 'not_found' });
-    });
-  });
-
-  describe('acceptInvitation', () => {
-    it('meldet ohne Supabase, dass Cloud-Funktionen fehlen', async () => {
-      state.configured = false;
-
-      expect(await acceptInvitation('TOKEN-1', 'u-2')).toEqual({
-        success: false,
-        error: 'Cloud-Funktionen sind nicht verfügbar',
-      });
-    });
-
-    it('übernimmt den Grund der Prüfung, wenn die Einladung ungültig ist', async () => {
-      state.queue = [{ data: row({ expires_at: PAST }), error: null }];
-
-      expect(await acceptInvitation('TOKEN-1', 'u-2')).toEqual({ success: false, error: 'expired' });
-    });
-
-    it('Gegenbeispiel: wer schon Mitglied ist, wird nicht noch einmal eingetragen', async () => {
-      state.queue = [
-        { data: row(), error: null },
-        { data: null, error: null },
-        { data: { id: 'm-x' }, error: null },
-      ];
-
-      expect(await acceptInvitation('TOKEN-1', 'u-2')).toEqual({ success: false, error: 'already_member' });
-    });
-
-    it('nimmt die Einladung an und erhöht den Verbrauchszähler', async () => {
-      state.queue = [
-        { data: row({ use_count: 0 }), error: null },
-        { data: null, error: null },
-        { data: null, error: null },
-        { data: row({ user_id: 'u-2', accepted_at: '2026-10-15T09:00:00Z', use_count: 1 }), error: null },
-      ];
-
-      const result = await acceptInvitation('TOKEN-1', 'u-2');
-
-      expect(result.success).toBe(true);
-      expect(result.membership).toMatchObject({ userId: 'u-2', role: 'trainer', tournamentId: 't-1' });
-      const updateBuilder = state.builders[3] as Builder;
-      expect(updateBuilder.update).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'u-2' }));
-    });
-
-    it('reicht die Meldung eines Update-Fehlers weiter', async () => {
-      state.queue = [
-        { data: row(), error: null },
-        { data: null, error: null },
-        { data: null, error: null },
-        { data: null, error: { message: 'RLS' } },
-      ];
-
-      expect(await acceptInvitation('TOKEN-1', 'u-2')).toEqual({ success: false, error: 'RLS' });
-    });
-
-    it('meldet eine Ausnahme als unerwarteten Fehler', async () => {
-      state.queue = [
-        { data: row(), error: null },
-        { data: null, error: null },
-        'throw',
-      ];
-
-      expect(await acceptInvitation('TOKEN-1', 'u-2')).toEqual({
-        success: false,
-        error: 'Ein unerwarteter Fehler ist aufgetreten',
-      });
-    });
-  });
-
   describe('deactivateInvitation', () => {
     it('gibt false ohne Supabase zurück', async () => {
       state.configured = false;
@@ -382,32 +229,6 @@ describe('invitationService', () => {
 
       const b = state.builders[0] as Builder;
       expect(b.gt).toHaveBeenCalledWith('expires_at', expect.any(String));
-    });
-  });
-
-  describe('getInvitationByToken', () => {
-    it('liefert undefined ohne Supabase', async () => {
-      state.configured = false;
-
-      expect(await getInvitationByToken('TOKEN-1')).toBeUndefined();
-    });
-
-    it('liefert die Einladung zu einem Code', async () => {
-      state.queue = [{ data: row(), error: null }];
-
-      expect(await getInvitationByToken('TOKEN-1')).toMatchObject({ id: 'inv-1', token: 'TOKEN-1' });
-    });
-
-    it('Gegenbeispiel: ein unbekannter Code liefert undefined', async () => {
-      state.queue = [{ data: null, error: { message: 'PGRST116' } }];
-
-      expect(await getInvitationByToken('FALSCH')).toBeUndefined();
-    });
-
-    it('Gegenbeispiel: eine Ausnahme liefert undefined', async () => {
-      state.queue = ['throw'];
-
-      expect(await getInvitationByToken('TOKEN-1')).toBeUndefined();
     });
   });
 });

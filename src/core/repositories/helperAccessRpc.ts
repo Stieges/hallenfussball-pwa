@@ -241,7 +241,7 @@ export type HelperAccessView =
   | { view: 'accountScan' } // Konto: Einträge warten / ohne Netz / Rückfrage (A-17a) @HE-089 @HE-092 @HE-093
   | { view: 'leader'; tournamentId: string } // „Du leitest dieses Turnier bereits“ @HE-091
   | { view: 'waiting'; checkNumber: number | null } // „Wartet auf Freigabe durch die Turnierleitung“ @HE-001 @OB-053
-  | { view: 'declined' } // „Anfrage abgelehnt“ @HE-004 @HE-008 @HE-102
+  | { view: 'declined'; codeOpen: boolean } // „Anfrage abgelehnt“ @HE-004 @HE-008 @HE-102; `codeOpen` = Code noch gültig (dann war es eine einzelne Ablehnung)
   | { view: 'requestExpired' } // „Anfrage verfallen“ @HE-011
   | { view: 'openField'; tournamentId: string; field: number } // Feld öffnen (ohne Feld: 1) @HE-095 @HE-037 @HE-098 Z.3
   | { view: 'finalStandings'; tournamentId: string } // Endstand, kein Eintrag @HE-098 Z.2
@@ -290,7 +290,7 @@ function viewForInfo(info: HelperAccessStatus, session: 'none' | 'device' | 'acc
     case 'pending':
       return { view: 'waiting', checkNumber: info.checkNumber ?? null };
     case 'declined':
-      return { view: 'declined' };
+      return { view: 'declined', codeOpen: info.state === 'open' };
     case 'expired':
       return { view: 'requestExpired' };
     case 'accepted':

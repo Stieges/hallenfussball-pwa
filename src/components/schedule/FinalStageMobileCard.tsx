@@ -4,7 +4,7 @@
  * Mannschaften untereinander, ihre Tore rechts in der Zeile; Strafstoß kleiner daneben, Sieger fett.
  * Ein offenes Spiel lässt sich hier eintragen (C-FINALRUNDE-MOBIL-EINGABE, `useScoreDraft`, @FU-101).
  */
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { ScheduledMatch } from '../../core/generators';
@@ -55,6 +55,8 @@ export interface FinalStageMobileCardProps {
   fieldOptions: FinalMobileOption[];
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
+  /** B-12: weitere Aktion der Turnierleitung (z. B. „Nicht angetreten“) unter dem Stand */
+  extraAction?: ReactNode;
 }
 
 const nameStyle: CSSProperties = { overflowWrap: 'break-word' };
@@ -75,7 +77,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const {
     match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore, inCorrectionMode,
     onScoreChange, onStartCorrection, changeAuthorOf, showReferees, showFields, editingSchedule, displayedRef, displayedField,
-    hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange,
+    hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange, extraAction,
   } = props;
   const { t } = useTranslation('tournament');
   const decided = result?.winner !== undefined && result.winner !== null;
@@ -211,6 +213,8 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           {t('finals.correct')}
         </button>
       )}
+
+      {extraAction}
 
       {editingSchedule && (showReferees || showFields) && (
         <div style={{ display: 'flex', gap: cssVars.spacing.sm, marginTop: cssVars.spacing.xs, paddingTop: cssVars.spacing.xs, borderTop: `1px solid ${cssVars.colors.border}` }}>

@@ -222,7 +222,7 @@ a11_mark "@ME-059 bildschirm-aendert-hallenmonitor-halle-abgelehnt      " "$(cut
 r="$(a11_probe authenticated "$U_SCREEN_DEVICE" "SELECT count(*) FROM public.tournaments WHERE id = '$T_MAIN'" \
   "UPDATE public.tournaments SET config = config || '{\"monitors\":[{\"id\":\"halle\",\"name\":\"Hallenmonitor Halle\",\"slides\":[]}]}'::jsonb WHERE id = '$T_MAIN';" \
   "SELECT coalesce(config->'monitors'->0->>'name', 'keiner') FROM public.tournaments WHERE id = '$T_MAIN'")"
-a11_mark "@ME-059 bildschirm-aendert-folien-im-turnier-abgelehnt        " "$(a11_denied_verdict "$r" "keiner")" "abgelehnt"
+a11_mark "@ME-059 bildschirm-aendert-folien-im-turnier-abgelehnt        " "$(a11_denied_verdict_b14 "$r" "keiner")" "abgelehnt"  # B-14: Bildschirm sieht die Zeile nicht mehr direkt
 r="$(a27_probe "$U_COADMIN" "$A27_HALLE_SLIDES" "$A27_HALLE_NOW")"
 a11_mark "@ME-059 gegen-maria-aendert-hallenmonitor-halle               " "$(cut -d'|' -f1,2 <<<"$r")" "1|2"
 
@@ -230,7 +230,7 @@ a11_mark "@ME-059 gegen-maria-aendert-hallenmonitor-halle               " "$(cut
 r="$(a11_probe authenticated "$U_SCREEN_DEVICE" "SELECT count(*) FROM public.matches WHERE id = '$A11_M13'" \
   "UPDATE public.matches SET scheduled_start = scheduled_start + interval '10 minutes' WHERE id = '$A11_M13';" \
   "SELECT to_char(scheduled_start, 'HH24:MI') FROM public.matches WHERE id = '$A11_M13'")"
-a11_mark "@ZP-084 bildschirm-verschiebt-spiel-13-abgelehnt              " "$(a11_denied_verdict "$r" "15:15")" "abgelehnt"
+a11_mark "@ZP-084 bildschirm-verschiebt-spiel-13-abgelehnt              " "$(a11_denied_verdict_b14 "$r" "15:15")" "abgelehnt"  # B-14: Bildschirm sieht die Zeile nicht mehr direkt
 r="$(a11_probe authenticated "$U_COADMIN" "SELECT count(*) FROM public.matches WHERE id = '$A11_M13'" \
   "UPDATE public.matches SET scheduled_start = scheduled_start + interval '10 minutes' WHERE id = '$A11_M13';" \
   "SELECT to_char(scheduled_start, 'HH24:MI') FROM public.matches WHERE id = '$A11_M13'")"

@@ -20,7 +20,6 @@ export { UserProfileScreen } from './UserProfileScreen';
 // Phase 4: Invitation System
 export { InviteDialog } from './InviteDialog';
 export { InviteLinkDialog } from './InviteLinkDialog';
-export { InviteAcceptScreen } from './InviteAcceptScreen';
 export { MemberList } from './MemberList';
 
 // Phase 5: Role Management

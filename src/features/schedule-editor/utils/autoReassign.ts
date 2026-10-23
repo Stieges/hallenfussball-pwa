@@ -9,6 +9,7 @@
  */
 
 import { Match, RefereeConfig } from '../../../types/tournament';
+import { getMatchStartState } from '../../../utils/matchStartState';
 import { MatchChange, ReassignmentResult, ReassignmentOptions } from '../types';
 import { detectAllConflicts } from './scheduleConflicts';
 
@@ -520,7 +521,7 @@ export function redistributeFields(
   const matchesByTime = new Map<string, Match[]>();
 
   for (const match of matches) {
-    if (match.matchStatus === 'skipped' || match.matchStatus === 'finished') {continue;}
+    if (match.matchStatus === 'skipped') {continue;}
     if (!match.scheduledTime) {continue;}
 
     const timeKey = new Date(match.scheduledTime).toISOString();
@@ -530,13 +531,21 @@ export function redistributeFields(
   }
 
   // For each time slot, distribute matches across fields
-  for (const [, matchesInSlot] of matchesByTime) {
+  for (const [, allInSlot] of matchesByTime) {
+    // @ZP-093: angepfiffene Spiele (läuft, Halbzeit, beendet) behalten ihr Feld; die übrigen verteilen sich auf die freien
+    const taken = new Set(
+      allInSlot.filter((m) => getMatchStartState([m]) === 'started').map((m) => m.field)
+    );
+    const matchesInSlot = allInSlot.filter((m) => getMatchStartState([m]) !== 'started');
+    const freeFields = Array.from({ length: numberOfFields }, (_, i) => i + 1).filter((f) => !taken.has(f));
+    const pool = freeFields.length > 0 ? freeFields : Array.from({ length: numberOfFields }, (_, i) => i + 1);
+
     // Sort by original field to maintain some consistency
     matchesInSlot.sort((a, b) => a.field - b.field);
 
-    // Assign fields 1, 2, 3, ... in order
+    // Assign the free fields in order
     matchesInSlot.forEach((match, index) => {
-      const newField = (index % numberOfFields) + 1;
+      const newField = pool[index % pool.length];
       if (match.field !== newField) {
         changes.push({
           matchId: match.id,

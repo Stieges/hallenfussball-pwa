@@ -77,6 +77,9 @@ async function beendenImSpielplan(plan: Page, heim: number, gast: number): Promi
   const zeile = plan.getByRole('row', { name: /^Spiel 1:/ });
   await expect(zeile).toBeVisible({ timeout: 15_000 });
   await zeile.click();
+  // Der Klick-außerhalb-Hörer der Karte ist erst 100 ms nach dem Aufklappen scharf. Ein Mensch tippt später; ohne diese
+  // Pause klickt Playwright vorher und der Test bliebe auch mit dem alten Fehler (@FU-112: Eingabe klappt sofort zu) grün.
+  await plan.waitForTimeout(300);
   await plan.getByTestId('end-and-enter-btn').filter({ visible: true }).first().click();
   const expand = plan.getByTestId('quick-score-expand').filter({ visible: true }).first();
   await expect(expand).toBeVisible();
