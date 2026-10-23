@@ -2,14 +2,11 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm).
- * Letzte Regeneration: 2026-10-20, nach DB-Fenster 20.10. (Migrationen 20261110_001-_004:
- * is_real_account, field_control inkl. take_field_control/field_control_state, Entfernung von
- * can_create_tournament, tournament_limit_error_message, anonymous_tournament_limit,
- * count_active_tournaments, is_anonymous_user) -- aus Produktion per Supabase-MCP
+ * Letzte Regeneration: 2026-10-23, nach dem DB-Fenster 23.10. (Migrationen 20261110_005 bis _010,
+ * 20261113_003, 20261113_101, 20261117_104 live) -- aus Produktion per Supabase-MCP
  * (generate_typescript_types), nicht aus einem Wegwerf-Container. Damit ist die Datei wieder
- * deckungsgleich mit der Produktion; die frueheren Vorgriffs-Nachtraege (B2/B3a/B3b/C0b) sind
- * aufgegangen. Hinweis: das MCP-Werkzeug liefert PostgrestVersion "14.1", die CLI "14.5"; hier
- * bleibt "14.5" stehen, weil der Typ-Drift-Check (CLI) damit vergleicht.
+ * deckungsgleich mit der Produktion. PostgrestVersion "14.1": so liefern sie seit dem 23.10.
+ * MCP-Werkzeug UND CLI (Typ-Drift-Check, Lauf 40012473086, Live-Seite "14.1").
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -28,7 +25,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -46,6 +43,206 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      bracket_log: {
+        Row: {
+          actor: string | null
+          created_at: string
+          detail: Json
+          group_id: string | null
+          id: number
+          kind: string
+          match_id: string | null
+          reason: string | null
+          tournament_id: string
+        }
+        Insert: {
+          actor?: string | null
+          created_at?: string
+          detail?: Json
+          group_id?: string | null
+          id?: never
+          kind: string
+          match_id?: string | null
+          reason?: string | null
+          tournament_id: string
+        }
+        Update: {
+          actor?: string | null
+          created_at?: string
+          detail?: Json
+          group_id?: string | null
+          id?: never
+          kind?: string
+          match_id?: string | null
+          reason?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bracket_log_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_log_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bracket_notices: {
+        Row: {
+          created_at: string
+          current_team_id: string | null
+          id: number
+          kind: string
+          match_id: string
+          origin_team_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          side: string
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_team_id?: string | null
+          id?: never
+          kind: string
+          match_id: string
+          origin_team_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          side: string
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string
+          current_team_id?: string | null
+          id?: never
+          kind?: string
+          match_id?: string
+          origin_team_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          side?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bracket_notices_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_notices_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clarifications: {
+        Row: {
+          conflict_code: string
+          created_at: string
+          group_id: string | null
+          id: number
+          kind: string
+          match_id: string | null
+          requested: Json
+          requested_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          server_last: Json | null
+          tournament_id: string
+        }
+        Insert: {
+          conflict_code: string
+          created_at?: string
+          group_id?: string | null
+          id?: never
+          kind: string
+          match_id?: string | null
+          requested: Json
+          requested_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          server_last?: Json | null
+          tournament_id: string
+        }
+        Update: {
+          conflict_code?: string
+          created_at?: string
+          group_id?: string | null
+          id?: never
+          kind?: string
+          match_id?: string | null
+          requested?: Json
+          requested_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          server_last?: Json | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clarifications_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clarifications_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_outbox_reports: {
+        Row: {
+          device_id: string
+          field: number | null
+          pending: number
+          reported_at: string
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          device_id: string
+          field?: number | null
+          pending: number
+          reported_at?: string
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          device_id?: string
+          field?: number | null
+          pending?: number
+          reported_at?: string
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_outbox_reports_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       field_control: {
         Row: {
@@ -78,6 +275,110 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "field_control_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_completions: {
+        Row: {
+          based_on_state: Json
+          completed_at: string
+          completed_by: string
+          group_id: string
+          open_ranks: number[]
+          ranking: string[]
+          reopened_at: string | null
+          reopened_by: string | null
+          stale: boolean
+          tie_orders: Json
+          tournament_id: string
+        }
+        Insert: {
+          based_on_state: Json
+          completed_at?: string
+          completed_by: string
+          group_id: string
+          open_ranks?: number[]
+          ranking: string[]
+          reopened_at?: string | null
+          reopened_by?: string | null
+          stale?: boolean
+          tie_orders?: Json
+          tournament_id: string
+        }
+        Update: {
+          based_on_state?: Json
+          completed_at?: string
+          completed_by?: string
+          group_id?: string
+          open_ranks?: number[]
+          ranking?: string[]
+          reopened_at?: string | null
+          reopened_by?: string | null
+          stale?: boolean
+          tie_orders?: Json
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_completions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      late_entries: {
+        Row: {
+          actor: string
+          device_id: string | null
+          event: Json
+          event_id: string
+          id: number
+          match_id: string
+          received_at: string
+          resolved_at: string | null
+          resolved_by: string | null
+          tournament_id: string
+        }
+        Insert: {
+          actor: string
+          device_id?: string | null
+          event: Json
+          event_id: string
+          id?: never
+          match_id: string
+          received_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tournament_id: string
+        }
+        Update: {
+          actor?: string
+          device_id?: string | null
+          event?: Json
+          event_id?: string
+          id?: never
+          match_id?: string
+          received_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "late_entries_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "late_entries_tournament_id_fkey"
             columns: ["tournament_id"]
             isOneToOne: false
             referencedRelation: "tournaments"
@@ -327,6 +628,7 @@ export type Database = {
           duration_minutes: number | null
           field: number
           final_type: string | null
+          forfeit_absent: string | null
           group_letter: string | null
           id: string
           is_final: boolean | null
@@ -340,12 +642,14 @@ export type Database = {
           match_status: string | null
           origin_a: Json | null
           origin_b: Json | null
+          original_start: string | null
           overtime_score_a: number | null
           overtime_score_b: number | null
           owner_id: string | null
           penalty_score_a: number | null
           penalty_score_b: number | null
           phase: string | null
+          reassigned_at: string | null
           referee_number: number | null
           referee_team_id: string | null
           round: number
@@ -377,6 +681,7 @@ export type Database = {
           duration_minutes?: number | null
           field: number
           final_type?: string | null
+          forfeit_absent?: string | null
           group_letter?: string | null
           id?: string
           is_final?: boolean | null
@@ -390,12 +695,14 @@ export type Database = {
           match_status?: string | null
           origin_a?: Json | null
           origin_b?: Json | null
+          original_start?: string | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
           owner_id?: string | null
           penalty_score_a?: number | null
           penalty_score_b?: number | null
           phase?: string | null
+          reassigned_at?: string | null
           referee_number?: number | null
           referee_team_id?: string | null
           round: number
@@ -427,6 +734,7 @@ export type Database = {
           duration_minutes?: number | null
           field?: number
           final_type?: string | null
+          forfeit_absent?: string | null
           group_letter?: string | null
           id?: string
           is_final?: boolean | null
@@ -440,12 +748,14 @@ export type Database = {
           match_status?: string | null
           origin_a?: Json | null
           origin_b?: Json | null
+          original_start?: string | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
           owner_id?: string | null
           penalty_score_a?: number | null
           penalty_score_b?: number | null
           phase?: string | null
+          reassigned_at?: string | null
           referee_number?: number | null
           referee_team_id?: string | null
           round?: number
@@ -508,6 +818,7 @@ export type Database = {
           slide_index: number | null
           tournament_id: string
           user_agent: string | null
+          wake_lock: string | null
         }
         Insert: {
           cache_status?: string | null
@@ -517,6 +828,7 @@ export type Database = {
           slide_index?: number | null
           tournament_id: string
           user_agent?: string | null
+          wake_lock?: string | null
         }
         Update: {
           cache_status?: string | null
@@ -526,15 +838,9 @@ export type Database = {
           slide_index?: number | null
           tournament_id?: string
           user_agent?: string | null
+          wake_lock?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "monitor_heartbeats_monitor_id_fkey"
-            columns: ["monitor_id"]
-            isOneToOne: true
-            referencedRelation: "monitors"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "monitor_heartbeats_tournament_id_fkey"
             columns: ["tournament_id"]
@@ -998,6 +1304,187 @@ export type Database = {
           },
         ]
       }
+      tournament_final_standings: {
+        Row: {
+          finished_at: string
+          finished_by: string
+          request_id: string
+          snapshot: Json
+          tournament_id: string
+        }
+        Insert: {
+          finished_at: string
+          finished_by: string
+          request_id: string
+          snapshot: Json
+          tournament_id: string
+        }
+        Update: {
+          finished_at?: string
+          finished_by?: string
+          request_id?: string
+          snapshot?: Json
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_final_standings_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_join_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          tournament_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          tournament_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_join_codes_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_join_requests: {
+        Row: {
+          check_number: number
+          code: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decline_reason: string | null
+          device_label: string | null
+          device_user_id: string
+          display_name: string
+          id: string
+          last_seen_at: string | null
+          member_id: string | null
+          status: string
+          tournament_id: string
+        }
+        Insert: {
+          check_number: number
+          code: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decline_reason?: string | null
+          device_label?: string | null
+          device_user_id: string
+          display_name: string
+          id?: string
+          last_seen_at?: string | null
+          member_id?: string | null
+          status?: string
+          tournament_id: string
+        }
+        Update: {
+          check_number?: number
+          code?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decline_reason?: string | null
+          device_label?: string | null
+          device_user_id?: string
+          display_name?: string
+          id?: string
+          last_seen_at?: string | null
+          member_id?: string | null
+          status?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_join_requests_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "tournament_join_codes"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "tournament_join_requests_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_collaborators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_join_requests_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_lifecycle_log: {
+        Row: {
+          actor: string
+          created_at: string
+          finished_at_before: string | null
+          id: number
+          kind: string
+          reason: string | null
+          request_id: string
+          tournament_id: string
+        }
+        Insert: {
+          actor: string
+          created_at?: string
+          finished_at_before?: string | null
+          id?: never
+          kind: string
+          reason?: string | null
+          request_id: string
+          tournament_id: string
+        }
+        Update: {
+          actor?: string
+          created_at?: string
+          finished_at_before?: string | null
+          id?: never
+          kind?: string
+          reason?: string | null
+          request_id?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_lifecycle_log_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_templates: {
         Row: {
           config: Json
@@ -1054,11 +1541,13 @@ export type Database = {
           final_round_break: number | null
           final_round_duration: number | null
           finals_config: Json | null
+          finished_at: string | null
           group_phase_break: number | null
           group_phase_duration: number
           id: string
           is_public: boolean | null
           last_modified_by: string | null
+          lifecycle_status: string
           location_city: string | null
           location_country: string | null
           location_name: string | null
@@ -1090,11 +1579,13 @@ export type Database = {
           final_round_break?: number | null
           final_round_duration?: number | null
           finals_config?: Json | null
+          finished_at?: string | null
           group_phase_break?: number | null
           group_phase_duration: number
           id?: string
           is_public?: boolean | null
           last_modified_by?: string | null
+          lifecycle_status?: string
           location_city?: string | null
           location_country?: string | null
           location_name?: string | null
@@ -1126,11 +1617,13 @@ export type Database = {
           final_round_break?: number | null
           final_round_duration?: number | null
           finals_config?: Json | null
+          finished_at?: string | null
           group_phase_break?: number | null
           group_phase_duration?: number
           id?: string
           is_public?: boolean | null
           last_modified_by?: string | null
+          lifecycle_status?: string
           location_city?: string | null
           location_country?: string | null
           location_name?: string | null
@@ -1169,7 +1662,60 @@ export type Database = {
         Returns: Json
       }
       auth_provider_for_email: { Args: { p_email: string }; Returns: string }
+      bracket_log_read: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          actor_name: string
+          actor_role: string
+          created_at: string
+          detail: Json
+          group_id: string
+          id: number
+          kind: string
+          match_id: string
+          reason: string
+        }[]
+      }
+      change_helper_access: {
+        Args: { p_action: string; p_member_id: string }
+        Returns: Json
+      }
+      complete_group: {
+        Args: {
+          p_expected_state: Json
+          p_from_queue?: boolean
+          p_group_id: string
+          p_known_decision_ids: string[]
+          p_open_ranks: number[]
+          p_ranking: string[]
+          p_tie_decisions: Json
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
       compute_match_state: { Args: { p_match_id: string }; Returns: Json }
+      decide_join_request: {
+        Args: {
+          p_accept: boolean
+          p_check_number?: number
+          p_field?: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      display_final_standings: {
+        Args: { p_tournament_id: string }
+        Returns: Json
+      }
+      display_tournament: {
+        Args: {
+          monitor_id: string
+          since_version?: number
+          tournament_id: string
+        }
+        Returns: Json
+      }
+      ensure_helper_code: { Args: { p_tournament_id: string }; Returns: Json }
       field_control_info: {
         Args: { p_device_id: string; p_field: number; p_tournament_id: string }
         Returns: Json
@@ -1178,16 +1724,38 @@ export type Database = {
         Args: { p_device_id?: string; p_tournament_id: string }
         Returns: Json
       }
+      finish_preflight: { Args: { p_tournament_id: string }; Returns: Json }
+      finish_tournament: {
+        Args: {
+          p_expected_state: Json
+          p_final_standings: Json
+          p_request_id: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      generate_helper_code: { Args: never; Returns: string }
       generate_share_code: { Args: never; Returns: string }
       has_tournament_permission: {
         Args: { p_permission: string; p_tournament_id: string }
         Returns: boolean
+      }
+      helper_access_status: { Args: { p_tournament_id: string }; Returns: Json }
+      helper_code_cutoff: { Args: { p_date: string }; Returns: string }
+      helper_request_count: {
+        Args: { p_tournament_id: string }
+        Returns: number
       }
       hook_before_user_created: { Args: { event: Json }; Returns: Json }
       is_active_tournament_member: {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
+      is_device_membership: {
+        Args: { p_member_id: string; p_role: string }
+        Returns: boolean
+      }
+      is_reading_member: { Args: { p_tournament_id: string }; Returns: boolean }
       is_real_account: { Args: never; Returns: boolean }
       is_tournament_admin: {
         Args: { p_tournament_id: string }
@@ -1201,6 +1769,8 @@ export type Database = {
         Args: { p_tournament_id: string }
         Returns: boolean
       }
+      join_code_info: { Args: { p_code: string }; Returns: Json }
+      list_helper_access: { Args: { p_tournament_id: string }; Returns: Json }
       make_tournament_private: {
         Args: { tournament_id: string }
         Returns: undefined
@@ -1225,6 +1795,13 @@ export type Database = {
           transitions: Json
         }
         Returns: Json
+      }
+      match_event_author_devices: {
+        Args: { p_match_id: string }
+        Returns: {
+          device_label: string
+          event_id: string
+        }[]
       }
       match_event_author_names: {
         Args: { p_match_id: string }
@@ -1252,15 +1829,31 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: boolean
       }
+      public_final_standings: { Args: { p_share_code: string }; Returns: Json }
+      public_tournament: {
+        Args: { share_code: string; since_version?: number }
+        Returns: Json
+      }
       record_monitor_heartbeat: {
         Args: {
           p_cache_status?: string
-          p_monitor_id: string
+          p_monitor_key: string
           p_slide_index?: number
           p_tournament_id: string
           p_user_agent?: string
+          p_wake_lock?: string
         }
         Returns: undefined
+      }
+      record_standing_decision: {
+        Args: {
+          p_action: string
+          p_decision: Json
+          p_expected_version: number
+          p_reason: string
+          p_tournament_id: string
+        }
+        Returns: Json
       }
       regenerate_share_code: {
         Args: { tournament_id: string }
@@ -1269,8 +1862,48 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
+      reopen_group: {
+        Args: {
+          p_from_queue?: boolean
+          p_group_id: string
+          p_reason: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      reopen_tournament: {
+        Args: {
+          p_reason: string
+          p_request_id: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      report_device_outbox: {
+        Args: {
+          p_device_id: string
+          p_field: number
+          p_pending: number
+          p_tournament_id: string
+        }
+        Returns: undefined
+      }
+      request_helper_access: {
+        Args: {
+          p_code: string
+          p_device_label?: string
+          p_display_name: string
+        }
+        Returns: Json
+      }
       reset_match_results: {
         Args: { p_match_ids: string[]; p_tournament_id: string }
+        Returns: Json
+      }
+      resolve_bracket_notice: { Args: { p_notice_id: number }; Returns: Json }
+      resolve_clarification: { Args: { p_id: number }; Returns: Json }
+      rotate_helper_code: {
+        Args: { p_open_requests?: string; p_tournament_id: string }
         Returns: Json
       }
       server_time: { Args: never; Returns: Json }
@@ -1284,9 +1917,21 @@ export type Database = {
         }
         Returns: Json
       }
+      tournament_closed_for_helpers: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       tournament_has_started: {
         Args: { p_tournament_id: string }
         Returns: boolean
+      }
+      tournament_is_closed: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
+      tournament_lifecycle: {
+        Args: { p_tournament_id: string }
+        Returns: string
       }
       user_owns_tournament: {
         Args: { p_tournament_id: string }

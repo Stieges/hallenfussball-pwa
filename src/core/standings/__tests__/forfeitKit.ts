@@ -25,7 +25,12 @@ export function cloudRow(match: Match, absent?: ForfeitAbsent, opts: { withColum
     match_status: match.matchStatus ?? null,
     decided_by: absent !== undefined ? 'forfeit' : finished ? 'regular' : null,
   });
-  return opts.withColumn === false ? row : Object.assign(row, { forfeit_absent: absent ?? null });
+  if (opts.withColumn === false) {
+    // Zeile wie vor 20261110_005: die Spalte fehlt ganz (die Fabrik setzt sie seit dem Typ-Abgleich 23.10. auf null).
+    Reflect.deleteProperty(row, 'forfeit_absent');
+    return row;
+  }
+  return Object.assign(row, { forfeit_absent: absent ?? null });
 }
 
 /** Ein Spiel nach dem Rundlauf über seine Cloud-Zeile. */
