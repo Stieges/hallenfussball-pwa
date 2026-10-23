@@ -175,3 +175,46 @@ describe('entryFromServer / syncHelperAccessEntry', () => {
     expect(findHelperAccessEntry('anon-tom', 't-cup')?.checkNumber).toBe(5);
   });
 });
+
+describe('A-17c: Merker und Wegweiser ohne Sitzung', () => {
+  it('@HE-097 setHomeHintDismissed schreibt den Merker dauerhaft; Gegenbeispiel: anderes Turnier unberührt', async () => {
+    const { setHomeHintDismissed } = await import('../helperAccessStore');
+    const storage = memory();
+    upsertHelperAccessEntry('anon-tom', entry(), storage);
+    upsertHelperAccessEntry('anon-tom', entry({ tournamentId: 't-nikolaus', code: 'NIKO123456' }), storage);
+    expect(setHomeHintDismissed('anon-tom', 't-cup', storage)).toBe(true);
+    expect(findHelperAccessEntry('anon-tom', 't-cup', storage)?.homeHintDismissed).toBe(true);
+    expect(findHelperAccessEntry('anon-tom', 't-nikolaus', storage)?.homeHintDismissed).toBe(false);
+  });
+
+  it('Gegenbeispiel: ohne Eintrag schreibt setHomeHintDismissed nichts', async () => {
+    const { setHomeHintDismissed } = await import('../helperAccessStore');
+    const storage = memory();
+    expect(setHomeHintDismissed('anon-tom', 't-cup', storage)).toBe(false);
+    expect(hasStoredHelperAccessIndex(storage)).toBe(false);
+  });
+
+  it('@HE-028 setOfflineReady merkt den Zeitpunkt', async () => {
+    const { setOfflineReady } = await import('../helperAccessStore');
+    const storage = memory();
+    upsertHelperAccessEntry('anon-tom', entry(), storage);
+    setOfflineReady('anon-tom', 't-cup', storage, NOW);
+    expect(findHelperAccessEntry('anon-tom', 't-cup', storage)?.offlineReadyAt).toBe(NOW.toISOString());
+  });
+
+  it('@HE-028 peekHelperAccessIndex liest den Index ohne Sitzung und löscht nichts', async () => {
+    const { peekHelperAccessIndex } = await import('../helperAccessStore');
+    const storage = memory();
+    upsertHelperAccessEntry('anon-tom', entry(), storage);
+    expect(peekHelperAccessIndex(storage)?.entries[0]?.field).toBe(2);
+    expect(hasStoredHelperAccessIndex(storage)).toBe(true);
+  });
+
+  it('Gegenbeispiel: kaputter Inhalt → null, aber nicht gelöscht (Wegweiser, kein Aufräumen ohne Sitzung)', async () => {
+    const { peekHelperAccessIndex } = await import('../helperAccessStore');
+    const storage = memory();
+    storage.setItem(HELPER_ACCESS_STORAGE_KEY, '{kaputt');
+    expect(peekHelperAccessIndex(storage)).toBeNull();
+    expect(hasStoredHelperAccessIndex(storage)).toBe(true);
+  });
+});
