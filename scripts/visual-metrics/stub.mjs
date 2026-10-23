@@ -3,6 +3,7 @@
 // Aufrufe an diese Adresse beantwortet `installiereStub` aus einer Stub-Datei `stubs/<datei>.json`, Zustand `<zustand>`.
 //   --stub helfer-join/e1     Datei stubs/helfer-join.json, Zustand "e1"
 // Zustand: { rpc: { <funktion>: { json } | { fehler: { code, message } } | { abbruch: true } },
+//            geraet: { id } (optional: anonyme Gerätesitzung eines Helfer-Handys im Speicher),
 //            einwilligung: true (Datenschutz-Abfrage vorab beantwortet), signup: "ok" | "429" (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
 //            ausgang: <N> (optional, nur mit konto: N wartende Einträge des Kontos in der lokalen Kopie, z. B. e4 „Erst verbinden“ @HE-092) }
 // Kein Code in src/ (Testumgebung ≠ Produktivcode). Nie gegen Produktion: die Adresse ist fest 127.0.0.1.
@@ -68,6 +69,10 @@ export async function installiereStub(ctx, stub) {
     const wert = JSON.stringify(sitzung(z.konto.id, false, z.konto.name))
     await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v) } catch { /* gesperrt */ } }, [STUB_STORAGE_KEY, wert])
   }
+  if (z.geraet) {
+    const wert = JSON.stringify(sitzung(z.geraet.id, true, ''))
+    await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v) } catch { /* gesperrt */ } }, [STUB_STORAGE_KEY, wert])
+  }
   if (z.ausgang) {
     if (!z.konto) throw new Error(`Stub ${stub.name}: "ausgang" braucht "konto"`)
     await installiereSaat(ctx, ausgangSaat(z.konto.id, z.ausgang))
@@ -99,6 +104,8 @@ export async function installiereStub(ctx, stub) {
     // Angemeldetes Konto: die App prueft den Nutzer beim Start (`getUser`) und frischt ggf. auf
     if (z.konto && pfad === '/auth/v1/user') return json(200, sitzung(z.konto.id, false, z.konto.name).user)
     if (z.konto && pfad === '/auth/v1/token') return json(200, sitzung(z.konto.id, false, z.konto.name))
+    if (z.geraet && pfad === '/auth/v1/user') return json(200, sitzung(z.geraet.id, true, '').user)
+    if (z.geraet && pfad === '/auth/v1/token') return json(200, sitzung(z.geraet.id, true, ''))
     // Profile, Einstellungen, Sitzung auffrischen usw.: leer, damit nichts hängt
     if (pfad.startsWith('/rest/v1/')) return json(200, [])
     return json(404, { msg: 'vm-stub: nicht vorgesehen' })

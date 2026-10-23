@@ -35,6 +35,7 @@ import { useRahmenWurzelStil } from './components/live-cockpit/frame/cockpitFram
 import { captureFeatureError } from './lib/sentry';
 import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
+import { HelperStartGate } from './features/helpers/components/HelperStartGate'; // A-17c: Wiedereinstieg @HE-096
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazyWithRetry(
@@ -46,12 +47,17 @@ const TournamentCreationScreen = lazyWithRetry(
   'TournamentCreationScreen'
 );
 const TournamentManagementScreen = lazyWithRetry(
-  () => import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen })),
+  () => import('./screens/GuardedTournamentManagementScreen').then(m => ({ default: m.GuardedTournamentManagementScreen })),
   'TournamentManagementScreen'
 );
 const LiveViewScreen = lazyWithRetry(
   () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
   'LiveViewScreen'
+);
+// A-17c: Auswahl bei mehreren Helfer-Zugängen (/helfer, @HE-099)
+const HelperChooserScreen = lazyWithRetry(
+  () => import('./features/helpers/components/HelperTournamentChooser').then(m => ({ default: m.HelperTournamentChooser })),
+  'HelperChooserScreen'
 );
 // A-17b: Beitritt per Helfer-QR-Code (/join/:code) und Hinweis für alte Einladungslinks (/invite)
 const JoinScreen = lazyWithRetry(
@@ -124,7 +130,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'join' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'join' | 'helper-chooser' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -320,6 +326,8 @@ function AppContent() {
     } else if (matchedRoute?.name === 'join') {
       // A-17b: Helfer-QR-Code; der Bildschirm liest den Code aus der Adresse (siehe Render unten)
       setScreen('join');
+    } else if (matchedRoute?.name === 'helperChooser') {
+      setScreen('helper-chooser'); // A-17c (@HE-099)
     } else if (matchedRoute?.name === 'invite') {
       // A-17b (@HE-063): alte Einladungslinks (/invite?token=…) führen zum Hinweis, nie zu einer Anfrage
       setScreen('invite');
@@ -362,7 +370,7 @@ function AppContent() {
   // Don't block public/display screens with global loading state
   // These screens have their own data loading logic
   // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
-  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || route?.name === 'join' || route?.name === 'invite' || location.pathname === '/test-live';
+  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || route?.name === 'join' || route?.name === 'helperChooser' || route?.name === 'invite' || location.pathname === '/test-live';
 
   // Auth screens should not be blocked by tournament loading
   const isAuthScreen = ['login', 'register', 'auth-callback', 'auth-confirm', 'set-password'].includes(screen);
@@ -535,9 +543,11 @@ function AppContent() {
         {/* A-17b: Helfer-QR-Code (Adresse trägt den Code) und Hinweis für alte Einladungslinks */}
         {route?.name === 'join' && route.params.code && <JoinScreen key={route.params.code} code={route.params.code} />}
         {route?.name === 'invite' && <LegacyInviteScreen />}
+        {route?.name === 'helperChooser' && <HelperChooserScreen tournaments={tournaments} />}
 
         {/* Main App Screens */}
         {isDashboardPath && (
+          <HelperStartGate active={route?.name === 'dashboard'} tournaments={tournaments}>
           <DashboardScreen
             tournaments={tournaments}
             onCreateNew={() => void navigate('/tournament/new')}
@@ -553,6 +563,7 @@ function AppContent() {
             onNavigateToProfile={() => void navigate('/profile')}
             onNavigateToSettings={() => void navigate('/settings')}
           />
+          </HelperStartGate>
         )}
 
         {(isWizardPath || screen === 'create') && (

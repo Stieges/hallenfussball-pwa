@@ -38,6 +38,8 @@ export interface UseJoinFlowResult {
   meta: JoinFlowMeta;
   /** Anzeigename eines echt angemeldeten Kontos (kein Gast, keine Gerätesitzung), sonst `null`. */
   accountName: string | null;
+  /** Nutzer-ID der Gerätesitzung, sobald gelesen oder angelegt (A-17c: Zugangs-Index, Hinweise); sonst `null`. */
+  deviceUserId: string | null;
   setName(name: string): void;
   submit(): void;
   confirmSignOut(): void;
@@ -53,6 +55,7 @@ export function useJoinFlow(code: string, injectedDeps?: JoinFlowDeps): UseJoinF
   const { tournamentRepository } = useRepositories();
   const [state, dispatch] = useReducer(joinFlowReducer, code, initialJoinFlowState);
   const [meta, setMeta] = useState<JoinFlowMeta>({ tournament: null, name: '' });
+  const [deviceUserId, setDeviceUserId] = useState<string | null>(null);
 
   const logoutRef = useRef(logout);
   const repositoryRef = useRef<unknown>(tournamentRepository);
@@ -61,8 +64,8 @@ export function useJoinFlow(code: string, injectedDeps?: JoinFlowDeps): UseJoinF
     repositoryRef.current = tournamentRepository;
   }, [logout, tournamentRepository]);
 
-  const deps = useMemo<JoinFlowDeps>(
-    () =>
+  const deps = useMemo<JoinFlowDeps>(() => {
+    const base: JoinFlowDeps =
       injectedDeps ??
       createJoinFlowDeps(supabase, {
         readSession: () => readSessionInfo(supabase?.auth ?? null),
@@ -74,9 +77,27 @@ export function useJoinFlow(code: string, injectedDeps?: JoinFlowDeps): UseJoinF
           syncHelperAccessEntry(deviceUserId, tournamentId, info, joinCode);
         },
         reportError: (error) => captureFeatureError(error, 'helpers', 'join'),
-      }),
-    [injectedDeps],
-  );
+      });
+    // A-17c: die Nutzer-ID der Gerätesitzung merken (Lesen beim Wiederscannen, Anlegen beim Absenden)
+    // `Object.create(base)`: nicht kopieren, damit spätere Änderungen am Grundobjekt (Tests) weiter durchschlagen
+    const wrapped: JoinFlowDeps = Object.assign(Object.create(base) as JoinFlowDeps, {
+      readSession: async () => {
+        const session = await base.readSession();
+        if (session.kind === 'device' && session.userId !== null) {
+          setDeviceUserId(session.userId);
+        }
+        return session;
+      },
+      ensureDeviceSession: async () => {
+        const result = await base.ensureDeviceSession();
+        if (result.ok) {
+          setDeviceUserId(result.userId);
+        }
+        return result;
+      },
+    });
+    return wrapped;
+  }, [injectedDeps]);
 
   // Eine Stufe mit Wirkung ausführen und das Ergebnis als Ereignis zurückgeben; ein geworfener Fehler wird Sentry-pflichtig.
   const runStep = useCallback(
@@ -155,6 +176,7 @@ export function useJoinFlow(code: string, injectedDeps?: JoinFlowDeps): UseJoinF
     state,
     meta,
     accountName,
+    deviceUserId,
     setName: useCallback((name: string) => dispatch({ type: 'nameChanged', name }), []),
     submit: useCallback(() => dispatch({ type: 'submit' }), []),
     confirmSignOut: useCallback(() => dispatch({ type: 'confirmSignOut' }), []),

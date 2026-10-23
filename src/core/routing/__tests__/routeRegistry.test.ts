@@ -23,6 +23,8 @@ describe('matchRoute', () => {
     ['/invite', 'invite', {}],
     // A-17b (@HE-001): Beitritt per Helfer-QR-Code, 10 Zeichen
     ['/join/ABCDEFGH23', 'join', { code: 'ABCDEFGH23' }],
+    // A-17c (@HE-099): Auswahl bei mehreren Helfer-Zugängen
+    ['/helfer', 'helperChooser', {}],
     ['/settings', 'settings', {}],
     ['/profile', 'profile', {}],
     ['/impressum', 'impressum', {}],
@@ -92,4 +94,10 @@ describe('matchRoute: /join/:code (A-17b)', () => {
       expect(matchRoute(path)?.name).not.toBe('join');
     },
   );
+});
+
+describe('matchRoute: /helfer (A-17c)', () => {
+  it.each(['/helfer/', '/helfer/x', '/Helfer', '/helfers'])('Gegenbeispiel %s ist keine Auswahl', (path) => {
+    expect(matchRoute(path)?.name).not.toBe('helperChooser');
+  });
 });
