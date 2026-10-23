@@ -10,7 +10,9 @@
  * UR (@FU-082): den Namen im Hinweis „inzwischen von … geändert“ liest `readEventAuthorNames` (Server-Lesefunktion),
  * ohne Namen bleibt es beim Text ohne „von …“.
  * Spiel beenden (20261110_009): angepfiffen → nur Turnierleitung, nach Rückfrage Abpfiff und Ergebnis in einem Eintrag
- * (`scheduleEndMatch.ts`); Helfer bekommen den Weg nicht (Hinweis wie bisher), im Strafstoßschießen abgelehnt.
+ * (`scheduleEndMatch.ts`); Helfer bekommen den Weg nicht, im Strafstoßschießen abgelehnt.
+ * B-49: Helfer bei laufendem Spiel auf fremd gesteuertem Feld → `offerTakeover` (Hinweis bzw. „Spielleitung übernehmen“,
+ * @FU-081), sonst der Hinweis wie bisher (@FU-113).
  * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042, @FU-112, @FU-113, @FU-114,
  * @FU-115, @FU-116, @FU-117, @FU-118.
  */
@@ -29,6 +31,8 @@ import { useResultEntryAck } from './useResultEntryAck';
 import { readEventAuthorNames } from '../../../core/repositories/eventAuthorNamesRpc';
 import { supabase } from '../../../lib/supabase';
 import { readForeignFieldHolder } from '../../../core/repositories/fieldControlStateRpc';
+import { getDeviceId } from '../../../core/device/deviceId';
+import { fieldHolderText } from '../../match-engine/fieldHolderText';
 import { endMatchFromSchedule, type EndPrompt } from './scheduleEndMatch';
 
 export type ResultEntryPrompt =
@@ -54,6 +58,11 @@ export interface UseScheduleResultEntryOptions {
   tournament: Tournament;
   showWarning: (message: string) => void;
   lockFinishedResults: boolean;
+  /**
+   * B-49 (@FU-081): laufendes Spiel auf einem fremd gesteuerten Feld → Hinweis „Feld 2 wird gerade von Tom gesteuert“ bzw.
+   * „Spielleitung übernehmen“ (`useScheduleTakeover`); `true` = erledigt, sonst der Hinweis „Spiel läuft“.
+   */
+  offerTakeover?: (matchId: string, field: number | null) => Promise<boolean>;
 }
 
 const score = (a: number, b: number): string => `${a}:${b}`;
@@ -64,7 +73,7 @@ const shootoutOf = (answer: string, teamAId: string, teamBId: string): Record<st
 };
 
 export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): ScheduleResultEntry {
-  const { tournament, showWarning, lockFinishedResults } = options;
+  const { tournament, showWarning, lockFinishedResults, offerTakeover } = options;
   const { t } = useTranslation('tournament');
   const { t: tCockpit } = useTranslation('cockpit');
   const { t: tCommon } = useTranslation('common');
@@ -182,7 +191,10 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         return false;
       }
       if (route === 'end' && actor !== 'leitung') {
-        showWarning(t('schedule.resultEntry.running')); // @FU-113: Helfer bekommen den Weg nicht
+        // @FU-113: Helfer bekommen den Weg nicht; B-49: fremd gesteuertes Feld → erst Übernahme anbieten (@FU-081)
+        if (!(await offerTakeover?.(matchId, match?.field ?? null))) {
+          showWarning(t('schedule.resultEntry.running'));
+        }
         return false;
       }
       if (actor !== 'leitung') {
@@ -195,8 +207,20 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
           engine, commands, sender: context.sender, guest: context.accountId === 'guest',
           entry, field: match?.field ?? null, entered: { home: scoreA, away: scoreB }, knockout,
           online: () => context.accountId === 'guest' || typeof navigator === 'undefined' || navigator.onLine,
-          readHolder: (field) => readForeignFieldHolder(supabase, tournament.id, field),
-          ask,
+          readHolder: async (field) => {
+            const info = await readForeignFieldHolder(supabase, tournament.id, field, getDeviceId());
+            return info ? { field: info.field, holder: fieldHolderText(info) } : null;
+          },
+          // @FU-081 (B-49): steuert ein anderes Gerät das Feld, bietet die Rückfrage zusätzlich „Spielleitung übernehmen“ an;
+          // die Übernahme liest den Stand frisch (Epoche) und öffnet die Übernahme-Rückfrage, das Spiel bleibt unverändert.
+          ask: async (endPrompt) => {
+            const answer = await ask(offerTakeover !== undefined && endPrompt.controlledBy !== null ? { ...endPrompt, takeOver: true } : endPrompt);
+            if (answer === 'takeover') {
+              void offerTakeover?.(matchId, match?.field ?? null);
+              return null;
+            }
+            return answer;
+          },
           askShootout: async () => {
             const answer = await ask({ kind: 'shootout', matchNumber: entry.meta.number, score: score(scoreA, scoreB), homeName: homeTeam.name, awayName: awayTeam.name });
             return answer === null ? null : shootoutOf(answer, entry.ctx.teamAId, entry.ctx.teamBId);
@@ -250,7 +274,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
       showWarning(await rejectionText(error, entry));
       return false;
     }
-  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning]);
+  }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning, offerTakeover]);
 
   return { enterScore, prompt, answerPrompt, changeAuthor };
 }

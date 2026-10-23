@@ -1175,7 +1175,9 @@
       "offline": "Deciding needs a connection – or use “Complete group”.",
       "decide": "Decide tie",
       "shootout": "Enter penalty shootout",
-      "order": "Set order"
+      "order": "Set order",
+      "withdrawnBy": "Withdrawn by {{name}} · {{time}}",
+      "withdrawnByUnknown": "Withdrawn · {{time}}"
     },
     "decided": {
       "sharedTitle": "Result accepted",
@@ -1191,7 +1193,9 @@
       "withdrawUntil": "Possible until the group is completed.",
       "closed": "The group is completed. The decision is final. It can only be changed by a correction or by reopening the group.",
       "withdrawFailed": "Withdrawing did not work. Please try again.",
-      "withdrawOffline": "Withdrawing needs a connection."
+      "withdrawOffline": "Withdrawing needs a connection.",
+      "by": "{{name}} · {{time}}",
+      "byUnknown": "Tournament management · {{time}}"
     },
     "dialog": {
       "titleChoice": "Decide tie",
@@ -1233,13 +1237,15 @@
         "SHOOTOUT_NEEDS_WINNER": "The penalty shootout needs a winner.",
         "UNKNOWN": "That did not work. Please try again.",
         "ALREADY_DECIDED": "This tie has already been decided. Please check the table.",
-        "WITHDRAW_NOT_ALLOWED": "The group is completed. The decision can no longer be withdrawn."
+        "WITHDRAW_NOT_ALLOWED": "The group is completed. The decision can no longer be withdrawn.",
+        "RETRY_LATER": "The server was busy. Please try again."
       },
       "seen": {
         "title": "Already decided",
         "body": "This tie has been decided in the meantime.",
         "current": "In effect: {{what}}",
-        "notSaved": "Your entry was not saved. The table shows the decision in effect."
+        "notSaved": "Your entry was not saved. The table shows the decision in effect.",
+        "titleBy": "Already decided by {{name}}"
       }
     },
     "settings": {

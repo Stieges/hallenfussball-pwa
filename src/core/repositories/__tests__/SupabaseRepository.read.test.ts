@@ -28,7 +28,8 @@ const hoisted = vi.hoisted(() => {
       };
     }
     self.then = (resolve: (r: Result) => unknown, reject: (e: unknown) => unknown) => {
-      const next = queues.get(table)?.shift();
+      // GA4 A-13b-C: `get` liest auch die Abschlüsse; ohne eigene Vorgabe eines Tests gibt es keine Zeilen
+      const next = queues.get(table)?.shift() ?? (table === 'group_completions' ? { data: [], error: null } : undefined);
       return next ? Promise.resolve(next).then(resolve, reject) : Promise.reject(new Error(`kein Ergebnis für ${table}`)).then(resolve, reject);
     };
     return self;
@@ -74,6 +75,7 @@ beforeEach(() => {
   queues.clear();
   calls.length = 0;
   vi.clearAllMocks();
+  rpc.mockResolvedValue({ data: [], error: null }); // bracket_log_read: kein Verlauf
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
@@ -94,7 +96,14 @@ describe('SupabaseRepository.get / getByShareCode – Besetzung als Slots (@TM-0
     enqueue('tournaments', { data: TOURNAMENT, error: null });
     enqueue('teams', { data: TEAMS, error: null });
     enqueue('matches', { data: MATCHES, error: null });
-    rpc.mockResolvedValueOnce({ data: { state: 'full', version: 1, server_now: 1, tournament: TOURNAMENT, teams: TEAMS, matches: MATCHES }, error: null });
+    // Nach Name: get() ruft vorher bracket_log_read (A-13b-C) über dieselbe rpc-Attrappe auf.
+    rpc.mockImplementation((name: string) =>
+      Promise.resolve(
+        name === 'public_tournament'
+          ? { data: { state: 'full', version: 1, server_now: 1, tournament: TOURNAMENT, teams: TEAMS, matches: MATCHES }, error: null }
+          : { data: [], error: null },
+      ),
+    );
     const repo = new SupabaseRepository();
 
     const leitung = await repo.get('tournament-1');

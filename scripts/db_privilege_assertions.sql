@@ -230,15 +230,17 @@ SELECT 'match-apply-event-immutable',
        (SELECT p.provolatile = 'i' FROM pg_proc p
          WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
 UNION ALL
+-- A-13b-S (20261110_006): Zaehlung und Eigenschaften gelten fuer die Rechenfunktion; die zehn Hilfen fuer „Gruppe
+-- abschliessen“ (group_key ... conflict_or_reject) im selben Schema sind ausgenommen und eigens geprueft.
 SELECT 'match-engine-function-count-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE (n.nspname = 'match_engine'
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
 SELECT 'match-engine-immutable-count-51',
        (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE (n.nspname = 'match_engine'
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
 UNION ALL
@@ -250,7 +252,7 @@ SELECT 'match-engine-no-security-definer',
 UNION ALL
 SELECT 'match-engine-search-path-all-52',
        (SELECT count(*) = 52 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE (n.nspname = 'match_engine'
+          WHERE ((n.nspname = 'match_engine' AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
 UNION ALL
@@ -349,7 +351,10 @@ SELECT 'match-engine-non-b3b-executable-anon-authenticated',
                                           AND has_function_privilege('authenticated', p.oid, 'EXECUTE'))
           FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'match_engine'
-           AND p.proname NOT IN ('normalize_uuid', 'cfg_num', 'envelope', 'dedupe_key', 'server_rules', 'cache_columns'))
+           AND p.proname NOT IN ('normalize_uuid', 'cfg_num', 'envelope', 'dedupe_key', 'server_rules', 'cache_columns')
+           -- A-13b-S (20261110_006): die Hilfen fuer „Gruppe abschliessen“ liegen in match_engine, sind aber nur aus den
+           -- Server-Funktionen erreichbar (eigene Assertion group-completion-helpers-no-client-execute).
+           AND p.proname NOT IN ('group_key', 'group_state', 'places_to_play_out', 'same_team_set', 'standing_decision_valid', 'shared_allowed', 'write_side', 'add_notice', 'apply_follow_up', 'conflict_or_reject'))
 UNION ALL
 SELECT 'positive-anon-execute-match-engine-apply-amend',
        coalesce(has_function_privilege('anon', to_regprocedure('match_engine.apply_amend(jsonb,jsonb)'), 'EXECUTE'), false)
@@ -728,6 +733,195 @@ SELECT 'append-match-events-end-by-lead-without-claim',
                         AND EXISTS (SELECT 1 FROM public.match_transitions t
                                      WHERE t.from_status = 'running' AND t.event_type = 'RESULT_ENTRY' AND t.actor = 'leitung')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+
+-- A-13b-S (20261110_006_group_completion.sql, @TM-046, @TM-113, @W2A-070, @W2A-072; Plan § 8, Soll 12/13): Gruppe abschliessen
+-- am Server. Vor dem Live-Einspielen: "f".
+--  (1) Die vier Tabellen haben keine Client-Schreibrechte; anon liest keine; bracket_log hat gar kein Tabellenrecht
+--      (Lesen nur ueber bracket_log_read); authenticated liest group_completions, bracket_notices, clarifications.
+UNION ALL
+SELECT 'group-completion-tables-no-client-writes',
+       coalesce((SELECT bool_and(to_regclass('public.' || t) IS NOT NULL
+                                 AND NOT has_table_privilege('anon', 'public.' || t, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                                 AND NOT has_table_privilege('authenticated', 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+                                 AND has_table_privilege('authenticated', 'public.' || t, 'SELECT') = (t <> 'bracket_log'))
+                   FROM unnest(ARRAY['group_completions', 'bracket_log', 'bracket_notices', 'clarifications']) AS t), false)
+--  (2) Die sechs RPCs: SECURITY DEFINER mit festem search_path, nur authenticated darf sie ausfuehren.
+UNION ALL
+SELECT 'group-completion-rpcs-definer-authenticated-only',
+       coalesce((SELECT count(*) = 6
+                        AND bool_and(p.prosecdef AND p.proconfig IS NOT NULL
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.record_standing_decision(uuid,text,jsonb,text,integer)'),
+                                  to_regprocedure('public.complete_group(uuid,text,uuid[],integer[],jsonb,text[],jsonb,boolean)'),
+                                  to_regprocedure('public.reopen_group(uuid,text,text,boolean)'),
+                                  to_regprocedure('public.resolve_bracket_notice(bigint)'),
+                                  to_regprocedure('public.resolve_clarification(bigint)'),
+                                  to_regprocedure('public.bracket_log_read(uuid)'))), false)
+--  (3) Die Hilfen in match_engine sind nur aus den Server-Funktionen erreichbar (kein EXECUTE fuer Client-Rollen) und
+--      haben einen festen search_path (Review A-13b-S, Soll).
+UNION ALL
+SELECT 'group-completion-helpers-no-client-execute',
+       coalesce((SELECT count(*) = 10
+                        AND bool_and(NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND p.proconfig = ARRAY['search_path=public, pg_temp'])
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('match_engine.group_key(text)'),
+                                  to_regprocedure('match_engine.group_state(uuid,text)'),
+                                  to_regprocedure('match_engine.places_to_play_out(jsonb)'),
+                                  to_regprocedure('match_engine.same_team_set(jsonb,jsonb)'),
+                                  to_regprocedure('match_engine.standing_decision_valid(jsonb)'),
+                                  to_regprocedure('match_engine.shared_allowed(uuid,text,integer[],jsonb)'),
+                                  to_regprocedure('match_engine.write_side(uuid,text,uuid,jsonb,boolean)'),
+                                  to_regprocedure('match_engine.add_notice(uuid,uuid,text,text,uuid,uuid)'),
+                                  to_regprocedure('match_engine.apply_follow_up(uuid,uuid,text,uuid,uuid,jsonb,jsonb,text,uuid,jsonb)'),
+                                  to_regprocedure('match_engine.conflict_or_reject(boolean,uuid,uuid,text,text,jsonb,text,uuid)'))), false)
+--  (4) Sperrreihenfolge R-GA4v2-8 (MG14): complete_group sperrt die Spiele vor der Turnierzeile.
+UNION ALL
+SELECT 'complete-group-locks-matches-before-tournament',
+       coalesce((SELECT position('ORDER BY m.id' IN p.prosrc) > 0
+                        AND position('ORDER BY m.id' IN p.prosrc)
+                            < position('FROM public.tournaments WHERE id = p_tournament_id' IN p.prosrc)
+                   FROM pg_proc p
+                  WHERE p.oid = to_regprocedure('public.complete_group(uuid,text,uuid[],integer[],jsonb,text[],jsonb,boolean)')), false)
+--  (5) Trigger: Korrektur macht einen Abschluss stale (SECURITY DEFINER, MG10); Voll-Speichern behaelt die Entscheidungen
+--      (Soll 12, MG15); reassigned_at schreibt nur der Server (Soll 13).
+UNION ALL
+SELECT 'group-completion-triggers',
+       coalesce((SELECT count(*) = 3 FROM pg_trigger tg
+                  WHERE NOT tg.tgisinternal AND tg.tgenabled <> 'D'
+                    AND ((tg.tgrelid = 'public.matches'::regclass AND tg.tgname = 'matches_mark_group_stale'
+                          AND tg.tgqual IS NOT NULL
+                          AND (SELECT prosecdef FROM pg_proc WHERE oid = tg.tgfoid))
+                      OR (tg.tgrelid = 'public.matches'::regclass AND tg.tgname = 'matches_guard_ga4_columns'
+                          AND position('reassigned_at' IN (SELECT prosrc FROM pg_proc WHERE oid = tg.tgfoid)) > 0)
+                      OR (tg.tgrelid = 'public.tournaments'::regclass AND tg.tgname = 'tournaments_keep_standing_decisions'
+                          AND position('standingDecisions' IN (SELECT prosrc FROM pg_proc WHERE oid = tg.tgfoid)) > 0))), false)
+--  (6) Leserolle des Drift-Checks (Daniel 21.10., ci-grants-sql-freigabe.md § 8): ci_schema_reader liest die vier Tabellen
+--      (pg_dump --schema-only sperrt jede Tabelle und braucht SELECT), und NUR lesen.
+UNION ALL
+SELECT 'ci-schema-reader-select-group-completion',
+       coalesce((SELECT bool_and(to_regclass('public.' || t) IS NOT NULL
+                                 AND has_table_privilege('ci_schema_reader', 'public.' || t, 'SELECT')
+                                 AND NOT has_table_privilege('ci_schema_reader', 'public.' || t, 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'))
+                   FROM unnest(ARRAY['group_completions', 'bracket_log', 'bracket_notices', 'clarifications']) AS t), false)
+-- A-16 (20261110_008_helper_join.sql, @HE-004 @HE-062 @HE-073 @HE-084 @HE-104 @HE-105; C-HELFER-OHNE-KONTO): Helfer-Beitritt
+-- per QR. Zwei Tabellen ohne Client-Rechte (RLS an, keine Policy; ci_schema_reader liest fuer den Schema-Dump, ohne
+-- BYPASSRLS); zehn Client-Funktionen SECURITY DEFINER mit search_path und Eigentuemer postgres, EXECUTE nur authenticated
+-- (join_code_info zusaetzlich anon, Scan ohne Sitzung); interne Funktionen fuer keinen Client; Positivliste der
+-- Definer-Schreiber auf tournament_collaborators (M4a, B-20 erweitert sie ausdruecklich); Loesch-Policy schuetzt
+-- Geraete-Zeilen (M2); protect_collaborator_row in der A-16-Fassung (md5, M4; Durchgang nur mit dem Schalter, den
+-- change_helper_access nur um seine UPDATEs setzt, Review M-1); Pruefzahl am Server (S-1); Rollen-Schutz
+-- der Geraete-Zeilen (K-3); keine verborgenen Zeichen in Namen (S-4). Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'helper-join-tables-no-client-access',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(c.relrowsecurity
+                                     AND NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = c.oid)
+                                     AND NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE')
+                                     AND NOT has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE'))
+                   FROM pg_class c
+                  WHERE c.oid IN (to_regclass('public.tournament_join_codes'), to_regclass('public.tournament_join_requests'))), false)
+UNION ALL
+SELECT 'helper-join-ci-schema-reader-select',
+       coalesce(has_table_privilege('ci_schema_reader', to_regclass('public.tournament_join_codes'), 'SELECT')
+                AND has_table_privilege('ci_schema_reader', to_regclass('public.tournament_join_requests'), 'SELECT'), false)
+UNION ALL
+SELECT 'helper-join-ci-schema-reader-no-bypassrls',
+       coalesce((SELECT NOT r.rolbypassrls FROM pg_roles r WHERE r.rolname = 'ci_schema_reader'), false)
+UNION ALL
+SELECT 'helper-join-rpcs-definer-owner-search-path',
+       coalesce((SELECT count(*) = 11
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND pg_get_userbyid(p.proowner) = 'postgres'
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.join_code_info(text)'),
+                                  to_regprocedure('public.request_helper_access(text,text,text)'),
+                                  to_regprocedure('public.helper_access_status(uuid)'),
+                                  to_regprocedure('public.ensure_helper_code(uuid)'),
+                                  to_regprocedure('public.rotate_helper_code(uuid,text)'),
+                                  to_regprocedure('public.list_helper_access(uuid)'),
+                                  to_regprocedure('public.helper_request_count(uuid)'),
+                                  to_regprocedure('public.decide_join_request(uuid,boolean,integer,smallint)'),
+                                  to_regprocedure('public.change_helper_access(uuid,text)'),
+                                  to_regprocedure('public.match_event_author_devices(uuid)'),
+                                  to_regprocedure('public.is_device_membership(uuid,text)'))), false)
+UNION ALL
+SELECT 'helper-join-rpcs-execute-authenticated-only',
+       coalesce((SELECT count(*) = 10
+                        AND bool_and(has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.request_helper_access(text,text,text)'),
+                                  to_regprocedure('public.helper_access_status(uuid)'),
+                                  to_regprocedure('public.ensure_helper_code(uuid)'),
+                                  to_regprocedure('public.rotate_helper_code(uuid,text)'),
+                                  to_regprocedure('public.list_helper_access(uuid)'),
+                                  to_regprocedure('public.helper_request_count(uuid)'),
+                                  to_regprocedure('public.decide_join_request(uuid,boolean,integer,smallint)'),
+                                  to_regprocedure('public.change_helper_access(uuid,text)'),
+                                  to_regprocedure('public.match_event_author_devices(uuid)'),
+                                  to_regprocedure('public.is_device_membership(uuid,text)'))), false)
+       AND coalesce(has_function_privilege('anon', to_regprocedure('public.join_code_info(text)'), 'EXECUTE')
+                    AND has_function_privilege('authenticated', to_regprocedure('public.join_code_info(text)'), 'EXECUTE'), false)
+UNION ALL
+SELECT 'helper-join-internal-no-client-execute',
+       coalesce((SELECT count(*) = 4
+                        AND bool_and(NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                                                      WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.helper_code_cutoff(date)'),
+                                  to_regprocedure('public.tournament_closed_for_helpers(uuid)'),
+                                  to_regprocedure('public.generate_helper_code()'),
+                                  to_regprocedure('public.protect_helper_access_row()'))), false)
+UNION ALL
+SELECT 'helper-join-definer-writers-tournament-collaborators',
+       coalesce((SELECT string_agg(p.proname, ',' ORDER BY p.proname)
+                   FROM pg_proc p
+                  WHERE p.pronamespace NOT IN ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) AND p.prosecdef
+                    AND p.prosrc ~* '(insert\s+into|update(\s+only)?|delete\s+from(\s+only)?)\s+("?public"?\s*\.\s*)?"?tournament_collaborators'),
+                '') = 'change_helper_access,decide_join_request'
+UNION ALL
+SELECT 'helper-join-collaborators-delete-no-device-rows',
+       coalesce((SELECT count(*) = 1
+                        AND bool_and(p.policyname = 'collaborators_delete_v4' AND p.roles = ARRAY['authenticated']::name[]
+                                     AND position('is_device_membership' IN coalesce(p.qual, '')) > 0)
+                   FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = 'tournament_collaborators' AND p.cmd = 'DELETE'), false)
+UNION ALL
+SELECT 'helper-join-protect-collaborator-row-a16',
+       coalesce((SELECT md5(p.prosrc) = '378a7e1ed6b72381c9b6924e0e664bc3'
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.protect_collaborator_row()')), false)
+       AND coalesce((SELECT position('set_config(''hallenfussball.helper_access_write'', ''on'', true)' IN p.prosrc) > 0
+                            AND position('set_config(''hallenfussball.helper_access_write'', '''', true)' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.change_helper_access(uuid,text)')), false)
+UNION ALL
+SELECT 'helper-join-decide-checks-check-number',
+       coalesce((SELECT position('p_check_number IS DISTINCT FROM v_req.check_number' IN p.prosrc) > 0
+                        AND position('''CHECK_MISMATCH''' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.decide_join_request(uuid,boolean,integer,smallint)')), false)
+UNION ALL
+SELECT 'helper-join-device-role-guard-trigger',
+       coalesce((SELECT t.tgenabled = 'O' AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16
+                        AND t.tgfoid = to_regprocedure('public.protect_helper_access_row()')
+                   FROM pg_trigger t
+                  WHERE t.tgrelid = to_regclass('public.tournament_collaborators') AND t.tgname = 'protect_helper_access_row'
+                    AND NOT t.tgisinternal), false)
+UNION ALL
+SELECT 'helper-join-names-without-hidden-chars',
+       coalesce((SELECT count(*) = 2
+                        AND bool_and(position('u200B' IN pg_get_constraintdef(c.oid)) > 0
+                                     AND position('u202E' IN pg_get_constraintdef(c.oid)) > 0)
+                   FROM pg_constraint c
+                  WHERE c.conrelid = to_regclass('public.tournament_join_requests') AND c.contype = 'c'
+                    AND (pg_get_constraintdef(c.oid) LIKE '%display_name%' OR pg_get_constraintdef(c.oid) LIKE '%device_label%')), false)
+
 -- B-14 (20261117_104_public_payload.sql, E-A2, @ZM-096..@ZM-102, @ME-018, Review Focus 6): oeffentliche Daten nur ueber
 -- public_tournament/display_tournament (SECURITY DEFINER, EXECUTE anon+authenticated, nie PUBLIC); keine SELECT-Policy
 -- fuer anon/public und keine mit is_public auf den acht Tabellen; Baustein public_view ohne Client-Rechte;

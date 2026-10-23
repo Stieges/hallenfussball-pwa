@@ -217,8 +217,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
               {tafel}
               {/* @FU-109: Statuszeile im normalen Fluss unter der Anzeigetafel (Review Version-Fix R1) */}
               <AwaitingServerCopyLine tournamentId={tournamentId} />
-              {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei beendetem Spiel allein. */}
-              {readOnly && (
+              {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung, nicht bei beendetem Spiel und nicht bei fremd gesteuertem Feld (B-49: Zeile in der Leiste). */}
+              {readOnly && !props.steuerung && (
                 <div className={shell.readOnlyBanner} data-testid="cockpit-readonly-banner" role="status">
                   {t('readOnly.banner')}
                 </div>

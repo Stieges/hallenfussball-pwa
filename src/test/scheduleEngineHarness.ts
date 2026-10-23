@@ -57,7 +57,7 @@ export interface ScheduleEngine {
 let counter = 0;
 
 /** `accountId: 'guest'` = Gast (lokal bestätigt, kein Sender-Aufruf). Sonst eigenes Konto je Aufruf (fake-indexeddb teilt sich). */
-export async function makeScheduleEngine(accountId?: string, options: { offline?: boolean } = {}): Promise<ScheduleEngine> {
+export async function makeScheduleEngine(accountId?: string, options: { offline?: boolean; deviceId?: string } = {}): Promise<ScheduleEngine> {
   const id = accountId ?? `olli-${(counter += 1)}`;
   const store = new LocalMatchStore();
   const clock = new ClockSync(() => Promise.resolve(NOW), () => NOW, { get: () => null, set: () => undefined });
@@ -69,6 +69,7 @@ export async function makeScheduleEngine(accountId?: string, options: { offline?
     store,
     api: { appendMatchEvents: api },
     clientFormat: 3,
+    ...(options.deviceId !== undefined ? { deviceId: options.deviceId } : {}), // B-49: Geräte-ID wie im MatchEngineProvider
     timers: { setTimeout: (callback, ms) => setTimeout(callback, ms), clearTimeout: (handle) => { clearTimeout(handle); } },
     now: () => NOW,
     requestCatchUp: () => undefined,

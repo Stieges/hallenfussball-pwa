@@ -1,8 +1,8 @@
 /**
- * Hinweis zu einem entschiedenen Gleichstand (Paket TB-B, TB-6b'; Mockup v3): das Ergebnis, nie Person und Zeit (kommen mit
- * dem Verlaufsprotokoll, GA4 A-13b, Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH). Die Turnierleitung kann bis zum Abschluss der
+ * Hinweis zu einem entschiedenen Gleichstand (Paket TB-B, TB-6b'; Mockup v3): das Ergebnis; Person und Zeit („Olli · 14:32“)
+ * nur für die Turnierleitung, aus dem Verlauf (GA4 A-13b-C, @W2A-063, @W2A-071). Die Turnierleitung kann bis zum Abschluss der
  * Gruppe zurücknehmen – ohne Rückfrage, ein Tipp (Daniel G6); danach steht der Hinweis mit Schloss und Wort. Der Helfer sieht
- * nur das Ergebnis, keine Taste und keinen Schloss-Hinweis (@W2A-071).
+ * nur das Ergebnis, keine Taste, keinen Schloss-Hinweis und nicht, wer wann entschieden hat (@W2A-071).
  */
 import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
@@ -10,14 +10,18 @@ import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import type { DecidedTieBlock } from '../../../core/standings/tieViews';
+import type { DecisionAuthor } from '../../../core/standings/decisionLog';
 import { decidedTexts } from './decidedText';
+import { timeText } from './tieFormat';
 
 export interface DecidedInfoProps {
   block: DecidedTieBlock;
   /** Teamname je Team-ID. */
   nameOf: (teamId: string) => string;
   canDecide: boolean;
-  /** Gruppe abgeschlossen (Zwischenregel bis GA4 A-13): nicht mehr zurücknehmbar. */
+  /** Wer wann eingetragen hat (nur Turnierleitung, aus dem Verlauf); fehlt ohne Verlauf. */
+  author?: DecisionAuthor;
+  /** Gruppe abgeschlossen (echter Abschluss, GA4 A-13b-C): nicht mehr zurücknehmbar. */
   closed: boolean;
   busy: boolean;
   failed: string | null;
@@ -37,7 +41,7 @@ const LockSymbol = () => (
   </svg>
 );
 
-export const DecidedInfo = ({ block, nameOf, canDecide, closed, busy, failed, onWithdraw }: DecidedInfoProps) => {
+export const DecidedInfo = ({ block, nameOf, canDecide, author, closed, busy, failed, onWithdraw }: DecidedInfoProps) => {
   const { t, i18n } = useTranslation('tournament');
   const { decision } = block;
   const { heading, body } = decidedTexts(t, i18n.language, decision, block, nameOf, canDecide);
@@ -65,6 +69,13 @@ export const DecidedInfo = ({ block, nameOf, canDecide, closed, busy, failed, on
     >
       <span style={title}>{heading}</span>
       <p style={line}>{body}</p>
+      {canDecide && author !== undefined ? (
+        <p style={line} data-testid="tie-decided-by">
+          {author.name !== undefined
+            ? t('standingsTie.decided.by', { name: author.name, time: timeText(author.at, i18n.language) })
+            : t('standingsTie.decided.byUnknown', { time: timeText(author.at, i18n.language) })}
+        </p>
+      ) : null}
       {showClosed ? <p style={line} data-testid="tie-closed-note">{t('standingsTie.decided.closed')}</p> : null}
     </InlineNotice>
   );
