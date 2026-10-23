@@ -323,7 +323,7 @@
     "gameTimes": "Game times",
     "gameTimePerMatch": "Game time per match",
     "minutesLocked": "Minutes 🔒",
-    "gameTimeLockedHint": "Locked because matches have already started. Reset schedule to change.",
+    "gameTimeLockedHint": "This time cannot be changed here.",
     "breakTime": "Break time between matches",
     "minutes": "Minutes"
   },
@@ -374,6 +374,8 @@
     "saved": "✓ Saved",
     "masterData": "Master Data",
     "tournamentName": "Tournament name",
+    "tournamentNameRequired": "Please enter a tournament name.",
+    "startDateRequired": "Please choose a start date.",
     "tournamentNamePlaceholder": "Club Name Hall Cup 2025",
     "organizerOptional": "Organizer (optional)",
     "organizerPlaceholder": "My Club e.V.",

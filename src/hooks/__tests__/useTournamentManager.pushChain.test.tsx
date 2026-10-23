@@ -5,7 +5,8 @@
  * verhält (am lokalen Stack belegt, A-08f3b2-Probe): Steht eine Bindung auf einer Tabelle, die NICHT in der
  * Publikation `supabase_realtime` ist, meldet der Server nach dem Beitritt eine System-Nachricht mit
  * `status: 'error'` und liefert für den GANZEN Kanal keine Änderungen -- der Kanal bleibt trotzdem `SUBSCRIBED`.
- * Publikation laut Migration 20260928_001 § 9 und `scripts/db-drift-check.sh` (REALTIME_PUBLICATION_TABLES).
+ * Publikation laut Migration 20260928_001 § 9 plus 20261110_006 § 6 (A-13b-C: Abschlüsse, Hinweise, Klärungen); die Liste
+ * `REALTIME_PUBLICATION_TABLES` in `scripts/db-drift-check.sh` zieht im DB-Fenster G1 nach (offener Punkt im PR).
  * Anforderung: @FU-087 (`plattform/2026-09-24_fundament-gemeinsamer-stand.md`).
  */
 import 'fake-indexeddb/auto';
@@ -25,7 +26,8 @@ interface FakeChannel {
 }
 
 const server = vi.hoisted(() => {
-  const PUBLISHED = new Set(['match_events', 'matches', 'teams', 'monitor_heartbeats']);
+  // GA4 A-13b-C: ab Migration 20261110_006 § 6 stehen auch Abschlüsse, Hinweise und Klärungen in der Publikation
+  const PUBLISHED = new Set(['match_events', 'matches', 'teams', 'monitor_heartbeats', 'group_completions', 'bracket_notices', 'clarifications']);
   const channels: FakeChannel[] = [];
   const makeChannel = (name: string): FakeChannel => {
     const ch: FakeChannel = {

@@ -10,7 +10,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Tournament } from '../../models/types';
 import type { StandingDecision } from '../../../types/tournament';
-import { OptimisticLockError } from '../../errors';
+import type { RecordDecisionRequest, RecordDecisionResult } from '../groupCompletionCloud';
 import { MAX_RETRIES } from '../../services/MutationQueue';
 
 const session = vi.hoisted(() => ({ userId: null as string | null }));
@@ -239,16 +239,19 @@ describe('@FU-110 Zwei Änderungen kurz nacheinander am selben Gerät kommen bei
       const { cloud, olli, geoeffnet } = await olliMitLiveCup();
       const entscheidung: StandingDecision[] = [{ groupId: 'A', order: ['x', 'y'] } as unknown as StandingDecision];
       Object.assign(cloud.fake, {
-        updateStandingDecisions: vi.fn(async (_id: string, standingDecisions: StandingDecision[], expectedVersion: number) => {
+        recordStandingDecision: vi.fn(async (_id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> => {
           const current = (await cloud.fake.get('T'))!;
-          if ((current.version ?? 0) !== expectedVersion) { throw new OptimisticLockError('T', current.version ?? 0, expectedVersion); }
+          if ((current.version ?? 0) !== expectedVersion) { return { status: 'rejected', code: 'STALE', version: current.version ?? 0 }; }
+          const standingDecisions = request.action === 'decide' ? [...(current.standingDecisions ?? []), request.decision] : [];
           cloud.setState({ tournament: { ...current, standingDecisions, version: expectedVersion + 1 }, revisions: revisions() });
+          return { status: 'ok', alreadyApplied: false, version: expectedVersion + 1 };
         }),
+        readBracketLog: vi.fn(async () => undefined),
       });
       const ansicht = { ...geoeffnet, location: { ...geoeffnet.location, name: 'Halle A' } };
       await olli.save(ansicht);
       await flush(); // 7→8, Kette 7..8
-      await olli.updateStandingDecisions('T', entscheidung, 8); // 8→9
+      await olli.recordStandingDecision('T', { action: 'decide', decision: entscheidung[0] }, 8); // 8→9
 
       await olli.save({ ...ansicht, date: '2027-01-01' }); // Ansicht vor der Entscheidung (ohne sie)
       await wiederholungenDurch();

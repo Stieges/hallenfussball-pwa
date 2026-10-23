@@ -11,7 +11,7 @@ import type { IStorageAdapter } from '../../storage/IStorageAdapter';
 import type { StandingDecision, Tournament } from '../../../types/tournament';
 import { NetworkError, OptimisticLockError } from '../../errors';
 import { STORAGE_KEYS } from '../../../constants/storage';
-import { writePlacementsToPlayOutToCloud, writeStandingDecisionsToCloud } from '../standingDecisionsCloud';
+import { writePlacementsToPlayOutToCloud } from '../standingDecisionsCloud';
 import { PlayOutPlacesService } from '../../services/PlayOutPlacesService';
 import { MemoryRepo, nikolaus, shootout } from '../../standings/__tests__/decisionTestKit';
 import { DATA, league } from '../../standings/__tests__/fixtures';
@@ -84,11 +84,6 @@ describe('Cloud: Zeile ohne Version (version IS NULL, etwa vom Seed des Durchsti
     expect(client.row.version).toBeNull();
     await writePlacementsToPlayOutToCloud(client as never, 't1', [1, 3], 0);
     expect(client.row).toEqual({ config: { standingDecisions: [MARIA], placementsToPlayOut: [1, 3] }, version: 1 });
-    // derselbe Weg für die Entscheidungen selbst
-    const zweite = cloudClient({ config: { placementsToPlayOut: [1] }, version: null });
-    await writeStandingDecisionsToCloud(zweite as never, 't1', [MARIA], 0);
-    expect(zweite.row.version).toBe(1);
-    expect(zweite.row.config).toMatchObject({ placementsToPlayOut: [1], standingDecisions: [MARIA] });
   });
 });
 

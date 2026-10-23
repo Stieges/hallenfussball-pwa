@@ -18,13 +18,17 @@ export interface ClockAdjustRecord {
  * ZA-3: Grundlage für das Zurücknehmen von Anpfiff (@SL-066/@SL-067) und Uhr-Korrektur (@SL-109).
  * `acceptedBeforeStart` = Zahl der angenommenen Ereignisse vor dem letzten Anpfiff -- ist danach
  * nichts dazugekommen, steht nur der Anpfiff selbst im Log (SQL zählt dieselben Schlüssel).
+ * `reopensBeforeStart` (A-25n, Review M1, @SL-074/@SL-075) = Zahl der angenommenen REOPEN vor dem letzten
+ * Anpfiff -- „Spiel fortsetzen“ gilt einmal je Anpfiff; die Rücknahme einer Wertung davor verbraucht es nicht
+ * (SQL `match_engine.apply_effect` zählt dieselben Einträge).
  */
 export interface UndoInfo {
   acceptedBeforeStart: number;
+  reopensBeforeStart: number;
   clockAdjusts: ClockAdjustRecord[];
 }
 
-export const EMPTY_UNDO_INFO: UndoInfo = { acceptedBeforeStart: 0, clockAdjusts: [] };
+export const EMPTY_UNDO_INFO: UndoInfo = { acceptedBeforeStart: 0, reopensBeforeStart: 0, clockAdjusts: [] };
 
 
 /** MATCH_START: Uhr startet, `elapsedMs` aus `clockMs` (Offline-Fall) oder 0. */
