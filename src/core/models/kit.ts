@@ -100,7 +100,10 @@ export interface KitConflictOptions {
 
 /**
  * @SL-137/@SL-139: gleiche Farbe, zu ähnlich (ΔE2000 < 30) oder kein Konflikt; mit `luminance` auch Helligkeitsabstand
- * < 1,5 : 1 (@SL-173). Unbekannte Farbe → kein Konflikt. */
+ * < 1,5 : 1 (@SL-173). Unbekannte Farbe → kein Konflikt.
+ * Ohne die Option gilt nur der Farbabstand. Leibchen-Verbraucher (Anpfiff, Zeile „Nächstes“) nehmen
+ * `kitConflictWithLuminance`; die Ergebniskästen der Zuschauer bleiben bei dieser Form.
+ */
 export function kitConflict(
   colorA: unknown,
   colorB: unknown,

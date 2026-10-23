@@ -52,4 +52,16 @@ describe('@SL-173 Helligkeitsabstand der Trikotfarben', () => {
     expect(a.fill).toEqual({ kind: 'solid', color: '#1565C0' });
     expect(b.fill).toEqual({ kind: 'solid', color: '#C62828' });
   });
+
+  // Grenze 1,5 : 1 genau abgesichert: Die Paare liegen knapp darunter (1,4998) bzw. knapp darüber (1,5001) mit Blau #1565C0,
+  // ΔE2000 jeweils über 30 – nur die Helligkeit entscheidet. Werte per getContrastRatio ausgerechnet, nicht geschätzt.
+  it.each([
+    { zeile: 'knapp unter 1,5', farbe: '#2D960F', verhaeltnis: 1.4998, hinweis: true },
+    { zeile: 'knapp über 1,5', farbe: '#23553C', verhaeltnis: 1.5001, hinweis: false },
+  ])('@SL-173 Grenze $zeile: #1565C0 / $farbe → Verhältnis $verhaeltnis', ({ farbe, verhaeltnis, hinweis }) => {
+    const blau = '#1565C0';
+    expect(Math.round(getContrastRatio(blau, farbe) * 10000) / 10000).toBe(verhaeltnis);
+    expect(hexDeltaE2000(blau, farbe)).toBeGreaterThan(30);
+    expect(kitConflictWithLuminance(blau, farbe)).toBe(hinweis ? 'similar' : 'none');
+  });
 });
