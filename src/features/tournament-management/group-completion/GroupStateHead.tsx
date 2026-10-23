@@ -1,7 +1,7 @@
 /**
  * Zustand je Gruppe (GA4 A-13c; @TM-059; Mockup Zustände 1 bis 6, 17 bis 21): neben dem Gruppennamen genau eines der vier
  * Zustandswörter – „offen“, „läuft“, „bereit zum Abschluss“, „abgeschlossen“ – und, wenn nötig, eine Zusatzmarke („Besetzung
- * prüfen“ nach einer Korrektur; „noch nicht gesendet“ folgt mit A-15c). Zusatzmarken ersetzen das Zustandswort nie: nach einer
+ * prüfen“ nach einer Korrektur; „noch nicht gesendet“ nach einem Abschluss ohne Netz, A-15c). Zusatzmarken ersetzen das Zustandswort nie: nach einer
  * Korrektur bleibt die Gruppe „abgeschlossen“. Darunter der Zähler, in einer laufenden Gruppe die gesperrte Zweittaste
  * „Gruppe abschließen“ mit kurzem Grund (@TM-054) und nach dem Abschluss ein Hinweis mit Wirkung, Person und Zeit (nur
  * Turnierleitung) und der leisen Taste „Gruppe wieder öffnen“. Test-IDs: `group-state-<Gruppe>`, `group-flag-<lage>-<Gruppe>`,
@@ -46,7 +46,7 @@ export const GroupStateMarks = ({ groupId }: { groupId: string }) => {
     return null;
   }
   const id = groupTestId(groupId);
-  const label = groupStateLabel(groupState(api.tournament, groupId));
+  const label = groupStateLabel(groupState(api.tournament, groupId), { unsent: activeCompletion(api.tournament, groupId)?.unsent === true });
   const look = WORD[label.word];
   return (
     <span style={marksRow}>

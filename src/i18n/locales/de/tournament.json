@@ -1365,7 +1365,8 @@
       "confirmAgain": "Erneut abschließen",
       "cancel": "Abbrechen",
       "close": "Schließen",
-      "understood": "Verstanden"
+      "understood": "Verstanden",
+      "offlineQueued": "Ohne Netz: Der Abschluss gilt sofort auf diesem Gerät und wird nachgereicht, sobald wieder Netz da ist."
     },
     "notice": {
       "openMatches": {

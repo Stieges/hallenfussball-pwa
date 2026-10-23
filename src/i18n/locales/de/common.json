@@ -140,8 +140,11 @@
       "DELETE_TOURNAMENT": "Turnier löschen",
       "UPDATE_MATCH": "Spiel aktualisieren",
       "UPDATE_MATCHES": "Spiele aktualisieren",
-      "UPDATE_TOURNAMENT_METADATA": "Turnierdaten aktualisieren"
-    }
+      "UPDATE_TOURNAMENT_METADATA": "Turnierdaten aktualisieren",
+      "COMPLETE_GROUP": "Gruppe abschließen"
+    },
+    "clarificationGroupReason": "Klärung nötig: Am Server wurde die Gruppe inzwischen geändert. Der Abschluss ohne Netz wurde nicht übernommen.",
+    "clarificationGroupDecisionReason": "Klärung nötig: Am Server wurde die Gruppe inzwischen geändert oder anders entschieden. Abschluss und Entscheidung ohne Netz wurden nicht übernommen."
   },
   "guestHidden": {
     "hint": "{{title}}: nur im Gastmodus nutzbar – kann ins Konto übernommen werden"

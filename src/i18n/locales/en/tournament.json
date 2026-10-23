@@ -1365,7 +1365,8 @@
       "confirmAgain": "Close again",
       "cancel": "Cancel",
       "close": "Close dialog",
-      "understood": "Understood"
+      "understood": "Understood",
+      "offlineQueued": "No network: the group is closed on this device right away and will be sent once the network is back."
     },
     "notice": {
       "openMatches": {

@@ -4,8 +4,9 @@
  * `reopenGroup` des Repositories (A-13b-C) auf:
  *   Taste → Plan → offene Spiele (Hinweis, @TM-054) | Gleichstand (Dialog „Gleichstand entscheiden“ im Modus „mit Abschluss“,
  *   @TM-043, @TM-048, @TM-049) | bereit (Dialog mit Tabelle und Wirkung, @TM-044) → `completeGroup`.
- * Ohne Eingabe wird nichts aufgerufen (@TM-049). Ohne Netz geht der Abschluss erst mit A-15c (Warteschlange): hier steht die
- * Meldung „braucht eine Verbindung“. Nur mit dem Recht `manageLifecycle` (Turnierleitung, Co-Admin); der Helfer sieht nur Zustände.
+ * Ohne Eingabe wird nichts aufgerufen (@TM-049). Ohne Netz gilt der Abschluss samt Entscheidung sofort auf dem Gerät und wird
+ * nachgereicht (A-15c, @W2A-062, @TM-146, @TM-147; das Repository reiht ein). Nur mit dem Recht `manageLifecycle` (Turnierleitung,
+ * Co-Admin); der Helfer sieht nur Zustände.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRepositories } from '../../../core/contexts/RepositoryContext';
@@ -116,10 +117,6 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
   }, [reload]);
 
   const submit = useCallback(async (groupId: string, plan: ReadyPlan): Promise<void> => {
-    if (!online) {
-      setFlow({ step: 'confirm', groupId, plan, busy: false, error: 'OFFLINE' });
-      return;
-    }
     setFlow({ step: 'confirm', groupId, plan, busy: true, error: null });
     try {
       if (tournamentRepository.completeGroup === undefined) {
@@ -129,7 +126,7 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
     } catch (error) {
       setFlow({ step: 'confirm', groupId, plan, busy: false, error: errorOf(error) });
     }
-  }, [online, tournamentRepository, tournament.id, handleResult]);
+  }, [tournamentRepository, tournament.id, handleResult]);
 
   const route = useCallback((groupId: string, decisions: NewDecision[]): void => {
     const plan = planCompletion(tournament, groupId, decisions);
