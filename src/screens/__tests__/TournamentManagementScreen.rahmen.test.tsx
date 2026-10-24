@@ -10,6 +10,9 @@ import { useAnnounceCockpitFrame } from '../../components/live-cockpit/frame/coc
 import { TournamentManagementScreen } from '../TournamentManagementScreen';
 
 const mobil = vi.hoisted(() => ({ wert: false }));
+const neuAbschluss = vi.hoisted(() => ({ aufruf: vi.fn() }));
+// A-15b (R2 PR 2): der Auslöser „erneut abschließen nach Korrektur“ hängt am Bildschirm der Turnierverwaltung
+vi.mock('../../hooks/useAutoRecompletion', () => ({ useAutoRecompletion: neuAbschluss.aufruf }));
 const verwaltung = vi.hoisted(() => ({
   tournament: { id: 't-1', title: 'Hallencup Süd', ageClass: 'U11', date: '2026-11-28', numberOfFields: 1, teams: [], matches: [] },
   schedule: { allMatches: [], phases: [], teams: [] },
@@ -80,5 +83,14 @@ describe('@SL-140 Rahmen am Bildschirm der Turnierverwaltung', () => {
     zeige('/tournament/t-1/schedule');
     expect(await screen.findByTestId('schedule-stub')).toBeInTheDocument();
     expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+});
+
+describe('A-15b: der Auslöser „erneut abschließen nach Korrektur“ läuft auf jedem Reiter der Turnierverwaltung (@TM-071 „ohne Zutun“)', () => {
+  it.each(['/tournament/t-1/live', '/tournament/t-1/schedule'])('%s: eingehängt mit Turnier-ID, Turnier und frischem Neuladen', async (pfad) => {
+    neuAbschluss.aufruf.mockClear();
+    zeige(pfad);
+    await screen.findByTestId(pfad.endsWith('live') ? 'live-stub' : 'schedule-stub');
+    expect(neuAbschluss.aufruf).toHaveBeenCalledWith('t-1', verwaltung.tournament, expect.any(Function));
   });
 });

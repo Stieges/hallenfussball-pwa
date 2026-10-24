@@ -856,7 +856,7 @@ async function main(): Promise<void> {
   await seedAbmeldenCups(abmeldenOwners);
   await seedTurniertagCup(engineDeps, ownerRepo, service);
   await seedZweitesTurnier(engineDeps, ownerRepo, service);
-  await seedNikolausCups(engineDeps, ownerRepo, service, userIds.helper);
+  await seedNikolausCups(engineDeps, ownerRepo, service, userIds.helper, userIds.coadmin);
 
   log('Fertig.');
 }

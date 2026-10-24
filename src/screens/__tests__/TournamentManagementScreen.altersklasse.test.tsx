@@ -14,6 +14,8 @@ const verwaltung = vi.hoisted(() => ({
   schedule: { allMatches: [], phases: [], teams: [] },
 }));
 // GA4 A-13c: Spielplan und Tabellen liegen unter den Anbietern für „Gruppe abschließen“ (Rechte, Repositories); hier nur die Hülle des Bildschirms
+// A-15b: der Auslöser „erneut abschließen“ braucht Rechte (AuthProvider) und ist hier nicht Gegenstand
+vi.mock('../../hooks/useAutoRecompletion', () => ({ useAutoRecompletion: () => undefined }));
 vi.mock('../../features/tournament-management/standings/StandingTieProvider', () => ({ StandingTieProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('../../features/tournament-management/group-completion/GroupCompletionProvider', () => ({ GroupCompletionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => mobil.wert }));

@@ -7,7 +7,9 @@
 import { expect, type Page } from '@playwright/test';
 import { vorbedingung, getRows, SOLL_TIMEOUT_MS } from './shared';
 import { getLocalServiceRoleClient } from '../../helpers';
-import { beendeAlleSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
+import { beendeAlleSpiele, fetchNikolausSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
+import { appendAsRole, fetchEngineRows } from '../../engineHelpers';
+import { eventOf } from './playViaRpc';
 import { expectPageAnchor, expectSollMarker } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
@@ -67,18 +69,29 @@ async function gleichstandMarkiert({ asRole }: StepContext): Promise<void> {
  * N6d: die Turnierleitung trägt über „Gleichstand entscheiden“ → „Strafstoßschießen eintragen“ das Ergebnis 4:3 für DJK Otting ein: der Sieger steht vor dem
  * anderen, die Spielergebnisse bleiben (@ET-055), und die Gruppe ist danach abgeschlossen (Daniel 23.10.: die Entscheidung schließt in einem Zug ab). Die
  * Zahlenfelder (`tie-shootout-score-*`) stehen in Tabellenreihenfolge, deshalb wird das Feld über die Beschriftung des Teams gewählt.
+ *
+ * Zwei Geräte (R2 PR 2, Review #382 N1, @W2A-060 „die erste gilt“): Maria (Co-Admin, Konto `coadmin`) hat den Dialog schon offen und 5:4 für TSV Petting
+ * eingetippt, als Olli 4:3 für Otting speichert. Danach speichert Maria: ihr Eintrag gilt nicht, und sie sieht, dass und von wem schon entschieden wurde
+ * („Olli Owner hat schon …“). Ollis 4:3 bleibt.
  */
-async function strafstossEintragen({ asRole }: StepContext): Promise<void> {
-  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
-  const seite = await asRole('owner');
+async function strafstossFuellen(seite: Page, otting: string, petting: string): Promise<ReturnType<Page['getByTestId']>> {
   await tabelleTurnierleitung(seite);
   await expectSollMarker(seite, 'group-close-button-all');
   await seite.getByTestId('group-close-button-all').click();
   const dialog = seite.getByTestId('tie-decision-dialog');
   await dialog.getByTestId('tie-pick-shootout').click();
   await expect(dialog.locator('[data-testid^="tie-shootout-score-"]')).toHaveCount(2);
-  await dialog.getByLabel(/DJK Otting/).fill('4');
-  await dialog.getByLabel(/TSV Petting/).fill('3');
+  await dialog.getByLabel(/DJK Otting/).fill(otting);
+  await dialog.getByLabel(/TSV Petting/).fill(petting);
+  return dialog;
+}
+
+async function strafstossEintragen({ asRole }: StepContext): Promise<void> {
+  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
+  const maria = await asRole('coadmin');
+  const mariasDialog = await strafstossFuellen(maria, '4', '5'); // Maria tippt 5:4 für Petting, speichert noch nicht
+  const seite = await asRole('owner');
+  const dialog = await strafstossFuellen(seite, '4', '3');
   await dialog.getByTestId('group-close-confirm').click();
   // Kein stiller Fehler: erst muss das Speichern sichtbar fertig sein (Dialog zu) – eine Ablehnung steht mit ihrem Text im Fehlschlag.
   const fehler = seite.locator('[data-testid="tie-error"], [data-testid="group-close-error"]');
@@ -86,6 +99,14 @@ async function strafstossEintragen({ asRole }: StepContext): Promise<void> {
     { message: 'Strafstoßschießen 4:3 gespeichert, Dialog geschlossen', timeout: SOLL_TIMEOUT_MS }).toBe('gespeichert');
   await expect(seite.getByTestId('group-close-dialog'), 'kein zweiter Abschluss-Dialog').toHaveCount(0);
   await expect.poll(async () => (await tabelleTurnierleitung(seite)).slice(2, 4).map((n) => n.replace(/\s*Strafstoßschießen.*$/s, '').trim()), { timeout: SOLL_TIMEOUT_MS }).toEqual(['DJK Otting', 'TSV Petting']);
+
+  // @W2A-060: Maria speichert danach – nicht angenommen, der Hinweis nennt Olli; Ollis Eintrag gilt weiter
+  await mariasDialog.getByTestId('group-close-confirm').click();
+  // Je nachdem, ob Marias Gerät Ollis Entscheidung schon per Realtime kennt: der Dialog zeigt „Schon entschieden von …“ (`tie-seen`), sonst lehnt
+  // der Server ab und der Hinweis nennt „… hat schon …“ – beides nennt Olli
+  const hinweis = maria.locator('[data-testid="tie-seen"], [data-testid="group-conflict"], [data-testid="group-decided-elsewhere"], [data-testid="group-already"]');
+  await expect(hinweis, 'Maria sieht, dass und von wem schon entschieden wurde').toContainText(/Schon entschieden von Olli Owner|Olli Owner hat schon/, { timeout: SOLL_TIMEOUT_MS });
+  await expect.poll(async () => (await tabelleTurnierleitung(seite)).slice(2, 4).map((n) => n.replace(/\s*Strafstoßschießen.*$/s, '').trim()), { message: 'Ollis 4:3 gilt', timeout: SOLL_TIMEOUT_MS }).toEqual(['DJK Otting', 'TSV Petting']);
 }
 
 /** N6e: ein neues Turnier ist für private Hallenturniere vorbelegt: „Punkte, direkter Vergleich, Tordifferenz, erzielte Tore“, alle aktiv (@W2A-046). */
@@ -163,6 +184,47 @@ async function gruppeAbschliessen({ asRole }: StepContext): Promise<void> {
   await expect(seite.getByTestId('tie-accept-withdraw'), 'nach dem Abschluss kein Zurücknehmen mehr (@W2A-070)').toHaveCount(0);
 }
 
+/**
+ * N7a2 (R2 PR 2, A-15b, Review #384 M2): Korrektur nach dem Abschluss → die Gruppe ist ohne Zutun erneut abgeschlossen (@TM-071 Z1–2,
+ * @TM-150 Z2). Olli hat die Tabelle offen; ein Spiel, das TSV Petting gewonnen hat, wird um ein Tor für Petting korrigiert (Punkte
+ * aller Teams bleiben, Platz 1 unberührt). Damit sind Petting und Otting nicht mehr gleich, Ollis Strafstoß-Entscheidung aus N6d
+ * verfällt, Petting steht vor Otting. Erwartet: die Gruppe ist abgeschlossen mit der neuen Rangfolge, nicht mehr veraltet, kein
+ * „Besetzung prüfen“, und genau EIN neuer Verlaufseintrag `complete_group` (auch nach weiterem Warten, M1).
+ * Die Korrektur geht über die Turnierleitungs-RPC: der Einstieg „Korrigieren“ im Spielplan/Cockpit fehlt noch (D12/D12b, B-24/B-25).
+ * Läuft als LETZTER Schritt: die Korrektur ändert ein Ergebnis, die Vorbedingung der übrigen Schritte (`beendeAlleSpiele`) prüft die
+ * festen Ergebnisse. Wird N7b (Turnier abschließen) grün, ist das Turnier gesperrt – dann gehört dieser Schritt vor N7b.
+ */
+async function neuAbschlussNachKorrektur({ asRole }: StepContext): Promise<void> {
+  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
+  const petting = NIKOLAUS.teamId('TSV Petting');
+  const abschluesse = async () => getRows<{ id: number }>(`bracket_log?tournament_id=eq.${NIKOLAUS.tournamentId}&kind=eq.complete_group&select=id`, 'Abschluss-Einträge');
+  const vorher = (await abschluesse()).length;
+  const seite = await asRole('owner');
+  await tabelleTurnierleitung(seite); // Ollis Gerät ist offen (der Auslöser läuft dort)
+  const spiel = (await fetchNikolausSpiele()).find((m) =>
+    (m.team_a_id === petting && (m.score_a ?? 0) > (m.score_b ?? 0)) || (m.team_b_id === petting && (m.score_b ?? 0) > (m.score_a ?? 0)));
+  expect(spiel, 'ein Spiel, das TSV Petting gewonnen hat').toBeDefined();
+  if (spiel === undefined) { return; }
+  const rows = await fetchEngineRows(spiel.id);
+  const letzter = rows.filter((row) => ['GOAL', 'OWN_GOAL', 'CORRECTION', 'RESULT_ENTRY'].includes(row.type)).pop();
+  const a = (spiel.score_a ?? 0) + (spiel.team_a_id === petting ? 1 : 0);
+  const b = (spiel.score_b ?? 0) + (spiel.team_b_id === petting ? 1 : 0);
+  const at = Date.now() - 1000;
+  const korrektur = await appendAsRole('owner', spiel.id, [eventOf('CORRECTION', at, at - 5000, {
+    payload: { scores: { [spiel.team_a_id]: a, [spiel.team_b_id]: b }, reason: 'Tor übersehen', basedOn: letzter?.id ?? null },
+  })], { feldFreigeben: true });
+  expect(korrektur.results.map((r) => r.status), 'Korrektur angenommen').toEqual(['accepted']);
+
+  const stand = async () => (await getRows<{ stale: boolean; ranking: string[]; reopened_at: string | null }>(
+    `group_completions?tournament_id=eq.${NIKOLAUS.tournamentId}&reopened_at=is.null&select=stale,ranking,reopened_at`, 'Gruppenabschluss'))[0];
+  await expect.poll(async () => { const g = await stand(); return g ? `${String(g.stale)}|${String(g.ranking.indexOf(petting) < g.ranking.indexOf(NIKOLAUS.teamId('DJK Otting')))}` : 'fehlt'; },
+    { message: 'ohne Zutun erneut abgeschlossen: nicht mehr veraltet, Petting vor Otting', timeout: 30_000 }).toBe('false|true'); // Realtime → Neuladen → Auslöser → Server
+  await expect(seite.getByTestId('group-stale-all'), 'kein „Besetzung prüfen“').toHaveCount(0, { timeout: 15_000 });
+  await expect(seite.getByTestId('group-state-all')).toHaveText('abgeschlossen');
+  await seite.waitForTimeout(5000); // M1: auch danach kein zweiter erneuter Abschluss
+  expect((await abschluesse()).length, 'genau ein neuer Verlaufseintrag „abgeschlossen“').toBe(vorher + 1);
+}
+
 /** N7b: Turnier abschließen: danach ist es abgeschlossen und gesperrt (@LZ-030). */
 async function turnierAbschliessen({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
@@ -190,10 +252,11 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging rot), kein Strafstoßschießen nötig – unter der BFV-privat-Reihenfolge; Voreinstellung = N6e', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
   { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], owner: 'Zuschauer-Tabelle ohne Gruppen (gebaut, #295)', expectedFail: false, run: zuschauerReihenfolge },
   { id: 'N6c', title: 'Tabelle: völliger Gleichstand (Petting/Otting) als „Gleichstand – Entscheidung nötig“ markiert, Taste „Gleichstand entscheiden“', scenarios: ['@ET-025', '@ET-055', '@W2A-047', '@W2A-067'], owner: 'Paket TB', expectedFail: false, run: gleichstandMarkiert },
-  { id: 'N6d', title: 'Tabelle: Strafstoßschießen 4:3 für Otting über „Gleichstand entscheiden“ eintragen, Sieger steht vorn, Gruppe abgeschlossen', scenarios: ['@ET-055', '@W2A-067', '@TM-046'], owner: 'Paket TB', expectedFail: false, run: strafstossEintragen },
+  { id: 'N6d', title: 'Tabelle: Strafstoßschießen 4:3 für Otting über „Gleichstand entscheiden“ eintragen, Sieger steht vorn, Gruppe abgeschlossen; Maria (zweites Gerät) danach 5:4: nicht angenommen, Hinweis nennt Olli', scenarios: ['@ET-055', '@W2A-067', '@TM-046', '@W2A-060'], owner: 'Paket TB', expectedFail: false, run: strafstossEintragen },
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB (TB-2)', expectedFail: false, run: vorbelegungPrivat },
   { id: 'N6f', title: 'Entscheidung öffentlich ohne Person, Zeit und Grund; Entscheidungsverlauf nicht anonym lesbar', scenarios: ['@W2A-072'], owner: 'Paket TB (TB-3\')', expectedFail: false, run: entscheidungNichtOeffentlich },
   { id: 'N7a', title: 'Gruppe abgeschlossen (mit der Entscheidung in N6d): kein Vorschlag mehr, „Gruppe wieder öffnen“, kein Zurücknehmen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-070'], owner: 'A-13c', expectedFail: false, run: gruppeAbschliessen },
   { id: 'N7b', title: 'Turnier abschließen: abgeschlossen und gesperrt', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a / B-33', expectedFail: true, run: turnierAbschliessen },
   { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
+  { id: 'N7a2', title: 'Korrektur nach dem Abschluss: Gruppe ohne Zutun erneut abgeschlossen, kein „Besetzung prüfen“, ein Verlaufseintrag', scenarios: ['@TM-071', '@TM-150'], owner: 'R2 PR 2 (A-15b)', expectedFail: false, run: neuAbschlussNachKorrektur },
 ];

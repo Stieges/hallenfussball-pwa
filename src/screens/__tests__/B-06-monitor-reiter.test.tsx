@@ -13,6 +13,8 @@ import { getTabFromPath } from '../../features/tournament-management/utils/tourn
 
 const geraet = vi.hoisted(() => ({ mobil: false }));
 
+// A-15b: der Auslöser „erneut abschließen“ braucht Rechte (AuthProvider) und ist hier nicht Gegenstand
+vi.mock('../../hooks/useAutoRecompletion', () => ({ useAutoRecompletion: () => undefined }));
 vi.mock('../../hooks/useTournamentManager', () => ({
   useTournamentManager: () => ({
     tournament: { id: 't1', name: 'Wintercup', teams: [], matches: [], groups: [], numberOfGroups: 1 },
