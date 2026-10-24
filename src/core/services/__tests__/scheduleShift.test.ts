@@ -116,13 +116,10 @@ describe('B – Verschieben mit Vorschau (Hallencup Ost, 15:05)', () => {
     expect(matches.map((m) => hhmm(m.scheduledTime))).toEqual(snapshot);
   });
 
-  // Befund: das „voraussichtliche Ende“ des Records rechnet eine Reserve für Verlängerung und Strafstoßschießen ein (17:25 vorher,
-  // 17:35 danach); ihre Höhe ist im Record Zeitrahmen und Fairness geparkt. Die App zeigt das Ende des letzten Spiels (17:15).
-  it.fails('@ZP-017 neues Ende 17:35 (mit Reserve für Verlängerung und Strafstoßschießen)', () => {
-    const { matches, statusOf } = hallencup();
-    const plan = planShift(matches, { from: { kind: 'time', at: at('15:15') }, minutes: 10 }, RULES, { now: at('15:05'), statusOf });
-    expect(hhmm(plan.newEnd)).toBe('17:35');
-  });
+  // Lücke @ZP-017 „neues Ende 17:35“: das voraussichtliche Ende des Records rechnet eine Reserve für Verlängerung und
+  // Strafstoßschießen ein, deren Höhe im Record Zeitrahmen und Fairness geparkt ist. Die App zeigt das Ende des letzten Spiels.
+  // Vorgeschlagener Befund C-ENDE-OHNE-RESERVE (Eintrag in BEFUNDE-HEUTIGER-CODE.md durch die Turnierleitung des Records);
+  // danach hier als it.fails mit Verweis aufnehmen.
 
   it('@ZP-062 ein unterbrochenes Spiel 11 („Ergebnis folgt“) behält seine Uhrzeit und zählt nicht mit', () => {
     const { matches, statusOf } = hallencup({ s11: 'unterbrochen' });
