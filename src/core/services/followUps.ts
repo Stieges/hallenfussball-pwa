@@ -51,5 +51,21 @@ export function reassignAfterCorrection(tournament: Tournament, groupId: string)
     return null;
   }
   const plan = planCompletion(asStale(tournament, groupId), groupId, [], 'auto');
-  return plan.code === 'READY' ? plan.request : null;
+  if (plan.code !== 'READY') {
+    return null;
+  }
+  // Review #384 M1: bleiben offene Plätze, markiert der Server die Gruppe nach dem erneuten Abschluss weiter als veraltet
+  // („Besetzung prüfen“, @TM-145). Trägt der geltende Abschluss schon genau diese Rangfolge und diese offenen Plätze, ist nichts
+  // zu tun – sonst schlösse jedes Öffnen und jedes Leitungsgerät erneut ab (Verlauf voller „erneut abgeschlossen“).
+  const current = activeCompletion(tournament, groupId);
+  if (current !== undefined && current.openRanks.length > 0
+    && sameOrder(current.ranking, plan.request.ranking) && sameOrder(current.openRanks.map(String), plan.request.openRanks.map(String))) {
+    return null;
+  }
+  return plan.request;
+}
+
+/** Stand einer Anfrage (Gruppe, Rangfolge, offene Plätze, Spielstände, Entscheidungen) – je Stand höchstens ein Versuch. */
+export function recompletionKey(tournamentId: string, request: CompleteGroupRequest): string {
+  return JSON.stringify([tournamentId, request.groupId, request.ranking, request.openRanks, request.expectedState, request.tieDecisions.map((d) => d.id)]);
 }

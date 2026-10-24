@@ -8,14 +8,22 @@
  *
  * - Nur mit dem Recht `manageLifecycle` und mit Netz; ohne Turnierleitungs-Gerät bleibt `stale`, der Hinweis erscheint beim
  *   nächsten Öffnen (RT-9). Ohne Netz kein Aufruf (die Korrektur ist erst nach der Bestätigung am Server veraltet).
- * - Mehrere Geräte der Turnierleitung: gleiche Aufrufe ergeben `ALREADY_COMPLETED`/`STALE_VERSION` – neu lesen, keine Meldung.
- * - Je Gruppe und Stand höchstens ein Versuch (kein Endlosversuch bei einer Ablehnung); ein neuer Stand darf erneut.
+ * - Mehrere Geräte der Turnierleitung: ohne offene Plätze ergibt ein zweiter Aufruf `ALREADY_COMPLETED`/`STALE_VERSION`; bleiben
+ *   offene Plätze (die Gruppe bleibt veraltet), trägt der geltende Abschluss schon dieselbe Rangfolge – dann gibt es gar keine
+ *   Anfrage (`reassignAfterCorrection`, Review #384 M1), auch nach neuem Öffnen nicht.
+ * - Je Gruppe und Stand höchstens ein Versuch (kein Endlosversuch bei einer Ablehnung); ein neuer Stand darf erneut. Endete der
+ *   Versuch mit einem Fehler statt mit einer Antwort, gilt er nach der Rückkehr des Netzes als nicht versucht (N1).
+ * - Scheitert ein Versuch, zeigt die Tabelle „Besetzung prüfen“ wieder (`recompletionFailures`, M3); solange der Auslöser die
+ *   Gruppe gleich erledigt, bleibt der Hinweis aus (@TM-150 Zeile 2).
+ * - Bekannte Grenze (Befund C-AUTO-ABSCHLUSS-EINGEREIHT): kippt das Netz zwischen der Prüfung hier und dem Aufruf, reiht
+ *   `OfflineRepository` den Abschluss ein; eine Abweichung beim Nachreichen erschiene dann in der Klärungsliste.
  * - Eine Entscheidung im Kasten der Tabelle schließt die Gruppe selbst ab (@W2A-074); dieser Auslöser ruft dafür nichts zusätzlich.
  */
 import { useEffect, useRef } from 'react';
 import type { Tournament } from '../types/tournament';
 import type { CompleteGroupRequest, CompleteGroupResult } from '../core/repositories/groupCompletionCloud';
-import { groupsToRecomplete, reassignAfterCorrection } from '../core/services/followUps';
+import { groupsToRecomplete, reassignAfterCorrection, recompletionKey } from '../core/services/followUps';
+import { clearRecompletionFailed, markRecompletionFailed } from './recompletionFailures';
 
 export interface RecompletionDeps {
   /** `complete_group` des Repositories (fehlt es, passiert nichts). */
@@ -29,16 +37,21 @@ export interface RecompletionDeps {
   onDone: () => void;
 }
 
-/** Stand einer Anfrage: dieselbe Gruppe mit derselben Rangfolge, denselben offenen Plätzen und denselben Spielständen. */
-const keyOf = (tournamentId: string, request: CompleteGroupRequest): string =>
-  JSON.stringify([tournamentId, request.groupId, request.ranking, request.openRanks, request.expectedState, request.tieDecisions.map((d) => d.id)]);
-
 export function useRecompletionAfterCorrection(tournament: Tournament | null, deps: RecompletionDeps): void {
   const { completeGroup, canManage, online, local, onDone } = deps;
   const tried = useRef(new Set<string>());
+  /** Review #384 N1: Versuche, die mit einem Fehler (nicht mit einer Antwort des Servers) endeten – nach der Rückkehr des Netzes erneut. */
+  const thrown = useRef(new Set<string>());
   const running = useRef(false);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
+
+  useEffect(() => {
+    if (online) {
+      thrown.current.forEach((key) => { tried.current.delete(key); });
+      thrown.current.clear();
+    }
+  }, [online]);
 
   useEffect(() => {
     if (tournament === null || !canManage || !online || completeGroup === undefined || running.current) {
@@ -46,7 +59,7 @@ export function useRecompletionAfterCorrection(tournament: Tournament | null, de
     }
     const pending = groupsToRecomplete(tournament, { local })
       .map((groupId) => reassignAfterCorrection(tournament, groupId))
-      .filter((request): request is CompleteGroupRequest => request !== null && !tried.current.has(keyOf(tournament.id, request)));
+      .filter((request): request is CompleteGroupRequest => request !== null && !tried.current.has(recompletionKey(tournament.id, request)));
     if (pending.length === 0) {
       return;
     }
@@ -54,9 +67,20 @@ export function useRecompletionAfterCorrection(tournament: Tournament | null, de
     void (async () => {
       try {
         for (const request of pending) {
-          tried.current.add(keyOf(tournament.id, request));
-          // Ablehnungen (schon abgeschlossen, Stand geändert) zeigen nichts: der frische Stand entscheidet beim nächsten Lauf
-          await completeGroup(tournament.id, request).catch(() => undefined);
+          const key = recompletionKey(tournament.id, request);
+          tried.current.add(key);
+          try {
+            const result = await completeGroup(tournament.id, request);
+            // Schon abgeschlossen (zweites Leitungsgerät) gilt als erledigt; eine Ablehnung zeigt „Besetzung prüfen“ wieder (M3)
+            if (result.status === 'ok') {
+              clearRecompletionFailed(key);
+            } else {
+              markRecompletionFailed(key);
+            }
+          } catch {
+            thrown.current.add(key); // N1: nach der Rückkehr des Netzes erneut versuchen
+            markRecompletionFailed(key);
+          }
         }
       } finally {
         running.current = false;

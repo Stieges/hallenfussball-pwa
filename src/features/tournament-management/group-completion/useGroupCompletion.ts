@@ -20,6 +20,8 @@ import type { OpenTieBlock } from '../../../core/standings/tieViews';
 import type { Tournament } from '../../../types/tournament';
 import { useStandingTie } from '../standings/standingTieContext';
 import { lastLogId } from './completionLog';
+import { reassignAfterCorrection, recompletionKey } from '../../../core/services/followUps';
+import { recompletionFailed, useRecompletionFailuresVersion } from '../../../hooks/recompletionFailures';
 
 export type ReadyPlan = Extract<CompletionPlan, { code: 'READY' }>;
 
@@ -84,10 +86,24 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
   const onChanged = tie?.onChanged;
 
   const proposals = useMemo(() => (canManage ? proposeGroupCompletion(tournament) : []), [canManage, tournament]);
-  const staleGroups = useMemo(
-    () => (canManage ? groupIds(tournament).filter((g) => groupState(tournament, g) === 'stale') : []),
-    [canManage, tournament],
-  );
+  // Review #384 M3 (@TM-150 Zeile 2 „ohne dass ‚Besetzung prüfen‘ erscheint“): eine veraltete Gruppe, die der Auslöser nach der
+  // Korrektur gleich erneut abschließt (Leitung, mit Netz, Anfrage vorhanden, noch nicht gescheitert), zeigt den Hinweis nicht
+  const failuresVersion = useRecompletionFailuresVersion();
+  const staleGroups = useMemo(() => {
+    if (!canManage) {
+      return [];
+    }
+    const autoDone = (g: string): boolean => {
+      if (!online) {
+        return false;
+      }
+      const request = reassignAfterCorrection(tournament, g);
+      return request !== null && !recompletionFailed(recompletionKey(tournament.id, request));
+    };
+    return groupIds(tournament).filter((g) => groupState(tournament, g) === 'stale' && !autoDone(g));
+    // failuresVersion: neu rechnen, sobald ein Versuch scheitert oder gelingt
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManage, online, tournament, failuresVersion]);
 
   const reload = useCallback(() => { onChanged?.(); }, [onChanged]);
 

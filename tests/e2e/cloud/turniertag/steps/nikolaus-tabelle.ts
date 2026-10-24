@@ -7,7 +7,9 @@
 import { expect, type Page } from '@playwright/test';
 import { vorbedingung, getRows, SOLL_TIMEOUT_MS } from './shared';
 import { getLocalServiceRoleClient } from '../../helpers';
-import { beendeAlleSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
+import { beendeAlleSpiele, fetchNikolausSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
+import { appendAsRole, fetchEngineRows } from '../../engineHelpers';
+import { eventOf } from './playViaRpc';
 import { expectPageAnchor, expectSollMarker } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
@@ -182,6 +184,45 @@ async function gruppeAbschliessen({ asRole }: StepContext): Promise<void> {
   await expect(seite.getByTestId('tie-accept-withdraw'), 'nach dem Abschluss kein Zurücknehmen mehr (@W2A-070)').toHaveCount(0);
 }
 
+/**
+ * N7a2 (R2 PR 2, A-15b, Review #384 M2): Korrektur nach dem Abschluss → die Gruppe ist ohne Zutun erneut abgeschlossen (@TM-071 Z1–2,
+ * @TM-150 Z2). Olli hat die Tabelle offen; ein Spiel, das TSV Petting gewonnen hat, wird um ein Tor für Petting korrigiert (Punkte
+ * aller Teams bleiben, Platz 1 unberührt). Damit sind Petting und Otting nicht mehr gleich, Ollis Strafstoß-Entscheidung aus N6d
+ * verfällt, Petting steht vor Otting. Erwartet: die Gruppe ist abgeschlossen mit der neuen Rangfolge, nicht mehr veraltet, kein
+ * „Besetzung prüfen“, und genau EIN neuer Verlaufseintrag `complete_group` (auch nach weiterem Warten, M1).
+ * Die Korrektur geht über die Turnierleitungs-RPC: der Einstieg „Korrigieren“ im Spielplan/Cockpit fehlt noch (D12/D12b, B-24/B-25).
+ */
+async function neuAbschlussNachKorrektur({ asRole }: StepContext): Promise<void> {
+  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
+  const petting = NIKOLAUS.teamId('TSV Petting');
+  const abschluesse = async () => getRows<{ id: number }>(`bracket_log?tournament_id=eq.${NIKOLAUS.tournamentId}&kind=eq.complete_group&select=id`, 'Abschluss-Einträge');
+  const vorher = (await abschluesse()).length;
+  const seite = await asRole('owner');
+  await tabelleTurnierleitung(seite); // Ollis Gerät ist offen (der Auslöser läuft dort)
+  const spiel = (await fetchNikolausSpiele()).find((m) =>
+    (m.team_a_id === petting && (m.score_a ?? 0) > (m.score_b ?? 0)) || (m.team_b_id === petting && (m.score_b ?? 0) > (m.score_a ?? 0)));
+  expect(spiel, 'ein Spiel, das TSV Petting gewonnen hat').toBeDefined();
+  if (spiel === undefined) { return; }
+  const rows = await fetchEngineRows(spiel.id);
+  const letzter = rows.filter((row) => ['GOAL', 'OWN_GOAL', 'CORRECTION', 'RESULT_ENTRY'].includes(row.type)).pop();
+  const a = (spiel.score_a ?? 0) + (spiel.team_a_id === petting ? 1 : 0);
+  const b = (spiel.score_b ?? 0) + (spiel.team_b_id === petting ? 1 : 0);
+  const at = Date.now() - 1000;
+  const korrektur = await appendAsRole('owner', spiel.id, [eventOf('CORRECTION', at, at - 5000, {
+    payload: { scores: { [spiel.team_a_id]: a, [spiel.team_b_id]: b }, reason: 'Tor übersehen', basedOn: letzter?.id ?? null },
+  })], { feldFreigeben: true });
+  expect(korrektur.results.map((r) => r.status), 'Korrektur angenommen').toEqual(['accepted']);
+
+  const stand = async () => (await getRows<{ stale: boolean; ranking: string[]; reopened_at: string | null }>(
+    `group_completions?tournament_id=eq.${NIKOLAUS.tournamentId}&reopened_at=is.null&select=stale,ranking,reopened_at`, 'Gruppenabschluss'))[0];
+  await expect.poll(async () => { const g = await stand(); return g ? `${String(g.stale)}|${String(g.ranking.indexOf(petting) < g.ranking.indexOf(NIKOLAUS.teamId('DJK Otting')))}` : 'fehlt'; },
+    { message: 'ohne Zutun erneut abgeschlossen: nicht mehr veraltet, Petting vor Otting', timeout: 30_000 }).toBe('false|true'); // Realtime → Neuladen → Auslöser → Server
+  await expect(seite.getByTestId('group-stale-all'), 'kein „Besetzung prüfen“').toHaveCount(0, { timeout: 15_000 });
+  await expect(seite.getByTestId('group-state-all')).toHaveText('abgeschlossen');
+  await seite.waitForTimeout(5000); // M1: auch danach kein zweiter erneuter Abschluss
+  expect((await abschluesse()).length, 'genau ein neuer Verlaufseintrag „abgeschlossen“').toBe(vorher + 1);
+}
+
 /** N7b: Turnier abschließen: danach ist es abgeschlossen und gesperrt (@LZ-030). */
 async function turnierAbschliessen({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
@@ -213,6 +254,7 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB (TB-2)', expectedFail: false, run: vorbelegungPrivat },
   { id: 'N6f', title: 'Entscheidung öffentlich ohne Person, Zeit und Grund; Entscheidungsverlauf nicht anonym lesbar', scenarios: ['@W2A-072'], owner: 'Paket TB (TB-3\')', expectedFail: false, run: entscheidungNichtOeffentlich },
   { id: 'N7a', title: 'Gruppe abgeschlossen (mit der Entscheidung in N6d): kein Vorschlag mehr, „Gruppe wieder öffnen“, kein Zurücknehmen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-070'], owner: 'A-13c', expectedFail: false, run: gruppeAbschliessen },
+  { id: 'N7a2', title: 'Korrektur nach dem Abschluss: Gruppe ohne Zutun erneut abgeschlossen, kein „Besetzung prüfen“, ein Verlaufseintrag', scenarios: ['@TM-071', '@TM-150'], owner: 'R2 PR 2 (A-15b)', expectedFail: false, run: neuAbschlussNachKorrektur },
   { id: 'N7b', title: 'Turnier abschließen: abgeschlossen und gesperrt', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a / B-33', expectedFail: true, run: turnierAbschliessen },
   { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
 ];
