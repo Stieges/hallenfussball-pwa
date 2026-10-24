@@ -439,6 +439,31 @@ SELECT 'matches-guard-kit-columns-invoker-no-client-execute',
                         AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                         AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_guard_kit_columns()')), false)
+-- R8 (20261118_001_verschieben_server.sql, C-VERSCHIEBEN-NUR-CLIENT): Server-Pruefung beim Verschieben. Trigger
+-- BEFORE UPDATE OF scheduled_start, original_start (ROW) aktiv; Funktion SECURITY INVOKER (current_user-Unterscheidung)
+-- mit festem search_path, ohne EXECUTE fuer PUBLIC, anon, authenticated; die Aenderungszaehlung zaehlt original_start.
+-- Vor dem Live-Einspielen: "f".
+UNION ALL
+SELECT 'matches-guard-schedule-times-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.matches') AND t.tgname = 'matches_guard_schedule_times'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = to_regprocedure('public.matches_guard_schedule_times()')
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 0 AND (t.tgtype & 16) = 16
+                  AND pg_get_triggerdef(t.oid) LIKE '%BEFORE UPDATE OF scheduled_start, original_start ON public.matches%')
+UNION ALL
+SELECT 'matches-guard-schedule-times-invoker-no-client-execute',
+       coalesce((SELECT NOT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.matches_guard_schedule_times()')), false)
+UNION ALL
+SELECT 'matches-bump-change-revision-counts-original-start',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = to_regclass('public.matches') AND t.tgname = 'matches_bump_change_revision'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND pg_get_triggerdef(t.oid) LIKE '%(old.original_start IS DISTINCT FROM new.original_start)%')
 UNION ALL
 -- A-08h (Befund C-MATCH-EVENTS-DIREKTWEG, @FU-084, @FU-085): Clients schreiben match_events nur noch
 -- über append_match_events (SECURITY DEFINER). anon und authenticated haben KEIN INSERT/UPDATE/DELETE

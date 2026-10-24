@@ -164,6 +164,7 @@ SW_FILE=""
 AFTER_TARGET=0
 A13BS_APPLIED=0
 A21AS_FILE=""
+R8_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -203,6 +204,9 @@ while IFS= read -r line; do
     [[ "$MODE" == "without-sw" ]] && continue
     A21AS_FILE="$line"
   fi
+  # R8 (20261118_001): fasst den Trigger matches_bump_change_revision neu (mit original_start) und bringt
+  # matches_guard_schedule_times -- nach dem erneuten Einspielen von 20261028_005 (Idempotenz) wieder einspielen.
+  [[ "$(basename "$line")" == "20261118_001_verschieben_server.sql" ]] && R8_FILE="$line"
   # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
   [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
   NEWER_MIGRATIONS+=("$line")
@@ -272,6 +276,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$A25B_FILE"; psql_stdin < "$SB_FILE"; fi
   # A-21a-S: seit 20261113_003 steht die juengste Fassung von append_match_events dort (Basis _009 + closed_intake).
   if [[ -n "$A21AS_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A21AS_FILE"; fi
+  # R8: 20261028_005 oben setzt matches_bump_change_revision auf die Fassung ohne original_start zurueck.
+  if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -1293,9 +1299,12 @@ A13BS_TRIGGER=""
 # A-21a-S (20261113_003): matches_guard_closed (Abschluss-Sperre) feuert alphabetisch zuerst (Unterlage A-21a, W5).
 A21AS_TRIGGER=""
 [[ -n "$A21AS_FILE" ]] && A21AS_TRIGGER="matches_guard_closed,"
+# R8 (20261118_001): matches_guard_schedule_times (BEFORE UPDATE OF scheduled_start, original_start; keine Engine-Spalte).
+R8_TRIGGER=""
+[[ -n "$R8_FILE" ]] && R8_TRIGGER="matches_guard_schedule_times,"
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
 check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
+  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,${R8_TRIGGER}matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
 # A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
 # B-14 (20261117_104): matches_updated_at_insert setzt updated_at auch beim INSERT; er

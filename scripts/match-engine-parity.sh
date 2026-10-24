@@ -115,6 +115,7 @@ SB_FILE=""
 # Rechenfunktion (match_apply_event, cache_columns, apply_effect bleiben unberuehrt) und ist wiederholbar. Pflicht wie A-34.
 A21AS_MIGRATION="20261113_003_tournament_lifecycle.sql"
 A21AS_FILE=""
+R8_FILE=""  # R8 (20261118_001): fasst matches_bump_change_revision neu -- nach jedem erneuten 20261028_005 wieder einspielen
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -163,6 +164,7 @@ while IFS= read -r line; do
     "$A25B_MIGRATION") A25B_FILE="$line" ;;
     "$SB_MIGRATION") SB_FILE="$line" ;;
     "$A21AS_MIGRATION") A21AS_FILE="$line" ;;
+    20261118_001_verschieben_server.sql) R8_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ -z "$A25B_FILE" ]]; then
@@ -253,6 +255,7 @@ if [[ -n "$A34_FILE" ]]; then psql_stdin < "$A34_FILE"; fi
 psql_stdin < "$A25B_FILE"
 psql_stdin < "$SB_FILE"
 psql_stdin < "$A21AS_FILE"
+if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi  # R8: Zaehlung um original_start nach 20261028_005 zurueck
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
@@ -339,6 +342,7 @@ for k in os.environ["MUT_KEYS"].split():
 sys.stdout.write(s)' < "$A25B_FILE" | psql_stdin
   psql_stdin < "$SB_FILE"
   psql_stdin < "$A21AS_FILE"
+  if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi  # R8: Zaehlung um original_start nach 20261028_005 zurueck
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
@@ -603,6 +607,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   psql_stdin < "$A25B_FILE"
   psql_stdin < "$SB_FILE"
   psql_stdin < "$A21AS_FILE"
+  if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi  # R8: Zaehlung um original_start nach 20261028_005 zurueck
   psql_stdin <<'SQL'
 UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
 GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;

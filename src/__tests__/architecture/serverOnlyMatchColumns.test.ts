@@ -4,8 +4,8 @@
  * Z1 Schutzspalten: Spaltenliste in `matches_guard_engine_columns` (jüngste Fassung, seit A-25b 20261110_005) =
  *    `SERVER_ONLY_MATCH_COLUMNS`;
  *    die Client-Schreibwege für bestehende Spiele (`mapMatchUpdateToSupabase`, `mapMatchToScheduleUpdate`) senden keine.
- * Z2 Spielplan-Spalten: `WHEN`-Liste von `matches_bump_change_revision` = Schlüssel von `mapMatchToScheduleUpdate`
- *    ohne `updated_at` und die Altspalten `team_a/b_placeholder`.
+ * Z2 Spielplan-Spalten: `WHEN`-Liste von `matches_bump_change_revision` (jüngste Fassung, seit R8 20261118_001) = Schlüssel
+ *    von `mapMatchToScheduleUpdate` ohne `updated_at` und die Altspalten `team_a/b_placeholder`.
  * Z3 Neutralwerte: INSERT-Zweig des Schutzes und `UPDATE` in `reset_match_results` = `NEUTRAL_RESULT_COLUMNS` (reset ohne
  *    `ENGINE_EVENT_ONLY_MATCH_COLUMNS`: ein Spiel mit Wertung hat Ereignisse, reset lehnt es mit HAS_ENTRIES ab);
  *    `mapMatchToSupabase` legt neue Spiele mit denselben Werten an; das lokale Zurücksetzen leert dieselben Felder.
@@ -38,6 +38,14 @@ const LATEST_GUARD_MIGRATION = readdirSync(MIGRATIONS_DIR)
   .sort()
   .map((name) => readFileSync(join(MIGRATIONS_DIR, name), 'utf8'))
   .filter((text) => text.includes(GUARD_START))
+  .at(-1) ?? '';
+/** R8: die jüngste Migration, die den Trigger der Änderungszählung anlegt (seit 20261118_001 mit original_start). */
+const BUMP_START = 'CREATE TRIGGER matches_bump_change_revision';
+const LATEST_BUMP_MIGRATION = readdirSync(MIGRATIONS_DIR)
+  .filter((name) => name.endsWith('.sql'))
+  .sort()
+  .map((name) => readFileSync(join(MIGRATIONS_DIR, name), 'utf8'))
+  .filter((text) => text.includes(BUMP_START))
   .at(-1) ?? '';
 
 /** Text zwischen zwei Markierungen (beide müssen genau einmal vorkommen). */
@@ -89,15 +97,14 @@ describe('A-10 Zwillinge TS ↔ SQL (Spalten-Schutz, Spielplan-Zählung, Neutral
   });
 
   it('Z2 die WHEN-Liste von matches_bump_change_revision = Spielplan-Spalten von mapMatchToScheduleUpdate (@TM-027)', () => {
-    const when = between(MIGRATION, 'CREATE TRIGGER matches_bump_change_revision', 'EXECUTE FUNCTION public.matches_bump_change_revision()');
+    const when = between(LATEST_BUMP_MIGRATION, BUMP_START, 'EXECUTE FUNCTION public.matches_bump_change_revision()');
     const counted = [...when.matchAll(/OLD\.(\w+) IS DISTINCT FROM NEW\.(\w+)/g)].map((m) => {
       expect(m[1]).toBe(m[2]);
       return m[1];
     });
-    // B-26: `original_start` ändert sich nur zusammen mit `scheduled_start` (Verschieben, Wiederherstellen) und wird darüber
-    // mitgezählt; eine eigene WHEN-Zeile bräuchte eine Migration (im B-26-Report als Vorschlag gemeldet).
+    // R8 (20261118_001, Review #376 Empfehlung 4): `original_start` hat eine eigene WHEN-Zeile.
     const scheduleKeys = Object.keys(mapMatchToScheduleUpdate(mapMatchToSupabase(fullMatch(), 'T')))
-      .filter((key) => !['updated_at', 'team_a_placeholder', 'team_b_placeholder', 'original_start'].includes(key));
+      .filter((key) => !['updated_at', 'team_a_placeholder', 'team_b_placeholder'].includes(key));
     expect([...counted].sort()).toEqual(scheduleKeys.sort());
   });
 
