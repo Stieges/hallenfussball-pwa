@@ -20,11 +20,15 @@ function base(): Date {
   d.setMinutes(d.getMinutes() - (d.getMinutes() % 5) - 30);
   return d;
 }
-const clock = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+/** Wanduhr in Europe/Berlin (die App rechnet „jetzt“ in der Turnier-Zeitzone; der Browser läuft in derselben Zone) */
+const berlin = (d: Date, part: 'date' | 'time') => new Intl.DateTimeFormat('en-CA', part === 'date'
+  ? { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }
+  : { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+const clock = (d: Date) => berlin(d, 'time');
 const kickoff = (n: number) => new Date(base().getTime() + (n - 1) * 12 * 60_000);
 
 function turnier(): Record<string, unknown> {
-  const date = new Date().toISOString().split('T')[0];
+  const date = berlin(base(), 'date'); // nie toISOString: zwischen 0 und 2 Uhr wäre das der Vortag (B5)
   const status = (n: number) => (n <= 2 ? { matchStatus: 'finished', scoreA: 1, scoreB: 0 } : n === 3
     ? { matchStatus: 'running', scoreA: 0, scoreB: 0, timerStartTime: new Date().toISOString(), timerElapsedSeconds: 0 }
     : { matchStatus: 'scheduled' });
@@ -54,6 +58,16 @@ function turnier(): Record<string, unknown> {
 
 const original = (page: Page, n: number) => page.getByTestId(`match-original-${MATCH(n)}`).filter({ visible: true });
 
+/** Neu laden; ein Dialog räumt beim Schließen seinen Verlaufseintrag (history.back) auf – bricht das Laden daran ab, einmal wiederholen. */
+async function reloadSchedule(page: Page): Promise<void> {
+  try {
+    await page.reload();
+  } catch {
+    await page.reload();
+  }
+  await expect(page.getByTestId('schedule-shift-button')).toBeVisible();
+}
+
 async function openSchedule(page: Page): Promise<void> {
   await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
   await expect(page.getByTestId('schedule-shift-button')).toBeVisible();
@@ -67,6 +81,7 @@ async function shiftFromFirstOpen(page: Page): Promise<void> {
 }
 
 test.describe('B-26 Zeiten verschieben (offline)', () => {
+  test.use({ timezoneId: 'Europe/Berlin' });
   test.beforeEach(async ({ seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [turnier()] });
   });
@@ -83,8 +98,7 @@ test.describe('B-26 Zeiten verschieben (offline)', () => {
     await page.getByTestId('time-shift-preview-cancel').click();
     await expect(preview).toBeHidden();
     await expect(original(page, 4)).toHaveCount(0);
-    await page.reload();
-    await expect(page.getByTestId('schedule-shift-button')).toBeVisible();
+    await reloadSchedule(page);
     await expect(original(page, 4)).toHaveCount(0);
   });
 
@@ -100,7 +114,7 @@ test.describe('B-26 Zeiten verschieben (offline)', () => {
     await expect(strip).toContainText('Ausdrucke sind veraltet');
     if (BILDER) { await page.screenshot({ path: `${BILDER}/danach-${test.info().project.name}.png` }); }
     // gespeichert: nach dem Neuladen steht weiter „ursprünglich“
-    await page.reload();
+    await reloadSchedule(page);
     await expect(original(page, 4)).toHaveText(`ursprünglich ${clock(kickoff(4))}`);
   });
 

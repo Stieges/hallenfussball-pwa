@@ -25,7 +25,7 @@ interface TimeShiftPreviewProps {
 
 const head: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
 const sub: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary };
-const body: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md, padding: cssVars.spacing.xl };
+const body: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.md };
 const list: CSSProperties = { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' };
 const row: CSSProperties = {
   display: 'grid',

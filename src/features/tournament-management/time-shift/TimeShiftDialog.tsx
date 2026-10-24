@@ -30,7 +30,7 @@ interface TimeShiftDialogProps {
   onClose: () => void;
 }
 
-const body: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.lg, padding: cssVars.spacing.xl };
+const body: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.lg };
 const restoreButton: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',

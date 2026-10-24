@@ -7,6 +7,9 @@
 import { test, expect } from '../helpers/test-fixtures';
 import { freezeClock, commonMasks, buildVisualTournament } from './helpers';
 
+// Uhrzeit im Zeitfeld wie auf deutschen Geräten (24 h), unabhängig von der Sprache des Containers (Review B7)
+test.use({ locale: 'de-DE', timezoneId: 'Europe/Berlin', launchOptions: { args: ['--lang=de-DE'], env: { ...process.env, LANG: 'de_DE.UTF-8', LANGUAGE: 'de_DE' } } });
+
 test('Zeiten verschieben: Dialog und Streifen', async ({ page, seedIndexedDB }) => {
   await freezeClock(page);
   await seedIndexedDB({ tournaments: [buildVisualTournament({ id: 'visual-zeiten-verschieben', title: 'Nordstadt Hallencup' })] });

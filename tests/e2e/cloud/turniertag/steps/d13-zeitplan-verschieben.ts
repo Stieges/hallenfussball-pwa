@@ -6,10 +6,10 @@
  */
 import { expect } from '@playwright/test';
 import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
+import type { StepContext, TurniertagStep } from './types';
 
 /** Speichern geht über die Cloud (Warteschlange): großzügiger als der Soll-Marker. */
 const SPEICHERN_MS = 15_000;
-import type { StepContext, TurniertagStep } from './types';
 
 async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
