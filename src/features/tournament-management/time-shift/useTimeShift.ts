@@ -5,7 +5,8 @@
  * - Vor dem ersten Anpfiff gilt „Übernehmen“ sofort (@ZP-019, @ZP-089), danach erst nach Vorschau und Bestätigung (@ZP-017).
  * - Ohne Bestätigung ändert sich nichts (@ZP-018): gespeichert wird nur in `confirm`.
  * - Beim Bestätigen rechnet der Plan auf dem aktuellen Stand neu: ein inzwischen angepfiffenes Spiel bleibt draußen.
- * - „Jetzt“ ist die Serverzeit (Uhr der Spiel-Engine, Zone 1), ohne Engine die Geräteuhr.
+ * - „Jetzt“ ist die Serverzeit (Uhr der Spiel-Engine, Zone 1), ohne Engine die Geräteuhr – als Wanduhr der Turnier-Zeitzone;
+ *   die Anpfiffe liegen am Turnierdatum (`onTournamentDay`), damit Kopien mit neuem Datum und fremde Gerätezeitzonen stimmen.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -17,6 +18,7 @@ import {
   planShift,
 } from '../../../core/services/ScheduleService';
 import type { ShiftPlan, ShiftRequest } from '../../../core/services/scheduleShift';
+import { actualKickoffWallClock, onTournamentDay, tournamentWallClock } from '../../../core/services/scheduleShiftClock';
 import { viewStatus, type TournamentView, type ViewMatchStatus } from '../../../core/view';
 import type { Match, Tournament } from '../../../types/tournament';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
@@ -73,17 +75,19 @@ export interface UseTimeShiftArgs {
 export function useTimeShift({ tournament, view, onTournamentUpdate, showSuccess }: UseTimeShiftArgs) {
   const { t } = useTranslation('tournament');
   const clock = useMatchEngineContextOptional()?.clock;
-  const serverNow = useCallback(() => new Date(clock ? clock.serverNow() : Date.now()), [clock]);
+  const serverNow = useCallback(() => tournamentWallClock(new Date(clock ? clock.serverNow() : Date.now())), [clock]);
   const [step, setStep] = useState<TimeShiftStep>('closed');
   const [form, setForm] = useState<ShiftForm>({ direction: 'later', mode: 'time', time: '', matchId: undefined, minutes: 10 });
   const [strip, setStrip] = useState<ShiftStrip | null>(null);
   const [now, setNow] = useState<Date>(serverNow);
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const day = tournament.startDate ?? tournament.date;
+  const matches = useMemo(() => onTournamentDay(tournament.matches, day), [tournament.matches, day]);
   const statusOf = useCallback((m: Match): ViewMatchStatus => view.byId.get(m.id)?.status ?? viewStatus(m), [view]);
   const rules = tournament;
-  const kickedOff = useMemo(() => isTournamentKickedOff(tournament.matches, { statusOf }), [tournament.matches, statusOf]);
-  const restorable = useMemo(() => kickedOff && hasRestorableTimes(tournament.matches, { statusOf }), [kickedOff, tournament.matches, statusOf]);
+  const kickedOff = useMemo(() => isTournamentKickedOff(matches, { statusOf }), [matches, statusOf]);
+  const restorable = useMemo(() => kickedOff && hasRestorableTimes(matches, { statusOf }), [kickedOff, matches, statusOf]);
 
   // „Jetzt“ läuft weiter, solange ein Dialog offen ist (Grenze Vergangenheit, „beginnt in X Minuten“)
   useEffect(() => {
@@ -96,8 +100,8 @@ export function useTimeShift({ tournament, view, onTournamentUpdate, showSuccess
   }, [step, serverNow]);
 
   const open = useCallback((presetMatchId?: string) => {
-    const first = firstOpen(tournament.matches, statusOf);
-    const preset = presetMatchId === undefined ? undefined : tournament.matches.find((m) => m.id === presetMatchId);
+    const first = firstOpen(matches, statusOf);
+    const preset = presetMatchId === undefined ? undefined : matches.find((m) => m.id === presetMatchId);
     setForm({
       direction: 'later',
       mode: preset ? 'match' : 'time',
@@ -107,7 +111,7 @@ export function useTimeShift({ tournament, view, onTournamentUpdate, showSuccess
       ...(preset ? { presetMatchId: preset.id } : {}),
     });
     setStep('form');
-  }, [tournament.matches, statusOf]);
+  }, [matches, statusOf]);
 
   // Einstieg aus den Einstellungen (Schloss → „Zeiten verschieben“): ?verschieben=1 öffnet den Dialog einmal
   useEffect(() => {
@@ -120,39 +124,39 @@ export function useTimeShift({ tournament, view, onTournamentUpdate, showSuccess
     open();
   }, [searchParams, setSearchParams, open]);
 
-  const requestOf = useCallback((f: ShiftForm, matches: readonly Match[]): ShiftRequest | undefined => {
+  const requestOf = useCallback((f: ShiftForm, list: readonly Match[]): ShiftRequest | undefined => {
     const signed = f.direction === 'later' ? f.minutes : -f.minutes;
     if (f.mode === 'match') {
       return f.matchId === undefined ? undefined : { from: { kind: 'match', matchId: f.matchId }, minutes: signed };
     }
-    const reference = firstOpen(matches, statusOf)?.scheduledTime ?? matches.find((m) => m.scheduledTime)?.scheduledTime;
+    const reference = firstOpen(list, statusOf)?.scheduledTime ?? list.find((m) => m.scheduledTime)?.scheduledTime;
     const at = sameDayAt(reference === undefined ? undefined : new Date(reference), f.time);
     return at === undefined ? undefined : { from: { kind: 'time', at }, minutes: signed };
   }, [statusOf]);
 
   const plan: ShiftPlan | undefined = useMemo(() => {
-    const request = requestOf(form, tournament.matches);
-    return request === undefined ? undefined : planShift(tournament.matches, request, rules, { now, statusOf });
-  }, [form, tournament.matches, rules, now, statusOf, requestOf]);
+    const request = requestOf(form, matches);
+    return request === undefined ? undefined : planShift(matches, request, rules, { now, statusOf, actualStartOf: actualKickoffWallClock });
+  }, [form, matches, rules, now, statusOf, requestOf]);
 
   const restorePlan: ShiftPlan | undefined = useMemo(
-    () => (step === 'restore' ? planRestore(tournament.matches, rules, { now, statusOf }) : undefined),
-    [step, tournament.matches, rules, now, statusOf],
+    () => (step === 'restore' ? planRestore(matches, rules, { now, statusOf, actualStartOf: actualKickoffWallClock }) : undefined),
+    [step, matches, rules, now, statusOf],
   );
 
   const close = useCallback(() => setStep('closed'), []);
 
-  const save = useCallback((matches: Match[]) => {
-    onTournamentUpdate({ ...tournament, matches, updatedAt: new Date().toISOString() }, false);
+  const save = useCallback((next: Match[]) => {
+    onTournamentUpdate({ ...tournament, matches: next, updatedAt: new Date().toISOString() }, false);
   }, [onTournamentUpdate, tournament]);
 
   /** Speichert die Verschiebung (vor dem ersten Anpfiff aus dem Dialog, danach aus der Vorschau). */
   const confirm = useCallback(() => {
-    const request = requestOf(form, tournament.matches);
+    const request = requestOf(form, matches);
     if (request === undefined) {
       return;
     }
-    const fresh = planShift(tournament.matches, request, rules, { now: serverNow(), statusOf });
+    const fresh = planShift(matches, request, rules, { now: serverNow(), statusOf, actualStartOf: actualKickoffWallClock });
     if (fresh.error !== undefined || fresh.changes.length === 0) {
       setNow(serverNow());
       setStep('form');
@@ -167,7 +171,7 @@ export function useTimeShift({ tournament, view, onTournamentUpdate, showSuccess
     showSuccess(message);
     setStrip({ direction: form.direction, minutes, end: fresh.newEnd });
     setStep('closed');
-  }, [requestOf, form, tournament.matches, rules, serverNow, statusOf, save, kickedOff, t, showSuccess]);
+  }, [requestOf, form, matches, rules, serverNow, statusOf, save, kickedOff, t, showSuccess]);
 
   /** Weiter: vor dem ersten Anpfiff sofort, danach zur Vorschau. */
   const proceed = useCallback(() => {
@@ -181,14 +185,14 @@ export function useTimeShift({ tournament, view, onTournamentUpdate, showSuccess
   const openRestore = useCallback(() => setStep('restore'), []);
 
   const confirmRestore = useCallback(() => {
-    const fresh = planRestore(tournament.matches, rules, { now: serverNow(), statusOf });
+    const fresh = planRestore(matches, rules, { now: serverNow(), statusOf, actualStartOf: actualKickoffWallClock });
     if (fresh.changes.length > 0) {
       save(fresh.matches);
+      showSuccess(t('timeShift.toastRestored'));
     }
-    showSuccess(t('timeShift.toastRestored'));
     setStrip(null);
     setStep('closed');
-  }, [tournament.matches, rules, serverNow, statusOf, save, showSuccess, t]);
+  }, [matches, rules, serverNow, statusOf, save, showSuccess, t]);
 
   const dismissStrip = useCallback(() => setStrip(null), []);
 

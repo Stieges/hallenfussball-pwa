@@ -36,6 +36,11 @@ export interface ShiftContext {
   now: Date;
   /** Fachlicher Status je Spiel (Ansicht der Leitung inkl. Engine); ohne Angabe aus dem Stand der Turnierkopie. */
   statusOf?: (match: Match) => ViewMatchStatus;
+  /**
+   * Tatsächlicher Anpfiff eines laufenden Spiels (Wanduhr wie `scheduledTime`), wenn bekannt. Die Puffer-Warnung rechnet damit
+   * das Ende eines spät angepfiffenen Spiels; beendete Vorgänger zählen gar nicht (Zone 1: früher Anpfiff nach frühem Ende).
+   */
+  actualStartOf?: (match: Match) => Date | undefined;
 }
 
 export type ShiftStart = { kind: 'time'; at: Date } | { kind: 'match'; matchId: string };
@@ -184,8 +189,15 @@ function byTimeThenField(a: { to: Date; field: number }, b: { to: Date; field: n
 }
 
 /** Puffer-Warnungen: je Feld benachbarte Spiele, deren Abstand die Änderung neu unter die eingestellte Pause drückt. */
-function bufferWarnings(before: readonly Match[], after: readonly Match[], changed: ReadonlySet<string>, rules: ShiftTimingRules, status: (m: Match) => ViewMatchStatus): ShiftWarning[] {
+function bufferWarnings(before: readonly Match[], after: readonly Match[], changed: ReadonlySet<string>, rules: ShiftTimingRules, ctx: ShiftContext): ShiftWarning[] {
+  const status = statusFn(ctx);
   const oldById = new Map(before.map((m) => [m.id, m]));
+  // Ende des Vorgängers: läuft er, zählt der tatsächliche Anpfiff (wenn später als geplant), sonst die Planzeit
+  const startOf = (m: Match): number => {
+    const planned = timeOf(m) ?? 0;
+    const actual = classify(status(m)) === 'running' ? ctx.actualStartOf?.(m)?.getTime() : undefined;
+    return actual === undefined || Number.isNaN(actual) ? planned : Math.max(planned, actual);
+  };
   const usable = after.filter((m) => timeOf(m) !== undefined && classify(status(m)) !== 'cancelled');
   const fields = [...new Set(usable.map((m) => m.field))].sort((a, b) => a - b);
   const warnings: ShiftWarning[] = [];
@@ -197,12 +209,15 @@ function bufferWarnings(before: readonly Match[], after: readonly Match[], chang
       if (!changed.has(prev.id) && !changed.has(next.id)) {
         continue;
       }
-      const gap = ((timeOf(next) ?? 0) - (timeOf(prev) ?? 0)) / MINUTE_MS - matchDurationMinutes(prev, rules);
+      if (classify(status(prev)) === 'finished') {
+        continue; // beendet: das Feld ist frei, ein früheres Weiterspielen ist kein Konflikt (Zone 1, @ZP-096)
+      }
+      const gap = ((timeOf(next) ?? 0) - startOf(prev)) / MINUTE_MS - matchDurationMinutes(prev, rules);
       const required = breakMinutes(prev, rules);
       const prevOld = oldById.get(prev.id);
       const nextOld = oldById.get(next.id);
       const gapBefore = prevOld && nextOld
-        ? ((timeOf(nextOld) ?? 0) - (timeOf(prevOld) ?? 0)) / MINUTE_MS - matchDurationMinutes(prevOld, rules)
+        ? ((timeOf(nextOld) ?? 0) - startOf(prevOld)) / MINUTE_MS - matchDurationMinutes(prevOld, rules)
         : Number.POSITIVE_INFINITY;
       // Nur, was die Änderung neu verursacht (Record: „betreffen nur, was die Änderung neu verursacht“)
       if (gap < required && gap < gapBefore) {
@@ -322,7 +337,7 @@ export function planShift(matches: readonly Match[], request: ShiftRequest, rule
   return {
     changes,
     kept,
-    warnings: [...shortNoticeWarnings(changes, ctx.now), ...bufferWarnings(matches, next, new Set(targets.keys()), rules, status)],
+    warnings: [...shortNoticeWarnings(changes, ctx.now), ...bufferWarnings(matches, next, new Set(targets.keys()), rules, ctx)],
     matches: next,
     ...(oldEnd ? { oldEnd } : {}),
     ...(newEnd ? { newEnd } : {}),
@@ -370,7 +385,7 @@ export function planRestore(matches: readonly Match[], rules: ShiftTimingRules, 
   return {
     changes,
     kept,
-    warnings: [...shortNoticeWarnings(changes, ctx.now), ...bufferWarnings(matches, next, targets, rules, status)],
+    warnings: [...shortNoticeWarnings(changes, ctx.now), ...bufferWarnings(matches, next, targets, rules, ctx)],
     matches: next,
     ...(oldEnd ? { oldEnd } : {}),
     ...(newEnd ? { newEnd } : {}),

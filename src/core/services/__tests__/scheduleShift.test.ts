@@ -116,10 +116,13 @@ describe('B – Verschieben mit Vorschau (Hallencup Ost, 15:05)', () => {
     expect(matches.map((m) => hhmm(m.scheduledTime))).toEqual(snapshot);
   });
 
-  // Lücke @ZP-017 „neues Ende 17:35“: das voraussichtliche Ende des Records rechnet eine Reserve für Verlängerung und
-  // Strafstoßschießen ein, deren Höhe im Record Zeitrahmen und Fairness geparkt ist. Die App zeigt das Ende des letzten Spiels.
-  // Vorgeschlagener Befund C-ENDE-OHNE-RESERVE (Eintrag in BEFUNDE-HEUTIGER-CODE.md durch die Turnierleitung des Records);
-  // danach hier als it.fails mit Verweis aufnehmen.
+  // Befund C-ENDE-OHNE-RESERVE: das voraussichtliche Ende des Records rechnet eine Reserve für Verlängerung und
+  // Strafstoßschießen ein (17:25 vorher, 17:35 danach); ihre Höhe ist im Record Zeitrahmen und Fairness geparkt.
+  it.fails('@ZP-017 C-ENDE-OHNE-RESERVE neues Ende 17:35 (mit Reserve für Verlängerung und Strafstoßschießen)', () => {
+    const { matches, statusOf } = hallencup();
+    const plan = planShift(matches, { from: { kind: 'time', at: at('15:15') }, minutes: 10 }, RULES, { now: at('15:05'), statusOf });
+    expect(hhmm(plan.newEnd)).toBe('17:35');
+  });
 
   it('@ZP-062 ein unterbrochenes Spiel 11 („Ergebnis folgt“) behält seine Uhrzeit und zählt nicht mit', () => {
     const { matches, statusOf } = hallencup({ s11: 'unterbrochen' });
@@ -278,4 +281,59 @@ describe('E – Ursprüngliche Uhrzeiten wiederherstellen', () => {
       expect([hhmm(m.scheduledTime), hhmm(originalStartToShow(m))]).toEqual(['15:25', '15:15']);
     }
   });
+
+  it('@ZP-037 Gegenbeispiel: ein früh angepfiffenes Spiel mit ursprünglicher Uhrzeit in der Zukunft bleibt stehen', () => {
+    const base = hallencup();
+    const shifted = shiftSchedule(base.matches, { from: { kind: 'time', at: at('15:15') }, minutes: 10 }, RULES, { now: at('15:05'), statusOf: base.statusOf });
+    // Spiel 13 wurde um 15:06 früh angepfiffen und läuft; „ursprünglich 15:15“ liegt noch in der Zukunft
+    const later = hallencup({ s11: 'beendet', s12: 'beendet', s13: 'läuft' });
+    const plan = planRestore(shifted, RULES, { now: at('15:07'), statusOf: later.statusOf });
+    const s13 = plan.matches.find((m) => m.id === 's13')!;
+    expect([hhmm(s13.scheduledTime), hhmm(originalStartToShow(s13))]).toEqual(['15:25', '15:15']);
+    expect(plan.changes.map((c) => c.matchId)).not.toContain('s13');
+    expect(timeOf(plan.matches, 's14')).toBe('15:15');
+  });
+
+  it.fails('@ZP-036 C-ENDE-OHNE-RESERVE die Vorschau nennt „neues Ende 17:25“ (mit Reserve)', () => {
+    const { matches, statusOf } = hallencup();
+    const shifted = shiftSchedule(matches, { from: { kind: 'time', at: at('15:15') }, minutes: 10 }, RULES, { now: at('15:05'), statusOf });
+    expect(hhmm(planRestore(shifted, RULES, { now: at('15:06'), statusOf }).newEnd)).toBe('17:25');
+  });
 });
+
+describe('C – Puffer mit tatsächlichem Anpfiff und Abpfiff (Zone 1, @ZP-096)', () => {
+  const rules: ShiftTimingRules = { groupPhaseGameDuration: 9, groupPhaseBreakDuration: 1 };
+
+  it('@ZP-096 Grenze: bleibt die Lücke genau so lang wie die Pause, warnt die Vorschau nicht', () => {
+    const { matches, statusOf } = build([
+      { id: 'g1', nr: 1, zeit: '16:00', feld: 1, stand: 'läuft' },
+      { id: 'g2', nr: 2, zeit: '16:11', feld: 1, stand: 'geplant' },
+    ]);
+    const plan = planShift(matches, { from: { kind: 'match', matchId: 'g2' }, minutes: -1 }, rules, { now: at('16:02'), statusOf });
+    expect(timeOf(plan.matches, 'g2')).toBe('16:10');
+    expect(plan.warnings.filter((w) => w.kind === 'buffer')).toEqual([]);
+  });
+
+  it('@ZP-096 Gegenbeispiel: ist das vorige Spiel schon beendet, warnt die Vorschau nicht zum Puffer', () => {
+    const { matches, statusOf } = build([
+      { id: 'f1', nr: 1, zeit: '16:00', feld: 1, stand: 'beendet' },
+      { id: 'f2', nr: 2, zeit: '16:10', feld: 1, stand: 'geplant' },
+    ]);
+    const plan = planShift(matches, { from: { kind: 'match', matchId: 'f2' }, minutes: -5 }, rules, { now: at('16:04'), statusOf });
+    expect(timeOf(plan.matches, 'f2')).toBe('16:05');
+    expect(plan.warnings.filter((w) => w.kind === 'buffer')).toEqual([]);
+  });
+
+  it('@ZP-096 ein spät angepfiffenes laufendes Spiel zählt mit seinem tatsächlichen Anpfiff', () => {
+    const { matches, statusOf } = build([
+      { id: 'l1', nr: 1, zeit: '16:00', feld: 1, stand: 'läuft' },
+      { id: 'l2', nr: 2, zeit: '16:15', feld: 1, stand: 'geplant' },
+    ]);
+    const actualStartOf = (m: Match) => (m.id === 'l1' ? at('16:05') : undefined);
+    const plan = planShift(matches, { from: { kind: 'match', matchId: 'l2' }, minutes: -1 }, rules, { now: at('16:06'), statusOf, actualStartOf });
+    expect(plan.warnings.filter((w) => w.kind === 'buffer')).toEqual([
+      { kind: 'buffer', field: 1, before: 1, after: 2, gapMinutes: 0, requiredMinutes: 1 },
+    ]);
+  });
+});
+

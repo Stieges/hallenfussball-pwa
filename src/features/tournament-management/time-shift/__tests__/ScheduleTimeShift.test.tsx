@@ -23,6 +23,8 @@ vi.mock('../../../../components/dialogs/PDFExportDialog', () => ({ PDFExportDial
 
 const DAY = '2026-11-28';
 const at = (hhmm: string) => new Date(`${DAY}T${hhmm}:00`);
+/** „jetzt“ als echter Zeitpunkt: Wanduhr in Europe/Berlin (28.11. = MEZ, UTC+1), unabhängig von der Zeitzone des Testlaufs */
+const berlin = (hhmm: string) => new Date(`${DAY}T${hhmm}:00+01:00`);
 const hhmm = (d: Date | undefined) => (d === undefined ? undefined : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
 
 function nikolaus(stati: MatchStatus[]): Tournament {
@@ -72,13 +74,13 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it('@ZP-094 der Spielplan bietet „Zeiten verschieben“ an', () => {
-    vi.setSystemTime(at('11:15'));
+    vi.setSystemTime(berlin('11:15'));
     renderShift(nikolaus(LIVE));
     expect(screen.getByTestId('schedule-shift-button')).toHaveTextContent('Zeiten verschieben');
   });
 
   it('@ZP-017/@ZP-018 ab dem ersten Anpfiff erst Vorschau; „Abbrechen“ ändert nichts', () => {
-    vi.setSystemTime(at('11:15'));
+    vi.setSystemTime(berlin('11:15'));
     const { onTournamentUpdate } = renderShift(nikolaus(LIVE));
     fireEvent.click(screen.getByTestId('schedule-shift-button'));
     fireEvent.click(screen.getByTestId('time-shift-proceed'));
@@ -90,7 +92,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   });
 
   it('@ZP-012/@ZP-016 bestätigt verschiebt das geplante Spiel, das laufende und die beendeten bleiben', () => {
-    vi.setSystemTime(at('11:15'));
+    vi.setSystemTime(berlin('11:15'));
     const { onTournamentUpdate } = renderShift(nikolaus(LIVE));
     fireEvent.click(screen.getByTestId('schedule-shift-button'));
     fireEvent.change(screen.getByTestId('time-shift-from-time'), { target: { value: '11:00' } });
@@ -102,7 +104,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   });
 
   it('@ZP-019 vor dem ersten Anpfiff gilt „Übernehmen“ sofort, ohne Vorschau', () => {
-    vi.setSystemTime(at('08:30'));
+    vi.setSystemTime(berlin('08:30'));
     const { onTournamentUpdate } = renderShift(nikolaus(BEFORE));
     fireEvent.click(screen.getByTestId('schedule-shift-button'));
     expect(screen.getByTestId('time-shift-proceed')).toHaveTextContent('Übernehmen');
@@ -112,7 +114,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   });
 
   it('@ZP-089 vor dem ersten Anpfiff kurzfristig vorziehen: Zusammenfassung und Warnung ohne Sperre', () => {
-    vi.setSystemTime(at('09:40'));
+    vi.setSystemTime(berlin('09:40'));
     renderShift(nikolaus(BEFORE));
     fireEvent.click(screen.getByTestId('schedule-shift-button'));
     fireEvent.click(screen.getByTestId('time-shift-direction-earlier'));
@@ -123,7 +125,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   });
 
   it('@ZP-057 Vorziehen in die Vergangenheit nimmt die App nicht an', () => {
-    vi.setSystemTime(at('11:15'));
+    vi.setSystemTime(berlin('11:15'));
     const { onTournamentUpdate } = renderShift(nikolaus(LIVE));
     fireEvent.click(screen.getByTestId('schedule-shift-button'));
     fireEvent.click(screen.getByTestId('time-shift-direction-earlier'));
@@ -134,7 +136,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   });
 
   it('@ZP-098 „Ab hier verschieben“ am geplanten Spiel öffnet den Dialog mit „ab Spiel 8“', () => {
-    vi.setSystemTime(at('11:15'));
+    vi.setSystemTime(berlin('11:15'));
     renderShift(nikolaus(LIVE));
     fireEvent.click(within(screen.getByTestId('row-m8')).getByTestId('match-menu-m8'));
     fireEvent.click(screen.getByTestId('ab-hier-verschieben'));
@@ -143,7 +145,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   });
 
   it('@ZP-098 am laufenden Spiel ist „Ab hier verschieben“ nicht wählbar, mit Grund', () => {
-    vi.setSystemTime(at('11:15'));
+    vi.setSystemTime(berlin('11:15'));
     renderShift(nikolaus(LIVE));
     fireEvent.click(screen.getByTestId('match-menu-m7'));
     const item = screen.getByTestId('ab-hier-verschieben');
@@ -155,7 +157,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
   });
 
   it('@ZP-036/@ZP-089 nach dem Verschieben Streifen mit „Rückgängig …“; Wiederherstellen setzt die Zeiten zurück', () => {
-    vi.setSystemTime(at('11:15'));
+    vi.setSystemTime(berlin('11:15'));
     const { onTournamentUpdate, rerenderWith } = renderShift(nikolaus(LIVE));
     fireEvent.click(screen.getByTestId('schedule-shift-button'));
     fireEvent.click(screen.getByTestId('time-shift-proceed'));
