@@ -8,7 +8,7 @@
 // Schema/Template Examples - Vollständiges Turnier-Schema
 export const JSON_TEMPLATE = {
   // === METADATEN (Step 3) ===
-  title: "TSV Musterstadt Hallencup 2025",
+  title: "TSV Musterstadt Hallencup",
   organizer: "TSV Musterstadt e.V.",
   ageClass: "U12",
   date: "2025-03-15",
