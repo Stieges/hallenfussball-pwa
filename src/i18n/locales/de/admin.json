@@ -338,7 +338,7 @@
     "contentVisibility": "Inhalts-Sichtbarkeit",
     "tournamentVisibility": "Turnier-Sichtbarkeit",
     "private": "🔒 Privat",
-    "privateDesc": "Nur für eingeloggte Turnierleitung sichtbar. Kein Public View.",
+    "privateDesc": "Nicht öffentlich: nur Turnierleitung, Helfer und Monitore sehen es. Kein Public View.",
     "shareable": "🔗 Mit Link teilbar",
     "shareableDesc": "Jeder mit dem Link kann zuschauen. Nicht in Suchmaschinen auffindbar.",
     "shareCode": "Share-Code",

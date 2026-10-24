@@ -572,12 +572,16 @@
     "button": "Festlegen",
     "loading": "Wird festgelegt …",
     "success": "Turnier erfolgreich festgelegt.",
-    "explanationPrivate": "Der Spielplan wird fest. Danach ist das Turnier nur für die eingeloggte Turnierleitung sichtbar.",
-    "explanationPublic": "Der Spielplan wird fest. Danach kann jeder mit dem Link zuschauen."
+    "explanationPrivate": "Der Spielplan wird festgelegt. Danach ist das Turnier nicht öffentlich, nur Turnierleitung, Helfer und Monitore sehen es.",
+    "explanationPublic": "Der Spielplan wird festgelegt. Danach kann jeder mit dem Link zuschauen.",
+    "explanationLocal": "Der Spielplan wird festgelegt. Das Turnier bleibt nur auf diesem Gerät.",
+    "explanationChangeable": "Teamnamen und Ergebnisse kannst du danach noch ändern, die Struktur nur bis zum ersten Anpfiff.",
+    "explanationOffline": "Der Spielplan wird festgelegt. Ohne Netz bleibt das Turnier vorerst auf diesem Gerät."
   },
   "preview": {
     "hintLabel": "Hinweis:",
-    "hintBody": "Dies ist eine Vorschau deines Turniers. Solange das Turnier nicht festgelegt ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan jetzt als PDF speichern oder zurück zur Bearbeitung gehen."
+    "hintBody": "Dies ist eine Vorschau deines Turniers. Solange das Turnier nicht festgelegt ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan jetzt als PDF speichern oder zurück zur Bearbeitung gehen.",
+    "edit": "Bearbeiten"
   },
   "schedule": {
     "incomplete_one": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiel passt nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen.",
