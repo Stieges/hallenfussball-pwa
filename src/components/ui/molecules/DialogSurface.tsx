@@ -76,6 +76,15 @@ const footerStyle = (isSheet: boolean): CSSProperties => ({
   paddingBottom: isSheet ? `calc(${cssVars.spacing.md} + env(safe-area-inset-bottom, 0px))` : cssVars.spacing.md,
 });
 
+/**
+ * Steht irgendein modaler Dialog offen (jede Rolle: `dialog` und `alertdialog`, etwa die Abpfiff-Rückfrage)? Die Tastenkürzel des Cockpits
+ * schweigen dann (@SL-142, Plan Cockpit v2 A4-1). Die Markierung setzt nur dieser Baustein, deshalb liegt die Abfrage hier.
+ */
+// eslint-disable-next-line react-refresh/only-export-components -- reine Abfrage, hängt an der Markierung dieses Bausteins
+export function istModalerDialogOffen(): boolean {
+  return typeof document !== 'undefined' && document.querySelector('[aria-modal="true"]') !== null;
+}
+
 export interface DialogSurfaceProps {
   /** Ist der Dialog offen? Geschlossen rendert der Baustein nichts. */
   isOpen: boolean;

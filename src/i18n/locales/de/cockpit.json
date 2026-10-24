@@ -581,6 +581,27 @@
     "goldenGoal": "$t(sport:phases.goldenGoal)",
     "strafstoss": "$t(sport:events.penaltyShootout)"
   },
+  "tasten": {
+    "titel": "Tastenkürzel",
+    "leertaste": "Leertaste",
+    "uhr": "Uhr anhalten, beim nächsten Druck läuft sie weiter",
+    "torLinks": "Tor für das links angezeigte Team",
+    "torRechts": "Tor für das rechts angezeigte Team",
+    "foulLinks": "Foul für das links angezeigte Team",
+    "foulRechts": "Foul für das rechts angezeigte Team",
+    "rueckgaengigStrg": "Strg+Z",
+    "rueckgaengigCmd": "Cmd+Z",
+    "rueckgaengig": "letzten Eintrag zurücknehmen",
+    "uebersicht": "diese Übersicht zeigen",
+    "eingabefeld": "Beim Tippen in ein Eingabefeld, etwa die Rückennummer, lösen die Kürzel nichts aus. Im offenen Nummern-Dialog zählen Ziffern als Nummer.",
+    "abpfiff": "Abpfiff: den Knopf „Abpfiff“ mit Tab wählen und Leertaste oder Eingabetaste etwa eine Sekunde halten.",
+    "abschalten": "Die Kürzel lassen sich in den Einstellungen des Cockpits abschalten.",
+    "schliessen": "Schließen",
+    "schalter": {
+      "label": "Tastenkürzel",
+      "hinweis": "Tasten wie Leertaste, 1, 2, F, J und Strg+Z leiten das Spiel am Laptop. Gilt nur für dieses Gerät."
+    }
+  },
   "rahmen": {
     "zurueck": "Zurück",
     "zurueckAria": "Zurück zum Spielplan",

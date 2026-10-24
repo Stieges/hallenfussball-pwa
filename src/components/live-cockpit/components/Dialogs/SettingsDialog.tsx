@@ -3,6 +3,7 @@ import { cssVars, dialogWidths } from '../../../../design-tokens';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { MatchCockpitSettingsPanel } from '../../../match-settings/MatchCockpitSettingsPanel';
 import type { MatchCockpitSettings } from '../../../../types/tournament';
+import { TastenkuerzelSchalter } from './TastenkuerzelSchalter';
 
 interface SettingsDialogProps {
     isOpen: boolean;
@@ -111,6 +112,7 @@ export function SettingsDialog({
                         onTestSound={onTestSound}
                         readOnly={readOnly}
                     />
+                    <TastenkuerzelSchalter />
                 </div>
 
                 <div style={footerStyle}>

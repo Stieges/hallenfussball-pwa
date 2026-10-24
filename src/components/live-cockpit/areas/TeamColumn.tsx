@@ -13,6 +13,7 @@ import { Button } from '../../ui/Button';
 import { MatchIcons } from '../../ui/IconsMatch';
 import type { TeamColumnModel, TeamKnoepfe } from '../model/toTeamColumnModel';
 import { TeamKopf } from './TeamKopf';
+import { useFeinerZeiger } from '../hooks/useFeinerZeiger';
 
 export interface TeamColumnProps {
   model: TeamColumnModel;
@@ -25,6 +26,8 @@ export interface TeamColumnProps {
   kompakt?: boolean;
   /** Ab 1024 px größere Schrift im Kopf. */
   breit?: boolean;
+  /** Tastenkürzel dieser Seite (@SL-153): Tor `1`/`2`, Foul `F`/`J`; ohne Angabe (Schalter aus, kein Laptop) weder Hinweis noch `aria-keyshortcuts`. */
+  taste?: { tor: string; foul: string };
 }
 
 // Beide Spalten teilen sich die Zeilen der Spaltenreihe (Subgrid): gleich hoch laufen Kopf, Tor und Knopfreihe, ohne dass der Kopf Platz für drei Namenszeilen
@@ -34,10 +37,10 @@ const zaehlerStil: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssV
 // Volle Fläche in der Primärfarbe, Schrift in „auf Primär“ (Kontrast ≥ 4,5 : 1, VISUAL-DESIGN § 5), kein Verlauf
 const torStil = (breit: boolean): CSSProperties => ({
   // Laptop (Mockup): doppelte Mindesthöhe, damit das Tor die größte Fläche der Spalte ist; sonst Haupttasten-Größe
-  minHeight: breit ? cssVars.sizing.cockpitTorBreit : cssVars.touchTargets.primary, width: '100%', background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
+  position: 'relative', minHeight: breit ? cssVars.sizing.cockpitTorBreit : cssVars.touchTargets.primary, width: '100%', background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
 });
 const knopfStil = (kompakt: boolean): CSSProperties => ({
-  minHeight: cssVars.touchTargets.minimum, flexDirection: kompakt ? 'row' : 'column', gap: kompakt ? cssVars.spacing.xs : 0,
+  position: 'relative', minHeight: cssVars.touchTargets.minimum, flexDirection: kompakt ? 'row' : 'column', gap: kompakt ? cssVars.spacing.xs : 0,
   padding: kompakt ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0,
 });
 const markeStil = (steht: boolean): CSSProperties => ({
@@ -52,8 +55,17 @@ function Hinweis({ children, testId }: { children: ReactNode; testId?: string })
   return <div style={hinweisStil} data-testid={testId}>{children}</div>;
 }
 
-export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false }: TeamColumnProps): ReactElement {
+// Kürzel-Hinweis oben rechts im Knopf (Mockup „haupt-720“): nur mit Maus oder Trackpad, Tablet und Handy haben keine Tasten (@SL-188)
+const kbdChipStil = (aufPrimaer: boolean): CSSProperties => ({
+  position: 'absolute', top: cssVars.spacing.xs, right: cssVars.spacing.xs, minWidth: cssVars.spacing.lg, boxSizing: 'border-box', textAlign: 'center',
+  padding: `0 ${cssVars.spacing.xs}`, border: `${cssVars.borderWidth.thin} solid ${aufPrimaer ? 'currentColor' : cssVars.colors.borderControl}`,
+  borderRadius: cssVars.borderRadius.sm, fontFamily: 'inherit', fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold,
+  color: aufPrimaer ? cssVars.colors.onPrimary : cssVars.colors.textSecondary,
+});
+
+export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false, taste }: TeamColumnProps): ReactElement {
   const { t } = useTranslation('cockpit');
+  const chips = useFeinerZeiger() && taste !== undefined;
   const { seite, name, fouls, strafen, kartenArten } = model;
   const foulText = fouls.grenze === null
     ? t('spalte.foulsOhneGrenze', { zaehlt: fouls.zaehlt })
@@ -74,13 +86,14 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       </div>
       {knoepfe.tor && (
         <Button size="lg" icon={<MatchIcons.Ball />} style={torStil(breit)} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
-          aria-label={t('spalte.aria.tor', { team: name })}>{t('spalte.tor')}</Button>
+          aria-keyshortcuts={taste?.tor} aria-label={t('spalte.aria.tor', { team: name })}>{t('spalte.tor')}{chips && <kbd aria-hidden="true" data-testid={`tor-taste-${seite}`} style={kbdChipStil(true)}>{taste.tor}</kbd>}</Button>
       )}
       <div style={reiheStil} data-testid={`team-row3-${seite}`}>
         {knoepfe.foul && (
           <Button variant="secondary" icon={<MatchIcons.Flag />} style={knopfStil(kompakt)} data-testid={`foul-button-${seite}`} onClick={onFoul}
-            aria-label={t('spalte.aria.foul', { team: name, zaehler: foulText })}>
+            aria-keyshortcuts={taste?.foul} aria-label={t('spalte.aria.foul', { team: name, zaehler: foulText })}>
             <span data-testid={`team-fouls-${seite}`}>{foulText}</span>
+            {chips && <kbd aria-hidden="true" data-testid={`foul-taste-${seite}`} style={kbdChipStil(false)}>{taste.foul}</kbd>}
           </Button>
         )}
         {zeigeStrafe && (

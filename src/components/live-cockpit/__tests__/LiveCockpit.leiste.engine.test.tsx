@@ -80,7 +80,18 @@ describe('Daumenleiste am Handy: fünf Plätze (Entscheidung A2)', () => {
     render(<Harness />); await starte(user);
     expect(screen.getByTestId('match-pause-button')).toHaveAttribute('aria-keyshortcuts', 'Space');
     expect(screen.getByTestId('match-undo-button')).toHaveAttribute('aria-keyshortcuts', 'Control+Z Meta+Z');
-    expect(within(screen.getByTestId('match-pause-button')).getByText('Leertaste')).toBeInTheDocument();
+    // Die Hinweise zeigt das Cockpit nur mit Maus oder Trackpad (@SL-188, Plan Cockpit v2 K1): `useFeinerZeiger` meldet in jsdom keinen feinen Zeiger
+    expect(within(screen.getByTestId('match-pause-button')).queryByText('Leertaste')).toBeNull();
+  });
+
+  it('@SL-188 mit Maus oder Trackpad steht der Hinweis „Leertaste“ auf dem Knopf, ohne Maus (Tablet quer) nicht', async () => {
+    const alt = window.matchMedia;
+    window.matchMedia = ((q: string) => ({ matches: q.includes('hover: hover'), media: q, addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn(), onchange: null, dispatchEvent: vi.fn() }));
+    try {
+      const user = userEvent.setup();
+      render(<Harness />); await starte(user);
+      expect(within(screen.getByTestId('match-pause-button')).getByText('Leertaste')).toBeInTheDocument();
+    } finally { window.matchMedia = alt; }
   });
 
   it('@SL-153 Gegenbeispiel: am Handy steht der Hinweis „Leertaste“ nicht auf dem Knopf, der Name bleibt', async () => {

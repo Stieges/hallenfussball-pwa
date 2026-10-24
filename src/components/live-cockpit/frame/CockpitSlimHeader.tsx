@@ -54,7 +54,9 @@ const nameStil: CSSProperties = {
 export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
   const { t } = useTranslation('cockpit');
   const navigate = useNavigate();
-  const schmal = useBreakpoint().isMobile;
+  const breitePruefung = useBreakpoint();
+  const schmal = breitePruefung.isMobile;
+  const breit = p.breit ?? breitePruefung.isDesktop;
   return (
     <header style={kopfStil(schmal)} data-testid="cockpit-slim-header">
       <button type="button" style={knopfStil} data-testid="cockpit-zurueck" aria-label={t('rahmen.zurueckAria')} onClick={() => { void navigate(buildTournamentTabPath(p.tournamentId, 'schedule')); }}>
@@ -64,7 +66,7 @@ export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
         <span style={nameStil} data-testid="cockpit-turniername">{p.turnierName}</span>
         <FeldWahl felder={p.felder} feld={p.feld} onFeld={p.onFeld} halter={p.halter} />
       </div>
-      {p.breit === true && p.onTastenkuerzel && (
+      {breit && p.onTastenkuerzel && (
         <button type="button" style={knopfStil} data-testid="cockpit-tastenkuerzel" onClick={p.onTastenkuerzel}>{t('rahmen.tastenkuerzel')}</button>
       )}
       {p.klaerung}

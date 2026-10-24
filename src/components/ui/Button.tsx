@@ -14,6 +14,8 @@ interface ButtonProps {
   style?: CSSProperties;
   /** Accessible label for screen readers (required for icon-only buttons) */
   'aria-label'?: string;
+  /** Tastenkürzel des Knopfs für Hilfstechnik, z. B. „1“ (Cockpit, @SL-153) */
+  'aria-keyshortcuts'?: string;
   /** Tooltip (z. B. Klartext zu einem reinen Symbol-Knopf, @OB-021) */
   title?: string;
   /** Button type attribute */
@@ -57,6 +59,7 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false,
   style = {},
   'aria-label': ariaLabel,
+  'aria-keyshortcuts': ariaKeyshortcuts,
   title,
   type = 'button',
   pressEffect = true,
@@ -179,6 +182,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={isDisabled}
       style={combinedStyles}
       aria-label={ariaLabel}
+      aria-keyshortcuts={ariaKeyshortcuts}
       title={title}
       aria-disabled={isDisabled}
       aria-busy={loading}
