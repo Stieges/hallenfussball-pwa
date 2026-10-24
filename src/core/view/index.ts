@@ -33,4 +33,4 @@ export {
 } from './originText';
 export { effectiveGroupCount, effectiveFields, effectiveFieldCount, type EffectiveField, type TournamentFactsInput } from './tournamentFacts';
 
-export { ageGroupsFor, parseAgeClass, composeAgeClass, ageClassText, joinMeta, AGE_LEVELS, type AgeGroup, type AgeGroupId, type AgeLevel, type ParsedAgeClass } from './ageClass';
+export { AGE_GROUPS, parseAgeClass, composeAgeClass, ageClassText, joinMeta, AGE_LEVELS, type AgeGroup, type AgeGroupId, type AgeLevel, type ParsedAgeClass } from './ageClass';

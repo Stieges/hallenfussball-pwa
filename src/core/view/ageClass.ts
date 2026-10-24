@@ -6,7 +6,7 @@
  * Leer bedeutet „keine Angabe“: dann zeigt keine Stelle etwas an, auch kein Trennzeichen davor (@W2B-022).
  */
 
-export type AgeGroupId = 'youth' | 'uClasses' | 'adults' | 'general';
+export type AgeGroupId = 'youth' | 'uClasses' | 'adults';
 
 export interface AgeGroup {
   id: AgeGroupId;
@@ -20,21 +20,14 @@ export const AGE_LEVELS: readonly AgeLevel[] = [1, 2, 3];
 
 const YOUTH: readonly string[] = ['G-Jugend', 'F-Jugend', 'E-Jugend', 'D-Jugend', 'C-Jugend', 'B-Jugend', 'A-Jugend'];
 
-const FOOTBALL_GROUPS: readonly AgeGroup[] = [
+/** Alle Turniere nutzen die Fußball-Liste; ältere Werte anderer Sportarten (z. B. „Mixed“) stehen unter „Sonstiges …“. */
+const GROUPS: readonly AgeGroup[] = [
   { id: 'youth', entries: YOUTH, hasLevel: true },
   { id: 'uClasses', entries: ['U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17', 'U19'], hasLevel: false },
   { id: 'adults', entries: ['Herren', 'Frauen', 'Senioren', 'Ü32', 'Ü40', 'Ü50'], hasLevel: false },
 ];
 
-/** Andere Sportarten behalten ihre eigene, kürzere Liste (bisher `getOtherAgeClassOptions`). */
-const OTHER_GROUPS: readonly AgeGroup[] = [
-  { id: 'uClasses', entries: ['U8', 'U10', 'U12', 'U14', 'U16', 'U18'], hasLevel: false },
-  { id: 'general', entries: ['Jugend', 'Erwachsene', 'Mixed'], hasLevel: false },
-];
-
-export function ageGroupsFor(sport: 'football' | 'other' | undefined): readonly AgeGroup[] {
-  return sport === 'other' ? OTHER_GROUPS : FOOTBALL_GROUPS;
-}
+export const AGE_GROUPS: readonly AgeGroup[] = GROUPS;
 
 export type ParsedAgeClass =
   | { kind: 'none' }
@@ -51,17 +44,16 @@ export function composeAgeClass(entry: string, level: AgeLevel | null): string {
   return `${entry.slice(0, 1)}${level}-Jugend`;
 }
 
-export function parseAgeClass(value: string | undefined, sport: 'football' | 'other' | undefined): ParsedAgeClass {
+export function parseAgeClass(value: string | undefined): ParsedAgeClass {
   const text = (value ?? '').trim();
   if (text === '') {
     return { kind: 'none' };
   }
-  const groups = ageGroupsFor(sport);
   const leveled = LEVEL_PATTERN.exec(text);
-  if (leveled && groups.some((group) => group.hasLevel)) {
+  if (leveled) {
     return { kind: 'entry', group: 'youth', entry: `${leveled[1]}-Jugend`, level: Number(leveled[2]) as AgeLevel };
   }
-  for (const group of groups) {
+  for (const group of GROUPS) {
     if (group.entries.includes(text)) {
       return { kind: 'entry', group: group.id, entry: text, level: null };
     }

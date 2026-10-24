@@ -62,10 +62,16 @@ describe('@W2B-022 Altersklasse startet leer', () => {
 });
 
 describe('@W2B-010 @W2B-023 Auswahl im Schritt „Stammdaten“ (echte Texte)', () => {
-  it('Jugend: E-Jugend dann Stufe 2 schreibt „E-Jugend“ und „E2-Jugend“ ins Turnier', () => {
+  it('Jugend: E-Jugend wählen schreibt „E-Jugend“ ins Turnier', () => {
     const onUpdate = schritt3('');
     fireEvent.click(screen.getByTestId('wizard-age-class-chip-E-Jugend'));
     expect(onUpdate).toHaveBeenLastCalledWith('ageClass', 'E-Jugend');
+  });
+
+  it('@W2B-023 Stufe 2 bei vorhandener E-Jugend schreibt „E2-Jugend“ ins Turnier', () => {
+    const onUpdate = schritt3('E-Jugend');
+    fireEvent.click(screen.getByTestId('wizard-age-class-level-2'));
+    expect(onUpdate).toHaveBeenLastCalledWith('ageClass', 'E2-Jugend');
   });
 
   it('@W2B-025 die zuletzt gewählte Schreibweise ist beim nächsten Turnier vorgewählt, das Feld bleibt leer', () => {

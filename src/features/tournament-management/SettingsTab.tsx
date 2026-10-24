@@ -414,7 +414,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <AgeClassPicker
                   value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
                   onChange={(v) => handleUpdate('ageClass', v)}
-                  sport={tournament.sport}
                   testId="settings-age-class"
                 />
               </div>

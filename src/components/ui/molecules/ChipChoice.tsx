@@ -26,11 +26,14 @@ export interface ChipChoiceProps {
 }
 
 const rowStyle: CSSProperties = {
+  // Bezugspunkt für `offsetLeft` der Chips beim Zentrieren des gewählten Chips
+  position: 'relative',
   display: 'flex',
   gap: cssVars.spacing.sm,
   overflowX: 'auto',
   padding: `${cssVars.spacing.xs} 0`,
-  scrollbarWidth: 'none',
+  // Schmale Leiste bleibt sichtbar: am Desktop sind sonst die hinteren Chips ohne Trackpad nicht erreichbar
+  scrollbarWidth: 'thin',
   WebkitOverflowScrolling: 'touch',
 };
 
@@ -39,8 +42,10 @@ function chipStyle(selected: boolean): CSSProperties {
     flex: '0 0 auto',
     display: 'inline-flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: cssVars.spacing.xs,
     minHeight: cssVars.touchTargets.comfortable,
+    minWidth: cssVars.touchTargets.comfortable,
     padding: `0 ${cssVars.spacing.md}`,
     border: `${cssVars.borderWidth.thin} solid ${selected ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,

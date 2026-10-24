@@ -375,8 +375,6 @@
     "tournamentNamePlaceholder": "Vereinsname Hallencup",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
-    "ageClass": "Altersklasse",
-    "ageClassPlaceholder": "Suchen oder auswählen...",
     "locationAndContact": "Ort & Kontakt",
     "dateAndTime": "Datum & Zeit",
     "startDate": "Startdatum",

@@ -61,7 +61,6 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         <AgeClassPicker
           value={formData.ageClass ?? ''}
           onChange={(v) => onUpdate('ageClass', v)}
-          sport={formData.sport ?? 'football'}
           testId="wizard-age-class"
         />
       </div>

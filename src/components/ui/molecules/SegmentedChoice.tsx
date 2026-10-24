@@ -24,7 +24,7 @@ export interface SegmentedChoiceProps<T extends string> {
   disabled?: boolean;
   /** `data-testid` des Behälters; die Knöpfe heißen `<testId>-<value>`. */
   testId?: string;
-  /** Kleinere Schrift ohne inneren Rand, damit längere Wörter (z. B. „Erwachsene“) auf dem Handy nie umbrechen. */
+  /** Kleinere Schrift, damit längere Wörter (z. B. „Erwachsene“) auf dem Handy nie umbrechen. */
   compact?: boolean;
 }
 
@@ -56,14 +56,14 @@ function optionStyle(selected: boolean, disabled: boolean, connected: boolean, f
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: cssVars.touchTargets.primary,
-    padding: compact ? 0 : `0 ${cssVars.spacing.xs}`,
+    padding: `0 ${cssVars.spacing.xs}`,
     border: connected ? 0 : `${cssVars.borderWidth.thin} solid ${selected ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderLeft: connected && !first ? `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}` : undefined,
     borderRadius: connected ? 0 : cssVars.borderRadius.md,
     background: selected ? cssVars.colors.primary : cssVars.colors.background,
     color: selected ? cssVars.colors.onPrimary : disabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     fontFamily: 'inherit',
-    fontSize: compact ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
+    fontSize: compact ? cssVars.fontSizes.sm : cssVars.fontSizes.lg,
     fontWeight: selected ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
     textAlign: 'center',
     // verbunden darf die Beschriftung umbrechen (nie kürzen), einzeln bleibt sie einzeilig in umbrechenden Zeilen

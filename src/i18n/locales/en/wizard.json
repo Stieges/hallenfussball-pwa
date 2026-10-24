@@ -76,8 +76,6 @@
     "tournamentNamePlaceholder": "Club Name Indoor Cup",
     "organizer": "Organizer (optional)",
     "organizerPlaceholder": "My Club",
-    "ageClass": "Age Group",
-    "ageClassPlaceholder": "Search or select...",
     "startDate": "Start Date",
     "startDatePastError": "Start date cannot be in the past",
     "startTime": "Start Time",
@@ -524,22 +522,6 @@
       "two": "2 (two halves)",
       "three": "3 periods",
       "four": "4 periods"
-    },
-    "ageClass": {
-      "gJugend": "U7",
-      "fJugend": "U9",
-      "eJugend": "U10/U11",
-      "dJugend": "U12/U13",
-      "cJugend": "U14/U15",
-      "bJugend": "U16/U17",
-      "aJugend": "U18/U19",
-      "senioren": "Seniors",
-      "herren": "Men",
-      "damen": "Women",
-      "ah": "Veterans",
-      "jugend": "Youth",
-      "erwachsene": "Adults",
-      "mixed": "Mixed"
     }
   },
   "ageClassPicker": {
@@ -554,8 +536,7 @@
     "groups": {
       "youth": "Youth",
       "uClasses": "U-classes",
-      "adults": "Adults",
-      "general": "General"
+      "adults": "Adults"
     }
   },
   "replan": {

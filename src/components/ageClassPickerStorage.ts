@@ -9,7 +9,7 @@ const KEY = 'hallenfussball.ageClassGroup';
 export function readLastAgeGroup(): AgeGroupId | null {
   try {
     const stored = window.localStorage.getItem(KEY);
-    return stored === 'youth' || stored === 'uClasses' || stored === 'adults' || stored === 'general' ? stored : null;
+    return stored === 'youth' || stored === 'uClasses' || stored === 'adults' ? stored : null;
   } catch {
     return null;
   }

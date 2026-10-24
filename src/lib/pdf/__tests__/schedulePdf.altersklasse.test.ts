@@ -12,8 +12,8 @@ async function kopfTexte(ageClass: string): Promise<string[]> {
 }
 
 describe('Altersklasse im PDF', () => {
-  it('@W2B-022 leer: keine Zeile „Altersklasse“ und kein Trennzeichen am Anfang eines Textes', async () => {
-    const texte = await kopfTexte('');
+  it.each(['', '   '])('@W2B-022 „%s“: keine Zeile „Altersklasse“ und kein Trennzeichen am Anfang eines Textes (auch im Kurzkopf der Folgeseiten)', async wert => {
+    const texte = await kopfTexte(wert);
     expect(texte).not.toContain('Altersklasse');
     expect(texte.filter(s => /^[·•|–-]\s/.test(s))).toEqual([]);
   });

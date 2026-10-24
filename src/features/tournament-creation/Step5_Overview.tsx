@@ -69,7 +69,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         <div className={styles.infoGrid}>
           {ageClassText(formData.ageClass) !== '' && (
             <div className={styles.infoBox} data-testid="step5-age-class">
-              <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
+              <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.xs }}>
                 {t('step5.ageClass')}
               </div>
               <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.primary }}>

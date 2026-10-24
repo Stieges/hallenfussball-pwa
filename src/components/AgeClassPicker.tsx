@@ -12,7 +12,7 @@ import { ChipChoice, InlineNotice, SegmentedChoice } from './ui/molecules';
 import {
   AGE_LEVELS,
   ageClassText,
-  ageGroupsFor,
+  AGE_GROUPS,
   composeAgeClass,
   parseAgeClass,
   type AgeGroupId,
@@ -23,25 +23,38 @@ import { readLastAgeGroup, writeLastAgeGroup } from './ageClassPickerStorage';
 export interface AgeClassPickerProps {
   value: string;
   onChange: (value: string) => void;
-  sport?: 'football' | 'other';
   testId?: string;
 }
 
 const CUSTOM_CHIP = 'custom';
 const CUSTOM_MAX_LENGTH = 40;
 
-export function AgeClassPicker({ value, onChange, sport = 'football', testId = 'age-class' }: AgeClassPickerProps) {
+export function AgeClassPicker({ value, onChange, testId = 'age-class' }: AgeClassPickerProps) {
   const { t } = useTranslation('wizard');
-  const groups = ageGroupsFor(sport);
-  const parsed = parseAgeClass(value, sport);
+  const groups = AGE_GROUPS;
+  const parsed = parseAgeClass(value);
 
   const [group, setGroup] = useState<AgeGroupId>(() => {
     const preferred = parsed.kind === 'entry' ? parsed.group : readLastAgeGroup();
     return groups.find((candidate) => candidate.id === preferred)?.id ?? groups[0].id;
   });
   const [custom, setCustom] = useState(parsed.kind === 'custom');
-  // Ein Wert außerhalb der Liste, der beim Öffnen schon da war, bleibt unverändert und wird erklärt (@W2B-026).
-  const [adopted] = useState(parsed.kind === 'custom' ? parsed.text : '');
+  // Ein Wert außerhalb der Liste, der von außen kommt (Öffnen, Verwerfen, Neuladen), bleibt unverändert und wird erklärt (@W2B-026).
+  const [adopted, setAdopted] = useState(parsed.kind === 'custom' ? parsed.text : '');
+  // Der Wert, den dieser Baustein zuletzt selbst gemeldet hat; jede andere Änderung kommt von außen und wird nachgezogen.
+  const [emitted, setEmitted] = useState(value);
+  if (value !== emitted) {
+    setEmitted(value);
+    setCustom(parsed.kind === 'custom');
+    setAdopted(parsed.kind === 'custom' ? parsed.text : '');
+    if (parsed.kind === 'entry') {
+      setGroup(parsed.group);
+    }
+  }
+  const emit = (next: string) => {
+    setEmitted(next);
+    onChange(next);
+  };
 
   const current = groups.find((candidate) => candidate.id === group) ?? groups[0];
   const entry = !custom && parsed.kind === 'entry' && current.entries.includes(parsed.entry) ? parsed.entry : null;
@@ -52,28 +65,28 @@ export function AgeClassPicker({ value, onChange, sport = 'football', testId = '
     setGroup(next);
     // Eine Wahl aus der anderen Schreibweise wäre unsichtbar: sie wird aufgehoben, „Sonstiges …“ bleibt.
     if (!custom && value !== '') {
-      onChange('');
+      emit('');
     }
   };
 
   const selectEntry = (chip: string) => {
     if (chip === CUSTOM_CHIP) {
       setCustom(!custom);
-      onChange('');
+      emit('');
       return;
     }
     setCustom(false);
     if (chip === entry) {
-      onChange('');
+      emit('');
       return;
     }
     writeLastAgeGroup(group);
-    onChange(composeAgeClass(chip, current.hasLevel ? level : null));
+    emit(composeAgeClass(chip, current.hasLevel ? level : null));
   };
 
   const selectLevel = (next: AgeLevel) => {
     if (entry) {
-      onChange(composeAgeClass(entry, level === next ? null : next));
+      emit(composeAgeClass(entry, level === next ? null : next));
     }
   };
 
@@ -117,7 +130,7 @@ export function AgeClassPicker({ value, onChange, sport = 'football', testId = '
           value={value}
           maxLength={CUSTOM_MAX_LENGTH}
           onChange={(text) => {
-            onChange(text);
+            emit(text);
             if (text.trim() !== '') {
               writeLastAgeGroup(group);
             }
@@ -125,7 +138,7 @@ export function AgeClassPicker({ value, onChange, sport = 'football', testId = '
           data-testid={`${testId}-custom-input`}
         />
       ) : null}
-      {custom && adopted !== '' ? (
+      {custom && adopted !== '' && value === adopted ? (
         <InlineNotice tone="info" data-testid={`${testId}-adopted`}>
           {t('ageClassPicker.adopted', { value: adopted })}
         </InlineNotice>

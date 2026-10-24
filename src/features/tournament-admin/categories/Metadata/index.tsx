@@ -357,7 +357,6 @@ export function MetadataCategory({
           <AgeClassPicker
             value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
             onChange={(v) => handleUpdate('ageClass', v)}
-            sport={tournament.sport}
             testId="metadata-age-class"
           />
         </div>

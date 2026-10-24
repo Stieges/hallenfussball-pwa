@@ -17,12 +17,11 @@ function speicherAnlegen() {
 
 const onChangeSpy = vi.fn<(value: string) => void>();
 
-function Harness({ initial = '', sport }: { initial?: string; sport?: 'football' | 'other' }) {
+function Harness({ initial = '' }: { initial?: string }) {
   const [value, setValue] = useState(initial);
   return (
     <AgeClassPicker
       value={value}
-      sport={sport}
       testId="ac"
       onChange={(v) => {
         onChangeSpy(v);
@@ -205,13 +204,48 @@ describe('@W2B-026 alter Wert „AH“', () => {
   });
 });
 
-describe('Sportart „andere“', () => {
-  it('hat ihre eigene Liste mit derselben Bedienung', () => {
-    render(<Harness sport="other" />);
-    fireEvent.click(chip('U12'));
-    expect(onChangeSpy).toHaveBeenLastCalledWith('U12');
-    fireEvent.click(group('general'));
-    expect(chip('Mixed')).toBeInTheDocument();
-    expect(screen.queryByTestId('ac-group-youth')).toBeNull();
+describe('Änderungen von außen (Verwerfen, Neuladen)', () => {
+  function WithReset() {
+    const [value, setValue] = useState('AH');
+    return (
+      <>
+        <AgeClassPicker value={value} onChange={setValue} testId="ac" />
+        <button type="button" data-testid="reset" onClick={() => setValue('AH')}>reset</button>
+      </>
+    );
+  }
+
+  it('@W2B-026 Verwerfen nach Sonstiges und E-Jugend zeigt „AH“ wieder unter Sonstiges', () => {
+    render(<WithReset />);
+    fireEvent.click(chip('custom'));
+    fireEvent.click(chip('E-Jugend'));
+    expect(chip('E-Jugend')).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByTestId('reset'));
+    expect(chip('custom')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('ac-custom-input')).toHaveValue('AH');
+    expect(screen.getByTestId('ac-adopted')).toBeInTheDocument();
+  });
+
+  it('von außen gesetzter Eintrag wird gewählt, auch in einer anderen Schreibweise', () => {
+    function Outer() {
+      const [value, setValue] = useState('');
+      return (
+        <>
+          <AgeClassPicker value={value} onChange={setValue} testId="ac" />
+          <button type="button" data-testid="load" onClick={() => setValue('U11')}>load</button>
+        </>
+      );
+    }
+    render(<Outer />);
+    fireEvent.click(screen.getByTestId('load'));
+    expect(group('uClasses')).toHaveAttribute('aria-checked', 'true');
+    expect(chip('U11')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('Gegenbeispiel @W2B-026: der Hinweis „bleibt unverändert“ verschwindet, sobald der Text geändert ist', () => {
+    render(<Harness initial="AH" />);
+    expect(screen.getByTestId('ac-adopted')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('ac-custom-input'), { target: { value: 'AH2' } });
+    expect(screen.queryByTestId('ac-adopted')).toBeNull();
   });
 });
