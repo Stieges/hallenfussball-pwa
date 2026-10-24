@@ -59,3 +59,41 @@ describe('EventLogBottomSheet mit retractedEvents (M4)', () => {
     expect(screen.getAllByRole('button', { name: /bearbeiten/i })).toHaveLength(1);
   });
 });
+
+describe('B-50 @FU-095 / B6.3: verworfene Klärungseinträge im Verlauf des Spiels', () => {
+  const AT = new Date(2026, 10, 28, 12, 10).getTime();
+  it('stehen als „verworfen von Olli, 12:10“, ohne Bearbeiten-Knopf, und zählen nicht als wirksamer Eintrag', () => {
+    render(
+      <EventLogBottomSheet
+        isOpen
+        onClose={() => undefined}
+        events={[event('e1', 30)]}
+        discardedEntries={[{ event: event('tor-nord', 60), by: 'Olli', at: AT }, { event: event('tor-sued', 70), by: 'Olli', at: AT }]}
+        homeTeamName="Heim"
+        awayTeamName="Gast"
+        homeTeamId="teamA"
+        awayTeamId="teamB"
+        onEventEdit={() => undefined}
+      />,
+    );
+
+    const marks = screen.getAllByTestId('event-discarded-mark');
+    expect(marks).toHaveLength(2);
+    expect(marks[0]).toHaveTextContent('verworfen von Olli, 12:10');
+    const rows = screen.getAllByTestId('event-row-discarded');
+    for (const row of rows) {
+      expect(within(row).queryByRole('button')).toBeNull();
+      expect(row).toHaveAttribute('aria-label', expect.stringContaining('verworfen von Olli'));
+    }
+    expect(screen.getAllByRole('button', { name: /bearbeiten/i })).toHaveLength(1);
+    expect(screen.queryByTestId('event-retracted-mark')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ohne Entscheidung (keine discardedEntries) keine Zeile „verworfen“', () => {
+    render(
+      <EventLogBottomSheet isOpen onClose={() => undefined} events={[event('e1', 30)]} homeTeamName="Heim" awayTeamName="Gast" homeTeamId="teamA" awayTeamId="teamB" />,
+    );
+    expect(screen.queryByTestId('event-discarded-mark')).toBeNull();
+  });
+});
+

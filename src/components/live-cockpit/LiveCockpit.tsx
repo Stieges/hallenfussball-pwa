@@ -19,6 +19,8 @@ import { useFoulCounts } from '../../hooks/useFoulCounts';
 import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
 import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
+import { useUebergabe } from '../../features/klaerungsliste/useUebergabe';
+import { useVerworfeneEintraege } from '../../features/klaerungsliste/useVerworfeneEintraege';
 import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
 import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
@@ -63,6 +65,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const matchEngineContext = useMatchEngineContextOptional();
   const outboxStatus = useOutboxStatus(matchEngineContext?.sender ?? null);
   const handleOutboxReload = useCallback(() => window.location.reload(), []);
+  // B-50 (@HE-056, @FU-017): hat der Server Einträge dieses Geräts wegen entzogenen Rechts zur Klärung gelegt
+  // B-50 Review M2: nur Spiele mit übergebenen Einträgen; Recht zurück schließt ab, Zuschauer behält die Lesesicht
+  const uebergabe = useUebergabe(outboxStatus, currentMatch?.id, kannSteuern);
+  const zugriffEntzogen = props.zugriffEntzogen ?? (uebergabe?.art === 'sperre' ? { uebergebeneEintraege: uebergabe.count } : null);
+  // B-50 (@FU-095, B6.3): verworfene Klärungseinträge stehen im Spielprotokoll der Turnierleitung (zählen nicht)
+  const verworfene = useVerworfeneEintraege(tournamentId, currentMatch, istLeitung);
+  const matchMitVerlauf = useMemo(() => (currentMatch && verworfene.length > 0 ? { ...currentMatch, discardedEntries: verworfene } : currentMatch), [currentMatch, verworfene]);
 
   // Einstellungen mit Vorgaben, Ton für das Ende, Gerätetyp
   const cockpitSettings = useMemo(() => ({ ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...cockpitSettingsProp }), [cockpitSettingsProp]);
@@ -175,8 +184,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     />
   );
 
-  if (props.zugriffEntzogen) {
-    return <div className={shell.empty} data-testid="cockpit-zugriff-entzogen"><p className={shell.emptyText}>{t('leiste.keinZugriff', { count: props.zugriffEntzogen.uebergebeneEintraege })}</p></div>;
+  if (zugriffEntzogen) {
+    return <div className={shell.empty} data-testid="cockpit-zugriff-entzogen"><p className={shell.emptyText}>{t('leiste.keinZugriff', { count: zugriffEntzogen.uebergebeneEintraege })}</p></div>;
   }
   if (!currentMatch) {
     if (leer) {
@@ -199,7 +208,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     );
   }
 
-  const match = currentMatch;
+  const match = matchMitVerlauf ?? currentMatch;
   if (!spalten) { return null; } // nie: ohne Spiel (spalten === null) kehrt die Hülle oben zurück
   // Task R2: `kannSteuern` kommt aus einer echten Berechtigungsprüfung (ManagementTab, `useCan('writeMatchData')`), das
   // beendete Spiel ist die bestehende "Spiel ist vorbei"-Sperre. Beide führen zu "keine Bedienung", aber nur das
@@ -225,6 +234,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
               )}
               {/* W1 (Nachtrag C3a-2a): rendert selbst nichts, solange kein Ausgangs-Zustand vorliegt. */}
               <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
+              {uebergabe?.art === 'zusehen' && <p className={shell.readOnlyBanner} data-testid="cockpit-uebergeben-zusehen" role="status">{t('leiste.nurZusehen', { count: uebergabe.count })}</p>}
             </>
           )}
           match={match}

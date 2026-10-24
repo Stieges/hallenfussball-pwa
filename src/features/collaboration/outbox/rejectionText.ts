@@ -85,6 +85,11 @@ const TYPE_KEYS: Partial<Record<EventType, string>> = {
 
 const UNKNOWN_TYPE_KEY = 'outbox.eventType.unknown';
 
+/** i18n-Schluessel (Namensraum common) der Eintragsart, z. B. „Tor“ (B-50 Klärungsliste). */
+export function eventTypeKey(type: EventType): string {
+  return TYPE_KEYS[type] ?? UNKNOWN_TYPE_KEY;
+}
+
 /** i18n-Schluessel zum Ablehnungscode; unbekannte Codes laufen auf „unbekannter Grund“. */
 export function rejectionReasonKey(code: string): string {
   return REASON_KEYS[code] ?? UNKNOWN_REASON_KEY;

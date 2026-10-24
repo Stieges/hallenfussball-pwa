@@ -31,6 +31,7 @@ const mockContext = {
     getStatus: () => mockStatus.current,
     subscribe: () => () => undefined,
     dismissRejected: vi.fn().mockResolvedValue(undefined),
+    closeHandedOver: vi.fn().mockResolvedValue(undefined),
   },
   store: { forAccount: vi.fn().mockResolvedValue([]) },
   // C3b-1: useEngineEventEditing fragt die Ansicht ab -- hier gibt es kein Engine-Spiel.
@@ -82,5 +83,36 @@ describe('LiveCockpit x OutboxNotice (C3a-2a, W1)', () => {
     render(<LiveCockpit {...baseProps(makeMatch())} />);
 
     expect(screen.queryByTestId('outbox-notice')).not.toBeInTheDocument();
+  });
+
+  it('B-50 @HE-056: Toms Eintrag in diesem Spiel wurde wegen entfernten Rechts übergeben → Cockpit zeigt „keinen Zugriff“ statt Bedienung', () => {
+    mockStatus.current = { ...emptyOutboxStatus(), revokedByMatch: { 'match-1': 1 } };
+    render(<LiveCockpit {...baseProps(makeMatch(), { kannSteuern: false })} />);
+
+    expect(screen.getByTestId('cockpit-zugriff-entzogen')).toHaveTextContent('cockpit:leiste.keinZugriff');
+  });
+
+  it('B-50 Gegenbeispiel: übergebene Einträge eines anderen Spiels sperren dieses Cockpit nicht', () => {
+    mockStatus.current = { ...emptyOutboxStatus(), revokedByMatch: { 'match-2': 1 } };
+    render(<LiveCockpit {...baseProps(makeMatch(), { kannSteuern: false })} />);
+
+    expect(screen.queryByTestId('cockpit-zugriff-entzogen')).not.toBeInTheDocument();
+  });
+
+  it('B-50 M2 @FU-017 zum Zuschauer gemacht: Lesesicht bleibt, Hinweis „nur noch zusehen“ statt Sperre', () => {
+    mockStatus.current = { ...emptyOutboxStatus(), revokedByMatch: { 'match-1': 2 }, revokedWatchOnlyByMatch: { 'match-1': 2 } };
+    render(<LiveCockpit {...baseProps(makeMatch(), { kannSteuern: false })} />);
+
+    expect(screen.queryByTestId('cockpit-zugriff-entzogen')).not.toBeInTheDocument();
+    expect(screen.getByTestId('cockpit-uebergeben-zusehen')).toHaveTextContent('cockpit:leiste.nurZusehen');
+  });
+
+  it('B-50 M2 Recht zurück: kein Hinweis, Cockpit bedienbar, die übergebenen Einträge werden abgeschlossen', () => {
+    mockStatus.current = { ...emptyOutboxStatus(), revokedByMatch: { 'match-1': 1 } };
+    render(<LiveCockpit {...baseProps(makeMatch(), { kannSteuern: true })} />);
+
+    expect(screen.queryByTestId('cockpit-zugriff-entzogen')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cockpit-uebergeben-zusehen')).not.toBeInTheDocument();
+    expect(mockContext.sender.closeHandedOver).toHaveBeenCalledWith('match-1');
   });
 });

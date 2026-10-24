@@ -17,7 +17,7 @@ import { cssVars } from '../../../../design-tokens';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import sportGlossary from '../../../../i18n/glossary.json';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
-import { mergeProtocol } from '../protocolEntries';
+import { mergeProtocol, type DiscardedProtocolEntry } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
 import { cardKindOf } from '../../../../utils/cardKind';
 import { useResultEntryEvents } from '../../../../features/match-engine/useResultEntryEvents';
@@ -29,6 +29,8 @@ interface EventLogBottomSheetProps {
   events: RuntimeMatchEvent[];
   /** C3b-1 (G6): zurückgenommene Einträge, nur zur Anzeige (durchgestrichen, ohne Bearbeiten). */
   retractedEvents?: RuntimeMatchEvent[];
+  /** B-50 (@FU-095, B6.3): verworfene Klärungseinträge (nur Turnierleitung). */
+  discardedEntries?: DiscardedProtocolEntry[];
   homeTeamName: string;
   awayTeamName: string;
   homeTeamId: string;
@@ -54,6 +56,7 @@ export function EventLogBottomSheet({
   onClose,
   events,
   retractedEvents,
+  discardedEntries,
   homeTeamName,
   awayTeamName,
   homeTeamId,
@@ -126,7 +129,7 @@ export function EventLogBottomSheet({
   };
 
   // Show most recent events first
-  const sortedEvents = mergeProtocol(events, retractedEvents).reverse();
+  const sortedEvents = mergeProtocol(events, retractedEvents, discardedEntries).reverse();
 
   // Check if event is editable (not status changes)
   const isEditable = (event: RuntimeMatchEvent): boolean => {

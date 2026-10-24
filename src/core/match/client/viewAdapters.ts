@@ -140,8 +140,8 @@ function isNumberArray(value: unknown): value is number[] {
  * per AMEND geleertes Feld nicht aus der Roh-Payload zurueckkommt),
  * Kartentyp und Strafdauer aus der Ereignisform.
  */
-function buildPayload(state: MatchState, event: EngineEvent, ctx: MatchContext): RuntimeMatchEvent['payload'] {
-  const details = state.details[event.id];
+function buildPayload(state: Pick<MatchState, 'details'>, event: EngineEvent, ctx: MatchContext): RuntimeMatchEvent['payload'] {
+  const details = Object.hasOwn(state.details, event.id) ? state.details[event.id] : undefined;
   const raw = event.payload;
   const payload: RuntimeMatchEvent['payload'] = {};
 
@@ -297,6 +297,26 @@ export function toRetractedEvents(
     payload: buildPayload(state, entry.source, ctx),
     scoreAfter,
   }));
+}
+
+/**
+ * B-50 (@FU-095 „die beiden Tore stehen als verworfen im Verlauf“, Record Ergebnisse korrigieren B6.3 „nur dieser eine Verlauf
+ * je Spiel“): ein Eintrag, der nie im Spiel-Log stand (verworfener Klärungseintrag), in der Form des Protokolls. `null` für
+ * Arten, die das Protokoll nicht zeigt. Nie Teil von `LiveMatch.events` – zählt nicht zum Stand.
+ */
+export function toProtocolEvent(source: EngineEvent, ctx: MatchContext, scoreAfter: { home: number; away: number }): LiveRuntimeEvent | null {
+  const type = mapEventType(source.type);
+  if (type === null) {
+    return null;
+  }
+  return {
+    id: source.id,
+    matchId: ctx.matchId,
+    timestampSeconds: Math.floor((source.clockMs ?? 0) / 1000),
+    type,
+    payload: buildPayload({ details: {} }, source, ctx),
+    scoreAfter,
+  };
 }
 
 /** Behaelt `prev`, solange die Folge inhaltlich gleich ist (M-4: nicht nur IDs). */

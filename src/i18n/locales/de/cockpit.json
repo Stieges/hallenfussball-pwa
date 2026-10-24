@@ -264,6 +264,8 @@
     "editAria": "{{description}} bearbeiten",
     "edit": "Bearbeiten",
     "retractedMark": "zurückgenommen",
+    "discardedMark": "verworfen von {{by}}, {{time}}",
+    "discardedByLead": "der Turnierleitung",
     "retractedAria": "{{description}} – zurückgenommen",
     "resultEntryBy": "Ergebnis eingetragen von {{name}}",
     "resultEntry": "Ergebnis eingetragen"
@@ -551,6 +553,8 @@
     "uebernehmen": "Spielleitung übernehmen",
     "keinZugriff_one": "Du hast keinen Zugriff mehr – 1 Eintrag an die Turnierleitung übergeben",
     "keinZugriff_other": "Du hast keinen Zugriff mehr – {{count}} Einträge an die Turnierleitung übergeben",
+    "nurZusehen_one": "Du kannst nur noch zusehen – 1 Eintrag an die Turnierleitung übergeben",
+    "nurZusehen_other": "Du kannst nur noch zusehen – {{count}} Einträge an die Turnierleitung übergeben",
     "tasteLeertaste": "Leertaste",
     "tasteRueckgaengigStrg": "Strg+Z",
     "tasteRueckgaengigCmd": "Cmd+Z"

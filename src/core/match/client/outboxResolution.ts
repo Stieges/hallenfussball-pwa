@@ -6,7 +6,7 @@
  */
 import type { AppendEventResult } from '../../repositories/appendMatchEventsRpc';
 import type { EngineEvent } from '../types';
-import type { BatchResolution, CascadeInfo, RejectedEntry } from './matchCopy';
+import type { BatchResolution, CascadeInfo, RejectedEntry, ReviewReason } from './matchCopy';
 
 /** B3: nach diesen abgelehnten Typen reissen alle uebrigen pending mit (RC8). */
 const CASCADE_TYPES = new Set(['MATCH_START', 'RESUME', 'SECTION_START', 'REOPEN', 'UNSKIP']);
@@ -27,6 +27,12 @@ function withDependsOn(detail: unknown, dependsOnEventId: string | undefined): u
   }
   const base = typeof detail === 'object' && detail !== null ? detail : {};
   return { ...base, dependsOnEventId };
+}
+
+/** B-50: Grund und – bei entzogenem Recht – die Art der Änderung (`detail.change`) aus der Antwort `review`. */
+function reviewReasonOf(code: string | undefined, detail: unknown): ReviewReason {
+  const change = typeof detail === 'object' && detail !== null && 'change' in detail && typeof detail.change === 'string' ? detail.change : undefined;
+  return { code: code ?? FALLBACK_CODE, ...(change !== undefined ? { change } : {}) };
 }
 
 /** Fixrunde 2, M-f: Position i traegt eine (nicht-null) `id`, die von `batch[i].id` abweicht. */
@@ -77,6 +83,7 @@ export function buildResolution(
 
   const ackedIds: string[] = [];
   const reviewIds: string[] = [];
+  const reviewReasons: Record<string, ReviewReason> = {};
   const droppedIds: string[] = [];
   const rejected: RejectedEntry[] = [];
   for (let i = 0; i < batch.length; i += 1) {
@@ -94,6 +101,7 @@ export function buildResolution(
     }
     if (result.status === 'review') {
       reviewIds.push(event.id);
+      reviewReasons[event.id] = reviewReasonOf(result.code, result.detail);
       continue;
     }
     // result.status === 'rejected': der Server hat DIESEN Eintrag beantwortet -- sein
@@ -127,6 +135,7 @@ export function buildResolution(
       ackedIds,
       rejected,
       reviewIds,
+      ...(reviewIds.length > 0 ? { reviewReasons } : {}),
       ...(droppedIds.length > 0 ? { droppedIds } : {}),
       ...(cascade ? { cascade } : {}),
     },

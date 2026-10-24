@@ -33,7 +33,8 @@ function resolve(root: JsonObject, dottedKey: string): unknown {
 
 const EXPECTED: Record<string, string> = {
   rejectedEntry: 'nicht übernommen',
-  awaitingReview: 'wartet auf Turnierleitung',
+  // B-50: Wortlaut nach @FU-038 („Toms Gerät zeigt „wird geprüft““), vorher „wartet auf Turnierleitung“ (Plan B-50 Q1)
+  awaitingReview: 'wird geprüft',
 };
 
 // Fixrunde 1 (Review m6): das en-Glossar sagte "rejected entry", die tatsaechliche UI (D-C1,

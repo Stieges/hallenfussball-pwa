@@ -17,7 +17,7 @@ import {
 import {
   MATCH_COPY_FORMAT_VERSION,
   applyResolution,
-  dismissRejectedEntries,
+  dismissRejectedEntries, closeHandedOverEntries,
   matchCopyKey,
   normalizeCopy,
   rejectAllPendingEntries,
@@ -217,6 +217,11 @@ export class LocalMatchStore {
   /** „Verstanden" (D-C1): bestaetigte Ablehnungen aus der Liste nehmen. */
   async dismissRejected(key: string, ids: string[]): Promise<void> {
     await this.update(key, (copy) => dismissRejectedEntries(copy, ids));
+  }
+
+  /** B-50 Review M2: übergebene Einträge (`RIGHTS_REVOKED`) als übergeben abschließen – Recht ist zurück. */
+  async closeHandedOver(key: string): Promise<void> {
+    await this.update(key, closeHandedOverEntries);
   }
 
   /**

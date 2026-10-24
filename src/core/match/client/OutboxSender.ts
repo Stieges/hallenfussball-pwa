@@ -146,6 +146,15 @@ export class OutboxSender {
     }
   }
 
+  /** B-50 Review M2: übergebene Einträge eines Spiels abschließen (Recht zurück), danach neu zählen. */
+  async closeHandedOver(matchId: string): Promise<void> {
+    if (this.accountId === null) {
+      return;
+    }
+    await this.store.closeHandedOver(this.queueKeyFor(matchId));
+    await this.refresh();
+  }
+
   subscribe(listener: (status: OutboxStatus) => void): () => void {
     return this.book.subscribe(listener);
   }

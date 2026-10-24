@@ -45,7 +45,7 @@ export function ProtocolRow({
   editable = true,
   onEventEdit,
 }: ProtocolRowProps) {
-  const { t } = useTranslation('cockpit');
+  const { t, i18n } = useTranslation('cockpit');
   const { event, retracted } = entry;
   const icon = getEventIcon(event);
   const time = formatTime(event.timestampSeconds);
@@ -159,7 +159,16 @@ export function ProtocolRow({
   };
 
   const warning = isIncomplete ? <span style={incompleteStyle}>⚠️</span> : null;
-  const mark = retracted ? (
+  const discarded = entry.discarded;
+  const discardedText = discarded
+    ? t('sidebar.discardedMark', {
+        by: discarded.by ?? t('sidebar.discardedByLead'),
+        time: new Date(discarded.at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }),
+      })
+    : null;
+  const mark = discardedText !== null ? (
+    <span style={retractedMarkStyle} data-testid="event-discarded-mark">{discardedText}</span>
+  ) : retracted ? (
     <span style={retractedMarkStyle} data-testid="event-retracted-mark">
       {t('sidebar.retractedMark')}
     </span>
@@ -173,8 +182,8 @@ export function ProtocolRow({
   return (
     <div
       style={rowStyle}
-      data-testid={retracted ? 'event-row-retracted' : undefined}
-      aria-label={retracted ? t('sidebar.retractedAria', { description }) : undefined}
+      data-testid={discardedText !== null ? 'event-row-discarded' : retracted ? 'event-row-retracted' : undefined}
+      aria-label={discardedText !== null ? `${description} – ${discardedText}` : retracted ? t('sidebar.retractedAria', { description }) : undefined}
     >
       {variant === 'sidebar' ? (
         <>
