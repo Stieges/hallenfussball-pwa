@@ -53,9 +53,9 @@ const tournament = {
 
 const schedule = { allMatches: [], initialStandings: [], endTime: new Date(), numberOfFields: 1 } as unknown as GeneratedSchedule;
 
-type TestUser = { id: string; globalRole: string } | null;
+type TestUser = { id: string; globalRole: string; isAnonymous?: boolean } | null;
 const konto: TestUser = { id: 'u1', globalRole: 'user' };
-const anonym: TestUser = { id: 'a1', globalRole: 'user' };
+const anonym: TestUser = { id: 'a1', globalRole: 'user', isAnonymous: true };
 const gast: TestUser = { id: 'g1', globalRole: 'guest' };
 
 const lage = vi.hoisted(() => ({ configured: true }));
@@ -110,8 +110,17 @@ describe.each([
     expect(text).not.toMatch(linkSatz);
   });
 
-  it('@W1-037 anonymes Konto zählt wie angemeldet (Cloud-Regel des Repositorys)', () => {
-    expect(renderMit(anonym)).toMatch(linkSatz);
+  it('@W1-037 anonyme Gerätesitzung: nur auf diesem Gerät, nie der Link-Satz (kein Cloud-Turnier möglich)', () => {
+    const text = renderMit(anonym);
+    expect(text).toMatch(geraetSatz);
+    expect(text).not.toMatch(linkSatz);
+  });
+
+  it('@W1-037 anonyme Gerätesitzung ohne Netz: Offline-Satz, nie der Link-Satz', () => {
+    setOnline(false);
+    const text = renderMit(anonym);
+    expect(text).toMatch(offlineSatz);
+    expect(text).not.toMatch(linkSatz);
   });
 
   it('@W1-037 Supabase nicht eingerichtet: nur auf diesem Gerät, auch mit Konto', () => {

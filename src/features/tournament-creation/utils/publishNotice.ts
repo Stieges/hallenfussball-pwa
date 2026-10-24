@@ -16,14 +16,19 @@ export interface PublishNoticeInput {
   /** Turnier geht ueber das Konto in die Cloud (usesCloudRepository). */
   toCloud: boolean;
   isOnline: boolean;
+  /** Anonyme Gerätesitzung: kann kein Turnier in der Cloud anlegen (tournaments_insert_v4 / is_real_account()). */
+  isAnonymous?: boolean;
 }
 
-export function publishNoticeKey({ visibility, toCloud, isOnline }: PublishNoticeInput): PublishNoticeKey {
+export function publishNoticeKey({ visibility, toCloud, isOnline, isAnonymous = false }: PublishNoticeInput): PublishNoticeKey {
   if (!toCloud) {
     return 'publish.explanationLocal';
   }
   if (!isOnline) {
     return 'publish.explanationOffline';
+  }
+  if (isAnonymous) {
+    return 'publish.explanationLocal';
   }
   return visibility === 'shareable' ? 'publish.explanationPublic' : 'publish.explanationPrivate';
 }

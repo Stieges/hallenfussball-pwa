@@ -419,7 +419,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               textAlign: 'center',
             }}
           >
-            {t(publishNoticeKey({ visibility: visibilityAfterPublish(currentTournament), toCloud, isOnline }))}
+            {t(publishNoticeKey({ visibility: visibilityAfterPublish(currentTournament), toCloud, isOnline, isAnonymous: user?.isAnonymous === true }))}
             {' '}
             {t('publish.explanationChangeable')}
           </p>
