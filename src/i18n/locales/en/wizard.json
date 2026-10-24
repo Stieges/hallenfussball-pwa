@@ -597,5 +597,23 @@
       "two": "places {{from}} and {{to}}",
       "range": "places {{from}} to {{to}}"
     }
+  },
+  "refereeConflict": {
+    "title": "Time conflict",
+    "message": "{{refName}} is already assigned to match #{{matchNumber}} ({{time}}).\n\nThe matches overlap in time.\n\nDo you want to make the assignment anyway?",
+    "confirm": "Assign anyway"
+  },
+  "typeSwitch": {
+    "title": "Change tournament type",
+    "message": "Do you really want to switch to \"{{type}}\"?\n\nThe settings will be adjusted.",
+    "confirm": "Switch",
+    "classic": "Classic tournament",
+    "bambini": "Bambini tournament"
+  },
+  "resetTournament": {
+    "title": "Reset tournament",
+    "message_one": "{{count}} result will be deleted!\n\nThis action cannot be undone.\n\nDo you really want to continue?",
+    "message_other": "{{count}} results will be deleted!\n\nThis action cannot be undone.\n\nDo you really want to continue?",
+    "confirm": "Reset"
   }
 }

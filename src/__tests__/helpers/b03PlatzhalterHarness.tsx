@@ -245,7 +245,9 @@ export function expectRendered(container: HTMLElement) {
 
 export async function renderSettingsScreen() {
   const { SettingsScreen } = await import('../../features/settings/components/SettingsScreen');
-  return renderInRouter(<SettingsScreen onBack={vi.fn()} />);
+  // Die App rendert die Einstellungen unter dem ToastProvider (AppChrome); Hinweise laufen über die App, nicht über alert (@OB-017)
+  const { ToastProvider } = await import('../../components/ui/Toast');
+  return renderInRouter(<ToastProvider><SettingsScreen onBack={vi.fn()} /></ToastProvider>);
 }
 
 export async function renderAdminSidebar() {

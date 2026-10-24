@@ -34,7 +34,7 @@ type WizardApi = ReturnType<typeof useTournamentWizard>;
 const draftSpy = vi.fn<(t: Tournament) => void>();
 
 function Harness() {
-  const api: WizardApi = useTournamentWizard();
+  const api: WizardApi = useTournamentWizard(undefined, () => Promise.resolve(false));
   return (
     <>
       <FinalsConfiguration formData={api.formData} onUpdate={api.updateForm} />

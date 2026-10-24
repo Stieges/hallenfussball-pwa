@@ -405,7 +405,11 @@
     "rulebook": "Rulebook (optional)",
     "rulebookPlaceholder": "e.g. BFV rules for futsal",
     "rulebookLimit": "Up to 80 characters.",
-    "rulebookTruncated": "Cut to 80 characters."
+    "rulebookTruncated": "Cut to 80 characters.",
+    "confirmResetDialog": {
+      "title": "Discard changes",
+      "confirm": "Discard"
+    }
   },
   "spectatorDisplay": {
     "title": "Display for spectators",

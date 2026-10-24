@@ -288,7 +288,6 @@
   },
   "teams": {
     "title": "Manage Teams",
-    "renameWarning": "Warning\n\n{{warning}}\n\nDo you want to change the name anyway?",
     "renameError": "Error renaming",
     "deleteError": "Error deleting",
     "restoreConfirm": "Do you want to restore this team?\n\nThe team will be shown again in the table and schedule.",
@@ -340,6 +339,10 @@
       "partRemoved_one": "{{count}} match without result and events is removed",
       "partRemoved_other": "{{count}} matches without result and events are removed",
       "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• The team will be marked as \"removed\"."
+    },
+    "restoreDialog": {
+      "title": "Restore team",
+      "confirm": "Restore"
     }
   },
   "settings": {
@@ -394,6 +397,14 @@
       "editTeams": "Edit teams",
       "changeGameMode": "Change game mode",
       "groupsAndFields": "Groups & Fields"
+    },
+    "confirmDialog": {
+      "resetTitle": "Discard changes",
+      "resetConfirm": "Discard",
+      "leaveTitle": "Switch to the wizard",
+      "leaveConfirm": "Switch",
+      "wizardTitle": "Edit in the wizard",
+      "wizardConfirm": "Edit"
     }
   },
   "monitors": {

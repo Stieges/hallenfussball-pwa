@@ -79,7 +79,7 @@ describe('SettingsTab — „Im Wizard bearbeiten" nur vor dem ersten Anpfiff (@
   });
 
   it('@W5-004 Aufruf behält den Status und öffnet den Wizard-Schritt', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const browserConfirm = vi.spyOn(window, 'confirm');
     const user = userEvent.setup();
     const onEditInWizard = vi.fn();
     render(
@@ -91,7 +91,9 @@ describe('SettingsTab — „Im Wizard bearbeiten" nur vor dem ersten Anpfiff (@
     );
 
     await user.click(screen.getByRole('button', { name: /settings\.advancedEditing\.editTeams/ }));
+    await user.click(await screen.findByTestId('confirm-dialog-confirm'));
 
+    expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017
     expect(onEditInWizard).toHaveBeenCalledTimes(1);
     // @W5-004: Bearbeiten setzt nie auf Entwurf zurück
     expect(onEditInWizard.mock.calls[0][0].status).toBe('published');

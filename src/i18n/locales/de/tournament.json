@@ -288,7 +288,6 @@
   },
   "teams": {
     "title": "Teams verwalten",
-    "renameWarning": "Warnung\n\n{{warning}}\n\nMöchtest du den Namen trotzdem ändern?",
     "renameError": "Fehler beim Umbenennen",
     "deleteError": "Fehler beim Löschen",
     "restoreConfirm": "Möchtest du dieses Team wiederherstellen?\n\nDas Team wird wieder in der Tabelle und im Spielplan angezeigt.",
@@ -340,6 +339,10 @@
       "partRemoved_one": "{{count}} Spiel ohne Ergebnis und ohne Ereignisse wird entfernt",
       "partRemoved_other": "{{count}} Spiele ohne Ergebnis und ohne Ereignisse werden entfernt",
       "warningMixed": "\"{{name}}\":\n\n• {{kept}}.\n• {{removed}}.\n• Das Team wird als \"entfernt\" markiert."
+    },
+    "restoreDialog": {
+      "title": "Team wiederherstellen",
+      "confirm": "Wiederherstellen"
     }
   },
   "settings": {
@@ -394,6 +397,14 @@
       "editTeams": "Teams bearbeiten",
       "changeGameMode": "Spielmodus ändern",
       "groupsAndFields": "Gruppen & Felder"
+    },
+    "confirmDialog": {
+      "resetTitle": "Änderungen verwerfen",
+      "resetConfirm": "Verwerfen",
+      "leaveTitle": "Zum Wizard wechseln",
+      "leaveConfirm": "Wechseln",
+      "wizardTitle": "Im Wizard bearbeiten",
+      "wizardConfirm": "Bearbeiten"
     }
   },
   "monitors": {
