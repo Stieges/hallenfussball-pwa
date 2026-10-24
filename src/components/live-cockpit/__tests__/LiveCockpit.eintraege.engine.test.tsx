@@ -189,7 +189,7 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     expect(screen.queryByText('Nr. 7 hat schon Gelb')).toBeNull();
   });
 
-  it('@SL-029 Zeitstrafe: Tipp, Nummer 5 — keine Dauer-Auswahl; die Engine setzt die Dauer aus der Regel, die Spalte zeigt die Marke', async () => {
+  it('@SL-029 Zeitstrafe: Tipp, Nummer 5 — keine Dauer-Auswahl; die Engine setzt die Dauer aus der Regel, die Strafen-Karte zeigt Team und Nummer', async () => {
     const user = userEvent.setup();
     render(<Harness />); await starte(user); zu(120_000);
     await user.click(screen.getByTestId('penalty-button-away'));
@@ -197,7 +197,8 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     await warteSperre();
     await user.click(nummer('5'));
     await waitFor(() => expect(typen('TIME_PENALTY')).toHaveLength(1));
-    expect(await screen.findByText(/^Nr\. 5 · /)).toBeInTheDocument();
+    // Am Laptop steht die Strafe als Karte in der rechten Spalte (@SL-186): Team und Nummer, die Restzeit zählt mit der Spieluhr
+    expect(await screen.findByText(/, Nr\. 5$/)).toBeInTheDocument();
     expect(typen('TIME_PENALTY')[0].payload).not.toHaveProperty('durationSeconds');
   });
 

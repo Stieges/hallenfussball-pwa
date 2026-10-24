@@ -163,16 +163,20 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     expect(screen.queryByTestId('notice-icon-3')).toBeNull();
   });
 
-  it('@SL-064 die Zeile ist am Handy (360 px) zwei Zeilen hoch (N1), ab Tablet (768 px) 32 px', () => {
+  it('@SL-064 die Zeile ist am Handy (360 px) zwei Zeilen hoch (N1), ab Tablet (768 px) 32 px; am Laptop reserviert sie nichts: die Meldung blendet sich in der Kopfzeile ein (@SL-183)', () => {
     const alt = window.innerWidth;
     try {
       window.innerWidth = 360;
       const mobil = render(<LiveCockpit {...baseProps(matchMit(0))} />);
       expect(screen.getByTestId(MELDUNG).style.height).toMatch(/calc\(2 \*/);
       mobil.unmount();
+      window.innerWidth = 768;
+      const tablet = render(<LiveCockpit {...baseProps(matchMit(0))} />);
+      expect(screen.getByTestId(MELDUNG).style.height).toBe('var(--sizing-notice-line-height-regular)');
+      tablet.unmount();
       window.innerWidth = 1280;
       render(<LiveCockpit {...baseProps(matchMit(0))} />);
-      expect(screen.getByTestId(MELDUNG).style.height).toBe('var(--sizing-notice-line-height-regular)');
+      expect(screen.getByTestId(MELDUNG).style.height).toBe('0px'); // ohne Meldung kein Platz: die Einblendung verschiebt nichts
     } finally {
       window.innerWidth = alt;
     }

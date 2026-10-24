@@ -8,7 +8,7 @@ import type { CSSProperties, ReactElement } from 'react';
 import type { BoxFill } from '../../../core/models/scoreBoxColors';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { MatchIcons } from '../IconsMatch';
-import { fillSurface, fillTextColor } from './scoreBoxStyle';
+import { fillStreifenProzent, fillSurface, fillTextColor } from './scoreBoxStyle';
 
 export interface TeamHeadBarProps {
   name: string;
@@ -34,17 +34,19 @@ const LANGER_NAME = 16;
 
 export function TeamHeadBar({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const gestapelt = name.length > LANGER_NAME;
+  const gestapelt = !breit && name.length > LANGER_NAME; // am Laptop bleibt „Heim“/„Gast“ neben dem Namen (Mockup `lang-haupt-720`): die Spalte ist breit genug
   const kopf: CSSProperties = {
     display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? cssVars.spacing.xs : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.md,
+    // Die Schrift bleibt von den Weste-Streifen weg (N3: „Gast“ auf dem Streifen fiele unter 4,5 : 1)
+    padding: `${cssVars.spacing.xs} calc(${String(fillStreifenProzent(fill))}% + ${cssVars.spacing.sm})`, borderRadius: cssVars.borderRadius.md,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, hyphens: 'manual',
     ...(fuellend ? { flex: '1 1 auto' } : {}),
+    ...(breit ? { minHeight: 'var(--cockpit-kopf, var(--sizing-cockpit-kopf-normal))', alignItems: 'center' } : {}),
     ...fillSurface(fill),
   };
   const nameStil: CSSProperties = {
     margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
-    fontSize: breit ? cssVars.fontSizes.titleMd : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
+    fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };
   const seite: CSSProperties = { flex: 'none', textAlign: gestapelt ? 'right' : undefined, fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };

@@ -7,14 +7,16 @@ import type { CSSProperties } from 'react';
 import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../../design-tokens';
 import type { MatchBadgeState } from '../../../core/view/badge';
 
-export type MatchStatusBadgeSize = 'card' | 'row' | 'display';
+/** `tafel`: Kopfzeile der Laptop-Tafel (@SL-180), größer als die Spielkarte (`card`), damit „Live“ aus 1 bis 2 m zu lesen ist. */
+export type MatchStatusBadgeSize = 'card' | 'row' | 'display' | 'tafel';
 
 /**
  * Fläche, auf der das Abzeichen steht. `app`: Spielkarte, Verwaltung, Zuschauer (Standard). `scoreboard`: die immer
  * dunkle Cockpit-Tafel (@OB-065). Auf der Tafel tragen nur „Ende“ und „ausgefallen“ eigene Farben (Tafel-Schrift und
  * Rahmen), damit die Schrift auf der dunklen Fläche ≥ 4,5 : 1 bleibt; alle übrigen Zustände sind wie auf der Spielkarte.
+ * `scoreboardFlach`: Laptop-Tafel (@SL-180) – „Live“ ohne rote Fläche (weiße Schrift, grüner Punkt), sonst wie `scoreboard`.
  */
-export type MatchStatusBadgeSurface = 'app' | 'scoreboard';
+export type MatchStatusBadgeSurface = 'app' | 'scoreboard' | 'scoreboardFlach';
 
 /** Farben für Monitor-Themes; ohne sie gelten die Farben der App (cssVars). */
 export interface MatchStatusBadgeTone {
@@ -54,7 +56,7 @@ export function badgeColors(state: MatchBadgeState): BadgeColors {
 
 /** Schrift der Anstoßzeit (geplantes Spiel): auf der dunklen Tafel die Tafel-Schrift, sonst textSecondary (@OB-065). */
 export function kickoffColorFor(surface: MatchStatusBadgeSurface = 'app'): string {
-  return surface === 'scoreboard' ? cssVars.colors.scoreboardTextMuted : cssVars.colors.textSecondary;
+  return surface !== 'app' ? cssVars.colors.scoreboardTextMuted : cssVars.colors.textSecondary;
 }
 
 /** Farben auf der Cockpit-Tafel: nur „Ende“ und „ausgefallen“ weichen ab (Schrift und Rahmen in der Tafel-Schrift). */
@@ -68,7 +70,8 @@ function badgeColorsOnScoreboard(state: MatchBadgeState): BadgeColors {
 
 export function badgeColorsFor(state: MatchBadgeState, tone: MatchStatusBadgeTone | undefined, surface: MatchStatusBadgeSurface = 'app'): BadgeColors {
   if (tone === undefined) {
-    return surface === 'scoreboard' ? badgeColorsOnScoreboard(state) : badgeColors(state);
+    if (surface === 'scoreboardFlach' && state === 'live') { return { bg: 'transparent', fg: cssVars.colors.scoreboardText }; }
+    return surface === 'app' ? badgeColors(state) : badgeColorsOnScoreboard(state);
   }
   return state === 'live' ? { bg: tone.liveBg, fg: tone.liveFg } : { bg: tone.neutralBg, fg: tone.neutralFg };
 }
@@ -101,10 +104,10 @@ export function badgeStyle(state: MatchBadgeState, size: MatchStatusBadgeSize, t
   return {
     ...base,
     gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.xs} ${size === 'row' ? cssVars.spacing.xs : cssVars.spacing.sm}`,
+    padding: `${cssVars.spacing.xs} ${size === 'row' || (surface === 'scoreboardFlach' && state === 'live') ? cssVars.spacing.xs : cssVars.spacing.sm}`,
     borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    lineHeight: cssVars.lineHeights.bodySm,
+    fontSize: size === 'tafel' ? cssVars.fontSizes.lg : cssVars.fontSizes.sm,
+    lineHeight: size === 'tafel' ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm,
   };
 }
 

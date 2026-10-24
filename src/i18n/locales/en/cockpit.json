@@ -69,6 +69,10 @@
       "vonGeplant": "of {{zeit}}",
       "amSchuss": "next to shoot: {{team}}"
     },
+    "kopf": {
+      "spiel": "Match {{nummer}}",
+      "gespielt": "Played {{zeit}}"
+    },
     "uhrHaelt": "Clock stops at every stoppage",
     "entscheidungOffen": "Draw – the decision follows",
     "abschnitt": {
@@ -244,6 +248,16 @@
     "placeholder": "—",
     "eventDescription": "Goal",
     "close": "Close"
+  },
+  "strafen": {
+    "titel": "Active time penalties",
+    "keine": "No active time penalties",
+    "restzeit": "Time left",
+    "mitNr": "{{team}}, No. {{nummer}}",
+    "ohneNr": "{{team}}, no number",
+    "dauer": "Time penalty {{minuten}} min",
+    "dauerSeit": "Time penalty {{minuten}} min · since {{zeit}}",
+    "weitere": "+ {{count}} more"
   },
   "sidebar": {
     "activePenalties": "Active Time Penalties",
@@ -497,7 +511,8 @@
     "tor": "Goal",
     "karte": "Card",
     "fouls": "Foul {{zaehlt}}/{{grenze}}",
-    "foulsOhneGrenze": "Foul {{zaehlt}}",
+    "foulsOhneGrenze": "Foul · {{zaehlt}}",
+    "foulsOhneGrenzeAria": "Foul {{zaehlt}}",
     "strafe": "No. {{nummer}} · {{rest}}",
     "strafeOhneNr": "no number · {{rest}}",
     "unterzahl": "Short-handed · {{rest}}",

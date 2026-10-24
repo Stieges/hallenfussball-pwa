@@ -20,6 +20,10 @@ export interface PhasePenalty {
   teamId: string;
   playerNumber?: number;
   remainingMs: number;
+  /** Länge der Strafe (Strafen-Karte: Balken zeigt den Rest davon). */
+  durationMs?: number;
+  /** Spielzeit im Abschnitt, in dem die Strafe verhängt wurde; `null`, wenn sie aus einem früheren Abschnitt stammt. */
+  seitMs?: number | null;
 }
 
 export interface PhaseShootout {
@@ -54,6 +58,8 @@ export interface PhaseView {
   isLastRegularSection: boolean;
   /** Restzeit der Abschnittspause, geklemmt auf 0; `null` außerhalb der Pause. */
   breakRemainingMs: number | null;
+  /** Länge der Abschnittspause (Zeitbalken der Pause); `null` außerhalb der Pause. */
+  breakTotalMs?: number | null;
   /**
    * Restzeit der Quittung nach dem Abpfiff in ms (@SL-152, 30 Sekunden ab dem Abpfiff-Ereignis), geklemmt auf 0; `null`,
    * solange das Spiel nicht beendet ist (auch ausgefallen) oder der Abpfiff keine Zeit trägt.
@@ -138,6 +144,7 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     reopenCount: reopenCountOf(state),
     isLastRegularSection: state.section >= sections,
     breakRemainingMs,
+    breakTotalMs: state.status === 'section_break' && rules ? rules.breakSeconds * 1000 : null,
     quittungRestMs: quittungRestOf(state, serverNow),
     playedMs: elapsedMs,
     plannedMs: plannedMsOf(state),
@@ -213,11 +220,14 @@ function penaltiesOf(state: MatchState, elapsedMs: number): PhasePenalty[] {
   if (state.status === 'finished') {
     return [];
   }
+  const basis = sectionBasisOf(state);
   return activePenalties(state, elapsedMs).map((penalty) => ({
     id: penalty.id,
     teamId: penalty.teamId,
     ...(penalty.playerNumber !== undefined ? { playerNumber: penalty.playerNumber } : {}),
     remainingMs: penaltyRemainingMs(penalty, elapsedMs),
+    durationMs: penalty.durationMs,
+    seitMs: penalty.startMs >= basis ? penalty.startMs - basis : null,
   }));
 }
 

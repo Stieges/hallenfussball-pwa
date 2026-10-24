@@ -24,13 +24,31 @@ export interface NoticeLineProps {
    * um und wird nie gekürzt – am Handy (Meldungen mit Teamnamen sind länger als eine Zeile; 3 bei langen Namen) (Namen nie mit „…“, VISUAL-DESIGN § 1).
    */
   zeilen?: 1 | 2 | 3;
+  /**
+   * `einblendung` (Laptop-Tafel, @SL-180): die Meldung blendet sich über die Kopfzeile der Tafel ein, ohne Platz zu reservieren und ohne zu verschieben;
+   * der Text bricht um (nie „…“), der Rand zeigt die Stufe (Farbe allein trägt nichts: das Symbol steht davor). Ohne Meldung bleibt nur der leere
+   * Bereich für die Ansage (`aria-live`).
+   */
+  art?: 'zeile' | 'einblendung';
+  /** Stufe der Meldung für den Rand der Einblendung: 3 Bestätigung (grün), 2 Warnung, 1 Hinweis. */
+  stufe?: 1 | 2 | 3;
 }
 
-export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact', icon, zeilen = 1 }: NoticeLineProps): ReactElement {
+export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact', icon, zeilen = 1, art = 'zeile', stufe = 3 }: NoticeLineProps): ReactElement {
   const einzeilig = size === 'regular' ? cssVars.sizing.noticeLineHeightRegular : cssVars.sizing.noticeLineHeightCompact;
   // mehrzeilig: drei Zeilen der kleinen Zeilenhöhe plus der Abstand, den die einzeilige Zeile über ihre Schrift hinaus hat
   const hoehe = zeilen === 1 ? einzeilig : `calc(${zeilen} * ${cssVars.lineHeights.bodySm} + ${cssVars.spacing.xs})`;
-  const zeile: CSSProperties = {
+  const einblendung = art === 'einblendung';
+  const randFarbe = stufe === 3 ? cssVars.colors.scoreboardOk : stufe === 2 ? cssVars.colors.scoreboardHighlight : cssVars.colors.scoreboardInfo;
+  const zeile: CSSProperties = einblendung ? {
+    position: 'relative', boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm,
+    // ohne Meldung ein leerer Bereich ohne Höhe (der Ansagebereich bleibt im Baum, `aria-live` sagt die nächste Meldung an)
+    ...(text ? { minHeight: einzeilig, padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`, border: `${cssVars.borderWidth.thin} solid ${randFarbe}` } : { height: 0, overflow: 'hidden' }),
+    borderRadius: cssVars.borderRadius.md,
+    // deckend, damit die Kopfzeile darunter nicht durchscheint: Meldefläche über dem Grund der Tafel
+    background: `linear-gradient(${cssVars.colors.noticeLineBg}, ${cssVars.colors.noticeLineBg}), ${cssVars.colors.scoreboardBg}`,
+    color: cssVars.colors.noticeLineText, fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.semibold, lineHeight: cssVars.lineHeights.bodyMd,
+  } : {
     position: 'relative',
     height: hoehe,
     boxSizing: 'border-box',
@@ -44,7 +62,9 @@ export function NoticeLine({ text, onClose, closeLabel, testId, size = 'compact'
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
   };
-  const textStil: CSSProperties = zeilen === 1
+  const textStil: CSSProperties = einblendung
+    ? { flex: 1, minWidth: 0, whiteSpace: 'normal', overflowWrap: 'break-word' }
+    : zeilen === 1
     ? { flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
     : { flex: 1, minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodySm };
   const kreuz: CSSProperties = {

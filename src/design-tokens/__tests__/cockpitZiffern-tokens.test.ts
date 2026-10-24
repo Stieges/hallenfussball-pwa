@@ -68,8 +68,16 @@ describe('F1: 11 mm auch bei 620 px Fensterhöhe – Tor-Taste bleibt >= 56 px',
   it('620 px, Variante a, lange Namen (zweite Leistenzeile): Tor >= 56 px', () => {
     expect(tor(620, NAMENSZEILE_VARIANTE_A, true)).toBeGreaterThanOrEqual(TOR_MIN);
   });
-  it('Gegenprobe: ohne Variante a (Name über dem Kasten) und mit langem Namen wäre bei 620 px das Minimum unterschritten – Variante a ist nötig', () => {
-    expect(tor(620, NAMENSZEILE_HAUPT, true)).toBeLessThan(TOR_MIN);
+  // Ersatz der entfallenen gerechneten Gegenprobe (sie rechnete mit dem Mockup-Kasten 76 px; die Stufe „knapp“ hat jetzt 68 px): die Mindesthöhe der
+  // Tor-Taste ist ein eigener Token je Stufe und liegt nie unter 56 px; das Minimum am echten Fenster (620 px) weist `cockpit-hoehen.spec.ts` nach.
+  it.each(STUFEN)('Stufe %s: Mindesthöhe der Tor-Taste (Token) >= 56 px', (stufe) => {
+    expect(px(`--sizing-cockpit-tor-${stufe}`)).toBeGreaterThanOrEqual(TOR_MIN);
+  });
+  it('Gegenprobe: ein Kasten von 76 px (Mockup-Wert) ließe bei 620 px ohne Variante a und mit langem Namen nur noch Tor < 56 px; 68 px reichen mit Variante a', () => {
+    const mitKasten = (kasten: number, zeilenOhne: number): number =>
+      620 - (FEST_OHNE_KASTEN_UHR_TOR - (NAMENSZEILE_HAUPT - zeilenOhne)) - kasten - px('--sizing-cockpit-ziffer-knapp') - ZWEITE_LEISTENZEILE;
+    expect(mitKasten(px('--sizing-cockpit-kasten-knapp'), NAMENSZEILE_VARIANTE_A)).toBeGreaterThanOrEqual(TOR_MIN);
+    expect(mitKasten(px('--sizing-cockpit-kasten-knapp') + 40, NAMENSZEILE_HAUPT)).toBeLessThan(TOR_MIN);
   });
   it('unter 620 px (600) reicht der Platz nicht: dort scrollt die Fläche, die Ziffern bleiben gleich groß', () => {
     expect(tor(600, NAMENSZEILE_VARIANTE_A, true)).toBeLessThan(TOR_MIN);

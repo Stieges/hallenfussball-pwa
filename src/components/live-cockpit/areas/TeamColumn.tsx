@@ -37,11 +37,11 @@ const zaehlerStil: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssV
 // Volle Fläche in der Primärfarbe, Schrift in „auf Primär“ (Kontrast ≥ 4,5 : 1, VISUAL-DESIGN § 5), kein Verlauf
 const torStil = (breit: boolean): CSSProperties => ({
   // Laptop (Mockup): doppelte Mindesthöhe, damit das Tor die größte Fläche der Spalte ist; sonst Haupttasten-Größe
-  position: 'relative', minHeight: breit ? cssVars.sizing.cockpitTorBreit : cssVars.touchTargets.primary, width: '100%', background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
+  position: 'relative', minHeight: breit ? 'var(--cockpit-tor, var(--sizing-cockpit-tor-normal))' : cssVars.touchTargets.primary, width: '100%', ...(breit ? { padding: cssVars.spacing.xs } : {}), background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
 });
-const knopfStil = (kompakt: boolean): CSSProperties => ({
-  position: 'relative', minHeight: cssVars.touchTargets.minimum, flexDirection: kompakt ? 'row' : 'column', gap: kompakt ? cssVars.spacing.xs : 0,
-  padding: kompakt ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0,
+const knopfStil = (kompakt: boolean, breit: boolean): CSSProperties => ({
+  position: 'relative', minHeight: breit ? 'var(--cockpit-fuss, var(--sizing-cockpit-fuss-normal))' : cssVars.touchTargets.minimum, flexDirection: kompakt ? 'row' : 'column', gap: kompakt ? cssVars.spacing.xs : 0,
+  padding: kompakt || breit ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0,
 });
 const markeStil = (steht: boolean): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning,
@@ -50,6 +50,7 @@ const markeStil = (steht: boolean): CSSProperties => ({
 });
 const hinweisStil: CSSProperties = { fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary };
 const zweizeilig: CSSProperties = { display: 'block' };
+const einzeilig: CSSProperties = { display: 'inline' }; // Laptop: „Zeitstrafe 2 Min“ bricht nur um, wenn die Spalte zu schmal ist (Mockup: eine Zeile)
 
 function Hinweis({ children, testId }: { children: ReactNode; testId?: string }): ReactElement {
   return <div style={hinweisStil} data-testid={testId}>{children}</div>;
@@ -70,6 +71,8 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
   const foulText = fouls.grenze === null
     ? t('spalte.foulsOhneGrenze', { zaehlt: fouls.zaehlt })
     : t('spalte.fouls', { zaehlt: fouls.zaehlt, grenze: fouls.grenze });
+  // Die Bildschirmleser-Fassung ohne Trennpunkt: „Foul SV Süd, Foul 5“ (@SL-102)
+  const foulAria = fouls.grenze === null ? t('spalte.foulsOhneGrenzeAria', { zaehlt: fouls.zaehlt }) : foulText;
   const zeigeKarte = knoepfe.karte && (kartenArten.yellow || kartenArten.yellowRed || kartenArten.red);
   const zeigeStrafe = knoepfe.zeitstrafe && kartenArten.timePenalty;
   const reiheStil: CSSProperties = {
@@ -90,26 +93,27 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       )}
       <div style={reiheStil} data-testid={`team-row3-${seite}`}>
         {knoepfe.foul && (
-          <Button variant="secondary" icon={<MatchIcons.Flag />} style={knopfStil(kompakt)} data-testid={`foul-button-${seite}`} onClick={onFoul}
-            aria-keyshortcuts={taste?.foul} aria-label={t('spalte.aria.foul', { team: name, zaehler: foulText })}>
+          <Button variant="secondary" icon={<MatchIcons.Flag />} style={knopfStil(kompakt, breit)} data-testid={`foul-button-${seite}`} onClick={onFoul}
+            aria-keyshortcuts={taste?.foul} aria-label={t('spalte.aria.foul', { team: name, zaehler: foulAria })}>
             <span data-testid={`team-fouls-${seite}`}>{foulText}</span>
             {chips && <kbd aria-hidden="true" data-testid={`foul-taste-${seite}`} style={kbdChipStil(false)}>{taste.foul}</kbd>}
           </Button>
         )}
         {zeigeStrafe && (
-          <Button variant="secondary" icon={<MatchIcons.Stopwatch />} style={knopfStil(kompakt)} data-testid={`penalty-button-${seite}`} onClick={onZeitstrafe}
+          <Button variant="secondary" icon={<MatchIcons.Stopwatch />} style={knopfStil(kompakt, breit)} data-testid={`penalty-button-${seite}`} onClick={onZeitstrafe}
             aria-label={t('spalte.aria.strafe', { team: name })}>
-            <span style={zweizeilig}>{t('spalte.strafeKnopf')}</span>{' '}
-            <span style={zweizeilig}>{t('spalte.strafeDauer', { minuten: model.zeitstrafeMinuten })}</span>
+            <span style={breit ? einzeilig : zweizeilig}>{t('spalte.strafeKnopf')}</span>{' '}
+            <span style={breit ? einzeilig : zweizeilig}>{t('spalte.strafeDauer', { minuten: model.zeitstrafeMinuten })}</span>
           </Button>
         )}
         {zeigeKarte && (
-          <Button variant="secondary" icon={<MatchIcons.Card />} style={knopfStil(kompakt)} data-testid={`card-button-${seite}`} onClick={onKarte}
+          <Button variant="secondary" icon={<MatchIcons.Card />} style={knopfStil(kompakt, breit)} data-testid={`card-button-${seite}`} onClick={onKarte}
             aria-label={t('spalte.aria.karte', { team: name })}>{t('spalte.karte')}</Button>
         )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
-      {strafen.length > 0 && (
+      {/* Am Laptop stehen die laufenden Strafen als Karten in der rechten Spalte (@SL-186), nicht noch einmal unter den Tasten */}
+      {strafen.length > 0 && !breit && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.xs }}>
           {strafen.map((s) => (
             <span key={s.id} style={markeStil(s.steht)} data-testid={`team-penalty-${s.id}`} data-steht={String(s.steht)}>

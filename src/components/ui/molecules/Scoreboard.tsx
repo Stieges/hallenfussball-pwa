@@ -7,10 +7,8 @@
  * Tokens. Die Uhr ist reine Anzeige und wird nicht sekündlich vorgelesen; Stand und Zustand sind `aria-live="polite"`.
  * Die Tafel ist in beiden Themes dunkel (Tokens `scoreboard*`).
  */
-import type { CSSProperties, ReactElement, ReactNode } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
-import type { SideBox } from '../../../core/models/scoreBoxColors';
-import type { MatchBadgeModel } from '../../../core/view/badge';
 import { getColorsByTheme } from '../../../design-tokens/colors';
 import { ScoreBox } from './ScoreBox';
 import { ClockDigits } from '../atoms/ClockDigits';
@@ -19,106 +17,24 @@ import styles from './Scoreboard.module.css';
 import { Icons } from '../Icons';
 import { TafelIcons } from '../IconsTafel';
 import { MatchStatusBadge } from './MatchStatusBadge';
+import { Abzeichen } from './ScoreboardAbzeichen';
+import { ueberstandVon, zeileHoehe } from './scoreboardAbzeichenMasse';
+import { ScoreboardDesktop } from './ScoreboardDesktop';
+import type { ScoreboardSeite, ScoreboardProps } from './scoreboardTypes';
 
-export interface ScoreboardSeite {
-  name: string; tore: number;
-  /** Kasten dieser Anzeigeseite: getragene Farbe wie am Hallenmonitor (@SL-176, `MatchView.boxes`); fehlt er, bleibt der Kasten neutral. */
-  kasten?: SideBox;
-}
-/**
- * `schlussphase`: nur Uhr-Art „durchlaufend, letzte Minute angehalten“ in ihrer Schlussphase (@SL-003, @SL-136) → Uhr in
- * `scoreboardFinalPhase` (Violett). `ton`: gedämpft (Pause, Endstand) oder grün (Pause vorbei, Wiederanpfiff).
- */
-export interface ScoreboardUhr {
-  rest: string; gespielt: string | null; hervorgehoben: boolean; steht: boolean; schlussphase: boolean;
-  /** Zeile über der Uhr („Restzeit“, „angehalten“, „Pause“, „Anstoß“). */
-  label?: string | null;
-  /** Zeile unter der Uhr („Spielzeit 3:12“); fehlt sie, steht `gespielt`. */
-  unterzeile?: string | null;
-  ton?: 'gedaempft' | 'ok';
-}
-export interface ScoreboardModel {
-  /** Zustands-Abzeichen ohne Uhr (@OB-065, @OB-066): dasselbe Molekül wie die Spielkarte. */
-  badge: MatchBadgeModel;
-  /** Vor dem Anpfiff nach der Anstoßzeit: „überfällig N Min“ im selben Platz (@OB-068); sonst leer. */
-  ueberfaelligText?: string | null;
-  /** Nach dem Abpfiff 30 Sekunden lang: „Abgepfiffen · 2:1 gespeichert“ unter dem Endstand (@SL-152); sonst leer. */
-  quittungText?: string | null;
-  links: ScoreboardSeite; rechts: ScoreboardSeite;
-  uhr: ScoreboardUhr | null;
-  /** Text in der Kopfzeile neben dem Zustand: Abschnitt, vor dem Spiel der Turniername. */
-  abschnittText: string | null;
-  hinweise: string[];
-  eintraegeWartenText: string | null;
-  /** Nur die Zahl: steht statt des vollen Wortlauts, wenn neben dem Zustand auch das Ton-Abzeichen Platz braucht (C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE). */
-  eintraegeWartenKurz?: string | null;
-  helferAnfragenText: string | null;
-  ariaStand: string;
-  /** Statt Stand und Uhr: „wartet auf Teams“ und „kein Spiel mehr“ (Aufgabe 2.5). */
-  leerAnzeige?: { titel: string; untertitel: string | null } | null;
-}
-/** `label` ist der zugängliche Name; `kurz` der sichtbare Text (fehlt er, steht `label`). */
-export interface ScoreboardAbzeichenKnopf { label: string; kurz?: string; onAntippen: () => void }
-export interface ScoreboardProps {
-  model: ScoreboardModel;
-  size: 'compact' | 'regular' | 'wide';
-  /** Stufe der Fensterhöhe am Laptop (Maße von Kasten und Ziffern, @SL-187); ohne Angabe die Handy-Maße. */
-  stufe?: 'knapp' | 'normal' | 'gross';
-  meldezeile: ReactNode;
-  onHelferAnfragen?: () => void;
-  testId?: string;
-  /** Stehende Anzeige (Spec § 7 Nr. 1): Wachhalten-Symbol, bis es angetippt wird (Aufgabe 4.2). */
-  wachhaltenHinweis?: ScoreboardAbzeichenKnopf | null;
-  /** Der Ton für den Abpfiff ist (noch) nicht freigegeben: Abzeichen statt schwebendem Hinweis (C-COCKPIT-SOUNDHINWEIS-VERDECKT). */
-  tonHinweis?: ScoreboardAbzeichenKnopf | null;
-  /** Übergang bis zum schmalen Kopf (Aufgabe 3.8): Verbindungsanzeige in der Kopfzeile. */
-  kopfRechts?: ReactNode;
-}
-
-/** Nur für Bildschirmleser: der volle Wortlaut eines Abzeichens, dessen sichtbarer Text verkürzt ist. */
-const nurVorlesen: CSSProperties = {
-  position: 'absolute', width: cssVars.sizing.hairline, height: cssVars.sizing.hairline, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)',
-  whiteSpace: 'nowrap', margin: `calc(-1 * ${cssVars.sizing.hairline})`, padding: 0, border: 0,
-};
-
-/** Höhe der Kopfzeile; die Tippfläche der Abzeichen (44 px) ragt darüber hinaus (`ueberstand`) und braucht dort Platz. */
-const zeileHoehe = (gross: boolean): string => (gross ? cssVars.spacing.xl : cssVars.spacing.lg);
-const ueberstandVon = (hoehe: string): string => `max(0px, calc((${cssVars.touchTargets.minimum} - ${hoehe}) / 2))`;
-
-function Abzeichen({ label, kurz, icon, onAntippen, testId, hoehe }: { label: string; kurz?: string; icon: ReactNode; onAntippen?: () => void; testId?: string; hoehe: string }): ReactElement {
-  const marke: CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, padding: `0 ${cssVars.spacing.sm}`,
-    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.scoreboardBorder}`, borderRadius: cssVars.borderRadius.full,
-    fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm, fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.scoreboardText, whiteSpace: 'nowrap',
-  };
-  if (onAntippen === undefined) {
-    // Verkürzter Text: sichtbar nur `kurz`, der volle Wortlaut bleibt für Bildschirmleser (das Abzeichen trägt weiter sein Wort bzw. seine Zahl)
-    return (
-      <span style={{ ...marke, position: 'relative' }} data-testid={testId}>
-        {icon}
-        {kurz === undefined ? label : <><span aria-hidden="true">{kurz}</span><span style={nurVorlesen}>{label}</span></>}
-      </span>
-    );
-  }
-  // Tippfläche 44 px; der negative Rand hält die Zeile in ihrer Höhe (wie das Kreuz der Meldezeile)
-  const flaeche: CSSProperties = {
-    minHeight: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum,
-    margin: `calc(-1 * ${ueberstandVon(hoehe)}) 0`,
-    padding: 0, background: 'none', border: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', color: 'inherit', fontFamily: 'inherit',
-  };
-  return (
-    <button type="button" style={flaeche} aria-label={label} onClick={onAntippen} data-testid={testId}>
-      <span style={marke}>{icon}{kurz ?? label}</span>
-    </button>
-  );
-}
+export type {
+  ScoreboardSeite, ScoreboardBalken, ScoreboardUhr, ScoreboardModel, ScoreboardAbzeichenKnopf, ScoreboardProps,
+} from './scoreboardTypes';
 
 // Die Tafel ist in beiden Themes dunkel; `ScoreBox` rechnet Kontrast und Rahmen aus Hex-Werten (keine CSS-Variablen möglich)
 const tafelFarben = getColorsByTheme('dark');
 
-export function Scoreboard({ model, size, stufe, meldezeile, onHelferAnfragen, testId, wachhaltenHinweis, tonHinweis, kopfRechts }: ScoreboardProps): ReactElement {
+export function Scoreboard(props: ScoreboardProps): ReactElement {
+  // Laptop: die Tafel wie am Hallenmonitor (Plan Cockpit v2 B1); Handy und Tablet hochkant behalten diese Tafel
+  return props.size === 'wide' ? <ScoreboardDesktop {...props} /> : <ScoreboardKompakt {...props} />;
+}
+
+function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, testId, wachhaltenHinweis, tonHinweis, kopfRechts }: ScoreboardProps): ReactElement {
   const gross = size !== 'compact';
   const id = (teil: string): string | undefined => (testId ? `${testId}-${teil}` : undefined);
   const uhr = model.uhr;

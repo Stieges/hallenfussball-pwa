@@ -256,6 +256,11 @@ export function fillSurface(fill: BoxFill): CSSProperties {
   };
 }
 
+/** Breite eines Weste-Streifens in Prozent der Fläche (0 ohne Weste): Schrift auf dem Streifen hätte weniger Kontrast als auf der Mitte (N3). */
+export function fillStreifenProzent(fill: BoxFill): number {
+  return fill.kind === 'vest' ? percent(L.vestStripeShare) : 0;
+}
+
 /** Schriftfarbe auf der Fläche des Kastens (Schwarz oder Weiß, mindestens 4,5 : 1). */
 export function fillTextColor(fill: BoxFill): '#FFFFFF' | '#000000' {
   return digitColor(fill, undefined, BOX_BLACK);

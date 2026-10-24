@@ -154,17 +154,17 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       const u = userEvent.setup();
       render(<Harness turnier={ZWEI_ABSCHNITTE} />); await FOUL_BEI_2_00(u);
       zu(210_000);
-      await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 3:30'));
+      await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 3:30'));
       await u.click(screen.getByTestId('cockpit-more-button'));
       await u.click(screen.getByTestId('mehr-uhr-korrigieren'));
       const dialog = await screen.findByRole('dialog', { name: /Spielzeit|Zeit/i });
       for (let i = 0; i < 2; i += 1) { await u.click(within(dialog).getByRole('button', { name: '10 Sekunden weniger' })); }
       await u.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
-      await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 3:10'));
+      await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 3:10'));
       zu(212_000);
       await u.click(screen.getByTestId('match-undo-button'));
       // Zwischen der Korrektur (bei 3:10) und dem Rückgängig laufen 2 s (`zu(212_000)`): „der Stand ohne die Korrektur“ ist daher 3:32
-      await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 3:32'), { timeout: 500 });
+      await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 3:32'), { timeout: 500 });
       expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1');
     });
 

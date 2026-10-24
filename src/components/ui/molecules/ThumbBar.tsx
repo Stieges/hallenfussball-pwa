@@ -159,7 +159,7 @@ export function ThumbBar({ ariaLabel, slots, layout, hinweis, tastenChips = true
             <Aktion key={slot.testId} slot={slot} layout={layout} chip={layout === 'breit' && tastenChips} tabIndex={slot.testId === tabstopp ? 0 : -1} />
           ) : (
             <div key={slot.halten.testId} style={layout === 'breit' ? { flex: HALTEN_GEWICHT, display: 'flex' } : { display: 'flex' }}>
-              <HoldButton {...slot.halten} kompakt={layout === 'daumen'} fuellend tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />
+              <HoldButton {...slot.halten} kompakt={layout === 'daumen'} einzeilig={layout === 'breit'} fuellend tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />
             </div>
           ),
         )}

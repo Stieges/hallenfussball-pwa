@@ -33,6 +33,42 @@
   gap: var(--spacing-md);
 }
 
+/* Maße der Stufen am Laptop (Plan Cockpit v2 B2, @SL-187): Tor, Foul-Reihe, Team-Leiste und Fußleiste je nach Fensterhöhe; die Fläche
+   scrollt erst unter 620 px (Tafel und Ziffern bleiben gleich groß). Standard ohne `data-stufe`: „normal“. */
+.container[data-layout='breit'] {
+  --cockpit-ereignisspalte: var(--sizing-cockpit-ereignisspalte-gross);
+  --cockpit-tor: var(--sizing-cockpit-tor-normal);
+  --cockpit-fuss: var(--sizing-cockpit-fuss-normal);
+  --cockpit-kopf: var(--sizing-cockpit-kopf-normal);
+  --cockpit-kopf-schrift: var(--font-size-title-lg);
+  --sizing-cockpit-leiste-breit: var(--sizing-cockpit-leiste-normal);
+}
+
+.container[data-layout='breit'][data-stufe='knapp'] {
+  --cockpit-ereignisspalte: var(--sizing-cockpit-ereignisspalte);
+  --cockpit-tor: var(--sizing-cockpit-tor-knapp);
+  --cockpit-fuss: var(--sizing-cockpit-fuss-knapp);
+  --cockpit-kopf: var(--sizing-cockpit-kopf-knapp);
+  --cockpit-kopf-schrift: var(--font-size-title-md);
+  --sizing-cockpit-leiste-breit: var(--sizing-cockpit-leiste-knapp);
+}
+
+.container[data-layout='breit'][data-stufe='gross'] {
+  --cockpit-ereignisspalte: var(--sizing-cockpit-ereignisspalte-gross);
+  --cockpit-tor: var(--sizing-cockpit-tor-gross);
+  --cockpit-fuss: var(--sizing-cockpit-fuss-gross-fluid);
+  --cockpit-kopf: var(--sizing-cockpit-kopf-gross-fluid);
+  --sizing-cockpit-leiste-breit: var(--sizing-cockpit-leiste-gross-fluid);
+}
+
+.container[data-layout='breit'][data-stufe='knapp'] .content,
+.container[data-layout='breit'][data-stufe='normal'] .content,
+.container[data-layout='breit'][data-stufe='gross'] .content {
+  /* kleinere Abstände in den niedrigen Stufen (Mockup 12 px, hier der nächste Token), damit Tafel und Tasten ohne Scrollen passen (@SL-187) */
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
 .container[data-layout='daumen'] .content {
   /* nur die Tastenfläche scrollt (LegacyAreas `.scoreboardDaumen`); Tafel und Leiste stehen fest */
   overflow-y: hidden;

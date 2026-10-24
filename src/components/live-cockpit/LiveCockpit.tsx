@@ -51,6 +51,7 @@ import { useCockpitTasten } from './hooks/useCockpitTasten';
 import { useTastenkuerzelAn } from './hooks/useTastenkuerzelAn';
 import { useTeamColumns } from './hooks/useTeamColumns';
 import { toTeamSummaryModel } from './model/toTeamSummaryModel';
+import { toStrafenModel, KEINE_STRAFEN } from './model/toStrafenModel';
 import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
 import { kastenOderStandard } from './model/kastenOderStandard';
@@ -152,6 +153,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     return { links: je(sides.links), rechts: je(sides.rechts) };
   }, [currentMatch, phase.zustand, fouls.gesamt, sides.links, sides.rechts, kasten]);
   usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, tx);
+  // Laufende Zeitstrafen als Karten am Laptop (@SL-186): Dauer und Beginn kommen aus der Engine-Ansicht
+  const strafen = useMemo(() => (currentMatch ? toStrafenModel(view?.penalties, currentMatch, kasten) : KEINE_STRAFEN), [currentMatch, view, kasten]);
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
   const tafel = (
@@ -195,7 +198,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   if (!currentMatch) {
     if (leer) {
       return (
-        <div className={shell.container} data-layout={layout} data-testid="live-cockpit">
+        <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit">
           <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>{tafel}</main>
           {leer.art === 'wartetAufHerkunft' && (
             <LeerLeiste
@@ -223,7 +226,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const effectiveScore = getEffectiveScore(match);
 
   return (
-    <div className={shell.container} data-layout={layout} data-testid="live-cockpit">
+    <div className={shell.container} data-layout={layout} data-stufe={layout === 'breit' ? stufe : undefined} data-testid="live-cockpit">
       <main className={isMobile ? `${shell.content} ${shell.contentMobile}` : shell.content}>
         <LegacyPlayArea
           kopf={(
@@ -250,7 +253,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
           strafstossForm={props.strafstossForm}
           columns={spalten}
           zusammenfassung={zusammenfassung}
-          sidebar={{ activePenalties: cmd.activePenalties, onEventEdit: cmd.onSidebarEventEdit }}
+          sidebar={{ strafen, onEventEdit: cmd.onSidebarEventEdit }}
         />
       </main>
 

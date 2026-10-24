@@ -49,7 +49,7 @@ describe('LiveCockpit: Tafel und Abzeichen ohne Netz', () => {
     render(<Harness />);
     await anpfiff(user);
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
-    expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 0:00');
+    expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 0:00');
     await waitFor(() => expect(screen.getByText('1 Eintrag wartet')).toBeInTheDocument()); // MATCH_START
   });
 
