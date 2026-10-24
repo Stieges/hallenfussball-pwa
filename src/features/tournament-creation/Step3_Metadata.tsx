@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Card, Combobox, Input } from '../../components/ui';
+import { Card, Input } from '../../components/ui';
+import { AgeClassPicker } from '../../components/AgeClassPicker';
 import { RulebookField } from '../../components/ui/molecules/RulebookField';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
-import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { localDateIso } from '../../core/view';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
@@ -57,16 +57,13 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         style={{ marginTop: cssVars.spacing.md }}
       />
 
-      <Combobox
-        label={t('step3.ageClass')}
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty ageClass should use default
-        value={formData.ageClass || DEFAULT_VALUES.ageClass}
-        onChange={(v) => onUpdate('ageClass', v)}
-        options={getAgeClassOptions(formData.sport ?? 'football')}
-        placeholder={t('step3.ageClassPlaceholder')}
-        style={{ marginTop: '16px' }}
-        data-testid="wizard-age-class"
-      />
+      <div style={{ marginTop: cssVars.spacing.md }}>
+        <AgeClassPicker
+          value={formData.ageClass ?? ''}
+          onChange={(v) => onUpdate('ageClass', v)}
+          testId="wizard-age-class"
+        />
+      </div>
 
       <LocationForm
         value={formData.location ?? { name: '' }}

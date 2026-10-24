@@ -4,6 +4,7 @@
 
 import { GeneratedSchedule } from '../core/generators'
 import { formatTime } from '../core/generators'
+import { ageClassText } from '../core/view';
 
 // ============================================================================
 // PRINT FORMATTING
@@ -22,7 +23,7 @@ export function formatScheduleForPrint(schedule: GeneratedSchedule): {
     <div class="schedule-header">
       <h1>${schedule.tournament.title}</h1>
       <div class="meta">
-        <span>${schedule.tournament.ageClass}</span>
+        ${ageClassText(schedule.tournament.ageClass) ? `<span>${ageClassText(schedule.tournament.ageClass)}</span>` : ''}
         <span>${schedule.tournament.date}</span>
         <span>${schedule.tournament.location.name}</span>
       </div>

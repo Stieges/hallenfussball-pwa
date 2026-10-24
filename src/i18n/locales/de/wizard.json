@@ -76,8 +76,6 @@
     "tournamentNamePlaceholder": "Vereinsname Hallencup",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
-    "ageClass": "Altersklasse",
-    "ageClassPlaceholder": "Suchen oder auswählen...",
     "startDate": "Startdatum",
     "startDatePastError": "Startdatum darf nicht in der Vergangenheit liegen",
     "startTime": "Startzeit",
@@ -524,22 +522,21 @@
       "two": "2 (zwei Halbzeiten)",
       "three": "3 Abschnitte",
       "four": "4 Abschnitte"
-    },
-    "ageClass": {
-      "gJugend": "G-Jugend (U7)",
-      "fJugend": "F-Jugend (U9)",
-      "eJugend": "E-Jugend (U10/U11)",
-      "dJugend": "D-Jugend (U12/U13)",
-      "cJugend": "C-Jugend (U14/U15)",
-      "bJugend": "B-Jugend (U16/U17)",
-      "aJugend": "A-Jugend (U18/U19)",
-      "senioren": "Senioren",
-      "herren": "Herren",
-      "damen": "Damen",
-      "ah": "AH (Alte Herren)",
-      "jugend": "Jugend",
-      "erwachsene": "Erwachsene",
-      "mixed": "Mixed"
+    }
+  },
+  "ageClassPicker": {
+    "label": "Altersklasse (freiwillig)",
+    "entriesLabel": "Altersklasse {{group}}",
+    "level": "Stufe",
+    "custom": "Sonstiges …",
+    "customLabel": "Eigene Altersklasse",
+    "adopted": "Übernommen aus dem Turnier: „{{value}}“ steht nicht in der Liste und bleibt unverändert.",
+    "previewLead": "Aushang, Monitor, Zuschauer-Seite, PDF:",
+    "previewEmpty": "Ohne Auswahl steht auf Aushang, Monitor und Zuschauer-Seite keine Altersklasse.",
+    "groups": {
+      "youth": "Jugend",
+      "uClasses": "U-Klassen",
+      "adults": "Erwachsene"
     }
   },
   "replan": {

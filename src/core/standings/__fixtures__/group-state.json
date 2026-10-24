@@ -72,7 +72,7 @@
               "enabled": true
             }
           ],
-          "ageClass": "U11",
+          "ageClass": "",
           "lastVisitedStep": 1,
           "sportId": "football-indoor",
           "placementsToPlayOut": [
@@ -664,7 +664,7 @@
               "enabled": true
             }
           ],
-          "ageClass": "U11",
+          "ageClass": "",
           "lastVisitedStep": 1,
           "sportId": "football-indoor",
           "placementsToPlayOut": [

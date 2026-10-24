@@ -32,3 +32,5 @@ export {
   type SlotKey,
 } from './originText';
 export { effectiveGroupCount, effectiveFields, effectiveFieldCount, type EffectiveField, type TournamentFactsInput } from './tournamentFacts';
+
+export { AGE_GROUPS, parseAgeClass, composeAgeClass, ageClassText, joinMeta, AGE_LEVELS, type AgeGroup, type AgeGroupId, type AgeLevel, type ParsedAgeClass } from './ageClass';

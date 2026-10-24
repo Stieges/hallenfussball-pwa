@@ -43,6 +43,7 @@ import { drawShortHeads, shortHeadTitleLines, shortQrColumn } from './render/sho
 import { renderParticipants } from './render/participants';
 import { koLines, pdfRuleLines, pdfRulesFrom, placementLine } from './rules';
 import type { PdfTexts } from './translations';
+import { ageClassText } from '../../core/view';
 
 export type { PDFExportOptions } from './pdfOptions';
 
@@ -88,7 +89,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   const hints = buildHints({
     fields: [
       [t.tournamentTitle, schedule.tournament.title],
-      [t.ageClass, schedule.tournament.ageClass],
+      [t.ageClass, ageClassText(schedule.tournament.ageClass)],
       [t.organizer, organizerName],
       [t.hall, hallName],
       [t.rules.label.rulebook, rules.rulebook ?? ''],
@@ -219,7 +220,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
     qr: qr?.modules,
     subtitleFor: page => {
       const key = sections.keyAtTop(page);
-      return [schedule.tournament.ageClass, dayOf(schedule, t), key ? sectionNames[key] : ''].filter(part => part !== '').join(t.rules.join);
+      return [ageClassText(schedule.tournament.ageClass), dayOf(schedule, t), key ? sectionNames[key] : ''].filter(part => part !== '').join(t.rules.join);
     },
   });
   drawFooters(doc, geo, footer);

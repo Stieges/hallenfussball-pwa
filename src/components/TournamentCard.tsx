@@ -22,6 +22,7 @@ import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { canWithListedRole } from '../features/auth/hooks/useCan';
 import { TextTag } from './ui/atoms';
 import { badgeContainerStyle, headerStyle, infoGridStyle, infoItemStyle, statusBadgeColors, valueStyle } from './tournamentCardStyles';
+import { ageClassText } from '../core/view';
 
 /** Map categoryLabel to TournamentActionMenu category */
 type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
@@ -244,10 +245,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             <dd style={{ ...valueStyle, margin: 0 }}>{getLocationName(tournament)}</dd>
           </div>
 
-          <div style={infoItemStyle}>
-            <dt style={labelStyle}>{t('card.labels.ageClass')}</dt>
-            <dd style={{ ...valueStyle, margin: 0 }}>{tournament.ageClass}</dd>
-          </div>
+          {ageClassText(tournament.ageClass) !== '' && (
+            <div style={infoItemStyle} data-testid="tournament-card-age-class">
+              <dt style={labelStyle}>{t('card.labels.ageClass')}</dt>
+              <dd style={{ ...valueStyle, margin: 0 }}>{ageClassText(tournament.ageClass)}</dd>
+            </div>
+          )}
 
           <div style={infoItemStyle}>
             <dt style={labelStyle}>{t('card.labels.mode')}</dt>
