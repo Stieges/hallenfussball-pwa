@@ -4,7 +4,7 @@ import { LocalStorageRepository } from '../repositories/LocalStorageRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { AuthenticationError, GuestStoreReadError, OptimisticLockError, RepositoryError, SessionReadError } from '../errors';
-import type { CompleteGroupRequest } from '../repositories/groupCompletionCloud';
+import { carriesNewDecision, type CompleteGroupRequest } from '../repositories/groupCompletionCloud';
 import { supabase } from '../../lib/supabase';
 import {
     GenericMutationQueue,
@@ -421,7 +421,9 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         }
                         const reached = await sendCompleteGroup(supabaseRepo, localRepo, payload);
                         const base = payload.baseVersion;
-                        if (base !== undefined && reached === base + 1) {
+                        // Review #368 H1: complete_group zählt die Version nur bei neuen Entscheidungen. Ohne neue Entscheidung
+                        // stammt ein Sprung um eins von jemand anderem – dann weder bestätigen noch anheben (@TM-116, @FU-110).
+                        if (base !== undefined && carriesNewDecision(payload.request) && reached === base + 1) {
                             completedById.set(item.id, { base, reached });
                             await confirmLocally(localRepo, payload.tournamentId, base, reached);
                         }

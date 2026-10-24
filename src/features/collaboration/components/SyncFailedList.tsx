@@ -14,6 +14,7 @@ import { CSSProperties, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { CompleteGroupMutation, FailedMutationItem, MutationType } from '../../../core/services/MutationQueue';
+import { carriesNewDecision } from '../../../core/repositories/groupCompletionCloud';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
@@ -132,10 +133,9 @@ type ReasonKey = 'syncStatus.discardedCopyReason' | 'syncStatus.conflictReason' 
     | 'syncStatus.clarificationGroupReason' | 'syncStatus.clarificationGroupDecisionReason';
 
 /** A-15c (@TM-146, @TM-147): trug der ohne Netz nachgereichte Abschluss eine neue Gleichstands-Entscheidung? */
-function carriesNewDecision(item: FailedMutationItem): boolean {
+function itemCarriesNewDecision(item: FailedMutationItem): boolean {
     const request = (item.payload as Partial<CompleteGroupMutation> | null)?.request;
-    const known = new Set(request?.knownDecisionIds ?? []);
-    return (request?.tieDecisions ?? []).some((d) => !known.has(d.id));
+    return carriesNewDecision({ tieDecisions: request?.tieDecisions ?? [], knownDecisionIds: request?.knownDecisionIds ?? [] });
 }
 
 /** Grund je Eintrag: Konflikt, verworfener Stand, eindeutige Ablehnung (@FU-126) – je eigener Text – oder der letzte Fehler. */
@@ -143,7 +143,7 @@ function reasonKey(item: FailedMutationItem): ReasonKey | null {
     if (item.discardedCopy) { return 'syncStatus.discardedCopyReason'; }
     // A-15c (@TM-116, @TM-146, @TM-147): ein nachgereichter Abschluss im Konflikt steht hier als „Klärung nötig“, mit Entscheidung
     if (item.type === 'COMPLETE_GROUP' && item.conflict) {
-        return carriesNewDecision(item) ? 'syncStatus.clarificationGroupDecisionReason' : 'syncStatus.clarificationGroupReason';
+        return itemCarriesNewDecision(item) ? 'syncStatus.clarificationGroupDecisionReason' : 'syncStatus.clarificationGroupReason';
     }
     if (item.rejection === 'invalidValue') { return 'syncStatus.invalidValueReason'; }
     if (item.rejection === 'tournamentGone') { return 'syncStatus.tournamentGoneReason'; } // @FU-123

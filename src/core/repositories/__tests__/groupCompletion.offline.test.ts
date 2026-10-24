@@ -303,6 +303,23 @@ describe('Eigene Speicherung nach dem Abschluss ohne Netz ist kein Konflikt (wie
     expect((cloud.save.mock.calls[0][0] as Tournament).version).toBe(6);
   });
 
+  it('Review #368 H1 Gegenbeispiel: Abschluss ohne neue Entscheidung, Maria hat inzwischen gespeichert (5 → 6) → die Speicherung prüft weiter gegen 5 (Konflikt statt still überschreiben)', async () => {
+    const ohneGleichstand = hallencup();
+    const server: Tournament = { ...ohneGleichstand, standingDecisions: [draftToDecision(ohneGleichstand, WEST_4_3, 'e-alt')] };
+    const { cloud, local, repo, queue } = setup(server);
+    net.online = false;
+    const request = requestOf(server, 'A', null);
+    expect(request.knownDecisionIds).toEqual(['e-alt']); // die Entscheidung kennt der Server schon
+    await repo.completeGroup(server.id, request);
+    await repo.save({ ...(await local$(local, server.id)), title: 'Hallencup Nord 2026' });
+    // complete_group zählt ohne neue Entscheidung nicht – die 6 stammt von Marias Speicherung
+    cloud.completeGroup.mockResolvedValue({ status: 'ok', alreadyCompleted: false, changed: [], tournamentVersion: 6 });
+
+    net.online = true;
+    await queue.process();
+    expect((cloud.save.mock.calls[0][0] as Tournament).version).toBe(5);
+  });
+
   it('Gegenbeispiel: hat am Server noch jemand gespeichert (5 → 7), prüft die Speicherung weiter gegen 5 (nichts still überschreiben)', async () => {
     const server = hallencup();
     const { cloud, local, repo, queue } = setup(server);
