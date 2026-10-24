@@ -191,6 +191,8 @@ async function gruppeAbschliessen({ asRole }: StepContext): Promise<void> {
  * verfällt, Petting steht vor Otting. Erwartet: die Gruppe ist abgeschlossen mit der neuen Rangfolge, nicht mehr veraltet, kein
  * „Besetzung prüfen“, und genau EIN neuer Verlaufseintrag `complete_group` (auch nach weiterem Warten, M1).
  * Die Korrektur geht über die Turnierleitungs-RPC: der Einstieg „Korrigieren“ im Spielplan/Cockpit fehlt noch (D12/D12b, B-24/B-25).
+ * Läuft als LETZTER Schritt: die Korrektur ändert ein Ergebnis, die Vorbedingung der übrigen Schritte (`beendeAlleSpiele`) prüft die
+ * festen Ergebnisse. Wird N7b (Turnier abschließen) grün, ist das Turnier gesperrt – dann gehört dieser Schritt vor N7b.
  */
 async function neuAbschlussNachKorrektur({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
@@ -254,7 +256,7 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB (TB-2)', expectedFail: false, run: vorbelegungPrivat },
   { id: 'N6f', title: 'Entscheidung öffentlich ohne Person, Zeit und Grund; Entscheidungsverlauf nicht anonym lesbar', scenarios: ['@W2A-072'], owner: 'Paket TB (TB-3\')', expectedFail: false, run: entscheidungNichtOeffentlich },
   { id: 'N7a', title: 'Gruppe abgeschlossen (mit der Entscheidung in N6d): kein Vorschlag mehr, „Gruppe wieder öffnen“, kein Zurücknehmen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-070'], owner: 'A-13c', expectedFail: false, run: gruppeAbschliessen },
-  { id: 'N7a2', title: 'Korrektur nach dem Abschluss: Gruppe ohne Zutun erneut abgeschlossen, kein „Besetzung prüfen“, ein Verlaufseintrag', scenarios: ['@TM-071', '@TM-150'], owner: 'R2 PR 2 (A-15b)', expectedFail: false, run: neuAbschlussNachKorrektur },
   { id: 'N7b', title: 'Turnier abschließen: abgeschlossen und gesperrt', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a / B-33', expectedFail: true, run: turnierAbschliessen },
   { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
+  { id: 'N7a2', title: 'Korrektur nach dem Abschluss: Gruppe ohne Zutun erneut abgeschlossen, kein „Besetzung prüfen“, ein Verlaufseintrag', scenarios: ['@TM-071', '@TM-150'], owner: 'R2 PR 2 (A-15b)', expectedFail: false, run: neuAbschlussNachKorrektur },
 ];
