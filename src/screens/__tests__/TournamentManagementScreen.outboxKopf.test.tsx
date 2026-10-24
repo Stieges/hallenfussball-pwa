@@ -8,6 +8,8 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '../../components/ui/Toast';
 
+// A-15b: der Auslöser „erneut abschließen“ braucht Rechte (AuthProvider) und ist hier nicht Gegenstand
+vi.mock('../../hooks/useAutoRecompletion', () => ({ useAutoRecompletion: () => undefined }));
 vi.mock('../../hooks/useTournamentManager', () => ({
   useTournamentManager: () => ({
     tournament: { id: 't1', name: 'Wintercup', teams: [], matches: [], groups: [], numberOfGroups: 1 },
