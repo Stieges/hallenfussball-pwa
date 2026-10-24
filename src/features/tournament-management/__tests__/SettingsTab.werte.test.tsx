@@ -75,6 +75,13 @@ describe('@W5-038 Feld-Management zeigt die Felder des Turniers', () => {
     expect(screen.getByText('1 Feld')).toBeInTheDocument();
     expect(screen.queryByText(/Keine Felder/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Wizard/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Feldnamen sind für dieses Turnier noch nicht angelegt/)).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: gespeicherte Feldliste mit Namen: Stift und Hinweis ohne „Wizard“', () => {
+    render(<FieldManagement tournament={nikolaus({ fields: [{ id: 'field-1', defaultName: 'Feld 1', customName: 'Halle Nord' }] })} onTournamentUpdate={vi.fn()} />);
+    expect(screen.getByText('Halle Nord')).toBeInTheDocument();
+    expect(screen.queryByText(/Feldnamen sind für dieses Turnier noch nicht angelegt/)).not.toBeInTheDocument();
   });
 
   it('Gegenbeispiel: ohne Feldliste und ohne Spiele bleibt der Leerzustand', () => {

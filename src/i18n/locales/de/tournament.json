@@ -799,7 +799,9 @@
     "editLabel": "Bezeichnung bearbeiten",
     "customName": "Eigene Bezeichnung",
     "shortCode": "Kurzcode (max 3)",
-    "customNameInfo": "Eigene Bezeichnungen werden in Monitor-Slides und im Spielplan angezeigt. Die Anzahl der Felder kann nur im Wizard geändert werden."
+    "customNameInfo": "Eigene Bezeichnungen werden in Monitor-Slides und im Spielplan angezeigt.",
+    "defaultNumbered": "Feld {{n}}",
+    "derivedInfo": "Feldnamen sind für dieses Turnier noch nicht angelegt, deshalb lassen sich die Felder hier nicht umbenennen."
   },
   "monitorEditor": {
     "allTeams": "Alle Teams",

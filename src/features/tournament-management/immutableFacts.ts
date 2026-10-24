@@ -3,6 +3,7 @@
  * (nie „classic“ roh). Gruppen und Felder kommen aus der gemeinsamen Ableitung in core/view.
  */
 import { effectiveFieldCount, effectiveGroupCount } from '../../core/view';
+import type { MatchStartState } from '../../utils/matchStartState';
 import type { Tournament } from '../../types/tournament';
 
 const P = 'settings.immutableSettings';
@@ -46,11 +47,14 @@ export function immutableFacts(tournament: Tournament, word: (key: ImmutableValu
   return facts;
 }
 
-/** Erklärtext je Zustand: gleiche Quelle wie `canEditInWizard` (Anpfiff) und Recht `restructure`. */
+/**
+ * Erklärtext je Zustand: Startzustand (Anpfiff) und Recht `restructure`. Nur `'started'` sagt „seit dem ersten
+ * Anpfiff fest“; bei `'unknown'` (offline, lädt) bleibt der Text neutral, denn angepfiffen ist dann nicht belegt.
+ */
 export function immutableDescriptionKey(
-  canEditInWizard: boolean,
+  startState: MatchStartState,
   canRestructure: boolean,
 ): 'settings.immutableSettings.descriptionAfterStart' | 'settings.immutableSettings.descriptionBeforeStart' | 'settings.immutableSettings.description' {
-  if (!canEditInWizard) { return `${P}.descriptionAfterStart`; }
-  return canRestructure ? `${P}.descriptionBeforeStart` : `${P}.description`;
+  if (startState === 'started') { return `${P}.descriptionAfterStart`; }
+  return startState === 'not-started' && canRestructure ? `${P}.descriptionBeforeStart` : `${P}.description`;
 }

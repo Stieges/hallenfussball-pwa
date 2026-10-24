@@ -6,6 +6,7 @@
  * - „Jeder gegen jeden“ ist immer eine Gruppe, auch wenn `numberOfGroups` vom Anlegen 2 trägt (@OB-069).
  * - Fehlt die Feldliste, zählen die Felder, auf denen Spiele liegen, sonst `numberOfFields`.
  */
+import { tournamentFieldList } from '../services/monitorConfigTransferChecks';
 import type { Match, Tournament, TournamentField } from '../../types/tournament';
 
 export interface TournamentFactsInput {
@@ -32,18 +33,17 @@ export interface EffectiveField {
 }
 
 /**
- * Felder des Turniers: die gespeicherte Liste; ohne sie die Felder, auf denen Spiele liegen
- * (Feld 1 bei einem Turnier ohne Feldliste); ohne Spiele `numberOfFields` Felder.
+ * Felder des Turniers, eine Regel mit dem Monitor-Editor (`tournamentFieldList`): die gespeicherte Liste;
+ * sonst field-1 … field-N mit N = größter Wert aus `numberOfFields` und dem höchsten Spielfeld
+ * (ein Turnier ohne Anzahl, dessen Spiele auf Feld 1 liegen, hat Feld 1). Ohne beides keine Felder.
  */
 export function effectiveFields(tournament: TournamentFactsInput): EffectiveField[] {
   const stored = tournament.fields ?? [];
   if (stored.length > 0) { return stored.map((field) => ({ ...field, stored: true })); }
-  const used = [...new Set((tournament.matches ?? []).map((match) => match.field).filter((n) => Number.isInteger(n) && n > 0))]
-    .sort((a, b) => a - b);
-  const numbers = used.length > 0
-    ? used
-    : Array.from({ length: Math.max(0, tournament.numberOfFields ?? 0) }, (_, i) => i + 1);
-  return numbers.map((n) => ({ id: `field-${n}`, defaultName: `Feld ${n}`, stored: false }));
+  const highestUsed = Math.max(0, ...(tournament.matches ?? []).map((match) => (Number.isInteger(match.field) ? match.field : 0)));
+  const count = Math.max(tournament.numberOfFields ?? 0, highestUsed);
+  if (count < 1) { return []; }
+  return tournamentFieldList({ numberOfFields: count }).map((field) => ({ ...field, stored: false }));
 }
 
 export function effectiveFieldCount(tournament: TournamentFactsInput): number {

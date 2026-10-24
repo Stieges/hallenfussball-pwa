@@ -799,7 +799,9 @@
     "editLabel": "Edit label",
     "customName": "Custom name",
     "shortCode": "Short code (max 3)",
-    "customNameInfo": "Custom names are displayed in monitor slides and the schedule. The number of fields can only be changed in the wizard."
+    "customNameInfo": "Custom names are shown in monitor slides and in the schedule.",
+    "defaultNumbered": "Field {{n}}",
+    "derivedInfo": "Field names have not been created for this tournament yet, so the fields cannot be renamed here."
   },
   "monitorEditor": {
     "allTeams": "All Teams",

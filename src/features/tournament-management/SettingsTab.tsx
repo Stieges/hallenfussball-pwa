@@ -485,7 +485,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     {t('settings.immutableSettings.title')}
                   </h4>
                   <p style={{ margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                    {t(immutableDescriptionKey(canEditInWizard, canRestructure))}
+                    {t(immutableDescriptionKey(matchStartState, canRestructure))}
                   </p>
                   <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
                     {immutableFacts(tournament, (key) => t(key)).map((fact) => (

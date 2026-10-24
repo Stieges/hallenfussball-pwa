@@ -18,6 +18,7 @@ import { ConfirmDialog, useConfirmDialog } from '../../../../components/ui/Confi
 import { RulebookField } from '../../../../components/ui/molecules/RulebookField';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
 import type { Tournament } from '../../../../types/tournament';
+import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
 import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../../../core/services/tournamentMetaValidation';
 
 // =============================================================================
@@ -419,7 +420,7 @@ export function MetadataCategory({
         <div style={styles.lockedField}>
           <div>
             <div style={styles.lockedFieldLabel}>{t('metadata.numberOfGroups')}</div>
-            <div style={styles.lockedFieldValue}>{tournament.numberOfGroups ?? 1}</div>
+            <div style={styles.lockedFieldValue}>{effectiveGroupCount(tournament)}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
         </div>
@@ -427,7 +428,7 @@ export function MetadataCategory({
         <div style={styles.lockedField}>
           <div>
             <div style={styles.lockedFieldLabel}>{t('metadata.numberOfFields')}</div>
-            <div style={styles.lockedFieldValue}>{tournament.numberOfFields}</div>
+            <div style={styles.lockedFieldValue}>{effectiveFieldCount(tournament)}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
         </div>

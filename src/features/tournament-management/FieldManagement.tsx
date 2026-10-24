@@ -291,10 +291,13 @@ export function FieldManagement({
               <div key={field.id} style={fieldItemStyle(false)}>
                 <div style={fieldIconStyle}>{field.id.replace('field-', 'F')}</div>
                 <div style={fieldInfoStyle}>
-                  <h4 style={fieldNameStyle}>{field.defaultName}</h4>
+                  <h4 style={fieldNameStyle}>{t('field.defaultNumbered', { n: field.id.replace('field-', '') })}</h4>
                 </div>
               </div>
             ))}
+            <p style={{ margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
+              {t('field.derivedInfo')}
+            </p>
           </div>
         ) : fields.length === 0 ? (
           <div style={emptyStateStyle}>

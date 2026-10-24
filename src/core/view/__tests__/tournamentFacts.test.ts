@@ -1,5 +1,7 @@
 /** @W5-038 / C-ADMIN-DASHBOARD-ZAHLEN: Anzeige-Werte aus dem Turnier, gespeicherte Werte bleiben. */
 import { describe, it, expect } from 'vitest';
+import { createMockTournament, createMockTeams } from '../../../test/factories';
+import { generateFullSchedule } from '../../generators/scheduleGenerator';
 import { effectiveGroupCount, effectiveFields, effectiveFieldCount } from '../tournamentFacts';
 
 describe('effectiveGroupCount', () => {
@@ -24,5 +26,24 @@ describe('effectiveFields', () => {
     const result = effectiveFields({ fields: [{ id: 'field-1', defaultName: 'Feld 1', customName: 'Halle Nord' }], matches: [{ field: 2 }] });
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ customName: 'Halle Nord', stored: true });
+  });
+});
+
+describe('effectiveFields mit dem echten Generator (gleiche Zahl wie Monitor-Editor und Helfer-Zuordnung)', () => {
+  function generated(teamCount: number, numberOfFields: number) {
+    const base = createMockTournament({ sportId: 'football-indoor', numberOfFields, groupSystem: 'roundRobin', teams: createMockTeams(teamCount) });
+    return { ...base, matches: generateFullSchedule(base).allMatches };
+  }
+  it('Gegenbeispiel: 4 Teams auf 3 Feldern bleiben 3 Felder (nicht nur die belegten)', () => {
+    expect(effectiveFieldCount(generated(4, 3))).toBe(3);
+  });
+  it('Gegenbeispiel: 3 Teams auf 2 Feldern bleiben 2 Felder', () => {
+    expect(effectiveFieldCount(generated(3, 2))).toBe(2);
+  });
+  it('Spiele auf einem höheren Feld als numberOfFields zählen mit', () => {
+    expect(effectiveFieldCount({ numberOfFields: 1, matches: [{ field: 3 }] })).toBe(3);
+  });
+  it('weder Anzahl noch Spiele: keine Felder', () => {
+    expect(effectiveFieldCount({ matches: [] })).toBe(0);
   });
 });
