@@ -33,7 +33,7 @@ describe('lageVon', () => {
     expect(lageVon(document.body).dialogOffen).toBe(false);
   });
 
-  it('A4-2 Halteknopf mit Tab erreicht → halteFokus; nach einem Mausklick nicht, bis wieder Tab oder ein anderer Fokuswechsel kommt; andere Knöpfe nie', async () => {
+  it('A4-2 Halteknopf mit Tab erreicht → halteFokus; nach einem Mausklick nicht, bis wieder Tab gedrückt wird (Fokus per Programm ändert nichts); andere Knöpfe nie', () => {
     const { unmount } = renderHook(() => useCockpitShortcuts({ aktiv: true, darf: () => false, aktionen: leer }));
     const halten = document.createElement('button');
     halten.setAttribute('data-halteknopf', '');
@@ -46,14 +46,9 @@ describe('lageVon', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
     expect(lageVon(halten).halteFokus).toBe(true);
     window.dispatchEvent(new Event('pointerdown'));
-    expect(lageVon(halten).halteFokus).toBe(false);
     document.body.append(halten);
-    halten.focus(); // Fokus ohne Mausklick im selben Durchlauf (Programm, Tab-Reihenfolge) zählt als Tastatur
-    await new Promise((fertig) => { setTimeout(fertig, 5); });
-    document.body.append(anderer);
-    halten.blur();
-    halten.focus();
-    expect(lageVon(halten).halteFokus).toBe(true);
+    halten.focus(); // Fokus per Programm oder Fokusfalle (Dialog zu) ändert die Fokusart nicht
+    expect(lageVon(halten).halteFokus).toBe(false);
     expect(lageVon(anderer).halteFokus).toBe(false);
     unmount();
   });

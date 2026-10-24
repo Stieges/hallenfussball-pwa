@@ -5,7 +5,7 @@
  * Echte Engine (fake-indexeddb); gemockt nur Ton, Sync-Anzeige, Rolle. Gherkin: docs/anforderungen/2026-10-02_spiel-leiten.md.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
@@ -57,6 +57,8 @@ async function starte(user: Nutzer, hilfe?: () => void): Promise<void> {
   await anpfiff(user);
   await waitFor(() => expect(zustand()).toContain('Live'));
 }
+/** Die Engine-Befehle laufen asynchron (fake-indexeddb): vor einer Gegenbeispiel-Erwartung abwarten, damit „nichts passiert“ nicht nur „noch nicht passiert“ heißt. */
+const engineLeer = async (): Promise<void> => { await act(async () => { await new Promise((r) => { setTimeout(r, 250); }); }); };
 const schliesseAuswahl = async (user: Nutzer): Promise<void> => { await user.keyboard('{Escape}'); await waitFor(() => expect(screen.queryByTestId('number-picker')).toBeNull()); };
 
 describe('@SL-153 Am Laptop leitet Olli ein Spiel mit Tastenkürzeln', () => {
@@ -122,6 +124,7 @@ describe('@SL-153 Am Laptop leitet Olli ein Spiel mit Tastenkürzeln', () => {
     await user.keyboard('{Control>}z{/Control}');
     await waitFor(() => expect(retractAnzahl()).toBe(1));
     await user.keyboard('{Control>}z{/Control}');
+    await engineLeer();
     expect(retractAnzahl()).toBe(1);
   });
 
@@ -134,6 +137,7 @@ describe('@SL-153 Am Laptop leitet Olli ein Spiel mit Tastenkürzeln', () => {
     await user.click(screen.getByTestId('match-undo-button'));
     await waitFor(() => expect(retractAnzahl()).toBe(1));
     await user.keyboard('{Control>}z{/Control}');
+    await engineLeer();
     expect(retractAnzahl()).toBe(1);
     zu(1500);
     await user.keyboard('{Control>}z{/Control}');
@@ -171,6 +175,7 @@ describe('@SL-154 / @SL-142 Eingabefeld, Dialog und Klick', () => {
     await user.keyboard('1');
     await waitFor(() => expect(within(auswahl).getByRole('textbox')).toHaveValue('1'));
     expect(within(auswahl).getByRole('textbox')).toHaveFocus();
+    await engineLeer();
     expect(toreImLog()).toHaveLength(1);
   });
 
@@ -180,6 +185,7 @@ describe('@SL-154 / @SL-142 Eingabefeld, Dialog und Klick', () => {
     await user.keyboard('1');
     const feld = within(await screen.findByTestId('number-picker')).getByRole('textbox');
     await user.type(feld, 'f ');
+    await engineLeer();
     expect(fouls()).toBe(0);
     expect(zustand()).toContain('Live');
   });
@@ -192,6 +198,7 @@ describe('@SL-154 / @SL-142 Eingabefeld, Dialog und Klick', () => {
     await new Promise((r) => { setTimeout(r, 1100); });
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
     await user.keyboard(' ');
+    await engineLeer();
     expect(zustand()).toContain('Live');
   });
 });
@@ -230,6 +237,7 @@ describe('@SL-188 / @SL-189 Hinweise nur mit Maus, Schalter', () => {
     await user.keyboard(' ');
     await user.keyboard('1');
     await user.keyboard('f');
+    await engineLeer();
     expect(zustand()).toContain('Live');
     expect(toreImLog()).toHaveLength(0);
     expect(fouls()).toBe(0);
@@ -241,7 +249,11 @@ describe('@SL-188 / @SL-189 Hinweise nur mit Maus, Schalter', () => {
     await starte(user);
     await user.keyboard('1');
     await user.keyboard('f');
+    await engineLeer();
     expect(toreImLog()).toHaveLength(0);
     expect(fouls()).toBe(0);
+    // Kein Kürzel wirkt, also meldet auch die Leiste keines (aria-keyshortcuts nur, wo die Taste wirklich wirkt)
+    expect(screen.getByTestId('match-pause-button')).not.toHaveAttribute('aria-keyshortcuts');
+    expect(screen.getByTestId('match-undo-button')).not.toHaveAttribute('aria-keyshortcuts');
   });
 });

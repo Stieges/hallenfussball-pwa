@@ -22,7 +22,7 @@ const istEingabeFeld = (ziel: EventTarget | null): boolean => {
 };
 
 /**
- * Wie der Fokus zuletzt bewegt wurde: Mausklick/Berührung ('maus') oder Tab-Taste bzw. Programm ('tastatur'). Anfangs 'tastatur'.
+ * Wie der Fokus zuletzt bewegt wurde: Mausklick/Berührung ('maus') oder Tab-Taste ('tastatur'). Anfangs 'tastatur'.
  * `:focus-visible` allein reicht nicht: Chrome und Safari melden ihn nach einem Mausklick, sobald eine Taste gedrückt wird – auch die Leertaste.
  */
 let fokusArt: 'maus' | 'tastatur' = 'tastatur';
@@ -44,29 +44,38 @@ export function useCockpitShortcuts(p: CockpitShortcutsParams): void {
   ref.current = p;
   useEffect(() => {
     if (!p.aktiv) { return undefined; }
+    const verschluckt = { uhr: false, rueckgaengig: false };
     const beiTaste = (e: KeyboardEvent): void => {
       const { darf, aktionen } = ref.current;
       const ergebnis = tasteZuAktion(
         { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, shiftKey: e.shiftKey, repeat: e.repeat, isComposing: e.isComposing, type: e.type === 'keyup' ? 'keyup' : 'keydown' },
         lageVon(e.target),
       );
-      if (ergebnis.verhindern) { e.preventDefault(); e.stopPropagation(); }
-      if (ergebnis.aktion !== null && darf(ergebnis.aktion)) { aktionen[ergebnis.aktion](); }
+      // Die Taste gehört dem Cockpit nur, wo die Aktion jetzt wirken darf; sonst behält der Browser sie (Leertaste auf einem Knopf, Helfer ohne Steuerrecht).
+      // Leertaste und Strg/Cmd+Z: die Entscheidung des keydown gilt für keyup und gehaltene Taste (sonst löst keyup einen fokussierten Knopf aus).
+      const merkTaste = e.key === ' ' ? 'uhr' : (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' ? 'rueckgaengig' : null;
+      let verhindern = false;
+      if (ergebnis.aktion !== null) {
+        const erlaubt = darf(ergebnis.aktion);
+        verhindern = ergebnis.verhindern && erlaubt;
+        if (merkTaste !== null) { verschluckt[merkTaste] = verhindern; }
+        if (erlaubt) { aktionen[ergebnis.aktion](); }
+      } else if (merkTaste !== null) {
+        if (e.type === 'keydown' && !e.repeat) { verschluckt[merkTaste] = false; } // z. B. Leertaste auf „Abpfiff halten“: gehört dem Knopf
+        verhindern = ergebnis.verhindern && verschluckt[merkTaste];
+      }
+      if (verhindern) { e.preventDefault(); e.stopPropagation(); }
     };
     fokusArt = 'tastatur'; // frischer Start je Cockpit: ohne Mausklick gilt der Fokus als Tastatur-Fokus
-    // Ein Mausklick holt den Fokus im selben Ereignis-Durchlauf (pointerdown → focusin); jeder andere Fokuswechsel (Tab, Programm) gilt als Tastatur.
-    let zeigerEben = false;
-    const beiZeiger = (): void => { fokusArt = 'maus'; zeigerEben = true; setTimeout(() => { zeigerEben = false; }, 0); };
-    const beiFokus = (): void => { if (!zeigerEben) { fokusArt = 'tastatur'; } };
+    // Die Fokusart folgt nur der letzten Eingabe: Zeiger → Maus, Tab → Tastatur. Fokus per Programm oder Fokusfalle (Dialog zu) ändert nichts.
+    const beiZeiger = (): void => { fokusArt = 'maus'; };
     const beiFokusTaste = (e: KeyboardEvent): void => { if (e.key === 'Tab') { fokusArt = 'tastatur'; } };
     window.addEventListener('pointerdown', beiZeiger, true);
-    window.addEventListener('focusin', beiFokus, true);
     window.addEventListener('keydown', beiFokusTaste, true);
     window.addEventListener('keydown', beiTaste, true);
     window.addEventListener('keyup', beiTaste, true);
     return () => {
       window.removeEventListener('pointerdown', beiZeiger, true);
-      window.removeEventListener('focusin', beiFokus, true);
       window.removeEventListener('keydown', beiFokusTaste, true);
       window.removeEventListener('keydown', beiTaste, true);
       window.removeEventListener('keyup', beiTaste, true);

@@ -8,6 +8,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { anpfeifen, cup } from '../helpers/laptopCup';
+import { abpfiffHaltenBisRueckfrage } from '../helpers/abpfiff';
 
 const breit = (page: Page): boolean => (page.viewportSize()?.width ?? 0) >= 1024;
 const feinerZeiger = (page: Page): Promise<boolean> => page.evaluate(() => window.matchMedia('(hover: hover) and (pointer: fine)').matches);
@@ -149,6 +150,18 @@ test.describe('Tastenkürzel im Cockpit (Gast, lokal)', () => {
     await page.getByTestId('match-finish-button').click(); // kurzer Klick: löst nichts aus, Fokus ohne :focus-visible
     await page.keyboard.press('Space');
     await expect(page.getByTestId('match-resume-button')).toBeVisible();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  });
+
+  test('@SL-154 @SL-157 Maus hält „Abpfiff halten“, Rückfrage, „Weiterspielen“: danach steuert die Leertaste die Uhr, auch wenn der Fokus zum Knopf zurückkehrt (Review M1)', async ({ page, seedIndexedDB }) => {
+    test.skip(!breit(page) || !(await feinerZeiger(page)), 'nur Laptop mit Maus');
+    await seedIndexedDB({ tournaments: [cup()] });
+    await anpfeifen(page);
+    await abpfiffHaltenBisRueckfrage(page);
+    await page.getByTestId('finish-confirm-weiter').click(); // „Weiterspielen“ bricht die Rückfrage ab
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await page.keyboard.press('Space');
+    await expect(page.getByTestId('match-resume-button')).toBeVisible(); // die Uhr steht
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
   });
 });

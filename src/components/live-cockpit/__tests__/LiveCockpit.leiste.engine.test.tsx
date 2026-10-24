@@ -99,7 +99,7 @@ describe('Daumenleiste am Handy: fünf Plätze (Entscheidung A2)', () => {
     const user = userEvent.setup();
     render(<Harness />); await starte(user);
     expect(within(screen.getByTestId('match-pause-button')).queryByText('Leertaste')).toBeNull();
-    expect(screen.getByTestId('match-pause-button')).toHaveAttribute('aria-keyshortcuts', 'Space');
+    expect(screen.getByTestId('match-pause-button')).not.toHaveAttribute('aria-keyshortcuts'); // kein Kürzel wirkt, also meldet die Leiste keins (N2)
   });
 });
 

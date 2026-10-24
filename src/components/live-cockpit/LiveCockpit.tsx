@@ -262,7 +262,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         fieldName={fieldName}
         steuerung={props.steuerung}
         controls={cmd.controls}
-        tastenAn={tastenAn}
+        tastenAn={tastenAktiv}
         onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
         onKorrigieren={props.onKorrigieren ? () => { props.onKorrigieren?.(match.id); } : undefined}
         onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}

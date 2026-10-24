@@ -2,7 +2,7 @@
  * tasteZuAktion – welche Aktion eine Taste im Cockpit auslöst (Plan Cockpit v2 K1; @SL-153, @SL-154, @SL-141 bis @SL-144, @SL-167).
  *
  * Rein, ohne React. Belegung: Leertaste = Uhr (anhalten, weiterlaufen), `1`/`2` = Tor für das links/rechts **angezeigte** Team,
- * `F`/`J` = Foul links/rechts, Strg/Cmd+Z = Rückgängig, `?` = Übersicht. Kein Kürzel für den Abpfiff.
+ * `F`/`J` = Foul links/rechts, Strg/Cmd+Z = Rückgängig, `?` = Übersicht. Den Abpfiff löst keine Taste aus.
  * Regeln: in Eingabefeldern und bei offenem Dialog (jede Rolle, auch die Abpfiff-Rückfrage) wirkt nichts und der Browser behält seine Taste
  * (@SL-142, @SL-144, A4-1). Die Leertaste steuert immer nur die Uhr, auch nach einem Klick auf einen Knopf: `keyup` und gehaltene Taste werden
  * geschluckt, damit kein fokussierter Knopf auslöst (@SL-154, @SL-143). Einzige Ausnahme ist „Abpfiff halten“ mit Tastatur-Fokus

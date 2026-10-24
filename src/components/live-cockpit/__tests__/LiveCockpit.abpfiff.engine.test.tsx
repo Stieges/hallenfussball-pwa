@@ -117,6 +117,9 @@ describe('Abpfiff halten fragt nach', () => {
   });
 });
 
+/** Mit der Tab-Taste auf den Knopf: Tastatur-Fokus (Fokus per Programm allein ändert die Fokusart nicht). */
+const tabZu = (k: HTMLElement): void => { fireEvent.keyDown(document.body, { key: 'Tab' }); k.focus(); };
+
 describe('@SL-158 kurze Bedienung pfeift nicht ab', () => {
   it.each<[string, (knopf: HTMLElement) => Promise<void>]>([
     ['„Abpfiff“ kurz antippt', async (k) => { fireEvent.pointerDown(k, { pointerId: 1, button: 0 }); fireEvent.pointerUp(k, { pointerId: 1 }); fireEvent.click(k); }],
@@ -124,10 +127,10 @@ describe('@SL-158 kurze Bedienung pfeift nicht ab', () => {
       fireEvent.pointerDown(k, { pointerId: 1, button: 0 }); await warte(500); fireEvent.pointerUp(k, { pointerId: 1 }); await warte(HOLD_MS);
     }],
     ['am Laptop die Eingabetaste drückt, während „Abpfiff“ den Fokus hat', async (k) => {
-      k.focus(); fireEvent.keyDown(k, { key: 'Enter' }); fireEvent.keyUp(k, { key: 'Enter' }); await warte(HOLD_MS + 60);
+      tabZu(k); fireEvent.keyDown(k, { key: 'Enter' }); fireEvent.keyUp(k, { key: 'Enter' }); await warte(HOLD_MS + 60);
     }],
     ['am Laptop die Leertaste kurz drückt, während „Abpfiff“ den Fokus hat (@SL-167)', async (k) => {
-      k.focus(); fireEvent.keyDown(k, { key: ' ' }); fireEvent.keyUp(k, { key: ' ' }); await warte(HOLD_MS + 60);
+      tabZu(k); fireEvent.keyDown(k, { key: ' ' }); fireEvent.keyUp(k, { key: ' ' }); await warte(HOLD_MS + 60);
     }],
   ])('@SL-158 %s → keine Rückfrage, Spiel 11 läuft weiter', async (_bedienung, aktion) => {
     const user = userEvent.setup();
@@ -154,7 +157,7 @@ describe('@SL-158 kurze Bedienung pfeift nicht ab', () => {
       const user = userEvent.setup();
       render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
       const knopf = screen.getByTestId('match-finish-button');
-      knopf.focus();
+      tabZu(knopf);
       fireEvent.keyDown(knopf, { key: taste });
       await warte(HOLD_MS + 60);
       expect(await screen.findByRole('alertdialog')).toHaveTextContent('Spiel 11 bei noch 3:12 Minuten Spielzeit beenden?');
@@ -166,7 +169,7 @@ describe('@SL-158 kurze Bedienung pfeift nicht ab', () => {
     const user = userEvent.setup();
     render(<Harness turnier={SPIEL_11} />); await imZweitenAbschnittBei(user, 168_000);
     const knopf = screen.getByTestId('match-finish-button');
-    knopf.focus();
+    tabZu(knopf);
     fireEvent.keyDown(knopf, { key: ' ' });
     await warte(HOLD_MS + 60);
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
