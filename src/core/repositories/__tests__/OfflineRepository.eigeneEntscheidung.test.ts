@@ -48,6 +48,9 @@ import { OfflineRepository } from '../OfflineRepository';
 import { LocalStorageRepository } from '../LocalStorageRepository';
 import { createFakeCloud } from '../../../test/fakeCloudRepository';
 import { flush, liveCup } from '../../../test/queueGuardFixtures';
+import { StandingDecisionService } from '../../services/StandingDecisionService';
+import { nikolaus, shootout } from '../../standings/__tests__/decisionTestKit';
+import type { Tournament } from '../../models/types';
 
 const OLLI = 'olli';
 
@@ -146,5 +149,61 @@ describe('@W2A-077 abgelehntes Speichern nach der eigenen Entscheidung nennt kei
     expect(failed).toHaveLength(1);
     expect(failed[0].conflict).toBe(true);
     expect(failed[0].ownDecision).toBeUndefined();
+  });
+});
+
+/**
+ * Review-Auflage B4 / Review #382 M1: die echte Kette auf demselben Gerät – entscheiden (7 → 8) über `StandingDecisionService`
+ * und das echte `OfflineRepository` (zieht die bestätigte Version nach), danach sofort zurücknehmen (@W2A-070) → gelingt
+ * gegen 8, ohne Konflikt. Nikolaus-Lage (Petting/Otting gleich auf Platz 3, Platz teilen erlaubt wie Strafstoß).
+ */
+describe('@W2A-070 entscheiden und sofort auf demselben Gerät zurücknehmen (bestätigte Version folgt der eigenen Kette)', () => {
+  const repos: OfflineRepository[] = [];
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    stores.raw.clear();
+    stores.queue.clear();
+    session.userId = OLLI;
+    net.online = true;
+    vi.stubGlobal('navigator', { get onLine() { return net.online; } });
+  });
+
+  afterEach(() => {
+    for (const r of repos.splice(0)) { r.mutationQueue.dispose(); }
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('@W2A-070 Strafstoßschießen 4:3 eintragen (Basis 7), dann zurücknehmen: beide gelingen, geprüft gegen 7 und 8', async () => {
+    const start: Tournament = { ...nikolaus(), id: 'T', ownerId: OLLI, version: 7 };
+    const revs = new Map(start.matches.map((m) => [m.id, 1]));
+    stores.raw.set('tournaments', [start]);
+    const cloud = createFakeCloud({ tournament: start, revisions: revs });
+    const expected: number[] = [];
+    Object.assign(cloud.fake, {
+      recordStandingDecision: vi.fn(async (_id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> => {
+        expected.push(expectedVersion);
+        const current = (await cloud.fake.get('T'))!;
+        if ((current.version ?? 0) !== expectedVersion) { return { status: 'rejected', code: 'STALE', version: current.version ?? 0 }; }
+        const others = (current.standingDecisions ?? []).filter((d) => d.id !== request.decision.id);
+        const standingDecisions = request.action === 'decide' ? [...others, request.decision] : others;
+        cloud.setState({ tournament: { ...current, standingDecisions, version: expectedVersion + 1 }, revisions: revs });
+        return { status: 'ok', alreadyApplied: false, version: expectedVersion + 1 };
+      }),
+      readBracketLog: vi.fn(async () => undefined),
+    });
+    const olli = new OfflineRepository(new LocalStorageRepository(), cloud.fake as never, OLLI);
+    repos.push(olli);
+    await olli.get('T', { fresh: true });
+    const service = new StandingDecisionService(olli, { groupClosed: () => false, newId: () => 'e-olli' });
+
+    const decided = await service.decide('T', shootout('D', 'P', 4, 3));
+    expect(decided.ok).toBe(true);
+    expect(await service.withdraw('T', 'e-olli')).toEqual({ ok: true });
+    await flush();
+
+    expect(expected).toEqual([7, 8]);
+    expect((await cloud.fake.get('T'))?.standingDecisions ?? []).toEqual([]);
   });
 });
