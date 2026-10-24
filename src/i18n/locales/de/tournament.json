@@ -383,12 +383,22 @@
     "startTime": "Startzeit",
     "immutableSettings": {
       "title": "Nicht änderbare Einstellungen",
-      "description": "Die folgenden Einstellungen können nach Veröffentlichung nicht mehr geändert werden, da sie den Spielplan beeinflussen würden:",
+      "description": "Diese Einstellungen bestimmen den Spielplan und lassen sich hier nicht ändern:",
       "numberOfTeams": "Anzahl Teams ({{count}})",
       "numberOfGroups": "Anzahl Gruppen ({{count}})",
       "numberOfFields": "Anzahl Felder ({{count}})",
       "gameMode": "Spielmodus ({{mode}})",
-      "tournamentType": "Turniertyp ({{type}})"
+      "tournamentType": "Turniertyp ({{type}})",
+      "descriptionBeforeStart": "Diese Einstellungen bestimmen den Spielplan. Vor dem ersten Anpfiff änderst du sie über „Erweiterte Bearbeitung“:",
+      "descriptionAfterStart": "Diese Einstellungen sind seit dem ersten Anpfiff fest, weil sie den Spielplan bestimmen:",
+      "groupSystem": "Spielsystem ({{system}})",
+      "values": {
+        "roundRobin": "Jeder gegen jeden",
+        "groupsAndFinals": "Gruppen + Finale",
+        "classic": "Klassisch",
+        "miniFussball": "Mini-Fußball",
+        "bambini": "Bambini"
+      }
     },
     "advancedEditing": {
       "title": "Erweiterte Bearbeitung",
@@ -783,7 +793,7 @@
     "count_one": "{{count}} Feld",
     "count_other": "{{count}} Felder",
     "noFields": "Keine Felder vorhanden",
-    "noFieldsInfo": "Felder werden im Wizard beim Erstellen des Turniers konfiguriert.",
+    "noFieldsInfo": "Die Felder stehen mit dem Festlegen des Turniers fest.",
     "inSlides": "In Slides",
     "default": "Standard",
     "editLabel": "Bezeichnung bearbeiten",

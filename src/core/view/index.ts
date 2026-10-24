@@ -31,3 +31,4 @@ export {
   teamDisplayName,
   type SlotKey,
 } from './originText';
+export { effectiveGroupCount, effectiveFields, effectiveFieldCount, type EffectiveField, type TournamentFactsInput } from './tournamentFacts';

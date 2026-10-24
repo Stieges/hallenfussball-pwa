@@ -18,6 +18,7 @@ import { Card, Input } from '../../components/ui';
 import { cssVars } from '../../design-tokens';
 import type { Tournament, TournamentField } from '../../types/tournament';
 import { useFields } from '../../hooks';
+import { effectiveFields } from '../../core/view';
 
 // =============================================================================
 // TYPES
@@ -261,6 +262,10 @@ export function FieldManagement({
     marginLeft: cssVars.spacing.sm,
   };
 
+  // @W5-038: ohne gespeicherte Feldliste zeigt die Ansicht die Felder, auf denen die Spiele liegen (nur lesend)
+  const derivedFields = fields.length === 0 ? effectiveFields(tournament) : [];
+  const shownCount = fields.length > 0 ? fields.length : derivedFields.length;
+
   // ==========================================================================
   // RENDER
   // ==========================================================================
@@ -272,7 +277,7 @@ export function FieldManagement({
         <div style={headerStyle}>
           <h3 style={titleStyle}>{t('field.title')}</h3>
           <span style={countBadgeStyle}>
-            {t('field.count', { count: fields.length })}
+            {t('field.count', { count: shownCount })}
           </span>
         </div>
 
@@ -280,7 +285,18 @@ export function FieldManagement({
         {error && <div style={errorStyle}>{error}</div>}
 
         {/* List */}
-        {fields.length === 0 ? (
+        {fields.length === 0 && derivedFields.length > 0 ? (
+          <div style={listStyle} data-testid="field-management-derived">
+            {derivedFields.map((field) => (
+              <div key={field.id} style={fieldItemStyle(false)}>
+                <div style={fieldIconStyle}>{field.id.replace('field-', 'F')}</div>
+                <div style={fieldInfoStyle}>
+                  <h4 style={fieldNameStyle}>{field.defaultName}</h4>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : fields.length === 0 ? (
           <div style={emptyStateStyle}>
             <p style={{ margin: 0, fontSize: cssVars.fontSizes.md }}>{t('field.noFields')}</p>
             <p style={{ margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.sm }}>
