@@ -33,7 +33,7 @@ export const GroupReopenDialog = ({ api, groupId, reason, busy, error }: GroupRe
   const name = groupNameOf(api.tournament, groupId);
   const canSave = reason.trim().length > 0 && reason.length <= MAX_REOPEN_REASON && !busy;
   const errorText = error === null ? null
-    : error === 'NOT_COMPLETED' || error === 'REASON_REQUIRED' ? t(`groupCompletion.reopen.errors.${error}`) : t(`groupCompletion.errors.${error}`);
+    : error === 'NOT_COMPLETED' || error === 'REASON_REQUIRED' || error === 'OFFLINE' ? t(`groupCompletion.reopen.errors.${error}`) : t(`groupCompletion.errors.${error}`);
   const footer = (
     <>
       <Button variant="secondary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} disabled={busy} onClick={api.close} data-testid="group-reopen-cancel">

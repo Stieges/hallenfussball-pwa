@@ -1344,7 +1344,11 @@
       "sideHome": "Heim",
       "sideAway": "Gast",
       "effectAll": "Die Tabelle ist an den Endstand übergeben.",
-      "phaseDone": "Die Gruppenphase ist abgeschlossen. Alle Plätze der Finalrunde sind besetzt."
+      "phaseDone": "Die Gruppenphase ist abgeschlossen. Alle Plätze der Finalrunde sind besetzt.",
+      "unsentTitle": "{{name}} abgeschlossen – wird gesendet, sobald die Verbindung steht",
+      "unsentTitle_all": "Gruppe abgeschlossen – wird gesendet, sobald die Verbindung steht",
+      "unsentBody": "{{name}} ist auf diesem Gerät abgeschlossen. Andere Geräte sehen den Abschluss nach dem Senden.",
+      "unsentBody_all": "Die Gruppe ist auf diesem Gerät abgeschlossen. Andere Geräte sehen den Abschluss nach dem Senden."
     },
     "dialog": {
       "title": "{{name}} abschließen",
@@ -1365,8 +1369,7 @@
       "confirmAgain": "Erneut abschließen",
       "cancel": "Abbrechen",
       "close": "Schließen",
-      "understood": "Verstanden",
-      "offlineQueued": "Ohne Netz: Der Abschluss gilt sofort auf diesem Gerät und wird nachgereicht, sobald wieder Netz da ist."
+      "understood": "Verstanden"
     },
     "notice": {
       "openMatches": {
@@ -1407,8 +1410,13 @@
       "confirm": "Gruppe wieder öffnen",
       "errors": {
         "NOT_COMPLETED": "Die Gruppe ist gar nicht mehr abgeschlossen. Bitte prüfe die Tabelle.",
-        "REASON_REQUIRED": "Bitte nenne einen Grund (höchstens 500 Zeichen)."
+        "REASON_REQUIRED": "Bitte nenne einen Grund (höchstens 500 Zeichen).",
+        "OFFLINE": "„Gruppe wieder öffnen“ braucht eine Verbindung. Bitte versuche es mit Netz erneut."
       }
+    },
+    "offline": {
+      "title": "Keine Verbindung",
+      "body": "Der Abschluss gilt sofort auf diesem Gerät und wird gesendet, sobald die Verbindung steht."
     }
   }
 }

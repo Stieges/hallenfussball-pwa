@@ -119,11 +119,15 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
   // „Alle Plätze der Finalrunde sind besetzt“ nur, wenn es Finalspiele gibt, keine Seite mehr auf einen Gruppenplatz wartet (aus den Seiten) UND die Gruppenphase abgeschlossen ist
   const finalMatches = tournament.matches.filter((m) => m.isFinal === true);
   const allGroupSidesFilled = finalMatches.length > 0 && finalMatches.every((m) => [m.slotA, m.slotB].every((slot) => !(isPendingSlot(slot) && slot.source.kind === 'groupRank')));
+  // A-15c (Mockup {#offnach}, @OB-002): noch nicht gesendet → Warn-Hinweis „wird gesendet, sobald die Verbindung steht“, keine
+  // Taste „Gruppe wieder öffnen“ (der Server kennt den Abschluss noch nicht)
+  const unsent = completion.unsent === true;
   return (
     <InlineNotice
-      tone="ok"
+      tone={unsent ? 'warn' : 'ok'}
+      icon={unsent ? <Icons.WifiOff size={iconSizeValues.sm} /> : undefined}
       data-testid={`group-done-${id}`}
-      footer={canManage ? (
+      footer={canManage && !unsent ? (
         <div>
           <Button
             variant="secondary"
@@ -138,7 +142,8 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
         </div>
       ) : undefined}
     >
-      <span style={title}>{`${t('groupCompletion.done.title', withGroup(name))}${suffix}`}</span>
+      <span style={title}>{unsent ? t('groupCompletion.done.unsentTitle', withGroup(name)) : `${t('groupCompletion.done.title', withGroup(name))}${suffix}`}</span>
+      {unsent ? <p style={line} data-testid={`group-done-unsent-${id}`}>{t('groupCompletion.done.unsentBody', withGroup(name))}</p> : null}
       <p style={line}>{name === undefined ? t('groupCompletion.done.effectAll') : effect.join(' ')}</p>
       {allGroupSidesFilled && phaseState(tournament, 'groups') === 'completed' ? <p style={line} data-testid="group-phase-done">{t('groupCompletion.done.phaseDone')}</p> : null}
     </InlineNotice>

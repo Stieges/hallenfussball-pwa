@@ -2,7 +2,8 @@
  * Abschluss-Dialog „Gruppe abschließen“ ohne offenen Gleichstand (GA4 A-13c; Mockup Zustände 7, 8, 16, 28): die Tabelle zum
  * Prüfen (Punkte, Tore, Tordifferenz; @TM-044), die Wirkung (welche Plätze besetzt werden, @TM-016), eine schon gültige
  * Entscheidung aus der Tabelle (@W2A-058: nicht erneut verlangt) und eine Haupttaste. Haupttaste oben, „Abbrechen“ darunter.
- * Ohne Netz bleibt die Taste frei; ein Satz sagt, dass der Abschluss sofort auf diesem Gerät gilt und nachgereicht wird (A-15c, @W2A-062).
+ * Ohne Netz bleibt die Taste frei; der Warn-Kasten „Keine Verbindung“ sagt, dass der Abschluss sofort auf diesem Gerät gilt und
+ * gesendet wird, sobald die Verbindung steht (A-15c, @W2A-062, Mockup {#offdlg}).
  */
 import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
@@ -17,6 +18,7 @@ import { rankTournamentGroup } from '../../../core/standings/tournamentTable';
 import { decidedTexts } from '../standings/decidedText';
 import { groupNameOf, labelText, signed, withGroup } from './completionTexts';
 import { GroupDialogShell } from './GroupDialogShell';
+import { OfflineQueuedNotice } from './OfflineQueuedNotice';
 import type { CompletionError, GroupCompletionApi, ReadyPlan } from './useGroupCompletion';
 
 const list: CSSProperties = { listStyle: 'none', margin: 0, padding: 0, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`, borderRadius: cssVars.borderRadius.md, background: cssVars.colors.surface };
@@ -87,7 +89,7 @@ export const GroupConfirmDialog = ({ api, groupId, plan, busy, error }: GroupCon
         </InlineNotice>
       ))}
       <InlineNotice tone="info" data-testid="group-close-effect"><span>{effectText}</span></InlineNotice>
-      {offline ? <p style={{ ...text, fontWeight: cssVars.fontWeights.semibold }} data-testid="group-close-offline">{t('groupCompletion.dialog.offlineQueued')}</p> : null}
+      {offline ? <OfflineQueuedNotice data-testid="group-close-offline" /> : null}
       {error !== null ? <InlineNotice tone="error" data-testid="group-close-error"><span>{t(`groupCompletion.errors.${error}`)}</span></InlineNotice> : null}
     </GroupDialogShell>
   );
