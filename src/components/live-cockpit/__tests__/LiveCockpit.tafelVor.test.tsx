@@ -82,6 +82,11 @@ describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
     render(<LiveCockpit {...makeProps(makeLiveMatch(), { uebernahmeVon: 'Tom' })} />);
     expect(screen.getByText('Spielzeit beruht auf Toms Gerät – bitte prüfen')).toBeInTheDocument();
   });
+
+  it('@SL-015 B-49: Vorgänger ohne Namen – „Spielzeit beruht auf dem vorigen Gerät – bitte prüfen“', () => {
+    render(<LiveCockpit {...makeProps(makeLiveMatch(), { uebernahmeVon: '' })} />);
+    expect(screen.getByText('Spielzeit beruht auf dem vorigen Gerät – bitte prüfen')).toBeInTheDocument();
+  });
 });
 
 describe('LiveCockpit: Tafel ohne Spiel', () => {

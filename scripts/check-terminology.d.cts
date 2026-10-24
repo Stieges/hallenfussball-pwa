@@ -44,6 +44,8 @@ declare const checkTerminology: {
   loadGlossary: (glossaryPath: string) => Glossary;
   wordBoundaryRegex: (phrase: string) => RegExp;
   stripInterpolationRefs: (value: string) => string;
+  /** Gilt das verbotene Synonym für diesen Text? (Kontextregel wie glossar-kontext.yaml; ohne Regel immer.) */
+  contextApplies: (forbidden: string, text: string) => boolean;
   buildForbiddenPatterns: (glossary: Glossary) => ForbiddenPattern[];
   checkKeyParity: (localesDir: string, locales: string[], namespaces: string[]) => string[];
   checkForbiddenSynonyms: (

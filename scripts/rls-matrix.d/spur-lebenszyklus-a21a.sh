@@ -112,11 +112,14 @@ done
 a21a_cell "anon display_final_standings (nicht oeffentlich)" "$(a21a_value "$a21a_out" display)" "none:false"
 
 # Vorher/Nachher an T_PUBLIC (oeffentlich, Teilen-Code), als anon (Eltern): @LZ-075, @ZM-012, @ZM-011.
+# Code und Kennung als feste Werte: seit B-14 (20261117_104) liest anon public.tournaments nicht mehr direkt -- ein
+# "FROM public.tournaments" als anon liefert keine Zeile, die Zelle waere aus dem falschen Grund leer. Zuschauer und
+# Monitor kennen Code bzw. Kennung ohnehin von aussen (Link, Kopplung).
+A21A_PUB_CODE="PUBA21"
 a21a_pub() { # a21a_pub <Vorbereitung> -> "<public-status>:<scorers>|<display-status>:<scorers>"
-  a27_sql anon "" "SELECT (public.public_final_standings(t.share_code) ->> 'status') || ':' || coalesce(public.public_final_standings(t.share_code) -> 'standings' ? 'scorers', false)::text
-       || '|' || (public.display_final_standings(t.id) ->> 'status') || ':' || coalesce(public.display_final_standings(t.id) -> 'standings' ? 'scorers', false)::text
-  FROM public.tournaments t WHERE t.id = '$T_PUBLIC';" \
-    "UPDATE public.tournaments SET share_code = coalesce(share_code, 'PUBA21') WHERE id = '$T_PUBLIC'; $1" | grep -E '^[a-z]+:(true|false)\|' | tail -1
+  a27_sql anon "" "SELECT (public.public_final_standings('$A21A_PUB_CODE') ->> 'status') || ':' || coalesce(public.public_final_standings('$A21A_PUB_CODE') -> 'standings' ? 'scorers', false)::text
+       || '|' || (public.display_final_standings('$T_PUBLIC') ->> 'status') || ':' || coalesce(public.display_final_standings('$T_PUBLIC') -> 'standings' ? 'scorers', false)::text;" \
+    "UPDATE public.tournaments SET share_code = '$A21A_PUB_CODE' WHERE id = '$T_PUBLIC'; $1" | grep -E '^[a-z]+:(true|false)\|' | tail -1
 }
 a21a_cell "@LZ-075 T_PUBLIC vor dem Abschluss: Zuschauer und Monitor 'none'" "$(a21a_pub "")" "none:false|none:false"
 a21a_cell "@ZM-012 T_PUBLIC nach dem Abschluss, Schalter aus: 'final' ohne Torschuetzen" "$(a21a_pub "$(a21a_finish_setup "$T_PUBLIC")")" "final:false|final:false"

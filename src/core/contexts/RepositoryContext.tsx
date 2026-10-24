@@ -7,6 +7,7 @@ import { LocalStorageLiveMatchRepository } from '../repositories/LocalStorageLiv
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { SupabaseLiveMatchRepository } from '../repositories/SupabaseLiveMatchRepository';
 import { OfflineRepository } from '../repositories/OfflineRepository';
+import { usesCloudRepository } from '../repositories/usesCloudRepository';
 import { setActiveTournamentSyncSource } from '../repositories/activeTournamentSyncSource';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { RealtimeEnabledContext } from '../../lib/realtimeEnabled';
@@ -79,7 +80,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
         //
         // Excludes:
         // - Local guests (globalRole='guest', localStorage only)
-        const canUseSupabase = isSignedIn && isSupabaseConfigured && userRole !== 'guest';
+        const canUseSupabase = usesCloudRepository(isSignedIn ? { globalRole: userRole } : null, isSupabaseConfigured);
 
         if (canUseSupabase) {
             try {

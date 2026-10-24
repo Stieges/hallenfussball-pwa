@@ -46,8 +46,8 @@ describe('Einstellung ändern (@W2A-066, @W2A-068)', () => {
     await userEvent.click(screen.getByTestId('playout-place-3'));
     await userEvent.click(screen.getByTestId('playout-save'));
     const dialog = screen.getByTestId('tie-places-confirm');
-    expect(within(dialog).getByRole('heading', { name: 'Annahme wird aufgehoben' })).toBeInTheDocument();
-    expect(within(dialog).getByTestId('playout-confirm-effect')).toHaveTextContent('Für TSV Petting und DJK Otting liegt die Annahme „Ergebnis so akzeptieren“ vor.');
+    expect(within(dialog).getByRole('heading', { name: 'Geteilter Platz wird aufgehoben' })).toBeInTheDocument();
+    expect(within(dialog).getByTestId('playout-confirm-effect')).toHaveTextContent('TSV Petting und DJK Otting teilen sich bisher einen Platz („Platz teilen“).');
     expect(dialog).toHaveTextContent('Ein eingetragenes Strafstoßschießen oder eine festgelegte Reihenfolge bleibt bei jeder Änderung bestehen.');
     expect(onUpdate).not.toHaveBeenCalled(); // noch nichts gespeichert
     await userEvent.click(within(dialog).getByTestId('playout-confirm-ok'));
@@ -156,6 +156,6 @@ describe('Englisch', () => {
     render(<Wrapper><PlayOutPlacesSettings tournament={await mitAnnahme()} onSave={onUpdate} /></Wrapper>);
     fireEvent.click(screen.getByTestId('playout-place-3'));
     fireEvent.click(screen.getByTestId('playout-save'));
-    expect(within(screen.getByTestId('tie-places-confirm')).getByRole('heading', { name: 'Acceptance will be withdrawn' })).toBeInTheDocument();
+    expect(within(screen.getByTestId('tie-places-confirm')).getByRole('heading', { name: 'Shared place will be undone' })).toBeInTheDocument();
   });
 });

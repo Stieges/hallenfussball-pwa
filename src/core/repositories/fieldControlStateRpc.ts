@@ -19,33 +19,26 @@ const FieldsSchema = z.array(z.object({
   isMine: z.boolean(),
 }));
 
-/** Wer ein Feld gerade steuert, aus Sicht dieses Geräts. */
+/**
+ * Wer ein Feld gerade steuert, aus Sicht dieses Geräts: Name (Profil bzw. Einladung, nie die E-Mail) und Geräte-Kennung,
+ * wie `field_control_state` sie liefert. Den Anzeigetext baut der Aufrufer mit `fieldHolderText` (B-49).
+ */
 export interface FieldHolder {
   field: number;
-  /** Name (Profil bzw. Einladung) und Gerät, z. B. „Tom (Handy)“; `null`, wenn beides fehlt. */
-  holder: string | null;
-}
-
-/** Name und Gerät des Halters: „Tom (Handy)“, nur Name, nur Gerät oder `null`. */
-export function holderText(name: string | null, deviceLabel: string | null): string | null {
-  const clean = (value: string | null): string | null => (value?.trim() ? value.trim() : null);
-  const n = clean(name);
-  const d = clean(deviceLabel);
-  if (n && d) {
-    return `${n} (${d})`;
-  }
-  return n ?? d;
+  holderName: string | null;
+  holderDeviceLabel: string | null;
 }
 
 /**
  * Halter des Feldes `field`, wenn ein ANDERES Gerät es steuert; `null`, wenn es frei ist, dieses Gerät es steuert oder
- * der Stand nicht lesbar ist.
+ * der Stand nicht lesbar ist. `deviceId` (`getDeviceId()`) ist Pflicht: ohne sie meldet der Server nie `isMine`, das
+ * steuernde Gerät sähe sich selbst als fremden Halter (B-49).
  */
 export async function readForeignFieldHolder(
   client: SupabaseClient<Database> | null,
   tournamentId: string,
   field: number,
-  deviceId?: string,
+  deviceId: string,
 ): Promise<FieldHolder | null> {
   if (!client) {
     return null;
@@ -53,7 +46,7 @@ export async function readForeignFieldHolder(
   try {
     const response = await withCloudReadTimeout(Promise.resolve(client.rpc('field_control_state', {
       p_tournament_id: tournamentId,
-      ...(deviceId !== undefined ? { p_device_id: deviceId } : {}),
+      p_device_id: deviceId,
     })));
     if (response.error) {
       return null;
@@ -67,7 +60,7 @@ export async function readForeignFieldHolder(
     if (!row || row.isMine || row.holderRole === null) {
       return null;
     }
-    return { field, holder: holderText(row.holderName, row.holderDeviceLabel) };
+    return { field, holderName: row.holderName, holderDeviceLabel: row.holderDeviceLabel };
   } catch {
     return null;
   }

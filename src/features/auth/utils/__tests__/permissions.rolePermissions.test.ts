@@ -21,7 +21,6 @@ import {
   hasPermission,
   canEditResults,
   canManageTournament,
-  canCreateInvitations,
   canEditAllTeams,
   canEditSchedule,
   canEditTeamRoster,
@@ -141,10 +140,6 @@ describe('can…-Funktionen — jede Zelle gegen die unabhängig gelesene JSON',
 
   it.each(ALL_ROLES)('canDeleteTournament(%s) folgt deleteTournament', (role) => {
     expect(canDeleteTournament(role)).toBe(expectedFor(role, 'deleteTournament'));
-  });
-
-  it.each(ALL_ROLES)('canCreateInvitations(%s) folgt manageMembers', (role) => {
-    expect(canCreateInvitations(role)).toBe(expectedFor(role, 'manageMembers'));
   });
 
   it.each(ALL_ROLES)('canEditResults(%s) folgt writeMatchData', (role) => {

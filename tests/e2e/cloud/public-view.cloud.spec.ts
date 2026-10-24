@@ -259,6 +259,9 @@ test.describe('Public-View', () => {
       // (Paket 1, Befund C-PUBLIC-SEITE-VERWAIST). Dieser Test prüft seit jeher /#/live/E2EPUB
       // (LiveViewScreen), nicht die entfernte Seite. Kennung @ZM-021 (≤ 10 s ohne Neuladen): Die
       // Abweichung liegt in LiveViewScreen, Ursache offen -- vor Auflösung prüfen.
+      // B-15: der heutige Weg (Adapter (a)) hat bewusst keinen festen Takt (BP-2, Egress); der Stand kommt erst mit dem 10-s-Takt
+      // des Adapters (b) nach B-14. Bis dahin bleibt dieser Test deterministisch rot (nie „zufällig bestanden“); mit (b) test.fail
+      // entfernen und die Frist auf >= 12 s setzen.
       test.fail();
 
       await expect(matchRow.getByText(`${UNIQUE_TARGET_SCORE_A}:0`, { exact: true })).toBeVisible({ timeout: 3000 });

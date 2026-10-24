@@ -128,6 +128,8 @@
     "discardConfirmTitle": "Übertragung verwerfen?",
     "discardConfirmMessage": "Diese Änderung wird endgültig verworfen und nicht mehr an die Cloud übertragen. Kennt der Server das Turnier, zeigt das Gerät danach seinen Stand – ohne Verbindung, sobald sie wieder besteht. Ein Turnier, das noch nie beim Server war, bleibt mit allen Teams und Spielen auf diesem Gerät. Das kann nicht rückgängig gemacht werden.",
     "conflictReason": "Turnier wurde inzwischen auf einem anderen Gerät geändert",
+    "invalidValueReason": "Nicht übernommen – ungültiger Wert",
+    "tournamentGoneReason": "Nicht übernommen – Turnier gibt es nicht mehr",
     "discardedCopyReason": "Nicht gesendet: Diese Änderung beruht auf einem verworfenen Stand. Der Stand des Servers wird geladen, sobald die Verbindung steht.",
     "discardAndLoad": "Verwerfen und aktuellen Stand laden",
     "discardAndLoadAriaLabel": "Änderung verwerfen und aktuellen Stand des Servers laden",
@@ -138,8 +140,11 @@
       "DELETE_TOURNAMENT": "Turnier löschen",
       "UPDATE_MATCH": "Spiel aktualisieren",
       "UPDATE_MATCHES": "Spiele aktualisieren",
-      "UPDATE_TOURNAMENT_METADATA": "Turnierdaten aktualisieren"
-    }
+      "UPDATE_TOURNAMENT_METADATA": "Turnierdaten aktualisieren",
+      "COMPLETE_GROUP": "Gruppe abschließen"
+    },
+    "clarificationGroupReason": "Klärung nötig: Am Server wurde die Gruppe inzwischen geändert. Der Abschluss ohne Netz wurde nicht übernommen.",
+    "clarificationGroupDecisionReason": "Klärung nötig: Am Server wurde die Gruppe inzwischen geändert oder anders entschieden. Abschluss und Entscheidung ohne Netz wurden nicht übernommen."
   },
   "guestHidden": {
     "hint": "{{title}}: nur im Gastmodus nutzbar – kann ins Konto übernommen werden"
@@ -228,5 +233,10 @@
       "message_other": "Es warten noch {{count}} Einträge auf Übertragung. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung mit diesem Konto gesendet.",
       "confirm": "Trotzdem abmelden"
     }
+  },
+  "deviceKind": {
+    "phone": "Handy",
+    "tablet": "Tablet",
+    "computer": "Laptop"
   }
 }

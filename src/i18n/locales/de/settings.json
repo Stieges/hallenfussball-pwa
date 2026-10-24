@@ -90,7 +90,8 @@
       "loading": "Lädt...",
       "action": "Zurücksetzen",
       "confirmMessage": "App-Update erzwingen?\n\nDies löscht den Service Worker Cache und lädt die App neu. Deine Turnierdaten bleiben erhalten.\n\nNutze diese Funktion, wenn die App nicht richtig funktioniert.",
-      "errorMessage": "Fehler beim Zurücksetzen. Bitte versuche es erneut oder lösche die Browser-Daten manuell."
+      "errorMessage": "Fehler beim Zurücksetzen. Bitte versuche es erneut oder lösche die Browser-Daten manuell.",
+      "dialogTitle": "App-Update erzwingen"
     }
   },
   "support": {
@@ -133,7 +134,8 @@
       "description": "Alle Tracking-Einstellungen zurücksetzen",
       "action": "Widerrufen",
       "confirmMessage": "Möchtest du deine Datenschutz-Einwilligung widerrufen?\n\nDies deaktiviert Error-Tracking und Session-Replay. Beim nächsten App-Start wirst du erneut nach deiner Einwilligung gefragt.",
-      "successMessage": "Deine Einwilligung wurde widerrufen."
+      "successMessage": "Deine Einwilligung wurde widerrufen.",
+      "dialogTitle": "Einwilligung widerrufen"
     }
   },
   "legal": {

@@ -30,14 +30,18 @@ import {
 import { useScheduleView } from './hooks/useScheduleView';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
 import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
+import { useScheduleTakeover } from './hooks/useScheduleTakeover';
+import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
+import { useScheduleForfeit } from './hooks/useScheduleForfeit';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { useAppSettings } from '../../hooks/useUserProfile';
 import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
+import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
+import { ScheduleTimeShift } from './time-shift/ScheduleTimeShift';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -66,8 +70,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   onNavigateToCockpit,
 }) => {
   const { t } = useTranslation('tournament');
-  // App settings for result lock behavior
-  const appSettings = useAppSettings();
   // A-11: Cockpit-Hinweis bei laufendem Spiel = Spielbetrieb; Spielplan ändern = manageSchedule; Aushang (@ZM-019)
   const canControlTimer = useCan('writeMatchData', tournament.id);
   const canSchedule = useCan('manageSchedule', tournament.id);
@@ -215,6 +217,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     };
   }, [liveMatchIds, tournament.matches, view]);
 
+  // B-49 (@FU-081): fremd gesteuertes Feld – „Feld 2 wird gerade von Tom gesteuert“ mit „Spielleitung übernehmen“, danach ins Cockpit
+  const takeover = useScheduleTakeover({ tournamentId: tournament.id, showWarning, onTaken: onNavigateToCockpit });
+
   // Action handlers (extracted for maintainability)
   const {
     handleRedistributeSR,
@@ -234,8 +239,18 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     showWarning,
     setPendingReferee,
     setPendingField,
-    lockFinishedResults: appSettings.lockFinishedResults,
+    // Korrektur beendeter Spiele im Spielplan: Grund-Auswahl statt Sperre (@EK-063, @EK-004), wie im Cockpit (useCockpitKorrektur).
+    // Die Nutzer-Einstellung `lockFinishedResults` verwies auf einen Knopf „Ergebnis korrigieren“, den es hier nicht gibt.
+    lockFinishedResults: false,
+    offerTakeover: takeover.offerTakeover,
   });
+
+  // B-12: „nicht angetreten“ und „Wertung zurücknehmen“ -- Bedienung nur für die Turnierleitung (@SL-118)
+  const forfeit = useScheduleForfeit({ tournament, showWarning, showSuccess });
+  const forfeitActions = useMemo(
+    () => (forfeit.allowed ? { mark: (id: string) => { void forfeit.markForfeit(id); }, revoke: (id: string) => { void forfeit.revokeForfeit(id); } } : undefined),
+    [forfeit],
+  );
 
   // ==========================================================================
   // RENDER
@@ -270,6 +285,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     <>
       <div style={containerStyle} className="schedule-tab-container">
         <Card style={editModeCardStyle} className="schedule-tab-card">
+          {/* GA4 A-13c: Zustand der Phasen und Vorschlag „Gruppe abschließen“ (nur Turnierleitung), nicht im Verwaltungskopf */}
+          <GroupCompletionTop />
           {/* Action Buttons Header */}
           <ScheduleToolbar
             isEditing={isEditing}
@@ -324,6 +341,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 data-testid="empty-filter-state"
               />
             ) : (
+              // B-26: Zeiten verschieben (@ZP-094, @ZP-098) – Taste, ⋮ je Spiel, „ursprünglich“, Dialog, Vorschau, Streifen
+              <ScheduleTimeShift
+                tournament={tournament} schedule={schedule} standings={currentStandings} view={view}
+                onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} canCreateNotice={canNotice}
+                enabled={canSchedule && !isEditing && tournament.completedAt === undefined}
+              >
               <ScheduleDisplay
                 schedule={schedule}
                 currentStandings={currentStandings}
@@ -342,8 +365,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
                 canEndRunning={canEndRunning}
+                forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />
+              </ScheduleTimeShift>
             )
           ) : (
             <ScheduleEditor
@@ -354,6 +379,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               externalEditMode={isEditing}
               onBeforeChange={saveToHistory}
               hideToolbar={true}
+              onRejectStarted={() => showWarning(t('schedule.startedLocked'))}
             />
           )}
 
@@ -370,6 +396,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       </div>
 
       <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} />
+      {takeover.dialog}
+      <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
 
       {/* Conflict Warning Dialog */}
       <ConfirmDialog

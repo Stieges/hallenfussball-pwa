@@ -73,7 +73,7 @@
   "step3": {
     "title": "Stammdaten",
     "tournamentName": "Turniername",
-    "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
+    "tournamentNamePlaceholder": "Vereinsname Hallencup",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
     "ageClass": "Altersklasse",
@@ -111,7 +111,9 @@
     "phonePlaceholder": "+49 123 456789",
     "website": "Website",
     "websitePlaceholder": "www.mein-verein.de",
-    "hint": "Diese Angaben erscheinen in der Fußzeile des Spielplans und im PDF-Export."
+    "hint": "Ohne Häkchen sieht diese Angaben nur die Turnierleitung.",
+    "showPublic": "Ansprechpartner öffentlich zeigen",
+    "showPublicHint": "Mit Häkchen erscheinen Name, E-Mail, Telefon und Website auf der Zuschauer-Seite und im Spielplan-PDF – für alle mit dem Zuschauer-Link. Ohne Häkchen sieht sie nur die Turnierleitung."
   },
   "step4": {
     "title": "Teams",
@@ -336,7 +338,7 @@
     },
     "modeHint": {
       "organizerMode": "Veranstalter-Modus:",
-      "organizerDescription": "Sie bringen eigene Schiedsrichter mit (z.B. SR1, SR2).",
+      "organizerDescription": "Du bringst eigene Schiedsrichter mit (z.B. SR1, SR2).",
       "teamsMode": "Teams-Modus:",
       "teamsDescription": "Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld."
     },
@@ -570,12 +572,17 @@
     "button": "Festlegen",
     "loading": "Wird festgelegt …",
     "success": "Turnier erfolgreich festgelegt.",
-    "explanationPrivate": "Der Spielplan wird fest. Danach ist das Turnier nur für die eingeloggte Turnierleitung sichtbar.",
-    "explanationPublic": "Der Spielplan wird fest. Danach kann jeder mit dem Link zuschauen."
+    "explanationPrivate": "Der Spielplan wird festgelegt. Danach ist das Turnier nicht öffentlich, nur Turnierleitung, Helfer und Monitore sehen es.",
+    "explanationPublic": "Der Spielplan wird festgelegt. Danach kann jeder mit dem Link zuschauen.",
+    "explanationLocal": "Der Spielplan wird festgelegt. Das Turnier bleibt nur auf diesem Gerät.",
+    "explanationChangeable": "Teamnamen und Ergebnisse kannst du danach noch ändern, die Struktur nur bis zum ersten Anpfiff.",
+    "explanationOffline": "Der Spielplan wird festgelegt. Ohne Netz bleibt das Turnier vorerst auf diesem Gerät.",
+    "shareFailed": "Das Turnier ist festgelegt, aber der Zuschauer-Link steht noch nicht. Hol das Teilen im Admin Center unter Sichtbarkeit nach."
   },
   "preview": {
     "hintLabel": "Hinweis:",
-    "hintBody": "Dies ist eine Vorschau deines Turniers. Solange das Turnier nicht festgelegt ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan jetzt als PDF speichern oder zurück zur Bearbeitung gehen."
+    "hintBody": "Dies ist eine Vorschau deines Turniers. Solange das Turnier nicht festgelegt ist, wird es nicht in der Übersicht angezeigt. Du kannst den Spielplan jetzt als PDF speichern oder zurück zur Bearbeitung gehen.",
+    "edit": "Bearbeiten"
   },
   "schedule": {
     "incomplete_one": "Der Spielplan lässt sich so nicht vollständig erstellen: {{count}} Spiel passt nicht hinein. Bitte ein weiteres Feld hinzufügen oder die Mindestpause verkürzen.",
@@ -583,17 +590,35 @@
   },
   "playOut": {
     "title": "Diese Plätze müssen bei Gleichstand ausgespielt werden",
-    "help": "Gleichstand auf einem angehakten Platz entscheidet ein Strafstoßschießen. Auf jedem anderen Platz darf die Turnierleitung das Ergebnis so akzeptieren. Vorbelegt ist Platz 1; jeder Platz lässt sich an- und abhaken, auch Platz 1. Die Einstellung lässt sich jederzeit ändern.",
+    "help": "Gleichstand auf einem angehakten Platz entscheidet ein Strafstoßschießen. Auf jedem anderen Platz darf die Turnierleitung den Platz teilen. Vorbelegt ist Platz 1; jeder Platz lässt sich an- und abhaken, auch Platz 1. Die Einstellung lässt sich jederzeit ändern.",
     "followUpNote": "Ein Platz, der in ein weiteres Spiel führt (zum Beispiel ins Halbfinale), wird immer ausgespielt – auch wenn er hier nicht angehakt ist.",
     "place": "Platz {{place}}",
     "legend": "Auszuspielende Plätze",
-    "summary": "Gleichstand auf {{selected}}: Strafstoßschießen nötig. Auf {{others}} darf die Turnierleitung das Ergebnis so akzeptieren – dann teilen die Teams den Platz.",
+    "summary": "Gleichstand auf {{selected}}: Strafstoßschießen nötig. Auf {{others}} darf die Turnierleitung den Platz teilen.",
     "summaryAll": "Gleichstand auf {{selected}}: Strafstoßschießen nötig. Alle Plätze sind eingestellt, die Teams teilen keinen Platz.",
-    "summaryNone": "Kein Platz ist eingestellt: Auf jedem Platz darf die Turnierleitung das Ergebnis so akzeptieren – dann teilen die Teams den Platz.",
+    "summaryNone": "Kein Platz ist eingestellt: Auf jedem Platz darf die Turnierleitung den Platz teilen.",
     "places": {
       "one": "Platz {{from}}",
       "two": "Platz {{from}} und {{to}}",
       "range": "Platz {{from}} bis {{to}}"
     }
+  },
+  "refereeConflict": {
+    "title": "Zeitkonflikt",
+    "message": "{{refName}} ist bereits für Spiel #{{matchNumber}} ({{time}}) eingeteilt.\n\nDie Spiele überschneiden sich zeitlich.\n\nMöchtest du die Zuweisung trotzdem vornehmen?",
+    "confirm": "Trotzdem zuweisen"
+  },
+  "typeSwitch": {
+    "title": "Turniertyp wechseln",
+    "message": "Möchtest du wirklich zu \"{{type}}\" wechseln?\n\nDie Einstellungen werden angepasst.",
+    "confirm": "Wechseln",
+    "classic": "Klassisches Turnier",
+    "bambini": "Bambini-Turnier"
+  },
+  "resetTournament": {
+    "title": "Turnier zurücksetzen",
+    "message_one": "Es wird {{count}} Ergebnis gelöscht!\n\nDiese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?",
+    "message_other": "Es werden {{count}} Ergebnisse gelöscht!\n\nDiese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?",
+    "confirm": "Zurücksetzen"
   }
 }

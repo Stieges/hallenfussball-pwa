@@ -25,9 +25,12 @@ import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
 import { PlayOutPlacesSettings } from './standings/PlayOutPlacesSettings';
 import type { PlayOutPlacesResult } from '../../core/services/PlayOutPlacesService';
+import { immutableDescriptionKey, immutableFacts } from './immutableFacts';
 import { useTournamentStartState } from '../../hooks/useTournamentStartState';
 import { useCan } from '../auth/hooks/useCan';
+import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
+import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../core/services/tournamentMetaValidation';
 
 interface SettingsTabProps {
   tournament: Tournament;
@@ -49,6 +52,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onSavePlayOutPlaces,
 }) => {
   const { t } = useTranslation('tournament');
+  // @OB-017: Alle Rückfragen laufen über den Dialog der App (Titel, Text und Variante je Aufruf)
+  const confirmDialog = useConfirmDialog({ title: '', message: '', cancelText: t('common.cancel') });
   // @W5-004: „Im Wizard bearbeiten" setzt ein festgelegtes Turnier NIE auf Entwurf zurück.
   // @LZ-003 / W3: nach dem ersten Anpfiff nicht anbieten (gleiche Sperre wie „Turnier löschen",
   // gemeinsame Funktion statt Kopie).
@@ -72,8 +77,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     startTime: tournament.startTime ?? tournament.timeSlot,
   });
 
+  const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
+
   // Sync formData wenn sich tournament ändert (nach Speichern)
   useEffect(() => {
+    setMetaErrors({});
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
@@ -142,10 +150,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Update Handler
   const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'title' || field === 'startDate') { setMetaErrors(prev => ({ ...prev, [field]: undefined })); }
   };
 
   // Speichern Handler
   const handleSave = () => {
+    // @W5-002 / C-META-NOVALID: leerer Name oder leeres Datum werden nicht gespeichert (ein vergangenes Datum schon, @W5-003)
+    const errors = validateTournamentMeta({ title: formData.title, startDate: formData.startDate });
+    setMetaErrors(errors);
+    if (hasMetaErrors(errors)) { return; }
     const updatedTournament: Tournament = {
       ...tournament,
       title: formData.title ?? tournament.title,
@@ -165,14 +178,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   // Zurücksetzen Handler
-  const handleReset = () => {
+  const handleReset = async () => {
     if (isDirty) {
-      const confirmReset = window.confirm(
-        t('settings.confirmReset')
-      );
+      // @OB-017: Rückfrage im Dialog der App, nie als Fenster des Browsers
+      const confirmReset = await confirmDialog.confirm({
+        title: t('settings.confirmDialog.resetTitle'),
+        message: t('settings.confirmReset'),
+        variant: 'warning',
+        confirmText: t('settings.confirmDialog.resetConfirm'),
+      });
       if (!confirmReset) {return;}
     }
 
+    setMetaErrors({});
     setFormData({
       title: tournament.title,
       organizer: tournament.organizer,
@@ -185,11 +203,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   };
 
   // Edit in Wizard Handler - mit Ziel-Schritt
-  const handleEditInWizard = (targetStep: number) => {
+  const handleEditInWizard = async (targetStep: number) => {
     if (isDirty) {
-      const confirmLeave = window.confirm(
-        t('settings.confirmLeaveToWizard')
-      );
+      const confirmLeave = await confirmDialog.confirm({
+        title: t('settings.confirmDialog.leaveTitle'),
+        message: t('settings.confirmLeaveToWizard'),
+        variant: 'warning',
+        confirmText: t('settings.confirmDialog.leaveConfirm'),
+      });
       if (!confirmLeave) {return;}
     }
 
@@ -203,9 +224,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       6: t('settings.wizardSteps.overview'),
     };
 
-    const confirmWizard = window.confirm(
-      t('settings.confirmWizardEdit', { step: stepNames[targetStep] ?? t('settings.wizard') })
-    );
+    // Ergebnisse gehen verloren: gefährliche Rückfrage, Fokus zuerst auf „Abbrechen“ (@OB-014)
+    const confirmWizard = await confirmDialog.confirm({
+      title: t('settings.confirmDialog.wizardTitle'),
+      message: t('settings.confirmWizardEdit', { step: stepNames[targetStep] ?? t('settings.wizard') }),
+      variant: 'danger',
+      confirmText: t('settings.confirmDialog.wizardConfirm'),
+    });
 
     if (confirmWizard && onEditInWizard) {
       // @W5-004/@LZ-004: Bearbeiten setzt ein Turnier NIE auf Entwurf zurück.
@@ -344,7 +369,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <div style={buttonGroupStyle}>
                 <button
                   style={buttonStyle('secondary')}
-                  onClick={handleReset}
+                  onClick={() => { void handleReset(); }}
                   disabled={!isDirty}
                   title={t('settings.discardChanges')}
                 >
@@ -372,6 +397,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 value={formData.title ?? ''}
                 onChange={(v) => handleUpdate('title', v)}
                 placeholder={t('settings.tournamentNamePlaceholder')}
+                errorMessage={metaErrors.title ? t('settings.tournamentNameRequired') : undefined}
                 required
               />
 
@@ -423,6 +449,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="date"
                   value={formData.startDate ?? ''}
                   onChange={(v) => handleUpdate('startDate', v)}
+                  errorMessage={metaErrors.startDate ? t('settings.startDateRequired') : undefined}
                   required
                 />
                 <Input
@@ -458,14 +485,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     {t('settings.immutableSettings.title')}
                   </h4>
                   <p style={{ margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                    {t('settings.immutableSettings.description')}
+                    {t(immutableDescriptionKey(matchStartState, canRestructure))}
                   </p>
                   <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                    <li>{t('settings.immutableSettings.numberOfTeams', { count: tournament.numberOfTeams })}</li>
-                    <li>{t('settings.immutableSettings.numberOfGroups', { count: tournament.numberOfGroups })}</li>
-                    <li>{t('settings.immutableSettings.numberOfFields', { count: tournament.numberOfFields })}</li>
-                    <li>{t('settings.immutableSettings.gameMode', { mode: tournament.mode })}</li>
-                    <li>{t('settings.immutableSettings.tournamentType', { type: tournament.tournamentType })}</li>
+                    {immutableFacts(tournament, (key) => t(key)).map((fact) => (
+                      <li key={fact.key}>{t(fact.labelKey, fact.params)}</li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -511,7 +536,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   <button
                     data-testid="wizard-edit-edit-teams"
-                    onClick={() => handleEditInWizard(5)}
+                    onClick={() => { void handleEditInWizard(5); }}
                     style={{
                       padding: '10px 16px',
                       borderRadius: cssVars.borderRadius.md,
@@ -528,7 +553,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   </button>
                   <button
                     data-testid="wizard-edit-change-game-mode"
-                    onClick={() => handleEditInWizard(3)}
+                    onClick={() => { void handleEditInWizard(3); }}
                     style={{
                       padding: '10px 16px',
                       borderRadius: cssVars.borderRadius.md,
@@ -545,7 +570,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   </button>
                   <button
                     data-testid="wizard-edit-groups-and-fields"
-                    onClick={() => handleEditInWizard(4)}
+                    onClick={() => { void handleEditInWizard(4); }}
                     style={{
                       padding: '10px 16px',
                       borderRadius: cssVars.borderRadius.md,
@@ -566,6 +591,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           </Card>
         )}
       </div>
+      <ConfirmDialog {...confirmDialog.dialogProps} />
     </div>
   );
 };

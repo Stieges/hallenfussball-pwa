@@ -14,9 +14,12 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { Input, Combobox } from '../../../../components/ui';
 import { LocationForm } from '../../../../components/LocationForm';
 import { ContactForm } from '../../../../components/ContactForm';
+import { ConfirmDialog, useConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { RulebookField } from '../../../../components/ui/molecules/RulebookField';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
 import type { Tournament } from '../../../../types/tournament';
+import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
+import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../../../core/services/tournamentMetaValidation';
 
 // =============================================================================
 // PROPS
@@ -169,12 +172,19 @@ export function MetadataCategory({
   onTournamentUpdate,
 }: MetadataCategoryProps) {
   const { t } = useTranslation('admin');
+  const resetDialog = useConfirmDialog({
+    title: t('metadata.confirmResetDialog.title'),
+    message: t('metadata.confirmReset'),
+    variant: 'warning',
+    confirmText: t('metadata.confirmResetDialog.confirm'),
+  });
   // Local form state (copy of tournament data)
   const [formData, setFormData] = useState<Partial<Tournament>>(() => toFormData(tournament));
 
   // Private notes (stored in tournament.adminNotes or similar)
   const [notes, setNotes] = useState(tournament.adminNotes ?? '');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
 
   // Sync formData when tournament changes (after save)
   useEffect(() => {
@@ -195,6 +205,8 @@ export function MetadataCategory({
       contactName: tournament.contactInfo?.name ?? '',
       contactPhone: tournament.contactInfo?.phone ?? '',
       contactEmail: tournament.contactInfo?.email ?? '',
+      contactWebsite: tournament.contactInfo?.website ?? '',
+      contactShowPublic: tournament.contactInfo?.showPublic === true, // B-14 (@W1-031): Häkchen allein speicherbar
       startDate: tournament.startDate ?? tournament.date,
       startTime: tournament.startTime ?? tournament.timeSlot,
       notes: tournament.adminNotes ?? '',
@@ -211,6 +223,8 @@ export function MetadataCategory({
       contactName: formData.contactInfo?.name ?? '',
       contactPhone: formData.contactInfo?.phone ?? '',
       contactEmail: formData.contactInfo?.email ?? '',
+      contactWebsite: formData.contactInfo?.website ?? '',
+      contactShowPublic: formData.contactInfo?.showPublic === true,
       startDate: formData.startDate ?? '',
       startTime: formData.startTime ?? '',
       notes: notes,
@@ -238,10 +252,15 @@ export function MetadataCategory({
   // Update handler
   const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'title' || field === 'startDate') { setMetaErrors(prev => ({ ...prev, [field]: undefined })); }
   };
 
   // Save handler
   const handleSave = () => {
+    // @W5-002 / C-META-NOVALID: leerer Name oder leeres Datum werden nicht gespeichert (ein vergangenes Datum schon, @W5-003)
+    const errors = validateTournamentMeta({ title: formData.title, startDate: formData.startDate });
+    setMetaErrors(errors);
+    if (hasMetaErrors(errors)) { return; }
     const updatedTournament: Tournament = {
       ...tournament,
       title: formData.title ?? tournament.title,
@@ -265,14 +284,16 @@ export function MetadataCategory({
   };
 
   // Reset handler
-  const handleReset = () => {
+  const handleReset = async () => {
     if (isDirty) {
-      const confirmReset = window.confirm(t('metadata.confirmReset'));
+      // @OB-017: Rückfrage im Dialog der App, nie als Fenster des Browsers
+      const confirmReset = await resetDialog.confirm();
       if (!confirmReset) {return;}
     }
 
     setFormData(toFormData(tournament));
     setNotes(tournament.adminNotes ?? '');
+    setMetaErrors({});
   };
 
   // Get mode display name
@@ -311,6 +332,7 @@ export function MetadataCategory({
             value={formData.title ?? ''}
             onChange={(v) => handleUpdate('title', v)}
             placeholder={t('metadata.tournamentNamePlaceholder')}
+            errorMessage={metaErrors.title ? t('metadata.tournamentNameRequired') : undefined}
             required
           />
 
@@ -367,6 +389,7 @@ export function MetadataCategory({
             type="date"
             value={formData.startDate ?? ''}
             onChange={(v) => handleUpdate('startDate', v)}
+            errorMessage={metaErrors.startDate ? t('metadata.startDateRequired') : undefined}
             required
           />
           <Input
@@ -397,7 +420,7 @@ export function MetadataCategory({
         <div style={styles.lockedField}>
           <div>
             <div style={styles.lockedFieldLabel}>{t('metadata.numberOfGroups')}</div>
-            <div style={styles.lockedFieldValue}>{tournament.numberOfGroups ?? 1}</div>
+            <div style={styles.lockedFieldValue}>{effectiveGroupCount(tournament)}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
         </div>
@@ -405,7 +428,7 @@ export function MetadataCategory({
         <div style={styles.lockedField}>
           <div>
             <div style={styles.lockedFieldLabel}>{t('metadata.numberOfFields')}</div>
-            <div style={styles.lockedFieldValue}>{tournament.numberOfFields}</div>
+            <div style={styles.lockedFieldValue}>{effectiveFieldCount(tournament)}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
         </div>
@@ -450,7 +473,7 @@ export function MetadataCategory({
         </button>
         <button
           style={styles.resetButton}
-          onClick={handleReset}
+          onClick={() => { void handleReset(); }}
           disabled={!isDirty}
         >
           {t('metadata.reset')}
@@ -463,6 +486,7 @@ export function MetadataCategory({
           <span>{t('metadata.changesSaved')}</span>
         </div>
       )}
+      <ConfirmDialog {...resetDialog.dialogProps} />
     </CategoryPage>
   );
 }

@@ -8,10 +8,12 @@ import { useTranslation } from 'react-i18next';
 import type { CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
+import { decidedBy, withdrawalOfBlock } from '../../../core/standings/decisionLog';
 import { groupTieView, type OpenTieBlock } from '../../../core/standings/tieViews';
 import { DecidedInfo } from './DecidedInfo';
 import { OpenTieNotice } from './OpenTieNotice';
 import { TieDecisionDialog } from './TieDecisionDialog';
+import { useGroupCompletionUi } from '../group-completion/groupCompletionContext';
 import { useStandingTie } from './standingTieContext';
 
 export interface TieGroupHintProps {
@@ -29,12 +31,18 @@ export const TieGroupHint = ({ tournament, groupId }: TieGroupHintProps) => {
   const [dialogBlock, setDialogBlock] = useState<OpenTieBlock | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [failed, setFailed] = useState<Record<string, string>>({});
+  const completion = useGroupCompletionUi();
   const nameOf = (teamId: string): string => tournament.teams.find((team) => team.id === teamId)?.name ?? '';
+  const canDecide = tie?.canDecide ?? false;
+  // Ein Kasten, eine Haupttaste (Daniel 23.10., VISUAL-DESIGN § 8): sind alle Gruppenspiele entschieden, trägt der Kasten „Gruppe
+  // abschließen“ oben die Entscheidung („Gleichstand entscheiden“ / „Strafstoßschießen eintragen“) – der eigene Hinweis entfällt dann.
+  const inBanner = completion !== null && completion.canManage
+    && (completion.proposals.includes(groupId) || completion.staleGroups.includes(groupId));
+  const openBlocks = canDecide && inBanner ? [] : view.open;
 
-  if (view.open.length === 0 && view.decided.length === 0) {
+  if (openBlocks.length === 0 && view.decided.length === 0) {
     return null;
   }
-  const canDecide = tie?.canDecide ?? false;
 
   const withdraw = async (decisionId: string): Promise<void> => {
     if (tie === null) {
@@ -59,13 +67,14 @@ export const TieGroupHint = ({ tournament, groupId }: TieGroupHintProps) => {
 
   return (
     <div style={list} data-testid="tie-hints">
-      {view.open.map((block) => (
+      {openBlocks.map((block) => (
         <OpenTieNotice
           key={block.teamIds.join('|')}
           block={block}
           names={block.teamIds.map(nameOf)}
           canDecide={canDecide}
           online={tie?.online ?? true}
+          withdrawn={canDecide ? withdrawalOfBlock(tournament, block.teamIds) : undefined}
           onEntry={() => setDialogBlock(block)}
         />
       ))}
@@ -75,6 +84,7 @@ export const TieGroupHint = ({ tournament, groupId }: TieGroupHintProps) => {
           block={block}
           nameOf={nameOf}
           canDecide={canDecide}
+          author={canDecide ? decidedBy(tournament, block.decision.id) : undefined}
           closed={view.closed}
           busy={busyId === block.decision.id}
           failed={failed[block.decision.id] ?? null}

@@ -6,7 +6,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, within } from '@testing-library/react';
 import type { MonitorSlide } from '../../../types/monitor';
 import type { Tournament } from '../../../types/tournament';
-import type { MatchStatus } from '../../../types/tournament';
 import { PERFORMANCE_PROFILES } from '../../../types/monitor';
 import de from '../../../i18n/locales/de/monitor.json';
 import en from '../../../i18n/locales/en/monitor.json';
@@ -26,7 +25,7 @@ vi.mock('../../../lib/supabase', () => ({
   supabase: { from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })), rpc: vi.fn().mockResolvedValue({ error: null }) },
 }));
 vi.mock('../../../core/repositories/SupabaseRepository', () => ({
-  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet }; }),
+  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet, getForDisplay: async (id: string) => { const t: unknown = await supabaseGet(id); return t ? { kind: 'full', version: 1, serverNowMs: 0, tournament: t } : { kind: 'not-found' }; } }; }),
 }));
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { get: localGet }; }),
@@ -102,7 +101,7 @@ describe('@ZM-071 Nächste Spiele: Zeilen über alle Felder, Uhrzeit und Feld, n
   });
 
   it('Gegenbeispiel: ein unterbrochenes (paused) Spiel erscheint nie als nächstes', async () => {
-    const pausiert = withScheduledTimes().map(m => (m.id === 'match-8' ? { ...m, matchStatus: 'paused' as unknown as MatchStatus } : m));
+    const pausiert = withScheduledTimes().map(m => (m.id === 'match-8' ? { ...m, matchStatus: 'paused' as const } : m));
     await starte(monitorTurnier(buildTournament({ matches: pausiert }), [slide('next-matches', { matchCount: 3 })]));
     expect(zeilen()).toHaveLength(1);
     expect(zeilen()[0]).toHaveTextContent('Kickers West');

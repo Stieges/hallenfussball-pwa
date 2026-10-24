@@ -30,10 +30,10 @@ export interface FinalScore {
   winner: 'a' | 'b' | null;
 }
 
-/** Was der Endstand vom Spiel liest; `matchStatus` auch als Cache-Wert 'paused'. */
+/** Was der Endstand vom Spiel liest. */
 export type FinalScoreSource = Partial<
   Pick<Match, 'scoreA' | 'scoreB' | 'overtimeScoreA' | 'overtimeScoreB' | 'penaltyScoreA' | 'penaltyScoreB' | 'decidedBy' | 'forfeitAbsent'>
-> & { matchStatus?: Match['matchStatus'] | 'paused' };
+> & { matchStatus?: Match['matchStatus'] };
 
 export type Pair = { a: number; b: number };
 

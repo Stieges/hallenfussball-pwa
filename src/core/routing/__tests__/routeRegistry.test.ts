@@ -21,6 +21,10 @@ describe('matchRoute', () => {
     ['/login', 'login', {}],
     ['/register', 'register', {}],
     ['/invite', 'invite', {}],
+    // A-17b (@HE-001): Beitritt per Helfer-QR-Code, 10 Zeichen
+    ['/join/ABCDEFGH23', 'join', { code: 'ABCDEFGH23' }],
+    // A-17c (@HE-099): Auswahl bei mehreren Helfer-Zugängen
+    ['/helfer', 'helperChooser', {}],
     ['/settings', 'settings', {}],
     ['/profile', 'profile', {}],
     ['/impressum', 'impressum', {}],
@@ -80,5 +84,20 @@ describe('matchRoute', () => {
 
   it('matcht /tournament/edit NICHT als tournament (zweisegmentig, endsWith /edit)', () => {
     expect(matchRoute('/tournament/edit')).toBeNull();
+  });
+});
+
+describe('matchRoute: /join/:code (A-17b)', () => {
+  it.each(['/join', '/join/', '/join/ABC', '/join/ABC DEF', '/join/AB-CDEFGH23', '/join/ABCDEFGH23/x', `/join/${'A'.repeat(33)}`])(
+    'Gegenbeispiel %s ist kein Beitritt',
+    (path) => {
+      expect(matchRoute(path)?.name).not.toBe('join');
+    },
+  );
+});
+
+describe('matchRoute: /helfer (A-17c)', () => {
+  it.each(['/helfer/', '/helfer/x', '/Helfer', '/helfers'])('Gegenbeispiel %s ist keine Auswahl', (path) => {
+    expect(matchRoute(path)?.name).not.toBe('helperChooser');
   });
 });

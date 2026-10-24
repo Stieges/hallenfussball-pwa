@@ -166,12 +166,13 @@ describe('Spiel beenden und Ergebnis eintragen (Spielplan)', () => {
 
   it('@FU-115 @FU-081 Toms Gerät steuert Feld 2: Hinweis „Feld 2 wird gerade von Tom gesteuert“ in der Rückfrage, danach ohne Übernahme beendet', async () => {
     confirmed(h, [anpfiff(480_000)]);
-    holder.read.mockResolvedValue({ field: 2, holder: 'Tom' });
+    holder.read.mockResolvedValue({ field: 2, holderName: 'Tom', holderDeviceLabel: null });
     const { hook, enter, answer } = render(h);
     const done = enter(SPIEL_9, 3, 1);
     await act(async () => { await settle(); });
 
     expect(holder.read.mock.calls.map((call) => call[2])).toEqual([2]); // Feld von Spiel 9
+    expect(typeof holder.read.mock.calls[0][3]).toBe('string'); // B-49: mit der Geräte-ID dieses Geräts
     expect(hook.result.current.prompt).toMatchObject({ kind: 'end', controlledBy: { field: 2, holder: 'Tom' } });
     await answer('yes');
     expect(await done).toBe(true);

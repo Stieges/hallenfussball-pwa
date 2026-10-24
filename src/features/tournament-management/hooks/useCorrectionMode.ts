@@ -46,7 +46,7 @@ export function useCorrectionMode({
   const handleStartCorrection = useCallback((matchId: string) => {
     // Check permission first - if not allowed, show warning
     if (!canCorrectResults) {
-      showWarning('Sie haben keine Berechtigung, Ergebnisse nachträglich zu korrigieren.');
+      showWarning('Du hast keine Berechtigung, Ergebnisse nachträglich zu korrigieren.');
       return;
     }
 

@@ -16,6 +16,7 @@ import { pseudoRechtecke } from './pseudo.mjs'
 import { buendle, textBericht } from './ausgabe.mjs'
 import { leseSaat, installiereSaat } from './saat/lader.mjs'
 import { fuehreAnsichtenAus } from './ansichten.mjs'
+import { STUB_URL, installiereStub, leseStub } from './stub.mjs'
 
 const HIER = dirname(fileURLToPath(import.meta.url))
 const STANDARD_GW = join(HIER, 'grenzwerte.json')
@@ -32,6 +33,9 @@ const HILFE = `Aufruf:
   --erwarte <css>           Pflicht fuer App: Element der erwarteten Ansicht (sonst BLOCKED)
   --saat <name>             feste Testdaten (scripts/visual-metrics/saat/<name>.json) vor dem ersten Laden in
                             IndexedDB/localStorage ablegen und die Einwilligung setzen (z. B. hallencup-messlauf)
+  --stub <datei>/<zustand>  Server-Antworten per Netz-Stub (scripts/visual-metrics/stubs/<datei>.json): Build mit lokaler Scheinadresse,
+                            alle Aufrufe daran beantwortet der Stub (nur fuer --app; kein Datenbank-Stand, keine Migration)
+  --bilder <ordner>         je Lauf hell/de/normal ein Bild nach <ordner>/<name>-<profil>.png (Sichtvergleich gegen das Mockup)
   --ansichten <gruppe>      alle Pflicht-Ansichten aus ansichten.json nacheinander messen (Gruppe: pflicht);
                             weitere Optionen (--themen, --sprachen, --varianten, --ohne-axe, --screenshots, --aus) gelten fuer jede
                             Ansicht; --profil <p> ersetzt das Profil der App-Ansichten, --monitor-profil <p> das der Monitor-Folien;
@@ -69,10 +73,12 @@ function parseArgs(argv) {
       case '--erwarte': o.erwarte = wert(); break
       case '--klick': o.klick.push(wert()); break
       case '--saat': o.saat = wert(); break
+      case '--stub': o.stub = wert(); break
+      case '--bilder': o.bilder = wert(); break
       case '--ansichten': o.ansichten = wert(); break
       case '--nur': o.nur = wert(); break
       case '--monitor-profil': o.monitorProfil = wert(); break
-      case '--profil': o.profil = wert(); break
+      case '--profil': o.profil = wert(); o.profilGegeben = true; break
       case '--themen': o.themen = wert(); break
       case '--sprachen': o.sprachen = wert(); break
       case '--varianten': o.varianten = wert(); break
@@ -197,6 +203,16 @@ async function main() {
       return 2
     }
   }
+  let stub = null
+  if (o.stub) {
+    if (!o.app) { process.stderr.write('--stub gilt nur fuer --app.\n'); return 2 }
+    try {
+      stub = leseStub(o.stub)
+    } catch (e) {
+      process.stderr.write(`${e.message}\n`)
+      return 2
+    }
+  }
   let profilAuswahl, themen, sprachen, varianten
   try {
     profilAuswahl = loeseProfile(o.profil)
@@ -286,7 +302,7 @@ async function main() {
     bericht.quelle = { ...bericht.quelle, art: 'datei', datei: pfad, sha256: createHash('sha256').update(readFileSync(pfad)).digest('hex') }
   } else {
     if (o.app) {
-      app = await starteApp({ neuBauen: o.neuBauen, log: (t) => process.stderr.write(`${t}\n`) })
+      app = await starteApp({ neuBauen: o.neuBauen, stubUrl: stub ? STUB_URL : null, log: (t) => process.stderr.write(`${t}\n`) })
       url = new URL(o.app, app.basisUrl).href
     } else {
       url = o.ziel
@@ -335,6 +351,7 @@ async function main() {
               serviceWorkers: 'block',
             })
             if (saat) await installiereSaat(ctx, saat)
+            if (stub) await installiereStub(ctx, stub)
             await ctx.addInitScript((px) => {
               const setze = () => {
                 for (const v of ['--vm-overscan', '--vm-overscan-x', '--vm-overscan-y']) document.documentElement.style.setProperty(v, `${px}px`)
@@ -356,6 +373,12 @@ async function main() {
               // 'warte:<ms>' wartet, statt zu klicken (z. B. die Sperre des Nummern-Bausteins von 300 ms, @SL-021)
               const warte = /^warte:(\d+)$/.exec(k)
               if (warte) { await page.waitForTimeout(Number(warte[1])); continue }
+              // 'fill:<selektor>::<text>' tippt Text in ein Feld (z. B. den Namen des Helfers), dann weiter
+              const fuell = /^fill:(.+?)::(.*)$/.exec(k)
+              if (fuell) {
+                try { await page.locator(fuell[1]).first().fill(fuell[2], { timeout: 5000 }) } catch { gr.push(`Vorbedingung nicht erfuellbar: Eingabe in ${fuell[1]}`) }
+                continue
+              }
               // 'scroll:oben' stellt den Messzustand ohne Klick-Scroll her (Fenster und alle Rollbereiche an den Anfang)
               if (k === 'scroll:oben') {
                 await page.evaluate(() => { window.scrollTo(0, 0); for (const el of document.querySelectorAll('*')) if (el.scrollTop > 0) el.scrollTop = 0 })
@@ -426,6 +449,10 @@ async function main() {
             for (const k of Object.keys(bericht.markierungen)) bericht.markierungen[k] = Math.max(bericht.markierungen[k], m.markierungen[k])
             for (const a of m.ausnahmen) if (!bericht.ausnahmen.some((x) => x.attr === a.attr && x.selektor === a.selektor)) bericht.ausnahmen.push(a)
             for (const [k, v] of Object.entries(m.zaehler)) bericht.zusammenfassung.zaehler[k] = (bericht.zusammenfassung.zaehler[k] ?? 0) + v
+            if (o.bilder && thema === 'hell' && sprache === 'de' && variante === 'normal') {
+              mkdirSync(o.bilder, { recursive: true })
+              await page.screenshot({ path: join(o.bilder, `${(stub?.name ?? 'seite').replace('/', '-')}-${name}.png`), fullPage: true })
+            }
             if (o.screenshots && hart > 0) {
               const bild = join(aus, `${stempel}-${name}-${thema}-${sprache}-${variante}.png`)
               await page.screenshot({ path: bild })

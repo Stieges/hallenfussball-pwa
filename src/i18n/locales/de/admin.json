@@ -12,7 +12,7 @@
   },
   "sidebar": {
     "backToTournament": "Zurück zum Turnier",
-    "criticalActions": "Kritische Aktionen",
+    "criticalActions": "Gefahrenbereich",
     "warnings": "{{count}} Warnungen",
     "warningClickAria": "Warnung: {{title}}. Klicken um zur Behebung zu navigieren.",
     "showAll": "Alle anzeigen"
@@ -22,7 +22,7 @@
     "searchPlaceholder": "Suchen...",
     "searchAriaLabel": "Kategorien durchsuchen",
     "noResults": "Keine Ergebnisse für \"{{query}}\"",
-    "criticalActions": "Kritische Aktionen",
+    "criticalActions": "Gefahrenbereich",
     "warnings": "{{count}} Warnungen",
     "andMore": "und {{count}} weitere"
   },
@@ -34,7 +34,7 @@
     "exports": "Exporte",
     "exportsDesc": "PDF, CSV, Backup",
     "teamHelpers": "Team & Helfer",
-    "teamHelpersDesc": "Helfer einladen und Berechtigungen verwalten",
+    "teamHelpersDesc": "Helfer-QR-Code, Anfragen und Zugänge",
     "sponsors": "Sponsoren",
     "sponsorsDesc": "Sponsorlogo-Verwaltung",
     "settings": "Turnier-Einstellungen",
@@ -51,7 +51,7 @@
     "helpDesc": "Tipps und häufig gestellte Fragen"
   },
   "dangerZone": {
-    "title": "Kritische Aktionen",
+    "title": "Gefahrenbereich",
     "description": "Destruktive Operationen - mit Vorsicht verwenden",
     "warningTitle": "Vorsicht!",
     "warningText": "Die folgenden Aktionen können nicht oder nur teilweise rückgängig gemacht werden. Stelle sicher, dass du weißt, was du tust.",
@@ -143,8 +143,8 @@
     "statisticsDescription": "Exportiert Statistiken wie Torschützenliste und Fair-Play-Tabelle als PDF.",
     "statisticsExportSuccess": "Statistik-Report erfolgreich erstellt!",
     "statisticsExportError": "Fehler beim Erstellen des Reports.",
-    "summaryTitle": "Turnier-Zusammenfassung",
-    "summaryDescription": "Generiert einen vollständigen Turnierbericht mit allen Ergebnissen, Tabellen und Statistiken als PDF.",
+    "summaryTitle": "Spielplan als PDF",
+    "summaryDescription": "Erzeugt den Spielplan mit Spielen, Uhrzeiten und Teams als PDF.",
     "backupTitle": "Backup & Restore",
     "format": "Format",
     "formatCsv": "CSV (Excel)",
@@ -194,25 +194,117 @@
   },
   "teamHelpers": {
     "title": "Team & Helfer",
-    "description": "Helfer einladen und Berechtigungen verwalten",
+    "description": "Helfer-QR-Code, Anfragen und Zugänge",
     "authRequired": "Anmeldung erforderlich",
-    "authRequiredDesc": "Um Helfer einzuladen und zu verwalten, musst du angemeldet sein.",
+    "authRequiredDesc": "Um Helfer zu verwalten, musst du angemeldet sein.",
     "goToSettings": "Gehe zu Einstellungen → Konto",
-    "inviteHelpers": "Helfer einladen",
-    "inviteDescription": "Erstelle einen Einladungs-Link, um Helfer zu deinem Turnier hinzuzufügen.",
-    "createInvite": "+ Einladung erstellen",
-    "inviteLinkCreated": "Einladungs-Link erstellt:",
-    "copied": "✓ Kopiert",
-    "copy": "Kopieren",
-    "shareLinkHint": "Teile diesen Link mit der Person, die du einladen möchtest.",
-    "currentMembers": "Aktuelle Mitglieder",
-    "activeInvitations": "Aktive Einladungen ({{count}})",
-    "roleDeputy": "Stellvertreter",
-    "roleHelper": "Helfer",
-    "roleTrainer": "Trainer",
-    "roleViewer": "Zuschauer",
-    "usedCount": "{{used}}/{{max}} verwendet",
-    "invitationUses": "{{useCount}}/{{maxUses}} verwendet"
+    "noRight": {
+      "title": "Nur die Turnierleitung kann Helfer verwalten",
+      "text": "Dir fehlt das Recht „Helfer verwalten“. Frage den Eigentümer des Turniers."
+    },
+    "loading": "Wird geladen …",
+    "loadError": "Die Helfer-Übersicht konnte nicht geladen werden. Prüfe die Verbindung.",
+    "offline": {
+      "title": "Geht nur mit Netz",
+      "text": "Zulassen, Ablehnen, Entziehen und Umteilen brauchen Verbindung. Nichts wird vorgemerkt. Die Notübernahme eines Feldes bleibt möglich."
+    },
+    "notice": {
+      "failed": "Das hat nicht geklappt – bitte noch einmal.",
+      "alreadyDecided": "Bereits von {{name}} entschieden",
+      "alreadyDecidedUnknown": "Bereits entschieden",
+      "requestExpired": "Anfrage verfallen"
+    },
+    "code": {
+      "title": "Helfer-QR-Code",
+      "validUntil": "gilt bis {{date}}, 23:59 Uhr",
+      "qrLabel": "Helfer-QR-Code",
+      "hint": "Zeige den QR-Code den Helfern auf dem Handy. Wer ihn scannt, kann eine Anfrage stellen. Eintragen darf erst, wen die Turnierleitung zulässt.",
+      "renew": "Code erneuern",
+      "loading": "Code wird geladen …",
+      "error": "Der Helfer-QR-Code konnte nicht geladen werden. Prüfe die Verbindung.",
+      "closedTitle": "Das Turnier ist abgeschlossen",
+      "closedText": "Es gibt keinen Helfer-QR-Code mehr. Ein Beitritt ist nicht mehr möglich."
+    },
+    "requests": {
+      "title": "Anfragen",
+      "none": "keine offenen",
+      "count_one": "{{count}} offene Anfrage",
+      "count_other": "{{count}} offene Anfragen",
+      "empty": "Sobald jemand den QR-Code scannt und einen Namen eingibt, erscheint die Anfrage hier.",
+      "requestedAt": "gestellt {{time}} Uhr",
+      "approve": "Zulassen",
+      "decline": "Ablehnen",
+      "sameNameTitle": "{{count}} Anfragen mit dem Namen {{name}}",
+      "sameNameText": "Frage nach der Zahl auf dem Handy, bevor du zulässt.",
+      "markMember": "{{name}} ist schon zugelassen ({{device}})",
+      "markMemberNoDevice": "{{name}} ist schon zugelassen",
+      "markDeclined": "Name „{{name}}“ um {{time}} abgelehnt"
+    },
+    "helpers": {
+      "title": "Helfer",
+      "none": "keine Zugänge",
+      "count_one": "{{count}} Zugang",
+      "count_other": "{{count}} Zugänge",
+      "empty": "Zugelassene Helfer erscheinen hier mit Feld und Gerät.",
+      "hint": "Zugänge werden nur entzogen, nie gelöscht. Was ein Helfer eingetragen hat, bleibt im Verlauf.",
+      "field": "Feld {{field}}",
+      "noField": "ohne Feld",
+      "controls": "steuert",
+      "lastSeen": "zuletzt {{time}}",
+      "unseen": "noch nicht gesehen",
+      "device": "Gerät: {{device}}",
+      "deviceUnknown": "Gerät unbekannt",
+      "revoke": "Entziehen",
+      "watchOnly": "Nur zusehen",
+      "viewerTag": "Nur zusehen",
+      "revokedTag": "Zugang entzogen"
+    },
+    "approve": {
+      "title": "{{name}} zulassen",
+      "intro": "möchte helfen · gestellt {{time}} Uhr",
+      "fieldLegend": "Feld für {{name}}",
+      "fieldN": "Feld {{field}}",
+      "fieldNone": "Ohne Feld",
+      "fieldHint": "„Ohne Feld“: {{name}} kann alle Felder leiten, wenn kein anderes Gerät es steuert.",
+      "numberLegend": "Welche Zahl zeigt das Handy?",
+      "numberHint": "Tippe die Zahl, die {{name}} auf dem Handy sieht. Damit lässt du {{name}} zu.",
+      "numberLabel": "Zahl {{number}}",
+      "mismatchTitle": "Zahl stimmt nicht – frag nach der Zahl auf dem Handy",
+      "mismatchText": "Nichts hat sich geändert.",
+      "cancel": "Abbrechen",
+      "close": "Schließen"
+    },
+    "renew": {
+      "title": "Code erneuern",
+      "text": "Der alte QR-Code gilt danach nicht mehr. Zugelassene Helfer bleiben Helfer.",
+      "question_one": "{{count}} offene Anfrage behalten oder ablehnen?",
+      "question_other": "{{count}} offene Anfragen behalten oder ablehnen?",
+      "effect": "Abgelehnte Handys sehen „Anfrage abgelehnt“ und können mit dem neuen Code neu anfragen.",
+      "decide_one": "{{count}} Anfrage ablehnen",
+      "decide_other": "{{count}} Anfragen ablehnen",
+      "keep_one": "{{count}} Anfrage behalten",
+      "keep_other": "{{count}} Anfragen behalten",
+      "confirm": "Code erneuern",
+      "cancel": "Abbrechen"
+    },
+    "revoke": {
+      "title": "{{name}} den Zugang entziehen?",
+      "intro": "({{where}}) kann danach nichts mehr eintragen.",
+      "effectSeen": "Das Gerät zeigt innerhalb von 3 Sekunden „Du hast keinen Zugriff mehr“. Was {{name}} eingetragen hat, bleibt im Verlauf.",
+      "effectBlock": "Dieses Gerät kann bis zum Ende des Turniers keine neue Anfrage stellen. Bei einem Fehltipp scannt {{name}} mit einem anderen Browser oder Gerät noch einmal. Der Zugang wird entzogen, nicht gelöscht.",
+      "effectNothing": "{{name}} sieht dann nichts mehr. „Nur zusehen“ dagegen lässt das Gerät alles weiter lesen wie bisher.",
+      "confirm": "Zugang entziehen",
+      "cancel": "Abbrechen"
+    },
+    "viewer": {
+      "title": "{{name}} zum Zuschauer machen?",
+      "intro": "({{where}}) kann danach nichts mehr eintragen.",
+      "effectSeen": "Das Gerät zeigt innerhalb von 3 Sekunden „Du kannst nur noch zusehen“ und sieht weiter alles wie ein Helfer, trägt aber nichts ein.",
+      "effectBlock": "Für ein fremdes oder verdächtiges Gerät wähle „Zugang entziehen“: Dann sieht es nichts mehr.",
+      "confirm": "Zum Zuschauer machen",
+      "cancel": "Abbrechen"
+    },
+    "where": "{{field}}, Gerät {{device}}"
   },
   "sponsorsSection": {
     "title": "Sponsoren",
@@ -231,7 +323,7 @@
     "gameTimes": "Spielzeiten",
     "gameTimePerMatch": "Spielzeit pro Spiel",
     "minutesLocked": "Minuten 🔒",
-    "gameTimeLockedHint": "Gesperrt, da bereits Spiele gestartet wurden. Spielplan zurücksetzen um zu ändern.",
+    "gameTimeLockedHint": "Diese Zeit lässt sich hier nicht ändern.",
     "breakTime": "Pausenzeit zwischen Spielen",
     "minutes": "Minuten"
   },
@@ -246,7 +338,7 @@
     "contentVisibility": "Inhalts-Sichtbarkeit",
     "tournamentVisibility": "Turnier-Sichtbarkeit",
     "private": "🔒 Privat",
-    "privateDesc": "Nur für eingeloggte Turnierleitung sichtbar. Kein Public View.",
+    "privateDesc": "Nicht öffentlich: nur Turnierleitung, Helfer und Monitore sehen es. Kein Public View.",
     "shareable": "🔗 Mit Link teilbar",
     "shareableDesc": "Jeder mit dem Link kann zuschauen. Nicht in Suchmaschinen auffindbar.",
     "shareCode": "Share-Code",
@@ -282,7 +374,9 @@
     "saved": "✓ Gespeichert",
     "masterData": "Stammdaten",
     "tournamentName": "Turniername",
-    "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
+    "tournamentNameRequired": "Bitte gib einen Turniernamen ein.",
+    "startDateRequired": "Bitte wähle ein Startdatum.",
+    "tournamentNamePlaceholder": "Vereinsname Hallencup",
     "organizerOptional": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
     "ageClass": "Altersklasse",
@@ -299,7 +393,7 @@
     "gameMode": "Spielmodus",
     "modeRoundRobin": "Jeder gegen Jeden",
     "modeGroupsAndFinals": "Gruppen + Finale",
-    "changeHint": "Um diese Einstellungen zu ändern, nutze \"Spielplan zurücksetzen\" in der Danger Zone.",
+    "changeHint": "Diese Einstellungen sind festgelegt und lassen sich hier nicht ändern.",
     "privateNotes": "Private Notizen",
     "privateNotesDesc": "Diese Notizen sind nur für dich sichtbar und werden nicht öffentlich angezeigt.",
     "notesPlaceholder": "Notizen für dich selbst eingeben...",
@@ -311,7 +405,11 @@
     "rulebook": "Regelwerk (optional)",
     "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
     "rulebookLimit": "Höchstens 80 Zeichen.",
-    "rulebookTruncated": "Auf 80 Zeichen gekürzt."
+    "rulebookTruncated": "Auf 80 Zeichen gekürzt.",
+    "confirmResetDialog": {
+      "title": "Änderungen verwerfen",
+      "confirm": "Verwerfen"
+    }
   },
   "spectatorDisplay": {
     "title": "Anzeige für Zuschauer",

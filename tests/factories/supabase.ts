@@ -91,6 +91,10 @@ export function createMatchRow(
     penalty_score_a: null,
     penalty_score_b: null,
     decided_by: null,
+    // forfeit_absent (20261110_005), reassigned_at (20261110_006), original_start (20261117_104).
+    forfeit_absent: null,
+    original_start: null,
+    reassigned_at: null,
     skipped_reason: null,
     skipped_at: null,
     duration_minutes: null,
@@ -138,6 +142,9 @@ export function createTournamentRow(
     share_code: null,
     share_code_created_at: null,
     completed_at: null,
+    // A-21a-S (20261113_003): Lebenszyklus, DB-Default 'draft' (passt zu status 'draft').
+    lifecycle_status: 'draft',
+    finished_at: null,
     deleted_at: null,
     last_modified_by: null,
     created_at: '2026-01-01T00:00:00Z',

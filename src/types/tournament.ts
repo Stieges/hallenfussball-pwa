@@ -271,14 +271,18 @@ export interface PlayoffConfig {
 }
 
 /**
- * Match Status for TL-RESULT-LOCK-01 (extended for US-SCHEDULE-EDITOR)
+ * Match Status for TL-RESULT-LOCK-01 (extended for US-SCHEDULE-EDITOR) -- alle Werte der Cloud-Spalte
+ * `matches.match_status` (CHECK `matches_match_status_check`)
  * - scheduled: Match not yet started
  * - waiting: Waiting for previous match to complete (dependency)
  * - running: Match currently in progress
+ * - paused: Match angepfiffen, aber unterbrochen (Halbzeit, Pause, Entscheidung offen, Strafstoßschießen);
+ *   der Cache schreibt `section_break`/`decision_pending`/`shootout` als `paused`, der Feinstatus steht in `liveState`
  * - finished: Match completed, results locked
  * - skipped: Match skipped (e.g., team withdrew)
  */
-export type MatchStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
+export const MATCH_STATUSES = ['scheduled', 'waiting', 'running', 'paused', 'finished', 'skipped'] as const;
+export type MatchStatus = (typeof MATCH_STATUSES)[number];
 
 /**
  * How a finals match was decided (for display purposes). 'forfeit' = Nichtantritts-Wertung (A-25, E-A4; in der Spalte
@@ -318,6 +322,11 @@ export interface Match {
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
   label?: string; // Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale')
   scheduledTime?: Date; // Actual scheduled time
+  /**
+   * B-26 (`matches.original_start`): Uhrzeit beim ersten Anpfiff des Turniers, wenn das Spiel danach verschoben wurde
+   * (Wanduhr wie `scheduledTime`); fehlt = nie verschoben bzw. Planung vor dem ersten Anpfiff (@ZP-049).
+   */
+  originalStart?: Date;
   matchNumber?: number; // Spiel-Nummer (1-basiert)
   phase?: string; // Phase: 'groupStage', 'semifinal', etc.
   referee?: number; // Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.)
@@ -487,6 +496,12 @@ export interface Tournament {
   placementsToPlayOut?: number[];
   /** GA4 A-13a: Abschlüsse der Gruppen (`group_completions`); fehlt vor G1 – dann ist keine Gruppe abgeschlossen. */
   groupCompletions?: GroupCompletion[];
+  /**
+   * GA4 A-13b-C: Verlauf der Besetzung und der Gleichstands-Entscheidungen (`bracket_log` über `bracket_log_read`) mit
+   * Person und Zeit. Nur die Turnierleitung bekommt Zeilen (Server), im öffentlich lesbaren Datensatz steht er nie
+   * (@W2A-072); fehlt vor G1 oder ohne Recht.
+   */
+  decisionLog?: BracketLogEntry[];
   /** A-25c (@W2A-025): Wertung bei Nichtantritt, im `config`-JSONB; fehlt sie oder ist sie unbrauchbar, gilt 2:0. */
   forfeitScore?: ForfeitScore;
   /** Wahl der Eröffnung bei zwei Mannschaften des Veranstalters (@W4-033); ohne Wahl `DEFAULT_OPENING_MODE`. */
@@ -832,7 +847,7 @@ export interface Standing {
  * Paket TB (Plan v2 § 3.2, TB-3'): Entscheidung der Turnierleitung über einen Gleichstand nach allen Kriterien.
  * Gültigkeit und Anwendung: `core/standings/decisions.ts`; Speichern und Zurücknehmen: `StandingDecisionService`.
  * Steht im öffentlich lesbaren `config` – deshalb ohne Person, Zeitpunkt und Grund (@W2A-072, Daniel B4d); „wer wann“
- * und der Grund einer Reihenfolge gehören ins Verlaufsprotokoll (GA4 A-13b, C-ENTSCHEIDUNG-PERSON-OEFFENTLICH).
+ * und der Grund einer Reihenfolge stehen im Verlauf der Turnierleitung (`Tournament.decisionLog`, GA4 A-13b-C).
  */
 export interface StandingDecision {
   id: string;
@@ -866,6 +881,36 @@ export interface GroupCompletion {
   completedAt?: string;
   /** Gesetzt, solange die Gruppe wieder geöffnet ist (@TM-099); dann gilt der Abschluss nicht. */
   reopenedAt?: string;
+  /**
+   * A-15c (@W2A-062, @TM-146, @TM-147): nur lokal – ohne Netz abgeschlossen, wartet in der Warteschlange auf den Server
+   * (Marke „noch nicht gesendet“). Die Cloud kennt das Feld nicht; ihr Abschluss ersetzt den lokalen.
+   */
+  unsent?: boolean;
+}
+
+/** Art eines Verlaufseintrags (`bracket_log.kind`, Migration `20261110_006`). */
+export type BracketLogKind =
+  | 'complete_group' | 'reopen_group' | 'standing_decision' | 'standing_withdraw'
+  | 'auto_advance' | 'auto_reassign' | 'release'
+  | 'set_slot' | 'swap_sides' | 'set_advancement' | 'set_slot_source'
+  | 'notice_kept' | 'clarification_resolved';
+
+/**
+ * GA4 A-13b-C (@TM-113, @W2A-071): ein Eintrag des Verlaufs, wie `bracket_log_read` ihn liefert. Name nie die E-Mail
+ * (`actorName` fehlt, wenn die Person keinen Namen hat). Gleichstands-Entscheidungen tragen die Kennung der Entscheidung in
+ * `detail.id`; der Grund einer Reihenfolge steht nur hier.
+ */
+export interface BracketLogEntry {
+  id: number;
+  kind: BracketLogKind;
+  matchId?: string;
+  groupId?: string;
+  detail: Record<string, unknown>;
+  reason?: string;
+  actorName?: string;
+  actorRole?: string;
+  /** ISO-Zeitpunkt. */
+  at: string;
 }
 
 // ============================================================================
@@ -1129,6 +1174,9 @@ export interface ContactInfo {
   email?: string;       // E-Mail
   phone?: string;       // Telefon
   website?: string;     // Website
+  /** Häkchen „Ansprechpartner öffentlich zeigen“ (@W1-031): nur dann liefert der Server den Kontakt an Zuschauer aus
+   *  (B-14) und das Spielplan-PDF druckt ihn (@W1-032). Fehlt es, bleibt der Kontakt intern (@W1-030). */
+  showPublic?: boolean;
 }
 
 /**

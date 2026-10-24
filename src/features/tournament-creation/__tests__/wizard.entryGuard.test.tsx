@@ -60,24 +60,28 @@ describe('A-08f3e4 Assistent: Zurücksetzen und Neu erzeugen löschen keine Eint
 
   it('@FU-090 Schritt 2 „Turnier zurücksetzen“ mit 5 Einträgen an Spiel 7 → nicht ausgeführt, Text wörtlich, Einträge bleiben', async () => {
     await seedEntries(h, SPIEL_7, ZWEI_ZU_EINS);
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { result } = renderHook(() => useTournamentWizard(mitErgebnis()), { wrapper });
+    const browserConfirm = vi.spyOn(window, 'confirm');
+    const confirm = vi.fn().mockResolvedValue(true);
+    const { result } = renderHook(() => useTournamentWizard(mitErgebnis(), confirm), { wrapper });
 
     act(() => { result.current.handleResetTournament(); });
 
     expect(await screen.findByText(BLOCKED_7)).toBeInTheDocument();
     expect(confirm).not.toHaveBeenCalled();
+    expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017
     expect(result.current.formData.matches?.find((m) => m.id === SPIEL_7)).toMatchObject({ scoreA: 4, matchStatus: 'finished' });
     expect(await entryCount(h, SPIEL_7)).toBe(5);
   });
 
   it('Gegenbeispiel: Schritt 2 ohne Einträge → Rückfrage und Zurücksetzen wie heute', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { result } = renderHook(() => useTournamentWizard(mitErgebnis()), { wrapper });
+    const browserConfirm = vi.spyOn(window, 'confirm');
+    const confirm = vi.fn().mockResolvedValue(true);
+    const { result } = renderHook(() => useTournamentWizard(mitErgebnis(), confirm), { wrapper });
 
     act(() => { result.current.handleResetTournament(); });
 
     await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017: nie ein Fenster des Browsers
     await vi.waitFor(() => expect(result.current.formData.matches?.find((m) => m.id === SPIEL_7)?.matchStatus).toBe('scheduled'));
     expect(result.current.formData.matches?.find((m) => m.id === SPIEL_7)).toMatchObject({ scoreA: undefined, matchStatus: 'scheduled' });
     expect(screen.queryByText(BLOCKED_7)).not.toBeInTheDocument();

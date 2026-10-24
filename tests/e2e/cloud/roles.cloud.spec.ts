@@ -3,7 +3,7 @@
  * task-T4-brief.md`), Spec 2.
  *
  * **Generiert aus `rolePermissions.json`** (Brief-Vorgabe: "nicht handgeschrieben"): die
- * erwartete Sichtbarkeit von `danger-zone-delete`/`invite-create-button`/
+ * erwartete Sichtbarkeit von `danger-zone-delete`/
  * `cockpit-readonly-banner` wird für jede Rolle aus der EINEN Rechte-Quelle
  * (`src/features/auth/permissions/rolePermissions.json`, dieselbe Datei, die
  * `src/features/auth/utils/permissions.ts#hasPermission()` zur Laufzeit auswertet) berechnet,
@@ -57,7 +57,7 @@ const rolePermissionsJson = JSON.parse(readFileSync(ROLE_PERMISSIONS_PATH, 'utf8
 /**
  * N7 (Fixrunde 2): ALLE Capability-Schlüssel aus `rolePermissionsJson.capabilities` -- vorher
  * deckte das zweite Orakel (I5/Ruling T, Server-RPC vs. JSON) nur die 3 Capabilities ab, die
- * auch ein UI-Element haben (`deleteTournament`, `manageMembers`, `writeMatchData`).
+ * auch ein UI-Element haben (`deleteTournament`, `manageMembers`, `writeMatchData`; die Einladen-Oberfläche zu `manageMembers` entfiel mit A-18a).
  * `correctEvents`/`tournamentSettings`/`teams`/`restructure` blieben ohne jede RPC-Gegenprobe --
  * eine Drift zwischen JSON und `role_permissions`-Tabelle bei GENAU diesen vier Rechten wäre nie
  * aufgefallen. Die Gegenprobe braucht kein UI-Element (nur die RPC), ist also billig
@@ -129,13 +129,12 @@ async function serverHasTournamentPermission(
 }
 
 // =============================================================================
-// JE ROLLE: role-badge, Löschen-Bereich, Einladen, Cockpit
+// JE ROLLE: Löschen-Bereich, Cockpit
 // =============================================================================
 
 for (const role of ALL_ROLES) {
   const userKey = ROLE_TO_USER_KEY[role];
   const canDelete = hasPermission(role, 'deleteTournament');
-  const canInvite = hasPermission(role, 'manageMembers');
   const canWrite = hasPermission(role, 'writeMatchData');
 
   test.describe(`Rolle ${role}`, () => {
@@ -146,28 +145,6 @@ for (const role of ALL_ROLES) {
         const serverResult = await serverHasTournamentPermission(userKey, E2E_LIVE_CUP_ID, capability);
         expect(serverResult, `Capability "${capability}" für Rolle "${role}"`).toBe(hasPermission(role, capability));
       }
-    });
-
-    // B-03 (@OB-005, Commit 5e7fe273): „Team & Helfer" ist als Platzhalter aus dem Admin-Center
-    // ausgeblendet (Kategorie aus ADMIN_CATEGORIES entfernt, die URL .../admin/team-helpers fällt
-    // auf das Dashboard zurück) -- bis zum Einstieg per QR-Code ist MemberList (member-list,
-    // role-badge, invite-create-button) über die Oberfläche nicht erreichbar. Gewollte Änderung,
-    // keine Regression; das Server-Orakel (Rechte-Orakel oben) bleibt aktiv.
-    test.fixme(`role-badge zeigt "${role}" (UI nicht erreichbar, B-03 @OB-005)`, async ({ asRole }) => {
-      const page = await asRole(userKey);
-      await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/admin/team-helpers`);
-      await page.waitForLoadState('networkidle');
-
-      // R7/RLS (collaborators_select_v3): jede Nicht-Owner-Rolle sieht in `tournament_collaborators`
-      // NUR die eigene Zeile (user_id = auth.uid()) -- für owner (sieht ALLE Zeilen) adressiert
-      // M5 das über den "(Du)"-Marker (MemberList.tsx#isMe) gezielt die eigene Zeile, statt
-      // `.first()` auf die DOM-Reihenfolge zu verlassen.
-      const memberList = page.locator('[data-testid="member-list"]');
-      await expect(memberList).toBeVisible({ timeout: 15000 });
-      const myRow = memberList.locator('[data-testid^="member-row-"]', { hasText: '(Du)' });
-      await expect(myRow).toBeVisible({ timeout: 15000 });
-      const myBadge = myRow.locator('[data-testid="role-badge"]');
-      await expect(myBadge).toHaveAttribute('data-role', role);
     });
 
     test(`Löschen-Bereich (danger-zone-delete): ${canDelete ? 'nur vor dem Anpfiff sichtbar' : 'nicht sichtbar'} (deleteTournament=${canDelete})`, async ({ asRole }) => {
@@ -182,7 +159,7 @@ for (const role of ALL_ROLES) {
       // Der Live-Cup ist angepfiffen -- @LZ-003 (B-01a, Commit d821510b): „Turnier löschen" wird
       // nach dem ersten Anpfiff NIE angeboten, auch dem Eigentümer nicht. Die anderen
       // Danger-Zone-Inhalte bleiben sichtbar.
-      await expect(page.getByText('Kritische Aktionen', { exact: false }).first()).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText('Gefahrenbereich', { exact: false }).first()).toBeVisible({ timeout: 15000 });
       await expect(deleteButton).toHaveCount(0);
 
       if (canDelete) {
@@ -191,24 +168,6 @@ for (const role of ALL_ROLES) {
         await page.goto(`/#/tournament/${E2E_DRAFT_CUP_ID}/admin/danger-zone`);
         await page.waitForLoadState('networkidle');
         await expect(deleteButton).toBeVisible({ timeout: 15000 });
-      }
-    });
-
-    // B-03 (@OB-005): siehe Kommentar beim role-badge-Test -- Einladen-UI ist nicht erreichbar.
-    test.fixme(`Einladen (invite-create-button): ${canInvite ? 'sichtbar' : 'nicht sichtbar'} (manageMembers=${canInvite}) (UI nicht erreichbar, B-03 @OB-005)`, async ({ asRole }) => {
-      const serverCanInvite = await serverHasTournamentPermission(userKey, E2E_LIVE_CUP_ID, 'manageMembers');
-      expect(serverCanInvite).toBe(canInvite); // Zweites Orakel (I5).
-
-      const page = await asRole(userKey);
-      await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/admin/team-helpers`);
-      await page.waitForLoadState('networkidle');
-
-      const inviteButton = page.locator('[data-testid="invite-create-button"]');
-      if (canInvite) {
-        await expect(inviteButton).toBeVisible({ timeout: 15000 });
-      } else {
-        await expect(page.locator('[data-testid="member-list"]')).toBeVisible({ timeout: 15000 });
-        await expect(inviteButton).toHaveCount(0);
       }
     });
 

@@ -11,6 +11,7 @@ import type { MatchEngineContextValue } from '../features/match-engine/matchEngi
 import type { Match, Team, Tournament } from '../types/tournament';
 import { createMockMatch, createMockTournament } from './factories';
 import { groupRank, slots, testUuid, vs } from './matchSlotFixtures';
+import { pendingSlot, teamSlot } from '../core/models/matchSlot';
 import { acceptAll, networkError } from '../core/match/client/__tests__/outboxHarness';
 
 export const NOW = 1_790_000_000_000;
@@ -45,6 +46,15 @@ export function finaleAusGruppeA(): Match {
   return createMockMatch({ id: FINALE, matchNumber: 12, group: undefined, phase: 'final', isFinal: true, ...slots(groupRank('A', 1), groupRank('A', 2)), matchStatus: 'scheduled' });
 }
 
+/** GA4 A-13c: Kennung von Halbfinale 1 für die Herkunft „Sieger Halbfinale 1“ (Herkunft aus einem Spiel, nicht aus einer Gruppe). */
+export const HF1_ID = '00000000-0000-4000-8000-0000000025a1';
+
+/** A-13c: Finale „Sieger Halbfinale 1 gegen FC Nord“ -- wird mit dem Ergebnis von Halbfinale 1 besetzt (`HF1_ID` als Kennung setzen). */
+export function finaleAusHalbfinale1(): Match {
+  const source = { kind: 'matchResult' as const, matchId: HF1_ID, role: 'winner' as const };
+  return createMockMatch({ id: FINALE, matchNumber: 12, group: undefined, phase: 'final', isFinal: true, slotA: pendingSlot(source), originA: source, slotB: teamSlot(FC_NORD), matchStatus: 'scheduled' });
+}
+
 export interface ScheduleEngine {
   value: MatchEngineContextValue;
   engine: MatchEngine;
@@ -57,7 +67,7 @@ export interface ScheduleEngine {
 let counter = 0;
 
 /** `accountId: 'guest'` = Gast (lokal bestätigt, kein Sender-Aufruf). Sonst eigenes Konto je Aufruf (fake-indexeddb teilt sich). */
-export async function makeScheduleEngine(accountId?: string, options: { offline?: boolean } = {}): Promise<ScheduleEngine> {
+export async function makeScheduleEngine(accountId?: string, options: { offline?: boolean; deviceId?: string } = {}): Promise<ScheduleEngine> {
   const id = accountId ?? `olli-${(counter += 1)}`;
   const store = new LocalMatchStore();
   const clock = new ClockSync(() => Promise.resolve(NOW), () => NOW, { get: () => null, set: () => undefined });
@@ -69,6 +79,7 @@ export async function makeScheduleEngine(accountId?: string, options: { offline?
     store,
     api: { appendMatchEvents: api },
     clientFormat: 3,
+    ...(options.deviceId !== undefined ? { deviceId: options.deviceId } : {}), // B-49: Geräte-ID wie im MatchEngineProvider
     timers: { setTimeout: (callback, ms) => setTimeout(callback, ms), clearTimeout: (handle) => { clearTimeout(handle); } },
     now: () => NOW,
     requestCatchUp: () => undefined,

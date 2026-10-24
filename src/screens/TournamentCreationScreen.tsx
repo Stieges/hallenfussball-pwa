@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useContext, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Icons } from '../components/ui';
 import { ProgressBar } from '../components/ProgressBar';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { ConfirmDialog, useConfirmDialog } from '../components/ui/ConfirmDialog';
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
 import { ReplanPanel } from '../features/tournament-creation/components/ReplanPanel';
 import type { ReplanSession } from '../features/tournament-creation/utils/replan';
@@ -20,6 +20,14 @@ import { generateFullSchedule } from '../core/generators';
 import { IncompleteScheduleError } from '../core/generators/incompleteScheduleError';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
+import { useRepository } from '../hooks/useRepository';
+import { useIsOnline } from '../hooks/useOnlineStatus';
+import { AuthContext } from '../features/auth/context/authContextInstance';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { usesCloudRepository } from '../core/repositories/usesCloudRepository';
+import { visibilityAfterPublish } from '../core/services/TournamentCreationService';
+import { shareAfterFirstRelease } from '../core/services/shareAfterFirstRelease';
+import { publishSharesByLink } from '../features/tournament-creation/utils/publishNotice';
 import { AuthSection } from '../components/layout/AuthSection';
 
 /** E2 + Controller-Ruling Fixrunde 2: Struktur = alles, was die Generatoren
@@ -125,6 +133,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { t } = useTranslation('wizard');
+  const repository = useRepository();
+  const authUser = useContext(AuthContext)?.user ?? null;
+  const isOnline = useIsOnline();
   const { saveTournament: defaultSaveTournament } = useTournaments();
   // B-02: Anpfiff-Sperre für die Neuplanung (Live-Signal über den gemeinsamen Hook)
   const { state: matchStartState, recheck } = useTournamentStartState(
@@ -134,6 +145,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // @OB-017: Rückfragen des Assistenten (Turniertyp wechseln, Turnier zurücksetzen) im Dialog der App
+  const wizardConfirm = useConfirmDialog({ title: '', message: '' });
 
   // ============================================================================
   // WIZARD HOOK - All wizard state and actions from useTournamentWizard
@@ -170,7 +184,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Persistence
     saveDraft,
     publishTournament,
-  } = useTournamentWizard(existingTournament);
+  } = useTournamentWizard(existingTournament, wizardConfirm.confirm);
 
   // @OB-029 / @OB-030: Der Schritt steht in der Adresse (`?step=`). Beim Direktaufruf und bei jeder Änderung der
   // Adresse gilt der Wunsch aus der Adresse -- auch gegen den zuletzt besuchten Schritt des Entwurfs (F-321).
@@ -331,7 +345,20 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     publishLockRef.current = true;
     setIsPublishing(true);
     try {
-      const published = await publishTournament(override);
+      // @W1-020: Erstfestlegen? Dieselbe Entscheidung wie der Satz in der Vorschau (publishNoticeKey).
+      const before = { ...formData, ...override };
+      const mayShare = publishSharesByLink({
+        visibility: visibilityAfterPublish(before),
+        toCloud: usesCloudRepository(authUser, isSupabaseConfigured),
+        isOnline,
+        isAnonymous: authUser?.isAnonymous === true,
+      });
+      const firstRelease = !before.publishedAt;
+      const releasedTournament = await publishTournament(override);
+      // Der Server-Code ersetzt den lokal erzeugten; Scheitern laesst das Turnier festgelegt (Hinweis unten).
+      const shared = await shareAfterFirstRelease(repository, releasedTournament, { firstRelease, mayShare });
+      const published = shared.tournament;
+      if (shared.status !== 'skipped') { setFormData(published); lastSavedDataRef.current = JSON.stringify(published); }
 
       // Call external save callback if provided (e.g. for potential redirects or parent updates)
       // Though publishTournament already saves to repo.
@@ -339,6 +366,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       // @W1-023: Toast statt Inline-Banner — überlebt den Seitenwechsel über den
       // ToastProvider in App.tsx.
       showSuccess(t('publish.success'));
+      if (shared.status === 'failed') { showWarning(t('publish.shareFailed')); }
 
       if (!onSave) {
         onBack();
@@ -491,6 +519,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         {/* Left: Back Button */}
         <button
           onClick={handleBackToDashboard}
+          disabled={isPublishing}
           style={{
             padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
             background: 'transparent',
@@ -860,6 +889,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           variant: 'danger',
         }}
       />
+
+      <ConfirmDialog {...wizardConfirm.dialogProps} />
 
       {/* Slide Animation Styles */}
       <style>{`

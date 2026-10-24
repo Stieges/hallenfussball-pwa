@@ -11,14 +11,20 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
+import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, TournamentGoneError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
-import type { StandingDecision } from '../../types/tournament';
-import { writeStandingDecisionsToCloud, writePlacementsToPlayOutToCloud } from './standingDecisionsCloud';
+import type { BracketLogEntry } from '../../types/tournament';
+import { writePlacementsToPlayOutToCloud } from './standingDecisionsCloud';
+import {
+  callCompleteGroup, callRecordStandingDecision, callReopenGroup, readGroupCompletions,
+  type CompleteGroupRequest, type CompleteGroupResult, type RecordDecisionRequest, type RecordDecisionResult, type ReopenGroupResult,
+} from './groupCompletionCloud';
+import { readBracketLog } from './bracketLogCloud';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
+  startTimeForDb,
   mapMatchUpdateToSupabase,
   mapMatchToScheduleUpdate,
   mapTeamToSupabase,
@@ -26,6 +32,8 @@ import {
 } from './supabaseMappers';
 import { readAccountTournamentList, type CloudTournamentList } from './accountTournamentList';
 import { shareIfUnshared, type ShareIfUnsharedResult } from './shareIfUnshared';
+import { callDisplayTournament, callPublicTournament } from './publicPayloadRpc';
+import type { PublicReply } from './publicPayload';
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -39,6 +47,25 @@ function getSupabase() {
     );
   }
   return supabase;
+}
+
+/**
+ * BP-1 (C-AUTH-ABGELAUFEN-ANDERE-MUTATIONEN, C-ENDGUELTIG-SOFORT-MELDEN): der Code der Server-Antwort (PGRST301, 23505 …)
+ * bleibt am eingepackten Fehler je Spiel, damit die Warteschlange „Anmeldung abgelaufen“ und eindeutige Ablehnungen erkennt.
+ */
+function withPostgrestCode(wrapped: Error, original: { code?: string }): Error {
+  return original.code ? Object.assign(wrapped, { code: original.code }) : wrapped;
+}
+
+/**
+ * BP-1 Review A1 (@FU-123, @FU-127, @FU-009): Fehler der Prüfung „gibt es das Turnier noch?“. Nur PGRST116 (0 Zeilen) heißt
+ * „gibt es nicht“; jeder andere Fehler (Netz, Zeitlimit, abgelaufene Anmeldung) wird als `RepositoryError` geworfen, damit
+ * die Warteschlange ihn als unklar wiederholt bzw. bei 401 anhält – nie als „Turnier gibt es nicht mehr“.
+ */
+function throwUnlessNotFound(error: { code?: string; message: string } | null): void {
+  if (error && error.code !== 'PGRST116') {
+    throw new RepositoryError('save', error.message, error);
+  }
 }
 
 /** A-08f3a: Cloud-Stand eines Turniers mit Revision je Spiel. */
@@ -125,11 +152,20 @@ export class SupabaseRepository implements ITournamentRepository {
       throw new RepositoryError('get', matchesError.message, matchesError);
     }
 
+    // GA4 A-13b-C: Abschlüsse der Gruppen und Verlauf der Entscheidungen (Server-Tabellen, nie vom Gerät geschrieben). Der Verlauf
+    // ist Zusatzwissen und verhindert das Laden nie; die Abschlüsse fehlen vor `_006` ganz (dann gilt keine Gruppe als abgeschlossen).
+    const groupCompletions = await readGroupCompletions(getSupabase(), id);
+    const decisionLog = await readBracketLog(getSupabase(), id);
+
     // Convert to frontend types. B-19b (@ME-032): lässt sich die empfangene Antwort nicht abbilden, ist sie
     // „unlesbar“ (kein Netzfehler); der Monitor lädt dann neu.
     try {
       return {
-        tournament: mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
+        tournament: {
+          ...mapTournamentFromSupabase(tournamentRow, teamRows, matchRows),
+          ...(groupCompletions !== undefined ? { groupCompletions } : {}),
+          ...(decisionLog !== undefined ? { decisionLog } : {}),
+        },
         matchRevisions: new Map(matchRows.map((row) => [row.id, row.version ?? 1])),
       };
     } catch (err) {
@@ -148,7 +184,7 @@ export class SupabaseRepository implements ITournamentRepository {
     if (metadata.title !== undefined) {updatePayload.title = metadata.title;}
     if (metadata.date !== undefined) {updatePayload.date = metadata.date;}
     if (metadata.status !== undefined) {updatePayload.status = metadata.status;}
-    if (metadata.startTime !== undefined) {updatePayload.start_time = metadata.startTime;}
+    if (metadata.startTime !== undefined) {updatePayload.start_time = startTimeForDb(metadata.startTime);} // @FU-128
      
     if (metadata.location) {
       if (metadata.location.name !== undefined) {updatePayload.location_name = metadata.location.name;}
@@ -214,7 +250,12 @@ export class SupabaseRepository implements ITournamentRepository {
    * Befund C-VERSION-NACH-ERSTANLAGE (@FU-110): liefert die Version, die die Zeile danach am Server trägt (Update: Basis + 1,
    * Neuanlage: 1, Upsert ohne Version: die geschriebene) – das Gerät vermerkt genau sie als bestätigt.
    */
-  async save(tournament: Tournament): Promise<number> {
+  /**
+   * BP-1 (@FU-123, Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN): `mustExist` – das Gerät kennt das Turnier aus der Cloud.
+   * Fehlt die Zeile dort, legt save() sie nicht neu an, sondern wirft `TournamentGoneError` (eindeutige Ablehnung).
+   * Ohne `mustExist` (noch nie in der Cloud, @FU-124) legt die erste Übertragung das Turnier an.
+   */
+  async save(tournament: Tournament, options: { mustExist?: boolean } = {}): Promise<number> {
     // Get current user for owner_id
     const {
       data: { user },
@@ -370,14 +411,17 @@ export class SupabaseRepository implements ITournamentRepository {
        
       } else if (!data || data.length === 0) {
         // No update happened - check if it exists (Conflict) or is new (Insert)
-        const { data: existing } = await getSupabase()
+        const { data: existing, error: existingError } = await getSupabase()
           .from('tournaments')
           .select('id')
           .eq('id', tournament.id)
           .single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: nur PGRST116 heißt „gibt es nicht“
 
         if (existing) {
           throw new OptimisticLockError('Turnier wurde zwischenzeitlich verändert. Bitte neu laden.');
+        } else if (options.mustExist) {
+          throw new TournamentGoneError(tournament.id); // @FU-123: gelöscht – nicht neu anlegen
         } else {
           // New tournament with predefined version? Treat as insert
           const { error: insertError } = await getSupabase()
@@ -390,6 +434,12 @@ export class SupabaseRepository implements ITournamentRepository {
     } else {
       // Legacy/Fallback: Upsert (Blind Overwrite)
       // If version is missing, we initialize it to 1 if inserting
+      if (options.mustExist) {
+        // @FU-123: der Upsert legte eine fehlende Zeile still neu an – vorher prüfen, ob es sie noch gibt
+        const { data: existing, error: existingError } = await getSupabase().from('tournaments').select('id').eq('id', tournament.id).single();
+        throwUnlessNotFound(existingError); // BP-1 Review A1: Netz/Anmeldung bleiben unklar bzw. halten an
+        if (!existing) { throw new TournamentGoneError(tournament.id); }
+      }
       reachedVersion = tournamentRow.version ?? 1;
       const { error } = await getSupabase()
         .from('tournaments')
@@ -675,7 +725,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
-        errors.push(toOriginImmutableError(update.id, error) ?? new Error(`Match ${update.id}: ${error.message}`)); // A-36a: HF002
+        errors.push(toOriginImmutableError(update.id, error) ?? withPostgrestCode(new Error(`Match ${update.id}: ${error.message}`), error)); // A-36a: HF002
       } else if (!data || data.length === 0) {
         console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
         errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));
@@ -698,7 +748,7 @@ export class SupabaseRepository implements ITournamentRepository {
       const { data: updatedT, error: tError } = await query.select('id');
 
       if (tError) {
-        errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
+        errors.push(withPostgrestCode(new Error(`Failed to update tournament timestamp: ${tError.message}`), tError));
       } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
         errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
       }
@@ -732,9 +782,24 @@ export class SupabaseRepository implements ITournamentRepository {
    * (`pg_trigger_depth() > 1`) true, so a tournament with matches AND events can still be deleted
    * in one step, exactly as intended.
    */
-  /** Paket TB: nur `config.standingDecisions`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
-  updateStandingDecisions(tournamentId: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
-    return writeStandingDecisionsToCloud(getSupabase(), tournamentId, decisions, expectedVersion);
+  /** GA4 A-13b-C: Entscheidung eintragen/zurücknehmen über `record_standing_decision` (`groupCompletionCloud.ts`), nie über REST. */
+  recordStandingDecision(tournamentId: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> {
+    return callRecordStandingDecision(getSupabase(), tournamentId, request, expectedVersion);
+  }
+
+  /** GA4 A-13b-C: „Gruppe abschließen“ über `complete_group`. */
+  completeGroup(tournamentId: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+    return callCompleteGroup(getSupabase(), tournamentId, request);
+  }
+
+  /** GA4 A-13b-C: Gruppe wieder öffnen über `reopen_group`. */
+  reopenGroup(tournamentId: string, groupId: string, reason: string): Promise<ReopenGroupResult> {
+    return callReopenGroup(getSupabase(), tournamentId, groupId, reason);
+  }
+
+  /** GA4 A-13b-C: Verlauf über `bracket_log_read`. */
+  readBracketLog(tournamentId: string): Promise<BracketLogEntry[] | undefined> {
+    return readBracketLog(getSupabase(), tournamentId);
   }
 
   /** Fixrunde TB-6: nur `config.placementsToPlayOut`, mit Versionsprüfung (`standingDecisionsCloud.ts`). */
@@ -823,62 +888,32 @@ export class SupabaseRepository implements ITournamentRepository {
   // =============================================================================
 
   /**
-   * Fetches a public tournament by share code (for anonymous access)
-   * Returns null if not found or not public
+   * Öffentliches Turnier per Teilen-Code (B-14, E-A2): nur über die Server-Funktion `public_tournament` mit fester
+   * Positivliste -- anon liest die Tabellen nicht mehr direkt. `null` heißt sicher „nicht geteilt oder unbekannt“
+   * (@ZM-068); jede Störung (Netz, Serverfehler, unlesbare Antwort) wirft und ist nie „nicht gefunden“ (@ZM-109).
    */
   async getByShareCode(shareCode: string): Promise<Tournament | null> {
-    // Normalize to uppercase
     const normalizedCode = shareCode.toUpperCase().trim();
-
-    // Validate format
     if (!/^[A-Z0-9]{6}$/.test(normalizedCode)) {
       return null;
     }
-
-    // Fetch tournament by share_code (RLS policy allows this for public tournaments)
-    const { data: tournamentRow, error: tournamentError } = await getSupabase()
-      .from('tournaments')
-      .select('*')
-      .eq('share_code', normalizedCode)
-      .eq('is_public', true)
-      .single();
-
-    if (tournamentError) {
-      if (tournamentError.code === 'PGRST116') {
-        // Not found
-        return null;
-      }
-      console.error('Failed to fetch public tournament:', tournamentError);
+    const reply = await callPublicTournament(getSupabase(), normalizedCode, null);
+    if (reply.kind === 'not-found') {
       return null;
     }
-
-    // Fetch teams
-    const { data: teamRows, error: teamsError } = await getSupabase()
-      .from('teams')
-      .select('*')
-      .eq('tournament_id', tournamentRow.id)
-      .order('sort_order', { ascending: true });
-
-    if (teamsError) {
-      console.error('Failed to fetch teams:', teamsError);
-      return null;
+    if (reply.kind !== 'full') {
+      throw new UnreadableResponseError('getByShareCode', new Error(`Antwort ${reply.kind} ohne since_version`));
     }
+    return reply.tournament;
+  }
 
-    // Fetch matches
-    const { data: matchRows, error: matchesError } = await getSupabase()
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', tournamentRow.id)
-      .order('match_number', { ascending: true });
-
-    if (matchesError) {
-      console.error('Failed to fetch matches:', matchesError);
-      return null;
-    }
-
-    // Convert to frontend types (database may return null for empty arrays)
-     
-    return mapTournamentFromSupabase(tournamentRow, teamRows ?? [], matchRows ?? []);
+  /**
+   * Monitor-Link `/display/:tournamentId/:monitorId` (B-14, Übergang bis B-20/B-21): Server-Funktion
+   * `display_tournament` mit Positivliste, Schiedsrichtern und nur dem eigenen Monitor; mit `sinceVersion` nur Änderungen.
+   * Störungen werfen (`RepositoryError`), eine Antwort außerhalb des Vertrags wirft `UnreadableResponseError`.
+   */
+  getForDisplay(tournamentId: string, monitorId: string, sinceVersion: number | null): Promise<PublicReply> {
+    return callDisplayTournament(getSupabase(), tournamentId, monitorId, sinceVersion);
   }
 
   /**

@@ -30,11 +30,10 @@
  *   - Fester Share-Code (`E2EPUB`): `TournamentCreationService.publish()` generiert nur einen
  *     Code, wenn noch keiner gesetzt ist — wir setzen ihn vorher, kein Sonderfall nötig.
  *   - `declined_at` (widerrufene Einladung/Mitgliedschaft): Die App selbst setzt das per
- *     direktem `.update({declined_at: …})` (`invitationService.ts`), es gibt keinen Mapper dafür.
- *   - `invite_email`-Ziel-Einladungen (invitee/expired/revokedinvite): `mapInvitationInsertToSupabase`
- *     ist für Einladungs-LINKS gebaut (keine Ziel-E-Mail im Feld), nicht für an eine konkrete
- *     Adresse adressierte Einladungen mit `invite_email`. Wir bauen die Zeile direkt im
- *     `CollaboratorInsert`-Format (demselben Typ, den der Mapper auch zurückgibt).
+ *     direktem `.update({declined_at: …})` (früher `invitationService.ts`), es gibt keinen Mapper dafür.
+ *   - `invite_email`-Ziel-Einladungen (invitee/expired/revokedinvite): der Einladungs-Mapper ist mit A-18a entfallen (Helfer treten per QR-Code bei);
+ *     die Zeilen mit `invite_email` entstehen direkt. Wir bauen die Zeile direkt im
+ *     `CollaboratorInsert`-Format (Typ der Tabelle).
  *   - `match_events` für Engine-Spiele: Schreibzugriff über `append_match_events` (Owner-JWT,
  *     `engineSeedDb.ts`), nicht über `ITournamentRepository.save()`, das keine Events schreibt.
  *   - Google-Provider (`app_metadata.provider`): Auth-Admin-API, kein DB-Mapper-Thema.
@@ -59,6 +58,8 @@ import {
   E2E_DRAFT_CUP_ID,
   E2E_STRANGER_CUP_ID,
   E2E_RELEASE_CUP_ID,
+  E2E_TEAM_HELFER_CUP_ID,
+  E2E_TEAM_HELFER_CUP_TITLE,
   E2E_LIVE_CUP_TITLE,
   E2E_PUBLIC_CUP_TITLE,
   E2E_DRAFT_CUP_TITLE,
@@ -87,6 +88,7 @@ import {
 } from '../tests/e2e/cloud/testData';
 
 import { TournamentCreationService } from '../src/core/services/TournamentCreationService';
+import { localDateIso } from '../src/core/view/time';
 import type { ITournamentRepository } from '../src/core/repositories/ITournamentRepository';
 import type { Tournament, MatchUpdate, Team } from '../src/core/models/types';
 import {
@@ -354,6 +356,7 @@ async function main(): Promise<void> {
     E2E_DRAFT_CUP_ID,
     E2E_STRANGER_CUP_ID,
     E2E_RELEASE_CUP_ID,
+    E2E_TEAM_HELFER_CUP_ID,
     E2E_TURNIERTAG_CUP_ID,
     ...Object.values(E2E_NIKOLAUS_CUPS).map((cup) => cup.tournamentId),
     ...E2E_ENGINE_CUPS.map((cup) => engineCupIds(cup.slug).tournamentId),
@@ -426,7 +429,7 @@ async function main(): Promise<void> {
       id: E2E_LIVE_CUP_ID,
       title: E2E_LIVE_CUP_TITLE,
       ageClass: 'U13',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -475,7 +478,7 @@ async function main(): Promise<void> {
     }
     if (collab.revoked) {
       // Kein Mapper dafür — die App selbst setzt declined_at per direktem Update
-      // (src/features/auth/services/invitationService.ts), kein Sonderfall.
+      // (früher src/features/auth/services/invitationService.ts, mit A-18a entfernt), kein Sonderfall.
       // `protect_collaborator_row` (20260922_003) prüft `user_owns_tournament()`, also
       // `auth.uid()` — beim Service-Role-Key immer NULL. Deshalb hier als Owner authentifiziert
       // (siehe signLocalUserJwt/asUserClient oben), nicht mit dem Service-Role-Client.
@@ -490,8 +493,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // invite_email-Ziel-Einladungen: mapInvitationInsertToSupabase deckt das nicht ab
-  // (kein invite_email-Feld, siehe Kopfkommentar) — direkte CollaboratorInsert-Zeilen.
+  // invite_email-Ziel-Einladungen: direkte CollaboratorInsert-Zeilen (siehe Kopfkommentar).
   const nowIso = new Date().toISOString();
   const in7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -553,7 +555,7 @@ async function main(): Promise<void> {
     id: E2E_PUBLIC_CUP_ID,
     title: E2E_PUBLIC_CUP_TITLE,
     ageClass: 'U15',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateIso(),
     timeSlot: '10:00 - 15:00',
     startTime: '10:00',
     location: { name: 'Sporthalle Testumgebung' },
@@ -681,7 +683,7 @@ async function main(): Promise<void> {
     id: E2E_DRAFT_CUP_ID,
     title: E2E_DRAFT_CUP_TITLE,
     ageClass: 'U11',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateIso(),
     timeSlot: '09:00 - 16:00',
     startTime: '09:00',
     location: { name: 'Sporthalle Testumgebung' },
@@ -722,7 +724,7 @@ async function main(): Promise<void> {
       id: E2E_RELEASE_CUP_ID,
       title: E2E_RELEASE_CUP_TITLE,
       ageClass: 'U15',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -780,6 +782,41 @@ async function main(): Promise<void> {
     throw new Error(`Mitgliedschaft coadmin (Freigabe-Cup): ${releaseCoadminError.message}`);
   }
 
+  // Team-Helfer-Cup (A-18a): eigener Cup für helfer-team.cloud.spec.ts, Owner olli, coadmin als Co-Admin.
+  log('Lege Team-Helfer-Cup an…');
+  const teamHelferCup = buildScheduledTournament(
+    service,
+    {
+      id: E2E_TEAM_HELFER_CUP_ID,
+      title: E2E_TEAM_HELFER_CUP_TITLE,
+      ageClass: 'U15',
+      date: localDateIso(),
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Sporthalle Testumgebung' },
+      numberOfFields: 2, // der Test wählt „Feld 2“ (approve-field-2 gibt es nur ab zwei Feldern)
+      numberOfTeams: 2,
+      teams: [
+        { id: e2eUuid('team:team-helfer-cup:1'), name: 'Team-Helfer Team 1' },
+        { id: e2eUuid('team:team-helfer-cup:2'), name: 'Team-Helfer Team 2' },
+      ],
+    },
+    /* isPublic */ false
+  );
+  teamHelferCup.publishedAt = nowIso;
+  await ownerRepo.save(teamHelferCup);
+  const { error: teamHelferCoadminError } = await admin.from('tournament_collaborators').insert(
+    mapMembershipInsertToSupabase({
+      tournamentId: E2E_TEAM_HELFER_CUP_ID,
+      userId: userIds.coadmin,
+      role: 'co-admin',
+      teamIds: [],
+    })
+  );
+  if (teamHelferCoadminError) {
+    throw new Error(`Mitgliedschaft coadmin (Team-Helfer-Cup): ${teamHelferCoadminError.message}`);
+  }
+
   // ---------------------------------------------------------------------------
   // 3.8 Fremd-Cup: Eigentümer stranger, privat
   // ---------------------------------------------------------------------------
@@ -788,7 +825,7 @@ async function main(): Promise<void> {
     id: E2E_STRANGER_CUP_ID,
     title: E2E_STRANGER_CUP_TITLE,
     ageClass: 'U11',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateIso(),
     timeSlot: '09:00 - 16:00',
     startTime: '09:00',
     location: { name: 'Sporthalle Testumgebung' },

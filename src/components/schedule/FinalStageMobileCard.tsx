@@ -4,7 +4,7 @@
  * Mannschaften untereinander, ihre Tore rechts in der Zeile; Strafstoß kleiner daneben, Sieger fett.
  * Ein offenes Spiel lässt sich hier eintragen (C-FINALRUNDE-MOBIL-EINGABE, `useScoreDraft`, @FU-101).
  */
-import { type CSSProperties } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { ScheduledMatch } from '../../core/generators';
@@ -14,6 +14,7 @@ import { ScoreDraftInput } from '../ui/atoms';
 import { ScoreChangedHint, ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
+import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 
 export interface FinalMobileOption {
   value: number;
@@ -55,6 +56,8 @@ export interface FinalStageMobileCardProps {
   fieldOptions: FinalMobileOption[];
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
+  /** B-12: weitere Aktion der Turnierleitung (z. B. „Nicht angetreten“) unter dem Stand */
+  extraAction?: ReactNode;
 }
 
 const nameStyle: CSSProperties = { overflowWrap: 'break-word' };
@@ -75,7 +78,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const {
     match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore, inCorrectionMode,
     onScoreChange, onStartCorrection, changeAuthorOf, showReferees, showFields, editingSchedule, displayedRef, displayedField,
-    hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange,
+    hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange, extraAction,
   } = props;
   const { t } = useTranslation('tournament');
   const decided = result?.winner !== undefined && result.winner !== null;
@@ -151,7 +154,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs, color: cssVars.colors.textSecondary }}>
           <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.accent }}>#{match.matchNumber}</span>
           <span>•</span>
-          <span>{match.time}</span>
+          <span>{match.time}<OriginalTimeNote matchId={match.id} /></span>
           {badge?.kind === 'badge' && <MatchStatusBadge model={badge} size="card" testId={isRunning ? `final-live-${match.id}` : undefined} />}
           {statusNote && <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid={`final-status-note-${match.id}`}>{statusNote}</span>}
           {note && <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid={`final-decision-${match.id}`}>{note}</span>}
@@ -159,6 +162,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         <div style={{ display: 'flex', gap: cssVars.spacing.sm, color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.xs }}>
           {showReferees && displayedRef && <span style={hasPendingRef ? { color: cssVars.colors.primary } : undefined}>SR:{displayedRef}</span>}
           {showFields && displayedField && displayedField > 1 && <span style={hasPendingField ? { color: cssVars.colors.primary } : undefined}>F:{displayedField}</span>}
+          <MatchMenuSlot matchId={match.id} />
         </div>
       </div>
 
@@ -211,6 +215,8 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           {t('finals.correct')}
         </button>
       )}
+
+      {extraAction}
 
       {editingSchedule && (showReferees || showFields) && (
         <div style={{ display: 'flex', gap: cssVars.spacing.sm, marginTop: cssVars.spacing.xs, paddingTop: cssVars.spacing.xs, borderTop: `1px solid ${cssVars.colors.border}` }}>

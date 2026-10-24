@@ -144,18 +144,6 @@ export const canDeleteTournament = (role: TournamentRole): boolean => {
   return hasPermission(role, 'deleteTournament');
 };
 
-/**
- * Kann Einladungen erstellen
- *
- * Erlaubt: NUR owner -- hasPermission(role, 'manageMembers') (R5/M6: DB verlangt für
- * tournament_collaborators-INSERT/UPDATE/DELETE im Verwaltungszweig has_tournament_permission(
- * tournament_id, 'manageMembers') -- ein Co-Admin trifft dort 0 Zeilen, egal was die UI anbietet,
- * solange die Tabelle ihm dieses Recht nicht zuweist).
- */
-export const canCreateInvitations = (role: TournamentRole): boolean => {
-  return hasPermission(role, 'manageMembers');
-};
-
 // ============================================
 // RESULTS & SCORES
 // ============================================

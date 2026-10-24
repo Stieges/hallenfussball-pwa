@@ -10,6 +10,7 @@
 
 import * as Sentry from '@sentry/react';
 import { getConsentStatus } from './consent';
+import { scrubBreadcrumb, scrubEventUrls } from './sentryScrub';
 
 let isInitialized = false;
 
@@ -90,13 +91,14 @@ export function initSentry(): void {
         delete event.request.headers;
       }
 
-      return event;
+      // A-17b: Helfer-Code (`/join/<code>`) und `token=` nie an Sentry (HashRouter: steht in jeder Adresse)
+      return scrubEventUrls(event);
     },
 
     // Filter breadcrumbs
     beforeBreadcrumb(breadcrumb) {
-      // Keep navigation breadcrumbs but don't add anything sensitive
-      return breadcrumb;
+      // Keep navigation breadcrumbs but don't add anything sensitive (Helfer-Code und Token gekürzt)
+      return scrubBreadcrumb(breadcrumb);
     },
   });
 

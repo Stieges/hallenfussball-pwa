@@ -76,6 +76,11 @@ export const MatchSchema = z.object({
       },
       z.date().optional()
     ),
+    // B-26: ursprüngliche Uhrzeit (matches.original_start), wie scheduledTime als Date oder ISO-Text
+    originalStart: z.preprocess(
+      (arg) => (typeof arg === 'string' && arg.length > 0 ? new Date(arg) : arg),
+      z.date().optional()
+    ),
     // C-SCHEMA-VERWIRFT-FELDER: ohne diese drei Felder ging beim lokalen Laden die Spielnummer verloren
     // (aus „Spiel 11“ wurde „Spiel 1“) und ein Komplett-Speichern schrieb `match_number = NULL` in die Cloud.
     matchNumber: z.number().optional(),

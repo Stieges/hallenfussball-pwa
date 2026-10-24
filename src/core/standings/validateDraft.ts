@@ -13,7 +13,8 @@ import { tableInput } from './tournamentTable';
 
 export type DraftCheck =
   | { ok: true; groupId: string; block: { place: number; size: number } }
-  | { ok: false; code: DecisionErrorCode };
+  /** `decisionId`: bei `ALREADY_DECIDED` die Kennung der geltenden Entscheidung (daraus „von wem“ aus dem Verlauf, @W2A-060). */
+  | { ok: false; code: DecisionErrorCode; decisionId?: string };
 
 type CheckedTournament = Pick<Tournament, 'teams' | 'matches' | 'pointSystem' | 'placementLogic' | 'standingDecisions' | 'placementsToPlayOut' | 'forfeitScore'>;
 
@@ -25,9 +26,10 @@ export function validateDraft(draft: DecisionDraft, tournament: CheckedTournamen
   const input = tableInput(tournament.teams, tournament.matches, tournament, draft.groupId);
   const groupId = input.groupId;
   const table = rankGroup(input);
-  // „Von wem“ steht nicht im öffentlich lesbaren config (@W2A-072); es kommt mit dem Verlaufsprotokoll (GA4 A-13b).
-  if (table.rows.some((r) => r.decision !== undefined && sameTeamSet(r.decision.teamIds, draft.teamIds))) {
-    return { ok: false, code: 'ALREADY_DECIDED' };
+  // „Von wem“ steht nicht im öffentlich lesbaren config (@W2A-072); es kommt aus dem Verlauf der Turnierleitung (`decisionLog`).
+  const applied = table.rows.find((r) => r.decision !== undefined && sameTeamSet(r.decision.teamIds, draft.teamIds))?.decision;
+  if (applied !== undefined) {
+    return { ok: false, code: 'ALREADY_DECIDED', decisionId: applied.id };
   }
   const blockRows = table.rows.filter((r) => draft.teamIds.includes(r.team.id));
   const open = table.openTies.some((block) => sameTeamSet(block, draft.teamIds));

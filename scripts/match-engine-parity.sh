@@ -109,12 +109,15 @@ A25B_FILE=""
 # erneuten Einspielen von A-25b ebenfalls erneut. Pflicht wie A-34.
 SB_MIGRATION="20261110_009_spiel_beenden.sql"
 SB_FILE=""
-# A-21a-S (20261113_003) und A-35 Klaerungsliste (20261117_005): fassen append_match_events (closed_intake, Klaerung) bzw.
-# match_apply_event (Kopie eines uebernommenen Klaerungseintrags, Fixtures 71a-71e) neu und liegen ueber Spiel beenden --
-# nach jedem erneuten Einspielen von _009 ebenfalls erneut, in Fenster-Reihenfolge (sonst stuende die aeltere Fassung).
-# Optional: fehlt eine Datei (anderer Branch), entfaellt sie.
+# A-21a-S (20261113_003): juengste Fassung von append_match_events (Basis _009 + Abschluss-Sperre closed_intake vor der
+# Feldsteuerung, Assertion lifecycle-append-closed-intake-before-field-control) -- jedes erneute Einspielen von _009 stellte
+# die Fassung ohne Abschluss-Sperre wieder her, deshalb nach jedem SB-Einspielen ebenfalls erneut. Die Datei ersetzt keine
+# Rechenfunktion (match_apply_event, cache_columns, apply_effect bleiben unberuehrt) und ist wiederholbar. Pflicht wie A-34.
 A21AS_MIGRATION="20261113_003_tournament_lifecycle.sql"
 A21AS_FILE=""
+# A-35 Klaerungsliste (20261117_005): fasst append_match_events (Klaerung) und match_apply_event (Kopie eines
+# uebernommenen Klaerungseintrags, Fixtures 71a-71e) neu und liegt ueber A-21a-S -- nach jedem erneuten Einspielen von _009
+# ebenfalls erneut, in Fenster-Reihenfolge (sonst stuende die aeltere Fassung). Optional: fehlt die Datei, entfaellt sie.
 A35_MIGRATION="20261117_005_klaerungsliste.sql"
 A35_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
@@ -174,6 +177,10 @@ if [[ -z "$A25B_FILE" ]]; then
 fi
 if [[ -z "$SB_FILE" ]]; then
   echo "::error::$SB_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Rechenfunktion ohne Spiel beenden (Fixtures 40, 70a-70k)." >&2
+  exit 1
+fi
+if [[ -z "$A21AS_FILE" ]]; then
+  echo "::error::$A21AS_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still append_match_events ohne Abschluss-Sperre." >&2
   exit 1
 fi
 if [[ -z "$A34_FILE" && true ]]; then

@@ -174,6 +174,20 @@ function kickoffOf(tournamentDate: string, startTime: string | null): Date | und
   return Number.isNaN(kickoff.getTime()) ? undefined : kickoff;
 }
 
+/** B-26: `matches.original_start` (time) als Wanduhr am Turniertag; NULL = nie verschoben. */
+function originalStartFromRow(tournamentDate: string, value: string | null | undefined): Pick<Match, 'originalStart'> {
+  const at = kickoffOf(tournamentDate, value ?? null);
+  return at === undefined ? {} : { originalStart: at };
+}
+
+/** Uhrzeit-Spalte (`time`) aus einer Wanduhr; wie bisher für `scheduled_start` (Ortszeit des Geräts). */
+function toTimeColumn(value: Date | string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  return value instanceof Date ? value.toTimeString().slice(0, 8) : String(value).slice(0, 8);
+}
+
 /**
  * Maps a Supabase match row to frontend Match type.
  *
@@ -201,6 +215,7 @@ export function mapMatchFromSupabase(row: MatchRow, tournamentDate: string): Mat
     finalType: row.final_type as Match['finalType'],
     label: row.label ?? undefined,
     scheduledTime: kickoffOf(tournamentDate, row.scheduled_start),
+    ...originalStartFromRow(tournamentDate, row.original_start), // B-26
     matchNumber: row.match_number ?? undefined,
     phase: row.phase ?? undefined,
     referee: row.referee_number ?? undefined,
@@ -298,11 +313,8 @@ export function mapMatchToSupabase(
     is_final: match.isFinal ?? false,
     final_type: match.finalType ?? null,
     label: match.label ?? null,
-    scheduled_start: match.scheduledTime
-      ? (match.scheduledTime instanceof Date
-          ? match.scheduledTime.toTimeString().slice(0, 8)
-          : String(match.scheduledTime).slice(0, 8))
-      : null,
+    scheduled_start: toTimeColumn(match.scheduledTime),
+    original_start: toTimeColumn(match.originalStart), // B-26: NULL = nie verschoben
     match_number: match.matchNumber ?? null,
     phase: match.phase ?? 'groupStage',
     referee_number: match.referee ?? null,
@@ -357,6 +369,7 @@ export function mapMatchToScheduleUpdate(
     final_type: row.final_type,
     label: row.label,
     scheduled_start: row.scheduled_start,
+    original_start: row.original_start ?? null, // B-26: ursprüngliche Uhrzeit gehört zum Zeitplan
     match_number: row.match_number,
     phase: row.phase,
     referee_number: row.referee_number,
@@ -614,9 +627,9 @@ export function mapTournamentFromSupabase(
     title: row.title,
     ageClass: config.ageClass ?? '',
     date: row.date,
-    timeSlot: row.start_time ?? '',
+    timeSlot: timeFromDb(row.start_time) ?? '',
     startDate: row.date,
-    startTime: row.start_time ?? undefined,
+    startTime: timeFromDb(row.start_time),
     location,
     organizer: config.organizer,
     rulebook: config.rulebook, ...bibColorFromConfig(config), ...spectatorDisplayFromConfig(config), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
@@ -679,6 +692,27 @@ export function mapTournamentFromSupabase(
  * Maps frontend Tournament to Supabase insert format
  * Returns tournament row, team rows, and match rows
  */
+/**
+ * @FU-128 (C-STARTTIME): `start_time` ist vom Typ time. Eine leere Zeichenkette oder ein Anzeigetext wie
+ * „09:00 - 16:00“ lehnt Postgres ab; ohne gültige Uhrzeit geht NULL.
+ */
+export function startTimeForDb(value: string | undefined): string | null {
+  const time = value?.trim();
+  return time && /^\d{1,2}:\d{2}(:\d{2})?$/.test(time) ? time : null;
+}
+
+/** Erste Uhrzeit eines Anzeigetexts („09:00 - 16:00“ -> „09:00“), z. B. aus einem JSON-Import; sonst NULL. */
+function firstTimeOf(text: string | undefined): string | null {
+  const match = /(\d{1,2}:\d{2})/.exec(text ?? '');
+  return match ? match[1] : null;
+}
+
+/** Der Server liefert time-Spalten als HH:MM:SS; die Anzeige zeigt HH:MM (@FU-128). */
+function timeFromDb(value: string | null): string | undefined {
+  const match = value ? /^(\d{1,2}):(\d{2})/.exec(value) : null;
+  return match ? `${match[1].padStart(2, '0')}:${match[2]}` : undefined;
+}
+
 export function mapTournamentToSupabase(
   tournament: Tournament,
   ownerId: string
@@ -742,7 +776,7 @@ export function mapTournamentToSupabase(
     sport: tournament.sport,
     tournament_type: tournament.tournamentType,
     date: tournament.startDate ?? tournament.date,
-    start_time: tournament.startTime ?? tournament.timeSlot ?? null,
+    start_time: startTimeForDb(tournament.startTime) ?? firstTimeOf(tournament.timeSlot), // @FU-128
     location_name: tournament.location.name ?? null,
     location_street: tournament.location.street ?? null,
     location_city: tournament.location.city ?? null,
@@ -761,7 +795,7 @@ export function mapTournamentToSupabase(
     config: config as unknown as Json,
     deleted_at: tournament.deletedAt ?? null,
     completed_at: tournament.completedAt ?? null,
-    version: tournament.version ?? null,
+    version: tournament.version ?? 1, // BP-1 C-TURNIER-VERSION-NULL: nie eine Zeile ohne Version (Backfill + NOT NULL: DB-Fenster)
   };
 
   // K1: is_public muss den echten Sichtbarkeitszustand tragen. SupabaseRepository.save()
@@ -782,60 +816,8 @@ export function mapTournamentToSupabase(
 }
 
 // =============================================================================
-// TOURNAMENT_COLLABORATORS MAPPERS (Invitations + Memberships)
+// TOURNAMENT_COLLABORATORS MAPPERS (Memberships)
 // =============================================================================
-
-export interface InvitationInsertInput {
-  tournamentId: string;
-  inviteCode: string;
-  role: string;
-  teamIds?: string[];
-  label?: string | null;
-  maxUses?: number;
-  expiresAtIso: string;
-  invitedBy: string;
-  invitedAtIso?: string;
-}
-
-/**
- * Maps an invitation-creation request to a tournament_collaborators insert row.
- * Used by invitationService.createInvitation.
- */
-export function mapInvitationInsertToSupabase(
-  input: InvitationInsertInput
-): CollaboratorInsert {
-  return {
-    tournament_id: input.tournamentId,
-    invite_code: input.inviteCode,
-    role: input.role,
-    team_ids: input.teamIds ?? [],
-    label: input.label ?? null,
-    max_uses: input.maxUses ?? 1,
-    use_count: 0,
-    expires_at: input.expiresAtIso,
-    invited_by: input.invitedBy,
-    invited_at: input.invitedAtIso ?? new Date().toISOString(),
-  };
-}
-
-export interface InvitationAcceptUpdate {
-  userId: string;
-  acceptedAtIso: string;
-  newUseCount: number;
-}
-
-/**
- * Maps an "invitation accepted" event to the row update.
- */
-export function mapInvitationAcceptToSupabase(
-  input: InvitationAcceptUpdate
-): CollaboratorUpdate {
-  return {
-    user_id: input.userId,
-    accepted_at: input.acceptedAtIso,
-    use_count: input.newUseCount,
-  };
-}
 
 export interface MembershipInsertInput {
   tournamentId: string;

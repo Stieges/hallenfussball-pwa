@@ -98,7 +98,7 @@ const finalsProjektion = (finals: unknown) => {
 };
 
 function setupWizard() {
-  const wizard = renderHook(() => useTournamentWizard());
+  const wizard = renderHook(() => useTournamentWizard(undefined, () => Promise.resolve(false)));
   const setField = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     act(() => {
       wizard.result.current.updateForm(field, value);

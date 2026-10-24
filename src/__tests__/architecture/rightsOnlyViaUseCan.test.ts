@@ -39,7 +39,6 @@ const sourceFiles = allFiles.filter((f) => !isTest(f.path));
 const ALLOWED = new Set([
   'src/features/auth/hooks/useCan.ts',
   'src/features/match-engine/useEventAuthors.ts',
-  'src/features/auth/components/MemberList.tsx',
 ]);
 
 /** Die Quellen selbst: hier werden Rolle und Rechte DEFINIERT (keine Erlaubnis, kein Fragen). Nie erweitern. */
@@ -50,7 +49,7 @@ const SOURCES = new Set([
 
 /** can…-Funktionen aus permissions.ts, die die Rolle der FRAGENDEN Person auswerten (L8: Ziel-Rollen-Prüfungen erlaubt). */
 const CAN_FUNCTIONS = [
-  'canManageTournament', 'canDeleteTournament', 'canCreateInvitations', 'canEditResults', 'canEditSchedule',
+  'canManageTournament', 'canDeleteTournament', 'canEditResults', 'canEditSchedule',
   'canEditAllTeams', 'canEditTeamRoster', 'canEditTeamMetadata',
 ];
 

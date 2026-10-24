@@ -42,6 +42,21 @@ export class RepositoryError extends AppError {
 }
 
 /**
+ * GA4 A-13b-C (R-GA4v2-8, Review-Auflage 2): der Server hat eine Verklemmung (`40P01`) oder eine Sperr-Wartezeit (`55P03`)
+ * gemeldet. Nichts wurde geschrieben; ein neuer Versuch ist erlaubt. Die Oberfläche sagt „Bitte erneut versuchen“,
+ * nie stiller Fehlschlag.
+ */
+export class RetryLaterError extends AppError {
+  public readonly sqlState: '40P01' | '55P03';
+
+  constructor(operation: string, sqlState: '40P01' | '55P03') {
+    super(`${operation}: Server gerade belegt (${sqlState}), bitte erneut versuchen`, 'repository', operation, { sqlState });
+    this.name = 'RetryLaterError';
+    this.sqlState = sqlState;
+  }
+}
+
+/**
  * Eine empfangene Antwort lässt sich nicht in die Turnierform abbilden (B-19b, @ME-032). Unterklasse von
  * RepositoryError (Vertrag: fehlerhafte Zeile scheitert als RepositoryError), wird nur beim Abbilden geworfen –
  * nicht bei Netz- oder Abfragefehlern.
@@ -337,6 +352,71 @@ export function isVersionConflict(error: unknown): boolean {
   }
   const inner = error.originalError;
   return Array.isArray(inner) ? inner.some((e) => e instanceof OptimisticLockError) : inner instanceof OptimisticLockError;
+}
+
+/**
+ * BP-1 (Befund C-ENDGUELTIG-SOFORT-MELDEN, @FU-126): Grund einer eindeutig endgültigen Ablehnung durch den Server.
+ * - `conflict`: Versionsprüfung (ein anderes Gerät hat inzwischen gespeichert)
+ * - `invalidValue`: ungültiger Wert – Postgres-Klasse 22 (Datenfehler) und 23 (Integrität), eigene Codes HF002/HF003,
+ *   Team noch von einem Spiel referenziert
+ * - `tournamentGone`: das Turnier gibt es in der Cloud nicht mehr (`TournamentGoneError`)
+ * `null`: unklar (z. B. 42501 Rechte, Netz, unbekannte Codes) – die Warteschlange wiederholt wie bisher.
+ */
+export type DefinitiveRejectionReason = 'conflict' | 'invalidValue' | 'tournamentGone';
+
+/**
+ * BP-1 (Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN, @FU-123): Das Gerät kennt das Turnier aus der Cloud, dort gibt es
+ * die Zeile aber nicht mehr (endgültig gelöscht oder nicht mehr sichtbar). `save()` legt es dann nicht neu an.
+ */
+export class TournamentGoneError extends Error {
+  public readonly tournamentId: string;
+
+  constructor(tournamentId: string) {
+    super(`Turnier ${tournamentId} gibt es in der Cloud nicht mehr – nicht neu angelegt`);
+    this.name = 'TournamentGoneError';
+    this.tournamentId = tournamentId;
+  }
+}
+
+/** Postgres-Fehlerklassen 22 (data exception) und 23 (integrity constraint violation), fünfstellige SQLSTATE. */
+const INVALID_VALUE_SQLSTATE = /^2[23][0-9A-Z]{3}$/;
+
+function carriesInvalidValueCode(candidate: unknown): boolean {
+  if (!candidate || typeof candidate !== 'object') {
+    return false;
+  }
+  const code = (candidate as { code?: unknown }).code;
+  return typeof code === 'string' && (INVALID_VALUE_SQLSTATE.test(code) || code === ORIGIN_IMMUTABLE_CODE || code === KIT_COLUMNS_SERVER_ONLY_CODE);
+}
+
+function isInvalidValueRejection(error: unknown): boolean {
+  if (error instanceof TeamStillReferencedError || error instanceof OriginImmutableError || carriesInvalidValueCode(error)) {
+    return true;
+  }
+  if (error instanceof RepositoryError) {
+    const inner = error.originalError;
+    return Array.isArray(inner) ? inner.some(isInvalidValueRejection) : isInvalidValueRejection(inner);
+  }
+  return false;
+}
+
+/**
+ * Einhängepunkt für eindeutig endgültige Ablehnungen (@FU-126): die Warteschlange meldet sie beim ersten Versuch als
+ * „nicht übernommen“ mit Grund und wiederholt sie nicht. Weitere eindeutige Gründe (z. B. A-21a-C1: `55000`
+ * TOURNAMENT_FINISHED) werden hier ergänzt.
+ */
+export function definitiveRejectionReason(error: unknown): DefinitiveRejectionReason | null {
+  if (isVersionConflict(error)) {
+    return 'conflict';
+  }
+  if (error instanceof TournamentGoneError) {
+    return 'tournamentGone';
+  }
+  return isInvalidValueRejection(error) ? 'invalidValue' : null;
+}
+
+export function isDefinitiveRejection(error: unknown): boolean {
+  return definitiveRejectionReason(error) !== null;
 }
 
 /**

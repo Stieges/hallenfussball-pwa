@@ -81,7 +81,7 @@ describe('SettingsTab — Metadaten-Formular', () => {
   });
 
   it('Zurücksetzen verwirft die Änderung (Gegenbeispiel: Titel bleibt)', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const browserConfirm = vi.spyOn(window, 'confirm');
     const user = userEvent.setup();
     const onTournamentUpdate = vi.fn();
     render(
@@ -94,6 +94,9 @@ describe('SettingsTab — Metadaten-Formular', () => {
     await user.type(title, 'Verworfener Titel');
 
     await user.click(screen.getByRole('button', { name: 'tournament:settings.reset' }));
+    // @OB-017: Rückfrage im Dialog der App, kein Fenster des Browsers
+    await user.click(await screen.findByTestId('confirm-dialog-confirm'));
+    expect(browserConfirm).not.toHaveBeenCalled();
 
     expect(screen.getByDisplayValue('Wintercup')).toBeInTheDocument();
     expect(screen.getByText('tournament:settings.saved')).toBeInTheDocument();
@@ -101,7 +104,7 @@ describe('SettingsTab — Metadaten-Formular', () => {
   });
 
   it('Zurücksetzen ohne Bestätigung behält die Änderung', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const browserConfirm = vi.spyOn(window, 'confirm');
     const user = userEvent.setup();
     render(<SettingsTab tournament={tournamentFixture()} onTournamentUpdate={vi.fn()} />);
 
@@ -111,7 +114,9 @@ describe('SettingsTab — Metadaten-Formular', () => {
     await user.type(title, 'Bleibt stehen');
 
     await user.click(screen.getByRole('button', { name: 'tournament:settings.reset' }));
+    await user.click(await screen.findByTestId('confirm-dialog-cancel'));
 
+    expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017
     expect(screen.getByDisplayValue('Bleibt stehen')).toBeInTheDocument();
   });
 

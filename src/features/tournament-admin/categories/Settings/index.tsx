@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { FieldManagement } from '../../../tournament-management/FieldManagement';
+import { GameTimesSection } from './GameTimesSection';
 import { useTournaments } from '../../../../hooks';
 import { useCopyTournament } from '../../../../hooks/useCopyTournament';
 import { Input } from '../../../../components/ui/Input';
@@ -42,33 +43,6 @@ const styles = {
     flexDirection: 'column',
     gap: cssVars.spacing.sm,
     marginBottom: cssVars.spacing.md,
-  } as CSSProperties,
-
-  label: {
-    fontSize: cssVars.fontSizes.labelSm,
-    color: cssVars.colors.textSecondary,
-  } as CSSProperties,
-
-  inputRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  input: {
-    width: 80,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodyMd,
-    textAlign: 'center',
-  } as CSSProperties,
-
-  inputUnit: {
-    fontSize: cssVars.fontSizes.bodySm,
-    color: cssVars.colors.textSecondary,
   } as CSSProperties,
 
   button: {
@@ -150,8 +124,6 @@ export function SettingsCategory({
     onTournamentUpdate(updatedTournament);
   };
 
-
-
   // Handle duplicate tournament
   const handleDuplicate = useCallback(async () => {
     try {
@@ -188,7 +160,6 @@ export function SettingsCategory({
       title={t('settingsSection.title')}
       description={t('settingsSection.description')}
     >
-
 
       {/* Duplicate Tournament - Functional */}
       <CollapsibleSection icon="📋" title={t('settingsSection.duplicateTournament')} defaultOpen>
@@ -247,42 +218,8 @@ export function SettingsCategory({
         <FieldManagement tournament={tournament} onTournamentUpdate={handleTournamentUpdate} />
       </CollapsibleSection>
 
-      {/* Game Times (Locked if matches started) */}
-      <CollapsibleSection icon="⏱️" title={t('settingsSection.gameTimes')}>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>{t('settingsSection.gameTimePerMatch')}</label>
-          <div style={styles.inputRow}>
-            <input
-              type="number"
-              value={tournament.groupPhaseGameDuration}
-              disabled
-              style={{ ...styles.input, opacity: 0.6 }}
-            />
-            <span style={styles.inputUnit}>{t('settingsSection.minutesLocked')}</span>
-          </div>
-          <p style={{ fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted }}>
-            {t('settingsSection.gameTimeLockedHint')}
-          </p>
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>{t('settingsSection.breakTime')}</label>
-          <div style={styles.inputRow}>
-            <input
-              type="number"
-              value={tournament.groupPhaseBreakDuration ?? 2}
-              min={0}
-              max={30}
-              disabled
-              style={{ ...styles.input, opacity: 0.6 }}
-            />
-            <span style={styles.inputUnit}>{t('settingsSection.minutesLocked')}</span>
-          </div>
-          <p style={{ fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted }}>
-            {t('settingsSection.gameTimeLockedHint')}
-          </p>
-        </div>
-      </CollapsibleSection>
+      {/* Spielzeit und Pause gesperrt mit erklärendem Schloss, Abschnitt „Uhrzeiten“ → Zeiten verschieben (B-26, @ZP-095) */}
+      <GameTimesSection tournament={tournament} />
     </CategoryPage>
   );
 }

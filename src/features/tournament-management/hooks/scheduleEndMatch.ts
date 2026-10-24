@@ -25,7 +25,6 @@ import { MatchCommandRejectedError, type MatchCommands, type MatchEngine, type O
 import { buildEndWithResultEvent } from '../../../core/match/client/matchCommandsEnd';
 import { isClientOutdated } from '../../../core/repositories/appendMatchEventsRpc';
 import type { ValidMatchEntry } from '../../../hooks/engineMatchModel';
-import type { FieldHolder } from '../../../core/repositories/fieldControlStateRpc';
 import { endPromptRestSeconds, routeForStatus } from './scoreChangeHelpers';
 
 /** Rückfrage „Spiel beenden und Ergebnis eintragen“ (`rest` = Restzeit „2:00“, `null` = Spielzeit abgelaufen). */
@@ -35,7 +34,15 @@ export interface EndPrompt {
   score: string;
   rest: string | null;
   /** @FU-115: ein anderes Gerät steuert das Feld (Feldnummer und Halter, z. B. „Tom (Handy)“). */
-  controlledBy: { field: number; holder: string | null } | null;
+  controlledBy: ControlledBy | null;
+  /** @FU-081 (B-49): zusätzlich „Spielleitung übernehmen“ anbieten (Antwort `'takeover'`). */
+  takeOver?: boolean;
+}
+
+/** Halter für die Anzeige: Feldnummer und Text wie `fieldHolderText` („Tom (Handy)“, ohne Namen `null`). */
+export interface ControlledBy {
+  field: number;
+  holder: string | null;
 }
 
 export interface EndMatchInput {
@@ -50,7 +57,7 @@ export interface EndMatchInput {
   entered: { home: number; away: number };
   knockout: boolean;
   online: () => boolean;
-  readHolder: (field: number) => Promise<FieldHolder | null>;
+  readHolder: (field: number) => Promise<ControlledBy | null>;
   ask: (prompt: EndPrompt) => Promise<string | null>;
   askShootout: () => Promise<Record<string, number> | null>;
   warn: (key: 'offline' | 'notSent' | 'pending' | 'outdated') => void;

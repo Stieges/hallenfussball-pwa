@@ -233,9 +233,25 @@ const AUTH_EXPIRED_STATUSES = [401, 403] as const;
 export function isAuthExpired(error: unknown): boolean {
   if (error instanceof AuthenticationError) { return true; }
   if (error instanceof RepositoryError) {
-    return isAuthApiExpired(error.originalError, true);
+    const inner = error.originalError;
+    // BP-1 (C-AUTH-ABGELAUFEN-ANDERE-MUTATIONEN, @FU-009): PostgREST-401 auf jedem Weg B, auch je Spiel eingepackt
+    if (Array.isArray(inner) ? inner.some(isPostgrestJwtRejection) : isPostgrestJwtRejection(inner)) { return true; }
+    return isAuthApiExpired(inner, true);
   }
   return isAuthApiExpired(error, false);
+}
+
+/**
+ * PostgREST-Fehlercodes der Gruppe 3 (JWT), alle mit HTTP 401: Token ungültig oder abgelaufen (PGRST301, „JWT expired“),
+ * Anfrage ohne Token bei abgeschalteter anonymer Rolle (PGRST302), Prüfung der Token-Angaben gescheitert (PGRST303).
+ * PostgREST-Fehlerobjekte tragen keinen HTTP-Status, nur den Code.
+ */
+const POSTGREST_JWT_CODES: readonly string[] = ['PGRST301', 'PGRST302', 'PGRST303'];
+
+function isPostgrestJwtRejection(candidate: unknown): boolean {
+  if (!candidate || typeof candidate !== 'object') { return false; }
+  const code = (candidate as { code?: unknown }).code;
+  return typeof code === 'string' && POSTGREST_JWT_CODES.includes(code);
 }
 
 function isAuthApiExpired(candidate: unknown, wrapped: boolean): boolean {

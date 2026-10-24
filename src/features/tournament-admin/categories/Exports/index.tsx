@@ -368,6 +368,16 @@ export function ExportsCategory({
       title={t('exports.title')}
       description={t('exports.description')}
     >
+      {/* Spielplan als PDF (@DR-029: steht oben) */}
+      <CollapsibleSection icon="📄" title={t('exports.summaryTitle')} defaultOpen>
+        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
+          {t('exports.summaryDescription')}
+        </p>
+        <button style={styles.button} onClick={() => setShowPDFDialog(true)}>
+          {t('exports.createPdf')}
+        </button>
+      </CollapsibleSection>
+
       {/* Game Events Export */}
       <CollapsibleSection icon="📋" title={t('exports.eventsTitle')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
@@ -894,16 +904,6 @@ export function ExportsCategory({
           disabled={isExporting}
         >
           {isExporting ? t('exports.creating') : t('exports.exportPdf')}
-        </button>
-      </CollapsibleSection>
-
-      {/* Tournament Summary - Uses existing PDF Export */}
-      <CollapsibleSection icon="📄" title={t('exports.summaryTitle')} defaultOpen>
-        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          {t('exports.summaryDescription')}
-        </p>
-        <button style={styles.button} onClick={() => setShowPDFDialog(true)}>
-          {t('exports.createPdf')}
         </button>
       </CollapsibleSection>
 

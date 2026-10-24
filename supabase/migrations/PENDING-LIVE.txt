@@ -4,9 +4,4 @@
 # und die CI-Tests spielen jede Migration weiter ein.
 # Format je Zeile: <dateiname> <frist YYYY-MM-DD> <commit-vorher (origin/main vor dem Merge)>
 # Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
-20261110_005_result_entry_forfeit.sql 2026-11-10 5e0d1eeca38392cfeca6607e58e0ed1389c50cd1
-20261110_006_group_completion.sql 2026-11-10 5e0d1eeca38392cfeca6607e58e0ed1389c50cd1
-20261110_008_helper_join.sql 2026-11-10 5e0d1eeca38392cfeca6607e58e0ed1389c50cd1
-20261110_009_spiel_beenden.sql 2026-11-10 5e0d1eeca38392cfeca6607e58e0ed1389c50cd1
-20261113_003_tournament_lifecycle.sql 2026-11-10 5e0d1eeca38392cfeca6607e58e0ed1389c50cd1
-20261117_005_klaerungsliste.sql 2026-11-17 5e0d1eeca38392cfeca6607e58e0ed1389c50cd1
+20261117_005_klaerungsliste.sql 2026-11-17 0d80e4d0630d2be0c319343dd0d65bf4bb5c93aa

@@ -34,14 +34,17 @@ import type { Tournament } from '../../../../types/tournament';
 import type { MatchUpdate } from '../../../../core/models/types';
 import { useKoResolutionAfterAck } from '../../../../hooks/useKoResolutionAfterAck';
 import {
-  FC_NORD, FINALE, SPIEL_7, SPIEL_9, SV_SUED, finaleAusGruppeA, makeScheduleEngine, scheduleTournament, settle, type ScheduleEngine,
+  FINALE, GAST, HALBFINALE_1, HEIM, HF1_ID, SPIEL_7, SPIEL_9 as GRUPPENSPIEL_9, finaleAusGruppeA, finaleAusHalbfinale1, makeScheduleEngine, scheduleTournament, settle,
+  type ScheduleEngine,
 } from '../../../../test/scheduleEngineHarness';
 import { useScheduleResultEntry } from '../useScheduleResultEntry';
 
 await initRealDeI18n();
 
-// Spiel 7 ist schon 1:0 beendet; mit Spiel 9 ist Gruppe A fertig, das Finale (Erster gegen Zweiter A) wird besetzt.
-const turnier = (): Tournament => scheduleTournament({ [SPIEL_7]: { scoreA: 1, scoreB: 0, matchStatus: 'finished' } }, [finaleAusGruppeA()]);
+// GA4 A-13c: Gruppenplätze besetzt nur „Gruppe abschließen“. Der Ablauf „erst nach der Bestätigung des Servers“ gilt für die
+// Herkunft aus einem Spiel: mit dem Ergebnis von Halbfinale 1 wird das Finale („Sieger Halbfinale 1“) besetzt.
+const SPIEL_9 = HF1_ID;
+const turnier = (): Tournament => scheduleTournament({ [HALBFINALE_1]: { id: HF1_ID } }, [finaleAusHalbfinale1()]);
 
 function wrapper(h: ScheduleEngine) {
   return ({ children }: { children: ReactNode }) => <MatchEngineContext.Provider value={h.value}>{children}</MatchEngineContext.Provider>;
@@ -185,12 +188,12 @@ describe('A-08f3e2 H-2: K.-o.-Auflösung erst nach Bestätigung durch den Server
   });
 
   it('H-2 Gegenbeispiel: Korrektur am beendeten Spiel 9 vom Server abgelehnt → Spiel bleibt beendet, trotzdem keine Auflösung', async () => {
-    // Spiel 9 endete 2:1 an einem anderen Gerät (fremde Ergebnisse lösen bei Olli nicht aus, Plan § 5.1 R3).
+    // Halbfinale 1 endete 2:1 an einem anderen Gerät (fremde Ergebnisse lösen bei Olli nicht aus, Plan § 5.1 R3).
     h.fetchConfirmed.mockResolvedValueOnce({
-      events: [{ id: 'e1', type: 'RESULT_ENTRY', actor: 'leitung', at: 1, section: null, clockMs: null, teamId: null, payload: { scores: { [SV_SUED]: 2, [FC_NORD]: 1 } }, seq: 1 }],
+      events: [{ id: 'e1', type: 'RESULT_ENTRY', actor: 'leitung', at: 1, section: null, clockMs: null, teamId: null, payload: { scores: { [HEIM]: 2, [GAST]: 1 } }, seq: 1 }],
       newWatermark: 1,
     });
-    await h.engine.ensureMatch(SPIEL_9, { matchId: SPIEL_9, teamAId: SV_SUED, teamBId: FC_NORD }, 'T');
+    await h.engine.ensureMatch(SPIEL_9, { matchId: SPIEL_9, teamAId: HEIM, teamBId: GAST }, 'T');
     await h.engine.catchUp(SPIEL_9);
     const server = deferredServer(h);
     const { onSlots } = mountManager(h);
@@ -208,7 +211,7 @@ describe('A-08f3e2 H-2: K.-o.-Auflösung erst nach Bestätigung durch den Server
   it('idempotent: weitere Benachrichtigungen nach der Auflösung lösen nichts mehr aus', async () => {
     const { onSlots } = mountManager(h);
     await mountSpielplan(h).enter(SPIEL_9, 3, 1);
-    await act(async () => { await h.engine.notifyStoreChange(SPIEL_9); await h.engine.notifyStoreChange(SPIEL_7); await settle(); });
+    await act(async () => { await h.engine.notifyStoreChange(SPIEL_9); await settle(); });
 
     expect(onSlots).toHaveBeenCalledTimes(1);
   });
@@ -262,5 +265,41 @@ describe('A-08f3e2 H-2 Gast', () => {
     expect(onSlots).toHaveBeenCalledTimes(1);
     nurSlots(onSlots);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('GA4 A-13c: das letzte Gruppenergebnis besetzt keine Gruppenplätze (@TM-044, @TM-016)', () => {
+  let h: ScheduleEngine;
+  beforeEach(async () => {
+    kv.clear();
+    vi.stubGlobal('indexedDB', new IDBFactory());
+    h = await makeScheduleEngine();
+  });
+  afterEach(() => {
+    h.engine.stop();
+    vi.unstubAllGlobals();
+  });
+
+  // Spiel 7 ist beendet; mit Spiel 9 ist Gruppe A fertig – früher wurde das Finale (Erster gegen Zweiter A) sofort besetzt.
+  const gruppeFertig = (): Tournament => scheduleTournament({ [SPIEL_7]: { scoreA: 1, scoreB: 0, matchStatus: 'finished' } }, [finaleAusGruppeA()]);
+
+  it('@TM-044 nach der Bestätigung des Servers: kein Slot-Update mit Gruppenherkunft, das Finale zeigt weiter seine Herkunft', async () => {
+    const turnierGruppe = gruppeFertig();
+    const { onSlots } = mountManager(h, turnierGruppe);
+    await mountSpielplan(h, turnierGruppe).enter(GRUPPENSPIEL_9, 3, 1);
+    expect(onSlots).not.toHaveBeenCalled();
+    expect(turnierGruppe.matches.find((m) => m.id === FINALE)?.slotA.kind).toBe('pending');
+  });
+
+  it('@TM-044 offen ohne Netz: kein Hinweis „K.-o.-Plätze werden nach dem Senden besetzt“ (der Offline-Pfad besetzt keine Gruppenplätze)', async () => {
+    deferredServer(h);
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+    try {
+      const { enter, showWarning } = mountSpielplan(h, gruppeFertig());
+      await enter(GRUPPENSPIEL_9, 3, 1);
+      expect(showWarning).not.toHaveBeenCalledWith('K.-o.-Plätze werden nach dem Senden besetzt');
+    } finally {
+      Reflect.deleteProperty(navigator, 'onLine');
+    }
   });
 });

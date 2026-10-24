@@ -15,10 +15,12 @@
  * Ein Spiel ist entschieden wie am Server (`complete_group`, Schritt 2): Status `finished` oder `skipped` (@W2A-055).
  * Zusätzlich verlangt die App bei `finished` einen Stand – nie lockerer als der Server, nur strenger.
  */
-import type { ForfeitAbsent, GroupCompletion, Match, StandingDecision, Tournament } from '../../types/tournament';
+import type { ForfeitAbsent, Match, StandingDecision, Tournament } from '../../types/tournament';
 import { groupKeyOf } from '../models/standingsGroups';
 import { matchSideTeamId } from '../models/matchSlot';
+import { activeCompletion, everCompleted, groupClosedFromCompletions } from '../standings/groupCompletions';
 import { groupTieView, type OpenTieBlock } from '../standings/tieViews';
+import { blockMayShare, effectivePlacementsToPlayOut, followUpRanks, mandatoryReason } from '../standings/playOutPlaces';
 import { rankTournamentGroup, type TableTournament } from '../standings/tournamentTable';
 
 export type CompletionTournament = Pick<Tournament, 'teams' | 'matches' | 'groupCompletions'> & TableTournament;
@@ -83,6 +85,11 @@ export function groupMatches(tournament: Pick<Tournament, 'matches'>, groupId: s
   return tournament.matches.filter((m) => !isFinalMatch(m) && groupKeyOf(m.group) === groupId);
 }
 
+/** Gruppenspiele, die noch nicht entschieden sind (@TM-054): laufend, angesetzt oder ohne Stand. */
+export function undecidedMatches(tournament: Pick<Tournament, 'matches'>, groupId: string): Match[] {
+  return groupMatches(tournament, groupId).filter((m) => !isDecided(m));
+}
+
 /** Alle Gruppen mit mindestens einem Gruppenspiel, sortiert (Jeder gegen jeden: `['']`). */
 export function groupIds(tournament: Pick<Tournament, 'matches'>): string[] {
   return [...new Set(tournament.matches.filter((m) => !isFinalMatch(m)).map((m) => groupKeyOf(m.group)))].sort();
@@ -112,23 +119,7 @@ export function expectedState(tournament: Pick<Tournament, 'matches'>, groupId: 
     .sort(byId);
 }
 
-const completionsOf = (tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): GroupCompletion[] =>
-  (tournament.groupCompletions ?? []).filter((c) => groupKeyOf(c.groupId) === groupId);
-
-/** Geltender Abschluss der Gruppe (vorhanden und nicht wieder geöffnet) oder `undefined`. */
-export function activeCompletion(tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): GroupCompletion | undefined {
-  return completionsOf(tournament, groupId).find((c) => c.reopenedAt === undefined);
-}
-
-/** War die Gruppe schon einmal abgeschlossen (auch wenn wieder geöffnet)? Dann heißt die Taste „Erneut abschließen“. */
-export function everCompleted(tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): boolean {
-  return completionsOf(tournament, groupId).length > 0;
-}
-
-/** Echter Zustand „Gruppe abgeschlossen“ (ersetzt in A-13b-C die Zwischenregel `groupClosedByFollowUp`). */
-export function groupClosedFromCompletions(tournament: Pick<Tournament, 'groupCompletions'>, groupId: string): boolean {
-  return activeCompletion(tournament, groupId) !== undefined;
-}
+export { activeCompletion, everCompleted, groupClosedFromCompletions };
 
 /** Zustand einer Gruppe (@TM-059). Ein Abschluss bleibt bestehen, bis die Gruppe wieder geöffnet wird. */
 export function groupState(tournament: Pick<Tournament, 'matches' | 'groupCompletions'>, groupId: string): GroupState {
@@ -201,10 +192,48 @@ export function proposeGroupCompletion(tournament: Pick<Tournament, 'matches' | 
   });
 }
 
+/** Team-IDs der entfernten Teams (`isRemoved`): sie zählen im Abschluss nicht mit (@TM-149, Server: `NOT is_removed`). */
+const removedTeamIds = (tournament: CompletionTournament): Set<string> =>
+  new Set(tournament.teams.filter((team) => team.isRemoved === true).map((team) => team.id));
+
+/**
+ * Rangfolge der Gruppe ohne entfernte Teams (@TM-149): Platz 1 bis n über die übrigen Teams. Der Server vergleicht nur mit den
+ * Teams ohne `is_removed` und meldete sonst `RANKING_MISMATCH` (Befund C-RANKING-ENTFERNTE-TEAMS).
+ */
+export function activeRanking(tournament: CompletionTournament, groupId: string): string[] {
+  const removed = removedTeamIds(tournament);
+  return rankTournamentGroup(tournament, groupId).rows.map((r) => r.team.id).filter((teamId) => !removed.has(teamId));
+}
+
+/**
+ * Offene Blöcke der Gruppe ohne entfernte Teams (@TM-149): Blöcke aus `groupTieView`, ohne die entfernten Mitglieder;
+ * bleibt weniger als ein Paar, entfällt der Block. Platz und Pflicht-Grund folgen der Rangfolge ohne entfernte Teams.
+ */
+function openBlocks(tournament: CompletionTournament, groupId: string): OpenTieBlock[] {
+  const { open } = groupTieView(tournament, groupId);
+  const removed = removedTeamIds(tournament);
+  if (removed.size === 0) {
+    return open;
+  }
+  const ranking = activeRanking(tournament, groupId);
+  const places = effectivePlacementsToPlayOut(tournament);
+  const followUps = followUpRanks(tournament.matches, groupId);
+  return open.flatMap((block) => {
+    const teamIds = block.teamIds.filter((teamId) => !removed.has(teamId));
+    if (teamIds.length < 2) {
+      return [];
+    }
+    const place = Math.min(...teamIds.map((teamId) => ranking.indexOf(teamId))) + 1;
+    const shape = { place, size: teamIds.length };
+    const mandatory = mandatoryReason(places, followUps, shape);
+    return [{ groupId: block.groupId, teamIds, ...shape, mayShare: blockMayShare(places, followUps, shape), ...(mandatory !== undefined ? { mandatory } : {}) }];
+  });
+}
+
 function ready(tournament: CompletionTournament, groupId: string, openRanks: number[]): GroupCompletionPreparation {
   return {
     code: 'READY',
-    ranking: rankTournamentGroup(tournament, groupId).rows.map((r) => r.team.id),
+    ranking: activeRanking(tournament, groupId),
     openRanks,
     tieDecisions: groupTieView(tournament, groupId).decided.map((d) => d.decision),
     expectedState: expectedState(tournament, groupId),
@@ -231,7 +260,7 @@ export function prepareGroupCompletion(tournament: CompletionTournament, groupId
   if (blocked !== undefined) {
     return blocked;
   }
-  const { open } = groupTieView(tournament, groupId);
+  const open = openBlocks(tournament, groupId);
   if (open.length > 0) {
     return { code: 'DECISION_REQUIRED', blocks: open };
   }
@@ -239,9 +268,11 @@ export function prepareGroupCompletion(tournament: CompletionTournament, groupId
 }
 
 /**
- * Erneuter Abschluss einer nach dem Abschluss geänderten Gruppe (`stale`, R-GA4v2-4, @TM-145): Plätze offener Blöcke mit
- * Folgespiel (ganzer Block) gehen über `openRanks` auf ihre Herkunft zurück; offene Blöcke ohne Folgespiel besetzen
- * nichts und halten den Abschluss nicht auf. Für eine Gruppe, die nicht `stale` ist, gilt `prepareGroupCompletion`.
+ * Erneuter Abschluss einer nach dem Abschluss geänderten Gruppe (`stale`, R-GA4v2-4, @TM-145, @TM-150): Plätze offener Blöcke mit
+ * Folgespiel (ganzer Block) gehen über `openRanks` auf ihre Herkunft zurück. Ein offener Block, dessen Pflicht nur aus der
+ * Einstellung „auszuspielende Plätze“ kommt (kein Folgespiel, z. B. der Turniersieger im Nikolaus), wird nie still festgelegt:
+ * `DECISION_REQUIRED` – „Besetzung prüfen“ bleibt stehen, bis die Turnierleitung entschieden hat (@TM-150). Ein offener Block
+ * ohne Pflicht (Annahme erlaubt) hält den Abschluss nicht auf. Für eine Gruppe, die nicht `stale` ist, gilt `prepareGroupCompletion`.
  */
 export function prepareRecompletion(tournament: CompletionTournament, groupId: string): GroupCompletionPreparation {
   if (groupState(tournament, groupId) !== 'stale') {
@@ -251,7 +282,12 @@ export function prepareRecompletion(tournament: CompletionTournament, groupId: s
   if (blocked !== undefined) {
     return blocked;
   }
-  const openRanks = groupTieView(tournament, groupId).open
+  const open = openBlocks(tournament, groupId);
+  const settingOnly = open.filter((block) => block.mandatory?.kind === 'setting');
+  if (settingOnly.length > 0) {
+    return { code: 'DECISION_REQUIRED', blocks: settingOnly };
+  }
+  const openRanks = open
     .filter((block) => block.mandatory?.kind === 'followUp')
     .flatMap((block) => Array.from({ length: block.size }, (_, i) => block.place + i));
   return ready(tournament, groupId, [...new Set(openRanks)].sort((x, y) => x - y));

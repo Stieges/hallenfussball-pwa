@@ -1,7 +1,7 @@
 /**
  * Spiel beenden (20261110_009) T2-UI (a): Verhaltenstest der Rückfrage, echte DE-Texte. @FU-112 („Spiel 9 läuft noch –
  * Uhr zeigt 2:00 Restzeit. Jetzt mit 3:1 beenden?“, Ja/Nein), @FU-114 („Spielzeit abgelaufen – jetzt mit 2:2 beenden?“),
- * @FU-115/@FU-081 (Hinweis „Feld 2 wird gerade von Tom gesteuert“ vor der Frage).
+ * @FU-115/@FU-081 (Hinweis „Feld 2 wird gerade von Tom gesteuert“ vor der Frage; B-49: Taste „Spielleitung übernehmen“).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
@@ -45,5 +45,18 @@ describe('ScheduleEndPrompt (über ScheduleResultEntryPrompt)', () => {
   it('Gegenbeispiel: Halter ohne Namen und Gerät → „Feld 2 wird gerade von einem anderen Gerät gesteuert“', () => {
     const view = render(<ScheduleResultEntryPrompt prompt={{ ...ende, controlledBy: { field: 2, holder: null } }} answerPrompt={vi.fn()} />);
     expect(view.getByTestId('result-entry-end-controlled').textContent).toBe('Feld 2 wird gerade von einem anderen Gerät gesteuert');
+  });
+
+  it('@FU-081 (B-49) fremd gesteuert mit Übernahme: zusätzlich „Spielleitung übernehmen“ → Antwort takeover', () => {
+    const answer = vi.fn();
+    const view = render(<ScheduleResultEntryPrompt prompt={{ ...ende, controlledBy: { field: 2, holder: 'Tom' }, takeOver: true }} answerPrompt={answer} />);
+    fireEvent.click(view.getByText('Spielleitung übernehmen'));
+    expect(answer.mock.calls[0]).toEqual(['takeover']); // danach schließt der Dialog (Abbruch zählt nicht mehr, die Antwort steht)
+  });
+
+  it('@FU-081 Gegenbeispiel: ohne Übernahme-Angebot keine Taste „Spielleitung übernehmen“', () => {
+    const view = render(<ScheduleResultEntryPrompt prompt={{ ...ende, controlledBy: { field: 2, holder: 'Tom' } }} answerPrompt={vi.fn()} />);
+    expect(view.queryByText('Spielleitung übernehmen')).toBeNull();
+    expect(view.queryByTestId('confirm-dialog-secondary')).toBeNull();
   });
 });

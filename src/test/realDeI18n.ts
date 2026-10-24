@@ -21,6 +21,7 @@ import deSettings from '../i18n/locales/de/settings.json';
 import deAdmin from '../i18n/locales/de/admin.json';
 import deSport from '../i18n/locales/de/sport.json';
 import dePublicView from '../i18n/locales/de/publicView.json';
+import deHelpers from '../i18n/locales/de/helpers.json';
 
 export async function initRealDeI18n(): Promise<void> {
   if (i18n.isInitialized && i18n.language === 'de') {return;}
@@ -28,7 +29,7 @@ export async function initRealDeI18n(): Promise<void> {
     lng: 'de',
     fallbackLng: 'de',
     defaultNS: 'common',
-    ns: ['common', 'auth', 'dashboard', 'wizard', 'tournament', 'cockpit', 'monitor', 'settings', 'admin', 'sport', 'publicView'],
+    ns: ['common', 'auth', 'dashboard', 'wizard', 'tournament', 'cockpit', 'monitor', 'settings', 'admin', 'sport', 'publicView', 'helpers'],
     resources: {
       de: {
         common: deCommon,
@@ -42,6 +43,7 @@ export async function initRealDeI18n(): Promise<void> {
         admin: deAdmin,
         sport: deSport,
         publicView: dePublicView,
+        helpers: deHelpers,
       },
     },
     interpolation: { escapeValue: false },

@@ -1,10 +1,13 @@
 import { MutationQueue } from '../services/MutationQueue';
-import { ITournamentRepository } from './ITournamentRepository';
+import { ITournamentRepository, type MakePublicOptions } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
 import { isAbortError, NetworkError, RepositoryError } from '../errors';
-import type { StandingDecision } from '../../types/tournament';
+import type { BracketLogEntry } from '../../types/tournament';
+import type {
+    CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
+} from './groupCompletionCloud';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
@@ -108,6 +111,9 @@ function sideDiffers(local: MatchSlot | undefined, remote: MatchSlot | undefined
  * auf HTTP 400 zurueck.
  */
 const RELEASE_REFUSAL_CODE = 'HF001';
+
+/** Wie lange das erste Teilen auf die Ankunft des Turniers in der Cloud wartet. */
+const SHARE_UPLOAD_WAIT_MS = 20_000;
 
 /** Ältere Fassung der Funktion kannte den eigenen SQLSTATE noch nicht. */
 const RELEASE_REFUSAL_MARKER = 'has not been released';
@@ -303,7 +309,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         }
         const discarded = this._mutationQueue.needsCloudCopy(id); // @FU-106: verworfener Konflikt → ganze Kopie der Cloud
         const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined || discarded, owned: (t: Tournament) => this.owned(t),
-            wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
+            wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before),
+            // A-15c: ein ohne Netz abgeschlossener, noch nicht gesendeter Abschluss bleibt sichtbar, bis der Server antwortet
+            keepLocalCompletions: () => this._mutationQueue.hasPendingOf(id, ['COMPLETE_GROUP']) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
         if (discarded && adoption.save !== undefined) {
@@ -367,21 +375,85 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         });
     }
 
-    /**
-     * Paket TB (F9, @W2A-062): in der Tabelle nur mit Netz – ohne Netz `NetworkError` (isOffline), nichts eingereiht;
-     * ohne Netz geht die Entscheidung mit „Gruppe abschließen“ (GA4 A-13b/A-15c). Danach lokale Kopie wie die Cloud.
-     */
-    async updateStandingDecisions(id: string, decisions: StandingDecision[], expectedVersion: number): Promise<void> {
+    /** Nur mit Netz (Entscheidung in der Tabelle, Wiederöffnen): ohne Netz `NetworkError` (isOffline), nichts geschrieben, nichts eingereiht. */
+    private requireNetwork(message: string): void {
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            throw new NetworkError('Die Entscheidung in der Tabelle braucht eine Verbindung.', true);
+            throw new NetworkError(message, true);
         }
-        await this.supabaseRepo.updateStandingDecisions(id, decisions, expectedVersion);
+    }
+
+    /**
+     * GA4 A-13b-C (R-GA4v2-1): Entscheidung eintragen/zurücknehmen über `record_standing_decision` (Entscheidung und Verlauf in
+     * einer Transaktion), nur mit Netz. Danach lokale Kopie mit Entscheidungen, Verlauf und neuer Version.
+     */
+    async recordStandingDecision(id: string, request: RecordDecisionRequest, expectedVersion: number): Promise<RecordDecisionResult> {
+        this.requireNetwork('Die Entscheidung in der Tabelle braucht eine Verbindung.');
+        const result = await this.supabaseRepo.recordStandingDecision(id, request, expectedVersion);
+        if (result.status !== 'ok') {
+            return result;
+        }
         const local = await this.localRepo.get(id);
         if (local) {
+            const others = (local.standingDecisions ?? []).filter((d) => d.id !== request.decision.id);
+            const standingDecisions = request.action === 'decide' ? [...others, request.decision] : others;
             // C-VERSION-MEHRDEUTIG: beruhte die Kopie auf der geprüften Version, ist die neue Server-Version bestätigt
-            const serverVersion = checkedVersion(local) === expectedVersion ? expectedVersion + 1 : local.serverVersion;
+            const serverVersion = checkedVersion(local) === expectedVersion ? result.version : local.serverVersion;
+            const decisionLog = (await this.supabaseRepo.readBracketLog(id)) ?? local.decisionLog;
             // @FU-110: keine Kette über eine Entscheidung (die Ansicht kennt sie ggf. nicht – ein Voll-Speichern nähme sie zurück)
-            await this.localRepo.cacheCloudCopy({ ...local, standingDecisions: decisions, version: expectedVersion + 1, serverVersion, ownUploadsFrom: undefined });
+            await this.localRepo.cacheCloudCopy({
+                ...local, standingDecisions, version: result.version, serverVersion, ownUploadsFrom: undefined,
+                ...(decisionLog !== undefined ? { decisionLog } : {}),
+            });
+        }
+        return result;
+    }
+
+    /**
+     * GA4 A-13b-C: „Gruppe abschließen“; mit Netz danach den Stand (Abschluss, besetzte Folgespiele) frisch holen.
+     * A-15c (@W2A-062, @TM-115, @TM-146, @TM-147): ohne Netz sofort auf dem Gerät wirksam (Abschluss, Entscheidung, Folgespiele,
+     * Marke „noch nicht gesendet“) und als `COMPLETE_GROUP` eingereiht – lokales Schreiben und Einreihen als eine Einheit (Regel Q).
+     */
+    async completeGroup(id: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            return this.queueGuard.track(id, async () => {
+                const local = await this.localRepo.get(id);
+                const result = await this.localRepo.completeGroupQueued(id, request);
+                const baseVersion = local === null ? undefined : checkedVersion(local);
+                this.mutationQueue.enqueue('COMPLETE_GROUP', {
+                    tournamentId: id, request, ...(baseVersion !== undefined ? { baseVersion } : {}),
+                });
+                return result;
+            });
+        }
+        const result = await this.supabaseRepo.completeGroup(id, request);
+        if (result.status === 'ok') {
+            await this.refreshAfterServerWrite(id);
+        }
+        return result;
+    }
+
+    /** GA4 A-13b-C: Gruppe wieder öffnen, nur mit Netz. */
+    async reopenGroup(id: string, groupId: string, reason: string): Promise<ReopenGroupResult> {
+        this.requireNetwork('„Gruppe wieder öffnen“ braucht eine Verbindung.');
+        const result = await this.supabaseRepo.reopenGroup(id, groupId, reason);
+        if (result.status === 'ok') {
+            await this.refreshAfterServerWrite(id);
+        }
+        return result;
+    }
+
+    readBracketLog(id: string): Promise<BracketLogEntry[] | undefined> {
+        return this.supabaseRepo.readBracketLog(id);
+    }
+
+    /** Nach einem Server-Schreibvorgang den Cloud-Stand lesen und übernehmen; scheitert das, bleibt der Schreibvorgang gültig (nächster Takt holt es nach). */
+    private async refreshAfterServerWrite(id: string): Promise<void> {
+        try {
+            await this.syncFromCloud(id, undefined, true);
+        } catch (error) {
+            if (!isAbortError(error) && !isCloudReadTimeout(error) && error instanceof Error) {
+                captureFeatureError(error, 'repository', 'refreshAfterServerWrite', { tournamentId: id });
+            }
         }
     }
 
@@ -860,7 +932,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      * Makes a tournament publicly accessible by generating a share code.
      * Strategy: Try cloud first, fall back to local, queue for sync.
      */
-    async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+    async makeTournamentPublic(tournamentId: string, options?: MakePublicOptions): Promise<{ shareCode: string; createdAt: string } | null> {
+        if (options?.requireCloud === true) {
+            return this.makePublicInCloud(tournamentId);
+        }
         try {
             // Try cloud first for proper share code generation
             const result = await this.supabaseRepo.makeTournamentPublic(tournamentId);
@@ -899,6 +974,45 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             });
         }
         return localResult;
+    }
+
+    /**
+     * @W1-020 (C-FESTLEGEN-TEILT-NICHT): Teilen beim ersten Festlegen. Das Turnier kommt ueber die Warteschlange in die
+     * Cloud; erst danach kennt `make_tournament_public` es. Darum erst warten, dann der Aufruf -- und bei jedem Fehler
+     * werfen statt lokal auszuweichen (der Hinweis an den Nutzer darf nicht behaupten, jeder koenne zuschauen).
+     */
+    private async makePublicInCloud(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        await this.waitForUpload(tournamentId, SHARE_UPLOAD_WAIT_MS);
+        const result = await this.supabaseRepo.makeTournamentPublic(tournamentId);
+        if (!result) { return null; }
+        const tournament = await this.localRepo.get(tournamentId);
+        if (tournament) {
+            await this.localRepo.cacheCloudCopy({ ...tournament, isPublic: true, shareCode: result.shareCode, shareCodeCreatedAt: result.createdAt });
+        }
+        return result;
+    }
+
+    /** Wartet, bis die Warteschlange fuer das Turnier leer ist; gescheiterte Speicherung oder Zeitablauf werfen. */
+    private waitForUpload(tournamentId: string, timeoutMs: number): Promise<void> {
+        const queue = this._mutationQueue;
+        const state = (): 'done' | 'failed' | 'waiting' => {
+            if (queue.hasFailed(tournamentId, ['SAVE_TOURNAMENT'])) { return 'failed'; }
+            return queue.hasPending(tournamentId) ? 'waiting' : 'done';
+        };
+        return new Promise<void>((resolve, reject) => {
+            let unsubscribe = (): void => undefined;
+            const timer = setTimeout(() => { unsubscribe(); reject(new NetworkError('Das Turnier ist noch nicht in der Cloud angekommen.')); }, timeoutMs);
+            const check = (): boolean => {
+                const current = state();
+                if (current === 'waiting') { return false; }
+                clearTimeout(timer);
+                unsubscribe();
+                if (current === 'done') { resolve(); } else { reject(new RepositoryError('makePublic', 'Das Speichern in der Cloud ist gescheitert.')); }
+                return true;
+            };
+            if (check()) { return; }
+            unsubscribe = queue.subscribe(() => { check(); });
+        });
     }
 
     /**

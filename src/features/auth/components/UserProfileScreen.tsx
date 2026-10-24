@@ -211,7 +211,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           <Card title={t('profile.security')}>
             <ProfileActions
               is2FAEnabled={false}
-              on2FAToggle={() => alert('2FA Einrichtung startet...')}
+              on2FAToggle={() => showInfo(t('profile.twoFactorSoon'))}
               onChangePassword={() => void handleChangePassword()}
               passwordResetCooldown={passwordResetCooldown}
               onLogout={handleLogout}

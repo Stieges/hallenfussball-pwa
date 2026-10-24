@@ -29,6 +29,36 @@ export const Icons = {
     </svg>
   ),
 
+  /** B-26: Uhr (Zeiten verschieben) */
+  Clock: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="7.5" stroke={color} strokeWidth="2" />
+      <path d="M10 6v4l2.5 2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+
+  /** B-26: Minus (eine Minute weniger) */
+  Minus: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M4 10h12" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  /** B-26: Schloss (gesperrte Einstellung, @ZP-095) */
+  Lock: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="4" y="9" width="12" height="8" rx="1.5" stroke={color} strokeWidth="2" />
+      <path d="M7 9V6.5a3 3 0 016 0V9" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  /** B-26: Drucker (Neu drucken) */
+  Printer: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M6 7V3h8v4M6 14H4a1 1 0 01-1-1V8a1 1 0 011-1h12a1 1 0 011 1v5a1 1 0 01-1 1h-2M6 12h8v5H6z" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  ),
+
   X: ({ size = 20, color = 'currentColor' }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
       <path d="M15 5L5 15M5 5l10 10" stroke={color} strokeWidth="2" strokeLinecap="round" />

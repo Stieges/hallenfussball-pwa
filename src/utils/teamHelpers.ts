@@ -266,21 +266,6 @@ export function renameTeam(
 }
 
 /**
- * Generate warning message for team rename
- */
-export function getTeamRenameWarning(
-  teamName: string,
-  matchesWithResults: number
-): string | null {
-  if (matchesWithResults === 0) {
-    return null;
-  }
-
-  return `"${teamName}" hat bereits ${matchesWithResults} Spiel${matchesWithResults === 1 ? '' : 'e'} mit Ergebnissen. ` +
-    `Der neue Name wird in allen Spielen, Listen und PDFs angezeigt.`;
-}
-
-/**
  * Get active (non-removed) teams
  */
 export function getActiveTeams(teams: Team[]): Team[] {
