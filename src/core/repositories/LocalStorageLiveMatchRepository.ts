@@ -45,6 +45,12 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
         }
     }
 
+    /** Lokal gibt es nur den Gerätestand: angepfiffen = irgendein Spiel ist nicht mehr NOT_STARTED (FINISHED eingeschlossen). */
+    async hasStartedMatches(tournamentId: string): Promise<boolean> {
+        const all = await this.getAll(tournamentId);
+        return [...all.values()].some((match) => match.status !== 'NOT_STARTED');
+    }
+
     // =========================================================================
     // PRIVATE HELPERS
     // =========================================================================

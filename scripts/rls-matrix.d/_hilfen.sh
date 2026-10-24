@@ -79,3 +79,21 @@ a11_allowed_verdict() {
     echo "gelingt-nicht(sichtbar=$visible,zeilen=$rows,wert=$check)"
   fi
 }
+
+# B-14: Ablehnung, wenn die Identitaet die Zeile gar nicht mehr sieht (oeffentliche Daten nur noch ueber die Positivliste):
+# "sichtbar=0, 0 Zeilen oder Fehler, Wert unveraendert" -> "abgelehnt".
+a11_denied_unseen_verdict() {
+  local result="$1" unchanged_value="$2"
+  local visible rows check
+  IFS='|' read -r visible rows check <<<"$result"
+  if [[ "$visible" == "0" && ( "$rows" == "0" || "$rows" == "fehler" ) && "$check" == "$unchanged_value" ]]; then
+    echo "abgelehnt"
+  else
+    echo "nicht-abgelehnt(sichtbar=$visible,zeilen=$rows,wert=$check)"
+  fi
+}
+
+# B-14: Verdikt je nachdem, ob 20261117_104 eingespielt ist (vorher sieht die Identitaet die Zeile noch).
+a11_denied_verdict_b14() {
+  if [[ "${WITH_B14:-0}" -eq 1 ]]; then a11_denied_unseen_verdict "$1" "$2"; else a11_denied_verdict "$1" "$2"; fi
+}

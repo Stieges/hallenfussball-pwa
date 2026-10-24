@@ -19,6 +19,8 @@ export interface CockpitSlimHeaderProps {
   felder: number;
   feld: number;
   onFeld: (n: number) => void;
+  /** Steuernde Geräte je Feld für die Feldwahl (@HE-049, B-49). */
+  halter?: Readonly<Record<number, string>>;
   verbindung: ReactNode;
   /** B-50 Q8: unauffälliger Einstieg in die Klärungsliste (nur Turnierleitung, nur bei offenen Fällen), links der Verbindung. */
   klaerung?: ReactNode;
@@ -60,7 +62,7 @@ export function CockpitSlimHeader(p: CockpitSlimHeaderProps): ReactElement {
       </button>
       <div style={gruppeStil(schmal)}>
         <span style={nameStil} data-testid="cockpit-turniername">{p.turnierName}</span>
-        <FeldWahl felder={p.felder} feld={p.feld} onFeld={p.onFeld} />
+        <FeldWahl felder={p.felder} feld={p.feld} onFeld={p.onFeld} halter={p.halter} />
       </div>
       {p.breit === true && p.onTastenkuerzel && (
         <button type="button" style={knopfStil} data-testid="cockpit-tastenkuerzel" onClick={p.onTastenkuerzel}>{t('rahmen.tastenkuerzel')}</button>

@@ -23,7 +23,7 @@ export const ADMIN_CATEGORY_GROUPS: AdminCategoryGroupConfig[] = [
   { id: 'management', label: 'Verwaltung', showLabel: true },
   { id: 'settings', label: 'Einstellungen', showLabel: true },
   { id: 'support', label: '', showLabel: false },
-  { id: 'danger', label: 'Kritische Aktionen', showLabel: true },
+  { id: 'danger', label: 'Gefahrenbereich', showLabel: true },
 ];
 
 // =============================================================================
@@ -57,6 +57,15 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     icon: '📤',
     group: 'management',
     path: 'exports',
+  },
+  // @OB-005 (A-18a): „Team & Helfer“ ist da, sobald der Einstieg per QR-Code gebaut ist – ohne Vertröstung.
+  {
+    id: 'team-helpers',
+    label: 'Team & Helfer',
+    description: 'Helfer-QR-Code, Anfragen und Zugänge',
+    icon: '👥',
+    group: 'management',
+    path: 'team-helpers',
   },
   {
     id: 'sponsors',

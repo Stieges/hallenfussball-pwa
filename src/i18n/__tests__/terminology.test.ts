@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 // keine zweite, potenziell abweichende Implementierung.
 import checkTerminology from '../../../scripts/check-terminology.cjs';
 
-const { runAllChecks, wordBoundaryRegex } = checkTerminology;
+const { runAllChecks, wordBoundaryRegex, contextApplies, buildForbiddenPatterns, loadGlossary } = checkTerminology;
 
 describe('Terminologie-Prüfer (scripts/check-terminology.cjs)', () => {
   it('findet mindestens die Sprachen de und en', () => {
@@ -63,5 +63,27 @@ describe('Terminologie-Prüfer (scripts/check-terminology.cjs)', () => {
       const regex = wordBoundaryRegex('Elfmeter');
       expect(regex.test('Elfmetermarke')).toBe(false);
     });
+  });
+});
+
+describe('Kontextregel „abgelehnt“ (A-17b, wie glossar-kontext.yaml)', () => {
+  const patterns = buildForbiddenPatterns(loadGlossary(new URL('../glossary.json', import.meta.url).pathname));
+  const verboten = (text: string) =>
+    patterns.some((p: { forbidden: string; regex: RegExp }) => p.regex.test(text) && contextApplies(p.forbidden, text));
+
+  it('@HE-008 „Anfrage abgelehnt“ ist erlaubt', () => {
+    expect(verboten('Anfrage abgelehnt')).toBe(false);
+    expect(verboten('Wurde deine Anfrage aus Versehen abgelehnt, scanne noch einmal.')).toBe(false);
+  });
+
+  it.each([
+    'Eintrag abgelehnt',
+    'abgelehnter Eintrag',
+    'Die abgelehnten Einträge liegen im Ausgang',
+    'vom Server abgelehnt',
+    'Ablehnung durch den Server',
+    'Warteschlange: abgelehnt',
+  ])('Gegenbeispiel: „%s“ bleibt verboten (D-C1)', (text) => {
+    expect(verboten(text)).toBe(true);
   });
 });

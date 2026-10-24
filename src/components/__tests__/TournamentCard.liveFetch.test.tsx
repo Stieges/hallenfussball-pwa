@@ -1,6 +1,6 @@
 /**
  * B-01a Fixrunde 2, P1 — Server-Abfragen sparen: Die Karte liest den Live-Stand
- * (ILiveMatchRepository.getAll) nur, wenn die Abfrage das Ergebnis ändern kann:
+ * (ILiveMatchRepository.hasStartedMatches) nur, wenn die Abfrage das Ergebnis ändern kann:
  * die Aktion wird angeboten (enabled = Boolean(onSoftDelete)), der Grundzustand
  * aus den Spielen ist 'not-started' und es sind Spiele geladen
  * (matches.length > 0).
@@ -19,8 +19,8 @@ vi.mock('../../hooks/useIsMobile', () => ({
 }));
 
 const { getAll, liveRepository } = vi.hoisted(() => {
-  const getAll = vi.fn(() => Promise.resolve(new Map()));
-  return { getAll, liveRepository: { getAll } };
+  const getAll = vi.fn(() => Promise.resolve(false));
+  return { getAll, liveRepository: { hasStartedMatches: getAll } };
 });
 
 vi.mock('../../core/contexts/RepositoryContext', async (importOriginal) => ({

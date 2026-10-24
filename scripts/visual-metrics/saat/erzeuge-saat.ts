@@ -11,12 +11,15 @@
  * (Veroeffentlichungszeit); der Aufrufer friert es ein (`SAAT_ZEIT`).
  */
 import { TournamentCreationService } from '../../../src/core/services/TournamentCreationService';
-import { resolveBracketAfterPlayoffMatch, resolvePlayoffPairings } from '../../../src/core/generators';
+import { resolveBracketAfterPlayoffMatch } from '../../../src/core/generators';
+import { activeRanking, expectedState } from '../../../src/core/services/GroupCompletionService';
+import { applyCompleteGroup } from '../../../src/core/repositories/localGroupCompletion';
 import { cacheColumns, reduceMatch, serverRules } from '../../../src/core/match';
 import type { EngineEvent, MatchContext, MatchRules } from '../../../src/core/match';
 import { MATCH_COPY_FORMAT_VERSION, matchCopyKey } from '../../../src/core/match/client/matchCopy';
 import type { ITournamentRepository } from '../../../src/core/repositories/ITournamentRepository';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type Match, type Team, type Tournament } from '../../../src/types/tournament';
+import { pendingSlot } from '../../../src/core/models/matchSlot'
 import type { Sponsor } from '../../../src/types/sponsor';
 import type { MonitorSlide, TournamentMonitor } from '../../../src/types/monitor';
 
@@ -26,6 +29,7 @@ export const SAAT_FORMAT = 1
 export const SAAT_ZEIT = '2026-11-14T08:00:00.000Z'
 export const TURNIER_ID = 'hallencup-messlauf'
 export const SHARE_CODE = 'MESS26'
+export const ABSCHLUSS_ID = 'abschluss-messlauf'
 export const ENTWURF_ID = 'hallencup-entwurf'
 
 /** Marke fuer "Zeit relativ zum Laden", vom Lader beim Befuellen aufgeloest (laufendes Spiel). */
@@ -85,6 +89,10 @@ function regelnFuer(t: Tournament, phase: string): MatchRules {
 interface EreignisPlan {
   /** Tore der regulaeren Spielzeit in Reihenfolge (Team-ID); sie verteilen sich gleichmaessig ueber die Spielzeit. */
   tore: string[]
+  /** Rueckennummer je Tor (gleicher Index wie `tore`); `undefined` = Nummer fehlt (die Ereignisliste zeigt dann das Warnzeichen). */
+  nummern?: (number | undefined)[]
+  /** Bis zu welcher Spielzeit (ms) sich die Tore verteilen; Vorgabe: die ganze Spielzeit (bzw. ein Abschnitt in der Halbzeitpause). */
+  toreBisMs?: number
   /** Karten der regulaeren Spielzeit (Abschnitt 1): Art, Team-ID, Spieluhr (ms), Rueckennummer. */
   karten?: Array<{ art: 'YELLOW_CARD' | 'YELLOW_RED_CARD' | 'RED_CARD'; teamId: string; clockMs: number; nummer: number }>
   /** Wie weit die Regelspielzeit gespielt ist: laeuft, in der Halbzeitpause oder beendet. */
@@ -112,11 +120,12 @@ function baueEreignisse(ctx: MatchContext, rules: MatchRules, plan: EreignisPlan
   })
   const log: EngineEvent[] = [e('MATCH_START', 1, null, { payload: { rules } })]
   // Tore: gleichmaessig verteilt, 20 s vor der Gleichverteilung (nie genau auf einer Abschnittsgrenze).
-  const spanne = plan.bis === 'halbzeitpause' ? secMs : gesamt
+  const spanne = plan.toreBisMs ?? (plan.bis === 'halbzeitpause' ? secMs : gesamt)
   plan.tore.forEach((teamId, i) => {
     const clockMs = Math.round(((i + 1) * spanne) / (plan.tore.length + 1)) - 20_000
     const section = Math.min(rules.sections, Math.floor(clockMs / secMs) + 1)
-    log.push(e('GOAL', section, clockMs, { teamId }))
+    const nummer = plan.nummern?.[i]
+    log.push(e('GOAL', section, clockMs, nummer === undefined ? { teamId } : { teamId, payload: { playerNumber: nummer } }))
   })
   // Karten (Abschnitt 1): fuer die Ansichten mit Kartenzeichen (Verlauf im Cockpit, Zuschauer-Seite)
   for (const k of plan.karten ?? []) {
@@ -265,6 +274,22 @@ const seiteId = (m: Match, seite: 'slotA' | 'slotB'): string => {
 }
 
 /** Gemeinsames Gerüst: ersetzt Spiele und sammelt die Engine-Kopien. */
+/**
+ * A-13c: „Gruppe abschließen“ für jede Gruppe über den echten lokalen Weg (`applyCompleteGroup`): Abschluss (`groupCompletions`) und
+ * besetzte Finalrunde. Ohne den Abschluss zeigte die Ansicht einen Vorschlag für Gruppen, deren Halbfinals längst laufen
+ * (Review #336 A3) – diesen Zustand gibt es nach A-13c nicht mehr.
+ */
+function schliesseGruppenAb(t: Tournament): void {
+  for (const gruppe of ['A', 'B']) {
+    const { tournament } = applyCompleteGroup(t, {
+      groupId: gruppe, ranking: activeRanking(t, gruppe), openRanks: [], tieDecisions: [], knownDecisionIds: [], expectedState: expectedState(t, gruppe),
+    })
+    if (tournament === undefined) { throw new Error(`Gruppe ${gruppe} nicht abgeschlossen`) }
+    t.matches = tournament.matches
+    t.groupCompletions = tournament.groupCompletions
+  }
+}
+
 function werkbank(t: Tournament): { kopien: EngineKopie[]; ersetze: (alt: Match, e: MatchMitKopie) => void } {
   const kopien: EngineKopie[] = []
   return {
@@ -309,7 +334,7 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
     const tore = [...Array.from({ length: a }, () => seiteId(m, 'slotA')), ...Array.from({ length: b }, () => seiteId(m, 'slotB'))]
     ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore, bis: 'ende' }, start + i * 900_000))
   })
-  resolvePlayoffPairings(t)
+  schliesseGruppenAb(t)
 
   const [hf1, hf2] = halbfinaleVon(t)
   // Halbfinale 1: 1:1, die Verlaengerung entscheidet (Tor Heim).
@@ -326,6 +351,8 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
   ersetze(finale, wendeEngineAn(t, finale, seiteId(finale, 'slotA'), seiteId(finale, 'slotB'),
     {
       tore: [seiteId(finale, 'slotA'), seiteId(finale, 'slotB'), seiteId(finale, 'slotA')], bis: 'laeuft', jetztNachAnpfiffMs: 320_000,
+      // Die Tore liegen vor "jetzt" (5:20) und tragen echte Spielminuten; Nummer 9, 11 und beim dritten Tor bewusst keine (Warnzeichen als Beispiel)
+      toreBisMs: 320_000, nummern: [9, 11, undefined],
       // Gelb, Gelb-Rot und Rot im laufenden Finale (Karten-Farben nur fuer Karten, Oberflaeche E)
       karten: [
         { art: 'YELLOW_CARD', teamId: seiteId(finale, 'slotA'), clockMs: 90_000, nummer: 7 },
@@ -336,11 +363,12 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
   return { turnier: t, kopien }
 }
 
-export type PhasenArt = 'halbzeitpause' | 'verlaengerung' | 'strafstoss'
+export type PhasenArt = 'halbzeitpause' | 'verlaengerung' | 'strafstoss' | 'vorwarnung'
 export const PHASEN: Record<PhasenArt, { id: string; titel: string; code: string; name: string }> = {
   halbzeitpause: { id: 'hallencup-phase-halbzeit', titel: 'Hallencup Phase Halbzeit', code: 'PHASEH', name: 'Halbzeitpause' },
   verlaengerung: { id: 'hallencup-phase-verlaengerung', titel: 'Hallencup Phase Verlängerung', code: 'PHASEV', name: 'Verlängerung läuft' },
   strafstoss: { id: 'hallencup-phase-strafstoss', titel: 'Hallencup Phase Strafstoß', code: 'PHASES', name: 'Strafstoßschießen läuft' },
+  vorwarnung: { id: 'hallencup-phase-vorwarnung', titel: 'Hallencup Phase Vorwarnung', code: 'PHASEW', name: 'Spiel kurz vor dem Ende (Restzeit 2:40, nächstes Spiel steht an)' },
 }
 
 /**
@@ -377,12 +405,15 @@ async function erzeugePhasenturnier(art: PhasenArt, nr: number): Promise<Erzeugt
   gruppe.forEach((m, i) => {
     ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore: [seiteId(m, 'slotA')], bis: 'ende' }, start + i * 900_000))
   })
-  resolvePlayoffPairings(t)
+  schliesseGruppenAb(t)
   const [hf1] = halbfinaleVon(t)
   const [a, b] = [seiteId(hf1, 'slotA'), seiteId(hf1, 'slotB')]
   const plan: EreignisPlan =
-    art === 'halbzeitpause' ? { tore: [a], bis: 'halbzeitpause' }
-    : art === 'verlaengerung' ? { tore: [a, b], bis: 'ende', verlaengerung: { laeuft: true } }
+    art === 'halbzeitpause' ? { tore: [a], nummern: [8], bis: 'halbzeitpause' }
+    // Vorwarnung (@SL-155): zweiter und letzter Abschnitt, Restzeit 2:40 (unter 3:00); die Uhr steht 7:20 nach dem Anpfiff
+    // (10:00 Spielzeit, 1 Minute Halbzeitpause), das 2. Halbfinale ist das "Nächste" auf Feld 1.
+    : art === 'vorwarnung' ? { tore: [a, b], nummern: [8, 4], bis: 'laeuft', toreBisMs: 440_000, jetztNachAnpfiffMs: 440_000 + 60_000 }
+    : art === 'verlaengerung' ? { tore: [a, b], nummern: [8, 4], bis: 'ende', verlaengerung: { laeuft: true } }
     : { tore: [], bis: 'ende', verlaengerung: {}, elfmeter: { a: [true, false], b: [false, true], beendet: false } }
   ersetze(hf1, wendeEngineAn(t, hf1, a, b, plan, start + 20_000_000))
   // 2. Halbfinale, Platz 3 und Finale bleiben ungespielt.
@@ -418,6 +449,29 @@ function normalisiereIds<T>(wert: T, spielIds: string[], art: number): T {
   return JSON.parse(text) as T
 }
 
+/**
+ * A-13c (Review #336 R1): Abschluss-Lage für die Messung der neuen Elemente. Aus dem Hauptturnier abgeleitet: alle Gruppenspiele
+ * entschieden, die Finalrunde noch ohne Spiele und ohne Besetzung; Gruppe A abgeschlossen und nach einer Korrektur veraltet
+ * (`stale`, „Besetzung prüfen“, Halbfinal-Seiten aus A besetzt), Gruppe B fertig, aber nicht abgeschlossen (Vorschlag „Gruppe abschließen“).
+ */
+function abschlussTurnier(basis: Tournament): Tournament {
+  const matches: Match[] = basis.matches.map((m, i) => {
+    const id = uuid(9, i + 1)
+    if (m.isFinal !== true) { return { ...m, id } }
+    const { scoreA: _a, scoreB: _b, decidedBy: _d, finishedAt: _f, timerStartTime: _s, timerElapsedSeconds: _e, penaltyScoreA: _pa, penaltyScoreB: _pb, overtimeScoreA: _oa, overtimeScoreB: _ob, events: _ev, ...rest } = m
+    return {
+      ...rest, id, matchStatus: 'scheduled',
+      slotA: m.originA === undefined ? m.slotA : pendingSlot(m.originA),
+      slotB: m.originB === undefined ? m.slotB : pendingSlot(m.originB),
+    }
+  })
+  const t: Tournament = { ...basis, id: ABSCHLUSS_ID, title: 'Hallencup Abschluss', shareCode: 'ABSC26', monitors: [], matches, groupCompletions: [] }
+  const ranking = activeRanking(t, 'A')
+  const placed = applyCompleteGroup(t, { groupId: 'A', ranking, openRanks: [], tieDecisions: [], knownDecisionIds: [], expectedState: expectedState(t, 'A') })
+  if (placed.tournament === undefined) { throw new Error('Abschluss-Saat: Gruppe A nicht abgeschlossen') }
+  return { ...placed.tournament, groupCompletions: (placed.tournament.groupCompletions ?? []).map((c) => ({ ...c, stale: true })) }
+}
+
 export async function erzeugeSaat(): Promise<SaatDatei> {
   ereignisZaehler = 0
   const haupt = await erzeugeHauptturnier()
@@ -426,7 +480,7 @@ export async function erzeugeSaat(): Promise<SaatDatei> {
   const entwurf = await erzeugeEntwurf()
   const h = normalisiereIds(haupt, haupt.turnier.matches.map((m) => m.id), 3)
   const p = phasen.map((x, i) => normalisiereIds(x, x.turnier.matches.map((m) => m.id), 6 + i))
-  const turniere = [h.turnier, ...p.map((x) => x.turnier), entwurf.turnier]
+  const turniere = [h.turnier, ...p.map((x) => x.turnier), entwurf.turnier, abschlussTurnier(h.turnier)]
   const rolle = (f: (m: Match) => boolean): string | undefined => h.turnier.matches.find(f)?.id
   const kopien = [...h.kopien, ...p.flatMap((x) => x.kopien)]
   return {

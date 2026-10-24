@@ -43,7 +43,7 @@ describe('useTournamentWizard.removeTeam (@FU-086)', () => {
   });
 
   it('@FU-086 Team entfernen und speichern: kein Spiel mehr mit dieser Team-ID', async () => {
-    const { result } = renderHook(() => useTournamentWizard(tournament()));
+    const { result } = renderHook(() => useTournamentWizard(tournament(), () => Promise.resolve(false)));
     act(() => result.current.removeTeam(A));
     await act(async () => { await result.current.saveDraft(); });
 
@@ -54,14 +54,14 @@ describe('useTournamentWizard.removeTeam (@FU-086)', () => {
   });
 
   it('@FU-086 Gegenbeispiel: Spiele anderer Teams bleiben stehen', () => {
-    const { result } = renderHook(() => useTournamentWizard(tournament()));
+    const { result } = renderHook(() => useTournamentWizard(tournament(), () => Promise.resolve(false)));
     act(() => result.current.removeTeam(A));
     expect(result.current.formData.matches?.map((m) => m.id)).toEqual(['m-bc']);
     expect(result.current.formData.teams).toHaveLength(2);
   });
 
   it('@FU-086 Team mit Ergebnis-Spiel bleibt als isRemoved, nur Spiele ohne Ergebnis fallen weg (wie deleteTeamSafely)', () => {
-    const { result } = renderHook(() => useTournamentWizard(tournament(true)));
+    const { result } = renderHook(() => useTournamentWizard(tournament(true), () => Promise.resolve(false)));
     act(() => result.current.removeTeam(B));
     expect(result.current.formData.teams?.find((t) => t.id === B)?.isRemoved).toBe(true);
     expect(result.current.formData.matches?.map((m) => m.id)).toEqual(['m-ab']);
@@ -73,7 +73,7 @@ describe('useTournamentWizard.removeTeam (@FU-086)', () => {
       [createTeamRow({ id: A, name: 'FC Nord' }), createTeamRow({ id: B, name: 'SV Sued' }), createTeamRow({ id: C, name: 'TSV Ost' })],
       [createMatchRow({ id: 'm-ab', team_a_id: A, team_b_id: B, score_a: 2 })]
     );
-    const { result } = renderHook(() => useTournamentWizard(halfScored));
+    const { result } = renderHook(() => useTournamentWizard(halfScored, () => Promise.resolve(false)));
     act(() => result.current.removeTeam(B));
     expect(result.current.formData.teams?.find((t) => t.id === B)?.isRemoved).toBe(true);
     expect(result.current.formData.matches?.map((m) => m.id)).toEqual(['m-ab']);
@@ -81,7 +81,7 @@ describe('useTournamentWizard.removeTeam (@FU-086)', () => {
 
   it('@FU-086 Gegenbeispiel: Team ohne Spielplan entfernen aendert nichts an den Spielen (Entwurf)', () => {
     const base = tournament();
-    const { result } = renderHook(() => useTournamentWizard({ ...base, matches: [] }));
+    const { result } = renderHook(() => useTournamentWizard({ ...base, matches: [] }, () => Promise.resolve(false)));
     act(() => result.current.removeTeam(A));
     expect(result.current.formData.teams?.map((t) => t.id)).toEqual([B, C]);
     expect(result.current.formData.matches).toEqual([]);

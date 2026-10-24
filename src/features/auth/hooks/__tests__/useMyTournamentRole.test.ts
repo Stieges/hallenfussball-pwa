@@ -8,7 +8,7 @@
  * gibt, und zementierte damit den Fehler statt ihn zu fangen.
  *
  * Diese Tests decken die vier Zweige direkt an der Quelle ab, unabhängig von den drei
- * Aufrufstellen (DangerZoneCategory, TeamHelpersCategory, MemberList).
+ * Aufrufstellen (DangerZoneCategory, TeamHelpersCategory; MemberList entfiel mit A-18a).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';

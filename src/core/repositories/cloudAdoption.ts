@@ -24,10 +24,31 @@ export interface CloudAdoption {
     /** Revisionen je Spiel nach der Übernahme (vollständig). */
     revisions: ReadonlyMap<string, number>;
     /**
+     * GA4 A-13b-C: Server-Tabellen ohne eigene Version (`group_completions`, Verlauf), die sich geändert haben (Feldweg). Der Client
+     * schreibt sie nie; die lokale Kopie ist nur Zwischenspeicher und folgt der Cloud, ohne `version` zu berühren.
+     */
+    serverTables?: ServerTables;
+    /**
      * C-VERSION-MEHRDEUTIG: Feldweg für eine Kopie ohne bestätigte Version (älterer Stand), deren Version gleich der
      * Cloud-Version ist, bei erfüllter Regel Q (nichts Eigenes wartet oder ist gescheitert): die Cloud bestätigt sie.
      */
     confirmedVersion?: number;
+}
+
+export type ServerTables = Pick<Tournament, 'groupCompletions' | 'decisionLog'>;
+
+/** Felder der Cloud-Kopie, die vom lokalen Stand abweichen; nur gelesene Werte zählen (fehlend = unbekannt, nie löschen). */
+export function changedServerTables(local: Tournament, cloud: Tournament): ServerTables | undefined {
+    const changed: ServerTables = {
+        ...(cloud.groupCompletions !== undefined && JSON.stringify(cloud.groupCompletions) !== JSON.stringify(local.groupCompletions) ? { groupCompletions: cloud.groupCompletions } : {}),
+        ...(cloud.decisionLog !== undefined && JSON.stringify(cloud.decisionLog) !== JSON.stringify(local.decisionLog) ? { decisionLog: cloud.decisionLog } : {}),
+    };
+    return Object.keys(changed).length === 0 ? undefined : changed;
+}
+
+/** A-15c: Server-Tabellen ohne die Abschlüsse (`undefined`, wenn danach nichts übrig bleibt). */
+function withoutCompletions({ groupCompletions: _kept, ...rest }: ServerTables): ServerTables | undefined {
+    return Object.keys(rest).length === 0 ? undefined : rest;
 }
 
 export interface CloudAdoptionOptions {
@@ -38,6 +59,11 @@ export interface CloudAdoptionOptions {
     owned: (tournament: Tournament) => Tournament;
     /** A-08f3c2 Regel Q (`cloudQueueGuard.ts`): darf die ganze Kopie ersetzt werden? Ohne Angabe ja. Geprüft im Kettenschritt. */
     wholeAllowed?: () => boolean;
+    /**
+     * A-15c (@W2A-062, @TM-146): wartet ein ohne Netz abgeschlossener Abschluss auf den Versand, übernimmt der Feldweg die
+     * Abschlüsse der Cloud nicht (sonst verschwände er auf dem Gerät, bevor der Server geantwortet hat). Ohne Angabe: übernehmen.
+     */
+    keepLocalCompletions?: () => boolean;
 }
 
 export function maxRevisions(a: ReadonlyMap<string, number>, b: ReadonlyMap<string, number>): Map<string, number> {
@@ -80,7 +106,13 @@ export function decideCloudAdoption(
     const merged = mergeServerLedFields(local, cloud, read.matchRevisions, stored, 'stufe2');
     const confirms = local.serverVersion === undefined && cloud.version !== undefined && local.version === cloud.version
         && (options.wholeAllowed?.() ?? true);
-    return { patch: merged.patch, revisions: maxRevisions(stored, merged.adopted), ...(confirms ? { confirmedVersion: cloud.version } : {}) };
+    const changed = changedServerTables(local, cloud);
+    const serverTables = changed !== undefined && options.keepLocalCompletions?.() === true ? withoutCompletions(changed) : changed;
+    return {
+        patch: merged.patch, revisions: maxRevisions(stored, merged.adopted),
+        ...(confirms ? { confirmedVersion: cloud.version } : {}),
+        ...(serverTables !== undefined ? { serverTables } : {}),
+    };
 }
 
 const revisionKey = (tournamentId: string): string => `serverRevisions-${tournamentId}`;

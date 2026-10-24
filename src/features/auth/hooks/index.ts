@@ -8,9 +8,6 @@ export type {
   TournamentSortOption,
 } from './useUserTournaments';
 
-export { useInvitation } from './useInvitation';
-export type { UseInvitationReturn } from './useInvitation';
-
 export { useTournamentMembers } from './useTournamentMembers';
 export type {
   UseTournamentMembersReturn,

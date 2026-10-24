@@ -24,11 +24,14 @@ import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 export function hydrateMatch(raw: unknown): Match {
   const match = raw as Record<string, unknown>;
 
-  // Convert scheduledTime from string to Date if present
-  if (match.scheduledTime && typeof match.scheduledTime === 'string') {
+  // Convert scheduledTime (and B-26 originalStart) from string to Date if present
+  const scheduledText = typeof match.scheduledTime === 'string' && match.scheduledTime !== '' ? match.scheduledTime : undefined;
+  const originalText = typeof match.originalStart === 'string' && match.originalStart !== '' ? match.originalStart : undefined;
+  if (scheduledText !== undefined || originalText !== undefined) {
     return {
       ...match,
-      scheduledTime: new Date(match.scheduledTime),
+      ...(scheduledText === undefined ? {} : { scheduledTime: new Date(scheduledText) }),
+      ...(originalText === undefined ? {} : { originalStart: new Date(originalText) }),
     } as unknown as Match;
   }
 

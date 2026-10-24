@@ -166,6 +166,9 @@ pending_assertions_for() {
     20261110_004_coadmin_einsatz.sql)
       echo "share-rpcs-permission-based make-public-keeps-existing-code heartbeats-select-manage-screens"
       ;;
+    20261110_007_ci_schema_reader_grants.sql)
+      echo "positive-ci-schema-reader-select-field-control positive-ci-schema-reader-select-match-corrections"
+      ;;
     20261110_005_result_entry_forfeit.sql)
       echo "matches-guard-engine-columns-forfeit-absent append-match-events-writes-forfeit-absent"
       ;;
@@ -180,6 +183,15 @@ pending_assertions_for() {
       ;;
     20261110_009_spiel_beenden.sql)
       echo "append-match-events-end-by-lead-without-claim"
+      ;;
+    20261117_104_public_payload.sql)
+      echo "public-read-functions-definer-execute-anon public-read-no-anon-select-policies public-read-view-schema-no-client-access public-read-reading-member-execute-only-authenticated public-read-default-privileges-no-anon public-read-reshare-keeps-code public-read-core-unchanged"
+      ;;
+    20261113_101_monitor_heartbeat_wake_lock.sql)
+      echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
+      ;;
+    20261110_010_standing_decision_null_version.sql)
+      # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
       ;;
     20261117_005_klaerungsliste.sql)
       echo "klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"
@@ -605,10 +617,13 @@ PRIVILEGE_ASSERTION_NAMES=(
   "share-rpcs-permission-based"
   "make-public-keeps-existing-code"
   "heartbeats-select-manage-screens"
+  "positive-ci-schema-reader-select-field-control"
+  "positive-ci-schema-reader-select-match-corrections"
   # A-25b (20261110_005_result_entry_forfeit.sql): Nichtantritt -- forfeit_absent geschuetzt und vom Schreibweg (mit
   # Feldsteuerung) geschrieben.
   "matches-guard-engine-columns-forfeit-absent"
   "append-match-events-writes-forfeit-absent"
+  "append-match-events-end-by-lead-without-claim"
   # A-13b-S (20261110_006_group_completion.sql): Gruppe abschliessen am Server -- Tabellen ohne Client-Schreibrecht,
   # RPCs nur authenticated, Hilfen ohne EXECUTE, Sperrreihenfolge Spiele vor Turnier, Trigger.
   "group-completion-tables-no-client-writes"
@@ -648,7 +663,17 @@ PRIVILEGE_ASSERTION_NAMES=(
   "lifecycle-closed-for-helpers-single-source"
   "lifecycle-late-entries-unique-event"
   "lifecycle-log-request-id-unique"
-  "append-match-events-end-by-lead-without-claim"
+  # B-14 (20261117_104_public_payload.sql, E-A2): oeffentliche Daten nur ueber die Positivliste.
+  "public-read-functions-definer-execute-anon"
+  "public-read-no-anon-select-policies"
+  "public-read-view-schema-no-client-access"
+  "public-read-reading-member-execute-only-authenticated"
+  "public-read-default-privileges-no-anon"
+  "public-read-reshare-keeps-code"
+  "public-read-core-unchanged"
+  # B-48b (20261113_101_monitor_heartbeat_wake_lock.sql): Lebenszeichen mit Kennung als Text, Pruefung gegen config.monitors.
+  "monitor-heartbeat-rpc-checks-config-monitors"
+  "monitor-heartbeat-key-per-tournament-wake-lock"
   # A-35 (20261117_005_klaerungsliste.sql): Klaerungsliste am Server.
   "klaerungsliste-tables-rls-no-client-writes"
   "klaerungsliste-select-policy"

@@ -32,6 +32,8 @@ import {
   type ConsentStatus,
 } from '../../../lib/consent';
 import { reinitializeSentry } from '../../../lib/sentry';
+import { useToast } from '../../../components/ui/Toast';
+import { ConfirmDialog, useConfirmDialog } from '../../../components/ui/ConfirmDialog';
 
 // =============================================================================
 // Types
@@ -57,6 +59,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 }) => {
   const navigate = useNavigate();
   const { t } = useTranslation('settings');
+  // @OB-017: Rückfragen im Dialog der App, Hinweise als Meldung der App, nie als Fenster des Browsers
+  const { showSuccess, showError, showInfo } = useToast();
+  const forceUpdateDialog = useConfirmDialog({
+    title: t('data.forceUpdate.dialogTitle'),
+    message: t('data.forceUpdate.confirmMessage'),
+    variant: 'warning',
+    confirmText: t('data.forceUpdate.action'),
+  });
+  const revokeDialog = useConfirmDialog({
+    title: t('privacy.revoke.dialogTitle'),
+    message: t('privacy.revoke.confirmMessage'),
+    variant: 'warning',
+    confirmText: t('privacy.revoke.action'),
+  });
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { fontSize, setFontSize } = useSettings();
 
@@ -103,7 +119,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [isClearing, setIsClearing] = useState(false);
 
   const handleForceUpdate = useCallback(async () => {
-    const confirmed = window.confirm(t('data.forceUpdate.confirmMessage'));
+    const confirmed = await forceUpdateDialog.confirm();
 
     if (!confirmed) {
       return;
@@ -142,20 +158,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         console.error('[ForceUpdate] Error:', err);
       }
       setIsClearing(false);
-      alert(t('data.forceUpdate.errorMessage'));
+      showError(t('data.forceUpdate.errorMessage'));
     }
-  }, [t]);
+  }, [t, forceUpdateDialog, showError]);
 
   // Handle consent revocation
-  const handleRevokeConsent = useCallback(() => {
-    const confirmed = window.confirm(t('privacy.revoke.confirmMessage'));
+  const handleRevokeConsent = useCallback(async () => {
+    const confirmed = await revokeDialog.confirm();
     if (confirmed) {
       revokeConsent();
       setConsent(null);
       void reinitializeSentry();
-      alert(t('privacy.revoke.successMessage'));
+      showSuccess(t('privacy.revoke.successMessage'));
     }
-  }, [t]);
+  }, [t, revokeDialog, showSuccess]);
 
   // Map current theme to BaseTheme
   const currentBaseTheme: BaseTheme = theme;
@@ -263,7 +279,7 @@ ${t('support.emailBody')}
                   names.forEach((name) => void caches.delete(name));
                 });
               }
-              alert(t('data.clearCache.success'));
+              showSuccess(t('data.clearCache.success'));
             }}
           />
           <SettingItem
@@ -323,7 +339,7 @@ ${t('support.emailBody')}
             description={t('about.changelog.description')}
             onClick={() => {
               // TODO: Show changelog modal
-              alert(t('about.changelog.content', { version: APP_VERSION }));
+              showInfo(t('about.changelog.content', { version: APP_VERSION }), { duration: 8000 });
             }}
           />
         </SettingsCategory>
@@ -353,7 +369,7 @@ ${t('support.emailBody')}
               label={t('privacy.revoke.label')}
               description={t('privacy.revoke.description')}
               actionLabel={t('privacy.revoke.action')}
-              onClick={handleRevokeConsent}
+              onClick={() => { void handleRevokeConsent(); }}
             />
           )}
         </SettingsCategory>
@@ -374,6 +390,8 @@ ${t('support.emailBody')}
           />
         </SettingsCategory>
       </div>
+      <ConfirmDialog {...forceUpdateDialog.dialogProps} />
+      <ConfirmDialog {...revokeDialog.dialogProps} />
     </div>
   );
 };

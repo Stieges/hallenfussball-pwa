@@ -137,6 +137,9 @@
 #                                                   # und die Vollmatrix-Zellen matches_update/teams_update/
 #                                                   # monitors_* muessen hier ROT sein (Gegenprobe, Exit 0).
 #                                                   # Laesst auch 20261110_002 (A-27) weg, das an _001 haengt.
+#   scripts/rls-role-matrix.sh --without-b14       # Alles ("nachher"), aber OHNE 20261117_104 (B-14: oeffentliche
+#                                                   # Daten nur ueber die Positivliste) -- die B-14-Zeilen
+#                                                   # (rls-matrix.d/spur-b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-a27       # Alles ("nachher") mit A-11, aber OHNE 20261110_002 (A-27:
 #                                                   # Geraete-Rollen helper/screen, anonyme Sitzungen nur mit
 #                                                   # Geraete-Rolle, Guard, anon ohne Schreibrecht) -- die A-27-Zeilen
@@ -153,6 +156,9 @@
 #   scripts/rls-role-matrix.sh --without-a25b      # Alles ("nachher"), aber OHNE 20261110_005 (A-25b: Nichtantritt-Wertung,
 #                                                   # forfeit_absent als Schutzspalte) -- die A-25b-Zeilen
 #                                                   # (rls-matrix.d/spur-wertung-a25.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-sb        # Alles ("nachher"), aber OHNE 20261110_009 (Spiel beenden im Spielplan)
+#                                                   # -- die Zeilen (rls-matrix.d/spur-x-spiel-beenden.sh) muessen hier
+#                                                   # ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-a13bs     # Alles ("nachher"), aber OHNE 20261110_006 (A-13b-S: Gruppe abschliessen,
 #                                                   # Verlauf, Hinweise, Klaerungen) -- die A-13b-S-Zeilen
 #                                                   # (rls-matrix.d/spur-gruppe-a13b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
@@ -163,9 +169,9 @@
 #                                                   # QR) -- die A-16-Zeilen (rls-matrix.d/spur-helfer-a16.sh) muessen
 #                                                   # hier ROT sein (Gegenprobe, Exit 0). Ohne A-34 (_003) entfaellt A-16
 #                                                   # ebenfalls (Fail-fast der Migration braucht field_control).
-#   scripts/rls-role-matrix.sh --without-sb        # Alles ("nachher"), aber OHNE 20261110_009 (Spiel beenden im Spielplan)
-#                                                   # -- die Zeilen (rls-matrix.d/spur-x-spiel-beenden.sh) muessen hier
-#                                                   # ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-b48b      # Alles ("nachher"), aber OHNE 20261113_101 (B-48b: Lebenszeichen mit
+#                                                   # Kennung als Text, Pruefung gegen config.monitors) -- die B-48b-Zeilen
+#                                                   # (rls-matrix.d/spur-b.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-a35       # Alles ("nachher"), aber OHNE 20261117_005 (A-35 Klaerungsliste) --
 #                                                   # die Zeilen (rls-matrix.d/spur-y-klaerung-a35.sh) muessen hier
 #                                                   # ROT sein (Gegenprobe, Exit 0).
@@ -269,14 +275,18 @@ WITH_A34_REQ=1
 WITH_CA2_REQ=1
 # A-25b: 20261110_005 im Modus "nachher" einspielen (Gegenprobe --without-a25b laesst sie weg; braucht _003 A-34).
 WITH_A25B_REQ=1
+# Spiel beenden: 20261110_009 im Modus "nachher" einspielen (Gegenprobe --without-sb laesst sie weg; braucht _005 A-25b).
+WITH_SB_REQ=1
 # A-13b-S: 20261110_006 im Modus "nachher" einspielen (Gegenprobe --without-a13bs laesst sie weg; braucht _005).
 WITH_A13BS_REQ=1
 # A-16: 20261110_008 im Modus "nachher" einspielen (Gegenprobe --without-a16 laesst sie weg; braucht _002 und _003).
 WITH_A16_REQ=1
 # A-21a-S: 20261113_003 im Modus "nachher" einspielen (Gegenprobe --without-a21as laesst sie weg; braucht _006).
 WITH_A21AS_REQ=1
-# Spiel beenden: 20261110_009 im Modus "nachher" einspielen (Gegenprobe --without-sb laesst sie weg; braucht _005 A-25b).
-WITH_SB_REQ=1
+# B-14: 20261117_104 im Modus "nachher" einspielen (Gegenprobe --without-b14 laesst sie weg; braucht _002 und _004).
+WITH_B14_REQ=1
+# B-48b: 20261113_101 im Modus "nachher" einspielen (Gegenprobe --without-b48b laesst sie weg; Erwartungen setzen A-27 voraus).
+WITH_B48B_REQ=1
 # A-35: 20261117_005 im Modus "nachher" einspielen (Gegenprobe --without-a35 laesst sie weg; braucht _003 A-21a-S und _008).
 WITH_A35_REQ=1
 
@@ -332,6 +342,10 @@ while [[ $# -gt 0 ]]; do
       WITH_A25B_REQ=0
       shift
       ;;
+    --without-sb)
+      WITH_SB_REQ=0
+      shift
+      ;;
     --without-a13bs)
       WITH_A13BS_REQ=0
       shift
@@ -344,8 +358,12 @@ while [[ $# -gt 0 ]]; do
       WITH_A16_REQ=0
       shift
       ;;
-    --without-sb)
-      WITH_SB_REQ=0
+    --without-b14)
+      WITH_B14_REQ=0
+      shift
+      ;;
+    --without-b48b)
+      WITH_B48B_REQ=0
       shift
       ;;
     --without-a35)
@@ -699,6 +717,37 @@ elif [[ "$WITH_A13BS" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, A-21a-S-Gegenprobe (ohne 20261113_003)"
 fi
 
+# B-48b (20261113_101, @ME-064, @ME-026/@ME-027 Datenteil; Befund C-HEARTBEAT): record_monitor_heartbeat mit Kennung als
+# Text, Pruefung gegen config.monitors, Sichtbarkeit is_public oder tournamentSettings. Haengt technisch nur an
+# has_tournament_permission (20260924_002); eingespielt mit A-27, weil die Zeilen in rls-matrix.d/spur-b.sh die Regel
+# "anonyme Sitzung zaehlt nicht als Eigentuemer" erwarten. Unabhaengig von _004 (Lesen bleibt dort, --without-coadmin
+# misst B-48b deshalb mit). --without-b48b ist die Gegenprobe.
+B48B_FILE="$(find_migration 20261113_101)"
+WITH_B48B=0
+if [[ "$WITH_A27" -eq 1 && "$WITH_B48B_REQ" -eq 1 ]]; then
+  WITH_B48B=1
+  echo "Migration einspielen: $(basename "$B48B_FILE")" >&2
+  psql_stdin < "$B48B_FILE"
+  MODE_LABEL="$MODE_LABEL + B-48b (20261113_101)"
+elif [[ "$WITH_A27" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, B-48b-Gegenprobe (ohne 20261113_101)"
+fi
+
+# B-14 (20261117_104, E-A2, Review Focus 6, @ZM-096..@ZM-102): anon und Konten ohne Rolle lesen tournaments, teams,
+# team_players, matches, match_events, monitors, sponsors, match_corrections nicht mehr direkt; oeffentlich nur ueber
+# public_tournament/display_tournament. Setzt _002 (Rolle screen) und _004 (Freigabe-Funktionen) voraus; --without-b14
+# ist die Gegenprobe (die B-14-Zeilen in rls-matrix.d/spur-b.sh muessen dann ROT sein).
+B14_FILE="$(find_migration 20261117_104)"
+WITH_B14=0
+if [[ "$WITH_CA2" -eq 1 && "$WITH_B14_REQ" -eq 1 ]]; then
+  WITH_B14=1
+  echo "Migration einspielen: $(basename "$B14_FILE")" >&2
+  psql_stdin < "$B14_FILE"
+  MODE_LABEL="$MODE_LABEL + B-14 (20261117_104)"
+elif [[ "$WITH_CA2" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, B-14-Gegenprobe (ohne 20261117_104)"
+fi
+
 # A-35 (20261117_005, Klaerungsliste am Server): zwei Tabellen (match_reviews mit Lese-Policy, field_control_log ohne),
 # Klaerungs-Hilfen, list_match_reviews, append_match_events auf der Fassung _003. Setzt _003 (A-21a-S), _009 und _008 voraus
 # (Fail-fast); --without-a35 ist die Gegenprobe.
@@ -960,13 +1009,13 @@ VALUES
   ('$C_DECLINED_COADMIN', '$T_MAIN', '$U_DECLINED', 'co-admin', now(), now());
 
 -- Fixrunde 2 / K2: offene (unclaimed) Einladung auf T_MAIN, exakt wie
--- invitationService.ts#createInvitation sie anlegt -- user_id NULL, invite_email gesetzt,
+-- invitationService.ts#createInvitation (bis A-18a) sie anlegt -- user_id NULL, invite_email gesetzt,
 -- accepted_at NULL, use_count 0. Wird von "eingeladener nimmt Einladung an" beansprucht.
 -- Fixrunde 1 (R6, M1): "invited_by" = U_OWNER ergänzt (vorher nicht gesetzt) — wird von den
 -- neuen R6-Zeilen "Eingeladener sieht Einladenden vor/nach Annahme" gebraucht
 -- (profile_visible_to_viewer()-Regel (ii)). Ändert an K2/L5 nichts, die lesen die Spalte nicht.
 -- R7-Fixrunde 1 (M-1, final-review-2.md): "expires_at" = now() + 7 Tage ergänzt (vorher NULL) --
--- die App setzt bei JEDER Einladung immer ein zukünftiges expires_at (invitationService.ts:183),
+-- die App setzt bei JEDER Einladung immer ein zukünftiges expires_at (invitationService.ts:183, bis A-18a),
 -- eine Fixture ohne Ablaufdatum verschleiert DB-Mutationen an der expires_at-Prüfung im
 -- Annahme-Zweig von protect_collaborator_row() (Review-Beleg DB-M2: blieb ohne diesen Fix
 -- fälschlich grün). Betrifft ALLE Zeilen, die diese geteilte Fixture nutzen (k2/l5/R6/R7) --
@@ -1601,7 +1650,7 @@ else
     "UPDATE public.tournament_collaborators SET tournament_id = '$T_ANON' WHERE tournament_id = '$T_MAIN' AND user_id = '$U_COADMIN';")"
 
   # K2-3: Eingeladener nimmt die Einladung an — exakt das Spaltenmuster der App
-  # (invitationService.ts#acceptInvitation): user_id, accepted_at, use_count. Der
+  # (invitationService.ts#acceptInvitation (bis A-18a)): user_id, accepted_at, use_count. Der
   # E-Mail-Claim ist nötig, damit die BESTEHENDE (unveränderte) collaborators_update_v3
   # die noch nicht beanspruchte Zeile überhaupt sichtbar macht (invite_email = auth.email()).
   k2_accept_invitation="$(run_write "$U_INVITEE" \
@@ -1870,7 +1919,7 @@ SQL
   n4_delete_foreign_rows="$(A27_AS_REAL=1 run_write "$U_OWNER_ANON" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
 
   # manageMembers (R5b): Co-Admin versucht, einen neuen Mitarbeiter in T_MAIN einzuladen (echter
-  # App-Pfad, invitationService.ts#createInvitation-Muster) → muss abgelehnt bleiben. Eigentümer
+  # App-Pfad, invitationService.ts#createInvitation (bis A-18a)-Muster) → muss abgelehnt bleiben. Eigentümer
   # dieselbe Sonde → muss gelingen.
   managemembers_coadmin_denied="$(run_write "$U_COADMIN" \
     "INSERT INTO public.tournament_collaborators (id, tournament_id, invite_code, invite_email, role, invited_by, max_uses) VALUES ('$(uuid_for invite:n4-coadmin)', '$T_MAIN', 'RLSCOADMININV', 'nobody-coadmin@rls-matrix.test', 'viewer', '$U_COADMIN', 5);")"
@@ -2201,6 +2250,10 @@ fi
 exp_r7_active="allowed"
 exp_r7_accept_valid="allowed"
 exp_r7_public_nonmember="allowed"
+# B-14: ein Konto ohne Rolle liest ein oeffentliches Turnier nicht mehr direkt (nur ueber public_tournament).
+if [[ "${WITH_B14:-0}" -eq 1 ]]; then
+  exp_r7_public_nonmember="denied"
+fi
 # R7-Fixrunde 1 (N-3, final-review-2.md): "accepted_at IS NOT NULL" ist NICHT Teil von R7 selbst
 # (das prüften schon die alten Baseline-Select-Policies) -- eine offene, nie angenommene
 # Mitgliedschaft (U_PENDING/C_OPEN_COADMIN, role='co-admin', accepted_at IS NULL) darf in BEIDEN
@@ -2235,7 +2288,7 @@ r7_declined_invite_sees_inviter="$(run_select_as authenticated "$U_DECLINED_INVI
 r7_expired_invite_sees_inviter="$(run_select_as authenticated "$U_EXPIRED_INVITEE" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';" "$EXPIRED_INVITEE_EMAIL")"
 
 # Annahme-Sonden: exakt derselbe Update-Pfad wie k2_accept_invitation oben
-# (invitationService.ts#acceptInvitation), je eigene, nie committete Transaktion (run_write()).
+# (invitationService.ts#acceptInvitation (bis A-18a)), je eigene, nie committete Transaktion (run_write()).
 r7_accept_declined_invite="$(run_write "$U_DECLINED_INVITEE" \
   "UPDATE public.tournament_collaborators SET user_id = '$U_DECLINED_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_DECLINED_INVITE';" \
   "$DECLINED_INVITEE_EMAIL")"
@@ -2271,6 +2324,10 @@ k1k2_mark_value "n2-abgelaufene-offene-einladung-sieht-einladenden-nicht" "$r7_e
 # unabhängige Regressions-Stichprobe für anonymes LESEN öffentlicher Turniere (siehe Fixrunde-1-
 # Kommentar oben). Immer "true" erwartet.
 pub_expect="true"
+# B-14 (E-A2): ab 20261117_104 liest anon kein Turnier mehr direkt -- dieselbe Stichprobe muss dann "false" sein.
+if [[ "${WITH_B14:-0}" -eq 1 ]]; then
+  pub_expect="false"
+fi
 pub_tournament="$(run_read_as_anon "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
 pub_match="$(run_read_as_anon "SELECT id FROM public.matches WHERE id = '$M_PUBLIC';")"
 pub_event="$(run_read_as_anon "SELECT id FROM public.match_events WHERE id = '$E_PUBLIC';")"
@@ -2309,7 +2366,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

@@ -9,7 +9,8 @@ export type CockpitAktion =
   | 'anpfiff' | 'pauseWeiter' | 'wiederanpfiff' | 'tor' | 'foul' | 'karte' | 'zeitstrafe' | 'rueckgaengig'
   | 'halbzeit' | 'abpfiff' | 'uhrKorrigieren' | 'seitenTauschen' | 'einstellungenAendern'
   | 'eintragZuruecknehmen' | 'nummerAendern' | 'nummerNachtragen' | 'ergebnisBestaetigen'
-  | 'entscheidung' | 'strafstoss' | 'spielFortsetzen';
+  | 'entscheidung' | 'strafstoss' | 'spielFortsetzen'
+  | 'nichtAngetreten';
 
 /** Interner Aktionsschlüssel der Zeitstrafe (kein Anzeigetext); als Konstante, damit die Glossar-Regel nur hier ausgenommen ist. */
 // eslint-disable-next-line local-rules/no-hardcoded-sport-terms-preferred -- interner Aktionsschlüssel, nicht sichtbar
@@ -27,6 +28,7 @@ const ERLAUBT: Record<CockpitAktion, readonly CockpitZustand[]> = {
   eintragZuruecknehmen: [...IM_SPIEL, ...PAUSEN, 'strafstoss'],
   nummerAendern: [...IM_SPIEL, ...PAUSEN, 'entscheidung', 'strafstoss'], nummerNachtragen: ['abgepfiffen'],
   ergebnisBestaetigen: ['abgepfiffen'], entscheidung: ['entscheidung'], strafstoss: ['strafstoss'], spielFortsetzen: ['abgepfiffen'],
+  nichtAngetreten: ['vorAnpfiff'], // @SL-174/@SL-175: nur vor dem Anpfiff (@FU-119), dazu nur die Turnierleitung (`mehrPunkteGrundgeruest`)
 };
 
 /** Wie `darfAktion`, wenn nur der Zustand bekannt ist (z. B. in den Eintrags-Abläufen). */

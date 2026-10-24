@@ -2,17 +2,16 @@
  * Paket TB-B, Task TB-6b/TB-6b' (Oberfläche): Hinweis zur Gruppentabelle bei Gleichstand – beide Hinweisformen, Helfer
  * ohne Tasten, ohne Netz gesperrt, entschieden mit „zurücknehmen“ (G6, ohne Rückfrage), nach Gruppenabschluss mit Schloss.
  * Aus dem Gherkin (nicht am Code abgelesen): @ET-025, @W2A-047, @W2A-050, @W2A-062, @W2A-063, @W2A-064, @W2A-067, @W2A-070,
- * @W2A-071. Mockup v3 (Daniel G1, G2, G5, G6). „Wer/wann“ steht bis GA4 A-13b nirgends: it.fails mit Befund
- * C-ENTSCHEIDUNG-PERSON-OEFFENTLICH (@W2A-063 letzte Zeile, @W2A-071 Zeile 3, @ET-029 letzte Zeile).
+ * @W2A-071. Mockup v3 (Daniel G1, G2, G5, G6). „Wer/wann“ (@W2A-063 letzte Zeile, @W2A-071 Zeile 3) kommt seit GA4 A-13b-C
+ * aus dem Verlauf der Turnierleitung (`decisionLog`); der Helfer sieht es nie (@W2A-071).
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { TieGroupHint } from '../TieGroupHint';
-import { DATA, id } from '../../../../core/standings/__tests__/fixtures';
-import { jgj, lage048, MemoryRepo, nikolaus, shared, shootout } from '../../../../core/standings/__tests__/decisionTestKit';
-import { teamSlot } from '../../../../core/models/matchSlot';
+import { DATA } from '../../../../core/standings/__tests__/fixtures';
+import { closeGroup, jgj, lage048, MemoryRepo, nikolaus, shared, shootout } from '../../../../core/standings/__tests__/decisionTestKit';
 import type { DecisionDraft } from '../../../../core/standings/decisions';
 import type { Tournament } from '../../../../types/tournament';
 import { fakeTie, i18nWrapper, withTie, type FakeTie } from './tieTestKit';
@@ -38,7 +37,7 @@ describe('Hinweis bei offenem Gleichstand (@ET-025, @W2A-067, @W2A-064)', () => 
     const hint = screen.getByTestId('tie-hint-choice');
     expect(within(hint).getByText('Gleichstand – Entscheidung nötig')).toBeInTheDocument();
     expect(hint).toHaveTextContent('TSV Petting und DJK Otting sind nach allen Kriterien gleich (Platz 3 und 4).');
-    expect(hint).toHaveTextContent('Strafstoßschießen eintragen oder Ergebnis so akzeptieren.');
+    expect(hint).toHaveTextContent('Strafstoßschießen eintragen oder Platz teilen.');
     expect(screen.getByTestId('tie-decide-entry')).toHaveTextContent('Gleichstand entscheiden');
     // Gegenbeispiel: die Pflicht-Form ist nicht da
     expect(screen.queryByTestId('tie-hint-mandatory')).toBeNull();
@@ -90,7 +89,7 @@ describe('Wer sieht welche Tasten (@W2A-050, @W2A-071, @W2A-062)', () => {
 
   it('@W2A-050 Helfer, Wahl-Fall: der Text nennt beide Wege, keine Taste', async () => {
     await zeige(nikolaus(), '', fakeTie({ canDecide: false }));
-    expect(screen.getByTestId('tie-hint-choice')).toHaveTextContent('Die Turnierleitung entscheidet: Strafstoßschießen oder Ergebnis so akzeptieren.');
+    expect(screen.getByTestId('tie-hint-choice')).toHaveTextContent('Die Turnierleitung entscheidet: Strafstoßschießen oder Platz teilen.');
     expect(screen.queryByRole('button')).toBeNull();
   });
 
@@ -111,11 +110,11 @@ describe('Wer sieht welche Tasten (@W2A-050, @W2A-071, @W2A-062)', () => {
 });
 
 describe('Entschieden: Ergebnis sichtbar, zurücknehmen bis zum Gruppenabschluss (@W2A-063, @W2A-070, @W2A-071, G6)', () => {
-  it('@W2A-063 nach „Ergebnis so akzeptieren“: Hinweis „Ergebnis akzeptiert“, Platz 3 geteilt, nächstes Team Platz 5, ohne Name und Zeit', async () => {
+  it('@W2A-063 nach „Platz teilen“: Hinweis „Platz geteilt“, Platz 3 geteilt, nächstes Team Platz 5, ohne Name und Zeit', async () => {
     const t = await mitEntscheidung(nikolaus(), shared(['P', 'D']));
     await zeige(t, '', fakeTie());
     const info = screen.getByTestId('tie-decided-info');
-    expect(info).toHaveTextContent('Ergebnis akzeptiert');
+    expect(info).toHaveTextContent('Platz geteilt');
     expect(info).toHaveTextContent('TSV Petting und DJK Otting teilen Platz 3. Das nächste Team steht auf Platz 5.');
     expect(info.textContent).not.toMatch(/\d{1,2}:\d{2}\s*$/); // keine Uhrzeit (Name/Zeit erst mit GA4 A-13b)
     expect(screen.queryByTestId('tie-hint-choice')).toBeNull();
@@ -155,10 +154,8 @@ describe('Entschieden: Ergebnis sichtbar, zurücknehmen bis zum Gruppenabschluss
   it('@W2A-070 nach dem Gruppenabschluss: Schloss-Hinweis, keine Taste mehr; Gegenbeispiel: Helfer sieht den Schloss-Hinweis nicht', async () => {
     const repo = new MemoryRepo(lage048());
     expect((await repo.service(['e-w']).decide(repo.tournament.id, shootout('W', 'S', 4, 3, 'A'))).ok).toBe(true);
-    const geschlossen: Tournament = {
-      ...repo.tournament,
-      matches: repo.tournament.matches.map((m) => (m.id === 'hf-1' ? { ...m, slotA: teamSlot(id('N')), originA: { kind: 'groupRank' as const, group: 'A', rank: 1 } } : m)),
-    };
+    await closeGroup(repo, 'A'); // „Gruppe abschließen“ (A-13b-C): echter Abschluss, nicht die Zwischenregel über Folgespiele
+    const geschlossen: Tournament = repo.tournament;
     const tie = fakeTie();
     await zeige(geschlossen, 'A', tie);
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent('Strafstoßschießen 4:3 für TSV West');
@@ -169,10 +166,8 @@ describe('Entschieden: Ergebnis sichtbar, zurücknehmen bis zum Gruppenabschluss
   it('@W2A-070 nach dem Gruppenabschluss sieht der Helfer das Ergebnis, aber keinen Schloss-Hinweis', async () => {
     const repo = new MemoryRepo(lage048());
     expect((await repo.service(['e-w']).decide(repo.tournament.id, shootout('W', 'S', 4, 3, 'A'))).ok).toBe(true);
-    const geschlossen: Tournament = {
-      ...repo.tournament,
-      matches: repo.tournament.matches.map((m) => (m.id === 'hf-1' ? { ...m, slotA: teamSlot(id('N')), originA: { kind: 'groupRank' as const, group: 'A', rank: 1 } } : m)),
-    };
+    await closeGroup(repo, 'A'); // „Gruppe abschließen“ (A-13b-C): echter Abschluss, nicht die Zwischenregel über Folgespiele
+    const geschlossen: Tournament = repo.tournament;
     await zeige(geschlossen, 'A', fakeTie({ canDecide: false }));
     expect(screen.getByTestId('tie-decided-info')).toBeInTheDocument();
     expect(screen.queryByTestId('tie-closed-note')).toBeNull();
@@ -200,14 +195,14 @@ describe('Entschieden: Ergebnis sichtbar, zurücknehmen bis zum Gruppenabschluss
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  // Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH: „wer wann“ kommt mit dem Verlaufsprotokoll (GA4 A-13b)
-  it.fails('@W2A-063 letzte Zeile: die Turnierleitung sieht, wer wann akzeptiert hat (Besitzer GA4 A-13b) – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
+  // „wer wann“ kommt aus dem Verlauf der Turnierleitung (GA4 A-13b-C, `Tournament.decisionLog`)
+  it('@W2A-063 letzte Zeile: die Turnierleitung sieht, wer wann akzeptiert hat (Verlauf, GA4 A-13b-C)', async () => {
     const t = await mitEntscheidung(nikolaus(), shared(['P', 'D']));
     await zeige(t, '', fakeTie());
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli · \d{2}:\d{2}/);
   });
 
-  it.fails('@W2A-071 Zeile 3: Maria sieht, wer wann entschieden hat (Besitzer GA4 A-13b) – Befund C-ENTSCHEIDUNG-PERSON-OEFFENTLICH', async () => {
+  it('@W2A-071 Zeile 3: Maria sieht, wer wann entschieden hat (Verlauf, GA4 A-13b-C)', async () => {
     const t = await mitEntscheidung(nikolaus(), shootout('D', 'P', 4, 3));
     await zeige(t, '', fakeTie());
     expect(screen.getByTestId('tie-decided-info')).toHaveTextContent(/Olli/);

@@ -31,7 +31,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
-      '**/mcp-ai-hub-analyzer/**',
+      '**/mcp-*-analyzer/**',
       '**/eslint-rules/**',
       '**/scripts/**',
       '**/supabase/functions/**',

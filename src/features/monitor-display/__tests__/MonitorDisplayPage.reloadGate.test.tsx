@@ -36,7 +36,7 @@ vi.mock('../../../lib/supabase', () => ({
   supabase: { from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })), rpc: vi.fn().mockResolvedValue({ error: null }) },
 }));
 vi.mock('../../../core/repositories/SupabaseRepository', () => ({
-  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet }; }),
+  SupabaseRepository: vi.fn(function SupabaseRepository() { return { get: supabaseGet, getForDisplay: async (id: string) => { const t: unknown = await supabaseGet(id); return t ? { kind: 'full', version: 1, serverNowMs: 0, tournament: t } : { kind: 'not-found' }; } }; }),
 }));
 vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { get: localGet }; }),
@@ -136,7 +136,7 @@ describe('MonitorDisplayPage — Neulade-Tor (B-19b, @ZM-124, @ZM-128, @ME-012, 
   });
 
   it('Gegenbeispiel „fast richtig“: Spiel pausiert (Unterbrechung) ist nicht vorbei → 10 min kein Neuladen', async () => {
-    await starte(monitorTurnier(withMatch('match-7', { matchStatus: 'paused' as never }), programmLive(true)));
+    await starte(monitorTurnier(withMatch('match-7', { matchStatus: 'paused' as const }), programmLive(true)));
     act(() => { __fireNeedRefresh(); });
     await vorspulen(10 * 60_000, 5_000);
     expect(updateSWMock).not.toHaveBeenCalled();

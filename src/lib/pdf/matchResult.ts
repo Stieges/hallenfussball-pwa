@@ -36,7 +36,7 @@ export interface ResultOptions {
   results?: boolean;
 }
 
-/** Zustand eines Spiels. `running` (auch pausiert, Verlängerung, Strafstoßschießen) ist `live`. */
+/** Zustand eines Spiels. `running` und `paused` (Halbzeit, Pause, Verlängerung, Strafstoßschießen) sind `live`. */
 export function resultState(match: StatefulMatch, options: ResultOptions = {}): ResultState {
   const { edition = 'plan', results = true } = options;
   if (edition === 'blank' || !results) {
@@ -44,6 +44,7 @@ export function resultState(match: StatefulMatch, options: ResultOptions = {}): 
   }
   switch (match.matchStatus) {
     case 'running':
+    case 'paused':
       return { kind: 'live' };
     case 'finished': {
       if (match.scoreA === undefined || match.scoreB === undefined) {
@@ -64,8 +65,17 @@ export function resultState(match: StatefulMatch, options: ResultOptions = {}): 
     }
     case 'skipped':
       return { kind: 'skipped' };
-    default:
+    case 'scheduled':
+    case 'waiting':
+    case undefined:
       // geplant oder wartend: wie geplant, ohne Ergebnis
       return { kind: 'empty' };
+    default:
+      return assertNeverStatus(match.matchStatus);
   }
+}
+
+/** Neuer `MatchStatus`-Wert ohne Zweig oben: `tsc` meldet es hier (C-MATCHSTATUS-OHNE-PAUSED). */
+function assertNeverStatus(status: never): never {
+  throw new Error(`Unbekannter Spielstatus: ${String(status)}`);
 }

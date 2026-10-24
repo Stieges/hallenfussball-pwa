@@ -1,4 +1,5 @@
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
+import { localDateIso } from '../view/time';
 import { Tournament } from '../models/types';
 import { generateTournamentId } from '../../utils/idGenerator';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
@@ -85,7 +86,7 @@ export class TournamentCreationService {
             isPublic: false,
             title: '',
             ageClass: 'U11',
-            date: new Date().toISOString().split('T')[0],
+            date: localDateIso(),
             timeSlot: '09:00 - 16:00',
             location: { name: '' },
             teams: [],
@@ -117,10 +118,12 @@ export class TournamentCreationService {
 
         switch (step) {
             case 1:
-                if (!data.title) { errors.push('Turniername erforderlich'); }
+                if (!data.title?.trim()) { errors.push('Turniername erforderlich'); }
                 if (!data.date) {
                     errors.push('Startdatum erforderlich');
-                } else if (this.isPastDate(data.date)) {
+                // @W5-003 (C-META-NOVALID): nur ein Entwurf darf nicht in der Vergangenheit liegen; ein festgelegtes
+                // Turnier bleibt nach dem Turniertag korrigierbar (Ort, Schreibweise).
+                } else if (data.status !== 'published' && this.isPastDate(data.date)) {
                     errors.push('Startdatum darf nicht in der Vergangenheit liegen');
                 }
                 if (!data.location?.name) { errors.push('Ort erforderlich'); }
@@ -332,9 +335,7 @@ export class TournamentCreationService {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
             return false;
         }
-        const today = new Date();
-        const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        return isoDate < todayIso;
+        return isoDate < localDateIso();
     }
 
     private findDuplicates(items: (string | undefined)[]): Set<string> {

@@ -19,6 +19,8 @@ import type { Tournament } from '../../types/tournament';
 vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: true,
   supabase: {
+    // A-18a: „Team & Helfer“ fragt die Helfer-Funktionen per rpc; ohne Antwort (Fehler ohne Code = Netz) bleibt die Seite leer.
+    rpc: () => Promise.resolve({ data: null, error: { message: 'kein Netz im Test' } }),
     from: () => ({
       select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }),
       delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
@@ -243,7 +245,9 @@ export function expectRendered(container: HTMLElement) {
 
 export async function renderSettingsScreen() {
   const { SettingsScreen } = await import('../../features/settings/components/SettingsScreen');
-  return renderInRouter(<SettingsScreen onBack={vi.fn()} />);
+  // Die App rendert die Einstellungen unter dem ToastProvider (AppChrome); Hinweise laufen über die App, nicht über alert (@OB-017)
+  const { ToastProvider } = await import('../../components/ui/Toast');
+  return renderInRouter(<ToastProvider><SettingsScreen onBack={vi.fn()} /></ToastProvider>);
 }
 
 export async function renderAdminSidebar() {

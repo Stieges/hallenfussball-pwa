@@ -68,6 +68,27 @@
       "reason": "Der Server nimmt den Eintrag vorerst an, die Turnierleitung entscheidet später darüber. Wortlaut seit B-50 nach @FU-038 („Toms Gerät zeigt „wird geprüft““), vorher „wartet auf Turnierleitung“.",
       "i18nKey": "outbox.awaitingReview"
     },
+    "helperAccess": {
+      "de": "Helfer-Zugang",
+      "en": "helper access",
+      "forbidden_de": ["Helfer-Einladung", "Helfer-Login"],
+      "reason": "A-17b: Helfer treten per QR-Code ohne Konto bei; „Einladung“ klänge nach Konto und E-Mail (R-GA5-1).",
+      "i18nKey": "helpers.access"
+    },
+    "checkNumber": {
+      "de": "Prüfzahl",
+      "en": "check number",
+      "forbidden_de": ["Prüfcode", "Bestätigungszahl"],
+      "reason": "A-17b: zweistellige Zahl (10–99), die Helfer-Handy und Turnierleitung gemeinsam zeigen (@HE-001, @HE-105); kein Passwort und kein Code.",
+      "i18nKey": "helpers.checkNumber"
+    },
+    "approve": {
+      "de": "zulassen",
+      "en": "approve",
+      "forbidden_de": ["freischalten", "genehmigen"],
+      "reason": "A-17b: die Turnierleitung lässt eine Helfer-Anfrage zu (Taste „Zulassen“, @HE-001); ein Verb für Handy und Leitung.",
+      "i18nKey": "helpers.approve"
+    },
     "cancelledMatch": {
       "de": "Ausgefallen",
       "en": "cancelled",

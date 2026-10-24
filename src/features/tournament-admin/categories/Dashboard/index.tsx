@@ -13,6 +13,7 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match } from '../../../../types/tournament';
 import { slotLabel } from '../../../../core/models/slotLabel';
+import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
 
 // =============================================================================
 // PROPS
@@ -272,8 +273,10 @@ export function DashboardCategory({
   tournamentId,
   tournament,
 }: DashboardCategoryProps) {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const navigate = useNavigate();
+  // @OB-069: „Jeder gegen jeden“ ist immer eine Gruppe, auch wenn die Gruppenzahl aus dem Anlegen etwas anderes trägt
+  const groupCount = effectiveGroupCount(tournament);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -288,11 +291,10 @@ export function DashboardCategory({
       (m) => m.matchStatus === 'scheduled'
     );
 
-    // Calculate total goals
-    const totalGoals = tournament.matches.reduce(
-      (sum, m) => sum + (m.scoreA ?? 0) + (m.scoreB ?? 0),
-      0
-    );
+    // @OB-069: Tore zählen nur aus beendeten Spielen (ein laufendes Spiel steht noch nicht fest)
+    const totalGoals = tournament.matches
+      .filter((m) => m.matchStatus === 'finished')
+      .reduce((sum, m) => sum + (m.scoreA ?? 0) + (m.scoreB ?? 0), 0);
 
     // Find next scheduled match (sort by slot, then by scheduledTime)
     const sortedScheduled = scheduledMatches.sort((a, b) => {
@@ -417,7 +419,7 @@ export function DashboardCategory({
           <div style={styles.statLabel}>{t('dashboard.teams')}</div>
           <div style={styles.statValue}>{tournament.teams.length}</div>
           <div style={styles.statSubvalue}>
-            {t('dashboard.groups', { count: tournament.numberOfGroups ?? 1 })}
+            {t('dashboard.groups', { count: groupCount })}
           </div>
         </div>
 
@@ -425,7 +427,9 @@ export function DashboardCategory({
           <div style={styles.statLabel}>{t('dashboard.goals')}</div>
           <div style={styles.statValue}>{stats.totalGoals}</div>
           <div style={styles.statSubvalue}>
-            {t('dashboard.goalsPerMatch', { avg: stats.completedMatches > 0 ? (stats.totalGoals / stats.completedMatches).toFixed(1) : '0' })}
+            {stats.completedMatches > 0
+              ? t('dashboard.goalsPerMatch', { avg: (stats.totalGoals / stats.completedMatches).toLocaleString(i18n.language, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })
+              : null}
           </div>
         </div>
       </div>
@@ -529,7 +533,7 @@ export function DashboardCategory({
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoFields')}</span>
-            <span>{tournament.numberOfFields}</span>
+            <span>{effectiveFieldCount(tournament)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoMode')}</span>

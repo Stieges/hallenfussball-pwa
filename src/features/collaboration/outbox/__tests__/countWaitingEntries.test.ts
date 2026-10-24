@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { MatchCopy } from '../../../../core/match/client/matchCopy';
 import { LocalMatchStore } from '../../../../core/match/client/LocalMatchStore';
 import type { EngineEvent, MatchContext } from '../../../../core/match/types';
-import { countWaitingEntries } from '../countWaitingEntries';
+import { countQueuedEntries, countWaitingBeforeSignOut, countWaitingEntries } from '../countWaitingEntries';
 
 const CTX: MatchContext = { matchId: 'm1', teamAId: 'team-a', teamBId: 'team-b' };
 
@@ -69,5 +69,21 @@ describe('countWaitingEntries', () => {
     await store.addPending('acc1', 'cw-1', ev('e2'));
     await store.markAcked('acc1', 'cw-1', ['e2']);
     await expect(countWaitingEntries(store, 'acc1')).resolves.toBe(2);
+  });
+});
+
+describe('countWaitingBeforeSignOut (gemeinsam fuer useGuardedLogout und Helfer-Beitritt @HE-092)', () => {
+  it('summiert lokale Kopie und Konto-Queue', async () => {
+    const store = { forAccount: vi.fn(async () => [copy('m1', { pending: [ev('e1')] })]) };
+    const repo = { mutationQueue: { getPendingCount: () => 2 } };
+    await expect(countWaitingBeforeSignOut(() => store, 'acc1', repo)).resolves.toBe(3);
+    expect(store.forAccount).toHaveBeenCalledWith('acc1');
+  });
+
+  it('Fehler je Ausgang zaehlen 0 (Fabrik wirft, Queue wirft, kein Queue-Repo)', async () => {
+    const throwingRepo = { mutationQueue: { getPendingCount: () => { throw new Error('x'); } } };
+    await expect(countWaitingBeforeSignOut(() => { throw new Error('IDB'); }, 'acc1', throwingRepo)).resolves.toBe(0);
+    await expect(countWaitingBeforeSignOut(() => ({ forAccount: async () => [] }), 'acc1', {})).resolves.toBe(0);
+    expect(countQueuedEntries(null)).toBe(0);
   });
 });

@@ -307,6 +307,9 @@ export interface UseConfirmDialogOptions {
   details?: string;
 }
 
+/** Rückfrage als Funktion: öffnet den Dialog der App und liefert die Antwort (true = bestätigt). */
+export type ConfirmFn = (options: Partial<UseConfirmDialogOptions>) => Promise<boolean>;
+
 export interface UseConfirmDialogReturn {
   isOpen: boolean;
   dialogProps: ConfirmDialogProps;

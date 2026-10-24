@@ -25,7 +25,7 @@ dist-ssr
 *.sw?
 
 # MCP Server und sensitive Daten
-mcp-ai-hub-analyzer/
+mcp-*-analyzer/
 .mcp.json
 .claude/
 **/mcp*.md
@@ -46,7 +46,7 @@ mcp-ai-hub-analyzer/
 **/*apikey*
 TEST-CREDENTIALS.md
 
-# Entwickler-Skripte mit API Keys (AI Hub)
+# Entwickler-Skripte mit API Keys (LLM-Gateway)
 evaluate-plan.js
 clarify-*.js
 search-property-names.js
@@ -83,3 +83,6 @@ ci_logs.txt
 
 # Vitest coverage output (M0)
 coverage/
+
+# Persönliche Aufgabenliste – nur lokal (Daniel 23.10.)
+docs/TODO.md

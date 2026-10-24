@@ -4,6 +4,7 @@ import { RulebookField } from '../../components/ui/molecules/RulebookField';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
+import { localDateIso } from '../../core/view';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
 
@@ -16,11 +17,12 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
   const { t } = useTranslation('wizard');
 
   // F-113: prevent past start dates. min= today (local ISO).
-  const now = new Date();
-  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const todayIso = localDateIso();
   const currentStartDate = formData.startDate ?? formData.date ?? '';
+  // @W5-003 (C-META-NOVALID): nur ein Entwurf darf nicht in der Vergangenheit liegen; ein festgelegtes Turnier bleibt korrigierbar.
+  const pastDateChecked = formData.status !== 'published';
   const startDateInPast =
-    !!currentStartDate && /^\d{4}-\d{2}-\d{2}$/.test(currentStartDate) && currentStartDate < todayIso;
+    pastDateChecked && !!currentStartDate && /^\d{4}-\d{2}-\d{2}$/.test(currentStartDate) && currentStartDate < todayIso;
 
   return (
     <Card>
@@ -82,7 +84,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
           label={t('step3.startDate')}
           type="date"
           value={currentStartDate}
-          min={todayIso}
+          min={pastDateChecked ? todayIso : undefined}
           onChange={(v) => {
             onUpdate('startDate', v);
             // Keep legacy field in sync

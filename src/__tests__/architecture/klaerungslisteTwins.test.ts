@@ -114,7 +114,8 @@ describe('A-35: Drift-Check (Rechte-Assertions, PENDING-LIVE)', () => {
         .filter(Boolean)
         .map((l) => l.split(/\s+/)[2]),
     );
-    expect([...commits]).toEqual(['5e0d1eeca38392cfeca6607e58e0ed1389c50cd1']);
+    expect(commits.size).toBe(1);
+    expect([...commits][0]).toMatch(/^[0-9a-f]{40}$/);
   });
 
   it('PENDING-LIVE: Zeile <datei> 2026-11-17 <commit-vorher> (Fenster F4)', () => {

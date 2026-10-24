@@ -10,6 +10,14 @@ import type { LocalClock } from './types';
  */
 export const TOURNAMENT_TIME_ZONE = 'Europe/Berlin';
 
+/**
+ * Kalendertag „heute“ als ISO-Datum (JJJJ-MM-TT) in der Ortszeit des Turniers (@W1-038). Nie `toISOString()`:
+ * das liefert den UTC-Tag und ist zwischen 0 und 2 Uhr deutscher Zeit der Vortag.
+ */
+export function localDateIso(now: Date = new Date(), timeZone: string = TOURNAMENT_TIME_ZONE): string {
+  return toTournamentLocal(now, timeZone).date;
+}
+
 const HH_MM = /^(\d{2}):(\d{2})/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
 

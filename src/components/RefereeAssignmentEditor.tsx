@@ -12,7 +12,9 @@ import { CSSProperties, useState } from 'react';
 import { ScheduledMatch } from '../core/generators';
 import { RefereeConfig } from '../types/tournament';
 import { cssVars } from '../design-tokens'
+import { useTranslation } from 'react-i18next';
 import { Select, Button } from './ui';
+import { ConfirmDialog, useConfirmDialog } from './ui/ConfirmDialog';
 
 /**
  * Check if a referee is already assigned to an overlapping match
@@ -59,6 +61,14 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   onAssignmentChange,
   onResetAssignments,
 }) => {
+  const { t } = useTranslation('wizard');
+  // @OB-017: Zeitkonflikt-Rückfrage im Dialog der App, nie als Fenster des Browsers
+  const conflictDialog = useConfirmDialog({
+    title: t('refereeConflict.title'),
+    message: '',
+    variant: 'warning',
+    confirmText: t('refereeConflict.confirm'),
+  });
   const [draggedReferee, setDraggedReferee] = useState<number | null>(null);
   const [dragOverMatch, setDragOverMatch] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true); // Collapsed by default
@@ -112,6 +122,18 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     return options;
   };
 
+  // Fragt nach, wenn sich die Einteilung zeitlich mit einem anderen Spiel überschneidet; true = zuweisen
+  const confirmConflict = async (matchId: string, refereeNumber: number): Promise<boolean> => {
+    const conflict = findOverlappingConflict(matches, matchId, refereeNumber);
+    if (!conflict) { return true; }
+    const refName = refereeConfig.mode === 'organizer'
+      ? (refereeConfig.refereeNames?.[refereeNumber] ?? `SR ${refereeNumber}`)
+      : `Team ${refereeNumber}`;
+    return conflictDialog.confirm({
+      message: t('refereeConflict.message', { refName, matchNumber: conflict.matchNumber, time: conflict.time }),
+    });
+  };
+
   // Drag & Drop Handlers
   const handleDragStart = (refereeNumber: number) => {
     setDraggedReferee(refereeNumber);
@@ -131,31 +153,11 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     setDragOverMatch(null);
   };
 
-  const handleDrop = (e: React.DragEvent, matchId: string) => {
+  const handleDrop = async (e: React.DragEvent, matchId: string) => {
     e.preventDefault();
-    if (draggedReferee !== null) {
-      // Check for conflicts
-      const conflict = findOverlappingConflict(matches, matchId, draggedReferee);
-      if (conflict) {
-        const refName = refereeConfig.mode === 'organizer'
-          ? (refereeConfig.refereeNames?.[draggedReferee] ?? `SR ${draggedReferee}`)
-          : `Team ${draggedReferee}`;
-
-        const confirmed = window.confirm(
-          `⚠️ Zeitkonflikt erkannt!\n\n` +
-          `${refName} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) eingeteilt.\n\n` +
-          `Die Spiele überschneiden sich zeitlich.\n\n` +
-          `Möchtest du die Zuweisung trotzdem vornehmen?`
-        );
-
-        if (!confirmed) {
-          setDraggedReferee(null);
-          setDragOverMatch(null);
-          return; // User canceled
-        }
-      }
-
-      onAssignmentChange(matchId, draggedReferee);
+    const refereeNumber = draggedReferee;
+    if (refereeNumber !== null && await confirmConflict(matchId, refereeNumber)) {
+      onAssignmentChange(matchId, refereeNumber);
     }
     setDraggedReferee(null);
     setDragOverMatch(null);
@@ -327,7 +329,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
             style={matchRowStyle(match.id)}
             onDragOver={(e) => handleDragOver(e, match.id)}
             onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, match.id)}
+            onDrop={(e) => { void handleDrop(e, match.id); }}
           >
             <div style={matchNumberStyle}>
               #{match.matchNumber}
@@ -345,29 +347,10 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
               value={match.referee?.toString() ?? ''}
               onChange={(value) => {
                 const refNum = value ? parseInt(value) : null;
-
-                // Check for conflicts if assigning a referee
-                if (refNum !== null) {
-                  const conflict = findOverlappingConflict(matches, match.id, refNum);
-                  if (conflict) {
-                    const refName = refereeConfig.mode === 'organizer'
-                      ? (refereeConfig.refereeNames?.[refNum] ?? `SR ${refNum}`)
-                      : `Team ${refNum}`;
-
-                    const confirmed = window.confirm(
-                      `⚠️ Zeitkonflikt erkannt!\n\n` +
-                      `${refName} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) eingeteilt.\n\n` +
-                      `Die Spiele überschneiden sich zeitlich.\n\n` +
-                      `Möchtest du die Zuweisung trotzdem vornehmen?`
-                    );
-
-                    if (!confirmed) {
-                      return; // User canceled
-                    }
-                  }
-                }
-
-                onAssignmentChange(match.id, refNum);
+                void (async () => {
+                  if (refNum !== null && !(await confirmConflict(match.id, refNum))) { return; }
+                  onAssignmentChange(match.id, refNum);
+                })();
               }}
               options={getRefereeOptions()}
             />
@@ -396,6 +379,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
           background: ${cssVars.colors.secondary};
         }
       `}</style>
+      <ConfirmDialog {...conflictDialog.dialogProps} />
     </div>
   );
 };

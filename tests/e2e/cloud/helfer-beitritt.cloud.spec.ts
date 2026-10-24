@@ -1,0 +1,96 @@
+/**
+ * tests/e2e/cloud/helfer-beitritt.cloud.spec.ts — GA5 A-17b „Einstieg per QR“.
+ *
+ * Szenarien: @HE-095 (Scan → Name → gleiche Prüfzahl → Zulassen → gleicher QR öffnet das Feld; @HE-001 ist in A-17b nur Teil:
+ * der Wechsel Warteschirm → „Du bist zugelassen“ ohne neuen Scan kommt mit A-17c), @HE-089 (Konto scannt → Rückfrage → der
+ * Laptop-Kontext bleibt angemeldet), @HE-015 (Gegenbeispiel: Hallen-WLAN ohne Internet → „Für den Einstieg brauchst du Netz“).
+ *
+ * Voraussetzung: lokaler Stack MIT der Migration `20261110_008_helper_join.sql` (A-16). Ein lokal älterer Stack hat sie evtl.
+ * nicht (hier wird nie zurückgesetzt oder gesät). Darum läuft der Block nur mit `E2E_STACK_HAS_008=1` und ist sonst `fixme`
+ * mit Grund. Die CI (`e2e-cloud.yml`) baut den Stack aus den Repo-Migrationen und setzt die Variable. Die Leitungs-Seite (Team & Helfer, A-18a) gibt es noch nicht:
+ * Zulassen läuft deshalb über die Schnittstelle `decide_join_request` mit der Prüfzahl des Helfer-Handys (S-1).
+ */
+import type { Browser, BrowserContext } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { restAsRole } from './restAsRole';
+import { loginAsRole } from './helpers';
+import { E2E_LIVE_CUP_ID, E2E_USERS } from './testData';
+
+const HAS_008 = process.env.E2E_STACK_HAS_008 === '1';
+
+test.describe('Helfer-Beitritt per QR (A-17b)', () => {
+  test.fixme(!HAS_008, 'Lokaler Stack ohne Migration _008 (helper_join): join_code_info/request_helper_access fehlen. Mit E2E_STACK_HAS_008=1 gegen einen Stack mit _008 starten.');
+  test.beforeEach(({ browserName: _browserName }, testInfo) => {
+    test.skip(!testInfo.project.name.includes('desktop'), 'Ein Lauf genügt (cloud-desktop); mobil würde denselben Cup doppelt anfragen.');
+  });
+
+  async function helperCode(): Promise<string> {
+    const res = await restAsRole('owner', 'POST', 'rpc/ensure_helper_code', { p_tournament_id: E2E_LIVE_CUP_ID });
+    expect(res.status).toBe(200);
+    return (res.json as { code: string }).code;
+  }
+
+  // Frischer Kontext je Gerät, die Datenschutz-Abfrage vorab beantwortet (wie `fixtures.ts`): sonst deckt ihr Dialog die Seite zu.
+  async function newDevice(browser: Browser): Promise<BrowserContext> {
+    const context = await browser.newContext();
+    const consent = { errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 };
+    await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
+    return context;
+  }
+
+  test('@HE-095 Scan → Name → Prüfzahl → Zulassen mit Feld 2 → gleicher QR öffnet Feld 2', async ({ browser }) => {
+    const code = await helperCode();
+    const helper = await (await newDevice(browser)).newPage();
+    await helper.goto(`/#/join/${code}`);
+    await helper.getByTestId('join-name').fill('Tom');
+    await helper.getByTestId('join-submit').click();
+    const shown = Number(await helper.getByTestId('check-number').innerText());
+    expect(shown).toBeGreaterThanOrEqual(10);
+
+    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_LIVE_CUP_ID });
+    const request = (list.json as { requests: { id: string; name: string; checkNumber: number }[] }).requests.find((r) => r.name === 'Tom');
+    expect(request?.checkNumber).toBe(shown);
+    const decided = await restAsRole('owner', 'POST', 'rpc/decide_join_request', { p_request_id: request?.id, p_accept: true, p_field: 2, p_check_number: shown });
+    expect(decided.status).toBe(200);
+
+    // Gleicher QR noch einmal: zugelassen → Feld 2, keine zweite Anfrage (@HE-095). Ein Scan öffnet die Seite neu; ein `goto` auf
+    // dieselbe Hash-Adresse bliebe im laufenden Dokument (kein Neuladen, kein neuer Code-Abruf), darum erst `about:blank`.
+    await helper.goto('about:blank');
+    await helper.goto(`/#/join/${code}`);
+    await expect(helper).toHaveURL(/\/live\?f=2/);
+  });
+
+  test('@HE-089 Konto scannt: Rückfrage; „Weiter“ meldet nur das Handy ab, der Laptop (eigene Anmeldung) bleibt angemeldet', async ({ browser }) => {
+    const code = await helperCode();
+    // Greta = `stranger` leitet den Live-Cup nicht (sonst @HE-091). Handy und Laptop melden sich je selbst an: getrennte Sitzungen,
+    // denn `signOut({ scope: 'local' })` beendet genau die Sitzung des Handys.
+    const open = async () => {
+      const page = await (await newDevice(browser)).newPage();
+      await loginAsRole(page, 'stranger');
+      return page;
+    };
+    const laptop = await open();
+    const phone = await open();
+    await phone.goto(`/#/join/${code}`);
+    await expect(phone.getByTestId('join-account-text')).toContainText(E2E_USERS.stranger.displayName);
+    await phone.getByTestId('join-account-continue').click();
+    await expect(phone.getByTestId('join-submit')).toBeVisible();
+    await laptop.reload();
+    await expect(laptop.getByTestId('auth-avatar-button')).toBeVisible({ timeout: 15000 });
+    await expect(laptop.getByTestId('join-account-continue')).toHaveCount(0);
+  });
+
+  test('@HE-015 Gegenbeispiel: ohne Internet „Für den Einstieg brauchst du Netz“, nicht „Code ungültig“, Name bleibt', async ({ browser }) => {
+    const code = await helperCode();
+    const context = await newDevice(browser);
+    const helper = await context.newPage();
+    await helper.goto(`/#/join/${code}`);
+    await helper.getByTestId('join-name').fill('Tom');
+    await context.route('**/rest/v1/rpc/**', (route) => route.abort());
+    await context.route('**/auth/v1/**', (route) => route.abort());
+    await helper.getByTestId('join-submit').click();
+    await expect(helper.getByTestId('join-offline')).toContainText('Für den Einstieg brauchst du Netz');
+    await expect(helper.getByTestId('join-name')).toHaveValue('Tom');
+    await expect(helper.getByText('nicht gültig')).toHaveCount(0);
+  });
+});

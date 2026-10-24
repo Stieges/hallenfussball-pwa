@@ -1286,8 +1286,8 @@ psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
 # A-30a (20261028_004_match_kit_colors.sql): matches_guard_kit_columns prueft nur kit_color_a/kit_color_b/bib_side
 # und aendert keine Engine-Spalte -- die Reihenfolge bleibt fuer das Ergebnis unerheblich.
 # A-13b-S (20261110_006): matches_guard_ga4_columns (nur reassigned_at, keine Engine-Spalte) kommt dazu, wenn dieser Lauf
-# _006 einspielt (A13BS_APPLIED, oben aus der Migrationsliste -- dieses Skript spielt jede Datei des Repos ein, die Liste der noch nicht eingespielten Migrationen
-# gilt hier nicht). Auf main vor dem Merge von G1b fehlt die Datei und damit der Trigger.
+# _006 einspielt (A13BS_APPLIED, oben aus der Migrationsliste -- dieses Skript spielt jede Datei des Repos ein, die
+# Ausnahmeliste des Drift-Checks gilt hier nicht). Auf main vor dem Merge von G1b fehlt die Datei und damit der Trigger.
 A13BS_TRIGGER=""
 [[ "$A13BS_APPLIED" -eq 1 ]] && A13BS_TRIGGER="matches_guard_ga4_columns,"
 # A-21a-S (20261113_003): matches_guard_closed (Abschluss-Sperre) feuert alphabetisch zuerst (Unterlage A-21a, W5).
@@ -1298,8 +1298,10 @@ check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name)
   ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_keep_origin,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at\"" "$(jq -Rn --arg v "$out" '$v')"
 # A-10 (20261028_005, L7): der Spalten-Schutz feuert auch BEFORE INSERT (Client-INSERT neutral).
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 4) = 4;")"
+# B-14 (20261117_104): matches_updated_at_insert setzt updated_at auch beim INSERT; er
+# feuert nach den Schutz-Triggern (Name) und ändert keine Engine-Spalte.
 check Spaltenschutz "BEFORE-INSERT-Trigger auf matches (Feuerreihenfolge = Name): $out" \
-  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_sync_owner\"" "$(jq -Rn --arg v "$out" '$v')"
+  ". == \"${A21AS_TRIGGER}matches_guard_engine_columns,${A13BS_TRIGGER}matches_guard_kit_columns,matches_sync_owner,matches_updated_at_insert\"" "$(jq -Rn --arg v "$out" '$v')"
 
 # --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
 echo "Absetzen (skipped_at/skipped_reason)..." >&2

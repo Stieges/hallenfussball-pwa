@@ -113,7 +113,7 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         onBeenden={handlers.finishConfirmed} onAbbrechen={handlers.finishDeclined}
       />
 
-      <MoreSheet isOpen={dialogs.showMore} onClose={handlers.closeMore} punkte={mehr.punkte} aktionen={mehr.aktionen} />
+      <MoreSheet isOpen={dialogs.showMore} onClose={handlers.closeMore} punkte={mehr.punkte} aktionen={mehr.aktionen} tournamentId={tournamentId} />
 
       {/* Aufgaben 3.4/3.5: Nummernauswahl, Kartenart-Schritt und Rückfrage der Einträge (Tor, Karte, Zeitstrafe zählen mit dem ersten Tipp) */}
       <EntrySheets {...entrySheets} />

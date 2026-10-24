@@ -43,6 +43,14 @@ export function isLive(status: ViewMatchStatus): boolean {
   return status === 'running' || status === 'paused';
 }
 
+/**
+ * Angepfiffen = läuft oder ist unterbrochen (Halbzeit), auf dem rohen Spielstatus der Turnierkopie bzw. des Servers.
+ * Der Spielstatus der Kopie kennt `'paused'` nicht im Typ, andere Geräte liefern ihn aber (C-HALBZEIT-NICHT-LAUFEND, @ZP-093).
+ */
+export function isMatchInProgress(status: string | undefined): boolean {
+  return status === 'running' || status === 'paused';
+}
+
 /** Kommend = nur geplant; ausgefallen/unterbrochen ist nie „nächstes Spiel“ (@ZM-041, @ZM-104). */
 export function isUpcoming(status: ViewMatchStatus): boolean {
   return status === 'scheduled';

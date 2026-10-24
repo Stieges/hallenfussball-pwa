@@ -51,7 +51,7 @@ function tournamentWith(status: 'published' | 'draft'): Tournament {
 }
 
 async function editInWizard(initial: Tournament): Promise<Tournament> {
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  const browserConfirm = vi.spyOn(window, 'confirm');
   const user = userEvent.setup();
   const onEditInWizard = vi.fn();
   render(
@@ -65,6 +65,8 @@ async function editInWizard(initial: Tournament): Promise<Tournament> {
   await user.click(
     screen.getByRole('button', { name: /settings\.advancedEditing\.editTeams/ })
   );
+  await user.click(await screen.findByTestId('confirm-dialog-confirm'));
+  expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017
 
   // App.handleEditInWizard persistiert genau dieses Objekt und öffnet den Wizard.
   expect(onEditInWizard).toHaveBeenCalledTimes(1);

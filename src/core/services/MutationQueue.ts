@@ -3,7 +3,8 @@ import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../repositories/LocalStorageRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
-import { AuthenticationError, GuestStoreReadError, SessionReadError } from '../errors';
+import { AuthenticationError, GuestStoreReadError, OptimisticLockError, RepositoryError, SessionReadError } from '../errors';
+import { carriesNewDecision, type CompleteGroupRequest } from '../repositories/groupCompletionCloud';
 import { supabase } from '../../lib/supabase';
 import {
     GenericMutationQueue,
@@ -11,7 +12,7 @@ import {
     type FailedMutationItem as GenericFailedMutationItem,
 } from './GenericMutationQueue';
 import type { QueueTimers } from './mutationQueueRetry';
-import { executeMetadataMutation, type MetadataMutationPayload } from './metadataMutation';
+import { executeMetadataMutation, mergeMetadataPayloads, type MetadataMutationPayload } from './metadataMutation';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { checkedVersion, withCheckedVersion } from '../repositories/confirmedVersion';
 import { captureFeatureError } from '../../lib/sentry';
@@ -26,7 +27,47 @@ export type MutationType =
     | 'DELETE_TOURNAMENT'
     | 'UPDATE_MATCH'
     | 'UPDATE_MATCHES'
-    | 'UPDATE_TOURNAMENT_METADATA';
+    | 'UPDATE_TOURNAMENT_METADATA'
+    /** A-15c (@W2A-062, @TM-115, @TM-146, @TM-147): ohne Netz abgeschlossene Gruppe, nachgereicht über `complete_group`. */
+    | 'COMPLETE_GROUP';
+
+/** A-15c: Nutzlast von `COMPLETE_GROUP` – Anfrage wie online (immer `fromQueue`) und die bestätigte Version beim Abschluss. */
+export interface CompleteGroupMutation {
+    tournamentId: string;
+    request: CompleteGroupRequest;
+    /** `checkedVersion` der lokalen Kopie beim Abschluss (für das Anheben wartender Speicherungen, @FU-110). */
+    baseVersion?: number;
+}
+
+/**
+ * A-15c: nachgereichten Abschluss senden. Angenommen (auch „schon so abgeschlossen“ – zweimal nachreichen ist harmlos) → Marke
+ * „noch nicht gesendet“ weg, erreichte Version zurück. Konflikt (der Server legt die Klärung an) oder sonstige Ablehnung →
+ * `OptimisticLockError`: der Eintrag landet sofort als Konflikt in der Fehlerliste, nichts wird wiederholt oder still
+ * überschrieben (@TM-116, @TM-146, @TM-147). Kein Recht (42501) bleibt ein unklarer Fehler (wird wiederholt).
+ */
+async function sendCompleteGroup(
+    supabaseRepo: SupabaseRepository,
+    localRepo: LocalStorageRepository,
+    payload: CompleteGroupMutation,
+): Promise<number | undefined> {
+    const { tournamentId, request } = payload;
+    const result = await supabaseRepo.completeGroup(tournamentId, { ...request, fromQueue: true });
+    switch (result.status) {
+        case 'ok':
+            try {
+                await localRepo.markCompletionSent(tournamentId, request.groupId);
+            } catch (error) {
+                captureFeatureError(error instanceof Error ? error : new Error(String(error)), 'sync', 'markCompletionSent', { tournamentId });
+            }
+            return result.tournamentVersion;
+        case 'forbidden':
+            throw new RepositoryError('completeGroup', 'keine Berechtigung', { code: '42501', message: 'keine Berechtigung' });
+        case 'clarification':
+            throw new OptimisticLockError(`complete_group: clarification ${result.code}`);
+        case 'rejected':
+            throw new OptimisticLockError(`complete_group: rejected ${result.code}`);
+    }
+}
 
 /**
  * Load-time allowlist, deliberately a `Record<MutationType, true>` and not a
@@ -44,6 +85,7 @@ const KNOWN_MUTATION_TYPES: Record<MutationType, true> = {
     UPDATE_MATCH: true,
     UPDATE_MATCHES: true,
     UPDATE_TOURNAMENT_METADATA: true,
+    COMPLETE_GROUP: true,
 };
 
 /**
@@ -117,6 +159,22 @@ async function confirmLocally(localRepo: LocalStorageRepository, tournamentId: s
         await localRepo.confirmUpload(tournamentId, base, reached); // C-VERSION-NACH-ERSTANLAGE: die vom Server gemeldete Version
     } catch (error) {
         captureFeatureError(error instanceof Error ? error : new Error(String(error)), 'sync', 'confirmUpload', { tournamentId });
+    }
+}
+
+/**
+ * BP-1 (@FU-123, Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN): Kennt dieses Gerät das Turnier aus der Cloud? Ja, wenn die
+ * Nutzlast oder die lokale Kopie eine Änderungszählung der Cloud trägt (`changeRevision`, nur ein Cloud-Abruf setzt sie, A-10)
+ * oder eine Kette eigener bestätigter Uploads (`ownUploadsFrom`, nur `confirmUpload` setzt sie). Dann darf ein Speichern das
+ * Turnier nicht neu anlegen. Ist die lokale Kopie nicht lesbar, zählt nur die Nutzlast.
+ */
+async function knownFromCloud(tournament: Tournament, localRepo: LocalStorageRepository): Promise<boolean> {
+    const marked = (t: Tournament | null | undefined): boolean => t?.changeRevision !== undefined || t?.ownUploadsFrom !== undefined;
+    if (marked(tournament)) { return true; }
+    try {
+        return marked(await localRepo.get(tournament.id));
+    } catch {
+        return false;
     }
 }
 
@@ -206,6 +264,8 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
         let adoptionFailed = false;
         /** @FU-110: erreichte Server-Version je erfolgreich gesendetem SAVE_TOURNAMENT (nur bis `rebasePending`). */
         const reachedById = new Map<string, number>();
+        /** A-15c: Version nach einem nachgereichten Abschluss, der nur die eigene Basis um eins weitergezählt hat. */
+        const completedById = new Map<string, { base: number; reached: number }>();
         if (accountId) {
             // Vor dem Laden der Basisklasse: die erste angemeldete Queue übernimmt den Altbestand.
             const queueAdopted = adoptLegacyKey(LEGACY_QUEUE_KEY, storageKey);
@@ -238,16 +298,39 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                 if (type === 'SAVE_TOURNAMENT') { return `SAVE_TOURNAMENT:${id}`; }
                 return type === 'UPDATE_TOURNAMENT_METADATA' ? `UPDATE_METADATA:${id}` : null;
             },
+            coalescePayload: (type, existing, incoming) => {
+                if (type !== 'UPDATE_TOURNAMENT_METADATA') { return incoming; }
+                // @BM-072/@BM-073: ein Teilen-Rückfall prüft am Server „noch kein Code“ und schreibt nur den Code – er verträgt
+                // weder fremde Felder noch das Verdrängen; deshalb nie zusammenfassen (angehängt, Reihenfolge bleibt).
+                const isShare = (p: unknown): boolean => (p as MetadataMutationPayload | null)?.onlyIfUnshared === true;
+                if (isShare(existing) || isShare(incoming)) { return null; }
+                // @FU-125: die jüngere Änderung gewinnt je Angabe, keine geht verloren
+                return mergeMetadataPayloads(existing as MetadataMutationPayload, incoming as MetadataMutationPayload);
+            },
             scopeOf: tournamentIdOf, // A-08f3c2 (Regel Q): Zähler und Dead-Letter je Turnier
             // @FU-106 (Auflage A1), @FU-109: bis zum Laden des Server-Stands warten nur Voll-Speicherungen (Einstellungen, Teams,
             // Spielplan); Spielergebnisse und -ereignisse gehen weiter zum Server (eigene Wege, Record präzisiert 21.10.)
             wholeCopyTypes: ['SAVE_TOURNAMENT'],
+            cloudCopyOnConflict: ['COMPLETE_GROUP'], // A-15c (@TM-117): nach einem Konflikt den Stand des Servers zeigen
             /**
              * Befund C-ZWEITES-SPEICHERN-EIGENE-VORVERSION (@FU-110): nach einem bestätigten Upload `base → reached` beruhen
              * wartende SAVE_TOURNAMENT desselben Turniers mit Basis `base` auf dem eigenen Stand – sie prüfen gegen `reached`.
              * Fremde Stände bleiben geschützt: `reached` hat nachweislich dieses Gerät erzeugt.
              */
             rebasePending: (done, pending) => {
+                if (done.type === 'COMPLETE_GROUP') {
+                    // A-15c: der Abschluss hat nur die eigenen Entscheidungen eingetragen (Basis + 1) – wartende Speicherungen
+                    // desselben Turniers auf dieser Basis beruhen auf dem eigenen Stand (wie @FU-110)
+                    const step = completedById.get(done.id);
+                    completedById.delete(done.id);
+                    if (step === undefined) { return undefined; }
+                    const id = (done.payload as CompleteGroupMutation).tournamentId;
+                    return pending.flatMap((p) => {
+                        const t = p.payload as Tournament;
+                        const same = p.type === 'SAVE_TOURNAMENT' && t.id === id && checkedVersion(t) === step.base;
+                        return same ? [{ id: p.id, payload: { ...t, serverVersion: step.reached } }] : [];
+                    });
+                }
                 if (done.type !== 'SAVE_TOURNAMENT') { return undefined; }
                 const reached = reachedById.get(done.id);
                 reachedById.delete(done.id);
@@ -290,7 +373,11 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         // C-VERSION-MEHRDEUTIG (@FU-106): geprüft wird gegen die bestätigte Version der (zusammengefassten)
                         // Nutzlast, nie gegen die lokal gestempelte; danach gilt der Upload als bestätigt.
                         const base = checkedVersion(tournament);
-                        const reached = await supabaseRepo.save(withCheckedVersion(tournament));
+                        const payload = withCheckedVersion(tournament);
+                        // @FU-123: ein aus der Cloud bekanntes Turnier nicht neu anlegen; sonst (@FU-124) unverändert
+                        const reached = await (await knownFromCloud(tournament, localRepo)
+                            ? supabaseRepo.save(payload, { mustExist: true })
+                            : supabaseRepo.save(payload));
                         reachedById.set(item.id, reached); // @FU-110: für das Anheben wartender Einträge (rebasePending)
                         await confirmLocally(localRepo, tournament.id, base, reached);
                         break;
@@ -325,6 +412,21 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                             break;
                         }
                         await executeMetadataMutation(supabaseRepo, localRepo, payload); // CA-3: Teilen-Rückfall bedingt (@BM-070)
+                        break;
+                    }
+                    case 'COMPLETE_GROUP': {
+                        const payload = item.payload as CompleteGroupMutation;
+                        if (await skipUploadForGuestEntries(payload.tournamentId, localRepo)) {
+                            break;
+                        }
+                        const reached = await sendCompleteGroup(supabaseRepo, localRepo, payload);
+                        const base = payload.baseVersion;
+                        // Review #368 H1: complete_group zählt die Version nur bei neuen Entscheidungen. Ohne neue Entscheidung
+                        // stammt ein Sprung um eins von jemand anderem – dann weder bestätigen noch anheben (@TM-116, @FU-110).
+                        if (base !== undefined && carriesNewDecision(payload.request) && reached === base + 1) {
+                            completedById.set(item.id, { base, reached });
+                            await confirmLocally(localRepo, payload.tournamentId, base, reached);
+                        }
                         break;
                     }
                     default:

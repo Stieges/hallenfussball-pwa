@@ -43,3 +43,16 @@ export type { PlacesToPlayOutPickerProps } from './PlacesToPlayOutPicker';
 // @SL-168: Verbindung mit Punkt, Wort, wartenden Einträgen und „Verbinden“
 export { VerbindungsStatus } from './VerbindungsStatus';
 export type { VerbindungsStatusProps, VerbindungsStatusTexte } from './VerbindungsStatus';
+// A-18a: Auswahl-Bausteine (fachfrei)
+export { NumberChoiceRow } from './NumberChoiceRow';
+export type { NumberChoiceRowProps } from './NumberChoiceRow';
+export { SegmentedChoice } from './SegmentedChoice';
+export type { SegmentedChoiceProps, SegmentedOption } from './SegmentedChoice';
+
+// A-17b (@HE-001): Prüfzahl, fachfrei
+export { CheckNumberBadge } from './CheckNumberBadge';
+export type { CheckNumberBadgeProps, CheckNumberBadgeSize } from './CheckNumberBadge';
+export { CountedTextField } from './CountedTextField';
+export type { CountedTextFieldProps } from './CountedTextField';
+export { EndStateCard } from './EndStateCard';
+export type { EndStateCardProps, EndStateTone } from './EndStateCard';

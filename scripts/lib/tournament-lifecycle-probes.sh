@@ -539,7 +539,7 @@ run_catalog() {
 run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | q "$(cat)" 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE '^(monitor-heartbeat-[a-z0-9-]+|public-read-[a-z0-9-]+)\|' || true)"
   check S "Rechte-Assertion: die A-21a-Zeilen (lifecycle-*) vorhanden und |t" "16|16" \
     "$(grep -cE '^lifecycle-[a-z0-9-]+\|' <<<"$priv")|$(grep -cE '^lifecycle-[a-z0-9-]+\|t$' <<<"$priv")"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"

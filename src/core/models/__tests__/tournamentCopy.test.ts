@@ -92,3 +92,26 @@ describe('buildCopiedTournament (Verdrahtung „Turnier kopieren“ in App.tsx)'
     expect(JSON.stringify(copy.matches)).not.toContain(M_SEMI);
   });
 });
+
+describe('A-13b-C: Abschlüsse und Verlauf wandern nicht in die Kopie', () => {
+  const original = {
+    id: 'orig', title: 'Orig', status: 'draft', teams, matches,
+    groupCompletions: [{ groupId: 'A', ranking: [T1, T2], openRanks: [], stale: false }],
+    decisionLog: [{ id: 1, kind: 'standing_decision', detail: { id: 'e-1' }, actorName: 'Olli', reason: 'Grund', at: '2026-12-06T10:00:00Z' }],
+  } as unknown as Tournament;
+  const options = { newId: 'neu', title: 'Kopie', now: '2026-12-07T10:00:00Z', makeId };
+
+  it('die Kopie hat keine abgeschlossene Gruppe und keinen Verlauf mit Namen und Gründen', () => {
+    const copy = buildCopiedTournament(original, options);
+    expect(copy.groupCompletions).toBeUndefined();
+    expect(copy.decisionLog).toBeUndefined();
+    expect(JSON.stringify(copy)).not.toMatch(/Olli|Grund/);
+  });
+
+  it('Gegenbeispiel: das Original bleibt unverändert', () => {
+    buildCopiedTournament(original, options);
+    expect(original.groupCompletions).toHaveLength(1);
+    expect(original.decisionLog).toHaveLength(1);
+  });
+});
+

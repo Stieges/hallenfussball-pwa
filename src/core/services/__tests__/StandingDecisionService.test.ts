@@ -10,7 +10,7 @@ import { DATA, id } from '../../standings/__tests__/fixtures';
 import { jgj, lage048, MemoryRepo, nikolaus, shared, shootout } from '../../standings/__tests__/decisionTestKit';
 
 describe('TB-3 StandingDecisionService', () => {
-  // „von wem“ steht nicht mehr im Turnierdatensatz (@W2A-072) – erwartet rot in `entscheidung.personZeit.test.ts`.
+  // „von wem“ steht nicht im Turnierdatensatz (@W2A-072), sondern im Verlauf der Turnierleitung (GA4 A-13b-C).
   it('@W2A-060 zwei Entscheidungen über denselben Gleichstand – die erste gilt, Maria erfährt, dass schon entschieden wurde', async () => {
     const repo = new MemoryRepo(jgj('RKMUNO', DATA.ET_055));
     // Olli und Maria haben beide Version v gelesen.
@@ -21,7 +21,7 @@ describe('TB-3 StandingDecisionService', () => {
     repo.staleReads.push(gelesenVonMaria);
     const maria = await repo.service(['e-maria']).decide(repo.tournament.id, shootout('K', 'R', 5, 4));
 
-    expect(maria).toEqual({ ok: false, code: 'ALREADY_DECIDED' });
+    expect(maria).toEqual({ ok: false, code: 'ALREADY_DECIDED', by: 'Olli' }); // „von wem“ aus dem Verlauf (A-13b-C)
     expect(repo.writes).toBe(1);
     expect(repo.tournament.standingDecisions).toHaveLength(1);
     expect(repo.tournament.standingDecisions?.[0]).toMatchObject({ id: 'e-olli', order: [id('R'), id('K')], shootout: { winner: 4, loser: 3 } });

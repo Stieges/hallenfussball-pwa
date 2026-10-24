@@ -73,7 +73,7 @@
   "step3": {
     "title": "Master Data",
     "tournamentName": "Tournament Name",
-    "tournamentNamePlaceholder": "Club Name Indoor Cup 2025",
+    "tournamentNamePlaceholder": "Club Name Indoor Cup",
     "organizer": "Organizer (optional)",
     "organizerPlaceholder": "My Club",
     "ageClass": "Age Group",
@@ -111,7 +111,9 @@
     "phonePlaceholder": "+49 123 456789",
     "website": "Website",
     "websitePlaceholder": "www.my-club.com",
-    "hint": "This information will appear in the schedule footer and PDF export."
+    "hint": "Without the tick, only the tournament management sees these details.",
+    "showPublic": "Show contact person publicly",
+    "showPublicHint": "With the tick, name, email, phone and website appear on the spectator page and in the schedule PDF – for everyone with the spectator link. Without it, only the tournament management sees them."
   },
   "step4": {
     "title": "Teams",
@@ -570,12 +572,17 @@
     "button": "Finalise",
     "loading": "Finalising …",
     "success": "Tournament successfully finalised.",
-    "explanationPrivate": "The schedule becomes fixed. Afterwards the tournament is visible only to the signed-in tournament directors.",
-    "explanationPublic": "The schedule becomes fixed. Afterwards anyone with the link can watch."
+    "explanationPrivate": "The schedule is locked in. Afterwards the tournament is not public; only tournament directors, helpers and monitors can see it.",
+    "explanationPublic": "The schedule is locked in. Afterwards anyone with the link can watch.",
+    "explanationLocal": "The schedule is locked in. The tournament stays only on this device.",
+    "explanationChangeable": "You can still change team names and results afterwards, the structure only until the first kick-off.",
+    "explanationOffline": "The schedule is locked in. Without a connection the tournament stays on this device for now.",
+    "shareFailed": "The tournament is set, but the spectator link is not live yet. Share it again in the Admin Center under Visibility."
   },
   "preview": {
     "hintLabel": "Note:",
-    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it does not appear in the overview. You can save the schedule as a PDF now or go back to editing."
+    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it does not appear in the overview. You can save the schedule as a PDF now or go back to editing.",
+    "edit": "Edit"
   },
   "schedule": {
     "incomplete_one": "The schedule cannot be completed as it is: {{count}} match does not fit. Please add another field or shorten the minimum break.",
@@ -583,17 +590,35 @@
   },
   "playOut": {
     "title": "These places must be played out in case of a tie",
-    "help": "A tie on a ticked place is decided by a penalty shootout. On every other place the tournament organiser may accept the result as it is. Place 1 is preset; every place can be ticked and unticked, including place 1. The setting can be changed at any time.",
+    "help": "A tie on a ticked place is decided by a penalty shootout. On every other place the tournament organiser may share the place. Place 1 is preset; every place can be ticked and unticked, including place 1. The setting can be changed at any time.",
     "followUpNote": "A place that leads to a further match (for example into the semi-final) is always played out – even if it is not ticked here.",
     "place": "Place {{place}}",
     "legend": "Places to play out",
-    "summary": "Tie on {{selected}}: penalty shootout needed. On {{others}} the tournament organiser may accept the result as it is – the teams then share the place.",
+    "summary": "Tie on {{selected}}: penalty shootout needed. On {{others}} the tournament organiser may share the place.",
     "summaryAll": "Tie on {{selected}}: penalty shootout needed. All places are set, teams never share a place.",
-    "summaryNone": "No place is set: on every place the tournament organiser may accept the result as it is – the teams then share the place.",
+    "summaryNone": "No place is set: on every place the tournament organiser may share the place.",
     "places": {
       "one": "place {{from}}",
       "two": "places {{from}} and {{to}}",
       "range": "places {{from}} to {{to}}"
     }
+  },
+  "refereeConflict": {
+    "title": "Time conflict",
+    "message": "{{refName}} is already assigned to match #{{matchNumber}} ({{time}}).\n\nThe matches overlap in time.\n\nDo you want to make the assignment anyway?",
+    "confirm": "Assign anyway"
+  },
+  "typeSwitch": {
+    "title": "Change tournament type",
+    "message": "Do you really want to switch to \"{{type}}\"?\n\nThe settings will be adjusted.",
+    "confirm": "Switch",
+    "classic": "Classic tournament",
+    "bambini": "Bambini tournament"
+  },
+  "resetTournament": {
+    "title": "Reset tournament",
+    "message_one": "{{count}} result will be deleted!\n\nThis action cannot be undone.\n\nDo you really want to continue?",
+    "message_other": "{{count}} results will be deleted!\n\nThis action cannot be undone.\n\nDo you really want to continue?",
+    "confirm": "Reset"
   }
 }

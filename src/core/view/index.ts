@@ -16,10 +16,10 @@ export {
   type MatchBadgeEngineDetail,
 } from './badge';
 export { spectatorClockOf, spectatorClockForMatch, formatRemaining, type SpectatorClock, type SpectatorClockInput, type SpectatorSectionKey } from './spectatorClock';
-export { viewStatus, viewStatusText, isLive, isUpcoming } from './status';
+export { viewStatus, viewStatusText, isLive, isUpcoming, isMatchInProgress } from './status';
 export { sideView } from './sides';
 export { placementView, groupPhaseOpen } from './placement';
-export { toTournamentLocal, kickoffLocal, kickoffInstant, minutesBetween, clockKey, TOURNAMENT_TIME_ZONE } from './time';
+export { localDateIso, toTournamentLocal, kickoffLocal, kickoffInstant, minutesBetween, clockKey, TOURNAMENT_TIME_ZONE } from './time';
 export { matchFinalScore, finalGoals, type FinalScore, type FinalDecision } from './finalScore';
 export {
   originText,
@@ -31,3 +31,4 @@ export {
   teamDisplayName,
   type SlotKey,
 } from './originText';
+export { effectiveGroupCount, effectiveFields, effectiveFieldCount, type EffectiveField, type TournamentFactsInput } from './tournamentFacts';

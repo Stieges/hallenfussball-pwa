@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TournamentCreationService } from './TournamentCreationService';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { Tournament } from '../models/types';
+import { localDateIso } from '../view/time';
 import { generateFullSchedule } from '../generators';
 import { vs, testUuid } from '../../test/matchSlotFixtures';
 
@@ -75,12 +76,9 @@ describe('TournamentCreationService', () => {
             expect(errors).toHaveLength(0);
         });
 
-        // Uses local-date formatting to match the production validator
-        // (TournamentCreationService.isPastDate compares against local
-        // calendar day). UTC-based ISO strings diverge near midnight.
-        function localIsoDate(d: Date): string {
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        }
+        // Gleiche Ortszeit-Funktion wie der Prüfer (@W1-038): Kalendertag in Europe/Berlin, unabhängig von der
+        // Zeitzone des Rechners (CI läuft in UTC).
+        const localIsoDate = localDateIso;
 
         it('F-113: should reject past start dates in step 1', () => {
             const yesterday = localIsoDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
