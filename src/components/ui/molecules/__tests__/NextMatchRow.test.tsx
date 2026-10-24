@@ -49,13 +49,25 @@ describe('NextMatchRow', () => {
     expect(screen.getByTestId('next-punkt-0')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('C-COCKPIT-NAECHSTES-WIE-FEHLER normal: Rahmen dünn in Randfarbe, Fläche neutral, keine Fehlerfarbe im Stil', () => {
+  it('C-COCKPIT-NAECHSTES-WIE-FEHLER normal: Rahmen in Randfarbe (gleich breit wie in der Vorwarnung), Fläche neutral, keine Fehlerfarbe im Stil', () => {
     render(<NextMatchRow {...basis()} />);
     const stil = screen.getByTestId('next').getAttribute('style') ?? '';
     expect(stil).toContain('var(--color-border)');
     expect(stil).not.toContain('--color-error');
     expect(stil).not.toContain('--color-error-light');
     expect(screen.getByTestId('next')).toHaveAttribute('data-modus', 'normal');
+    expect(stil).toContain('2px');
+  });
+
+  it('@SL-155 gleiche Außenmaße: Rahmenbreite normal = Vorwarnung = verborgen (die Tasten darunter springen nie)', () => {
+    const breite = (extra: Partial<NextMatchRowProps>): string => {
+      const { unmount } = render(<NextMatchRow {...basis(extra)} />);
+      const wert = screen.getByTestId('next').style.border;
+      unmount();
+      return wert.split(' ')[0];
+    };
+    expect(breite({ modus: 'normal' })).toBe(breite({ modus: 'vorwarnung' }));
+    expect(breite({ verborgen: true })).toBe(breite({ modus: 'vorwarnung' }));
   });
 
   it('@SL-155 Vorwarnung: Rahmen in der Warn-Rahmenfarbe, mittel breit; Fläche bleibt neutral, kein zusätzlicher Text', () => {

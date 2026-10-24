@@ -1,7 +1,7 @@
 /**
  * E2E: Tafel und Tastenfläche am Handy (Plan Cockpit v2 A3): @SL-179 Doppelpunkt der Kästen senkrecht über dem der Uhr, @SL-061 kleine Handys:
  * Tor ohne Scrollen, Foul/Zeitstrafe/Karte durch Scrollen der Tastenfläche, Tafel und Leiste fest; @SL-155 Platz der Zeile „Nächstes“ bleibt
- * reserviert (die Tasten springen nie, F3 Variante R). Läuft in `cockpit-360x640` und `mobile-md` (390 × 844); Laptop siehe `cockpit-hoehen`.
+ * reserviert (die Tasten springen nie, F3 Variante R). Läuft in der CI im schlanken Projekt `cockpit-390x664` (unter 800 px: die Tastenfläche scrollt) und in `mobile-sm`/`mobile-md` (ab 800 px: alles ohne Scrollen), lokal zusätzlich in `cockpit-360x640`; Laptop siehe `cockpit-hoehen` (PR B).
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
@@ -72,6 +72,24 @@ test.describe('Cockpit am Handy: Tafel und Tastenfläche (Gast, lokal)', () => {
     await zeile.evaluate((el) => { el.style.visibility = 'visible'; }); // so sieht die Zeile ab 3:00 aus: gleicher Platz
     expect(await oben(page, 'goal-button-home')).toBe(davor.tor);
     expect(await oben(page, 'foul-button-home')).toBe(davor.foul);
+  });
+
+  test('@SL-155 echter Übergang 3:01 → 3:00 (Uhr vorgespult): die Zeile erscheint, Tor, Foul und Zeile selbst bleiben an ihrem Platz und gleich groß', async ({ page, seedIndexedDB }) => {
+    await page.clock.install();
+    await seedIndexedDB({ tournaments: [cup({ minuten: 4, perioden: 1 })] });
+    await anpfeifen(page);
+    const zeile = page.getByTestId('cockpit-naechstes');
+    await page.clock.fastForward(55_000); // Restzeit etwa 3:05
+    await expect(zeile).toHaveAttribute('data-verborgen', 'true');
+    const davor = { tor: await oben(page, 'goal-button-home'), foul: await oben(page, 'foul-button-home'), zeile: await zeile.boundingBox() };
+    await page.clock.fastForward(10_000); // Restzeit etwa 2:55: die Vorwarnung ist aktiv
+    await expect(zeile).not.toHaveAttribute('data-verborgen', 'true');
+    await expect(zeile).toHaveAttribute('data-modus', 'vorwarnung');
+    const danach = { tor: await oben(page, 'goal-button-home'), foul: await oben(page, 'foul-button-home'), zeile: await zeile.boundingBox() };
+    expect(danach.tor, 'Tor springt nicht').toBe(davor.tor);
+    expect(danach.foul, 'Foul springt nicht').toBe(davor.foul);
+    expect(danach.zeile?.height, 'gleiche Höhe der Zeile in allen Modi').toBe(davor.zeile?.height);
+    expect(danach.zeile?.width).toBe(davor.zeile?.width);
   });
 
   test('@SL-155 ab 3:00 steht die Zeile da (Vorwarnung), davor nicht', async ({ page, seedIndexedDB }) => {

@@ -34,9 +34,8 @@ const zeileStil = (modus: NextMatchRowProps['modus']): CSSProperties => ({
   position: 'relative', display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, flexWrap: 'wrap', minWidth: 0,
   padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, boxSizing: 'border-box',
   background: cssVars.colors.surface, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm,
-  border: modus === 'vorwarnung'
-    ? `${cssVars.borderWidth.medium} solid ${cssVars.colors.nextWarnBorder}`
-    : `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+  // Gleiche Außenmaße in jedem Modus (@SL-155 „die Tasten springen nie“): der Rahmen ist immer mittel breit, nur die Farbe wechselt
+  border: `${cssVars.borderWidth.medium} solid ${modus === 'vorwarnung' ? cssVars.colors.nextWarnBorder : cssVars.colors.border}`,
   borderRadius: cssVars.borderRadius.md,
 });
 const labelStil: CSSProperties = { fontWeight: cssVars.fontWeights.bold };

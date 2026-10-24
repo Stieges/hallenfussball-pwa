@@ -107,6 +107,9 @@ test.describe('Cockpit Scheibe 3: Team-Spalten und Einträge (Gast, lokal)', () 
     // Abstand der beiden Tor-Knöpfe mindestens `spacing.sm` (8 px, Mockup `column-gap`): ein Fehltipp bucht sonst ein Tor für die Gegner (VISUAL § 9)
     const luecke = torGast.x - (torHeim.x + torHeim.width);
     expect(luecke).toBeGreaterThanOrEqual(7.5);
+    // Beide Köpfe sind gleich hoch, auch wenn der Name links dreizeilig umbricht und der rechte einzeilig bleibt (Spalten teilen die Zeile)
+    const kopfGast = await page.getByTestId('team-head-away').boundingBox();
+    expect(Math.abs((kopfGast?.height ?? 0) - kopfHeim.height), 'Köpfe gleich hoch').toBeLessThanOrEqual(1);
     // @SL-176: der Kopf trägt die getragene Farbe wie der Kasten (hier die Trikotfarbe aus der Farbsaat, kein Leibchen)
     await expect(page.getByTestId('team-head-home')).toHaveCSS('background-color', 'rgb(255, 215, 0)');
   });

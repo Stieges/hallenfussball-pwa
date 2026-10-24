@@ -22,6 +22,8 @@ export interface TeamHeadBarProps {
   testId: string;
   nameTestId: string;
   stripeTestId?: string;
+  /** Füllt die Höhe seiner Zeile: in der Tastenspalte sind beide Köpfe gleich hoch, auch wenn ein Name dreizeilig umbricht. */
+  fuellend?: boolean;
 }
 
 /**
@@ -30,13 +32,14 @@ export interface TeamHeadBarProps {
  */
 const LANGER_NAME = 16;
 
-export function TeamHeadBar({ name, label, fill, bib = null, breit = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
+export function TeamHeadBar({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
   const gestapelt = name.length > LANGER_NAME;
   const kopf: CSSProperties = {
     display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? cssVars.spacing.xs : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.md,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, hyphens: 'manual',
+    ...(fuellend ? { flex: '1 1 auto' } : {}),
     ...fillSurface(fill),
   };
   const nameStil: CSSProperties = {

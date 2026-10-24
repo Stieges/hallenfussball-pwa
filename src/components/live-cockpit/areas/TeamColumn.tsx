@@ -68,7 +68,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
   return (
     <section style={spalteStil} data-testid={`team-column-${seite}`} aria-label={name}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
-      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} />
+      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} fuellend />
       {/* Der Zähler steht im Foul-Knopf (Laptop-Mockup Stand 4); eine eigene Zeile nur ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) */}
       {!knoepfe.foul && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
       </div>

@@ -17,13 +17,15 @@ export interface TeamKopfProps {
   kasten: SideBox;
   /** Ab 1024 px größere Schrift im Kopf. */
   breit?: boolean;
+  /** In der Tastenspalte: der Kopf füllt die gemeinsame Zeile, beide Köpfe sind gleich hoch. */
+  fuellend?: boolean;
 }
 
-export function TeamKopf({ seite, name, kasten, breit = false }: TeamKopfProps): ReactElement {
+export function TeamKopf({ seite, name, kasten, breit = false, fuellend = false }: TeamKopfProps): ReactElement {
   const { t } = useTranslation('cockpit');
   return (
     <TeamHeadBar
-      name={name} label={t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')} fill={kasten.fill} breit={breit}
+      name={name} label={t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')} fill={kasten.fill} breit={breit} fuellend={fuellend}
       bib={kasten.bib ? { ariaLabel: t('spalte.leibchen') } : null}
       testId={`team-head-${seite}`} nameTestId={`team-name-${seite}`}
     />

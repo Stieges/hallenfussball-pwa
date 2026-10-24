@@ -246,7 +246,7 @@ export function markStyle(kind: ScoreBoxMark, size: ScoreBoxSize, colors: { back
 
 /** Fläche eines Kastens als Hintergrund (Farbe oder Weste mit Streifen); für Köpfe, die dieselbe Farbe tragen (Cockpit-Team-Kopf, @SL-176). */
 export function fillSurface(fill: BoxFill): CSSProperties {
-  const colors = shownColors(fill, undefined, '#000000');
+  const colors = shownColors(fill, undefined, BOX_BLACK);
   const stripe = percent(L.vestStripeShare);
   return {
     backgroundColor: colors.center,
@@ -258,5 +258,5 @@ export function fillSurface(fill: BoxFill): CSSProperties {
 
 /** Schriftfarbe auf der Fläche des Kastens (Schwarz oder Weiß, mindestens 4,5 : 1). */
 export function fillTextColor(fill: BoxFill): '#FFFFFF' | '#000000' {
-  return digitColor(fill, undefined, '#000000');
+  return digitColor(fill, undefined, BOX_BLACK);
 }
