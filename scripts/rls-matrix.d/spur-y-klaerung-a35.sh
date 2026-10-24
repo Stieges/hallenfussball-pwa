@@ -73,10 +73,9 @@ for kl_id in "${MATRIX_IDS[@]}"; do
   kl_allowed="$(perm_expected "$(role_for_id "$kl_id")" "leadMatches")"
   if [[ "$kl_allowed" == "true" ]]; then
     kl_exp="list=1;sel=1;ins=42501;log=42501;disc=accepted;"
-  elif [[ "$kl_id" == "declined-membership" ]]; then
-    # angenommen, dann entzogen (I-4): die Entscheidung wird selbst zur Klaerung gelegt, nie angewendet
-    kl_exp="list=0;sel=0;ins=42501;log=42501;disc=review;"
   else
+    # auch declined-membership (angenommen, dann entzogen, I-4): die Entscheidung wird glatt abgelehnt
+    # (FORBIDDEN_ACTOR RIGHTS_REVOKED, Review #355 M3/D15) -- nie selbst ein Klaerungseintrag, nie angewendet
     kl_exp="list=0;sel=0;ins=42501;log=42501;disc=rejected;"
   fi
   kl_cell "@FU-038 Klaerungsliste lesen/schreiben/entscheiden $kl_id" "$(kl_probe authenticated "$kl_uid")" "$kl_exp"
