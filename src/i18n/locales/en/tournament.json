@@ -1415,6 +1415,11 @@
         "title": "Already closed differently",
         "body": "Someone else closed the group with a different ranking. Your closing was not saved. The table shows the current state.",
         "bodyBy": "{{by}} has already decided differently and closed the group. Your entry was not saved. The table shows the current state."
+      },
+      "decidedElsewhere": {
+        "title": "Already decided",
+        "body": "Someone else has already decided this tie. Your entry was not saved. The table shows the current state.",
+        "bodyBy": "{{by}} has already decided. Your entry was not saved. The table shows the current state."
       }
     },
     "errors": {

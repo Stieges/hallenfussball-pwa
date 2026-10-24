@@ -1415,6 +1415,11 @@
         "title": "Schon anders abgeschlossen",
         "body": "Eine andere Person hat die Gruppe mit einer anderen Rangfolge abgeschlossen. Dein Abschluss wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand.",
         "bodyBy": "{{by}} hat schon anders entschieden und die Gruppe abgeschlossen. Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand."
+      },
+      "decidedElsewhere": {
+        "title": "Schon entschieden",
+        "body": "Eine andere Person hat diesen Gleichstand schon entschieden. Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand.",
+        "bodyBy": "{{by}} hat schon entschieden. Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand."
       }
     },
     "errors": {

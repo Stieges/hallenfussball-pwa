@@ -60,23 +60,26 @@ async function zeige(tournament: Tournament, { repo = fakeRepo(), leitung = true
   hoisted.online.current = online;
   const onChanged = vi.fn();
   const Wrapper = await i18nWrapper(language);
-  render(
+  const tree = (t: Tournament) => (
     <Wrapper>
       <MemoryRouter>
-        <StandingTieProvider tournamentId={tournament.id} onChanged={onChanged}>
-          <GroupCompletionProvider tournament={tournament}>
+        <StandingTieProvider tournamentId={t.id} onChanged={onChanged}>
+          <GroupCompletionProvider tournament={t}>
             <TabellenTab
-              tournament={tournament}
-              schedule={generateFullSchedule(tournament)}
-              currentStandings={calculateStandingsPerGroup(tournament)}
-              overallStandings={calculateStandings(tournament.teams, tournament.matches, tournament)}
+              tournament={t}
+              schedule={generateFullSchedule(t)}
+              currentStandings={calculateStandingsPerGroup(t)}
+              overallStandings={calculateStandings(t.teams, t.matches, t)}
             />
           </GroupCompletionProvider>
         </StandingTieProvider>
       </MemoryRouter>
-    </Wrapper>,
+    </Wrapper>
   );
-  return { repo, onChanged };
+  const view = render(tree(tournament));
+  /** Neuladen nach einer Server-Antwort: derselbe Baum mit dem frischen Turnier (z. B. neuer Verlauf). */
+  const neuGeladen = (t: Tournament): void => { view.rerender(tree(t)); };
+  return { repo, onChanged, neuGeladen };
 }
 
 const hallencup = (): Tournament => tournamentFromFixture('hallencup');
@@ -760,41 +763,74 @@ describe('@TM-151 „Erneut abschließen“ verlangt bei offenem Gleichstand mit
 });
 
 /**
- * R2 PR 1 – @W2A-060 (Befund C-GLEICHSTAND-KOLLISION-OHNE-NAME):
+ * R2 PR 1 – @W2A-060 (Befund C-GLEICHSTAND-KOLLISION-OHNE-NAME), Fixrunde Review #382 M2/M3:
  *   Wenn Olli 4:3 für TSV Waging rot und kurz danach Maria 5:4 für DJK Kammer einträgt
  *   Dann gilt Ollis Eintrag
  *   Und Maria sieht, dass und von wem schon entschieden wurde
- * Maria trägt im Kasten ein; der Server lehnt ab (Olli war schneller). Nach dem Neuladen kennt Marias Gerät den Verlauf mit Olli.
+ * Maria trägt im Kasten ein; der Server lehnt ab (Olli war schneller). Genannt wird nur eine Person aus einem Verlaufseintrag,
+ * der NACH Marias Absenden neu ins Gerät kam und nach dem die Gruppe nicht wieder geöffnet wurde – nie ein alter Eintrag
+ * (sonst stünde etwa „Maria hat schon anders entschieden“ bei Maria). `COMPLETED_DIFFERENTLY` = schon anders abgeschlossen,
+ * `DECIDED_ELSEWHERE` = schon entschieden, Gruppe nicht abgeschlossen (eigener Hinweis).
  */
 describe('@W2A-060 die erste Entscheidung gilt, die zweite Person sieht von wem', () => {
-  const nachOllisAbschluss = (t: Tournament): Tournament => ({
-    ...t,
-    decisionLog: [{ id: 1, kind: 'complete_group', groupId: 'A', detail: {}, actorName: 'Olli', at: '2026-11-28T11:00:00Z' }],
-  });
+  const eintrag = (id: number, kind: 'complete_group' | 'reopen_group' | 'standing_decision', actorName: string) =>
+    ({ id, kind, groupId: 'A', detail: kind === 'standing_decision' ? { id: `e${String(id)}`, teamIds: [HC.sued, HC.west] } : {}, actorName, at: '2026-11-28T11:00:00Z' });
+  const mitVerlauf = (t: Tournament, log: ReturnType<typeof eintrag>[]): Tournament => ({ ...t, decisionLog: log });
 
-  it.each(['COMPLETED_DIFFERENTLY', 'DECIDED_ELSEWHERE'] as const)('@W2A-060 Server meldet %s: Hinweis nennt Olli, Marias Eintrag ist nicht gespeichert', async (code) => {
+  async function mariaTraegtEin(code: 'COMPLETED_DIFFERENTLY' | 'DECIDED_ELSEWHERE', vorher: ReturnType<typeof eintrag>[]) {
     const repo = fakeRepo();
     repo.completeGroup.mockResolvedValue({ status: 'rejected', code });
-    await zeige(nachOllisAbschluss(gruppeA()), { repo });
+    const { neuGeladen } = await zeige(mitVerlauf(gruppeA(), vorher), { repo });
     await userEvent.click(screen.getByTestId('group-close-button-A'));
     await screen.findByTestId('tie-decision-dialog');
     await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
     await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
     await userEvent.click(screen.getByTestId('group-close-confirm'));
-    const hinweis = await screen.findByTestId('group-conflict');
-    expect(hinweis).toHaveTextContent('Olli hat schon anders entschieden');
-    expect(hinweis).not.toHaveTextContent('Eine andere Person');
+    return neuGeladen;
+  }
+
+  it('@W2A-060 COMPLETED_DIFFERENTLY: nach dem Neuladen nennt der Hinweis Olli (neuer Abschluss-Eintrag)', async () => {
+    const neuGeladen = await mariaTraegtEin('COMPLETED_DIFFERENTLY', []);
+    expect(await screen.findByTestId('group-conflict')).toHaveTextContent('Eine andere Person'); // vor dem Neuladen allgemein
+    neuGeladen(mitVerlauf(gruppeA(), [eintrag(1, 'standing_decision', 'Olli'), eintrag(2, 'complete_group', 'Olli')]));
+    expect(screen.getByTestId('group-conflict')).toHaveTextContent('Olli hat schon anders entschieden');
   });
 
-  it('@W2A-060 ohne Verlauf (kein Name bekannt): der Hinweis bleibt allgemein', async () => {
-    const repo = fakeRepo();
-    repo.completeGroup.mockResolvedValue({ status: 'rejected', code: 'COMPLETED_DIFFERENTLY' });
-    await zeige(gruppeA(), { repo });
-    await userEvent.click(screen.getByTestId('group-close-button-A'));
-    await screen.findByTestId('tie-decision-dialog');
-    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
-    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
-    await userEvent.click(screen.getByTestId('group-close-confirm'));
-    expect(await screen.findByTestId('group-conflict')).toHaveTextContent('Eine andere Person');
+  it('@W2A-060 DECIDED_ELSEWHERE: eigener Hinweis „schon entschieden“ ohne „abgeschlossen“, Name aus dem Entscheidungs-Eintrag', async () => {
+    const vorher = [eintrag(1, 'complete_group', 'Maria'), eintrag(2, 'reopen_group', 'Maria')];
+    const neuGeladen = await mariaTraegtEin('DECIDED_ELSEWHERE', vorher);
+    neuGeladen(mitVerlauf(gruppeA(), [...vorher, eintrag(3, 'standing_decision', 'Olli')]));
+    const hinweis = await screen.findByTestId('group-decided-elsewhere');
+    expect(hinweis).toHaveTextContent('Olli hat schon entschieden');
+    expect(hinweis).not.toHaveTextContent('abgeschlossen');
+    expect(screen.queryByTestId('group-conflict')).toBeNull();
+  });
+
+  it('@W2A-060 Gegenbeispiel (Review #382 M3): alter Abschluss von Maria, danach wieder geöffnet → nie „Maria hat …“, sondern allgemein', async () => {
+    const vorher = [eintrag(1, 'complete_group', 'Maria'), eintrag(2, 'reopen_group', 'Maria')];
+    await mariaTraegtEin('COMPLETED_DIFFERENTLY', vorher);
+    const hinweis = await screen.findByTestId('group-conflict');
+    expect(hinweis).toHaveTextContent('Eine andere Person');
+    expect(hinweis).not.toHaveTextContent('Maria');
+  });
+
+  it('@W2A-060 Gegenbeispiel: alter Abschluss von Maria (ohne Wiederöffnen), der frische Verlauf kommt nicht an → nie „Maria hat …“', async () => {
+    await mariaTraegtEin('COMPLETED_DIFFERENTLY', [eintrag(1, 'complete_group', 'Maria')]);
+    const hinweis = await screen.findByTestId('group-conflict');
+    expect(hinweis).toHaveTextContent('Eine andere Person');
+    expect(hinweis).not.toHaveTextContent('Maria');
+  });
+
+  it('@W2A-060 Gegenbeispiel: neuer Abschluss-Eintrag, danach aber wieder geöffnet → allgemein', async () => {
+    const neuGeladen = await mariaTraegtEin('COMPLETED_DIFFERENTLY', []);
+    neuGeladen(mitVerlauf(gruppeA(), [eintrag(1, 'complete_group', 'Olli'), eintrag(2, 'reopen_group', 'Olli')]));
+    const hinweis = await screen.findByTestId('group-conflict');
+    expect(hinweis).toHaveTextContent('Eine andere Person');
+    expect(hinweis).not.toHaveTextContent('Olli');
+  });
+
+  it('@W2A-060 Gegenbeispiel: Verlauf nicht lesbar (bleibt leer) → allgemeiner Text', async () => {
+    await mariaTraegtEin('DECIDED_ELSEWHERE', []);
+    expect(await screen.findByTestId('group-decided-elsewhere')).toHaveTextContent('Eine andere Person hat diesen Gleichstand schon entschieden');
   });
 });

@@ -19,19 +19,21 @@ import { draftToDecision, planCompletion, type CompletionPlan, type NewDecision 
 import type { OpenTieBlock } from '../../../core/standings/tieViews';
 import type { Tournament } from '../../../types/tournament';
 import { useStandingTie } from '../standings/standingTieContext';
+import { lastLogId } from './completionLog';
 
 export type ReadyPlan = Extract<CompletionPlan, { code: 'READY' }>;
 
 /** Fehler, der im Dialog steht (nichts gespeichert, neuer Versuch erlaubt). */
 export type CompletionError = 'OFFLINE' | 'RETRY_LATER' | 'UNKNOWN' | 'FORBIDDEN';
-export type NoticeKind = 'openMatches' | 'already' | 'tableChanged' | 'differently';
+export type NoticeKind = 'openMatches' | 'already' | 'tableChanged' | 'differently' | 'decidedElsewhere';
 export type ReopenError = CompletionError | 'NOT_COMPLETED' | 'REASON_REQUIRED';
 
 export type CompletionFlow =
   | { step: 'idle' }
   | { step: 'tie'; groupId: string; blocks: OpenTieBlock[]; decisions: NewDecision[] }
   | { step: 'confirm'; groupId: string; plan: ReadyPlan; busy: boolean; error: CompletionError | null }
-  | { step: 'notice'; groupId: string; kind: NoticeKind; open?: number }
+  /** `knownLogId`: höchste Verlaufs-Kennung beim Absenden – genannt wird nur, wer danach eingetragen hat (@W2A-060). */
+  | { step: 'notice'; groupId: string; kind: NoticeKind; open?: number; knownLogId?: number }
   | { step: 'reopen'; groupId: string; reason: string; busy: boolean; error: ReopenError | null };
 
 export const MAX_REOPEN_REASON = 500;
@@ -68,8 +70,6 @@ const errorOf = (error: unknown): CompletionError => {
 };
 
 const TABLE_CHANGED = ['STALE_VERSION', 'RANKING_MISMATCH', 'TIE_DECISION_REQUIRED', 'SHARED_NOT_ALLOWED', 'INVALID_TIE_DECISIONS'];
-/** @W2A-060: jemand anders hat schon entschieden bzw. anders abgeschlossen – der Hinweis nennt, wer (aus dem Verlauf). */
-const DECIDED_BY_OTHER = ['COMPLETED_DIFFERENTLY', 'DECIDED_ELSEWHERE'];
 
 export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
   const tie = useStandingTie();
@@ -90,10 +90,10 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
 
   const reload = useCallback(() => { onChanged?.(); }, [onChanged]);
 
-  const handleResult = useCallback((groupId: string, plan: ReadyPlan, result: CompleteGroupResult): void => {
+  const handleResult = useCallback((groupId: string, plan: ReadyPlan, result: CompleteGroupResult, knownLogId: number): void => {
     if (result.status === 'ok') {
       reload();
-      setFlow(result.alreadyCompleted ? { step: 'notice', groupId, kind: 'already' } : IDLE);
+      setFlow(result.alreadyCompleted ? { step: 'notice', groupId, kind: 'already', knownLogId } : IDLE);
       return;
     }
     if (result.status === 'forbidden') {
@@ -105,9 +105,10 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
       setFlow({ step: 'notice', groupId, kind: 'openMatches', ...(result.open !== undefined ? { open: result.open } : {}) });
       return;
     }
-    if (result.status === 'rejected' && DECIDED_BY_OTHER.includes(result.code)) {
+    // @W2A-060: schon anders abgeschlossen bzw. schon entschieden (Gruppe dann nicht abgeschlossen) – der Hinweis nennt, wer
+    if (result.status === 'rejected' && (result.code === 'COMPLETED_DIFFERENTLY' || result.code === 'DECIDED_ELSEWHERE')) {
       reload();
-      setFlow({ step: 'notice', groupId, kind: 'differently' });
+      setFlow({ step: 'notice', groupId, kind: result.code === 'DECIDED_ELSEWHERE' ? 'decidedElsewhere' : 'differently', knownLogId });
       return;
     }
     if (result.status === 'rejected' && TABLE_CHANGED.includes(result.code)) {
@@ -120,15 +121,16 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
 
   const submit = useCallback(async (groupId: string, plan: ReadyPlan): Promise<void> => {
     setFlow({ step: 'confirm', groupId, plan, busy: true, error: null });
+    const knownLogId = lastLogId(tournament); // Stand des Verlaufs beim Absenden (@W2A-060)
     try {
       if (tournamentRepository.completeGroup === undefined) {
         throw new Error('Repository kann Gruppen nicht abschließen');
       }
-      handleResult(groupId, plan, await tournamentRepository.completeGroup(tournament.id, plan.request));
+      handleResult(groupId, plan, await tournamentRepository.completeGroup(tournament.id, plan.request), knownLogId);
     } catch (error) {
       setFlow({ step: 'confirm', groupId, plan, busy: false, error: errorOf(error) });
     }
-  }, [tournamentRepository, tournament.id, handleResult]);
+  }, [tournamentRepository, tournament, handleResult]);
 
   const route = useCallback((groupId: string, decisions: NewDecision[]): void => {
     const plan = planCompletion(tournament, groupId, decisions);
