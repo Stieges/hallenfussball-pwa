@@ -6,7 +6,7 @@
  * noch einmal von selbst, und die übrigen wartenden Einträge gehen weiter raus.
  * @FU-127: Ein unklarer Fehler wird wiederholt; nimmt der Server die Änderung danach an, war sie nie „nicht übernommen“.
  *
- * Abgrenzung „eindeutig“ (Controller 2026-10-22, F2): Versionskonflikt, Postgres-Klasse 22/23, HF002/HF003, Team noch
+ * Abgrenzung „eindeutig“ (Controller 2026-10-22, F2): Versionskonflikt, Postgres-Klasse 22/23, HF002/HF003/HF005 (R8), Team noch
  * referenziert. 42501 (Rechte) bleibt unklar.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -74,6 +74,8 @@ const EINDEUTIG: ReadonlyArray<{ grund: string; error: () => unknown; conflict: 
   { grund: 'ein Wert nicht zulässig ist (23514, Prüfregel)', error: () => pgError('23514', 'new row violates check constraint'), conflict: false, rejection: 'invalidValue' },
   { grund: 'ein Wert nicht zulässig ist (HF002, Herkunft unveränderlich)', error: () => pgError('HF002', 'origin is immutable'), conflict: false, rejection: 'invalidValue' },
   { grund: 'ein Wert nicht zulässig ist (HF003, Farben nur beim Anpfiff)', error: () => pgError('HF003', 'kit columns are server-only'), conflict: false, rejection: 'invalidValue' },
+  // R8 (@ZP-016, @ZP-057): der Server nimmt die Uhrzeit nicht an (Spiel angepfiffen, Vorziehen in die Vergangenheit)
+  { grund: 'ein Wert nicht zulässig ist (HF005, Uhrzeit eines angepfiffenen Spiels)', error: () => pgError('HF005', 'SCHEDULE_LOCKED: Spiel m11 ist angepfiffen oder beendet (running), seine Uhrzeit bleibt.'), conflict: false, rejection: 'invalidValue' },
   { grund: 'ein Wert nicht zulässig ist (Team noch referenziert)', error: () => new TeamStillReferencedError('m7'), conflict: false, rejection: 'invalidValue' },
 ];
 
