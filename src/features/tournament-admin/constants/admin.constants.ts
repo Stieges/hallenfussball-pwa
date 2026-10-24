@@ -23,7 +23,7 @@ export const ADMIN_CATEGORY_GROUPS: AdminCategoryGroupConfig[] = [
   { id: 'management', label: 'Verwaltung', showLabel: true },
   { id: 'settings', label: 'Einstellungen', showLabel: true },
   { id: 'support', label: '', showLabel: false },
-  { id: 'danger', label: 'Kritische Aktionen', showLabel: true },
+  { id: 'danger', label: 'Gefahrenbereich', showLabel: true },
 ];
 
 // =============================================================================
