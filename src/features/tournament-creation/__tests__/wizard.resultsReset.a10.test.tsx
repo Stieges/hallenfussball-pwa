@@ -62,6 +62,8 @@ describe('A-10 Assistent Schritt 2 „Turnier zurücksetzen“ über den Server 
     await vi.waitFor(() => expect(spiel7(result)?.matchStatus).toBe('scheduled'));
     expect(confirm).toHaveBeenCalledTimes(1);
     expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017
+    // @OB-014: Ergebnisse löschen ist gefährlich – Rückfrage als danger (Fokus zuerst auf „Abbrechen“)
+    expect(confirm.mock.calls[0][0].variant).toBe('danger');
     expect(cloud.rpc).toHaveBeenCalledWith('reset_match_results', { p_tournament_id: 'T', p_match_ids: [SPIEL_7, SPIEL_9, HALBFINALE_1] });
     expect(spiel7(result)).toMatchObject({ scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' });
   });

@@ -64,7 +64,7 @@ const existingTournament = (overrides: Partial<Tournament> = {}): Tournament =>
   }) as unknown as Tournament;
 
 function setup(tournament: Tournament) {
-  const wizard = renderHook(() => useTournamentWizard(tournament));
+  const wizard = renderHook(() => useTournamentWizard(tournament, () => Promise.resolve(false)));
   const stepProps = () => ({
     formData: wizard.result.current.formData,
     onUpdate: wizard.result.current.updateForm,

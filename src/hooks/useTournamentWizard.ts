@@ -99,16 +99,13 @@ export interface UseTournamentWizardReturn {
   publishTournament: (override?: Partial<Tournament>) => Promise<Tournament>;
 }
 
-/** Ohne Dialog des Bildschirms gilt jede Rückfrage als abgelehnt (nie ein Fenster des Browsers). */
-const declineConfirm: ConfirmFn = () => Promise.resolve(false);
-
 /**
  * @param askConfirm Rückfrage im Dialog der App (@OB-017): Der Hook zeigt selbst nichts an, der Bildschirm
  *   rendert den Dialog. Nie ein Fenster des Browsers.
  */
 export function useTournamentWizard(
-  existingTournament?: Tournament,
-  askConfirm: ConfirmFn = declineConfirm
+  existingTournament: Tournament | undefined,
+  askConfirm: ConfirmFn
 ): UseTournamentWizardReturn {
   const { t } = useTranslation('wizard');
   // Get auth-aware repository (Supabase for authenticated, localStorage for guests)

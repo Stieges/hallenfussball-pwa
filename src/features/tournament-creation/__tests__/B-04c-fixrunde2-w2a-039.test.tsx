@@ -37,7 +37,7 @@ vi.mock('../../../hooks/useRepository', () => ({
 type WizardApi = ReturnType<typeof useTournamentWizard>;
 
 function Harness({ onDraft }: { onDraft: (t: Tournament) => void }) {
-  const api: WizardApi = useTournamentWizard();
+  const api: WizardApi = useTournamentWizard(undefined, () => Promise.resolve(false));
   return (
     <>
       <FinalsConfiguration formData={api.formData} onUpdate={api.updateForm} />

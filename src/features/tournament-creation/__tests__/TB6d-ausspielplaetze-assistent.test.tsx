@@ -47,7 +47,7 @@ const entwurf = (over: Partial<Tournament> = {}): Tournament => ({
 
 async function zeigeSchritt(tournament: Tournament) {
   const Wrapper = await i18nWrapper('de');
-  const wizard = renderHook(() => useTournamentWizard(tournament));
+  const wizard = renderHook(() => useTournamentWizard(tournament, () => Promise.resolve(false)));
   const props = () => ({
     formData: wizard.result.current.formData,
     onUpdate: wizard.result.current.updateForm,

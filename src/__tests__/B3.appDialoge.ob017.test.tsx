@@ -122,8 +122,20 @@ describe('@OB-017 Dialog der App statt Browser-Fenster – ersetzte Stellen', ()
 
     await user.click(screen.getByRole('button', { name: /settings\.advancedEditing\.editTeams/ }));
 
-    const cancel = await screen.findByTestId('confirm-dialog-cancel');
-    await waitFor(() => expect(cancel).toHaveFocus());
+    // Das Fixture gilt als „ungespeichert“: erst kommt die einfache Rückfrage „Zum Wizard wechseln“ (warning) …
+    expect(await screen.findByText('tournament:settings.confirmDialog.leaveTitle')).toBeInTheDocument();
+    await user.click(screen.getByTestId('confirm-dialog-confirm'));
+    // … dann die gefährliche („Spielplan wird neu erzeugt, Ergebnisse gehen verloren“)
+    expect(await screen.findByText('tournament:settings.confirmDialog.wizardTitle')).toBeInTheDocument();
+    const cancel = screen.getByTestId('confirm-dialog-cancel');
+    // Erst nach der Fokusfalle (bei warning springt der Fokus nach 50 ms auf „Bestätigen“) prüfen
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(cancel).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onEditInWizard).not.toHaveBeenCalled();
+    expect(screen.getByTestId('confirm-dialog-cancel')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog-cancel')).not.toBeInTheDocument());
     expect(onEditInWizard).not.toHaveBeenCalled();
     expectKeinBrowserFenster();
   });

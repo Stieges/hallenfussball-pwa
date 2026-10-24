@@ -9,7 +9,7 @@ vi.mock('../useRepository', () => ({ useRepository: () => ({ save: vi.fn(), get:
 
 import { useTournamentWizard } from '../useTournamentWizard';
 
-function startWithClassic(ask?: Parameters<typeof useTournamentWizard>[1]) {
+function startWithClassic(ask: Parameters<typeof useTournamentWizard>[1]) {
   const hook = renderHook(() => useTournamentWizard(undefined, ask));
   act(() => hook.result.current.updateForm('tournamentType', 'classic'));
   return hook;
@@ -40,17 +40,6 @@ describe('@OB-017 Assistent: Turniertyp wechseln fragt im Dialog der App', () =>
     act(() => result.current.handleTournamentTypeChange('bambini'));
 
     await waitFor(() => expect(ask).toHaveBeenCalledTimes(1));
-    expect(result.current.formData.tournamentType).toBe('classic');
-    expect(browserConfirm).not.toHaveBeenCalled();
-  });
-
-  it('Gegenbeispiel: ohne Dialog des Bildschirms gilt die Rückfrage als abgelehnt – nie ein Fenster des Browsers', async () => {
-    const browserConfirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { result } = startWithClassic();
-
-    act(() => result.current.handleTournamentTypeChange('bambini'));
-    await act(async () => { await Promise.resolve(); });
-
     expect(result.current.formData.tournamentType).toBe('classic');
     expect(browserConfirm).not.toHaveBeenCalled();
   });

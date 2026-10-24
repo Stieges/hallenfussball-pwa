@@ -135,7 +135,7 @@
       "action": "Revoke",
       "confirmMessage": "Would you like to revoke your privacy consent?\n\nThis will disable error tracking and session replay. You will be asked for consent again on the next app start.",
       "successMessage": "Your consent has been revoked.",
-      "dialogTitle": "Withdraw consent"
+      "dialogTitle": "Revoke consent"
     }
   },
   "legal": {
