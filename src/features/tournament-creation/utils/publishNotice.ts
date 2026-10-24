@@ -32,3 +32,12 @@ export function publishNoticeKey({ visibility, toCloud, isOnline, isAnonymous = 
   }
   return visibility === 'shareable' ? 'publish.explanationPublic' : 'publish.explanationPrivate';
 }
+
+/**
+ * C-FESTLEGEN-TEILT-NICHT: Teilt „Festlegen“ das Turnier per Link? Genau dann, wenn die Vorschau den Satz
+ * „jeder mit dem Link“ ankuendigt -- angemeldet, online, kein anonymes Konto, und das Turnier wird beim Festlegen teilbar
+ * (ein bereits festgelegtes, privat gestelltes Turnier bleibt privat).
+ */
+export function publishSharesByLink(input: PublishNoticeInput): boolean {
+  return publishNoticeKey(input) === 'publish.explanationPublic';
+}

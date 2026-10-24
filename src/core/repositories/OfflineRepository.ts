@@ -1,5 +1,5 @@
 import { MutationQueue } from '../services/MutationQueue';
-import { ITournamentRepository } from './ITournamentRepository';
+import { ITournamentRepository, type MakePublicOptions } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
@@ -111,6 +111,9 @@ function sideDiffers(local: MatchSlot | undefined, remote: MatchSlot | undefined
  * auf HTTP 400 zurueck.
  */
 const RELEASE_REFUSAL_CODE = 'HF001';
+
+/** Wie lange das erste Teilen auf die Ankunft des Turniers in der Cloud wartet. */
+const SHARE_UPLOAD_WAIT_MS = 20_000;
 
 /** Ältere Fassung der Funktion kannte den eigenen SQLSTATE noch nicht. */
 const RELEASE_REFUSAL_MARKER = 'has not been released';
@@ -929,7 +932,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      * Makes a tournament publicly accessible by generating a share code.
      * Strategy: Try cloud first, fall back to local, queue for sync.
      */
-    async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+    async makeTournamentPublic(tournamentId: string, options?: MakePublicOptions): Promise<{ shareCode: string; createdAt: string } | null> {
+        if (options?.requireCloud === true) {
+            return this.makePublicInCloud(tournamentId);
+        }
         try {
             // Try cloud first for proper share code generation
             const result = await this.supabaseRepo.makeTournamentPublic(tournamentId);
@@ -968,6 +974,45 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             });
         }
         return localResult;
+    }
+
+    /**
+     * @W1-020 (C-FESTLEGEN-TEILT-NICHT): Teilen beim ersten Festlegen. Das Turnier kommt ueber die Warteschlange in die
+     * Cloud; erst danach kennt `make_tournament_public` es. Darum erst warten, dann der Aufruf -- und bei jedem Fehler
+     * werfen statt lokal auszuweichen (der Hinweis an den Nutzer darf nicht behaupten, jeder koenne zuschauen).
+     */
+    private async makePublicInCloud(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        await this.waitForUpload(tournamentId, SHARE_UPLOAD_WAIT_MS);
+        const result = await this.supabaseRepo.makeTournamentPublic(tournamentId);
+        if (!result) { return null; }
+        const tournament = await this.localRepo.get(tournamentId);
+        if (tournament) {
+            await this.localRepo.cacheCloudCopy({ ...tournament, isPublic: true, shareCode: result.shareCode, shareCodeCreatedAt: result.createdAt });
+        }
+        return result;
+    }
+
+    /** Wartet, bis die Warteschlange fuer das Turnier leer ist; gescheiterte Speicherung oder Zeitablauf werfen. */
+    private waitForUpload(tournamentId: string, timeoutMs: number): Promise<void> {
+        const queue = this._mutationQueue;
+        const state = (): 'done' | 'failed' | 'waiting' => {
+            if (queue.hasFailed(tournamentId, ['SAVE_TOURNAMENT'])) { return 'failed'; }
+            return queue.hasPending(tournamentId) ? 'waiting' : 'done';
+        };
+        return new Promise<void>((resolve, reject) => {
+            let unsubscribe = (): void => undefined;
+            const timer = setTimeout(() => { unsubscribe(); reject(new NetworkError('Das Turnier ist noch nicht in der Cloud angekommen.')); }, timeoutMs);
+            const check = (): boolean => {
+                const current = state();
+                if (current === 'waiting') { return false; }
+                clearTimeout(timer);
+                unsubscribe();
+                if (current === 'done') { resolve(); } else { reject(new RepositoryError('makePublic', 'Das Speichern in der Cloud ist gescheitert.')); }
+                return true;
+            };
+            if (check()) { return; }
+            unsubscribe = queue.subscribe(() => { check(); });
+        });
     }
 
     /**
