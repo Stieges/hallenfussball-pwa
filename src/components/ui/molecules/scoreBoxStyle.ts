@@ -12,7 +12,7 @@ import { borderWidths, cssVars, displayLayout, displayList } from '../../../desi
 import { getContrastRatio } from '../../../design-tokens/display';
 import { getBlockFrame, mixHex, type BlockFrame, type BlockFrameWidths } from '../../../design-tokens/displayColor';
 
-export type ScoreBoxSize = 'display' | 'row' | 'compact';
+export type ScoreBoxSize = 'display' | 'row' | 'compact' | 'cockpit';
 export type ScoreBoxOutcome = 'winner' | 'loser';
 export type ScoreBoxMark = 'cup' | 'bib';
 
@@ -100,6 +100,16 @@ const LAYOUTS: Record<ScoreBoxSize, SizeLayout> = {
     ringOffset: borderWidths.medium,
     digitFontSize: 'inherit',
   },
+  /** Cockpit (@SL-176, @SL-178): Breite füllt die Zelle, Höhe und Ziffer kommen je Stufe aus `--cockpit-kasten` / `--cockpit-ziffer` (Tafel setzt sie aus den Tokens) */
+  cockpit: {
+    width: '100%',
+    height: 'var(--cockpit-kasten)',
+    radius: cssVars.borderRadius.md,
+    frame: SMALL_FRAME,
+    ringWidth: borderWidths.medium,
+    ringOffset: borderWidths.medium,
+    digitFontSize: 'var(--cockpit-ziffer)',
+  },
   compact: {
     width: cssVars.touchTargets.primary,
     height: cssVars.touchTargets.minimum,
@@ -168,8 +178,8 @@ export function boxStyle({ fill, size, background, textColor, outcome, ringColor
   };
   return {
     position: 'relative',
-    display: size === 'display' ? 'block' : 'inline-block',
-    flex: size === 'display' ? undefined : 'none',
+    display: size === 'display' || size === 'cockpit' ? 'block' : 'inline-block',
+    flex: size === 'display' || size === 'cockpit' ? undefined : 'none',
     boxSizing: 'border-box',
     width: layout.width,
     height: layout.height,
@@ -232,4 +242,21 @@ export function markStyle(kind: ScoreBoxMark, size: ScoreBoxSize, colors: { back
     color: colors.background,
     fontSize: `calc(${diameter} * ${MARK_ICON_SHARE})`,
   };
+}
+
+/** Fläche eines Kastens als Hintergrund (Farbe oder Weste mit Streifen); für Köpfe, die dieselbe Farbe tragen (Cockpit-Team-Kopf, @SL-176). */
+export function fillSurface(fill: BoxFill): CSSProperties {
+  const colors = shownColors(fill, undefined, '#000000');
+  const stripe = percent(L.vestStripeShare);
+  return {
+    backgroundColor: colors.center,
+    ...(fill.kind === 'vest'
+      ? { backgroundImage: `linear-gradient(90deg, ${colors.stripes} ${stripe}%, ${colors.center} ${stripe}%, ${colors.center} ${100 - stripe}%, ${colors.stripes} ${100 - stripe}%)` }
+      : {}),
+  };
+}
+
+/** Schriftfarbe auf der Fläche des Kastens (Schwarz oder Weiß, mindestens 4,5 : 1). */
+export function fillTextColor(fill: BoxFill): '#FFFFFF' | '#000000' {
+  return digitColor(fill, undefined, '#000000');
 }

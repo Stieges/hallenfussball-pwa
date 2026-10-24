@@ -21,6 +21,7 @@ import { useNow } from '../hooks/useNow';
 import { alsUebersetzer } from '../model/alsUebersetzer';
 import { toScoreboardModel } from '../model/toScoreboardModel';
 import type { LiveMatch } from '../types';
+import type { CockpitKasten } from '../typesFarben';
 
 export interface ScoreboardAreaProps {
   match: LiveMatch | null;
@@ -30,6 +31,10 @@ export interface ScoreboardAreaProps {
   /** Anzeige-Reihenfolge der Seiten (`useSideOrder`). */
   order: { links: Side; rechts: Side };
   size: 'compact' | 'regular' | 'wide';
+  /** Stufe der Fensterhöhe (nur Layout `breit`, @SL-187). */
+  stufe?: 'knapp' | 'normal' | 'gross';
+  /** Kästen des Spiels nach Heim/Gast (@SL-176). */
+  kasten?: CockpitKasten;
   notices: Pick<UseCockpitNoticesReturn, 'aktuell' | 'schliesse'>;
   /** Wirklich wartende Einträge aus dem Ausgang (nie ein gesetzter Zähler, RF4). */
   eintraegeWarten: number;
@@ -79,7 +84,7 @@ function noticeIcon(stufe: NoticeStufe | undefined): ReactElement | undefined {
 }
 
 export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
-  const { match, phase, view, settings, order, size, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null, eingetragenVon = null } = props;
+  const { match, phase, view, settings, order, size, stufe, kasten, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null, eingetragenVon = null } = props;
   const { t, i18n } = useTranslation('cockpit');
   // Takt nur vor dem Anpfiff: „überfällig N Min“ (@OB-068) (@SL-118); sonst steht der Wert still
   const jetztMs = useNow(phase.zustand === 'vorAnpfiff' ? 30_000 : null);
@@ -87,10 +92,10 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
   const model = useMemo(
     () => toScoreboardModel({
       match, phase, view, links: order.links, rechts: order.rechts, uhrArt: settings.clockMode,
-      schlussphaseMinuten: settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
+      schlussphaseMinuten: settings.finalPhaseMinutes, kasten, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
       vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon }, eingetragenVon,
     }, alsUebersetzer(t)),
-    [match, phase, view, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, t, i18n.language],
+    [match, phase, view, kasten, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, t, i18n.language],
   );
   // @SL-152: solange die Quittung steht, sagt sie dasselbe genauer („Abgepfiffen · 2:1 gespeichert“); nur diese Meldung entfällt
   const meldung = notices.aktuell?.kennung === 'abgepfiffen' && model.quittungText ? null : notices.aktuell;
@@ -99,6 +104,7 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
       testId="scoreboard"
       model={model}
       size={size}
+      stufe={stufe}
       onHelferAnfragen={helferAnfragen > 0 ? onHelferAnfragen : undefined}
       tonHinweis={tonHinweis}
       kopfRechts={sync}

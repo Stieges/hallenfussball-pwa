@@ -6,6 +6,7 @@
 import { useMemo } from 'react';
 import type { SperrHinweis } from '../../../core/match';
 import type { MatchCockpitSettings } from '../../../types/tournament';
+import type { CockpitKasten } from '../typesFarben';
 import type { TeamColumnProps } from '../areas/TeamColumn';
 import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase } from '../model/cockpitPhase';
@@ -25,11 +26,13 @@ export interface TeamColumnsArgs {
   sperrHinweise: readonly SperrHinweis[];
   order: { links: Side; rechts: Side };
   handlers: Record<Side, TeamSideHandlers>;
+  /** Kästen je Seite des Spiels (`home`/`away`) – die Anzeigeseite legt `order` darüber (@SL-065, Seiten tauschen). */
+  kasten: CockpitKasten;
 }
 
 export type TeamColumnPair = { links: Omit<TeamColumnProps, 'kompakt' | 'breit'>; rechts: Omit<TeamColumnProps, 'kompakt' | 'breit'> };
 
-export function useTeamColumns({ match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers }: TeamColumnsArgs): TeamColumnPair | null {
+export function useTeamColumns({ match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers, kasten }: TeamColumnsArgs): TeamColumnPair | null {
   return useMemo(() => {
     if (!match) { return null; }
     const knoepfe = teamKnoepfe(phase, kannSteuern);
@@ -37,11 +40,11 @@ export function useTeamColumns({ match, view, phase, settings, kannSteuern, foul
     const spalte = (seite: Side): Omit<TeamColumnProps, 'kompakt' | 'breit'> => ({
       model: toTeamColumnModel({
         match, seite, view, zustand: phase.zustand, fouls: fouls[seite], foulGrenze: settings.foulLimit, sperrHinweise,
-        zeitstrafeSekunden, unterzahl: null, darfErgaenzen: false, kartenArten: settings.enabledCards,
+        zeitstrafeSekunden, unterzahl: null, darfErgaenzen: false, kartenArten: settings.enabledCards, kasten: kasten[seite],
       }),
       knoepfe,
       onTor: handlers[seite].onTor, onFoul: handlers[seite].onFoul, onZeitstrafe: handlers[seite].onZeitstrafe, onKarte: handlers[seite].onKarte,
     });
     return { links: spalte(order.links), rechts: spalte(order.rechts) };
-  }, [match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers]);
+  }, [match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers, kasten]);
 }

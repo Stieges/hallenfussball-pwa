@@ -38,6 +38,7 @@ import { restzeitSpielMs } from './model/restzeit';
 import { mehrPunkteGrundgeruest } from './model/mehrPunkte';
 import shell from './LiveCockpitShell.module.css';
 import { useCockpitPhase, useSideOrder } from './hooks';
+import { useCockpitStufe } from './hooks/useCockpitStufe';
 import { useEntryFlows } from './hooks/useEntryFlows';
 import { useEntryCommands } from './hooks/useEntryCommands';
 import { useFreshEntryCommands } from './hooks/useFreshEntryCommands';
@@ -51,6 +52,7 @@ import { useTeamColumns } from './hooks/useTeamColumns';
 import { toTeamSummaryModel } from './model/toTeamSummaryModel';
 import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
+import { kastenOderStandard } from './model/kastenOderStandard';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
 
 const NO_SPERREN: readonly SperrHinweis[] = [];
@@ -78,6 +80,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
   const { isMobile, isTablet, width } = useBreakpoint();
   const layout = width >= breakpointValues.desktop ? 'breit' : 'daumen';
+  const stufe = useCockpitStufe();
 
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
@@ -136,18 +139,19 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const cmd = useCockpitCommands({
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
   });
+  const kasten = useMemo(() => kastenOderStandard(props.kasten), [props.kasten]);
   const foulsJeSeite = useMemo(() => ({ home: homeFouls, away: awayFouls }), [homeFouls, awayFouls]);
   const anzeigeOrdnung = useMemo(() => ({ links: sides.links, rechts: sides.rechts }), [sides.links, sides.rechts]);
   const spalten = useTeamColumns({
     match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern, fouls: foulsJeSeite,
-    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers,
+    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers, kasten,
   });
   // Nach dem Abpfiff statt der Tastenblöcke die Zusammenfassung (@SL-048); sie liest nur die Einträge des Spiels, nach dem Neuladen steht sie wieder da (@SL-115)
   const zusammenfassung = useMemo(() => {
     if (!currentMatch || phase.zustand !== 'abgepfiffen') { return null; }
-    const je = (seite: 'home' | 'away') => toTeamSummaryModel({ match: currentMatch, seite, fouls: foulsJeSeite[seite] });
+    const je = (seite: 'home' | 'away') => toTeamSummaryModel({ match: currentMatch, seite, fouls: foulsJeSeite[seite], kasten: kasten[seite] });
     return { links: je(sides.links), rechts: je(sides.rechts) };
-  }, [currentMatch, phase.zustand, foulsJeSeite, sides.links, sides.rechts]);
+  }, [currentMatch, phase.zustand, foulsJeSeite, sides.links, sides.rechts, kasten]);
   usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, tx);
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
@@ -158,7 +162,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       view={view}
       settings={cockpitSettings}
       order={{ links: sides.links, rechts: sides.rechts }}
+      kasten={kasten}
       size={isMobile ? 'compact' : isTablet ? 'regular' : 'wide'}
+      stufe={layout === 'breit' ? stufe : undefined}
       notices={notices}
       eintraegeWarten={rejectedOutbox.pendingCount}
       tonHinweis={tonHinweis}

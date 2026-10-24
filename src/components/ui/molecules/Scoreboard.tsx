@@ -9,12 +9,21 @@
  */
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
+import type { SideBox } from '../../../core/models/scoreBoxColors';
 import type { MatchBadgeModel } from '../../../core/view/badge';
+import { getColorsByTheme } from '../../../design-tokens/colors';
+import { ScoreBox } from './ScoreBox';
+import { pairFrameStrength } from './scoreBoxStyle';
+import styles from './Scoreboard.module.css';
 import { Icons } from '../Icons';
 import { TafelIcons } from '../IconsTafel';
 import { MatchStatusBadge } from './MatchStatusBadge';
 
-export interface ScoreboardSeite { name: string; tore: number; /** Trikotfarbe des Stand-Kastens (Mockup-Freigabe 16.10.); fehlt sie, bleibt der Kasten neutral. */ trikot?: string | null }
+export interface ScoreboardSeite {
+  name: string; tore: number;
+  /** Kasten dieser Anzeigeseite: getragene Farbe wie am Hallenmonitor (@SL-176, `MatchView.boxes`); fehlt er, bleibt der Kasten neutral. */
+  kasten?: SideBox;
+}
 /**
  * `schlussphase`: nur Uhr-Art „durchlaufend, letzte Minute angehalten“ in ihrer Schlussphase (@SL-003, @SL-136) → Uhr in
  * `scoreboardFinalPhase` (Violett). `ton`: gedämpft (Pause, Endstand) oder grün (Pause vorbei, Wiederanpfiff).
@@ -52,6 +61,8 @@ export interface ScoreboardAbzeichenKnopf { label: string; kurz?: string; onAnti
 export interface ScoreboardProps {
   model: ScoreboardModel;
   size: 'compact' | 'regular' | 'wide';
+  /** Stufe der Fensterhöhe am Laptop (Maße von Kasten und Ziffern, @SL-187); ohne Angabe die Handy-Maße. */
+  stufe?: 'knapp' | 'normal' | 'gross';
   meldezeile: ReactNode;
   onHelferAnfragen?: () => void;
   testId?: string;
@@ -61,20 +72,6 @@ export interface ScoreboardProps {
   tonHinweis?: ScoreboardAbzeichenKnopf | null;
   /** Übergang bis zum schmalen Kopf (Aufgabe 3.8): Verbindungsanzeige in der Kopfzeile. */
   kopfRechts?: ReactNode;
-}
-
-/** Ziffernfarbe auf der Trikotfarbe: Schwarz oder Weiß, je nachdem was mehr Kontrast gibt (≥ 4,5 : 1). */
-function ziffernFarbe(trikot: string): string | null {
-  const treffer = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(trikot);
-  if (treffer === null) { return null; }
-  const hex = treffer[1].length === 3 ? treffer[1].replace(/./g, '$&$&') : treffer[1];
-  const linear = [0, 2, 4].map((i) => {
-    const kanal = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return kanal <= 0.03928 ? kanal / 12.92 : ((kanal + 0.055) / 1.055) ** 2.4;
-  });
-  const leuchtdichte = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-  // Kontrast gegen Weiß (1,05 / (L + 0,05)) gegen Kontrast gegen Schwarz ((L + 0,05) / 0,05)
-  return 1.05 / (leuchtdichte + 0.05) >= (leuchtdichte + 0.05) / 0.05 ? cssVars.colors.scoreboardOnLive : cssVars.colors.scoreboardOnHighlight;
 }
 
 /** Nur für Bildschirmleser: der volle Wortlaut eines Abzeichens, dessen sichtbarer Text verkürzt ist. */
@@ -117,7 +114,10 @@ function Abzeichen({ label, kurz, icon, onAntippen, testId, hoehe }: { label: st
   );
 }
 
-export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, wachhaltenHinweis, tonHinweis, kopfRechts }: ScoreboardProps): ReactElement {
+// Die Tafel ist in beiden Themes dunkel; `ScoreBox` rechnet Kontrast und Rahmen aus Hex-Werten (keine CSS-Variablen möglich)
+const tafelFarben = getColorsByTheme('dark');
+
+export function Scoreboard({ model, size, stufe, meldezeile, onHelferAnfragen, testId, wachhaltenHinweis, tonHinweis, kopfRechts }: ScoreboardProps): ReactElement {
   const gross = size !== 'compact';
   const id = (teil: string): string | undefined => (testId ? `${testId}-${teil}` : undefined);
   const uhr = model.uhr;
@@ -160,15 +160,12 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
     lineHeight: cssVars.lineHeights.title, overflowWrap: 'break-word', hyphens: 'manual',
   };
   const kastenHoehe = size === 'compact' ? `calc(${cssVars.spacing.xxl} + ${cssVars.spacing.sm})` : size === 'regular' ? `calc(${cssVars.spacing.xxl} * 2)` : `calc(${cssVars.spacing.xxl} * 2 - ${cssVars.spacing.sm})`;
-  const kasten = (seite: ScoreboardSeite): CSSProperties => {
-    const farbe = seite.trikot ? ziffernFarbe(seite.trikot) : null;
-    return {
-      width: '100%', height: kastenHoehe, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      border: `calc(${cssVars.borderWidth.thin} * 2) solid ${cssVars.colors.scoreboardBorder}`, borderRadius: cssVars.borderRadius.md,
-      fontSize: gross ? cssVars.sizing.scoreboardScoreRegular : cssVars.sizing.scoreboardScoreCompact, fontWeight: cssVars.fontWeights.bold,
-      fontVariantNumeric: 'tabular-nums', lineHeight: 1,
-      background: farbe && seite.trikot ? seite.trikot : 'transparent', color: farbe ?? cssVars.colors.scoreboardText,
-    };
+  // Neutraler Kasten nur ohne Farben (`kasten` fehlt); sonst zeichnet `ScoreBox` Fläche, Weste, Rahmen und Ziffernfarbe (@SL-176)
+  const neutralerKasten: CSSProperties = {
+    width: '100%', height: kastenHoehe, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    border: `calc(${cssVars.borderWidth.thin} * 2) solid ${cssVars.colors.scoreboardBorder}`, borderRadius: cssVars.borderRadius.md,
+    fontSize: gross ? cssVars.sizing.scoreboardScoreRegular : cssVars.sizing.scoreboardScoreCompact, fontWeight: cssVars.fontWeights.bold,
+    fontVariantNumeric: 'tabular-nums', lineHeight: 1, background: 'transparent', color: cssVars.colors.scoreboardText,
   };
   // Markierung ohne Layoutwirkung (B1: „die Tafel springt nicht“): Outline statt Rand und Innenabstand
   const markierung = uhr?.steht ? cssVars.colors.scoreboardHighlight : uhr?.ton === 'ok' ? cssVars.colors.scoreboardOk : null;
@@ -189,15 +186,26 @@ export function Scoreboard({ model, size, meldezeile, onHelferAnfragen, testId, 
   const nurVorlesen: CSSProperties = { position: 'absolute', left: '-100vw', width: cssVars.sizing.hairline, height: cssVars.sizing.hairline, overflow: 'hidden' };
   const zeile: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm, textAlign: 'center' };
 
+  // Gleiche Rahmenbreite beider Kästen (Entscheidung Daniel 15.10.)
+  const pairFrame = model.links.kasten && model.rechts.kasten
+    ? pairFrameStrength({ fill: model.links.kasten.fill }, { fill: model.rechts.kasten.fill }, tafelFarben.scoreboardBg)
+    : undefined;
   const seite = (s: ScoreboardSeite, wo: 'links' | 'rechts'): ReactElement => (
     <div style={team}>
       {gross && <div style={name} data-teamname="" data-testid={id(`name-${wo}`)}>{s.name}</div>}
-      <div style={kasten(s)} data-testid={id(`box-${wo}`)} data-trikot={s.trikot && ziffernFarbe(s.trikot) ? 'farbe' : 'neutral'} aria-hidden="true">{s.tore}</div>
+      <div aria-hidden="true">
+        {s.kasten ? (
+          <ScoreBox
+            score={s.tore} fill={s.kasten.fill} size="cockpit" background={tafelFarben.scoreboardBg} textColor={tafelFarben.scoreboardText}
+            bib={s.kasten.bib} frameStrength={pairFrame} ariaLabel={`${s.name}: ${String(s.tore)}`} testId={id(`box-${wo}`) ?? `box-${wo}`}
+          />
+        ) : <div style={neutralerKasten} data-testid={id(`box-${wo}`)} data-trikot="neutral">{s.tore}</div>}
+      </div>
     </div>
   );
 
   return (
-    <section data-testid={testId} data-size={size} style={tafel}>
+    <section data-testid={testId} data-size={size} data-stufe={stufe} className={styles.tafel} style={tafel}>
       <div style={kopf}>
         <span aria-live="polite" data-testid={id('state')} style={{ display: 'inline-flex', minWidth: 0 }}>
           {model.ueberfaelligText

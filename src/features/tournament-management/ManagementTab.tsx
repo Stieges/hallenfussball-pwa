@@ -32,6 +32,7 @@ import { useEngineMatchInit } from './hooks/useEngineMatchInit';
 import { useCockpitKorrektur } from './hooks/useCockpitKorrektur';
 import { laeuftAufFeld, useCockpitFieldControl } from './hooks/useCockpitFieldControl';
 import { toMatchSummary } from './model/toMatchSummary';
+import { toCockpitBoxes } from './model/toCockpitBoxes';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
 import { StorageWarningBanner } from '../../components/StorageWarningBanner';
 import { FeldWahl } from '../../components/live-cockpit/frame/FeldWahl';
@@ -119,6 +120,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     const name = nameOf(eventId);
     return name !== ownName ? name : null;
   }, [nameOf, ownName]);
+  // @SL-176: Kästen wie am Hallenmonitor (getragene Farbe, Einstellung „Teamfarben in den Ergebniskästen“)
+  const kasten = useMemo(() => toCockpitBoxes(tournament, currentMatchData?.id), [tournament, currentMatchData?.id]);
   const currentMatch = useMemo(() =>
     currentMatchData ? liveMatches.get(currentMatchData.id) ?? null : null,
     [currentMatchData, liveMatches]
@@ -220,6 +223,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onKorrigieren={korrektur.onKorrigieren}
             onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}
+            kasten={kasten}
             sperrHinweise={sperrHinweise}
             eintragAutor={eintragAutor}
             lastFinishedMatch={lastFinishedMatch}
