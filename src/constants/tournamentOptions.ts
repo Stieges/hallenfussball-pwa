@@ -10,75 +10,6 @@ export interface SelectOption {
 }
 
 /**
- * Altersklassen für Fußball
- */
-export function getFootballAgeClassOptions(): SelectOption[] {
-  return [
-    // Jugendklassen (G bis A)
-    { value: 'G-Jugend', label: i18n.t('wizard:options.ageClass.gJugend', { defaultValue: '' }) },
-    { value: 'F-Jugend', label: i18n.t('wizard:options.ageClass.fJugend', { defaultValue: '' }) },
-    { value: 'E-Jugend', label: i18n.t('wizard:options.ageClass.eJugend', { defaultValue: '' }) },
-    { value: 'D-Jugend', label: i18n.t('wizard:options.ageClass.dJugend', { defaultValue: '' }) },
-    { value: 'C-Jugend', label: i18n.t('wizard:options.ageClass.cJugend', { defaultValue: '' }) },
-    { value: 'B-Jugend', label: i18n.t('wizard:options.ageClass.bJugend', { defaultValue: '' }) },
-    { value: 'A-Jugend', label: i18n.t('wizard:options.ageClass.aJugend', { defaultValue: '' }) },
-
-    // U-Klassen (numerisch sortiert)
-    { value: 'U7', label: 'U7' },
-    { value: 'U8', label: 'U8' },
-    { value: 'U9', label: 'U9' },
-    { value: 'U10', label: 'U10' },
-    { value: 'U11', label: 'U11' },
-    { value: 'U12', label: 'U12' },
-    { value: 'U13', label: 'U13' },
-    { value: 'U14', label: 'U14' },
-    { value: 'U15', label: 'U15' },
-    { value: 'U16', label: 'U16' },
-    { value: 'U17', label: 'U17' },
-    { value: 'U18', label: 'U18' },
-    { value: 'U19', label: 'U19' },
-    { value: 'U20', label: 'U20' },
-    { value: 'U21', label: 'U21' },
-    { value: 'U23', label: 'U23' },
-
-    // Senioren
-    { value: 'Senioren', label: i18n.t('wizard:options.ageClass.senioren', { defaultValue: '' }) },
-    { value: 'Herren', label: i18n.t('wizard:options.ageClass.herren', { defaultValue: '' }) },
-    { value: 'Damen', label: i18n.t('wizard:options.ageClass.damen', { defaultValue: '' }) },
-    { value: 'AH', label: i18n.t('wizard:options.ageClass.ah', { defaultValue: '' }) },
-    { value: 'Ü30', label: 'Ü30' },
-    { value: 'Ü35', label: 'Ü35' },
-    { value: 'Ü40', label: 'Ü40' },
-    { value: 'Ü45', label: 'Ü45' },
-    { value: 'Ü50', label: 'Ü50' },
-  ];
-}
-
-/**
- * Altersklassen für andere Sportarten
- */
-export function getOtherAgeClassOptions(): SelectOption[] {
-  return [
-    { value: 'U8', label: 'U8' },
-    { value: 'U10', label: 'U10' },
-    { value: 'U12', label: 'U12' },
-    { value: 'U14', label: 'U14' },
-    { value: 'U16', label: 'U16' },
-    { value: 'U18', label: 'U18' },
-    { value: 'Jugend', label: i18n.t('wizard:options.ageClass.jugend', { defaultValue: '' }) },
-    { value: 'Erwachsene', label: i18n.t('wizard:options.ageClass.erwachsene', { defaultValue: '' }) },
-    { value: 'Mixed', label: i18n.t('wizard:options.ageClass.mixed', { defaultValue: '' }) },
-  ];
-}
-
-/**
- * Helper-Funktion: Gibt die passenden Altersklassen basierend auf der Sportart zurück
- */
-export const getAgeClassOptions = (sport: 'football' | 'other'): SelectOption[] => {
-  return sport === 'football' ? getFootballAgeClassOptions() : getOtherAgeClassOptions();
-};
-
-/**
  * Gruppensysteme
  */
 export function getGroupSystemOptions(): SelectOption[] {
@@ -138,7 +69,7 @@ export function getGamePeriodsOptions(): SelectOption[] {
  * Standard-Werte
  */
 export const DEFAULT_VALUES = {
-  ageClass: '', // Keine Vorauswahl - Benutzer muss selbst wählen
+  ageClass: '', // Keine Angabe: startet leer, ist freiwillig (@W2B-022)
   numberOfGroups: 2,
   numberOfFields: 1,
   groupPhaseGameDuration: 10, // Spieldauer Gruppenphase (Standard: 10 Min)

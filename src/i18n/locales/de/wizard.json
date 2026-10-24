@@ -542,6 +542,22 @@
       "mixed": "Mixed"
     }
   },
+  "ageClassPicker": {
+    "label": "Altersklasse (freiwillig)",
+    "entriesLabel": "Altersklasse {{group}}",
+    "level": "Stufe",
+    "custom": "Sonstiges …",
+    "customLabel": "Eigene Altersklasse",
+    "adopted": "Übernommen aus dem Turnier: „{{value}}“ steht nicht in der Liste und bleibt unverändert.",
+    "previewLead": "Aushang, Monitor, Zuschauer-Seite, PDF:",
+    "previewEmpty": "Ohne Auswahl steht auf Aushang, Monitor und Zuschauer-Seite keine Altersklasse.",
+    "groups": {
+      "youth": "Jugend",
+      "uClasses": "U-Klassen",
+      "adults": "Erwachsene",
+      "general": "Allgemein"
+    }
+  },
   "replan": {
     "title": "Neuplanung prüfen",
     "endTime": "Endzeit",

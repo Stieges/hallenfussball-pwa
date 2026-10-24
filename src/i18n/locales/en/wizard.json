@@ -542,6 +542,22 @@
       "mixed": "Mixed"
     }
   },
+  "ageClassPicker": {
+    "label": "Age group (optional)",
+    "entriesLabel": "Age group {{group}}",
+    "level": "Level",
+    "custom": "Other …",
+    "customLabel": "Custom age group",
+    "adopted": "Taken over from the tournament: “{{value}}” is not in the list and stays unchanged.",
+    "previewLead": "Poster, monitor, spectator page, PDF:",
+    "previewEmpty": "Without a choice, no age group appears on the poster, monitor or spectator page.",
+    "groups": {
+      "youth": "Youth",
+      "uClasses": "U-classes",
+      "adults": "Adults",
+      "general": "General"
+    }
+  },
   "replan": {
     "title": "Review rescheduling",
     "endTime": "End time",

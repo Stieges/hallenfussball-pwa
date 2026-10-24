@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, fontSizesMd3 } from '../../design-tokens'
 import { GeneratedSchedule } from '../../core/generators';
 import { getFullLocationAddress, formatDateGerman } from '../../utils/locationHelpers';
+import { joinMeta } from '../../core/view';
 
 interface TournamentHeaderProps {
   schedule: GeneratedSchedule;
@@ -106,7 +107,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
       </div>
 
       <div style={subtitleStyle}>
-        {schedule.tournament.ageClass} • {formatDateGerman(schedule.tournament.date)}
+        {joinMeta([schedule.tournament.ageClass, formatDateGerman(schedule.tournament.date)], ' • ')}
       </div>
 
       <div style={metaGridStyle}>

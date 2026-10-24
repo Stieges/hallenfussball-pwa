@@ -24,6 +24,8 @@ export interface SegmentedChoiceProps<T extends string> {
   disabled?: boolean;
   /** `data-testid` des Behälters; die Knöpfe heißen `<testId>-<value>`. */
   testId?: string;
+  /** Kleinere Schrift ohne inneren Rand, damit längere Wörter (z. B. „Erwachsene“) auf dem Handy nie umbrechen. */
+  compact?: boolean;
 }
 
 /** Bis zu dieser Anzahl sitzen die Möglichkeiten verbunden in einem Rahmen. */
@@ -47,21 +49,21 @@ function groupStyle(count: number): CSSProperties {
   return { display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.sm };
 }
 
-function optionStyle(selected: boolean, disabled: boolean, connected: boolean, first: boolean): CSSProperties {
+function optionStyle(selected: boolean, disabled: boolean, connected: boolean, first: boolean, compact: boolean): CSSProperties {
   return {
     flex: connected ? undefined : '1 1 auto',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: cssVars.touchTargets.primary,
-    padding: `0 ${cssVars.spacing.xs}`,
+    padding: compact ? 0 : `0 ${cssVars.spacing.xs}`,
     border: connected ? 0 : `${cssVars.borderWidth.thin} solid ${selected ? cssVars.colors.primary : cssVars.colors.borderControl}`,
     borderLeft: connected && !first ? `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}` : undefined,
     borderRadius: connected ? 0 : cssVars.borderRadius.md,
     background: selected ? cssVars.colors.primary : cssVars.colors.background,
     color: selected ? cssVars.colors.onPrimary : disabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     fontFamily: 'inherit',
-    fontSize: cssVars.fontSizes.lg,
+    fontSize: compact ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
     fontWeight: selected ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
     textAlign: 'center',
     // verbunden darf die Beschriftung umbrechen (nie kürzen), einzeln bleibt sie einzeilig in umbrechenden Zeilen
@@ -72,7 +74,7 @@ function optionStyle(selected: boolean, disabled: boolean, connected: boolean, f
   };
 }
 
-export function SegmentedChoice<T extends string>({ legend, hint, options, value, onChange, disabled = false, testId = 'segmented-choice' }: SegmentedChoiceProps<T>) {
+export function SegmentedChoice<T extends string>({ legend, hint, options, value, onChange, disabled = false, testId = 'segmented-choice', compact = false }: SegmentedChoiceProps<T>) {
   const connected = options.length <= CONNECTED_MAX;
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -121,7 +123,7 @@ export function SegmentedChoice<T extends string>({ legend, hint, options, value
             tabIndex={option.value === value ? 0 : -1}
             aria-checked={option.value === value}
             disabled={disabled}
-            style={optionStyle(option.value === value, disabled, connected, index === 0)}
+            style={optionStyle(option.value === value, disabled, connected, index === 0, compact)}
             data-testid={`${testId}-${option.value}`}
             onClick={() => onChange(option.value)}
           >

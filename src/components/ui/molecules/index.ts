@@ -56,3 +56,7 @@ export { CountedTextField } from './CountedTextField';
 export type { CountedTextFieldProps } from './CountedTextField';
 export { EndStateCard } from './EndStateCard';
 export type { EndStateCardProps, EndStateTone } from './EndStateCard';
+
+// Altersklasse (@W2B-010): fachfreie Chip-Reihe
+export { ChipChoice } from './ChipChoice';
+export type { ChipChoiceProps, ChipOption } from './ChipChoice';

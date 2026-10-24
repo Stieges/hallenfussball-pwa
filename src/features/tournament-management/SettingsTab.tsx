@@ -15,10 +15,11 @@
 
 import { useState, useEffect, useMemo, useCallback, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, Input, Combobox } from '../../components/ui';
+import { Card, Input } from '../../components/ui';
+import { AgeClassPicker } from '../../components/AgeClassPicker';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
-import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
+import { DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
 import { SponsorManagement } from './SponsorManagement';
@@ -409,14 +410,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 style={{ marginTop: '16px' }}
               />
 
-              <Combobox
-                label={t('settings.ageClass')}
-                value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
-                onChange={(v) => handleUpdate('ageClass', v)}
-                options={getAgeClassOptions(tournament.sport)}
-                placeholder={t('settings.ageClassPlaceholder')}
-                style={{ marginTop: '16px' }}
-              />
+              <div style={{ marginTop: cssVars.spacing.md }}>
+                <AgeClassPicker
+                  value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
+                  onChange={(v) => handleUpdate('ageClass', v)}
+                  sport={tournament.sport}
+                  testId="settings-age-class"
+                />
+              </div>
             </Card>
 
             <Card style={{ marginTop: cssVars.spacing.lg }}>

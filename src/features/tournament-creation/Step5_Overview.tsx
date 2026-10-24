@@ -6,6 +6,7 @@ import { getFullLocationAddress } from '../../utils/locationHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { activeTeams } from './utils/replanTeams';
 import styles from './Step5_Overview.module.css';
+import { ageClassText } from '../../core/view';
 
 interface Step5Props {
   formData: Partial<Tournament>;
@@ -66,14 +67,16 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
 
         {/* Modus & System */}
         <div className={styles.infoGrid}>
-          <div className={styles.infoBox}>
-            <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              {t('step5.ageClass')}
+          {ageClassText(formData.ageClass) !== '' && (
+            <div className={styles.infoBox} data-testid="step5-age-class">
+              <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
+                {t('step5.ageClass')}
+              </div>
+              <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.primary }}>
+                {ageClassText(formData.ageClass)}
+              </div>
             </div>
-            <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.primary }}>
-              {formData.ageClass}
-            </div>
-          </div>
+          )}
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
               {t('step5.mode')}
