@@ -147,7 +147,8 @@ describe('LiveCockpit: Halbzeit von selbst und Wiederanpfiff (B-08b)', () => {
 });
 
 describe('LiveCockpit: Fouls über die Halbzeit (G11, B-08b Punkt 3)', () => {
-  it('Halbzeit lässt die Fouls in der Gesamtzahl stehen; die Zählung des zweiten Abschnitts geht darauf weiter (kein Reset)', async () => {
+  // Ersetzt die Aussage „kein Reset“ (G11): @SL-036 verlangt, dass der Zähler gegen die Grenze im zweiten Abschnitt bei 0 beginnt (Plan Cockpit v2 A5)
+  it('@SL-036 Halbzeit: der Zähler gegen die Grenze beginnt im zweiten Abschnitt bei 0, die Fouls bleiben im Spiel', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={ZWEI_ABSCHNITTE} />);
     await anpfiff(user);
@@ -160,9 +161,9 @@ describe('LiveCockpit: Fouls über die Halbzeit (G11, B-08b Punkt 3)', () => {
     zu(420_000);
     await user.click(screen.getByTestId('match-wiederanpfiff-button'));
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
-    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 0/5');
     await user.click(screen.getByTestId('foul-button-home'));
-    await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 2/5'));
+    await waitFor(() => expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1/5'));
   });
 });
 

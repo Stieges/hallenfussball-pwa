@@ -15,7 +15,7 @@ await initRealDeI18n();
 
 const ALLE_ARTEN = { yellow: true, yellowRed: true, red: true, timePenalty: true };
 const model = (m: Partial<TeamColumnModel> = {}): TeamColumnModel => ({
-  seite: 'away', teamId: 'sv-sued', name: 'SV Süd', farbe: null, fouls: { zaehlt: 3, grenze: 5 }, strafen: [], unterzahl: null,
+  seite: 'away', teamId: 'sv-sued', name: 'SV Süd', kasten: { fill: { kind: 'solid', color: '#C62828' }, bib: false }, fouls: { zaehlt: 3, grenze: 5 }, strafen: [], unterzahl: null,
   darfErgaenzen: false, gesperrt: [], zeitstrafeMinuten: 2, kartenArten: ALLE_ARTEN, ...m,
 });
 const props = (m: Partial<TeamColumnModel> = {}, p: Partial<TeamColumnProps> = {}): TeamColumnProps => ({
@@ -213,19 +213,22 @@ describe('TeamColumn', () => {
     }
   });
 
-  it('Kopf nach Mockup: umrandet, Streifen und „Heim/Gast“ in einer Zeile, der Name darunter', () => {
-    render(<TeamColumn {...props({ farbe: 'var(--color-team-fallback)' })} />);
+  // @SL-176: der Kopf trägt die Farbe des Ergebniskastens (ersetzt den alten Streifen in der Teamfarbe)
+  it('@SL-176 Kopf in der Farbe des Kastens: Name und „Gast“ stehen auf der getragenen Farbe, Schrift mit Kontrast', () => {
+    render(<TeamColumn {...props({ kasten: { fill: { kind: 'solid', color: '#6A1B9A' }, bib: false } })} />);
     const kopf = screen.getByTestId('team-head-away');
-    expect(kopf.style.border).not.toBe('');
-    const zeile = within(kopf).getByTestId('team-stripe-away').parentElement!;
-    expect(zeile).toHaveTextContent('Gast');
-    expect(zeile).not.toContainElement(screen.getByTestId('team-name-away'));
-    expect(kopf.lastElementChild).toBe(screen.getByTestId('team-name-away'));
+    expect(kopf).toHaveAttribute('data-color', '#6A1B9A');
+    expect(kopf).toHaveStyle({ backgroundColor: '#6A1B9A', color: '#FFFFFF' });
+    expect(kopf).toHaveTextContent('Gast');
+    expect(within(kopf).getByTestId('team-name-away')).toHaveTextContent('SV Süd');
   });
 
-  it('Teamfarbe nur als Streifen im Kopf, nie als Schrifthintergrund', () => {
-    render(<TeamColumn {...props({ farbe: 'var(--color-team-fallback)' })} />);
-    expect(screen.getByTestId('team-head-away').style.backgroundColor).toBe('');
-    expect(within(screen.getByTestId('team-head-away')).getByTestId('team-stripe-away')).toBeInTheDocument();
+  it('@SL-176 Leibchen: Weste (Streifen in Trikotfarbe) und Leibchen-Zeichen im Kopf; ohne Leibchen kein Zeichen (Gegenbeispiel)', () => {
+    const { rerender } = render(<TeamColumn {...props({ kasten: { fill: { kind: 'vest', center: '#FFEB3B', stripes: '#2E7D32' }, bib: true } })} />);
+    expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-fill', 'vest');
+    expect(screen.getByTestId('team-head-away-leibchen')).toBeInTheDocument();
+    expect(screen.getByTestId('team-head-away')).toHaveStyle({ color: '#000000' });
+    rerender(<TeamColumn {...props()} />);
+    expect(screen.queryByTestId('team-head-away-leibchen')).toBeNull();
   });
 });

@@ -3,6 +3,7 @@
  * Rein, ohne React. Szenarien: @SL-099, @SL-102, @SL-031, @SL-086, @SL-032, @SL-029, @SL-089, @SL-023, @SL-093, @SL-030.
  */
 import type { SperrHinweis } from '../../../core/match';
+import type { SideBox } from '../../../core/models/scoreBoxColors';
 import type { EnabledCards } from '../../../types/tournament';
 import type { PhaseView } from '../engine/phaseView';
 import type { LiveMatch } from '../types';
@@ -15,7 +16,8 @@ export interface TeamColumnModel {
   seite: Side;
   teamId: string;
   name: string;
-  farbe: string | null;
+  /** Fläche des Kastens dieser Seite (getragene Farbe, @SL-176) für den Kopf. */
+  kasten: SideBox;
   /** Fouls gegen die Grenze (@SL-099); `grenze: null` = ausgeschaltet, dann nur die Zahl (@SL-102). */
   fouls: { zaehlt: number; grenze: number | null };
   strafen: { id: string; rest: string; nummer: number | null; steht: boolean }[];
@@ -39,6 +41,7 @@ export interface TeamColumnInput {
   unterzahl: { restMs: number } | null; // B-10b2; bis dahin null
   darfErgaenzen: boolean; // B-10b2; bis dahin false
   kartenArten: EnabledCards;
+  kasten: SideBox;
 }
 
 export interface TeamKnoepfe { tor: boolean; foul: boolean; zeitstrafe: boolean; karte: boolean }
@@ -49,7 +52,7 @@ export function toTeamColumnModel(input: TeamColumnInput): TeamColumnModel {
     seite: input.seite,
     teamId: team.id,
     name: team.name,
-    farbe: team.colors?.primary ?? null,
+    kasten: input.kasten,
     fouls: { zaehlt: input.fouls, grenze: input.foulGrenze },
     strafen: (input.view?.penalties ?? [])
       .filter((p) => p.teamId === team.id)

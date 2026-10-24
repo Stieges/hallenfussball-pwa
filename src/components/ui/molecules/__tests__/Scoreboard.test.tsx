@@ -136,10 +136,14 @@ describe('Scoreboard', () => {
     expect(screen.getByTestId('scoreboard-clock')).toBeEmptyDOMElement();
   });
 
-  it('Stand-Kästen in Trikotfarbe (Mockup-Freigabe 16.10.), Ziffern in der Kontrastfarbe; ohne Trikotfarbe neutral', () => {
-    const { rerender } = render(<Scoreboard model={{ ...model, links: { ...model.links, trikot: palette.yellow[400] }, rechts: { ...model.rechts, trikot: '#2563EB' } }} size="compact" meldezeile={null} testId="scoreboard" />);
-    expect(screen.getByTestId('scoreboard-box-links')).toHaveStyle({ backgroundColor: palette.yellow[400], color: 'var(--color-scoreboard-on-highlight)' });
-    expect(screen.getByTestId('scoreboard-box-rechts')).toHaveStyle({ backgroundColor: '#2563EB', color: 'var(--color-scoreboard-on-live)' });
+  it('@SL-176 Stand-Kästen in der getragenen Farbe (ScoreBox wie am Monitor), Ziffern mit Kontrastfarbe; ohne Kasten neutral', () => {
+    const gelb = { fill: { kind: 'solid' as const, color: palette.yellow[400] }, bib: false };
+    const blau = { fill: { kind: 'solid' as const, color: '#2563EB' }, bib: false };
+    const { rerender } = render(<Scoreboard model={{ ...model, links: { ...model.links, kasten: gelb }, rechts: { ...model.rechts, kasten: blau } }} size="compact" meldezeile={null} testId="scoreboard" />);
+    expect(screen.getByTestId('scoreboard-box-links')).toHaveAttribute('data-color', palette.yellow[400]);
+    expect(screen.getByTestId('scoreboard-box-links')).toHaveAttribute('data-digit-color', '#000000');
+    expect(screen.getByTestId('scoreboard-box-rechts')).toHaveAttribute('data-color', '#2563EB');
+    expect(screen.getByTestId('scoreboard-box-rechts')).toHaveAttribute('data-digit-color', '#FFFFFF');
     rerender(<Scoreboard model={model} size="compact" meldezeile={null} testId="scoreboard" />);
     expect(screen.getByTestId('scoreboard-box-links')).toHaveAttribute('data-trikot', 'neutral');
   });

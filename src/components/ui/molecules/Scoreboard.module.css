@@ -1,0 +1,24 @@
+/*
+ * Tafel des Cockpits: Maße von Kasten und Ziffern je Gerät und Stufe der Fensterhöhe (Plan Cockpit v2 3.4, @SL-178).
+ * Handy und Tablet hochkant: Handy-Maße; Laptop (`data-stufe`): knapp (< 720 px), normal, gross (ab 800 px). Nur Tokens, keine Zahlen.
+ * `ScoreBox` (Größe cockpit) und die Uhr lesen `--cockpit-kasten` und `--cockpit-ziffer`.
+ */
+.tafel {
+  --cockpit-kasten: var(--sizing-cockpit-kasten-handy);
+  --cockpit-ziffer: var(--sizing-cockpit-ziffer-handy);
+}
+
+.tafel[data-stufe='knapp'] {
+  --cockpit-kasten: var(--sizing-cockpit-kasten-knapp);
+  --cockpit-ziffer: var(--sizing-cockpit-ziffer-knapp);
+}
+
+.tafel[data-stufe='normal'] {
+  --cockpit-kasten: var(--sizing-cockpit-kasten-normal);
+  --cockpit-ziffer: var(--sizing-cockpit-ziffer-normal);
+}
+
+.tafel[data-stufe='gross'] {
+  --cockpit-kasten: var(--sizing-cockpit-kasten-gross);
+  --cockpit-ziffer: var(--sizing-cockpit-ziffer-gross);
+}

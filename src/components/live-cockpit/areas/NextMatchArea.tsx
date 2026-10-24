@@ -20,9 +20,14 @@ export interface NextMatchAreaProps {
   phase: CockpitPhase;
   /** Restzeit des ganzen Spiels (`restzeitSpielMs`), `null` ohne Ansicht. */
   restSpielMs: number | null;
+  /**
+   * Die eine Quelle `data-layout` der Hülle: am Laptop (`breit`) steht die Zeile immer; am Handy und Tablet hochkant (`daumen`) erst ab der
+   * Vorwarnung und nach dem Abpfiff – davor bleibt ihr Platz reserviert, die Tasten springen nie (@SL-155, F3 Variante R).
+   */
+  layout?: 'daumen' | 'breit';
 }
 
-export function NextMatchArea({ naechstes, phase, restSpielMs }: NextMatchAreaProps): ReactElement | null {
+export function NextMatchArea({ naechstes, phase, restSpielMs, layout = 'breit' }: NextMatchAreaProps): ReactElement | null {
   const { t } = useTranslation('cockpit');
   const reduziert = usePrefersReducedMotion();
   const aktiv = naechstes !== null && vorwarnungAktiv(phase, restSpielMs);
@@ -37,6 +42,7 @@ export function NextMatchArea({ naechstes, phase, restSpielMs }: NextMatchAreaPr
 
   if (naechstes === null) { return null; }
   const farben = naechstes.farben ?? { home: null, away: null };
+  const verborgen = layout === 'daumen' && !aktiv && phase.zustand !== 'abgepfiffen';
   return (
     <NextMatchRow
       label={t('naechstes.label')}
@@ -47,6 +53,7 @@ export function NextMatchArea({ naechstes, phase, restSpielMs }: NextMatchAreaPr
       modus={aktiv ? 'vorwarnung' : 'normal'}
       blinken={aktiv && !reduziert && blinktNoch && geblinktFuer === id}
       onBlinkEnde={() => setBlinktNoch(false)}
+      verborgen={verborgen}
       testId="cockpit-naechstes"
     />
   );

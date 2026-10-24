@@ -92,6 +92,8 @@ export {
 export {
   breakpoints,
   breakpointValues,
+  cockpitHeightSteps,
+  cockpitMinHoehe,
   mediaQueries,
   containerWidths,
   type BreakpointToken,

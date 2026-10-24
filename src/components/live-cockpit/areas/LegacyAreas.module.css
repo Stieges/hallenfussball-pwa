@@ -76,3 +76,21 @@
 .scoreRowMobile {
   column-gap: var(--spacing-sm); /* Mockup `column-gap`: genug Abstand zwischen den Tor-Knöpfen der Gegner (VISUAL § 9) */
 }
+
+/* Handy und Tablet hochkant (@SL-061, @SL-155): Tafel, Zeile „Nächstes“ und Fußleiste stehen fest, nur die Tastenfläche scrollt, wo der Platz nicht reicht.
+   Das Tor bleibt dabei ganz oben in der Tastenfläche (primaer.sichtbar), Foul, Zeitstrafe und Karte folgen darunter. */
+.flaecheDaumen {
+  gap: var(--spacing-sm);
+}
+
+.linksDaumen {
+  flex: 1;
+  min-height: 0;
+}
+
+.scoreboardDaumen {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

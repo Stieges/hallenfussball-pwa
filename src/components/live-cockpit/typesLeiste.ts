@@ -3,13 +3,14 @@
  * Eigene Datei, weil `types.ts` an der Zeilengrenze steht; `LiveCockpitProps` erbt sie.
  */
 import type { ReactNode } from 'react';
+import type { LiveCockpitFarbenProps } from './typesFarben';
 
 /** Getragene Farben der beiden Seiten eines Spiels (`wornColors`); `null` = keine Trikotfarbe festgelegt (@SL-161). */
 export interface MatchSummaryFarben { home: string | null; away: string | null }
 
 export type TiebreakWahl = 'overtime' | 'goldenGoal' | 'shootout';
 
-export interface LiveCockpitLeisteProps {
+export interface LiveCockpitLeisteProps extends LiveCockpitFarbenProps {
   /**
    * Turnierleitung (`useCan('leadMatches')`, LT-5): nur sie bekommt „Korrigieren“ (@SL-159), der Helfer nach dem Abpfiff
    * den Hinweis „Korrektur über die Turnierleitung“ (@SL-045). Ohne Angabe gilt: kein Leitungsrecht.

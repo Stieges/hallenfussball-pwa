@@ -43,3 +43,7 @@ export function makePhaseView(overrides: Partial<PhaseView> = {}): PhaseView {
     plannedMs: overrides.plannedMs ?? basis.sections * basis.sectionLimitMs,
   };
 }
+
+/** Kasten einer Seite für Tests: Standardfarbe Heim Blau, Gast Rot (Vorbelegung der Einstellung, @ZM-152). */
+export const KASTEN_HEIM: import('../../../core/models/scoreBoxColors').SideBox = { fill: { kind: 'solid', color: '#1565C0' }, bib: false };
+export const KASTEN_GAST: import('../../../core/models/scoreBoxColors').SideBox = { fill: { kind: 'solid', color: '#C62828' }, bib: false };

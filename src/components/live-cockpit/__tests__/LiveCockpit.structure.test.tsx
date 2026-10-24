@@ -43,6 +43,22 @@ describe('Cockpit-Hülle – Struktur (Scheibe 1, ohne Sichtänderung)', () => {
     expect(screen.getByTestId('scoreboard-clock')).toBeInTheDocument();
   });
 
+  it('@SL-061 Handy: nur die Tastenfläche scrollt – Tore und Tasten liegen darin, Tafel und Zeile „Nächstes“ stehen außerhalb (fest)', () => {
+    const alt = window.innerWidth;
+    try {
+      window.innerWidth = 360;
+      render(<LiveCockpit {...makeProps(makeLiveMatch(), { upcomingMatches: [{ id: 'm12', number: 12, phaseLabel: 'Gruppe', scheduledKickoff: '10:15', fieldId: 'field-1', homeTeam: { id: 'a', name: 'DJK Berg' }, awayTeam: { id: 'b', name: 'TuS Tal' } }] })} />);
+      const flaeche = screen.getByTestId('cockpit-tastenflaeche');
+      expect(flaeche).toContainElement(screen.getByTestId('goal-button-home'));
+      expect(flaeche).toContainElement(screen.getByTestId('goal-button-away'));
+      expect(flaeche).not.toContainElement(screen.getByTestId('scoreboard'));
+      expect(flaeche).not.toContainElement(screen.getByTestId('cockpit-naechstes'));
+      expect(screen.getByTestId('cockpit-naechstes')).toHaveAttribute('data-verborgen', 'true'); // Platz reserviert, Zeile erst ab 3:00
+    } finally {
+      window.innerWidth = alt;
+    }
+  });
+
   it('LiveCockpit.tsx hat höchstens 300 Zeilen (Spec § 1 Nr. 4)', () => {
     expect(lines('LiveCockpit.tsx')).toBeLessThanOrEqual(300);
   });

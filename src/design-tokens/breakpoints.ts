@@ -52,6 +52,13 @@ export const breakpointValues = {
   ultrawide: 1536,
 } as const;
 
+/**
+ * Stufen des Cockpits nach Fensterhöhe (Layout `breit`, Plan Cockpit v2 3.4, F5): unter `knapp` die Stufe „knapp“ (auch Variante a:
+ * Name nur in der Leiste), ab `gross` die Stufe „gross“, dazwischen „normal“. Unter `cockpitMinHoehe` scrollt die Fläche.
+ */
+export const cockpitHeightSteps = { knapp: 720, gross: 800 } as const;
+export const cockpitMinHoehe = 620;
+
 // =============================================================================
 // Media Query Helpers
 // =============================================================================
