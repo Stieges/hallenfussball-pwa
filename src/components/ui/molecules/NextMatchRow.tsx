@@ -26,6 +26,8 @@ export interface NextMatchRowProps {
   /** Wechsel-Countdown nach dem Abpfiff (LT-4): Text und Anteil 0 bis 1 des Balkens. */
   wechsel?: { text: string; anteil: number };
   testId: string;
+  /** Der Platz bleibt reserviert, die Zeile ist nicht zu sehen (Handy vor der Vorwarnung, @SL-155: die Tasten springen nie). */
+  verborgen?: boolean;
 }
 
 const zeileStil = (modus: NextMatchRowProps['modus']): CSSProperties => ({
@@ -61,10 +63,12 @@ export function NextMatchRow(p: NextMatchRowProps): ReactElement {
   return (
     <div
       className={p.blinken ? styles.blinken : undefined}
-      style={zeileStil(p.modus)}
       data-testid={p.testId}
       data-modus={p.modus}
       data-blinken={p.blinken ? 'true' : undefined}
+      data-verborgen={p.verborgen ? 'true' : undefined}
+      aria-hidden={p.verborgen ? true : undefined}
+      style={p.verborgen ? { ...zeileStil(p.modus), visibility: 'hidden' } : zeileStil(p.modus)}
       onAnimationEnd={(e) => { if (e.target === e.currentTarget) { p.onBlinkEnde?.(); } }}
     >
       <span style={{ display: 'inline-flex', color: cssVars.colors.textSecondary }}><MatchIcons.Calendar size={16} /></span>

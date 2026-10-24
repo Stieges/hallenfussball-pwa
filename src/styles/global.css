@@ -402,7 +402,7 @@
   --sizing-cockpit-ziffer-normal: 80px;
   --sizing-cockpit-ziffer-gross: 88px;
   /* Cockpit: Höhe der Ergebniskästen je Stufe der Fensterhöhe (Handy: Kasten folgt der Ziffer) */
-  --sizing-cockpit-kasten-handy: 104px;
+  --sizing-cockpit-kasten-handy: 96px;
   --sizing-cockpit-kasten-knapp: 76px;
   --sizing-cockpit-kasten-normal: 90px;
   --sizing-cockpit-kasten-gross: 108px;

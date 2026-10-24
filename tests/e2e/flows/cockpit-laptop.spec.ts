@@ -53,7 +53,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     }
   });
 
-  test('@SL-061 Handy und alle Größen, Anfangszustand: Tafel, Tor, Foul, Zeitstrafe und Karte beider Teams liegen ohne Scrollen zwischen Kopf und Leiste', async ({ page, seedIndexedDB }) => {
+  test('@SL-061 Handy und alle Größen, Anfangszustand: Tafel und Tor beider Teams (ab 800 px Fensterhöhe auch Foul, Zeitstrafe und Karte) liegen ohne Scrollen zwischen Kopf und Leiste', async ({ page, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [cup()] });
     await anpfeifen(page);
     await anAnfangRollen(page);
@@ -63,7 +63,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   test('@SL-061 Handy, schwerer Fall im Anfangszustand: alle Tasten beider Teams liegen ohne Scrollen zwischen Kopf und Leiste – C-COCKPIT-HANDY-KARTE-UNTER-LEISTE', async ({ page, seedIndexedDB }) => {
     // Befund C-COCKPIT-HANDY-KARTE-UNTER-LEISTE (neu bewertet nach #298, 20.10.: Tafel mit Abzeichen „Ende“/Anstoßzeit ist gemergt, der Fall bleibt rot – es fehlen noch 5 px, die Zeitstrafe-Taste endet bei 570 statt 565; Lösung: Spaltenkopf wie handy-c, Streifen und Name in einer Zeile): bei 360 × 640 reicht die Höhe im schwersten Fall (dreizeiliger Name, vier Zeitstrafen) nicht
     test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'Laptop: Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL');
-    test.fail((page.viewportSize()?.height ?? 0) < 700, 'schwerster Fall passt bei 640 px Höhe nicht ohne Scrollen');
+    // Seit 24.10. (@SL-061): am kleinen Handy scrollt die Tastenfläche, Tafel und Tor bleiben im Bild – der Fall ist damit auch bei 640 px Höhe erfüllt
     await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
     await anpfeifen(page);
     for (const seite of ['home', 'away'] as const) { await tippeZeitstrafe(page, seite); await tippeZeitstrafe(page, seite); }
@@ -343,7 +343,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   });
 
   test('@SL-160 Rot/Weiß: zwei Farbpunkte, kein Leibchen-Zeichen', async ({ page, seedIndexedDB }) => {
-    await seedIndexedDB({ tournaments: [cup({ farben: [FARBEN[0], FARBEN[1], '#C62828', '#FFFFFF'] })] });
+    await seedIndexedDB({ tournaments: [cup({ farben: [FARBEN[0], FARBEN[1], '#C62828', '#FFFFFF'], minuten: 3, perioden: 1 })] });
     await anpfeifen(page);
     await expect(page.getByTestId('cockpit-naechstes')).toContainText('TSV Ost');
     await expect(page.getByTestId('cockpit-naechstes-punkt-0')).toBeVisible();
@@ -352,7 +352,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   });
 
   test('@SL-160 Blau/Navy: Leibchen-Zeichen ohne Text', async ({ page, seedIndexedDB }, testInfo) => {
-    await seedIndexedDB({ tournaments: [cup({ farben: [FARBEN[0], FARBEN[1], '#1565C0', '#0D1B4C'] })] });
+    await seedIndexedDB({ tournaments: [cup({ farben: [FARBEN[0], FARBEN[1], '#1565C0', '#0D1B4C'], minuten: 3, perioden: 1 })] });
     await anpfeifen(page);
     await expect(page.getByTestId('cockpit-naechstes-leibchen')).toBeVisible();
     await expect(page.getByTestId('cockpit-naechstes-leibchen')).toHaveText('');
@@ -360,7 +360,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   });
 
   test('@SL-161 ohne festgelegte Trikotfarbe steht nur der Name', async ({ page, seedIndexedDB }) => {
-    await seedIndexedDB({ tournaments: [cup({ farben: [FARBEN[0], FARBEN[1], '#C62828', ''] })] });
+    await seedIndexedDB({ tournaments: [cup({ farben: [FARBEN[0], FARBEN[1], '#C62828', ''], minuten: 3, perioden: 1 })] });
     await anpfeifen(page);
     await expect(page.getByTestId('cockpit-naechstes-punkt-0')).toBeVisible();
     await expect(page.getByTestId('cockpit-naechstes-punkt-1')).toHaveCount(0);

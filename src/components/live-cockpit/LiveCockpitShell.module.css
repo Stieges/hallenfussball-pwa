@@ -33,6 +33,11 @@
   gap: var(--spacing-md);
 }
 
+.container[data-layout='daumen'] .content {
+  /* nur die Tastenfläche scrollt (LegacyAreas `.scoreboardDaumen`); Tafel und Leiste stehen fest */
+  overflow-y: hidden;
+}
+
 .contentMobile {
   gap: var(--spacing-sm);
   /* Mockup: schmaler seitlicher Rand am Handy, damit lange Teamnamen in den Spalten in höchstens drei Zeilen passen (@OB-025) */

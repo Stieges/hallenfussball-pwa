@@ -107,8 +107,8 @@ test.describe('Cockpit Scheibe 3: Team-Spalten und Einträge (Gast, lokal)', () 
     // Abstand der beiden Tor-Knöpfe mindestens `spacing.sm` (8 px, Mockup `column-gap`): ein Fehltipp bucht sonst ein Tor für die Gegner (VISUAL § 9)
     const luecke = torGast.x - (torHeim.x + torHeim.width);
     expect(luecke).toBeGreaterThanOrEqual(7.5);
-    // Der Streifen trägt die Trikotfarbe (Farbsaat)
-    await expect(page.getByTestId('team-stripe-home')).toHaveCSS('background-color', 'rgb(255, 215, 0)');
+    // @SL-176: der Kopf trägt die getragene Farbe wie der Kasten (hier die Trikotfarbe aus der Farbsaat, kein Leibchen)
+    await expect(page.getByTestId('team-head-home')).toHaveCSS('background-color', 'rgb(255, 215, 0)');
   });
 
   test('@SL-087 Gegenbeispiel: ohne Anpfiff bietet die Spalte keine Eintrags-Tasten an', async ({ page }) => {

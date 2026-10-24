@@ -24,22 +24,29 @@ export interface TeamHeadBarProps {
   stripeTestId?: string;
 }
 
+/**
+ * Ab dieser Länge steht „Heim“/„Gast“ über dem Namen statt neben ihm: der Name bekommt die ganze Breite und bricht nur zwischen Wörtern um
+ * (nie mitten im Wort, VISUAL-DESIGN § 2; gemessen am Handy mit 50 Zeichen, `titel.wortbruch`).
+ */
+const LANGER_NAME = 16;
+
 export function TeamHeadBar({ name, label, fill, bib = null, breit = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
+  const gestapelt = name.length > LANGER_NAME;
   const kopf: CSSProperties = {
-    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
+    display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? cssVars.spacing.xs : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.md,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, hyphens: 'manual',
     ...fillSurface(fill),
   };
   const nameStil: CSSProperties = {
-    margin: 0, flex: '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
+    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
     fontSize: breit ? cssVars.fontSizes.titleMd : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };
-  const seite: CSSProperties = { flex: 'none', fontSize: cssVars.fontSizes.labelSm, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
+  const seite: CSSProperties = { flex: 'none', textAlign: gestapelt ? 'right' : undefined, fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: cssVars.lineHeights.bodyMd };
   return (
-    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-color={fill.kind === 'vest' ? fill.center : fill.color}>
+    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-gestapelt={gestapelt ? 'true' : undefined} data-color={fill.kind === 'vest' ? fill.center : fill.color}>
       <p data-teamname="" data-testid={nameTestId} style={nameStil}>
         {bib && (
           <span role="img" aria-label={bib.ariaLabel} data-testid={`${testId}-leibchen`} style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', minHeight: cssVars.lineHeights.bodyMd }}>

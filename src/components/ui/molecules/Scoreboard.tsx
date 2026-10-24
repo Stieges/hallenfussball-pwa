@@ -13,6 +13,7 @@ import type { SideBox } from '../../../core/models/scoreBoxColors';
 import type { MatchBadgeModel } from '../../../core/view/badge';
 import { getColorsByTheme } from '../../../design-tokens/colors';
 import { ScoreBox } from './ScoreBox';
+import { ClockDigits } from '../atoms/ClockDigits';
 import { pairFrameStrength } from './scoreBoxStyle';
 import styles from './Scoreboard.module.css';
 import { Icons } from '../Icons';
@@ -152,14 +153,20 @@ export function Scoreboard({ model, size, stufe, meldezeile, onHelferAnfragen, t
   const rechts: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0, marginLeft: 'auto' };
 
   const mitte: CSSProperties = {
-    display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: cssVars.spacing.sm, alignItems: 'center', minWidth: 0,
+    display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', columnGap: cssVars.spacing.sm, rowGap: cssVars.spacing.xs, alignItems: 'center', minWidth: 0,
+  };
+  const kastenHoehe = size === 'compact' ? `calc(${cssVars.spacing.xxl} + ${cssVars.spacing.sm})` : size === 'regular' ? `calc(${cssVars.spacing.xxl} * 2)` : `calc(${cssVars.spacing.xxl} * 2 - ${cssVars.spacing.sm})`;
+  // Doppelpunkt zwischen den Kästen: Mitte der Spalte 2; Spalte 1 und 3 sind gleich breit, die Uhr darunter (ClockDigits) hat ihre Achse in der Mitte derselben Breite (@SL-179)
+  const gestapelt = size !== 'wide'; // Handy und Tablet hochkant: Uhr unter den Kästen; Laptop (wide): Uhr zwischen den Kästen bis „Tafel wie Monitor“ (Plan B1)
+  const doppelpunkt: CSSProperties = {
+    gridColumn: 2, gridRow: 1, alignSelf: 'end', height: model.links.kasten ? 'var(--cockpit-kasten)' : kastenHoehe, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 'var(--cockpit-ziffer)', fontWeight: cssVars.fontWeights.bold, lineHeight: 1, color: cssVars.colors.scoreboardTextMuted, userSelect: 'none',
   };
   const team: CSSProperties = { display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: cssVars.spacing.xs, minWidth: 0, alignSelf: 'end' };
   const name: CSSProperties = {
     width: '100%', textAlign: 'center', fontWeight: cssVars.fontWeights.bold, fontSize: cssVars.fontSizes.xl,
     lineHeight: cssVars.lineHeights.title, overflowWrap: 'break-word', hyphens: 'manual',
   };
-  const kastenHoehe = size === 'compact' ? `calc(${cssVars.spacing.xxl} + ${cssVars.spacing.sm})` : size === 'regular' ? `calc(${cssVars.spacing.xxl} * 2)` : `calc(${cssVars.spacing.xxl} * 2 - ${cssVars.spacing.sm})`;
   // Neutraler Kasten nur ohne Farben (`kasten` fehlt); sonst zeichnet `ScoreBox` Fläche, Weste, Rahmen und Ziffernfarbe (@SL-176)
   const neutralerKasten: CSSProperties = {
     width: '100%', height: kastenHoehe, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -170,17 +177,15 @@ export function Scoreboard({ model, size, stufe, meldezeile, onHelferAnfragen, t
   // Markierung ohne Layoutwirkung (B1: „die Tafel springt nicht“): Outline statt Rand und Innenabstand
   const markierung = uhr?.steht ? cssVars.colors.scoreboardHighlight : uhr?.ton === 'ok' ? cssVars.colors.scoreboardOk : null;
   const uhrFlaeche: CSSProperties = {
-    textAlign: 'center', minWidth: 0, margin: '0 auto', borderRadius: cssVars.borderRadius.md,
+    ...(gestapelt ? { gridColumn: '1 / -1', gridRow: 2, width: '100%' } : { gridColumn: 2, gridRow: 1 }), textAlign: 'center', minWidth: 0, margin: '0 auto', borderRadius: cssVars.borderRadius.md,
     outline: markierung ? `calc(${cssVars.borderWidth.thin} * 2) dashed ${markierung}` : undefined,
     outlineOffset: markierung ? cssVars.spacing.xs : undefined,
   };
-  const uhrGroesse = size === 'compact' ? cssVars.sizing.scoreboardClockCompact : size === 'regular' ? cssVars.sizing.scoreboardClockRegular : cssVars.sizing.scoreboardClockWide;
   const uhrFarbe = uhr?.schlussphase ? cssVars.colors.scoreboardFinalPhase : uhr?.ton === 'ok' ? cssVars.colors.scoreboardOk : uhr?.ton === 'gedaempft' ? cssVars.colors.scoreboardTextMuted : cssVars.colors.scoreboardText;
   const klein: CSSProperties = { color: cssVars.colors.scoreboardTextMuted, fontSize: gross ? cssVars.fontSizes.md : cssVars.fontSizes.sm, lineHeight: gross ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm, fontVariantNumeric: 'tabular-nums' };
   const uhrZahl: CSSProperties = {
-    color: uhrFarbe, fontSize: uhrGroesse, fontWeight: cssVars.fontWeights.bold, fontVariantNumeric: 'tabular-nums',
-    lineHeight: size === 'compact' ? cssVars.lineHeights.displayMd : `calc(${cssVars.lineHeights.displayLg} + ${size === 'regular' ? cssVars.spacing.md : cssVars.spacing.sm})`,
-    whiteSpace: 'nowrap', minWidth: '5ch',
+    // Ziffern ≥ 11 mm (@SL-178): Größe je Gerät und Stufe aus den Tokens (`--cockpit-ziffer`, Scoreboard.module.css)
+    color: uhrFarbe, fontSize: 'var(--cockpit-ziffer)', fontWeight: cssVars.fontWeights.bold, lineHeight: 1,
   };
   // Der Stand als Text für Screenreader (die Kästen sind aria-hidden); außerhalb des Bildes wie die alte Statusmeldung
   const nurVorlesen: CSSProperties = { position: 'absolute', left: '-100vw', width: cssVars.sizing.hairline, height: cssVars.sizing.hairline, overflow: 'hidden' };
@@ -193,7 +198,7 @@ export function Scoreboard({ model, size, stufe, meldezeile, onHelferAnfragen, t
   const seite = (s: ScoreboardSeite, wo: 'links' | 'rechts'): ReactElement => (
     <div style={team}>
       {gross && <div style={name} data-teamname="" data-testid={id(`name-${wo}`)}>{s.name}</div>}
-      <div aria-hidden="true">
+      <div aria-hidden="true" style={{ width: '100%' }}>
         {s.kasten ? (
           <ScoreBox
             score={s.tore} fill={s.kasten.fill} size="cockpit" background={tafelFarben.scoreboardBg} textColor={tafelFarben.scoreboardText}
@@ -230,11 +235,12 @@ export function Scoreboard({ model, size, stufe, meldezeile, onHelferAnfragen, t
       ) : (
         <div style={mitte}>
           {seite(model.links, 'links')}
+          {gestapelt && <span style={doppelpunkt} aria-hidden="true" data-testid={id('colon')}>:</span>}
           <div style={uhrFlaeche} data-testid={id('clock')} data-schlussphase={String(uhr?.schlussphase ?? false)} data-steht={String(uhr?.steht ?? false)}>
             {uhr && (
               <>
                 {uhr.label && <div style={{ ...klein, fontWeight: cssVars.fontWeights.bold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs }}>{uhr.steht && <TafelIcons.Pause size={iconSizeValues.xs} />}{uhr.label}</div>}
-                <div style={uhrZahl} data-testid={id('clock-rest')}>{uhr.rest}</div>
+                <ClockDigits text={uhr.rest} style={uhrZahl} testId={id('clock-rest')} />
                 <div style={{ ...klein, minHeight: gross ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm }} data-testid={id('clock-sub')}>{uhr.unterzeile ?? uhr.gespielt}</div>
               </>
             )}

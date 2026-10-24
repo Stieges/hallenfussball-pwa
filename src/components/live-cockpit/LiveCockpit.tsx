@@ -234,7 +234,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
             </>
           )}
           match={match}
-          naechstes={<NextMatchArea naechstes={upcomingMatches.length > 0 ? upcomingMatches[0] : null} phase={phase} restSpielMs={view ? restzeitSpielMs(view) : null} />}
+          naechstes={<NextMatchArea naechstes={upcomingMatches.length > 0 ? upcomingMatches[0] : null} phase={phase} restSpielMs={view ? restzeitSpielMs(view) : null} layout={layout} />}
           isMobile={isMobile}
           isDesktop={layout === 'breit'}
           zustand={phase.zustand}
