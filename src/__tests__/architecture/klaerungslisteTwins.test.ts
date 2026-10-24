@@ -6,7 +6,7 @@
  *  - match_apply_event = Fassung 20261110_005 + NUR hinzugefügte Zeilen (Schritt 3a, Kopie im beendeten Spiel),
  *  - beide Basisdateien unverändert (SHA-256), Fail-fast verlangt die _003-Fassung,
  *  - Übergänge REVIEW_* gleich in matchTransitions.json und Migration, Eintragsarten gleich in TS und SQL,
- *  - Rechte-Assertions, Drift-Check-Zuordnung und PENDING-LIVE (Fenster F4, 17.11.).
+ *  - Rechte-Assertions, Drift-Check-Zuordnung; seit dem Einspielen (24.10.) steht die Migration nicht mehr in PENDING-LIVE.
  * Anforderungen: @FU-036, @FU-037, @FU-038, @FU-095, @FU-017, @FU-116, @HE-056, @HE-080.
  */
 import { createHash } from 'node:crypto';
@@ -106,26 +106,12 @@ describe('A-35: Drift-Check (Rechte-Assertions, PENDING-LIVE)', () => {
     }
   });
 
-  it('PENDING-LIVE: alle Zeilen mit demselben Vergleichscommit (Drift-Check, Review A3: gleich mit B-14)', () => {
-    const commits = new Set(
-      pending
-        .split('\n')
-        .map((l) => l.replace(/#.*/, '').trim())
-        .filter(Boolean)
-        .map((l) => l.split(/\s+/)[2]),
-    );
-    expect(commits.size).toBe(1);
-    expect([...commits][0]).toMatch(/^[0-9a-f]{40}$/);
-  });
-
-  it('PENDING-LIVE: Zeile <datei> 2026-11-17 <commit-vorher> (Fenster F4)', () => {
-    const row = pending
+  it('keine PENDING-LIVE-Zeile: 20261117_005 ist live (24.10., Daniel) – sonst ließe der Drift-Check die Assertions aus', () => {
+    const files = pending
       .split('\n')
       .map((l) => l.replace(/#.*/, '').trim())
       .filter(Boolean)
-      .map((l) => l.split(/\s+/))
-      .find(([file]) => file === MIGRATION_NAME);
-    expect(row?.[1]).toBe('2026-11-17');
-    expect(row?.[2]).toMatch(/^[0-9a-f]{40}$/);
+      .map((l) => l.split(/\s+/)[0]);
+    expect(files).not.toContain(MIGRATION_NAME);
   });
 });
