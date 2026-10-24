@@ -75,6 +75,9 @@ describe('shareAfterFirstRelease', () => {
         const outcome = await shareAfterFirstRelease(repository, released, { firstRelease: true, mayShare: true });
 
         expect(outcome.status).toBe('failed');
+        expect(outcome.tournament.isPublic).toBe(false);
+        expect(outcome.tournament.shareCode).toBeUndefined();
+        expect(outcome.tournament.shareCodeCreatedAt).toBeUndefined();
         expect(outcome.tournament.status).toBe('published');
         expect(outcome.tournament.publishedAt).toBeDefined();
         expect(spy).toHaveBeenCalledTimes(1);
@@ -87,5 +90,7 @@ describe('shareAfterFirstRelease', () => {
         const outcome = await shareAfterFirstRelease(repository, released, { firstRelease: true, mayShare: true });
 
         expect(outcome.status).toBe('failed');
+        expect(outcome.tournament.isPublic).toBe(false);
+        expect(outcome.tournament.shareCode).toBeUndefined();
     });
 });

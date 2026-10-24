@@ -358,7 +358,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       // Der Server-Code ersetzt den lokal erzeugten; Scheitern laesst das Turnier festgelegt (Hinweis unten).
       const shared = await shareAfterFirstRelease(repository, releasedTournament, { firstRelease, mayShare });
       const published = shared.tournament;
-      if (shared.status === 'shared') { setFormData(published); lastSavedDataRef.current = JSON.stringify(published); }
+      if (shared.status !== 'skipped') { setFormData(published); lastSavedDataRef.current = JSON.stringify(published); }
 
       // Call external save callback if provided (e.g. for potential redirects or parent updates)
       // Though publishTournament already saves to repo.
@@ -519,6 +519,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         {/* Left: Back Button */}
         <button
           onClick={handleBackToDashboard}
+          disabled={isPublishing}
           style={{
             padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
             background: 'transparent',

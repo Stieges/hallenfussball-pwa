@@ -33,13 +33,23 @@ export async function shareAfterFirstRelease(
   try {
     const result = await repository.makeTournamentPublic(published.id, { requireCloud: true });
     if (!result) {
-      return { status: 'failed', tournament: published };
+      return { status: 'failed', tournament: withoutLocalOnlyLink(published) };
     }
     return {
       status: 'shared',
       tournament: { ...published, isPublic: true, shareCode: result.shareCode, shareCodeCreatedAt: result.createdAt },
     };
   } catch {
-    return { status: 'failed', tournament: published };
+    return { status: 'failed', tournament: withoutLocalOnlyLink(published) };
   }
+}
+
+/**
+ * Scheitert das Teilen, kennt die Cloud den lokal erzeugten Code nie. Der lokale Stand folgt der Wahrheit: privat, kein Code.
+ * Sonst zeigten Sichtbarkeit, Teilen-Dialog, QR und Monitor-Editor einen toten Link, und „Mit Link teilbar“ liesse sich nicht
+ * mehr antippen, um das Teilen nachzuholen.
+ */
+function withoutLocalOnlyLink(published: Tournament): Tournament {
+  const { shareCode: _code, shareCodeCreatedAt: _createdAt, ...rest } = published;
+  return { ...rest, isPublic: false };
 }

@@ -86,6 +86,12 @@ test.describe('Festlegen teilt das Turnier (C-FESTLEGEN-TEILT-NICHT)', () => {
       createdId = row?.id ?? null;
       expect(row?.is_public, 'is_public in der Cloud').toBe(true);
 
+      // Der in der App angezeigte Code (Admin -> Sichtbarkeit, lokale Kopie der Turnierleitung) ist der Code der Datenbank,
+      // nicht der lokal erzeugte (sonst zeigte die App einen toten Link/QR).
+      await owner.goto(`/#/tournament/${row?.id ?? ''}/admin/visibility`);
+      await owner.getByRole('button', { name: /Turnier-Sichtbarkeit/ }).click();
+      await expect(owner.locator('input[readonly]').first()).toHaveValue(new RegExp(row?.share_code ?? 'KEIN-CODE'), { timeout: 15000 });
+
       // Ein Zuschauer ohne Anmeldung (frischer Kontext).
       const viewer = await newFreshContext(browser);
       try {
