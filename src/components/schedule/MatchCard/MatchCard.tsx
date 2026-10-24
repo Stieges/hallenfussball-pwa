@@ -197,6 +197,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         result={result}
         badge={badge}
         viewStatus={viewStatus}
+        matchId={matchId}
       />
 
       {/* Body: Teams, Tore je Zeile + Events Indicator */}

@@ -23,6 +23,7 @@ import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import type { TeamLogo, TeamColors } from '../../../types/tournament';
+import { MatchMenuSlot, OriginalTimeNote } from '../MatchTimeShiftSlots';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -207,6 +208,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
           {badge?.kind === 'badge'
             ? <MatchStatusBadge model={badge} size="row" testId={isLive ? `match-row-live-${matchId}` : undefined} />
             : formatTime(scheduledTime)}
+          <OriginalTimeNote matchId={matchId} />
         </div>
 
         {/* Field */}
@@ -226,6 +228,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         <div style={groupStyle}>
           {showGroupLabel && group && group !== 'all' ? t('matchCard.groupShort', { group }) : ''}
         </div>
+        <MatchMenuSlot matchId={matchId} />
       </div>
 
       {/* Expand Content */}

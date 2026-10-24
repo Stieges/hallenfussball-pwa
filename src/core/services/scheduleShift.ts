@@ -62,7 +62,7 @@ export interface KeptMatch {
 
 export type ShiftWarning =
   | { kind: 'buffer'; field: number; before: number | undefined; after: number | undefined; gapMinutes: number; requiredMinutes: number }
-  | { kind: 'soon'; matchNumbers: Array<number | undefined>; at: Date; inMinutes: number };
+  | { kind: 'shortNotice'; matchNumbers: Array<number | undefined>; at: Date; inMinutes: number };
 
 export interface PastError {
   kind: 'past';
@@ -214,20 +214,20 @@ function bufferWarnings(before: readonly Match[], after: readonly Match[], chang
 }
 
 /** „beginnt in X Minuten“: früher gelegte Spiele mit neuem Anpfiff in weniger als 30 Minuten, je Uhrzeit eine Warnung. */
-function soonWarnings(changes: readonly ShiftedMatch[], now: Date): ShiftWarning[] {
-  const soon = changes.filter((c) => {
+function shortNoticeWarnings(changes: readonly ShiftedMatch[], now: Date): ShiftWarning[] {
+  const nearWarning = changes.filter((c) => {
     const ahead = c.to.getTime() - now.getTime();
     return c.to.getTime() < c.from.getTime() && ahead >= 0 && ahead < SHORT_NOTICE_MINUTES * MINUTE_MS;
   });
   const byTime = new Map<number, ShiftedMatch[]>();
-  for (const c of soon) {
+  for (const c of nearWarning) {
     const key = c.to.getTime();
     byTime.set(key, [...(byTime.get(key) ?? []), c]);
   }
   return [...byTime.entries()]
     .sort(([a], [b]) => a - b)
     .map(([at, group]) => ({
-      kind: 'soon' as const,
+      kind: 'shortNotice' as const,
       matchNumbers: group.map((c) => c.matchNumber),
       at: new Date(at),
       inMinutes: Math.floor((at - now.getTime()) / MINUTE_MS),
@@ -322,7 +322,7 @@ export function planShift(matches: readonly Match[], request: ShiftRequest, rule
   return {
     changes,
     kept,
-    warnings: [...soonWarnings(changes, ctx.now), ...bufferWarnings(matches, next, new Set(targets.keys()), rules, status)],
+    warnings: [...shortNoticeWarnings(changes, ctx.now), ...bufferWarnings(matches, next, new Set(targets.keys()), rules, status)],
     matches: next,
     ...(oldEnd ? { oldEnd } : {}),
     ...(newEnd ? { newEnd } : {}),
@@ -370,7 +370,7 @@ export function planRestore(matches: readonly Match[], rules: ShiftTimingRules, 
   return {
     changes,
     kept,
-    warnings: [...soonWarnings(changes, ctx.now), ...bufferWarnings(matches, next, targets, rules, status)],
+    warnings: [...shortNoticeWarnings(changes, ctx.now), ...bufferWarnings(matches, next, targets, rules, status)],
     matches: next,
     ...(oldEnd ? { oldEnd } : {}),
     ...(newEnd ? { newEnd } : {}),

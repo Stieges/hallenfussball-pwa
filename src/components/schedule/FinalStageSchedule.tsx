@@ -35,6 +35,7 @@ import { FinalStageMobileCard } from './FinalStageMobileCard';
 import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitAction';
 import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
+import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 
 interface PendingChanges {
   refereeAssignments: Record<string, number | null>;
@@ -322,6 +323,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     fontStyle: isDragging ? 'italic' : undefined,
                   }}>
                     {isDragging ? '↕️' : match.time}
+                    {!isDragging && <OriginalTimeNote matchId={match.id} />}
+                    {!isDragging && !editingSchedule && <MatchMenuSlot matchId={match.id} />}
                   </td>
                   <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{finalMatchLabel(match, sides, t)}</td>
                   <td style={{

@@ -210,8 +210,8 @@ describe('Vorziehen vor dem ersten Anpfiff (Nikolaus-Turnier)', () => {
     expect([hhmm(plan.changes[0].from), hhmm(plan.changes[0].to)]).toEqual(['16:30', '16:15']);
     expect(plan.changes).toHaveLength(15);
     expect(hhmm(plan.newEnd)).toBe('18:45');
-    const soon = plan.warnings.find((w) => w.kind === 'soon');
-    expect(soon).toMatchObject({ kind: 'soon', matchNumbers: [1], inMinutes: 5 });
+    const nearWarning = plan.warnings.find((w) => w.kind === 'shortNotice');
+    expect(nearWarning).toMatchObject({ kind: 'shortNotice', matchNumbers: [1], inMinutes: 5 });
   });
 
   it('@ZP-090 bei kurzfristigem Vorziehen steht bei Spiel 1 „ursprünglich 16:30“', () => {
@@ -226,7 +226,7 @@ describe('Vorziehen vor dem ersten Anpfiff (Nikolaus-Turnier)', () => {
     const plan = planShift(matches, { from: { kind: 'match', matchId: 'n1' }, minutes: -15 }, NIKOLAUS_RULES, { now: at('15:30'), statusOf });
     expect(timeOf(plan.matches, 'n1')).toBe('16:15');
     expect(originalStartToShow(plan.matches[0])).toBeUndefined();
-    expect(plan.warnings.filter((w) => w.kind === 'soon')).toEqual([]);
+    expect(plan.warnings.filter((w) => w.kind === 'shortNotice')).toEqual([]);
   });
 });
 

@@ -41,6 +41,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
 import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
+import { ScheduleTimeShift } from './time-shift/ScheduleTimeShift';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -340,6 +341,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 data-testid="empty-filter-state"
               />
             ) : (
+              // B-26: Zeiten verschieben (@ZP-094, @ZP-098) – Taste, ⋮ je Spiel, „ursprünglich“, Dialog, Vorschau, Streifen
+              <ScheduleTimeShift
+                tournament={tournament} schedule={schedule} standings={currentStandings} view={view}
+                onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} canCreateNotice={canNotice}
+                enabled={canSchedule && !isEditing && tournament.completedAt === undefined}
+              >
               <ScheduleDisplay
                 schedule={schedule}
                 currentStandings={currentStandings}
@@ -361,6 +368,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />
+              </ScheduleTimeShift>
             )
           ) : (
             <ScheduleEditor
