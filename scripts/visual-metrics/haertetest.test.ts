@@ -414,6 +414,15 @@ describe('Gegen Schummeln', () => {
     const ein = await messe('--ziel', FIX('dialogfuss-einzeilig.html'), '--profil', 'handy-360', ...SCHNELL)
     expect(warn(ein.b).has('dialogfuss.taste-zeilen')).toBe(false)
   })
+  it('@SL-178 Cockpit-Ziffern: zu kleine Ziffern (40 px Schrift) sind WARNUNG cockpit.ziffern in Handy und Laptop; Gegenbeispiel 120 px ohne', async () => {
+    for (const profil of ['handy-390', 'laptop-1280x620']) {
+      const klein = await messe('--ziel', FIX('cockpit-ziffern-zu-klein.html'), '--profil', profil, ...SCHNELL)
+      expect(warn(klein.b).has('cockpit.ziffern'), profil).toBe(true)
+      expect(hart(klein.b).has('cockpit.ziffern'), profil).toBe(false)
+      const ok = await messe('--ziel', FIX('cockpit-ziffern-ok.html'), '--profil', profil, ...SCHNELL)
+      expect(warn(ok.b).has('cockpit.ziffern'), profil).toBe(false)
+    }
+  })
   it('B-16 kein stilles Abschneiden: 40 zu kleine Tasten = 40 gebuendelte Befunde', async () => {
     const r = await messe('--ziel', FIX('viele-befunde.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(r.b.zusammenfassung.zaehler['touch.min']).toBe(40)

@@ -117,6 +117,8 @@ function skillKopieAbweichend(eigen) {
   return null
 }
 
+const e_hat = (regel, art) => regel.geltung.includes(art)
+
 function grenzenFuer(gw, profil, opts, modus) {
   const art = profil.art
   const g = {}
@@ -131,12 +133,20 @@ function grenzenFuer(gw, profil, opts, modus) {
     // reflow-320 ist noch nicht im Record: dort ist jeder Befund WARNUNG.
     typ[e.id] = art === 'reflow' ? 'WARNUNG' : (e.typJeArt?.[art] ?? e.typ)
   }
+  // Cockpit-Ziffern: Millimeter und Bildpunkte je Millimeter fuer die Breite dieses Profils (naechste Profilbreite, exakt wenn vorhanden)
+  const zRegel = gw.grenzwerte.find((e) => e.id === 'cockpit.ziffern')
+  let ziffern = null
+  if (zRegel?.pxProMm && e_hat(zRegel, art)) {
+    const breiten = Object.keys(zRegel.pxProMm).map(Number)
+    const naechste = breiten.reduce((b, x) => (Math.abs(x - profil.breite) < Math.abs(b - profil.breite) ? x : b), breiten[0])
+    ziffern = { mm: zRegel.wert, pxProMm: zRegel.pxProMm[String(naechste)] }
+  }
   const monitorSchrift = art === 'monitor' ? { stand: g['monitor.schrift.stand'], lesetext: g['monitor.schrift.lesetext'], nah: g['monitor.schrift.nah'] } : null
   const std = gw.grenzwerte.find((e) => e.id === 'overscan.standard')?.wert ?? 48
   // Die App liest den Profil-Rand nicht (Paket Rand-URL-Parameter offen): dort nur "im Fenster" pruefen.
   const randPx = modus === 'APP' ? 0 : profil.rand === 'standard' ? std : 0
   const ebuPruefen = art === 'monitor' && (modus === 'APP' || profil.rand === 'standard')
-  return { g, typ, monitorSchrift, randPx, injektionPx: profil.rand === 'standard' ? std : 0, ebuPruefen }
+  return { g, typ, ziffern, monitorSchrift, randPx, injektionPx: profil.rand === 'standard' ? std : 0, ebuPruefen }
 }
 
 // Ausnahmeliste einer Regel (grenzwerte.json, Feld ausnahmeliste): Eintrag { befund, begruendung, selektor?, verdecktVon?, app? } (mindestens selektor oder verdecktVon).
@@ -338,7 +348,7 @@ async function main() {
   try {
     outer: for (const name of profile) {
       const profil = PROFILE[name]
-      const { g, typ, monitorSchrift, randPx, injektionPx, ebuPruefen } = grenzenFuer(gw, profil, o, modus)
+      const { g, typ, ziffern, monitorSchrift, randPx, injektionPx, ebuPruefen } = grenzenFuer(gw, profil, o, modus)
       for (const thema of themen) {
         for (const sprache of sprachen) {
           for (const variante of varianten) {
@@ -423,7 +433,7 @@ async function main() {
             const extraInhalte = profil.art === 'monitor' ? await pseudoRechtecke(page) : []
 
             const m = await page.evaluate(messeSeite, {
-              art: profil.art, g, randPx, monitorSchrift, ebuPruefen, extraInhalte,
+              art: profil.art, g, randPx, monitorSchrift, ziffern, ebuPruefen, extraInhalte,
               primarySelektor: o.primary ?? STANDARD_PRIMARY,
               ausfuehrlich: !!o.ausfuehrlich,
             })

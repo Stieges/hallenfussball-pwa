@@ -396,6 +396,16 @@
   --sizing-cockpit-leiste-breit: calc(var(--touch-target-primary) + var(--spacing-sm));
   --sizing-cockpit-mehr-breit: 6rem;
   --sizing-feldwahl-max: 26.25rem;
+  /* Cockpit: Ziffern von Stand und Uhr >= 11 mm (@SL-178): Schriftgrößen, Ziffernhöhe ≈ 0,727 em (Inter) -> Handy 66,9 px, Laptop >= 55,3 px in jeder Stufe ab 620 px Fensterhöhe */
+  --sizing-cockpit-ziffer-handy: 92px;
+  --sizing-cockpit-ziffer-knapp: 76px;
+  --sizing-cockpit-ziffer-normal: 80px;
+  --sizing-cockpit-ziffer-gross: 88px;
+  /* Cockpit: Höhe der Ergebniskästen je Stufe der Fensterhöhe (Handy: Kasten folgt der Ziffer) */
+  --sizing-cockpit-kasten-handy: 104px;
+  --sizing-cockpit-kasten-knapp: 76px;
+  --sizing-cockpit-kasten-normal: 90px;
+  --sizing-cockpit-kasten-gross: 108px;
   /* Rahmenbreiten: dünn, mittel, kräftig (eine Quelle für `borderWidths` und `cssVars.borderWidth`) */
   --border-width-thin: 1px;
   --border-width-medium: 2px;
