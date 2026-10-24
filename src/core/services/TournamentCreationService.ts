@@ -85,7 +85,7 @@ export class TournamentCreationService {
             // explizit übergebener Wert eines bestehenden Turniers gewinnt also weiterhin.
             isPublic: false,
             title: '',
-            ageClass: 'U11',
+            ageClass: '',
             date: localDateIso(),
             timeSlot: '09:00 - 16:00',
             location: { name: '' },

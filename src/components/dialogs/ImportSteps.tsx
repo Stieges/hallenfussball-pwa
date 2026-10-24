@@ -16,6 +16,7 @@ import { cssVars } from '../../design-tokens'
 import { Tournament, ImportValidationResult } from '../../types/tournament';
 import { formatTournamentDate } from '../../utils/tournamentCategories';
 import { downloadTemplate } from './ImportTemplates';
+import { ageClassText } from '../../core/view';
 
 // =============================================================================
 // SELECT STEP
@@ -321,10 +322,12 @@ export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) 
             <span style={labelStyle}>{t('import.preview.labels.matches')}</span>
             <span style={valueStyle}>{tournament.matches.length}</span>
           </div>
-          <div style={previewItemStyle}>
-            <span style={labelStyle}>{t('import.preview.labels.ageClass')}</span>
-            <span style={valueStyle}>{tournament.ageClass}</span>
-          </div>
+          {ageClassText(tournament.ageClass) !== '' && (
+            <div style={previewItemStyle}>
+              <span style={labelStyle}>{t('import.preview.labels.ageClass')}</span>
+              <span style={valueStyle}>{ageClassText(tournament.ageClass)}</span>
+            </div>
+          )}
           <div style={previewItemStyle}>
             <span style={labelStyle}>{t('import.preview.labels.source')}</span>
             <span style={{ ...valueStyle, color: cssVars.colors.statusExternal }}>

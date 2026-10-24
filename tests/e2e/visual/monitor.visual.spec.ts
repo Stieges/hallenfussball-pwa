@@ -180,3 +180,50 @@ for (const [abfrage, bild] of [['', 'monitor-rand.png'], ['?rand=0', 'monitor-ra
     });
   });
 }
+
+/**
+ * B-27 (@ZP-003, @ZP-004, @ZP-046): Folie „Nächste Spiele“ nach dem Verschieben um 10 Minuten: groß die neue Uhrzeit, klein
+ * „ursprünglich hh:mm“ darunter; das dritte Spiel ist nicht verschoben und trägt nichts. Nur das Desktop-Profil (1280×720).
+ */
+test('Monitor: Nächste Spiele mit ursprünglicher Uhrzeit', async ({ page, seedIndexedDB }) => {
+  test.skip(test.info().project.name !== 'visual-desktop', 'Monitor nur im Querformat (1280×720)');
+  await freezeClock(page);
+
+  const a = (n: number) => `00000000-0000-4000-8000-0000000000a${n}`;
+  const tournament = buildVisualTournament({
+    id: 'visual-monitor-urspruenglich',
+    title: 'Nordstadt Hallencup',
+    matches: [
+      { id: 'vu-1', round: 1, teamA: a(1), teamB: a(2), field: 1, matchStatus: 'scheduled', scheduledTime: '2026-03-14T10:10:00.000Z', originalStart: '2026-03-14T10:00:00.000Z' },
+      { id: 'vu-2', round: 1, teamA: a(3), teamB: a(4), field: 1, matchStatus: 'scheduled', scheduledTime: '2026-03-14T10:30:00.000Z', originalStart: '2026-03-14T10:20:00.000Z' },
+      { id: 'vu-3', round: 2, teamA: a(1), teamB: a(3), field: 1, matchStatus: 'scheduled', scheduledTime: '2026-03-14T10:50:00.000Z' },
+    ],
+    monitors: [
+      {
+        id: 'visual-monitor-urspruenglich-1',
+        name: 'Eingang Monitor',
+        defaultSlideDuration: 15,
+        transition: 'none',
+        transitionDuration: 0,
+        theme: 'dark',
+        performanceMode: 'auto',
+        slides: [{ id: 'slide-next', type: 'next-matches', config: {}, duration: null, order: 0 }],
+        createdAt: '2026-03-01T08:00:00.000Z',
+        updatedAt: '2026-03-14T09:00:00.000Z',
+      },
+    ],
+  });
+
+  await seedIndexedDB({ tournaments: [tournament] });
+
+  await page.goto('/#/display/visual-monitor-urspruenglich/visual-monitor-urspruenglich-1');
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByTestId('monitor-error-state')).not.toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('monitor-match-original').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId('monitor-match-original')).toHaveCount(2);
+
+  await expect(page).toHaveScreenshot('monitor-urspruenglich.png', {
+    fullPage: true,
+    mask: commonMasks(page),
+  });
+});

@@ -26,6 +26,7 @@ import { AuthContext } from '../auth/context/authContextInstance';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { usesCloudRepository } from '../../core/repositories/usesCloudRepository';
 import { publishNoticeKey } from './utils/publishNotice';
+import { joinMeta } from '../../core/view';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -208,7 +209,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         </div>
         <h1 style={titleStyle}>{currentTournament.title}</h1>
         <p style={subtitleStyle}>
-          {currentTournament.ageClass} • {currentTournament.date} • {getLocationName(currentTournament)}
+          {joinMeta([currentTournament.ageClass, currentTournament.date, getLocationName(currentTournament)], ' • ')}
         </p>
         {getLocationAddressLine(currentTournament) && (
           <p style={{ ...subtitleStyle, fontSize: cssVars.fontSizes.md, marginTop: '4px', opacity: 0.8 }}>

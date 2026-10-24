@@ -90,13 +90,15 @@ export function toPublicCopy(tournament: Tournament): Tournament {
   } as Tournament;
 }
 
-/** `scheduledTime` ist das einzige Datum im Turnier; JSON macht daraus einen Text. */
+/** `scheduledTime` und `originalStart` (B-27) sind die einzigen Daten im Turnier; JSON macht daraus Text. */
 function reviveDates(tournament: Tournament): Tournament {
   return {
     ...tournament,
-    matches: tournament.matches.map((match: Match) => (
-      typeof match.scheduledTime === 'string' ? { ...match, scheduledTime: new Date(match.scheduledTime) } : match
-    )),
+    matches: tournament.matches.map((match: Match) => ({
+      ...match,
+      ...(typeof match.scheduledTime === 'string' ? { scheduledTime: new Date(match.scheduledTime) } : {}),
+      ...(typeof match.originalStart === 'string' ? { originalStart: new Date(match.originalStart) } : {}),
+    })),
   };
 }
 

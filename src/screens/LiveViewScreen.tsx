@@ -44,6 +44,7 @@ import { PublicConnectionHint } from '../features/public-view/components/PublicC
 import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
 import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
 import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
+import { joinMeta } from '../core/view';
 
 export interface LiveViewScreenProps {
   shareCode: string;
@@ -160,7 +161,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         <div style={headerStyle}>
           <h1 style={titleStyle}>{tournament.title}</h1>
           <p style={subtitleStyle}>
-            {tournament.ageClass} • {formatDateGerman(tournament.date)}
+            {joinMeta([tournament.ageClass, formatDateGerman(tournament.date)], ' • ')}
           </p>
           <div style={shareCodeBadgeStyle}>
             {t('liveView.badge', { code: shareCode })}

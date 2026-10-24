@@ -14,6 +14,7 @@ import type { TournamentTab } from '../features/tournament-management/utils/tour
 import { AuthSection } from '../components/layout/AuthSection';
 import { OwnTournamentsMoreItem } from '../features/helpers/components/OwnTournamentsMoreItem';
 import { EngineOutboxHeaderStatus } from '../features/tournament-management/components/EngineOutboxHeaderStatus';
+import { joinMeta } from '../core/view';
 import { KlaerungslisteEinstieg } from '../features/klaerungsliste/KlaerungslisteEinstieg';
 
 export interface ManagementHeaderProps {
@@ -112,7 +113,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
         <div style={headerContentStyle}>
           <div style={titleStyle}>{tournament.title}</div>
           <div style={subtitleStyle}>
-            {tournament.ageClass} · {formatDateGerman(tournament.date)} · {getLocationName(tournament)}
+            {joinMeta([tournament.ageClass, formatDateGerman(tournament.date), getLocationName(tournament)], ' · ')}
           </div>
         </div>
         <button onClick={() => { void navigate(`/tournament/${tournament.id}/admin`); }} style={adminButtonStyle} title="Admin Center öffnen">

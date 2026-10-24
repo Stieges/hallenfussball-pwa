@@ -6,6 +6,7 @@ import type { GeneratedSchedule } from '../../core/generators';
 import { getLocationAddressLine } from '../../utils/locationHelpers';
 import type { HeaderFact } from './render/header';
 import type { PdfTexts } from './translations';
+import { ageClassText } from '../../core/view';
 
 /** Datum des Turniers: im Format TT.MM.JJJJ unverändert, sonst in der Sprache des Dokuments; ohne Datum leer. */
 export function dayOf(schedule: GeneratedSchedule, t: PdfTexts): string {
@@ -42,7 +43,10 @@ export function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerN
   if (organizerName) {
     facts.push({ label: t.organizer, value: organizerName });
   }
-  facts.push({ label: t.ageClass, value: schedule.tournament.ageClass });
+  const ageClass = ageClassText(schedule.tournament.ageClass);
+  if (ageClass !== '') {
+    facts.push({ label: t.ageClass, value: ageClass });
+  }
   const address = getLocationAddressLine(schedule.tournament);
   facts.push({ label: t.hall, value: address ? `${hallName}, ${address}` : hallName });
   facts.push({ label: t.appointment, value: appointmentValue(schedule, t) });

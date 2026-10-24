@@ -368,7 +368,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
 
     // Step 3: Metadata
     title: String(json.title),
-    ageClass: String(json.ageClass ?? 'Herren'),
+    ageClass: typeof json.ageClass === 'string' ? json.ageClass : '',
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty date should use current date
     date: String(json.date || localDateIso()),
     timeSlot: String(json.timeSlot ?? '09:00'),
@@ -498,7 +498,7 @@ export function parseCSVTeamsToTournament(content: string): ImportValidationResu
     groupPhaseBreakDuration: 2,
 
     location: { name: '' },
-    ageClass: 'Herren',
+    ageClass: '',
 
     matches: [], // No matches from CSV
 

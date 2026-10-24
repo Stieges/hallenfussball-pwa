@@ -11,12 +11,13 @@ import { useState, useEffect, useMemo, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
-import { Input, Combobox } from '../../../../components/ui';
+import { Input } from '../../../../components/ui';
+import { AgeClassPicker } from '../../../../components/AgeClassPicker';
 import { LocationForm } from '../../../../components/LocationForm';
 import { ContactForm } from '../../../../components/ContactForm';
 import { ConfirmDialog, useConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { RulebookField } from '../../../../components/ui/molecules/RulebookField';
-import { getAgeClassOptions, DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
+import { DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
 import type { Tournament } from '../../../../types/tournament';
 import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
 import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../../../core/services/tournamentMetaValidation';
@@ -353,12 +354,10 @@ export function MetadataCategory({
             testId="metadata-rulebook"
           />
 
-          <Combobox
-            label={t('metadata.ageClass')}
+          <AgeClassPicker
             value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
             onChange={(v) => handleUpdate('ageClass', v)}
-            options={getAgeClassOptions(tournament.sport)}
-            placeholder={t('metadata.searchOrSelect')}
+            testId="metadata-age-class"
           />
         </div>
       </CollapsibleSection>

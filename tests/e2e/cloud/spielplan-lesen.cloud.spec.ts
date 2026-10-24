@@ -162,7 +162,7 @@ test.describe('Spielplan liest fremde Tore', () => {
         await owner.page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/settings`);
         await owner.page.waitForLoadState('networkidle');
         await owner.page.getByText('Metadaten bearbeiten').click();
-        await owner.page.locator('input[type="text"]').nth(3).fill('Halle Zwei');
+        await owner.page.getByLabel(/^Veranstaltungsort/).fill('Halle Zwei');
         await owner.page.getByRole('button', { name: 'Speichern' }).click();
         await expect.poll(async () => ((await serviceRest('GET', `tournaments?id=eq.${E2E_LIVE_CUP_ID}&select=location_name`)).json as Array<{ location_name: string }>)[0].location_name, {
           message: 'eigene Änderung des Eigentümers gespeichert',

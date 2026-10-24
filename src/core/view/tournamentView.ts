@@ -15,7 +15,7 @@ import { matchLabelText, type SlotLabelContext } from './originText';
 import { placementView } from './placement';
 import { sideView, type SideContext } from './sides';
 import { isLive, isUpcoming, viewStatus } from './status';
-import { clockKey, kickoffLocal, TOURNAMENT_TIME_ZONE, toTournamentLocal } from './time';
+import { clockKey, kickoffLocal, originalKickoffLocal, TOURNAMENT_TIME_ZONE, toTournamentLocal } from './time';
 import { viewRules } from './visibility';
 import type {
   CurrentView,
@@ -122,6 +122,7 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
   const detail = blank ? undefined : usableDetail(match, input);
   const status = blank ? 'scheduled' : audienceStatus(viewStatus(match, detail?.status ?? input.engineStatus?.(match.id)), rules);
   const kickoff = kickoffLocal(input.date, match.scheduledTime);
+  const originalKickoff = blank ? undefined : originalKickoffLocal(input.date, match.scheduledTime, match.originalStart);
   const score = blank ? undefined : scoreFor(match, status, rules);
   const correctedAt = blank ? undefined : correctedAtFor(match, input, options, rules);
   const final = match.isFinal === true;
@@ -130,6 +131,7 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
     ...(match.matchNumber === undefined ? {} : { matchNumber: match.matchNumber }),
     field: match.field,
     ...(kickoff === undefined ? {} : { kickoff }),
+    ...(originalKickoff === undefined ? {} : { originalKickoff }),
     kickoffTentative: final && status === 'scheduled',
     phase: final ? 'final' : 'groupStage',
     ...(match.group === undefined ? {} : { group: match.group }),
