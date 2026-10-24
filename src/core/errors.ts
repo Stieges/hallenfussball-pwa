@@ -278,7 +278,7 @@ export function isTransientMutationError(error: unknown): boolean {
   if (error instanceof TeamStillReferencedError || isOriginImmutableError(error)) {
     return false;
   }
-  if (error && typeof error === 'object' && (error as { code?: unknown }).code === KIT_COLUMNS_SERVER_ONLY_CODE) {
+  if (error && typeof error === 'object' && [KIT_COLUMNS_SERVER_ONLY_CODE, SCHEDULE_TIME_REJECTED_CODE].includes(String((error as { code?: unknown }).code))) {
     return false;
   }
   if (isAbortError(error)) {
@@ -357,7 +357,7 @@ export function isVersionConflict(error: unknown): boolean {
 /**
  * BP-1 (Befund C-ENDGUELTIG-SOFORT-MELDEN, @FU-126): Grund einer eindeutig endgültigen Ablehnung durch den Server.
  * - `conflict`: Versionsprüfung (ein anderes Gerät hat inzwischen gespeichert)
- * - `invalidValue`: ungültiger Wert – Postgres-Klasse 22 (Datenfehler) und 23 (Integrität), eigene Codes HF002/HF003,
+ * - `invalidValue`: ungültiger Wert – Postgres-Klasse 22 (Datenfehler) und 23 (Integrität), eigene Codes HF002/HF003/HF005,
  *   Team noch von einem Spiel referenziert
  * - `tournamentGone`: das Turnier gibt es in der Cloud nicht mehr (`TournamentGoneError`)
  * `null`: unklar (z. B. 42501 Rechte, Netz, unbekannte Codes) – die Warteschlange wiederholt wie bisher.
@@ -386,7 +386,8 @@ function carriesInvalidValueCode(candidate: unknown): boolean {
     return false;
   }
   const code = (candidate as { code?: unknown }).code;
-  return typeof code === 'string' && (INVALID_VALUE_SQLSTATE.test(code) || code === ORIGIN_IMMUTABLE_CODE || code === KIT_COLUMNS_SERVER_ONLY_CODE);
+  return typeof code === 'string' && (INVALID_VALUE_SQLSTATE.test(code) || code === ORIGIN_IMMUTABLE_CODE || code === KIT_COLUMNS_SERVER_ONLY_CODE
+    || code === SCHEDULE_TIME_REJECTED_CODE);
 }
 
 function isInvalidValueRejection(error: unknown): boolean {
@@ -483,11 +484,25 @@ export class TeamStillReferencedError extends Error {
  * - HF001 – Freigabe vor Veröffentlichung (`make_tournament_public`, `enforce_release_before_public`)
  * - HF002 – Herkunft eines Platzes unveränderlich (Trigger `matches_keep_origin`, A-36a)
  * - HF003 – getragene Farben setzt nur der Anpfiff (Trigger `matches_guard_kit_columns`, A-30a)
+ * - HF004 – `change_revision` schreibt nur der Server (Trigger `tournaments_guard_change_revision`, A-10)
+ * - HF005 – Uhrzeit nicht angenommen: Spiel angepfiffen oder beendet, oder Vorziehen in die Vergangenheit
+ *   (Trigger `matches_guard_schedule_times`, R8)
  */
 export const ORIGIN_IMMUTABLE_CODE = 'HF002';
 
 /** A-30a: Client-Schreiben auf `kit_color_a/kit_color_b/bib_side` – nicht transient (Fehler im Stand, nicht im Netz). */
 export const KIT_COLUMNS_SERVER_ONLY_CODE = 'HF003';
+
+/**
+ * R8 (@ZP-016, @ZP-057): Der Server nimmt eine Uhrzeit nicht an (Spiel angepfiffen/beendet oder Vorziehen in die
+ * Vergangenheit). Eindeutig endgültig: die Warteschlange meldet „nicht übernommen“ und wiederholt nicht.
+ */
+export const SCHEDULE_TIME_REJECTED_CODE = 'HF005';
+
+/** Postgrest-Fehler mit Code HF005 (Uhrzeit nicht angenommen). */
+export function isScheduleTimeRejected(error: unknown): boolean {
+  return !!error && typeof error === 'object' && (error as { code?: unknown }).code === SCHEDULE_TIME_REJECTED_CODE;
+}
 
 /**
  * Ein Schreiben wollte `origin_a/origin_b` eines Spiels ändern. Nicht transient: der Fehler liegt im Stand,

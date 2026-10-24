@@ -191,6 +191,9 @@ pending_assertions_for() {
     20261113_101_monitor_heartbeat_wake_lock.sql)
       echo "monitor-heartbeat-rpc-checks-config-monitors monitor-heartbeat-key-per-tournament-wake-lock"
       ;;
+    20261118_001_verschieben_server.sql)
+      echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
+      ;;
     20261110_010_standing_decision_null_version.sql)
       # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
       ;;
@@ -574,6 +577,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "matches-guard-kit-columns-trigger-active"
   "matches-kit-from-match-start-definer-no-client-execute"
   "matches-guard-kit-columns-invoker-no-client-execute"
+  # R8 (20261118_001, @ZP-016/@ZP-057/@ZP-084): Server-Pruefung beim Verschieben, Zaehlung um original_start.
+  "matches-guard-schedule-times-trigger-active"
+  "matches-guard-schedule-times-invoker-no-client-execute"
+  "matches-bump-change-revision-counts-original-start"
   # A-08h (20261028_002, @FU-084/@FU-085): Client-Schreibrechte auf match_events entzogen, nur SELECT.
   "anon-no-insert-match-events"
   "anon-no-update-match-events"
