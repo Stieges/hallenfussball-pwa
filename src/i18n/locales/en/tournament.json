@@ -383,12 +383,22 @@
     "startTime": "Start Time",
     "immutableSettings": {
       "title": "Immutable Settings",
-      "description": "The following settings cannot be changed after publication, as they would affect the schedule:",
+      "description": "These settings determine the schedule and cannot be changed here:",
       "numberOfTeams": "Number of teams ({{count}})",
       "numberOfGroups": "Number of groups ({{count}})",
       "numberOfFields": "Number of fields ({{count}})",
       "gameMode": "Game mode ({{mode}})",
-      "tournamentType": "Tournament type ({{type}})"
+      "tournamentType": "Tournament type ({{type}})",
+      "descriptionBeforeStart": "These settings determine the schedule. Before the first kick-off you change them under “Advanced editing”:",
+      "descriptionAfterStart": "These settings have been fixed since the first kick-off because they determine the schedule:",
+      "groupSystem": "Format ({{system}})",
+      "values": {
+        "roundRobin": "Round robin",
+        "groupsAndFinals": "Groups + finals",
+        "classic": "Classic",
+        "miniFussball": "Mini football",
+        "bambini": "Bambini"
+      }
     },
     "advancedEditing": {
       "title": "Advanced Editing",
@@ -783,13 +793,15 @@
     "count_one": "{{count}} field",
     "count_other": "{{count}} fields",
     "noFields": "No fields available",
-    "noFieldsInfo": "Fields are configured in the wizard when creating the tournament.",
+    "noFieldsInfo": "The fields are fixed when the tournament is set.",
     "inSlides": "In slides",
     "default": "Default",
     "editLabel": "Edit label",
     "customName": "Custom name",
     "shortCode": "Short code (max 3)",
-    "customNameInfo": "Custom names are displayed in monitor slides and the schedule. The number of fields can only be changed in the wizard."
+    "customNameInfo": "Custom names are shown in monitor slides and in the schedule.",
+    "defaultNumbered": "Field {{n}}",
+    "derivedInfo": "Field names have not been created for this tournament yet, so the fields cannot be renamed here."
   },
   "monitorEditor": {
     "allTeams": "All Teams",

@@ -13,6 +13,7 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match } from '../../../../types/tournament';
 import { slotLabel } from '../../../../core/models/slotLabel';
+import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
 
 // =============================================================================
 // PROPS
@@ -275,7 +276,7 @@ export function DashboardCategory({
   const { t, i18n } = useTranslation('admin');
   const navigate = useNavigate();
   // @OB-069: „Jeder gegen jeden“ ist immer eine Gruppe, auch wenn die Gruppenzahl aus dem Anlegen etwas anderes trägt
-  const groupCount = tournament.groupSystem === 'roundRobin' ? 1 : (tournament.numberOfGroups ?? 1);
+  const groupCount = effectiveGroupCount(tournament);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -532,7 +533,7 @@ export function DashboardCategory({
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoFields')}</span>
-            <span>{tournament.numberOfFields}</span>
+            <span>{effectiveFieldCount(tournament)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoMode')}</span>

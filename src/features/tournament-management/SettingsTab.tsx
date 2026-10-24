@@ -25,6 +25,7 @@ import { SponsorManagement } from './SponsorManagement';
 import { FieldManagement } from './FieldManagement';
 import { PlayOutPlacesSettings } from './standings/PlayOutPlacesSettings';
 import type { PlayOutPlacesResult } from '../../core/services/PlayOutPlacesService';
+import { immutableDescriptionKey, immutableFacts } from './immutableFacts';
 import { useTournamentStartState } from '../../hooks/useTournamentStartState';
 import { useCan } from '../auth/hooks/useCan';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -484,14 +485,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     {t('settings.immutableSettings.title')}
                   </h4>
                   <p style={{ margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                    {t('settings.immutableSettings.description')}
+                    {t(immutableDescriptionKey(matchStartState, canRestructure))}
                   </p>
                   <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                    <li>{t('settings.immutableSettings.numberOfTeams', { count: tournament.numberOfTeams })}</li>
-                    <li>{t('settings.immutableSettings.numberOfGroups', { count: tournament.numberOfGroups })}</li>
-                    <li>{t('settings.immutableSettings.numberOfFields', { count: tournament.numberOfFields })}</li>
-                    <li>{t('settings.immutableSettings.gameMode', { mode: tournament.mode })}</li>
-                    <li>{t('settings.immutableSettings.tournamentType', { type: tournament.tournamentType })}</li>
+                    {immutableFacts(tournament, (key) => t(key)).map((fact) => (
+                      <li key={fact.key}>{t(fact.labelKey, fact.params)}</li>
+                    ))}
                   </ul>
                 </div>
               </div>
