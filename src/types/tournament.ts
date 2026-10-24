@@ -322,6 +322,11 @@ export interface Match {
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
   label?: string; // Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale')
   scheduledTime?: Date; // Actual scheduled time
+  /**
+   * B-26 (`matches.original_start`): Uhrzeit beim ersten Anpfiff des Turniers, wenn das Spiel danach verschoben wurde
+   * (Wanduhr wie `scheduledTime`); fehlt = nie verschoben bzw. Planung vor dem ersten Anpfiff (@ZP-049).
+   */
+  originalStart?: Date;
   matchNumber?: number; // Spiel-Nummer (1-basiert)
   phase?: string; // Phase: 'groupStage', 'semifinal', etc.
   referee?: number; // Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.)

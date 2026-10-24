@@ -14,6 +14,7 @@ import { ScoreDraftInput } from '../ui/atoms';
 import { ScoreChangedHint, ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
+import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 
 export interface FinalMobileOption {
   value: number;
@@ -153,7 +154,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs, color: cssVars.colors.textSecondary }}>
           <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.accent }}>#{match.matchNumber}</span>
           <span>•</span>
-          <span>{match.time}</span>
+          <span>{match.time}<OriginalTimeNote matchId={match.id} /></span>
           {badge?.kind === 'badge' && <MatchStatusBadge model={badge} size="card" testId={isRunning ? `final-live-${match.id}` : undefined} />}
           {statusNote && <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid={`final-status-note-${match.id}`}>{statusNote}</span>}
           {note && <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid={`final-decision-${match.id}`}>{note}</span>}
@@ -161,6 +162,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         <div style={{ display: 'flex', gap: cssVars.spacing.sm, color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.xs }}>
           {showReferees && displayedRef && <span style={hasPendingRef ? { color: cssVars.colors.primary } : undefined}>SR:{displayedRef}</span>}
           {showFields && displayedField && displayedField > 1 && <span style={hasPendingField ? { color: cssVars.colors.primary } : undefined}>F:{displayedField}</span>}
+          <MatchMenuSlot matchId={match.id} />
         </div>
       </div>
 

@@ -174,6 +174,20 @@ function kickoffOf(tournamentDate: string, startTime: string | null): Date | und
   return Number.isNaN(kickoff.getTime()) ? undefined : kickoff;
 }
 
+/** B-26: `matches.original_start` (time) als Wanduhr am Turniertag; NULL = nie verschoben. */
+function originalStartFromRow(tournamentDate: string, value: string | null | undefined): Pick<Match, 'originalStart'> {
+  const at = kickoffOf(tournamentDate, value ?? null);
+  return at === undefined ? {} : { originalStart: at };
+}
+
+/** Uhrzeit-Spalte (`time`) aus einer Wanduhr; wie bisher für `scheduled_start` (Ortszeit des Geräts). */
+function toTimeColumn(value: Date | string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  return value instanceof Date ? value.toTimeString().slice(0, 8) : String(value).slice(0, 8);
+}
+
 /**
  * Maps a Supabase match row to frontend Match type.
  *
@@ -201,6 +215,7 @@ export function mapMatchFromSupabase(row: MatchRow, tournamentDate: string): Mat
     finalType: row.final_type as Match['finalType'],
     label: row.label ?? undefined,
     scheduledTime: kickoffOf(tournamentDate, row.scheduled_start),
+    ...originalStartFromRow(tournamentDate, row.original_start), // B-26
     matchNumber: row.match_number ?? undefined,
     phase: row.phase ?? undefined,
     referee: row.referee_number ?? undefined,
@@ -298,11 +313,8 @@ export function mapMatchToSupabase(
     is_final: match.isFinal ?? false,
     final_type: match.finalType ?? null,
     label: match.label ?? null,
-    scheduled_start: match.scheduledTime
-      ? (match.scheduledTime instanceof Date
-          ? match.scheduledTime.toTimeString().slice(0, 8)
-          : String(match.scheduledTime).slice(0, 8))
-      : null,
+    scheduled_start: toTimeColumn(match.scheduledTime),
+    original_start: toTimeColumn(match.originalStart), // B-26: NULL = nie verschoben
     match_number: match.matchNumber ?? null,
     phase: match.phase ?? 'groupStage',
     referee_number: match.referee ?? null,
@@ -357,6 +369,7 @@ export function mapMatchToScheduleUpdate(
     final_type: row.final_type,
     label: row.label,
     scheduled_start: row.scheduled_start,
+    original_start: row.original_start ?? null, // B-26: ursprüngliche Uhrzeit gehört zum Zeitplan
     match_number: row.match_number,
     phase: row.phase,
     referee_number: row.referee_number,

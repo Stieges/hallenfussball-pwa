@@ -16,6 +16,7 @@ import type { ResultFigures } from '../matchResult';
 import type { MatchCardStatus } from './MatchCardScore';
 import { formatTime } from './utils';
 import { MatchStatusBadge } from '../../ui/molecules/MatchStatusBadge';
+import { MatchMenuSlot, OriginalTimeNote } from '../MatchTimeShiftSlots';
 
 export interface MatchCardHeaderProps {
   scheduledTime?: string;
@@ -29,6 +30,8 @@ export interface MatchCardHeaderProps {
   badge?: MatchBadgeModel;
   /** Fachlicher Status der Ansicht: „ausgefallen“ und „gewertet“ stehen in der Kopfzeile (@ZM-104) */
   viewStatus?: ViewMatchStatus;
+  /** B-26: Spiel-ID für „ursprünglich hh:mm“ und ⋮ (nur im Spielplan der Leitung, über den Kontext) */
+  matchId?: string;
 }
 
 const headerStyle: CSSProperties = {
@@ -54,7 +57,7 @@ const metaStyle: CSSProperties = {
 const FROM_CARD_STATUS: Record<MatchCardStatus, ViewMatchStatus> = { scheduled: 'scheduled', waiting: 'scheduled', running: 'running', finished: 'finished', skipped: 'cancelled' };
 
 export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
-  scheduledTime, field, group, showGroupLabel, referee, status, result, badge, viewStatus,
+  scheduledTime, field, group, showGroupLabel, referee, status, result, badge, viewStatus, matchId,
 }) => {
   const { t } = useTranslation('tournament');
   const isLive = status === 'running';
@@ -75,6 +78,7 @@ export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
         fontVariantNumeric: 'tabular-nums',
       }} data-testid={badge?.kind === 'kickoff' ? 'match-kickoff' : undefined}>
         {formatTime(scheduledTime)}
+        {matchId !== undefined && <OriginalTimeNote matchId={matchId} />}
       </span>
       <div style={metaStyle}>
         {field !== undefined && <span>{t('matchCard.field', { field })}</span>}
@@ -87,6 +91,7 @@ export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
         {finishedNote && (
           <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid="match-card-decision">{finishedNote}</span>
         )}
+        {matchId !== undefined && <MatchMenuSlot matchId={matchId} />}
       </div>
     </div>
   );

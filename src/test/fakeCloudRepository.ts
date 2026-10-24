@@ -32,7 +32,7 @@ function clone(state: FakeCloudState): CloudReadWithRevisions {
  * A-10 (Teil C, @TM-027): Spielplan-Felder, deren Änderung der Server in `tournaments.change_revision` zählt
  * (Trigger `matches_bump_change_revision`, Spaltenliste = `mapMatchToScheduleUpdate`).
  */
-const SCHEDULE_FIELDS = ['slotA', 'slotB', 'round', 'field', 'slot', 'group', 'isFinal', 'finalType', 'label', 'scheduledTime', 'matchNumber', 'phase', 'referee'] as const;
+const SCHEDULE_FIELDS = ['slotA', 'slotB', 'round', 'field', 'slot', 'group', 'isFinal', 'finalType', 'label', 'scheduledTime', 'originalStart', 'matchNumber', 'phase', 'referee'] as const;
 
 export interface FakeCloudOptions {
   /** A-10: `updateMatches` zählt `changeRevision` je Spiel mit geänderter Spielplan-Spalte (wie der Server nach F2b). */
