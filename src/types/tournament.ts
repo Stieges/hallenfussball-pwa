@@ -1040,6 +1040,8 @@ export interface RuntimeMatchEvent {
     home: number;
     away: number;
   };
+  /** Abschnitt des Eintrags (1-basiert, Verlängerung = Abschnitte + 1; nur Engine-Spiele): Fouls zählen je Halbzeit (@SL-099, @SL-100). */
+  section?: number;
   /** Event was recorded without details - needs completion */
   incomplete?: boolean;
 }

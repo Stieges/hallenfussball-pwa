@@ -127,25 +127,22 @@ describe('LiveCockpit – Meldezeile statt Toast (Aufgabe 2.3)', () => {
     expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 4/5');
   });
 
-  // Befund (Ziel-Record Spiel leiten, Paket B-11a): Das Cockpit liest `cockpitSettings.foulLimit` nicht,
-  // die Grenze gilt fest 5. Rot nach dem Gherkin, deshalb `it.fails` (Baustein „Tests gegen die Anforderung“).
-  it.fails('@SL-034 Grenze 3: das 3. Foul meldet „FC Alpha: 3. Foul in dieser Halbzeit“ (Befund C-FOUL-GRENZE-FEST: foulLimit wird nicht gelesen, B-11a)', () => {
+  // Das Cockpit liest `cockpitSettings.foulLimit` (Plan Cockpit v2 A5; vorher fest 5, Befund C-FOUL-GRENZE-FEST).
+  it('@SL-034 Grenze 3: das 3. Foul meldet „FC Alpha: 3. Foul in dieser Halbzeit“ (C-FOUL-GRENZE-FEST behoben)', () => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 3 };
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(2), { cockpitSettings: settings })} />);
     rerender(<LiveCockpit {...baseProps(matchMit(3), { cockpitSettings: settings })} />);
     expect(screen.getByTestId(MELDUNG)).toHaveTextContent('FC Alpha: 3. Foul in dieser Halbzeit');
   });
 
-  it.fails('@SL-102 ist die Foul-Grenze ausgeschaltet, gibt es beim 5. Foul keinen Hinweis (Befund C-FOUL-GRENZE-FEST: foulLimit wird nicht gelesen, B-11a)', () => {
+  it('@SL-102 ist die Foul-Grenze ausgeschaltet, gibt es beim 5. Foul keinen Hinweis (C-FOUL-GRENZE-FEST behoben)', () => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: null };
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(4), { cockpitSettings: settings })} />);
     rerender(<LiveCockpit {...baseProps(matchMit(5), { cockpitSettings: settings })} />);
     expect(screen.getByTestId(MELDUNG)).toBeEmptyDOMElement();
   });
 
-  // Zähler je Abschnitt braucht den Abschnitt aus `PhaseView` (B-11a); bis dahin zählt das ganze Spiel.
-  it.todo('@SL-036 in der zweiten Halbzeit beginnt der Foul-Zähler für die Grenze bei 0, das Spiel zählt weiter 4 (wartet auf B-11a)');
-  it.todo('@SL-100 Zählung je Abschnitt: Verlängerung zählt zum letzten Abschnitt (wartet auf B-11a)');
+  // @SL-036 und @SL-100 (Zählung je Abschnitt, Verlängerung zum letzten Abschnitt): `hooks/__tests__/zaehleFouls.test.ts` und `LiveCockpit.foulGrenze.engine.test.tsx`
 
   it('@SL-098 Gegenbeispiel: Wechsel auf ein anderes Spiel mit 5 Fouls meldet nichts (kein „6. Foul“ beim Öffnen)', () => {
     const { rerender } = render(<LiveCockpit {...baseProps(matchMit(2))} />);
