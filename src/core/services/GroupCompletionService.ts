@@ -282,7 +282,7 @@ export type RecompletionTrigger = 'manual' | 'auto';
  * die Herkunft. Ein offener Block ohne Pflicht (Annahme erlaubt) hält den Abschluss nicht auf. Für eine Gruppe, die nicht
  * `stale` ist, gilt `prepareGroupCompletion`.
  */
-export function prepareRecompletion(tournament: CompletionTournament, groupId: string, trigger: RecompletionTrigger = 'auto'): GroupCompletionPreparation {
+export function prepareRecompletion(tournament: CompletionTournament, groupId: string, trigger: RecompletionTrigger): GroupCompletionPreparation {
   if (groupState(tournament, groupId) !== 'stale') {
     return prepareGroupCompletion(tournament, groupId);
   }

@@ -182,7 +182,7 @@ describe('A-13a @TM-145 erneuter Abschluss nach Korrektur: offene Plätze mit Fo
     const korrigiert = withMatch(t, matchOf(t, HC.sued, HC.west).id, { scoreA: 2, scoreB: 2 });
     const stale = { ...korrigiert, groupCompletions: [completion('A', [HC.nord, HC.west, HC.sued, HC.ost], { stale: true })] };
     expect(groupState(stale, 'A')).toBe('stale');
-    const result = prepareRecompletion(stale, 'A');
+    const result = prepareRecompletion(stale, 'A', 'auto');
     expect(result).toMatchObject({ code: 'READY', openRanks: [2, 3], tieDecisions: [], expectedState: expectedState(stale, 'A') });
     expect(result.code === 'READY' && result.ranking[0]).toBe(HC.nord);
     // Gegenbeispiel: der erste Abschluss darf keine Plätze offen lassen – dort wird die Entscheidung verlangt
@@ -191,20 +191,20 @@ describe('A-13a @TM-145 erneuter Abschluss nach Korrektur: offene Plätze mit Fo
 
   it('@TM-145 @TM-150 Gegenbeispiele: nicht veraltet → wie der erste Abschluss; Pflicht-Block nur aus der Einstellung (ohne Folgespiel) wird nie still festgelegt', async () => {
     const t = await abgeschlossen();
-    expect(prepareRecompletion(t, 'A')).toEqual(prepareGroupCompletion(t, 'A'));
+    expect(prepareRecompletion(t, 'A', 'auto')).toEqual(prepareGroupCompletion(t, 'A'));
 
     // @TM-150 (Entscheidung Daniel 2026-10-22, Befund C-NEUABSCHLUSS-PFLICHTBLOCK-STILL): kein Folgespiel, aber Platz 3 auszuspielen
     // → die Turnierleitung entscheidet; „Besetzung prüfen“ bleibt stehen, nichts geht still nach openRanks.
     const ohneFolgespiel = { ...lage060([1, 2, 3], false), groupCompletions: [completion('A', [id('N'), id('S'), id('W'), id('O')], { stale: true })] };
-    expect(prepareRecompletion(ohneFolgespiel, 'A')).toMatchObject({ code: 'DECISION_REQUIRED', blocks: [{ mandatory: { kind: 'setting', place: 3 } }] });
+    expect(prepareRecompletion(ohneFolgespiel, 'A', 'auto')).toMatchObject({ code: 'DECISION_REQUIRED', blocks: [{ mandatory: { kind: 'setting', place: 3 } }] });
     const mitFolgespiel = { ...lage060([1, 2], true), groupCompletions: [completion('A', [id('N'), id('S'), id('W'), id('O')], { stale: true })] };
-    expect(prepareRecompletion(mitFolgespiel, 'A')).toMatchObject({ code: 'READY', openRanks: [3, 4] });
+    expect(prepareRecompletion(mitFolgespiel, 'A', 'auto')).toMatchObject({ code: 'READY', openRanks: [3, 4] });
   });
 
   it('@TM-145 ein danach wieder offenes Gruppenspiel hält auch den erneuten Abschluss auf', async () => {
     const t = await abgeschlossen();
     const offen = withMatch(t, matchOf(t, HC.sued, HC.west).id, { matchStatus: 'running' });
     const stale = { ...offen, groupCompletions: [completion('A', [HC.nord, HC.west, HC.sued, HC.ost], { stale: true })] };
-    expect(prepareRecompletion(stale, 'A')).toEqual({ code: 'OPEN_MATCHES', open: 1 });
+    expect(prepareRecompletion(stale, 'A', 'auto')).toEqual({ code: 'OPEN_MATCHES', open: 1 });
   });
 });

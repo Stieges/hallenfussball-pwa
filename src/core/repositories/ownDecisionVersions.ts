@@ -48,7 +48,12 @@ export function rememberOwnDecisionVersion(tournamentId: string, version: number
   }
 }
 
-/** Stammt die Server-Version direkt nach `base` von einer eigenen Gleichstands-Entscheidung? */
+/**
+ * Stammt die Server-Version direkt nach `base` von einer eigenen Gleichstands-Entscheidung?
+ * Bekannte Grenze (Review #382 N4): Lag danach noch eine fremde Änderung (`base + 2`), nennt der Grund trotzdem die eigene
+ * Entscheidung – der Konfliktfehler trägt die aktuelle Server-Version nicht. Für das MVP hingenommen; der Text bleibt wahr
+ * („hat sich … geändert“), er verschweigt nur die zweite Änderung. Die Merkung gilt je Gerät, nicht je Konto (N6).
+ */
 export function nextVersionIsOwnDecision(tournamentId: string, base: number | undefined): boolean {
   return base !== undefined && (read()[tournamentId] ?? []).includes(base + 1);
 }

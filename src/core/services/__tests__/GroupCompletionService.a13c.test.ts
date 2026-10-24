@@ -55,12 +55,12 @@ describe('@TM-150 Der Neu-Abschluss legt einen auszuspielenden Platz ohne Folges
     { zeile: 'Gleichstand auf einem Platz, der nicht auszuspielen ist', plaetze: [1, 2], code: 'READY' },
   ])('$zeile → $code', ({ plaetze, code }) => {
     const t = veraltet(nikolaus(plaetze));
-    expect(prepareRecompletion(t, '').code).toBe(code);
+    expect(prepareRecompletion(t, '', 'auto').code).toBe(code);
   });
 
   it('Zeile 1: der Block ist genau der Pflicht-Block (Platz 3, Einstellung); „Besetzung prüfen“ bleibt, solange nicht entschieden ist', () => {
     const t = veraltet(nikolaus([1, 2, 3]));
-    const result = prepareRecompletion(t, '');
+    const result = prepareRecompletion(t, '', 'auto');
     expect(result).toEqual({
       code: 'DECISION_REQUIRED',
       blocks: [expect.objectContaining({ teamIds: [NK.petting, NK.otting], place: 3, size: 2, mayShare: false, mandatory: { kind: 'setting', place: 3 } })],
@@ -69,7 +69,7 @@ describe('@TM-150 Der Neu-Abschluss legt einen auszuspielenden Platz ohne Folges
 
   it('Zeile 2 (Gegenbeispiel): kein Gleichstand auf einem auszuspielenden Platz → neu abgeschlossen, keine offenen Plätze', () => {
     const t = veraltet(nikolaus([1]));
-    expect(prepareRecompletion(t, '')).toMatchObject({ code: 'READY', openRanks: [] });
+    expect(prepareRecompletion(t, '', 'auto')).toMatchObject({ code: 'READY', openRanks: [] });
   });
 
   it('nach Ollis Entscheidung (Strafstoßschießen 4:3) ist der Block entschieden → bereit, die Entscheidung geht mit', async () => {
@@ -77,7 +77,7 @@ describe('@TM-150 Der Neu-Abschluss legt einen auszuspielenden Platz ohne Folges
     const repo = new MemoryRepo(t);
     const decided = await repo.service(['e-1']).decide(t.id, { groupId: '', teamIds: [NK.petting, NK.otting], order: [NK.otting, NK.petting], kind: 'shootout', shootout: { winner: 4, loser: 3 } });
     expect(decided.ok).toBe(true);
-    const result = prepareRecompletion(repo.tournament, '');
+    const result = prepareRecompletion(repo.tournament, '', 'auto');
     expect(result).toMatchObject({ code: 'READY', openRanks: [] });
     expect(result.code === 'READY' && result.tieDecisions.map((d) => d.id)).toEqual(['e-1']);
     expect(result.code === 'READY' && result.ranking.slice(2, 4)).toEqual([NK.otting, NK.petting]);
@@ -96,7 +96,7 @@ describe('@TM-150 wörtlich: Platz 1 ausgespielt, kein Folgespiel', () => {
 
   it('Zeile 1: SC Ost und TSV West nach allen Kriterien gleich auf Platz 1 → Entscheidung nötig, „Besetzung prüfen“ bleibt, die Gruppe ist nicht neu abgeschlossen', () => {
     const t = lage('1:1');
-    const result = prepareRecompletion(t, '');
+    const result = prepareRecompletion(t, '', 'auto');
     expect(result).toEqual({ code: 'DECISION_REQUIRED', blocks: [expect.objectContaining({ teamIds: expect.arrayContaining([id('W'), id('O')]), place: 1, size: 2, mayShare: false, mandatory: { kind: 'setting', place: 1 } })] });
     expect(groupState(t, '')).toBe('stale'); // nichts abgeschlossen, solange keine Entscheidung vorliegt
   });
@@ -106,11 +106,11 @@ describe('@TM-150 wörtlich: Platz 1 ausgespielt, kein Folgespiel', () => {
     const gewinner = id('O');
     const entschieden = await repo.service(['e-1']).decide(repo.tournament.id, { groupId: '', teamIds: [id('W'), id('O')], order: [gewinner, id('W')], kind: 'shootout', shootout: { winner: 4, loser: 3 } });
     expect(entschieden.ok).toBe(true);
-    expect(prepareRecompletion(repo.tournament, '')).toMatchObject({ code: 'READY', openRanks: [] });
+    expect(prepareRecompletion(repo.tournament, '', 'auto')).toMatchObject({ code: 'READY', openRanks: [] });
   });
 
   it('Zeile 2: SC Ost allein auf Platz 1 → neu abschließbar ohne offene Plätze (READY)', () => {
-    expect(prepareRecompletion(lage('0:1'), '')).toMatchObject({ code: 'READY', openRanks: [] });
+    expect(prepareRecompletion(lage('0:1'), '', 'auto')).toMatchObject({ code: 'READY', openRanks: [] });
   });
   // Der Teil „ohne dass ‚Besetzung prüfen‘ erscheint“ braucht den Auslöser nach der Korrektur und steht im A-15b-Brief (kein Test hier).
 });

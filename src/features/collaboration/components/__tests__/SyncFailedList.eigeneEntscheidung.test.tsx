@@ -57,7 +57,7 @@ describe('@W2A-077 Grund nach der eigenen Entscheidung', () => {
   it('@W2A-077 auf Englisch übersetzt (Sprachparität)', async () => {
     await renderWithI18n(<SyncFailedList items={[eintrag({ conflict: true, ownDecision: true })]} onRetry={vi.fn()} onDiscard={vi.fn()} onClose={vi.fn()} />, 'en');
 
-    expect(screen.getByTestId('sync-failed-reason-dl-1').textContent).toBe('Not applied: the state has since changed through your own decision');
+    expect(screen.getByTestId('sync-failed-reason-dl-1').textContent).toBe('Not accepted: the state has since changed through your own decision');
   });
 
   it('@FU-108 Gegenbeispiel: Konflikt ohne Merkmal bleibt „anderes Gerät“', async () => {
