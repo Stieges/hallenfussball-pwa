@@ -12,7 +12,6 @@ import { E2E_USERS, E2E_TEST_PASSWORD, type E2EUserKey } from './testData';
 import { getLocalSupabaseStatus } from '../../../scripts/lib/localSupabaseStatus';
 import { assertLocalSupabaseTarget } from '../../../scripts/lib/assertLocalSupabaseTarget';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
-import { localDateIso } from '../../../src/core/view/time';
 
 // =============================================================================
 // LOGIN (über die Oberfläche, Brief Abschnitt 2)
@@ -491,7 +490,7 @@ export async function seedGuestTournament(page: Page, title: string): Promise<st
     const draft = new TournamentCreationService({}).createDraft({
       title: tournamentTitle,
       ageClass: 'U13',
-      date: localDateIso(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Gast-Halle' },
