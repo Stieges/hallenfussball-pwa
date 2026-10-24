@@ -23,7 +23,7 @@ import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../featur
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
-import { TabellenTab } from '../features/tournament-management/TabellenTab';
+import { TabellenTabMitAdresse } from '../features/tournament-management/TabellenTabMitAdresse';
 import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
 import { GroupCompletionProvider } from '../features/tournament-management/group-completion/GroupCompletionProvider';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
@@ -247,7 +247,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
                 />
               )}
               {activeTab === 'tabellen' && (
-                <TabellenTab
+                <TabellenTabMitAdresse
                   tournament={tournament}
                   schedule={schedule}
                   currentStandings={currentStandings}

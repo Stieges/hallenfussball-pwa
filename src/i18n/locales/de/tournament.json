@@ -599,8 +599,7 @@
     "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen"
   },
   "tables": {
-    "noGroups": "Dieses Turnier hat keine Gruppen.",
-    "groupsOnlyInfo": "Die Gruppen-Tabelle ist nur für Gruppenturniere verfügbar.",
+    "single": "Tabelle",
     "tableOnlyInfo": "Die Tabelle ist nur für Gruppenturniere verfügbar.",
     "groups": "Gruppen"
   },
