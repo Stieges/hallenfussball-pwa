@@ -42,6 +42,7 @@ vi.mock('../../../components/ScheduleDisplay', () => ({ ScheduleDisplay: () => <
 vi.mock('../../../components/RefereeAssignmentEditor', () => ({ RefereeAssignmentEditor: () => <div /> }));
 vi.mock('../../../lib/pdfExporter', () => ({ exportScheduleToPDF: vi.fn() }));
 
+
 import { TournamentPreview } from '../TournamentPreview';
 
 const tournament = {
@@ -52,20 +53,19 @@ const tournament = {
 
 const schedule = { allMatches: [], initialStandings: [], endTime: new Date(), numberOfFields: 1 } as unknown as GeneratedSchedule;
 
-const konto = {
-  user: { id: 'u1', email: 'o@example.org', name: 'Olli', globalRole: 'user' },
-  isGuest: false,
-  isAnonymous: false,
-} as unknown as AuthContextValue;
-const gast = {
-  user: { id: 'g1', email: '', name: 'Gast', globalRole: 'guest' },
-  isGuest: true,
-  isAnonymous: false,
-} as unknown as AuthContextValue;
+type TestUser = { id: string; globalRole: string } | null;
+const konto: TestUser = { id: 'u1', globalRole: 'user' };
+const anonym: TestUser = { id: 'a1', globalRole: 'user' };
+const gast: TestUser = { id: 'g1', globalRole: 'guest' };
 
-const renderMit = (auth: AuthContextValue | undefined) => {
+const lage = vi.hoisted(() => ({ configured: true }));
+vi.mock('../../../lib/supabase', () => ({
+  get isSupabaseConfigured() { return lage.configured; },
+}));
+
+const renderMit = (user: TestUser) => {
   render(
-    <AuthContext.Provider value={auth}>
+    <AuthContext.Provider value={(user ? { user } : undefined) as unknown as AuthContextValue | undefined}>
       <TournamentPreview tournament={tournament} schedule={schedule} onEdit={() => undefined} onPublish={() => undefined} />
     </AuthContext.Provider>
   );
@@ -77,10 +77,10 @@ const setOnline = (value: boolean) => {
 };
 
 describe.each([
-  ['de', deWizard, /jeder mit dem Link/, /nur auf diesem Gerät/, /Uhr|Zeit/i],
-  ['en', enWizard, /anyone with the link/, /only on this device/, /time|clock|o'clock/i],
-])('Paket D (%s): Satz neben „Festlegen“', (_lang, wizard, linkSatz, geraetSatz, zeitWort) => {
-  beforeEach(() => { texts.current = wizard; setOnline(true); });
+  ['de', deWizard, /jeder mit dem Link/, /nur auf diesem Gerät/, /Uhr|Zeit/i, /Ohne Netz bleibt das Turnier vorerst auf diesem Gerät/],
+  ['en', enWizard, /anyone with the link/, /only on this device/, /time|clock|o'clock/i, /Without a connection the tournament stays on this device for now/],
+])('Paket D (%s): Satz neben „Festlegen“', (_lang, wizard, linkSatz, geraetSatz, zeitWort, offlineSatz) => {
+  beforeEach(() => { texts.current = wizard; lage.configured = true; setOnline(true); });
   afterEach(() => { setOnline(true); });
 
   it('@W1-037 angemeldet und online: jeder mit dem Link kann zuschauen', () => {
@@ -90,7 +90,7 @@ describe.each([
   });
 
   it('@W1-037 nicht angemeldet: nur auf diesem Gerät (Gegenbeispiel: kein „jeder mit dem Link“)', () => {
-    const text = renderMit(undefined);
+    const text = renderMit(null);
     expect(text).toMatch(geraetSatz);
     expect(text).not.toMatch(linkSatz);
   });
@@ -101,9 +101,23 @@ describe.each([
     expect(text).not.toMatch(linkSatz);
   });
 
-  it('@W1-037 angemeldet, aber offline: kein Link-Versprechen', () => {
+  it('@W1-037 angemeldet, aber ohne Netz: vorerst auf diesem Gerät (nicht „nur“, kein Link)', () => {
     setOnline(false);
     const text = renderMit(konto);
+    expect(text).toContain(wizard.publish.explanationOffline);
+    expect(text).toMatch(offlineSatz);
+    expect(text).not.toMatch(geraetSatz);
+    expect(text).not.toMatch(linkSatz);
+  });
+
+  it('@W1-037 anonymes Konto zählt wie angemeldet (Cloud-Regel des Repositorys)', () => {
+    expect(renderMit(anonym)).toMatch(linkSatz);
+  });
+
+  it('@W1-037 Supabase nicht eingerichtet: nur auf diesem Gerät, auch mit Konto', () => {
+    lage.configured = false;
+    const text = renderMit(konto);
+    expect(text).toMatch(geraetSatz);
     expect(text).not.toMatch(linkSatz);
   });
 

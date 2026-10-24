@@ -53,6 +53,9 @@ vi.mock('../../../components/RefereeAssignmentEditor', () => ({
 
 vi.mock('../../../lib/pdfExporter', () => ({ exportScheduleToPDF: vi.fn() }));
 
+/** @W1-037: Olli ist angemeldet (Konto) und Supabase ist eingerichtet – nur dann kündigt der Satz den Link an. */
+vi.mock('../../../lib/supabase', () => ({ isSupabaseConfigured: true }));
+
 import { TournamentPreview } from '../TournamentPreview';
 
 const baseTournament = (overrides: Partial<Tournament> = {}): Tournament =>
@@ -127,16 +130,9 @@ const repositoryMock = (): ITournamentRepository => ({
   regenerateShareCode: vi.fn(() => Promise.resolve(null)),
 });
 
-/** @W1-037: Olli ist angemeldet (Konto, nicht Gast) – nur dann kündigt der Satz den Link an. */
-const angemeldet = {
-  user: { id: 'u1', email: 'o@example.org', name: 'Olli', globalRole: 'user' },
-  isGuest: false,
-  isAnonymous: false,
-} as unknown as AuthContextValue;
-
 const renderPreview = (tournament: Tournament) =>
   render(
-    <AuthContext.Provider value={angemeldet}>
+    <AuthContext.Provider value={{ user: { id: 'u1', email: 'o@example.org', name: 'Olli', globalRole: 'user' } } as unknown as AuthContextValue}>
       <TournamentPreview
         tournament={tournament}
         schedule={schedule}
@@ -198,6 +194,7 @@ describe('B-04b @W1-020 – Der Satz sagt, was publish() tatsächlich tut', () =
     }
     expect(deWizard.publish.explanationPrivate).toMatch(/Spielplan/);
     expect(deWizard.publish.explanationPrivate).toMatch(/Turnierleitung/);
+    expect(deWizard.publish.explanationPrivate).not.toMatch(/eingeloggt/);
     expect(deWizard.publish.explanationPublic).toMatch(/Spielplan/);
     expect(deWizard.publish.explanationPublic).toMatch(/Link/);
     expect(enWizard.publish.explanationPrivate).toMatch(/schedule/);

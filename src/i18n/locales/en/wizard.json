@@ -572,10 +572,11 @@
     "button": "Finalise",
     "loading": "Finalising …",
     "success": "Tournament successfully finalised.",
-    "explanationPrivate": "The schedule is locked in. Afterwards the tournament is visible only to the signed-in tournament directors.",
+    "explanationPrivate": "The schedule is locked in. Afterwards the tournament is not public; only tournament directors, helpers and monitors can see it.",
     "explanationPublic": "The schedule is locked in. Afterwards anyone with the link can watch.",
     "explanationLocal": "The schedule is locked in. The tournament stays only on this device.",
-    "explanationChangeable": "You can still change team names and results afterwards, the structure only until the first kick-off."
+    "explanationChangeable": "You can still change team names and results afterwards, the structure only until the first kick-off.",
+    "explanationOffline": "The schedule is locked in. Without a connection the tournament stays on this device for now."
   },
   "preview": {
     "hintLabel": "Note:",

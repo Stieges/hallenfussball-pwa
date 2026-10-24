@@ -23,6 +23,8 @@ import { visibilityAfterPublish } from '../../core/services/TournamentCreationSe
 import { useMatchEntryGuard } from '../../hooks/useMatchEntryGuard';
 import { useIsOnline } from '../../hooks/useOnlineStatus';
 import { AuthContext } from '../auth/context/authContextInstance';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { usesCloudRepository } from '../../core/repositories/usesCloudRepository';
 import { publishNoticeKey } from './utils/publishNotice';
 
 interface TournamentPreviewProps {
@@ -48,9 +50,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const entryGuard = useMatchEntryGuard();
   // @W1-037: der Satz richtet sich nach Anmelde- und Verbindungsstand, nicht nur nach der Sichtbarkeit.
-  const auth = useContext(AuthContext);
+  // useContext statt useAuth: useAuth wirft ohne Provider, die Vorschau läuft aber auch ohne (dann: kein Konto).
+  const user = useContext(AuthContext)?.user ?? null;
   const isOnline = useIsOnline();
-  const signedIn = Boolean(auth?.user) && auth?.isGuest !== true && auth?.isAnonymous !== true && auth?.user?.globalRole !== 'guest';
+  // Dieselbe Regel wie die Repository-Wahl (RepositoryContext): Cloud oder nur dieses Gerät.
+  const toCloud = usesCloudRepository(user, isSupabaseConfigured);
 
   // F-211: shared regeneration helper — keeps the previous schedule visible
   // on failure and surfaces the error in the UI without crashing the wizard.
@@ -415,7 +419,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               textAlign: 'center',
             }}
           >
-            {t(publishNoticeKey({ visibility: visibilityAfterPublish(currentTournament), signedIn, isOnline }))}
+            {t(publishNoticeKey({ visibility: visibilityAfterPublish(currentTournament), toCloud, isOnline }))}
             {' '}
             {t('publish.explanationChangeable')}
           </p>

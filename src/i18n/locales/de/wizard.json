@@ -572,10 +572,11 @@
     "button": "Festlegen",
     "loading": "Wird festgelegt …",
     "success": "Turnier erfolgreich festgelegt.",
-    "explanationPrivate": "Der Spielplan wird festgelegt. Danach ist das Turnier nur für die eingeloggte Turnierleitung sichtbar.",
+    "explanationPrivate": "Der Spielplan wird festgelegt. Danach ist das Turnier nicht öffentlich, nur Turnierleitung, Helfer und Monitore sehen es.",
     "explanationPublic": "Der Spielplan wird festgelegt. Danach kann jeder mit dem Link zuschauen.",
     "explanationLocal": "Der Spielplan wird festgelegt. Das Turnier bleibt nur auf diesem Gerät.",
-    "explanationChangeable": "Teamnamen und Ergebnisse kannst du danach noch ändern, die Struktur nur bis zum ersten Anpfiff."
+    "explanationChangeable": "Teamnamen und Ergebnisse kannst du danach noch ändern, die Struktur nur bis zum ersten Anpfiff.",
+    "explanationOffline": "Der Spielplan wird festgelegt. Ohne Netz bleibt das Turnier vorerst auf diesem Gerät."
   },
   "preview": {
     "hintLabel": "Hinweis:",
