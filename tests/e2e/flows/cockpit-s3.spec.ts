@@ -71,7 +71,8 @@ test.describe('Cockpit Scheibe 3: Team-Spalten und Einträge (Gast, lokal)', () 
     await wartePicker(page);
     await page.getByTestId('number-picker').getByRole('button', { name: '5', exact: true }).click();
     await expect(page.getByTestId('number-picker')).toBeHidden();
-    await expect(page.getByTestId('team-column-away').getByText(/^Nr\. 5 · \d+:\d{2}$/)).toBeVisible();
+    // Am Laptop steht die Strafe als Karte in der rechten Spalte (@SL-186: „SV Süd, Nr. 5“), sonst als Marke in der Team-Spalte
+    await expect(page.getByTestId('team-column-away').getByText(/^Nr\. 5 · \d+:\d{2}$/).or(page.getByText(/^SV Süd, Nr\. 5$/))).toBeVisible();
     await expect(page.getByTestId('team-fouls-away')).toHaveText('Foul 2/5'); // die Zeitstrafe zählt als Foul
 
     // Gelbe Karte FC Nord, Nr. 9

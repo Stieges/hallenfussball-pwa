@@ -122,7 +122,8 @@ test.describe('Cockpit: Halbzeit, Wiederanpfiff, Abpfiff von selbst', () => {
     // @SL-006 + Befund C-COCKPIT-HALBZEIT-START: der Wiederanpfiff startet Abschnitt 2, meldet den Wiederanpfiff
     await wiederanpfiff.click();
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
-    await expect(page.getByTestId('scoreboard-clock-sub')).toContainText(/Spielzeit 0:0\d/);
+    // Am Laptop steht die gespielte Zeit in der Kopfzeile der Tafel (@SL-180), sonst unter der Uhr
+    await expect(page.locator('[data-testid="scoreboard-kopf-text"], [data-testid="scoreboard-clock-sub"]')).toContainText(/(Spielzeit|Gespielt) 0:0\d/);
     await expect(page.getByTestId('notice-line')).toContainText('Wiederanpfiff');
     await expect(page.getByText('Spiel fortgesetzt')).toHaveCount(0);
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
