@@ -610,8 +610,7 @@
     "engineReadyError": "Match could not be prepared — please try again"
   },
   "tables": {
-    "noGroups": "This tournament has no groups.",
-    "groupsOnlyInfo": "Group tables are only available for group tournaments.",
+    "single": "Table",
     "tableOnlyInfo": "Tables are only available for group tournaments.",
     "groups": "Groups"
   },

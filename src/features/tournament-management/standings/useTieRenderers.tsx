@@ -14,6 +14,8 @@ export interface TieRenderers {
   hint: (groupId: string) => ReactNode;
   /** Marke eines Teams in seiner Gruppe. */
   marker: (teamId: string, groupId: string) => ReactNode;
+  /** Das Team steht in einem offenen Gleichstand (Marke „Entscheidung nötig“ / „Strafstoßschießen nötig“): keine Medaille für den Platz (@W2A-076). */
+  isOpen: (teamId: string, groupId: string) => boolean;
 }
 
 export function useTieRenderers(tournament: Tournament): TieRenderers {
@@ -33,6 +35,7 @@ export function useTieRenderers(tournament: Tournament): TieRenderers {
         const marker = tieMarkerOf(viewOf(groupId), teamId);
         return marker === undefined ? null : <TieRowMarker marker={marker} />;
       },
+      isOpen: (teamId, groupId) => viewOf(groupId).open.some((block) => block.teamIds.includes(teamId)),
     };
   }, [tournament]);
 }
