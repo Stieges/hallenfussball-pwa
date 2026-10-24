@@ -98,7 +98,7 @@ describe('A-35: Zwillinge Migration ↔ TS', () => {
 
 describe('A-35: Drift-Check (Rechte-Assertions, PENDING-LIVE)', () => {
   it('die Assertions stehen in der SQL-Datei, in PRIVILEGE_ASSERTION_NAMES und in pending_assertions_for', () => {
-    const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/\./g, '\\.')}\\)\\n\\s+echo "([^"]+)"`));
+    const mapping = drift.match(new RegExp(`    ${MIGRATION_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)\\n\\s+echo "([^"]+)"`));
     expect(mapping?.[1]).toBe(ASSERTIONS.join(' '));
     for (const name of ASSERTIONS) {
       expect(assertions).toContain(`SELECT '${name}',`);
