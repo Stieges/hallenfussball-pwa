@@ -1,11 +1,13 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
-import { TournamentMode } from '../../../types/tournament';
+import { GroupSystem, TournamentMode } from '../../../types/tournament';
 
 interface ModeSelectionProps {
   selectedMode: TournamentMode;
   onModeChange: (mode: TournamentMode) => void;
+  /** Gewähltes Spielsystem: der Untertitel der Karte nennt, was gewählt ist (Jeder gegen jeden oder Gruppen + Finalrunde). */
+  groupSystem?: GroupSystem;
 }
 
 interface ModeButtonProps {
@@ -84,6 +86,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({
 export const ModeSelection: React.FC<ModeSelectionProps> = ({
   selectedMode,
   onModeChange,
+  groupSystem,
 }) => {
   const { t } = useTranslation('wizard');
 
@@ -103,7 +106,7 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
           isSelected={selectedMode === 'classic'}
           onClick={() => onModeChange('classic')}
           title={t('modeSelection.classic.title')}
-          subtitle={t('modeSelection.classic.subtitle')}
+          subtitle={t(groupSystem === 'roundRobin' ? 'modeSelection.classic.subtitleRoundRobin' : 'modeSelection.classic.subtitle')}
           testId="wizard-mode-classic"
         />
       </div>

@@ -1128,6 +1128,8 @@
       "koRound": "{{round}}: if drawn, {{rule}}",
       "ruleShootout": "penalty shootout, {{shooters}}",
       "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
+      "playOutOne": "Tie for place {{places}}: penalty shootout",
+      "playOutMany": "Tie for places {{places}}: penalty shootout",
       "ruleGoldenGoal": "golden goal",
       "shooters": "{{n}} shooters per team",
       "shootersOne": "1 shooter per team"

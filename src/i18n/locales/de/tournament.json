@@ -1128,6 +1128,8 @@
       "koRound": "{{round}}: bei Gleichstand {{rule}}",
       "ruleShootout": "Strafstoßschießen, {{shooters}}",
       "ruleOvertimeThenShootout": "Verlängerung, dann Strafstoßschießen, {{shooters}}",
+      "playOutOne": "Gleichstand auf Platz {{places}}: Strafstoßschießen",
+      "playOutMany": "Gleichstand auf den Plätzen {{places}}: Strafstoßschießen",
       "ruleGoldenGoal": "Golden Goal",
       "shooters": "{{n}} Schützen je Team",
       "shootersOne": "1 Schütze je Team"

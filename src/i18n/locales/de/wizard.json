@@ -67,7 +67,8 @@
     "label": "Turniermodus",
     "classic": {
       "title": "Klassisches Hallenturnier",
-      "subtitle": "Gruppen + Finalrunde"
+      "subtitle": "Gruppen + Finalrunde",
+      "subtitleRoundRobin": "Jeder gegen jeden"
     }
   },
   "step3": {
@@ -166,13 +167,19 @@
     "locationLabel": "Ort",
     "teamsLabel": "Teams",
     "notSpecified": "(nicht angegeben)",
-    "football": "Fußball",
     "otherSport": "Sonstiges",
     "bambiniType": "Bambini",
     "classicType": "Klassisch",
-    "classicMode": "Klassisch",
-    "miniFussballMode": "Mini-Fußball",
     "teamsCount": "{{count}} Teams",
+    "time": "Uhrzeit",
+    "timeValue": "{{time}} Uhr",
+    "matches": "Spiele",
+    "matchesCount_one": "{{count}} Spiel",
+    "matchesCount_other": "{{count}} Spiele",
+    "duration": "Spielzeit",
+    "breakTime": "Pause",
+    "fields": "Felder",
+    "rules": "Regeln",
     "showPreview": "Vorschau anzeigen"
   },
   "groupsAndFields": {

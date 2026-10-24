@@ -67,7 +67,8 @@
     "label": "Tournament Mode",
     "classic": {
       "title": "Classic Indoor Tournament",
-      "subtitle": "Groups + Final Round"
+      "subtitle": "Groups + Final Round",
+      "subtitleRoundRobin": "Round robin"
     }
   },
   "step3": {
@@ -166,13 +167,19 @@
     "locationLabel": "Location",
     "teamsLabel": "Teams",
     "notSpecified": "(not specified)",
-    "football": "Football",
     "otherSport": "Other",
     "bambiniType": "Bambini",
     "classicType": "Classic",
-    "classicMode": "Classic",
-    "miniFussballMode": "Mini-Football",
     "teamsCount": "{{count}} teams",
+    "time": "Start time",
+    "timeValue": "{{time}}",
+    "matches": "Matches",
+    "matchesCount_one": "{{count}} match",
+    "matchesCount_other": "{{count}} matches",
+    "duration": "Match time",
+    "breakTime": "Break",
+    "fields": "Fields",
+    "rules": "Rules",
     "showPreview": "Show Preview"
   },
   "groupsAndFields": {
