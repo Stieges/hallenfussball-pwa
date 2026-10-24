@@ -282,7 +282,7 @@
     "noActiveMatch": "Kein aktives Spiel",
     "scheduledKickoff": "Geplante Anstoßzeit: {{time}}",
     "restartTitle": "Spiel neu starten?",
-    "restartMessage": "Achtung: Dieses Spiel wurde bereits beendet!\n\nMöchten Sie das Spiel wirklich neu starten?\n\nDabei wird das Spiel auf 0:0 zurückgesetzt und alle Ereignisse werden gelöscht.",
+    "restartMessage": "Achtung: Dieses Spiel wurde bereits beendet!\n\nMöchtest du das Spiel wirklich neu starten?\n\nDabei wird das Spiel auf 0:0 zurückgesetzt und alle Ereignisse werden gelöscht.",
     "restart": "Neu starten",
     "cancel": "Abbrechen",
     "emptyState": "Kein aktives Spiel vorhanden"

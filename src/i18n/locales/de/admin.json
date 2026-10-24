@@ -12,7 +12,7 @@
   },
   "sidebar": {
     "backToTournament": "Zurück zum Turnier",
-    "criticalActions": "Kritische Aktionen",
+    "criticalActions": "Gefahrenbereich",
     "warnings": "{{count}} Warnungen",
     "warningClickAria": "Warnung: {{title}}. Klicken um zur Behebung zu navigieren.",
     "showAll": "Alle anzeigen"
@@ -22,7 +22,7 @@
     "searchPlaceholder": "Suchen...",
     "searchAriaLabel": "Kategorien durchsuchen",
     "noResults": "Keine Ergebnisse für \"{{query}}\"",
-    "criticalActions": "Kritische Aktionen",
+    "criticalActions": "Gefahrenbereich",
     "warnings": "{{count}} Warnungen",
     "andMore": "und {{count}} weitere"
   },
@@ -51,7 +51,7 @@
     "helpDesc": "Tipps und häufig gestellte Fragen"
   },
   "dangerZone": {
-    "title": "Kritische Aktionen",
+    "title": "Gefahrenbereich",
     "description": "Destruktive Operationen - mit Vorsicht verwenden",
     "warningTitle": "Vorsicht!",
     "warningText": "Die folgenden Aktionen können nicht oder nur teilweise rückgängig gemacht werden. Stelle sicher, dass du weißt, was du tust.",
@@ -143,8 +143,8 @@
     "statisticsDescription": "Exportiert Statistiken wie Torschützenliste und Fair-Play-Tabelle als PDF.",
     "statisticsExportSuccess": "Statistik-Report erfolgreich erstellt!",
     "statisticsExportError": "Fehler beim Erstellen des Reports.",
-    "summaryTitle": "Turnier-Zusammenfassung",
-    "summaryDescription": "Generiert einen vollständigen Turnierbericht mit allen Ergebnissen, Tabellen und Statistiken als PDF.",
+    "summaryTitle": "Spielplan als PDF",
+    "summaryDescription": "Erzeugt den Spielplan mit Spielen, Uhrzeiten und Teams als PDF.",
     "backupTitle": "Backup & Restore",
     "format": "Format",
     "formatCsv": "CSV (Excel)",
@@ -393,7 +393,7 @@
     "gameMode": "Spielmodus",
     "modeRoundRobin": "Jeder gegen Jeden",
     "modeGroupsAndFinals": "Gruppen + Finale",
-    "changeHint": "Um diese Einstellungen zu ändern, nutze \"Spielplan zurücksetzen\" in der Danger Zone.",
+    "changeHint": "Diese Einstellungen sind festgelegt und lassen sich hier nicht ändern.",
     "privateNotes": "Private Notizen",
     "privateNotesDesc": "Diese Notizen sind nur für dich sichtbar und werden nicht öffentlich angezeigt.",
     "notesPlaceholder": "Notizen für dich selbst eingeben...",

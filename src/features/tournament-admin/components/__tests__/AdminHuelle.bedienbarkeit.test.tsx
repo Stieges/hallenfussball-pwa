@@ -48,9 +48,10 @@ describe('Admin-Hülle: Seitenleiste', () => {
     const { container } = render(
       <AdminSidebar activeCategory="match-cockpit" onNavigate={vi.fn()} onBackToTournament={vi.fn()} />
     );
-    const kritisch = screen.getByText('Kritische Aktionen');
-    expect(kritisch.style.color).not.toBe('var(--color-error)');
-    const gefahr = screen.getByText('Gefahrenbereich').closest('button')!;
+    // Gruppenüberschrift und Knopf heißen beide „Gefahrenbereich“ (@OB-072).
+    const bezeichnungen = screen.getAllByText('Gefahrenbereich');
+    for (const kritisch of bezeichnungen) { expect(kritisch.style.color).not.toBe('var(--color-error)'); }
+    const gefahr = bezeichnungen.map((b) => b.closest('button')).find((b): b is HTMLButtonElement => b !== null)!;
     expect(gefahr.style.color).not.toBe('var(--color-warning)');
     expect(gefahr.style.color).not.toBe('var(--color-error)');
     const gruppen = Array.from(container.querySelectorAll<HTMLElement>('div')).filter(

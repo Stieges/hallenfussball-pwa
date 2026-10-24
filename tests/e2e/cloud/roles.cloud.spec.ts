@@ -159,7 +159,7 @@ for (const role of ALL_ROLES) {
       // Der Live-Cup ist angepfiffen -- @LZ-003 (B-01a, Commit d821510b): „Turnier löschen" wird
       // nach dem ersten Anpfiff NIE angeboten, auch dem Eigentümer nicht. Die anderen
       // Danger-Zone-Inhalte bleiben sichtbar.
-      await expect(page.getByText('Kritische Aktionen', { exact: false }).first()).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText('Gefahrenbereich', { exact: false }).first()).toBeVisible({ timeout: 15000 });
       await expect(deleteButton).toHaveCount(0);
 
       if (canDelete) {

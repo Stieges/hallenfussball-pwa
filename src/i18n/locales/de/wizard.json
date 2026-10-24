@@ -73,7 +73,7 @@
   "step3": {
     "title": "Stammdaten",
     "tournamentName": "Turniername",
-    "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
+    "tournamentNamePlaceholder": "Vereinsname Hallencup",
     "organizer": "Veranstalter (optional)",
     "organizerPlaceholder": "Mein Verein e.V.",
     "ageClass": "Altersklasse",
@@ -338,7 +338,7 @@
     },
     "modeHint": {
       "organizerMode": "Veranstalter-Modus:",
-      "organizerDescription": "Sie bringen eigene Schiedsrichter mit (z.B. SR1, SR2).",
+      "organizerDescription": "Du bringst eigene Schiedsrichter mit (z.B. SR1, SR2).",
       "teamsMode": "Teams-Modus:",
       "teamsDescription": "Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld."
     },
