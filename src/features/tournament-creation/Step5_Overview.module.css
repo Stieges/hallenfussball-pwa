@@ -20,6 +20,51 @@
   border-radius: var(--border-radius-lg);
 }
 
+.heading {
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xl);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.label {
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.valueDefault,
+.valuePrimary,
+.valueWarning {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.valuePrimary { color: var(--color-primary); }
+.valueWarning { color: var(--color-warning); }
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.ruleList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+}
+
 /* Teams container with wrap */
 .teamsContainer {
   margin-top: var(--spacing-md);

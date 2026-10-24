@@ -45,12 +45,15 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * gleiche Texte je Seite, nur die Abschnitte Platz 3 und Finale getauscht; quer gleiche Seitenzahl, der Seitenumbruch
  * fällt jetzt zwischen Überschrift „Finale“ (Seite 4 unten) und Finalzeile (Seite 5). Stände davor: bb3e0ca5e417,
  * 5bd69682be36, 783e5046a4f9, d652f84ac302, EN 4b9bdb85b3f8.
+ * Neu aufgenommen 24.10. (@DR-020): neue Kopfzeile „Gleichstand auf Platz 1: Strafstoßschießen“ unter der Wertung; sie verschiebt
+ * alles darunter um eine Zeile, sonst ändert sich nur dieser Text. Stände davor: 1b9bebb000a0, 8aeb731a31c0, 748bb781943c,
+ * 19c0c20f5f26, EN ee7c12a63f2c.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '1b9bebb000a0',
-  '20 Spiele, hoch': '8aeb731a31c0',
-  '12 Spiele, quer': '748bb781943c',
-  '20 Spiele, quer': '19c0c20f5f26',
+  '12 Spiele, hoch': '92e27f9338d0',
+  '20 Spiele, hoch': '026dca7efbd1',
+  '12 Spiele, quer': '2ad20180580c',
+  '20 Spiele, quer': '329ef9fb4fa6',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -65,7 +68,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('ee7c12a63f2c');
+    expect(layoutDigest(pages)).toBe('1e5c882d540d');
   });
 });
 

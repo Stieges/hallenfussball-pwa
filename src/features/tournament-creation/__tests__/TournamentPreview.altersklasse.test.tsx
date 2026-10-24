@@ -90,7 +90,9 @@ describe('Vorschau-Kopf: Altersklasse (@W2B-022, @W2B-024, @W2B-026)', () => {
   it('@W2B-022 ohne Altersklasse beginnt die Zeile nicht mit einem Trennzeichen', () => {
     const text = untertitel('');
     expect(text.startsWith('\u2022')).toBe(false);
-    expect(text).toContain('2030-01-01');
+    // @W1-039: das Datum steht wie im PDF-Kopf (Wochentag, TT.MM.JJJJ), nie roh als 2030-01-01
+    expect(text).toContain('Dienstag, 01.01.2030');
+    expect(text).not.toContain('2030-01-01');
   });
 
   it.each(['U11', 'AH'])('@W2B-024 @W2B-026 „%s“ steht genau so davor', (wert) => {

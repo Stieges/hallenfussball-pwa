@@ -14,6 +14,7 @@ import { fontOf, registerPdfFonts, type PdfFontMode } from './fonts';
 import type { PageGeometry, PdfFormat, PdfOrientation } from './layout';
 import type { PDFExportOptions } from './pdfOptions';
 import type { RankEntry } from './placement';
+import { appTranslator } from './appTranslator';
 import { guardDocText } from './printable';
 import { buildPdfTexts, resolvePdfLocale, type PdfLocale, type PdfTexts, type PdfTranslator } from './translations';
 import type { PdfAudience } from './visibility';
@@ -46,12 +47,6 @@ export interface PdfInput {
   organizerName: string;
   hallName: string;
   contact: string | undefined;
-}
-
-/** Übersetzer der App: i18next, Namespace `tournament`, Sprache des Dokuments. */
-export function appTranslator(locale: PdfLocale): PdfTranslator {
-  // Fehlt ein Schlüssel, erscheint der Schlüssel selbst (sichtbar statt still leer).
-  return (key, values) => i18next.t(key, key, { ns: 'tournament', lng: locale, ...values });
 }
 
 /** Löst die Vorgaben des Aufrufers auf: ein Ort für jede Vorgabe, gleich für jedes Dokument. */

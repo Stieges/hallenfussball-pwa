@@ -137,6 +137,8 @@ export interface PdfRuleTexts {
   koAll: (rule: string) => string;
   koRound: (round: string, rule: string) => string;
   ruleShootout: (shooters: string) => string;
+  /** Zeile „Gleichstand auf Platz 1: Strafstoßschießen“ (@DR-020); mehrere Plätze als Aufzählung nach der Sprache. */
+  playOut: (places: number[]) => string;
   ruleOvertimeThenShootout: (shooters: string) => string;
   ruleGoldenGoal: string;
   shooters: (count: number) => string;
@@ -176,6 +178,10 @@ function buildRuleTexts(translate: PdfTranslator, s: (key: string) => string, lo
     koAll: rule => translate('pdf.rules.koAll', { label: r('label.ko'), rule }),
     koRound: (round, rule) => translate('pdf.rules.koRound', { round, rule }),
     ruleShootout: shooters => translate('pdf.rules.ruleShootout', { shooters }),
+    playOut: places =>
+      translate(places.length === 1 ? 'pdf.rules.playOutOne' : 'pdf.rules.playOutMany', {
+        places: new Intl.ListFormat(locale, { type: 'conjunction' }).format(places.map(String)),
+      }),
     ruleOvertimeThenShootout: shooters => translate('pdf.rules.ruleOvertimeThenShootout', { shooters }),
     ruleGoldenGoal: r('ruleGoldenGoal'),
     shooters: n => (n === 1 ? r('shootersOne') : translate('pdf.rules.shooters', { n })),
