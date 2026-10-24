@@ -263,6 +263,7 @@ export function toRuntimeEvents(
       type: entry.type,
       payload: buildPayload(state, entry.source, ctx),
       scoreAfter: { home, away },
+      ...(entry.source.section !== null ? { section: entry.source.section } : {}),
       ...(open !== undefined ? { incomplete: open } : {}),
     };
     if (entry.source.type === 'GOAL' || entry.source.type === 'OWN_GOAL') {
@@ -296,6 +297,7 @@ export function toRetractedEvents(
     type: entry.type,
     payload: buildPayload(state, entry.source, ctx),
     scoreAfter,
+    ...(entry.source.section !== null ? { section: entry.source.section } : {}),
   }));
 }
 

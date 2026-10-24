@@ -16,6 +16,7 @@ import type { ViewMatchStatus } from '../../../core/view/types';
 import type { Side, Uebersetzer } from './cockpitTypes';
 import { scoreboardVor, type ScoreboardVorInput } from './scoreboardVor';
 import { liveMatchFinalScore } from '../../../utils/matchScore';
+import type { CockpitKasten } from '../typesFarben';
 
 /** Was die Tafel vom Spiel liest (der Cockpit-`LiveMatch` und der Kern-`LiveMatch` erfüllen es beide). */
 export type ScoreboardMatch = Pick<LiveMatch, 'id' | 'number' | 'scheduledKickoff' | 'homeTeam' | 'awayTeam' | 'homeScore' | 'awayScore' | 'overtimeScoreA' | 'overtimeScoreB' | 'penaltyScoreA' | 'penaltyScoreB'>;
@@ -34,8 +35,8 @@ export interface ScoreboardInput {
   helferAnfragen: number;
   /** Jetzt in ms (für „überfällig N Min“ (@OB-068)); kommt aus einem Takt, nie aus `Date.now()` im Render. */
   jetztMs: number;
-  /** Trikotfarben der Stand-Kästen je Anzeigeseite (Aufgabe 2.6); fehlt sie, bleibt der Kasten neutral. */
-  trikot?: Partial<Record<'links' | 'rechts', string | null>>;
+  /** Kästen je Seite des Spiels (`home`/`away`, @SL-176); die Anzeigeseite (`links`/`rechts`) legt der Aufrufer darüber. Fehlen sie, bleibt der Kasten neutral. */
+  kasten?: CockpitKasten;
   fieldName?: string;
   tournamentName?: string;
   /** Vor dem Anpfiff, zwischen den Spielen und nach der Übernahme (Aufgabe 2.5). */
@@ -198,8 +199,7 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const stand = endstand ? { home: endstand.a, away: endstand.b } : { home: 0, away: 0 };
   const seite = (anzeige: 'links' | 'rechts'): ScoreboardSeite => {
     const s = input[anzeige];
-    const trikot = input.trikot?.[anzeige];
-    return { name: match ? (s === 'home' ? match.homeTeam.name : match.awayTeam.name) : '', tore: s === 'home' ? stand.home : stand.away, ...(trikot ? { trikot } : {}) };
+    return { name: match ? (s === 'home' ? match.homeTeam.name : match.awayTeam.name) : '', tore: s === 'home' ? stand.home : stand.away, ...(input.kasten ? { kasten: input.kasten[s] } : {}) };
   };
   const links = seite('links');
   const rechts = seite('rechts');

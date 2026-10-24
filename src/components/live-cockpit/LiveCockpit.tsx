@@ -15,8 +15,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import { breakpointValues } from '../../design-tokens';
-import { useFoulCounts } from '../../hooks/useFoulCounts';
-import { useFoulThresholdWarning } from '../../hooks/useFoulThresholdWarning';
+import { useFoulZaehler } from './hooks/useFoulZaehler';
 import { AwaitingServerCopyLine, SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
 import { useUebergabe } from '../../features/klaerungsliste/useUebergabe';
@@ -38,6 +37,7 @@ import { restzeitSpielMs } from './model/restzeit';
 import { mehrPunkteGrundgeruest } from './model/mehrPunkte';
 import shell from './LiveCockpitShell.module.css';
 import { useCockpitPhase, useSideOrder } from './hooks';
+import { useCockpitStufe } from './hooks/useCockpitStufe';
 import { useEntryFlows } from './hooks/useEntryFlows';
 import { useEntryCommands } from './hooks/useEntryCommands';
 import { useFreshEntryCommands } from './hooks/useFreshEntryCommands';
@@ -53,6 +53,7 @@ import { useTeamColumns } from './hooks/useTeamColumns';
 import { toTeamSummaryModel } from './model/toTeamSummaryModel';
 import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
 import { alsUebersetzer } from './model/alsUebersetzer';
+import { kastenOderStandard } from './model/kastenOderStandard';
 import { hatSchonGelb as hatSchonGelbIn } from './model/secondYellow';
 
 const NO_SPERREN: readonly SperrHinweis[] = [];
@@ -80,20 +81,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, tournamentId);
   const { isMobile, isTablet, width } = useBreakpoint();
   const layout = width >= breakpointValues.desktop ? 'breit' : 'daumen';
+  const stufe = useCockpitStufe();
 
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
   const notices = useCockpitNotices(); // Meldezeile statt Toast (Spec § 7)
-
-  // C3b-2b (G11): Foul-Zaehler aus den FOUL-Eintraegen in `events` -- ganzes Spiel, kein
-  // Halbzeit-Reset, kein lokales +1 (zurueckgenommenes zaehlt nicht, G6/RC13).
-  const { home: homeFouls, away: awayFouls } = useFoulCounts(currentMatch);
-  // M7: 5-Fouls-Warnung als Effekt auf den Zaehler -- einmal je Team beim Erreichen von 5.
-  useFoulThresholdWarning(
-    { home: homeFouls, away: awayFouls },
-    { home: currentMatch?.homeTeam.name ?? '', away: currentMatch?.awayTeam.name ?? '' },
-    (teamName, count) => { notices.melde(2, t('meldung.foulGrenze', { teamName, count })); }, currentMatch?.id,
-  );
 
   // I4 (W1, Nachtrag Fixrunde 1): Ablehnungen (D-C1) auch für Helfer im Cockpit sichtbar.
   const rejectedOutbox = useRejectedOutboxDialog(tournamentId, notices.fehler);
@@ -115,6 +107,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     [engineView, currentMatch, elapsedSeconds],
   );
   const phase = useCockpitPhase(currentMatch, view, currentMatch ? null : leer);
+  // @SL-099 (C-COCKPIT-FOULS-NICHT-JE-HALBZEIT): Zähler gegen die Grenze je Halbzeit, Gesamtzahl nur in der Zusammenfassung; Meldung ab `foulLimit`
+  const fouls = useFoulZaehler(currentMatch, view, cockpitSettings.foulLimit, (teamName, count) => { notices.melde(2, t('meldung.foulGrenze', { teamName, count })); });
   // @FU-112/@FU-115: im Spielplan beendet -- „von <Name>“ liefert der Aufrufer (nur, wenn es jemand anderes war)
   const eingetragenVon = view?.eingetragenImSpielplan ? props.eintragAutor?.(view.eingetragenImSpielplan) ?? null : null;
   // Nur im angepfiffenen Spiel: vor dem Anpfiff und ohne Spiel hat das Abzeichen keine Wirkung, der Anpfiff-Tipp gibt den Ton frei
@@ -145,18 +139,18 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
     aktiv: tastenAktiv, uebersichtAktiv: tastenAn && layout === 'breit', phase, kannSteuern, sides: { links: sides.links, rechts: sides.rechts },
     flows, controls: cmd.controls, onUebersicht: props.onTastenuebersicht,
   });
-  const foulsJeSeite = useMemo(() => ({ home: homeFouls, away: awayFouls }), [homeFouls, awayFouls]);
+  const kasten = useMemo(() => kastenOderStandard(props.kasten), [props.kasten]);
   const anzeigeOrdnung = useMemo(() => ({ links: sides.links, rechts: sides.rechts }), [sides.links, sides.rechts]);
   const spalten = useTeamColumns({
-    match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern, fouls: foulsJeSeite,
-    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers, tasten: tastenAktiv,
+    match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern, fouls: fouls.halbzeit,
+    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers, kasten, tasten: tastenAktiv,
   });
   // Nach dem Abpfiff statt der Tastenblöcke die Zusammenfassung (@SL-048); sie liest nur die Einträge des Spiels, nach dem Neuladen steht sie wieder da (@SL-115)
   const zusammenfassung = useMemo(() => {
     if (!currentMatch || phase.zustand !== 'abgepfiffen') { return null; }
-    const je = (seite: 'home' | 'away') => toTeamSummaryModel({ match: currentMatch, seite, fouls: foulsJeSeite[seite] });
+    const je = (seite: 'home' | 'away') => toTeamSummaryModel({ match: currentMatch, seite, fouls: fouls.gesamt[seite], kasten: kasten[seite] });
     return { links: je(sides.links), rechts: je(sides.rechts) };
-  }, [currentMatch, phase.zustand, foulsJeSeite, sides.links, sides.rechts]);
+  }, [currentMatch, phase.zustand, fouls.gesamt, sides.links, sides.rechts, kasten]);
   usePenaltyExpiryNotice(currentMatch?.id, view, teams, notices.melde, tx);
 
   // Tafel: mit Spiel und ohne (wartet auf Teams, kein Spiel mehr). Die Verbindungsanzeige steht bis zum schmalen Kopf (3.8) darin.
@@ -167,7 +161,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       view={view}
       settings={cockpitSettings}
       order={{ links: sides.links, rechts: sides.rechts }}
+      kasten={kasten}
       size={isMobile ? 'compact' : isTablet ? 'regular' : 'wide'}
+      stufe={layout === 'breit' ? stufe : undefined}
       notices={notices}
       eintraegeWarten={rejectedOutbox.pendingCount}
       tonHinweis={tonHinweis}
@@ -247,7 +243,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
             </>
           )}
           match={match}
-          naechstes={<NextMatchArea naechstes={upcomingMatches.length > 0 ? upcomingMatches[0] : null} phase={phase} restSpielMs={view ? restzeitSpielMs(view) : null} />}
+          naechstes={<NextMatchArea naechstes={upcomingMatches.length > 0 ? upcomingMatches[0] : null} phase={phase} restSpielMs={view ? restzeitSpielMs(view) : null} layout={layout} />}
           isMobile={isMobile}
           isDesktop={layout === 'breit'}
           zustand={phase.zustand}

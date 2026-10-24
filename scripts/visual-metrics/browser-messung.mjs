@@ -492,6 +492,31 @@ export function messeSeite(opt) {
     }
   }
 
+  // ---------- Cockpit-Ziffern (@SL-178): Ziffernhoehe >= 11 mm, in Bildpunkten je Profilbreite ----------
+  // Gemessen wird die gerenderte Ziffer (Canvas-Metrik der berechneten Schrift), nie font-size * Annahme. Schrift nicht geladen = Befund
+  // (kein Messen mit Ersatzschrift); transform:scale der Vorfahren wird einbezogen.
+  if (hat('cockpit.ziffern') && opt.ziffern) {
+    const soll = opt.ziffern.mm * opt.ziffern.pxProMm
+    const leinwand = document.createElement('canvas').getContext('2d')
+    for (const el of document.querySelectorAll('[data-ziffern]')) {
+      if (!sichtbar(el)) continue
+      const s = stil(el)
+      const schrift = `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${s.fontFamily}`
+      if (!document.fonts.check(schrift, '0')) {
+        melde('cockpit.ziffern', el, 'Schrift nicht geladen', 'geladene Schrift', { schrift: s.fontFamily })
+        continue
+      }
+      leinwand.font = schrift
+      const m = leinwand.measureText('0')
+      let skala = 1
+      if (el.offsetWidth > 0) skala = el.getBoundingClientRect().width / el.offsetWidth
+      const px = m.actualBoundingBoxAscent * skala
+      if (px + 0.01 < soll) {
+        melde('cockpit.ziffern', el, `${r1(px)} px (${r1(px / opt.ziffern.pxProMm)} mm bei ${opt.ziffern.pxProMm} px/mm)`, `>= ${Math.ceil(soll)} px (${opt.ziffern.mm} mm)`)
+      }
+    }
+  }
+
   // ---------- M7 Overscan (Text, Bilder, Hintergrundbilder, Pseudo-Elemente; B-08) ----------
   if (hat('overscan.app-rand') || hat('overscan.ebu-grafik')) {
     const inhalte = traeger.map((t) => ({ el: t.el, r: vereinige(t.rects) }))

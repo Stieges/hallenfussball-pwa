@@ -333,6 +333,46 @@
       "profil": "laptop-1280"
     },
     {
+      "id": "cockpit-handy-764",
+      "titel": "Cockpit: läuft am Handy mit Browserleiste (390 × 764, Finale; Tastenfläche scrollt, Tor bleibt im Bild)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "handy-390x764"
+    },
+    {
+      "id": "cockpit-handy-664",
+      "titel": "Cockpit: läuft am Handy mit Leisten (390 × 664, Finale; Tastenfläche scrollt, Tor bleibt im Bild)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "handy-390x664"
+    },
+    {
+      "id": "cockpit-laptop-620",
+      "titel": "Cockpit: Laptop-Fenster 620 Pixel hoch (Ziffern bleiben ≥ 11 mm)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-vorwarnung/live?matchId=00000009-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "laptop-1280x620"
+    },
+    {
+      "id": "cockpit-laptop-800",
+      "titel": "Cockpit: Laptop-Fenster 800 Pixel hoch",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-vorwarnung/live?matchId=00000009-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "laptop-1280x800"
+    },
+    {
       "id": "cockpit-abgepfiffen-verlaengerung",
       "titel": "Cockpit: abgepfiffen nach Verlängerung (Halbfinale 1)",
       "gruppen": [

@@ -3,13 +3,14 @@
  * Eigene Datei, weil `types.ts` an der Zeilengrenze steht; `LiveCockpitProps` erbt sie.
  */
 import type { ReactNode } from 'react';
+import type { LiveCockpitFarbenProps } from './typesFarben';
 
 /** Getragene Farben der beiden Seiten eines Spiels (`wornColors`); `null` = keine Trikotfarbe festgelegt (@SL-161). */
 export interface MatchSummaryFarben { home: string | null; away: string | null }
 
 export type TiebreakWahl = 'overtime' | 'goldenGoal' | 'shootout';
 
-export interface LiveCockpitLeisteProps {
+export interface LiveCockpitLeisteProps extends LiveCockpitFarbenProps {
   /** Öffnet die Übersicht der Tastenkürzel (Taste `?`, @SL-153); die Übersicht gehört dem Rahmen, damit auch der Knopf im Kopf sie öffnet. */
   onTastenuebersicht?(): void;
   /**

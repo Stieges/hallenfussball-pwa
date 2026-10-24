@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { toTeamSummaryModel } from '../toTeamSummaryModel';
-import { makeLiveMatch } from '../../__tests__/cockpitFixtures';
+import { KASTEN_GAST, KASTEN_HEIM, makeLiveMatch } from '../../__tests__/cockpitFixtures';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
 
 /** `makeLiveMatch` baut das Kern-Spiel (Draht-Ereignisse); das Cockpit liest dieselben Einträge im Laufzeitformat. */
@@ -29,8 +29,8 @@ const events: RuntimeMatchEvent[] = [
   ereignis('FOUL', SUED, 185), ereignis('FOUL', SUED, 270),
 ];
 const match = makeLiveMatch({ status: 'FINISHED', homeScore: 2, awayScore: 1, events: alsKern(events) });
-const nord = (m = match) => toTeamSummaryModel({ match: m, seite: 'home', fouls: 3 });
-const sued = (m = match) => toTeamSummaryModel({ match: m, seite: 'away', fouls: 3 });
+const nord = (m = match) => toTeamSummaryModel({ match: m, seite: 'home', fouls: 3, kasten: KASTEN_HEIM });
+const sued = (m = match) => toTeamSummaryModel({ match: m, seite: 'away', fouls: 3, kasten: KASTEN_GAST });
 
 describe('toTeamSummaryModel (@SL-048)', () => {
   it('FC Nord: zwei Tore mit Nummer und Zeit, keine Karten, eine Zeitstrafe, 3 Fouls', () => {
@@ -54,7 +54,7 @@ describe('toTeamSummaryModel (@SL-048)', () => {
   });
 
   it('die Fouls sind die übergebene Gesamtzahl im Spiel, nicht die Zahl der Foul-Ereignisse (Karten und Zeitstrafen zählen mit)', () => {
-    expect(toTeamSummaryModel({ match, seite: 'home', fouls: 7 }).fouls).toBe(7);
+    expect(toTeamSummaryModel({ match, seite: 'home', fouls: 7, kasten: KASTEN_HEIM }).fouls).toBe(7);
   });
 
   it('Tore, Karten und Zeitstrafen stehen nach Spielzeit aufsteigend, auch wenn die Eintragsreihenfolge anders ist', () => {
@@ -75,14 +75,14 @@ describe('toTeamSummaryModel (@SL-048)', () => {
     expect(sued(m).tore).toEqual([]);
   });
 
-  it('die Teamfarbe des Teams kommt für den Streifen mit; ohne Farbe null (Gegenbeispiel)', () => {
+  it('@SL-176 der Kasten der Seite kommt für den Kopf mit, die Teamfarbe zählt nicht (Gegenbeispiel)', () => {
     const m = makeLiveMatch({ homeTeam: { id: NORD, name: 'FC Nord', colors: { primary: 'red' } } });
-    expect(nord(m).farbe).toBe('red');
-    expect(sued(m).farbe).toBeNull();
+    expect(nord(m).kasten).toBe(KASTEN_HEIM);
+    expect(sued(m).kasten).toBe(KASTEN_GAST);
   });
 
   it('ein Spiel ohne Einträge: leere Listen und 0 Fouls', () => {
-    expect(toTeamSummaryModel({ match: makeLiveMatch({ events: alsKern([]) }), seite: 'home', fouls: 0 })).toMatchObject({ tore: [], karten: [], zeitstrafen: [], fouls: 0 });
+    expect(toTeamSummaryModel({ match: makeLiveMatch({ events: alsKern([]) }), seite: 'home', fouls: 0, kasten: KASTEN_HEIM })).toMatchObject({ tore: [], karten: [], zeitstrafen: [], fouls: 0 });
   });
 
   it('ein Spiel ohne Ereignisliste (älteres Spiel) ergibt leere Listen', () => {

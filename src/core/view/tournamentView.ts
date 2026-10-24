@@ -103,7 +103,7 @@ function clockRulesOf(match: Match, input: TournamentViewInput): SpectatorClockR
  * Streifen der Weste (Review A5): Trikotfarbe beim Anpfiff, bis D.1 die aktuelle Teamfarbe der Leibchen-Seite; erst wenn
  * beides fehlt, die Standardfarbe der Seite (D-3). D.1 setzt `match.kit?.shirt ??` davor (bis dahin Lücke @ZM-163).
  */
-function boxesOf(match: Match, teams: TournamentViewInput['teams'], settings: SpectatorDisplaySettings): MatchView['boxes'] {
+export function matchBoxes(match: Match, teams: TournamentViewInput['teams'], settings: SpectatorDisplaySettings): MatchView['boxes'] {
   const bibSide: KitSide | undefined = match.kit?.bibSide;
   const bibTeamId = bibSide === undefined ? undefined : slotTeamId(bibSide === 'a' ? match.slotA : match.slotB);
   const shirt = bibTeamId === undefined ? undefined : normalizeKitColor(teams.find((t) => t.id === bibTeamId)?.colors?.primary);
@@ -146,7 +146,7 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
     ...(isLive(status) ? { clockRules: clockRulesOf(match, input) } : {}),
     home: sideView(match, 'A', sides),
     away: sideView(match, 'B', sides),
-    boxes: boxesOf(match, input.teams, display),
+    boxes: matchBoxes(match, input.teams, display),
   };
 }
 

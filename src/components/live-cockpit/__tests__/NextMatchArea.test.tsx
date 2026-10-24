@@ -20,8 +20,8 @@ const spiel = (home: string | null, away: string | null, id = 'm13'): MatchSumma
   id, number: 13, phaseLabel: 'Gruppe', scheduledKickoff: '15:15', fieldId: 'field-1', homeTeam: { id: 'w', name: 'TSV West' }, awayTeam: { id: 'm', name: 'SG Mitte' },
   farben: { home, away },
 });
-const zeige = (naechstes: MatchSummary | null, rest: number | null = 300_000, z: CockpitZustand = 'laeuft') =>
-  render(<NextMatchArea naechstes={naechstes} phase={phase(z)} restSpielMs={rest} />);
+const zeige = (naechstes: MatchSummary | null, rest: number | null = 300_000, z: CockpitZustand = 'laeuft', layout?: 'daumen' | 'breit') =>
+  render(<NextMatchArea naechstes={naechstes} phase={phase(z)} restSpielMs={rest} layout={layout} />);
 const zeile = () => screen.getByTestId('cockpit-naechstes');
 // jsdom kennt keine CSS-Animationen: React hört dort auf den herstellerspezifischen Namen
 const animationEnde = (el: HTMLElement) => fireEvent(el, new Event('webkitAnimationEnd', { bubbles: true }));
@@ -127,5 +127,37 @@ describe('NextMatchArea – Vorwarnung ab 3:00', () => {
     expect(zeile()).toHaveAttribute('data-blinken', 'true');
     vor.rerender(<NextMatchArea naechstes={spiel('#C62828', '#FFFFFF', 'b')} phase={phase()} restSpielMs={170_000} />);
     expect(zeile()).toHaveAttribute('data-blinken', 'true');
+  });
+});
+
+describe('NextMatchArea am Handy (Layout daumen): erst ab 3:00 und nach dem Abpfiff, der Platz bleibt reserviert (@SL-155, F3 Variante R)', () => {
+  it('@SL-155 Restzeit 3:01: die Zeile ist nicht zu sehen, ihr Platz bleibt – die Tasten springen nie', () => {
+    zeige(spiel('#C62828', '#FFFFFF'), 181_000, 'laeuft', 'daumen');
+    expect(zeile()).toHaveAttribute('data-verborgen', 'true');
+    expect(zeile()).toHaveAttribute('aria-hidden', 'true');
+    expect(zeile()).toHaveStyle({ visibility: 'hidden' });
+  });
+
+  it('@SL-155 Restzeit 3:00: die Zeile steht da, ihr Rahmen ist hervorgehoben, ohne Zusatztext', () => {
+    zeige(spiel('#C62828', '#FFFFFF'), 180_000, 'laeuft', 'daumen');
+    expect(zeile()).not.toHaveAttribute('data-verborgen');
+    expect(zeile()).toHaveAttribute('data-modus', 'vorwarnung');
+    expect(zeile()).toHaveTextContent('Nächstes: Spiel 13 · TSV West – SG Mitte · Anstoß 15:15');
+  });
+
+  it('@SL-155 nach dem Abpfiff steht die Zeile am Handy da (Endstand-Quittung zeigt das nächste Spiel, @SL-152)', () => {
+    zeige(spiel('#C62828', '#FFFFFF'), null, 'abgepfiffen', 'daumen');
+    expect(zeile()).not.toHaveAttribute('data-verborgen');
+  });
+
+  it('Gegenbeispiel: am Laptop (breit) steht die Zeile immer, auch bei 3:01', () => {
+    zeige(spiel('#C62828', '#FFFFFF'), 181_000, 'laeuft', 'breit');
+    expect(zeile()).not.toHaveAttribute('data-verborgen');
+    expect(zeile()).toHaveAttribute('data-modus', 'normal');
+  });
+
+  it('am Handy ohne nächstes Spiel steht nichts (kein reservierter Platz ohne Zeile)', () => {
+    zeige(null, 100_000, 'laeuft', 'daumen');
+    expect(screen.queryByTestId('cockpit-naechstes')).toBeNull();
   });
 });

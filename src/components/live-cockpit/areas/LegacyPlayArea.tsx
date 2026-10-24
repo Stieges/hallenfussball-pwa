@@ -48,11 +48,11 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
   );
 
   return (
-    <div className={cls(styles.flaeche, isDesktop && styles.flaecheBreit)} data-testid="cockpit-flaeche">
-      <div className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile)}>
+    <div className={cls(styles.flaeche, isDesktop && styles.flaecheBreit, !isDesktop && styles.flaecheDaumen)} data-testid="cockpit-flaeche">
+      <div className={cls(styles.links, isDesktop && styles.linksBreit, isMobile && styles.linksMobile, !isDesktop && styles.linksDaumen)}>
         {kopf}
         {naechstes}
-        <div className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit)}>
+        <div data-testid="cockpit-tastenflaeche" className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit, !isDesktop && styles.scoreboardDaumen)}>
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
             <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile)}>

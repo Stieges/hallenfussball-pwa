@@ -1,5 +1,7 @@
 export { HoldButton, HOLD_MS } from './HoldButton';
 export type { HoldButtonProps } from './HoldButton';
+export { ClockDigits } from './ClockDigits';
+export type { ClockDigitsProps } from './ClockDigits';
 export { KartenSymbol } from './KartenSymbol';
 export type { KartenSymbolProps } from './KartenSymbol';
 export { kartenFlaecheStil } from './kartenFlaeche';

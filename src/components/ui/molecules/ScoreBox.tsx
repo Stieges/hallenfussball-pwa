@@ -92,7 +92,7 @@ export function ScoreBox({
     >
       <span style={digitAreaStyle(size)}>
         {score !== null && (
-          <span style={digitsStyle(size)} data-monitor="stand" data-testid={`${testId}-digits`}>
+          <span style={digitsStyle(size)} data-monitor="stand" {...(size === 'cockpit' ? { 'data-ziffern': 'stand' } : {})} data-testid={`${testId}-digits`}>
             {score}
           </span>
         )}

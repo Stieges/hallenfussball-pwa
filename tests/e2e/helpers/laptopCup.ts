@@ -102,14 +102,23 @@ export async function anAnfangRollen(page: Page): Promise<void> {
   await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('main').forEach((m) => { m.scrollTop = 0; }); });
 }
 
-/** Jede Taste beider Teams (und die Tafel) liegt ganz zwischen Unterkante des Kopfs und Oberkante der Leiste. */
+/** Fensterhöhe, unter der die Tastenfläche am Handy scrollt (@SL-061, Record 24.10.): Tor bleibt sichtbar, Foul, Zeitstrafe und Karte folgen durch Scrollen. */
+export const KLEINES_HANDY_HOEHE = 800;
+export const NUR_TOR_UND_TAFEL = ['scoreboard', 'goal-button-home', 'goal-button-away'];
+
+/**
+ * Jede Taste beider Teams (und die Tafel) liegt ganz zwischen Unterkante des Kopfs und Oberkante der Leiste. Am Handy hoch unter 800 px
+ * Fensterhöhe gilt das nur für Tafel und Tor (@SL-061): Foul, Zeitstrafe und Karte liegen in der scrollenden Tastenfläche.
+ */
 export async function pruefeZwischenKopfUndLeiste(page: Page): Promise<void> {
+  const groesse = page.viewportSize();
+  const kleinesHandy = (groesse?.width ?? 0) < 1024 && (groesse?.height ?? 0) < KLEINES_HANDY_HOEHE;
   const kopf = await page.getByTestId('cockpit-slim-header').boundingBox();
   const leiste = await page.getByRole('toolbar').boundingBox();
   if (!kopf || !leiste) { throw new Error('Kopf oder Leiste nicht sichtbar'); }
   const oben = Math.round(kopf.y + kopf.height);
   const unten = Math.round(leiste.y);
-  for (const id of SPALTEN_TASTEN) {
+  for (const id of kleinesHandy ? NUR_TOR_UND_TAFEL : SPALTEN_TASTEN) {
     const box = await page.getByTestId(id).boundingBox();
     if (!box) { throw new Error(`${id} nicht sichtbar`); }
     expect(Math.round(box.y), `${id}: Oberkante unter dem Kopf`).toBeGreaterThanOrEqual(oben - 1);

@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-17",
+  "version": "2026-10-24",
   "hinweis": "Jede Zahl mit Begruendung, Quelle, Typ und Geltung. HART = Fehler (Exit 1), WARNUNG = Hypothese, Designziel oder Wert ohne Record-Deckung (nur Bericht). Gleiche Datei liegt als .claude/skills/visuelle-pruefung/grenzwerte.json; das Messskript warnt bei Abweichung. Grenzwerte werden nie zum Gruenwerden gelockert: eigene Grenzwerte oder Sehwinkel-Parameter nur mit --begruendung (sonst BLOCKED), der Lauf ist dann nie VOLLMATRIX.",
   "arten": {
     "handy": "Handy hoch 360x640, 390x844",
@@ -501,6 +501,25 @@
       ],
       "begruendung": "Nur Sponsor-Zeile, QR-Beschriftung, App-Hinweis ([data-monitor=nah]) >= 12'; 55 Zoll / 10 m: 7,08 % Bildhoehe. WARNUNG bis Token-Paket und Record-Nachzug.",
       "quelle": "Entscheidung Daniel 2026-10-16 (55 Zoll / 10 m); Controller-Entscheidung 2026-10-16 (WARNUNG bis display.ts-Token-Paket und Record @ZM-125/@ZM-129, Review B-09/B-10)"
+    },
+    {
+      "id": "cockpit.ziffern",
+      "wert": 11,
+      "einheit": "mm Ziffernhoehe (Versalhoehe der Ziffern)",
+      "typ": "WARNUNG",
+      "geltung": [
+        "handy",
+        "desktop"
+      ],
+      "pxProMm": {
+        "360": 6.0,
+        "390": 6.0,
+        "1280": 5.0,
+        "1440": 5.0,
+        "1920": 5.6
+      },
+      "begruendung": "Stand und Uhr im Cockpit ([data-ziffern=stand|uhr]) sind aus 1-2 m lesbar: Ziffern >= 11 mm hoch (DIN 1450, x-Hoehe = Abstand / 250, Ziffern ca. Versalhoehe). CSS-mm sind kein echtes Millimeter: je Profilbreite gilt ein Bildpunkt-Maßstab (pxProMm; Handy 6,0 -> 66 px, Laptop 5,0 -> 55 px). Gemessen wird die Hoehe der gerenderten Ziffer (Canvas-Metrik der berechneten Schrift, nach document.fonts.ready; nicht geladene Schrift = Befund statt Ersatzschrift), mit transform:scale der Vorfahren. WARNUNG bis die Generalprobe am echten Geraet nachgemessen hat, dann HART.",
+      "quelle": "Entscheidung Daniel 2026-10-24 (Cockpit wird aus 1-2 m gelesen); Controller 2026-10-24 (pxProMm je Profilbreite, Plan Cockpit v2 3.3); Record Spiel leiten @SL-178; VISUAL-DESIGN Regel 4"
     },
     {
       "id": "overscan.app-rand",

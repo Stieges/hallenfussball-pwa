@@ -2,7 +2,7 @@
  * Öffentliche API der gemeinsamen Turnier-Ansicht (A-36b, Teilplan A-36 § 2.2).
  */
 export type * from './types';
-export { buildTournamentView, currentOf } from './tournamentView';
+export { buildTournamentView, currentOf, matchBoxes } from './tournamentView';
 export { viewRules } from './visibility';
 export {
   matchBadgeModel,

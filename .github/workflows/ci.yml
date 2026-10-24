@@ -166,6 +166,7 @@ jobs:
         include:
           - project: mobile-sm
           - project: mobile-md
+          - project: cockpit-390x664
           - project: tablet-portrait
           - project: desktop
           - project: desktop-webkit

@@ -69,7 +69,7 @@ export function TeamSummary({ model, breit = false }: TeamSummaryProps): ReactEl
   );
   return (
     <section style={spalteStil} data-testid={`team-summary-${seite}`} aria-label={name} tabIndex={0}>
-      <TeamKopf seite={seite} name={name} farbe={model.farbe} breit={breit} />
+      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} />
       <div style={flaecheStil}>
         <Abschnitt testId={`team-summary-tore-${seite}`} titel={t('zusammenfassung.tore', { count: model.tore.length })} leerTitel={t('zusammenfassung.toreKeine')} eintraege={model.tore.map(tor)} />
         <Abschnitt testId={`team-summary-karten-${seite}`} titel={t('zusammenfassung.karten', { count: model.karten.length })} leerTitel={t('zusammenfassung.kartenKeine')} eintraege={model.karten.map(karte)} />

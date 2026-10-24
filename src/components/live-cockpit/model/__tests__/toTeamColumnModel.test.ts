@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { toTeamColumnModel, teamKnoepfe, type TeamColumnInput } from '../toTeamColumnModel';
-import { makeLiveMatch, makePhaseView } from '../../__tests__/cockpitFixtures';
+import { KASTEN_GAST, makeLiveMatch, makePhaseView } from '../../__tests__/cockpitFixtures';
 import type { CockpitPhase, CockpitZustand } from '../cockpitPhase';
 
 const ARTEN = { yellow: true, yellowRed: true, red: true, timePenalty: true };
 const input = (extra: Partial<TeamColumnInput> = {}): TeamColumnInput => ({
   match: makeLiveMatch(), seite: 'away', view: makePhaseView(), zustand: 'laeuft',
-  fouls: 3, foulGrenze: 5, sperrHinweise: [], zeitstrafeSekunden: 120, unterzahl: null, darfErgaenzen: false, kartenArten: ARTEN, ...extra,
+  fouls: 3, foulGrenze: 5, sperrHinweise: [], zeitstrafeSekunden: 120, unterzahl: null, darfErgaenzen: false, kartenArten: ARTEN, kasten: KASTEN_GAST, ...extra,
 });
 const phase = (zustand: CockpitZustand): CockpitPhase => ({ zustand, abschnittArt: 'regulaer', abschnitt: 1, abschnitte: 2, letzterAbschnitt: false });
 
@@ -36,10 +36,10 @@ describe('toTeamColumnModel', () => {
     expect(toTeamColumnModel(input({ sperrHinweise })).gesperrt).toEqual([7]);
   });
 
-  it('Name, Seite und Teamfarbe kommen aus dem Spiel der Seite', () => {
+  it('Name und Seite kommen aus dem Spiel der Seite, der Kasten (getragene Farbe, @SL-176) aus dem Aufruf – nicht aus der Teamfarbe', () => {
     const match = makeLiveMatch({ awayTeam: { id: 'sv-sued', name: 'SV Süd', colors: { primary: 'var(--c)' } } });
     const m = toTeamColumnModel(input({ match }));
-    expect([m.seite, m.teamId, m.name, m.farbe]).toEqual(['away', 'sv-sued', 'SV Süd', 'var(--c)']);
+    expect([m.seite, m.teamId, m.name, m.kasten]).toEqual(['away', 'sv-sued', 'SV Süd', KASTEN_GAST]);
     expect(toTeamColumnModel(input({ seite: 'home' })).name).toBe('FC Nord');
   });
 

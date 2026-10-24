@@ -1,7 +1,8 @@
 /**
  * LiveCockpit -- Foul-Zähler je Halbzeit über die echte Engine (Aufgabe 3.3, Auflage 19).
  * Szenario @SL-099: SV Süd (hier SV Beta) hat im ersten Abschnitt 4 Fouls und im zweiten 2; ein weiteres Foul -> „Foul 3/5“.
- * Bis B-11a zählt der Zähler das ganze Spiel (7), deshalb `it.fails` mit Befund C-COCKPIT-FOULS-NICHT-JE-HALBZEIT, Ziel B-11a.
+ * Der Zähler gegen die Grenze zählt je Halbzeit, die Gesamtzahl steht erst in der Zusammenfassung (@SL-099, @SL-036, @SL-100).
+ * Befund C-COCKPIT-FOULS-NICHT-JE-HALBZEIT (vorher `it.fails`, Plan Cockpit v2 A5) ist damit behoben.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -49,7 +50,7 @@ async function fouls(user: ReturnType<typeof userEvent.setup>, n: number, erwart
 }
 
 describe('LiveCockpit – Foul-Zähler je Halbzeit (Engine)', () => {
-  it.fails('@SL-099 SV Süd 4 Fouls im ersten, 2 im zweiten Abschnitt, ein weiteres Foul → „Foul 3/5“ (Befund C-COCKPIT-FOULS-NICHT-JE-HALBZEIT, Ziel B-11a)', async () => {
+  it('@SL-099 SV Süd 4 Fouls im ersten, 2 im zweiten Abschnitt, ein weiteres Foul → „Foul 3/5“, nach dem Abpfiff 7 Fouls im ganzen Spiel', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={ZWEI_ABSCHNITTE} />);
     await anpfiff(user);
@@ -60,12 +61,33 @@ describe('LiveCockpit – Foul-Zähler je Halbzeit (Engine)', () => {
     zu(420_000);
     await user.click(screen.getByTestId('match-wiederanpfiff-button'));
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
-    // Erwartung nach Gherkin: je Halbzeit gezählt. Heute: ganzes Spiel (4 + 2 = 6 schon vor dem weiteren Foul).
+    // Nach Gherkin je Halbzeit gezählt: im zweiten Abschnitt beginnt der Zähler bei 0 (@SL-036)
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5');
     await user.click(screen.getByTestId('foul-button-away'));
     await user.click(screen.getByTestId('foul-button-away'));
     await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 2/5'));
     await user.click(screen.getByTestId('foul-button-away'));
     await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 3/5'));
+    // nach dem Abpfiff zeigt die Zusammenfassung die Gesamtzahl im ganzen Spiel (4 + 3)
+    zu(420_000 + 360_000);
+    await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Ende'));
+    expect(screen.getByTestId('team-summary-fouls-away')).toHaveTextContent('Fouls: 7');
+  });
+
+  it('@SL-036 Gegenbeispiel: die 4 Fouls des ersten Abschnitts stehen nach dem Anpfiff des zweiten weiter in der Liste und zählen im Spiel', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={ZWEI_ABSCHNITTE} />);
+    await anpfiff(user);
+    await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
+    await fouls(user, 4, 4);
+    zu(360_000);
+    await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Halbzeit'));
+    zu(420_000);
+    await user.click(screen.getByTestId('match-wiederanpfiff-button'));
+    await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0/5'));
+    zu(420_000 + 360_000);
+    await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Ende'));
+    expect(screen.getByTestId('team-summary-fouls-away')).toHaveTextContent('Fouls: 4');
   });
 
   it('@SL-099 Gegenbeispiel: im ersten Abschnitt zählt jedes Foul sofort mit (4 Fouls → „Foul 4/5“)', async () => {

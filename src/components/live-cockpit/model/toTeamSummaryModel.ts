@@ -3,6 +3,7 @@
  * Rein, ohne React. Tore, Karten und Zeitstrafen aus den wirksamen Einträgen des Spiels (zurückgenommene stehen nicht in
  * `match.events`), nach Spielzeit aufsteigend; die Fouls sind die Gesamtzahl im Spiel (`useFoulCounts`, @SL-099).
  */
+import type { SideBox } from '../../../core/models/scoreBoxColors';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { cardKindOf, type CardKind } from '../../../utils/cardKind';
 import type { LiveMatch } from '../types';
@@ -16,8 +17,8 @@ export interface SummaryStrafe { id: string; nummer: number | null; zeit: string
 export interface TeamSummaryModel {
   seite: Side;
   name: string;
-  /** Teamfarbe für den Streifen im Kopf; `null` = keine festgelegt. */
-  farbe: string | null;
+  /** Fläche des Kastens dieser Seite (getragene Farbe, @SL-176) für den Kopf. */
+  kasten: SideBox;
   tore: SummaryTor[];
   karten: SummaryKarte[];
   zeitstrafen: SummaryStrafe[];
@@ -29,13 +30,14 @@ export interface TeamSummaryInput {
   match: Pick<LiveMatch, 'homeTeam' | 'awayTeam' | 'events'>;
   seite: Side;
   fouls: number;
+  kasten: SideBox;
 }
 
 const nachZeit = (a: RuntimeMatchEvent, b: RuntimeMatchEvent): number => a.timestampSeconds - b.timestampSeconds;
 const nummerOf = (event: RuntimeMatchEvent): number | null => event.payload.playerNumber ?? null;
 const zeitOf = (event: RuntimeMatchEvent): string => formatUhr(event.timestampSeconds);
 
-export function toTeamSummaryModel({ match, seite, fouls }: TeamSummaryInput): TeamSummaryModel {
+export function toTeamSummaryModel({ match, seite, fouls, kasten }: TeamSummaryInput): TeamSummaryModel {
   const team = seite === 'home' ? match.homeTeam : match.awayTeam;
   const eigene = (match.events ?? []).filter((event) => event.payload.teamId === team.id).sort(nachZeit);
   const tore = eigene
@@ -48,5 +50,5 @@ export function toTeamSummaryModel({ match, seite, fouls }: TeamSummaryInput): T
   const zeitstrafen = eigene
     .filter((event) => event.type === 'TIME_PENALTY')
     .map((event) => ({ id: event.id, nummer: nummerOf(event), zeit: zeitOf(event) }));
-  return { seite, name: team.name, farbe: team.colors?.primary ?? null, tore, karten, zeitstrafen, fouls };
+  return { seite, name: team.name, kasten, tore, karten, zeitstrafen, fouls };
 }
