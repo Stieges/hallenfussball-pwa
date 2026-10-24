@@ -87,6 +87,8 @@ export const E2E_ENGINE_CUPS = [
   runningCup('UNDO'),
   runningCup('SYNC'),
   runningCup('REJECT'),
+  // C-SYNC Teil A: ein vom Server abgelehnter Eintrag ist sichtbar und lässt sich mit „Verstanden“ abhaken.
+  runningCup('VERSTANDEN'),
   runningCup('RECONNECT'),
   // A-06l: Offline-Robustheit (WLAN ohne Internet, hängende Anfrage, Rückkehr aus dem Ruhezustand).
   runningCup('OFFLINEWLAN'),
@@ -118,6 +120,9 @@ export const E2E_ENGINE_CUPS = [
   runningCup('SPIELPLANKANAL'),
   runningCup('SPIELPLANHELFER'),
   finishedCup('SCHREIBWEG'),
+  // @FU-084 (präzisiert 24.10.) / @FU-116 Z. 2: ein Tor nach dem Ende legt der Server zur Klärung ab -- der Test
+  // hinterlässt einen Klärungseintrag und braucht deshalb ein eigenes Turnier (der Cup SCHREIBWEG bleibt unberührt).
+  finishedCup('SCHREIBWEGENDE'),
   finishedCup('NACHTRAG'),
   {
     slug: 'HELPERAMEND',
