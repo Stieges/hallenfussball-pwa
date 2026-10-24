@@ -1,4 +1,4 @@
-import { ITournamentRepository } from './ITournamentRepository';
+import { ITournamentRepository, type MakePublicOptions } from './ITournamentRepository';
 import { Tournament, Match, MatchUpdate } from '../models/types';
 import type {
     CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
@@ -357,7 +357,7 @@ export class LocalStorageRepository implements ITournamentRepository {
      * Makes a tournament publicly accessible by generating a local share code.
      * Note: Local share codes are only valid within this browser instance.
      */
-    makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+    makeTournamentPublic(tournamentId: string, _options?: MakePublicOptions): Promise<{ shareCode: string; createdAt: string } | null> {
         return this.serialize(async () => {
             const list = await this.loadList();
             const index = list.findIndex(t => t.id === tournamentId);

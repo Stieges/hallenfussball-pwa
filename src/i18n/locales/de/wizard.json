@@ -576,7 +576,8 @@
     "explanationPublic": "Der Spielplan wird festgelegt. Danach kann jeder mit dem Link zuschauen.",
     "explanationLocal": "Der Spielplan wird festgelegt. Das Turnier bleibt nur auf diesem Gerät.",
     "explanationChangeable": "Teamnamen und Ergebnisse kannst du danach noch ändern, die Struktur nur bis zum ersten Anpfiff.",
-    "explanationOffline": "Der Spielplan wird festgelegt. Ohne Netz bleibt das Turnier vorerst auf diesem Gerät."
+    "explanationOffline": "Der Spielplan wird festgelegt. Ohne Netz bleibt das Turnier vorerst auf diesem Gerät.",
+    "shareFailed": "Das Turnier ist festgelegt, aber der Zuschauer-Link steht noch nicht. Hol das Teilen im Admin Center unter Sichtbarkeit nach."
   },
   "preview": {
     "hintLabel": "Hinweis:",

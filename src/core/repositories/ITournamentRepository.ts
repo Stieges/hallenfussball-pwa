@@ -4,6 +4,11 @@ import type {
   CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
 } from './groupCompletionCloud';
 
+/** Optionen fuer `makeTournamentPublic`. */
+export interface MakePublicOptions {
+    requireCloud?: boolean;
+}
+
 /**
  * Interface for Data Access
  * Follows the Repository Pattern to decouple logic from storage.
@@ -94,8 +99,12 @@ export interface ITournamentRepository {
      * Makes a tournament publicly accessible by generating a share code.
      * Returns the generated share code and creation timestamp.
      * For local-only storage, this generates a local share code.
+     *
+     * `requireCloud` (@W1-020, C-FESTLEGEN-TEILT-NICHT): Der Code muss vom Server kommen. Das Repository wartet, bis das
+     * Turnier in der Cloud angekommen ist, und weicht bei einem Fehler NICHT auf einen lokalen Code aus, sondern wirft.
+     * Nur `OfflineRepository` wertet das aus; die anderen Implementierungen ignorieren es.
      */
-    makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null>;
+    makeTournamentPublic(tournamentId: string, options?: MakePublicOptions): Promise<{ shareCode: string; createdAt: string } | null>;
 
     /**
      * Makes a tournament private by removing the share code.

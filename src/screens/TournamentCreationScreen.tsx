@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, useContext, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Icons } from '../components/ui';
@@ -20,6 +20,14 @@ import { generateFullSchedule } from '../core/generators';
 import { IncompleteScheduleError } from '../core/generators/incompleteScheduleError';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
+import { useRepository } from '../hooks/useRepository';
+import { useIsOnline } from '../hooks/useOnlineStatus';
+import { AuthContext } from '../features/auth/context/authContextInstance';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { usesCloudRepository } from '../core/repositories/usesCloudRepository';
+import { visibilityAfterPublish } from '../core/services/TournamentCreationService';
+import { shareAfterFirstRelease } from '../core/services/shareAfterFirstRelease';
+import { publishSharesByLink } from '../features/tournament-creation/utils/publishNotice';
 import { AuthSection } from '../components/layout/AuthSection';
 
 /** E2 + Controller-Ruling Fixrunde 2: Struktur = alles, was die Generatoren
@@ -125,6 +133,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { t } = useTranslation('wizard');
+  const repository = useRepository();
+  const authUser = useContext(AuthContext)?.user ?? null;
+  const isOnline = useIsOnline();
   const { saveTournament: defaultSaveTournament } = useTournaments();
   // B-02: Anpfiff-Sperre für die Neuplanung (Live-Signal über den gemeinsamen Hook)
   const { state: matchStartState, recheck } = useTournamentStartState(
@@ -334,7 +345,20 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     publishLockRef.current = true;
     setIsPublishing(true);
     try {
-      const published = await publishTournament(override);
+      // @W1-020: Erstfestlegen? Dieselbe Entscheidung wie der Satz in der Vorschau (publishNoticeKey).
+      const before = { ...formData, ...override };
+      const mayShare = publishSharesByLink({
+        visibility: visibilityAfterPublish(before),
+        toCloud: usesCloudRepository(authUser, isSupabaseConfigured),
+        isOnline,
+        isAnonymous: authUser?.isAnonymous === true,
+      });
+      const firstRelease = !before.publishedAt;
+      const releasedTournament = await publishTournament(override);
+      // Der Server-Code ersetzt den lokal erzeugten; Scheitern laesst das Turnier festgelegt (Hinweis unten).
+      const shared = await shareAfterFirstRelease(repository, releasedTournament, { firstRelease, mayShare });
+      const published = shared.tournament;
+      if (shared.status !== 'skipped') { setFormData(published); lastSavedDataRef.current = JSON.stringify(published); }
 
       // Call external save callback if provided (e.g. for potential redirects or parent updates)
       // Though publishTournament already saves to repo.
@@ -342,6 +366,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       // @W1-023: Toast statt Inline-Banner — überlebt den Seitenwechsel über den
       // ToastProvider in App.tsx.
       showSuccess(t('publish.success'));
+      if (shared.status === 'failed') { showWarning(t('publish.shareFailed')); }
 
       if (!onSave) {
         onBack();
@@ -494,6 +519,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         {/* Left: Back Button */}
         <button
           onClick={handleBackToDashboard}
+          disabled={isPublishing}
           style={{
             padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
             background: 'transparent',
