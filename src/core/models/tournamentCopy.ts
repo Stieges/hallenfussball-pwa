@@ -30,6 +30,8 @@ const MATCH_CLEARED = {
   liveState: undefined,
   // Beim Anpfiff getragene Farben schreibt nur der Server (K1)
   kit: undefined,
+  // B-26: eine Kopie ist ein neues Turnier ohne verschobene Uhrzeiten
+  originalStart: undefined,
 } as const;
 
 export interface CopiedContent {

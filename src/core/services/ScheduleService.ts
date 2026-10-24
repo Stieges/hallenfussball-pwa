@@ -103,3 +103,7 @@ export class ScheduleService {
         await this.repository.updateMatches(tournamentId, updates);
     }
 }
+
+// B-26 (Bauplan GB9): Zeiten verschieben, Vorschau und Wiederherstellen als reine Regeln; gespeichert wird über den Voll-Speicherweg
+// des Turniers (Uhrzeiten und `original_start` gehören zu den Zeitplan-Spalten, Turnierversion als Sperre, @FU-110).
+export { planShift, planRestore, shiftSchedule, originalStartToShow, hasRestorableTimes, isTournamentKickedOff } from './scheduleShift';

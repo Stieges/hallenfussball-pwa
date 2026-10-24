@@ -31,6 +31,7 @@ const FULL_MATCH: Required<Match> = {
   finalType: 'final',
   label: '1. Halbfinale',
   scheduledTime: new Date('2026-11-14T14:20:00.000Z'),
+  originalStart: new Date('2026-11-14T14:10:00.000Z'), // B-26
   matchNumber: 11,
   phase: 'semifinal',
   referee: 3,
