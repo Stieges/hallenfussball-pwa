@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
-import { definitiveRejectionReason, isTransientMutationError, isVersionConflict, type DefinitiveRejectionReason } from '../errors';
+import { definitiveRejectionReason, isTransientMutationError, isVersionConflict, OwnDecisionConflictError, type DefinitiveRejectionReason } from '../errors';
 import { StorageError } from '../storage/StorageError';
 import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
@@ -33,6 +33,7 @@ const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     failedAt: z.number(),
     lastError: z.string().optional(),
     conflict: z.boolean().optional(),
+    ownDecision: z.boolean().optional(),
     discardedCopy: z.boolean().optional(),
     // Review A3: tolerant – ein Grund einer neueren App-Version macht den Eintrag nicht ungültig (siehe knownRejection)
     rejection: z.unknown().optional(),
@@ -73,6 +74,8 @@ export interface FailedMutationItem<TType extends string = string> extends Gener
     lastError?: string;
     /** @FU-106: abgelehnt, weil ein anderes Gerät inzwischen gespeichert hat (Versionskonflikt). */
     conflict?: boolean;
+    /** @W2A-077: der Konflikt geht auf eine eigene Gleichstands-Entscheidung dieses Geräts zurück, nicht auf ein anderes Gerät. */
+    ownDecision?: boolean;
     /**
      * @FU-109 (Befund C-VERWORFEN-FALSCHER-GRUND): nicht gesendet, weil die Kopie nach „Verwerfen“ noch auf den Stand des
      * Servers wartet (z. B. Server nicht erreichbar). Kein Konflikt mit einem anderen Gerät; „Erneut versuchen“ hilft nicht.
@@ -309,12 +312,13 @@ export class GenericMutationQueue<TType extends string> {
     /**
      * Move a failed mutation to the dead-letter queue
      */
-    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, reason?: DefinitiveRejectionReason | 'discardedCopy'): void {
+    private moveToDeadLetter(item: GenericMutationItem<TType>, error?: string, reason?: DefinitiveRejectionReason | 'discardedCopy', ownDecision = false): void {
         const failedItem: FailedMutationItem<TType> = {
             ...item,
             failedAt: Date.now(),
             lastError: error,
             ...(reason === 'conflict' ? { conflict: true } : {}),
+            ...(reason === 'conflict' && ownDecision ? { ownDecision: true } : {}),
             ...(reason === 'discardedCopy' ? { discardedCopy: true } : {}),
             ...(reason === 'invalidValue' || reason === 'tournamentGone' ? { rejection: reason } : {}),
         };
@@ -329,7 +333,7 @@ export class GenericMutationQueue<TType extends string> {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
         this.queue.shift();
-        this.moveToDeadLetter(item, errorMessage, reason);
+        this.moveToDeadLetter(item, errorMessage, reason, error instanceof OwnDecisionConflictError);
         // A-15c (@TM-117): nach einem Konflikt zeigt das Gerät wieder den Stand des Servers (nur für die gewählten Typen)
         if (reason === 'conflict' && this.config.cloudCopyOnConflict?.includes(item.type)) { this.markCloudCopyNeeded([{ ...item, failedAt: Date.now() }]); }
         this.lastFailure = 'permanent';

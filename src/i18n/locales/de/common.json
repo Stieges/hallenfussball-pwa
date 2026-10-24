@@ -128,6 +128,7 @@
     "discardConfirmTitle": "Übertragung verwerfen?",
     "discardConfirmMessage": "Diese Änderung wird endgültig verworfen und nicht mehr an die Cloud übertragen. Kennt der Server das Turnier, zeigt das Gerät danach seinen Stand – ohne Verbindung, sobald sie wieder besteht. Ein Turnier, das noch nie beim Server war, bleibt mit allen Teams und Spielen auf diesem Gerät. Das kann nicht rückgängig gemacht werden.",
     "conflictReason": "Turnier wurde inzwischen auf einem anderen Gerät geändert",
+    "ownDecisionConflictReason": "Nicht übernommen: Der Stand hat sich inzwischen durch deine eigene Entscheidung geändert",
     "invalidValueReason": "Nicht übernommen – ungültiger Wert",
     "tournamentGoneReason": "Nicht übernommen – Turnier gibt es nicht mehr",
     "discardedCopyReason": "Nicht gesendet: Diese Änderung beruht auf einem verworfenen Stand. Der Stand des Servers wird geladen, sobald die Verbindung steht.",

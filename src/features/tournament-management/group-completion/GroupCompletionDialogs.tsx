@@ -32,7 +32,7 @@ export const GroupCompletionDialogs = ({ api }: { api: GroupCompletionApi }) => 
   case 'confirm':
     return <GroupConfirmDialog api={api} groupId={flow.groupId} plan={flow.plan} busy={flow.busy} error={flow.error} />;
   case 'notice':
-    return <GroupNoticeDialog api={api} groupId={flow.groupId} kind={flow.kind} {...(flow.open !== undefined ? { open: flow.open } : {})} />;
+    return <GroupNoticeDialog api={api} groupId={flow.groupId} kind={flow.kind} {...(flow.open !== undefined ? { open: flow.open } : {})} {...(flow.knownLogId !== undefined ? { knownLogId: flow.knownLogId } : {})} />;
   case 'reopen':
     return <GroupReopenDialog api={api} groupId={flow.groupId} reason={flow.reason} busy={flow.busy} error={flow.error} />;
   }

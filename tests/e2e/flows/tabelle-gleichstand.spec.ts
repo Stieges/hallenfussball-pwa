@@ -4,7 +4,7 @@
  * Zeile, Auswahl der Plätze), Einstellung mit Rückfrage – auf Desktop und 360 px. Helfer und Zuschauer (offline nicht
  * erreichbar) über den Prüfstand `tests/e2e/harness/gleichstand.html`. Daten: Saat `nikolaus-gleichstand` (Nikolausturnier,
  * Plan Abschnitt 6). Gherkin: @ET-025, @ET-055, @W2A-044, @W2A-047, @W2A-050, @W2A-056, @W2A-059, @W2A-061, @W2A-063,
- * @W2A-064, @W2A-066, @W2A-067, @W2A-068, @W2A-070, @W2A-071. Bilder nach `TB6_BILDER`. Läuft gegen den lokalen Dev-Server
+ * @W2A-064, @W2A-066, @W2A-067 (alle drei Zeilen, Zeile 3 seit R2 PR 1), @W2A-068, @W2A-070, @W2A-071. Bilder nach `TB6_BILDER`. Läuft gegen den lokalen Dev-Server
  * ohne Supabase; nie gegen die Produktion.
  */
 import { mkdirSync } from 'node:fs';
@@ -110,6 +110,20 @@ for (const g of GROESSEN) {
       await bild(page, 'wahl-fall', g.breite);
       await page.getByTestId('tie-marker').first().scrollIntoViewIfNeeded();
       await bild(page, 'gesamtplatzierung', g.breite);
+    });
+
+    test(`@W2A-067 Zeile 3 (kein Platz ausgewählt): Petting und Otting „Gleichstand – Entscheidung nötig“, Taste „Gleichstand entscheiden“, Angebot Strafstoßschießen und „Platz teilen“`, async ({ page }) => {
+      await oeffne(page, g.breite, g.hoehe, []);
+      await expect(page.getByTestId('tie-marker')).toHaveCount(2);
+      await expect(page.getByTestId('tie-marker').first()).toContainText('Gleichstand – Entscheidung nötig');
+      await expect(page.locator(HAUPTTASTE)).toHaveText('Gleichstand entscheiden');
+      await page.locator(HAUPTTASTE).click();
+      const dialog = page.getByTestId('tie-decision-dialog');
+      await expect(dialog.getByTestId('tie-pick-shootout')).toBeVisible(); // „Strafstoßschießen eintragen“
+      await expect(dialog.getByTestId('tie-accept-result')).toBeVisible(); // „Platz teilen“
+      await expect(dialog.getByRole('heading', { name: 'Gleichstand auf Platz 3' })).toBeVisible();
+      await pruefeMasse(page, [HAUPTTASTE]);
+      await bild(page, 'kein-platz', g.breite);
     });
 
     test(`@W2A-064 Pflicht-Fall (Plätze 1 bis 3): „Strafstoßschießen nötig“, nur die Taste „Strafstoßschießen eintragen“`, async ({ page }) => {

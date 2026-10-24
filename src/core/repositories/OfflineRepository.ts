@@ -8,6 +8,8 @@ import type { BracketLogEntry } from '../../types/tournament';
 import type {
     CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
 } from './groupCompletionCloud';
+import { carriesNewDecision } from './groupCompletionCloud';
+import { rememberOwnDecisionVersion } from './ownDecisionVersions';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 import { slotTeamId } from '../models/matchSlot';
@@ -392,6 +394,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         if (result.status !== 'ok') {
             return result;
         }
+        if (!result.alreadyApplied) { rememberOwnDecisionVersion(id, result.version); } // @W2A-077
         const local = await this.localRepo.get(id);
         if (local) {
             const others = (local.standingDecisions ?? []).filter((d) => d.id !== request.decision.id);
@@ -427,6 +430,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         }
         const result = await this.supabaseRepo.completeGroup(id, request);
         if (result.status === 'ok') {
+            // @W2A-077: nur eine neue Entscheidung zählt die Version (Review #368 H1) – dann ist sie die eigene
+            if (!result.alreadyCompleted && result.tournamentVersion !== undefined && carriesNewDecision(request)) {
+                rememberOwnDecisionVersion(id, result.tournamentVersion);
+            }
             await this.refreshAfterServerWrite(id);
         }
         return result;

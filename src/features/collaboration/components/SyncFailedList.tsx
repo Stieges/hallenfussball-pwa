@@ -129,7 +129,8 @@ const styles = {
 /** @FU-108/@FU-109/@FU-126: ein neuer Versuch schickte denselben Stand und scheiterte erneut – nur Verwerfen hilft. */
 const retryUseless = (item: FailedMutationItem): boolean => item.conflict === true || item.discardedCopy === true || item.rejection !== undefined;
 
-type ReasonKey = 'syncStatus.discardedCopyReason' | 'syncStatus.conflictReason' | 'syncStatus.invalidValueReason' | 'syncStatus.tournamentGoneReason'
+type ReasonKey = 'syncStatus.discardedCopyReason' | 'syncStatus.conflictReason' | 'syncStatus.ownDecisionConflictReason'
+    | 'syncStatus.invalidValueReason' | 'syncStatus.tournamentGoneReason'
     | 'syncStatus.clarificationGroupReason' | 'syncStatus.clarificationGroupDecisionReason';
 
 /** A-15c (@TM-146, @TM-147): trug der ohne Netz nachgereichte Abschluss eine neue Gleichstands-Entscheidung? */
@@ -147,6 +148,7 @@ function reasonKey(item: FailedMutationItem): ReasonKey | null {
     }
     if (item.rejection === 'invalidValue') { return 'syncStatus.invalidValueReason'; }
     if (item.rejection === 'tournamentGone') { return 'syncStatus.tournamentGoneReason'; } // @FU-123
+    if (item.conflict && item.ownDecision) { return 'syncStatus.ownDecisionConflictReason'; } // @W2A-077: kein anderes Gerät
     return item.conflict ? 'syncStatus.conflictReason' : null;
 }
 
