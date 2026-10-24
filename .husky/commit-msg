@@ -1,0 +1,3 @@
+# Wächter gegen Anbieter-Namen in Commit-Nachrichten (Begriffsliste lokal,
+# siehe scripts/check-forbidden-terms.sh)
+scripts/check-forbidden-terms.sh --message "$1"

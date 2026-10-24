@@ -7,6 +7,64 @@ on:
     branches: [main, develop]
 
 jobs:
+  forbidden-terms:
+    name: Forbidden Terms Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for PR commit range)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Guard fails if the terms list secret is missing
+        env:
+          FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
+        run: |
+          if [ -z "$FORBIDDEN_TERMS" ]; then
+            echo "::error::Secret FORBIDDEN_TERMS ist leer oder fehlt. Ein uebersprungener Check darf nie gruen sein — Job schlaegt fehl." >&2
+            exit 1
+          fi
+
+      - name: Check working tree
+        env:
+          CI: 'true'
+          FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
+        run: scripts/check-forbidden-terms.sh --tree
+
+      - name: Check PR commit messages
+        if: github.event_name == 'pull_request'
+        env:
+          CI: 'true'
+          FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -e
+          status=0
+          for sha in $(git log --format=%H "$BASE_SHA..$HEAD_SHA"); do
+            git show -s --format=%B "$sha" > "/tmp/commit-msg-$sha.txt"
+            if ! scripts/check-forbidden-terms.sh --message "/tmp/commit-msg-$sha.txt"; then
+              echo "commit $sha: Treffer in Commit-Nachricht"
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: Check PR title and description
+        if: github.event_name == 'pull_request'
+        env:
+          CI: 'true'
+          FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -e
+          status=0
+          scripts/check-forbidden-terms.sh --text "$PR_TITLE" || { echo "PR-Titel: Treffer"; status=1; }
+          scripts/check-forbidden-terms.sh --text "$PR_BODY" || { echo "PR-Beschreibung: Treffer"; status=1; }
+          exit $status
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
