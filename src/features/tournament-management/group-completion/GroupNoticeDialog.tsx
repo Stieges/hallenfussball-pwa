@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/Button';
 import { InlineNotice, type InlineNoticeTone } from '../../../components/ui/molecules/InlineNotice';
 import { undecidedMatches } from '../../../core/services/GroupCompletionService';
 import { groupNameOf, matchText, withGroup } from './completionTexts';
+import { lastGroupLog } from './completionLog';
 import { GroupDialogShell } from './GroupDialogShell';
 import type { GroupCompletionApi, NoticeKind } from './useGroupCompletion';
 
@@ -37,9 +38,15 @@ export const GroupNoticeDialog = ({ api, groupId, kind, open }: GroupNoticeDialo
   const title = kind === 'openMatches'
     ? t('groupCompletion.notice.openMatches.title', { count: Math.max(count, 1) })
     : t(`groupCompletion.notice.${kind === 'already' ? 'already' : kind === 'tableChanged' ? 'tableChanged' : 'differently'}.title`, withGroup(name));
+  // @W2A-060: wer zuerst abgeschlossen bzw. entschieden hat – Name nur aus dem Verlauf der Turnierleitung, sonst allgemein
+  const by = kind === 'already' || kind === 'differently' ? lastGroupLog(tournament, 'complete_group', groupId)?.name : undefined;
   const body = kind === 'openMatches'
     ? t('groupCompletion.notice.openMatches.body', withGroup(name, { matches: matches.map((m) => matchText(tournament, m)).join(', ') || '–' }))
-    : t(`groupCompletion.notice.${kind === 'already' ? 'already' : kind === 'tableChanged' ? 'tableChanged' : 'differently'}.body`, withGroup(name));
+    : kind === 'tableChanged'
+      ? t('groupCompletion.notice.tableChanged.body', withGroup(name))
+      : by !== undefined
+        ? t(`groupCompletion.notice.${kind}.bodyBy`, withGroup(name, { by }))
+        : t(`groupCompletion.notice.${kind}.body`, withGroup(name));
   const footer = (
     <Button variant="primary" size="lg" fullWidth style={{ minHeight: cssVars.touchTargets.primary }} onClick={api.close} data-primary data-testid={OK_ID[kind]}>
       {t('groupCompletion.dialog.understood')}

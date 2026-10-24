@@ -1404,7 +1404,8 @@
       "already": {
         "title": "{{name}} is already closed",
         "title_all": "The group is already closed",
-        "body": "Someone else closed the group with the same table. You do not need to do anything."
+        "body": "Someone else closed the group with the same table. You do not need to do anything.",
+        "bodyBy": "{{by}} closed the group with the same table. You do not need to do anything."
       },
       "tableChanged": {
         "title": "The table has changed",
@@ -1412,7 +1413,8 @@
       },
       "differently": {
         "title": "Already closed differently",
-        "body": "Someone else closed the group with a different ranking. Your closing was not saved. The table shows the current state."
+        "body": "Someone else closed the group with a different ranking. Your closing was not saved. The table shows the current state.",
+        "bodyBy": "{{by}} has already decided differently and closed the group. Your entry was not saved. The table shows the current state."
       }
     },
     "errors": {

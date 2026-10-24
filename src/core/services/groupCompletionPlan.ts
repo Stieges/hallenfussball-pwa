@@ -15,7 +15,7 @@ import { decisionBasis, sortedIds, type DecisionDraft } from '../standings/decis
 import { tableInput } from '../standings/tournamentTable';
 import type { OpenTieBlock } from '../standings/tieViews';
 import {
-  everCompleted, groupState, prepareGroupCompletion, prepareRecompletion, type CompletionTournament,
+  everCompleted, groupState, prepareGroupCompletion, prepareRecompletion, type CompletionTournament, type RecompletionTrigger,
 } from './GroupCompletionService';
 
 /** Eine Seite der Finalrunde, die der Abschluss besetzt (oder neu besetzt). */
@@ -84,15 +84,16 @@ export type CompletionPlan =
 /**
  * Plan für den Abschluss von `groupId` (Gruppenkennung wie `groupKeyOf`, `''` bei Jeder gegen jeden). `decisions` sind die in
  * diesem Ablauf neu eingetragenen Entscheidungen; sie zählen im Plan wie gespeicherte (@W2A-058: eine schon gültige
- * Entscheidung aus der Tabelle wird nicht erneut verlangt).
+ * Entscheidung aus der Tabelle wird nicht erneut verlangt). `trigger`: die Taste der Turnierleitung (`manual`, Standard,
+ * @TM-151) oder der Auslöser nach einer Korrektur (`auto`, A-15b) – nur bei einer veralteten Gruppe von Belang.
  */
-export function planCompletion(tournament: Tournament, groupId: string, decisions: readonly NewDecision[] = []): CompletionPlan {
+export function planCompletion(tournament: Tournament, groupId: string, decisions: readonly NewDecision[] = [], trigger: RecompletionTrigger = 'manual'): CompletionPlan {
   const known = tournament.standingDecisions ?? [];
   const withNew: Tournament = decisions.length === 0 ? tournament : {
     ...tournament,
     standingDecisions: [...known, ...decisions.map(({ reason: _reason, ...decision }): StandingDecision => decision)],
   };
-  const prepared = groupState(withNew, groupId) === 'stale' ? prepareRecompletion(withNew, groupId) : prepareGroupCompletion(withNew, groupId);
+  const prepared = groupState(withNew, groupId) === 'stale' ? prepareRecompletion(withNew, groupId, trigger) : prepareGroupCompletion(withNew, groupId);
   if (prepared.code !== 'READY') {
     return prepared;
   }

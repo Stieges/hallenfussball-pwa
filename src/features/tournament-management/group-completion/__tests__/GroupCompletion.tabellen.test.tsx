@@ -719,3 +719,82 @@ describe('Reihenfolge der Tasten und Beschriftung bei drei Teams (Review #361 A2
     expect(screen.getByTestId('group-close-then-all')).toHaveTextContent('Danach ist die Gruppe abgeschlossen.');
   });
 });
+
+/**
+ * R2 PR 1 – @TM-151 (Record `2026-10-01_turniermodi`, Befund C-ERNEUT-ABSCHLIESSEN-OHNE-STRAFSTOSS):
+ *   Gegeben die Lage aus @W2A-048, Gruppe A ist abgeschlossen und TSV West steht nach dem Strafstoßschießen 4:3 in Halbfinale 2
+ *   Und Olli hat das Spiel SV Süd – TSV West von 1:1 auf 2:2 korrigiert, beide sind weiter nach allen Kriterien gleich,
+ *   Halbfinale 2 ist nicht angepfiffen
+ *   Wenn Olli „Erneut abschließen“ für Gruppe A wählt
+ *   Dann verlangt die App zuerst das Ergebnis des Strafstoßschießens zwischen SV Süd und TSV West
+ *   Und solange es fehlt, ist Gruppe A nicht neu abgeschlossen …
+ *   Und nachdem Olli 4:3 für TSV West eingetragen hat, ist Gruppe A neu abgeschlossen und Halbfinale 2 zeigt TSV West
+ * Lage nach der Korrektur: Gruppe A abgeschlossen und veraltet (`stale`), die alte Entscheidung ist verfallen, Süd/West gleich.
+ */
+describe('@TM-151 „Erneut abschließen“ verlangt bei offenem Gleichstand mit Folgespiel zuerst das Strafstoßschießen', () => {
+  const korrigiert = (): Tournament => ({
+    ...hallencup(),
+    groupCompletions: [completion('A', [HC.nord, HC.west, HC.sued, HC.ost], { stale: true })],
+  });
+
+  it('@TM-151 die Taste öffnet zuerst das Strafstoßschießen zwischen SV Süd und TSV West; ohne Eingabe wird nichts abgeschlossen', async () => {
+    const { repo } = await zeige(korrigiert());
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    expect(await screen.findByTestId('tie-decision-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('group-close-confirm')).toBeDisabled();
+    expect(repo.completeGroup).not.toHaveBeenCalled();
+  });
+
+  it('@TM-151 nach 4:3 für TSV West: neu abgeschlossen mit West vor Süd, kein Platz bleibt offen (Halbfinale 2 bekommt TSV West)', async () => {
+    const { repo } = await zeige(korrigiert());
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '3');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    await waitFor(() => { expect(repo.completeGroup).toHaveBeenCalledTimes(1); });
+    const [, request] = repo.completeGroup.mock.calls[0];
+    expect(request).toMatchObject({ groupId: 'A', ranking: [HC.nord, HC.west, HC.sued, HC.ost], openRanks: [] });
+    expect(request.tieDecisions[0]).toMatchObject({ kind: 'shootout', order: [HC.west, HC.sued], shootout: { winner: 4, loser: 3 } });
+  });
+});
+
+/**
+ * R2 PR 1 – @W2A-060 (Befund C-GLEICHSTAND-KOLLISION-OHNE-NAME):
+ *   Wenn Olli 4:3 für TSV Waging rot und kurz danach Maria 5:4 für DJK Kammer einträgt
+ *   Dann gilt Ollis Eintrag
+ *   Und Maria sieht, dass und von wem schon entschieden wurde
+ * Maria trägt im Kasten ein; der Server lehnt ab (Olli war schneller). Nach dem Neuladen kennt Marias Gerät den Verlauf mit Olli.
+ */
+describe('@W2A-060 die erste Entscheidung gilt, die zweite Person sieht von wem', () => {
+  const nachOllisAbschluss = (t: Tournament): Tournament => ({
+    ...t,
+    decisionLog: [{ id: 1, kind: 'complete_group', groupId: 'A', detail: {}, actorName: 'Olli', at: '2026-11-28T11:00:00Z' }],
+  });
+
+  it.each(['COMPLETED_DIFFERENTLY', 'DECIDED_ELSEWHERE'] as const)('@W2A-060 Server meldet %s: Hinweis nennt Olli, Marias Eintrag ist nicht gespeichert', async (code) => {
+    const repo = fakeRepo();
+    repo.completeGroup.mockResolvedValue({ status: 'rejected', code });
+    await zeige(nachOllisAbschluss(gruppeA()), { repo });
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    const hinweis = await screen.findByTestId('group-conflict');
+    expect(hinweis).toHaveTextContent('Olli hat schon anders entschieden');
+    expect(hinweis).not.toHaveTextContent('Eine andere Person');
+  });
+
+  it('@W2A-060 ohne Verlauf (kein Name bekannt): der Hinweis bleibt allgemein', async () => {
+    const repo = fakeRepo();
+    repo.completeGroup.mockResolvedValue({ status: 'rejected', code: 'COMPLETED_DIFFERENTLY' });
+    await zeige(gruppeA(), { repo });
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    expect(await screen.findByTestId('group-conflict')).toHaveTextContent('Eine andere Person');
+  });
+});

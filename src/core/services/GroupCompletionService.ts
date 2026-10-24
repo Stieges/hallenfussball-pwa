@@ -268,13 +268,21 @@ export function prepareGroupCompletion(tournament: CompletionTournament, groupId
 }
 
 /**
- * Erneuter Abschluss einer nach dem Abschluss geänderten Gruppe (`stale`, R-GA4v2-4, @TM-145, @TM-150): Plätze offener Blöcke mit
- * Folgespiel (ganzer Block) gehen über `openRanks` auf ihre Herkunft zurück. Ein offener Block, dessen Pflicht nur aus der
- * Einstellung „auszuspielende Plätze“ kommt (kein Folgespiel, z. B. der Turniersieger im Nikolaus), wird nie still festgelegt:
- * `DECISION_REQUIRED` – „Besetzung prüfen“ bleibt stehen, bis die Turnierleitung entschieden hat (@TM-150). Ein offener Block
- * ohne Pflicht (Annahme erlaubt) hält den Abschluss nicht auf. Für eine Gruppe, die nicht `stale` ist, gilt `prepareGroupCompletion`.
+ * Wer schließt erneut ab? `manual` = die Turnierleitung tippt „Erneut abschließen“ (@TM-151): jeder offene Pflicht-Block, auch
+ * einer mit Folgespiel, verlangt zuerst die Entscheidung. `auto` = der Auslöser nach einer angenommenen Korrektur (A-15b,
+ * @TM-071, @TM-145): Plätze offener Blöcke mit Folgespiel gehen über `openRanks` auf ihre Herkunft zurück.
  */
-export function prepareRecompletion(tournament: CompletionTournament, groupId: string): GroupCompletionPreparation {
+export type RecompletionTrigger = 'manual' | 'auto';
+
+/**
+ * Erneuter Abschluss einer nach dem Abschluss geänderten Gruppe (`stale`, R-GA4v2-4, @TM-145, @TM-150, @TM-151). Ein offener Block,
+ * dessen Pflicht nur aus der Einstellung „auszuspielende Plätze“ kommt (kein Folgespiel, z. B. der Turniersieger im Nikolaus),
+ * wird nie still festgelegt: `DECISION_REQUIRED` – „Besetzung prüfen“ bleibt stehen, bis die Turnierleitung entschieden hat
+ * (@TM-150). Blöcke mit Folgespiel: bei `manual` ebenfalls `DECISION_REQUIRED` (@TM-151), bei `auto` über `openRanks` zurück auf
+ * die Herkunft. Ein offener Block ohne Pflicht (Annahme erlaubt) hält den Abschluss nicht auf. Für eine Gruppe, die nicht
+ * `stale` ist, gilt `prepareGroupCompletion`.
+ */
+export function prepareRecompletion(tournament: CompletionTournament, groupId: string, trigger: RecompletionTrigger = 'auto'): GroupCompletionPreparation {
   if (groupState(tournament, groupId) !== 'stale') {
     return prepareGroupCompletion(tournament, groupId);
   }
@@ -283,9 +291,9 @@ export function prepareRecompletion(tournament: CompletionTournament, groupId: s
     return blocked;
   }
   const open = openBlocks(tournament, groupId);
-  const settingOnly = open.filter((block) => block.mandatory?.kind === 'setting');
-  if (settingOnly.length > 0) {
-    return { code: 'DECISION_REQUIRED', blocks: settingOnly };
+  const required = open.filter((block) => block.mandatory?.kind === 'setting' || (trigger === 'manual' && block.mandatory?.kind === 'followUp'));
+  if (required.length > 0) {
+    return { code: 'DECISION_REQUIRED', blocks: required };
   }
   const openRanks = open
     .filter((block) => block.mandatory?.kind === 'followUp')

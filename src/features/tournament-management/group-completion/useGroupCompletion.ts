@@ -67,7 +67,9 @@ const errorOf = (error: unknown): CompletionError => {
   return error instanceof RetryLaterError ? 'RETRY_LATER' : 'UNKNOWN';
 };
 
-const TABLE_CHANGED = ['STALE_VERSION', 'RANKING_MISMATCH', 'TIE_DECISION_REQUIRED', 'DECIDED_ELSEWHERE', 'SHARED_NOT_ALLOWED', 'INVALID_TIE_DECISIONS'];
+const TABLE_CHANGED = ['STALE_VERSION', 'RANKING_MISMATCH', 'TIE_DECISION_REQUIRED', 'SHARED_NOT_ALLOWED', 'INVALID_TIE_DECISIONS'];
+/** @W2A-060: jemand anders hat schon entschieden bzw. anders abgeschlossen – der Hinweis nennt, wer (aus dem Verlauf). */
+const DECIDED_BY_OTHER = ['COMPLETED_DIFFERENTLY', 'DECIDED_ELSEWHERE'];
 
 export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
   const tie = useStandingTie();
@@ -103,7 +105,7 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
       setFlow({ step: 'notice', groupId, kind: 'openMatches', ...(result.open !== undefined ? { open: result.open } : {}) });
       return;
     }
-    if (result.status === 'rejected' && result.code === 'COMPLETED_DIFFERENTLY') {
+    if (result.status === 'rejected' && DECIDED_BY_OTHER.includes(result.code)) {
       reload();
       setFlow({ step: 'notice', groupId, kind: 'differently' });
       return;

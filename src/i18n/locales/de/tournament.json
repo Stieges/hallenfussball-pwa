@@ -1404,7 +1404,8 @@
       "already": {
         "title": "{{name}} ist schon abgeschlossen",
         "title_all": "Die Gruppe ist schon abgeschlossen",
-        "body": "Eine andere Person hat die Gruppe mit derselben Tabelle abgeschlossen. Du musst nichts mehr tun."
+        "body": "Eine andere Person hat die Gruppe mit derselben Tabelle abgeschlossen. Du musst nichts mehr tun.",
+        "bodyBy": "{{by}} hat die Gruppe mit derselben Tabelle abgeschlossen. Du musst nichts mehr tun."
       },
       "tableChanged": {
         "title": "Die Tabelle hat sich geändert",
@@ -1412,7 +1413,8 @@
       },
       "differently": {
         "title": "Schon anders abgeschlossen",
-        "body": "Eine andere Person hat die Gruppe mit einer anderen Rangfolge abgeschlossen. Dein Abschluss wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand."
+        "body": "Eine andere Person hat die Gruppe mit einer anderen Rangfolge abgeschlossen. Dein Abschluss wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand.",
+        "bodyBy": "{{by}} hat schon anders entschieden und die Gruppe abgeschlossen. Dein Eintrag wurde nicht gespeichert. Die Tabelle zeigt den geltenden Stand."
       }
     },
     "errors": {
