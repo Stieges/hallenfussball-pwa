@@ -21,7 +21,6 @@ import {
   deleteTeamSafely,
   renameTeam,
   getTeamDeletionWarning,
-  getTeamRenameWarning,
   getActiveTeams,
   getRemovedTeams,
   TeamMatchAnalysis,
@@ -30,6 +29,7 @@ import { getGroupDisplayName } from '../../utils/displayNames';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
 import { useCan } from '../auth/hooks/useCan';
+import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -44,6 +44,13 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // A-11 (@HE-042, L6): Umbenennen, Logo, Farbe = teams; Löschen, Wiederherstellen = restructure. Ohne Recht lesend + Hinweis.
   const canEditTeams = useCan('teams', tournament.id);
   const canRestructure = useCan('restructure', tournament.id);
+  const restoreDialog = useConfirmDialog({
+    title: t('teams.restoreDialog.title'),
+    message: t('teams.restoreConfirm'),
+    variant: 'info',
+    confirmText: t('teams.restoreDialog.confirm'),
+    cancelText: t('common.cancel'),
+  });
   // State für Bearbeitung
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -100,17 +107,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   const handleSaveRename = () => {
     if (!editingTeamId) { return; }
 
-    const analysis = teamAnalyses[editingTeamId];
-    const warning = getTeamRenameWarning(analysis.teamName, analysis.matchesWithResults);
-
-    // Wenn Warnung und noch nicht bestätigt
-    if (warning) {
-      const confirmed = window.confirm(
-        t('teams.renameWarning', { warning })
-      );
-      if (!confirmed) { return; }
-    }
-
+    // @OB-073: Umbenennen fragt nie nach, auch nicht bei vorhandenen Ergebnissen; Ergebnisse und Tabelle bleiben (Zuordnung per Team-ID).
     try {
       const result = renameTeam(tournament, editingTeamId, editingName.trim());
 
@@ -153,10 +150,9 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     }
   };
 
-  const handleRestoreTeam = (teamId: string) => {
-    const confirmed = window.confirm(
-      t('teams.restoreConfirm')
-    );
+  const handleRestoreTeam = async (teamId: string) => {
+    // @OB-017: Rückfrage im Dialog der App, nie als Fenster des Browsers
+    const confirmed = await restoreDialog.confirm();
 
     if (!confirmed) { return; }
 
@@ -625,7 +621,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       background: 'transparent',
                       color: cssVars.colors.textSecondary,
                     }}
-                    onClick={() => handleRestoreTeam(team.id)}
+                    onClick={() => { void handleRestoreTeam(team.id); }}
                   >
                     ↩️ {t('teams.restore')}
                   </button>}
@@ -707,6 +703,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
           />
         )
       }
+      <ConfirmDialog {...restoreDialog.dialogProps} />
     </div >
   );
 };

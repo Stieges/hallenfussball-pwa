@@ -75,8 +75,8 @@ describe('TeamsTab — Hauptpfade (Abdeckung)', () => {
   });
 
   it('Wiederherstellen und Löschen mit Ergebnissen laufen über onTournamentUpdate', async () => {
-    // H1: handleRestoreTeam fragt über window.confirm — hier bestätigt.
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    // H1/@OB-017: handleRestoreTeam fragt im Dialog der App, nie über window.confirm — hier bestätigt.
+    const browserConfirm = vi.spyOn(window, 'confirm');
     const user = userEvent.setup();
     const onTournamentUpdate = vi.fn();
     render(
@@ -90,6 +90,8 @@ describe('TeamsTab — Hauptpfade (Abdeckung)', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /teams\.restore/ }));
+    await user.click(await screen.findByTestId('confirm-dialog-confirm'));
+    expect(browserConfirm).not.toHaveBeenCalled();
     expect(onTournamentUpdate).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByTestId('team-expand-toggle-ufer'));

@@ -14,6 +14,7 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { Input, Combobox } from '../../../../components/ui';
 import { LocationForm } from '../../../../components/LocationForm';
 import { ContactForm } from '../../../../components/ContactForm';
+import { ConfirmDialog, useConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { RulebookField } from '../../../../components/ui/molecules/RulebookField';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
 import type { Tournament } from '../../../../types/tournament';
@@ -170,6 +171,12 @@ export function MetadataCategory({
   onTournamentUpdate,
 }: MetadataCategoryProps) {
   const { t } = useTranslation('admin');
+  const resetDialog = useConfirmDialog({
+    title: t('metadata.confirmResetDialog.title'),
+    message: t('metadata.confirmReset'),
+    variant: 'warning',
+    confirmText: t('metadata.confirmResetDialog.confirm'),
+  });
   // Local form state (copy of tournament data)
   const [formData, setFormData] = useState<Partial<Tournament>>(() => toFormData(tournament));
 
@@ -276,9 +283,10 @@ export function MetadataCategory({
   };
 
   // Reset handler
-  const handleReset = () => {
+  const handleReset = async () => {
     if (isDirty) {
-      const confirmReset = window.confirm(t('metadata.confirmReset'));
+      // @OB-017: Rückfrage im Dialog der App, nie als Fenster des Browsers
+      const confirmReset = await resetDialog.confirm();
       if (!confirmReset) {return;}
     }
 
@@ -464,7 +472,7 @@ export function MetadataCategory({
         </button>
         <button
           style={styles.resetButton}
-          onClick={handleReset}
+          onClick={() => { void handleReset(); }}
           disabled={!isDirty}
         >
           {t('metadata.reset')}
@@ -477,6 +485,7 @@ export function MetadataCategory({
           <span>{t('metadata.changesSaved')}</span>
         </div>
       )}
+      <ConfirmDialog {...resetDialog.dialogProps} />
     </CategoryPage>
   );
 }

@@ -405,7 +405,11 @@
     "rulebook": "Regelwerk (optional)",
     "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
     "rulebookLimit": "Höchstens 80 Zeichen.",
-    "rulebookTruncated": "Auf 80 Zeichen gekürzt."
+    "rulebookTruncated": "Auf 80 Zeichen gekürzt.",
+    "confirmResetDialog": {
+      "title": "Änderungen verwerfen",
+      "confirm": "Verwerfen"
+    }
   },
   "spectatorDisplay": {
     "title": "Anzeige für Zuschauer",

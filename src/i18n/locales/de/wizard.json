@@ -597,5 +597,23 @@
       "two": "Platz {{from}} und {{to}}",
       "range": "Platz {{from}} bis {{to}}"
     }
+  },
+  "refereeConflict": {
+    "title": "Zeitkonflikt",
+    "message": "{{refName}} ist bereits für Spiel #{{matchNumber}} ({{time}}) eingeteilt.\n\nDie Spiele überschneiden sich zeitlich.\n\nMöchtest du die Zuweisung trotzdem vornehmen?",
+    "confirm": "Trotzdem zuweisen"
+  },
+  "typeSwitch": {
+    "title": "Turniertyp wechseln",
+    "message": "Möchtest du wirklich zu \"{{type}}\" wechseln?\n\nDie Einstellungen werden angepasst.",
+    "confirm": "Wechseln",
+    "classic": "Klassisches Turnier",
+    "bambini": "Bambini-Turnier"
+  },
+  "resetTournament": {
+    "title": "Turnier zurücksetzen",
+    "message_one": "Es wird {{count}} Ergebnis gelöscht!\n\nDiese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?",
+    "message_other": "Es werden {{count}} Ergebnisse gelöscht!\n\nDiese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?",
+    "confirm": "Zurücksetzen"
   }
 }

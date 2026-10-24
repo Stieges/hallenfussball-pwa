@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Icons } from '../components/ui';
 import { ProgressBar } from '../components/ProgressBar';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { ConfirmDialog, useConfirmDialog } from '../components/ui/ConfirmDialog';
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
 import { ReplanPanel } from '../features/tournament-creation/components/ReplanPanel';
 import type { ReplanSession } from '../features/tournament-creation/utils/replan';
@@ -135,6 +135,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const navigate = useNavigate();
   const location = useLocation();
 
+  // @OB-017: Rückfragen des Assistenten (Turniertyp wechseln, Turnier zurücksetzen) im Dialog der App
+  const wizardConfirm = useConfirmDialog({ title: '', message: '' });
+
   // ============================================================================
   // WIZARD HOOK - All wizard state and actions from useTournamentWizard
   // ============================================================================
@@ -170,7 +173,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Persistence
     saveDraft,
     publishTournament,
-  } = useTournamentWizard(existingTournament);
+  } = useTournamentWizard(existingTournament, wizardConfirm.confirm);
 
   // @OB-029 / @OB-030: Der Schritt steht in der Adresse (`?step=`). Beim Direktaufruf und bei jeder Änderung der
   // Adresse gilt der Wunsch aus der Adresse -- auch gegen den zuletzt besuchten Schritt des Entwurfs (F-321).
@@ -860,6 +863,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           variant: 'danger',
         }}
       />
+
+      <ConfirmDialog {...wizardConfirm.dialogProps} />
 
       {/* Slide Animation Styles */}
       <style>{`

@@ -53,25 +53,29 @@ describe('A-10 Assistent Schritt 2 „Turnier zurücksetzen“ über den Server 
   it('L1 Konto-Turnier ohne Einträge → Rückfrage, reset_match_results mit allen Spielen, danach Formular zurückgesetzt', async () => {
     h = await makeScheduleEngine();
     cloud.rpc.mockResolvedValue({ data: { status: 'ok', reset: 1 }, error: null });
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { result } = renderHook(() => useTournamentWizard(mitErgebnis()), { wrapper });
+    const browserConfirm = vi.spyOn(window, 'confirm');
+    const confirm = vi.fn().mockResolvedValue(true);
+    const { result } = renderHook(() => useTournamentWizard(mitErgebnis(), confirm), { wrapper });
 
     act(() => { result.current.handleResetTournament(); });
 
     await vi.waitFor(() => expect(spiel7(result)?.matchStatus).toBe('scheduled'));
     expect(confirm).toHaveBeenCalledTimes(1);
+    expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017
     expect(cloud.rpc).toHaveBeenCalledWith('reset_match_results', { p_tournament_id: 'T', p_match_ids: [SPIEL_7, SPIEL_9, HALBFINALE_1] });
     expect(spiel7(result)).toMatchObject({ scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' });
   });
 
   it('Gegenbeispiel: Rückfrage abgelehnt → kein Server-Aufruf, nichts geändert', async () => {
     h = await makeScheduleEngine();
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    const { result } = renderHook(() => useTournamentWizard(mitErgebnis()), { wrapper });
+    const browserConfirm = vi.spyOn(window, 'confirm');
+    const confirm = vi.fn().mockResolvedValue(false);
+    const { result } = renderHook(() => useTournamentWizard(mitErgebnis(), confirm), { wrapper });
 
     act(() => { result.current.handleResetTournament(); });
 
     await vi.waitFor(() => expect(confirm).toHaveBeenCalledTimes(1));
+    expect(browserConfirm).not.toHaveBeenCalled(); // @OB-017: nie ein Fenster des Browsers
     expect(cloud.rpc).not.toHaveBeenCalled();
     expect(spiel7(result)).toMatchObject({ scoreA: 2, matchStatus: 'finished' });
   });
@@ -79,8 +83,8 @@ describe('A-10 Assistent Schritt 2 „Turnier zurücksetzen“ über den Server 
   it('@FU-090 Server meldet HAS_ENTRIES → Text wörtlich, Formular unverändert', async () => {
     h = await makeScheduleEngine();
     cloud.rpc.mockResolvedValue({ data: { status: 'rejected', code: 'HAS_ENTRIES', matchIds: [SPIEL_7] }, error: null });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { result } = renderHook(() => useTournamentWizard(mitErgebnis()), { wrapper });
+    const confirm = vi.fn().mockResolvedValue(true);
+    const { result } = renderHook(() => useTournamentWizard(mitErgebnis(), confirm), { wrapper });
 
     act(() => { result.current.handleResetTournament(); });
 
@@ -91,8 +95,8 @@ describe('A-10 Assistent Schritt 2 „Turnier zurücksetzen“ über den Server 
   it('L8 Konto-Turnier ohne Netz → Hinweis, kein Server-Aufruf, Formular unverändert', async () => {
     h = await makeScheduleEngine();
     net.online = false;
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { result } = renderHook(() => useTournamentWizard(mitErgebnis()), { wrapper });
+    const confirm = vi.fn().mockResolvedValue(true);
+    const { result } = renderHook(() => useTournamentWizard(mitErgebnis(), confirm), { wrapper });
 
     act(() => { result.current.handleResetTournament(); });
 
@@ -103,8 +107,8 @@ describe('A-10 Assistent Schritt 2 „Turnier zurücksetzen“ über den Server 
 
   it('Gegenbeispiel Gast → lokal wie heute, kein Server-Aufruf', async () => {
     h = await makeScheduleEngine('guest');
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { result } = renderHook(() => useTournamentWizard(mitErgebnis()), { wrapper });
+    const confirm = vi.fn().mockResolvedValue(true);
+    const { result } = renderHook(() => useTournamentWizard(mitErgebnis(), confirm), { wrapper });
 
     act(() => { result.current.handleResetTournament(); });
 

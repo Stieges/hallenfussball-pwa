@@ -7,6 +7,8 @@
  */
 
 import { useState, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ConfirmFn } from '../components/ui/ConfirmDialog';
 import { Tournament, TournamentType, PlacementCriterion } from '../types/tournament';
 import { countMatchesWithResults, deleteTeamSafely } from '../utils/teamHelpers';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
@@ -97,9 +99,18 @@ export interface UseTournamentWizardReturn {
   publishTournament: (override?: Partial<Tournament>) => Promise<Tournament>;
 }
 
+/** Ohne Dialog des Bildschirms gilt jede Rückfrage als abgelehnt (nie ein Fenster des Browsers). */
+const declineConfirm: ConfirmFn = () => Promise.resolve(false);
+
+/**
+ * @param askConfirm Rückfrage im Dialog der App (@OB-017): Der Hook zeigt selbst nichts an, der Bildschirm
+ *   rendert den Dialog. Nie ein Fenster des Browsers.
+ */
 export function useTournamentWizard(
-  existingTournament?: Tournament
+  existingTournament?: Tournament,
+  askConfirm: ConfirmFn = declineConfirm
 ): UseTournamentWizardReturn {
+  const { t } = useTranslation('wizard');
   // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
   const repository = useRepository();
   const resultsReset = useResultsReset(); // A-10 (@FU-090, L1, L8)
@@ -302,16 +313,7 @@ export function useTournamentWizard(
   }, [updateForm]);
 
   // Tournament type change
-  const handleTournamentTypeChange = useCallback((newType: TournamentType) => {
-    const currentType = formData.tournamentType;
-
-    if (currentType && currentType !== newType) {
-      const confirmed = window.confirm(
-        `Möchtest du wirklich zu "${newType === 'classic' ? 'Klassisches Turnier' : 'Bambini-Turnier'}" wechseln?\n\nDie Einstellungen werden angepasst.`
-      );
-      if (!confirmed) { return; }
-    }
-
+  const applyTournamentType = useCallback((newType: TournamentType) => {
     if (newType === 'bambini') {
       setFormData((prev) => ({
         ...prev,
@@ -331,20 +333,45 @@ export function useTournamentWizard(
         resultMode: 'goals',
       }));
     }
-  }, [formData.tournamentType]);
+  }, []);
+
+  const handleTournamentTypeChange = useCallback((newType: TournamentType) => {
+    const currentType = formData.tournamentType;
+
+    void (async () => {
+      if (currentType && currentType !== newType) {
+        const confirmed = await askConfirm({
+          title: t('typeSwitch.title'),
+          message: t('typeSwitch.message', { type: t(newType === 'classic' ? 'typeSwitch.classic' : 'typeSwitch.bambini') }),
+          variant: 'warning',
+          confirmText: t('typeSwitch.confirm'),
+        });
+        if (!confirmed) { return; }
+      }
+      applyTournamentType(newType);
+    })();
+  }, [formData.tournamentType, askConfirm, t, applyTournamentType]);
+
 
   // Reset tournament -- A-08f3e4 (@FU-090): mit Einträgen nicht ausführen; A-10: Konto-Turnier erst am Server, dann lokal
   const handleResetTournament = useCallback(() => {
     const matches = formData.matches ?? [];
     if (matches.length === 0) { return; }
     void resultsReset.blocks(formData).then(async (blocked) => {
+      if (blocked) { return; }
       const resultCount = countMatchesWithResults(matches);
-      if (blocked || !window.confirm(`⚠️ TURNIER ZURÜCKSETZEN\n\nEs werden ${resultCount} Ergebnis${resultCount === 1 ? '' : 'se'} gelöscht!\n\n` +
-        `Diese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?`)) { return; }
+      // @OB-017/@OB-014: gefährliche Rückfrage im Dialog der App, Fokus zuerst auf „Abbrechen“
+      const confirmed = await askConfirm({
+        title: t('resetTournament.title'),
+        message: t('resetTournament.message', { count: resultCount }),
+        variant: 'danger',
+        confirmText: t('resetTournament.confirm'),
+      });
+      if (!confirmed) { return; }
       const resetMatches = await resultsReset.reset(formData);
       if (resetMatches) { setFormData(prev => ({ ...prev, matches: resetMatches, updatedAt: new Date().toISOString() })); }
     });
-  }, [formData, resultsReset]);
+  }, [formData, resultsReset, askConfirm, t]);
 
   // Create draft tournament
   const createDraftTournament = useCallback((): Tournament => {
