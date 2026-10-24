@@ -13,6 +13,8 @@ export const displayList = {
     team: '3.6vh',
     /** Tabellenkopf und Seitenhinweis (mindestens 3 % der Bildhöhe) */
     head: '3vh',
+    /** „ursprünglich hh:mm“ und „voraussichtlich“ unter der Uhrzeit (B-27, @ZP-046; mindestens 3 % der Bildhöhe) */
+    timeNote: '3vh',
   },
   /** Abstand zwischen Überschrift und Liste */
   headingGap: '2vh',
@@ -25,6 +27,8 @@ export const displayList = {
   cellGap: '2vh',
   /** Spaltenbreiten in em der Zeilenschrift: Uhrzeit, Feld, Trenner/Stand */
   timeWidth: '3.4em',
+  /** Breite der Uhrzeit-Spalte, wenn eine Zeile „ursprünglich hh:mm“ trägt (alle Zeilen der Seite gleich, B-27) */
+  timeNoteWidth: '9.5em',
   fieldWidth: '5em',
   separatorWidth: '2.6em',
   /** Status-Punkt vor der Zeile im Spielplan */

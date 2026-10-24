@@ -5,7 +5,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
-import { fieldSchedule, pageOf, pagesFor } from '../slideContent';
+import { hasTimeNotes, fieldSchedule, pageOf, pagesFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -56,6 +56,7 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
             theme={theme}
             showScore={!ergebnisseAusgeblendet}
             showStatus
+            wideTime={hasTimeNotes(rows)}
           />
         ))}
       </div>

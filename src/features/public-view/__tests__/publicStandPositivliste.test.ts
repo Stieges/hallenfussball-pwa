@@ -58,4 +58,15 @@ describe('Stand-Speicher: Positivliste', () => {
     expect(generateFullSchedule(restored).allMatches.map((m) => m.id)).toEqual(generateFullSchedule(original).allMatches.map((m) => m.id));
     expect(restored.matches.map((m) => [m.id, m.scoreA, m.matchStatus])).toEqual(original.matches.map((m) => [m.id, m.scoreA, m.matchStatus]));
   });
+
+  it('@ZP-003 B-27 ein gespeicherter Stand behält die ursprüngliche Uhrzeit (Date, nicht Text), „ursprünglich“ ist nach dem Neuladen noch da', () => {
+    const storage = memory();
+    const t = buildLiveViewTournament();
+    const shifted = { ...t, matches: t.matches.map((m, i) => (i === 1 ? { ...m, scheduledTime: new Date(2026, 9, 10, 15, 40), originalStart: new Date(2026, 9, 10, 15, 30) } : m)) };
+    saveStand(storage, 'ABC123', { source: 'legacy', version: '1', day: '2026-10-10', tournament: shifted });
+    const restored = loadStand(storage, 'ABC123', '2026-10-10', 'legacy')?.stand.tournament.matches[1];
+    expect(restored?.originalStart).toBeInstanceOf(Date);
+    expect(restored?.originalStart?.getHours()).toBe(15);
+    expect(restored?.originalStart?.getMinutes()).toBe(30);
+  });
 });

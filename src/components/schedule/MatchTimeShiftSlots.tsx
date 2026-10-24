@@ -3,7 +3,9 @@
  * - `OriginalTimeNote`: klein „ursprünglich hh:mm“ unter der Anpfiffzeit, wenn die Uhrzeit um mindestens 1 Minute abweicht
  *   (@ZP-004, @ZP-010, @ZP-037). Die Uhrzeit liefert der Spielplan der Leitung über den Kontext.
  * - `MatchMenuSlot`: der ⋮-Knopf je Spiel („Ab hier verschieben“, @ZP-098); nur, wenn der Spielplan ihn anbietet.
- * Ohne Kontext (Zuschauer, PDF, andere Ansichten) erscheint nichts.
+ * - B-27: dieselbe Stelle trägt bei K.-o.-Spielen „voraussichtlich“ (@ZM-105). Die Zuschauer-Seite liefert beides aus der
+ *   gemeinsamen Ansicht (`ViewTimeNotes`), die Leitung aus ihrem Spielplan.
+ * Ohne Kontext (PDF, andere Ansichten) erscheint nichts.
  */
 import { useContext, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,14 +23,21 @@ const noteStyle: CSSProperties = {
 
 export function OriginalTimeNote({ matchId }: { matchId: string }) {
   const { t } = useTranslation('tournament');
-  const time = useContext(MatchTimeShiftContext)?.originalTimeOf(matchId);
-  if (time === undefined) {
+  const slots = useContext(MatchTimeShiftContext);
+  const time = slots?.originalTimeOf(matchId);
+  const tentative = slots?.tentativeOf?.(matchId) === true;
+  if (time === undefined && !tentative) {
     return null;
   }
   return (
-    <span style={noteStyle} data-testid={`match-original-${matchId}`}>
-      {t('timeShift.original', { time })}
-    </span>
+    <>
+      {tentative && <span style={noteStyle} data-testid={`match-tentative-${matchId}`}>{t('timeShift.tentative')}</span>}
+      {time !== undefined && (
+        <span style={noteStyle} data-testid={`match-original-${matchId}`}>
+          {t('timeShift.original', { time })}
+        </span>
+      )}
+    </>
   );
 }
 

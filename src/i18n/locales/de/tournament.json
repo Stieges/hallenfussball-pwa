@@ -1445,6 +1445,7 @@
     "button": "Zeiten verschieben",
     "listHint": "Über ⋮ am Spiel ab dort verschieben.",
     "original": "ursprünglich {{time}}",
+    "tentative": "voraussichtlich",
     "dialogTitle": "Zeiten verschieben",
     "close": "Schließen",
     "direction": "Richtung",

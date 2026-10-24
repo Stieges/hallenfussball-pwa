@@ -10,6 +10,7 @@ import { getFieldDisplayName } from '../../../utils/displayNames';
 import { resultFigures, tableResultExtra } from '../../../components/schedule/matchResult';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
+import { MonitorTimeCell } from './MonitorTimeCell';
 
 interface MonitorMatchRowProps {
   /** Das Spiel der Ansicht: Status, Seitentexte, Anstoß und Endstand kommen von dort (A-36c). */
@@ -20,10 +21,12 @@ interface MonitorMatchRowProps {
   showScore?: boolean;
   /** Abzeichen mit dem Wort des Zustands vorn (Spielplan, @OB-066, @ZM-071); Standard aus. */
   showStatus?: boolean;
+  /** Eine Zeile der Seite trägt einen Hinweis unter der Uhrzeit (`hasTimeNotes`): Spalte breiter (B-27) */
+  wideTime?: boolean;
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung (optional Ergebnis und Bezeichnung). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false }: MonitorMatchRowProps) {
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false, wideTime = false }: MonitorMatchRowProps) {
   const { t } = useTranslation('tournament');
   const colors = monitorThemes[resolveTheme(theme)];
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
@@ -63,9 +66,13 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
           {match.badge.kind === 'badge' && <MatchStatusBadge model={match.badge} size="display" tone={monitorBadgeTone(colors)} />}
         </div>
       )}
-      <div style={{ ...cell, fontWeight: cssVars.fontWeights.semibold, flex: `0 0 ${displayList.timeWidth}` }}>
-        {match.kickoff?.time ?? '–'}
-      </div>
+      <MonitorTimeCell
+        match={match}
+        color={colors.text}
+        noteColor={colors.textSecondary}
+        wide={wideTime}
+        style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
+      />
       <div style={{ ...cell, color: colors.textMuted, flex: `0 0 ${displayList.fieldWidth}` }}>
         {getFieldDisplayName(match.field, tournament)}
       </div>

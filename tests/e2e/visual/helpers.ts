@@ -98,6 +98,8 @@ export interface VisualMatchOverride {
   scoreA?: number;
   scoreB?: number;
   scheduledTime: string;
+  /** B-27: Uhrzeit beim ersten Anpfiff, wenn das Spiel danach verschoben wurde */
+  originalStart?: string;
   timerStartTime?: string;
   timerElapsedSeconds?: number;
 }
@@ -202,6 +204,7 @@ export function buildVisualTournament(overrides: {
       scoreB: m.scoreB,
       scheduledTime: m.scheduledTime,
       time: m.scheduledTime.slice(11, 16),
+      originalStart: m.originalStart,
       timerStartTime: m.timerStartTime,
       timerElapsedSeconds: m.timerElapsedSeconds,
     })),
