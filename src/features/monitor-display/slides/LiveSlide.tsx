@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayList, displaySpacing, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displaySpacing, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
@@ -9,6 +9,7 @@ import { LiveMatchDisplay } from '../../../components/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { toLiveMatch } from '../monitorMatch';
 import { monitorSideLabel, sideTeam } from '../matchSides';
+import { MonitorTimeNotes } from '../components/MonitorTimeCell';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -24,7 +25,6 @@ interface LiveSlideProps {
 
 export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId }: LiveSlideProps) {
   const { t } = useTranslation('monitor');
-  const { t: tt } = useTranslation('tournament');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -144,16 +144,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
                   marginTop: displaySpacing.contentLG,
                 }}>
                   {t('slides.live.kickoff')} {nextMatch.kickoff.time}
-                  {nextMatch.kickoffTentative && (
-                    <div data-testid="monitor-next-tentative" style={{ fontSize: displayList.fontSizes.timeNote, color: themeColors.textSecondary }}>
-                      {tt('timeShift.tentative')}
-                    </div>
-                  )}
-                  {nextMatch.originalKickoff && (
-                    <div data-testid="monitor-next-original" style={{ fontSize: displayList.fontSizes.timeNote, color: themeColors.textSecondary }}>
-                      {tt('timeShift.original', { time: nextMatch.originalKickoff.time })}
-                    </div>
-                  )}
+                  <MonitorTimeNotes match={nextMatch} color={themeColors.text} testIdPrefix="monitor-next" />
                 </div>
               )}
             </>

@@ -55,11 +55,6 @@ export function nextMatchList(view: TournamentView, matchCount: number | undefin
   return upcomingMatches(view, { count: matchCount ?? DEFAULT_SLIDE_CONFIG.matchCount ?? 3 });
 }
 
-/** Trägt eine Zeile einen Hinweis unter der Uhrzeit („ursprünglich“, „voraussichtlich“)? Dann sind alle Uhrzeit-Spalten breiter (B-27). */
-export function hasTimeNotes(rows: readonly MatchView[]): boolean {
-  return rows.some(m => m.originalKickoff !== undefined || m.kickoffTentative);
-}
-
 /** Finalrunde: die K.-o.-Spiele der Ansicht, in Anpfiff-Reihenfolge. */
 export function finalRoundMatches(view: TournamentView): MatchView[] {
   return view.matches.filter(m => m.phase === 'final').sort(compareKickoff);

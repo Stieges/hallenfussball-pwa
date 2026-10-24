@@ -5,7 +5,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { resolveTheme } from '../monitorDisplayHelpers';
-import { hasTimeNotes, nextMatchList, pageOf, pagesFor } from '../slideContent';
+import { nextMatchList, pageOf, pagesFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -50,7 +50,6 @@ export function NextMatchesSlide({ slide, tournament, view, theme, style, page =
               match={match}
               tournament={tournament}
               theme={theme}
-              wideTime={hasTimeNotes(rows)}
             />
           ))}
         </div>

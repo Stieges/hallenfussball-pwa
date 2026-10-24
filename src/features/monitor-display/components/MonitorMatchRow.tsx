@@ -21,12 +21,10 @@ interface MonitorMatchRowProps {
   showScore?: boolean;
   /** Abzeichen mit dem Wort des Zustands vorn (Spielplan, @OB-066, @ZM-071); Standard aus. */
   showStatus?: boolean;
-  /** Eine Zeile der Seite trägt einen Hinweis unter der Uhrzeit (`hasTimeNotes`): Spalte breiter (B-27) */
-  wideTime?: boolean;
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung (optional Ergebnis und Bezeichnung). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false, wideTime = false }: MonitorMatchRowProps) {
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false }: MonitorMatchRowProps) {
   const { t } = useTranslation('tournament');
   const colors = monitorThemes[resolveTheme(theme)];
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
@@ -68,14 +66,12 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
       )}
       <MonitorTimeCell
         match={match}
+        fieldName={getFieldDisplayName(match.field, tournament)}
         color={colors.text}
-        noteColor={colors.textSecondary}
-        wide={wideTime}
+        fieldColor={colors.textMuted}
+        noteColor={colors.text}
         style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
       />
-      <div style={{ ...cell, color: colors.textMuted, flex: `0 0 ${displayList.fieldWidth}` }}>
-        {getFieldDisplayName(match.field, tournament)}
-      </div>
       <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{monitorSideLabel(match.home)}</div>
       <div
         data-testid="monitor-match-separator"

@@ -61,20 +61,32 @@ describe('B-27 Monitor „Nächste Spiele“: ursprüngliche Uhrzeit', () => {
     expect(screen.queryByTestId('monitor-match-original')).toBeNull();
   });
 
-  it('@ZP-046 „ursprünglich“ ist mindestens 3 % der Bildhöhe hoch (Untergrenze der Folie), die Uhrzeit größer gesetzt', () => {
+  it('@ZP-046 Hinweis liegt nicht unter der Lesetext-Stufe der Zeile (3,6 % der Bildhöhe) und ist in voller Textfarbe gesetzt', () => {
+    naechste(mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' }));
+    const note = screen.getByTestId('monitor-match-original');
+    expect(parseFloat(note.style.fontSize)).toBeGreaterThanOrEqual(3.6);
+    expect(note.style.color).toBe(within(zeile('match-8')).getByTestId('monitor-match-time').style.color);
+  });
+
+  // Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN: @ZP-046 verlangt 9,4 % der Bildhöhe (Sehwinkel 16′), die Listen-Folien setzen
+  // Zeilen mit 3,6 % – erst das Paket „Monitor-Schriftstufen“ (Fern-Fassung) löst das. Bis dahin erwartet rot.
+  it.fails('@ZP-046 C-MONITOR-URSPRUENGLICH-ZU-KLEIN „ursprünglich“ ist mindestens 9,4 % der Bildhöhe hoch, die Uhrzeit deutlich größer', () => {
     naechste(mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' }));
     const note = parseFloat(screen.getByTestId('monitor-match-original').style.fontSize);
     const time = parseFloat(within(zeile('match-8')).getByTestId('monitor-match-time').style.fontSize);
-    expect(screen.getByTestId('monitor-match-original').style.fontSize).toBe(displayList.fontSizes.timeNote);
-    expect(note).toBeGreaterThanOrEqual(3);
+    expect(note).toBeGreaterThanOrEqual(9.4);
     expect(time).toBeGreaterThan(note);
   });
 
-  it('alle Zeilen der Seite haben gleich breite Uhrzeit-Spalten, sobald eine Zeile den Hinweis trägt', () => {
+  it('@ZM-087 die Uhrzeit-Spalte hat in jeder Zeile dieselbe feste Breite, mit und ohne Hinweis (Namensspalten bleiben)', () => {
+    const { unmount } = naechste(mitZeiten({ shown: '14:20' }, { shown: '14:40' }));
+    const ohne = [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-time"]')].map((el) => el.style.flex);
+    unmount();
     naechste(mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' }));
-    const widths = [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-time"]')].map((el) => el.style.flexBasis || el.style.flex);
-    expect(widths.length).toBeGreaterThan(1);
-    expect(new Set(widths).size).toBe(1);
+    const mit = [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-time"]')].map((el) => el.style.flex);
+    expect(ohne.length).toBeGreaterThan(1);
+    expect(ohne[0]).toContain(displayList.timeFieldWidth);
+    expect(mit).toEqual(ohne);
   });
 });
 

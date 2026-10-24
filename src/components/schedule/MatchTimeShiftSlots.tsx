@@ -14,7 +14,7 @@ import { MatchTimeShiftContext } from './matchTimeShiftContext';
 
 const noteStyle: CSSProperties = {
   display: 'block',
-  fontSize: cssVars.fontSizes.xs,
+  fontSize: cssVars.fontSizes.sm,
   fontWeight: cssVars.fontWeights.normal,
   color: cssVars.colors.textSecondary,
   fontVariantNumeric: 'tabular-nums',

@@ -13,8 +13,8 @@ export const displayList = {
     team: '3.6vh',
     /** Tabellenkopf und Seitenhinweis (mindestens 3 % der Bildhöhe) */
     head: '3vh',
-    /** „ursprünglich hh:mm“ und „voraussichtlich“ unter der Uhrzeit (B-27, @ZP-046; mindestens 3 % der Bildhöhe) */
-    timeNote: '3vh',
+    /** „ursprünglich hh:mm“ und „voraussichtlich“ unter der Uhrzeit (B-27): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
+    timeNote: '3.6vh',
   },
   /** Abstand zwischen Überschrift und Liste */
   headingGap: '2vh',
@@ -25,11 +25,9 @@ export const displayList = {
   rowPaddingX: '2vh',
   /** Abstand zwischen den Zellen einer Zeile */
   cellGap: '2vh',
-  /** Spaltenbreiten in em der Zeilenschrift: Uhrzeit, Feld, Trenner/Stand */
-  timeWidth: '3.4em',
-  /** Breite der Uhrzeit-Spalte, wenn eine Zeile „ursprünglich hh:mm“ trägt (alle Zeilen der Seite gleich, B-27) */
-  timeNoteWidth: '9.5em',
-  fieldWidth: '5em',
+  /** Spalte Uhrzeit über Feld (und Hinweisen, B-27): feste Breite in em der Zeilenschrift, früher Uhrzeit 3,4 em + Feld 5 em */
+  timeFieldWidth: '8.4em',
+  /** Trenner/Stand */
   separatorWidth: '2.6em',
   /** Status-Punkt vor der Zeile im Spielplan */
   markerSize: '1.6vh',
