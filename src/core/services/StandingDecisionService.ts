@@ -19,6 +19,7 @@ import { sortedIds, decisionBasis, type DecisionDraft, type DecisionErrorCode } 
 import { validateDraft } from '../standings/validateDraft';
 import { tableInput } from '../standings/tournamentTable';
 import { decidedBy } from '../standings/decisionLog';
+import { checkedVersion } from '../repositories/confirmedVersion';
 import type { RecordDecisionRejection, RecordDecisionRequest } from '../repositories/groupCompletionCloud';
 
 export type DecideResult =
@@ -108,13 +109,17 @@ export class StandingDecisionService {
     return { ok: false, code: 'STALE' };
   }
 
-  /** Schreibt über `record_standing_decision` gegen die gelesene Version. */
+  /**
+   * Schreibt über `record_standing_decision` gegen die zuletzt vom Server bestätigte Version der gelesenen Kopie
+   * (`checkedVersion`, Befund C-ENTSCHEIDUNG-GEGEN-ANZEIGEVERSION, @W2A-060): nie gegen die lokal gestempelte Version – die
+   * kann nach einer fremden Änderung dieselbe Zahl tragen wie der Server und fremde Entscheidungen still überschreiben.
+   */
   private async write(tournament: Tournament, request: RecordDecisionRequest): Promise<WriteOutcome> {
     if (this.repository.recordStandingDecision === undefined) {
       throw new RepositoryError('recordStandingDecision', 'Repository kann keine Entscheidungen speichern');
     }
     try {
-      const result = await this.repository.recordStandingDecision(tournament.id, request, tournament.version ?? 0);
+      const result = await this.repository.recordStandingDecision(tournament.id, request, checkedVersion(tournament) ?? 0);
       if (result.status === 'ok') {
         return 'ok';
       }
