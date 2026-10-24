@@ -144,7 +144,12 @@ async function zeitplanVorziehen({ asRole, browser }: StepContext): Promise<void
   await expectPageAnchor(ownerPage.getByRole('button', { name: 'Spielplan bearbeiten' }), 'Spielplan der Turnierleitung');
   await expectSollMarker(ownerPage, 'schedule-shift-button');
   await ownerPage.getByTestId('schedule-shift-button').click();
-  await expect(ownerPage.getByText('Spiel 1 beginnt um 16:15 statt 16:30 · 15 Spiele rücken 15 Minuten vor · neues Ende 18:45')).toBeVisible({ timeout: 5000 });
+  // B-26: „ab Spiel 1“, „Vorziehen“, „15 Minuten“ (ein Feld: kein Feldwahl-Schritt, Mockup E4)
+  await ownerPage.getByTestId('time-shift-mode-match').click();
+  await ownerPage.getByTestId('time-shift-from-match').selectOption(spiele[0].id);
+  await ownerPage.getByTestId('time-shift-direction-earlier').click();
+  await ownerPage.getByTestId('time-shift-quick-15').click();
+  await expect(ownerPage.getByTestId('time-shift-summary')).toContainText('Spiel 1 beginnt um 16:15 statt 16:30 · 15 Spiele rücken 15 Minuten vor · neues Ende 18:45', { timeout: 5000 });
   await ownerPage.getByRole('button', { name: 'Übernehmen' }).click();
   await expect.poll(async () => (await fetchNikolausSpiele(ZWILLING)).map((s) => s.scheduled_start), { timeout: 10000 }).toEqual(
     spiele.map((_, i) => `${String(16 + Math.floor((15 + i * 10) / 60)).padStart(2, '0')}:${String((15 + i * 10) % 60).padStart(2, '0')}:00`)
