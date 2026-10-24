@@ -11,7 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, TournamentGoneError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, toOriginImmutableError } from '../errors';
+import { CloudReadAbortedError, OptimisticLockError, TeamStillReferencedError, TournamentGoneError, RepositoryError, AuthenticationError, UnreadableResponseError, isAbortError, isScheduleTimeRejected, toOriginImmutableError } from '../errors';
 import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import type { Database } from '../../types/supabase';
 import type { BracketLogEntry } from '../../types/tournament';
@@ -589,11 +589,14 @@ export class SupabaseRepository implements ITournamentRepository {
         for (const { id, error } of errors) { console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1'); }
         const immutable = errors.map((r) => toOriginImmutableError(r.id, r.error)).find((e) => e !== undefined);
         if (immutable) { throw immutable; } // A-36a: HF002 nicht transient, Muster TeamStillReferencedError
+        // R8: HF005 (Uhrzeit eines angepfiffenen Spiels / Vorziehen in die Vergangenheit) bleibt erkennbar -> „nicht übernommen“
+        const scheduleRejected = errors.find((r) => isScheduleTimeRejected(r.error));
         throw new RepositoryError(
           'saveMatches',
           `Failed to update ${errors.length} match(es): ${errors
             .map((e) => `${e.id}: ${e.error?.message ?? `0 rows updated (expected 1, got ${e.updatedCount})`}`)
-            .join('; ')}`
+            .join('; ')}`,
+          scheduleRejected?.error ?? undefined
         );
       }
     }
