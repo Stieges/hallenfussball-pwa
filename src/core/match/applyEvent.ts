@@ -18,6 +18,7 @@ import { applyAmend } from './handlers/amend';
 import { AMENDABLE_EVENT_TYPES, detailsFromPayload } from './details';
 import { applyCard, applyFoul, applyGoal, applySubstitution, applyTimePenalty } from './handlers/records';
 import { applyRetract } from './handlers/retract';
+import { finishedReviewCopy } from './handlers/reviewCopy';
 import { runEndCheck } from './handlers/endcheck';
 import { applySectionEnd, applySectionStart } from './handlers/sections';
 import { applyShootoutEnd, applyShootoutKick } from './handlers/shootout';
@@ -180,7 +181,12 @@ export function applyEvent(state: MatchState, event: EngineEvent, ctx: MatchCont
     return { status: 'noop', state };
   }
 
-  const row = findTransition(state.status, event.type);
+  // A-35 (@FU-095, @FU-116): Kopie eines übernommenen Klärungseintrags in ein beendetes Spiel (handlers/reviewCopy.ts).
+  const copy = finishedReviewCopy(state, event);
+  if (copy?.status === 'rejected') {
+    return { status: 'rejected', code: copy.code, detail: copy.detail };
+  }
+  const row = copy?.row ?? findTransition(state.status, event.type);
   if (!row) {
     return {
       status: 'rejected',

@@ -173,8 +173,9 @@ export function mapLiveMatchFromSupabase(
     : undefined;
 
   // Sort events by timestamp
+  // A-35 (@FU-038): ein Eintrag der Klärungsliste (review_state 'pending') zählt nicht und ist kein Eintrag des Spiels.
   const sortedEvents = [...events]
-    .filter((e) => !e.is_deleted)
+    .filter((e) => !e.is_deleted && (e.review_state ?? null) === null)
     .sort((a, b) => a.timestamp_seconds - b.timestamp_seconds);
 
   return {

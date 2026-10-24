@@ -189,6 +189,20 @@ describe('mapLiveMatchFromSupabase', () => {
     expect(liveMatch.events[1].id).toBe('e3');
   });
 
+  // A-35 (@FU-038 „Dann ist das Tor nicht im Spielstand“, @FU-017, @HE-056): ein Eintrag in der Klärungsliste
+  // (review_state 'pending') zählt nicht und erscheint nicht als Eintrag des Spiels; erst die Kopie nach „Übernehmen“.
+  it('@FU-038 zeigt einen Eintrag der Klärungsliste nicht als Eintrag des Spiels (Gegenbeispiel: normaler Eintrag bleibt)', () => {
+    const events = [
+      createEventRow({ id: 'tor-tom-nach-uebernahme', timestamp_seconds: 60, event_format: 1, review_state: 'pending' }),
+      createEventRow({ id: 'tor-olli', timestamp_seconds: 90, event_format: 1, review_state: null }),
+      createEventRow({ id: 'tor-uebernommen', timestamp_seconds: 120, event_format: 1, target_event_id: 'tor-tom-nach-uebernahme' }),
+    ];
+
+    const liveMatch = mapLiveMatchFromSupabase(createMatchRow(), events, new Map<string, TeamRow>());
+
+    expect(liveMatch.events.map((event) => event.id)).toEqual(['tor-olli', 'tor-uebernommen']);
+  });
+
   it('parses live_state JSONB', () => {
     const matchRow = createMatchRow({
       match_status: 'running',

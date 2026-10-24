@@ -81,7 +81,8 @@
 # local-db-apply.sh und die CI-Tests spielen jede Migration weiter ein. Für jede gelistete Migration:
 #   (a) sie wird beim Nachspielen übersprungen,
 #   (b) ihre Rechte-Assertions (Zuordnung fest in pending_assertions_for() unten, kein Namensraten) werden ausgelassen,
-#   (c) role_permissions live wird gegen rolePermissions.json aus <commit-vorher> verglichen (`git show`),
+#   (c) role_permissions live wird gegen rolePermissions.json aus <commit-vorher> verglichen (`git show`), ebenso
+#       match_transitions live gegen src/core/match/matchTransitions.json aus <commit-vorher> (c2),
 #   (d) ist die Frist überschritten (heute > Frist, UTC), bricht der Lauf hart ab,
 #   (e) jeder Lauf druckt, was ausgenommen ist.
 # Nach dem Einspielen entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
@@ -192,6 +193,9 @@ pending_assertions_for() {
       ;;
     20261110_010_standing_decision_null_version.sql)
       # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
+      ;;
+    20261117_005_klaerungsliste.sql)
+      echo "klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"
       ;;
     *)
       return 1
@@ -671,6 +675,12 @@ PRIVILEGE_ASSERTION_NAMES=(
   # B-48b (20261113_101_monitor_heartbeat_wake_lock.sql): Lebenszeichen mit Kennung als Text, Pruefung gegen config.monitors.
   "monitor-heartbeat-rpc-checks-config-monitors"
   "monitor-heartbeat-key-per-tournament-wake-lock"
+  # A-35 (20261117_005_klaerungsliste.sql): Klaerungsliste am Server.
+  "klaerungsliste-tables-rls-no-client-writes"
+  "klaerungsliste-select-policy"
+  "klaerungsliste-helpers-no-client-execute"
+  "klaerungsliste-rpc-definer-authenticated-only"
+  "klaerungsliste-append-routes-reviews"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
@@ -801,8 +811,24 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
     2>"$WORKDIR/match_transitions_live.log" | sort)" \
     || { echo "::error::Konnte public.match_transitions nicht live lesen (ci_schema_reader):" >&2
          cat "$WORKDIR/match_transitions_live.log" >&2; exit 1; }
+  TRANSITIONS_REL_PATH="src/core/match/matchTransitions.json"
+  TRANSITIONS_SOURCE_FILE="$REPO_ROOT/$TRANSITIONS_REL_PATH"
+  if [[ -n "$PENDING_JSON_COMMIT" ]]; then
+    # PENDING-LIVE (c2), wie (c): live stehen noch die Uebergaenge VOR der Migration -- Vergleich gegen die JSON aus
+    # <commit-vorher> (z. B. 20261117_005 bringt REVIEW_ACCEPT/REVIEW_DISCARD erst beim Einspielen).
+    if ! git -C "$REPO_ROOT" cat-file -e "$PENDING_JSON_COMMIT^{commit}" 2>/dev/null; then
+      git -C "$REPO_ROOT" fetch --quiet --no-tags --depth=1 origin "$PENDING_JSON_COMMIT" >/dev/null 2>&1 || true
+    fi
+    TRANSITIONS_SOURCE_FILE="$WORKDIR/matchTransitions.pending-base.json"
+    if ! git -C "$REPO_ROOT" show "$PENDING_JSON_COMMIT:$TRANSITIONS_REL_PATH" > "$TRANSITIONS_SOURCE_FILE" 2>"$WORKDIR/git_show_transitions.log"; then
+      echo "::error::PENDING-LIVE: $TRANSITIONS_REL_PATH aus Commit $PENDING_JSON_COMMIT nicht lesbar:" >&2
+      cat "$WORKDIR/git_show_transitions.log" >&2
+      exit 1
+    fi
+    echo "PENDING-LIVE: Vergleichsstand $TRANSITIONS_REL_PATH aus Commit $PENDING_JSON_COMMIT"
+  fi
   JSON_MATCH_TRANSITIONS="$(jq -r '.transitions[] | [.from,.type,.actor,.to] | join("|")' \
-    "$REPO_ROOT/src/core/match/matchTransitions.json" | sort)"
+    "$TRANSITIONS_SOURCE_FILE" | sort)"
   if [[ "$DB_MATCH_TRANSITIONS_LIVE" == "$JSON_MATCH_TRANSITIONS" ]]; then
     ROW_COUNT="$(wc -l <<<"$JSON_MATCH_TRANSITIONS" | tr -d ' ')"
     echo "Gleichlauf grün: match_transitions (live) und matchTransitions.json stimmen überein ($ROW_COUNT Zeilen)."

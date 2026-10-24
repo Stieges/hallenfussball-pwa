@@ -20,7 +20,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { expectEngineMatchRunningUi, fetchUserIdByEmail, newRoleContext, openCockpit } from './engineHelpers';
+import { expectEngineMatchRunningUi, fetchReviewRows, fetchUserIdByEmail, newRoleContext, openCockpit } from './engineHelpers';
 import { enterGoal, fetchFailedMutationTypes, fetchMatchRow, fetchQueuedMutationTypes, newFreshContext, readSessionAccessToken, safeCleanup } from './helpers';
 import { restAsRole, serviceRest } from './restAsRole';
 import { E2E_DRAFT_CUP_ID, E2E_LIVE_CUP_ID, E2E_USERS } from './testData';
@@ -401,9 +401,11 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       await expect(device.page.getByText(kopie.title).first()).toBeVisible({ timeout: 15000 });
 
       // @HE-087: Betreiber trägt Maria aus dem Original aus; das schon offene Gerät kann nichts mehr eintragen.
-      // Zwei gültige Ergebnisse (review-ca67 A4): der Tor-Knopf ist schon weg (Rechte neu gelesen) – oder Maria tippt, und das
-      // Gerät zeigt „nicht übernommen“ bzw. nach mindestens 10 s noch „wartet“. Der kurze „wartet“-Zustand direkt nach dem
-      // Tippen zählt nicht. In beiden Fällen bleibt der Spielstand am Server über die ganze Frist 1:0.
+      // Gültige Ergebnisse (review-ca67 A4): der Tor-Knopf ist schon weg (Rechte neu gelesen) – oder Maria tippt, und das
+      // Gerät zeigt „nicht übernommen“ bzw. nach mindestens 10 s noch „wartet“ – oder (A-35, @HE-080/@FU-017: erste
+      // Verbindung nach dem Entzug) der Server legt das Tor „zur Klärung“ in die Klärungsliste (Grund RIGHTS_REVOKED,
+      // Konto Maria) und es zählt nicht. Der kurze „wartet“-Zustand direkt nach dem Tippen zählt nicht. In allen Fällen
+      // bleibt der Spielstand am Server über die ganze Frist 1:0.
       await openCockpit(device.page, original.id, original.matchId);
       await expectEngineMatchRunningUi(device.page);
       const austragen = runVorlage('3', original.id, email);
@@ -414,6 +416,9 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
         const getippt = Date.now();
         await expect.poll(async () => {
           if (await device.page.getByTestId('sync-status-rejected').count() > 0) { return 'nicht übernommen'; }
+          const zurKlaerung = (await fetchReviewRows(original.matchId))
+            .some((row) => row.kind === 'review' && row.reason === 'RIGHTS_REVOKED' && row.user_id === id);
+          if (zurKlaerung) { return 'zur Klärung'; }
           const wartet = await device.page.getByTestId('engine-outbox-waiting').count() > 0;
           return wartet && Date.now() - getippt >= 10_000 ? 'wartet' : 'offen';
         }, { message: 'der Server übernimmt das Tor nicht, das Gerät zeigt es', timeout: 25000, intervals: [1000] }).not.toBe('offen');
