@@ -100,8 +100,10 @@ async function strafstossEintragen({ asRole }: StepContext): Promise<void> {
 
   // @W2A-060: Maria speichert danach – nicht angenommen, der Hinweis nennt Olli; Ollis Eintrag gilt weiter
   await mariasDialog.getByTestId('group-close-confirm').click();
-  const hinweis = maria.locator('[data-testid="group-conflict"], [data-testid="group-decided-elsewhere"], [data-testid="group-already"]');
-  await expect(hinweis, 'Maria sieht, dass und von wem schon entschieden wurde').toContainText('Olli Owner hat schon', { timeout: SOLL_TIMEOUT_MS });
+  // Je nachdem, ob Marias Gerät Ollis Entscheidung schon per Realtime kennt: der Dialog zeigt „Schon entschieden von …“ (`tie-seen`), sonst lehnt
+  // der Server ab und der Hinweis nennt „… hat schon …“ – beides nennt Olli
+  const hinweis = maria.locator('[data-testid="tie-seen"], [data-testid="group-conflict"], [data-testid="group-decided-elsewhere"], [data-testid="group-already"]');
+  await expect(hinweis, 'Maria sieht, dass und von wem schon entschieden wurde').toContainText(/Schon entschieden von Olli Owner|Olli Owner hat schon/, { timeout: SOLL_TIMEOUT_MS });
   await expect.poll(async () => (await tabelleTurnierleitung(seite)).slice(2, 4).map((n) => n.replace(/\s*Strafstoßschießen.*$/s, '').trim()), { message: 'Ollis 4:3 gilt', timeout: SOLL_TIMEOUT_MS }).toEqual(['DJK Otting', 'TSV Petting']);
 }
 

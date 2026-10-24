@@ -10,6 +10,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { OpenTieBlock } from '../../../core/standings/tieViews';
 import { checkDraftFields, DECISION_REASON_MAX_LENGTH, type DecisionDraft, type DecisionErrorCode } from '../../../core/standings/decisions';
 import { validateDraft } from '../../../core/standings/validateDraft';
+import { decidedBy } from '../../../core/standings/decisionLog';
 import { useStandingTie } from './standingTieContext';
 
 export type TieStep = 'choice' | 'shootout' | 'order' | 'seen';
@@ -89,6 +90,13 @@ export function useTieDraft({ tournament, block, mode, onDraft, onClose }: UseTi
     }
     if (mode === 'withClose') {
       const check = validateDraft(draft, tournament);
+      if (!check.ok && check.code === 'ALREADY_DECIDED') {
+        // @W2A-060 (R2 PR 2): kam die Entscheidung einer anderen Person schon an (Neuladen während des Dialogs), sieht man – wie im
+        // Tabellen-Weg – dass und von wem schon entschieden wurde; der eigene Eintrag wird nicht gespeichert
+        setSeenBy(check.decisionId === undefined ? undefined : decidedBy(tournament, check.decisionId)?.name);
+        setStep('seen');
+        return;
+      }
       if (!check.ok) {
         setError(check.code);
         return;

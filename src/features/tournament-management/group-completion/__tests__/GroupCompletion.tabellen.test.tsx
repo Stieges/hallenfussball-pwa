@@ -41,6 +41,7 @@ import { TabellenTab } from '../../TabellenTab';
 import { StandingTieProvider } from '../../standings/StandingTieProvider';
 import { GroupCompletionProvider } from '../GroupCompletionProvider';
 import { groupTestId } from '../groupTestId';
+import { draftToDecision } from '../../../../core/services/groupCompletionPlan';
 
 interface FakeRepo {
   completeGroup: ReturnType<typeof vi.fn<(tournamentId: string, request: CompleteGroupRequest) => Promise<CompleteGroupResult>>>;
@@ -817,6 +818,22 @@ describe('@W2A-060 die erste Entscheidung gilt, die zweite Person sieht von wem'
     await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
     await userEvent.click(screen.getByTestId('group-close-confirm'));
     expect(await screen.findByTestId('group-conflict')).toHaveTextContent('Olli hat schon anders entschieden');
+  });
+
+  it('@W2A-060 kurz danach (R2 PR 2): Ollis Entscheidung ist per Neuladen schon auf Marias Gerät → der Dialog zeigt „Schon entschieden von Olli“, nichts gespeichert', async () => {
+    const repo = fakeRepo();
+    const ohne = mitVerlauf(gruppeA(), []);
+    const { neuGeladen } = await zeige(ohne, { repo });
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    const olli = draftToDecision(ohne, { groupId: 'A', teamIds: [HC.sued, HC.west], order: [HC.west, HC.sued], kind: 'shootout', shootout: { winner: 4, loser: 3 } }, 'e-olli');
+    const { reason: _r, ...entscheidung } = olli;
+    neuGeladen({ ...mitVerlauf(gruppeA(), [{ ...eintrag(1, 'standing_decision', 'Olli'), detail: { id: 'e-olli', teamIds: [HC.sued, HC.west] } }]), standingDecisions: [entscheidung] });
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    expect(await screen.findByTestId('tie-seen')).toHaveTextContent('Schon entschieden von Olli');
+    expect(repo.completeGroup).not.toHaveBeenCalled();
   });
 
   it('@W2A-060 Gegenbeispiel (Review #382 M3): alter Abschluss von Maria, danach wieder geöffnet → nie „Maria hat …“, sondern allgemein', async () => {
