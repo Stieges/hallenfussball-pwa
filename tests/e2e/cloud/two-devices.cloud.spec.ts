@@ -21,7 +21,9 @@ import {
   engineCupTarget,
   expectEngineMatchRunningUi,
   expectSeededEngineMatch,
+  fetchCountedEngineRows,
   fetchEngineRows,
+  fetchReviewRows,
   fetchUserIdByEmail,
   newRoleContext,
   openCockpit,
@@ -48,6 +50,9 @@ import {
 } from './testData';
 
 const owner3sMs = 3000;
+const APPEND_RPC_PATTERN = '**/rest/v1/rpc/append_match_events';
+/** Gültige UUID, die in keinem Spiel vorkommt: der Server lehnt den Eintrag als ungültig ab (wie Cup TEILABLEHNUNG). */
+const UNKNOWN_TEAM_ID = '00000000-0000-4000-8000-000000000bad';
 
 function cup(slug: EngineCupSlug) {
   return { ids: engineCupIds(slug), target: engineCupTarget(slug) };
@@ -253,7 +258,10 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     }
   });
 
-  test('Cup REJECT: ein vom Server abgelehnter Eintrag ist sichtbar, zählt nicht, lässt sich mit "Verstanden" abhaken (C-SYNC Teil A)', async ({ asRole, browser }) => {
+  // @FU-130 (A-35, Daniel 23.10.): „Gegeben Toms Gerät verliert das Netz, während er steuert, und Tom trägt ein Tor ein /
+  // Und Olli pfeift ab / Wenn Toms Gerät wieder Netz hat / Dann steht Toms Tor in Ollis Klärungsliste mit ‚nach dem Ende
+  // angekommen‘ und zählt noch nicht“. Vorher erwartete dieser Test die Ablehnung (C-SYNC Teil A, jetzt Cup VERSTANDEN).
+  test('@FU-130 Cup REJECT: Tor offline, Abpfiff, wieder online – das Tor liegt zur Klärung (nach dem Ende angekommen), zählt nicht, wird nicht als abgelehnt gezeigt', async ({ asRole, browser }) => {
     const { ids, target } = cup('REJECT');
     const seededRows = await expectSeededEngineMatch(target);
     const { context: helperContext, page: helperPage } = await newRoleContext(browser, 'helper');
@@ -263,7 +271,8 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await helperContext.setOffline(true);
       await enterGoal(helperPage, 'home');
       // Anker: das Tor wartet im Ausgang, nichts ist abgelehnt.
-      await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '1', { timeout: 5000 });
+      const helperStatus = helperPage.locator('[data-testid="sync-status"]');
+      await expect(helperStatus).toHaveAttribute('data-pending', '1', { timeout: 5000 });
       await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
 
       const ownerPage = await asRole('owner');
@@ -273,12 +282,45 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await expect.poll(() => fetchMatchRow(ids.matchId).then((row) => row.match_status), { timeout: 10000 }).toBe('finished');
 
       await helperContext.setOffline(false);
+      // Toms Tor ist angekommen und steht in der Klärungsliste mit „nach dem Ende angekommen“ (AFTER_END) ...
+      await expect.poll(async () => (await fetchReviewRows(ids.matchId)).map((row) => [row.kind, row.reason]), { timeout: 15000 })
+        .toEqual([['review', 'AFTER_END']]);
+      // ... und hat den Ausgang verlassen, ohne als „nicht übernommen“ zu gelten.
+      await expect(helperStatus).toHaveAttribute('data-pending', '0', { timeout: 15000 });
+      await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
+
+      // „und zählt noch nicht“: gezählt ist nur der Abpfiff dazugekommen, der Stand bleibt 1:0.
+      const counted = await fetchCountedEngineRows(ids.matchId);
+      expect(counted.length).toBe(seededRows + 1);
+      expect(counted.filter((row) => row.type === 'GOAL')).toHaveLength(1);
+      const row = await fetchMatchRow(ids.matchId);
+      expect([row.score_a, row.score_b]).toEqual([1, 0]);
+    } finally {
+      await safeCleanup('Helfer-Context schließen (REJECT)', () => helperContext.close());
+    }
+  });
+
+  // C-SYNC Teil A (@FU-011): ein Eintrag, den der Server ablehnt, ist auf dem Gerät sichtbar, zählt nicht und lässt sich mit
+  // „Verstanden“ abhaken. Auslöser: das Tor trägt ein Team, das es im Spiel nicht gibt (wie Cup TEILABLEHNUNG) -- das lehnt
+  // der Server weiterhin ab (keine Klärung).
+  test('@FU-011 Cup VERSTANDEN: ein vom Server abgelehnter Eintrag ist sichtbar, zählt nicht, lässt sich mit "Verstanden" abhaken (C-SYNC Teil A)', async ({ browser }) => {
+    const { ids, target } = cup('VERSTANDEN');
+    const seededRows = await expectSeededEngineMatch(target);
+    const { context: helperContext, page: helperPage } = await newRoleContext(browser, 'helper');
+    try {
+      await openCockpit(helperPage, ids.tournamentId, ids.matchId);
+      await expectEngineMatchRunningUi(helperPage);
+      await helperPage.route(APPEND_RPC_PATTERN, async (route) => {
+        const body = route.request().postDataJSON() as { p_events: Array<Record<string, unknown>> } & Record<string, unknown>;
+        const tampered = { ...body, p_events: body.p_events.map((event) => (event.type === 'GOAL' ? { ...event, teamId: UNKNOWN_TEAM_ID } : event)) };
+        await route.continue({ postData: JSON.stringify(tampered) });
+      });
+      await enterGoal(helperPage, 'home');
       await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toBeVisible({ timeout: 10000 });
 
-      // Gegenbeispiel in der DB: das Tor des Helfers wurde NICHT übernommen (nur MATCH_END kam dazu).
-      const rows = await fetchEngineRows(ids.matchId);
-      expect(rows.length).toBe(seededRows + 1);
-      expect(rows.filter((row) => row.type === 'GOAL')).toHaveLength(1);
+      // Gegenbeispiel in der DB: das Tor wurde nicht gespeichert, auch nicht zur Klärung; der Stand bleibt 1:0.
+      expect((await fetchEngineRows(ids.matchId)).length).toBe(seededRows);
+      expect(await fetchReviewRows(ids.matchId)).toEqual([]);
       const row = await fetchMatchRow(ids.matchId);
       expect([row.score_a, row.score_b]).toEqual([1, 0]);
 
@@ -289,7 +331,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await expect(helperPage.locator('[data-testid="sync-status-rejected"]')).toHaveCount(0);
       await expect(helperPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
     } finally {
-      await safeCleanup('Helfer-Context schließen (REJECT)', () => helperContext.close());
+      await safeCleanup('Helfer-Context schließen (VERSTANDEN)', () => helperContext.close());
     }
   });
 

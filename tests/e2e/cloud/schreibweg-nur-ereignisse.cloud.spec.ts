@@ -1,6 +1,7 @@
 /**
  * tests/e2e/cloud/schreibweg-nur-ereignisse.cloud.spec.ts — A-08g: der Server nimmt Spielstand nur über
- * Ereignisse an (@FU-084, @FU-085) und Nachträge nach dem Abpfiff (@FU-056). Echter Weg: Oberfläche
+ * Ereignisse an (@FU-084, @FU-085) und Nachträge nach dem Abpfiff (@FU-056). Seit A-35 (20261117_005) legt er ein Tor
+ * nach dem Ende zur Klärung ab statt es abzulehnen (@FU-084 präzisiert, @FU-116 Z. 2) -- es zählt trotzdem nicht. Echter Weg: Oberfläche
  * (Nachtrag), RPC und direkte REST-Aufrufe mit dem Schlüssel von Tom (Helfer) bzw. Olli (Eigentümer),
  * Gegenprobe per Service-Role.
  *
@@ -14,7 +15,9 @@ import {
   appendAsRole,
   engineCupTarget,
   expectSeededEngineMatch,
+  fetchCountedEngineRows,
   fetchEngineRows,
+  fetchReviewRows,
   openCockpit,
   type AppendAsRoleEvent,
 } from './engineHelpers';
@@ -51,14 +54,33 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Engine-Cups nur auf cloud-desktop.');
   });
 
-  test('@FU-084 beendetes Spiel: ein Tor über die Schnittstelle wird abgelehnt, der Spielstand bleibt', async () => {
-    const ids = engineCupIds('SCHREIBWEG');
-    const seeded = await expectSeededEngineMatch(engineCupTarget('SCHREIBWEG'));
-    const answer = await appendAsRole('helper', ids.matchId, [goal(ids.homeTeamId, 61000)]);
-    expect(answer.results[0].status).toBe('rejected');
-    test.info().annotations.push({ type: 'Ablehnungsgrund', description: String(answer.results[0].code) });
+  // @FU-084 (präzisiert 24.10.): „Gegeben Spiel 7 ist beendet / Wenn ein Gerät unter Umgehung der App ein Tor für Spiel 7
+  // an die Datenbank sendet / Dann zählt das Tor nicht, und der Spielstand bleibt unverändert / Und es landet höchstens als
+  // Eintrag ‚zur Klärung‘ in der Klärungsliste der Turnierleitung (@FU-116, @FU-130)“. Eigener Cup, weil der
+  // Klärungseintrag bleibt (Engine-Zeilen sind unlöschbar, A-08h).
+  test('@FU-084 beendetes Spiel: ein Tor über die Schnittstelle zählt nicht, der Spielstand bleibt, höchstens ein Klärungseintrag', async () => {
+    const ids = engineCupIds('SCHREIBWEGENDE');
+    const seeded = await expectSeededEngineMatch(engineCupTarget('SCHREIBWEGENDE'));
+    const tor = goal(ids.homeTeamId, 61000);
+    const answer = await appendAsRole('helper', ids.matchId, [tor]);
+    test.info().annotations.push({ type: 'Antwort', description: `${answer.results[0].status} ${String(answer.results[0].code)}` });
+
+    // Dann zählt das Tor nicht, und der Spielstand bleibt unverändert.
+    expect(answer.results[0].status).not.toBe('accepted');
+    expect(answer.results[0].status === 'rejected' || answer.results[0].status === 'review').toBe(true);
     await expectScore(ids.matchId, 1, 1, 'finished');
-    expect((await fetchEngineRows(ids.matchId)).length).toBe(seeded);
+    expect((await fetchCountedEngineRows(ids.matchId)).length).toBe(seeded);
+
+    // Und es landet höchstens als Eintrag „zur Klärung“ in der Klärungsliste (nach dem Ende angekommen, @FU-116 Z. 2).
+    const reviews = await fetchReviewRows(ids.matchId);
+    if (answer.results[0].status === 'review') {
+      expect(answer.results[0].code).toBe('AFTER_END');
+      expect(reviews.map((row) => [row.event_id, row.kind, row.reason])).toEqual([[tor.id, 'review', 'AFTER_END']]);
+      expect((await fetchEngineRows(ids.matchId)).length).toBe(seeded + 1);
+    } else {
+      expect(reviews).toEqual([]);
+      expect((await fetchEngineRows(ids.matchId)).length).toBe(seeded);
+    }
   });
 
   test('@FU-084 Gegenbeispiel: laufendes Spiel nimmt dasselbe Tor an (die Ablehnung hängt am Zustand)', async () => {
