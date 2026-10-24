@@ -731,12 +731,25 @@ run_probes() {
   q "BEGIN; SET LOCAL app.lifecycle_write = 'on'; UPDATE public.tournaments SET lifecycle_status = 'fixed', finished_at = NULL WHERE id = '$T_CUP'; COMMIT;" >/dev/null
 }
 
+# after_assertions <Dateiname> -- Rechte-Assertion-Namen einer Migration laut Zuordnung in db-drift-check.sh (leer, wenn keine).
+after_assertions() {
+  awk -v pat="    $1)" '$0 == pat {f = 1; next} f && /echo "/ {sub(/^[^"]*"/, ""); sub(/".*$/, ""); print; exit} f && /;;/ {exit}' \
+    "$REPO_ROOT/scripts/db-drift-check.sh"
+}
 # run_assertions -- Rechte-Assertions als ci_schema_reader; neue Namen; Namensliste = db-drift-check.sh.
 A35_ASSERTIONS="klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"
 run_assertions() {
   local priv names_sql names_sh a
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # Assertions spaeterer Migrationen (AFTER, z. B. 20261117_104) laufen hier noch nicht -- ihre Namen aus der Zuordnung
+  # in db-drift-check.sh auslassen; sie werden nach dem Einspielen von AFTER am Ende geprueft.
+  local later f n
+  later=""
+  for f in ${AFTER[@]+"${AFTER[@]}"}; do
+    n="$(after_assertions "$(basename "$f")")"
+    later="$later $n"
+  done
+  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE "^($(echo $later | tr ' ' '|'))\\|" || true)"
   for a in $A35_ASSERTIONS; do
     check S "Rechte-Assertion: $a vorhanden und |t" "$a|t" "$(grep -E "^$a\|" <<<"$priv" || true)"
   done
@@ -968,6 +981,10 @@ for f in ${AFTER[@]+"${AFTER[@]}"}; do
   psql_stdin < "$f"
   echo "OK    spaetere Migration laeuft: $(basename "$f")" >&2
 done
+if [[ ${#AFTER[@]} -gt 0 ]]; then
+  PRIV_END="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || PRIV_END="nicht ausfuehrbar: $PRIV_END"
+  check S "nach den spaeteren Migrationen: Rechte-Assertion keine Zeile |f" "" "$(grep -v '|t$' <<<"$PRIV_END" || true)"
+fi
 
 summary
 echo
