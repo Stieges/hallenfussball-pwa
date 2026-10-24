@@ -6,15 +6,15 @@
  * der Cockpit-Spalte (`position: sticky`), damit „Wiederanpfiff“ auch bei 360 × 640 im ersten Bildschirm liegt.
  * „Abpfiff halten“ ist ein Halteknopf (Entscheidung A2, @SL-157); Fortsetzen und Korrigieren binden LT-4 bis LT-6.
  */
-import { useCallback, useState, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { MatchIcons } from '../../ui/IconsMatch';
 import { ThumbBar, type ThumbBarRolle, type ThumbBarSlot } from '../../ui/molecules/ThumbBar';
-import { useUndoGuard } from '../hooks/useUndoGuard';
 import type { CockpitPhase } from '../model/cockpitPhase';
 import type { CockpitControls } from '../model/cockpitTypes';
 import { istApple } from '../model/plattform';
+import { useFeinerZeiger } from '../hooks/useFeinerZeiger';
 import { leisteFuer, type LeistenAktion } from '../model/thumbBarModel';
 import type { LiveCockpitLeisteProps, TiebreakWahl } from '../typesLeiste';
 import { NurLesenLeiste } from './NurLesenLeiste';
@@ -34,6 +34,8 @@ export interface ThumbBarAreaProps {
   /** „Korrigieren“ nach dem Abpfiff (@SL-159): öffnet die Korrektur mit Grund; ohne Handler keine Taste. */
   onKorrigieren?: () => void;
   onChooseTiebreak?: (wahl: TiebreakWahl) => void;
+  /** Schalter „Tastenkürzel“ (Vorgabe an): aus → keine Hinweise und kein `aria-keyshortcuts` (@SL-189). */
+  tastenAn?: boolean;
 }
 
 const klebtUnten = { flex: 'none', position: 'sticky', bottom: 0, zIndex: cssVars.zIndex.sticky } as const;
@@ -47,9 +49,11 @@ function plattformName(): string {
 export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
   const { phase, layout, kannSteuern, istLeitung, controls } = p;
   const { t } = useTranslation('cockpit');
+  const feinerZeiger = useFeinerZeiger(); // Chips nur mit Maus oder Trackpad (@SL-188)
+  const tastenAn = p.tastenAn ?? true;
   const [entscheidungOffen, setEntscheidungOffen] = useState(false);
-  const onUndo = controls.onUndo;
-  const rueckgaengig = useUndoGuard(useCallback(async () => { onUndo?.(); }, [onUndo]));
+  // Die 1-s-Sperre von „Rückgängig“ steckt in `controls.onUndo` (eine Instanz für Knopf und Tastenkürzel, @SL-108)
+  const rueckgaengig = controls.onUndo ?? (() => undefined);
 
   // „Spiel fortsetzen“ (LT-6) ist noch nicht gebunden; „Korrigieren“ steht, sobald die Hülle einen Weg übergibt und die Leitung es darf (@SL-159).
   const modell = leisteFuer(phase, { layout, istLeitung, fortsetzenMoeglich: false, korrigierenMoeglich: p.onKorrigieren !== undefined });
@@ -69,7 +73,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
   const aktion = (label: string, testId: string, rolle: ThumbBarRolle, onPress: () => void, icon: ReactElement, extra: Partial<Extract<ThumbBarSlot, { art: 'aktion' }>> = {}): ThumbBarSlot => (
     { art: 'aktion', label, icon, onPress, rolle, testId, ...extra }
   );
-  const leertaste = { text: t('leiste.tasteLeertaste'), aria: 'Space' };
+  const leertaste = tastenAn ? { text: t('leiste.tasteLeertaste'), aria: 'Space' } : undefined;
   const slotFuer = (a: LeistenAktion): ThumbBarSlot | null => {
     switch (a) {
       case 'anpfiff': return aktion(t('leiste.anpfiff'), 'match-start-button', 'haupt', controls.onStart, <MatchIcons.Play />);
@@ -81,7 +85,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
       case 'weiterNaechstes': return aktion(t('leiste.weiterNaechstes'), 'match-next-button', 'haupt', p.onWeiterNaechstes, <MatchIcons.Play />);
       case 'rueckgaengig': {
         // Der Platz bleibt immer stehen (die Leiste springt nicht); ohne Ziel oder Engine-Weg ist der Knopf gesperrt (@FU-071)
-        const taste = { text: istApple(plattformName()) ? t('leiste.tasteRueckgaengigCmd') : t('leiste.tasteRueckgaengigStrg'), aria: 'Control+Z Meta+Z' };
+        const taste = tastenAn ? { text: istApple(plattformName()) ? t('leiste.tasteRueckgaengigCmd') : t('leiste.tasteRueckgaengigStrg'), aria: 'Control+Z Meta+Z' } : undefined;
         return aktion(t('leiste.rueckgaengig'), 'match-undo-button', 'neben', rueckgaengig, <MatchIcons.Undo />, {
           disabled: !controls.onUndo || !controls.canUndo, gestrichelt: layout === 'breit', taste,
           ariaLabel: controls.undoLabel ? t('leiste.rueckgaengigAria', { ziel: controls.undoLabel }) : undefined,
@@ -114,7 +118,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
 
   return (
     <div style={klebtUnten}>
-      <ThumbBar ariaLabel={t('leiste.aria')} slots={slots} layout={layout} hinweis={hinweis} />
+      <ThumbBar ariaLabel={t('leiste.aria')} slots={slots} layout={layout} hinweis={hinweis} tastenChips={feinerZeiger} />
       <TiebreakChoiceSheet
         isOpen={entscheidungOffen}
         onClose={() => { setEntscheidungOffen(false); }}

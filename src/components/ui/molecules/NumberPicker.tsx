@@ -8,7 +8,8 @@
  * Mit `tastatur` ist „Andere Nr.“ schon offen und das Feld fokussiert: Eingabetaste übernimmt (nur 1–99, nach der
  * Sperre), Esc schließt. Eine Eingabe außerhalb 1–99 (0, 100, „7a“) weist der Baustein mit einem Hinweis ab; das Tor
  * zählt dann ohne Nummer weiter (@SL-172). Wann `tastatur` gilt (Taste geöffnet oder hover:hover + pointer:fine, nie nach Breite),
- * entscheidet der Aufrufer.
+ * entscheidet der Aufrufer. Ziffern zählen im ganzen offenen Dialog als Nummer, auch wenn kein Feld den Fokus hat (etwa nach einem Klick
+ * auf einen Nummernknopf): die Taste öffnet „Andere Nr.“, trägt die Ziffer ein und setzt den Fokus ins Feld (@SL-154, A4-4).
  */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ReactElement, ReactNode } from 'react';
@@ -62,6 +63,7 @@ export function NumberPicker({
   const [andere, setAndere] = useState<string | null>(tastatur ? '' : null);
   const [eingabeTakt, setEingabeTakt] = useState(0);
   const feldRef = useRef<HTMLInputElement>(null);
+  const fokusInsFeld = useRef(false);
   useEffect(() => {
     if (!isOpen) { return undefined; }
     gesperrtRef.current = true;
@@ -90,13 +92,30 @@ export function NumberPicker({
       uebernehmen();
     }
   };
+  // @SL-154: eine Ziffer außerhalb des Felds gehört zur Nummer; die 300-ms-Sperre gilt wie für Tipps
+  const onFlaechenTaste = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.target === feldRef.current || e.ctrlKey || e.metaKey || e.altKey || !/^[0-9]$/.test(e.key)) { return; }
+    e.preventDefault();
+    if (gesperrtRef.current) { return; }
+    fokusInsFeld.current = true;
+    setAndere((vorher) => (vorher ?? '') + e.key);
+    setEingabeTakt((n) => n + 1);
+  };
+  useEffect(() => {
+    const feld = feldRef.current;
+    if (fokusInsFeld.current && feld) {
+      fokusInsFeld.current = false;
+      feld.focus();
+      feld.setSelectionRange(feld.value.length, feld.value.length);
+    }
+  });
   const gegenueber = ausloeserSeite === 'links' ? 'rechts' : 'links';
 
   return (
     <DialogSurface isOpen={isOpen} onClose={() => onSchliesse('schliessen')} onBackdropClick={() => onSchliesse('abdunkelung')}
       ariaLabel={texte.titel} testId={testId} scrimTestId={`${testId}-scrim`}
       initialFocusRef={tastatur ? feldRef : undefined}>
-      <div style={flaecheStil}>
+      <div style={flaecheStil} onKeyDown={onFlaechenTaste}>
         <h2 style={{ fontSize: cssVars.fontSizes.lg, margin: 0 }}>{texte.titel}</h2>
         {kopf}
         {eigentor && <Button variant="secondary" onClick={tippe(eigentor.onWaehle)} style={knopfMass}>{eigentor.label}</Button>}

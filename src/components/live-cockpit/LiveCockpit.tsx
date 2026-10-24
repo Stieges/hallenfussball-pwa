@@ -47,6 +47,8 @@ import { legacyPhaseViewOf } from './model/legacyPhaseView';
 import { istAngepfiffenUndNichtBeendet } from './model/cockpitPhase';
 import { useCockpitNotices } from './hooks/useCockpitNotices';
 import { useCockpitCommands } from './hooks/useCockpitCommands';
+import { useCockpitTasten } from './hooks/useCockpitTasten';
+import { useTastenkuerzelAn } from './hooks/useTastenkuerzelAn';
 import { useTeamColumns } from './hooks/useTeamColumns';
 import { toTeamSummaryModel } from './model/toTeamSummaryModel';
 import { usePenaltyExpiryNotice } from './hooks/usePenaltyExpiryNotice';
@@ -130,11 +132,18 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const cmd = useCockpitCommands({
     props, settings: cockpitSettings, sound, flows, sides, melde: notices.melde, engineView, view,
   });
+  // Tastenkürzel (@SL-153): nur am Laptop mit Steuerrecht und eingeschaltetem Schalter; `?` auch ohne Steuerrecht
+  const [tastenAn] = useTastenkuerzelAn();
+  const tastenAktiv = tastenAn && layout === 'breit' && kannSteuern;
+  useCockpitTasten({
+    aktiv: tastenAktiv, uebersichtAktiv: tastenAn && layout === 'breit', phase, kannSteuern, sides: { links: sides.links, rechts: sides.rechts },
+    flows, controls: cmd.controls, onUebersicht: props.onTastenuebersicht,
+  });
   const kasten = useMemo(() => kastenOderStandard(props.kasten), [props.kasten]);
   const anzeigeOrdnung = useMemo(() => ({ links: sides.links, rechts: sides.rechts }), [sides.links, sides.rechts]);
   const spalten = useTeamColumns({
     match: currentMatch, view, phase, settings: cockpitSettings, kannSteuern, fouls: fouls.halbzeit,
-    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers, kasten,
+    sperrHinweise: props.sperrHinweise ?? NO_SPERREN, order: anzeigeOrdnung, handlers: cmd.teamHandlers, kasten, tasten: tastenAktiv,
   });
   // Nach dem Abpfiff statt der Tastenblöcke die Zusammenfassung (@SL-048); sie liest nur die Einträge des Spiels, nach dem Neuladen steht sie wieder da (@SL-115)
   const zusammenfassung = useMemo(() => {
@@ -253,6 +262,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         fieldName={fieldName}
         steuerung={props.steuerung}
         controls={cmd.controls}
+        tastenAn={tastenAktiv}
         onWeiterNaechstes={() => { props.onLoadNextMatch(match.fieldId); }}
         onKorrigieren={props.onKorrigieren ? () => { props.onKorrigieren?.(match.id); } : undefined}
         onChooseTiebreak={props.onChooseTiebreak ? (wahl) => { props.onChooseTiebreak?.(match.id, wahl); } : undefined}

@@ -160,6 +160,7 @@ export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung
     <button
       type="button"
       data-testid={testId}
+      data-halteknopf=""
       data-fuellt={fuellt ? 'true' : undefined}
       aria-label={name}
       aria-describedby={beschreibungId}

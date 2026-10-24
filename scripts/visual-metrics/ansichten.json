@@ -310,6 +310,19 @@
       "profil": "desktop-1440"
     },
     {
+      "id": "cockpit-tasten-uebersicht",
+      "titel": "Cockpit: Laptop-Ansicht mit Übersicht der Tastenkürzel (Knopf im Kopf)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000015",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "desktop-1440",
+      "klick": [
+        "[data-testid=\"cockpit-tastenkuerzel\"]"
+      ]
+    },
+    {
       "id": "cockpit-laptop-vorwarnung",
       "titel": "Cockpit: Laptop-Ansicht, Vorwarnung (Restzeit 2:40, Rahmen der Zeile „Nächstes“ farbig)",
       "gruppen": [

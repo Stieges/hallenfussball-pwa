@@ -10,12 +10,13 @@
  * - Zeit-Editor für manuelle Anpassungen
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { KLAERUNG_IM_COCKPIT_KOPF, KlaerungslisteEinstieg } from '../klaerungsliste/KlaerungslisteEinstieg';
 import { LiveCockpit } from '../../components/live-cockpit';
+import { ShortcutHelp } from '../../components/live-cockpit/areas/ShortcutHelp';
 import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
 import { useCockpitLeerGrund } from './hooks/useCockpitLeerGrund';
@@ -85,6 +86,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
   // A-11 (useCan): Spielregeln (@W2A-030) = tournamentSettings; Spielbetrieb im Cockpit = writeMatchData. Ohne bekannte
   // Rolle entscheidet useCan (Gedächtnis, sonst L7: Spielbetrieb offen) -- „ohne Mitgliedszeile erlaubt“ entfällt.
+  const [tastenHilfe, setTastenHilfe] = useState(false); // Übersicht der Tastenkürzel: Knopf im Kopf und Taste `?` (@SL-153)
   const canChangeRules = useCan('tournamentSettings', tournament.id);
   const canPlay = useCan('writeMatchData', tournament.id);
   // Turnierleitung (@SL-159): nur sie bekommt „Korrigieren“, der Helfer den Hinweis „Korrektur über die Turnierleitung“ (@SL-045)
@@ -201,7 +203,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       {vollbild && (
         <CockpitSlimHeader
           tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} halter={steuer.halter}
-          verbindung={<ConnectionPill tournamentId={tournament.id} />}
+          verbindung={<ConnectionPill tournamentId={tournament.id} />} onTastenkuerzel={() => setTastenHilfe(true)}
           klaerung={KLAERUNG_IM_COCKPIT_KOPF ? <KlaerungslisteEinstieg tournament={tournament} variant="cockpit" /> : undefined}
         />
       )}
@@ -224,6 +226,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}
             kasten={kasten}
+            onTastenuebersicht={() => setTastenHilfe(true)}
             sperrHinweise={sperrHinweise}
             eintragAutor={eintragAutor}
             lastFinishedMatch={lastFinishedMatch}
@@ -277,6 +280,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
 
       {/* Korrektur nach dem Abpfiff: Ergebnis, dann Grund (@SL-159) */}
+      <ShortcutHelp isOpen={tastenHilfe} onClose={() => setTastenHilfe(false)} />
       {korrektur.dialoge}
       {steuer.dialog}
     </div>

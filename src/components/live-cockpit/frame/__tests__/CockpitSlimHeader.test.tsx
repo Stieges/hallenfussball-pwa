@@ -2,7 +2,7 @@
  * Schmaler Kopf (Plan LT-2, @SL-140, visuelle Prüfung): „← Zurück“ bleibt Text, der Turniername wird nie mit Auslassungspunkten abgeschnitten.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { CockpitSlimHeader } from '../CockpitSlimHeader';
@@ -67,5 +67,30 @@ describe('CockpitSlimHeader am Handy (visuelle Prüfung)', () => {
     } finally {
       window.innerWidth = vorher;
     }
+  });
+});
+
+describe('CockpitSlimHeader: Knopf „Tastenkürzel“ (@SL-153)', () => {
+  const mit = (breit: boolean, handler?: () => void) => render(
+    <MemoryRouter>
+      <CockpitSlimHeader tournamentId="t-1" turnierName="Hallencup" felder={1} feld={1} onFeld={vi.fn()} verbindung={null} breit={breit} onTastenkuerzel={handler} />
+    </MemoryRouter>,
+  );
+
+  it('am Laptop mit Handler: der Knopf steht im Kopf und öffnet die Übersicht', () => {
+    const auf = vi.fn();
+    mit(true, auf);
+    fireEvent.click(screen.getByRole('button', { name: 'Tastenkürzel' }));
+    expect(auf).toHaveBeenCalledTimes(1);
+  });
+
+  it('am Handy oder ohne Handler: kein Knopf', () => {
+    mit(false, vi.fn());
+    expect(screen.queryByTestId('cockpit-tastenkuerzel')).toBeNull();
+  });
+
+  it('am Laptop ohne Handler: kein Knopf', () => {
+    mit(true);
+    expect(screen.queryByTestId('cockpit-tastenkuerzel')).toBeNull();
   });
 });

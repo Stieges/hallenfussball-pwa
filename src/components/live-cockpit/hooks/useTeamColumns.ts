@@ -26,13 +26,15 @@ export interface TeamColumnsArgs {
   sperrHinweise: readonly SperrHinweis[];
   order: { links: Side; rechts: Side };
   handlers: Record<Side, TeamSideHandlers>;
+  /** Tastenkürzel an (Schalter, Steuerrecht, Laptop): links `1`/`F`, rechts `2`/`J` – die angezeigte Seite (@SL-153). */
+  tasten?: boolean;
   /** Kästen je Seite des Spiels (`home`/`away`) – die Anzeigeseite legt `order` darüber (@SL-065, Seiten tauschen). */
   kasten: CockpitKasten;
 }
 
 export type TeamColumnPair = { links: Omit<TeamColumnProps, 'kompakt' | 'breit'>; rechts: Omit<TeamColumnProps, 'kompakt' | 'breit'> };
 
-export function useTeamColumns({ match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers, kasten }: TeamColumnsArgs): TeamColumnPair | null {
+export function useTeamColumns({ match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers, kasten, tasten = false }: TeamColumnsArgs): TeamColumnPair | null {
   return useMemo(() => {
     if (!match) { return null; }
     const knoepfe = teamKnoepfe(phase, kannSteuern);
@@ -45,6 +47,9 @@ export function useTeamColumns({ match, view, phase, settings, kannSteuern, foul
       knoepfe,
       onTor: handlers[seite].onTor, onFoul: handlers[seite].onFoul, onZeitstrafe: handlers[seite].onZeitstrafe, onKarte: handlers[seite].onKarte,
     });
-    return { links: spalte(order.links), rechts: spalte(order.rechts) };
-  }, [match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers, kasten]);
+    return {
+      links: { ...spalte(order.links), ...(tasten ? { taste: { tor: '1', foul: 'F' } } : {}) },
+      rechts: { ...spalte(order.rechts), ...(tasten ? { taste: { tor: '2', foul: 'J' } } : {}) },
+    };
+  }, [match, view, phase, settings, kannSteuern, fouls, sperrHinweise, order, handlers, kasten, tasten]);
 }

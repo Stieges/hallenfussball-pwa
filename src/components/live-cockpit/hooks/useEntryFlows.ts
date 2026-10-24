@@ -47,7 +47,8 @@ export interface UseEntryFlowsReturn {
   offen: OffenerEintrag | null;
   oeffne: (eintrag: OffenerEintrag) => void;
   schliesse: () => void;
-  tippeTor: (seite: Side) => void;
+  /** `perTaste`: per Tastenkürzel geöffnet → Nummernauswahl im Tastatur-Modus (@SL-153, auch ohne feinen Zeiger). */
+  tippeTor: (seite: Side, optionen?: { perTaste?: boolean }) => void;
   waehleNummer: (nummer: number) => Promise<void>;
   schliesseAuswahl: (grund: NumberPickerSchliessGrund) => Promise<void>;
   waehleEigentor: () => Promise<void>;
@@ -91,14 +92,14 @@ export function useEntryFlows(p: EntryFlowsParams): UseEntryFlowsReturn {
 
   const teamVon = (seite: Side): { id: string; name: string } => (seite === 'home' ? paramsRef.current.teams.home : paramsRef.current.teams.away);
 
-  const tippeTor = useCallback((seite: Side) => {
+  const tippeTor = useCallback((seite: Side, optionen?: { perTaste?: boolean }) => {
     if (wache.current) { return; }
     wache.current = true;
     const { spielzeitJetzt, melde, t } = paramsRef.current;
     const team = teamVon(seite);
     const ersterTippMs = spielzeitJetzt();
     torRef.current = { id: Promise.resolve(commandsRef.current.tor(team.id)).catch(() => null), seite, ersterTippMs };
-    setOffen({ art: 'tor', seite, ersterTippMs });
+    setOffen({ art: 'tor', seite, ersterTippMs, ...(optionen?.perTaste === true ? { perTaste: true } : {}) });
     melde(3, t('meldung.tor', { team: team.name }));
   }, []);
 

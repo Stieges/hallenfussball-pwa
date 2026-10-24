@@ -11,6 +11,8 @@ export interface MatchSummaryFarben { home: string | null; away: string | null }
 export type TiebreakWahl = 'overtime' | 'goldenGoal' | 'shootout';
 
 export interface LiveCockpitLeisteProps extends LiveCockpitFarbenProps {
+  /** Öffnet die Übersicht der Tastenkürzel (Taste `?`, @SL-153); die Übersicht gehört dem Rahmen, damit auch der Knopf im Kopf sie öffnet. */
+  onTastenuebersicht?(): void;
   /**
    * Turnierleitung (`useCan('leadMatches')`, LT-5): nur sie bekommt „Korrigieren“ (@SL-159), der Helfer nach dem Abpfiff
    * den Hinweis „Korrektur über die Turnierleitung“ (@SL-045). Ohne Angabe gilt: kein Leitungsrecht.

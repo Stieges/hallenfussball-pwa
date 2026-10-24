@@ -31,6 +31,8 @@ export interface ThumbBarProps {
   slots: ThumbBarSlot[];
   layout: 'daumen' | 'breit';
   hinweis?: { text: string; testId: string };
+  /** Tasten-Hinweise (`<kbd>`) zeigen: nur mit Maus oder Trackpad (Tablet und Handy haben keine Tasten); Vorgabe: im Layout `breit` immer. */
+  tastenChips?: boolean;
 }
 
 /** Breite Zellen: Gewichte haupt 2 · neben 1,2 · halten 1,4; „Mehr“ hat die feste Breite `cockpitMehrBreit`. */
@@ -105,7 +107,7 @@ function knopfStil(slot: Extract<ThumbBarSlot, { art: 'aktion' }>, layout: Thumb
   };
 }
 
-function Aktion({ slot, layout, tabIndex }: { slot: Extract<ThumbBarSlot, { art: 'aktion' }>; layout: ThumbBarProps['layout']; tabIndex: number }) {
+function Aktion({ slot, layout, tabIndex, chip }: { slot: Extract<ThumbBarSlot, { art: 'aktion' }>; layout: ThumbBarProps['layout']; tabIndex: number; chip: boolean }) {
   return (
     <button
       type="button"
@@ -121,7 +123,7 @@ function Aktion({ slot, layout, tabIndex }: { slot: Extract<ThumbBarSlot, { art:
       {slot.icon}
       <span>{slot.label}</span>
       {slot.sublabel && <small>{slot.sublabel}</small>}
-      {layout === 'breit' && slot.taste && <kbd aria-hidden="true" style={kbdStil(slot.rolle === 'haupt')}>{slot.taste.text}</kbd>}
+      {chip && slot.taste && <kbd aria-hidden="true" style={kbdStil(slot.rolle === 'haupt')}>{slot.taste.text}</kbd>}
     </button>
   );
 }
@@ -129,7 +131,7 @@ function Aktion({ slot, layout, tabIndex }: { slot: Extract<ThumbBarSlot, { art:
 const slotId = (slot: ThumbBarSlot): string => (slot.art === 'aktion' ? slot.testId : slot.halten.testId);
 const slotGesperrt = (slot: ThumbBarSlot): boolean => (slot.art === 'aktion' ? slot.disabled === true : slot.halten.disabled === true);
 
-export function ThumbBar({ ariaLabel, slots, layout, hinweis }: ThumbBarProps) {
+export function ThumbBar({ ariaLabel, slots, layout, hinweis, tastenChips = true }: ThumbBarProps) {
   const [fokusId, setFokusId] = useState<string | null>(null);
   const frei = slots.filter((slot) => !slotGesperrt(slot)).map(slotId);
   // Tabstopp: der zuletzt fokussierte Knopf, solange er bedienbar ist, sonst der erste bedienbare
@@ -154,7 +156,7 @@ export function ThumbBar({ ariaLabel, slots, layout, hinweis }: ThumbBarProps) {
       <div style={reiheStil(layout, slots.length)}>
         {slots.map((slot) =>
           slot.art === 'aktion' ? (
-            <Aktion key={slot.testId} slot={slot} layout={layout} tabIndex={slot.testId === tabstopp ? 0 : -1} />
+            <Aktion key={slot.testId} slot={slot} layout={layout} chip={layout === 'breit' && tastenChips} tabIndex={slot.testId === tabstopp ? 0 : -1} />
           ) : (
             <div key={slot.halten.testId} style={layout === 'breit' ? { flex: HALTEN_GEWICHT, display: 'flex' } : { display: 'flex' }}>
               <HoldButton {...slot.halten} kompakt={layout === 'daumen'} fuellend tabIndex={slot.halten.testId === tabstopp ? 0 : -1} />

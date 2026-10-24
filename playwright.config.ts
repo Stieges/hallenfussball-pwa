@@ -273,7 +273,7 @@ export default defineConfig({
       // B-17 Fixrunde 2 (Daniel 15.10.): Desktop Safari (WebKit) nur für die Monitor-Spec. Die übrige Suite
       // bleibt bei Chromium. Lokal vorher: `npx playwright install webkit`.
       name: 'desktop-webkit',
-      testMatch: /monitor-dauerbetrieb\.spec\.ts$/,
+      testMatch: /(monitor-dauerbetrieb|cockpit-tasten)\.spec\.ts$/,
       use: {
         ...devices['Desktop Safari'],
         viewport: { width: 1280, height: 720 },

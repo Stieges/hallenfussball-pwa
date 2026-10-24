@@ -582,6 +582,27 @@
     "goldenGoal": "$t(sport:phases.goldenGoal)",
     "strafstoss": "$t(sport:events.penaltyShootout)"
   },
+  "tasten": {
+    "titel": "Keyboard shortcuts",
+    "leertaste": "Space",
+    "uhr": "Stop the clock; the next press lets it run again",
+    "torLinks": "Goal for the team shown on the left",
+    "torRechts": "Goal for the team shown on the right",
+    "foulLinks": "Foul for the team shown on the left",
+    "foulRechts": "Foul for the team shown on the right",
+    "rueckgaengigStrg": "Ctrl+Z",
+    "rueckgaengigCmd": "Cmd+Z",
+    "rueckgaengig": "take back the last entry",
+    "uebersicht": "show this overview",
+    "eingabefeld": "While typing in an input field, such as the jersey number, the shortcuts do nothing. In an open number dialog, digits count as the number.",
+    "abpfiff": "End of match: choose the “End match” button with Tab and hold Space or Enter for about a second.",
+    "abschalten": "The shortcuts can be switched off in the cockpit settings.",
+    "schliessen": "Close",
+    "schalter": {
+      "label": "Keyboard shortcuts",
+      "hinweis": "Keys such as Space, 1, 2, F, J and Ctrl+Z run the match on a laptop. Applies to this device only."
+    }
+  },
   "rahmen": {
     "zurueck": "Back",
     "zurueckAria": "Back to the schedule",

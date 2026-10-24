@@ -23,6 +23,7 @@ import { useCockpitClock } from './useCockpitClock';
 import type { UseEntryFlowsReturn } from './useEntryFlows';
 import type { UseSideOrderReturn } from './useSideOrder';
 import { useTiebreakCommands } from './useTiebreakCommands';
+import { useUndoGuard } from './useUndoGuard';
 import { korrekturUhrstaende } from '../model/zeitKorrektur';
 import { restzeitSpielMs, restzeitText } from '../model/restzeit';
 
@@ -101,6 +102,9 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     notify: { success: showSuccess, error: showError },
   });
   const tiebreak = useTiebreakCommands(match, props);
+  // Eine 1-Sekunden-Sperre für Knopf und Tastenkürzel (@SL-108): Knopf „Rückgängig“ und danach Strg+Z binnen 1 s nehmen nur einen Eintrag zurück
+  const undo = editing.undo;
+  const rueckgaengig = useUndoGuard(useCallback(async () => { await undo(); }, [undo]));
 
   // Zeitstrafen kommen aus der Engine-Ansicht (B-08a): Sie enden mit dem Abpfiff von selbst (@SL-097), kein lokaler Countdown mehr.
   const activePenalties = useMemo((): ActivePenalty[] => (engineView?.penalties ?? []).map((p) => ({
@@ -226,7 +230,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     overlayHandlers,
     teamHandlers: { home: sideHandlers('home'), away: sideHandlers('away') },
     controls: {
-      onUndo: editing.undoVisible ? () => { void editing.undo(); } : undefined,
+      onUndo: editing.undoVisible ? rueckgaengig : undefined,
       onStart: clock.starte,
       onPauseResume: clock.pauseOderWeiter,
       onEditTime: openTimeAdjust,
