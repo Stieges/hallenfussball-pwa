@@ -18,6 +18,11 @@ import { wrapAtSeparators } from './textFit';
 export interface HeaderFact {
   label: string;
   value: string;
+  /**
+   * Ganze Aussage in einer Zeile, normal geschrieben, ohne Bezeichnungsspalte (@DR-020 „Gleichstand auf Platz 1:
+   * Strafstoßschießen“): ihre lange Bezeichnung würde sonst die Wertespalte aller Zeilen verschmälern.
+   */
+  statement?: boolean;
 }
 
 /** Inhalt des Kopfs, fertig übersetzt. */
@@ -114,10 +119,17 @@ export function renderHeader(doc: jsPDF, head: HeaderInput, geo: PageGeometry): 
   doc.setTextColor(...printColors.ink);
   doc.setFontSize(printType.meta);
   doc.setFont(fontOf(doc), 'bold');
-  const labelWidth = Math.max(0, ...head.facts.map(fact => doc.getTextWidth(fact.label)));
+  const labelWidth = Math.max(0, ...head.facts.filter(fact => fact.statement !== true).map(fact => doc.getTextWidth(fact.label)));
   const valueLeft = left + labelWidth + printMetrics.factLabelGap;
   const room = Math.max(1, width - (valueLeft - left));
   for (const fact of head.facts) {
+    if (fact.statement === true) {
+      doc.setFont(fontOf(doc), 'normal');
+      doc.setFontSize(printType.meta);
+      doc.text(fact.label, left, baseline);
+      baseline += printMetrics.factAdvance;
+      continue;
+    }
     doc.setFont(fontOf(doc), 'bold');
     doc.setFontSize(printType.meta);
     doc.text(fact.label, left, baseline);

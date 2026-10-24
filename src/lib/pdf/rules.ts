@@ -14,6 +14,7 @@ import type { GeneratedSchedule } from '../../core/generators';
 import { footballIndoorConfig } from '../../config/sports/football';
 import { SECONDS_PER_MINUTE } from '../../utils/timeHelpers';
 import type { PdfTexts } from './translations';
+import { effectivePlacementsToPlayOut } from '../../core/standings/playOutPlaces';
 import { koModeFor, koSlotsFrom, type KoKey } from './koSlots';
 
 /** Standard-Punktesystem der Hallensportart (3/1/0): nur davon weicht der Punkte-Zusatz ab. */
@@ -29,10 +30,14 @@ export type PdfRules = Pick<
   | 'pointSystem'
   | 'finalsConfig'
   | 'matchCockpitSettings'
-> & { rulebook?: string; koSlots: KoKey[] };
+> & { rulebook?: string; koSlots: KoKey[]; placementsToPlayOut: number[] };
 
-/** Adapter: Turnier und erzeugter Plan → Eingang. Solange `rulebook` am Turnier fehlt, liefert er `undefined`. */
-export function pdfRulesFrom(tournament: Tournament, schedule: GeneratedSchedule): PdfRules {
+/**
+ * Adapter: Turnier und erzeugter Plan → Eingang. Solange `rulebook` am Turnier fehlt, liefert er `undefined`.
+ * Ohne Plan (`undefined`, Zusammenfassung im Assistenten, wenn der Plan noch nicht erzeugbar ist) gibt es keine
+ * K.-o.-Runden; die Spielzeit zeigt dann nur die Gruppendauer.
+ */
+export function pdfRulesFrom(tournament: Tournament, schedule: Pick<GeneratedSchedule, 'allMatches'> | undefined): PdfRules {
   const rulebook = 'rulebook' in tournament && typeof tournament.rulebook === 'string' ? tournament.rulebook : undefined;
   return {
     groupSystem: tournament.groupSystem,
@@ -43,24 +48,39 @@ export function pdfRulesFrom(tournament: Tournament, schedule: GeneratedSchedule
     finalsConfig: tournament.finalsConfig,
     matchCockpitSettings: tournament.matchCockpitSettings,
     rulebook,
-    koSlots: koSlotsFrom(schedule.allMatches.filter(m => m.phase !== 'groupStage')),
+    koSlots: schedule ? koSlotsFrom(schedule.allMatches.filter(m => m.phase !== 'groupStage')) : [],
+    placementsToPlayOut: effectivePlacementsToPlayOut(tournament),
   };
 }
 
-/** Regelzeilen des Kopfs in fester Reihenfolge: Modus, Platzierung, Spielzeit, Regelwerk (nur wenn nicht leer). */
-export function pdfRuleLines(rules: PdfRules, t: PdfTexts): string[] {
+/** Art einer Regelzeile; die Zusammenfassung im Assistenten zeigt `tiebreak`, `playOut` und `rulebook` unverändert. */
+export type PdfRuleKind = 'mode' | 'tiebreak' | 'playOut' | 'duration' | 'rulebook';
+
+/**
+ * Regelzeilen des Kopfs in fester Reihenfolge: Modus, Wertung, Gleichstand auf auszuspielenden Plätzen (@DR-020, nur wenn
+ * es solche Plätze gibt), Spielzeit, Regelwerk (nur wenn nicht leer). Eine Quelle für PDF und Zusammenfassung.
+ */
+export function pdfRuleEntries(rules: PdfRules, t: PdfTexts): Array<{ kind: PdfRuleKind; line: string }> {
   const { label } = t.rules;
-  const lines = [`${label.mode}: ${modeText(rules, t)}`];
+  const entries: Array<{ kind: PdfRuleKind; line: string }> = [{ kind: 'mode', line: `${label.mode}: ${modeText(rules, t)}` }];
   const placement = placementLine(rules, t);
   if (placement !== '') {
-    lines.push(placement);
+    entries.push({ kind: 'tiebreak', line: placement });
   }
-  lines.push(`${label.duration}: ${durationText(rules, t)}`);
+  if (rules.placementsToPlayOut.length > 0) {
+    entries.push({ kind: 'playOut', line: t.rules.playOut(rules.placementsToPlayOut) });
+  }
+  entries.push({ kind: 'duration', line: `${label.duration}: ${durationText(rules, t)}` });
   const rulebook = rules.rulebook?.trim() ?? '';
   if (rulebook !== '') {
-    lines.push(`${label.rulebook}: ${rulebook}`);
+    entries.push({ kind: 'rulebook', line: `${label.rulebook}: ${rulebook}` });
   }
-  return lines;
+  return entries;
+}
+
+/** Regelzeilen des Kopfs als Text (`pdfRuleEntries`). */
+export function pdfRuleLines(rules: PdfRules, t: PdfTexts): string[] {
+  return pdfRuleEntries(rules, t).map(entry => entry.line);
 }
 
 /** Zeile „Platzierung: Punkte – Tordifferenz …“; leer, wenn kein Kriterium und kein Punkte-Zusatz gilt. */
@@ -96,7 +116,8 @@ export function koLines(rules: PdfRules, t: PdfTexts): string[] {
   return groups.map(entry => t.rules.koRound(t.rules.startUpper(t.rules.joinList(entry.labels)), ruleText(entry.mode, shooters, t)));
 }
 
-function modeText(rules: PdfRules, t: PdfTexts): string {
+/** Text des Modus (Jeder gegen jeden / Gruppen + Finalrunde), auch für die Zusammenfassung. */
+export function modeText(rules: PdfRules, t: PdfTexts): string {
   return rules.groupSystem === 'groupsAndFinals' ? t.modeGroupsAndFinals : t.rules.modeRoundRobin;
 }
 

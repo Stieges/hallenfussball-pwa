@@ -182,6 +182,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
       <ModeSelection
         selectedMode={formData.mode ?? 'classic'}
         onModeChange={(mode) => onUpdate('mode', mode)}
+        groupSystem={formData.groupSystem}
       />
 
       {/* Classic Mode Configuration */}

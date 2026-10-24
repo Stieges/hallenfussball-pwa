@@ -2,8 +2,8 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm).
- * Letzte Regeneration: 2026-10-23, nach dem DB-Fenster 23.10. (Migrationen 20261110_005 bis _010,
- * 20261113_003, 20261113_101, 20261117_104 live) -- aus Produktion per Supabase-MCP
+ * Letzte Regeneration: 2026-10-24, nach dem Einspielen von 20261117_005 (A-35 Klaerungsliste: match_reviews,
+ * field_control_log, revoked_device_contacts, list_match_reviews) -- aus Produktion per Supabase-MCP
  * (generate_typescript_types), nicht aus einem Wegwerf-Container. Damit ist die Datei wieder
  * deckungsgleich mit der Produktion. PostgrestVersion "14.1": so liefern sie seit dem 23.10.
  * MCP-Werkzeug UND CLI (Typ-Drift-Check, Lauf 40012473086, Live-Seite "14.1").
@@ -275,6 +275,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "field_control_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_control_log: {
+        Row: {
+          claimed_at: string
+          epoch: number
+          field: number
+          holder_device_id: string | null
+          holder_user_id: string | null
+          tournament_id: string
+        }
+        Insert: {
+          claimed_at: string
+          epoch: number
+          field: number
+          holder_device_id?: string | null
+          holder_user_id?: string | null
+          tournament_id: string
+        }
+        Update: {
+          claimed_at?: string
+          epoch?: number
+          field?: number
+          holder_device_id?: string | null
+          holder_user_id?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_control_log_tournament_id_fkey"
             columns: ["tournament_id"]
             isOneToOne: false
             referencedRelation: "tournaments"
@@ -593,6 +628,67 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_reviews: {
+        Row: {
+          created_at: string
+          detail: Json
+          device_id: string | null
+          event_id: string
+          field: number | null
+          kind: string
+          match_id: string
+          reason: string
+          tournament_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail?: Json
+          device_id?: string | null
+          event_id: string
+          field?: number | null
+          kind: string
+          match_id: string
+          reason: string
+          tournament_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: Json
+          device_id?: string | null
+          event_id?: string
+          field?: number | null
+          kind?: string
+          match_id?: string
+          reason?: string
+          tournament_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_reviews_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_reviews_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_reviews_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]
@@ -938,6 +1034,38 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      revoked_device_contacts: {
+        Row: {
+          first_contact_at: string
+          first_device_id: string | null
+          revoked_since: string | null
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          first_contact_at?: string
+          first_device_id?: string | null
+          revoked_since?: string | null
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          first_contact_at?: string
+          first_device_id?: string | null
+          revoked_since?: string | null
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revoked_device_contacts_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
@@ -1771,6 +1899,7 @@ export type Database = {
       }
       join_code_info: { Args: { p_code: string }; Returns: Json }
       list_helper_access: { Args: { p_tournament_id: string }; Returns: Json }
+      list_match_reviews: { Args: { p_tournament_id: string }; Returns: Json }
       make_tournament_private: {
         Args: { tournament_id: string }
         Returns: undefined

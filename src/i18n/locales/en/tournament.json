@@ -1128,6 +1128,8 @@
       "koRound": "{{round}}: if drawn, {{rule}}",
       "ruleShootout": "penalty shootout, {{shooters}}",
       "ruleOvertimeThenShootout": "extra time, then penalty shootout, {{shooters}}",
+      "playOutOne": "Tie for place {{places}}: penalty shootout",
+      "playOutMany": "Tie for places {{places}}: penalty shootout",
       "ruleGoldenGoal": "golden goal",
       "shooters": "{{n}} shooters per team",
       "shootersOne": "1 shooter per team"
@@ -1443,6 +1445,7 @@
     "button": "Shift times",
     "listHint": "Use ⋮ on a match to shift from there.",
     "original": "originally {{time}}",
+    "tentative": "expected",
     "dialogTitle": "Shift times",
     "close": "Close",
     "direction": "Direction",
@@ -1538,5 +1541,78 @@
     "lockButton": "Why is {{name}} locked?",
     "timesSection": "Times",
     "timesSectionDesc": "Move matches later or earlier."
+  },
+  "klaerung": {
+    "titel": "Clarification list",
+    "knopf": "Clarification list",
+    "knopfAria": "Open clarification list: {{offen}} open, {{hinweise}} notices",
+    "hinweiseKurz_one": "1 notice",
+    "hinweiseKurz_other": "{{count}} notices",
+    "leer": "Nothing to clarify.",
+    "spiel": "Match {{number}} · Field {{field}}",
+    "spielOhneFeld": "Match {{number}}",
+    "unbekannt": "a device",
+    "fall": {
+      "afterTakeover_one": "1 entry from {{author}} after takeover",
+      "afterTakeover_other": "{{count}} entries from {{author}} after takeover",
+      "beforeTakeover_one": "1 entry from {{author}} before takeover",
+      "beforeTakeover_other": "{{count}} entries from {{author}} before takeover",
+      "rightsRevoked_one": "1 entry from {{author}}, access revoked",
+      "rightsRevoked_other": "{{count}} entries from {{author}}, access revoked",
+      "afterEnd_one": "1 entry from {{author}}, arrived after the end",
+      "afterEnd_other": "{{count}} entries from {{author}}, arrived after the end",
+      "beforeReset_one": "1 entry from {{author}} before the reset",
+      "beforeReset_other": "{{count}} entries from {{author}} before the reset"
+    },
+    "hinweis": {
+      "titel": "Notices",
+      "tor_one": "1 goal from {{author}} (field {{field}}) inserted afterwards",
+      "tor_other": "{{count}} goals from {{author}} (field {{field}}) inserted afterwards",
+      "eintrag_one": "1 entry from {{author}} (field {{field}}) inserted afterwards",
+      "eintrag_other": "{{count}} entries from {{author}} (field {{field}}) inserted afterwards"
+    },
+    "zeile": {
+      "mitNummer": "{{what}} {{team}}, no. {{nr}}",
+      "team": "{{what}} {{team}}",
+      "ohneTeam": "{{what}}",
+      "minute": "{{line}} · period {{section}}, minute {{minute}}",
+      "geraet": "Device {{time}}"
+    },
+    "aufklappen": "Show entries",
+    "zuklappen": "Hide entries",
+    "uebernehmen": "Accept",
+    "verwerfen": "Discard",
+    "alleUebernehmen": "Accept all",
+    "alleVerwerfen": "Discard all",
+    "speichern": "Save",
+    "zurueck": "Back",
+    "nurVerwerfen": "can only be discarded",
+    "vorschau": {
+      "stand": "New score: {{home}} {{score}} {{away}}",
+      "uebernommen": "Accepted: {{list}}",
+      "nichts": "nothing will be accepted",
+      "koBeendet": "Not possible: the knockout match is finished – please correct the result"
+    },
+    "ergebnis": {
+      "gespeichert": "Decision saved",
+      "gruppeVeraltet": "Match {{number}} was already finished – if the group is completed, please complete it again."
+    },
+    "fehler": {
+      "offline": "Only possible with a connection",
+      "nichtGesendet": "Not sent – please try again",
+      "veraltet": "Update the app",
+      "schonEntschieden": "Already decided – reloading the list",
+      "spielFehlt": "Match {{number}} is not loaded on this device yet",
+      "nieAngepfiffen": "The match was never kicked off – the entry can only be discarded",
+      "nichtUebernehmbar": "This entry cannot be accepted – only discarded",
+      "unbekannt": "Not saved – please reload the list and try again",
+      "keinRecht": "You can no longer decide – your access has been revoked"
+    },
+    "verlauf": {
+      "titel": "Recently decided",
+      "uebernommen": "{{what}} – accepted by {{by}}, {{time}}",
+      "verworfen": "{{what}} – discarded by {{by}}, {{time}}",
+      "turnierleitung": "the organisers"
+    }
   }
 }

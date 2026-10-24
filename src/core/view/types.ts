@@ -111,6 +111,8 @@ export interface MatchView {
   field: number;
   /** W14 */
   kickoff?: LocalClock;
+  /** „ursprünglich hh:mm“ (B-27, @ZP-004): nur bei mindestens 1 Minute Abweichung und nur nach Verschieben ab dem ersten Anpfiff */
+  originalKickoff?: LocalClock;
   /** @ZM-105, Darstellung B-27 */
   kickoffTentative: boolean;
   phase: 'groupStage' | 'final';

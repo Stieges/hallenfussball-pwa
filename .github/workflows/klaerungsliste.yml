@@ -1,0 +1,41 @@
+name: Klaerungsliste
+
+# A-35 Klaerungsliste am Server (supabase/migrations/20261117_005_klaerungsliste.sql).
+# scripts/klaerungsliste-check.sh spielt Baseline + alle neueren Migrationen in einen eigenen Wegwerf-Container
+# supabase/postgres und prueft Fail-fast, die Szenarien (@FU-036, @FU-037, @FU-038, @FU-095, @FU-096, @FU-017, @FU-116,
+# @HE-056, @HE-080) ueber append_match_events und take_field_control, Schema, Rechte, zweites Einspielen und Rueckweg.
+# Die beiden Gegenproben beweisen, dass der Check Fehler auch erkennt. Pfadfilter wie append-match-events.yml.
+
+on:
+  pull_request:
+    paths:
+      - 'src/core/match/**'
+      - 'supabase/migrations/**'
+      - 'scripts/klaerungsliste-check.sh'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/db-drift-check.sh'
+      - '.github/workflows/klaerungsliste.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  klaerungsliste:
+    name: Klaerungsliste (append_match_events, Postgres-Wegwerfcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Klaerungsliste pruefen
+        # Exit 1 bei jeder Abweichung. Container wird per trap entfernt.
+        run: bash scripts/klaerungsliste-check.sh
+
+      - name: Gegenprobe A (ohne 20261117_005 muss K ROT sein)
+        run: bash scripts/klaerungsliste-check.sh --without-migration
+
+      - name: Gegenprobe B (jede der Mutationen M1-M19 muss mindestens eine Pruefung ROT machen)
+        run: bash scripts/klaerungsliste-check.sh --gegenprobe

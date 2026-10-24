@@ -20,6 +20,7 @@ vi.mock('../../features/tournament-management/standings/StandingTieProvider', ()
 vi.mock('../../features/tournament-management/group-completion/GroupCompletionProvider', () => ({ GroupCompletionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
+vi.mock('../../features/klaerungsliste/KlaerungslisteEinstieg', () => ({ KlaerungslisteEinstieg: () => null })); // B-50: braucht AuthProvider, hier nicht Gegenstand
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({
   EngineOutboxHeaderStatus: ({ tournament }: { tournament: { id: string } }) => <span data-testid="engine-outbox-kopf">{tournament.id}</span>,
 }));

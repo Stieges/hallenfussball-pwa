@@ -9,6 +9,7 @@ import { LiveMatchDisplay } from '../../../components/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { toLiveMatch } from '../monitorMatch';
 import { monitorSideLabel, sideTeam } from '../matchSides';
+import { MonitorTimeNotes } from '../components/MonitorTimeCell';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -143,6 +144,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
                   marginTop: displaySpacing.contentLG,
                 }}>
                   {t('slides.live.kickoff')} {nextMatch.kickoff.time}
+                  <MonitorTimeNotes match={nextMatch} color={themeColors.text} testIdPrefix="monitor-next" />
                 </div>
               )}
             </>

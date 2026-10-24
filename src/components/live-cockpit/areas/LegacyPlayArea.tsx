@@ -70,6 +70,7 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
             activePenalties={sidebar.activePenalties}
             events={match.events}
             retractedEvents={match.retractedEvents}
+            discardedEntries={match.discardedEntries}
             homeTeamName={match.homeTeam.name}
             awayTeamName={match.awayTeam.name}
             homeTeamId={match.homeTeam.id}

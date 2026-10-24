@@ -1,0 +1,134 @@
+{
+  "title": "A-35 @FU-038 Verwerfen und Übernehmen sind Einträge der Turnierleitung ohne eigene Wirkung -- in jedem Zustand; Helfer dürfen nicht entscheiden",
+  "szenario": "Unklarer Offline-Eintrag landet in der Klärungsliste",
+  "ctx": {
+    "matchId": "match-71a",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "000071a-0000-4000-8000-000000000001",
+      "actor": "leitung",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {},
+      "type": "REVIEW_DISCARD",
+      "targetId": "deadbeef-0000-4000-8000-0000000000aa",
+      "actorUser": "owner"
+    },
+    {
+      "id": "000071a-0000-4000-8000-000000000002",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {},
+      "type": "REVIEW_ACCEPT",
+      "targetId": "deadbeef-0000-4000-8000-0000000000aa",
+      "actorUser": "helper"
+    },
+    {
+      "id": "000071a-0000-4000-8000-000000000003",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 1,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      },
+      "type": "MATCH_START",
+      "actorUser": "helper"
+    },
+    {
+      "id": "000071a-0000-4000-8000-000000000004",
+      "actor": "leitung",
+      "at": 2000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {},
+      "type": "REVIEW_ACCEPT",
+      "targetId": "deadbeef-0000-4000-8000-0000000000aa",
+      "actorUser": "owner"
+    },
+    {
+      "id": "000071a-0000-4000-8000-000000000005",
+      "actor": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {},
+      "type": "REVIEW_DISCARD",
+      "targetId": "deadbeef-0000-4000-8000-0000000000aa",
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "000071a-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "000071a-0000-4000-8000-000000000002",
+        "status": "rejected",
+        "code": "FORBIDDEN_ACTOR"
+      },
+      {
+        "id": "000071a-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "000071a-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "000071a-0000-4000-8000-000000000005",
+        "status": "rejected",
+        "code": "FORBIDDEN_ACTOR"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

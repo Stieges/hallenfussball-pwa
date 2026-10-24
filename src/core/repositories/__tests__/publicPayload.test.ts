@@ -79,6 +79,19 @@ describe('parsePublicPayload (B-14)', () => {
     expect(match.scheduledTime?.getMinutes()).toBe(40);
   });
 
+  it('@ZP-045 B-27 die Schnittstelle liefert neue und ursprüngliche Uhrzeit, aber nicht, wer verschoben hat, und keinen Grund', () => {
+    const reply = full(parsePublicPayload(voll([
+      { id: S9, match_number: 15, round: 4, field: 1, team_a_id: NORD, team_b_id: SUED, scheduled_start: '15:40:00',
+        original_start: '15:30:00', shifted_by: 'u-olli', shift_reason: 'Verspätung', match_status: 'scheduled' },
+    ])));
+    const match = reply.tournament.matches[0];
+    expect([match.scheduledTime?.getHours(), match.scheduledTime?.getMinutes()]).toEqual([15, 40]);
+    expect([match.originalStart?.getHours(), match.originalStart?.getMinutes()]).toEqual([15, 30]);
+    const text = JSON.stringify(reply);
+    expect(text).not.toContain('u-olli');
+    expect(text).not.toContain('Verspätung');
+  });
+
   it('Delta: nur geänderte Spiele, Anstoßzeit über tournament_date (Review #342 A5 Punkt 3)', () => {
     const reply = parsePublicPayload({
       state: 'delta', version: 9, base_version: 7, server_now: 1, tournament_date: '2026-11-21',

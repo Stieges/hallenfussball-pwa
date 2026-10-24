@@ -5,6 +5,7 @@
 import type { GeneratedSchedule } from '../../core/generators';
 import { getLocationAddressLine } from '../../utils/locationHelpers';
 import type { HeaderFact } from './render/header';
+import type { PdfRuleKind } from './rules';
 import type { PdfTexts } from './translations';
 import { ageClassText } from '../../core/view';
 
@@ -22,19 +23,25 @@ export function dayOf(schedule: GeneratedSchedule, t: PdfTexts): string {
  * 2 Felder“. Datum im Format TT.MM.JJJJ bleibt unverändert, sonst mit Wochentag in der Sprache des Dokuments.
  */
 function appointmentValue(schedule: GeneratedSchedule, t: PdfTexts): string {
-  const date = schedule.tournament.date;
-  let day = t.noDate;
-  if (date) {
-    const formatted = dayOf(schedule, t);
-    const weekday = date.includes('.') ? '' : t.formatWeekday(date);
-    day = weekday === '' ? formatted : `${weekday}, ${formatted}`;
-  }
   return t.appointmentLine({
-    day,
+    day: dayWithWeekday(schedule.tournament.date, t),
     start: t.formatClock(schedule.startTime),
     end: t.formatClock(schedule.endTime),
     fields: t.fields(schedule.numberOfFields),
   });
+}
+
+/**
+ * Der Tag mit Wochentag („Samstag, 28.11.2026“), die einzige Quelle für Kopf, Zusammenfassung und Vorschau. Ein Datum
+ * im Format TT.MM.JJJJ bleibt ohne Wochentag unverändert; ohne Datum steht der Text „Kein Datum“ des Dokuments (`noDate`).
+ */
+export function dayWithWeekday(date: string | undefined, t: PdfTexts): string {
+  if (!date) {
+    return t.noDate;
+  }
+  const formatted = date.includes('.') ? date : t.formatDate(date);
+  const weekday = date.includes('.') ? '' : t.formatWeekday(date);
+  return weekday === '' ? formatted : `${weekday}, ${formatted}`;
 }
 
 /** Angaben im Kopf: Veranstalter (nur wenn angegeben), Altersklasse, Halle mit Adresse, Termin. */
@@ -53,9 +60,15 @@ export function headerFacts(schedule: GeneratedSchedule, t: PdfTexts, organizerN
   return facts;
 }
 
-/** Regelzeilen aus `pdfRuleLines` („Bezeichnung: Wert“) als Zeilen der Angabentabelle (Daniel 15.10., v7.2). */
-export function ruleFacts(lines: string[]): HeaderFact[] {
-  return lines.map(line => {
+/**
+ * Regelzeilen aus `pdfRuleEntries` als Zeilen der Angabentabelle (Daniel 15.10., v7.2): „Bezeichnung: Wert“ geteilt, die
+ * Gleichstandsregel als ganze Aussage in einer Zeile (@DR-020).
+ */
+export function ruleFacts(entries: Array<{ kind: PdfRuleKind; line: string }>): HeaderFact[] {
+  return entries.map(({ kind, line }) => {
+    if (kind === 'playOut') {
+      return { label: line, value: '', statement: true };
+    }
     const cut = line.indexOf(': ');
     return cut < 0 ? { label: line, value: '' } : { label: line.slice(0, cut), value: line.slice(cut + 2) };
   });

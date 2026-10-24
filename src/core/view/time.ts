@@ -95,6 +95,27 @@ export function minutesBetween(from: LocalClock, to: LocalClock): number {
   return wallMinutes(to) - wallMinutes(from);
 }
 
+/** Ab so vielen Minuten Abweichung steht die ursprüngliche Uhrzeit dabei (@ZP-004, @ZP-005; gleiche Schwelle wie die Leitung). */
+export const ORIGINAL_KICKOFF_MIN_DEVIATION_MINUTES = 1;
+
+/**
+ * „ursprünglich hh:mm“ (B-27, @ZP-004): die Uhrzeit beim ersten Anpfiff, wenn sie mindestens eine Minute von der
+ * angezeigten abweicht. Stimmt sie wieder überein (@ZP-005) oder fehlt sie (nie nach dem ersten Anpfiff verschoben,
+ * @ZP-049), steht nichts dabei.
+ */
+export function originalKickoffLocal(
+  date: string,
+  scheduledTime: Date | string | undefined,
+  originalStart: Date | string | undefined,
+): LocalClock | undefined {
+  const shown = kickoffLocal(date, scheduledTime);
+  const original = kickoffLocal(date, originalStart);
+  if (shown === undefined || original === undefined) {
+    return undefined;
+  }
+  return Math.abs(minutesBetween(original, shown)) >= ORIGINAL_KICKOFF_MIN_DEVIATION_MINUTES ? original : undefined;
+}
+
 function wallMinutes(clock: LocalClock): number {
   const [year, month, day] = clock.date.split('-').map(Number);
   const [hour, minute] = clock.time.split(':').map(Number);

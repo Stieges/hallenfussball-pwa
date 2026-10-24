@@ -27,6 +27,9 @@ import { isSupabaseConfigured } from '../../lib/supabase';
 import { usesCloudRepository } from '../../core/repositories/usesCloudRepository';
 import { publishNoticeKey } from './utils/publishNotice';
 import { joinMeta } from '../../core/view';
+import { appTranslator } from '../../lib/pdf/appTranslator';
+import { dayWithWeekday } from '../../lib/pdf/headerFacts';
+import { buildPdfTexts, resolvePdfLocale } from '../../lib/pdf/translations';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -45,7 +48,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   onTournamentChange,
   isPublishing = false,
 }) => {
-  const { t } = useTranslation('wizard');
+  const { t, i18n } = useTranslation('wizard');
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
@@ -125,6 +128,10 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   const handleFieldChange = (matchId: string, fieldNumber: number) => {
     applyChange({ ...currentTournament, fieldAssignments: { ...(currentTournament.fieldAssignments ?? {}), [matchId]: fieldNumber } });
   };
+
+  // Datum wie im Kopf des PDFs und in der Zusammenfassung (eine Quelle: dayWithWeekday); ohne Datum entfällt die Angabe
+  const locale = resolvePdfLocale(i18n.language);
+  const dayText = currentTournament.date ? dayWithWeekday(currentTournament.date, buildPdfTexts(appTranslator(locale), locale)) : '';
 
   const containerStyle: CSSProperties = {
     maxWidth: '1600px',
@@ -209,7 +216,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         </div>
         <h1 style={titleStyle}>{currentTournament.title}</h1>
         <p style={subtitleStyle}>
-          {joinMeta([currentTournament.ageClass, currentTournament.date, getLocationName(currentTournament)], ' • ')}
+          {joinMeta([currentTournament.ageClass, dayText, getLocationName(currentTournament)], ' • ')}
         </p>
         {getLocationAddressLine(currentTournament) && (
           <p style={{ ...subtitleStyle, fontSize: cssVars.fontSizes.md, marginTop: '4px', opacity: 0.8 }}>

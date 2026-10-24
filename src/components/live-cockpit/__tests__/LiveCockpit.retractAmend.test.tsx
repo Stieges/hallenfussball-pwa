@@ -40,6 +40,9 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
     syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(), isCloudSyncAvailable: false,
   }),
 }));
+// B-50 N1: Klärungsliste der Turnierleitung (verworfene Einträge für den Verlauf des Spiels)
+const mockReviews: { current: unknown[] } = { current: [] };
+vi.mock('../../../core/repositories/matchReviewsRpc', () => ({ readMatchReviews: () => Promise.resolve({ ok: true, reviews: mockReviews.current }) }));
 const mockActor: { current: Actor } = { current: 'helper' };
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => mockActor.current }));
 
@@ -272,3 +275,33 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
     expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('1:0');
   });
 });
+
+describe('B-50 @FU-095 / B6.3: verworfene Klärungseinträge im Verlauf des Spiels (Cockpit der Turnierleitung)', () => {
+  const verworfen = {
+    eventId: 'tor-tom-verworfen', matchId: MATCH_ID, matchNumber: 7, field: 1, kind: 'review', reason: 'CONTROL_LOST',
+    detail: { timing: 'after' }, receivedAt: NOW, author: 'Tom', deviceLabel: 'Handy',
+    entry: { type: 'GOAL', teamId: 'teamb', section: 1, clockMs: 120_000, payload: { playerNumber: 9 }, targetId: null, deviceAt: NOW },
+    decision: { type: 'REVIEW_DISCARD', eventId: 'd1', at: new Date(2026, 10, 28, 12, 10).getTime(), by: 'Olli' },
+  };
+  beforeEach(() => { mockReviews.current = [verworfen]; });
+
+  it('Olli sieht Toms verworfenes Tor im Protokoll „verworfen von Olli, 12:10“; der Stand bleibt 1:0', async () => {
+    const { value, commands } = await setup();
+    await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 7 });
+    await commands.pause(MATCH_ID, CTX, 'helper');
+    renderCockpit(value, { istLeitung: true });
+    const mark = await screen.findByTestId('event-discarded-mark');
+    expect(mark).toHaveTextContent('verworfen von Olli, 12:10');
+    expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('1:0');
+  });
+
+  it('Gegenbeispiel: Helfer Tom sieht keinen verworfenen Klärungseintrag im Protokoll', async () => {
+    const { value, commands } = await setup();
+    await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 7 });
+    await commands.pause(MATCH_ID, CTX, 'helper');
+    renderCockpit(value, { istLeitung: false });
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    expect(screen.queryByTestId('event-discarded-mark')).toBeNull();
+  });
+});
+

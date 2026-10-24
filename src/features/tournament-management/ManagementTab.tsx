@@ -14,6 +14,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
+import { KLAERUNG_IM_COCKPIT_KOPF, KlaerungslisteEinstieg } from '../klaerungsliste/KlaerungslisteEinstieg';
 import { LiveCockpit } from '../../components/live-cockpit';
 import type { MatchSummary } from '../../components/live-cockpit/types';
 import { useCockpitExecution } from '../../hooks/useCockpitExecution';
@@ -198,6 +199,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <CockpitSlimHeader
           tournamentId={tournament.id} turnierName={tournament.title} felder={tournament.numberOfFields} feld={feld} onFeld={setFeld} halter={steuer.halter}
           verbindung={<ConnectionPill tournamentId={tournament.id} />}
+          klaerung={KLAERUNG_IM_COCKPIT_KOPF ? <KlaerungslisteEinstieg tournament={tournament} variant="cockpit" /> : undefined}
         />
       )}
       {/* Speicher-Warnung im Rahmen: im Fluss unter dem Kopf, damit sie nicht verloren geht (die feste Leiste der Hülle entfällt hier) */}

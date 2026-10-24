@@ -4,7 +4,28 @@
  * die Listener sofort (Sichtbarkeit ≤ 10 s, L92).
  */
 import type { LocalMatchStore } from './LocalMatchStore';
+import { RIGHTS_REVOKED, type MatchCopy } from './matchCopy';
 import { emptyOutboxStatus, type OutboxPause, type OutboxStatus } from './outboxTypes';
+
+export type CopyListCounts = Pick<OutboxStatus, 'pendingByTournament' | 'pendingByMatch' | 'rejectedByMatch' | 'reviewByMatch' | 'revokedByMatch' | 'revokedWatchOnlyByMatch'>;
+
+/** Zähler der Listen aller Kopien eines Kontos (rein). */
+export function countCopyLists(copies: readonly MatchCopy[]): CopyListCounts {
+  const counts: CopyListCounts = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, revokedByMatch: {}, revokedWatchOnlyByMatch: {} };
+  for (const copy of copies) {
+    counts.pendingByMatch[copy.matchId] = copy.pending.length;
+    counts.rejectedByMatch[copy.matchId] = copy.rejected.length;
+    counts.reviewByMatch[copy.matchId] = copy.review.length;
+    const tournamentKey = copy.tournamentId ?? '';
+    counts.pendingByTournament[tournamentKey] = (counts.pendingByTournament[tournamentKey] ?? 0) + copy.pending.length;
+    const handedOver = copy.review.map((event) => copy.reviewReasons?.[event.id]).filter((reason) => reason?.code === RIGHTS_REVOKED);
+    if (handedOver.length > 0) {
+      counts.revokedByMatch[copy.matchId] = handedOver.length;
+      counts.revokedWatchOnlyByMatch[copy.matchId] = handedOver.filter((reason) => reason?.change === 'watch_only').length;
+    }
+  }
+  return counts;
+}
 
 export class OutboxStatusBook {
   private snapshot: OutboxStatus = emptyOutboxStatus();
@@ -45,18 +66,7 @@ export class OutboxStatusBook {
     pausedMatches: Record<string, OutboxPause>,
   ): Promise<void> {
     const copies = accountId === null ? [] : await store.forAccount(accountId);
-    const pendingByTournament: Record<string, number> = {};
-    const pendingByMatch: Record<string, number> = {};
-    const rejectedByMatch: Record<string, number> = {};
-    const reviewByMatch: Record<string, number> = {};
-    for (const copy of copies) {
-      pendingByMatch[copy.matchId] = copy.pending.length;
-      rejectedByMatch[copy.matchId] = copy.rejected.length;
-      reviewByMatch[copy.matchId] = copy.review.length;
-      const tournamentKey = copy.tournamentId ?? '';
-      pendingByTournament[tournamentKey] = (pendingByTournament[tournamentKey] ?? 0) + copy.pending.length;
-    }
-    this.set({ pendingByTournament, pendingByMatch, rejectedByMatch, reviewByMatch, pausedMatches });
+    this.set({ ...countCopyLists(copies), pausedMatches });
   }
 
   /** Einmal je Instanz: `navigator.storage.persist()` anfordern (RC6). Fehlt die API, kein Fehler. */

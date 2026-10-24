@@ -62,10 +62,10 @@
       "i18nKey": "outbox.rejectedEntry"
     },
     "awaitingReview": {
-      "de": "wartet auf Turnierleitung",
+      "de": "wird geprüft",
       "en": "awaiting review",
       "forbidden_de": ["in Prüfung", "Review offen"],
-      "reason": "Der Server nimmt den Eintrag vorerst an, die Turnierleitung entscheidet später darüber.",
+      "reason": "Der Server nimmt den Eintrag vorerst an, die Turnierleitung entscheidet später darüber. Wortlaut seit B-50 nach @FU-038 („Toms Gerät zeigt „wird geprüft““), vorher „wartet auf Turnierleitung“.",
       "i18nKey": "outbox.awaitingReview"
     },
     "helperAccess": {

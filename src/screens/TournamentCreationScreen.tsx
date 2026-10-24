@@ -717,7 +717,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                     </div>
                   </div>
                 )}
-                <Step5_OverviewDirect formData={formData} onSave={handlePreview} />
+                <Step5_OverviewDirect formData={formData} onSave={handlePreview} createDraft={createDraftTournament} />
               </>
             )}
             {step === 6 && generatedSchedule && (

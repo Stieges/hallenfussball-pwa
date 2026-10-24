@@ -17,6 +17,7 @@ import type { TournamentView, ViewLocale } from '../core/view';
 import { Standing, Match, Team } from '../types/tournament';
 import type { ScheduleSource } from './schedule/scheduleSource';
 import { useElapsedSeconds } from './schedule/useTickingNow';
+import { ViewTimeNotes } from './schedule/ViewTimeNotes';
 import type { MatchForfeitActions } from './schedule/MatchForfeitAction';
 import { useSpectatorClocks } from './schedule/useSpectatorClocks';
 import {
@@ -190,6 +191,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   };
 
   return (
+    <ViewTimeNotes view={view}>
     <div style={containerStyle} className="schedule-display">
       {/* Tournament Header - Hidden on Desktop as info is in Top Nav */}
       <div className="md:hidden">
@@ -304,6 +306,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         }
       `}</style>
     </div>
+    </ViewTimeNotes>
   );
 };
 

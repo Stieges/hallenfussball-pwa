@@ -54,10 +54,11 @@ describe('Adapter pdfRulesFrom (@DR-006)', () => {
 });
 
 describe('Pflichtzeilen Kopf (@DR-006): Hallencup mit BFV-Regelwerk', () => {
-  it('@DR-006 Modus, Wertung, Spielzeit mit Zeitstrafe, Regelwerk in dieser Reihenfolge', () => {
+  it('@DR-006 Modus, Wertung, Gleichstand, Spielzeit mit Zeitstrafe, Regelwerk in dieser Reihenfolge', () => {
     expect(pdfRuleLines(rulesOf({}, BFV), de)).toEqual([
       'Modus: Gruppen + Finalrunde',
       'Wertung: Punkte – Tordifferenz – Tore – direkter Vergleich',
+      'Gleichstand auf Platz 1: Strafstoßschießen',
       'Spielzeit: 10 Min. · Zeitstrafe 2 Min.',
       `Regelwerk: ${BFV}`,
     ]);
@@ -268,6 +269,7 @@ describe('Englischer Wortlaut (@DR-022)', () => {
     expect(pdfRuleLines(rules, en)).toEqual([
       'Mode: Groups + final round',
       'Tiebreakers: Points – Goal difference – Goals – head-to-head',
+      'Tie for place 1: penalty shootout',
       'Match time: 10 min · Time penalty 2 min',
       `Rulebook: ${BFV}`,
     ]);
@@ -307,5 +309,34 @@ describe('F6 N4 Test-Fixture nutzt die Produktions-ID „directComparison“', (
     expect(turnier.placementLogic.map(criterion => criterion.id)).not.toContain('headToHead');
     const zeilen = pdfRuleLines(pdfRulesFrom(turnier, hallencupSchedule(turnier)), de);
     expect(zeilen.join('\n')).toContain('direkter Vergleich');
+  });
+});
+
+describe('Gleichstand auf auszuspielenden Plätzen (@DR-020)', () => {
+  const rulesFor = (placementsToPlayOut: number[]): PdfRules => ({ ...rulesOf(), placementsToPlayOut });
+
+  it.each([
+    [[1], 'Gleichstand auf Platz 1: Strafstoßschießen'],
+    [[1, 2], 'Gleichstand auf den Plätzen 1 und 2: Strafstoßschießen'],
+    [[1, 2, 3], 'Gleichstand auf den Plätzen 1, 2 und 3: Strafstoßschießen'],
+  ])('Plätze %j → „%s“, direkt nach der Wertung', (places, line) => {
+    const lines = pdfRuleLines(rulesFor(places), de);
+    expect(lines).toContain(line);
+    expect(lines.indexOf(line)).toBe(lines.findIndex(entry => entry.startsWith('Wertung:')) + 1);
+  });
+
+  it('kein auszuspielender Platz → keine Zeile', () => {
+    expect(pdfRuleLines(rulesFor([]), de).some(line => line.startsWith('Gleichstand'))).toBe(false);
+  });
+
+  it('englisch ebenso', () => {
+    expect(pdfRuleLines(rulesFor([1]), en)).toContain('Tie for place 1: penalty shootout');
+  });
+
+  it('der Adapter liest die Einstellung am Turnier; ohne Eintrag gilt nur Platz 1 (Voreinstellung), ohne Plan keine K.-o.-Runden', () => {
+    const tournament = hallencupTournament();
+    expect(pdfRulesFrom(tournament, undefined).placementsToPlayOut).toEqual([1]);
+    expect(pdfRulesFrom({ ...tournament, placementsToPlayOut: [] }, undefined).placementsToPlayOut).toEqual([]);
+    expect(pdfRulesFrom(tournament, undefined).koSlots).toEqual([]);
   });
 });

@@ -164,6 +164,7 @@ SW_FILE=""
 AFTER_TARGET=0
 A13BS_APPLIED=0
 A21AS_FILE=""
+A35_FILE=""
 R8_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
@@ -203,6 +204,12 @@ while IFS= read -r line; do
   if [[ "$(basename "$line")" == "20261113_003_tournament_lifecycle.sql" ]]; then
     [[ "$MODE" == "without-sw" ]] && continue
     A21AS_FILE="$line"
+  fi
+  # A-35 (20261117_005): setzt 20261113_003 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg. Sie fasst
+  # append_match_events nach A-21a-S (Klaerung) und match_apply_event (Kopie, Fixtures 71a-71e) neu.
+  if [[ "$(basename "$line")" == "20261117_005_klaerungsliste.sql" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    A35_FILE="$line"
   fi
   # R8 (20261118_001): fasst den Trigger matches_bump_change_revision neu (mit original_start) und bringt
   # matches_guard_schedule_times -- nach dem erneuten Einspielen von 20261028_005 (Idempotenz) wieder einspielen.
@@ -276,6 +283,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$A25B_FILE"; psql_stdin < "$SB_FILE"; fi
   # A-21a-S: seit 20261113_003 steht die juengste Fassung von append_match_events dort (Basis _009 + closed_intake).
   if [[ -n "$A21AS_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A21AS_FILE"; fi
+  # A-35: seit 20261117_005 steht die juengste Fassung von append_match_events dort (Basis _003 + Klaerung).
+  if [[ -n "$A35_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A35_FILE"; fi
   # R8: 20261028_005 oben setzt matches_bump_change_revision auf die Fassung ohne original_start zurueck.
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi
 fi
@@ -294,6 +303,8 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   [[ -n "$SB_FILE" ]] && NEWEST_APPEND_FILE="$SB_FILE"
   # A-21a-S: seit 20261113_003 steht die juengste Fassung dort -- diese Datei wird mutiert.
   [[ -n "$A21AS_FILE" ]] && NEWEST_APPEND_FILE="$A21AS_FILE"
+  # A-35: seit 20261117_005 steht die juengste Fassung dort -- diese Datei wird mutiert (falls vorhanden).
+  [[ -n "$A35_FILE" ]] && NEWEST_APPEND_FILE="$A35_FILE"
   HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$NEWEST_APPEND_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
@@ -559,7 +570,7 @@ for f in "$FIXTURES_DIR"/*.json; do
   FIX_INDEX=$((FIX_INDEX + 1))
   jq -c --arg file "$(basename "$f")" --argjson idx "$FIX_INDEX" \
      --arg owner "$U_OWNER" --arg coadmin "$U_COADMIN" --arg helper "$U_HELPER" \
-     --arg trainer "$U_TRAINER" --arg stranger "$U_STRANGER" '
+     --arg trainer "$U_TRAINER" --arg stranger "$U_STRANGER" --argjson a35 "$([[ -n "$A35_FILE" ]] && echo true || echo false)" '
     def pad($n; $w): ("000000000000" + ($n | tostring))[-$w:];
     . as $f
     | pad($idx; 8) as $fx
@@ -595,6 +606,15 @@ for f in "$FIXTURES_DIR"/*.json; do
         match: ($fx + "-0000-4000-a000-000000000001"),
         team_a: $m[$f.ctx.teamAId], team_b: $m[$f.ctx.teamBId],
         not_derivable: (if $not_derivable != null then $not_derivable
+                        # A-35: Entscheidungen REVIEW_* brauchen einen echten Klaerungseintrag (match_reviews), die Kopie
+                        # eines uebernommenen Eintrags (Typ mit targetId) legt nur der Server selbst an -- beides ist
+                        # ueber append_match_events nicht aus der Fixture herstellbar. Schreibweg: klaerungsliste-check.sh
+                        # (K/G), Rechenfunktion: match-engine-parity.sh (Fixtures 71a-71e).
+                        elif ([$all[] | select((.type | startswith("REVIEW_"))
+                                              or (.targetId != null and (.type | IN("GOAL", "OWN_GOAL", "YELLOW_CARD",
+                                                  "YELLOW_RED_CARD", "RED_CARD", "TIME_PENALTY", "FOUL", "SUBSTITUTION"))))]
+                              | length) > 0
+                        then "Klaerungs-Fixture (REVIEW_* bzw. Kopie mit targetId): Schreibweg in klaerungsliste-check.sh"
                         elif ($batch_users | length) > 1 then "Stapel mit mehreren actorUser"
                         else null end),
         config: (if $r == null then {} else {gamePeriods: $r.sections, halftimeBreak: ($r.breakSeconds / 60),
@@ -616,6 +636,13 @@ for f in "$FIXTURES_DIR"/*.json; do
           | (if $f.mode == "batch" then $f.events[0].actorUser else $au end) as $caller
           | if ($caller == "trainer" or $caller == "stranger")
             then {id: $mf.events[$i].id, status: "rejected", code: "FORBIDDEN_ACTOR"}
+            # A-35 (20261117_005, @FU-116 Z. 2): ein Spielstand-/Karten-/Straf-/Foul-/Wechsel-Eintrag, den die
+            # Rechenfunktion mit MATCH_FINISHED ablehnt, legt der Schreibweg zur Klaerung (review AFTER_END) statt ihn
+            # abzulehnen; die Rechenfunktion selbst (expect.results) bleibt bei MATCH_FINISHED.
+            elif $a35 and $mf.expect.results[$i].status == "rejected" and $mf.expect.results[$i].code == "MATCH_FINISHED"
+                 and ($f.events[$i].type | IN("GOAL", "OWN_GOAL", "YELLOW_CARD", "YELLOW_RED_CARD", "RED_CARD",
+                                              "TIME_PENALTY", "FOUL", "SUBSTITUTION"))
+            then {id: $mf.events[$i].id, status: "review", code: "AFTER_END"}
             else $mf.expect.results[$i] end]),
         forbidden_override: ([$f.events[] | .actorUser] | map(select(. == "trainer" or . == "stranger")) | length > 0),
         expected_state: $mf.expect.serverState,
@@ -735,9 +762,10 @@ done < "$WORKDIR/plans.jsonl"
 if [[ "${#SKIPPED[@]}" -gt 0 ]]; then
   echo "Nicht ueber die Konfiguration herstellbar (uebersprungen, ${#SKIPPED[@]}):"
   printf '    %s\n' "${SKIPPED[@]}"
-  # Nur S14 ist ein erlaubter Grund -- jeder andere Ausfall zaehlt als Abweichung.
-  OTHER_SKIPS="$(printf '%s\n' "${SKIPPED[@]}" | grep -vc ': S14: ' || true)"
-  check Fixtures "uebersprungen nur aus Grund S14 (andere: $OTHER_SKIPS)" '. == 0' "$OTHER_SKIPS"
+  # Nur S14 und die A-35-Klaerungs-Fixtures (genau 71a-71e, Schreibweg in klaerungsliste-check.sh) sind erlaubte
+  # Gruende -- jeder andere Ausfall zaehlt als Abweichung.
+  OTHER_SKIPS="$(printf '%s\n' "${SKIPPED[@]}" | grep -v ': S14: ' | grep -vcE '^71[a-e]-[a-z0-9-]+\.json: Klaerungs-Fixture ' || true)"
+  check Fixtures "uebersprungen nur aus Grund S14 oder Klaerungs-Fixture 71a-71e (andere: $OTHER_SKIPS)" '. == 0' "$OTHER_SKIPS"
 else
   echo "Alle $FIXTURE_COUNT Fixtures ueber die Konfiguration herstellbar (keine uebersprungen)."
 fi
@@ -829,10 +857,20 @@ done
 for who in declined pending viewer; do
   case "$who" in declined) uid="$U_DECLINED" ;; pending) uid="$U_PENDING" ;; *) uid="$U_VIEWER" ;; esac
   out="$(call authenticated "$uid" "$(M r4)" "$(arr "$(ev MATCH_START "$(E "r4-$who")")")")"
-  check Rechte "M2: $who-Mitgliedschaft: FORBIDDEN_ACTOR, kein Zustand" '[.results[].code] == ["FORBIDDEN_ACTOR"] and .state == null' "$out"
+  if [[ "$who" == "declined" && -n "$A35_FILE" ]]; then
+    # A-35 (20261117_005, @FU-017, @HE-080): angenommen und dann entzogen -> bis zur ersten Verbindung nach dem Entzug
+    # legt der Server den Eintrag zur Klaerung (review RIGHTS_REVOKED, zaehlt nie), statt ihn abzulehnen.
+    check Rechte "M2: declined-Mitgliedschaft (angenommen, dann entzogen): A-35 review RIGHTS_REVOKED, kein Zustand" \
+      '[.results[] | .status + ":" + .code] == ["review:RIGHTS_REVOKED"] and .state == null' "$out"
+  else
+    check Rechte "M2: $who-Mitgliedschaft: FORBIDDEN_ACTOR, kein Zustand" '[.results[].code] == ["FORBIDDEN_ACTOR"] and .state == null' "$out"
+  fi
 done
+out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M r4)' AND review_state IS NULL;")"
+check Rechte "trainer/stranger/declined/pending/viewer: nichts gespeichert, das zaehlt" '. == 0' "$out"
 out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M r4)';")"
-check Rechte "trainer/stranger/declined/pending/viewer: nichts gespeichert" '. == 0' "$out"
+check Rechte "trainer/stranger/declined/pending/viewer: hoechstens der Klaerungseintrag (A-35) gespeichert" \
+  ". == $([[ -n "$A35_FILE" ]] && echo 1 || echo 0)" "$out"
 out="$(call authenticated "$U_OWNER" "$(uuid_for match:gibt-es-nicht)" "$(arr "$(ev MATCH_START "$(E r4-nomatch)")")")"
 check Rechte "M6: Spiel existiert nicht -> dieselbe Antwort wie fehlendes Recht (FORBIDDEN_ACTOR, state null)" \
   '[.results[].code] == ["FORBIDDEN_ACTOR"] and .state == null and .exception == null' "$out"
@@ -1651,8 +1689,11 @@ q "DELETE FROM public.tournaments WHERE id = '$T_A8D';" >/dev/null
 out="$(q "SELECT count(*) FROM public.match_events WHERE match_id = '$(M a8-del)';")"
 check A-08h "L3 Gegenbeispiel: Wartungslöschung des Turniers entfernt seine Ereignisse (Kaskade bleibt)" '. == 0' "$out"
 
-# Schritt 0 (Katalog): jede Funktion, die match_events schreibt, ist SECURITY DEFINER.
-out="$(q "SELECT count(*) FROM pg_proc p WHERE p.pronamespace IN ('public'::regnamespace, 'match_engine'::regnamespace) AND NOT p.prosecdef AND p.prosrc ~* '(insert[[:space:]]+into|update|delete[[:space:]]+from)[[:space:]]+[^;]{0,30}match_events';")"
+# Schritt 0 (Katalog): jede Funktion, die match_events schreibt, ist SECURITY DEFINER -- oder eine interne Hilfe im
+# Schema match_engine, die keine Client-Rolle (anon, authenticated, PUBLIC) aufrufen darf und die nur aus einer
+# SECURITY-DEFINER-Funktion heraus laeuft (A-35: match_engine.review_store aus append_match_events).
+out="$(q "SELECT count(*) FROM pg_proc p WHERE p.pronamespace IN ('public'::regnamespace, 'match_engine'::regnamespace) AND NOT p.prosecdef AND p.prosrc ~* '(insert[[:space:]]+into|update|delete[[:space:]]+from)[[:space:]]+[^;]{0,30}match_events' AND NOT (p.pronamespace = 'match_engine'::regnamespace AND NOT has_function_privilege('anon', p.oid, 'EXECUTE') AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE') AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE'));")"
+check A-08h "Schritt 0b: interne match_events-Schreiber ohne Client-EXECUTE (A-35: genau review_store)" '. == "review_store" or . == ""' "$(jq -Rn --arg v "$(q "SELECT coalesce(string_agg(p.proname, ',' ORDER BY p.proname), '') FROM pg_proc p WHERE p.pronamespace = 'match_engine'::regnamespace AND NOT p.prosecdef AND p.prosrc ~* '(insert[[:space:]]+into|update|delete[[:space:]]+from)[[:space:]]+[^;]{0,30}match_events';")" '$v')"
 check A-08h "Schritt 0: keine SECURITY-INVOKER-Funktion schreibt match_events (erwartet 0)" '. == 0' "$out"
 
 # --- 12. Ergebnis -----------------------------------------------------------------------------

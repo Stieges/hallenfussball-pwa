@@ -41,7 +41,7 @@ import { printHeader } from '../../design-tokens/print-header';
 import { qrSide } from './render/qrCode';
 import { drawShortHeads, shortHeadTitleLines, shortQrColumn } from './render/shortHeader';
 import { renderParticipants } from './render/participants';
-import { koLines, pdfRuleLines, pdfRulesFrom, placementLine } from './rules';
+import { koLines, pdfRuleEntries, pdfRulesFrom, placementLine } from './rules';
 import type { PdfTexts } from './translations';
 import { ageClassText } from '../../core/view';
 
@@ -142,7 +142,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
       // im Dateinamen; der Endstand trägt seine Zeile in der Fußzeile
       kicker: edition === 'blank' || edition === 'plan' ? t.kicker.plan : undefined,
       title: schedule.tournament.title,
-      facts: [...headerFacts(schedule, t, organizerName, hallName), ...ruleFacts(pdfRuleLines(rules, t))],
+      facts: [...headerFacts(schedule, t, organizerName, hallName), ...ruleFacts(pdfRuleEntries(rules, t))],
       separator: t.rules.join,
       logoLeft,
       logoRight,

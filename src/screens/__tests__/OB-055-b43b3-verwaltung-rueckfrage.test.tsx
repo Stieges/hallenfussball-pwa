@@ -20,6 +20,7 @@ vi.mock('../../hooks/useTournamentManager', () => ({
 vi.mock('../../core/contexts/RepositoryContext', () => ({ useRepositories: () => ({ tournamentRepository: {} }) }));
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => null }));
+vi.mock('../../features/klaerungsliste/KlaerungslisteEinstieg', () => ({ KlaerungslisteEinstieg: () => null })); // B-50: braucht AuthProvider, hier nicht Gegenstand
 // A-08f3e3: Übertragungsstatus im Kopf braucht Repository-Kontext; hier nicht Gegenstand.
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({ EngineOutboxHeaderStatus: () => null }));
 vi.mock('../../features/tournament-management/TeamsTab', () => ({ TeamsTab: () => <p>Teams-Tab</p> }));

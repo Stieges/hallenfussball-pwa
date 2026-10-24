@@ -138,6 +138,32 @@ export function fetchEngineRows(matchId: string): Promise<EngineRowRecord[]> {
   );
 }
 
+/**
+ * A-35 Klärungsliste (20261117_005): Einträge eines Spiels, die der Server „zur Klärung“ abgelegt hat. Sie stehen in
+ * `match_events` mit `review_state = 'pending'` (zählen nie) und mit Grund in `match_reviews`.
+ */
+export interface ReviewRowRecord {
+  event_id: string;
+  kind: 'review' | 'notice';
+  reason: string;
+  user_id: string | null;
+}
+
+export function fetchReviewRows(matchId: string): Promise<ReviewRowRecord[]> {
+  return getJson<ReviewRowRecord[]>(
+    `match_reviews?match_id=eq.${matchId}&order=created_at.asc&select=event_id,kind,reason,user_id`,
+    `fetchReviewRows(${matchId})`
+  );
+}
+
+/** Engine-Zeilen, die zählen (`review_state IS NULL`) -- ein Klärungseintrag (`pending`) zählt nie. */
+export function fetchCountedEngineRows(matchId: string): Promise<EngineRowRecord[]> {
+  return getJson<EngineRowRecord[]>(
+    `match_events?match_id=eq.${matchId}&event_format=not.is.null&review_state=is.null&order=seq.asc&select=id,type,target_event_id,client_time,payload`,
+    `fetchCountedEngineRows(${matchId})`
+  );
+}
+
 /** Autor (`match_event_authors.user_id`) eines angenommenen Ereignisses. */
 export async function fetchEventAuthorUserId(eventId: string): Promise<string | null> {
   const rows = await getJson<Array<{ user_id: string | null }>>(

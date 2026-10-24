@@ -35,6 +35,7 @@ vi.mock('../../features/tournament-management/ManagementTab', () => {
 });
 vi.mock('../../features/tournament-management/ScheduleTab', () => ({ ScheduleTab: () => <div data-testid="schedule-stub" /> }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => <div data-testid="auth-stub" /> }));
+vi.mock('../../features/klaerungsliste/KlaerungslisteEinstieg', () => ({ KlaerungslisteEinstieg: () => null })); // B-50: braucht AuthProvider, hier nicht Gegenstand
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({ EngineOutboxHeaderStatus: () => null }));
 vi.mock('../../components/ui/Toast', () => ({ useToast: () => ({ showError: vi.fn() }) }));
 
