@@ -195,6 +195,18 @@ export class OptimisticLockError extends Error {
   }
 }
 
+/**
+ * @W2A-077 (R2 PR 1): Versionskonflikt eines Voll-Speicherns, dessen nächste Server-Version eine eigene Gleichstands-Entscheidung
+ * dieses Geräts war. Bleibt ein Konflikt (`isVersionConflict`), trägt aber den eigenen Grund statt „anderes Gerät“.
+ */
+export class OwnDecisionConflictError extends OptimisticLockError {
+  constructor(cause: unknown) {
+    super('Versionskonflikt: der Stand hat sich durch die eigene Gleichstands-Entscheidung geändert');
+    this.name = 'OwnDecisionConflictError';
+    this.cause = cause;
+  }
+}
+
 // =============================================================================
 // Utilities
 // =============================================================================

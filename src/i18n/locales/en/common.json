@@ -128,6 +128,7 @@
     "discardConfirmTitle": "Discard transfer?",
     "discardConfirmMessage": "This change will be permanently discarded and will no longer be transferred to the cloud. If the server knows the tournament, the device will then show its state – without a connection, once it is back. A tournament that has never been on the server stays on this device with all teams and matches. This cannot be undone.",
     "conflictReason": "The tournament has since been changed on another device",
+    "ownDecisionConflictReason": "Not applied: the state has since changed through your own decision",
     "invalidValueReason": "Not accepted – invalid value",
     "tournamentGoneReason": "Not accepted – tournament no longer exists",
     "discardedCopyReason": "Not sent: this change is based on a discarded state. The state of the server will load once the connection is back.",

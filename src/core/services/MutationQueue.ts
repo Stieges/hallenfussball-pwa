@@ -3,7 +3,7 @@ import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../repositories/LocalStorageRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
-import { AuthenticationError, GuestStoreReadError, OptimisticLockError, RepositoryError, SessionReadError } from '../errors';
+import { AuthenticationError, GuestStoreReadError, isVersionConflict, OptimisticLockError, OwnDecisionConflictError, RepositoryError, SessionReadError } from '../errors';
 import { carriesNewDecision, type CompleteGroupRequest } from '../repositories/groupCompletionCloud';
 import { supabase } from '../../lib/supabase';
 import {
@@ -15,6 +15,7 @@ import type { QueueTimers } from './mutationQueueRetry';
 import { executeMetadataMutation, mergeMetadataPayloads, type MetadataMutationPayload } from './metadataMutation';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { checkedVersion, withCheckedVersion } from '../repositories/confirmedVersion';
+import { nextVersionIsOwnDecision, rememberOwnDecisionVersion } from '../repositories/ownDecisionVersions';
 import { captureFeatureError } from '../../lib/sentry';
 
 export { MAX_RETRIES, type MutationQueueStatus } from './GenericMutationQueue';
@@ -375,9 +376,15 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         const base = checkedVersion(tournament);
                         const payload = withCheckedVersion(tournament);
                         // @FU-123: ein aus der Cloud bekanntes Turnier nicht neu anlegen; sonst (@FU-124) unverändert
-                        const reached = await (await knownFromCloud(tournament, localRepo)
-                            ? supabaseRepo.save(payload, { mustExist: true })
-                            : supabaseRepo.save(payload));
+                        let reached: number;
+                        try {
+                            reached = await (await knownFromCloud(tournament, localRepo)
+                                ? supabaseRepo.save(payload, { mustExist: true })
+                                : supabaseRepo.save(payload));
+                        } catch (error) {
+                            // @W2A-077: war die Version nach der Basis die eigene Gleichstands-Entscheidung, ist es kein anderes Gerät
+                            throw isVersionConflict(error) && nextVersionIsOwnDecision(tournament.id, base) ? new OwnDecisionConflictError(error) : error;
+                        }
                         reachedById.set(item.id, reached); // @FU-110: für das Anheben wartender Einträge (rebasePending)
                         await confirmLocally(localRepo, tournament.id, base, reached);
                         break;
@@ -425,6 +432,7 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         // stammt ein Sprung um eins von jemand anderem – dann weder bestätigen noch anheben (@TM-116, @FU-110).
                         if (base !== undefined && carriesNewDecision(payload.request) && reached === base + 1) {
                             completedById.set(item.id, { base, reached });
+                            rememberOwnDecisionVersion(payload.tournamentId, reached); // @W2A-077
                             await confirmLocally(localRepo, payload.tournamentId, base, reached);
                         }
                         break;
