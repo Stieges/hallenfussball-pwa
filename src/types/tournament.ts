@@ -876,6 +876,11 @@ export interface GroupCompletion {
   completedAt?: string;
   /** Gesetzt, solange die Gruppe wieder geöffnet ist (@TM-099); dann gilt der Abschluss nicht. */
   reopenedAt?: string;
+  /**
+   * A-15c (@W2A-062, @TM-146, @TM-147): nur lokal – ohne Netz abgeschlossen, wartet in der Warteschlange auf den Server
+   * (Marke „noch nicht gesendet“). Die Cloud kennt das Feld nicht; ihr Abschluss ersetzt den lokalen.
+   */
+  unsent?: boolean;
 }
 
 /** Art eines Verlaufseintrags (`bracket_log.kind`, Migration `20261110_006`). */

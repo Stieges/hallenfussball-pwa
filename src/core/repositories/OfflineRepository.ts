@@ -306,7 +306,9 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         }
         const discarded = this._mutationQueue.needsCloudCopy(id); // @FU-106: verworfener Konflikt → ganze Kopie der Cloud
         const options = { mayCache: firstCopy ?? true, whole: firstCopy !== undefined || discarded, owned: (t: Tournament) => this.owned(t),
-            wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before) };
+            wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before),
+            // A-15c: ein ohne Netz abgeschlossener, noch nicht gesendeter Abschluss bleibt sichtbar, bis der Server antwortet
+            keepLocalCompletions: () => this._mutationQueue.hasPendingOf(id, ['COMPLETE_GROUP']) };
         const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
         this.serverRevisions.record(id, adoption.revisions);
         if (discarded && adoption.save !== undefined) {
@@ -370,7 +372,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         });
     }
 
-    /** Online-only bis A-15c (F9, @W2A-062): ohne Netz `NetworkError` (isOffline), nichts geschrieben, nichts eingereiht. */
+    /** Nur mit Netz (Entscheidung in der Tabelle, Wiederöffnen): ohne Netz `NetworkError` (isOffline), nichts geschrieben, nichts eingereiht. */
     private requireNetwork(message: string): void {
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
             throw new NetworkError(message, true);
@@ -403,9 +405,23 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         return result;
     }
 
-    /** GA4 A-13b-C: „Gruppe abschließen“ nur mit Netz; danach holt die App den Stand (Abschluss, besetzte Folgespiele) frisch. */
+    /**
+     * GA4 A-13b-C: „Gruppe abschließen“; mit Netz danach den Stand (Abschluss, besetzte Folgespiele) frisch holen.
+     * A-15c (@W2A-062, @TM-115, @TM-146, @TM-147): ohne Netz sofort auf dem Gerät wirksam (Abschluss, Entscheidung, Folgespiele,
+     * Marke „noch nicht gesendet“) und als `COMPLETE_GROUP` eingereiht – lokales Schreiben und Einreihen als eine Einheit (Regel Q).
+     */
     async completeGroup(id: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
-        this.requireNetwork('„Gruppe abschließen“ braucht eine Verbindung.');
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            return this.queueGuard.track(id, async () => {
+                const local = await this.localRepo.get(id);
+                const result = await this.localRepo.completeGroupQueued(id, request);
+                const baseVersion = local === null ? undefined : checkedVersion(local);
+                this.mutationQueue.enqueue('COMPLETE_GROUP', {
+                    tournamentId: id, request, ...(baseVersion !== undefined ? { baseVersion } : {}),
+                });
+                return result;
+            });
+        }
         const result = await this.supabaseRepo.completeGroup(id, request);
         if (result.status === 'ok') {
             await this.refreshAfterServerWrite(id);

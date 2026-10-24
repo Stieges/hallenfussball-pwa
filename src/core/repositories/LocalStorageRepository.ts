@@ -3,7 +3,7 @@ import { Tournament, Match, MatchUpdate } from '../models/types';
 import type {
     CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
 } from './groupCompletionCloud';
-import { applyCompleteGroup, applyRecordDecision, applyReopenGroup, type LocalChange } from './localGroupCompletion';
+import { applyCompleteGroup, applyCompletionSent, applyRecordDecision, applyReopenGroup, type LocalChange } from './localGroupCompletion';
 import { OptimisticLockError } from '../errors';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
@@ -194,6 +194,20 @@ export class LocalStorageRepository implements ITournamentRepository {
     /** GA4 A-13b-C: „Gruppe abschließen“ im lokalen Speicher (Gast). */
     completeGroup(id: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
         return this.changeTournament(id, (t) => applyCompleteGroup(t, request));
+    }
+
+    /**
+     * A-15c (@W2A-062, @TM-146, @TM-147): Abschluss ohne Netz auf einer Cloud-Kopie – sofort wirksam, mit Marke „noch nicht
+     * gesendet“, ohne die Version zu zählen. Den Versand übernimmt die Warteschlange (`COMPLETE_GROUP`).
+     */
+    completeGroupQueued(id: string, request: CompleteGroupRequest): Promise<CompleteGroupResult> {
+        return this.changeTournament(id, (t) => applyCompleteGroup(t, request, { queued: true }));
+    }
+
+    /** A-15c: nachgereichter Abschluss vom Server angenommen – Marke „noch nicht gesendet“ entfernen (fehlt das Turnier: nichts). */
+    async markCompletionSent(id: string, groupId: string): Promise<void> {
+        if ((await this.get(id)) === null) { return; }
+        await this.changeTournament(id, (t) => applyCompletionSent(t, groupId));
     }
 
     /** GA4 A-13b-C: Gruppe lokal wieder öffnen. */

@@ -38,6 +38,15 @@ export interface CompleteGroupRequest {
   fromQueue?: boolean;
 }
 
+/**
+ * A-15c (Review #368 H1): trägt der Abschluss eine Entscheidung, die der Server noch nicht kannte? Nur dann zählt
+ * `complete_group` die Turnierversion (20261110_006, Schritt 7).
+ */
+export function carriesNewDecision(request: Pick<CompleteGroupRequest, 'tieDecisions' | 'knownDecisionIds'>): boolean {
+  const known = new Set(request.knownDecisionIds);
+  return request.tieDecisions.some((d) => !known.has(d.id));
+}
+
 const LastSchema = z.object({
   actor: z.string().nullish(),
   kind: z.string(),
@@ -84,7 +93,7 @@ export interface FollowUpChange {
 }
 
 export type CompleteGroupResult =
-  | { status: 'ok'; alreadyCompleted: boolean; changed: FollowUpChange[]; tournamentVersion?: number }
+  | { status: 'ok'; alreadyCompleted: boolean; changed: FollowUpChange[]; tournamentVersion?: number; /** A-15c: ohne Netz lokal wirksam, wird nachgereicht. */ queued?: boolean }
   | { status: 'rejected'; code: CompleteGroupRejection; open?: number; last?: ServerLast }
   | { status: 'clarification'; code: ConflictCode; clarificationId: number; last?: ServerLast }
   | { status: 'forbidden' };

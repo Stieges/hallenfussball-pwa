@@ -1,7 +1,7 @@
 /**
  * Zustand je Gruppe (GA4 A-13c; @TM-059; Mockup Zustände 1 bis 6, 17 bis 21): neben dem Gruppennamen genau eines der vier
  * Zustandswörter – „offen“, „läuft“, „bereit zum Abschluss“, „abgeschlossen“ – und, wenn nötig, eine Zusatzmarke („Besetzung
- * prüfen“ nach einer Korrektur; „noch nicht gesendet“ folgt mit A-15c). Zusatzmarken ersetzen das Zustandswort nie: nach einer
+ * prüfen“ nach einer Korrektur; „noch nicht gesendet“ nach einem Abschluss ohne Netz, A-15c). Zusatzmarken ersetzen das Zustandswort nie: nach einer
  * Korrektur bleibt die Gruppe „abgeschlossen“. Darunter der Zähler, in einer laufenden Gruppe die gesperrte Zweittaste
  * „Gruppe abschließen“ mit kurzem Grund (@TM-054) und nach dem Abschluss ein Hinweis mit Wirkung, Person und Zeit (nur
  * Turnierleitung) und der leisen Taste „Gruppe wieder öffnen“. Test-IDs: `group-state-<Gruppe>`, `group-flag-<lage>-<Gruppe>`,
@@ -46,7 +46,7 @@ export const GroupStateMarks = ({ groupId }: { groupId: string }) => {
     return null;
   }
   const id = groupTestId(groupId);
-  const label = groupStateLabel(groupState(api.tournament, groupId));
+  const label = groupStateLabel(groupState(api.tournament, groupId), { unsent: activeCompletion(api.tournament, groupId)?.unsent === true });
   const look = WORD[label.word];
   return (
     <span style={marksRow}>
@@ -119,11 +119,15 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
   // „Alle Plätze der Finalrunde sind besetzt“ nur, wenn es Finalspiele gibt, keine Seite mehr auf einen Gruppenplatz wartet (aus den Seiten) UND die Gruppenphase abgeschlossen ist
   const finalMatches = tournament.matches.filter((m) => m.isFinal === true);
   const allGroupSidesFilled = finalMatches.length > 0 && finalMatches.every((m) => [m.slotA, m.slotB].every((slot) => !(isPendingSlot(slot) && slot.source.kind === 'groupRank')));
+  // A-15c (Mockup {#offnach}, @OB-002): noch nicht gesendet → Warn-Hinweis „wird gesendet, sobald die Verbindung steht“, keine
+  // Taste „Gruppe wieder öffnen“ (der Server kennt den Abschluss noch nicht)
+  const unsent = completion.unsent === true;
   return (
     <InlineNotice
-      tone="ok"
+      tone={unsent ? 'warn' : 'ok'}
+      icon={unsent ? <Icons.WifiOff size={iconSizeValues.sm} /> : undefined}
       data-testid={`group-done-${id}`}
-      footer={canManage ? (
+      footer={canManage && !unsent ? (
         <div>
           <Button
             variant="secondary"
@@ -138,7 +142,8 @@ const CompletedNote = ({ groupId }: { groupId: string }) => {
         </div>
       ) : undefined}
     >
-      <span style={title}>{`${t('groupCompletion.done.title', withGroup(name))}${suffix}`}</span>
+      <span style={title}>{unsent ? t('groupCompletion.done.unsentTitle', withGroup(name)) : `${t('groupCompletion.done.title', withGroup(name))}${suffix}`}</span>
+      {unsent ? <p style={line} data-testid={`group-done-unsent-${id}`}>{t('groupCompletion.done.unsentBody', withGroup(name))}</p> : null}
       <p style={line}>{name === undefined ? t('groupCompletion.done.effectAll') : effect.join(' ')}</p>
       {allGroupSidesFilled && phaseState(tournament, 'groups') === 'completed' ? <p style={line} data-testid="group-phase-done">{t('groupCompletion.done.phaseDone')}</p> : null}
     </InlineNotice>

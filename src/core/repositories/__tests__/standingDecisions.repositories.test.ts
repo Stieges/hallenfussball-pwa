@@ -3,7 +3,8 @@
  * (Plan v2 § 3.2, R-TB-5, R-GA4v2-1).
  * - OfflineRepository: nur mit Netz (@W2A-062, F9) – ohne Netz NetworkError, nichts geschrieben, nichts eingereiht; mit Netz
  *   `record_standing_decision`, danach lokale Kopie mit Entscheidungen, Verlauf und neuer Version.
- * - Dasselbe für „Gruppe abschließen“ und Wiederöffnen (online-only bis A-15c).
+ * - Wiederöffnen ebenso nur mit Netz. „Gruppe abschließen“ geht seit A-15c auch ohne Netz (sofort lokal, nachgereicht über die
+ *   Warteschlange; Anforderung @W2A-062 am 23.10. geändert) – Einzelheiten in `groupCompletion.offline.test.ts`.
  * - LocalStorageRepository: Versionsprüfung wie die Cloud (Konflikt → `rejected STALE`), Abschluss und Wiederöffnen lokal.
  */
 import 'fake-indexeddb/auto';
@@ -105,16 +106,18 @@ describe('TB-3 Repositories: Entscheidungen schreiben', () => {
     expect((await local.get('t1'))?.version).toBe(5);
   });
 
-  it('@TM-115 „Gruppe abschließen“ und Wiederöffnen ohne Netz: NetworkError (offline), die Cloud wird nie gerufen', async () => {
-    const { cloud, repo } = offlineRepo();
+  it('@TM-115 „Gruppe abschließen“ ohne Netz gilt sofort (eingereiht, Cloud nicht gerufen); Wiederöffnen ohne Netz: NetworkError', async () => {
+    const { cloud, local, repo } = offlineRepo();
     net.online = false;
-    for (const aufruf of [() => repo.completeGroup('t1', ABSCHLUSS), () => repo.reopenGroup('t1', '', 'Ergebnis falsch')]) {
-      const fehler = await aufruf().catch((e: unknown) => e);
-      expect(fehler).toBeInstanceOf(NetworkError);
-      expect((fehler as NetworkError).isOffline).toBe(true);
-    }
+    expect(await repo.completeGroup('t1', ABSCHLUSS)).toMatchObject({ status: 'ok', queued: true });
+    expect((await local.get('t1'))?.groupCompletions).toEqual([expect.objectContaining({ groupId: '', unsent: true })]);
+    expect(repo.mutationQueue.getPendingCount()).toBe(1);
+    const fehler = await repo.reopenGroup('t1', '', 'Ergebnis falsch').catch((e: unknown) => e);
+    expect(fehler).toBeInstanceOf(NetworkError);
+    expect((fehler as NetworkError).isOffline).toBe(true);
     expect(cloud.completeGroup).not.toHaveBeenCalled();
     expect(cloud.reopenGroup).not.toHaveBeenCalled();
+    repo.mutationQueue.dispose();
   });
 
   it('@TM-046 mit Netz geht „Gruppe abschließen“ an die Cloud; eine Ablehnung wird unverändert weitergegeben und holt nichts nach', async () => {

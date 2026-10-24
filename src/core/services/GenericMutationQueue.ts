@@ -143,6 +143,11 @@ export interface MutationQueueConfig<TType extends string> {
      * gestiegene Prüf-Version. Ohne Angabe bleiben wartende Einträge unverändert.
      */
     rebasePending?: (done: GenericMutationItem<TType>, pending: readonly GenericMutationItem<TType>[]) => ReadonlyArray<{ id: string; payload: unknown }> | undefined;
+    /**
+     * A-15c (@TM-117): Typen, nach deren Konflikt der Bereich sofort den Cloud-Stand braucht (wie nach „Verwerfen“, @FU-106) –
+     * die lokale Kopie trägt dann eine Wirkung, die der Server nicht übernommen hat. Ohne Angabe: keine.
+     */
+    cloudCopyOnConflict?: readonly TType[];
 }
 
 /**
@@ -282,6 +287,10 @@ export class GenericMutationQueue<TType extends string> {
     public completedCount(scope: string): number { return this.completed.get(scope) ?? 0; }
     /** A-08f3c2: wartet ein Eintrag des Bereichs? */
     public hasPending(scope: string): boolean { return this.queue.some((item) => this.inScope(item, scope)); }
+    /** A-15c: wartet ein Eintrag des Bereichs mit einem dieser Typen? */
+    public hasPendingOf(scope: string, types: readonly TType[]): boolean {
+        return this.queue.some((item) => types.includes(item.type) && this.inScope(item, scope));
+    }
     /** A-08f3c2 (H2): liegt ein Eintrag des Bereichs mit einem dieser Typen im Dead-Letter? */
     public hasFailed(scope: string, types: readonly TType[]): boolean {
         return this.failedQueue.some((item) => types.includes(item.type) && this.inScope(item, scope));
@@ -321,6 +330,8 @@ export class GenericMutationQueue<TType extends string> {
         if (error instanceof Error) { captureFeatureError(error, this.config.sentryFeature, 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
         this.queue.shift();
         this.moveToDeadLetter(item, errorMessage, reason);
+        // A-15c (@TM-117): nach einem Konflikt zeigt das Gerät wieder den Stand des Servers (nur für die gewählten Typen)
+        if (reason === 'conflict' && this.config.cloudCopyOnConflict?.includes(item.type)) { this.markCloudCopyNeeded([{ ...item, failedAt: Date.now() }]); }
         this.lastFailure = 'permanent';
         this.save();
         this.notifyListeners();

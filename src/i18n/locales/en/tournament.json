@@ -1344,7 +1344,11 @@
       "sideHome": "home",
       "sideAway": "away",
       "effectAll": "The table has been handed over to the final standing.",
-      "phaseDone": "The group stage is closed. All places in the final round are filled."
+      "phaseDone": "The group stage is closed. All places in the final round are filled.",
+      "unsentTitle": "{{name}} closed – will be sent once the connection is up",
+      "unsentTitle_all": "Group closed – will be sent once the connection is up",
+      "unsentBody": "{{name}} is closed on this device. Other devices see the closing after it has been sent.",
+      "unsentBody_all": "The group is closed on this device. Other devices see the closing after it has been sent."
     },
     "dialog": {
       "title": "Close {{name}}",
@@ -1406,8 +1410,13 @@
       "confirm": "Reopen group",
       "errors": {
         "NOT_COMPLETED": "The group is no longer closed. Please check the table.",
-        "REASON_REQUIRED": "Please give a reason (up to 500 characters)."
+        "REASON_REQUIRED": "Please give a reason (up to 500 characters).",
+        "OFFLINE": "“Reopen group” needs a connection. Please try again with a network."
       }
+    },
+    "offline": {
+      "title": "No connection",
+      "body": "Closing applies on this device right away and will be sent once the connection is up."
     }
   }
 }

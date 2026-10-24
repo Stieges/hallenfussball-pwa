@@ -140,8 +140,11 @@
       "DELETE_TOURNAMENT": "Delete tournament",
       "UPDATE_MATCH": "Update match",
       "UPDATE_MATCHES": "Update matches",
-      "UPDATE_TOURNAMENT_METADATA": "Update tournament data"
-    }
+      "UPDATE_TOURNAMENT_METADATA": "Update tournament data",
+      "COMPLETE_GROUP": "Close group"
+    },
+    "clarificationGroupReason": "Needs clarification: the group was changed on the server in the meantime. Closing it without network was not applied.",
+    "clarificationGroupDecisionReason": "Needs clarification: the group was changed or decided differently on the server in the meantime. Closing it and the decision made without network were not applied."
   },
   "guestHidden": {
     "hint": "{{title}}: only available in guest mode – can be transferred to your account"

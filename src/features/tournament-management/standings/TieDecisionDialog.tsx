@@ -22,6 +22,7 @@ import { ChoiceStep, OrderStep, ShootoutStep } from './TieDialogSteps';
 import { stepText } from './tieStyles';
 import { useStandingTie } from './standingTieContext';
 import { useTieDraft, type TieDialogMode } from './useTieDraft';
+import { OfflineQueuedNotice } from '../group-completion/OfflineQueuedNotice';
 
 export interface TieDecisionDialogProps {
   tournament: Tournament;
@@ -154,6 +155,7 @@ export const TieDecisionDialog = ({ tournament, block, onClose, mode = 'table', 
           <p style={{ ...stepText, fontWeight: cssVars.fontWeights.semibold }} data-testid="tie-offline-hint">{t('standingsTie.dialog.errors.OFFLINE')}</p>
         ) : null}
         {closing && step !== 'seen' ? <p style={stepText} data-testid="tie-then-closed">{t('standingsTie.dialog.thenClosed')}</p> : null}
+        {closing && step !== 'seen' && tie !== null && !tie.online ? <OfflineQueuedNotice data-testid="tie-offline-queued" /> : null}
         {errorText !== null ? <InlineNotice tone="error" data-testid="tie-error"><span>{errorText}</span></InlineNotice> : null}
       </div>
     </DialogSurface>

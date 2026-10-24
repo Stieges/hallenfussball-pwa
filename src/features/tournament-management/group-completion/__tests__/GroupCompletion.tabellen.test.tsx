@@ -443,20 +443,75 @@ describe('@TM-016 @TM-046 Abschluss: Wirkung, Ergebnis', () => {
     await waitFor(() => { expect(repo.completeGroup).toHaveBeenCalledTimes(2); });
   });
 
-  it('ohne Netz: die Taste im Dialog ist gesperrt und nennt den Grund (Abschluss ohne Netz: A-15c); completeGroup wird nicht aufgerufen', async () => {
+  it('@W2A-062 ohne Netz (Anforderung 23.10.): die Taste im Dialog bleibt frei, der Satz sagt „gilt sofort … nachgereicht“; completeGroup wird gerufen', async () => {
     const t = nikolaus([1]);
     const ohneGleichstand = { ...t, standingDecisions: undefined } as Tournament;
-    // Platz 1 und 2 auszuspielen, Gleichstand nur auf 3/4 → mit Annahme angeboten; für den Test eine Lage ohne Gleichstand: Gruppe nach Entscheidung
+    // Lage ohne offenen Gleichstand: die Annahme Petting/Otting steht schon in der Tabelle
     const repo = new MemoryRepo({ ...ohneGleichstand, version: 1 });
     expect((await repo.service(['e-1']).decide(repo.tournament.id, { groupId: '', teamIds: [NK.petting, NK.otting], order: [NK.petting, NK.otting], kind: 'shared' })).ok).toBe(true);
     const fake = fakeRepo();
-    await zeige(repo.tournament, { repo: fake, online: false });
+    fake.completeGroup.mockResolvedValue({ status: 'ok', alreadyCompleted: false, changed: [], queued: true });
+    const { onChanged } = await zeige(repo.tournament, { repo: fake, online: false });
     await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
     await userEvent.click(screen.getByTestId('group-close-button-all'));
     const dialog = await screen.findByTestId('group-close-dialog');
-    expect(within(dialog).getByTestId('group-close-confirm')).toBeDisabled();
-    expect(within(dialog).getByTestId('group-close-offline')).toBeInTheDocument();
-    expect(fake.completeGroup).not.toHaveBeenCalled();
+    expect(within(dialog).getByTestId('group-close-confirm')).toBeEnabled();
+    const hinweis = within(dialog).getByTestId('group-close-offline');
+    expect(hinweis).toHaveAttribute('data-tone', 'warn');
+    expect(hinweis).toHaveTextContent('Keine Verbindung');
+    expect(hinweis).toHaveTextContent('Der Abschluss gilt sofort auf diesem Gerät und wird gesendet, sobald die Verbindung steht.');
+    await userEvent.click(within(dialog).getByTestId('group-close-confirm'));
+    await waitFor(() => { expect(fake.completeGroup).toHaveBeenCalledTimes(1); });
+    await waitFor(() => { expect(screen.queryByTestId('group-close-dialog')).toBeNull(); });
+    expect(screen.queryByTestId('group-close-error')).toBeNull();
+    expect(onChanged).toHaveBeenCalled();
+  });
+
+  it('@W2A-062 Z1 ohne Netz im Kasten: Strafstoßschießen 4:3 für West schließt in einem Zug ab (kein „braucht eine Verbindung“)', async () => {
+    const repo = fakeRepo();
+    repo.completeGroup.mockResolvedValue({ status: 'ok', alreadyCompleted: false, changed: [], queued: true });
+    await zeige(gruppeA(), { repo, online: false });
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    expect(screen.queryByTestId('tie-offline-hint')).toBeNull();
+    expect(screen.getByTestId('tie-offline-queued')).toHaveTextContent('Keine Verbindung'); // Mockup {#offdlg}
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '3');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    await waitFor(() => { expect(repo.completeGroup).toHaveBeenCalledTimes(1); });
+    expect(repo.completeGroup.mock.calls[0][1].tieDecisions[0]).toMatchObject({ kind: 'shootout', order: [HC.west, HC.sued] });
+    await waitFor(() => { expect(screen.queryByTestId('tie-decision-dialog')).toBeNull(); });
+    expect(screen.queryByTestId('group-close-error')).toBeNull();
+  });
+
+  it('@W2A-062 @TM-146 Z1 sofort danach: Gruppe A „abgeschlossen“ mit Marke „noch nicht gesendet“, Halbfinale 2 Gast TSV West; Gegenbeispiel gesendet: keine Marke', async () => {
+    const offen = gruppeA();
+    const entscheidung = { id: 'e-olli', groupId: 'A', teamIds: [HC.sued, HC.west], order: [HC.west, HC.sued], kind: 'shootout' as const, shootout: { winner: 4, loser: 3 }, basis: 'Strafstoßschießen' };
+    const abgeschlossen = (unsent: boolean): Tournament => {
+      const mitEntscheidung = { ...offen, standingDecisions: [entscheidung] };
+      return {
+        ...placeFollowUps(mitEntscheidung, 'A', [HC.nord, HC.west, HC.sued, HC.ost]).tournament,
+        groupCompletions: [{ ...completion('A', [HC.nord, HC.west, HC.sued, HC.ost]), ...(unsent ? { unsent: true } : {}) }],
+      };
+    };
+    await zeige(abgeschlossen(true));
+    expect(marke('A')).toContain('abgeschlossen');
+    expect(screen.getByTestId('group-flag-notSent-A')).toHaveTextContent('noch nicht gesendet');
+    // Mockup {#offnach}: Warn-Hinweis „wird gesendet, sobald die Verbindung steht“, andere Geräte erst nach dem Senden
+    const hinweis = screen.getByTestId('group-done-A');
+    expect(hinweis).toHaveAttribute('data-tone', 'warn');
+    expect(hinweis).toHaveTextContent('Gruppe A abgeschlossen – wird gesendet, sobald die Verbindung steht');
+    expect(screen.getByTestId('group-done-unsent-A')).toHaveTextContent('Andere Geräte sehen den Abschluss nach dem Senden.');
+    expect(hinweis).toHaveTextContent('2. Halbfinale: TSV West (Gast)');
+    // Review #368 M1 (@OB-002): keine Taste „Gruppe wieder öffnen“, solange nichts gesendet ist
+    expect(screen.queryByTestId('group-reopen-A')).toBeNull();
+
+    cleanup();
+    await zeige(abgeschlossen(false));
+    expect(screen.queryByTestId('group-flag-notSent-A')).toBeNull();
+    expect(screen.getByTestId('group-done-A')).toHaveAttribute('data-tone', 'ok');
+    expect(screen.queryByTestId('group-done-unsent-A')).toBeNull();
+    expect(screen.getByTestId('group-reopen-A')).toBeInTheDocument();
   });
 });
 
@@ -480,6 +535,17 @@ describe('@TM-072 @TM-099 Gruppe wieder öffnen', () => {
     await waitFor(() => { expect(repo.reopenGroup).toHaveBeenCalledTimes(1); });
     expect(repo.reopenGroup).toHaveBeenCalledWith(abgeschlossen().id, 'A', 'Ergebnis SV Süd – TSV West prüfen');
     await waitFor(() => { expect(onChanged).toHaveBeenCalled(); });
+  });
+
+  it('Review #368 N4: Wiederöffnen ohne Netz nennt das Wiederöffnen (nicht „Gruppe abschließen“); reopenGroup wird nicht gerufen', async () => {
+    const { repo } = await zeige(abgeschlossen(), { online: false });
+    await userEvent.click(screen.getByTestId('group-reopen-A'));
+    await userEvent.type(await screen.findByTestId('group-reopen-reason'), 'Ergebnis prüfen');
+    await userEvent.click(screen.getByTestId('group-reopen-confirm'));
+    const dialog = screen.getByTestId('group-reopen-dialog');
+    expect(dialog).toHaveTextContent('„Gruppe wieder öffnen“ braucht eine Verbindung');
+    expect(dialog).not.toHaveTextContent('„Gruppe abschließen“ braucht');
+    expect(repo.reopenGroup).not.toHaveBeenCalled();
   });
 
   it('Gegenbeispiel: nur Leerzeichen als Grund → gesperrt, kein Aufruf', async () => {
