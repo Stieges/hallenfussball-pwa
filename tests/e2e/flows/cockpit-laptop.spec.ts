@@ -305,6 +305,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     test.skip((page.viewportSize()?.width ?? 0) < 1024, 'Tastatur am Laptop');
     await seedIndexedDB({ tournaments: [cup()] });
     await anpfeifen(page);
+    await page.keyboard.press('Tab'); // mit der Tastatur zum Knopf (nach dem Mausklick auf „Anpfiff“ gilt sonst Maus-Fokus, @SL-154)
     await page.getByTestId('match-finish-button').focus();
     await page.keyboard.down(' ');
     await expect(page.getByRole('alertdialog')).toBeVisible({ timeout: 3000 });
