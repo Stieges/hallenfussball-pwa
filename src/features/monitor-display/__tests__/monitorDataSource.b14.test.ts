@@ -62,6 +62,23 @@ describe('createMonitorSource über display_tournament (B-14)', () => {
     expect(delta.tournament.matches.map((m) => [m.id, m.scoreA])).toEqual([['s7', 1], ['s8', 1]]);
   });
 
+  it('@ZP-003 @ZP-005 Delta mit original_start: Spiel 8 trägt ohne Neuladen die ursprüngliche Uhrzeit, ein späteres Delta ohne sie nimmt sie wieder weg', async () => {
+    const source = createMonitorSource('tour-1', 'mon-1');
+    const verschoben = { ...spiel('s8', 8, 0), scheduledTime: new Date(2026, 10, 28, 15, 25), originalStart: new Date(2026, 10, 28, 15, 15) } as Match;
+    const zurueck = { ...spiel('s8', 8, 0), scheduledTime: new Date(2026, 10, 28, 15, 15) } as Match;
+    getForDisplay.mockResolvedValueOnce(voll(100))
+      .mockResolvedValueOnce({ kind: 'delta', version: 200, baseVersion: 100, serverNowMs: 0, matches: [verschoben], removedMatchIds: [] })
+      .mockResolvedValueOnce({ kind: 'delta', version: 300, baseVersion: 200, serverNowMs: 0, matches: [zurueck], removedMatchIds: [] });
+    await source.fetch(null);
+    const mit = await source.fetch('100');
+    if (mit.kind !== 'snapshot') { throw new Error(mit.kind); }
+    expect(mit.tournament.matches.find((m) => m.id === 's8')?.originalStart?.getMinutes()).toBe(15);
+    const ohne = await source.fetch('200');
+    if (ohne.kind !== 'snapshot') { throw new Error(ohne.kind); }
+    expect(ohne.tournament.matches.find((m) => m.id === 's8')?.originalStart).toBeUndefined();
+    expect(ohne.tournament.matches.find((m) => m.id === 's7')).toBeDefined();
+  });
+
   it('Gegenbeispiel: Version eines anderen Wegs (kein Stand gemerkt) → volle Antwort statt Delta', async () => {
     getForDisplay.mockResolvedValueOnce(voll(300));
     await createMonitorSource('tour-1', 'mon-1').fetch('abc');

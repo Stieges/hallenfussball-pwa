@@ -10,6 +10,7 @@ import { getFieldDisplayName } from '../../../utils/displayNames';
 import { resultFigures, tableResultExtra } from '../../../components/schedule/matchResult';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
+import { MonitorTimeCell } from './MonitorTimeCell';
 
 interface MonitorMatchRowProps {
   /** Das Spiel der Ansicht: Status, Seitentexte, Anstoß und Endstand kommen von dort (A-36c). */
@@ -63,12 +64,14 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
           {match.badge.kind === 'badge' && <MatchStatusBadge model={match.badge} size="display" tone={monitorBadgeTone(colors)} />}
         </div>
       )}
-      <div style={{ ...cell, fontWeight: cssVars.fontWeights.semibold, flex: `0 0 ${displayList.timeWidth}` }}>
-        {match.kickoff?.time ?? '–'}
-      </div>
-      <div style={{ ...cell, color: colors.textMuted, flex: `0 0 ${displayList.fieldWidth}` }}>
-        {getFieldDisplayName(match.field, tournament)}
-      </div>
+      <MonitorTimeCell
+        match={match}
+        fieldName={getFieldDisplayName(match.field, tournament)}
+        color={colors.text}
+        fieldColor={colors.textMuted}
+        noteColor={colors.text}
+        style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
+      />
       <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{monitorSideLabel(match.home)}</div>
       <div
         data-testid="monitor-match-separator"
