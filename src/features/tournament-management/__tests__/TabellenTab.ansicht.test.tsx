@@ -12,7 +12,7 @@ import { tabellenAnsichtAusAdresse, istEineTabelle } from '../tabellenAnsicht';
 import { generateFullSchedule } from '../../../core/generators';
 import { calculateStandings, calculateStandingsPerGroup } from '../../../utils/calculations';
 import type { Tournament } from '../../../types/tournament';
-import { lage048, MemoryRepo, nikolaus, shootout } from '../../../core/standings/__tests__/decisionTestKit';
+import { jgj, lage048, MemoryRepo, nikolaus, shootout } from '../../../core/standings/__tests__/decisionTestKit';
 import { NAME } from '../../../core/standings/__tests__/fixtures';
 import { fakeTie, i18nWrapper, withTie } from '../standings/__tests__/tieTestKit';
 
@@ -122,6 +122,36 @@ describe('@W2A-076 Offener Gleichstand: keine Medaille für den Platz', () => {
 
   it('Voreinstellung „Platz 1 bis 3“ (Strafstoßschießen nötig): ebenfalls keine Medaille, solange offen', async () => {
     await zeige(nikolaus([1, 2, 3]), platzierung);
+    expect(medaille(NAME.P)).toBe('none');
+    expect(medaille(NAME.D)).toBe('none');
+  });
+
+  // Gherkin @W2A-076: der offene Gleichstand liegt auf Platz 1 (Beispieldaten aus dem Review: P und D je 10 Punkte, 1:1)
+  const platz1 = (): Tournament => jgj('PDFX', 'P–D 1:1; P–F 2:0; P–X 2:0; D–F 2:0; D–X 2:0; F–X 1:0');
+
+  it('offener Gleichstand auf Platz 1 (Voreinstellung „nur Platz 1“: Markierung „Strafstoßschießen nötig“): beide ohne Medaille, kein Silber, Platz 3 Bronze', async () => {
+    await zeige(platz1(), platzierung);
+    expect(medaille(NAME.P)).toBe('none');
+    expect(medaille(NAME.D)).toBe('none');
+    expect(screen.getAllByTestId('tie-marker')[0]).toHaveTextContent('Strafstoßschießen nötig');
+    expect(screen.queryAllByTestId('place-medal').filter((m) => m.getAttribute('data-medal') === 'gold' || m.getAttribute('data-medal') === 'silver')).toHaveLength(0);
+    expect(medaille(NAME.F)).toBe('bronze');
+  });
+
+  it('nach dem Strafstoßschießen 4:3 für Otting auf Platz 1: Gold, Silber, Bronze richtig', async () => {
+    const repo = new MemoryRepo(platz1());
+    expect((await repo.service(['e-1']).decide(repo.tournament.id, shootout('D', 'P', 4, 3))).ok).toBe(true);
+    await zeige(repo.tournament, platzierung);
+    expect(medaille(NAME.D)).toBe('gold');
+    expect(medaille(NAME.P)).toBe('silver');
+    expect(medaille(NAME.F)).toBe('bronze');
+  });
+
+  it('Randfall Jeder gegen jeden mit Gruppenbuchstaben an den Teams: Markierung da, also keine Medaille', async () => {
+    const t = platz1();
+    const mitGruppe: Tournament = { ...t, teams: t.teams.map((team) => ({ ...team, group: 'A' })) };
+    await zeige(mitGruppe, platzierung);
+    expect(screen.getAllByTestId('tie-marker').length).toBeGreaterThanOrEqual(2);
     expect(medaille(NAME.P)).toBe('none');
     expect(medaille(NAME.D)).toBe('none');
   });

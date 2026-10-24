@@ -318,7 +318,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
 
   // @W2A-076: Solange der Platz als „Gleichstand – Entscheidung nötig“ / „Strafstoßschießen nötig“ offen ist, gibt es keine Medaille
   const medalOf = (placement: { rank: number; team: { id: string; group?: string }; decidedBy: string }): Medal =>
-    placement.decidedBy === 'groupStage' && tieUi.isOpen(placement.team.id, groupKeyOf(placement.team.group)) ? 'none' : medalForRank(placement.rank);
+    placement.decidedBy === 'groupStage' && tieUi.isOpen(placement.team.id, hasGroups ? groupKeyOf(placement.team.group) : '') ? 'none' : medalForRank(placement.rank);
   const medalColor: Record<Medal, string> = {
     gold: cssVars.colors.medalGold, silver: cssVars.colors.medalSilver, bronze: cssVars.colors.medalBronze, none: cssVars.colors.surface,
   };
@@ -453,6 +453,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
             <tbody>
               {finalRanking.map((placement) => {
                 const standing = getStanding(placement.team);
+                const medal = medalOf(placement);
                 const goalDiff = standing ? standing.goalsFor - standing.goalsAgainst : 0;
 
                 const enabledCriteria = tournament.placementLogic.filter(c => c.enabled && c.id !== 'directComparison');
@@ -465,7 +466,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                 return (
                   <tr key={`${placement.team.id}-${placement.rank}`}>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      <div style={medalStyle(medalOf(placement))} data-testid="place-medal" data-medal={medalOf(placement)}>{placementRankText(placement)}</div>
+                      <div style={medalStyle(medal)} data-testid="place-medal" data-medal={medal}>{placementRankText(placement)}</div>
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                       {placement.team.name}
@@ -564,6 +565,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                 const enabledCriteria = tournament.placementLogic.filter(c => c.enabled && c.id !== 'directComparison');
                 const highlightPoints = enabledCriteria.some(c => c.id === 'points');
                 const highlightGoalDiff = enabledCriteria.some(c => c.id === 'goalDifference');
+                const medal = medalOf(placement);
 
                 return (
                   <React.Fragment key={teamKey}>
@@ -572,7 +574,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                       style={{ cursor: 'pointer' }}
                     >
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <div style={medalStyle(medalOf(placement))} data-testid="place-medal" data-medal={medalOf(placement)}>{placementRankText(placement)}</div>
+                        <div style={medalStyle(medal)} data-testid="place-medal" data-medal={medal}>{placementRankText(placement)}</div>
                       </td>
                       <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
                         {placement.team.name}
