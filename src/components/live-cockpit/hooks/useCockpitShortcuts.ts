@@ -22,7 +22,7 @@ const istEingabeFeld = (ziel: EventTarget | null): boolean => {
 };
 
 /**
- * Wie der Fokus zuletzt bewegt wurde: Mausklick/Berührung ('maus') oder Tab-Taste ('tastatur'). Anfangs 'tastatur' (Fokus per Programm).
+ * Wie der Fokus zuletzt bewegt wurde: Mausklick/Berührung ('maus') oder Tab-Taste bzw. Programm ('tastatur'). Anfangs 'tastatur'.
  * `:focus-visible` allein reicht nicht: Chrome und Safari melden ihn nach einem Mausklick, sobald eine Taste gedrückt wird – auch die Leertaste.
  */
 let fokusArt: 'maus' | 'tastatur' = 'tastatur';
@@ -53,14 +53,20 @@ export function useCockpitShortcuts(p: CockpitShortcutsParams): void {
       if (ergebnis.verhindern) { e.preventDefault(); e.stopPropagation(); }
       if (ergebnis.aktion !== null && darf(ergebnis.aktion)) { aktionen[ergebnis.aktion](); }
     };
-    const beiZeiger = (): void => { fokusArt = 'maus'; };
+    fokusArt = 'tastatur'; // frischer Start je Cockpit: ohne Mausklick gilt der Fokus als Tastatur-Fokus
+    // Ein Mausklick holt den Fokus im selben Ereignis-Durchlauf (pointerdown → focusin); jeder andere Fokuswechsel (Tab, Programm) gilt als Tastatur.
+    let zeigerEben = false;
+    const beiZeiger = (): void => { fokusArt = 'maus'; zeigerEben = true; setTimeout(() => { zeigerEben = false; }, 0); };
+    const beiFokus = (): void => { if (!zeigerEben) { fokusArt = 'tastatur'; } };
     const beiFokusTaste = (e: KeyboardEvent): void => { if (e.key === 'Tab') { fokusArt = 'tastatur'; } };
     window.addEventListener('pointerdown', beiZeiger, true);
+    window.addEventListener('focusin', beiFokus, true);
     window.addEventListener('keydown', beiFokusTaste, true);
     window.addEventListener('keydown', beiTaste, true);
     window.addEventListener('keyup', beiTaste, true);
     return () => {
       window.removeEventListener('pointerdown', beiZeiger, true);
+      window.removeEventListener('focusin', beiFokus, true);
       window.removeEventListener('keydown', beiFokusTaste, true);
       window.removeEventListener('keydown', beiTaste, true);
       window.removeEventListener('keyup', beiTaste, true);
