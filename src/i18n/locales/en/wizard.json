@@ -572,12 +572,15 @@
     "button": "Finalise",
     "loading": "Finalising …",
     "success": "Tournament successfully finalised.",
-    "explanationPrivate": "The schedule becomes fixed. Afterwards the tournament is visible only to the signed-in tournament directors.",
-    "explanationPublic": "The schedule becomes fixed. Afterwards anyone with the link can watch."
+    "explanationPrivate": "The schedule is locked in. Afterwards the tournament is visible only to the signed-in tournament directors.",
+    "explanationPublic": "The schedule is locked in. Afterwards anyone with the link can watch.",
+    "explanationLocal": "The schedule is locked in. The tournament stays only on this device.",
+    "explanationChangeable": "You can still change team names and results afterwards, the structure only until the first kick-off."
   },
   "preview": {
     "hintLabel": "Note:",
-    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it does not appear in the overview. You can save the schedule as a PDF now or go back to editing."
+    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it does not appear in the overview. You can save the schedule as a PDF now or go back to editing.",
+    "edit": "Edit"
   },
   "schedule": {
     "incomplete_one": "The schedule cannot be completed as it is: {{count}} match does not fit. Please add another field or shorten the minimum break.",

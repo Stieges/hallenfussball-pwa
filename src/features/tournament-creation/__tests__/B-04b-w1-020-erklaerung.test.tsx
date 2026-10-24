@@ -29,6 +29,8 @@ import {
   TournamentCreationService,
   visibilityAfterPublish,
 } from '../../../core/services/TournamentCreationService';
+import { AuthContext } from '../../auth/context/authContextInstance';
+import type { AuthContextValue } from '../../auth/context/authContextValue';
 import deWizard from '../../../i18n/locales/de/wizard.json';
 import enWizard from '../../../i18n/locales/en/wizard.json';
 
@@ -125,14 +127,23 @@ const repositoryMock = (): ITournamentRepository => ({
   regenerateShareCode: vi.fn(() => Promise.resolve(null)),
 });
 
+/** @W1-037: Olli ist angemeldet (Konto, nicht Gast) – nur dann kündigt der Satz den Link an. */
+const angemeldet = {
+  user: { id: 'u1', email: 'o@example.org', name: 'Olli', globalRole: 'user' },
+  isGuest: false,
+  isAnonymous: false,
+} as unknown as AuthContextValue;
+
 const renderPreview = (tournament: Tournament) =>
   render(
-    <TournamentPreview
-      tournament={tournament}
-      schedule={schedule}
-      onEdit={() => undefined}
-      onPublish={() => undefined}
-    />
+    <AuthContext.Provider value={angemeldet}>
+      <TournamentPreview
+        tournament={tournament}
+        schedule={schedule}
+        onEdit={() => undefined}
+        onPublish={() => undefined}
+      />
+    </AuthContext.Provider>
   );
 
 describe('B-04b @W1-020 – Der Satz sagt, was publish() tatsächlich tut', () => {
@@ -154,7 +165,7 @@ describe('B-04b @W1-020 – Der Satz sagt, was publish() tatsächlich tut', () =
     // 'shareable' ↔ isPublic && shareCode
     const visibility = visibilityAfterPublish(data);
     expect(visibility).toBe('shareable');
-    const announcedShareable = hint.textContent === 'wizard:publish.explanationPublic';
+    const announcedShareable = hint.textContent?.startsWith('wizard:publish.explanationPublic');
     const actuallyShareable = result.isPublic === true && Boolean(result.shareCode);
     expect(announcedShareable).toBe(visibility === 'shareable');
     expect(actuallyShareable).toBe(visibility === 'shareable');
@@ -167,14 +178,14 @@ describe('B-04b @W1-020 – Der Satz sagt, was publish() tatsächlich tut', () =
     renderPreview(data);
 
     const hint = screen.getByTestId('publish-explanation');
-    expect(hint).toHaveTextContent('wizard:publish.explanationPrivate');
+    expect(hint.textContent).toContain('wizard:publish.explanationPrivate');
 
     const service = new TournamentCreationService(repositoryMock());
     const result = await service.publish(data);
 
     const visibility = visibilityAfterPublish(data);
     expect(visibility).toBe('private');
-    const announcedShareable = hint.textContent === 'wizard:publish.explanationPublic';
+    const announcedShareable = hint.textContent?.startsWith('wizard:publish.explanationPublic');
     const actuallyShareable = result.isPublic === true && Boolean(result.shareCode);
     expect(announcedShareable).toBe(visibility === 'shareable');
     expect(actuallyShareable).toBe(visibility === 'shareable');
