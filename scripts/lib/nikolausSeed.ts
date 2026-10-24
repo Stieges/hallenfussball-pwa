@@ -106,7 +106,8 @@ async function seedOne(
   ownerRepo: ITournamentRepository,
   service: TournamentCreationService,
   variante: NikolausVariante,
-  helperId: string
+  helperId: string,
+  coadminId: string
 ): Promise<void> {
   const cup = E2E_NIKOLAUS_CUPS[variante];
   deps.log(`Lege ${cup.title} an…`);
@@ -118,6 +119,14 @@ async function seedOne(
       .insert(mapMembershipInsertToSupabase({ tournamentId: tournament.id, userId: helperId, role: 'collaborator', teamIds: [] }));
     if (error) {
       throw new Error(`Mitgliedschaft helper (${cup.title}): ${error.message}`);
+    }
+  }
+  if (cup.mitCoAdmin) {
+    const { error } = await deps.admin
+      .from('tournament_collaborators')
+      .insert(mapMembershipInsertToSupabase({ tournamentId: tournament.id, userId: coadminId, role: 'co-admin', teamIds: [] }));
+    if (error) {
+      throw new Error(`Mitgliedschaft co-admin (${cup.title}): ${error.message}`);
     }
   }
   const { error: publicError } = await deps.ownerClient.rpc('make_tournament_public', { tournament_id: tournament.id });
@@ -136,8 +145,9 @@ export async function seedNikolausCups(
   deps: NikolausSeedDeps,
   ownerRepo: ITournamentRepository,
   service: TournamentCreationService,
-  helperId: string
+  helperId: string,
+  coadminId: string
 ): Promise<void> {
-  await seedOne(deps, ownerRepo, service, 'haupt', helperId);
-  await seedOne(deps, ownerRepo, service, 'zeitplan', helperId);
+  await seedOne(deps, ownerRepo, service, 'haupt', helperId, coadminId);
+  await seedOne(deps, ownerRepo, service, 'zeitplan', helperId, coadminId);
 }

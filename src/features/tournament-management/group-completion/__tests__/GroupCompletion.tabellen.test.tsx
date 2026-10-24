@@ -806,6 +806,19 @@ describe('@W2A-060 die erste Entscheidung gilt, die zweite Person sieht von wem'
     expect(screen.queryByTestId('group-conflict')).toBeNull();
   });
 
+  it('@W2A-060 kurz danach (R2 PR 2): Ollis Abschluss kommt per Neuladen an, während Marias Dialog offen ist → der Hinweis nennt trotzdem Olli', async () => {
+    const repo = fakeRepo();
+    repo.completeGroup.mockResolvedValue({ status: 'rejected', code: 'COMPLETED_DIFFERENTLY' });
+    const { neuGeladen } = await zeige(mitVerlauf(gruppeA(), []), { repo });
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    neuGeladen(mitVerlauf(gruppeA(), [eintrag(1, 'standing_decision', 'Olli'), eintrag(2, 'complete_group', 'Olli')]));
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    expect(await screen.findByTestId('group-conflict')).toHaveTextContent('Olli hat schon anders entschieden');
+  });
+
   it('@W2A-060 Gegenbeispiel (Review #382 M3): alter Abschluss von Maria, danach wieder geöffnet → nie „Maria hat …“, sondern allgemein', async () => {
     const vorher = [eintrag(1, 'complete_group', 'Maria'), eintrag(2, 'reopen_group', 'Maria')];
     await mariaTraegtEin('COMPLETED_DIFFERENTLY', vorher);

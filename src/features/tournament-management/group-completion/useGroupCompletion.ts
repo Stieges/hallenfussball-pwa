@@ -32,7 +32,7 @@ export type CompletionFlow =
   | { step: 'idle' }
   | { step: 'tie'; groupId: string; blocks: OpenTieBlock[]; decisions: NewDecision[] }
   | { step: 'confirm'; groupId: string; plan: ReadyPlan; busy: boolean; error: CompletionError | null }
-  /** `knownLogId`: höchste Verlaufs-Kennung beim Absenden – genannt wird nur, wer danach eingetragen hat (@W2A-060). */
+  /** `knownLogId`: höchste Verlaufs-Kennung beim Start des Ablaufs – genannt wird nur, wer danach eingetragen hat (@W2A-060). */
   | { step: 'notice'; groupId: string; kind: NoticeKind; open?: number; knownLogId?: number }
   | { step: 'reopen'; groupId: string; reason: string; busy: boolean; error: ReopenError | null };
 
@@ -78,6 +78,7 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
   const flowRef = useRef(flow);
   flowRef.current = flow;
   const draftAccepted = useRef(false);
+  const startLogId = useRef(0);
   const canManage = tie?.canDecide ?? false;
   const online = tie?.online ?? true;
   const onChanged = tie?.onChanged;
@@ -121,7 +122,7 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
 
   const submit = useCallback(async (groupId: string, plan: ReadyPlan): Promise<void> => {
     setFlow({ step: 'confirm', groupId, plan, busy: true, error: null });
-    const knownLogId = lastLogId(tournament); // Stand des Verlaufs beim Absenden (@W2A-060)
+    const knownLogId = startLogId.current; // Stand des Verlaufs beim Start des Ablaufs (@W2A-060)
     try {
       if (tournamentRepository.completeGroup === undefined) {
         throw new Error('Repository kann Gruppen nicht abschließen');
@@ -130,7 +131,7 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
     } catch (error) {
       setFlow({ step: 'confirm', groupId, plan, busy: false, error: errorOf(error) });
     }
-  }, [tournamentRepository, tournament, handleResult]);
+  }, [tournamentRepository, tournament.id, handleResult]);
 
   const route = useCallback((groupId: string, decisions: NewDecision[]): void => {
     const plan = planCompletion(tournament, groupId, decisions);
@@ -147,7 +148,11 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
     }
   }, [tournament, submit]);
 
-  const begin = useCallback((groupId: string) => { route(groupId, []); }, [route]);
+  const begin = useCallback((groupId: string) => {
+    // @W2A-060: was das Gerät beim Start schon kannte, nennt der Hinweis nie (auch nicht, wenn der Stand währenddessen neu lädt)
+    startLogId.current = lastLogId(tournament);
+    route(groupId, []);
+  }, [route, tournament]);
 
   const acceptDraft = useCallback((draft: DecisionDraft): void => {
     const current = flowRef.current;
