@@ -24,6 +24,7 @@ import { teamSlot, pendingSlot, matchSideTeamId } from '../core/models/matchSlot
 import type { MatchSlot } from '../core/models/schemas/MatchSlotSchema';
 import { FILE_SOURCE_KEY, checkImportedFinalsPlan, parseFileSource, parseFinalsPhase, type FileSide } from './importFinalsPlan';
 import { defaultPlacementLogic } from '../core/standings/placementDefaults';
+import { localDateIso } from '../core/view/time';
 import {
   isTiebreakerMode,
   isTiebreakerRoundKey,
@@ -369,9 +370,9 @@ function parseJSONTournament(content: string): ImportValidationResult {
     title: String(json.title),
     ageClass: String(json.ageClass ?? 'Herren'),
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty date should use current date
-    date: String(json.date || new Date().toISOString().split('T')[0]),
+    date: String(json.date || localDateIso()),
     timeSlot: String(json.timeSlot ?? '09:00'),
-    startDate: json.startDate ? String(json.startDate) : json.date ? String(json.date) : new Date().toISOString().split('T')[0],
+    startDate: json.startDate ? String(json.startDate) : json.date ? String(json.date) : localDateIso(),
     startTime: json.startTime ? String(json.startTime) : json.timeSlot ? String(json.timeSlot) : '09:00',
     location,
     organizer: json.organizer ? String(json.organizer) : undefined,
@@ -489,9 +490,9 @@ export function parseCSVTeamsToTournament(content: string): ImportValidationResu
     numberOfGroups,
     groupSystem: numberOfGroups > 1 ? 'groupsAndFinals' : 'roundRobin',
 
-    date: new Date().toISOString().split('T')[0],
+    date: localDateIso(),
     timeSlot: '09:00',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: localDateIso(),
     startTime: '09:00',
     groupPhaseGameDuration: 10,
     groupPhaseBreakDuration: 2,

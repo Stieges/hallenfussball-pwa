@@ -19,7 +19,7 @@ export { spectatorClockOf, spectatorClockForMatch, formatRemaining, type Spectat
 export { viewStatus, viewStatusText, isLive, isUpcoming, isMatchInProgress } from './status';
 export { sideView } from './sides';
 export { placementView, groupPhaseOpen } from './placement';
-export { toTournamentLocal, kickoffLocal, kickoffInstant, minutesBetween, clockKey, TOURNAMENT_TIME_ZONE } from './time';
+export { localDateIso, toTournamentLocal, kickoffLocal, kickoffInstant, minutesBetween, clockKey, TOURNAMENT_TIME_ZONE } from './time';
 export { matchFinalScore, finalGoals, type FinalScore, type FinalDecision } from './finalScore';
 export {
   originText,
