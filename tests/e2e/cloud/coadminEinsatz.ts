@@ -18,6 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, type Page } from '@playwright/test';
 import { fetchUserIdByEmail } from './engineHelpers';
+import { localDateIso } from '../../../src/core/view/time';
 import { getLocalServiceRoleClient, gotoLogin } from './helpers';
 import { E2E_RELEASE_CUP_ID, E2E_TEST_PASSWORD, E2E_USERS } from './testData';
 
@@ -133,7 +134,7 @@ export async function cloneReleaseCup(label: string, options: { withCoAdmin?: bo
   const title = `CA7 ${label} ${randomUUID().slice(0, 6)}`;
   const { change_revision: _drop, ...tournamentRow } = remap(source);
   const tournament = {
-    ...tournamentRow, title, date: new Date().toISOString().slice(0, 10), is_public: false, share_code: null, share_code_created_at: null,
+    ...tournamentRow, title, date: localDateIso(), is_public: false, share_code: null, share_code_created_at: null,
     version: 1, deleted_at: null,
   };
   await svc('POST', '/rest/v1/tournaments', [tournament]);

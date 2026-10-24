@@ -34,4 +34,12 @@ describe('@W1-038 Datum nach deutscher Zeit', () => {
     const errors = service.validateStep(1, { title: 'T', date: '2026-10-23', location: { name: 'Halle' }, status: 'draft' });
     expect(errors).toContain(VERGANGENHEIT);
   });
+
+  it('Prüfer in deutscher Zeit: um 0:30 Uhr am 24.10.2026 (22:30 UTC) ist der 23.10.2026 vergangen', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-23T22:30:00Z'));
+    const service = new TournamentCreationService(repo);
+    const errors = service.validateStep(1, { title: 'T', date: '2026-10-23', location: { name: 'Halle' }, status: 'draft' });
+    expect(errors).toContain(VERGANGENHEIT);
+  });
 });

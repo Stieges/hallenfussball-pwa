@@ -32,6 +32,7 @@ import {
 } from '../../tests/e2e/cloud/testData';
 import type { TournamentCreationService } from '../../src/core/services/TournamentCreationService';
 import type { ITournamentRepository } from '../../src/core/repositories/ITournamentRepository';
+import { localDateIso } from '../../src/core/view/time';
 import type { Tournament, Team } from '../../src/core/models/types';
 import { mapMembershipInsertToSupabase } from '../../src/core/repositories/supabaseMappers';
 import { generateFullSchedule } from '../../src/core/generators/scheduleGenerator';
@@ -139,7 +140,7 @@ function buildSingleMatchCup(
       id: ids.tournamentId,
       title,
       ageClass: 'U13',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -294,7 +295,7 @@ export async function seedTurniertagCup(
       id: E2E_TURNIERTAG_CUP_ID,
       title: E2E_TURNIERTAG_CUP_TITLE,
       ageClass: 'U13',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -360,7 +361,7 @@ export async function seedZweitesTurnier(
       id: E2E_ZWEITES_TURNIER_ID,
       title: E2E_ZWEITES_TURNIER_TITLE,
       ageClass: 'U13',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },

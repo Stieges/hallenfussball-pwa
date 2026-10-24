@@ -88,6 +88,7 @@ import {
 } from '../tests/e2e/cloud/testData';
 
 import { TournamentCreationService } from '../src/core/services/TournamentCreationService';
+import { localDateIso } from '../src/core/view/time';
 import type { ITournamentRepository } from '../src/core/repositories/ITournamentRepository';
 import type { Tournament, MatchUpdate, Team } from '../src/core/models/types';
 import {
@@ -428,7 +429,7 @@ async function main(): Promise<void> {
       id: E2E_LIVE_CUP_ID,
       title: E2E_LIVE_CUP_TITLE,
       ageClass: 'U13',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -554,7 +555,7 @@ async function main(): Promise<void> {
     id: E2E_PUBLIC_CUP_ID,
     title: E2E_PUBLIC_CUP_TITLE,
     ageClass: 'U15',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateIso(),
     timeSlot: '10:00 - 15:00',
     startTime: '10:00',
     location: { name: 'Sporthalle Testumgebung' },
@@ -682,7 +683,7 @@ async function main(): Promise<void> {
     id: E2E_DRAFT_CUP_ID,
     title: E2E_DRAFT_CUP_TITLE,
     ageClass: 'U11',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateIso(),
     timeSlot: '09:00 - 16:00',
     startTime: '09:00',
     location: { name: 'Sporthalle Testumgebung' },
@@ -723,7 +724,7 @@ async function main(): Promise<void> {
       id: E2E_RELEASE_CUP_ID,
       title: E2E_RELEASE_CUP_TITLE,
       ageClass: 'U15',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -789,7 +790,7 @@ async function main(): Promise<void> {
       id: E2E_TEAM_HELFER_CUP_ID,
       title: E2E_TEAM_HELFER_CUP_TITLE,
       ageClass: 'U15',
-      date: new Date().toISOString().split('T')[0],
+      date: localDateIso(),
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -824,7 +825,7 @@ async function main(): Promise<void> {
     id: E2E_STRANGER_CUP_ID,
     title: E2E_STRANGER_CUP_TITLE,
     ageClass: 'U11',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateIso(),
     timeSlot: '09:00 - 16:00',
     startTime: '09:00',
     location: { name: 'Sporthalle Testumgebung' },
