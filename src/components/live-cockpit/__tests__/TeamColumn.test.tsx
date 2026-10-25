@@ -52,13 +52,13 @@ describe('TeamColumn', () => {
 
   it('@SL-035 Gegenbeispiel: ohne Grenze nur die Zahl', () => {
     render(<TeamColumn {...props({ fouls: { zaehlt: 3, grenze: null } })} />);
-    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/^Foul 3$/);
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/^Foul · 3$/);
   });
 
   it('@SL-102 ausgeschaltete Foul-Grenze: nur die Zahl 5, ohne Grenze', () => {
     render(<TeamColumn {...props({ fouls: { zaehlt: 5, grenze: null } })} />);
     const zaehler = screen.getByTestId('team-fouls-away');
-    expect(zaehler).toHaveTextContent(/^Foul 5$/);
+    expect(zaehler).toHaveTextContent(/^Foul · 5$/);
     expect(zaehler).not.toHaveTextContent('/');
   });
 
@@ -191,7 +191,7 @@ describe('TeamColumn', () => {
       expect(el.style.hyphens).not.toBe('auto'); // VISUAL-DESIGN § 2: Teamnamen trennen nie
       expect(el).not.toHaveAttribute('lang');
     }
-    expect(name.style.overflowWrap).toBe('anywhere');
+    expect(name.style.overflowWrap).toBe('anywhere'); // Handy: ein Wort, das allein nicht passt, bricht lieber als dass es herausragt (Laptop: break-word, siehe TeamColumn.laptop.test)
   });
 
   it('@OB-025 die Schrift des Namens ist eine Stufe zwischen mittel und groß (kleiner statt kürzen), nie darunter', () => {

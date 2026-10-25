@@ -22,7 +22,7 @@
 .flaecheBreit {
   display: grid;
   /* Die Liste ist so breit wie die Spalte des Mockups, höchstens aber ein Drittel: bei 1024 px bleibt der Tafel mehr Breite (kein Wortbruch im Teamnamen) */
-  grid-template-columns: minmax(0, 1fr) minmax(0, min(var(--sizing-cockpit-ereignisspalte), 33%));
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(var(--cockpit-ereignisspalte, var(--sizing-cockpit-ereignisspalte)), 35%));
   grid-template-rows: minmax(0, 1fr);
 }
 
@@ -36,6 +36,12 @@
 .linksBreit {
   gap: var(--spacing-md);
   min-height: 0;
+}
+
+[data-stufe='knapp'] .linksBreit,
+[data-stufe='normal'] .linksBreit,
+[data-stufe='gross'] .linksBreit {
+  gap: var(--spacing-sm);
 }
 
 .ereignisse {
@@ -69,6 +75,13 @@
   align-items: start;
 }
 
+/* Laptop: die Spalten füllen die Höhe der Tastenfläche, das Tor nimmt den Überschuss (Mockup: größte Fläche der Spalte, @SL-187) */
+.scoreRowBreit {
+  height: 100%;
+  align-items: stretch;
+  grid-template-rows: auto minmax(var(--cockpit-tor, var(--sizing-cockpit-tor-normal)), 1fr) auto auto;
+}
+
 .linksMobile {
   gap: var(--spacing-sm);
 }
@@ -86,11 +99,15 @@
 .linksDaumen {
   flex: 1;
   min-height: 0;
+  /* Stehen viele Hinweise über den Tasten (Nur-Lesen, Ausgang, Klärung, „nur zusehen“), scrollt die Spalte als Ganzes, statt die Tastenfläche auf 0 zu drücken (N1 aus dem Review zu PR A) */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .scoreboardDaumen {
   flex: 1 1 auto;
-  min-height: 0;
+  /* Die Tastenfläche behält mindestens Kopf und Tor-Taste: das Tor bleibt bedienbar (@SL-061), auch wenn Hinweise Platz brauchen */
+  min-height: calc(var(--touch-target-primary) + var(--sizing-cockpit-kopf-knapp) + var(--spacing-sm));
   overflow-y: auto;
   overscroll-behavior: contain;
 }

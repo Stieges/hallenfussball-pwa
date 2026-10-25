@@ -1012,7 +1012,7 @@
   "matchClock": {
     "remaining": "Time left",
     "breakPrefix": "Break",
-    "expired": "Time is up – result to follow",
+    "expired": "Time up",
     "ariaRemaining": "Time left {{time}}",
     "section": {
       "firstHalf": "1st half",

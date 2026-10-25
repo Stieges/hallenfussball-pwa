@@ -93,7 +93,7 @@ describe('LiveCockpit: Halbzeit von selbst und Wiederanpfiff (B-08b)', () => {
     zu(420_000);
     await user.click(screen.getByTestId('match-wiederanpfiff-button'));
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
-    expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 0:00');
+    expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 0:00');
     expect(stand()).toHaveTextContent('1:0');
     expect(screen.getByText('Wiederanpfiff – der nächste Abschnitt läuft')).toBeInTheDocument();
     expect(screen.queryByText('Spiel fortgesetzt')).toBeNull();

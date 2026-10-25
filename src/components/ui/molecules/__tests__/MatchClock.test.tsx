@@ -54,10 +54,10 @@ describe('MatchClock', () => {
     expect(screen.getByTestId('match-clock-section')).toHaveTextContent('Abschnitt 3 von 4');
   });
 
-  it('@OB-066 Spielzeit abgelaufen, noch nicht abgepfiffen: 0:00 und „Spielzeit abgelaufen – Ergebnis folgt“', () => {
+  it('@OB-066 Spielzeit abgelaufen, noch nicht abgepfiffen: 0:00 und „Zeit abgelaufen“', () => {
     render(<MatchClock clock={clock({ remaining: '0:00', expired: true })} size="card" />);
     expect(screen.getByTestId('match-clock')).toHaveTextContent('0:00');
-    expect(screen.getByTestId('match-clock-expired')).toHaveTextContent('Spielzeit abgelaufen – Ergebnis folgt');
+    expect(screen.getByTestId('match-clock-expired')).toHaveTextContent('Zeit abgelaufen');
   });
 
   it('@OB-066 Gegenbeispiel: ohne Restzeit (Pause ohne Pausen-Daten) steht nur das Abschnittswort, keine Ziffern und kein „abgelaufen“', () => {

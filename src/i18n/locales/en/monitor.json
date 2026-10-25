@@ -26,7 +26,7 @@
     "noRunningMatch": "No running match",
     "tablesShownMessage": "Tables will be shown until a match starts",
     "clock": {
-      "ended": "Playing time over – result to follow",
+      "ended": "Time up",
       "holdsOnInterruption": "Clock stops on interruption",
       "stopped": "stopped"
     },

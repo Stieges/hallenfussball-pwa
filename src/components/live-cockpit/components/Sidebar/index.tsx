@@ -9,17 +9,22 @@
  */
 
 import { type CSSProperties } from 'react';
+import { StrafenSpalte } from '../../areas/StrafenSpalte';
+import { KEINE_STRAFEN, type StrafenModel } from '../../model/toStrafenModel';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
-import { mergeProtocol, takeRecent, formatTime, type DiscardedProtocolEntry } from '../protocolEntries';
+import { mergeProtocol, takeRecent, type DiscardedProtocolEntry } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
 import { cardKindOf } from '../../../../utils/cardKind';
 import { useResultEntryEvents } from '../../../../features/match-engine/useResultEntryEvents';
 import { ResultEntryProtocolRows } from '../ResultEntryProtocolRow';
 
 export interface SidebarProps {
-  activePenalties: ActivePenalty[];
+  /** Nicht mehr gelesen: die Karten kommen aus `strafen` (Engine-Ansicht mit Dauer und Beginn, @SL-186). */
+  activePenalties?: ActivePenalty[];
+  /** Laufende Zeitstrafen als Karten (höchstens zwei je Team, „+ n weitere“); ohne Angabe „keine“. */
+  strafen?: StrafenModel;
   events: RuntimeMatchEvent[];
   /** C3b-1 (G6): zurückgenommene Einträge, nur zur Anzeige (durchgestrichen, ohne Bearbeiten). */
   retractedEvents?: RuntimeMatchEvent[];
@@ -44,14 +49,13 @@ export interface SidebarProps {
 // ---------------------------------------------------------------------------
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  activePenalties,
+  strafen = KEINE_STRAFEN,
   events,
   retractedEvents,
   discardedEntries,
   homeTeamName,
   awayTeamName,
   homeTeamId,
-  awayTeamId,
   onEventEdit,
   matchId,
 }) => {
@@ -75,33 +79,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     textTransform: 'uppercase',
     letterSpacing: '1px',
     marginBottom: cssVars.spacing.md,
-  };
-
-  // ---------------------------------------------------------------------------
-  // Penalty Card
-  // ---------------------------------------------------------------------------
-
-  const penaltyCardStyle: CSSProperties = {
-    background: cssVars.colors.warningBannerBg,
-    borderLeft: `3px solid ${cssVars.colors.warning}`,
-    borderRadius: `0 ${cssVars.borderRadius.sm} ${cssVars.borderRadius.sm} 0`,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    marginBottom: cssVars.spacing.sm,
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const penaltyTimerStyle: CSSProperties = {
-    color: cssVars.colors.warning,
-    fontWeight: cssVars.fontWeights.bold,
-    fontVariantNumeric: 'tabular-nums',
-  };
-
-  const getTeamName = (teamId: string): string => {
-    if (teamId === homeTeamId) {return homeTeamName;}
-    if (teamId === awayTeamId) {return awayTeamName;}
-    return teamId;
   };
 
   // ---------------------------------------------------------------------------
@@ -177,26 +154,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div style={containerStyle}>
-      {/* Active Penalties */}
-      <div style={panelStyle}>
-        <div style={panelTitleStyle}>{t('sidebar.activePenalties')}</div>
-        {activePenalties.length === 0 ? (
-          <div style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-            {t('sidebar.noPenalties')}
-          </div>
-        ) : (
-          activePenalties.map((penalty) => (
-            <div key={penalty.eventId} style={penaltyCardStyle}>
-              <span>
-                #{penalty.playerNumber ?? '?'} {getTeamName(penalty.teamId)}
-              </span>
-              <span style={penaltyTimerStyle}>
-                {formatTime(penalty.remainingSeconds)}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+      {/* Laufende Zeitstrafen als Karten (Plan Cockpit v2 B3, @SL-186) */}
+      <StrafenSpalte model={strafen} />
 
       {/* Event Log */}
       <div style={panelStyle}>

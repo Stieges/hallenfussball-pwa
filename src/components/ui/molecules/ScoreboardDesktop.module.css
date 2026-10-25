@@ -1,0 +1,191 @@
+/*
+ * Laptop-Tafel (Plan Cockpit v2 B1, @SL-180, @SL-181): aufgebaut wie die Live-Folie des Hallenmonitors.
+ * Maße aus den Stufen der Fensterhöhe (`--cockpit-*` aus Scoreboard.module.css), nur Tokens, keine Zahlen in Media-Queries.
+ * Kopfzeile · Namen klein über den Kästen · Kästen mit Doppelpunkt · „Restzeit“ · Uhr · Zeitbalken (Doppelpunkte auf einer Achse, @SL-179).
+ */
+.tafel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cockpit-tafel-abstand, var(--spacing-sm));
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--cockpit-tafel-polster, var(--spacing-md));
+  background: var(--color-scoreboard-bg);
+  color: var(--color-scoreboard-text);
+  border: var(--border-width-thin) solid var(--color-scoreboard-divider);
+  border-radius: var(--border-radius-lg);
+}
+
+.tafel[data-stufe='knapp'] {
+  --cockpit-uhr-zeile: var(--line-height-cockpit-uhr-knapp);
+  --cockpit-tafel-abstand: var(--spacing-xs);
+  --cockpit-tafel-polster: var(--spacing-xs);
+  --cockpit-balken: var(--spacing-md);
+}
+
+.tafel[data-stufe='normal'] {
+  --cockpit-tafel-abstand: var(--spacing-xs);
+  --cockpit-tafel-polster: var(--spacing-xs);
+  --cockpit-balken: var(--spacing-md);
+}
+
+.tafel[data-stufe='gross'] {
+  --cockpit-tafel-abstand: var(--spacing-sm);
+  --cockpit-tafel-polster: var(--spacing-md);
+  --cockpit-balken: var(--spacing-lg);
+}
+
+/* Kopfzeile: links „Live“ (ohne rote Fläche), rechts „Spiel 3 · Feld 1 · 2. Halbzeit · Gespielt 4:06“, daneben die Abzeichen */
+.kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  /* gleich hoch mit und ohne Abzeichen („Ton aus“, „Einträge warten“): sonst springt die Tafel, sobald ein Abzeichen kommt oder geht (`zeileHoehe(true)`) */
+  min-height: var(--spacing-xl);
+}
+
+.kopfText {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  font-size: var(--font-size-label-md);
+  line-height: var(--line-height-body-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-scoreboard-text-muted);
+  overflow-wrap: break-word;
+}
+
+.abzeichen {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+/* Feld des Kopftextes: die Einblendung („Tor für …“, 3 s, `aria-live`) liegt genau darüber und verschiebt nichts; „Live“ und die Knöpfe bleiben frei */
+.kopfFeld {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.einblendung {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+}
+
+.kaesten {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--cockpit-doppelpunkt, var(--spacing-xxl)) minmax(0, 1fr);
+  align-items: end;
+  min-width: 0;
+}
+
+.seite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.name {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-body-md);
+  overflow-wrap: break-word;
+  hyphens: manual;
+  text-wrap: balance;
+}
+
+.tafel[data-stufe='gross'] .name {
+  font-size: var(--font-size-xl);
+}
+
+/* Stufe „knapp“ (< 720 px, Variante a): über dem Kasten nur „Heim“/„Gast“, der Name steht groß in der Leiste über den Tasten */
+.label {
+  width: 100%;
+  text-align: center;
+  font-size: var(--font-size-label-md);
+  line-height: var(--line-height-body-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-scoreboard-text-muted);
+}
+
+.doppelpunkt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--cockpit-kasten);
+  font-size: var(--cockpit-ziffer);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  color: var(--color-scoreboard-text-muted);
+  user-select: none;
+}
+
+/* Uhrgruppe: Etikett, Ziffern über die ganze Breite (Achse in der Mitte, gleich dem Doppelpunkt der Kästen), Zeitbalken */
+.uhr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cockpit-uhr-abstand, var(--spacing-xs));
+  min-width: 0;
+  text-align: center;
+  border-radius: var(--border-radius-md);
+}
+
+.tafel[data-stufe='gross'] .uhr {
+  --cockpit-uhr-abstand: var(--spacing-sm);
+}
+
+.etikett {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-scoreboard-text-muted);
+  letter-spacing: var(--letter-spacing-wider);
+}
+
+.unterzeile {
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body-md);
+  color: var(--color-scoreboard-text-muted);
+}
+
+.meldungen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  align-items: center;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body-sm);
+  text-align: center;
+}
+
+.zeile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  text-align: center;
+}

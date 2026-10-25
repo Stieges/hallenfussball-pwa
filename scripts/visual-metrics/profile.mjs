@@ -13,6 +13,7 @@ export const PROFILE = {
   // Cockpit-Maße nach Fensterhoehe (Plan Cockpit v2 3.3/3.4): Laptop-Fenster 620 und 800 Pixel hoch; Handy mit Browserleiste (764) und Safari mit Leisten (664)
   'laptop-1280x620': { art: 'desktop', breite: 1280, hoehe: 620 },
   'laptop-1280x800': { art: 'desktop', breite: 1280, hoehe: 800 },
+  'laptop-1920x1080': { art: 'desktop', breite: 1920, hoehe: 1080 },
   'handy-390x764': { art: 'handy', breite: 390, hoehe: 764 },
   'handy-390x664': { art: 'handy', breite: 390, hoehe: 664 },
   'monitor-1080-rand0': { art: 'monitor', breite: 1920, hoehe: 1080, rand: 'null' },

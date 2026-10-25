@@ -19,6 +19,6 @@
 }
 
 .tafel[data-stufe='gross'] {
-  --cockpit-kasten: var(--sizing-cockpit-kasten-gross);
-  --cockpit-ziffer: var(--sizing-cockpit-ziffer-gross);
+  --cockpit-kasten: var(--sizing-cockpit-kasten-gross-fluid);
+  --cockpit-ziffer: var(--sizing-cockpit-ziffer-gross-fluid);
 }

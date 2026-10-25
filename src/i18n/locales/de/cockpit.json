@@ -51,6 +51,7 @@
     },
     "uhr": {
       "restzeit": "Restzeit",
+      "zeitAbgelaufen": "Zeit abgelaufen",
       "steht": "Uhr steht",
       "pause": "Pause",
       "pauseVorbei": "Pause vorbei",
@@ -68,6 +69,10 @@
       "anpfiffVerlaengerung": "Anpfiff Verlängerung",
       "vonGeplant": "von {{zeit}}",
       "amSchuss": "am Schuss: {{team}}"
+    },
+    "kopf": {
+      "spiel": "Spiel {{nummer}}",
+      "gespielt": "Gespielt {{zeit}}"
     },
     "uhrHaelt": "Uhr hält bei Unterbrechung",
     "entscheidungOffen": "Unentschieden – die Entscheidung folgt",
@@ -244,6 +249,17 @@
     "placeholder": "—",
     "eventDescription": "Tor",
     "close": "Schließen"
+  },
+  "strafen": {
+    "titel": "Aktive Zeitstrafen",
+    "keine": "Keine aktiven Zeitstrafen",
+    "restzeit": "Restzeit",
+    "mitNr": "{{team}}, Nr. {{nummer}}",
+    "ohneNr": "{{team}}, ohne Nr.",
+    "dauer": "Zeitstrafe {{minuten}} Min",
+    "dauerSeit": "Zeitstrafe {{minuten}} Min · seit Spielzeit {{zeit}}",
+    "weitere": "+ {{count}} weitere ({{team}})",
+    "dauerSeitErsteHalbzeit": "Zeitstrafe {{minuten}} Min · seit 1. Halbzeit {{zeit}}"
   },
   "sidebar": {
     "activePenalties": "Aktive Zeitstrafen",
@@ -501,7 +517,8 @@
     "tor": "Tor",
     "karte": "Karte",
     "fouls": "Foul {{zaehlt}}/{{grenze}}",
-    "foulsOhneGrenze": "Foul {{zaehlt}}",
+    "foulsOhneGrenze": "Foul · {{zaehlt}}",
+    "foulsOhneGrenzeAria": "Foul {{zaehlt}}",
     "strafe": "Nr. {{nummer}} · {{rest}}",
     "strafeOhneNr": "ohne Nr. · {{rest}}",
     "unterzahl": "Unterzahl · {{rest}}",

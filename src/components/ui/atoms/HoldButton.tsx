@@ -30,6 +30,8 @@ export interface HoldButtonProps {
   kompakt?: boolean;
   /** Füllt die Zelle der umgebenden Reihe (Laptop und Tablet quer: keine Lücke neben dem Knopf). */
   fuellend?: boolean;
+  /** Laptop: Wort und Zusatz („Abpfiff halten“) stehen in einer Zeile; sonst Zusatz unter dem Wort. */
+  einzeilig?: boolean;
 }
 
 const istHaltetaste = (key: string): boolean => key === 'Enter' || key === ' ';
@@ -86,9 +88,10 @@ const fuellungStil = (fuellt: boolean): CSSProperties => ({
 
 const inhaltStil: CSSProperties = { position: 'relative', display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm };
 const zweiStil: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' };
+const einStil: CSSProperties = { display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: cssVars.spacing.sm, textAlign: 'left' };
 const subStil: CSSProperties = { fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.medium, color: cssVars.colors.textSecondary };
 
-export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false, tabIndex, kompakt = false, fuellend = false }: HoldButtonProps) {
+export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung, disabled = false, tabIndex, kompakt = false, fuellend = false, einzeilig = false }: HoldButtonProps) {
   const [fuellt, setFuellt] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zeigerRef = useRef<number | null>(null);
@@ -182,7 +185,7 @@ export function HoldButton({ label, sublabel, icon, onHold, testId, beschreibung
       </span>
       <span style={kompakt ? { ...inhaltStil, flexDirection: 'column', gap: 0 } : inhaltStil}>
         {icon}
-        <span style={sublabel ? zweiStil : undefined}>
+        <span style={sublabel ? (einzeilig ? einStil : zweiStil) : undefined}>
           {label}
           {sublabel && <small style={subStil}>{sublabel}</small>}
         </span>

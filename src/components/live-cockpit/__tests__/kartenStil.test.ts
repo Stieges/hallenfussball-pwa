@@ -35,9 +35,9 @@ describe('kartenFlaecheStil', () => {
     expect(quelle('../areas/kartenStil.ts')).not.toMatch(/colors\.(warning|error|accent)/);
   });
 
-  it('Gegenbeispiel: Warnhinweise (unvollständiger Eintrag, Sidebar-Banner) bleiben bei warning', () => {
+  it('Gegenbeispiel: Warnhinweise (unvollständiger Eintrag, Strafen-Karte) bleiben bei warning', () => {
     expect(quelle('../components/ProtocolRow.tsx')).toContain('cssVars.colors.warning');
-    expect(quelle('../components/Sidebar/index.tsx')).toContain('cssVars.colors.warning');
+    expect(quelle('../../ui/molecules/PenaltyCard.tsx')).toContain('cssVars.colors.warning'); // das Banner der Zeitstrafen ist seit PR B die Strafen-Karte (@SL-186)
   });
 
   it('Kartendialog und Kartenart-Schritt färben Karten nur mit den Karten-Tokens', () => {

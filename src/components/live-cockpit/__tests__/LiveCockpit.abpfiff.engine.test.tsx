@@ -15,6 +15,9 @@ import { HARNESS_MATCH_ID, anpfiff, eintraegeImLog, halte } from './engineHarnes
 import { T0 } from './enginePhaseFixture';
 import { HOLD_MS } from '../../ui/atoms/HoldButton';
 
+/** Die gespielte Zeit: am Laptop in der Kopfzeile der Tafel (@SL-180), am Handy unter der Uhr. */
+const spielzeit = (): HTMLElement => screen.queryByTestId('scoreboard-kopf-text') ?? screen.getByTestId('scoreboard-clock-sub');
+
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 await initRealDeI18n();
@@ -62,7 +65,7 @@ async function imZweitenAbschnittBei(user: ReturnType<typeof userEvent.setup>, s
   await user.click(screen.getByTestId('match-wiederanpfiff-button'));
   await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
   zu(420_000 + spielzeitMs);
-  await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent(/Spielzeit 2:48/));
+  await waitFor(() => expect(spielzeit()).toHaveTextContent(/(Gespielt|Spielzeit) 2:48/));
 }
 
 describe('Abpfiff halten fragt nach', () => {
@@ -90,7 +93,7 @@ describe('Abpfiff halten fragt nach', () => {
     render(<Harness turnier={SPIEL_11} />); await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(240_000);
-    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent(/Spielzeit 4:00/));
+    await waitFor(() => expect(spielzeit()).toHaveTextContent(/(Gespielt|Spielzeit) 4:00/));
     await halte(screen.getByTestId('match-finish-button'));
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('Spiel 11 bei noch 8:00 Minuten Spielzeit beenden?');
   });

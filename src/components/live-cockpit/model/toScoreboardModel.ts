@@ -10,6 +10,7 @@ import type { LiveMatch } from '../types';
 import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
 import type { ScoreboardModel, ScoreboardSeite, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
+import type { ScoreboardBalken } from '../../ui/molecules/scoreboardTypes';
 import { matchBadgeModel, type MatchBadgeModel } from '../../../core/view/badge';
 import { viewStatus } from '../../../core/view/status';
 import type { ViewMatchStatus } from '../../../core/view/types';
@@ -94,6 +95,22 @@ function abschnittTextOf(phase: CockpitPhase, view: PhaseView | null, von: strin
   return phase.abschnitte > 2 ? t('tafel.abschnitt.vonN', { nummer: phase.abschnitt, gesamt: phase.abschnitte }) : null; // @FU-072
 }
 
+/**
+ * Farbe des Zeitbalkens in der Schlussphase „durchlaufend, letzte x Minuten angehalten“: Violett wie die Uhr-Ziffern (Daniel 25.10., @ZM-166).
+ * Sie greift nur bei dieser Uhr-Art (`schlussphase` kommt aus `getClockDisplay`); sonst bleibt der Balken grün.
+ */
+export const BALKEN_TON_SCHLUSSPHASE: ScoreboardBalken['ton'] = 'violett';
+
+/**
+ * Zeitbalken der laufenden Zustände (@ZM-145, @ZM-166): Rest durch Länge des Abschnitts, nimmt ab; angehalten grau, in der Schlussphase
+ * (`BALKEN_TON_SCHLUSSPHASE`) violett, sonst grün. Ist die Spielzeit abgelaufen, aber noch nicht abgepfiffen, ist er leer; die Spur bleibt sichtbar (@ZM-166).
+ */
+function balkenLaufend(restMs: number, limitMs: number, steht: boolean, schlussphase: boolean): ScoreboardUhr['balken'] {
+  if (restMs <= 0) { return { anteil: 0, ton: 'gruen' }; }
+  const anteil = limitMs > 0 ? Math.min(1, restMs / limitMs) : 0;
+  return { anteil, ton: steht ? 'grau' : schlussphase ? BALKEN_TON_SCHLUSSPHASE : 'gruen' };
+}
+
 interface UhrErgebnis { uhr: ScoreboardUhr | null; hinweise: string[] }
 
 /** Uhr und stehende Zeilen der laufenden Zustände (läuft, pausiert, Pause, Entscheidung, Strafstoßschießen, abgepfiffen). */
@@ -114,12 +131,15 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     // „Uhr hält bei Unterbrechung“ bleibt für „immer angehalten“ (@SL-003).
     const schlussphase = anzeige.phase === 'schlussphaseAngehalten';
     const gespielt = formatUhr(view.sectionElapsedMs / 1000);
+    const abgelaufen = anzeige.phase === 'abgelaufen'; // @ZM-166: „Zeit abgelaufen“ über der Uhr, keine Zeile darunter
     if (anzeige.hinweisUhrHaelt && !schlussphase) { hinweise.push(t('tafel.uhrHaelt')); }
     return {
       hinweise,
       uhr: {
         rest: formatUhr(anzeige.restSekunden), gespielt, schlussphase, steht, hervorgehoben: anzeige.hervorhebung || steht,
-        label: t(steht ? 'tafel.uhr.steht' : 'tafel.uhr.restzeit'), unterzeile: t('tafel.unterzeile.spielzeit', { zeit: gespielt }),
+        balken: balkenLaufend(anzeige.restSekunden * 1000, view.sectionLimitMs, steht, schlussphase),
+        label: t(abgelaufen ? 'tafel.uhr.zeitAbgelaufen' : steht ? 'tafel.uhr.steht' : 'tafel.uhr.restzeit'),
+        unterzeile: abgelaufen ? '' : t('tafel.unterzeile.spielzeit', { zeit: gespielt }), // '' statt null: sonst setzt die Handy-Tafel die gespielte Zeit darunter
       },
     };
   }
@@ -131,6 +151,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
       hinweise,
       uhr: {
         rest: formatUhr(rest), gespielt: null, schlussphase: false, steht: false, hervorgehoben: vorbei, ton: vorbei ? 'ok' : 'gedaempft',
+        balken: { anteil: view.breakTotalMs ? Math.min(1, rest * 1000 / view.breakTotalMs) : 0, ton: 'gedaempft' },
         label: t(vorbei ? 'tafel.uhr.pauseVorbei' : 'tafel.uhr.pause'),
         unterzeile: t(vorbei ? (vorVerlaengerung ? 'tafel.unterzeile.anpfiffVerlaengerung' : 'tafel.unterzeile.wiederanpfiff') : (vorVerlaengerung ? 'tafel.unterzeile.bisVerlaengerung' : 'tafel.unterzeile.bisWiederanpfiff')),
       },
@@ -199,13 +220,20 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const stand = endstand ? { home: endstand.a, away: endstand.b } : { home: 0, away: 0 };
   const seite = (anzeige: 'links' | 'rechts'): ScoreboardSeite => {
     const s = input[anzeige];
-    return { name: match ? (s === 'home' ? match.homeTeam.name : match.awayTeam.name) : '', tore: s === 'home' ? stand.home : stand.away, ...(input.kasten ? { kasten: input.kasten[s] } : {}) };
+    return { name: match ? (s === 'home' ? match.homeTeam.name : match.awayTeam.name) : '', tore: s === 'home' ? stand.home : stand.away, label: t(s === 'home' ? 'spalte.heim' : 'spalte.gast'), ...(input.kasten ? { kasten: input.kasten[s] } : {}) };
   };
   const links = seite('links');
   const rechts = seite('rechts');
   const { uhr, hinweise } = uhrOf(input, t);
   const vor = scoreboardVor(input, t);
+  const abschnittText = abschnittTextOf(phase, input.view, input.eingetragenVon, t) ?? vor.kopfText;
+  const laeuft = phase.zustand === 'laeuft' || phase.zustand === 'pausiert';
+  const kopfText = [
+    match ? t('tafel.kopf.spiel', { nummer: match.number }) : null, input.fieldName ?? null, abschnittText,
+    laeuft && uhr?.gespielt ? t('tafel.kopf.gespielt', { zeit: uhr.gespielt }) : null,
+  ].filter((teil): teil is string => Boolean(teil)).join(' · ');
   return {
+    kopfText: kopfText || null,
     badge: badgeOf(input), links, rechts,
     uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, input.view, input.eingetragenVon, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
     ueberfaelligText: vor.ueberfaelligText, quittungText: quittungTextOf(input, links, rechts, t),

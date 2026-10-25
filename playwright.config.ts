@@ -215,7 +215,7 @@ export default defineConfig({
     {
       // Cockpit Scheibe 3 (Plan Abschluss PR 2): kleinstes Handy mit 360 × 640, nur die Cockpit-Specs (@SL-061, @OB-025).
       name: 'cockpit-360x640',
-      testMatch: /cockpit-(s3|laptop|endstand|tasten|tafel-masse|teamfarben)\.spec\.ts/,
+      testMatch: /cockpit-(s3|laptop|endstand|tasten|handy-platz|tafel-masse|teamfarben)\.spec\.ts/,
       use: {
         viewport: { width: 360, height: 640 },
         deviceScaleFactor: 3,
@@ -273,7 +273,7 @@ export default defineConfig({
       // B-17 Fixrunde 2 (Daniel 15.10.): Desktop Safari (WebKit) nur für die Monitor-Spec. Die übrige Suite
       // bleibt bei Chromium. Lokal vorher: `npx playwright install webkit`.
       name: 'desktop-webkit',
-      testMatch: /(monitor-dauerbetrieb|cockpit-tasten)\.spec\.ts$/,
+      testMatch: /(monitor-dauerbetrieb|cockpit-tasten|cockpit-hoehen)\.spec\.ts$/,
       use: {
         ...devices['Desktop Safari'],
         viewport: { width: 1280, height: 720 },

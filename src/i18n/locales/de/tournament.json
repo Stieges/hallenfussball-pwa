@@ -1012,7 +1012,7 @@
   "matchClock": {
     "remaining": "Restzeit",
     "breakPrefix": "Pause",
-    "expired": "Spielzeit abgelaufen – Ergebnis folgt",
+    "expired": "Zeit abgelaufen",
     "ariaRemaining": "Restzeit {{time}}",
     "section": {
       "firstHalf": "1. Halbzeit",

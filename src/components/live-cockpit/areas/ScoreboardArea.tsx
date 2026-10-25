@@ -117,6 +117,8 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
           icon={noticeIcon(meldung?.stufe)}
           size={size === 'compact' ? 'compact' : 'regular'}
           zeilen={meldezeilen(match, size)}
+          art={size === 'wide' ? 'einblendung' : 'zeile'}
+          stufe={meldung?.stufe}
         />
       )}
     />

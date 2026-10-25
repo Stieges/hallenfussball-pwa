@@ -9,7 +9,7 @@
  *   - @ZM-039 Verlängerung nach Überlauf (Anpfiff bei 10:45) zählt ab dem Anpfiff
  * Gegenbeispiele (grün):
  *   - Gruppenspiel in der regulären Spielzeit bleibt bei 10 Minuten
- *   - abgelaufene Spielzeit ohne Verlängerung zeigt weiter „Ergebnis folgt“
+ *   - abgelaufene Spielzeit ohne Verlängerung zeigt „Zeit abgelaufen“ (@ZM-166)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -170,11 +170,11 @@ describe('@ZM-039 @ZM-139 Monitor-Uhr in der Verlängerung (Paket MU)', () => {
     expect(liveMatchOf(match, tournament).durationSeconds).toBe(600);
   });
 
-  it('@ZM-039 Gegenbeispiel abgelaufene Spielzeit ohne Verlängerung zeigt weiter „Ergebnis folgt“', () => {
+  it('@ZM-039 Gegenbeispiel abgelaufene Spielzeit ohne Verlängerung zeigt „Zeit abgelaufen“ (@ZM-166)', () => {
     const match = spiel({ id: 'gruppe', group: 'A', phase: 'groupStage', ...laufend({ uhrSek: 600, phase: 'regular', beginnSek: 300, section: 2, abschnittSek: 300 }) });
     const tournament = turnier(match);
 
     renderLive(tournament);
-    expect(screen.getByText(/Ergebnis folgt/)).toBeInTheDocument();
+    expect(screen.getByText(/Zeit abgelaufen/)).toBeInTheDocument();
   });
 });

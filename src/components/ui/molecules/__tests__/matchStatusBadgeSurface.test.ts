@@ -74,3 +74,27 @@ describe('@OB-068 überfällig auf der Tafel: lesbar in jedem Thema', () => {
     expect(contrastRatio(resolveToken(theme, cssVars.colors.scoreboardHighlight), tafel)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
   });
 });
+
+describe('@SL-180 „Live“ auf der Laptop-Tafel ohne rote Fläche (Fläche `scoreboardFlach`)', () => {
+  it('„Live“: keine Fläche, Tafel-Schrift weiß; die App- und die Handy-Tafel-Fläche behalten das Live-Rot', () => {
+    expect(badgeColorsFor('live', undefined, 'scoreboardFlach')).toEqual({ bg: 'transparent', fg: cssVars.colors.scoreboardText });
+    expect(badgeColorsFor('live', undefined, 'scoreboard').bg).toBe(cssVars.colors.statusLive);
+    expect(badgeColorsFor('live', undefined, 'app').bg).toBe(cssVars.colors.statusLive);
+  });
+
+  it.each(THEMES)('%s: weiße Schrift auf der Tafel hat ≥ 4,5 : 1 (die Tafel ist in jedem Theme dunkel)', (theme) => {
+    const grund = resolveToken(theme, cssVars.colors.scoreboardBg);
+    const schrift = resolveToken(theme, badgeColorsFor('live', undefined, 'scoreboardFlach').fg);
+    expect(contrastRatio(schrift, grund)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  it('Gegenprobe: alle übrigen Zustände sehen auf der flachen Tafel wie auf der Handy-Tafel aus', () => {
+    for (const zustand of ALLE_ZUSTAENDE.filter((z) => z !== 'live')) {
+      expect(badgeColorsFor(zustand, undefined, 'scoreboardFlach')).toEqual(badgeColorsFor(zustand, undefined, 'scoreboard'));
+    }
+  });
+
+  it('die Anstoßzeit hat auf der flachen Tafel die Tafel-Schrift', () => {
+    expect(kickoffColorFor('scoreboardFlach')).toBe(cssVars.colors.scoreboardTextMuted);
+  });
+});

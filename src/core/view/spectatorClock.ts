@@ -38,7 +38,7 @@ export interface SpectatorClock {
   section: number;
   sections: number;
   stopped: boolean;
-  /** „Spielzeit abgelaufen – Ergebnis folgt“: nur der Übergang bis zum Abpfiff (Autofinish) */
+  /** „Zeit abgelaufen“: nur der Übergang bis zum Abpfiff (Autofinish) */
   expired: boolean;
 }
 

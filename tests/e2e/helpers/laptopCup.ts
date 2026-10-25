@@ -97,9 +97,9 @@ export async function wartendeEintraege(page: Page, anzahl: number, { tonBehalte
 
 export const SPALTEN_TASTEN = ['scoreboard', 'goal-button-home', 'foul-button-home', 'penalty-button-home', 'card-button-home', 'goal-button-away', 'foul-button-away', 'penalty-button-away', 'card-button-away'];
 
-/** Fenster und Inhaltsbereich an den Anfang: gemessen wird, was die Turnierleitung nach dem Anpfiff ohne Zutun sieht. */
+/** Fenster, Inhaltsbereich und die linke Spalte darin (am Handy scrollt sie bei vielen Hinweisen über den Tasten) an den Anfang; die Tastenfläche bleibt, wie sie nach den Tipps steht: gemessen wird, was die Turnierleitung nach dem Anpfiff ohne Zutun sieht. */
 export async function anAnfangRollen(page: Page): Promise<void> {
-  await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('main').forEach((m) => { m.scrollTop = 0; }); });
+  await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('main, main *:not([data-testid="cockpit-tastenflaeche"])').forEach((m) => { if (m.scrollTop > 0) { m.scrollTop = 0; } }); });
 }
 
 /** Fensterhöhe, unter der die Tastenfläche am Handy scrollt (@SL-061, Record 24.10.): Tor bleibt sichtbar, Foul, Zeitstrafe und Karte folgen durch Scrollen. */
