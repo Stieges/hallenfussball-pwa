@@ -42,7 +42,7 @@ Fehlen sie, überspringt der Workflow den Test mit einer Meldung (Job bleibt gr�
 
 ## Aufräumen
 
-Ein angepfiffenes Turnier kann die App nicht mehr löschen (@LZ-003, Schutz in der Datenbank). Jeder Volllauf hinterlässt deshalb ein Wegwerf-Turnier; der Test nennt es am Ende (`RESTBESTAND: …`, im CI in der Zusammenfassung). Wöchentlich und am 15.11. abschließend: `scripts/prod-smoke-cleanup.sql` im SQL-Editor (Platzhalter `<testkonto-mail>` einsetzen, erst Vorschau, dann Löschen). Es trifft nur Turniere dieses Kontos und lässt `ZZ-Rauchtest-Dauer` stehen.
+Ein angepfiffenes Turnier kann die App nicht mehr löschen (@LZ-003, Schutz in der Datenbank). Jeder Volllauf hinterlässt deshalb ein Wegwerf-Turnier; der Test nennt es am Ende (`RESTBESTAND: …`, im CI in der Zusammenfassung). Wöchentlich und am 15.11. abschließend: `scripts/prod-smoke-cleanup.sql` im SQL-Editor (erst Vorschau, dann Löschen). Es trifft nur Turniere des Testkontos coadmin-test2 (Eigentümer-Kennung fest im SQL) und lässt `ZZ-Rauchtest-Dauer` stehen.
 
 ## Bekannte Grenzen
 
