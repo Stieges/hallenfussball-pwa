@@ -14,6 +14,7 @@ import { useKoResolutionAfterAck } from './useKoResolutionAfterAck';
 import { applySlotUpdates } from './koSlotResolution';
 import { useEngineCatchUpOnCloudChange } from './useEngineCatchUpOnCloudChange';
 import { createPushCoalescer } from './coalescePushes';
+import { useLifecycleLock } from './useLifecycleLock';
 
 const FRESH = { fresh: true } as const;
 
@@ -150,9 +151,16 @@ export function useTournamentManager(tournamentId: string) {
     // I3: welche Spiele die Engine GERADE kontrolliert (Ref, synchron waehrend des Renderns
     // aktualisiert -- kein Effekt-/Render-Zyklus, s. useEngineOverlaidMatchIds).
     const overlaidMatchIdsRef = useEngineOverlaidMatchIds(tournament);
+    // R3-2b (E10): nach dem Abschluss kein save() – der Server lehnte jede Änderung mit 55000 ab
+    const lifecycleLock = useLifecycleLock(tournament);
 
     // Update Handler (matches signature of useTournamentSync)
     const handleTournamentUpdate = useCallback(async (updated: Tournament) => {
+        if (!lifecycleLock.saveAllowed(updated)) {
+            // Abgeschlossen: nichts senden, die Anzeige zeigt wieder den Stand des Servers
+            await loadTournament(FRESH);
+            return;
+        }
         const sanitized = stripEngineOverlayFields(updated, tournament, overlaidMatchIdsRef.current);
         try {
             await service.updateTournament(sanitized);
@@ -166,7 +174,7 @@ export function useTournamentManager(tournamentId: string) {
             // Reload to get consistent state
             await loadTournament();
         }
-    }, [service, loadTournament, tournament, overlaidMatchIdsRef]);
+    }, [service, loadTournament, tournament, overlaidMatchIdsRef, lifecycleLock]);
 
     // Task A1 (Sofortschutz): Gegenstück zu handleTournamentUpdate OHNE Speicherpfad. Manche
     // Aufrufer (z. B. das Cockpit nach Spielende) wollen den lokalen Zustand nur mit dem

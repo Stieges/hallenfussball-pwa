@@ -105,7 +105,8 @@ describe('useTournamentManager.applyRemote — kein Speicherweg (Task A1, Fixrun
     window.addEventListener('tournament-updated', gehoert);
 
     await act(async () => {
-      await result.current.handleTournamentUpdate(makeTournament({ lifecycleStatus: 'finished' }));
+      // R3-2b (E10): ein abgeschlossenes Turnier wird gar nicht mehr gespeichert – hier ein gewöhnliches Speichern
+      await result.current.handleTournamentUpdate(makeTournament({ title: 'Umbenannt' }));
     });
     window.removeEventListener('tournament-updated', gehoert);
 
