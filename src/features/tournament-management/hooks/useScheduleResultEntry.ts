@@ -16,6 +16,7 @@
  * Szenarien: @FU-080, @FU-081, @FU-082, @FU-093, @FU-094, @FU-097, @FU-069, @EK-004, @HE-042, @FU-112, @FU-113, @FU-114,
  * @FU-115, @FU-116, @FU-117, @FU-118.
  */
+import { isTournamentClosedById } from '../../../core/services/closedTournaments';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../../../types/tournament';
@@ -159,6 +160,11 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
   }, [staleText, t, tCockpit]);
 
   const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number): Promise<boolean> => {
+    if (isTournamentClosedById(tournament.id)) {
+      // R3-3 (@LZ-036): zweite Linie -- der Spielplan bietet die Eingabe nach dem Abschluss nicht an; kommt sie doch, nie still verwerfen
+      showWarning(t('rights.closedSaveBlocked'));
+      return false;
+    }
     const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
     if (!entry) {
       showWarning(t('schedule.resultEntry.teamsMissing'));

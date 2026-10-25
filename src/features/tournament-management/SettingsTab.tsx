@@ -31,6 +31,8 @@ import { useTournamentStartState } from '../../hooks/useTournamentStartState';
 import { useCan } from '../auth/hooks/useCan';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
+import { TournamentClosedHint } from '../../components/ui/molecules/TournamentClosedHint';
+import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../core/services/tournamentMetaValidation';
 
 interface SettingsTabProps {
@@ -64,6 +66,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Teams ersetzen (Erweiterte Bearbeitung) = restructure. Rechte nur über useCan.
   const canChangeRules = useCan('tournamentSettings', tournament.id);
   const canRestructure = useCan('restructure', tournament.id);
+  const closed = useTournamentClosed(tournament.id); // R3-3: nach dem Abschluss ist der Grund der Abschluss, nicht das Recht
   // Collapse-State für Formular-Bereich
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
 
@@ -336,7 +339,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   return (
     <div style={containerStyle}>
       <div style={contentStyle}>
-        {!canChangeRules && <div style={{ marginBottom: cssVars.spacing.md }}><LeadOnlyHint /></div>}
+        {!canChangeRules && <div style={{ marginBottom: cssVars.spacing.md }}>{closed ? <TournamentClosedHint /> : <LeadOnlyHint />}</div>}
         {/* Collapsible Header für Metadaten-Bearbeitung */}
         <div
           style={collapsibleHeaderStyle}

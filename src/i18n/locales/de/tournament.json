@@ -1174,7 +1174,11 @@
     "finalTable": "Abschlusstabelle"
   },
   "rights": {
-    "leadOnlyHint": "Ändern nur durch die Turnierleitung"
+    "leadOnlyHint": "Ändern nur durch die Turnierleitung",
+    "closedTitle": "Turnier abgeschlossen",
+    "closedBack": "Zurück zum Turnier",
+    "closedHint": "Das Turnier ist abgeschlossen – hier lässt sich nichts mehr ändern.",
+    "closedSaveBlocked": "Das Turnier ist abgeschlossen – die Änderung wurde nicht gespeichert."
   },
   "standingsTie": {
     "marker": {

@@ -35,6 +35,8 @@ import { useRahmenWurzelStil } from './components/live-cockpit/frame/cockpitFram
 import { captureFeatureError } from './lib/sentry';
 import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
+import { isTournamentClosed } from './core/services/lifecycle';
+import { ClosedTournamentEditNotice } from './screens/ClosedTournamentEditNotice';
 import { HelperStartGate } from './features/helpers/components/HelperStartGate'; // A-17c: Wiedereinstieg @HE-096
 
 // Lazy load screens for better initial load performance
@@ -134,6 +136,7 @@ type ScreenType = 'dashboard' | 'create' | 'view' | 'live' | 'login' | 'register
 
 function AppContent() {
   const { t } = useTranslation('common');
+  const { t: tTournament } = useTranslation('tournament');
   const { showError } = useToast();
   const { isGuest } = useAuth();
   const navigate = useNavigate();
@@ -253,12 +256,16 @@ function AppContent() {
       try {
         await softDeleteTournament(id);
       } catch (error) {
+        if (error instanceof Error && error.message === 'TOURNAMENT_CLOSED') {
+          showError(tTournament('rights.closedHint')); // R3-3: eigener Text, kein Fehler für Sentry
+          return;
+        }
         console.error('[App] Failed to soft delete tournament:', error);
         if (error instanceof Error) { captureFeatureError(error, 'tournament', 'softDelete', { tournamentId: id }); }
         showError(t('errors.deleteTournament'));
       }
     }
-  }, [softDeleteDialog, softDeleteTournament, showError, t]);
+  }, [softDeleteDialog, softDeleteTournament, showError, t, tTournament]);
 
   const handleRestore = useCallback(async (id: string, title: string) => {
     try {
@@ -288,6 +295,7 @@ function AppContent() {
   }, [permanentDeleteDialog, permanentDeleteTournament, showError, t]);
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const wizardTournament = selectedTournament ?? (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined);
   const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
 
@@ -451,6 +459,10 @@ function AppContent() {
 
   // Handler for editing a published tournament in the wizard
   const handleEditInWizard = async (tournament: Tournament, targetStep?: number) => {
+    if (isTournamentClosed(tournament)) {
+      showError(tTournament('rights.closedHint')); // R3-3: zweite Linie, die Verwaltung bietet den Einstieg nicht an
+      return;
+    }
     try {
       // Update lastVisitedStep if targetStep is provided
       const tournamentToEdit = targetStep
@@ -566,7 +578,11 @@ function AppContent() {
           </HelperStartGate>
         )}
 
-        {(isWizardPath || screen === 'create') && (
+        {/* R3-3 (@LZ-036): ein abgeschlossenes Turnier wird nicht mehr neu geplant -- der Wizard (alle 5 Schritte) öffnet nicht */}
+        {isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament) && (
+          <ClosedTournamentEditNotice onBack={() => void navigate(`/tournament/${wizardTournament.id}`)} />
+        )}
+        {(isWizardPath || screen === 'create') && !(isEditWizardPath && wizardTournament !== undefined && isTournamentClosed(wizardTournament)) && (
           <TournamentCreationScreen
             onBack={() => {
               // Abbrechen im Wizard-Bearbeiten stellt den Stand von vorher wieder her – mit dem Zustand von vorher
@@ -600,10 +616,7 @@ function AppContent() {
                 void navigate('/');
               }
             }}
-            existingTournament={
-              selectedTournament ??
-              (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined)
-            }
+            existingTournament={wizardTournament}
             quickEditMode={quickEditMode}
             onNavigateToLogin={() => void navigate('/login')}
             onNavigateToRegister={() => void navigate('/register')}

@@ -14,6 +14,8 @@ import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
 import { useCan } from '../../../auth/hooks/useCan';
+import { useTournamentClosed } from '../../../../hooks/useTournamentClosed';
+import { TournamentClosedHint } from '../../../../components/ui/molecules/TournamentClosedHint';
 import type { Tournament } from '../../../../types/tournament';
 import { useResultsReset } from '../../hooks/useResultsReset';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
@@ -237,6 +239,7 @@ export function DangerZoneCategory({
   // R7: Löschen nur der Eigentümer (DB: protect_deleted_at -> deleteTournament), für alle anderen ausgeblendet.
   // Abschließen/Archivieren gibt es hier nicht mehr (R3-1, C-FINISH-PROMISE): der neue Weg kommt mit R3-4 (@LZ-022).
   const canDelete = useCan('deleteTournament', tournamentId);
+  const closed = useTournamentClosed(tournamentId); // R3-3 (@LZ-036): „Ergebnisse zurücksetzen“ gibt es nach dem Abschluss nicht
 
   // @LZ-003: „Turnier löschen" nur vor dem ersten Anpfiff — und nur, wenn der
   // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe
@@ -364,7 +367,7 @@ export function DangerZoneCategory({
       </div>
 
       {/* Reset Schedule (Danger) */}
-      {renderActionCard('reset_schedule')}
+      {closed ? <TournamentClosedHint /> : renderActionCard('reset_schedule')}
 
       {/* Delete Tournament (Danger) — R7: nur für den Eigentümer, @LZ-003: nur vor dem ersten Anpfiff */}
       {canOfferDelete && renderActionCard('delete_tournament')}

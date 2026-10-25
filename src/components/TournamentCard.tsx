@@ -10,6 +10,7 @@
  * - Action menu (dropdown on desktop, bottom sheet on mobile)
  */
 
+import { isTournamentClosed } from '../core/services/lifecycle';
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament, PlacementCriterion, GroupSystem } from '../types/tournament';
@@ -56,7 +57,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   // P1: Live-Abfrage nur, wenn ein Papierkorb angeboten werden könnte.
   // CA-5 (@HE-085, Auflage 10c): „Löschen“ nur mit dem Recht deleteTournament; ohne Rolle (Gast, lokal) = eigenes Turnier.
   const { myRole } = tournament;
-  const mayDelete = canWithListedRole(myRole, 'deleteTournament');
+  const mayDelete = canWithListedRole(myRole, 'deleteTournament', isTournamentClosed(tournament)); // R3-3: abgeschlossen = kein Papierkorb
   const { state: matchStartState } = useTournamentStartState(tournament, {
     enabled: Boolean(onSoftDelete) && mayDelete,
   });

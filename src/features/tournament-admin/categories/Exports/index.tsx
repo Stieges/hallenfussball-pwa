@@ -13,6 +13,8 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
 import { useCan } from '../../../auth/hooks/useCan';
+import { useTournamentClosed } from '../../../../hooks/useTournamentClosed';
+import { TournamentClosedHint } from '../../../../components/ui/molecules/TournamentClosedHint';
 import { generateFullSchedule } from '../../../../core/generators';
 import { calculateStandingsPerGroup, eventsForMatch, type EngineEventsById } from '../../../../utils/calculations';
 import { cardKindOf } from '../../../../utils/cardKind';
@@ -166,7 +168,8 @@ export function ExportsCategory({
   onTournamentUpdate,
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
-  const canNotice = useCan('tournamentSettings', tournament.id); // A-11 @ZM-019: Aushang nur mit Turniereinstellungen
+  const canNotice = useCan('tournamentSettings', tournament.id, { openAfterClose: true }); // A-11 @ZM-019: Aushang nur mit Turniereinstellungen; bleibt nach dem Abschluss (druckt den Link der öffentlichen Ansicht, schreibt nichts, @LZ-037 Z. 5)
+  const closed = useTournamentClosed(tournament.id); // R3-3 (@LZ-036): Wiederherstellen überschriebe ein abgeschlossenes Turnier
   const { t: tSport } = useTranslation('sport');
   const { t: tTournament } = useTranslation('tournament');
   // F3b2 (M8/U1): EIN Lauf beim Klick auf "Exportieren" statt eines Dauer-Abos -- s.
@@ -938,6 +941,9 @@ export function ExportsCategory({
           </div>
         )}
 
+        {closed ? (
+          <div style={{ marginTop: cssVars.spacing.xl }}><TournamentClosedHint /></div>
+        ) : (
         <div style={{ marginTop: cssVars.spacing.xl }}>
           <h4 style={styles.label}>{t('exports.restoreBackup')}</h4>
           <input
@@ -974,6 +980,7 @@ export function ExportsCategory({
             </span>
           </div>
         </div>
+        )}
       </CollapsibleSection>
 
       {/* PDF Export Dialog */}

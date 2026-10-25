@@ -10,6 +10,7 @@
  * - Zeit-Editor für manuelle Anpassungen
  */
 
+import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, Tournament } from '../../types/tournament';
@@ -91,6 +92,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const canPlay = useCan('writeMatchData', tournament.id);
   // Turnierleitung (@SL-159): nur sie bekommt „Korrigieren“, der Helfer den Hinweis „Korrektur über die Turnierleitung“ (@SL-045)
   const istLeitung = useCan('leadMatches', tournament.id);
+  const closed = useTournamentClosed(tournament.id); // R3-3: Cockpit nennt den Abschluss statt des Helfer-Satzes
   const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes, endstandPause } = useFieldMatchSelection({
     numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed,
   });
@@ -222,6 +224,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             steuerung={steuer.steuerung}
             uebernahmeVon={steuer.uebernahmeVon}
             istLeitung={istLeitung}
+            abgeschlossen={closed}
             onKorrigieren={korrektur.onKorrigieren}
             onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}

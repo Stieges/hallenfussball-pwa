@@ -42,7 +42,7 @@ import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
 import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 import { ScheduleTimeShift } from './time-shift/ScheduleTimeShift';
-import { isTournamentClosed } from '../../core/services/lifecycle';
+import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -74,7 +74,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // A-11: Cockpit-Hinweis bei laufendem Spiel = Spielbetrieb; Spielplan ändern = manageSchedule; Aushang (@ZM-019)
   const canControlTimer = useCan('writeMatchData', tournament.id);
   const canSchedule = useCan('manageSchedule', tournament.id);
-  const canNotice = useCan('tournamentSettings', tournament.id);
+  const canNotice = useCan('tournamentSettings', tournament.id, { openAfterClose: true }); // Aushang druckt nur den Link der öffentlichen Ansicht: bleibt nach dem Abschluss (@LZ-037 Z. 5)
+  const closed = useTournamentClosed(tournament.id); // R3-3 (@LZ-036, @ZP-087): Ergebnis, Schiri, Feld im Spielplan nur vor dem Abschluss
   const canEndRunning = useCan('leadMatches', tournament.id); // @FU-112/@FU-113: Spiel beenden nur Turnierleitung
   // Toast notifications
   const { showWarning, showSuccess } = useToast();
@@ -335,7 +336,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           )}
 
           {/* Conditional rendering based on view mode */}
-          {viewMode === 'table' ? (
+          {viewMode === 'table' || closed ? (
             hasFilters && filteredMatches.length === 0 ? (
               <EmptyFilterState
                 onReset={resetFilters}
@@ -346,20 +347,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               <ScheduleTimeShift
                 tournament={tournament} schedule={schedule} standings={currentStandings} view={view}
                 onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} canCreateNotice={canNotice}
-                enabled={canSchedule && !isEditing && !isTournamentClosed(tournament)}
+                enabled={canSchedule && !isEditing && !closed}
               >
               <ScheduleDisplay
                 schedule={schedule}
                 currentStandings={currentStandings}
                 currentMatches={tournament.matches}
                 tournamentTeams={tournament.teams}
-                editable={true}
+                editable={!closed}
                 editingSchedule={isEditing}
                 pendingChanges={isEditing ? pendingChanges : undefined}
-                onScoreChange={handleScoreChange}
+                onScoreChange={closed ? undefined : handleScoreChange}
                 changeAuthorOf={resultEntry.changeAuthor}
-                onRefereeChange={handleRefereeAssignment}
-                onFieldChange={handleFieldChange}
+                onRefereeChange={closed ? undefined : handleRefereeAssignment}
+                onFieldChange={closed ? undefined : handleFieldChange}
                 onMatchSwap={isEditing ? handleMatchSwap : undefined}
                 view={view}
                 locale={locale}

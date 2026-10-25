@@ -17,6 +17,8 @@ import type { LiveCockpitLeisteProps } from '../typesLeiste';
 export interface NurLesenLeisteProps {
   fieldName: string;
   steuerung?: LiveCockpitLeisteProps['steuerung'];
+  /** Turnier abgeschlossen (R3-3): statt eines Helfer-Satzes steht „Das Turnier ist abgeschlossen“. */
+  abgeschlossen?: boolean;
   mitEreignissen: boolean;
   onEreignisse: () => void;
   onMehr: () => void;
@@ -41,10 +43,11 @@ function steuerText(t: TFunction<'cockpit'>, feld: string, s: Steuerung): string
   return name !== null ? t('leiste.leitet', { feld, name }) : t('leiste.leitetOhneName', { feld });
 }
 
-export function NurLesenLeiste({ fieldName, steuerung, mitEreignissen, onEreignisse, onMehr }: NurLesenLeisteProps): ReactElement {
+export function NurLesenLeiste({ fieldName, steuerung, abgeschlossen = false, mitEreignissen, onEreignisse, onMehr }: NurLesenLeisteProps): ReactElement {
   const { t } = useTranslation('cockpit');
   return (
     <div data-testid="leiste-nur-lesen" style={stil}>
+      {abgeschlossen && <div data-testid="leiste-abgeschlossen">{t('leiste.abgeschlossen')}</div>}
       {steuerung && <div data-testid="leiste-leitet" role="status">{steuerText(t, fieldName, steuerung)}</div>}
       {steuerung?.onUebernehmen && (
         <Button variant="primary" style={{ minHeight: cssVars.touchTargets.primary }} data-testid="leiste-uebernehmen" onClick={steuerung.onUebernehmen}>
