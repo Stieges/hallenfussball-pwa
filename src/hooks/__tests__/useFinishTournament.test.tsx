@@ -466,3 +466,24 @@ describe('H-6 die Startseite lädt nach dem Abschluss ihre Liste neu', () => {
     window.removeEventListener('tournament-updated', gehoert);
   });
 });
+
+describe('Die Prüfung hängt nie endlos: hängt eine Lese-Stufe, endet sie nach 20 s mit „Prüfung gescheitert“', () => {
+  it('der rohe Stand kommt nicht → nach 20 s CHECK_FAILED, kein Abschluss-Aufruf; ein neuer Versuch beginnt mit neuer request_id', async () => {
+    vi.useFakeTimers();
+    const loadRaw = vi.fn(() => new Promise<Tournament | null>(() => undefined));
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw }));
+    let ersterLauf: Promise<void> = Promise.resolve();
+    act(() => { ersterLauf = result.current.start(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(19_000); });
+    expect(result.current.state.phase).toBe('checking');
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500); await ersterLauf; });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
+    expect(calls('finish_tournament')).toEqual([]);
+  });
+
+  it('Gegenbeispiel: kommt der rohe Stand rechtzeitig, läuft die Prüfung durch', async () => {
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw: () => Promise.resolve(tournament) }));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state.phase).toBe('confirming');
+  });
+});

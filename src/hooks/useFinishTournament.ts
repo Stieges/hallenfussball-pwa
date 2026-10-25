@@ -102,6 +102,25 @@ function rejectionOf(result: Exclude<FinishTournamentResult, { status: 'ok' } | 
 
 const client = () => (isSupabaseConfigured ? supabase : null);
 
+/** Zeitgrenze je Lese-Stufe der Prüfung (Stand lesen, Spiel-Ereignisse laden): hängt eine Stufe, endet die Prüfung mit „Prüfung gescheitert“ statt endlos „wird geprüft“. */
+export const FINISH_STAGE_TIMEOUT_MS = 20_000;
+const STAGE_TIMED_OUT = Symbol('stage-timed-out');
+
+async function stage<T>(name: string, work: Promise<T>): Promise<T | typeof STAGE_TIMED_OUT> {
+  const started = Date.now();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof STAGE_TIMED_OUT>((resolve) => { timer = setTimeout(() => { resolve(STAGE_TIMED_OUT); }, FINISH_STAGE_TIMEOUT_MS); });
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    clearTimeout(timer);
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console -- Messung der Prüfdauer je Stufe (nur Entwicklung, von der Cloud-E2E N6c2 gelesen)
+      console.info(`[finish] ${name} ${String(Date.now() - started)} ms`);
+    }
+  }
+}
+
 /** H-6 (Review #393): die Startseite lädt ihre Liste neu, sonst bliebe das Turnier dort unter „Läuft“ (@LZ-006). */
 const announceTournamentUpdated = (): void => {
   if (typeof window !== 'undefined') {
@@ -160,18 +179,22 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
     set({ phase: 'checking' });
     const [preflight, reviews, raw] = await Promise.all([
       readFinishPreflight(client(), current.id), readMatchReviews(client(), current.id),
-      latest.current.loadRaw ? latest.current.loadRaw().catch(() => null) : Promise.resolve(current),
+      stage('raw', latest.current.loadRaw ? latest.current.loadRaw().catch(() => null) : Promise.resolve(current)),
     ]);
     if (outdated()) {
       return;
     }
-    if (preflight.status !== 'ok' || !reviews.ok || raw === null) {
+    if (preflight.status !== 'ok' || !reviews.ok || raw === null || raw === STAGE_TIMED_OUT) {
       set({ phase: 'rejected', reason: preflight.status === 'forbidden' ? { code: 'FORBIDDEN' } : { code: 'CHECK_FAILED' } });
       return;
     }
     let engineEventsById;
     try {
-      engineEventsById = context !== null ? await loadEngineEventsForExport(raw, context) : undefined;
+      const loaded = context !== null ? await stage('engine', loadEngineEventsForExport(raw, context)) : undefined;
+      if (loaded === STAGE_TIMED_OUT) {
+        throw new Error('Ereignisse nicht rechtzeitig geladen');
+      }
+      engineEventsById = loaded;
     } catch {
       if (!outdated()) {
         set({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
