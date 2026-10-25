@@ -18,6 +18,7 @@ import { useFinishTournament } from '../../../hooks/useFinishTournament';
 import { useCan } from '../../auth/hooks/useCan';
 import { useMatchReviews } from '../../klaerungsliste/useMatchReviews';
 import { finishFacts, lateFinishHint, shouldSuggestFinish } from '../model/finishSummary';
+import { useServerLifecyclePoll } from '../hooks/useServerLifecyclePoll';
 import { FinishedStateSection } from './FinishedStateSection';
 import { FinishSectionCards } from './FinishSectionCards';
 import { FinishTournamentDialog } from './FinishTournamentDialog';
@@ -49,6 +50,10 @@ export function FinishTournamentSection({ tournament, onReload }: FinishTourname
   const suggest = shouldSuggestFinish(tournament, lifecycle, openReviews);
   const lateHint = lateFinishHint(tournament, lifecycle, now);
   const local = tournamentRepository instanceof LocalStorageRepository;
+  // Ein anderes Gerät schließt ab: die Ansicht folgt dem Server (Realtime kennt `tournaments` nicht), die Startseite lädt ebenfalls neu
+  useServerLifecyclePoll(tournament.id, canManage && !local && lifecycle === 'running', () => {
+    void reloadFresh().then(() => { window.dispatchEvent(new Event('tournament-updated')); });
+  });
   // m-2 (Review #395): wird das Turnier abgeschlossen (oder abgebrochen), bleibt kein offener Dialog zurück – auch nicht nach dem Wiederöffnen
   // über den Notweg. Nur dieser Zustand schließt: ein kurzes Neuladen der Ansicht (Cloud-Stand wird gelesen) darf den Dialog nicht schließen.
   const ended = lifecycle === 'finished' || lifecycle === 'cancelled';

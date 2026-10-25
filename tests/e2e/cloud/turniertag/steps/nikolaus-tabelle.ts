@@ -285,7 +285,7 @@ async function turnierAbschliessen({ asRole }: StepContext): Promise<void> {
   await expect(seite.getByTestId('tournament-ended'), 'Verwaltung zeigt Zustand C').toBeVisible({ timeout: 20_000 });
   await expect(seite.getByTestId('tournament-ended')).toContainText('Wieder öffnen geht nur über den Betreiber.');
   await expect(seite.getByTestId('tournament-finish-open'), 'kein „Turnier abschließen“ mehr').toHaveCount(0);
-  await expect(maria.getByTestId('tournament-ended'), 'Marias Gerät wechselt ohne Neuladen auf „abgeschlossen“ (Realtime, #394 H-2)').toBeVisible({ timeout: 30_000 });
+  await expect(maria.getByTestId('tournament-ended'), 'Marias Gerät wechselt ohne Neuladen auf „abgeschlossen“ (Abfrage alle 15 s, #394 H-2)').toBeVisible({ timeout: 30_000 });
   const nachher = await zustand();
   expect(nachher.lifecycle_status, 'Server: abgeschlossen').toBe('finished');
   expect(nachher.finished_at, 'Abschlusszeitpunkt gesetzt').not.toBeNull();
