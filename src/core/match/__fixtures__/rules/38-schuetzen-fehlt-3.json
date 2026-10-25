@@ -1,0 +1,22 @@
+{
+  "title": "@W2A-012: ohne eingestellte Schützenzahl gilt die Vorgabe 3",
+  "input": {
+    "durationMinutes": null,
+    "phase": "groupStage",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {},
+    "finalsConfig": null
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 600,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 3,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

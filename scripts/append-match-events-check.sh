@@ -166,6 +166,10 @@ A13BS_APPLIED=0
 A21AS_FILE=""
 A35_FILE=""
 R8_FILE=""
+# M1 (20261118_002): juengste Fassung von server_rules (Schuetzen 1-5/Vorgabe 3, Zeitstrafe aus der Einstellung). Jedes erneute
+# Einspielen von 20261028_001 (ZA-3) stellte die Fassung mit 120 s/5 Schuetzen wieder her -- danach wieder einspielen. Pflicht wie A-34.
+M1_MIGRATION="20261118_002_spielregeln_zeitstrafe_schuetzen.sql"
+M1_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -214,6 +218,7 @@ while IFS= read -r line; do
   # R8 (20261118_001): fasst den Trigger matches_bump_change_revision neu (mit original_start) und bringt
   # matches_guard_schedule_times -- nach dem erneuten Einspielen von 20261028_005 (Idempotenz) wieder einspielen.
   [[ "$(basename "$line")" == "20261118_001_verschieben_server.sql" ]] && R8_FILE="$line"
+  [[ "$(basename "$line")" == "$M1_MIGRATION" ]] && M1_FILE="$line"
   # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
   [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
   NEWER_MIGRATIONS+=("$line")
@@ -229,6 +234,10 @@ if [[ -z "$A25B_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
 fi
 if [[ -z "$SB_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
   echo "::error::$SB_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still die Fixtures 40 und 70* gegen einen Schreibweg ohne Spiel beenden." >&2
+  exit 1
+fi
+if [[ -z "$M1_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
+  echo "::error::$M1_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still server_rules mit fester Zeitstrafe 120 s und Vorgabe 5 Schuetzen." >&2
   exit 1
 fi
 if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
@@ -287,6 +296,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   if [[ -n "$A35_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A35_FILE"; fi
   # R8: 20261028_005 oben setzt matches_bump_change_revision auf die Fassung ohne original_start zurueck.
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi
+  # M1: 20261028_001 oben setzt server_rules auf die Fassung mit 120 s/5 Schuetzen zurueck.
+  psql_stdin < "$M1_FILE"
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
@@ -592,7 +603,8 @@ for f in "$FIXTURES_DIR"/*.json; do
     | ([$rs[] | . == $r] | all) as $same
     | (if $r == null then null
        elif ($same | not) then "mehrere MATCH_START mit unterschiedlichen Regeln"
-       elif $r.penaltySeconds != 120 then "penaltySeconds != 120 (fest am Server)"
+       elif $r.penaltySeconds < 60 or $r.penaltySeconds > 600 or ($r.penaltySeconds | floor) != $r.penaltySeconds then "penaltySeconds ausserhalb 60-600 (M1 20261118_002)"
+       elif $r.shootersPerTeam < 1 or $r.shootersPerTeam > 5 then "shootersPerTeam ausserhalb 1-5 (M1 20261118_002)"
        elif ($r.breakSeconds % 60) != 0 then "breakSeconds kein Minutenvielfaches"
        elif ($r.overtimeSeconds % 60) != 0 then "overtimeSeconds kein Minutenvielfaches"
        elif (($r.sections * $r.sectionSeconds) % 60) != 0 then "Gesamtdauer kein Minutenvielfaches"
@@ -619,7 +631,8 @@ for f in "$FIXTURES_DIR"/*.json; do
                         else null end),
         config: (if $r == null then {} else {gamePeriods: $r.sections, halftimeBreak: ($r.breakSeconds / 60),
                   matchCockpitSettings: {penaltyShootersPerTeam: $r.shootersPerTeam,
-                                         penaltySuddenDeathAfter: $r.suddenDeathAfter}} end),
+                                         penaltySuddenDeathAfter: $r.suddenDeathAfter,
+                                         timePenaltyDurationSeconds: $r.penaltySeconds}} end),
         finals: (if $r == null then null else ({tiebreakerDuration: ($r.overtimeSeconds / 60)}
                   + (if $r.tiebreak != null then {tiebreaker: $r.tiebreak} else {} end)) end),
         # A-25a: ein Direkteintrag kennt keine Regeln -- `knockout: true` auf Fixture-Ebene legt ein K.-o.-Spiel an.
@@ -1055,16 +1068,16 @@ done
 
 # 5d: servergesetzte Regeln (Client-Regeln verworfen) + Ableitung inkl. Standardwerten.
 out="$(q "SELECT payload FROM public.match_events WHERE id = '$(E i1-start)';")"
-check Sonstiges "5d: MATCH_START speichert Server-Regeln (Standard: 1 Abschnitt, Turnierdauer, Pause 60, Rueckfall overtime-then-shootout (ZA-3 E1), 300, 5, 6, 120)" \
-  '.rules == {"sections":1,"sectionSeconds":600,"breakSeconds":60,"knockout":false,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":5,"suddenDeathAfter":6,"penaltySeconds":120}' "$out"
+check Sonstiges "5d: MATCH_START speichert Server-Regeln (Standard: 1 Abschnitt, Turnierdauer, Pause 60, Rueckfall overtime-then-shootout (ZA-3 E1), 300, 3 (M1 @W2A-012), 6, 120)" \
+  '.rules == {"sections":1,"sectionSeconds":600,"breakSeconds":60,"knockout":false,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":3,"suddenDeathAfter":6,"penaltySeconds":120}' "$out"
 out="$(q "SELECT jsonb_build_array(
   match_engine.server_rules(NULL, 'groupStage', 12, 20, '{}'::jsonb, NULL),
   match_engine.server_rules(NULL, 'final', 12, 20, '{\"gamePeriods\":9,\"halftimeBreak\":\"2\"}'::jsonb, '{\"tiebreaker\":\"goldenGoal\",\"tiebreakerDuration\":3}'::jsonb),
   match_engine.server_rules(7, 'semifinal', 12, NULL, '{\"gamePeriods\":\"2\",\"matchCockpitSettings\":{\"penaltyShootersPerTeam\":3,\"penaltySuddenDeathAfter\":4}}'::jsonb, '{\"tiebreaker\":\"bogus\"}'::jsonb),
   match_engine.server_rules(NULL, NULL, 12, 20, '{\"gamePeriods\":0}'::jsonb, NULL));" 2>&1 || true)"
 check Sonstiges "5d: Regelableitung (Standard, Begrenzung 1-4, Zahl als Text, duration_minutes vor Turnierdauer, K.o., fehlender/ungueltiger tiebreaker -> overtime-then-shootout (ZA-3 E1, @SL-145))" \
-  '.[0] == {"sections":1,"sectionSeconds":720,"breakSeconds":60,"knockout":false,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":5,"suddenDeathAfter":6,"penaltySeconds":120}
-   and .[1] == {"sections":4,"sectionSeconds":300,"breakSeconds":120,"knockout":true,"tiebreak":"goldenGoal","overtimeSeconds":180,"shootersPerTeam":5,"suddenDeathAfter":6,"penaltySeconds":120}
+  '.[0] == {"sections":1,"sectionSeconds":720,"breakSeconds":60,"knockout":false,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":3,"suddenDeathAfter":6,"penaltySeconds":120}
+   and .[1] == {"sections":4,"sectionSeconds":300,"breakSeconds":120,"knockout":true,"tiebreak":"goldenGoal","overtimeSeconds":180,"shootersPerTeam":3,"suddenDeathAfter":6,"penaltySeconds":120}
    and .[2] == {"sections":2,"sectionSeconds":210,"breakSeconds":60,"knockout":true,"tiebreak":"overtime-then-shootout","overtimeSeconds":300,"shootersPerTeam":3,"suddenDeathAfter":4,"penaltySeconds":120}
    and .[3].sections == 1 and .[3].knockout == false and .[3].sectionSeconds == 720' "$out"
 
@@ -1488,7 +1501,8 @@ check Sonstiges "@FU-094 Gruppenspiel 2:2 mit Strafstoss: keine Zeile gespeicher
 echo "SW (@EK-062, Strafstoss nach Wiedereroeffnen)..." >&2
 T_SW="$(uuid_for tournament:sw)"
 {
-  tournament_sql "$T_SW" '{}' '{"tiebreaker":"shootout"}' 10
+  # M1 (20261118_002, @W2A-012): Vorgabe seit M1 3 Schuetzen -- Fall 4 (3:0 geleitet) braucht 5, deshalb ausdruecklich eingestellt.
+  tournament_sql "$T_SW" '{"matchCockpitSettings":{"penaltyShootersPerTeam":5}}' '{"tiebreaker":"shootout"}' 10
   echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$(uuid_for team:sw-nord)', '$T_SW', 'FC Nord'), ('$(uuid_for team:sw-berg)', '$T_SW', 'DJK Berg');"
   for name in sw-hf1 sw-hf2 sw-hf3; do
     echo "INSERT INTO public.matches (id, tournament_id, round, field, phase, team_a_id, team_b_id) VALUES ('$(M "$name")', '$T_SW', 1, 1, 'semifinal', '$(uuid_for team:sw-nord)', '$(uuid_for team:sw-berg)');"

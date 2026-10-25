@@ -123,7 +123,7 @@ describe('@DR-015 K.-o.-Zeile über der Finalrunde', () => {
     const seite = findPage(pages, 'Halbfinale');
     expect(seite, 'Finalseite').toBeGreaterThan(0);
 
-    const ko = pages[seite].texts.find(t => trimmed(t) === 'K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team');
+    const ko = pages[seite].texts.find(t => trimmed(t) === 'K.-o.: bei Gleichstand Strafstoßschießen, 3 Schützen je Team');
     const titel = pages[seite].texts.find(t => ohneNummer(t.str) === 'Halbfinale');
     expect(ko, 'K.-o.-Zeile auf der Finalseite').toBeDefined();
     expect(ko && titel ? ko.y : 0).toBeLessThan(titel?.y ?? 0);
