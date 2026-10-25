@@ -1,24 +1,26 @@
 /**
- * Rauchtest nach dem Deploy gegen die PRODUKTION (Paket „Testwelle 1 vorbereiten“).
+ * Rauchtest nach dem Deploy gegen die PRODUKTION (Anforderung plattform/2026-10-25_rauchtest-nach-deploy.md).
  *
- * Läuft nur mit Testkonto (PROD_SMOKE_EMAIL / PROD_SMOKE_PASSWORD) und legt EIN eigenes, eindeutig benanntes
- * Wegwerf-Turnier an („ZZ-Rauchtest-<Zeit>“). Es fasst kein anderes Turnier an. Ohne Zugangsdaten wird der Test
- * mit klarer Meldung übersprungen (der Workflow prüft das schon vorher).
+ * Zwei Modi (PROD_SMOKE_MODE):
+ *  - "kurz" (Vorgabe, bei jedem Deploy, @RT-001/@RT-002): NUR LESEN. Version, Anmelden, das dauerhafte Turnier
+ *    "ZZ-Rauchtest-Dauer" des Testkontos im Cockpit öffnen (ohne Anpfiff), Zuschauer-Link ohne Anmeldung.
+ *  - "voll" (täglich und von Hand, @RT-003): legt EIN Wegwerf-Turnier "ZZ-Rauchtest-<Zeit>" an, festlegen, anpfeifen, Tor,
+ *    abpfeifen, Zuschauer-Link zeigt exakt "1:0". Hinterlässt eine Zeile (Aufräumen: scripts/prod-smoke-cleanup.sql).
+ * Ohne Zugangsdaten wird übersprungen (@RT-005). Fristriegel (@RT-007) und Adress-Erlaubnisliste (@RT-008) stehen in
+ * playwright.prod-smoke.config.ts / scripts/lib/prodSmokeGuards.ts; keine Spur/kein Video (@RT-006) ebenda.
  *
- * Ablauf: Seite lädt (optional: in der erwarteten Version) -> Anmelden -> Turnier anlegen und festlegen -> Spiel anpfeifen,
- * Tor, abpfeifen -> Zuschauer-Link (frischer Kontext, ohne Anmeldung) zeigt den Stand -> Aufräumen (immer, auch bei Fehlschlag).
- *
- * Aufräumen: „Turnier löschen“ ist ein Weich-Löschen (deletedAt) und nach dem ersten Anpfiff gar nicht mehr angeboten (@LZ-003).
- * Das Wegwerf-Turnier bleibt deshalb als Zeile stehen; entfernt wird es mit scripts/prod-smoke-cleanup.sql (siehe docs/PROD-RAUCHTEST.md).
- * Der Test schreibt die Turnier-Kennung immer in die Ausgabe, damit nichts unbemerkt liegen bleibt.
+ * Aufräumen im Volllauf: „Turnier löschen“ ist ein Weich-Löschen und nach dem ersten Anpfiff gar nicht mehr angeboten (@LZ-003).
+ * Die Turnier-Kennung steht immer in der Ausgabe (auch bei Fehlschlag).
  */
-import { test, expect, type Page, type BrowserContext } from '@playwright/test';
+import { test, expect, type Browser, type Page, type BrowserContext } from '@playwright/test';
 import { t } from '../helpers/i18n';
 import { tippeTor } from '../helpers/cockpitNeu';
 import { abpfiffHalten } from '../helpers/abpfiff';
 
 const EMAIL = process.env.PROD_SMOKE_EMAIL ?? '';
 const PASSWORD = process.env.PROD_SMOKE_PASSWORD ?? '';
+const MODE = process.env.PROD_SMOKE_MODE === 'voll' ? 'voll' : 'kurz';
+const DAUER_TITEL = 'ZZ-Rauchtest-Dauer';
 const EXPECTED_SHA = (process.env.PROD_SMOKE_EXPECTED_SHA ?? '').slice(0, 8);
 
 const CONSENT = { errorTracking: false, sessionReplay: false, timestamp: Date.now(), version: 1 };
@@ -116,10 +118,96 @@ async function loeschenWennMoeglich(page: Page, id: string): Promise<boolean> {
   return true;
 }
 
-test.describe('Rauchtest Produktion', () => {
-  test.skip(EMAIL === '' || PASSWORD === '', 'PROD_SMOKE_EMAIL / PROD_SMOKE_PASSWORD fehlen -- Rauchtest übersprungen.');
+async function pruefeVersion(page: Page, baseURL: string | undefined): Promise<void> {
+  const antwort = await page.goto('/#/');
+  expect(antwort?.ok()).toBe(true);
+  await expect(page.locator('#root')).not.toBeEmpty({ timeout: 30_000 });
+  // Direkt nach dem Deploy kann der Produktions-Alias einen Moment brauchen: mit erwarteter Version bis zu 2 Minuten warten.
+  let version = await ausgelieferteVersion(page);
+  if (EXPECTED_SHA !== '') {
+    await expect.poll(async () => { version = await ausgelieferteVersion(page); return version; }, {
+      message: 'ausgelieferte Version = erwartete Version', timeout: 120_000, intervals: [5000, 10_000],
+    }).toBe(EXPECTED_SHA);
+  }
+  console.log(`[Rauchtest] ${baseURL ?? ''} liefert Version ${version ?? 'unbekannt'}`);
+  expect(version, 'Version im ausgelieferten Bündel gefunden').not.toBeNull();
+}
 
-  test('Seite, Anmelden, Turnier, Spiel, Zuschauer', async ({ browser, baseURL }) => {
+/** Liest den Zuschauer-Code aus Verwaltung, Sichtbarkeit. */
+async function leseZuschauerCode(page: Page, turnierId: string): Promise<string> {
+  await page.goto(`/#/tournament/${turnierId}/admin/visibility`);
+  await page.getByRole('button', { name: /Turnier-Sichtbarkeit/ }).click();
+  const feld = page.locator('input[readonly]').first();
+  await expect(feld).toHaveValue(/\/live\/[A-Za-z0-9]+/, { timeout: 20_000 });
+  const code = /\/live\/([A-Za-z0-9]+)/.exec(await feld.inputValue())?.[1] ?? '';
+  expect(code).not.toBe('');
+  return code;
+}
+
+/** Zuschauer ohne Anmeldung (frischer Kontext): zeigt das Turnier; optional genau das Ergebnis eines beendeten Spiels. */
+async function pruefeZuschauer(browser: Browser, code: string, titel: string, ergebnis?: string): Promise<void> {
+  const zuschauer = await browser.newContext();
+  await setzeEinwilligung(zuschauer);
+  try {
+    const seite = await zuschauer.newPage();
+    await seite.goto(`/#/live/${code}`);
+    await expect(seite.getByText(titel).first()).toBeVisible({ timeout: 30_000 });
+    if (ergebnis !== undefined) {
+      // Ergebnis-Knopf der Spielkarte (match-circle-<id>), beendet, genau "1:0" -- keine Uhrzeit kann das treffen.
+      const kreis = seite.locator('[data-testid^="match-circle-"][data-match-status="finished"]');
+      await expect(kreis.first()).toHaveText(new RegExp(`^\\s*${ergebnis.replace(':', '\\s*:\\s*')}\\s*$`), { timeout: 30_000 });
+    }
+  } finally {
+    await zuschauer.close();
+  }
+}
+
+/** Findet die Karte des dauerhaften Turniers auf der Startseite und liefert seine Kennung. */
+async function findeDauerTurnier(page: Page): Promise<string> {
+  await page.goto('/#/');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('[data-testid="auth-avatar-button"]')).toBeVisible({ timeout: 30_000 });
+  const karte = page.locator('[data-testid^="tournament-card-"]', { hasText: DAUER_TITEL }).first();
+  if (!(await karte.isVisible({ timeout: 5000 }).catch(() => false))) {
+    // eingeklappte Abschnitte öffnen
+    const zu = page.locator('[data-testid^="section-"] [aria-expanded="false"]');
+    for (let i = 0; i < await zu.count(); i++) { await zu.nth(i).click().catch(() => undefined); }
+  }
+  if (!(await karte.isVisible({ timeout: 10_000 }).catch(() => false))) {
+    throw new Error(`Das Dauer-Turnier "${DAUER_TITEL}" fehlt im Testkonto. Einmal anlegen und festlegen (Checkliste Daniel, Abschnitt Rauchtest).`);
+  }
+  const kennung = /^tournament-card-(.+)$/.exec(await karte.getAttribute('data-testid') ?? '')?.[1];
+  if (!kennung) { throw new Error('Kennung des Dauer-Turniers nicht lesbar'); }
+  return kennung;
+}
+
+test.describe('Rauchtest Produktion (@RT-005 ohne Zugangsdaten übersprungen)', () => {
+  test.skip(EMAIL === '' || PASSWORD === '', '@RT-005 PROD_SMOKE_EMAIL / PROD_SMOKE_PASSWORD fehlen -- Rauchtest übersprungen.');
+
+  test('@RT-001 @RT-002 Kurzlauf: Version, Anmelden, Dauer-Turnier im Cockpit, Zuschauer-Link (nur lesen)', async ({ browser, baseURL }) => {
+    test.skip(MODE !== 'kurz', 'Modus voll');
+    const context = await browser.newContext();
+    await setzeEinwilligung(context);
+    const page = await context.newPage();
+    try {
+      await test.step('Seite lädt in der erwarteten Version', async () => { await pruefeVersion(page, baseURL); });
+      await test.step('Anmelden mit dem Testkonto', async () => { await anmelden(page); });
+      const id = await test.step('Dauer-Turnier finden', async () => findeDauerTurnier(page));
+      await test.step('Cockpit öffnet ohne Anpfiff', async () => {
+        await page.goto(`/#/tournament/${id}/live`);
+        await expect(page.getByTestId('scoreboard-state').or(page.getByTestId('match-start-button'))
+          .or(page.getByTestId('match-pause-button')).or(page.getByTestId('match-resume-button')).first()).toBeVisible({ timeout: 30_000 });
+      });
+      await test.step('Zuschauer-Link zeigt das Turnier ohne Anmeldung', async () => {
+        await pruefeZuschauer(browser, await leseZuschauerCode(page, id), DAUER_TITEL);
+      });
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('@RT-003 Volllauf: Wegwerf-Turnier anlegen, anpfeifen, Tor, abpfeifen, Zuschauer-Link', async ({ browser, baseURL }) => {
+    test.skip(MODE !== 'voll', 'Modus kurz');
     const titel = `ZZ-Rauchtest-${new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)}`;
     const context = await browser.newContext();
     await setzeEinwilligung(context);
@@ -127,21 +215,7 @@ test.describe('Rauchtest Produktion', () => {
     let turnierId: string | null = null;
 
     try {
-      await test.step('Seite lädt in der erwarteten Version', async () => {
-        const antwort = await page.goto('/#/');
-        expect(antwort?.ok()).toBe(true);
-        await expect(page.locator('#root')).not.toBeEmpty({ timeout: 30_000 });
-        // Direkt nach dem Deploy kann der Produktions-Alias einen Moment brauchen: mit erwarteter Version bis zu 2 Minuten warten.
-        let version = await ausgelieferteVersion(page);
-        if (EXPECTED_SHA !== '') {
-          await expect.poll(async () => { version = await ausgelieferteVersion(page); return version; }, {
-            message: 'ausgelieferte Version = erwartete Version', timeout: 120_000, intervals: [5000, 10_000],
-          }).toBe(EXPECTED_SHA);
-        }
-        console.log(`[Rauchtest] ${baseURL ?? ''} liefert Version ${version ?? 'unbekannt'}`);
-        expect(version, 'Version im ausgelieferten Bündel gefunden').not.toBeNull();
-      });
-
+      await test.step('Seite lädt in der erwarteten Version', async () => { await pruefeVersion(page, baseURL); });
       await test.step('Anmelden mit dem Testkonto', async () => { await anmelden(page); });
 
       await test.step('Wegwerf-Turnier anlegen und festlegen', async () => {
@@ -149,15 +223,7 @@ test.describe('Rauchtest Produktion', () => {
         console.log(`[Rauchtest] Wegwerf-Turnier ${titel} (${turnierId})`);
       });
 
-      let zuschauerCode = '';
-      await test.step('Zuschauer-Link lesen (Verwaltung, Sichtbarkeit)', async () => {
-        await page.goto(`/#/tournament/${turnierId ?? ''}/admin/visibility`);
-        await page.getByRole('button', { name: /Turnier-Sichtbarkeit/ }).click();
-        const feld = page.locator('input[readonly]').first();
-        await expect(feld).toHaveValue(/\/live\/[A-Za-z0-9]+/, { timeout: 20_000 });
-        zuschauerCode = /\/live\/([A-Za-z0-9]+)/.exec(await feld.inputValue())?.[1] ?? '';
-        expect(zuschauerCode).not.toBe('');
-      });
+      const zuschauerCode = await test.step('Zuschauer-Link lesen (Verwaltung, Sichtbarkeit)', async () => leseZuschauerCode(page, turnierId ?? ''));
 
       await test.step('Im Cockpit: anpfeifen, Tor, abpfeifen', async () => {
         await page.goto(`/#/tournament/${turnierId ?? ''}/live`);
@@ -168,17 +234,8 @@ test.describe('Rauchtest Produktion', () => {
         await expect(page.getByTestId('match-start-button').or(page.getByTestId('scoreboard-state')).first()).toBeVisible({ timeout: 20_000 });
       });
 
-      await test.step('Zuschauer-Link (ohne Anmeldung) zeigt das Turnier und den Stand', async () => {
-        const zuschauer = await browser.newContext();
-        await setzeEinwilligung(zuschauer);
-        try {
-          const seite = await zuschauer.newPage();
-          await seite.goto(`/#/live/${zuschauerCode}`);
-          await expect(seite.getByText(titel).first()).toBeVisible({ timeout: 30_000 });
-          await expect(seite.getByText(/1\s*[:\-–]\s*0/).first()).toBeVisible({ timeout: 30_000 });
-        } finally {
-          await zuschauer.close();
-        }
+      await test.step('Zuschauer-Link (ohne Anmeldung) zeigt das Turnier und genau 1:0', async () => {
+        await pruefeZuschauer(browser, zuschauerCode, titel, '1:0');
       });
     } finally {
       if (turnierId !== null) {

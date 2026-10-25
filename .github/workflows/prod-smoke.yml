@@ -1,19 +1,28 @@
 name: Prod Smoke
 
-# Rauchtest NACH dem Deploy gegen die Produktion (Paket „Testwelle 1 vorbereiten“): Seite in aktueller Version, Anmelden mit
-# Testkonto, Wegwerf-Turnier anlegen, Spiel anpfeifen + Tor + abpfeifen, Zuschauer-Link zeigt den Stand.
+# Rauchtest gegen die Produktion (Anforderung plattform/2026-10-25_rauchtest-nach-deploy.md, @RT-001 bis @RT-008).
 # Anleitung, Aufräumen und Secrets: docs/PROD-RAUCHTEST.md
 #
-# Start: nach erfolgreichem Vercel-Deploy der Produktion (deployment_status) oder von Hand (workflow_dispatch).
-# Fehlen die Secrets PROD_SMOKE_EMAIL / PROD_SMOKE_PASSWORD, wird der Test mit klarer Meldung ÜBERSPRUNGEN (Job grün).
-# Erlaubt nur bis 15.11.2026 (Freigabe für E2E gegen Produktion); danach diese Datei abschalten.
+#  - Nach jedem erfolgreichen Vercel-Deploy der Produktion (deployment_status): KURZLAUF, nur lesen (@RT-001, @RT-004).
+#  - Einmal täglich (schedule) und von Hand (workflow_dispatch): VOLLLAUF mit Wegwerf-Turnier (@RT-003).
+# Fehlen die Secrets PROD_SMOKE_EMAIL / PROD_SMOKE_PASSWORD, wird mit klarer Meldung ÜBERSPRUNGEN (Job grün, @RT-005).
+# Nach dem 15.11.2026 wird der Lauf ROT (@RT-007); dann diese Datei abschalten.
+# Ablage nach einem Fehlschlag: nur Bilder und error-context.md, nie Spur oder Video (@RT-006); das Repository ist öffentlich.
 
 on:
   deployment_status:
+  schedule:
+    - cron: '35 4 * * *'
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Lauf: voll (Wegwerf-Turnier) oder kurz (nur lesen)'
+        required: false
+        default: 'voll'
+        type: choice
+        options: [voll, kurz]
       base_url:
-        description: 'Adresse der Produktion (leer = https://hallenfussball-pwa.vercel.app)'
+        description: 'Adresse (leer = https://hallenfussball-pwa.vercel.app; nur hallenfussball-pwa*.vercel.app erlaubt)'
         required: false
         default: ''
       expected_sha:
@@ -33,7 +42,7 @@ jobs:
     name: Rauchtest Produktion
     # Bei deployment_status nur erfolgreiche Produktions-Deploys; Vorschau-Deploys der PRs ignorieren.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' ||
       (github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'Production')
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -42,8 +51,22 @@ jobs:
       PROD_SMOKE_PASSWORD: ${{ secrets.PROD_SMOKE_PASSWORD }}
       PROD_SMOKE_BASE_URL: ${{ github.event.inputs.base_url }}
       PROD_SMOKE_EXPECTED_SHA: ${{ github.event.inputs.expected_sha || github.event.deployment.sha }}
+      # Deploy = kurz, Zeitplan = voll, von Hand = Auswahl
+      PROD_SMOKE_MODE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode || (github.event_name == 'schedule' && 'voll' || 'kurz') }}
 
     steps:
+      - name: Frist und Adresse prüfen (zuerst, vor allem anderen)
+        run: |
+          if [ "$(date -u +%Y%m%d)" -gt 20261115 ]; then
+            echo "::error title=Rauchtest abgelaufen::Rauchtest gegen Produktion abgelaufen (Freigabe bis 15.11.)"
+            echo "### Rauchtest gegen Produktion abgelaufen (Freigabe bis 15.11.)" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if [ -n "$PROD_SMOKE_BASE_URL" ] && ! printf '%s' "$PROD_SMOKE_BASE_URL" | grep -Eq '^https://hallenfussball-pwa(-[a-z0-9-]+)?\.vercel\.app/?$'; then
+            echo "::error title=Adresse nicht erlaubt::Nur hallenfussball-pwa*.vercel.app bekommt Zugangsdaten."
+            exit 1
+          fi
+
       - name: Zugangsdaten vorhanden?
         id: secrets
         run: |
@@ -56,7 +79,7 @@ jobs:
             echo "have=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Checkout (der geprüfte Commit, nur wegen des Testcodes)
+      - name: Checkout (nur wegen des Testcodes)
         if: steps.secrets.outputs.have == 'true'
         uses: actions/checkout@v7
 
@@ -84,22 +107,33 @@ jobs:
           if [ -z "$PROD_SMOKE_BASE_URL" ]; then unset PROD_SMOKE_BASE_URL; fi
           npx playwright test -c playwright.prod-smoke.config.ts --project=prod-smoke 2>&1 | tee prod-smoke.log
 
-      - name: Wegwerf-Turnier im Zusammenfassungs-Bericht nennen
+      - name: Turnier im Zusammenfassungs-Bericht nennen
         if: always() && steps.secrets.outputs.have == 'true'
         run: |
           {
-            echo "### Wegwerf-Turnier des Rauchtests"
-            echo "Nach dem ersten Anpfiff kann die App das Turnier nicht löschen; es bleibt stehen und wird mit \`scripts/prod-smoke-cleanup.sql\` entfernt."
+            echo "### Rauchtest ($PROD_SMOKE_MODE)"
+            echo "Im Volllauf bleibt das Wegwerf-Turnier stehen (nach dem Anpfiff nicht löschbar); Aufräumen mit \`scripts/prod-smoke-cleanup.sql\`."
             echo '```'
             grep -E "^\[Rauchtest\]" prod-smoke.log || echo "(keine Ausgabe)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Bericht hochladen
-        if: failure()
+      - name: Ablage auf Zugangsdaten prüfen (Treffer werden entfernt)
+        if: failure() && steps.secrets.outputs.have == 'true'
+        run: |
+          mkdir -p test-results/prod-smoke
+          grep -rlF -e "$PROD_SMOKE_PASSWORD" test-results/prod-smoke 2>/dev/null | while read -r datei; do
+            echo "::warning::Zugangsdaten in $datei gefunden, Datei entfernt"
+            rm -f "$datei"
+          done || true
+
+      - name: Bericht hochladen (nur Bilder und Fehlerbeschreibung)
+        if: failure() && steps.secrets.outputs.have == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: prod-smoke-report
-          path: test-results/prod-smoke/
+          path: |
+            test-results/prod-smoke/**/*.png
+            test-results/prod-smoke/**/error-context.md
           retention-days: 7
           if-no-files-found: ignore
