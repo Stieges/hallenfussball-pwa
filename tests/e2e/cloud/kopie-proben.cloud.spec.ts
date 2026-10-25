@@ -58,6 +58,9 @@ test.describe('Kopie fürs Proben gegen den lokalen Stack', () => {
       await page.goto('/#/');
       const trigger = page.getByTestId(`tournament-${E2E_LIVE_CUP_ID}-actions-trigger`);
       await expect(trigger).toBeVisible({ timeout: 30000 });
+      // R3-1 (@LZ-001): ist der Abschnitt der Karte eingeklappt (anderes Turnier läuft), zuerst öffnen
+      const kopf = page.locator('[data-testid^="section-"]', { has: trigger }).locator('[aria-expanded]').first();
+      if ((await kopf.getAttribute('aria-expanded')) === 'false') { await kopf.click(); }
       await trigger.scrollIntoViewIfNeeded();
       await trigger.click();
       await page.getByTestId('action-menu-item-copy').click();

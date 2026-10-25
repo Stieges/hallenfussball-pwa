@@ -52,7 +52,7 @@ describe('@W5-027 Kopie nach der Generalprobe archivieren', () => {
     expect(archiviert.deletedAt).toBeUndefined();
   });
 
-  it.fails('@W5-027 Olli kann die gespielte Kopie im Gefahrenbereich archivieren (Weg kommt mit R3-4, Abschluss-Dialog)', () => {
+  it.fails('@W5-027 C-FINISH-PROMISE Olli kann die gespielte Kopie im Gefahrenbereich archivieren (Weg kommt mit R3-4, Abschluss-Dialog)', () => {
     renderDangerZone(gespielteKopie());
     expect(screen.getByRole('button', { name: /Turnier archivieren|Turnier abschließen/i })).toBeInTheDocument();
   });
