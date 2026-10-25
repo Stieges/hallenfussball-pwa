@@ -26,7 +26,8 @@
     "src",
     "tests",
     "playwright.config.ts",
-    "playwright.auth-slow.config.ts"
+    "playwright.auth-slow.config.ts",
+    "playwright.prod-smoke.config.ts"
   ],
   "references": [
     {
