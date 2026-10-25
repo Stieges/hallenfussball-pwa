@@ -54,7 +54,7 @@ describe('MatchClock', () => {
     expect(screen.getByTestId('match-clock-section')).toHaveTextContent('Abschnitt 3 von 4');
   });
 
-  it('@OB-066 @ZM-166 Spielzeit abgelaufen, noch nicht abgepfiffen: 0:00 und „Zeit abgelaufen“', () => {
+  it('@OB-066 Spielzeit abgelaufen, noch nicht abgepfiffen: 0:00 und „Zeit abgelaufen“', () => {
     render(<MatchClock clock={clock({ remaining: '0:00', expired: true })} size="card" />);
     expect(screen.getByTestId('match-clock')).toHaveTextContent('0:00');
     expect(screen.getByTestId('match-clock-expired')).toHaveTextContent('Zeit abgelaufen');

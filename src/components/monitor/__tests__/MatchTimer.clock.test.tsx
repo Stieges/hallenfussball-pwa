@@ -50,7 +50,7 @@ describe('@ZM-137 Uhr-Hervorhebung und Hinweise', () => {
     expect(screen.getByTestId('monitor-clock')).toHaveAttribute('data-phase', 'normal');
   });
 
-  it('nach Ablauf ohne Abpfiff (RUNNING): @ZM-166 00:00 und „Zeit abgelaufen“, nie Nachspielzeit', () => {
+  it('nach Ablauf ohne Abpfiff (RUNNING): 00:00 und „Zeit abgelaufen“, nie Nachspielzeit', () => {
     render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="RUNNING" timerStartTime={nowIso()} timerElapsedSeconds={400} />);
     expect(screen.getByTestId('monitor-clock')).toHaveTextContent('00:00');
     expect(screen.getByText(/liveMatch\.clock\.ended/)).toBeInTheDocument();
