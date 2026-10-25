@@ -21,6 +21,12 @@ export interface ReviewReason {
 export const RIGHTS_REVOKED = 'RIGHTS_REVOKED';
 
 /**
+ * R3-2a (@FU-018, @LZ-039): das Turnier ist abgeschlossen – der Server hat den Eintrag aufbewahrt („nach dem Abschluss
+ * eingetroffen“, `late_entries`), er zählt nicht; das Gerät zeigt „an die Turnierleitung übergeben“ (Migration 20261113_003).
+ */
+export const AFTER_FINISH = 'AFTER_FINISH';
+
+/**
  * B-50 Review M2: Hat das Gerät das Schreibrecht zurück, sind die übergebenen Einträge (`RIGHTS_REVOKED`) als übergeben
  * abgeschlossen – sie liegen in Ollis Klärungsliste, das Gerät führt sie nicht weiter. Andere Klärungseinträge bleiben.
  */

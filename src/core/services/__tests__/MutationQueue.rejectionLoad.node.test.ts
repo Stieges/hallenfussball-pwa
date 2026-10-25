@@ -35,7 +35,7 @@ function abgelegt(id: string, rejection: string) {
     timestamp: 1,
     retryCount: 0,
     failedAt: 2,
-    lastError: 'Turnier ist abgeschlossen',
+    lastError: 'Grund aus einer neueren App-Version',
     rejection,
   };
 }
@@ -53,7 +53,8 @@ afterEach(() => {
 
 describe('BP-1 Review A3 C-ENDGUELTIG-SOFORT-MELDEN: unbekannter Grund aus einer neueren App-Version (@FU-004, @FU-126)', () => {
   it('@FU-004 @FU-126 unbekannter Grund: Eintrag bleibt „nicht übernommen“ erhalten, gilt als unklar, auch nach erneutem Ablegen', async () => {
-    mockStorage.set(FAILED_KEY, JSON.stringify([abgelegt('neu-1', 'tournamentFinished')]));
+    // R3-2a: 'tournamentFinished' ist seitdem bekannt – als unbekannter Grund dient ein erfundener Wert
+    mockStorage.set(FAILED_KEY, JSON.stringify([abgelegt('neu-1', 'grundAusNeuererVersion')]));
 
     mq = new MutationQueue({} as SupabaseRepository);
 

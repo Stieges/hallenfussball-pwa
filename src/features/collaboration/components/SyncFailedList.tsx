@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { CompleteGroupMutation, FailedMutationItem, MutationType } from '../../../core/services/MutationQueue';
 import { carriesNewDecision } from '../../../core/repositories/groupCompletionCloud';
+import type { StoredRejectionReason } from '../../../core/errors';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
@@ -130,8 +131,15 @@ const styles = {
 const retryUseless = (item: FailedMutationItem): boolean => item.conflict === true || item.discardedCopy === true || item.rejection !== undefined;
 
 type ReasonKey = 'syncStatus.discardedCopyReason' | 'syncStatus.conflictReason' | 'syncStatus.ownDecisionConflictReason'
-    | 'syncStatus.invalidValueReason' | 'syncStatus.tournamentGoneReason'
+    | 'syncStatus.invalidValueReason' | 'syncStatus.tournamentGoneReason' | 'syncStatus.tournamentFinishedReason'
     | 'syncStatus.clarificationGroupReason' | 'syncStatus.clarificationGroupDecisionReason';
+
+/** Text je abgelegtem Grund (@FU-126, @FU-123, R3-2a @HE-070) – ein neuer Grund ohne Text ist ein Typfehler (Nachblick #344 A3). */
+const REJECTION_REASON_KEYS: Record<StoredRejectionReason, ReasonKey> = {
+    invalidValue: 'syncStatus.invalidValueReason',
+    tournamentGone: 'syncStatus.tournamentGoneReason',
+    tournamentFinished: 'syncStatus.tournamentFinishedReason',
+};
 
 /** A-15c (@TM-146, @TM-147): trug der ohne Netz nachgereichte Abschluss eine neue Gleichstands-Entscheidung? */
 function itemCarriesNewDecision(item: FailedMutationItem): boolean {
@@ -146,8 +154,7 @@ function reasonKey(item: FailedMutationItem): ReasonKey | null {
     if (item.type === 'COMPLETE_GROUP' && item.conflict) {
         return itemCarriesNewDecision(item) ? 'syncStatus.clarificationGroupDecisionReason' : 'syncStatus.clarificationGroupReason';
     }
-    if (item.rejection === 'invalidValue') { return 'syncStatus.invalidValueReason'; }
-    if (item.rejection === 'tournamentGone') { return 'syncStatus.tournamentGoneReason'; } // @FU-123
+    if (item.rejection !== undefined) { return REJECTION_REASON_KEYS[item.rejection]; }
     if (item.conflict && item.ownDecision) { return 'syncStatus.ownDecisionConflictReason'; } // @W2A-077: kein anderes Gerät
     return item.conflict ? 'syncStatus.conflictReason' : null;
 }

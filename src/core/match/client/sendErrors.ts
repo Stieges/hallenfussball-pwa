@@ -4,10 +4,10 @@
  * kommen aus `RepositoryError.originalError` -- `appendMatchEventsRpc` extrahiert
  * sie nicht (dort wird nichts geaendert), hier wird nur gelesen.
  */
-import { isTransientMutationError } from '../../errors';
+import { isTournamentFinishedRejection, isTransientMutationError } from '../../errors';
 
 export interface SendFailure {
-  kind: 'transient' | 'auth' | 'notReady' | 'matchFull' | 'matchGone' | 'permanent';
+  kind: 'transient' | 'auth' | 'notReady' | 'matchFull' | 'matchGone' | 'tournamentFinished' | 'permanent';
   /** SQLSTATE bzw. PostgREST-Code, falls im Fehler enthalten. */
   sqlState?: string;
   message: string;
@@ -80,6 +80,10 @@ export function classifySendFailure(error: unknown): SendFailure {
   }
   if (sqlState === '54000') {
     return failure('matchFull');
+  }
+  if (isTournamentFinishedRejection(error)) {
+    // R3-2a: Wettlauf mit dem Abschluss (Sperre nach dem `closed_intake`-Zweig) – der nächste Versuch wird aufbewahrt.
+    return failure('tournamentFinished');
   }
   if (sqlState === '55000') {
     return failure('matchGone');

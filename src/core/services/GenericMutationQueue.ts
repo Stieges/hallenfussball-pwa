@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
-import { definitiveRejectionReason, isTransientMutationError, isVersionConflict, OwnDecisionConflictError, type DefinitiveRejectionReason } from '../errors';
+import { definitiveRejectionReason, isTransientMutationError, isVersionConflict, OwnDecisionConflictError, type DefinitiveRejectionReason, type StoredRejectionReason } from '../errors';
 import { StorageError } from '../storage/StorageError';
 import { QueueInFlight, QueueRetryTimer, globalQueueTimers, HOLD_RETRY_MS, isAuthExpired, type QueueTimers } from './mutationQueueRetry';
 import { REQUEST_TIMEOUT_MS } from '../utils/syncRetryTiming';
@@ -39,7 +39,9 @@ const GenericFailedMutationItemSchema = GenericMutationItemSchema.extend({
     rejection: z.unknown().optional(),
 });
 
-const KNOWN_REJECTIONS: ReadonlyArray<FailedMutationItem['rejection']> = ['invalidValue', 'tournamentGone'];
+/** Nachblick #344 A3: jede abgelegte Ablehnung ist hier bekannt – ein neuer Grund ohne Eintrag ist ein Typfehler. */
+const STORED_REJECTIONS: Record<StoredRejectionReason, true> = { invalidValue: true, tournamentGone: true, tournamentFinished: true };
+const KNOWN_REJECTIONS = Object.keys(STORED_REJECTIONS) as StoredRejectionReason[];
 
 /**
  * BP-1 Review A3 (@FU-004, @FU-126): Grund beim Laden. Unbekannte Werte (z. B. von einer neueren App-Version) gelten als
@@ -47,6 +49,29 @@ const KNOWN_REJECTIONS: ReadonlyArray<FailedMutationItem['rejection']> = ['inval
  */
 function knownRejection(value: unknown): FailedMutationItem['rejection'] {
     return KNOWN_REJECTIONS.find((known) => known === value);
+}
+
+/**
+ * Merkmale eines abgelegten Eintrags je Grund. Die Fallunterscheidung ist vollständig (`never`): ein neuer Grund in
+ * `DefinitiveRejectionReason` ohne Zuordnung hier ist ein Typfehler, statt still „ohne Grund, mit Erneut versuchen“ zu landen.
+ */
+function deadLetterMarks(reason: DefinitiveRejectionReason | 'discardedCopy' | undefined, ownDecision: boolean): Pick<FailedMutationItem, 'conflict' | 'ownDecision' | 'discardedCopy' | 'rejection'> {
+    switch (reason) {
+        case undefined:
+            return {};
+        case 'conflict':
+            return ownDecision ? { conflict: true, ownDecision: true } : { conflict: true };
+        case 'discardedCopy':
+            return { discardedCopy: true };
+        case 'invalidValue':
+        case 'tournamentGone':
+        case 'tournamentFinished':
+            return { rejection: reason };
+        default: {
+            const unhandled: never = reason;
+            return unhandled;
+        }
+    }
 }
 
 /**
@@ -83,9 +108,10 @@ export interface FailedMutationItem<TType extends string = string> extends Gener
     discardedCopy?: boolean;
     /**
      * BP-1 (@FU-126, Befund C-ENDGUELTIG-SOFORT-MELDEN): vom Server eindeutig abgelehnt, ohne Wiederholung abgelegt.
-     * `invalidValue`: ungültiger Wert; `tournamentGone`: Turnier gibt es nicht mehr (@FU-123). Ein Konflikt trägt weiter `conflict`.
+     * `invalidValue`: ungültiger Wert; `tournamentGone`: Turnier gibt es nicht mehr (@FU-123); `tournamentFinished`: Turnier ist
+     * abgeschlossen (R3-2a, 55000). Ein Konflikt trägt weiter `conflict`.
      */
-    rejection?: Exclude<DefinitiveRejectionReason, 'conflict'>;
+    rejection?: StoredRejectionReason;
 }
 
 /**
@@ -317,10 +343,7 @@ export class GenericMutationQueue<TType extends string> {
             ...item,
             failedAt: Date.now(),
             lastError: error,
-            ...(reason === 'conflict' ? { conflict: true } : {}),
-            ...(reason === 'conflict' && ownDecision ? { ownDecision: true } : {}),
-            ...(reason === 'discardedCopy' ? { discardedCopy: true } : {}),
-            ...(reason === 'invalidValue' || reason === 'tournamentGone' ? { rejection: reason } : {}),
+            ...deadLetterMarks(reason, ownDecision),
         };
         this.failedQueue.push(failedItem);
         this.saveFailed();

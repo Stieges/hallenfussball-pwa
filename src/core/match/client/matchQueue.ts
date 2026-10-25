@@ -16,6 +16,8 @@ export class MatchQueue {
   pause: OutboxPause | null = null;
   private timer: TimeoutHandle | null = null;
   private backoffStep = 0;
+  /** R3-2a: schon einmal 55000 TOURNAMENT_FINISHED seit dem letzten Erfolg (der zweite Mal in Folge ist endgültig). */
+  private finishedRaceSeen = false;
 
   constructor(
     readonly matchId: string,
@@ -36,6 +38,17 @@ export class MatchQueue {
 
   resetBackoff(): void {
     this.backoffStep = 0;
+    this.finishedRaceSeen = false;
+  }
+
+  /**
+   * R3-2a: `true` beim ersten 55000 TOURNAMENT_FINISHED seit dem letzten Erfolg (Wettlauf mit dem Abschluss → noch ein Versuch),
+   * `false` ab dem zweiten in Folge (dann endgültig, keine Schleife).
+   */
+  takeFinishedRaceRetry(): boolean {
+    const first = !this.finishedRaceSeen;
+    this.finishedRaceSeen = true;
+    return first;
   }
 
   /** Haelt die Warteschlange bis zum naechsten Versuch an (Grund im Status). */

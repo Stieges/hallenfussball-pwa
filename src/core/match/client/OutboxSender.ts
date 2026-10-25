@@ -22,6 +22,8 @@ const NOT_READY_RETRY_MS = 60000;
 const PERMANENT_RETRY_MS = 30000;
 const MATCH_FULL_CODE = 'MATCH_FULL';
 const MATCH_GONE_CODE = 'MATCH_GONE';
+/** R3-2a: Ablehnungscode im Ausgang, wenn der Server zweimal in Folge 55000 TOURNAMENT_FINISHED meldet. */
+const TOURNAMENT_FINISHED_CODE = 'TOURNAMENT_FINISHED';
 
 type BatchOutcome = 'continue' | 'done' | 'halt';
 
@@ -353,6 +355,23 @@ export class OutboxSender {
           failure.kind === 'matchFull' ? MATCH_FULL_CODE : MATCH_GONE_CODE,
           this.now(),
         );
+        this.notifyStoreChange?.(queue.matchId);
+        if (isCurrent) {
+          await this.refresh();
+        }
+        return 'continue';
+      }
+      case 'tournamentFinished': {
+        // R3-2a (@FU-018): Wettlauf mit dem Abschluss – nichts verwerfen, erneut gesendet antwortet `closed_intake` mit
+        // AFTER_FINISH (aufbewahrt, endgültig). Kommt 55000 ein zweites Mal in Folge, ist es endgültig: keine Schleife.
+        if (queue.takeFinishedRaceRetry()) {
+          queue.scheduleRetry('backoff', queue.takeBackoffMs());
+          if (isCurrent) {
+            await this.refresh();
+          }
+          return 'done';
+        }
+        await this.store.rejectAllPending(queue.key, TOURNAMENT_FINISHED_CODE, this.now());
         this.notifyStoreChange?.(queue.matchId);
         if (isCurrent) {
           await this.refresh();

@@ -638,6 +638,7 @@
     "inzwischenOhneName": "{{feld}} is now controlled by another device",
     "keinRecht": "You are not allowed to take over the match",
     "fehler": "Taking over failed – please try again",
+    "turnierAbgeschlossen": "The tournament is finished – taking over is no longer possible",
     "anderesGeraet": "another device"
   }
 }

@@ -4,14 +4,14 @@
  * die Listener sofort (Sichtbarkeit ≤ 10 s, L92).
  */
 import type { LocalMatchStore } from './LocalMatchStore';
-import { RIGHTS_REVOKED, type MatchCopy } from './matchCopy';
+import { AFTER_FINISH, RIGHTS_REVOKED, type MatchCopy } from './matchCopy';
 import { emptyOutboxStatus, type OutboxPause, type OutboxStatus } from './outboxTypes';
 
-export type CopyListCounts = Pick<OutboxStatus, 'pendingByTournament' | 'pendingByMatch' | 'rejectedByMatch' | 'reviewByMatch' | 'revokedByMatch' | 'revokedWatchOnlyByMatch'>;
+export type CopyListCounts = Pick<OutboxStatus, 'pendingByTournament' | 'pendingByMatch' | 'rejectedByMatch' | 'reviewByMatch' | 'revokedByMatch' | 'revokedWatchOnlyByMatch' | 'afterFinishByMatch'>;
 
 /** Zähler der Listen aller Kopien eines Kontos (rein). */
 export function countCopyLists(copies: readonly MatchCopy[]): CopyListCounts {
-  const counts: CopyListCounts = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, revokedByMatch: {}, revokedWatchOnlyByMatch: {} };
+  const counts: CopyListCounts = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, revokedByMatch: {}, revokedWatchOnlyByMatch: {}, afterFinishByMatch: {} };
   for (const copy of copies) {
     counts.pendingByMatch[copy.matchId] = copy.pending.length;
     counts.rejectedByMatch[copy.matchId] = copy.rejected.length;
@@ -22,6 +22,10 @@ export function countCopyLists(copies: readonly MatchCopy[]): CopyListCounts {
     if (handedOver.length > 0) {
       counts.revokedByMatch[copy.matchId] = handedOver.length;
       counts.revokedWatchOnlyByMatch[copy.matchId] = handedOver.filter((reason) => reason?.change === 'watch_only').length;
+    }
+    const afterFinish = copy.review.filter((event) => copy.reviewReasons?.[event.id]?.code === AFTER_FINISH).length;
+    if (afterFinish > 0) {
+      counts.afterFinishByMatch[copy.matchId] = afterFinish;
     }
   }
   return counts;
