@@ -3,7 +3,7 @@
  *
  * Nur die Restzeit des Abschnitts (herunterzählend, nie die gespielte Zeit), in Schriftstärke 800 mit gleich breiten
  * Ziffern; der Abschnitt steht klein davor („Restzeit · 2. Halbzeit“). In der Pause steht die Pausen-Restzeit mit dem
- * Wort der Pause. Nach Ablauf der Spielzeit bis zum Abpfiff steht „Spielzeit abgelaufen – Ergebnis folgt“.
+ * Wort der Pause. Nach Ablauf der Spielzeit bis zum Abpfiff steht „Zeit abgelaufen“.
  * Ohne Restzeit (Pause ohne Pausen-Daten) steht nur das Abschnittswort. Reine Anzeige.
  */
 import type { CSSProperties, ReactElement } from 'react';

@@ -45,20 +45,35 @@ describe('@ZM-166 Der Zeitbalken zeigt den Zustand des Spiels, nie in Rot', () =
     expect(b?.ton).toBe('gruen');
   });
 
-  it('mit abgelaufener Spielzeit, noch nicht abgepfiffen: der Balken ist voll und grün', () => {
-    expect(balken({ sectionElapsedMs: min(6) })).toEqual({ anteil: 1, ton: 'gruen' });
+  it('@ZM-166 mit abgelaufener Spielzeit, noch nicht abgepfiffen: der Balken ist leer, die Spur bleibt sichtbar', () => {
+    const b = balken({ sectionElapsedMs: min(6) });
+    expect(b).not.toBeNull();
+    expect(b?.anteil).toBe(0);
   });
 
-  it('Schlussphase der Uhr-Art „letzte Minute angehalten“: der Balken bleibt grün wie am Monitor (Tabelle @ZM-166 kennt keine eigene Farbe), nie rot; die Farbe hängt an einem Schalter', () => {
+  it('@ZM-166 abgelaufene Spielzeit: über der Uhr „Zeit abgelaufen“ statt „Restzeit“, keine Zeile darunter', () => {
+    const uhr = toScoreboardModel(input({ sectionElapsedMs: min(6) }), t).uhr;
+    expect(uhr?.label).toBe('tafel.uhr.zeitAbgelaufen');
+    expect(uhr?.unterzeile).toBe('');
+  });
+
+  it('@ZM-166 Schlussphase der Uhr-Art „letzte Minute angehalten“: der Balken ist violett wie die Uhr-Ziffern, nie rot', () => {
     const b = balken({ sectionElapsedMs: min(5, 30) });
     expect(b?.ton).toBe(BALKEN_TON_SCHLUSSPHASE);
-    expect(b?.ton).toBe('gruen');
-    expect(b?.ton).not.toBe('rot');
+    expect(b?.ton).toBe('violett');
     expect(b?.anteil).toBeCloseTo(1 / 12, 5);
+  });
+
+  it('@ZM-166 Gegenbeispiel: gleiche Restzeit (0:30) bei durchlaufend ohne Schlussphase bleibt grün', () => {
+    expect(balken({ sectionElapsedMs: min(5, 30) }, {}, 'immer-durchlaufend')?.ton).toBe('gruen');
   });
 
   it('Gegenbeispiel Uhr-Art „immer durchlaufend“: keine Schlussphase, der Balken bleibt grün', () => {
     expect(balken({ sectionElapsedMs: min(5, 30) }, {}, 'immer-durchlaufend')?.ton).toBe('gruen');
+  });
+
+  it('@ZM-166 Gegenbeispiel: gleiche Restzeit bei „immer angehalten“ (Netto) bleibt grün, nie violett', () => {
+    expect(balken({ sectionElapsedMs: min(5, 30) }, {}, 'immer-angehalten')?.ton).toBe('gruen');
   });
 
   it.each([

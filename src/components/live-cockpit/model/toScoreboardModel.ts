@@ -96,17 +96,17 @@ function abschnittTextOf(phase: CockpitPhase, view: PhaseView | null, von: strin
 }
 
 /**
- * Farbe des Zeitbalkens in der Schlussphase „durchlaufend, letzte Minute angehalten“. Vorerst wie die Anforderung @ZM-166 und der Monitor: grün
- * (die Tabelle kennt dort keine eigene Farbe). Das Mockup zeigt Violett wie die Uhr; entscheidet Daniel dafür, genügt es, hier 'violett' einzutragen.
+ * Farbe des Zeitbalkens in der Schlussphase „durchlaufend, letzte x Minuten angehalten“: Violett wie die Uhr-Ziffern (Daniel 25.10., @ZM-166).
+ * Sie greift nur bei dieser Uhr-Art (`schlussphase` kommt aus `getClockDisplay`); sonst bleibt der Balken grün.
  */
-export const BALKEN_TON_SCHLUSSPHASE: ScoreboardBalken['ton'] = 'gruen';
+export const BALKEN_TON_SCHLUSSPHASE: ScoreboardBalken['ton'] = 'violett';
 
 /**
- * Zeitbalken der laufenden Zustände (@ZM-145, @ZM-166): Rest durch Länge des Abschnitts, nimmt ab; angehalten grau, sonst grün
- * (Schlussphase: `BALKEN_TON_SCHLUSSPHASE`). Ist die Spielzeit abgelaufen, aber noch nicht abgepfiffen, steht er voll und grün (Tabelle @ZM-166).
+ * Zeitbalken der laufenden Zustände (@ZM-145, @ZM-166): Rest durch Länge des Abschnitts, nimmt ab; angehalten grau, in der Schlussphase
+ * (`BALKEN_TON_SCHLUSSPHASE`) violett, sonst grün. Ist die Spielzeit abgelaufen, aber noch nicht abgepfiffen, ist er leer; die Spur bleibt sichtbar (@ZM-166).
  */
 function balkenLaufend(restMs: number, limitMs: number, steht: boolean, schlussphase: boolean): ScoreboardUhr['balken'] {
-  if (restMs <= 0) { return { anteil: 1, ton: 'gruen' }; }
+  if (restMs <= 0) { return { anteil: 0, ton: 'gruen' }; }
   const anteil = limitMs > 0 ? Math.min(1, restMs / limitMs) : 0;
   return { anteil, ton: steht ? 'grau' : schlussphase ? BALKEN_TON_SCHLUSSPHASE : 'gruen' };
 }
@@ -131,13 +131,15 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
     // „Uhr hält bei Unterbrechung“ bleibt für „immer angehalten“ (@SL-003).
     const schlussphase = anzeige.phase === 'schlussphaseAngehalten';
     const gespielt = formatUhr(view.sectionElapsedMs / 1000);
+    const abgelaufen = anzeige.phase === 'abgelaufen'; // @ZM-166: „Zeit abgelaufen“ über der Uhr, keine Zeile darunter
     if (anzeige.hinweisUhrHaelt && !schlussphase) { hinweise.push(t('tafel.uhrHaelt')); }
     return {
       hinweise,
       uhr: {
         rest: formatUhr(anzeige.restSekunden), gespielt, schlussphase, steht, hervorgehoben: anzeige.hervorhebung || steht,
         balken: balkenLaufend(anzeige.restSekunden * 1000, view.sectionLimitMs, steht, schlussphase),
-        label: t(steht ? 'tafel.uhr.steht' : 'tafel.uhr.restzeit'), unterzeile: t('tafel.unterzeile.spielzeit', { zeit: gespielt }),
+        label: t(abgelaufen ? 'tafel.uhr.zeitAbgelaufen' : steht ? 'tafel.uhr.steht' : 'tafel.uhr.restzeit'),
+        unterzeile: abgelaufen ? '' : t('tafel.unterzeile.spielzeit', { zeit: gespielt }), // '' statt null: sonst setzt die Handy-Tafel die gespielte Zeit darunter
       },
     };
   }

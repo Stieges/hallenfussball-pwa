@@ -51,6 +51,7 @@
     },
     "uhr": {
       "restzeit": "Time left",
+      "zeitAbgelaufen": "Time up",
       "steht": "Clock stopped",
       "pause": "Break",
       "pauseVorbei": "Break over",

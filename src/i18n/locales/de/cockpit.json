@@ -51,6 +51,7 @@
     },
     "uhr": {
       "restzeit": "Restzeit",
+      "zeitAbgelaufen": "Zeit abgelaufen",
       "steht": "Uhr steht",
       "pause": "Pause",
       "pauseVorbei": "Pause vorbei",

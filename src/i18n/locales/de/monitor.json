@@ -26,7 +26,7 @@
     "noRunningMatch": "Kein laufendes Spiel",
     "tablesShownMessage": "Die Tabellen werden angezeigt, bis ein Spiel gestartet wird",
     "clock": {
-      "ended": "Spielzeit abgelaufen – Ergebnis folgt",
+      "ended": "Zeit abgelaufen",
       "holdsOnInterruption": "Uhr hält bei Unterbrechung",
       "stopped": "angehalten"
     },

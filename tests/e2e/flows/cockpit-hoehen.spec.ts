@@ -107,6 +107,32 @@ test.describe('Laptop 1280×600 (unter 620 px)', () => {
   });
 });
 
+test.describe('Laptop 1280×720: Zeitbalken (@ZM-166)', () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  const start = Date.now();
+  const vorruecken = async (page: Page, ms: number): Promise<void> => { await page.clock.setFixedTime(new Date(start + ms)); }; // ms seit dem Anpfiff
+
+  test('@ZM-166 @ZM-145 normal grün, in der Schlussphase violett, bei abgelaufener Spielzeit leer mit „Zeit abgelaufen“ und ohne Zeile darunter', async ({ page, seedIndexedDB }) => {
+    await page.clock.install();
+    // der Abpfiff von selbst (`useAutoSectionEnd`) läuft über die Web-Sperre: ohne sie bleibt der Zustand „abgelaufen, noch nicht abgepfiffen“ stehen
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'locks', { value: { request: () => new Promise<void>(() => undefined) }, configurable: true }); });
+    await vorbereiten(page, seedIndexedDB, { namen: NAMEN, farben: FARBEN, perioden: 1 }); // ein Abschnitt zu 12 Minuten: er ist zugleich der letzte
+    await bildDavon(page, 'runde3-normal-720');
+    await expect(page.getByTestId('scoreboard-zeitbalken')).toHaveAttribute('data-ton', 'gruen');
+    await vorruecken(page, 11 * 60_000 + 30_000); // noch 0:30 im letzten Abschnitt
+    await expect(page.getByTestId('scoreboard-zeitbalken')).toHaveAttribute('data-ton', 'violett');
+    await bildDavon(page, 'runde3-schlussphase-violett-720');
+    await vorruecken(page, 14 * 60_000); // mehr als 12 Minuten gespielt: Spielzeit abgelaufen, noch nicht abgepfiffen
+    await expect(page.getByTestId('scoreboard-zeitbalken')).toHaveAttribute('data-anteil', '0.000');
+    await expect(page.getByTestId('scoreboard-zeitbalken')).toBeVisible();
+    await expect(page.getByTestId('scoreboard-clock').getByText('Zeit abgelaufen', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('scoreboard-clock').getByText('Restzeit', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('scoreboard-clock-sub')).toHaveCount(0);
+    await bildDavon(page, 'runde3-abgelaufen-720');
+  });
+});
+
 test.describe('Laptop 1280×720: Einblendung, Zeitstrafen, lange Namen', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
