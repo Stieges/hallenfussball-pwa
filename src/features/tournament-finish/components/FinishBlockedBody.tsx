@@ -9,6 +9,7 @@ import type { FinishItem } from '../../../core/repositories/lifecycleRpc';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../../../components/ui/Icons';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
+import { HyphenSafe } from './HyphenSafe';
 import { useFinishT } from '../hooks/useFinishT';
 import { describeFinishItem } from '../model/finishItems';
 import { listReset, rowButton, small, stack, strong, text } from './finishStyles';
@@ -21,7 +22,7 @@ export interface FinishBlockedBodyProps {
 }
 
 export function FinishBlockedBody({ items, tournament, onJump }: FinishBlockedBodyProps) {
-  const { t } = useTranslation('tournament');
+  const { t, i18n } = useTranslation('tournament');
   const tt = useFinishT();
   return (
     <div style={stack} data-testid="finish-blocked">
@@ -31,7 +32,7 @@ export function FinishBlockedBody({ items, tournament, onJump }: FinishBlockedBo
       </InlineNotice>
       <ul style={listReset} data-testid="finish-open-list">
         {items.map((item, index) => {
-          const view = describeFinishItem(item, tournament, tt, index);
+          const view = describeFinishItem(item, tournament, tt, index, i18n.language);
           return (
             <li key={view.id}>
               <button type="button" style={rowButton} data-testid="finish-open-item" data-target={view.target} onClick={() => { onJump(view.target); }}>
@@ -39,8 +40,8 @@ export function FinishBlockedBody({ items, tournament, onJump }: FinishBlockedBo
                   <Icons.AlertTriangle size={iconSizeValues.sm} />
                 </span>
                 <span style={{ display: 'grid', gap: cssVars.spacing.xs, minWidth: 0 }}>
-                  <span style={{ ...strong, fontSize: cssVars.fontSizes.md }}>{view.title}</span>
-                  {view.detail !== null && <span style={small}>{view.detail}</span>}
+                  <span style={{ ...strong, fontSize: cssVars.fontSizes.md }}><HyphenSafe text={view.title} /></span>
+                  {view.detail !== null && <span style={small}><HyphenSafe text={view.detail} /></span>}
                 </span>
                 <span style={{ color: cssVars.colors.textSecondary, display: 'flex' }} aria-hidden="true"><Icons.ChevronRight size={iconSizeValues.md} /></span>
               </button>

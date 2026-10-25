@@ -24,7 +24,7 @@ interface ButtonProps {
   pressEffect?: boolean;
   /**
    * Die Aktion läuft, die Beschriftung bleibt sichtbar (anders als `loading`, das nur den Kreisel zeigt): `aria-busy`, nicht
-   * antippbar. Vorgabe: folgt `loading`.
+   * antippbar, der Fokus bleibt auf der Taste. Vorgabe: folgt `loading`.
    */
   busy?: boolean;
   /** Loading state - shows spinner and disables button */
@@ -91,7 +91,8 @@ export const Button: React.FC<ButtonProps> = ({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const isDisabled = disabled || loading || busy === true;
+  const isDisabled = disabled || loading;
+  const blocked = isDisabled || busy === true; // `busy`: nicht antippbar, aber nicht „disabled“ – der Fokus bleibt auf der Taste (Review #395 m-3)
   const shouldAnimate = pressEffect && !prefersReducedMotion && !isDisabled;
 
   const handlePressStart = () => {
@@ -184,13 +185,13 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       ref={ref}
       type={type}
-      onClick={isDisabled ? undefined : onClick}
+      onClick={blocked ? undefined : onClick}
       disabled={isDisabled}
       style={combinedStyles}
       aria-label={ariaLabel}
       aria-keyshortcuts={ariaKeyshortcuts}
       title={title}
-      aria-disabled={isDisabled}
+      aria-disabled={blocked}
       aria-busy={busy ?? loading}
       data-testid={testId}
       data-primary={isPrimaryMarker ? '' : undefined}

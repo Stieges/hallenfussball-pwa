@@ -156,6 +156,7 @@ export function buildCopiedTournament(
     lifecycleStatus: undefined,
     finishedAt: undefined,
     anyMatchStarted: undefined,
+    lastMatchEndedAt: undefined,
     cancelledAt: undefined,
     cancelledReason: undefined,
     deletedAt: undefined,

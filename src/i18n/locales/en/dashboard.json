@@ -63,6 +63,7 @@
   "card": {
     "ariaLabel": "Tournament: {{title}}, {{status}}",
     "ariaLabelExternal": "Tournament: {{title}}, {{status}}, {{source}}",
+    "lateFinishNotice": "The last game was on {{date}}. The tournament is still running – close it in the administration.",
     "statusLabel": "Status: {{status}}",
     "draftNotice": "Draft - Not yet published",
     "labels": {

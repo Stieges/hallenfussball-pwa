@@ -81,6 +81,7 @@ vi.mock('../../../hooks/useCockpitExecution', () => ({
 }));
 
 import { ManagementTab } from '../ManagementTab';
+import { resetClosedTournaments, setTournamentClosed } from '../../../core/services/closedTournaments';
 
 import { RouterWrapper } from './routerWrapper';
 const NORD = testUuid(1);
@@ -132,5 +133,18 @@ describe('ManagementTab – @FU-069 Hinweis bei eingetragenem Ergebnis (A-08a)',
     await waitFor(() => expect(screen.getByTestId('cockpit-not-on-engine')).toBeInTheDocument());
     expect(screen.getByTestId('cockpit-not-on-engine')).toHaveTextContent('Für dieses Spiel ist ein Ergebnis eingetragen. Korrigieren geht im Spielplan.');
     expect(screen.getByTestId('cockpit-not-on-engine')).not.toHaveTextContent('über die Turnierleitung');
+  });
+
+  it('Review #395: nach dem Abschluss liest die Turnierleitung weder den Helfer-Satz noch den Korrektur-Satz, sondern „abgeschlossen“', async () => {
+    can.lead = true;
+    setTournamentClosed('t1', true);
+    try {
+      setup([scheduled({ id: SPIEL, scoreA: 3, scoreB: 1 })], SPIEL);
+      await waitFor(() => expect(screen.getByTestId('cockpit-not-on-engine')).toBeInTheDocument());
+      expect(screen.getByTestId('cockpit-not-on-engine')).toHaveTextContent('Das Turnier ist abgeschlossen');
+      expect(screen.getByTestId('cockpit-not-on-engine')).not.toHaveTextContent('Korrektur über die Turnierleitung');
+    } finally {
+      resetClosedTournaments();
+    }
   });
 });

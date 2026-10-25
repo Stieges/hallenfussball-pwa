@@ -92,18 +92,23 @@ export const LATE_FINISH_HINT_DAYS = 7;
  * endete vor mindestens 7 Tagen. Ergebnis ist der Zeitpunkt des letzten Spiel-Endes (für „Das letzte Spiel war am …“), sonst `null`.
  * Das Datum, bis wann die öffentliche Ansicht läuft, nennt der Hinweis erst mit @LZ-082 (Plan R3 § 7 C1).
  */
-export function lateFinishHint(tournament: Pick<Tournament, 'matches'>, lifecycle: TournamentLifecycle, now: Date): string | null {
-  if (lifecycle !== 'running' || tournament.matches.length === 0) {
+export function lateFinishHint(
+  tournament: Pick<Tournament, 'matches'> & Partial<Pick<Tournament, 'lastMatchEndedAt'>>, lifecycle: TournamentLifecycle, now: Date,
+): string | null {
+  if (lifecycle !== 'running') {
     return null;
   }
-  if (!tournament.matches.every((match) => match.matchStatus === 'finished' || match.matchStatus === 'skipped')) {
+  let lastEnd: Date | null = null;
+  if (tournament.matches.length === 0) {
+    // Liste der Startseite (ohne Spiele): das Ende des letzten Spiels trägt die Listenabfrage
+    lastEnd = tournament.lastMatchEndedAt === undefined ? null : new Date(tournament.lastMatchEndedAt);
+  } else if (tournament.matches.every((match) => match.matchStatus === 'finished' || match.matchStatus === 'skipped')) {
+    const ends = tournament.matches.flatMap((match) => (match.finishedAt === undefined ? [] : [new Date(match.finishedAt)]))
+      .filter((date) => !Number.isNaN(date.getTime()));
+    lastEnd = ends.length === 0 ? null : new Date(Math.max(...ends.map((date) => date.getTime())));
+  }
+  if (lastEnd === null || Number.isNaN(lastEnd.getTime())) {
     return null;
   }
-  const ends = tournament.matches.flatMap((match) => (match.finishedAt === undefined ? [] : [new Date(match.finishedAt)]))
-    .filter((date) => !Number.isNaN(date.getTime()));
-  if (ends.length === 0) {
-    return null;
-  }
-  const last = new Date(Math.max(...ends.map((date) => date.getTime())));
-  return Math.floor((now.getTime() - last.getTime()) / 86_400_000) >= LATE_FINISH_HINT_DAYS ? last.toISOString() : null;
+  return Math.floor((now.getTime() - lastEnd.getTime()) / 86_400_000) >= LATE_FINISH_HINT_DAYS ? lastEnd.toISOString() : null;
 }

@@ -501,6 +501,8 @@ export interface Tournament {
   finishedAt?: string;
   /** Nur Listen aus der Cloud (ohne Spiele): Zusatzabfrage „hat ein angepfiffenes Spiel“ (R3-1). Nie gespeichert. */
   anyMatchStarted?: boolean;
+  /** Nur Listen aus der Cloud (ohne Spiele): Ende des letzten Spiels, wenn jedes Spiel entschieden ist (@LZ-005, Hinweis auf der Startseite). Nie gespeichert. */
+  lastMatchEndedAt?: string;
 
   // Dashboard Soft Delete (Papierkorb)
   /** ISO Date when moved to trash. Undefined = not deleted */

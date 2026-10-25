@@ -267,6 +267,41 @@ describe('@LZ-009 Zustand C „abgeschlossen“ (Review #394 H-1: trotz gesperrt
   });
 });
 
+describe('Review #395 M-1: ohne Inhalt bleibt kein Rahmen und kein Abstand stehen', () => {
+  it('Helfer, Gast und Entwurf: der Bereich zeichnet gar nichts', () => {
+    roleMock.current = 'collaborator';
+    const helfer = zeige(fertig);
+    expect(helfer.container).toBeEmptyDOMElement();
+    helfer.unmount();
+    roleMock.current = 'owner';
+    env.local = true;
+    const gast = zeige(fertig);
+    expect(gast.container).toBeEmptyDOMElement();
+    gast.unmount();
+    env.local = false;
+    const entwurf = zeige({ ...fertig, status: 'draft', lifecycleStatus: 'draft' });
+    expect(entwurf.container).toBeEmptyDOMElement();
+  });
+
+  it('Gegenbeispiel: zeigt der Bereich etwas, steht der Abstand nach unten dabei (ein Wurzelelement)', () => {
+    const { container } = zeige(fertig);
+    expect(container.children).toHaveLength(1);
+  });
+});
+
+describe('Review #395 m-2: nach einem Abschluss und Wiederöffnen öffnet sich der Dialog nicht von selbst', () => {
+  it('Dialog offen → abgeschlossen → (Notweg) wieder „Läuft“: kein Dialog, keine neue Prüfung', () => {
+    const { rerender } = zeige(fertig);
+    fireEvent.click(screen.getByTestId('tournament-finish-open'));
+    expect(screen.getByTestId('finish-dialog')).toBeInTheDocument();
+    const startVorher = finishSpy.start.mock.calls.length;
+    rerender(<MemoryRouter><FinishTournamentSection tournament={{ ...fertig, lifecycleStatus: 'finished', finishedAt: '2026-11-28T12:10:00.000Z' }} onReload={onReload} /></MemoryRouter>);
+    rerender(<MemoryRouter><FinishTournamentSection tournament={fertig} onReload={onReload} /></MemoryRouter>);
+    expect(screen.queryByTestId('finish-dialog')).toBeNull();
+    expect(finishSpy.start.mock.calls.length).toBe(startVorher);
+  });
+});
+
 describe('Der Dialog schließt, wenn der Abschluss durch ist; die Verwaltung folgt dem Server', () => {
   it('Schließen über den Dialog setzt ihn zurück', () => {
     zeige(fertig);

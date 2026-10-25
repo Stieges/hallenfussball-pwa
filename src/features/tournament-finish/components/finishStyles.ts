@@ -8,11 +8,11 @@ import { cssVars } from '../../../design-tokens';
 export const stack: CSSProperties = { display: 'grid', gap: cssVars.spacing.md };
 export const tightStack: CSSProperties = { display: 'grid', gap: cssVars.spacing.sm };
 
-export const text: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: 1.4, color: cssVars.colors.textPrimary, overflowWrap: 'anywhere' };
-export const small: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.sm, lineHeight: 1.4, color: cssVars.colors.textSecondary, overflowWrap: 'anywhere' };
+export const text: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.bodyMd, color: cssVars.colors.textPrimary, overflowWrap: 'anywhere' };
+export const small: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodyMd, color: cssVars.colors.textSecondary, overflowWrap: 'anywhere' };
 export const strong: CSSProperties = { fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary, overflowWrap: 'anywhere' };
-export const heading: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.lg, lineHeight: 1.3, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
-export const subHeading: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: 1.3, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
+export const heading: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.lg, lineHeight: cssVars.lineHeights.title, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
+export const subHeading: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.md, lineHeight: cssVars.lineHeights.title, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
 
 export const card: CSSProperties = {
   display: 'grid', gap: cssVars.spacing.sm, padding: cssVars.spacing.md, background: cssVars.colors.surface,

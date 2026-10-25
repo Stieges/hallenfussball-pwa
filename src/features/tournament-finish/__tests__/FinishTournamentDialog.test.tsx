@@ -224,7 +224,8 @@ describe('@LZ-021 Speichern läuft: kein zweites Tippen, nicht schließbar', () 
     const haupt = screen.getByTestId('tournament-finish-confirm');
     expect(haupt).toHaveTextContent('Wird gespeichert');
     expect(haupt).toHaveAttribute('aria-busy', 'true');
-    expect(haupt).toBeDisabled();
+    expect(haupt).toHaveAttribute('aria-disabled', 'true'); // nicht „disabled“: der Fokus bleibt auf der Taste (#395 m-3)
+    expect(haupt).not.toBeDisabled();
     expect(screen.getByTestId('finish-cancel')).toBeDisabled();
     expect(screen.getByTestId('finish-close')).toBeDisabled();
     expect(screen.getByTestId('finish-sending')).toHaveTextContent('Der Endstand wird gespeichert.');
@@ -238,6 +239,32 @@ describe('@LZ-021 Speichern läuft: kein zweites Tippen, nicht schließbar', () 
     const { again } = zeige({ phase: 'confirming', ready });
     act(() => { again({ phase: 'done', finishedAt: '2026-11-28T12:10:00+00:00', alreadyApplied: false }); });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Review #395 m-3 / m-4: Fokus und Text ohne Netz', () => {
+  it('m-3: die fokussierte Haupttaste behält beim Speichern den Fokus (nur aria-disabled, nicht disabled)', () => {
+    const { again } = zeige({ phase: 'confirming', ready });
+    const haupt = screen.getByTestId('tournament-finish-confirm');
+    haupt.focus();
+    act(() => { again({ phase: 'sending' }); });
+    expect(document.activeElement).toBe(screen.getByTestId('tournament-finish-confirm'));
+    fireEvent.click(screen.getByTestId('tournament-finish-confirm'));
+  });
+
+  it('m-3: nach einem Fehler steht der Fokus im Dialog (Titel), nicht auf der Seite dahinter', () => {
+    const { again } = zeige({ phase: 'confirming', ready });
+    screen.getByTestId('finish-cancel').focus();
+    act(() => { again({ phase: 'rejected', reason: { code: 'UNEXPECTED' } }); });
+    expect(document.activeElement).toBe(screen.getByRole('heading', { level: 2 }));
+  });
+
+  it('m-4: der Text ohne Netz verspricht keine Taste, die gesperrt ist – der Dialog prüft von selbst neu', () => {
+    env.online = false;
+    zeige({ phase: 'confirming', ready });
+    const text = screen.getByTestId('finish-offline').textContent ?? '';
+    expect(text).toContain('prüft der Dialog von selbst neu');
+    expect(text).not.toMatch(/tippe dann noch einmal/);
   });
 });
 

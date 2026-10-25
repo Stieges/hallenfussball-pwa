@@ -18,7 +18,7 @@ export interface FinishFooterProps {
 }
 
 const spinner: CSSProperties = {
-  width: cssVars.iconSizes.sm, height: cssVars.iconSizes.sm, borderRadius: '50%', flex: 'none',
+  width: cssVars.iconSizes.sm, height: cssVars.iconSizes.sm, borderRadius: cssVars.borderRadius.full, flex: 'none',
   border: `${cssVars.borderWidth.medium} solid currentColor`, borderRightColor: 'transparent', animation: 'finishSpin 1s linear infinite',
 };
 

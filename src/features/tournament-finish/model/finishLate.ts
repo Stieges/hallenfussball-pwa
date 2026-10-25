@@ -8,7 +8,6 @@ import type { LateEntry } from '../../../core/repositories/lateEntriesRead';
 import { EventTypeSchema } from '../../../core/match/types';
 import { eventTypeKey } from '../../collaboration/outbox/rejectionText';
 import { slotLabel, teamDisplayName } from '../../../core/view/originText';
-import { keepTogether } from './finishNames';
 import { formatClock } from './finishFormat';
 import type { FinishT } from './finishItems';
 
@@ -32,7 +31,7 @@ export function describeLateEntry(entry: LateEntry, ctx: LateEntryContext, t: Fi
   const type = EventTypeSchema.safeParse(entry.type);
   const typeLabel = t(`common:${type.success ? eventTypeKey(type.data) : 'outbox.eventType.unknown'}`);
   const match = ctx.tournament.matches.find((candidate) => candidate.id === entry.matchId);
-  const team = entry.teamId === null ? null : keepTogether(teamDisplayName(ctx.tournament.teams, entry.teamId));
+  const team = entry.teamId === null ? null : teamDisplayName(ctx.tournament.teams, entry.teamId);
   const what = team === null
     ? t('tournament:finish.late.whatNoTeam', { type: typeLabel })
     : entry.playerNumber === null
@@ -43,7 +42,7 @@ export function describeLateEntry(entry: LateEntry, ctx: LateEntryContext, t: Fi
     ? t('tournament:finish.late.entryNoNumber', { what })
     : t('tournament:finish.late.entry', { what, number });
   const slots = { teams: ctx.tournament.teams, matches: ctx.tournament.matches, groups: ctx.tournament.groups };
-  const matchLine = match === undefined ? null : `${keepTogether(slotLabel(match.slotA, slots))} – ${keepTogether(slotLabel(match.slotB, slots))}`;
+  const matchLine = match === undefined ? null : `${slotLabel(match.slotA, slots)} – ${slotLabel(match.slotB, slots)}`;
   const name = entry.actorName ?? (ctx.self?.id === entry.actor ? ctx.self.name : null) ?? t('tournament:finish.late.unknownDevice');
   const at = formatClock(entry.recordedAt, language);
   const received = formatClock(entry.receivedAt, language);

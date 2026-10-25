@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../../../types/tournament';
 import { cssVars } from '../../../design-tokens';
+import { HyphenSafe } from './HyphenSafe';
 import { useFinishT } from '../hooks/useFinishT';
 import type { LateEntriesState } from '../hooks/useLateEntries';
 import { describeLateEntry } from '../model/finishLate';
@@ -41,10 +42,10 @@ export function LateEntriesCard({ tournament, late, self }: LateEntriesCardProps
             return (
               <li key={view.id} data-testid="late-entry" style={{ display: 'grid', gap: cssVars.spacing.xs, padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.md, background: cssVars.colors.background }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: cssVars.spacing.sm, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <span style={{ ...strong, fontSize: cssVars.fontSizes.md }}>{view.title}</span>
+                  <span style={{ ...strong, fontSize: cssVars.fontSizes.md }}><HyphenSafe text={view.title} /></span>
                   <span style={{ ...small, color: cssVars.colors.textPrimary, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.warning}`, background: cssVars.colors.warningLight, borderRadius: cssVars.borderRadius.full, padding: `0 ${cssVars.spacing.sm}`, fontWeight: cssVars.fontWeights.semibold }}>{t('finish.late.notCounted')}</span>
                 </div>
-                {view.matchLine !== null && <span style={small}>{view.matchLine}</span>}
+                {view.matchLine !== null && <span style={small}><HyphenSafe text={view.matchLine} /></span>}
                 <span style={small}>{view.byLine}</span>
                 {view.receivedLine !== null && <span style={small}>{view.receivedLine}</span>}
               </li>

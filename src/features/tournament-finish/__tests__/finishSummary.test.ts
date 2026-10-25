@@ -66,6 +66,15 @@ describe('@LZ-005 Hinweis, wenn ein Turnier nach dem letzten Spiel nicht abgesch
   });
 });
 
+describe('@LZ-005 Liste der Startseite (ohne Spiele, mit dem Ende des letzten Spiels aus der Listenabfrage)', () => {
+  it('7 Tage danach ein Hinweis, 6 Tage danach keiner, ohne Ende (ein Spiel offen) keiner', () => {
+    const liste = { matches: [], lastMatchEndedAt: '2026-10-12T16:00:00.000Z' };
+    expect(lateFinishHint(liste, 'running', new Date('2026-10-19T17:00:00.000Z'))).toBe('2026-10-12T16:00:00.000Z');
+    expect(lateFinishHint(liste, 'running', new Date('2026-10-18T17:00:00.000Z'))).toBeNull();
+    expect(lateFinishHint({ matches: [] }, 'running', new Date('2026-12-24T12:00:00.000Z'))).toBeNull();
+  });
+});
+
 describe('Zahlen des Dialogs: „15 von 15 Spielen gespielt · 0 ausgefallen · 6 Teams“', () => {
   it('Nikolaus', () => {
     expect(finishFacts(fertig)).toEqual({ played: 15, total: 15, skipped: 0, teams: 6 });

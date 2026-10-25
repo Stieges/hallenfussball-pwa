@@ -8,7 +8,7 @@ export const winnerBox: CSSProperties = {
   background: cssVars.colors.warningLight, color: cssVars.colors.textPrimary, minWidth: 0,
 };
 export const winnerIcon: CSSProperties = {
-  width: cssVars.touchTargets.comfortable, height: cssVars.touchTargets.comfortable, flex: 'none', borderRadius: '50%',
+  width: cssVars.touchTargets.comfortable, height: cssVars.touchTargets.comfortable, flex: 'none', borderRadius: cssVars.borderRadius.full,
   border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.medalGold}`, color: cssVars.colors.medalGold,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };

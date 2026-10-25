@@ -10,7 +10,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { FinishItem, ServerFinishItem } from '../../../core/repositories/lifecycleRpc';
 import { slotLabel, teamDisplayName } from '../../../core/view/originText';
 import { getGroupDisplayName } from '../../../utils/displayNames';
-import { keepTogether } from './finishNames';
+import { formatClock } from './finishFormat';
 import { OVERALL_GROUP } from '../../../core/models/standingsGroups';
 
 export type FinishT = (key: string, options?: Record<string, unknown>) => string;
@@ -55,14 +55,14 @@ function groupName(tournament: TournamentForItems, groupId: string | undefined):
   return getGroupDisplayName(groupId, { groups: tournament.groups ?? [] });
 }
 
-function matchLine(tournament: TournamentForItems, item: { matchId: string; field?: number }, t: FinishT): { title: string; detail: string | null } | null {
+function matchLine(tournament: TournamentForItems, item: { matchId: string; field?: number }, t: FinishT, language: string): { title: string; detail: string | null } | null {
   const match = tournament.matches.find((candidate) => candidate.id === item.matchId);
   if (match === undefined) {
     return null;
   }
   const ctx = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups };
-  const sides = `${keepTogether(slotLabel(match.slotA, ctx))} – ${keepTogether(slotLabel(match.slotB, ctx))}`;
-  const time = match.scheduledTime ? new Date(match.scheduledTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : null;
+  const sides = `${slotLabel(match.slotA, ctx)} – ${slotLabel(match.slotB, ctx)}`;
+  const time = formatClock(match.scheduledTime, language);
   const field = item.field ?? match.field;
   const parts = [sides, ...(time ? [time] : []), ...(field ? [t('tournament:finish.item.field', { field })] : [])];
   return { title: '', detail: parts.join(' · ') };
@@ -81,12 +81,12 @@ function matchName(item: { matchNumber?: number; finalType?: string }, t: Finish
   return item.matchNumber === undefined ? t('tournament:finish.item.matchUnknown') : t('tournament:finish.item.match', { number: item.matchNumber });
 }
 
-function serverItemView(item: ServerFinishItem, tournament: TournamentForItems, t: FinishT): Omit<FinishItemView, 'id' | 'target'> {
+function serverItemView(item: ServerFinishItem, tournament: TournamentForItems, t: FinishT, language: string): Omit<FinishItemView, 'id' | 'target'> {
   switch (item.kind) {
     case 'match_running':
     case 'match_undecided': {
       const name = matchName(item, t);
-      const line = matchLine(tournament, item, t);
+      const line = matchLine(tournament, item, t, language);
       return {
         title: t(item.kind === 'match_running' ? 'tournament:finish.item.matchRunning' : 'tournament:finish.item.matchUndecided', { name }),
         detail: line?.detail ?? null,
@@ -102,7 +102,7 @@ function serverItemView(item: ServerFinishItem, tournament: TournamentForItems, 
       };
     }
     case 'tie_open': {
-      const names = joinNames(item.teamIds.map((id) => keepTogether(teamDisplayName(tournament.teams, id))), t('tournament:finish.item.and'));
+      const names = joinNames(item.teamIds.map((id) => teamDisplayName(tournament.teams, id)), t('tournament:finish.item.and'));
       const places = [...item.places].sort((a, b) => a - b).join('/');
       return {
         title: t('tournament:finish.item.tieOpen', { places }),
@@ -124,7 +124,7 @@ function serverItemView(item: ServerFinishItem, tournament: TournamentForItems, 
 }
 
 /** Der Eintrag zu einem offenen Punkt. */
-export function describeFinishItem(item: FinishItem, tournament: TournamentForItems, t: FinishT, index: number): FinishItemView {
+export function describeFinishItem(item: FinishItem, tournament: TournamentForItems, t: FinishT, index: number, language = 'de'): FinishItemView {
   const target = finishItemTarget(item, tournament.id);
   if (item.kind === 'review_open') {
     const number = item.matchNumber;
@@ -135,5 +135,5 @@ export function describeFinishItem(item: FinishItem, tournament: TournamentForIt
       target,
     };
   }
-  return { id: `${item.kind}:${index}`, ...serverItemView(item, tournament, t), target };
+  return { id: `${item.kind}:${index}`, ...serverItemView(item, tournament, t, language), target };
 }

@@ -14,7 +14,7 @@ import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import { generateLiveUrl } from '../../../utils/shareUtils';
 import type { LateEntriesState } from '../hooks/useLateEntries';
 import type { StoredStandingsState } from '../hooks/useStoredFinalStandings';
-import { keepTogether } from '../model/finishNames';
+import { TeamName } from './HyphenSafe';
 import { formatClock, formatDay } from '../model/finishFormat';
 import { shootoutNote } from '../model/finishSummary';
 import { LateEntriesCard } from './LateEntriesCard';
@@ -59,7 +59,7 @@ export function FinishedStateView({ tournament, stored, late, self }: FinishedSt
               {ranking.map((row, index) => (
                 <li key={row.teamId} style={{ ...placeRow, ...(index === ranking.length - 1 ? { borderBottom: 'none' } : {}) }}>
                   <span style={placeNumber}>{row.place}</span>
-                  <span style={strong}>{keepTogether(row.teamName)}</span>
+                  <span style={strong}><TeamName name={row.teamName} /></span>
                   <span style={small}>{index === 0 && note !== null ? t('finish.closed.shootout', { winner: note.winner, loser: note.loser }) : ''}</span>
                 </li>
               ))}

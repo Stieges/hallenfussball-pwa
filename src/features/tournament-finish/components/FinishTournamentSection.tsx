@@ -6,12 +6,13 @@
  * Nur mit Recht `manageLifecycle` (Helfer: bietet die App das nicht an, @LZ-022) und nur für Turniere mit Konto (E9). Der Dienst
  * bekommt den frisch gelesenen rohen Cloud-Stand, nie die Überlagerung der Anzeige (Review #393 H-2).
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
 import { LocalStorageRepository } from '../../../core/repositories/LocalStorageRepository';
 import { useRepositories } from '../../../core/contexts/RepositoryContext';
 import { openReviewCount } from '../../../core/match/review/reviewCases';
+import { cssVars } from '../../../design-tokens';
 import { lifecycleOf } from '../../../core/services/lifecycle';
 import { useFinishTournament } from '../../../hooks/useFinishTournament';
 import { useCan } from '../../auth/hooks/useCan';
@@ -20,6 +21,9 @@ import { finishFacts, lateFinishHint, shouldSuggestFinish } from '../model/finis
 import { FinishedStateSection } from './FinishedStateSection';
 import { FinishSectionCards } from './FinishSectionCards';
 import { FinishTournamentDialog } from './FinishTournamentDialog';
+
+/** Abstand nach unten nur, wenn der Bereich etwas zeigt (kein leerer Rahmen im Dashboard, Review #395 M-1). */
+const gap = { marginBottom: cssVars.spacing.lg } as const;
 
 export interface FinishTournamentSectionProps {
   /** Das Turnier der Ansicht (kann mit der Spielsteuerung überlagert sein; nur zur Anzeige und für die Vorschlags-Regel). */
@@ -45,12 +49,14 @@ export function FinishTournamentSection({ tournament, onReload }: FinishTourname
   const suggest = shouldSuggestFinish(tournament, lifecycle, openReviews);
   const lateHint = lateFinishHint(tournament, lifecycle, now);
   const local = tournamentRepository instanceof LocalStorageRepository;
+  // m-2 (Review #395): ist das Turnier nicht mehr „Läuft“ (abgeschlossen, Notweg wieder geöffnet), bleibt kein offener Dialog zurück
+  useEffect(() => { if (lifecycle !== 'running') { setOpen(false); } }, [lifecycle]);
 
   if (!canManage || local) {
     return null;
   }
   if (lifecycle === 'finished') {
-    return <FinishedStateSection tournament={tournament} showLate />;
+    return <div style={gap}><FinishedStateSection tournament={tournament} showLate /></div>;
   }
   if (lifecycle !== 'running') {
     return null;
@@ -59,12 +65,12 @@ export function FinishTournamentSection({ tournament, onReload }: FinishTourname
   const closeDialog = (): void => { setOpen(false); };
   const jump = (target: string): void => { setOpen(false); void navigate(target); };
   return (
-    <>
+    <div style={gap}>
       <FinishSectionCards suggest={suggest} facts={facts} openReviews={openReviews} lateSince={lateHint} onOpen={() => { setOpen(true); }} />
       <FinishTournamentDialog
         isOpen={open} tournament={tournament} finish={finish} onClose={closeDialog} onJump={jump}
         onReloadState={async () => { await reloadFresh(); }}
       />
-    </>
+    </div>
   );
 }

@@ -11,7 +11,7 @@ import type { FinishReady } from '../../../core/services/finishPreparation';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../../../components/ui/Icons';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
-import { keepTogether } from '../model/finishNames';
+import { HyphenSafe, TeamName } from './HyphenSafe';
 import { finishFacts, pointsByTeam, shootoutNote } from '../model/finishSummary';
 import { FinishWarnings } from './FinishWarnings';
 import { disclosureIcon, factsLine, winnerBox, winnerIcon } from './finishReadyStyles';
@@ -46,8 +46,8 @@ export function FinishReadyBody({ ready, tournament, topNotice, showWarnings = t
         <span style={winnerIcon} aria-hidden="true"><Icons.Trophy size={iconSizeValues.lg} /></span>
         <span style={{ ...tightStack, gap: cssVars.spacing.xs, minWidth: 0 }}>
           <span style={small}>{t('finish.ready.winner')}</span>
-          <strong style={{ fontSize: cssVars.fontSizes.xxl, lineHeight: 1.2, overflowWrap: 'anywhere' }}>{keepTogether(winner.teamName)}</strong>
-          {note !== null && <span style={small}>{t('finish.ready.shootout', { winner: note.winner, loser: note.loser, other: keepTogether(note.otherName) })}</span>}
+          <strong style={{ fontSize: cssVars.fontSizes.xxl, lineHeight: cssVars.lineHeights.headlineMd, overflowWrap: 'anywhere' }}><TeamName name={winner.teamName} /></strong>
+          {note !== null && <span style={small}><HyphenSafe text={t('finish.ready.shootout', { winner: note.winner, loser: note.loser, other: note.otherName })} /></span>}
         </span>
       </div>
       <div style={tightStack}>
@@ -56,7 +56,7 @@ export function FinishReadyBody({ ready, tournament, topNotice, showWarnings = t
           {rows.map((row, index) => (
             <li key={row.teamId} style={{ ...placeRow, ...(index === rows.length - 1 ? { borderBottom: 'none' } : {}) }}>
               <span style={placeNumber}>{row.place}</span>
-              <span style={strong}>{keepTogether(row.teamName)}</span>
+              <span style={strong}><TeamName name={row.teamName} /></span>
               <span style={small}>{points?.has(row.teamId) === true ? t('finish.ready.points', { points: points.get(row.teamId) }) : ''}</span>
             </li>
           ))}

@@ -1709,7 +1709,7 @@
     "checking": "Der Stand wird geprüft …",
     "offline": {
       "title": "Kein Netz",
-      "text": "Turnier abschließen braucht eine Verbindung. Schalte WLAN oder mobile Daten ein und tippe dann noch einmal auf „Turnier abschließen“. Das Turnier bleibt so lange geöffnet.",
+      "text": "Turnier abschließen braucht eine Verbindung. Schalte WLAN oder mobile Daten ein. Sobald die Verbindung steht, prüft der Dialog von selbst neu. Das Turnier bleibt so lange geöffnet.",
       "hint": "Abschließen geht erst mit Verbindung"
     },
     "sending": {

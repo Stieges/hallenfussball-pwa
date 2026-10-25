@@ -95,6 +95,12 @@ test.describe('R3-4 Turnier abschließen: Dialog, Verwaltung, Zustand C (T2-UI)'
           await expect(page.getByRole('checkbox')).toHaveCount(0);
           await expect(page.getByRole('button', { name: /wieder öffnen/i })).toHaveCount(0);
           await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity).map((animation) => animation.finished))); // Einblend-Animation des Dialogs abwarten
+          if (szene.id.startsWith('dlg-')) {
+            // wie am Gerät nach einem Tipp: der Start-Fokus zeigt keinen Tastatur-Ring (Playwright setzt ihn sonst ohne vorherigen Zeiger-Tipp)
+            const titel = page.getByTestId('finish-dialog').getByRole('heading', { level: 2 });
+            await titel.evaluate((el) => { el.blur(); });
+            await titel.click();
+          }
           const breite = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, fenster: window.innerWidth }));
           expect(breite.scroll, 'keine waagrechte Rollleiste').toBeLessThanOrEqual(breite.fenster);
 

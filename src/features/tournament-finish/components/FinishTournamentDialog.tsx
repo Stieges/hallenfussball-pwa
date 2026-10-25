@@ -7,7 +7,7 @@
  *         → „nicht bestätigt“ / Fehler (Haupttaste „Erneut versuchen“)
  *   ohne Netz: Hinweis „Kein Netz“, Haupttaste gesperrt mit der Zeile „Abschließen geht erst mit Verbindung“ (@LZ-019); kommt das
  *   Netz zurück, prüft der Dialog von selbst neu.
- * Handy: Vollbild mit festem Fuß (Inhalt scrollt); breiter: zentriert, 560 px.
+ * Handy: Vollbild mit festem Fuß (Inhalt scrollt); breiter: zentriert in der Breite `dialogWidths.md` (480 px; das Mockup zeigte 560 px).
  */
 import { useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +82,14 @@ export function FinishTournamentDialog({ isOpen, tournament, finish, onClose, on
       onClose();
     }
   }, [isOpen, done, onClose]);
+
+  // m-3 (Review #395): ändert sich die Ansicht (bereit, nicht bestätigt, Fehler), bleibt der Fokus im Dialog (auf dem Titel); während des Speicherns
+  // bleibt er auf der Haupttaste (sie ist nur `aria-disabled`)
+  useEffect(() => {
+    if (isOpen && state.phase !== 'sending') {
+      titleRef.current?.focus();
+    }
+  }, [isOpen, state.phase]);
 
   const close = (): void => { if (!sending) { onClose(); } };
   const notice = (tone: 'warn' | 'info' | 'error', icon: React.ReactNode, title: string, body: string, testId: string) => (
@@ -158,10 +166,10 @@ export function FinishTournamentDialog({ isOpen, tournament, finish, onClose, on
   } as const;
   const header = (
     <div style={barStyle}>
-      <h2 id={titleId} ref={titleRef} tabIndex={-1} style={{ outline: 'none', margin: 0, flex: 1, minWidth: 0, fontSize: cssVars.fontSizes.titleMd, lineHeight: 1.3, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary }}>{t('finish.title')}</h2>
+      <h2 id={titleId} ref={titleRef} tabIndex={-1} style={{ outline: 'none', margin: 0, flex: 1, minWidth: 0, fontSize: cssVars.fontSizes.titleMd, lineHeight: cssVars.lineHeights.title, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary }}>{t('finish.title')}</h2>
       <button
         type="button" aria-label={t('finish.close')} disabled={sending} onClick={close} data-testid="finish-close"
-        style={{ flex: 'none', width: cssVars.touchTargets.minimum, height: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', color: cssVars.colors.textSecondary, cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.5 : 1 }}
+        style={{ flex: 'none', width: cssVars.touchTargets.minimum, height: cssVars.touchTargets.minimum, minWidth: cssVars.touchTargets.minimum, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', color: cssVars.colors.textSecondary, cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? cssVars.opacity.disabled : 1 }}
       >
         <Icons.X size={iconSizeValues.md} />
       </button>

@@ -25,6 +25,8 @@ describe('@LZ-009 Verwaltung: Bereich „Turnier abschließen“', () => {
     render(<DashboardCategory tournamentId="t1" tournament={turnier} onTournamentUpdate={vi.fn()} onReload={onReload} />);
     expect(screen.getByTestId('finish-section-stub')).toBeInTheDocument();
     expect((section.props as { onReload: unknown }).onReload).toBe(onReload);
+    // M-1 (Review #395): kein eigener Abstands-Rahmen im Dashboard – der Bereich trägt seinen Abstand selbst, nur wenn er etwas zeigt
+    expect(screen.getByTestId('finish-section-stub').parentElement?.style.marginBottom).toBe('');
   });
 
   it('Gegenbeispiel: ohne Neuladen (kein Verwaltungsrahmen) kein Bereich', () => {

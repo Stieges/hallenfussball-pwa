@@ -396,7 +396,7 @@ export function DashboardCategory({
       </div>
 
       {/* R3-4 (B-33): Turnier abschließen (Vorschlag, Knopf, Dialog) bzw. Zustand „abgeschlossen“ */}
-      {onReload !== undefined && <div style={{ marginBottom: cssVars.spacing.lg }}><FinishTournamentSection tournament={tournament} onReload={onReload} /></div>}
+      {onReload !== undefined && <FinishTournamentSection tournament={tournament} onReload={onReload} />}
 
       {/* Pulse animation for live status */}
       <style>{`

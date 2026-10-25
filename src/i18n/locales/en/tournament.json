@@ -1709,7 +1709,7 @@
     "checking": "Checking the current state …",
     "offline": {
       "title": "No network",
-      "text": "Closing the tournament needs a connection. Switch on Wi-Fi or mobile data and then tap “Close tournament” again. The tournament stays open until then.",
+      "text": "Closing the tournament needs a connection. Switch on Wi-Fi or mobile data. Once the connection is back, the dialog checks again by itself. The tournament stays open until then.",
       "hint": "Closing only works with a connection"
     },
     "sending": {
