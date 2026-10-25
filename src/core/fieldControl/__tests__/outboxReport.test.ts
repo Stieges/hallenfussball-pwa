@@ -56,3 +56,18 @@ describe('R3-2a dueOutboxReports (@LZ-018, @FU-068)', () => {
     expect(dueOutboxReports({ ...leer, lastSent })).toEqual([{ tournamentId: 'live-cup', field: null, pending: 0 }]);
   });
 });
+
+describe('R3-2b Review #392 M1 Start-Abgleich (reconciled)', () => {
+  it('Turnier mit Kopien auf dem Gerät, in diesem Seitenleben noch nicht gemeldet: einmal 0 melden', () => {
+    expect(dueOutboxReports({ ...leer, pendingByTournament: { 'live-cup': 0 }, reconciled: new Set() }))
+      .toEqual([{ tournamentId: 'live-cup', field: null, pending: 0 }]);
+  });
+
+  it('schon abgeglichen: 0 ohne Feld bleibt Ruhe', () => {
+    expect(dueOutboxReports({ ...leer, pendingByTournament: { 'live-cup': 0 }, reconciled: new Set(['live-cup']) })).toEqual([]);
+  });
+
+  it('Gegenbeispiel: Turniere ohne Kopie auf dem Gerät und Kopien ohne Turnier („“) werden nicht abgeglichen', () => {
+    expect(dueOutboxReports({ ...leer, pendingByTournament: { '': 0 }, reconciled: new Set() })).toEqual([]);
+  });
+});

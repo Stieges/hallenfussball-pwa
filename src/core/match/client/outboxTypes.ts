@@ -53,6 +53,8 @@ export interface OutboxStatus {
   revokedWatchOnlyByMatch: Record<string, number>;
   /** R3-2a (@FU-018): nach dem Turnierabschluss angekommen, an die Turnierleitung übergeben (Grund `AFTER_FINISH`) je Spiel. */
   afterFinishByMatch: Record<string, number>;
+  /** R3-2b (Review #392 M2): dieselben je Turnier – Grundlage fürs Aufräumen nach dem Wiederöffnen. */
+  afterFinishByTournament: Record<string, number>;
   pausedMatches: Record<string, OutboxPause>;
   authRequired: boolean;
   clientOutdated: boolean;
@@ -72,6 +74,7 @@ export function emptyOutboxStatus(): OutboxStatus {
     revokedByMatch: {},
     revokedWatchOnlyByMatch: {},
     afterFinishByMatch: {},
+    afterFinishByTournament: {},
     pausedMatches: {},
     authRequired: false,
     clientOutdated: false,

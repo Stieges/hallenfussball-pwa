@@ -23,15 +23,20 @@ const rowsOf = (key: GeneratedTournamentKey): GeneratedRows =>
 
 /**
  * Fixture-Zeilen plus Ergebnisse (`updates`) → Turnier über `mapTournamentFromSupabase`. Ohne Ergebnisse
- * (`results: false`): das frisch angelegte Turnier, kein Spiel angepfiffen.
+ * (`results: false`): das frisch angelegte Turnier, kein Spiel angepfiffen. `extraUpdates`: weitere Spalten je Spiel.
  */
-export function tournamentFromFixture(key: GeneratedTournamentKey, { results = true }: { results?: boolean } = {}): Tournament {
+export function tournamentFromFixture(
+  key: GeneratedTournamentKey,
+  { results = true, extraUpdates = [] }: { results?: boolean; extraUpdates?: ReadonlyArray<{ id: string; set: Record<string, unknown> }> } = {},
+): Tournament {
   const rows = rowsOf(key);
   const updates = new Map(groupStateFixture.updates.filter((u) => results && u.tournament === key).map((u) => [u.id, u]));
+  const extra = new Map(extraUpdates.map((u) => [u.id, u.set]));
   const matchRows = rows.matches.map((row) => {
     const update = updates.get(String(row.id));
     const { tournament: _t, id: _id, ...columns } = update ?? { tournament: key, id: '' };
-    return { ...MATCH_DEFAULTS, ...row, ...columns };
+    // R3-2b: Zusatz-Spalten je Spiel (tournament-state.json `extraUpdates`, Spalten wie in matches)
+    return { ...MATCH_DEFAULTS, ...row, ...columns, ...(extra.get(String(row.id)) ?? {}) };
   });
   return mapTournamentFromSupabase(
     rows.tournament as unknown as MapperArgs[0],

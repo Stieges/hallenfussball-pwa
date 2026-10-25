@@ -29,6 +29,7 @@ import {
 import { makeFetchConfirmed, type MatchEventsQueryClient } from './supabaseFetchConfirmed';
 import { MatchEngineContext, type MatchEngineContextValue } from './matchEngineContextInstance';
 import { useOutboxReport } from './useOutboxReport';
+import { useAfterFinishCleanup } from './useAfterFinishCleanup';
 
 const BROADCAST_CHANNEL_NAME = 'hallenfussball-matches';
 
@@ -237,6 +238,8 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
 
   // R3-2a (@LZ-018, @FU-068): Zahl wartender Einträge alle 30 s an den Server melden (Warnungen vor dem Abschluss)
   useOutboxReport({ sender: bundle.sender, accountId });
+  // R3-2b (Review #392 M2, @FU-018): nach dem Wiederöffnen „an die Turnierleitung übergeben“ aufräumen
+  useAfterFinishCleanup({ sender: bundle.sender, accountId });
 
   // Unmount: ausstehende Wiederaufnahmen loeschen, bevor irgendetwas entsorgt wird (A-06g).
   useEffect(() => {

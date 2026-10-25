@@ -31,13 +31,26 @@ export const AFTER_FINISH = 'AFTER_FINISH';
  * abgeschlossen – sie liegen in Ollis Klärungsliste, das Gerät führt sie nicht weiter. Andere Klärungseinträge bleiben.
  */
 export function closeHandedOverEntries(copy: MatchCopy): void {
+  closeReviewEntriesWithCode(copy, RIGHTS_REVOKED);
+}
+
+/**
+ * R3-2b (Review #392 M2, @FU-018 letzte Zeile): Ist das Turnier wieder geöffnet, sind die nach dem Abschluss angekommenen
+ * Einträge (`AFTER_FINISH`) als übergeben abgeschlossen – sie liegen bei der Turnierleitung („nach dem Abschluss
+ * eingetroffen“), wer sie übernehmen will, tut das dort. Der Hinweis „Turnier ist abgeschlossen – N übergeben“ verschwindet.
+ */
+export function closeAfterFinishEntries(copy: MatchCopy): void {
+  closeReviewEntriesWithCode(copy, AFTER_FINISH);
+}
+
+function closeReviewEntriesWithCode(copy: MatchCopy, code: string): void {
   const reasons = copy.reviewReasons ?? {};
-  const handedOver = new Set(copy.review.filter((event) => reasons[event.id]?.code === RIGHTS_REVOKED).map((event) => event.id));
-  if (handedOver.size === 0) {
+  const closing = new Set(copy.review.filter((event) => reasons[event.id]?.code === code).map((event) => event.id));
+  if (closing.size === 0) {
     return;
   }
-  copy.review = copy.review.filter((event) => !handedOver.has(event.id));
-  copy.reviewReasons = Object.fromEntries(Object.entries(reasons).filter(([id]) => !handedOver.has(id)));
+  copy.review = copy.review.filter((event) => !closing.has(event.id));
+  copy.reviewReasons = Object.fromEntries(Object.entries(reasons).filter(([id]) => !closing.has(id)));
   copy.updatedAt = Date.now();
 }
 
