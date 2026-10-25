@@ -144,7 +144,7 @@ export function TournamentAdminCenter({
   const [showMobileHub, setShowMobileHub] = useState(true);
 
   // Tournament data
-  const { tournament, handleTournamentUpdate, applyRemote, scheduleService, loadingError } =
+  const { tournament, handleTournamentUpdate, applyRemote, scheduleService, loadingError, reload } =
     useTournamentManager(tournamentId);
 
   // A2 Fixrunde 1 (Ruling AJ, I1: .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -225,6 +225,8 @@ export function TournamentAdminCenter({
       // Kategorien ignorieren die zusätzlichen Props einfach.
       onLocalTournamentUpdate: applyRemote,
       onMatchesUpdate: handleMatchesUpdate,
+      // R3-4: nach dem Abschluss (und nach „Stand neu laden“) frisch aus der Cloud lesen
+      onReload: () => reload({ fresh: true }),
     };
 
     switch (activeCategory) {

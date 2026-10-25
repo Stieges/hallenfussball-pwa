@@ -22,6 +22,11 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   /** Enable press effect (scale down on press). Default: true */
   pressEffect?: boolean;
+  /**
+   * Die Aktion läuft, die Beschriftung bleibt sichtbar (anders als `loading`, das nur den Kreisel zeigt): `aria-busy`, nicht
+   * antippbar. Vorgabe: folgt `loading`.
+   */
+  busy?: boolean;
   /** Loading state - shows spinner and disables button */
   loading?: boolean;
   /** Test ID for E2E testing */
@@ -63,6 +68,7 @@ export const Button: React.FC<ButtonProps> = ({
   title,
   type = 'button',
   pressEffect = true,
+  busy,
   loading = false,
   'data-testid': testId,
   'data-primary': isPrimaryMarker,
@@ -85,7 +91,7 @@ export const Button: React.FC<ButtonProps> = ({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const isDisabled = disabled || loading;
+  const isDisabled = disabled || loading || busy === true;
   const shouldAnimate = pressEffect && !prefersReducedMotion && !isDisabled;
 
   const handlePressStart = () => {
@@ -185,7 +191,7 @@ export const Button: React.FC<ButtonProps> = ({
       aria-keyshortcuts={ariaKeyshortcuts}
       title={title}
       aria-disabled={isDisabled}
-      aria-busy={loading}
+      aria-busy={busy ?? loading}
       data-testid={testId}
       data-primary={isPrimaryMarker ? '' : undefined}
       onMouseDown={handlePressStart}

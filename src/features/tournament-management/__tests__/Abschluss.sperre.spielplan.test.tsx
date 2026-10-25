@@ -117,6 +117,14 @@ describe('@ZP-087 @LZ-036 Spielplan nach dem Abschluss: ändert niemand den Zeit
     expect(displayProps.current.editable).toBe(false);
   });
 
+  it('Review #394 m-2: abgeschlossen ist die Umschaltung Tabelle/Gitter weg (es gibt nur die Tabelle), offen ist sie da', () => {
+    renderTab();
+    expect(screen.getByTestId('schedule-view-grid')).toBeInTheDocument();
+    act(() => setTournamentClosed('hallencup-ost', true));
+    expect(screen.queryByTestId('schedule-view-grid')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('schedule-view-table')).not.toBeInTheDocument();
+  });
+
   it('@LZ-037 Z. 5 abgeschlossen: „Aushang mit QR-Code“ im PDF-Dialog bleibt angeboten (druckt nur den Link der öffentlichen Ansicht)', async () => {
     const user = userEvent.setup();
     setTournamentClosed('hallencup-ost', true);

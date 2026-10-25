@@ -305,6 +305,18 @@ describe('m-1 Zustandsgrenzen: bestätigen und erneut senden nur aus der richtig
     expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'STALE_STATE' } });
   });
 
+  it('ein zweites Tippen auf „Turnier abschließen“, während der erste Abschluss läuft, sendet nichts (@LZ-021: genau ein Abschluss)', async () => {
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    finishAnswer = () => new Promise<Answer>(() => undefined);
+    act(() => { void result.current.confirm(); });
+    await waitFor(() => { expect(result.current.state.phase).toBe('sending'); });
+    await act(async () => { await result.current.confirm(); });
+    await act(async () => { await result.current.retry(); });
+    expect(calls('finish_tournament')).toHaveLength(1);
+    expect(calls('list_match_reviews')).toHaveLength(2); // Prüfen + einmal direkt vor dem Senden (S2), nicht ein drittes Mal
+  });
+
   it('retry() ist nur nach „nicht bestätigt“ möglich – aus „bereit“ sendet es nichts', async () => {
     const { result } = render();
     await act(async () => { await result.current.start(); });

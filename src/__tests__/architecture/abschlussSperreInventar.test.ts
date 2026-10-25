@@ -105,11 +105,16 @@ describe('Inventar: Sperre nach dem Abschluss (R3-3, V6)', () => {
     expect(noReason).toEqual([]);
   });
 
-  it('nur CategoryRightGate (öffentliche Ansicht) und der Aushang lassen per openAfterClose ein Recht nach dem Abschluss offen (nur kürzen, nie erweitern)', () => {
+  it('nur CategoryRightGate (öffentliche Ansicht), der Aushang und der Zustand „abgeschlossen“ der Verwaltung lassen per openAfterClose ein Recht nach dem Abschluss offen (nur kürzen, nie erweitern)', () => {
     const users = sourceFiles
       .filter((f) => /openAfterClose\s*:/.test(f.text) && f.path !== 'src/features/auth/hooks/useCan.ts')
       .map((f) => f.path);
     // Aushang (QR-Code der öffentlichen Ansicht drucken) schreibt nichts, @LZ-037 Z. 5, Review #394 R-2
-    expect(users.sort()).toEqual([`${ADMIN}categories/Exports/index.tsx`, `${ADMIN}components/CategoryRightGate.tsx`, `${HOME}ScheduleTab.tsx`]);
+    // Zustand C der Verwaltung (R3-4, Review #394 H-1): `manageLifecycle` ist nach dem Abschluss gesperrt, der Bereich „abgeschlossen“
+    // (Endstand, „Nach dem Ende eingetroffen“) liest nur und muss der Turnierleitung trotzdem erscheinen – er schreibt nichts.
+    expect(users.sort()).toEqual([
+      `${ADMIN}categories/Exports/index.tsx`, `${ADMIN}components/CategoryRightGate.tsx`,
+      'src/features/tournament-finish/components/FinishTournamentSection.tsx', `${HOME}ScheduleTab.tsx`,
+    ]);
   });
 });

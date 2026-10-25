@@ -1,5 +1,5 @@
 /**
- * Hinweis innerhalb einer Ansicht (kein Toast). Nur Darstellung, keine Logik. Ton `warn` (Vorgabe), `info`, `error`, `ok`;
+ * Hinweis innerhalb einer Ansicht (kein Toast). Nur Darstellung, keine Logik. Ton `warn` (Vorgabe), `info`, `error`, `ok`, `neutral` (reine Auskunft ohne Wertung, z. B. die Folgen eines Abschlusses);
  * Text bleibt `textPrimary`, Rand, Fläche und Symbol tragen den Ton, das Symbol steht immer dabei: Farbe allein trägt keine
  * Bedeutung (VISUAL-DESIGN § 7). `icon` ersetzt das Symbol des Tons (z. B. „ohne Netz“). `role="status"`, bei `error`
  * `role="alert"`: Bildschirmleser lesen den Inhalt beim Erscheinen vor.
@@ -8,7 +8,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../Icons';
 
-export type InlineNoticeTone = 'warn' | 'info' | 'error' | 'ok';
+export type InlineNoticeTone = 'warn' | 'info' | 'error' | 'ok' | 'neutral';
 
 export interface InlineNoticeProps {
   children: ReactNode;
@@ -28,6 +28,7 @@ const TONES: Record<InlineNoticeTone, { background: string; border: string; symb
   info: { background: cssVars.colors.infoLight, border: cssVars.colors.infoBorder, symbol: cssVars.colors.info },
   error: { background: cssVars.colors.errorLight, border: cssVars.colors.errorBorder, symbol: cssVars.colors.error },
   ok: { background: cssVars.colors.primaryLight, border: cssVars.colors.primary, symbol: cssVars.colors.primary },
+  neutral: { background: cssVars.colors.surface, border: cssVars.colors.borderControl, symbol: cssVars.colors.textSecondary },
 };
 
 const TONE_ICON: Record<InlineNoticeTone, ReactNode> = {
@@ -35,6 +36,7 @@ const TONE_ICON: Record<InlineNoticeTone, ReactNode> = {
   info: <Icons.Info size={iconSizeValues.sm} />,
   error: <Icons.AlertTriangle size={iconSizeValues.sm} />,
   ok: <Icons.Check size={iconSizeValues.sm} />,
+  neutral: <Icons.Info size={iconSizeValues.sm} />,
 };
 
 export const InlineNotice = ({ children, tone = 'warn', icon, footer, live = true, 'data-testid': testId }: InlineNoticeProps) => {

@@ -435,6 +435,8 @@ export interface Tournament {
   isKidsTournament: boolean;
   hideScoresForPublic: boolean;
   hideRankingsForPublic: boolean;
+  /** Torschützen für die Öffentlichkeit (`config.publicScorers`, Server; R3-4: Text im Abschluss-Dialog). Nur gelesen, nie aus der App geschrieben. */
+  publicScorers?: boolean;
   resultMode: ResultMode;
 
   // Point System

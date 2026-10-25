@@ -309,7 +309,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             tournament={tournament}
             schedule={schedule}
             standings={currentStandings}
-            canEditSchedule={canSchedule} canCreateNotice={canNotice}
+            canEditSchedule={canSchedule} canCreateNotice={canNotice} hideViewToggle={closed}
           />
 
           {/* US-VIEWER-FILTERS: Filter Bar */}
