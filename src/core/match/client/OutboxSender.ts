@@ -157,6 +157,22 @@ export class OutboxSender {
     await this.refresh();
   }
 
+  /**
+   * R3-2b (Review #392 M2, @FU-018): das Turnier ist wieder geöffnet – die nach dem Abschluss angekommenen Einträge seiner
+   * Spiele als übergeben abschließen, danach neu zählen. Ob es wieder offen ist, entscheidet der Aufrufer am Server.
+   */
+  async closeAfterFinish(tournamentId: string): Promise<void> {
+    if (this.accountId === null) {
+      return;
+    }
+    const copies = (await this.store.forAccount(this.accountId)).filter((copy) => copy.tournamentId === tournamentId);
+    for (const copy of copies) {
+      await this.store.closeAfterFinish(this.queueKeyFor(copy.matchId));
+      this.notifyStoreChange?.(copy.matchId);
+    }
+    await this.refresh();
+  }
+
   subscribe(listener: (status: OutboxStatus) => void): () => void {
     return this.book.subscribe(listener);
   }

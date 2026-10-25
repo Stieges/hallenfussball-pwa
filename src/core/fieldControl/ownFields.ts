@@ -21,7 +21,13 @@ export function ownFieldsByTournament(): Record<string, readonly number[]> {
   return Object.fromEntries(own);
 }
 
-/** Nur für Tests. */
-export function resetOwnFieldsForTests(): void {
+/**
+ * Abmelden oder Kontowechsel (R3-2b, Review #392 m1): der Feld-Stand gehört zum vorigen Konto – sonst meldete das neue Konto
+ * Felder aus fremden Turnieren (42501 alle 30 s). Das Cockpit liest den Stand für das neue Konto neu.
+ */
+export function clearOwnFields(): void {
   own.clear();
 }
+
+/** Nur für Tests. */
+export const resetOwnFieldsForTests = clearOwnFields;
