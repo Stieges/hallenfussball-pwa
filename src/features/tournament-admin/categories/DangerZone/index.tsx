@@ -12,7 +12,6 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
-import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
 import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
 import { useCan } from '../../../auth/hooks/useCan';
 import type { Tournament } from '../../../../types/tournament';
@@ -236,9 +235,8 @@ export function DangerZoneCategory({
   const resultsReset = useResultsReset(); // A-10 (@FU-090, L1, L8)
 
   // R7: Löschen nur der Eigentümer (DB: protect_deleted_at -> deleteTournament), für alle anderen ausgeblendet.
-  // A-11 (useCan, @LZ-022): Abschließen/Archivieren nur mit manageLifecycle; Zurücksetzen bleibt (A-10, Server prüft).
+  // Abschließen/Archivieren gibt es hier nicht mehr (R3-1, C-FINISH-PROMISE): der neue Weg kommt mit R3-4 (@LZ-022).
   const canDelete = useCan('deleteTournament', tournamentId);
-  const canLifecycle = useCan('manageLifecycle', tournamentId);
 
   // @LZ-003: „Turnier löschen" nur vor dem ersten Anpfiff — und nur, wenn der
   // Anpfiff-Zustand überhaupt feststellbar ist (fail-closed, siehe
@@ -281,15 +279,6 @@ export function DangerZoneCategory({
           break;
         }
 
-        case 'end_tournament':
-        case 'archive_tournament': {
-          // L5: dashboardStatus allein ist wirkungslos — utils/tournamentCategories.ts liest status,
-          // manuallyCompleted und Spielergebnisse. Beide Aktionen teilen bewusst die Logik: Die App kennt
-          // keinen Archiv-Zustand (TournamentStatus = 'draft' | 'published'); eigener Zustand = Follow-up (Task 22).
-          await onTournamentUpdate({ ...tournament, ...buildFinishTournamentPatch(tournament) });
-          break;
-        }
-
         case 'delete_tournament':
           await onTournamentUpdate({
             ...tournament,
@@ -323,8 +312,6 @@ export function DangerZoneCategory({
         <div style={styles.actionHeader}>
           <span style={styles.actionIcon}>
             {action === 'reset_schedule' && '🗑️'}
-            {action === 'end_tournament' && '🛑'}
-            {action === 'archive_tournament' && '📦'}
             {action === 'delete_tournament' && '🗑️'}
           </span>
           <h3
@@ -378,10 +365,6 @@ export function DangerZoneCategory({
 
       {/* Reset Schedule (Danger) */}
       {renderActionCard('reset_schedule')}
-
-      {/* End/Archive Tournament (Warning) — @LZ-022: nur mit manageLifecycle */}
-      {canLifecycle && renderActionCard('end_tournament')}
-      {canLifecycle && renderActionCard('archive_tournament')}
 
       {/* Delete Tournament (Danger) — R7: nur für den Eigentümer, @LZ-003: nur vor dem ersten Anpfiff */}
       {canOfferDelete && renderActionCard('delete_tournament')}

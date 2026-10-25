@@ -158,8 +158,6 @@ describe('DangerZoneCategory — "Turnier löschen" nur für den Eigentümer (Ta
   it('andere Gefahrenzone-Aktionen bleiben für den Co-Admin sichtbar (kein Overreach)', () => {
     setupWithMembership('co-admin');
 
-    expect(screen.getByRole('button', { name: /Turnier beenden/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Turnier archivieren/i })).toBeInTheDocument();
     // Ersatz-Aussage für die hier früher erwartete Aktion: „Spielplan neu generieren"
     // wird seit B-01a (@OB-006/@OB-007) NIE angeboten — auch nicht dem Co-Admin.
     expect(screen.queryByRole('button', { name: /Spielplan neu generieren/i })).not.toBeInTheDocument();

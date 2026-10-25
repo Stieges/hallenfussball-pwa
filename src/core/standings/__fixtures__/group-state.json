@@ -82,7 +82,6 @@
           "publishedAt": "2026-10-21T00:44:01.347Z"
         },
         "deleted_at": null,
-        "completed_at": null,
         "version": 1
       },
       "teams": [
@@ -673,7 +672,6 @@
           "publishedAt": "2026-10-21T00:44:01.364Z"
         },
         "deleted_at": null,
-        "completed_at": null,
         "version": 1
       },
       "teams": [

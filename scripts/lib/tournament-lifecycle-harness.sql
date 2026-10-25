@@ -193,4 +193,31 @@ BEGIN
 END;
 $fn$;
 
+-- lifecycle-of.json (R3-1, Zwilling lifecycleOf): eigenes kleines Turnier (unabhaengig von group-state.json) mit je einem Spiel
+-- je Eintrag von matchStatuses, dann der gespeicherte Zustand (lifecycleStatus; der Abschluss sperrt die Spiele, deshalb zuletzt).
+-- Ergebnis public.tournament_lifecycle. Eigentuemer = der des ersten Turniers im Bestand. Nur in einer Transaktion mit
+-- ROLLBACK aufrufen.
+CREATE FUNCTION lc.life_case(p_case jsonb) RETURNS text LANGUAGE plpgsql AS $fn$
+DECLARE
+  v_owner uuid := (SELECT owner_id FROM public.tournaments ORDER BY created_at LIMIT 1);
+  tid uuid := gen_random_uuid();
+  ta uuid := gen_random_uuid();
+  tb uuid := gen_random_uuid();
+  i integer;
+BEGIN
+  INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, status, config)
+  VALUES (tid, v_owner, 'lifecycle-of', '2026-11-26', 4, 10, 'published', '{}');
+  INSERT INTO public.teams (id, tournament_id, name) VALUES (ta, tid, 'Team A'), (tb, tid, 'Team B');
+  FOR i IN 0 .. jsonb_array_length(p_case -> 'matchStatuses') - 1 LOOP
+    INSERT INTO public.matches (tournament_id, owner_id, round, field, slot, team_a_id, team_b_id, match_status)
+    VALUES (tid, v_owner, i + 1, 1, i + 1, ta, tb, p_case -> 'matchStatuses' ->> i);
+  END LOOP;
+  PERFORM set_config('app.lifecycle_write', 'on', true);
+  UPDATE public.tournaments SET lifecycle_status = p_case ->> 'lifecycleStatus',
+         finished_at = CASE WHEN p_case ->> 'lifecycleStatus' = 'finished' THEN now() ELSE NULL END
+   WHERE id = tid;
+  RETURN public.tournament_lifecycle(tid);
+END;
+$fn$;
+
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA lc TO anon, authenticated, service_role;

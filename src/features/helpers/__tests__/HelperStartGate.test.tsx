@@ -171,7 +171,7 @@ describe('@HE-099 (präzisiert 23.10.): eigenes laufendes Turnier zählt wie ein
 
   it('Gegenbeispiel: das eigene Turnier ist abgeschlossen → zählt nicht, Feld 2 öffnet sich direkt', async () => {
     upsertHelperAccessEntry('anon-tom', entry());
-    renderApp(deps(OK_CUP), [{ ...eigenesHeute('t-eigen'), manuallyCompleted: true }]);
+    renderApp(deps(OK_CUP), [{ ...eigenesHeute('t-eigen'), lifecycleStatus: 'finished' as const }]);
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/tournament/t-cup/live?f=2'));
   });
 });

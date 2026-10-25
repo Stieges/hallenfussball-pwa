@@ -7,14 +7,14 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Tournament, Match } from '../../../types/tournament';
+import type { Tournament } from '../../../types/tournament';
 import type { TournamentMembership } from '../types/auth.types';
 import { AUTH_STORAGE_KEYS } from '../types/auth.types';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { useAuth } from './useAuth';
 import { filterWithoutGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
 import type { TournamentDisplayStatus, TournamentCardData } from '../components/TournamentCard';
-import { isMatchInProgress } from '../../../core/view';
+import { lifecycleOf } from '../../../core/services/lifecycle';
 import { useRepository } from '../../../hooks/useRepository';
 
 /**
@@ -57,45 +57,18 @@ export interface UseUserTournamentsReturn {
  * Ermittelt den Anzeige-Status eines Turniers
  */
 const getTournamentDisplayStatus = (tournament: Tournament): TournamentDisplayStatus => {
-  // Draft status
-  if (tournament.status === 'draft') {
-    return 'draft';
+  // R3-1 (@LZ-001, @LZ-006): der gespeicherte Zustand vom Server, nie aus Spielständen abgeleitet
+  switch (lifecycleOf(tournament)) {
+    case 'draft':
+      return 'draft';
+    case 'running':
+      return 'live';
+    case 'finished':
+    case 'cancelled':
+      return 'finished';
+    case 'fixed':
+      return 'upcoming';
   }
-
-  // Manuell beendet
-  if (tournament.manuallyCompleted) {
-    return 'finished';
-  }
-
-  // Check if any match is running (live)
-  const hasRunningMatch = tournament.matches.some(
-    (match: Match) => isMatchInProgress(match.matchStatus)
-  );
-  if (hasRunningMatch) {
-    return 'live';
-  }
-
-  // Check if all matches are finished
-  const allMatchesFinished =
-    tournament.matches.length > 0 &&
-    tournament.matches.every(
-      (match: Match) => match.matchStatus === 'finished' || match.matchStatus === 'skipped'
-    );
-  if (allMatchesFinished) {
-    return 'finished';
-  }
-
-  // Has any match started?
-  const hasStartedMatch = tournament.matches.some(
-    (match: Match) =>
-      match.matchStatus === 'finished' || isMatchInProgress(match.matchStatus)
-  );
-  if (hasStartedMatch) {
-    // In progress but no running match = paused
-    return 'upcoming';
-  }
-
-  return 'upcoming';
 };
 
 /**

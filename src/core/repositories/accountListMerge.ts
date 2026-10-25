@@ -56,6 +56,14 @@ export function writeAccountRoleMemory(accountId: string, memory: AccountRoleMem
     safeLocalStorage.setItem(memoryKey(accountId), JSON.stringify(memory));
 }
 
+/** R3-1: Zustand und „angepfiffen“ gehören dem Server – auch wenn die lokale Fassung sonst neuer ist. */
+const withServerState = (localT: Tournament, cloudT: Tournament): Tournament => ({
+    ...localT,
+    lifecycleStatus: cloudT.lifecycleStatus,
+    finishedAt: cloudT.finishedAt,
+    anyMatchStarted: cloudT.anyMatchStarted,
+});
+
 const withRole = (tournament: Tournament, role: TournamentListRole | undefined): Tournament => {
     const { myRole: _stored, ...rest } = tournament;
     return role === undefined ? rest : { ...rest, myRole: role };
@@ -80,7 +88,7 @@ export function mergeAccountList({ cloud, local, memory, preferLocal }: AccountL
     const localById = new Map(local.map((t) => [t.id, t]));
     const merged = cloud.tournaments.map((cloudT) => {
         const localT = localById.get(cloudT.id);
-        return localT && preferLocal(cloudT, localT) ? withRole(localT, cloudT.myRole) : cloudT;
+        return localT && preferLocal(cloudT, localT) ? withRole(withServerState(localT, cloudT), cloudT.myRole) : cloudT;
     });
     const notListed = local.filter((t) => !cloudIds.has(t.id));
 

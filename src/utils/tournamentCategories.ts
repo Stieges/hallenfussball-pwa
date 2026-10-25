@@ -1,24 +1,20 @@
 /**
  * Tournament Category Helpers
  *
- * Kategorisiert Turniere nach gespeichertem Zustand und Spielstand, NIE nach dem Datum allein:
- * 1. Läuft (@LZ-001) - published + mindestens ein Spiel angepfiffen + nicht abgeschlossen/abgebrochen.
- *    Keine Tagesprüfung: ein Turnier über Mitternacht oder mit vergessenem Abschluss bleibt „Läuft“ (@LZ-005, @LZ-006).
- * 2. Festgelegt/kommend (@LZ-001) - published + kein Spiel angepfiffen + nicht abgeschlossen/abgebrochen,
- *    auch wenn Datum oder Startzeit vorbei sind.
- * 3. Archiv (@LZ-001, @LZ-006) - NUR abgeschlossen (manuallyCompleted) oder abgebrochen (cancelledAt);
- *    ein vergangenes Datum verschiebt nichts (Befund C-ARCHIV-NACH-DATUM).
- *    Offen: die Ableitung „alle Ergebnisse da -> abgeschlossen“ (isTournamentCompleted) widerspricht @LZ-006
- *    und bleibt bis zum Befund C-ZUSTAND-ABGELEITET bestehen.
- * 4. Entwurf - draft status
+ * Kategorisiert Turniere nach dem GESPEICHERTEN Zustand vom Server (`lifecycleOf`, R3-1), NIE nach Spielständen oder
+ * dem Datum allein (@LZ-001, @LZ-005, @LZ-006):
+ * 1. Läuft - festgelegt + mindestens ein Spiel angepfiffen. Keine Tagesprüfung: ein Turnier über Mitternacht oder mit
+ *    vergessenem Abschluss bleibt „Läuft“; auch wenn alle Spiele entschieden sind (die App schließt nie von selbst ab).
+ * 2. Festgelegt/kommend - festgelegt, kein Spiel angepfiffen, auch wenn Datum oder Startzeit vorbei sind.
+ * 3. Archiv - NUR abgeschlossen (`finished`) oder abgebrochen (`cancelled`, MVP+); ein vergangenes Datum verschiebt nichts.
+ * 4. Entwurf - draft
  *
  * „Laufend“ heißt angepfiffen, nicht „Startzeit vorbei“ (@LZ-001: festgelegt, kein Spiel angepfiffen → „Festgelegt“;
- * Spiel angepfiffen → „Läuft“). Bis @FU-128 kam die Startzeit aus der Cloud als HH:MM:SS und war hier unlesbar;
- * seitdem ist sie lesbar (HH:MM), und die frühere Uhr-Regel hätte festgelegte Turniere aus „kommend“ geschoben.
+ * Spiel angepfiffen → „Läuft“).
  */
 
-import { Tournament, Match, TRASH_RETENTION_DAYS } from '../types/tournament';
-import { getMatchStartState } from './matchStartState';
+import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
+import { lifecycleOf } from '../core/services/lifecycle';
 
 export type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
 
@@ -60,101 +56,6 @@ export function getTournamentDateTime(tournament: Tournament): Date | null {
 }
 
 /**
- * Check if a match has a valid result
- */
-function matchHasResult(match: Match): boolean {
-  return typeof match.scoreA === 'number' && typeof match.scoreB === 'number';
-}
-
-/**
- * Check if tournament is completed based on match results
- * A tournament is completed when:
- * 1. manuallyCompleted flag is set, OR
- * 2. All matches have results (group matches + final if configured)
- */
-export function isTournamentCompleted(tournament: Tournament): boolean {
-  // Manual override takes precedence
-  if (tournament.manuallyCompleted) {
-    return true;
-  }
-
-  // No matches = not completed
-   
-  if (!tournament.matches || tournament.matches.length === 0) {
-    return false;
-  }
-
-  // Check all group matches
-  const groupMatches = tournament.matches.filter(m => !m.isFinal);
-  const allGroupMatchesComplete = groupMatches.every(matchHasResult);
-
-  if (!allGroupMatchesComplete) {
-    return false;
-  }
-
-  // Check finals if configured
-  const finalMatches = tournament.matches.filter(m => m.isFinal);
-
-  if (finalMatches.length === 0) {
-    // No finals configured - tournament complete when all group matches done
-    return true;
-  }
-
-  // Find the decisive final match (the actual final or 3rd place if that's the last)
-  const finalMatch = finalMatches.find(m => m.finalType === 'final');
-
-  // The tournament is complete when the final has a result
-  if (finalMatch && matchHasResult(finalMatch)) {
-    return true;
-  }
-
-  // Alternative: All configured finals complete
-  const allFinalsComplete = finalMatches.every(matchHasResult);
-  return allFinalsComplete;
-}
-
-/**
- * Läuft = mindestens ein Spiel angepfiffen UND nicht abgeschlossen/abgebrochen (@LZ-001).
- * Keine Tagesprüfung: das Datum allein beendet kein laufendes Turnier (@LZ-005, @LZ-006).
- */
-function isTournamentRunning(tournament: Tournament): boolean {
-  if (tournament.status !== 'published') {return false;}
-  if (isTournamentCancelled(tournament)) {return false;}
-  if (isTournamentCompleted(tournament)) {return false;}
-  return getMatchStartState(tournament.matches) === 'started';
-}
-
-/**
- * Check if tournament is upcoming (future date/time)
- */
-function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
-  if (tournament.status !== 'published') {return false;}
-
-  // Archiviert/manuell abgeschlossen heißt „nicht mehr kommend“, auch bei Datum in der Zukunft (@W5-027: Generalprobe
-  // vor dem Turniertag). Nur das Flag, nicht „alle Ergebnisse da“: ein laufendes Turnier mit Zwischenstand bleibt sichtbar.
-  if (tournament.manuallyCompleted || isTournamentCancelled(tournament)) {return false;}
-
-  const tournamentDate = getTournamentDateTime(tournament);
-  if (!tournamentDate) {return false;}
-
-  return tournamentDate > now;
-}
-
-/**
- * Archiv = abgeschlossen (manuell oder, bis C-ZUSTAND-ABGELEITET, aus den Ergebnissen) oder abgebrochen.
- * Das Datum verschiebt nichts (@LZ-001, @LZ-005, @LZ-006).
- */
-function isTournamentFinished(tournament: Tournament): boolean {
-  if (tournament.status !== 'published') {return false;}
-  return isTournamentCancelled(tournament) || isTournamentCompleted(tournament);
-}
-
-/** Abgebrochen (@LZ-001): der Abbruch wird mit Zeitpunkt gespeichert. */
-function isTournamentCancelled(tournament: Tournament): boolean {
-  return !!tournament.cancelledAt;
-}
-
-/**
  * Check if tournament is in trash (soft-deleted)
  */
 export function isTournamentTrashed(tournament: Tournament): boolean {
@@ -164,32 +65,23 @@ export function isTournamentTrashed(tournament: Tournament): boolean {
 /**
  * Categorize a single tournament
  */
-export function categorizeTournament(tournament: Tournament, now: Date = new Date()): TournamentCategory {
+export function categorizeTournament(tournament: Tournament): TournamentCategory {
   // Trashed tournaments (soft-deleted)
   if (isTournamentTrashed(tournament)) {
     return 'trashed';
   }
 
-  // Draft tournaments
-  if (tournament.status === 'draft') {
-    return 'draft';
+  switch (lifecycleOf(tournament)) {
+    case 'draft':
+      return 'draft';
+    case 'running':
+      return 'running';
+    case 'finished':
+    case 'cancelled':
+      return 'finished';
+    case 'fixed':
+      return 'upcoming';
   }
-
-  // Published tournaments: laufend erst mit dem Anpfiff, nicht mit der Startzeit (@LZ-001)
-  if (isTournamentRunning(tournament)) {
-    return 'running';
-  }
-
-  if (isTournamentUpcoming(tournament, now)) {
-    return 'upcoming';
-  }
-
-  if (isTournamentFinished(tournament)) {
-    return 'finished';
-  }
-
-  // Fallback: if published but can't categorize, treat as upcoming
-  return 'upcoming';
 }
 
 /**
@@ -208,10 +100,9 @@ export interface CategorizedTournaments {
  */
 export interface ExtendedCategorizedTournaments extends CategorizedTournaments {
   archivedByYear: Record<number, Tournament[]>;
-  finishable: Tournament[];
 }
 
-export function categorizeTournaments(tournaments: Tournament[], now: Date = new Date()): CategorizedTournaments {
+export function categorizeTournaments(tournaments: Tournament[]): CategorizedTournaments {
   const categorized: CategorizedTournaments = {
     running: [],
     upcoming: [],
@@ -221,7 +112,7 @@ export function categorizeTournaments(tournaments: Tournament[], now: Date = new
   };
 
   for (const tournament of tournaments) {
-    const category = categorizeTournament(tournament, now);
+    const category = categorizeTournament(tournament);
     categorized[category].push(tournament);
   }
 
@@ -287,10 +178,10 @@ export function formatTournamentDate(tournament: Tournament): string {
 }
 
 /**
- * Get extended categorization with archived by year and finishable tournaments
+ * Get extended categorization with archived by year
  */
-export function getExtendedCategories(tournaments: Tournament[], now: Date = new Date()): ExtendedCategorizedTournaments {
-  const base = categorizeTournaments(tournaments, now);
+export function getExtendedCategories(tournaments: Tournament[]): ExtendedCategorizedTournaments {
+  const base = categorizeTournaments(tournaments);
 
   // Group finished tournaments by year
   const archivedByYear: Record<number, Tournament[]> = {};
@@ -304,23 +195,9 @@ export function getExtendedCategories(tournaments: Tournament[], now: Date = new
     archivedByYear[year].push(tournament);
   }
 
-  // Find finishable tournaments (100% matches complete but not archived)
-  const finishable = [...base.running, ...base.upcoming].filter(tournament => {
-     
-    if (!tournament.matches || tournament.matches.length === 0) {return false;}
-    if (tournament.manuallyCompleted) {return false;}
-
-    const allMatchesComplete = tournament.matches.every(
-      m => typeof m.scoreA === 'number' && typeof m.scoreB === 'number'
-    );
-
-    return allMatchesComplete;
-  });
-
   return {
     ...base,
     archivedByYear,
-    finishable,
   };
 }
 

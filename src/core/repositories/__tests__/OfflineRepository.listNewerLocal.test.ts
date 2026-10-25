@@ -1,7 +1,7 @@
 /**
- * @W5-027 angemeldet: Archiviert Olli die Probe-Kopie, steht die Änderung zuerst nur lokal (Warteschlange).
+ * @W5-027 angemeldet: Ändert Olli die Probe-Kopie, steht die Änderung zuerst nur lokal (Warteschlange).
  * Die Startseite lädt danach die Cloud-Liste neu; dort liegt noch der alte Stand. Die neuere lokale Fassung muss gewinnen,
- * sonst bliebe die archivierte Kopie auf der Startseite stehen.
+ * sonst bliebe die alte Fassung auf der Startseite stehen. Der Turnier-Zustand gehört dagegen immer dem Server (R3-1, @LZ-006).
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
@@ -28,12 +28,21 @@ function repo(cloudList: Tournament[], localList: Tournament[], pendingIds: stri
 describe('@W5-027 OfflineRepository.listForCurrentUser: neuere lokale Fassung gewinnt', () => {
   afterEach(() => { created.forEach(q => q.dispose()); created = []; });
 
-  it('die lokal archivierte Kopie (neueres updatedAt, Änderung wartet in der Warteschlange) ersetzt die alte Cloud-Zeile', async () => {
+  it('die lokal geänderte Kopie (neueres updatedAt, Änderung wartet in der Warteschlange) ersetzt die alte Cloud-Zeile', async () => {
     const cloudStand = tournament('kopie', '2026-11-20T10:00:00.000Z');
-    const lokal = tournament('kopie', '2026-11-20T10:05:00.000Z', { manuallyCompleted: true });
+    const lokal = tournament('kopie', '2026-11-20T10:05:00.000Z', { title: 'Lokal geändert' });
     const list = await repo([cloudStand], [lokal]).listForCurrentUser();
     expect(list).toHaveLength(1);
-    expect(list[0].manuallyCompleted).toBe(true);
+    expect(list[0].title).toBe('Lokal geändert');
+  });
+
+  it('@LZ-006 der Zustand bleibt der des Servers, auch wenn die neuere lokale Fassung gilt', async () => {
+    const cloudStand = tournament('kopie', '2026-11-20T10:00:00.000Z', { lifecycleStatus: 'finished', finishedAt: '2026-11-20T09:00:00.000Z' });
+    const lokal = tournament('kopie', '2026-11-20T10:05:00.000Z', { title: 'Lokal geändert', lifecycleStatus: 'fixed' });
+    const list = await repo([cloudStand], [lokal]).listForCurrentUser();
+    expect(list[0].title).toBe('Lokal geändert');
+    expect(list[0].lifecycleStatus).toBe('finished');
+    expect(list[0].finishedAt).toBe('2026-11-20T09:00:00.000Z');
   });
 
   it('Gegenbeispiel: ist die Cloud-Zeile neuer oder gleich alt, gilt die Cloud-Fassung', async () => {
@@ -53,10 +62,10 @@ describe('@W5-027 OfflineRepository.listForCurrentUser: neuere lokale Fassung ge
 
   it('Gegenbeispiel: nichts in der Warteschlange, die Cloud-Fassung gilt, auch wenn die lokale ein neueres updatedAt hat (Geräteuhr)', async () => {
     const cloudStand = tournament('kopie', '2026-11-20T10:00:00.000Z', { title: 'Cloud' });
-    const lokal = tournament('kopie', '2026-11-20T11:00:00.000Z', { title: 'Lokal', manuallyCompleted: true });
+    const lokal = tournament('kopie', '2026-11-20T11:00:00.000Z', { title: 'Lokal', lifecycleStatus: 'finished' });
     const list = await repo([cloudStand], [lokal], []).listForCurrentUser();
     expect(list[0].title).toBe('Cloud');
-    expect(list[0].manuallyCompleted).toBeUndefined();
+    expect(list[0].lifecycleStatus).toBeUndefined();
   });
 
   it('Dead-Letter: die Änderung wurde abgelehnt und steht nicht mehr als offen in der Warteschlange, die Cloud-Fassung gilt', async () => {

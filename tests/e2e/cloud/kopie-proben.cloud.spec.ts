@@ -41,7 +41,7 @@ test.describe('Kopie fürs Proben gegen den lokalen Stack', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Nur cloud-desktop.');
   });
 
-  test('@W5-024 @W5-025 @W5-027 Startseite kopiert ein Turnier mit Teams und Spielen; die Kopie wird archiviert und bleibt nach dem Neuladen im Archiv', async ({ asRole }) => {
+  test('@W5-024 @W5-025 @W5-027 Startseite kopiert ein Turnier mit Teams und Spielen', async ({ asRole }) => {
     test.setTimeout(180_000);
     const probeName = `Cloud-Probe ${Date.now()}`;
     const originalBefore = (await rows<TournamentRow>(`tournaments?id=eq.${E2E_LIVE_CUP_ID}&select=id,title,status,is_public,share_code`))[0];
@@ -93,28 +93,8 @@ test.describe('Kopie fürs Proben gegen den lokalen Stack', () => {
       expect(originalBefore.title).toBe(E2E_LIVE_CUP_TITLE);
 
       // --- B2: archivieren, sofort neu laden ---
-      const updatedAt = async () => (await rows<{ updated_at: string }>(`tournaments?id=eq.${copy.id}&select=updated_at`))[0].updated_at;
-      const updatedAtVorher = await updatedAt();
-      await page.goto(`/#/tournament/${copy.id}/admin/danger-zone`);
-      await page.getByRole('button', { name: /Turnier archivieren/i }).click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('textbox').fill('ARCHIVIEREN');
-      await dialog.getByRole('button', { name: /Turnier archivieren/i }).click();
-      await expect(dialog).toBeHidden();
-
-      const karte = (p: typeof page) => p.locator(`[data-testid="tournament-card-${copy.id}"]`);
-      for (const phase of ['sofort nach dem Archivieren', 'nach dem Abgleich mit dem Server']) {
-        if (phase.startsWith('nach')) {
-          // Abgleich mit dem Server abwarten: die Archivierung ist in der Datenbank angekommen
-          await expect.poll(updatedAt, { timeout: 60000, message: 'Archivierung beim Server' }).not.toBe(updatedAtVorher);
-        }
-        await page.goto('/#/');
-        await page.reload();
-        await expect(page.getByTestId(`tournament-${E2E_LIVE_CUP_ID}-actions-trigger`), phase).toBeVisible({ timeout: 30000 });
-        await expect(karte(page), `Startseite ${phase}`).toHaveCount(0);
-        await page.goto('/#/archiv');
-        await expect(karte(page), `Archiv ${phase}`).toBeVisible({ timeout: 15000 });
-      }
+      // R3-1: die alten Knöpfe „Turnier archivieren“/„Turnier beenden“ sind weg (C-FINISH-PROMISE). Der Weg über den
+      // Abschluss-Dialog kommt mit R3-4; dann hier wieder archivieren und Startseite/Archiv nach dem Neuladen prüfen.
     } finally {
       await page.context().close();
       if (copyId) { await removeCopy(copyId); }

@@ -1,7 +1,7 @@
 /**
- * A-11 @LZ-022 „Wer abschließen, abbrechen, wieder öffnen … darf“: Tom (Helfer) bekommt „Turnier beenden“ (abschließen)
- * und „Turnier archivieren“ nicht angeboten (manageLifecycle). Gegenbeispiel: Maria (Co-Admin) und Olli.
- * „Turnier abbrechen“ und „wieder öffnen“ gibt es heute nicht als Knopf (entsteht mit A-21a).
+ * R3-1 (C-FINISH-PROMISE): die alten Knöpfe „Turnier beenden“ und „Turnier archivieren“ sind für niemanden mehr da. Sie
+ * setzten nur einen Haken, der nichts sperrte und dem Endstand nichts versprach. Der Abschluss kommt mit R3-4 (@LZ-022:
+ * nur mit Recht manageLifecycle). Hier bleibt die Gegenprobe: weder Helfer noch Co-Admin noch Eigentümer sehen die alten Knöpfe.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -21,24 +21,19 @@ const tournament = {
   startDate: '2026-11-14', startTime: '09:00',
 } as unknown as Tournament;
 
-function renderZone() {
-  render(<DangerZoneCategory tournamentId="hallencup-ost" tournament={tournament} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
-}
-
 beforeEach(() => vi.clearAllMocks());
 
-describe('@LZ-022 Turnier abschließen – wer darf', () => {
-  it('@LZ-022 Tom (Helfer): „Turnier beenden“ und „Turnier archivieren“ sind nicht angeboten', () => {
-    role.current = 'collaborator';
-    renderZone();
-    expect(screen.queryByRole('button', { name: 'Turnier beenden' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Turnier archivieren' })).not.toBeInTheDocument();
+describe('C-FINISH-PROMISE alte Abschluss-Knöpfe weg', () => {
+  it.each(['collaborator', 'co-admin', 'owner'])('%s: kein „Turnier beenden“, kein „Turnier archivieren“', (r) => {
+    role.current = r;
+    render(<DangerZoneCategory tournamentId="hallencup-ost" tournament={tournament} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Turnier beenden/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Turnier archivieren/i })).not.toBeInTheDocument();
   });
 
-  it.each(['co-admin', 'owner'])('Gegenbeispiel %s (Maria/Olli): „Turnier beenden“ ist angeboten', (r) => {
-    role.current = r;
-    renderZone();
-    expect(screen.getByRole('button', { name: 'Turnier beenden' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Turnier archivieren' })).toBeInTheDocument();
+  it('Gegenbeispiel: „Spielplan zurücksetzen“ bleibt für die Turnierleitung', () => {
+    role.current = 'owner';
+    render(<DangerZoneCategory tournamentId="hallencup-ost" tournament={tournament} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Spielplan zurücksetzen' })).toBeInTheDocument();
   });
 });

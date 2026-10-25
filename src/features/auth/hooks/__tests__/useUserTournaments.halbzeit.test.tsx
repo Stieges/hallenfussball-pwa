@@ -38,7 +38,23 @@ describe('useUserTournaments – Halbzeit zählt als live (C-HALBZEIT-NICHT-LAUF
     expect(await statusOf(tournament('t-hz', ['finished', 'paused', 'scheduled']))).toBe('live');
   });
 
-  it('Gegenbeispiel: nur beendete und geplante Spiele ergeben „upcoming“, nicht „live“', async () => {
-    expect(await statusOf(tournament('t-nl', ['finished', 'scheduled']))).toBe('upcoming');
+  it('@LZ-001 ein beendetes und ein geplantes Spiel: angepfiffen, also „live“ (Läuft), nicht „upcoming“', async () => {
+    expect(await statusOf(tournament('t-nl', ['finished', 'scheduled']))).toBe('live');
+  });
+
+  it('Gegenbeispiel @LZ-001: nur geplante Spiele (festgelegt, nichts angepfiffen) ergeben „upcoming“', async () => {
+    expect(await statusOf(tournament('t-fest', ['scheduled', 'scheduled']))).toBe('upcoming');
+  });
+
+  it('@LZ-006 alle Spiele beendet, aber nicht abgeschlossen: weiter „live“, nicht „finished“ (Befund C-ZUSTAND-ABGELEITET)', async () => {
+    expect(await statusOf(tournament('t-alle', ['finished', 'finished']))).toBe('live');
+  });
+
+  it('@LZ-001 am Server abgeschlossen: „finished“', async () => {
+    expect(await statusOf({ ...tournament('t-fertig', ['finished']), lifecycleStatus: 'finished' })).toBe('finished');
+  });
+
+  it('@LZ-006 Gegenbeispiel: der alte Haken manuallyCompleted ändert nichts', async () => {
+    expect(await statusOf({ ...tournament('t-haken', ['scheduled']), ...({ manuallyCompleted: true } as object) })).toBe('upcoming');
   });
 });

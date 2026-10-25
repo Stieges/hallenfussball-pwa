@@ -14,6 +14,7 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match } from '../../../../types/tournament';
 import { slotLabel } from '../../../../core/models/slotLabel';
 import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
+import { lifecycleOf } from '../../../../core/services/lifecycle';
 
 // =============================================================================
 // PROPS
@@ -309,8 +310,12 @@ export function DashboardCategory({
 
     // Determine status
     const isLive = runningMatches.length > 0;
-    const isCompleted = completedMatches === totalMatches && totalMatches > 0;
-    const isDraft = tournament.status === 'draft';
+    // R3-1 (@LZ-006): „Abgeschlossen“ und „Läuft“ kommen aus dem gespeicherten Zustand, nie aus den Spielständen
+    const lifecycle = lifecycleOf(tournament);
+    const isCompleted = lifecycle === 'finished';
+    const isRunning = lifecycle === 'running';
+    const allMatchesDone = completedMatches === totalMatches && totalMatches > 0;
+    const isDraft = lifecycle === 'draft';
 
     return {
       totalMatches,
@@ -322,6 +327,8 @@ export function DashboardCategory({
       progress,
       isLive,
       isCompleted,
+      isRunning,
+      allMatchesDone,
       isDraft,
     };
   }, [tournament]);
@@ -339,6 +346,7 @@ export function DashboardCategory({
     if (stats.isLive) {return t('dashboard.statusLive');}
     if (stats.isCompleted) {return t('dashboard.statusCompleted');}
     if (stats.isDraft) {return t('dashboard.statusDraft');}
+    if (stats.isRunning) {return t('dashboard.statusRunning');}
     return t('dashboard.statusActive');
   };
 
@@ -357,7 +365,7 @@ export function DashboardCategory({
       description={t('dashboard.description')}
     >
       {/* Status Banner */}
-      <div style={{ ...styles.statusBanner, ...getStatusBannerStyle() }}>
+      <div data-testid="admin-status-banner" style={{ ...styles.statusBanner, ...getStatusBannerStyle() }}>
         <div style={styles.statusInfo}>
           {stats.isLive && (
             <div
@@ -374,7 +382,7 @@ export function DashboardCategory({
             <div style={styles.statusSubtext}>
               {stats.isLive
                 ? t('dashboard.gamesRunning', { count: stats.runningMatches.length })
-                : stats.isCompleted
+                : stats.allMatchesDone
                   ? t('dashboard.allGamesFinished')
                   : t('dashboard.gamesPlayed', { completed: stats.completedMatches, total: stats.totalMatches })}
             </div>

@@ -149,7 +149,6 @@ export const TournamentSchema = z.object({
     createdAt: z.string(),
     updatedAt: z.string(),
     deletedAt: z.string().optional(),
-    completedAt: z.string().optional(),
     cancelledAt: z.string().optional(),
     cancelledReason: z.string().optional(),
     lastVisitedStep: z.number().optional(),

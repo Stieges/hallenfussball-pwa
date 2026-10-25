@@ -40,7 +40,7 @@ describe('useCopyTournament (Dashboard und Admin Center)', () => {
       expect(spiel.id).toMatch(UUID);
       expect(spiel).toMatchObject({ matchStatus: 'scheduled', scoreA: undefined, finishedAt: undefined });
     }
-    expect(saved.completedAt).toBeUndefined();
+    expect(saved.finishedAt).toBeUndefined();
   });
 
   it('@W5-026 gespeicherte Kopie hat keine Monitore; Gegenbeispiel: das Original behält sie', async () => {

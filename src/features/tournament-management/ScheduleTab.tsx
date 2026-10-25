@@ -42,6 +42,7 @@ import { useCan } from '../auth/hooks/useCan';
 import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
 import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 import { ScheduleTimeShift } from './time-shift/ScheduleTimeShift';
+import { isTournamentClosed } from '../../core/services/lifecycle';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -345,7 +346,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               <ScheduleTimeShift
                 tournament={tournament} schedule={schedule} standings={currentStandings} view={view}
                 onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} canCreateNotice={canNotice}
-                enabled={canSchedule && !isEditing && tournament.completedAt === undefined}
+                enabled={canSchedule && !isEditing && !isTournamentClosed(tournament)}
               >
               <ScheduleDisplay
                 schedule={schedule}

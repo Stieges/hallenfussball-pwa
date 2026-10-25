@@ -26,31 +26,9 @@ export const OPENING_MODES: readonly OpeningMode[] = ['guest-opening', 'club-der
 export const DEFAULT_OPENING_MODE: OpeningMode = 'guest-opening';
 
 /**
- * Dashboard-Status für erweiterte Kategorisierung
- * Unterscheidet zwischen verschiedenen Turnier-Zuständen für Dashboard-Tabs
- */
-export type DashboardTournamentStatus = 'draft' | 'upcoming' | 'running' | 'finished' | 'cancelled';
-
-/**
  * Turnier-System-Typ für Filterung und Anzeige
  */
 export type TournamentSystemType = 'groups' | 'knockout' | 'groups_knockout' | 'league';
-
-/**
- * Stats-Snapshot für archivierte Turniere (Performance-Optimierung)
- * Wird beim Abschließen eines Turniers erstellt
- */
-export interface TournamentStatsSnapshot {
-  teamCount: number;
-  totalMatches: number;
-  completedMatches: number;
-  winnerName?: string;
-  winnerTeamId?: string;
-  secondPlaceName?: string;
-  thirdPlaceName?: string;
-  totalGoals?: number;
-  createdAt: string;
-}
 
 /** Retention period for soft-deleted tournaments in days */
 export const TRASH_RETENTION_DAYS = 30;
@@ -515,25 +493,20 @@ export interface Tournament {
   // Wizard navigation state (for draft restoration)
   lastVisitedStep?: number; // Last visited step in tournament creation wizard (1-5)
 
-  // Manual completion override
-  manuallyCompleted?: boolean; // Turnier manuell als beendet markiert (z.B. Abbruch)
-  completedAt?: string;        // ISO timestamp wann Turnier beendet wurde
+  // Turnier-Zustand vom Server (R3-1, @LZ-001): `tournaments.lifecycle_status`; fehlt er (lokal angelegt), gilt `status`.
+  lifecycleStatus?: 'draft' | 'fixed' | 'finished' | 'cancelled';
+  /** Zeitpunkt des Abschlusses (Server, `tournaments.finished_at`); beim Wiederöffnen wieder leer. */
+  finishedAt?: string;
+  /** Nur Listen aus der Cloud (ohne Spiele): Zusatzabfrage „hat ein angepfiffenes Spiel“ (R3-1). Nie gespeichert. */
+  anyMatchStarted?: boolean;
 
   // Dashboard Soft Delete (Papierkorb)
   /** ISO Date when moved to trash. Undefined = not deleted */
   deletedAt?: string;
 
-  // Dashboard Status (derived, für erweiterte Kategorisierung)
-  /** Detaillierter Status für Dashboard-Anzeige */
-  dashboardStatus?: DashboardTournamentStatus;
-
   // Turnier-System für Filterung
   /** Art des Turniersystems (groups, knockout, etc.) */
   tournamentSystem?: TournamentSystemType;
-
-  // Stats Snapshot für archivierte Turniere
-  /** Gespeicherte Statistiken beim Abschluss für Performance */
-  statsSnapshot?: TournamentStatsSnapshot;
 
   // Abbruch-Grund
   /** Grund für Turnierabbruch (wenn cancelled) */

@@ -16,6 +16,7 @@ import { DialogSurface } from '../../../../components/ui/molecules/DialogSurface
 import { DialogActions } from '../../../../components/ui/molecules/DialogActions';
 import { SHIFT_QUERY } from '../../../tournament-management/time-shift/useTimeShift';
 import type { Tournament } from '../../../../types/tournament';
+import { isTournamentClosed } from '../../../../core/services/lifecycle';
 
 const row: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, marginBottom: cssVars.spacing.md };
 const label: CSSProperties = { fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textSecondary };
@@ -71,7 +72,7 @@ export function GameTimesSection({ tournament }: { tournament: Tournament }) {
   const navigate = useNavigate();
   const titleId = useId();
   const inputId = useId();
-  const canShift = tournament.completedAt === undefined;
+  const canShift = !isTournamentClosed(tournament);
   const [why, setWhy] = useState(false);
   const toShift = () => {
     setWhy(false);

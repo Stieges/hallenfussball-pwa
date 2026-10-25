@@ -9,6 +9,10 @@
  * - Rollenumfang (Plan-Review Auflage 10d): echte Konten listen alle aktiven Mitgliedschaften; eine anonyme Sitzung
  *   (Geräte-Zugang, Gast-Konto) fragt keine Mitgliedschaften ab – ihre Liste bleibt wie bisher.
  * - Scheitert nur die Mitglieder-Abfrage, bleiben die eigenen Turniere stehen, `memberships = 'unknown'` (@FU-100).
+ * - R3-1 (@LZ-001, @LZ-006, Befund C-STARTSEITE-OHNE-ANPFIFF-CLOUD): die Liste kennt den gespeicherten Zustand
+ *   (`lifecycle_status`); „Läuft“ = festgelegt + ein angepfiffenes Spiel. Dafür EINE Zusatzabfrage je Liste: welche der
+ *   festgelegten Turniere ein laufendes, pausiertes oder beendetes Spiel haben (dieselbe Regel wie `tournament_lifecycle`).
+ *   Scheitert sie, bleibt die Liste stehen (Zustand „Festgelegt“), der Fehler geht nicht verloren.
  * Keine Migration: alter und neuer Server-Stand haben dieselben Spalten und Lese-Regeln.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -16,6 +20,7 @@ import type { Database } from '../../types/supabase';
 import type { Tournament, TournamentListRole } from '../../types/tournament';
 import { RepositoryError } from '../errors';
 import { mapTournamentFromSupabase } from './supabaseMappers';
+import { storedLifecycleOf } from '../services/lifecycle';
 
 /** `known`: Abfrage gelungen · `unknown`: Abfrage gescheitert · `not-queried`: anonyme Sitzung oder kein Konto. */
 export type MembershipLookup = 'known' | 'unknown' | 'not-queried';
@@ -27,6 +32,8 @@ export interface CloudTournamentList {
     ownIds: ReadonlySet<string>;
     memberships: MembershipLookup;
     membershipError?: Error;
+    /** R3-1: die Zusatzabfrage „angepfiffenes Spiel“ ist gescheitert (festgelegte Turniere stehen dann als „Festgelegt“). */
+    startedError?: Error;
 }
 
 /** Rollen einer Mitgliedszeile, die die Startseite kennt (CHECK `tournament_collaborators_role_check` ohne 'owner'). */
@@ -89,7 +96,37 @@ async function readMemberTournaments(client: Client, userId: string, ownIds: Rea
     });
 }
 
+/** Spielstände, die ein Turnier zum „Läuft“ machen (Regel von `public.tournament_lifecycle`). */
+const STARTED_MATCH_STATUSES = ['running', 'paused', 'finished'];
+
+/**
+ * R3-1: markiert festgelegte Turniere mit einem angepfiffenen Spiel (`anyMatchStarted`). Nur festgelegte werden gefragt – bei
+ * Entwurf, Abgeschlossen und Abgebrochen ändert „angepfiffen“ den Zustand nicht. Eine Abfrage für die ganze Liste.
+ */
+async function markStarted(client: Client, tournaments: Tournament[]): Promise<{ tournaments: Tournament[]; error?: Error }> {
+    const fixedIds = tournaments.filter((t) => storedLifecycleOf(t) === 'fixed').map((t) => t.id);
+    if (fixedIds.length === 0) {
+        return { tournaments };
+    }
+    const { data, error } = await client
+        .from('matches')
+        .select('tournament_id')
+        .in('tournament_id', fixedIds)
+        .in('match_status', STARTED_MATCH_STATUSES);
+    if (error) {
+        return { tournaments, error: new RepositoryError('listStarted', error.message, error) };
+    }
+    const started = new Set(data.map((row) => row.tournament_id));
+    return { tournaments: tournaments.map((t) => (started.has(t.id) ? { ...t, anyMatchStarted: true } : t)) };
+}
+
 export async function readAccountTournamentList(client: Client): Promise<CloudTournamentList> {
+    const list = await readAccountTournamentListUnmarked(client);
+    const marked = await markStarted(client, list.tournaments);
+    return { ...list, tournaments: marked.tournaments, ...(marked.error ? { startedError: marked.error } : {}) };
+}
+
+async function readAccountTournamentListUnmarked(client: Client): Promise<CloudTournamentList> {
     const {
         data: { user },
     } = await client.auth.getUser();

@@ -151,35 +151,6 @@ export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
     buttonLabel: 'Spielplan zurücksetzen',
     severity: 'danger',
   },
-  end_tournament: {
-    action: 'end_tournament',
-    title: 'Turnier vorzeitig beenden',
-    description:
-      'Markiert das Turnier als abgeschlossen. Laufende Spiele musst du vorher selbst im Live-Cockpit beenden.',
-    consequences: [
-      'Laufende Spiele werden nicht automatisch beendet — beende sie vorher im Live-Cockpit.',
-      'Keine weiteren Ergebnisse können eingetragen werden',
-      'Tabellen und Platzierungen werden finalisiert',
-      'Eine Statistik-Momentaufnahme wird gespeichert',
-    ],
-    confirmText: 'BEENDEN',
-    buttonLabel: 'Turnier beenden',
-    severity: 'warning',
-  },
-  archive_tournament: {
-    action: 'archive_tournament',
-    title: 'Turnier abschließen und ins Archiv legen',
-    description:
-      'Markiert das Turnier als abgeschlossen. Ein veröffentlichtes Turnier erscheint danach unter "Beendete Turniere"; ein Entwurf bleibt unter "Gespeicherte Turniere".',
-    consequences: [
-      'Turnier gilt als beendet, Tabellen und Platzierungen werden finalisiert',
-      'Eine Statistik-Momentaufnahme wird gespeichert',
-      'Ein separater Archiv-Bereich mit Wiederherstellung ist noch nicht umgesetzt',
-    ],
-    confirmText: 'ARCHIVIEREN',
-    buttonLabel: 'Turnier archivieren',
-    severity: 'warning',
-  },
   delete_tournament: {
     action: 'delete_tournament',
     title: 'Turnier endgültig löschen',

@@ -57,8 +57,8 @@ describe('Admin Center: Turnier duplizieren', () => {
   it('@W5-025 C-COPY-AC-FELDER: nicht abgeschlossen, Spiele leer – und Teams, Spielplan, Regeln bleiben erhalten', async () => {
     const original = hallencupOstGespielt();
     const saved = await duplicate(original);
-    expect(saved.completedAt).toBeUndefined();
-    expect(saved.manuallyCompleted).toBeUndefined();
+    expect(saved.finishedAt).toBeUndefined();
+    expect(saved.lifecycleStatus).toBeUndefined();
     expect(saved.matches).toHaveLength(original.matches.length);
     expect(saved.matches.every((spiel) => spiel.matchStatus === 'scheduled' && spiel.finishedAt === undefined)).toBe(true);
     expect(saved.teams.map((team) => team.name)).toEqual(original.teams.map((team) => team.name));
