@@ -71,7 +71,7 @@
     "statusCompleted": "Completed",
     "statusDraft": "Draft",
     "statusRunning": "Running",
-    "statusActive": "Active",
+    "statusActive": "Fixed",
     "gamesRunning_one": "{{count}} match running",
     "gamesRunning_other": "{{count}} matches running",
     "allGamesFinished": "All matches finished",

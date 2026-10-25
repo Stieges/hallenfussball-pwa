@@ -309,10 +309,11 @@ export function DashboardCategory({
     const progress = totalMatches > 0 ? (completedMatches / totalMatches) * 100 : 0;
 
     // Determine status
-    const isLive = runningMatches.length > 0;
     // R3-1 (@LZ-006): „Abgeschlossen“ und „Läuft“ kommen aus dem gespeicherten Zustand, nie aus den Spielständen
     const lifecycle = lifecycleOf(tournament);
     const isCompleted = lifecycle === 'finished';
+    // „Abgeschlossen“ geht vor „LIVE“ (@LZ-001): am Server abgeschlossen, auch wenn ein Spiel noch auf „läuft“ steht
+    const isLive = runningMatches.length > 0 && !isCompleted;
     const isRunning = lifecycle === 'running';
     const allMatchesDone = completedMatches === totalMatches && totalMatches > 0;
     const isDraft = lifecycle === 'draft';
@@ -335,16 +336,16 @@ export function DashboardCategory({
 
   // Get status banner style
   const getStatusBannerStyle = () => {
-    if (stats.isLive) {return styles.statusBannerLive;}
     if (stats.isCompleted) {return styles.statusBannerCompleted;}
+    if (stats.isLive) {return styles.statusBannerLive;}
     if (stats.isDraft) {return styles.statusBannerDraft;}
     return styles.statusBannerActive;
   };
 
   // Get status text
   const getStatusText = () => {
-    if (stats.isLive) {return t('dashboard.statusLive');}
     if (stats.isCompleted) {return t('dashboard.statusCompleted');}
+    if (stats.isLive) {return t('dashboard.statusLive');}
     if (stats.isDraft) {return t('dashboard.statusDraft');}
     if (stats.isRunning) {return t('dashboard.statusRunning');}
     return t('dashboard.statusActive');
@@ -352,8 +353,8 @@ export function DashboardCategory({
 
   // Get status color
   const getStatusColor = () => {
-    if (stats.isLive) {return cssVars.colors.success;}
     if (stats.isCompleted) {return cssVars.colors.info;}
+    if (stats.isLive) {return cssVars.colors.success;}
     if (stats.isDraft) {return cssVars.colors.textMuted;}
     return cssVars.colors.primary;
   };

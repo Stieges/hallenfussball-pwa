@@ -49,6 +49,30 @@ describe('@LZ-001 Zustand des Turniers: eine Zeile je Lage', () => {
   });
 });
 
+describe('Zwilling Trigger tournaments_lifecycle_follow_status: finished/cancelled vom Server, sonst folgt der Zustand status', () => {
+  const kopie = (status: string, lifecycleStatus: string | undefined, matches: string[] = []) =>
+    ({ id: 'x', status, lifecycleStatus, matches: matches.map(match) }) as unknown as Tournament;
+
+  it('@LZ-001 Zeile 2: zweites Gerät legt fest, die Kopie trägt noch lifecycleStatus draft, status published → Festgelegt', () => {
+    expect(lifecycleOf(kopie('published', 'draft'))).toBe('fixed');
+  });
+  it('@LZ-001 Zeilen 3–4: dieselbe Kopie ohne Netz nach dem Anpfiff → Läuft (nicht Entwurf)', () => {
+    expect(lifecycleOf(kopie('published', 'draft', ['running']))).toBe('running');
+  });
+  it('@LZ-003 Festlegen zurücknehmen (status draft) trotz veraltetem fixed in der Kopie → Entwurf', () => {
+    expect(lifecycleOf(kopie('draft', 'fixed'))).toBe('draft');
+  });
+  it('Gegenbeispiel: finished und cancelled vom Server gelten, auch wenn status published ist', () => {
+    expect(lifecycleOf(kopie('published', 'finished'))).toBe('finished');
+    expect(lifecycleOf(kopie('published', 'cancelled'))).toBe('cancelled');
+    expect(isTournamentClosed(kopie('published', 'finished'))).toBe(true);
+  });
+  it('Gegenbeispiel: ein veraltetes draft/fixed hält ein festgelegtes Turnier nie zurück, schließt es aber auch nicht', () => {
+    expect(isTournamentClosed(kopie('published', 'draft'))).toBe(false);
+    expect(isTournamentClosed(kopie('published', 'fixed'))).toBe(false);
+  });
+});
+
 describe('@LZ-006 die App leitet den Zustand nie aus Spielständen ab', () => {
   it('alle Spiele beendet, nicht abgeschlossen: weiter Läuft, nicht Abgeschlossen', () => {
     const alle = ausDemServer('fixed', ['finished', 'finished', 'skipped']);

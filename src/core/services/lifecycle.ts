@@ -43,11 +43,16 @@ export function hasStartedMatch(t: Pick<Tournament, 'matches' | 'anyMatchStarted
 }
 
 /**
- * Gespeicherter Zustand. Ohne Server-Zeile (lokal angelegt, Gast) gilt wie beim Backfill der Server-Migration:
- * festgelegt (`published`) = fixed, sonst Entwurf – nie etwas aus Spielständen.
+ * Gespeicherter Zustand, Zwilling des Server-Triggers `tournaments_lifecycle_follow_status`: `finished` und `cancelled`
+ * setzt nur der Server (Abschluss, Abbruch) und gelten, wenn die Kopie sie trägt. Sonst folgt der Zustand `status`
+ * (festgelegt = `published` = fixed, sonst Entwurf) – ein veraltetes `draft` in der Kopie hält ein inzwischen festgelegtes
+ * Turnier nicht zurück. Nie etwas aus Spielständen.
  */
 export function storedLifecycleOf(t: Pick<Tournament, 'status' | 'lifecycleStatus'>): StoredLifecycle {
-  return t.lifecycleStatus ?? (t.status === 'published' ? 'fixed' : 'draft');
+  if (t.lifecycleStatus === 'finished' || t.lifecycleStatus === 'cancelled') {
+    return t.lifecycleStatus;
+  }
+  return t.status === 'published' ? 'fixed' : 'draft';
 }
 
 /** Der Zustand, den Startseite, Turnier-Kopf und Zuschauer-Seite zeigen (@LZ-001). */

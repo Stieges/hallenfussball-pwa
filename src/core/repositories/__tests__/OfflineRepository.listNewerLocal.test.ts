@@ -8,6 +8,7 @@ import { OfflineRepository } from '../OfflineRepository';
 import type { LocalStorageRepository } from '../LocalStorageRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
 import type { Tournament } from '../../models/types';
+import { lifecycleOf } from '../../services/lifecycle';
 import { ownerOnlyList } from '../../../test/fakeCloudRepository';
 
 let created: Array<{ dispose(): void }> = [];
@@ -43,6 +44,14 @@ describe('@W5-027 OfflineRepository.listForCurrentUser: neuere lokale Fassung ge
     expect(list[0].title).toBe('Lokal geändert');
     expect(list[0].lifecycleStatus).toBe('finished');
     expect(list[0].finishedAt).toBe('2026-11-20T09:00:00.000Z');
+  });
+
+  it('@LZ-001 wartendes Festlegen: lokal festgelegt (status published), Cloud noch draft → Festgelegt, nach dem Anpfiff Läuft', async () => {
+    const cloudStand = tournament('neu', '2026-11-20T10:00:00.000Z', { status: 'draft', lifecycleStatus: 'draft' });
+    const lokal = tournament('neu', '2026-11-20T10:05:00.000Z', { status: 'published', lifecycleStatus: 'draft', matches: [{ id: 'm', matchStatus: 'running' }] as never });
+    const list = await repo([cloudStand], [lokal]).listForCurrentUser();
+    expect(lifecycleOf(list[0])).toBe('running');
+    expect(lifecycleOf({ ...list[0], matches: [] })).toBe('fixed');
   });
 
   it('Gegenbeispiel: ist die Cloud-Zeile neuer oder gleich alt, gilt die Cloud-Fassung', async () => {

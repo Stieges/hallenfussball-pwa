@@ -77,10 +77,11 @@ test.describe('@OB-029 Direktaufruf: Wizard-Schritt', () => {
 test.describe('@OB-031 Zurück-Taste über die besuchten Seiten', () => {
   test('@OB-031 Startseite, Spielplan, Tabellen, Admin Center, dreimal Zurück: Tabellen, Spielplan, Startseite, keine unbesuchte Seite', async ({ page }) => {
     await oeffne(page, '/#/');
-    // KB-3c: die Saat enthält angepfiffene Turniere (@LZ-001: „Läuft“); dann ist „Bevorstehende Turniere“ eingeklappt.
-    const bevorstehend = page.locator('[data-testid="section-upcoming"] [aria-expanded]').first();
-    await bevorstehend.waitFor({ timeout: 25000 });
-    if ((await bevorstehend.getAttribute('aria-expanded')) === 'false') { await bevorstehend.click(); }
+    // R3-1 (@LZ-001, @LZ-006): die Karte steht unter „Läuft“ (offen, solange etwas läuft). Früher stand sie unter „Bevorstehend“,
+    // nur weil „alle Ergebnisse da“ sie fälschlich aus „Läuft“ nahm.
+    const laeuft = page.locator('[data-testid="section-running"] [aria-expanded]').first();
+    await laeuft.waitFor({ timeout: 25000 });
+    if ((await laeuft.getAttribute('aria-expanded')) === 'false') { await laeuft.click(); }
     await page.locator(`[data-testid="tournament-card-${TURNIER}"]`).click({ timeout: 25000 });
     await expect(page.locator('[data-testid="filter-group"]')).toBeVisible({ timeout: 25000 });
     const spielplan = new RegExp(`/tournament/${TURNIER}(/schedule)?$`);

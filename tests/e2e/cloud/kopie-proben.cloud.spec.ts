@@ -3,8 +3,8 @@
  *
  * @W5-024 @W5-025 B1: Angemeldet liefert die Startseiten-Liste nur Kopfdaten ohne Teams und Spiele
  *   (`SupabaseRepository.listForCurrentUser`). Die Kopie über die Startseite muss trotzdem Teams und Spielplan haben.
- * @W5-027 B2: Die archivierte Kopie steht auch nach sofortigem Neuladen (Änderung noch in der Warteschlange) nicht mehr
- *   auf der Startseite, sondern im Archiv; nach dem Abgleich mit dem Server bleibt es so.
+ * @W5-027 B2 (Kopie archivieren, Archiv nach dem Neuladen): entfällt mit R3-1, der Weg kommt mit R3-4 (Abschluss-Dialog);
+ *   hier bewusst ohne Kennung im Testnamen, damit die Szenario-Abdeckung nichts Ungeprüftes zählt.
  *
  * Lauf nur in der CI („Cloud E2E Tests (lokaler Supabase-Stack)“), nur cloud-desktop. Die Kopie wird am Ende per
  * Service-Role entfernt; das Original (Live-Cup) wird nur gelesen.
@@ -41,7 +41,7 @@ test.describe('Kopie fürs Proben gegen den lokalen Stack', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Nur cloud-desktop.');
   });
 
-  test('@W5-024 @W5-025 @W5-027 Startseite kopiert ein Turnier mit Teams und Spielen', async ({ asRole }) => {
+  test('@W5-024 @W5-025 Startseite kopiert ein Turnier mit Teams und Spielen, das Original bleibt unverändert', async ({ asRole }) => {
     test.setTimeout(180_000);
     const probeName = `Cloud-Probe ${Date.now()}`;
     const originalBefore = (await rows<TournamentRow>(`tournaments?id=eq.${E2E_LIVE_CUP_ID}&select=id,title,status,is_public,share_code`))[0];

@@ -71,7 +71,7 @@
     "statusCompleted": "✓ Abgeschlossen",
     "statusDraft": "Entwurf",
     "statusRunning": "Läuft",
-    "statusActive": "Aktiv",
+    "statusActive": "Festgelegt",
     "gamesRunning_one": "{{count}} Spiel läuft",
     "gamesRunning_other": "{{count}} Spiele laufen",
     "allGamesFinished": "Alle Spiele beendet",
