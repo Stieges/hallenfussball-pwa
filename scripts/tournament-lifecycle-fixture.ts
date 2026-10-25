@@ -46,6 +46,16 @@ function upsertSql(table: string, rows: Row[]): string {
   return `INSERT INTO public.${table} (${cols.join(', ')}) SELECT ${cols.join(', ')} FROM jsonb_populate_recordset(NULL::public.${table}, ${json(rows)}) ON CONFLICT (id) DO UPDATE SET ${updates.join(', ')};`;
 }
 
+/**
+ * Das Pruefskript spielt die Zielmigration in einem aelteren Schema-Stand ein (spaetere Migrationen folgen erst danach).
+ * Der heutige Mapper kennt aber schon spaetere Spalten (z. B. matches.original_start); die gelesenen DB-Zeilen nennen
+ * die Spalten, die es im Pruefstand wirklich gibt -- nur diese werden geschrieben.
+ */
+function known(set: Row, sample: Row | undefined): Row {
+  if (!sample) { return set; }
+  return Object.fromEntries(Object.entries(set).filter(([k]) => k in sample));
+}
+
 const input = JSON.parse(readFileSync(0, 'utf8')) as Input;
 const owner = String(input.tournament.owner_id);
 // Die Zeilentypen der App kennen die neuen Spalten (lifecycle_status, finished_at) erst nach dem Typen-PR; der Lese-Mapper
@@ -58,11 +68,11 @@ const version = Number(input.tournament.version);
 const remote = new Map(input.matches.map((m) => [String(m.id), m]));
 
 const out = {
-  tournament: updateSql('tournaments', { ...tournamentRow, version: version + 1 },
+  tournament: updateSql('tournaments', known({ ...tournamentRow, version: version + 1 }, input.tournament),
     `id = '${String(input.tournament.id)}' AND version = ${version}`),
-  teams: teamRows.length > 0 ? upsertSql('teams', teamRows as unknown as Row[]) : 'SELECT 1;',
+  teams: teamRows.length > 0 ? upsertSql('teams', (teamRows as unknown as Row[]).map((r) => known(r, input.teams[0]))) : 'SELECT 1;',
   matches: matchRows.map((row) => updateSql('matches',
-    mapMatchToScheduleUpdate(row, remote.get(String(row.id)) as never) as Row,
+    known(mapMatchToScheduleUpdate(row, remote.get(String(row.id)) as never) as Row, input.matches[0]),
     `id = '${String(row.id)}' AND tournament_id = '${String(input.tournament.id)}'`)),
 };
 process.stdout.write(JSON.stringify(out));

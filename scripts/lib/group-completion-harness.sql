@@ -84,7 +84,11 @@ $fn$;
 CREATE FUNCTION harness.ins(p_table text, p_row jsonb) RETURNS void LANGUAGE plpgsql AS $fn$
 DECLARE cols text;
 BEGIN
-  SELECT string_agg(quote_ident(k), ', ') INTO cols FROM jsonb_object_keys(p_row) k;
+  -- Nur Schluessel, die es als Spalte gibt: die Fixture bildet den heutigen Stand ab (z. B. matches.original_start aus
+  -- 20261117_104), Pruefskripte spielen sie aber auch in aelteren Schema-Staenden ein (Zielmigration vor der Spalte).
+  SELECT string_agg(quote_ident(k), ', ') INTO cols FROM jsonb_object_keys(p_row) k
+   WHERE EXISTS (SELECT 1 FROM information_schema.columns c
+                  WHERE c.table_schema = 'public' AND c.table_name = p_table AND c.column_name = k);
   EXECUTE format('INSERT INTO public.%I (%s) SELECT %s FROM jsonb_populate_record(NULL::public.%I, $1)',
                  p_table, cols, cols, p_table) USING p_row;
 END;
