@@ -5,7 +5,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildCopiedTournament } from '../tournamentCopy';
-import { categorizeTournament, isTournamentCompleted } from '../../../utils/tournamentCategories';
+import { categorizeTournament } from '../../../utils/tournamentCategories';
+import { isTournamentClosed } from '../../services/lifecycle';
 import {
   hallencupOstGespielt, OST_ID, OST_CODE, OST_TEAM_A, OST_TEAM_B, OST_M_GRUPPE, OST_M_FINALE,
 } from '../__fixtures__/hallencupOstGespielt';
@@ -64,18 +65,18 @@ describe('@W5-025 Eine Kopie fürs Proben startet leer', () => {
     }
   });
 
-  it('@W5-025 C-COPY-AC-FELDER: das Turnier ist nicht abgeschlossen, nicht abgebrochen, ohne Endstand-Schnappschuss', () => {
+  it('@W5-025 C-COPY-AC-FELDER: das Turnier ist nicht abgeschlossen, nicht abgebrochen, ohne Server-Zustand', () => {
     const kopie = kopieVon();
-    for (const feld of ['manuallyCompleted', 'completedAt', 'cancelledAt', 'cancelledReason', 'statsSnapshot', 'dashboardStatus', 'deletedAt'] as const) {
+    for (const feld of ['lifecycleStatus', 'finishedAt', 'cancelledAt', 'cancelledReason', 'deletedAt'] as const) {
       expect(kopie[feld], feld).toBeUndefined();
     }
   });
 
   it('@W5-025 die Kopie steht auf der Startseite bei „kommend“, nicht bei „beendet“ oder „Entwurf“', () => {
     const original = hallencupOstGespielt();
-    expect(isTournamentCompleted(original)).toBe(true); // Ausgangslage: abgeschlossen
-    expect(isTournamentCompleted(kopieVon(original))).toBe(false);
-    expect(categorizeTournament(kopieVon(original), new Date('2026-11-20T10:00:00Z'))).toBe('upcoming');
+    expect(isTournamentClosed(original)).toBe(true); // Ausgangslage: abgeschlossen
+    expect(isTournamentClosed(kopieVon(original))).toBe(false);
+    expect(categorizeTournament(kopieVon(original))).toBe('upcoming');
   });
 
   it('@W5-025 C-COPY-DASH: kein Spiel wirkt gespielt (kein 0:0 mit Ergebnisstatus), Struktur bleibt änderbar', () => {
@@ -88,7 +89,7 @@ describe('@W5-025 Eine Kopie fürs Proben startet leer', () => {
     kopieVon(original);
     expect(original).toEqual(hallencupOstGespielt());
     expect(original.matches[0]).toMatchObject({ scoreA: 3, scoreB: 1, matchStatus: 'finished', decidedBy: 'penalty' });
-    expect(original.completedAt).toBeDefined();
+    expect(original.finishedAt).toBeDefined();
   });
 });
 

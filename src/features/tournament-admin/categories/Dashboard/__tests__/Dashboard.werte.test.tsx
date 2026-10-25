@@ -61,3 +61,40 @@ describe('Struktur-Info im Admin Center (@W5-038)', () => {
     expect(screen.getByText('Anzahl Gruppen').nextElementSibling?.textContent).toBe('2');
   });
 });
+
+/** R3-1 @LZ-006: der Statuskopf zeigt den gespeicherten Zustand, nie einen aus den Spielständen abgeleiteten. */
+describe('Dashboard Statuskopf (@LZ-001, @LZ-006)', () => {
+  const alleEntschieden = [{ id: 'm1', field: 1, matchStatus: 'finished', scoreA: 2, scoreB: 1, slot: 0 }, { id: 'm2', field: 1, matchStatus: 'finished', scoreA: 0, scoreB: 0, slot: 1 }];
+  function kopf(t: Tournament) {
+    render(<DashboardCategory tournamentId="t1" tournament={t} onTournamentUpdate={vi.fn()} />);
+  }
+  it('@LZ-006 alle Spiele entschieden, nicht abgeschlossen: „Läuft“, nicht „Abgeschlossen“; Unterzeile nennt die beendeten Spiele', () => {
+    kopf(nikolaus({ matches: alleEntschieden as Tournament['matches'], lifecycleStatus: 'fixed' }));
+    expect(screen.getByText('Läuft')).toBeInTheDocument();
+    expect(screen.queryByText('✓ Abgeschlossen')).not.toBeInTheDocument();
+    expect(screen.getByText('Alle Spiele beendet')).toBeInTheDocument();
+  });
+  it('@LZ-001 am Server abgeschlossen: „Abgeschlossen“', () => {
+    kopf(nikolaus({ matches: alleEntschieden as Tournament['matches'], lifecycleStatus: 'finished' }));
+    expect(screen.getByText('✓ Abgeschlossen')).toBeInTheDocument();
+  });
+  it('@LZ-001 festgelegt, nichts angepfiffen: weder „Läuft“ noch „Abgeschlossen“', () => {
+    kopf(nikolaus({ lifecycleStatus: 'fixed' }));
+    expect(screen.queryByText('Läuft')).not.toBeInTheDocument();
+    expect(screen.queryByText('✓ Abgeschlossen')).not.toBeInTheDocument();
+  });
+  it('@LZ-001 am Server abgeschlossen, ein Spiel steht noch auf „läuft“: „Abgeschlossen“ geht vor „LIVE“', () => {
+    kopf(nikolaus({ matches: [{ id: 'm1', field: 1, matchStatus: 'running', slot: 0 }] as Tournament['matches'], lifecycleStatus: 'finished' }));
+    expect(screen.getByText('✓ Abgeschlossen')).toBeInTheDocument();
+    expect(screen.queryByText('● LIVE')).not.toBeInTheDocument();
+    expect(screen.queryByText('1 Spiel läuft')).not.toBeInTheDocument();
+  });
+  it('@LZ-001 festgelegt, nichts angepfiffen: „Festgelegt“', () => {
+    kopf(nikolaus({ lifecycleStatus: 'fixed' }));
+    expect(screen.getByText('Festgelegt')).toBeInTheDocument();
+  });
+  it('Gegenbeispiel: ein Spiel läuft gerade → „LIVE“ vor „Läuft“', () => {
+    kopf(nikolaus({ matches: [{ id: 'm1', field: 1, matchStatus: 'running', slot: 0 }] as Tournament['matches'], lifecycleStatus: 'fixed' }));
+    expect(screen.getByText('● LIVE')).toBeInTheDocument();
+  });
+});

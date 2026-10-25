@@ -10,7 +10,6 @@ import {
   getExpiredTrashedTournaments,
   getRemainingDays,
 } from '../utils/tournamentCategories';
-import { createStatsSnapshot, buildFinishTournamentPatch } from '../utils/tournamentStats';
 
 /**
  * Custom hook for managing tournaments
@@ -157,11 +156,11 @@ export const useTournaments = () => {
 
   /**
    * Restore tournament from trash
-   * Optionally restore as 'finished' or 'draft' if date is in past
+   * Optionally restore as 'draft'
    */
   const restoreTournament = useCallback(async (
     id: string,
-    options?: { restoreAs?: 'finished' | 'draft' }
+    options?: { restoreAs?: 'draft' }
   ) => {
     const tournament = tournaments.find(t => t.id === id);
     if (!tournament) { return; }
@@ -175,11 +174,6 @@ export const useTournaments = () => {
     // If restoring as draft, set status
     if (options?.restoreAs === 'draft') {
       updated.status = 'draft';
-    }
-    // If restoring as finished, mark as completed
-    if (options?.restoreAs === 'finished') {
-      updated.manuallyCompleted = true;
-      updated.completedAt = new Date().toISOString();
     }
 
     await saveTournament(updated);
@@ -223,39 +217,6 @@ export const useTournaments = () => {
     await loadTournaments();
   }, [tournaments, repository, loadTournaments]);
 
-  // ============================================================================
-  // TOURNAMENT COMPLETION FUNCTIONS
-  // ============================================================================
-
-  /**
-   * Finish tournament: Mark as completed and create stats snapshot
-   */
-  const finishTournament = useCallback(async (id: string) => {
-    const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) { return; }
-
-    await saveTournament({ ...tournament, ...buildFinishTournamentPatch(tournament) });
-  }, [saveTournament, tournaments]);
-
-  /**
-   * Cancel tournament: Mark as cancelled with reason
-   */
-  const cancelTournament = useCallback(async (id: string, reason?: string) => {
-    const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) { return; }
-
-    const updated: Tournament = {
-      ...tournament,
-      dashboardStatus: 'cancelled',
-      cancelledAt: new Date().toISOString(),
-      cancelledReason: reason,
-      statsSnapshot: createStatsSnapshot(tournament),
-      updatedAt: new Date().toISOString(),
-    };
-
-    await saveTournament(updated);
-  }, [saveTournament, tournaments]);
-
   return {
     // Original exports
     tournaments,
@@ -275,10 +236,6 @@ export const useTournaments = () => {
     permanentDeleteTournament,
     cleanupExpiredTrash,
     emptyTrash,
-
-    // Tournament Completion
-    finishTournament,
-    cancelTournament,
 
     // Utilities
     getRemainingDays,

@@ -64,6 +64,9 @@ async function kopiere(browser: Browser, zweck: string, datum?: string): Promise
     await page.goto('/#/');
     const ausloeser = page.getByTestId(`tournament-${TURNIERTAG_ID}-actions-trigger`);
     await expect(ausloeser, 'Turniertag-Cup auf der Startseite').toBeVisible({ timeout: 30000 });
+    // R3-1 (@LZ-001): läuft ein anderes Turnier, steht „Bevorstehende Turniere“ eingeklappt – Abschnitt der Karte zuerst öffnen
+    const kopf = page.locator('[data-testid^="section-"]', { has: ausloeser }).locator('[aria-expanded]').first();
+    if ((await kopf.getAttribute('aria-expanded')) === 'false') { await kopf.click(); }
     await ausloeser.scrollIntoViewIfNeeded();
     await ausloeser.click();
     await page.getByTestId('action-menu-item-copy').click();

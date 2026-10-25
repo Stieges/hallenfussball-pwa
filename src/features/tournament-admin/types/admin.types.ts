@@ -136,8 +136,6 @@ export interface ActivityLogFilter {
  */
 export type DangerAction =
   | 'reset_schedule'
-  | 'end_tournament'
-  | 'archive_tournament'
   | 'delete_tournament';
 
 /**

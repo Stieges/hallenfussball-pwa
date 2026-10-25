@@ -166,6 +166,13 @@ run_twins() {
     got="$(q "BEGIN; SELECT CASE WHEN lc.state_case(\$J\$$row\$J\$::jsonb) = (\$J\$$row\$J\$::jsonb -> 'expected') THEN 'gleich' ELSE lc.state_case(\$J\$$row\$J\$::jsonb)::text END; ROLLBACK;" | grep -v '^$' | tail -1)"
     check G "tournament-state.json: $(jq -r '.name' <<<"$row")" "gleich" "$got"
   done
+  # lifecycle-of.json (Zwilling lifecycleOf, R3-1): gespeicherter Zustand + Spielstaende -> public.tournament_lifecycle
+  n="$(jq '.cases | length' "$FIX_DIR/lifecycle-of.json")"
+  for ((i = 0; i < n; i++)); do
+    row="$(jq -c ".cases[$i]" "$FIX_DIR/lifecycle-of.json")"
+    got="$(q "BEGIN; SELECT lc.life_case(\$J\$$row\$J\$::jsonb); ROLLBACK;" | grep -v '^$' | head -1)"
+    check G "lifecycle-of.json: $(jq -r '.name' <<<"$row")" "$(jq -r '.expected' <<<"$row")" "$got"
+  done
 }
 
 # ---------------------------------------------------------------------------------------------------------

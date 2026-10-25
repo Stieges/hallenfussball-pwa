@@ -11,7 +11,7 @@ import { matchOrigins } from './matchOrigin';
 
 /** Ergebnis-, Abschluss-, Timer- und Überspringen-Felder, die eine Kopie nie übernimmt (C-KOPIE-ERGEBNISSE, @W5-025). */
 const MATCH_CLEARED = {
-  // Kein Ergebnis heißt kein Wert, nicht 0:0: `isTournamentCompleted` liest jede Zahl als Ergebnis (C-COPY-DASH).
+  // Kein Ergebnis heißt kein Wert, nicht 0:0: jede Zahl gilt als Ergebnis (C-COPY-DASH).
   scoreA: undefined,
   scoreB: undefined,
   finishedAt: undefined,
@@ -153,12 +153,11 @@ export function buildCopiedTournament(
     shareCodeCreatedAt: undefined,
     publishedAt: released ? options.now : undefined,
     // Nicht abgeschlossen (@W5-025)
-    manuallyCompleted: undefined,
-    completedAt: undefined,
+    lifecycleStatus: undefined,
+    finishedAt: undefined,
+    anyMatchStarted: undefined,
     cancelledAt: undefined,
     cancelledReason: undefined,
-    statsSnapshot: undefined,
-    dashboardStatus: undefined,
     deletedAt: undefined,
     // Neue Zeile in der Datenhaltung: Versionen des Originals gelten nicht
     version: undefined,

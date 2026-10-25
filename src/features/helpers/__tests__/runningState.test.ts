@@ -84,8 +84,8 @@ describe('Eigenes Turnier läuft', () => {
   it('Gegenbeispiel: Turniertag in der Zukunft → läuft nicht', () => {
     expect(isRunningOwnTournament(own({ startDate: '2026-12-05', date: '2026-12-05' }), NOW)).toBe(false);
   });
-  it('Gegenbeispiel: heute, aber manuell abgeschlossen → läuft nicht', () => {
-    expect(isRunningOwnTournament(own({ manuallyCompleted: true }), NOW)).toBe(false);
+  it('Gegenbeispiel: heute, aber abgeschlossen (Zustand vom Server) → läuft nicht', () => {
+    expect(isRunningOwnTournament(own({ lifecycleStatus: 'finished' }), NOW)).toBe(false);
   });
   it('Gegenbeispiel: heute, aber im Papierkorb / abgebrochen / Entwurf → läuft nicht', () => {
     expect(isRunningOwnTournament(own({ deletedAt: '2026-11-28T06:00:00Z' }), NOW)).toBe(false);

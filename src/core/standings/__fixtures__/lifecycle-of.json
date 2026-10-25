@@ -1,0 +1,107 @@
+{
+  "$comment": "Gleichlauf Zustand fuer die Anzeige (R3-1, @LZ-001, @LZ-006): public.tournament_lifecycle (SQL, 20261113_003) == lifecycleOf (TS, src/core/services/lifecycle.ts). Eingabe: lifecycleStatus (gespeichert: draft | fixed | finished | cancelled) und matchStatuses (je Eintrag ein Spiel). Erwartung ('expected') erzeugt aus der SQL-Regel im Wegwerf-Container (supabase/postgres, Baseline + alle Migrationen, Funktion lc.life_case aus scripts/lib/tournament-lifecycle-harness.sql), nie von Hand. SQL-Seite der Pruefung: scripts/tournament-lifecycle-check.sh Kategorie G (run_twins).",
+  "cases": [
+    {
+      "name": "Entwurf ohne Spiele im Lauf",
+      "lifecycleStatus": "draft",
+      "matchStatuses": [],
+      "expected": "draft"
+    },
+    {
+      "name": "Entwurf, ein Spiel steht auf running (bleibt Entwurf)",
+      "lifecycleStatus": "draft",
+      "matchStatuses": [
+        "running"
+      ],
+      "expected": "draft"
+    },
+    {
+      "name": "Festgelegt, alle Spiele geplant",
+      "lifecycleStatus": "fixed",
+      "matchStatuses": [],
+      "expected": "fixed"
+    },
+    {
+      "name": "Festgelegt, Spiele wartend oder uebersprungen (nicht angepfiffen)",
+      "lifecycleStatus": "fixed",
+      "matchStatuses": [
+        "waiting",
+        "skipped"
+      ],
+      "expected": "fixed"
+    },
+    {
+      "name": "Festgelegt, das erste Spiel laeuft",
+      "lifecycleStatus": "fixed",
+      "matchStatuses": [
+        "running"
+      ],
+      "expected": "running"
+    },
+    {
+      "name": "Festgelegt, ein Spiel pausiert (Halbzeit)",
+      "lifecycleStatus": "fixed",
+      "matchStatuses": [
+        "scheduled",
+        "paused"
+      ],
+      "expected": "running"
+    },
+    {
+      "name": "Festgelegt, das erste Spiel ist beendet",
+      "lifecycleStatus": "fixed",
+      "matchStatuses": [
+        "finished",
+        "scheduled"
+      ],
+      "expected": "running"
+    },
+    {
+      "name": "Festgelegt, alle Spiele beendet (nicht von selbst abgeschlossen)",
+      "lifecycleStatus": "fixed",
+      "matchStatuses": [
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished",
+        "finished"
+      ],
+      "expected": "running"
+    },
+    {
+      "name": "Abgeschlossen",
+      "lifecycleStatus": "finished",
+      "matchStatuses": [
+        "finished",
+        "finished"
+      ],
+      "expected": "finished"
+    },
+    {
+      "name": "Abgeschlossen, ein Spiel steht auf running (bleibt abgeschlossen)",
+      "lifecycleStatus": "finished",
+      "matchStatuses": [
+        "running"
+      ],
+      "expected": "finished"
+    },
+    {
+      "name": "Abgebrochen mit angepfiffenem Spiel",
+      "lifecycleStatus": "cancelled",
+      "matchStatuses": [
+        "finished"
+      ],
+      "expected": "cancelled"
+    }
+  ]
+}

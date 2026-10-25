@@ -10,10 +10,8 @@ import { categorizeTournament } from '../tournamentCategories';
 import { mapTournamentFromSupabase } from '../../core/repositories/supabaseMappers';
 import { createTournamentRow } from '../../../tests/factories/supabase';
 
-const JETZT = new Date(2026, 10, 26, 12, 0); // 26.11.2026, 12:00 Ortszeit
-
 function ausDerCloud(date: string, extra: Record<string, unknown> = {}) {
-  const row = createTournamentRow({ status: 'published', date, start_time: '09:00:00', ...extra });
+  const row = createTournamentRow({ status: 'published', lifecycle_status: 'fixed', date, start_time: '09:00:00', ...extra });
   return mapTournamentFromSupabase(row, [], []);
 }
 
@@ -23,21 +21,21 @@ describe('Startseite: festgelegtes Turnier aus der Cloud (@LZ-001, @FU-128)', ()
   });
 
   it('@LZ-001 heute, Startzeit 09:00 vorbei, kein Spiel angepfiffen: kommend, nicht laufend', () => {
-    expect(categorizeTournament(ausDerCloud('2026-11-26'), JETZT)).toBe('upcoming');
+    expect(categorizeTournament(ausDerCloud('2026-11-26'))).toBe('upcoming');
   });
 
   it('@LZ-001 auch kurz nach der Startzeit (09:01): kommend', () => {
-    expect(categorizeTournament(ausDerCloud('2026-11-26'), new Date(2026, 10, 26, 9, 1))).toBe('upcoming');
+    expect(categorizeTournament(ausDerCloud('2026-11-26'))).toBe('upcoming');
   });
 
   it('@LZ-001 Gegenbeispiel: das erste Spiel steht auf „läuft“ (Spiele hier von Hand angehängt, keine Cloud-Liste), dann läuft das Turnier', () => {
     const t = ausDerCloud('2026-11-26');
     const angepfiffen = { ...t, matches: [{ id: 'm1', matchStatus: 'running' }, { id: 'm2', matchStatus: 'scheduled' }] } as unknown as typeof t;
-    expect(categorizeTournament(angepfiffen, JETZT)).toBe('running');
+    expect(categorizeTournament(angepfiffen)).toBe('running');
   });
 
-  it('Gegenbeispiel: manuell abgeschlossen steht im Archiv', () => {
-    const t = { ...ausDerCloud('2026-11-26'), manuallyCompleted: true };
-    expect(categorizeTournament(t, JETZT)).toBe('finished');
+  it('Gegenbeispiel: am Server abgeschlossen steht im Archiv', () => {
+    const t = ausDerCloud('2026-11-26', { lifecycle_status: 'finished' });
+    expect(categorizeTournament(t)).toBe('finished');
   });
 });
