@@ -1,6 +1,7 @@
 /**
  * Status-Hinweis des Ausgangs (C2b): ein Banner nach dem LiveCockpit-Muster.
- * Prioritaet (Produktentscheidung): clientOutdated > authRequired > notReady > review.
+ * Prioritaet (Produktentscheidung): clientOutdated > authRequired > notReady > tournamentFinished > review.
+ * `tournamentFinished` (R3-2a, @FU-018, @HE-070): nach dem Abschluss angekommene Einträge sind an die Turnierleitung übergeben.
  * `onReload` ist injiziert (Standard-Aufrufer: window.location.reload).
  */
 import type { CSSProperties } from 'react';
@@ -8,9 +9,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import type { OutboxStatus } from '../../../core/match/client/outboxTypes';
 import { cssVars } from '../../../design-tokens';
-import { reviewTotal } from './useOutboxStatus';
+import { afterFinishTotal, reviewTotal } from './useOutboxStatus';
 
-export type OutboxNoticeKind = 'clientOutdated' | 'authRequired' | 'notReady' | 'review';
+export type OutboxNoticeKind = 'clientOutdated' | 'authRequired' | 'notReady' | 'tournamentFinished' | 'review';
 
 export interface OutboxNoticeProps {
   status: OutboxStatus;
@@ -37,6 +38,10 @@ function reviewCountOf(status: OutboxStatus, matchId: string | undefined): numbe
   return matchId === undefined ? reviewTotal(status) : reviewTotal(status, [matchId]);
 }
 
+function afterFinishCountOf(status: OutboxStatus, matchId: string | undefined): number {
+  return matchId === undefined ? afterFinishTotal(status) : afterFinishTotal(status, [matchId]);
+}
+
 function noticeKind(status: OutboxStatus, matchId: string | undefined): OutboxNoticeKind | null {
   if (status.clientOutdated) {
     return 'clientOutdated';
@@ -46,6 +51,9 @@ function noticeKind(status: OutboxStatus, matchId: string | undefined): OutboxNo
   }
   if (matchId !== undefined && status.pausedMatches[matchId] === 'notReady') {
     return 'notReady';
+  }
+  if (afterFinishCountOf(status, matchId) > 0) {
+    return 'tournamentFinished';
   }
   return reviewCountOf(status, matchId) > 0 ? 'review' : null;
 }
@@ -59,7 +67,9 @@ export function OutboxNotice({ status, matchId, onReload }: OutboxNoticeProps) {
   const text =
     kind === 'review'
       ? t('outbox.notice.review', { count: reviewCountOf(status, matchId) })
-      : t(`outbox.notice.${kind}`);
+      : kind === 'tournamentFinished'
+        ? t('outbox.notice.tournamentFinished', { count: afterFinishCountOf(status, matchId) })
+        : t(`outbox.notice.${kind}`);
   return (
     <div data-testid="outbox-notice" data-kind={kind} role="status" style={noticeStyle}>
       <span>{text}</span>

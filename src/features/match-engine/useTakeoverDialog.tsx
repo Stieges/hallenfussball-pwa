@@ -37,18 +37,22 @@ export function useTakeoverDialog(takeOver: FieldControl['takeOver']): TakeoverD
   const [request, setRequest] = useState<TakeoverRequest | null>(null);
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  // R3-2a (Plan H-9): nach dem Abschluss lehnt der Server jede Übernahme ab – die Haupttaste bleibt dann gesperrt
+  const [abgeschlossen, setAbgeschlossen] = useState(false);
 
   const open = useCallback((next: TakeoverRequest) => {
     setRequest(next);
     setFehler(null);
+    setAbgeschlossen(false);
   }, []);
   const close = useCallback(() => {
     setRequest(null);
     setFehler(null);
+    setAbgeschlossen(false);
   }, []);
 
   const confirm = useCallback(async () => {
-    if (!request || busy) {
+    if (!request || busy || abgeschlossen) {
       return;
     }
     setBusy(true);
@@ -67,15 +71,20 @@ export function useTakeoverDialog(takeOver: FieldControl['takeOver']): TakeoverD
         : t('steuer.inzwischenOhneName', { feld: request.feldName }));
       return;
     }
+    if (result.kind === 'tournamentFinished') {
+      setAbgeschlossen(true);
+      setFehler(t('steuer.turnierAbgeschlossen'));
+      return;
+    }
     setFehler(t(result.kind === 'offline' ? 'steuer.nurMitNetz' : result.kind === 'forbidden' ? 'steuer.keinRecht' : 'steuer.fehler'));
-  }, [request, busy, takeOver, close, t]);
+  }, [request, busy, abgeschlossen, takeOver, close, t]);
 
   const dialog = request ? (
     <TakeoverDialog
       isOpen
       feldName={request.feldName}
       halter={request.halter}
-      busy={busy}
+      busy={busy || abgeschlossen}
       fehler={fehler}
       onConfirm={() => { void confirm(); }}
       onCancel={close}

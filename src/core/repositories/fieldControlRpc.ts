@@ -9,12 +9,12 @@
  *
  * Fehlerpolitik: Lesen → `null` bei fehlendem Client, Netz, Zeitlimit, Recht oder unerwarteter Antwort (der letzte bekannte
  * Stand bleibt beim Aufrufer). Übernehmen → Ergebnisart, nie ein Wurf: Netz/Zeitlimit = `offline` („Übernehmen geht nur mit
- * Netz“), veraltete Epoche = `changed`, fehlendes Recht = `forbidden`.
+ * Netz“), veraltete Epoche = `changed`, fehlendes Recht = `forbidden`, abgeschlossenes Turnier = `tournamentFinished` (R3-2a).
  */
 import { z } from 'zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../../types/supabase';
-import { isTransientMutationError } from '../errors';
+import { isTournamentFinishedRejection, isTransientMutationError } from '../errors';
 import { isCloudReadTimeout, withCloudReadTimeout } from './cloudAdoption';
 
 /** Stand eines Feldes aus Sicht eines Geräts (`public.field_control_info`). */
@@ -76,6 +76,8 @@ export type TakeFieldControlResult =
   | { kind: 'unchanged'; control: FieldControlInfo }
   | { kind: 'changed'; control: FieldControlInfo | null }
   | { kind: 'forbidden' }
+  /** R3-2a (Plan H-9): Turnier abgeschlossen (55000 TOURNAMENT_FINISHED) – nicht wiederholen. */
+  | { kind: 'tournamentFinished' }
   | { kind: 'offline' }
   | { kind: 'error'; message: string };
 
@@ -93,6 +95,9 @@ export async function takeFieldControl(client: Client, args: TakeFieldControlArg
       ...(args.deviceLabel !== null ? { p_device_label: args.deviceLabel } : {}),
     })));
     if (response.error) {
+      if (isTournamentFinishedRejection(response.error)) {
+        return { kind: 'tournamentFinished' };
+      }
       return isTransientMutationError(response.error) ? { kind: 'offline' } : { kind: 'error', message: response.error.message };
     }
     const parsed = TakeResponseSchema.safeParse(response.data);

@@ -131,6 +131,7 @@
     "ownDecisionConflictReason": "Not accepted: the state has since changed through your own decision",
     "invalidValueReason": "Not accepted – invalid value",
     "tournamentGoneReason": "Not accepted – tournament no longer exists",
+    "tournamentFinishedReason": "Not accepted – the tournament is finished",
     "discardedCopyReason": "Not sent: this change is based on a discarded state. The state of the server will load once the connection is back.",
     "discardAndLoad": "Discard and load current state",
     "discardAndLoadAriaLabel": "Discard the change and load the current state of the server",
@@ -170,6 +171,7 @@
       "NOT_CONTROLLER": "Another device is currently controlling this game.",
       "MATCH_FULL": "No further entries are possible for this game. Please inform tournament control.",
       "MATCH_GONE": "The game was deleted.",
+      "TOURNAMENT_FINISHED": "The tournament is finished – the entry was not accepted.",
       "unknown": "Unknown reason"
     },
     "eventType": {
@@ -225,7 +227,9 @@
       "reloadNow": "Update now",
       "authRequired": "Please sign in again",
       "notReady": "Game not ready yet (teams open)",
-      "review": "$t(sport:outbox.awaitingReview) ({{count}})"
+      "review": "$t(sport:outbox.awaitingReview) ({{count}})",
+      "tournamentFinished_one": "The tournament is finished – {{count}} entry handed to the organisers",
+      "tournamentFinished_other": "The tournament is finished – {{count}} entries handed to the organisers"
     },
     "logoutWarning": {
       "title_one": "{{count}} entry not yet sent",

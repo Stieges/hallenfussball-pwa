@@ -49,6 +49,7 @@ const REASON_KEYS: Record<string, string> = {
   NOT_CONTROLLER: 'outbox.rejection.NOT_CONTROLLER',
   MATCH_FULL: 'outbox.rejection.MATCH_FULL',
   MATCH_GONE: 'outbox.rejection.MATCH_GONE',
+  TOURNAMENT_FINISHED: 'outbox.rejection.TOURNAMENT_FINISHED',
 };
 
 const UNKNOWN_REASON_KEY = 'outbox.rejection.unknown';

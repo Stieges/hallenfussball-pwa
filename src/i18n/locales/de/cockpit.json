@@ -638,6 +638,7 @@
     "inzwischenOhneName": "{{feld}} wird jetzt von einem anderen Gerät gesteuert",
     "keinRecht": "Du darfst die Spielleitung nicht übernehmen",
     "fehler": "Übernehmen hat nicht geklappt – bitte erneut versuchen",
+    "turnierAbgeschlossen": "Das Turnier ist abgeschlossen – Übernehmen ist nicht mehr möglich",
     "anderesGeraet": "anderes Gerät"
   }
 }

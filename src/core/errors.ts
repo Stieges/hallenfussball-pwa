@@ -383,9 +383,38 @@ export function isVersionConflict(error: unknown): boolean {
  * - `invalidValue`: ungültiger Wert – Postgres-Klasse 22 (Datenfehler) und 23 (Integrität), eigene Codes HF002/HF003/HF005,
  *   Team noch von einem Spiel referenziert
  * - `tournamentGone`: das Turnier gibt es in der Cloud nicht mehr (`TournamentGoneError`)
+ * - `tournamentFinished`: das Turnier ist abgeschlossen (SQLSTATE 55000 mit TOURNAMENT_FINISHED, R3-2a, @LZ-038, @HE-070)
  * `null`: unklar (z. B. 42501 Rechte, Netz, unbekannte Codes) – die Warteschlange wiederholt wie bisher.
  */
-export type DefinitiveRejectionReason = 'conflict' | 'invalidValue' | 'tournamentGone';
+export type DefinitiveRejectionReason = 'conflict' | 'invalidValue' | 'tournamentGone' | 'tournamentFinished';
+
+/** Gründe, die ein abgelegter Eintrag als `rejection` trägt (ein Konflikt trägt `conflict`). */
+export type StoredRejectionReason = Exclude<DefinitiveRejectionReason, 'conflict'>;
+
+/**
+ * Sperre nach dem Abschluss (Migration 20261113_003, R-EA-6): die Trigger lehnen mit SQLSTATE 55000 und dem Text
+ * TOURNAMENT_FINISHED ab. 55000 allein reicht nicht: `append_match_events` meldet damit auch „Spiel nicht mehr beschreibbar“.
+ */
+export const TOURNAMENT_FINISHED_CODE = '55000';
+const TOURNAMENT_FINISHED_MARKER = 'TOURNAMENT_FINISHED';
+
+/**
+ * R3-2a (@LZ-038, @HE-070, @FU-057): Hat der Server abgelehnt, weil das Turnier abgeschlossen ist? Auch eingepackt in
+ * `RepositoryError` (`save`: Objekt, `updateMatches`: Liste mit kopiertem Code).
+ */
+export function isTournamentFinishedRejection(error: unknown): boolean {
+  if (Array.isArray(error)) {
+    return error.some(isTournamentFinishedRejection);
+  }
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const { code, message, originalError } = error as { code?: unknown; message?: unknown; originalError?: unknown };
+  if (code === TOURNAMENT_FINISHED_CODE && typeof message === 'string' && message.includes(TOURNAMENT_FINISHED_MARKER)) {
+    return true;
+  }
+  return originalError !== undefined && originalError !== error && isTournamentFinishedRejection(originalError);
+}
 
 /**
  * BP-1 (Befund C-WARTESCHLANGE-LEGT-GELOESCHTES-NEU-AN, @FU-123): Das Gerät kennt das Turnier aus der Cloud, dort gibt es
@@ -426,8 +455,8 @@ function isInvalidValueRejection(error: unknown): boolean {
 
 /**
  * Einhängepunkt für eindeutig endgültige Ablehnungen (@FU-126): die Warteschlange meldet sie beim ersten Versuch als
- * „nicht übernommen“ mit Grund und wiederholt sie nicht. Weitere eindeutige Gründe (z. B. A-21a-C1: `55000`
- * TOURNAMENT_FINISHED) werden hier ergänzt.
+ * „nicht übernommen“ mit Grund und wiederholt sie nicht. Ein neuer Grund braucht auch eine Zuordnung in
+ * `GenericMutationQueue` (`deadLetterMarks`) und einen Text in `SyncFailedList` – beide per Typ erzwungen.
  */
 export function definitiveRejectionReason(error: unknown): DefinitiveRejectionReason | null {
   if (isVersionConflict(error)) {
@@ -435,6 +464,9 @@ export function definitiveRejectionReason(error: unknown): DefinitiveRejectionRe
   }
   if (error instanceof TournamentGoneError) {
     return 'tournamentGone';
+  }
+  if (isTournamentFinishedRejection(error)) {
+    return 'tournamentFinished';
   }
   return isInvalidValueRejection(error) ? 'invalidValue' : null;
 }

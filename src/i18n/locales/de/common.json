@@ -131,6 +131,7 @@
     "ownDecisionConflictReason": "Nicht übernommen: Der Stand hat sich inzwischen durch deine eigene Entscheidung geändert",
     "invalidValueReason": "Nicht übernommen – ungültiger Wert",
     "tournamentGoneReason": "Nicht übernommen – Turnier gibt es nicht mehr",
+    "tournamentFinishedReason": "Nicht übernommen – Turnier ist abgeschlossen",
     "discardedCopyReason": "Nicht gesendet: Diese Änderung beruht auf einem verworfenen Stand. Der Stand des Servers wird geladen, sobald die Verbindung steht.",
     "discardAndLoad": "Verwerfen und aktuellen Stand laden",
     "discardAndLoadAriaLabel": "Änderung verwerfen und aktuellen Stand des Servers laden",
@@ -170,6 +171,7 @@
       "NOT_CONTROLLER": "Ein anderes Gerät steuert dieses Spiel gerade.",
       "MATCH_FULL": "Für dieses Spiel sind keine weiteren Eingaben möglich. Bitte die Turnierleitung informieren.",
       "MATCH_GONE": "Das Spiel wurde gelöscht.",
+      "TOURNAMENT_FINISHED": "Das Turnier ist abgeschlossen – der Eintrag wurde nicht übernommen.",
       "unknown": "Unbekannter Grund"
     },
     "eventType": {
@@ -225,7 +227,9 @@
       "reloadNow": "Jetzt aktualisieren",
       "authRequired": "Bitte neu anmelden",
       "notReady": "Spiel noch nicht bereit (Teams offen)",
-      "review": "$t(sport:outbox.awaitingReview) ({{count}})"
+      "review": "$t(sport:outbox.awaitingReview) ({{count}})",
+      "tournamentFinished_one": "Turnier ist abgeschlossen – {{count}} Eintrag an die Turnierleitung übergeben",
+      "tournamentFinished_other": "Turnier ist abgeschlossen – {{count}} Einträge an die Turnierleitung übergeben"
     },
     "logoutWarning": {
       "title_one": "{{count}} Eintrag noch nicht übertragen",

@@ -51,6 +51,8 @@ export interface OutboxStatus {
   revokedByMatch: Record<string, number>;
   /** Davon „zum Zuschauer gemacht“ (`change` watch_only) – die Lesesicht bleibt (B-50 Review M2). */
   revokedWatchOnlyByMatch: Record<string, number>;
+  /** R3-2a (@FU-018): nach dem Turnierabschluss angekommen, an die Turnierleitung übergeben (Grund `AFTER_FINISH`) je Spiel. */
+  afterFinishByMatch: Record<string, number>;
   pausedMatches: Record<string, OutboxPause>;
   authRequired: boolean;
   clientOutdated: boolean;
@@ -69,6 +71,7 @@ export function emptyOutboxStatus(): OutboxStatus {
     reviewByMatch: {},
     revokedByMatch: {},
     revokedWatchOnlyByMatch: {},
+    afterFinishByMatch: {},
     pausedMatches: {},
     authRequired: false,
     clientOutdated: false,

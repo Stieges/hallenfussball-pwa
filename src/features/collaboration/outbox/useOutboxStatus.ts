@@ -44,3 +44,8 @@ export function rejectedTotal(status: OutboxStatus, matchIds?: string[]): number
 export function reviewTotal(status: OutboxStatus, matchIds?: string[]): number {
   return totalOf(status.reviewByMatch, matchIds);
 }
+
+/** R3-2a (@FU-018): nach dem Abschluss angekommene, an die Turnierleitung übergebene Einträge, optional auf Spiele begrenzt. */
+export function afterFinishTotal(status: OutboxStatus, matchIds?: string[]): number {
+  return totalOf(status.afterFinishByMatch, matchIds);
+}
