@@ -28,6 +28,7 @@ import {
 } from '../../core/match/client';
 import { makeFetchConfirmed, type MatchEventsQueryClient } from './supabaseFetchConfirmed';
 import { MatchEngineContext, type MatchEngineContextValue } from './matchEngineContextInstance';
+import { useOutboxReport } from './useOutboxReport';
 
 const BROADCAST_CHANNEL_NAME = 'hallenfussball-matches';
 
@@ -233,6 +234,9 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [accountId, resync]);
+
+  // R3-2a (@LZ-018, @FU-068): Zahl wartender Einträge alle 30 s an den Server melden (Warnungen vor dem Abschluss)
+  useOutboxReport({ sender: bundle.sender, accountId });
 
   // Unmount: ausstehende Wiederaufnahmen loeschen, bevor irgendetwas entsorgt wird (A-06g).
   useEffect(() => {

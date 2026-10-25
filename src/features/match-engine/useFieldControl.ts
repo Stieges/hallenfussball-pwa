@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getDeviceId } from '../../core/device/deviceId';
 import { deviceLabel } from '../../core/device/deviceLabel';
 import { ownFieldsWithoutLabel } from '../../core/fieldControl/fieldControlView';
+import { noteFieldControlList } from '../../core/fieldControl/ownFields';
 import { readFieldControlState, takeFieldControl, type FieldControlInfo, type TakeFieldControlResult } from '../../core/repositories/fieldControlRpc';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { useMatchEngineContextOptional } from './useMatchEngineContext';
@@ -65,6 +66,7 @@ export function useFieldControl(tournamentId: string, options: { poll?: boolean 
       return listRef.current;
     }
     setStand({ tournamentId, list: next });
+    noteFieldControlList(tournamentId, next); // R3-2a: Feld für die Geräte-Meldung (useOutboxReport)
     return next;
   }, [active, tournamentId, deviceId]);
 
