@@ -9,6 +9,7 @@
  * Senden erneut lesen), E4 (eigener Ausgang → „Erst übertragen“), S1 (wer abschließen darf, liest auch die Klärungsliste).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { StrictMode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../types/tournament';
 
@@ -493,5 +494,15 @@ describe('Die Prüfung hängt nie endlos: hängt eine Lese-Stufe, endet sie nach
     const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw: () => Promise.resolve(tournament) }));
     await act(async () => { await result.current.start(); });
     expect(result.current.state.phase).toBe('confirming');
+  });
+});
+
+describe('StrictMode (Entwicklung, Cloud-E2E): Zustandswechsel gehen beim erneuten Einhängen nicht verloren', () => {
+  it('die Prüfung endet sichtbar in „bereit“ und der Abschluss in „fertig“', async () => {
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload }), { wrapper: StrictMode });
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state.phase).toBe('confirming');
+    await act(async () => { await result.current.confirm(); });
+    expect(result.current.state.phase).toBe('done');
   });
 });

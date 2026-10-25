@@ -106,26 +106,13 @@ const client = () => (isSupabaseConfigured ? supabase : null);
 export const FINISH_STAGE_TIMEOUT_MS = 20_000;
 const STAGE_TIMED_OUT = Symbol('stage-timed-out');
 
-/** Entwicklung: Ablauf der Prüfung im Konsolenprotokoll (von der Cloud-E2E N6c2 gelesen). */
-function trace(message: string): void {
-  if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console -- Ablauf der Prüfung (nur Entwicklung)
-    console.info(`[finish] ${message}`);
-  }
-}
-
-async function stage<T>(name: string, work: Promise<T>): Promise<T | typeof STAGE_TIMED_OUT> {
-  const started = Date.now();
+async function stage<T>(work: Promise<T>): Promise<T | typeof STAGE_TIMED_OUT> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof STAGE_TIMED_OUT>((resolve) => { timer = setTimeout(() => { resolve(STAGE_TIMED_OUT); }, FINISH_STAGE_TIMEOUT_MS); });
   try {
     return await Promise.race([work, timeout]);
   } finally {
     clearTimeout(timer);
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console -- Messung der Prüfdauer je Stufe (nur Entwicklung, von der Cloud-E2E N6c2 gelesen)
-      console.info(`[finish] ${name} ${String(Date.now() - started)} ms`);
-    }
   }
 }
 
@@ -150,7 +137,8 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
   const run = useRef<{ requestId: string; ready: FinishReady | null; attempt: number }>({ requestId: '', ready: null, attempt: 0 });
   const phase = useRef<FinishState['phase']>('idle'); // synchron lesbar: confirm()/retry()/start() prüfen die Phase (m-1)
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  // StrictMode (Entwicklung, CI) hängt Effekte aus und wieder ein: „eingehängt“ muss beim erneuten Einhängen wieder gelten, sonst gingen alle Zustandswechsel verloren
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const set = useCallback((next: FinishState) => {
     phase.current = next.phase;
     if (next.phase === 'rejected') {
@@ -173,14 +161,12 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
 
   const start = useCallback(async () => {
     if (phase.current === 'sending') {
-      trace('start ignoriert (sendet)');
       return; // m-1: während des Sendens beginnt kein neuer Durchlauf (kein zweiter Abschluss mit neuer ID)
     }
     const { tournament: current, engineContext: context } = latest.current;
     const mine = run.current.attempt + 1;
     run.current = { requestId: crypto.randomUUID(), ready: null, attempt: mine };
-    const outdated = () => { const old = mine !== run.current.attempt; if (old) { trace(`Durchlauf ${String(mine)} veraltet (jetzt ${String(run.current.attempt)})`); } return old; }; // m-1: ein neuerer Durchlauf (oder reset) gilt
-    trace(`start ${String(mine)}`);
+    const outdated = () => mine !== run.current.attempt; // m-1: ein neuerer Durchlauf (oder reset) gilt
     const blocked = gate();
     if (blocked !== null || current === null) {
       set({ phase: 'rejected', reason: blocked ?? { code: 'CHECK_FAILED' } });
@@ -190,7 +176,7 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
     try {
       const [preflight, reviews, raw] = await Promise.all([
         readFinishPreflight(client(), current.id), readMatchReviews(client(), current.id),
-        stage('raw', latest.current.loadRaw ? latest.current.loadRaw().catch(() => null) : Promise.resolve(current)),
+        stage(latest.current.loadRaw ? latest.current.loadRaw().catch(() => null) : Promise.resolve(current)),
       ]);
       if (outdated()) {
         return;
@@ -201,7 +187,7 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
       }
       let engineEventsById;
       try {
-        const loaded = context !== null ? await stage('engine', loadEngineEventsForExport(raw, context)) : undefined;
+        const loaded = context !== null ? await stage(loadEngineEventsForExport(raw, context)) : undefined;
         if (loaded === STAGE_TIMED_OUT) {
           throw new Error('Ereignisse nicht rechtzeitig geladen');
         }
@@ -221,7 +207,6 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
         appVersion: __BUILD_HASH__, computedAt: new Date().toISOString(),
       });
       if (!prepared.ok) {
-        trace(`Grund: ${prepared.blocker.code}`);
         set({ phase: 'rejected', reason: prepared.blocker });
         if (prepared.blocker.code === 'ALREADY_FINISHED') {
           await latest.current.reload(); // H-5: das Turnier ist abgeschlossen – die Ansicht folgt dem Server
@@ -230,14 +215,9 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
         return;
       }
       run.current.ready = prepared.ready;
-      trace('bereit');
       set({ phase: 'confirming', ready: prepared.ready });
-    } catch (error) {
+    } catch {
       // Eine unerwartete Ausnahme in der Prüfung (Rechnung, Lesen) darf nie als „wird geprüft“ stehen bleiben
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console -- Ursache der gescheiterten Prüfung (nur Entwicklung, von der Cloud-E2E N6c2 gelesen)
-        console.info(`[finish] Fehler: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
-      }
       if (!outdated()) {
         set({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
       }
@@ -326,7 +306,6 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
   }, [gate, send, set]);
 
   const reset = useCallback(() => {
-    trace('reset');
     if (phase.current === 'sending') {
       return; // der Aufruf läuft: Abbrechen ist gesperrt (@LZ-021)
     }

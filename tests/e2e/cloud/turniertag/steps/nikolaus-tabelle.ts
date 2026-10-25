@@ -242,7 +242,6 @@ async function abschlussVerweigert({ asRole }: StepContext): Promise<void> {
   await openNikolausPath(seite, '/admin/dashboard');
   await expect(seite.getByTestId('finish-status'), 'etwas ist offen: kein Vorschlag, die Karte „Turnierstand“').toBeVisible({ timeout: 15_000 });
   await expect(seite.getByTestId('finish-suggestion')).toHaveCount(0);
-  seite.on('console', (message) => { if (message.text().startsWith('[finish]')) { test.info().annotations.push({ type: 'Messung', description: message.text() }); process.stdout.write(`[N6c2] ${message.text()}\n`); } });
   const t0 = Date.now();
   await seite.getByTestId('tournament-finish-open').click();
   const liste = seite.getByTestId('finish-open-list');
