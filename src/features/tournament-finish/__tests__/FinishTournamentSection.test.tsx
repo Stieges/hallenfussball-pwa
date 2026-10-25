@@ -302,6 +302,17 @@ describe('Review #395 m-2: nach einem Abschluss und Wiederöffnen öffnet sich d
   });
 });
 
+describe('Review #395 m-2, Gegenbeispiel: ein kurzes Neuladen schließt den Dialog nicht', () => {
+  it('ist die Ansicht beim Neuladen einen Moment „festgelegt“ (noch ohne Spielstände), bleibt der offene Dialog stehen', () => {
+    const { rerender } = zeige(fertig);
+    fireEvent.click(screen.getByTestId('tournament-finish-open'));
+    const flackern = { ...fertig, anyMatchStarted: undefined, matches: fertig.matches.map((m) => ({ ...m, matchStatus: 'scheduled' as const })) };
+    rerender(<MemoryRouter><FinishTournamentSection tournament={flackern} onReload={onReload} /></MemoryRouter>);
+    rerender(<MemoryRouter><FinishTournamentSection tournament={fertig} onReload={onReload} /></MemoryRouter>);
+    expect(screen.getByTestId('finish-dialog')).toBeInTheDocument();
+  });
+});
+
 describe('Der Dialog schließt, wenn der Abschluss durch ist; die Verwaltung folgt dem Server', () => {
   it('Schließen über den Dialog setzt ihn zurück', () => {
     zeige(fertig);

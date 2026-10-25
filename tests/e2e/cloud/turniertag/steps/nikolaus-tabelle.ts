@@ -245,10 +245,10 @@ async function abschlussVerweigert({ asRole }: StepContext): Promise<void> {
   await seite.getByTestId('tournament-finish-open').click();
   const liste = seite.getByTestId('finish-open-list');
   await expect(liste, 'Liste der offenen Punkte').toBeVisible({ timeout: 15_000 });
-  await expect(liste.getByTestId('finish-open-item').filter({ hasText: 'Gruppe noch nicht abgeschlossen' }), '@LZ-013: Eintrag „Gruppe noch nicht abgeschlossen“').toHaveCount(1);
+  await expect(liste.getByTestId('finish-open-item').filter({ hasText: /Gruppe.* noch nicht abgeschlossen/ }), '@LZ-013: Eintrag „Gruppe noch nicht abgeschlossen“').toHaveCount(1);
   await expect(seite.getByTestId('finish-back'), 'Haupttaste „Zurück zur Verwaltung“').toHaveText('Zurück zur Verwaltung');
   await expect(seite.getByTestId('tournament-finish-confirm'), 'kein gesperrter Abschließen-Knopf (Daniel 25.10.)').toHaveCount(0);
-  await liste.getByTestId('finish-open-item').filter({ hasText: 'Gruppe noch nicht abgeschlossen' }).click();
+  await liste.getByTestId('finish-open-item').filter({ hasText: /Gruppe.* noch nicht abgeschlossen/ }).click();
   await expect(seite, 'der Tipp führt zur Tabelle der Gruppe').toHaveURL(/\/standings$/, { timeout: 10_000 });
   expect(await zustand(), 'das Turnier ist unverändert „Läuft“').toEqual(vorher);
 }

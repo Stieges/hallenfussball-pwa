@@ -49,8 +49,10 @@ export function FinishTournamentSection({ tournament, onReload }: FinishTourname
   const suggest = shouldSuggestFinish(tournament, lifecycle, openReviews);
   const lateHint = lateFinishHint(tournament, lifecycle, now);
   const local = tournamentRepository instanceof LocalStorageRepository;
-  // m-2 (Review #395): ist das Turnier nicht mehr „Läuft“ (abgeschlossen, Notweg wieder geöffnet), bleibt kein offener Dialog zurück
-  useEffect(() => { if (lifecycle !== 'running') { setOpen(false); } }, [lifecycle]);
+  // m-2 (Review #395): wird das Turnier abgeschlossen (oder abgebrochen), bleibt kein offener Dialog zurück – auch nicht nach dem Wiederöffnen
+  // über den Notweg. Nur dieser Zustand schließt: ein kurzes Neuladen der Ansicht (Cloud-Stand wird gelesen) darf den Dialog nicht schließen.
+  const ended = lifecycle === 'finished' || lifecycle === 'cancelled';
+  useEffect(() => { if (ended) { setOpen(false); } }, [ended]);
 
   if (!canManage || local) {
     return null;
