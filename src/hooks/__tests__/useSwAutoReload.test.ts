@@ -70,6 +70,7 @@ function waitingStatus(pending: number): OutboxStatus {
     revokedByMatch: {},
     revokedWatchOnlyByMatch: {},
     afterFinishByMatch: {},
+    afterFinishByTournament: {},
     pausedMatches: {},
     authRequired: false,
     clientOutdated: false,

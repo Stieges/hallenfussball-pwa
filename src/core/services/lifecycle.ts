@@ -10,7 +10,8 @@
  * „Läuft“, bis die Turnierleitung abschließt. Die Alt-Haken `manuallyCompleted`, `completedAt`, `dashboardStatus`
  * und `statsSnapshot` zählen nicht mehr (Plan R3 E2, F9).
  */
-import type { Tournament } from '../../types/tournament';
+import type { Match, Tournament } from '../../types/tournament';
+import { matchSideTeamId } from '../models/matchSlot';
 
 /** Was der Server speichert. */
 export type StoredLifecycle = 'draft' | 'fixed' | 'finished' | 'cancelled';
@@ -70,4 +71,66 @@ export function isTournamentClosed(t: Pick<Tournament, 'status' | 'lifecycleStat
 /** @LZ-002 (MVP-Teil): welche Aktion zum Turnierende die App anbietet; ohne Recht `manageLifecycle` keine (@LZ-022). */
 export function actionsOffered(lifecycle: TournamentLifecycle, can: { manageLifecycle: boolean }): TournamentEndAction[] {
   return lifecycle === 'running' && can.manageLifecycle ? ['finish'] : [];
+}
+
+/**
+ * Stand eines Spiels für den Stand-Vergleich beim Turnierabschluss (A-21a-C1, R-EA-14, @LZ-029, Plan R3 E4). Schlüssel wie
+ * `match_engine.tournament_state` (Migration 20261113_003): Teams, Tore, Verlängerung, Strafstoßschießen, Status (fehlend =
+ * `scheduled`), wer bei einer Wertung fehlte. Fehlende Werte fehlen (dort `jsonb_strip_nulls`).
+ */
+export interface TournamentMatchState {
+  id: string;
+  ta?: string;
+  tb?: string;
+  a?: number;
+  b?: number;
+  oa?: number;
+  ob?: number;
+  pa?: number;
+  pb?: number;
+  s: string;
+  f?: string;
+}
+
+const present = <K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> =>
+  value === undefined ? {} : ({ [key]: value } as Record<K, V>);
+
+function matchState(m: Match): TournamentMatchState {
+  return {
+    id: m.id,
+    ...present('ta', matchSideTeamId(m, 'A')),
+    ...present('tb', matchSideTeamId(m, 'B')),
+    ...present('a', m.scoreA),
+    ...present('b', m.scoreB),
+    ...present('oa', m.overtimeScoreA),
+    ...present('ob', m.overtimeScoreB),
+    ...present('pa', m.penaltyScoreA),
+    ...present('pb', m.penaltyScoreB),
+    s: m.matchStatus ?? 'scheduled',
+    ...present('f', m.forfeitAbsent),
+  };
+}
+
+/**
+ * TS-Zwilling von `match_engine.tournament_state` (Gleichlauf `core/standings/__fixtures__/tournament-state.json`): Stand
+ * ALLER Spiele, nach Spiel-ID (Text) sortiert. Der Abschluss gilt nur für den Stand, auf dem das Gerät den Endstand
+ * gerechnet hat – gesendet wird der bestätigte Serverstand, die App rechnet nur, wenn ihr Stand ihm gleicht (E4).
+ */
+export function expectedTournamentState(t: Pick<Tournament, 'matches'>): TournamentMatchState[] {
+  return t.matches.map(matchState).sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+}
+
+/** Kanonische Form eines Stands (Reihenfolge der Spiele und Schlüssel egal) – für den Vergleich lokal ↔ Server. */
+function canonicalState(state: readonly TournamentMatchState[]): string {
+  const KEYS: ReadonlyArray<keyof TournamentMatchState> = ['id', 'ta', 'tb', 'a', 'b', 'oa', 'ob', 'pa', 'pb', 's', 'f'];
+  return JSON.stringify(
+    [...state]
+      .sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0))
+      .map((row) => KEYS.filter((key) => row[key] !== undefined && row[key] !== null).map((key) => [key, row[key]])),
+  );
+}
+
+/** Gleicht der lokale Stand dem bestätigten Serverstand (`finish_preflight.state`)? */
+export function sameTournamentState(a: readonly TournamentMatchState[], b: readonly TournamentMatchState[]): boolean {
+  return canonicalState(a) === canonicalState(b);
 }

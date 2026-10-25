@@ -17,7 +17,7 @@ import {
 import {
   MATCH_COPY_FORMAT_VERSION,
   applyResolution,
-  dismissRejectedEntries, closeHandedOverEntries,
+  dismissRejectedEntries, closeHandedOverEntries, closeAfterFinishEntries,
   matchCopyKey,
   normalizeCopy,
   rejectAllPendingEntries,
@@ -222,6 +222,11 @@ export class LocalMatchStore {
   /** B-50 Review M2: übergebene Einträge (`RIGHTS_REVOKED`) als übergeben abschließen – Recht ist zurück. */
   async closeHandedOver(key: string): Promise<void> {
     await this.update(key, closeHandedOverEntries);
+  }
+
+  /** R3-2b (Review #392 M2): nach dem Abschluss angekommene Einträge (`AFTER_FINISH`) als übergeben abschließen – wieder geöffnet. */
+  async closeAfterFinish(key: string): Promise<void> {
+    await this.update(key, closeAfterFinishEntries);
   }
 
   /**

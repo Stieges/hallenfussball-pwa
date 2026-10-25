@@ -97,7 +97,7 @@ describe('useTournamentManager.applyRemote — kein Speicherweg (Task A1, Fixrun
     expect(mockUpdateTournament).toHaveBeenCalledWith(updated);
   });
 
-  it('@W5-027 meldet nach dem Speichern „tournament-updated“, damit die Startseite ihre Liste neu lädt', async () => {
+  it('meldet nach dem Speichern „tournament-updated“, damit die Startseite ihre Liste neu lädt', async () => {
     const { result } = renderHook(() => useTournamentManager('tour-1'));
     await waitFor(() => expect(result.current.tournament).not.toBeNull());
     mockUpdateTournament.mockResolvedValueOnce(undefined);
@@ -105,14 +105,15 @@ describe('useTournamentManager.applyRemote — kein Speicherweg (Task A1, Fixrun
     window.addEventListener('tournament-updated', gehoert);
 
     await act(async () => {
-      await result.current.handleTournamentUpdate(makeTournament({ lifecycleStatus: 'finished' }));
+      // R3-2b (E10): ein abgeschlossenes Turnier wird gar nicht mehr gespeichert – hier ein gewöhnliches Speichern
+      await result.current.handleTournamentUpdate(makeTournament({ title: 'Umbenannt' }));
     });
     window.removeEventListener('tournament-updated', gehoert);
 
     expect(gehoert).toHaveBeenCalledTimes(1);
   });
 
-  it('@W5-027 Gegenbeispiel: scheitert das Speichern, wird nichts gemeldet', async () => {
+  it('Gegenbeispiel: scheitert das Speichern, wird nichts gemeldet', async () => {
     const { result } = renderHook(() => useTournamentManager('tour-1'));
     await waitFor(() => expect(result.current.tournament).not.toBeNull());
     mockUpdateTournament.mockRejectedValueOnce(new Error('offline'));

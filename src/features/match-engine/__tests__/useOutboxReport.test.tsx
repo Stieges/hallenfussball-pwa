@@ -16,15 +16,24 @@ const server = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock('../../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: { rpc: server.rpc } }));
 
 import { emptyOutboxStatus, type OutboxStatus } from '../../../core/match/client/outboxTypes';
-import { resetOwnFieldsForTests } from '../../../core/fieldControl/ownFields';
+import { ownFieldsByTournament, resetOwnFieldsForTests } from '../../../core/fieldControl/ownFields';
 import { MatchEngineContext, type MatchEngineContextValue } from '../matchEngineContextInstance';
-import { OUTBOX_REPORT_INTERVAL_MS, useOutboxReport } from '../useOutboxReport';
+import { OUTBOX_REPORT_DEBOUNCE_MS, OUTBOX_REPORT_INTERVAL_MS, useOutboxReport } from '../useOutboxReport';
 import { useFieldControl } from '../useFieldControl';
 
 const CLARA_FELD_2 = { field: 2, epoch: 4, holderName: 'Clara', holderRole: 'helper', holderDeviceLabel: 'phone', isMine: true, claimedAt: 1_790_000_000_000 };
 
 let status: OutboxStatus = emptyOutboxStatus();
-const sender = { getStatus: () => status, subscribe: () => () => undefined, kick: () => Promise.resolve() };
+let statusListener: ((s: OutboxStatus) => void) | null = null;
+const sender = {
+  getStatus: () => status,
+  subscribe: (listener: (s: OutboxStatus) => void) => { statusListener = listener; return () => { statusListener = null; }; },
+  kick: () => Promise.resolve(),
+};
+/** Der Ausgang meldet eine Änderung (wie `OutboxStatusBook` nach jedem Sende-Lauf). */
+function ausgangMeldet(): void {
+  act(() => { statusListener?.(status); });
+}
 const engine = { sender, accountId: 'clara' } as unknown as MatchEngineContextValue;
 const wrapper = ({ children }: { children: ReactNode }) => <MatchEngineContext.Provider value={engine}>{children}</MatchEngineContext.Provider>;
 
@@ -42,6 +51,7 @@ beforeEach(() => {
   sichtbar = 'visible';
   online = true;
   status = emptyOutboxStatus();
+  statusListener = null;
   resetOwnFieldsForTests();
   server.rpc.mockReset();
   server.rpc.mockImplementation(async (fn: string) => (fn === 'field_control_state' ? { data: [CLARA_FELD_2], error: null } : { data: null, error: null }));
@@ -142,5 +152,102 @@ describe('R3-2a useOutboxReport (@LZ-018, @FU-068)', () => {
     await weiter(OUTBOX_REPORT_INTERVAL_MS);
 
     expect(meldungen().map((args) => args.p_pending)).toEqual([3, 3]);
+  });
+});
+
+/**
+ * R3-2b, Auflagen aus Review #392: M1 (der Server darf keine veraltete Zahl „noch nicht übertragen“ behalten – bei Änderung
+ * sofort melden, beim Start abgleichen) und m1 (Feld-Stand beim Abmelden/Kontowechsel leeren). @LZ-018/@FU-068: die Warnung
+ * „Feld 2: 3 Einträge noch nicht übertragen“ darf nur stehen, solange wirklich etwas wartet.
+ */
+describe('R3-2b Review #392 M1/m1 – keine veraltete Zahl am Server', () => {
+  it('M1 @FU-068 Toms 3 Einträge sind übertragen: das Gerät meldet 0 sofort (entprellt), nicht erst nach 30 s', async () => {
+    wartend(3);
+    renderHook(() => useOutboxReport({ sender, accountId: 'tom' }));
+    await weiter(0);
+    status = { ...emptyOutboxStatus(), pendingByTournament: { 'live-cup': 0 } };
+    ausgangMeldet();
+    await weiter(OUTBOX_REPORT_DEBOUNCE_MS);
+
+    expect(meldungen().map((args) => args.p_pending)).toEqual([3, 0]);
+    expect(OUTBOX_REPORT_DEBOUNCE_MS).toBeLessThan(OUTBOX_REPORT_INTERVAL_MS);
+  });
+
+  it('M1 (a) Tom sperrt das Handy direkt nach dem Senden: die Änderung auf 0 wird trotzdem gemeldet (mit Netz)', async () => {
+    wartend(1);
+    renderHook(() => useOutboxReport({ sender, accountId: 'tom' }));
+    await weiter(0);
+    sichtbar = 'hidden';
+    status = { ...emptyOutboxStatus(), pendingByTournament: { 'live-cup': 0 } };
+    ausgangMeldet();
+    await weiter(OUTBOX_REPORT_DEBOUNCE_MS);
+
+    expect(meldungen().map((args) => args.p_pending)).toEqual([1, 0]);
+  });
+
+  it('M1 mehrere Änderungen eines Sende-Laufs ergeben eine Meldung', async () => {
+    renderHook(() => useOutboxReport({ sender, accountId: 'tom' }));
+    await weiter(0);
+    for (const n of [3, 2, 1]) {
+      status = { ...emptyOutboxStatus(), pendingByTournament: { 'live-cup': n } };
+      ausgangMeldet();
+      await weiter(100);
+    }
+    await weiter(OUTBOX_REPORT_DEBOUNCE_MS);
+
+    expect(meldungen().map((args) => args.p_pending)).toEqual([1]);
+  });
+
+  it('M1 (b) neu geladen: das Gerät hat Kopien des Live-Cups mit 0 wartend → einmal 0 melden (Abgleich), danach Ruhe', async () => {
+    status = { ...emptyOutboxStatus(), pendingByTournament: { 'live-cup': 0 } };
+    renderHook(() => useOutboxReport({ sender, accountId: 'tom' }));
+    await weiter(0);
+    await weiter(3 * OUTBOX_REPORT_INTERVAL_MS);
+
+    expect(meldungen()).toEqual([{ p_tournament_id: 'live-cup', p_device_id: 'clara-handy', p_field: null, p_pending: 0 }]);
+  });
+
+  it('M1 (b) die Kopien sind beim Start noch nicht gezählt: der Abgleich folgt, sobald der Ausgang sie meldet', async () => {
+    renderHook(() => useOutboxReport({ sender, accountId: 'tom' }));
+    await weiter(0);
+    expect(meldungen()).toEqual([]);
+    status = { ...emptyOutboxStatus(), pendingByTournament: { 'live-cup': 0, 'winter-cup': 0 } };
+    ausgangMeldet();
+    await weiter(OUTBOX_REPORT_DEBOUNCE_MS);
+
+    expect(meldungen().map((args) => args.p_tournament_id)).toEqual(['live-cup', 'winter-cup']);
+  });
+
+  it('Gegenbeispiel M1: ein gescheiterter Abgleich (z. B. kein Recht mehr) wird nicht alle 30 s wiederholt', async () => {
+    status = { ...emptyOutboxStatus(), pendingByTournament: { 'alt-cup': 0 } };
+    server.rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'keine Berechtigung' } });
+    renderHook(() => useOutboxReport({ sender, accountId: 'tom' }));
+    await weiter(0);
+    await weiter(3 * OUTBOX_REPORT_INTERVAL_MS);
+
+    expect(meldungen()).toHaveLength(1);
+  });
+
+  it('m1 Kontowechsel: der Feld-Stand des vorigen Kontos ist weg – das neue Konto meldet kein fremdes Feld', async () => {
+    await claraSteuertFeld2();
+    expect(ownFieldsByTournament()).toEqual({ 'live-cup': [2] });
+    const hook = renderHook(({ accountId }) => useOutboxReport({ sender, accountId }), { initialProps: { accountId: 'clara' } });
+    await weiter(0);
+    server.rpc.mockClear();
+
+    hook.rerender({ accountId: 'maria' });
+    await weiter(0);
+    await weiter(OUTBOX_REPORT_INTERVAL_MS);
+
+    expect(ownFieldsByTournament()).toEqual({});
+    expect(meldungen()).toEqual([]);
+  });
+
+  it('m1 Abmelden (Konto → Gast): der Feld-Stand ist weg', async () => {
+    await claraSteuertFeld2();
+    const hook = renderHook(({ accountId }) => useOutboxReport({ sender, accountId }), { initialProps: { accountId: 'clara' } });
+    await weiter(0);
+    hook.rerender({ accountId: 'guest' });
+    expect(ownFieldsByTournament()).toEqual({});
   });
 });

@@ -7,7 +7,8 @@
  *
  * Regel je Turnier und Takt (30 s): melden, wenn Einträge warten (jeden Takt – die Zahl bleibt frisch), wenn dieses Gerät ein Feld
  * steuert (auch 0 – sonst gälte es nach 2 Minuten als still) oder wenn sich Zahl oder Feld seit der letzten Meldung geändert haben
- * (z. B. von 3 auf 0). Sonst nichts. Feld = das niedrigste Feld, das dieses Gerät steuert, sonst unbekannt (`null`).
+ * (z. B. von 3 auf 0); beim Start einmal je Turnier mit Kopien auf dem Gerät, auch 0 (Abgleich, Review #392 M1). Sonst nichts.
+ * Feld = das niedrigste Feld, das dieses Gerät steuert, sonst unbekannt (`null`).
  * Kopien ohne Turnier (Schlüssel '') melden nichts.
  */
 
@@ -24,6 +25,12 @@ export interface OutboxReportInput {
   ownFieldsByTournament: Readonly<Record<string, readonly number[]>>;
   /** Zuletzt erfolgreich gemeldet, je Turnier. */
   lastSent: Readonly<Record<string, OutboxReport>>;
+  /**
+   * Turniere, die in diesem Seitenleben schon (mindestens versucht) gemeldet wurden (Review #392 M1, Start-Abgleich). Ein
+   * Turnier mit Kopien auf dem Gerät, das hier fehlt, wird einmal gemeldet – auch mit 0: der Server kann aus einem früheren
+   * Seitenleben oder Konto noch eine Zahl > 0 halten. Fehlt die Angabe, gibt es keinen Abgleich.
+   */
+  reconciled?: ReadonlySet<string>;
 }
 
 function lowestField(fields: readonly number[] | undefined): number | null {
@@ -44,7 +51,8 @@ export function dueOutboxReports(input: OutboxReportInput): OutboxReport[] {
     const field = lowestField(input.ownFieldsByTournament[tournamentId]);
     const last = input.lastSent[tournamentId] as OutboxReport | undefined;
     const changed = last !== undefined && (last.pending !== pending || last.field !== field);
-    if (pending > 0 || field !== null || changed) {
+    const unreconciled = input.reconciled !== undefined && !input.reconciled.has(tournamentId) && tournamentId in input.pendingByTournament;
+    if (pending > 0 || field !== null || changed || unreconciled) {
       due.push({ tournamentId, field, pending });
     }
   }

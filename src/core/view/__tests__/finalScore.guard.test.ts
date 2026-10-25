@@ -37,6 +37,7 @@ const ALLOWED: Readonly<Record<string, string>> = {
   'core/match/client/viewAdapters.ts': 'Engine-Zustand → Cockpit-Form',
   'core/services/TournamentCreationService.ts': 'Status beim Veröffentlichen übernehmen',
   'core/services/matchResultStatusDiff.ts': 'Feldliste Ergebnis-Diff',
+  'core/services/lifecycle.ts': 'R3-2b Stand-Vergleich beim Abschluss (expectedTournamentState = Zwilling match_engine.tournament_state), transportiert die Spalten, rechnet keinen Endstand',
   'hooks/useTournamentManager.ts': 'Rohdaten → Match',
   // Cockpit: bis Cockpit 4.3 (Neubau), danach nur noch matchFinalScore
   'components/live-cockpit/LiveCockpit.tsx': 'Cockpit, bis Cockpit 4.3',
