@@ -652,7 +652,7 @@ describe('mapTournamentFromSupabase', () => {
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-10T12:00:00Z',
       deleted_at: '2026-01-15T00:00:00Z',
-      completed_at: '2026-01-14T18:00:00Z',
+      finished_at: '2026-01-14T18:00:00Z',
     });
     const tournament = mapTournamentFromSupabase(row, [], []);
 
@@ -660,7 +660,7 @@ describe('mapTournamentFromSupabase', () => {
     expect(tournament.createdAt).toBe('2026-01-01T00:00:00Z');
     expect(tournament.updatedAt).toBe('2026-01-10T12:00:00Z');
     expect(tournament.deletedAt).toBe('2026-01-15T00:00:00Z');
-    expect(tournament.completedAt).toBe('2026-01-14T18:00:00Z');
+    expect(tournament.finishedAt).toBe('2026-01-14T18:00:00Z');
   });
 
   it('K2: mappt is_public, share_code und share_code_created_at', () => {

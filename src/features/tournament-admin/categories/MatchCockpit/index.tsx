@@ -15,6 +15,9 @@ import type { Tournament, MatchCockpitSettings } from '../../../../types/tournam
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
 import { MatchRulesSection } from './MatchRulesSection';
 import { sectionSecondsOf } from './sectionSeconds';
+import { ForfeitScoreField } from '../../../../components/match-settings/ForfeitScoreField';
+import { changeForfeitScore, effectiveForfeitScore, forfeitScoreLocked } from '../../../../core/models/forfeit';
+import type { ForfeitScore } from '../../../../types/tournament';
 
 // =============================================================================
 // PROPS
@@ -79,6 +82,18 @@ export function MatchCockpitCategory({
         [tournament, onTournamentUpdate, canChangeRules]
     );
 
+    // @W2A-025 / @W2A-078: Wertung bei Nichtantritt – gesperrt, sobald ein Spiel so gewertet ist (Regel `changeForfeitScore`)
+    const handleForfeitScoreChange = useCallback(
+        (next: ForfeitScore) => {
+            const change = changeForfeitScore(tournament, next);
+            if (!canChangeRules || !change.ok) {
+                return;
+            }
+            onTournamentUpdate({ ...tournament, forfeitScore: change.forfeitScore });
+        },
+        [tournament, onTournamentUpdate, canChangeRules]
+    );
+
     // Handle test sound
     const handleTestSound = useCallback(() => {
         void sound.testPlay();
@@ -98,6 +113,12 @@ export function MatchCockpitCategory({
                     finalPhaseMinutes={cockpitSettings.finalPhaseMinutes}
                     sectionSeconds={sectionSecondsOf(tournament)}
                     onFinalPhaseChange={(finalPhaseMinutes) => handleCockpitSettingsChange({ ...cockpitSettings, finalPhaseMinutes })}
+                />
+                <ForfeitScoreField
+                    value={effectiveForfeitScore(tournament)}
+                    locked={forfeitScoreLocked(tournament)}
+                    disabled={!canChangeRules}
+                    onChange={handleForfeitScoreChange}
                 />
                 <MatchCockpitSettingsPanel
                     settings={cockpitSettings}

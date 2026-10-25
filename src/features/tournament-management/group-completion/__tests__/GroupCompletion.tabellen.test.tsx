@@ -41,6 +41,9 @@ import { TabellenTab } from '../../TabellenTab';
 import { StandingTieProvider } from '../../standings/StandingTieProvider';
 import { GroupCompletionProvider } from '../GroupCompletionProvider';
 import { groupTestId } from '../groupTestId';
+import { reassignAfterCorrection, recompletionKey } from '../../../../core/services/followUps';
+import { markRecompletionFailed, resetRecompletionFailures } from '../../../../hooks/recompletionFailures';
+import { draftToDecision } from '../../../../core/services/groupCompletionPlan';
 
 interface FakeRepo {
   completeGroup: ReturnType<typeof vi.fn<(tournamentId: string, request: CompleteGroupRequest) => Promise<CompleteGroupResult>>>;
@@ -107,7 +110,13 @@ const placeAll = (t: Tournament): Tournament['matches'] => ['A', 'B'].reduce((ac
 
 const marke = (g: string): string => screen.getByTestId(`group-state-${groupTestId(g)}`).textContent ?? '';
 
-beforeEach(() => { cleanup(); });
+beforeEach(() => { cleanup(); resetRecompletionFailures(); });
+
+/** Der Auslöser nach der Korrektur (A-15b) ist gescheitert: dann zeigt die Tabelle „Besetzung prüfen“ wieder (Review #384 M3). */
+const autoGescheitert = (t: Tournament, groupId: string): void => {
+  const request = reassignAfterCorrection(t, groupId);
+  if (request !== null) { markRecompletionFailed(recompletionKey(t.id, request)); }
+};
 
 describe('groupTestId (Auflage 1): genau eine Stelle bildet die Gruppe \'\' auf \'all\' ab', () => {
   it('\'\' → \'all\', Buchstaben bleiben', () => {
@@ -570,7 +579,21 @@ describe('@TM-072 @TM-099 Gruppe wieder öffnen', () => {
 describe('@TM-145 @TM-150 Besetzung prüfen nach einer Korrektur', () => {
   const veraltet = (t: Tournament): Tournament => ({ ...t, groupCompletions: [completion('', [NK.kammer, NK.wagingRot, NK.petting, NK.otting, NK.fridolfing, NK.wagingBlau], { stale: true })] });
 
-  it('Banner (warn) „Besetzung nach Korrektur prüfen“ mit der Haupttaste (offener Gleichstand mit Wahl: „Gleichstand entscheiden“); das Zustandswort bleibt „abgeschlossen“', async () => {
+  it('@TM-150 Zeile 2 (Review #384 M3): erledigt der Auslöser die Gruppe gleich, erscheint „Besetzung prüfen“ nicht', async () => {
+    await zeige(veraltet(nikolaus([1, 2])));
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    expect(screen.queryByTestId('group-stale-all')).toBeNull();
+    expect(marke('')).toBe('abgeschlossen');
+  });
+
+  it('@TM-150 Zeile 1: Gleichstand auf einem auszuspielenden Platz – der Auslöser kann nicht, „Besetzung prüfen“ steht', async () => {
+    await zeige(veraltet(nikolaus([1, 2, 3])));
+    await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
+    expect(screen.getByTestId('group-stale-all')).toHaveTextContent('Besetzung nach Korrektur prüfen');
+  });
+
+  it('Banner (warn) „Besetzung nach Korrektur prüfen“ nach einem gescheiterten Versuch des Auslösers, mit der Haupttaste (offener Gleichstand mit Wahl: „Gleichstand entscheiden“); das Zustandswort bleibt „abgeschlossen“', async () => {
+    autoGescheitert(veraltet(nikolaus([1, 2])), '');
     await zeige(veraltet(nikolaus([1, 2])));
     await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
     expect(screen.getByTestId('group-stale-all')).toHaveTextContent('Besetzung nach Korrektur prüfen');
@@ -582,6 +605,7 @@ describe('@TM-145 @TM-150 Besetzung prüfen nach einer Korrektur', () => {
     { zeile: 'Gleichstand auf einem auszuspielenden Platz ohne Folgespiel', plaetze: [1, 2, 3], dialog: true },
     { zeile: 'Gleichstand auf einem Platz, der nicht auszuspielen ist', plaetze: [1, 2], dialog: false },
   ])('@TM-150 $zeile → Entscheidung verlangt: $dialog', async ({ plaetze, dialog }) => {
+    autoGescheitert(veraltet(nikolaus(plaetze)), ''); // Zeile 2: Taste nur sichtbar, wenn der Auslöser es nicht erledigt hat
     const { repo } = await zeige(veraltet(nikolaus(plaetze)));
     await userEvent.click(screen.getByRole('button', { name: rankingTitle('de') }));
     await userEvent.click(screen.getByTestId('group-close-button-all'));
@@ -735,10 +759,13 @@ describe('Reihenfolge der Tasten und Beschriftung bei drei Teams (Review #361 A2
  * Lage nach der Korrektur: Gruppe A abgeschlossen und veraltet (`stale`), die alte Entscheidung ist verfallen, Süd/West gleich.
  */
 describe('@TM-151 „Erneut abschließen“ verlangt bei offenem Gleichstand mit Folgespiel zuerst das Strafstoßschießen', () => {
-  const korrigiert = (): Tournament => ({
-    ...hallencup(),
-    groupCompletions: [completion('A', [HC.nord, HC.west, HC.sued, HC.ost], { stale: true })],
-  });
+  // Nach der Korrektur hat der Auslöser (A-15b) Platz 2 und 3 schon auf die Herkunft zurückgesetzt: der Abschluss trägt die
+  // aktuelle Rangfolge mit offenen Plätzen, die Gruppe bleibt veraltet („Besetzung prüfen“, @TM-145)
+  const korrigiert = (): Tournament => {
+    const t = hallencup();
+    const request = reassignAfterCorrection({ ...t, groupCompletions: [completion('A', [HC.nord, HC.west, HC.sued, HC.ost], { stale: true })] }, 'A');
+    return { ...t, groupCompletions: [completion('A', request?.ranking ? [...request.ranking] : [], { stale: true, openRanks: [2, 3] })] };
+  };
 
   it('@TM-151 die Taste öffnet zuerst das Strafstoßschießen zwischen SV Süd und TSV West; ohne Eingabe wird nichts abgeschlossen', async () => {
     const { repo } = await zeige(korrigiert());
@@ -804,6 +831,35 @@ describe('@W2A-060 die erste Entscheidung gilt, die zweite Person sieht von wem'
     expect(hinweis).toHaveTextContent('Olli hat schon entschieden');
     expect(hinweis).not.toHaveTextContent('abgeschlossen');
     expect(screen.queryByTestId('group-conflict')).toBeNull();
+  });
+
+  it('@W2A-060 kurz danach (R2 PR 2): Ollis Abschluss kommt per Neuladen an, während Marias Dialog offen ist → der Hinweis nennt trotzdem Olli', async () => {
+    const repo = fakeRepo();
+    repo.completeGroup.mockResolvedValue({ status: 'rejected', code: 'COMPLETED_DIFFERENTLY' });
+    const { neuGeladen } = await zeige(mitVerlauf(gruppeA(), []), { repo });
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    neuGeladen(mitVerlauf(gruppeA(), [eintrag(1, 'standing_decision', 'Olli'), eintrag(2, 'complete_group', 'Olli')]));
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    expect(await screen.findByTestId('group-conflict')).toHaveTextContent('Olli hat schon anders entschieden');
+  });
+
+  it('@W2A-060 kurz danach (R2 PR 2): Ollis Entscheidung ist per Neuladen schon auf Marias Gerät → der Dialog zeigt „Schon entschieden von Olli“, nichts gespeichert', async () => {
+    const repo = fakeRepo();
+    const ohne = mitVerlauf(gruppeA(), []);
+    const { neuGeladen } = await zeige(ohne, { repo });
+    await userEvent.click(screen.getByTestId('group-close-button-A'));
+    await screen.findByTestId('tie-decision-dialog');
+    const olli = draftToDecision(ohne, { groupId: 'A', teamIds: [HC.sued, HC.west], order: [HC.west, HC.sued], kind: 'shootout', shootout: { winner: 4, loser: 3 } }, 'e-olli');
+    const { reason: _r, ...entscheidung } = olli;
+    neuGeladen({ ...mitVerlauf(gruppeA(), [{ ...eintrag(1, 'standing_decision', 'Olli'), detail: { id: 'e-olli', teamIds: [HC.sued, HC.west] } }]), standingDecisions: [entscheidung] });
+    await userEvent.type(screen.getByTestId('tie-shootout-score-0'), '5');
+    await userEvent.type(screen.getByTestId('tie-shootout-score-1'), '4');
+    await userEvent.click(screen.getByTestId('group-close-confirm'));
+    expect(await screen.findByTestId('tie-seen')).toHaveTextContent('Schon entschieden von Olli');
+    expect(repo.completeGroup).not.toHaveBeenCalled();
   });
 
   it('@W2A-060 Gegenbeispiel (Review #382 M3): alter Abschluss von Maria, danach wieder geöffnet → nie „Maria hat …“, sondern allgemein', async () => {

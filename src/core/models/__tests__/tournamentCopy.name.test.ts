@@ -44,7 +44,7 @@ describe('@W5-025 Datum der Probe', () => {
     const k = kopie(proposeProbeDate({ startDate: '2026-11-14' }, HEUTE));
     expect(k.startDate).toBe('2026-11-21');
     expect(k.date).toBe('2026-11-21');
-    expect(categorizeTournament(k, HEUTE)).toBe('upcoming');
+    expect(categorizeTournament(k)).toBe('upcoming');
   });
   // KB-3c: Archiv nur nach Abschluss (@LZ-001, @LZ-006, Befund C-ARCHIV-NACH-DATUM). Die Kopie ist weder abgeschlossen
   // noch abgebrochen und nichts ist angepfiffen, also „Festgelegt“ (kommend); das alte Datum allein archiviert nicht.
@@ -52,11 +52,11 @@ describe('@W5-025 Datum der Probe', () => {
     const ohne = buildCopiedTournament({ ...hallencupOstGespielt(), startDate: '2026-11-14', date: '2026-11-14' }, {
       newId: crypto.randomUUID(), title: 'x', now: HEUTE.toISOString(), makeId: () => crypto.randomUUID(),
     });
-    expect(categorizeTournament(ohne, HEUTE)).toBe('upcoming');
+    expect(categorizeTournament(ohne)).toBe('upcoming');
   });
   it('Original in der Zukunft: Datum übernommen, Kopie bei „kommend“', () => {
     const k = kopie(proposeProbeDate({ startDate: '2026-12-05' }, HEUTE));
     expect(k.startDate).toBe('2026-12-05');
-    expect(categorizeTournament(k, HEUTE)).toBe('upcoming');
+    expect(categorizeTournament(k)).toBe('upcoming');
   });
 });

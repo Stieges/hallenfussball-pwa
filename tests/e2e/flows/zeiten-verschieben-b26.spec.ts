@@ -13,9 +13,16 @@ const TEAMS = Array.from({ length: 6 }, (_, i) => `00000000-0000-4000-8000-00000
 const MATCH = (n: number) => `00000000-0000-4000-8000-0000000026b${n}`;
 const BILDER = process.env.B26_BILDER;
 
+/**
+ * Feste Uhr (C-E2E-B26-MITTERNACHT): der Test rechnete mit der echten Uhrzeit und wurde nachts rot (23:30 -> „neues Ende
+ * 00:13“ am Folgetag, Nacht der Zeitumstellung -> „2 statt 3 Spiele“). Jetzt steht „jetzt“ im Browser UND in der
+ * Testrechnung auf einem normalen Wintertag mittags ohne Zeitumstellung: Dienstag 10.11.2026, 12:00 Uhr Berlin (MEZ, UTC+1).
+ */
+const JETZT = new Date('2026-11-10T11:00:00Z');
+
 /** Spielbeginn als Wanduhr: Spiel 1 liegt 30 Minuten vor jetzt (auf 5 Minuten abgerundet). */
 function base(): Date {
-  const d = new Date();
+  const d = new Date(JETZT);
   d.setSeconds(0, 0);
   d.setMinutes(d.getMinutes() - (d.getMinutes() % 5) - 30);
   return d;
@@ -30,7 +37,7 @@ const kickoff = (n: number) => new Date(base().getTime() + (n - 1) * 12 * 60_000
 function turnier(): Record<string, unknown> {
   const date = berlin(base(), 'date'); // nie toISOString: zwischen 0 und 2 Uhr wäre das der Vortag (B5)
   const status = (n: number) => (n <= 2 ? { matchStatus: 'finished', scoreA: 1, scoreB: 0 } : n === 3
-    ? { matchStatus: 'running', scoreA: 0, scoreB: 0, timerStartTime: new Date().toISOString(), timerElapsedSeconds: 0 }
+    ? { matchStatus: 'running', scoreA: 0, scoreB: 0, timerStartTime: JETZT.toISOString(), timerElapsedSeconds: 0 }
     : { matchStatus: 'scheduled' });
   const matches = Array.from({ length: 8 }, (_, i) => {
     const n = i + 1;
@@ -52,7 +59,7 @@ function turnier(): Record<string, unknown> {
     date, timeSlot: '10:00 - 14:00', startDate: date, startTime: clock(base()), location: { name: 'Halle Nord' },
     teams: TEAMS.map((id, i) => ({ id, name: ['FC Nord', 'SC Ost', 'SV Süd', 'TSV West', 'DJK Berg', 'TuS Tal'][i], group: 'A' })),
     matches,
-    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    createdAt: JETZT.toISOString(), updatedAt: JETZT.toISOString(),
   };
 }
 
@@ -82,7 +89,9 @@ async function shiftFromFirstOpen(page: Page): Promise<void> {
 
 test.describe('B-26 Zeiten verschieben (offline)', () => {
   test.use({ timezoneId: 'Europe/Berlin' });
-  test.beforeEach(async ({ seedIndexedDB }) => {
+  test.beforeEach(async ({ page, seedIndexedDB }) => {
+    // Datum und Uhrzeit im Browser fest (Zeitgeber laufen weiter echt); vor dem ersten Laden der App
+    await page.clock.setFixedTime(JETZT);
     await seedIndexedDB({ tournaments: [turnier()] });
   });
 

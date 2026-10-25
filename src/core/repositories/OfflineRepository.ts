@@ -507,6 +507,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             );
             const cloud = await Promise.race([this.supabaseRepo.listWithMemberships(), timeoutPromise]);
             if (cloud.membershipError) { captureFeatureError(cloud.membershipError, 'repository', 'listMemberships'); }
+            if (cloud.startedError) { captureFeatureError(cloud.startedError, 'repository', 'listStarted'); }
             if (this.accountId !== undefined) {
                 await this.localRepo.assignUnmarkedOwners(this.accountId, new Set(cloud.tournaments.filter(t => t.myRole === 'owner').map(t => t.id)));
             }

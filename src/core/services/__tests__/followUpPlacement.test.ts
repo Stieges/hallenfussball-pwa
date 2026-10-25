@@ -46,3 +46,44 @@ describe('placeFollowUps', () => {
     expect(result.changed).toEqual([]);
   });
 });
+
+/**
+ * R2 PR 2 – Befund C-LOKALER-NEUABSCHLUSS-KEIN-ZWILLING: der erneute Abschluss im lokalen Speicher (Gast) besetzt wie der Server.
+ * @TM-071: Gruppe A war abgeschlossen mit 1. SV Süd, 2. FC Nord; nach der Korrektur ist FC Nord Erster → Halbfinale 1 Heim FC Nord,
+ * Halbfinale 2 Gast SV Süd (beide nicht angepfiffen). Gegenbeispiele @TM-099 (angepfiffen bleibt), @TM-073 (von Hand bleibt),
+ * @TM-145 (offener Platz geht auf die Herkunft zurück), @EK-017 (gleiche Rangfolge ändert nichts).
+ */
+describe('placeFollowUps beim erneuten Abschluss (@TM-071, Gast-Zwilling)', () => {
+  const ALT = [HC.sued, HC.nord, HC.west, HC.ost];
+  const abgeschlossen = () => placeFollowUps(t(), 'A', ALT).tournament;
+
+  it('@TM-071 neue Rangfolge Nord, Süd: Halbfinale 1 Heim FC Nord, Halbfinale 2 Gast SV Süd, beide neu besetzt', () => {
+    const { tournament, changed } = placeFollowUps(abgeschlossen(), 'A', RANG);
+    expect(seite(tournament, '1. Halbfinale', 'slotA')).toBe(HC.nord);
+    expect(seite(tournament, '2. Halbfinale', 'slotB')).toBe(HC.sued);
+    expect(changed.map((c) => c.result)).toEqual(['reassigned', 'reassigned']);
+    expect(matchLabelled(tournament, '1. Halbfinale').slotA).toMatchObject({ resolvedFrom: { kind: 'groupRank', group: 'A', rank: 1 } });
+  });
+
+  it('@TM-099 Gegenbeispiel: Halbfinale 1 schon angepfiffen → seine Heimseite bleibt SV Süd, Halbfinale 2 wird neu besetzt', () => {
+    const start = abgeschlossen();
+    const hf1 = matchLabelled(start, '1. Halbfinale');
+    const angepfiffen = { ...start, matches: start.matches.map((m) => (m.id === hf1.id ? { ...m, matchStatus: 'running' as const } : m)) };
+    const { tournament } = placeFollowUps(angepfiffen, 'A', RANG);
+    expect(seite(tournament, '1. Halbfinale', 'slotA')).toBe(HC.sued);
+    expect(seite(tournament, '2. Halbfinale', 'slotB')).toBe(HC.sued);
+  });
+
+  it('@TM-145 Platz 2 offen: Halbfinale 2 Gast geht zurück auf „Zweiter Gruppe A“ (Herkunft), Halbfinale 1 neu besetzt', () => {
+    const { tournament, changed } = placeFollowUps(abgeschlossen(), 'A', RANG, [2]);
+    expect(matchLabelled(tournament, '2. Halbfinale').slotB).toMatchObject({ kind: 'pending', source: { kind: 'groupRank', group: 'A', rank: 2 } });
+    expect(changed).toContainEqual(expect.objectContaining({ result: 'released' }));
+  });
+
+  it('@EK-017 Gegenbeispiel: gleiche Rangfolge → nichts neu besetzt, dasselbe Turnier', () => {
+    const start = abgeschlossen();
+    const result = placeFollowUps(start, 'A', ALT);
+    expect(result.changed).toEqual([]);
+    expect(result.tournament).toBe(start);
+  });
+});

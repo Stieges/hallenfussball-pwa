@@ -1,13 +1,14 @@
 /**
  * @W5-027 – Nach der Generalprobe wird die Kopie archiviert, das Original bleibt.
+ * R3-1: die alten Knöpfe „Turnier beenden“/„Turnier archivieren“ (setzten nur einen Haken) sind weg (C-FINISH-PROMISE); der Weg
+ * über den Abschluss-Dialog kommt mit R3-4 – bis dahin ist der Archiv-Weg der Probe-Kopie rot (`it.fails`).
  * Gherkin: docs/anforderungen/2026-09-27_wizard-nach-dem-anlegen.md. Die Löschsperre (@LZ-003, @LZ-090) bleibt ohne Ausnahme.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import type { Tournament } from '../../../../../types/tournament';
 import { buildCopiedTournament } from '../../../../../core/models/tournamentCopy';
-import { hallencupOstGespielt, OST_ID } from '../../../../../core/models/__fixtures__/hallencupOstGespielt';
+import { hallencupOstGespielt } from '../../../../../core/models/__fixtures__/hallencupOstGespielt';
 import { categorizeTournament, getExtendedCategories } from '../../../../../utils/tournamentCategories';
 
 vi.mock('../../../../auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: true }) }));
@@ -19,8 +20,6 @@ vi.mock('../../../../auth/hooks/useTournamentMembers', () => ({
 }));
 
 import { DangerZoneCategory } from '../index';
-
-const JETZT = new Date('2026-11-20T10:00:00.000Z');
 
 /** „Hallencup Ost (Probe)“ mit gespielter Generalprobe: ein Spiel beendet, der Rest noch offen. */
 function gespielteKopie(): Tournament {
@@ -37,26 +36,14 @@ function renderDangerZone(tournament: Tournament, onTournamentUpdate = vi.fn()) 
   return onTournamentUpdate;
 }
 
-async function archivieren() {
-  const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: /Turnier archivieren/i }));
-  const dialog = screen.getByRole('dialog');
-  await user.type(within(dialog).getByRole('textbox'), 'ARCHIVIEREN');
-  await user.click(within(dialog).getByRole('button', { name: /Turnier archivieren/i }));
-}
-
 describe('@W5-027 Kopie nach der Generalprobe archivieren', () => {
-  it('@W5-027 die Kopie steht vor dem Archivieren auf der Startseite, danach im Archiv und nicht mehr dort', async () => {
+  it('@W5-027 die gespielte Kopie steht auf der Startseite bei „Läuft“; ist sie am Server abgeschlossen, im Archiv und nicht mehr dort', () => {
     const kopie = gespielteKopie();
-    // KB-3c: ein Spiel ist beendet, also angepfiffen: „Läuft“ (@LZ-001), nicht mehr „kommend“ (früher nur über das Datum).
-    expect(categorizeTournament(kopie, JETZT)).toBe('running');
+    // KB-3c: ein Spiel ist beendet, also angepfiffen: „Läuft“ (@LZ-001), nicht mehr „kommend“.
+    expect(categorizeTournament({ ...kopie, lifecycleStatus: 'fixed' })).toBe('running');
 
-    const onUpdate = renderDangerZone(kopie);
-    await archivieren();
-
-    const archiviert = onUpdate.mock.calls[0][0] as Tournament;
-    expect(archiviert.id).toBe(kopie.id);
-    const kategorien = getExtendedCategories([archiviert], JETZT);
+    const archiviert: Tournament = { ...kopie, lifecycleStatus: 'finished', finishedAt: '2026-11-20T11:00:00.000Z' };
+    const kategorien = getExtendedCategories([archiviert]);
     expect(kategorien.finished.map((t) => t.id)).toEqual([kopie.id]);
     expect(kategorien.upcoming).toEqual([]);
     expect(kategorien.running).toEqual([]);
@@ -65,18 +52,15 @@ describe('@W5-027 Kopie nach der Generalprobe archivieren', () => {
     expect(archiviert.deletedAt).toBeUndefined();
   });
 
-  it('@W5-027 das Original bleibt mit allen Spielen, Helfern und Bildschirmen unverändert und wird nicht gespeichert', async () => {
-    const original = hallencupOstGespielt();
-    const kopie = buildCopiedTournament(original, {
-      newId: crypto.randomUUID(), title: 'Hallencup Ost (Probe)', now: '2026-11-20T10:00:00.000Z', makeId: () => crypto.randomUUID(),
-    });
-    const onUpdate = renderDangerZone(kopie);
-    await archivieren();
+  it.fails('@W5-027 C-FINISH-PROMISE Olli kann die gespielte Kopie im Gefahrenbereich archivieren (Weg kommt mit R3-4, Abschluss-Dialog)', () => {
+    renderDangerZone(gespielteKopie());
+    expect(screen.getByRole('button', { name: /Turnier archivieren|Turnier abschließen/i })).toBeInTheDocument();
+  });
 
-    expect(onUpdate).toHaveBeenCalledTimes(1);
-    expect((onUpdate.mock.calls[0][0] as Tournament).id).not.toBe(OST_ID);
-    expect(original).toEqual(hallencupOstGespielt());
-    expect(original.monitors).toHaveLength(1);
+  it('C-FINISH-PROMISE Gegenbeispiel: die alten Knöpfe „Turnier beenden“ und „Turnier archivieren“ gibt es nicht mehr, auch nicht für die Turnierleitung', () => {
+    renderDangerZone(gespielteKopie());
+    expect(screen.queryByRole('button', { name: /Turnier beenden/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Turnier archivieren/i })).not.toBeInTheDocument();
   });
 
   // Gegenbeispiel: die Löschsperre @LZ-003/@LZ-090 gilt auch für die Probe-Kopie, sobald ein Spiel angepfiffen wurde

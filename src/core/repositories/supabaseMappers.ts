@@ -28,6 +28,7 @@ import { completeMatchCockpitSettings } from '../../types/tournament';
 // queue's JSON round-trip.
 import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 import { RepositoryError } from '../errors';
+import { parseStoredLifecycle } from '../services/lifecycle';
 import { SlotSourceSchema, TeamIdSchema, type MatchSlot, type SlotSource } from '../models/schemas/MatchSlotSchema';
 import { pendingSlot, slotSource, slotTeamId, teamSlot } from '../models/matchSlot';
 import { ensureMatchNumbers, sortByMatchNumber } from '../models/matchNumbers';
@@ -479,13 +480,10 @@ interface TournamentConfig {
   breakBetweenPhases?: number;
 
   // Dashboard metadata
-  dashboardStatus?: string;
   tournamentSystem?: string;
-  statsSnapshot?: unknown;
   cancelledReason?: string;
   cancelledAt?: string;
   adminNotes?: string;
-  manuallyCompleted?: boolean;
 
   // Match cockpit settings
   matchCockpitSettings?: unknown;
@@ -639,12 +637,11 @@ export function mapTournamentFromSupabase(
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     lastVisitedStep: config.lastVisitedStep,
-    manuallyCompleted: config.manuallyCompleted,
-    completedAt: row.completed_at ?? undefined,
+    // R3-1 (E2): der Zustand kommt vom Server; die Alt-Haken (manuallyCompleted, completed_at, dashboardStatus, statsSnapshot) zählen nicht
+    lifecycleStatus: parseStoredLifecycle(row.lifecycle_status),
+    finishedAt: row.finished_at ?? undefined,
     deletedAt: row.deleted_at ?? undefined,
-    dashboardStatus: config.dashboardStatus as Tournament['dashboardStatus'],
     tournamentSystem: config.tournamentSystem as Tournament['tournamentSystem'],
-    statsSnapshot: config.statsSnapshot as Tournament['statsSnapshot'],
     cancelledReason: config.cancelledReason,
     cancelledAt: config.cancelledAt,
     adminNotes: config.adminNotes,
@@ -748,13 +745,10 @@ export function mapTournamentToSupabase(
     organizer: tournament.organizer,
     rulebook: tournament.rulebook, ...bibColorToConfig(tournament), ...spectatorDisplayToConfig(tournament), // A-30a: Leibchenfarbe (@W3-029); 2.1: Anzeige für Zuschauer (@ZM-152)
     contactInfo: tournament.contactInfo,
-    dashboardStatus: tournament.dashboardStatus,
     tournamentSystem: tournament.tournamentSystem,
-    statsSnapshot: tournament.statsSnapshot,
     cancelledReason: tournament.cancelledReason,
     cancelledAt: tournament.cancelledAt,
     adminNotes: tournament.adminNotes,
-    manuallyCompleted: tournament.manuallyCompleted,
     matchCockpitSettings: tournament.matchCockpitSettings,
     lastVisitedStep: tournament.lastVisitedStep,
     isExternal: tournament.isExternal,
@@ -794,7 +788,6 @@ export function mapTournamentToSupabase(
     referee_config: (tournament.refereeConfig ?? null) as unknown as Json,
     config: config as unknown as Json,
     deleted_at: tournament.deletedAt ?? null,
-    completed_at: tournament.completedAt ?? null,
     version: tournament.version ?? 1, // BP-1 C-TURNIER-VERSION-NULL: nie eine Zeile ohne Version (Backfill + NOT NULL: DB-Fenster)
   };
 

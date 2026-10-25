@@ -4,7 +4,8 @@ import type {
     CompleteGroupRequest, CompleteGroupResult, RecordDecisionRequest, RecordDecisionResult, ReopenGroupResult,
 } from './groupCompletionCloud';
 import { applyCompleteGroup, applyCompletionSent, applyRecordDecision, applyReopenGroup, type LocalChange } from './localGroupCompletion';
-import { OptimisticLockError } from '../errors';
+import { ForfeitScoreLockedError, OptimisticLockError } from '../errors';
+import { forfeitScoreChangeLocked } from '../models/forfeit';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { hydrateTournament } from './hydration';
@@ -139,6 +140,10 @@ export class LocalStorageRepository implements ITournamentRepository {
         // C-VERSION-MEHRDEUTIG: der Inhalt beruht auf der bestätigten Version der Nutzlast -- sie geht mit, die gestempelte Zahl nicht.
         // @FU-110: liegt sie in der Kette eigener Uploads, beruht er auf der aktuellen bestätigten Version (Kette bleibt).
         const existing = index >= 0 ? list[index] : undefined;
+        // @W2A-078: eigenes Speichern ändert die Wertung bei Nichtantritt nicht, solange ein Spiel so gewertet ist
+        if (!cached && existing !== undefined && forfeitScoreChangeLocked(existing, tournament)) {
+            throw new ForfeitScoreLockedError();
+        }
         const base = ownChainBase(checkedVersion(tournament), existing);
         const chain = existing?.ownUploadsFrom !== undefined && base === existing.serverVersion ? existing.ownUploadsFrom : undefined;
         const stamp = cached ? {} : {

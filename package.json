@@ -26,6 +26,7 @@
     "test:e2e:desktop": "playwright test --project=desktop",
     "test:e2e:all-viewports": "playwright test --project=mobile-sm --project=mobile-md --project=tablet-portrait --project=desktop",
     "test:e2e:cloud": "bash scripts/require-local-stack.sh && playwright test --project=cloud-setup --project=cloud-desktop --project=cloud-mobile",
+    "test:prod-smoke": "bash scripts/prod-smoke.sh",
     "test:e2e:cloud:fresh": "npm run test:env:reset && npm run test:e2e:cloud",
     "test:a11y": "playwright test tests/e2e/usability/accessibility.spec.ts",
     "test:visual": "bash scripts/visual-in-container.sh compare",

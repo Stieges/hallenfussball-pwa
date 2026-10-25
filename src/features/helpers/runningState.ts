@@ -17,7 +17,7 @@ export const RUNNING_GRACE_DAYS = 1;
 
 import type { HelperAccessEntry } from '../../core/repositories/helperAccessRpc';
 import type { Tournament } from '../../types/tournament';
-import { isTournamentCompleted } from '../../utils/tournamentCategories';
+import { isTournamentClosed } from '../../core/services/lifecycle';
 
 /** `YYYY-MM-DD` in Ortszeit des Geräts. */
 export function localDateKey(now: Date): string {
@@ -65,7 +65,7 @@ function wasKickedOff(tournament: Tournament): boolean {
 
 /** Läuft das eigene Turnier auf dem Gerät? */
 export function isRunningOwnTournament(tournament: Tournament, now: Date): boolean {
-  if (tournament.status !== 'published' || tournament.deletedAt || tournament.cancelledAt || isTournamentCompleted(tournament)) {
+  if (tournament.status !== 'published' || tournament.deletedAt || tournament.cancelledAt || isTournamentClosed(tournament)) {
     return false;
   }
   const day = toDateKey(tournament.startDate ?? tournament.date);

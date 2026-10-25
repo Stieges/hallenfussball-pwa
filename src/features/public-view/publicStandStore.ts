@@ -63,7 +63,7 @@ const STAND_TOURNAMENT_KEYS = [
   'gamePeriods', 'halftimeBreak', 'gameDuration', 'breakDuration', 'roundLogic', 'numberOfRounds', 'placementLogic', 'placementsToPlayOut',
   'finalsConfig', 'refereeConfig', 'fieldAssignments', 'groups', 'fields', 'finals', 'playoffConfig', 'minRestSlots', 'isKidsTournament',
   'hideScoresForPublic', 'hideRankingsForPublic', 'resultMode', 'pointSystem', 'title', 'ageClass', 'date', 'timeSlot', 'startDate',
-  'startTime', 'location', 'organizer', 'rulebook', 'teams', 'matches', 'createdAt', 'updatedAt', 'completedAt', 'tournamentSystem',
+  'startTime', 'location', 'organizer', 'rulebook', 'teams', 'matches', 'createdAt', 'updatedAt', 'tournamentSystem',
   'matchCockpitSettings', 'version', 'isPublic', 'shareCode', 'publishedAt', 'bibColor', 'spectatorDisplay', 'hostTeamIds',
   'standingDecisions', 'groupCompletions', 'forfeitScore', 'openingMode',
 ] as const satisfies readonly (keyof Tournament)[];

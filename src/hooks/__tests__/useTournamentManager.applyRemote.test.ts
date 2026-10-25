@@ -105,7 +105,7 @@ describe('useTournamentManager.applyRemote — kein Speicherweg (Task A1, Fixrun
     window.addEventListener('tournament-updated', gehoert);
 
     await act(async () => {
-      await result.current.handleTournamentUpdate(makeTournament({ manuallyCompleted: true }));
+      await result.current.handleTournamentUpdate(makeTournament({ lifecycleStatus: 'finished' }));
     });
     window.removeEventListener('tournament-updated', gehoert);
 

@@ -30,6 +30,8 @@ export interface NikolausCup {
   monitorId: string;
   /** Der Helfer (Tom) ist Mitglied des Turniers. */
   mitHelfer: boolean;
+  /** Die Co-Admin (Maria, Konto `coadmin`) ist Mitglied des Turniers – Zwei-Geräte-Nachweis @W2A-060 (R2 PR 2). */
+  mitCoAdmin: boolean;
   teamId: (name: (typeof E2E_NIKOLAUS_TEAM_NAMES)[number]) => string;
 }
 /** Sa 28.11.2026, Start 16:30. */
@@ -76,6 +78,7 @@ export const E2E_NIKOLAUS_CUPS: Record<NikolausVariante, NikolausCup> = {
     shareCode: E2E_NIKOLAUS_SHARE_CODE,
     monitorId: E2E_NIKOLAUS_MONITOR_ID,
     mitHelfer: false,
+    mitCoAdmin: true,
     teamId: nikolausTeamId,
   },
   zeitplan: {
@@ -85,6 +88,7 @@ export const E2E_NIKOLAUS_CUPS: Record<NikolausVariante, NikolausCup> = {
     shareCode: E2E_NIKOLAUS_ZEITPLAN_SHARE_CODE,
     monitorId: E2E_NIKOLAUS_ZEITPLAN_MONITOR_ID,
     mitHelfer: true,
+    mitCoAdmin: false,
     teamId: (name) => e2eUuid(`team:nikolaus-cup:zeitplan:${name}`),
   },
 };

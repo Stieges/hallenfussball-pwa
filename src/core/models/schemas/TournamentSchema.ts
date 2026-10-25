@@ -149,7 +149,9 @@ export const TournamentSchema = z.object({
     createdAt: z.string(),
     updatedAt: z.string(),
     deletedAt: z.string().optional(),
-    completedAt: z.string().optional(),
+    // R3-1: Zustand vom Server; ein Fremdwert in der lokalen Kopie zählt als „nicht gesetzt“
+    lifecycleStatus: z.enum(['draft', 'fixed', 'finished', 'cancelled']).optional().catch(undefined),
+    finishedAt: z.string().optional(),
     cancelledAt: z.string().optional(),
     cancelledReason: z.string().optional(),
     lastVisitedStep: z.number().optional(),

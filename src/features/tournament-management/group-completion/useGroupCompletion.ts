@@ -20,6 +20,8 @@ import type { OpenTieBlock } from '../../../core/standings/tieViews';
 import type { Tournament } from '../../../types/tournament';
 import { useStandingTie } from '../standings/standingTieContext';
 import { lastLogId } from './completionLog';
+import { reassignAfterCorrection, recompletionKey } from '../../../core/services/followUps';
+import { recompletionFailed, useRecompletionFailuresVersion } from '../../../hooks/recompletionFailures';
 
 export type ReadyPlan = Extract<CompletionPlan, { code: 'READY' }>;
 
@@ -32,7 +34,7 @@ export type CompletionFlow =
   | { step: 'idle' }
   | { step: 'tie'; groupId: string; blocks: OpenTieBlock[]; decisions: NewDecision[] }
   | { step: 'confirm'; groupId: string; plan: ReadyPlan; busy: boolean; error: CompletionError | null }
-  /** `knownLogId`: höchste Verlaufs-Kennung beim Absenden – genannt wird nur, wer danach eingetragen hat (@W2A-060). */
+  /** `knownLogId`: höchste Verlaufs-Kennung beim Start des Ablaufs – genannt wird nur, wer danach eingetragen hat (@W2A-060). */
   | { step: 'notice'; groupId: string; kind: NoticeKind; open?: number; knownLogId?: number }
   | { step: 'reopen'; groupId: string; reason: string; busy: boolean; error: ReopenError | null };
 
@@ -78,15 +80,30 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
   const flowRef = useRef(flow);
   flowRef.current = flow;
   const draftAccepted = useRef(false);
+  const startLogId = useRef(0);
   const canManage = tie?.canDecide ?? false;
   const online = tie?.online ?? true;
   const onChanged = tie?.onChanged;
 
   const proposals = useMemo(() => (canManage ? proposeGroupCompletion(tournament) : []), [canManage, tournament]);
-  const staleGroups = useMemo(
-    () => (canManage ? groupIds(tournament).filter((g) => groupState(tournament, g) === 'stale') : []),
-    [canManage, tournament],
-  );
+  // Review #384 M3 (@TM-150 Zeile 2 „ohne dass ‚Besetzung prüfen‘ erscheint“): eine veraltete Gruppe, die der Auslöser nach der
+  // Korrektur gleich erneut abschließt (Leitung, mit Netz, Anfrage vorhanden, noch nicht gescheitert), zeigt den Hinweis nicht
+  const failuresVersion = useRecompletionFailuresVersion();
+  const staleGroups = useMemo(() => {
+    if (!canManage) {
+      return [];
+    }
+    const autoDone = (g: string): boolean => {
+      if (!online) {
+        return false;
+      }
+      const request = reassignAfterCorrection(tournament, g);
+      return request !== null && !recompletionFailed(recompletionKey(tournament.id, request));
+    };
+    return groupIds(tournament).filter((g) => groupState(tournament, g) === 'stale' && !autoDone(g));
+    // failuresVersion: neu rechnen, sobald ein Versuch scheitert oder gelingt
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManage, online, tournament, failuresVersion]);
 
   const reload = useCallback(() => { onChanged?.(); }, [onChanged]);
 
@@ -121,7 +138,7 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
 
   const submit = useCallback(async (groupId: string, plan: ReadyPlan): Promise<void> => {
     setFlow({ step: 'confirm', groupId, plan, busy: true, error: null });
-    const knownLogId = lastLogId(tournament); // Stand des Verlaufs beim Absenden (@W2A-060)
+    const knownLogId = startLogId.current; // Stand des Verlaufs beim Start des Ablaufs (@W2A-060)
     try {
       if (tournamentRepository.completeGroup === undefined) {
         throw new Error('Repository kann Gruppen nicht abschließen');
@@ -130,7 +147,7 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
     } catch (error) {
       setFlow({ step: 'confirm', groupId, plan, busy: false, error: errorOf(error) });
     }
-  }, [tournamentRepository, tournament, handleResult]);
+  }, [tournamentRepository, tournament.id, handleResult]);
 
   const route = useCallback((groupId: string, decisions: NewDecision[]): void => {
     const plan = planCompletion(tournament, groupId, decisions);
@@ -147,7 +164,11 @@ export function useGroupCompletion(tournament: Tournament): GroupCompletionApi {
     }
   }, [tournament, submit]);
 
-  const begin = useCallback((groupId: string) => { route(groupId, []); }, [route]);
+  const begin = useCallback((groupId: string) => {
+    // @W2A-060: was das Gerät beim Start schon kannte, nennt der Hinweis nie (auch nicht, wenn der Stand währenddessen neu lädt)
+    startLogId.current = lastLogId(tournament);
+    route(groupId, []);
+  }, [route, tournament]);
 
   const acceptDraft = useCallback((draft: DecisionDraft): void => {
     const current = flowRef.current;

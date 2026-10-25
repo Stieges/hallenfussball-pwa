@@ -21,7 +21,7 @@ import { SettingsCategory } from '../index';
 
 describe('@ZP-095 Schloss an Spielzeit und Pause', () => {
   it('@ZP-095 Antippen des Schlosses erklärt die Sperre und führt zu „Zeiten verschieben“', () => {
-    const turnier = { ...hallencupOstGespielt(), completedAt: undefined };
+    const turnier = { ...hallencupOstGespielt(), lifecycleStatus: 'fixed' as const, finishedAt: undefined };
     render(<SettingsCategory tournamentId={turnier.id} tournament={turnier} onTournamentUpdate={vi.fn()} />);
     fireEvent.click(screen.getByText('Spielzeiten'));
     fireEvent.click(screen.getByTestId('settings-lock-game'));
@@ -32,7 +32,7 @@ describe('@ZP-095 Schloss an Spielzeit und Pause', () => {
   });
 
   it('@ZP-095 Gegenbeispiel: nach dem Abschluss nennt der Satz „Zeiten verschieben“ nicht', () => {
-    const turnier = { ...hallencupOstGespielt(), completedAt: '2026-11-14T18:00:00.000Z' };
+    const turnier = { ...hallencupOstGespielt(), lifecycleStatus: 'finished' as const, finishedAt: '2026-11-14T18:00:00.000Z' };
     render(<SettingsCategory tournamentId={turnier.id} tournament={turnier} onTournamentUpdate={vi.fn()} />);
     fireEvent.click(screen.getByText('Spielzeiten'));
     fireEvent.click(screen.getByTestId('settings-lock-break'));

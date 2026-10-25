@@ -3,8 +3,8 @@
  *
  * @W5-024 @W5-025 B1: Angemeldet liefert die Startseiten-Liste nur Kopfdaten ohne Teams und Spiele
  *   (`SupabaseRepository.listForCurrentUser`). Die Kopie über die Startseite muss trotzdem Teams und Spielplan haben.
- * @W5-027 B2: Die archivierte Kopie steht auch nach sofortigem Neuladen (Änderung noch in der Warteschlange) nicht mehr
- *   auf der Startseite, sondern im Archiv; nach dem Abgleich mit dem Server bleibt es so.
+ * @W5-027 B2 (Kopie archivieren, Archiv nach dem Neuladen): entfällt mit R3-1, der Weg kommt mit R3-4 (Abschluss-Dialog);
+ *   hier bewusst ohne Kennung im Testnamen, damit die Szenario-Abdeckung nichts Ungeprüftes zählt.
  *
  * Lauf nur in der CI („Cloud E2E Tests (lokaler Supabase-Stack)“), nur cloud-desktop. Die Kopie wird am Ende per
  * Service-Role entfernt; das Original (Live-Cup) wird nur gelesen.
@@ -41,7 +41,7 @@ test.describe('Kopie fürs Proben gegen den lokalen Stack', () => {
     test.skip(!testInfo.project.name.includes('desktop'), 'Nur cloud-desktop.');
   });
 
-  test('@W5-024 @W5-025 @W5-027 Startseite kopiert ein Turnier mit Teams und Spielen; die Kopie wird archiviert und bleibt nach dem Neuladen im Archiv', async ({ asRole }) => {
+  test('@W5-024 @W5-025 Startseite kopiert ein Turnier mit Teams und Spielen, das Original bleibt unverändert', async ({ asRole }) => {
     test.setTimeout(180_000);
     const probeName = `Cloud-Probe ${Date.now()}`;
     const originalBefore = (await rows<TournamentRow>(`tournaments?id=eq.${E2E_LIVE_CUP_ID}&select=id,title,status,is_public,share_code`))[0];
@@ -58,6 +58,9 @@ test.describe('Kopie fürs Proben gegen den lokalen Stack', () => {
       await page.goto('/#/');
       const trigger = page.getByTestId(`tournament-${E2E_LIVE_CUP_ID}-actions-trigger`);
       await expect(trigger).toBeVisible({ timeout: 30000 });
+      // R3-1 (@LZ-001): ist der Abschnitt der Karte eingeklappt (anderes Turnier läuft), zuerst öffnen
+      const kopf = page.locator('[data-testid^="section-"]', { has: trigger }).locator('[aria-expanded]').first();
+      if ((await kopf.getAttribute('aria-expanded')) === 'false') { await kopf.click(); }
       await trigger.scrollIntoViewIfNeeded();
       await trigger.click();
       await page.getByTestId('action-menu-item-copy').click();
@@ -93,28 +96,8 @@ test.describe('Kopie fürs Proben gegen den lokalen Stack', () => {
       expect(originalBefore.title).toBe(E2E_LIVE_CUP_TITLE);
 
       // --- B2: archivieren, sofort neu laden ---
-      const updatedAt = async () => (await rows<{ updated_at: string }>(`tournaments?id=eq.${copy.id}&select=updated_at`))[0].updated_at;
-      const updatedAtVorher = await updatedAt();
-      await page.goto(`/#/tournament/${copy.id}/admin/danger-zone`);
-      await page.getByRole('button', { name: /Turnier archivieren/i }).click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('textbox').fill('ARCHIVIEREN');
-      await dialog.getByRole('button', { name: /Turnier archivieren/i }).click();
-      await expect(dialog).toBeHidden();
-
-      const karte = (p: typeof page) => p.locator(`[data-testid="tournament-card-${copy.id}"]`);
-      for (const phase of ['sofort nach dem Archivieren', 'nach dem Abgleich mit dem Server']) {
-        if (phase.startsWith('nach')) {
-          // Abgleich mit dem Server abwarten: die Archivierung ist in der Datenbank angekommen
-          await expect.poll(updatedAt, { timeout: 60000, message: 'Archivierung beim Server' }).not.toBe(updatedAtVorher);
-        }
-        await page.goto('/#/');
-        await page.reload();
-        await expect(page.getByTestId(`tournament-${E2E_LIVE_CUP_ID}-actions-trigger`), phase).toBeVisible({ timeout: 30000 });
-        await expect(karte(page), `Startseite ${phase}`).toHaveCount(0);
-        await page.goto('/#/archiv');
-        await expect(karte(page), `Archiv ${phase}`).toBeVisible({ timeout: 15000 });
-      }
+      // R3-1: die alten Knöpfe „Turnier archivieren“/„Turnier beenden“ sind weg (C-FINISH-PROMISE). Der Weg über den
+      // Abschluss-Dialog kommt mit R3-4; dann hier wieder archivieren und Startseite/Archiv nach dem Neuladen prüfen.
     } finally {
       await page.context().close();
       if (copyId) { await removeCopy(copyId); }

@@ -16,6 +16,7 @@ import { Tournament } from '../types/tournament';
 import { MatchUpdate } from '../core/models/types';
 import { useToast } from '../components/ui/Toast';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useAutoRecompletion } from '../hooks/useAutoRecompletion';
 import { useTournamentManager } from '../hooks/useTournamentManager';
 import { ManagementHeader, ManagementMobileNav } from './ManagementChrome';
 import { useCockpitFrame } from '../components/live-cockpit/frame/cockpitFrame';
@@ -102,6 +103,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   // Paket TB-B: nach dem Eintragen oder Zurücknehmen einer Gleichstands-Entscheidung frisch aus der Cloud lesen
   const reloadFresh = useCallback(() => { void reload({ fresh: true }); }, [reload]);
+  // A-15b (@TM-071, @TM-150): nach einer angenommenen Korrektur schließt das Gerät der Turnierleitung die Gruppe erneut ab
+  useAutoRecompletion(tournamentId, tournament, reloadFresh);
 
 
   // A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): result entry in

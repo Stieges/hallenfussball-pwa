@@ -18,6 +18,8 @@ import {
   PlayOutPlacesSection,
 } from './components';
 import { MatchCockpitSettingsPanel } from '../../components/match-settings/MatchCockpitSettingsPanel';
+import { ForfeitScoreField } from '../../components/match-settings/ForfeitScoreField';
+import { changeForfeitScore, effectiveForfeitScore, forfeitScoreLocked } from '../../core/models/forfeit';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -418,6 +420,15 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             }}>
               {t('step2.cockpitDescription')}
             </p>
+            {/* @W2A-025 / @W2A-078: Wertung bei Nichtantritt, gesperrt sobald ein Spiel so gewertet ist */}
+            <ForfeitScoreField
+              value={effectiveForfeitScore(formData)}
+              locked={forfeitScoreLocked({ matches: formData.matches ?? [] })}
+              onChange={(next) => {
+                const change = changeForfeitScore({ matches: formData.matches ?? [], forfeitScore: formData.forfeitScore }, next);
+                if (change.ok) { onUpdate('forfeitScore', change.forfeitScore); }
+              }}
+            />
             <MatchCockpitSettingsPanel
               settings={cockpitSettings}
               onChange={handleCockpitSettingsChange}

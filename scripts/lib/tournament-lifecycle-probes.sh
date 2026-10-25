@@ -166,6 +166,13 @@ run_twins() {
     got="$(q "BEGIN; SELECT CASE WHEN lc.state_case(\$J\$$row\$J\$::jsonb) = (\$J\$$row\$J\$::jsonb -> 'expected') THEN 'gleich' ELSE lc.state_case(\$J\$$row\$J\$::jsonb)::text END; ROLLBACK;" | grep -v '^$' | tail -1)"
     check G "tournament-state.json: $(jq -r '.name' <<<"$row")" "gleich" "$got"
   done
+  # lifecycle-of.json (Zwilling lifecycleOf, R3-1): gespeicherter Zustand + Spielstaende -> public.tournament_lifecycle
+  n="$(jq '.cases | length' "$FIX_DIR/lifecycle-of.json")"
+  for ((i = 0; i < n; i++)); do
+    row="$(jq -c ".cases[$i]" "$FIX_DIR/lifecycle-of.json")"
+    got="$(q "BEGIN; SELECT lc.life_case(\$J\$$row\$J\$::jsonb); ROLLBACK;" | grep -v '^$' | head -1)"
+    check G "lifecycle-of.json: $(jq -r '.name' <<<"$row")" "$(jq -r '.expected' <<<"$row")" "$got"
+  done
 }
 
 # ---------------------------------------------------------------------------------------------------------
@@ -539,7 +546,8 @@ run_catalog() {
 run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | q "$(cat)" 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE '^(monitor-heartbeat-[a-z0-9-]+|public-read-[a-z0-9-]+)\|' || true)"
+  # Zeilen spaeterer Migrationen (nach der Zielmigration, im Lauf erst im AFTER-Block): hier noch nicht eingespielt, also |f
+  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE '^(monitor-heartbeat-[a-z0-9-]+|public-read-[a-z0-9-]+|matches-guard-schedule-times-[a-z0-9-]+|matches-bump-change-revision-[a-z0-9-]+|klaerungsliste-[a-z0-9-]+)\|' || true)"
   check S "Rechte-Assertion: die A-21a-Zeilen (lifecycle-*) vorhanden und |t" "16|16" \
     "$(grep -cE '^lifecycle-[a-z0-9-]+\|' <<<"$priv")|$(grep -cE '^lifecycle-[a-z0-9-]+\|t$' <<<"$priv")"
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
