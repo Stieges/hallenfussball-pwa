@@ -615,7 +615,8 @@
     "matchLoading": "Spiel wird geladen...",
     "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden",
     "enginePreparing": "Spiel wird vorbereitet …",
-    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen"
+    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen",
+    "resultEnteredLead": "Für dieses Spiel ist ein Ergebnis eingetragen. Korrigieren geht im Spielplan."
   },
   "tables": {
     "single": "Tabelle",
@@ -1177,7 +1178,7 @@
     "leadOnlyHint": "Ändern nur durch die Turnierleitung",
     "closedTitle": "Turnier abgeschlossen",
     "closedBack": "Zurück zum Turnier",
-    "closedHint": "Das Turnier ist abgeschlossen – hier lässt sich nichts mehr ändern.",
+    "closedHint": "Das Turnier ist abgeschlossen. Ergebnisse, Spielplan und Teams sind gesperrt.",
     "closedSaveBlocked": "Das Turnier ist abgeschlossen – die Änderung wurde nicht gespeichert."
   },
   "standingsTie": {
@@ -1624,6 +1625,154 @@
       "uebernommen": "{{what}} – übernommen von {{by}}, {{time}}",
       "verworfen": "{{what}} – verworfen von {{by}}, {{time}}",
       "turnierleitung": "der Turnierleitung"
+    }
+  },
+  "finish": {
+    "open": "Turnier abschließen",
+    "title": "Turnier abschließen",
+    "close": "Schließen",
+    "cancel": "Abbrechen",
+    "section": {
+      "suggestionTitle": "Alles entschieden",
+      "suggestionText": "Alles entschieden – Endstand prüfen und Turnier abschließen.",
+      "statusTitle": "Turnierstand",
+      "gamesDone": "{{done}} von {{total}} Spielen beendet.",
+      "reviewsOpen_one": "{{count}} Eintrag in der Klärungsliste ist noch offen.",
+      "reviewsOpen_other": "{{count}} Einträge in der Klärungsliste sind noch offen.",
+      "lateHint": "Das letzte Spiel war am {{date}}. Das Turnier läuft noch. Schließe es ab, wenn alles entschieden ist."
+    },
+    "blocked": {
+      "title": "Das Turnier kann noch nicht abgeschlossen werden.",
+      "lead_one": "{{count}} Ding ist noch offen. Tippe auf den Eintrag, um direkt dorthin zu springen.",
+      "lead_other": "{{count}} Dinge sind noch offen. Tippe auf einen Eintrag, um direkt dorthin zu springen.",
+      "after": "Sobald alles erledigt ist, kannst du das Turnier abschließen.",
+      "back": "Zurück zur Verwaltung"
+    },
+    "item": {
+      "field": "Feld {{field}}",
+      "match": "Spiel {{number}}",
+      "matchUnknown": "Ein Spiel",
+      "matchRunning": "{{name}} läuft noch",
+      "matchUndecided": "{{name}} ist noch offen",
+      "groupOpen": "{{group}} ist noch nicht abgeschlossen",
+      "groupOpenSingle": "Gruppe noch nicht abgeschlossen",
+      "groupOpenDetail": "Schließe die Gruppe in der Tabelle ab.",
+      "groupStale": "{{group}} muss neu abgeschlossen werden",
+      "groupStaleSingle": "Gruppe muss neu abgeschlossen werden",
+      "groupStaleDetail": "Ein Ergebnis hat sich nach dem Abschluss der Gruppe geändert.",
+      "tieOpen": "Gleichstand auf Platz {{places}}: Entscheidung nötig",
+      "tieOpenDetail": "{{names}} sind gleichauf. Die Gruppe ist noch nicht abgeschlossen.",
+      "noticeOpen": "Folgen-Hinweis ist offen",
+      "noticeOpenDetail": "Eine Korrektur ändert, wer im Spiel {{number}} antritt. Prüfe den Hinweis.",
+      "noticeOpenDetailPlain": "Eine Korrektur ändert, wer in einem Folgespiel antritt. Prüfe den Hinweis.",
+      "clarificationOpen": "Eine Klärung ist offen",
+      "clarificationOpenDetail": "Eine Aktion der Turnierleitung traf auf einen Konflikt. Prüfe sie in der Tabelle.",
+      "reviewOpen": "Klärungsliste: Eintrag zu Spiel {{number}}",
+      "reviewOpenPlain": "Klärungsliste: Eintrag offen",
+      "reviewOpenDetail": "Der Eintrag muss erst geklärt werden",
+      "unknown": "Noch etwas ist offen",
+      "unknownDetail": "Der Server meldet einen offenen Punkt, den diese App-Version nicht kennt. Lade die App neu.",
+      "and": "und"
+    },
+    "ready": {
+      "winner": "Sieger",
+      "shootout": "Platz 1 per Strafstoßschießen entschieden: {{winner}}:{{loser}} gegen {{other}}",
+      "podium": "Endstand: Plätze 1 bis 3",
+      "points": "{{points}} Pkt",
+      "showAll": "Alle {{count}} Plätze anzeigen",
+      "hideAll": "Weniger Plätze anzeigen",
+      "allPlaces": "Endstand: alle Plätze",
+      "played": "Spielen gespielt",
+      "skipped": "ausgefallen",
+      "teams": "Teams",
+      "consequences": "Das passiert beim Abschließen",
+      "saveWithScorers": "Endstand und Torschützen werden gespeichert.",
+      "saveStandings": "Der Endstand wird gespeichert.",
+      "locked": "Danach kann niemand mehr Ergebnisse ändern.",
+      "codes": "Helfer-Codes werden ungültig.",
+      "display": "Zuschauer und Monitor zeigen den Endstand.",
+      "reopen": "Wieder öffnen geht nur über den Betreiber.",
+      "confirm": "Turnier abschließen",
+      "playedOf": "{{played}} von {{total}}"
+    },
+    "warning": {
+      "outbox_one": "Feld {{field}}: {{count}} Eintrag noch nicht übertragen",
+      "outbox_other": "Feld {{field}}: {{count}} Einträge noch nicht übertragen",
+      "outboxNoField_one": "{{count}} Eintrag noch nicht übertragen",
+      "outboxNoField_other": "{{count}} Einträge noch nicht übertragen",
+      "outboxDetail": "Stand {{time}}. Du kannst trotzdem abschließen. Was später ankommt, zählt nicht im Endstand.",
+      "silent": "Feld {{field}}: Gerät meldet sich nicht",
+      "silentDetail": "Das Gerät hat sich seit {{time}} nicht gemeldet, vielleicht ist der Bildschirm gesperrt oder das Netz weg. Du kannst trotzdem abschließen. Was dort noch nicht übertragen ist, zählt nicht im Endstand.",
+      "silentDetailNoTime": "Das Gerät hat sich nicht gemeldet, vielleicht ist der Bildschirm gesperrt oder das Netz weg. Du kannst trotzdem abschließen. Was dort noch nicht übertragen ist, zählt nicht im Endstand.",
+      "outboxDetailNoTime": "Du kannst trotzdem abschließen. Was später ankommt, zählt nicht im Endstand."
+    },
+    "checking": "Der Stand wird geprüft …",
+    "offline": {
+      "title": "Kein Netz",
+      "text": "Turnier abschließen braucht eine Verbindung. Schalte WLAN oder mobile Daten ein. Sobald die Verbindung steht, prüft der Dialog von selbst neu. Das Turnier bleibt so lange geöffnet.",
+      "hint": "Abschließen geht erst mit Verbindung"
+    },
+    "sending": {
+      "title": "Der Endstand wird gespeichert.",
+      "text": "Das dauert einen Moment. Schließe die App nicht und lade die Seite nicht neu.",
+      "hint": "Bitte warte, bis das Speichern fertig ist.",
+      "button": "Wird gespeichert"
+    },
+    "error": {
+      "title": "Das Turnier ist noch nicht abgeschlossen.",
+      "text": "Beim Speichern ist etwas schiefgegangen. Es wurde nichts verändert, das Turnier läuft weiter. Tippe auf „Erneut versuchen“. Klappt es mehrmals nicht, prüfe dein Netz oder versuche es in einer Minute noch einmal.",
+      "retry": "Erneut versuchen",
+      "checkFailed": "Der Stand konnte nicht geprüft werden. Es wurde nichts verändert. Tippe auf „Erneut versuchen“.",
+      "forbidden": "Nur die Turnierleitung kann das Turnier abschließen. Es wurde nichts verändert.",
+      "local": "Dieses Turnier liegt nur auf diesem Gerät. Abschließen geht nur für Turniere mit Konto.",
+      "ownOutbox_one": "Erst übertragen: Dieses Gerät hat noch {{count}} Eintrag nicht übertragen. Warte, bis die Übertragung fertig ist, und tippe dann auf „Erneut versuchen“.",
+      "ownOutbox_other": "Erst übertragen: Dieses Gerät hat noch {{count}} Einträge nicht übertragen. Warte, bis die Übertragung fertig ist, und tippe dann auf „Erneut versuchen“.",
+      "stale": "Der Stand hat sich geändert, seit du den Dialog geöffnet hast. Lade den Stand neu und prüfe den Abschluss noch einmal.",
+      "staleButton": "Stand neu laden",
+      "provisional": "Der Endstand ist noch vorläufig. Schließe zuerst die Gruppe ab und entscheide offene Gleichstände.",
+      "notRunning": "Das Turnier läuft noch nicht. Abschließen geht erst, wenn ein Spiel angepfiffen wurde.",
+      "cancelled": "Das Turnier ist abgebrochen und lässt sich nicht abschließen.",
+      "alreadyFinished": "Das Turnier ist bereits abgeschlossen.",
+      "alreadyFinishedAt": "Das Turnier ist bereits abgeschlossen (am {{date}}, {{time}} Uhr).",
+      "alreadyFinishedBy": "Das Turnier hat {{name}} bereits abgeschlossen.",
+      "alreadyFinishedByAt": "Das Turnier hat {{name}} bereits abgeschlossen (am {{date}}, {{time}} Uhr).",
+      "alreadyFinishedClose": "Zur Verwaltung"
+    },
+    "unconfirmed": {
+      "title": "Noch nicht bestätigt",
+      "text": "Der Server hat nicht rechtzeitig geantwortet. Dein Abschluss ist vielleicht angekommen. Tippe auf „Erneut versuchen“: Das Turnier wird höchstens einmal abgeschlossen.",
+      "asking": "Der Stand beim Server wird abgefragt …",
+      "finished": "Der Server meldet: Das Turnier ist abgeschlossen.",
+      "running": "Der Server meldet: Das Turnier ist noch nicht abgeschlossen.",
+      "unknown": "Der Stand beim Server ist gerade nicht lesbar."
+    },
+    "closed": {
+      "title": "Turnier abgeschlossen am {{date}}, {{time}} Uhr",
+      "titleNoDate": "Turnier abgeschlossen",
+      "text": "Ergebnisse, Spielplan und Teams sind gesperrt. Helfer-Codes sind ungültig. Der Endstand ist gespeichert.",
+      "reopen": "Wieder öffnen geht nur über den Betreiber.",
+      "standings": "Endstand",
+      "standingsUnavailable": "Der gespeicherte Endstand konnte gerade nicht gelesen werden.",
+      "shootout": "Strafstoßschießen {{winner}}:{{loser}}",
+      "openPublic": "Zuschauer-Ansicht öffnen",
+      "openPublicHint": "Öffnet die Seite, die Zuschauer sehen.",
+      "notPublic": "Die öffentliche Ansicht ist nicht eingeschaltet. Du kannst sie unter „Sichtbarkeit“ freigeben."
+    },
+    "late": {
+      "title": "Nach dem Ende eingetroffen",
+      "text": "Diese Einträge kamen erst nach dem Abschluss an. Die Einträge zählen nicht im Endstand und bleiben hier erhalten.",
+      "empty": "Bisher ist nach dem Abschluss nichts eingetroffen.",
+      "unavailable": "Die Liste konnte gerade nicht gelesen werden.",
+      "notCounted": "zählt nicht",
+      "entry": "{{what}}, Spiel {{number}}",
+      "entryNoNumber": "{{what}}",
+      "what": "{{type}} für {{team}}",
+      "whatPlayer": "{{type}} für {{team}} (#{{number}})",
+      "whatNoTeam": "{{type}}",
+      "by": "Erfasst von {{name}} um {{time}}",
+      "byNoTime": "Erfasst von {{name}}",
+      "unknownDevice": "Helfer-Gerät",
+      "received": "Eingetroffen um {{time}}"
     }
   }
 }

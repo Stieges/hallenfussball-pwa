@@ -53,6 +53,8 @@ export interface ScheduleToolbarProps {
   canEditSchedule?: boolean;
   /** A-11 @ZM-019: Aushang im PDF-Dialog nur mit tournamentSettings. Vorgabe: ja. */
   canCreateNotice?: boolean;
+  /** R3-4 (Review #394 m-2): abgeschlossen zeigt der Spielplan nur die Tabelle – die Umschaltung Tabelle/Grid entfällt. */
+  hideViewToggle?: boolean;
 }
 
 export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
@@ -76,6 +78,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   standings,
   canEditSchedule = true,
   canCreateNotice,
+  hideViewToggle = false,
 }) => {
   const { t } = useTranslation('tournament');
 
@@ -209,8 +212,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           </>
         )}
 
-        {/* View Mode Toggle */}
-        <div style={viewToggleContainerStyle} role="tablist" aria-label={t('toolbar.switchView')}>
+        {/* View Mode Toggle (nach dem Abschluss entfällt er: nur die Tabelle, R3-4 m-2) */}
+        {!hideViewToggle && <div style={viewToggleContainerStyle} role="tablist" aria-label={t('toolbar.switchView')}>
           <button
             onClick={() => onViewModeChange('table')}
             style={getViewToggleButtonStyle('table')}
@@ -227,7 +230,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           >
             {t('toolbar.viewGrid')}
           </button>
-        </div>
+        </div>}
       </div>
 
       {/* Right side: Export buttons */}

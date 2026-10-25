@@ -117,7 +117,41 @@ async function markStarted(client: Client, tournaments: Tournament[]): Promise<{
         return { tournaments, error: new RepositoryError('listStarted', error.message, error) };
     }
     const started = new Set(data.map((row) => row.tournament_id));
-    return { tournaments: tournaments.map((t) => (started.has(t.id) ? { ...t, anyMatchStarted: true } : t)) };
+    const ended = await lastMatchEnds(client, [...started]);
+    return {
+        tournaments: tournaments.map((t) => {
+            if (!started.has(t.id)) {
+                return t;
+            }
+            const end = ended.get(t.id);
+            return { ...t, anyMatchStarted: true, ...(end === undefined ? {} : { lastMatchEndedAt: end }) };
+        }),
+    };
+}
+
+/**
+ * @LZ-005 (Hinweis „Turnier läuft noch“ auf der Startseite): je laufendem Turnier das Ende des letzten Spiels, aber nur wenn JEDES Spiel
+ * entschieden ist (beendet oder ausgefallen). Scheitert die Abfrage, fehlt der Hinweis – die Liste bleibt stehen.
+ */
+async function lastMatchEnds(client: Client, tournamentIds: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (tournamentIds.length === 0) {
+        return result;
+    }
+    const { data, error } = await client.from('matches').select('tournament_id, match_status, actual_end').in('tournament_id', tournamentIds);
+    if (error) {
+        return result;
+    }
+    const open = new Set<string>();
+    for (const row of data) {
+        if (row.match_status !== 'finished' && row.match_status !== 'skipped') {
+            open.add(row.tournament_id);
+        } else if (row.actual_end !== null && (result.get(row.tournament_id) ?? '') < row.actual_end) {
+            result.set(row.tournament_id, row.actual_end);
+        }
+    }
+    open.forEach((id) => result.delete(id));
+    return result;
 }
 
 export async function readAccountTournamentList(client: Client): Promise<CloudTournamentList> {

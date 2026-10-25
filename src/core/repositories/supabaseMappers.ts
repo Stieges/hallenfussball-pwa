@@ -454,6 +454,7 @@ interface TournamentConfig {
   isKidsTournament?: boolean;
   hideScoresForPublic?: boolean;
   hideRankingsForPublic?: boolean;
+  publicScorers?: boolean;
   resultMode?: string;
 
   // Finals legacy
@@ -620,6 +621,7 @@ export function mapTournamentFromSupabase(
     isKidsTournament: config.isKidsTournament ?? false,
     hideScoresForPublic: config.hideScoresForPublic ?? false,
     hideRankingsForPublic: config.hideRankingsForPublic ?? false,
+    ...(typeof config.publicScorers === 'boolean' ? { publicScorers: config.publicScorers } : {}),
     resultMode: (config.resultMode ?? 'goals') as Tournament['resultMode'],
     pointSystem,
     title: row.title,

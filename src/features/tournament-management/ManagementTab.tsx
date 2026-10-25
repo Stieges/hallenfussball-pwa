@@ -259,8 +259,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         </div>
       ) : notOnEngineReason ? (
         <div className={styles.noMatches} data-testid="cockpit-not-on-engine">
+          {/* @SL-159: „Korrektur über die Turnierleitung“ gilt nur für Helfer; die Turnierleitung korrigiert im Spielplan (R3-4) */}
           {notOnEngineReason === 'resultEntered'
-            ? tCockpit('engine.retract.hint.goalFinished')
+            ? (closed ? t('rights.closedHint') : istLeitung ? t('management.resultEnteredLead') : tCockpit('engine.retract.hint.goalFinished'))
             : t('filter.status.skipped')}
         </div>
       ) : engineReadyError ? (

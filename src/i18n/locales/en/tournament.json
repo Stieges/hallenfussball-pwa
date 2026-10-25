@@ -615,7 +615,8 @@
     "matchLoading": "Loading match...",
     "noMatchesOnField": "No matches on this field",
     "enginePreparing": "Match is being prepared …",
-    "engineReadyError": "Match could not be prepared — please try again"
+    "engineReadyError": "Match could not be prepared — please try again",
+    "resultEnteredLead": "A result has been entered for this game. Corrections are made in the schedule."
   },
   "tables": {
     "single": "Table",
@@ -1177,7 +1178,7 @@
     "leadOnlyHint": "Only the tournament management can change this",
     "closedTitle": "Tournament finished",
     "closedBack": "Back to the tournament",
-    "closedHint": "The tournament is finished – nothing can be changed here any more.",
+    "closedHint": "The tournament is closed. Results, schedule and teams are locked.",
     "closedSaveBlocked": "The tournament is finished – the change was not saved."
   },
   "standingsTie": {
@@ -1624,6 +1625,154 @@
       "uebernommen": "{{what}} – accepted by {{by}}, {{time}}",
       "verworfen": "{{what}} – discarded by {{by}}, {{time}}",
       "turnierleitung": "the organisers"
+    }
+  },
+  "finish": {
+    "open": "Close tournament",
+    "title": "Close tournament",
+    "close": "Close",
+    "cancel": "Cancel",
+    "section": {
+      "suggestionTitle": "Everything decided",
+      "suggestionText": "Everything decided – check the final standings and close the tournament.",
+      "statusTitle": "Tournament status",
+      "gamesDone": "{{done}} of {{total}} games finished.",
+      "reviewsOpen_one": "{{count}} entry in the review list is still open.",
+      "reviewsOpen_other": "{{count}} entries in the review list are still open.",
+      "lateHint": "The last game was on {{date}}. The tournament is still running. Close it once everything is decided."
+    },
+    "blocked": {
+      "title": "The tournament cannot be closed yet.",
+      "lead_one": "{{count}} thing is still open. Tap the entry to jump straight to it.",
+      "lead_other": "{{count}} things are still open. Tap an entry to jump straight to it.",
+      "after": "Once everything is done, you can close the tournament.",
+      "back": "Back to administration"
+    },
+    "item": {
+      "field": "Field {{field}}",
+      "match": "Game {{number}}",
+      "matchUnknown": "A game",
+      "matchRunning": "{{name}} is still running",
+      "matchUndecided": "{{name}} is still open",
+      "groupOpen": "{{group}} is not closed yet",
+      "groupOpenSingle": "Group not closed yet",
+      "groupOpenDetail": "Close the group in the table.",
+      "groupStale": "{{group}} must be closed again",
+      "groupStaleSingle": "Group must be closed again",
+      "groupStaleDetail": "A result changed after the group was closed.",
+      "tieOpen": "Tie for place {{places}}: decision needed",
+      "tieOpenDetail": "{{names}} are level. The group is not closed yet.",
+      "noticeOpen": "Follow-up notice is open",
+      "noticeOpenDetail": "A correction changes who plays in game {{number}}. Check the notice.",
+      "noticeOpenDetailPlain": "A correction changes who plays in a follow-up game. Check the notice.",
+      "clarificationOpen": "A clarification is open",
+      "clarificationOpenDetail": "An action by the tournament director ran into a conflict. Check it in the table.",
+      "reviewOpen": "Review list: entry for game {{number}}",
+      "reviewOpenPlain": "Review list: entry open",
+      "reviewOpenDetail": "The entry has to be reviewed first",
+      "unknown": "Something else is open",
+      "unknownDetail": "The server reports an open item this app version does not know. Reload the app.",
+      "and": "and"
+    },
+    "ready": {
+      "winner": "Winner",
+      "shootout": "Place 1 decided by penalty shootout: {{winner}}:{{loser}} against {{other}}",
+      "podium": "Final standings: places 1 to 3",
+      "points": "{{points}} pts",
+      "showAll": "Show all {{count}} places",
+      "hideAll": "Show fewer places",
+      "allPlaces": "Final standings: all places",
+      "played": "games played",
+      "skipped": "cancelled",
+      "teams": "teams",
+      "consequences": "What happens when you close it",
+      "saveWithScorers": "The final standings and top scorers are saved.",
+      "saveStandings": "The final standings are saved.",
+      "locked": "After that, nobody can change results anymore.",
+      "codes": "Helper codes become invalid.",
+      "display": "Spectators and the hall monitor show the final standings.",
+      "reopen": "Only the operator can reopen it.",
+      "confirm": "Close tournament",
+      "playedOf": "{{played}} of {{total}}"
+    },
+    "warning": {
+      "outbox_one": "Field {{field}}: {{count}} entry not yet transferred",
+      "outbox_other": "Field {{field}}: {{count}} entries not yet transferred",
+      "outboxNoField_one": "{{count}} entry not yet transferred",
+      "outboxNoField_other": "{{count}} entries not yet transferred",
+      "outboxDetail": "As of {{time}}. You can still close the tournament. Anything that arrives later does not count in the final standings.",
+      "silent": "Field {{field}}: device is not reporting",
+      "silentDetail": "The device has not reported since {{time}}, maybe its screen is locked or the network is gone. You can still close the tournament. Whatever is not yet transferred there does not count in the final standings.",
+      "silentDetailNoTime": "The device has not reported, maybe its screen is locked or the network is gone. You can still close the tournament. Whatever is not yet transferred there does not count in the final standings.",
+      "outboxDetailNoTime": "You can still close the tournament. Anything that arrives later does not count in the final standings."
+    },
+    "checking": "Checking the current state …",
+    "offline": {
+      "title": "No network",
+      "text": "Closing the tournament needs a connection. Switch on Wi-Fi or mobile data. Once the connection is back, the dialog checks again by itself. The tournament stays open until then.",
+      "hint": "Closing only works with a connection"
+    },
+    "sending": {
+      "title": "The final standings are being saved.",
+      "text": "This takes a moment. Do not close the app and do not reload the page.",
+      "hint": "Please wait until saving has finished.",
+      "button": "Saving"
+    },
+    "error": {
+      "title": "The tournament is not closed yet.",
+      "text": "Something went wrong while saving. Nothing was changed, the tournament keeps running. Tap “Try again”. If it keeps failing, check your network or try again in a minute.",
+      "retry": "Try again",
+      "checkFailed": "The state could not be checked. Nothing was changed. Tap “Try again”.",
+      "forbidden": "Only the tournament director can close the tournament. Nothing was changed.",
+      "local": "This tournament only exists on this device. Closing only works for tournaments with an account.",
+      "ownOutbox_one": "Transfer first: this device still has {{count}} entry that has not been transferred. Wait until the transfer is done and then tap “Try again”.",
+      "ownOutbox_other": "Transfer first: this device still has {{count}} entries that have not been transferred. Wait until the transfer is done and then tap “Try again”.",
+      "stale": "The state has changed since you opened the dialog. Reload the state and check the closing again.",
+      "staleButton": "Reload state",
+      "provisional": "The final standings are still provisional. Close the group first and decide any open ties.",
+      "notRunning": "The tournament is not running yet. Closing only works once a game has been kicked off.",
+      "cancelled": "The tournament was cancelled and cannot be closed.",
+      "alreadyFinished": "The tournament is already closed.",
+      "alreadyFinishedAt": "The tournament is already closed (on {{date}} at {{time}}).",
+      "alreadyFinishedBy": "{{name}} has already closed the tournament.",
+      "alreadyFinishedByAt": "{{name}} has already closed the tournament (on {{date}} at {{time}}).",
+      "alreadyFinishedClose": "To administration"
+    },
+    "unconfirmed": {
+      "title": "Not confirmed yet",
+      "text": "The server did not answer in time. Your closing may have arrived. Tap “Try again”: the tournament is closed at most once.",
+      "asking": "Asking the server for the current state …",
+      "finished": "The server reports: the tournament is closed.",
+      "running": "The server reports: the tournament is not closed yet.",
+      "unknown": "The state at the server cannot be read right now."
+    },
+    "closed": {
+      "title": "Tournament closed on {{date}} at {{time}}",
+      "titleNoDate": "Tournament closed",
+      "text": "Results, schedule and teams are locked. Helper codes are invalid. The final standings are saved.",
+      "reopen": "Only the operator can reopen it.",
+      "standings": "Final standings",
+      "standingsUnavailable": "The saved final standings could not be read right now.",
+      "shootout": "Penalty shootout {{winner}}:{{loser}}",
+      "openPublic": "Open spectator view",
+      "openPublicHint": "Opens the page spectators see.",
+      "notPublic": "The public view is not switched on. You can release it under “Visibility”."
+    },
+    "late": {
+      "title": "Arrived after the end",
+      "text": "These entries only arrived after the tournament was closed. They do not count in the final standings and are kept here.",
+      "empty": "Nothing has arrived since the tournament was closed.",
+      "unavailable": "The list could not be read right now.",
+      "notCounted": "does not count",
+      "entry": "{{what}}, game {{number}}",
+      "entryNoNumber": "{{what}}",
+      "what": "{{type}} for {{team}}",
+      "whatPlayer": "{{type}} for {{team}} (#{{number}})",
+      "whatNoTeam": "{{type}}",
+      "by": "Recorded by {{name}} at {{time}}",
+      "byNoTime": "Recorded by {{name}}",
+      "unknownDevice": "Helper device",
+      "received": "Arrived at {{time}}"
     }
   }
 }

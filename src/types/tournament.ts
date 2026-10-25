@@ -435,6 +435,8 @@ export interface Tournament {
   isKidsTournament: boolean;
   hideScoresForPublic: boolean;
   hideRankingsForPublic: boolean;
+  /** Torschützen für die Öffentlichkeit (`config.publicScorers`, Server; R3-4: Text im Abschluss-Dialog). Nur gelesen, nie aus der App geschrieben. */
+  publicScorers?: boolean;
   resultMode: ResultMode;
 
   // Point System
@@ -499,6 +501,8 @@ export interface Tournament {
   finishedAt?: string;
   /** Nur Listen aus der Cloud (ohne Spiele): Zusatzabfrage „hat ein angepfiffenes Spiel“ (R3-1). Nie gespeichert. */
   anyMatchStarted?: boolean;
+  /** Nur Listen aus der Cloud (ohne Spiele): Ende des letzten Spiels, wenn jedes Spiel entschieden ist (@LZ-005, Hinweis auf der Startseite). Nie gespeichert. */
+  lastMatchEndedAt?: string;
 
   // Dashboard Soft Delete (Papierkorb)
   /** ISO Date when moved to trash. Undefined = not deleted */

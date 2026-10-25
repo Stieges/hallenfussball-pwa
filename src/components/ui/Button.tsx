@@ -22,6 +22,11 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   /** Enable press effect (scale down on press). Default: true */
   pressEffect?: boolean;
+  /**
+   * Die Aktion läuft, die Beschriftung bleibt sichtbar (anders als `loading`, das nur den Kreisel zeigt): `aria-busy`, nicht
+   * antippbar, der Fokus bleibt auf der Taste. Vorgabe: folgt `loading`.
+   */
+  busy?: boolean;
   /** Loading state - shows spinner and disables button */
   loading?: boolean;
   /** Test ID for E2E testing */
@@ -63,6 +68,7 @@ export const Button: React.FC<ButtonProps> = ({
   title,
   type = 'button',
   pressEffect = true,
+  busy,
   loading = false,
   'data-testid': testId,
   'data-primary': isPrimaryMarker,
@@ -86,6 +92,7 @@ export const Button: React.FC<ButtonProps> = ({
   }, []);
 
   const isDisabled = disabled || loading;
+  const blocked = isDisabled || busy === true; // `busy`: nicht antippbar, aber nicht „disabled“ – der Fokus bleibt auf der Taste (Review #395 m-3)
   const shouldAnimate = pressEffect && !prefersReducedMotion && !isDisabled;
 
   const handlePressStart = () => {
@@ -178,14 +185,14 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       ref={ref}
       type={type}
-      onClick={isDisabled ? undefined : onClick}
+      onClick={blocked ? undefined : onClick}
       disabled={isDisabled}
       style={combinedStyles}
       aria-label={ariaLabel}
       aria-keyshortcuts={ariaKeyshortcuts}
       title={title}
-      aria-disabled={isDisabled}
-      aria-busy={loading}
+      aria-disabled={blocked}
+      aria-busy={busy ?? loading}
       data-testid={testId}
       data-primary={isPrimaryMarker ? '' : undefined}
       onMouseDown={handlePressStart}

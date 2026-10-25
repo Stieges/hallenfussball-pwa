@@ -22,7 +22,8 @@ import { expectedTournamentState, sameTournamentState, type TournamentMatchState
 
 /** Warum (noch) nicht abgeschlossen werden kann – vor dem Senden. */
 export type FinishBlocker =
-  | { code: 'ALREADY_FINISHED'; at: string | null }
+  /** `by`: wer abgeschlossen hat, nur wenn der Server es nennt (Review #393 H-5: ohne Namen nichts behaupten). */
+  | { code: 'ALREADY_FINISHED'; at: string | null; by?: string | null }
   | { code: 'NOT_RUNNING'; lifecycle: string }
   | { code: 'OPEN_ITEMS'; items: FinishItem[] }
   | { code: 'OWN_OUTBOX'; pending: number }

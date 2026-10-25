@@ -62,6 +62,7 @@ const withServerState = (localT: Tournament, cloudT: Tournament): Tournament => 
     lifecycleStatus: cloudT.lifecycleStatus,
     finishedAt: cloudT.finishedAt,
     anyMatchStarted: cloudT.anyMatchStarted,
+    lastMatchEndedAt: cloudT.lastMatchEndedAt,
 });
 
 const withRole = (tournament: Tournament, role: TournamentListRole | undefined): Tournament => {

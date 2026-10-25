@@ -15,6 +15,7 @@ import type { Tournament, Match } from '../../../../types/tournament';
 import { slotLabel } from '../../../../core/models/slotLabel';
 import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
 import { lifecycleOf } from '../../../../core/services/lifecycle';
+import { FinishTournamentSection } from '../../../tournament-finish/components/FinishTournamentSection';
 
 // =============================================================================
 // PROPS
@@ -24,6 +25,8 @@ interface DashboardCategoryProps {
   tournamentId: string;
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void;
+  /** Turnier frisch aus der Cloud neu laden (nach dem Abschluss, R3-4). */
+  onReload?: () => Promise<void> | void;
 }
 
 // =============================================================================
@@ -273,6 +276,7 @@ function formatTime(date: Date | undefined): string {
 export function DashboardCategory({
   tournamentId,
   tournament,
+  onReload,
 }: DashboardCategoryProps) {
   const { t, i18n } = useTranslation('admin');
   const navigate = useNavigate();
@@ -390,6 +394,9 @@ export function DashboardCategory({
           </div>
         </div>
       </div>
+
+      {/* R3-4 (B-33): Turnier abschließen (Vorschlag, Knopf, Dialog) bzw. Zustand „abgeschlossen“ */}
+      {onReload !== undefined && <FinishTournamentSection tournament={tournament} onReload={onReload} />}
 
       {/* Pulse animation for live status */}
       <style>{`

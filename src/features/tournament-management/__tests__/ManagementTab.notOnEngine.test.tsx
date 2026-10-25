@@ -11,6 +11,12 @@ import { MatchNotOnEngineError } from '../../../core/errors';
 import { teamSlot } from '../../../core/models/matchSlot';
 import { testUuid } from '../../../test/testIds';
 
+// R3-4 (@SL-159): „Korrektur über die Turnierleitung“ gilt nur für Helfer; ob Olli (Turnierleitung) oder Tom (Helfer) davorsitzt, steuert `can.lead`
+const can = vi.hoisted(() => ({ lead: false }));
+vi.mock('../../auth/hooks/useCan', () => ({
+  useCan: (permission: string) => (permission === 'writeMatchData' ? true : permission === 'leadMatches' && can.lead),
+  useCanState: (permission: string) => ({ allowed: permission === 'writeMatchData', isLoading: false }),
+}));
 const mockShowError = vi.fn();
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'owner' }));
 vi.mock('../../../components/ui/Toast/ToastContext', () => ({
@@ -75,6 +81,7 @@ vi.mock('../../../hooks/useCockpitExecution', () => ({
 }));
 
 import { ManagementTab } from '../ManagementTab';
+import { resetClosedTournaments, setTournamentClosed } from '../../../core/services/closedTournaments';
 
 import { RouterWrapper } from './routerWrapper';
 const NORD = testUuid(1);
@@ -106,6 +113,7 @@ function setup(matches: ScheduledMatch[], initialMatchId?: string) {
 describe('ManagementTab – @FU-069 Hinweis bei eingetragenem Ergebnis (A-08a)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    can.lead = false;
     mockGetLiveMatchData.mockRejectedValue(new MatchNotOnEngineError('resultEntered'));
   });
 
@@ -117,5 +125,26 @@ describe('ManagementTab – @FU-069 Hinweis bei eingetragenem Ergebnis (A-08a)',
     expect(screen.queryByTestId('cockpit-stub')).toBeNull();
     expect(mockShowError).not.toHaveBeenCalled();
     expect(mockCaptureFeatureError).not.toHaveBeenCalled();
+  });
+
+  it('@SL-159 Tom (Helfer) liest „Korrektur über die Turnierleitung“; Olli (Turnierleitung) liest nicht, an wen er sich wenden soll, sondern wo er korrigiert', async () => {
+    can.lead = true;
+    setup([scheduled({ id: SPIEL, scoreA: 3, scoreB: 1 })], SPIEL);
+    await waitFor(() => expect(screen.getByTestId('cockpit-not-on-engine')).toBeInTheDocument());
+    expect(screen.getByTestId('cockpit-not-on-engine')).toHaveTextContent('Für dieses Spiel ist ein Ergebnis eingetragen. Korrigieren geht im Spielplan.');
+    expect(screen.getByTestId('cockpit-not-on-engine')).not.toHaveTextContent('über die Turnierleitung');
+  });
+
+  it('Review #395: nach dem Abschluss liest die Turnierleitung weder den Helfer-Satz noch den Korrektur-Satz, sondern „abgeschlossen“', async () => {
+    can.lead = true;
+    setTournamentClosed('t1', true);
+    try {
+      setup([scheduled({ id: SPIEL, scoreA: 3, scoreB: 1 })], SPIEL);
+      await waitFor(() => expect(screen.getByTestId('cockpit-not-on-engine')).toBeInTheDocument());
+      expect(screen.getByTestId('cockpit-not-on-engine')).toHaveTextContent('Das Turnier ist abgeschlossen');
+      expect(screen.getByTestId('cockpit-not-on-engine')).not.toHaveTextContent('Korrektur über die Turnierleitung');
+    } finally {
+      resetClosedTournaments();
+    }
   });
 });

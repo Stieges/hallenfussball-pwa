@@ -4,7 +4,7 @@
  * Kammer vor Waging rot (direktes Spiel zuerst, @ET-056), Petting und Otting gleichauf (@ET-055, @ET-025), Fridolfing, Waging blau.
  * Szenarien mit anderen Mannschaftsnamen (@W2A-041 bis @W2A-045) prüfen dieselben Regeln; diese Fälle liegen als Vitest-Tests in Paket TB.
  */
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { vorbedingung, getRows, SOLL_TIMEOUT_MS } from './shared';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { beendeAlleSpiele, fetchNikolausSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
@@ -192,7 +192,7 @@ async function gruppeAbschliessen({ asRole }: StepContext): Promise<void> {
  * „Besetzung prüfen“, und genau EIN neuer Verlaufseintrag `complete_group` (auch nach weiterem Warten, M1).
  * Die Korrektur geht über die Turnierleitungs-RPC: der Einstieg „Korrigieren“ im Spielplan/Cockpit fehlt noch (D12/D12b, B-24/B-25).
  * Läuft als LETZTER Schritt: die Korrektur ändert ein Ergebnis, die Vorbedingung der übrigen Schritte (`beendeAlleSpiele`) prüft die
- * festen Ergebnisse. Wird N7b (Turnier abschließen) grün, ist das Turnier gesperrt – dann gehört dieser Schritt vor N7b.
+ * festen Ergebnisse. Steht vor N7b (Turnier abschließen): danach ist das Turnier gesperrt (R3-4).
  */
 async function neuAbschlussNachKorrektur({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
@@ -225,15 +225,87 @@ async function neuAbschlussNachKorrektur({ asRole }: StepContext): Promise<void>
   expect((await abschluesse()).length, 'genau ein neuer Verlaufseintrag „abgeschlossen“').toBe(vorher + 1);
 }
 
-/** N7b: Turnier abschließen: danach ist es abgeschlossen und gesperrt (@LZ-030). */
+/** Zustand des Nikolaus-Turniers am Server (Service-Rolle): `lifecycle_status` und `finished_at` (R3-4; die alte Spalte `status` sagt nichts über den Abschluss, C-E2E-N7B-SPALTE). */
+const zustand = async (): Promise<{ lifecycle_status: string | null; finished_at: string | null }> =>
+  (await getRows<{ lifecycle_status: string | null; finished_at: string | null }>(`tournaments?id=eq.${NIKOLAUS.tournamentId}&select=lifecycle_status,finished_at`, 'Zustand des Turniers'))[0];
+
+/**
+ * N6c2 (R3-4, @LZ-010, @LZ-013): „Turnier abschließen“, solange die Gruppe nicht abgeschlossen ist (Petting und Otting sind gleichauf, N6c): der Dialog nennt
+ * den offenen Punkt („Gruppe noch nicht abgeschlossen“), der Tipp darauf führt zur Tabelle, es gibt keine Taste zum Abschließen, und das Turnier bleibt im
+ * Zustand „Läuft“ (nichts wurde verändert). Steht VOR N6d (die Entscheidung des Gleichstands schließt die Gruppe ab).
+ */
+async function abschlussVerweigert({ asRole }: StepContext): Promise<void> {
+  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
+  const vorher = await zustand();
+  expect(vorher.finished_at, 'noch nicht abgeschlossen').toBeNull();
+  const seite = await asRole('owner');
+  await openNikolausPath(seite, '/admin/dashboard');
+  await expect(seite.getByTestId('finish-status'), 'etwas ist offen: kein Vorschlag, die Karte „Turnierstand“').toBeVisible({ timeout: 15_000 });
+  await expect(seite.getByTestId('finish-suggestion')).toHaveCount(0);
+  const t0 = Date.now();
+  await seite.getByTestId('tournament-finish-open').click();
+  const liste = seite.getByTestId('finish-open-list');
+  // Messung der Prüfdauer (Stand „wird geprüft“ → Liste): die Zeit steht als Anmerkung im Bericht
+  await expect(liste.or(seite.getByTestId('finish-error')), 'Liste der offenen Punkte (oder ein Fehlertext)').toBeVisible({ timeout: 60_000 });
+  test.info().annotations.push({ type: 'Prüfdauer des Abschluss-Dialogs (ms)', description: String(Date.now() - t0) });
+  await expect(liste, 'Liste der offenen Punkte').toBeVisible({ timeout: 1000 });
+  await expect(liste.getByTestId('finish-open-item').filter({ hasText: /Gruppe.* noch nicht abgeschlossen/ }), '@LZ-013: Eintrag „Gruppe noch nicht abgeschlossen“').toHaveCount(1);
+  await expect(seite.getByTestId('finish-back'), 'Haupttaste „Zurück zur Verwaltung“').toHaveText('Zurück zur Verwaltung');
+  await expect(seite.getByTestId('tournament-finish-confirm'), 'kein gesperrter Abschließen-Knopf (Daniel 25.10.)').toHaveCount(0);
+  await liste.getByTestId('finish-open-item').filter({ hasText: /Gruppe.* noch nicht abgeschlossen/ }).click();
+  await expect(seite, 'der Tipp führt zur Tabelle der Gruppe').toHaveURL(/\/standings$/, { timeout: 10_000 });
+  expect(await zustand(), 'das Turnier ist unverändert „Läuft“').toEqual(vorher);
+}
+
+/**
+ * N7b (R3-4, @LZ-009, @LZ-030, @LZ-038, @LZ-039; Review #393 H-2): Olli schließt das Turnier ab. Die 15 Ergebnisse stehen über die Engine (Spiel 1 echt am
+ * Handy gespielt, N3/N4) – die Anzeige trägt die Überlagerung der Spielsteuerung, der Dienst bekommt den rohen Cloud-Stand: der Dialog ist „bereit“, ohne
+ * „Stand neu laden“. Nach dem Bestätigen zeigt die Verwaltung Zustand C, der Server steht auf `finished`, der Endstand ist gespeichert (Kammer vorn), und ein
+ * danach gesendeter Eintrag zählt nicht: `review AFTER_FINISH`, Stand gleich, aufbewahrt unter „Nach dem Ende eingetroffen“.
+ * (Die Nikolaus-Linie hat kein Helfer-Konto; der Eintrag kommt vom Konto der Turnierleitung – @LZ-040 nennt auch deren Korrektur.)
+ */
 async function turnierAbschliessen({ asRole }: StepContext): Promise<void> {
   await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
   const seite = await asRole('owner');
+  const maria = await asRole('coadmin'); // zweites Gerät, schon offen: Abschluss auf einem anderen Gerät (Review #394 H-2)
+  await openNikolausPath(maria, '/admin/dashboard');
+  await expect(maria.getByTestId('finish-suggestion'), 'Maria sieht denselben Vorschlag').toBeVisible({ timeout: 15_000 });
   await openNikolausPath(seite, '/admin/dashboard');
-  await expectPageAnchor(seite.getByText('Dashboard', { exact: true }).first(), 'Admin-Kategorie Dashboard');
-  await expectSollMarker(seite, 'tournament-finish-button');
-  await seite.getByTestId('tournament-finish-button').click();
-  await expect.poll(async () => (await getRows<{ status: string }>(`tournaments?id=eq.${NIKOLAUS.tournamentId}&select=status`, 'Turnierstatus'))[0]?.status, { timeout: SOLL_TIMEOUT_MS }).toBe('completed');
+  await expect(seite.getByTestId('finish-suggestion'), '@LZ-007: alles entschieden, der Vorschlag steht da').toBeVisible({ timeout: 15_000 });
+  await seite.getByTestId('tournament-finish-open').click();
+  const dialog = seite.getByTestId('finish-dialog');
+  await expect(dialog.getByTestId('finish-ready'), 'Dialog „bereit“ – ohne „Stand neu laden“ (H-2)').toBeVisible({ timeout: 15_000 });
+  await expect(dialog.getByText('Stand neu laden')).toHaveCount(0);
+  await expect(dialog.getByTestId('finish-winner')).toContainText(KAMMER);
+  await expect(dialog.getByTestId('finish-places').getByRole('listitem'), 'Plätze 1 bis 3').toHaveCount(3);
+  await expect(dialog.getByTestId('finish-facts')).toContainText('15 von 15');
+  expect((await zustand()).lifecycle_status, 'vor dem Bestätigen ist das Turnier festgelegt, nicht abgeschlossen').toBe('fixed');
+
+  await dialog.getByTestId('tournament-finish-confirm').click();
+  await expect(seite.getByTestId('tournament-ended'), 'Verwaltung zeigt Zustand C').toBeVisible({ timeout: 20_000 });
+  await expect(seite.getByTestId('tournament-ended')).toContainText('Wieder öffnen geht nur über den Betreiber.');
+  await expect(seite.getByTestId('tournament-finish-open'), 'kein „Turnier abschließen“ mehr').toHaveCount(0);
+  await expect(maria.getByTestId('tournament-ended'), 'Marias Gerät wechselt ohne Neuladen auf „abgeschlossen“ (Abfrage alle 15 s, #394 H-2)').toBeVisible({ timeout: 30_000 });
+  const nachher = await zustand();
+  expect(nachher.lifecycle_status, 'Server: abgeschlossen').toBe('finished');
+  expect(nachher.finished_at, 'Abschlusszeitpunkt gesetzt').not.toBeNull();
+  const gespeichert = await getRows<{ snapshot: { ranking: Array<{ place: number; teamName: string }> } }>(`tournament_final_standings?tournament_id=eq.${NIKOLAUS.tournamentId}&select=snapshot`, 'gespeicherter Endstand');
+  expect(gespeichert, 'genau ein gespeicherter Endstand').toHaveLength(1);
+  expect(gespeichert[0].snapshot.ranking.find((row) => row.place === 1)?.teamName, 'Platz 1').toBe(KAMMER);
+  await expect(seite.getByTestId('finished-standings'), 'Zustand C nennt Plätze 1 bis 3').toContainText(KAMMER, { timeout: 15_000 });
+
+  // @LZ-038/@LZ-039: ein Eintrag nach dem Abschluss zählt nicht, wird aufbewahrt und gezeigt
+  const letztes = (await fetchNikolausSpiele())[14];
+  const vorherStand = `${String(letztes.score_a)}:${String(letztes.score_b)}`;
+  const at = Date.now() - 1000;
+  const spaet = await appendAsRole('owner', letztes.id, [eventOf('GOAL', at, at - 5000, { teamId: letztes.team_a_id })], { feldFreigeben: true });
+  expect(spaet.results.map((r) => `${r.status}:${r.code ?? ''}`), 'nach dem Abschluss: zur Klärung, nicht angenommen (AFTER_FINISH)').toEqual(['review:AFTER_FINISH']);
+  const danach = (await fetchNikolausSpiele())[14];
+  expect(`${String(danach.score_a)}:${String(danach.score_b)}`, 'das Ergebnis ist unverändert').toBe(vorherStand);
+  expect(await getRows<{ id: number }>(`late_entries?tournament_id=eq.${NIKOLAUS.tournamentId}&select=id`, 'nach dem Ende eingetroffen'), 'aufbewahrt').toHaveLength(1);
+  await seite.reload();
+  await expect(seite.getByTestId('late-entry'), 'Olli sieht den Eintrag „nach dem Ende eingetroffen“').toHaveCount(1, { timeout: 20_000 });
+  await expect(seite.getByTestId('late-entry')).toContainText('zählt nicht');
 }
 
 /** N7c: Jeder gegen jeden: der Endstand ist die abgeschlossene Tabelle, Plätze 1 bis 6, kein Platz geteilt (@ET-022). */
@@ -252,11 +324,12 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging rot), kein Strafstoßschießen nötig – unter der BFV-privat-Reihenfolge; Voreinstellung = N6e', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
   { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], owner: 'Zuschauer-Tabelle ohne Gruppen (gebaut, #295)', expectedFail: false, run: zuschauerReihenfolge },
   { id: 'N6c', title: 'Tabelle: völliger Gleichstand (Petting/Otting) als „Gleichstand – Entscheidung nötig“ markiert, Taste „Gleichstand entscheiden“', scenarios: ['@ET-025', '@ET-055', '@W2A-047', '@W2A-067'], owner: 'Paket TB', expectedFail: false, run: gleichstandMarkiert },
+  { id: 'N6c2', title: 'Turnier abschließen bei offener Gruppe: Liste „Gruppe noch nicht abgeschlossen“ mit Sprung zur Tabelle, kein Abschließen-Knopf, Turnier bleibt „Läuft“', scenarios: ['@LZ-010', '@LZ-013'], owner: 'R3-4 (B-33)', expectedFail: false, run: abschlussVerweigert },
   { id: 'N6d', title: 'Tabelle: Strafstoßschießen 4:3 für Otting über „Gleichstand entscheiden“ eintragen, Sieger steht vorn, Gruppe abgeschlossen; Maria (zweites Gerät) danach 5:4: nicht angenommen, Hinweis nennt Olli', scenarios: ['@ET-055', '@W2A-067', '@TM-046', '@W2A-060'], owner: 'Paket TB', expectedFail: false, run: strafstossEintragen },
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB (TB-2)', expectedFail: false, run: vorbelegungPrivat },
   { id: 'N6f', title: 'Entscheidung öffentlich ohne Person, Zeit und Grund; Entscheidungsverlauf nicht anonym lesbar', scenarios: ['@W2A-072'], owner: 'Paket TB (TB-3\')', expectedFail: false, run: entscheidungNichtOeffentlich },
   { id: 'N7a', title: 'Gruppe abgeschlossen (mit der Entscheidung in N6d): kein Vorschlag mehr, „Gruppe wieder öffnen“, kein Zurücknehmen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-070'], owner: 'A-13c', expectedFail: false, run: gruppeAbschliessen },
-  { id: 'N7b', title: 'Turnier abschließen: abgeschlossen und gesperrt', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a / B-33', expectedFail: true, run: turnierAbschliessen },
-  { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
   { id: 'N7a2', title: 'Korrektur nach dem Abschluss: Gruppe ohne Zutun erneut abgeschlossen, kein „Besetzung prüfen“, ein Verlaufseintrag', scenarios: ['@TM-071', '@TM-150'], owner: 'R2 PR 2 (A-15b)', expectedFail: false, run: neuAbschlussNachKorrektur },
+  { id: 'N7b', title: 'Turnier abschließen: Dialog bereit ohne „Stand neu laden“, abgeschlossen und gesperrt, späte Einträge aufbewahrt', scenarios: ['@LZ-009', '@LZ-030', '@LZ-038', '@LZ-039'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'R3-4 (B-33)', expectedFail: false, run: turnierAbschliessen },
+  { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
 ];

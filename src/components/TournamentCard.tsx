@@ -22,6 +22,7 @@ import { TournamentActionMenu } from './TournamentActionMenu';
 import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { canWithListedRole } from '../features/auth/hooks/useCan';
 import { TextTag } from './ui/atoms';
+import { LateFinishNotice } from './LateFinishNotice';
 import { badgeContainerStyle, headerStyle, infoGridStyle, infoItemStyle, statusBadgeColors, valueStyle } from './tournamentCardStyles';
 import { ageClassText } from '../core/view';
 
@@ -295,6 +296,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             </div>
           )}
         </dl>
+        <LateFinishNotice tournament={tournament} mayFinish={myRole !== undefined && canWithListedRole(myRole, 'manageLifecycle')} />
       </article>
     </Card>
   );

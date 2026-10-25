@@ -9,6 +9,7 @@
  * Senden erneut lesen), E4 (eigener Ausgang → „Erst übertragen“), S1 (wer abschließen darf, liest auch die Klärungsliste).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { StrictMode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Tournament } from '../../types/tournament';
 
@@ -280,5 +281,228 @@ describe('S1: wer abschließen darf, sieht auch die Klärungsliste (sonst bestü
     const mitAbschluss = Object.entries(roles).filter(([, rights]) => rights.includes('manageLifecycle'));
     expect(mitAbschluss.map(([role]) => role)).toEqual(['co-admin']);
     expect(mitAbschluss.filter(([, rights]) => !rights.includes('leadMatches'))).toEqual([]);
+  });
+});
+
+/**
+ * R3-4 Auflagen aus Review #393: m-1 (Zustandsgrenzen), H-2 (roher Cloud-Stand), H-5 (ALREADY_FINISHED ohne Person).
+ * Gegenbeispiele zu @LZ-021 (genau ein Abschluss, dieselbe ID nur beim erneuten Senden) und @LZ-009.
+ */
+describe('m-1 Zustandsgrenzen: bestätigen und erneut senden nur aus der richtigen Phase', () => {
+  it('confirm() ohne vorheriges Prüfen oder nach einer Ablehnung sendet nichts (kein alter Endstand mit alter request_id)', async () => {
+    const { result } = render();
+    await act(async () => { await result.current.confirm(); });
+    expect(calls('finish_tournament')).toEqual([]);
+
+    await act(async () => { await result.current.start(); });
+    finishAnswer = () => Promise.resolve(ok({ status: 'rejected', code: 'STALE_STATE' }));
+    await act(async () => { await result.current.confirm(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'STALE_STATE' } });
+    expect(calls('finish_tournament')).toHaveLength(1);
+
+    await act(async () => { await result.current.confirm(); }); // zweites Tippen nach der Ablehnung
+    await act(async () => { await result.current.retry(); });
+    expect(calls('finish_tournament')).toHaveLength(1);
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'STALE_STATE' } });
+  });
+
+  it('ein zweites Tippen auf „Turnier abschließen“, während der erste Abschluss läuft, sendet nichts (@LZ-021: genau ein Abschluss)', async () => {
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    finishAnswer = () => new Promise<Answer>(() => undefined);
+    act(() => { void result.current.confirm(); });
+    await waitFor(() => { expect(result.current.state.phase).toBe('sending'); });
+    await act(async () => { await result.current.confirm(); });
+    await act(async () => { await result.current.retry(); });
+    expect(calls('finish_tournament')).toHaveLength(1);
+    expect(calls('list_match_reviews')).toHaveLength(2); // Prüfen + einmal direkt vor dem Senden (S2), nicht ein drittes Mal
+  });
+
+  it('retry() ist nur nach „nicht bestätigt“ möglich – aus „bereit“ sendet es nichts', async () => {
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.retry(); });
+    expect(calls('finish_tournament')).toEqual([]);
+    expect(result.current.state.phase).toBe('confirming');
+  });
+
+  it('E3: nach einer Ablehnung beginnt ein neuer Durchlauf – mit neuer request_id und frisch geprüftem Endstand', async () => {
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    finishAnswer = () => Promise.resolve(ok({ status: 'rejected', code: 'STALE_STATE' }));
+    await act(async () => { await result.current.confirm(); });
+    finishAnswer = () => Promise.resolve(ok({ status: 'ok', finishedAt: '2026-11-28T17:30:00+00:00' }));
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.confirm(); });
+    const ids = calls('finish_tournament').map((args) => args.p_request_id);
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).not.toBe(ids[0]);
+  });
+
+  it('ein langsamer erster Durchlauf überschreibt nicht den Zustand des neueren', async () => {
+    let releaseFirst: (answer: Answer) => void = () => undefined;
+    let first = true;
+    server.rpc.mockImplementation((fn: string) => {
+      if (fn === 'finish_preflight' && first) {
+        first = false;
+        return new Promise<Answer>((resolve) => { releaseFirst = resolve; });
+      }
+      if (fn === 'finish_preflight') { return Promise.resolve(preflightAnswer()); }
+      if (fn === 'list_match_reviews') { return Promise.resolve(ok([])); }
+      return Promise.resolve(ok(null));
+    });
+    const { result } = render();
+    let langsam: Promise<void> = Promise.resolve();
+    act(() => { langsam = result.current.start(); });
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state.phase).toBe('confirming');
+    await act(async () => {
+      releaseFirst(ok({ status: 'ok', lifecycle: 'running', finishedAt: null, canFinish: false, items: [{ kind: 'match_running', matchId: 'x' }], warnings: [], state: serverState }));
+      await langsam;
+    });
+    expect(result.current.state.phase).toBe('confirming'); // der alte Durchlauf meldet „OPEN_ITEMS“ nicht mehr hinein
+  });
+
+  it('während des Sendens beginnt kein neuer Durchlauf (keine zweite request_id, kein zweiter Aufruf)', async () => {
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    finishAnswer = () => new Promise<Answer>(() => undefined);
+    act(() => { void result.current.confirm(); });
+    await waitFor(() => { expect(result.current.state.phase).toBe('sending'); });
+    await act(async () => { await result.current.start(); });
+    act(() => { result.current.reset(); });
+    expect(result.current.state.phase).toBe('sending');
+    expect(calls('finish_preflight')).toHaveLength(1);
+  });
+});
+
+describe('H-2 der Dienst bekommt den rohen Cloud-Stand, nicht die Überlagerung der Anzeige', () => {
+  it('die Anzeige trägt ein Tor aus der Spielsteuerung, der rohe Stand gleicht dem Server → bereit, gesendet wird der Serverstand', async () => {
+    const m = matchOf(tournament, NK.kammer, NK.wagingRot);
+    const angezeigt = withMatch(tournament, m.id, { scoreA: (m.scoreA ?? 0) + 1 });
+    const loadRaw = vi.fn(() => Promise.resolve(tournament));
+    const { result } = renderHook(() => useFinishTournament(angezeigt, { reload, loadRaw }));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state.phase).toBe('confirming');
+    expect(loadRaw).toHaveBeenCalledTimes(1);
+    await act(async () => { await result.current.confirm(); });
+    expect(calls('finish_tournament')[0].p_expected_state).toEqual(serverState);
+  });
+
+  it('Gegenbeispiel: ohne rohen Stand (nur die Überlagerung) endet es in „Stand neu laden“ – der Fehler, den H-2 verhindert', async () => {
+    const m = matchOf(tournament, NK.kammer, NK.wagingRot);
+    const { result } = render(withMatch(tournament, m.id, { scoreA: (m.scoreA ?? 0) + 1 }));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'STALE_STATE' } });
+  });
+
+  it('der rohe Stand ist nicht lesbar → „Prüfung gescheitert“, kein Abschluss', async () => {
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw: () => Promise.resolve(null) }));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
+    expect(calls('finish_tournament')).toEqual([]);
+  });
+});
+
+describe('H-5 ALREADY_FINISHED: nie behaupten, jemand anderes habe abgeschlossen', () => {
+  it('Prüfung meldet „abgeschlossen“ (ohne Person): Grund ohne Namen, die Ansicht lädt neu', async () => {
+    server.rpc.mockImplementation((fn: string) => (fn === 'finish_preflight'
+      ? Promise.resolve(ok({ status: 'ok', lifecycle: 'finished', finishedAt: '2026-11-28T12:10:00+00:00', canFinish: false, items: [], warnings: [], state: serverState }))
+      : Promise.resolve(ok([]))));
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'ALREADY_FINISHED', at: '2026-11-28T12:10:00+00:00' } });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('der Server nennt beim Abschluss die Person → sie steht im Grund; nennt er sie nicht, fehlt das Feld', async () => {
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    finishAnswer = () => Promise.resolve(ok({ status: 'rejected', code: 'ALREADY_FINISHED', by: 'Maria', at: '2026-11-28T12:10:00+00:00' }));
+    await act(async () => { await result.current.confirm(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'ALREADY_FINISHED', at: '2026-11-28T12:10:00+00:00', by: 'Maria' } });
+
+    await act(async () => { await result.current.start(); });
+    finishAnswer = () => Promise.resolve(ok({ status: 'rejected', code: 'ALREADY_FINISHED', by: null, at: null }));
+    await act(async () => { await result.current.confirm(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'ALREADY_FINISHED', at: null } });
+  });
+});
+
+describe('H-6 die Startseite lädt nach dem Abschluss ihre Liste neu', () => {
+  it('nach dem Abschluss meldet die App „tournament-updated“ – nach dem Neuladen des Turniers, vor „fertig“', async () => {
+    const gehoert = vi.fn();
+    window.addEventListener('tournament-updated', gehoert);
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    expect(gehoert).not.toHaveBeenCalled();
+    await act(async () => { await result.current.confirm(); });
+    expect(result.current.state.phase).toBe('done');
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(gehoert).toHaveBeenCalledTimes(1);
+    window.removeEventListener('tournament-updated', gehoert);
+  });
+
+  it('Gegenbeispiel: abgelehnt oder nicht bestätigt (Server sagt „läuft noch“) → keine Meldung', async () => {
+    const gehoert = vi.fn();
+    window.addEventListener('tournament-updated', gehoert);
+    finishAnswer = () => Promise.resolve({ data: null, error: { message: 'Failed to fetch' } });
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.confirm(); });
+    await waitFor(() => { expect(result.current.state.phase).toBe('unconfirmed'); });
+    expect(gehoert).not.toHaveBeenCalled();
+    window.removeEventListener('tournament-updated', gehoert);
+  });
+
+  it('meldet der Server nach ausgebliebener Antwort „abgeschlossen“, kommt die Meldung ebenfalls', async () => {
+    const gehoert = vi.fn();
+    window.addEventListener('tournament-updated', gehoert);
+    finishAnswer = () => Promise.resolve({ data: null, error: { message: 'Failed to fetch' } });
+    lifecycleAnswer = 'finished';
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.confirm(); });
+    expect(gehoert).toHaveBeenCalledTimes(1);
+    window.removeEventListener('tournament-updated', gehoert);
+  });
+});
+
+describe('Die Prüfung hängt nie endlos: hängt eine Lese-Stufe, endet sie nach 20 s mit „Prüfung gescheitert“', () => {
+  it('der rohe Stand kommt nicht → nach 20 s CHECK_FAILED, kein Abschluss-Aufruf; ein neuer Versuch beginnt mit neuer request_id', async () => {
+    vi.useFakeTimers();
+    const loadRaw = vi.fn(() => new Promise<Tournament | null>(() => undefined));
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw }));
+    let ersterLauf: Promise<void> = Promise.resolve();
+    act(() => { ersterLauf = result.current.start(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(19_000); });
+    expect(result.current.state.phase).toBe('checking');
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500); await ersterLauf; });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
+    expect(calls('finish_tournament')).toEqual([]);
+  });
+
+  it('eine unerwartete Ausnahme in der Prüfung (kaputter Stand) bleibt nicht als „wird geprüft“ stehen, sondern endet mit „Prüfung gescheitert“', async () => {
+    const kaputt = { ...tournament, matches: undefined } as unknown as Tournament;
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw: () => Promise.resolve(kaputt) }));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
+    expect(calls('finish_tournament')).toEqual([]);
+  });
+
+  it('Gegenbeispiel: kommt der rohe Stand rechtzeitig, läuft die Prüfung durch', async () => {
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw: () => Promise.resolve(tournament) }));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state.phase).toBe('confirming');
+  });
+});
+
+describe('StrictMode (Entwicklung, Cloud-E2E): Zustandswechsel gehen beim erneuten Einhängen nicht verloren', () => {
+  it('die Prüfung endet sichtbar in „bereit“ und der Abschluss in „fertig“', async () => {
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload }), { wrapper: StrictMode });
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state.phase).toBe('confirming');
+    await act(async () => { await result.current.confirm(); });
+    expect(result.current.state.phase).toBe('done');
   });
 });
