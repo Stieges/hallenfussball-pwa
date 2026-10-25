@@ -177,48 +177,59 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
       return;
     }
     set({ phase: 'checking' });
-    const [preflight, reviews, raw] = await Promise.all([
-      readFinishPreflight(client(), current.id), readMatchReviews(client(), current.id),
-      stage('raw', latest.current.loadRaw ? latest.current.loadRaw().catch(() => null) : Promise.resolve(current)),
-    ]);
-    if (outdated()) {
-      return;
-    }
-    if (preflight.status !== 'ok' || !reviews.ok || raw === null || raw === STAGE_TIMED_OUT) {
-      set({ phase: 'rejected', reason: preflight.status === 'forbidden' ? { code: 'FORBIDDEN' } : { code: 'CHECK_FAILED' } });
-      return;
-    }
-    let engineEventsById;
     try {
-      const loaded = context !== null ? await stage('engine', loadEngineEventsForExport(raw, context)) : undefined;
-      if (loaded === STAGE_TIMED_OUT) {
-        throw new Error('Ereignisse nicht rechtzeitig geladen');
+      const [preflight, reviews, raw] = await Promise.all([
+        readFinishPreflight(client(), current.id), readMatchReviews(client(), current.id),
+        stage('raw', latest.current.loadRaw ? latest.current.loadRaw().catch(() => null) : Promise.resolve(current)),
+      ]);
+      if (outdated()) {
+        return;
       }
-      engineEventsById = loaded;
-    } catch {
+      if (preflight.status !== 'ok' || !reviews.ok || raw === null || raw === STAGE_TIMED_OUT) {
+        set({ phase: 'rejected', reason: preflight.status === 'forbidden' ? { code: 'FORBIDDEN' } : { code: 'CHECK_FAILED' } });
+        return;
+      }
+      let engineEventsById;
+      try {
+        const loaded = context !== null ? await stage('engine', loadEngineEventsForExport(raw, context)) : undefined;
+        if (loaded === STAGE_TIMED_OUT) {
+          throw new Error('Ereignisse nicht rechtzeitig geladen');
+        }
+        engineEventsById = loaded;
+      } catch {
+        if (!outdated()) {
+          set({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
+        }
+        return;
+      }
+      if (outdated()) {
+        return;
+      }
+      const ownPending = context?.sender.getStatus().pendingByTournament[raw.id] ?? 0;
+      const prepared = prepareFinish({
+        tournament: raw, preflight: preflight.preflight, reviews: reviews.reviews, ownPending, engineEventsById,
+        appVersion: __BUILD_HASH__, computedAt: new Date().toISOString(),
+      });
+      if (!prepared.ok) {
+        set({ phase: 'rejected', reason: prepared.blocker });
+        if (prepared.blocker.code === 'ALREADY_FINISHED') {
+          await latest.current.reload(); // H-5: das Turnier ist abgeschlossen – die Ansicht folgt dem Server
+          announceTournamentUpdated();
+        }
+        return;
+      }
+      run.current.ready = prepared.ready;
+      set({ phase: 'confirming', ready: prepared.ready });
+    } catch (error) {
+      // Eine unerwartete Ausnahme in der Prüfung (Rechnung, Lesen) darf nie als „wird geprüft“ stehen bleiben
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console -- Ursache der gescheiterten Prüfung (nur Entwicklung, von der Cloud-E2E N6c2 gelesen)
+        console.info(`[finish] Fehler: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
+      }
       if (!outdated()) {
         set({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
       }
-      return;
     }
-    if (outdated()) {
-      return;
-    }
-    const ownPending = context?.sender.getStatus().pendingByTournament[raw.id] ?? 0;
-    const prepared = prepareFinish({
-      tournament: raw, preflight: preflight.preflight, reviews: reviews.reviews, ownPending, engineEventsById,
-      appVersion: __BUILD_HASH__, computedAt: new Date().toISOString(),
-    });
-    if (!prepared.ok) {
-      set({ phase: 'rejected', reason: prepared.blocker });
-      if (prepared.blocker.code === 'ALREADY_FINISHED') {
-        await latest.current.reload(); // H-5: das Turnier ist abgeschlossen – die Ansicht folgt dem Server
-        announceTournamentUpdated();
-      }
-      return;
-    }
-    run.current.ready = prepared.ready;
-    set({ phase: 'confirming', ready: prepared.ready });
   }, [gate, set]);
 
   const send = useCallback(async () => {

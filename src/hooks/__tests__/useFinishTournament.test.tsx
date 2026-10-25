@@ -481,6 +481,14 @@ describe('Die Prüfung hängt nie endlos: hängt eine Lese-Stufe, endet sie nach
     expect(calls('finish_tournament')).toEqual([]);
   });
 
+  it('eine unerwartete Ausnahme in der Prüfung (kaputter Stand) bleibt nicht als „wird geprüft“ stehen, sondern endet mit „Prüfung gescheitert“', async () => {
+    const kaputt = { ...tournament, matches: undefined } as unknown as Tournament;
+    const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw: () => Promise.resolve(kaputt) }));
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'CHECK_FAILED' } });
+    expect(calls('finish_tournament')).toEqual([]);
+  });
+
   it('Gegenbeispiel: kommt der rohe Stand rechtzeitig, läuft die Prüfung durch', async () => {
     const { result } = renderHook(() => useFinishTournament(tournament, { reload, loadRaw: () => Promise.resolve(tournament) }));
     await act(async () => { await result.current.start(); });
