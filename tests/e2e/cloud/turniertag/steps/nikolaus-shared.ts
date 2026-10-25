@@ -148,5 +148,13 @@ export async function beendeAlleSpiele(): Promise<void> {
     expect(result.results.map((r) => r.status), `Spiel ${spielnummer(spiel)} beenden`).toEqual(events.map(() => 'accepted'));
   }
   const nachher = await fetchNikolausSpiele();
-  expect(nachher.map((s) => `${s.score_a}:${s.score_b}`), 'alle 15 Ergebnisse stehen wie vorgesehen').toEqual(NIKOLAUS_ERGEBNISSE.map(([a, b]) => `${a}:${b}`));
+  // Ein Spiel, das N7a2 ausdrücklich korrigiert hat (Ereignis CORRECTION), darf vom vorgesehenen Ergebnis abweichen; N7a2 steht seit R3-4 vor N7b
+  const korrigiert = new Set<string>();
+  for (const spiel of nachher) {
+    if ((await fetchEngineRows(spiel.id)).some((row) => row.type === 'CORRECTION')) {
+      korrigiert.add(spiel.id);
+    }
+  }
+  expect(nachher.map((s) => (korrigiert.has(s.id) ? 'korrigiert' : `${s.score_a}:${s.score_b}`)), 'alle 15 Ergebnisse stehen wie vorgesehen (Korrekturen ausgenommen)')
+    .toEqual(NIKOLAUS_ERGEBNISSE.map(([a, b], index) => (korrigiert.has(nachher[index].id) ? 'korrigiert' : `${a}:${b}`)));
 }

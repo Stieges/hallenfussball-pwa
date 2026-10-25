@@ -5,17 +5,24 @@
  */
 import { expect } from '@playwright/test';
 import { E2E_TURNIERTAG_SHARE_CODE } from '../../testData';
+import { restAsRole } from '../../restAsRole';
 import { expectPageAnchor, expectSollMarker, getRows, openTurniertagPath, SOLL_TIMEOUT_MS, TURNIERTAG_ID } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
-/** D11b: nach dem Abschluss ist der Helfer-QR ungültig, das Dashboard zeigt "beendet" erst nach dem Abschluss (@HE-038, C-ZUSTAND-ABGELEITET). */
+/**
+ * D11b: nach dem Abschluss ist der Helfer-QR ungültig (`join_code_info` nennt „closed“, @HE-038) und der Zustand steht am Server auf „abgeschlossen“ –
+ * nicht schon vorher (C-ZUSTAND-ABGELEITET, C-E2E-N7B-SPALTE: die Spalte ist `lifecycle_status`, nicht `status`). Wie D11 bis Teil F erwartet rot.
+ */
 async function nachAbschluss({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/admin/dashboard');
   await expectPageAnchor(ownerPage.getByText('Dashboard', { exact: true }).first(), 'Admin-Kategorie Dashboard');
-  const status = (await getRows<{ status: string }>(`tournaments?id=eq.${TURNIERTAG_ID}&select=status`, 'Turnierstatus'))[0]?.status;
-  expect(status, 'Turnier ist abgeschlossen').toBe('completed');
-  await expectSollMarker(ownerPage, 'helper-join-expired');
+  const zustand = (await getRows<{ lifecycle_status: string }>(`tournaments?id=eq.${TURNIERTAG_ID}&select=lifecycle_status`, 'Zustand des Turniers'))[0]?.lifecycle_status;
+  expect(zustand, 'Turnier ist abgeschlossen').toBe('finished');
+  const code = await restAsRole('owner', 'POST', 'rpc/ensure_helper_code', { p_tournament_id: TURNIERTAG_ID });
+  expect(code.status, 'Helfer-Code lesbar (bleibt nach dem Abschluss verwaltbar)').toBe(200);
+  const info = await restAsRole('owner', 'POST', 'rpc/join_code_info', { p_code: (code.json as { code: string }).code });
+  expect((info.json as { state: string }).state, 'der QR ist nach dem Abschluss ungültig (@HE-038)').toBe('closed');
 }
 
 /** D13b: Zeiten ehrlich: bei Verzug steht die ursprüngliche Uhrzeit dabei (@ZP-004, @ZP-007). */
@@ -53,7 +60,7 @@ async function lastmessung({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D11b', title: 'Nach dem Abschluss: Helfer-QR ungültig, Dashboard nicht vorzeitig beendet', scenarios: ['@HE-038'], befunde: ['C-ZUSTAND-ABGELEITET'], owner: 'A-21a, A-18, B-23', expectedFail: true, run: nachAbschluss },
+  { id: 'D11b', title: 'Nach dem Abschluss: Helfer-QR ungültig, Dashboard nicht vorzeitig beendet', scenarios: ['@HE-038'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'Teil F (Endstand mit Finalrunde); Abschluss-Dialog gebaut (R3-4)', expectedFail: true, run: nachAbschluss },
 ];
 
 /** Nach D13 (Zeitplan verschieben). */
