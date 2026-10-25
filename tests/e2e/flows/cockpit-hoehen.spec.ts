@@ -86,6 +86,12 @@ for (const [breite, fh] of FENSTER) {
       const flaeche = await page.getByTestId('scoreboard-abzeichen').evaluate((el) => getComputedStyle(el).backgroundColor);
       expect(flaeche).toBe('rgba(0, 0, 0, 0)');
     });
+
+    test(`@SL-180 Zeitbalken am Laptop mindestens doppelt so dick wie zuvor: knapp und normal ≥ 16 px, groß ≥ 24 px (${String(fh)} px)`, async ({ page, seedIndexedDB }) => {
+      await vorbereiten(page, seedIndexedDB);
+      const mindest = fh >= 800 ? 24 : 16;
+      expect(await hoeheVon(page, 'scoreboard-zeitbalken')).toBeGreaterThanOrEqual(mindest);
+    });
   });
 }
 

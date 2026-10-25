@@ -20,20 +20,20 @@
 .tafel[data-stufe='knapp'] {
   --cockpit-uhr-zeile: var(--line-height-cockpit-uhr-knapp);
   --cockpit-tafel-abstand: var(--spacing-xs);
-  --cockpit-tafel-polster: var(--spacing-sm);
-  --cockpit-balken: var(--spacing-sm);
+  --cockpit-tafel-polster: var(--spacing-xs);
+  --cockpit-balken: var(--spacing-md);
 }
 
 .tafel[data-stufe='normal'] {
-  --cockpit-tafel-abstand: var(--spacing-sm);
-  --cockpit-tafel-polster: var(--spacing-sm);
-  --cockpit-balken: var(--spacing-sm);
+  --cockpit-tafel-abstand: var(--spacing-xs);
+  --cockpit-tafel-polster: var(--spacing-xs);
+  --cockpit-balken: var(--spacing-md);
 }
 
 .tafel[data-stufe='gross'] {
   --cockpit-tafel-abstand: var(--spacing-sm);
   --cockpit-tafel-polster: var(--spacing-md);
-  --cockpit-balken: var(--spacing-md);
+  --cockpit-balken: var(--spacing-lg);
 }
 
 /* Kopfzeile: links „Live“ (ohne rote Fläche), rechts „Spiel 3 · Feld 1 · 2. Halbzeit · Gespielt 4:06“, daneben die Abzeichen */
