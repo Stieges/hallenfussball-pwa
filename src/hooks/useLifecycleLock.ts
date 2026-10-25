@@ -6,11 +6,13 @@
  * Öffentliche Ansicht und Torschützen-Schalter laufen über eigene Wege (`make_tournament_private/public`,
  * `updateTournamentMetadata`), nicht über `save()`.
  */
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import type { Tournament } from '../types/tournament';
 import { isTournamentClosed } from '../core/services/lifecycle';
+import { setTournamentClosed } from '../core/services/closedTournaments';
 
 type LifecycleFields = Pick<Tournament, 'status' | 'lifecycleStatus'>;
+type LockedTournament = LifecycleFields & Partial<Pick<Tournament, 'id'>>;
 
 export interface LifecycleLock {
   /** Das Turnier ist abgeschlossen (oder abgebrochen): nichts mehr zu bearbeiten. */
@@ -19,7 +21,14 @@ export interface LifecycleLock {
   saveAllowed: (next: LifecycleFields) => boolean;
 }
 
-export function useLifecycleLock(tournament: LifecycleFields | null): LifecycleLock {
+export function useLifecycleLock(tournament: LockedTournament | null): LifecycleLock {
   const closed = tournament !== null && isTournamentClosed(tournament);
+  const tournamentId = tournament?.id;
+  // R3-3 (V6): `useCan` verneint nach dem Abschluss alle schreibenden Rechte -- dafür muss es das Turnier kennen.
+  useLayoutEffect(() => {
+    if (tournamentId) {
+      setTournamentClosed(tournamentId, closed);
+    }
+  }, [tournamentId, closed]);
   return useMemo(() => ({ closed, saveAllowed: (next: LifecycleFields) => !closed && !isTournamentClosed(next) }), [closed]);
 }

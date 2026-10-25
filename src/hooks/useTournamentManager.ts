@@ -15,6 +15,9 @@ import { applySlotUpdates } from './koSlotResolution';
 import { useEngineCatchUpOnCloudChange } from './useEngineCatchUpOnCloudChange';
 import { createPushCoalescer } from './coalescePushes';
 import { useLifecycleLock } from './useLifecycleLock';
+import { isPublicViewOnlyChange } from '../core/services/lifecycle';
+import { useOptionalToast } from '../components/ui/Toast';
+import { useTranslation } from 'react-i18next';
 
 const FRESH = { fresh: true } as const;
 
@@ -154,11 +157,18 @@ export function useTournamentManager(tournamentId: string) {
     // R3-2b (E10): nach dem Abschluss kein save() – der Server lehnte jede Änderung mit 55000 ab
     const lifecycleLock = useLifecycleLock(tournament);
 
-    // Update Handler (matches signature of useTournamentSync)
+    const { t } = useTranslation('tournament');
+    const toast = useOptionalToast();
+    // Update Handler (matches signature of useTournamentSync). Abgeschlossen: kein Speichern, dafür ein sichtbarer Hinweis (R3-3, M-1)
     const handleTournamentUpdate = useCallback(async (updated: Tournament) => {
         if (!lifecycleLock.saveAllowed(updated)) {
             // Abgeschlossen: nichts senden, die Anzeige zeigt wieder den Stand des Servers
             await loadTournament(FRESH);
+            // R3-3 (M-1, Review #393): nicht still verwerfen. Die öffentliche Ansicht (teilen/beenden, Code erneuern)
+            // läuft über eigene Wege und meldet danach nur den Stand -- das ist kein verlorenes Speichern.
+            if (tournament === null || !isPublicViewOnlyChange(tournament, updated)) {
+                toast?.showWarning(t('rights.closedSaveBlocked'));
+            }
             return;
         }
         const sanitized = stripEngineOverlayFields(updated, tournament, overlaidMatchIdsRef.current);
@@ -174,7 +184,7 @@ export function useTournamentManager(tournamentId: string) {
             // Reload to get consistent state
             await loadTournament();
         }
-    }, [service, loadTournament, tournament, overlaidMatchIdsRef, lifecycleLock]);
+    }, [service, loadTournament, tournament, overlaidMatchIdsRef, lifecycleLock, toast, t]);
 
     // Task A1 (Sofortschutz): Gegenstück zu handleTournamentUpdate OHNE Speicherpfad. Manche
     // Aufrufer (z. B. das Cockpit nach Spielende) wollen den lokalen Zustand nur mit dem
@@ -203,9 +213,10 @@ export function useTournamentManager(tournamentId: string) {
     const overlaidTournament = useEngineOverlayForTournament(tournament);
     // A-08f3e2 Fixrunde 1 (I-1): K.-o.-Plätze nach Server-Bestätigung besetzen, auch ohne offenen Spielplan-Tab
     const applyKoSlots = useCallback((updates: MatchUpdate[]) => {
+        if (lifecycleLock.closed) { return; } // R3-3: nach dem Abschluss besetzt niemand mehr K.-o.-Plätze (der Server lehnte ab)
         setTournament((current) => (current ? applySlotUpdates(current, updates) : current));
         service.schedule.updateMatches(tournamentId, updates).catch(() => { setError('Speichern fehlgeschlagen'); });
-    }, [service, tournamentId]);
+    }, [service, tournamentId, lifecycleLock.closed]);
     useKoResolutionAfterAck(overlaidTournament, applyKoSlots);
 
     // =========================================================================

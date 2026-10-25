@@ -68,6 +68,19 @@ export function isTournamentClosed(t: Pick<Tournament, 'status' | 'lifecycleStat
   return stored === 'finished' || stored === 'cancelled';
 }
 
+/**
+ * Unterscheidet sich `next` von `current` nur in den Angaben der öffentlichen Ansicht (Teilen/Beenden, Code erneuern)?
+ * Diese laufen über eigene Server-Wege (`make_tournament_public/private`) und bleiben nach dem Abschluss änderbar
+ * (@LZ-037 Z. 5); die danach gemeldete Turnier-Kopie ist kein Speichern (R3-3, M-1).
+ */
+const PUBLIC_VIEW_KEYS: readonly string[] = ['isPublic', 'shareCode', 'shareCodeCreatedAt', 'updatedAt'];
+
+export function isPublicViewOnlyChange(current: Tournament, next: Tournament): boolean {
+  const strip = (t: Tournament): string =>
+    JSON.stringify(Object.fromEntries(Object.entries(t).filter(([key]) => !PUBLIC_VIEW_KEYS.includes(key)).sort(([a], [b]) => a.localeCompare(b))));
+  return strip(current) === strip(next);
+}
+
 /** @LZ-002 (MVP-Teil): welche Aktion zum Turnierende die App anbietet; ohne Recht `manageLifecycle` keine (@LZ-022). */
 export function actionsOffered(lifecycle: TournamentLifecycle, can: { manageLifecycle: boolean }): TournamentEndAction[] {
   return lifecycle === 'running' && can.manageLifecycle ? ['finish'] : [];

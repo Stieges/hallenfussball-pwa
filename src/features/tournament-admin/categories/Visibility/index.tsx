@@ -19,6 +19,8 @@ import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareU
 import { isSupabaseConfigured } from '../../../../lib/supabase';
 import { isReleaseRefusal } from '../../../../core/repositories/OfflineRepository';
 import { useCan } from '../../../auth/hooks/useCan';
+import { useTournamentClosed } from '../../../../hooks/useTournamentClosed';
+import { TournamentClosedHint } from '../../../../components/ui/molecules/TournamentClosedHint';
 import { visibilityStyles as styles } from './visibilityStyles';
 import { SpectatorDisplaySection } from './SpectatorDisplaySection';
 
@@ -58,6 +60,8 @@ export function VisibilityCategory({
   const isDraft = !tournament.publishedAt;
   // @ZM-019 (A-11): „Anzeige für Zuschauer“ stellen nur Turnierleitung und Co-Admin
   const canEditDisplay = useCan('tournamentSettings', tournamentId);
+  // R3-3 (@LZ-037): nach dem Abschluss bleiben nur Teilen/Beenden der öffentlichen Ansicht; die Inhalts-Schalter sind gesperrt
+  const closed = useTournamentClosed(tournamentId);
 
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -422,6 +426,7 @@ export function VisibilityCategory({
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
           {t('visibility.whatVisitorsSee')}
         </p>
+        {closed && <div style={{ marginBottom: cssVars.spacing.md }}><TournamentClosedHint /></div>}
         <div style={styles.checkboxGroup}>
           <label style={styles.checkbox}>
             <input type="checkbox" checked disabled />
@@ -432,6 +437,8 @@ export function VisibilityCategory({
               type="checkbox"
               checked={!tournament.hideScoresForPublic}
               onChange={(e) => handleScoresVisibility(e.target.checked)}
+              disabled={!canEditDisplay}
+              data-testid="visibility-scores-toggle"
             />
             <span>{t('visibility.results')}</span>
           </label>
@@ -440,7 +447,8 @@ export function VisibilityCategory({
               type="checkbox"
               checked={!tournament.hideRankingsForPublic}
               onChange={(e) => handleRankingsVisibility(e.target.checked)}
-              disabled={tournament.isKidsTournament}
+              disabled={tournament.isKidsTournament || !canEditDisplay}
+              data-testid="visibility-rankings-toggle"
             />
             <span>{t('visibility.rankings')} {tournament.isKidsTournament && t('visibility.disabledByBambini')}</span>
           </label>

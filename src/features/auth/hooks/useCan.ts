@@ -13,7 +13,8 @@
  * L7/F2 (Rolle unbekannt, Gedächtnis leer): Spielbetrieb (`writeMatchData`) offen, alle Verwaltungsrechte zu. Der
  * Server entscheidet beim Übertragen.
  */
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { isTournamentClosedById, subscribeClosedTournaments } from '../../../core/services/closedTournaments';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { hasPermission, type Permission } from '../utils/permissions';
 import { TOURNAMENT_ROLES, type TournamentRole } from '../types/auth.types';
@@ -40,6 +41,25 @@ function rememberedRole(tournamentId: string): TournamentRole | null {
   return legacy === 'helper' ? 'collaborator' : null;
 }
 
+/**
+ * R3-3 (V6, @LZ-037): Rechte, die nach dem Turnierabschluss bestehen bleiben (Positivliste). Alles andere ist mit dem
+ * Abschluss gesperrt. `manageHelpers`: Helfer-Zugänge entziehen und den Code erneuern (@LZ-037 Z. 5, 7; F13);
+ * `readDisplay`: ein gekoppelter Bildschirm liest nur. Neue Rechte sind damit gesperrt, bis jemand sie bewusst freigibt.
+ */
+export const PERMISSIONS_OPEN_AFTER_CLOSE: ReadonlySet<Permission> = new Set<Permission>(['manageHelpers', 'readDisplay']);
+
+export interface CanOptions {
+  /**
+   * Bleibt auch nach dem Abschluss offen -- nur für Stellen, die der Record ausdrücklich freigibt (öffentliche Ansicht
+   * teilen/beenden, Torschützen-Schalter, @LZ-037). Jeder Aufrufer steht im Inventar-Test.
+   */
+  openAfterClose?: boolean;
+}
+
+function staysOpenAfterClose(permission: Permission, options: CanOptions): boolean {
+  return options.openAfterClose === true || PERMISSIONS_OPEN_AFTER_CLOSE.has(permission);
+}
+
 export interface CanState {
   allowed: boolean;
   /** Die Rolle ist noch nicht bekannt und es gibt auch kein Gedächtnis: die Anzeige wartet, statt „kein Recht“ zu zeigen. */
@@ -51,7 +71,15 @@ export interface CanState {
  * solange die Rolle noch geladen wird, statt dem Eigentümer kurz „Nur die Turnierleitung …“ zu zeigen. `allowed` ist genau
  * der Wert von `useCan`.
  */
-export function useCanState(permission: Permission, tournamentId: string): CanState {
+export function useCanState(permission: Permission, tournamentId: string, options: CanOptions = {}): CanState {
+  const state = useRoleCanState(permission, tournamentId);
+  const closed = useSyncExternalStore(subscribeClosedTournaments, () => isTournamentClosedById(tournamentId));
+  // R3-3 (V6, @LZ-036): abgeschlossen = jedes schreibende Recht verneint, außer der Positivliste (oder dem Aufrufer, der
+  // ausdrücklich offen bleibt, z. B. die Kategorie „öffentliche Ansicht“, @LZ-037).
+  return closed && !staysOpenAfterClose(permission, options) ? { allowed: false, isLoading: state.isLoading } : state;
+}
+
+function useRoleCanState(permission: Permission, tournamentId: string): CanState {
   const { role, isLoading, isUnknown } = useMyTournamentRole(tournamentId);
 
   useEffect(() => {
@@ -74,8 +102,8 @@ export function useCanState(permission: Permission, tournamentId: string): CanSt
   return { allowed: UNKNOWN_ROLE_RIGHTS.has(permission), isLoading: isLoading && !isUnknown };
 }
 
-export function useCan(permission: Permission, tournamentId: string): boolean {
-  return useCanState(permission, tournamentId).allowed;
+export function useCan(permission: Permission, tournamentId: string, options: CanOptions = {}): boolean {
+  return useCanState(permission, tournamentId, options).allowed;
 }
 
 /**
@@ -89,7 +117,11 @@ export function useCan(permission: Permission, tournamentId: string): boolean {
  *   Spielbetrieb (`writeMatchData`), nie `true` für Verwaltungsrechte.
  * - Aufrufer stehen fest im Wächter `rightsOnlyViaUseCan.test.ts` (`LISTED_ROLE_CALLERS`, nur kürzen, nie erweitern).
  */
-export function canWithListedRole(role: TournamentRole | undefined, permission: Permission): boolean {
+export function canWithListedRole(role: TournamentRole | undefined, permission: Permission, closed = false): boolean {
+  // R3-3: ein abgeschlossenes Turnier der Liste (Startseite, Monitor-Übertragung) bietet nichts Schreibendes an
+  if (closed && !PERMISSIONS_OPEN_AFTER_CLOSE.has(permission)) {
+    return false;
+  }
   if (role === undefined) {
     return true;
   }

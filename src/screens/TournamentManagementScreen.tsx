@@ -18,6 +18,8 @@ import { useToast } from '../components/ui/Toast';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useAutoRecompletion } from '../hooks/useAutoRecompletion';
 import { useTournamentManager } from '../hooks/useTournamentManager';
+import { useTournamentClosed } from '../hooks/useTournamentClosed';
+import { TournamentClosedHint } from '../components/ui/molecules/TournamentClosedHint';
 import { ManagementHeader, ManagementMobileNav } from './ManagementChrome';
 import { useCockpitFrame } from '../components/live-cockpit/frame/cockpitFrame';
 import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
@@ -101,6 +103,9 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     scheduleService,
   } = useTournamentManager(tournamentId);
 
+  // R3-3 (@LZ-036): nach dem Abschluss ist nichts mehr zu ändern -- Hinweis oben, Einstiege über useCan/useTournamentClosed gesperrt
+  const closed = useTournamentClosed(tournamentId);
+
   // Paket TB-B: nach dem Eintragen oder Zurücknehmen einer Gleichstands-Entscheidung frisch aus der Cloud lesen
   const reloadFresh = useCallback(() => { void reload({ fresh: true }); }, [reload]);
   // A-15b (@TM-071, @TM-150): nach einer angenommenen Korrektur schließt das Gerät der Turnierleitung die Gruppe erneut ab
@@ -113,7 +118,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   // match. Local state is already synced by `applyRemote` (via ScheduleTab's
   // onLocalTournamentUpdate); this only talks to the repository.
   const handleMatchesUpdate = useCallback((updates: MatchUpdate[]) => {
-    if (updates.length === 0) { return; }
+    if (updates.length === 0 || closed) { return; } // abgeschlossen: der Server lehnte jede Änderung ab (R3-3)
     const run = updates.length === 1
       ? scheduleService.updateMatch(tournamentId, updates[0])
       : scheduleService.updateMatches(tournamentId, updates);
@@ -124,7 +129,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       // Ergebnis-/Status-Sync NIE angezeigt.
       showError('Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.');
     });
-  }, [scheduleService, tournamentId, showError]);
+  }, [scheduleService, tournamentId, showError, closed]);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
   const handleTabChange = (newTab: TabType) => {
@@ -232,6 +237,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         />
       )}
 
+      {closed && !vollbild && (
+        <div style={{ padding: `${cssVars.spacing.md} ${cssVars.spacing.md} 0` }}><TournamentClosedHint /></div>
+      )}
+
       {/* TAB CONTENT */}
       <div style={contentStyle}>
         {(activeTab === 'schedule' || activeTab === 'tabellen') && (
@@ -296,7 +305,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       </div>
 
       {/* MON-KONF-01: Monitor-Editor Dialog */}
-      {editingMonitorId && (
+      {editingMonitorId && !closed && (
         <MonitorEditor
           tournament={tournament}
           monitorId={editingMonitorId}

@@ -1,3 +1,5 @@
+import { setTournamentClosed } from '../core/services/closedTournaments';
+import { isTournamentClosed } from '../core/services/lifecycle';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { useRepository } from '../hooks/useRepository';
@@ -48,6 +50,8 @@ export const useTournaments = () => {
       // G7: Turnier-Limit zählt auch ausgeblendete Turniere weiter — daher der
       // ungefilterte Zähler vor dem Ausblenden in der Anzeige.
       setAllActiveCount(getActiveTournaments(migrated).length);
+      // R3-3: `useCan` und die Sperren der Oberfläche kennen den Abschluss jedes Turniers der Liste (Wizard, Startseite)
+      migrated.forEach((t) => { setTournamentClosed(t.id, isTournamentClosed(t)); });
       setTournaments(
         hideGuestTournaments
           ? await filterWithoutGuestEngineEntries(migrated)
@@ -144,6 +148,7 @@ export const useTournaments = () => {
   const softDeleteTournament = useCallback(async (id: string) => {
     const tournament = tournaments.find(t => t.id === id);
     if (!tournament) { return; }
+    if (isTournamentClosed(tournament)) { throw new Error('TOURNAMENT_CLOSED'); } // R3-3: der Server lehnt `deleted_at` mit 55000 ab; der Aufrufer meldet es
 
     const updated: Tournament = {
       ...tournament,
@@ -164,6 +169,7 @@ export const useTournaments = () => {
   ) => {
     const tournament = tournaments.find(t => t.id === id);
     if (!tournament) { return; }
+    if (isTournamentClosed(tournament)) { throw new Error('TOURNAMENT_CLOSED'); } // R3-3
 
     const updated: Tournament = {
       ...tournament,
