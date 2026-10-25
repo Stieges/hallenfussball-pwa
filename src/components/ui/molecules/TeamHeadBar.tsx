@@ -45,7 +45,7 @@ export function TeamHeadBar({ name, label, fill, bib = null, breit = false, fuel
     ...fillSurface(fill),
   };
   const nameStil: CSSProperties = {
-    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'break-word', lineHeight: cssVars.lineHeights.bodyMd,
+    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: breit ? 'break-word' : 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
     fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };
