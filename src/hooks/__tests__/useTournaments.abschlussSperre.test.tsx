@@ -49,4 +49,13 @@ describe('@LZ-036 Startseite nach dem Abschluss', () => {
     await act(async () => { await result.current.softDeleteTournament('auf'); });
     expect(hoisted.save).toHaveBeenCalledTimes(1);
   });
+
+  it('Review #394 m-1: eine ältere Liste (offener Stand) öffnet die Sperre nicht wieder', async () => {
+    const { result } = renderHook(() => useTournaments());
+    await waitFor(() => expect(isTournamentClosedById('zu')).toBe(true));
+    hoisted.repoList = [t('zu', 'fixed'), t('auf', 'fixed')];
+    await act(async () => { window.dispatchEvent(new Event('tournament-updated')); });
+    await waitFor(() => expect(result.current.tournaments.find((x) => x.id === 'zu')?.lifecycleStatus).toBe('fixed'));
+    expect(isTournamentClosedById('zu')).toBe(true);
+  });
 });

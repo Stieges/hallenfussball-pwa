@@ -256,12 +256,16 @@ function AppContent() {
       try {
         await softDeleteTournament(id);
       } catch (error) {
+        if (error instanceof Error && error.message === 'TOURNAMENT_CLOSED') {
+          showError(tTournament('rights.closedHint')); // R3-3: eigener Text, kein Fehler für Sentry
+          return;
+        }
         console.error('[App] Failed to soft delete tournament:', error);
         if (error instanceof Error) { captureFeatureError(error, 'tournament', 'softDelete', { tournamentId: id }); }
         showError(t('errors.deleteTournament'));
       }
     }
-  }, [softDeleteDialog, softDeleteTournament, showError, t]);
+  }, [softDeleteDialog, softDeleteTournament, showError, t, tTournament]);
 
   const handleRestore = useCallback(async (id: string, title: string) => {
     try {

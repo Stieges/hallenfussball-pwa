@@ -1,9 +1,9 @@
 /**
  * Wizard-Bearbeiten eines abgeschlossenen Turniers (R3-3, @LZ-036, @ZP-087): die Neuplanung ist nach dem Abschluss nicht
  * mehr möglich -- der Wizard (alle fünf Schritte) öffnet gar nicht erst, statt beim Speichern zu scheitern. Ein Link
- * `/tournament/:id/edit` bleibt so ehrlich: Hinweis und Weg zurück.
+ * `/tournament/:id/edit` bleibt so ehrlich: Überschrift, Hinweis und Weg zurück (Fokus auf der Überschrift).
  */
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens';
 import { Button } from '../components/ui/Button';
@@ -22,12 +22,16 @@ const wrap: CSSProperties = {
   gap: cssVars.spacing.lg,
   alignItems: 'flex-start',
 };
+const heading: CSSProperties = { margin: 0, fontSize: cssVars.fontSizes.xl, color: cssVars.colors.textPrimary, outline: 'none' };
 
 export function ClosedTournamentEditNotice({ onBack }: ClosedTournamentEditNoticeProps) {
   const { t } = useTranslation('tournament');
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { headingRef.current?.focus(); }, []);
   return (
     <div style={wrap} data-testid="wizard-closed-notice">
-      <TournamentClosedHint />
+      <h1 ref={headingRef} tabIndex={-1} style={heading} data-testid="wizard-closed-heading">{t('rights.closedTitle')}</h1>
+      <TournamentClosedHint live />
       <Button variant="secondary" size="lg" onClick={onBack} data-testid="wizard-closed-back" data-primary>{t('rights.closedBack')}</Button>
     </div>
   );

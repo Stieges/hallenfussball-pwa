@@ -238,7 +238,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       )}
 
       {closed && !vollbild && (
-        <div style={{ padding: `${cssVars.spacing.md} ${cssVars.spacing.md} 0` }}><TournamentClosedHint /></div>
+        <div style={{ padding: `${cssVars.spacing.md} ${cssVars.spacing.md} 0` }}><TournamentClosedHint live /></div>
       )}
 
       {/* TAB CONTENT */}

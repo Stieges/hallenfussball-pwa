@@ -116,4 +116,13 @@ describe('@ZP-087 @LZ-036 Spielplan nach dem Abschluss: ändert niemand den Zeit
     expect(screen.queryByTestId('schedule-editor-stub')).not.toBeInTheDocument();
     expect(displayProps.current.editable).toBe(false);
   });
+
+  it('@LZ-037 Z. 5 abgeschlossen: „Aushang mit QR-Code“ im PDF-Dialog bleibt angeboten (druckt nur den Link der öffentlichen Ansicht)', async () => {
+    const user = userEvent.setup();
+    setTournamentClosed('hallencup-ost', true);
+    renderTab();
+    await user.click(screen.getByTestId('schedule-action-pdf'));
+    expect(await screen.findByTestId('pdf-choice-schedule')).toBeInTheDocument();
+    expect(screen.getByTestId('pdf-choice-notice')).toBeInTheDocument();
+  });
 });

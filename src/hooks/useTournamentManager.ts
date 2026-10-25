@@ -166,7 +166,8 @@ export function useTournamentManager(tournamentId: string) {
             await loadTournament(FRESH);
             // R3-3 (M-1, Review #393): nicht still verwerfen. Die öffentliche Ansicht (teilen/beenden, Code erneuern)
             // läuft über eigene Wege und meldet danach nur den Stand -- das ist kein verlorenes Speichern.
-            if (tournament === null || !isPublicViewOnlyChange(tournament, updated)) {
+            // Wie beim Speichern erst die Engine-Überlagerung abziehen (Review #394 M-1): sonst unterscheiden sich gespielte Spiele
+            if (tournament === null || !isPublicViewOnlyChange(tournament, stripEngineOverlayFields(updated, tournament, overlaidMatchIdsRef.current))) {
                 toast?.showWarning(t('rights.closedSaveBlocked'));
             }
             return;

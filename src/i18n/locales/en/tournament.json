@@ -1175,6 +1175,7 @@
   },
   "rights": {
     "leadOnlyHint": "Only the tournament management can change this",
+    "closedTitle": "Tournament finished",
     "closedBack": "Back to the tournament",
     "closedHint": "The tournament is finished – nothing can be changed here any more.",
     "closedSaveBlocked": "The tournament is finished – the change was not saved."

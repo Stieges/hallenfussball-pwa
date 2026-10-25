@@ -17,6 +17,8 @@ export interface InlineNoticeProps {
   icon?: ReactNode;
   /** Über die volle Breite unter Symbol und Text (Tasten): bekommt die ganze Fläche statt nur die Textspalte. */
   footer?: ReactNode;
+  /** Vorlesen beim Erscheinen (Vorgabe an). Aus: derselbe Hinweis steht schon an anderer Stelle der Seite (keine doppelte Live-Region). */
+  live?: boolean;
   /** Test-ID für End-to-End- und Komponententests */
   'data-testid'?: string;
 }
@@ -35,7 +37,7 @@ const TONE_ICON: Record<InlineNoticeTone, ReactNode> = {
   ok: <Icons.Check size={iconSizeValues.sm} />,
 };
 
-export const InlineNotice = ({ children, tone = 'warn', icon, footer, 'data-testid': testId }: InlineNoticeProps) => {
+export const InlineNotice = ({ children, tone = 'warn', icon, footer, live = true, 'data-testid': testId }: InlineNoticeProps) => {
   const style: CSSProperties = {
     background: TONES[tone].background,
     border: `${cssVars.borderWidth.thin} solid ${TONES[tone].border}`,
@@ -52,7 +54,7 @@ export const InlineNotice = ({ children, tone = 'warn', icon, footer, 'data-test
   const symbol: CSSProperties = { color: TONES[tone].symbol, display: 'flex' };
   const body: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0, overflowWrap: 'anywhere' };
   return (
-    <div role={tone === 'error' ? 'alert' : 'status'} data-testid={testId} data-tone={tone} style={style}>
+    <div role={live ? (tone === 'error' ? 'alert' : 'status') : undefined} data-testid={testId} data-tone={tone} style={style}>
       <span style={symbol} aria-hidden="true">{icon ?? TONE_ICON[tone]}</span>
       <div style={body}>{children}</div>
       {footer !== undefined ? <div style={footerStyle}>{footer}</div> : null}

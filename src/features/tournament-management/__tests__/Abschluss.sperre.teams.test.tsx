@@ -38,6 +38,8 @@ describe('@LZ-036 Teams und Kader nach dem Abschluss', () => {
     render(<TeamsTab tournament={tournament} onTournamentUpdate={vi.fn()} />);
     expect(screen.getByTestId('tournament-closed-hint')).toHaveTextContent('Das Turnier ist abgeschlossen');
     expect(screen.queryByTestId('lead-only-hint')).not.toBeInTheDocument();
+    // Review #394 m-3: der Kasten im Tab ist keine zweite Live-Region (oben auf der Seite steht schon eine)
+    expect(screen.getByTestId('tournament-closed-hint')).not.toHaveAttribute('role');
     expect(screen.getByText('SG Mitte')).toBeInTheDocument();
     await user.click(screen.getByTestId('team-expand-toggle-sg'));
     expect(screen.queryByTestId('team-edit-button-sg')).not.toBeInTheDocument();

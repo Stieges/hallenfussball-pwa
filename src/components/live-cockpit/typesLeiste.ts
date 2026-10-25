@@ -18,6 +18,8 @@ export interface LiveCockpitLeisteProps extends LiveCockpitFarbenProps {
    * den Hinweis „Korrektur über die Turnierleitung“ (@SL-045). Ohne Angabe gilt: kein Leitungsrecht.
    */
   istLeitung?: boolean;
+  /** Turnier abgeschlossen (R3-3, @LZ-036): das Cockpit liest nur und sagt es -- für Leitung und Helfer, nie „Korrektur über die Turnierleitung“. */
+  abgeschlossen?: boolean;
   /**
    * „Korrigieren“ nach dem Ende (@SL-159, B-10a2): öffnet die Korrektur des Spiels mit Grund. Nur mit Handler und Leitungsrecht steht die
    * Taste da; der Helfer bekommt stattdessen den Hinweis (@HE-043).

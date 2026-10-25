@@ -26,6 +26,8 @@ export interface ThumbBarAreaProps {
   layout: 'daumen' | 'breit';
   kannSteuern: boolean;
   istLeitung: boolean;
+  /** Turnier abgeschlossen: die Nur-lesen-Leiste nennt es (R3-3). */
+  abgeschlossen?: boolean;
   fieldName: string;
   steuerung?: LiveCockpitLeisteProps['steuerung'];
   controls: CockpitControls;
@@ -63,7 +65,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
     return (
       <div style={klebtUnten}>
         <NurLesenLeiste
-          fieldName={p.fieldName} steuerung={p.steuerung} mitEreignissen={modell.aktionen.includes('ereignisse')}
+          fieldName={p.fieldName} steuerung={p.steuerung} abgeschlossen={p.abgeschlossen} mitEreignissen={modell.aktionen.includes('ereignisse')}
           onEreignisse={controls.onEventLog} onMehr={controls.onMore}
         />
       </div>

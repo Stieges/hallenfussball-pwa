@@ -6,7 +6,14 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+// echte Kette useCan -> Rolle -> hasPermission (Review #394 M-2): nur die Rolle ist gemockt
+const role = vi.hoisted((): { current: string } => ({ current: 'owner' }));
+vi.mock('../../../../auth/hooks/useMyTournamentRole', () => ({ useMyTournamentRole: () => ({ role: role.current, isLoading: false }) }));
+// Der PDF-Dialog: hier nur, ob die Aushang-Karte (canCreateNotice) angeboten wird
+const dialogProps = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
+vi.mock('../../../../../components/dialogs/PDFExportDialog', () => ({
+  PDFExportDialog: (props: Record<string, unknown>) => { dialogProps.current = props; return null; },
+}));
 import { render, screen } from '@testing-library/react';
 
 vi.unmock('i18next');
@@ -22,7 +29,7 @@ import { ExportsCategory } from '../index';
 await initRealDeI18n();
 
 let h: ScheduleEngine;
-beforeEach(() => { vi.stubGlobal('indexedDB', new IDBFactory()); resetClosedTournaments(); });
+beforeEach(() => { vi.stubGlobal('indexedDB', new IDBFactory()); resetClosedTournaments(); role.current = 'owner'; dialogProps.current = {}; });
 afterEach(() => { h.engine.stop(); vi.unstubAllGlobals(); resetClosedTournaments(); });
 
 async function renderExports() {
@@ -51,5 +58,25 @@ describe('@LZ-036 Sicherung wiederherstellen nach dem Abschluss', () => {
     const { container } = await renderExports();
     expect(container.querySelector('input[type="file"]')).not.toBeNull();
     expect(screen.queryByTestId('tournament-closed-hint')).not.toBeInTheDocument();
+  });
+
+  it('@LZ-037 Z. 5 abgeschlossen: der Aushang (QR-Code der öffentlichen Ansicht) bleibt angeboten', async () => {
+    h = await makeScheduleEngine();
+    setTournamentClosed(scheduleTournament({}).id, true);
+    await renderExports();
+    expect(dialogProps.current.canCreateNotice).toBe(true);
+  });
+
+  it('abgeschlossen, Helfer ohne Recht (@ZM-019): der Aushang bleibt ohne Recht aus', async () => {
+    role.current = 'collaborator';
+    h = await makeScheduleEngine();
+    setTournamentClosed(scheduleTournament({}).id, true);
+    await renderExports();
+    expect(dialogProps.current.canCreateNotice).toBe(false);
+  });
+
+  it('Gegenbeispiel: offen – Olli bietet den Aushang an', async () => {
+    await renderExports();
+    expect(dialogProps.current.canCreateNotice).toBe(true);
   });
 });

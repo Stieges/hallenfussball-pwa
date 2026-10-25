@@ -74,7 +74,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // A-11: Cockpit-Hinweis bei laufendem Spiel = Spielbetrieb; Spielplan ändern = manageSchedule; Aushang (@ZM-019)
   const canControlTimer = useCan('writeMatchData', tournament.id);
   const canSchedule = useCan('manageSchedule', tournament.id);
-  const canNotice = useCan('tournamentSettings', tournament.id);
+  const canNotice = useCan('tournamentSettings', tournament.id, { openAfterClose: true }); // Aushang druckt nur den Link der öffentlichen Ansicht: bleibt nach dem Abschluss (@LZ-037 Z. 5)
   const closed = useTournamentClosed(tournament.id); // R3-3 (@LZ-036, @ZP-087): Ergebnis, Schiri, Feld im Spielplan nur vor dem Abschluss
   const canEndRunning = useCan('leadMatches', tournament.id); // @FU-112/@FU-113: Spiel beenden nur Turnierleitung
   // Toast notifications

@@ -5,7 +5,7 @@
  * das Innenleben bei `kannSteuern=false` decken LiveCockpit.readOnly.test.tsx und die Tastenkürzel-Tests ab.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, cleanup } from '@testing-library/react';
 import { ManagementTab } from '../ManagementTab';
 import type { Tournament } from '../../../types/tournament';
 import type { GeneratedSchedule } from '../../../core/generators';
@@ -150,6 +150,15 @@ describe('R3-3 Cockpit nach dem Abschluss (@LZ-036 Z. 3–5, @SL-159, @HE-070)',
       expect(cockpitProps.current.onNichtAngetreten === undefined).toBe(role === 'collaborator');
     },
   );
+
+  it('@SL-159 abgeschlossen: das Cockpit bekommt „abgeschlossen“ (statt des Helfer-Satzes), offen nicht', () => {
+    renderTab();
+    expect(cockpitProps.current.abgeschlossen).toBe(false);
+    cleanup();
+    setTournamentClosed('tournament-1', true);
+    renderTab();
+    expect(cockpitProps.current.abgeschlossen).toBe(true);
+  });
 
   it('der Abschluss mitten im Spiel (anderes Gerät schließt ab) macht das Cockpit sofort schreibgeschützt', () => {
     renderTab();

@@ -51,7 +51,8 @@ export const useTournaments = () => {
       // ungefilterte Zähler vor dem Ausblenden in der Anzeige.
       setAllActiveCount(getActiveTournaments(migrated).length);
       // R3-3: `useCan` und die Sperren der Oberfläche kennen den Abschluss jedes Turniers der Liste (Wizard, Startseite)
-      migrated.forEach((t) => { setTournamentClosed(t.id, isTournamentClosed(t)); });
+      // nur „abgeschlossen“ setzen, nie zurück: eine ältere Liste (lokale Kopie, Zeitüberschreitung) darf die Sperre der Verwaltung nicht öffnen
+      migrated.forEach((t) => { if (isTournamentClosed(t)) { setTournamentClosed(t.id, true); } });
       setTournaments(
         hideGuestTournaments
           ? await filterWithoutGuestEngineEntries(migrated)

@@ -3,7 +3,7 @@
  * Bedienweg wie App.wizardAbbrechen.test.tsx: Verwaltung und Wizard sind Attrappen, geprüft wird, was die App daraus macht.
  */
 import 'fake-indexeddb/auto';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Tournament } from './types/tournament';
@@ -68,6 +68,10 @@ describe('R3-3 Wizard-Neuplanung nach dem Abschluss (@LZ-036, @ZP-087; alle 5 Sc
     expect(screen.queryByTestId('wizard-stub')).not.toBeInTheDocument();
     expect(screen.getByTestId('tournament-closed-hint')).toBeInTheDocument();
     expect(screen.getByTestId('wizard-closed-back')).toBeInTheDocument();
+    // Review #394 m-3: eine Überschrift mit Fokus, genau eine Live-Region, Haupttaste nur die Zurück-Taste
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(within(screen.getByTestId('wizard-closed-notice')).getAllByRole('status')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-primary]')).toHaveLength(1);
   });
 
   it('abgeschlossen: auch mit Schritt (?step=5, „Teams bearbeiten“) kein Wizard', async () => {

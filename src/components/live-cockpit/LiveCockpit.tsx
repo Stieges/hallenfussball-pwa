@@ -262,6 +262,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
         layout={layout}
         kannSteuern={kannSteuern}
         istLeitung={istLeitung}
+        abgeschlossen={props.abgeschlossen}
         fieldName={fieldName}
         steuerung={props.steuerung}
         controls={cmd.controls}

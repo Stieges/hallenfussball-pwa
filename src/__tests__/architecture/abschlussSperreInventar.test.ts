@@ -105,10 +105,11 @@ describe('Inventar: Sperre nach dem Abschluss (R3-3, V6)', () => {
     expect(noReason).toEqual([]);
   });
 
-  it('nur CategoryRightGate lässt per openAfterClose ein Recht nach dem Abschluss offen (Positivliste: nur kürzen, nie erweitern)', () => {
+  it('nur CategoryRightGate (öffentliche Ansicht) und der Aushang lassen per openAfterClose ein Recht nach dem Abschluss offen (nur kürzen, nie erweitern)', () => {
     const users = sourceFiles
       .filter((f) => /openAfterClose\s*:/.test(f.text) && f.path !== 'src/features/auth/hooks/useCan.ts')
       .map((f) => f.path);
-    expect(users).toEqual([`${ADMIN}components/CategoryRightGate.tsx`]);
+    // Aushang (QR-Code der öffentlichen Ansicht drucken) schreibt nichts, @LZ-037 Z. 5, Review #394 R-2
+    expect(users.sort()).toEqual([`${ADMIN}categories/Exports/index.tsx`, `${ADMIN}components/CategoryRightGate.tsx`, `${HOME}ScheduleTab.tsx`]);
   });
 });
