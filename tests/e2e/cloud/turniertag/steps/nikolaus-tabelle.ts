@@ -4,7 +4,7 @@
  * Kammer vor Waging rot (direktes Spiel zuerst, @ET-056), Petting und Otting gleichauf (@ET-055, @ET-025), Fridolfing, Waging blau.
  * Szenarien mit anderen Mannschaftsnamen (@W2A-041 bis @W2A-045) prüfen dieselben Regeln; diese Fälle liegen als Vitest-Tests in Paket TB.
  */
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { vorbedingung, getRows, SOLL_TIMEOUT_MS } from './shared';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { beendeAlleSpiele, fetchNikolausSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
@@ -242,9 +242,13 @@ async function abschlussVerweigert({ asRole }: StepContext): Promise<void> {
   await openNikolausPath(seite, '/admin/dashboard');
   await expect(seite.getByTestId('finish-status'), 'etwas ist offen: kein Vorschlag, die Karte „Turnierstand“').toBeVisible({ timeout: 15_000 });
   await expect(seite.getByTestId('finish-suggestion')).toHaveCount(0);
+  const t0 = Date.now();
   await seite.getByTestId('tournament-finish-open').click();
   const liste = seite.getByTestId('finish-open-list');
-  await expect(liste, 'Liste der offenen Punkte').toBeVisible({ timeout: 15_000 });
+  // Messung der Prüfdauer (Stand „wird geprüft“ → Liste): die Zeit steht als Anmerkung im Bericht
+  await expect(liste.or(seite.getByTestId('finish-error')), 'Liste der offenen Punkte (oder ein Fehlertext)').toBeVisible({ timeout: 60_000 });
+  test.info().annotations.push({ type: 'Prüfdauer des Abschluss-Dialogs (ms)', description: String(Date.now() - t0) });
+  await expect(liste, 'Liste der offenen Punkte').toBeVisible({ timeout: 1000 });
   await expect(liste.getByTestId('finish-open-item').filter({ hasText: /Gruppe.* noch nicht abgeschlossen/ }), '@LZ-013: Eintrag „Gruppe noch nicht abgeschlossen“').toHaveCount(1);
   await expect(seite.getByTestId('finish-back'), 'Haupttaste „Zurück zur Verwaltung“').toHaveText('Zurück zur Verwaltung');
   await expect(seite.getByTestId('tournament-finish-confirm'), 'kein gesperrter Abschließen-Knopf (Daniel 25.10.)').toHaveCount(0);
