@@ -106,6 +106,14 @@ const client = () => (isSupabaseConfigured ? supabase : null);
 export const FINISH_STAGE_TIMEOUT_MS = 20_000;
 const STAGE_TIMED_OUT = Symbol('stage-timed-out');
 
+/** Entwicklung: Ablauf der Prüfung im Konsolenprotokoll (von der Cloud-E2E N6c2 gelesen). */
+function trace(message: string): void {
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console -- Ablauf der Prüfung (nur Entwicklung)
+    console.info(`[finish] ${message}`);
+  }
+}
+
 async function stage<T>(name: string, work: Promise<T>): Promise<T | typeof STAGE_TIMED_OUT> {
   const started = Date.now();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -165,12 +173,14 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
 
   const start = useCallback(async () => {
     if (phase.current === 'sending') {
+      trace('start ignoriert (sendet)');
       return; // m-1: während des Sendens beginnt kein neuer Durchlauf (kein zweiter Abschluss mit neuer ID)
     }
     const { tournament: current, engineContext: context } = latest.current;
     const mine = run.current.attempt + 1;
     run.current = { requestId: crypto.randomUUID(), ready: null, attempt: mine };
-    const outdated = () => mine !== run.current.attempt; // m-1: ein neuerer Durchlauf (oder reset) gilt
+    const outdated = () => { const old = mine !== run.current.attempt; if (old) { trace(`Durchlauf ${String(mine)} veraltet (jetzt ${String(run.current.attempt)})`); } return old; }; // m-1: ein neuerer Durchlauf (oder reset) gilt
+    trace(`start ${String(mine)}`);
     const blocked = gate();
     if (blocked !== null || current === null) {
       set({ phase: 'rejected', reason: blocked ?? { code: 'CHECK_FAILED' } });
@@ -211,6 +221,7 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
         appVersion: __BUILD_HASH__, computedAt: new Date().toISOString(),
       });
       if (!prepared.ok) {
+        trace(`Grund: ${prepared.blocker.code}`);
         set({ phase: 'rejected', reason: prepared.blocker });
         if (prepared.blocker.code === 'ALREADY_FINISHED') {
           await latest.current.reload(); // H-5: das Turnier ist abgeschlossen – die Ansicht folgt dem Server
@@ -219,6 +230,7 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
         return;
       }
       run.current.ready = prepared.ready;
+      trace('bereit');
       set({ phase: 'confirming', ready: prepared.ready });
     } catch (error) {
       // Eine unerwartete Ausnahme in der Prüfung (Rechnung, Lesen) darf nie als „wird geprüft“ stehen bleiben
@@ -314,6 +326,7 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
   }, [gate, send, set]);
 
   const reset = useCallback(() => {
+    trace('reset');
     if (phase.current === 'sending') {
       return; // der Aufruf läuft: Abbrechen ist gesperrt (@LZ-021)
     }
