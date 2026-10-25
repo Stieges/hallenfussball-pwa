@@ -207,6 +207,17 @@ export class OwnDecisionConflictError extends OptimisticLockError {
   }
 }
 
+/**
+ * @W2A-078 (R2 PR 3, Befund C-WERTUNG-EINSTELLUNG-OHNE-SPERRE): ein Speichern würde die Wertung bei Nichtantritt ändern, obwohl
+ * schon ein Spiel so gewertet ist – gespeicherte Wertungen änderten sich sonst rückwirkend. Nichts wird geschrieben.
+ */
+export class ForfeitScoreLockedError extends Error {
+  constructor() {
+    super('Die Wertung bei Nichtantritt ist gesperrt: im Turnier ist schon ein Spiel so gewertet.');
+    this.name = 'ForfeitScoreLockedError';
+  }
+}
+
 // =============================================================================
 // Utilities
 // =============================================================================

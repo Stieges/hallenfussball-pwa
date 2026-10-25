@@ -74,6 +74,21 @@ export type ForfeitScoreChange =
  */
 export const forfeitScoreLocked = (tournament: Pick<Tournament, 'matches'>): boolean => tournament.matches.some(isForfeitMatch);
 
+/**
+ * @W2A-078: Würde ein Speichern von `existing` auf `next` die geltende Wertung ändern, obwohl gespeichert oder im neuen Stand schon
+ * ein Spiel als Nichtantritt gewertet ist? Die Regel für den Speicherweg (`LocalStorageRepository.save`), Zwilling von
+ * `changeForfeitScore` für das Feld.
+ */
+export function forfeitScoreChangeLocked(
+  existing: Pick<Tournament, 'matches' | 'forfeitScore'>,
+  next: Pick<Tournament, 'matches' | 'forfeitScore'>,
+): boolean {
+  const before = effectiveForfeitScore(existing);
+  const after = effectiveForfeitScore(next);
+  const changed = before.winner !== after.winner || before.loser !== after.loser;
+  return changed && (forfeitScoreLocked(existing) || forfeitScoreLocked(next));
+}
+
 /** Die eine Regel für jede Oberfläche, die die Einstellung ändert (B-12): gleicher Wert immer, anderer nur ohne Wertung. */
 export function changeForfeitScore(tournament: Pick<Tournament, 'matches' | 'forfeitScore'>, next: unknown): ForfeitScoreChange {
   const forfeitScore = parseForfeitScore(next);
