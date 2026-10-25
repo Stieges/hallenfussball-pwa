@@ -28,7 +28,7 @@ export function ClosedTournamentEditNotice({ onBack }: ClosedTournamentEditNotic
   return (
     <div style={wrap} data-testid="wizard-closed-notice">
       <TournamentClosedHint />
-      <Button variant="secondary" onClick={onBack} data-testid="wizard-closed-back">{t('rights.closedBack')}</Button>
+      <Button variant="secondary" size="lg" onClick={onBack} data-testid="wizard-closed-back" data-primary>{t('rights.closedBack')}</Button>
     </div>
   );
 }
