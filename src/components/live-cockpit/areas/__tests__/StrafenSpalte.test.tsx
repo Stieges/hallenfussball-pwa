@@ -39,7 +39,15 @@ describe('@SL-186 Laufende Zeitstrafen stehen als Karten am Laptop', () => {
     render(<StrafenSpalte model={modell([strafe('a', 72), strafe('b', 100, 4), strafe('c', 110, 7)])} />);
     expect(screen.getByTestId('strafen-spalte')).toHaveAttribute('data-anzahl', '2');
     expect(screen.queryByTestId('strafen-karte-c')).toBeNull();
-    expect(screen.getByTestId('strafen-weitere')).toHaveTextContent('+ 1 weitere');
+    expect(screen.getByTestId('strafen-weitere')).toHaveTextContent('+ 1 weitere (DJK Otting)');
+    expect(screen.getAllByRole('listitem')).toHaveLength(2); // Karten stehen in einer Liste, je Karte mit Namen und Restzeit
+    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getByTestId('strafen-karte-a')).toHaveAttribute('aria-label', 'DJK Otting, Nr. 9, Restzeit 1:12');
+  });
+
+  it('Strafe aus der 1. Halbzeit läuft in der 2. weiter: „seit 1. Halbzeit 9:30“', () => {
+    render(<StrafenSpalte model={modell([{ ...strafe('f', 50), seitMs: null, seitErsteHalbzeitMs: 570_000 }])} />);
+    expect(screen.getByTestId('strafen-karte-f')).toHaveTextContent('Zeitstrafe 2 Min · seit 1. Halbzeit 9:30');
   });
 
   it('ohne Nummer steht „ohne Nr.“, bei einer Strafe aus dem früheren Abschnitt entfällt „seit Spielzeit“', () => {

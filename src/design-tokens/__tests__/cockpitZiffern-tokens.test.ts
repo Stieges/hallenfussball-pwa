@@ -73,11 +73,12 @@ describe('F1: 11 mm auch bei 620 px Fensterhöhe – Tor-Taste bleibt >= 56 px',
   it.each(STUFEN)('Stufe %s: Mindesthöhe der Tor-Taste (Token) >= 56 px', (stufe) => {
     expect(px(`--sizing-cockpit-tor-${stufe}`)).toBeGreaterThanOrEqual(TOR_MIN);
   });
+  const KASTEN_MOCKUP = 76;
   it('Gegenprobe: ein Kasten von 76 px (Mockup-Wert) ließe bei 620 px ohne Variante a und mit langem Namen nur noch Tor < 56 px; 68 px reichen mit Variante a', () => {
     const mitKasten = (kasten: number, zeilenOhne: number): number =>
       620 - (FEST_OHNE_KASTEN_UHR_TOR - (NAMENSZEILE_HAUPT - zeilenOhne)) - kasten - px('--sizing-cockpit-ziffer-knapp') - ZWEITE_LEISTENZEILE;
     expect(mitKasten(px('--sizing-cockpit-kasten-knapp'), NAMENSZEILE_VARIANTE_A)).toBeGreaterThanOrEqual(TOR_MIN);
-    expect(mitKasten(px('--sizing-cockpit-kasten-knapp') + 40, NAMENSZEILE_HAUPT)).toBeLessThan(TOR_MIN);
+    expect(mitKasten(KASTEN_MOCKUP, NAMENSZEILE_HAUPT)).toBeLessThan(TOR_MIN);
   });
   it('unter 620 px (600) reicht der Platz nicht: dort scrollt die Fläche, die Ziffern bleiben gleich groß', () => {
     expect(tor(600, NAMENSZEILE_VARIANTE_A, true)).toBeLessThan(TOR_MIN);

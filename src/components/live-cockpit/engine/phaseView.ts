@@ -24,6 +24,8 @@ export interface PhasePenalty {
   durationMs?: number;
   /** Spielzeit im Abschnitt, in dem die Strafe verhängt wurde; `null`, wenn sie aus einem früheren Abschnitt stammt. */
   seitMs?: number | null;
+  /** Strafe aus der 1. Halbzeit, jetzt läuft die 2.: Spielzeit des Beginns in der 1. Halbzeit (der erste Abschnitt beginnt bei 0). Sonst nicht gesetzt. */
+  seitErsteHalbzeitMs?: number;
 }
 
 export interface PhaseShootout {
@@ -228,6 +230,7 @@ function penaltiesOf(state: MatchState, elapsedMs: number): PhasePenalty[] {
     remainingMs: penaltyRemainingMs(penalty, elapsedMs),
     durationMs: penalty.durationMs,
     seitMs: penalty.startMs >= basis ? penalty.startMs - basis : null,
+    ...(penalty.startMs < basis && state.section === 2 && state.phase !== 'overtime' ? { seitErsteHalbzeitMs: penalty.startMs } : {}),
   }));
 }
 

@@ -122,8 +122,31 @@ test.describe('Laptop 1280×720: Einblendung, Zeitstrafen, lange Namen', () => {
     expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual((await page.getByTestId('scoreboard-box-links').boundingBox())?.y ?? 0); // verdeckt weder Kasten noch Uhr
     const waehrend = { uhr: await page.getByTestId('scoreboard-clock-rest').boundingBox(), kasten: await page.getByTestId('scoreboard-box-links').boundingBox(), tor: await page.getByTestId('goal-button-home').boundingBox() };
     expect(waehrend).toEqual(vorher);
+    await page.waitForTimeout(600); // Einblendung des Nummern-Dialogs ist fertig, die Animation vorbei (Bild für den Mockup-Vergleich)
     await bildDavon(page, 'toast-720');
     await expect(meldung).not.toContainText('Tor für', { timeout: 6000 });
+  });
+
+  test('@SL-183 während der Einblendung bleiben „Live“ und der Knopf „Ton aus“ sichtbar und klickbar; nur der Kopftext wird ersetzt', async ({ page, seedIndexedDB }) => {
+    await vorbereiten(page, seedIndexedDB);
+    await page.reload(); // nach dem Neuladen ist der Ton wieder gesperrt: „Ton aus“ steht in der Kopfzeile
+    await expect(page.getByTestId('match-pause-button')).toBeVisible();
+    const ton = page.getByTestId('scoreboard-ton');
+    await expect(ton).toBeVisible();
+    await page.getByTestId('goal-button-home').click();
+    const meldung = page.getByTestId('notice-line');
+    await expect(meldung).toContainText('Tor für TSV Petting');
+    const kopfText = (await page.getByTestId('scoreboard-kopf-text').boundingBox())!;
+    const einblendung = (await meldung.boundingBox())!;
+    expect(einblendung.x, 'die Einblendung beginnt im Feld des Kopftextes').toBeGreaterThanOrEqual(kopfText.x - 1);
+    expect(einblendung.x + einblendung.width, 'und reicht nicht bis in die Knöpfe').toBeLessThanOrEqual(kopfText.x + kopfText.width + 1);
+    await expect(page.getByTestId('scoreboard-abzeichen')).toBeVisible();
+    await page.keyboard.press('Escape'); // der Nummern-Dialog nach dem Tor liegt sonst mit seinem Schleier über allem
+    await expect(page.getByTestId('number-picker')).toBeHidden();
+    await ton.click({ trial: true }); // nichts liegt darüber
+    await ton.click();
+    await expect(ton).toHaveCount(0);
+    await expect(meldung).toContainText('Tor für TSV Petting'); // die Einblendung läuft weiter
   });
 
   test('@SL-186 Zeitstrafen als Karten: keine → „Keine aktiven Zeitstrafen“, zwei → zwei Karten, drei → zwei Karten und „+ 1 weitere“', async ({ page, seedIndexedDB }) => {
@@ -137,7 +160,7 @@ test.describe('Laptop 1280×720: Einblendung, Zeitstrafen, lange Namen', () => {
     await expect(page.getByTestId('team-penalty-p1')).toHaveCount(0);
     await tippeZeitstrafe(page, 'away');
     await expect(page.getByTestId('strafen-spalte')).toHaveAttribute('data-anzahl', '2');
-    await expect(page.getByTestId('strafen-weitere')).toHaveText('+ 1 weitere');
+    await expect(page.getByTestId('strafen-weitere')).toHaveText('+ 1 weitere (DJK Otting)');
     const karten = page.locator('[data-testid^="strafen-karte-"][data-anteil]');
     await expect(karten).toHaveCount(2);
     await expect(karten.first()).toContainText('DJK Otting, ohne Nr.');

@@ -34,14 +34,20 @@ export function StrafenSpalte({ model }: StrafenSpalteProps): ReactElement {
   return (
     <div style={kasten} data-testid="strafen-spalte" data-anzahl={model.karten.length}>
       <h3 style={titel}>{t('strafen.titel')}</h3>
+      <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm }}>
       {model.karten.map((k) => (
         <PenaltyCard
           key={k.id} testId={`strafen-karte-${k.id}`} etikett={t('strafen.restzeit')} rest={k.rest} anteil={k.anteil} fill={k.kasten.fill}
           titel={k.nummer === null ? t('strafen.ohneNr', { team: k.teamName }) : t('strafen.mitNr', { team: k.teamName, nummer: k.nummer })}
-          unterzeile={k.seit === null ? t('strafen.dauer', { minuten: k.minuten }) : t('strafen.dauerSeit', { minuten: k.minuten, zeit: k.seit })}
+          unterzeile={k.seit !== null ? t('strafen.dauerSeit', { minuten: k.minuten, zeit: k.seit }) : k.seitErsteHalbzeit !== null ? t('strafen.dauerSeitErsteHalbzeit', { minuten: k.minuten, zeit: k.seitErsteHalbzeit }) : t('strafen.dauer', { minuten: k.minuten })}
         />
       ))}
-      {model.weitere > 0 && <div style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.semibold }} data-testid="strafen-weitere">{t('strafen.weitere', { count: model.weitere })}</div>}
+      </div>
+      {model.weitere > 0 && (
+        <div style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.semibold }} data-testid="strafen-weitere">
+          {model.weitereJeTeam.map((w) => <div key={w.teamName}>{t('strafen.weitere', { count: w.anzahl, team: w.teamName })}</div>)}
+        </div>
+      )}
     </div>
   );
 }

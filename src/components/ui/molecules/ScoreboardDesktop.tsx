@@ -70,7 +70,11 @@ export function ScoreboardDesktop({ model, stufe, meldezeile, onHelferAnfragen, 
             ? <span style={{ fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.scoreboardHighlight, whiteSpace: 'nowrap' }} data-testid={id('ueberfaellig')}>{model.ueberfaelligText}</span>
             : <MatchStatusBadge model={model.badge} size="tafel" surface="scoreboardFlach" testId={id('abzeichen')} />}
         </span>
-        <span className={desktop.kopfText} data-testid={id('kopf-text')}>{model.kopfText ?? model.abschnittText}</span>
+        {/* Die Einblendung ersetzt nur den Kopftext (@SL-183): „Live“ und die Knöpfe rechts bleiben sichtbar und klickbar; `aria-live` bleibt im Baum */}
+        <span className={desktop.kopfFeld}>
+          <span className={desktop.kopfText} data-testid={id('kopf-text')}>{model.kopfText ?? model.abschnittText}</span>
+          <div className={desktop.einblendung}>{meldezeile}</div>
+        </span>
         <span className={desktop.abzeichen}>
           {kopfRechts}
           {tonHinweis && <Abzeichen hoehe={hoehe} label={tonHinweis.label} kurz={tonHinweis.kurz} icon={<TafelIcons.VolumeOff size={icon} />} onAntippen={tonHinweis.onAntippen} testId={id('ton')} />}
@@ -79,7 +83,6 @@ export function ScoreboardDesktop({ model, stufe, meldezeile, onHelferAnfragen, 
           {model.helferAnfragenText && <Abzeichen hoehe={hoehe} label={model.helferAnfragenText} icon={<Icons.Users size={icon} />} onAntippen={onHelferAnfragen} testId={id('helfer-anfragen')} />}
         </span>
       </div>
-      <div className={desktop.einblendung}>{meldezeile}</div>
 
       {model.leerAnzeige ? (
         <div style={{ textAlign: 'center', minWidth: 0 }} data-testid={id('empty')}>

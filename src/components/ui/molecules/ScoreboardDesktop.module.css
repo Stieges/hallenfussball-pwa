@@ -47,7 +47,7 @@
 }
 
 .kopfText {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
   text-align: right;
   font-size: var(--font-size-label-md);
@@ -66,12 +66,21 @@
   min-width: 0;
 }
 
-/* Einblendung („Tor für …“) liegt über der Kopfzeile, verschiebt nichts (Plan B1: 3 s, `aria-live`) */
+/* Feld des Kopftextes: die Einblendung („Tor für …“, 3 s, `aria-live`) liegt genau darüber und verschiebt nichts; „Live“ und die Knöpfe bleiben frei */
+.kopfFeld {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
 .einblendung {
   position: absolute;
-  top: var(--cockpit-tafel-polster, var(--spacing-md));
-  left: var(--cockpit-tafel-polster, var(--spacing-md));
-  right: var(--cockpit-tafel-polster, var(--spacing-md));
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1;
 }
 

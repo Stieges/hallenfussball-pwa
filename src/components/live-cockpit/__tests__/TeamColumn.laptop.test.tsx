@@ -50,12 +50,24 @@ describe('TeamColumn am Laptop', () => {
     expect(screen.getByRole('button', { name: 'Foul SV Süd, Foul 5' })).toBeInTheDocument();
   });
 
-  it('@SL-182 ein 50-Zeichen-Name steht in der Leiste vollständig neben „Heim“/„Gast“, bricht um und endet nie mit „…“', () => {
+  it('@SL-182 ein 50-Zeichen-Name steht in der Leiste vollständig, „Heim“/„Gast“ darüber, bricht um und endet nie mit „…“', () => {
     render(<TeamColumn {...props({ name: NAME_50 })} />);
     const kopf = screen.getByTestId('team-head-away');
     expect(screen.getByTestId('team-name-away')).toHaveTextContent(NAME_50);
-    expect(kopf).not.toHaveAttribute('data-gestapelt'); // am Laptop bleibt die Seite neben dem Namen (Mockup `lang-haupt-720`)
+    expect(kopf).toHaveAttribute('data-gestapelt', 'true'); // auch am Laptop: der lange Name bekommt die ganze Breite (VISUAL-DESIGN § 2)
     expect(kopf).toHaveTextContent('Gast');
     expect(kopf.textContent).not.toContain('…');
+  });
+
+  it('@SL-182 „Nordheim-Süd“: der lange Name trennt nie mitten im Wort und bricht höchstens an Leerzeichen und Bindestrich; ein kurzer Name steht neben „Gast“', () => {
+    const lang = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
+    const { unmount } = render(<TeamColumn {...props({ name: lang })} />);
+    const name = screen.getByTestId('team-name-away');
+    expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-gestapelt', 'true');
+    expect(name.style.overflowWrap).toBe('break-word'); // nicht „anywhere“: ein Wort bricht nie mitten im Wort
+    expect(name.style.hyphens).toBe('manual');
+    unmount();
+    render(<TeamColumn {...props({ name: 'SV Süd' })} />);
+    expect(screen.getByTestId('team-head-away')).not.toHaveAttribute('data-gestapelt');
   });
 });

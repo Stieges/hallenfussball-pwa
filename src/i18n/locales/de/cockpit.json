@@ -257,7 +257,8 @@
     "ohneNr": "{{team}}, ohne Nr.",
     "dauer": "Zeitstrafe {{minuten}} Min",
     "dauerSeit": "Zeitstrafe {{minuten}} Min · seit Spielzeit {{zeit}}",
-    "weitere": "+ {{count}} weitere"
+    "weitere": "+ {{count}} weitere ({{team}})",
+    "dauerSeitErsteHalbzeit": "Zeitstrafe {{minuten}} Min · seit 1. Halbzeit {{zeit}}"
   },
   "sidebar": {
     "activePenalties": "Aktive Zeitstrafen",

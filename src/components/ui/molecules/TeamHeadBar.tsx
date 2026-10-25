@@ -34,9 +34,9 @@ const LANGER_NAME = 16;
 
 export function TeamHeadBar({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
-  const gestapelt = !breit && name.length > LANGER_NAME; // am Laptop bleibt „Heim“/„Gast“ neben dem Namen (Mockup `lang-haupt-720`): die Spalte ist breit genug
+  const gestapelt = name.length > LANGER_NAME; // auch am Laptop: „Heim“/„Gast“ über dem langen Namen, sonst bricht er am Bindestrich (VISUAL-DESIGN § 2, `titel.wortbruch`)
   const kopf: CSSProperties = {
-    display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? cssVars.spacing.xs : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
+    display: 'flex', flexDirection: gestapelt ? 'column-reverse' : 'row', alignItems: gestapelt ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: gestapelt ? (breit ? 0 : cssVars.spacing.xs) : cssVars.spacing.sm, boxSizing: 'border-box', minWidth: 0,
     // Die Schrift bleibt von den Weste-Streifen weg (N3: „Gast“ auf dem Streifen fiele unter 4,5 : 1)
     padding: `${cssVars.spacing.xs} calc(${String(fillStreifenProzent(fill))}% + ${cssVars.spacing.sm})`, borderRadius: cssVars.borderRadius.md,
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, hyphens: 'manual',
@@ -45,7 +45,7 @@ export function TeamHeadBar({ name, label, fill, bib = null, breit = false, fuel
     ...fillSurface(fill),
   };
   const nameStil: CSSProperties = {
-    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
+    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'break-word', lineHeight: cssVars.lineHeights.bodyMd,
     fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };

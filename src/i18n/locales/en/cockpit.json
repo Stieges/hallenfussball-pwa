@@ -257,7 +257,8 @@
     "ohneNr": "{{team}}, no number",
     "dauer": "Time penalty {{minuten}} min",
     "dauerSeit": "Time penalty {{minuten}} min · since {{zeit}}",
-    "weitere": "+ {{count}} more"
+    "weitere": "+ {{count}} more ({{team}})",
+    "dauerSeitErsteHalbzeit": "Time penalty {{minuten}} min · since 1st half {{zeit}}"
   },
   "sidebar": {
     "activePenalties": "Active Time Penalties",

@@ -410,8 +410,8 @@
   /* Zeilenhöhe der Uhr-Ziffern je Stufe: unter 1, damit die Uhr nicht höher wird als ihre Ziffern (Ziffernhöhe ≈ 0,727 em); knapp 0,85 */
   --line-height-cockpit-uhr-knapp: 0.85;
   /* Cockpit Laptop: Mindesthöhen je Stufe der Fensterhöhe (Mockup `cockpit-desktop`, Maße 620/720/800): Tor, Foul-Reihe, Team-Leiste, Fußleiste */
-  --sizing-cockpit-tor-knapp: 60px;
-  --sizing-cockpit-tor-normal: 72px;
+  --sizing-cockpit-tor-knapp: 58px;
+  --sizing-cockpit-tor-normal: 60px;
   --sizing-cockpit-tor-gross: 84px;
   --sizing-cockpit-fuss-knapp: 52px;
   --sizing-cockpit-fuss-normal: 64px;

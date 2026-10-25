@@ -70,7 +70,7 @@ describe('@ZM-166 Der Zeitbalken zeigt den Zustand des Spiels, nie in Rot', () =
     expect(m.uhr?.balken ?? null).toBeNull();
   });
 
-  it('@ZM-145 der Balken nimmt mit der Restzeit ab: eine Sekunde später ist er kürzer, mit 0:00 voll nur vor dem Abpfiff', () => {
+  it('@ZM-145 der Balken nimmt mit der Restzeit ab: eine Sekunde später ist er kürzer', () => {
     const frueher = balken({ sectionElapsedMs: min(4, 30) })?.anteil ?? 0;
     const spaeter = balken({ sectionElapsedMs: min(4, 31) })?.anteil ?? 0;
     expect(spaeter).toBeLessThan(frueher);

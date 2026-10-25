@@ -31,6 +31,7 @@ describe('@SL-186 Laufende Zeitstrafen stehen als Karten am Laptop', () => {
     const m = toStrafenModel([strafe('lang', 110), strafe('kurz', 20), strafe('mittel', 60)], match, kasten);
     expect(m.karten.map((k) => k.id)).toEqual(['kurz', 'mittel']);
     expect(m.weitere).toBe(1);
+    expect(m.weitereJeTeam).toEqual([{ teamName: 'DJK Otting', anzahl: 1 }]); // „+ 1 weitere“ nennt das Team
   });
 
   it('die Grenze gilt je Team: zwei Karten für jedes Team, die dritte des einen Teams zählt zu „weitere“', () => {
@@ -56,6 +57,16 @@ describe('@SL-186 Laufende Zeitstrafen stehen als Karten am Laptop', () => {
   it('ohne Nummer: die Karte nennt keine Nummer (Titel „ohne Nr.“)', () => {
     const m = toStrafenModel([strafe('o', 50, { playerNumber: undefined })], match, kasten);
     expect(m.karten[0].nummer).toBeNull();
+  });
+
+  it('die Sortierung folgt der Restzeit in ms, nicht dem Anzeigetext (gleicher Text „1:40“, kürzere Restzeit zuerst)', () => {
+    const m = toStrafenModel([strafe('b', 100.4), strafe('a', 100.2)], match, kasten);
+    expect(m.karten.map((k) => k.id)).toEqual(['a', 'b']); // beide zeigen „1:40“, die Reihenfolge entscheidet die Restzeit
+  });
+
+  it('Strafe aus der 1. Halbzeit (läuft in der 2. weiter): „seit“ nennt die Spielzeit in der 1. Halbzeit', () => {
+    const m = toStrafenModel([strafe('h', 50, { seitMs: null, seitErsteHalbzeitMs: 570_000 })], match, kasten);
+    expect(m.karten[0]).toMatchObject({ seit: null, seitErsteHalbzeit: '9:30' });
   });
 
   it('Strafe aus einem früheren Abschnitt: kein „seit Spielzeit“ (der Beginn lag vor dem Abschnitt)', () => {

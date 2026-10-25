@@ -42,7 +42,7 @@ export function PenaltyCard({ etikett, rest, titel, unterzeile, anteil, fill, te
   const gefuellt = Math.max(0, Math.min(1, anteil));
   const streifen: CSSProperties = { alignSelf: 'stretch', minHeight: cssVars.spacing.lg, borderRadius: cssVars.borderRadius.sm, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, ...fillSurface(fill) };
   return (
-    <div style={karte} data-testid={testId} data-anteil={gefuellt.toFixed(3)}>
+    <div style={karte} role="listitem" aria-label={`${titel}, ${etikett} ${rest}`} data-testid={testId} data-anteil={gefuellt.toFixed(3)}>
       <div style={zeile}>
         <span style={streifen} data-testid={`${testId}-streifen`} aria-hidden="true" />
         <span>
