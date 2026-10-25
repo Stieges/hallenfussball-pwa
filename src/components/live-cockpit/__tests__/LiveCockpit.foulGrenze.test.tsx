@@ -59,7 +59,7 @@ describe('LiveCockpit – Foul-Zähler gegen die Grenze (@SL-099, @SL-033, @SL-0
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: null };
     render(<LiveCockpit {...makeProps(mitFouls(5), { cockpitSettings: settings })} />);
     const zaehler = screen.getByTestId('team-fouls-away');
-    expect(zaehler).toHaveTextContent(/^Foul 5$/);
+    expect(zaehler).toHaveTextContent(/^Foul · 5$/);
     expect(zaehler).not.toHaveTextContent('/');
   });
 

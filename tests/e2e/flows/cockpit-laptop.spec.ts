@@ -60,7 +60,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     await pruefeZwischenKopfUndLeiste(page);
   });
 
-  test('@SL-061 Handy, schwerer Fall im Anfangszustand: alle Tasten beider Teams liegen ohne Scrollen zwischen Kopf und Leiste – C-COCKPIT-HANDY-KARTE-UNTER-LEISTE', async ({ page, seedIndexedDB }) => {
+  test('@SL-061 Handy, schwerer Fall im Anfangszustand: Tafel und Tor beider Teams (ab 800 px Fensterhöhe auch alle übrigen Tasten) liegen ohne Scrollen zwischen Kopf und Leiste – C-COCKPIT-HANDY-KARTE-UNTER-LEISTE', async ({ page, seedIndexedDB }) => {
     // Befund C-COCKPIT-HANDY-KARTE-UNTER-LEISTE (neu bewertet nach #298, 20.10.: Tafel mit Abzeichen „Ende“/Anstoßzeit ist gemergt, der Fall bleibt rot – es fehlen noch 5 px, die Zeitstrafe-Taste endet bei 570 statt 565; Lösung: Spaltenkopf wie handy-c, Streifen und Name in einer Zeile): bei 360 × 640 reicht die Höhe im schwersten Fall (dreizeiliger Name, vier Zeitstrafen) nicht
     test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'Laptop: Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL');
     // Seit 24.10. (@SL-061): am kleinen Handy scrollt die Tastenfläche, Tafel und Tor bleiben im Bild – der Fall ist damit auch bei 640 px Höhe erfüllt
@@ -82,8 +82,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   });
 
   test('@SL-061 Laptop, schwerer Fall: der Inhaltsbereich selbst scrollt nicht – C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL', async ({ page, seedIndexedDB }) => {
-    // Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL (neu bewertet nach #298, 20.10.: der Fall bleibt rot, der Inhaltsbereich scrollt bei 1280 × 720 um 51 px, bei 1024 × 768 um 3 px): bei 1280 × 720 und 1024 × 768 (Leiste 80 px) fehlt im schwersten Fall (50-Zeichen-Name in Tafel und Spalte, vier Zeitstrafen, Meldezeile) Höhe
-    test.fail((page.viewportSize()?.height ?? 0) < 800, 'schwerster Fall passt bei 720 und 768 px Höhe noch nicht ganz ohne Scrollen des Inhaltsbereichs');
+    // Befund C-COCKPIT-LAPTOP-SCROLLT-IM-SCHWERSTEN-FALL behoben (PR B, 24.10.): die Maße der Stufen (Kasten 68 px, Tor 60 px, Strafen-Karten statt Marken) lassen den schwersten Fall (50-Zeichen-Name, vier Zeitstrafen, Meldezeile) auch bei 720 und 768 px Höhe ohne Scrollen passen
     test.skip((page.viewportSize()?.width ?? 0) < 1024, 'nur Laptop-Anordnung');
     await seedIndexedDB({ tournaments: [cup({ namen: [NAME_50, NAMEN[1], NAMEN[2], NAMEN[3]] })] });
     await anpfeifen(page);
@@ -116,7 +115,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     await expect(page.locator('footer')).toHaveCount(0);
     await expect(page.getByRole('combobox', { name: /Spiel/ })).toHaveCount(0);
 
-    const rest = async () => (await page.getByTestId('scoreboard-clock-sub').textContent()) ?? '';
+    const rest = async () => (await page.locator('[data-testid="scoreboard-kopf-text"], [data-testid="scoreboard-clock-sub"]').textContent()) ?? '';
     const vorher = await rest();
     await page.getByTestId('cockpit-zurueck').click();
     await expect(page).toHaveURL(new RegExp(`/tournament/${ID}/schedule$`));
@@ -181,7 +180,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
 
   for (const felder of [1, 2]) {
     const feldText = `${felder} Feld${felder > 1 ? 'er' : ''}`;
-    test(`@SL-061 @SL-168 Kopf gleich hoch in allen drei Anzeigen – verbunden, nicht verbunden mit 3 wartenden Einträgen, „Verbinde …“ (${feldText}); alle Tasten zwischen Kopf und Leiste`, async ({ page, context, seedIndexedDB }, testInfo) => {
+    test(`@SL-061 @SL-168 Kopf gleich hoch in allen drei Anzeigen – verbunden, nicht verbunden mit 3 wartenden Einträgen, „Verbinde …“ (${feldText}); Tafel und Tor, am Laptop alle Tasten, zwischen Kopf und Leiste`, async ({ page, context, seedIndexedDB }, testInfo) => {
       await seedIndexedDB({ tournaments: [cup({ felder })] });
       await anpfeifen(page);
       await wartendeEintraege(page, 3);
@@ -369,7 +368,7 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     await expect(page.getByTestId('cockpit-naechstes-leibchen')).toHaveCount(0);
   });
 
-  test('@SL-061 @SL-168 C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE nach dem Neuladen stehen „Ton aus“ und „3 Einträge warten“ in einer Zeile, die Tafel wird nicht höher, alle Tasten liegen zwischen Kopf und Leiste – auch ohne Netz', async ({ page, context, seedIndexedDB }, testInfo) => {
+  test('@SL-061 @SL-168 C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE nach dem Neuladen stehen „Ton aus“ und „3 Einträge warten“ in einer Zeile, die Tafel wird nicht höher, Tafel und Tor (am Laptop alle Tasten) liegen zwischen Kopf und Leiste – auch ohne Netz', async ({ page, context, seedIndexedDB }, testInfo) => {
     await seedIndexedDB({ tournaments: [cup()] });
     await anpfeifen(page);
     await anAnfangRollen(page);

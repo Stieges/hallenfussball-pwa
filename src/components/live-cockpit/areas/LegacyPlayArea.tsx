@@ -7,12 +7,12 @@
  * Strafstoßschießen seine Form (sonst die Spalten). Übergangsweise: die Ereignisliste (4.1) ersetzt die Sidebar, 4.3 löscht den Bereich.
  */
 import type { ReactElement, ReactNode } from 'react';
-import type { ActivePenalty } from '../../../types/tournament';
 import type { LiveMatch } from '../types';
 import { Sidebar } from '../components';
 import type { SidebarProps } from '../components';
 import type { CockpitZustand } from '../model/cockpitPhase';
 import type { TeamSummaryModel } from '../model/toTeamSummaryModel';
+import type { StrafenModel } from '../model/toStrafenModel';
 import { TeamColumn, type TeamColumnProps } from './TeamColumn';
 import { TeamSummary } from './TeamSummary';
 import styles from './LegacyAreas.module.css';
@@ -34,7 +34,8 @@ export interface LegacyPlayAreaProps {
   /** Nach dem Abpfiff statt der Tastenblöcke: Tore, Karten, Zeitstrafen, Fouls je Team (@SL-048); in Anzeige-Reihenfolge. */
   zusammenfassung?: { links: TeamSummaryModel; rechts: TeamSummaryModel } | null;
   sidebar: {
-    activePenalties: ActivePenalty[];
+    /** Laufende Zeitstrafen als Karten (@SL-186). */
+    strafen: StrafenModel;
     onEventEdit?: SidebarProps['onEventEdit'];
   };
 }
@@ -55,7 +56,7 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
         <div data-testid="cockpit-tastenflaeche" className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit, !isDesktop && styles.scoreboardDaumen)}>
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
-            <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile)}>
+            <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile, isDesktop && styles.scoreRowBreit)}>
               {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links)}
               {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts)}
             </div>
@@ -67,7 +68,7 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
       {isDesktop && (
         <div className={styles.ereignisse}>
           <Sidebar
-            activePenalties={sidebar.activePenalties}
+            strafen={sidebar.strafen}
             events={match.events}
             retractedEvents={match.retractedEvents}
             discardedEntries={match.discardedEntries}

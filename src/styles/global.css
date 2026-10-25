@@ -392,6 +392,7 @@
   --sizing-sidebar-width: 300px;
   /* Cockpit Laptop (Mockup laptop.html, Daniel 18.10.): Ereignisspalte, Tor-Höhe, Leiste, Mehr-Knopf, Feldwahl */
   --sizing-cockpit-ereignisspalte: 25rem;
+  --sizing-cockpit-ereignisspalte-gross: max(27.5rem, 31.25vw);
   --sizing-cockpit-tor-breit: calc(var(--touch-target-minimum) * 2);
   --sizing-cockpit-leiste-breit: calc(var(--touch-target-primary) + var(--spacing-sm));
   --sizing-cockpit-mehr-breit: 6rem;
@@ -403,9 +404,30 @@
   --sizing-cockpit-ziffer-gross: 88px;
   /* Cockpit: Höhe der Ergebniskästen je Stufe der Fensterhöhe (Handy: Kasten folgt der Ziffer) */
   --sizing-cockpit-kasten-handy: 96px;
-  --sizing-cockpit-kasten-knapp: 76px;
+  --sizing-cockpit-kasten-knapp: 68px;
   --sizing-cockpit-kasten-normal: 90px;
   --sizing-cockpit-kasten-gross: 108px;
+  /* Zeilenhöhe der Uhr-Ziffern je Stufe: unter 1, damit die Uhr nicht höher wird als ihre Ziffern (Ziffernhöhe ≈ 0,727 em); knapp 0,85 */
+  --line-height-cockpit-uhr-knapp: 0.85;
+  /* Cockpit Laptop: Mindesthöhen je Stufe der Fensterhöhe (Mockup `cockpit-desktop`, Maße 620/720/800): Tor, Foul-Reihe, Team-Leiste, Fußleiste */
+  --sizing-cockpit-tor-knapp: 58px;
+  --sizing-cockpit-tor-normal: 60px;
+  --sizing-cockpit-tor-gross: 84px;
+  --sizing-cockpit-fuss-knapp: 52px;
+  --sizing-cockpit-fuss-normal: 64px;
+  --sizing-cockpit-fuss-gross: 76px;
+  --sizing-cockpit-leiste-knapp: 52px;
+  --sizing-cockpit-leiste-normal: 56px;
+  --sizing-cockpit-leiste-gross: 60px;
+  --sizing-cockpit-kopf-knapp: 40px;
+  --sizing-cockpit-kopf-normal: 44px;
+  --sizing-cockpit-kopf-gross: 48px;
+  /* Stufe „gross“ wächst ab 800 px mit der Fensterhöhe linear weiter bis zu den Werten des Mockups bei 1080 px (164/128/112/60/80 px): bei 800 px der Wert der Stufe, nach oben begrenzt */
+  --sizing-cockpit-kasten-gross-fluid: clamp(var(--sizing-cockpit-kasten-gross), calc(var(--sizing-cockpit-kasten-gross) + (100vh - 800px) * 0.2), 164px);
+  --sizing-cockpit-ziffer-gross-fluid: clamp(var(--sizing-cockpit-ziffer-gross), calc(var(--sizing-cockpit-ziffer-gross) + (100vh - 800px) * 0.1429), 128px);
+  --sizing-cockpit-fuss-gross-fluid: clamp(var(--sizing-cockpit-fuss-gross), calc(var(--sizing-cockpit-fuss-gross) + (100vh - 800px) * 0.1286), 112px);
+  --sizing-cockpit-kopf-gross-fluid: clamp(var(--sizing-cockpit-kopf-gross), calc(var(--sizing-cockpit-kopf-gross) + (100vh - 800px) * 0.0429), 60px);
+  --sizing-cockpit-leiste-gross-fluid: clamp(var(--sizing-cockpit-leiste-gross), calc(var(--sizing-cockpit-leiste-gross) + (100vh - 800px) * 0.0714), 80px);
   /* Rahmenbreiten: dünn, mittel, kräftig (eine Quelle für `borderWidths` und `cssVars.borderWidth`) */
   --border-width-thin: 1px;
   --border-width-medium: 2px;

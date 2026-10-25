@@ -323,6 +323,58 @@
       ]
     },
     {
+      "id": "cockpit-laptop-720",
+      "titel": "Cockpit: Laptop 1280 × 720, läuft (Tafel wie Monitor, Finale)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "laptop-1280",
+      "klick": [
+        "warte:3500"
+      ]
+    },
+    {
+      "id": "cockpit-laptop-1080",
+      "titel": "Cockpit: Laptop 1920 × 1080, läuft (Stufe groß)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "laptop-1920x1080",
+      "klick": [
+        "warte:3500"
+      ]
+    },
+    {
+      "id": "cockpit-laptop-strafen",
+      "titel": "Cockpit: Laptop 1280 × 720, drei Zeitstrafen für ein Team (zwei Karten und „+ 1 weitere“, Finale)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016",
+      "erwarte": "[data-testid=\"scoreboard\"]",
+      "profil": "laptop-1280",
+      "klick": [
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "[data-testid=\"penalty-button-away\"]",
+        "warte:400",
+        "[data-testid=\"number-picker\"] [data-lage] button",
+        "warte:200",
+        "warte:3500",
+        "scroll:oben"
+      ]
+    },
+    {
       "id": "cockpit-laptop-vorwarnung",
       "titel": "Cockpit: Laptop-Ansicht, Vorwarnung (Restzeit 2:40, Rahmen der Zeile „Nächstes“ farbig)",
       "gruppen": [

@@ -63,7 +63,7 @@ export function MatchStatusBadge({ model, size, tone, surface = 'app', testId }:
     >
       {live && (
         <span
-          style={{ ...dotStyle(size, badgeColorsFor(state, tone, surface).fg), animation: animations.pulse }}
+          style={{ ...dotStyle(size, surface === 'scoreboardFlach' ? cssVars.colors.scoreboardOk : badgeColorsFor(state, tone, surface).fg), animation: animations.pulse }}
           aria-hidden="true"
           data-testid="match-status-badge-dot"
         />

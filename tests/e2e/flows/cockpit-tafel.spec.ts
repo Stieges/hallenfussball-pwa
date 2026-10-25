@@ -68,6 +68,9 @@ function createTestTournament() {
   };
 }
 
+/** Die Zeile mit „Spiel n“ und der gespielten Zeit: am Laptop die Kopfzeile der Tafel (@SL-180), sonst die Zeile unter der Uhr */
+const UHR_ZEILE = '[data-testid="scoreboard-kopf-text"], [data-testid="scoreboard-clock-sub"]';
+
 test.describe('Cockpit-Tafel', () => {
   test.beforeEach(async ({ page, seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
@@ -91,12 +94,13 @@ test.describe('Cockpit-Tafel', () => {
     await expect(page.getByTestId('scoreboard-state')).toBeEmpty();
     await expect(page.getByTestId('scoreboard-clock-rest')).toContainText(/\d{1,2}:\d{2}/);
     await expect(page.getByTestId('scoreboard-clock')).toContainText('Anstoß');
-    await expect(page.getByTestId('scoreboard-clock-sub')).toContainText(/Spiel \d+/);
+    // Am Laptop steht „Spiel 1 · Feld 1“ in der Kopfzeile der Tafel (@SL-180), am Handy unter der Uhr
+    await expect(page.locator(UHR_ZEILE).first()).toContainText(/Spiel \d+/);
 
     // @SL-001: der Anpfiff startet die Uhr; die Spielzeit läuft ab 0:00
     await page.getByTestId('match-start-button').click();
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
-    await expect(page.getByTestId('scoreboard-clock-sub')).toContainText(/Spielzeit 0:0\d/);
+    await expect(page.locator(UHR_ZEILE).first()).toContainText(/(Spielzeit|Gespielt) 0:0\d/);
     await expect(page.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'false');
   });
 
@@ -152,7 +156,7 @@ test.describe('Cockpit-Tafel', () => {
     await expect(page.getByTestId('scoreboard-state')).toContainText('Live');
     // der frühere schwebende Hinweis „Sound für Spielende“ gibt es nicht mehr
     await expect(page.getByText('Sound für Spielende')).toHaveCount(0);
-    // Meldung („Spiel angepfiffen“) steht in der Tafel, im Fluss
+    // Meldung („Spiel angepfiffen“) steht in der Tafel: am Handy im Fluss, am Laptop blendet sie sich über die Kopfzeile ein (@SL-183) und schiebt nichts
     const zeile = page.getByTestId('notice-line');
     await expect(zeile).toContainText('Spiel angepfiffen');
     const lage = await zeile.evaluate((el) => {
@@ -161,7 +165,8 @@ test.describe('Cockpit-Tafel', () => {
       }
       return 'im Fluss';
     });
-    expect(lage).toBe('im Fluss');
+    const amLaptop = (await page.getByTestId('scoreboard-kopf-text').count()) > 0;
+    expect(lage).toBe(amLaptop ? 'absolute' : 'im Fluss');
     // die Tafel läuft nie über ihre Breite hinaus (auch nicht mit Meldung) und überlagert nichts seitlich
     const breite = await page.getByTestId('scoreboard').evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth, rechts: el.getBoundingClientRect().right, fenster: window.innerWidth }));
     expect(breite.scroll).toBeLessThanOrEqual(breite.client);
@@ -188,11 +193,14 @@ test.describe('Cockpit-Tafel', () => {
     await expect(abzeichen.getByTestId('match-status-badge-dot')).toBeAttached();
     for (const fenster of [{ width: 360, height: 640 }, { width: 1280, height: 800 }]) {
       await page.setViewportSize(fenster);
-      await expect(abzeichen).toBeVisible();
-      const box = await abzeichen.boundingBox();
-      expect(box, `Abzeichen bei ${fenster.width}×${fenster.height}`).not.toBeNull();
-      expect(box!.height).toBeGreaterThan(0);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(fenster.width);
+      // Beim Wechsel der Fenstergröße tauscht das Cockpit die Tafel (Handy ↔ Laptop): erst messen, wenn die neue Tafel steht
+      await expect(async () => {
+        await expect(abzeichen).toBeVisible();
+        const box = await abzeichen.boundingBox();
+        expect(box, `Abzeichen bei ${fenster.width}×${fenster.height}`).not.toBeNull();
+        expect(box!.height).toBeGreaterThan(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(fenster.width);
+      }).toPass({ timeout: 5000 });
     }
   });
 

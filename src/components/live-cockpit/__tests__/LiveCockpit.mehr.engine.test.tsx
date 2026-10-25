@@ -49,7 +49,7 @@ describe('Mehr → Uhr korrigieren (K10)', () => {
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(60_000);
-    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 1:00'));
+    await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 1:00'));
 
     await user.click(screen.getByTestId('cockpit-more-button'));
     await user.click(screen.getByTestId('mehr-uhr-korrigieren'));
@@ -57,7 +57,7 @@ describe('Mehr → Uhr korrigieren (K10)', () => {
     await user.click(within(dialog).getByRole('button', { name: '10 Sekunden mehr' }));
     await user.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
 
-    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 1:10'));
+    await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 1:10'));
     expect(korrekturen()).toHaveLength(1);
     expect(korrekturen()[0]?.clockMs).toBe(70_000);
   });
@@ -92,7 +92,7 @@ describe('S3 Steuer-Verlust bei offenem Uhr-Dialog und Blatt „Mehr“ (@SL-018
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(60_000);
-    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-sub')).toHaveTextContent('Spielzeit 1:00'));
+    await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 1:00'));
     return ansicht;
   }
 

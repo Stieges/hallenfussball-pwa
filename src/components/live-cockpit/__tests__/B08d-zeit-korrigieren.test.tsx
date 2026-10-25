@@ -51,7 +51,8 @@ afterEach(() => {
 });
 
 const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
-const uhrSub = (): HTMLElement => screen.getByTestId('scoreboard-clock-sub');
+/** Die gespielte Zeit steht am Laptop in der Kopfzeile der Tafel (@SL-180), nicht mehr unter der Uhr. */
+const uhrSub = (): HTMLElement => screen.getByTestId('scoreboard-kopf-text');
 /** Bietet „Mehr“ den Punkt „Uhr korrigieren“ an? Öffnet das Blatt, schaut nach und schließt es wieder. */
 async function zeitPunktDa(user: ReturnType<typeof userEvent.setup>): Promise<boolean> {
   await user.click(screen.getByTestId('cockpit-more-button'));
@@ -83,17 +84,17 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
     await zurZweitenHalbzeit(user);
     zu(740_000); // zweiter Abschnitt bei 5:20
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:20'));
 
     const dialog = await zeitDialog(user);
     const weniger = within(dialog).getByRole('button', { name: '10 Sekunden weniger' });
     for (let i = 0; i < 3; i += 1) { await user.click(weniger); }
     await user.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
 
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 4:50'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 4:50'));
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('1:10');
     zu(750_000); // +10 s bei laufender Uhr (Anker neu)
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:00'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:00'));
   });
 
   it('@SL-011 laufende Uhr bei 5:23: Ziel 4:50 ist erreichbar und kommt als CLOCK_ADJUST mit 650000 an', async () => {
@@ -104,7 +105,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur senderFabrik={fabrik} />);
     await zurZweitenHalbzeit(user);
     zu(743_000); // Tom hat vergessen anzuhalten: die Uhr läuft, 5:23
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:23'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:23'));
 
     const dialog = await zeitDialog(user);
     const weniger = within(dialog).getByRole('button', { name: '10 Sekunden weniger' });
@@ -114,7 +115,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     expect(within(dialog).getByText('4:50')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
 
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 4:50'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 4:50'));
     const kopie = await (store as LocalMatchStore | null)?.load(konto, HARNESS_MATCH_ID);
     const korrekturen = (kopie?.pending ?? []).filter((e) => e.type === 'CLOCK_ADJUST');
     expect(korrekturen).toHaveLength(1);
@@ -126,7 +127,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
     await zurZweitenHalbzeit(user);
     zu(740_000);
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:20'));
 
     const dialog = await zeitDialog(user);
     await user.click(within(dialog).getByRole('button', { name: '10 Sekunden weniger' }));
@@ -139,7 +140,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(180_000); // erster Abschnitt bei 3:00
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 3:00'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 3:00'));
 
     const dialog = await zeitDialog(user);
     const mehr = within(dialog).getByRole('button', { name: '10 Sekunden mehr' });
@@ -148,7 +149,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     expect(within(dialog).queryByText('7:00')).not.toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
 
-    expect(uhrSub()).toHaveTextContent('Spielzeit 3:00');
+    expect(uhrSub()).toHaveTextContent('Gespielt 3:00');
   });
 
   it('@SL-077 nach dem Tor bei 5:10 stellt die Uhr nicht davor zurück; Hinweis mit dem Tor', async () => {
@@ -160,14 +161,14 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
     await user.keyboard('{Escape}');
     zu(740_000); // 5:20
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20')); // erst wenn die Anzeige nachgezogen hat, sonst öffnet der Dialog mit 5:10
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:20')); // erst wenn die Anzeige nachgezogen hat, sonst öffnet der Dialog mit 5:10
 
     const dialog = await zeitDialog(user);
     expect(within(dialog).getByText('wegen des Tors bei 5:10 frühestens 5:10')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: '10 Sekunden weniger' }));
     expect(within(dialog).getByRole('button', { name: '10 Sekunden weniger' })).toBeDisabled();
     await user.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:10'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:10'));
   });
 
   it('@SL-077 „Dann behält die Uhr 5:20“: ein Versuch unter 5:10 (4:50) sendet nichts, die Uhr bleibt bei 5:20', async () => {
@@ -182,7 +183,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await warteSperre(); // Sperre des Nummern-Bausteins (@SL-021); Schließen lässt das Tor ohne Nummer zählen (@SL-083)
     await user.keyboard('{Escape}');
     zu(740_000); // Uhr steht bei 5:20
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20')); // Anzeige muss nachgezogen haben, bevor der Dialog öffnet
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:20')); // Anzeige muss nachgezogen haben, bevor der Dialog öffnet
 
     const dialog = await zeitDialog(user);
     const weniger = within(dialog).getByRole('button', { name: '10 Sekunden weniger' });
@@ -191,7 +192,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     expect(within(dialog).queryByText('4:50')).not.toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
 
-    await waitFor(() => expect(uhrSub()).toHaveTextContent('Spielzeit 5:20'));
+    await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:20'));
     const kopie = await (store as LocalMatchStore | null)?.load(konto, HARNESS_MATCH_ID);
     expect((kopie?.pending ?? []).filter((e) => e.type === 'CLOCK_ADJUST')).toHaveLength(0);
   });
