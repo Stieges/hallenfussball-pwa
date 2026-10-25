@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
-const env = vi.hoisted(() => ({ online: true, lifecycle: 'running' }));
+const env = vi.hoisted<{ online: boolean; lifecycle: string | null | undefined }>(() => ({ online: true, lifecycle: 'running' }));
 vi.mock('../../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: {} }));
 vi.mock('../../../hooks/useOnlineStatus', () => ({ useIsOnline: () => env.online }));
 const read = vi.hoisted(() => vi.fn());
