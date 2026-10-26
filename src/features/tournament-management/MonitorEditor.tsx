@@ -17,7 +17,6 @@ import { useTranslation } from 'react-i18next';
 import { dialogWidths } from '../../design-tokens';
 import type { Tournament, TournamentGroup } from '../../types/tournament';
 import type {
-  MonitorSlide,
   SlideType,
   SlideConfig,
   TransitionType,
@@ -32,6 +31,7 @@ import { SlidePreview } from './components/SlidePreview';
 import { MonitorOverscanField } from './components/MonitorOverscanField';
 import { SlideReferenceWarning } from './components/SlideReferenceWarning';
 import { useSlotFields } from './hooks/useSlotFields';
+import { buildEditorGroups, getSlideDescription } from './components/monitor-editor/monitorEditorHelpers';
 import {
   addSlideButtonStyle,
   closeButtonStyle,
@@ -164,31 +164,7 @@ export function MonitorEditor({
   const titleId = `monitor-editor-title-${monitorId}`;
 
   // Get groups from tournament - generate if not explicit
-  // For roundRobin tournaments, there's only one group (all teams play each other)
-  const groups: TournamentGroup[] = useMemo(() => {
-    // Round-robin mode = single group tournament (everyone plays everyone)
-    if (tournament.groupSystem === 'roundRobin') {
-      return [{ id: 'default', customName: t('monitorEditor.allTeams') }];
-    }
-
-    // If explicit groups are defined, use them
-    if (tournament.groups && tournament.groups.length > 0) {
-      return tournament.groups;
-    }
-
-    // If numberOfGroups is set, generate synthetic group entries
-    const numGroups = tournament.numberOfGroups ?? 1;
-    if (numGroups <= 1) {
-      // Single group tournament - return one default group
-      return [{ id: 'default', customName: t('monitorEditor.allTeams') }];
-    }
-
-    // Generate group entries A, B, C, etc.
-    return Array.from({ length: numGroups }, (_, i) => ({
-      id: String.fromCharCode(65 + i), // A, B, C...
-      customName: t('monitorEditor.groupLabel', { letter: String.fromCharCode(65 + i) }),
-    }));
-  }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem, t]);
+  const groups: TournamentGroup[] = useMemo(() => buildEditorGroups(tournament, t), [tournament, t]);
 
   // Ohne öffentliches Turnier mit Share-Code entfällt die Zuschauer-QR-Folie im Monitor (@ZM-071, F-04)
   const zuschauerQrMoeglich = tournament.isPublic === true && Boolean(tournament.shareCode);
@@ -311,34 +287,6 @@ export function MonitorEditor({
 
   const getSlideTypeMeta = (type: SlideType) => {
     return SLIDE_TYPES.find(s => s.type === type);
-  };
-
-  const getSlideDescription = (slide: MonitorSlide): string => {
-    const { type, config } = slide;
-
-    switch (type) {
-      case 'live':
-      case 'schedule-field': {
-        const fieldName = config.fieldId ? getFieldDisplayName(config.fieldId) : t('monitorEditor.notConfigured');
-        return fieldName;
-      }
-      case 'standings':
-      case 'schedule-group': {
-        const group = groups.find(g => g.id === config.groupId);
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback
-        return group?.customName || t('monitorEditor.groupLabel', { letter: config.groupId }) || t('monitorEditor.notConfigured');
-      }
-      case 'sponsor': {
-        const sponsor = sponsors.find(s => s.id === config.sponsorId);
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
-        return sponsor?.name || t('monitorEditor.notConfigured');
-      }
-      case 'custom-text':
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty headline should use fallback
-        return config.headline || t('monitorEditor.customText');
-      default:
-        return '';
-    }
   };
 
   // ==========================================================================
@@ -479,7 +427,7 @@ export function MonitorEditor({
                       {/* Info */}
                       <div style={slideInfoStyle}>
                         <div style={slideTypeStyle}>{meta?.label ?? slide.type}</div>
-                        <div style={slideDescStyle}>{getSlideDescription(slide)}</div>
+                        <div style={slideDescStyle}>{getSlideDescription(slide, { groups, sponsors, getFieldDisplayName, t })}</div>
                       </div>
 
                       {/* Actions */}
