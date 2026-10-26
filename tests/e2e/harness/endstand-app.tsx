@@ -3,7 +3,7 @@
  * „vorläufig“) – ECHTE Komponenten, echte Design-Tokens, echte i18n, Hell/Dunkel über den echten ThemeProvider; ersetzt ist nur das
  * Lesen der gespeicherten Zeile (feste Werte), weil Konto, Server und ein abgeschlossenes Turnier offline fehlen. Nur Testumgebung,
  * nicht Teil des Builds. Beispiel wie die Mockups Runde 2 (Nikolaus-Turnier, 6 Teams). Adresse: `?szene=<id>` (`&sprache=en`);
- * ids: klar, ps, vor, lang, ko, ohnenr (nur Tore ohne Nummer), laden, nichtlesbar, fehlt, leer (Zustände ohne Liste).
+ * ids: klar, ps, vor, vornetz (vorläufig, Torschützen evtl. unvollständig), lang, ko, ohnenr (nur Tore ohne Nummer), laden, nichtlesbar, fehlt, leer (Zustände ohne Liste).
  */
 import ReactDOM from 'react-dom/client';
 import i18n from '../../../src/i18n';
@@ -16,8 +16,9 @@ import type { FinalStandingRow, ScorerRow } from '../../../src/core/standings/fi
 import { computeFinalStandings } from '../../../src/core/standings/finalStandings';
 import { decisionBasis } from '../../../src/core/standings/decisions';
 import { tableInput } from '../../../src/core/standings/tournamentTable';
-import { nikolausFertig } from '../../../src/core/services/__tests__/finishKit';
+import { gleichstandUmPlatz1, nikolausFertig } from '../../../src/core/services/__tests__/finishKit';
 import { NK } from '../../../src/core/standings/__tests__/groupCompletionKit';
+import { completeGroup } from '../../../src/core/standings/finalStandings/__tests__/finalStandingsKit';
 import { FinalStandingsStatus, type FinalStandingsStatusKind } from '../../../src/features/tournament-finish/components/FinalStandingsStatus';
 import { FinalStandingsView } from '../../../src/features/tournament-finish/components/FinalStandingsView';
 
@@ -33,19 +34,20 @@ const LANG: Record<string, string> = {
   [NK.wagingRot]: 'Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921',
 };
 const lang = szene === 'lang';
-const basis = await nikolausFertig();
+const shootout = szene === 'ps' || szene === 'lang';
+// Strafstoßschießen um Platz 1 gibt es nur bei echtem Gleichstand (Review #397 m-7): eigenes Turnier mit Kammer = Waging rot
+const basis = shootout ? { ...gleichstandUmPlatz1(false), status: 'published' as const, lifecycleStatus: 'fixed' as const } : await nikolausFertig();
 const turnier: Tournament = {
   ...basis,
   teams: basis.teams.map((team) => ({ ...team, name: (lang ? LANG[team.id] : undefined) ?? NAMEN[team.id] ?? team.name })),
 };
-const shootout = szene === 'ps' || lang;
-const anzeige: Tournament = shootout ? {
+const anzeige: Tournament = shootout ? completeGroup({
   ...turnier,
   standingDecisions: [...(turnier.standingDecisions ?? []), {
     id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.wagingRot].sort(), order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 },
     basis: decisionBasis(tableInput(turnier.teams, turnier.matches, turnier, ''), [NK.kammer, NK.wagingRot]),
   }],
-} : turnier;
+}) : turnier;
 
 const name = (id: string): string => turnier.teams.find((team) => team.id === id)?.name ?? id;
 const scorer = (rank: number, id: string, number: number, goals: number): ScorerRow => ({ kind: 'player', rank, teamId: id as never, teamName: name(id), number, goals });
@@ -67,11 +69,12 @@ const ranking: FinalStandingRow[] = szene === 'ko'
     { place: 5, teamId: NK.fridolfing as never, teamName: name(NK.fridolfing), origin: { kind: 'groupPlace', group: 'A', place: 3 } },
     { place: 5, teamId: NK.wagingBlau as never, teamName: name(NK.wagingBlau), origin: { kind: 'groupPlace', group: 'B', place: 3 } },
   ]
-  : computeFinalStandings(turnier).ranking;
+  : computeFinalStandings(anzeige).ranking;
 
 const ZUSTAENDE: Record<string, FinalStandingsStatusKind> = { laden: 'loading', nichtlesbar: 'unavailable', fehlt: 'missing', leer: 'empty' };
 const zustand = ZUSTAENDE[szene];
-const [gezeigteTore, vorlaeufig] = [szene === 'vor' ? scorers.slice(0, 3) : szene === 'ohnenr' ? ohneNummer : scorers, szene === 'vor'];
+const vorlaeufig = szene === 'vor' || szene === 'vornetz';
+const gezeigteTore = vorlaeufig ? scorers.slice(0, 3) : szene === 'ohnenr' ? ohneNummer : scorers;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ThemeProvider>
@@ -81,7 +84,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         {zustand !== undefined ? <FinalStandingsStatus kind={zustand} onRetry={() => undefined} /> : (
           <FinalStandingsView
             tournament={anzeige} ranking={ranking} scorers={gezeigteTore}
-            provisional={vorlaeufig} finishedAt={vorlaeufig ? undefined : '2026-11-28T13:10:00+01:00'}
+            provisional={vorlaeufig} scorersIncomplete={szene === 'vornetz'} finishedAt={vorlaeufig ? undefined : '2026-11-28T13:10:00+01:00'}
           />
         )}
       </div>

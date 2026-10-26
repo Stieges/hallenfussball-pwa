@@ -16,8 +16,8 @@ export function FinalStandingsStatus({ kind, onRetry }: { kind: FinalStandingsSt
       <p style={small} role={kind === 'empty' ? undefined : 'status'} data-testid={`final-standings-${kind}`}>{t(`finalStandings.${kind}`)}</p>
       {kind === 'unavailable' && onRetry !== undefined && (
         <button type="button" style={secondaryButton} onClick={onRetry} data-testid="final-standings-retry">
-          <Icons.Refresh size={iconSizeValues.sm} />
           <span>{t('finalStandings.retry')}</span>
+          <Icons.Refresh size={iconSizeValues.sm} />
         </button>
       )}
     </div>

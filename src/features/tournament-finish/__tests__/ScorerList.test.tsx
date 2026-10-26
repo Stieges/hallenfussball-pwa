@@ -46,3 +46,16 @@ describe('Leertext je Stand (m-3)', () => {
     expect(document.querySelectorAll('ol')).toHaveLength(0);
   });
 });
+
+describe('Hinweis „Torschützen evtl. unvollständig“ (m-9, @ET-042)', () => {
+  it('Laden der Spielsteuerung scheitert (incomplete) → der Hinweis steht sichtbar über der Liste', () => {
+    render(<ScorerList scorers={[player(1, 9)]} provisional incomplete />);
+    expect(screen.getByTestId('final-scorers-incomplete')).toHaveTextContent('Torschützen evtl. unvollständig (ohne Netz)');
+    expect(screen.getAllByTestId('final-scorer-row')).toHaveLength(1);
+  });
+
+  it('Gegenbeispiel: Laden gelingt → kein Hinweis', () => {
+    render(<ScorerList scorers={[player(1, 9)]} provisional />);
+    expect(screen.queryByTestId('final-scorers-incomplete')).toBeNull();
+  });
+});

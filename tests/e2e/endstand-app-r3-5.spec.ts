@@ -29,6 +29,7 @@ const SZENEN: Szene[] = [
   { id: 'klar', kennung: '@ET-041 @ET-045', text: /Das Turnier ist abgeschlossen. Der Endstand steht fest. Gespeichert am/, da: ['final-standings-winner', 'final-scorers'], nicht: ['final-standings-badge', 'final-standings-provisional'] },
   { id: 'ps', kennung: '@ET-041 @ET-044 (Strafstoßschießen)', text: /Platz 1 per Strafstoßschießen entschieden: 4:3 gegen SV Süd/, da: ['final-standings-winner'] },
   { id: 'vor', kennung: '@ET-042 @TM-058 (vorläufig)', text: /Vorläufig – der Endstand steht noch nicht fest/, da: ['final-standings-badge', 'final-standings-provisional'], nicht: ['final-standings-winner', 'final-standings-saved'] },
+  { id: 'vornetz', kennung: '@ET-042 (vorläufig, Torschützen evtl. unvollständig, m-9)', text: /Torschützen evtl\. unvollständig \(ohne Netz\)/, da: ['final-scorers-incomplete', 'final-standings-badge'], nicht: ['final-standings-winner'] },
   { id: 'lang', kennung: '@ET-041 (50-Zeichen-Namen)', text: /Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921/, da: ['final-standings-winner'] },
   { id: 'ohnenr', kennung: '@ET-041 (nur Tore ohne Rückennummer, M-2)', text: /ohne Nummer – FC Nord/, da: ['final-scorer-row'], nicht: ['final-scorers-toggle'] },
   { id: 'laden', kennung: '@ET-045 (wird geladen)', text: /wird geladen/, warte: 'final-standings-loading', nicht: ['final-standings-list', 'final-standings-retry'] },
