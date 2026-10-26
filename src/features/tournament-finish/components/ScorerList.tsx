@@ -14,12 +14,14 @@ import { scorerGoals, scorerName, scorerRank, scorerRow } from './finalStandings
 
 const VISIBLE_RANK = 3;
 
-export function ScorerList({ scorers }: { scorers: readonly ScorerRow[] }) {
+export function ScorerList({ scorers, provisional, incomplete = false }: { scorers: readonly ScorerRow[]; provisional: boolean; incomplete?: boolean }) {
   const { t } = useTranslation('tournament');
   const [all, setAll] = useState(false);
   const isShort = (row: ScorerRow): boolean => row.kind === 'player' && row.rank <= VISIBLE_RANK;
-  const shown = all ? scorers : scorers.filter(isShort);
-  const hasMore = scorers.some((row) => !isShort(row));
+  // Ohne Spielerzeile zeigt die Liste die Sammelzeilen („ohne Nummer“, „Eigentore“) gleich – nie ein leerer Kasten (Review #397 M-2).
+  const hasPlayers = scorers.some((row) => row.kind === 'player');
+  const shown = all || !hasPlayers ? scorers : scorers.filter(isShort);
+  const hasMore = hasPlayers && scorers.some((row) => !isShort(row));
   const label = (row: ScorerRow) => {
     if (row.kind === 'player') {
       return <><span>#{row.number} </span><TeamName name={row.teamName} /></>;
@@ -29,7 +31,8 @@ export function ScorerList({ scorers }: { scorers: readonly ScorerRow[] }) {
   return (
     <section style={tightStack} aria-labelledby="final-scorers-title" data-testid="final-scorers">
       <h3 id="final-scorers-title" style={heading}>{t('finalStandings.scorers')}</h3>
-      {scorers.length === 0 ? <p style={small} data-testid="final-scorers-empty">{t('finalStandings.scorersEmpty')}</p> : (
+      {incomplete && <p style={small} role="status" data-testid="final-scorers-incomplete">{t('finalStandings.scorersIncomplete')}</p>}
+      {scorers.length === 0 ? <p style={small} data-testid="final-scorers-empty">{t(provisional ? 'finalStandings.scorersEmptyProvisional' : 'finalStandings.scorersEmptyStored')}</p> : (
         <ol style={placeList}>
           {shown.map((row, index) => (
             <li key={`${row.kind}-${row.teamId}-${row.kind === 'player' ? row.number : ''}`} style={{ ...scorerRow, ...(index === shown.length - 1 ? { borderBottom: 'none' } : {}) }} data-testid="final-scorer-row">

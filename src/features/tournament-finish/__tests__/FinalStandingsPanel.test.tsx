@@ -101,6 +101,30 @@ describe('@ET-045 nach dem Abschluss gilt der gespeicherte Endstand, nie eine Ne
     expect(recompute.calls).toBe(0);
   });
 
+  it('m-1 „nicht lesbar“: Taste „Erneut laden“ (≥ 44 px) liest die Zeile noch einmal; gelingt es, steht der gespeicherte Endstand da', async () => {
+    read.mockResolvedValueOnce({ status: 'failed' });
+    render(<FinalStandingsPanel tournament={finished(fertig)} />);
+    const retry = await screen.findByTestId('final-standings-retry');
+    expect(retry).toHaveTextContent('Erneut laden');
+    expect(retry.style.minHeight).toContain('touch');
+    read.mockResolvedValueOnce({ status: 'ok', snapshot: storedOther(), finishedAt: FINISHED_AT });
+    fireEvent.click(retry);
+    await screen.findByTestId('final-standings-list');
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(recompute.calls).toBe(0);
+  });
+
+  it('m-1 Zeile fehlt (none): eigener Text, nicht „konnte gerade nicht gelesen werden“, keine Neurechnung', async () => {
+    read.mockResolvedValue({ status: 'none' });
+    render(<FinalStandingsPanel tournament={finished(fertig)} />);
+    const missing = await screen.findByTestId('final-standings-missing');
+    expect(missing).toHaveTextContent('kein gespeicherter Endstand');
+    expect(missing).not.toHaveTextContent('nicht gelesen');
+    expect(screen.queryByTestId('final-standings-unavailable')).toBeNull();
+    expect(screen.queryByTestId('final-standings-list')).toBeNull();
+    expect(recompute.calls).toBe(0);
+  });
+
   it('solange gelesen wird, steht „wird geladen“, kein errechneter Zwischenstand', () => {
     read.mockReturnValue(new Promise(() => undefined));
     render(<FinalStandingsPanel tournament={finished(fertig)} />);
@@ -186,6 +210,16 @@ describe('@ET-042 / @TM-058 vor dem Abschluss: vorläufig', () => {
     render(<FinalStandingsPanel tournament={t} />);
     expect(screen.getByTestId('final-standings')).toHaveAttribute('data-state', 'provisional');
     expect(screen.getByTestId('final-standings-provisional')).toBeTruthy();
+    expect(screen.queryByTestId('final-standings-saved')).toBeNull();
+  });
+
+  it('@TM-058 wörtlich (m-5): 15 von 15 Spielen entschieden, aber die Gruppe ist NICHT abgeschlossen → der Endstand steht nicht fest, er ist vorläufig', () => {
+    const offen: Tournament = { ...fertig, groupCompletions: [] };
+    expect(offen.matches.every((m) => m.matchStatus === 'finished')).toBe(true);
+    render(<FinalStandingsPanel tournament={offen} />);
+    expect(screen.getByTestId('final-standings')).toHaveAttribute('data-state', 'provisional');
+    expect(screen.getByTestId('final-standings-provisional')).toBeTruthy();
+    expect(screen.queryByTestId('final-standings-winner')).toBeNull();
     expect(screen.queryByTestId('final-standings-saved')).toBeNull();
   });
 

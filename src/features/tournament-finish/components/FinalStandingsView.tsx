@@ -27,9 +27,11 @@ export interface FinalStandingsViewProps {
   provisional: boolean;
   /** Zeitpunkt des Abschlusses (nur gespeichert). */
   finishedAt?: string;
+  /** Torschützen evtl. unvollständig (vorläufig, Ereignisse der Spielsteuerung nicht lesbar): Hinweis über der Liste. */
+  scorersIncomplete?: boolean;
 }
 
-export function FinalStandingsView({ tournament, ranking, scorers, provisional, finishedAt }: FinalStandingsViewProps) {
+export function FinalStandingsView({ tournament, ranking, scorers, provisional, finishedAt, scorersIncomplete = false }: FinalStandingsViewProps) {
   const { t, i18n } = useTranslation('tournament');
   const note = provisional ? null : shootoutNote(tournament, ranking);
   const winners = ranking.filter((row) => row.place === 1);
@@ -73,7 +75,7 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
           ))}
         </ol>
       </section>
-      <ScorerList scorers={scorers} />
+      <ScorerList scorers={scorers} provisional={provisional} incomplete={scorersIncomplete} />
       {!provisional && (
         <p style={{ ...small, textAlign: 'center' }} data-testid="final-standings-saved">
           {day !== null && clock !== null ? t('finalStandings.savedAt', { date: day, time: clock }) : t('finalStandings.savedNoDate')}

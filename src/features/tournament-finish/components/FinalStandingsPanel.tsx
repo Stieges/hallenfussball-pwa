@@ -6,29 +6,27 @@
  * - sonst: der Endstand, wie er gerade steht (`computeFinalStandings`, `computeScorers`), gekennzeichnet „vorläufig“ (@ET-042).
  * Turnierleitung und Helfer lesen dieselbe Zeile (`writeMatchData`); Helfer landen nach dem Abschluss über `/standings` hier.
  */
-import { useTranslation } from 'react-i18next';
 import type { Tournament } from '../../../types/tournament';
 import { computeFinalStandings } from '../../../core/standings/finalStandings';
-import { useStoredFinalStandings } from '../hooks/useStoredFinalStandings';
+import { useStoredFinalStandingsReload } from '../hooks/useStoredFinalStandings';
 import { useProvisionalScorers } from '../hooks/useProvisionalScorers';
 import { FinalStandingsView } from './FinalStandingsView';
-import { small } from './finishStyles';
+import { FinalStandingsStatus } from './FinalStandingsStatus';
 
 export function FinalStandingsPanel({ tournament }: { tournament: Tournament }) {
-  const { t } = useTranslation('tournament');
   const finished = tournament.lifecycleStatus === 'finished';
-  const stored = useStoredFinalStandings(tournament.id, finished, tournament.finishedAt);
-  const scorers = useProvisionalScorers(tournament, !finished);
+  const { state: stored, reload } = useStoredFinalStandingsReload(tournament.id, finished, tournament.finishedAt);
+  const provisionalScorers = useProvisionalScorers(tournament, !finished);
 
   if (finished) {
     if (stored.status === 'ok') {
       return <FinalStandingsView tournament={tournament} ranking={stored.snapshot.ranking} scorers={stored.snapshot.scorers} provisional={false} finishedAt={stored.finishedAt} />;
     }
-    const failed = stored.status !== 'loading';
-    return <p style={small} role="status" data-testid={failed ? 'final-standings-unavailable' : 'final-standings-loading'}>{t(failed ? 'finalStandings.unavailable' : 'finalStandings.loading')}</p>;
+    const kind = stored.status === 'loading' ? 'loading' : stored.status === 'none' ? 'missing' : 'unavailable';
+    return <FinalStandingsStatus kind={kind} onRetry={reload} />;
   }
   if (!tournament.matches.some((match) => match.matchStatus === 'finished')) {
-    return <p style={small} data-testid="final-standings-empty">{t('finalStandings.empty')}</p>;
+    return <FinalStandingsStatus kind="empty" />;
   }
-  return <FinalStandingsView tournament={tournament} ranking={computeFinalStandings(tournament).ranking} scorers={scorers} provisional />;
+  return <FinalStandingsView tournament={tournament} ranking={computeFinalStandings(tournament).ranking} scorers={provisionalScorers.scorers} scorersIncomplete={provisionalScorers.incomplete} provisional />;
 }
