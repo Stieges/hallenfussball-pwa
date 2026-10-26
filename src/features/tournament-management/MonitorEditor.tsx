@@ -12,9 +12,9 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-05
  */
 
-import { useState, useCallback, useMemo, CSSProperties } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../design-tokens';
+import { dialogWidths } from '../../design-tokens';
 import type { Tournament, TournamentGroup } from '../../types/tournament';
 import type {
   MonitorSlide,
@@ -32,6 +32,39 @@ import { SlidePreview } from './components/SlidePreview';
 import { MonitorOverscanField } from './components/MonitorOverscanField';
 import { SlideReferenceWarning } from './components/SlideReferenceWarning';
 import { useSlotFields } from './hooks/useSlotFields';
+import {
+  addSlideButtonStyle,
+  closeButtonStyle,
+  contentStyle,
+  editorStyle,
+  errorStyle,
+  headerStyle,
+  iconButtonStyle,
+  inputGroupStyle,
+  inputStyle,
+  labelStyle,
+  loadingOverlayStyle,
+  sectionStyle,
+  sectionTitleStyle,
+  selectStyle,
+  settingsGridStyle,
+  slideActionsStyle,
+  slideConfigStyle,
+  slideDescStyle,
+  slideIconStyle,
+  slideInfoStyle,
+  slideItemStyle,
+  slidePreviewWrapStyle,
+  slideTypeButtonStyle,
+  slideTypeIconStyle,
+  slideTypeLabelStyle,
+  slideTypeQrHintStyle,
+  slideTypeSelectorStyle,
+  slideTypeStyle,
+  slidesListStyle,
+  spinnerStyle,
+  titleStyle,
+} from './components/monitor-editor/monitorEditorStyles';
 
 // =============================================================================
 // TYPES
@@ -309,222 +342,6 @@ export function MonitorEditor({
   };
 
   // ==========================================================================
-  // STYLES
-  // ==========================================================================
-
-  const editorStyle: CSSProperties = {
-    maxHeight: '90vh',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  };
-
-  const headerStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  };
-
-  const titleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xl,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
-    margin: 0,
-  };
-
-  const closeButtonStyle: CSSProperties = {
-    minWidth: '44px',
-    minHeight: '44px',
-    background: 'transparent',
-    border: 'none',
-    fontSize: cssVars.fontSizes.xl,
-    cursor: 'pointer',
-    color: cssVars.colors.textSecondary,
-  };
-
-  const contentStyle: CSSProperties = {
-    flex: 1,
-    overflow: 'auto',
-    padding: cssVars.spacing.lg,
-    position: 'relative',
-  };
-
-  const loadingOverlayStyle: CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.3)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-    borderRadius: cssVars.borderRadius.md,
-  };
-
-  const spinnerStyle: CSSProperties = {
-    width: 40,
-    height: 40,
-    border: `3px solid ${cssVars.colors.border}`,
-    borderTopColor: cssVars.colors.primary,
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-  };
-
-  const sectionStyle: CSSProperties = {
-    marginBottom: cssVars.spacing.xl,
-  };
-
-  const sectionTitleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const settingsGridStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: cssVars.spacing.md,
-  };
-
-  const inputGroupStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
-  };
-
-  const labelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const inputStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    background: cssVars.colors.surface,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.md,
-  };
-
-  const selectStyle: CSSProperties = {
-    ...inputStyle,
-    cursor: 'pointer',
-  };
-
-  const slidesListStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  };
-
-  const slideItemStyle = (isEditing: boolean): CSSProperties => ({
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${isEditing ? cssVars.colors.primary : cssVars.colors.border}`,
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.md,
-  });
-
-  const slideIconStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xl,
-    width: '40px',
-    textAlign: 'center',
-  };
-
-  const slideInfoStyle: CSSProperties = {
-    flex: 1,
-    minWidth: 0,
-  };
-
-  const slideTypeStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const slideDescStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  };
-
-  const slideActionsStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.xs,
-  };
-
-  const iconButtonStyle: CSSProperties = {
-    minWidth: '36px',
-    minHeight: '36px',
-    padding: cssVars.spacing.xs,
-    background: 'transparent',
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.sm,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.md,
-  };
-
-  const addSlideButtonStyle: CSSProperties = {
-    width: '100%',
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceLight,
-    border: `2px dashed ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textPrimary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.sm,
-  };
-
-  const slideTypeSelectorStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: cssVars.spacing.sm,
-    marginTop: cssVars.spacing.md,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-  };
-
-  const slideTypeButtonStyle: CSSProperties = {
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceLight,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    textAlign: 'center',
-  };
-
-  const errorStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    background: `${cssVars.colors.error}22`,
-    color: cssVars.colors.error,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const slideConfigStyle: CSSProperties = {
-    marginTop: cssVars.spacing.md,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceLight,
-    borderRadius: cssVars.borderRadius.md,
-  };
-
-  // ==========================================================================
   // RENDER
   // ==========================================================================
 
@@ -703,7 +520,7 @@ export function MonitorEditor({
 
                     {/* Slide Preview + Config (wenn bearbeitet) */}
                     {isEditing && (
-                      <div style={{ padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, borderTop: `1px solid ${cssVars.colors.border}` }}>
+                      <div style={slidePreviewWrapStyle}>
                         <SlidePreview slide={slide} tournament={tournament} scale={0.15} />
                       </div>
                     )}
@@ -740,10 +557,10 @@ export function MonitorEditor({
                       style={slideTypeButtonStyle}
                       onClick={() => void handleAddSlide(st.type)}
                     >
-                      <div style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: '4px' }}>{st.icon}</div>
-                      <div style={{ fontSize: cssVars.fontSizes.sm }}>{st.label}</div>
+                      <div style={slideTypeIconStyle}>{st.icon}</div>
+                      <div style={slideTypeLabelStyle}>{st.label}</div>
                       {st.type === 'qr-code' && !zuschauerQrMoeglich && (
-                        <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
+                        <div style={slideTypeQrHintStyle}>
                           {t('monitorEditor.slides.qrHidden')}
                         </div>
                       )}
