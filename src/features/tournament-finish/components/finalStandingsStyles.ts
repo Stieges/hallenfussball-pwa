@@ -1,0 +1,35 @@
+/**
+ * Gestaltung des Endstand-Blocks in der App (R3-5): nur Design-Tokens. Platz 1 wird ohne neue Farbe hervorgehoben (Fläche
+ * `primaryLight`, Rand `primary`); Gold kommt mit R3-6 (Zuschauer-Seite).
+ */
+import type { CSSProperties } from 'react';
+import { cssVars } from '../../../design-tokens';
+import { placeNumber, placeRow } from './finishStyles';
+
+export { placeNumber };
+
+export const standingsRow: CSSProperties = { ...placeRow, gridTemplateColumns: `${cssVars.spacing.xl} minmax(0, 1fr)`, minHeight: cssVars.touchTargets.primary };
+export const standingsRowFirst: CSSProperties = {
+  background: cssVars.colors.primaryLight, borderLeft: `${cssVars.borderWidth.medium} solid ${cssVars.colors.primary}`,
+};
+/** Torschützen: Rang, Name, Tore – die Tore rutschen bei schmaler Spalte unter den Namen, statt ihn mitten im Wort zu trennen. */
+export const scorerRow: CSSProperties = {
+  ...placeRow, display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: cssVars.spacing.sm, minHeight: cssVars.touchTargets.minimum,
+};
+export const scorerRank: CSSProperties = { ...placeNumber, width: cssVars.spacing.xl, flex: 'none' };
+/** Grundbreite des Namens: reicht sie neben Rang und Tore nicht, stehen die Tore in der nächsten Zeile (Name bricht nur an Leerzeichen). */
+export const scorerName: CSSProperties = { flex: `1 1 calc(${cssVars.spacing.xxl} * 4)`, minWidth: 0 };
+export const scorerGoals: CSSProperties = { flex: 'none', marginLeft: 'auto', whiteSpace: 'nowrap' };
+
+export const winnerCard: CSSProperties = {
+  display: 'grid', gridTemplateColumns: `${cssVars.iconSizes.xl} minmax(0, 1fr)`, gap: cssVars.spacing.md, alignItems: 'center',
+  padding: cssVars.spacing.md, background: cssVars.colors.primaryLight, border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.primary}`,
+  borderRadius: cssVars.borderRadius.lg, minWidth: 0,
+};
+export const winnerName: CSSProperties = {
+  margin: 0, fontSize: cssVars.fontSizes.xxl, lineHeight: cssVars.lineHeights.title, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary, overflowWrap: 'anywhere',
+};
+export const badge: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`, borderRadius: cssVars.borderRadius.full,
+  border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textSecondary,
+};

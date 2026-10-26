@@ -4,7 +4,7 @@
  */
 import type { Tournament } from '../../types/tournament';
 
-export type TabellenAnsicht = 'groups' | 'ranking';
+export type TabellenAnsicht = 'groups' | 'ranking' | 'final';
 
 /** Name des Abfrageparameters in der Adresse. */
 export const TABELLEN_ANSICHT_PARAM = 'ansicht';
@@ -12,13 +12,17 @@ export const TABELLEN_ANSICHT_PARAM = 'ansicht';
 /** Vorgabe: die Tabelle (bei Jeder gegen jeden die Gesamttabelle aller Teams, sonst die Gruppentabellen). */
 export const TABELLEN_ANSICHT_VORGABE: TabellenAnsicht = 'groups';
 
-const WERT_IN_ADRESSE: Record<TabellenAnsicht, string> = { groups: 'tabelle', ranking: 'platzierung' };
+const WERT_IN_ADRESSE: Record<TabellenAnsicht, string> = { groups: 'tabelle', ranking: 'platzierung', final: 'endstand' };
 
 export const tabellenAnsichtInAdresse = (ansicht: TabellenAnsicht): string => WERT_IN_ADRESSE[ansicht];
 
-/** Ungültiger oder fehlender Wert → Vorgabe. */
-export function tabellenAnsichtAusAdresse(wert: string | null): TabellenAnsicht {
-  return (Object.keys(WERT_IN_ADRESSE) as TabellenAnsicht[]).find((a) => WERT_IN_ADRESSE[a] === wert) ?? TABELLEN_ANSICHT_VORGABE;
+/** Vorgabe je Turnier: nach dem Abschluss der gespeicherte Endstand (R3-5, @ET-045, @HE-098 Z. 2), sonst die Tabelle. */
+export const tabellenAnsichtVorgabe = (tournament: Pick<Tournament, 'lifecycleStatus'>): TabellenAnsicht =>
+  tournament.lifecycleStatus === 'finished' ? 'final' : TABELLEN_ANSICHT_VORGABE;
+
+/** Ungültiger oder fehlender Wert → `vorgabe`. */
+export function tabellenAnsichtAusAdresse(wert: string | null, vorgabe: TabellenAnsicht = TABELLEN_ANSICHT_VORGABE): TabellenAnsicht {
+  return (Object.keys(WERT_IN_ADRESSE) as TabellenAnsicht[]).find((a) => WERT_IN_ADRESSE[a] === wert) ?? vorgabe;
 }
 
 /**
