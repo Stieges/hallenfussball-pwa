@@ -11,13 +11,13 @@ import { Icons } from '../../../components/ui/Icons';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import { formatClock, formatDay } from '../model/finishFormat';
 import { placeOriginLabel } from '../model/placeOrigin';
-import { shootoutNote } from '../model/finishSummary';
+import { shootoutNote, type ShootoutTournament } from '../model/finishSummary';
 import { ScorerList } from './ScorerList';
 import { TeamName } from './HyphenSafe';
 import { badge, placeNumber, standingsRow, standingsRowFirst, winnerCard, winnerName } from './finalStandingsStyles';
 import { heading, placeList, small, strong, tightStack } from './finishStyles';
 
-export type FinalStandingsViewTournament = Pick<Tournament, 'groups' | 'standingDecisions'>;
+export type FinalStandingsViewTournament = Pick<Tournament, 'groups'> & ShootoutTournament;
 
 export interface FinalStandingsViewProps {
   tournament: FinalStandingsViewTournament;

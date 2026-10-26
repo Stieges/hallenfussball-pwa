@@ -20,7 +20,7 @@ import { shootoutNote } from '../model/finishSummary';
 import { LateEntriesCard } from './LateEntriesCard';
 import { card, heading, placeList, placeNumber, placeRow, small, strong, text } from './finishStyles';
 
-export type FinishedStateTournament = Pick<Tournament, 'id' | 'teams' | 'matches' | 'groups' | 'standingDecisions' | 'finishedAt' | 'isPublic' | 'shareCode'>;
+export type FinishedStateTournament = Pick<Tournament, 'id' | 'teams' | 'matches' | 'groups' | 'standingDecisions' | 'pointSystem' | 'placementLogic' | 'placementsToPlayOut' | 'forfeitScore' | 'finishedAt' | 'isPublic' | 'shareCode'>;
 
 export interface FinishedStateViewProps {
   tournament: FinishedStateTournament;

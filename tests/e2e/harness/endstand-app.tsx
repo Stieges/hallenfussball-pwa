@@ -14,6 +14,8 @@ import { cssVars } from '../../../src/design-tokens';
 import type { Tournament } from '../../../src/types/tournament';
 import type { FinalStandingRow, ScorerRow } from '../../../src/core/standings/finalStandings';
 import { computeFinalStandings } from '../../../src/core/standings/finalStandings';
+import { decisionBasis } from '../../../src/core/standings/decisions';
+import { tableInput } from '../../../src/core/standings/tournamentTable';
 import { nikolausFertig } from '../../../src/core/services/__tests__/finishKit';
 import { NK } from '../../../src/core/standings/__tests__/groupCompletionKit';
 import { FinalStandingsView } from '../../../src/features/tournament-finish/components/FinalStandingsView';
@@ -39,7 +41,8 @@ const shootout = szene === 'ps' || lang;
 const anzeige: Tournament = shootout ? {
   ...turnier,
   standingDecisions: [...(turnier.standingDecisions ?? []), {
-    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.wagingRot].sort(), order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 }, basis: 'x',
+    id: 'ps1', groupId: '', teamIds: [NK.kammer, NK.wagingRot].sort(), order: [NK.kammer, NK.wagingRot], kind: 'shootout', shootout: { winner: 4, loser: 3 },
+    basis: decisionBasis(tableInput(turnier.teams, turnier.matches, turnier, ''), [NK.kammer, NK.wagingRot]),
   }],
 } : turnier;
 

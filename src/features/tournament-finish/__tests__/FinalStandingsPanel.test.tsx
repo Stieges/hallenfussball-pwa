@@ -139,6 +139,18 @@ describe('@ET-041 Plätze, Herkunft je Platz, Torschützen, Sieger', () => {
     expect(rowsOf()[0]).toContain('Platz 1 per Strafstoßschießen');
   });
 
+  it('Gegenbeispiel (Review #397 M-1): die Entscheidung gilt nicht mehr (Grundlage verfallen) → Sieger-Karte ohne „Strafstoßschießen“', async () => {
+    const t = finished(fertig);
+    const verfallen = { ...t, standingDecisions: (t.standingDecisions ?? []).map((d) => ({ ...d, basis: 'verfallen' })) };
+    read.mockResolvedValue({ status: 'ok', snapshot: { ...storedOther(), ranking: storedOther().ranking.map((row, i) => ({ ...row, teamId: [NK.otting, NK.petting, NK.kammer, NK.wagingRot, NK.fridolfing, NK.wagingBlau][i] as never, teamName: ['DJK Otting', 'TSV Petting', 'DJK Kammer', 'TSV Waging rot', 'TSV 1921 Fridolfing', 'TSV Waging blau'][i] })) }, finishedAt: FINISHED_AT });
+    render(<FinalStandingsPanel tournament={verfallen} />);
+    const winner = await screen.findByTestId('final-standings-winner');
+    expect(winner).toHaveTextContent('DJK Otting');
+    expect(winner).not.toHaveTextContent('Strafstoßschießen');
+    expect(rowsOf()[0]).not.toContain('Strafstoßschießen');
+    expect(rowsOf()[0]).toContain('Platz 1 der Tabelle');
+  });
+
   it('Torschützen: Rang 1 bis 3 sichtbar, der Rest und die Sammelzeilen hinter „Alle Torschützen anzeigen“', async () => {
     read.mockResolvedValue({ status: 'ok', snapshot: storedOther(), finishedAt: FINISHED_AT });
     render(<FinalStandingsPanel tournament={finished(fertig)} />);
