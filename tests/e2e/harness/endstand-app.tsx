@@ -3,7 +3,7 @@
  * „vorläufig“) – ECHTE Komponenten, echte Design-Tokens, echte i18n, Hell/Dunkel über den echten ThemeProvider; ersetzt ist nur das
  * Lesen der gespeicherten Zeile (feste Werte), weil Konto, Server und ein abgeschlossenes Turnier offline fehlen. Nur Testumgebung,
  * nicht Teil des Builds. Beispiel wie die Mockups Runde 2 (Nikolaus-Turnier, 6 Teams). Adresse: `?szene=<id>` (`&sprache=en`);
- * ids: klar, ps, vor, lang, ko.
+ * ids: klar, ps, vor, lang, ko, ohnenr (nur Tore ohne Nummer), laden, nichtlesbar, fehlt, leer (Zustände ohne Liste).
  */
 import ReactDOM from 'react-dom/client';
 import i18n from '../../../src/i18n';
@@ -18,6 +18,7 @@ import { decisionBasis } from '../../../src/core/standings/decisions';
 import { tableInput } from '../../../src/core/standings/tournamentTable';
 import { nikolausFertig } from '../../../src/core/services/__tests__/finishKit';
 import { NK } from '../../../src/core/standings/__tests__/groupCompletionKit';
+import { FinalStandingsStatus, type FinalStandingsStatusKind } from '../../../src/features/tournament-finish/components/FinalStandingsStatus';
 import { FinalStandingsView } from '../../../src/features/tournament-finish/components/FinalStandingsView';
 
 const query = new URLSearchParams(window.location.search);
@@ -48,6 +49,10 @@ const anzeige: Tournament = shootout ? {
 
 const name = (id: string): string => turnier.teams.find((team) => team.id === id)?.name ?? id;
 const scorer = (rank: number, id: string, number: number, goals: number): ScorerRow => ({ kind: 'player', rank, teamId: id as never, teamName: name(id), number, goals });
+const ohneNummer: ScorerRow[] = [
+  { kind: 'noNumber', rank: null, teamId: NK.kammer as never, teamName: name(NK.kammer), goals: 3 },
+  { kind: 'ownGoals', rank: null, teamId: NK.otting as never, teamName: name(NK.otting), goals: 1 },
+];
 const scorers: ScorerRow[] = [
   scorer(1, NK.kammer, 9, 5), scorer(2, NK.wagingRot, 7, 4), scorer(3, NK.kammer, 10, 3), scorer(3, NK.wagingRot, 4, 3), scorer(3, NK.otting, 11, 3),
   scorer(6, NK.petting, 2, 2), { kind: 'noNumber', rank: null, teamId: NK.kammer as never, teamName: name(NK.kammer), goals: 2 },
@@ -64,15 +69,21 @@ const ranking: FinalStandingRow[] = szene === 'ko'
   ]
   : computeFinalStandings(turnier).ranking;
 
+const ZUSTAENDE: Record<string, FinalStandingsStatusKind> = { laden: 'loading', nichtlesbar: 'unavailable', fehlt: 'missing', leer: 'empty' };
+const zustand = ZUSTAENDE[szene];
+const [gezeigteTore, vorlaeufig] = [szene === 'vor' ? scorers.slice(0, 3) : szene === 'ohnenr' ? ohneNummer : scorers, szene === 'vor'];
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <ThemeProvider>
     <div style={{ background: cssVars.colors.background, minHeight: '100vh', color: cssVars.colors.textPrimary }}>
       <div style={{ padding: cssVars.spacing.md, maxWidth: '720px', margin: '0 auto', display: 'grid', gap: cssVars.spacing.md }}>
         <h2 style={{ margin: 0 }}>Nikolaus-Turnier 2026</h2>
-        <FinalStandingsView
-          tournament={anzeige} ranking={ranking} scorers={szene === 'vor' ? scorers.slice(0, 3) : scorers}
-          provisional={szene === 'vor'} finishedAt={szene === 'vor' ? undefined : '2026-11-28T13:10:00+01:00'}
-        />
+        {zustand !== undefined ? <FinalStandingsStatus kind={zustand} onRetry={() => undefined} /> : (
+          <FinalStandingsView
+            tournament={anzeige} ranking={ranking} scorers={gezeigteTore}
+            provisional={vorlaeufig} finishedAt={vorlaeufig ? undefined : '2026-11-28T13:10:00+01:00'}
+          />
+        )}
       </div>
     </div>
   </ThemeProvider>,

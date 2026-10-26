@@ -24,12 +24,17 @@ const GRENZEN = {
   'titel.wortbruch': 0, 'kontrast.text': 4.5, 'kontrast.text-gross': 3, 'touch.min': 44, 'touch.primaer': 56, 'primaer.sichtbar': 0, 'schrift.min': 11,
 };
 
-interface Szene { id: string; kennung: string; text: RegExp; nicht?: string[]; da?: string[] }
+interface Szene { id: string; kennung: string; text: RegExp; nicht?: string[]; da?: string[]; warte?: string }
 const SZENEN: Szene[] = [
   { id: 'klar', kennung: '@ET-041 @ET-045', text: /Das Turnier ist abgeschlossen. Der Endstand steht fest. Gespeichert am/, da: ['final-standings-winner', 'final-scorers'], nicht: ['final-standings-badge', 'final-standings-provisional'] },
   { id: 'ps', kennung: '@ET-041 @ET-044 (Strafstoßschießen)', text: /Platz 1 per Strafstoßschießen entschieden: 4:3 gegen SV Süd/, da: ['final-standings-winner'] },
   { id: 'vor', kennung: '@ET-042 @TM-058 (vorläufig)', text: /Vorläufig – der Endstand steht noch nicht fest/, da: ['final-standings-badge', 'final-standings-provisional'], nicht: ['final-standings-winner', 'final-standings-saved'] },
   { id: 'lang', kennung: '@ET-041 (50-Zeichen-Namen)', text: /Spielvereinigung Grün-Gelb Kleinstadt-Neudorf 1921/, da: ['final-standings-winner'] },
+  { id: 'ohnenr', kennung: '@ET-041 (nur Tore ohne Rückennummer, M-2)', text: /ohne Nummer – FC Nord/, da: ['final-scorer-row'], nicht: ['final-scorers-toggle'] },
+  { id: 'laden', kennung: '@ET-045 (wird geladen)', text: /wird geladen/, warte: 'final-standings-loading', nicht: ['final-standings-list', 'final-standings-retry'] },
+  { id: 'nichtlesbar', kennung: '@ET-045 (nicht lesbar, Erneut laden)', text: /konnte gerade nicht gelesen werden/, warte: 'final-standings-retry', da: ['final-standings-unavailable'], nicht: ['final-standings-list'] },
+  { id: 'fehlt', kennung: '@ET-045 (Zeile fehlt)', text: /kein gespeicherter Endstand/, warte: 'final-standings-missing', nicht: ['final-standings-list', 'final-standings-retry'] },
+  { id: 'leer', kennung: '@TM-058 (Noch keine Ergebnisse)', text: /Noch keine Ergebnisse/, warte: 'final-standings-empty', nicht: ['final-standings-list'] },
   { id: 'ko', kennung: '@ET-041 (Herkunft Finale, Spiel um Platz 3, Gruppe)', text: /Dritter Gruppe A/, da: ['final-standings-list'] },
 ];
 
@@ -53,7 +58,7 @@ test.describe('R3-5 Endstand in der App (T2-UI)', () => {
           await page.setViewportSize({ width: g.width, height: g.height });
           await page.emulateMedia({ colorScheme: thema });
           await page.goto(`/tests/e2e/harness/endstand-app.html?szene=${szene.id}`);
-          await expect(page.getByTestId('final-standings-list')).toBeVisible();
+          await expect(page.getByTestId(szene.warte ?? 'final-standings-list')).toBeVisible();
           await expect(page.locator('body')).toContainText(szene.text);
           for (const id of szene.da ?? []) {
             await expect(page.getByTestId(id).first()).toBeVisible();
