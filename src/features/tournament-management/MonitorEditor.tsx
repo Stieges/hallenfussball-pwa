@@ -23,29 +23,19 @@ import type {
   PerformanceMode,
   MonitorTheme,
 } from '../../types/monitor';
-import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors, useSponsors } from '../../hooks';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { useSlotFields } from './hooks/useSlotFields';
 import { buildEditorGroups } from './components/monitor-editor/monitorEditorHelpers';
 import { MonitorSettingsSection } from './components/monitor-editor/MonitorSettingsSection';
-import { MonitorSlideRow } from './components/monitor-editor/MonitorSlideRow';
+import { MonitorSlideList } from './components/monitor-editor/MonitorSlideList';
 import {
-  addSlideButtonStyle,
   closeButtonStyle,
   contentStyle,
   editorStyle,
   errorStyle,
   headerStyle,
   loadingOverlayStyle,
-  sectionStyle,
-  sectionTitleStyle,
-  slideTypeButtonStyle,
-  slideTypeIconStyle,
-  slideTypeLabelStyle,
-  slideTypeQrHintStyle,
-  slideTypeSelectorStyle,
-  slidesListStyle,
   spinnerStyle,
   titleStyle,
 } from './components/monitor-editor/monitorEditorStyles';
@@ -60,32 +50,6 @@ interface MonitorEditorProps {
   onTournamentUpdate: (tournament: Tournament) => Promise<void>;
   onClose: () => void;
 }
-
-interface SlideTypeOption {
-  type: SlideType;
-  label: string;
-  icon: string;
-  phase: number;
-}
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/**
- * Positivliste der Folien-Typen im Editor (@OB-002: Funktion erst anbieten, wenn sie wirkt).
- * Schedule-group und top-scorers haben keinen Renderer im Monitor und bleiben verborgen.
- */
-const MONITOR_SLIDE_TYPES_OFFERED: readonly SlideType[] = [
-  'live',
-  'standings',
-  'schedule-field',
-  'sponsor',
-  'custom-text',
-  'qr-code',
-  'all-standings',
-  'next-matches',
-];
 
 // =============================================================================
 // COMPONENT
@@ -129,21 +93,6 @@ export function MonitorEditor({
 
   // Get groups from tournament - generate if not explicit
   const groups: TournamentGroup[] = useMemo(() => buildEditorGroups(tournament, t), [tournament, t]);
-
-  // Ohne öffentliches Turnier mit Share-Code entfällt die Zuschauer-QR-Folie im Monitor (@ZM-071, F-04)
-  const zuschauerQrMoeglich = tournament.isPublic === true && Boolean(tournament.shareCode);
-
-  // Angebotene Folien-Typen: nur was der Monitor darstellt (@OB-002)
-  const availableSlideTypes: SlideTypeOption[] = useMemo(() => {
-    return SLIDE_TYPES
-      .filter(s => MONITOR_SLIDE_TYPES_OFFERED.includes(s.type))
-      .map(s => ({
-        type: s.type,
-        label: s.label,
-        icon: s.icon,
-        phase: s.phase,
-      }));
-  }, []);
 
   // ==========================================================================
   // HANDLERS
@@ -288,66 +237,23 @@ export function MonitorEditor({
 
           <MonitorSettingsSection monitor={monitor} onUpdateSettings={handleUpdateSettings} />
 
-          {/* Slides Section */}
-          <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>{t('monitorEditor.slides.title', { count: monitor.slides.length })}</h3>
-
-            <div style={slidesListStyle}>
-              {monitor.slides.map((slide, index) => {
-                const isEditing = editingSlideId === slide.id;
-
-                return (
-                  <MonitorSlideRow
-                    key={slide.id}
-                    slide={slide}
-                    index={index}
-                    slideCount={monitor.slides.length}
-                    isEditing={isEditing}
-                    tournament={tournament}
-                    fields={fields}
-                    groups={groups}
-                    sponsors={sponsors}
-                    slotTargets={slotTargets}
-                    getFieldDisplayName={getFieldDisplayName}
-                    onMoveSlide={handleMoveSlide}
-                    onRemoveSlide={handleRemoveSlide}
-                    onUpdateSlide={handleUpdateSlide}
-                    setEditingSlideId={setEditingSlideId}
-                  />
-                );
-              })}
-
-              {/* Add Slide Button */}
-              <button
-                style={addSlideButtonStyle}
-                onClick={() => setIsAddingSlide(!isAddingSlide)}
-              >
-                <span>+</span>
-                <span>{t('monitorEditor.slides.addSlide')}</span>
-              </button>
-
-              {/* Slide Type Selector */}
-              {isAddingSlide && (
-                <div style={slideTypeSelectorStyle}>
-                  {availableSlideTypes.map(st => (
-                    <button
-                      key={st.type}
-                      style={slideTypeButtonStyle}
-                      onClick={() => void handleAddSlide(st.type)}
-                    >
-                      <div style={slideTypeIconStyle}>{st.icon}</div>
-                      <div style={slideTypeLabelStyle}>{st.label}</div>
-                      {st.type === 'qr-code' && !zuschauerQrMoeglich && (
-                        <div style={slideTypeQrHintStyle}>
-                          {t('monitorEditor.slides.qrHidden')}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <MonitorSlideList
+            monitor={monitor}
+            tournament={tournament}
+            editingSlideId={editingSlideId}
+            isAddingSlide={isAddingSlide}
+            fields={fields}
+            groups={groups}
+            sponsors={sponsors}
+            slotTargets={slotTargets}
+            getFieldDisplayName={getFieldDisplayName}
+            onAddSlide={handleAddSlide}
+            onMoveSlide={handleMoveSlide}
+            onRemoveSlide={handleRemoveSlide}
+            onUpdateSlide={handleUpdateSlide}
+            setEditingSlideId={setEditingSlideId}
+            setIsAddingSlide={setIsAddingSlide}
+          />
         </div>
       </div>
     </DialogSurface>
