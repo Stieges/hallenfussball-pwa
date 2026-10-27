@@ -26,12 +26,10 @@ import type {
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors, useSponsors } from '../../hooks';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
-import { SlideConfigEditor } from './components/SlideConfigEditor';
-import { SlidePreview } from './components/SlidePreview';
-import { SlideReferenceWarning } from './components/SlideReferenceWarning';
 import { useSlotFields } from './hooks/useSlotFields';
-import { buildEditorGroups, getSlideDescription } from './components/monitor-editor/monitorEditorHelpers';
+import { buildEditorGroups } from './components/monitor-editor/monitorEditorHelpers';
 import { MonitorSettingsSection } from './components/monitor-editor/MonitorSettingsSection';
+import { MonitorSlideRow } from './components/monitor-editor/MonitorSlideRow';
 import {
   addSlideButtonStyle,
   closeButtonStyle,
@@ -39,27 +37,14 @@ import {
   editorStyle,
   errorStyle,
   headerStyle,
-  iconButtonStyle,
-  inputGroupStyle,
-  inputStyle,
-  labelStyle,
   loadingOverlayStyle,
   sectionStyle,
   sectionTitleStyle,
-  selectStyle,
-  slideActionsStyle,
-  slideConfigStyle,
-  slideDescStyle,
-  slideIconStyle,
-  slideInfoStyle,
-  slideItemStyle,
-  slidePreviewWrapStyle,
   slideTypeButtonStyle,
   slideTypeIconStyle,
   slideTypeLabelStyle,
   slideTypeQrHintStyle,
   slideTypeSelectorStyle,
-  slideTypeStyle,
   slidesListStyle,
   spinnerStyle,
   titleStyle,
@@ -261,14 +246,6 @@ export function MonitorEditor({
   }, [monitor, monitorId, reorderSlides, t]);
 
   // ==========================================================================
-  // HELPERS
-  // ==========================================================================
-
-  const getSlideTypeMeta = (type: SlideType) => {
-    return SLIDE_TYPES.find(s => s.type === type);
-  };
-
-  // ==========================================================================
   // RENDER
   // ==========================================================================
 
@@ -317,75 +294,26 @@ export function MonitorEditor({
 
             <div style={slidesListStyle}>
               {monitor.slides.map((slide, index) => {
-                const meta = getSlideTypeMeta(slide.type);
                 const isEditing = editingSlideId === slide.id;
 
                 return (
-                  <div key={slide.id}>
-                    <div style={slideItemStyle(isEditing)}>
-                      {/* Icon */}
-                      <div style={slideIconStyle}>{meta?.icon ?? '📄'}</div>
-
-                      {/* Info */}
-                      <div style={slideInfoStyle}>
-                        <div style={slideTypeStyle}>{meta?.label ?? slide.type}</div>
-                        <div style={slideDescStyle}>{getSlideDescription(slide, { groups, sponsors, getFieldDisplayName, t })}</div>
-                      </div>
-
-                      {/* Actions */}
-                      <div style={slideActionsStyle}>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => void handleMoveSlide(slide.id, 'up')}
-                          disabled={index === 0}
-                          title={t('monitorEditor.slides.moveUp')}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => void handleMoveSlide(slide.id, 'down')}
-                          disabled={index === monitor.slides.length - 1}
-                          title={t('monitorEditor.slides.moveDown')}
-                        >
-                          ↓
-                        </button>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => setEditingSlideId(isEditing ? null : slide.id)}
-                          title={t('monitorEditor.slides.edit')}
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => void handleRemoveSlide(slide.id)}
-                          title={t('monitorEditor.slides.remove')}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                    <SlideReferenceWarning slide={slide} targets={slotTargets} />
-
-                    {/* Slide Preview + Config (wenn bearbeitet) */}
-                    {isEditing && (
-                      <div style={slidePreviewWrapStyle}>
-                        <SlidePreview slide={slide} tournament={tournament} scale={0.15} />
-                      </div>
-                    )}
-                    {isEditing && (
-                      <SlideConfigEditor
-                        slide={slide}
-                        fields={fields}
-                        groups={groups}
-                        sponsors={sponsors}
-                        onUpdate={(config, duration) => void handleUpdateSlide(slide.id, { config, duration })}
-                        getFieldDisplayName={getFieldDisplayName}
-                        styles={{ slideConfigStyle, inputGroupStyle, labelStyle, selectStyle, inputStyle }}
-                      />
-                    )}
-                  </div>
+                  <MonitorSlideRow
+                    key={slide.id}
+                    slide={slide}
+                    index={index}
+                    slideCount={monitor.slides.length}
+                    isEditing={isEditing}
+                    tournament={tournament}
+                    fields={fields}
+                    groups={groups}
+                    sponsors={sponsors}
+                    slotTargets={slotTargets}
+                    getFieldDisplayName={getFieldDisplayName}
+                    onMoveSlide={handleMoveSlide}
+                    onRemoveSlide={handleRemoveSlide}
+                    onUpdateSlide={handleUpdateSlide}
+                    setEditingSlideId={setEditingSlideId}
+                  />
                 );
               })}
 
