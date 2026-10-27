@@ -9,7 +9,7 @@ import { createMockTournament } from '../../../../test/factories';
 import { vs } from '../../../../test/matchSlotFixtures';
 import { computeFinalStandings, type FinalStandingRow } from '..';
 import { jgj } from '../../__tests__/decisionTestKit';
-import { BFV_ORDER, id, parseMatches, POINTS_310, teamsOf } from '../../__tests__/fixtures';
+import { BFV_ORDER, id, parseMatches, POINTS_310, teamsOf, type Key } from '../../__tests__/fixtures';
 import { completeGroup } from './finalStandingsKit';
 
 /** @ET-022: 1. SG Mitte, 2. FC Nord, 3. VfB Ufer, 4. SV Süd, 5. TSV West, 6. SC Ost (alle Spiele 1:0). */
@@ -52,8 +52,8 @@ describe('R3-5b @ET-022 Jeder gegen jeden: je Platz die Werte der abgeschlossene
 function hallencup(): Tournament {
   const a = parseMatches('W–O 3:0; N–O 2:0; S–O 2:0; W–S 0:0; N–W 2:0; N–S 0:1', { group: 'A', idPrefix: 'a' });
   const b = parseMatches('M–T 2:0; B–T 2:0; U–T 1:0; M–U 2:0; B–U 2:0; M–B 1:0', { group: 'B', idPrefix: 'b' });
-  const final = (matchId: string, finalType: NonNullable<Match['finalType']>, x: string, y: string, scoreA: number, scoreB: number): Match => ({
-    id: matchId, round: 7, field: 1, isFinal: true, finalType, matchStatus: 'finished', scoreA, scoreB, ...vs(id(x as 'N'), id(y as 'N')),
+  const final = (matchId: string, finalType: NonNullable<Match['finalType']>, x: Key, y: Key, scoreA: number, scoreB: number): Match => ({
+    id: matchId, round: 7, field: 1, isFinal: true, finalType, matchStatus: 'finished', scoreA, scoreB, ...vs(id(x), id(y)),
   });
   const playoffs: Match[] = [
     { id: 'hf-1', round: 7, field: 1, isFinal: true, phase: 'semifinal', matchStatus: 'finished', scoreA: 1, scoreB: 0, ...vs(id('S'), id('B')) },

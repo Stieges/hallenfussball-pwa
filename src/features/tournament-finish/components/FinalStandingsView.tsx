@@ -9,12 +9,12 @@ import type { Tournament } from '../../../types/tournament';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../../../components/ui/Icons';
 import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
-import { formatClock, formatDay } from '../model/finishFormat';
+import { formatClock, formatDay, formatSigned } from '../model/finishFormat';
 import { placeOriginLabel } from '../model/placeOrigin';
 import { shootoutNote, type ShootoutTournament } from '../model/finishSummary';
 import { ScorerList } from './ScorerList';
 import { TeamName } from './HyphenSafe';
-import { badge, placeNumber, standingsRow, standingsRowFirst, winnerCard, winnerName } from './finalStandingsStyles';
+import { badge, placeNumber, pointsCell, standingsHeader, standingsRow, standingsRowFirst, valueCell, winnerCard, winnerName } from './finalStandingsStyles';
 import { heading, placeList, small, strong, tightStack } from './finishStyles';
 
 export type FinalStandingsViewTournament = Pick<Tournament, 'groups'> & ShootoutTournament;
@@ -40,6 +40,8 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
   const clock = formatClock(finishedAt, i18n.language);
   const originOf = (row: FinalStandingRow): string =>
     row.place === 1 && note !== null ? t('finalStandings.originShootout') : placeOriginLabel(row.origin, t, tournament);
+  // Spalten Sp, Diff, Pkt nur, wenn der gespeicherte Stand Tabellenwerte trägt; gezeigt wird, was gespeichert ist, nie neu gerechnet (@ET-045)
+  const withValues = ranking.some((row) => row.tableValues !== undefined);
   return (
     <div style={{ display: 'grid', gap: cssVars.spacing.md }} data-testid="final-standings" data-state={provisional ? 'provisional' : 'stored'}>
       {provisional && (
@@ -63,17 +65,35 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
           {t('finalStandings.title')}
           {provisional && <span style={badge} data-testid="final-standings-badge">{t('finalStandings.provisionalBadge')}</span>}
         </h3>
-        <ol style={placeList} data-testid="final-standings-list">
-          {ranking.map((row, index) => (
-            <li key={row.teamId} style={{ ...standingsRow, ...(!provisional && row.place === 1 ? standingsRowFirst : {}), ...(index === ranking.length - 1 ? { borderBottom: 'none' } : {}) }} data-testid="final-standing-row" data-place={row.place}>
-              <span style={placeNumber}>{row.place}</span>
-              <span style={{ display: 'grid', minWidth: 0 }}>
-                <span style={strong}><TeamName name={row.teamName} /></span>
-                <span style={small} data-testid="final-standing-origin">{originOf(row)}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <div style={placeList}>
+          {withValues && (
+            <div style={standingsHeader(true)} data-testid="final-standings-header">
+              <span>{t('finalStandings.columns.place')}</span>
+              <span>{t('finalStandings.columns.team')}</span>
+              <span style={valueCell} title={t('finalStandings.columns.gamesLong')}>{t('finalStandings.columns.games')}</span>
+              <span style={valueCell} title={t('finalStandings.columns.goalDiffLong')}>{t('finalStandings.columns.goalDiff')}</span>
+              <span style={valueCell} title={t('finalStandings.columns.pointsLong')}>{t('finalStandings.columns.points')}</span>
+            </div>
+          )}
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0 }} data-testid="final-standings-list">
+            {ranking.map((row, index) => (
+              <li key={row.teamId} style={{ ...standingsRow(withValues), ...(!provisional && row.place === 1 ? standingsRowFirst : {}), ...(index === ranking.length - 1 ? { borderBottom: 'none' } : {}) }} data-testid="final-standing-row" data-place={row.place}>
+                <span style={placeNumber}>{row.place}</span>
+                <span style={{ display: 'grid', minWidth: 0 }}>
+                  <span style={strong}><TeamName name={row.teamName} /></span>
+                  <span style={small} data-testid="final-standing-origin">{originOf(row)}</span>
+                </span>
+                {withValues && (
+                  <>
+                    <span style={valueCell} data-testid="final-standing-games">{row.tableValues?.games}</span>
+                    <span style={valueCell} data-testid="final-standing-diff">{row.tableValues === undefined ? null : formatSigned(row.tableValues.goalDiff)}</span>
+                    <span style={pointsCell} data-testid="final-standing-points">{row.tableValues?.points}</span>
+                  </>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
       <ScorerList scorers={scorers} provisional={provisional} incomplete={scorersIncomplete} />
       {!provisional && (

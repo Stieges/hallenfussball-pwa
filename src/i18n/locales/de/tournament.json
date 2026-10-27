@@ -1801,6 +1801,16 @@
     "scorerOwnGoals": "Eigentore für {{team}}",
     "showAllScorers": "Alle Torschützen anzeigen",
     "showFewerScorers": "Weniger Torschützen anzeigen",
+    "columns": {
+      "place": "Platz",
+      "team": "Team",
+      "games": "Sp",
+      "gamesLong": "Spiele",
+      "goalDiff": "Diff",
+      "goalDiffLong": "Tordifferenz",
+      "points": "Pkt",
+      "pointsLong": "Punkte"
+    },
     "origin": {
       "final": {
         "winner": "Sieger Finale",
