@@ -67,8 +67,8 @@ interface MonitorSlideListProps {
   onMoveSlide: (slideId: string, direction: 'up' | 'down') => Promise<void>;
   onRemoveSlide: (slideId: string) => Promise<void>;
   onUpdateSlide: (slideId: string, updates: { config?: Partial<SlideConfig>; duration?: number | null }) => Promise<void>;
-  setEditingSlideId: (id: string | null) => void;
-  setIsAddingSlide: (value: boolean) => void;
+  onToggleEditSlide: (slideId: string) => void;
+  onToggleAddSlide: () => void;
 }
 
 export function MonitorSlideList({
@@ -85,8 +85,8 @@ export function MonitorSlideList({
   onMoveSlide,
   onRemoveSlide,
   onUpdateSlide,
-  setEditingSlideId,
-  setIsAddingSlide,
+  onToggleEditSlide,
+  onToggleAddSlide,
 }: MonitorSlideListProps) {
   const { t } = useTranslation('tournament');
 
@@ -117,7 +117,7 @@ export function MonitorSlideList({
               onMoveSlide={onMoveSlide}
               onRemoveSlide={onRemoveSlide}
               onUpdateSlide={onUpdateSlide}
-              setEditingSlideId={setEditingSlideId}
+              onToggleEditSlide={onToggleEditSlide}
             />
           );
         })}
@@ -125,7 +125,7 @@ export function MonitorSlideList({
         {/* Add Slide Button */}
         <button
           style={addSlideButtonStyle}
-          onClick={() => setIsAddingSlide(!isAddingSlide)}
+          onClick={() => onToggleAddSlide()}
         >
           <span>+</span>
           <span>{t('monitorEditor.slides.addSlide')}</span>

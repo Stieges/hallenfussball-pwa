@@ -46,7 +46,7 @@ interface MonitorSlideRowProps {
   onMoveSlide: (slideId: string, direction: 'up' | 'down') => Promise<void>;
   onRemoveSlide: (slideId: string) => Promise<void>;
   onUpdateSlide: (slideId: string, updates: { config?: Partial<SlideConfig>; duration?: number | null }) => Promise<void>;
-  setEditingSlideId: (id: string | null) => void;
+  onToggleEditSlide: (slideId: string) => void;
 }
 
 export function MonitorSlideRow({
@@ -63,7 +63,7 @@ export function MonitorSlideRow({
   onMoveSlide,
   onRemoveSlide,
   onUpdateSlide,
-  setEditingSlideId,
+  onToggleEditSlide,
 }: MonitorSlideRowProps) {
   const { t } = useTranslation('tournament');
   const meta = getSlideTypeMeta(slide.type);
@@ -100,7 +100,7 @@ export function MonitorSlideRow({
           </button>
           <button
             style={iconButtonStyle}
-            onClick={() => setEditingSlideId(isEditing ? null : slide.id)}
+            onClick={() => onToggleEditSlide(slide.id)}
             title={t('monitorEditor.slides.edit')}
           >
             ✏️

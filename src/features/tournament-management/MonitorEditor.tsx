@@ -194,6 +194,14 @@ export function MonitorEditor({
     }
   }, [monitor, monitorId, reorderSlides, t]);
 
+  const handleToggleEditSlide = useCallback((slideId: string) => {
+    setEditingSlideId(editingSlideId === slideId ? null : slideId);
+  }, [editingSlideId]);
+
+  const handleToggleAddSlide = useCallback(() => {
+    setIsAddingSlide(!isAddingSlide);
+  }, [isAddingSlide]);
+
   // ==========================================================================
   // RENDER
   // ==========================================================================
@@ -251,8 +259,8 @@ export function MonitorEditor({
             onMoveSlide={handleMoveSlide}
             onRemoveSlide={handleRemoveSlide}
             onUpdateSlide={handleUpdateSlide}
-            setEditingSlideId={setEditingSlideId}
-            setIsAddingSlide={setIsAddingSlide}
+            onToggleEditSlide={handleToggleEditSlide}
+            onToggleAddSlide={handleToggleAddSlide}
           />
         </div>
       </div>
