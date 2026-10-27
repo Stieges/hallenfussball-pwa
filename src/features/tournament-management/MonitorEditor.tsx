@@ -28,10 +28,10 @@ import { useMonitors, useSponsors } from '../../hooks';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
 import { SlideConfigEditor } from './components/SlideConfigEditor';
 import { SlidePreview } from './components/SlidePreview';
-import { MonitorOverscanField } from './components/MonitorOverscanField';
 import { SlideReferenceWarning } from './components/SlideReferenceWarning';
 import { useSlotFields } from './hooks/useSlotFields';
 import { buildEditorGroups, getSlideDescription } from './components/monitor-editor/monitorEditorHelpers';
+import { MonitorSettingsSection } from './components/monitor-editor/MonitorSettingsSection';
 import {
   addSlideButtonStyle,
   closeButtonStyle,
@@ -47,7 +47,6 @@ import {
   sectionStyle,
   sectionTitleStyle,
   selectStyle,
-  settingsGridStyle,
   slideActionsStyle,
   slideConfigStyle,
   slideDescStyle,
@@ -87,26 +86,6 @@ interface SlideTypeOption {
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-const TRANSITION_OPTIONS: { value: TransitionType; labelKey: string }[] = [
-  { value: 'fade', labelKey: 'monitorEditor.settings.transitions.fade' },
-  { value: 'slide', labelKey: 'monitorEditor.settings.transitions.slide' },
-  { value: 'none', labelKey: 'monitorEditor.settings.transitions.none' },
-];
-
-const PERFORMANCE_OPTIONS: { value: PerformanceMode; labelKey: string; descriptionKey: string }[] = [
-  { value: 'auto', labelKey: 'monitorEditor.settings.performance.auto', descriptionKey: 'monitorEditor.settings.performance.autoDesc' },
-  { value: 'high', labelKey: 'monitorEditor.settings.performance.high', descriptionKey: 'monitorEditor.settings.performance.highDesc' },
-  { value: 'low', labelKey: 'monitorEditor.settings.performance.low', descriptionKey: 'monitorEditor.settings.performance.lowDesc' },
-];
-
-const THEME_OPTIONS: { value: MonitorTheme; labelKey: string; descriptionKey: string }[] = [
-  { value: 'dark', labelKey: 'monitorEditor.settings.themes.dark', descriptionKey: 'monitorEditor.settings.themes.darkDesc' },
-  { value: 'light', labelKey: 'monitorEditor.settings.themes.light', descriptionKey: 'monitorEditor.settings.themes.lightDesc' },
-  { value: 'auto', labelKey: 'monitorEditor.settings.themes.auto', descriptionKey: 'monitorEditor.settings.themes.autoDesc' },
-];
-
-const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
 
 /**
  * Positivliste der Folien-Typen im Editor (@OB-002: Funktion erst anbieten, wenn sie wirkt).
@@ -330,84 +309,7 @@ export function MonitorEditor({
           {/* Error */}
           {error && <div style={errorStyle}>{error}</div>}
 
-          {/* Settings Section */}
-          <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>{t('monitorEditor.settings.title')}</h3>
-            <div style={settingsGridStyle}>
-              {/* Name */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.name')}</label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={monitor.name}
-                  onChange={(e) => void handleUpdateSettings({ name: e.target.value })}
-                />
-              </div>
-
-              {/* Duration */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.slideDuration')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.defaultSlideDuration}
-                  onChange={(e) => void handleUpdateSettings({ defaultSlideDuration: Number(e.target.value) })}
-                >
-                  {DURATION_PRESETS.map(d => (
-                    <option key={d} value={d}>{d}s</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Transition */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.transition')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.transition}
-                  onChange={(e) => void handleUpdateSettings({ transition: e.target.value as TransitionType })}
-                >
-                  {TRANSITION_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Performance Mode */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.performanceLabel')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.performanceMode}
-                  onChange={(e) => void handleUpdateSettings({ performanceMode: e.target.value as PerformanceMode })}
-                >
-                  {PERFORMANCE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Theme */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.themeLabel')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.theme}
-                  onChange={(e) => void handleUpdateSettings({ theme: e.target.value as MonitorTheme })}
-                >
-                  {THEME_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Bildrand in Prozent (@ME-067) */}
-              <MonitorOverscanField
-                value={monitor.overscanPercent}
-                onChange={(overscanPercent) => void handleUpdateSettings({ overscanPercent })}
-              />
-            </div>
-          </div>
+          <MonitorSettingsSection monitor={monitor} onUpdateSettings={handleUpdateSettings} />
 
           {/* Slides Section */}
           <div style={sectionStyle}>
