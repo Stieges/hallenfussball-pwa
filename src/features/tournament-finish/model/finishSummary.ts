@@ -7,7 +7,7 @@
 import type { Tournament } from '../../../types/tournament';
 import { OVERALL_GROUP, standingsGroups } from '../../../core/models/standingsGroups';
 import { computeFinalStandings, type FinalStandingRow } from '../../../core/standings/finalStandings';
-import { rankTournamentGroup } from '../../../core/standings/tournamentTable';
+import { rankTournamentGroup, type TableTournament } from '../../../core/standings/tournamentTable';
 import { hasFinalRound } from '../../../utils/openPlacements';
 import type { TournamentLifecycle } from '../../../core/services/lifecycle';
 
@@ -30,22 +30,29 @@ export interface ShootoutNote {
   otherName: string;
 }
 
+/** Was `shootoutNote` braucht, um die Gültigkeit der Entscheidung wie die Tabelle zu prüfen (Teams, Spiele, Wertung, Entscheidungen). */
+export type ShootoutTournament = Pick<Tournament, 'teams' | 'matches'> & TableTournament;
+
 /**
- * „Platz 1 per Strafstoßschießen entschieden: 4:3 gegen SV Süd“ (E6). Nur, wenn eine gültige Entscheidung `shootout` den
- * Sieger vor den Zweiten setzt; sonst `null` (kein Hinweis). Der zweite Name ist der Gegner in der Entscheidung.
+ * „Platz 1 per Strafstoßschießen entschieden: 4:3 gegen SV Süd“ (E6). Nur, wenn alles zutrifft: Platz 1 stammt aus Gruppenplatz 1
+ * (Rangliste einer Gruppe, kein Finale), die Entscheidung `shootout` gehört zu dieser Gruppe, wird von der Tabelle der Gruppe angewendet
+ * (`rankTournamentGroup`: Block, Grundlage und „die neueste gilt“ wie dort) und setzt den Sieger vor das Team auf Platz 2;
+ * sonst `null`. Verfallene Entscheidungen bleiben am Server im `config` stehen und dürfen nichts beschriften (Review #397 M-1).
  */
-export function shootoutNote(tournament: Pick<Tournament, 'standingDecisions'>, ranking: readonly FinalStandingRow[]): ShootoutNote | null {
+export function shootoutNote(tournament: ShootoutTournament, ranking: readonly FinalStandingRow[]): ShootoutNote | null {
   const first = ranking.find((row) => row.place === 1);
-  if (first === undefined) {
+  const second = ranking.find((row) => row.place === 2);
+  if (first === undefined || second === undefined || first.origin.kind !== 'groupPlace' || first.origin.place !== 1) {
     return null;
   }
-  const decision = (tournament.standingDecisions ?? []).find((entry) => entry.kind === 'shootout' && entry.shootout !== undefined && entry.order[0] === first.teamId);
-  const otherId = decision?.order[1];
-  const other = otherId === undefined ? undefined : ranking.find((row) => row.teamId === otherId);
-  if (decision?.shootout === undefined || other === undefined) {
+  const group = first.origin.group;
+  // die Entscheidung, die die Tabelle tatsächlich angewendet hat (Block, Grundlage, „die neueste gilt“ wie dort; Review #397 m-7)
+  const decision = rankTournamentGroup(tournament, group).rows.find((row) => row.team.id === first.teamId)?.decision;
+  if (decision?.kind !== 'shootout' || decision.shootout === undefined
+    || decision.order[0] !== first.teamId || decision.order[1] !== second.teamId) {
     return null;
   }
-  return { winner: decision.shootout.winner, loser: decision.shootout.loser, otherName: other.teamName };
+  return { winner: decision.shootout.winner, loser: decision.shootout.loser, otherName: second.teamName };
 }
 
 export interface FinishFacts {

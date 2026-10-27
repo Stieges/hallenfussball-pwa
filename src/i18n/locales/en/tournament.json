@@ -1774,5 +1774,68 @@
       "unknownDevice": "Helper device",
       "received": "Arrived at {{time}}"
     }
+  },
+  "finalStandings": {
+    "title": "Final standings",
+    "tab": "Final standings",
+    "provisionalBadge": "provisional",
+    "provisionalTitle": "Provisional – the final standings are not fixed yet",
+    "provisionalText": "They show how things stand right now. They become final when the tournament is closed.",
+    "winner": "Winner",
+    "winnerShootout": "1st place decided by penalty shootout: {{winner}}:{{loser}} against {{other}}",
+    "originShootout": "1st place by penalty shootout",
+    "loading": "Loading the saved final standings …",
+    "unavailable": "The saved final standings could not be read right now. Try again with a connection.",
+    "retry": "Reload",
+    "missing": "There are no saved final standings to show for this tournament.",
+    "empty": "No results yet. The final standings appear after the first games.",
+    "savedAt": "The tournament is closed. The final standings are fixed. Saved on {{date}} at {{time}}.",
+    "savedNoDate": "The tournament is closed. The final standings are fixed.",
+    "scorers": "Top scorers",
+    "scorersEmptyProvisional": "No goals yet.",
+    "scorersEmptyStored": "No goal was scored in the tournament.",
+    "scorersIncomplete": "Top scorers may be incomplete (offline)",
+    "goals_one": "{{count}} goal",
+    "goals_other": "{{count}} goals",
+    "scorerNoNumber": "no number – {{team}}",
+    "scorerOwnGoals": "Own goals for {{team}}",
+    "showAllScorers": "Show all scorers",
+    "showFewerScorers": "Show fewer scorers",
+    "origin": {
+      "final": {
+        "winner": "Winner final",
+        "loser": "Loser final"
+      },
+      "thirdPlace": {
+        "winner": "Winner 3rd place game",
+        "loser": "Loser 3rd place game"
+      },
+      "fifthSixth": {
+        "winner": "Winner 5th place game",
+        "loser": "Loser 5th place game"
+      },
+      "seventhEighth": {
+        "winner": "Winner 7th place game",
+        "loser": "Loser 7th place game"
+      },
+      "koRound": {
+        "semi": "Loser semi-final",
+        "quarter": "Loser quarter-final",
+        "r16": "Loser round of 16"
+      },
+      "groupPlace": {
+        "1": "1st {{group}}",
+        "2": "2nd {{group}}",
+        "3": "3rd {{group}}",
+        "4": "4th {{group}}",
+        "5": "5th {{group}}",
+        "6": "6th {{group}}",
+        "7": "7th {{group}}",
+        "8": "8th {{group}}"
+      },
+      "groupPlaceOther": "Place {{place}} {{group}}",
+      "table": "Place {{place}} in the table",
+      "open": "still open"
+    }
   }
 }

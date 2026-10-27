@@ -32,7 +32,8 @@ import { resolvePlacementCriterionLabel } from '../tournament-creation/component
 import { useTieRenderers } from './standings/useTieRenderers';
 import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 import { GroupStateDetails, GroupStateMarks } from './group-completion/GroupStateHead';
-import { istEineTabelle, medalForRank, type Medal, TABELLEN_ANSICHT_VORGABE, type TabellenAnsicht } from './tabellenAnsicht';
+import { istEineTabelle, medalForRank, type Medal, tabellenAnsichtVorgabe, type TabellenAnsicht } from './tabellenAnsicht';
+import { FinalStandingsPanel } from '../tournament-finish/components/FinalStandingsPanel';
 
 export interface TabellenTabProps {
   tournament: Tournament;
@@ -65,8 +66,11 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const { t } = useTranslation('tournament');
   const { t: tWizard } = useTranslation('wizard');
   const isMobile = useIsMobile();
-  const [localView, setLocalView] = useState<TabellenAnsicht>(TABELLEN_ANSICHT_VORGABE);
-  const viewMode = view ?? localView;
+  const [localView, setLocalView] = useState<TabellenAnsicht>(tabellenAnsichtVorgabe(tournament));
+  // R3-5: nach dem Abschluss gilt nur der gespeicherte Endstand; die errechnete Gesamtplatzierung gibt es dann nicht mehr (@ET-045)
+  const finished = tournament.lifecycleStatus === 'finished';
+  const chosenView = view ?? localView;
+  const viewMode: TabellenAnsicht = finished && chosenView === 'ranking' ? 'final' : chosenView;
   const setViewMode = (next: TabellenAnsicht) => { (onViewChange ?? setLocalView)(next); };
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -111,6 +115,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     minWidth: isMobile ? '80px' : '120px',
+    minHeight: cssVars.touchTargets.minimum, // Touch-Ziel ≥ 44 px (R3-5, visual:metrics touch.min)
   });
 
   // ============================================================================
@@ -718,17 +723,30 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
             >
               {singleTable ? t('tables.single') : t('tables.groups')}
             </button>
+            {!finished && (
+              <button
+                style={getSegmentButtonStyle(viewMode === 'ranking')}
+                onClick={() => setViewMode('ranking')}
+              >
+                {t('ranking.title')}
+              </button>
+            )}
             <button
-              style={getSegmentButtonStyle(viewMode === 'ranking')}
-              onClick={() => setViewMode('ranking')}
+              style={getSegmentButtonStyle(viewMode === 'final')}
+              onClick={() => setViewMode('final')}
+              data-testid="tabellen-view-final"
             >
-              {t('ranking.title')}
+              {t('finalStandings.tab')}
             </button>
           </div>
         </div>
 
         {/* View Content */}
-        {viewMode === 'groups' ? renderGroupsView() : renderRankingView()}
+        {viewMode === 'groups' && renderGroupsView()}
+        {viewMode === 'ranking' && renderRankingView()}
+        {viewMode === 'final' && (
+          <FinalStandingsPanel tournament={tournament} />
+        )}
       </Card>
     </div>
   );
