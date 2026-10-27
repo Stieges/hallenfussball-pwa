@@ -3,7 +3,7 @@
  */
 
 import type { CSSProperties } from 'react';
-import { borderWidths, cssVars, spacingSemantics } from '../../../../design-tokens';
+import { borderWidths, cssVars, gridMinColumnWidths, spacingSemantics } from '../../../../design-tokens';
 
 export const editorStyle: CSSProperties = {
   maxHeight: '90vh',
@@ -80,7 +80,7 @@ export const sectionTitleStyle: CSSProperties = {
 
 export const settingsGridStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  gridTemplateColumns: `repeat(auto-fit, minmax(${gridMinColumnWidths.md}, 1fr))`,
   gap: cssVars.spacing.md,
 };
 
@@ -183,7 +183,7 @@ export const addSlideButtonStyle: CSSProperties = {
 
 export const slideTypeSelectorStyle: CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+  gridTemplateColumns: `repeat(auto-fit, minmax(${gridMinColumnWidths.sm}, 1fr))`,
   gap: cssVars.spacing.sm,
   marginTop: cssVars.spacing.md,
   padding: cssVars.spacing.md,
