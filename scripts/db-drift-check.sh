@@ -204,6 +204,9 @@ pending_assertions_for() {
       # M1 (R2 PR 4): nur der Rumpf von match_engine.server_rules (Rechte unveraendert) -- keine eigene Rechte-Assertion;
       # den Rumpf prueft der Schema-Vergleich (pg_dump match_engine), die Werte match-engine-parity.sh (Regel-Fixtures 35-41)
       ;;
+    20261118_006_monitor_aenderungssignal.sql)
+      echo "monitor-signal-triggers-statement-active monitor-signal-definer-no-client-execute"
+      ;;
     20261117_005_klaerungsliste.sql)
       echo "klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"
       ;;
@@ -695,6 +698,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   "klaerungsliste-helpers-no-client-execute"
   "klaerungsliste-rpc-definer-authenticated-only"
   "klaerungsliste-append-routes-reviews"
+  # R5 PR 1 (20261118_006, @ZM-084/@FU-001): Aenderungssignal fuer Monitore (Trigger je Anweisung, Funktion ohne Client-EXECUTE).
+  "monitor-signal-triggers-statement-active"
+  "monitor-signal-definer-no-client-execute"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
