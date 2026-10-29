@@ -117,6 +117,9 @@ export const E2E_ENGINE_CUPS = [
   // A-08g: Server-Nachweise (Schreibweg nur über Ereignisse, Nachtrag) und Spielplan-Lesen (@FU-087).
   runningCup('SCHREIBWEGLAUF'),
   runningCup('SPIELPLANOWNER'),
+  // R5 PR 1 (@ZM-084, @FU-001): Sofort-Kanal – je Messung ein eigener Cup mit Monitor (monitor-sofort.cloud.spec.ts).
+  runningCup('MONSOFORT'),
+  runningCup('MONSCHLECHT'),
   runningCup('SPIELPLANKANAL'),
   runningCup('SPIELPLANHELFER'),
   finishedCup('SCHREIBWEG'),

@@ -22,6 +22,9 @@ import {
   E2E_TURNIERTAG_SHARE_CODE,
   E2E_TURNIERTAG_MONITOR_ID,
   E2E_SPIELPLANOWNER_MONITOR_ID,
+  E2E_MONSOFORT_MONITOR_ID,
+  E2E_MONSOFORT_EINGANG_MONITOR_ID,
+  E2E_MONSCHLECHT_MONITOR_ID,
   E2E_ZWEITES_TURNIER_ID,
   E2E_ZWEITES_TURNIER_TITLE,
   ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
@@ -34,6 +37,7 @@ import type { TournamentCreationService } from '../../src/core/services/Tourname
 import type { ITournamentRepository } from '../../src/core/repositories/ITournamentRepository';
 import { localDateIso } from '../../src/core/view/time';
 import type { Tournament, Team } from '../../src/core/models/types';
+import type { MonitorSlide } from '../../src/types/monitor';
 import { mapMembershipInsertToSupabase } from '../../src/core/repositories/supabaseMappers';
 import { generateFullSchedule } from '../../src/core/generators/scheduleGenerator';
 import { matchSideTeamId } from '../../src/core/models/matchSlot';
@@ -201,6 +205,23 @@ async function seedOneEngineCup(
         updatedAt: nowIso,
       },
     ];
+  }
+  if (cup.slug === 'MONSOFORT' || cup.slug === 'MONSCHLECHT') {
+    // R5 PR 1 (monitor-sofort.cloud.spec.ts): Feld-Monitor mit Live-Folie Feld 1, bei MONSOFORT dazu „Eingang“.
+    const nowIso = new Date().toISOString();
+    const monitor = (id: string, name: string, slide: MonitorSlide) => ({
+      id, name, defaultSlideDuration: 15, transition: 'none' as const, transitionDuration: 0, theme: 'dark' as const,
+      performanceMode: 'high' as const, slides: [slide], createdAt: nowIso, updatedAt: nowIso,
+    });
+    const feld1 = (id: string): MonitorSlide => ({ id: e2eUuid(`${id}:slide:live-field-1`), type: 'live', config: { fieldId: 'field-1' }, duration: null, order: 0 });
+    tournament.monitors = cup.slug === 'MONSOFORT'
+      ? [
+        monitor(E2E_MONSOFORT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSOFORT_MONITOR_ID)),
+        monitor(E2E_MONSOFORT_EINGANG_MONITOR_ID, 'Eingang', {
+          id: e2eUuid(`${E2E_MONSOFORT_EINGANG_MONITOR_ID}:slide:text`), type: 'custom-text', config: { headline: 'Willkommen' }, duration: null, order: 0,
+        }),
+      ]
+      : [monitor(E2E_MONSCHLECHT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSCHLECHT_MONITOR_ID))];
   }
   await ownerRepo.save(tournament);
   if (cup.helper) {
