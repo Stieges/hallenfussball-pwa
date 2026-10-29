@@ -205,7 +205,7 @@ describe('R5 Sofort-Kanal: useMonitorDisplayData', () => {
     expect(q.unsubscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('Rückfall-Takt beider Profile ist 2 s (C-MONITOR-TAKT-2S)', () => {
+  it('@FU-001 Rückfall-Takt beider Profile ist 2 s', () => {
     expect([PERFORMANCE_PROFILES.high.pollingInterval, PERFORMANCE_PROFILES.low.pollingInterval]).toEqual([2_000, 2_000]);
   });
 });

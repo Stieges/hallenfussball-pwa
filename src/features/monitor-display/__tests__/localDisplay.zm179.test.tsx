@@ -55,6 +55,19 @@ describe('@ZM-179 Stand aus den Engine-Kopien dieses Browsers', () => {
     expect(await withLocalEngineState(probe, { all: () => Promise.resolve([copy('spiel-11', [])]) })).toBe(probe);
   });
 
+  it('ein in der Turnierkopie beendetes Spiel bleibt beendet (der Engine-Stand überlagert nur Laufendes)', async () => {
+    const beendet: Tournament = { ...probe, matches: [{ ...probe.matches[0], matchStatus: 'finished', scoreA: 2, scoreB: 2 }] };
+    const result = await withLocalEngineState(beendet, { all: () => Promise.resolve([copy('spiel-11', [anpfiff, torNord])]) });
+    expect(result.matches[0]).toMatchObject({ matchStatus: 'finished', scoreA: 2, scoreB: 2 });
+  });
+
+  it('Anpfiff ohne Farbe: die getragene Farbe der Turnierkopie bleibt (@ZM-154)', async () => {
+    const kit = { a: '#2E7D32', b: '#C62828' };
+    const mitFarbe: Tournament = { ...probe, matches: [{ ...probe.matches[0], kit }] };
+    const result = await withLocalEngineState(mitFarbe, { all: () => Promise.resolve([copy('spiel-11', [anpfiff, torNord])]) });
+    expect(result.matches[0]).toMatchObject({ scoreA: 1, kit });
+  });
+
   it('Lesefehler der Kopien -> Turnierkopie unverändert, kein Absturz', async () => {
     expect(await withLocalEngineState(probe, { all: () => Promise.reject(new Error('IndexedDB gesperrt')) })).toBe(probe);
   });

@@ -44,12 +44,16 @@ export async function withLocalEngineState(tournament: Tournament, source?: Loca
   const overlays = new Map<string, EngineOverlayFields>();
   for (const match of tournament.matches) {
     const copy = newest.get(match.id.toLowerCase());
-    if (copy === undefined) {
+    // Ein in der Turnierkopie schon abgeschlossenes Spiel (beendet, ausgefallen) bleibt, wie es dort steht: die
+    // Überlagerung bringt nur laufende Einträge schneller an den Monitor (Fixrunde, CI-Befund a36c/zm151).
+    if (copy === undefined || match.matchStatus === 'finished' || match.matchStatus === 'skipped') {
       continue;
     }
     const view = viewOfCopy(copy);
     if (view.log.length > 0) {
-      overlays.set(match.id, engineOverlayFields(view, copy.ctx));
+      const fields = engineOverlayFields(view, copy.ctx);
+      // Ohne Farbe im Anpfiff-Ereignis bleibt die getragene Farbe der Turnierkopie (nie löschen, @ZM-154/@ZM-159).
+      overlays.set(match.id, { ...fields, kit: fields.kit ?? match.kit });
     }
   }
   return applyEngineOverlay(tournament, overlays);
