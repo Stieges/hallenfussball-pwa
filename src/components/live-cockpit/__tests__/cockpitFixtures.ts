@@ -32,7 +32,7 @@ export function makePhaseView(overrides: Partial<PhaseView> = {}): PhaseView {
     sectionElapsedMs: 192_000, sectionLimitMs: 360_000, limitClockMs: 360_000, limitAt: null, reopenCount: 0,
     isLastRegularSection: true,
     breakRemainingMs: null, quittungRestMs: null, earliestAdjustMs: 0, earliestAdjustIsGoal: false, penalties: [], shootout: null,
-    clockAdjustments: [], tiebreakMode: null, playedMs: 0, plannedMs: 0, eingetragenImSpielplan: null,
+    clockAdjustments: [], tiebreakMode: null, penaltySeconds: null, playedMs: 0, plannedMs: 0, eingetragenImSpielplan: null,
     ...overrides,
   };
   // gespielte und geplante Gesamtzeit folgen den Abschnitten, solange der Test sie nicht selbst nennt (`sectionLimitMs` je Abschnitt)

@@ -73,7 +73,7 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
         </h3>
         <div style={placeList}>
           {withValues && (
-            <div style={standingsHeader(true)} data-testid="final-standings-header">
+            <div style={standingsHeader(true)} data-testid="final-standings-header" aria-hidden="true">
               <span>{t('finalStandings.columns.place')}</span>
               <span>{t('finalStandings.columns.team')}</span>
               <span style={valueCell} title={t('finalStandings.columns.gamesLong')}>{t('finalStandings.columns.games')}</span>
@@ -91,9 +91,9 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
                 </span>
                 {withValues && (
                   <>
-                    <span style={valueCell} data-testid="final-standing-games">{row.tableValues?.games}</span>
-                    <span style={valueCell} data-testid="final-standing-diff">{row.tableValues === undefined ? null : formatSigned(row.tableValues.goalDiff)}</span>
-                    <span style={pointsCell} data-testid="final-standing-points">{row.tableValues?.points}</span>
+                    <span style={valueCell} data-testid="final-standing-games" aria-label={row.tableValues === undefined ? undefined : t('finalStandings.valueLabel.games', { value: row.tableValues.games })}>{row.tableValues?.games}</span>
+                    <span style={valueCell} data-testid="final-standing-diff" aria-label={row.tableValues === undefined ? undefined : t('finalStandings.valueLabel.goalDiff', { value: formatSigned(row.tableValues.goalDiff) })}>{row.tableValues === undefined ? null : formatSigned(row.tableValues.goalDiff)}</span>
+                    <span style={pointsCell} data-testid="final-standing-points" aria-label={row.tableValues === undefined ? undefined : t('finalStandings.valueLabel.points', { value: row.tableValues.points })}>{row.tableValues?.points}</span>
                   </>
                 )}
               </li>

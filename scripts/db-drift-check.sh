@@ -194,11 +194,15 @@ pending_assertions_for() {
     20261118_001_verschieben_server.sql)
       echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
       ;;
-    20261118_002_endstand_tabellenwerte.sql)
+    20261118_005_endstand_tabellenwerte.sql)
       # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
       ;;
     20261110_010_standing_decision_null_version.sql)
       # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
+      ;;
+    20261118_002_spielregeln_zeitstrafe_schuetzen.sql)
+      # M1 (R2 PR 4): nur der Rumpf von match_engine.server_rules (Rechte unveraendert) -- keine eigene Rechte-Assertion;
+      # den Rumpf prueft der Schema-Vergleich (pg_dump match_engine), die Werte match-engine-parity.sh (Regel-Fixtures 35-41)
       ;;
     20261117_005_klaerungsliste.sql)
       echo "klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"

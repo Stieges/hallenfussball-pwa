@@ -91,6 +91,24 @@ describe('R3-5b @ET-001 Gruppen-Ausgeschiedene zeigen Spiele, Punkte und Tordiff
   });
 });
 
+describe('R3-5b Screenreader: Wertzellen tragen einen zugänglichen Namen, der Kopf ist versteckt', () => {
+  it('Zeile mit Werten: „Spiele 3“, „Tordifferenz +1“, „Punkte 4“; Platzierungsspiel-Zeile ohne Namen; Kopf aria-hidden', async () => {
+    read.mockResolvedValue({ status: 'ok', snapshot: hallencup(), finishedAt: FINISHED_AT });
+    render(<FinalStandingsPanel tournament={finished(fertig)} />);
+    await screen.findByTestId('final-standings-list');
+    const rows = screen.getAllByTestId('final-standing-row');
+    const mit = within(rows[4]);
+    expect(mit.getByTestId('final-standing-games')).toHaveAccessibleName('Spiele 3');
+    expect(mit.getByTestId('final-standing-diff')).toHaveAccessibleName('Tordifferenz +1');
+    expect(mit.getByTestId('final-standing-points')).toHaveAccessibleName('Punkte 4');
+    const ohne = within(rows[0]);
+    for (const id of ['final-standing-games', 'final-standing-diff', 'final-standing-points']) {
+      expect(ohne.getByTestId(id).hasAttribute('aria-label')).toBe(false);
+    }
+    expect(screen.getByTestId('final-standings-header').getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
 describe('R3-5b @ET-045 die gespeicherten Zahlen gelten, auch wenn das Turnierobjekt anders rechnen würde', () => {
   it('ein Spielergebnis im Turnierobjekt wird danach geändert: die Anzeige zeigt weiter die gespeicherten Zahlen, ohne Neurechnung', async () => {
     const geaendert: Tournament = {

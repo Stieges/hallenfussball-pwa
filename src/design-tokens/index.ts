@@ -146,6 +146,7 @@ export {
   layoutHeightValues,
   componentSizes,
   borderWidths,
+  gridMinColumnWidths,
   type TouchTargetKey,
   type IconSizeKey,
   type InputHeightKey,

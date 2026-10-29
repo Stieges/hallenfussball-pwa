@@ -1394,7 +1394,7 @@
               "autoFinishEnabled": true,
               "autoAdvanceSeconds": 10,
               "finalDecider": "penalty",
-              "penaltyShootersPerTeam": 5,
+              "penaltyShootersPerTeam": 3,
               "penaltySuddenDeathAfter": 6,
               "timePenaltyDurationSeconds": 120,
               "clockMode": "durchlaufend-letzte-minute-angehalten",
@@ -1819,7 +1819,7 @@
               "autoFinishEnabled": false,
               "autoAdvanceSeconds": 10,
               "finalDecider": "penalty",
-              "penaltyShootersPerTeam": 5,
+              "penaltyShootersPerTeam": 3,
               "penaltySuddenDeathAfter": 6,
               "timePenaltyDurationSeconds": 120,
               "clockMode": "durchlaufend-letzte-minute-angehalten",
@@ -2244,7 +2244,7 @@
               "autoFinishEnabled": true,
               "autoAdvanceSeconds": 10,
               "finalDecider": "penalty",
-              "penaltyShootersPerTeam": 5,
+              "penaltyShootersPerTeam": 3,
               "penaltySuddenDeathAfter": 6,
               "timePenaltyDurationSeconds": 120,
               "clockMode": "durchlaufend-letzte-minute-angehalten",
@@ -2667,7 +2667,7 @@
               "autoFinishEnabled": true,
               "autoAdvanceSeconds": 10,
               "finalDecider": "penalty",
-              "penaltyShootersPerTeam": 5,
+              "penaltyShootersPerTeam": 3,
               "penaltySuddenDeathAfter": 6,
               "timePenaltyDurationSeconds": 120,
               "clockMode": "durchlaufend-letzte-minute-angehalten",
@@ -3532,7 +3532,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -3633,7 +3633,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -3734,7 +3734,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -3799,7 +3799,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -3900,7 +3900,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -3977,7 +3977,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4054,7 +4054,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4143,7 +4143,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4196,7 +4196,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4309,7 +4309,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4374,7 +4374,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4475,7 +4475,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4564,7 +4564,7 @@
                   "knockout": true,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4675,7 +4675,7 @@
                   "knockout": true,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -4911,7 +4911,7 @@
                   "knockout": true,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5035,7 +5035,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5122,7 +5122,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5209,7 +5209,7 @@
                   "knockout": true,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5276,7 +5276,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5363,7 +5363,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5450,7 +5450,7 @@
                   "knockout": true,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5564,7 +5564,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5651,7 +5651,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5738,7 +5738,7 @@
                   "knockout": true,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5895,7 +5895,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -5982,7 +5982,7 @@
                   "knockout": false,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }
@@ -6069,7 +6069,7 @@
                   "knockout": true,
                   "tiebreak": "overtime-then-shootout",
                   "overtimeSeconds": 300,
-                  "shootersPerTeam": 5,
+                  "shootersPerTeam": 3,
                   "suddenDeathAfter": 6,
                   "penaltySeconds": 120
                 }

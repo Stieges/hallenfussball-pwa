@@ -1,0 +1,27 @@
+{
+  "title": "M1 (gilt nach Vorschlag): Zeitstrafe unter 1 Minute gibt es nicht, es gilt die Untergrenze 60 s; Kommazahl abgerundet",
+  "input": {
+    "durationMinutes": null,
+    "phase": "groupStage",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {
+      "matchCockpitSettings": {
+        "timePenaltyDurationSeconds": 30.9,
+        "penaltyShootersPerTeam": "4"
+      }
+    },
+    "finalsConfig": null
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 600,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 4,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 60
+  }
+}

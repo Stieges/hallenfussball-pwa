@@ -1811,6 +1811,11 @@
       "points": "Pkt",
       "pointsLong": "Punkte"
     },
+    "valueLabel": {
+      "games": "Spiele {{value}}",
+      "goalDiff": "Tordifferenz {{value}}",
+      "points": "Punkte {{value}}"
+    },
     "origin": {
       "final": {
         "winner": "Sieger Finale",

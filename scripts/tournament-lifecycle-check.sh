@@ -54,7 +54,7 @@ APPEND_005_FILE="$MIGRATIONS_DIR/20261110_005_result_entry_forfeit.sql"
 HELPERS_SOURCE_FILE="$MIGRATIONS_DIR/20261110_008_helper_join.sql"
 # R3-5b: spaetere Migration, die NUR final_standing_row_valid ersetzt (tableValues). Kategorie G liest dieselbe Gleichlauf-Datei
 # und prueft sie deshalb gegen die Fassung MIT dieser Migration; fehlt die Datei, laeuft G gegen die A-21a-Fassung (Gegenprobe).
-ROW_FOLLOWUP_FILE="$MIGRATIONS_DIR/20261118_002_endstand_tabellenwerte.sql"
+ROW_FOLLOWUP_FILE="$MIGRATIONS_DIR/20261118_005_endstand_tabellenwerte.sql"
 FIX_DIR="$REPO_ROOT/src/core/standings/__fixtures__"
 CONTAINER_PREFIX="tournament-lifecycle-check-$$"
 CURRENT_CONTAINER=""

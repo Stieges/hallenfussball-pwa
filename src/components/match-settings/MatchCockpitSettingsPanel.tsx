@@ -91,7 +91,7 @@ export function MatchCockpitSettingsPanel({
   ];
 
   // Spielregel Zeitstrafe (@W2A-029): die Turnierleitung stellt die Dauer ein
-  // (gleiche Auswahl wie die Spielsteuerung, siehe TimePenaltyDialog).
+  // (60/120/300 s; die Spielsteuerung bietet keine Dauer an, sie nimmt die Regel des Spiels, @W2A-016).
   const TIME_PENALTY_OPTIONS: { value: number; label: string }[] = [
     { value: 60, label: t('timePenalty.oneMin') },
     { value: 120, label: t('timePenalty.twoMin') },
