@@ -1791,6 +1791,8 @@
     "provisionalText": "Er ist so, wie es gerade steht. Fest wird er erst, wenn das Turnier abgeschlossen ist.",
     "winner": "Sieger",
     "winnerShootout": "Platz 1 per Strafstoßschießen entschieden: {{winner}}:{{loser}} gegen {{other}}",
+    "winnerValues_one": "{{count}} Punkt, Tordifferenz {{diff}}",
+    "winnerValues_other": "{{count}} Punkte, Tordifferenz {{diff}}",
     "originShootout": "Platz 1 per Strafstoßschießen",
     "loading": "Der gespeicherte Endstand wird geladen …",
     "unavailable": "Der gespeicherte Endstand konnte gerade nicht gelesen werden. Versuche es mit Netz noch einmal.",
