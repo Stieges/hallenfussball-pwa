@@ -2,8 +2,7 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm).
- * Letzte Regeneration: 2026-10-24, nach dem Einspielen von 20261117_005 (A-35 Klaerungsliste: match_reviews,
- * field_control_log, revoked_device_contacts, list_match_reviews) -- aus Produktion per Supabase-MCP
+ * Letzte Regeneration: 2026-10-29, nach dem Einspielen von 20261118_004 (W-M: list_late_entries) -- aus Produktion per Supabase-MCP
  * (generate_typescript_types), nicht aus einem Wegwerf-Container. Damit ist die Datei wieder
  * deckungsgleich mit der Produktion. PostgrestVersion "14.1": so liefern sie seit dem 23.10.
  * MCP-Werkzeug UND CLI (Typ-Drift-Check, Lauf 40012473086, Live-Seite "14.1").
@@ -1899,6 +1898,7 @@ export type Database = {
       }
       join_code_info: { Args: { p_code: string }; Returns: Json }
       list_helper_access: { Args: { p_tournament_id: string }; Returns: Json }
+      list_late_entries: { Args: { p_tournament_id: string }; Returns: Json }
       list_match_reviews: { Args: { p_tournament_id: string }; Returns: Json }
       make_tournament_private: {
         Args: { tournament_id: string }
