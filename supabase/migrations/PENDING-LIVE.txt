@@ -4,4 +4,3 @@
 # und die CI-Tests spielen jede Migration weiter ein.
 # Format je Zeile: <dateiname> <frist YYYY-MM-DD> <commit-vorher (origin/main vor dem Merge)>
 # Nach dem Einspielen im Fenster entfernt der Controller die Zeile (Freigabe-Unterlage des Pakets, § 2).
-20261118_004_abschluss_nachzug.sql 2026-11-19 991aaa77991a1c9d815c611c768c162dfcf35e3d
