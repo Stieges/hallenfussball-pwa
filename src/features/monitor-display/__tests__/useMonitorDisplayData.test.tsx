@@ -43,7 +43,9 @@ describe('useMonitorDisplayData', () => {
     vi.restoreAllMocks();
   });
 
-  it('gleichzeitiger Abruf: Poll-Tick während eines hängenden Abrufs startet keinen zweiten; nach resolve wieder', async () => {
+  // R5 PR 1 (Plan Test 2): ein Anstoß während eines laufenden Abrufs wird nicht mehr verworfen, sondern als genau EIN
+  // Nachabruf vorgemerkt (vorher: Tick übersprungen, nächster Abruf erst beim übernächsten Takt).
+  it('gleichzeitiger Abruf: Poll-Tick während eines hängenden Abrufs startet keinen zweiten; nach resolve genau ein Nachabruf', async () => {
     const pending = deferred<DisplayDelta>();
     const fetch = vi.fn<MonitorDataSource['fetch']>()
       .mockReturnValueOnce(pending.promise)
@@ -57,9 +59,13 @@ describe('useMonitorDisplayData', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
 
     await act(async () => { pending.resolve(snapshot()); await vi.advanceTimersByTimeAsync(0); });
-    // Tick bei 10 000 ms startet wieder einen Abruf (der Tick bei 5 000 ms wurde übersprungen).
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    // Der Tick bei 5 000 ms war vorgemerkt: genau ein Nachabruf direkt nach der Antwort, kein zweiter.
     expect(fetch).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(4_999); });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    // Tick bei 10 000 ms wie gewohnt.
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 
   it('Intervall ohne Monitor: 4999 ms kein zweiter Aufruf, 5000 ms ja', async () => {

@@ -322,21 +322,23 @@ function goalInMatch8(): GoalEventInfo {
 }
 
 describe('MonitorDisplayPage — Datenweg (Bestand, ergänzend zu dataSource-Test)', () => {
-  it('Bestand: vor dem ersten Monitor-Laden pollt die Seite alle 5 s (Grenzen 4 999 / 5 000 ms)', async () => {
+  // R5 PR 1 (C-MONITOR-TAKT-2S, @FU-001 Monitor 2 s): Rückfall-Takt 2 s – vor dem ersten Laden und in beiden Profilen
+  // (vorher 5 s / high 5 s / low 10 s).
+  it('Bestand: vor dem ersten Monitor-Laden pollt die Seite alle 2 s (Grenzen 1 999 / 2 000 ms)', async () => {
     supabaseGet.mockRejectedValue(new Error('offline'));
     localGet.mockResolvedValue(null);
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await vorspulen(0);
     const start = supabaseGet.mock.calls.length;
-    await vorspulen(4_999);
+    await vorspulen(1_999);
     expect(supabaseGet).toHaveBeenCalledTimes(start);
     await vorspulen(1);
     expect(supabaseGet).toHaveBeenCalledTimes(start + 1);
   });
 
   it.each([
-    { modus: 'high' as const, takt: 5_000 },
-    { modus: 'low' as const, takt: 10_000 },
+    { modus: 'high' as const, takt: 2_000 },
+    { modus: 'low' as const, takt: 2_000 },
   ])('Bestand: Profil $modus pollt alle $takt ms (Grenzen beidseitig)', async ({ modus, takt }) => {
     await starte(monitorTurnier(buildTournament(), [slide('custom-text', { headline: 'Hallo' })], { performanceMode: modus }));
     const start = supabaseGet.mock.calls.length;

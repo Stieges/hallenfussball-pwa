@@ -50,6 +50,21 @@ export interface MatchEngineView {
   confirmedCount: number;
 }
 
+/**
+ * Ansicht einer gespeicherten Kopie (dieselbe Rechnung wie `MatchEngine.view`). Auch fuer Leser ohne laufende Engine,
+ * etwa den Monitor im selben Browser bei einem Turnier nur auf diesem Geraet (R5, @ZM-179).
+ */
+export function viewOfCopy(copy: MatchCopy): MatchEngineView {
+  const viewCopy: ViewCopy = {
+    accountId: copy.accountId,
+    matchId: copy.matchId,
+    confirmed: copy.confirmed,
+    acked: copy.acked,
+    pending: copy.pending,
+  };
+  return { result: computeView(viewCopy, copy.ctx), log: buildLog(copy), confirmedCount: copy.confirmed.length };
+}
+
 function engineMatchStatus(): EngineMatchStatus {
   return { lastError: null, divergent: false };
 }
@@ -260,17 +275,7 @@ export class MatchEngine {
   /** B2: `{ result, log }` aus der gecachten Kopie (computeView cacht selbst inkrementell, I7). */
   view(matchId: string): MatchEngineView | null {
     const copy = this.copies.get(matchId);
-    if (!copy) {
-      return null;
-    }
-    const viewCopy: ViewCopy = {
-      accountId: copy.accountId,
-      matchId: copy.matchId,
-      confirmed: copy.confirmed,
-      acked: copy.acked,
-      pending: copy.pending,
-    };
-    return { result: computeView(viewCopy, copy.ctx), log: buildLog(copy), confirmedCount: copy.confirmed.length };
+    return copy ? viewOfCopy(copy) : null;
   }
 
   status(matchId: string): EngineMatchStatus {

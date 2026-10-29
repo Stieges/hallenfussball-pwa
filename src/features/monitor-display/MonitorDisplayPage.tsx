@@ -22,7 +22,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { displayLayout, monitorThemes } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
-import { PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
+import { LOCAL_FALLBACK_POLL_MS, PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
 import { useTranslation, I18nextProvider } from 'react-i18next';
 import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
@@ -41,11 +41,9 @@ import { monitorPageCount } from './slideContent';
 import { buildMonitorRuleMatches, buildMonitorView, monitorJetztMs } from './monitorView';
 import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
-import { boundFieldNumbers, visibleGoal } from './monitorGoalFilter';
 import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
-import { createMonitorSource } from './monitorDataSource';
+import { createMonitorSource, type DisplayOrigin } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
-import { useMonitorEvents } from './useMonitorEvents';
 import { useMonitorHeartbeat } from './useMonitorHeartbeat';
 import { SlideRenderer } from './slides/SlideRenderer';
 import { TransitionWrapper } from './components/TransitionWrapper';
@@ -64,9 +62,12 @@ interface MonitorDisplayPageProps {
   onBack?: () => void;
 }
 
-/** Poll-Takt: ohne Monitor 5 s (schneller, bis etwas da ist), sonst das Profil-Intervall. */
-const monitorPollIntervalMs = (m: TournamentMonitor | null): number =>
-  m ? getPerformanceSettings(m.performanceMode).pollingInterval : 5000;
+/**
+ * Rückfall-Takt (R5 PR 1, C-MONITOR-TAKT-2S): Cloud 2 s in beiden Profilen (auch ohne Monitor), lokal 1 s – das
+ * Änderungssignal bringt den Stand sonst sofort.
+ */
+const monitorPollIntervalMs = (m: TournamentMonitor | null, origin: DisplayOrigin | null): number =>
+  origin === 'local' ? LOCAL_FALLBACK_POLL_MS : m ? getPerformanceSettings(m.performanceMode).pollingInterval : PERFORMANCE_PROFILES.high.pollingInterval;
 
 // =============================================================================
 // MAIN COMPONENT
@@ -82,7 +83,9 @@ function MonitorDisplayPageContent({
     () => createMonitorSource(tournamentId, monitorId),
     [tournamentId, monitorId]
   );
-  const { tournament, monitor, origin, loading, error, lastFetch } = useMonitorDisplayData(
+  const {
+    tournament, monitor, loading, error, lastFetch, goalEvent, cardEvent, clearGoalEvent, clearCardEvent,
+  } = useMonitorDisplayData(
     displaySource,
     { tournamentId, monitorId },
     monitorPollIntervalMs
@@ -93,14 +96,9 @@ function MonitorDisplayPageContent({
   useTastenAbfang();
 
   const view = useMemo(() => (tournament === null ? null : buildMonitorView(tournament)), [tournament]); // gemeinsame Ansicht (A-36c)
-  // Live match events for animations (einzige Stelle mit useLiveMatches)
-  // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung
+  // Einblendungen aus derselben Antwort wie Stand und Uhr (R5 PR 1, Feldfilter für Tor und Karte im Hook).
+  // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung (der Server liefert dann auch keinen Stand).
   const ergebnisseAusgeblendet = view !== null && !view.rules.results;
-  const { lastGoalEvent, clearLastGoalEvent, lastCardEvent, clearLastCardEvent } = useMonitorEvents(
-    tournamentId,
-    origin,
-    ergebnisseAusgeblendet
-  );
 
   // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und Beamer-Laptops ab.
   // Erst aktivieren, wenn ein Monitor geladen ist (auf der Fehlerseite wäre die Anfrage sinnlos).
@@ -160,9 +158,6 @@ function MonitorDisplayPageContent({
   const { slideState } = useSlideshow(slideProgram, transitionMs);
   // Neue App-Version nur zwischen Spielen (B-19b, @ZM-124, @ME-012): das Neulade-Tor der Kiosk-Seite.
   useReloadGate(slideProgram.slides, slideProgram.matches, slideState.currentIndex);
-
-  // Tor-Einblendung nach Feld der Live-Folien (B-16e1, @ZM-083)
-  const boundFields = useMemo(() => boundFieldNumbers(monitor?.slides ?? []), [monitor]);
 
   // Current slide
   const currentSlide = useMemo(() => {
@@ -260,17 +255,15 @@ function MonitorDisplayPageContent({
       {/* Cache Indicator (Admin only) */}
       <CacheIndicator cacheStatus={cacheStatus} visible={showCacheIndicator} />
 
-      {/* Goal Animation Overlay */}
+      {/* Tor- und Karten-Einblendung (@ZM-083, @ZM-178; Feldfilter im Hook) */}
       <GoalAnimation
-        goalEvent={visibleGoal(lastGoalEvent, tournament.matches, boundFields)}
-        onAnimationComplete={clearLastGoalEvent}
+        goalEvent={ergebnisseAusgeblendet ? null : goalEvent}
+        onAnimationComplete={clearGoalEvent}
         sportId={tournament?.sportId}
       />
-
-      {/* Card Animation Overlay */}
       <CardAnimation
-        cardEvent={lastCardEvent}
-        onAnimationComplete={clearLastCardEvent}
+        cardEvent={ergebnisseAusgeblendet ? null : cardEvent}
+        onAnimationComplete={clearCardEvent}
       />
 
       <MonitorKeyframes />

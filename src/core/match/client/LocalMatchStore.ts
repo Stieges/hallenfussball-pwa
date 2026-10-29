@@ -241,6 +241,22 @@ export class LocalMatchStore {
     });
   }
 
+  /** Alle Kopien aller Konten (nur lesen; Monitor im selben Browser, R5 @ZM-179). */
+  async all(): Promise<MatchCopy[]> {
+    let results: MatchCopy[] = [];
+    await this.db.run(
+      'readonly',
+      (store) => {
+        const req = getAllStored<MatchCopy>(store);
+        req.onsuccess = () => {
+          results = req.result.map((item) => item.value);
+        };
+      },
+      () => results,
+    );
+    return results;
+  }
+
   async forAccount(accountId: string): Promise<MatchCopy[]> {
     let results: MatchCopy[] = [];
     await this.db.run(

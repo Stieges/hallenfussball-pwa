@@ -17,6 +17,7 @@ import { ResyncNowContext } from './resyncNowContext';
 import { cancelQueueResumes, queueOf, scheduleQueueResume, type ResumableQueue } from './queueWiring';
 import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { getDeviceId } from '../../core/device/deviceId';
+import { BROADCAST_CHANNELS } from '../../constants/storage';
 import {
   LocalMatchStore,
   ClockSync,
@@ -31,7 +32,7 @@ import { MatchEngineContext, type MatchEngineContextValue } from './matchEngineC
 import { useOutboxReport } from './useOutboxReport';
 import { useAfterFinishCleanup } from './useAfterFinishCleanup';
 
-const BROADCAST_CHANNEL_NAME = 'hallenfussball-matches';
+const BROADCAST_CHANNEL_NAME = BROADCAST_CHANNELS.MATCH_ENGINE;
 
 const NOT_CONFIGURED_ERROR = new Error('Supabase nicht konfiguriert');
 

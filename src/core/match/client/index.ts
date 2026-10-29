@@ -40,6 +40,7 @@ export {
 } from './view';
 export {
   MatchEngine,
+  viewOfCopy,
   type EngineSender,
   type EngineMatchStatus,
   type MatchEngineDeps,

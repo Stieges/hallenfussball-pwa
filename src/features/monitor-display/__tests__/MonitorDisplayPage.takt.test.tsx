@@ -98,7 +98,7 @@ describe('MonitorDisplayPage — Takt-Gegenprobe (C-MON-TAKT-STEHT, Klon je Poll
     expect(reihenfolge).toEqual(['A', 'B', 'A', 'B', 'A']);
   });
 
-  // Profil low pollt alle 10 s: Der Wechsel muss bei 15 s passieren, nicht erst beim Poll bei 20 s.
+  // Profil low (bis R5 Poll alle 10 s, seither 2 s): Der Wechsel passiert bei 15 s, unabhängig vom Poll.
   it('Profil low (Poll alle 10 s): Wechsel bei 15 s, nicht erst beim nächsten Poll', async () => {
     await starte(monitorTurnier(buildTournament(), [
       slide('custom-text', { headline: 'Folie A' }),
@@ -123,11 +123,11 @@ describe('MonitorDisplayPage — Takt-Gegenprobe (C-MON-TAKT-STEHT, Klon je Poll
   });
 
   // @ZM-079 (Seite): Anhalten im laufenden Spiel ausschalten. Der Poll mit dem Klon löst den Pin,
-  // der Takt läuft ab dem Poll (5 s) und die Tabelle erscheint 15 s danach.
+  // der Takt läuft ab dem Poll (Rückfall-Takt 2 s seit R5 PR 1, vorher 5 s) und die Tabelle erscheint 15 s danach.
   it('Anhalten im laufenden Spiel ausgeschaltet: Pin löst sich am Poll, Tabelle nach 15 s', async () => {
     await starte(monitorTurnier(buildTournament(), programmLive(true)));
     liefere(monitorTurnier(buildTournament(), programmLive(false)));
-    await vorspulenInSchritten(19_000);
+    await vorspulenInSchritten(16_000);
     expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
     await vorspulenInSchritten(1_000);
     expect(screen.queryByLabelText('Heim: 1')).not.toBeInTheDocument();
@@ -159,7 +159,7 @@ describe('MonitorDisplayPage — Rückfall bei nur übersprungenen Live-Folien (
     const live = [slide('live', { fieldId: 'field-1' })];
     await starte(monitorTurnier(buildTournament(), live));
     liefere(monitorTurnier(buildTournament({ matches: withMatch('match-7', { matchStatus: 'finished', scoreA: 2, scoreB: 1 }) }), live));
-    await vorspulenInSchritten(5_000);
+    await vorspulenInSchritten(2_000); // Rückfall-Takt 2 s (R5 PR 1) bringt den Abpfiff
     expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
     await vorspulenInSchritten(29_999);
     expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();

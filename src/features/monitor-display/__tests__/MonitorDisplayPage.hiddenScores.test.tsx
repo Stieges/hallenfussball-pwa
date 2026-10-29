@@ -3,24 +3,17 @@
  * Kindermodus: kein Stand, keine Tabelle, keine Tor-Einblendung; Paarung, Feld und Uhr bleiben.
  * Gegenbeispiele: ohne Schalter bleiben Tabelle und Tor-Einblendung da. Sponsor-QR (R7): Zuschauer-Adresse.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import type { CardEventInfo, GoalEventInfo } from '../../../hooks/useLiveMatches';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import type { MonitorSlide } from '../../../types/monitor';
-import type { Tournament } from '../../../types/tournament';
+import type { Match, RuntimeMatchEvent, Tournament } from '../../../types/tournament';
 import {
-  attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMonitor,
+  attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMatch, withMonitor,
 } from './monitorFixture';
 
-const { supabaseGet, localGet, live } = vi.hoisted(() => ({
+const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
   localGet: vi.fn(),
-  live: {
-    goal: null as GoalEventInfo | null,
-    card: null as CardEventInfo | null,
-    clearGoal: vi.fn(),
-    clearCard: vi.fn(),
-  },
 }));
 
 vi.mock('../../../lib/supabase', () => ({
@@ -39,13 +32,6 @@ vi.mock('qrcode.react', async () => {
     QRCodeSVG: ({ value }: { value: string }) => React.createElement('svg', { 'data-testid': 'qr-code', 'data-value': value }),
   };
 });
-vi.mock('../../../hooks/useLiveMatches', () => ({
-  useLiveMatches: () => ({
-    liveMatches: new Map(), runningMatches: [], pausedMatches: [], runningMatchIds: new Set<string>(),
-    getMatchById: () => undefined, lastGoalEvent: live.goal, clearLastGoalEvent: live.clearGoal,
-    lastCardEvent: live.card, clearLastCardEvent: live.clearCard, calculateElapsedSeconds: () => 0,
-  }),
-}));
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
@@ -54,23 +40,43 @@ async function renderMonitor(tournament: Tournament, slides: MonitorSlide[]): Pr
   supabaseGet.mockResolvedValue(attachMonitor(tournament, withMonitor({ slides })));
   localGet.mockResolvedValue(null);
   render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
-  await waitFor(() => expect(screen.queryByText('Lade Display...')).not.toBeInTheDocument());
+  // Ohne echte Übersetzung steht der Schlüssel `monitor:loading` statt „Lade Display...“ – beides abwarten.
+  await waitFor(() => expect(screen.queryByText(/Lade Display\.\.\.|monitor:loading/)).not.toBeInTheDocument());
 }
 
-/** Tor von DJK Berg in Spiel 8 (Feld 2). */
-function torInSpiel8(): GoalEventInfo {
-  return { matchId: 'match-8', teamId: 'team-berg', teamName: 'DJK Berg', side: 'home', timestamp: 1, newScore: { home: 1, away: 0 } };
+/** Spiel 8 läuft auf Feld 2 (DJK Berg – TuS Mitte), Sponsor „Bäckerei Maier“ im Turnier. */
+function spiel8(flags: Partial<Tournament>, patch: Partial<Match> = {}): Tournament {
+  return buildTournament({ sponsors: [FIXTURE_SPONSOR], ...flags, matches: withMatch('match-8', { matchStatus: 'running', scoreA: 0, scoreB: 0, ...patch }) });
 }
 
 /** Gelbe Karte für DJK Berg Nr. 4 in Spiel 8 (Feld 2). */
-function gelbeKarte(): CardEventInfo {
-  return { matchId: 'match-8', teamId: 'team-berg', teamName: 'DJK Berg', side: 'home', cardType: 'YELLOW', playerNumber: 4, timestamp: 2 };
+const gelbeKarte: RuntimeMatchEvent = {
+  id: 'ev-gelb-4', matchId: 'match-8', timestampSeconds: 120, type: 'YELLOW_CARD', payload: { teamId: 'team-berg', playerNumber: 4 }, scoreAfter: { home: 0, away: 0 },
+};
+
+/**
+ * R5 PR 1: Tor und Karte kommen in der nächsten Antwort (Rückfall-Takt 2 s) – Einblendungen entstehen aus dem Stand.
+ * Im Kindermodus liefert der Server keinen Stand; hier liefert die Attrappe ihn trotzdem, damit die Seite die Regel
+ * selbst zeigen muss (zweite Sicherung neben dem Server).
+ */
+async function sponsorMonitorMitAenderung(flags: Partial<Tournament>, nachher: Partial<Match>): Promise<void> {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+  const monitor = withMonitor({ slides: [slide('sponsor', { sponsorId: 'sp-1' })] });
+  supabaseGet.mockResolvedValue(attachMonitor(spiel8(flags), monitor));
+  localGet.mockResolvedValue(null);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  supabaseGet.mockResolvedValue(attachMonitor(spiel8(flags, nachher), monitor));
+  await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+  expect(screen.getByText('Bäckerei Maier')).toBeInTheDocument();
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  live.goal = null;
-  live.card = null;
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('@W2A-031 Monitor im Kindermodus: Live-Folie ohne Stand', () => {
@@ -105,16 +111,12 @@ describe('@ZM-090 / @ZM-118 Kindermodus am Monitor', () => {
   });
 
   it('@ZM-118 Kindermodus: gelbe Karte in Spiel 8 wird nicht eingeblendet', async () => {
-    live.card = gelbeKarte();
-    await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: true }), [slide('sponsor', { sponsorId: 'sp-1' })]);
-    expect(await screen.findByText('Bäckerei Maier')).toBeInTheDocument();
+    await sponsorMonitorMitAenderung({ hideScoresForPublic: true }, { events: [gelbeKarte] });
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 
   it('@ZM-118 Kindermodus: Tor in Spiel 8 wird nicht eingeblendet', async () => {
-    live.goal = torInSpiel8();
-    await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: true }), [slide('sponsor', { sponsorId: 'sp-1' })]);
-    expect(await screen.findByText('Bäckerei Maier')).toBeInTheDocument();
+    await sponsorMonitorMitAenderung({ hideScoresForPublic: true }, { scoreA: 1 });
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 });
@@ -127,9 +129,8 @@ describe('Gegenbeispiele ohne Schalter (Ergebnisse öffentlich)', () => {
   });
 
   it('Gegenbeispiel ohne Schalter: gelbe Karte wird eingeblendet', async () => {
-    live.card = gelbeKarte();
-    await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: false }), [slide('sponsor', { sponsorId: 'sp-1' })]);
-    expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
+    await sponsorMonitorMitAenderung({ hideScoresForPublic: false }, { events: [gelbeKarte] });
+    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   });
 
   it('Gegenbeispiel ohne Schalter: die Stand-Blöcke zeigen den sichtbaren Stand 1:0', async () => {
@@ -139,9 +140,8 @@ describe('Gegenbeispiele ohne Schalter (Ergebnisse öffentlich)', () => {
   });
 
   it('@ZM-083 Eingang: die Tor-Einblendung bleibt grün', async () => {
-    live.goal = torInSpiel8();
-    await renderMonitor(buildTournament({ sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: false }), [slide('sponsor', { sponsorId: 'sp-1' })]);
-    expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
+    await sponsorMonitorMitAenderung({ hideScoresForPublic: false }, { scoreA: 1 });
+    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   });
 });
 
