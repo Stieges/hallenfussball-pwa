@@ -34,6 +34,14 @@ const TIEBREAK_VALUES = new Set(['shootout', 'overtime-then-shootout', 'goldenGo
 export const TIEBREAK_FALLBACK = 'overtime-then-shootout' as const;
 const ROUND_KEYS = new Set(['roundOf16', 'quarterfinal', 'semifinal', 'final']);
 const PLACEMENT_FINAL_TYPES = new Set(['thirdPlace', 'fifthSixth', 'seventhEighth']);
+/** M1 (@W2A-012): Schützen je Team 1 bis 5, Vorgabe 3. Zwilling: `20261118_002` (`shootersPerTeam`). */
+export const SHOOTERS_MIN = 1n;
+export const SHOOTERS_MAX = 5n;
+export const SHOOTERS_DEFAULT = 3n;
+/** M1 (@W2A-016, @W2A-029): Zeitstrafe aus der Einstellung, 60 bis 600 s, Vorgabe 120. Zwilling: `20261118_002` (`penaltySeconds`). */
+export const PENALTY_SECONDS_MIN = 60n;
+export const PENALTY_SECONDS_MAX = 600n;
+export const PENALTY_SECONDS_DEFAULT = 120n;
 
 /** Exakter Dezimalwert `n / d` (d > 0). */
 interface Decimal {
@@ -98,6 +106,11 @@ function minutesToSeconds(value: Decimal): number {
   return clamp(floorDiv(value.n * 60n, value.d), 0n, INT4_MAX);
 }
 
+/** floor(wert), geklemmt auf min..max (M1: Schützen, Zeitstrafe). */
+function bounded(value: Decimal, min: bigint, max: bigint): number {
+  return clamp(floorDiv(value.n, value.d), min, max);
+}
+
 /** floor(wert), geklemmt auf 0..INT4_MAX. */
 function wholeNumber(value: Decimal): number {
   return clamp(floorDiv(value.n, value.d), 0n, INT4_MAX);
@@ -138,8 +151,8 @@ export function serverRules(input: ServerRulesInput): MatchRules {
     knockout: !isGroup,
     tiebreak: tiebreakFor(finals, input.phase, typeof input.finalType === 'string' ? input.finalType : null),
     overtimeSeconds: minutesToSeconds(cfgNum(field(finals, 'tiebreakerDuration')) ?? { n: 5n, d: 1n }),
-    shootersPerTeam: wholeNumber(cfgNum(field(settings, 'penaltyShootersPerTeam')) ?? { n: 5n, d: 1n }),
+    shootersPerTeam: bounded(cfgNum(field(settings, 'penaltyShootersPerTeam')) ?? { n: SHOOTERS_DEFAULT, d: 1n }, SHOOTERS_MIN, SHOOTERS_MAX),
     suddenDeathAfter: wholeNumber(cfgNum(field(settings, 'penaltySuddenDeathAfter')) ?? { n: 6n, d: 1n }),
-    penaltySeconds: 120,
+    penaltySeconds: bounded(cfgNum(field(settings, 'timePenaltyDurationSeconds')) ?? { n: PENALTY_SECONDS_DEFAULT, d: 1n }, PENALTY_SECONDS_MIN, PENALTY_SECONDS_MAX),
   };
 }

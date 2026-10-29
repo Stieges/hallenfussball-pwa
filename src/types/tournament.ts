@@ -699,7 +699,7 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
 
   // Final Rules
   finalDecider: 'penalty',
-  penaltyShootersPerTeam: 5,
+  penaltyShootersPerTeam: 3,
   penaltySuddenDeathAfter: 6,
 
   // Spielregel Zeitstrafe (@W2A-029)

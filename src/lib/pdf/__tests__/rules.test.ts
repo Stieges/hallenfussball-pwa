@@ -66,7 +66,7 @@ describe('Pflichtzeilen Kopf (@DR-006): Hallencup mit BFV-Regelwerk', () => {
 
   it('@DR-006 die K.-o.-Entscheidung steht als eine Zeile über der Finalrunde', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } }, BFV);
-    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team']);
+    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 3 Schützen je Team']);
   });
 });
 
@@ -135,7 +135,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
   it('@TM-142 Gegenbeispiel: eine Gruppe mit top-4 spielt Halbfinale (1.–4., 2.–3.) – die K.-o.-Zeile steht', () => {
     const teams = hallencupTournament().teams.map(team => ({ ...team, group: 'A' }));
     expect(koLines(rulesOf({ numberOfGroups: 1, teams, finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } }), de))
-      .toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team']);
+      .toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 3 Schützen je Team']);
   });
 
   it('top-8 mit zwei Gruppen und Viertelfinal-Regel: keine Zeile „Viertelfinale“', () => {
@@ -150,7 +150,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
     expect(koLines(rules, de)).toEqual([
       'Halbfinale: bei Gleichstand Golden Goal',
       // ZA-3 (E1, @SL-145): ohne Regel gilt „Verlängerung, dann Strafstoßschießen“.
-      'Spiel um Platz 3 und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen je Team',
+      'Spiel um Platz 3 und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 3 Schützen je Team',
     ]);
   });
 
@@ -160,7 +160,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
     });
     expect(koLines(rules, de)).toEqual([
       'Halbfinale: bei Gleichstand Golden Goal',
-      'Platzierungsspiele und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen je Team',
+      'Platzierungsspiele und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 3 Schützen je Team',
     ]);
   });
 
@@ -177,7 +177,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
     const rules = { ...pdfRulesFrom(tournament, storedSchedule(tournament)), rulebook: undefined };
     expect(koLines(rules, de)).toEqual([
       'Viertelfinale, Platzierungsspiele und Finale: bei Gleichstand Golden Goal',
-      'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
+      'Halbfinale: bei Gleichstand Strafstoßschießen, 3 Schützen je Team',
     ]);
   });
 });
@@ -191,8 +191,8 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
       },
     });
     expect(koLines(rules, de)).toEqual([
-      'Halbfinale: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
-      'Spiel um Platz 3 und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen je Team',
+      'Halbfinale: bei Gleichstand Strafstoßschießen, 3 Schützen je Team',
+      'Spiel um Platz 3 und Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 3 Schützen je Team',
     ]);
   });
 
@@ -204,14 +204,14 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
       },
     });
     expect(koLines(rules, de)).toEqual([
-      'Halbfinale und Spiel um Platz 3: bei Gleichstand Strafstoßschießen, 5 Schützen je Team',
-      'Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 5 Schützen je Team',
+      'Halbfinale und Spiel um Platz 3: bei Gleichstand Strafstoßschießen, 3 Schützen je Team',
+      'Finale: bei Gleichstand Verlängerung, dann Strafstoßschießen, 3 Schützen je Team',
     ]);
   });
 
   it('@DR-015 (c) gleiche Regel in allen Runden: genau eine Zeile ohne Rundennamen', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } });
-    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team']);
+    expect(koLines(rules, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 3 Schützen je Team']);
   });
 
   it('Golden Goal als einzige Regel: Wortlaut in der K.-o.-Zeile', () => {
@@ -244,6 +244,12 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
 
 describe('Schützenzahl folgt der Turnierkonfiguration (@DR-008)', () => {
   it('@DR-008 geänderte Schützenzahl 5 → 3 steht in der K.-o.-Zeile', () => {
+    // Gegeben: der Spielplan nennt 5 Schützen (eingestellt; die Vorgabe ist seit @W2A-012 3)
+    const vorher = rulesOf({
+      finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' },
+      matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, penaltyShootersPerTeam: 5 },
+    });
+    expect(koLines(vorher, de)).toEqual(['K.-o.: bei Gleichstand Strafstoßschießen, 5 Schützen je Team']);
     const rules = rulesOf({
       finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' },
       matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, penaltyShootersPerTeam: 3 },
@@ -273,7 +279,7 @@ describe('Englischer Wortlaut (@DR-022)', () => {
       'Match time: 10 min · Time penalty 2 min',
       `Rulebook: ${BFV}`,
     ]);
-    expect(koLines(rules, en)).toEqual(['Knockout: if drawn, penalty shootout, 5 shooters per team']);
+    expect(koLines(rules, en)).toEqual(['Knockout: if drawn, penalty shootout, 3 shooters per team']);
   });
 
   it('@DR-022 EN: Rundennamen klein in der Aufzählung, am Zeilenanfang groß', () => {
@@ -282,7 +288,7 @@ describe('Englischer Wortlaut (@DR-022)', () => {
     });
     expect(koLines(rules, en)).toEqual([
       'Semi-finals: if drawn, golden goal',
-      'Match for 3rd place and final: if drawn, penalty shootout, 5 shooters per team',
+      'Match for 3rd place and final: if drawn, penalty shootout, 3 shooters per team',
     ]);
   });
 
@@ -290,7 +296,7 @@ describe('Englischer Wortlaut (@DR-022)', () => {
     const rules = rulesOf({ finalsConfig: { preset: 'all-places', tiebreakerByRound: { semifinal: 'goldenGoal' } } });
     expect(koLines(rules, en)).toEqual([
       'Semi-finals: if drawn, golden goal',
-      'Placement matches and final: if drawn, extra time, then penalty shootout, 5 shooters per team',
+      'Placement matches and final: if drawn, extra time, then penalty shootout, 3 shooters per team',
     ]);
   });
 

@@ -164,13 +164,13 @@ describe('G62 @BM-032 @ZM-102 englisch „to be decided“ für einen offenen Pl
   });
 });
 
-describe('G74 @DR-015 K.-o.-Zeile „5 Schützen je Team“', () => {
-  it('DE: „… Strafstoßschießen, 5 Schützen je Team“; EN: „5 shooters per team“', async () => {
+describe('G74 @DR-015 K.-o.-Zeile „3 Schützen je Team“ (Vorgabe seit @W2A-012)', () => {
+  it('DE: „… Strafstoßschießen, 3 Schützen je Team“; EN: „3 shooters per team“', async () => {
     const de = await layoutOf({ now: NOW });
     const eng = await layoutOf({ now: NOW, ...en });
 
-    expect(allStrs(de.pages).join(' ')).toContain('Strafstoßschießen, 5 Schützen je Team');
-    expect(allStrs(eng.pages).join(' ')).toContain('penalty shootout, 5 shooters per team');
+    expect(allStrs(de.pages).join(' ')).toContain('Strafstoßschießen, 3 Schützen je Team');
+    expect(allStrs(eng.pages).join(' ')).toContain('penalty shootout, 3 shooters per team');
   });
 });
 

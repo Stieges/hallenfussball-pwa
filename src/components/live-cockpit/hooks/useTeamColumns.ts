@@ -38,7 +38,8 @@ export function useTeamColumns({ match, view, phase, settings, kannSteuern, foul
   return useMemo(() => {
     if (!match) { return null; }
     const knoepfe = teamKnoepfe(phase, kannSteuern);
-    const zeitstrafeSekunden = match.timePenaltyDurationSeconds ?? settings.timePenaltyDurationSeconds;
+    // @W2A-016, @W2A-029 (C-ZEITSTRAFE-BESCHRIFTUNG-FEST): Dauer aus der Regel des Spiels (Anpfiff); vorher die Einstellung
+    const zeitstrafeSekunden = view?.penaltySeconds ?? match.timePenaltyDurationSeconds ?? settings.timePenaltyDurationSeconds;
     const spalte = (seite: Side): Omit<TeamColumnProps, 'kompakt' | 'breit'> => ({
       model: toTeamColumnModel({
         match, seite, view, zustand: phase.zustand, fouls: fouls[seite], foulGrenze: settings.foulLimit, sperrHinweise,

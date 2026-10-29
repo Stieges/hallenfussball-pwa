@@ -158,12 +158,13 @@ describe('Fixrunde A4a: Client-Vorgabe = SQL-Rückfall für Schützen und Sudden
     finalsConfig: null,
   });
 
-  it('ergänzte Vorgaben ergeben dieselben Regeln wie ein Turnier ohne Cockpit-Konfiguration (5 / 6)', () => {
+  it('ergänzte Vorgaben ergeben dieselben Regeln wie ein Turnier ohne Cockpit-Konfiguration (3 / 6, @W2A-012; Zeitstrafe 120)', () => {
     const ohneKonfig = serverRules(eingabe({}));
     const mitVorgaben = serverRules(eingabe({ matchCockpitSettings: completeMatchCockpitSettings({}) }));
     expect(mitVorgaben).toEqual(ohneKonfig);
-    expect(ohneKonfig.shootersPerTeam).toBe(5);
+    expect(ohneKonfig.shootersPerTeam).toBe(3);
     expect(ohneKonfig.suddenDeathAfter).toBe(6);
+    expect(ohneKonfig.penaltySeconds).toBe(120);
   });
 });
 
