@@ -1,5 +1,5 @@
--- supabase/rollbacks/20261118_002_endstand_tabellenwerte_rollback.sql
--- RUECKWEG zu supabase/migrations/20261118_002_endstand_tabellenwerte.sql (R3-5b): die Zeilenpruefung des Endstands woertlich
+-- supabase/rollbacks/20261118_005_endstand_tabellenwerte_rollback.sql
+-- RUECKWEG zu supabase/migrations/20261118_005_endstand_tabellenwerte.sql (R3-5b): die Zeilenpruefung des Endstands woertlich
 -- wie vorher (20261113_003_tournament_lifecycle.sql, Zeilen 399-465). Liegt bewusst NICHT in supabase/migrations.
 -- Reihenfolge: ZUERST die App auf den Stand ohne R3-5b (sie schreibt sonst tableValues, die die alte Funktion ablehnt),
 -- DANN dieser Block. Schon gespeicherte Endstaende mit tableValues bleiben lesbar (die Funktion prueft nur beim Abschluss).

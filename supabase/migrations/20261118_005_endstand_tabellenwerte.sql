@@ -1,4 +1,4 @@
--- supabase/migrations/20261118_002_endstand_tabellenwerte.sql
+-- supabase/migrations/20261118_005_endstand_tabellenwerte.sql
 -- R3-5b (plan-R3-5b-tabellenwerte.md): Der gespeicherte Endstand traegt je Gruppenplatz Spiele, Tore, Gegentore,
 -- Tordifferenz und Punkte aus der Gruppentabelle. Die Zeilenpruefung des Abschlusses erlaubt dafuer den optionalen
 -- Schluessel "tableValues" (genau fuenf Schluessel, alle ganzzahlig; games/goalsFor/goalsAgainst/points >= 0;
@@ -11,7 +11,7 @@
 --   Abwaertsvertraeglich (Schluessel optional); eine Zeile ohne tableValues bleibt gueltig. Keine Tabellen-, Rechte- oder
 --   Policy-Aenderung; final_standings_payload reicht den Snapshot unveraendert weiter.
 -- Reihenfolge: VOR dem Merge des App-Codes live, sonst lehnt finish_tournament neue Endstaende mit tableValues ab.
--- Rueckweg: supabase/rollbacks/20261118_002_endstand_tabellenwerte_rollback.sql
+-- Rueckweg: supabase/rollbacks/20261118_005_endstand_tabellenwerte_rollback.sql
 -- Beweis: scripts/tournament-lifecycle-check.sh (Kategorie G liest final-standings-shapes.json).
 
 BEGIN;
