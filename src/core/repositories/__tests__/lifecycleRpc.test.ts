@@ -136,6 +136,33 @@ describe('R3-2b finish_preflight: Punkte, Warnungen, Stand (B-33-Übergabe)', ()
   });
 });
 
+describe('W-M (a) der Server meldet offene Klärungen selbst (Migration 20261118_004, Punkt review_open)', () => {
+  const KLAERUNG = { kind: 'review_open', eventId: 'tor-tom', matchId: 'hf2', matchNumber: 14, field: 1 };
+
+  it('@LZ-010 Zeile Klärung: finish_preflight nennt „Tor Heim, von Tom“ zum Halbfinale 2 als offene Klärung, nicht als unbekannten Punkt', async () => {
+    rpc.mockResolvedValue(ok({ status: 'ok', lifecycle: 'running', finishedAt: null, canFinish: false, items: [KLAERUNG], warnings: [], state: [] }));
+    const result = await readFinishPreflight(client, 'live-cup');
+    expect(result).toMatchObject({ status: 'ok', preflight: { canFinish: false, items: [KLAERUNG] } });
+  });
+
+  it('@LZ-012 finish_tournament lehnt mit dem laufenden Spiel um Platz 3 und zwei Klärungen ab → drei lesbare Punkte', async () => {
+    const items = [
+      { kind: 'match_running', matchId: 'p3', matchNumber: 15, field: 2, finalType: 'thirdPlace' },
+      KLAERUNG,
+      { kind: 'review_open', eventId: 'tor-kai', matchId: 'final', matchNumber: 16 },
+    ];
+    rpc.mockResolvedValue(ok({ status: 'rejected', code: 'OPEN_ITEMS', items }));
+    await expect(callFinishTournament(client, REQUEST)).resolves.toEqual({ status: 'rejected', code: 'OPEN_ITEMS', items });
+  });
+
+  it('Gegenbeispiel: ein Klärungs-Punkt ohne Kennung des Eintrags hält trotzdem auf (unbekannt, verschwindet nicht still)', async () => {
+    rpc.mockResolvedValue(ok({ status: 'rejected', code: 'OPEN_ITEMS', items: [{ kind: 'review_open', matchId: 'hf2' }] }));
+    await expect(callFinishTournament(client, REQUEST)).resolves.toEqual({
+      status: 'rejected', code: 'OPEN_ITEMS', items: [{ kind: 'unknown', serverKind: 'review_open' }],
+    });
+  });
+});
+
 describe('R3-2b tournament_lifecycle: Zustand vom Server', () => {
   it('liest running/finished/fixed; unbekanntes Turnier → null; keine Antwort → undefined', async () => {
     rpc.mockResolvedValueOnce(ok('running'));
