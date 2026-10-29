@@ -22,6 +22,7 @@ import { useMonitors } from '../../hooks';
 import { useMonitorHeartbeats } from '../../hooks/useMonitorHeartbeats';
 import { useCan } from '../auth/hooks/useCan';
 import { MonitorCard } from './components/MonitorCard';
+import { validateMonitorName } from './components/monitor-editor/validateMonitorName';
 import { MonitorTransferSheet } from './MonitorTransferSheet';
 import { downloadMonitorConfig } from './monitorConfigDownload';
 
@@ -104,19 +105,9 @@ export function MonitorsConfigTab({
   const handleCreate = async () => {
     const trimmedName = newMonitorName.trim();
 
-    if (!trimmedName) {
-      setError(t('monitors.errors.nameRequired'));
-      return;
-    }
-
-    if (trimmedName.length > 50) {
-      setError(t('monitors.errors.nameTooLong'));
-      return;
-    }
-
-    // Check for duplicate names
-    if (monitors.some(m => m.name.toLowerCase() === trimmedName.toLowerCase())) {
-      setError(t('monitors.errors.duplicateName'));
+    const nameError = validateMonitorName(trimmedName, monitors.map(m => m.name));
+    if (nameError) {
+      setError(t(`monitors.errors.${nameError}`));
       return;
     }
 

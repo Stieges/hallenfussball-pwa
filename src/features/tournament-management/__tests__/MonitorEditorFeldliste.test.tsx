@@ -67,6 +67,9 @@ describe('MonitorEditor – Feldliste wie bei der Übernahme (K4)', () => {
     expect(Array.from(select?.options ?? []).map(o => o.value)).toEqual(['', 'field-1', 'field-2']);
 
     await userEvent.selectOptions(select!, 'field-1');
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('slide-reference-warning')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('monitor-editor-save'));
     await waitFor(() => expect(onUpdate).toHaveBeenCalled());
 
     const saved = onUpdate.mock.calls[0][0] as Tournament;

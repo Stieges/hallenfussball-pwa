@@ -37,6 +37,24 @@ function full(reply: PublicReply) {
   return reply;
 }
 
+describe('parsePublicPayload: Zustand des Turniers (R3-6)', () => {
+  const mitZustand = (extra: Record<string, unknown>) => {
+    const reply = voll([spiel7()]);
+    return { ...reply, tournament: { ...reply.tournament, ...extra } };
+  };
+
+  it('@ZM-121 Z. 4: lifecycle_status und finished_at des Servers kommen in der Turnier-Ansicht an (Kindersatz in der Cloud)', () => {
+    const reply = full(parsePublicPayload(mitZustand({ lifecycle_status: 'finished', finished_at: '2026-11-28T12:10:00+00:00', config: { hideScoresForPublic: true } })));
+    expect(reply.tournament.lifecycleStatus).toBe('finished');
+    expect(reply.tournament.hideScoresForPublic).toBe(true);
+  });
+
+  it('Gegenbeispiel: ohne Zustand vom Server bleibt lifecycleStatus leer; ein unbekannter Wert gilt nicht als abgeschlossen', () => {
+    expect(full(parsePublicPayload(voll([spiel7()]))).tournament.lifecycleStatus).toBeUndefined();
+    expect(full(parsePublicPayload(mitZustand({ lifecycle_status: 'fixed' }))).tournament.lifecycleStatus).toBe('fixed');
+  });
+});
+
 describe('parsePublicPayload (B-14)', () => {
   it('@ZM-068 not_found → „nicht gefunden“ (nicht geteilt und unbekannt sind gleich)', () => {
     expect(parsePublicPayload({ state: 'not_found' })).toEqual({ kind: 'not-found' });

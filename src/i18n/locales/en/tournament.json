@@ -810,7 +810,6 @@
     "notFound": "Monitor not found",
     "close": "Close",
     "notFoundMessage": "The monitor with ID \"{{id}}\" no longer exists.",
-    "loading": "Loading...",
     "errors": {
       "saveFailed": "Error saving",
       "addFailed": "Error adding",
@@ -861,6 +860,15 @@
       "qrHidden": "Without a public tournament this slide is skipped",
       "referenceField": "Field is missing in this tournament – please adjust",
       "referenceGroup": "Group is missing in this tournament – please adjust"
+    },
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "save": "Save",
+    "discard": {
+      "title": "Discard changes?",
+      "message": "Your changes to the monitor are not saved yet and will be lost.",
+      "confirm": "Discard",
+      "keepEditing": "Keep editing"
     }
   },
   "toolbar": {
@@ -1783,6 +1791,8 @@
     "provisionalText": "They show how things stand right now. They become final when the tournament is closed.",
     "winner": "Winner",
     "winnerShootout": "1st place decided by penalty shootout: {{winner}}:{{loser}} against {{other}}",
+    "winnerValues_one": "{{count}} point, goal difference {{diff}}",
+    "winnerValues_other": "{{count}} points, goal difference {{diff}}",
     "originShootout": "1st place by penalty shootout",
     "loading": "Loading the saved final standings …",
     "unavailable": "The saved final standings could not be read right now. Try again with a connection.",

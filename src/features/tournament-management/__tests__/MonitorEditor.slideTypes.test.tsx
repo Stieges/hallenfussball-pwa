@@ -20,14 +20,14 @@ const hoisted = vi.hoisted(() => ({
     createdAt: '2026-10-01T00:00:00.000Z',
     updatedAt: '2026-10-01T00:00:00.000Z',
   },
-  addSlide: vi.fn(),
+  saveMonitor: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../hooks', () => ({
   useMonitors: () => ({
     getMonitorById: () => hoisted.monitor,
     updateMonitor: vi.fn(),
-    addSlide: hoisted.addSlide,
+    saveMonitor: hoisted.saveMonitor,
     updateSlide: vi.fn(),
     removeSlide: vi.fn(),
     reorderSlides: vi.fn(),
@@ -54,12 +54,6 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hoisted.monitor.slides = [];
-    // Neue Folie ohne Config (wie ein Monitor ohne matchCount) – prüft die Vorbelegung im Editor
-    hoisted.addSlide.mockImplementation(async (_monitorId: string, type: MonitorSlide['type'], config?: MonitorSlide['config']) => {
-      const slide: MonitorSlide = { id: `s-${hoisted.monitor.slides.length}`, type, config: { ...config }, duration: 15, order: hoisted.monitor.slides.length };
-      hoisted.monitor.slides.push(slide);
-      return slide;
-    });
   });
 
   it('bietet genau die Folien an, die der Monitor zeigt (@OB-002)', async () => {
@@ -115,9 +109,10 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     renderEditor(tournament());
     await openAddMenu(user);
     await user.click(screen.getByRole('button', { name: /Live-Spiel/ }));
-    expect(hoisted.addSlide).toHaveBeenCalledWith('monitor-1', 'live', { fieldId: 'f1' });
-    expect(hoisted.monitor.slides[0].config.fieldId).toBe('f1');
     expect(screen.queryByText(/notConfigured/)).toBeNull();
+    await user.click(screen.getByTestId('monitor-editor-save'));
+    const gespeichert = hoisted.saveMonitor.mock.calls[0][0] as { slides: MonitorSlide[] };
+    expect(gespeichert.slides[0]).toMatchObject({ type: 'live', config: { fieldId: 'f1' } });
   });
 
   it('@ME-066 Gegenbeispiel: eine Folie ohne Feldbezug (Nächste Spiele) bekommt keine Feld-Vorbelegung', async () => {
@@ -125,7 +120,9 @@ describe('MonitorEditor – angebotene Folien-Typen', () => {
     renderEditor(tournament());
     await openAddMenu(user);
     await user.click(screen.getByRole('button', { name: /Nächste Spiele/ }));
-    expect(hoisted.addSlide).toHaveBeenCalledWith('monitor-1', 'next-matches', undefined);
-    expect(hoisted.monitor.slides[0].config.fieldId).toBeUndefined();
+    await user.click(screen.getByTestId('monitor-editor-save'));
+    const gespeichert = hoisted.saveMonitor.mock.calls[0][0] as { slides: MonitorSlide[] };
+    expect(gespeichert.slides[0].type).toBe('next-matches');
+    expect(gespeichert.slides[0].config.fieldId).toBeUndefined();
   });
 });
