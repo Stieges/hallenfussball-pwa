@@ -11,7 +11,8 @@ import { rankGroup } from '../groupTable';
 import { tableInput } from '../tournamentTable';
 import { FINAL_TYPE_RANKS } from '../../../utils/openPlacements';
 import { groupPlaceInfo, type GroupPlaceInfo } from '../groupPlaces';
-import type { ComputedFinalStandings, PlaceOrigin } from './types';
+import { groupTableValues } from './tableValues';
+import type { ComputedFinalStandings, FinalStandingRow, PlaceOrigin, TableValues } from './types';
 import type { FinalStandingsTournament } from './index';
 
 function originOf(placement: FinalPlacement, groupPlaces: ReadonlyMap<string, GroupPlaceInfo>): PlaceOrigin {
@@ -32,13 +33,27 @@ export function legacyStandings(tournament: FinalStandingsTournament): ComputedF
   const overall = rankGroup(tableInput(teams, tournament.matches, tournament)).rows; // Gesamtwertung wie `calculateStandings`
   const { ranking } = getMergedFinalRanking(teams, tournament.matches, overall, tournament);
   const groupPlaces = groupPlaceInfo(teams, tournament.matches, tournament);
+  const tables = new Map<string, ReadonlyMap<string, TableValues>>(); // je Gruppe einmal aus der Gruppentabelle (@ET-001)
+  const valuesOf = (origin: PlaceOrigin, teamId: string): { tableValues?: TableValues } => {
+    if (origin.kind !== 'groupPlace') {
+      return {};
+    }
+    const table = tables.get(origin.group) ?? groupTableValues(tournament, origin.group);
+    tables.set(origin.group, table);
+    const values = table.get(teamId);
+    return values === undefined ? {} : { tableValues: values };
+  };
   return {
     state: 'provisional',
-    ranking: ranking.filter((placement) => placement.team.isRemoved !== true).map((placement) => ({
-      place: placement.rank,
-      teamId: placement.team.id as TeamId,
-      teamName: placement.team.name,
-      origin: originOf(placement, groupPlaces),
-    })),
+    ranking: ranking.filter((placement) => placement.team.isRemoved !== true).map((placement): FinalStandingRow => {
+      const origin = originOf(placement, groupPlaces);
+      return {
+        place: placement.rank,
+        teamId: placement.team.id as TeamId,
+        teamName: placement.team.name,
+        origin,
+        ...valuesOf(origin, placement.team.id),
+      };
+    }),
   };
 }

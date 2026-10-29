@@ -194,6 +194,9 @@ pending_assertions_for() {
     20261118_001_verschieben_server.sql)
       echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
       ;;
+    20261118_005_endstand_tabellenwerte.sql)
+      # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
+      ;;
     20261110_010_standing_decision_null_version.sql)
       # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
       ;;

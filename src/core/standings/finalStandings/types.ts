@@ -28,6 +28,15 @@ export interface PerGameValues {
   games: number;
 }
 
+/** Tabellenwerte eines Gruppenplatzes: Summen aus der Gruppentabelle, beim Abschluss mitgespeichert (@ET-001, @ET-022, @ET-045). */
+export interface TableValues {
+  games: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDiff: number;
+  points: number;
+}
+
 /** Eine Zeile des Endstands; geteilte Plätze tragen dieselbe Platzziffer (2, 2, 2, 5). */
 export interface FinalStandingRow {
   place: number;
@@ -35,6 +44,8 @@ export interface FinalStandingRow {
   teamName: string;
   origin: PlaceOrigin;
   perGame?: PerGameValues;
+  /** Nur Zeilen mit Herkunft `groupPlace`; nie neu gerechnet, die Ansichten zeigen die gespeicherten Zahlen (@ET-045). */
+  tableValues?: TableValues;
 }
 
 /** Zeile der Torschützenliste: Spieler mit Rang oder die Sammelzeilen „ohne Nummer“ / „Eigentore“ ohne Rang. */

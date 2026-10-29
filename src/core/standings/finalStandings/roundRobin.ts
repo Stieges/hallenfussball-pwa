@@ -15,21 +15,30 @@ import type { TeamId } from '../../models/schemas/MatchSlotSchema';
 import { activeCompletion, groupState } from '../../services/GroupCompletionService';
 import { rankTournamentGroup } from '../tournamentTable';
 import { placeNumbers } from './sharedPlaces';
-import type { ComputedFinalStandings, FinalStandingRow } from './types';
+import { tableValuesOf } from './tableValues';
+import type { ComputedFinalStandings, FinalStandingRow, TableValues } from './types';
 import type { FinalStandingsTournament } from './index';
 
 /** Gleiche Teams, jedes genau einmal (Reihenfolge egal). */
 const sameMembers = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && new Set(a).size === a.length && a.every((teamId) => b.includes(teamId));
 
+const optionalValues = (tableValues: TableValues | undefined): { tableValues?: TableValues } =>
+  tableValues === undefined ? {} : { tableValues };
+
 /** Zeilen in der Reihenfolge `order` mit Platzziffern; Herkunft = Platz in der (einzigen) Gruppe. */
-function rows(order: readonly string[], places: readonly number[], teams: ReadonlyMap<string, Team>, groupId: string): FinalStandingRow[] {
+function rows(
+  order: readonly string[], places: readonly number[], teams: ReadonlyMap<string, Team>, groupId: string,
+  values: ReadonlyMap<string, TableValues>,
+): FinalStandingRow[] {
   return order.map((teamId, i) => ({
     place: places[i],
     // Team-IDs sind seit A-03 UUIDs; die Form prüft FinalStandingsSnapshotSchema vor dem Speichern.
     teamId: teamId as TeamId,
     teamName: teams.get(teamId)?.name ?? '',
     origin: { kind: 'groupPlace', group: groupId, place: places[i] },
+    // Spiele, Punkte, Tordifferenz aus der Gruppentabelle (@ET-022), nie aus einer zweiten Rechnung.
+    ...optionalValues(values.get(teamId)),
   }));
 }
 
@@ -40,6 +49,7 @@ export function roundRobinStandings(tournament: FinalStandingsTournament, groupI
   const teams = new Map(tournament.teams.map((team) => [team.id, team]));
 
   const table = rankTournamentGroup(tournament, groupId);
+  const values = new Map(table.rows.map((row) => [row.team.id, tableValuesOf(row)]));
   const tableOrder = keep(table.rows.map((row) => row.team.id));
   const shared = table.rows
     .filter((row) => row.decision?.kind === 'shared' && row.tieBlock !== undefined)
@@ -49,7 +59,7 @@ export function roundRobinStandings(tournament: FinalStandingsTournament, groupI
 
   const provisional = (): ComputedFinalStandings => {
     const places = placeNumbers(tableOrder, [...shared, ...open]) ?? tableOrder.map((_, i) => i + 1);
-    return { state: 'provisional', ranking: rows(tableOrder, places, teams, groupId) };
+    return { state: 'provisional', ranking: rows(tableOrder, places, teams, groupId, values) };
   };
 
   const completion = activeCompletion(tournament, groupId);
@@ -62,5 +72,5 @@ export function roundRobinStandings(tournament: FinalStandingsTournament, groupI
   if (places === undefined) {
     return provisional();
   }
-  return { state: 'complete', ranking: rows(order, places, teams, groupId) };
+  return { state: 'complete', ranking: rows(order, places, teams, groupId, values) };
 }

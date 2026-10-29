@@ -42,12 +42,26 @@ const PerGameSchema = z.strictObject({
   games: z.number().int().min(1),
 });
 
+/** Summen aus der Gruppentabelle: Ganzzahlen, außer der Tordifferenz alle ab 0; Tordifferenz = Tore − Gegentore. */
+const count = z.number().int().min(0);
+const TableValuesSchema = z.strictObject({
+  games: count,
+  goalsFor: count,
+  goalsAgainst: count,
+  goalDiff: z.number().int(),
+  points: count,
+}).refine((values) => values.goalDiff === values.goalsFor - values.goalsAgainst, {
+  message: 'Tordifferenz = Tore minus Gegentore',
+  path: ['goalDiff'],
+});
+
 export const FinalStandingRowSchema = z.strictObject({
   place,
   teamId: TeamIdSchema,
   teamName,
   origin: PlaceOriginSchema,
   perGame: PerGameSchema.optional(),
+  tableValues: TableValuesSchema.optional(),
 });
 
 export const ScorerRowSchema = z.discriminatedUnion('kind', [

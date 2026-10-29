@@ -66,8 +66,8 @@ const ranking: FinalStandingRow[] = szene === 'ko'
     { place: 2, teamId: NK.wagingRot as never, teamName: name(NK.wagingRot), origin: { kind: 'placementGame', finalType: 'final', role: 'loser' } },
     { place: 3, teamId: NK.otting as never, teamName: name(NK.otting), origin: { kind: 'placementGame', finalType: 'thirdPlace', role: 'winner' } },
     { place: 4, teamId: NK.petting as never, teamName: name(NK.petting), origin: { kind: 'placementGame', finalType: 'thirdPlace', role: 'loser' } },
-    { place: 5, teamId: NK.fridolfing as never, teamName: name(NK.fridolfing), origin: { kind: 'groupPlace', group: 'A', place: 3 } },
-    { place: 5, teamId: NK.wagingBlau as never, teamName: name(NK.wagingBlau), origin: { kind: 'groupPlace', group: 'B', place: 3 } },
+    { place: 5, teamId: NK.fridolfing as never, teamName: name(NK.fridolfing), origin: { kind: 'groupPlace', group: 'A', place: 3 }, tableValues: { games: 3, goalsFor: 5, goalsAgainst: 4, goalDiff: 1, points: 4 } },
+    { place: 5, teamId: NK.wagingBlau as never, teamName: name(NK.wagingBlau), origin: { kind: 'groupPlace', group: 'B', place: 3 }, tableValues: { games: 3, goalsFor: 2, goalsAgainst: 5, goalDiff: -3, points: 3 } },
   ]
   : computeFinalStandings(anzeige).ranking;
 
