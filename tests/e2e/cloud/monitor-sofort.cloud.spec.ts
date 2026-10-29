@@ -146,7 +146,9 @@ test.describe('R5 Sofort-Kanal: Monitor ohne Anmeldung folgt dem Cockpit', () =>
     await halle.routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => {
       const server = ws.connectToServer();
       server.onMessage((nachricht) => {
-        if (typeof nachricht === 'string' && nachricht.includes('"changed"')) {
+        // realtime-js 2.x (Protokoll 2.0.0) bekommt Broadcasts als Binärrahmen; der Ereignisname steht als ASCII darin.
+        const text = typeof nachricht === 'string' ? nachricht : nachricht.toString('latin1');
+        if (text.includes('changed')) {
           signale += 1;
           if (signale % 20 === 0) { verworfen += 1; return; }
         }
