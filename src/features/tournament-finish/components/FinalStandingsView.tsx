@@ -14,7 +14,7 @@ import { placeOriginLabel } from '../model/placeOrigin';
 import { shootoutNote, type ShootoutTournament } from '../model/finishSummary';
 import { ScorerList } from './ScorerList';
 import { TeamName } from './HyphenSafe';
-import { badge, placeNumber, pointsCell, standingsHeader, standingsRow, standingsRowFirst, valueCell, winnerCard, winnerName } from './finalStandingsStyles';
+import { badge, goldRowFirst, goldWinnerCard, goldTrophy, placeNumber, pointsCell, standingsHeader, standingsRow, standingsRowFirst, valueCell, winnerCard, winnerName } from './finalStandingsStyles';
 import { heading, placeList, small, strong, tightStack } from './finishStyles';
 
 export type FinalStandingsViewTournament = Pick<Tournament, 'groups'> & ShootoutTournament;
@@ -22,26 +22,32 @@ export type FinalStandingsViewTournament = Pick<Tournament, 'groups'> & Shootout
 export interface FinalStandingsViewProps {
   tournament: FinalStandingsViewTournament;
   ranking: readonly FinalStandingRow[];
-  scorers: readonly ScorerRow[];
+  /** Ohne Angabe (`undefined`) steht keine Torschützenliste da: Zuschauer ohne Schalter (@ZM-012). */
+  scorers?: readonly ScorerRow[];
   /** `true` = der Stand steht noch nicht fest („vorläufig“). */
   provisional: boolean;
   /** Zeitpunkt des Abschlusses (nur gespeichert). */
   finishedAt?: string;
   /** Torschützen evtl. unvollständig (vorläufig, Ereignisse der Spielsteuerung nicht lesbar): Hinweis über der Liste. */
   scorersIncomplete?: boolean;
+  /** `public` = Zuschauer-Seite (R3-6, Mockup `zs-*`): Platz 1 in Gold (`medalGold`), keine Herkunftszeile je Platz; sonst die App. */
+  variant?: 'app' | 'public';
+  /** Herkunft der Plätze, Spalten Sp/Diff/Pkt und Strafstoß-Satz weglassen: Tabellen für Zuschauer aus (@ZM-102). */
+  hideTableDetails?: boolean;
 }
 
-export function FinalStandingsView({ tournament, ranking, scorers, provisional, finishedAt, scorersIncomplete = false }: FinalStandingsViewProps) {
+export function FinalStandingsView({ tournament, ranking, scorers, provisional, finishedAt, scorersIncomplete = false, variant = 'app', hideTableDetails = false }: FinalStandingsViewProps) {
   const { t, i18n } = useTranslation('tournament');
-  const note = provisional ? null : shootoutNote(tournament, ranking);
+  const gold = variant === 'public';
+  const note = provisional || hideTableDetails ? null : shootoutNote(tournament, ranking);
   const winners = ranking.filter((row) => row.place === 1);
   const winner = !provisional && winners.length === 1 ? winners[0] : undefined;
   const day = formatDay(finishedAt, i18n.language);
   const clock = formatClock(finishedAt, i18n.language);
-  const originOf = (row: FinalStandingRow): string =>
-    row.place === 1 && note !== null ? t('finalStandings.originShootout') : placeOriginLabel(row.origin, t, tournament);
+  const originOf = (row: FinalStandingRow): string | null =>
+    hideTableDetails || gold ? null : row.place === 1 && note !== null ? t('finalStandings.originShootout') : placeOriginLabel(row.origin, t, tournament);
   // Spalten Sp, Diff, Pkt nur, wenn der gespeicherte Stand Tabellenwerte trägt; gezeigt wird, was gespeichert ist, nie neu gerechnet (@ET-045)
-  const withValues = ranking.some((row) => row.tableValues !== undefined);
+  const withValues = !hideTableDetails && ranking.some((row) => row.tableValues !== undefined);
   return (
     <div style={{ display: 'grid', gap: cssVars.spacing.md }} data-testid="final-standings" data-state={provisional ? 'provisional' : 'stored'}>
       {provisional && (
@@ -51,12 +57,17 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
         </InlineNotice>
       )}
       {winner !== undefined && (
-        <div style={winnerCard} data-testid="final-standings-winner">
-          <Icons.Trophy size={iconSizeValues.xl} />
+        <div style={gold ? goldWinnerCard : winnerCard} data-testid="final-standings-winner">
+          <span style={gold ? goldTrophy : undefined}><Icons.Trophy size={iconSizeValues.xl} /></span>
           <div style={tightStack}>
             <span style={small}>{t('finalStandings.winner')}</span>
             <p style={winnerName}><TeamName name={winner.teamName} /></p>
             {note !== null && <span style={small}>{t('finalStandings.winnerShootout', { winner: note.winner, loser: note.loser, other: note.otherName })}</span>}
+            {note === null && gold && !hideTableDetails && winner.tableValues !== undefined && (
+              <span style={small} data-testid="final-standings-winner-values">
+                {t('finalStandings.winnerValues', { count: winner.tableValues.points, diff: formatSigned(winner.tableValues.goalDiff) })}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -77,11 +88,11 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
           )}
           <ol style={{ listStyle: 'none', margin: 0, padding: 0 }} data-testid="final-standings-list">
             {ranking.map((row, index) => (
-              <li key={row.teamId} style={{ ...standingsRow(withValues), ...(!provisional && row.place === 1 ? standingsRowFirst : {}), ...(index === ranking.length - 1 ? { borderBottom: 'none' } : {}) }} data-testid="final-standing-row" data-place={row.place}>
+              <li key={row.teamId} style={{ ...standingsRow(withValues), ...(!provisional && row.place === 1 ? (gold ? goldRowFirst : standingsRowFirst) : {}), ...(index === ranking.length - 1 ? { borderBottom: 'none' } : {}) }} data-testid="final-standing-row" data-place={row.place}>
                 <span style={placeNumber}>{row.place}</span>
                 <span style={{ display: 'grid', minWidth: 0 }}>
                   <span style={strong}><TeamName name={row.teamName} /></span>
-                  <span style={small} data-testid="final-standing-origin">{originOf(row)}</span>
+                  {originOf(row) !== null && <span style={small} data-testid="final-standing-origin">{originOf(row)}</span>}
                 </span>
                 {withValues && (
                   <>
@@ -95,7 +106,7 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
           </ol>
         </div>
       </section>
-      <ScorerList scorers={scorers} provisional={provisional} incomplete={scorersIncomplete} />
+      {scorers !== undefined && <ScorerList scorers={scorers} provisional={provisional} incomplete={scorersIncomplete} />}
       {!provisional && (
         <p style={{ ...small, textAlign: 'center' }} data-testid="final-standings-saved">
           {day !== null && clock !== null ? t('finalStandings.savedAt', { date: day, time: clock }) : t('finalStandings.savedNoDate')}

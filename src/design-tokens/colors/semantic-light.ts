@@ -167,9 +167,9 @@ export const semanticColorsLight = {
   correctionIcon: palette.amber[600],
 
   // ---------------------------------------------------------------------------
-  // Medal Colors (same for both themes)
+  // Medal Colors (Gold im hellen Thema kräftiger: ≥ 3:1 auf Weiß für Rand und Symbol; Silber und Bronze wie dunkel)
   // ---------------------------------------------------------------------------
-  medalGold: palette.special.gold,
+  medalGold: palette.special.goldDark,
   medalSilver: palette.special.silver,
   medalBronze: palette.special.bronze,
 
