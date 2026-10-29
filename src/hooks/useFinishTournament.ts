@@ -276,7 +276,7 @@ export function useFinishTournament(tournament: Tournament | null, { reload, loa
     }
     const mine = run.current.attempt;
     set({ phase: 'sending' });
-    // S2: die Klärungsliste unmittelbar vor dem Abschluss erneut lesen (verkleinert das Fenster bis W-M)
+    // S2: die Klärungsliste unmittelbar vor dem Abschluss erneut lesen (Vorprüfung; dicht hält seit W-M der Server, review_open)
     const reviews = await readMatchReviews(client(), t.id);
     if (mine !== run.current.attempt) {
       return;
