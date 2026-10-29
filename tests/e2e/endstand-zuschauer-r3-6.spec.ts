@@ -88,6 +88,24 @@ test.describe('R3-6 Endstand auf der Zuschauer-Seite (T2-UI)', () => {
     expect(await platz2.evaluate((el) => getComputedStyle(el).boxShadow)).not.toContain(goldRgb);
   });
 
+  for (const thema of ['light', 'dark'] as const) {
+    test(`M-2 Gold (${thema}): Rand und Pokal der Sieger-Karte haben ≥ 3 : 1 gegen den Hintergrund`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+      await page.emulateMedia({ colorScheme: thema });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('/tests/e2e/harness/endstand-zuschauer.html?szene=klar');
+      const werte = await page.getByTestId('final-standings-winner').evaluate((el) => {
+        const rgb = (c: string): number[] => (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+        const lum = (c: number[]): number => { const [r, g, b] = c.map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        const kontrast = (a: number[], b: number[]): number => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+        const grund = rgb(getComputedStyle(document.body).backgroundColor);
+        return { rand: kontrast(rgb(getComputedStyle(el).borderTopColor), grund), pokal: kontrast(rgb(getComputedStyle(el.querySelector('span') ?? el).color), grund) };
+      });
+      expect(werte.rand, 'Rand').toBeGreaterThanOrEqual(3);
+      expect(werte.pokal, 'Pokal').toBeGreaterThanOrEqual(3);
+    });
+  }
+
   test('m-2: Zeile 1 (Gold) rückt den Namen nicht ein – gleiche linke Kante wie Zeile 2', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
     await page.setViewportSize({ width: 390, height: 844 });
