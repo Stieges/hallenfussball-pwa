@@ -1,7 +1,7 @@
 /**
  * R5 PR 3, @W2A-059 (Monitor): offener Gleichstand = gleiche Platzziffer + kurze Markierung hinter dem Namen,
  * „Strafstoß folgt“ bei Pflicht, sonst „wird entschieden“; nach der Entscheidung weg; kein Erklärtext, keine Taste.
- * Dazu C-MONITOR-TABELLE-ALLE-PLATZ-1: Punkte 3/1/1/0/0/0 → Plätze 1/2/2/4/4/6 (Rechnung stimmt, der Befund war nicht reproduzierbar).
+ * Dazu der Befund „alle Teams Platz 1“ vom 24.10.: Punkte 3/1/1/0/0/0 → Plätze 1/2/2/4/4/6 (Rechnung stimmt, der Befund war nicht reproduzierbar).
  * Mutation: in `publicTieMarkOf` `mayShare` vertauschen → die beiden Texttests rot.
  */
 import { describe, it, expect } from 'vitest';
@@ -51,7 +51,7 @@ describe('@W2A-059 Monitor-Tabelle markiert offene Gleichstände', () => {
     expect(screen.queryByTestId('monitor-tie-mark')).toBeNull();
   });
 
-  it('C-MONITOR-TABELLE-ALLE-PLATZ-1: 2 beendete Spiele, Punkte 3/1/1/0/0/0 geben Plätze 1/2/2/4/4/6, nie überall 1', () => {
+  it('Platz-1-Befund vom 24.10.: 2 beendete Spiele, Punkte 3/1/1/0/0/0 geben Plätze 1/2/2/4/4/6, nie überall 1', () => {
     const { tournament } = league('WOUMNB', 'W–O 1:0; U–M 0:0', {});
     const spiele = tournament.matches.map((m) => ({ ...m, matchStatus: 'finished' as const }));
     zeigen({ ...tournament, matches: spiele }, '');

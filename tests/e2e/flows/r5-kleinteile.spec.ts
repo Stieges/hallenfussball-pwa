@@ -75,6 +75,10 @@ test.describe('@W2A-059 Monitor-Tabelle mit offenem Gleichstand', () => {
 // Zuschauer-Seite offline über den Prüfstand `tests/e2e/harness/gleichstand.html` (echte `PublicStandingsTab`, Saat Nikolaus; der Stack
 // `/live/:code` per Cloud war lokal nicht nutzbar: der lokale Stack kennt die Funktion `public_tournament` nicht).
 test.describe('@W2A-059 Zuschauer-Tabelle mit offenem Gleichstand', () => {
+  test.beforeEach(() => {
+    test.skip(!!process.env.CI_E2E_USE_PREVIEW, 'Prüfstand nur am Dev-Server (im gebauten Stand nicht vorhanden)');
+  });
+
   for (const [breite, hoehe] of [[360, 800], [390, 844], [1280, 800]] as const) {
     for (const [plaetze, art] of [['3', 'follows'], ['1', 'deciding']] as const) {
       for (const thema of ['light', 'dark'] as const) {
