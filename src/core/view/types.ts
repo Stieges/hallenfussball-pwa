@@ -103,6 +103,8 @@ export interface SpectatorClockRules {
   sectionSeconds: number;
   overtimeSeconds: number;
   clockMode: ClockMode;
+  /** Länge der angehaltenen Schlussphase in Minuten (@W2A-040); fehlt sie, gilt die Vorgabe (1) */
+  finalPhaseMinutes?: number;
 }
 
 export interface MatchView {

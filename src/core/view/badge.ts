@@ -25,6 +25,12 @@ export interface MatchBadgeEngineDetail {
   sectionElapsedSec?: number;
   /** Rest der Pause aus breakStartedAt/breakSeconds */
   breakRemainingSec?: number;
+  /** Im aktuellen Abschnitt gespielte Millisekunden (genau, Monitor-Uhr R5: Restzeit und Sekundenwechsel) */
+  sectionElapsedMs?: number;
+  /** Länge der Pause zwischen zwei Abschnitten (Zeitbalken der Pause, @ZM-166) */
+  breakSeconds?: number;
+  /** Seit Beginn der Pause vergangene Millisekunden (genau, Monitor-Uhr R5) */
+  breakElapsedMs?: number;
   /** Länge der Verlängerung (Restzeit in der Verlängerung, 5.1a) */
   overtimeSeconds?: number;
   /** Uhrstand (Sekunden) am Anpfiff der Verlängerung, nur in der Verlängerung (Monitor-Dauer, Paket MU; wie `viewDurationSeconds`) */
@@ -131,15 +137,32 @@ export function badgeDetailFromLiveState(raw: unknown, nowMs: number): MatchBadg
   }
   if (typeof s.elapsedMs === 'number') {
     const running = typeof s.anchorAt === 'number' ? Math.max(0, nowMs - s.anchorAt) : 0;
-    detail.sectionElapsedSec = Math.max(0, Math.floor((s.elapsedMs + running - (s.sectionStartMs ?? 0)) / MS_PER_SECOND));
+    detail.sectionElapsedMs = Math.max(0, s.elapsedMs + running - (s.sectionStartMs ?? 0));
+    detail.sectionElapsedSec = Math.floor(detail.sectionElapsedMs / MS_PER_SECOND);
   }
   if (s.phase === 'overtime' && typeof s.elapsedMs === 'number' && typeof s.sectionStartMs === 'number') {
     detail.overtimeStartSec = Math.floor(overtimeStartMsOf(s.status, s.elapsedMs, s.sectionStartMs) / MS_PER_SECOND);
   }
   if (typeof s.breakStartedAt === 'number' && typeof s.breakSeconds === 'number') {
-    detail.breakRemainingSec = Math.max(0, s.breakSeconds - Math.floor((nowMs - s.breakStartedAt) / MS_PER_SECOND));
+    detail.breakSeconds = s.breakSeconds;
+    detail.breakElapsedMs = Math.max(0, nowMs - s.breakStartedAt);
+    detail.breakRemainingSec = Math.max(0, s.breakSeconds - Math.floor(detail.breakElapsedMs / MS_PER_SECOND));
   }
   return detail;
+}
+
+/**
+ * Uhr-Anker eines `live_state` (Monitor-Uhr R5, @ZM-176): solange er gleich bleibt, läuft die Uhr ohne Eingriff weiter
+ * (die angezeigte Restzeit darf dann nie steigen). Pause, Weiter, Abschnitt, Zeitkorrektur setzen einen neuen Anker.
+ * Ungültiger Feinstatus → `null`.
+ */
+export function liveStateAnchorKey(raw: unknown): string | null {
+  const parsed = LiveStateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return null;
+  }
+  const s = parsed.data;
+  return [s.status, s.phase, s.section, s.sectionStartMs, s.elapsedMs, s.anchorAt, s.breakStartedAt, s.breakSeconds].map(String).join('|');
 }
 
 /**

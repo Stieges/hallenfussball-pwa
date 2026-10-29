@@ -5,6 +5,7 @@
 import type { ReactNode } from 'react';
 import type { SideBox } from '../../../core/models/scoreBoxColors';
 import type { MatchBadgeModel } from '../../../core/view/badge';
+import type { ZeitBalkenModell } from '../../../core/view/zeitBalken';
 
 export interface ScoreboardSeite {
   name: string; tore: number;
@@ -17,12 +18,8 @@ export interface ScoreboardSeite {
  * `schlussphase`: nur Uhr-Art „durchlaufend, letzte Minute angehalten“ in ihrer Schlussphase (@SL-003, @SL-136) → Uhr in
  * `scoreboardFinalPhase` (Violett). `ton`: gedämpft (Pause, Endstand) oder grün (Pause vorbei, Wiederanpfiff).
  */
-export interface ScoreboardBalken {
-  /** Gefüllter Anteil 0 bis 1: der Rest des Abschnitts (bzw. der Pause) im Verhältnis zu seiner Länge, nimmt mit der Restzeit ab (@ZM-145, @ZM-166). */
-  anteil: number;
-  /** Grün läuft, Grau angehalten, Gedämpft Pause, Violett Schlussphase; nie Rot (Rot gehört dem Live-Abzeichen, @ZM-166). */
-  ton: 'gruen' | 'grau' | 'gedaempft' | 'violett';
-}
+/** Zeitbalken: Anteil (Rest durch Länge) und Ton – Regel und Typ in `core/view/zeitBalken` (eine Quelle mit dem Hallenmonitor, @ZM-166). */
+export type ScoreboardBalken = ZeitBalkenModell;
 export interface ScoreboardUhr {
   rest: string; gespielt: string | null; hervorgehoben: boolean; steht: boolean; schlussphase: boolean;
   /** Zeitbalken unter der Uhr (Laptop, @SL-180); fehlt er, steht keiner. */
