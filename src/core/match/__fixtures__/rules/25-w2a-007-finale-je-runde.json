@@ -21,7 +21,7 @@
     "knockout": true,
     "tiebreak": "overtime-then-shootout",
     "overtimeSeconds": 300,
-    "shootersPerTeam": 5,
+    "shootersPerTeam": 3,
     "suddenDeathAfter": 6,
     "penaltySeconds": 120
   }

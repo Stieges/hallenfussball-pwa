@@ -25,7 +25,7 @@
     "knockout": true,
     "tiebreak": "goldenGoal",
     "overtimeSeconds": 300,
-    "shootersPerTeam": 5,
+    "shootersPerTeam": 3,
     "suddenDeathAfter": 6,
     "penaltySeconds": 120
   }

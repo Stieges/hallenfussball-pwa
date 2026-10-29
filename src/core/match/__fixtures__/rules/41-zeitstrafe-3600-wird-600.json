@@ -1,0 +1,26 @@
+{
+  "title": "M1 (gilt nach Vorschlag): Zeitstrafe über 10 Minuten gibt es nicht, es gilt die Obergrenze 600 s; Text-Zahl",
+  "input": {
+    "durationMinutes": null,
+    "phase": "groupStage",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": 12,
+    "config": {
+      "matchCockpitSettings": {
+        "timePenaltyDurationSeconds": "3600"
+      }
+    },
+    "finalsConfig": null
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 600,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 3,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 600
+  }
+}

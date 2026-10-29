@@ -81,6 +81,11 @@ export interface PhaseView {
   /** Entscheidungsart der K.-o.-Runde; im Gruppenspiel `null`. */
   tiebreakMode: TiebreakMode | null;
   /**
+   * @W2A-016, @W2A-029: Zeitstrafen-Dauer dieses Spiels in Sekunden aus der Regel beim Anpfiff (`rules.penaltySeconds`);
+   * `null` vor dem Anpfiff (dann gilt die Einstellung des Turniers).
+   */
+  penaltySeconds: number | null;
+  /**
    * @FU-112, @FU-115: ID des Ergebnis-Eintrags, mit dem die Turnierleitung das angepfiffene Spiel im Spielplan beendet hat
    * (Abpfiff und Ergebnis in einem Schritt); `null`, wenn das Spiel anders endete oder nicht beendet ist.
    */
@@ -156,6 +161,7 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     shootout: shootoutOf(state, ctx),
     clockAdjustments: clockAdjustmentsOf(state),
     tiebreakMode: rules?.knockout ? state.tiebreakMode : null,
+    penaltySeconds: rules?.penaltySeconds ?? null,
     eingetragenImSpielplan: eingetragenImSpielplanOf(state),
   };
 }
