@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useMatchSound } from '../../hooks/useMatchSound';
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion, MatchCockpitSettings, DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -117,6 +118,10 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   const handleCockpitSettingsChange = (newSettings: MatchCockpitSettings) => {
     onUpdate('matchCockpitSettings', newSettings);
   };
+
+  // @HT-030: gewählten Ton schon im Assistenten anhören (wie im Admin-Cockpit)
+  const sound = useMatchSound(cockpitSettings.soundId, cockpitSettings.soundVolume, cockpitSettings.soundEnabled, formData.id ?? 'new');
+  const handleTestSound = () => { void sound.testPlay(); };
 
   return (
     <Card>
@@ -433,6 +438,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               settings={cockpitSettings}
               onChange={handleCockpitSettingsChange}
               tournamentId={formData.id ?? 'new'}
+              onTestSound={handleTestSound}
             />
           </CollapsibleSection>
         </>

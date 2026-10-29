@@ -82,7 +82,7 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
       ...Array.from(container.querySelectorAll('button')),
       ...Array.from(container.querySelectorAll<HTMLElement>('input[type="range"]')),
     ];
-    // Schalter Vibration, Test (▶), Stummschalten, Test, Hochladen, Löschen
+    // Schalter Vibration, Anhören (am Ton), Stummschalten, Anhören, Hochladen, Löschen
     expect(bedienelemente.length).toBeGreaterThanOrEqual(6);
     for (const element of bedienelemente) {
       const ok = istMindestens44(element, 'height') || istMindestens44(element, 'minHeight');
@@ -97,12 +97,12 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
     }
   });
 
-  it('@OB-022 Gegenbeispiel: die Tasten wirken weiter (Test spielt den Ton, Hochladen öffnet die Dateiauswahl, Stumm setzt 0)', () => {
+  it('@OB-022 Gegenbeispiel: die Tasten wirken weiter (Anhören spielt den Ton, Hochladen öffnet die Dateiauswahl, Stumm setzt 0)', () => {
     const onChange = vi.fn();
     const onTestSound = vi.fn();
     const klick = vi.spyOn(HTMLInputElement.prototype, 'click');
     render(<MatchCockpitSettingsPanel settings={EINSTELLUNGEN} onChange={onChange} tournamentId="t1" onTestSound={onTestSound} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+    fireEvent.click(screen.getByTestId('settings-volume-listen'));
     expect(onTestSound).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: /Hochladen|Upload/i }));
     expect(klick).toHaveBeenCalled();

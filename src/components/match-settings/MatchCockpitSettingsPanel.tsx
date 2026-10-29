@@ -133,15 +133,15 @@ export function MatchCockpitSettingsPanel({
   // Handle sound preset change
   const handleSoundChange = useCallback(
     (value: string) => {
+      // Ein einziger onChange: zwei aufeinanderfolgende updateSetting-Aufrufe
+      // bauen beide auf demselben alten `settings` auf, der zweite überschriebe den ersten.
       if (value === 'none') {
-        updateSetting('soundEnabled', false);
-        updateSetting('soundId', null);
+        onChange({ ...settings, soundEnabled: false, soundId: null });
       } else {
-        updateSetting('soundEnabled', true);
-        updateSetting('soundId', value as MatchSoundPreset);
+        onChange({ ...settings, soundEnabled: true, soundId: value as MatchSoundPreset });
       }
     },
-    [updateSetting]
+    [settings, onChange]
   );
 
   // Handle custom sound upload
@@ -158,9 +158,7 @@ export function MatchCockpitSettingsPanel({
       const result = await storeCustomSound(tournamentId, file);
 
       if (result.success) {
-        updateSetting('hasCustomSound', true);
-        updateSetting('soundId', 'custom');
-        updateSetting('soundEnabled', true);
+        onChange({ ...settings, hasCustomSound: true, soundId: 'custom', soundEnabled: true });
       } else {
         setUploadError(result.error ?? t('settings.uploadFailed'));
       }
@@ -172,17 +170,18 @@ export function MatchCockpitSettingsPanel({
         fileInputRef.current.value = '';
       }
     },
-    [tournamentId, updateSetting, t]
+    [tournamentId, settings, onChange, t]
   );
 
   // Handle custom sound delete
   const handleDeleteCustomSound = useCallback(async () => {
     await deleteCustomSound(tournamentId);
-    updateSetting('hasCustomSound', false);
-    if (settings.soundId === 'custom') {
-      updateSetting('soundId', 'horn-1');
-    }
-  }, [tournamentId, settings.soundId, updateSetting]);
+    onChange({
+      ...settings,
+      hasCustomSound: false,
+      ...(settings.soundId === 'custom' ? { soundId: 'horn-1' as const } : {}),
+    });
+  }, [tournamentId, settings, onChange]);
 
   // Get current sound value for select
   const currentSoundValue = settings.soundEnabled && settings.soundId
@@ -273,6 +272,7 @@ export function MatchCockpitSettingsPanel({
               value={currentSoundValue}
               onChange={(e) => handleSoundChange(e.target.value)}
               aria-label={t('settings.endSound')}
+              data-testid="settings-end-sound-select"
               style={styles.select}
             >
               {SOUND_PRESET_OPTIONS.map((opt) => (
@@ -291,11 +291,9 @@ export function MatchCockpitSettingsPanel({
                 variant="secondary"
                 size="sm"
                 onClick={onTestSound}
-                style={styles.iconButton}
-                aria-label={t('settings.testSound')}
-                title={t('settings.testSound')}
+                data-testid="settings-end-sound-listen"
               >
-                ▶
+                {t('settings.listen')}
               </Button>
             )}
           </div>
@@ -333,8 +331,8 @@ export function MatchCockpitSettingsPanel({
                 {settings.soundVolume > 0 ? '🔊' : '🔇'}
               </Button>
               {onTestSound && (
-                <Button variant="secondary" size="sm" onClick={onTestSound}>
-                  {t('settings.test')}
+                <Button variant="secondary" size="sm" onClick={onTestSound} data-testid="settings-volume-listen">
+                  {t('settings.listen')}
                 </Button>
               )}
             </div>
@@ -570,6 +568,7 @@ const styles: Record<string, CSSProperties> = {
   // Slider
   sliderContainer: {
     display: 'flex',
+    flexWrap: 'wrap', // „Anhören“ bricht auf schmalen Handys in die nächste Zeile statt über den Rand zu ragen
     alignItems: 'center',
     gap: cssVars.spacing.sm,
   },

@@ -29,6 +29,8 @@ interface GroupTablesProps {
   /** Nur bei `app`: Hinweise einer Gruppe (`''` = Jeder gegen jeden) und Marke je Team. */
   renderTieHint?: (groupId: string) => ReactNode;
   renderTieMarker?: (teamId: string, groupId: string) => ReactNode;
+  /** Nur bei `public` (@W2A-059): kurze Markierung eines offenen Gleichstands unter dem Teamnamen, ohne Erklärtext. */
+  renderPublicTieMarker?: (teamId: string, groupId: string) => ReactNode;
   /**
    * GA4 A-13c: Zustandsmarken neben dem Gruppennamen (`marks`) und Zähler, gesperrte Taste und Abschluss-Hinweis darunter (`below`);
    * nur bei `app`. `null` = nichts für diese Gruppe.
@@ -44,11 +46,16 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   tieDisplay = 'public',
   renderTieHint,
   renderTieMarker,
+  renderPublicTieMarker,
   renderGroupState,
 }) => {
   const { t } = useTranslation('tournament');
   const groupStandings = getGroupStandings(standings, teams);
   const tieApp = tieDisplay === 'app';
+  const tieMarkerFor = (group: string): ((teamId: string) => ReactNode) | undefined =>
+    tieApp && renderTieMarker ? (teamId) => renderTieMarker(teamId, group) : undefined;
+  const publicTieMarkerFor = (group: string): ((teamId: string) => ReactNode) | undefined =>
+    !tieApp && renderPublicTieMarker ? (teamId) => renderPublicTieMarker(teamId, group) : undefined;
 
   if (groupStandings.length === 0) {
     return (
@@ -83,7 +90,8 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
             tournament={tournament}
             activeMatchTeamIds={activeMatchTeamIds}
             tieHint={tieApp ? renderTieHint?.(group) : undefined}
-            tieMarker={tieApp && renderTieMarker ? (teamId) => renderTieMarker(teamId, group) : undefined}
+            tieMarker={tieMarkerFor(group)}
+            publicTieMarker={publicTieMarkerFor(group)}
             groupState={tieApp ? renderGroupState?.(group) ?? undefined : undefined}
           />
         ))}
@@ -117,11 +125,13 @@ interface StandingsTableProps {
   /** TB-6b: Hinweise der Gruppe über der Tabelle und Marke unter dem Teamnamen (nur Ansicht `app`). */
   tieHint?: ReactNode;
   tieMarker?: (teamId: string) => ReactNode;
+  /** @W2A-059: Marke für Zuschauer, steht (Desktop wie Handy) in der Namenszelle unter dem Namen, nie als eigene Zeile. */
+  publicTieMarker?: (teamId: string) => ReactNode;
   /** A-13c: Zustandsmarken neben dem Titel und Angaben darunter. */
   groupState?: { marks: ReactNode; below: ReactNode };
 }
 
-const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds, tieHint, tieMarker, groupState }) => {
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds, tieHint, tieMarker, publicTieMarker, groupState }) => {
   const { t } = useTranslation('tournament');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // ... (rest of logic)
@@ -256,7 +266,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         />
                       )}
                     </div>
-                    {tieMarker?.(standing.team.id)}
+                    {(tieMarker ?? publicTieMarker)?.(standing.team.id)}
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     {standing.played}
@@ -379,6 +389,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                           />
                         )}
                       </div>
+                      {publicTieMarker?.(standing.team.id)}
                     </td>
                     <td style={{ ...mobileTdStyle, textAlign: 'center' }}>
                       <span style={{
