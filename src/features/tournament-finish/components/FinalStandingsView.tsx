@@ -63,6 +63,11 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
             <span style={small}>{t('finalStandings.winner')}</span>
             <p style={winnerName}><TeamName name={winner.teamName} /></p>
             {note !== null && <span style={small}>{t('finalStandings.winnerShootout', { winner: note.winner, loser: note.loser, other: note.otherName })}</span>}
+            {note === null && gold && !hideTableDetails && winner.tableValues !== undefined && (
+              <span style={small} data-testid="final-standings-winner-values">
+                {t('finalStandings.winnerValues', { count: winner.tableValues.points, diff: formatSigned(winner.tableValues.goalDiff) })}
+              </span>
+            )}
           </div>
         </div>
       )}

@@ -84,8 +84,17 @@ test.describe('R3-6 Endstand auf der Zuschauer-Seite (T2-UI)', () => {
     expect(await rand('final-standings-winner')).toContain(goldRgb);
     const platz1 = page.locator('[data-testid="final-standing-row"][data-place="1"]');
     const platz2 = page.locator('[data-testid="final-standing-row"][data-place="2"]');
-    expect(await platz1.evaluate((el) => getComputedStyle(el).borderLeftColor)).toBe(goldRgb);
-    expect(await platz2.evaluate((el) => getComputedStyle(el).borderLeftColor)).not.toBe(goldRgb);
+    expect(await platz1.evaluate((el) => getComputedStyle(el).boxShadow)).toContain(goldRgb);
+    expect(await platz2.evaluate((el) => getComputedStyle(el).boxShadow)).not.toContain(goldRgb);
+  });
+
+  test('m-2: Zeile 1 (Gold) rückt den Namen nicht ein – gleiche linke Kante wie Zeile 2', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/tests/e2e/harness/endstand-zuschauer.html?szene=klar');
+    const kante = (platz: number) => page.locator(`[data-testid="final-standing-row"][data-place="${String(platz)}"] span`).nth(1).evaluate((el) => el.getBoundingClientRect().left);
+    expect(await kante(1)).toBe(await kante(2));
+    await expect(page.getByTestId('final-standings-winner-values')).toContainText('Punkte, Tordifferenz');
   });
 
   test('@ZM-012 „Alle Torschützen anzeigen“ klappt die Liste auf und wieder zu', async ({ page }, testInfo) => {

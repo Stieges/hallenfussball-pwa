@@ -97,12 +97,24 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     expect(within(first).getByTestId('final-standing-diff')).toHaveTextContent('+6');
   });
 
+  it('@ET-022 m-1: die Sieger-Karte nennt Punkte und Tordifferenz aus dem gespeicherten Stand (Punkte 99 = nie neu gerechnet)', async () => {
+    await renderWith(buildLiveViewTournament(), stored({ points: 99 }));
+    expect(await screen.findByTestId('final-standings-winner-values')).toHaveTextContent('99 Punkte, Tordifferenz +6');
+  });
+
+  it('@ZM-102 m-1 Gegenbeispiel: Tabellen für Zuschauer aus – keine Punkte in der Sieger-Karte', async () => {
+    await renderWith(buildLiveViewTournament({ hideRankingsForPublic: true }), stored({ points: 99 }));
+    await screen.findByTestId('final-standings-winner');
+    expect(screen.queryByTestId('final-standings-winner-values')).toBeNull();
+  });
+
   it('Gold nur für Platz 1: Sieger-Karte und erste Zeile tragen medalGold, Platz 2 nicht', async () => {
     await renderWith(buildLiveViewTournament(), stored());
     await screen.findByTestId('final-standings-list');
     const rows = screen.getAllByTestId('final-standing-row');
     expect(screen.getByTestId('final-standings-winner').getAttribute('style')).toContain('--color-medal-gold');
     expect(rows[0].getAttribute('style')).toContain('--color-medal-gold');
+    expect(rows[0].getAttribute('style')).not.toMatch(/border-left/);
     expect(rows[1].getAttribute('style') ?? '').not.toContain('--color-medal-gold');
   });
 

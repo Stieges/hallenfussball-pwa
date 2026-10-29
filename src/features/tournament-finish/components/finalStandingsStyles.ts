@@ -51,4 +51,5 @@ export const badge: CSSProperties = {
 /** Zuschauer-Seite (R3-6): Platz 1 in Gold – Rand und Pokal; Fläche bleibt die neutrale. */
 export const goldWinnerCard: CSSProperties = { ...winnerCard, background: cssVars.colors.surface, border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.medalGold}` };
 export const goldTrophy: CSSProperties = { display: 'inline-flex', color: cssVars.colors.medalGold };
-export const goldRowFirst: CSSProperties = { borderLeft: `${cssVars.borderWidth.medium} solid ${cssVars.colors.medalGold}` };
+/** Innenschatten statt Rand: der Name in Zeile 1 steht auf derselben Kante wie in den übrigen Zeilen (Review #405 m-2). */
+export const goldRowFirst: CSSProperties = { boxShadow: `inset ${cssVars.borderWidth.medium} 0 0 ${cssVars.colors.medalGold}` };
