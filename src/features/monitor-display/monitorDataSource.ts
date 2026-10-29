@@ -13,7 +13,7 @@ import { UnreadableResponseError } from '../../core/errors';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import { subscribeDisplaySignal } from '../../core/realtime/displaySignal';
-import { subscribeLocalDisplaySignal, withLocalEngineState } from './localDisplay';
+import { isKnownToServer, subscribeLocalDisplaySignal, withLocalEngineState } from './localDisplay';
 
 export type DisplayOrigin = 'cloud' | 'local';
 
@@ -106,6 +106,7 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
     },
     async fetch(sinceVersion: string | null): Promise<DisplayDelta> {
       let lookupFailed = false;
+      let serverDenies = false;
 
       // L2: Cloud zuerst — ein Hallen-Monitor läuft auf einem fremden Gerät ohne localStorage.
       if (isSupabaseConfigured) {
@@ -114,6 +115,7 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
           if (cloud !== 'not-found') {
             return cloud;
           }
+          serverDenies = true;
         } catch (err) {
           // B-19b (@ME-032): nur eine nicht abbildbare Antwort ist „unlesbar“. Netz- und Abfragefehler
           // bleiben der Rückfall auf die lokale Kopie; eine Störung ist nie „nicht gefunden“ (@ZM-109).
@@ -137,8 +139,11 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
       if (!found) {
         return { kind: 'missing', lookupFailed };
       }
-      // @ZM-179: Einträge eines Turniers nur auf diesem Gerät stehen in den Engine-Kopien dieses Browsers.
-      found = await withLocalEngineState(found);
+      // @ZM-179: Einträge eines Turniers nur auf diesem Gerät stehen in den Engine-Kopien dieses Browsers. @ZM-180 (L2b):
+      // Kennt der Server das Turnier, zählen nur bestätigte Einträge – sonst überholte ein wartender Abpfiff den Server,
+      // und die nächste Cloud-Antwort holte den älteren Stand („läuft“) zurück.
+      const onlyConfirmed = isSupabaseConfigured && !serverDenies && isKnownToServer(found);
+      found = await withLocalEngineState(found, undefined, { onlyConfirmed });
 
       const monitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId) ?? null;
       return { kind: 'snapshot', version: null, tournament: found, monitor, origin: 'local', lookupFailed };
