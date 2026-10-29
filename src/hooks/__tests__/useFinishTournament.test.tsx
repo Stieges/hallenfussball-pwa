@@ -229,6 +229,28 @@ describe('@LZ-010 @LZ-012 Liste offener Punkte', () => {
   });
 });
 
+describe('W-M (a) der Server hält den Abschluss bei offener Klärung selbst auf (Migration 20261118_004)', () => {
+  const KLAERUNG = { kind: 'review_open', eventId: 'spaet', matchId: 'm15', matchNumber: 15, field: 1 };
+
+  it('@LZ-010 Zeile Klärung: die App liest eine leere Klärungsliste, der Server nennt den Eintrag → Liste mit der Klärung, kein Abschluss-Aufruf', async () => {
+    preflightItems = [KLAERUNG];
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'OPEN_ITEMS', items: [KLAERUNG] } });
+    expect(calls('finish_tournament')).toEqual([]);
+  });
+
+  it('V1: rutscht eine Klärung nach dem erneuten Lesen der Liste durch, lehnt der Server ab – die App zeigt die Klärung, nicht „unbekannt“', async () => {
+    finishAnswer = () => Promise.resolve(ok({ status: 'rejected', code: 'OPEN_ITEMS', items: [KLAERUNG] }));
+    const { result } = render();
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.confirm(); });
+    expect(calls('finish_tournament')).toHaveLength(1);
+    expect(result.current.state).toEqual({ phase: 'rejected', reason: { code: 'OPEN_ITEMS', items: [KLAERUNG] } });
+    expect(reload).not.toHaveBeenCalled();
+  });
+});
+
 describe('E4 eigener Ausgang und @LZ-029 Korrektur vor dem Abschluss', () => {
   it('das Gerät zeigt ein Tor, das noch wartet → „Erst übertragen“, kein Aufruf (kein STALE_STATE-Kreis)', async () => {
     env.pending = 1;

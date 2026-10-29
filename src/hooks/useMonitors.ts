@@ -57,6 +57,9 @@ export interface UseMonitorsResult {
   /** Display-URL für einen Monitor generieren */
   getDisplayUrl: (monitorId: string) => string;
 
+  /** Ganzen Monitor (Entwurf des Editors) in einem Speichervorgang übernehmen (@ME-071) */
+  saveMonitor: (monitor: TournamentMonitor) => Promise<TournamentMonitor>;
+
   /** Fertige Monitore (z. B. übernommen, B-22) in einem Speichervorgang anhängen */
   addMonitors: (newMonitors: TournamentMonitor[]) => Promise<void>;
 }
@@ -112,7 +115,7 @@ function generateMonitorId(): string {
 /**
  * Generiert eine eindeutige Slide-ID
  */
-function generateSlideId(): string {
+export function generateSlideId(): string {
   return `slide-${generateUniqueId().substring(0, 12)}`;
 }
 
@@ -316,6 +319,34 @@ export function useMonitors(
       };
 
       await saveTournament(updatedTournament);
+    },
+    [tournament, monitors, saveTournament]
+  );
+
+  // Ganzen Monitor ersetzen (Speichern im Editor, @ME-071)
+  const saveMonitor = useCallback(
+    async (draft: TournamentMonitor): Promise<TournamentMonitor> => {
+      if (!tournament) {
+        throw new Error('Kein Turnier ausgewählt');
+      }
+      if (!monitors.some(m => m.id === draft.id)) {
+        throw new Error(`Monitor mit ID ${draft.id} nicht gefunden`);
+      }
+
+      const now = new Date().toISOString();
+      const savedMonitor: TournamentMonitor = {
+        ...draft,
+        name: draft.name.trim(),
+        slides: draft.slides.map((s, idx) => ({ ...s, order: idx })),
+        updatedAt: now,
+      };
+
+      await saveTournament({
+        ...tournament,
+        monitors: monitors.map(m => (m.id === draft.id ? savedMonitor : m)),
+        updatedAt: now,
+      });
+      return savedMonitor;
     },
     [tournament, monitors, saveTournament]
   );
@@ -537,6 +568,7 @@ export function useMonitors(
     reorderSlides,
     getDisplayUrl,
     addMonitors,
+    saveMonitor,
   };
 }
 

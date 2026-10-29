@@ -810,7 +810,6 @@
     "notFound": "Monitor nicht gefunden",
     "close": "Schließen",
     "notFoundMessage": "Der Monitor mit ID \"{{id}}\" existiert nicht mehr.",
-    "loading": "Wird geladen...",
     "errors": {
       "saveFailed": "Fehler beim Speichern",
       "addFailed": "Fehler beim Hinzufügen",
@@ -861,6 +860,15 @@
       "qrHidden": "Ohne öffentliches Turnier wird diese Folie übersprungen",
       "referenceField": "Feld fehlt in diesem Turnier – bitte anpassen",
       "referenceGroup": "Gruppe fehlt in diesem Turnier – bitte anpassen"
+    },
+    "saved": "Gespeichert",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "discard": {
+      "title": "Änderungen verwerfen?",
+      "message": "Deine Änderungen am Monitor sind noch nicht gespeichert und gehen verloren.",
+      "confirm": "Verwerfen",
+      "keepEditing": "Weiter bearbeiten"
     }
   },
   "toolbar": {
@@ -1805,6 +1813,21 @@
     "scorerOwnGoals": "Eigentore für {{team}}",
     "showAllScorers": "Alle Torschützen anzeigen",
     "showFewerScorers": "Weniger Torschützen anzeigen",
+    "columns": {
+      "place": "Platz",
+      "team": "Team",
+      "games": "Sp",
+      "gamesLong": "Spiele",
+      "goalDiff": "Diff",
+      "goalDiffLong": "Tordifferenz",
+      "points": "Pkt",
+      "pointsLong": "Punkte"
+    },
+    "valueLabel": {
+      "games": "Spiele {{value}}",
+      "goalDiff": "Tordifferenz {{value}}",
+      "points": "Punkte {{value}}"
+    },
     "origin": {
       "final": {
         "winner": "Sieger Finale",

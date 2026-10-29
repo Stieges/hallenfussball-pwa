@@ -1327,4 +1327,31 @@ SELECT 'klaerungsliste-append-routes-reviews',
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
        AND coalesce((SELECT count(*) = 16 AND bool_and(t.actor = 'leitung' AND t.to_status = '=')
                        FROM public.match_transitions t WHERE t.event_type IN ('REVIEW_ACCEPT', 'REVIEW_DISCARD')), false)
+-- ---------------------------------------------------------------------------------------------------------------
+-- W-M (20261118_004_abschluss_nachzug.sql): Server-Nachzug Abschluss (Klaerungsliste, Kindermodus, spaete Eintraege)
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) finish_open_items meldet offene Eintraege der Klaerungsliste (review_open, gueltige Entscheidung = review_state NULL)
+UNION ALL
+SELECT 'abschluss-nachzug-open-items-review-open',
+       coalesce((SELECT position('''review_open''' IN p.prosrc) > 0
+                        AND position('FROM public.match_reviews r' IN p.prosrc) > 0
+                        AND position('r.kind = ''review''' IN p.prosrc) > 0
+                        AND position('AND d.review_state IS NULL' IN p.prosrc) > 0
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('match_engine.finish_open_items(uuid)')), false)
+-- (2) final_standings_payload: Kindermodus ueberstimmt alle Schalter (gleiche Lesart wie public_payload)
+UNION ALL
+SELECT 'abschluss-nachzug-payload-kids-mode',
+       coalesce((SELECT position('public_view.switches(p_tournament.config) ->> ''kidsMode''' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('match_engine.final_standings_payload(public.tournaments)')), false)
+-- (3) list_late_entries: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated, prueft manageLifecycle
+UNION ALL
+SELECT 'abschluss-nachzug-late-entries-rpc',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                        AND position('has_tournament_permission(p_tournament_id, ''manageLifecycle'')' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.list_late_entries(uuid)')), false)
 ;

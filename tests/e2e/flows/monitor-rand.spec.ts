@@ -267,6 +267,12 @@ test.describe('Bildrand im Monitor-Editor (@ME-020, @ME-067)', () => {
     // kein seitliches Überlaufen des Editors auf dem Gerät
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
+    // @ME-071: vor „Speichern“ gilt der Entwurf nicht, der Monitor bleibt bei 5 % (64)
+    await monitor.waitForTimeout(2_000);
+    expect((await messe(monitor, 0, 0)).links).toBe(64);
+    await page.getByTestId('monitor-editor-save').click();
+    await expect(page.getByText('Gespeichert')).toBeVisible();
+
     await expect.poll(async () => (await messe(monitor, 0, 0)).links, { timeout: 10_000, intervals: [500] }).toBe(102.4);
     const m = await messe(monitor, 0, 0);
     expect([m.oben, m.unten]).toEqual([57.6, 57.6]);

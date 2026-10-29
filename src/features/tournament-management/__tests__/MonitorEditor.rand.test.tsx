@@ -1,4 +1,4 @@
-/** MonitorEditor: der Regler „Bildrand“ steht in den Einstellungen und meldet die Prozent an updateMonitor (@ME-067, @ME-020). */
+/** MonitorEditor: der Regler „Bildrand“ steht in den Einstellungen und meldet die Prozent beim Speichern an saveMonitor (@ME-067, @ME-020). */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MonitorEditor } from '../MonitorEditor';
@@ -10,12 +10,12 @@ const hoisted = vi.hoisted(() => ({
     performanceMode: 'auto', slides: [], createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z',
     overscanPercent: undefined as number | undefined,
   },
-  updateMonitor: vi.fn(),
+  saveMonitor: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../hooks', () => ({
   useMonitors: () => ({
-    getMonitorById: () => hoisted.monitor, updateMonitor: hoisted.updateMonitor, addSlide: vi.fn(), updateSlide: vi.fn(),
+    getMonitorById: () => hoisted.monitor, saveMonitor: hoisted.saveMonitor, addSlide: vi.fn(), updateSlide: vi.fn(),
     removeSlide: vi.fn(), reorderSlides: vi.fn(), getDisplayUrl: () => '',
   }),
   useSponsors: () => ({ sponsors: [] }),
@@ -36,7 +36,9 @@ describe('MonitorEditor – Bildrand (@ME-067, @ME-020)', () => {
   it('@ME-020 eine Änderung auf 8 % wird als overscanPercent gespeichert, nicht als Bildpunkte', () => {
     rendere();
     fireEvent.change(screen.getByTestId('monitor-overscan-input'), { target: { value: '8' } });
-    expect(hoisted.updateMonitor).toHaveBeenCalledWith('monitor-1', { overscanPercent: 8 });
+    expect(hoisted.saveMonitor).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('monitor-editor-save'));
+    expect(hoisted.saveMonitor).toHaveBeenCalledWith(expect.objectContaining({ id: 'monitor-1', overscanPercent: 8 }));
   });
 
   it('@ME-067 Gegenbeispiel: ein gespeicherter Rand 0 % bleibt 0 im Regler', () => {

@@ -810,7 +810,6 @@
     "notFound": "Monitor not found",
     "close": "Close",
     "notFoundMessage": "The monitor with ID \"{{id}}\" no longer exists.",
-    "loading": "Loading...",
     "errors": {
       "saveFailed": "Error saving",
       "addFailed": "Error adding",
@@ -861,6 +860,15 @@
       "qrHidden": "Without a public tournament this slide is skipped",
       "referenceField": "Field is missing in this tournament – please adjust",
       "referenceGroup": "Group is missing in this tournament – please adjust"
+    },
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "save": "Save",
+    "discard": {
+      "title": "Discard changes?",
+      "message": "Your changes to the monitor are not saved yet and will be lost.",
+      "confirm": "Discard",
+      "keepEditing": "Keep editing"
     }
   },
   "toolbar": {
@@ -1805,6 +1813,21 @@
     "scorerOwnGoals": "Own goals for {{team}}",
     "showAllScorers": "Show all scorers",
     "showFewerScorers": "Show fewer scorers",
+    "columns": {
+      "place": "Place",
+      "team": "Team",
+      "games": "P",
+      "gamesLong": "Played",
+      "goalDiff": "GD",
+      "goalDiffLong": "Goal difference",
+      "points": "Pts",
+      "pointsLong": "Points"
+    },
+    "valueLabel": {
+      "games": "Played {{value}}",
+      "goalDiff": "Goal difference {{value}}",
+      "points": "Points {{value}}"
+    },
     "origin": {
       "final": {
         "winner": "Winner final",
