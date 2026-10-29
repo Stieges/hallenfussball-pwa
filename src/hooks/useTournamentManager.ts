@@ -160,7 +160,9 @@ export function useTournamentManager(tournamentId: string) {
     const { t } = useTranslation('tournament');
     const toast = useOptionalToast();
     // Update Handler (matches signature of useTournamentSync). Abgeschlossen: kein Speichern, dafür ein sichtbarer Hinweis (R3-3, M-1)
-    const handleTournamentUpdate = useCallback(async (updated: Tournament) => {
+    // `rethrow`: der Editor (Monitor, @ME-071) muss ein gescheitertes Speichern erfahren, sonst meldet er „Gespeichert“.
+    // Alle anderen Aufrufer behalten das bisherige Verhalten (Fehler werden hier behandelt und nicht weitergereicht).
+    const persistTournament = useCallback(async (updated: Tournament, rethrow: boolean) => {
         if (!lifecycleLock.saveAllowed(updated)) {
             // Abgeschlossen: nichts senden, die Anzeige zeigt wieder den Stand des Servers
             await loadTournament(FRESH);
@@ -169,6 +171,9 @@ export function useTournamentManager(tournamentId: string) {
             // Wie beim Speichern erst die Engine-Überlagerung abziehen (Review #394 M-1): sonst unterscheiden sich gespielte Spiele
             if (tournament === null || !isPublicViewOnlyChange(tournament, stripEngineOverlayFields(updated, tournament, overlaidMatchIdsRef.current))) {
                 toast?.showWarning(t('rights.closedSaveBlocked'));
+            }
+            if (rethrow) {
+                throw new Error(t('rights.closedSaveBlocked'));
             }
             return;
         }
@@ -184,8 +189,20 @@ export function useTournamentManager(tournamentId: string) {
             setError('Speichern fehlgeschlagen');
             // Reload to get consistent state
             await loadTournament();
+            if (rethrow) {
+                throw err;
+            }
         }
     }, [service, loadTournament, tournament, overlaidMatchIdsRef, lifecycleLock, toast, t]);
+
+    const handleTournamentUpdate = useCallback(
+        (updated: Tournament) => persistTournament(updated, false),
+        [persistTournament],
+    );
+    const saveTournamentOrThrow = useCallback(
+        (updated: Tournament) => persistTournament(updated, true),
+        [persistTournament],
+    );
 
     // Task A1 (Sofortschutz): Gegenstück zu handleTournamentUpdate OHNE Speicherpfad. Manche
     // Aufrufer (z. B. das Cockpit nach Spielende) wollen den lokalen Zustand nur mit dem
@@ -257,6 +274,7 @@ export function useTournamentManager(tournamentId: string) {
         isLoading,
         loadingError: error,
         handleTournamentUpdate,
+        saveTournamentOrThrow,
         applyRemote,
         reload: loadTournament,
         scheduleService: service.schedule,

@@ -3,14 +3,7 @@
  */
 
 import type { CSSProperties } from 'react';
-import { borderWidths, cssVars, gridMinColumnWidths, spacingSemantics } from '../../../../design-tokens';
-
-export const editorStyle: CSSProperties = {
-  maxHeight: '90vh',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
+import { cssVars, gridMinColumnWidths, spacingSemantics } from '../../../../design-tokens';
 
 export const headerStyle: CSSProperties = {
   padding: cssVars.spacing.lg,
@@ -42,29 +35,6 @@ export const contentStyle: CSSProperties = {
   overflow: 'auto',
   padding: cssVars.spacing.lg,
   position: 'relative',
-};
-
-export const loadingOverlayStyle: CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  background: 'rgba(0, 0, 0, 0.3)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: cssVars.zIndex.raised,
-  borderRadius: cssVars.borderRadius.md,
-};
-
-export const spinnerStyle: CSSProperties = {
-  width: cssVars.iconSizes.xl,
-  height: cssVars.iconSizes.xl,
-  border: `${borderWidths.strong} solid ${cssVars.colors.border}`,
-  borderTopColor: cssVars.colors.primary,
-  borderRadius: '50%',
-  animation: 'spin 0.8s linear infinite',
 };
 
 export const sectionStyle: CSSProperties = {
@@ -201,15 +171,6 @@ export const slideTypeButtonStyle: CSSProperties = {
   textAlign: 'center',
 };
 
-export const errorStyle: CSSProperties = {
-  padding: cssVars.spacing.sm,
-  background: `${cssVars.colors.error}22`,
-  color: cssVars.colors.error,
-  borderRadius: cssVars.borderRadius.sm,
-  fontSize: cssVars.fontSizes.sm,
-  marginBottom: cssVars.spacing.md,
-};
-
 export const slideConfigStyle: CSSProperties = {
   marginTop: cssVars.spacing.md,
   padding: cssVars.spacing.md,
@@ -234,4 +195,19 @@ export const slideTypeLabelStyle: CSSProperties = {
 export const slideTypeQrHintStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.xs,
   color: cssVars.colors.textSecondary,
+};
+
+export const footerStackStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: cssVars.spacing.sm,
+};
+
+export const fieldErrorStyle: CSSProperties = {
+  fontSize: cssVars.fontSizes.sm,
+  color: cssVars.colors.error,
+};
+
+export const inputInvalidStyle: CSSProperties = {
+  borderColor: cssVars.colors.error,
 };

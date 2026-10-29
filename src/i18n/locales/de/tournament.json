@@ -810,7 +810,6 @@
     "notFound": "Monitor nicht gefunden",
     "close": "Schließen",
     "notFoundMessage": "Der Monitor mit ID \"{{id}}\" existiert nicht mehr.",
-    "loading": "Wird geladen...",
     "errors": {
       "saveFailed": "Fehler beim Speichern",
       "addFailed": "Fehler beim Hinzufügen",
@@ -861,6 +860,15 @@
       "qrHidden": "Ohne öffentliches Turnier wird diese Folie übersprungen",
       "referenceField": "Feld fehlt in diesem Turnier – bitte anpassen",
       "referenceGroup": "Gruppe fehlt in diesem Turnier – bitte anpassen"
+    },
+    "saved": "Gespeichert",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "discard": {
+      "title": "Änderungen verwerfen?",
+      "message": "Deine Änderungen am Monitor sind noch nicht gespeichert und gehen verloren.",
+      "confirm": "Verwerfen",
+      "keepEditing": "Weiter bearbeiten"
     }
   },
   "toolbar": {

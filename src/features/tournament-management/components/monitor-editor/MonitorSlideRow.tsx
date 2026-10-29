@@ -4,14 +4,13 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import type { Tournament, TournamentField, TournamentGroup } from '../../../../types/tournament';
-import type { MonitorSlide, SlideConfig, SlideType } from '../../../../types/monitor';
+import type { MonitorSlide, SlideType } from '../../../../types/monitor';
 import { SLIDE_TYPES } from '../../../../types/monitor';
-import type { SlotTargets } from '../../../../core/services/monitorConfigTransferChecks';
 import { SlideConfigEditor } from '../SlideConfigEditor';
 import { SlidePreview } from '../SlidePreview';
 import { SlideReferenceWarning } from '../SlideReferenceWarning';
 import { getSlideDescription } from './monitorEditorHelpers';
+import type { SlideActions, SlideContext } from './monitorEditorTypes';
 import {
   iconButtonStyle,
   inputGroupStyle,
@@ -37,34 +36,13 @@ interface MonitorSlideRowProps {
   index: number;
   slideCount: number;
   isEditing: boolean;
-  tournament: Tournament;
-  fields: TournamentField[];
-  groups: TournamentGroup[];
-  sponsors: { id: string; name: string }[];
-  slotTargets: SlotTargets;
-  getFieldDisplayName: (id: string) => string;
-  onMoveSlide: (slideId: string, direction: 'up' | 'down') => Promise<void>;
-  onRemoveSlide: (slideId: string) => Promise<void>;
-  onUpdateSlide: (slideId: string, updates: { config?: Partial<SlideConfig>; duration?: number | null }) => Promise<void>;
-  onToggleEditSlide: (slideId: string) => void;
+  slideContext: SlideContext;
+  slideActions: SlideActions;
 }
 
-export function MonitorSlideRow({
-  slide,
-  index,
-  slideCount,
-  isEditing,
-  tournament,
-  fields,
-  groups,
-  sponsors,
-  slotTargets,
-  getFieldDisplayName,
-  onMoveSlide,
-  onRemoveSlide,
-  onUpdateSlide,
-  onToggleEditSlide,
-}: MonitorSlideRowProps) {
+export function MonitorSlideRow({ slide, index, slideCount, isEditing, slideContext, slideActions }: MonitorSlideRowProps) {
+  const { tournament, fields, groups, sponsors, slotTargets, getFieldDisplayName } = slideContext;
+  const { onMoveSlide, onRemoveSlide, onUpdateSlide, onToggleEditSlide } = slideActions;
   const { t } = useTranslation('tournament');
   const meta = getSlideTypeMeta(slide.type);
 
@@ -84,7 +62,7 @@ export function MonitorSlideRow({
         <div style={slideActionsStyle}>
           <button
             style={iconButtonStyle}
-            onClick={() => void onMoveSlide(slide.id, 'up')}
+            onClick={() => onMoveSlide(slide.id, 'up')}
             disabled={index === 0}
             title={t('monitorEditor.slides.moveUp')}
           >
@@ -92,7 +70,7 @@ export function MonitorSlideRow({
           </button>
           <button
             style={iconButtonStyle}
-            onClick={() => void onMoveSlide(slide.id, 'down')}
+            onClick={() => onMoveSlide(slide.id, 'down')}
             disabled={index === slideCount - 1}
             title={t('monitorEditor.slides.moveDown')}
           >
@@ -107,7 +85,7 @@ export function MonitorSlideRow({
           </button>
           <button
             style={iconButtonStyle}
-            onClick={() => void onRemoveSlide(slide.id)}
+            onClick={() => onRemoveSlide(slide.id)}
             title={t('monitorEditor.slides.remove')}
           >
             🗑️
@@ -128,7 +106,7 @@ export function MonitorSlideRow({
           fields={fields}
           groups={groups}
           sponsors={sponsors}
-          onUpdate={(config, duration) => void onUpdateSlide(slide.id, { config, duration })}
+          onUpdate={(config, duration) => onUpdateSlide(slide.id, { config, duration })}
           getFieldDisplayName={getFieldDisplayName}
           styles={{ slideConfigStyle, inputGroupStyle, labelStyle, selectStyle, inputStyle }}
         />

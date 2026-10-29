@@ -98,6 +98,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     isLoading,
     loadingError,
     handleTournamentUpdate,
+    saveTournamentOrThrow,
     applyRemote,
     reload,
     scheduleService,
@@ -309,7 +310,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         <MonitorEditor
           tournament={tournament}
           monitorId={editingMonitorId}
-          onTournamentUpdate={handleAsyncTournamentUpdate}
+          onTournamentUpdate={saveTournamentOrThrow}
           onClose={() => setEditingMonitorId(null)}
         />
       )}

@@ -4,11 +4,10 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import type { Tournament, TournamentField, TournamentGroup } from '../../../../types/tournament';
-import type { SlideConfig, SlideType, TournamentMonitor } from '../../../../types/monitor';
+import type { SlideType, TournamentMonitor } from '../../../../types/monitor';
 import { SLIDE_TYPES } from '../../../../types/monitor';
-import type { SlotTargets } from '../../../../core/services/monitorConfigTransferChecks';
 import { MonitorSlideRow } from './MonitorSlideRow';
+import type { SlideActions, SlideContext } from './monitorEditorTypes';
 import {
   addSlideButtonStyle,
   sectionStyle,
@@ -55,39 +54,24 @@ const availableSlideTypes: SlideTypeOption[] = SLIDE_TYPES
 
 interface MonitorSlideListProps {
   monitor: TournamentMonitor;
-  tournament: Tournament;
   editingSlideId: string | null;
   isAddingSlide: boolean;
-  fields: TournamentField[];
-  groups: TournamentGroup[];
-  sponsors: { id: string; name: string }[];
-  slotTargets: SlotTargets;
-  getFieldDisplayName: (id: string) => string;
-  onAddSlide: (type: SlideType) => Promise<void>;
-  onMoveSlide: (slideId: string, direction: 'up' | 'down') => Promise<void>;
-  onRemoveSlide: (slideId: string) => Promise<void>;
-  onUpdateSlide: (slideId: string, updates: { config?: Partial<SlideConfig>; duration?: number | null }) => Promise<void>;
-  onToggleEditSlide: (slideId: string) => void;
+  slideContext: SlideContext;
+  slideActions: SlideActions;
+  onAddSlide: (type: SlideType) => void;
   onToggleAddSlide: () => void;
 }
 
 export function MonitorSlideList({
   monitor,
-  tournament,
   editingSlideId,
   isAddingSlide,
-  fields,
-  groups,
-  sponsors,
-  slotTargets,
-  getFieldDisplayName,
+  slideContext,
+  slideActions,
   onAddSlide,
-  onMoveSlide,
-  onRemoveSlide,
-  onUpdateSlide,
-  onToggleEditSlide,
   onToggleAddSlide,
 }: MonitorSlideListProps) {
+  const { tournament } = slideContext;
   const { t } = useTranslation('tournament');
 
   // Ohne öffentliches Turnier mit Share-Code entfällt die Zuschauer-QR-Folie im Monitor (@ZM-071, F-04)
@@ -108,16 +92,8 @@ export function MonitorSlideList({
               index={index}
               slideCount={monitor.slides.length}
               isEditing={isEditing}
-              tournament={tournament}
-              fields={fields}
-              groups={groups}
-              sponsors={sponsors}
-              slotTargets={slotTargets}
-              getFieldDisplayName={getFieldDisplayName}
-              onMoveSlide={onMoveSlide}
-              onRemoveSlide={onRemoveSlide}
-              onUpdateSlide={onUpdateSlide}
-              onToggleEditSlide={onToggleEditSlide}
+              slideContext={slideContext}
+              slideActions={slideActions}
             />
           );
         })}
@@ -138,7 +114,7 @@ export function MonitorSlideList({
               <button
                 key={st.type}
                 style={slideTypeButtonStyle}
-                onClick={() => void onAddSlide(st.type)}
+                onClick={() => onAddSlide(st.type)}
               >
                 <div style={slideTypeIconStyle}>{st.icon}</div>
                 <div style={slideTypeLabelStyle}>{st.label}</div>
