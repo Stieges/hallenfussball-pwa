@@ -52,6 +52,9 @@ TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
 APPEND_SOURCE_FILE="$MIGRATIONS_DIR/20261110_009_spiel_beenden.sql"
 APPEND_005_FILE="$MIGRATIONS_DIR/20261110_005_result_entry_forfeit.sql"
 HELPERS_SOURCE_FILE="$MIGRATIONS_DIR/20261110_008_helper_join.sql"
+# R3-5b: spaetere Migration, die NUR final_standing_row_valid ersetzt (tableValues). Kategorie G liest dieselbe Gleichlauf-Datei
+# und prueft sie deshalb gegen die Fassung MIT dieser Migration; fehlt die Datei, laeuft G gegen die A-21a-Fassung (Gegenprobe).
+ROW_FOLLOWUP_FILE="$MIGRATIONS_DIR/20261118_005_endstand_tabellenwerte.sql"
 FIX_DIR="$REPO_ROOT/src/core/standings/__fixtures__"
 CONTAINER_PREFIX="tournament-lifecycle-check-$$"
 CURRENT_CONTAINER=""
@@ -201,6 +204,8 @@ schema_dump() { docker exec "$CURRENT_CONTAINER" pg_dump -U postgres --schema-on
 counts() { python3 "$REPO_ROOT/scripts/db_catalog_counts.py" /dev/stdin <<<"$1"; }
 count_of() { python3 -c "import json,sys; print(json.load(sys.stdin)['$2'])" <<<"$1"; }
 
+apply_row_followup() { [[ -f "$ROW_FOLLOWUP_FILE" ]] && { psql_stdin < "$ROW_FOLLOWUP_FILE" >/dev/null || { echo "::error::$(basename "$ROW_FOLLOWUP_FILE") scheitert" >&2; exit 1; }; }; return 0; }
+
 CATS=(P F G R S M W X)
 DEVS=(0 0 0 0 0 0 0 0)
 OKS=(0 0 0 0 0 0 0 0)
@@ -257,6 +262,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
       stop_container
       continue
     fi
+    apply_row_followup
     reset_counts
     echo "--- GEGENPROBE $mut ---"
     setup_after
@@ -352,6 +358,7 @@ for dim in tables rls_tables triggers policies; do
   check S "Katalogzaehlung $dim: Zuwachs" "$expected" $(( $(count_of "$COUNTS_AFTER" "$dim") - $(count_of "$COUNTS_BEFORE" "$dim") ))
 done
 
+apply_row_followup
 setup_after
 run_probes
 run_races
@@ -363,7 +370,9 @@ STATE_SQL="SELECT (SELECT count(*) FROM public.tournament_final_standings) || '|
 STATE_W="$(q "$STATE_SQL")"
 DUMP_W="$(schema_dump)"
 psql_stdin < "$TARGET_FILE" >/dev/null 2>&1
-check W "zweites Einspielen laeuft (Exit 0)" "0" "$?"
+W_EXIT=$?
+apply_row_followup   # die A-21a-Datei setzt die Zeilenpruefung auf ihre Fassung zurueck; die spaetere Migration stellt sie wieder her
+check W "zweites Einspielen laeuft (Exit 0)" "0" "$W_EXIT"
 check W "danach Daten unveraendert (abgeschlossene Turniere bleiben abgeschlossen), Schema wie nach dem ersten Einspielen" \
   "$STATE_W|identisch" "$(q "$STATE_SQL")|$([[ "$(schema_dump)" == "$DUMP_W" ]] && echo identisch || echo verschieden)"
 

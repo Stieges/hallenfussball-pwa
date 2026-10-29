@@ -8,7 +8,21 @@ import { placeNumber, placeRow } from './finishStyles';
 
 export { placeNumber };
 
-export const standingsRow: CSSProperties = { ...placeRow, gridTemplateColumns: `${cssVars.spacing.xl} minmax(0, 1fr)`, minHeight: cssVars.touchTargets.primary };
+/** Platz, Team und – wenn die Zeilen Tabellenwerte tragen (R3-5b) – Spalten Sp, Diff, Pkt in fester Breite (Zahlen rechtsbündig). */
+/** Schmaler als `spacing.xl`, damit ein 50-Zeichen-Name auf dem 360-px-Handy neben den drei Spalten Platz hat. */
+const valueColumns = `repeat(3, calc(${cssVars.spacing.xl} - ${cssVars.spacing.xs}))`;
+const rowColumns = (withValues: boolean): string =>
+  `${cssVars.spacing.xl} minmax(0, 1fr)${withValues ? ` ${valueColumns}` : ''}`;
+export const standingsRow = (withValues: boolean): CSSProperties => ({
+  ...placeRow, gridTemplateColumns: rowColumns(withValues), minHeight: cssVars.touchTargets.primary,
+});
+export const standingsHeader = (withValues: boolean): CSSProperties => ({
+  display: 'grid', gridTemplateColumns: rowColumns(withValues), gap: cssVars.spacing.sm, padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+  borderBottom: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+  fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textSecondary,
+});
+export const valueCell: CSSProperties = { textAlign: 'right', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' };
+export const pointsCell: CSSProperties = { ...valueCell, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary };
 export const standingsRowFirst: CSSProperties = {
   background: cssVars.colors.primaryLight, borderLeft: `${cssVars.borderWidth.medium} solid ${cssVars.colors.primary}`,
 };

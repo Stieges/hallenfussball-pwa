@@ -1801,6 +1801,21 @@
     "scorerOwnGoals": "Own goals for {{team}}",
     "showAllScorers": "Show all scorers",
     "showFewerScorers": "Show fewer scorers",
+    "columns": {
+      "place": "Place",
+      "team": "Team",
+      "games": "P",
+      "gamesLong": "Played",
+      "goalDiff": "GD",
+      "goalDiffLong": "Goal difference",
+      "points": "Pts",
+      "pointsLong": "Points"
+    },
+    "valueLabel": {
+      "games": "Played {{value}}",
+      "goalDiff": "Goal difference {{value}}",
+      "points": "Points {{value}}"
+    },
     "origin": {
       "final": {
         "winner": "Winner final",
