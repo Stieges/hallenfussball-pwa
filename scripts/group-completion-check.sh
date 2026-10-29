@@ -30,7 +30,7 @@
 #   RACE_RUNS=10 bash scripts/group-completion-check.sh     weniger Wiederholungen der Verklemmungs-Probe
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigener Wegwerf-Container
-# (--platform linux/amd64), wird am Ende entfernt (trap). Hilfen: scripts/lib/group-completion-harness.sql.
+# (nativ, per DOCKER_PLATFORM ueberschreibbar), wird am Ende entfernt (trap). Hilfen: scripts/lib/group-completion-harness.sql.
 #
 set -euo pipefail
 
@@ -43,7 +43,7 @@ case "${1:-}" in
 esac
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # wie forfeit-check.sh
-DOCKER_PLATFORM="${DOCKER_PLATFORM:-linux/amd64}"
+DOCKER_PLATFORM="${DOCKER_PLATFORM:-}" # leer = Plattform des Rechners (nativ); z. B. linux/amd64 erzwingt Emulation
 RACE_RUNS="${RACE_RUNS:-50}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
@@ -92,7 +92,7 @@ trap cleanup EXIT
 
 start_container() {
   CURRENT_CONTAINER="$CONTAINER_PREFIX-$1"
-  docker run -d --platform "$DOCKER_PLATFORM" --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
+  docker run -d ${DOCKER_PLATFORM:+--platform "$DOCKER_PLATFORM"} --name "$CURRENT_CONTAINER" -e POSTGRES_PASSWORD=postgres -p 5432 "$POSTGRES_IMAGE" >/dev/null
   local ready=0
   for _ in $(seq 1 240); do
     if [[ "$(docker logs "$CURRENT_CONTAINER" 2>&1 | grep -c "database system is ready to accept connections" || true)" -ge 2 ]]; then
