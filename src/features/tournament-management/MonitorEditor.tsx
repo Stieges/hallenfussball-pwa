@@ -12,26 +12,33 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-05
  */
 
-import { useState, useCallback, useMemo, CSSProperties } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, dialogWidths } from '../../design-tokens';
+import { dialogWidths } from '../../design-tokens';
 import type { Tournament, TournamentGroup } from '../../types/tournament';
 import type {
-  MonitorSlide,
   SlideType,
   SlideConfig,
   TransitionType,
   PerformanceMode,
   MonitorTheme,
 } from '../../types/monitor';
-import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors, useSponsors } from '../../hooks';
 import { DialogSurface } from '../../components/ui/molecules/DialogSurface';
-import { SlideConfigEditor } from './components/SlideConfigEditor';
-import { SlidePreview } from './components/SlidePreview';
-import { MonitorOverscanField } from './components/MonitorOverscanField';
-import { SlideReferenceWarning } from './components/SlideReferenceWarning';
 import { useSlotFields } from './hooks/useSlotFields';
+import { buildEditorGroups } from './components/monitor-editor/monitorEditorHelpers';
+import { MonitorSettingsSection } from './components/monitor-editor/MonitorSettingsSection';
+import { MonitorSlideList } from './components/monitor-editor/MonitorSlideList';
+import {
+  closeButtonStyle,
+  contentStyle,
+  editorStyle,
+  errorStyle,
+  headerStyle,
+  loadingOverlayStyle,
+  spinnerStyle,
+  titleStyle,
+} from './components/monitor-editor/monitorEditorStyles';
 
 // =============================================================================
 // TYPES
@@ -43,52 +50,6 @@ interface MonitorEditorProps {
   onTournamentUpdate: (tournament: Tournament) => Promise<void>;
   onClose: () => void;
 }
-
-interface SlideTypeOption {
-  type: SlideType;
-  label: string;
-  icon: string;
-  phase: number;
-}
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const TRANSITION_OPTIONS: { value: TransitionType; labelKey: string }[] = [
-  { value: 'fade', labelKey: 'monitorEditor.settings.transitions.fade' },
-  { value: 'slide', labelKey: 'monitorEditor.settings.transitions.slide' },
-  { value: 'none', labelKey: 'monitorEditor.settings.transitions.none' },
-];
-
-const PERFORMANCE_OPTIONS: { value: PerformanceMode; labelKey: string; descriptionKey: string }[] = [
-  { value: 'auto', labelKey: 'monitorEditor.settings.performance.auto', descriptionKey: 'monitorEditor.settings.performance.autoDesc' },
-  { value: 'high', labelKey: 'monitorEditor.settings.performance.high', descriptionKey: 'monitorEditor.settings.performance.highDesc' },
-  { value: 'low', labelKey: 'monitorEditor.settings.performance.low', descriptionKey: 'monitorEditor.settings.performance.lowDesc' },
-];
-
-const THEME_OPTIONS: { value: MonitorTheme; labelKey: string; descriptionKey: string }[] = [
-  { value: 'dark', labelKey: 'monitorEditor.settings.themes.dark', descriptionKey: 'monitorEditor.settings.themes.darkDesc' },
-  { value: 'light', labelKey: 'monitorEditor.settings.themes.light', descriptionKey: 'monitorEditor.settings.themes.lightDesc' },
-  { value: 'auto', labelKey: 'monitorEditor.settings.themes.auto', descriptionKey: 'monitorEditor.settings.themes.autoDesc' },
-];
-
-const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
-
-/**
- * Positivliste der Folien-Typen im Editor (@OB-002: Funktion erst anbieten, wenn sie wirkt).
- * Schedule-group und top-scorers haben keinen Renderer im Monitor und bleiben verborgen.
- */
-const MONITOR_SLIDE_TYPES_OFFERED: readonly SlideType[] = [
-  'live',
-  'standings',
-  'schedule-field',
-  'sponsor',
-  'custom-text',
-  'qr-code',
-  'all-standings',
-  'next-matches',
-];
 
 // =============================================================================
 // COMPONENT
@@ -131,46 +92,7 @@ export function MonitorEditor({
   const titleId = `monitor-editor-title-${monitorId}`;
 
   // Get groups from tournament - generate if not explicit
-  // For roundRobin tournaments, there's only one group (all teams play each other)
-  const groups: TournamentGroup[] = useMemo(() => {
-    // Round-robin mode = single group tournament (everyone plays everyone)
-    if (tournament.groupSystem === 'roundRobin') {
-      return [{ id: 'default', customName: t('monitorEditor.allTeams') }];
-    }
-
-    // If explicit groups are defined, use them
-    if (tournament.groups && tournament.groups.length > 0) {
-      return tournament.groups;
-    }
-
-    // If numberOfGroups is set, generate synthetic group entries
-    const numGroups = tournament.numberOfGroups ?? 1;
-    if (numGroups <= 1) {
-      // Single group tournament - return one default group
-      return [{ id: 'default', customName: t('monitorEditor.allTeams') }];
-    }
-
-    // Generate group entries A, B, C, etc.
-    return Array.from({ length: numGroups }, (_, i) => ({
-      id: String.fromCharCode(65 + i), // A, B, C...
-      customName: t('monitorEditor.groupLabel', { letter: String.fromCharCode(65 + i) }),
-    }));
-  }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem, t]);
-
-  // Ohne öffentliches Turnier mit Share-Code entfällt die Zuschauer-QR-Folie im Monitor (@ZM-071, F-04)
-  const zuschauerQrMoeglich = tournament.isPublic === true && Boolean(tournament.shareCode);
-
-  // Angebotene Folien-Typen: nur was der Monitor darstellt (@OB-002)
-  const availableSlideTypes: SlideTypeOption[] = useMemo(() => {
-    return SLIDE_TYPES
-      .filter(s => MONITOR_SLIDE_TYPES_OFFERED.includes(s.type))
-      .map(s => ({
-        type: s.type,
-        label: s.label,
-        icon: s.icon,
-        phase: s.phase,
-      }));
-  }, []);
+  const groups: TournamentGroup[] = useMemo(() => buildEditorGroups(tournament, t), [tournament, t]);
 
   // ==========================================================================
   // HANDLERS
@@ -272,257 +194,13 @@ export function MonitorEditor({
     }
   }, [monitor, monitorId, reorderSlides, t]);
 
-  // ==========================================================================
-  // HELPERS
-  // ==========================================================================
+  const handleToggleEditSlide = useCallback((slideId: string) => {
+    setEditingSlideId(editingSlideId === slideId ? null : slideId);
+  }, [editingSlideId]);
 
-  const getSlideTypeMeta = (type: SlideType) => {
-    return SLIDE_TYPES.find(s => s.type === type);
-  };
-
-  const getSlideDescription = (slide: MonitorSlide): string => {
-    const { type, config } = slide;
-
-    switch (type) {
-      case 'live':
-      case 'schedule-field': {
-        const fieldName = config.fieldId ? getFieldDisplayName(config.fieldId) : t('monitorEditor.notConfigured');
-        return fieldName;
-      }
-      case 'standings':
-      case 'schedule-group': {
-        const group = groups.find(g => g.id === config.groupId);
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback
-        return group?.customName || t('monitorEditor.groupLabel', { letter: config.groupId }) || t('monitorEditor.notConfigured');
-      }
-      case 'sponsor': {
-        const sponsor = sponsors.find(s => s.id === config.sponsorId);
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
-        return sponsor?.name || t('monitorEditor.notConfigured');
-      }
-      case 'custom-text':
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty headline should use fallback
-        return config.headline || t('monitorEditor.customText');
-      default:
-        return '';
-    }
-  };
-
-  // ==========================================================================
-  // STYLES
-  // ==========================================================================
-
-  const editorStyle: CSSProperties = {
-    maxHeight: '90vh',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  };
-
-  const headerStyle: CSSProperties = {
-    padding: cssVars.spacing.lg,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  };
-
-  const titleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xl,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
-    margin: 0,
-  };
-
-  const closeButtonStyle: CSSProperties = {
-    minWidth: '44px',
-    minHeight: '44px',
-    background: 'transparent',
-    border: 'none',
-    fontSize: cssVars.fontSizes.xl,
-    cursor: 'pointer',
-    color: cssVars.colors.textSecondary,
-  };
-
-  const contentStyle: CSSProperties = {
-    flex: 1,
-    overflow: 'auto',
-    padding: cssVars.spacing.lg,
-    position: 'relative',
-  };
-
-  const loadingOverlayStyle: CSSProperties = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.3)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-    borderRadius: cssVars.borderRadius.md,
-  };
-
-  const spinnerStyle: CSSProperties = {
-    width: 40,
-    height: 40,
-    border: `3px solid ${cssVars.colors.border}`,
-    borderTopColor: cssVars.colors.primary,
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-  };
-
-  const sectionStyle: CSSProperties = {
-    marginBottom: cssVars.spacing.xl,
-  };
-
-  const sectionTitleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const settingsGridStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: cssVars.spacing.md,
-  };
-
-  const inputGroupStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
-  };
-
-  const labelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const inputStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    background: cssVars.colors.surface,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.md,
-  };
-
-  const selectStyle: CSSProperties = {
-    ...inputStyle,
-    cursor: 'pointer',
-  };
-
-  const slidesListStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  };
-
-  const slideItemStyle = (isEditing: boolean): CSSProperties => ({
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${isEditing ? cssVars.colors.primary : cssVars.colors.border}`,
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.md,
-  });
-
-  const slideIconStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xl,
-    width: '40px',
-    textAlign: 'center',
-  };
-
-  const slideInfoStyle: CSSProperties = {
-    flex: 1,
-    minWidth: 0,
-  };
-
-  const slideTypeStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const slideDescStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  };
-
-  const slideActionsStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.xs,
-  };
-
-  const iconButtonStyle: CSSProperties = {
-    minWidth: '36px',
-    minHeight: '36px',
-    padding: cssVars.spacing.xs,
-    background: 'transparent',
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.sm,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.md,
-  };
-
-  const addSlideButtonStyle: CSSProperties = {
-    width: '100%',
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceLight,
-    border: `2px dashed ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textPrimary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.sm,
-  };
-
-  const slideTypeSelectorStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: cssVars.spacing.sm,
-    marginTop: cssVars.spacing.md,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-  };
-
-  const slideTypeButtonStyle: CSSProperties = {
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceLight,
-    border: `1px solid ${cssVars.colors.borderControl}`,
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    textAlign: 'center',
-  };
-
-  const errorStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    background: `${cssVars.colors.error}22`,
-    color: cssVars.colors.error,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const slideConfigStyle: CSSProperties = {
-    marginTop: cssVars.spacing.md,
-    padding: cssVars.spacing.md,
-    background: cssVars.colors.surfaceLight,
-    borderRadius: cssVars.borderRadius.md,
-  };
+  const handleToggleAddSlide = useCallback(() => {
+    setIsAddingSlide(!isAddingSlide);
+  }, [isAddingSlide]);
 
   // ==========================================================================
   // RENDER
@@ -565,194 +243,25 @@ export function MonitorEditor({
           {/* Error */}
           {error && <div style={errorStyle}>{error}</div>}
 
-          {/* Settings Section */}
-          <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>{t('monitorEditor.settings.title')}</h3>
-            <div style={settingsGridStyle}>
-              {/* Name */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.name')}</label>
-                <input
-                  type="text"
-                  style={inputStyle}
-                  value={monitor.name}
-                  onChange={(e) => void handleUpdateSettings({ name: e.target.value })}
-                />
-              </div>
+          <MonitorSettingsSection monitor={monitor} onUpdateSettings={handleUpdateSettings} />
 
-              {/* Duration */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.slideDuration')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.defaultSlideDuration}
-                  onChange={(e) => void handleUpdateSettings({ defaultSlideDuration: Number(e.target.value) })}
-                >
-                  {DURATION_PRESETS.map(d => (
-                    <option key={d} value={d}>{d}s</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Transition */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.transition')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.transition}
-                  onChange={(e) => void handleUpdateSettings({ transition: e.target.value as TransitionType })}
-                >
-                  {TRANSITION_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Performance Mode */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.performanceLabel')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.performanceMode}
-                  onChange={(e) => void handleUpdateSettings({ performanceMode: e.target.value as PerformanceMode })}
-                >
-                  {PERFORMANCE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Theme */}
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>{t('monitorEditor.settings.themeLabel')}</label>
-                <select
-                  style={selectStyle}
-                  value={monitor.theme}
-                  onChange={(e) => void handleUpdateSettings({ theme: e.target.value as MonitorTheme })}
-                >
-                  {THEME_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Bildrand in Prozent (@ME-067) */}
-              <MonitorOverscanField
-                value={monitor.overscanPercent}
-                onChange={(overscanPercent) => void handleUpdateSettings({ overscanPercent })}
-              />
-            </div>
-          </div>
-
-          {/* Slides Section */}
-          <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>{t('monitorEditor.slides.title', { count: monitor.slides.length })}</h3>
-
-            <div style={slidesListStyle}>
-              {monitor.slides.map((slide, index) => {
-                const meta = getSlideTypeMeta(slide.type);
-                const isEditing = editingSlideId === slide.id;
-
-                return (
-                  <div key={slide.id}>
-                    <div style={slideItemStyle(isEditing)}>
-                      {/* Icon */}
-                      <div style={slideIconStyle}>{meta?.icon ?? '📄'}</div>
-
-                      {/* Info */}
-                      <div style={slideInfoStyle}>
-                        <div style={slideTypeStyle}>{meta?.label ?? slide.type}</div>
-                        <div style={slideDescStyle}>{getSlideDescription(slide)}</div>
-                      </div>
-
-                      {/* Actions */}
-                      <div style={slideActionsStyle}>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => void handleMoveSlide(slide.id, 'up')}
-                          disabled={index === 0}
-                          title={t('monitorEditor.slides.moveUp')}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => void handleMoveSlide(slide.id, 'down')}
-                          disabled={index === monitor.slides.length - 1}
-                          title={t('monitorEditor.slides.moveDown')}
-                        >
-                          ↓
-                        </button>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => setEditingSlideId(isEditing ? null : slide.id)}
-                          title={t('monitorEditor.slides.edit')}
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          style={iconButtonStyle}
-                          onClick={() => void handleRemoveSlide(slide.id)}
-                          title={t('monitorEditor.slides.remove')}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                    <SlideReferenceWarning slide={slide} targets={slotTargets} />
-
-                    {/* Slide Preview + Config (wenn bearbeitet) */}
-                    {isEditing && (
-                      <div style={{ padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, borderTop: `1px solid ${cssVars.colors.border}` }}>
-                        <SlidePreview slide={slide} tournament={tournament} scale={0.15} />
-                      </div>
-                    )}
-                    {isEditing && (
-                      <SlideConfigEditor
-                        slide={slide}
-                        fields={fields}
-                        groups={groups}
-                        sponsors={sponsors}
-                        onUpdate={(config, duration) => void handleUpdateSlide(slide.id, { config, duration })}
-                        getFieldDisplayName={getFieldDisplayName}
-                        styles={{ slideConfigStyle, inputGroupStyle, labelStyle, selectStyle, inputStyle }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Add Slide Button */}
-              <button
-                style={addSlideButtonStyle}
-                onClick={() => setIsAddingSlide(!isAddingSlide)}
-              >
-                <span>+</span>
-                <span>{t('monitorEditor.slides.addSlide')}</span>
-              </button>
-
-              {/* Slide Type Selector */}
-              {isAddingSlide && (
-                <div style={slideTypeSelectorStyle}>
-                  {availableSlideTypes.map(st => (
-                    <button
-                      key={st.type}
-                      style={slideTypeButtonStyle}
-                      onClick={() => void handleAddSlide(st.type)}
-                    >
-                      <div style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: '4px' }}>{st.icon}</div>
-                      <div style={{ fontSize: cssVars.fontSizes.sm }}>{st.label}</div>
-                      {st.type === 'qr-code' && !zuschauerQrMoeglich && (
-                        <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
-                          {t('monitorEditor.slides.qrHidden')}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <MonitorSlideList
+            monitor={monitor}
+            tournament={tournament}
+            editingSlideId={editingSlideId}
+            isAddingSlide={isAddingSlide}
+            fields={fields}
+            groups={groups}
+            sponsors={sponsors}
+            slotTargets={slotTargets}
+            getFieldDisplayName={getFieldDisplayName}
+            onAddSlide={handleAddSlide}
+            onMoveSlide={handleMoveSlide}
+            onRemoveSlide={handleRemoveSlide}
+            onUpdateSlide={handleUpdateSlide}
+            onToggleEditSlide={handleToggleEditSlide}
+            onToggleAddSlide={handleToggleAddSlide}
+          />
         </div>
       </div>
     </DialogSurface>

@@ -5,7 +5,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { CardDialog } from '../components/Dialogs/CardDialog';
-import { TimePenaltyDialog } from '../components/Dialogs/TimePenaltyDialog';
 
 vi.mock('react-i18next', async () => {
   const de: unknown = (await import('../../../i18n/locales/de/cockpit.json')).default;
@@ -35,12 +34,5 @@ describe('Dialog-Hinweis „zählt als Foul" (F3a)', () => {
       <CardDialog isOpen onClose={vi.fn()} onConfirm={vi.fn()} {...teams} />,
     );
     expect(screen.getByTestId('card-dialog-foul-hint')).toHaveTextContent('zählt als Foul');
-  });
-
-  it('TimePenaltyDialog zeigt den Hinweis', () => {
-    render(
-      <TimePenaltyDialog isOpen onClose={vi.fn()} onConfirm={vi.fn()} {...teams} />,
-    );
-    expect(screen.getByTestId('penalty-dialog-foul-hint')).toHaveTextContent('zählt als Foul');
   });
 });

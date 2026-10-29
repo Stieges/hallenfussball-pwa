@@ -3,7 +3,7 @@
  * deckende Fläche (gemessen über die aufgelöste Farbe, hell und dunkel), Abdunkelung aus dem
  * Overlay-Token, jeder Text mit mindestens 4,5 : 1 (große Schrift und Symbole 3 : 1) gegen
  * die Fläche, auf der er liegt. Dazu das Verhalten wie vor der Umstellung (Esc genau einmal,
- * Fokus-Ziel, Klick auf die Abdunkelung) für CardDialog, GoalScorerDialog, TimePenaltyDialog
+ * Fokus-Ziel, Klick auf die Abdunkelung) für CardDialog, GoalScorerDialog
  * und EditScoreDialog. Befund C-DIALOG-FLAECHE-DURCHSICHTIG.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -16,7 +16,6 @@ import { NumberPicker } from '../../ui/molecules/NumberPicker';
 import { SettingsDialog } from '../components/Dialogs/SettingsDialog';
 import { SubstitutionDialog } from '../components/Dialogs/SubstitutionDialog';
 import { TimeAdjustDialog } from '../components/Dialogs/TimeAdjustDialog';
-import { TimePenaltyDialog } from '../components/Dialogs/TimePenaltyDialog';
 import { PenaltyShootoutDialog as LivePenaltyShootoutDialog } from '../components/Tiebreaker/PenaltyShootoutDialog';
 import { TiebreakerBanner } from '../components/Tiebreaker/TiebreakerBanner';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS, type EditableMatchEvent } from '../../../types/tournament';
@@ -42,7 +41,6 @@ const KINDS: Kind[] = [
   { name: 'SubstitutionDialog', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'SubstitutionDialog (Team gewählt)', mount: () => void render(<SubstitutionDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} preselectedTeamSide="home" />) },
   { name: 'TimeAdjustDialog', mount: () => void render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentSeconds={125} minSeconds={0} maxSeconds={600} minIsGoal={false} />) },
-  { name: 'TimePenaltyDialog', mount: () => void render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />) },
   { name: 'Tiebreaker/PenaltyShootoutDialog', mount: () => void render(<LivePenaltyShootoutDialog homeTeamName="VfB Ufer" awayTeamName="SC Nord" onRecordShot={noop} onFinish={noop} onCancel={noop} />) },
   { name: 'Tiebreaker/TiebreakerBanner', mount: () => void render(<TiebreakerBanner homeTeamName="VfB Ufer" awayTeamName="SC Nord" score={2} onStartPenaltyShootout={noop} onEndAsDraw={noop} />) },
 ];
@@ -194,25 +192,15 @@ describe('@OB-055 B-43b2 – Verhalten wie vor der Umstellung', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('TimePenaltyDialog: Esc einmal, Fokus im Dialog, Abdunkelung schließt', () => {
-    const onClose = vi.fn();
-    render(<TimePenaltyDialog isOpen onClose={onClose} onConfirm={noop} homeTeam={home} awayTeam={away} />);
-    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('dialog').parentElement!);
-    expect(onClose).toHaveBeenCalledTimes(2);
-  });
-
   it('Gegenbeispiel: nach dem Schließen sperrt kein Dialog mehr den Hintergrund', () => {
-    const { unmount } = render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    const { unmount } = render(<CardDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
     expect(document.body.style.overflow).toBe('hidden');
     unmount();
     expect(document.body.style.overflow).toBe('');
   });
 
   it('verschachtelt: ein Cockpit-Dialog über einem zweiten lässt den Hintergrund gesperrt, bis der letzte schließt', () => {
-    const a = render(<TimePenaltyDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
+    const a = render(<CardDialog isOpen onClose={noop} onConfirm={noop} homeTeam={home} awayTeam={away} />);
     const b = render(<TimeAdjustDialog isOpen onClose={noop} onConfirm={noop} currentSeconds={5} minSeconds={0} maxSeconds={600} minIsGoal={false} />);
     b.unmount();
     expect(document.body.style.overflow).toBe('hidden');

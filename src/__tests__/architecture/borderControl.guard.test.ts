@@ -52,9 +52,7 @@ const COCKPIT: Record<string, number> = {
   'components/live-cockpit/components/Dialogs/GoalScorerDialog.tsx': 4,
   'components/live-cockpit/components/Dialogs/SubstitutionDialog.tsx': 4,
   'components/live-cockpit/components/Dialogs/TimeAdjustDialog.tsx': 1,
-  'components/live-cockpit/components/Dialogs/TimePenaltyDialog.tsx': 4,
   'components/live-cockpit/components/GameControls/index.tsx': 1,
-  'components/live-cockpit/components/TeamBlock/index.tsx': 2,
   'components/live-cockpit/components/Tiebreaker/PenaltyShootoutDialog.tsx': 2,
 };
 

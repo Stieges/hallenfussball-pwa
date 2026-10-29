@@ -117,6 +117,12 @@ export const borderWidths = {
   strong: '3px',
 } as const;
 
+/**
+ * Mindest-Spaltenbreiten der Raster (grid-template-columns minmax): sm für das Typwahl-Raster,
+ * md für das Einstellungsraster des Monitor-Editors.
+ */
+export const gridMinColumnWidths = { sm: '140px', md: '180px' } as const;
+
 export type TouchTargetKey = keyof typeof touchTargets;
 export type IconSizeKey = keyof typeof iconSizes;
 export type InputHeightKey = keyof typeof inputHeights;

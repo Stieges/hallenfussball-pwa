@@ -197,7 +197,6 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
     'components/live-cockpit/components/Dialogs/SettingsDialog.tsx',
     'components/live-cockpit/components/Dialogs/SubstitutionDialog.tsx',
     'components/live-cockpit/components/Dialogs/TimeAdjustDialog.tsx',
-    'components/live-cockpit/components/Dialogs/TimePenaltyDialog.tsx',
     'components/live-cockpit/components/Tiebreaker/PenaltyShootoutDialog.tsx',
     'components/live-cockpit/components/Tiebreaker/TiebreakerBanner.tsx',
     // B-43b3: Anmeldung, Spielbericht, Zuschauer, Schedule-Editor

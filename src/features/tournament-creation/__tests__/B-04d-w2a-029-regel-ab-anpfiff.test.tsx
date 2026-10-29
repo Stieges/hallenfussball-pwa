@@ -145,11 +145,9 @@ describe('B-04d @W2A-029 – Spielregel-Änderung wirkt ab dem nächsten Anpfiff
     expect(await zeitstrafeSekunden(spielA)).toBe(120);
   });
 
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
-  // Engine-Weg: penaltySeconds der Startregel ist fest 120 s (serverRules.ts), matchCockpitSettings wird nicht übernommen.
-  // Nach ZA-1 muss der Wert 60 grün werden. Gegenbeispiele, die dann aussagekräftig sein müssen: das laufende Spiel
-  // (120 bleibt 120, heute gleichwertig mit dem festen Rückfall) und der Gegenbeispiel-Wert 120 (heute leer grün).
-  it.fails('Pflichttest @W2A-029: ein danach angepfiffenes Spiel gilt 1 Minute', async () => {
+  // R2 PR 4 (M1, Befund C-ZEITSTRAFE-FEST-120S behoben): penaltySeconds der Startregel kommt aus
+  // matchCockpitSettings.timePenaltyDurationSeconds (serverRules.ts, Zwilling 20261118_002).
+  it('Pflichttest @W2A-029: ein danach angepfiffenes Spiel gilt 1 Minute', async () => {
     const { rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
 
     rendereEinstellungen();
@@ -159,10 +157,9 @@ describe('B-04d @W2A-029 – Spielregel-Änderung wirkt ab dem nächsten Anpfiff
     expect(await zeitstrafeSekunden(spielB)).toBe(60);
   });
 
-  // erwartet rot bis B-10b1/A-27 – Befund C-KO-RUNDENREGEL-SERVER bzw. ZA-1 (task-GB5-plan.md); Markierung entfernen, sobald grün
-  // Aussagekräftig nach ZA-1: das eingerichtete, nicht angepfiffene Spiel (vor der Änderung eingerichtet, erst nach der
-  // Änderung angepfiffen) bekommt 60; heute bekommt es den festen Rückfall 120.
-  it.fails('Gegenbeispiel @W2A-029: ein eingerichtetes, nicht angepfiffenes Spiel übernimmt die neue Regel sofort', async () => {
+  // Das eingerichtete, nicht angepfiffene Spiel (vor der Änderung eingerichtet, erst nach der Änderung angepfiffen)
+  // bekommt 60: die Regel gilt ab dem Anpfiff, nicht ab dem Einrichten.
+  it('Gegenbeispiel @W2A-029: ein eingerichtetes, nicht angepfiffenes Spiel übernimmt die neue Regel sofort', async () => {
     const { rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
 
     // Spiel C ist vor der Änderung eingerichtet, aber noch nicht angepfiffen
@@ -175,8 +172,7 @@ describe('B-04d @W2A-029 – Spielregel-Änderung wirkt ab dem nächsten Anpfiff
   });
 
   it('Gegenbeispiel @W2A-029: ein gültiger Regelwert wird übernommen (2 Minuten bleiben 2 Minuten)', async () => {
-    // Heute leer grün: die Engine liefert immer 120 (fester Rückfall). Nach ZA-1 wird dieser Fall aussagekräftig,
-    // weil er einen Wert ungleich dem festen Rückfall prüft.
+    // Seit M1 aussagekräftig zusammen mit dem Pflichttest: die Engine liest die Einstellung (60 → 60, 120 → 120).
     const { rendereEinstellungen, aendereZeitstrafe, anpfiff, zeitstrafeSekunden } = setup();
 
     rendereEinstellungen();
