@@ -3,7 +3,7 @@
  * der gewählten Trikotfarbe. Fachfrei: kennt nur Beschriftung, Farbe und Zustand. Der Punkt ist ein reiner Zusatz (Farbe
  * trägt keine Bedeutung allein, die Beschriftung bleibt); ohne Farbe steht kein Punkt. Tippfläche mindestens `touchTargets.minimum`.
  */
-import type { CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { Icons } from '../Icons';
 
@@ -13,8 +13,8 @@ export interface TeamDetailsToggleProps {
   onToggle: () => void;
   /** Gewählte Hauptfarbe des Teams (CSS-Farbwert); ohne Angabe kein Farbpunkt. */
   color?: string;
-  /** Gesprochener Name der Farbe des Punktes, z. B. „Farbe gewählt“. */
-  colorLabel?: string;
+  /** Gesprochene Beschreibung mit Team und Farbstand (z. B. „SV Süd, Trikotfarbe gewählt“); sichtbarer Text bleibt Anfang des Namens. */
+  description?: string;
   'data-testid'?: string;
 }
 
@@ -44,10 +44,18 @@ const dotStyle = (color: string): CSSProperties => ({
   border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.borderControl}`,
 });
 
-export const TeamDetailsToggle = ({ label, expanded, onToggle, color, colorLabel, 'data-testid': testId }: TeamDetailsToggleProps) => (
-  <button type="button" onClick={onToggle} style={button} aria-expanded={expanded} data-testid={testId}>
-    {color !== undefined && <span style={dotStyle(color)} role="img" aria-label={colorLabel} data-testid={testId === undefined ? undefined : `${testId}-dot`} />}
-    <span>{label}</span>
-    {expanded ? <Icons.ChevronUp size={iconSizeValues.sm} /> : <Icons.ChevronDown size={iconSizeValues.sm} />}
-  </button>
-);
+const hidden: CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
+
+export const TeamDetailsToggle = ({ label, expanded, onToggle, color, description, 'data-testid': testId }: TeamDetailsToggleProps) => {
+  const descriptionId = useId();
+  return (
+    <>
+      <button type="button" onClick={onToggle} style={button} aria-expanded={expanded} aria-describedby={description === undefined ? undefined : descriptionId} data-testid={testId}>
+        {color !== undefined && <span style={dotStyle(color)} aria-hidden="true" data-testid={testId === undefined ? undefined : `${testId}-dot`} />}
+        <span>{label}</span>
+        {expanded ? <Icons.ChevronUp size={iconSizeValues.sm} /> : <Icons.ChevronDown size={iconSizeValues.sm} />}
+      </button>
+      {description !== undefined && <span id={descriptionId} style={hidden}>{description}</span>}
+    </>
+  );
+};

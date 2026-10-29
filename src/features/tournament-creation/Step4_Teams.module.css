@@ -42,6 +42,15 @@
   min-width: 0; /* Prevent flex blowout */
 }
 
+/* Knopf „Farbe & Logo“ und Löschtaste bleiben in einer Zeile (360 px), brechen nur gemeinsam um */
+.teamRowActions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+
 /* Delete button - WCAG compliant 48x48px touch target */
 .deleteButton {
   flex-shrink: 0;

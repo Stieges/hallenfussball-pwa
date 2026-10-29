@@ -57,7 +57,7 @@ describe('TB-4 Zuschauer-Tabelle', () => {
       if (ansicht === null) { throw new Error('schmale Tabelle fehlt'); }
       return within(ansicht).getAllByRole('row', { hidden: true })
         .map((row) => within(row).queryAllByRole('cell', { hidden: true }))
-        .filter((cells) => cells.length > 1 && (cells[1].textContent ?? '').trim().endsWith(ende))
+        .filter((cells) => cells.length > 1 && (cells[1].textContent ?? '').includes(ende))
         .map((cells) => (cells[0].textContent ?? '').trim());
     };
     const fertig = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055));

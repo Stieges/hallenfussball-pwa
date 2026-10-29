@@ -41,11 +41,25 @@ describe('@W2A-059 Zuschauer-Tabelle markiert offene Gleichstände', () => {
     expect(new Set(marken(container))).toEqual(new Set(['follows']));
   });
 
-  it('auf dem Handy steht die Markierung in einer eigenen Zeile der schmalen Tabelle', async () => {
+  it('auf dem Handy steht die Markierung in der Namenszelle unter dem Namen (wie im Mockup), nicht als eigene Zeile', async () => {
     const { container } = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055));
     const handy = container.querySelector<HTMLElement>('.mobile-view');
     if (handy === null) { throw new Error('schmale Tabelle fehlt'); }
-    expect(within(handy).getAllByTestId('tie-marker-row')).toHaveLength(2);
+    const marken = within(handy).getAllByTestId('public-tie-mark');
+    expect(marken).toHaveLength(2);
+    for (const marke of marken) {
+      expect(marke.closest('td')).toBe(marke.closest('tr')?.children[1]);
+    }
+    expect(within(handy).queryByTestId('tie-marker-row')).toBeNull();
+  });
+
+  it('keine Bedienelemente in den Zeilen mit Markierung (Desktop-Zeile und Handy-Zeile ganz)', async () => {
+    const { container } = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055));
+    const zeilen = [...container.querySelectorAll('[data-testid="public-tie-mark"]')].map((m) => m.closest('tr'));
+    expect(zeilen).toHaveLength(4);
+    for (const zeile of zeilen) {
+      expect(zeile?.querySelectorAll('button, a, input, select, [role="button"]')).toHaveLength(0);
+    }
   });
 
   it('nach der Entscheidung ist die Markierung weg', async () => {

@@ -1,6 +1,6 @@
 /**
  * Kurze Markierung hinter dem Teamnamen einer Monitor-Tabelle bei offenem Gleichstand (@W2A-059): „Strafstoß folgt“ oder
- * „wird entschieden“, Wort und Rahmen (Farbe trägt nie allein). Kein Erklärtext, keine Bedienelemente. Schrift in der
+ * „wird entschieden“, Wort und Rahmen (Farbe trägt nie allein). Kein Erklärtext, keine Bedienelemente. Rahmen in `warningSymbol`, keine Füllung (kein passender Hintergrund-Token; Rückfrage im Report). Schrift in der
  * Kopfstufe der Tabelle (mindestens 3 % der Bildhöhe, @ZM-125).
  */
 import { useTranslation } from 'react-i18next';
@@ -20,7 +20,6 @@ export function MonitorTieMark({ mark, themeColors }: { mark: PublicTieMark; the
         padding: `0 ${displayList.rowPaddingX}`,
         border: `${cssVars.borderWidth.medium} solid ${themeColors.warningSymbol}`,
         borderRadius: cssVars.borderRadius.full,
-        background: themeColors.pauseBadgeBg,
         color: themeColors.text,
         fontSize: displayList.fontSizes.head,
         fontWeight: cssVars.fontWeights.semibold,

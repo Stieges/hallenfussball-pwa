@@ -38,6 +38,22 @@ describe('@W3-039 Wizard Schritt 4: Farbe & Logo', () => {
   });
 });
 
+describe('@W3-039 zugänglicher Name (WCAG 2.5.3)', () => {
+  it('Name beginnt mit dem sichtbaren Text, Team und Farbstand stehen in der Beschreibung, der Punkt ist stumm', () => {
+    zeige([{ id: 't1', name: 'SV Süd', colors: { primary: '#000000' } }, { id: 't2', name: 'TSV West' }]);
+    const knopf = screen.getByTestId('wizard-team-details-t1');
+    expect(knopf).toHaveAccessibleName(/^wizard:step4\.expandLabel$/);
+    expect(knopf).toHaveAccessibleDescription(/step4\.colorChosenFor/);
+    expect(screen.getByTestId('wizard-team-details-t1-dot')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('wizard-team-details-t2')).toHaveAccessibleDescription(/step4\.detailsFor/);
+  });
+
+  it('Knopf und Löschtaste liegen in einer gemeinsamen Gruppe (bleiben bei 360 px in einer Zeile)', () => {
+    zeige([{ id: 't1', name: 'SV Süd' }]);
+    expect(screen.getByTestId('wizard-team-details-t1').parentElement).toBe(screen.getByTestId('wizard-remove-team-t1').parentElement);
+  });
+});
+
 describe('TeamDetailsToggle (Molekül)', () => {
   it('Tippfläche mindestens 44 px (Token) und Zustand über aria-expanded', () => {
     render(<TeamDetailsToggle label="Farbe & Logo" expanded onToggle={noop} color="#ff0000" data-testid="x" />);

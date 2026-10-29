@@ -324,24 +324,26 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     )}
                   </div>
 
-                  {/* @W3-039: beschrifteter Knopf „Farbe & Logo“ mit Farbpunkt statt nacktem Pfeil */}
-                  <TeamDetailsToggle
-                    label={t('step4.expandLabel')}
-                    expanded={isExpanded}
-                    onToggle={() => toggleExpanded(team.id)}
-                    color={team.colors?.primary}
-                    colorLabel={t('step4.colorChosen')}
-                    data-testid={`wizard-team-details-${team.id}`}
-                  />
+                  <div className={styles.teamRowActions}>
+                    {/* @W3-039: beschrifteter Knopf „Farbe & Logo“ mit Farbpunkt statt nacktem Pfeil */}
+                    <TeamDetailsToggle
+                      label={t('step4.expandLabel')}
+                      expanded={isExpanded}
+                      onToggle={() => toggleExpanded(team.id)}
+                      color={team.colors?.primary}
+                      description={team.colors?.primary !== undefined ? t('step4.colorChosenFor', { name: team.name }) : t('step4.detailsFor', { name: team.name })}
+                      data-testid={`wizard-team-details-${team.id}`}
+                    />
 
-                  <button
-                    onClick={() => onRemoveTeam(team.id)}
-                    className={styles.deleteButton}
-                    aria-label={t('step4.deleteTeam', { name: team.name })}
-                    data-testid={`wizard-remove-team-${team.id}`}
-                  >
-                    <Icons.Trash size={18} />
-                  </button>
+                    <button
+                      onClick={() => onRemoveTeam(team.id)}
+                      className={styles.deleteButton}
+                      aria-label={t('step4.deleteTeam', { name: team.name })}
+                      data-testid={`wizard-remove-team-${team.id}`}
+                    >
+                      <Icons.Trash size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Expanded section: Logo & Color editing */}

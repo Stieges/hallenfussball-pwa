@@ -38,6 +38,7 @@ describe('@ZM-177 Gruppenangabe in der Kopfzeile der Live-Folie', () => {
   it.each(['all', '', undefined])('Gruppe %j (eine Gruppe, Jeder gegen jeden): Kopfzeile ohne Gruppenangabe', (group) => {
     const { container } = render(<LiveMatchDisplay match={createMatch({ group })} />);
     expect(screen.getByTestId('live-group').textContent).toBe('');
+    expect(screen.getByTestId('live-info').textContent).toBe('Feld 1 — Spiel 11');
     expect(container.textContent ?? '').not.toMatch(/\ball\b|liveMatch\.group/);
   });
 

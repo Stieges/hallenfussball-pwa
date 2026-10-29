@@ -273,6 +273,7 @@ export function MatchCockpitSettingsPanel({
               value={currentSoundValue}
               onChange={(e) => handleSoundChange(e.target.value)}
               aria-label={t('settings.endSound')}
+              data-testid="settings-end-sound-select"
               style={styles.select}
             >
               {SOUND_PRESET_OPTIONS.map((opt) => (

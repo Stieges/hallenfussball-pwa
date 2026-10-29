@@ -38,6 +38,7 @@ test.describe('@ZM-177 Kopfzeile der Live-Folie', () => {
       await expect(page.getByTestId('live-header')).toBeVisible({ timeout: 25000 });
       await expect(page.getByTestId('live-group')).toHaveText(erwartet);
       await expect(page.getByTestId('live-header')).not.toContainText(/\ball\b/);
+      await expect(page.getByTestId('live-info')).toHaveText('Feld 1 — Spiel 16'); // @ZM-177 „Feld 1 — Spiel n“ bleibt
       await bild(page, `monitor-kopfzeile-${gruppe}-1920`);
     });
   }
@@ -68,6 +69,33 @@ test.describe('@W2A-059 Monitor-Tabelle mit offenem Gleichstand', () => {
       await expect(zeilen.locator('button, a, input')).toHaveCount(0);
       await bild(page, `monitor-tabelle-${art}-1920`);
     });
+  }
+});
+
+// Zuschauer-Seite offline über den Prüfstand `tests/e2e/harness/gleichstand.html` (echte `PublicStandingsTab`, Saat Nikolaus; der Stack
+// `/live/:code` per Cloud war lokal nicht nutzbar: der lokale Stack kennt die Funktion `public_tournament` nicht).
+test.describe('@W2A-059 Zuschauer-Tabelle mit offenem Gleichstand', () => {
+  for (const [breite, hoehe] of [[360, 800], [390, 844], [1280, 800]] as const) {
+    for (const [plaetze, art] of [['3', 'follows'], ['1', 'deciding']] as const) {
+      for (const thema of ['light', 'dark'] as const) {
+        test(`${breite} px ${thema}, Platz 3 ${art === 'follows' ? 'mit' : 'ohne'} Pflicht: Marke in der Namenszelle, gleiche Ziffer, keine Bedienelemente`, async ({ page }) => {
+          await page.emulateMedia({ colorScheme: thema });
+          await page.setViewportSize({ width: breite, height: hoehe });
+          await page.goto(`/tests/e2e/harness/gleichstand.html?rolle=zuschauer&plaetze=${plaetze}`);
+          const marken = page.locator('[data-testid="public-tie-mark"]:visible');
+          await expect(marken).toHaveCount(2, { timeout: 25000 });
+          await expect(marken.first()).toHaveAttribute('data-kind', art);
+          const werte = await marken.evaluateAll((els) => els.map((el) => {
+            const zeile = el.closest('tr');
+            return { ziffer: zeile?.children[0].textContent?.trim(), inNamenszelle: el.closest('td') === zeile?.children[1], bedienelemente: zeile?.querySelectorAll('button, a, input, select').length };
+          }));
+          expect(werte[0].ziffer).toBe(werte[1].ziffer);
+          expect(werte.every((w) => w.inNamenszelle && w.bedienelemente === 0)).toBe(true);
+          await expect(page.locator('[data-testid="tie-marker"], [data-testid="tie-hints"]')).toHaveCount(0);
+          await bild(page, `zs-gleichstand-${art}-${breite}-${thema === 'light' ? 'hell' : 'dunkel'}`);
+        });
+      }
+    }
   }
 });
 
@@ -106,7 +134,24 @@ test.describe('@W3-039 Farbe & Logo im Assistenten', () => {
     await expect(knopf).toHaveAttribute('aria-expanded', 'true');
     await page.locator('button[aria-haspopup="true"]').first().click();
     await page.getByRole('option', { name: /Farbe #000000/i }).or(page.getByLabel(/Farbe #000000/i)).first().click();
-    await expect(knopf.locator('[role="img"]')).toBeVisible();
+    await expect(knopf.locator('[data-testid$="-dot"]')).toBeVisible();
     await bild(page, `wizard-schritt5-farbe-logo-offen-${page.viewportSize()?.width ?? 0}`);
+  });
+});
+
+test.describe('@HT-030 „Anhören“ im Admin-Cockpit (gleiche Komponente wie im Assistenten)', () => {
+  test('Admin → Match Cockpit: zwei „Anhören“-Knöpfe ≥ 44 px, nichts ragt über den Rand', async ({ page }) => {
+    await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
+    await page.goto('/#/tournament/hallencup-messlauf/admin/match-cockpit');
+    const knoepfe = page.getByRole('button', { name: 'Anhören' });
+    await expect(knoepfe).toHaveCount(2, { timeout: 25000 });
+    await knoepfe.last().scrollIntoViewIfNeeded();
+    const breite = page.viewportSize()?.width ?? 0;
+    for (const k of await knoepfe.all()) {
+      const kasten = await k.boundingBox();
+      expect(kasten?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect((kasten?.x ?? 0) + (kasten?.width ?? 0)).toBeLessThanOrEqual(breite);
+    }
+    await bild(page, `admin-cockpit-anhoeren-${breite}`);
   });
 });
