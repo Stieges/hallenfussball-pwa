@@ -150,6 +150,7 @@ export const palette = {
   // ---------------------------------------------------------------------------
   special: {
     gold: '#FFD700',
+    goldDark: '#A16207', // Gold für das helle Thema (Gold-700): Rand/Symbol auf Weiß 4,9:1 statt 1,4:1 (Review #405 M-2, Daniel 29.10.)
     silver: '#C0C0C0',
     bronze: '#CD7F32',
     live: '#FB7185', // Live-Rot (Rose 400, dunkles Thema): eigener Ton, nicht das Fehler-Rot (@OB-039, Aufgabe 1.1)

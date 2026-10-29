@@ -17,7 +17,10 @@
   "liveView": {
     "pullRelease": "Loslassen zum Aktualisieren",
     "badge": "LIVE: {{code}}",
-    "footer": "Erstellt mit Hallenfußball-App"
+    "footer": "Erstellt mit Hallenfußball-App",
+    "ended": "Turnier abgeschlossen",
+    "endedKids": "Turnier beendet – danke fürs Mitspielen",
+    "scheduleTitle": "Spielplan"
   },
   "connection": {
     "stale": "Stand von {{time}} – keine Verbindung"

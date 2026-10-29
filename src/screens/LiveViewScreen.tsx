@@ -24,6 +24,7 @@ import { PublicBottomNav } from '../components/ui/PublicBottomNav';
 import { NowSourceContext } from '../components/schedule/useTickingNow';
 import { usePublicTournament } from '../features/public-view/usePublicTournament';
 import { usePublicView } from '../features/public-view/usePublicView';
+import { usePublicFinalStandings } from '../features/public-view/usePublicFinalStandings';
 import { usePublicViewFilters } from '../features/public-view/usePublicViewFilters';
 import { usePullToRefresh, getRefreshIndicatorStyle, getRefreshSpinnerStyle, PULL_THRESHOLD } from '../features/public-view/usePullToRefresh';
 import { publicPageContainerStyle, publicPageContentStyle } from '../features/public-view/publicPageStyles';
@@ -41,6 +42,8 @@ import { useTheme } from '../hooks/useTheme';
 import { PublicStandingsTab } from '../features/public-view/components/PublicStandingsTab';
 import { PublicInfoTab } from '../features/public-view/components/PublicInfoTab';
 import { PublicConnectionHint } from '../features/public-view/components/PublicConnectionHint';
+import { showsFinalStandings, showsKidsEnded } from '../features/public-view/showsFinalStandings';
+import { PublicEndedBadge, PublicFinalStandingsBlock } from '../features/public-view/components/PublicFinalStandings';
 import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
 import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
 import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
@@ -78,7 +81,9 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
 
 
   // Die gemeinsame Ansicht der Zuschauer (A-36c): Status, Seitentexte, Endstand und Sichtbarkeit nur von hier
-  const view = usePublicView(tournament, schedule, fetchedAtMs);
+  // Der gespeicherte Endstand (R3-6): erst nach dem Abschluss, im selben Takt, ohne Neuladen
+  const finalStandings = usePublicFinalStandings(shareCode, tournament !== null);
+  const view = usePublicView(tournament, schedule, fetchedAtMs, finalStandings);
 
   // Styles
   const headerStyle: CSSProperties = {
@@ -132,6 +137,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const filteredStandings = visibleStandings(view.rules, currentStandings);
   const myTeamLabel = myTeamName(tournament, myTeamId);
   const groups = uniqueGroups(tournament);
+  const ended = showsFinalStandings(view, finalStandings) || showsKidsEnded(tournament, view);
 
   return (
     <NowSourceContext.Provider value={nowMs}>
@@ -166,6 +172,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
           <div style={shareCodeBadgeStyle}>
             {t('liveView.badge', { code: shareCode })}
           </div>
+          {ended && <div style={{ marginTop: cssVars.spacing.sm }}><PublicEndedBadge /></div>}
         </div>
 
         {/* Ohne Netz bleibt der letzte Stand stehen, mit Hinweis (B-15, @ZM-032) */}
@@ -173,6 +180,11 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
           <div style={{ marginBottom: cssVars.spacing.md }}>
             <PublicConnectionHint hint={connectionHint} />
           </div>
+        )}
+
+        {/* Endstand oben (R3-6), Spielplan darunter wie heute */}
+        {tab === 'schedule' && (
+          <PublicFinalStandingsBlock tournament={tournament} view={view} finalStandings={finalStandings} />
         )}
 
         {/* "Mein Team" Bar - only on schedule tab */}

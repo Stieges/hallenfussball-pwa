@@ -4,6 +4,7 @@
  * Kammer vor Waging rot (direktes Spiel zuerst, @ET-056), Petting und Otting gleichauf (@ET-055, @ET-025), Fridolfing, Waging blau.
  * Szenarien mit anderen Mannschaftsnamen (@W2A-041 bis @W2A-045) prüfen dieselben Regeln; diese Fälle liegen als Vitest-Tests in Paket TB.
  */
+import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import { vorbedingung, getRows, SOLL_TIMEOUT_MS } from './shared';
 import { getLocalServiceRoleClient } from '../../helpers';
@@ -308,16 +309,60 @@ async function turnierAbschliessen({ asRole }: StepContext): Promise<void> {
   await expect(seite.getByTestId('late-entry')).toContainText('zählt nicht');
 }
 
-/** N7c: Jeder gegen jeden: der Endstand ist die abgeschlossene Tabelle, Plätze 1 bis 6, kein Platz geteilt (@ET-022). */
+/** Das Turnier ist abgeschlossen (Vorbedingung von N7c/N7d: N7b schließt es per Oberfläche ab). */
+async function turnierIstAbgeschlossen(): Promise<void> {
+  const zeilen = await getRows<{ lifecycle_status: string }>(`tournaments?id=eq.${NIKOLAUS.tournamentId}&select=lifecycle_status`, 'Zustand des Turniers');
+  expect(zeilen[0]?.lifecycle_status, 'Vorbedingung: das Turnier ist abgeschlossen (N7b)').toBe('finished');
+}
+
+/**
+ * N7c: Jeder gegen jeden: der Endstand ist die abgeschlossene Tabelle, Plätze 1 bis 6, kein Platz geteilt, mit Spielen, Tordifferenz und
+ * Punkten aus dem gespeicherten Stand (@ET-022, @ET-045). Zuschauer = anon, über `public_final_standings`.
+ */
 async function endstand({ anonPage }: StepContext): Promise<void> {
-  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
+  await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
   await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
   await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
-  await expectSollMarker(anonPage, 'final-standings');
-  const zeilen = anonPage.locator('[data-testid="final-standings"] tr, [data-testid="final-standings"] [role="row"]');
+  await expect(anonPage.getByTestId('final-standings-list'), 'Endstand der Zuschauer-Seite').toBeVisible({ timeout: 20_000 });
+  const zeilen = anonPage.getByTestId('final-standing-row');
+  await expect(zeilen, 'Plätze 1 bis 6').toHaveCount(6);
+  expect(await zeilen.evaluateAll((els) => els.map((el) => el.getAttribute('data-place'))), 'kein Platz geteilt').toEqual(['1', '2', '3', '4', '5', '6']);
   const namen = await zeilen.evaluateAll((els) => els.map((el) => (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim()));
-  expect(namen.slice(0, 2).join('|'), 'Platz 1 und 2').toMatch(/1.*Kammer.*\|2.*Waging rot/);
-  expect(namen.slice(-2).join('|'), 'Platz 5 und 6').toMatch(/5.*Fridolfing.*\|6.*Waging blau/);
+  expect(namen[0], 'Platz 1').toContain(KAMMER);
+  expect(namen[1], 'Platz 2').toContain(ROT);
+  expect(namen[4], 'Platz 5').toContain('Fridolfing');
+  expect(namen[5], 'Platz 6').toContain('Waging blau');
+  await expect(anonPage.getByTestId('final-standings-header'), 'Spalten Sp, Diff, Pkt').toContainText('Pkt');
+  for (const zelle of ['final-standing-games', 'final-standing-diff', 'final-standing-points']) {
+    for (const text of await anonPage.getByTestId(zelle).allTextContents()) {
+      expect(text, `${zelle} gefüllt`).not.toBe('');
+    }
+  }
+  await expect(anonPage.getByTestId('tournament-ended'), 'Abzeichen „Turnier abgeschlossen“').toBeVisible();
+}
+
+/** Schaltet den Kindermodus am (abgeschlossenen) Turnier um: nur als Datenbank-Eigentümer mit dem Server-Schalter (Zustandssperre, REST darf das nicht). */
+function setzeKindermodus(an: boolean): void {
+  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET config = jsonb_set(coalesce(config,'{}'::jsonb), '{hideScoresForPublic}', '${an ? 'true' : 'false'}'::jsonb) WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
+  execFileSync('docker', ['exec', '-i', 'supabase_db_hallenfussball-pwa', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
+}
+
+/**
+ * N7d: Kindermodus nach dem Abschluss (E7, @ZM-121 Z. 4, „Kindermodus überstimmt alle Schalter“): der Server liefert `none` (W-M),
+ * die Zuschauer-Seite zeigt „Turnier beendet – danke fürs Mitspielen“ aus dem öffentlichen Zustand, keine Plätze, keine Torschützen.
+ */
+async function endstandKindermodus({ anonPage }: StepContext): Promise<void> {
+  await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
+  setzeKindermodus(true);
+  try {
+    await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
+    await expect(anonPage.getByTestId('final-standings-kids'), 'Kindersatz').toContainText('Turnier beendet – danke fürs Mitspielen', { timeout: 20_000 });
+    await expect(anonPage.getByTestId('tournament-ended')).toBeVisible();
+    await expect(anonPage.getByTestId('final-standing-row'), 'keine Plätze').toHaveCount(0);
+    await expect(anonPage.getByTestId('final-scorers'), 'keine Torschützen').toHaveCount(0);
+  } finally {
+    setzeKindermodus(false);
+  }
 }
 
 export const steps: readonly TurniertagStep[] = [
@@ -331,5 +376,6 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N7a', title: 'Gruppe abgeschlossen (mit der Entscheidung in N6d): kein Vorschlag mehr, „Gruppe wieder öffnen“, kein Zurücknehmen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-070'], owner: 'A-13c', expectedFail: false, run: gruppeAbschliessen },
   { id: 'N7a2', title: 'Korrektur nach dem Abschluss: Gruppe ohne Zutun erneut abgeschlossen, kein „Besetzung prüfen“, ein Verlaufseintrag', scenarios: ['@TM-071', '@TM-150'], owner: 'R2 PR 2 (A-15b)', expectedFail: false, run: neuAbschlussNachKorrektur },
   { id: 'N7b', title: 'Turnier abschließen: Dialog bereit ohne „Stand neu laden“, abgeschlossen und gesperrt, späte Einträge aufbewahrt', scenarios: ['@LZ-009', '@LZ-030', '@LZ-038', '@LZ-039'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'R3-4 (B-33)', expectedFail: false, run: turnierAbschliessen },
-  { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'A-19 / A-20 / B-23', expectedFail: true, run: endstand },
+  { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'R3-6 (B-23)', expectedFail: false, run: endstand },
+  { id: 'N7d', title: 'Kindermodus nach dem Abschluss: „Turnier beendet – danke fürs Mitspielen“, keine Plätze, keine Torschützen', scenarios: ['@ZM-121'], owner: 'R3-6 (E7)', expectedFail: false, run: endstandKindermodus },
 ];
