@@ -133,15 +133,15 @@ export function MatchCockpitSettingsPanel({
   // Handle sound preset change
   const handleSoundChange = useCallback(
     (value: string) => {
+      // Ein einziger onChange: zwei aufeinanderfolgende updateSetting-Aufrufe
+      // bauen beide auf demselben alten `settings` auf, der zweite überschriebe den ersten.
       if (value === 'none') {
-        updateSetting('soundEnabled', false);
-        updateSetting('soundId', null);
+        onChange({ ...settings, soundEnabled: false, soundId: null });
       } else {
-        updateSetting('soundEnabled', true);
-        updateSetting('soundId', value as MatchSoundPreset);
+        onChange({ ...settings, soundEnabled: true, soundId: value as MatchSoundPreset });
       }
     },
-    [updateSetting]
+    [settings, onChange]
   );
 
   // Handle custom sound upload
@@ -158,9 +158,7 @@ export function MatchCockpitSettingsPanel({
       const result = await storeCustomSound(tournamentId, file);
 
       if (result.success) {
-        updateSetting('hasCustomSound', true);
-        updateSetting('soundId', 'custom');
-        updateSetting('soundEnabled', true);
+        onChange({ ...settings, hasCustomSound: true, soundId: 'custom', soundEnabled: true });
       } else {
         setUploadError(result.error ?? t('settings.uploadFailed'));
       }
@@ -172,17 +170,18 @@ export function MatchCockpitSettingsPanel({
         fileInputRef.current.value = '';
       }
     },
-    [tournamentId, updateSetting, t]
+    [tournamentId, settings, onChange, t]
   );
 
   // Handle custom sound delete
   const handleDeleteCustomSound = useCallback(async () => {
     await deleteCustomSound(tournamentId);
-    updateSetting('hasCustomSound', false);
-    if (settings.soundId === 'custom') {
-      updateSetting('soundId', 'horn-1');
-    }
-  }, [tournamentId, settings.soundId, updateSetting]);
+    onChange({
+      ...settings,
+      hasCustomSound: false,
+      ...(settings.soundId === 'custom' ? { soundId: 'horn-1' as const } : {}),
+    });
+  }, [tournamentId, settings, onChange]);
 
   // Get current sound value for select
   const currentSoundValue = settings.soundEnabled && settings.soundId
