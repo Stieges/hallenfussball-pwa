@@ -343,6 +343,7 @@
     "notUploaded": "(not uploaded)",
     "test": "Test",
     "testSound": "Test sound",
+    "listen": "Listen",
     "volume": "Volume",
     "volumePercent": "{{percent}}%",
     "volumeAria": "Volume",

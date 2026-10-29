@@ -343,6 +343,7 @@
     "notUploaded": "(nicht hochgeladen)",
     "test": "Test",
     "testSound": "Sound testen",
+    "listen": "Anhören",
     "volume": "Lautstärke",
     "volumePercent": "{{percent}}%",
     "volumeAria": "Lautstärke",

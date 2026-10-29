@@ -21,6 +21,11 @@ export function groupKeyOf(group?: string | null): string {
   return group === undefined || group === null || group === '' || group === 'all' ? OVERALL_GROUP : group;
 }
 
+/** Gehört das Spiel/Team zur einen Gruppe von „Jeder gegen jeden“ (fehlend, leer, `'all'`)? Dann gibt es nichts anzuzeigen (@ZM-177). */
+export function isSingleGroupId(group?: string | null): boolean {
+  return groupKeyOf(group) === OVERALL_GROUP;
+}
+
 export interface StandingsGroup<T> {
   group: string;
   teams: T[];

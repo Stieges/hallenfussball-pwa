@@ -45,7 +45,7 @@ for (const thema of ['light', 'dark'] as const) {
       await page.setViewportSize({ width: 360, height: 640 });
       await installiereSaat(page.context(), leseSaat('hallencup-messlauf'));
       await page.goto('/#/tournament/hallencup-entwurf/edit?step=5');
-      await page.getByRole('button', { name: /Logo & Farben/ }).first().click();
+      await page.getByRole('button', { name: /Farbe & Logo/ }).first().click();
       await pruefe(page, `wizard-teams-farbauswahl-360x640-${t}`);
     });
 

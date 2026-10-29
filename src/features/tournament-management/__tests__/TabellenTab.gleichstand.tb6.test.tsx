@@ -114,12 +114,13 @@ describe('App-Tabelle mit Gruppen: der Hinweis steht in der Gruppe, die ihn brau
 });
 
 describe('Zuschauer-Ansicht: nur Reihenfolge und gemeinsame Ziffer (@W2A-059, @W2A-072)', () => {
-  it('@W2A-059 Gleichstand offen: Petting und Otting beide auf 3, dahinter 5 – keine Marke, kein Hinweis, kein Wort „Strafstoß“', async () => {
+  it('@W2A-059 Gleichstand offen: Petting und Otting beide auf 3, dahinter 5 – nur die kurze Markierung „Strafstoß folgt“ (R5), keine App-Marke, kein Hinweis', async () => {
     await zeigeZuschauer(nikolaus([1, 2, 3]));
     expect([platz(NAME.P), platz(NAME.D), platz(NAME.F)]).toEqual(['3', '3', '5']);
     expect(screen.queryByTestId('tie-marker')).toBeNull();
     expect(screen.queryByTestId('tie-hints')).toBeNull();
-    expect(document.body.textContent).not.toMatch(/Strafstoß|Entscheidung nötig|Gleicher Platz/);
+    expect(new Set(screen.getAllByTestId('public-tie-mark').map((m) => m.textContent))).toEqual(new Set(['Strafstoß folgt'])); // Desktop- und Handy-Tabelle je Team
+    expect(document.body.textContent).not.toMatch(/Strafstoßschießen|Entscheidung nötig|Gleicher Platz/);
   });
 
   it('@W2A-059 entschieden (Strafstoßschießen 4:3): nur die Reihenfolge, weder Ergebnis noch Marke; Gegenbeispiel: dieselben Daten in der App zeigen sie', async () => {

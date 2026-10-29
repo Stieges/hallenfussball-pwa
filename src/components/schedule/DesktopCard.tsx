@@ -11,6 +11,7 @@ import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { SpectatorClock } from '../../core/view';
 import type { ScheduleSource } from './scheduleSource';
+import { isSingleGroupId } from '../../core/models/standingsGroups';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { buildSideContext, matchHeading, matchViewOf, sideDisplay, type SideContext } from './matchSides';
 import { resultFigures } from './matchResult';
@@ -86,7 +87,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         scheduledTime={match.time}
         field={match.field}
         referee={match.referee ? t('matchCard.refereeSR', { referee: match.referee }) : undefined}
-        group={matchHeading(match, sides) ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined)}
+        group={matchHeading(match, sides) ?? (match.group && !isSingleGroupId(match.group) ? getGroupShortCode(match.group, tournament) : undefined)}
         showGroupLabel={showGroupLabel}
         homeTeam={sideDisplay(match, 'A', sides)}
         awayTeam={sideDisplay(match, 'B', sides)}

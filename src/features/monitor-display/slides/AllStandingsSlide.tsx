@@ -4,6 +4,7 @@ import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorTheme } from '../../../types/monitor';
+import { groupTieView } from '../../../core/standings/tieViews';
 import { calculateStandings } from '../../../utils/calculations';
 import { getGroupDisplayName, resolveTheme } from '../monitorDisplayHelpers';
 import { finalRoundMatches, standingsSections, type StandingsSection } from '../slideContent';
@@ -49,7 +50,7 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: 
     return (
       <div style={style}>
         <SlideHeading icon="standings" color={colors.text}>{name}</SlideHeading>
-        <StandingsTable rows={standings} themeColors={colors} />
+        <StandingsTable rows={standings} themeColors={colors} tie={groupTieView(tournament, section.kind === 'group' ? section.groupId : '')} />
         <SlidePageHint page={index} pages={sections.length} color={colors.textMuted} />
       </div>
     );

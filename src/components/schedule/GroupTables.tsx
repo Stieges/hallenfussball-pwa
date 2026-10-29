@@ -29,6 +29,8 @@ interface GroupTablesProps {
   /** Nur bei `app`: Hinweise einer Gruppe (`''` = Jeder gegen jeden) und Marke je Team. */
   renderTieHint?: (groupId: string) => ReactNode;
   renderTieMarker?: (teamId: string, groupId: string) => ReactNode;
+  /** Nur bei `public` (@W2A-059): kurze Markierung eines offenen Gleichstands unter dem Teamnamen, ohne Erklärtext. */
+  renderPublicTieMarker?: (teamId: string, groupId: string) => ReactNode;
   /**
    * GA4 A-13c: Zustandsmarken neben dem Gruppennamen (`marks`) und Zähler, gesperrte Taste und Abschluss-Hinweis darunter (`below`);
    * nur bei `app`. `null` = nichts für diese Gruppe.
@@ -44,11 +46,16 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   tieDisplay = 'public',
   renderTieHint,
   renderTieMarker,
+  renderPublicTieMarker,
   renderGroupState,
 }) => {
   const { t } = useTranslation('tournament');
   const groupStandings = getGroupStandings(standings, teams);
   const tieApp = tieDisplay === 'app';
+  const tieMarkerFor = (group: string): ((teamId: string) => ReactNode) | undefined => {
+    const render = tieApp ? renderTieMarker : renderPublicTieMarker;
+    return render ? (teamId) => render(teamId, group) : undefined;
+  };
 
   if (groupStandings.length === 0) {
     return (
@@ -83,7 +90,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
             tournament={tournament}
             activeMatchTeamIds={activeMatchTeamIds}
             tieHint={tieApp ? renderTieHint?.(group) : undefined}
-            tieMarker={tieApp && renderTieMarker ? (teamId) => renderTieMarker(teamId, group) : undefined}
+            tieMarker={tieMarkerFor(group)}
             groupState={tieApp ? renderGroupState?.(group) ?? undefined : undefined}
           />
         ))}

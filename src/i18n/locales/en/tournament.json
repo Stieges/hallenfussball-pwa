@@ -1182,6 +1182,10 @@
     "closedSaveBlocked": "The tournament is finished – the change was not saved."
   },
   "standingsTie": {
+    "publicMark": {
+      "follows": "Penalty shootout follows",
+      "deciding": "to be decided"
+    },
     "marker": {
       "need": "Penalty shootout needed",
       "open": "Tie – decision needed",

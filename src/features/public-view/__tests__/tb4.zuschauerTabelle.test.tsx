@@ -1,6 +1,6 @@
 /**
- * Paket TB, Task TB-4: Zuschauer-Seite „Tabellen“ je Gruppe nach BFV privat, Platzziffer aus der Rechnung, keine
- * Markierung (Szenarien @W2A-049 Zuschauer, @W2A-059, @W2A-047, @ET-055). Ganze Kette Turnier -> usePublicTournament ->
+ * Paket TB, Task TB-4: Zuschauer-Seite „Tabellen“ je Gruppe nach BFV privat, Platzziffer aus der Rechnung, nur mit
+ * der kurzen Markierung aus R5 (@W2A-059, siehe w2a059.zuschauerMarkierung.test.tsx; Szenarien @W2A-049 Zuschauer, @W2A-059, @W2A-047, @ET-055). Ganze Kette Turnier -> usePublicTournament ->
  * PublicStandingsTab -> GroupTables. Daten: Plan v2 Abschnitt 6.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -43,10 +43,10 @@ describe('TB-4 Zuschauer-Tabelle', () => {
     expect(zeilen().slice(0, 2).map(([, name]) => name)).toEqual([NAME.R, NAME.K]);
   });
 
-  it('@W2A-059 @ET-055 Zuschauer: offener Gleichstand zeigt dieselbe Platzziffer 3, 3, 5 und keine Markierung', async () => {
+  it('@W2A-059 @ET-055 Zuschauer: offener Gleichstand zeigt dieselbe Platzziffer 3, 3, 5 und keinen Erklärtext der Leitung', async () => {
     const { container } = await zuschauerTabelle(zweiGruppenWaging(DATA.ET_055));
     expect([ziffer(NAME.R), ziffer(NAME.K), ziffer(NAME.N)]).toEqual([['3'], ['3'], ['5']]);
-    expect(container.textContent ?? '').not.toMatch(/gleichauf|Entscheidung nötig|Strafstoß/i);
+    expect(container.textContent ?? '').not.toMatch(/gleichauf|Entscheidung nötig|Strafstoßschießen/i);
     expect(container.querySelector('[data-testid="tie-marker"]')).toBeNull();
   });
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
+import { TeamDetailsToggle } from '../../components/ui/molecules/TeamDetailsToggle';
 import { Card, Button, Input, Icons, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -323,32 +324,15 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     )}
                   </div>
 
-                  {/* Expand button for logo/color editing */}
-                  <button
-                    type="button"
-                    onClick={() => toggleExpanded(team.id)}
-                    style={{
-                      flexShrink: 0,
-                      width: 44,
-                      height: 44,
-                      minWidth: 44,
-                      minHeight: 44,
-                      padding: 0,
-                      background: cssVars.colors.surface,
-                      border: `1px solid ${cssVars.colors.borderControl}`,
-                      borderRadius: cssVars.borderRadius.md,
-                      color: cssVars.colors.textSecondary,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s',
-                    }}
-                    aria-expanded={isExpanded}
-                    aria-label={isExpanded ? t('step4.collapseLabel') : t('step4.expandLabel')}
-                  >
-                    {isExpanded ? '▲' : '▼'}
-                  </button>
+                  {/* @W3-039: beschrifteter Knopf „Farbe & Logo“ mit Farbpunkt statt nacktem Pfeil */}
+                  <TeamDetailsToggle
+                    label={t('step4.expandLabel')}
+                    expanded={isExpanded}
+                    onToggle={() => toggleExpanded(team.id)}
+                    color={team.colors?.primary}
+                    colorLabel={t('step4.colorChosen')}
+                    data-testid={`wizard-team-details-${team.id}`}
+                  />
 
                   <button
                     onClick={() => onRemoveTeam(team.id)}
