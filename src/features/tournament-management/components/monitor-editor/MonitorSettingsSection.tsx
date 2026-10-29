@@ -106,7 +106,10 @@ export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }:
             id={`${id}-transition`}
             style={selectStyle}
             value={monitor.transition}
-            onChange={(e) => onUpdateSettings({ transition: pick(transitions, e.target.value) })}
+            onChange={(e) => {
+              const value = pick(transitions, e.target.value);
+              if (value) {onUpdateSettings({ transition: value });}
+            }}
           >
             {transitions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -118,7 +121,10 @@ export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }:
             id={`${id}-performance`}
             style={selectStyle}
             value={monitor.performanceMode}
-            onChange={(e) => onUpdateSettings({ performanceMode: pick(performances, e.target.value) })}
+            onChange={(e) => {
+              const value = pick(performances, e.target.value);
+              if (value) {onUpdateSettings({ performanceMode: value });}
+            }}
           >
             {performances.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -131,7 +137,10 @@ export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }:
             data-testid="monitor-theme-select"
             style={selectStyle}
             value={monitor.theme}
-            onChange={(e) => onUpdateSettings({ theme: pick(themes, e.target.value) })}
+            onChange={(e) => {
+              const value = pick(themes, e.target.value);
+              if (value) {onUpdateSettings({ theme: value });}
+            }}
           >
             {themes.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>

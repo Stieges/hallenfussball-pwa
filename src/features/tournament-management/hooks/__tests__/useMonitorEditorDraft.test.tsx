@@ -58,6 +58,8 @@ describe('useMonitorEditorDraft', () => {
     await act(async () => { fertig(); await Promise.all([p1, p2]); });
     expect(result.current.isSaving).toBe(false);
     expect(saveMonitor).toHaveBeenCalledTimes(1);
+    expect(await p1).toBe('saved');
+    expect(await p2).toBe('busy');
   });
 
   it('@ME-071 scheitert das Speichern: Entwurf unverändert, saveError gesetzt, „failed“', async () => {

@@ -71,6 +71,7 @@ export function MonitorEditorDialog({ tournament, stored, onTournamentUpdate, on
       } else if (result === 'unchanged') {
         onClose();
       }
+      // 'busy': ein Speichern läuft schon, nichts tun
     } finally {
       clickGuard.current = false;
     }

@@ -4,7 +4,7 @@
  * @see docs/anforderungen/2026-10-03_monitor-einrichten.md
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, TournamentMonitor } from '../../../types/monitor';
@@ -114,6 +114,43 @@ describe('@ME-071 Änderungen gelten erst mit „Speichern“', () => {
     expect(screen.queryByText('Änderungen verwerfen?')).toBeNull();
   });
 
+  it('Zurück-Taste mit Änderung: genau eine Rückfrage; „Weiter bearbeiten“; erneut Zurück: wieder genau eine', async () => {
+    const { user, onClose } = oeffnen();
+    await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    act(() => { window.history.back(); });
+    expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Weiter bearbeiten' }));
+    await waitFor(() => expect(screen.queryByText('Änderungen verwerfen?')).toBeNull());
+    act(() => { window.history.back(); });
+    expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByLabelText<HTMLSelectElement>('Slide-Dauer (Sek.)').value).toBe('30');
+  });
+
+  it('Klick auf die Abdunkelung mit Änderung: Rückfrage; Gegenbeispiel ohne Änderung schließt sofort', async () => {
+    const mit = oeffnen();
+    await mit.user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
+    fireEvent.click(document.querySelector('.dialog-surface-scrim')!);
+    expect(await screen.findByText('Änderungen verwerfen?')).toBeInTheDocument();
+    expect(mit.onClose).not.toHaveBeenCalled();
+  });
+
+  it('Gegenbeispiel: Abdunkelung ohne Änderung schließt ohne Rückfrage', () => {
+    const { onClose } = oeffnen();
+    fireEvent.click(document.querySelector('.dialog-surface-scrim')!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Änderungen verwerfen?')).toBeNull();
+  });
+
+  it('Folie anlegen, dann „Abbrechen“: nichts gespeichert', async () => {
+    const { user, onUpdate, onClose } = oeffnen();
+    await user.click(screen.getByRole('button', { name: /Slide hinzufügen/ }));
+    await user.click(screen.getByRole('button', { name: /Nächste Spiele/ }));
+    await user.click(screen.getByTestId('monitor-editor-cancel'));
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('Speichern scheitert: Meldung im Fuß, Dialog und Eingabe bleiben', async () => {
     const { user, onClose, speichern } = oeffnen(monitor(), vi.fn().mockRejectedValue(new Error('offline')));
     await user.selectOptions(screen.getByLabelText('Slide-Dauer (Sek.)'), '30');
@@ -172,8 +209,18 @@ describe('@ME-072 Name mit Leerzeichen und Prüfung beim Speichern', () => {
     const { user, speichern, gespeichert } = oeffnen();
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), '  Halle Nord  ');
+    expect(screen.getByLabelText('Name')).toHaveValue('  Halle Nord  ');
     await speichern();
     await waitFor(() => expect(gespeichert().name).toBe('Halle Nord'));
+  });
+
+  it('im Feld steht „Halle Nord“ mit dem Leerzeichen, nicht gekürzt', async () => {
+    const { user } = oeffnen();
+    await user.clear(screen.getByLabelText('Name'));
+    await user.type(screen.getByLabelText('Name'), 'Halle Nord');
+    expect(screen.getByLabelText('Name')).toHaveValue('Halle Nord');
+    await user.type(screen.getByLabelText('Name'), ' ');
+    expect(screen.getByLabelText('Name')).toHaveValue('Halle Nord ');
   });
 
   it.each([

@@ -86,6 +86,11 @@ test.describe('@ME-071 @ME-072 Monitor-Editor mit Speichern und Abbrechen', () =
     await page.getByTestId('monitor-editor-close').click();
     await expect(page.getByText('Änderungen verwerfen?')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Weiter bearbeiten' })).toBeFocused();
+    // Einblendung abwarten: die Fläche der Rückfrage muss deckend sein
+    await expect.poll(() => page.evaluate(() => {
+      const panels = [...document.querySelectorAll<HTMLElement>('[role="alertdialog"], [role="dialog"]')];
+      return Math.min(...panels.map((p) => Number(getComputedStyle(p).opacity)));
+    })).toBe(1);
     await bild(page, testInfo, 'rueckfrage-laptop-1440x900');
     await page.getByRole('button', { name: 'Weiter bearbeiten' }).click();
 

@@ -17,7 +17,7 @@ import {
 } from '../components/monitor-editor/monitorDraft';
 import { validateMonitorName, type MonitorNameError } from '../components/monitor-editor/validateMonitorName';
 
-export type MonitorSaveResult = 'saved' | 'unchanged' | 'invalid' | 'failed';
+export type MonitorSaveResult = 'saved' | 'unchanged' | 'invalid' | 'failed' | 'busy';
 
 export interface UseMonitorEditorDraftResult {
   draft: TournamentMonitor;
@@ -69,7 +69,7 @@ export function useMonitorEditorDraft(
 
   const save = useCallback(async (): Promise<MonitorSaveResult> => {
     if (savingRef.current) {
-      return 'unchanged';
+      return 'busy';
     }
     setNameChecked(true);
     if (validateMonitorName(draftRef.current.name, otherNames) !== null) {
