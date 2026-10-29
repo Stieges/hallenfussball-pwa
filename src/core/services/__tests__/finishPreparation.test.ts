@@ -86,6 +86,37 @@ describe('@LZ-010 @LZ-012 @LZ-013 Abschluss wird verweigert, solange etwas offen
   });
 });
 
+describe('W-M (a) offene Klärungen meldet der Server selbst – je Eintrag genau ein Punkt', () => {
+  const vomServer = (eventId: string) => ({ kind: 'review_open' as const, eventId, matchId: 'hf2', matchNumber: 14, field: 1 });
+
+  it('@LZ-012 der Server nennt die zwei Klärungen schon, die Klärungsliste der App auch → weiter genau 3 Einträge', async () => {
+    const tournament = await nikolausFertig();
+    const laeuft = { kind: 'match_running' as const, matchId: 'p3', matchNumber: 15, field: 2, finalType: 'thirdPlace' };
+    const result = prepareFinish(await input({
+      tournament,
+      preflight: preflightFor(tournament, { canFinish: false, items: [laeuft, vomServer('k1'), vomServer('k2')] }),
+      reviews: [review({ eventId: 'k1' }), review({ eventId: 'k2' })],
+    }));
+    if (result.ok || result.blocker.code !== 'OPEN_ITEMS') { throw new Error('erwartet: OPEN_ITEMS'); }
+    expect(result.blocker.items).toEqual([laeuft, vomServer('k1'), vomServer('k2')]);
+  });
+
+  it('@LZ-010 Zeile Klärung: die App sieht die Klärungsliste nicht (leer), der Server nennt den Eintrag → Abschluss aufgehalten', async () => {
+    const tournament = await nikolausFertig();
+    expect(prepareFinish(await input({ tournament, preflight: preflightFor(tournament, { canFinish: false, items: [vomServer('tor-tom')] }) })))
+      .toEqual({ ok: false, blocker: { code: 'OPEN_ITEMS', items: [vomServer('tor-tom')] } });
+  });
+
+  it('Gegenbeispiel: eine Klärung, die der Server (noch) nicht nennt, ergänzt die App weiterhin', async () => {
+    const tournament = await nikolausFertig();
+    const result = prepareFinish(await input({
+      tournament, preflight: preflightFor(tournament, { canFinish: false, items: [vomServer('k1')] }), reviews: [review({ eventId: 'k1' }), review({ eventId: 'neu' })],
+    }));
+    if (result.ok || result.blocker.code !== 'OPEN_ITEMS') { throw new Error('erwartet: OPEN_ITEMS'); }
+    expect(result.blocker.items.map((item) => (item.kind === 'review_open' ? item.eventId : item.kind))).toEqual(['k1', 'neu']);
+  });
+});
+
 describe('Plan R3 E4: die App rechnet nur auf dem bestätigten Serverstand', () => {
   it('eigener Ausgang: das Gerät zeigt ein Tor, das noch wartet → „Erst übertragen“, kein Abschluss (kein STALE_STATE-Kreis)', async () => {
     const server = await nikolausFertig();

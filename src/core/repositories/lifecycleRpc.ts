@@ -38,21 +38,23 @@ const NoticeItemSchema = z.object({ kind: z.literal('notice_open'), noticeId: z.
 const ClarificationItemSchema = z.object({
   kind: z.literal('clarification_open'), clarificationId: z.number().int(), matchId: z.string().optional(), groupId: z.string().optional(),
 });
-const ServerItemSchema = z.discriminatedUnion('kind', [MatchItemSchema, GroupItemSchema, TieItemSchema, NoticeItemSchema, ClarificationItemSchema]);
+/**
+ * Offener Eintrag der Klärungsliste (W-M (a), Migration 20261118_004: `finish_open_items` meldet ihn; bis dahin nur aus
+ * `list_match_reviews` in der App, Plan R3 E5). Gleiche Form an beiden Quellen, Sprungziel Klärungsliste.
+ */
+const ReviewItemSchema = z.object({
+  kind: z.literal('review_open'), eventId: z.string(), matchId: z.string(), matchNumber: optionalInt, field: optionalInt,
+});
+const ServerItemSchema = z.discriminatedUnion('kind', [
+  MatchItemSchema, GroupItemSchema, TieItemSchema, NoticeItemSchema, ClarificationItemSchema, ReviewItemSchema,
+]);
 
 /** Offener Punkt vom Server; eine unbekannte Art hält den Abschluss trotzdem auf (`unknown`, nichts verschwindet still). */
 export type ServerFinishItem = z.infer<typeof ServerItemSchema> | { kind: 'unknown'; serverKind: string };
 
-/** Plan R3 E5: offener Eintrag der Klärungsliste (aus `list_match_reviews`, bis W-M nur in der App geprüft). */
-export interface ReviewOpenItem {
-  kind: 'review_open';
-  eventId: string;
-  matchId: string;
-  matchNumber?: number;
-  field?: number;
-}
+export type ReviewOpenItem = z.infer<typeof ReviewItemSchema>;
 
-export type FinishItem = ServerFinishItem | ReviewOpenItem;
+export type FinishItem = ServerFinishItem;
 
 const WarningSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('outbox_pending'), field: optionalInt, pending: z.number().int(), reportedAt: z.string(), deviceId: z.string() }),
