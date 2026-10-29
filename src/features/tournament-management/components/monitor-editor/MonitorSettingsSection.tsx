@@ -1,12 +1,18 @@
 /**
- * Einstellungen des Monitor-Editors (M1a ausgelagert): Name, Folienzeit, Wechsel, Darstellung, Farbschema, Bildrand.
+ * Einstellungen des Monitor-Editors: Name, Folienzeit, Wechsel, Darstellung, Farbschema, Bildrand.
+ * Alles wirkt nur auf den Entwurf (@ME-071); Fehler des Namens stehen am Feld (@ME-072).
  */
 
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MonitorTheme, PerformanceMode, TournamentMonitor, TransitionType } from '../../../../types/monitor';
 import { MonitorOverscanField } from '../MonitorOverscanField';
+import type { MonitorSettingsUpdate } from './monitorDraft';
+import type { MonitorNameError } from './validateMonitorName';
 import {
+  fieldErrorStyle,
   inputGroupStyle,
+  inputInvalidStyle,
   inputStyle,
   labelStyle,
   sectionStyle,
@@ -15,64 +21,78 @@ import {
   settingsGridStyle,
 } from './monitorEditorStyles';
 
-const TRANSITION_OPTIONS: { value: TransitionType; labelKey: string }[] = [
-  { value: 'fade', labelKey: 'monitorEditor.settings.transitions.fade' },
-  { value: 'slide', labelKey: 'monitorEditor.settings.transitions.slide' },
-  { value: 'none', labelKey: 'monitorEditor.settings.transitions.none' },
-];
-
-const PERFORMANCE_OPTIONS: { value: PerformanceMode; labelKey: string; descriptionKey: string }[] = [
-  { value: 'auto', labelKey: 'monitorEditor.settings.performance.auto', descriptionKey: 'monitorEditor.settings.performance.autoDesc' },
-  { value: 'high', labelKey: 'monitorEditor.settings.performance.high', descriptionKey: 'monitorEditor.settings.performance.highDesc' },
-  { value: 'low', labelKey: 'monitorEditor.settings.performance.low', descriptionKey: 'monitorEditor.settings.performance.lowDesc' },
-];
-
-const THEME_OPTIONS: { value: MonitorTheme; labelKey: string; descriptionKey: string }[] = [
-  { value: 'dark', labelKey: 'monitorEditor.settings.themes.dark', descriptionKey: 'monitorEditor.settings.themes.darkDesc' },
-  { value: 'light', labelKey: 'monitorEditor.settings.themes.light', descriptionKey: 'monitorEditor.settings.themes.lightDesc' },
-  { value: 'auto', labelKey: 'monitorEditor.settings.themes.auto', descriptionKey: 'monitorEditor.settings.themes.autoDesc' },
-];
-
 const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
 
 interface MonitorSettingsSectionProps {
   monitor: TournamentMonitor;
-  onUpdateSettings: (updates: {
-    name?: string;
-    defaultSlideDuration?: number;
-    transition?: TransitionType;
-    transitionDuration?: number;
-    performanceMode?: PerformanceMode;
-    theme?: MonitorTheme;
-    overscanPercent?: number;
-  }) => Promise<void>;
+  nameError: MonitorNameError | null;
+  onUpdateSettings: (updates: MonitorSettingsUpdate) => void;
 }
 
-export function MonitorSettingsSection({ monitor, onUpdateSettings }: MonitorSettingsSectionProps) {
+interface Option<V extends string> {
+  value: V;
+  label: string;
+}
+
+/** Wert aus einer Auswahl zurückholen, ohne Typ-Umwandlung: nur ein vorhandener Wert zählt. */
+function pick<V extends string>(options: readonly Option<V>[], raw: string): V | undefined {
+  return options.find(o => o.value === raw)?.value;
+}
+
+export function MonitorSettingsSection({ monitor, nameError, onUpdateSettings }: MonitorSettingsSectionProps) {
   const { t } = useTranslation('tournament');
+  const id = useId();
+
+  const transitions: Option<TransitionType>[] = [
+    { value: 'fade', label: t('monitorEditor.settings.transitions.fade') },
+    { value: 'slide', label: t('monitorEditor.settings.transitions.slide') },
+    { value: 'none', label: t('monitorEditor.settings.transitions.none') },
+  ];
+  const performances: Option<PerformanceMode>[] = [
+    { value: 'auto', label: t('monitorEditor.settings.performance.auto') },
+    { value: 'high', label: t('monitorEditor.settings.performance.high') },
+    { value: 'low', label: t('monitorEditor.settings.performance.low') },
+  ];
+  const themes: Option<MonitorTheme>[] = [
+    { value: 'dark', label: t('monitorEditor.settings.themes.dark') },
+    { value: 'light', label: t('monitorEditor.settings.themes.light') },
+    { value: 'auto', label: t('monitorEditor.settings.themes.auto') },
+  ];
+
+  const nameId = `${id}-name`;
+  const nameErrorId = `${id}-name-error`;
 
   return (
     <div style={sectionStyle}>
       <h3 style={sectionTitleStyle}>{t('monitorEditor.settings.title')}</h3>
       <div style={settingsGridStyle}>
-        {/* Name */}
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>{t('monitorEditor.settings.name')}</label>
+          <label htmlFor={nameId} style={labelStyle}>{t('monitorEditor.settings.name')}</label>
           <input
+            id={nameId}
+            data-testid="monitor-name-input"
             type="text"
-            style={inputStyle}
+            style={nameError ? { ...inputStyle, ...inputInvalidStyle } : inputStyle}
             value={monitor.name}
-            onChange={(e) => void onUpdateSettings({ name: e.target.value })}
+            aria-invalid={nameError !== null}
+            aria-describedby={nameError ? nameErrorId : undefined}
+            onChange={(e) => onUpdateSettings({ name: e.target.value })}
           />
+          {nameError && (
+            <div id={nameErrorId} role="alert" data-testid="monitor-name-error" style={fieldErrorStyle}>
+              {t(`monitors.errors.${nameError}`)}
+            </div>
+          )}
         </div>
 
-        {/* Duration */}
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>{t('monitorEditor.settings.slideDuration')}</label>
+          <label htmlFor={`${id}-duration`} style={labelStyle}>{t('monitorEditor.settings.slideDuration')}</label>
           <select
+            id={`${id}-duration`}
+            data-testid="monitor-duration-select"
             style={selectStyle}
             value={monitor.defaultSlideDuration}
-            onChange={(e) => void onUpdateSettings({ defaultSlideDuration: Number(e.target.value) })}
+            onChange={(e) => onUpdateSettings({ defaultSlideDuration: Number(e.target.value) })}
           >
             {DURATION_PRESETS.map(d => (
               <option key={d} value={d}>{d}s</option>
@@ -80,52 +100,47 @@ export function MonitorSettingsSection({ monitor, onUpdateSettings }: MonitorSet
           </select>
         </div>
 
-        {/* Transition */}
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>{t('monitorEditor.settings.transition')}</label>
+          <label htmlFor={`${id}-transition`} style={labelStyle}>{t('monitorEditor.settings.transition')}</label>
           <select
+            id={`${id}-transition`}
             style={selectStyle}
             value={monitor.transition}
-            onChange={(e) => void onUpdateSettings({ transition: e.target.value as TransitionType })}
+            onChange={(e) => onUpdateSettings({ transition: pick(transitions, e.target.value) })}
           >
-            {TRANSITION_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-            ))}
+            {transitions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
 
-        {/* Performance Mode */}
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>{t('monitorEditor.settings.performanceLabel')}</label>
+          <label htmlFor={`${id}-performance`} style={labelStyle}>{t('monitorEditor.settings.performanceLabel')}</label>
           <select
+            id={`${id}-performance`}
             style={selectStyle}
             value={monitor.performanceMode}
-            onChange={(e) => void onUpdateSettings({ performanceMode: e.target.value as PerformanceMode })}
+            onChange={(e) => onUpdateSettings({ performanceMode: pick(performances, e.target.value) })}
           >
-            {PERFORMANCE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-            ))}
+            {performances.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
 
-        {/* Theme */}
         <div style={inputGroupStyle}>
-          <label style={labelStyle}>{t('monitorEditor.settings.themeLabel')}</label>
+          <label htmlFor={`${id}-theme`} style={labelStyle}>{t('monitorEditor.settings.themeLabel')}</label>
           <select
+            id={`${id}-theme`}
+            data-testid="monitor-theme-select"
             style={selectStyle}
             value={monitor.theme}
-            onChange={(e) => void onUpdateSettings({ theme: e.target.value as MonitorTheme })}
+            onChange={(e) => onUpdateSettings({ theme: pick(themes, e.target.value) })}
           >
-            {THEME_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
-            ))}
+            {themes.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
 
         {/* Bildrand in Prozent (@ME-067) */}
         <MonitorOverscanField
           value={monitor.overscanPercent}
-          onChange={(overscanPercent) => void onUpdateSettings({ overscanPercent })}
+          onChange={(overscanPercent) => onUpdateSettings({ overscanPercent })}
         />
       </div>
     </div>
