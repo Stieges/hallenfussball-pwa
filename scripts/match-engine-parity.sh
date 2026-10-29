@@ -121,6 +121,10 @@ R8_FILE=""  # R8 (20261118_001): fasst matches_bump_change_revision neu -- nach 
 # Kette. Pflicht wie A-34.
 M1_MIGRATION="20261118_002_spielregeln_zeitstrafe_schuetzen.sql"
 M1_FILE=""
+# W-M (20261118_004): fasst finish_open_items und final_standings_payload neu (Basis 20261113_003) -- jedes erneute Einspielen von
+# A21AS_FILE (20261113_003) stellte die alte Fassung wieder her, deshalb ans Ende jeder Kette. Pflicht wie M1.
+WM_MIGRATION="20261118_004_abschluss_nachzug.sql"
+WM_FILE=""
 # A-35 Klaerungsliste (20261117_005): fasst append_match_events (Klaerung) und match_apply_event (Kopie eines
 # uebernommenen Klaerungseintrags, Fixtures 71a-71e) neu und liegt ueber A-21a-S -- nach jedem erneuten Einspielen von _009
 # ebenfalls erneut, in Fenster-Reihenfolge (sonst stuende die aeltere Fassung). Optional: fehlt die Datei, entfaellt sie.
@@ -176,6 +180,7 @@ while IFS= read -r line; do
     "$A21AS_MIGRATION") A21AS_FILE="$line" ;;
     20261118_001_verschieben_server.sql) R8_FILE="$line" ;;
     "$M1_MIGRATION") M1_FILE="$line" ;;
+    "$WM_MIGRATION") WM_FILE="$line" ;;
     "$A35_MIGRATION") A35_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
@@ -193,6 +198,10 @@ if [[ -z "$A21AS_FILE" ]]; then
 fi
 if [[ -z "$M1_FILE" ]]; then
   echo "::error::$M1_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie liefen die Regel-Fixtures 35-41 still gegen server_rules mit 120 s/5 Schuetzen." >&2
+  exit 1
+fi
+if [[ -z "$WM_FILE" ]]; then
+  echo "::error::$WM_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still finish_open_items und final_standings_payload in der Fassung von 20261113_003." >&2
   exit 1
 fi
 if [[ -z "$A34_FILE" && true ]]; then
@@ -278,6 +287,7 @@ psql_stdin < "$SB_FILE"
 reapply_after_sb
 if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi  # R8: Zaehlung um original_start nach 20261028_005 zurueck
 psql_stdin < "$M1_FILE"  # M1: server_rules nach dem erneuten 20261028_001 zurueck
+psql_stdin < "$WM_FILE"  # W-M: finish_open_items/final_standings_payload nach dem erneuten 20261113_003 zurueck
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
 # Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
@@ -366,6 +376,7 @@ sys.stdout.write(s)' < "$A25B_FILE" | psql_stdin
   reapply_after_sb
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi  # R8: Zaehlung um original_start nach 20261028_005 zurueck
   psql_stdin < "$M1_FILE"  # M1: server_rules nach dem erneuten 20261028_001 zurueck
+  psql_stdin < "$WM_FILE"  # W-M: finish_open_items/final_standings_payload nach dem erneuten 20261113_003 zurueck
 }
 
 if [[ "$MODE" == "gegenprobe" ]]; then
@@ -632,6 +643,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   reapply_after_sb
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi  # R8: Zaehlung um original_start nach 20261028_005 zurueck
   psql_stdin < "$M1_FILE"  # M1: server_rules nach dem erneuten 20261028_001 zurueck
+  psql_stdin < "$WM_FILE"  # W-M: finish_open_items/final_standings_payload nach dem erneuten 20261113_003 zurueck
   psql_stdin <<'SQL'
 UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
 GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;
