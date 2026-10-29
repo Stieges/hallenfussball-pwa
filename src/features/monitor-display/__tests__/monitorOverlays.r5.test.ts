@@ -10,6 +10,7 @@ import type { Match, RuntimeMatchEvent, Tournament } from '../../../types/tourna
 import type { MonitorSlide } from '../../../types/monitor';
 import { boundFieldNumbers, cardIdsOf, detectOverlays } from '../monitorOverlays';
 import { buildTournament, slide, withMatch } from './monitorFixture';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 /** Spiel 8 läuft (Feld 2): DJK Berg (Heim) – TuS Mitte. */
 const spiel8Laeuft = (patch: Partial<Match> = {}): Tournament =>
@@ -32,31 +33,37 @@ function detect(prev: Tournament, next: Tournament, slides: MonitorSlide[], seen
 }
 
 describe('@ZM-083 Tor-Einblendung nach Feld', () => {
-  const vorher = spiel8Laeuft();
-  // DJK Berg spielt in Spiel 8 links (Heim): 0:0 -> 1:0. (@ZM-083 nennt „0:1“ für Berg als Gast; Seite egal, Team zählt.)
-  const nachher = spiel8Laeuft({ scoreA: 1 });
+  // @ZM-083 wörtlich: „Clara trägt in Spiel 8 ein Tor für DJK Berg ein … der neue Stand 0:1“ – DJK Berg spielt als Gast.
+  const bergGast = (patch: Partial<Match> = {}): Tournament => spiel8Laeuft({ ...looseVs('team-mitte', 'team-berg'), ...patch });
+  const vorher = bergGast();
+  const nachher = bergGast({ scoreB: 1 });
 
   it('Hallenmonitor Feld 1: keine Tor-Einblendung für dieses Tor', () => {
     expect(detect(vorher, nachher, FELD_1).goals).toEqual([]);
   });
 
-  it('Hallenmonitor Eingang: Tor-Einblendung für DJK Berg in Spiel 8', () => {
+  it('Hallenmonitor Eingang: Tor-Einblendung für DJK Berg in Spiel 8, Stand 0:1', () => {
     const { goals } = detect(vorher, nachher, EINGANG);
     expect(goals).toHaveLength(1);
-    expect(goals[0]).toMatchObject({ matchId: 'match-8', teamId: 'team-berg', teamName: 'DJK Berg', side: 'home', newScore: { home: 1, away: 0 } });
+    expect(goals[0]).toMatchObject({ matchId: 'match-8', teamId: 'team-berg', teamName: 'DJK Berg', side: 'away', newScore: { home: 0, away: 1 } });
   });
 
   it('Hallenmonitor Feld 2 (Live-Folie von Spiel 8): Tor-Einblendung für DJK Berg', () => {
     expect(detect(vorher, nachher, FELD_2).goals.map((g) => g.teamName)).toEqual(['DJK Berg']);
   });
 
+  it('Gegenstück Heimseite: DJK Berg als Heim 0:0 -> 1:0 steht links', () => {
+    const { goals } = detect(spiel8Laeuft(), spiel8Laeuft({ scoreA: 1 }), EINGANG);
+    expect(goals[0]).toMatchObject({ teamName: 'DJK Berg', side: 'home', newScore: { home: 1, away: 0 } });
+  });
+
   it('Tor des Gastteams: Einblendung für TuS Mitte auf der Gastseite', () => {
-    const { goals } = detect(vorher, spiel8Laeuft({ scoreB: 1 }), EINGANG);
+    const { goals } = detect(spiel8Laeuft(), spiel8Laeuft({ scoreB: 1 }), EINGANG);
     expect(goals[0]).toMatchObject({ teamId: 'team-mitte', teamName: 'TuS Mitte', side: 'away', newScore: { home: 0, away: 1 } });
   });
 
   it('Tor in der Sekunde vor dem Abpfiff (vorher laufend, jetzt beendet) kommt trotzdem', () => {
-    expect(detect(vorher, spiel8Laeuft({ scoreA: 1, matchStatus: 'finished' }), EINGANG).goals).toHaveLength(1);
+    expect(detect(vorher, bergGast({ scoreB: 1, matchStatus: 'finished' }), EINGANG).goals).toHaveLength(1);
   });
 
   it('Tor während der Unterbrechung (paused) kommt', () => {

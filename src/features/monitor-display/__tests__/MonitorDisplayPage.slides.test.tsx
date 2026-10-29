@@ -10,6 +10,7 @@ import type { Match, RuntimeMatchEvent, Tournament } from '../../../types/tourna
 import {
   attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMatch, withMonitor,
 } from './monitorFixture';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
 const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
@@ -59,6 +60,9 @@ async function renderMonitor(tournament: Tournament, slides: MonitorSlide[]) {
 function tabelle(flags: Partial<Tournament> = {}): Tournament {
   return buildTournament({ ...flags, matches: withMatch('match-7', { scoreA: undefined, scoreB: undefined }) });
 }
+
+/** @ZM-083 wörtlich: DJK Berg spielt in Spiel 8 als Gast (TuS Mitte – DJK Berg), Tor -> 0:1. */
+const BERG_GAST: Partial<Match> = looseVs('team-mitte', 'team-berg');
 
 /** Spiel 8 läuft auf Feld 2 (DJK Berg – TuS Mitte); `patch` ändert den Stand bzw. die Ereignisse. */
 const spiel8 = (patch: Partial<Match> = {}): Tournament =>
@@ -181,22 +185,23 @@ describe('MonitorDisplayPage — Einblendungen (Tor)', { timeout: 15_000 }, () =
   afterEach(() => { vi.useRealTimers(); });
 
   it('@ZM-083 Eingang: Tor in Spiel 8 (DJK Berg) wird im Monitor eingeblendet', async () => {
-    await ladeUndAendere([slide('custom-text', { headline: 'Willkommen' })], spiel8(), spiel8({ scoreA: 1 }));
+    await ladeUndAendere([slide('custom-text', { headline: 'Willkommen' })], spiel8(BERG_GAST), spiel8({ ...BERG_GAST, scoreB: 1 }));
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   });
 
   it('@ZM-083 Feld 1: Tor auf Feld 2 wird auf dem Feld-1-Monitor nicht eingeblendet', async () => {
-    await ladeUndAendere([slide('live', { fieldId: 'field-1' })], spiel8(), spiel8({ scoreA: 1 }));
+    await ladeUndAendere([slide('live', { fieldId: 'field-1' })], spiel8(BERG_GAST), spiel8({ ...BERG_GAST, scoreB: 1 }));
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 
   it('@ZM-083 Feld 2 mit Live-Folie von Spiel 8: Einblendung und zugleich der neue Stand, danach die Live-Folie mit dem Stand', async () => {
-    await ladeUndAendere([slide('live', { fieldId: 'field-2' })], spiel8(), spiel8({ scoreA: 1 }));
+    await ladeUndAendere([slide('live', { fieldId: 'field-2' })], spiel8(BERG_GAST), spiel8({ ...BERG_GAST, scoreB: 1 }));
     expect(screen.getByText('TOR!')).toBeInTheDocument();
-    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Heim: 0')).toBeInTheDocument();
+    expect(screen.getByLabelText('Gast: 1')).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(4_000); });
     expect(screen.queryByText('TOR!')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Gast: 1')).toBeInTheDocument();
   });
 
   it('erstes Laden mit Toren: keine Einblendung (Plan R5 Test 7)', async () => {

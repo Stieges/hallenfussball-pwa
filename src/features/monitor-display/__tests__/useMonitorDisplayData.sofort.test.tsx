@@ -130,7 +130,8 @@ describe('R5 Sofort-Kanal: useMonitorDisplayData', () => {
 
   it('@ZM-083 Feld 2: Einblendung und neuer Stand im selben Render; nach dem Ende der Einblendung bleibt der Stand', async () => {
     const feld1 = withMonitor({ slides: [slide('live', { fieldId: 'field-1' })] });
-    const fetch = vi.fn<MonitorDataSource['fetch']>().mockResolvedValueOnce(snapshot(stand(1, feld1))).mockResolvedValue(snapshot(stand(2, feld1)));
+    const neu = deferred<DisplayDelta>();
+    const fetch = vi.fn<MonitorDataSource['fetch']>().mockResolvedValueOnce(snapshot(stand(1, feld1))).mockReturnValueOnce(neu.promise);
     const q = quelle(fetch);
     const renders: Array<{ score: number | undefined; goal: string | null }> = [];
     const { result } = renderHook(() => {
@@ -140,9 +141,10 @@ describe('R5 Sofort-Kanal: useMonitorDisplayData', () => {
     });
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     act(() => { q.signal(); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    const erster = renders.find((r) => r.score === 2);
-    expect(erster).toEqual({ score: 2, goal: 'FC Nord' });
+    // Nur Mikrotasks leeren, KEINE Timer: eine Einblendung, die erst einen Takt nach dem Stand käme, fehlt hier.
+    await act(async () => { neu.resolve(snapshot(stand(2, feld1))); await Promise.resolve(); await Promise.resolve(); });
+    expect(renders.filter((r) => r.score === 2 && r.goal === null)).toEqual([]);
+    expect(renders.find((r) => r.score === 2)).toEqual({ score: 2, goal: 'FC Nord' });
     act(() => { result.current.clearGoalEvent(); });
     expect(result.current.goalEvent).toBeNull();
     expect(score7(result.current.tournament)).toBe(2);
