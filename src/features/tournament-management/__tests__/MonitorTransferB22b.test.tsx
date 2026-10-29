@@ -182,7 +182,7 @@ describe('Monitore übernehmen – B-22b', () => {
       await waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
 
       const saved = savedTournament(onUpdate);
-      const { rerender } = render(
+      const { unmount } = render(
         <MonitorEditor tournament={saved} monitorId={saved.monitors?.[0].id ?? ''} onTournamentUpdate={vi.fn()} onClose={vi.fn()} />
       );
       expect(screen.getAllByTestId('slide-reference-warning').length).toBeGreaterThan(0);
@@ -191,7 +191,9 @@ describe('Monitore übernehmen – B-22b', () => {
         ...saved,
         monitors: [{ ...saved.monitors![0], slides: [{ ...saved.monitors![0].slides[0], config: { fieldId: 'field-1' } }, ...saved.monitors![0].slides.slice(1)] }],
       });
-      rerender(<MonitorEditor tournament={angepasst} monitorId={angepasst.monitors?.[0].id ?? ''} onTournamentUpdate={vi.fn()} onClose={vi.fn()} />);
+      // Der Editor füllt seinen Entwurf beim Öffnen (@ME-071): ein angepasstes Turnier zeigt sich beim erneuten Öffnen
+      unmount();
+      render(<MonitorEditor tournament={angepasst} monitorId={angepasst.monitors?.[0].id ?? ''} onTournamentUpdate={vi.fn()} onClose={vi.fn()} />);
       expect(screen.getAllByTestId('slide-reference-warning')).toHaveLength(1);
     });
   });

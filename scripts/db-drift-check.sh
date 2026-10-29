@@ -210,6 +210,9 @@ pending_assertions_for() {
     20261117_005_klaerungsliste.sql)
       echo "klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"
       ;;
+    20261118_004_abschluss_nachzug.sql)
+      echo "abschluss-nachzug-open-items-review-open abschluss-nachzug-payload-kids-mode abschluss-nachzug-late-entries-rpc"
+      ;;
     *)
       return 1
       ;;
@@ -698,6 +701,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "klaerungsliste-helpers-no-client-execute"
   "klaerungsliste-rpc-definer-authenticated-only"
   "klaerungsliste-append-routes-reviews"
+  # W-M (20261118_004_abschluss_nachzug.sql): Klaerungsliste haelt den Abschluss auf, Kindermodus im Endstand, spaete Eintraege.
+  "abschluss-nachzug-open-items-review-open"
+  "abschluss-nachzug-payload-kids-mode"
+  "abschluss-nachzug-late-entries-rpc"
   # R5 PR 1 (20261118_006, @ZM-084/@FU-001): Aenderungssignal fuer Monitore (Trigger je Anweisung, Funktion ohne Client-EXECUTE).
   "monitor-signal-triggers-statement-active"
   "monitor-signal-definer-no-client-execute"

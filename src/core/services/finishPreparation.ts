@@ -5,7 +5,8 @@
  *
  * Reihenfolge:
  * 1. Zustand: nur „Läuft“ lässt sich abschließen (abgeschlossen → `ALREADY_FINISHED`, sonst `NOT_RUNNING`).
- * 2. Offene Punkte: die des Servers plus offene Klärungen (E5, bis W-M nur hier geprüft) – alle gemeinsam (@LZ-012).
+ * 2. Offene Punkte: die des Servers (seit W-M samt offener Klärungen, `review_open`) plus offene Klärungen aus der
+ *    Klärungsliste, die der Server noch nicht nennt (E5 als Vorprüfung) – je Eintrag genau einmal, alle gemeinsam (@LZ-012).
  * 3. Stand (E4): die App rechnet den Endstand nur, wenn ihr Stand dem bestätigten Serverstand gleicht; sonst „Erst
  *    übertragen“ (eigene wartende Einträge) bzw. „Stand neu laden“ – nie ein Abschluss, der sicher `STALE_STATE` bekommt.
  * 4. Endstand: nur `complete` (vorläufig → `PROVISIONAL`), Form wie am Server (`FinalStandingsSnapshotSchema`).
@@ -64,6 +65,15 @@ export function openReviewItems(reviews: readonly MatchReview[]): ReviewOpenItem
   }));
 }
 
+/**
+ * W-M (a): der Server meldet offene Klärungen selbst (`review_open`); die App ergänzt nur Einträge aus der Klärungsliste,
+ * die der Server noch nicht nennt (dieselbe Kennung `eventId` steht nie doppelt in der Liste, @LZ-012).
+ */
+export function mergeOpenItems(serverItems: readonly FinishItem[], reviewItems: readonly ReviewOpenItem[]): FinishItem[] {
+  const known = new Set(serverItems.flatMap((item) => (item.kind === 'review_open' ? [item.eventId] : [])));
+  return [...serverItems, ...reviewItems.filter((item) => !known.has(item.eventId))];
+}
+
 /** Endstand mit Torschützen zum Speichern (@ET-045: mit App-Version); vorläufig oder formwidrig → Grund. */
 export function buildFinalStandingsSnapshot(
   tournament: FinishTournamentInput,
@@ -93,7 +103,7 @@ export function prepareFinish(input: FinishPreparationInput): FinishPreparation 
   if (preflight.lifecycle !== 'running') {
     return { ok: false, blocker: { code: 'NOT_RUNNING', lifecycle: preflight.lifecycle } };
   }
-  const items: FinishItem[] = [...preflight.items, ...openReviewItems(input.reviews)];
+  const items = mergeOpenItems(preflight.items, openReviewItems(input.reviews));
   if (items.length > 0) {
     return { ok: false, blocker: { code: 'OPEN_ITEMS', items } };
   }

@@ -7,7 +7,7 @@
  * Klärung der Gruppe → Tabelle (dort stehen Abschluss, Entscheidung und Hinweise); Klärungsliste → Spielplan mit geöffneter Liste.
  */
 import type { Tournament } from '../../../types/tournament';
-import type { FinishItem, ServerFinishItem } from '../../../core/repositories/lifecycleRpc';
+import type { FinishItem, ReviewOpenItem } from '../../../core/repositories/lifecycleRpc';
 import { slotLabel, teamDisplayName } from '../../../core/view/originText';
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import { formatClock } from './finishFormat';
@@ -81,7 +81,7 @@ function matchName(item: { matchNumber?: number; finalType?: string }, t: Finish
   return item.matchNumber === undefined ? t('tournament:finish.item.matchUnknown') : t('tournament:finish.item.match', { number: item.matchNumber });
 }
 
-function serverItemView(item: ServerFinishItem, tournament: TournamentForItems, t: FinishT, language: string): Omit<FinishItemView, 'id' | 'target'> {
+function serverItemView(item: Exclude<FinishItem, ReviewOpenItem>, tournament: TournamentForItems, t: FinishT, language: string): Omit<FinishItemView, 'id' | 'target'> {
   switch (item.kind) {
     case 'match_running':
     case 'match_undecided': {
