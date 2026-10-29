@@ -572,7 +572,8 @@ run_probes haupt
 
 # --- P: Rechte-Assertion ------------------------------------------------------------------------------------------
 PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || PRIV_OUT="nicht ausfuehrbar: $PRIV_OUT"
-check P "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$PRIV_OUT" || true)"
+# Zeilen spaeterer Migrationen (AFTER, z. B. 20261118_004 W-M) sind hier noch nicht eingespielt, also |f -- auslassen.
+check P "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$PRIV_OUT" | grep -vE '^abschluss-nachzug-[a-z0-9-]+\|' || true)"
 check P "die drei neuen Zeilen vorhanden und |t" \
   "matches-bump-change-revision-counts-original-start|t,matches-guard-schedule-times-invoker-no-client-execute|t,matches-guard-schedule-times-trigger-active|t" \
   "$(grep -E '^(matches-guard-schedule-times|matches-bump-change-revision-counts)' <<<"$PRIV_OUT" | sort | paste -sd, -)"

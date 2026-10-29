@@ -114,6 +114,9 @@ const TournamentRowSchema = z.object({
   is_public: optionalNullable(z.boolean()),
   share_code: optionalNullable(z.string()),
   completed_at: optionalNullable(z.string()),
+  // Zustand vom Server (A-21a): ohne diese Felder fehlt der Zuschauer-Seite der Abschluss (Kindermodus-Satz, R3-6)
+  lifecycle_status: optionalNullable(z.string()),
+  finished_at: optionalNullable(z.string()),
   config: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 

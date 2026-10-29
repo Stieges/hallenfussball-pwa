@@ -194,6 +194,9 @@ pending_assertions_for() {
     20261118_001_verschieben_server.sql)
       echo "matches-guard-schedule-times-trigger-active matches-guard-schedule-times-invoker-no-client-execute matches-bump-change-revision-counts-original-start"
       ;;
+    20261118_005_endstand_tabellenwerte.sql)
+      # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
+      ;;
     20261110_010_standing_decision_null_version.sql)
       # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
       ;;
@@ -203,6 +206,9 @@ pending_assertions_for() {
       ;;
     20261117_005_klaerungsliste.sql)
       echo "klaerungsliste-tables-rls-no-client-writes klaerungsliste-select-policy klaerungsliste-helpers-no-client-execute klaerungsliste-rpc-definer-authenticated-only klaerungsliste-append-routes-reviews"
+      ;;
+    20261118_004_abschluss_nachzug.sql)
+      echo "abschluss-nachzug-open-items-review-open abschluss-nachzug-payload-kids-mode abschluss-nachzug-late-entries-rpc"
       ;;
     *)
       return 1
@@ -692,6 +698,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "klaerungsliste-helpers-no-client-execute"
   "klaerungsliste-rpc-definer-authenticated-only"
   "klaerungsliste-append-routes-reviews"
+  # W-M (20261118_004_abschluss_nachzug.sql): Klaerungsliste haelt den Abschluss auf, Kindermodus im Endstand, spaete Eintraege.
+  "abschluss-nachzug-open-items-review-open"
+  "abschluss-nachzug-payload-kids-mode"
+  "abschluss-nachzug-late-entries-rpc"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

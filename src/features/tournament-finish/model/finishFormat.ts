@@ -31,3 +31,11 @@ export function daysBetween(from: string | number | Date | null | undefined, now
   const date = parse(from);
   return date === null ? null : Math.floor((now.getTime() - date.getTime()) / 86_400_000);
 }
+
+/** Tordifferenz mit Vorzeichen: „+1“, „−3“ (echtes Minuszeichen), „0“. */
+export function formatSigned(value: number): string {
+  if (value > 0) {
+    return `+${value}`;
+  }
+  return value < 0 ? `−${Math.abs(value)}` : '0';
+}

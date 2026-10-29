@@ -170,6 +170,10 @@ R8_FILE=""
 # Einspielen von 20261028_001 (ZA-3) stellte die Fassung mit 120 s/5 Schuetzen wieder her -- danach wieder einspielen. Pflicht wie A-34.
 M1_MIGRATION="20261118_002_spielregeln_zeitstrafe_schuetzen.sql"
 M1_FILE=""
+# W-M (20261118_004): fasst finish_open_items und final_standings_payload neu (Basis 20261113_003). Das erneute Einspielen von
+# 20261113_003 in der Idempotenz-Kette stellte beide in der alten Fassung wieder her -- danach wieder einspielen. Pflicht wie M1.
+WM_MIGRATION="20261118_004_abschluss_nachzug.sql"
+WM_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -219,6 +223,11 @@ while IFS= read -r line; do
   # matches_guard_schedule_times -- nach dem erneuten Einspielen von 20261028_005 (Idempotenz) wieder einspielen.
   [[ "$(basename "$line")" == "20261118_001_verschieben_server.sql" ]] && R8_FILE="$line"
   [[ "$(basename "$line")" == "$M1_MIGRATION" ]] && M1_FILE="$line"
+  # W-M setzt 20261113_003 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg.
+  if [[ "$(basename "$line")" == "$WM_MIGRATION" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    WM_FILE="$line"
+  fi
   # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
   [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
   NEWER_MIGRATIONS+=("$line")
@@ -238,6 +247,10 @@ if [[ -z "$SB_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
 fi
 if [[ -z "$M1_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
   echo "::error::$M1_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still server_rules mit fester Zeitstrafe 120 s und Vorgabe 5 Schuetzen." >&2
+  exit 1
+fi
+if [[ -z "$WM_FILE" && "${MODE:-normal}" != "without-migration" && "${MODE:-normal}" != "without-sw" ]]; then
+  echo "::error::$WM_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still finish_open_items und final_standings_payload in der Fassung von 20261113_003." >&2
   exit 1
 fi
 if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
@@ -298,6 +311,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi
   # M1: 20261028_001 oben setzt server_rules auf die Fassung mit 120 s/5 Schuetzen zurueck.
   psql_stdin < "$M1_FILE"
+  # W-M: das erneute 20261113_003 oben setzt finish_open_items/final_standings_payload auf die Fassung ohne W-M zurueck.
+  if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$WM_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
