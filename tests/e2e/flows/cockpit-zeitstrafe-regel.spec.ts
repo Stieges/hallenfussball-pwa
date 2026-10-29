@@ -42,7 +42,13 @@ test.describe('Spielregeln aus den Einstellungen (@W2A-016, @W2A-029, @W2A-012)'
     await expect(page.getByText(/Dauer/)).toHaveCount(0);
     await page.getByTestId('number-picker').getByRole('button', { name: '5', exact: true }).click();
     await expect(page.getByTestId('number-picker')).toBeHidden();
-    await expect(page.getByTestId('team-column-away').getByText(/^Nr\. 5 · (1:00|0:5\d)$/)).toBeVisible();
+    // Handy: Marke „Nr. 5 · 1:00“ unter den Tasten der Team-Spalte; Laptop/Desktop (seit #386): Karte „<Team>, Nr. 5, Restzeit 1:00“
+    // in der Strafen-Spalte (accessible name). Beide Wege nennen Team Gast, Nummer 5 und Restzeit 1:00 bzw. 0:5x.
+    const gast = (await page.getByTestId('team-column-away').getAttribute('aria-label')) ?? '';
+    expect(gast).not.toBe('');
+    const marke = page.getByTestId('team-column-away').getByText(/^Nr\. 5 · (1:00|0:5\d)$/);
+    const karte = page.getByRole('listitem', { name: new RegExp(`^${gast.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, Nr\\. 5, Restzeit (1:00|0:5\\d)$`) });
+    await expect(marke.or(karte)).toBeVisible();
     await bild(page, `cockpit-zeitstrafe-1min-laeuft-${testInfo.project.name}`);
   });
 
