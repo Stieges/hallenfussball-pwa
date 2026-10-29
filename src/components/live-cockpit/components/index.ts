@@ -5,7 +5,6 @@
  */
 
 // New Mockup-Based Components
-export { TeamBlock, type TeamBlockProps } from './TeamBlock';
 export { FoulBar, type FoulBarProps } from './FoulBar';
 export { Sidebar, type SidebarProps } from './Sidebar';
 export { GameControls, type GameControlsProps } from './GameControls';
@@ -18,7 +17,6 @@ export {
   TimeAdjustDialog,
   GoalScorerDialog,
   CardDialog,
-  TimePenaltyDialog,
   SubstitutionDialog,
   EventEditDialog,
   SettingsDialog,

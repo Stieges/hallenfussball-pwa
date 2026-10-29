@@ -10,7 +10,6 @@ import { resolve } from 'node:path';
 import type { EditableMatchEvent, RuntimeMatchEvent } from '../../../types/tournament';
 import { ProtocolRow } from '../components/ProtocolRow';
 import { EventEditDialog } from '../components/Dialogs/EventEditDialog';
-import { CardButtonRow } from '../components/TeamBlock/CardButtonRow';
 
 vi.mock('react-i18next', () => {
   const stable = { t: (key: string) => key, i18n: { language: 'de' } };
@@ -85,28 +84,5 @@ describe('Karten-Farben nur für Karten (Oberfläche E) – Bearbeiten-Dialog', 
     const bg = screen.getByTestId('karten-symbol-YELLOW_RED').style.background;
     expect(bg).toContain(GELB);
     expect(bg).toContain(ROT);
-  });
-});
-
-describe('Karten-Farben nur für Karten (Oberfläche E) – Kartenknöpfe im Teamblock', () => {
-  it('jeder Knopf trägt sein Kartensymbol in Kartenfarbe', () => {
-    render(
-      <CardButtonRow teamName="Heim" teamSide="home" disabled={false} yellowStyle={{}} yellowRedStyle={{}} redStyle={{}}
-        onYellowCard={vi.fn()} onYellowRedCard={vi.fn()} onRedCard={vi.fn()} />,
-    );
-    expect(screen.getByTestId('karten-symbol-YELLOW').style.background).toContain(GELB);
-    expect(screen.getByTestId('karten-symbol-RED').style.background).toContain(ROT);
-    const bg = screen.getByTestId('karten-symbol-YELLOW_RED').style.background;
-    expect(bg).toContain(GELB);
-    expect(bg).toContain(ROT);
-  });
-
-  it('Gegenbeispiel: die Schrift der Kartenknöpfe nutzt weder warning noch error; Foul/Zeitstrafe behalten ihre Farbe', () => {
-    const teamBlock = quelle('src/components/live-cockpit/components/TeamBlock/index.tsx');
-    const gelb = /const btnYellowStyle[\s\S]*?\};/.exec(teamBlock)?.[0] ?? '';
-    const rot = /const btnRedStyle[\s\S]*?\};/.exec(teamBlock)?.[0] ?? '';
-    expect(gelb).not.toMatch(/colors\.(warning|error)/);
-    expect(rot).not.toMatch(/colors\.(warning|error)/);
-    expect(teamBlock).toMatch(/const btnPenaltyStyle[\s\S]*?colors\.warning/);
   });
 });
