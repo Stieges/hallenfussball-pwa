@@ -272,6 +272,7 @@ export function MatchCockpitSettingsPanel({
               value={currentSoundValue}
               onChange={(e) => handleSoundChange(e.target.value)}
               aria-label={t('settings.endSound')}
+              data-testid="settings-end-sound-select"
               style={styles.select}
             >
               {SOUND_PRESET_OPTIONS.map((opt) => (
@@ -290,11 +291,9 @@ export function MatchCockpitSettingsPanel({
                 variant="secondary"
                 size="sm"
                 onClick={onTestSound}
-                style={styles.iconButton}
-                aria-label={t('settings.testSound')}
-                title={t('settings.testSound')}
+                data-testid="settings-end-sound-listen"
               >
-                ▶
+                {t('settings.listen')}
               </Button>
             )}
           </div>
@@ -332,8 +331,8 @@ export function MatchCockpitSettingsPanel({
                 {settings.soundVolume > 0 ? '🔊' : '🔇'}
               </Button>
               {onTestSound && (
-                <Button variant="secondary" size="sm" onClick={onTestSound}>
-                  {t('settings.test')}
+                <Button variant="secondary" size="sm" onClick={onTestSound} data-testid="settings-volume-listen">
+                  {t('settings.listen')}
                 </Button>
               )}
             </div>
@@ -569,6 +568,7 @@ const styles: Record<string, CSSProperties> = {
   // Slider
   sliderContainer: {
     display: 'flex',
+    flexWrap: 'wrap', // „Anhören“ bricht auf schmalen Handys in die nächste Zeile statt über den Rand zu ragen
     alignItems: 'center',
     gap: cssVars.spacing.sm,
   },

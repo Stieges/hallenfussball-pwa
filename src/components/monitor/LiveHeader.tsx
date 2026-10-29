@@ -6,6 +6,7 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } from '../../design-tokens';
 import type { MatchBadgeModel } from '../../core/view';
+import { isSingleGroupId } from '../../core/models/standingsGroups';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { monitorBadgeTone } from '../ui/molecules/matchStatusBadgeStyle';
 
@@ -57,7 +58,7 @@ export function LiveHeader({ badge, field, matchNumber, group, size, themeColors
       </div>
       <div style={infoStyle} data-testid="live-info">Feld {field} — Spiel {matchNumber}</div>
       <div style={{ ...infoStyle, color: themeColors.text, justifySelf: 'end' }} data-testid="live-group">
-        {group ? t('liveMatch.group', { group }) : null}
+        {group !== undefined && !isSingleGroupId(group) ? t('liveMatch.group', { group }) : null}
       </div>
     </div>
   );
