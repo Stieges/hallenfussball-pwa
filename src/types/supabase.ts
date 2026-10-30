@@ -1832,7 +1832,10 @@ export type Database = {
       }
       display_final_standings:
         | { Args: { p_tournament_id: string }; Returns: Json }
-        | { Args: { p_monitor_id: string; p_tournament_id: string }; Returns: Json }
+        | {
+            Args: { p_monitor_id: string; p_tournament_id: string }
+            Returns: Json
+          }
       display_tournament: {
         Args: {
           monitor_id: string
