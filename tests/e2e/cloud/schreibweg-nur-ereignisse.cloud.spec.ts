@@ -58,7 +58,7 @@ test.describe('Schreibweg nur über Ereignisse', () => {
   // an die Datenbank sendet / Dann zählt das Tor nicht, und der Spielstand bleibt unverändert / Und es landet höchstens als
   // Eintrag ‚zur Klärung‘ in der Klärungsliste der Turnierleitung (@FU-116, @FU-130)“. Eigener Cup, weil der
   // Klärungseintrag bleibt (Engine-Zeilen sind unlöschbar, A-08h).
-  test('@FU-084 beendetes Spiel: ein Tor über die Schnittstelle zählt nicht, der Spielstand bleibt, höchstens ein Klärungseintrag', async () => {
+  test('@FU-084 @ZM-180 beendetes Spiel: ein Tor über die Schnittstelle zählt nicht, der Spielstand bleibt, höchstens ein Klärungseintrag', async () => {
     const ids = engineCupIds('SCHREIBWEGENDE');
     const seeded = await expectSeededEngineMatch(engineCupTarget('SCHREIBWEGENDE'));
     const tor = goal(ids.homeTeamId, 61000);

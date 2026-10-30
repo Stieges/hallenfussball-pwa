@@ -35,20 +35,23 @@ export interface PerformanceSettings {
 /**
  * Vordefinierte Performance-Profile
  */
+/** Rückfall-Takt eines Monitors im selben Browser bei einem Turnier nur auf diesem Gerät (R5 PR 1, @ZM-179). */
+export const LOCAL_FALLBACK_POLL_MS = 1000;
+
 export const PERFORMANCE_PROFILES: Record<Exclude<PerformanceMode, 'auto'>, PerformanceSettings> = {
   high: {
     enableTransitions: true,
     enableAnimations: true,
     enableGlow: true,
     enableBackgroundEffects: true,
-    pollingInterval: 5000,        // 5 Sekunden
+    pollingInterval: 2000,        // Rückfall 2 s (R5 PR 1); sonst bringt das Änderungssignal den Stand sofort
   },
   low: {
     enableTransitions: false,     // Harte Schnitte
     enableAnimations: false,      // Keine Animationen
     enableGlow: false,            // Kein Glow-Effekt
     enableBackgroundEffects: false,
-    pollingInterval: 10000,       // 10 Sekunden (weniger CPU)
+    pollingInterval: 2000,        // Rückfall 2 s auch im Sparmodus (C-MONITOR-TAKT-2S, @FU-001 Monitor 2 s)
   },
 };
 

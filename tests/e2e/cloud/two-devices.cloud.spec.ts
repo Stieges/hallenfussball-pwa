@@ -10,7 +10,7 @@
  * laufen nur auf `cloud-desktop`, damit Desktop und Mobil nicht denselben Cup benutzen.
  *
  * Bekannte Grenzen (kein Nachweis für diese Szenarien): Tor-Sichtbarkeit unter Hallen-WLAN
- * (300 ms, 5 % Verlust) -> C4a/C4b; Monitor <= 3 s -> C4b (C-MONPOLL); "Ohne Netz geht nichts
+ * (300 ms, 5 % Verlust) -> C4a/C4b (Monitor: monitor-sofort.cloud.spec.ts, R5); "Ohne Netz geht nichts
  * verloren" (10 s + Zeitstrafe) -> C4a, die 10 s deckt der F4-Unit-Test.
  */
 
@@ -185,7 +185,9 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     }
   });
 
-  test('Public-Cup: owner trägt Tor ein, anonymer Monitor zeigt es ohne Reload (5s-Polling, kein Echtzeitpfad)', async ({ asRole, page: anonPage }) => {
+  // R5 PR 1 (@ZM-084, @FU-001): seit dem Änderungssignal folgt der anonyme Monitor sofort (vorher 5-s-Abfrage, gemessen
+  // 7,0–7,9 s, C-MONPOLL). Frist nach F6: CI 2 s, lokal 1 s. Ausführliche Messung: monitor-sofort.cloud.spec.ts.
+  test('Public-Cup: owner trägt Tor ein, anonymer Monitor zeigt es ohne Reload (Änderungssignal, höchstens 1 s bzw. 2 s in CI)', async ({ asRole, page: anonPage }) => {
     // R-3a-2: bleibt auf dem Public-Cup (der anonyme Monitor braucht ein öffentliches Turnier);
     // einziger Schreiber auf dem Engine-Laufspiel, Cockpit mit ?matchId=.
     const target = await runningEngineTarget(E2E_PUBLIC_CUP_ID, 'public-cup', 'Public-Cup');
@@ -202,8 +204,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     expect(Number.isFinite(before)).toBe(true);
 
     await enterGoal(ownerPage, 'home');
-    // gemessen 7,0-7,9 s (5-s-Abfrage); Ziel <= 3 s verfehlt -> C-MONPOLL (C4b), Timeout nicht anfassen.
-    await expect(monitorHomeBlock).toHaveAttribute('aria-label', `Heim: ${before + 1}`, { timeout: 12000 });
+    await expect(monitorHomeBlock).toHaveAttribute('aria-label', `Heim: ${before + 1}`, { timeout: process.env.CI ? 2_000 : 1_000 });
   });
 
   test('Cup NSTART: nie gestartetes Spiel lässt sich im Cockpit öffnen (C-NSTART)', async ({ asRole }) => {

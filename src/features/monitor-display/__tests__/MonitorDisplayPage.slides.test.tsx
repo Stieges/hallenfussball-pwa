@@ -5,22 +5,16 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
-import type { CardEventInfo, GoalEventInfo } from '../../../hooks/useLiveMatches';
 import type { MonitorSlide } from '../../../types/monitor';
-import type { Tournament } from '../../../types/tournament';
+import type { Match, RuntimeMatchEvent, Tournament } from '../../../types/tournament';
 import {
   attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMatch, withMonitor,
 } from './monitorFixture';
+import { looseVs } from '../../../test/matchSlotFixtures';
 
-const { supabaseGet, localGet, live } = vi.hoisted(() => ({
+const { supabaseGet, localGet } = vi.hoisted(() => ({
   supabaseGet: vi.fn(),
   localGet: vi.fn(),
-  live: {
-    goal: null as GoalEventInfo | null,
-    card: null as CardEventInfo | null,
-    clearGoal: vi.fn(),
-    clearCard: vi.fn(),
-  },
 }));
 
 vi.mock('../../../lib/supabase', () => ({
@@ -40,21 +34,6 @@ vi.mock('qrcode.react', async () => {
     QRCodeSVG: ({ value }: { value: string }) => React.createElement('svg', { 'data-testid': 'qr-code', 'data-value': value }),
   };
 });
-// Die Einblendungen kommen aus `live` (veränderbar), nicht aus einem Zustand des Hooks.
-vi.mock('../../../hooks/useLiveMatches', () => ({
-  useLiveMatches: () => ({
-    liveMatches: new Map(),
-    runningMatches: [],
-    pausedMatches: [],
-    runningMatchIds: new Set<string>(),
-    getMatchById: () => undefined,
-    lastGoalEvent: live.goal,
-    clearLastGoalEvent: live.clearGoal,
-    lastCardEvent: live.card,
-    clearLastCardEvent: live.clearCard,
-    calculateElapsedSeconds: () => 0,
-  }),
-}));
 
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
 
@@ -82,15 +61,30 @@ function tabelle(flags: Partial<Tournament> = {}): Tournament {
   return buildTournament({ ...flags, matches: withMatch('match-7', { scoreA: undefined, scoreB: undefined }) });
 }
 
-const goalInMatch8: GoalEventInfo = {
-  matchId: 'match-8', teamId: 'team-berg', teamName: 'DJK Berg', side: 'home',
-  timestamp: 1, newScore: { home: 1, away: 0 },
-};
+/** @ZM-083 wörtlich: DJK Berg spielt in Spiel 8 als Gast (TuS Mitte – DJK Berg), Tor -> 0:1. */
+const BERG_GAST: Partial<Match> = looseVs('team-mitte', 'team-berg');
+
+/** Spiel 8 läuft auf Feld 2 (DJK Berg – TuS Mitte); `patch` ändert den Stand bzw. die Ereignisse. */
+const spiel8 = (patch: Partial<Match> = {}): Tournament =>
+  buildTournament({ sponsors: [FIXTURE_SPONSOR], matches: withMatch('match-8', { matchStatus: 'running', scoreA: 0, scoreB: 0, ...patch }) });
+
+/**
+ * R5 PR 1: Einblendungen kommen aus derselben Antwort wie der Stand. Erst-Laden mit `vorher`, die nächste Antwort
+ * (Rückfall-Takt 2 s; das Änderungssignal holt sie sonst sofort) bringt `nachher`.
+ */
+async function ladeUndAendere(slides: MonitorSlide[], vorher: Tournament, nachher: Tournament): Promise<void> {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+  const monitor = withMonitor({ slides });
+  supabaseGet.mockResolvedValue(attachMonitor(vorher, monitor));
+  localGet.mockResolvedValue(null);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId={monitor.id} onBack={vi.fn()} />);
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  supabaseGet.mockResolvedValue(attachMonitor(nachher, monitor));
+  await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
-  live.goal = null;
-  live.card = null;
 });
 
 describe('MonitorDisplayPage — Folieninhalt (Bestand)', { timeout: 15_000 }, () => {
@@ -188,37 +182,42 @@ describe('MonitorDisplayPage — Tasten (Bestand)', { timeout: 15_000 }, () => {
 });
 
 describe('MonitorDisplayPage — Einblendungen (Tor)', { timeout: 15_000 }, () => {
+  afterEach(() => { vi.useRealTimers(); });
+
   it('@ZM-083 Eingang: Tor in Spiel 8 (DJK Berg) wird im Monitor eingeblendet', async () => {
-    live.goal = goalInMatch8;
-    await renderMonitor(buildTournament(), [slide('custom-text', { headline: 'Willkommen' })]);
-    expect(await screen.findByText('DJK Berg')).toBeInTheDocument();
+    await ladeUndAendere([slide('custom-text', { headline: 'Willkommen' })], spiel8(BERG_GAST), spiel8({ ...BERG_GAST, scoreB: 1 }));
+    expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   });
 
   it('@ZM-083 Feld 1: Tor auf Feld 2 wird auf dem Feld-1-Monitor nicht eingeblendet', async () => {
-    live.goal = goalInMatch8;
-    await renderMonitor(buildTournament(), [slide('live', { fieldId: 'field-1' })]);
-    // Effekte nach dem Laden flushen, bevor die Einblendung geprüft wird (sonst falsches Grün).
-    await act(async () => { await Promise.resolve(); });
+    await ladeUndAendere([slide('live', { fieldId: 'field-1' })], spiel8(BERG_GAST), spiel8({ ...BERG_GAST, scoreB: 1 }));
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 
+  it('@ZM-083 Feld 2 mit Live-Folie von Spiel 8: Einblendung und zugleich der neue Stand, danach die Live-Folie mit dem Stand', async () => {
+    await ladeUndAendere([slide('live', { fieldId: 'field-2' })], spiel8(BERG_GAST), spiel8({ ...BERG_GAST, scoreB: 1 }));
+    expect(screen.getByText('TOR!')).toBeInTheDocument();
+    expect(screen.getByLabelText('Heim: 0')).toBeInTheDocument();
+    expect(screen.getByLabelText('Gast: 1')).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(4_000); });
+    expect(screen.queryByText('TOR!')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Gast: 1')).toBeInTheDocument();
+  });
+
+  it('erstes Laden mit Toren: keine Einblendung (Plan R5 Test 7)', async () => {
+    await ladeUndAendere([slide('custom-text', { headline: 'Willkommen' })], spiel8({ scoreA: 3 }), spiel8({ scoreA: 3 }));
+    expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
+  });
 });
 
 describe('MonitorDisplayPage — Karteneinblendung (@ZM-119, Fake-Timer)', () => {
   // Szenario-Daten: DJK Berg Nr. 4, Spiel 8, Sponsor-Folie „Bäckerei Maier“.
-  const gelbeKarte: CardEventInfo = {
-    matchId: 'match-8', teamId: 'team-berg', teamName: 'DJK Berg', side: 'home', cardType: 'YELLOW',
-    playerNumber: 4, timestamp: 2,
+  const gelbeKarte: RuntimeMatchEvent = {
+    id: 'ev-gelb-4', matchId: 'match-8', timestampSeconds: 120, type: 'YELLOW_CARD', payload: { teamId: 'team-berg', playerNumber: 4 }, scoreAfter: { home: 0, away: 0 },
   };
 
   async function renderMitKarte(): Promise<void> {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
-    live.card = gelbeKarte;
-    const tournament = buildTournament({ sponsors: [FIXTURE_SPONSOR] });
-    supabaseGet.mockResolvedValue(attachMonitor(tournament, withMonitor({ slides: [slide('sponsor', { sponsorId: 'sp-1' })] })));
-    localGet.mockResolvedValue(null);
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
-    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await ladeUndAendere([slide('sponsor', { sponsorId: 'sp-1' })], spiel8(), spiel8({ events: [gelbeKarte] }));
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();
   }
 
@@ -226,17 +225,20 @@ describe('MonitorDisplayPage — Karteneinblendung (@ZM-119, Fake-Timer)', () =>
     vi.useRealTimers();
   });
 
-  // Kein Soll-Anspruch: die Verweildauer 3199/3200 ms steht nicht im Szenario (Review B3).
-  it('Bestand: Karte erscheint und verschwindet von selbst (bei 3000 ms), Aufräumen 200 ms später', async () => {
+  // Kein Soll-Anspruch: die Verweildauer 3000 ms steht nicht im Szenario (Review B3).
+  it('Bestand: Karte erscheint und verschwindet von selbst (bei 3000 ms), kommt mit weiteren Antworten nicht wieder', async () => {
     await renderMitKarte();
     await act(async () => { await vi.advanceTimersByTimeAsync(2999); });
     expect(screen.getByText('DJK Berg')).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
-    expect(live.clearCard).not.toHaveBeenCalled();
-    await act(async () => { await vi.advanceTimersByTimeAsync(199); });
-    expect(live.clearCard).not.toHaveBeenCalled();
-    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
-    expect(live.clearCard).toHaveBeenCalledTimes(1);
+    // Dieselbe Karte in den nächsten Antworten (Rückfall-Takt): keine zweite Einblendung (Gesehen-Menge).
+    await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+    expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
+  });
+
+  it('@ZM-178 Feld 1: Karte in Spiel 8 (Feld 2) wird auf dem Feld-1-Monitor nicht eingeblendet', async () => {
+    await ladeUndAendere([slide('live', { fieldId: 'field-1' })], spiel8(), spiel8({ events: [gelbeKarte] }));
+    expect(screen.queryByText('DJK Berg')).not.toBeInTheDocument();
   });
 });

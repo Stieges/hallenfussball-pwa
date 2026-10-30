@@ -12,6 +12,8 @@ import { isSupabaseConfigured } from '../../lib/supabase';
 import { UnreadableResponseError } from '../../core/errors';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
+import { subscribeDisplaySignal } from '../../core/realtime/displaySignal';
+import { isKnownToServer, subscribeLocalDisplaySignal, withLocalEngineState } from './localDisplay';
 
 export type DisplayOrigin = 'cloud' | 'local';
 
@@ -31,16 +33,17 @@ export type DisplayDelta =
 
 export interface MonitorDataSource {
   fetch(sinceVersion: string | null): Promise<DisplayDelta>;
+  /**
+   * Änderungssignal (R5 PR 1): ruft `onChange` ohne Inhalt, sobald sich das Turnier geändert haben kann (Server-Signal
+   * `display:<id>`, im selben Browser auch die Engine). Gibt die Abmeldung zurück. Fehlt es, bleibt nur der Rückfall-Takt.
+   */
+  subscribe?(onChange: () => void): () => void;
 }
 
-// L2: Der Server-Aufruf hat kein eingebautes Timeout. Ohne Begrenzung würde ein
-// hängender Request isFetchingRef dauerhaft auf true halten und damit jeden weiteren
-// Poll-Tick blockieren — beim Erstladen bliebe der Spinner stehen statt auf lokal
-// zurückzufallen. Bewusst deutlich UNTER der schnellsten konfigurierten pollingInterval
-// (PERFORMANCE_PROFILES.high = 5000ms, siehe types/monitor.ts) gewählt, damit ein Hänger
-// nicht auch noch den nächsten Poll-Tick verschluckt (der sonst wegen isFetchingRef
-// überspringen würde). Der zugrunde liegende Request läuft nach dem Timeout einfach weiter
-// im Hintergrund aus — wir warten nur nicht mehr darauf.
+// L2: Der Server-Aufruf hat kein eingebautes Timeout. Ohne Begrenzung würde ein hängender Request den Abruf dauerhaft
+// belegen – beim Erstladen bliebe der Spinner stehen statt auf lokal zurückzufallen. Seit R5 PR 1 merkt sich der Hook
+// Anstöße während eines Abrufs (Signal, Rückfall-Takt 2 s) und holt danach genau einmal nach; die Grenze bleibt 4 s,
+// damit ein Hänger nach spätestens zwei Takten endet. Der Request läuft nach dem Timeout im Hintergrund aus.
 const CLOUD_TIMEOUT_MS = 4_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -67,6 +70,7 @@ function sinceOf(sinceVersion: string | null): number | null {
  * since_version)` -- Positivliste mit Schiedsrichtern, nur der eigene Monitor, auch ohne Online-Teilen (@ZM-101) --,
  * begrenzt durch CLOUD_TIMEOUT_MS; danach LocalStorage. Mit gemerktem Stand fragt sie nur nach Änderungen
  * (`unchanged` bzw. geänderte Spiele, E-A3). Übergang bis zur Bildschirm-Kopplung (B-20/B-21).
+ * `subscribe` meldet Änderungen sofort (R5 PR 1): Server-Signal `display:<id>` und, im selben Browser, die Engine.
  */
 export function createMonitorSource(tournamentId: string, monitorId: string): MonitorDataSource {
   let held: Tournament | null = null;
@@ -95,8 +99,14 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
   }
 
   return {
+    subscribe(onChange: () => void): () => void {
+      const offServer = subscribeDisplaySignal(tournamentId, onChange);
+      const offLocal = subscribeLocalDisplaySignal(onChange);
+      return () => { offServer(); offLocal(); };
+    },
     async fetch(sinceVersion: string | null): Promise<DisplayDelta> {
       let lookupFailed = false;
+      let serverDenies = false;
 
       // L2: Cloud zuerst — ein Hallen-Monitor läuft auf einem fremden Gerät ohne localStorage.
       if (isSupabaseConfigured) {
@@ -105,6 +115,7 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
           if (cloud !== 'not-found') {
             return cloud;
           }
+          serverDenies = true;
         } catch (err) {
           // B-19b (@ME-032): nur eine nicht abbildbare Antwort ist „unlesbar“. Netz- und Abfragefehler
           // bleiben der Rückfall auf die lokale Kopie; eine Störung ist nie „nicht gefunden“ (@ZM-109).
@@ -128,6 +139,11 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
       if (!found) {
         return { kind: 'missing', lookupFailed };
       }
+      // @ZM-179: Einträge eines Turniers nur auf diesem Gerät stehen in den Engine-Kopien dieses Browsers. @ZM-180 (L2b):
+      // Kennt der Server das Turnier, zählen nur bestätigte Einträge – sonst überholte ein wartender Abpfiff den Server,
+      // und die nächste Cloud-Antwort holte den älteren Stand („läuft“) zurück.
+      const onlyConfirmed = isSupabaseConfigured && !serverDenies && isKnownToServer(found);
+      found = await withLocalEngineState(found, undefined, { onlyConfirmed });
 
       const monitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId) ?? null;
       return { kind: 'snapshot', version: null, tournament: found, monitor, origin: 'local', lookupFailed };

@@ -1354,4 +1354,28 @@ SELECT 'abschluss-nachzug-late-entries-rpc',
                         AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
                         AND position('has_tournament_permission(p_tournament_id, ''manageLifecycle'')' IN p.prosrc) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.list_late_entries(uuid)')), false)
+-- R5 PR 1 (20261118_006, Sofort-Kanal, Zone 1 „Änderungssignal“): Signal ohne Inhalt je Anweisung und Turnier.
+-- (1) Sieben Trigger AFTER ... FOR EACH STATEMENT auf matches (I/U/D), teams (I/U/D), tournaments (U), aktiv.
+UNION ALL
+SELECT 'monitor-signal-triggers-statement-active',
+       coalesce((SELECT count(*) = 7
+                        AND bool_and((t.tgtype & 1) = 0 AND (t.tgtype & 2) = 0 AND t.tgenabled = 'O')
+                        AND count(DISTINCT c.relname || ':' || (t.tgtype & 28)::text) = 7
+                        AND bool_and(c.relname IN ('matches', 'teams') OR (c.relname = 'tournaments' AND (t.tgtype & 16) = 16))
+                   FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+                  WHERE t.tgfoid = (SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                                      WHERE n.nspname = 'public' AND p.proname = 'monitor_display_signal' AND p.pronargs = 0)
+                    AND NOT t.tgisinternal), false)
+-- (2) Trigger-Funktion: SECURITY DEFINER, search_path fest, kein EXECUTE fuer Client-Rollen, oeffentlicher Kanal
+--     display:<id> mit Inhalt nur {at}, eigener EXCEPTION-Zweig (ein Signal kippt nie eine Aenderung).
+UNION ALL
+SELECT 'monitor-signal-definer-no-client-execute',
+       coalesce((SELECT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND position('realtime.send(jsonb_build_object(''at'', v_at), ''changed'', ''display:'' || v_id, false)' IN p.prosrc) > 0
+                        AND position('EXCEPTION WHEN OTHERS THEN' IN p.prosrc) > 0
+                   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                  WHERE n.nspname = 'public' AND p.proname = 'monitor_display_signal' AND p.pronargs = 0), false)
 ;

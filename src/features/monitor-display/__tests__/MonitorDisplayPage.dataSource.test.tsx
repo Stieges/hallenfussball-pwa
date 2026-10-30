@@ -6,14 +6,22 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 // declarations further down the file — referencing those directly throws a TDZ error
 // ("Cannot access '...' before initialization"). vi.hoisted() hoists the values themselves
 // so the factories below can safely close over them. See https://vitest.dev/api/vi.html#vi-hoisted
-const { supabaseGet, localGet } = vi.hoisted(() => ({
-  supabaseGet: vi.fn(),
-  localGet: vi.fn(),
-}));
+const { supabaseGet, localGet, channelSpy, removeChannelSpy } = vi.hoisted(() => {
+  const channelApi = { on: () => channelApi, subscribe: () => channelApi };
+  return {
+    supabaseGet: vi.fn(),
+    localGet: vi.fn(),
+    channelSpy: vi.fn(() => channelApi),
+    removeChannelSpy: vi.fn(() => Promise.resolve('ok')),
+  };
+});
 
 vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
-  supabase: { from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })), rpc: vi.fn().mockResolvedValue({ error: null }) },
+  supabase: {
+    from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })), rpc: vi.fn().mockResolvedValue({ error: null }),
+    channel: channelSpy, removeChannel: removeChannelSpy,
+  },
 }));
 // Regular `function` (not an arrow function) so `new SupabaseRepository()` in the production
 // code — matching the LiveViewScreen.tsx pattern — can actually invoke it as a constructor.
@@ -24,16 +32,8 @@ vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
   LocalStorageRepository: vi.fn(function LocalStorageRepository() { return { get: localGet }; }),
 }));
 
-const { useLiveMatchesSpy } = vi.hoisted(() => ({
-  useLiveMatchesSpy: vi.fn(() => ({
-    liveMatches: new Map(), runningMatches: [], pausedMatches: [], runningMatchIds: new Set<string>(),
-    getMatchById: vi.fn(), lastGoalEvent: null, clearLastGoalEvent: vi.fn(),
-    lastCardEvent: null, clearLastCardEvent: vi.fn(), calculateElapsedSeconds: () => 0,
-  })),
-}));
-vi.mock('../../../hooks/useLiveMatches', () => ({ useLiveMatches: useLiveMatchesSpy }));
-
 import { MonitorDisplayPage } from '../MonitorDisplayPage';
+import { PERFORMANCE_PROFILES } from '../../../types/monitor';
 
 vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
 await (await import('../../../test/realDeI18n')).initRealDeI18n();
@@ -57,16 +57,20 @@ describe('MonitorDisplayPage — Datenherkunft (L2)', () => {
     await waitFor(() => expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument());
   });
 
-  it('L2: schaltet useLiveMatches bei Cloud-Herkunft auf Anon-Realtime', async () => {
+  // R5 PR 1 (ersetzt „L2: useLiveMatches auf Anon-Realtime“): der Monitor hört – auch ohne Anmeldung – auf das
+  // Änderungssignal seines Turniers (Zone 1 „Änderungssignal“), nicht mehr auf Tabellen-Änderungen.
+  it('R5: abonniert das öffentliche Änderungssignal display:<turnier> genau einmal', async () => {
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
-    await waitFor(() => expect(useLiveMatchesSpy).toHaveBeenCalledWith('tour-1', { allowPublicRealtime: true }));
+    await waitFor(() => expect(channelSpy).toHaveBeenCalledWith('display:tour-1', { config: { private: false } }));
+    await waitFor(() => expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument());
+    expect(channelSpy).toHaveBeenCalledTimes(1);
   });
 
   it('Regression: fällt auf localStorage zurück, wenn die Cloud nichts liefert', async () => {
     supabaseGet.mockResolvedValue(null); localGet.mockResolvedValue(cloudTournament);
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await waitFor(() => expect(localGet).toHaveBeenCalledWith('tour-1'));
-    await waitFor(() => expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: false }));
+    await waitFor(() => expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument());
   });
 });
 
@@ -78,8 +82,9 @@ describe('MonitorDisplayPage — Datenherkunft (L2)', () => {
 // OfflineBanner.test.tsx — vi.advanceTimersByTimeAsync für Timer-gated async Code).
 // =============================================================================
 describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
-  // cloudTournament.monitors[0].performanceMode ist 'low' -> PERFORMANCE_PROFILES.low.pollingInterval (types/monitor.ts).
-  const POLLING_INTERVAL_MS = 10_000;
+  // cloudTournament.monitors[0].performanceMode ist 'low' -> PERFORMANCE_PROFILES.low.pollingInterval (types/monitor.ts,
+  // seit R5 PR 1 Rückfall 2 s).
+  const POLLING_INTERVAL_MS = PERFORMANCE_PROFILES.low.pollingInterval;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -114,19 +119,20 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
   });
 
-  it('Important: ein vollständig fehlgeschlagener Poll (Cloud UND lokal leer) rührt die Realtime-Anbindung nicht an', async () => {
+  it('Important: ein vollständig fehlgeschlagener Poll (Cloud UND lokal leer) rührt die Signal-Anbindung nicht an', async () => {
     // Deckt den Fall ab, in dem BEIDE Quellen nichts liefern: Der Hallen-TV hat keinen
-    // eigenen localStorage-Stand, der !found-Guard in loadData() greift, dataSource
-    // bleibt unberührt.
+    // eigenen localStorage-Stand; das Änderungssignal bleibt abonniert (kein Ab- und Wiederanmelden).
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+    expect(channelSpy).toHaveBeenCalledTimes(1);
 
     supabaseGet.mockRejectedValueOnce(new Error('network blip'));
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
-    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+    expect(channelSpy).toHaveBeenCalledTimes(1);
+    expect(removeChannelSpy).not.toHaveBeenCalled();
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
   });
 
   it('F-324: ein Cloud-Aussetzer stuft einen laufenden Bildschirm nicht auf die lokale Kopie zurück', async () => {
@@ -138,14 +144,17 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
 
-    // Poll 2: Cloud fällt aus, lokal liegt ein älterer Stand.
+    // Poll 2: Cloud fällt aus, lokal liegt ein älterer Stand (anderer Folientext).
     supabaseGet.mockRejectedValueOnce(new Error('network blip'));
-    localGet.mockResolvedValueOnce({ ...cloudTournament, title: 'Veralteter lokaler Stand' });
+    localGet.mockResolvedValueOnce({
+      ...cloudTournament,
+      monitors: [{ ...cloudTournament.monitors[0], slides: [{ id: 's1', type: 'custom-text', config: { headline: 'Veralteter lokaler Stand' }, duration: 15, order: 0 }] }],
+    });
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
-    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+    expect(screen.queryByText('Veralteter lokaler Stand')).not.toBeInTheDocument();
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
     expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
   });
@@ -162,7 +171,6 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
-    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: false });
 
     // Der Organisator ändert den Slide-Text; die Änderung liegt lokal vor.
     localGet.mockResolvedValue({
@@ -186,7 +194,7 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
 // echter Fehlschlag (Reject/Timeout) rechtfertigt es, den bestehenden Stand zu halten.
 // =============================================================================
 describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler (Fix-Runde 2)', () => {
-  const POLLING_INTERVAL_MS = 10_000;
+  const POLLING_INTERVAL_MS = PERFORMANCE_PROFILES.low.pollingInterval;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -260,8 +268,8 @@ describe('MonitorDisplayPage — Wake Lock (L7)', () => {
 // erfolgreich war. Praxisfall: Der Hallen-TV schaltet ein, bevor das WLAN steht.
 // =============================================================================
 describe('MonitorDisplayPage — Fix 1: Erstladen-Fehlschlag erholt sich automatisch', () => {
-  // Kein Monitor geladen -> schnellere Taktung laut Fix 1 (5s statt Profil-Intervall).
-  const FAST_RETRY_MS = 5000;
+  // Kein Monitor geladen -> Rückfall-Takt (seit R5 PR 1 2 s wie mit Monitor, vorher 5 s).
+  const FAST_RETRY_MS = 2000;
 
   beforeEach(() => {
     vi.useFakeTimers();

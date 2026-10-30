@@ -33,4 +33,6 @@ export const STORAGE_KEYS = {
 export const BROADCAST_CHANNELS = {
   /** Match management sync between tabs */
   MATCH_MANAGEMENT: 'match-management',
+  /** Engine meldet geaenderte Spiel-Kopien an andere Tabs (W10); der Monitor im selben Browser hoert mit (R5, @ZM-179). */
+  MATCH_ENGINE: 'hallenfussball-matches',
 } as const;

@@ -165,6 +165,14 @@ export const E2E_PUBLIC_CUP_MONITOR_ID = e2eUuid('monitor:public-cup:1');
 export const E2E_SPIELPLANOWNER_MONITOR_ID = e2eUuid('monitor:engine-cup:SPIELPLANOWNER:1');
 
 /**
+ * R5 PR 1 (monitor-sofort.cloud.spec.ts, @ZM-084/@ZM-083/@FU-001): je Cup ein Feld-Monitor (Live-Folie Feld 1) und ein
+ * Übersichts-Monitor „Eingang“ (nur ein Text, kein Feld) – beide öffnet ein nicht angemeldetes Gerät.
+ */
+export const E2E_MONSOFORT_MONITOR_ID = e2eUuid('monitor:engine-cup:MONSOFORT:feld-1');
+export const E2E_MONSOFORT_EINGANG_MONITOR_ID = e2eUuid('monitor:engine-cup:MONSOFORT:eingang');
+export const E2E_MONSCHLECHT_MONITOR_ID = e2eUuid('monitor:engine-cup:MONSCHLECHT:feld-1');
+
+/**
  * Fixrunde 2 (N3, Ruling AA; vorher Fixrunde 1/I2/Ruling V, damals noch am Entwurf-Cup):
  * Sponsor + Monitor des Freigabe-Cup, für den Nachweis "Sponsor und Monitor folgen" in
  * `publish-coadmin.cloud.spec.ts` -- der Monitor zeigt EINEN `sponsor`-Slide auf genau diesen
