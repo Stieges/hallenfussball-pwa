@@ -805,7 +805,7 @@ TB="$(uuid_for team:b)"
 {
   tournament_sql "$T_P" '{}' 'null' 10
   echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TA', '$T_P', 'A'), ('$TB', '$T_P', 'B');"
-  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1 w1a w1b w1c w1d w1e w1f; do
+  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1 w1a w1b w1c w1d w1e w1f w1g; do
     echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:$name")', '$T_P', 1, 1, '$TA', '$TB', NULL, NULL);"
   done
   # A-34: Autorenzeile mit Geraete-ID auf eigenem Feld 2 -- ein Aufruf mit Geraete-ID beansprucht das Feld (Steuer je
@@ -1422,7 +1422,12 @@ w1_end() { # $1 Spiel, $2 Minuten seit dem Eintreffen des Abpfiffs (Dezimal)
 }
 w1_end w1a 5
 out="$(call authenticated "$U_HELPER" "$(M w1a)" "$(arr "$(ev REOPEN "$(E w1a-reopen)" '{"at":661000,"clockMs":590000}')")")"
-check Sonstiges "@SL-147: 1 Minute nach dem Abpfiff ohne Netz gewaehlt, nach 5 Minuten angekommen -> Spiel 11 laeuft weiter" \
+# 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET, @SL-147 geaendert 30.10.): spaeter als 2 Minuten -> Klaerungsliste, bleibt beendet.
+check Sonstiges "@SL-147 Z. 2: ohne Netz gewaehlt, nach 5 Minuten angekommen -> Spiel 11 bleibt beendet, Fortsetzen in der Klaerungsliste" \
+  '.results[0].status == "review" and .results[0].code == "AFTER_END" and .state.status == "finished"' "$out"
+w1_end w1g 1
+out="$(call authenticated "$U_HELPER" "$(M w1g)" "$(arr "$(ev REOPEN "$(E w1g-reopen)" '{"at":621000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Z. 1: 20 s nach dem Abpfiff gewaehlt, nach 1 Minute angekommen -> Spiel 11 laeuft weiter" \
   '.results[0].status == "accepted" and .state.status == "running"' "$out"
 w1_end w1b 15
 out="$(call authenticated "$U_HELPER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reopen)" '{"at":661000,"clockMs":590000}')")")"
@@ -1432,7 +1437,7 @@ out="$(call authenticated "$U_OWNER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reo
 check Sonstiges "@SL-147 Gegenstueck: die Turnierleitung oeffnet auch nach 15 Minuten wieder" '.results[0].status == "accepted"' "$out"
 w1_end w1c 11.6
 out="$(call authenticated "$U_HELPER" "$(M w1c)" "$(arr "$(ev REOPEN "$(E w1c-reopen)" '{"at":661000,"clockMs":590000}')")")"
-check Sonstiges "@SL-147 Grenze: 2 min + 10 min Spielraum, nach 11:36 angekommen -> angenommen" '.results[0].status == "accepted"' "$out"
+check Sonstiges "@SL-147 Grenze: 2 min + 10 min Spielraum, nach 11:36 angekommen -> zur Klaerung (20261118_009), nicht abgelehnt" '.results[0].status == "review" and .results[0].code == "AFTER_END"' "$out"
 w1_end w1d 12.4
 out="$(call authenticated "$U_HELPER" "$(M w1d)" "$(arr "$(ev REOPEN "$(E w1d-reopen)" '{"at":661000,"clockMs":590000}')")")"
 check Sonstiges "@SL-147 Grenze: nach 12:24 angekommen -> abgelehnt" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"

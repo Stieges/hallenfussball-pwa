@@ -219,6 +219,10 @@ pending_assertions_for() {
     20261118_004_abschluss_nachzug.sql)
       echo "abschluss-nachzug-open-items-review-open abschluss-nachzug-payload-kids-mode abschluss-nachzug-late-entries-rpc"
       ;;
+    20261118_009_fortsetzen_spaet.sql)
+      # C-REOPEN-NACH-ABPFIFF-SPAET (@SL-147 Z. 2): nur CREATE OR REPLACE append_match_events (spaetes Fortsetzen -> Klaerung)
+      echo "fortsetzen-spaet-append-reopen-review"
+      ;;
     *)
       return 1
       ;;
@@ -714,6 +718,8 @@ PRIVILEGE_ASSERTION_NAMES=(
   # R5 PR 1 (20261118_006, @ZM-084/@FU-001): Aenderungssignal fuer Monitore (Trigger je Anweisung, Funktion ohne Client-EXECUTE).
   "monitor-signal-triggers-statement-active"
   "monitor-signal-definer-no-client-execute"
+  # C-REOPEN-NACH-ABPFIFF-SPAET (20261118_009, @SL-147 Z. 2, @ZM-180): spaetes Fortsetzen des Helfers -> Klaerungsliste.
+  "fortsetzen-spaet-append-reopen-review"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
