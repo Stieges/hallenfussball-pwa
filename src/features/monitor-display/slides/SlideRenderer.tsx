@@ -3,7 +3,8 @@ import { monitorThemes, cssVars } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme, PerformanceSettings } from '../../../types/monitor';
-import type { QrRueckfallFolie } from '../slideProgramme';
+import type { EndFolie, QrRueckfallFolie } from '../slideProgramme';
+import type { MonitorEnd } from '../monitorEnd';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { randPadding, wirksamerRand } from '../overscan';
 import { LiveSlide } from './LiveSlide';
@@ -14,9 +15,11 @@ import { NextMatchesSlide } from './NextMatchesSlide';
 import { CustomTextSlide } from './CustomTextSlide';
 import { QrSlide } from './QrSlide';
 import { AllStandingsSlide } from './AllStandingsSlide';
+import { FinalStandingsSlide } from './FinalStandingsSlide';
+import { FinalScorersSlide } from './FinalScorersSlide';
 
 interface SlideRendererProps {
-  slide: MonitorSlide | QrRueckfallFolie;
+  slide: MonitorSlide | QrRueckfallFolie | EndFolie;
   tournament: Tournament;
   /** Die gemeinsame Ansicht des Monitors (A-36c): Status, Seitentexte, Anstoß, Endstand und Sichtbarkeit */
   view: TournamentView;
@@ -30,10 +33,12 @@ interface SlideRendererProps {
   pinnedMatchId?: string | null;
   /** Seite der Folie (B-16f1, ausgewertet ab f3). */
   page?: number;
+  /** Der Monitor nach dem Abschluss (R3-7): Endstand aus dem gespeicherten Stand des Servers, Kindermodus oder `none`. */
+  end?: MonitorEnd;
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, view, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0 }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, view, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0, end = { kind: 'none' } }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -53,6 +58,12 @@ export function SlideRenderer({ slide, tournament, view, performanceSettings, th
   };
 
   switch (slide.type) {
+    case 'final-standings':
+      return <FinalStandingsSlide tournament={tournament} end={end} theme={theme} style={slideStyle} page={page} />;
+
+    case 'final-scorers':
+      return <FinalScorersSlide tournament={tournament} end={end} theme={theme} style={slideStyle} page={page} />;
+
     case 'live':
       return <LiveSlide slide={slide} tournament={tournament} view={view} performanceSettings={performanceSettings} theme={theme} style={slideStyle} pinnedMatchId={pinnedMatchId} />;
 

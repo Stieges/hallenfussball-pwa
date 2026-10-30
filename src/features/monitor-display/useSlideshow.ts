@@ -36,8 +36,9 @@ function clampState(state: SlideshowState, count: number): SlideshowState {
 
 /**
  * @param transitionMs Übergangsdauer in ms bei Folienwechsel, `null` = ohne Übergang.
+ * @param resetKey ändert sich der Schlüssel, beginnt die Folienfolge von vorn (R3-7: mit dem Abschluss bei „Endstand“).
  */
-export function useSlideshow(program: SlideProgram, transitionMs: number | null): SlideshowControl {
+export function useSlideshow(program: SlideProgram, transitionMs: number | null, resetKey = ''): SlideshowControl {
   const count = program.slides.length;
   const [state, setState] = useState<SlideshowState>(() => ({
     index: 0,
@@ -106,6 +107,16 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null)
 
   const view = useMemo(() => clampState(state, count), [state, count]);
   const wake = wakeAt(program, view);
+
+  // Neuer Schlüssel (der erste zählt nicht): Folienfolge von vorn, ein laufender Übergang fällt weg
+  const lastResetKey = useRef(resetKey);
+  useEffect(() => {
+    if (lastResetKey.current === resetKey) { return; }
+    lastResetKey.current = resetKey;
+    if (transitionTimerRef.current !== null) { clearTimeout(transitionTimerRef.current); transitionTimerRef.current = null; }
+    setTransitionDirection(null);
+    commit({ index: 0, page: 0, startedAt: Date.now(), direction: 'next', pinnedMatchId: null, finalUntil: null });
+  }, [resetKey, commit]);
 
   // Jede neue Programm-Referenz (neue Daten je Poll) sofort auswerten: Spielregeln wirken beim Empfang.
   // Der Takt startet nur neu, wenn sich Folie, Seite, Pin oder Haltezeit tatsächlich ändern (C-MON-TAKT-STEHT).

@@ -1,0 +1,729 @@
+{
+ "e1": {
+  "rpc": {
+   "display_tournament": {
+    "json": {
+     "state": "full",
+     "version": 1792699029588738,
+     "server_now": 1793356066152,
+     "tournament": {
+      "id": "00000000-0000-4000-8000-000000000900",
+      "title": "Nikolaus-Turnier 2026",
+      "date": "2026-11-28",
+      "start_time": "09:00",
+      "number_of_fields": 1,
+      "number_of_teams": 6,
+      "is_public": true,
+      "share_code": "NIKO26",
+      "lifecycle_status": "finished",
+      "finished_at": "2026-11-28T12:10:00+00:00",
+      "config": {
+       "monitors": [
+        {
+         "id": "mon-end",
+         "name": "Halle",
+         "defaultSlideDuration": 15,
+         "transition": "none",
+         "transitionDuration": 0,
+         "theme": "auto",
+         "performanceMode": "high",
+         "slides": [
+          {
+           "id": "s1",
+           "type": "live",
+           "config": {
+            "fieldId": "field-1"
+           },
+           "duration": null,
+           "order": 0
+          },
+          {
+           "id": "s2",
+           "type": "all-standings",
+           "config": {},
+           "duration": null,
+           "order": 1
+          },
+          {
+           "id": "s3",
+           "type": "qr-code",
+           "config": {},
+           "duration": null,
+           "order": 2
+          }
+         ],
+         "createdAt": "2026-11-28T08:00:00.000Z",
+         "updatedAt": "2026-11-28T08:00:00.000Z"
+        }
+       ]
+      }
+     },
+     "teams": [
+      {
+       "id": "00000000-0000-4000-8000-000000000001",
+       "name": "FC Nord"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000002",
+       "name": "SV Süd"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000003",
+       "name": "TSV West"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000004",
+       "name": "SG Mitte"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000005",
+       "name": "SC Ost"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000006",
+       "name": "FC Berg"
+      }
+     ],
+     "matches": [
+      {
+       "id": "00000000-0000-4000-8000-000000000500",
+       "match_number": 1,
+       "round": 1,
+       "field": 1,
+       "phase": "groupStage",
+       "team_a_id": "00000000-0000-4000-8000-000000000001",
+       "team_b_id": "00000000-0000-4000-8000-000000000002",
+       "scheduled_start": "09:00:00",
+       "match_status": "finished",
+       "score_a": 2,
+       "score_b": 1,
+       "events": []
+      }
+     ]
+    }
+   },
+   "display_final_standings": {
+    "json": {
+     "status": "final",
+     "finishedAt": "2026-11-28T12:10:00+00:00",
+     "standings": {
+      "format": 1,
+      "ranking": [
+       {
+        "place": 1,
+        "teamId": "00000000-0000-4000-8000-000000000001",
+        "teamName": "FC Nord",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 1
+        }
+       },
+       {
+        "place": 2,
+        "teamId": "00000000-0000-4000-8000-000000000002",
+        "teamName": "SV Süd",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 2
+        }
+       },
+       {
+        "place": 3,
+        "teamId": "00000000-0000-4000-8000-000000000003",
+        "teamName": "TSV West",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 3
+        }
+       },
+       {
+        "place": 4,
+        "teamId": "00000000-0000-4000-8000-000000000004",
+        "teamName": "SG Mitte",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 4
+        }
+       },
+       {
+        "place": 5,
+        "teamId": "00000000-0000-4000-8000-000000000005",
+        "teamName": "SC Ost",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 5
+        }
+       },
+       {
+        "place": 6,
+        "teamId": "00000000-0000-4000-8000-000000000006",
+        "teamName": "FC Berg",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 6
+        }
+       }
+      ],
+      "appVersion": "vm-stub",
+      "computedAt": "2026-11-28T13:10:00+01:00"
+     }
+    }
+   }
+  },
+  "einwilligung": true
+ },
+ "e2": {
+  "rpc": {
+   "display_tournament": {
+    "json": {
+     "state": "full",
+     "version": 1792699029588738,
+     "server_now": 1793356066152,
+     "tournament": {
+      "id": "00000000-0000-4000-8000-000000000900",
+      "title": "Nikolaus-Turnier 2026",
+      "date": "2026-11-28",
+      "start_time": "09:00",
+      "number_of_fields": 1,
+      "number_of_teams": 8,
+      "is_public": true,
+      "share_code": "NIKO26",
+      "lifecycle_status": "finished",
+      "finished_at": "2026-11-28T12:10:00+00:00",
+      "config": {
+       "monitors": [
+        {
+         "id": "mon-end",
+         "name": "Halle",
+         "defaultSlideDuration": 15,
+         "transition": "none",
+         "transitionDuration": 0,
+         "theme": "auto",
+         "performanceMode": "high",
+         "slides": [
+          {
+           "id": "s1",
+           "type": "live",
+           "config": {
+            "fieldId": "field-1"
+           },
+           "duration": null,
+           "order": 0
+          },
+          {
+           "id": "s2",
+           "type": "all-standings",
+           "config": {},
+           "duration": null,
+           "order": 1
+          },
+          {
+           "id": "s3",
+           "type": "qr-code",
+           "config": {},
+           "duration": null,
+           "order": 2
+          }
+         ],
+         "createdAt": "2026-11-28T08:00:00.000Z",
+         "updatedAt": "2026-11-28T08:00:00.000Z"
+        }
+       ]
+      }
+     },
+     "teams": [
+      {
+       "id": "00000000-0000-4000-8000-000000000001",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 1"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000002",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 2"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000003",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 3"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000004",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 4"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000005",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 5"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000006",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 6"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000007",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 7"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000008",
+       "name": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 8"
+      }
+     ],
+     "matches": [
+      {
+       "id": "00000000-0000-4000-8000-000000000500",
+       "match_number": 1,
+       "round": 1,
+       "field": 1,
+       "phase": "groupStage",
+       "team_a_id": "00000000-0000-4000-8000-000000000001",
+       "team_b_id": "00000000-0000-4000-8000-000000000002",
+       "scheduled_start": "09:00:00",
+       "match_status": "finished",
+       "score_a": 2,
+       "score_b": 1,
+       "events": []
+      }
+     ]
+    }
+   },
+   "display_final_standings": {
+    "json": {
+     "status": "final",
+     "finishedAt": "2026-11-28T12:10:00+00:00",
+     "standings": {
+      "format": 1,
+      "ranking": [
+       {
+        "place": 1,
+        "teamId": "00000000-0000-4000-8000-000000000001",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 1",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 1
+        }
+       },
+       {
+        "place": 2,
+        "teamId": "00000000-0000-4000-8000-000000000002",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 2",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 2
+        }
+       },
+       {
+        "place": 3,
+        "teamId": "00000000-0000-4000-8000-000000000003",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 3",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 3
+        }
+       },
+       {
+        "place": 4,
+        "teamId": "00000000-0000-4000-8000-000000000004",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 4",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 4
+        }
+       },
+       {
+        "place": 5,
+        "teamId": "00000000-0000-4000-8000-000000000005",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 5",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 5
+        }
+       },
+       {
+        "place": 6,
+        "teamId": "00000000-0000-4000-8000-000000000006",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 6",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 6
+        }
+       },
+       {
+        "place": 7,
+        "teamId": "00000000-0000-4000-8000-000000000007",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 7",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 7
+        }
+       },
+       {
+        "place": 8,
+        "teamId": "00000000-0000-4000-8000-000000000008",
+        "teamName": "Hinterzarten Niederbrunnen Obermusterdorf Kleinb 8",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 8
+        }
+       }
+      ],
+      "appVersion": "vm-stub",
+      "computedAt": "2026-11-28T13:10:00+01:00"
+     }
+    }
+   }
+  },
+  "einwilligung": true
+ },
+ "e3": {
+  "rpc": {
+   "display_tournament": {
+    "json": {
+     "state": "full",
+     "version": 1792699029588738,
+     "server_now": 1793356066152,
+     "tournament": {
+      "id": "00000000-0000-4000-8000-000000000900",
+      "title": "Nikolaus-Turnier 2026",
+      "date": "2026-11-28",
+      "start_time": "09:00",
+      "number_of_fields": 1,
+      "number_of_teams": 6,
+      "is_public": true,
+      "share_code": "NIKO26",
+      "lifecycle_status": "finished",
+      "finished_at": "2026-11-28T12:10:00+00:00",
+      "config": {
+       "monitors": [
+        {
+         "id": "mon-end",
+         "name": "Halle",
+         "defaultSlideDuration": 15,
+         "transition": "none",
+         "transitionDuration": 0,
+         "theme": "auto",
+         "performanceMode": "high",
+         "slides": [
+          {
+           "id": "s1",
+           "type": "live",
+           "config": {
+            "fieldId": "field-1"
+           },
+           "duration": null,
+           "order": 0
+          },
+          {
+           "id": "s2",
+           "type": "all-standings",
+           "config": {},
+           "duration": null,
+           "order": 1
+          },
+          {
+           "id": "s3",
+           "type": "qr-code",
+           "config": {},
+           "duration": null,
+           "order": 2
+          }
+         ],
+         "createdAt": "2026-11-28T08:00:00.000Z",
+         "updatedAt": "2026-11-28T08:00:00.000Z"
+        }
+       ]
+      }
+     },
+     "teams": [
+      {
+       "id": "00000000-0000-4000-8000-000000000001",
+       "name": "FC Nord"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000002",
+       "name": "SV Süd"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000003",
+       "name": "TSV West"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000004",
+       "name": "SG Mitte"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000005",
+       "name": "SC Ost"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000006",
+       "name": "FC Berg"
+      }
+     ],
+     "matches": [
+      {
+       "id": "00000000-0000-4000-8000-000000000500",
+       "match_number": 1,
+       "round": 1,
+       "field": 1,
+       "phase": "groupStage",
+       "team_a_id": "00000000-0000-4000-8000-000000000001",
+       "team_b_id": "00000000-0000-4000-8000-000000000002",
+       "scheduled_start": "09:00:00",
+       "match_status": "finished",
+       "score_a": 2,
+       "score_b": 1,
+       "events": []
+      }
+     ]
+    }
+   },
+   "display_final_standings": {
+    "json": {
+     "status": "final",
+     "finishedAt": "2026-11-28T12:10:00+00:00",
+     "standings": {
+      "format": 1,
+      "ranking": [
+       {
+        "place": 1,
+        "teamId": "00000000-0000-4000-8000-000000000001",
+        "teamName": "FC Nord",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 1
+        }
+       },
+       {
+        "place": 2,
+        "teamId": "00000000-0000-4000-8000-000000000002",
+        "teamName": "SV Süd",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 2
+        }
+       },
+       {
+        "place": 3,
+        "teamId": "00000000-0000-4000-8000-000000000003",
+        "teamName": "TSV West",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 3
+        }
+       },
+       {
+        "place": 4,
+        "teamId": "00000000-0000-4000-8000-000000000004",
+        "teamName": "SG Mitte",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 4
+        }
+       },
+       {
+        "place": 5,
+        "teamId": "00000000-0000-4000-8000-000000000005",
+        "teamName": "SC Ost",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 5
+        }
+       },
+       {
+        "place": 6,
+        "teamId": "00000000-0000-4000-8000-000000000006",
+        "teamName": "FC Berg",
+        "origin": {
+         "kind": "groupPlace",
+         "group": "",
+         "place": 6
+        }
+       }
+      ],
+      "appVersion": "vm-stub",
+      "computedAt": "2026-11-28T13:10:00+01:00",
+      "scorers": [
+       {
+        "kind": "player",
+        "rank": 1,
+        "teamId": "00000000-0000-4000-8000-000000000001",
+        "teamName": "FC Nord",
+        "number": 9,
+        "goals": 5
+       },
+       {
+        "kind": "player",
+        "rank": 2,
+        "teamId": "00000000-0000-4000-8000-000000000002",
+        "teamName": "SV Süd",
+        "number": 7,
+        "goals": 4
+       },
+       {
+        "kind": "player",
+        "rank": 3,
+        "teamId": "00000000-0000-4000-8000-000000000001",
+        "teamName": "FC Nord",
+        "number": 10,
+        "goals": 3
+       },
+       {
+        "kind": "player",
+        "rank": 3,
+        "teamId": "00000000-0000-4000-8000-000000000002",
+        "teamName": "SV Süd",
+        "number": 4,
+        "goals": 3
+       },
+       {
+        "kind": "player",
+        "rank": 3,
+        "teamId": "00000000-0000-4000-8000-000000000003",
+        "teamName": "TSV West",
+        "number": 11,
+        "goals": 3
+       },
+       {
+        "kind": "player",
+        "rank": 6,
+        "teamId": "00000000-0000-4000-8000-000000000004",
+        "teamName": "SG Mitte",
+        "number": 2,
+        "goals": 2
+       }
+      ]
+     }
+    }
+   }
+  },
+  "einwilligung": true
+ },
+ "e4": {
+  "rpc": {
+   "display_tournament": {
+    "json": {
+     "state": "full",
+     "version": 1792699029588738,
+     "server_now": 1793356066152,
+     "tournament": {
+      "id": "00000000-0000-4000-8000-000000000900",
+      "title": "Nikolaus-Turnier 2026",
+      "date": "2026-11-28",
+      "start_time": "09:00",
+      "number_of_fields": 1,
+      "number_of_teams": 6,
+      "is_public": true,
+      "share_code": "NIKO26",
+      "lifecycle_status": "finished",
+      "finished_at": "2026-11-28T12:10:00+00:00",
+      "config": {
+       "monitors": [
+        {
+         "id": "mon-end",
+         "name": "Halle",
+         "defaultSlideDuration": 15,
+         "transition": "none",
+         "transitionDuration": 0,
+         "theme": "auto",
+         "performanceMode": "high",
+         "slides": [
+          {
+           "id": "s1",
+           "type": "live",
+           "config": {
+            "fieldId": "field-1"
+           },
+           "duration": null,
+           "order": 0
+          },
+          {
+           "id": "s2",
+           "type": "all-standings",
+           "config": {},
+           "duration": null,
+           "order": 1
+          },
+          {
+           "id": "s3",
+           "type": "qr-code",
+           "config": {},
+           "duration": null,
+           "order": 2
+          }
+         ],
+         "createdAt": "2026-11-28T08:00:00.000Z",
+         "updatedAt": "2026-11-28T08:00:00.000Z"
+        }
+       ],
+       "hideScoresForPublic": true
+      }
+     },
+     "teams": [
+      {
+       "id": "00000000-0000-4000-8000-000000000001",
+       "name": "FC Nord"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000002",
+       "name": "SV Süd"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000003",
+       "name": "TSV West"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000004",
+       "name": "SG Mitte"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000005",
+       "name": "SC Ost"
+      },
+      {
+       "id": "00000000-0000-4000-8000-000000000006",
+       "name": "FC Berg"
+      }
+     ],
+     "matches": [
+      {
+       "id": "00000000-0000-4000-8000-000000000500",
+       "match_number": 1,
+       "round": 1,
+       "field": 1,
+       "phase": "groupStage",
+       "team_a_id": "00000000-0000-4000-8000-000000000001",
+       "team_b_id": "00000000-0000-4000-8000-000000000002",
+       "scheduled_start": "09:00:00",
+       "match_status": "finished",
+       "score_a": 2,
+       "score_b": 1,
+       "events": []
+      }
+     ]
+    }
+   },
+   "display_final_standings": {
+    "json": {
+     "status": "none"
+    }
+   }
+  },
+  "einwilligung": true
+ }
+}

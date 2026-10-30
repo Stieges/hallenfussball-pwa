@@ -83,6 +83,15 @@
       "notFound": "Sponsor not found",
       "scanMore": "Scan for more info",
       "tier": "{{tier}} sponsor"
+    },
+    "final": {
+      "title": "Final standings",
+      "kids": "Tournament over – thanks for playing",
+      "scorersTitle": "Top scorers",
+      "goals_one": "goal",
+      "goals_other": "goals",
+      "scorerNoNumber": "no number – {{team}}",
+      "scorerOwnGoals": "Own goals for {{team}}"
     }
   },
   "dauerbetrieb": {

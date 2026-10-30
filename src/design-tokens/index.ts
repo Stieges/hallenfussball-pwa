@@ -132,6 +132,7 @@ export {
   type MonitorThemeColors,
 } from './display';
 export { displayList } from './displayList';
+export { displayFinal } from './displayFinal';
 export { mixHex, getBlockFrame, getBlockFrames, type BlockFrame, type BlockFrameWidths } from './displayColor';
 
 export {
