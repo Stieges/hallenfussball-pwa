@@ -1376,6 +1376,7 @@ UNION ALL
 SELECT 'monitor-endstand-public-reopen',
        coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
                         AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
                         AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
                         AND position('20261118_008 (B)' IN p.prosrc) > 0
                         AND position('t.share_code = p_share_code AND coalesce(t.is_public, false) AND t.deleted_at IS NULL' IN p.prosrc) > 0

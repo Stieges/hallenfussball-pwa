@@ -173,7 +173,7 @@ start_container() {
 psql_stdin() { docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CURRENT_CONTAINER" psql -U postgres -X -v ON_ERROR_STOP=1 -q; }
 psql_value() { docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CURRENT_CONTAINER" psql -U postgres -X -v ON_ERROR_STOP=1 -q -tA; }
 q() { psql_value <<<"$1" 2>&1; }
-schema_dump() { docker exec "$CURRENT_CONTAINER" pg_dump -U postgres --schema-only --schema=public --schema=match_engine postgres | grep -vE '^\\(un)?restrict '; }
+schema_dump() { docker exec "$CURRENT_CONTAINER" pg_dump -U postgres --schema-only --schema=public --schema=match_engine --schema=public_view postgres | grep -vE '^\\(un)?restrict '; }
 counts() { python3 "$REPO_ROOT/scripts/db_catalog_counts.py" /dev/stdin <<<"$1"; }
 count_of() { python3 -c "import json,sys; print(json.load(sys.stdin)['$2'])" <<<"$1"; }
 apply_target() { psql_stdin < "${1:-$TARGET_FILE}"; }
@@ -620,7 +620,7 @@ check X "Rueckweg-Datei im Repo = Ausgabe von --print-rueckweg" "identisch" \
   "$(diff -q <(rueckweg_sql) "$ROLLBACK_FILE" >/dev/null 2>&1 && echo identisch || echo verschieden)"
 rueckweg_sql | psql_stdin >/dev/null 2>"$WORK_DIR/rueckweg.err"
 check X "Rueckweg laeuft (Exit 0)" "0|" "$?|$(head -c 200 "$WORK_DIR/rueckweg.err")"
-check X "nach dem Rueckweg: Schema public + match_engine = vor der Migration (pg_dump identisch)" "identisch" \
+check X "nach dem Rueckweg: Schema public + match_engine + public_view = vor der Migration (pg_dump identisch, config_for = Fassung 007)" "identisch" \
   "$([[ "$(schema_dump)" == "$DUMP_BEFORE" ]] && echo identisch || { diff <(echo "$DUMP_BEFORE") <(schema_dump) | head -20 >&2; echo verschieden; })"
 check X "nach dem Rueckweg: Daten unveraendert" "$STATE_W" "$(q "$STATE_SQL")"
 check X "Rueckweg ein zweites Mal -> Abbruch durch den Waechter, nichts geaendert" "1|identisch" \

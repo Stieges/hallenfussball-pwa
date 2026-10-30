@@ -171,6 +171,41 @@ describe('@ZM-121 Z. 4: Kindermodus', () => {
   });
 });
 
+describe('@ZM-121 Z. 2 mit Z. 4: Kindermodus und Wiederöffnen über den Betreiber (Review #415 🟡1)', () => {
+  // „den Endstand von vor dem Wiederöffnen unverändert, bis Olli neu abschließt“ – im Kindermodus war das „Turnier beendet – danke
+  // fürs Mitspielen“. Der Server liefert im Kindermodus nie einen Endstand (none), auch nach dem Wiederöffnen.
+  it('der Monitor zeigt „Turnier beendet – danke fürs Mitspielen“; nach dem Wiederöffnen bleibt das so – nie Live, Tabelle oder Spielliste', async () => {
+    endstand.antwort = SERVER_NONE;
+    await starte(turnier({ abgeschlossen: true, kinder: true }));
+    expect(folie()).toBe('kinder');
+    liefere(turnier({ abgeschlossen: false, kinder: true }));
+    const gesehen = await durchlauf(40);
+    for (const weg of ['live', 'tabelle', 'spielliste']) { expect(gesehen).not.toContain(weg); }
+    expect(gesehen).toContain('kinder');
+    expect(screen.queryByTestId('monitor-final-row')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ein nie abgeschlossenes Turnier im Kindermodus läuft im normalen Programm (Live-Folie zuerst, kein „Turnier beendet“)', async () => {
+    endstand.antwort = SERVER_NONE;
+    await starte(turnier({ abgeschlossen: false, kinder: true }));
+    expect(folie()).toBe('live');
+    const gesehen = await durchlauf(40);
+    expect(gesehen).not.toContain('kinder');
+  });
+
+  it('Gegenbeispiel: nach dem Wiederöffnen schaltet Olli den Kindermodus aus – dann gilt der gespeicherte Endstand des Servers (Plätze)', async () => {
+    endstand.antwort = SERVER_NONE;
+    await starte(turnier({ abgeschlossen: true, kinder: true }));
+    expect(folie()).toBe('kinder');
+    endstand.antwort = serverEndstand({ scorersPublic: false });
+    liefere(turnier({ abgeschlossen: false, kinder: false }));
+    await vor(10_000);
+    for (let i = 0; i < 12 && folie() !== 'endstand'; i++) { await vor(5_000); }
+    expect(folie()).toBe('endstand');
+    expect(screen.queryByTestId('monitor-final-kids')).toBeNull();
+  });
+});
+
 describe('@LZ-077 Z. 1: Läuft → abschließt, ohne Neuladen nach höchstens 10 Sekunden', () => {
   it('der Monitor zeigt Spiel 7 live; nach dem Abschluss steht der Endstand ≤ 10 s später da, mitten in der Live-Folie', async () => {
     await starte(turnier({ abgeschlossen: false }));

@@ -31,10 +31,12 @@ export type MonitorEnd =
 /** Kein Abschluss (oder noch kein Stand): der Monitor zeigt sein Programm unverändert. */
 export const NO_END: MonitorEnd = { kind: 'none' };
 const PENDING_END: MonitorEnd = { kind: 'pending' };
+/** Kindermodus nach dem Ende: „Turnier beendet – danke fürs Mitspielen“ statt eines Endstands (@ZM-121 Z. 4). */
+export const KIDS_END: MonitorEnd = { kind: 'kids' };
 
 export function monitorEnd(tournament: Pick<Tournament, 'lifecycleStatus'>, view: TournamentView, finalStandings: PublicFinalStandings, cloud = true): MonitorEnd {
   const abgeschlossen = tournament.lifecycleStatus === 'finished';
-  if (abgeschlossen && showsKidsEnded(tournament, view)) { return { kind: 'kids' }; }
+  if (abgeschlossen && showsKidsEnded(tournament, view)) { return KIDS_END; }
   if (finalStandings.status !== 'final' || !view.rules.results) {
     // Nicht abgeschlossen ohne Endstand vom Server: normales Programm. Abgeschlossen: das Live-Programm bleibt weg (pending).
     return abgeschlossen && cloud ? PENDING_END : NO_END;
