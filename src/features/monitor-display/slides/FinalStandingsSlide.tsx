@@ -10,8 +10,8 @@ import { rankingPages } from '../finalPages';
 import type { MonitorEnd } from '../monitorEnd';
 import { HyphenSafe } from '../../tournament-finish/components/HyphenSafe';
 import { SlidePageHint } from '../components/SlidePageHint';
-import { SlideHeading } from '../components/SlideHeading';
-import { finalColumn, finalHeadingBlock, finalKids, finalName, finalPlace, finalRow, finalSubtitle } from './finalStyles';
+import { FinalHeading } from './FinalHeading';
+import { finalColumn, finalKids, finalName, finalPlace, finalRow } from './finalStyles';
 
 interface FinalStandingsSlideProps {
   tournament: Pick<Tournament, 'title'>;
@@ -32,12 +32,7 @@ export function FinalStandingsSlide({ tournament, end, theme, style, page = 0 }:
   const resolved = resolveTheme(theme);
   const colors = monitorThemes[resolved];
   if (end.kind === 'none') { return <div style={style} data-testid="monitor-final-empty" />; }
-  const heading = (
-    <div style={finalHeadingBlock}>
-      <SlideHeading icon="finals" color={colors.text}>{t('slides.final.title')}</SlideHeading>
-      <div style={finalSubtitle(colors)}>{tournament.title}</div>
-    </div>
-  );
+  const heading = <FinalHeading icon="standings" title={t('slides.final.title')} subtitle={tournament.title} colors={colors} />;
   if (end.kind === 'kids') {
     return (
       <div style={style} data-testid="monitor-final-kids">

@@ -9,28 +9,29 @@ import { palette } from './colors/palette';
 
 export const displayFinal = {
   fontSizes: {
-    /** Platz, Teamname, Zahl der Tore in einer Zeile: 9,4 % der Bildhöhe (@ZM-125, Profil „fern“: Teamnamen und Tabellenzeilen aus 10 m) */
-    row: '9.4vh',
+    /** Platz, Teamname, Zahl der Tore in einer Zeile: 9,5 % der Bildhöhe (mindestens 9,44 % nach Sehwinkel, @ZM-125, Profil „fern“: Teamnamen und Tabellenzeilen aus 10 m) */
+    row: '9.5vh',
     /** „Tore“ hinter der Zahl */
     unit: '3.6vh',
     /** Turniername unter der Überschrift */
-    subtitle: '3.6vh',
+    subtitle: '3.2vh',
     /** Kindermodus: „Turnier beendet – danke fürs Mitspielen“ */
     kids: '9vh',
   },
   /** Zeilenpolster innen und Abstand zwischen den Zeilen: knapp, damit 6 große Zeilen mit Kopf in den Bildrand passen */
-  rowPaddingY: '0.5vh',
-  rowGap: '0.8vh',
+  rowPaddingY: '0.2vh',
+  rowGap: '0.4vh',
   /** Zeilenhöhe der Zeilenschrift (unitlos) */
-  rowLineHeight: 1.1,
+  rowLineHeight: 1.05,
   /** Spalte „Platz“ in em der Zeilenschrift */
   placeWidth: '1.3em',
   /** Rahmen der Siegerzeile (Platz 1) */
   winnerBorderWidth: '0.4vh',
   /** Pokal in der Siegerzeile: gleich der Schrift */
   cupSize: '1em',
-  /** Abstand zwischen Überschrift und Turniername */
-  subtitleGap: '0.6vh',
+  /** Abstand zwischen Überschrift und Turniername sowie zwischen Kopf und Liste: knapp, damit die Folie über den Positionspunkten unten endet */
+  subtitleGap: '0.3vh',
+  headingGapBelow: '0.5vh',
   gold: {
     dark: palette.special.gold,
     light: palette.special.goldDark,

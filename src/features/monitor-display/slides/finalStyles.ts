@@ -12,7 +12,7 @@ export const finalColumn: CSSProperties = {
 };
 
 export const finalSubtitle = (colors: FinalThemeColors): CSSProperties => ({
-  fontSize: displayFinal.fontSizes.subtitle, color: colors.text, marginTop: displayFinal.subtitleGap, marginBottom: displayList.headingGap,
+  fontSize: displayFinal.fontSizes.subtitle, color: colors.text, marginTop: displayFinal.subtitleGap, marginBottom: displayFinal.headingGapBelow,
   textAlign: 'center', overflowWrap: 'break-word', maxWidth: '100%',
 });
 
@@ -39,7 +39,7 @@ export function finalRow(colors: FinalThemeColors, goldColor: string | null): CS
 }
 
 export const finalPlace = (colors: FinalThemeColors): CSSProperties => ({
-  fontWeight: cssVars.fontWeights.bold, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums',
+  fontWeight: cssVars.fontWeights.bold, color: colors.text, fontVariantNumeric: 'tabular-nums',
 });
 
 export const finalName: CSSProperties = { minWidth: 0, overflowWrap: 'break-word', fontWeight: cssVars.fontWeights.bold };

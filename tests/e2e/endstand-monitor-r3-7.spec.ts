@@ -90,9 +90,18 @@ test.describe('R3-7 Endstand und Torschützen am Monitor (T2-UI)', () => {
             const text = range.getBoundingClientRect();
             const zeile = (el.closest('[data-testid="monitor-final-row"], [data-testid="monitor-scorer-row"]') ?? el).getBoundingClientRect();
             const box = el.getBoundingClientRect();
-            return text.right > box.right + 1 || text.bottom > zeile.bottom + 1 || text.top < zeile.top - 1;
+            // Der Textkasten (Schrift-Ober- und -Unterlänge) ragt bei knapper Zeilenhöhe um etwa eine Zehntel Schrifthöhe über die Zeile; abgeschnitten ist erst mehr
+            const spiel = 0.15 * parseFloat(getComputedStyle(el).fontSize);
+            return text.right > box.right + 1 || text.bottom > zeile.bottom + spiel || text.top < zeile.top - spiel;
           }).map((el) => el.textContent));
           expect(abgeschnitten, 'abgeschnittene Teamnamen').toEqual([]);
+          // Die Folie endet über den Positionspunkten unten (sie überdecken keine Zeile)
+          const unten = await page.evaluate(() => {
+            const punkte = document.querySelector('[data-testid="monitor-slide-dots"]')?.getBoundingClientRect();
+            const inhalt = [...document.querySelectorAll('[data-testid="monitor-final-row"], [data-testid="monitor-scorer-row"], [data-testid="monitor-final-kids"] p')].map((el) => el.getBoundingClientRect().bottom);
+            return { punkte: punkte?.top ?? Infinity, inhalt: Math.max(0, ...inhalt) };
+          });
+          expect(unten.inhalt, 'Inhalt endet über den Positionspunkten').toBeLessThanOrEqual(unten.punkte);
           const doc = await page.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight, fw: window.innerWidth, fh: window.innerHeight }));
           expect(doc.w, 'keine waagrechte Rollleiste').toBeLessThanOrEqual(doc.fw);
           expect(doc.h, 'keine senkrechte Rollleiste').toBeLessThanOrEqual(doc.fh);

@@ -17,6 +17,8 @@ import type { MonitorEnd } from '../../../src/features/monitor-display/monitorEn
 import { END_SCORERS_SLIDE, END_STANDINGS_SLIDE } from '../../../src/features/monitor-display/monitorEnd';
 import { SlideRenderer } from '../../../src/features/monitor-display/slides/SlideRenderer';
 import { containerStyle } from '../../../src/features/monitor-display/components/monitorStyles';
+import { SlideDots } from '../../../src/features/monitor-display/components/MonitorChrome';
+import { sichererBereichStyle } from '../../../src/features/monitor-display/overscan';
 import { buildTournament } from '../../../src/features/monitor-display/__tests__/monitorFixture';
 import { buildMonitorView } from '../../../src/features/monitor-display/monitorView';
 import { PERFORMANCE_PROFILES } from '../../../src/types/monitor';
@@ -62,6 +64,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           overscanPercent={rand} page={szene === 'tor2' ? Math.max(seite, 1) : seite} end={end}
         />
       </div>
+      {/* Positionspunkte wie auf der Monitor-Seite (im sicheren Bereich, unten): die Folie darf sie nicht überdecken */}
+      <div style={sichererBereichStyle(rand)}><SlideDots count={3} currentIndex={0} enableTransitions={false} /></div>
     </div>
   </I18nextProvider>,
 );

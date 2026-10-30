@@ -10,8 +10,8 @@ import { scorerPages } from '../finalPages';
 import type { MonitorEnd } from '../monitorEnd';
 import { HyphenSafe } from '../../tournament-finish/components/HyphenSafe';
 import { SlidePageHint } from '../components/SlidePageHint';
-import { SlideHeading } from '../components/SlideHeading';
-import { finalColumn, finalHeadingBlock, finalName, finalPlace, finalRow, finalSubtitle } from './finalStyles';
+import { FinalHeading } from './FinalHeading';
+import { finalColumn, finalName, finalPlace, finalRow } from './finalStyles';
 
 interface FinalScorersSlideProps {
   tournament: Pick<Tournament, 'title'>;
@@ -39,10 +39,7 @@ export function FinalScorersSlide({ tournament, end, theme, style, page = 0 }: F
   };
   return (
     <div style={style} data-testid="monitor-final-scorers" data-page={index + 1} data-pages={pages.length}>
-      <div style={finalHeadingBlock}>
-        <SlideHeading icon="scorers" color={colors.text}>{t('slides.final.scorersTitle')}</SlideHeading>
-        <div style={finalSubtitle(colors)}>{tournament.title}</div>
-      </div>
+      <FinalHeading icon="scorers" title={t('slides.final.scorersTitle')} subtitle={tournament.title} colors={colors} />
       <div style={finalColumn}>
         {pages[index].map((row) => (
           <div key={`${row.kind}-${row.teamId}-${row.kind === 'player' ? row.number : ''}`} data-testid="monitor-scorer-row" data-rank={row.rank ?? ''} style={finalRow(colors, null)}>
