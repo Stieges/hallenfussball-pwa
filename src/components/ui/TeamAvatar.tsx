@@ -181,7 +181,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
             onError={() => setImageError(true)}
           />
         )}
-        <div style={initialsContainerStyles}>
+        <div style={initialsContainerStyles} data-initialen>
           {initials}
         </div>
       </div>
