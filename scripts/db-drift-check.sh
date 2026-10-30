@@ -197,6 +197,12 @@ pending_assertions_for() {
     20261118_005_endstand_tabellenwerte.sql)
       # R3-5b: nur CREATE OR REPLACE match_engine.final_standing_row_valid (tableValues) -- keine eigene Rechte-Assertion
       ;;
+    20261118_007_public_entscheidung_basis.sql)
+      # C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER: nur CREATE OR REPLACE public_view.config_for (basis durchreichen); die md5 des
+      # Sicherheitskerns (public-read-core-unchanged) ist auf die neue Fassung gezogen. Den Rumpf beweist
+      # scripts/public-payload-check.sh (Kategorie P, Gegenprobe G14)
+      echo "public-read-core-unchanged"
+      ;;
     20261110_010_standing_decision_null_version.sql)
       # N6d: nur record_standing_decision (NULL-Version gilt als 0) -- keine eigene Rechte-Assertion
       ;;

@@ -1216,12 +1216,14 @@ SELECT 'public-read-reshare-keeps-code',
 -- public_tournament, display_tournament, is_reading_member; Reihenfolge Schema, Name, Argumente) wie in
 -- 20261117_104_public_payload.sql, und die vier Trigger aus A1 aktiv. Aendert eine spaetere Migration eine dieser
 -- Funktionen, muss der Wert hier mitgezogen werden (bewusst). Vor dem Live-Einspielen: "f".
+-- Mitgezogen fuer 20261118_007_public_entscheidung_basis.sql (public_view.config_for reicht basis durch; vorher
+-- b066d903d80edc87778e7e65b2958366). 007 live seit 30.10.2026 (md5(prosrc) config_for ad6a688f…).
 UNION ALL
 SELECT 'public-read-core-unchanged',
        coalesce((SELECT count(*) = 12
                         AND md5(string_agg(pg_get_functiondef(p.oid), E'\n'
                                            ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
-                            = 'b066d903d80edc87778e7e65b2958366'
+                            = 'd9d204bec11e731e6b68287dd79d0bfc'
                    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                   WHERE n.nspname = 'public_view'
                      OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
