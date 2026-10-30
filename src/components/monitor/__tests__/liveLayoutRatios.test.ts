@@ -85,14 +85,22 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
     expect(header + m.boxH + names + lower + 2 * padding).toBeLessThanOrEqual(flaecheH);
   });
 
-  it('unterer Bereich fasst Uhr, Balken, Hinweiszeile und Schiedsrichter-Zeile', () => {
+  // R5 PR 2 (@ZM-166, @ZM-165): der Text steht ÜBER der Uhr (eine Zeile statt Hinweiszeile darunter), der Balken ist etwa
+  // 3 % der Bildhöhe hoch. Aufbau: Polster · Zeile über der Uhr · Abstand · Uhr · Abstand · Balken · Abstand · Schiedsrichter-Zeile.
+  it('unterer Bereich fasst Text über der Uhr, Uhr, Balken und Schiedsrichter-Zeile', () => {
     const c = m.ctx;
     const rows = resolveCss(L.lowerPaddingTop, c)
+      + m.hint * L.hintLineHeight + resolveCss(L.clockGap, c)
       + m.clock * L.clockLineHeight + 2 * resolveCss(L.clockPadY, c)
-      + resolveCss(L.clockGap, c) + resolveCss(L.progressHeight, c) + resolveCss(L.clockGap, c)
-      + resolveCss(L.hintGapAbove, c) + m.hint * L.hintLineHeight
+      + resolveCss(L.clockGap, c) + resolveCss(L.progressHeight, c)
       + resolveCss(L.hintGapAbove, c) + m.hint * L.hintLineHeight;
     expect(rows).toBeLessThanOrEqual(resolveCss(L.lowerHeight, c));
+  });
+
+  it('@ZM-165 Zeitbalken etwa 3 % der Bildhöhe (mindestens 2,5 %, höchstens 3,5 % der Folienfläche)', () => {
+    const balken = resolveCss(L.progressHeight, m.ctx);
+    expect(balken).toBeGreaterThanOrEqual(0.025 * flaecheH);
+    expect(balken).toBeLessThanOrEqual(0.035 * flaecheH);
   });
 
   it('Abstand zwischen Namen und Uhr vorhanden', () => {

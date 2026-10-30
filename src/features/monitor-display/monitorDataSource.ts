@@ -14,6 +14,7 @@ import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import { subscribeDisplaySignal } from '../../core/realtime/displaySignal';
 import { isKnownToServer, subscribeLocalDisplaySignal, withLocalEngineState } from './localDisplay';
+import { MonitorServerClock } from './monitorServerClock';
 
 export type DisplayOrigin = 'cloud' | 'local';
 
@@ -38,6 +39,18 @@ export interface MonitorDataSource {
    * `display:<id>`, im selben Browser auch die Engine). Gibt die Abmeldung zurück. Fehlt es, bleibt nur der Rückfall-Takt.
    */
   subscribe?(onChange: () => void): () => void;
+  /**
+   * Jetzt in Serverzeit (R5 PR 2, @ZM-176): Geräteuhr plus Abstand, den jede Antwort mitmisst (`server_now`). Bei einem
+   * Turnier nur auf diesem Gerät die Geräteuhr. Fehlt es, gilt die Geräteuhr.
+   */
+  nowMs?(): number;
+}
+
+export interface MonitorSourceOptions {
+  /** Serverzeit-Messung (Tests geben eine eigene Geräteuhr) */
+  clock?: MonitorServerClock;
+  /** Geräteuhr für die Laufzeit der Anfrage (nur für Tests) */
+  deviceNow?: () => number;
 }
 
 // L2: Der Server-Aufruf hat kein eingebautes Timeout. Ohne Begrenzung würde ein hängender Request den Abruf dauerhaft
@@ -72,12 +85,18 @@ function sinceOf(sinceVersion: string | null): number | null {
  * (`unchanged` bzw. geänderte Spiele, E-A3). Übergang bis zur Bildschirm-Kopplung (B-20/B-21).
  * `subscribe` meldet Änderungen sofort (R5 PR 1): Server-Signal `display:<id>` und, im selben Browser, die Engine.
  */
-export function createMonitorSource(tournamentId: string, monitorId: string): MonitorDataSource {
+export function createMonitorSource(tournamentId: string, monitorId: string, options: MonitorSourceOptions = {}): MonitorDataSource {
   let held: Tournament | null = null;
+  const deviceNow = options.deviceNow ?? ((): number => Date.now());
+  const clock = options.clock ?? new MonitorServerClock(deviceNow);
 
   async function fromCloud(sinceVersion: string | null): Promise<DisplayDelta | 'not-found'> {
     const since = held === null ? null : sinceOf(sinceVersion);
+    const requestedAt = deviceNow();
     const reply = await withTimeout(new SupabaseRepository().getForDisplay(tournamentId, monitorId, since), CLOUD_TIMEOUT_MS);
+    if (reply.kind !== 'not-found') {
+      clock.observe(reply.serverNowMs, requestedAt, deviceNow());
+    }
     switch (reply.kind) {
       case 'not-found':
         held = null;
@@ -99,6 +118,7 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
   }
 
   return {
+    nowMs: () => clock.nowMs(),
     subscribe(onChange: () => void): () => void {
       const offServer = subscribeDisplaySignal(tournamentId, onChange);
       const offLocal = subscribeLocalDisplaySignal(onChange);
@@ -144,6 +164,8 @@ export function createMonitorSource(tournamentId: string, monitorId: string): Mo
       // und die nächste Cloud-Antwort holte den älteren Stand („läuft“) zurück.
       const onlyConfirmed = isSupabaseConfigured && !serverDenies && isKnownToServer(found);
       found = await withLocalEngineState(found, undefined, { onlyConfirmed });
+      // Turnier nur auf diesem Gerät: seine Zeitpunkte gelten in Geräteuhr. Bei einer Störung bleibt der gemessene Abstand.
+      if (!lookupFailed) { clock.useDeviceClock(); }
 
       const monitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId) ?? null;
       return { kind: 'snapshot', version: null, tournament: found, monitor, origin: 'local', lookupFailed };

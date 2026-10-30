@@ -1,40 +1,74 @@
 /**
- * MatchTimer - Restzeit-Uhr für die Monitor-Ansicht (@ZM-139, @ZM-137)
+ * MatchTimer – Uhr des Hallenmonitors (R5 PR 2; @ZM-176, @ZM-084, @ZM-139, @ZM-145, @ZM-165, @ZM-166, @ZM-137, @ME-031).
  *
- * - Zeigt die Restzeit des Abschnitts (zentrale Funktion getClockDisplay)
- * - Neutral bis zur angehaltenen Schlussphase, dann eigene Hervorhebung (keine Teamfarbe, keine Eskalation)
- * - Hinweise: „Uhr hält bei Unterbrechung“, bei angehaltener Uhr zusätzlich „angehalten“
- * - Nach Ablauf 00:00 und „Spielzeit abgelaufen – Ergebnis folgt“
+ * - Restzeit des Abschnitts bzw. der Pause aus `monitorUhrOf` (core/view): Feinstatus `live_state` in Serverzeit,
+ *   „jetzt“ aus `NowSourceContext` (die Monitor-Seite stellt Serverzeit bereit, C-MONITOR-UHR-RECHNER).
+ * - Takt an der Sekundengrenze: die Anzeige wechselt kurz nach dem Sekundenwechsel der Spieluhr, nicht bis zu 1 s später.
+ * - Sperre gegen Rückwärts je Uhr-Anker (`monitorUhrMitSperre`).
+ * - Text über der Uhr: „Restzeit“ | „angehalten“ | „Pause · Halbzeit“ | „Pause“ | „Verlängerung“ | „Zeit abgelaufen“.
+ * - Zeitbalken = `ui/atoms/ZeitBalken` (dieselbe Regel wie die Cockpit-Tafel): nimmt ab, nie Rot, keiner im
+ *   Strafstoßschießen und nach dem Ende.
+ *
+ * Ohne Ansicht (`uhr` fehlt, Vorschau/Tests) gilt ein einziger Abschnitt der Länge `durationSeconds` aus den Zeitfeldern.
  */
-
-import { CSSProperties, useState, useEffect } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
-import { MatchStatus } from '../../hooks/useLiveMatches';
+import type { MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
-import { getClockDisplay, DEFAULT_CLOCK_MODE, type ClockMode } from '../../core/match/clockDisplay';
+import { DEFAULT_CLOCK_MODE, type ClockMode } from '../../core/match/clockDisplay';
+import { monitorUhrMitSperre, monitorUhrOf, type MatchView, type MonitorUhrEingabe, type MonitorUhrModell, type MonitorUhrText } from '../../core/view';
+import { NowSourceContext } from '../schedule/useTickingNow';
+import { cachedElapsedSeconds } from '../schedule/matchResult';
+import { ZeitBalken } from '../ui/atoms/ZeitBalken';
+import {
+  STUFEN, balkenRahmenStyle, clockBoxStyle, containerStyle, labelRowStyle, labelStyle, timeStyle, type MatchTimerSize,
+} from './matchTimerStyles';
+
+/** Die Uhr eines Spiels der Ansicht (Monitor-Seite). */
+export interface MatchTimerUhrQuelle {
+  match: Pick<MatchView, 'isLive' | 'clockRules'>;
+  /** `matches.live_state` (Serverzeit) */
+  liveState?: unknown;
+  /** Zeitfelder des Zwischenspeichers, nur ohne Feinstatus */
+  timerStartTime?: string;
+  timerElapsedSeconds?: number;
+  /** Die Uhr steht laut Zwischenspeicher (unterbrochen) */
+  steht?: boolean;
+}
 
 export interface MatchTimerProps {
-  /** Gespielte Sekunden im Abschnitt (Vorbelegung, falls kein Zeitstempel) */
-  elapsedSeconds: number;
-  /** Abschnittslänge in Sekunden */
-  durationSeconds: number;
-  /** Match status */
-  status: MatchStatus;
-  /** Size variant */
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  /** Show progress bar */
+  /** Ohne Ansicht: gespielte Sekunden (Vorbelegung, falls kein Zeitstempel) */
+  elapsedSeconds?: number;
+  /** Ohne Ansicht: Länge des einzigen Abschnitts in Sekunden */
+  durationSeconds?: number;
+  /** Ohne Ansicht: Status des Spiels */
+  status?: MatchStatus;
+  size?: MatchTimerSize;
+  /** Zeitbalken zeigen */
   showProgress?: boolean;
-  /** Timer start time for real-time calculation */
   timerStartTime?: string;
-  /** Timer elapsed seconds before current run */
   timerElapsedSeconds?: number;
-  /** Theme (dark/light/auto) */
   theme?: MonitorTheme;
-  /** Uhr-Art des Turniers (Vorgabe: durchlaufend, letzte Minute angehalten) */
+  /** Ohne Ansicht: Uhr-Art des Turniers */
   clockMode?: ClockMode;
+  /** Die Uhr aus der Ansicht des Spiels (hat Vorrang) */
+  uhr?: MatchTimerUhrQuelle;
 }
+
+/** Kurzer Nachlauf nach dem berechneten Sekundenwechsel, damit die Rundung sicher umspringt. */
+const TICK_NACHLAUF_MS = 15;
+
+type UhrTextKey = 'remaining' | 'stopped' | 'pauseHalftime' | 'pause' | 'overtime' | 'ended';
+
+const TEXT_KEY: Record<MonitorUhrText, UhrTextKey> = {
+  restzeit: 'remaining',
+  angehalten: 'stopped',
+  pauseHalbzeit: 'pauseHalftime',
+  pause: 'pause',
+  verlaengerung: 'overtime',
+  zeitAbgelaufen: 'ended',
+};
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -42,174 +76,69 @@ function formatTime(totalSeconds: number): string {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-/** Gespielte Zeit im Abschnitt; bei laufendem Spiel aus dem Zeitstempel */
-function calculateRealTimeElapsed(
-  status: MatchStatus,
-  timerStartTime?: string,
-  timerElapsedSeconds?: number,
-  fallbackElapsed?: number
-): number {
-  if (status === 'NOT_STARTED') {
-    return 0;
+function eingabeOf(props: MatchTimerProps, nowMs: number): MonitorUhrEingabe {
+  const { uhr } = props;
+  if (uhr !== undefined) {
+    return {
+      match: uhr.match, liveState: uhr.liveState, nowMs, cacheSteht: uhr.steht === true,
+      // Ohne Zeitfelder wie bisher am Monitor: gespielt 0 (volle Abschnittslänge)
+      cacheElapsedSec: cachedElapsedSeconds(uhr.steht === true ? { timerElapsedSeconds: uhr.timerElapsedSeconds } : uhr, nowMs) ?? 0,
+      cacheAnker: [uhr.timerStartTime, uhr.timerElapsedSeconds, uhr.steht].map(String).join('|'),
+    };
   }
-  if (status !== 'RUNNING' || !timerStartTime) {
-    return timerElapsedSeconds ?? fallbackElapsed ?? 0;
-  }
-  const runtimeSeconds = Math.floor((Date.now() - new Date(timerStartTime).getTime()) / 1000);
-  return (timerElapsedSeconds ?? 0) + runtimeSeconds;
+  // Ohne Ansicht: ein Abschnitt der Länge `durationSeconds` (Vorschau, ältere Aufrufer)
+  const status = props.status ?? 'RUNNING';
+  const laeuft = status === 'RUNNING';
+  const zeitfelder = { timerStartTime: laeuft ? props.timerStartTime : undefined, timerElapsedSeconds: props.timerElapsedSeconds ?? props.elapsedSeconds ?? 0 };
+  return {
+    match: {
+      isLive: status !== 'FINISHED',
+      clockRules: { sections: 1, sectionSeconds: props.durationSeconds ?? 0, overtimeSeconds: 0, clockMode: props.clockMode ?? DEFAULT_CLOCK_MODE },
+    },
+    nowMs, cacheSteht: !laeuft,
+    cacheElapsedSec: status === 'NOT_STARTED' ? 0 : cachedElapsedSeconds(zeitfelder, nowMs),
+    cacheAnker: [status, zeitfelder.timerStartTime, zeitfelder.timerElapsedSeconds].map(String).join('|'),
+  };
 }
 
-const sizeStyles: Record<string, { time: string; progress: string; gap: string }> = {
-  sm: { time: '18px', progress: '6px', gap: '6px' },
-  md: { time: '28px', progress: '8px', gap: '10px' },
-  lg: { time: '42px', progress: '12px', gap: '14px' },
-  xl: { time: displayFontSizes.clockXL, progress: displayLayout.scoreArea.progressHeight, gap: displayLayout.scoreArea.clockGap },
-};
+/** Uhr mit Takt an der Sekundengrenze und Sperre gegen Rückwärts. */
+function useMonitorUhr(props: MatchTimerProps): MonitorUhrModell | null {
+  const jetzt = useContext(NowSourceContext);
+  const [takt, setTakt] = useState(0);
+  const vorher = useRef<MonitorUhrModell | null>(null);
+  const uhr = monitorUhrMitSperre(monitorUhrOf(eingabeOf(props, jetzt())), vorher.current);
+  useEffect(() => { vorher.current = uhr; });
+  const warten = uhr?.msBisWechsel ?? null;
+  useEffect(() => {
+    if (warten === null) { return undefined; }
+    const timer = setTimeout(() => setTakt((n) => n + 1), warten + TICK_NACHLAUF_MS);
+    return () => clearTimeout(timer);
+  }, [warten, takt]);
+  return uhr;
+}
 
-export const MatchTimer: React.FC<MatchTimerProps> = ({
-  elapsedSeconds: propElapsedSeconds,
-  durationSeconds,
-  status,
-  size = 'lg',
-  showProgress = true,
-  timerStartTime,
-  timerElapsedSeconds,
-  theme = 'dark',
-  clockMode = DEFAULT_CLOCK_MODE,
-}) => {
+export const MatchTimer: React.FC<MatchTimerProps> = (props) => {
+  const { size = 'lg', showProgress = true, theme = 'dark' } = props;
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
-
-  const [displayElapsed, setDisplayElapsed] = useState(() =>
-    calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds)
-  );
-
-  useEffect(() => {
-    const update = () => setDisplayElapsed(
-      calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds)
-    );
-    update();
-    if (status !== 'RUNNING') {
-      return undefined;
-    }
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [status, timerStartTime, timerElapsedSeconds, propElapsedSeconds, durationSeconds]);
-
-  const clock = getClockDisplay({
-    gespielt: displayElapsed,
-    abschnittSekunden: durationSeconds,
-    uhrArt: clockMode,
-    angehalten: status === 'PAUSED',
-  });
-  const abgelaufen = clock.phase === 'abgelaufen';
-  const progressPercent = Math.min(100, (displayElapsed / durationSeconds) * 100);
-  const currentSize = sizeStyles[size];
-  const highlight = clock.hervorhebung;
-
-  const containerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: currentSize.gap,
-    width: '100%',
-  };
-
-  const timeContainerStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'baseline',
-    gap: size === 'xl' ? displayLayout.scoreArea.clockInnerGap : '8px',
-    // M2: neutrale Hervorhebung (Umkehrung der Textfarbe), keine Buntfarbe
-    // B-44a2: Größe und Lage der Uhr sind in jeder Phase gleich, nur die Füllung wechselt
-    padding: size === 'xl'
-      ? `${displayLayout.scoreArea.clockPadY} ${displayLayout.scoreArea.clockPadX}`
-      : '4px 12px',
-    borderRadius: '999px',
-    backgroundColor: highlight ? themeColors.text : 'transparent',
-  };
-
-  const timeStyle: CSSProperties = {
-    fontSize: currentSize.time,
-    fontWeight: cssVars.fontWeights.bold,
-    fontFamily: cssVars.fontFamilies.heading,
-    // M3: abgelaufen ist neutral, der Text trägt die Aussage
-    color: highlight ? themeColors.background : themeColors.timerNormal,
-    textShadow: highlight ? 'none' : themeColors.textShadowLight,
-    letterSpacing: '0.02em',
-    lineHeight: displayLayout.scoreArea.clockLineHeight,
-  };
-
-  // H1: Hinweise stehen direkt auf dem Monitor-Hintergrund, Text in der Textfarbe (Kontrast ≥ 4,5 : 1)
-  // B-44a2: Hinweise in Hinweisgröße (≥ 3 % Bildhöhe), kompakt gesetzt, mit Abstand zur Uhr (xl)
-  const hintStyle: CSSProperties = {
-    fontSize: size === 'xl' ? displayFontSizes.clockHint : displayFontSizes.bodySM,
-    fontWeight: cssVars.fontWeights.bold,
-    color: themeColors.text,
-    textAlign: 'center',
-  };
-
-  const hintGroupStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'row',
-    // B-44a2: immer dieselbe Zeile, feste Höhe auch ohne Hinweis (Lage ändert sich nie)
-    flexWrap: 'nowrap',
-    whiteSpace: 'nowrap',
-    minHeight: size === 'xl' ? `calc(${displayFontSizes.clockHint} * ${displayLayout.scoreArea.hintLineHeight})` : undefined,
-    justifyContent: 'center',
-    columnGap: displayLayout.scoreArea.hintColumnGap,
-    rowGap: displayLayout.scoreArea.hintGap,
-    lineHeight: displayLayout.scoreArea.hintLineHeight,
-    marginTop: size === 'xl' ? displayLayout.scoreArea.hintGapAbove : undefined,
-  };
-
-  const progressContainerStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: size === 'xl' ? displayLayout.scoreArea.progressWidth : undefined,
-    height: currentSize.progress,
-    backgroundColor: themeColors.progressTrack,
-    borderRadius: currentSize.progress,
-    overflow: 'hidden',
-    position: 'relative',
-    boxShadow: themeColors.progressInsetShadow,
-  };
-
-  const progressBarStyle: CSSProperties = {
-    height: '100%',
-    width: `${progressPercent}%`,
-    background: highlight
-      ? themeColors.text
-      : `linear-gradient(90deg, ${themeColors.progressBar} 0%, ${themeColors.liveBadgeText} 100%)`,
-    borderRadius: currentSize.progress,
-    transition: 'width 1s linear',
-    boxShadow: themeColors.progressShadow,
-  };
-
-  // H2: der Text „abgelaufen“ nur ohne Abpfiff (nicht FINISHED)
-  const hints: string[] = [];
-  if (abgelaufen && status !== 'FINISHED') { hints.push(t('liveMatch.clock.ended')); }
-  if (!abgelaufen && clock.hinweisUhrHaelt) { hints.push(t('liveMatch.clock.holdsOnInterruption')); }
-  if (clock.angehalten) { hints.push(t('liveMatch.clock.stopped')); }
-  if (status === 'PAUSED' && !clock.angehalten) { hints.push(t('timer.pause')); }
+  const uhr = useMonitorUhr(props);
+  const stufe = STUFEN[size];
 
   return (
-    <>
-      <div style={containerStyle}>
-        <div style={timeContainerStyle} data-testid="monitor-clock" data-phase={clock.phase}>
-          <span style={timeStyle} data-monitor="uhr">{formatTime(clock.restSekunden)}</span>
-        </div>
-
-        {showProgress && (
-          <div style={progressContainerStyle}>
-            <div style={progressBarStyle} />
-          </div>
-        )}
-
-        {(hints.length > 0 || size === 'xl') && (
-          <div style={hintGroupStyle} data-testid="clock-hints">
-            {hints.map(text => <div key={text} style={hintStyle}>{text}</div>)}
-          </div>
-        )}
+    <div style={containerStyle(stufe)}>
+      <div style={labelRowStyle(size, stufe)} data-testid="clock-hints">
+        {uhr && <div style={labelStyle(stufe, themeColors)} data-testid="clock-label" data-text={uhr.text}>{t(`liveMatch.clock.${TEXT_KEY[uhr.text]}`)}</div>}
       </div>
-    </>
+      {uhr?.restSekunden !== undefined && uhr.restSekunden !== null && (
+        <div style={clockBoxStyle(size)} data-testid="monitor-clock" data-phase={uhr.schlussphase ? 'schlussphaseAngehalten' : uhr.text === 'zeitAbgelaufen' ? 'abgelaufen' : 'normal'}>
+          <span style={timeStyle(stufe, themeColors, uhr.schlussphase)} data-monitor="uhr">{formatTime(uhr.restSekunden)}</span>
+        </div>
+      )}
+      {showProgress && uhr?.balken && (
+        <div style={balkenRahmenStyle(size, stufe)}>
+          <ZeitBalken anteil={uhr.balken.anteil} ton={uhr.balken.ton} hoehe={stufe.progress} spur={themeColors.progressTrack} testId="monitor-zeitbalken" />
+        </div>
+      )}
+    </div>
   );
 };

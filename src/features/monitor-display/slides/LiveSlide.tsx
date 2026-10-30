@@ -58,6 +58,11 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
           finalScore={shown.score}
           finalRound={shown.phase === 'final'}
           badge={shown.badge}
+          // R5 PR 2: Uhr aus der Ansicht und dem Feinstatus (Serverzeit), nicht aus der Spieldauer (C-MONITOR-OHNE-ABSCHNITTE)
+          uhr={{
+            match: shown, liveState: runningMatch.liveState, timerStartTime: runningMatch.timerStartTime,
+            timerElapsedSeconds: runningMatch.timerElapsedSeconds, steht: shown.status === 'paused',
+          }}
         />
       </div>
     );
