@@ -16,14 +16,15 @@
 # Kategorien:
 #   P  Positiv-Kontrolle: bisherige Wege unveraendert (public_final_standings, display_final_standings(uuid) mit is_public).
 #   F  Fail-fast (Block 0 der Datei unter Test, zurueckgerollt; plus ganze Datei): ohne display_tournament, ohne Kindermodus im
-#      Endstand (final_standings_payload aus 20261113_003) -> Abbruch ohne Aenderung.
+#      Endstand (final_standings_payload aus 20261113_003), fremde Fassung von public_final_standings -> Abbruch ohne Aenderung.
 #   A  (A) Monitor-Link ohne Teilen: final fuer jeden Aufrufer mit tournament_id + monitor_id; Gegenbeispiele wie
 #      display_tournament (fremde/leere/zu lange Kennung, Monitor eines anderen Turniers, geloescht, oeffentlich aber fremde
 #      Kennung), vor dem Abschluss none, Teilen zurueckgenommen weiter final.
 #   K  nichts preisgeben, was der Monitor-Link nicht schon sieht: Kindermodus none, Torschuetzen nur mit Schalter (wie
 #      display_tournament), gleiche Antwort wie die Zuschaueransicht.
-#   B  (B) Wiederoeffnen: dieselbe Antwort wie vor dem Wiederoeffnen (Betriebs-Vorlage Block 1 woertlich und reopen_tournament),
-#      bis neu abgeschlossen; Kindermodus nach dem Wiederoeffnen none; Zuschauer-Endstand unveraendert none (Frage an Daniel).
+#   B  (B) Wiederoeffnen: Monitor-Link UND Zuschauer-Endstand (@LZ-077 Z. 2, Entscheidung 30.10.) liefern dieselbe Antwort wie
+#      vor dem Wiederoeffnen (Betriebs-Vorlage Block 1 woertlich und reopen_tournament), bis neu abgeschlossen; Kindermodus
+#      danach none; Teilen zurueckgenommen -> Zuschauer none; der alte Monitor-Weg display_final_standings(uuid) bleibt none.
 #   C  Abbruch (MVP+): 'cancelled' mit gespeichertem Stand -> none (kein Teil-Endstand; nur Dokumentation des Ist-Stands).
 #   S  Rechte und Katalog: DEFINER/search_path/EXECUTE anon+authenticated, nicht PUBLIC; +1 Funktion, nichts sonst; die
 #      bisherigen Funktionen wortgleich; Rechte-Assertion als ci_schema_reader, Namensliste, Drift-Check-Zuordnung.
@@ -32,7 +33,7 @@
 # Aufrufoptionen:
 #   bash scripts/monitor-endstand-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/monitor-endstand-check.sh --without-migration  Gegenprobe: ohne die Migration muessen A und B rot sein, P gruen
-#   bash scripts/monitor-endstand-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M8); Exit 0 NUR, wenn
+#   bash scripts/monitor-endstand-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M12); Exit 0 NUR, wenn
 #                                                               JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/monitor-endstand-check.sh --print-rueckweg     gibt den Rueckweg aus, ohne Container
 #
@@ -63,11 +64,14 @@ FIX_DIR="$REPO_ROOT/src/core/standings/__fixtures__"
 CONTAINER_PREFIX="monitor-endstand-check-$$"
 CURRENT_CONTAINER=""
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/monitor-endstand-check.XXXXXX")"
-NEW_ASSERTIONS="monitor-endstand-display-link"
+NEW_ASSERTIONS="monitor-endstand-display-link monitor-endstand-public-reopen"
 MON="mon-eingang"   # „Hallenmonitor Eingang“ (@ZM-121)
 
-# Rueckweg (Anhang der Freigabe): die neue Fassung display_final_standings(uuid, text) weg. EIN Block, Waechter: nur, wenn
-# genau diese Fassung (Kennzeichen „20261118_008“ im Kommentar) da ist.
+# Funktionstext woertlich aus 20261113_003 (Rueckweg und Fail-fast-Probe)
+fn_003_sql() { awk -v head="CREATE OR REPLACE FUNCTION $1(" 'index($0, head) == 1 {f=1} f{print} f && $0=="$$;"{exit}' "$LIFECYCLE_FILE"; }
+
+# Rueckweg (Anhang der Freigabe): public_final_standings woertlich aus 20261113_003, die neue Fassung
+# display_final_standings(uuid, text) weg. EIN Block, Waechter: nur, wenn genau diese Fassungen (Kennzeichen) da sind.
 rueckweg_sql() {
   cat <<'SQL'
 -- supabase/rollbacks/20261118_008_monitor_endstand_rollback.sql
@@ -76,18 +80,25 @@ rueckweg_sql() {
 -- scripts/monitor-endstand-check.sh (Kategorie X: Schema danach = Stand vor der Migration).
 -- Reihenfolge: ZUERST die App auf den Stand ohne diesen Client-Teil (sie ruft dann wieder display_final_standings(uuid)),
 -- DANN dieser Block. Danach zeigt ein Monitor ohne Online-Teilen nach dem Abschluss keinen Endstand, und nach dem
--- Wiederoeffnen faellt er ins normale Programm zurueck (Befunde C-MONITOR-ENDSTAND-OHNE-TEILEN,
--- C-MONITOR-ENDSTAND-WIEDEROEFFNEN wieder offen). Keine Daten gehen verloren.
+-- Wiederoeffnen fallen Monitor und Zuschauer-Seite in die laufende Ansicht zurueck (Befunde C-MONITOR-ENDSTAND-OHNE-TEILEN,
+-- C-MONITOR-ENDSTAND-WIEDEROEFFNEN, @LZ-077 Z. 2 wieder offen). Keine Daten gehen verloren.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 DO $rw$
 BEGIN
   IF to_regprocedure('public.display_final_standings(uuid,text)') IS NULL
-     OR position('20261118_008' IN coalesce(obj_description(to_regprocedure('public.display_final_standings(uuid,text)'), 'pg_proc'), '')) = 0 THEN
+     OR position('20261118_008' IN coalesce(obj_description(to_regprocedure('public.display_final_standings(uuid,text)'), 'pg_proc'), '')) = 0
+     OR position('20261118_008 (B)' IN coalesce((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.public_final_standings(text)')), '')) = 0 THEN
     RAISE EXCEPTION 'Rueckweg 20261118_008: Monitor-Endstand nicht in der Fassung 20261118_008 -- nichts geaendert';
   END IF;
 END
 $rw$;
+-- public_final_standings woertlich aus 20261113_003_tournament_lifecycle.sql
+SQL
+  fn_003_sql public.public_final_standings
+  cat <<'SQL'
+REVOKE ALL ON FUNCTION public.public_final_standings(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.public_final_standings(text) TO anon, authenticated;
 DROP FUNCTION public.display_final_standings(uuid, text);
 COMMIT;
 -- Danach: Assertion monitor-endstand-display-link + PRIVILEGE_ASSERTION_NAMES + pending_assertions_for zurueck, Drift-Check.
@@ -230,7 +241,6 @@ niko_fin_with_monitor() { # niko_fin_with_monitor [config-json] [oeffentlich] ->
 # ---------------------------------------------------------------------------------------------------------
 # F: Fail-fast (Block 0 der Datei unter Test, zurueckgerollt)
 # ---------------------------------------------------------------------------------------------------------
-fn_003_sql() { awk -v head="CREATE OR REPLACE FUNCTION $1(" 'index($0, head) == 1 {f=1} f{print} f && $0=="$$;"{exit}' "$LIFECYCLE_FILE"; }
 run_failfast() { # run_failfast <Datei>
   local file="$1" ff
   ff="$(awk '/^-- 0\. Voraussetzungen/{f=1} /^-- 1\. Endstand/{exit} f' "$file")"
@@ -242,6 +252,10 @@ ROLLBACK;" | grep -c 'Voraussetzungen fehlen')"
     "$(q "BEGIN; $(fn_003_sql match_engine.final_standings_payload)
 $ff
 ROLLBACK;" | grep -c 'ohne Kindermodus')"
+  check F "F4 fremde Fassung von public_final_standings (ein Leerzeichen anders) -> Abbruch 'unbekannte Fassung'" "1" \
+    "$(q "BEGIN; $(fn_003_sql public.public_final_standings | sed 's/^  RETURN match_engine.final_standings_payload(v_t);/  RETURN  match_engine.final_standings_payload(v_t);/')
+$ff
+ROLLBACK;" | grep -c 'public_final_standings hat eine unbekannte Fassung')"
 }
 
 # ---------------------------------------------------------------------------------------------------------
@@ -309,8 +323,9 @@ run_probes() {
   t="$(niko_fin_with_monitor '{"publicScorers": true}' oeffentlich)"
   code="$(code_of "$t")"
   before="$(mon "$t" "$MON")"
+  pub_before="$(anon_val "SELECT public.public_final_standings('$code')::text")"
   fa="$(fin_at_ms "$t")"
-  check B "B0 vor dem Wiederoeffnen: final" "final" "$(jstatus "$before")"
+  check B "B0 vor dem Wiederoeffnen: Monitor und Zuschauer final" "final|final" "$(jstatus "$before")|$(jstatus "$pub_before")"
   check B "B1 @LZ-091 Betriebs-Vorlage Block 1 laeuft, Turnier laeuft wieder, der gespeicherte Endstand ist noch da" "0|running|1" \
     "$(reopen_by_operator "$t")|$(life "$t")|$(q "SELECT count(*) FROM public.tournament_final_standings WHERE tournament_id = '$t';")"
   after="$(mon "$t" "$MON")"
@@ -318,9 +333,11 @@ run_probes() {
     "$(jeq "$after" "$before")"
   check B "B2 auch nach 2 weiteren Abrufen und fuer einen angemeldeten Aufrufer gleich" "gleich|gleich" \
     "$(mon "$t" "$MON" >/dev/null; jeq "$(mon "$t" "$MON")" "$before")|$(jeq "$(mon_as kai "$t" "$MON")" "$before")"
-  check B "B3 Zuschauer-Endstand nach dem Wiederoeffnen unveraendert none (Frage an Daniel, @LZ-065 MVP+); bisheriger Monitor-Weg ebenso" \
-    "none|none" \
-    "$(anon_val "SELECT public.public_final_standings('$code') ->> 'status'")|$(anon_val "SELECT public.display_final_standings('$t'::uuid) ->> 'status'")"
+  check B "B3 @LZ-077 Z. 2 Zuschauer (Teilen-Code) sehen den bisherigen Endstand unveraendert (gleiche Antwort wie vorher)" "gleich" \
+    "$(jeq "$(anon_val "SELECT public.public_final_standings('$code')::text")" "$pub_before")"
+  check B "B3 Zuschauer-Antwort = Monitor-Antwort nach dem Wiederoeffnen; der alte Monitor-Weg display_final_standings(uuid) bleibt none" \
+    "gleich|none" \
+    "$(jeq "$(anon_val "SELECT public.public_final_standings('$code')::text")" "$after")|$(anon_val "SELECT public.display_final_standings('$t'::uuid) ->> 'status'")"
   check B "B4 @LZ-091 Olli schliesst erneut ab -> neuer Endstand mit neuem Zeitpunkt, Monitor zeigt ihn" "ok|final|neu" \
     "$(fin_niko olli "$t")|$(jstatus "$(mon "$t" "$MON")")|$(q "SELECT CASE WHEN finished_at > '$fa'::timestamptz AND (\$j\$$(mon "$t" "$MON")\$j\$::jsonb ->> 'finishedAt')::timestamptz = finished_at THEN 'neu' ELSE 'alt' END FROM public.tournaments WHERE id = '$t';")"
   t="$(niko_fin_with_monitor)"
@@ -330,11 +347,27 @@ run_probes() {
   set_config_on "$t" '{"hideScoresForPublic": true}'
   check B "B6 nach dem Wiederoeffnen Kindermodus eingeschaltet -> none (Kindermodus ueberstimmt alles)" "none" "$(jstatus "$(mon "$t" "$MON")")"
   check B "B7 wieder geoeffnet, fremde Kennung -> none" "none" "$(jstatus "$(mon "$t" mon-fremd)")"
+  t="$(niko_fin_with_monitor '' oeffentlich)"
+  code="$(code_of "$t")"
+  q "SELECT lc.reopen('olli', '$t', 'versehentlich abgeschlossen', gen_random_uuid());" >/dev/null
+  check B "B8 Zuschauer nach dem Wiederoeffnen: final; Teilen zurueckgenommen -> none (Teilen-Pruefung unveraendert)" "final|none" \
+    "$(anon_val "SELECT public.public_final_standings('$code') ->> 'status'")|$(q "UPDATE public.tournaments SET is_public = false WHERE id = '$t';" >/dev/null; anon_val "SELECT public.public_final_standings('$code') ->> 'status'")"
+  t="$(niko_fin_with_monitor '{"publicScorers": true}' oeffentlich)"
+  code="$(code_of "$t")"
+  q "SELECT lc.reopen('olli', '$t', 'versehentlich abgeschlossen', gen_random_uuid());" >/dev/null
+  set_config_on "$t" '{"hideScoresForPublic": true}'
+  check B "B9 Zuschauer nach dem Wiederoeffnen mit Kindermodus -> genau {status: none}" '{"status": "none"}' \
+    "$(anon_val "SELECT public.public_final_standings('$code')::text")"
+  t="$(niko_ready)"
+  make_public "$t"
+  check B "B10 @LZ-075 nie abgeschlossen (alles entschieden, Zustand fixed) -> Zuschauer none, kein vorlaeufiger Endstand" "none" \
+    "$(anon_val "SELECT public.public_final_standings('$(code_of "$t")') ->> 'status'")"
 
   # --- C Abbruch (MVP+, nur Ist-Stand) ---------------------------------------------------------------------------
-  t="$(niko_fin_with_monitor)"
+  t="$(niko_fin_with_monitor '' oeffentlich)"
   q "BEGIN; SET LOCAL app.lifecycle_write = 'on'; UPDATE public.tournaments SET lifecycle_status = 'cancelled' WHERE id = '$t'; COMMIT;" >/dev/null
-  check C "C1 'cancelled' (im MVP nicht erreichbar) mit gespeichertem Stand -> none, kein Teil-Endstand" "none" "$(jstatus "$(mon "$t" "$MON")")"
+  check C "C1 'cancelled' (im MVP nicht erreichbar) mit gespeichertem Stand -> Monitor und Zuschauer none, kein Teil-Endstand" "none|none" \
+    "$(jstatus "$(mon "$t" "$MON")")|$(anon_val "SELECT public.public_final_standings('$(code_of "$t")') ->> 'status'")"
   check C "C2 keine Server-Funktion setzt lifecycle_status auf 'cancelled' (Abbrechen gibt es im MVP nicht)" "0" \
     "$(q "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
             WHERE n.nspname IN ('public', 'match_engine') AND p.prosrc ~ 'lifecycle_status\\s*=\\s*''cancelled''';")"
@@ -347,6 +380,12 @@ run_rights() {
               || has_function_privilege('authenticated', p.oid, 'EXECUTE') || '|'
               || EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
             FROM pg_proc p WHERE p.oid = to_regprocedure('public.display_final_standings(uuid,text)');")"
+  check S "S2 public_final_standings: weiter SECURITY DEFINER, search_path fest, EXECUTE anon + authenticated, nicht PUBLIC" \
+    "true|{\"search_path=public, pg_temp\"}|true|true|false" \
+    "$(q "SELECT p.prosecdef || '|' || p.proconfig::text || '|' || has_function_privilege('anon', p.oid, 'EXECUTE') || '|'
+              || has_function_privilege('authenticated', p.oid, 'EXECUTE') || '|'
+              || EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+            FROM pg_proc p WHERE p.oid = to_regprocedure('public.public_final_standings(text)');")"
 }
 
 run_assertions() {
@@ -365,7 +404,7 @@ run_assertions() {
 
 old_md5() {
   q "SELECT string_agg(p.oid::regprocedure::text || '=' || md5(p.prosrc), ',' ORDER BY 1) FROM pg_proc p
-      WHERE p.oid IN (to_regprocedure('public.display_final_standings(uuid)'), to_regprocedure('public.public_final_standings(text)'),
+      WHERE p.oid IN (to_regprocedure('public.display_final_standings(uuid)'),
                       to_regprocedure('match_engine.final_standings_payload(public.tournaments)'),
                       to_regprocedure('public.display_tournament(uuid,text,bigint)'));"
 }
@@ -392,13 +431,17 @@ fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   MUTATIONS=(
     "M1|Monitor-Kennung nicht geprueft (jeder Link)|                     WHERE m ->> 'id' = p_monitor_id) THEN|                     WHERE true) THEN"
-    "M2|Wiederoeffnen nicht beachtet (Zweig B fehlt)|  IF v_t.lifecycle_status = 'fixed' THEN|  IF false THEN"
-    "M3|nach dem Wiederoeffnen finishedAt nicht vom gespeicherten Stand (Zeitpunkt leer)|      v_t.finished_at := v_finished_at;|      v_t.finished_at := NULL;"
-    "M4|Endstand an final_standings_payload vorbei (Kindermodus/Schalter nicht beachtet)|  RETURN match_engine.final_standings_payload(v_t);|  RETURN CASE WHEN v_t.lifecycle_status = 'finished' THEN jsonb_build_object('status', 'final', 'finishedAt', v_t.finished_at, 'standings', (SELECT snapshot FROM public.tournament_final_standings WHERE tournament_id = v_t.id)) ELSE jsonb_build_object('status', 'none') END;"
+    "M2|Monitor: Wiederoeffnen nicht beachtet (Zweig B fehlt)|  IF v_t.lifecycle_status = 'fixed' THEN@@2|  IF false THEN"
+    "M3|Monitor: nach dem Wiederoeffnen finishedAt nicht vom gespeicherten Stand (Zeitpunkt leer)|      v_t.finished_at := v_finished_at;@@2|      v_t.finished_at := NULL;"
+    "M4|Monitor: Endstand an final_standings_payload vorbei (Kindermodus/Schalter nicht beachtet)|  RETURN match_engine.final_standings_payload(v_t);@@2|  RETURN CASE WHEN v_t.lifecycle_status = 'finished' THEN jsonb_build_object('status', 'final', 'finishedAt', v_t.finished_at, 'standings', (SELECT snapshot FROM public.tournament_final_standings WHERE tournament_id = v_t.id)) ELSE jsonb_build_object('status', 'none') END;"
     "M5|oeffentlich ersetzt die Monitor-Kennung|  IF NOT FOUND\n     OR NOT EXISTS|  IF NOT FOUND\n     OR NOT coalesce(v_t.is_public, false) AND NOT EXISTS"
     "M6|kein EXECUTE fuer anon|GRANT EXECUTE ON FUNCTION public.display_final_standings(uuid, text) TO anon, authenticated;|GRANT EXECUTE ON FUNCTION public.display_final_standings(uuid, text) TO authenticated;"
     "M7|Fail-fast laesst Endstand ohne Kindermodus durch|  IF position('W-M (b)' IN|  IF false AND position('W-M (b)' IN"
-    "M8|Wiederoeffnen auch nach Abbruch ('cancelled' liefert Teil-Endstand)|  IF v_t.lifecycle_status = 'fixed' THEN|  IF v_t.lifecycle_status IN ('fixed', 'cancelled') THEN"
+    "M8|Monitor: Wiederoeffnen auch nach Abbruch ('cancelled' liefert Teil-Endstand)|  IF v_t.lifecycle_status = 'fixed' THEN@@2|  IF v_t.lifecycle_status IN ('fixed', 'cancelled') THEN"
+    "M9|Zuschauer: Wiederoeffnen nicht beachtet (Zweig B fehlt)|  IF v_t.lifecycle_status = 'fixed' THEN@@1|  IF false THEN"
+    "M10|Zuschauer: nach dem Wiederoeffnen finishedAt nicht vom gespeicherten Stand|      v_t.finished_at := v_finished_at;@@1|      v_t.finished_at := now();"
+    "M11|Zuschauer: Teilen-Pruefung entfallen (is_public nicht beachtet)|   WHERE t.share_code = p_share_code AND coalesce(t.is_public, false) AND t.deleted_at IS NULL;|   WHERE t.share_code = p_share_code AND t.deleted_at IS NULL;"
+    "M12|Fail-fast laesst fremde Fassung von public_final_standings durch|     OR (md5((SELECT prosrc|     OR false AND (md5((SELECT prosrc"
   )
   not_killed=()
   for mut in "${MUTATIONS[@]}"; do
@@ -410,9 +453,22 @@ src, dst = sys.argv[1], sys.argv[2]
 frm = sys.argv[3].replace('\\n', '\n')
 to = sys.argv[4].replace('\\n', '\n')
 text = open(src, encoding='utf-8').read()
-if text.count(frm) != 1:
+# „Muster@@N“: genau die N-te Stelle (die Zweige (B) stehen in beiden Funktionen gleich; 1 = Zuschauer, 2 = Monitor-Link)
+nth = 0
+if '@@' in frm:
+    frm, nth = frm.rsplit('@@', 1)
+    nth = int(nth)
+    if text.count(frm) < nth:
+        sys.exit(f"Mutation: Stelle {nth} nicht gefunden: {frm!r} ({text.count(frm)}x)")
+    pos = -1
+    for _ in range(nth):
+        pos = text.index(frm, pos + 1)
+    text = text[:pos] + to + text[pos + len(frm):]
+elif text.count(frm) != 1:
     sys.exit(f"Mutation: Stelle nicht genau einmal gefunden: {frm!r} ({text.count(frm)}x)")
-open(dst, 'w', encoding='utf-8').write(text.replace(frm, to))
+else:
+    text = text.replace(frm, to)
+open(dst, 'w', encoding='utf-8').write(text)
 PY
     then
       echo "::error::Mutation $mid nicht anwendbar"; exit 1
@@ -464,11 +520,12 @@ for dim in tables columns functions triggers policies indexes rls_tables; do
   [[ "$dim" == "functions" ]] && expected=1
   check S "Katalogzaehlung $dim: Zuwachs" "$expected" $(( $(count_of "$COUNTS_AFTER" "$dim") - $(count_of "$COUNTS_BEFORE" "$dim") ))
 done
-check S "bisherige Funktionen wortgleich (display_final_standings(uuid), public_final_standings, final_standings_payload, display_tournament)" \
+check S "bisherige Funktionen wortgleich (display_final_standings(uuid), final_standings_payload, display_tournament)" \
   "$MD5_BEFORE" "$(old_md5)"
 echo "md5(prosrc) nachher (Soll fuer Produktion):"
 q "SELECT '    ' || p.oid::regprocedure::text || ' ' || md5(p.prosrc) FROM pg_proc p
     WHERE p.oid IN (to_regprocedure('public.display_final_standings(uuid,text)'), to_regprocedure('public.display_final_standings(uuid)'),
+                    to_regprocedure('public.public_final_standings(text)'),
                     to_regprocedure('match_engine.final_standings_payload(public.tournaments)')) ORDER BY 1;"
 
 run_probes

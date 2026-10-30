@@ -215,7 +215,7 @@ pending_assertions_for() {
       ;;
     # @ZM-121 Z. 1/2: neue Fassung display_final_standings(uuid, text) fuer den Monitor-Link (scripts/monitor-endstand-check.sh)
     20261118_008_monitor_endstand.sql)
-      echo "monitor-endstand-display-link"
+      echo "monitor-endstand-display-link monitor-endstand-public-reopen"
       ;;
     *)
       return 1
@@ -714,6 +714,7 @@ PRIVILEGE_ASSERTION_NAMES=(
   "monitor-signal-definer-no-client-execute"
   # Monitor-Endstand (20261118_008, @ZM-121 Z. 1/2): Endstand ueber den Monitor-Link, auch nach dem Wiederoeffnen.
   "monitor-endstand-display-link"
+  "monitor-endstand-public-reopen"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

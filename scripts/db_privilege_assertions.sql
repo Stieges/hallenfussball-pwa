@@ -1367,6 +1367,16 @@ SELECT 'monitor-endstand-display-link',
                         AND position('WHERE m ->> ''id'' = p_monitor_id' IN p.prosrc) > 0
                         AND position('FROM public.tournament_final_standings fs WHERE fs.tournament_id = v_t.id' IN p.prosrc) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.display_final_standings(uuid,text)')), false)
+-- (2) Zuschauer-Endstand nach dem Wiederoeffnen (@LZ-077 Z. 2): Zweig (B), Teilen-Pruefung und final_standings_payload bleiben.
+UNION ALL
+SELECT 'monitor-endstand-public-reopen',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('20261118_008 (B)' IN p.prosrc) > 0
+                        AND position('t.share_code = p_share_code AND coalesce(t.is_public, false) AND t.deleted_at IS NULL' IN p.prosrc) > 0
+                        AND position('RETURN match_engine.final_standings_payload(v_t);' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.public_final_standings(text)')), false)
 -- R5 PR 1 (20261118_006, Sofort-Kanal, Zone 1 „Änderungssignal“): Signal ohne Inhalt je Anweisung und Turnier.
 -- (1) Sieben Trigger AFTER ... FOR EACH STATEMENT auf matches (I/U/D), teams (I/U/D), tournaments (U), aktiv.
 UNION ALL

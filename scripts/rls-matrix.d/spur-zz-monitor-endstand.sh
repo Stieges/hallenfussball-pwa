@@ -12,7 +12,8 @@
 #   display_final_standings(T_MAIN, 'mon-fremd'): 'none' (Kennung steht nicht in config.monitors).
 #   nach dem Wiederoeffnen (lifecycle_status 'fixed', finished_at NULL; Endstand bleibt gespeichert, @LZ-091):
 #     weiter 'final' (@ZM-121 Z. 2).
-# Dazu anon: im Kindermodus 'none' (@ZM-121 Z. 4). Gegenprobe: --without-mend (Funktion fehlt -> 42883, rot).
+# Dazu anon: im Kindermodus 'none' (@ZM-121 Z. 4); Zuschauer-Endstand des oeffentlichen T_PUBLIC nach dem Wiederoeffnen
+# weiter 'final' (@LZ-077 Z. 2), ohne Teilen 'none'. Gegenprobe: --without-mend (Funktion fehlt -> 42883 bzw. none, rot).
 
 MEND_MISMATCHES=0
 MEND_CELLS=0
@@ -62,4 +63,16 @@ mend_cell "@ZM-121 Z. 4 anon: Kindermodus -> kein Endstand" \
   "$(mend_probe anon "" "UPDATE public.tournaments SET config = coalesce(config, '{}'::jsonb) || '{\"hideScoresForPublic\": true}'::jsonb WHERE id = '$T_MAIN'; $MEND_SETUP_FIN")" \
   "mon=none:false;fremd=none;"
 
-echo "mend: $MEND_CELLS Zellen geprueft (${#MATRIX_IDS[@]} Identitaeten x 2 + anon 3), $MEND_MISMATCHES Abweichung(en)"
+# Zuschauer (anon, Teilen-Code): T_PUBLIC abgeschlossen, dann wieder geoeffnet -> final; dasselbe ohne Teilen -> none.
+MEND_PUB_SETUP="UPDATE public.tournaments SET share_code = 'PUBME1' WHERE id = '$T_PUBLIC';
+$(a21a_finish_setup "$T_PUBLIC")
+SET LOCAL app.lifecycle_write = 'on';
+UPDATE public.tournaments SET lifecycle_status = 'fixed', finished_at = NULL WHERE id = '$T_PUBLIC';
+RESET app.lifecycle_write;"
+mend_pub() { a27_sql anon "" "SELECT 'mendpub:' || (public.public_final_standings('PUBME1') ->> 'status');" "$1" | grep -m1 -oE 'mendpub:[a-z0-9]+' || echo "mendpub:fehler"; }
+mend_cell "@LZ-077 Z. 2 anon: Zuschauer-Endstand nach dem Wiederoeffnen" "$(mend_pub "$MEND_PUB_SETUP")" "mendpub:final"
+mend_cell "@LZ-077 Z. 2 anon: wieder geoeffnet, aber nicht (mehr) geteilt -> kein Endstand" \
+  "$(mend_pub "$MEND_PUB_SETUP
+UPDATE public.tournaments SET is_public = false WHERE id = '$T_PUBLIC';")" "mendpub:none"
+
+echo "mend: $MEND_CELLS Zellen geprueft (${#MATRIX_IDS[@]} Identitaeten x 2 + anon 5), $MEND_MISMATCHES Abweichung(en)"
