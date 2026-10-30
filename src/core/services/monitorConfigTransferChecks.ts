@@ -7,6 +7,7 @@
 
 import type { Tournament, TournamentField } from '../../types/tournament';
 import { createDefaultFields } from '../../utils/displayNames';
+import { isSingleGroupId, standingsGroups } from '../models/standingsGroups';
 import type { MonitorConfigPayload, TransferSlide } from './monitorConfigTransfer';
 
 /** Ziel der Umstellung „Auf Feld 1 umstellen“ (@ME-061) */
@@ -36,7 +37,8 @@ export function tournamentFieldList(tournament: Partial<Pick<Tournament, 'fields
  * gespeicherten Standardgruppen (@ZM-181, @ZM-177; Befund C-MONITOR-ALLE-TABELLEN-OHNE-ZEILEN).
  */
 export function assignedGroupIds(teams: readonly { group?: string }[] | undefined): string[] {
-  return [...new Set((teams ?? []).map((team) => team.group).filter((group): group is string => group !== undefined && group !== '' && group !== 'all'))].sort();
+  // EINE Regel für die Zuordnung (`standingsGroups`/`groupKeyOf`, wie die Monitor-Folie): leer, fehlend und 'all' sind „keine Gruppe“
+  return standingsGroups(teams ?? []).map((g) => g.group).filter((id) => !isSingleGroupId(id));
 }
 
 /** Gleiche Regeln wie der Monitor-Editor: Felder wie `tournamentFieldList`; Gruppen wie dort */

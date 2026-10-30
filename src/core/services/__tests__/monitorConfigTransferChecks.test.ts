@@ -14,6 +14,7 @@ import {
   sanitizeCustomQr,
   slideReferenceProblem,
   tournamentSlotTargets,
+  assignedGroupIds,
 } from '../monitorConfigTransferChecks';
 
 const ONE_FIELD = { fieldIds: ['field-1'], groupIds: ['A', 'B'] };
@@ -32,6 +33,17 @@ function payload(slides: TransferSlide[], name = 'Halle'): MonitorConfigPayload 
     }],
   };
 }
+
+describe('assignedGroupIds folgt derselben Zuordnung wie die Monitor-Folie (`standingsGroups`/`groupKeyOf`)', () => {
+  it('fehlend, leer und \'all\' zählen als „keine Gruppe“; Buchstaben sortiert, ohne Dubletten', () => {
+    expect(assignedGroupIds([{ group: 'B' }, { group: 'A' }, { group: 'all' }, { group: '' }, {}, { group: 'B' }])).toEqual(['A', 'B']);
+  });
+  it('Gegenbeispiel: Teams ohne Gruppe oder alle mit \'all\' (Jeder gegen jeden) ergeben keine Gruppe; \'ALL\' ist ein Buchstabe', () => {
+    expect(assignedGroupIds([{}, { group: 'all' }])).toEqual([]);
+    expect(assignedGroupIds(undefined)).toEqual([]);
+    expect(assignedGroupIds([{ group: 'ALL' }])).toEqual(['ALL']);
+  });
+});
 
 describe('tournamentSlotTargets nach tatsächlicher Team-Zuordnung (@ZM-181, @ZM-177)', () => {
   it('Standardgruppen A, B, C, aber Teams nur in A und B: Ziele sind A und B', () => {

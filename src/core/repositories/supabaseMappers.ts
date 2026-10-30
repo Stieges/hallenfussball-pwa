@@ -541,7 +541,7 @@ interface TournamentConfig {
  * A und B (so schrieb der Assistent sie bis dahin) lesen und schreiben wir nicht mehr mit, sonst bieten Monitor und Editor Gruppen an,
  * zu denen kein Team gehört (C-MONITOR-ALLE-TABELLEN-OHNE-ZEILEN). Bei Gruppen + Finalrunde bleibt die Konfiguration unverändert.
  */
-function groupsOfSystem(groupSystem: string | undefined, groups: Tournament['groups']): Tournament['groups'] {
+export function groupsOfSystem(groupSystem: string | undefined, groups: Tournament['groups']): Tournament['groups'] {
   return groupSystem === 'roundRobin' ? undefined : groups;
 }
 
