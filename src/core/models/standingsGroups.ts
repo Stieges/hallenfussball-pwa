@@ -3,8 +3,8 @@
  *
  * Ein Turnier ohne Gruppen („Jeder gegen jeden“; der Assistent entfernt die Gruppe der Teams) ist EINE Gruppe mit allen
  * Teams (Record Turniermodi: Jeder gegen jeden = „eine Gruppe“). Genutzt von `GroupTables` (Turnierverwaltung,
- * Zuschauer-Seite) und der Tabellenrechnung `calculateStandingsPerGroup`. Monitor (`standingsSections`: „Gesamttabelle“)
- * und PDF (@DR-009) nutzen diese Funktion NICHT, sie haben eigene Regeln für Turniere ohne Gruppen.
+ * Zuschauer-Seite), der Tabellenrechnung `calculateStandingsPerGroup` und dem Monitor (`groupIds` → `standingsSections`:
+ * „Gesamttabelle“, C-MONITOR-ALLE-TABELLEN-OHNE-ZEILEN). Das PDF (@DR-009) nutzt diese Funktion NICHT, es hat eigene Regeln für Turniere ohne Gruppen.
  * Es geht nur um die Zuordnung; die Reihenfolge innerhalb einer Tabelle bleibt Sache der Tabellenrechnung.
  */
 
