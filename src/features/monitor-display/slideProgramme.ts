@@ -89,7 +89,17 @@ export function selectDisplayableSlides<T extends MonitorSlideLike>(
 // der Hook `useSlideshow` plant den einen Timer, die Seite steuert nur Tasten.
 // =============================================================================
 
-export type ProgramSlide = MonitorSlide | QrRueckfallFolie;
+/**
+ * Folien nach dem Abschluss (R3-7; @ZM-121): „Endstand“ und „Torschützen“ stehen nicht im Programm des Monitors, sondern
+ * kommen mit dem Abschluss dazu (eigener Render-Pfad wie die Zuschauer-QR-Folie); Dauer = Monitor-Standard.
+ */
+export interface EndFolie {
+  id: string;
+  type: 'final-standings' | 'final-scorers';
+  duration: null;
+}
+
+export type ProgramSlide = MonitorSlide | QrRueckfallFolie | EndFolie;
 
 /** Haltezeit des Endergebnisses nach Abpfiff, bevor der Takt weiterläuft (@ZM-077). */
 export const FINAL_RESULT_HOLD_MS = 30_000;

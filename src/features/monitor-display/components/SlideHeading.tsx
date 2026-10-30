@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { cssVars, displayList } from '../../../design-tokens';
 import { Icons } from '../../../components/ui/Icons';
 
-export type SlideHeadingIcon = 'standings' | 'schedule' | 'nextMatches' | 'finals';
+export type SlideHeadingIcon = 'standings' | 'schedule' | 'nextMatches' | 'finals' | 'scorers';
 
 interface SlideHeadingProps {
   /** Linien-Symbol statt Emoji (Designsprache „Anzeigetafel“, Symbole statt Emojis) */
@@ -16,6 +16,7 @@ const ICONS = {
   schedule: Icons.Calendar,
   nextMatches: Icons.List,
   finals: Icons.Trophy,
+  scorers: Icons.List,
 } as const;
 
 /** Überschrift einer Listen-Folie (B-44b): Linien-Symbol, daneben das Wort, Größe relativ zur Bildhöhe. */

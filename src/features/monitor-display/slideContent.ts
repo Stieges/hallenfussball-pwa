@@ -10,6 +10,8 @@ import type { MatchView, TournamentView } from '../../core/view';
 import { DEFAULT_SLIDE_CONFIG } from '../../types/monitor';
 import type { ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
+import { rankingPages, scorerPages } from './finalPages';
+import type { MonitorEnd } from './monitorEnd';
 
 /** Zeilen je Seite bis B-17 misst (@ZM-129). */
 export const MONITOR_ROWS_PER_PAGE = 6;
@@ -100,7 +102,10 @@ export function pagesFor(items: number, perPage: number = MONITOR_ROWS_PER_PAGE)
  * Seitenzahl einer Folie für den Takt (B-16f1, f3). Alle Tabellen: ein Abschnitt je Seite. Spielplan und
  * Nächste Spiele: je MONITOR_ROWS_PER_PAGE Zeilen. Andere Folien: eine Seite. B-17 misst die Seitenzahl.
  */
-export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null, view?: TournamentView | null): number {
+export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null, view?: TournamentView | null, end?: MonitorEnd): number {
+  // Folien nach dem Abschluss (R3-7, @ZM-129): Seiten aus dem gespeicherten Endstand, ohne Tabelle und Ansicht
+  if (slide.type === 'final-standings') { return end?.kind === 'final' ? rankingPages(end.ranking).length : 1; }
+  if (slide.type === 'final-scorers') { return end?.kind === 'final' && end.scorers !== null ? scorerPages(end.scorers).length : 1; }
   if (!tournament || !view || !('config' in slide)) { return 1; }
   switch (slide.type) {
     case 'all-standings':
