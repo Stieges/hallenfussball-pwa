@@ -1354,6 +1354,19 @@ SELECT 'abschluss-nachzug-late-entries-rpc',
                         AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
                         AND position('has_tournament_permission(p_tournament_id, ''manageLifecycle'')' IN p.prosrc) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.list_late_entries(uuid)')), false)
+-- Monitor-Endstand (20261118_008_monitor_endstand.sql, @ZM-121 Z. 1/2): Endstand ueber den Monitor-Link wie
+-- display_tournament (Kennung in config.monitors, ohne Teilen), nach dem Wiederoeffnen der gespeicherte Stand; Antwort nur
+-- ueber final_standings_payload (Kindermodus, Torschuetzen-Schalter). DEFINER, search_path fest, anon + authenticated, nicht PUBLIC.
+UNION ALL
+SELECT 'monitor-endstand-display-link',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('RETURN match_engine.final_standings_payload(v_t);' IN p.prosrc) > 0
+                        AND position('WHERE m ->> ''id'' = p_monitor_id' IN p.prosrc) > 0
+                        AND position('FROM public.tournament_final_standings fs WHERE fs.tournament_id = v_t.id' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.display_final_standings(uuid,text)')), false)
 -- R5 PR 1 (20261118_006, Sofort-Kanal, Zone 1 „Änderungssignal“): Signal ohne Inhalt je Anweisung und Turnier.
 -- (1) Sieben Trigger AFTER ... FOR EACH STATEMENT auf matches (I/U/D), teams (I/U/D), tournaments (U), aktiv.
 UNION ALL
