@@ -1,0 +1,116 @@
+name: Main-Ampel
+
+# Stopp-Regel (@TA-022, Plan Werkzeug-Paket Abschnitt 5a, Daniel 30.10.): Seit „Branch muss aktuell sein“ (strict) aus ist,
+# darf ein PR mergen, sobald SEINE Prüfungen grün sind – auch wenn main inzwischen weitergewandert ist. Das Zusammenspiel
+# zweier PRs zeigt erst der Lauf nach dem Merge auf main. Ist dort ein Pflicht-Lauf rot, wird nichts weiter gemergt, bis main
+# wieder grün ist; nur ein PR mit der Markierung (Label) „main-reparatur“ darf durch.
+#
+# Umsetzung: Dieser Workflow setzt auf jedem offenen PR den Commit-Status „Main-Ampel (Stopp-Regel)“:
+#   - failure, solange der letzte abgeschlossene Push-Lauf eines der Läufe unten auf main rot ist (abgebrochene und
+#     übersprungene Läufe zählen nicht), mit Link auf den roten Lauf;
+#   - success, wenn alle grün sind, oder wenn der PR das Label „main-reparatur“ trägt.
+# Auslöser: jedes Ende eines dieser Läufe (auf main → alle offenen PRs neu bewerten; auf einem PR-Branch → nur dieser PR,
+# so bekommen auch Dependabot-PRs den Status, deren eigener pull_request-Lauf nicht schreiben darf), außerdem neue Commits
+# und Label-Änderungen am PR selbst.
+# Blockierend wird der Status erst, wenn er in der Branch-Regel für main als Pflicht-Prüfung eingetragen ist (Einstellung,
+# Daniels Entscheidung; dieser Workflow ändert keine Einstellungen).
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - E2E Cloud
+      - CodeQL Security Scan
+      - Visual Regression
+      - RLS Role Matrix
+      - Match Engine Parity
+      - Append Match Events
+      - Supabase Schema Drift Check
+      - Klaerungsliste
+    types: [completed]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: main-ampel-${{ github.event.workflow_run.head_branch || github.head_ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  ampel:
+    name: Main-Ampel setzen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Pflicht-Läufe auf main lesen und Status der PRs setzen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EREIGNIS: ${{ github.event_name }}
+          LAUF_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          LAUF_SHA: ${{ github.event.workflow_run.head_sha }}
+          LAUF_PRS: ${{ toJSON(github.event.workflow_run.pull_requests.*.number) }}
+          PR_NUMMER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          KONTEXT='Main-Ampel (Stopp-Regel)'
+          LAEUFE=('CI' 'E2E Cloud' 'CodeQL Security Scan' 'Visual Regression' 'RLS Role Matrix' 'Match Engine Parity' 'Append Match Events' 'Supabase Schema Drift Check' 'Klaerungsliste')
+
+          # 1. Letzter abgeschlossener Push-Lauf je Workflow auf main (abgebrochen/übersprungen zählt nicht).
+          rot=''
+          rot_url=''
+          for w in "${LAEUFE[@]}"; do
+            zeile=$(gh run list -R "$REPO" --workflow "$w" --branch main --event push --status completed --limit 20 \
+              --json conclusion,headSha,url \
+              --jq '[.[] | select(.conclusion != "cancelled" and .conclusion != "skipped")][0] // empty | "\(.conclusion) \(.headSha[0:8]) \(.url)"' || true)
+            if [ -z "$zeile" ]; then echo "  $w: kein abgeschlossener Push-Lauf auf main"; continue; fi
+            read -r fazit sha url <<<"$zeile"
+            echo "  $w: $fazit ($sha)"
+            if [ "$fazit" != 'success' ] && [ "$fazit" != 'neutral' ]; then
+              rot="${rot:+$rot, }$w ($sha)"
+              rot_url="${rot_url:-$url}"
+            fi
+          done
+          if [ -n "$rot" ]; then
+            echo "::warning::Hauptzweig rot: $rot – keine weiteren Merges außer PRs mit Label main-reparatur (Stopp-Regel)."
+            echo "### Main-Ampel: ROT – $rot" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Main-Ampel: grün" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # 2. Welche PRs bekommen den Status?
+          ziele=()
+          if [ "$EREIGNIS" = 'pull_request' ]; then
+            ziele=("$PR_NUMMER")
+          elif [ "$EREIGNIS" = 'workflow_run' ] && [ "$LAUF_BRANCH" != 'main' ]; then
+            while read -r nr; do ziele+=("$nr"); done < <(jq -r '.[]' <<<"$LAUF_PRS")
+          else
+            while read -r nr; do ziele+=("$nr"); done < <(gh pr list -R "$REPO" --state open --limit 200 --json number --jq '.[].number')
+          fi
+
+          # 3. Status je PR (Kopf-Commit), Label „main-reparatur“ lässt durch.
+          for nr in "${ziele[@]+"${ziele[@]}"}"; do
+            [ -n "$nr" ] || continue
+            read -r kopf reparatur < <(gh pr view "$nr" -R "$REPO" --json headRefOid,labels \
+              --jq '"\(.headRefOid) \([.labels[].name] | index("main-reparatur") != null)"')
+            if [ -z "$rot" ]; then
+              zustand=success; text='Hauptzweig grün'; ziel_url=''
+            elif [ "$reparatur" = 'true' ]; then
+              zustand=success; text="Reparatur-PR: darf trotz rotem Hauptzweig – rot: $rot"; ziel_url="$rot_url"
+            else
+              zustand=failure; text="Hauptzweig rot: $rot – erst reparieren (Label main-reparatur)"; ziel_url="$rot_url"
+            fi
+            echo "  PR #$nr ($kopf): $zustand"
+            # Ein pull_request-Lauf aus einem Fork oder von Dependabot darf keinen Status schreiben; den setzt dann der
+            # workflow_run-Lauf nach dem Ende der PR-Prüfungen (läuft mit den Rechten des Repos).
+            gh api -X POST "repos/$REPO/statuses/$kopf" -f state="$zustand" -f context="$KONTEXT" \
+              -f description="${text:0:139}" ${ziel_url:+-f target_url="$ziel_url"} >/dev/null \
+              || echo "::warning::Status für PR #$nr nicht gesetzt (Rechte des Laufs); folgt mit dem nächsten workflow_run."
+          done

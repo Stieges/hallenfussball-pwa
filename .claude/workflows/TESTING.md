@@ -96,6 +96,31 @@ node scripts/scenario-tests.mjs --floor-schreiben                             # 
 | Aufgaben, Briefe, Proben | lokal | Review |
 | Lokal vs. Repo | Records und Befundliste nur lokal; die CI sieht nur die erzeugten Auszüge | |
 
+## 0.7 Vor dem Hochladen: Prüfung wie die CI (`.husky/pre-push`, @TA-019, @TA-020)
+
+`git push` startet `scripts/vor-push/vor-push.mjs`. Es holt `origin/main`, führt den hochzuladenden Commit damit zusammen
+(nur im Objektspeicher, `git merge-tree`; Arbeitsbaum, Index und Branch bleiben unberührt) und prüft das Ergebnis in einer
+temporären Arbeitskopie ohne `.env.local`: Token- und Terminologie-Gleichlauf, Lint, Build, `test:scenarios --base origin/main`,
+den Härtetest der visuellen Messung (nur bei Änderungen an App oder `scripts/visual-metrics/`) und die Playwright-Specs der
+geänderten Bereiche im Projekt `desktop` ohne Datenbank (Vorschau des Builds, freier Port, kein Server auf 3000/3100).
+Die Ausgabe nennt je Spec den Grund der Auswahl (`scripts/vor-push/auswahl.mjs`) und am Ende die Dauer je Schritt.
+
+- **Konflikt mit `origin/main`:** Abbruch mit den Dateien; `git merge origin/main` (kein Rebase), lösen, erneut pushen.
+- **Zeitgrenze:** je Schritt fest; Playwright `VOR_PUSH_E2E_MINUTEN` (Standard 15). Überschreiten bricht mit Schritt und Grenze ab.
+- **Ohne Prüfung:** Branch auf dem Server löschen, Tags, ein Stand ohne neue Commits gegenüber `origin/main`.
+- `--no-verify` ist nie nötig und bleibt verboten.
+
+## 0.8 Warten auf den Zustand, nicht auf die Zeit (@TA-021)
+
+- Nach einer Aktion auf das erwartete Element oder den erwarteten Zustand warten (`findBy…`, `waitFor`, Playwright-`expect`),
+  nie auf eine feste Zeit. Abwesenheit („kein Endstand“) erst prüfen, wenn die Antwort, von der sie abhängt, verarbeitet ist –
+  sonst ist die Prüfung grün, ohne etwas zu prüfen.
+- Zeitbezüge in E2E (`page.clock`) relativ zu einem Zeitpunkt der Seite nehmen (z. B. `Date.now()` der Seite nach dem Anpfiff),
+  nie relativ zum Laden der Testdatei.
+- Ein höheres Zeitlimit nur mit Begründung im Code (welche echte Wartezeit, gemessen wie lange). Teure Durchläufe (Dateibaum)
+  lieber in einem nativen Aufruf (`git grep`) als die Grenze anzuheben.
+- Nachweis je Fix: dreimal parallel unter Last grün und Mutationsprobe rot.
+
 ---
 
 # Teil 1: E2E-Testing mit Playwright

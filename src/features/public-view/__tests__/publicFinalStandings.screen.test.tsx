@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../test/realDeI18n';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Tournament } from '../../../types/tournament';
 import { buildLiveViewTournament, SHARE_CODE, TEAM_IDS } from '../../../screens/__tests__/liveViewFixture';
@@ -64,6 +64,21 @@ async function renderWith(tournament: Tournament, reply: unknown) {
   return view;
 }
 
+/**
+ * Wartet, bis die Seite den Endstand beim Server erfragt UND dessen Antwort verarbeitet hat (@TA-021, Befund
+ * C-PUBLICFINALSTANDINGS-SCREEN-FLAKE). Die Frage stellt `usePolling` erst nach dem Laden des Turniers; unter Last kam
+ * die Prüfung „rpc aufgerufen“ davor. Ohne dieses Warten wären die Abwesenheits-Prüfungen („kein Endstand“) auch dann
+ * grün, wenn die Antwort noch gar nicht da ist – sie prüften dann nichts.
+ */
+async function serverAntwortVerarbeitet(): Promise<void> {
+  await waitFor(() => { expect(rpc).toHaveBeenCalledWith('public_final_standings', { p_share_code: SHARE_CODE }); });
+  await act(async () => {
+    await Promise.allSettled(rpc.mock.results.map((r) => r.value as Promise<unknown>));
+    // Ein Durchlauf der Ereignisschleife: withTimeout/parse/setState hängen sich als Folgeschritte an die Antwort.
+    await new Promise((weiter) => { setTimeout(weiter, 0); });
+  });
+}
+
 describe('R3-6 Zuschauer-Seite: Endstand', () => {
   beforeEach(() => { supabaseGet.mockReset(); localGet.mockReset(); rpc.mockReset(); localStorage.clear(); });
 
@@ -105,6 +120,7 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
   it('@ZM-102 m-1 Gegenbeispiel: Tabellen für Zuschauer aus – keine Punkte in der Sieger-Karte', async () => {
     await renderWith(buildLiveViewTournament({ hideRankingsForPublic: true }), stored({ points: 99 }));
     await screen.findByTestId('final-standings-winner');
+    await serverAntwortVerarbeitet();
     expect(screen.queryByTestId('final-standings-winner-values')).toBeNull();
   });
 
@@ -118,11 +134,11 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     expect(rows[1].getAttribute('style') ?? '').not.toContain('--color-medal-gold');
   });
 
-  it('@LZ-075: vor dem Abschluss kein Endstand, auch kein vorläufiger – selbst wenn alle Spiele beendet sind', async () => {
+  it('@LZ-075 @TA-021: vor dem Abschluss kein Endstand, auch kein vorläufiger – selbst wenn alle Spiele beendet sind', async () => {
     const t = buildLiveViewTournament();
     const alleBeendet: Tournament = { ...t, matches: t.matches.map((m) => ({ ...m, matchStatus: 'finished' as const, scoreA: m.scoreA ?? 1, scoreB: m.scoreB ?? 0 })) };
     await renderWith(alleBeendet, { status: 'none' });
-    expect(rpc).toHaveBeenCalledWith('public_final_standings', { p_share_code: SHARE_CODE });
+    await serverAntwortVerarbeitet();
     expect(screen.queryByTestId('final-standings')).toBeNull();
     expect(screen.queryByTestId('final-standings-list')).toBeNull();
     expect(screen.queryByTestId('tournament-ended')).toBeNull();
@@ -168,6 +184,7 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     const t = { ...buildLiveViewTournament(), lifecycleStatus: 'finished' as const };
     await renderWith(t, { status: 'none' });
     await screen.findAllByText(/FC Nord/);
+    await serverAntwortVerarbeitet();
     expect(screen.queryByTestId('final-standings-kids')).toBeNull();
     expect(screen.queryByTestId('final-standings')).toBeNull();
   });
@@ -176,6 +193,7 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     const t = { ...buildLiveViewTournament({ hideScoresForPublic: true }), lifecycleStatus: 'fixed' as const };
     await renderWith(t, { status: 'none' });
     await screen.findAllByText(/FC Nord/);
+    await serverAntwortVerarbeitet();
     expect(screen.queryByTestId('final-standings-kids')).toBeNull();
     expect(screen.queryByTestId('tournament-ended')).toBeNull();
   });
@@ -185,6 +203,7 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     halb.standings.ranking = halb.standings.ranking.slice(0, 4);
     await renderWith(buildLiveViewTournament(), halb);
     await screen.findAllByText(/FC Nord/);
+    await serverAntwortVerarbeitet();
     expect(screen.queryByTestId('final-standings')).toBeNull();
   });
 });

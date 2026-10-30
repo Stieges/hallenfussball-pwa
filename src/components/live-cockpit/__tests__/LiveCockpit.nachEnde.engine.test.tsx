@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
 import { anpfiff, halte, warteSperre } from './engineHarnessSupport';
+import { HOLD_MS } from '../../ui/atoms/HoldButton';
 import { T0 } from './enginePhaseFixture';
 
 vi.unmock('i18next');
@@ -33,6 +34,16 @@ vi.mock('../../../components/ui/Toast/ToastContext', () => ({
 const EIN_ABSCHNITT = { groupPhaseGameDuration: 10, gamePeriods: 1 };
 const zu = (ms: number): void => { vi.setSystemTime(T0 + ms); };
 const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
+
+/**
+ * Zeitgrenze je Test (@TA-021, Befund C-PUBLICFINALSTANDINGS-SCREEN-FLAKE, Teil Cockpit) – Begründung: Jeder Test bis zum
+ * Ende wartet ECHTE Zeit, weil die Produktregeln sie verlangen und nur `Date` gefälscht ist (fake-indexeddb braucht echte
+ * Zeitgeber): Abpfiff halten `HOLD_MS` (@SL-157) plus Sperre des Nummern-Bausteins 300 ms. Dazu kommt die echte Engine mit
+ * IndexedDB-Nachbau. Gemessen 30.10.: allein 1,6–2,1 s, bei Last ~17 (drei Läufe parallel neben zwei Vollläufen) bis
+ * 2,5 s; im Commit-Hook bei Last ~40 über der 5-s-Vorgabe. Gewartet wird überall auf den Zustand (waitFor/findBy), nie auf
+ * eine Zeit außer den beiden Produktfristen; die Grenze ist deshalb echte Wartezeit plus 10 s Rechenzeit.
+ */
+const ENGINE_TEST_MS = HOLD_MS + 60 + 310 + 10_000;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -68,7 +79,7 @@ async function bisZumVorzeitigenEnde(user: ReturnType<typeof userEvent.setup>): 
   await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
 }
 
-describe('@SL-169 Tafel nach dem Ende mit echter Engine', () => {
+describe('@SL-169 Tafel nach dem Ende mit echter Engine', { timeout: ENGINE_TEST_MS }, () => {
   it('vorzeitig bei 4:00 abgepfiffen: „Ende“, kein Abschnitt, „Gespielt 4:00“ und „von 10:00“', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={EIN_ABSCHNITT} />);
@@ -102,7 +113,7 @@ describe('@SL-169 Tafel nach dem Ende mit echter Engine', () => {
   });
 });
 
-describe('@SL-048 / @SL-159 / @HE-043 nach dem Ende mit echter Engine', () => {
+describe('@SL-048 / @SL-159 / @HE-043 nach dem Ende mit echter Engine', { timeout: ENGINE_TEST_MS }, () => {
   it('Turnierleitung: Zusammenfassung mit dem Tor, „Korrigieren“ da, kein Hinweis „Korrektur folgt“ und kein Helfer-Hinweis', async () => {
     const user = userEvent.setup();
     const onKorrigieren = vi.fn();
