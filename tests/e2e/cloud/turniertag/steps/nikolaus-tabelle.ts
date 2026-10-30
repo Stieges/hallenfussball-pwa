@@ -10,6 +10,8 @@ import { vorbedingung, getRows, SOLL_TIMEOUT_MS } from './shared';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { beendeAlleSpiele, fetchNikolausSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
 import { appendAsRole, fetchEngineRows } from '../../engineHelpers';
+import { z } from 'zod';
+import { e2eUuid } from '../../e2eUuid';
 import { restAsRole } from '../../restAsRole';
 import { eventOf } from './playViaRpc';
 import { expectPageAnchor, expectSollMarker } from './shared';
@@ -366,21 +368,23 @@ async function endstandKindermodus({ anonPage }: StepContext): Promise<void> {
   }
 }
 
-const MONITOR_E2E_ID = 'e2e-r3-7-monitor';
+
+const MONITOR_E2E_ID = e2eUuid('monitor:nikolaus-cup:haupt:endstand');
 
 /**
- * Legt einen Monitor mit dem Programm Live-Spiel, Alle Tabellen, Nächste Spiele und Zuschauer-QR an (an) oder entfernt ihn wieder (aus): nur als
- * Datenbank-Eigentümer mit dem Server-Schalter (Zustandssperre, wie `setzeKindermodus`); der Monitor gehört nur dieser Prüfung.
+ * Fügt den Endstand-Monitor (Programm Live-Spiel, Alle Tabellen, Nächste Spiele, Zuschauer-QR) hinzu bzw. entfernt ihn wieder; der Seed-Monitor bleibt
+ * (Datenbank-Eigentümer mit dem Server-Schalter wie `setzeKindermodus`, Zustandssperre).
  */
 function setzeMonitor(an: boolean): void {
-  const folie = (id: string, type: string, order: number): Record<string, unknown> => ({ id, type, config: {}, duration: null, order });
-  const monitor = {
+  const ohne = `coalesce((SELECT jsonb_agg(m) FROM jsonb_array_elements(coalesce(config->'monitors','[]'::jsonb)) m WHERE m->>'id' <> '${MONITOR_E2E_ID}'), '[]'::jsonb)`;
+  const folie = (id: string, type: string, order: number): Record<string, unknown> => ({ id: e2eUuid(`monitor:nikolaus-cup:haupt:endstand:${id}`), type, config: {}, duration: null, order });
+  const monitor = JSON.stringify({
     id: MONITOR_E2E_ID, name: 'Halle', defaultSlideDuration: 15, transition: 'none', transitionDuration: 0, theme: 'dark', performanceMode: 'high',
     slides: [folie('s1', 'live', 0), folie('s2', 'all-standings', 1), folie('s3', 'next-matches', 2), folie('s4', 'qr-code', 3)],
     createdAt: '2026-11-28T08:00:00.000Z', updatedAt: '2026-11-28T08:00:00.000Z',
-  };
-  const wert = an ? `jsonb_set(coalesce(config,'{}'::jsonb), '{monitors}', '${JSON.stringify([monitor])}'::jsonb)` : `coalesce(config,'{}'::jsonb) - 'monitors'`;
-  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET config = ${wert} WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
+  });
+  const wert = an ? `${ohne} || jsonb_build_array('${monitor}'::jsonb)` : ohne;
+  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET config = jsonb_set(coalesce(config,'{}'::jsonb), '{monitors}', ${wert}) WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
   execFileSync('docker', ['exec', '-i', 'supabase_db_hallenfussball-pwa', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
 }
 
@@ -392,9 +396,8 @@ function setzeMonitor(an: boolean): void {
 async function endstandMonitor({ anonPage }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
   const antwort = await restAsRole('owner', 'POST', 'rpc/display_final_standings', { p_tournament_id: NIKOLAUS.tournamentId });
-  const gespeichert = (antwort.json as { status: string; standings?: { ranking: { teamName: string }[] } });
-  expect(gespeichert.status, 'der Server meldet den gespeicherten Endstand').toBe('final');
-  const erwartet = (gespeichert.standings?.ranking ?? []).map((zeile) => zeile.teamName);
+  const gespeichert = z.object({ status: z.literal('final'), standings: z.object({ ranking: z.array(z.object({ teamName: z.string() })) }) }).parse(antwort.json);
+  const erwartet = gespeichert.standings.ranking.map((zeile) => zeile.teamName);
   expect(erwartet, 'sechs Plätze').toHaveLength(6);
   setzeMonitor(true);
   try {

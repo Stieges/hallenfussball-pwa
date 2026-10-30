@@ -15,6 +15,8 @@ import type { EndFolie, ProgramSlide } from './slideProgramme';
 
 export type MonitorEnd =
   | { kind: 'none' }
+  /** Abgeschlossen (Cloud), der Endstand ist noch nicht da oder der Abruf scheiterte: das Live-Programm bleibt trotzdem weg (@LZ-076 nach Neuladen). */
+  | { kind: 'pending' }
   | { kind: 'kids' }
   | {
     kind: 'final';
@@ -26,11 +28,12 @@ export type MonitorEnd =
 
 /** Kein Abschluss (oder noch kein Stand): der Monitor zeigt sein Programm unverändert. */
 export const NO_END: MonitorEnd = { kind: 'none' };
+const PENDING_END: MonitorEnd = { kind: 'pending' };
 
-export function monitorEnd(tournament: Pick<Tournament, 'lifecycleStatus'>, view: TournamentView, finalStandings: PublicFinalStandings): MonitorEnd {
+export function monitorEnd(tournament: Pick<Tournament, 'lifecycleStatus'>, view: TournamentView, finalStandings: PublicFinalStandings, cloud = true): MonitorEnd {
   if (tournament.lifecycleStatus !== 'finished') { return NO_END; }
   if (showsKidsEnded(tournament, view)) { return { kind: 'kids' }; }
-  if (finalStandings.status !== 'final') { return NO_END; }
+  if (finalStandings.status !== 'final') { return cloud ? PENDING_END : NO_END; }
   return {
     kind: 'final',
     finishedAt: finalStandings.finishedAt,

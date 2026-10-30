@@ -91,8 +91,7 @@
       "goals_one": "goal",
       "goals_other": "goals",
       "scorerNoNumber": "no number – {{team}}",
-      "scorerOwnGoals": "Own goals for {{team}}",
-      "place": "Place {{place}}"
+      "scorerOwnGoals": "Own goals for {{team}}"
     }
   },
   "dauerbetrieb": {

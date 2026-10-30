@@ -91,8 +91,7 @@
       "goals_one": "Tor",
       "goals_other": "Tore",
       "scorerNoNumber": "ohne Nummer – {{team}}",
-      "scorerOwnGoals": "Eigentore für {{team}}",
-      "place": "Platz {{place}}"
+      "scorerOwnGoals": "Eigentore für {{team}}"
     }
   },
   "dauerbetrieb": {

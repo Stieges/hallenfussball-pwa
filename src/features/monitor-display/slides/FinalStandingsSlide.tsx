@@ -33,6 +33,7 @@ export function FinalStandingsSlide({ tournament, end, theme, style, page = 0 }:
   const colors = monitorThemes[resolved];
   if (end.kind === 'none') { return <div style={style} data-testid="monitor-final-empty" />; }
   const heading = <FinalHeading icon="standings" title={t('slides.final.title')} subtitle={tournament.title} colors={colors} />;
+  if (end.kind === 'pending') { return <div style={style} data-testid="monitor-final-pending">{heading}</div>; }
   if (end.kind === 'kids') {
     return (
       <div style={style} data-testid="monitor-final-kids">
@@ -53,7 +54,7 @@ export function FinalStandingsSlide({ tournament, end, theme, style, page = 0 }:
             <span data-testid="monitor-final-place" style={finalPlace(colors)}>{row.place}</span>
             <span data-testid="monitor-final-team" data-teamname style={finalName}><HyphenSafe text={monitorTeamName(row.teamName)} /></span>
             {row.place === 1
-              ? <span aria-hidden="true" style={{ display: 'inline-flex', color: gold, fontSize: displayFinal.cupSize }}><Icons.Trophy size="1em" /></span>
+              ? <span aria-hidden="true" style={{ display: 'inline-flex', color: gold, fontSize: displayFinal.cupSize }}><Icons.Trophy size={displayFinal.cupSize} /></span>
               : <span />}
           </div>
         ))}

@@ -38,8 +38,8 @@ import {
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
-import { applyEnd, monitorEnd, NO_END } from './monitorEnd';
-import { useMonitorFinalStandings } from './useMonitorFinalStandings';
+import { applyEnd } from './monitorEnd';
+import { useMonitorEnd } from './useMonitorEnd';
 import { buildMonitorRuleMatches, buildMonitorView } from './monitorView';
 import { NowSourceContext } from '../../components/schedule/useTickingNow';
 import { useSlideshow } from './useSlideshow';
@@ -104,11 +104,8 @@ function MonitorDisplayPageContent({
   // Einblendungen aus derselben Antwort wie Stand und Uhr (R5 PR 1, Feldfilter für Tor und Karte im Hook).
   // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung (der Server liefert dann auch keinen Stand).
   const ergebnisseAusgeblendet = view !== null && !view.rules.results;
-  // Nach dem Abschluss (R3-7, @LZ-076): der Endstand kommt allein aus dem gespeicherten Stand des Servers (`display_final_standings`),
-  // nie aus der Live-Tabelle; im Kindermodus fragt der Monitor nicht (er zeigt nur den Satz „Turnier beendet“).
-  const abgeschlossen = tournament?.lifecycleStatus === 'finished' && origin === 'cloud' && !ergebnisseAusgeblendet;
-  const finalStandings = useMonitorFinalStandings(tournamentId, abgeschlossen);
-  const end = useMemo(() => (tournament === null || view === null ? NO_END : monitorEnd(tournament, view, finalStandings)), [tournament, view, finalStandings]);
+  // Nach dem Abschluss (R3-7, @LZ-076): Endstand allein aus dem gespeicherten Stand des Servers, nie aus der Live-Tabelle (useMonitorEnd)
+  const end = useMonitorEnd(tournamentId, tournament, view, origin);
 
   // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und Beamer-Laptops ab.
   // Erst aktivieren, wenn ein Monitor geladen ist (auf der Fehlerseite wäre die Anfrage sinnlos).

@@ -40,8 +40,13 @@ describe('monitorEnd', () => {
     expect(monitorEnd(t, buildMonitorView(t), gelesen(serverEndstand())).kind).toBe('none');
   });
 
-  it('abgeschlossen, aber der Server meldet (noch) keinen Endstand: nichts erfinden, kein Endstand', () => {
-    expect(endeFuer(SERVER_NONE).kind).toBe('none');
+  it('abgeschlossen, aber der Server meldet (noch) keinen Endstand: nichts erfinden – „pending“, nie die Live-Tabelle als Endstand', () => {
+    expect(endeFuer(SERVER_NONE).kind).toBe('pending');
+  });
+
+  it('Turnier nur auf diesem Gerät (kein Server): kein Endstand, Programm unverändert', () => {
+    const t = abgeschlossen();
+    expect(monitorEnd(t, buildMonitorView(t), gelesen(SERVER_NONE), false).kind).toBe('none');
   });
 
   it('@ZM-121 Z. 4: Kindermodus = „Turnier beendet – danke fürs Mitspielen“, nie ein Platz – auch wenn der Server Plätze liefert', () => {
@@ -83,6 +88,10 @@ describe('applyEnd', () => {
 
   it('ein Programm ohne die ersetzten Folien bekommt den Endstand trotzdem (der Monitor zeigt nach dem Ende den Endstand)', () => {
     expect(typen(applyEnd([slide('qr-code')], endeFuer(serverEndstand({ scorersPublic: false }))))).toEqual(['final-standings', 'qr-code']);
+  });
+
+  it('@LZ-076: abgeschlossen, Endstand noch nicht da („pending“): Live, Tabellen, Nächste Spiele und Spielplan sind weg, Sponsor und QR bleiben', () => {
+    expect(typen(applyEnd(PROGRAMM, endeFuer(SERVER_NONE)))).toEqual(['final-standings', 'sponsor', 'custom-text', 'qr-code']);
   });
 
   it('@LZ-075: ohne Abschluss bleibt das Programm unverändert', () => {

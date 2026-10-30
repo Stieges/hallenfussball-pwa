@@ -53,8 +53,8 @@ const PROGRAMM: MonitorSlide[] = [
 const NAME_50 = 'Hinterzarten Niederbrunnen Obermusterdorf Kleinstadt';
 
 /** Turnier „Hallencup Nord“ (Spiel 7 läuft); `abgeschlossen`: Zustand vom Server = finished, alle Spiele beendet. */
-function turnier(opts: { abgeschlossen: boolean; kinder?: boolean; programm?: MonitorSlide[] }): Tournament {
-  const matches = opts.abgeschlossen ? withMatch('match-7', { matchStatus: 'finished', scoreA: 2, scoreB: 1 }) : undefined;
+function turnier(opts: { abgeschlossen: boolean; kinder?: boolean; programm?: MonitorSlide[]; spielLaeuft?: boolean }): Tournament {
+  const matches = opts.abgeschlossen ? withMatch('match-7', opts.spielLaeuft === true ? { matchStatus: 'running', scoreA: 1, scoreB: 1 } : { matchStatus: 'finished', scoreA: 2, scoreB: 1 }) : undefined;
   const basis = buildTournament({
     title: 'Nikolaus-Turnier 2026', sponsors: [FIXTURE_SPONSOR], hideScoresForPublic: opts.kinder === true,
     lifecycleStatus: opts.abgeschlossen ? 'finished' : 'fixed', ...(opts.abgeschlossen ? { finishedAt: '2026-11-28T12:10:00+00:00' } : {}),
@@ -113,7 +113,8 @@ describe('@ZM-121 Z. 1, @LZ-076: Nach dem Abschluss zeigt der Monitor den Endsta
 
   it('ein Durchlauf zeigt nie Live-Spiel, Tabelle, Nächste Spiele oder Spielplan – Sponsor „Bäckerei Maier“ und Zuschauer-QR laufen wie sonst', async () => {
     endstand.antwort = serverEndstand({ scorersPublic: false });
-    await starte(turnier({ abgeschlossen: true }));
+    // Spiel 7 steht im Stand noch auf „läuft“: eine Live-Folie im Programm fiele sofort auf (kein Rückfall durch „kein Spiel“)
+    await starte(turnier({ abgeschlossen: true, spielLaeuft: true }));
     const gesehen = await durchlauf(60);
     expect(gesehen).toEqual(expect.arrayContaining(['endstand', 'sponsor', 'qr']));
     for (const weg of ['live', 'tabelle', 'spielliste']) { expect(gesehen).not.toContain(weg); }
@@ -132,6 +133,17 @@ describe('@ZM-121 Z. 1, @LZ-076: Nach dem Abschluss zeigt der Monitor den Endsta
     await starte(turnier({ abgeschlossen: true }));
     expect(screen.queryByTestId('monitor-final-standings')).toBeNull();
     expect(screen.queryByTestId('monitor-final-row')).toBeNull();
+  });
+
+  it('@LZ-076 nach dem Neuladen: scheitert der erste Endstand-Abruf, erscheint im Durchlauf nie Live, Tabelle oder Spielliste – danach kommt der Endstand, sobald der Abruf klappt', async () => {
+    endstand.antwort = new Error('offline');
+    await starte(turnier({ abgeschlossen: true, spielLaeuft: true }));
+    const gesehen = await durchlauf(40);
+    for (const weg of ['live', 'tabelle', 'spielliste']) { expect(gesehen).not.toContain(weg); }
+    expect(endstand.aufrufe.length).toBeGreaterThan(1);
+    endstand.antwort = serverEndstand({ scorersPublic: false });
+    await vor(10_000);
+    expect(folie()).toBe('endstand');
   });
 });
 
@@ -226,6 +238,20 @@ describe('@ET-045: gespeicherter Endstand, nie neu gerechnet', () => {
   });
 });
 
+describe('@ZM-121 Z. 2: Wiederöffnen (Notweg @LZ-091) – Befund C-MONITOR-ENDSTAND-WIEDEROEFFNEN', () => {
+  // Soll laut Record (Muss): der Endstand von vor dem Wiederöffnen bleibt unverändert, bis neu abgeschlossen wird. Der Server liefert nach dem Wiederöffnen
+  // aber `none` (final_standings_payload nur bei lifecycle_status = finished), also heute rot.
+  it.fails('C-MONITOR-ENDSTAND-WIEDEROEFFNEN: nach dem Wiederöffnen zeigt der Monitor den Endstand von vorher unverändert', async () => {
+    endstand.antwort = serverEndstand({ scorersPublic: false });
+    await starte(turnier({ abgeschlossen: true }));
+    expect(folie()).toBe('endstand');
+    endstand.antwort = SERVER_NONE;
+    liefere(turnier({ abgeschlossen: false }));
+    await vor(30_000);
+    expect(screen.getAllByTestId('monitor-final-row')).toHaveLength(6);
+  });
+});
+
 describe('@ZM-180: beendet bleibt beendet', () => {
   it('ein älterer Stand des Turniers (Spiel 7 wieder „läuft“ 1:1) bringt die Live-Folie nicht zurück, solange der Server abgeschlossen meldet', async () => {
     endstand.antwort = serverEndstand({ scorersPublic: false });
@@ -247,7 +273,7 @@ describe('@ZM-180: beendet bleibt beendet', () => {
     expect(screen.getAllByTestId('monitor-final-row')).toHaveLength(6);
   });
 
-  it('nach dem Wiederöffnen (Zustand nicht mehr abgeschlossen) läuft das Programm wieder normal', async () => {
+  it('Übergangsverhalten heute: nach dem Wiederöffnen (Server meldet nicht mehr abgeschlossen) ist der Endstand weg und das normale Programm läuft wieder', async () => {
     endstand.antwort = serverEndstand({ scorersPublic: false });
     await starte(turnier({ abgeschlossen: true }));
     expect(folie()).toBe('endstand');
