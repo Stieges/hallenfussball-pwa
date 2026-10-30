@@ -5,6 +5,7 @@
 import type { TFunction } from 'i18next';
 import type { Tournament, TournamentGroup } from '../../../../types/tournament';
 import type { MonitorSlide } from '../../../../types/monitor';
+import { assignedGroupIds } from '../../../../core/services/monitorConfigTransferChecks';
 
 export interface SlideDescriptionDeps {
   groups: TournamentGroup[];
@@ -21,6 +22,12 @@ export function buildEditorGroups(tournament: Tournament, t: TFunction<'tourname
   // Round-robin mode = single group tournament (everyone plays everyone)
   if (tournament.groupSystem === 'roundRobin') {
     return [{ id: 'default', customName: t('monitorEditor.allTeams') }];
+  }
+
+  // Gruppen, zu denen Teams gehören, sind die Angebote – Namen aus den gespeicherten Gruppen, sonst „Gruppe A“ (@ZM-181)
+  const assigned = assignedGroupIds(tournament.teams);
+  if (assigned.length > 0) {
+    return assigned.map(id => tournament.groups?.find(g => g.id === id) ?? { id, customName: t('monitorEditor.groupLabel', { letter: id }) });
   }
 
   // If explicit groups are defined, use them

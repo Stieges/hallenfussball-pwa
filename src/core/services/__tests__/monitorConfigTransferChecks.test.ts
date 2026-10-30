@@ -33,6 +33,21 @@ function payload(slides: TransferSlide[], name = 'Halle'): MonitorConfigPayload 
   };
 }
 
+describe('tournamentSlotTargets nach tatsächlicher Team-Zuordnung (@ZM-181, @ZM-177)', () => {
+  it('Standardgruppen A, B, C, aber Teams nur in A und B: Ziele sind A und B', () => {
+    const teams = ['A', 'B', 'A'].map((group, i) => ({ id: `t${i}`, name: `Team ${i}`, group }));
+    expect(tournamentSlotTargets({ groupSystem: 'groupsAndFinals', groups: [{ id: 'A' }, { id: 'B' }, { id: 'C' }], numberOfGroups: 3, teams }).groupIds).toEqual(['A', 'B']);
+  });
+
+  it('Jeder gegen jeden mit gespeicherten Gruppen A und B: nur „default“', () => {
+    expect(tournamentSlotTargets({ groupSystem: 'roundRobin', groups: [{ id: 'A' }, { id: 'B' }], teams: [{ id: 't0', name: 'Team 0' }, { id: 't1', name: 'Team 1' }] }).groupIds).toEqual(['default']);
+  });
+
+  it('Gegenbeispiel: ohne Zuordnung gelten die gespeicherten Gruppen', () => {
+    expect(tournamentSlotTargets({ groupSystem: 'groupsAndFinals', groups: [{ id: 'A' }, { id: 'B' }], teams: [{ id: 't0', name: 'Team 0' }, { id: 't1', name: 'Team 1' }] }).groupIds).toEqual(['A', 'B']);
+  });
+});
+
 describe('tournamentSlotTargets', () => {
   it('liest Felder aus dem Turnier und fällt sonst auf die Anzahl zurück', () => {
     const withFields = tournamentSlotTargets({
