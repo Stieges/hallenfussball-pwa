@@ -4,7 +4,8 @@
  * `leisteFuer` sagt, welche Plätze der Zustand hat; hier werden sie zu Slots (Text `leiste.*`, Symbole `MatchIcons`,
  * Tasten-Hinweise). Ohne Steuerrecht steht statt der Leiste die Nur-Lesen-Zeile. Die Leiste steht im Fluss am unteren Rand
  * der Cockpit-Spalte (`position: sticky`), damit „Wiederanpfiff“ auch bei 360 × 640 im ersten Bildschirm liegt.
- * „Abpfiff halten“ ist ein Halteknopf (Entscheidung A2, @SL-157); Fortsetzen und Korrigieren binden LT-4 bis LT-6.
+ * „Abpfiff halten“ ist ein Halteknopf (Entscheidung A2, @SL-157); „Spiel fortsetzen“ steht, solange `controls.onFortsetzen` da ist (LT-6,
+ * @SL-074, @SL-075); „Korrigieren“ bindet LT-5.
  */
 import { useState, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -57,8 +58,8 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
   // Die 1-s-Sperre von „Rückgängig“ steckt in `controls.onUndo` (eine Instanz für Knopf und Tastenkürzel, @SL-108)
   const rueckgaengig = controls.onUndo ?? (() => undefined);
 
-  // „Spiel fortsetzen“ (LT-6) ist noch nicht gebunden; „Korrigieren“ steht, sobald die Hülle einen Weg übergibt und die Leitung es darf (@SL-159).
-  const modell = leisteFuer(phase, { layout, istLeitung, fortsetzenMoeglich: false, korrigierenMoeglich: p.onKorrigieren !== undefined });
+  // „Spiel fortsetzen“ nur mit Handler (30 Sekunden Endstand, einmal, Ende durch Ablauf; LT-6); „Korrigieren“ mit Weg und Leitungsrecht (@SL-159).
+  const modell = leisteFuer(phase, { layout, istLeitung, fortsetzenMoeglich: controls.onFortsetzen !== undefined, korrigierenMoeglich: p.onKorrigieren !== undefined });
   if (modell.aktionen.length === 0) { return null; }
 
   if (!kannSteuern) {
@@ -107,8 +108,10 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
         const onKorrigieren = p.onKorrigieren;
         return onKorrigieren ? aktion(t('leiste.korrigieren'), 'match-correct-button', 'neben', onKorrigieren, <MatchIcons.Edit />) : null;
       }
-      case 'fortsetzen':
-        return null;
+      case 'fortsetzen': {
+        const onFortsetzen = controls.onFortsetzen;
+        return onFortsetzen ? aktion(t('leiste.fortsetzen'), 'match-continue-button', 'neben', onFortsetzen, <MatchIcons.Stopwatch />) : null;
+      }
     }
   };
   const slots = modell.aktionen.map(slotFuer).filter((s): s is ThumbBarSlot => s !== null);

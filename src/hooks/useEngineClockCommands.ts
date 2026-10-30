@@ -4,7 +4,7 @@
  * `finish(timing)` (Spielende an der exakten Grenze). Eine Ablehnung (ungültiger Schritt, keine Engine-Kopie)
  * wird als Hinweis gemeldet (`onError`), nie geworfen; `silent` unterdrückt nur die Ablehnung (automatische
  * Enden), „Speicher voll“ wird immer gemeldet. Rückgabe: ID des gespeicherten Eintrags, `null` bei Ablehnung
- * oder Noop. Szenarien: @SL-005, @SL-006, @SL-009, @FU-070, @FU-071.
+ * oder Noop. Szenarien: @SL-005, @SL-006, @SL-009, @FU-070, @FU-071; `reopen` (LT-6): „Spiel fortsetzen“ mit Uhrstand (@SL-074).
  */
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +37,8 @@ export interface EngineClockCommands {
   endSection: (timing?: CommandTiming, options?: ClockCommandOptions) => Promise<string | null>;
   adjustClock: (clockMs: number, previousClockMs: number) => Promise<string | null>;
   finish: (timing?: CommandTiming, options?: ClockCommandOptions) => Promise<string | null>;
+  /** „Spiel fortsetzen“ (REOPEN): Uhr läuft ab `clockMs` (absolute Spieluhr) weiter. */
+  reopen: (clockMs: number) => Promise<string | null>;
 }
 
 export function useEngineClockCommands({ tournamentId, match, onError }: ClockCommandsParams): EngineClockCommands {
@@ -87,6 +89,12 @@ export function useEngineClockCommands({ tournamentId, match, onError }: ClockCo
     [run, actor],
   );
 
-  return useMemo(() => ({ startSection, endSection, adjustClock, finish }), [startSection, endSection, adjustClock, finish]);
+  const engine = context?.engine ?? null;
+  const reopen = useCallback(
+    (clockMs: number) => run((cmd, c) => cmd.reopen(c.matchId, c, actor, { clockMs, at: engine ? engine.serverNow() : Date.now() })),
+    [run, actor, engine],
+  );
+
+  return useMemo(() => ({ startSection, endSection, adjustClock, finish, reopen }), [startSection, endSection, adjustClock, finish, reopen]);
 }
 

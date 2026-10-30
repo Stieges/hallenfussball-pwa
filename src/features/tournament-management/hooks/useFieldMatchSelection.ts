@@ -32,6 +32,8 @@ export interface FieldMatchSelection {
   ladeNaechstes: () => void;
   /** Korrektur in den 30 Sekunden (@SL-163, @SL-164): Frist des Endstands anhalten und danach mit Restzeit (mind. 10 s) fortsetzen. */
   endstandPause: { pausiere: (matchId: string) => void; setzeFort: () => void };
+  /** Spiel, dessen Endstand gerade als Quittung steht (nicht nach „Weiter“); `null` sonst. Grundlage für „Spiel fortsetzen“ (LT-6). */
+  gehaltenId: string | null;
 }
 
 const FELD_PARAM = 'f';
@@ -122,5 +124,5 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
     }
   }, [fieldMatches, currentMatchData, schedule.allMatches, feld, schreibeFeld, quittiere]);
 
-  return { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel: setSelectedMatchId, ladeNaechstes, endstandPause };
+  return { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel: setSelectedMatchId, ladeNaechstes, endstandPause, gehaltenId };
 }

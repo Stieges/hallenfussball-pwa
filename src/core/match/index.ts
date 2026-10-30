@@ -18,6 +18,7 @@ export { toServerState, type ServerMatchState } from './serverState';
 export { activePenalties, elapsedAt, penaltyRemainingMs } from './penalties';
 export { redCardSuspensions, type SperrHinweis, type SuspensionMatchRef } from './suspensions';
 export { shootoutWinner } from './handlers/shootout';
+export { continueBlockReason, type ContinueBlockReason } from './handlers/reopen';
 export { transitions, findTransition, isActorAllowed, type TransitionRow } from './transitions';
 export {
   AMENDABLE_EVENT_TYPES,

@@ -174,6 +174,9 @@ M1_FILE=""
 # 20261113_003 in der Idempotenz-Kette stellte beide in der alten Fassung wieder her -- danach wieder einspielen. Pflicht wie M1.
 WM_MIGRATION="20261118_004_abschluss_nachzug.sql"
 WM_FILE=""
+# 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET): fasst append_match_events neu (Basis 20261117_005, spaetes Fortsetzen -> Klaerung).
+# Das erneute Einspielen von 20261117_005 in der Idempotenz-Kette stellte die alte Fassung wieder her -- danach wieder einspielen.
+FS_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -227,6 +230,11 @@ while IFS= read -r line; do
   if [[ "$(basename "$line")" == "$WM_MIGRATION" ]]; then
     [[ "$MODE" == "without-sw" ]] && continue
     WM_FILE="$line"
+  fi
+  # 20261118_009 setzt 20261117_005 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg.
+  if [[ "$(basename "$line")" == "20261118_009_fortsetzen_spaet.sql" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    FS_FILE="$line"
   fi
   # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
   [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
@@ -307,6 +315,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   if [[ -n "$A21AS_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A21AS_FILE"; fi
   # A-35: seit 20261117_005 steht die juengste Fassung von append_match_events dort (Basis _003 + Klaerung).
   if [[ -n "$A35_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A35_FILE"; fi
+  # 20261118_009: seit dort steht die juengste Fassung von append_match_events (Basis _005 + spaetes Fortsetzen).
+  if [[ -n "$FS_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$FS_FILE"; fi
   # R8: 20261028_005 oben setzt matches_bump_change_revision auf die Fassung ohne original_start zurueck.
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi
   # M1: 20261028_001 oben setzt server_rules auf die Fassung mit 120 s/5 Schuetzen zurueck.
@@ -331,6 +341,8 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   [[ -n "$A21AS_FILE" ]] && NEWEST_APPEND_FILE="$A21AS_FILE"
   # A-35: seit 20261117_005 steht die juengste Fassung dort -- diese Datei wird mutiert (falls vorhanden).
   [[ -n "$A35_FILE" ]] && NEWEST_APPEND_FILE="$A35_FILE"
+  # 20261118_009: seit dort steht die juengste Fassung -- diese Datei wird mutiert (falls vorhanden).
+  [[ -n "$FS_FILE" ]] && NEWEST_APPEND_FILE="$FS_FILE"
   HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$NEWEST_APPEND_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
