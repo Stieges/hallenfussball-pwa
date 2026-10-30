@@ -16,6 +16,8 @@ export const displayList = {
     /** „ursprünglich hh:mm“ und „voraussichtlich“ unter der Uhrzeit (B-27): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
     timeNote: '3.6vh',
   },
+  /** Logo/Initialen vor dem Namen in der Zeile (Spielanzeige S3, Daniel 30.10.): „WW“ bei 3 vh Schrift passt in den Kreis */
+  avatarSize: '6.5vh',
   /** Abstand zwischen Überschrift und Liste */
   headingGap: '2vh',
   /** Abstand zwischen zwei Zeilen */

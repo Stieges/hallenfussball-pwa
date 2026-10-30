@@ -69,8 +69,8 @@ describe('Kasten hoch und Namen in Kastenbreite', () => {
 describe('Namen im Normalmodus', () => {
   it('Vorgabe der Namensgröße ist das Token teamName, bei beiden gleich', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
-    expect(screen.getByTestId('live-name-home').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamName);
-    expect(screen.getByTestId('live-name-away').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamName);
+    expect(screen.getByTestId('live-name-home').querySelector('[data-fit-vorgabe]')).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamName);
+    expect(screen.getByTestId('live-name-away').querySelector('[data-fit-vorgabe]')).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamName);
   });
 });
 
@@ -95,8 +95,8 @@ describe('Doppelpunkt genau mittig', () => {
 describe('Rahmenlogik einheitlich', () => {
   it('Rot und Gelb: beide Kästen mit demselben dezenten Rahmen', () => {
     render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: '#FDE047' }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
-    const home = document.querySelector<HTMLElement>('[data-position="home"]')!;
-    const away = document.querySelector<HTMLElement>('[data-position="away"]')!;
+    const home = screen.getByTestId('live-box-home');
+    const away = screen.getByTestId('live-box-away');
     expect(home.style.borderStyle).toBe('solid');
     expect(away.style.borderStyle).toBe('solid');
     expect(home.style.borderWidth).toBe(L.frameWidthSubtle);
@@ -106,20 +106,20 @@ describe('Rahmenlogik einheitlich', () => {
   // 2.3 (W14): die Standardfarben sind jetzt Blau `#1565C0` und Rot `#C62828` (@ZM-152); beide heben sich vom dunklen Monitor ≥ 3 : 1 ab
   it('@ZM-140 Standard Blau/Rot (je ≥ 3 : 1 zum dunklen Grund): beide Rahmen dezent und gleich breit', () => {
     render(<LiveMatchDisplay match={createMatch()} />);
-    expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthSubtle);
-    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthSubtle);
+    expect(screen.getByTestId('live-box-home').style.borderWidth).toBe(L.frameWidthSubtle);
+    expect(screen.getByTestId('live-box-away').style.borderWidth).toBe(L.frameWidthSubtle);
   });
 
   it('@ZM-140 Navy (unter 3 : 1 zum dunklen Grund) macht beide Rahmen kräftig (gleiche Breite, Entscheidung 2026-10-15)', () => {
     render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: palette.kit.blue }, bib: false }, away: { fill: { kind: 'solid', color: palette.kit.navy }, bib: false } }} />);
-    expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
-    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
+    expect(screen.getByTestId('live-box-home').style.borderWidth).toBe(L.frameWidthStrong);
+    expect(screen.getByTestId('live-box-away').style.borderWidth).toBe(L.frameWidthStrong);
   });
 
   it('Schwarz: kräftiger Rahmen, der andere Kasten bekommt dieselbe Breite', () => {
     render(<LiveMatchDisplay match={createMatch()} boxes={{ home: { fill: { kind: 'solid', color: palette.kit.black }, bib: false }, away: { fill: { kind: 'solid', color: '#DC2626' }, bib: false } }} />);
-    expect(document.querySelector<HTMLElement>('[data-position="home"]')!.style.borderWidth).toBe(L.frameWidthStrong);
-    expect(document.querySelector<HTMLElement>('[data-position="away"]')!.style.borderWidth).toBe(L.frameWidthStrong);
+    expect(screen.getByTestId('live-box-home').style.borderWidth).toBe(L.frameWidthStrong);
+    expect(screen.getByTestId('live-box-away').style.borderWidth).toBe(L.frameWidthStrong);
   });
 });
 
@@ -139,8 +139,8 @@ describe('Gleiche Lage in allen Zuständen', () => {
     render(<LiveMatchDisplay match={createMatch()} hideScore />);
     expect(screen.getByTestId('live-name-home').style.gridRow).toBe('1');
     // B4: die Größe kommt im gerenderten Kindermodus wirklich beim Namen an (Vorgabe des Anpassens)
-    expect(screen.getByTestId('live-name-home').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamNameKids);
-    expect(screen.getByTestId('live-name-away').firstElementChild).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamNameKids);
+    expect(screen.getByTestId('live-name-home').querySelector('[data-fit-vorgabe]')).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamNameKids);
+    expect(screen.getByTestId('live-name-away').querySelector('[data-fit-vorgabe]')).toHaveAttribute('data-fit-vorgabe', displayFontSizes.teamNameKids);
     expect(screen.getByTestId('live-name-home').style.alignSelf).toBe('start');
     expect(screen.getByTestId('live-name-away').style.alignSelf).toBe('start');
     expect(screen.getByTestId('live-name-home').style.marginTop).toBe(L.kidsNamesOffset);

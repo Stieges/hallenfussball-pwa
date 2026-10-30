@@ -1,6 +1,6 @@
 /**
  * @ZM-138 Vor dem Anpfiff zeigt die Live-Folie das nächste Spiel des Felds mit Anstoßzeit.
- * Mit dem Anpfiff wechselt die Folie auf Stand und Uhr ohne Logos.
+ * Mit dem Anpfiff wechselt die Folie auf Stand und Uhr; Logo bzw. Initialen stehen dann klein vor dem Namen (@ZM-157).
  */
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -54,5 +54,23 @@ describe('@ZM-138 Vor dem Anpfiff: nächstes Spiel mit Anstoßzeit', () => {
     );
     expect(screen.getByText(/slides\.live\.idleSkip/)).toBeInTheDocument();
     expect(screen.queryByText(/14:20/)).toBeNull();
+  });
+
+  it('@ZM-138 nach dem Anpfiff stehen Logo bzw. Initialen klein vor dem Namen', () => {
+    render(
+      <LiveSlide
+        slide={slide('live', { fieldId: 'field-1' })}
+        {...withView(buildTournament())}
+        performanceSettings={performanceSettings}
+        theme="dark"
+        style={{}}
+      />,
+    );
+    // Spiel 7 läuft: FC Nord (ohne Logo) gegen SV Süd; Initialen stehen im Avatar vor dem Namen, nicht im Kasten
+    const avatar = screen.getByTestId('live-team-home-avatar');
+    expect(avatar).toHaveTextContent('FN');
+    expect(avatar.compareDocumentPosition(screen.getByText('FC Nord')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('live-box-home').contains(avatar)).toBe(false);
+    expect(screen.queryByText(/slides\.live\.nextMatch/)).toBeNull();
   });
 });

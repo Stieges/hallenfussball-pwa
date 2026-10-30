@@ -43,8 +43,8 @@ describe('@ZM-147 Monitor: Endstand ohne Verlauf nach dem Strafstoßschießen', 
   it('@ZM-147 zeigt 2:2, „Strafstoßschießen 4 : 3“ und FC Nord als Sieger', async () => {
     const cup = await nurErgebnis();
     zeigeLive(cup);
-    expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
-    expect(screen.getByLabelText('Gast: 2')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Heim: 2/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Gast: 2/)).toBeInTheDocument();
     expect(screen.getByTestId('live-penalty').textContent).toBe('Strafstoßschießen 4 : 3');
     expect(screen.getByTestId('live-winner').textContent).toBe('FC Nord gewinnt');
   });

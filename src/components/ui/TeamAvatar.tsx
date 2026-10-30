@@ -1,5 +1,5 @@
 import React, { useState, CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens';
+import { cssVars, displayFontSizes } from '../../design-tokens';
 import { TeamLogo, TeamColors } from '../../types/tournament';
 
 /**
@@ -15,7 +15,10 @@ const AVATAR_SIZES = {
   xxxl: 180, // TV displays, large projections
 } as const;
 
-type AvatarSize = keyof typeof AVATAR_SIZES;
+/** Initialen-Schrift als Anteil der Avatar-Größe */
+const INITIALS_SHARE = 0.4;
+
+export type AvatarSize = keyof typeof AVATAR_SIZES;
 
 interface TeamAvatarProps {
   /** Team data with name, optional logo and colors */
@@ -31,6 +34,13 @@ interface TeamAvatarProps {
   };
   /** Size variant */
   size?: AvatarSize;
+  /** Größe als Token-String (z. B. `displayFontSizes.teamName`); hat Vorrang vor `size` (Monitor, Aufgabe 3.1) */
+  dimension?: string;
+  /**
+   * Initialen neutral statt Weiß auf Streufarbe (Monitor, Spielanzeige S3): Fläche, Schrift und Rand kommen vom Thema der Anzeige,
+   * damit zwei Buchstaben in jeder Farbe lesbar bleiben (Kontrast ≥ 4,5 : 1). Ein Logo bleibt davon unberührt.
+   */
+  neutral?: { background: string; color: string; border: string };
   /** Show jersey color ring around avatar */
   showColorRing?: boolean;
   /** Additional styles */
@@ -86,6 +96,8 @@ function getBackgroundColor(name: string, providedColor?: string): string {
 export const TeamAvatar: React.FC<TeamAvatarProps> = ({
   team,
   size = 'md',
+  dimension,
+  neutral,
   showColorRing = false,
   style = {},
   'data-testid': testId,
@@ -95,7 +107,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
 
   const pixelSize = AVATAR_SIZES[size];
   const ringWidth = size === 'xs' ? 2 : size === 'sm' ? 2 : 3;
-  const fontSize = Math.round(pixelSize * 0.4);
+  const fontSize = dimension === undefined ? `${Math.round(pixelSize * INITIALS_SHARE)}px` : `max(calc(${dimension} * ${INITIALS_SHARE}), ${displayFontSizes.clockHint})`;
 
   const logo = team.logo;
   const hasLogo = logo && logo.type !== 'initials' && !imageError;
@@ -107,8 +119,8 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
 
   const containerStyles: CSSProperties = {
     position: 'relative',
-    width: pixelSize,
-    height: pixelSize,
+    width: dimension ?? pixelSize,
+    height: dimension ?? pixelSize,
     flexShrink: 0,
     ...style,
   };
@@ -121,15 +133,17 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: pending || (hasLogo && imageLoaded) ? 'transparent' : bgColor,
-    color: '#FFFFFF',
-    fontSize: `${fontSize}px`,
+    backgroundColor: pending || (hasLogo && imageLoaded) ? 'transparent' : neutral?.background ?? bgColor,
+    color: neutral?.color ?? '#FFFFFF',
+    fontSize,
     fontWeight: cssVars.fontWeights.bold,
     fontFamily: cssVars.fontFamilies.body,
     textTransform: 'uppercase',
     userSelect: 'none',
     border: pending
       ? `1px dashed ${cssVars.colors.textPlaceholder}`
+      : neutral !== undefined
+        ? `${cssVars.borderWidth.thin} solid ${neutral.border}`
       : showColorRing && team.colors?.primary
         ? `${ringWidth}px solid ${team.colors.primary}`
         : `1px solid ${cssVars.colors.border}`,

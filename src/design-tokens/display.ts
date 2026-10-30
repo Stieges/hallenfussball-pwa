@@ -219,7 +219,8 @@ export const displayLayout = {
   scoreArea: {
     header: '6%',
     // B-44a2: Abstand zwischen Kopfzeile (LIVE, Feld, Gruppe) und Kästen
-    headerGap: '1.5cqh',
+    // Spielanzeige S3: Ecken (Leibchen-Zeichen, Pokal) ragen monitorCup/3 über den Kasten und berühren den Kopf nicht (+1 cqh Luft)
+    headerGap: '3.8cqh',
     // B-44a2: Marke gleich breit für LIVE, PAUSE, BEENDET
     badgeWidth: '11em',
     // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
@@ -230,12 +231,15 @@ export const displayLayout = {
     // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
     // B-44a2: Namensspalte = Kastenbreite; B-44a4 (Ruling 16.10.): wieder breiter als der Kasten, damit 50 Zeichen bei
     // 800×600 und 1024×768 voll und zweizeilig über 3 % der Bildschirmhöhe stehen (@ZM-087, @ZM-125)
-    teamNameWidth: '92%',
+    teamNameWidth: '88%',
     teamNamesGap: '1cqh',
     // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
     separatorWidth: '0%',
     // B-44a2 (@ZM-125): Kasten hoch, annähernd quadratisch (Breite 33 % der Bildbreite); der Stand ist das Größte
-    blockHeight: '42cqh',
+    // Spielanzeige S3 (@ZM-157, Daniel 30.10. Option A): 36 statt 42 – Ecken und zwei Zusatzzeilen brauchen Platz; Höhe/Breite ≈ 0,62
+    blockHeight: '36cqh',
+    // Spielanzeige S3 (Daniel 30.10.): Logo/Initialen vor dem Namen; „WW“ bei Mindestschrift passt in den Kreis
+    avatarSize: '7.5cqh',
     // B-44a2: Namen bis zu zwei Zeilen
     nameLines: 2,
     // B-44a2: Platz unter den Namen für Uhr, Balken und Hinweise; bleibt in jedem Zustand reserviert (gleiche Lage)
@@ -247,7 +251,8 @@ export const displayLayout = {
     hintGap: '1cqh',
     hintGapAbove: '1.6cqh',
     // B-44a2: senkrechter Innenabstand der Folie (Höhe ist knapp, vorher clamp(24px, 3vw, 48px) auch senkrecht)
-    paddingY: '1.5cqh',
+    // Spielanzeige S3: 0,8 statt 1,5 – das Polster nimmt den Rest (bei Bildrand 48 px bei 1280×720 passt die Folie sonst um 1,5 px nicht)
+    paddingY: '0.8cqh',
     // B-44a3: seitliches Polster der Folie
     paddingX: '3cqw',
     // B-48a (@ME-006): Hinweis-Ecke oben rechts auf dem Feld ohne laufendes Spiel (Mockup v8)

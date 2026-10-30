@@ -1,20 +1,21 @@
 /**
  * LiveScoreGrid – Raster der Live-Folie: Kästen, Doppelpunkt, Namen (@ZM-140) und das Ende (Mockup K5g, @ZM-147/@ZM-049):
  * Sieger-Kasten mit Ring (Pokal-Kreis nur in der Finalrunde), Verlierer zurückgenommen, Strafstoßergebnis klein unter dem Doppelpunkt.
+ * Kästen sind `ScoreBox` (Weste, Ecken, Ring), Namen `TeamName` (Logo bzw. Initialen davor, zwei freigehaltene Zusatzzeilen, @ZM-157).
  */
 import { CSSProperties, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayLayout, displaySizes } from '../../design-tokens';
 import type { monitorThemes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
-import type { FinalScore } from '../../core/view';
+import type { FinalScore, MatchView } from '../../core/view';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
-import { Icons } from '../ui/Icons';
-import { ScoreBlock } from './ScoreBlock';
+import { ScoreBox } from '../ui/molecules/ScoreBox';
+import { TeamName } from '../ui/molecules/TeamName';
+import { pairFrameStrength } from '../ui/molecules/scoreBoxStyle';
 import { TeamNameDisplay } from './TeamNameDisplay';
 import { LivePenaltyResult } from './LiveFinalScore';
 import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
-import type { BlockFrame } from '../../design-tokens';
 
 export interface LiveScoreGridProps {
   match: LiveMatch;
@@ -22,9 +23,8 @@ export interface LiveScoreGridProps {
   theme: MonitorTheme;
   themeColors: (typeof monitorThemes)[keyof typeof monitorThemes];
   hideScore: boolean;
-  homeColor: string;
-  awayColor: string;
-  frames: { home: BlockFrame; away: BlockFrame };
+  /** Kästen je Seite (`MatchView.boxes`): Farbe bzw. Weste und Leibchen-Zeichen */
+  boxes: MatchView['boxes'];
   /** Endstand der Ansicht; nur ein beendetes Spiel trägt Ring, Pokal und Strafstoßergebnis */
   finalScore?: FinalScore;
   /** Finalrunde: nur dort bekommt der Sieger den Pokal (Ring hat jeder Sieger, Spec 4.5) */
@@ -34,13 +34,10 @@ export interface LiveScoreGridProps {
 const layout = displayLayout.scoreArea;
 /** Mit Strafstoßergebnis in der Mitte sind die Namen um diesen Anteil schmaler als der Kasten: Platz für „Strafstoßschießen“ zwischen den Namen (Mockup K5g) */
 const PENALTY_NAME_SHARE = 0.8;
-/** Pokal-Kreis (Mockup K5g `.cup`): Versatz über/rechts neben der Kastenecke als Bruchteil des Kreisdurchmessers, Symbolgröße als Anteil, Strichstärke des Symbols */
-const CUP_OFFSET_TOP_DIVISOR = 3;
-const CUP_OFFSET_RIGHT_DIVISOR = 5;
-const CUP_ICON_SHARE = 0.6;
-const CUP_ICON_STROKE = 2.4;
+/** Zusatzzeilen unter dem Namen, in jedem Zustand freigehalten (@ZM-157, @ZM-151) */
+const ADDON_LINES = 2;
 
-export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, homeColor, awayColor, frames, finalScore, finalRound = false }: LiveScoreGridProps) {
+export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxes, finalScore, finalRound = false }: LiveScoreGridProps) {
   const { t } = useTranslation('monitor');
   // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
   const [namePx, setNamePx] = useState<{ home?: number; away?: number }>({});
@@ -51,19 +48,24 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
   // Sieger/Verlierer nur nach dem Abpfiff und mit Entscheidung; ein Unentschieden in der Gruppe hat weder Ring noch Pokal; der Pokal nur in der Finalrunde
   const winner = !hideScore && match.status === 'FINISHED' ? finalScore?.winner ?? null : null;
   const outcomeOf = (side: 'a' | 'b') => (winner === null ? undefined : winner === side ? 'winner' : 'loser');
-  const withPenalty = winner !== null && finalScore?.penalty !== undefined;
+  // Strafstoßergebnis: nach dem Ende mit Sieger, im laufenden Strafstoßschießen als Zwischenstand am selben Platz (@ZM-047:teil)
+  const shootoutRunning = match.status === 'RUNNING' || match.status === 'PAUSED';
+  const withPenalty = !hideScore && finalScore?.penalty !== undefined && (winner !== null || shootoutRunning);
+  // Rahmenbreite aus den getragenen Farben, nicht aus der gedämpften: sie ändert sich am Ende nicht (@ZM-151)
+  const frameStrength = pairFrameStrength({ fill: boxes.home.fill }, { fill: boxes.away.fill }, themeColors.background);
 
   // @ZM-140 Raster: Kasten (Zeile 1) und Namen (Zeile 2) teilen sich ein Raster, Spalten 1 | 2 | 3
   // B-44a2: Zeile 1 hat die feste Kastenhöhe (auch im Kindermodus, gleiche Lage), Zeile 2 reserviert zwei Namenszeilen
-  // Dazu eine Zeile für Zusätze unter dem Namen („nach Verlängerung“, @ZM-156/@ZM-157), in jedem Zustand reserviert: die Kästen springen nicht (@ZM-151)
-  const addonLineHeight = `calc(${displayFontSizes.clockHint} * ${layout.hintLineHeight})`;
-  const nameRowHeight = `calc(${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines} + ${addonLineHeight})`;
+  // Dazu zwei Zeilen für Zusätze unter dem Namen („nach Verlängerung“, @ZM-156/@ZM-157), in jedem Zustand reserviert: die Kästen springen nicht (@ZM-151)
+  const addonLineHeight = `calc(${displayFontSizes.clockHint} * ${layout.clockLineHeight})`;
+  const nameRowHeight = `calc(${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines} + ${addonLineHeight} * ${ADDON_LINES})`;
   const gridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: `minmax(0, 1fr) ${layout.separatorWidth} minmax(0, 1fr)`,
     gridTemplateRows: `${layout.blockHeight} ${nameRowHeight}`,
     columnGap: layout.blockGap,
-    rowGap: layout.teamNamesGap,
+    // Abstand Kasten zu Namen = Ringbreite (der Ring liegt außen, die Zeilenhöhe des Namens lässt oben Luft); die Höhe geht an die zwei Zusatzzeilen (@ZM-157)
+    rowGap: layout.frameWidthStrong,
     alignItems: 'center',
     width: '100%',
     flexShrink: 0,
@@ -107,69 +109,69 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
     alignItems: 'center',
     minWidth: 0,
     maxWidth: '100%',
+    // Der Avatar liegt neben dem Namen und kommt zur Breite dazu (TeamName `avatarOutside`): Polster statt Überlauf, `width` bleibt der Token
+    ...(withPenalty ? {} : { boxSizing: 'content-box' as const, paddingInline: `calc((${layout.avatarSize} + ${cssVars.spacing.sm}) / 2)` }),
   });
-
-  // Pokal-Kreis oben rechts am Sieger-Kasten (Mockup K5g `.cup`), Maße aus `monitorCup`
-  const cupStyle: CSSProperties = {
-    position: 'absolute',
-    top: `calc(${layout.monitorCup} / -${CUP_OFFSET_TOP_DIVISOR})`,
-    right: `calc(${layout.monitorCup} / -${CUP_OFFSET_RIGHT_DIVISOR})`,
-    width: layout.monitorCup,
-    height: layout.monitorCup,
-    borderRadius: cssVars.borderRadius.full,
-    background: themeColors.progressBar,
-    color: themeColors.background,
-    border: `${layout.frameWidthSubtle} solid ${themeColors.background}`,
-    fontSize: `calc(${layout.monitorCup} * ${CUP_ICON_SHARE})`,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxSizing: 'border-box',
-  };
 
   const block = (side: 'a' | 'b') => {
     const home = side === 'a';
+    const sideBox = home ? boxes.home : boxes.away;
+    const cup = winner === side && finalRound;
+    // Zugänglicher Name wie bisher am ScoreBlock (Wortlaut „Heim: 2“ von Tests gepinnt), in der Finalrunde beim Sieger dazu „Pokal“; die Zeichen selbst sind dekorativ
+    const ariaLabel = [`${home ? 'Heim' : 'Gast'}: ${home ? match.homeScore : match.awayScore}`, cup ? t('liveMatch.winnerAria') : ''].filter(Boolean).join(', ');
     return (
       <div style={blockCellStyle(home ? 1 : 3)} data-testid={home ? 'live-block-home' : 'live-block-away'}>
-        <ScoreBlock
+        <ScoreBox
           score={home ? match.homeScore : match.awayScore}
-          backgroundColor={home ? homeColor : awayColor}
-          position={home ? 'home' : 'away'}
-          size={size}
-          frame={home ? frames.home : frames.away}
+          fill={sideBox.fill}
+          size="display"
+          background={themeColors.background}
+          textColor={themeColors.text}
           outcome={outcomeOf(side)}
           ringColor={themeColors.progressBar}
-          dimColor={themeColors.background}
+          cup={cup}
+          bib={sideBox.bib}
+          frameStrength={frameStrength}
+          ariaLabel={ariaLabel}
+          testId={home ? 'live-box-home' : 'live-box-away'}
         />
-        {winner === side && finalRound && (
-          <span style={cupStyle} role="img" aria-label={t('liveMatch.winnerAria')} data-testid={`live-cup-${home ? 'home' : 'away'}`}>
-            <Icons.Trophy size="1em" strokeWidth={CUP_ICON_STROKE} />
-          </span>
-        )}
       </div>
     );
   };
 
   const name = (side: 'a' | 'b') => {
     const home = side === 'a';
+    const team = home ? match.homeTeam : match.awayTeam;
+    // unter dem Namen des Siegers (Spec 4.4): Sieg nach Verlängerung, mit oder ohne Strafstoßschießen
+    const addons = winner === side && finalScore?.overtime !== undefined ? [t('liveMatch.afterOvertime')] : [];
     return (
       <div style={nameCellStyle(home ? 1 : 3)} data-testid={home ? 'live-name-home' : 'live-name-away'}>
-        <TeamNameDisplay
-          name={home ? match.homeTeam.name : match.awayTeam.name}
-          size={size}
-          theme={theme}
-          maxWidth="100%"
-          fontSize={hideScore ? displayFontSizes.teamNameKids : undefined}
-          sizePx={sharedNamePx}
-          onFitPx={home ? onHomePx : onAwayPx}
+        <TeamName
+          team={team}
+          layout="stacked"
+          avatarSize="display"
+          avatarOutside={!withPenalty}
+          avatarNeutral={{ background: themeColors.surfaceHover, color: themeColors.text, border: themeColors.border }}
+          addons={addons}
+          reserveAddonLines={ADDON_LINES}
           emphasis={outcomeOf(side)}
+          addonColor={themeColors.textSecondary}
+          addonFontSize={displayFontSizes.clockHint}
+          addonLineHeight={layout.clockLineHeight}
+          testId={home ? 'live-team-home' : 'live-team-away'}
+          name={
+            <TeamNameDisplay
+              name={team.name}
+              size={size}
+              theme={theme}
+              maxWidth="100%"
+              fontSize={hideScore ? displayFontSizes.teamNameKids : undefined}
+              sizePx={sharedNamePx}
+              onFitPx={home ? onHomePx : onAwayPx}
+              emphasis={outcomeOf(side)}
+            />
+          }
         />
-        {/* unter dem Namen des Siegers (Spec 4.4): Sieg nach Verlängerung, mit oder ohne Strafstoßschießen */}
-        {winner === side && finalScore?.overtime !== undefined && (
-          <div data-testid="live-after-overtime" style={{ fontSize: displayFontSizes.clockHint, fontWeight: cssVars.fontWeights.bold, lineHeight: layout.hintLineHeight, color: themeColors.textSecondary, whiteSpace: 'nowrap' }}>
-            {t('liveMatch.afterOvertime')}
-          </div>
-        )}
       </div>
     );
   };
