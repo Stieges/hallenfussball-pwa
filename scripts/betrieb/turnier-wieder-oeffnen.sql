@@ -16,8 +16,9 @@
 --   - Das Turnier ist wieder "Läuft" (bzw. "Festgelegt", falls nie ein Spiel angepfiffen war).
 --   - Helfer dürfen SOFORT wieder eintragen, und der Helfer-QR-Code gilt wieder (am Turniertag). Eine eigene
 --     Freischaltung je Helfer gibt es im MVP nicht (@LZ-062 ist MVP+).
---   - Die öffentliche Seite und der Hallen-Monitor zeigen wieder den laufenden Stand, keinen Endstand; ein Hinweis
---     "vorläufig" fehlt dort noch (@LZ-065 MVP+). Der Bildschirm wird nicht mehr 60 Minuten nach dem Abschluss frei.
+--   - Der Hallen-Monitor zeigt weiter den Endstand von vor dem Wiederöffnen, unverändert, bis Olli neu abschließt
+--     (@ZM-121 Z. 2; Server ab 20261118_008). Die öffentliche Seite zeigt wieder den laufenden Stand, keinen Endstand; ein
+--     Hinweis "vorläufig" fehlt dort noch (@LZ-065 MVP+). Der Bildschirm wird nicht mehr 60 Minuten nach dem Abschluss frei.
 --   - Der alte Endstand bleibt gespeichert, bis Olli erneut abschließt; dann wird er ersetzt.
 --   - Der Verlauf hält das Wiederöffnen mit Grund und dem Zeitpunkt des aufgehobenen Abschlusses fest. Als Person steht
 --     dort Olli (die Vorlage handelt in seinem Namen, wie bei seiner Bitte).

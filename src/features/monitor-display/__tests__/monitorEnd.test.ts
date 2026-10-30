@@ -9,7 +9,7 @@ import { applyEnd, monitorEnd } from '../monitorEnd';
 import { buildMonitorView } from '../monitorView';
 import type { ProgramSlide } from '../slideProgramme';
 import { buildTournament, slide } from './monitorFixture';
-import { serverEndstand, SERVER_NONE } from './endstandFixture';
+import { FINISHED_AT, serverEndstand, SERVER_NONE } from './endstandFixture';
 
 function gelesen(raw: unknown): PublicFinalStandings {
   const parsed = parsePublicFinalStandings(raw);
@@ -35,9 +35,25 @@ describe('monitorEnd', () => {
     expect(ende.kind === 'final' && ende.ranking.map((r) => r.teamName)).toEqual(['FC Nord', 'SV Süd', 'TSV West', 'SG Mitte', 'SC Ost', 'FC Berg']);
   });
 
-  it('@LZ-075 Gegenbeispiel: ohne Abschluss kein Endstand, auch wenn eine Antwort mit Endstand vorliegt (älterer Stand)', () => {
+  it('@LZ-075 Gegenbeispiel: ohne Abschluss meldet der Server keinen Endstand (none) – der Monitor zeigt keinen', () => {
     const t = buildTournament({ lifecycleStatus: 'fixed' });
-    expect(monitorEnd(t, buildMonitorView(t), gelesen(serverEndstand())).kind).toBe('none');
+    expect(monitorEnd(t, buildMonitorView(t), gelesen(SERVER_NONE)).kind).toBe('none');
+  });
+
+  // Server-Vertrag ab 20261118_008: liefert display_final_standings(tournament_id, monitor_id) ohne Abschluss einen Endstand, ist
+  // das Turnier über den Betreiber wieder geöffnet (@LZ-091) – nur dann gibt es einen gespeicherten Stand (Beweis
+  // scripts/monitor-endstand-check.sh A5/B2). Vor 20261118_008 hieß „Antwort mit Endstand ohne Abschluss“ „älterer Stand“.
+  it('@ZM-121 Z. 2: wieder geöffnet (Notweg @LZ-091), der Server liefert den Endstand von vorher – der Monitor zeigt ihn unverändert', () => {
+    const t = buildTournament({ lifecycleStatus: 'fixed' });
+    const ende = monitorEnd(t, buildMonitorView(t), gelesen(serverEndstand({ scorersPublic: false })));
+    expect(ende.kind).toBe('final');
+    expect(ende.kind === 'final' && ende.ranking.map((r) => r.teamName)).toEqual(['FC Nord', 'SV Süd', 'TSV West', 'SG Mitte', 'SC Ost', 'FC Berg']);
+    expect(ende.kind === 'final' && ende.finishedAt).toBe(FINISHED_AT);
+  });
+
+  it('@ZM-121 Z. 2 Gegenbeispiel: wieder geöffnet, der Server meldet keinen Endstand – normales Programm, kein „pending“', () => {
+    const t = buildTournament({ lifecycleStatus: 'fixed' });
+    expect(monitorEnd(t, buildMonitorView(t), gelesen(SERVER_NONE)).kind).toBe('none');
   });
 
   it('abgeschlossen, aber der Server meldet (noch) keinen Endstand: nichts erfinden – „pending“, nie die Live-Tabelle als Endstand', () => {

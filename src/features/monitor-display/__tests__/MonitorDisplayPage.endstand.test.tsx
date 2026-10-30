@@ -1,7 +1,9 @@
 /**
- * R3-7 Monitor nach dem Abschluss – über die gerenderte Seite (@LZ-076, @LZ-077 Z. 1, @ZM-121 Z. 1 und 4, @ZM-012 Z. 2, @ZM-129, @ET-045, @ZM-180).
- * Übertragungsweg wie am Turniertag: Turnier über die Quelle (Zustand vom Server), Endstand über `display_final_standings` in der
- * Form der ECHTEN Server-Antwort (Fixture `endstandFixture`, Torschützen nur mit Schalter). Zeit in Schritten, echter Takt der Seite.
+ * R3-7 Monitor nach dem Abschluss – über die gerenderte Seite (@LZ-076, @LZ-077 Z. 1, @ZM-121 Z. 1, 2 und 4, @ZM-012 Z. 2, @ZM-129, @ET-045,
+ * @ZM-180). Übertragungsweg wie am Turniertag: Turnier über die Quelle (Zustand vom Server), Endstand über
+ * `display_final_standings(tournament_id, monitor_id)` in der Form der ECHTEN Server-Antwort (Fixture `endstandFixture`, Torschützen nur
+ * mit Schalter; nach dem Wiederöffnen über den Betreiber dieselbe Antwort wie vorher, Migration 20261118_008, Beweis
+ * scripts/monitor-endstand-check.sh B2). Zeit in Schritten, echter Takt der Seite.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
@@ -11,7 +13,7 @@ import { attachMonitor, buildTournament, FIXTURE_SPONSOR, slide, withMatch, with
 import { serverEndstand, SERVER_NONE } from './endstandFixture';
 
 const { supabaseGet, localGet, endstand } = vi.hoisted(() => {
-  const endstand: { antwort: unknown; aufrufe: string[] } = { antwort: undefined, aufrufe: [] };
+  const endstand: { antwort: unknown; aufrufe: string[]; monitore: string[] } = { antwort: undefined, aufrufe: [], monitore: [] };
   return { supabaseGet: vi.fn(), localGet: vi.fn(), endstand };
 });
 
@@ -19,9 +21,10 @@ vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
   supabase: {
     from: vi.fn(() => ({ upsert: vi.fn().mockResolvedValue({}) })),
-    rpc: vi.fn((name: string, params: { p_tournament_id?: string }) => {
+    rpc: vi.fn((name: string, params: { p_tournament_id?: string; p_monitor_id?: string }) => {
       if (name === 'display_final_standings') {
         endstand.aufrufe.push(String(params.p_tournament_id));
+        endstand.monitore.push(String(params.p_monitor_id));
         return endstand.antwort instanceof Error ? Promise.reject(endstand.antwort) : Promise.resolve({ data: endstand.antwort, error: null });
       }
       return Promise.resolve({ error: null });
@@ -97,6 +100,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   endstand.antwort = SERVER_NONE;
   endstand.aufrufe = [];
+  endstand.monitore = [];
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
 });
 afterEach(() => { vi.useRealTimers(); });
@@ -111,6 +115,13 @@ describe('@ZM-121 Z. 1, @LZ-076: Nach dem Abschluss zeigt der Monitor den Endsta
     expect(endstand.aufrufe[0]).toBe('tour-1');
   });
 
+  it('C-MONITOR-ENDSTAND-OHNE-TEILEN behoben: der Monitor fragt über seinen Link (Turnier + eigene Kennung) – so gilt es auch ohne Online-Teilen (@ZM-101)', async () => {
+    endstand.antwort = serverEndstand({ scorersPublic: false });
+    await starte(turnier({ abgeschlossen: true }));
+    expect(endstand.monitore[0]).toBe('mon-1');
+    expect(folie()).toBe('endstand');
+  });
+
   it('ein Durchlauf zeigt nie Live-Spiel, Tabelle, Nächste Spiele oder Spielplan – Sponsor „Bäckerei Maier“ und Zuschauer-QR laufen wie sonst', async () => {
     endstand.antwort = serverEndstand({ scorersPublic: false });
     // Spiel 7 steht im Stand noch auf „läuft“: eine Live-Folie im Programm fiele sofort auf (kein Rückfall durch „kein Spiel“)
@@ -120,12 +131,13 @@ describe('@ZM-121 Z. 1, @LZ-076: Nach dem Abschluss zeigt der Monitor den Endsta
     for (const weg of ['live', 'tabelle', 'spielliste']) { expect(gesehen).not.toContain(weg); }
   });
 
-  it('Gegenbeispiel @LZ-075: ohne Abschluss läuft das Programm unverändert (Live-Folie zuerst, nie ein Endstand) – auch wenn der Server einen hätte', async () => {
-    endstand.antwort = serverEndstand();
+  it('Gegenbeispiel @LZ-075: ohne Abschluss meldet der Server keinen Endstand – das Programm läuft unverändert (Live-Folie zuerst), kein Abruf-Takt', async () => {
+    endstand.antwort = SERVER_NONE;
     await starte(turnier({ abgeschlossen: false }));
-    const gesehen = await durchlauf(5);
+    const gesehen = await durchlauf(60);
     expect(gesehen[0]).toBe('live');
-    expect(endstand.aufrufe).toEqual([]);
+    expect(gesehen).not.toContain('endstand');
+    expect(endstand.aufrufe.length).toBeLessThanOrEqual(1);
     expect(screen.queryByTestId('monitor-final-standings')).toBeNull();
   });
 
@@ -238,17 +250,41 @@ describe('@ET-045: gespeicherter Endstand, nie neu gerechnet', () => {
   });
 });
 
-describe('@ZM-121 Z. 2: Wiederöffnen (Notweg @LZ-091) – Befund C-MONITOR-ENDSTAND-WIEDEROEFFNEN', () => {
-  // Soll laut Record (Muss): der Endstand von vor dem Wiederöffnen bleibt unverändert, bis neu abgeschlossen wird. Der Server liefert nach dem Wiederöffnen
-  // aber `none` (final_standings_payload nur bei lifecycle_status = finished), also heute rot.
-  it.fails('C-MONITOR-ENDSTAND-WIEDEROEFFNEN: nach dem Wiederöffnen zeigt der Monitor den Endstand von vorher unverändert', async () => {
+describe('@ZM-121 Z. 2: Wiederöffnen über den Betreiber (Notweg @LZ-091)', () => {
+  // Soll (Muss): der Endstand von vor dem Wiederöffnen bleibt unverändert, bis neu abgeschlossen wird. Der Server (20261118_008) liefert
+  // nach dem Wiederöffnen dieselbe Antwort wie vorher (Beweis scripts/monitor-endstand-check.sh B2); das Turnier meldet „läuft“.
+  it('nach dem Wiederöffnen zeigt der Monitor den Endstand von vorher unverändert – nie Live, Tabelle oder Spielliste', async () => {
     endstand.antwort = serverEndstand({ scorersPublic: false });
-    await starte(turnier({ abgeschlossen: true }));
+    await starte(turnier({ abgeschlossen: true, spielLaeuft: true }));
     expect(folie()).toBe('endstand');
-    endstand.antwort = SERVER_NONE;
-    liefere(turnier({ abgeschlossen: false }));
-    await vor(30_000);
+    const vorher = screen.getAllByTestId('monitor-final-row').map((z) => z.textContent);
+    const wiederOffen = turnier({ abgeschlossen: false });
+    wiederOffen.matches = withMatch('match-7', { matchStatus: 'running', scoreA: 1, scoreB: 1 });
+    liefere(wiederOffen);
+    const gesehen = await durchlauf(40);
+    for (const weg of ['live', 'tabelle', 'spielliste']) { expect(gesehen).not.toContain(weg); }
+    expect(gesehen).toContain('endstand');
+    for (let i = 0; i < 12 && folie() !== 'endstand'; i++) { await vor(5_000); }
+    expect(folie()).toBe('endstand');
+    expect(screen.getAllByTestId('monitor-final-row').map((z) => z.textContent)).toEqual(vorher);
+  });
+
+  it('lädt der Monitor im wieder geöffneten Turnier neu, steht der Endstand von vorher da', async () => {
+    endstand.antwort = serverEndstand({ scorersPublic: false });
+    await starte(turnier({ abgeschlossen: false }));
+    expect(folie()).toBe('endstand');
     expect(screen.getAllByTestId('monitor-final-row')).toHaveLength(6);
+  });
+
+  it('@LZ-091 letzte Zeile: schließt Olli neu ab, zeigt der Monitor ≤ 10 s später den neuen Endstand', async () => {
+    endstand.antwort = serverEndstand({ scorersPublic: false });
+    await starte(turnier({ abgeschlossen: false }));
+    expect(screen.getAllByTestId('monitor-final-row')[0]).toHaveTextContent('FC Nord');
+    endstand.antwort = serverEndstand({ names: ['SV Süd', 'FC Nord', 'TSV West', 'SG Mitte', 'SC Ost', 'FC Berg'], scorersPublic: false });
+    liefere(turnier({ abgeschlossen: true }));
+    await vor(10_000);
+    expect(folie()).toBe('endstand');
+    expect(screen.getAllByTestId('monitor-final-row')[0]).toHaveTextContent('SV Süd');
   });
 });
 
@@ -273,10 +309,11 @@ describe('@ZM-180: beendet bleibt beendet', () => {
     expect(screen.getAllByTestId('monitor-final-row')).toHaveLength(6);
   });
 
-  it('Übergangsverhalten heute: nach dem Wiederöffnen (Server meldet nicht mehr abgeschlossen) ist der Endstand weg und das normale Programm läuft wieder', async () => {
+  it('Gegenbeispiel: meldet der Server nach dem Wiederöffnen keinen Endstand mehr (z. B. Kindermodus eingeschaltet), läuft das normale Programm wieder', async () => {
     endstand.antwort = serverEndstand({ scorersPublic: false });
     await starte(turnier({ abgeschlossen: true }));
     expect(folie()).toBe('endstand');
+    endstand.antwort = SERVER_NONE;
     liefere(turnier({ abgeschlossen: false }));
     await vor(10_000);
     expect(screen.queryByTestId('monitor-final-standings')).toBeNull();

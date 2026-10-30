@@ -105,7 +105,7 @@ function MonitorDisplayPageContent({
   // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung (der Server liefert dann auch keinen Stand).
   const ergebnisseAusgeblendet = view !== null && !view.rules.results;
   // Nach dem Abschluss (R3-7, @LZ-076): Endstand allein aus dem gespeicherten Stand des Servers, nie aus der Live-Tabelle (useMonitorEnd)
-  const end = useMonitorEnd(tournamentId, tournament, view, origin);
+  const end = useMonitorEnd(tournamentId, monitorId, tournament, view, origin);
 
   // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und Beamer-Laptops ab.
   // Erst aktivieren, wenn ein Monitor geladen ist (auf der Fehlerseite wäre die Anfrage sinnlos).

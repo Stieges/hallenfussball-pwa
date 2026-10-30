@@ -2,9 +2,11 @@
  * Der Monitor nach dem Abschluss (R3-7; @LZ-076, @LZ-077 Z. 1, @ZM-121 Z. 1 und 4, @ZM-012 Z. 2, @ET-045) – rein, ohne React.
  *
  * Der Endstand kommt nie aus der Live-Tabelle, sondern allein aus dem beim Abschluss gespeicherten Stand des Servers
- * (`display_final_standings`, nie selbst rechnen). Er gilt nur, solange das Turnier „abgeschlossen“ ist (beendet bleibt beendet,
- * @ZM-180: kommt ein älterer Stand nach, ändert er nichts). Im Kindermodus steht statt des Endstands der Satz „Turnier beendet –
- * danke fürs Mitspielen“, nie ein Platz; die Entscheidung trifft der Monitor selbst, auch wenn der Server (fälschlich) Plätze liefert.
+ * (`display_final_standings`, nie selbst rechnen). Er gilt, solange das Turnier „abgeschlossen“ ist (beendet bleibt beendet, @ZM-180:
+ * kommt ein älterer Spielstand nach, ändert er nichts) – und nach dem Wiederöffnen über den Betreiber (@LZ-091), solange der Server ihn
+ * weiter liefert: dann unverändert bis zum neuen Abschluss (@ZM-121 Z. 2; den Stand gibt es beim Server nur nach einem Abschluss).
+ * Im Kindermodus steht statt des Endstands der Satz „Turnier beendet – danke fürs Mitspielen“, nie ein Platz; die Entscheidung trifft
+ * der Monitor selbst, auch wenn der Server (fälschlich) Plätze liefert.
  */
 import type { PublicFinalStandings } from '../../core/repositories/publicFinalStandings';
 import type { FinalStandingRow, ScorerRow } from '../../core/standings/finalStandings';
@@ -31,9 +33,12 @@ export const NO_END: MonitorEnd = { kind: 'none' };
 const PENDING_END: MonitorEnd = { kind: 'pending' };
 
 export function monitorEnd(tournament: Pick<Tournament, 'lifecycleStatus'>, view: TournamentView, finalStandings: PublicFinalStandings, cloud = true): MonitorEnd {
-  if (tournament.lifecycleStatus !== 'finished') { return NO_END; }
-  if (showsKidsEnded(tournament, view)) { return { kind: 'kids' }; }
-  if (finalStandings.status !== 'final') { return cloud ? PENDING_END : NO_END; }
+  const abgeschlossen = tournament.lifecycleStatus === 'finished';
+  if (abgeschlossen && showsKidsEnded(tournament, view)) { return { kind: 'kids' }; }
+  if (finalStandings.status !== 'final' || !view.rules.results) {
+    // Nicht abgeschlossen ohne Endstand vom Server: normales Programm. Abgeschlossen: das Live-Programm bleibt weg (pending).
+    return abgeschlossen && cloud ? PENDING_END : NO_END;
+  }
   return {
     kind: 'final',
     finishedAt: finalStandings.finishedAt,
