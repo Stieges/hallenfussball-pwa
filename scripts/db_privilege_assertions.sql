@@ -1219,7 +1219,7 @@ SELECT 'public-read-reshare-keeps-code',
 -- Mitgezogen fuer 20261118_007_public_entscheidung_basis.sql (public_view.config_for reicht basis durch; vorher
 -- b066d903d80edc87778e7e65b2958366). 007 live seit 30.10.2026 (md5(prosrc) config_for ad6a688f…).
 -- Mitgezogen fuer 20261118_008_monitor_endstand.sql (U): config_for gibt clockMode/finalPhaseMinutes heraus (vorher, Fassung
--- 007: d9d204bec11e731e6b68287dd79d0bfc). Bis 008 live ist, laesst der Drift-Check diese Zeile live aus (pending_assertions_for).
+-- 007: d9d204bec11e731e6b68287dd79d0bfc). 008 live seit 30.10.2026 (md5(prosrc) config_for 4aed3d49…).
 UNION ALL
 SELECT 'public-read-core-unchanged',
        coalesce((SELECT count(*) = 12
