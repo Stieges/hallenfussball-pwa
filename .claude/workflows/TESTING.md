@@ -58,7 +58,9 @@ test.fail(testInfo.project.name === 'tablet-portrait', 'Befund C-COCKPIT-TABLET-
   (`C-COCKPIT-TABLET-OHNE-PROTOKOLL`). Nicht gültig: `@DF-01`, `@DF-0012`, `B-51b`, `F-B13-4`, `C-Jugend`. Ein Verweis nur im Kommentar zählt nicht.
 - **Ratsche:** Die Zahl der Markierungen ohne Verweis darf nicht größer sein als auf `main` (Verschieben zählt nicht als Zuwachs);
   die Meldung nennt die neuen Tests. Sinkt die Zahl, ist die Prüfung grün und meldet es.
-- **Unbekannter Verweis ist sofort rot**, auch in regulären Tests (Tippfehler). Bekannt ist, was in `tests/meta/befund-kennungen.json` steht.
+- **Unbekannter Verweis ist lokal sofort rot**, auch in regulären Tests (Tippfehler, @TA-024): `npm run test:scenarios` prüft gegen die
+  lokale Befundliste (`docs/anforderungen/BEFUNDE-HEUTIGER-CODE.md`, aus Arbeitskopien über das Hauptrepo; `--befunde <pfad>`).
+  In der CI fehlt die Liste: dort zählt nur die Schreibweise (@TA-023). Deshalb fährt jeder Review den lokalen Lauf.
 
 ## 0.3 Selbst-Auflösung
 
@@ -74,15 +76,11 @@ nicht der Umsetzer: ein Umsetzer schlägt sie vor und lässt den Test bis dahin 
 ## 0.5 Liste der bekannten Kennungen und Untergrenze
 
 ```bash
-node scripts/befund-kennungen-erzeugen.mjs --befunde <Pfad zur Befundliste>   # braucht die lokale Befundliste (docs/ fehlt in CI und Worktrees)
 node scripts/mvp-kennungen-erzeugen.mjs --repo <Hauptrepo>                    # MVP-Kennungen aus den Anforderungen neu erzeugen
 node scripts/scenario-tests.mjs --floor-schreiben                             # Untergrenze auf den gemessenen Stand, nie von Hand
 ```
 
-- `tests/meta/befund-kennungen.json` enthält **nur** Kennungen, die ein Test nennt, keinen Befundtext. Nach jedem neuen Verweis neu
-  erzeugen und mit committen. Die CI prüft beide Richtungen: ein Verweis im Test, der in der Liste fehlt, und eine Kennung in der Liste,
-  die kein Test nennt (von Hand ergänzt oder Verweis entfernt), machen sie rot. Nicht sehen kann die CI eine erfundene Kennung, die
-  zugleich im Test und in der Liste steht; das fängt erst der nächste Lauf des Erzeugers gegen die Befundliste ab.
+- Eine Liste der bekannten Befund-Kennungen gibt es im Repo nicht mehr (Konflikte bei fast jedem Paket, Daniel 30.10.).
 - **Untergrenze** am Paketende nachziehen (`--floor-schreiben`, nach der MVP-Liste), nie senken.
 
 ## 0.6 Datenwege
@@ -90,7 +88,7 @@ node scripts/scenario-tests.mjs --floor-schreiben                             # 
 | Objekt | liegt | geprüft von |
 |---|---|---|
 | Szenario `@XX-nnn` | Anforderungs-Record (lokal) | `mvp-kennungen.json` (Auszug im Repo), CI |
-| Beobachtung / Befund `C-…`, `DF-nnn` | Befundliste (lokal) | `befund-kennungen.json` (Auszug im Repo), CI |
+| Beobachtung / Befund `C-…`, `DF-nnn` | Befundliste (lokal) | `scenario-tests.mjs` lokal (bekannt?), CI nur Schreibweise |
 | Test | `src/`, `tests/`, `scripts/` | Vitest/Playwright, `scenario-tests.mjs` |
 | Untergrenze | `tests/meta/szenario-floor.json` | `scenario-tests.mjs` |
 | Aufgaben, Briefe, Proben | lokal | Review |
