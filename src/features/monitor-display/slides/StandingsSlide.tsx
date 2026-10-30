@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
-import { groupKeyOf } from '../../../core/models/standingsGroups';
+import { groupKeyOf, OVERALL_GROUP } from '../../../core/models/standingsGroups';
 import { groupTieView } from '../../../core/standings/tieViews';
 import { calculateStandings } from '../../../utils/calculations';
 import { getGroupDisplayName, resolveTheme } from '../monitorDisplayHelpers';
@@ -20,7 +20,9 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
-  const groupId = slide.config.groupId;
+  // „default“ ist die Gruppen-ID, die der Monitor-Editor bei „Jeder gegen jeden“ (eine Gruppe) anbietet; kein Team trägt sie → alle Teams
+  const configGroupId = slide.config.groupId;
+  const groupId = configGroupId === 'default' && !tournament.teams.some(team => team.group === 'default') ? OVERALL_GROUP : configGroupId;
   const groupName = getGroupDisplayName(tournament, groupId);
   const { teams, matches } = tournament;
 

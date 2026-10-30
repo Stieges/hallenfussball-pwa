@@ -295,11 +295,18 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
     expect(verdeckt(r.b).map((x) => `${x.typ} ${x.selektor}`)).toEqual(['HART [data-testid="tor-gast-16"]'])
     expect(schwebend(r.b)).toHaveLength(0)
   })
-  it('Fixrunde 1 echter Stand: Spielplan nach dem SK-Fix meldet nichts Schwebendes; das Cockpit hat kein HART, jede Verdeckungs-Meldung ist bekannt oder eine Warnung (kein bestimmter Fehler erwartet)', async () => {
+  it('Fixrunde 1 echter Stand: Spielplan meldet als Schwebendes nur Warnungen der Leiste Teilen/Als PDF (@OB-074: Leiste steht am Handy fest am Fensterrand); das Cockpit hat kein HART, jede Verdeckungs-Meldung ist bekannt oder eine Warnung (kein bestimmter Fehler erwartet)', async () => {
     const plan = await messe('--app', '/#/tournament/hallencup-messlauf/schedule', '--erwarte', '[data-testid="schedule-view-table"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(plan.b.status, plan.out).not.toBe('BLOCKED')
-    expect(schwebend(plan.b)).toHaveLength(0)
+    // @OB-074: „Teilen“/„Als PDF“ stehen am Handy fest über der Liste. Beim Scrollen liegt die Leiste zeitweise über Zeilen-Bedienelementen,
+    // die durch Weiterscrollen frei werden; das ist nach @TA-012 („schwebende Leiste über einem Element, das erst durch Weiterscrollen
+    // frei wird = Warnung“) eine Warnung, nie HART. Erlaubt ist ausschließlich die Leiste als Verdecker (kein anderer Schwebender, kein HART:
+    // ein Element, das in keiner Scroll-Stellung frei wird, z. B. die letzte Zeile, bliebe HART).
     expect(verdeckt(plan.b).filter((x) => x.typ === 'HART')).toHaveLength(0)
+    for (const x of schwebend(plan.b)) {
+      const verdecker = (x as { verdecktVon?: string }).verdecktVon ?? ''
+      expect(x.typ === 'WARNUNG' && /schedule-action-buttons|schedule-action-pdf|"Teilen"|"Als PDF"/.test(verdecker), JSON.stringify(x)).toBe(true)
+    }
     const c = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016', '--erwarte', '[data-testid="scoreboard"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(c.b.status, c.out).not.toBe('BLOCKED')
     // @TA-012 verlangt nicht, dass die App einen bestimmten Fehler hat: kein HART; jede Meldung traegt eine Befund-Kennung
