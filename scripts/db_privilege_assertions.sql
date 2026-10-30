@@ -1218,12 +1218,14 @@ SELECT 'public-read-reshare-keeps-code',
 -- Funktionen, muss der Wert hier mitgezogen werden (bewusst). Vor dem Live-Einspielen: "f".
 -- Mitgezogen fuer 20261118_007_public_entscheidung_basis.sql (public_view.config_for reicht basis durch; vorher
 -- b066d903d80edc87778e7e65b2958366). 007 live seit 30.10.2026 (md5(prosrc) config_for ad6a688f…).
+-- Mitgezogen fuer 20261118_008_monitor_endstand.sql (U): config_for gibt clockMode/finalPhaseMinutes heraus (vorher, Fassung
+-- 007: d9d204bec11e731e6b68287dd79d0bfc). Bis 008 live ist, laesst der Drift-Check diese Zeile live aus (pending_assertions_for).
 UNION ALL
 SELECT 'public-read-core-unchanged',
        coalesce((SELECT count(*) = 12
                         AND md5(string_agg(pg_get_functiondef(p.oid), E'\n'
                                            ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
-                            = 'd9d204bec11e731e6b68287dd79d0bfc'
+                            = '764632d34bde5c11bfce47b6afbadb9f'
                    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                   WHERE n.nspname = 'public_view'
                      OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),

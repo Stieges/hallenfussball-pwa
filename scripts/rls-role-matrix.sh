@@ -798,8 +798,12 @@ fi
 # (Kindermodus im Endstand) und B-14 (display_tournament) voraus (Fail-fast); --without-mend ist die Gegenprobe.
 MEND_FILE="$(find_migration 20261118_008)"
 WITH_MEND=0
+BASIS_FILE="$(find_migration 20261118_007)"
 if [[ "$WITH_WM" -eq 1 && "$WITH_MEND_REQ" -eq 1 ]]; then
   WITH_MEND=1
+  # 008 prueft die Fassung von public_view.config_for (20261118_007, live) -- 007 deshalb davor (nur config_for).
+  echo "Migration einspielen: $(basename "$BASIS_FILE")" >&2
+  psql_stdin < "$BASIS_FILE"
   echo "Migration einspielen: $(basename "$MEND_FILE")" >&2
   psql_stdin < "$MEND_FILE"
   MODE_LABEL="$MODE_LABEL + Monitor-Endstand (20261118_008)"

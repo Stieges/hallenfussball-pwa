@@ -26,14 +26,17 @@
 #      vor dem Wiederoeffnen (Betriebs-Vorlage Block 1 woertlich und reopen_tournament), bis neu abgeschlossen; Kindermodus
 #      danach none; Teilen zurueckgenommen -> Zuschauer none; der alte Monitor-Weg display_final_standings(uuid) bleibt none.
 #   C  Abbruch (MVP+): 'cancelled' mit gespeichertem Stand -> none (kein Teil-Endstand; nur Dokumentation des Ist-Stands).
+#   U  (U) C-MONITOR-UHRART-FEHLT (@ZM-166, @ZM-137): public_tournament (Zuschauer) und display_tournament (Monitor) liefern aus
+#      matchCockpitSettings genau clockMode und finalPhaseMinutes (richtiger JSON-Typ), sonst nichts davon; ohne Einstellung
+#      fehlt der Schluessel (Vorgabe der App); config sonst wie Fassung 20261118_007.
 #   S  Rechte und Katalog: DEFINER/search_path/EXECUTE anon+authenticated, nicht PUBLIC; +1 Funktion, nichts sonst; die
 #      bisherigen Funktionen wortgleich; Rechte-Assertion als ci_schema_reader, Namensliste, Drift-Check-Zuordnung.
 #   W  zweites Einspielen (idempotent).   X  Rueckweg -> Schema = vorher; Waechter stoppt den zweiten Rueckweg.
 #
 # Aufrufoptionen:
 #   bash scripts/monitor-endstand-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
-#   bash scripts/monitor-endstand-check.sh --without-migration  Gegenprobe: ohne die Migration muessen A und B rot sein, P gruen
-#   bash scripts/monitor-endstand-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M12); Exit 0 NUR, wenn
+#   bash scripts/monitor-endstand-check.sh --without-migration  Gegenprobe: ohne die Migration muessen A, B und U rot sein, P gruen
+#   bash scripts/monitor-endstand-check.sh --gegenprobe         je Lauf eine Mutation der Migration (M1-M15); Exit 0 NUR, wenn
 #                                                               JEDE Mutation mindestens eine Pruefung rot faerbt
 #   bash scripts/monitor-endstand-check.sh --print-rueckweg     gibt den Rueckweg aus, ohne Container
 #
@@ -64,9 +67,12 @@ FIX_DIR="$REPO_ROOT/src/core/standings/__fixtures__"
 CONTAINER_PREFIX="monitor-endstand-check-$$"
 CURRENT_CONTAINER=""
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/monitor-endstand-check.XXXXXX")"
-NEW_ASSERTIONS="monitor-endstand-display-link monitor-endstand-public-reopen"
+NEW_ASSERTIONS="monitor-endstand-display-link monitor-endstand-public-reopen public-read-core-unchanged"
 MON="mon-eingang"   # „Hallenmonitor Eingang“ (@ZM-121)
 
+# public_view.config_for woertlich aus 20261118_007 (Rueckweg; mit Kommentarzeile davor)
+BASIS_FILE="$MIGRATIONS_DIR/20261118_007_public_entscheidung_basis.sql"
+fn_007_sql() { awk '/^-- config nach Positivliste\./{f=1} f{print} f && $0=="$$;"{exit}' "$BASIS_FILE"; }
 # Funktionstext woertlich aus 20261113_003 (Rueckweg und Fail-fast-Probe)
 fn_003_sql() { awk -v head="CREATE OR REPLACE FUNCTION $1(" 'index($0, head) == 1 {f=1} f{print} f && $0=="$$;"{exit}' "$LIFECYCLE_FILE"; }
 
@@ -80,19 +86,25 @@ rueckweg_sql() {
 -- scripts/monitor-endstand-check.sh (Kategorie X: Schema danach = Stand vor der Migration).
 -- Reihenfolge: ZUERST die App auf den Stand ohne diesen Client-Teil (sie ruft dann wieder display_final_standings(uuid)),
 -- DANN dieser Block. Danach zeigt ein Monitor ohne Online-Teilen nach dem Abschluss keinen Endstand, und nach dem
--- Wiederoeffnen fallen Monitor und Zuschauer-Seite in die laufende Ansicht zurueck (Befunde C-MONITOR-ENDSTAND-OHNE-TEILEN,
--- C-MONITOR-ENDSTAND-WIEDEROEFFNEN, @LZ-077 Z. 2 wieder offen). Keine Daten gehen verloren.
+-- Wiederoeffnen fallen Monitor und Zuschauer-Seite in die laufende Ansicht zurueck, und die Uhr-Art kommt dort nicht mehr an
+-- (Befunde C-MONITOR-ENDSTAND-OHNE-TEILEN, C-MONITOR-ENDSTAND-WIEDEROEFFNEN, C-MONITOR-UHRART-FEHLT, @LZ-077 Z. 2 wieder offen).
+-- Keine Daten gehen verloren.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 DO $rw$
 BEGIN
   IF to_regprocedure('public.display_final_standings(uuid,text)') IS NULL
      OR position('20261118_008' IN coalesce(obj_description(to_regprocedure('public.display_final_standings(uuid,text)'), 'pg_proc'), '')) = 0
-     OR position('20261118_008 (B)' IN coalesce((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.public_final_standings(text)')), '')) = 0 THEN
+     OR position('20261118_008 (B)' IN coalesce((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.public_final_standings(text)')), '')) = 0
+     OR position('20261118_008 (U)' IN coalesce((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public_view.config_for(jsonb,text,text,boolean)')), '')) = 0 THEN
     RAISE EXCEPTION 'Rueckweg 20261118_008: Monitor-Endstand nicht in der Fassung 20261118_008 -- nichts geaendert';
   END IF;
 END
 $rw$;
+-- public_view.config_for woertlich aus 20261118_007_public_entscheidung_basis.sql
+SQL
+  fn_007_sql
+  cat <<'SQL'
 -- public_final_standings woertlich aus 20261113_003_tournament_lifecycle.sql
 SQL
   fn_003_sql public.public_final_standings
@@ -166,9 +178,9 @@ counts() { python3 "$REPO_ROOT/scripts/db_catalog_counts.py" /dev/stdin <<<"$1";
 count_of() { python3 -c "import json,sys; print(json.load(sys.stdin)['$2'])" <<<"$1"; }
 apply_target() { psql_stdin < "${1:-$TARGET_FILE}"; }
 
-CATS=(P F A K B C S W X)
-DEVS=(0 0 0 0 0 0 0 0 0)
-OKS=(0 0 0 0 0 0 0 0 0)
+CATS=(P F A K B C U S W X)
+DEVS=(0 0 0 0 0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0 0 0 0 0)
 FAILED=""
 cat_index() {
   local i
@@ -187,7 +199,7 @@ check() { # check <Kategorie> <Name> <erwartet> <erhalten>
 }
 total_dev() { local s=0 d; for d in "${DEVS[@]}"; do s=$((s + d)); done; echo "$s"; }
 dev_of() { echo "${DEVS[$(cat_index "$1")]}"; }
-reset_counts() { DEVS=(0 0 0 0 0 0 0 0 0); OKS=(0 0 0 0 0 0 0 0 0); FAILED=""; }
+reset_counts() { DEVS=(0 0 0 0 0 0 0 0 0 0); OKS=(0 0 0 0 0 0 0 0 0 0); FAILED=""; }
 summary() {
   local i line=""
   for i in "${!CATS[@]}"; do line="$line ${CATS[$i]} ${OKS[$i]}/$((OKS[i] + DEVS[i]))"; done
@@ -256,7 +268,12 @@ ROLLBACK;" | grep -c 'ohne Kindermodus')"
     "$(q "BEGIN; $(fn_003_sql public.public_final_standings | sed 's/^  RETURN match_engine.final_standings_payload(v_t);/  RETURN  match_engine.final_standings_payload(v_t);/')
 $ff
 ROLLBACK;" | grep -c 'public_final_standings hat eine unbekannte Fassung')"
+  check F "F5 fremde Fassung von public_view.config_for (20261117_104 statt 20261118_007) -> Abbruch 'unbekannte Fassung'" "1" \
+    "$(q "BEGIN; $(awk '/^-- config nach Positivliste/{f=1} f{print} f && $0=="$$;"{exit}' "$MIGRATIONS_DIR/20261117_104_public_payload.sql")
+$ff
+ROLLBACK;" | grep -c 'config_for hat eine unbekannte Fassung')"
 }
+
 
 # ---------------------------------------------------------------------------------------------------------
 # P, A, K, B, C: Proben (Erwartungen aus dem Gherkin, nie aus dem Code abgelesen)
@@ -373,7 +390,52 @@ run_probes() {
             WHERE n.nspname IN ('public', 'match_engine') AND p.prosrc ~ 'lifecycle_status\\s*=\\s*''cancelled''';")"
 }
 
+# --- U (U) Uhr-Art fuer Zuschauer und Monitor ---------------------------------------------------------------------
+UHR_VOLL='{"clockMode": "immer-durchlaufend", "finalPhaseMinutes": 3, "soundId": "horn-1", "soundVolume": 80, "hapticEnabled": true, "foulLimit": 5, "timePenaltyDurationSeconds": 120, "internNotiz": "cockpit-geheim"}'
+UHR_MUSTER='horn-1|cockpit-geheim|soundVolume|hapticEnabled|timePenaltyDurationSeconds|foulLimit'
+uhr_von() { # uhr_von viewer|screen <Turnier> -> config.matchCockpitSettings als Text (leer = fehlt)
+  if [[ "$1" == "viewer" ]]; then
+    anon_val "SELECT coalesce((public.public_tournament('$(code_of "$2")') -> 'tournament' -> 'config' -> 'matchCockpitSettings')::text, '')"
+  else
+    anon_val "SELECT coalesce((public.display_tournament('$2'::uuid, '$MON') -> 'tournament' -> 'config' -> 'matchCockpitSettings')::text, '')"
+  fi
+}
+geheim_in() { # geheim_in viewer|screen <Turnier> -> da|fehlt (irgendein Cockpit-Wert ausser Uhr in der ganzen Antwort)
+  if [[ "$1" == "viewer" ]]; then
+    anon_val "SELECT CASE WHEN public.public_tournament('$(code_of "$2")')::text ~ '($UHR_MUSTER)' THEN 'da' ELSE 'fehlt' END"
+  else
+    anon_val "SELECT CASE WHEN public.display_tournament('$2'::uuid, '$MON')::text ~ '($UHR_MUSTER)' THEN 'da' ELSE 'fehlt' END"
+  fi
+}
+run_uhr_probes() {
+  local t
+  t="$(niko_ready)"; add_monitor "$t" "$MON"; make_public "$t"
+  set_config_on "$t" "{\"matchCockpitSettings\": $UHR_VOLL}"
+  check U "U1 @ZM-166 Zuschauer (public_tournament): Uhr-Art und Schlussphase kommen an, sonst nichts aus matchCockpitSettings" \
+    '{"clockMode": "immer-durchlaufend", "finalPhaseMinutes": 3}' "$(uhr_von viewer "$t")"
+  check U "U2 @ZM-166 Monitor (display_tournament): dasselbe" '{"clockMode": "immer-durchlaufend", "finalPhaseMinutes": 3}' "$(uhr_von screen "$t")"
+  check U "U3 Datenschutz: Ton, Bedienung, Spielregeln, interne Werte fehlen in beiden ganzen Antworten" "fehlt|fehlt" \
+    "$(geheim_in viewer "$t")|$(geheim_in screen "$t")"
+  t="$(niko_ready)"; add_monitor "$t" "$MON"; make_public "$t"
+  check U "U4 Vorgabe: ohne gespeicherte Einstellung fehlt der Schluessel (Zuschauer, Monitor) -- die App nimmt ihre Vorgabe" "|" \
+    "$(uhr_von viewer "$t")|$(uhr_von screen "$t")"
+  set_config_on "$t" '{"matchCockpitSettings": {"clockMode": 3, "finalPhaseMinutes": "3", "soundId": "horn-1"}}'
+  check U "U5 falscher JSON-Typ (Uhr-Art als Zahl, Schlussphase als Text) -> Schluessel fehlt ganz" "|" "$(uhr_von viewer "$t")|$(uhr_von screen "$t")"
+  set_config_on "$t" '{"matchCockpitSettings": ["immer-durchlaufend"]}'
+  check U "U6 matchCockpitSettings kein Objekt -> fehlt" "" "$(uhr_von screen "$t")"
+  set_config_on "$t" '{"matchCockpitSettings": {"clockMode": "durchlaufend-letzte-minute-angehalten", "finalPhaseMinutes": 3}, "hideScoresForPublic": true}'
+  check U "U7 @ZM-137 „letzte 3 Minuten angehalten“ kommt an (Zuschauer, Monitor), auch im Kindermodus (keine Wertung)" \
+    '{"clockMode": "durchlaufend-letzte-minute-angehalten", "finalPhaseMinutes": 3}|{"clockMode": "durchlaufend-letzte-minute-angehalten", "finalPhaseMinutes": 3}' \
+    "$(uhr_von viewer "$t")|$(uhr_von screen "$t")"
+}
+# config_for-Ausgaben fuer eine feste Eingabe ohne matchCockpitSettings-Teil (Vergleich vor/nach der Migration)
+CF_INPUT='{"sportId": "football", "groups": [{"id": "A"}], "hideRankingsForPublic": false, "standingDecisions": [{"id": "d1", "groupId": "A", "basis": "Los", "reason": "x"}], "contactInfo": {"name": "Olli", "showPublic": true}, "monitors": [{"id": "mon-eingang", "slides": []}], "matchCockpitSettings": {"clockMode": "immer-angehalten", "soundId": "horn-1"}, "adminNotes": "intern"}'
+config_for_ohne_uhr() {
+  q "SELECT (public_view.config_for('$CF_INPUT'::jsonb, 'viewer', NULL, true) - 'matchCockpitSettings')::text || '|' || (public_view.config_for('$CF_INPUT'::jsonb, 'screen', 'mon-eingang', false) - 'matchCockpitSettings')::text;"
+}
+
 run_rights() {
+
   check S "S1 display_final_standings(uuid,text): SECURITY DEFINER, search_path fest, EXECUTE anon + authenticated, nicht PUBLIC" \
     "true|{\"search_path=public, pg_temp\"}|true|true|false" \
     "$(q "SELECT p.prosecdef || '|' || p.proconfig::text || '|' || has_function_privilege('anon', p.oid, 'EXECUTE') || '|'
@@ -418,13 +480,14 @@ setup_data
 
 if [[ "$MODE" == "without-migration" ]]; then
   run_probes
+  run_uhr_probes
   summary
-  A_DEV="$(dev_of A)"; B_DEV="$(dev_of B)"
-  if [[ "$A_DEV" -gt 0 && "$B_DEV" -gt 0 && "$(dev_of P)" -eq 0 ]]; then
-    echo "Ohne Migration: A und B rot, P gruen -- Gegenprobe wie verlangt."
+  A_DEV="$(dev_of A)"; B_DEV="$(dev_of B)"; U_DEV="$(dev_of U)"
+  if [[ "$A_DEV" -gt 0 && "$B_DEV" -gt 0 && "$U_DEV" -gt 0 && "$(dev_of P)" -eq 0 ]]; then
+    echo "Ohne Migration: A, B und U rot, P gruen -- Gegenprobe wie verlangt."
     exit 0
   fi
-  echo "::error::Ohne Migration nicht wie verlangt (A=$A_DEV, B=$B_DEV muessen > 0 sein, P=$(dev_of P) muss 0 sein)."
+  echo "::error::Ohne Migration nicht wie verlangt (A=$A_DEV, B=$B_DEV, U=$U_DEV muessen > 0 sein, P=$(dev_of P) muss 0 sein)."
   exit 1
 fi
 
@@ -442,7 +505,11 @@ if [[ "$MODE" == "gegenprobe" ]]; then
     "M10|Zuschauer: nach dem Wiederoeffnen finishedAt nicht vom gespeicherten Stand|      v_t.finished_at := v_finished_at;@@1|      v_t.finished_at := now();"
     "M11|Zuschauer: Teilen-Pruefung entfallen (is_public nicht beachtet)|   WHERE t.share_code = p_share_code AND coalesce(t.is_public, false) AND t.deleted_at IS NULL;|   WHERE t.share_code = p_share_code AND t.deleted_at IS NULL;"
     "M12|Fail-fast laesst fremde Fassung von public_final_standings durch|     OR (md5((SELECT prosrc|     OR false AND (md5((SELECT prosrc"
+    "M13|Uhr: alle Cockpit-Einstellungen gehen durch (Datenschutz)|       WHERE (s.key = 'clockMode' AND jsonb_typeof(s.value) = 'string')|       WHERE true OR (s.key = 'clockMode' AND jsonb_typeof(s.value) = 'string')"
+    "M14|Uhr: Block (U) fehlt (Fassung 20261118_007)|  IF jsonb_typeof(v_config -> 'matchCockpitSettings') = 'object' THEN|  IF false THEN"
+    "M15|Fail-fast laesst fremde Fassung von config_for durch|  IF md5((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public_view.config_for(jsonb,text,text,boolean)'))) <> 'ad6a688f10d82978b15ce850e2af8fff'|  IF false AND md5((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public_view.config_for(jsonb,text,text,boolean)'))) <> 'ad6a688f10d82978b15ce850e2af8fff'"
   )
+
   not_killed=()
   for mut in "${MUTATIONS[@]}"; do
     IFS='|' read -r mid mtext mfrom mto <<<"$mut"
@@ -481,7 +548,7 @@ PY
       echo "ROT   $mid $mtext (Einspielen scheitert: $(head -c 160 "$WORK_DIR/$mid.apply"))"
       continue
     fi
-    { run_failfast "$mutated"; run_probes; run_rights; } > "$WORK_DIR/$mid.log" 2>&1
+    { run_failfast "$mutated"; run_probes; run_uhr_probes; run_rights; } > "$WORK_DIR/$mid.log" 2>&1
     if [[ "$(total_dev)" -gt 0 ]]; then
       echo "ROT   $mid $mtext ($(total_dev) Abweichung(en): $(grep '^ABWEICHUNG' "$WORK_DIR/$mid.log" | cut -c13-40 | sed 's/ *$//' | paste -sd',' -))"
     else
@@ -511,6 +578,7 @@ q "ALTER FUNCTION match_engine.final_standings_payload_probe(public.tournaments)
 DUMP_BEFORE="$(schema_dump)"
 COUNTS_BEFORE="$(counts "$DUMP_BEFORE")"
 MD5_BEFORE="$(old_md5)"
+CF_BEFORE="$(config_for_ohne_uhr)"
 echo "Migration einspielen..." >&2
 apply_target >/dev/null || { echo "::error::$TARGET_NAME scheitert" >&2; exit 1; }
 DUMP_AFTER="$(schema_dump)"
@@ -522,13 +590,21 @@ for dim in tables columns functions triggers policies indexes rls_tables; do
 done
 check S "bisherige Funktionen wortgleich (display_final_standings(uuid), final_standings_payload, display_tournament)" \
   "$MD5_BEFORE" "$(old_md5)"
+echo "md5 Sicherheitskern public-read-core-unchanged nachher (Soll in db_privilege_assertions.sql):"
+q "SELECT '    ' || md5(string_agg(pg_get_functiondef(p.oid), E'\\n' ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public_view' OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
+          to_regprocedure('public.display_tournament(uuid,text,bigint)'), to_regprocedure('public.is_reading_member(uuid)'));"
 echo "md5(prosrc) nachher (Soll fuer Produktion):"
 q "SELECT '    ' || p.oid::regprocedure::text || ' ' || md5(p.prosrc) FROM pg_proc p
     WHERE p.oid IN (to_regprocedure('public.display_final_standings(uuid,text)'), to_regprocedure('public.display_final_standings(uuid)'),
-                    to_regprocedure('public.public_final_standings(text)'),
+                    to_regprocedure('public.public_final_standings(text)'), to_regprocedure('public_view.config_for(jsonb,text,text,boolean)'),
                     to_regprocedure('match_engine.final_standings_payload(public.tournaments)')) ORDER BY 1;"
 
 run_probes
+run_uhr_probes
+check U "U8 config_for sonst unveraendert: Ausgabe ohne matchCockpitSettings = Fassung 20261118_007 (Zuschauer, Bildschirm)" \
+  "$CF_BEFORE" "$(config_for_ohne_uhr)"
 run_rights
 run_assertions
 

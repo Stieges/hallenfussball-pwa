@@ -19,15 +19,23 @@
 --       laesst (Notweg @LZ-091) -> den bisherigen Endstand unveraendert, bis Olli neu abschliesst“): public_final_standings
 --       (Fassung 20261113_003, sonst wortgleich) bekommt denselben Zweig (B). Teilen-Pruefung, Kindermodus und
 --       Torschuetzen-Schalter unveraendert.
--- Szenarien: @ZM-121 Z. 1 und Z. 2, @LZ-076, @LZ-077 Z. 2, @LZ-091 (Monitor- und Zuschauer-Sicht), @ZM-101 (Monitor zeigt ohne Teilen weiter), @ZM-180
+-- Szenarien: @ZM-121 Z. 1 und Z. 2, @LZ-076, @LZ-077 Z. 2, @LZ-091 (Monitor- und Zuschauer-Sicht), @ZM-166, @ZM-137 (U), @ZM-101 (Monitor zeigt ohne Teilen weiter), @ZM-180
 --   (beendet bleibt beendet: das Wiederoeffnen wirft den Monitor nicht aus dem Endstand); weiter gilt @ZM-121 Z. 4 /
 --   „Kindermodus ueberstimmt alle Schalter“ und @ZM-012 Z. 2 (Torschuetzen nur mit Schalter).
+--   (U) C-MONITOR-UHRART-FEHLT (@ZM-166, @ZM-137; Entscheidung Daniel 30.10. „Ja“ – Erweiterung der Positivliste):
+--       public_view.config_for (Fassung 20261118_007, sonst wortgleich) gibt aus matchCockpitSettings genau clockMode
+--       (Uhr-Art) und finalPhaseMinutes (Laenge der Schlussphase) heraus, fuer Zuschauer ('viewer', public_tournament) und
+--       Monitor ('screen', display_tournament) gleich. Sonst blieb die Uhr dort immer bei der Vorgabe („durchlaufend, letzte
+--       Minute angehalten“, 1 Minute): violetter Balken auch bei „immer durchlaufend/angehalten“, Schlussphase nie laenger.
+--       Alle anderen Cockpit-Einstellungen (Ton, Bedienung, Regeln) bleiben draussen.
 -- Nicht Teil: @ZM-121 Z. 3 (Abbruch, seit 30.10. MVP+) -- Abbrechen gibt es im MVP nicht (lifecycle_status 'cancelled'
 --   vorgehalten; @LZ-046 … @LZ-053 sind @mvp-plus); 'cancelled' liefert in beiden Funktionen wie bisher {status:'none'}.
 --   Andockstelle fuer MVP+: der Zweig (B) unten (dort kaeme ein Teil-Endstand mit Kennzeichen hinzu, sobald sein
 --   Speicherformat aus @LZ-047 ff. feststeht).
 --
--- Inhalt: CREATE OR REPLACE FUNCTION public.public_final_standings(text) (Text aus 20261113_003 + Zweig (B), Kennzeichen
+-- Inhalt: CREATE OR REPLACE FUNCTION public_view.config_for(jsonb,text,text,boolean) (Text aus 20261118_007 + Block (U),
+--   Kennzeichen „20261118_008 (U)“; Signatur, IMMUTABLE, search_path, Rechte unveraendert),
+--   CREATE OR REPLACE FUNCTION public.public_final_standings(text) (Text aus 20261113_003 + Zweig (B), Kennzeichen
 --   „20261118_008“ im Kommentar) und public.display_final_standings(uuid, text) (neu, zweite Fassung neben der
 --   bisherigen display_final_standings(uuid), die UNVERAENDERT bleibt -- Monitore mit dem alten App-Stand lesen weiter
 --   ueber sie, bis die App ausgerollt ist; Ablösung mit B-21). Die Antwort baut match_engine.final_standings_payload
@@ -39,15 +47,18 @@
 --   display_final_standings(uuid)), nicht PUBLIC.
 -- Fail-fast: display_tournament(uuid,text,bigint) (20261117_104), display_final_standings(uuid) und
 --   final_standings_payload in der Fassung mit Kindermodus (20261118_004, Kennzeichen „W-M (b)“), Tabelle
---   tournament_final_standings mit finished_at, public_final_standings in der Fassung 20261113_003 (md5) oder dieser Datei.
+--   tournament_final_standings mit finished_at, public_final_standings in der Fassung 20261113_003 (md5) oder dieser Datei,
+--   public_view.config_for in der Fassung 20261118_007 (md5) oder dieser Datei.
 --   Sonst Abbruch ohne Aenderung.
 -- Bestandsdaten: keine Aenderung.
 -- Reihenfolge: VOR dem Merge des App-Teils live (die App ruft dann display_final_standings mit p_monitor_id).
 -- RUECKWEG: supabase/rollbacks/20261118_008_monitor_endstand_rollback.sql (= `bash scripts/monitor-endstand-check.sh
---   --print-rueckweg`), EIN Block: public_final_standings woertlich aus 20261113_003, DROP der neuen Monitor-Fassung.
+--   --print-rueckweg`), EIN Block: public_view.config_for woertlich aus 20261118_007, public_final_standings woertlich aus
+--   20261113_003, DROP der neuen Monitor-Fassung.
 --   Vorher die App ohne diesen Client-Teil deployen.
 -- Beweis: scripts/monitor-endstand-check.sh (Wegwerf-Container, Baseline + alle Migrationen; --without-migration,
---   --gegenprobe), RLS-Matrix scripts/rls-matrix.d/spur-zz-monitor-endstand.sh.
+--   --gegenprobe), scripts/public-payload-check.sh (Positivliste mit (U), Gegenprobe G16/G17), RLS-Matrix
+--   scripts/rls-matrix.d/spur-zz-monitor-endstand.sh. Sicherheitskern public-read-core-unchanged auf die neue Fassung gezogen.
 -- Produktion: Einspielen durch Daniel nach Freigabe; dieser Branch spielt nichts ein. Idempotent (CREATE OR REPLACE).
 
 BEGIN;
@@ -78,6 +89,111 @@ BEGIN
          AND position('20261118_008 (B)' IN (SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.public_final_standings(text)'))) = 0) THEN
     RAISE EXCEPTION '20261118_008_monitor_endstand: public_final_standings hat eine unbekannte Fassung (erwartet 20261113_003) – erst klären';
   END IF;
+  -- public_view.config_for: Fassung 20261118_007 (live seit 30.10.) oder diese Datei.
+  IF to_regprocedure('public_view.config_for(jsonb,text,text,boolean)') IS NULL THEN
+    RAISE EXCEPTION '20261118_008_monitor_endstand: Voraussetzungen fehlen – zuerst 20261117_104 und 20261118_007 einspielen';
+  END IF;
+  IF md5((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public_view.config_for(jsonb,text,text,boolean)'))) <> 'ad6a688f10d82978b15ce850e2af8fff'
+     AND position('20261118_008 (U)' IN (SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public_view.config_for(jsonb,text,text,boolean)'))) = 0 THEN
+    RAISE EXCEPTION '20261118_008_monitor_endstand: public_view.config_for hat eine unbekannte Fassung (erwartet 20261118_007) – erst klären';
+  END IF;
+END;
+$$;
+
+-- ---------------------------------------------------------------------------------------------------------------
+-- 0b. (U) Positivliste: Uhr-Art und Laenge der Schlussphase fuer Zuschauer und Monitor (Text aus 20261118_007 + Block (U))
+-- ---------------------------------------------------------------------------------------------------------------
+-- config nach Positivliste. Zielgruppe 'viewer' (Zuschauer-Link) oder 'screen' (Bildschirm eines Monitors).
+CREATE OR REPLACE FUNCTION public_view.config_for(p_config jsonb, p_audience text, p_monitor_id text,
+                                                  p_rankings_visible boolean)
+RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  c_config_keys constant text[] := ARRAY[
+    'sportId', 'tournamentType', 'tournamentSystem', 'mode', 'groupSystem', 'breakBetweenPhases', 'gamePeriods',
+    'halftimeBreak', 'gameDuration', 'breakDuration', 'roundLogic', 'numberOfRounds', 'placementLogic',
+    'fieldAssignments', 'groups', 'fields', 'finals', 'playoffConfig', 'minRestSlots', 'isKidsTournament',
+    'hideScoresForPublic', 'hideRankingsForPublic', 'publicLiveScore', 'publicEvents', 'publicScorers', 'resultMode',
+    'ageClass', 'organizer', 'bibColor', 'spectatorDisplay', 'hostTeamIds', 'openingMode', 'placementsToPlayOut',
+    'forfeitScore', 'monitorReferees'];
+  v_config jsonb := CASE WHEN jsonb_typeof(p_config) = 'object' THEN p_config ELSE '{}'::jsonb END;
+  v_out jsonb;
+  v_contact jsonb := v_config -> 'contactInfo';
+  v_monitor jsonb;
+  v_sponsor_ids text[];
+BEGIN
+  SELECT coalesce(jsonb_object_agg(e.key, e.value), '{}'::jsonb) INTO v_out
+    FROM jsonb_each(v_config) AS e
+   WHERE e.key = ANY (c_config_keys) AND e.value <> 'null'::jsonb;
+
+  -- 20261118_008 (U): Uhr am Monitor und auf der Zuschauer-Seite (@ZM-166, @ZM-137) -- aus matchCockpitSettings NUR die
+  -- Uhr-Art und die Laenge der Schlussphase (die Anzeige liest genau diese zwei, tournamentView clockRulesOf); keine Ton-,
+  -- Bedien- oder Spielregel-Einstellungen. Nur mit dem passenden JSON-Typ; sonst fehlt der Wert (Vorgabe der App).
+  IF jsonb_typeof(v_config -> 'matchCockpitSettings') = 'object' THEN
+    v_out := v_out || jsonb_build_object('matchCockpitSettings', (
+      SELECT coalesce(jsonb_object_agg(s.key, s.value), '{}'::jsonb)
+        FROM jsonb_each(v_config -> 'matchCockpitSettings') AS s
+       WHERE (s.key = 'clockMode' AND jsonb_typeof(s.value) = 'string')
+          OR (s.key = 'finalPhaseMinutes' AND jsonb_typeof(s.value) = 'number')));
+    IF v_out -> 'matchCockpitSettings' = '{}'::jsonb THEN
+      v_out := v_out - 'matchCockpitSettings';
+    END IF;
+  END IF;
+
+  -- Gleichstands-Entscheidungen: nur wenn Tabellen oeffentlich sind; ohne Begruendung und ohne Altfelder (Person,
+  -- Zeit, Grund). basis ist seit TB v2 der Fingerabdruck der Grundlage (src/core/standings/decisions.ts decisionBasis:
+  -- Punkteschema, Kriterien, [Spielkennung, Stand, Status, Nichtantritt] der Spiele des Blocks) -- ohne ihn uebernimmt
+  -- die Anzeige die Entscheidung nie (@W2A-059 Z. 3). Durchgereicht wird er nur in genau dieser Form (JSON-Objekt mit
+  -- points, criteria, matches[, forfeit]); jeder andere Text (Altwert, frueher Begruendung) wird zu "".
+  IF p_rankings_visible AND jsonb_typeof(v_config -> 'standingDecisions') = 'array' THEN
+    v_out := v_out || jsonb_build_object('standingDecisions', (
+      SELECT coalesce(jsonb_agg(public_view.without_nulls(jsonb_build_object(
+               'id', d -> 'id', 'groupId', d -> 'groupId', 'teamIds', d -> 'teamIds', 'order', d -> 'order',
+               'kind', d -> 'kind', 'shootout', d -> 'shootout',
+               'basis', CASE WHEN jsonb_typeof(d -> 'basis') = 'string' AND pg_input_is_valid(d ->> 'basis', 'jsonb') THEN
+                          CASE WHEN jsonb_typeof((d ->> 'basis')::jsonb) = 'object'
+                                    AND ((d ->> 'basis')::jsonb ?& ARRAY['points', 'criteria', 'matches'])
+                                    AND ((d ->> 'basis')::jsonb - ARRAY['points', 'criteria', 'matches', 'forfeit']) = '{}'::jsonb
+                               THEN d -> 'basis' ELSE '""'::jsonb END
+                        ELSE '""'::jsonb END)) ORDER BY ord), '[]'::jsonb)
+        FROM jsonb_array_elements(v_config -> 'standingDecisions') WITH ORDINALITY AS x(d, ord)
+       WHERE jsonb_typeof(d) = 'object'));
+  END IF;
+
+  IF p_audience = 'viewer' THEN
+    -- Kontaktperson des Veranstalters nur mit Haekchen (@ZM-097, @W1-030..032); nur diese vier Felder.
+    IF jsonb_typeof(v_contact) = 'object' AND v_contact -> 'showPublic' = 'true'::jsonb THEN
+      v_out := v_out || jsonb_build_object('contactInfo', public_view.without_nulls(jsonb_build_object(
+        'name', v_contact -> 'name', 'email', v_contact -> 'email', 'phone', v_contact -> 'phone',
+        'website', v_contact -> 'website', 'showPublic', true)));
+    END IF;
+  ELSIF p_audience = 'screen' THEN
+    -- Nur der eigene Monitor und nur die Sponsoren seiner Folien (E-A2, @ME-018).
+    SELECT m INTO v_monitor
+      FROM jsonb_array_elements(CASE WHEN jsonb_typeof(v_config -> 'monitors') = 'array'
+                                     THEN v_config -> 'monitors' ELSE '[]'::jsonb END) AS x(m)
+     WHERE m ->> 'id' = p_monitor_id
+     LIMIT 1;
+    IF v_monitor IS NOT NULL THEN
+      v_out := v_out || jsonb_build_object('monitors', jsonb_build_array(v_monitor));
+      SELECT coalesce(array_agg(DISTINCT s -> 'config' ->> 'sponsorId'), ARRAY[]::text[]) INTO v_sponsor_ids
+        FROM jsonb_array_elements(CASE WHEN jsonb_typeof(v_monitor -> 'slides') = 'array'
+                                       THEN v_monitor -> 'slides' ELSE '[]'::jsonb END) AS y(s)
+       WHERE s -> 'config' ->> 'sponsorId' IS NOT NULL;
+      v_out := v_out || jsonb_build_object('sponsors', (
+        SELECT coalesce(jsonb_agg(public_view.without_nulls(jsonb_build_object(
+                 'id', sp -> 'id', 'name', sp -> 'name', 'logoUrl', sp -> 'logoUrl', 'logoBase64', sp -> 'logoBase64',
+                 'websiteUrl', sp -> 'websiteUrl', 'tier', sp -> 'tier')) ORDER BY ord), '[]'::jsonb)
+          FROM jsonb_array_elements(CASE WHEN jsonb_typeof(v_config -> 'sponsors') = 'array'
+                                         THEN v_config -> 'sponsors' ELSE '[]'::jsonb END) WITH ORDINALITY AS z(sp, ord)
+         WHERE sp ->> 'id' = ANY (v_sponsor_ids)));
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'public_view.config_for: unbekannte Zielgruppe %', p_audience USING ERRCODE = '22023';
+  END IF;
+  RETURN v_out;
 END;
 $$;
 

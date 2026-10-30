@@ -221,7 +221,7 @@ pending_assertions_for() {
       ;;
     # @ZM-121 Z. 1/2: neue Fassung display_final_standings(uuid, text) fuer den Monitor-Link (scripts/monitor-endstand-check.sh)
     20261118_008_monitor_endstand.sql)
-      echo "monitor-endstand-display-link monitor-endstand-public-reopen"
+      echo "monitor-endstand-display-link monitor-endstand-public-reopen public-read-core-unchanged"
       ;;
     *)
       return 1

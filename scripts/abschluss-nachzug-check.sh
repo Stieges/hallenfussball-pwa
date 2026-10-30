@@ -425,7 +425,14 @@ run_wm_probes() {
 run_assertions() {
   local priv names_sql names_sh a
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion als ci_schema_reader: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # Assertions spaeterer Migrationen (nach 20261118_004, hier erst im AFTER-Block): Namen aus der festen Zuordnung in
+  # db-drift-check.sh (pending_assertions_for), wie public-payload-check.sh.
+  local later="" f
+  for f in ${AFTER[@]+"${AFTER[@]}"}; do
+    later="$later $(awk -v n="    $(basename "$f"))" '$0 == n { getline; if ($0 ~ /echo "/) { sub(/^[^"]*"/, ""); sub(/"[^"]*$/, ""); print } }' "$REPO_ROOT/scripts/db-drift-check.sh")"
+  done
+  check S "Rechte-Assertion als ci_schema_reader: keine Zeile |f (ohne Assertions spaeterer Migrationen)" "" \
+    "$(grep -v '|t$' <<<"$priv" | while IFS= read -r line; do [[ " $later " == *" ${line%%|*} "* ]] || echo "$line"; done || true)"
   for a in $NEW_ASSERTIONS; do
     check S "Rechte-Assertion: $a vorhanden und |t" "$a|t" "$(grep -E "^$a\|" <<<"$priv" || true)"
   done
