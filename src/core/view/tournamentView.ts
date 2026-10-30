@@ -95,7 +95,11 @@ function clockRulesOf(match: Match, input: TournamentViewInput): SpectatorClockR
     config: { gamePeriods: input.gamePeriods, halftimeBreak: input.halftimeBreak, matchCockpitSettings: input.matchCockpitSettings },
     finalsConfig: input.finalsConfig ?? null,
   });
-  return { sections: rules.sections, sectionSeconds: rules.sectionSeconds, overtimeSeconds: rules.overtimeSeconds, clockMode: input.matchCockpitSettings?.clockMode ?? DEFAULT_CLOCK_MODE };
+  const finalPhaseMinutes = input.matchCockpitSettings?.finalPhaseMinutes;
+  return {
+    sections: rules.sections, sectionSeconds: rules.sectionSeconds, overtimeSeconds: rules.overtimeSeconds, clockMode: input.matchCockpitSettings?.clockMode ?? DEFAULT_CLOCK_MODE,
+    ...(finalPhaseMinutes === undefined ? {} : { finalPhaseMinutes }),
+  };
 }
 
 /**

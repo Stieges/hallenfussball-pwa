@@ -10,7 +10,7 @@ import type { LiveMatch } from '../types';
 import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
 import type { ScoreboardModel, ScoreboardSeite, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
-import type { ScoreboardBalken } from '../../ui/molecules/scoreboardTypes';
+import { zeitBalkenLaufend, zeitBalkenPause } from '../../../core/view/zeitBalken';
 import { matchBadgeModel, type MatchBadgeModel } from '../../../core/view/badge';
 import { viewStatus } from '../../../core/view/status';
 import type { ViewMatchStatus } from '../../../core/view/types';
@@ -96,20 +96,9 @@ function abschnittTextOf(phase: CockpitPhase, view: PhaseView | null, von: strin
 }
 
 /**
- * Farbe des Zeitbalkens in der Schlussphase „durchlaufend, letzte x Minuten angehalten“: Violett wie die Uhr-Ziffern (Daniel 25.10., @ZM-166).
- * Sie greift nur bei dieser Uhr-Art (`schlussphase` kommt aus `getClockDisplay`); sonst bleibt der Balken grün.
+ * Farbe des Zeitbalkens in der Schlussphase: eine Quelle mit dem Hallenmonitor (`core/view/zeitBalken`, @ZM-166).
  */
-export const BALKEN_TON_SCHLUSSPHASE: ScoreboardBalken['ton'] = 'violett';
-
-/**
- * Zeitbalken der laufenden Zustände (@ZM-145, @ZM-166): Rest durch Länge des Abschnitts, nimmt ab; angehalten grau, in der Schlussphase
- * (`BALKEN_TON_SCHLUSSPHASE`) violett, sonst grün. Ist die Spielzeit abgelaufen, aber noch nicht abgepfiffen, ist er leer; die Spur bleibt sichtbar (@ZM-166).
- */
-function balkenLaufend(restMs: number, limitMs: number, steht: boolean, schlussphase: boolean): ScoreboardUhr['balken'] {
-  if (restMs <= 0) { return { anteil: 0, ton: 'gruen' }; }
-  const anteil = limitMs > 0 ? Math.min(1, restMs / limitMs) : 0;
-  return { anteil, ton: steht ? 'grau' : schlussphase ? BALKEN_TON_SCHLUSSPHASE : 'gruen' };
-}
+export { BALKEN_TON_SCHLUSSPHASE } from '../../../core/view/zeitBalken';
 
 interface UhrErgebnis { uhr: ScoreboardUhr | null; hinweise: string[] }
 
@@ -137,7 +126,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
       hinweise,
       uhr: {
         rest: formatUhr(anzeige.restSekunden), gespielt, schlussphase, steht, hervorgehoben: anzeige.hervorhebung || steht,
-        balken: balkenLaufend(anzeige.restSekunden * 1000, view.sectionLimitMs, steht, schlussphase),
+        balken: zeitBalkenLaufend(anzeige.restSekunden * 1000, view.sectionLimitMs, steht, schlussphase),
         label: t(abgelaufen ? 'tafel.uhr.zeitAbgelaufen' : steht ? 'tafel.uhr.steht' : 'tafel.uhr.restzeit'),
         unterzeile: abgelaufen ? '' : t('tafel.unterzeile.spielzeit', { zeit: gespielt }), // '' statt null: sonst setzt die Handy-Tafel die gespielte Zeit darunter
       },
@@ -151,7 +140,7 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
       hinweise,
       uhr: {
         rest: formatUhr(rest), gespielt: null, schlussphase: false, steht: false, hervorgehoben: vorbei, ton: vorbei ? 'ok' : 'gedaempft',
-        balken: { anteil: view.breakTotalMs ? Math.min(1, rest * 1000 / view.breakTotalMs) : 0, ton: 'gedaempft' },
+        balken: zeitBalkenPause(rest * 1000, view.breakTotalMs ?? undefined),
         label: t(vorbei ? 'tafel.uhr.pauseVorbei' : 'tafel.uhr.pause'),
         unterzeile: t(vorbei ? (vorVerlaengerung ? 'tafel.unterzeile.anpfiffVerlaengerung' : 'tafel.unterzeile.wiederanpfiff') : (vorVerlaengerung ? 'tafel.unterzeile.bisVerlaengerung' : 'tafel.unterzeile.bisWiederanpfiff')),
       },

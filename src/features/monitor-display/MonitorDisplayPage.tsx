@@ -19,7 +19,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-10 bis P1-12
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { displayLayout, monitorThemes } from '../../design-tokens';
 import type { TournamentMonitor } from '../../types/monitor';
 import { LOCAL_FALLBACK_POLL_MS, PERFORMANCE_PROFILES, calculateCacheStatus } from '../../types/monitor';
@@ -38,7 +38,8 @@ import {
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
-import { buildMonitorRuleMatches, buildMonitorView, monitorJetztMs } from './monitorView';
+import { buildMonitorRuleMatches, buildMonitorView } from './monitorView';
+import { NowSourceContext } from '../../components/schedule/useTickingNow';
 import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
 import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
@@ -95,7 +96,9 @@ function MonitorDisplayPageContent({
   const cursorRuht = useIdleCursor();
   useTastenAbfang();
 
-  const view = useMemo(() => (tournament === null ? null : buildMonitorView(tournament)), [tournament]); // gemeinsame Ansicht (A-36c)
+  // Jetzt in Serverzeit (R5 PR 2, @ZM-176): Ansicht, Folienregeln und Uhr rechnen nie mit der Uhr des Hallen-Rechners allein
+  const serverJetzt = useCallback(() => displaySource.nowMs?.() ?? Date.now(), [displaySource]);
+  const view = useMemo(() => (tournament === null ? null : buildMonitorView(tournament, serverJetzt())), [tournament, serverJetzt]); // gemeinsame Ansicht (A-36c)
   // Einblendungen aus derselben Antwort wie Stand und Uhr (R5 PR 1, Feldfilter für Tor und Karte im Hook).
   // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung (der Server liefert dann auch keinen Stand).
   const ergebnisseAusgeblendet = view !== null && !view.rules.results;
@@ -138,7 +141,7 @@ function MonitorDisplayPageContent({
   // Folienfolge (B-16c): Takt und Übergang liegen in useSlideshow. Tasten wirken nicht (@ME-022).
   const defaultSlideDuration = monitor?.defaultSlideDuration ?? 15;
   // Spiele für die Anhalte- und Feldregeln (B-16e1) samt Vorlaufzeit (@ZM-138): jede neue Turnier-Referenz wertet die Regeln aus.
-  const ansichtZeitMs = useMemo(() => (view === null ? 0 : monitorJetztMs()), [view]);
+  const ansichtZeitMs = useMemo(() => (view === null ? 0 : serverJetzt()), [view, serverJetzt]);
   const ruleMatches = useMemo(
     () => (view === null || tournament === null ? undefined : buildMonitorRuleMatches(view, tournament)),
     [view, tournament]
@@ -221,7 +224,7 @@ function MonitorDisplayPageContent({
         ...pixelShift,
       }}>
         {currentSlide && (
-          <TransitionWrapper
+          <NowSourceContext.Provider value={serverJetzt}><TransitionWrapper
             slideState={slideState}
             transitionType={monitor.transition}
             transitionDuration={monitor.transitionDuration}
@@ -238,7 +241,7 @@ function MonitorDisplayPageContent({
               pinnedMatchId={slideState.pinnedMatchId}
               page={slideState.page}
             />
-          </TransitionWrapper>
+          </TransitionWrapper></NowSourceContext.Provider>
         )}
       </div>
 

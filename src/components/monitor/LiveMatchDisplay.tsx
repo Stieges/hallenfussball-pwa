@@ -17,7 +17,7 @@ import { DEFAULT_SPECTATOR_DISPLAY } from '../../core/models/spectatorDisplay';
 import { resolveBoxColors, type BoxFill } from '../../core/models/scoreBoxColors';
 import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
-import { MatchTimer } from './MatchTimer';
+import { MatchTimer, type MatchTimerUhrQuelle } from './MatchTimer';
 import type { ClockMode } from '../../core/match/clockDisplay';
 import { LiveScoreGrid } from './LiveScoreGrid';
 import { LiveFinalScore, type LiveFinalScoreProps } from './LiveFinalScore';
@@ -50,6 +50,8 @@ export interface LiveMatchDisplayProps {
   finalRound?: boolean;
   /** Abzeichen der Ansicht (`MatchView.badge`); ohne Angabe aus Status und Anstoß des Spiels (@OB-066) */
   badge?: MatchBadgeModel;
+  /** Uhr aus der Ansicht des Spiels (R5 PR 2: Feinstatus in Serverzeit, Abschnitt, Pause, Verlängerung); ohne Angabe die Zeitfelder */
+  uhr?: MatchTimerUhrQuelle;
 }
 
 /** Fläche als eine Farbe: bei der Weste die Mitte (die Ziffer steht darauf, @ZM-156). */
@@ -79,6 +81,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   finalScore,
   finalRound = false,
   badge,
+  uhr,
 }) => {
   const { t } = useTranslation('monitor');
   const { themeColors } = useMonitorTheme(theme);
@@ -166,6 +169,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
               timerElapsedSeconds={match.timerElapsedSeconds}
               theme={theme}
               clockMode={clockMode}
+              uhr={uhr}
             />
           )}
           {/* B1: Schiedsrichter-Zeile im reservierten unteren Bereich, immer an derselben Stelle (unten) */}

@@ -171,6 +171,8 @@ export const E2E_SPIELPLANOWNER_MONITOR_ID = e2eUuid('monitor:engine-cup:SPIELPL
 export const E2E_MONSOFORT_MONITOR_ID = e2eUuid('monitor:engine-cup:MONSOFORT:feld-1');
 export const E2E_MONSOFORT_EINGANG_MONITOR_ID = e2eUuid('monitor:engine-cup:MONSOFORT:eingang');
 export const E2E_MONSCHLECHT_MONITOR_ID = e2eUuid('monitor:engine-cup:MONSCHLECHT:feld-1');
+/** R5 PR 2 (Fall „Uhr“, @ZM-176): Feld-Monitor mit Live-Folie Feld 1 für den Uhr-Vergleich mit dem Cockpit. */
+export const E2E_MONUHR_MONITOR_ID = e2eUuid('monitor:engine-cup:MONUHR:feld-1');
 
 /**
  * Fixrunde 2 (N3, Ruling AA; vorher Fixrunde 1/I2/Ruling V, damals noch am Entwurf-Cup):

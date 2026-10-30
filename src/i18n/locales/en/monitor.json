@@ -27,8 +27,11 @@
     "tablesShownMessage": "Tables will be shown until a match starts",
     "clock": {
       "ended": "Time up",
-      "holdsOnInterruption": "Clock stops on interruption",
-      "stopped": "stopped"
+      "stopped": "stopped",
+      "remaining": "Time left",
+      "pause": "Break",
+      "pauseHalftime": "Break · $t(sport:phases.halftime)",
+      "overtime": "$t(sport:phases.overtime)"
     },
     "withoutResult": "without result",
     "finalScore": "Final score",

@@ -25,6 +25,7 @@ import {
   E2E_MONSOFORT_MONITOR_ID,
   E2E_MONSOFORT_EINGANG_MONITOR_ID,
   E2E_MONSCHLECHT_MONITOR_ID,
+  E2E_MONUHR_MONITOR_ID,
   E2E_ZWEITES_TURNIER_ID,
   E2E_ZWEITES_TURNIER_TITLE,
   ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
@@ -206,8 +207,8 @@ async function seedOneEngineCup(
       },
     ];
   }
-  if (cup.slug === 'MONSOFORT' || cup.slug === 'MONSCHLECHT') {
-    // R5 PR 1 (monitor-sofort.cloud.spec.ts): Feld-Monitor mit Live-Folie Feld 1, bei MONSOFORT dazu „Eingang“.
+  if (cup.slug === 'MONSOFORT' || cup.slug === 'MONSCHLECHT' || cup.slug === 'MONUHR') {
+    // R5 PR 1/2 (monitor-sofort.cloud.spec.ts): Feld-Monitor mit Live-Folie Feld 1, bei MONSOFORT dazu „Eingang“.
     const nowIso = new Date().toISOString();
     const monitor = (id: string, name: string, slide: MonitorSlide) => ({
       id, name, defaultSlideDuration: 15, transition: 'none' as const, transitionDuration: 0, theme: 'dark' as const,
@@ -221,7 +222,9 @@ async function seedOneEngineCup(
           id: e2eUuid(`${E2E_MONSOFORT_EINGANG_MONITOR_ID}:slide:text`), type: 'custom-text', config: { headline: 'Willkommen' }, duration: null, order: 0,
         }),
       ]
-      : [monitor(E2E_MONSCHLECHT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSCHLECHT_MONITOR_ID))];
+      : cup.slug === 'MONUHR'
+        ? [monitor(E2E_MONUHR_MONITOR_ID, 'Feld 1', feld1(E2E_MONUHR_MONITOR_ID))]
+        : [monitor(E2E_MONSCHLECHT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSCHLECHT_MONITOR_ID))];
   }
   await ownerRepo.save(tournament);
   if (cup.helper) {
