@@ -14,8 +14,12 @@ export function monitorJetztMs(): number {
   return new Date().getTime();
 }
 
-export function buildMonitorView(tournament: Tournament): TournamentView {
-  const now = new Date().getTime();
+/**
+ * `nowMs`: Jetzt in Serverzeit (R5 PR 2, Bereitsteller `MonitorDataSource.nowMs`); der Feinstatus (`live_state`) ist in
+ * Serverzeit verankert. Ohne Angabe die Geräteuhr (Tests, Vorschau).
+ */
+export function buildMonitorView(tournament: Tournament, nowMs: number = monitorJetztMs()): TournamentView {
+  const now = nowMs;
   return buildTournamentView({ ...tournament, engineDetail: engineDetailFromMatches(tournament.matches, now) }, {
     audience: 'screen',
     medium: 'app',

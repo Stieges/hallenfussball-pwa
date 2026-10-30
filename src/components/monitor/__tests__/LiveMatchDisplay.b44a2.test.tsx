@@ -162,43 +162,44 @@ describe('„ohne Ergebnis“ lesbar und mit Abstand (Kindermodus)', () => {
   });
 });
 
-describe('Hinweise unter der Uhr (@ZM-137)', () => {
+// R5 PR 2 (@ZM-166, @ZM-084): der Zustand steht als EIN Text ÜBER der Uhr („Restzeit“, „angehalten“, „Zeit abgelaufen“ …),
+// die frühere Hinweiszeile darunter entfällt (@ZM-137: „Uhr hält bei Unterbrechung“ gestrichen 2026-10-16). Die Zeile behält
+// ihre Regeln aus B-44a2: Hinweisgröße, nie umbrechen, feste Höhe auch ohne Text.
+describe('Text über der Uhr (@ZM-166, @ZM-137)', () => {
   const props = { elapsedSeconds: 300, durationSeconds: 360, status: 'PAUSED', timerElapsedSeconds: 300, size: 'xl' } as const;
 
-  it('gesetzt in Hinweisgröße (≥ 3 % Bildhöhe), kompakt, in einer gemeinsamen Gruppe', () => {
+  it('gesetzt in Hinweisgröße (≥ 3 % Bildhöhe), kompakt, genau ein Text', () => {
     render(<MatchTimer {...props} />);
     const group = screen.getByTestId('clock-hints');
-    expect(group.children.length).toBe(2);
-    for (const hint of Array.from(group.children) as HTMLElement[]) {
-      expect(hint.style.fontSize).toBe(displayFontSizes.clockHint);
-    }
+    expect(group.children.length).toBe(1);
+    expect(screen.getByTestId('clock-label').style.fontSize).toBe(displayFontSizes.clockHint);
     expect(parseFloat(group.style.lineHeight)).toBeLessThanOrEqual(1.3);
-    expect(group.style.rowGap).toBe(L.hintGap);
   });
 
-  it('Abstand zwischen Uhr und Hinweisen', () => {
+  it('steht über der Uhr (vor ihr im Dokument)', () => {
     render(<MatchTimer {...props} />);
-    expect(screen.getByTestId('clock-hints').style.marginTop).toBe(L.hintGapAbove);
+    const zeile = screen.getByTestId('clock-hints');
+    const uhr = screen.getByTestId('monitor-clock');
+    expect(zeile.compareDocumentPosition(uhr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('abgelaufen ohne Abpfiff: Hinweis ebenfalls in Hinweisgröße', () => {
+  it('abgelaufen ohne Abpfiff: „Zeit abgelaufen“ ebenfalls in Hinweisgröße', () => {
     render(<MatchTimer elapsedSeconds={400} durationSeconds={360} status="RUNNING" timerStartTime={new Date().toISOString()} timerElapsedSeconds={400} size="xl" />);
     const group = screen.getByTestId('clock-hints');
-    expect((group.children[0] as HTMLElement).style.fontSize).toBe(displayFontSizes.clockHint);
+    expect(group.children[0]).toHaveTextContent('liveMatch.clock.ended');
+    expect(screen.getByTestId('clock-label').style.fontSize).toBe(displayFontSizes.clockHint);
   });
 
-  it('Hinweiszeile darf nie umbrechen (absolut, nicht nur im Vergleich der Zustände)', () => {
+  it('Zeile darf nie umbrechen (absolut, nicht nur im Vergleich der Zustände)', () => {
     render(<MatchTimer {...props} />);
     const group = screen.getByTestId('clock-hints');
     expect(group.style.flexWrap).toBe('nowrap');
     expect(group.style.whiteSpace).toBe('nowrap');
   });
 
-  it('ohne Hinweis bleibt die Hinweiszeile als leere Zeile fester Höhe stehen (Lage ändert sich nie)', () => {
+  it('die Zeile hat eine feste Mindesthöhe (Lage ändert sich nie)', () => {
     render(<MatchTimer elapsedSeconds={10} durationSeconds={360} status="RUNNING" timerStartTime={new Date().toISOString()} timerElapsedSeconds={10} clockMode="immer-durchlaufend" size="xl" />);
-    const group = screen.getByTestId('clock-hints');
-    expect(group.children.length).toBe(0);
-    expect(group.style.minHeight).not.toBe('');
+    expect(screen.getByTestId('clock-hints').style.minHeight).not.toBe('');
   });
 });
 

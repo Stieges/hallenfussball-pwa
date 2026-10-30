@@ -27,8 +27,11 @@
     "tablesShownMessage": "Die Tabellen werden angezeigt, bis ein Spiel gestartet wird",
     "clock": {
       "ended": "Zeit abgelaufen",
-      "holdsOnInterruption": "Uhr hält bei Unterbrechung",
-      "stopped": "angehalten"
+      "stopped": "angehalten",
+      "remaining": "Restzeit",
+      "pause": "Pause",
+      "pauseHalftime": "Pause · $t(sport:phases.halftime)",
+      "overtime": "$t(sport:phases.overtime)"
     },
     "withoutResult": "ohne Ergebnis",
     "finalScore": "Endstand",

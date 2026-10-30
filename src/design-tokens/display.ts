@@ -256,8 +256,11 @@ export const displayLayout = {
     noticeLineHeight: NOTICE_LINE_HEIGHT,
     noticeGap: '0.6cqh',
     // B-44a3: Uhr und unterer Bereich (vorher Literale in MatchTimer)
-    progressHeight: '1.2cqh',
+    // R5 PR 2 (@ZM-165, Plan F5 „gilt nach Vorschlag“): Zeitbalken etwa 3 % der Bildhöhe (vorher 1,2cqh, C-MONITOR-ZEITBALKEN-DUENN)
+    progressHeight: '3cqh',
     clockGap: '1.2cqh',
+    // R5 PR 2: Zeichenabstand der Uhr-Ziffern (vorher Literal in MatchTimer)
+    clockLetterSpacing: '0.02em',
     clockPadY: '0.8cqh',
     clockPadX: '2cqh',
     clockInnerGap: '1cqh',
