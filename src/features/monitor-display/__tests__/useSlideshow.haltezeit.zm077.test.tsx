@@ -61,11 +61,15 @@ describe('useSlideshow: Takt nach der Haltezeit des Endergebnisses (@ZM-077)', (
     for (const abstand of folge.slice(1).map(([t], i) => t - folge[i][0])) { expect(abstand).toBe(5_000); }
   });
 
-  it('ein neu angepfiffenes Spiel während des Übergangs wird nicht überschrieben: Live-Folie kommt zurück', () => {
+  it('Anpfiff MITTEN im Übergang: die Live-Folie bleibt, der laufende Übergang überschreibt sie nicht', () => {
     const { result, rerender } = bisNachHaltezeit(500);
-    wechsel(result, 5_600); // ein Wechsel auf Alle Tabellen ist durch
-    rerender({ p: programm(true) });
-    act(() => { vi.advanceTimersByTime(2_000); });
-    expect(result.current.slideState.currentIndex).toBe(0);
+    act(() => { vi.advanceTimersByTime(1_100); }); // Haltezeit endet bei 30 s, Übergang läuft ab 30 s
+    expect(result.current.slideState.isTransitioning).toBe(true);
+    rerender({ p: programm(true) }); // neues Spiel in den 500 ms des Übergangs angepfiffen
+    for (let t = 0; t < 8_000; t += 100) {
+      act(() => { vi.advanceTimersByTime(100); });
+      expect(result.current.slideState.currentIndex, `bei +${String(t)} ms`).toBe(0);
+    }
+    expect(result.current.slideState.isTransitioning).toBe(false);
   });
 });

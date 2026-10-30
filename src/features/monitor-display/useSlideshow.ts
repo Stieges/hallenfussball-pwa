@@ -75,6 +75,12 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null,
     const ms = transitionMsRef.current;
     const cur = currentState();
     if (ms === null || target.index === cur.index) {
+      // Ein laufender Übergang gilt nicht mehr (z. B. Anpfiff mitten im Übergang): sonst überschriebe er die Live-Folie
+      if (transitionTimerRef.current !== null) {
+        clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current = null;
+        setTransitionDirection(null);
+      }
       commit(target);
       return;
     }

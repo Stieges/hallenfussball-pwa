@@ -39,22 +39,27 @@ const RAENDER = [{ name: 'rand0', prozent: 0 }, { name: 'standard', prozent: 5 }
 
 const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 
-async function messung(page: Page, rand: number): Promise<{ metrik: string; selektor: string; ist: unknown }[]> {
+async function messung(page: Page, rand: number, profil: string): Promise<{ metrik: string; selektor: string; ist: unknown }[]> {
   const m: { befunde: { metrik: string; selektor: string; ist: unknown; schwere?: string }[] } = await page.evaluate(messeSeite, {
     art: 'monitor', g: GRENZEN, randPx: 0, monitorSchrift: SCHRIFT, ziffern: null, ebuPruefen: rand > 0, extraInhalte: [], primarySelektor: '[data-primary]',
   });
   // Härte je Metrik aus den Grenzwerten (WARNUNG zählt nicht als Fehler, wird aber im Bericht genannt)
-  // Bekannter Altbefund (nicht Teil dieses Fixes, im Bericht gemeldet): die Spaltenköpfe der Tabelle (`StandingsTable`, auch Einzelfolie
-  // „Tabelle“) und der Seitenhinweis „Seite 1 / 2“ (`SlidePageHint`, gedämpfte Farbe) haben bei 1280×720 und 960×540 Kontrast unter 4,5:1. Bei 1920×1080 gilt die Regel für großen Text und greift nicht.
+  // Befund C-MONITOR-TABELLENKOPF-KONTRAST (nicht Teil dieses Fixes): Spaltenköpfe der Tabelle (`StandingsTable`, auch Einzelfolie „Tabelle“)
+  // und Seitenhinweis „Seite x / y“ (`SlidePageHint`, gedämpfte Farbe) liegen bei 1280×720 und 960×540 unter 4,5:1. Ausgenommen sind nur
+  // diese Texte, nur in diesen beiden Profilen und nur bei Werten ≥ 3,0:1; jede weitere Verschlechterung bleibt rot. Grenzwerte unverändert.
   const kopf = new Set(['#', 'Team', 'S', 'U', 'N', 'Diff', 'Pkt']);
+  const bekannt = (b: { metrik: string; ist: unknown; text?: string }) => profil !== '1080'
+    && b.metrik === 'kontrast.text'
+    && (kopf.has(String(b.text)) || /^Seite \d+ \/ \d+$/.test(String(b.text)))
+    && parseFloat(String(b.ist)) >= 3.0;
   return m.befunde
     .filter((b) => (TYP[b.metrik] ?? 'HART') === 'HART' && (b.schwere === undefined || b.schwere === 'HART'))
-    .filter((b) => !(b.metrik === 'kontrast.text' && (kopf.has(String((b as { text?: string }).text)) || /^Seite \d+ \/ \d+$/.test(String((b as { text?: string }).text)))));
+    .filter((b) => !bekannt(b as { metrik: string; ist: unknown; text?: string }));
 }
 
 
 const SZENEN = [
-  { id: 'jeg', kennung: '@ZM-071 @ZM-177 (Jeder gegen jeden, Standardgruppen A/B gespeichert)', seiten: 1, zeilen: 6, kein: /Gruppe/ },
+  { id: 'jeg', kennung: '@ZM-181 @ZM-071 @ZM-177 (Jeder gegen jeden, Standardgruppen A/B gespeichert)', seiten: 1, zeilen: 6, text: /Gesamttabelle/, kein: /Gruppe/ },
   { id: 'zwei', kennung: '@ZM-071 (zwei echte Gruppen, Seite 1/2)', seiten: 2, zeilen: 3, text: /Gruppe A/ },
   { id: 'zwei', kennung: '@ZM-071 (zwei echte Gruppen, Seite 2/2)', seiten: 2, zeilen: 3, text: /Gruppe B/, seite: 1 },
 ] as const;
@@ -75,6 +80,14 @@ test.describe('Monitor „Alle Tabellen“ (T2-UI)', () => {
           await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
           await expect(page.getByTestId('monitor-slide')).toHaveAttribute('data-pages', String(szene.seiten));
           await expect(page.getByTestId('standings-row')).toHaveCount(szene.zeilen);
+          if (szene.id === 'jeg') {
+            // Ergebnisse der Spiele (@ZM-181): FC Nord 4 Siege, 1 Remis, 0 Niederlagen, 13 Punkte
+            const nord = page.getByTestId('standings-row').filter({ hasText: 'FC Nord' });
+            await expect(nord.getByTestId('standings-won')).toHaveText('4');
+            await expect(nord.getByTestId('standings-drawn')).toHaveText('1');
+            await expect(nord.getByTestId('standings-lost')).toHaveText('0');
+            await expect(nord).toContainText(/13$/);
+          }
           if ('text' in szene) { await expect(page.locator('body')).toContainText(szene.text); }
           if ('kein' in szene) { await expect(page.locator('body')).not.toContainText(szene.kein); }
           const doc = await page.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight, fw: window.innerWidth, fh: window.innerHeight }));
@@ -83,7 +96,7 @@ test.describe('Monitor „Alle Tabellen“ (T2-UI)', () => {
           const ordner = process.env.ALLE_TABELLEN_BILDER ?? testInfo.outputDir;
           mkdirSync(ordner, { recursive: true });
           await page.screenshot({ path: join(ordner, `${szene.id}-s${String(seite + 1)}-${p.name}-${r.name}.png`) });
-          expect(await messung(page, r.prozent), `${szene.id} ${p.name} ${r.name}: HART-Befunde der Messung`).toEqual([]);
+          expect(await messung(page, r.prozent, p.name), `${szene.id} ${p.name} ${r.name}: HART-Befunde der Messung`).toEqual([]);
           await ctx.close();
         });
       }
