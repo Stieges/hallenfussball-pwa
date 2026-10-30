@@ -19,6 +19,7 @@ vi.mock('../../../core/repositories/LocalStorageRepository', () => ({
 vi.mock('../localDisplay', () => ({
   withLocalEngineState: async (t: unknown) => Promise.resolve(t),
   subscribeLocalDisplaySignal: () => () => undefined,
+  isKnownToServer: () => false,
 }));
 
 import { createMonitorSource } from '../monitorDataSource';

@@ -93,6 +93,18 @@ export function tieMarkerOf(view: GroupTieView, teamId: string): TieMarker | und
   return { kind: decision.order[0] === teamId ? 'shootoutWon' : 'shootoutLost', winner, loser };
 }
 
+/**
+ * Markierung für Zuschauer und Monitor (@W2A-059): nur offene Blöcke, ohne jeden Erklärtext. `follows` = der Platz wird
+ * ausgespielt (Pflicht, „Strafstoß folgt“), `deciding` = die Turnierleitung entscheidet noch („wird entschieden“).
+ * Entschiedene Blöcke und Teams ohne Gleichstand: keine Markierung.
+ */
+export type PublicTieMark = 'follows' | 'deciding';
+
+export function publicTieMarkOf(view: GroupTieView, teamId: string): PublicTieMark | undefined {
+  const block = view.open.find((b) => b.teamIds.includes(teamId));
+  return block === undefined ? undefined : block.mayShare ? 'deciding' : 'follows';
+}
+
 function appliedDecisions(tournament: ViewTournament): Map<string, StandingDecision> {
   const applied = new Map<string, StandingDecision>();
   for (const { group } of standingsGroups(tournament.teams)) {

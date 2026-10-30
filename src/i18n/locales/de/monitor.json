@@ -99,6 +99,10 @@
     "cloudTimeout": "Cloud-Anfrage nach {{ms}}ms abgebrochen (Timeout)"
   },
   "standings": {
+    "tie": {
+      "follows": "Strafstoß folgt",
+      "deciding": "wird entschieden"
+    },
     "header": {
       "rank": "#",
       "team": "Team",

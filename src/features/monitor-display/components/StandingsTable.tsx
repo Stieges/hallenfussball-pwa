@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, displayEffects, displayList, monitorThemes } from '../../../design-tokens';
 import { calculateStandings } from '../../../utils/calculations';
 import { monitorTeamName } from '../../../core/models/teamNameAbbrev';
+import { publicTieMarkOf, type GroupTieView } from '../../../core/standings/tieViews';
+import { MonitorTieMark } from './MonitorTieMark';
 
 export type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
 export type StandingRows = ReturnType<typeof calculateStandings>;
@@ -9,10 +11,12 @@ export type StandingRows = ReturnType<typeof calculateStandings>;
 interface StandingsTableProps {
   rows: StandingRows;
   themeColors: MonitorColors;
+  /** Gleichstände der Gruppe (@W2A-059): offene Blöcke bekommen eine kurze Markierung hinter dem Namen. */
+  tie?: GroupTieView;
 }
 
 /** Tabelle einer Gruppe (Kopf und Zeilen), wie sie am Monitor steht (B-16f3, Organismus). */
-export function StandingsTable({ rows, themeColors }: StandingsTableProps) {
+export function StandingsTable({ rows, themeColors, tie }: StandingsTableProps) {
   const { t } = useTranslation('monitor');
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen, Inhalt nutzt die Breite
   const grid = {
@@ -51,44 +55,48 @@ export function StandingsTable({ rows, themeColors }: StandingsTableProps) {
       </div>
 
       {/* Table Rows: Farbe nur mit Bedeutung – Punkte und Tordifferenz; Siege, Unentschieden, Niederlagen neutral */}
-      {rows.map((row, idx) => (
-        <div
-          key={row.team.id}
-          data-testid="standings-row"
-          style={{
-            ...grid,
-            padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
-            borderBottom: idx < rows.length - 1 ? `${cssVars.borderWidth.thin} solid ${themeColors.border}` : 'none',
-            fontSize: displayList.fontSizes.team,
-            color: themeColors.text,
-          }}
-        >
-          <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{row.place ?? idx + 1}</div>
-          <div data-teamname style={{ fontSize: displayList.fontSizes.team, minWidth: 0, overflowWrap: 'break-word' }}>
-            {monitorTeamName(row.team.name)}
+      {rows.map((row, idx) => {
+        const mark = tie === undefined ? undefined : publicTieMarkOf(tie, row.team.id);
+        return (
+          <div
+            key={row.team.id}
+            data-testid="standings-row"
+            style={{
+              ...grid,
+              padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
+              borderBottom: idx < rows.length - 1 ? `${cssVars.borderWidth.thin} solid ${themeColors.border}` : 'none',
+              fontSize: displayList.fontSizes.team,
+              color: themeColors.text,
+            }}
+          >
+            <div style={{ fontWeight: cssVars.fontWeights.semibold }}>{row.place ?? idx + 1}</div>
+            <div data-teamname style={{ fontSize: displayList.fontSizes.team, minWidth: 0, overflowWrap: 'break-word' }}>
+              {monitorTeamName(row.team.name)}
+              {mark !== undefined && <MonitorTieMark mark={mark} themeColors={themeColors} />}
+            </div>
+            <div data-testid="standings-won" style={{ ...number, color: themeColors.text }}>{row.won}</div>
+            <div data-testid="standings-drawn" style={{ ...number, color: themeColors.text }}>{row.drawn}</div>
+            <div data-testid="standings-lost" style={{ ...number, color: themeColors.text }}>{row.lost}</div>
+            <div data-testid="standings-goalDiff" style={{
+              ...number,
+              color: row.goalDifference > 0
+                ? themeColors.progressBar
+                : row.goalDifference < 0
+                  ? themeColors.progressBarWarning
+                  : themeColors.text,
+            }}>
+              {row.goalDifference > 0 ? '+' : ''}{row.goalDifference}
+            </div>
+            <div style={{
+              ...number,
+              fontWeight: cssVars.fontWeights.bold,
+              color: themeColors.score,
+            }}>
+              {row.points}
+            </div>
           </div>
-          <div data-testid="standings-won" style={{ ...number, color: themeColors.text }}>{row.won}</div>
-          <div data-testid="standings-drawn" style={{ ...number, color: themeColors.text }}>{row.drawn}</div>
-          <div data-testid="standings-lost" style={{ ...number, color: themeColors.text }}>{row.lost}</div>
-          <div data-testid="standings-goalDiff" style={{
-            ...number,
-            color: row.goalDifference > 0
-              ? themeColors.progressBar
-              : row.goalDifference < 0
-                ? themeColors.progressBarWarning
-                : themeColors.text,
-          }}>
-            {row.goalDifference > 0 ? '+' : ''}{row.goalDifference}
-          </div>
-          <div style={{
-            ...number,
-            fontWeight: cssVars.fontWeights.bold,
-            color: themeColors.score,
-          }}>
-            {row.points}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

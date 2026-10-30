@@ -1190,6 +1190,10 @@
     "closedSaveBlocked": "Das Turnier ist abgeschlossen – die Änderung wurde nicht gespeichert."
   },
   "standingsTie": {
+    "publicMark": {
+      "follows": "Strafstoß folgt",
+      "deciding": "wird entschieden"
+    },
     "marker": {
       "need": "Strafstoßschießen nötig",
       "open": "Gleichstand – Entscheidung nötig",
