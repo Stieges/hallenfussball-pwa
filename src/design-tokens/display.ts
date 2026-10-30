@@ -274,8 +274,10 @@ export const displayLayout = {
     badgeDot: '1.4cqh',
     // Kompakte Kopfzeile (Größe nicht xl): Punkt der Statusmarke
     badgeDotCompact: '14px',
-    // B-44a2: Balkenbreite (vorher 700px fest)
-    progressWidth: '36cqw',
+    // R5 PR 2 (@ZM-165): Zeitbalken so breit wie beide Ergebniskästen zusammen. Jede Spalte ist halb so breit wie die
+    // Folie, der Kasten nimmt blockWidth (70 %) mittig ein → äußere Kanten bei (100 % + 70 %) / 2 = 85 % der Breite
+    // (vorher 36cqw, B-44a2; davor 700px fest)
+    progressWidth: 'calc((100% + 70%) / 2)',
     // B-44a2: Rahmen der Kästen, einheitlich in beiden: dezent, bei Kontrast unter 3 : 1 kräftig
     frameWidthSubtle: '2px',
     frameWidthStrong: '4px',

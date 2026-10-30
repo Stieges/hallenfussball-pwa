@@ -179,7 +179,9 @@ describe('@ZM-165 Der Zeitbalken ist aus der Halle gut zu sehen', () => {
     const balken = screen.getByTestId('monitor-zeitbalken');
     expect(balken.style.height).toBe(displayLayout.scoreArea.progressHeight);
     expect(displayLayout.scoreArea.progressHeight).toBe('3cqh');
-    expect(balken.parentElement?.style.maxWidth).toBe(displayLayout.scoreArea.progressWidth);
+    expect(balken.parentElement?.style.maxWidth).toBe('calc(85%)'); // jsdom rechnet den Token aus
+    // so breit wie die Kästen: Spalte = halbe Breite, Kasten blockWidth mittig → (1 + blockWidth) / 2 der Breite
+    expect(displayLayout.scoreArea.progressWidth).toBe(`calc((100% + ${displayLayout.scoreArea.blockWidth}) / 2)`);
     // erster Abschnitt 3:00 von 6:00 → halb, nicht 3:00 von 12:00 (ganzes Spiel → drei Viertel)
     expect(balken).toHaveAttribute('data-anteil', '0.500');
   });
