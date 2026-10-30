@@ -142,6 +142,15 @@ describe('@ZM-176 Die Uhr springt nie zurück, außer bei einer Korrektur der Ze
     expect(korrigiert?.restSekunden).toBe(220);
   });
 
+  it('Zeitkorrektur (+0:20) bei angehaltener Uhr: nur die gespielte Zeit ändert sich – die Uhr springt von 3:20 auf 3:40', () => {
+    const halt = imAbschnitt(1, 200, false);
+    const vorher = uhr(halt, T0);
+    const korrigiert = monitorUhrMitSperre(uhr({ ...halt, elapsedMs: halt.elapsedMs - 20_000 }, T0 + 5_000), vorher);
+    expect(vorher?.restSekunden).toBe(200);
+    expect(korrigiert?.restSekunden).toBe(220);
+    expect(korrigiert?.text).toBe('angehalten');
+  });
+
   it('Pause und Weiter sind neue Anker: die Restzeit bleibt 06:41 → läuft ab 06:41 weiter (@ZM-084)', () => {
     const halt = { ...imAbschnitt(1, 0, false), sectionSeconds: 600, elapsedMs: 199_000 };
     const angehalten = monitorUhrOf({ match: { isLive: true, clockRules: { ...regeln(), sectionSeconds: 600 } }, liveState: halt, nowMs: T0 + 30_000 });

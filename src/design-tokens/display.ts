@@ -183,6 +183,8 @@ export const displayTransitions = {
 // =============================================================================
 
 /** Maße der Hinweis-Ecke (B-48a); die Höhe daraus ist ein Token, damit die Folie genau so weit nach unten rückt. */
+/** Kasten der Live-Folie: Anteil seiner Spalte; der Zeitbalken leitet seine Breite daraus ab (@ZM-165). */
+const BLOCK_WIDTH = '70%';
 const NOTICE_PAD_Y = '0.4cqh';
 const NOTICE_BORDER = '0.3cqh';
 const NOTICE_LINE_HEIGHT = 1.2;
@@ -223,7 +225,7 @@ export const displayLayout = {
     // B-44a2: Kindermodus: Namen oben bündig in der Kastenreihe, mit Abstand von oben
     kidsNamesOffset: '8cqh',
     // H3 @ZM-125: Kasten = 70 % einer Spalte; zwei Spalten teilen die Breite abzüglich seitlichem Polster (paddingX) = ca. 33 % Bildbreite
-    blockWidth: '70%',
+    blockWidth: BLOCK_WIDTH,
     blockGap: '0%',
     // B-17 Fixrunde: Teamnamen bekommen eine breitere Box, damit 50 Zeichen auf zwei Zeilen passen (@ZM-087)
     // B-44a2: Namensspalte = Kastenbreite; B-44a4 (Ruling 16.10.): wieder breiter als der Kasten, damit 50 Zeichen bei
@@ -275,9 +277,9 @@ export const displayLayout = {
     // Kompakte Kopfzeile (Größe nicht xl): Punkt der Statusmarke
     badgeDotCompact: '14px',
     // R5 PR 2 (@ZM-165): Zeitbalken so breit wie beide Ergebniskästen zusammen. Jede Spalte ist halb so breit wie die
-    // Folie, der Kasten nimmt blockWidth (70 %) mittig ein → äußere Kanten bei (100 % + 70 %) / 2 = 85 % der Breite
+    // Folie, der Kasten nimmt blockWidth mittig ein → äußere Kanten bei (100 % + blockWidth) / 2 der Breite (70 % → 85 %)
     // (vorher 36cqw, B-44a2; davor 700px fest)
-    progressWidth: 'calc((100% + 70%) / 2)',
+    progressWidth: `calc((100% + ${BLOCK_WIDTH}) / 2)`,
     // B-44a2: Rahmen der Kästen, einheitlich in beiden: dezent, bei Kontrast unter 3 : 1 kräftig
     frameWidthSubtle: '2px',
     frameWidthStrong: '4px',
