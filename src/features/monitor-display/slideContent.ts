@@ -8,6 +8,7 @@
 import type { Tournament } from '../../types/tournament';
 import type { MatchView, TournamentView } from '../../core/view';
 import { DEFAULT_SLIDE_CONFIG } from '../../types/monitor';
+import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
 import type { ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
@@ -62,14 +63,13 @@ export function finalRoundMatches(view: TournamentView): MatchView[] {
   return view.matches.filter(m => m.phase === 'final').sort(compareKickoff);
 }
 
-/** Gruppen-IDs: aus der Gruppenkonfiguration, sonst aus den Teams (sortiert, ohne Dubletten). */
+/**
+ * Gruppen-IDs aus der tatsächlichen Zuordnung der Teams (sortiert, ohne Dubletten) – dieselbe Quelle wie Zuschauer-Seite
+ * und Einzelfolie (`standingsGroups`). `tournament.groups` zählt nicht: der Assistent speichert dort auch bei
+ * „Jeder gegen jeden“ zwei Standardgruppen, denen kein Team angehört (C-MONITOR-ALLE-TABELLEN-OHNE-ZEILEN). Ohne Gruppen: leer.
+ */
 export function groupIds(tournament: Tournament): string[] {
-  if (tournament.groups && tournament.groups.length > 0) {
-    return tournament.groups.map(g => g.id);
-  }
-  const ids = new Set<string>();
-  tournament.teams.forEach(team => { if (team.group) { ids.add(team.group); } });
-  return [...ids].sort();
+  return standingsGroups(tournament.teams).map(g => g.group).filter(id => id !== OVERALL_GROUP);
 }
 
 /** Ein Abschnitt der Folie „Alle Tabellen / Finalrunde“: eine Gruppentabelle oder die Finalrunde. */
