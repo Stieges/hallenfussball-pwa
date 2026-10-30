@@ -109,7 +109,8 @@ async function main() {
       const plan = [
         ['Design-Token-Gleichlauf', 'npm', ['run', '--silent', 'tokens:check'], {}, 5 * MIN],
         ['Terminologie-Gleichlauf', 'npm', ['run', '--silent', 'terms:check'], {}, 5 * MIN],
-        ['Lint', 'npm', ['run', '--silent', 'lint'], {}, 15 * MIN],
+        // Lint gemessen 3:39 min (Last ~15) bis 10:58 min (Last ~35, 31.10.); Grenze mit Reserve gegen Hängen, nicht gegen Last.
+        ['Lint', 'npm', ['run', '--silent', 'lint'], {}, 25 * MIN],
         [stand.art === 'aktuell' ? 'Build' : 'Build nach dem Zusammenführen', 'npm', ['run', '--silent', 'build'], leer, 15 * MIN],
         ['Szenario-Prüfung gegen den Hauptzweig', 'npm', ['run', '--silent', 'test:scenarios', '--', '--base', basis], {}, 5 * MIN],
       ]

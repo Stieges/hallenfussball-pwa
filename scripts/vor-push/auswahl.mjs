@@ -8,7 +8,9 @@ export const OFFLINE_SPEC = /^tests\/e2e\/(?!(cloud|visual|auth-slow|prod-smoke)
 const OHNE_OBERFLAECHE = /^(docs\/|\.github\/|\.claude\/|\.husky\/|supabase\/|tests\/meta\/|[^/]+\.md$)/
 
 /** Test-Dateien unter src/ ändern das Verhalten der App nicht. */
-const SRC_TEST = /(^|\/)__tests__\/|\.(test|spec)\.tsx?$/
+const IN_TESTORDNER = /(?:^|\/)__tests__\//
+const TESTDATEI = /\.(?:test|spec)\.tsx?$/
+const istSrcTest = (p) => IN_TESTORDNER.test(p) || TESTDATEI.test(p)
 
 /**
  * Härtetest der visuellen Messung (scripts/visual-metrics): misst die gebaute App. Nötig, wenn sich die App selbst
@@ -19,7 +21,7 @@ export function haertetestNoetig(geaendert) {
     p.startsWith('scripts/visual-metrics/') ||
     /^(index\.html|vite\.config\.ts|package(-lock)?\.json|tsconfig[^/]*\.json)$/.test(p) ||
     p.startsWith('public/') ||
-    (p.startsWith('src/') && !SRC_TEST.test(p)))
+    (p.startsWith('src/') && !istSrcTest(p)))
 }
 
 /**
@@ -78,7 +80,7 @@ export function waehleSpecs(geaendert, specs, lese) {
       for (const s of offline.filter((x) => RAUCHTEST.test(x))) nimm(s, 'playwright.config.ts geändert')
       continue
     }
-    if (!pfad.startsWith('src/') || SRC_TEST.test(pfad)) continue
+    if (!pfad.startsWith('src/') || istSrcTest(pfad)) continue
     let getroffen = false
     for (const b of BEREICHE) {
       if (!b.pfad.test(pfad)) continue
