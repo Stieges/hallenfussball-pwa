@@ -56,8 +56,11 @@ const uuid = (kind: number, n: number): string => `0000${String(kind).padStart(4
 const LANG_A = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921'
 const LANG_B = 'Eintracht Oberweiler-Niederstetten 1919'
 
+/** Logo der Messlauf-Saat (@ZM-157): ein kleines Wappen als Daten-URL, damit "mit Logo" und "nur Initialen" nebeneinander messbar sind. */
+const LOGO_WAPPEN = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMxNTY1QzAiLz48cGF0aCBkPSJNMTIgNWw2IDN2NWMwIDMtMi41IDUuNS02IDYuNUM4LjUwMCAxOC41MDAgNiAxNiA2IDEzVjh6IiBmaWxsPSIjRkZGRkZGIi8+PC9zdmc+'
+
 const TEAMS: Team[] = [
-  { id: uuid(1, 1), name: LANG_A, group: 'A' },
+  { id: uuid(1, 1), name: LANG_A, group: 'A', logo: { type: 'base64', value: LOGO_WAPPEN } },
   { id: uuid(1, 2), name: 'Turn- und Sportverein Ost', group: 'A' },
   { id: uuid(1, 3), name: 'FC Nordstadt', group: 'A' },
   { id: uuid(1, 4), name: 'SV Südpark', group: 'A' },

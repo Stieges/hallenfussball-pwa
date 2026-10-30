@@ -195,8 +195,8 @@ async function messeLiveFolie(page: Page, namen: string[], vorgabe: string) {
       if (!el || (el.textContent ?? '').trim() === '') { fehlenderKopf.push(name); continue; }
       bloecke.push(box(el, name));
     }
-    document.querySelectorAll('[data-position]').forEach((el) => {
-      bloecke.push(box(el, `Stand ${el.getAttribute('data-position')}`));
+    document.querySelectorAll('[data-testid="live-box-home"], [data-testid="live-box-away"]').forEach((el) => {
+      bloecke.push(box(el, `Stand ${el.getAttribute('data-testid')}`));
     });
     teams.forEach((t) => bloecke.push(box(t.el, `Team ${t.name.slice(0, 12)}`)));
     const uhr = leaf(/^\d{2}:\d{2}/);

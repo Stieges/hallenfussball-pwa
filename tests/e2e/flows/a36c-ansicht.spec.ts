@@ -130,12 +130,12 @@ async function beendeFinale(page: Page, ergebnis: { scoreA: number; scoreB: numb
 
 /** Ende nach Strafstoßschießen (Mockup K5g): nichts überlappt, Strafstoß mittig unter dem Doppelpunkt, Ring und Pokal nur am Sieger. */
 async function pruefeEnde(page: Page, siegerSeite: 'home' | 'away', pokal = true) {
-  const kasten = (seite: string) => page.locator(`[data-testid="live-block-${seite}"] [data-position]`);
+  const kasten = (seite: string) => page.locator(`[data-testid="live-box-${seite}"]`);
   const verlierer = siegerSeite === 'home' ? 'away' : 'home';
   await expect(kasten(siegerSeite)).toHaveAttribute('data-outcome', 'winner');
   await expect(kasten(verlierer)).toHaveAttribute('data-outcome', 'loser');
-  await expect(page.getByTestId(`live-cup-${siegerSeite}`)).toHaveCount(pokal ? 1 : 0);
-  await expect(page.getByTestId(`live-cup-${verlierer}`)).toHaveCount(0);
+  await expect(page.getByTestId(`live-box-${siegerSeite}-cup`)).toHaveCount(pokal ? 1 : 0);
+  await expect(page.getByTestId(`live-box-${verlierer}-cup`)).toHaveCount(0);
   const boxen = await page.evaluate(() => {
     const r = (sel: string) => { const b = document.querySelector(sel)?.getBoundingClientRect(); return b ? { l: b.left, r: b.right, t: b.top, b: b.bottom } : null; };
     return { px: r('[data-testid="live-penalty-block"]'), sep: r('[data-testid="live-separator"]'), home: r('[data-testid="live-name-home"] [data-teamname]'), away: r('[data-testid="live-name-away"] [data-teamname]'), winner: r('[data-testid="live-winner"]'), grid: r('[data-testid="live-grid"]'), kHome: r('[data-testid="live-block-home"]'), kAway: r('[data-testid="live-block-away"]') };
@@ -203,7 +203,7 @@ test.describe('A-36c Monitor 1280×720', () => {
   test('@ZM-156 Gegenbeispiel: Sieg in regulärer Zeit – Ring und Pokal am Sieger, keine Strafstoß-Zeile', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
     await beendeFinale(page, { scoreA: 3, scoreB: 1, decidedBy: 'regular' });
-    await expect(page.getByTestId('live-cup-home')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId('live-box-home-cup')).toBeVisible({ timeout: 20000 });
     await expect(page.getByTestId('live-penalty-block')).toHaveCount(0);
     await expect(page.getByTestId('live-endstand')).toHaveText('Endstand');
     await bild(page, 'monitor-1280-live-ende-regulaer');
@@ -213,24 +213,24 @@ test.describe('A-36c Monitor 1280×720', () => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
     await beendeFinale(page, { scoreA: 3, scoreB: 1, decidedBy: 'regular', isFinal: false, group: 'A' });
     await expect(page.getByTestId('live-endstand')).toHaveText('Endstand', { timeout: 20000 });
-    await expect(page.locator('[data-testid="live-block-home"] [data-position]')).toHaveAttribute('data-outcome', 'winner');
-    await expect(page.locator('[data-testid="live-block-away"] [data-position]')).toHaveAttribute('data-outcome', 'loser');
-    await expect(page.getByTestId('live-cup-home')).toHaveCount(0);
-    await expect(page.getByTestId('live-cup-away')).toHaveCount(0);
+    await expect(page.locator('[data-testid="live-box-home"]')).toHaveAttribute('data-outcome', 'winner');
+    await expect(page.locator('[data-testid="live-box-away"]')).toHaveAttribute('data-outcome', 'loser');
+    await expect(page.getByTestId('live-box-home-cup')).toHaveCount(0);
+    await expect(page.getByTestId('live-box-away-cup')).toHaveCount(0);
     await bild(page, 'monitor-1280-live-ende-gruppe');
   });
 
   test('@ZM-156 @ZM-157 Spiel um Platz 3 nach Verlängerung: Ring, Pokal, „nach Verlängerung“ unter dem Namen des Siegers (nicht unter „Endstand“), Kästen unverändert', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-live', '[data-testid="live-slide-area"]');
-    const vorher = await page.evaluate(() => [...document.querySelectorAll('[data-testid^="live-block-"] [data-position]')].map((e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }));
+    const vorher = await page.evaluate(() => [...document.querySelectorAll('[data-testid="live-box-home"], [data-testid="live-box-away"]')].map((e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }));
     await beendeFinale(page, { scoreA: 1, scoreB: 1, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime' });
-    const zusatz = page.getByTestId('live-after-overtime');
+    const zusatz = page.locator('[data-testid$="-addon-0"]');
     await expect(zusatz).toHaveText('nach Verlängerung', { timeout: 20000 });
-    await expect(page.getByTestId('live-cup-home')).toBeVisible();
+    await expect(page.getByTestId('live-box-home-cup')).toBeVisible();
     await expect(page.getByTestId('live-penalty-block')).toHaveCount(0);
     const boxen = await page.evaluate(() => {
       const r = (sel: string) => { const b = document.querySelector(sel)?.getBoundingClientRect(); return b ? { l: b.left, r: b.right, t: b.top, b: b.bottom } : null; };
-      return { zusatz: r('[data-testid="live-after-overtime"]'), name: r('[data-testid="live-name-home"] [data-teamname]'), endstand: r('[data-testid="live-endstand"]'), kasten: [...document.querySelectorAll('[data-testid^="live-block-"] [data-position]')].map((e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }) };
+      return { zusatz: r('[data-testid$="-addon-0"]'), name: r('[data-testid="live-name-home"] [data-teamname]'), endstand: r('[data-testid="live-endstand"]'), kasten: [...document.querySelectorAll('[data-testid="live-box-home"], [data-testid="live-box-away"]')].map((e) => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }) };
     });
     expect(boxen.zusatz!.t, 'Zusatz unter dem Namen des Siegers').toBeGreaterThanOrEqual(boxen.name!.b - 1);
     expect(boxen.zusatz!.b, 'Zusatz überlappt „Endstand“ nicht').toBeLessThanOrEqual(boxen.endstand!.t);

@@ -1,5 +1,5 @@
 import React, { useState, CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens';
+import { cssVars, displayFontSizes } from '../../design-tokens';
 import { TeamLogo, TeamColors } from '../../types/tournament';
 
 /**
@@ -15,7 +15,10 @@ const AVATAR_SIZES = {
   xxxl: 180, // TV displays, large projections
 } as const;
 
-type AvatarSize = keyof typeof AVATAR_SIZES;
+/** Initialen-Schrift als Anteil der Avatar-Größe */
+const INITIALS_SHARE = 0.4;
+
+export type AvatarSize = keyof typeof AVATAR_SIZES;
 
 interface TeamAvatarProps {
   /** Team data with name, optional logo and colors */
@@ -31,6 +34,8 @@ interface TeamAvatarProps {
   };
   /** Size variant */
   size?: AvatarSize;
+  /** Größe als Token-String (z. B. `displayFontSizes.teamName`); hat Vorrang vor `size` (Monitor, Aufgabe 3.1) */
+  dimension?: string;
   /** Show jersey color ring around avatar */
   showColorRing?: boolean;
   /** Additional styles */
@@ -86,6 +91,7 @@ function getBackgroundColor(name: string, providedColor?: string): string {
 export const TeamAvatar: React.FC<TeamAvatarProps> = ({
   team,
   size = 'md',
+  dimension,
   showColorRing = false,
   style = {},
   'data-testid': testId,
@@ -95,7 +101,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
 
   const pixelSize = AVATAR_SIZES[size];
   const ringWidth = size === 'xs' ? 2 : size === 'sm' ? 2 : 3;
-  const fontSize = Math.round(pixelSize * 0.4);
+  const fontSize = dimension === undefined ? `${Math.round(pixelSize * INITIALS_SHARE)}px` : `max(calc(${dimension} * ${INITIALS_SHARE}), ${displayFontSizes.clockHint})`;
 
   const logo = team.logo;
   const hasLogo = logo && logo.type !== 'initials' && !imageError;
@@ -107,8 +113,8 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
 
   const containerStyles: CSSProperties = {
     position: 'relative',
-    width: pixelSize,
-    height: pixelSize,
+    width: dimension ?? pixelSize,
+    height: dimension ?? pixelSize,
     flexShrink: 0,
     ...style,
   };
@@ -123,7 +129,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
     justifyContent: 'center',
     backgroundColor: pending || (hasLogo && imageLoaded) ? 'transparent' : bgColor,
     color: '#FFFFFF',
-    fontSize: `${fontSize}px`,
+    fontSize,
     fontWeight: cssVars.fontWeights.bold,
     fontFamily: cssVars.fontFamilies.body,
     textTransform: 'uppercase',

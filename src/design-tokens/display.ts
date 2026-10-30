@@ -233,12 +233,14 @@ export const displayLayout = {
     // @ZM-140 Raster: Mittelspalte zwischen den Kästen (Trenner, im Kindermodus leer)
     separatorWidth: '0%',
     // B-44a2 (@ZM-125): Kasten hoch, annähernd quadratisch (Breite 33 % der Bildbreite); der Stand ist das Größte
-    blockHeight: '42cqh',
+    // Spielanzeige S3 (@ZM-157): 41 statt 42 (Verhältnis ≥ 0,7 bleibt) – zwei freigehaltene Zusatzzeilen unter dem Namen brauchen Platz
+    blockHeight: '41cqh',
     // B-44a2: Namen bis zu zwei Zeilen
     nameLines: 2,
     // B-44a2: Platz unter den Namen für Uhr, Balken und Hinweise; bleibt in jedem Zustand reserviert (gleiche Lage)
     // B-44a3: fasst Uhr, Balken, Hinweiszeile und Schiedsrichter-Zeile
-    lowerHeight: '30cqh',
+    // Spielanzeige S3 (@ZM-157): 29,8 statt 30 – Uhr, Balken, Hinweis und Schiedsrichter-Zeile brauchen nicht mehr (liveLayoutRatios rechnet 29,4 nach)
+    lowerHeight: '29.8cqh',
     // B-44a2: Abstand zwischen Namen und Uhr (liegt innerhalb von lowerHeight)
     lowerPaddingTop: '2cqh',
     // B-44a2: Abstand zwischen Uhr und Hinweisen sowie zwischen Hinweisen
