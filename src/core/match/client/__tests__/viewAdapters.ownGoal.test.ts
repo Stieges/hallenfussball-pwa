@@ -55,4 +55,43 @@ describe('toRuntimeEvents – Eigentor-Kennzeichnung (@SL-022, L2)', () => {
 
     expect(zurueck.payload).toMatchObject({ teamId: 'fc-nord', ownGoal: true, ownGoalTeamId: 'sv-sued' });
   });
+
+  // Befund C-RUECKGAENGIG-DOPPELTE-ZEILEN: das Eigentor entsteht im Cockpit als Tor-Tipp, RETRACT und OWN_GOAL (@SL-022). Gespeichert
+  // ist nichts doppelt; im Protokoll darf der Zwischenschritt nach „Rückgängig“ aber nicht als zweites „Tor“ auftauchen.
+  describe('Eigentor-Weg des Cockpits: Tor-Tipp, RETRACT, OWN_GOAL, dann Rückgängig', () => {
+    const tipp = ereignis({ id: 'tipp', type: 'GOAL', at: 2_000, clockMs: 340_000, teamId: 'fc-nord' });
+    const tippZurueck = ereignis({ id: 'r-tipp', type: 'RETRACT', at: 2_050, targetId: 'tipp' });
+    const eigentor = ereignis({ id: 'og', type: 'OWN_GOAL', at: 2_100, clockMs: 340_000, teamId: 'sv-sued' });
+    const rueckgaengig = ereignis({ id: 'r-og', type: 'RETRACT', at: 5_000, targetId: 'og' });
+
+    it('@SL-022 nach einmal „Rückgängig“ steht genau eine zurückgenommene Zeile, und zwar das Eigentor', () => {
+      const log = [anpfiff, tipp, tippZurueck, eigentor, rueckgaengig];
+      const state = reduceMatch(log, CTX).state;
+      const zurueck = toRetractedEvents(state, log, CTX);
+      expect(zurueck.map((e) => e.id)).toEqual(['og']);
+      expect(zurueck[0].payload).toMatchObject({ ownGoal: true, ownGoalTeamId: 'sv-sued' });
+      expect(toRuntimeEvents(state, log, CTX)).toEqual([]);
+    });
+
+    it('@SL-022 ohne „Rückgängig“ steht das Eigentor als wirksame Zeile und der Zwischenschritt nicht als zurückgenommen', () => {
+      const log = [anpfiff, tipp, tippZurueck, eigentor];
+      const state = reduceMatch(log, CTX).state;
+      expect(toRuntimeEvents(state, log, CTX).map((e) => e.id)).toEqual(['og']);
+      expect(toRetractedEvents(state, log, CTX)).toEqual([]);
+    });
+
+    it('Gegenbeispiel: ein zurückgenommenes Tor bleibt sichtbar, auch wenn danach zur selben Spielsekunde ein Eigentor des Gegners fällt', () => {
+      const spaeter = ereignis({ id: 'og2', type: 'OWN_GOAL', at: 3_000, clockMs: 340_000, teamId: 'fc-nord' });
+      const log = [anpfiff, tipp, tippZurueck, ereignis({ id: 'x', type: 'FOUL', at: 2_060, clockMs: 341_000, teamId: 'sv-sued' }), spaeter];
+      const state = reduceMatch(log, CTX).state;
+      expect(toRetractedEvents(state, log, CTX).map((e) => e.id)).toEqual(['tipp']);
+    });
+
+    it('Gegenbeispiel: ein zurückgenommenes Tor zu einer anderen Spielsekunde bleibt sichtbar', () => {
+      const andere = ereignis({ id: 'og3', type: 'OWN_GOAL', at: 2_100, clockMs: 400_000, teamId: 'sv-sued' });
+      const log = [anpfiff, tipp, tippZurueck, andere];
+      const state = reduceMatch(log, CTX).state;
+      expect(toRetractedEvents(state, log, CTX).map((e) => e.id)).toEqual(['tipp']);
+    });
+  });
 });
