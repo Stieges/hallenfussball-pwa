@@ -89,6 +89,10 @@ export function useSlideshow(program: SlideProgram, transitionMs: number | null,
         index: target.index,
         page: target.page,
         direction: target.direction,
+        // Pin und Haltezeit gehören zum Zielzustand: aus `latest` bliebe ein gelöster Pin stehen und die Haltezeit
+        // des Endergebnisses (@ZM-077) endete nach jedem Übergang neu (Folienwechsel alle 0,5 s).
+        pinnedMatchId: target.pinnedMatchId,
+        finalUntil: target.finalUntil,
         startedAt: Date.now(),
       });
     }, ms);
