@@ -48,6 +48,7 @@
 #     G11B wie G11 fuer Teams (Team-INSERT-Trigger fehlt)                        -> A rot (A1, NB-2)
 #     G12 Bildschirm bekommt SR-Namen trotz Vorgabe Nummer                       -> P rot (A2, @W3-032)
 #     G13 Kindermodus mit Entscheidungs-Angaben in live_state                    -> P rot (N2)
+#     G14 basis wieder leer (Fassung 20261117_104, mutiert in 20261118_007)       -> P rot (@W2A-059 Z. 3)
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigene Wegwerf-Container und ein
 # eigenes Wegwerf-Netz, am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
@@ -70,6 +71,10 @@ BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 TARGET_NAME="20261117_104_public_payload.sql"
 TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
 ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261117_104_public_payload_rollback.sql"
+# Spaetere Migration, die NUR public_view.config_for ersetzt (basis = gespeicherter Fingerabdruck, C-PUBLIC-ENTSCHEIDUNG-
+# BASIS-LEER). Die Proben laufen gegen die Fassung MIT ihr; fehlt die Datei, laufen sie gegen 20261117_104 (Gegenprobe:
+# die Pruefung „basis = gespeicherter Fingerabdruck“ wird rot).
+BASIS_FOLLOWUP_FILE="$MIGRATIONS_DIR/20261118_007_public_entscheidung_basis.sql"
 DEFAULTS_FILE="$REPO_ROOT/src/core/models/publicContentDefaults.json"
 PREFIX="public-payload-check-$$"
 NET="$PREFIX-net"
@@ -222,6 +227,9 @@ HF1="$(uuid_for match:halbfinale-1)"; HF2="$(uuid_for match:halbfinale-2)"; M_WI
 M_DEL="$(uuid_for match:del-1)"; S_NEU="$(uuid_for match:spiel-15-neu)"; T_NEU="$(uuid_for team:fc-neu)"
 E() { uuid_for "event:$1"; }
 SHARE="HCNORD"
+# Fingerabdruck der Grundlage einer Entscheidung wie src/core/standings/decisionBasis (JSON.stringify: points, criteria,
+# matches[, forfeit]) -- d1 traegt ihn, d2 einen Alt-Text (frueher Begruendung) in basis.
+BASIS_D1="{\"points\":[3,1,0],\"criteria\":[\"points\",\"directComparison\",\"goalDifference\",\"goalsFor\"],\"matches\":[[\"$S1\",2,0,\"finished\",null]]}"
 
 # --- JWT (HS256) je Rolle, wie die App sie mitschickt -------------------------------------------------------------
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
@@ -383,7 +391,10 @@ VALUES ('$T', '$U_OLLI', 'Hallencup Nord', '2026-11-21', '13:00', 6, 2, 10, 'Spo
           'matchCockpitSettings', '{"internSetting":"cockpit-intern"}'::jsonb,
           'standingDecisions', jsonb_build_array(jsonb_build_object('id', 'd1', 'groupId', 'A',
               'teamIds', jsonb_build_array('$SV_SUED', '$TSV_WEST'), 'order', jsonb_build_array('$SV_SUED', '$TSV_WEST'),
-              'kind', 'order', 'basis', 'Los gezogen von Olli', 'decidedBy', 'Olli Leitung', 'reason', 'Losentscheid-Grund')),
+              'kind', 'order', 'basis', '$BASIS_D1', 'decidedBy', 'Olli Leitung', 'reason', 'Losentscheid-Grund'),
+            jsonb_build_object('id', 'd2', 'groupId', 'A',
+              'teamIds', jsonb_build_array('$SC_OST', '$FC_NORD'), 'order', jsonb_build_array('$FC_NORD', '$SC_OST'),
+              'kind', 'shootout', 'shootout', jsonb_build_object('winner', 4, 'loser', 3), 'basis', 'Los gezogen von Olli')),
           'monitors', '[{"id":"mon-feld1","name":"Hallenmonitor Feld 1","slides":[{"id":"s1","type":"live","config":{}},{"id":"s2","type":"sponsor","config":{"sponsorId":"sp-baecker"}}]},{"id":"mon-eingang","name":"Hallenmonitor Eingang","slides":[{"id":"s3","type":"sponsor","config":{"sponsorId":"sp-auto"}}]}]'::jsonb,
           'sponsors', '[{"id":"sp-baecker","name":"Baeckerei Korn","logoBase64":"data:image/png;base64,QkFFQ0tFUg==","websiteUrl":"https://korn.test","tier":"gold"},{"id":"sp-auto","name":"Autohaus Rad","logoBase64":"data:image/png;base64,QVVUTw=="}]'::jsonb)),
        ('$T_WINTER', '$U_FREMD', 'Wintercup', '2026-12-05', '10:00', 2, 1, 10, 'Halle Sued', NULL, NULL,
@@ -529,8 +540,15 @@ run_probes() {
   check P "interne Angaben fehlen (adminNotes, dashboardStatus, Cockpit-Einstellungen, Rueckzugsgrund, Ausfallgrund)" \
     "fehlt|fehlt|fehlt|fehlt|fehlt" \
     "$(has "$full" 'Hausmeister Kurt')|$(has "$full" 'intern-dashboard')|$(has "$full" 'cockpit-intern')|$(has "$full" 'Rueckzug intern')|$(has "$full" 'Halle zu spaet')"
-  check P "Gleichstands-Entscheidung ohne Begruendung, Person, Grund (basis leer)" "fehlt|fehlt|fehlt|" \
-    "$(has "$full" 'Los gezogen')|$(has "$full" 'Olli Leitung')|$(has "$full" 'Losentscheid-Grund')|$(jq -r '.tournament.config.standingDecisions[0].basis' <<<"$full" 2>/dev/null)"
+  check P "Gleichstands-Entscheidung ohne Begruendung, Person, Grund (decidedBy/decidedAt/reason und Alt-Text fehlen)" "fehlt|fehlt|fehlt|fehlt|fehlt" \
+    "$(has "$full" 'Los gezogen')|$(has "$full" 'Olli Leitung')|$(has "$full" 'Losentscheid-Grund')|$(has "$full" 'decidedBy')|$(has "$full" 'reason')"
+  check P "Gleichstands-Entscheidung: nur id, groupId, teamIds, order, kind[, shootout], basis" \
+    "basis,groupId,id,kind,order,teamIds|basis,groupId,id,kind,order,shootout,teamIds" \
+    "$(jq -r '[.tournament.config.standingDecisions[] | keys | join(",")] | join("|")' <<<"$full" 2>/dev/null)"
+  # @W2A-059 Z. 3 / C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER (20261118_007): der Fingerabdruck geht unveraendert durch, sonst
+  # uebernimmt die Anzeige die Entscheidung nie; ein Alt-Text in basis (frueher Begruendung) wird zu "".
+  check P "@W2A-059 basis = gespeicherter Fingerabdruck (Zuschauer, Monitor); Alt-Text in basis -> leer" "gleich|gleich|" \
+    "$([[ "$(jq -r '.tournament.config.standingDecisions[0].basis' <<<"$full" 2>/dev/null)" == "$BASIS_D1" ]] && echo gleich || echo verschieden)|$([[ "$(jq -r '.tournament.config.standingDecisions[0].basis' <<<"$(disp anon "$T" mon-feld1 null)" 2>/dev/null)" == "$BASIS_D1" ]] && echo gleich || echo verschieden)|$(jq -r '.tournament.config.standingDecisions[1].basis' <<<"$full" 2>/dev/null)"
   check P "@W3-001 Zuschauer: kein Schiedsrichter, weder Name noch Nummer" "fehlt|fehlt|fehlt" \
     "$(has "$full" 'Paul Schmidt')|$(has "$full" 'referee_number')|$(has "$full" 'referee_config')"
   check P "Turnier: owner_id, version, Teams-Kontakte und Spieler fehlen" "fehlt|false|fehlt|fehlt" \
@@ -761,7 +779,14 @@ run_probes() {
 run_assertions() {
   local priv names_sql names_sh
   priv="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || priv="nicht ausfuehrbar: $priv"
-  check S "Rechte-Assertion: keine Zeile |f" "" "$(grep -v '|t$' <<<"$priv" || true)"
+  # Assertions spaeterer Migrationen (nach 20261117_104, hier nicht eingespielt) zaehlen nicht: Namen aus der festen
+  # Zuordnung in db-drift-check.sh (pending_assertions_for).
+  local later="" f
+  for f in ${AFTER[@]+"${AFTER[@]}"}; do
+    later="$later $(awk -v n="    $(basename "$f"))" '$0 == n { getline; if ($0 ~ /echo "/) { sub(/^[^"]*"/, ""); sub(/"[^"]*$/, ""); print } }' "$REPO_ROOT/scripts/db-drift-check.sh")"
+  done
+  check S "Rechte-Assertion: keine Zeile |f (ohne Assertions spaeterer Migrationen)" "" \
+    "$(grep -v '|t$' <<<"$priv" | while IFS= read -r line; do [[ " $later " == *" ${line%%|*} "* ]] || echo "$line"; done || true)"
   check S "Rechte-Assertion: die B-14-Zeilen vorhanden und |t" \
     "public-read-core-unchanged|t,public-read-default-privileges-no-anon|t,public-read-functions-definer-execute-anon|t,public-read-no-anon-select-policies|t,public-read-reading-member-execute-only-authenticated|t,public-read-reshare-keeps-code|t,public-read-view-schema-no-client-access|t" \
     "$(grep -E '^public-read-' <<<"$priv" | sort | paste -sd, -)"
@@ -801,6 +826,15 @@ run_measurement() {
   send "$U_OLLI" "$S7"; need_accepted "Messung Tor" "accepted"
   measure "Zuschauer Delta 1 Tor (Spiel 7, 4 Ereignisse)" anon public_tournament "{\"share_code\":\"$SHARE\",\"since_version\":$v}"
   measure "Bildschirm Delta 1 Tor" anon display_tournament "{\"tournament_id\":\"$T\",\"monitor_id\":\"mon-feld1\",\"since_version\":$vs}"
+}
+
+apply_basis_followup() {
+  if [[ -f "$BASIS_FOLLOWUP_FILE" ]]; then
+    psql_stdin < "$BASIS_FOLLOWUP_FILE" >/dev/null || { echo "::error::$(basename "$BASIS_FOLLOWUP_FILE") scheitert" >&2; exit 1; }
+    echo "Folge-Migration $(basename "$BASIS_FOLLOWUP_FILE") eingespielt (Proben gegen diese Fassung)." >&2
+  else
+    echo "Folge-Migration $(basename "$BASIS_FOLLOWUP_FILE") fehlt -- Proben gegen 20261117_104." >&2
+  fi
 }
 
 summary() {
@@ -845,19 +879,38 @@ if [[ "$MODE" == "gegenprobe" ]]; then
               OR coalesce(v_structure_us, 0) > p_since_version;"
   export G9_FROM="   WHERE e.key = ANY (c_config_keys) AND e.value <> 'null'::jsonb;"
   export G9_TO="   WHERE e.value <> 'null'::jsonb;"
-  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13)
+  # G14 mutiert die Folge-Migration 20261118_007 (dort steht basis); alle anderen die Ziel-Migration.
+  export G14_FROM="                               THEN d -> 'basis' ELSE '\"\"'::jsonb END"
+  export G14_TO="                               THEN '\"\"'::jsonb ELSE '\"\"'::jsonb END"
+  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13 G14)
   RED_TOTAL=0
   for mut in "${MUTS[@]}"; do
     start_container "$(tr 'A-Z' 'a-z' <<<"$mut")"
     setup_before
-    MUT_KEY="$mut" python3 -c '
+    mutate() {
+      MUT_KEY="$mut" python3 -c '
 import os, sys
 s = sys.stdin.read()
 k = os.environ["MUT_KEY"]
 frm = os.environ[k + "_FROM"]
 if s.count(frm) != 1:
     sys.exit("Gegenprobe: Muster %s nicht genau einmal in der Migration (%d)" % (k, s.count(frm)))
-sys.stdout.write(s.replace(frm, os.environ[k + "_TO"]))' < "$TARGET_FILE" | psql_stdin
+sys.stdout.write(s.replace(frm, os.environ[k + "_TO"]))' < "$1" | psql_stdin
+    }
+    # Muster in public_view.config_for (G2, G9) stehen auch in 20261118_007, die die Funktion ersetzt: dort mit
+    # mutieren, sonst ueberschriebe die Folge-Migration die Mutation. G14 steht nur in 20261118_007.
+    if [[ "$mut" == "G14" ]]; then
+      psql_stdin < "$TARGET_FILE"
+      mutate "$BASIS_FOLLOWUP_FILE"
+    else
+      mutate "$TARGET_FILE"
+      from_var="${mut}_FROM"
+      if [[ -f "$BASIS_FOLLOWUP_FILE" ]] && grep -qF -- "${!from_var}" "$BASIS_FOLLOWUP_FILE"; then
+        mutate "$BASIS_FOLLOWUP_FILE"
+      else
+        apply_basis_followup
+      fi
+    fi
     post_migration_data
     start_rest
     reset_counts
@@ -897,6 +950,9 @@ if [[ "$MODE" == "without-migration" ]]; then
 fi
 
 DUMP_BEFORE="$(schema_dump)"
+# forfeit_absent gibt es seit 20261110_005 (vor dieser Migration) echt; nur wenn sie fehlt, legt der Harness sie an
+# (post_migration_data) und nimmt sie vor dem Rueckweg-Vergleich wieder weg.
+FORFEIT_REAL="$(q "SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'matches' AND column_name = 'forfeit_absent';")"
 COUNTS_BEFORE="$(counts "$DUMP_BEFORE")"
 ROWS_SQL="SELECT (SELECT count(*) FROM public.tournaments) || '|' || (SELECT count(*) FROM public.teams) || '|' || (SELECT count(*) FROM public.matches) || '|' || (SELECT count(*) FROM public.match_events) || '|' || (SELECT count(*) FROM public.tournament_collaborators);"
 ROWS_BEFORE="$(q "$ROWS_SQL")"
@@ -928,6 +984,7 @@ for dim in columns functions triggers tables policies indexes rls_tables; do
   check S "Katalogzaehlung public $dim: Zuwachs" "$expected" $(( $(count_of "$COUNTS_AFTER" "$dim") - $(count_of "$COUNTS_BEFORE" "$dim") ))
 done
 
+apply_basis_followup
 post_migration_data
 start_rest
 run_probes
@@ -945,7 +1002,7 @@ check W "zweites Einspielen laeuft (Exit 0)" "0" "$W_EXIT"
 check W "danach Schema unveraendert (pg_dump identisch)" "identisch" "$([[ "$(schema_dump)" == "$DUMP_W1" ]] && echo identisch || echo verschieden)"
 
 # --- X: Rueckweg ----------------------------------------------------------------------------------------------------
-psql_stdin <<<"ALTER TABLE public.matches DROP COLUMN IF EXISTS forfeit_absent;" # Harness-Spalte (A-25-Ersatz) weg
+[[ "$FORFEIT_REAL" == "1" ]] || psql_stdin <<<"ALTER TABLE public.matches DROP COLUMN IF EXISTS forfeit_absent;" # Harness-Spalte (A-25-Ersatz) weg
 psql_stdin < "$ROLLBACK_FILE"
 DUMP_ROLLED_BACK="$(schema_dump)"
 check X "nach dem Rueckweg: Schema public = vor der Migration (pg_dump identisch)" "identisch" \
@@ -957,8 +1014,18 @@ check X "nach dem Rueckweg: Schema public_view weg, anon liest das oeffentliche 
   "$(q "SELECT to_regnamespace('public_view') IS NOT NULL;")|$(q "BEGIN; SET LOCAL ROLE anon; SELECT count(*) = 1 FROM public.tournaments WHERE share_code = '$SHARE'; ROLLBACK;" | grep -E '^[tf]$')"
 
 for f in ${AFTER[@]+"${AFTER[@]}"}; do
-  psql_stdin < "$f"
-  echo "OK    spaetere Migration laeuft nach dem Rueckweg: $(basename "$f")" >&2
+  # Spaetere Migrationen laufen nach dem Rueckweg -- ausser sie brauchen 20261117_104 selbst (20261118_001 Zeitspalten,
+  # 20261118_007 public_view.config_for): dann brechen sie mit Hinweis auf 20261117_104 ab, ohne etwas anzulegen.
+  set +e
+  after_out="$(psql_stdin < "$f" 2>&1)"
+  after_exit=$?
+  set -e
+  if [[ "$after_exit" -eq 0 ]]; then
+    echo "OK    spaetere Migration laeuft nach dem Rueckweg: $(basename "$f")" >&2
+  else
+    check X "$(basename "$f") nach dem Rueckweg von 20261117_104: bricht mit Hinweis auf 20261117_104 ab" "enthalten" \
+      "$(has "$after_out" '20261117_104')"
+  fi
 done
 
 summary
