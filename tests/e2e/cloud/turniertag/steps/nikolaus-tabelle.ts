@@ -16,7 +16,6 @@ import { restAsRole } from '../../restAsRole';
 import { eventOf } from './playViaRpc';
 import { expectPageAnchor, expectSollMarker } from './shared';
 import type { StepContext, TurniertagStep } from './types';
-import { e2eUuid } from '../../e2eUuid';
 
 const KAMMER = 'DJK Kammer';
 const ROT = 'TSV Waging rot';
