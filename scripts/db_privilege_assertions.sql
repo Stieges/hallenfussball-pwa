@@ -1218,12 +1218,14 @@ SELECT 'public-read-reshare-keeps-code',
 -- Funktionen, muss der Wert hier mitgezogen werden (bewusst). Vor dem Live-Einspielen: "f".
 -- Mitgezogen fuer 20261118_007_public_entscheidung_basis.sql (public_view.config_for reicht basis durch; vorher
 -- b066d903d80edc87778e7e65b2958366). 007 live seit 30.10.2026 (md5(prosrc) config_for ad6a688f…).
+-- Mitgezogen fuer 20261118_008_monitor_endstand.sql (U): config_for gibt clockMode/finalPhaseMinutes heraus (vorher, Fassung
+-- 007: d9d204bec11e731e6b68287dd79d0bfc). 008 live seit 30.10.2026 (md5(prosrc) config_for 4aed3d49…).
 UNION ALL
 SELECT 'public-read-core-unchanged',
        coalesce((SELECT count(*) = 12
                         AND md5(string_agg(pg_get_functiondef(p.oid), E'\n'
                                            ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
-                            = 'd9d204bec11e731e6b68287dd79d0bfc'
+                            = '764632d34bde5c11bfce47b6afbadb9f'
                    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                   WHERE n.nspname = 'public_view'
                      OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
@@ -1356,6 +1358,30 @@ SELECT 'abschluss-nachzug-late-entries-rpc',
                         AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
                         AND position('has_tournament_permission(p_tournament_id, ''manageLifecycle'')' IN p.prosrc) > 0
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.list_late_entries(uuid)')), false)
+-- Monitor-Endstand (20261118_008_monitor_endstand.sql, @ZM-121 Z. 1/2): Endstand ueber den Monitor-Link wie
+-- display_tournament (Kennung in config.monitors, ohne Teilen), nach dem Wiederoeffnen der gespeicherte Stand; Antwort nur
+-- ueber final_standings_payload (Kindermodus, Torschuetzen-Schalter). DEFINER, search_path fest, anon + authenticated, nicht PUBLIC.
+UNION ALL
+SELECT 'monitor-endstand-display-link',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('RETURN match_engine.final_standings_payload(v_t);' IN p.prosrc) > 0
+                        AND position('WHERE m ->> ''id'' = p_monitor_id' IN p.prosrc) > 0
+                        AND position('FROM public.tournament_final_standings fs WHERE fs.tournament_id = v_t.id' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.display_final_standings(uuid,text)')), false)
+-- (2) Zuschauer-Endstand nach dem Wiederoeffnen (@LZ-077 Z. 2): Zweig (B), Teilen-Pruefung und final_standings_payload bleiben.
+UNION ALL
+SELECT 'monitor-endstand-public-reopen',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('20261118_008 (B)' IN p.prosrc) > 0
+                        AND position('t.share_code = p_share_code AND coalesce(t.is_public, false) AND t.deleted_at IS NULL' IN p.prosrc) > 0
+                        AND position('RETURN match_engine.final_standings_payload(v_t);' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.public_final_standings(text)')), false)
 -- R5 PR 1 (20261118_006, Sofort-Kanal, Zone 1 „Änderungssignal“): Signal ohne Inhalt je Anweisung und Turnier.
 -- (1) Sieben Trigger AFTER ... FOR EACH STATEMENT auf matches (I/U/D), teams (I/U/D), tournaments (U), aktiv.
 UNION ALL

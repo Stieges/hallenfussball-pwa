@@ -129,6 +129,16 @@ describe('R3-6 Zuschauer-Seite: Endstand', () => {
     expect(screen.queryByText(/vorläufig/i)).toBeNull();
   });
 
+  it('@LZ-077 Z. 2: wieder geöffnet über den Betreiber (Turnier läuft, Server liefert den gespeicherten Endstand) – derselbe Endstand wie vorher, nie neu gerechnet', async () => {
+    const t = buildLiveViewTournament();
+    const wiederOffen: Tournament = { ...t, lifecycleStatus: 'fixed', matches: t.matches.map((m, i) => (i === 0 ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 3 } : m)) };
+    await renderWith(wiederOffen, stored({ points: 99 }));
+    const rows = within(await screen.findByTestId('final-standings-list')).getAllByTestId('final-standing-row');
+    expect(rows.map((row) => within(row).getByText(/^(FC|SV|TSV|SC|VfL|TuS)/).textContent)).toEqual(NAMES);
+    expect(within(rows[0]).getByTestId('final-standing-points')).toHaveTextContent('99');
+    expect(screen.queryByText(/vorläufig/i)).toBeNull();
+  });
+
   it('@ZM-012 Gegenbeispiel: Torschützen-Schalter aus – die Plätze stehen da, aber keine Torschützenliste', async () => {
     await renderWith(buildLiveViewTournament(), stored({ scorers: false }));
     await screen.findByTestId('final-standings-list');
