@@ -9,7 +9,7 @@
  * schließt die Gruppe mit dem Strafstoßschießen 4:3 für FC Nord ab (Entscheidung wie im Abschluss-Ablauf: `draftToDecision`).
  *
  * Die Server-Zeilen entstehen wie beim Veröffentlichen (`mapTournamentToSupabase`), die Ergebnisse wie nach dem Abpfiff
- * (`score_*`, `match_status = finished`, `decided_by = regular`). Die Antwort trägt nur die Felder der Positivliste.
+ * (`score_*`, `match_status = finished`, `decided_by` = `regular` bzw. die Wertung des Spiels, `forfeit_absent`). Die Antwort trägt nur die Felder der Positivliste.
  */
 import type { Tournament } from '../../../types/tournament';
 import { draftToDecision } from '../../services/groupCompletionPlan';
@@ -28,8 +28,8 @@ export const ERGEBNISSE_NORD_SUED =
   'N–S 2:2; N–M 1:0; N–W 1:0; N–O 1:0; N–B 1:0; S–M 1:0; S–W 1:0; S–O 1:0; S–B 1:0; M–W 1:0; M–O 1:0; M–B 1:0; W–O 1:0; W–B 1:0; O–B 1:0';
 
 /** Das Turnier auf dem Gerät der Turnierleitung, vor der Entscheidung (öffentlich geteilt, Tabellen sichtbar, ein Monitor mit Tabellen-Folie). */
-export function turnierNordSued(): Tournament {
-  const { tournament } = league('NSMWOB', ERGEBNISSE_NORD_SUED);
+export function turnierNordSued(ergebnisse: string = ERGEBNISSE_NORD_SUED): Tournament {
+  const { tournament } = league('NSMWOB', ergebnisse);
   return {
     ...tournament,
     id: 'c0ffee00-0000-4000-8000-000000000001',
@@ -78,7 +78,8 @@ export function serverZeilen(tournament: Tournament): { tournament: Row; teams: 
         score_a: finished ? match.scoreA ?? null : null,
         score_b: finished ? match.scoreB ?? null : null,
         match_status: match?.matchStatus ?? 'scheduled',
-        decided_by: finished ? 'regular' : null,
+        decided_by: finished ? match.decidedBy ?? 'regular' : null,
+        forfeit_absent: finished ? match.forfeitAbsent ?? null : null,
       };
     }),
   };

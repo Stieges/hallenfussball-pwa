@@ -49,6 +49,7 @@
 #     G12 Bildschirm bekommt SR-Namen trotz Vorgabe Nummer                       -> P rot (A2, @W3-032)
 #     G13 Kindermodus mit Entscheidungs-Angaben in live_state                    -> P rot (N2)
 #     G14 basis wieder leer (Fassung 20261117_104, mutiert in 20261118_007)       -> P rot (@W2A-059 Z. 3)
+#     G15 Formpruefung ohne Bedingung "keine Zusatzschluessel" (in 20261118_007)   -> P rot (Review #413 M1)
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigene Wegwerf-Container und ein
 # eigenes Wegwerf-Netz, am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
@@ -228,7 +229,8 @@ M_DEL="$(uuid_for match:del-1)"; S_NEU="$(uuid_for match:spiel-15-neu)"; T_NEU="
 E() { uuid_for "event:$1"; }
 SHARE="HCNORD"
 # Fingerabdruck der Grundlage einer Entscheidung wie src/core/standings/decisionBasis (JSON.stringify: points, criteria,
-# matches[, forfeit]) -- d1 traegt ihn, d2 einen Alt-Text (frueher Begruendung) in basis.
+# matches[, forfeit]) -- d1 traegt ihn, d2 einen Alt-Text (frueher Begruendung) in basis, d3 einen Fingerabdruck mit
+# Zusatzschluessel "reason", d4 ein JSON-Array (beide keine Form von decisionBasis -> "").
 BASIS_D1="{\"points\":[3,1,0],\"criteria\":[\"points\",\"directComparison\",\"goalDifference\",\"goalsFor\"],\"matches\":[[\"$S1\",2,0,\"finished\",null]]}"
 
 # --- JWT (HS256) je Rolle, wie die App sie mitschickt -------------------------------------------------------------
@@ -394,7 +396,13 @@ VALUES ('$T', '$U_OLLI', 'Hallencup Nord', '2026-11-21', '13:00', 6, 2, 10, 'Spo
               'kind', 'order', 'basis', '$BASIS_D1', 'decidedBy', 'Olli Leitung', 'reason', 'Losentscheid-Grund'),
             jsonb_build_object('id', 'd2', 'groupId', 'A',
               'teamIds', jsonb_build_array('$SC_OST', '$FC_NORD'), 'order', jsonb_build_array('$FC_NORD', '$SC_OST'),
-              'kind', 'shootout', 'shootout', jsonb_build_object('winner', 4, 'loser', 3), 'basis', 'Los gezogen von Olli')),
+              'kind', 'shootout', 'shootout', jsonb_build_object('winner', 4, 'loser', 3), 'basis', 'Los gezogen von Olli'),
+            jsonb_build_object('id', 'd3', 'groupId', 'B',
+              'teamIds', jsonb_build_array('$SG_MITTE', '$DJK_BERG'), 'order', jsonb_build_array('$SG_MITTE', '$DJK_BERG'),
+              'kind', 'shared', 'basis', '{"points":[3,1,0],"criteria":[],"matches":[],"reason":"Losentscheid-Grund-2"}'),
+            jsonb_build_object('id', 'd4', 'groupId', 'B',
+              'teamIds', jsonb_build_array('$DJK_BERG', '$SG_MITTE'), 'order', jsonb_build_array('$DJK_BERG', '$SG_MITTE'),
+              'kind', 'shared', 'basis', '[1,2]')),
           'monitors', '[{"id":"mon-feld1","name":"Hallenmonitor Feld 1","slides":[{"id":"s1","type":"live","config":{}},{"id":"s2","type":"sponsor","config":{"sponsorId":"sp-baecker"}}]},{"id":"mon-eingang","name":"Hallenmonitor Eingang","slides":[{"id":"s3","type":"sponsor","config":{"sponsorId":"sp-auto"}}]}]'::jsonb,
           'sponsors', '[{"id":"sp-baecker","name":"Baeckerei Korn","logoBase64":"data:image/png;base64,QkFFQ0tFUg==","websiteUrl":"https://korn.test","tier":"gold"},{"id":"sp-auto","name":"Autohaus Rad","logoBase64":"data:image/png;base64,QVVUTw=="}]'::jsonb)),
        ('$T_WINTER', '$U_FREMD', 'Wintercup', '2026-12-05', '10:00', 2, 1, 10, 'Halle Sued', NULL, NULL,
@@ -543,10 +551,12 @@ run_probes() {
   check P "Gleichstands-Entscheidung ohne Begruendung, Person, Grund (decidedBy/decidedAt/reason und Alt-Text fehlen)" "fehlt|fehlt|fehlt|fehlt|fehlt" \
     "$(has "$full" 'Los gezogen')|$(has "$full" 'Olli Leitung')|$(has "$full" 'Losentscheid-Grund')|$(has "$full" 'decidedBy')|$(has "$full" 'reason')"
   check P "Gleichstands-Entscheidung: nur id, groupId, teamIds, order, kind[, shootout], basis" \
-    "basis,groupId,id,kind,order,teamIds|basis,groupId,id,kind,order,shootout,teamIds" \
+    "basis,groupId,id,kind,order,teamIds|basis,groupId,id,kind,order,shootout,teamIds|basis,groupId,id,kind,order,teamIds|basis,groupId,id,kind,order,teamIds" \
     "$(jq -r '[.tournament.config.standingDecisions[] | keys | join(",")] | join("|")' <<<"$full" 2>/dev/null)"
   # @W2A-059 Z. 3 / C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER (20261118_007): der Fingerabdruck geht unveraendert durch, sonst
   # uebernimmt die Anzeige die Entscheidung nie; ein Alt-Text in basis (frueher Begruendung) wird zu "".
+  check P "Formpruefung basis: Fingerabdruck mit Zusatzschluessel reason (d3) und JSON-Array (d4) -> leer, Grund nirgends" "||fehlt" \
+    "$(jq -r '.tournament.config.standingDecisions[2].basis' <<<"$full" 2>/dev/null)|$(jq -r '.tournament.config.standingDecisions[3].basis' <<<"$full" 2>/dev/null)|$(has "$full" 'Losentscheid-Grund-2')"
   check P "@W2A-059 basis = gespeicherter Fingerabdruck (Zuschauer, Monitor); Alt-Text in basis -> leer" "gleich|gleich|" \
     "$([[ "$(jq -r '.tournament.config.standingDecisions[0].basis' <<<"$full" 2>/dev/null)" == "$BASIS_D1" ]] && echo gleich || echo verschieden)|$([[ "$(jq -r '.tournament.config.standingDecisions[0].basis' <<<"$(disp anon "$T" mon-feld1 null)" 2>/dev/null)" == "$BASIS_D1" ]] && echo gleich || echo verschieden)|$(jq -r '.tournament.config.standingDecisions[1].basis' <<<"$full" 2>/dev/null)"
   check P "@W3-001 Zuschauer: kein Schiedsrichter, weder Name noch Nummer" "fehlt|fehlt|fehlt" \
@@ -879,10 +889,13 @@ if [[ "$MODE" == "gegenprobe" ]]; then
               OR coalesce(v_structure_us, 0) > p_since_version;"
   export G9_FROM="   WHERE e.key = ANY (c_config_keys) AND e.value <> 'null'::jsonb;"
   export G9_TO="   WHERE e.value <> 'null'::jsonb;"
-  # G14 mutiert die Folge-Migration 20261118_007 (dort steht basis); alle anderen die Ziel-Migration.
+  # G14/G15 mutieren die Folge-Migration 20261118_007 (dort steht basis); alle anderen die Ziel-Migration.
   export G14_FROM="                               THEN d -> 'basis' ELSE '\"\"'::jsonb END"
   export G14_TO="                               THEN '\"\"'::jsonb ELSE '\"\"'::jsonb END"
-  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13 G14)
+  export G15_FROM="                                    AND ((d ->> 'basis')::jsonb - ARRAY['points', 'criteria', 'matches', 'forfeit']) = '{}'::jsonb
+"
+  export G15_TO=""
+  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13 G14 G15)
   RED_TOTAL=0
   for mut in "${MUTS[@]}"; do
     start_container "$(tr 'A-Z' 'a-z' <<<"$mut")"
@@ -899,7 +912,7 @@ sys.stdout.write(s.replace(frm, os.environ[k + "_TO"]))' < "$1" | psql_stdin
     }
     # Muster in public_view.config_for (G2, G9) stehen auch in 20261118_007, die die Funktion ersetzt: dort mit
     # mutieren, sonst ueberschriebe die Folge-Migration die Mutation. G14 steht nur in 20261118_007.
-    if [[ "$mut" == "G14" ]]; then
+    if [[ "$mut" == "G14" || "$mut" == "G15" ]]; then
       psql_stdin < "$TARGET_FILE"
       mutate "$BASIS_FOLLOWUP_FILE"
     else
