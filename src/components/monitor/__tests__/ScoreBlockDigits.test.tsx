@@ -4,8 +4,8 @@
  * auch bei zwei Stellen. Gilt für jede Auflösung, weil die Größe aus dem Kasten (cq-Einheiten) kommt.
  */
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
-import { ScoreBlock } from '../ScoreBlock';
+import { render, screen } from '@testing-library/react';
+import { ScoreBox } from '../../ui/molecules/ScoreBox';
 import { scoreDigitFontSize, DIGIT_HEIGHT_MAX_OF_BOX } from '../scoreDigitSize';
 
 describe('Ziffern im Kasten haben Luft', () => {
@@ -15,9 +15,11 @@ describe('Ziffern im Kasten haben Luft', () => {
   });
 
   it('der Kasten ist ein Größen-Container (cq-Einheiten wirken)', () => {
-    const { container } = render(<ScoreBlock score={12} backgroundColor="#1E40AF" position="home" />);
-    const block = container.querySelector<HTMLElement>('[data-position="home"]')!;
-    expect(block.style.containerType).toBe('size');
+    const { container } = render(
+      <ScoreBox score={12} fill={{ kind: 'solid', color: '#1E40AF' }} size="display" background="#0f172a" textColor="#ffffff" ariaLabel="Heim: 12" testId="box" />,
+    );
+    const ziffernflaeche = screen.getByTestId('box-digits').parentElement!;
+    expect(ziffernflaeche.style.containerType).toBe('size');
     expect(container.textContent).toBe('12');
   });
 });

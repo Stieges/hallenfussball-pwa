@@ -32,8 +32,8 @@ function zeigeSpiel7(kit: MatchKit | undefined, spectatorDisplay: SpectatorDispl
   );
 }
 
-const heim = () => document.querySelector<HTMLElement>('[data-position="home"]');
-const gast = () => document.querySelector<HTMLElement>('[data-position="away"]');
+const heim = () => document.querySelector<HTMLElement>('[data-testid="live-box-home"]');
+const gast = () => document.querySelector<HTMLElement>('[data-testid="live-box-away"]');
 
 describe('@ZM-159 Farbe der Kästen am Monitor Feld 1 (Fälle A, B, C)', () => {
   it.each([

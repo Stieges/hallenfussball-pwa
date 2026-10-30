@@ -65,7 +65,7 @@ async function waehle(page: Page, seite: 'home' | 'away', hex: string) {
   await page.getByRole('option', { name: `Farbe ${hex}` }).click();
 }
 
-const kasten = (page: Page, seite: 'home' | 'away') => page.locator(`[data-testid="live-block-${seite}"] [data-position]`);
+const kasten = (page: Page, seite: 'home' | 'away') => page.locator(`[data-testid="live-box-${seite}"]`);
 const flaeche = (page: Page, seite: 'home' | 'away') => kasten(page, seite).evaluate((el) => getComputedStyle(el).backgroundColor);
 const groesse = (page: Page, seite: 'home' | 'away') => kasten(page, seite).evaluate((el) => {
   const b = el.getBoundingClientRect();

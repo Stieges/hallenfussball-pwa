@@ -32,7 +32,7 @@ describe('TeamName', () => {
   });
 
   it('@ZM-157 SG Mitte mit Logo: vor dem Namen das Logo', () => {
-    render(<TeamName {...props({ team: { name: 'SG Mitte', logo: { type: 'upload', value: 'data:image/png;base64,AAAA' } }, name: 'SG Mitte' })} />);
+    render(<TeamName {...props({ team: { name: 'SG Mitte', logo: { type: 'base64', value: 'data:image/png;base64,AAAA' } }, name: 'SG Mitte' })} />);
     const avatar = screen.getByTestId('tn-avatar');
     expect(avatar.querySelector('img')).not.toBeNull();
     expect(avatar.querySelector('img')).toHaveAttribute('src', 'data:image/png;base64,AAAA');
@@ -68,7 +68,7 @@ describe('TeamName', () => {
     const { unmount } = render(<TeamName {...props()} />);
     const ohne = screen.getByTestId('tn-avatar').style.width;
     unmount();
-    render(<TeamName {...props({ team: { name: 'SG Mitte', logo: { type: 'upload', value: 'data:image/png;base64,AAAA' } } })} />);
+    render(<TeamName {...props({ team: { name: 'SG Mitte', logo: { type: 'base64', value: 'data:image/png;base64,AAAA' } } })} />);
     expect(screen.getByTestId('tn-avatar').style.width).toBe(ohne);
     expect(ohne).toBe(displayFontSizes.teamName);
   });

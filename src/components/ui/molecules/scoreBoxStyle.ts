@@ -72,7 +72,7 @@ interface SizeLayout {
 const DIGIT_HEIGHT_MAX_OF_BOX = 0.6;
 const DIGIT_WIDTH_MAX_OF_BOX = 0.5;
 /** Zeilen-Kasten (Monitor-Folienzeile): Maße in em der Zeilenschrift `displayList.fontSizes.team` (Feinschliff in Aufgabe 3.2). */
-const ROW_BOX_WIDTH_EM = 2.4;
+export const ROW_BOX_WIDTH_EM = 2.4;
 const ROW_BOX_HEIGHT_EM = 1.8;
 /** Ecken: Versatz über/neben der Kastenecke als Bruchteil des Kreisdurchmessers (wie `LiveScoreGrid`, Mockup K5g) und Symbolanteil. */
 const CORNER_TOP_DIVISOR = 3;

@@ -44,7 +44,7 @@ const stand = (extra: Partial<FinalScore>): FinalScore => ({ a: 2, b: 2, regular
 /** Alles, was Größe und Lage der Kästen bestimmt: Raster, Zelle, Kasten, Trenner. */
 function kastenStile() {
   const zelle = (s: string) => screen.getByTestId(`live-block-${s}`);
-  const kasten = (s: string) => zelle(s).querySelector<HTMLElement>('[data-position]')!;
+  const kasten = (s: string) => screen.getByTestId(`live-box-${s}`);
   const pick = (el: HTMLElement, keys: string[]) => keys.map((k) => `${k}=${(el.style as unknown as Record<string, string>)[k]}`).join(';');
   return {
     raster: pick(screen.getByTestId('live-grid'), ['gridTemplateColumns', 'gridTemplateRows', 'columnGap', 'rowGap', 'width']),
@@ -87,10 +87,10 @@ describe('@ZM-151 Ergebniskästen: ein Raster für alle Zustände', () => {
 
   it('@ZM-156 der Sieger-Ring ist eine Outline (ändert die Größe nicht), der Pokal-Kreis (Finalrunde) liegt absolut über dem Kasten', () => {
     render(<LiveMatchDisplay match={createMatch(ZUSTAENDE[5][1])} finalScore={ZUSTAENDE[5][2]} finalRound />);
-    const kasten = screen.getByTestId('live-block-home').querySelector<HTMLElement>('[data-position]')!;
-    expect(kasten.style.outline).not.toBe('');
-    expect(kasten.style.borderWidth).toBe(screen.getByTestId('live-block-away').querySelector<HTMLElement>('[data-position]')!.style.borderWidth);
-    expect(screen.getByTestId('live-cup-home').style.position).toBe('absolute');
+    const kasten = screen.getByTestId('live-box-home');
+    expect(kasten.style.outlineStyle).toBe('solid');
+    expect(kasten.style.borderWidth).toBe(screen.getByTestId('live-box-away').style.borderWidth);
+    expect(screen.getByTestId('live-box-home-cup').style.position).toBe('absolute');
   });
 
   it('@ZM-156 Gegenbeispiel: Gruppenspiel mit Sieger hat den Ring (Outline), aber keinen Pokal; die Kästen bleiben gleich', () => {
@@ -98,8 +98,8 @@ describe('@ZM-151 Ergebniskästen: ein Raster für alle Zustände', () => {
     const finale = kastenStile();
     unmount();
     render(<LiveMatchDisplay match={createMatch(ZUSTAENDE[3][1])} finalScore={ZUSTAENDE[3][2]} />);
-    expect(screen.getByTestId('live-block-home').querySelector<HTMLElement>('[data-position]')!.style.outline).not.toBe('');
-    expect(screen.queryByTestId('live-cup-home')).toBeNull();
+    expect(screen.getByTestId('live-box-home').style.outlineStyle).toBe('solid');
+    expect(screen.queryByTestId('live-box-home-cup')).toBeNull();
     expect(kastenStile()).toEqual(finale);
   });
 });

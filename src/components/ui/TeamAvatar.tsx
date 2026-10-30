@@ -1,5 +1,5 @@
 import React, { useState, CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens';
+import { cssVars, displayFontSizes } from '../../design-tokens';
 import { TeamLogo, TeamColors } from '../../types/tournament';
 
 /**
@@ -101,7 +101,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
 
   const pixelSize = AVATAR_SIZES[size];
   const ringWidth = size === 'xs' ? 2 : size === 'sm' ? 2 : 3;
-  const fontSize = dimension === undefined ? `${Math.round(pixelSize * INITIALS_SHARE)}px` : `calc(${dimension} * ${INITIALS_SHARE})`;
+  const fontSize = dimension === undefined ? `${Math.round(pixelSize * INITIALS_SHARE)}px` : `max(calc(${dimension} * ${INITIALS_SHARE}), ${displayFontSizes.clockHint})`;
 
   const logo = team.logo;
   const hasLogo = logo && logo.type !== 'initials' && !imageError;
