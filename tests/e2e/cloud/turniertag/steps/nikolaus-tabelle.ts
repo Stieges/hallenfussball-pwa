@@ -170,6 +170,61 @@ async function entscheidungNichtOeffentlich(): Promise<void> {
   }
 }
 
+/** Zweiter Monitor nur für N6g: eine einzige Tabellen-Folie (der Seed-Monitor zeigt nur die Live-Folie von Feld 1). */
+const TABELLEN_MONITOR_ID = e2eUuid('monitor:nikolaus-cup:haupt:tabelle');
+
+/** Fügt den Tabellen-Monitor hinzu bzw. entfernt ihn wieder (Datenbank-Eigentümer mit dem Server-Schalter, wie `setzeKindermodus`). */
+function tabellenMonitor(an: boolean): void {
+  const ohne = `coalesce((SELECT jsonb_agg(m) FROM jsonb_array_elements(coalesce(config->'monitors','[]'::jsonb)) m WHERE m->>'id' <> '${TABELLEN_MONITOR_ID}'), '[]'::jsonb)`;
+  const monitor = JSON.stringify({
+    id: TABELLEN_MONITOR_ID, name: 'Tabelle', defaultSlideDuration: 15, transition: 'fade', transitionDuration: 500, theme: 'dark', performanceMode: 'auto',
+    slides: [{ id: e2eUuid('monitor:nikolaus-cup:haupt:tabelle:slide'), type: 'standings', config: { groupId: '' }, duration: null, order: 0 }],
+    createdAt: '2026-10-30T09:00:00.000Z', updatedAt: '2026-10-30T09:00:00.000Z',
+  });
+  const wert = an ? `${ohne} || jsonb_build_array('${monitor}'::jsonb)` : ohne;
+  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET config = jsonb_set(coalesce(config,'{}'::jsonb), '{monitors}', ${wert}) WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
+  execFileSync('docker', ['exec', '-i', 'supabase_db_hallenfussball-pwa', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
+}
+
+/**
+ * N6g (Befund C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER, @W2A-059 Z. 3 „die Markierung verschwindet, sobald der Platz entschieden ist“, @ET-055, @ZM-180
+ * Prüfregel „jeder Übertragungsweg“): nach N6d (Gruppe mit Strafstoßschießen 4:3 für DJK Otting abgeschlossen) zeigen die Zuschauer-Seite
+ * (`public_tournament`, Reiter „Tabellen“) und der Hallen-Monitor (`display_tournament`, Tabellen-Folie) Otting vor Petting ohne jede
+ * Markierung („Strafstoß folgt“ / „wird entschieden“). Vorher reichte der Server die Grundlage der Entscheidung leer durch; die Anzeige
+ * übernahm sie nie (Migration 20261118_007). Läuft nach N6d und vor N7a2 (die Korrektur dort hebt die Entscheidung auf).
+ */
+async function entschiedenOeffentlich({ anonPage, browser }: StepContext): Promise<void> {
+  await vorbedingung('alle 15 Spiele beenden', beendeAlleSpiele);
+  const abschluss = await getRows<{ ranking: string[] }>(`group_completions?tournament_id=eq.${NIKOLAUS.tournamentId}&reopened_at=is.null&select=ranking`, 'Gruppenabschluss');
+  expect(abschluss, 'Vorbedingung: N6d hat die Gruppe abgeschlossen').toHaveLength(1);
+  const otting = 'DJK Otting';
+  const petting = 'TSV Petting';
+
+  await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
+  await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
+  await anonPage.getByText('Tabellen', { exact: true }).first().click();
+  await expect(anonPage.locator('body')).toContainText(otting, { timeout: 10_000 });
+  await expect(anonPage.getByTestId('public-tie-mark'), 'Zuschauer: keine Markierung nach der Entscheidung').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
+  const text = await anonPage.locator('body').innerText();
+  expect(text, 'Zuschauer: kein „Strafstoß folgt“').not.toContain('Strafstoß folgt');
+  expect(text.indexOf(otting), 'Zuschauer: Otting (Sieger 4:3) steht vor Petting').toBeLessThan(text.indexOf(petting));
+
+  tabellenMonitor(true);
+  const halle = await browser.newContext(); // Hallen-Monitor ohne Anmeldung
+  try {
+    const monitor = await halle.newPage();
+    await monitor.goto(`/#/display/${NIKOLAUS.tournamentId}/${TABELLEN_MONITOR_ID}`);
+    const zeilen = monitor.getByTestId('standings-row');
+    await expect(zeilen, 'Monitor: Tabellen-Folie mit 6 Teams').toHaveCount(6, { timeout: 20_000 });
+    await expect(monitor.getByTestId('monitor-tie-mark'), 'Monitor: keine Markierung nach der Entscheidung').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
+    const namen = await zeilen.evaluateAll((els) => els.map((el) => (el as HTMLElement).innerText));
+    expect(namen.findIndex((n) => n.includes(otting)), 'Monitor: Otting steht vor Petting').toBeLessThan(namen.findIndex((n) => n.includes(petting)));
+  } finally {
+    await halle.close();
+    tabellenMonitor(false);
+  }
+}
+
 /**
  * N7a: die Gruppe ist abgeschlossen (GA4 A-13c; Daniel 23.10.: die Entscheidung des Gleichstands in N6d hat die Gruppe in einem Zug abgeschlossen,
  * @TM-046, @TM-057): der Spielplan schlägt keinen Abschluss mehr vor (@TM-044), die Tabelle zeigt „abgeschlossen“ und „Gruppe wieder öffnen“, kein
@@ -422,6 +477,7 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N6d', title: 'Tabelle: Strafstoßschießen 4:3 für Otting über „Gleichstand entscheiden“ eintragen, Sieger steht vorn, Gruppe abgeschlossen; Maria (zweites Gerät) danach 5:4: nicht angenommen, Hinweis nennt Olli', scenarios: ['@ET-055', '@W2A-067', '@TM-046', '@W2A-060'], owner: 'Paket TB', expectedFail: false, run: strafstossEintragen },
   { id: 'N6e', title: 'Assistent: Reihenfolge bei Punktgleichheit für private Hallenturniere vorbelegt', scenarios: ['@W2A-046'], owner: 'Paket TB (TB-2)', expectedFail: false, run: vorbelegungPrivat },
   { id: 'N6f', title: 'Entscheidung öffentlich ohne Person, Zeit und Grund; Entscheidungsverlauf nicht anonym lesbar', scenarios: ['@W2A-072'], owner: 'Paket TB (TB-3\')', expectedFail: false, run: entscheidungNichtOeffentlich },
+  { id: 'N6g', title: 'Nach dem Strafstoßschießen: Zuschauer-Tabelle und Monitor-Tabelle zeigen Otting vor Petting ohne Markierung', scenarios: ['@W2A-059', '@ET-055', '@ZM-180'], befunde: ['C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER'], owner: 'Migration 20261118_007 (basis durchreichen)', expectedFail: false, run: entschiedenOeffentlich },
   { id: 'N7a', title: 'Gruppe abgeschlossen (mit der Entscheidung in N6d): kein Vorschlag mehr, „Gruppe wieder öffnen“, kein Zurücknehmen', scenarios: ['@TM-044', '@TM-046', '@TM-057', '@W2A-070'], owner: 'A-13c', expectedFail: false, run: gruppeAbschliessen },
   { id: 'N7a2', title: 'Korrektur nach dem Abschluss: Gruppe ohne Zutun erneut abgeschlossen, kein „Besetzung prüfen“, ein Verlaufseintrag', scenarios: ['@TM-071', '@TM-150'], owner: 'R2 PR 2 (A-15b)', expectedFail: false, run: neuAbschlussNachKorrektur },
   { id: 'N7b', title: 'Turnier abschließen: Dialog bereit ohne „Stand neu laden“, abgeschlossen und gesperrt, späte Einträge aufbewahrt', scenarios: ['@LZ-009', '@LZ-030', '@LZ-038', '@LZ-039'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'R3-4 (B-33)', expectedFail: false, run: turnierAbschliessen },
