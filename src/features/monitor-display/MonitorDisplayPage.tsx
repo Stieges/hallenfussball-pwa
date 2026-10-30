@@ -38,6 +38,8 @@ import {
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
 import { monitorPageCount } from './slideContent';
+import { applyEnd } from './monitorEnd';
+import { useMonitorEnd } from './useMonitorEnd';
 import { buildMonitorRuleMatches, buildMonitorView } from './monitorView';
 import { NowSourceContext } from '../../components/schedule/useTickingNow';
 import { useSlideshow } from './useSlideshow';
@@ -85,7 +87,7 @@ function MonitorDisplayPageContent({
     [tournamentId, monitorId]
   );
   const {
-    tournament, monitor, loading, error, lastFetch, goalEvent, cardEvent, clearGoalEvent, clearCardEvent,
+    tournament, monitor, origin, loading, error, lastFetch, goalEvent, cardEvent, clearGoalEvent, clearCardEvent,
   } = useMonitorDisplayData(
     displaySource,
     { tournamentId, monitorId },
@@ -102,6 +104,8 @@ function MonitorDisplayPageContent({
   // Einblendungen aus derselben Antwort wie Stand und Uhr (R5 PR 1, Feldfilter für Tor und Karte im Hook).
   // B-16e2 (@ZM-118): Kindermodus – keine Tor- oder Karten-Einblendung (der Server liefert dann auch keinen Stand).
   const ergebnisseAusgeblendet = view !== null && !view.rules.results;
+  // Nach dem Abschluss (R3-7, @LZ-076): Endstand allein aus dem gespeicherten Stand des Servers, nie aus der Live-Tabelle (useMonitorEnd)
+  const end = useMonitorEnd(tournamentId, tournament, view, origin);
 
   // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und Beamer-Laptops ab.
   // Erst aktivieren, wenn ein Monitor geladen ist (auf der Fehlerseite wäre die Anfrage sinnlos).
@@ -130,10 +134,12 @@ function MonitorDisplayPageContent({
   // die nächste immer darstellbare Folie (Spielplan) — der Bildschirm ist nie leer.
   const qrMoeglich = tournament?.isPublic === true && Boolean(tournament?.shareCode);
   // B-16e2 (@ZM-090): Bei ausgeblendeten Ergebnissen fallen wertende Folien weg (Rückfall: QR)
-  const slides = useMemo(
+  const programSlides = useMemo(
     () => selectDisplayableSlides(monitor?.slides ?? [], { qrMoeglich, isShowable: (slide) => view === null || isSlideShowable(slide, view.rules) }),
     [monitor, qrMoeglich, view]
   );
+  // Nach dem Abschluss ersetzt die Folie „Endstand“ Live-Spiel, Tabellen, Nächste Spiele und Spielplan (R3-7, @ZM-121)
+  const slides = useMemo(() => applyEnd(programSlides, end), [programSlides, end]);
   // Rückfall (B-16e1 Ruling, @ZM-122): Sind alle Live-Folien ohne Spiel, zeigt die Seite QR bzw. Spielplan.
   // Nur ohne Pin: Während eines Spiels und der 30-s-Haltezeit (@ZM-077) bleibt die Live-Folie sichtbar.
   const rueckfallFolie = qrMoeglich ? ZUSCHAUER_QR_SLIDE : SPIELPLAN_FALLBACK_SLIDE;
@@ -151,14 +157,15 @@ function MonitorDisplayPageContent({
       slides,
       defaultDurationSec: defaultSlideDuration,
       matches: ruleMatches,
-      pageCount: (slide) => monitorPageCount(slide, tournament, view),
+      pageCount: (slide) => monitorPageCount(slide, tournament, view, end),
     }),
-    [slides, defaultSlideDuration, tournament, view, ruleMatches]
+    [slides, defaultSlideDuration, tournament, view, ruleMatches, end]
   );
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
     ? (monitor?.transitionDuration ?? 0)
     : null;
-  const { slideState } = useSlideshow(slideProgram, transitionMs);
+  // Mit dem Abschluss beginnt das Programm bei „Endstand“ (R3-7, @LZ-077: sichtbar nach höchstens 10 Sekunden, auch mitten in einer Folie)
+  const { slideState } = useSlideshow(slideProgram, transitionMs, end.kind === 'final' ? `final:${end.finishedAt}` : end.kind);
   // Neue App-Version nur zwischen Spielen (B-19b, @ZM-124, @ME-012): das Neulade-Tor der Kiosk-Seite.
   useReloadGate(slideProgram.slides, slideProgram.matches, slideState.currentIndex);
 
@@ -240,6 +247,7 @@ function MonitorDisplayPageContent({
               hinweisHoehe={hinweisZeigt ? displayLayout.noticeHeight : undefined}
               pinnedMatchId={slideState.pinnedMatchId}
               page={slideState.page}
+              end={end}
             />
           </TransitionWrapper></NowSourceContext.Provider>
         )}

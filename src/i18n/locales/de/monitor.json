@@ -83,6 +83,15 @@
       "notFound": "Sponsor nicht gefunden",
       "scanMore": "Scan für mehr Info",
       "tier": "{{tier}} Sponsor"
+    },
+    "final": {
+      "title": "Endstand",
+      "kids": "Turnier beendet – danke fürs Mitspielen",
+      "scorersTitle": "Torschützen",
+      "goals_one": "Tor",
+      "goals_other": "Tore",
+      "scorerNoNumber": "ohne Nummer – {{team}}",
+      "scorerOwnGoals": "Eigentore für {{team}}"
     }
   },
   "dauerbetrieb": {

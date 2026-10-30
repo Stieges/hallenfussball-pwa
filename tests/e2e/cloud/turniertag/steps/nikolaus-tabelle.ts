@@ -10,6 +10,9 @@ import { vorbedingung, getRows, SOLL_TIMEOUT_MS } from './shared';
 import { getLocalServiceRoleClient } from '../../helpers';
 import { beendeAlleSpiele, fetchNikolausSpiele, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
 import { appendAsRole, fetchEngineRows } from '../../engineHelpers';
+import { z } from 'zod';
+import { e2eUuid } from '../../e2eUuid';
+import { restAsRole } from '../../restAsRole';
 import { eventOf } from './playViaRpc';
 import { expectPageAnchor, expectSollMarker } from './shared';
 import type { StepContext, TurniertagStep } from './types';
@@ -365,6 +368,52 @@ async function endstandKindermodus({ anonPage }: StepContext): Promise<void> {
   }
 }
 
+
+const MONITOR_E2E_ID = e2eUuid('monitor:nikolaus-cup:haupt:endstand');
+
+/**
+ * Fügt den Endstand-Monitor (Programm Live-Spiel, Alle Tabellen, Nächste Spiele, Zuschauer-QR) hinzu bzw. entfernt ihn wieder; der Seed-Monitor bleibt
+ * (Datenbank-Eigentümer mit dem Server-Schalter wie `setzeKindermodus`, Zustandssperre).
+ */
+function setzeMonitor(an: boolean): void {
+  const ohne = `coalesce((SELECT jsonb_agg(m) FROM jsonb_array_elements(coalesce(config->'monitors','[]'::jsonb)) m WHERE m->>'id' <> '${MONITOR_E2E_ID}'), '[]'::jsonb)`;
+  const folie = (id: string, type: string, order: number): Record<string, unknown> => ({ id: e2eUuid(`monitor:nikolaus-cup:haupt:endstand:${id}`), type, config: {}, duration: null, order });
+  const monitor = JSON.stringify({
+    id: MONITOR_E2E_ID, name: 'Halle', defaultSlideDuration: 15, transition: 'none', transitionDuration: 0, theme: 'dark', performanceMode: 'high',
+    slides: [folie('s1', 'live', 0), folie('s2', 'all-standings', 1), folie('s3', 'next-matches', 2), folie('s4', 'qr-code', 3)],
+    createdAt: '2026-11-28T08:00:00.000Z', updatedAt: '2026-11-28T08:00:00.000Z',
+  });
+  const wert = an ? `${ohne} || jsonb_build_array('${monitor}'::jsonb)` : ohne;
+  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET config = jsonb_set(coalesce(config,'{}'::jsonb), '{monitors}', ${wert}) WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
+  execFileSync('docker', ['exec', '-i', 'supabase_db_hallenfussball-pwa', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
+}
+
+/**
+ * N7e: Hallen-Monitor nach dem Abschluss (R3-7, @LZ-076, @ZM-121 Z. 1, @ET-045): lädt der Monitor nach dem Abschluss, steht die Folie „Endstand“
+ * da – Plätze 1 bis 6 wie im gespeicherten Endstand des Servers (`display_final_standings`), statt Live-Spiel, Tabellen und Nächste Spiele.
+ * Ohne Torschützen-Schalter folgt keine Torschützen-Folie (@ZM-012 Z. 2).
+ */
+async function endstandMonitor({ anonPage }: StepContext): Promise<void> {
+  await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
+  const antwort = await restAsRole('owner', 'POST', 'rpc/display_final_standings', { p_tournament_id: NIKOLAUS.tournamentId });
+  const gespeichert = z.object({ status: z.literal('final'), standings: z.object({ ranking: z.array(z.object({ teamName: z.string() })) }) }).parse(antwort.json);
+  const erwartet = gespeichert.standings.ranking.map((zeile) => zeile.teamName);
+  expect(erwartet, 'sechs Plätze').toHaveLength(6);
+  setzeMonitor(true);
+  try {
+    await anonPage.goto(`/#/display/${NIKOLAUS.tournamentId}/${MONITOR_E2E_ID}`);
+    await expect(anonPage.getByTestId('monitor-final-standings'), 'Folie „Endstand“ statt Live-Spiel').toBeVisible({ timeout: 20_000 });
+    await expect(anonPage.getByTestId('monitor-final-row'), 'Plätze 1 bis 6').toHaveCount(6);
+    expect(await anonPage.getByTestId('monitor-final-team').allTextContents(), 'Reihenfolge wie im gespeicherten Endstand').toEqual(erwartet);
+    expect(await anonPage.getByTestId('monitor-final-place').allTextContents(), 'kein Platz geteilt').toEqual(['1', '2', '3', '4', '5', '6']);
+    await expect(anonPage.getByTestId('live-slide-area'), 'kein Live-Spiel nach dem Abschluss').toHaveCount(0);
+    await expect(anonPage.getByTestId('standings-row'), 'keine Live-Tabelle nach dem Abschluss').toHaveCount(0);
+    await expect(anonPage.getByTestId('monitor-final-scorers'), 'Torschützen-Schalter aus: keine Torschützen-Folie').toHaveCount(0);
+  } finally {
+    setzeMonitor(false);
+  }
+}
+
 export const steps: readonly TurniertagStep[] = [
   { id: 'N6a', title: 'Tabelle: bei Punktgleichheit zuerst das direkte Spiel (Kammer vor Waging rot), kein Strafstoßschießen nötig – unter der BFV-privat-Reihenfolge; Voreinstellung = N6e', scenarios: ['@ET-056'], owner: 'Reihenfolge der Kriterien aus dem Turnier (Punkte, direkter Vergleich, Tordifferenz, Tore)', expectedFail: false, run: direktesSpielZuerst },
   { id: 'N6b', title: 'Tabelle: Zuschauer-Seite zeigt die Tabelle von Jeder gegen jeden in derselben Reihenfolge', scenarios: ['@W2A-049'], owner: 'Zuschauer-Tabelle ohne Gruppen (gebaut, #295)', expectedFail: false, run: zuschauerReihenfolge },
@@ -378,4 +427,5 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N7b', title: 'Turnier abschließen: Dialog bereit ohne „Stand neu laden“, abgeschlossen und gesperrt, späte Einträge aufbewahrt', scenarios: ['@LZ-009', '@LZ-030', '@LZ-038', '@LZ-039'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'R3-4 (B-33)', expectedFail: false, run: turnierAbschliessen },
   { id: 'N7c', title: 'Endstand = abgeschlossene Tabelle, Plätze 1 bis 6', scenarios: ['@ET-022'], owner: 'R3-6 (B-23)', expectedFail: false, run: endstand },
   { id: 'N7d', title: 'Kindermodus nach dem Abschluss: „Turnier beendet – danke fürs Mitspielen“, keine Plätze, keine Torschützen', scenarios: ['@ZM-121'], owner: 'R3-6 (E7)', expectedFail: false, run: endstandKindermodus },
+  { id: 'N7e', title: 'Hallen-Monitor nach dem Abschluss: Folie „Endstand“ mit Platz 1 bis 6 statt Live-Spiel und Tabellen', scenarios: ['@LZ-076', '@ZM-121', '@ET-045'], owner: 'R3-7 (B-23)', expectedFail: false, run: endstandMonitor },
 ];
