@@ -120,6 +120,8 @@ export const E2E_ENGINE_CUPS = [
   // R5 PR 1 (@ZM-084, @FU-001): Sofort-Kanal – je Messung ein eigener Cup mit Monitor (monitor-sofort.cloud.spec.ts).
   runningCup('MONSOFORT'),
   runningCup('MONSCHLECHT'),
+  // R5 PR 2 (@ZM-176, @ZM-084): Uhr am Monitor folgt der Cockpit-Uhr (monitor-sofort.cloud.spec.ts, Fall „Uhr“).
+  runningCup('MONUHR'),
   runningCup('SPIELPLANKANAL'),
   runningCup('SPIELPLANHELFER'),
   finishedCup('SCHREIBWEG'),
