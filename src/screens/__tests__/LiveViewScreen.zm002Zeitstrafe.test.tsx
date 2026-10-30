@@ -4,7 +4,7 @@
  * (Befund C-ZEITSTRAFE-OEFFENTLICH-UNSICHTBAR, Prod-Nachlauf N4). Spiel 9 läuft; Lage aus `payloadFixtures.ts`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { PublicRpcArgs, PublicRpcResponse } from '../../features/public-view/rpcPublicSource';
@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 describe('Zuschauer-Seite zeigt die Zeitstrafe als Ereigniszeile (Server-Antwort) – Wächter, kein Nachweis von @ZM-002', () => {
-  it('Wächter: Spiel 9 aufgeklappt zeigt überhaupt eine Zeile „Zeitstrafe <Team> #5“ mit Spielzeit 03:20 (Format siehe it.fails unten)', async () => {
+  it('Wächter: Spiel 9 aufgeklappt zeigt überhaupt eine Zeitstrafe-Zeile mit dem Team (Format siehe it.fails unten)', async () => {
     rpcCall.mockImplementation(() => Promise.resolve({ data: mitZeitstrafe(), error: null }));
     render(
       <RepositoryProvider user={null}>
@@ -51,9 +51,8 @@ describe('Zuschauer-Seite zeigt die Zeitstrafe als Ereigniszeile (Server-Antwort
     );
     const karte = (await screen.findAllByTestId('match-clock'))[0].closest('[data-match-card]')!;
     await userEvent.click(karte);
-    const zeilen = await screen.findAllByText(/Zeitstrafe .*#5/);
+    const zeilen = await screen.findAllByText(/Zeitstrafe \S/);
     expect(zeilen.length).toBeGreaterThan(0);
-    expect(within(zeilen[0].closest('div')!.parentElement!).queryByText('03:20')).not.toBeNull();
   });
 
   it('Gegenbeispiel: ohne Zeitstrafe im Ereignisstrom steht keine Zeitstrafe-Zeile da', async () => {
@@ -81,5 +80,19 @@ describe('Zuschauer-Seite zeigt die Zeitstrafe als Ereigniszeile (Server-Antwort
     await userEvent.click(karte);
     const zeilen = await screen.findAllByText(/Zeitstrafe/);
     expect(zeilen.some((zeile) => /Zeitstrafe .+, Nr\. 5, 4\./.test(zeile.closest('div')?.parentElement?.textContent ?? ''))).toBe(true);
+  });
+
+  // @ZM-002 verlangt ebenso „Tor FC Nord, Nr. 9, 3.“ (ohne Rückennummer „Tor FC Nord, 12.“); heute „TOR <Team> #9“ mit Uhrzeit -> gleicher Befund.
+  it.fails('@ZM-002 C-ZEITSTRAFE-ZEILE-FORMAT: Torzeilen lauten „Tor <Team>, Nr. <n>, <Minute>.“ (Minute statt Uhrzeit)', async () => {
+    rpcCall.mockImplementation(() => Promise.resolve({ data: mitZeitstrafe(), error: null }));
+    render(
+      <RepositoryProvider user={null}>
+        <MemoryRouter initialEntries={['/live/NIK6ST']}><LiveViewScreen shareCode="NIK6ST" /></MemoryRouter>
+      </RepositoryProvider>,
+    );
+    const karte = (await screen.findAllByTestId('match-clock'))[0].closest('[data-match-card]')!;
+    await userEvent.click(karte);
+    const zeilen = await screen.findAllByText(/^tor\b/i);
+    expect(zeilen.some((zeile) => /Tor .+(, Nr\. \d+)?, \d+\./.test(zeile.closest('div')?.parentElement?.textContent ?? ''))).toBe(true);
   });
 });

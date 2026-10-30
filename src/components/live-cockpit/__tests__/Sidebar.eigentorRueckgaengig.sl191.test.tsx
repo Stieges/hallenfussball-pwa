@@ -57,8 +57,8 @@ describe('@SL-191 Rückgängig beim Eigentor: Verlauf', () => {
     const state = protokoll();
     expect([effectiveScoreFor(state, 'fc-nord'), effectiveScoreFor(state, 'sv-sued')]).toEqual([1, 0]);
     expect(screen.getAllByTestId('event-row-retracted')).toHaveLength(1);
-    // wirksam bleibt nur das Tor von FC Nord bei 1:40
-    expect(screen.getAllByText(/TOR FC Nord|Tor FC Nord/i).length).toBe(2); // wirksames Tor + die eine durchgestrichene Zeile
+    // wirksam bleibt nur das Tor von FC Nord bei 1:40 – gezählt werden nur Zeilen außerhalb der durchgestrichenen
+    expect(screen.getAllByText(/Tor FC Nord/i).filter((el) => !el.closest('[data-testid="event-row-retracted"]'))).toHaveLength(1);
   });
 
   it.fails('@SL-191 C-EIGENTOR-PROTOKOLLZEILE: die durchgestrichene Zeile heißt „Eigentor SV Süd, Nr. 4“ mit 05:40', () => {
