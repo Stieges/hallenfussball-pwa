@@ -2825,7 +2825,7 @@
                 "matchNumber": 1,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
-                "finishedAt": "2026-11-14T08:11:00.000Z",
+                "finishedAt": "2026-10-15T08:11:00.000Z",
                 "timerElapsedSeconds": 600
               },
               {
@@ -2850,7 +2850,7 @@
                 "matchNumber": 2,
                 "matchStatus": "finished",
                 "decidedBy": "regular",
-                "finishedAt": "2026-11-14T08:26:00.000Z",
+                "finishedAt": "2026-10-15T08:26:00.000Z",
                 "timerElapsedSeconds": 600
               },
               {
@@ -6553,7 +6553,7 @@
               "type": "MATCH_START",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794643200000,
+              "at": 1792051200000,
               "section": 1,
               "clockMs": null,
               "payload": {
@@ -6576,7 +6576,7 @@
               "type": "GOAL",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794643480000,
+              "at": 1792051480000,
               "section": 1,
               "clockMs": 280000,
               "payload": {},
@@ -6588,7 +6588,7 @@
               "type": "SECTION_END",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794643500000,
+              "at": 1792051500000,
               "section": 1,
               "clockMs": 300000,
               "payload": {},
@@ -6599,7 +6599,7 @@
               "type": "SECTION_START",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794643560000,
+              "at": 1792051560000,
               "section": 2,
               "clockMs": 300000,
               "payload": {},
@@ -6610,7 +6610,7 @@
               "type": "MATCH_END",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794643860000,
+              "at": 1792051860000,
               "section": 2,
               "clockMs": 600000,
               "payload": {},
@@ -6622,7 +6622,7 @@
           "pending": [],
           "rejected": [],
           "review": [],
-          "updatedAt": 1794643860000
+          "updatedAt": 1792051860000
         },
         "guest|00000010-0000-4000-8000-000000000002": {
           "formatVersion": 2,
@@ -6640,7 +6640,7 @@
               "type": "MATCH_START",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794644100000,
+              "at": 1792052100000,
               "section": 1,
               "clockMs": null,
               "payload": {
@@ -6663,7 +6663,7 @@
               "type": "GOAL",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794644380000,
+              "at": 1792052380000,
               "section": 1,
               "clockMs": 280000,
               "payload": {},
@@ -6675,7 +6675,7 @@
               "type": "SECTION_END",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794644400000,
+              "at": 1792052400000,
               "section": 1,
               "clockMs": 300000,
               "payload": {},
@@ -6686,7 +6686,7 @@
               "type": "SECTION_START",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794644460000,
+              "at": 1792052460000,
               "section": 2,
               "clockMs": 300000,
               "payload": {},
@@ -6697,7 +6697,7 @@
               "type": "MATCH_END",
               "actor": "helper",
               "actorUser": "helper",
-              "at": 1794644760000,
+              "at": 1792052760000,
               "section": 2,
               "clockMs": 600000,
               "payload": {},
@@ -6709,7 +6709,7 @@
           "pending": [],
           "rejected": [],
           "review": [],
-          "updatedAt": 1794644760000
+          "updatedAt": 1792052760000
         },
         "guest|00000010-0000-4000-8000-000000000003": {
           "formatVersion": 2,

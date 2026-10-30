@@ -411,8 +411,11 @@ async function erzeugePhasenturnier(art: PhasenArt, nr: number): Promise<Erzeugt
   const { kopien, ersetze } = werkbank(t)
   const gruppe = t.matches.filter((m) => !m.isFinal)
   if (gruppe.length !== 2) { throw new Error(`Phasen-Turnier: ${String(gruppe.length)} Gruppenspiele statt 2`) }
+  // LT-6: die Gruppenspiele liegen hier vor dem Laden (30 Tage vor der Saat-Zeit) -- sonst hielte das Cockpit ihren Endstand
+  // (Abpfiff nach „jetzt“) statt den des eben beendeten Halbfinales, und „Spiel fortsetzen“ stuende nicht da.
+  const gruppenStart = art === 'fortsetzen' ? start - 30 * 86_400_000 : start
   gruppe.forEach((m, i) => {
-    ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore: [seiteId(m, 'slotA')], bis: 'ende' }, start + i * 900_000))
+    ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore: [seiteId(m, 'slotA')], bis: 'ende' }, gruppenStart + i * 900_000))
   })
   schliesseGruppenAb(t)
   const [hf1] = halbfinaleVon(t)
