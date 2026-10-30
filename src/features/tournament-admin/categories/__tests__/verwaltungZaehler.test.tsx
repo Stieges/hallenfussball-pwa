@@ -1,6 +1,6 @@
 /**
  * Verwaltung zählt richtig: „ausstehend“ im Dashboard und „Spiele beendet“ im Activity Log
- * (Befund C-VERWALTUNG-ZAEHLT-AUSSTEHEND-FALSCH, Usability-Durchgang 30.10.; Zähler des Spielplans/Tabelle als Maßstab).
+ * (@LZ-092, Befund C-VERWALTUNG-ZAEHLT-AUSSTEHEND-FALSCH, Usability-Durchgang 30.10.; Zähler des Spielplans/Tabelle als Maßstab).
  * Lage wie in der Beobachtung: 10 Spiele, 6 beendet (ohne Endzeit am Spiel), 1 läuft, 3 noch nicht begonnen
  * (Spiele ohne gespeicherten Status gelten als geplant, `Match.matchStatus` hat den Standard „scheduled“).
  * Gegenbeispiel: ein beendetes Spiel mit Endzeit wird nur einmal gezählt.
@@ -34,8 +34,8 @@ const LAGE = turnier([
   {}, {}, {},
 ]);
 
-describe('Dashboard: „ausstehend“ zählt die noch nicht begonnenen Spiele (C-VERWALTUNG-ZAEHLT-AUSSTEHEND-FALSCH)', () => {
-  it('6 beendet, 1 läuft, 3 ohne Status: „6/10“ und „3 ausstehend“, nicht „0 ausstehend“', () => {
+describe('@LZ-092 Dashboard: „ausstehend“ zählt die noch nicht begonnenen Spiele (C-VERWALTUNG-ZAEHLT-AUSSTEHEND-FALSCH)', () => {
+  it('@LZ-092 6 beendet, 1 läuft, 3 ohne Status: „Spiele 6/10“ und „3 ausstehend“, nicht „0 ausstehend“', () => {
     render(<MemoryRouter><DashboardCategory tournamentId="t1" tournament={LAGE} onTournamentUpdate={vi.fn()} /></MemoryRouter>);
     const karte = screen.getByText('Spiele').parentElement!;
     expect(karte.textContent).toContain('6/10');
@@ -49,8 +49,8 @@ describe('Dashboard: „ausstehend“ zählt die noch nicht begonnenen Spiele (C
   });
 });
 
-describe('Activity Log: „Spiele beendet“ zählt beendete Spiele auch ohne Endzeit (C-VERWALTUNG-ZAEHLT-AUSSTEHEND-FALSCH)', () => {
-  it('6 beendete Spiele ohne Endzeit: Zähler „6“, nicht „0“', () => {
+describe('@LZ-092 Activity Log: „Spiele beendet“ zählt beendete Spiele auch ohne Endzeit (C-VERWALTUNG-ZAEHLT-AUSSTEHEND-FALSCH)', () => {
+  it('@LZ-092 6 beendete Spiele ohne Endzeit: die Aktivitätsliste fasst „6 Spiele beendet“ zusammen, nicht „0“', () => {
     render(<ActivityLogCategory tournamentId="t1" tournament={LAGE} onTournamentUpdate={vi.fn()} />);
     // der Zähler steht in der Zusammenfassung über dem Etikett „Spiele beendet“ (das Filter-Etikett ist eine <option>)
     const etikett = screen.getAllByText('Spiele beendet').find((el) => el.tagName !== 'OPTION')!;
