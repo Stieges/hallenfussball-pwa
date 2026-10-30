@@ -106,7 +106,26 @@ export function saveStand(storage: StandStorage | null, shareCode: string, stand
   if (storage === null) {
     return;
   }
-  attempt(() => { storage.setItem(STAND_PREFIX + shareCode, JSON.stringify({ ...stand, tournament: toPublicCopy(stand.tournament) })); });
+  attempt(() => {
+    const key = STAND_PREFIX + shareCode;
+    if (isOlderThanStored(stand, parseStand(storage.getItem(key)))) {
+      return;
+    }
+    storage.setItem(key, JSON.stringify({ ...stand, tournament: toPublicCopy(stand.tournament) }));
+  });
+}
+
+/**
+ * @ZM-180: ein älterer Stand (z. B. aus einem zweiten Tab) überschreibt keinen neueren. Vergleichbar sind nur Zahlen-Versionen
+ * derselben Quelle (`rpc`); der Fingerabdruck der Quelle `legacy` hat keine Reihenfolge, dort gilt wie bisher der letzte Abruf.
+ */
+function isOlderThanStored(stand: StoredStand, stored: StoredStand | null): boolean {
+  if (stored?.source !== 'rpc' || stand.source !== 'rpc') {
+    return false;
+  }
+  const next = Number(stand.version);
+  const held = Number(stored.version);
+  return Number.isFinite(next) && Number.isFinite(held) && next < held;
 }
 
 export function saveContact(storage: StandStorage | null, shareCode: string, contact: StoredContact): void {
