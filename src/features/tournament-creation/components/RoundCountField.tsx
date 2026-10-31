@@ -31,6 +31,8 @@ const inputStyle: CSSProperties = {
   flex: 1,
   minWidth: 0,
   width: '100%',
+  minHeight: cssVars.touchTargets.minimum, // tippbar: Touch ≥ 44 px (die Anzeige im NumberStepper ist nicht bedienbar)
+  boxSizing: 'border-box',
   textAlign: 'center',
   fontFamily: 'inherit',
   fontSize: cssVars.fontSizes.lg,
