@@ -86,7 +86,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
 
   // Seiten tauschen: nur die Anzeige dieses Geräts (@SL-065)
   const sides = useSideOrder(currentMatch);
-  const notices = useCockpitNotices(); // Meldezeile statt Toast (Spec § 7)
+  const notices = useCockpitNotices(currentMatch?.id); // Meldezeile statt Toast (Spec § 7); endet mit dem Spielwechsel (@SL-192)
 
   // I4 (W1, Nachtrag Fixrunde 1): Ablehnungen (D-C1) auch für Helfer im Cockpit sichtbar.
   const rejectedOutbox = useRejectedOutboxDialog(tournamentId, notices.fehler);

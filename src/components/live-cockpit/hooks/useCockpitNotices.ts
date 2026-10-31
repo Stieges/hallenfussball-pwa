@@ -21,7 +21,11 @@ export interface UseCockpitNoticesReturn {
   fehler: (text: string) => void;
 }
 
-export function useCockpitNotices(): UseCockpitNoticesReturn {
+/**
+ * `spielId`: jede Meldung gehört zu ihrem Spiel. Wechselt die Spiel-ID (Weiter, Spielplan, Adresse), sind Zeile und wartende Meldung
+ * sofort leer (@SL-192, C-MELDUNG-UEBER-SPIELWECHSEL). Der Aufruf steht vor den Hooks, die beim Öffnen des neuen Spiels melden.
+ */
+export function useCockpitNotices(spielId?: string): UseCockpitNoticesReturn {
   const [aktuell, setAktuell] = useState<CockpitNotice | null>(null);
   const aktuellRef = useRef<CockpitNotice | null>(null);
   const wartendStufe2 = useRef<CockpitNotice | null>(null);
@@ -49,6 +53,8 @@ export function useCockpitNotices(): UseCockpitNoticesReturn {
   }, [zeige]);
 
   const fehler = useCallback((text: string) => { melde(2, text); }, [melde]);
+
+  useEffect(() => { wartendStufe2.current = null; zeige(null); }, [spielId, zeige]);
 
   const id = aktuell?.id;
   const dauerMs = aktuell?.dauerMs;
