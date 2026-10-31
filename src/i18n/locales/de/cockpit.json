@@ -473,7 +473,7 @@
         "decisionPending": "Erst die Entscheidung treffen",
         "staleBase": "Vor der letzten Korrektur – nicht mehr zurücknehmbar",
         "regularGoal": "Tor aus der regulären Spielzeit – nicht mehr zurücknehmbar",
-        "shootout": "Im $t(sport:events.penaltyShootout) die Schüsse über das Protokoll zurücknehmen",
+        "shootout": "Im $t(sport:events.penaltyShootout) nimmt „Rückgängig“ den letzten Schuss zurück",
         "notAllowed": "Gerade nicht zurücknehmbar",
         "goalFinished": "Spiel ist beendet – Korrektur über die Turnierleitung"
       },

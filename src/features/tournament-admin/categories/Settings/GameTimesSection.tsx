@@ -90,13 +90,17 @@ export function GameTimesSection({ tournament }: { tournament: Tournament }) {
           <div key={item.key} style={row}>
             <label htmlFor={`${inputId}-${item.key}`} style={label}>{item.name}</label>
             <div style={valueRow}>
-              <input id={`${inputId}-${item.key}`} type="number" value={item.minutes} disabled readOnly style={input} data-testid={`settings-locked-${item.key}`} />
+              <input id={`${inputId}-${item.key}`} type="number" value={item.minutes} disabled readOnly style={input} aria-describedby={`${inputId}-${item.key}-grund`} data-testid={`settings-locked-${item.key}`} />
               <span style={unit}>{tt('timeShift.minutesUnit')}</span>
               <button type="button" style={lockButton} aria-label={tt('timeShift.lockButton', { name: item.name })} onClick={() => setWhy(true)} data-testid={`settings-lock-${item.key}`}>
                 <Icons.Lock size={iconSizeValues.sm} />
               </button>
             </div>
-            <p style={hint}>{t('settingsSection.gameTimeLockedHint')}</p>
+            {/* @W5-036 / @OB-043: Grund der Sperre, und der Weg nur, wenn „Zeiten verschieben“ in diesem Zustand angeboten wird */}
+            <p id={`${inputId}-${item.key}-grund`} style={hint} data-testid={`settings-locked-${item.key}-grund`}>
+              {t('settingsSection.gameTimeLockedHint')}
+              {canShift ? ` ${t('settingsSection.gameTimeLockedWay')}` : ''}
+            </p>
           </div>
         ))}
       </CollapsibleSection>

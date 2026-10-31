@@ -9,6 +9,8 @@ vi.unmock('react-i18next');
 await initRealDeI18n();
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));
 vi.mock('../../../../../components/LocationForm', () => ({ LocationForm: () => null }));
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../../../../hooks/useTournamentStartState', () => ({ useTournamentStartState: () => ({ state: 'unknown' }) }));
 
 import { DashboardCategory } from '../index';
 import { MetadataCategory } from '../../Metadata';

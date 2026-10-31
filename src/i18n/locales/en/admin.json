@@ -320,7 +320,8 @@
     "gameTimes": "Game times",
     "gameTimePerMatch": "Game time per match",
     "minutesLocked": "Minutes 🔒",
-    "gameTimeLockedHint": "This time cannot be changed here.",
+    "gameTimeLockedHint": "This time cannot be changed here because the schedule is built on it.",
+    "gameTimeLockedWay": "You change times via “Shift times”.",
     "breakTime": "Break time between matches",
     "minutes": "Minutes"
   },
@@ -381,7 +382,6 @@
     "startDate": "Start date",
     "startTime": "Start time",
     "structureInfo": "Structure Info (locked)",
-    "structureInfoDesc": "These settings were defined during tournament creation and cannot be changed.",
     "numberOfTeams": "Number of teams",
     "numberOfGroups": "Number of groups",
     "numberOfFields": "Number of fields",

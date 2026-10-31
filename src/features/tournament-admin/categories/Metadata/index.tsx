@@ -19,6 +19,9 @@ import { ConfirmDialog, useConfirmDialog } from '../../../../components/ui/Confi
 import { RulebookField } from '../../../../components/ui/molecules/RulebookField';
 import { DEFAULT_VALUES } from '../../../../constants/tournamentOptions';
 import type { Tournament } from '../../../../types/tournament';
+import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
+import { useCan } from '../../../auth/hooks/useCan';
+import { immutableDescriptionKey } from '../../../tournament-management/immutableFacts';
 import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
 import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../../../core/services/tournamentMetaValidation';
 
@@ -173,6 +176,10 @@ export function MetadataCategory({
   onTournamentUpdate,
 }: MetadataCategoryProps) {
   const { t } = useTranslation('admin');
+  const { t: tt } = useTranslation('tournament');
+  // @W5-036: der Erklärtext der Struktur-Info folgt dem Zustand (vor dem Anpfiff mit Recht: Weg; danach: Grund; sonst neutral)
+  const { state: matchStartState } = useTournamentStartState(tournament);
+  const canRestructure = useCan('restructure', tournament.id);
   const resetDialog = useConfirmDialog({
     title: t('metadata.confirmResetDialog.title'),
     message: t('metadata.confirmReset'),
@@ -405,7 +412,7 @@ export function MetadataCategory({
       {/* Locked Structure Info */}
       <CollapsibleSection icon="🔒" title={t('metadata.structureInfo')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          {t('metadata.structureInfoDesc')}
+          {tt(immutableDescriptionKey(matchStartState, canRestructure))}
         </p>
 
         <div style={styles.lockedField}>

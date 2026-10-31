@@ -4,6 +4,8 @@
  * @W5-003: liegt der Turniertag in der Vergangenheit, wird die Korrektur von Ort oder Schreibweise trotzdem
  * gespeichert. Szenarien aus docs/anforderungen/2026-09-27_wizard-nach-dem-anlegen.md.
  */
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../../../../hooks/useTournamentStartState', () => ({ useTournamentStartState: () => ({ state: 'unknown' }) }));
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { Tournament } from '../../../../../types/tournament';
