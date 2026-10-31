@@ -82,9 +82,13 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
     lineHeight: 1.6,
   };
 
+  // F-09 / @OB-022: Kontaktlinks stehen in einer Liste, nicht im Fließtext – Tippfläche mindestens 44 hoch
   const linkStyle: CSSProperties = {
     color: cssVars.colors.primary,
     textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    minHeight: cssVars.touchTargets.minimum,
   };
 
   return (

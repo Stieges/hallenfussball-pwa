@@ -104,7 +104,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     const isClickableStep = clickable && onStepClick && (isVisited || isCurrent);
 
     return {
-      fontSize: isMobile ? '10px' : cssVars.fontSizes.xs,
+      fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.xs,
       fontWeight: isCurrent ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
       color:
         currentStep > stepNum
@@ -135,8 +135,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     return {
       background: 'none',
       border: 'none',
-      padding: isMobile ? '6px 2px' : '8px 4px',
+      padding: isMobile ? `${cssVars.spacing.xs} ${cssVars.spacing.xs}` : `${cssVars.spacing.sm} ${cssVars.spacing.xs}`,
       margin: 0,
+      // @OB-022: Tippfläche mindestens 44 × 44 Bildpunkte
+      minHeight: cssVars.touchTargets.minimum,
+      minWidth: cssVars.touchTargets.minimum,
+      justifyContent: 'center',
       cursor: isClickableStep ? 'pointer' : 'default',
       ...labelStyle(stepIndex),
     };
@@ -164,12 +168,15 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   return (
     <div style={{ marginBottom: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: cssVars.spacing.sm,
-        overflow: 'hidden',
-      }}>
+      <div
+        role="tablist"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: cssVars.spacing.sm,
+          overflow: 'hidden',
+        }}
+      >
         {stepLabels.map((label, index) => {
           const stepNum = index + 1;
           const isVisited = isStepVisited(index);

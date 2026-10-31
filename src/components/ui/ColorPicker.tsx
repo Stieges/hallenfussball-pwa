@@ -154,14 +154,16 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const presetsGridStyles: CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(6, 1fr)',
+    gridTemplateColumns: `repeat(auto-fill, minmax(${cssVars.touchTargets.minimum}, 1fr))`,
     gap: cssVars.spacing.xs,
     marginBottom: showCustomPicker ? cssVars.spacing.md : 0,
   };
 
   const presetSwatchStyles = (color: string, isSelected: boolean): CSSProperties => ({
-    width: 28,
-    height: 28,
+    // @OB-022: Farbfläche als Taste mindestens 44 × 44
+    width: '100%',
+    minWidth: cssVars.touchTargets.minimum,
+    minHeight: cssVars.touchTargets.minimum,
     borderRadius: cssVars.borderRadius.sm,
     backgroundColor: color,
     border: isSelected

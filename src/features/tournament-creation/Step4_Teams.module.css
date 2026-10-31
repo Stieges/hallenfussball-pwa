@@ -122,7 +122,7 @@
   border: 1px solid var(--color-border-control);
   border-radius: var(--border-radius-md);
   color: var(--color-text-primary);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg); /* @OB-022: Eingabeschrift mindestens 16 px */
   cursor: pointer;
   /* Fix BUG-001: Prevent all options from rendering at once */
   -webkit-appearance: none;

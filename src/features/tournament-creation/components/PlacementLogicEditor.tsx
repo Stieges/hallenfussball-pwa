@@ -86,8 +86,13 @@ const SortableItem: React.FC<SortableItemProps> = ({
   const dragHandleStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
-    padding: '4px',
+    gap: cssVars.spacing.xs,
+    padding: cssVars.spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // @OB-022: Griff und Pfeile mindestens 44 × 44 Bildpunkte
+    minWidth: cssVars.touchTargets.minimum,
+    minHeight: cssVars.touchTargets.minimum,
     cursor: 'grab',
     color: cssVars.colors.textSecondary,
   };
@@ -97,7 +102,9 @@ const SortableItem: React.FC<SortableItemProps> = ({
     border: 'none',
     color: cssVars.colors.textSecondary,
     cursor: disabled ? 'not-allowed' : 'pointer',
-    padding: '2px',
+    padding: cssVars.spacing.xs,
+    minWidth: cssVars.touchTargets.minimum,
+    minHeight: cssVars.touchTargets.minimum,
     opacity: disabled ? 0.3 : 1,
     display: 'flex',
     alignItems: 'center',
@@ -105,7 +112,9 @@ const SortableItem: React.FC<SortableItemProps> = ({
   });
 
   const toggleButtonStyle: CSSProperties = {
-    padding: '6px 12px',
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    minWidth: cssVars.touchTargets.minimum,
+    minHeight: cssVars.touchTargets.minimum,
     background: criterion.enabled ? cssVars.colors.primary : cssVars.colors.border,
     border: 'none',
     borderRadius: '6px',
@@ -139,7 +148,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </div>
 
         {/* Arrow Buttons (fallback for non-touch) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>
           <button
             onClick={(e) => {
               e.stopPropagation();

@@ -11,7 +11,7 @@
 import { type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { cssVars } from '../../design-tokens';
+import { cssVars, layoutHeights } from '../../design-tokens';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 // ---------------------------------------------------------------------------
@@ -22,13 +22,16 @@ interface FooterProps {
   /** @OB-002 (Platzhalter Nr. 15): „Cookie-Einstellungen“ ist ausgeblendet – der
    *  Einstieg kommt erst mit Zielbild Ü3; die Prop bleibt für Aufrufer bestehen. */
   onOpenCookieSettings?: () => void;
+  /** @OB-022: am Handy steht eine feste untere Leiste (Dashboard, Turnierseiten); die Fußzeile reserviert ihre Höhe plus Safe-Area,
+   *  damit Impressum und Datenschutz am Seitenende nicht darunter liegen. */
+  untereLeiste?: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function Footer({ onOpenCookieSettings: _onOpenCookieSettings }: FooterProps) {
+export function Footer({ onOpenCookieSettings: _onOpenCookieSettings, untereLeiste = false }: FooterProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { t } = useTranslation('common');
@@ -50,9 +53,15 @@ export function Footer({ onOpenCookieSettings: _onOpenCookieSettings }: FooterPr
   // Styles
   // ---------------------------------------------------------------------------
 
+  const randAbstand = isMobile ? cssVars.spacing.md : cssVars.spacing.lg;
   const footerStyle: CSSProperties = {
     marginTop: 'auto',
-    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
+    paddingTop: randAbstand,
+    paddingLeft: randAbstand,
+    paddingRight: randAbstand,
+    paddingBottom: isMobile && untereLeiste
+      ? `calc(${randAbstand} + ${layoutHeights.bottomNav} + env(safe-area-inset-bottom, 0px))`
+      : randAbstand,
     borderTop: `1px solid ${cssVars.colors.border}`,
     backgroundColor: cssVars.colors.background,
     textAlign: 'center',

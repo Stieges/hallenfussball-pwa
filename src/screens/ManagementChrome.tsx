@@ -58,20 +58,20 @@ const backButtonStyle: CSSProperties = {
   marginRight: cssVars.spacing.md,
 };
 const titleStyle: CSSProperties = {
-  fontSize: cssVars.fontSizes.xxl,
   fontWeight: cssVars.fontWeights.bold,
   color: cssVars.colors.textPrimary,
   marginBottom: cssVars.spacing.xs,
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  // @OB-025 / Gestaltungsregel 1 und 2: der Turniername bricht an Leerzeichen um, nie „…“ und nie getrennt;
+  // passt er nicht, wird die Schrift stufenweise kleiner (zwischen zwei Token-Stufen)
+  fontSize: `clamp(${cssVars.fontSizes.lg}, 5vw, ${cssVars.fontSizes.xxl})`,
+  overflowWrap: 'break-word',
+  hyphens: 'manual',
 };
 const subtitleStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.md,
   color: cssVars.colors.textSecondary,
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  overflowWrap: 'break-word',
+  hyphens: 'manual',
 };
 const tabBarStyle: CSSProperties = {
   display: 'flex',
@@ -99,6 +99,10 @@ const adminButtonStyle: CSSProperties = {
   marginRight: cssVars.spacing.md,
   transition: 'all 0.15s ease',
   flexShrink: 0,
+  // @OB-022: Tippfläche mindestens 44 Bildpunkte
+  justifyContent: 'center',
+  minHeight: cssVars.touchTargets.minimum,
+  minWidth: cssVars.touchTargets.minimum,
 };
 
 export function ManagementHeader(p: ManagementHeaderProps): ReactElement {

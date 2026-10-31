@@ -532,6 +532,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
             display: 'flex',
             alignItems: 'center',
             gap: cssVars.spacing.sm,
+            minHeight: cssVars.touchTargets.minimum,
           }}
         >
           <Icons.ChevronLeft />
@@ -839,6 +840,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   icon={<Icons.ChevronRight />}
                   iconPosition="right"
                   size={isMobile ? 'sm' : 'md'}
+                  style={{ minHeight: cssVars.touchTargets.primary }}
+                  data-primary
                 >
                   Weiter
                 </Button>

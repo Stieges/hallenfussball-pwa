@@ -13,6 +13,15 @@ interface FinalsConfigurationProps {
 
 const TIEBREAKER_MODES: readonly TiebreakerMode[] = ['shootout', 'overtime-then-shootout', 'goldenGoal'];
 
+/** @OB-022: Zeile mit Auswahlknopf oder Häkchen – die ganze Zeile (Beschriftung) ist die Tippfläche, mindestens 44 hoch */
+const zeileMitAuswahl: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  minHeight: cssVars.touchTargets.minimum,
+  cursor: 'pointer',
+};
+
 const roundSelectStyle: CSSProperties = {
   minHeight: cssVars.touchTargets.minimum,
   padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
@@ -183,6 +192,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             data-testid="finals-advanced-options-toggle"
             style={{
               width: '100%',
+              minHeight: cssVars.touchTargets.minimum,
               padding: '10px 12px',
               background: cssVars.colors.surfaceDarkMedium,
               border: `1px solid ${cssVars.colors.borderControl}`,
@@ -267,7 +277,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           </h4>
 
           {['top-4', 'top-8', 'top-16', 'all-places'].includes(currentPreset) && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', cursor: 'pointer' }}>
+            <label style={{ ...zeileMitAuswahl, marginBottom: '8px' }}>
               <input
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelSemifinals ?? true}
@@ -281,7 +291,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           )}
 
           {['top-8', 'top-16', 'all-places'].includes(currentPreset) && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', cursor: 'pointer' }}>
+            <label style={{ ...zeileMitAuswahl, marginBottom: '8px' }}>
               <input
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelQuarterfinals ?? true}
@@ -295,7 +305,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           )}
 
           {currentPreset === 'top-16' && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+            <label style={zeileMitAuswahl}>
               <input
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelRoundOf16 ?? true}
@@ -333,7 +343,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           </h4>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+            <label style={zeileMitAuswahl}>
               <input
                 type="radio"
                 name="tiebreaker"
@@ -352,7 +362,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               </div>
             </label>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+            <label style={zeileMitAuswahl}>
               <input
                 type="radio"
                 name="tiebreaker"
@@ -371,7 +381,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               </div>
             </label>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+            <label style={zeileMitAuswahl}>
               <input
                 type="radio"
                 name="tiebreaker"
@@ -400,12 +410,13 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 onChange={(e) => handleTiebreakerDurationChange(parseInt(e.target.value) || 5)}
                 style={{
                   width: '60px',
+                  minHeight: cssVars.touchTargets.minimum,
                   padding: '6px 10px',
                   background: cssVars.colors.inputBg,
                   border: `1px solid ${cssVars.colors.borderControl}`,
                   borderRadius: cssVars.borderRadius.sm,
                   color: cssVars.colors.textPrimary,
-                  fontSize: cssVars.fontSizes.md,
+                  fontSize: cssVars.fontSizes.lg,
                   textAlign: 'center',
                 }}
               />

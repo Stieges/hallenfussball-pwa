@@ -91,6 +91,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
           cursor: 'pointer',
           fontSize: cssVars.fontSizes.sm,
           padding: '8px 0',
+          minHeight: cssVars.touchTargets.minimum, // @OB-022
           display: 'flex',
           alignItems: 'center',
           gap: '6px',

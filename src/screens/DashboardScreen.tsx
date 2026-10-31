@@ -272,8 +272,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
               fontWeight: cssVars.fontWeights.medium,
               flex: isMobile ? 1 : undefined,
+              minHeight: cssVars.touchTargets.primary,
               ...(isAtLimit ? { opacity: 0.6 } : {}),
             }}
+            data-primary
           >
             {isAtLimit ? t('buttons.limitReached') : t('buttons.newTournament')}
           </Button>

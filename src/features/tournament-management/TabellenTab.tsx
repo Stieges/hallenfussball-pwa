@@ -98,9 +98,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
 
   const segmentGroupStyle: CSSProperties = {
     display: 'inline-flex',
+    gap: cssVars.spacing.xs, // F-10: die Segmente berühren sich nicht
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.lg,
-    padding: '4px',
+    padding: cssVars.spacing.xs,
     border: `1px solid ${cssVars.colors.borderControl}`,
   };
 
