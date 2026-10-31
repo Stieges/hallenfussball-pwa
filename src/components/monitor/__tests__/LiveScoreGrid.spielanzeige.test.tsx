@@ -114,14 +114,42 @@ describe('@ZM-157 Finale beendet mit allen Zusätzen', () => {
     expect(screen.getByTestId('live-grid').textContent).not.toContain('…');
   });
 
-  it('@ZM-157 Logo/Initialen: Avatar-Größe ist der Token scoreArea.avatarSize, Initialen neutral (Thema statt Weiß auf Streufarbe)', () => {
+  it('@ZM-157 Logo/Initialen: Avatar steht außen neben dem Kasten (Variante c) in der Größe der Tokens, Initialen neutral (Thema statt Weiß auf Streufarbe)', () => {
     zeige();
     const avatar = screen.getByTestId('live-team-home-avatar');
-    expect(avatar.style.width).toBe(displayLayout.scoreArea.avatarSize);
+    expect(avatar.style.width).toBe(`min(${displayLayout.scoreArea.avatarOutsideHeight}, ${displayLayout.scoreArea.avatarOutsideWidthCap})`);
+    expect(avatar.style.justifySelf).toBe('start');
     const flaeche = avatar.firstElementChild as HTMLElement;
     const normiert = document.createElement('div');
     normiert.style.backgroundColor = monitorThemes.dark.surfaceHover;
     expect(flaeche.style.backgroundColor).toBe(normiert.style.backgroundColor);
+  });
+
+  it('@ZM-157 Variante c: Logo links vom Heimkasten und rechts vom Gastkasten, senkrecht mittig, nicht über dem Namen', () => {
+    zeige();
+    const heim = screen.getByTestId('live-team-home-avatar');
+    const gast = screen.getByTestId('live-team-away-avatar');
+    expect(heim.style.justifySelf).toBe('start');
+    expect(gast.style.justifySelf).toBe('end');
+    expect(heim.style.gridColumn).toBe('1');
+    expect(gast.style.gridColumn).toBe('3');
+    for (const a of [heim, gast]) {
+      expect(a.style.alignSelf).toBe('center');
+      expect(a.style.gridRow).toBe('1');
+    }
+    expect(screen.getByTestId('live-block-home')).not.toContainElement(heim);
+    expect(screen.getByTestId('live-name-home')).not.toContainElement(heim);
+    expect(screen.getByTestId('live-name-away')).not.toContainElement(gast);
+  });
+
+  it('@ZM-157 Gegenbeispiel: Team ohne Logo – Initialen im gleich großen Kreis an derselben Stelle wie das Logo', () => {
+    zeige();
+    const heim = screen.getByTestId('live-team-home-avatar');
+    const gast = screen.getByTestId('live-team-away-avatar');
+    expect(heim.querySelector('img')).toBeNull();
+    expect(gast.querySelector('img')).not.toBeNull();
+    expect(heim.style.width).toBe(gast.style.width);
+    expect(heim.style.height).toBe(gast.style.height);
   });
 
   it('@ZM-157 kein Zeichen liegt in der Ziffernfläche: Pokal, Leibchen-Zeichen und Avatar sind keine Kinder der Ziffer', () => {

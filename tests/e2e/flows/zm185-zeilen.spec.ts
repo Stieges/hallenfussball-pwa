@@ -292,7 +292,7 @@ test.describe('@ZM-185 Nächste Spiele (Nikolaus-Turnier, 1920×1080)', () => {
 // ---- @ZM-157 Live-Folie und Endstand am Monitor: Logo bzw. Initialen mittig über dem Namen, direkt unter dem Kasten ----
 const FINALE = '00000003-0000-4000-8000-000000000016';
 const FINALE_ENDE = { matchStatus: 'finished', timerStartTime: undefined, timerElapsedSeconds: 600, scoreA: 1, scoreB: 1, overtimeScoreA: 1, overtimeScoreB: 1, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty' };
-const MONITORE = [{ breite: 1280, hoehe: 720 }, { breite: 1920, hoehe: 1080 }] as const;
+const MONITORE = [{ breite: 1280, hoehe: 720 }, { breite: 1920, hoehe: 1080 }, { breite: 960, hoehe: 540 }] as const;
 
 async function oeffneLive(page: Page, breite: number, hoehe: number) {
   await page.setViewportSize({ width: breite, height: hoehe });
@@ -324,38 +324,41 @@ async function aendereFinale(page: Page, patch: Record<string, unknown>) {
   }), { id: FINALE, w: patch });
 }
 
-/** Lage von Kasten, Avatar, Name und Uhr je Seite der Live-Folie */
+/** Lage von Kasten, Avatar, Pokal, Leibchen-Zeichen, Name und Uhr je Seite der Live-Folie */
 async function messeLive(page: Page) {
   return page.evaluate(() => {
-    const r = (el: Element | null) => { if (!el) { return null; } const b = el.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, cx: b.left + b.width / 2 }; };
+    const r = (el: Element | null) => { if (!el) { return null; } const b = el.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, cx: b.left + b.width / 2, cy: b.top + b.height / 2, w: b.width, h: b.height }; };
     const seite = (s: string) => {
       const name = document.querySelector(`[data-testid="live-name-${s}"] [data-teamname]`)!;
       const lauf = document.createRange(); lauf.selectNodeContents(name);
       const rs = Array.from(lauf.getClientRects());
       return {
         box: r(document.querySelector(`[data-testid="live-box-${s}"]`)), avatar: r(document.querySelector(`[data-testid="live-team-${s}-avatar"]`)),
+        cup: r(document.querySelector(`[data-testid="live-box-${s}-cup"]`)), bib: r(document.querySelector(`[data-testid="live-box-${s}-bib"]`)),
         text: { l: Math.min(...rs.map((x) => x.left)), r: Math.max(...rs.map((x) => x.right)), t: Math.min(...rs.map((x) => x.top)), b: Math.max(...rs.map((x) => x.bottom)) },
         bild: document.querySelector(`[data-testid="live-team-${s}-avatar"] img`) !== null,
+        avatarImNamen: document.querySelector(`[data-testid="live-name-${s}"] [data-testid="live-team-${s}-avatar"]`) !== null,
       };
     };
     const flaeche = document.querySelector('[data-testid="live-slide-area"]')!;
     const uhr = document.querySelector('[data-monitor="uhr"]');
-    const kopf = document.querySelector('[data-testid="live-badge"]');
     return {
-      kopf: r(kopf), unten: r(document.querySelector('[data-testid="live-lower"]')), rahmen: r(flaeche.firstElementChild),
+      kopf: r(document.querySelector('[data-testid="live-badge"]')), unten: r(document.querySelector('[data-testid="live-lower"]')), rahmen: r(flaeche.firstElementChild),
       home: seite('home'), away: seite('away'), uhr: r(uhr), flaeche: r(flaeche),
       abgeschnitten: flaeche.scrollHeight > flaeche.clientHeight + 1 || flaeche.scrollWidth > flaeche.clientWidth + 1,
-      hoehe: window.innerHeight,
     };
   });
 }
 
-test.describe('@ZM-157 Hallenmonitor Feld 1: Logo bzw. Initialen mittig über dem Namen, direkt unter dem Kasten', () => {
+type Rechteck = { l: number; t: number; r: number; b: number } | null;
+const schneiden = (a: Rechteck, b: Rechteck) => a !== null && b !== null && Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5;
+
+test.describe('@ZM-157 Hallenmonitor Feld 1 (Variante c): Logo bzw. Initialen groß außen neben dem Kasten, senkrecht mittig', () => {
   test.beforeEach(() => { test.skip(test.info().project.name !== 'desktop', 'läuft nur im Projekt desktop'); });
 
   for (const { breite, hoehe } of MONITORE) {
     for (const zustand of ['läuft', 'Endstand nach Strafstoßschießen'] as const) {
-      test(`@ZM-157 ${zustand} (${breite}×${hoehe}): Heimlogo und Gastinitialen mittig über ihrem Namen, unter dem Kasten, Uhr und Balken unverdrängt`, async ({ page }) => {
+      test(`@ZM-157 ${zustand} (${breite}×${hoehe}): Heimlogo links vom Heimkasten, Gastinitialen rechts vom Gastkasten, halb so hoch wie der Kasten, im Rand, ohne Pokal und Leibchen zu berühren`, async ({ page }) => {
         await oeffneLive(page, breite, hoehe);
         if (zustand !== 'läuft') {
           await aendereFinale(page, FINALE_ENDE);
@@ -364,21 +367,26 @@ test.describe('@ZM-157 Hallenmonitor Feld 1: Logo bzw. Initialen mittig über de
         }
         await bild(page, `live-${zustand === 'läuft' ? 'laeuft' : 'ende'}-${breite}`);
         const m = await messeLive(page);
+        // Heim links, Gast rechts, nie über dem Namen
+        expect(m.home.avatar!.r, 'Heimlogo links vom Heimkasten').toBeLessThanOrEqual(m.home.box!.l - 0.5);
+        expect(m.away.avatar!.l, 'Gastinitialen rechts vom Gastkasten').toBeGreaterThanOrEqual(m.away.box!.r + 0.5);
+        expect(m.home.avatarImNamen || m.away.avatarImNamen, 'kein Kreis über dem Namen').toBe(false);
         for (const s of [m.home, m.away]) {
-          const mitte = (s.text.l + s.text.r) / 2;
-          expect(Math.abs(s.avatar!.cx - mitte), 'Avatar mittig über dem Namen').toBeLessThanOrEqual(TOL);
-          expect(s.avatar!.t, 'Avatar unter dem Kasten').toBeGreaterThanOrEqual(s.box!.b - 1);
-          expect(s.avatar!.t - s.box!.b, 'direkt unter dem Kasten').toBeLessThan(hoehe * 0.06);
-          expect(s.avatar!.b, 'Avatar über dem Namen').toBeLessThanOrEqual(s.text.t + 1);
+          expect(Math.abs(s.avatar!.cy - s.box!.cy), 'senkrecht mittig zum Kasten').toBeLessThanOrEqual(TOL);
+          expect(s.avatar!.h / s.box!.h, 'etwa halb so hoch wie der Kasten').toBeGreaterThanOrEqual(0.4);
+          expect(s.avatar!.h / s.box!.h).toBeLessThanOrEqual(0.55);
+          expect(Math.abs(s.avatar!.w - s.avatar!.h), 'Kreis').toBeLessThanOrEqual(0.5);
+          expect(s.avatar!.l, 'innerhalb des Rands (5 %)').toBeGreaterThanOrEqual(0.05 * breite - 0.5);
+          expect(s.avatar!.r, 'innerhalb des Rands (5 %)').toBeLessThanOrEqual(0.95 * breite + 0.5);
+          expect(schneiden(s.avatar, s.box), 'Kreis berührt den Kasten nicht').toBe(false);
+          expect(schneiden(s.avatar, s.cup) || schneiden(s.avatar, s.bib), 'Pokal und Leibchen-Zeichen unberührt').toBe(false);
         }
+        expect(Math.abs(m.home.avatar!.w - m.away.avatar!.w), 'Logo und Initialen gleich groß').toBeLessThanOrEqual(0.5);
         expect(m.home.bild, 'Heimteam hat ein Logo').toBe(true);
         expect(m.away.bild, 'Gast zeigt Initialen').toBe(false);
-        expect(m.home.avatar!.cx, 'Heimlogo links der Mitte').toBeLessThan(breite / 2);
-        expect(m.away.avatar!.cx, 'Gastinitialen rechts der Mitte').toBeGreaterThan(breite / 2);
         expect(m.abgeschnitten, 'Folie schneidet nichts ab').toBe(false);
         expect(m.kopf!.t, 'Kopfzeile nicht über den oberen Rand der Folie hinaus').toBeGreaterThanOrEqual(m.rahmen!.t - 0.5);
         expect(m.unten!.b, 'unterer Bereich (Uhr, Balken, Hinweise) nicht über den unteren Rand hinaus').toBeLessThanOrEqual(m.rahmen!.b + 0.5);
-        expect(m.flaeche!.b, 'Folie endet im Bild').toBeLessThanOrEqual(hoehe + 1);
         if (m.uhr) {
           const namenUnten = Math.max(m.home.text.b, m.away.text.b);
           expect(m.uhr.t, 'Uhr unter den Namen, nicht verdrängt').toBeGreaterThanOrEqual(namenUnten - 1);
@@ -387,4 +395,14 @@ test.describe('@ZM-157 Hallenmonitor Feld 1: Logo bzw. Initialen mittig über de
       });
     }
   }
+
+  test('@ZM-157 Gegenbeispiel: Endstand mit Pokal – der Pokal des Siegers liegt oben rechts am Kasten, der Kreis daneben bleibt frei', async ({ page }) => {
+    await oeffneLive(page, 1920, 1080);
+    await aendereFinale(page, FINALE_ENDE);
+    await expect(page.getByTestId('live-box-home-cup')).toBeVisible({ timeout: 20000 });
+    const m = await messeLive(page);
+    expect(m.home.cup, 'Pokal am Heimkasten').not.toBeNull();
+    expect(schneiden(m.home.avatar, m.home.cup)).toBe(false);
+    expect(m.home.cup!.cx, 'Pokal oben rechts am Kasten').toBeGreaterThan(m.home.box!.cx);
+  });
 });

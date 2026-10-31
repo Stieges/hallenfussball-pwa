@@ -33,9 +33,9 @@ export interface TeamNameProps {
   addonFontSize?: string;
   /**
    * Lage des Avatars zum Namen: `before` davor (Handy, Karte, Kopf) | `after` dahinter (Monitor „Nächste Spiele“, Heimseite: Logo am Strich, @ZM-185)
-   * | `above` mittig über dem Namen, der Name behält die volle Breite (Monitor Live-Folie, Endstand und Spielplan eines Felds, @ZM-157, @ZM-185)
+   * | `above` mittig über dem Namen, der Name behält die volle Breite (Spielplan eines Felds, @ZM-185) | `none` kein Avatar (Live-Folie: das Logo steht außen neben dem Kasten, @ZM-157)
    */
-  avatarPlacement?: 'before' | 'after' | 'above';
+  avatarPlacement?: 'before' | 'after' | 'above' | 'none';
   /** Zeilenhöhe der Zusätze (Faktor); ohne Angabe `displayLayout.scoreArea.hintLineHeight` */
   addonLineHeight?: number;
   /** Abstand zwischen Avatar und Name bei `avatarPlacement="above"`; ohne Angabe `displayList.avatarStackGap` */
@@ -82,7 +82,7 @@ export function TeamName({
     : { size: avatarSize };
   const flexJustify = { start: 'flex-start', center: 'center', end: 'flex-end' } as const;
   const above = avatarPlacement === 'above';
-  const avatar = <TeamAvatar team={team} neutral={avatarNeutral} {...avatarProps} data-testid={`${testId}-avatar`} />;
+  const avatar = avatarPlacement === 'none' ? null : <TeamAvatar team={team} neutral={avatarNeutral} {...avatarProps} data-testid={`${testId}-avatar`} />;
   return (
     <div
       style={{ display: 'flex', flexDirection: 'column', alignItems: flexJustify[justify], minWidth: 0, maxWidth: '100%', width: stacked || above ? '100%' : undefined }}

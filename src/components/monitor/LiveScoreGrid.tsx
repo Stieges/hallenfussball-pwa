@@ -12,6 +12,7 @@ import type { FinalScore, MatchView } from '../../core/view';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { ScoreBox } from '../ui/molecules/ScoreBox';
 import { TeamName } from '../ui/molecules/TeamName';
+import { TeamAvatar } from '../ui/TeamAvatar';
 import { pairFrameStrength } from '../ui/molecules/scoreBoxStyle';
 import { TeamNameDisplay } from './TeamNameDisplay';
 import { LivePenaltyResult } from './LiveFinalScore';
@@ -57,9 +58,10 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
   // @ZM-140 Raster: Kasten (Zeile 1) und Namen (Zeile 2) teilen sich ein Raster, Spalten 1 | 2 | 3
   // B-44a2: Zeile 1 hat die feste Kastenhöhe (auch im Kindermodus, gleiche Lage), Zeile 2 reserviert zwei Namenszeilen
   // Dazu zwei Zeilen für Zusätze unter dem Namen („nach Verlängerung“, @ZM-156/@ZM-157), in jedem Zustand reserviert: die Kästen springen nicht (@ZM-151)
+  const outsideSize = `min(${layout.avatarOutsideHeight}, ${layout.avatarOutsideWidthCap})`;
   const addonLineHeight = `calc(${displayFontSizes.clockHint} * ${layout.clockLineHeight})`;
-  // @ZM-157: Logo bzw. Initialen mittig über dem Namen, direkt unter dem Kasten – Höhe und Abstand kommen zur Namenszeile dazu
-  const nameRowHeight = `calc(${layout.avatarSize} + ${layout.avatarGap} + ${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines} + ${addonLineHeight} * ${ADDON_LINES})`;
+  // @ZM-157 (Variante c): Logo bzw. Initialen stehen außen neben dem Kasten, unter dem Kasten nur der Name (im Kindermodus ohne Kästen am Namen)
+  const nameRowHeight = `calc(${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines} + ${addonLineHeight} * ${ADDON_LINES})`;
   const gridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: `minmax(0, 1fr) ${layout.separatorWidth} minmax(0, 1fr)`,
@@ -68,7 +70,12 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
     // Abstand Kasten zu Namen = Ringbreite (der Ring liegt außen, die Zeilenhöhe des Namens lässt oben Luft); die Höhe geht an die zwei Zusatzzeilen (@ZM-157)
     rowGap: layout.frameWidthStrong,
     alignItems: 'center',
-    width: '100%',
+    // Das Logo steht außen neben dem Kasten und ragt in das Seitenpolster der Folie: das Raster reicht über das Polster (negativer Rand, eigenes Polster
+    // gleicher Größe), die Spalten und Kästen behalten ihre Lage und Größe (@ZM-151, @ZM-125)
+    boxSizing: 'border-box',
+    width: `calc(100% + 2 * ${layout.paddingX})`,
+    marginInline: `calc(-1 * ${layout.paddingX})`,
+    paddingInline: layout.paddingX,
     flexShrink: 0,
   };
 
@@ -118,8 +125,18 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
     const cup = winner === side && finalRound;
     // Zugänglicher Name wie bisher am ScoreBlock (Wortlaut „Heim: 2“ von Tests gepinnt), in der Finalrunde beim Sieger dazu „Pokal“; die Zeichen selbst sind dekorativ
     const ariaLabel = [`${home ? 'Heim' : 'Gast'}: ${home ? match.homeScore : match.awayScore}`, cup ? t('liveMatch.winnerAria') : ''].filter(Boolean).join(', ');
+    // Logo bzw. Initialen: eigenes Rasterfeld in derselben Zelle wie der Kasten, außen daneben (Rand der Spalte minus Lücke), senkrecht mittig; so ragt nichts aus der Kastenzelle
+    const abstandAussen = `calc((100% - ${layout.blockWidth}) / 2 - ${outsideSize} - ${layout.avatarOutsideGap})`;
     return (
-      <div style={blockCellStyle(home ? 1 : 3)} data-testid={home ? 'live-block-home' : 'live-block-away'}>
+      <>
+        <TeamAvatar
+          team={home ? match.homeTeam : match.awayTeam}
+          dimension={outsideSize}
+          neutral={{ background: themeColors.surfaceHover, color: themeColors.text, border: themeColors.border }}
+          style={{ gridRow: 1, gridColumn: home ? 1 : 3, justifySelf: home ? 'start' : 'end', alignSelf: 'center', ...(home ? { marginLeft: abstandAussen } : { marginRight: abstandAussen }) }}
+          data-testid={home ? 'live-team-home-avatar' : 'live-team-away-avatar'}
+        />
+        <div style={blockCellStyle(home ? 1 : 3)} data-testid={home ? 'live-block-home' : 'live-block-away'}>
         <ScoreBox
           score={home ? match.homeScore : match.awayScore}
           fill={sideBox.fill}
@@ -134,7 +151,8 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
           ariaLabel={ariaLabel}
           testId={home ? 'live-box-home' : 'live-box-away'}
         />
-      </div>
+        </div>
+      </>
     );
   };
 
@@ -149,8 +167,7 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
           team={team}
           layout="stacked"
           avatarSize="display"
-          avatarPlacement="above"
-          avatarGap={layout.avatarGap}
+          avatarPlacement={hideScore ? 'before' : 'none'}
           avatarNeutral={{ background: themeColors.surfaceHover, color: themeColors.text, border: themeColors.border }}
           addons={addons}
           reserveAddonLines={ADDON_LINES}
