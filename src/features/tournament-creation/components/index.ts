@@ -19,3 +19,4 @@ export { SmartConfig } from './SmartConfig';
 export { SportSelector } from './SportSelector';
 export { PlayOutPlacesSection, PlayOutPlacesField } from './PlayOutPlacesSection';
 export { PlacementAfterRow } from './PlacementAfterRow';
+export { RoundCountField, RoundCountSummary } from './RoundCountField';

@@ -172,8 +172,7 @@ const baseTournament = (): Tournament =>
     lastVisitedStep: 6,
   }) as unknown as Tournament;
 
-const established = (): Tournament => {
-  const base = baseTournament();
+const established = (base: Tournament = baseTournament()): Tournament => {
   return {
     ...base,
     matches: generateFullSchedule(base).allMatches.map((m, index) => ({
@@ -240,6 +239,27 @@ describe('B-02 Paket A – Neuplanen im Wizard mit Vorschau (Integration)', () =
     // Der bestätigte Plan ist der neue: Das hinzugefügte Feld wird genutzt
     expect((override.matches ?? []).some((m) => m.field === 2)).toBe(true);
     expect(current.matches.some((m) => m.field === 2)).toBe(false);
+  });
+
+  it('@TM-152 Rundenzahl 1 → 3 vor dem Anpfiff: „Speichern & Zurück“ öffnet die Neuplanung, nach Bestätigen 45 Spiele', async () => {
+    const six = established({
+      ...baseTournament(),
+      numberOfTeams: 6,
+      teams: [1, 2, 3, 4, 5, 6].map((n) => ({ id: testUuid(n), name: `Team ${String(n)}` })),
+    });
+    expect(six.matches).toHaveLength(15);
+    spies.existing = six;
+    spies.formDataOverride = { ...six, numberOfRounds: 3 };
+    renderScreen(six, true);
+
+    fireEvent.click(screen.getByTestId('quickedit-save'));
+    await screen.findByTestId('replan-end-time');
+    fireEvent.click(screen.getByTestId('replan-confirm'));
+
+    await waitFor(() => {
+      expect(spies.publishTournament).toHaveBeenCalledWith(expect.objectContaining({ matches: expect.any(Array) }));
+    });
+    expect(spies.publishTournament.mock.calls[0][0]?.matches).toHaveLength(45);
   });
 
   it('@W5-007 – Gegenbeispiel: Abbrechen lässt den Plan unverändert', async () => {

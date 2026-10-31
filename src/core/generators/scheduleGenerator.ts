@@ -10,6 +10,7 @@
 
 import { Team, Match, Tournament } from '../../types/tournament';
 import { generateGroupPhaseScheduleWithReport } from './fairScheduler'
+import { effectiveRoundCount, repeatRounds } from './repeatRounds'
 import { effectiveHostTeamIds } from '../models/hostTeams'
 import { generatePlayoffSchedule } from './playoffScheduler'
 import { legacyFinalsPreset } from './playoffGenerator'
@@ -323,7 +324,7 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Ret
     }
   }
 
-  return generateGroupPhaseScheduleWithReport({
+  const firstRound = generateGroupPhaseScheduleWithReport({
     groups: groupsMap,
     numberOfFields: tournament.numberOfFields,
     slotDurationMinutes: tournament.groupPhaseGameDuration,
@@ -335,6 +336,14 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Ret
     hostTeamIds: effectiveHostTeamIds(tournament.hostTeamIds, tournament.teams), // @W4-027, Reihenfolge = Teamliste
     openingMode: tournament.openingMode,
   })
+  // @TM-152: weitere Runden bei „Jeder gegen jeden“ (Heim/Gast getauscht, Mindestpause über die Rundengrenze)
+  const matches = repeatRounds(firstRound.matches, effectiveRoundCount(tournament), {
+    minRestSlots: tournament.minRestSlots ?? 1,
+    slotDurationMinutes: tournament.groupPhaseGameDuration,
+    breakBetweenSlotsMinutes: tournament.groupPhaseBreakDuration ?? 0,
+    startTime,
+  })
+  return { ...firstRound, matches }
 }
 
 function generateFinalMatches(
