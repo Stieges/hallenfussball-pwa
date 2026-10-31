@@ -210,7 +210,7 @@ describe('@OB-029 Wizard: Schritt in der Adresse', () => {
   it('@OB-029 Zurück im Wizard schreibt den vorigen Schritt in die Adresse', async () => {
     renderWizard('/?step=3', complete({ lastVisitedStep: 3 }));
     expect(await screen.findAllByRole('tab')).toBeTruthy();
-    const back = screen.getAllByRole('button', { name: /^zurück$|^back$/i });
+    const back = screen.getAllByRole('button', { name: /^zurück$|^back$|navigation\.back$/i });
     fireEvent.click(back[back.length - 1]);
     expect(search()).toBe('?step=2');
     expect(activeStep()).toBe(2);

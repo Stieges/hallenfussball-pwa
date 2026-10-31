@@ -17,7 +17,7 @@ import { useCallback, CSSProperties, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
-import { cssVars, mediaQueries, layoutHeights } from '../../design-tokens'
+import { cssVars, mediaQueries } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
 import {
@@ -453,11 +453,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           }
 
           /* @OB-074: backdrop-filter würde die Karte zum Bezug von position: fixed machen, die Leiste klebte dann am Kartenende
-             statt am Fensterrand. Am Handy ist der Filter aus; die Karte reserviert Leistenhöhe plus Abstand, damit die letzte Zeile darüber liegt */
+             statt am Fensterrand. Am Handy ist der Filter aus; den Platz unter der letzten Zeile reserviert (seit Usability F) die Fußzeile (Footer: Leistenhöhe + --schedule-action-bar-h + Safe-Area), damit weder die letzte Zeile noch Impressum/Datenschutz unter der Leiste liegen */
           .schedule-tab-card {
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
-            padding-bottom: calc(var(--schedule-action-bar-h, 0px) + ${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
           }
         }
       `}</style>

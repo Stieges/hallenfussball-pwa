@@ -38,8 +38,13 @@ const headerStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
+  // @OB-025: reicht die Breite nicht, rutschen die Tasten in eine zweite Zeile; der Titel bleibt lesbar (nie Buchstabe für Buchstabe)
+  rowGap: cssVars.spacing.sm,
 };
-const headerContentStyle: CSSProperties = { flex: 1, minWidth: 0 };
+// Handy: Titel mindestens halbe Breite, die Tasten rutschen sonst in Zeile 2. Ab Tablet: eine Zeile, Titel nimmt den Rest (der Untertitel darf umbrechen)
+const headerContentStyle = (isMobile: boolean): CSSProperties => ({ flex: isMobile ? '1 1 50%' : '1 1 auto', minWidth: 0 });
+// Tastengruppe (Zahnrad, Status, Anmeldung): rechts oben; reicht die Breite nicht, rutscht sie als Ganzes in die zweite Zeile
+const headerActionsStyle: CSSProperties = { display: 'flex', alignItems: 'center', marginLeft: 'auto' };
 const backButtonStyle: CSSProperties = {
   padding: cssVars.spacing.sm,
   background: 'transparent',
@@ -58,20 +63,20 @@ const backButtonStyle: CSSProperties = {
   marginRight: cssVars.spacing.md,
 };
 const titleStyle: CSSProperties = {
-  fontSize: cssVars.fontSizes.xxl,
   fontWeight: cssVars.fontWeights.bold,
   color: cssVars.colors.textPrimary,
   marginBottom: cssVars.spacing.xs,
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  // @OB-025 / Gestaltungsregel 1 und 2: der Turniername bricht an Leerzeichen um, nie „…“ und nie getrennt;
+  // passt er nicht, wird die Schrift stufenweise kleiner (zwischen zwei Token-Stufen)
+  fontSize: `clamp(${cssVars.fontSizes.lg}, 5vw, ${cssVars.fontSizes.xxl})`,
+  overflowWrap: 'break-word',
+  hyphens: 'manual',
 };
 const subtitleStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.md,
   color: cssVars.colors.textSecondary,
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  overflowWrap: 'break-word',
+  hyphens: 'manual',
 };
 const tabBarStyle: CSSProperties = {
   display: 'flex',
@@ -99,6 +104,10 @@ const adminButtonStyle: CSSProperties = {
   marginRight: cssVars.spacing.md,
   transition: 'all 0.15s ease',
   flexShrink: 0,
+  // @OB-022: Tippfläche mindestens 44 Bildpunkte
+  justifyContent: 'center',
+  minHeight: cssVars.touchTargets.minimum,
+  minWidth: cssVars.touchTargets.minimum,
 };
 
 export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
@@ -106,16 +115,17 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
   const { tournament, isMobile, activeTab, isSettingsDirty, onTabChange } = p;
   return (
     <>
-      <header style={headerStyle}>
+      <header style={{ ...headerStyle, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
         {p.onBack && (
           <button onClick={p.onBack} style={backButtonStyle} title="Zurück zum Dashboard">←</button>
         )}
-        <div style={headerContentStyle}>
+        <div style={headerContentStyle(isMobile)}>
           <div style={titleStyle}>{tournament.title}</div>
           <div style={subtitleStyle}>
             {joinMeta([tournament.ageClass, formatDateGerman(tournament.date), getLocationName(tournament)], ' · ')}
           </div>
         </div>
+        <div style={headerActionsStyle} data-testid="management-header-actions">
         <button onClick={() => { void navigate(`/tournament/${tournament.id}/admin`); }} style={adminButtonStyle} title="Admin Center öffnen">
           <span>⚙️</span>
           {!isMobile && <span>Admin Center</span>}
@@ -130,6 +140,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
           onNavigateToProfile={p.onNavigateToProfile}
           onNavigateToSettings={p.onNavigateToSettings}
         />
+        </div>
       </header>
 
       {!isMobile && (

@@ -167,9 +167,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const containerStyle: CSSProperties = {
     padding: isMobile ? '20px 16px' : '40px 20px',
-    // Add bottom padding on mobile for fixed bottom nav (64px nav + safe area + extra buffer)
-    // Add extra bottom padding on mobile for fixed bottom nav (80px nav + safe area + 80px buffer)
-    paddingBottom: isMobile ? 'calc(160px + env(safe-area-inset-bottom, 20px))' : '40px',
+    // Den Platz über der festen unteren Leiste reserviert die Fußzeile (Footer, @OB-022), hier nur der normale Abstand
+    paddingBottom: isMobile ? cssVars.spacing.lg : '40px',
     maxWidth: '1200px',
     margin: '0 auto',
     minHeight: isMobile ? '100vh' : 'auto',
@@ -272,8 +271,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
               fontWeight: cssVars.fontWeights.medium,
               flex: isMobile ? 1 : undefined,
+              minHeight: cssVars.touchTargets.primary,
               ...(isAtLimit ? { opacity: 0.6 } : {}),
             }}
+            data-primary
           >
             {isAtLimit ? t('buttons.limitReached') : t('buttons.newTournament')}
           </Button>

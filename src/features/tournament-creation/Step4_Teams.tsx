@@ -287,6 +287,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                       padding: 0,
                       cursor: 'pointer',
                       flexShrink: 0,
+                      // @OB-022: Tippfläche mindestens 44 × 44 (der Avatar selbst ist 40)
+                      minWidth: cssVars.touchTargets.minimum,
+                      minHeight: cssVars.touchTargets.minimum,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                     aria-label={t(isExpanded ? 'step4.avatarCollapse' : 'step4.avatarExpand', { name: team.name })}
                   >

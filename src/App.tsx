@@ -719,6 +719,7 @@ function AppContent() {
       {/* Footer - shown on main screens (not on public/invite flows or legal pages) */}
       {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && !isLegalPath && (
         <AppFooter
+          untereLeiste={isDashboardPath || isTournamentPath}
           onOpenCookieSettings={() => {
             // TODO: Integrate with Cookie Banner when implemented
             // Cookie banner will be added in a future commit
