@@ -27,7 +27,7 @@ export interface LiveCockpitLeisteProps extends LiveCockpitFarbenProps {
   onKorrigieren?(matchId: string): void;
   /**
    * Der Endstand dieses Spiels steht noch als Quittung (`useEndstandHalten`, @SL-152): nur dann „Spiel fortsetzen“ (LT-6). Nach „Weiter“
-   * ist das Spiel quittiert (`false`, @SL-075 Z. 1, @SL-162). Ohne Angabe entscheidet allein die Quittungszeit der Engine (30 Sekunden).
+   * ist das Spiel quittiert (`false`, @SL-075 Z. 1, @SL-162). Ohne Angabe wird nie angeboten (im Zweifel zu, Review #422 🟢 b).
    */
   endstandSteht?: boolean;
   /** B-12 (@SL-174): „Nicht angetreten“ unter „Mehr“ (nur Turnierleitung, vor dem Anpfiff); öffnet den Dialog der Verwaltung */

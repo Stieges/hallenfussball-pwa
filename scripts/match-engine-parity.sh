@@ -135,6 +135,8 @@ MEND_FILE=""
 # ebenfalls erneut, in Fenster-Reihenfolge (sonst stuende die aeltere Fassung). Optional: fehlt die Datei, entfaellt sie.
 A35_MIGRATION="20261117_005_klaerungsliste.sql"
 A35_FILE=""
+# 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET): juengste Fassung von append_match_events -- nach dem erneuten 005 wieder einspielen.
+FS_FILE=""
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
 RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
@@ -188,6 +190,7 @@ while IFS= read -r line; do
     "$WM_MIGRATION") WM_FILE="$line" ;;
     "$MEND_MIGRATION") MEND_FILE="$line" ;;
     "$A35_MIGRATION") A35_FILE="$line" ;;
+    20261118_009_fortsetzen_spaet.sql) FS_FILE="$line" ;;
   esac
 done <<< "$NEWER_MIGRATIONS_RAW"
 if [[ -z "$A25B_FILE" ]]; then
@@ -272,6 +275,7 @@ psql_value() {
 reapply_after_sb() {
   if [[ -n "$A21AS_FILE" ]]; then psql_stdin < "$A21AS_FILE"; fi
   if [[ -n "$A35_FILE" ]]; then psql_stdin < "$A35_FILE"; fi
+  if [[ -n "$FS_FILE" ]]; then psql_stdin < "$FS_FILE"; fi
 }
 
 echo "Baseline + ${#NEWER_MIGRATIONS[@]} neuere Migration(en) einspielen..." >&2

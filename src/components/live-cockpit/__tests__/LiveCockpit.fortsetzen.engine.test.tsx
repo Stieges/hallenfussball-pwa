@@ -159,6 +159,21 @@ describe('@SL-075 Nach „Weiter“, nach 30 Sekunden oder ein zweites Mal setzt
     expect(reopens()).toHaveLength(0);
   });
 
+  it('Steuer innerhalb der 30 Sekunden weg und wieder da: das offene Blatt bleibt zu, nichts wird gesendet (Review #422 🟢 a)', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness turnier={SPIEL_11} />);
+    await vonSelbstBeendetBei21(user);
+    zu(ABPFIFF + 10_000);
+    await user.click(screen.getByTestId('match-continue-button'));
+    expect(await screen.findByTestId('resume-finished-dialog')).toBeInTheDocument();
+    rerender(<Harness turnier={SPIEL_11} kannSteuern={false} />);
+    await waitFor(() => expect(screen.queryByTestId('resume-finished-dialog')).toBeNull());
+    rerender(<Harness turnier={SPIEL_11} kannSteuern />);
+    await waitFor(() => expect(fortsetzenTaste()).not.toBeNull());
+    expect(screen.queryByTestId('resume-finished-dialog')).toBeNull();
+    expect(reopens()).toHaveLength(0);
+  });
+
   it('@SL-075 Z. 3 Tom hat Spiel 11 schon einmal fortgesetzt, und es ist wieder von selbst beendet → kein „Spiel fortsetzen“', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={SPIEL_11} />);

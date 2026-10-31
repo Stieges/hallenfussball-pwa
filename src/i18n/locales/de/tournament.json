@@ -1600,7 +1600,8 @@
       "team": "{{what}} {{team}}",
       "ohneTeam": "{{what}}",
       "minute": "{{line}} · Abschnitt {{section}}, {{minute}}. Minute",
-      "geraet": "Gerät {{time}}"
+      "geraet": "Gerät {{time}}",
+      "fortsetzenZuSpaet": "Fortsetzen kam zu spät an"
     },
     "aufklappen": "Einträge zeigen",
     "zuklappen": "Einträge ausblenden",

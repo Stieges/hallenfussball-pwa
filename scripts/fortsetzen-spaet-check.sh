@@ -195,6 +195,7 @@ D_OLLI="$(uuid_for device:olli-tablet)"; D_TOM="$(uuid_for device:tom-handy)"
 T_CUP="$(uuid_for tournament:live-cup)"
 TN="$(uuid_for team:fc-nord)"; TS="$(uuid_for team:sv-sued)"
 MONITOR_ID="halle-feld-1"
+SHARE_CODE="LIVE11"
 E() { uuid_for "event:$1"; }
 M() { uuid_for "match:$1"; }
 
@@ -241,6 +242,18 @@ BEGIN
   RETURN coalesce(m ->> 'match_status', m ->> 'status', '-') || '|' || coalesce(m ->> 'score_a', '-') || ':' || coalesce(m ->> 'score_b', '-');
 END;
 \$fn\$;
+-- Zuschauer-Seite wie die App sie liest (anon, public_tournament mit Teilen-Code) -- Status und Stand eines Spiels (@ZM-180)
+CREATE FUNCTION harness.viewer(p_match uuid) RETURNS text LANGUAGE plpgsql AS \$fn\$
+DECLARE v jsonb; m jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '', true);
+  PERFORM set_config('role', 'anon', true);
+  v := public.public_tournament('$SHARE_CODE', NULL);
+  PERFORM set_config('role', 'postgres', true);
+  SELECT x INTO m FROM jsonb_array_elements(v -> 'matches') x WHERE x ->> 'id' = p_match::text;
+  RETURN coalesce(m ->> 'match_status', m ->> 'status', '-') || '|' || coalesce(m ->> 'score_a', '-') || ':' || coalesce(m ->> 'score_b', '-');
+END;
+\$fn\$;
 -- Feldsteuerung uebernehmen (echter Weg take_field_control, wie „Spielleitung uebernehmen“ der Turnierleitung)
 CREATE FUNCTION harness.take(p_user uuid, p_field integer, p_device uuid) RETURNS text LANGUAGE plpgsql AS \$fn\$
 DECLARE v jsonb; v_epoch integer;
@@ -263,8 +276,8 @@ SELECT '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authentic
 FROM (VALUES ('$U_OLLI'::uuid, 'olli@fs.test'), ('$U_TOM'::uuid, 'tom@fs.test')) AS u(id, email);
 INSERT INTO public.profiles (id, display_name, email) VALUES ('$U_OLLI', 'Olli', 'olli@fs.test'), ('$U_TOM', 'Tom', 'tom@fs.test')
 ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name, email = EXCLUDED.email;
-INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config)
-VALUES ('$T_CUP', '$U_OLLI', 'Live-Cup', '2026-11-28', 2, 10, '{"monitors": [{"id": "$MONITOR_ID", "name": "Halle"}]}'::jsonb);
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, is_public, share_code, config)
+VALUES ('$T_CUP', '$U_OLLI', 'Live-Cup', '2026-11-28', 2, 10, true, '$SHARE_CODE', '{"publishedAt": "2026-10-01T00:00:00.000Z", "monitors": [{"id": "$MONITOR_ID", "name": "Halle"}]}'::jsonb);
 INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accepted_at, label)
 VALUES ('$T_CUP', '$U_TOM', 'collaborator', now(), 'Tom');
 INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TN', '$T_CUP', 'FC Nord'), ('$TS', '$T_CUP', 'SV Süd');
@@ -365,6 +378,7 @@ run_probes() {
     "$(results "$out")|$(state_of "$out")"
   check P "P1 Spielzeile laeuft, Stand 2:1; Monitor (display_tournament) zeigt das Spiel wieder laufend" "2:1|running|running|2:1" \
     "$(row "$(M p1)")|$(q "SELECT harness.monitor('$(M p1)');")"
+  check P "P1 Zuschauer-Seite (public_tournament, anon) zeigt das Spiel wieder laufend 2:1" "running|2:1" "$(q "SELECT harness.viewer('$(M p1)');")"
   check P "P1 kein Klaerungseintrag" "" "$(reviews_of "$(M p1)")"
 
   # --- A @SL-147 Z. 2 + @ZM-180: ohne Netz, nach 5 Minuten angekommen -> bleibt beendet, Klaerungsliste -------------------
@@ -374,6 +388,7 @@ run_probes() {
     "$(results "$out")|$(state_of "$out")"
   check A "A1 @ZM-180 Spielzeile bleibt beendet 2:1; Monitor (display_tournament, anon) zeigt weiter „beendet“ 2:1" "2:1|finished|finished|2:1" \
     "$(row "$(M a1)")|$(q "SELECT harness.monitor('$(M a1)');")"
+  check A "A1 @ZM-180 Zuschauer-Seite (public_tournament, anon) zeigt weiter „beendet“ 2:1" "finished|2:1" "$(q "SELECT harness.viewer('$(M a1)');")"
   check A "A1 das Fortsetzen liegt zur Klaerung (AFTER_END, REOPEN, CONTINUE_LATE), zaehlt nicht (review_state pending)" "AFTER_END:REOPEN:CONTINUE_LATE|pending" \
     "$(reviews_of "$(M a1)")|$(q "SELECT coalesce(review_state, 'NULL') FROM public.match_events WHERE id = '$(E a1-fortsetzen)';")"
   check A "A1 @SL-147 Z. 2 die Turnierleitung (Olli) findet das Fortsetzen von Tom in der Klaerungsliste, offen" "review:AFTER_END:REOPEN:Tom:offen" \
@@ -383,11 +398,15 @@ run_probes() {
   out="$(reopen "$U_TOM" "$D_TOM" a1 "$end")"
   check A "A2 Toms Geraet sendet das Fortsetzen erneut (Warteschlange): wieder review AFTER_END, Spiel bleibt beendet, kein zweiter Eintrag" \
     "review:AFTER_END|finished|1" "$(results "$out")|$(state_of "$out" | cut -d'|' -f1)|$(q "SELECT count(*) FROM public.match_reviews WHERE match_id = '$(M a1)';")"
+  check A "A2 @ZM-180 nach der Wiederholung: Monitor und Zuschauer-Seite weiter „beendet“ 2:1" "finished|2:1|finished|2:1" \
+    "$(q "SELECT harness.monitor('$(M a1)');")|$(q "SELECT harness.viewer('$(M a1)');")"
   out="$(send "$U_TOM" "$D_TOM" "$(M a1)" \
     "$(evj REOPEN "$(E a1-fortsetzen-b)" "$(( end + 25000 ))" 560000)" \
     "$(evj GOAL "$(E a1-tor-danach)" "$(( end + 40000 ))" 575000 "$TS")")"
   check A "A3 Fortsetzen und danach ein Tor im selben Aufruf (5 Minuten zu spaet): beides zur Klaerung, Stand bleibt 2:1 beendet" \
     "review:AFTER_END,review:AFTER_END|2:1|finished" "$(results "$out")|$(row "$(M a1)")"
+  check A "A3 @ZM-180 danach: Monitor und Zuschauer-Seite weiter „beendet“ 2:1 (das Tor zaehlt nicht)" "finished|2:1|finished|2:1" \
+    "$(q "SELECT harness.monitor('$(M a1)');")|$(q "SELECT harness.viewer('$(M a1)');")"
   out="$(send "$U_OLLI" "$D_OLLI" "$(M a1)" "$(evj REVIEW_DISCARD "$(E a1-verwerfen)" "$(now_ms)" null "" "$(E a1-fortsetzen)" null)")"
   check A "A4 Olli verwirft den Eintrag: angenommen, Spiel bleibt beendet 2:1" "accepted|2:1|finished" "$(results "$out")|$(row "$(M a1)")"
   take="$(q "SELECT harness.take('$U_OLLI', 2, '$D_OLLI');")"

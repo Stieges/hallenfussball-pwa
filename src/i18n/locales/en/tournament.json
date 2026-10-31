@@ -1600,7 +1600,8 @@
       "team": "{{what}} {{team}}",
       "ohneTeam": "{{what}}",
       "minute": "{{line}} · period {{section}}, minute {{minute}}",
-      "geraet": "Device {{time}}"
+      "geraet": "Device {{time}}",
+      "fortsetzenZuSpaet": "Continue arrived too late"
     },
     "aufklappen": "Show entries",
     "zuklappen": "Hide entries",

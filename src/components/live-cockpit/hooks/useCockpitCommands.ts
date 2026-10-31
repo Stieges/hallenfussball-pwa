@@ -119,7 +119,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     playSound: useCallback(() => { void sound.play(); }, [sound]),
   });
   // LT-6 „Spiel fortsetzen“ (@SL-074, @SL-075): nur während der Endstand steht (nicht nach „Weiter“), mit Steuer, wenn die Engine es zulässt
-  const fortsetzen = useFortsetzen({ engineView, kannSteuern: !readOnly, endstandSteht: props.endstandSteht ?? true, reopen: cockpitClock.fortsetzen, melde, meldung: t('meldung.fortgesetzt') });
+  const fortsetzen = useFortsetzen({ engineView, kannSteuern: !readOnly, endstandSteht: props.endstandSteht ?? false, reopen: cockpitClock.fortsetzen, melde, meldung: t('meldung.fortgesetzt') });
   const clock = useClockControls({
     match, abschnittspause: cockpitClock.abschnittspause,
     // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.

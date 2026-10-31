@@ -36,7 +36,7 @@ export interface HarnessProps {
   onKorrigieren?: (matchId: string) => void;
   /** Übersicht der Tastenkürzel (Taste `?`, Plan Cockpit v2 K1). */
   onTastenuebersicht?: () => void;
-  /** LT-6: steht der Endstand noch als Quittung (Vorgabe: keine Angabe = nur die 30 Sekunden der Engine); `false` = nach „Weiter“. */
+  /** LT-6: steht der Endstand noch als Quittung (Vorgabe `true`, wie ManagementTab im Endstand); `false` = nach „Weiter“. */
   endstandSteht?: boolean;
 }
 
@@ -78,7 +78,7 @@ function Cockpit({ context, turnier, einstellungen, zeitKorrektur, kannSteuern, 
 }
 
 /** Baut die Engine im Hintergrund auf und zeigt dann das Cockpit mit einem noch nicht angepfiffenen Spiel. */
-export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen, zeitKorrektur = false, kannSteuern = true, istLeitung, onKorrigieren, onNichtAngetreten, onTastenuebersicht, endstandSteht }: HarnessProps): ReactElement | null {
+export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen, zeitKorrektur = false, kannSteuern = true, istLeitung, onKorrigieren, onNichtAngetreten, onTastenuebersicht, endstandSteht = true }: HarnessProps): ReactElement | null {
   const [context, setContext] = useState<MatchEngineContextValue | null>(null);
   useEffect(() => {
     let abgebrochen = false;
