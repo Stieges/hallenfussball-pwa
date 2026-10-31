@@ -133,6 +133,15 @@ describe('@TA-022 Main-Ampel: rot auf dem Hauptzweig hält weitere Merges an', (
     expect(r.aus).not.toContain('Supabase Schema Drift Check')
   })
 
+  it('@TA-022 fehlt ein Pflicht-Job im Lauf auf main (umbenannt, entfallen), ist die Ampel rot statt still grün', () => {
+    const f = grundFixture()
+    f.jobs[1] = f.jobs[1].filter((j) => j.name !== 'Build')
+    const r = ampel(f, AUF_MAIN)
+    expect(r.code, r.aus).toBe(0)
+    expect(r.status.every((s) => s.state === 'failure')).toBe(true)
+    expect(r.status[0].description).toContain('Pflicht-Job fehlt im Lauf: Build')
+  })
+
   it('@TA-022 schlägt die Abfrage bei GitHub fehl, setzt die Ampel keinen (grünen) Status und endet rot', () => {
     const f = grundFixture()
     f.fehler = ['run list -R o/r --workflow CodeQL']

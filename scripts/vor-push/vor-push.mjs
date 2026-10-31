@@ -233,6 +233,8 @@ export async function main(argv = process.argv.slice(2)) {
 
       for (const [schrittName, befehl, args, env, grenzeMs] of plan) {
         const e = await schritt(schrittName, befehl, args, { cwd: ziel, env, grenzeMs })
+        // Abbruch per Signal läuft: keine Zusammenfassung „Schritt … ist rot“, der Abbruch-Pfad beendet mit 130.
+        if (abbruchLaeuft) await new Promise(() => {})
         ergebnisse.push(e)
         if (!e.ok) break
       }

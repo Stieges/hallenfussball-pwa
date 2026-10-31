@@ -327,6 +327,8 @@ describe('@TA-020 Review #420: Abbruch und Aufräumen', () => {
     // Der Hook beendet den Schritt, BEVOR er selbst endet: kurz danach ist der Stellvertreter weg (er schliefe 60 s).
     await expect.poll(() => lebt(pid), { timeout: 3_000, interval: 100 }).toBe(false)
     expect(aus).toContain('abgebrochen (SIGINT)')
+    expect(aus).not.toContain('ist rot')
+    expect(aus).not.toContain('Zusammenfassung')
     expect(git(klon, 'worktree', 'list').stdout).not.toContain('vor-push-')
   }, LAUF_MS)
 
@@ -370,6 +372,7 @@ describe('@TA-025 Sicherungs-Push', () => {
     expect(r.aus).toContain('✓ Typen')
     expect(r.aus).not.toContain('▶ Build')
     expect(r.aus).not.toContain('Playwright')
+    expect(r.aus).not.toContain('Härtetest')
     const log = readFileSync(join(klon, '.git', 'vor-push-sicherung.log'), 'utf8')
     expect(log).toContain(`refs/heads/sicherung/spur-a ${sha} gruen konflikt`)
   }, LAUF_MS)

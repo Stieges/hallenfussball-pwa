@@ -51,6 +51,10 @@ export function rotePflichtPruefungen(repo) {
     const { jobs: liste } = ghJson(['run', 'view', String(lauf.databaseId), '-R', repo, '--json', 'jobs'])
     const pflicht = liste.filter((j) => jobs.includes(j.name))
     const roteJobs = pflicht.filter((j) => !NICHT_ROT.has(j.conclusion))
+    // Fehlt ein Pflicht-Job im Lauf (umbenannt, entfallen), wäre die Ampel sonst still grün: als rot werten.
+    for (const fehlt of jobs.filter((n) => !liste.some((j) => j.name === n))) {
+      roteJobs.push({ name: `Pflicht-Job fehlt im Lauf: ${fehlt}`, url: lauf.url })
+    }
     console.log(`  ${workflow} (${String(lauf.headSha).slice(0, 8)}): ${roteJobs.length === 0 ? 'grün' : `rot: ${roteJobs.map((j) => j.name).join(', ')}`}`)
     for (const j of roteJobs) rot.push({ workflow, job: j.name, sha: String(lauf.headSha).slice(0, 8), url: j.url ?? lauf.url })
   }
