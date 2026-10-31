@@ -4,7 +4,6 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 
 export const SZENARIO_SKRIPT = resolve(__dirname, '..', 'scenario-tests.mjs')
-export const ERZEUGER_SKRIPT = resolve(__dirname, '..', 'befund-kennungen-erzeugen.mjs')
 
 export const schreibe = (ordner: string, name: string, inhalt: string) => {
   const pfad = join(ordner, name)
@@ -16,12 +15,14 @@ export const schreibe = (ordner: string, name: string, inhalt: string) => {
 export const mvpListe = (ordner: string, ids: string[]) =>
   schreibe(ordner, 'tests/meta/mvp-kennungen.json', JSON.stringify({ soll: ids.length, records: { zuschauer: ids } }))
 
-export const befundKennungen = (ordner: string, kennungen: string[]) =>
-  schreibe(ordner, 'tests/meta/befund-kennungen.json', JSON.stringify({ kennungen }))
+/** Lokale Befundliste (wie docs/anforderungen/BEFUNDE-HEUTIGER-CODE.md) mit den gegebenen Kennungen (@TA-024). */
+export const befundliste = (ordner: string, kennungen: string[]) =>
+  schreibe(ordner, 'docs/anforderungen/BEFUNDE-HEUTIGER-CODE.md',
+    ['| Kennung | Befund |', '|---|---|', ...kennungen.map((k) => `| ${k} | Beispiel |`)].join('\n') + '\n')
 
 /** Ohne GIT_*-Variablen (pre-commit-Hook), GIT_CEILING_DIRECTORIES auf das Temp-Elternverzeichnis. */
 export const sauberEnv = (ordner: string, basis: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv => ({
-  ...Object.fromEntries(Object.entries(basis).filter(([k]) => !k.startsWith('GIT_'))),
+  ...Object.fromEntries(Object.entries(basis).filter(([k]) => !k.startsWith('GIT_') && k !== 'BEFUNDE_PFAD')),
   GIT_CEILING_DIRECTORIES: dirname(ordner),
 })
 

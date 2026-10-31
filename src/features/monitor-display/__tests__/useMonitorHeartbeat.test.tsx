@@ -151,7 +151,7 @@ describe('useMonitorHeartbeat', () => {
     expect(letzteMeldung()).toBe('not_applicable');
   });
 
-  // Befund C-MON-HEARTBEAT-TAKT (Lebenszeichen je Folienwechsel), steht nicht in tests/meta/befund-kennungen.json
+  // Befund C-MON-HEARTBEAT-TAKT (Lebenszeichen je Folienwechsel), nur im Kommentar, also kein geprüfter Verweis
   it('Gegenbeispiel: ein Folienwechsel sendet nicht und startet den 30-s-Takt nicht neu', async () => {
     const { rerender } = renderMonitor({ status: 'granted', folie: 0 });
     await vorspulen(10_000);

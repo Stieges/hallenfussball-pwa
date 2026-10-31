@@ -27,7 +27,7 @@
 // Optionen dazu: [--base <git-ref>] [--floor <pfad>] [--summary <pfad>]
 // (Standard fuer --summary: Umgebungsvariable GITHUB_STEP_SUMMARY).
 //
-// TM-1 (@TA-013 bis @TA-015, @TA-018): Rot markierte Tests ("erwartet rot") brauchen einen Verweis auf einen Befund oder Defekt.
+// TM-1 (@TA-013, @TA-014, @TA-018, @TA-023, @TA-024): Rot markierte Tests ("erwartet rot") brauchen einen Verweis auf einen Befund oder Defekt.
 //  - Markierung: Modifikator .fails/.fail am Aufruf (it.fails, test.fail('Titel', fn)) oder jeder Rumpf-Aufruf
 //    test.fail(..) / testInfo.fail(..), bedingt oder unbedingt. skip/fixme/todo sind keine Markierung im Sinn von TM-1.
 //  - Verweis: "@DF-nnn"/"DF-nnn" (genau drei Ziffern) oder eine Befund-Kennung "C-..." in Grossbuchstaben, gesucht in
@@ -35,14 +35,14 @@
 //    String der Begruendung (2. Argument). Kommentare zaehlen nie; Template-Literale nur mit statischem Text.
 //  - Ratsche: Zahl der Markierungen ohne Verweis <= Zahl auf --base (gemessen); darueber rot und die neuen Tests genannt.
 //    Ohne --base nur Bericht. Sinkt die Zahl: gruen mit HINWEIS.
-//  - Jeder Verweis in einem Titel oder einer Begruendung (auch in regulaeren Tests) muss in tests/meta/befund-kennungen.json
-//    stehen (erzeugt von scripts/befund-kennungen-erzeugen.mjs, Option --befund-kennungen <pfad>), sonst sofort rot.
-//    Rueckrichtung: jede Kennung der Liste muss von mindestens einem Test genannt werden, sonst rot (Liste veraltet
-//    oder von Hand ergaenzt).
+//  - @TA-023/@TA-024: Ob ein Verweis bekannt ist, prueft der LOKALE Lauf direkt gegen die Befundliste
+//    (docs/anforderungen/BEFUNDE-HEUTIGER-CODE.md, gitignored; Option --befunde <pfad>, BEFUNDE_PFAD, sonst Worktree/Hauptrepo);
+//    unbekannt -> sofort rot. In der CI fehlt die Liste: dann gilt nur die Schreibweise (HINWEIS), die die Erkennung oben erzwingt.
 import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { join, relative, resolve } from 'node:path'
+import { findeBefundliste, leseBefundliste } from './lib/befundliste.mjs'
 import { sammleStepModule, sammleTestDateien, stepBefunde, testTexte } from './lib/testtexte.mjs'
 
 const KENNUNG = /(?<![A-Za-z0-9])[A-Z][A-Z0-9]{0,3}-\d{3}(?!\d)/g
@@ -65,7 +65,7 @@ function parseArgs(argv) {
     else if (a === '--scan') o.scan = wert().split(',')
     else if (a === '--base') o.base = wert()
     else if (a === '--floor') o.floor = wert()
-    else if (a === '--befund-kennungen') o.befundKennungen = wert()
+    else if (a === '--befunde') o.befunde = wert()
     else if (a === '--summary') o.summary = wert()
     else if (a === '--floor-schreiben') o.floorSchreiben = true
     else throw new Error(`Unbekannte Option ${a}`)
@@ -159,22 +159,22 @@ function neueOhneVerweis(aktuell, haupt) {
   })
 }
 
-/** TM-1 (@TA-015): jeder Verweis in einem Testtitel oder einer Begruendung muss in tests/meta/befund-kennungen.json stehen. */
+/**
+ * TM-1 (@TA-023, @TA-024): ist ein Verweis bekannt? Geprüft wird direkt gegen die lokale Befundliste (docs/, gitignored;
+ * in Arbeitskopien über das Hauptrepo gefunden). In der CI fehlt sie: dann zählt nur die Schreibweise – ein falsch
+ * geschriebener Verweis wird gar nicht als Verweis erkannt, ein markierter Test damit „ohne Verweis“ (Ratsche @TA-014).
+ * Restrisiko: ein richtig geschriebener, aber unbekannter Verweis, der ohne lokalen Lauf gemergt wird (Review fährt ihn).
+ */
 function pruefeVerweise(opt, root, stellen, fehler) {
-  const pfad = opt.befundKennungen ?? resolve(root, 'tests/meta/befund-kennungen.json')
-  if (stellen.length === 0 && !existsSync(pfad)) return
-  if (!existsSync(pfad)) {
-    fehler.push(`Verweis ${stellen[0].kennung} in ${stellen[0].datei}:${stellen[0].zeile} (${stellen.length} Verweise insgesamt), aber ${pfad} fehlt (node scripts/befund-kennungen-erzeugen.mjs)`)
+  const pfad = findeBefundliste(root, opt.befunde)
+  if (pfad === null) {
+    if (stellen.length > 0) console.log(`\nHINWEIS: Befundliste nicht gefunden (CI): ${stellen.length} Verweise nur auf ihre Schreibweise geprüft, nicht ob sie bekannt sind`)
     return
   }
-  const kennungen = JSON.parse(readFileSync(pfad, 'utf8')).kennungen
-  const bekannt = new Set(kennungen)
-  // Rueckrichtung (ohne docs/ pruefbar): die Liste nennt nur, was ein Test nennt (@TA-016).
-  const genannt = new Set(stellen.map((x) => x.kennung))
-  const ueberzaehlig = kennungen.filter((k) => !genannt.has(k))
-  if (ueberzaehlig.length > 0) fehler.push(`Liste veraltet oder von Hand ergaenzt: ${ueberzaehlig.join(', ')} steht in ${relative(root, pfad)}, aber kein Test nennt es (neu erzeugen: node scripts/befund-kennungen-erzeugen.mjs)`)
+  const { bekannt, doppelt } = leseBefundliste(pfad)
+  if (doppelt.length > 0) fehler.push(`Doppelte Kennung in der Befundliste ${pfad}: ${doppelt.join(', ')}`)
   for (const s of stellen) {
-    if (!bekannt.has(s.kennung)) fehler.push(`Unbekannter Verweis ${s.kennung} in ${s.datei}:${s.zeile} (nicht in ${relative(root, pfad)}; Tippfehler oder Liste mit node scripts/befund-kennungen-erzeugen.mjs neu erzeugen)`)
+    if (!bekannt.has(s.kennung)) fehler.push(`Unbekannter Verweis ${s.kennung} in ${s.datei}:${s.zeile} (nicht in der Befundliste ${pfad}; Tippfehler?)`)
   }
 }
 

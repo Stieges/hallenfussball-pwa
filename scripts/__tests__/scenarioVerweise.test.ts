@@ -1,47 +1,25 @@
 // TM-1 (Plattform-Record "Testabdeckung"): Verweis-Pflicht fuer "erwartet rot"-Tests.
-// Kennungen: @TA-013 (Verweis fehlt -> gemeldet), @TA-014 (Ratsche), @TA-015 (unbekannter Verweis),
+// Kennungen: @TA-013 (Verweis fehlt -> gemeldet), @TA-014 (Ratsche), @TA-023/@TA-024 (Verweis: CI Schreibweise, lokal bekannt?),
 // @TA-017 (Untergrenze), @TA-018 (Selbst-Aufloesung). Werte stehen im Gherkin des Records.
 // Verweis-Beispiele stehen hier nur in String-Literalen und der ZEILEN-Konstante, nie in Testtiteln:
 // dieses Skript scannt auch die eigenen Testdateien.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { befundKennungen, git, mvpListe, sauberEnv, schreibe as schreibeIn, szenarioLauf } from './skriptHilfen'
+import { befundliste, git, mvpListe, sauberEnv, schreibe as schreibeIn, szenarioLauf } from './skriptHilfen'
 
 let ordner: string
 const schreibe = (name: string, inhalt: string) => schreibeIn(ordner, name, inhalt)
-const alleDateien = (ordner_: string): string[] =>
-  readdirSync(ordner_).flatMap((n) => {
-    const p = join(ordner_, n)
-    return n === 'meta' || n === '.git' ? [] : statSync(p).isDirectory() ? alleDateien(p) : [p]
-  })
-/** Die Liste enthaelt nur Kennungen, die eine Datei im Ordner nennt (die CI prueft auch die Rueckrichtung). */
-const synchronisiere = () => {
-  const pfad = join(ordner, 'tests/meta/befund-kennungen.json')
-  let roh: string
-  try {
-    roh = readFileSync(pfad, 'utf8')
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return
-    throw e
-  }
-  const text = alleDateien(ordner).map((p) => readFileSync(p, 'utf8').replace(/\/\/.*$/gm, '')).join('\n')
-  const liste = JSON.parse(roh).kennungen.filter((k: string) => text.includes(k))
-  writeFileSync(pfad, JSON.stringify({ kennungen: liste }))
-}
-const lauf = (...args: string[]) => {
-  synchronisiere()
-  return szenarioLauf(ordner, ...args)
-}
+const lauf = (...args: string[]) => szenarioLauf(ordner, ...args)
 const BEKANNT = ['C-COCKPIT-AUSGEFALLEN-BEREIT', 'C-COCKPIT-TABLET-OHNE-PROTOKOLL', 'C-KONTRAST-TEXTPAARE', 'DF-001', 'DF-002']
 const ZEITLIMIT = 20_000
 
 beforeEach(() => {
   ordner = mkdtempSync(join(tmpdir(), 'scenario-verweise-'))
   mvpListe(ordner, ['ZM-096', 'HE-001'])
-  befundKennungen(ordner, BEKANNT)
+  befundliste(ordner, BEKANNT)
 })
 afterEach(() => rmSync(ordner, { recursive: true, force: true }))
 
@@ -177,27 +155,76 @@ describe('@TA-015 ein Verweis auf eine unbekannte Kennung laesst die Pruefung sc
     expect(r.stderr, quelle).toMatch(erwartet)
   }
 
-  it('@TA-015 ein unbekannter Defekt-Verweis nennt Kennung, Datei und Zeile', () => {
+  it('@TA-024 ein unbekannter Defekt-Verweis nennt Kennung, Datei und Zeile', () => {
     rot("it('Eins', () => {})\nit('@DF-007 Fall', () => {})\n", /Unbekannter Verweis DF-007 in src\/u\.test\.ts:2/)
   })
 
-  it('@TA-015 der vertippte Befund-Verweis scheitert ebenfalls, auch in einem regulaeren Test', () => {
+  it('@TA-024 der vertippte Befund-Verweis scheitert ebenfalls, auch in einem regulaeren Test', () => {
     rot("it('C-COCKPIT-TABLETT-OHNE-PROTOKOLL Fall', () => {})\n", /Unbekannter Verweis C-COCKPIT-TABLETT-OHNE-PROTOKOLL in src\/u\.test\.ts:1/)
   })
 
-  it('@TA-015 auch ein markierter Test mit unbekanntem Verweis in der Begruendung scheitert', () => {
+  it('@TA-024 auch ein markierter Test mit unbekanntem Verweis in der Begruendung scheitert', () => {
     rot("test('Fall', () => {\n  test.fail(c, 'Befund C-GIBT-ES-NICHT')\n})\n", /Unbekannter Verweis C-GIBT-ES-NICHT in src\/u\.test\.ts:2/)
   })
 
-  it('@TA-015 Gegenbeispiel: ein bekannter Verweis ist gruen; fehlt die Liste, scheitert schon der erste Verweis', () => {
+  it('@TA-024 Gegenbeispiel: ein bekannter Verweis ist gruen', () => {
     schreibe('src/u.test.ts', "it('@DF-001 Fall', () => {})\n")
-    expect(lauf().status).toBe(0)
-    rmSync(join(ordner, 'tests/meta/befund-kennungen.json'))
-    const r = szenarioLauf(ordner)
+    const r = lauf()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).not.toMatch(/nur auf ihre Schreibweise/)
+  })
+
+  it('@TA-024 doppelte Kennung in der Befundliste ist rot', () => {
+    befundliste(ordner, ['DF-001', 'DF-001'])
+    schreibe('src/u.test.ts', "it('@DF-001 Fall', () => {})\n")
+    const r = lauf()
     expect(r.status).toBe(1)
-    expect(r.stderr).toMatch(/Verweis DF-001 in src\/u\.test\.ts:1.*befund-kennungen\.json fehlt/)
-    schreibe('src/u.test.ts', "it('Fall ohne jeden Verweis', () => {})\n")
-    expect(lauf().status).toBe(0)
+    expect(r.stderr).toMatch(/Doppelte Kennung in der Befundliste .*DF-001/)
+  })
+
+  it('@TA-024 in einer Arbeitskopie wird die Befundliste ueber das Hauptrepo gefunden', () => {
+    rmSync(join(ordner, 'docs'), { recursive: true, force: true })
+    const haupt = join(ordner, 'haupt')
+    mkdirSync(haupt)
+    befundliste(haupt, BEKANNT)
+    schreibe('haupt/src/u.test.ts', "it('@DF-007 Fall', () => {})\n")
+    mvpListe(haupt, ['ZM-096'])
+    git(haupt, 'init', '-q', '-b', 'main')
+    git(haupt, 'add', 'src', 'tests')
+    git(haupt, 'commit', '-q', '-m', 'main')
+    const kopie = join(ordner, 'kopie')
+    git(haupt, 'worktree', 'add', '-q', kopie)
+    const r = szenarioLauf(kopie)
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/Unbekannter Verweis DF-007 in src\/u\.test\.ts:1/)
+  }, ZEITLIMIT)
+})
+
+describe('@TA-023 ohne Befundliste (CI) prueft die Szenario-Pruefung nur die Schreibweise', () => {
+  beforeEach(() => { rmSync(join(ordner, 'docs'), { recursive: true, force: true }) })
+
+  it('@TA-023 ein in der Befundliste unbekannter, richtig geschriebener Verweis ist gruen und der Lauf meldet die Einschraenkung', () => {
+    schreibe('src/u.test.ts', "it('@DF-007 Fall', () => {})\nit('C-COCKPIT-TABLETT-OHNE-PROTOKOLL Fall', () => {})\n")
+    const r = lauf()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toMatch(/Befundliste nicht gefunden \(CI\): 2 Verweise nur auf ihre Schreibweise geprüft/)
+  })
+
+  it('@TA-023 Gegenbeispiel: ein neu markierter Test mit falsch geschriebenem Verweis zaehlt als ohne Verweis und scheitert an der Ratsche', () => {
+    schreibe('tests/meta/szenario-floor.json', JSON.stringify({ mitTest: 0, kennungen: [] }))
+    schreibe('src/u.test.ts', "it('Eins', () => {})\n")
+    git(ordner, 'init', '-q', '-b', 'main')
+    git(ordner, 'add', '-A')
+    git(ordner, 'commit', '-q', '-m', 'main')
+    schreibe('src/u.test.ts', "it('Eins', () => {})\nit.fails('@DF-07 Fall', () => {})\nit.fails('c-cockpit-tablet Fall', () => {})\n")
+    const r = lauf('--base', 'HEAD')
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/@DF-07 Fall/)
+    expect(r.stderr).toMatch(/c-cockpit-tablet Fall/)
+  }, ZEITLIMIT)
+
+  it('@TA-023 es gibt keine Liste der bekannten Kennungen mehr im Repo', () => {
+    expect(existsSync(resolve(__dirname, '..', '..', 'tests', 'meta', 'befund-kennungen.json'))).toBe(false)
   })
 })
 
@@ -257,7 +284,7 @@ describe('@TA-018 wird ein Defekt behoben, faellt die Markierung weg und der Ver
 
     // Szenario-Pruefung: markiert zaehlt nicht, die behobene Fassung zaehlt regulaer; der Verweis bleibt im Namen
     mvpListe(ordner, ['SL-034'])
-    befundKennungen(ordner, ['DF-001'])
+    befundliste(ordner, ['DF-001'])
     schreibe('lauf/vorher/a.test.ts', `it.fails('${NAME}', () => {})\n`)
     const vorher = szenarioLauf(ordner, '--scan', 'lauf/vorher')
     expect(vorher.stdout).toMatch(/mit Test: 0,/)
