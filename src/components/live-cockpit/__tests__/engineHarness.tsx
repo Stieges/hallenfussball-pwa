@@ -38,6 +38,8 @@ export interface HarnessProps {
   onTastenuebersicht?: () => void;
   /** LT-6: steht der Endstand noch als Quittung (Vorgabe `true`, wie ManagementTab im Endstand); `false` = nach „Weiter“. */
   endstandSteht?: boolean;
+  /** Testet die Vorgabe des Cockpits: `endstandSteht` wird gar nicht übergeben. */
+  endstandOhneAngabe?: boolean;
 }
 
 function Cockpit({ context, turnier, einstellungen, zeitKorrektur, kannSteuern, istLeitung, onKorrigieren, onNichtAngetreten, onTastenuebersicht, endstandSteht }: { context: MatchEngineContextValue; turnier?: Partial<Tournament>; einstellungen?: Partial<MatchCockpitSettings>; zeitKorrektur?: boolean; kannSteuern: boolean; istLeitung?: boolean; onKorrigieren?: (matchId: string) => void; onNichtAngetreten?: (matchId: string) => void; onTastenuebersicht?: () => void; endstandSteht?: boolean }): ReactElement | null {
@@ -78,7 +80,7 @@ function Cockpit({ context, turnier, einstellungen, zeitKorrektur, kannSteuern, 
 }
 
 /** Baut die Engine im Hintergrund auf und zeigt dann das Cockpit mit einem noch nicht angepfiffenen Spiel. */
-export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen, zeitKorrektur = false, kannSteuern = true, istLeitung, onKorrigieren, onNichtAngetreten, onTastenuebersicht, endstandSteht = true }: HarnessProps): ReactElement | null {
+export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier, einstellungen, zeitKorrektur = false, kannSteuern = true, istLeitung, onKorrigieren, onNichtAngetreten, onTastenuebersicht, endstandSteht = true, endstandOhneAngabe = false }: HarnessProps): ReactElement | null {
   const [context, setContext] = useState<MatchEngineContextValue | null>(null);
   useEffect(() => {
     let abgebrochen = false;
@@ -86,6 +88,6 @@ export function Harness({ senderFabrik = storeSender, gastKonto = false, turnier
     return () => { abgebrochen = true; };
   }, [senderFabrik, gastKonto]);
   if (!context) { return null; }
-  return <MatchEngineContext.Provider value={context}><Cockpit context={context} turnier={turnier} einstellungen={einstellungen} zeitKorrektur={zeitKorrektur} kannSteuern={kannSteuern} istLeitung={istLeitung} onKorrigieren={onKorrigieren} onNichtAngetreten={onNichtAngetreten} onTastenuebersicht={onTastenuebersicht} endstandSteht={endstandSteht} /></MatchEngineContext.Provider>;
+  return <MatchEngineContext.Provider value={context}><Cockpit context={context} turnier={turnier} einstellungen={einstellungen} zeitKorrektur={zeitKorrektur} kannSteuern={kannSteuern} istLeitung={istLeitung} onKorrigieren={onKorrigieren} onNichtAngetreten={onNichtAngetreten} onTastenuebersicht={onTastenuebersicht} endstandSteht={endstandOhneAngabe ? undefined : endstandSteht} /></MatchEngineContext.Provider>;
 }
 

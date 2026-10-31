@@ -137,6 +137,13 @@ describe('@SL-075 Nach „Weiter“, nach 30 Sekunden oder ein zweites Mal setzt
     await waitFor(() => expect(fortsetzenTaste()).toBeNull());
   });
 
+  it('@SL-075 ohne Angabe, ob der Endstand steht, bietet das Cockpit „Spiel fortsetzen“ nicht an (Vorgabe im Zweifel aus)', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={SPIEL_11} endstandOhneAngabe />);
+    await vonSelbstBeendetBei21(user);
+    expect(fortsetzenTaste()).toBeNull();
+  });
+
   it('@SL-075 Z. 2 seit dem Abpfiff sind mehr als 30 Sekunden vergangen → kein „Spiel fortsetzen“ (Gegenbeispiel 29 s: angeboten)', async () => {
     const user = userEvent.setup();
     render(<Harness turnier={SPIEL_11} />);
