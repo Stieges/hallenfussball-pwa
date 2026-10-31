@@ -106,4 +106,46 @@ describe('TeamName', () => {
     render(<TeamName {...props({ emphasis: 'loser' })} />);
     expect(screen.getByTestId('tn').dataset.emphasis).toBe('loser');
   });
+
+  describe('avatarPlacement', () => {
+    const LOGO = { type: 'base64' as const, value: 'data:image/png;base64,AAAA' };
+    const lage = (a: HTMLElement, b: HTMLElement) => a.compareDocumentPosition(b);
+
+    it('@ZM-157 above (Monitor Live): Avatar mittig über dem Namen, Name behält die volle Breite', () => {
+      render(<TeamName {...props({ avatarPlacement: 'above' })} />);
+      const reihe = screen.getByTestId('tn-avatar').parentElement!;
+      expect(reihe.dataset.avatarPlacement).toBe('above');
+      expect(reihe.style.flexDirection).toBe('column');
+      expect(reihe.style.alignItems).toBe('center');
+      expect(lage(screen.getByTestId('tn-avatar'), screen.getByText('FC Nord')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.getByText('FC Nord').style.width).toBe('100%');
+    });
+
+    it('@ZM-185 after (Nächste Spiele, Heimseite): Avatar hinter dem Namen', () => {
+      render(<TeamName {...props({ layout: 'inline', avatarSize: 'list', reserveAddonLines: 0, avatarPlacement: 'after' })} />);
+      expect(lage(screen.getByText('FC Nord'), screen.getByTestId('tn-avatar')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.getByTestId('tn-avatar').parentElement!.style.flexDirection).toBe('row');
+    });
+
+    it('@ZM-185 before (Handy, Gastseite): Avatar vor dem Namen – Standard bleibt unverändert', () => {
+      render(<TeamName {...props({ layout: 'inline', avatarSize: 'list', reserveAddonLines: 0 })} />);
+      expect(screen.getByTestId('tn-avatar').parentElement!.dataset.avatarPlacement).toBe('before');
+      expect(lage(screen.getByTestId('tn-avatar'), screen.getByText('FC Nord')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('@ZM-185 Team ohne Logo: Initialen im gleich großen Kreis an derselben Stelle wie das Logo, in jeder Lage', () => {
+      for (const avatarPlacement of ['before', 'after', 'above'] as const) {
+        const ersteAnsicht = render(<TeamName {...props({ avatarPlacement })} />);
+        const ohne = screen.getByTestId('tn-avatar');
+        const reiheOhne = Array.from(ohne.parentElement!.children).indexOf(ohne);
+        const breiteOhne = ohne.style.width;
+        ersteAnsicht.unmount();
+        const zweiteAnsicht = render(<TeamName {...props({ avatarPlacement, team: { name: 'SG Mitte', logo: LOGO } })} />);
+        const mit = screen.getByTestId('tn-avatar');
+        expect(Array.from(mit.parentElement!.children).indexOf(mit), `Platz in der Reihe (${avatarPlacement})`).toBe(reiheOhne);
+        expect(mit.style.width).toBe(breiteOhne);
+        zweiteAnsicht.unmount();
+      }
+    });
+  });
 });

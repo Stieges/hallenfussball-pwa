@@ -1,5 +1,5 @@
 /**
- * TeamName – Teamname mit Logo bzw. Initialen davor und freigehaltenen Zusatzzeilen (Aufgabe 3.1 Spielanzeige,
+ * TeamName – Teamname mit Logo bzw. Initialen davor, dahinter oder darüber und freigehaltenen Zusatzzeilen (Aufgabe 3.1 Spielanzeige,
  * @ZM-157, @ZM-088, @ZM-155, RF4).
  *
  * Der Name selbst kommt als `name` (Monitor: `TeamNameDisplay` mit Kurzform und Einpassung, sonst der volle Name) und bricht
@@ -16,7 +16,7 @@ export interface TeamNameProps {
   team: { name: string; logo?: TeamLogo; colors?: TeamColors; pending?: boolean };
   /** Monitor: TeamNameDisplay (Kurzform, Einpassung); sonst der volle Name */
   name: ReactNode;
-  /** Monitor: Avatar links neben dem Namen unter dem Kasten, Zusätze darunter | Karte/Kopf: Avatar vor dem Namen */
+  /** Monitor: Zusätze unter dem Namen, volle Breite | Karte/Kopf: Avatar vor dem Namen */
   layout: 'stacked' | 'inline';
   /** `display` = Avatar-Größe der Live-Folie (Token `displayLayout.scoreArea.avatarSize`), `list` = Monitor-Zeile (`displayList.avatarSize`, damit die Initialen ≥ 3 % Bildhöhe in den Kreis passen) */
   avatarSize: AvatarSize | 'display' | 'list';
@@ -31,10 +31,15 @@ export interface TeamNameProps {
   addonColor?: string;
   /** Schriftgröße der Zusätze; ohne Angabe `cssVars.fontSizes.sm` */
   addonFontSize?: string;
-  /** Monitor: der Avatar kommt zur Breite der Zelle dazu, der Name behält so die volle Breite (Einpassung, @ZM-087, @ZM-125); die Reihe ragt je zur Hälfte links und rechts über die Zelle */
-  avatarOutside?: boolean;
+  /**
+   * Lage des Avatars zum Namen: `before` davor (Handy, Karte, Kopf) | `after` dahinter (Monitor „Nächste Spiele“, Heimseite: Logo am Strich, @ZM-185)
+   * | `above` mittig über dem Namen, der Name behält die volle Breite (Monitor Live-Folie, Endstand und Spielplan eines Felds, @ZM-157, @ZM-185)
+   */
+  avatarPlacement?: 'before' | 'after' | 'above';
   /** Zeilenhöhe der Zusätze (Faktor); ohne Angabe `displayLayout.scoreArea.hintLineHeight` */
   addonLineHeight?: number;
+  /** Abstand zwischen Avatar und Name bei `avatarPlacement="above"`; ohne Angabe `displayList.avatarStackGap` */
+  avatarGap?: string;
   /** Initialen neutral (Fläche, Schrift, Rand vom Thema der Anzeige), siehe TeamAvatar */
   avatarNeutral?: { background: string; color: string; border: string };
   /** Kinder: `${testId}-avatar`, `${testId}-addons`, `${testId}-addon-0|1` */
@@ -52,7 +57,8 @@ export function TeamName({
   reserveAddonLines,
   emphasis,
   justify = 'center',
-  avatarOutside = false,
+  avatarPlacement = 'before',
+  avatarGap = displayList.avatarStackGap,
   avatarNeutral,
   addonColor = cssVars.colors.textSecondary,
   addonFontSize = cssVars.fontSizes.sm,
@@ -75,18 +81,31 @@ export function TeamName({
     : avatarSize === 'list' ? { dimension: displayList.avatarSize }
     : { size: avatarSize };
   const flexJustify = { start: 'flex-start', center: 'center', end: 'flex-end' } as const;
-  const avatarWidth = avatarSize === 'display' ? displayLayout.scoreArea.avatarSize : avatarSize === 'list' ? displayList.avatarSize : undefined;
-  const rootWidth = avatarOutside && avatarWidth !== undefined ? `calc(100% + ${avatarWidth} + ${cssVars.spacing.sm})` : stacked ? '100%' : undefined;
+  const above = avatarPlacement === 'above';
+  const avatar = <TeamAvatar team={team} neutral={avatarNeutral} {...avatarProps} data-testid={`${testId}-avatar`} />;
   return (
     <div
-      style={{ display: 'flex', flexDirection: 'column', alignItems: flexJustify[justify], minWidth: 0, maxWidth: avatarOutside ? undefined : '100%', width: rootWidth }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: flexJustify[justify], minWidth: 0, maxWidth: '100%', width: stacked || above ? '100%' : undefined }}
       data-testid={testId}
       data-layout={layout}
       {...(emphasis !== undefined ? { 'data-emphasis': emphasis } : {})}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: flexJustify[justify], gap: cssVars.spacing.sm, minWidth: 0, maxWidth: '100%', width: stacked ? '100%' : undefined }}>
-        <TeamAvatar team={team} neutral={avatarNeutral} {...avatarProps} data-testid={`${testId}-avatar`} />
-        <div style={{ flex: stacked ? '1 1 0' : '0 1 auto', minWidth: 0, overflowWrap: 'break-word', hyphens: 'manual' }}>{name}</div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: above ? 'column' : 'row',
+          alignItems: above ? 'center' : 'flex-start',
+          justifyContent: above ? 'flex-start' : flexJustify[justify],
+          gap: above ? avatarGap : cssVars.spacing.sm,
+          minWidth: 0,
+          maxWidth: '100%',
+          width: stacked || above ? '100%' : undefined,
+        }}
+        data-avatar-placement={avatarPlacement}
+      >
+        {avatarPlacement !== 'after' && avatar}
+        <div style={{ flex: stacked && !above ? '1 1 0' : '0 1 auto', minWidth: 0, width: above ? '100%' : undefined, overflowWrap: 'break-word', hyphens: 'manual' }}>{name}</div>
+        {avatarPlacement === 'after' && avatar}
       </div>
       {reserveAddonLines > 0 && (
         <div

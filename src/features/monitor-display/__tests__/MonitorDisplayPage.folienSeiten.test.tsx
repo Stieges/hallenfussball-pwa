@@ -188,8 +188,8 @@ describe('@ZM-130 Zeile 3: Seitenwechsel über die gerenderte Seite (echter Poll
   });
 });
 
-describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer Seite', () => {
-  it('Seiten 6, 6 und 1 Zeilen; die Vereinigung ist alle 13 Uhrzeiten, keine doppelt', async () => {
+describe('@ZM-129 @ZM-185 Spielplan mit 13 Spielen: 4 Spiele je Seite, jede Zeile genau auf einer Seite', () => {
+  it('Seiten 4, 4, 4 und 1 Zeilen; die Vereinigung ist alle 13 Uhrzeiten, keine doppelt', async () => {
     await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele() }), [slide('schedule-field', { fieldId: 'field-1' })]));
     expect(screen.getByText(/^Seite \d+ \/ \d+$/)).toBeInTheDocument();
     const seite1 = uhrzeiten();
@@ -197,10 +197,13 @@ describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer
     const seite2 = uhrzeiten();
     await vorspulenInSchritten(15_000);
     const seite3 = uhrzeiten();
-    expect(seite1).toHaveLength(6);
-    expect(seite2).toHaveLength(6);
-    expect(seite3).toEqual(['15:00']);
-    const alle = [...seite1, ...seite2, ...seite3];
+    await vorspulenInSchritten(15_000);
+    const seite4 = uhrzeiten();
+    expect(seite1).toHaveLength(4);
+    expect(seite2).toHaveLength(4);
+    expect(seite3).toHaveLength(4);
+    expect(seite4).toEqual(['15:00']);
+    const alle = [...seite1, ...seite2, ...seite3, ...seite4];
     expect(new Set(alle).size).toBe(13);
     expect(alle).toHaveLength(13);
   });

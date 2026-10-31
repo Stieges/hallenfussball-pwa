@@ -1,7 +1,7 @@
 /**
  * LiveScoreGrid – Raster der Live-Folie: Kästen, Doppelpunkt, Namen (@ZM-140) und das Ende (Mockup K5g, @ZM-147/@ZM-049):
  * Sieger-Kasten mit Ring (Pokal-Kreis nur in der Finalrunde), Verlierer zurückgenommen, Strafstoßergebnis klein unter dem Doppelpunkt.
- * Kästen sind `ScoreBox` (Weste, Ecken, Ring), Namen `TeamName` (Logo bzw. Initialen davor, zwei freigehaltene Zusatzzeilen, @ZM-157).
+ * Kästen sind `ScoreBox` (Weste, Ecken, Ring), Namen `TeamName` (Logo bzw. Initialen mittig darüber, zwei freigehaltene Zusatzzeilen, @ZM-157).
  */
 import { CSSProperties, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +58,8 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
   // B-44a2: Zeile 1 hat die feste Kastenhöhe (auch im Kindermodus, gleiche Lage), Zeile 2 reserviert zwei Namenszeilen
   // Dazu zwei Zeilen für Zusätze unter dem Namen („nach Verlängerung“, @ZM-156/@ZM-157), in jedem Zustand reserviert: die Kästen springen nicht (@ZM-151)
   const addonLineHeight = `calc(${displayFontSizes.clockHint} * ${layout.clockLineHeight})`;
-  const nameRowHeight = `calc(${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines} + ${addonLineHeight} * ${ADDON_LINES})`;
+  // @ZM-157: Logo bzw. Initialen mittig über dem Namen, direkt unter dem Kasten – Höhe und Abstand kommen zur Namenszeile dazu
+  const nameRowHeight = `calc(${layout.avatarSize} + ${layout.avatarGap} + ${displayFontSizes.teamName} * ${TEAM_NAME_ZEILENHOEHE * layout.nameLines} + ${addonLineHeight} * ${ADDON_LINES})`;
   const gridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: `minmax(0, 1fr) ${layout.separatorWidth} minmax(0, 1fr)`,
@@ -109,8 +110,6 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
     alignItems: 'center',
     minWidth: 0,
     maxWidth: '100%',
-    // Der Avatar liegt neben dem Namen und kommt zur Breite dazu (TeamName `avatarOutside`): Polster statt Überlauf, `width` bleibt der Token
-    ...(withPenalty ? {} : { boxSizing: 'content-box' as const, paddingInline: `calc((${layout.avatarSize} + ${cssVars.spacing.sm}) / 2)` }),
   });
 
   const block = (side: 'a' | 'b') => {
@@ -150,7 +149,8 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, boxe
           team={team}
           layout="stacked"
           avatarSize="display"
-          avatarOutside={!withPenalty}
+          avatarPlacement="above"
+          avatarGap={layout.avatarGap}
           avatarNeutral={{ background: themeColors.surfaceHover, color: themeColors.text, border: themeColors.border }}
           addons={addons}
           reserveAddonLines={ADDON_LINES}

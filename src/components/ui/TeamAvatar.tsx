@@ -18,6 +18,13 @@ const AVATAR_SIZES = {
 /** Initialen-Schrift als Anteil der Avatar-Größe */
 const INITIALS_SHARE = 0.4;
 
+/**
+ * Bild-Logo ganz im Kreis (Daniel 31.10., @ZM-157, @ZM-185): das Bild wird mit erhaltenem Seitenverhältnis in ein Quadrat von
+ * 1/√2 des Durchmessers eingepasst; dessen Ecken liegen genau auf dem Kreis, also liegt jedes eingepasste Logo (hoch, breit, quadratisch)
+ * vollständig im Kreis – nichts wird angeschnitten.
+ */
+const LOGO_INSCRIBED_SHARE = 0.7;
+
 export type AvatarSize = keyof typeof AVATAR_SIZES;
 
 interface TeamAvatarProps {
@@ -151,9 +158,9 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
   };
 
   const imageStyles: CSSProperties = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
+    width: `${LOGO_INSCRIBED_SHARE * 100}%`,
+    height: `${LOGO_INSCRIBED_SHARE * 100}%`,
+    objectFit: 'contain',
     opacity: imageLoaded ? 1 : 0,
     transition: 'opacity 0.2s ease',
   };

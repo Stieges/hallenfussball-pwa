@@ -237,9 +237,13 @@ export const displayLayout = {
     separatorWidth: '0%',
     // B-44a2 (@ZM-125): Kasten hoch, annähernd quadratisch (Breite 33 % der Bildbreite); der Stand ist das Größte
     // Spielanzeige S3 (@ZM-157, Daniel 30.10. Option A): 36 statt 42 – Ecken und zwei Zusatzzeilen brauchen Platz; Höhe/Breite ≈ 0,62
-    blockHeight: '36cqh',
-    // Spielanzeige S3 (Daniel 30.10.): Logo/Initialen vor dem Namen; „WW“ bei Mindestschrift passt in den Kreis
+    // Fixrunde CB (Daniel 31.10., @ZM-157): Logo/Initialen mittig über dem Namen brauchen Avatar + Abstand (≈ 8 cqh) – 28 statt 36, damit Kopf,
+    // Kasten, Namen, Zusatzzeilen, Uhr und Balken in den Bildrand passen (Uhr und Balken bleiben unverdrängt); Höhe/Breite ≈ 0,48
+    blockHeight: '28cqh',
+    // Spielanzeige S3 (Daniel 30.10.): Logo/Initialen am Namen (Fixrunde CB 31.10.: mittig darüber); „WW“ bei Mindestschrift passt in den Kreis
     avatarSize: '7.5cqh',
+    // Fixrunde CB (@ZM-157): Abstand zwischen Logo/Initialen und dem Namen darunter (Live-Folie, in Folienhöhe wie der Rest)
+    avatarGap: '0.6cqh',
     // B-44a2: Namen bis zu zwei Zeilen
     nameLines: 2,
     // B-44a2: Platz unter den Namen für Uhr, Balken und Hinweise; bleibt in jedem Zustand reserviert (gleiche Lage)

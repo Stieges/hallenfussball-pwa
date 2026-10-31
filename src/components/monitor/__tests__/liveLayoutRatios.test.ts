@@ -37,7 +37,9 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
     expect(m.boxW / flaecheW).toBeLessThanOrEqual(0.34);
     // Mit Bildrand ist die Fläche verhältnismäßig breiter (z. B. 1184×624 statt 1280×720), der Kasten wird etwas flacher (B-44a4)
     // Spielanzeige S3 (Daniel 30.10., Option A): Kasten 36 cqh, Verhältnis 0,62 statt 0,7 (Ecken und Zusatzzeilen brauchen Höhe)
-    expect(m.boxH / m.boxW).toBeGreaterThanOrEqual(rand === 0 ? 0.6 : 0.55);
+    // Fixrunde CB (Daniel 31.10., @ZM-157): Logo/Initialen mittig über dem Namen kosten Höhe, der Kasten sinkt auf 28 cqh (Verhältnis ≈ 0,45–0,48);
+    // die Zusage der Anforderung (Spielstand ≥ 20′ = 11,8 % der Bildhöhe) hält der Test „Ziffern“ unten ein
+    expect(m.boxH / m.boxW).toBeGreaterThanOrEqual(0.44);
     expect(m.boxH / m.boxW).toBeLessThanOrEqual(1.2);
   });
 
@@ -45,8 +47,10 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
     expect(m.digit).toBeGreaterThanOrEqual(2 * m.name);
   });
 
-  it('Ziffern deutlich größer als die Uhr (mindestens 1,8 ×); Uhr mindestens 1,5 × Teamname', () => {
-    expect(m.digit).toBeGreaterThanOrEqual(1.8 * m.clock);
+  it('Ziffern deutlich größer als die Uhr (mindestens 1,5 ×); Uhr mindestens 1,5 × Teamname', () => {
+    // Fixrunde CB (Daniel 31.10.): 1,5 statt 1,8 – der niedrigere Kasten trägt Ziffern von 0,6 × Kastenhöhe (16,8 % der Bildhöhe, über den 11,8 % des Sehwinkels 20′)
+    expect(m.digit).toBeGreaterThanOrEqual(1.5 * m.clock);
+    expect(m.digit).toBeGreaterThanOrEqual(0.118 * h);
     expect(m.clock).toBeGreaterThanOrEqual(1.5 * m.name);
   });
 
@@ -81,8 +85,10 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
   it('gesamte Folie passt in die Folienfläche innerhalb des Bildrands (@ME-020): Kopf, Kasten, Namen (2 Zeilen), unterer Bereich, Polster', () => {
     const padding = resolveCss(L.paddingY, m.ctx);
     const header = (parseFloat(L.header) / 100) * flaecheH + resolveCss(L.headerGap, m.ctx);
-    // S3: dazu die zwei freigehaltenen Zusatzzeilen unter dem Namen (@ZM-157) und der Abstand Kasten/Name (Ringbreite)
-    const names = L.nameLines * TEAM_NAME_ZEILENHOEHE * m.name + 2 * m.hint * L.clockLineHeight + resolveCss(L.frameWidthStrong, m.ctx);
+    // S3: dazu die zwei freigehaltenen Zusatzzeilen unter dem Namen (@ZM-157) und der Abstand Kasten/Name (Ringbreite);
+    // Fixrunde CB: dazu Logo/Initialen mittig über dem Namen (Kreis und Abstand zum Namen, @ZM-157)
+    const names = L.nameLines * TEAM_NAME_ZEILENHOEHE * m.name + 2 * m.hint * L.clockLineHeight + resolveCss(L.frameWidthStrong, m.ctx)
+      + resolveCss(L.avatarSize, m.ctx) + resolveCss(L.avatarGap, m.ctx);
     const lower = resolveCss(L.lowerHeight, m.ctx);
     expect(header + m.boxH + names + lower + 2 * padding).toBeLessThanOrEqual(flaecheH);
   });

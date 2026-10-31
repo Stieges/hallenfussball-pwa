@@ -11,6 +11,7 @@ import { DEFAULT_SLIDE_CONFIG } from '../../types/monitor';
 import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
 import type { ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
+import { displayList } from '../../design-tokens';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
 
@@ -111,7 +112,7 @@ export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | 
     case 'all-standings':
       return Math.max(1, standingsSections(tournament, view).length);
     case 'schedule-field':
-      return pagesFor(fieldSchedule(view, fieldIdToNumber(slide.config.fieldId)).length);
+      return pagesFor(fieldSchedule(view, fieldIdToNumber(slide.config.fieldId)).length, displayList.scheduleRowsPerPage);
     case 'next-matches':
       return pagesFor(nextMatchList(view, slide.config.matchCount).length);
     default:

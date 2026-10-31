@@ -34,4 +34,22 @@ describe('TeamAvatar dimension', () => {
     render(<TeamAvatar team={{ name: 'FC Nord' }} dimension={displayFontSizes.teamName} data-testid="av" />);
     expect((screen.getByTestId('av').firstElementChild as HTMLElement).style.color).toBe('rgb(255, 255, 255)');
   });
+
+  it('@ZM-157 @ZM-185 Logo ganz im Kreis: eingepasst (contain) in ein Quadrat, dessen Ecken auf dem Kreis liegen – nichts wird angeschnitten', () => {
+    render(<TeamAvatar team={{ name: 'SG Mitte', logo: { type: 'base64', value: 'data:image/png;base64,AAAA' } }} dimension="10vh" data-testid="av" />);
+    const bild = screen.getByRole('img');
+    expect(bild.style.objectFit).toBe('contain');
+    const anteil = parseFloat(bild.style.width) / 100;
+    expect(bild.style.height).toBe(bild.style.width);
+    // Die Diagonale des Quadrats (anteil · √2 · Durchmesser) passt in den Durchmesser: jede eingepasste Form liegt im Kreis
+    expect(anteil * Math.SQRT2).toBeLessThanOrEqual(1.0);
+    expect(anteil).toBeGreaterThan(0.6);
+  });
+
+  it('@ZM-185 Gegenbeispiel: ohne Logo steht kein Bild da, die Initialen füllen denselben Kreis', () => {
+    render(<TeamAvatar team={{ name: 'TSV 1921 Fridolfing' }} dimension="10vh" data-testid="av" />);
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.getByText('T1')).toBeInTheDocument();
+    expect(screen.getByTestId('av').style.width).toBe('10vh');
+  });
 });

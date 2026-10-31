@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
+import { cssVars, displayFontSizes, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
 import { MatchStatusBadge } from '../../../components/ui/molecules/MatchStatusBadge';
 import { ScoreBox } from '../../../components/ui/molecules/ScoreBox';
 import { TeamName } from '../../../components/ui/molecules/TeamName';
@@ -15,6 +15,7 @@ import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel, sideTeam } from '../matchSides';
 import type { SideView } from '../../../core/view';
 import { MonitorTimeCell } from './MonitorTimeCell';
+import { rowBadgeWidth } from '../rowBadgeWidth';
 
 interface MonitorMatchRowProps {
   /** Das Spiel der Ansicht: Status, Seitentexte, Anstoß und Endstand kommen von dort (A-36c). */
@@ -25,10 +26,16 @@ interface MonitorMatchRowProps {
   showScore?: boolean;
   /** Abzeichen mit dem Wort des Zustands vorn (Spielplan, @OB-066, @ZM-071); Standard aus. */
   showStatus?: boolean;
+  /**
+   * Lage von Logo bzw. Initialen: `beside` vor dem Namen (Finalrunde in „Alle Tabellen“) | `above` mittig über dem Namen, in jeder Zeile an
+   * derselben Stelle (Spielplan eines Felds, @ZM-185) | `mirrored` Heimlogo hinter dem Heimnamen, Gastlogo vor dem Gastnamen, beide am Strich
+   * (Nächste Spiele, @ZM-185).
+   */
+  logoPlacement?: 'beside' | 'above' | 'mirrored';
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung (optional Ergebnis und Bezeichnung). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false }: MonitorMatchRowProps) {
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false, logoPlacement = 'beside' }: MonitorMatchRowProps) {
   const { t } = useTranslation('tournament');
   const colors = monitorThemes[resolveTheme(theme)];
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
@@ -55,17 +62,19 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
     />
   );
   // @ZM-157: Logo bzw. Initialen vor dem Namen, offene Seite mit neutralem Platzhalter (RF4); der Name bricht um, nie „…“
+  const above = logoPlacement === 'above';
   const teamOf = (side: 'home' | 'away', align: 'start' | 'end') => {
     const view: SideView = match[side];
     const known = sideTeam(view, tournament.teams);
     const label = monitorSideLabel(view);
     return (
-      <div style={{ ...cell, flex: '1 1 0' }}>
+      <div style={{ ...cell, flex: '1 1 0', ...(above ? { alignSelf: 'flex-start' } : {}) }}>
         <TeamName
           team={{ name: label, logo: known?.logo, colors: known?.colors, pending: view.pending }}
-          name={<span data-teamname style={{ ...cell, textAlign: align === 'end' ? 'right' : 'left', display: 'block' }}>{label}</span>}
+          name={<span data-teamname style={{ ...cell, textAlign: above ? 'center' : align === 'end' ? 'right' : 'left', display: 'block' }}>{label}</span>}
           avatarNeutral={{ background: colors.surfaceHover, color: colors.text, border: colors.border }}
-          layout="inline" avatarSize="list" addons={[]} reserveAddonLines={0} justify={align}
+          layout="inline" avatarSize="list" addons={[]} reserveAddonLines={0} justify={above ? 'center' : align}
+          avatarPlacement={above ? 'above' : logoPlacement === 'mirrored' && side === 'home' ? 'after' : 'before'}
           testId={`monitor-match-team-${side}`}
         />
       </div>
@@ -91,7 +100,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
     >
       {showStatus && (
         // Feste Breite: die Spalten springen nicht, auch wenn ein Spiel noch kein Abzeichen trägt (@ZM-151)
-        <div data-testid="monitor-match-status" style={{ flex: `0 0 ${displayLayout.scoreArea.badgeWidth}`, display: 'flex', fontSize: displayFontSizes.liveBadge }}>
+        <div data-testid="monitor-match-status" style={{ flex: `0 0 ${rowBadgeWidth(tournament)}`, display: 'flex', fontSize: displayFontSizes.liveBadge }}>
           {match.badge.kind === 'badge' && <MatchStatusBadge model={match.badge} size="display" tone={monitorBadgeTone(colors)} />}
         </div>
       )}
@@ -109,7 +118,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
         style={{
           ...cell,
           flex: '0 0 auto',
-          minWidth: showScore ? `calc(${2 * ROW_BOX_WIDTH_EM}em + ${displayList.cellGap})` : displayList.separatorWidth,
+          minWidth: showScore ? `calc(${2 * ROW_BOX_WIDTH_EM}em + 2 * ${displayList.cellGap} + ${displayList.colonWidth})` : displayList.separatorWidth,
           textAlign: 'center',
           fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
           color: showScore ? colors.text : colors.textMuted,
@@ -118,7 +127,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
         {withBoxes && figures !== null ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: displayList.cellGap }}>
             {box('home', figures.goalsA)}
-            <span aria-hidden="true">:</span>
+            <span aria-hidden="true" style={{ display: 'inline-block', width: displayList.colonWidth, textAlign: 'center' }}>:</span>
             {box('away', figures.goalsB)}
           </div>
         ) : showScore ? score : '–'}
