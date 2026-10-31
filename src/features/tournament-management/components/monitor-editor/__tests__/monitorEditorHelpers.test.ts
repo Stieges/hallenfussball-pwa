@@ -39,6 +39,34 @@ describe('monitorEditorHelpers – buildEditorGroups', () => {
   });
 });
 
+describe('monitorEditorHelpers – buildEditorGroups nach tatsächlicher Team-Zuordnung (@ZM-181, @ZM-177)', () => {
+  const teamsIn = (gruppen: string[]) => gruppen.map((group, i) => ({ id: `t${i}`, name: `Team ${i}`, ...(group === '' ? {} : { group }) }));
+
+  it('gespeicherte Standardgruppen A, B, C ohne Teams in C: angeboten werden nur A und B, mit dem gespeicherten Namen', () => {
+    const groups = buildEditorGroups(createMockTournament({
+      groupSystem: 'groupsAndFinals', numberOfGroups: 3, groups: [{ id: 'A' }, { id: 'B', customName: 'Löwen' }, { id: 'C' }],
+      teams: teamsIn(['A', 'A', 'B', 'B']),
+    }), t);
+    expect(groups.map(g => g.id)).toEqual(['A', 'B']);
+    expect(groups[1].customName).toBe('Löwen');
+    expect(groups[0]).toEqual({ id: 'A' });
+  });
+
+  it('Jeder gegen jeden mit gespeicherten Gruppen A und B (Altbestand): eine Gruppe „Alle Teams“', () => {
+    const groups = buildEditorGroups(createMockTournament({
+      groupSystem: 'roundRobin', numberOfGroups: 2, groups: [{ id: 'A' }, { id: 'B' }], teams: teamsIn(['', '', '']),
+    }), t);
+    expect(groups).toEqual([{ id: 'default', customName: de.monitorEditor.allTeams }]);
+  });
+
+  it('Gegenbeispiel: ohne Zuordnung (kein Team hat eine Gruppe) bleibt es bei den gespeicherten Gruppen', () => {
+    const groups = buildEditorGroups(createMockTournament({
+      groupSystem: 'groupsAndFinals', numberOfGroups: 2, groups: [{ id: 'A' }, { id: 'B' }], teams: teamsIn(['', '']),
+    }), t);
+    expect(groups.map(g => g.id)).toEqual(['A', 'B']);
+  });
+});
+
 describe('monitorEditorHelpers – getSlideDescription', () => {
   const leeres = { sponsors: [], getFieldDisplayName: (id: string) => id };
 

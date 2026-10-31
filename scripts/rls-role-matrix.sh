@@ -178,6 +178,9 @@
 #   scripts/rls-role-matrix.sh --without-wm        # Alles ("nachher"), aber OHNE 20261118_004 (W-M Server-Nachzug
 #                                                   # Abschluss) -- die Zeilen (rls-matrix.d/spur-z-abschluss-nachzug.sh)
 #                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-mend      # Alles ("nachher"), aber OHNE 20261118_008 (Monitor-Endstand ueber den
+#                                                   # Monitor-Link, auch nach dem Wiederoeffnen) -- die Zeilen
+#                                                   # (rls-matrix.d/spur-zz-monitor-endstand.sh) muessen hier ROT sein.
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -294,6 +297,8 @@ WITH_B48B_REQ=1
 WITH_A35_REQ=1
 # W-M: 20261118_004 im Modus "nachher" einspielen (Gegenprobe --without-wm laesst sie weg; braucht _005 A-35 und _104 B-14).
 WITH_WM_REQ=1
+# Monitor-Endstand: 20261118_008 im Modus "nachher" einspielen (Gegenprobe --without-mend laesst sie weg; braucht W-M und B-14).
+WITH_MEND_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -377,6 +382,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-wm)
       WITH_WM_REQ=0
+      shift
+      ;;
+    --without-mend)
+      WITH_MEND_REQ=0
       shift
       ;;
     -h|--help)
@@ -783,6 +792,23 @@ if [[ "$WITH_A35" -eq 1 && "$WITH_B14" -eq 1 && "$WITH_WM_REQ" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL + W-M (20261118_004)"
 elif [[ "$WITH_A35" -eq 1 && "$WITH_B14" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, W-M-Gegenprobe (ohne 20261118_004)"
+fi
+
+# Monitor-Endstand (20261118_008, @ZM-121 Z. 1/2): display_final_standings(uuid, text) fuer den Monitor-Link. Setzt W-M
+# (Kindermodus im Endstand) und B-14 (display_tournament) voraus (Fail-fast); --without-mend ist die Gegenprobe.
+MEND_FILE="$(find_migration 20261118_008)"
+WITH_MEND=0
+BASIS_FILE="$(find_migration 20261118_007)"
+if [[ "$WITH_WM" -eq 1 && "$WITH_MEND_REQ" -eq 1 ]]; then
+  WITH_MEND=1
+  # 008 prueft die Fassung von public_view.config_for (20261118_007, live) -- 007 deshalb davor (nur config_for).
+  echo "Migration einspielen: $(basename "$BASIS_FILE")" >&2
+  psql_stdin < "$BASIS_FILE"
+  echo "Migration einspielen: $(basename "$MEND_FILE")" >&2
+  psql_stdin < "$MEND_FILE"
+  MODE_LABEL="$MODE_LABEL + Monitor-Endstand (20261118_008)"
+elif [[ "$WITH_WM" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, Monitor-Endstand-Gegenprobe (ohne 20261118_008)"
 fi
 
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
@@ -2389,7 +2415,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_MEND_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

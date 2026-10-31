@@ -146,14 +146,19 @@ export async function fremdesGeraetSendetTor(teamId: string): Promise<void> {
   await act(async () => { await fremd.goal(HARNESS_MATCH_ID, HARNESS_CTX, 'leitung', teamId, false); });
 }
 
+/** Wartezeit für die Sperre des Nummern-Bausteins: 300 ms Sperre plus 10 ms Reserve (echte Zeitgeber). */
+export const SPERRE_WARTE_MS = 310;
+/** Reserve über `HOLD_MS` hinaus, bis der Halteknopf sicher ausgelöst hat. */
+export const HALTE_RESERVE_MS = 60;
+
 /** Wartet die Sperre des Nummern-Bausteins ab (echte Zeitgeber, 300 ms; nur `Date` ist gefälscht). */
 export async function warteSperre(): Promise<void> {
-  await act(async () => { await new Promise((fertig) => { setTimeout(fertig, 310); }); });
+  await act(async () => { await new Promise((fertig) => { setTimeout(fertig, SPERRE_WARTE_MS); }); });
 }
 
 /** Hält einen Halteknopf (Abpfiff) gedrückt, bis er ausgelöst hat (echte Zeitgeber, `HOLD_MS` plus Reserve; @SL-157). */
 export async function halte(knopf: HTMLElement): Promise<void> {
   fireEvent.pointerDown(knopf, { pointerId: 1, button: 0 });
-  await act(async () => { await new Promise((fertig) => { setTimeout(fertig, HOLD_MS + 60); }); });
+  await act(async () => { await new Promise((fertig) => { setTimeout(fertig, HOLD_MS + HALTE_RESERVE_MS); }); });
   fireEvent.pointerUp(knopf, { pointerId: 1 });
 }

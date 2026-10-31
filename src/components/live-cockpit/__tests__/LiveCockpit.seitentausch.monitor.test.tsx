@@ -49,3 +49,24 @@ describe('H6 Seitentausch im Cockpit, Monitor bleibt Heim links', () => {
     expect(kasten.home.fill).toEqual({ kind: 'solid', color: LILA }); // das Cockpit hat die Kästen nicht verändert
   });
 });
+
+describe('@SL-190 Ein Seitentausch gilt nur für das Spiel, in dem Tom getauscht hat', () => {
+  it('Spiel 11 getauscht (SV Süd links), danach Spiel 12 „TSV Ost – DJK West“: TSV Ost links, die Karten-Taste links gilt für TSV Ost', async () => {
+    const spiel11 = makeLiveMatch();
+    const spiel12 = makeLiveMatch({ id: 'match-12', number: 12, homeTeam: { id: 'tsv-ost', name: 'TSV Ost' }, awayTeam: { id: 'djk-west', name: 'DJK West' } });
+    const { rerender } = render(<LiveCockpit {...makeProps(spiel11)} />);
+    await userEvent.click(screen.getByTestId('cockpit-more-button'));
+    await userEvent.click(await screen.findByTestId('mehr-seiten-tauschen'));
+    expect(screen.getByTestId('scoreboard-name-links')).toHaveTextContent('SV Süd');
+
+    rerender(<LiveCockpit {...makeProps(spiel12)} />);
+    expect(screen.getByTestId('scoreboard-name-links')).toHaveTextContent('TSV Ost');
+    expect(screen.getByTestId('scoreboard-name-rechts')).toHaveTextContent('DJK West');
+    const linksTaste = screen.getByTestId('card-button-home');
+    const rechtsTaste = screen.getByTestId('card-button-away');
+    expect(linksTaste.compareDocumentPosition(rechtsTaste) & Node.DOCUMENT_POSITION_FOLLOWING, 'Heim-Taste steht links').toBeTruthy();
+    await userEvent.click(linksTaste);
+    expect(await screen.findByTestId('card-kind-step')).toHaveAccessibleName(/TSV Ost/);
+  });
+});
+

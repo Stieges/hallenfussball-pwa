@@ -1,0 +1,66 @@
+name: Main-Ampel
+
+# Stopp-Regel (@TA-022, Plan Werkzeug-Paket Abschnitt 5a, Daniel 30.10.): Seit „Branch muss aktuell sein“ (strict) aus ist,
+# darf ein PR mergen, sobald SEINE Prüfungen grün sind – auch wenn main inzwischen weitergewandert ist. Das Zusammenspiel
+# zweier PRs zeigt erst der Lauf nach dem Merge auf main. Ist dort eine Pflicht-Prüfung der Branch-Regel rot, wird nichts
+# weiter gemergt, bis main wieder grün ist; nur ein PR mit dem Label „main-reparatur“ darf durch.
+#
+# Logik in scripts/main-ampel.mjs (Test: scripts/__tests__/mainAmpel.test.ts). Sie setzt auf offenen PRs den Commit-Status
+# „Main-Ampel (Stopp-Regel)“. Gezählt werden nur die Pflicht-Prüfungen der Branch-Regel (Liste PFLICHT im Skript), nicht
+# der Schema-Abgleich gegen die Live-Datenbank und keine Zusatz-Jobs. Abgebrochene Läufe zählen nicht.
+# Fail-closed: Scheitert eine Abfrage bei GitHub, endet der Lauf rot und setzt keinen Status (nie grün ohne Prüfung).
+# Auslöser: Ende eines Pflicht-Workflows (auf main → alle offenen PRs; auf einem PR-Branch → dieser PR, Fork-PRs über den
+# Kopf-Commit gesucht, damit auch sie den Status bekommen), außerdem neue Commits und Label-Änderungen am PR.
+# Einen roten Lauf auf main wieder grün bekommen: Reparatur-PR mergen; ist nur der Lauf selbst gestört, in Actions „Re-run“
+# des roten Laufs – sein Ende löst die Ampel neu aus. Von Hand: workflow_dispatch dieses Workflows.
+# Blockierend wird der Status erst, wenn er in der Branch-Regel für main als Pflicht-Prüfung eingetragen ist (Einstellung,
+# Daniels Entscheidung; dieser Workflow ändert keine Einstellungen).
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - E2E Cloud
+      - CodeQL Security Scan
+      - Visual Regression
+    types: [completed]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: main-ampel-${{ github.event.workflow_run.head_branch || github.head_ref || 'main' }}
+  # Das Ergebnis hängt nur vom aktuellen Stand ab: der neueste Lauf gewinnt.
+  cancel-in-progress: true
+
+jobs:
+  ampel:
+    name: Main-Ampel setzen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Bei pull_request der Stand des PRs (Skript-Änderungen werden im PR selbst geprüft), bei workflow_run der
+      # Standard-Branch. Nur das Skript, keine Abhängigkeiten. Ein Fork-PR führt sein eigenes Skript aus, aber mit
+      # schreibgeschütztem Token (kein Status, keine Rechte); seinen Status setzt der workflow_run-Lauf mit main-Stand.
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/main-ampel.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Pflicht-Prüfungen auf main lesen und Status der PRs setzen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EREIGNIS: ${{ github.event_name }}
+          LAUF_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          LAUF_SHA: ${{ github.event.workflow_run.head_sha }}
+          LAUF_PRS: ${{ toJSON(github.event.workflow_run.pull_requests.*.number) }}
+          PR_NUMMER: ${{ github.event.pull_request.number }}
+        run: node scripts/main-ampel.mjs

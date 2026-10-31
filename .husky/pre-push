@@ -1,29 +1,16 @@
-# Check for uncommitted CI-relevant changes
-UNCOMMITTED_CI_FILES=$(git diff --name-only | grep -E "playwright\.config\.ts|vite\.config\.ts|\.github/workflows/ci\.yml" || true)
+# Vor-Push-Prüfung wie die CI (@TA-019, @TA-020): führt den Commit mit dem neuesten origin/main zusammen
+# (ohne den Arbeitsbaum anzufassen) und prüft das Ergebnis in einer temporären Arbeitskopie: Lint, Build,
+# Szenario-Prüfung, Härtetest der visuellen Messung und Playwright-Specs der geänderten Bereiche ohne Datenbank.
+# Löschen eines Branches und Tags laufen ohne Prüfung durch. Sicherungs-Push auf „sicherung/…“: VOR_PUSH_MODUS=sicherung
+# (nur Konflikt-Warnung, Lint, Typen; @TA-025). Details: scripts/vor-push/vor-push.mjs
 
+# Hinweis (kein Abbruch): geprüft wird der COMMITTETE Stand, nicht lokale, nicht committete Änderungen.
+UNCOMMITTED_CI_FILES=$(git diff --name-only | grep -E "playwright\.config\.ts|vite\.config\.ts|\.github/workflows/" || true)
 if [ -n "$UNCOMMITTED_CI_FILES" ]; then
   echo ""
-  echo "🚨 WARNUNG: Uncommitted CI-relevante Änderungen!"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "⚠️  Nicht committete CI-relevante Änderungen (werden NICHT hochgeladen und NICHT geprüft):"
+  echo "$UNCOMMITTED_CI_FILES" | while read -r file; do echo "   - $file"; done
   echo ""
-  echo "Folgende Dateien haben lokale Änderungen die NICHT gepusht werden:"
-  echo "$UNCOMMITTED_CI_FILES" | while read file; do echo "   - $file"; done
-  echo ""
-  echo "⚠️  CI verwendet den COMMITTED Stand, nicht deine lokalen Änderungen!"
-  echo ""
-  echo "Optionen:"
-  echo "   1. git add <datei> && git commit --amend  (Änderungen inkludieren)"
-  echo "   2. git checkout <datei>                   (Lokale Änderungen verwerfen)"
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo ""
-  read -p "Trotzdem pushen? (y/N) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Push abgebrochen."
-    exit 1
-  fi
 fi
 
-npm run lint
-npm run build
+node scripts/vor-push/start.mjs "$@"
