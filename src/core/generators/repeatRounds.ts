@@ -20,9 +20,12 @@ export function clampRoundCount(value: number): { rounds: number; hint: RoundCou
   return { rounds: Math.floor(value), hint: null };
 }
 
-/** Rundenzahl, mit der der Spielplan erzeugt wird: nur bei „Jeder gegen jeden“, sonst 1 (@TM-140 später). */
-export function effectiveRoundCount(tournament: Pick<Tournament, 'groupSystem' | 'numberOfRounds'>): number {
-  if (tournament.groupSystem !== 'roundRobin') { return 1; }
+/**
+ * Rundenzahl, mit der der Spielplan erzeugt wird: nur bei „Jeder gegen jeden“ (ohne Angabe gilt wie im Assistenten
+ * „Jeder gegen jeden“), sonst 1 (@TM-140 später).
+ */
+export function effectiveRoundCount(tournament: Partial<Pick<Tournament, 'groupSystem' | 'numberOfRounds'>>): number {
+  if ((tournament.groupSystem ?? 'roundRobin') !== 'roundRobin') { return 1; }
   return clampRoundCount(tournament.numberOfRounds ?? ROUND_COUNT_MIN).rounds;
 }
 
@@ -70,8 +73,11 @@ function smallestGap(slots: readonly (readonly string[])[]): number {
   return gap;
 }
 
-/** Rechenbudget der Suche nach einer Anordnung ohne Verstoß, in Suchschritten (nie in Zeit). */
-export const ROUND_ORDER_NODE_BUDGET = 200_000;
+/**
+ * Rechenbudget je Suche nach einer Anordnung ohne Verstoß, in Suchschritten (jeder Versuch, ein Spiel in ein
+ * Zeitfenster zu legen, zählt; nie in Zeit).
+ */
+export const ROUND_ORDER_NODE_BUDGET = 50_000;
 
 type Slots = readonly (readonly Match[])[];
 
@@ -111,6 +117,7 @@ function searchArrangement(previous: Slots, minRestSlots: number, budget: number
     const busy = new Set<string>();
 
     function pick(from: number): boolean {
+      if (++nodes > budget) { return false; }
       if (chosen.length === size) {
         const saved = chosen.flatMap((index) => teams[index].map((team) => [team, last.get(team)] as const));
         chosen.forEach((index) => {
@@ -145,7 +152,8 @@ function searchArrangement(previous: Slots, minRestSlots: number, budget: number
 
 /**
  * Anordnung der nächsten Runde: zuerst eine Drehung der Zeitfenster ohne zusätzlichen Verstoß (unverändert zuerst),
- * sonst die Rücksetzsuche, sonst die Drehung mit den wenigsten Verstößen (Mindestpause schon in der Runde unerfüllbar).
+ * sonst die Rücksetzsuche mit der verlangten Pause, dann mit je einem Fenster weniger bis 0, zuletzt die Drehung mit
+ * den wenigsten Verstößen.
  */
 function arrangeNextRound(previous: Slots, minRestSlots: number): Match[][] {
   const previousTeams = teamsOfSlots(previous);
@@ -159,7 +167,11 @@ function arrangeNextRound(previous: Slots, minRestSlots: number): Match[][] {
   }
   const rotated = best.map((index) => [...previous[index]]);
   if (bestScore === 2 * ownViolations) { return rotated; }
-  return searchArrangement(previous, minRestSlots, ROUND_ORDER_NODE_BUDGET) ?? rotated;
+  for (let rest = minRestSlots; rest >= 0; rest--) {
+    const found = searchArrangement(previous, rest, ROUND_ORDER_NODE_BUDGET);
+    if (found) { return found; }
+  }
+  return rotated;
 }
 
 /**
@@ -168,16 +180,22 @@ function arrangeNextRound(previous: Slots, minRestSlots: number): Match[][] {
  */
 export function repeatRounds(firstRound: readonly Match[], rounds: number, options: RepeatRoundsOptions): Match[] {
   if (rounds <= 1 || firstRound.length === 0) { return [...firstRound]; }
-  const slotCount = Math.max(...firstRound.map(slotOf)) + 1;
-  const bySlot: Match[][] = Array.from({ length: slotCount }, () => []);
-  for (const match of firstRound) { bySlot[slotOf(match)].push(match); }
-  bySlot.forEach((matches) => matches.sort((a, b) => a.field - b.field));
   const step = (options.slotDurationMinutes + options.breakBetweenSlotsMinutes) * 60_000;
+  const timeOf = (slot: number): Date | undefined =>
+    options.startTime ? new Date(options.startTime.getTime() + slot * step) : undefined;
+
+  // Runde 1 auf belegte Zeitfenster verdichten (so plant auch die Zeitplanung, leere Fenster entfallen dort).
+  const occupied = [...new Set(firstRound.map(slotOf))].sort((a, b) => a - b);
+  const bySlot: Match[][] = occupied.map((slot, position) => firstRound
+    .filter((match) => slotOf(match) === slot)
+    .sort((a, b) => a.field - b.field)
+    .map((match) => ({ ...match, slot: position, round: position + 1, scheduledTime: timeOf(position) })));
+  const slotCount = bySlot.length;
 
   // Schafft schon die erste Runde die Mindestpause nicht, gilt über die Grenze das, was sie schafft (nie schlechter).
   const restSlots = Math.min(options.minRestSlots, smallestGap(teamsOfSlots(bySlot)) - 1);
 
-  const result: Match[] = [...firstRound];
+  const result: Match[] = bySlot.flat();
   let previous: Match[][] = bySlot;
   for (let round = 1; round < rounds; round++) {
     const arranged = arrangeNextRound(previous, restSlots);
@@ -192,7 +210,7 @@ export function repeatRounds(firstRound: readonly Match[], rounds: number, optio
         field: fields[index] ?? match.field,
         slot,
         round: slot + 1,
-        scheduledTime: options.startTime ? new Date(options.startTime.getTime() + slot * step) : undefined,
+        scheduledTime: timeOf(slot),
       }));
     });
     next.forEach((matches) => result.push(...matches));

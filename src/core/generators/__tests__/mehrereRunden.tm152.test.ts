@@ -11,7 +11,8 @@ import { generateFullSchedule } from '..';
 import type { ScheduledMatch } from '../scheduleTypes';
 import type { Tournament } from '../../../types/tournament';
 import { createMockTournament, createMockTeams } from '../../../test/factories';
-import { effectiveRoundCount } from '../repeatRounds';
+import { effectiveRoundCount, repeatRounds } from '../repeatRounds';
+import type { Match } from '../../../types/tournament';
 
 function nikolaus(numberOfRounds: number | undefined, extra: Partial<Tournament> = {}): Tournament {
   return createMockTournament({
@@ -124,15 +125,66 @@ describe('@TM-152 Rundenzahl bei „Jeder gegen jeden“ (Nikolaus-Turnier, 6 Te
     expect([...pairCounts(matches).values()].every((c) => c === 1)).toBe(true);
   });
 
-  it('@TM-152 Gegenbeispiel: bei „Gruppen + Finalrunde“ wirkt die Rundenzahl nicht (@TM-140 später)', () => {
+  it('@TM-152 Gegenbeispiel: bei „Gruppen + Finalrunde“ wirkt eine gespeicherte Rundenzahl nicht (@TM-140 später)', () => {
+    const gruppen = (numberOfRounds: number | undefined): Tournament => createMockTournament({
+      teams: createMockTeams(8, 2), numberOfTeams: 8, numberOfGroups: 2, numberOfFields: 1,
+      groupSystem: 'groupsAndFinals', finalsConfig: { preset: 'none' }, numberOfRounds,
+    });
+    const einfach = groupMatches(gruppen(undefined));
+    const mitDrei = groupMatches(gruppen(3));
+
+    expect(einfach).toHaveLength(12);
+    expect(mitDrei).toHaveLength(12);
+    expect([...pairCounts(mitDrei).values()].every((c) => c === 1)).toBe(true);
     expect(effectiveRoundCount({ groupSystem: 'groupsAndFinals', numberOfRounds: 3 })).toBe(1);
-    expect(effectiveRoundCount({ groupSystem: 'roundRobin', numberOfRounds: 3 })).toBe(3);
   });
 
-  it('@TM-152 die Runden folgen aufeinander: alle Spiele der Runde 1 liegen vor dem ersten Spiel der Runde 2', () => {
-    const matches = groupMatches(nikolaus(2));
+  it('@TM-152 lässt sich die Mindestpause schon in der ersten Runde nicht einhalten, gilt über die Rundengrenze dieselbe Pause wie in der ersten Runde', () => {
+    let ersteRundeVerfehlt = 0;
+    for (const [teams, fields] of [[7, 2], [5, 1], [9, 2], [10, 3]] as const) {
+      const base = createMockTournament({
+        teams: createMockTeams(teams, 1), numberOfTeams: teams, numberOfFields: fields, groupSystem: 'roundRobin',
+        finalsConfig: { preset: 'none' }, minRestSlots: 2, groupPhaseGameDuration: 10, groupPhaseBreakDuration: 0,
+      });
+      const single = minGapInSlots(groupMatches({ ...base, numberOfRounds: 1 }), 10);
+      const double = minGapInSlots(groupMatches({ ...base, numberOfRounds: 2 }), 10);
+      if (single < 3) { ersteRundeVerfehlt++; }
+      expect(double, `${String(teams)} Teams, ${String(fields)} Feld(er)`).toBeGreaterThanOrEqual(Math.min(single, 3));
+    }
+    // die Lage des Szenarios kommt wirklich vor (Runde 1 schafft Mindestpause 2 nicht)
+    expect(ersteRundeVerfehlt).toBeGreaterThan(0);
+  });
 
-    expect(new Set(matches.slice(0, 15).map(pairKey)).size).toBe(15);
-    expect(new Set(matches.slice(15).map(pairKey)).size).toBe(15);
+  it('@TM-152 Rechenbudget: auch große Turniere mit hoher Mindestpause brauchen für 10 Runden unter 500 ms', () => {
+    for (const [teams, fields, rest] of [[16, 4, 3], [14, 2, 3], [7, 1, 3], [24, 3, 2]] as const) {
+      const t = createMockTournament({
+        teams: createMockTeams(teams, 1), numberOfTeams: teams, numberOfFields: fields, groupSystem: 'roundRobin',
+        finalsConfig: { preset: 'none' }, minRestSlots: rest, groupPhaseGameDuration: 10, groupPhaseBreakDuration: 0,
+      });
+      const firstRound = generateFullSchedule({ ...t, numberOfRounds: 1 }).allMatches as unknown as Match[];
+      const started = performance.now();
+      const all = repeatRounds(firstRound, 10, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
+      const elapsed = performance.now() - started;
+      expect(all).toHaveLength(firstRound.length * 10);
+      expect(elapsed, `${String(teams)} Teams, ${String(fields)} Felder, Pause ${String(rest)}`).toBeLessThan(500);
+    }
+  });
+
+  it('@TM-152 jede Runde ist vollständig gespielt, bevor die nächste beginnt (3 Runden, k-tes Spiel einer Paarung = Runde k)', () => {
+    for (const fields of [1, 2]) {
+      const matches = groupMatches(nikolaus(3, { numberOfFields: fields }));
+      const roundOf = new Map<ScheduledMatch, number>();
+      const seen = new Map<string, number>();
+      for (const m of matches) {
+        const k = (seen.get(pairKey(m)) ?? 0) + 1;
+        seen.set(pairKey(m), k);
+        roundOf.set(m, k);
+      }
+      for (const k of [1, 2]) {
+        const lastEnd = Math.max(...matches.filter((m) => roundOf.get(m) === k).map((m) => m.endTime.getTime()));
+        const nextStart = Math.min(...matches.filter((m) => roundOf.get(m) === k + 1).map((m) => m.startTime.getTime()));
+        expect(lastEnd, `${String(fields)} Feld(er), Runde ${String(k)}`).toBeLessThanOrEqual(nextStart);
+      }
+    }
   });
 });
