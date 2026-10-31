@@ -267,6 +267,8 @@
     "noPenalties": "No active penalties",
     "noEvents": "No events yet",
     "goalEvent": "GOAL {{teamName}}",
+    "ownGoalEvent": "Own goal {{teamName}}{{player}}",
+    "playerNumber": ", No. {{number}}",
     "yellowEvent": "Yellow {{teamName}}",
     "yellowRedEvent": "Yellow-red {{teamName}}",
     "redEvent": "Red {{teamName}}",

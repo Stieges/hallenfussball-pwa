@@ -684,10 +684,11 @@
       "gotoCockpit": "Zum Cockpit",
       "endAndEnter": "Spiel beenden und Ergebnis eintragen",
       "eventYellowRedCard": "Gelb-Rote Karte {{team}}{{player}}",
-      "eventGoal": "TOR {{team}}{{player}}",
+      "eventGoal": "Tor {{team}}{{player}}, {{minute}}.",
       "eventYellowCard": "Gelbe Karte {{team}}{{player}}",
       "eventRedCard": "Rote Karte {{team}}{{player}}",
-      "eventTimePenalty": "Zeitstrafe {{team}}{{player}}",
+      "eventTimePenalty": "Zeitstrafe {{team}}{{player}}, {{minute}}.",
+      "playerNumber": ", Nr. {{number}}",
       "eventSubstitution": "Wechsel {{team}}",
       "eventFoul": "Foul {{team}}"
     },

@@ -3,7 +3,8 @@
  * Anzeigesprache, Rahmen wie die Monitor-Seite. Das Turnier kommt über die echte Antwortform von `display_tournament` (Kit
  * `publicEntscheidungKit`, Prüfregel @ZM-180), nicht aus einem selbstgebauten Objekt. Nur Testumgebung, nicht Teil des Builds.
  * Adresse: `?szene=<id>&seite=<n>&thema=dark|light&rand=<Prozent>`; ids: jeg (Jeder gegen jeden, der Assistent hat die Standardgruppen
- * A und B gespeichert, die Teams haben keine Gruppe), zwei (zwei echte Gruppen A und B).
+ * A und B gespeichert, die Teams haben keine Gruppe), zwei (zwei echte Gruppen A und B), jeg-einzel (Einzelfolie „Tabelle“ mit der
+ * Editor-ID „default“ bei Jeder gegen jeden, @ZM-177/@ZM-181).
  */
 import ReactDOM from 'react-dom/client';
 import '../../../src/i18n';
@@ -38,7 +39,9 @@ const antwort = parsePublicPayload(serverAntwort(lokal, { art: 'gespeichert' }, 
 if (antwort.kind !== 'full') { throw new Error(antwort.kind); }
 const turnier = antwort.tournament;
 const view = buildMonitorView(turnier);
-const folie = { id: 'alle', type: 'all-standings', config: {}, duration: null, order: 0 } as unknown as MonitorSlide;
+const folie = (szene === 'jeg-einzel'
+  ? { id: 'einzel', type: 'standings', config: { groupId: 'default' }, duration: null, order: 0 }
+  : { id: 'alle', type: 'all-standings', config: {}, duration: null, order: 0 }) as unknown as MonitorSlide;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <I18nextProvider i18n={anzeigeI18n()}>

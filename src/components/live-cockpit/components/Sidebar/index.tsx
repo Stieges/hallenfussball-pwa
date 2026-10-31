@@ -95,6 +95,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         if (event.payload.direction === 'DEC') {
           return `−1 ${teamName}`;
         }
+        // @SL-022: Eigentor „Eigentor <schießendes Team>, Nr. <n>“ (nicht „Tor <begünstigtes Team>“)
+        if (event.payload.ownGoal === true) {
+          const ownGoalTeam = event.payload.ownGoalTeamId === homeTeamId ? homeTeamName : awayTeamName;
+          const ownGoalPlayer = event.payload.playerNumber
+            ? t('sidebar.playerNumber', { number: event.payload.playerNumber })
+            : '';
+          return t('sidebar.ownGoalEvent', { teamName: ownGoalTeam, player: ownGoalPlayer });
+        }
         // Build goal description with player and assists
         let goalText = t('sidebar.goalEvent', { teamName }) + playerInfo;
         // Show assists if present

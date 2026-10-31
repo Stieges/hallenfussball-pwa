@@ -41,8 +41,8 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe('Zuschauer-Seite zeigt die Zeitstrafe als Ereigniszeile (Server-Antwort) – Wächter, kein Nachweis von @ZM-002', () => {
-  it('Wächter: Spiel 9 aufgeklappt zeigt überhaupt eine Zeitstrafe-Zeile mit dem Team (Format siehe it.fails unten)', async () => {
+describe('@ZM-002 Zuschauer-Seite zeigt Tor und Zeitstrafe als Ereigniszeile (echte Server-Antwort, @ZM-180)', () => {
+  it('Wächter: Spiel 9 aufgeklappt zeigt überhaupt eine Zeitstrafe-Zeile mit dem Team (Format siehe unten)', async () => {
     rpcCall.mockImplementation(() => Promise.resolve({ data: mitZeitstrafe(), error: null }));
     render(
       <RepositoryProvider user={null}>
@@ -67,9 +67,8 @@ describe('Zuschauer-Seite zeigt die Zeitstrafe als Ereigniszeile (Server-Antwort
     expect(screen.queryByText(/Zeitstrafe/)).toBeNull();
   });
 
-  // @ZM-002 verlangt die Ereigniszeile „Zeitstrafe SV Süd, Nr. 5, 4.“: Team, Rückennummer als „Nr.“, Minute „4.“ (nicht Uhrzeit 03:20).
-  // Heute zeigt die Seite „Zeitstrafe <Team> #5 · 03:20“ -> Befund C-ZEITSTRAFE-ZEILE-FORMAT.
-  it.fails('@ZM-002 C-ZEITSTRAFE-ZEILE-FORMAT: die Zeile lautet „Zeitstrafe <Team>, Nr. 5, 4.“ (Minute statt Uhrzeit)', async () => {
+  // @ZM-002: Ereigniszeile „Zeitstrafe SV Süd, Nr. 5, 4.“ – Team, Rückennummer als „Nr.“, Minute „4.“ (nicht Uhrzeit 03:20).
+  it('@ZM-002 C-ZEITSTRAFE-ZEILE-FORMAT: die Zeile lautet „Zeitstrafe <Team>, Nr. 5, 4.“ (Minute statt Uhrzeit)', async () => {
     rpcCall.mockImplementation(() => Promise.resolve({ data: mitZeitstrafe(), error: null }));
     render(
       <RepositoryProvider user={null}>
@@ -78,12 +77,13 @@ describe('Zuschauer-Seite zeigt die Zeitstrafe als Ereigniszeile (Server-Antwort
     );
     const karte = (await screen.findAllByTestId('match-clock'))[0].closest('[data-match-card]')!;
     await userEvent.click(karte);
-    const zeilen = await screen.findAllByText(/Zeitstrafe/);
-    expect(zeilen.some((zeile) => /Zeitstrafe .+, Nr\. 5, 4\./.test(zeile.closest('div')?.parentElement?.textContent ?? ''))).toBe(true);
+    const zeilen = await screen.findAllByText(/^Zeitstrafe .+, Nr\. 5, 4\.$/);
+    for (const zeile of zeilen) { expect(zeile.textContent).not.toMatch(/#|03:20/); }
+    expect(screen.queryByText('03:20')).toBeNull();
   });
 
-  // @ZM-002 verlangt ebenso „Tor FC Nord, Nr. 9, 3.“ (ohne Rückennummer „Tor FC Nord, 12.“); heute „TOR <Team> #9“ mit Uhrzeit -> gleicher Befund.
-  it.fails('@ZM-002 C-ZEITSTRAFE-ZEILE-FORMAT: Torzeilen lauten „Tor <Team>, Nr. <n>, <Minute>.“ (Minute statt Uhrzeit)', async () => {
+  // @ZM-002: „Tor FC Nord, Nr. 9, 3.“ (ohne Rückennummer „Tor FC Nord, 12.“, @ZM-003); Fixture: Tore mit Nr. 3.., Sekunde 40 + 70 n -> Minute 1, 2 ...
+  it('@ZM-002 C-ZEITSTRAFE-ZEILE-FORMAT: Torzeilen lauten „Tor <Team>, Nr. <n>, <Minute>.“ (Minute statt Uhrzeit)', async () => {
     rpcCall.mockImplementation(() => Promise.resolve({ data: mitZeitstrafe(), error: null }));
     render(
       <RepositoryProvider user={null}>
@@ -92,7 +92,8 @@ describe('Zuschauer-Seite zeigt die Zeitstrafe als Ereigniszeile (Server-Antwort
     );
     const karte = (await screen.findAllByTestId('match-clock'))[0].closest('[data-match-card]')!;
     await userEvent.click(karte);
-    const zeilen = await screen.findAllByText(/^tor\b/i);
-    expect(zeilen.some((zeile) => /Tor .+(, Nr\. \d+)?, \d+\./.test(zeile.closest('div')?.parentElement?.textContent ?? ''))).toBe(true);
+    const zeilen = await screen.findAllByText(/^Tor .+, Nr\. \d+, \d+\.$/);
+    expect(zeilen.length).toBeGreaterThan(0);
+    for (const zeile of zeilen) { expect(zeile.textContent).not.toMatch(/#|TOR|\d\d:\d\d/); }
   });
 });

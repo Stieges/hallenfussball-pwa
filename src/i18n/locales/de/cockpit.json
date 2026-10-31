@@ -267,6 +267,8 @@
     "noPenalties": "Keine aktiven Strafen",
     "noEvents": "Noch keine Ereignisse",
     "goalEvent": "TOR {{teamName}}",
+    "ownGoalEvent": "Eigentor {{teamName}}{{player}}",
+    "playerNumber": ", Nr. {{number}}",
     "yellowEvent": "Gelb {{teamName}}",
     "yellowRedEvent": "Gelb-Rot {{teamName}}",
     "redEvent": "Rot {{teamName}}",

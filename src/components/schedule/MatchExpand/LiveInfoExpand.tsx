@@ -90,6 +90,16 @@ function formatEventTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+/** @ZM-002/@ZM-003: Spielminute als laufende Nummer („3.“ für 2:00 bis 2:59), nicht als Uhrzeit. */
+function eventMinute(seconds: number): number {
+  return Math.floor(seconds / 60) + 1;
+}
+
+/** Tor und Zeitstrafe tragen die Minute in der Zeile (@ZM-002); alle anderen Zeilen behalten die Uhrzeit rechts. */
+function showsMinuteInLabel(event: MatchEvent): boolean {
+  return event.type === 'GOAL' || event.type === 'TIME_PENALTY';
+}
+
 function getEventIcon(event: MatchEvent): ReactNode {
   switch (event.type) {
     case 'GOAL':
@@ -116,10 +126,12 @@ function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team, t: (ke
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
   const teamName = event.teamName || (event.teamId === homeTeam.id ? homeTeam.name : awayTeam.name);
   const playerInfo = event.playerNumber ? ` #${event.playerNumber}` : '';
+  const numberInfo = event.playerNumber ? t('matchExpand.liveInfo.playerNumber', { number: String(event.playerNumber) }) : '';
+  const minute = String(eventMinute(event.timestampSeconds));
 
   switch (event.type) {
     case 'GOAL':
-      return t('matchExpand.liveInfo.eventGoal', { team: teamName, player: playerInfo });
+      return t('matchExpand.liveInfo.eventGoal', { team: teamName, player: numberInfo, minute });
     case 'YELLOW_CARD':
       return t('matchExpand.liveInfo.eventYellowCard', { team: teamName, player: playerInfo });
     case 'RED_CARD':
@@ -131,7 +143,7 @@ function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team, t: (ke
         { team: teamName, player: playerInfo },
       );
     case 'TIME_PENALTY':
-      return t('matchExpand.liveInfo.eventTimePenalty', { team: teamName, player: playerInfo });
+      return t('matchExpand.liveInfo.eventTimePenalty', { team: teamName, player: numberInfo, minute });
     case 'SUBSTITUTION':
       return t('matchExpand.liveInfo.eventSubstitution', { team: teamName });
     case 'FOUL':
@@ -313,9 +325,11 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
               <span style={eventTextStyle}>
                 {getEventLabel(event, homeTeam, awayTeam, t)}
               </span>
-              <span style={eventTimeStyle}>
-                {formatEventTime(event.timestampSeconds)}
-              </span>
+              {!showsMinuteInLabel(event) && (
+                <span style={eventTimeStyle}>
+                  {formatEventTime(event.timestampSeconds)}
+                </span>
+              )}
             </div>
           ))
         ) : (

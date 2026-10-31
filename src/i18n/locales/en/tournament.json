@@ -684,10 +684,11 @@
       "gotoCockpit": "Go to Cockpit",
       "endAndEnter": "End match and enter result",
       "eventYellowRedCard": "Yellow-red card {{team}}{{player}}",
-      "eventGoal": "GOAL {{team}}{{player}}",
+      "eventGoal": "Goal {{team}}{{player}}, {{minute}}.",
       "eventYellowCard": "Yellow card {{team}}{{player}}",
       "eventRedCard": "Red card {{team}}{{player}}",
-      "eventTimePenalty": "Time penalty {{team}}{{player}}",
+      "eventTimePenalty": "Time penalty {{team}}{{player}}, {{minute}}.",
+      "playerNumber": ", No. {{number}}",
       "eventSubstitution": "Substitution {{team}}",
       "eventFoul": "Foul {{team}}"
     },

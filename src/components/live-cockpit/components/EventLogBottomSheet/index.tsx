@@ -81,6 +81,13 @@ export function EventLogBottomSheet({
         if (event.payload.direction === 'DEC') {
           return `−1 ${teamName}`;
         }
+        // @SL-022: Eigentor „Eigentor <schießendes Team>, Nr. <n>“ (nicht „TOR <begünstigtes Team>“)
+        if (event.payload.ownGoal === true) {
+          const ownGoalPlayer = event.payload.playerNumber
+            ? t('sidebar.playerNumber', { number: event.payload.playerNumber })
+            : '';
+          return t('sidebar.ownGoalEvent', { teamName: getTeamName(event.payload.ownGoalTeamId), player: ownGoalPlayer });
+        }
         let goalText = `TOR ${teamName}${playerInfo}`;
         const assists = event.payload.assists;
         if (assists && assists.length > 0) {
