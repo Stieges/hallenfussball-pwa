@@ -280,6 +280,25 @@ export function toRuntimeEvents(
 }
 
 /**
+ * Der Eigentor-Weg des Cockpits (@SL-022) erfasst zuerst den Tor-Tipp, nimmt ihn mit RETRACT zurück und erfasst direkt danach
+ * OWN_GOAL des Gegners zur Spielsekunde des ersten Tipps. Dieser Zwischenschritt ist kein eigener Protokolleintrag: Er soll nach
+ * einem „Rückgängig“ des Eigentors nicht als zweite durchgestrichene Zeile „Tor“ neben dem Eigentor stehen
+ * (C-RUECKGAENGIG-DOPPELTE-ZEILEN; gespeichert ist nichts doppelt). Erkannt wird er nur, wenn auf das RETRACT des Tors unmittelbar
+ * ein OWN_GOAL des anderen Teams im selben Abschnitt und in derselben Spielsekunde folgt; jedes andere zurückgenommene Tor bleibt.
+ */
+function isReplacedByOwnGoal(source: EngineEvent, log: readonly EngineEvent[]): boolean {
+  if (source.type !== 'GOAL') {
+    return false;
+  }
+  const retractAt = log.findIndex((event) => event.type === 'RETRACT' && event.targetId === source.id);
+  const next = retractAt < 0 ? undefined : log[retractAt + 1];
+  return next?.type === 'OWN_GOAL'
+    && next.teamId !== source.teamId
+    && next.section === source.section
+    && Math.floor((next.clockMs ?? 0) / 1000) === Math.floor((source.clockMs ?? 0) / 1000);
+}
+
+/**
  * G6: zurueckgenommene Eintraege (Log-Reihenfolge) fuer die Protokoll-Anzeige. Nie Teil von
  * `LiveMatch.events`; `scoreAfter` ist der aktuelle Stand (ohne den zurueckgenommenen Eintrag),
  * ohne "offen"-Markierung.
@@ -290,7 +309,7 @@ export function toRetractedEvents(
   ctx: MatchContext,
 ): LiveRuntimeEvent[] {
   const scoreAfter = { home: effectiveScoreFor(state, ctx.teamAId), away: effectiveScoreFor(state, ctx.teamBId) };
-  return collectEntries(state, log, true).map((entry) => ({
+  return collectEntries(state, log, true).filter((entry) => !isReplacedByOwnGoal(entry.source, log)).map((entry) => ({
     id: entry.id,
     matchId: ctx.matchId,
     timestampSeconds: Math.floor((entry.source.clockMs ?? 0) / 1000),

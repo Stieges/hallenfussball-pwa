@@ -39,8 +39,8 @@ const rechte = vi.hoisted(() => ({ aktiv: new Set<string>() }));
 vi.mock('../../auth/hooks/useCan', () => ({ useCan: (recht: string) => rechte.aktiv.has(recht) }));
 
 vi.mock('../../../components/live-cockpit', () => ({
-  LiveCockpit: (props: { currentMatch?: { id: string } | null; upcomingMatches?: { id: string }[]; onLoadNextMatch?: () => void; istLeitung?: boolean; onKorrigieren?: (matchId: string) => void }) => (
-    <div data-testid="cockpit-stub" data-zeigt={props.currentMatch?.id ?? ''} data-naechstes={props.upcomingMatches?.[0]?.id ?? ''} data-leitung={String(props.istLeitung ?? false)} data-korrigieren={String(props.onKorrigieren !== undefined)}>
+  LiveCockpit: (props: { currentMatch?: { id: string } | null; upcomingMatches?: { id: string }[]; onLoadNextMatch?: () => void; istLeitung?: boolean; onKorrigieren?: (matchId: string) => void; endstandSteht?: boolean }) => (
+    <div data-testid="cockpit-stub" data-zeigt={props.currentMatch?.id ?? ''} data-naechstes={props.upcomingMatches?.[0]?.id ?? ''} data-leitung={String(props.istLeitung ?? false)} data-korrigieren={String(props.onKorrigieren !== undefined)} data-endstand-steht={String(props.endstandSteht)}>
       <button type="button" data-testid="weiter" onClick={() => { props.onLoadNextMatch?.(); }}>Weiter</button>
       <button type="button" data-testid="korrigieren" onClick={() => { props.onKorrigieren?.(props.currentMatch?.id ?? ''); }}>Korrigieren</button>
     </div>
@@ -117,14 +117,15 @@ const engineKontext = (abpfiffVor: number | null): MatchEngineContextValue => {
 const zeigt = (): string | null => screen.getByTestId('cockpit-stub').getAttribute('data-zeigt');
 const naechstes = (): string | null => screen.getByTestId('cockpit-stub').getAttribute('data-naechstes');
 
-function zeige(abpfiffVor: number | null) {
+function zeige(abpfiffVor: number | null, initialMatchId?: string) {
   return render(
     <MatchEngineContext.Provider value={engineKontext(abpfiffVor)}>
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} initialMatchId={initialMatchId} />
     </MatchEngineContext.Provider>,
     { wrapper: RouterWrapper },
   );
 }
+const endstandSteht = (): string | null => screen.getByTestId('cockpit-stub').getAttribute('data-endstand-steht');
 
 describe('ManagementTab – Endstand nach dem Abpfiff von selbst (B-10a)', () => {
   beforeEach(() => {
@@ -149,6 +150,25 @@ describe('ManagementTab – Endstand nach dem Abpfiff von selbst (B-10a)', () =>
     zeige(5_000);
     act(() => { fireEvent.click(screen.getByTestId('weiter')); });
     expect(zeigt()).toBe('m12');
+  });
+
+  it('LT-6 @SL-074 5 Sekunden nach dem Abpfiff steht der Endstand von Spiel 11: das Cockpit darf „Spiel fortsetzen“ anbieten', () => {
+    zeige(5_000);
+    expect(zeigt()).toBe('m11');
+    expect(endstandSteht()).toBe('true');
+  });
+
+  it('LT-6 @SL-075 Z. 1 / @SL-162 nach „Weiter“ ist Spiel 11 quittiert: auch erneut aus dem Spielplan geöffnet steht der Endstand nicht mehr (kein Fortsetzen)', () => {
+    const { rerender } = zeige(5_000);
+    act(() => { fireEvent.click(screen.getByTestId('weiter')); });
+    expect(zeigt()).toBe('m12');
+    rerender(
+      <MatchEngineContext.Provider value={engineKontext(5_000)}>
+        <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} initialMatchId="m11" />
+      </MatchEngineContext.Provider>,
+    );
+    expect(zeigt()).toBe('m11');
+    expect(endstandSteht()).toBe('false');
   });
 
   it('@SL-049 nach den 30 Sekunden zeigt das Cockpit von selbst Spiel 12', () => {

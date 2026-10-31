@@ -36,6 +36,17 @@
     "groupCount": "Anzahl Gruppen",
     "fieldCount": "Anzahl Felder",
     "fieldCountOther": "Anzahl Spielflächen",
+    "rounds": {
+      "label": "Runden",
+      "decrease": "Eine Runde weniger",
+      "increase": "Eine Runde mehr",
+      "maxHint": "Höchstens {{count}} Runden",
+      "minHint": "Mindestens {{count}} Runde",
+      "summary_one": "{{count}} Spiel · Ende ca. {{time}}",
+      "summary_other": "{{count}} Spiele · Ende ca. {{time}}",
+      "summaryNoTime_one": "{{count}} Spiel",
+      "summaryNoTime_other": "{{count}} Spiele"
+    },
     "smartConfigTip": "Tipp: Lass dir die optimale Konfiguration berechnen",
     "advancedSettings": "Erweiterte Einstellungen",
     "timePlanning": "Zeitplanung",

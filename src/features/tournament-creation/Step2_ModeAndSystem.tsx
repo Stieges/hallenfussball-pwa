@@ -17,7 +17,10 @@ import {
   ValidationWarnings,
   SmartConfig,
   PlayOutPlacesSection,
+  RoundCountField,
+  RoundCountSummary,
 } from './components';
+import { useRoundRobinEstimate } from './hooks/useRoundRobinEstimate';
 import { MatchCockpitSettingsPanel } from '../../components/match-settings/MatchCockpitSettingsPanel';
 import { ForfeitScoreField } from '../../components/match-settings/ForfeitScoreField';
 import { changeForfeitScore, effectiveForfeitScore, forfeitScoreLocked } from '../../core/models/forfeit';
@@ -45,6 +48,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 }) => {
   const { t } = useTranslation('wizard');
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
+  const isRoundRobin = (formData.groupSystem ?? 'roundRobin') === 'roundRobin';
+  // @TM-153 / Review #423 N1: Plan-Schätzung einmal je Strukturänderung, für Zusammenfassung und Dauer
+  const roundEstimate = useRoundRobinEstimate(formData);
 
   // TOUR-EDIT-STRUCTURE: Strukturfelder sind gesperrt wenn Ergebnisse vorhanden
   const structureFieldsLocked = hasResults;
@@ -211,7 +217,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             {/* @W4-028: DFB-Schlüssel im MVP aus (Tabelle fehlerhaft, C-DFB-SCHLUESSEL-LUECKEN) */}
 
             {/* Basic Tournament Parameters - Responsive Grid */}
-            <div className={`${styles.configGrid} ${canUseGroups ? styles.threeColumns : ''}`}>
+            <div className={`${styles.configGrid} ${styles.threeColumns}`}>
               <NumberStepper
                 label={t('step2.teamCount')}
                 value={formData.numberOfTeams ?? 4}
@@ -241,10 +247,16 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 mode="stepper"
                 disabled={structureFieldsLocked}
               />
+              {/* @TM-152/@TM-153: Rundenzahl nur bei „Jeder gegen jeden“ */}
+              {isRoundRobin && (
+                <RoundCountField formData={formData} onUpdate={onUpdate} disabled={structureFieldsLocked} />
+              )}
             </div>
 
+            {isRoundRobin && <RoundCountSummary estimate={roundEstimate} />}
+
             {/* Duration Estimate - Always visible as it's important */}
-            <DurationEstimate formData={formData} />
+            <DurationEstimate formData={formData} plannedMinutes={roundEstimate?.durationMinutes ?? null} />
 
             {/* Validation Warnings - Always visible */}
             <ValidationWarnings formData={formData} />

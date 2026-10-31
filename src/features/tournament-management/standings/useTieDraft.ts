@@ -34,7 +34,6 @@ export function useTieDraft({ tournament, block, mode, onDraft, onClose }: UseTi
   const [order, setOrder] = useState<string[]>(block.teamIds);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<TieError | null>(null);
-  const [triedSave, setTriedSave] = useState(false);
   const [busy, setBusy] = useState(false);
   /** Name der Person, die schon entschieden hat (Schritt „seen“, @W2A-060); fehlt ohne Verlauf. */
   const [seenBy, setSeenBy] = useState<string | undefined>(undefined);
@@ -67,17 +66,16 @@ export function useTieDraft({ tournament, block, mode, onDraft, onClose }: UseTi
     return { groupId: block.groupId, teamIds: block.teamIds, order, kind: 'order', reason };
   }, [block, order, reason, shootoutDraft]);
 
-  /** Fehler am Feld des Strafstoßschießens, erst nach einem Speichern-Versuch (Mockup Zustand 9). */
-  const shootoutFieldError = triedSave && shootoutDraft !== null && checkDraftFields(shootoutDraft) === 'SHOOTOUT_NEEDS_WINNER'
+  /** Fehler am Feld des Strafstoßschießens, sobald beide Zahlen ohne Sieger dastehen (@W2A-061, C-GLEICHSTAND-VORSCHAU-BEI-REMIS). */
+  const shootoutFieldError = shootoutDraft !== null && checkDraftFields(shootoutDraft) === 'SHOOTOUT_NEEDS_WINNER'
     ? { a: scores[0], b: scores[1] }
     : null;
 
   const canSave = step === 'shootout'
-    ? shootoutDraft !== null
+    ? shootoutDraft !== null && shootoutFieldError === null
     : step === 'order' && reason.trim().length > 0 && reason.length <= DECISION_REASON_MAX_LENGTH;
 
   const submit = useCallback(async (kind: 'shared' | 'shootout' | 'order'): Promise<void> => {
-    setTriedSave(true);
     setError(null);
     const draft = draftOf(kind);
     if (draft === null) {
@@ -130,7 +128,6 @@ export function useTieDraft({ tournament, block, mode, onDraft, onClose }: UseTi
   }, [draftOf, mode, tournament, onDraft, onClose, tie, online]);
 
   const setScore = useCallback((index: 0 | 1, value: string) => {
-    setTriedSave(false);
     setScores((current) => (index === 0 ? [value, current[1]] : [current[0], value]));
   }, []);
 

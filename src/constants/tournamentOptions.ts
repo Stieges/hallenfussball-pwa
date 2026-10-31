@@ -79,5 +79,5 @@ export const DEFAULT_VALUES = {
   breakBetweenPhases: 5, // Pause zwischen Gruppenphase und Finalrunde (Standard: 5 Min)
   gamePeriods: 1, // Standard: durchgehend ohne Unterbrechung
   halftimeBreak: 1, // Halbzeitpause (Standard: 1 Min)
-  numberOfRounds: 5,
+  numberOfRounds: 1, // @TM-152: eine Runde, nur bei „Jeder gegen jeden“ wählbar (1–10)
 } as const;

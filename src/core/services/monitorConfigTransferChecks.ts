@@ -7,6 +7,7 @@
 
 import type { Tournament, TournamentField } from '../../types/tournament';
 import { createDefaultFields } from '../../utils/displayNames';
+import { isSingleGroupId, standingsGroups } from '../models/standingsGroups';
 import type { MonitorConfigPayload, TransferSlide } from './monitorConfigTransfer';
 
 /** Ziel der Umstellung „Auf Feld 1 umstellen“ (@ME-061) */
@@ -18,7 +19,7 @@ export interface SlotTargets {
   groupIds: readonly string[];
 }
 
-type TournamentSlotSource = Partial<Pick<Tournament, 'fields' | 'numberOfFields' | 'groups' | 'numberOfGroups' | 'groupSystem'>>;
+type TournamentSlotSource = Partial<Pick<Tournament, 'fields' | 'numberOfFields' | 'groups' | 'numberOfGroups' | 'groupSystem' | 'teams'>>;
 
 /**
  * Felder des Turniers, wie der Monitor-Editor sie zeigt und die Übernahme-Prüfung sie kennt:
@@ -30,6 +31,16 @@ export function tournamentFieldList(tournament: Partial<Pick<Tournament, 'fields
     : createDefaultFields(Math.max(1, tournament.numberOfFields ?? 1));
 }
 
+/**
+ * Gruppen, zu denen tatsächlich Teams gehören (sortiert, ohne Dubletten). Leer, wenn kein Team eine Gruppe hat – dann gibt es keine
+ * Zuordnung, aus der sich Gruppen ableiten ließen. Die Monitor-Angebote richten sich nach dieser Zuordnung, nicht nach
+ * gespeicherten Standardgruppen (@ZM-181, @ZM-177; Befund C-MONITOR-ALLE-TABELLEN-OHNE-ZEILEN).
+ */
+export function assignedGroupIds(teams: readonly { group?: string }[] | undefined): string[] {
+  // EINE Regel für die Zuordnung (`standingsGroups`/`groupKeyOf`, wie die Monitor-Folie): leer, fehlend und 'all' sind „keine Gruppe“
+  return standingsGroups(teams ?? []).map((g) => g.group).filter((id) => !isSingleGroupId(id));
+}
+
 /** Gleiche Regeln wie der Monitor-Editor: Felder wie `tournamentFieldList`; Gruppen wie dort */
 export function tournamentSlotTargets(tournament: TournamentSlotSource): SlotTargets {
   const fieldIds = tournamentFieldList(tournament).map(f => f.id);
@@ -38,6 +49,8 @@ export function tournamentSlotTargets(tournament: TournamentSlotSource): SlotTar
   if (tournament.groupSystem === 'roundRobin') {
     // Jeder gegen Jeden: eine Gruppe, auch wenn noch eine Gruppenzahl gespeichert ist (K2)
     groupIds = ['default'];
+  } else if (assignedGroupIds(tournament.teams).length > 0) {
+    groupIds = assignedGroupIds(tournament.teams);
   } else if (tournament.groups && tournament.groups.length > 0) {
     groupIds = tournament.groups.map(g => g.id);
   } else {

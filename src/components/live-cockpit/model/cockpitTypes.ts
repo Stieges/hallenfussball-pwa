@@ -45,6 +45,8 @@ export interface CockpitControls {
   onPauseResume: () => void;
   /** Abpfiff von Hand (öffnet ab LT-1 die Rückfrage). */
   onFinish: () => void;
+  /** „Spiel fortsetzen“ (LT-6): öffnet das Blatt mit der Restzeit; ohne Handler keine Taste (@SL-075). */
+  onFortsetzen?: () => void;
   onEventLog: () => void;
   onMore: () => void;
   /** A-08c: ohne Handler kein Punkt „Uhr korrigieren“ (@FU-071). */

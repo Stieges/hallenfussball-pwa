@@ -34,6 +34,8 @@ export interface CockpitClock {
   abgepfiffenVonHand: (eventId: string | null) => void;
   /** Uhr auf `clockMs` stellen (B-08d, CLOCK_ADJUST); `previousClockMs` ist der bisherige Stand. */
   korrigiereUhr: (clockMs: number, previousClockMs: number) => Promise<string | null>;
+  /** „Spiel fortsetzen“ nach dem Abpfiff (LT-6, REOPEN): Uhr läuft ab `clockMs` weiter. */
+  fortsetzen: (clockMs: number) => Promise<string | null>;
 }
 
 export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
@@ -63,5 +65,6 @@ export function useCockpitClock(args: CockpitClockArgs): CockpitClock {
   return {
     abschnittspause: engineView?.status === 'section_break', wiederanpfiff, abgepfiffenVonHand,
     korrigiereUhr: commands.adjustClock,
+    fortsetzen: commands.reopen,
   };
 }

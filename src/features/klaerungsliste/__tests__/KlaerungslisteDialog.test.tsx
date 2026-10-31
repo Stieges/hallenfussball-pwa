@@ -149,6 +149,27 @@ describe('Grund im Titel (@FU-017, @HE-056, @HE-080, @FU-130, @FU-116 Z. 2)', ()
   });
 });
 
+describe('@SL-147 Z. 2 Fortsetzen ohne Netz, nach 5 Minuten angekommen – die Turnierleitung findet es in der Klärungsliste', () => {
+  it('@SL-147 Spiel 11: „Fortsetzen kam zu spät an“ von Tom, nur „Verwerfen“, kein „Übernehmen“', () => {
+    const fortsetzen = review({
+      eventId: 'fortsetzen-11', matchNumber: 11, reason: 'AFTER_END', detail: { why: 'CONTINUE_LATE', arrivedAfterMs: 300_000 },
+      entry: { type: 'REOPEN', teamId: null, clockMs: 560_000 },
+    });
+    const { liste } = show([fortsetzen]);
+    expect(liste).toHaveTextContent('1 Eintrag von Tom, nach dem Ende angekommen');
+    expect(liste).toHaveTextContent('Spiel 11');
+    expect(liste).toHaveTextContent('Fortsetzen kam zu spät an');
+    expect(liste).not.toHaveTextContent('Spiel wieder geöffnet');
+    expect(screen.getByTestId('klaerung-fall-fortsetzen-11-verwerfen')).toHaveTextContent('Verwerfen');
+    expect(screen.queryByTestId('klaerung-fall-fortsetzen-11-uebernehmen')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ein REOPEN ohne CONTINUE_LATE behält den Eintragsnamen', () => {
+    const { liste } = show([review({ reason: 'AFTER_END', detail: {}, entry: { type: 'REOPEN', teamId: null } })]);
+    expect(liste).not.toHaveTextContent('Fortsetzen kam zu spät an');
+  });
+});
+
 describe('@FU-037 Eindeutiger Offline-Eintrag wird automatisch einsortiert – Hinweis', () => {
   it('Olli sieht „1 Tor von Tom (Feld 2) nachträglich eingefügt“, ohne Knöpfe', () => {
     show([review({ kind: 'notice', detail: { timing: 'before' } })]);

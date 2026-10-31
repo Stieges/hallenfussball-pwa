@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tournament } from '../../../types/tournament';
 import { useToast } from '../../../components/ui/Toast/ToastContext';
+import { effectiveRoundCount } from '../../../core/generators/repeatRounds';
 import {
   LockedConstraints,
   MatchStructure,
@@ -211,7 +212,7 @@ export function useSmartConfig({
           groupCount: formData.numberOfGroups ?? 2,
           finalsPlan: formData.finalsConfig?.preset ?? 'none',
         }
-      : {};
+      : { rounds: effectiveRoundCount({ groupSystem: formData.groupSystem, numberOfRounds: formData.numberOfRounds }) }; // @TM-152
     const result = calculateRecommendation(availableHours, teamsToUse, constraints, structure);
 
     if (result.constraintsImpossible) {
@@ -232,6 +233,8 @@ export function useSmartConfig({
     formData.numberOfTeams,
     formData.numberOfGroups,
     formData.finalsConfig?.preset,
+    formData.groupSystem,
+    formData.numberOfRounds,
     availableHours,
     usesGroups,
     showWarning,

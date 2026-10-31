@@ -146,8 +146,12 @@ for (const g of GROESSEN) {
       await expect(dialog.getByTestId('tie-then-closed')).toHaveText('Danach ist die Gruppe abgeschlossen.');
       await dialog.getByLabel(/DJK Otting/).fill('4');
       await dialog.getByLabel(/TSV Petting/).fill('4');
-      await page.getByTestId('group-close-confirm').click();
+      // C-GLEICHSTAND-VORSCHAU-BEI-REMIS: die Meldung steht schon beim Eintippen, keine Vorschau, die Taste ist gesperrt
+      await page.waitForTimeout(300);
+      await bild(page, 'dialog-4-4-eingetippt', g.breite);
       await expect(dialog.getByRole('alert')).toContainText('braucht einen Sieger');
+      await expect(dialog.getByTestId('tie-effect'), 'bei 4:4 keine Vorschau „Danach in der Tabelle“').toHaveCount(0);
+      await expect(page.getByTestId('group-close-confirm')).toBeDisabled();
       await bild(page, 'dialog-fehler', g.breite);
       await dialog.getByLabel(/DJK Otting/).fill('4');
       await dialog.getByLabel(/TSV Petting/).fill('3');

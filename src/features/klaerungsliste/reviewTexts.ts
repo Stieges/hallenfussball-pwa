@@ -29,8 +29,12 @@ export function matchLine(t: TFunction, matchNumber: number | null, field: numbe
     : t('tournament:klaerung.spiel', { number: matchNumber, field });
 }
 
-/** „Gelbe Karte SV Süd, Nr. 5 · Abschnitt 1, 7. Minute“. */
+/** „Gelbe Karte SV Süd, Nr. 5 · Abschnitt 1, 7. Minute“; ein zu spät angekommenes „Spiel fortsetzen“ als „Fortsetzen kam zu spät an“. */
 export function entryLine(t: TFunction, review: MatchReview, teamName: TeamNameOf): string {
+  // @SL-147 Z. 2 (Migration 20261118_009): das Spiel wurde NICHT wieder geöffnet – nicht „Spiel wieder geöffnet“ zeigen
+  if (review.reason === 'AFTER_END' && review.detail.why === 'CONTINUE_LATE') {
+    return t('tournament:klaerung.zeile.fortsetzenZuSpaet');
+  }
   const what = t(`common:${eventTypeKey(review.entry.type)}`);
   const team = teamName(review.entry.teamId);
   const nr = review.entry.payload.playerNumber;

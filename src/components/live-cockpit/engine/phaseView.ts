@@ -5,9 +5,11 @@
  */
 import {
   activePenalties,
+  continueBlockReason,
   elapsedAt,
   penaltyRemainingMs,
   shootoutWinner,
+  type ContinueBlockReason,
   type MatchContext,
   type MatchState,
   type MatchStatus,
@@ -90,6 +92,14 @@ export interface PhaseView {
    * (Abpfiff und Ergebnis in einem Schritt); `null`, wenn das Spiel anders endete oder nicht beendet ist.
    */
   eingetragenImSpielplan: string | null;
+  /**
+   * LT-6 (@SL-074, @SL-075, @SL-146, @SL-104): warum der Helfer das Spiel jetzt nicht fortsetzen dürfte -- `continueBlockReason`
+   * der Engine (nur nach Ende durch Ablauf, einmal, nicht nach Strafstoßschießen); `null` = „Spiel fortsetzen“ ginge. Die 30 Sekunden
+   * prüft das Cockpit über `quittungRestMs`. Fehlt in der Ersatz-Ansicht ohne Engine: dann wird nie angeboten.
+   */
+  fortsetzenSperre?: ContinueBlockReason | 'SHOOTOUT_FINISHED' | null;
+  /** LT-6: kleinste Spielzeit im Abschnitt beim Fortsetzen (relativ): spätester Eintrag des Abschnitts ohne den Abpfiff selbst. */
+  fortsetzenFruehestMs?: number;
 }
 
 /** Dauer der Quittung nach dem Abpfiff in ms (@SL-152): so lange steht die Zeile „Abgepfiffen · 2:1 gespeichert“. */
@@ -130,6 +140,8 @@ export function eingetragenImSpielplanOf(state: MatchState): string | null {
 
 /** Ereignistypen, die keine Uhr-Stellung eines Eintrags sind. */
 const NON_ENTRY_TYPES = new Set(['RETRACT', 'AMEND']);
+/** Beim Fortsetzen zählt der Abpfiff (und ein früheres Fortsetzen) nicht als Eintrag des Abschnitts (LT-6). */
+const ABPFIFF_TYPES = new Set([...NON_ENTRY_TYPES, 'MATCH_END', 'REOPEN']);
 
 export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: number): PhaseView {
   const rules = state.rules;
@@ -163,6 +175,8 @@ export function phaseViewOf(state: MatchState, ctx: MatchContext, serverNow: num
     tiebreakMode: rules?.knockout ? state.tiebreakMode : null,
     penaltySeconds: rules?.penaltySeconds ?? null,
     eingetragenImSpielplan: eingetragenImSpielplanOf(state),
+    fortsetzenSperre: continueBlockReason(state, serverNow),
+    fortsetzenFruehestMs: earliestAdjustOf(state, ABPFIFF_TYPES).ms,
   };
 }
 
@@ -202,11 +216,11 @@ function reopenCountOf(state: MatchState): number {
 }
 
 /** Spätester Uhrstand eines wirksamen Eintrags im aktuellen Abschnitt, relativ zum Abschnittsbeginn, mind. 0; `isGoal` für ein Tor. */
-function earliestAdjustOf(state: MatchState): { ms: number; isGoal: boolean } {
+function earliestAdjustOf(state: MatchState, ohne: ReadonlySet<string> = NON_ENTRY_TYPES): { ms: number; isGoal: boolean } {
   let latest: { clockMs: number; type: string } | null = null;
   for (const event of Object.values(state.accepted)) {
     if (
-      NON_ENTRY_TYPES.has(event.type) ||
+      ohne.has(event.type) ||
       state.retracted.includes(event.id) ||
       event.section !== state.section ||
       event.clockMs === null

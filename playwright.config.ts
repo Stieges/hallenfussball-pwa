@@ -215,7 +215,7 @@ export default defineConfig({
     {
       // Cockpit Scheibe 3 (Plan Abschluss PR 2): kleinstes Handy mit 360 × 640, nur die Cockpit-Specs (@SL-061, @OB-025).
       name: 'cockpit-360x640',
-      testMatch: /cockpit-(s3|laptop|endstand|tasten|handy-platz|tafel-masse|teamfarben)\.spec\.ts/,
+      testMatch: /cockpit-(s3|laptop|endstand|fortsetzen|tasten|handy-platz|tafel-masse|teamfarben)\.spec\.ts/,
       use: {
         viewport: { width: 360, height: 640 },
         deviceScaleFactor: 3,
@@ -448,16 +448,23 @@ export default defineConfig({
         VITE_SUPABASE_ANON_KEY: '',
       },
     },
-    {
-      // cloud (Task T3) — fester, eigener Port 3100, gegen den LOKALEN Supabase-Stack (nie
-      // Produktion, siehe getCloudSupabaseEnv() oben). `--strictPort` aus demselben Grund wie
-      // beim offline-Server oben (kein stilles Ausweichen auf einen anderen Port).
-      name: 'cloud',
-      command: `npm run dev -- --port ${CLOUD_PORT} --strictPort`,
-      url: cloudBaseURL,
-      reuseExistingServer: false,
-      timeout: 120000,
-      env: getCloudSupabaseEnv(),
-    },
+    // cloud (Task T3) — fester, eigener Port 3100, gegen den LOKALEN Supabase-Stack (nie
+    // Produktion, siehe getCloudSupabaseEnv() oben). `--strictPort` aus demselben Grund wie
+    // beim offline-Server oben (kein stilles Ausweichen auf einen anderen Port).
+    // E2E_OHNE_CLOUD_SERVER=1 (Vor-Push-Prüfung, scripts/vor-push/vor-push.mjs, @TA-020): nur die
+    // Projekte ohne Datenbank laufen; ohne diesen Schalter belegte jeder Lauf Port 3100 und
+    // kollidierte mit parallelen Läufen anderer Arbeitskopien.
+    ...(process.env.E2E_OHNE_CLOUD_SERVER
+      ? []
+      : [
+          {
+            name: 'cloud',
+            command: `npm run dev -- --port ${CLOUD_PORT} --strictPort`,
+            url: cloudBaseURL,
+            reuseExistingServer: false,
+            timeout: 120000,
+            env: getCloudSupabaseEnv(),
+          },
+        ]),
   ],
 });

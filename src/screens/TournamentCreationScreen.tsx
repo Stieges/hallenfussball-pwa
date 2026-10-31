@@ -29,6 +29,7 @@ import { visibilityAfterPublish } from '../core/services/TournamentCreationServi
 import { shareAfterFirstRelease } from '../core/services/shareAfterFirstRelease';
 import { publishSharesByLink } from '../features/tournament-creation/utils/publishNotice';
 import { AuthSection } from '../components/layout/AuthSection';
+import { effectiveRoundCount } from '../core/generators/repeatRounds';
 
 /** E2 + Controller-Ruling Fixrunde 2: Struktur = alles, was die Generatoren
  *  außer Metadaten lesen — Teams, Felder, Modus, Gruppen, Finalrunde,
@@ -57,6 +58,7 @@ function hasStructuralChanges(current: Tournament, next: Tournament): boolean {
     current.gamePeriods !== next.gamePeriods ||
     current.halftimeBreak !== next.halftimeBreak ||
     current.minRestSlots !== next.minRestSlots ||
+    effectiveRoundCount(current) !== effectiveRoundCount(next) || // @TM-152: Rundenzahl legt die Spielzahl fest
     current.useDFBKeys !== next.useDFBKeys ||
     current.dfbKeyPattern !== next.dfbKeyPattern ||
     JSON.stringify(current.groups) !== JSON.stringify(next.groups) ||

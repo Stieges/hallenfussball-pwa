@@ -68,6 +68,8 @@ export interface CalculationResult {
 export interface MatchStructure {
   groupCount?: number;
   finalsPlan?: FinalsPreset;
+  /** @TM-152: Rundenzahl bei „Jeder gegen jeden“ (ohne Gruppen), Vorgabe 1. */
+  rounds?: number;
 }
 
 /**
@@ -105,9 +107,9 @@ function structureOf(structure: MatchStructure): Pick<Recommendation, 'groupCoun
  * ungleichen Gruppen größere Gruppen zuerst) plus Spiele der Finalrunde.
  */
 export function countTournamentMatches(teams: number, structure: MatchStructure = {}): number {
-  const { groupCount, finalsPlan = 'none' } = structure;
+  const { groupCount, finalsPlan = 'none', rounds = 1 } = structure;
   if (groupCount === undefined || groupCount < 2) {
-    return (teams * (teams - 1)) / 2;
+    return ((teams * (teams - 1)) / 2) * rounds;
   }
   const baseSize = Math.floor(teams / groupCount);
   const largerGroups = teams % groupCount;

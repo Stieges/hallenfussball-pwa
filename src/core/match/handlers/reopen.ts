@@ -51,17 +51,30 @@ export function acceptedReopenCount(state: MatchState): number {
   return Object.values(state.accepted).filter((accepted) => accepted.type === 'REOPEN').length;
 }
 
-function helperContinueBlock(state: MatchState, event: EngineEvent): ContinueBlockReason | null {
+function helperContinueBlock(state: MatchState, at: number): ContinueBlockReason | null {
   if (state.baseDecidedBy === null || state.finishedAt === null || !endedByClock(state)) {
     return 'NOT_ENDED_BY_CLOCK';
   }
   if (acceptedReopenCount(state) > state.undo.reopensBeforeStart) {
     return 'ALREADY_CONTINUED';
   }
-  if (event.at - state.finishedAt > CONTINUE_WINDOW_MS) {
+  if (at - state.finishedAt > CONTINUE_WINDOW_MS) {
     return 'CONTINUE_WINDOW_EXPIRED';
   }
   return null;
+}
+
+/**
+ * R-LT2 (Plan Cockpit Scheibe 3, LT-6): warum ein Helfer das Spiel zum Zeitpunkt `at` NICHT fortsetzen dürfte -- dieselben
+ * Gründe und dieselbe Reihenfolge wie `applyReopen` (Strafstoßschießen, dann 2a–2c); `null` = „Spiel fortsetzen“ ginge.
+ * Das Cockpit bietet die Taste nur bei `null` an (@SL-074, @SL-075, @SL-146); die Frist von 30 Sekunden kommt dort aus der
+ * Quittung. Ein Eintrag der Status-Prüfung (Spiel beendet?) gehört nicht hierher -- das prüft der Übergang.
+ */
+export function continueBlockReason(state: MatchState, at: number): ContinueBlockReason | 'SHOOTOUT_FINISHED' | null {
+  if (state.phase === 'shootout') {
+    return 'SHOOTOUT_FINISHED';
+  }
+  return helperContinueBlock(state, at);
 }
 
 export function applyReopen(state: MatchState, event: EngineEvent): ReopenOutcome {
@@ -69,7 +82,7 @@ export function applyReopen(state: MatchState, event: EngineEvent): ReopenOutcom
     return { status: 'rejected', code: ERROR_CODES.INVALID_TRANSITION, detail: { reason: 'SHOOTOUT_FINISHED' } };
   }
   if (event.actor !== 'leitung') {
-    const reason = helperContinueBlock(state, event);
+    const reason = helperContinueBlock(state, event.at);
     if (reason !== null) {
       return { status: 'rejected', code: ERROR_CODES.FORBIDDEN_ACTOR, detail: { reason } };
     }

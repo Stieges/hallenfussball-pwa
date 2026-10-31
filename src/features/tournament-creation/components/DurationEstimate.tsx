@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, FinalsPreset } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
+import { effectiveRoundCount } from '../../../core/generators/repeatRounds';
 
 // Duration thresholds in minutes
 const DURATION_WARNING_THRESHOLD = 480; // 8 hours
@@ -10,6 +11,8 @@ const DURATION_CRITICAL_THRESHOLD = 600; // 10 hours
 
 interface DurationEstimateProps {
   formData: Partial<Tournament>;
+  /** @TM-153: bei „Jeder gegen jeden“ die Dauer aus dem erzeugten Plan (`useRoundRobinEstimate`), sonst die Formel. */
+  plannedMinutes?: number | null;
 }
 
 /**
@@ -44,7 +47,7 @@ const calculateFinalsMatches = (preset: FinalsPreset, numberOfGroups: number): n
   }
 };
 
-export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) => {
+export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData, plannedMinutes = null }) => {
   const { t } = useTranslation('wizard');
 
   const teams = formData.numberOfTeams ?? 4;
@@ -76,7 +79,8 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   // Calculate group phase matches (Round Robin: n*(n-1)/2)
   let groupPhaseMatches: number;
   if (groupSystem === 'roundRobin') {
-    groupPhaseMatches = (teams * (teams - 1)) / 2;
+    // @TM-152: jede Paarung so oft, wie Runden eingestellt sind
+    groupPhaseMatches = ((teams * (teams - 1)) / 2) * effectiveRoundCount(formData);
   } else {
     // Groups and Finals: each group plays round robin
     const teamsPerGroup = Math.ceil(teams / numberOfGroups);
@@ -97,7 +101,7 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   const finalsSlotsNeeded = Math.ceil(finalsMatches / Math.min(fields, 2)); // Finals usually max 2 parallel
   const finalsMinutes = finalsSlotsNeeded * finalsSlotDuration;
 
-  const totalMinutes = groupPhaseMinutes +
+  const totalMinutes = plannedMinutes ?? groupPhaseMinutes +
     (finalsMatches > 0 ? breakBetweenPhases : 0) +
     finalsMinutes;
 
