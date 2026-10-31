@@ -116,7 +116,8 @@ jobs:
         # Ausgabe erst in die Datei, Exit-Code merken, dann Ende + Fehlergrund zeigen
         # (Unhandled Errors standen sonst oberhalb der letzten 40 Zeilen). Verhalten unverändert: Exit-Code bleibt der von test:coverage.
         run: |
-          npm run test:coverage -- --reporter=dot > coverage-summary.txt 2>&1; s=$?
+          # bash läuft hier mit -e: den Exit-Code per || abfangen, sonst bricht der Schritt vor der Ausgabe ab
+          s=0; npm run test:coverage -- --reporter=dot > coverage-summary.txt 2>&1 || s=$?
           tail -40 coverage-summary.txt
           grep -n -A12 -E "Unhandled Errors|Unhandled Rejection|ERROR:|FAIL " coverage-summary.txt || true
           exit $s
