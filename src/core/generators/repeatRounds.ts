@@ -33,9 +33,16 @@ export interface RepeatRoundsOptions {
   minRestSlots: number;
   /** Rechenbudget je Suche (Vorgabe ROUND_ORDER_NODE_BUDGET); nur zum Prüfen des Rückfalls kleiner setzen. */
   nodeBudget?: number;
+  /** Nur zum Prüfen: zählt Suchen und die größte Zahl an Suchschritten einer Suche (unabhängig vom Budget-Zähler). */
+  stats?: RepeatRoundsStats;
   slotDurationMinutes: number;
   breakBetweenSlotsMinutes: number;
   startTime?: Date;
+}
+
+export interface RepeatRoundsStats {
+  searches: number;
+  maxStepsPerSearch: number;
 }
 
 const slotOf = (match: Match): number => match.slot ?? match.round - 1;
@@ -95,6 +102,7 @@ const teamsOfSlots = (slots: Slots): string[][] => slots.map((matches) => matche
 function searchArrangement(
   previous: Slots, minRestSlots: number, maxPerSlot: number, slotLimit: number, budget: number,
   fixedSizes: readonly number[] | null = null,
+  stats?: RepeatRoundsStats,
 ): Match[][] | null {
   const previousCount = previous.length;
   const matches = previous.flat();
@@ -105,6 +113,7 @@ function searchArrangement(
   const arrangement: Match[][] = [];
   let open = matches.length;
   let nodes = 0;
+  let steps = 0; // eigener Zähler je Aufruf von fill/pick – belegt im Test, dass das Budget wirklich greift
 
   const rested = (match: number, position: number): boolean =>
     teams[match].every((team) => position - (last.get(team) ?? Number.NEGATIVE_INFINITY) >= minRestSlots + 1);
@@ -116,6 +125,7 @@ function searchArrangement(
   function fill(slot: number): boolean {
     if (open === 0) { return true; }
     if (slot >= slotLimit || open > (slotLimit - slot) * maxPerSlot) { return false; }
+    steps++;
     if (++nodes > budget) { return false; }
     const position = previousCount + slot;
     const candidates = matches.map((_, index) => index)
@@ -144,6 +154,7 @@ function searchArrangement(
     }
 
     function pick(from: number, size: number): boolean {
+      steps++;
       if (++nodes > budget) { return false; }
       if (chosen.length === size) { return commit(); }
       for (let i = from; i < candidates.length && nodes <= budget; i++) {
@@ -167,7 +178,9 @@ function searchArrangement(
     return false;
   }
 
-  return fill(0) ? arrangement : null;
+  const found = fill(0);
+  if (stats) { stats.searches++; stats.maxStepsPerSearch = Math.max(stats.maxStepsPerSearch, steps); }
+  return found ? arrangement : null;
 }
 
 /**
@@ -177,7 +190,9 @@ function searchArrangement(
  * Zeit, hält aber die Pause). Erst danach wird die Pause je ein Fenster gelockert, zuletzt die Drehung mit den
  * wenigsten Verstößen.
  */
-function arrangeNextRound(previous: Slots, minRestSlots: number, maxPerSlot: number, budget: number): Match[][] {
+function arrangeNextRound(
+  previous: Slots, minRestSlots: number, maxPerSlot: number, budget: number, stats?: RepeatRoundsStats,
+): Match[][] {
   const previousTeams = teamsOfSlots(previous);
   const ownViolations = restViolations(previousTeams, minRestSlots);
   let best = slotOrderCandidates(previous.length)[0];
@@ -191,10 +206,10 @@ function arrangeNextRound(previous: Slots, minRestSlots: number, maxPerSlot: num
   if (bestScore === 2 * ownViolations) { return rotated; }
   const sizes = previous.map((matches) => matches.length);
   for (let rest = minRestSlots; rest >= 0; rest--) {
-    const sameShape = searchArrangement(previous, rest, maxPerSlot, previous.length, budget, sizes);
+    const sameShape = searchArrangement(previous, rest, maxPerSlot, previous.length, budget, sizes, stats);
     if (sameShape) { return sameShape; }
     for (let extra = 0; extra <= rest + 1; extra++) {
-      const found = searchArrangement(previous, rest, maxPerSlot, previous.length + extra, budget);
+      const found = searchArrangement(previous, rest, maxPerSlot, previous.length + extra, budget, null, stats);
       if (found) { return found; }
     }
   }
@@ -234,7 +249,9 @@ export function repeatRounds(firstRound: readonly Match[], rounds: number, optio
   let previous: Match[][] = bySlot;
   let nextSlot = bySlot.length;
   for (let round = 1; round < rounds; round++) {
-    const arranged = arrangeNextRound(previous, restSlots, maxPerSlot, options.nodeBudget ?? ROUND_ORDER_NODE_BUDGET);
+    const arranged = arrangeNextRound(
+      previous, restSlots, maxPerSlot, options.nodeBudget ?? ROUND_ORDER_NODE_BUDGET, options.stats,
+    );
     const next = arranged.map((matches, position) => {
       const slot = nextSlot++;
       const fields = previous[position]?.length === matches.length

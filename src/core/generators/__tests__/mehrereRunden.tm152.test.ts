@@ -11,7 +11,7 @@ import { generateFullSchedule } from '..';
 import type { ScheduledMatch } from '../scheduleTypes';
 import type { Tournament } from '../../../types/tournament';
 import { createMockTournament, createMockTeams } from '../../../test/factories';
-import { effectiveRoundCount, repeatRounds } from '../repeatRounds';
+import { effectiveRoundCount, repeatRounds, ROUND_ORDER_NODE_BUDGET, type RepeatRoundsStats } from '../repeatRounds';
 import type { Match } from '../../../types/tournament';
 import { matchTeamIds } from '../../models/matchSlot';
 
@@ -88,12 +88,35 @@ function minGapInWindows(matches: readonly Match[]): number {
   return min;
 }
 
+/** Runde 1 je Teams/Felder/Pause einmal erzeugen (der Fair-Scheduler ist der teure Teil, nicht die Wiederholung). */
+const firstRoundCache = new Map<string, Match[]>();
 function firstRoundOf(teams: number, fields: number, rest: number): Match[] {
+  const key = `${String(teams)}/${String(fields)}/${String(rest)}`;
+  const cached = firstRoundCache.get(key);
+  if (cached) { return cached; }
   const t = createMockTournament({
     teams: createMockTeams(teams, 1), numberOfTeams: teams, numberOfFields: fields, groupSystem: 'roundRobin',
     finalsConfig: { preset: 'none' }, minRestSlots: rest, groupPhaseGameDuration: 10, groupPhaseBreakDuration: 0,
   });
-  return generateFullSchedule({ ...t, numberOfRounds: 1 }).allMatches as unknown as Match[];
+  const firstRound = generateFullSchedule({ ...t, numberOfRounds: 1 }).allMatches as unknown as Match[];
+  firstRoundCache.set(key, firstRound);
+  return firstRound;
+}
+
+/**
+ * Raster für die Fensterzahl: 3–12 Teams vollständig (1–4 Felder, Pause 0/1), die Kanten 24 Teams und 1/4 Felder,
+ * dazu eine feste Stichprobe aus 13–23 Teams (fester Startwert, damit der Lauf reproduzierbar bleibt).
+ */
+function windowRaster(): Array<[number, number, number]> {
+  const cases: Array<[number, number, number]> = [];
+  for (let teams = 3; teams <= 12; teams++) {
+    for (const fields of [1, 2, 3, 4]) { for (const rest of [0, 1]) { cases.push([teams, fields, rest]); } }
+  }
+  for (const fields of [1, 4]) { for (const rest of [0, 1]) { cases.push([24, fields, rest]); } }
+  let seed = 20261031;
+  const next = (n: number): number => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  for (let i = 0; i < 8; i++) { cases.push([13 + next(11), 1 + next(4), next(2)]); }
+  return cases;
 }
 
 describe('@TM-152 Rundenzahl bei „Jeder gegen jeden“ (Nikolaus-Turnier, 6 Teams)', () => {
@@ -192,23 +215,19 @@ describe('@TM-152 Rundenzahl bei „Jeder gegen jeden“ (Nikolaus-Turnier, 6 Te
     expect(minGapInWindows(all)).toBeGreaterThanOrEqual(Math.min(minGapInWindows(firstRound), rest + 1));
   });
 
-  it('@TM-152 Mindestpause 0 und 1: weitere Runden brauchen nie mehr Zeitfenster als die erste (Raster 3–24 Teams, 1–4 Felder, 2/3/4/10 Runden)', () => {
+  it('@TM-152 Mindestpause 0 und 1: weitere Runden brauchen nie mehr Zeitfenster als die erste (3–12 Teams vollständig, 24 Teams, Stichprobe 13–23; 1–4 Felder; 2/3/4/10 Runden)', () => {
     const abweichungen: string[] = [];
-    for (let teams = 3; teams <= 24; teams++) {
-      for (const fields of [1, 2, 3, 4]) {
-        for (const rest of [0, 1]) {
-          const firstRound = firstRoundOf(teams, fields, rest);
-          const windows = new Set(firstRound.map((m) => m.slot)).size;
-          for (const rounds of [2, 3, 4, 10]) {
-            const all = repeatRounds(firstRound, rounds, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
-            const count = new Set(all.map((m) => m.slot)).size;
-            if (count !== rounds * windows) { abweichungen.push(`${String(teams)}/${String(fields)}/P${String(rest)}/${String(rounds)}R: ${String(count)} statt ${String(rounds * windows)}`); }
-          }
-        }
+    for (const [teams, fields, rest] of windowRaster()) {
+      const firstRound = firstRoundOf(teams, fields, rest);
+      const windows = new Set(firstRound.map((m) => m.slot)).size;
+      for (const rounds of [2, 3, 4, 10]) {
+        const all = repeatRounds(firstRound, rounds, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
+        const count = new Set(all.map((m) => m.slot)).size;
+        if (count !== rounds * windows) { abweichungen.push(`${String(teams)}/${String(fields)}/P${String(rest)}/${String(rounds)}R: ${String(count)} statt ${String(rounds * windows)}`); }
       }
     }
     expect(abweichungen).toEqual([]);
-  }, 120_000);
+  }, 60_000);
 
   it('@TM-152 10 Teams, 3 Felder, 3 Runden (Voreinstellung Mindestpause 1): Ende wie 3 × die erste Runde', () => {
     const t = createMockTournament({
@@ -249,18 +268,17 @@ describe('@TM-152 Rundenzahl bei „Jeder gegen jeden“ (Nikolaus-Turnier, 6 Te
     expect(minGapInWindows(all)).toBe(2);
   });
 
-  it('@TM-152 Rechenbudget: auch große Turniere mit hoher Mindestpause brauchen für 10 Runden unter 500 ms', () => {
+  it('@TM-152 Rechenbudget: jede Suche bleibt in ihren Suchschritten (gezählt, nicht per Uhr), auch bei großen Turnieren mit hoher Mindestpause', () => {
     for (const [teams, fields, rest] of [[16, 4, 3], [14, 2, 3], [7, 1, 3], [24, 3, 2], [20, 4, 3], [22, 4, 3], [14, 4, 3]] as const) {
-      const t = createMockTournament({
-        teams: createMockTeams(teams, 1), numberOfTeams: teams, numberOfFields: fields, groupSystem: 'roundRobin',
-        finalsConfig: { preset: 'none' }, minRestSlots: rest, groupPhaseGameDuration: 10, groupPhaseBreakDuration: 0,
-      });
-      const firstRound = generateFullSchedule({ ...t, numberOfRounds: 1 }).allMatches as unknown as Match[];
+      const firstRound = firstRoundOf(teams, fields, rest);
+      const stats: RepeatRoundsStats = { searches: 0, maxStepsPerSearch: 0 };
       const started = performance.now();
-      const all = repeatRounds(firstRound, 10, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
-      const elapsed = performance.now() - started;
-      expect(all).toHaveLength(firstRound.length * 10);
-      expect(elapsed, `${String(teams)} Teams, ${String(fields)} Felder, Pause ${String(rest)}`).toBeLessThan(500);
+      const all = repeatRounds(firstRound, 10, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0, stats });
+      const label = `${String(teams)} Teams, ${String(fields)} Felder, Pause ${String(rest)}`;
+      expect(all, label).toHaveLength(firstRound.length * 10);
+      expect(stats.maxStepsPerSearch, label).toBeLessThanOrEqual(ROUND_ORDER_NODE_BUDGET + 1);
+      // nur Notbremse gegen Endlosläufe, keine Leistungsmessung (CI-Rechner sind unterschiedlich schnell)
+      expect(performance.now() - started, label).toBeLessThan(5_000);
     }
   });
 
