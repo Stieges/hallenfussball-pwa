@@ -5,26 +5,14 @@
  * für jede gelistete Migration ist im Drift-Check die Zuordnung ihrer Rechte-Assertions hinterlegt.
  */
 import { describe, it, expect } from 'vitest';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join, relative, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const ROOT = resolve(__dirname, '../../..');
 const PENDING = join(ROOT, 'supabase/migrations/PENDING-LIVE.txt');
 const DRIFT = join(ROOT, 'scripts/db-drift-check.sh');
-
-function walk(dir: string, out: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      walk(full, out);
-    } else {
-      out.push(full);
-    }
-  }
-  return out;
-}
 
 const entries = readFileSync(PENDING, 'utf8')
   .split('\n')
@@ -51,11 +39,14 @@ describe('A-11 A6: PENDING-LIVE nur für den Drift-Check', () => {
     }
   });
 
-  it('nur scripts/db-drift-check.sh liest die Datei (RLS-Matrix, lokales Einspielen, CI spielen alles ein)', () => {
-    const candidates = [...walk(join(ROOT, 'scripts')), ...walk(join(ROOT, '.github'))];
-    const readers = candidates
-      .filter((file) => readFileSync(file, 'utf8').includes('PENDING-LIVE'))
-      .map((file) => relative(ROOT, file).split('\\').join('/'));
+  // @TA-021 (Befund C-PENDINGLIVE-TEST-FLAKE): früher las der Test jede Datei unter scripts/ und .github/ einzeln im
+  // Vitest-Worker – unter der Last des Commit-Hooks über die 5-s-Grenze. `git grep` sucht in einem nativen Aufruf über
+  // dieselben Dateien (eingecheckte und neue, nicht ignorierte), ohne die Zeitgrenze anzuheben.
+  it('@TA-021 nur scripts/db-drift-check.sh liest die Datei (RLS-Matrix, lokales Einspielen, CI spielen alles ein)', () => {
+    const suche = spawnSync('git', ['grep', '-l', '--untracked', '--fixed-strings', 'PENDING-LIVE', '--', 'scripts', '.github'], { cwd: ROOT, encoding: 'utf8' });
+    expect(suche.error).toBeUndefined();
+    expect([0, 1], suche.stderr).toContain(suche.status);
+    const readers = suche.stdout.split('\n').filter(Boolean).sort();
     expect(readers).toEqual(['scripts/db-drift-check.sh']);
   });
 });

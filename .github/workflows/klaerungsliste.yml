@@ -6,7 +6,19 @@ name: Klaerungsliste
 # @HE-056, @HE-080) ueber append_match_events und take_field_control, Schema, Rechte, zweites Einspielen und Rueckweg.
 # Die beiden Gegenproben beweisen, dass der Check Fehler auch erkennt. Pfadfilter wie append-match-events.yml.
 
+# push: main (@TA-022, Plan Werkzeug-Paket 5a): seit „Branch muss aktuell sein“ aus ist, prüft ein PR nicht mehr gegen den
+# neuesten Hauptzweig; das Zusammenspiel zweier PRs zeigt erst der Lauf nach dem Merge (Stopp-Regel: main-ampel.yml).
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/core/match/**'
+      - 'supabase/migrations/**'
+      - 'scripts/klaerungsliste-check.sh'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/db-drift-check.sh'
+      - '.github/workflows/klaerungsliste.yml'
   pull_request:
     paths:
       - 'src/core/match/**'

@@ -3,11 +3,9 @@
  * Szenarien: docs/anforderungen/2026-10-02_oberflaeche.md @OB-017 (Beispiele je Stelle), @OB-014 (Fokus bei Gefahr),
  * @OB-073 (Team umbenennen fragt nicht nach). Befund C-WINDOW-CONFIRM.
  * Die drei Beispielzeilen aus @OB-017 prüft B03.platzhalterListe.ob017.test.tsx; hier die übrigen ersetzten Stellen
- * und der Wächter über den ganzen Produktcode.
+ * (der Wächter über den ganzen Produktcode: architecture/ob017Waechter.test.ts).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -60,32 +58,7 @@ function tournamentWith(teams: Array<{ id: string; name: string; isRemoved?: boo
   } as unknown as Tournament;
 }
 
-describe('@OB-017 Wächter: im Produktcode steht kein Fenster des Browsers mehr', () => {
-  const SRC = join(__dirname, '..');
-  const isTest = (p: string) => /(\.test\.|\.spec\.)/.test(p) || /(^|\/)(__tests__|test)\//.test(p);
-  function walk(dir: string, out: string[] = []): string[] {
-    for (const name of readdirSync(dir)) {
-      const full = join(dir, name);
-      if (statSync(full).isDirectory()) { walk(full, out); continue; }
-      const rel = relative(SRC, full);
-      if (/\.(ts|tsx)$/.test(name) && !isTest(rel)) { out.push(full); }
-    }
-    return out;
-  }
-  /** Kommentare entfernen, damit Hinweise wie „statt window.confirm“ nicht anschlagen. */
-  const ohneKommentare = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
-
-  it('kein window.confirm|alert|prompt und kein loses confirm(/alert(/prompt( in src/ (ohne Tests)', () => {
-    const treffer: string[] = [];
-    for (const file of walk(SRC)) {
-      const code = ohneKommentare(readFileSync(file, 'utf8'));
-      const lokalesConfirm = /(const|let|function)\s+confirm\b/.test(code);
-      const muster = [/\b(window|globalThis|self)\.(confirm|alert|prompt)\b/, /(^|[^\w.$])(alert|prompt)\(/, lokalesConfirm ? null : /(^|[^\w.$])confirm\(/];
-      for (const m of muster) { if (m?.test(code)) { treffer.push(`${relative(SRC, file)}: ${m}`); } }
-    }
-    expect(treffer).toEqual([]);
-  });
-});
+// Der Wächter über den ganzen Produktcode steht im Node-Projekt: src/__tests__/architecture/ob017Waechter.test.ts (@TA-021).
 
 describe('@OB-017 Dialog der App statt Browser-Fenster – ersetzte Stellen', () => {
   it('Team wiederherstellen (TeamsTab) fragt im Dialog der App nach', async () => {
