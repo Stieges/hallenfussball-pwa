@@ -5,7 +5,7 @@
  *  - append_match_events = Fassung 20261117_005 + NUR hinzugefügte Zeilen; Basisdatei unverändert (SHA-256),
  *  - die Fristen am Server = die Konstanten der Engine (CONTINUE_WINDOW_MS, SERVER_CLOCK_TOLERANCE_MS),
  *  - Rückweg = Funktionstext aus 20261117_005 wörtlich,
- *  - Rechte-Assertion, Drift-Check-Zuordnung und PENDING-LIVE-Zeile (bis Daniel einspielt).
+ *  - Rechte-Assertion, Drift-Check-Zuordnung; seit dem Einspielen (31.10.) steht die Migration nicht mehr in PENDING-LIVE.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -67,8 +67,12 @@ describe('20261118_009: Drift-Check (Rechte-Assertion, PENDING-LIVE)', () => {
     expect(drift).toContain(`  "${ASSERTION}"`);
   });
 
-  it('PENDING-LIVE nennt die Migration mit Frist und Commit vorher, bis Daniel sie einspielt', () => {
-    const zeile = pending.split('\n').find((l) => l.startsWith(`${MIGRATION_NAME} `));
-    expect(zeile).toMatch(/^20261118_009_fortsetzen_spaet\.sql \d{4}-\d{2}-\d{2} [0-9a-f]{40}$/);
+  it('keine PENDING-LIVE-Zeile: 20261118_009 ist live (31.10., Daniel) – sonst ließe der Drift-Check die Assertion aus', () => {
+    const files = pending
+      .split('\n')
+      .map((l) => l.replace(/#.*/, '').trim())
+      .filter(Boolean)
+      .map((l) => l.split(/\s+/)[0]);
+    expect(files).not.toContain(MIGRATION_NAME);
   });
 });
