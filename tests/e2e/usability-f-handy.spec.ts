@@ -22,11 +22,12 @@ const TEAMS = ['FC Nordstadt', 'SV Südpark', 'TSV Westtal', 'BSC Ostring'].map(
   name,
 }));
 
+const KURZER_TITEL = 'Hallencup Messlauf';
 const LANGER_TITEL = 'Hallencup der Jugendabteilungen Süd';
 
-const turnier = () => buildVisualTournament({
+const turnier = (title: string = LANGER_TITEL) => buildVisualTournament({
   id: ID,
-  title: LANGER_TITEL,
+  title,
   matches: [{
     id: 'uf-match-1', round: 1, teamA: TEAMS[0].id, teamB: TEAMS[1].id, field: 1, matchStatus: 'scheduled' as const,
     scheduledTime: '2026-03-14T09:00:00.000Z',
@@ -255,4 +256,30 @@ test.describe('Usability F am Handy', () => {
       for (const a of abstand) { expect(a).toBeGreaterThanOrEqual(3.5); }
     });
   }
+});
+
+test.describe('Usability F am Tablet', () => {
+  test.beforeEach(({ browserName }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop' || browserName !== 'chromium', 'setzt Fenstergröße selbst');
+  });
+
+  test('@OB-025 Tablet 768×1024: Kopf der Turnierseite – Titel einzeilig, Tastengruppe rechts oben in derselben Zeile', async ({ page, seedIndexedDB }, testInfo) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await seedIndexedDB({ tournaments: [turnier(KURZER_TITEL)] });
+    await page.goto(`/#/tournament/${ID}/schedule`);
+    await expect(page.locator('header').first()).toContainText('Hallencup');
+    const m = await page.evaluate((t) => {
+      const kopf = document.querySelector('header')!;
+      const titel = [...kopf.querySelectorAll<HTMLElement>('div')].find((d) => d.textContent === t)!;
+      const gruppe = kopf.querySelector<HTMLElement>('[data-testid="management-header-actions"]')!.getBoundingClientRect();
+      const tr = titel.getBoundingClientRect();
+      const zeilen = Math.round(tr.height / parseFloat(getComputedStyle(titel).lineHeight === 'normal' ? String(parseFloat(getComputedStyle(titel).fontSize) * 1.2) : getComputedStyle(titel).lineHeight));
+      return { zeilen, gruppeRechts: gruppe.right, gruppeOben: gruppe.top, titelOben: tr.top, titelUnten: tr.bottom, breite: window.innerWidth, kopfHoehe: kopf.getBoundingClientRect().height };
+    }, KURZER_TITEL);
+    expect(m.zeilen, 'Titel einzeilig').toBe(1);
+    expect(m.gruppeOben, 'Tastengruppe in der Zeile des Titels').toBeLessThan(m.titelUnten);
+    expect(m.gruppeRechts, 'Tastengruppe rechts oben (am rechten Rand)').toBeGreaterThan(m.breite - 40);
+    expect(m.kopfHoehe).toBeLessThan(140);
+    await bild(page, 'turnierseite-tablet-nachher', testInfo);
+  });
 });

@@ -63,6 +63,7 @@ describe('F-01 Kopf der Turnierseite', () => {
     const kopfzeile = screen.getByText(LANGER_NAME).closest('header')!;
     expect(kopfzeile.style.flexWrap).toBe('wrap');
     expect(screen.getByText(LANGER_NAME).parentElement!.style.flex).toBe('1 1 50%');
+    expect(screen.getByTestId('management-header-actions').style.marginLeft).toBe('auto');
   });
 
   it('@OB-022 das Zahnrad ist mindestens 44 × 44 groß', () => {

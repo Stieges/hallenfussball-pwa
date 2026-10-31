@@ -39,10 +39,12 @@ const headerStyle: CSSProperties = {
   justifyContent: 'space-between',
   alignItems: 'center',
   // @OB-025: reicht die Breite nicht, rutschen die Tasten in eine zweite Zeile; der Titel bleibt lesbar (nie Buchstabe für Buchstabe)
-  flexWrap: 'wrap',
   rowGap: cssVars.spacing.sm,
 };
-const headerContentStyle: CSSProperties = { flex: '1 1 50%', minWidth: 0 };
+// Handy: Titel mindestens halbe Breite, die Tasten rutschen sonst in Zeile 2. Ab Tablet: eine Zeile, Titel nimmt den Rest (der Untertitel darf umbrechen)
+const headerContentStyle = (isMobile: boolean): CSSProperties => ({ flex: isMobile ? '1 1 50%' : '1 1 auto', minWidth: 0 });
+// Tastengruppe (Zahnrad, Status, Anmeldung): rechts oben; reicht die Breite nicht, rutscht sie als Ganzes in die zweite Zeile
+const headerActionsStyle: CSSProperties = { display: 'flex', alignItems: 'center', marginLeft: 'auto' };
 const backButtonStyle: CSSProperties = {
   padding: cssVars.spacing.sm,
   background: 'transparent',
@@ -113,16 +115,17 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
   const { tournament, isMobile, activeTab, isSettingsDirty, onTabChange } = p;
   return (
     <>
-      <header style={headerStyle}>
+      <header style={{ ...headerStyle, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
         {p.onBack && (
           <button onClick={p.onBack} style={backButtonStyle} title="Zurück zum Dashboard">←</button>
         )}
-        <div style={headerContentStyle}>
+        <div style={headerContentStyle(isMobile)}>
           <div style={titleStyle}>{tournament.title}</div>
           <div style={subtitleStyle}>
             {joinMeta([tournament.ageClass, formatDateGerman(tournament.date), getLocationName(tournament)], ' · ')}
           </div>
         </div>
+        <div style={headerActionsStyle} data-testid="management-header-actions">
         <button onClick={() => { void navigate(`/tournament/${tournament.id}/admin`); }} style={adminButtonStyle} title="Admin Center öffnen">
           <span>⚙️</span>
           {!isMobile && <span>Admin Center</span>}
@@ -137,6 +140,7 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
           onNavigateToProfile={p.onNavigateToProfile}
           onNavigateToSettings={p.onNavigateToSettings}
         />
+        </div>
       </header>
 
       {!isMobile && (
