@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, FinalsPreset } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
+import { effectiveRoundCount } from '../../../core/generators/repeatRounds';
 
 // Duration thresholds in minutes
 const DURATION_WARNING_THRESHOLD = 480; // 8 hours
@@ -76,7 +77,8 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   // Calculate group phase matches (Round Robin: n*(n-1)/2)
   let groupPhaseMatches: number;
   if (groupSystem === 'roundRobin') {
-    groupPhaseMatches = (teams * (teams - 1)) / 2;
+    // @TM-152: jede Paarung so oft, wie Runden eingestellt sind
+    groupPhaseMatches = ((teams * (teams - 1)) / 2) * effectiveRoundCount(formData);
   } else {
     // Groups and Finals: each group plays round robin
     const teamsPerGroup = Math.ceil(teams / numberOfGroups);

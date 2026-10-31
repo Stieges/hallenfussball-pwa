@@ -36,6 +36,18 @@
     "groupCount": "Number of Groups",
     "fieldCount": "Number of Fields",
     "fieldCountOther": "Number of Playing Areas",
+    "rounds": {
+      "label": "Rounds",
+      "decrease": "One round fewer",
+      "increase": "One round more",
+      "maxHint": "At most {{count}} rounds",
+      "minHint": "At least {{count}} round",
+      "summary_one": "{{count}} match · ends approx. {{time}}",
+      "summary_other": "{{count}} matches · ends approx. {{time}}",
+      "summaryNoTime_one": "{{count}} match",
+      "summaryNoTime_other": "{{count}} matches",
+      "lateHint": "The tournament only ends around midnight or later. Fewer rounds, shorter matches or more fields shorten it – you can still continue."
+    },
     "smartConfigTip": "Tip: Let us calculate the optimal configuration",
     "advancedSettings": "Advanced Settings",
     "timePlanning": "Time Planning",
