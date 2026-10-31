@@ -270,16 +270,19 @@ export function ActivityLogCategory({
       });
     }
 
+    // Beendete Spiele ohne Endzeit tragen den Zeitpunkt dieser Berechnung (wie „Ergebnis eingetragen“ unten)
+    const fallbackTimestamp = new Date().toISOString();
+
     // Process matches for activity entries
     tournament.matches.forEach((match) => {
       const matchLabel = getMatchLabel(tournament, match);
 
-      // Add match finished entries
-      if (match.finishedAt) {
+      // Add match finished entries – auch ein beendetes Spiel ohne gespeicherte Endzeit zählt als beendet
+      if (match.finishedAt || match.matchStatus === 'finished') {
         entries.push({
           id: `match-finished-${match.id}`,
           type: 'match_finished',
-          timestamp: match.finishedAt,
+          timestamp: match.finishedAt ?? fallbackTimestamp,
           matchId: match.id,
           matchLabel,
           description: t('activityLog.matchFinished'),
@@ -312,7 +315,7 @@ export function ActivityLogCategory({
         (!match.correctionHistory || match.correctionHistory.length === 0)
       ) {
         // Use finishedAt or fallback to now
-        const timestamp = match.finishedAt ?? new Date().toISOString();
+        const timestamp = match.finishedAt ?? fallbackTimestamp;
         entries.push({
           id: `result-entered-${match.id}`,
           type: 'result_entered',

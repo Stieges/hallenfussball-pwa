@@ -33,7 +33,20 @@ describe('usePublicFinalStandings', () => {
     expect(read).toHaveBeenCalledWith('ABC123');
   });
 
-  it('@ZM-069: nach dem Wiederöffnen gilt derselbe Link weiter – der Endstand verschwindet nach höchstens 10 Sekunden', async () => {
+  // Server-Vertrag ab 20261118_008: nach dem Wiederöffnen über den Betreiber dieselbe Antwort wie vorher (Beweis
+  // scripts/monitor-endstand-check.sh B3). Vor 20261118_008 meldete der Server dann `none` und der Endstand verschwand.
+  it('@ZM-069 @LZ-077 Z. 2: nach dem Wiederöffnen gilt derselbe Link weiter – der bisherige Endstand bleibt unverändert', async () => {
+    const read = vi.fn(() => Promise.resolve(FINAL));
+    const { result } = renderHook(() => usePublicFinalStandings('ABC123', true, read));
+    await advance(0);
+    const vorher = result.current;
+    expect(vorher.status).toBe('final');
+    await advance(30_000);
+    expect(result.current).toEqual(vorher);
+    expect(read).toHaveBeenLastCalledWith('ABC123');
+  });
+
+  it('Gegenbeispiel: meldet der Server keinen Endstand mehr (z. B. Teilen zurückgenommen, Kindermodus), verschwindet er nach höchstens 10 Sekunden', async () => {
     let reply: unknown = FINAL;
     const read = vi.fn(() => Promise.resolve(reply));
     const { result } = renderHook(() => usePublicFinalStandings('ABC123', true, read));
@@ -42,7 +55,6 @@ describe('usePublicFinalStandings', () => {
     reply = { status: 'none' };
     await advance(10_000);
     expect(result.current.status).toBe('none');
-    expect(read).toHaveBeenLastCalledWith('ABC123');
   });
 
   it('@ZM-109 Gegenbeispiel: eine Störung oder unlesbare Antwort löscht den Endstand nicht', async () => {

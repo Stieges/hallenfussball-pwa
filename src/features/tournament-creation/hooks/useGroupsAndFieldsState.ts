@@ -75,10 +75,11 @@ export function useGroupsAndFieldsState({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.numberOfFields]);
 
-  // Sync to formData
+  // Sync to formData – bei „Jeder gegen jeden“ gibt es keine Gruppen (eine Gruppe, @ZM-181): keine Standardgruppen A/B ins Formular
+  const isRoundRobin = formData.groupSystem === 'roundRobin';
   useEffect(() => {
-    onUpdate('groups', groups);
-  }, [groups, onUpdate]);
+    onUpdate('groups', isRoundRobin ? undefined : groups);
+  }, [groups, isRoundRobin, onUpdate]);
 
   useEffect(() => {
     onUpdate('fields', fields);

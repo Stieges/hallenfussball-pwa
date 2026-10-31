@@ -219,8 +219,12 @@ pending_assertions_for() {
     20261118_004_abschluss_nachzug.sql)
       echo "abschluss-nachzug-open-items-review-open abschluss-nachzug-payload-kids-mode abschluss-nachzug-late-entries-rpc"
       ;;
+    # @ZM-121 Z. 1/2: neue Fassung display_final_standings(uuid, text) fuer den Monitor-Link (scripts/monitor-endstand-check.sh)
+    20261118_008_monitor_endstand.sql)
+      echo "monitor-endstand-display-link monitor-endstand-public-reopen public-read-core-unchanged"
+      ;;
+    # C-REOPEN-NACH-ABPFIFF-SPAET (@SL-147 Z. 2): nur CREATE OR REPLACE append_match_events (spaetes Fortsetzen -> Klaerung)
     20261118_009_fortsetzen_spaet.sql)
-      # C-REOPEN-NACH-ABPFIFF-SPAET (@SL-147 Z. 2): nur CREATE OR REPLACE append_match_events (spaetes Fortsetzen -> Klaerung)
       echo "fortsetzen-spaet-append-reopen-review"
       ;;
     *)
@@ -718,6 +722,9 @@ PRIVILEGE_ASSERTION_NAMES=(
   # R5 PR 1 (20261118_006, @ZM-084/@FU-001): Aenderungssignal fuer Monitore (Trigger je Anweisung, Funktion ohne Client-EXECUTE).
   "monitor-signal-triggers-statement-active"
   "monitor-signal-definer-no-client-execute"
+  # Monitor-Endstand (20261118_008, @ZM-121 Z. 1/2): Endstand ueber den Monitor-Link, auch nach dem Wiederoeffnen.
+  "monitor-endstand-display-link"
+  "monitor-endstand-public-reopen"
   # C-REOPEN-NACH-ABPFIFF-SPAET (20261118_009, @SL-147 Z. 2, @ZM-180): spaetes Fortsetzen des Helfers -> Klaerungsliste.
   "fortsetzen-spaet-append-reopen-review"
 )

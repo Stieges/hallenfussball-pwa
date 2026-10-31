@@ -19,4 +19,30 @@ describe('useSideOrder – Stufe 1', () => {
     act(() => result.current.tausche());
     expect([result.current.links, result.current.rechts]).toEqual(['home', 'away']);
   });
+
+  // Befund C-SEITENTAUSCH-WIRKT-AUFS-NAECHSTE-SPIEL: das Cockpit bleibt beim Spielwechsel eingebunden, der Tausch gehörte zum alten Spiel
+  it('@SL-065 Der Tausch gilt nur für das Spiel, in dem er gewählt wurde: im nächsten Spiel steht das Heimteam wieder links', () => {
+    const spiel12 = { id: 'match-12', homeTeam: { id: 'dj-berg' }, awayTeam: { id: 'tsv-west' } };
+    const { result, rerender } = renderHook(({ spiel }) => useSideOrder(spiel), { initialProps: { spiel: spiel11 } });
+    act(() => result.current.tausche());
+    expect(result.current.links).toBe('away');
+    rerender({ spiel: spiel12 });
+    expect(result.current.getauscht).toBe(false);
+    expect([result.current.links, result.current.rechts]).toEqual(['home', 'away']);
+  });
+
+  it('@SL-127 Tauscht die Turnierleitung Heim und Gast, zeigt das Cockpit die neue Paarung in der Grundstellung', () => {
+    const getauscht = { id: 'match-11', homeTeam: { id: 'sv-sued' }, awayTeam: { id: 'fc-nord' } };
+    const { result, rerender } = renderHook(({ spiel }) => useSideOrder(spiel), { initialProps: { spiel: spiel11 } });
+    act(() => result.current.tausche());
+    rerender({ spiel: getauscht });
+    expect([result.current.links, result.current.rechts]).toEqual(['home', 'away']);
+  });
+
+  it('Gegenbeispiel: derselbe Spielstand neu gezeichnet behält den Tausch (gleiche Spiel-ID und Paarung)', () => {
+    const { result, rerender } = renderHook(({ spiel }) => useSideOrder(spiel), { initialProps: { spiel: spiel11 } });
+    act(() => result.current.tausche());
+    rerender({ spiel: { ...spiel11, homeTeam: { id: 'fc-nord' } } });
+    expect(result.current.links).toBe('away');
+  });
 });

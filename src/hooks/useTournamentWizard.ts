@@ -164,12 +164,15 @@ export function useTournamentWizard(
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
 
-      // When switching to roundRobin, remove group assignments from teams
-      if (field === 'groupSystem' && value === 'roundRobin' && prev.teams) {
-        updated.teams = prev.teams.map((team) => {
-          const { group: _group, ...teamWithoutGroup } = team;
-          return teamWithoutGroup;
-        });
+      // When switching to roundRobin, remove group assignments from teams – und die Gruppen selbst (@ZM-181: eine Gruppe, keine A/B)
+      if (field === 'groupSystem' && value === 'roundRobin') {
+        updated.groups = undefined;
+        if (prev.teams) {
+          updated.teams = prev.teams.map((team) => {
+            const { group: _group, ...teamWithoutGroup } = team;
+            return teamWithoutGroup;
+          });
+        }
       }
 
       // When switching to groupsAndFinals, apply sport-specific default finals preset

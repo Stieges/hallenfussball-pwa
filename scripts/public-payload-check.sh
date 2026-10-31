@@ -50,6 +50,8 @@
 #     G13 Kindermodus mit Entscheidungs-Angaben in live_state                    -> P rot (N2)
 #     G14 basis wieder leer (Fassung 20261117_104, mutiert in 20261118_007)       -> P rot (@W2A-059 Z. 3)
 #     G15 Formpruefung ohne Bedingung "keine Zusatzschluessel" (in 20261118_007)   -> P rot (Review #413 M1)
+#     G16 Uhr-Block (U) fehlt (in 20261118_008, Fassung 007)                      -> P rot (@ZM-166, @ZM-137)
+#     G17 Uhr-Block laesst alle Cockpit-Einstellungen durch (in 20261118_008)      -> P rot (Datenschutz)
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigene Wegwerf-Container und ein
 # eigenes Wegwerf-Netz, am Ende entfernt (trap). Harness-Hilfen liegen im Schema "harness".
@@ -72,10 +74,20 @@ BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 TARGET_NAME="20261117_104_public_payload.sql"
 TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
 ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261117_104_public_payload_rollback.sql"
-# Spaetere Migration, die NUR public_view.config_for ersetzt (basis = gespeicherter Fingerabdruck, C-PUBLIC-ENTSCHEIDUNG-
-# BASIS-LEER). Die Proben laufen gegen die Fassung MIT ihr; fehlt die Datei, laufen sie gegen 20261117_104 (Gegenprobe:
-# die Pruefung „basis = gespeicherter Fingerabdruck“ wird rot).
-BASIS_FOLLOWUP_FILE="$MIGRATIONS_DIR/20261118_007_public_entscheidung_basis.sql"
+# Spaetere Migrationen, die public_view.config_for ersetzen (Proben laufen gegen den Stand MIT ihnen, in dieser Reihenfolge):
+#   20261118_007 basis = gespeicherter Fingerabdruck (C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER);
+#   20261118_008 (U) Uhr-Art und Schlussphase aus matchCockpitSettings (C-MONITOR-UHRART-FEHLT) -- braucht 20261118_004
+#   (Kindermodus im Endstand, Fail-fast von 008), deshalb steht 004 davor.
+# Fehlt eine Datei, laufen die Proben ohne sie (Gegenprobe: die zugehoerigen P-Pruefungen werden rot). Vor dem Rueckweg von
+# 20261117_104 werden sie in umgekehrter Reihenfolge ueber ihre Rueckwege zurueckgenommen.
+FOLLOWUP_FILES=()
+FOLLOWUP_ROLLBACKS=()
+for followup in 20261118_004_abschluss_nachzug 20261118_007_public_entscheidung_basis 20261118_008_monitor_endstand; do
+  if [[ -f "$MIGRATIONS_DIR/$followup.sql" ]]; then
+    FOLLOWUP_FILES+=("$MIGRATIONS_DIR/$followup.sql")
+    FOLLOWUP_ROLLBACKS+=("$REPO_ROOT/supabase/rollbacks/${followup}_rollback.sql")
+  fi
+done
 DEFAULTS_FILE="$REPO_ROOT/src/core/models/publicContentDefaults.json"
 PREFIX="public-payload-check-$$"
 NET="$PREFIX-net"
@@ -390,7 +402,7 @@ VALUES ('$T', '$U_OLLI', 'Hallencup Nord', '2026-11-21', '13:00', 6, 2, 10, 'Spo
           'contactInfo', '{"name":"Olga Orga","email":"olga@orga.test","phone":"0171 1112223","website":"https://orga.test"}'::jsonb,
           'adminNotes', 'Schluessel bei Hausmeister Kurt',
           'dashboardStatus', 'intern-dashboard',
-          'matchCockpitSettings', '{"internSetting":"cockpit-intern"}'::jsonb,
+          'matchCockpitSettings', '{"internSetting":"cockpit-intern","clockMode":"immer-durchlaufend","finalPhaseMinutes":2,"soundId":"horn-intern","foulLimit":5}'::jsonb,
           'standingDecisions', jsonb_build_array(jsonb_build_object('id', 'd1', 'groupId', 'A',
               'teamIds', jsonb_build_array('$SV_SUED', '$TSV_WEST'), 'order', jsonb_build_array('$SV_SUED', '$TSV_WEST'),
               'kind', 'order', 'basis', '$BASIS_D1', 'decidedBy', 'Olli Leitung', 'reason', 'Losentscheid-Grund'),
@@ -559,6 +571,10 @@ run_probes() {
     "$(jq -r '.tournament.config.standingDecisions[2].basis' <<<"$full" 2>/dev/null)|$(jq -r '.tournament.config.standingDecisions[3].basis' <<<"$full" 2>/dev/null)|$(has "$full" 'Losentscheid-Grund-2')"
   check P "@W2A-059 basis = gespeicherter Fingerabdruck (Zuschauer, Monitor); Alt-Text in basis -> leer" "gleich|gleich|" \
     "$([[ "$(jq -r '.tournament.config.standingDecisions[0].basis' <<<"$full" 2>/dev/null)" == "$BASIS_D1" ]] && echo gleich || echo verschieden)|$([[ "$(jq -r '.tournament.config.standingDecisions[0].basis' <<<"$(disp anon "$T" mon-feld1 null)" 2>/dev/null)" == "$BASIS_D1" ]] && echo gleich || echo verschieden)|$(jq -r '.tournament.config.standingDecisions[1].basis' <<<"$full" 2>/dev/null)"
+  # @ZM-166/@ZM-137, C-MONITOR-UHRART-FEHLT (20261118_008 (U)): aus matchCockpitSettings nur Uhr-Art und Schlussphase.
+  check P "@ZM-166 Uhr: matchCockpitSettings = genau clockMode und finalPhaseMinutes (Zuschauer, Monitor); Ton/Regeln/Intern fehlen" \
+    '{"clockMode":"immer-durchlaufend","finalPhaseMinutes":2}|{"clockMode":"immer-durchlaufend","finalPhaseMinutes":2}|fehlt|fehlt|fehlt' \
+    "$(jq -cS '.tournament.config.matchCockpitSettings' <<<"$full" 2>/dev/null)|$(jq -cS '.tournament.config.matchCockpitSettings' <<<"$(disp anon "$T" mon-feld1 null)" 2>/dev/null)|$(has "$full" 'horn-intern')|$(has "$full" 'foulLimit')|$(has "$(disp anon "$T" mon-feld1 null)" 'horn-intern')"
   check P "@W3-001 Zuschauer: kein Schiedsrichter, weder Name noch Nummer" "fehlt|fehlt|fehlt" \
     "$(has "$full" 'Paul Schmidt')|$(has "$full" 'referee_number')|$(has "$full" 'referee_config')"
   check P "Turnier: owner_id, version, Teams-Kontakte und Spieler fehlen" "fehlt|false|fehlt|fehlt" \
@@ -839,12 +855,11 @@ run_measurement() {
 }
 
 apply_basis_followup() {
-  if [[ -f "$BASIS_FOLLOWUP_FILE" ]]; then
-    psql_stdin < "$BASIS_FOLLOWUP_FILE" >/dev/null || { echo "::error::$(basename "$BASIS_FOLLOWUP_FILE") scheitert" >&2; exit 1; }
-    echo "Folge-Migration $(basename "$BASIS_FOLLOWUP_FILE") eingespielt (Proben gegen diese Fassung)." >&2
-  else
-    echo "Folge-Migration $(basename "$BASIS_FOLLOWUP_FILE") fehlt -- Proben gegen 20261117_104." >&2
-  fi
+  local f
+  for f in ${FOLLOWUP_FILES[@]+"${FOLLOWUP_FILES[@]}"}; do
+    psql_stdin < "$f" >/dev/null || { echo "::error::$(basename "$f") scheitert" >&2; exit 1; }
+    echo "Folge-Migration $(basename "$f") eingespielt (Proben gegen diese Fassung)." >&2
+  done
 }
 
 summary() {
@@ -889,13 +904,18 @@ if [[ "$MODE" == "gegenprobe" ]]; then
               OR coalesce(v_structure_us, 0) > p_since_version;"
   export G9_FROM="   WHERE e.key = ANY (c_config_keys) AND e.value <> 'null'::jsonb;"
   export G9_TO="   WHERE e.value <> 'null'::jsonb;"
-  # G14/G15 mutieren die Folge-Migration 20261118_007 (dort steht basis); alle anderen die Ziel-Migration.
+  # G14/G15 stehen nur in den Folge-Migrationen (007, 008: basis), G16/G17 nur in 008 (Uhr); config_for-Muster (G2, G9,
+  # G14, G15) stehen in jeder Datei, die config_for ersetzt -- dort wird jeweils mit mutiert.
   export G14_FROM="                               THEN d -> 'basis' ELSE '\"\"'::jsonb END"
   export G14_TO="                               THEN '\"\"'::jsonb ELSE '\"\"'::jsonb END"
   export G15_FROM="                                    AND ((d ->> 'basis')::jsonb - ARRAY['points', 'criteria', 'matches', 'forfeit']) = '{}'::jsonb
 "
   export G15_TO=""
-  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13 G14 G15)
+  export G16_FROM="  IF jsonb_typeof(v_config -> 'matchCockpitSettings') = 'object' THEN"
+  export G16_TO="  IF false THEN"
+  export G17_FROM="       WHERE (s.key = 'clockMode' AND jsonb_typeof(s.value) = 'string')"
+  export G17_TO="       WHERE true OR (s.key = 'clockMode' AND jsonb_typeof(s.value) = 'string')"
+  MUTS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G11B G12 G13 G14 G15 G16 G17)
   RED_TOTAL=0
   for mut in "${MUTS[@]}"; do
     start_container "$(tr 'A-Z' 'a-z' <<<"$mut")"
@@ -910,20 +930,20 @@ if s.count(frm) != 1:
     sys.exit("Gegenprobe: Muster %s nicht genau einmal in der Migration (%d)" % (k, s.count(frm)))
 sys.stdout.write(s.replace(frm, os.environ[k + "_TO"]))' < "$1" | psql_stdin
     }
-    # Muster in public_view.config_for (G2, G9) stehen auch in 20261118_007, die die Funktion ersetzt: dort mit
-    # mutieren, sonst ueberschriebe die Folge-Migration die Mutation. G14 steht nur in 20261118_007.
-    if [[ "$mut" == "G14" || "$mut" == "G15" ]]; then
-      psql_stdin < "$TARGET_FILE"
-      mutate "$BASIS_FOLLOWUP_FILE"
-    else
-      mutate "$TARGET_FILE"
-      from_var="${mut}_FROM"
-      if [[ -f "$BASIS_FOLLOWUP_FILE" ]] && grep -qF -- "${!from_var}" "$BASIS_FOLLOWUP_FILE"; then
-        mutate "$BASIS_FOLLOWUP_FILE"
-      else
-        apply_basis_followup
+    # Mutiert wird nur die LETZTE Datei (Ziel, dann die Folge-Migrationen) mit dem Muster -- sie bestimmt die Fassung, die am
+    # Ende gilt (config_for ersetzt jede Folge-Migration ganz). Fruehere Dateien laufen unveraendert, sonst haelt die
+    # Fassungspruefung von 20261118_008 (md5 der Fassung 007) die mutierte 007 an.
+    from_var="${mut}_FROM"
+    last=""
+    for f in "$TARGET_FILE" ${FOLLOWUP_FILES[@]+"${FOLLOWUP_FILES[@]}"}; do
+      if python3 -c 'import os,sys; sys.exit(0 if open(sys.argv[1], encoding="utf-8").read().count(os.environ[sys.argv[2]]) > 0 else 1)' "$f" "$from_var"; then
+        last="$f"
       fi
-    fi
+    done
+    [[ -n "$last" ]] || { echo "::error::Gegenprobe $mut: Muster in keiner Datei" >&2; exit 1; }
+    for f in "$TARGET_FILE" ${FOLLOWUP_FILES[@]+"${FOLLOWUP_FILES[@]}"}; do
+      if [[ "$f" == "$last" ]]; then mutate "$f"; else psql_stdin < "$f" >/dev/null; fi
+    done
     post_migration_data
     start_rest
     reset_counts
@@ -1016,6 +1036,13 @@ check W "danach Schema unveraendert (pg_dump identisch)" "identisch" "$([[ "$(sc
 
 # --- X: Rueckweg ----------------------------------------------------------------------------------------------------
 [[ "$FORFEIT_REAL" == "1" ]] || psql_stdin <<<"ALTER TABLE public.matches DROP COLUMN IF EXISTS forfeit_absent;" # Harness-Spalte (A-25-Ersatz) weg
+# Folge-Migrationen zuerst zuruecknehmen (umgekehrte Reihenfolge, ueber ihre Rueckwege), dann 20261117_104. Das zweite
+# Einspielen (W) hat config_for auf die Fassung 104 gesetzt -- die Folge-Migrationen deshalb vorher erneut einspielen
+# (idempotent), damit ihre Rueckwege die erwartete Fassung vorfinden.
+apply_basis_followup
+for ((i = ${#FOLLOWUP_ROLLBACKS[@]} - 1; i >= 0; i--)); do
+  psql_stdin < "${FOLLOWUP_ROLLBACKS[$i]}" >/dev/null || { check X "Rueckweg $(basename "${FOLLOWUP_ROLLBACKS[$i]}") laeuft" "0" "1"; }
+done
 psql_stdin < "$ROLLBACK_FILE"
 DUMP_ROLLED_BACK="$(schema_dump)"
 check X "nach dem Rueckweg: Schema public = vor der Migration (pg_dump identisch)" "identisch" \

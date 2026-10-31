@@ -174,6 +174,11 @@ M1_FILE=""
 # 20261113_003 in der Idempotenz-Kette stellte beide in der alten Fassung wieder her -- danach wieder einspielen. Pflicht wie M1.
 WM_MIGRATION="20261118_004_abschluss_nachzug.sql"
 WM_FILE=""
+# Monitor-Endstand (20261118_008): fasst public_final_standings neu (Basis 20261113_003, Zweig B) -- das erneute Einspielen von
+# 20261113_003 stellte die alte Fassung wieder her (Assertion monitor-endstand-public-reopen), deshalb direkt nach WM_FILE.
+# Pflicht wie W-M (ohne SW faellt sie mit W-M weg, Fail-fast).
+MEND_MIGRATION="20261118_008_monitor_endstand.sql"
+MEND_FILE=""
 # 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET): fasst append_match_events neu (Basis 20261117_005, spaetes Fortsetzen -> Klaerung).
 # Das erneute Einspielen von 20261117_005 in der Idempotenz-Kette stellte die alte Fassung wieder her -- danach wieder einspielen.
 FS_FILE=""
@@ -231,6 +236,10 @@ while IFS= read -r line; do
     [[ "$MODE" == "without-sw" ]] && continue
     WM_FILE="$line"
   fi
+  if [[ "$(basename "$line")" == "$MEND_MIGRATION" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    MEND_FILE="$line"
+  fi
   # 20261118_009 setzt 20261117_005 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg.
   if [[ "$(basename "$line")" == "20261118_009_fortsetzen_spaet.sql" ]]; then
     [[ "$MODE" == "without-sw" ]] && continue
@@ -259,6 +268,10 @@ if [[ -z "$M1_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
 fi
 if [[ -z "$WM_FILE" && "${MODE:-normal}" != "without-migration" && "${MODE:-normal}" != "without-sw" ]]; then
   echo "::error::$WM_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still finish_open_items und final_standings_payload in der Fassung von 20261113_003." >&2
+  exit 1
+fi
+if [[ -z "$MEND_FILE" && "${MODE:-normal}" != "without-migration" && "${MODE:-normal}" != "without-sw" ]]; then
+  echo "::error::$MEND_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden (umbenannt?) -- ohne sie pruefte das Skript still public_final_standings in der Fassung von 20261113_003." >&2
   exit 1
 fi
 if [[ -z "$A34_FILE" && "${MODE:-normal}" != "without-migration" ]]; then
@@ -321,8 +334,9 @@ if [[ "$MODE" != "without-migration" ]]; then
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi
   # M1: 20261028_001 oben setzt server_rules auf die Fassung mit 120 s/5 Schuetzen zurueck.
   psql_stdin < "$M1_FILE"
-  # W-M: das erneute 20261113_003 oben setzt finish_open_items/final_standings_payload auf die Fassung ohne W-M zurueck.
-  if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$WM_FILE"; fi
+  # W-M: das erneute 20261113_003 oben setzt finish_open_items/final_standings_payload auf die Fassung ohne W-M zurueck,
+  # 008: ebenso public_final_standings auf die Fassung ohne Zweig B.
+  if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$WM_FILE"; psql_stdin < "$MEND_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.

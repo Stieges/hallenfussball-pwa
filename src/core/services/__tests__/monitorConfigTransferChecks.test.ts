@@ -14,6 +14,7 @@ import {
   sanitizeCustomQr,
   slideReferenceProblem,
   tournamentSlotTargets,
+  assignedGroupIds,
 } from '../monitorConfigTransferChecks';
 
 const ONE_FIELD = { fieldIds: ['field-1'], groupIds: ['A', 'B'] };
@@ -32,6 +33,32 @@ function payload(slides: TransferSlide[], name = 'Halle'): MonitorConfigPayload 
     }],
   };
 }
+
+describe('assignedGroupIds folgt derselben Zuordnung wie die Monitor-Folie (`standingsGroups`/`groupKeyOf`)', () => {
+  it('fehlend, leer und \'all\' zählen als „keine Gruppe“; Buchstaben sortiert, ohne Dubletten', () => {
+    expect(assignedGroupIds([{ group: 'B' }, { group: 'A' }, { group: 'all' }, { group: '' }, {}, { group: 'B' }])).toEqual(['A', 'B']);
+  });
+  it('Gegenbeispiel: Teams ohne Gruppe oder alle mit \'all\' (Jeder gegen jeden) ergeben keine Gruppe; \'ALL\' ist ein Buchstabe', () => {
+    expect(assignedGroupIds([{}, { group: 'all' }])).toEqual([]);
+    expect(assignedGroupIds(undefined)).toEqual([]);
+    expect(assignedGroupIds([{ group: 'ALL' }])).toEqual(['ALL']);
+  });
+});
+
+describe('tournamentSlotTargets nach tatsächlicher Team-Zuordnung (@ZM-181, @ZM-177)', () => {
+  it('Standardgruppen A, B, C, aber Teams nur in A und B: Ziele sind A und B', () => {
+    const teams = ['A', 'B', 'A'].map((group, i) => ({ id: `t${i}`, name: `Team ${i}`, group }));
+    expect(tournamentSlotTargets({ groupSystem: 'groupsAndFinals', groups: [{ id: 'A' }, { id: 'B' }, { id: 'C' }], numberOfGroups: 3, teams }).groupIds).toEqual(['A', 'B']);
+  });
+
+  it('Jeder gegen jeden mit gespeicherten Gruppen A und B: nur „default“', () => {
+    expect(tournamentSlotTargets({ groupSystem: 'roundRobin', groups: [{ id: 'A' }, { id: 'B' }], teams: [{ id: 't0', name: 'Team 0' }, { id: 't1', name: 'Team 1' }] }).groupIds).toEqual(['default']);
+  });
+
+  it('Gegenbeispiel: ohne Zuordnung gelten die gespeicherten Gruppen', () => {
+    expect(tournamentSlotTargets({ groupSystem: 'groupsAndFinals', groups: [{ id: 'A' }, { id: 'B' }], teams: [{ id: 't0', name: 'Team 0' }, { id: 't1', name: 'Team 1' }] }).groupIds).toEqual(['A', 'B']);
+  });
+});
 
 describe('tournamentSlotTargets', () => {
   it('liest Felder aus dem Turnier und fällt sonst auf die Anzahl zurück', () => {

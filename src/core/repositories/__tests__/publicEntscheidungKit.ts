@@ -1,7 +1,8 @@
 /**
  * Test-Hilfen zu C-PUBLIC-ENTSCHEIDUNG-BASIS-LEER (@W2A-059 Z. 3, @ET-055, @ET-044, @ZM-180): eine entschiedene Gleichstands-Lage, einmal
  * so, wie sie auf dem Gerät der Turnierleitung entsteht, und einmal als Antwort der Server-Funktionen `public_tournament` /
- * `display_tournament` (Form des B-14-Vertrags, `20261117_104_public_payload.sql` + `20261118_007_public_entscheidung_basis.sql`).
+ * `display_tournament` (Form des B-14-Vertrags, `20261117_104_public_payload.sql` + `20261118_007_public_entscheidung_basis.sql` +
+ * `20261118_008_monitor_endstand.sql` (U): aus `matchCockpitSettings` nur Uhr-Art und Länge der Schlussphase).
  * Nur Testumgebung.
  *
  * Lage: privates Turnier „Jeder gegen jeden“ mit 6 Teams, alle Spiele beendet. FC Nord und SV Süd haben je 13 Punkte, 6:2 Tore und
@@ -120,8 +121,24 @@ function pick(row: Row, keys: readonly string[]): Row {
  */
 export type BasisInAntwort = { art: 'gespeichert' } | { art: 'leer' } | { art: 'anders'; basis: string };
 
-function publicConfig(config: Row, basis: BasisInAntwort, audience: 'viewer' | 'screen'): Row {
+/** Uhr in der Antwort: `mit` = Fassung 20261118_008 (Uhr-Art und Schlussphase), `ohne` = Fassung 20261118_007 (gar nicht). */
+export type UhrInAntwort = 'mit' | 'ohne';
+
+/** 20261118_008 (U): aus `matchCockpitSettings` nur `clockMode` (Text) und `finalPhaseMinutes` (Zahl); leer → weg. */
+function uhrAus(settings: unknown): Row | undefined {
+  if (typeof settings !== 'object' || settings === null || Array.isArray(settings)) { return undefined; }
+  const s = settings as Row;
+  const out: Row = {
+    ...(typeof s.clockMode === 'string' ? { clockMode: s.clockMode } : {}),
+    ...(typeof s.finalPhaseMinutes === 'number' ? { finalPhaseMinutes: s.finalPhaseMinutes } : {}),
+  };
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function publicConfig(config: Row, basis: BasisInAntwort, audience: 'viewer' | 'screen', uhr: UhrInAntwort): Row {
   const out = pick(config, CONFIG_PUBLIC);
+  const settings = uhr === 'mit' ? uhrAus(config.matchCockpitSettings) : undefined;
+  if (settings !== undefined) { out.matchCockpitSettings = settings; }
   const decisions = Array.isArray(config.standingDecisions) ? (config.standingDecisions as Row[]) : [];
   out.standingDecisions = decisions.map((d) => pick({
     id: d.id, groupId: d.groupId, teamIds: d.teamIds, order: d.order, kind: d.kind, shootout: d.shootout,
@@ -135,13 +152,13 @@ function publicConfig(config: Row, basis: BasisInAntwort, audience: 'viewer' | '
 }
 
 /** Volle Antwort `{state:'full', …}` von `public_tournament` (Zuschauer) bzw. `display_tournament` (Bildschirm). */
-export function serverAntwort(tournament: Tournament, basis: BasisInAntwort, audience: 'viewer' | 'screen' = 'viewer'): Row {
+export function serverAntwort(tournament: Tournament, basis: BasisInAntwort, audience: 'viewer' | 'screen' = 'viewer', uhr: UhrInAntwort = 'mit'): Row {
   const zeilen = serverZeilen(tournament);
   return {
     state: 'full',
     version: 1_793_000_000_000_000,
     server_now: 1_793_000_000_000,
-    tournament: { ...pick(zeilen.tournament, TOURNAMENT_PUBLIC), config: publicConfig(zeilen.tournament.config as Row, basis, audience) },
+    tournament: { ...pick(zeilen.tournament, TOURNAMENT_PUBLIC), config: publicConfig(zeilen.tournament.config as Row, basis, audience, uhr) },
     teams: zeilen.teams.map((row) => pick(row, TEAM_PUBLIC)),
     // Seiten immer mit Schlüssel (Vertrag: null = kein Team)
     matches: zeilen.matches.map((row) => ({ ...pick(row, MATCH_PUBLIC), team_a_id: row.team_a_id ?? null, team_b_id: row.team_b_id ?? null })),
