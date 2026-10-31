@@ -60,7 +60,8 @@ export function Footer({ onOpenCookieSettings: _onOpenCookieSettings, untereLeis
     paddingLeft: randAbstand,
     paddingRight: randAbstand,
     paddingBottom: isMobile && untereLeiste
-      ? `calc(${randAbstand} + ${layoutHeights.bottomNav} + env(safe-area-inset-bottom, 0px))`
+      // die schwebende Leiste „Teilen · Als PDF“ des Spielplans (Höhe aus --schedule-action-bar-h) liegt über der unteren Leiste
+      ? `calc(${cssVars.spacing.xl} + ${layoutHeights.bottomNav} + var(--schedule-action-bar-h, 0px) + env(safe-area-inset-bottom, 0px))`
       : randAbstand,
     borderTop: `1px solid ${cssVars.colors.border}`,
     backgroundColor: cssVars.colors.background,

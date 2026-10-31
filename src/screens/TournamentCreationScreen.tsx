@@ -802,7 +802,20 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       {/* Navigation - ausblenden wenn Step 6 (Preview hat eigene Navigation) */}
       {step !== 6 && (
-        <div style={{ marginTop: isMobile ? '16px' : '24px' }}>
+        <div
+          style={isMobile ? {
+            // @OB-022 (Haupttaste ohne Scrollen erreichbar): am Handy bleibt die Fußleiste „Zurück · Weiter“ am unteren Fensterrand stehen
+            position: 'sticky',
+            bottom: 0,
+            zIndex: cssVars.zIndex.navigation,
+            marginTop: cssVars.spacing.md,
+            paddingTop: cssVars.spacing.sm,
+            paddingBottom: `calc(${cssVars.spacing.sm} + env(safe-area-inset-bottom, 0px))`,
+            background: cssVars.colors.background,
+            borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+          } : { marginTop: '24px' }}
+          data-testid="wizard-footer-bar"
+        >
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',

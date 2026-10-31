@@ -97,6 +97,9 @@ test.describe('Usability F am Handy', () => {
       const weiter = await mass(page, '[data-primary]');
       expect(weiter.primary).toBe(true);
       expect(weiter.h).toBeGreaterThanOrEqual(56);
+      // Haupttaste ohne Scrollen im Fenster (primaer.sichtbar)
+      const unten = await page.evaluate(() => document.querySelector<HTMLElement>('[data-primary]')!.getBoundingClientRect().bottom);
+      expect(unten).toBeLessThanOrEqual(g.height);
       await bild(page, `wizard-1-${g.name}-nachher`, testInfo);
     });
 

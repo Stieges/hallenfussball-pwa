@@ -82,6 +82,7 @@ describe('F-02 Fußzeile und untere Leiste', () => {
     const f = fuss(true);
     expect(f.style.paddingBottom).toContain(layoutHeights.bottomNav);
     expect(f.style.paddingBottom).toContain('safe-area-inset-bottom');
+    expect(f.style.paddingBottom).toContain('--schedule-action-bar-h'); // schwebende Leiste „Teilen · Als PDF“ verdeckt die Links nicht
   });
 
   it('@OB-022 Gegenbeispiel: ohne untere Leiste bleibt der normale Abstand', () => {
@@ -107,6 +108,17 @@ describe('F-03 Suchfeld und Filter-Chips', () => {
     const chips = screen.getAllByTestId(/^filter-chip-/);
     expect(chips.length).toBeGreaterThan(2);
     for (const chip of chips) { expect(chip.style.minHeight).toBe(cssVars.touchTargets.minimum); }
+  });
+});
+
+describe('F-06 Fußleiste des Assistenten am Handy', () => {
+  it('@OB-022 Quelltext: die Leiste „Zurück · Weiter“ bleibt am Handy am unteren Fensterrand stehen (Haupttaste ohne Scrollen)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const q = readFileSync(`${process.cwd()}/src/screens/TournamentCreationScreen.tsx`, 'utf8');
+    const i = q.indexOf('data-testid="wizard-footer-bar"');
+    const block = q.slice(q.lastIndexOf('style={isMobile ? {', i), i);
+    expect(block).toContain("position: 'sticky'");
+    expect(block).toContain('bottom: 0');
   });
 });
 
