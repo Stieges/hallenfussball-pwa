@@ -14,6 +14,8 @@ import type { useEngineEventEditing } from '../../../hooks/useEngineEventEditing
 import type { OffenerEintrag } from '../model/cockpitTypes';
 import { EntrySheets, type EntrySheetsProps } from './EntrySheets';
 import { FinishConfirm } from './FinishConfirm';
+import { ResumeFinishedDialog } from './ResumeFinishedDialog';
+import type { RestGrenzen } from '../model/fortsetzen';
 import { MoreSheet } from './MoreSheet';
 import type { MehrPunkt } from '../model/mehrPunkte';
 import {
@@ -35,6 +37,8 @@ export interface CockpitDialogState {
   showMore: boolean;
   /** Rückfrage nach „Abpfiff halten“ mit der festgehaltenen Restzeit des Spiels (LT-1), sonst `null`. */
   finishFrage: { restText: string } | null;
+  /** „Spiel fortsetzen“ offen (LT-6): Grenzen der Restzeit, sonst `null`. */
+  fortsetzen?: RestGrenzen | null;
   showPenaltyShootout: boolean;
 }
 
@@ -54,6 +58,9 @@ export interface CockpitOverlayHandlers {
   finishConfirmed: () => void;
   /** „Weiterspielen“, Esc oder Tipp daneben. */
   finishDeclined: () => void;
+  /** „Spiel fortsetzen“ (LT-6): Abbrechen bzw. Restzeit in Sekunden übernehmen. */
+  closeFortsetzen?: () => void;
+  confirmFortsetzen?: (restSekunden: number) => void;
   closeSettings: () => void;
   changeSettings: (settings: MatchCockpitSettings) => void;
   testSound: () => void;
@@ -111,6 +118,11 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
       <FinishConfirm
         offen={dialogs.finishFrage !== null} spielNummer={match.number} restText={dialogs.finishFrage?.restText ?? ''}
         onBeenden={handlers.finishConfirmed} onAbbrechen={handlers.finishDeclined}
+      />
+
+      <ResumeFinishedDialog
+        offen={(dialogs.fortsetzen ?? null) !== null} spielNummer={match.number} grenzen={dialogs.fortsetzen ?? null}
+        onFortsetzen={(rest) => { handlers.confirmFortsetzen?.(rest); }} onAbbrechen={() => { handlers.closeFortsetzen?.(); }}
       />
 
       <MoreSheet isOpen={dialogs.showMore} onClose={handlers.closeMore} punkte={mehr.punkte} aktionen={mehr.aktionen} tournamentId={tournamentId} />

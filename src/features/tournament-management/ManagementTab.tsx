@@ -93,7 +93,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Turnierleitung (@SL-159): nur sie bekommt „Korrigieren“, der Helfer den Hinweis „Korrektur über die Turnierleitung“ (@SL-045)
   const istLeitung = useCan('leadMatches', tournament.id);
   const closed = useTournamentClosed(tournament.id); // R3-3: Cockpit nennt den Abschluss statt des Helfer-Satzes
-  const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes, endstandPause } = useFieldMatchSelection({
+  const { feld, setFeld, fieldMatches, currentMatchData, waehleSpiel, ladeNaechstes, endstandPause, gehaltenId } = useFieldMatchSelection({
     numberOfFields: tournament.numberOfFields, schedule, liveMatches, initialMatchId, onInitialMatchConsumed,
   });
   // „Korrigieren“ nach dem Abpfiff (@SL-159): nur die Turnierleitung bekommt den Weg, derselbe wie die Korrektur im Spielplan;
@@ -226,6 +226,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             istLeitung={istLeitung}
             abgeschlossen={closed}
             onKorrigieren={korrektur.onKorrigieren}
+            endstandSteht={currentMatch.id === gehaltenId} // LT-6: „Spiel fortsetzen“ nur, solange der Endstand steht (nicht nach „Weiter“)
             onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}
             kasten={kasten}

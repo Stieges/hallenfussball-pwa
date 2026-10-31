@@ -179,6 +179,9 @@ WM_FILE=""
 # Pflicht wie W-M (ohne SW faellt sie mit W-M weg, Fail-fast).
 MEND_MIGRATION="20261118_008_monitor_endstand.sql"
 MEND_FILE=""
+# 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET): fasst append_match_events neu (Basis 20261117_005, spaetes Fortsetzen -> Klaerung).
+# Das erneute Einspielen von 20261117_005 in der Idempotenz-Kette stellte die alte Fassung wieder her -- danach wieder einspielen.
+FS_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -236,6 +239,11 @@ while IFS= read -r line; do
   if [[ "$(basename "$line")" == "$MEND_MIGRATION" ]]; then
     [[ "$MODE" == "without-sw" ]] && continue
     MEND_FILE="$line"
+  fi
+  # 20261118_009 setzt 20261117_005 voraus (Fail-fast) -- ohne SW faellt sie ebenfalls weg.
+  if [[ "$(basename "$line")" == "20261118_009_fortsetzen_spaet.sql" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    FS_FILE="$line"
   fi
   # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
   [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
@@ -320,6 +328,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   if [[ -n "$A21AS_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A21AS_FILE"; fi
   # A-35: seit 20261117_005 steht die juengste Fassung von append_match_events dort (Basis _003 + Klaerung).
   if [[ -n "$A35_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$A35_FILE"; fi
+  # 20261118_009: seit dort steht die juengste Fassung von append_match_events (Basis _005 + spaetes Fortsetzen).
+  if [[ -n "$FS_FILE" && "$MODE" != "without-sw" ]]; then psql_stdin < "$FS_FILE"; fi
   # R8: 20261028_005 oben setzt matches_bump_change_revision auf die Fassung ohne original_start zurueck.
   if [[ -n "$R8_FILE" ]]; then psql_stdin < "$R8_FILE"; fi
   # M1: 20261028_001 oben setzt server_rules auf die Fassung mit 120 s/5 Schuetzen zurueck.
@@ -345,6 +355,8 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   [[ -n "$A21AS_FILE" ]] && NEWEST_APPEND_FILE="$A21AS_FILE"
   # A-35: seit 20261117_005 steht die juengste Fassung dort -- diese Datei wird mutiert (falls vorhanden).
   [[ -n "$A35_FILE" ]] && NEWEST_APPEND_FILE="$A35_FILE"
+  # 20261118_009: seit dort steht die juengste Fassung -- diese Datei wird mutiert (falls vorhanden).
+  [[ -n "$FS_FILE" ]] && NEWEST_APPEND_FILE="$FS_FILE"
   HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$NEWEST_APPEND_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
@@ -819,7 +831,7 @@ TB="$(uuid_for team:b)"
 {
   tournament_sql "$T_P" '{}' 'null' 10
   echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TA', '$T_P', 'A'), ('$TB', '$T_P', 'B');"
-  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1 w1a w1b w1c w1d w1e w1f; do
+  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2 z1 w1a w1b w1c w1d w1e w1f w1g; do
     echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:$name")', '$T_P', 1, 1, '$TA', '$TB', NULL, NULL);"
   done
   # A-34: Autorenzeile mit Geraete-ID auf eigenem Feld 2 -- ein Aufruf mit Geraete-ID beansprucht das Feld (Steuer je
@@ -1436,7 +1448,12 @@ w1_end() { # $1 Spiel, $2 Minuten seit dem Eintreffen des Abpfiffs (Dezimal)
 }
 w1_end w1a 5
 out="$(call authenticated "$U_HELPER" "$(M w1a)" "$(arr "$(ev REOPEN "$(E w1a-reopen)" '{"at":661000,"clockMs":590000}')")")"
-check Sonstiges "@SL-147: 1 Minute nach dem Abpfiff ohne Netz gewaehlt, nach 5 Minuten angekommen -> Spiel 11 laeuft weiter" \
+# 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET, @SL-147 geaendert 30.10.): spaeter als 2 Minuten -> Klaerungsliste, bleibt beendet.
+check Sonstiges "@SL-147 Z. 2: ohne Netz gewaehlt, nach 5 Minuten angekommen -> Spiel 11 bleibt beendet, Fortsetzen in der Klaerungsliste" \
+  '.results[0].status == "review" and .results[0].code == "AFTER_END" and .state.status == "finished"' "$out"
+w1_end w1g 1
+out="$(call authenticated "$U_HELPER" "$(M w1g)" "$(arr "$(ev REOPEN "$(E w1g-reopen)" '{"at":621000,"clockMs":590000}')")")"
+check Sonstiges "@SL-147 Z. 1: 20 s nach dem Abpfiff gewaehlt, nach 1 Minute angekommen -> Spiel 11 laeuft weiter" \
   '.results[0].status == "accepted" and .state.status == "running"' "$out"
 w1_end w1b 15
 out="$(call authenticated "$U_HELPER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reopen)" '{"at":661000,"clockMs":590000}')")")"
@@ -1446,7 +1463,7 @@ out="$(call authenticated "$U_OWNER" "$(M w1b)" "$(arr "$(ev REOPEN "$(E w1b-reo
 check Sonstiges "@SL-147 Gegenstueck: die Turnierleitung oeffnet auch nach 15 Minuten wieder" '.results[0].status == "accepted"' "$out"
 w1_end w1c 11.6
 out="$(call authenticated "$U_HELPER" "$(M w1c)" "$(arr "$(ev REOPEN "$(E w1c-reopen)" '{"at":661000,"clockMs":590000}')")")"
-check Sonstiges "@SL-147 Grenze: 2 min + 10 min Spielraum, nach 11:36 angekommen -> angenommen" '.results[0].status == "accepted"' "$out"
+check Sonstiges "@SL-147 Grenze: 2 min + 10 min Spielraum, nach 11:36 angekommen -> zur Klaerung (20261118_009), nicht abgelehnt" '.results[0].status == "review" and .results[0].code == "AFTER_END"' "$out"
 w1_end w1d 12.4
 out="$(call authenticated "$U_HELPER" "$(M w1d)" "$(arr "$(ev REOPEN "$(E w1d-reopen)" '{"at":661000,"clockMs":590000}')")")"
 check Sonstiges "@SL-147 Grenze: nach 12:24 angekommen -> abgelehnt" '.results[0].code == "FORBIDDEN_ACTOR"' "$out"

@@ -563,6 +563,7 @@
     "anpfiffVerlaengerung": "Start extra time",
     "entscheidung": "Choose decider",
     "weiterNaechstes": "Next match",
+    "fortsetzen": "Resume match",
     "abgeschlossen": "The tournament is finished",
     "korrigieren": "Correct",
     "mehr": "More",
@@ -657,5 +658,14 @@
     "fehler": "Taking over failed – please try again",
     "turnierAbgeschlossen": "The tournament is finished – taking over is no longer possible",
     "anderesGeraet": "another device"
+  },
+  "fortsetzen": {
+    "titel": "Resume match {{spiel}}",
+    "restzeit": "Set remaining time",
+    "weniger": "Subtract 10 seconds",
+    "mehr": "Add 10 seconds",
+    "hoechstens": "at most {{zeit}}",
+    "abbrechen": "Cancel",
+    "fortsetzen": "Resume"
   }
 }

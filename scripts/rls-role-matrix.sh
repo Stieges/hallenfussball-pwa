@@ -181,6 +181,9 @@
 #   scripts/rls-role-matrix.sh --without-mend      # Alles ("nachher"), aber OHNE 20261118_008 (Monitor-Endstand ueber den
 #                                                   # Monitor-Link, auch nach dem Wiederoeffnen) -- die Zeilen
 #                                                   # (rls-matrix.d/spur-zz-monitor-endstand.sh) muessen hier ROT sein.
+#   scripts/rls-role-matrix.sh --without-fs        # Alles ("nachher"), aber OHNE 20261118_009 (spaetes „Spiel fortsetzen“
+#                                                   # -> Klaerungsliste) -- die Zeilen (rls-matrix.d/spur-zz-fortsetzen-spaet.sh)
+#                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -299,6 +302,8 @@ WITH_A35_REQ=1
 WITH_WM_REQ=1
 # Monitor-Endstand: 20261118_008 im Modus "nachher" einspielen (Gegenprobe --without-mend laesst sie weg; braucht W-M und B-14).
 WITH_MEND_REQ=1
+# 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET): im Modus "nachher" einspielen (Gegenprobe --without-fs laesst sie weg; braucht _005).
+WITH_FS_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -386,6 +391,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-mend)
       WITH_MEND_REQ=0
+      shift
+      ;;
+    --without-fs)
+      WITH_FS_REQ=0
       shift
       ;;
     -h|--help)
@@ -809,6 +818,19 @@ if [[ "$WITH_WM" -eq 1 && "$WITH_MEND_REQ" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL + Monitor-Endstand (20261118_008)"
 elif [[ "$WITH_WM" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, Monitor-Endstand-Gegenprobe (ohne 20261118_008)"
+fi
+# 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET, @SL-147 Z. 2): append_match_events legt ein „Spiel fortsetzen“ des Helfers, das
+# spaeter als 2 Minuten nach dem Abpfiff ankommt, zur Klaerung. Keine Tabelle, keine Policy. Setzt _005 (A-35) voraus
+# (Fail-fast); --without-fs ist die Gegenprobe.
+FS_FILE="$(find_migration 20261118_009)"
+WITH_FS=0
+if [[ "$WITH_A35" -eq 1 && "$WITH_FS_REQ" -eq 1 ]]; then
+  WITH_FS=1
+  echo "Migration einspielen: $(basename "$FS_FILE")" >&2
+  psql_stdin < "$FS_FILE"
+  MODE_LABEL="$MODE_LABEL + Fortsetzen spaet (20261118_009)"
+elif [[ "$WITH_A35" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, Fortsetzen-Gegenprobe (ohne 20261118_009)"
 fi
 
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
@@ -2415,7 +2437,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_MEND_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_MEND_REQ" -eq 1 && "$WITH_FS_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

@@ -445,6 +445,29 @@
       "profil": "app"
     },
     {
+      "id": "cockpit-fortsetzen",
+      "titel": "Cockpit: eben von selbst abgepfiffen, Endstand 2:1 mit „Weiter“ und „Spiel fortsetzen“ (LT-6, @SL-074, @SL-152)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-fortsetzen/live?matchId=00000010-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"match-continue-button\"]",
+      "profil": "app"
+    },
+    {
+      "id": "cockpit-fortsetzen-dialog",
+      "titel": "Cockpit: Blatt „Spiel fortsetzen“ mit Restzeit (LT-6, @SL-074)",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/tournament/hallencup-phase-fortsetzen/live?matchId=00000010-0000-4000-8000-000000000003",
+      "erwarte": "[data-testid=\"match-continue-button\"]",
+      "profil": "app",
+      "klick": [
+        "[data-testid=\"match-continue-button\"]"
+      ]
+    },
+    {
       "id": "cockpit-halbzeitpause",
       "titel": "Cockpit: Halbzeitpause",
       "gruppen": [

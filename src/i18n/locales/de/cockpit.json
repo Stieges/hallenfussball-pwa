@@ -563,6 +563,7 @@
     "anpfiffVerlaengerung": "Anpfiff Verlängerung",
     "entscheidung": "Entscheidung wählen",
     "weiterNaechstes": "Weiter",
+    "fortsetzen": "Spiel fortsetzen",
     "abgeschlossen": "Das Turnier ist abgeschlossen",
     "korrigieren": "Korrigieren",
     "mehr": "Mehr",
@@ -657,5 +658,14 @@
     "fehler": "Übernehmen hat nicht geklappt – bitte erneut versuchen",
     "turnierAbgeschlossen": "Das Turnier ist abgeschlossen – Übernehmen ist nicht mehr möglich",
     "anderesGeraet": "anderes Gerät"
+  },
+  "fortsetzen": {
+    "titel": "Spiel {{spiel}} fortsetzen",
+    "restzeit": "Restzeit einstellen",
+    "weniger": "10 Sekunden weniger",
+    "mehr": "10 Sekunden mehr",
+    "hoechstens": "höchstens {{zeit}}",
+    "abbrechen": "Abbrechen",
+    "fortsetzen": "Fortsetzen"
   }
 }

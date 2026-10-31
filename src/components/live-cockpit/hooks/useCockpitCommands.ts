@@ -23,6 +23,7 @@ import { useCockpitClock } from './useCockpitClock';
 import type { UseEntryFlowsReturn } from './useEntryFlows';
 import type { UseSideOrderReturn } from './useSideOrder';
 import { useTiebreakCommands } from './useTiebreakCommands';
+import { useFortsetzen } from './useFortsetzen';
 import { useUndoGuard } from './useUndoGuard';
 import { korrekturUhrstaende } from '../model/zeitKorrektur';
 import { restzeitSpielMs, restzeitText } from '../model/restzeit';
@@ -117,6 +118,8 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     tournamentId: props.tournamentId, match, readOnly, settings, engineView, melde,
     playSound: useCallback(() => { void sound.play(); }, [sound]),
   });
+  // LT-6 „Spiel fortsetzen“ (@SL-074, @SL-075): nur während der Endstand steht (nicht nach „Weiter“), mit Steuer, wenn die Engine es zulässt
+  const fortsetzen = useFortsetzen({ engineView, kannSteuern: !readOnly, endstandSteht: props.endstandSteht ?? false, reopen: cockpitClock.fortsetzen, melde, meldung: t('meldung.fortgesetzt') });
   const clock = useClockControls({
     match, abschnittspause: cockpitClock.abschnittspause,
     // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.
@@ -206,6 +209,8 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     closeMore: () => setShowMore(false),
     finishConfirmed: () => { setFinishFrage(null); if (!readOnly) { clock.pfeifeAb(); } },
     finishDeclined: () => setFinishFrage(null),
+    closeFortsetzen: fortsetzen.schliesse,
+    confirmFortsetzen: fortsetzen.bestaetige,
     closeSettings: () => setShowSettings(false),
     changeSettings: (newSettings) => { if (onUpdateSettings) { onUpdateSettings(newSettings); } },
     testSound: () => { void sound.play(); },
@@ -224,6 +229,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     dialogs: {
       offen: flows.offen,
       showTimeAdjust, showEventLog, showSettings, showMore, zeit: zeitGrenzen, finishFrage,
+      fortsetzen: fortsetzen.offen ? fortsetzen.grenzen : null,
       // Task R2 Fixrunde 2 (H1): unter readOnly gar nicht, und nur mit beiden Strafstoß-Handlern.
       showPenaltyShootout: tiebreak.showPenaltyDialog && !readOnly && !!props.onRecordPenaltyResult && !!props.onAbortPenaltyShootout,
     },
@@ -236,6 +242,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
       onEditTime: openTimeAdjust,
       onSwitchSides: switchSides,
       onFinish: frageNachAbpfiff,
+      onFortsetzen: fortsetzen.moeglich ? fortsetzen.oeffne : undefined,
       onSettings: () => setShowSettings(true),
       onEventLog: () => setShowEventLog(true),
       onMore: () => setShowMore(true),

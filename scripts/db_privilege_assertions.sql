@@ -1406,4 +1406,17 @@ SELECT 'monitor-signal-definer-no-client-execute',
                         AND position('EXCEPTION WHEN OTHERS THEN' IN p.prosrc) > 0
                    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                   WHERE n.nspname = 'public' AND p.proname = 'monitor_display_signal' AND p.pronargs = 0), false)
+-- C-REOPEN-NACH-ABPFIFF-SPAET (20261118_009, @SL-147 Z. 2, @ZM-180): ein „Spiel fortsetzen“ des Helfers, das spaeter als
+-- 2 Minuten nach dem Eintreffen des Abpfiffs ankommt, legt append_match_events zur Klaerung (AFTER_END) statt es anzuwenden.
+-- Die Weiche steht NACH der Rechenfunktion (eine Ablehnung bleibt Ablehnung), gemessen an recorded_at des Abpfiffs.
+UNION ALL
+SELECT 'fortsetzen-spaet-append-reopen-review',
+       coalesce((SELECT position('20261118_009' IN p.prosrc) > 0
+                        AND position('v_reopen_late_ms := v_now_ms - floor(extract(epoch FROM v_server_mark) * 1000)::bigint;' IN p.prosrc) > 0
+                        AND position('''CONTINUE_LATE''' IN p.prosrc) > position('public.match_continue(v_state' IN p.prosrc)
+                        AND position('IF v_result ->> ''status'' = ''accepted'' AND v_reopen_late_ms IS NOT NULL THEN' IN p.prosrc) > 0
+                        AND p.prosecdef
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
 ;

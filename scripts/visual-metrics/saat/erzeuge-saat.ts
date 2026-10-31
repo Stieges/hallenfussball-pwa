@@ -103,6 +103,11 @@ interface EreignisPlan {
   elfmeter?: { a: boolean[]; b: boolean[]; beendet: boolean }
   /** Zeit seit Anpfiff bis "jetzt" fuer ein laufendes Spiel (ms); Vorgabe: 20 s nach dem letzten Ereignis. */
   jetztNachAnpfiffMs?: number
+  /**
+   * LT-6: beendetes Spiel mit Zeiten relativ zum Laden -- der Abpfiff liegt 2 Sekunden vor „jetzt“, der Endstand steht noch als
+   * Quittung (@SL-152), „Spiel fortsetzen“ ist angeboten (@SL-074).
+   */
+  ebenBeendet?: boolean
 }
 
 let ereignisZaehler = 0
@@ -196,9 +201,10 @@ function wendeEngineAn(t: Tournament, match: Match, teamA: string, teamB: string
   const ohneNull = <T,>(v: T | null): T | undefined => v ?? undefined
   // Laufende Spiele (inkl. Pause, Verlaengerung, Schießen): Zeiten relativ zum Laden, der Lader loest die Marken auf.
   const live = status === 'running'
+  const relativ = live || plan.ebenBeendet === true
   const letztes = ereignisse[ereignisse.length - 1].at
-  const jetzt = plan.jetztNachAnpfiffMs === undefined ? letztes + 20_000 : start + plan.jetztNachAnpfiffMs
-  const zeit = (at: number): number | string => (live ? `@jetzt-ms${at - jetzt >= 0 ? '+' : '-'}${String(Math.abs(at - jetzt))}` : at)
+  const jetzt = plan.jetztNachAnpfiffMs === undefined ? letztes + (plan.ebenBeendet === true ? 2_000 : 20_000) : start + plan.jetztNachAnpfiffMs
+  const zeit = (at: number): number | string => (relativ ? `@jetzt-ms${at - jetzt >= 0 ? '+' : '-'}${String(Math.abs(at - jetzt))}` : at)
   const neu = {
     ...match,
     scoreA: ohneNull(c.score_a), scoreB: ohneNull(c.score_b),
@@ -206,7 +212,8 @@ function wendeEngineAn(t: Tournament, match: Match, teamA: string, teamB: string
     penaltyScoreA: ohneNull(c.penalty_score_a), penaltyScoreB: ohneNull(c.penalty_score_b),
     matchStatus: status,
     decidedBy: ohneNull(c.decided_by),
-    finishedAt: c.finished_at === null ? undefined : new Date(c.finished_at).toISOString(),
+    finishedAt: c.finished_at === null ? undefined
+      : plan.ebenBeendet === true ? `@jetzt-${String(Math.round((jetzt - c.finished_at) / 1000))}s` : new Date(c.finished_at).toISOString(),
     timerElapsedSeconds: c.timer_elapsed_seconds,
     ...(live ? { timerStartTime: `@jetzt-${String(Math.round((jetzt - start) / 1000))}s`, timerElapsedSeconds: 0 } : {}),
     // Aufgabe 1.2 (R-SA8): der Feinstatus aus `live_state` (Halbzeitpause, Verlängerung, Strafstoßschießen) für Monitor und Zuschauer
@@ -363,12 +370,14 @@ async function erzeugeHauptturnier(): Promise<Erzeugt> {
   return { turnier: t, kopien }
 }
 
-export type PhasenArt = 'halbzeitpause' | 'verlaengerung' | 'strafstoss' | 'vorwarnung'
+export type PhasenArt = 'halbzeitpause' | 'verlaengerung' | 'strafstoss' | 'vorwarnung' | 'fortsetzen'
 export const PHASEN: Record<PhasenArt, { id: string; titel: string; code: string; name: string }> = {
   halbzeitpause: { id: 'hallencup-phase-halbzeit', titel: 'Hallencup Phase Halbzeit', code: 'PHASEH', name: 'Halbzeitpause' },
   verlaengerung: { id: 'hallencup-phase-verlaengerung', titel: 'Hallencup Phase Verlängerung', code: 'PHASEV', name: 'Verlängerung läuft' },
   strafstoss: { id: 'hallencup-phase-strafstoss', titel: 'Hallencup Phase Strafstoß', code: 'PHASES', name: 'Strafstoßschießen läuft' },
   vorwarnung: { id: 'hallencup-phase-vorwarnung', titel: 'Hallencup Phase Vorwarnung', code: 'PHASEW', name: 'Spiel kurz vor dem Ende (Restzeit 2:40, nächstes Spiel steht an)' },
+  // LT-6 (@SL-074, @SL-152): Halbfinale 1 eben (2 s vor dem Laden) mit Ablauf bei 2:1 beendet -- Endstand mit „Weiter“ und „Spiel fortsetzen“
+  fortsetzen: { id: 'hallencup-phase-fortsetzen', titel: 'Hallencup Phase Fortsetzen', code: 'PHASEF', name: 'Eben von selbst abgepfiffen (Endstand 2:1, Spiel fortsetzen)' },
 }
 
 /**
@@ -402,8 +411,11 @@ async function erzeugePhasenturnier(art: PhasenArt, nr: number): Promise<Erzeugt
   const { kopien, ersetze } = werkbank(t)
   const gruppe = t.matches.filter((m) => !m.isFinal)
   if (gruppe.length !== 2) { throw new Error(`Phasen-Turnier: ${String(gruppe.length)} Gruppenspiele statt 2`) }
+  // LT-6: die Gruppenspiele liegen hier vor dem Laden (30 Tage vor der Saat-Zeit) -- sonst hielte das Cockpit ihren Endstand
+  // (Abpfiff nach „jetzt“) statt den des eben beendeten Halbfinales, und „Spiel fortsetzen“ stuende nicht da.
+  const gruppenStart = art === 'fortsetzen' ? start - 30 * 86_400_000 : start
   gruppe.forEach((m, i) => {
-    ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore: [seiteId(m, 'slotA')], bis: 'ende' }, start + i * 900_000))
+    ersetze(m, wendeEngineAn(t, m, seiteId(m, 'slotA'), seiteId(m, 'slotB'), { tore: [seiteId(m, 'slotA')], bis: 'ende' }, gruppenStart + i * 900_000))
   })
   schliesseGruppenAb(t)
   const [hf1] = halbfinaleVon(t)
@@ -414,6 +426,7 @@ async function erzeugePhasenturnier(art: PhasenArt, nr: number): Promise<Erzeugt
     // (10:00 Spielzeit, 1 Minute Halbzeitpause), das 2. Halbfinale ist das "Nächste" auf Feld 1.
     : art === 'vorwarnung' ? { tore: [a, b], nummern: [8, 4], bis: 'laeuft', toreBisMs: 440_000, jetztNachAnpfiffMs: 440_000 + 60_000 }
     : art === 'verlaengerung' ? { tore: [a, b], nummern: [8, 4], bis: 'ende', verlaengerung: { laeuft: true } }
+    : art === 'fortsetzen' ? { tore: [a, b, a], nummern: [8, 4, 9], bis: 'ende', ebenBeendet: true }
     : { tore: [], bis: 'ende', verlaengerung: {}, elfmeter: { a: [true, false], b: [false, true], beendet: false } }
   ersetze(hf1, wendeEngineAn(t, hf1, a, b, plan, start + 20_000_000))
   // 2. Halbfinale, Platz 3 und Finale bleiben ungespielt.
@@ -503,7 +516,7 @@ export async function erzeugeSaat(): Promise<SaatDatei> {
       mitVerlaengerung: rolle((m) => m.decidedBy === 'overtime'),
       mitStrafstossschiessen: rolle((m) => m.decidedBy === 'penalty'),
       ungespieltesSpiel: rolle((m) => m.finalType === 'thirdPlace'),
-      phasenTurniere: Object.fromEntries(arten.map((art, i) => [art, { turnierId: PHASEN[art].id, spielId: p[i].turnier.matches.find((m) => m.matchStatus === 'running')?.id }])),
+      phasenTurniere: Object.fromEntries(arten.map((art, i) => [art, { turnierId: PHASEN[art].id, spielId: p[i].turnier.matches.find((m) => m.matchStatus === 'running' || (art === 'fortsetzen' && m.isFinal && m.matchStatus === 'finished'))?.id }])),
       monitore: h.turnier.monitors?.map((m) => m.id),
     },
   }
