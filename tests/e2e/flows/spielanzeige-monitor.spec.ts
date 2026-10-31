@@ -128,17 +128,23 @@ test.describe('@ZM-160 @ZM-161 Live-Folie Feld 1 (1280×720)', () => {
     await bild(page, 'monitor-1280-live-weste');
   });
 
-  test('@ZM-138 nach dem Anpfiff stehen Logo bzw. Initialen klein vor dem Namen', async ({ page }) => {
+  test('@ZM-138 @ZM-157 nach dem Anpfiff stehen Logo bzw. Initialen klein, mittig über dem Namen und unter dem Kasten', async ({ page }) => {
     await oeffne(page, 'mon-live', 'live-box-home');
     for (const seite of ['home', 'away']) {
       const lage = await page.evaluate((s) => {
         const a = document.querySelector(`[data-testid="live-team-${s}-avatar"]`)?.getBoundingClientRect();
-        const n = document.querySelector(`[data-testid="live-name-${s}"] [data-teamname]`)?.getBoundingClientRect();
+        const nameEl = document.querySelector(`[data-testid="live-name-${s}"] [data-teamname]`);
+        const lauf = nameEl ? document.createRange() : null;
+        lauf?.selectNodeContents(nameEl!);
+        const zeilen = lauf ? Array.from(lauf.getClientRects()) : [];
         const k = document.querySelector(`[data-testid="live-box-${s}"]`)?.getBoundingClientRect();
-        return a && n && k ? { a: { l: a.left, r: a.right, t: a.top, b: a.bottom }, n: { l: n.left }, k: { b: k.bottom } } : null;
+        return a && zeilen.length > 0 && k
+          ? { a: { cx: (a.left + a.right) / 2, t: a.top, b: a.bottom }, n: { cx: (Math.min(...zeilen.map((z) => z.left)) + Math.max(...zeilen.map((z) => z.right))) / 2, t: Math.min(...zeilen.map((z) => z.top)) }, k: { b: k.bottom } }
+          : null;
       }, seite);
       expect(lage, `Avatar ${seite}`).not.toBeNull();
-      expect(lage!.a.r, 'Avatar steht vor dem Namen').toBeLessThanOrEqual(lage!.n.l + TOLERANZ_PX);
+      expect(Math.abs(lage!.a.cx - lage!.n.cx), 'Avatar mittig über dem Namen').toBeLessThanOrEqual(TOLERANZ_PX + 0.5);
+      expect(lage!.a.b, 'Avatar über dem Namen').toBeLessThanOrEqual(lage!.n.t + TOLERANZ_PX);
       expect(lage!.a.t, 'Avatar liegt unter dem Kasten').toBeGreaterThanOrEqual(lage!.k.b - TOLERANZ_PX);
     }
   });

@@ -157,8 +157,9 @@ test.describe('A-36c Monitor 1280×720', () => {
   test('@ZM-039 Spielplan Feld 1: das Finale trägt Statuspunkt „live“, die Halbfinals ihre Endstände', async ({ page }) => {
     await oeffne(page, MONITOR, '/#/display/hallencup-messlauf/mon-plan-feld', '[data-testid="monitor-match-row"]');
     const finale = page.locator(`[data-testid="monitor-match-row"][data-match-id="${FINALE}"]`);
-    // Finale ist das letzte Spiel auf Feld 1 vor Platz 3: eventuell auf Seite 2 (6 Zeilen je Seite)
-    for (let versuch = 0; versuch < 4 && (await finale.count()) === 0; versuch += 1) {
+    // Finale ist das letzte Spiel auf Feld 1 vor Platz 3: auf einer späteren Seite (4 Zeilen je Seite, @ZM-185); jede Seite steht 15 s
+    test.setTimeout(120_000);
+    for (let versuch = 0; versuch < 6 && (await finale.count()) === 0; versuch += 1) {
       await page.waitForTimeout(16000);
     }
     await expect(finale).toHaveAttribute('data-status', 'running');
