@@ -72,12 +72,14 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
   /**
    * Die erste Übertragung erreicht den Server, die Antwort geht verloren. Das Gerät schickt dasselbe
    * Tor (gleiche Ereignis-ID) erneut. `answers` hält, was der Server auf jeden Versuch geantwortet hat.
+   * `keepRetriesOffServer`: jede Wiederholung bricht ab, bevor sie den Server erreicht (`serverCalls`
+   * bleibt 1) -- übertragen kann das Gerät den Eintrag dann nur über den Push zeigen.
    */
   async function loseFirstResponse(
     page: Page,
-    options: { holdCatchUp?: boolean } = {}
-  ): Promise<{ attempts: () => number; answers: string[]; sent: AppendAsRoleEvent[][] }> {
-    const state = { count: 0, answers: [] as string[], sent: [] as AppendAsRoleEvent[][] };
+    options: { holdCatchUp?: boolean; keepRetriesOffServer?: boolean } = {}
+  ): Promise<{ attempts: () => number; serverCalls: () => number; answers: string[]; sent: AppendAsRoleEvent[][] }> {
+    const state = { count: 0, serverCalls: 0, answers: [] as string[], sent: [] as AppendAsRoleEvent[][] };
     // Das Nachladen (GET match_events, auch das 5-s-Ausweichen) würde den Eintrag vor der Wiederholung
     // bestätigen und den zweiten Versuch überflüssig machen: bis zum zweiten Versuch zurückhalten.
     let releaseCatchUp: () => void = () => undefined;
@@ -98,6 +100,11 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
         releaseCatchUp();
       }
       state.sent.push(appendBodyOf(route).p_events);
+      if (options.keepRetriesOffServer && state.count >= 2) {
+        await route.abort('connectionreset');
+        return;
+      }
+      state.serverCalls += 1;
       const response = await route.fetch();
       const json = (await response.json()) as { results: Array<{ status: string }> };
       state.answers.push(json.results[0]?.status ?? 'leer');
@@ -107,7 +114,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       }
       await route.fulfill({ response, json });
     });
-    return { attempts: () => state.count, answers: state.answers, sent: state.sent };
+    return { attempts: () => state.count, serverCalls: () => state.serverCalls, answers: state.answers, sent: state.sent };
   }
 
   test('@FU-010 Bestätigung verloren: dasselbe Tor kommt erneut, der Server antwortet "duplicate", es gibt es genau einmal und es gilt als übertragen', async ({ browser }) => {
@@ -147,27 +154,34 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
     }
   });
 
-  test('@FU-010 Bestätigung verloren, Live-Verbindung steht: das Gerät zeigt das Tor als übertragen', async ({ browser }) => {
-    test.setTimeout(60_000);
-    const ids = engineCupIds('DOPPELTLIVE');
-    await expectSeededEngineMatch(engineCupTarget('DOPPELTLIVE'));
-    const { context, page } = await newRoleContext(browser, 'owner');
-    try {
-      await openSettledCockpit(page, ids.tournamentId, ids.matchId);
-      const lost = await loseFirstResponse(page);
-      await enterGoal(page, 'home');
-      // Erst warten, bis der Versuch mit verlorener Antwort passiert ist (sonst steht der Zähler noch auf 0),
-      // dann die Wiederholung (1 s) und den Push abwarten: das Gerät muss das Tor als übertragen zeigen.
-      await expect.poll(() => lost.attempts(), { timeout: 10000 }).toBeGreaterThanOrEqual(1);
-      await page.waitForTimeout(3000);
-      await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 5000 });
-      await expect(page.locator('[data-testid="sync-wait-details"]')).toHaveCount(0);
-      // Push-Weg erzwungen: genau ein Sendeversuch (kein stiller Erfolg über eine Wiederholung mit "duplicate").
-      expect(lost.attempts()).toBe(1);
-      expect(lost.answers).toEqual(['accepted']);
-    } finally {
-      await context.close();
-    }
+  test.describe('Live-Verbindung steht', () => {
+    // Der erste Versuch verbraucht die Saat DOPPELTLIVE; eine automatische Wiederholung liefe nur gegen den
+    // verbrauchten Stand (C-FU010-CLOUD-WACKELT) -- wie nikolaus/turniertag keine Wiederholung.
+    test.describe.configure({ retries: 0 });
+
+    test('@FU-010 Bestätigung verloren, Live-Verbindung steht: das Gerät zeigt das Tor als übertragen', async ({ browser }) => {
+      test.setTimeout(60_000);
+      const ids = engineCupIds('DOPPELTLIVE');
+      const baseRows = await expectSeededEngineMatch(engineCupTarget('DOPPELTLIVE'));
+      const { context, page } = await newRoleContext(browser, 'owner');
+      try {
+        await openSettledCockpit(page, ids.tournamentId, ids.matchId);
+        // Push-Weg erzwungen: Wiederholungen (nach 1 s, 2 s, 5 s) erreichen den Server nicht. Ob das Gerät
+        // vor dem Push schon wiederholt, ist Zeitfrage (CI-Last) und hier gleichgültig -- ein stiller Erfolg
+        // über eine Wiederholung mit "duplicate" ist ausgeschlossen.
+        const lost = await loseFirstResponse(page, { keepRetriesOffServer: true });
+        await enterGoal(page, 'home');
+        await expect.poll(() => lost.serverCalls(), { timeout: 10000 }).toBe(1);
+        await expect(page.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 15000 });
+        await expect(page.locator('[data-testid="sync-wait-details"]')).toHaveCount(0);
+        expect(lost.serverCalls()).toBe(1);
+        expect(lost.answers).toEqual(['accepted']);
+        expect(lost.sent.every((events) => events[0]?.id === lost.sent[0][0].id)).toBe(true);
+        expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows + 1);
+      } finally {
+        await context.close();
+      }
+    });
   });
 
   test('@FU-011 Karte wird vom Server nicht übernommen: Tor und Zeitstrafe kommen auf allen Geräten an, nur die Karte ist "nicht übernommen"', async ({ browser, asRole }) => {
