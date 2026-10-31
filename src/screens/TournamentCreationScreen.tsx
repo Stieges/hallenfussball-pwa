@@ -807,20 +807,25 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
             // @OB-022 (Haupttaste ohne Scrollen erreichbar): am Handy bleibt die Fußleiste „Zurück · Weiter“ am unteren Fensterrand stehen
             position: 'sticky',
             bottom: 0,
-            zIndex: cssVars.zIndex.navigation,
+            zIndex: cssVars.zIndex.sticky,
             marginTop: cssVars.spacing.md,
             paddingTop: cssVars.spacing.sm,
             paddingBottom: `calc(${cssVars.spacing.sm} + env(safe-area-inset-bottom, 0px))`,
             background: cssVars.colors.background,
             borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
-          } : { marginTop: '24px' }}
+          } : { marginTop: cssVars.spacing.lg }}
           data-testid="wizard-footer-bar"
         >
+          {/* G4 / WCAG 2.4.11: fokussierte Felder landen nicht hinter der festen Leiste (Leistenhöhe + Safe-Area) */}
+          {isMobile && (
+            <style>{`html { scroll-padding-bottom: calc(${cssVars.touchTargets.primary} + ${cssVars.spacing.xl} + env(safe-area-inset-bottom, 0px)); }`}</style>
+          )}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            // G4: am Handy „Zurück · (Speichern) · Weiter“ immer in EINER Zeile
+            flexWrap: 'nowrap',
             gap: isMobile ? cssVars.spacing.sm : 0,
           }}>
             <Button
@@ -830,7 +835,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               icon={<Icons.ChevronLeft />}
               size={isMobile ? 'sm' : 'md'}
             >
-              Zurück
+              {t('navigation.back')}
             </Button>
 
             <div className="wizard-footer-actions">
@@ -856,7 +861,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   style={{ minHeight: cssVars.touchTargets.primary }}
                   data-primary
                 >
-                  Weiter
+                  {t('navigation.next')}
                 </Button>
               )}
             </div>
@@ -953,20 +958,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           .wizard-footer-actions {
             gap: ${cssVars.spacing.sm};
             justify-content: flex-end;
-            flex-wrap: wrap;
+            flex: 1 1 auto;
+            min-width: 0;
           }
-        }
 
-        @media (max-width: 400px) {
-          .wizard-footer-actions {
-            flex-direction: column;
-            width: 100%;
-          }
-          
+          /* Buttons teilen sich die Zeile; „Weiter“ behält durch flex-grow den Vorrang */
           .wizard-footer-actions > button {
-             width: 100% !important;
-             margin-left: 0 !important;
-             margin-right: 0 !important;
+            flex: 1 1 auto;
+            min-width: 0;
           }
         }
       `}</style>

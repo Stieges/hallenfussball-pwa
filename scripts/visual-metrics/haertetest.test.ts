@@ -318,6 +318,13 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
       expect(x.metrik === 'verdeckt.schwebend' ? x.typ === 'WARNUNG' : /\[bekannt: C-[A-Z0-9-]+\]/.test(JSON.stringify(x)), JSON.stringify(x)).toBe(true)
     }
   })
+  it('Ausnahmeliste greift (Fixture): Fuß-Links unter der festen Tab-Leiste sind eine harte Verdeckung, die Ausnahmeliste stuft sie zur WARNUNG mit Befund-Kennung herab', async () => {
+    const r = await messe('--ziel', FIX('verdeckt-fuss-unter-leiste.html'), '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    expect(r.b.status, r.out).not.toBe('BLOCKED')
+    const a = verdeckt(r.b)
+    expect(a.length).toBeGreaterThan(0)
+    expect(a.every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('C-FUSS-LINKS-UNTER-LEISTE'))).toBe(true)
+  })
   it('Ausnahmeliste: jeder Eintrag nennt Befund-Kennung, Begruendung und mindestens Element oder Verdecker', () => {
     const gw = JSON.parse(readFileSync(join(ORDNER, 'grenzwerte.json'), 'utf8')) as { grenzwerte: { id: string; typ: string; ausnahmeliste?: { befund: string; selektor?: string; verdecktVon?: string; begruendung: string }[] }[] }
     const regel = gw.grenzwerte.find((e) => e.id === 'verdeckt.bedienelement')
@@ -329,13 +336,11 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
       expect(a.begruendung.length).toBeGreaterThan(10)
     }
   })
-  it('Ausnahmeliste greift: Fuss-Links unter der Tab-Leiste sind WARNUNG mit Befund-Kennung, nicht HART; das Cockpit hat keinen Sound-Hinweis mehr, der etwas verdeckt (C-COCKPIT-SOUNDHINWEIS-VERDECKT behoben, Aufgabe 2.4)', async () => {
+  it('Fuss-Links: keine Verdeckung mehr auf /#/archiv (Rückfall-Schutz F-02); das Cockpit hat keinen Sound-Hinweis mehr, der etwas verdeckt (C-COCKPIT-SOUNDHINWEIS-VERDECKT behoben, Aufgabe 2.4)', async () => {
     const start = await messe('--app', '/#/archiv', '--erwarte', '[data-testid="footer-impressum-link"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(start.b.status, start.out).not.toBe('BLOCKED')
-    const a = verdeckt(start.b)
-    // Usability F (F-02, @OB-022): die Fußzeile reserviert jetzt die Höhe der unteren Leiste, die Fuß-Links liegen nicht mehr darunter.
-    // Der Test verlangt nicht, dass die App diesen Fehler hat: gibt es Meldungen, sind sie WARNUNG mit Befund-Kennung, nie HART.
-    expect(a.every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('C-FUSS-LINKS-UNTER-LEISTE'))).toBe(true)
+    // Rückfall-Schutz für F-02 (Usability F, @OB-022): die Fuß-Links liegen nicht mehr unter der Tab-Leiste – keine Verdeckung, auch keine bekannte.
+    expect(verdeckt(start.b)).toHaveLength(0)
     const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016', '--erwarte', '[data-testid="scoreboard"]', '--saat', 'hallencup-messlauf', '--profil', 'desktop-1440', '--varianten', 'normal', ...SCHNELL)
     expect(cockpit.b.status, cockpit.out).not.toBe('BLOCKED')
     const c = verdeckt(cockpit.b)

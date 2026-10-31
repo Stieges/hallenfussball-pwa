@@ -1,4 +1,8 @@
 {
+  "navigation": {
+    "back": "Back",
+    "next": "Next"
+  },
   "step1": {
     "title": "Sport & Tournament Type",
     "sportLabel": "Sport",

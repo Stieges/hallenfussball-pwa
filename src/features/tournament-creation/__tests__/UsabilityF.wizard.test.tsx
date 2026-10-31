@@ -2,10 +2,9 @@
  * Usability F (Handy) im Assistenten und in der Verwaltung (Prüfbericht 2026-10-30): F-06, F-07, F-08, F-09, F-10.
  * Szenarien: @OB-022 (Tippflächen ≥ 44, Eingabeschrift ≥ 16, Haupttaste ≥ 56). Jeder Schritt des Assistenten ist eine eigene
  * Instanz (Schritt 1 Stammdaten, 3 Modus mit Smart-Konfiguration und Finalrunde, 5 Teams) und wird einzeln geprüft.
- * jsdom misst keine Pixel; geprüft werden die gesetzten Token-Stile und die Modul-Stilregeln, die echte Messung ist
- * `npm run visual:metrics` (Ansichten wizard-neu-1 bis -6, Handy-Profile).
+ * jsdom misst keine Pixel; geprüft werden die gesetzten Token-Stile. Die echten Maße (Schritt 3 und 5, 360 und 390) misst
+ * tests/e2e/usability-f-handy.spec.ts, dazu `npm run visual:metrics` (Ansichten wizard-neu-1 bis -6).
  */
-import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { cssVars } from '../../../design-tokens';
@@ -20,42 +19,8 @@ import { TournamentFooter } from '../../../components/schedule/TournamentFooter'
 vi.mock('../../../hooks/useTournaments', () => ({ useTournaments: () => ({ tournaments: [] }) }));
 
 const MIN = cssVars.touchTargets.minimum;
-const lies = (rel: string): string => readFileSync(new URL(rel, import.meta.url), 'utf8');
-const regel = (css: string, selektor: string): string => {
-  const i = css.indexOf(`${selektor} {`);
-  if (i < 0) { throw new Error(`Regel ${selektor} fehlt`); }
-  return css.slice(i, css.indexOf('}', i));
-};
-
-describe('F-07 Schritt 3: Smart-Konfiguration (Modul-Stile)', () => {
-  const css = lies('../components/SmartConfig.module.css');
-
-  it('@OB-022 Zahlenfelder Stunden/Minuten: Schrift 16 px (Token lg) und Höhe ≥ 44', () => {
-    const r = regel(css, '.hoursInput,\n.minutesInput');
-    expect(r).toContain('font-size: var(--font-size-lg)');
-    expect(r).toContain('min-height: var(--touch-target-minimum)');
-  });
-
-  it('@OB-022 Auswahlfeld der Randbedingungen: Schrift 16 px und Höhe ≥ 44, kein Festmaß 32', () => {
-    const r = regel(css, '.constraintSelect');
-    expect(r).toContain('font-size: var(--font-size-lg)');
-    expect(r).toContain('height: var(--touch-target-minimum)');
-    expect(r).not.toContain('32px');
-  });
-
-  it('@OB-022 „Optimale Konfiguration berechnen“, Umschalter, „Letzte Einstellung“ und die Zeilen der Randbedingungen: ≥ 44 hoch', () => {
-    for (const s of ['.calculateButton', '.toggleButton', '.quickApplyButton', '.constraintRow']) {
-      expect(regel(css, s), s).toContain('min-height: var(--touch-target-minimum)');
-    }
-  });
-});
 
 describe('F-07 Schritt 5: Gruppenwahl und Teamliste', () => {
-  it('@OB-022 „Gruppe für …“: Schrift 16 px (Token lg)', () => {
-    const css = lies('../Step4_Teams.module.css');
-    expect(regel(css, '.groupSelect')).toContain('font-size: var(--font-size-lg)');
-  });
-
   it('@OB-022 Farbauswahl: jede Voreinstellung ist als Taste mindestens 44 × 44', () => {
     render(<ColorPicker label="Trikot" value="#FF0000" onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /FF0000/i }));
@@ -121,24 +86,5 @@ describe('F-09 Kontaktlinks der Turnierseite', () => {
     const links = screen.getAllByRole('link');
     expect(links).toHaveLength(3);
     for (const l of links) { expect(l.style.minHeight).toBe(MIN); }
-  });
-});
-
-describe('F-10 Segmenttasten Tabellen', () => {
-  it('Gestaltung: die Segmente berühren sich nicht (Abstand xs im Segment)', async () => {
-    const quelle = lies('../../tournament-management/TabellenTab.tsx');
-    const i = quelle.indexOf('const segmentGroupStyle');
-    expect(quelle.slice(i, quelle.indexOf('};', i))).toContain('gap: cssVars.spacing.xs');
-  });
-});
-
-describe('Kopf des Assistenten: „Zurück“ und „Weiter“', () => {
-  it('@OB-022 Quelltext: „Zurück“ ≥ 44 hoch, „Weiter“ als Haupttaste markiert und ≥ 56', () => {
-    const q = lies('../../../screens/TournamentCreationScreen.tsx');
-    const zurueck = q.slice(q.indexOf('onClick={handleBackToDashboard}'), q.indexOf('Icons.ChevronLeft'));
-    expect(zurueck).toContain('minHeight: cssVars.touchTargets.minimum');
-    const weiter = q.slice(q.indexOf('handleStepChange(Math.min(6, step + 1))'), q.indexOf('Weiter\n'));
-    expect(weiter).toContain('minHeight: cssVars.touchTargets.primary');
-    expect(weiter).toContain('data-primary');
   });
 });

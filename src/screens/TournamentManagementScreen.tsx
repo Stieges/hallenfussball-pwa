@@ -226,7 +226,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   // Im Rahmen (Cockpit-Vollbild, @SL-140) füllt der Inhalt die Resthöhe und gibt sie dem Cockpit weiter (K3); sonst scrollt die Seite wie bisher
   const contentStyle: CSSProperties = vollbild
     ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }
-    : { flex: 1, overflow: 'auto', paddingBottom: isMobile ? '72px' : undefined };
+    : { flex: 1, overflow: 'auto', paddingBottom: isMobile ? cssVars.spacing.md : undefined }; // Platz über der unteren Leiste reserviert die Fußzeile
 
   return (
     <div style={containerStyle}>

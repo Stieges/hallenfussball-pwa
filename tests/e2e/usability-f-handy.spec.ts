@@ -43,6 +43,35 @@ const mass = (page: Page, selektor: string, nr = 0): Promise<Mass> =>
     return { w: r.width, h: r.height, fontSize: parseFloat(getComputedStyle(el).fontSize), primary: el.hasAttribute('data-primary') };
   }, [selektor, nr]);
 
+
+/** Misst im Bereich `wurzel` jedes Bedienelement: Tippfläche ≥ 44 (bei Auswahlknopf/Häkchen zählt die Beschriftungszeile), Eingabeschrift ≥ 16 px,
+ *  kein „…“ in Auswahlfeldern (Text passt in die Breite). Liefert Verstöße als lesbare Zeilen. */
+const messeBereich = (page: Page, wurzel: string) =>
+  page.evaluate((w) => {
+    const root = document.querySelector(w);
+    if (!root) { throw new Error(`Bereich ${w} fehlt`); }
+    const sichtbar = (el: Element) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
+    const befunde: string[] = [];
+    const ctx = document.createElement('canvas').getContext('2d')!;
+    for (const el of Array.from(root.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [role="button"], [role="tab"]')).filter(sichtbar)) {
+      const art = el instanceof HTMLInputElement ? el.type : el.tagName.toLowerCase();
+      const name = el.getAttribute('data-testid') ?? el.getAttribute('aria-label') ?? (el.textContent ?? '').trim().slice(0, 24) ?? art;
+      const zeile = ['checkbox', 'radio'].includes(art) ? el.closest('label') : null;
+      const r = (zeile ?? el).getBoundingClientRect();
+      if (r.height < 43.5) { befunde.push(`${art} „${name}“ ${r.width.toFixed(0)}×${r.height.toFixed(1)} (Höhe < 44)`); }
+      const cs = getComputedStyle(el);
+      if (['select', 'textarea', 'text', 'number', 'email', 'tel', 'time', 'date'].includes(art) && parseFloat(cs.fontSize) < 16) { befunde.push(`${art} „${name}“ Schrift ${cs.fontSize} (< 16)`); }
+      // Ausnahme (eigener Befund, nicht F): „Timer-Richtung“ im Panel Match Cockpit – die Karte begrenzt die Breite (@OB-021), der Wert wird dort gekürzt
+      if (el instanceof HTMLSelectElement && el.getAttribute('aria-label') !== 'Timer-Richtung') {
+        ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const text = el.selectedOptions[0]?.textContent ?? '';
+        const frei = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        if (ctx.measureText(text).width > frei + 1) { befunde.push(`select „${name}“ Wert „${text}“ passt nicht in die Breite (${ctx.measureText(text).width.toFixed(0)} > ${frei.toFixed(0)}) – „…“`); }
+      }
+    }
+    return befunde;
+  }, wurzel);
+
 async function bild(page: Page, name: string, testInfo: { outputDir: string }) {
   const ordner = process.env.UF_SCR ?? testInfo.outputDir;
   mkdirSync(ordner, { recursive: true });
@@ -121,6 +150,109 @@ test.describe('Usability F am Handy', () => {
       expect(titel.ellipsis).toBe(false);
       expect(titel.abgeschnitten).toBe(false);
       await bild(page, `turnierseite-${g.name}-nachher`, testInfo);
+    });
+
+    test(`@OB-022 @OB-025 ${g.name}: Assistent Schritt 3 – alle Bedienelemente ≥ 44, Eingaben ≥ 16 px, Smart-Konfiguration ohne „…“`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width: g.width, height: g.height });
+      await page.goto('/#/tournament/new?step=3');
+      await page.getByText(/Smart-Konfiguration/).first().click();
+      await expect(page.locator('.step-content select').first()).toBeVisible();
+      // „Spieldauer“ und „Pausendauer“ einschalten, damit die längsten Werte („10 Min“) sichtbar sind
+      for (const box of await page.locator('#smart-config-panel input[type="checkbox"]').all()) { await box.check(); }
+      await page.waitForTimeout(300);
+      expect(await messeBereich(page, '.step-content')).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+      await bild(page, `wizard-3-${g.name}-nachher`, testInfo);
+    });
+
+    test(`@OB-022 ${g.name}: Assistent Schritt 5 – Teamzeilen, Gruppenwahl und Farbauswahl ≥ 44, Eingaben ≥ 16 px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width: g.width, height: g.height });
+      await page.goto('/#/tournament/new?step=5');
+      await expect(page.getByTestId('wizard-add-team')).toBeVisible();
+      for (let i = 0; i < 2; i++) { await page.getByTestId('wizard-add-team').click(); }
+      await expect(page.locator('[data-testid^="wizard-team-details-"]').first()).toBeVisible();
+      expect(await messeBereich(page, '.step-content')).toEqual([]);
+      // Farbauswahl öffnen: jede Voreinstellung ≥ 44 × 44
+      await page.locator('[data-testid^="wizard-team-details-"]').first().click();
+      await page.locator('button[aria-haspopup="true"]').first().click();
+      const farben = page.getByRole('option');
+      expect(await farben.count(), 'Farbvoreinstellungen sichtbar').toBeGreaterThan(4);
+      for (let i = 0; i < await farben.count(); i++) {
+        const m = await mass(page, '[role="option"]', i);
+        expect(m.h).toBeGreaterThanOrEqual(44);
+        expect(m.w).toBeGreaterThanOrEqual(44);
+      }
+      expect(await messeBereich(page, '.step-content')).toEqual([]);
+      await bild(page, `wizard-5-${g.name}-nachher`, testInfo);
+    });
+
+    test(`@OB-022 ${g.name}: Assistent-Fußleiste – „Zurück“ und „Weiter“ in einer Zeile, Weiter ≥ 56, Zurück ≥ 44, Fokus landet nicht hinter der Leiste`, async ({ page }) => {
+      await page.setViewportSize({ width: g.width, height: g.height });
+      for (const schritt of [1, 3, 5]) {
+        await page.goto(`/#/tournament/new?step=${String(schritt)}`);
+        const leiste = page.getByTestId('wizard-footer-bar');
+        await expect(leiste).toBeVisible();
+        const box = await page.evaluate(() => {
+          const bar = document.querySelector<HTMLElement>('[data-testid="wizard-footer-bar"]')!;
+          const knoepfe = Array.from(bar.querySelectorAll('button')).map((b) => { const r = b.getBoundingClientRect(); return { text: (b.textContent ?? '').trim(), top: r.top, bottom: r.bottom, h: r.height, left: r.left, right: r.right }; });
+          const r = bar.getBoundingClientRect();
+          return { knoepfe, leiste: { top: r.top, bottom: r.bottom, h: r.height }, scrollPadding: parseFloat(getComputedStyle(document.documentElement).scrollPaddingBottom), fenster: window.innerHeight, breite: window.innerWidth };
+        });
+        const weiter = box.knoepfe.find((k) => k.text === 'Weiter')!;
+        const zurueck = box.knoepfe.find((k) => k.text === 'Zurück')!;
+        expect(Math.abs(weiter.top - zurueck.top), `Schritt ${String(schritt)}: Zurück und Weiter in einer Zeile`).toBeLessThanOrEqual(30);
+        expect(weiter.left).toBeGreaterThan(zurueck.right - 1);
+        expect(weiter.h).toBeGreaterThanOrEqual(56);
+        expect(zurueck.h).toBeGreaterThanOrEqual(44);
+        for (const k of box.knoepfe) { expect(k.right, 'Taste im Bild').toBeLessThanOrEqual(box.breite + 0.5); }
+        expect(box.leiste.bottom).toBeLessThanOrEqual(box.fenster + 0.5);
+        // Leiste höchstens eine Tastenreihe hoch (nicht mehr gestapelt)
+        expect(box.leiste.h).toBeLessThan(56 + 40);
+        expect(box.scrollPadding, 'scroll-padding-bottom ≥ Leistenhöhe').toBeGreaterThanOrEqual(box.leiste.h);
+      }
+      // Fokus: das letzte Eingabefeld von Schritt 1 landet nach focus() nicht hinter der Leiste
+      await page.goto('/#/tournament/new?step=1');
+      const felder = page.locator('.step-content input:visible');
+      const n = await felder.count();
+      await felder.nth(n - 1).focus();
+      await page.waitForTimeout(300);
+      const hinter = await page.evaluate(() => {
+        const bar = document.querySelector<HTMLElement>('[data-testid="wizard-footer-bar"]')!.getBoundingClientRect();
+        const el = document.activeElement as HTMLElement;
+        return el.getBoundingClientRect().bottom > bar.top + 0.5 && el.getBoundingClientRect().top < bar.bottom;
+      });
+      expect(hinter, 'fokussiertes Feld liegt nicht hinter der Leiste').toBe(false);
+    });
+
+    test(`@OB-022 ${g.name}: Turnierseite – Fuß-Links am Seitenende nicht von „Teilen/Als PDF“ oder der unteren Leiste verdeckt`, async ({ page, seedIndexedDB }) => {
+      await page.setViewportSize({ width: g.width, height: g.height });
+      await seedIndexedDB({ tournaments: [turnier()] });
+      await page.goto(`/#/tournament/${ID}/schedule`);
+      await expect(page.getByTestId('schedule-action-pdf')).toBeAttached();
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(400);
+      for (const id of ['footer-impressum-link', 'footer-datenschutz-link']) {
+        const verdeckt = await page.evaluate((testid) => {
+          const link = document.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
+          if (!link) { throw new Error(`${testid} fehlt`); }
+          const r = link.getBoundingClientRect();
+          const oben = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return oben !== null && !(oben === link || link.contains(oben) || oben.contains(link));
+        }, id);
+        expect(verdeckt, id).toBe(false);
+      }
+    });
+
+    test(`@OB-022 ${g.name}: Tabellen – die Segmenttasten berühren sich nicht`, async ({ page, seedIndexedDB }) => {
+      await page.setViewportSize({ width: g.width, height: g.height });
+      await seedIndexedDB({ tournaments: [turnier()] });
+      await page.goto(`/#/tournament/${ID}/standings`);
+      const abstand = await page.evaluate(() => {
+        const knoepfe = Array.from(document.querySelectorAll<HTMLElement>('button')).filter((b) => /^(Gruppen|Tabelle|Gesamtplatzierung|Endstand)$/.test((b.textContent ?? '').trim()));
+        const gruppe = knoepfe.length > 1 ? knoepfe : [];
+        return gruppe.slice(1).map((b, i) => b.getBoundingClientRect().left - gruppe[i].getBoundingClientRect().right);
+      });
+      for (const a of abstand) { expect(a).toBeGreaterThanOrEqual(3.5); }
     });
   }
 });

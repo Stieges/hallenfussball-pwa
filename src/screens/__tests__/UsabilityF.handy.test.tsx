@@ -111,17 +111,6 @@ describe('F-03 Suchfeld und Filter-Chips', () => {
   });
 });
 
-describe('F-06 Fußleiste des Assistenten am Handy', () => {
-  it('@OB-022 Quelltext: die Leiste „Zurück · Weiter“ bleibt am Handy am unteren Fensterrand stehen (Haupttaste ohne Scrollen)', async () => {
-    const { readFileSync } = await import('node:fs');
-    const q = readFileSync(`${process.cwd()}/src/screens/TournamentCreationScreen.tsx`, 'utf8');
-    const i = q.indexOf('data-testid="wizard-footer-bar"');
-    const block = q.slice(q.lastIndexOf('style={isMobile ? {', i), i);
-    expect(block).toContain("position: 'sticky'");
-    expect(block).toContain('bottom: 0');
-  });
-});
-
 describe('F-06 Schritt-Punkte des Assistenten', () => {
   it('@OB-022 jeder Schritt ist mindestens 44 × 44 groß, Schrift nicht unter 12 px', () => {
     render(<ProgressBar currentStep={2} totalSteps={6} stepLabels={['Stammdaten', 'Sportart', 'Modus', 'Gruppen & Felder', 'Teams', 'Übersicht']} />);

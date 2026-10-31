@@ -17,7 +17,7 @@ const TIEBREAKER_MODES: readonly TiebreakerMode[] = ['shootout', 'overtime-then-
 const zeileMitAuswahl: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '12px',
+  gap: cssVars.spacing.md,
   minHeight: cssVars.touchTargets.minimum,
   cursor: 'pointer',
 };
@@ -277,7 +277,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           </h4>
 
           {['top-4', 'top-8', 'top-16', 'all-places'].includes(currentPreset) && (
-            <label style={{ ...zeileMitAuswahl, marginBottom: '8px' }}>
+            <label style={{ ...zeileMitAuswahl, marginBottom: cssVars.spacing.sm }}>
               <input
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelSemifinals ?? true}
@@ -291,7 +291,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           )}
 
           {['top-8', 'top-16', 'all-places'].includes(currentPreset) && (
-            <label style={{ ...zeileMitAuswahl, marginBottom: '8px' }}>
+            <label style={{ ...zeileMitAuswahl, marginBottom: cssVars.spacing.sm }}>
               <input
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelQuarterfinals ?? true}
@@ -409,9 +409,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 value={currentDuration}
                 onChange={(e) => handleTiebreakerDurationChange(parseInt(e.target.value) || 5)}
                 style={{
-                  width: '60px',
+                  width: cssVars.touchTargets.primary,
                   minHeight: cssVars.touchTargets.minimum,
-                  padding: '6px 10px',
+                  padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
                   background: cssVars.colors.inputBg,
                   border: `1px solid ${cssVars.colors.borderControl}`,
                   borderRadius: cssVars.borderRadius.sm,
