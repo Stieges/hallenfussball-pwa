@@ -537,6 +537,15 @@ interface TournamentConfig {
 }
 
 /**
+ * „Jeder gegen jeden“ ist immer EINE Gruppe ohne Gruppenzuordnung der Teams (@ZM-181, @ZM-177, @ZM-170): gespeicherte Standardgruppen
+ * A und B (so schrieb der Assistent sie bis dahin) lesen und schreiben wir nicht mehr mit, sonst bieten Monitor und Editor Gruppen an,
+ * zu denen kein Team gehört (C-MONITOR-ALLE-TABELLEN-OHNE-ZEILEN). Bei Gruppen + Finalrunde bleibt die Konfiguration unverändert.
+ */
+export function groupsOfSystem(groupSystem: string | undefined, groups: Tournament['groups']): Tournament['groups'] {
+  return groupSystem === 'roundRobin' ? undefined : groups;
+}
+
+/**
  * Maps Supabase tournament row + teams + matches to frontend Tournament type
  */
 export function mapTournamentFromSupabase(
@@ -608,7 +617,7 @@ export function mapTournamentFromSupabase(
     finalsConfig: finalsConfig ?? undefined,
     refereeConfig: refereeConfig ?? undefined,
     fieldAssignments: config.fieldAssignments,
-    groups: config.groups as Tournament['groups'],
+    groups: groupsOfSystem(config.groupSystem, config.groups as Tournament['groups']),
     fields: config.fields as Tournament['fields'],
     finals: config.finals ?? {
       final: false,
@@ -741,7 +750,7 @@ export function mapTournamentToSupabase(
     breakBetweenPhases: tournament.breakBetweenPhases,
     placementLogic: tournament.placementLogic,
     fieldAssignments: tournament.fieldAssignments,
-    groups: tournament.groups,
+    groups: groupsOfSystem(tournament.groupSystem, tournament.groups),
     fields: tournament.fields,
     ageClass: tournament.ageClass,
     organizer: tournament.organizer,

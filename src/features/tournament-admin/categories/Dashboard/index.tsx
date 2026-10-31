@@ -292,8 +292,9 @@ export function DashboardCategory({
     const runningMatches = tournament.matches.filter(
       (m) => m.matchStatus === 'running'
     );
+    // Ohne gespeicherten Status gilt ein Spiel als geplant (`Match.matchStatus`, Standard „scheduled“)
     const scheduledMatches = tournament.matches.filter(
-      (m) => m.matchStatus === 'scheduled'
+      (m) => (m.matchStatus ?? 'scheduled') === 'scheduled'
     );
 
     // @OB-069: Tore zählen nur aus beendeten Spielen (ein laufendes Spiel steht noch nicht fest)

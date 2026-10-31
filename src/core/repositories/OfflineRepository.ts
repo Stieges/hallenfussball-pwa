@@ -21,6 +21,7 @@ import { effectiveHostTeamIds } from '../models/hostTeams';
 import { parsePlacementsToPlayOut } from '../standings/playOutPlaces';
 import { mergeAccountList, offlineAccountList, readAccountRoleMemory, writeAccountRoleMemory, type AccountRoleMemory } from './accountListMerge';
 import { checkedVersion, withCheckedVersion } from './confirmedVersion';
+import { groupsOfSystem } from './supabaseMappers';
 
 /**
  * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
@@ -677,7 +678,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
         })) {return true;}
 
         // Groups/Fields
-        if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) {return true;}
+        // Jeder gegen jeden hat keine Gruppen (@ZM-181): eine lokale Bestandskopie mit gespeicherten Standardgruppen A/B ist keine Änderung
+        if (JSON.stringify(groupsOfSystem(local.groupSystem, local.groups)) !== JSON.stringify(groupsOfSystem(remote.groupSystem, remote.groups))) {return true;}
         if (JSON.stringify(local.fields) !== JSON.stringify(remote.fields)) {return true;}
 
         // L3: Monitor-/Sponsoren-Konfiguration liegt im config-JSONB und wird nur vom Voll-Save

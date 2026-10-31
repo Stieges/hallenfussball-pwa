@@ -44,7 +44,8 @@ describe('Monitor „Alle Tabellen“ – Gruppen aus der Zuordnung der Teams', 
   it('@ZM-181 @ZM-071 @ZM-177 Jeder gegen jeden mit Standardgruppen A, B im Turnier: eine Gesamttabelle mit allen Teams, keine „Gruppe B“', () => {
     const lokal = { ...mitStrafstossNord(turnierNordSued()), groupSystem: 'roundRobin' as const, numberOfGroups: 2, groups: createDefaultGroups(2) };
     const t = viaServer(lokal);
-    expect(t.groups?.length).toBe(2);
+    // Der Mapper liest bei Jeder gegen jeden keine gespeicherten Gruppen mehr (@ZM-181, PR „Kleines Fehlerpaket“); die Folie rechnet trotzdem richtig
+    expect(t.groups).toBeUndefined();
     const view = buildMonitorView(t);
     expect(standingsSections(t, view)).toEqual([{ kind: 'overall' }]);
     expect(monitorPageCount({ type: 'all-standings', config: {} } as never, t, view)).toBe(1);

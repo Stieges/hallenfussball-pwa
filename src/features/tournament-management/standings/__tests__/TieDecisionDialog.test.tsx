@@ -105,6 +105,21 @@ describe('Strafstoßschießen eintragen (@ET-055, @W2A-061, @W2A-064)', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('@W2A-061 4:4: schon beim Eintippen keine Vorschau „Danach in der Tabelle“, Meldung am Feld und „Speichern“ gesperrt (C-GLEICHSTAND-VORSCHAU-BEI-REMIS)', async () => {
+    const tie = fakeTie();
+    await open(nikolaus(), '', tie);
+    await userEvent.click(screen.getByTestId('tie-pick-shootout'));
+    await userEvent.type(screen.getByLabelText(/DJK Otting/), '4');
+    await userEvent.type(screen.getByLabelText(/TSV Petting/), '4');
+    expect(screen.queryByTestId('tie-effect')).toBeNull();
+    expect(await screen.findByRole('alert')).toHaveTextContent('braucht einen Sieger');
+    expect(screen.getByTestId('tie-decision-save')).toBeDisabled();
+    expect(tie.decide).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByLabelText(/DJK Otting/), '5');
+    expect(screen.getByTestId('tie-effect')).toBeInTheDocument();
+    expect(screen.getByTestId('tie-decision-save')).toBeEnabled();
+  });
+
   it('@W2A-064 Pflicht wegen der Einstellung: öffnet gleich das Strafstoßschießen, nennt den Grund und bietet „Turnierregeln ansehen“; keine Wahl', async () => {
     const tie = fakeTie();
     const { onClose } = await open(nikolaus([1, 2, 3]), '', tie);
