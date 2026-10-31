@@ -1,9 +1,10 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, FinalsPreset } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
 import { effectiveRoundCount } from '../../../core/generators/repeatRounds';
+import { estimateRoundRobinRounds } from '../utils/roundCountEstimate';
 
 // Duration thresholds in minutes
 const DURATION_WARNING_THRESHOLD = 480; // 8 hours
@@ -47,6 +48,11 @@ const calculateFinalsMatches = (preset: FinalsPreset, numberOfGroups: number): n
 
 export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) => {
   const { t } = useTranslation('wizard');
+  // @TM-153: bei „Jeder gegen jeden“ dieselbe Quelle wie „Ende ca.“ – der erzeugte Plan statt der Formel
+  const plannedMinutes = useMemo(
+    () => ((formData.groupSystem ?? 'roundRobin') === 'roundRobin' ? estimateRoundRobinRounds(formData).durationMinutes : null),
+    [formData],
+  );
 
   const teams = formData.numberOfTeams ?? 4;
   const fields = formData.numberOfFields ?? 1;
@@ -99,7 +105,7 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   const finalsSlotsNeeded = Math.ceil(finalsMatches / Math.min(fields, 2)); // Finals usually max 2 parallel
   const finalsMinutes = finalsSlotsNeeded * finalsSlotDuration;
 
-  const totalMinutes = groupPhaseMinutes +
+  const totalMinutes = plannedMinutes ?? groupPhaseMinutes +
     (finalsMatches > 0 ? breakBetweenPhases : 0) +
     finalsMinutes;
 

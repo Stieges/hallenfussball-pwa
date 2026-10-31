@@ -1,13 +1,13 @@
 /**
  * Rundenzahl bei „Jeder gegen jeden“ (@TM-152, @TM-153): Eingabe 1–10 (Vorbelegung 1) mit Tippfehler-Schutz –
  * zu große oder zu kleine Werte werden auf die Grenze gesetzt und mit „Höchstens 10 Runden“ bzw. „Mindestens 1 Runde“
- * gemeldet. Darunter (`RoundCountSummary`) Spielzahl und voraussichtliches Ende; endet das Turnier gegen Mitternacht,
- * nur ein Hinweis – Weiter bleibt möglich.
+ * gemeldet. Aufbau wie `NumberStepper` (−, Anzeige, +), die Anzeige ist hier tippbar. Darunter (`RoundCountSummary`)
+ * Spielzahl und Ende aus dem erzeugten Plan; Weiter bleibt immer möglich.
  */
-import { CSSProperties, useEffect, useState } from 'react';
+import { CSSProperties, useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
-import { Button, Input } from '../../../components/ui';
+import { Button } from '../../../components/ui';
 import type { Tournament } from '../../../types/tournament';
 import { clampRoundCount, ROUND_COUNT_MAX, ROUND_COUNT_MIN, type RoundCountHint } from '../../../core/generators/repeatRounds';
 import { estimateRoundRobinRounds } from '../utils/roundCountEstimate';
@@ -18,12 +18,35 @@ interface RoundCountFieldProps {
   disabled?: boolean;
 }
 
-const rowStyle: CSSProperties = { display: 'flex', alignItems: 'flex-end', gap: cssVars.spacing.sm };
-const buttonStyle: CSSProperties = { minWidth: cssVars.touchTargets.minimum, minHeight: cssVars.touchTargets.minimum };
-const hintStyle: CSSProperties = { color: cssVars.colors.warning, fontSize: cssVars.fontSizes.sm, margin: `${cssVars.spacing.xs} 0 0 0` };
+const containerStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs };
+const labelStyle: CSSProperties = {
+  fontSize: cssVars.fontSizes.sm,
+  fontWeight: cssVars.fontWeights.medium,
+  color: cssVars.colors.textPrimary,
+};
+const rowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm };
+const buttonStyle: CSSProperties = { minWidth: cssVars.touchTargets.minimum, height: cssVars.touchTargets.minimum };
+// wie die Anzeige im NumberStepper; Schrift 16 px (fontSizes.lg) gegen den Zoom auf iOS
+const inputStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  width: '100%',
+  textAlign: 'center',
+  fontFamily: 'inherit',
+  fontSize: cssVars.fontSizes.lg,
+  fontWeight: cssVars.fontWeights.semibold,
+  color: cssVars.colors.textPrimary,
+  padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+  background: cssVars.colors.surface,
+  borderRadius: cssVars.borderRadius.md,
+  border: `1px solid ${cssVars.colors.borderControl}`,
+};
+const hintStyle: CSSProperties = { color: cssVars.colors.warning, fontSize: cssVars.fontSizes.sm, margin: 0 };
 
 export const RoundCountField: React.FC<RoundCountFieldProps> = ({ formData, onUpdate, disabled = false }) => {
   const { t } = useTranslation('wizard');
+  const inputId = useId();
+  const hintId = `${inputId}-hint`;
   const value = clampRoundCount(formData.numberOfRounds ?? ROUND_COUNT_MIN).rounds;
   const [draft, setDraft] = useState(String(value));
   const [hint, setHint] = useState<RoundCountHint>(null);
@@ -38,14 +61,15 @@ export const RoundCountField: React.FC<RoundCountFieldProps> = ({ formData, onUp
   };
 
   const handleTyping = (text: string) => {
-    setDraft(text);
-    if (text.trim() === '') { return; }
-    const parsed = Number.parseInt(text, 10);
-    if (!Number.isNaN(parsed)) { apply(parsed, true); }
+    const digits = text.replace(/[^0-9]/g, '');
+    setDraft(digits);
+    if (digits === '') { return; }
+    apply(Number.parseInt(digits, 10), true);
   };
 
   return (
-    <div>
+    <div style={containerStyle}>
+      <label htmlFor={inputId} style={labelStyle}>{t('step2.rounds.label')}</label>
       <div style={rowStyle}>
         <Button
           variant="secondary"
@@ -58,16 +82,18 @@ export const RoundCountField: React.FC<RoundCountFieldProps> = ({ formData, onUp
         >
           −
         </Button>
-        <Input
-          label={t('step2.rounds.label')}
-          type="number"
+        <input
+          id={inputId}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
           value={draft}
-          min={ROUND_COUNT_MIN}
-          max={ROUND_COUNT_MAX}
-          onChange={handleTyping}
+          onChange={(event) => handleTyping(event.target.value)}
           onBlur={() => setDraft(String(value))}
           disabled={disabled}
-          describedBy={hint ? 'wizard-round-count-hint' : undefined}
+          aria-describedby={hintId}
+          style={inputStyle}
           data-testid="wizard-round-count-input"
         />
         <Button
@@ -82,11 +108,12 @@ export const RoundCountField: React.FC<RoundCountFieldProps> = ({ formData, onUp
           +
         </Button>
       </div>
-      {hint && (
-        <p id="wizard-round-count-hint" role="status" style={hintStyle} data-testid="wizard-round-count-hint">
-          {t(hint === 'max' ? 'step2.rounds.maxHint' : 'step2.rounds.minHint', { count: hint === 'max' ? ROUND_COUNT_MAX : ROUND_COUNT_MIN })}
-        </p>
-      )}
+      {/* Live-Region bleibt stehen, nur der Text wechselt – so sagen Screenreader den Hinweis an */}
+      <p id={hintId} role="status" aria-live="polite" style={hintStyle} data-testid="wizard-round-count-hint">
+        {hint === null
+          ? null
+          : t(hint === 'max' ? 'step2.rounds.maxHint' : 'step2.rounds.minHint', { count: hint === 'max' ? ROUND_COUNT_MAX : ROUND_COUNT_MIN })}
+      </p>
     </div>
   );
 };
@@ -97,33 +124,25 @@ const summaryStyle: CSSProperties = {
   fontSize: cssVars.fontSizes.md,
   fontWeight: cssVars.fontWeights.semibold,
 };
-const lateStyle: CSSProperties = {
-  margin: `${cssVars.spacing.xs} 0 0 0`,
-  padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-  background: cssVars.colors.warningSubtle,
-  border: `1px solid ${cssVars.colors.warningBorder}`,
-  borderRadius: cssVars.borderRadius.md,
-  color: cssVars.colors.textPrimary,
-  fontSize: cssVars.fontSizes.sm,
-};
 
-/** Spielzahl · Ende ca. hh:mm und – bei spätem Ende – der Hinweis gegen Mitternacht (@TM-153). */
+/** „<n> Spiele · Ende ca. hh:mm“ aus dem erzeugten Plan (@TM-153). */
 export const RoundCountSummary: React.FC<{ formData: Partial<Tournament> }> = ({ formData }) => {
   const { t } = useTranslation('wizard');
-  const estimate = estimateRoundRobinRounds(formData);
+  const {
+    numberOfTeams, numberOfFields, numberOfRounds, groupSystem, startTime, timeSlot, teams, groupPhaseGameDuration,
+    groupPhaseBreakDuration, gamePeriods, halftimeBreak, minRestSlots, hostTeamIds, openingMode,
+  } = formData;
+  const estimate = useMemo(() => estimateRoundRobinRounds({
+    numberOfTeams, numberOfFields, numberOfRounds, groupSystem, startTime, timeSlot, teams, groupPhaseGameDuration,
+    groupPhaseBreakDuration, gamePeriods, halftimeBreak, minRestSlots, hostTeamIds, openingMode,
+  }), [numberOfTeams, numberOfFields, numberOfRounds, groupSystem, startTime, timeSlot, teams, groupPhaseGameDuration,
+    groupPhaseBreakDuration, gamePeriods, halftimeBreak, minRestSlots, hostTeamIds, openingMode]);
   if (estimate.matches === 0) { return null; }
   return (
-    <div>
-      <p style={summaryStyle} data-testid="wizard-round-summary">
-        {estimate.endTime === null
-          ? t('step2.rounds.summaryNoTime', { count: estimate.matches })
-          : t('step2.rounds.summary', { count: estimate.matches, time: estimate.endTime })}
-      </p>
-      {estimate.endsLate && (
-        <p role="status" style={lateStyle} data-testid="wizard-round-late-hint">
-          {t('step2.rounds.lateHint')}
-        </p>
-      )}
-    </div>
+    <p style={summaryStyle} data-testid="wizard-round-summary">
+      {estimate.endTime === null
+        ? t('step2.rounds.summaryNoTime', { count: estimate.matches })
+        : t('step2.rounds.summary', { count: estimate.matches, time: estimate.endTime })}
+    </p>
   );
 };

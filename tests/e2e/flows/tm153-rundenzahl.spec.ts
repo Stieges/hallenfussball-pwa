@@ -1,8 +1,8 @@
 /**
  * @TM-153 – Der Assistent zeigt bei mehreren Runden Spielzahl und Ende und warnt nur (Record 2026-10-01_turniermodi).
  *
- * Gegeben Olli legt ein Turnier „Jeder gegen jeden“ mit 6 Teams an, 10 Minuten je Spiel, Beginn 16:30
- * (Pause zwischen den Spielen 0 – nur so ergibt das Szenario „Ende ca. 00:00“, Lücke im Gegeben).
+ * Gegeben Olli legt ein Turnier „Jeder gegen jeden“ mit 6 Teams an, 10 Minuten je Spiel, ohne Pause zwischen den
+ * Spielen, Beginn 16:30 (Record-Stand 31.10.; kein Hinweis „gegen Mitternacht“).
  * Wenn Olli <Rundenzahl> einstellt, dann zeigt der Assistent <Anzeige>.
  * Echter Bedienweg: Schritt 1 (Beginn) → Schritt 2 (klassisch) → Schritt 3 (Modus & Spielsystem).
  */
@@ -45,20 +45,20 @@ async function zuSchrittSpielmodus(page: Page): Promise<void> {
 }
 
 test.describe('@TM-153 Rundenzahl im Assistenten', () => {
-  test('@TM-153 vorbelegt 1 Runde: „15 Spiele · Ende ca. 19:00“, kein Hinweis', async ({ page }) => {
+  test('@TM-153 vorbelegt 1 Runde: „15 Spiele · Ende ca. 19:00“, kein Grenz-Hinweis', async ({ page }) => {
     await zuSchrittSpielmodus(page);
 
     await expect(page.getByTestId('wizard-round-count-input')).toHaveValue('1');
     await expect(page.getByTestId('wizard-round-summary')).toHaveText('15 Spiele · Ende ca. 19:00');
-    await expect(page.getByTestId('wizard-round-late-hint')).toHaveCount(0);
+    await expect(page.getByTestId('wizard-round-count-hint')).toHaveText('');
   });
 
-  test('@TM-153 3 Runden: „45 Spiele · Ende ca. 00:00“, Hinweis gegen Mitternacht, Weiter bleibt möglich', async ({ page }) => {
+  test('@TM-153 3 Runden: „45 Spiele · Ende ca. 00:00“, Weiter bleibt möglich', async ({ page }) => {
     await zuSchrittSpielmodus(page);
 
     await page.getByTestId('wizard-round-count-input').fill('3');
     await expect(page.getByTestId('wizard-round-summary')).toHaveText('45 Spiele · Ende ca. 00:00');
-    await expect(page.getByTestId('wizard-round-late-hint')).toContainText('gegen Mitternacht');
+    await expect(page.getByText(/Mitternacht/)).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Weiter', exact: true }).click();
     await expect(page).toHaveURL(/\?step=4/);

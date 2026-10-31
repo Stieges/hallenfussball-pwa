@@ -45,8 +45,7 @@
       "summary_one": "{{count}} match · ends approx. {{time}}",
       "summary_other": "{{count}} matches · ends approx. {{time}}",
       "summaryNoTime_one": "{{count}} match",
-      "summaryNoTime_other": "{{count}} matches",
-      "lateHint": "The tournament only ends around midnight or later. Fewer rounds, shorter matches or more fields shorten it – you can still continue."
+      "summaryNoTime_other": "{{count}} matches"
     },
     "smartConfigTip": "Tip: Let us calculate the optimal configuration",
     "advancedSettings": "Advanced Settings",

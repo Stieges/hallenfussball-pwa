@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import { Tournament } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
+import { effectiveRoundCount } from '../../../core/generators/repeatRounds';
 import { cssVars } from '../../../design-tokens';
 import styles from './ValidationWarnings.module.css';
 
@@ -31,7 +32,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   // Calculate match count
   let totalMatches: number;
   if (groupSystem === 'roundRobin') {
-    totalMatches = (teams * (teams - 1)) / 2;
+    // @TM-152: jede Paarung so oft, wie Runden eingestellt sind
+    totalMatches = ((teams * (teams - 1)) / 2) * effectiveRoundCount(formData);
   } else {
     const teamsPerGroup = Math.ceil(teams / groups);
     totalMatches = ((teamsPerGroup * (teamsPerGroup - 1)) / 2) * groups;
