@@ -1,5 +1,5 @@
-// Gemeinsamer Parser fuer Testtitel (TA-CI, TM-1): wird von scenario-tests.mjs und
-// befund-kennungen-erzeugen.mjs genutzt. Liest Quelltext ohne TypeScript-Parser.
+// Gemeinsamer Parser fuer Testtitel (TA-CI, TM-1): wird von scenario-tests.mjs
+// genutzt. Liest Quelltext ohne TypeScript-Parser.
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 

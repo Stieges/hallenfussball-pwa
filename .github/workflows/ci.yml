@@ -126,9 +126,9 @@ jobs:
       # Soll-Zahl, mehr als 15 Nachweisen aus der Generalprobe oder wenn die Zahl der MVP-Kennungen mit
       # regulaerem Test (kein skip/todo/fails, `:teil` zaehlt nicht) unter den GEMESSENEN Stand von origin/main
       # oder unter tests/meta/szenario-floor.json faellt. PRs gegen develop vergleichen ebenfalls mit main.
-      # TM-1 (@TA-013..@TA-015): im selben Schritt: erwartet rote Tests (it.fails/test.fail) ohne Verweis auf Befund oder
-      # Defekt duerfen nicht mehr werden als auf origin/main; jeder Verweis in einem Testnamen muss in
-      # tests/meta/befund-kennungen.json stehen (Tippfehler sind sofort rot).
+      # TM-1 (@TA-013, @TA-014, @TA-023): im selben Schritt: erwartet rote Tests (it.fails/test.fail) ohne Verweis auf Befund
+      # oder Defekt duerfen nicht mehr werden als auf origin/main. Verweise gelten hier nur ueber ihre Schreibweise; ob sie
+      # bekannt sind, prueft der lokale Lauf gegen die Befundliste (@TA-024, die Liste ist nicht im Repo).
       # Job-Summary ueber $GITHUB_STEP_SUMMARY (setzt das Skript selbst).
       - name: Szenario-Abdeckung (blockierend, Ratchet gegen origin/main)
         shell: bash
