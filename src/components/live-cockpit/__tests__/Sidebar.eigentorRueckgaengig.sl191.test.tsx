@@ -2,7 +2,7 @@
  * @SL-191 Nimmt Tom ein Eigentor zurück, steht im Verlauf genau eine durchgestrichene Zeile (Befund C-RUECKGAENGIG-DOPPELTE-ZEILEN).
  * Die Kette ist die echte: Eigentor-Weg des Cockpits (Tor-Tipp, RETRACT, OWN_GOAL, „Rückgängig“) -> Engine-Zustand -> Anzeige-Adapter
  * (`toRuntimeEvents`/`toRetractedEvents`) -> Protokoll (`Sidebar`). Der Wortlaut „Eigentor SV Süd, Nr. 4, 5:40“ ist offen
- * (Befund C-EIGENTOR-PROTOKOLLZEILE): die Zeile heißt heute „Tor <begünstigtes Team>“; als `it.fails` festgehalten.
+ * (Befund C-EIGENTOR-PROTOKOLLZEILE, behoben): die Zeile heißt „Eigentor <schießendes Team>, Nr. <n>“.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -61,10 +61,11 @@ describe('@SL-191 Rückgängig beim Eigentor: Verlauf', () => {
     expect(screen.getAllByText(/Tor FC Nord/i).filter((el) => !el.closest('[data-testid="event-row-retracted"]'))).toHaveLength(1);
   });
 
-  it.fails('@SL-191 C-EIGENTOR-PROTOKOLLZEILE: die durchgestrichene Zeile heißt „Eigentor SV Süd, Nr. 4“ mit 05:40', () => {
+  it('@SL-191 @SL-022 C-EIGENTOR-PROTOKOLLZEILE: die durchgestrichene Zeile heißt „Eigentor SV Süd, Nr. 4“ mit 05:40', () => {
     protokoll();
     const zeile = screen.getByTestId('event-row-retracted');
-    expect(zeile.textContent).toMatch(/Eigentor.*SV Süd.*4/);
+    expect(zeile.textContent).toContain('Eigentor SV Süd, Nr. 4');
+    expect(zeile.textContent).not.toMatch(/Tor FC Nord/i);
     expect(zeile.textContent).toContain('05:40');
   });
 });

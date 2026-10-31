@@ -171,20 +171,20 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     await expect(helperPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Ende', { timeout: 15000 });
 
     // Gegenbeispiel: die schon gesetzte Nummer 7 ist gesperrt, es entsteht kein Eintrag.
-    await helperPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
+    await helperPage.getByRole('button', { name: `Tor ${ids.homeTeamName}, Nr. 7 bearbeiten` }).click();
     await expect(helperPage.locator('[data-testid="event-edit-locked"]')).toHaveText('Korrektur nur durch die Turnierleitung');
     await helperPage.keyboard.press('Escape');
     expect((await fetchEngineRows(ids.matchId)).length).toBe(seeded);
 
     // Die fehlende Nummer lässt sich ergänzen.
-    await helperPage.getByRole('button', { name: `TOR ${ids.awayTeamName} bearbeiten` }).click();
+    await helperPage.getByRole('button', { name: `Tor ${ids.awayTeamName}, ohne Nr. bearbeiten` }).click();
     await helperPage.locator('[data-testid="event-edit-number"]').fill('9');
     await helperPage.locator('[data-testid="event-edit-save"]').click();
     await expect.poll(async () => (await fetchEngineRows(ids.matchId)).slice(seeded).map((row) => [row.type, row.target_event_id]), { timeout: 10000 }).toEqual([['AMEND', goalAwayId]]);
     await expectScore(ids.matchId, 1, 1, 'finished');
     await helperPage.reload();
     await helperPage.waitForLoadState('networkidle');
-    await expect(helperPage.getByText(`TOR ${ids.awayTeamName} #9`)).toBeVisible({ timeout: 15000 });
+    await expect(helperPage.getByText(`Tor ${ids.awayTeamName}, Nr. 9`)).toBeVisible({ timeout: 15000 });
 
     // Server: dieselbe Nachtragung auf die gesetzte Nummer lehnt er für den Helfer ab.
     const locked = await appendAsRole('helper', ids.matchId, [

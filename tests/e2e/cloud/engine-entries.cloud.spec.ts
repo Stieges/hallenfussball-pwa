@@ -79,7 +79,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     await expect(picker).toBeHidden();
 
     // Bearbeiten-Dialog: „7a“ -> Hinweis, Speichern gesperrt, die Nummer 7 bleibt (Esc schließt ohne Schreiben).
-    await ownerPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
+    await ownerPage.getByRole('button', { name: `Tor ${ids.homeTeamName}, Nr. 7 bearbeiten` }).click();
     await ownerPage.getByTestId('event-edit-number').fill('7a');
     await expect(ownerPage.getByTestId('event-edit-number-invalid')).toBeVisible();
     await expect(ownerPage.getByTestId('event-edit-save')).toBeDisabled();
@@ -87,7 +87,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     await ownerPage.keyboard.press('Escape');
     await expect(ownerPage.getByTestId('event-edit-number')).toBeHidden();
 
-    await ownerPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
+    await ownerPage.getByRole('button', { name: `Tor ${ids.homeTeamName}, Nr. 7 bearbeiten` }).click();
     await ownerPage.locator('[data-testid="event-edit-number"]').fill('9');
     await ownerPage.locator('[data-testid="event-edit-save"]').click();
 
@@ -99,7 +99,7 @@ test.describe('Engine-Einträge über Geräte', () => {
     const helperPage = await asRole('helper');
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     for (const page of [ownerPage, helperPage]) {
-      await expect(page.getByText(`TOR ${ids.homeTeamName} #9`)).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText(`Tor ${ids.homeTeamName}, Nr. 9`)).toBeVisible({ timeout: 15000 });
       await expect(page.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
     }
   });
@@ -138,19 +138,19 @@ test.describe('Engine-Einträge über Geräte', () => {
     await expect(helperPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Ende', { timeout: 15000 });
 
     // App: gesetzte Nummer 7 ist für den Helfer gesperrt.
-    await helperPage.getByRole('button', { name: `TOR ${ids.homeTeamName} #7 bearbeiten` }).click();
+    await helperPage.getByRole('button', { name: `Tor ${ids.homeTeamName}, Nr. 7 bearbeiten` }).click();
     await expect(helperPage.locator('[data-testid="event-edit-locked"]')).toHaveText('Korrektur nur durch die Turnierleitung');
     await helperPage.keyboard.press('Escape');
 
     // App: das Tor ohne Nummer lässt sich ergänzen, das Ergebnis bleibt 1:1.
-    await helperPage.getByRole('button', { name: `TOR ${ids.awayTeamName} bearbeiten` }).click();
+    await helperPage.getByRole('button', { name: `Tor ${ids.awayTeamName}, ohne Nr. bearbeiten` }).click();
     await helperPage.locator('[data-testid="event-edit-number"]').fill('5');
     await helperPage.locator('[data-testid="event-edit-save"]').click();
     await expectOneNewRow(ids.matchId, seededRows, 'AMEND', goalAwayId);
     await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 10000 });
     await helperPage.reload();
     await helperPage.waitForLoadState('networkidle');
-    await expect(helperPage.getByText(`TOR ${ids.awayTeamName} #5`)).toBeVisible({ timeout: 15000 });
+    await expect(helperPage.getByText(`Tor ${ids.awayTeamName}, Nr. 5`)).toBeVisible({ timeout: 15000 });
     await expect(helperPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
     await expect(helperPage.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('1');
     const row = await fetchMatchRow(ids.matchId);

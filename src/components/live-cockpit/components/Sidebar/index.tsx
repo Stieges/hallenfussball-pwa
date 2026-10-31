@@ -16,6 +16,7 @@ import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
 import { mergeProtocol, takeRecent, type DiscardedProtocolEntry } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
+import { describeGoal } from '../goalDescription';
 import { cardKindOf } from '../../../../utils/cardKind';
 import { useResultEntryEvents } from '../../../../features/match-engine/useResultEntryEvents';
 import { ResultEntryProtocolRows } from '../ResultEntryProtocolRow';
@@ -95,15 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         if (event.payload.direction === 'DEC') {
           return `−1 ${teamName}`;
         }
-        // Build goal description with player and assists
-        let goalText = t('sidebar.goalEvent', { teamName }) + playerInfo;
-        // Show assists if present
-        const assists = event.payload.assists;
-        if (assists && assists.length > 0) {
-          const assistsText = assists.map(a => `#${a}`).join(', ');
-          goalText += ` ${t('sidebar.assistFormat', { assists: assistsText })}`;
-        }
-        return goalText;
+        return describeGoal(event, { homeTeamId, homeTeamName, awayTeamName }, t);
       }
       case 'YELLOW_CARD':
         return t('sidebar.yellowEvent', { teamName }) + playerInfo;

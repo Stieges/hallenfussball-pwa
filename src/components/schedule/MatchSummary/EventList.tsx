@@ -12,6 +12,7 @@ import type { RuntimeMatchEvent } from '../../../types/tournament';
 import { cardKindOf } from '../../../utils/cardKind';
 import { FOUL_SYMBOL } from '../../../utils/eventSymbols';
 import { KartenSymbol } from '../../ui/atoms/KartenSymbol';
+import { eventMinute } from '../MatchExpand/liveInfoEventLine';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +37,10 @@ const formatTime = (seconds: number): string => {
   const secs = seconds % 60;
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
+
+/** Tor, Zeitstrafe und Karten tragen Minute bzw. Nummer in der Zeile (@ZM-002, @ZM-021), ohne Uhrzeit-Spalte. */
+const hatNurZeile = (event: RuntimeMatchEvent): boolean =>
+  event.type === 'GOAL' || event.type === 'TIME_PENALTY' || event.type === 'YELLOW_CARD' || event.type === 'RED_CARD';
 
 const getEventIcon = (event: RuntimeMatchEvent): ReactNode => {
   switch (event.type) {
@@ -74,14 +79,20 @@ export function EventList({
 
   const getEventDescription = (event: RuntimeMatchEvent): string => {
     const teamName = event.payload.teamName ?? getTeamName(event.payload.teamId);
-    const playerInfo = event.payload.playerNumber ? ` #${event.payload.playerNumber}` : '';
+    // @ZM-002/@ZM-021: „Tor FC Nord, Nr. 9, 3.“, „Zeitstrafe SV Süd, Nr. 5, 4.“, „Gelbe Karte SV Süd, Nr. 5“
+    const numberInfo = event.payload.playerNumber ? t('matchSummary.events.playerNumber', { number: String(event.payload.playerNumber) }) : '';
+    const minute = String(eventMinute(event.timestampSeconds));
 
     switch (event.type) {
       case 'GOAL': {
         if (event.payload.direction === 'DEC') {
           return t('matchSummary.events.goalDecrement', { team: teamName });
         }
-        let goalText = t('matchSummary.events.goal', { team: teamName, player: playerInfo });
+        // @ZM-186: Eigentor „Eigentor SV Süd, Nr. 4, 6.“ -- schießendes Team, nicht das begünstigte
+        if (event.payload.ownGoal === true) {
+          return t('matchSummary.events.ownGoal', { team: getTeamName(event.payload.ownGoalTeamId), player: numberInfo, minute });
+        }
+        let goalText = t('matchSummary.events.goal', { team: teamName, player: numberInfo, minute });
         const assists = event.payload.assists;
         if (assists && assists.length > 0) {
           const assistText = assists.map(a => `#${a}`).join(', ');
@@ -90,15 +101,12 @@ export function EventList({
         return goalText;
       }
       case 'YELLOW_CARD':
-        return t('matchSummary.events.yellowCard', { team: teamName, player: playerInfo });
+        return t('matchSummary.events.yellowCard', { team: teamName, player: numberInfo });
       case 'RED_CARD':
         // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
-        return t(cardKindOf(event) === 'YELLOW_RED' ? 'matchSummary.events.yellowRedCard' : 'matchSummary.events.redCard', { team: teamName, player: playerInfo });
+        return t(cardKindOf(event) === 'YELLOW_RED' ? 'matchSummary.events.yellowRedCard' : 'matchSummary.events.redCard', { team: teamName, player: numberInfo });
       case 'TIME_PENALTY': {
-        const duration = event.payload.penaltyDuration
-          ? Math.floor(event.payload.penaltyDuration / 60)
-          : 2;
-        return t('matchSummary.events.timePenalty', { duration, team: teamName, player: playerInfo });
+        return t('matchSummary.events.timePenalty', { team: teamName, player: numberInfo, minute });
       }
       case 'SUBSTITUTION': {
         const playersOut = event.payload.playersOut;
@@ -206,7 +214,7 @@ export function EventList({
       {displayEvents.map((event) => (
         <div key={event.id} style={eventRowStyle}>
           <span style={iconStyle}>{getEventIcon(event)}</span>
-          <span style={timeStyle}>{formatTime(event.timestampSeconds)}</span>
+          {!hatNurZeile(event) && <span style={timeStyle}>{formatTime(event.timestampSeconds)}</span>}
           <span style={descStyle}>
             {getEventDescription(event)}
             {event.incomplete && <span style={incompleteStyle}>\u26A0\uFE0F</span>}

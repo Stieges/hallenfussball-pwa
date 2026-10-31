@@ -60,6 +60,7 @@ async function messung(page: Page, rand: number, profil: string): Promise<{ metr
 
 const SZENEN = [
   { id: 'jeg', kennung: '@ZM-181 @ZM-071 @ZM-177 (Jeder gegen jeden, Standardgruppen A/B gespeichert)', seiten: 1, zeilen: 6, text: /Gesamttabelle/, kein: /Gruppe/ },
+  { id: 'jeg-einzel', kennung: '@ZM-177 @ZM-181 C-MONITOR-TABELLE-UEBERSCHRIFT-GRUPPE (Einzelfolie „Tabelle“ ohne groupId wie im Editor)', seiten: 1, zeilen: 6, text: /Gesamttabelle/, kein: /Gruppe/ },
   { id: 'zwei', kennung: '@ZM-071 (zwei echte Gruppen, Seite 1/2)', seiten: 2, zeilen: 3, text: /Gruppe A/ },
   { id: 'zwei', kennung: '@ZM-071 (zwei echte Gruppen, Seite 2/2)', seiten: 2, zeilen: 3, text: /Gruppe B/, seite: 1 },
 ] as const;
@@ -80,7 +81,7 @@ test.describe('Monitor „Alle Tabellen“ (T2-UI)', () => {
           await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
           await expect(page.getByTestId('monitor-slide')).toHaveAttribute('data-pages', String(szene.seiten));
           await expect(page.getByTestId('standings-row')).toHaveCount(szene.zeilen);
-          if (szene.id === 'jeg') {
+          if (szene.id === 'jeg' || szene.id === 'jeg-einzel') {
             // Ergebnisse der Spiele (@ZM-181): FC Nord 4 Siege, 1 Remis, 0 Niederlagen, 13 Punkte
             const nord = page.getByTestId('standings-row').filter({ hasText: 'FC Nord' });
             await expect(nord.getByTestId('standings-won')).toHaveText('4');

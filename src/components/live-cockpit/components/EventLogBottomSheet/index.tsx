@@ -15,10 +15,10 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { BottomSheet } from '../../../ui/BottomSheet';
-import sportGlossary from '../../../../i18n/glossary.json';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
 import { mergeProtocol, type DiscardedProtocolEntry } from '../protocolEntries';
 import { ProtocolRow } from '../ProtocolRow';
+import { describeGoal } from '../goalDescription';
 import { cardKindOf } from '../../../../utils/cardKind';
 import { useResultEntryEvents } from '../../../../features/match-engine/useResultEntryEvents';
 import { ResultEntryProtocolRows } from '../ResultEntryProtocolRow';
@@ -77,30 +77,21 @@ export function EventLogBottomSheet({
     const playerInfo = event.payload.playerNumber ? ` #${event.payload.playerNumber}` : '';
 
     switch (event.type) {
-      case 'GOAL': {
+      case 'GOAL':
         if (event.payload.direction === 'DEC') {
           return `−1 ${teamName}`;
         }
-        let goalText = `TOR ${teamName}${playerInfo}`;
-        const assists = event.payload.assists;
-        if (assists && assists.length > 0) {
-          const assistText = assists.map(a => `#${a}`).join(', ');
-          goalText += ` (Assist: ${assistText})`;
-        }
-        return goalText;
-      }
+        return describeGoal(event, { homeTeamId, homeTeamName, awayTeamName }, t);
       case 'YELLOW_CARD':
-        return `Gelbe Karte ${teamName}${playerInfo}`;
+        return t('sidebar.sheetYellowEvent', { teamName }) + playerInfo;
       case 'RED_CARD':
         // F3b2 (Ruling PC30): Gelb-Rot NUR ueber cardKindOf unterscheiden.
-        return cardKindOf(event) === 'YELLOW_RED'
-          ? `${t('cardDialog.yellowRedCard')} ${teamName}${playerInfo}`
-          : `${t('cardDialog.redCard')} ${teamName}${playerInfo}`;
+        return `${t(cardKindOf(event) === 'YELLOW_RED' ? 'cardDialog.yellowRedCard' : 'cardDialog.redCard')} ${teamName}${playerInfo}`;
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
           : 2;
-        return `${duration} Min ${sportGlossary.terms.timePenalty.de} ${teamName}${playerInfo}`;
+        return t('sidebar.sheetPenaltyEvent', { duration, teamName }) + playerInfo;
       }
       case 'SUBSTITUTION': {
         const playersOut = event.payload.playersOut;
@@ -108,19 +99,19 @@ export function EventLogBottomSheet({
         if (playersOut?.length || playersIn?.length) {
           const outInfo = playersOut?.map(n => `#${n}`).join(',') ?? '?';
           const inInfo = playersIn?.map(n => `#${n}`).join(',') ?? '?';
-          return `Wechsel ${teamName}: ${outInfo} → ${inInfo}`;
+          return t('sidebar.sheetSubstitutionDetail', { teamName, out: outInfo, in: inInfo });
         }
-        return `Wechsel ${teamName}`;
+        return t('sidebar.substitutionEvent', { teamName });
       }
       case 'FOUL':
-        return `Foul ${teamName}`;
+        return t('sidebar.foulEvent', { teamName });
       case 'STATUS_CHANGE': {
         const toStatus = event.payload.toStatus;
         switch (toStatus) {
-          case 'RUNNING': return 'Spiel gestartet';
-          case 'PAUSED': return 'Spiel pausiert';
-          case 'FINISHED': return 'Spiel beendet';
-          default: return `Status: ${toStatus}`;
+          case 'RUNNING': return t('sidebar.matchStarted');
+          case 'PAUSED': return t('sidebar.matchPaused');
+          case 'FINISHED': return t('sidebar.matchEnded');
+          default: return t('sidebar.statusOther', { status: String(toStatus) });
         }
       }
       default:

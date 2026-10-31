@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
@@ -17,13 +18,15 @@ interface StandingsSlideProps {
 }
 
 export function StandingsSlide({ slide, tournament, theme, style }: StandingsSlideProps) {
+  const { t } = useTranslation('monitor');
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
   // „default“ ist die Gruppen-ID, die der Monitor-Editor bei „Jeder gegen jeden“ (eine Gruppe) anbietet; kein Team trägt sie → alle Teams
   const configGroupId = slide.config.groupId;
   const groupId = configGroupId === 'default' && !tournament.teams.some(team => team.group === 'default') ? OVERALL_GROUP : configGroupId;
-  const groupName = getGroupDisplayName(tournament, groupId);
+  // @ZM-177/@ZM-181: ohne Gruppe (Jeder gegen jeden; der Editor legt die Folie dort ohne `groupId` an) heißt die Überschrift „Gesamttabelle“
+  const groupName = !configGroupId || groupId === OVERALL_GROUP ? t('slides.allStandings.overall') : getGroupDisplayName(tournament, groupId);
   const { teams, matches } = tournament;
 
   // Calculate standings for this group
