@@ -2,7 +2,7 @@
 // oder Branch des Umsetzers anzufassen. `git merge-tree --write-tree` (ab Git 2.38) rechnet das Ergebnis nur im
 // Objektspeicher; `git commit-tree` macht daraus einen losen Commit, den eine eigene, temporäre Arbeitskopie auscheckt.
 import { spawnSync } from 'node:child_process'
-import { existsSync, lstatSync, mkdtempSync, rmSync, symlinkSync, unlinkSync } from 'node:fs'
+import { existsSync, lstatSync, mkdtempSync, readdirSync, rmSync, statSync, symlinkSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -14,12 +14,58 @@ export function ohneGitUmgebung(env = process.env) {
   return Object.fromEntries(Object.entries(env).filter(([k]) => !k.startsWith('GIT_')))
 }
 
-/** git ohne Identitäts- und Signier-Abhängigkeit; Fehler werfen mit stderr. */
-export function git(cwd, args, { erlaubt = [0] } = {}) {
-  const r = spawnSync('git', ['-c', 'user.name=vor-push', '-c', 'user.email=vor-push@localhost', '-c', 'commit.gpgsign=false', ...args], { cwd, env: ohneGitUmgebung(), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+/**
+ * git ohne Identitäts- und Signier-Abhängigkeit; Fehler werfen mit stderr. `timeoutMs` beendet git nach der Frist
+ * (Fehler mit `zeitgrenze: true`), z. B. für `fetch` bei hängender Verbindung.
+ */
+export function git(cwd, args, { erlaubt = [0], timeoutMs } = {}) {
+  const r = spawnSync('git', ['-c', 'user.name=vor-push', '-c', 'user.email=vor-push@localhost', '-c', 'commit.gpgsign=false', ...args], { cwd, env: ohneGitUmgebung(), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: timeoutMs, killSignal: 'SIGKILL' })
+  if (r.error && r.error.code === 'ETIMEDOUT') throw Object.assign(new Error(`git ${args.join(' ')}: Zeitgrenze überschritten`), { zeitgrenze: true })
   if (r.error) throw r.error
   if (!erlaubt.includes(r.status)) throw new Error(`git ${args.join(' ')} (Exit ${String(r.status)}): ${r.stderr.trim()}`)
   return r
+}
+
+const PRAEFIX = 'vor-push-'
+
+/** Löst die Verknüpfung auf die echten node_modules, damit kein Aufräumschritt hineingreift. */
+function loeseVerknuepfung(ordner) {
+  const verknuepfung = join(ordner, 'node_modules')
+  try {
+    if (lstatSync(verknuepfung).isSymbolicLink()) unlinkSync(verknuepfung)
+  } catch {
+    // keine Verknüpfung
+  }
+}
+
+/**
+ * Arbeitskopien früherer Läufe, die liegen geblieben sind (SIGKILL, Absturz): nur eigene (`vor-push-*` im Temp-Ordner,
+ * gehört diesem Benutzer, ist eine git-Arbeitskopie mit `.git`-Datei) und älter als `alterMs`. Danach `git worktree prune`.
+ */
+export function alteArbeitskopienAufraeumen(cwd, { ordner = tmpdir(), alterMs = 6 * 60 * 60 * 1000, jetzt = Date.now() } = {}) {
+  const geraeumt = []
+  let namen = []
+  try { namen = readdirSync(ordner) } catch { return geraeumt }
+  for (const name of namen) {
+    if (!name.startsWith(PRAEFIX)) continue
+    const pfad = join(ordner, name)
+    try {
+      const st = statSync(pfad)
+      const eigen = typeof process.getuid !== 'function' || st.uid === process.getuid()
+      if (!st.isDirectory() || !eigen || jetzt - st.mtimeMs < alterMs) continue
+      if (!lstatSync(join(pfad, '.git')).isFile()) continue
+      loeseVerknuepfung(pfad)
+      rmSync(pfad, { recursive: true, force: true })
+      geraeumt.push(pfad)
+    } catch {
+      // nicht lesbar oder schon weg: liegen lassen
+    }
+  }
+  if (geraeumt.length > 0) {
+    git(cwd, ['worktree', 'prune'], { erlaubt: [0, 128] })
+    console.log(`vor-push: ${String(geraeumt.length)} liegen gebliebene Arbeitskopien früherer Läufe entfernt.`)
+  }
+  return geraeumt
 }
 
 /** Geänderte Pfade des Branches seit dem gemeinsamen Vorfahren mit der Basis (wie die Dateiliste eines PRs). */
@@ -50,7 +96,7 @@ export function probeStand(cwd, sha, basis) {
  * Liefert den Pfad und eine Aufräum-Funktion, die die Arbeitskopie wieder abmeldet und löscht.
  */
 export function probeArbeitskopie(cwd, commit, { nodeModules = join(cwd, 'node_modules') } = {}) {
-  const ziel = mkdtempSync(join(tmpdir(), 'vor-push-'))
+  const ziel = mkdtempSync(join(tmpdir(), PRAEFIX))
   git(cwd, ['worktree', 'add', '--detach', '--quiet', ziel, commit])
   if (existsSync(nodeModules)) symlinkSync(nodeModules, join(ziel, 'node_modules'), 'dir')
   let erledigt = false
@@ -58,8 +104,7 @@ export function probeArbeitskopie(cwd, commit, { nodeModules = join(cwd, 'node_m
     if (erledigt) return
     erledigt = true
     // Erst die Verknüpfung lösen, damit kein Aufräumschritt je in die echten node_modules greift.
-    const verknuepfung = join(ziel, 'node_modules')
-    if (existsSync(verknuepfung) && lstatSync(verknuepfung).isSymbolicLink()) unlinkSync(verknuepfung)
+    loeseVerknuepfung(ziel)
     git(cwd, ['worktree', 'remove', '--force', ziel], { erlaubt: [0, 128] })
     rmSync(ziel, { recursive: true, force: true })
     git(cwd, ['worktree', 'prune'], { erlaubt: [0, 128] })

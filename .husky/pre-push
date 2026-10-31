@@ -1,7 +1,8 @@
 # Vor-Push-Prüfung wie die CI (@TA-019, @TA-020): führt den Commit mit dem neuesten origin/main zusammen
 # (ohne den Arbeitsbaum anzufassen) und prüft das Ergebnis in einer temporären Arbeitskopie: Lint, Build,
 # Szenario-Prüfung, Härtetest der visuellen Messung und Playwright-Specs der geänderten Bereiche ohne Datenbank.
-# Löschen eines Branches und Tags laufen ohne Prüfung durch. Details: scripts/vor-push/vor-push.mjs
+# Löschen eines Branches und Tags laufen ohne Prüfung durch. Sicherungs-Push auf „sicherung/…“: VOR_PUSH_MODUS=sicherung
+# (nur Konflikt-Warnung, Lint, Typen; @TA-025). Details: scripts/vor-push/vor-push.mjs
 
 # Hinweis (kein Abbruch): geprüft wird der COMMITTETE Stand, nicht lokale, nicht committete Änderungen.
 UNCOMMITTED_CI_FILES=$(git diff --name-only | grep -E "playwright\.config\.ts|vite\.config\.ts|\.github/workflows/" || true)
@@ -12,4 +13,4 @@ if [ -n "$UNCOMMITTED_CI_FILES" ]; then
   echo ""
 fi
 
-node scripts/vor-push/vor-push.mjs "$@"
+node scripts/vor-push/start.mjs "$@"

@@ -106,9 +106,23 @@ geänderten Bereiche im Projekt `desktop` ohne Datenbank (Vorschau des Builds, f
 Die Ausgabe nennt je Spec den Grund der Auswahl (`scripts/vor-push/auswahl.mjs`) und am Ende die Dauer je Schritt.
 
 - **Konflikt mit `origin/main`:** Abbruch mit den Dateien; `git merge origin/main` (kein Rebase), lösen, erneut pushen.
-- **Zeitgrenze:** je Schritt fest; Playwright `VOR_PUSH_E2E_MINUTEN` (Standard 15). Überschreiten bricht mit Schritt und Grenze ab.
+- **Abhängigkeiten:** Passen die installierten `node_modules` nicht zur `package-lock.json` des geprüften Stands, bricht der
+  Hook mit „npm ci“ ab (nie mit fremden Abhängigkeiten prüfen).
+- **Zeitgrenze:** je Schritt fest; Playwright `VOR_PUSH_E2E_MINUTEN` (Standard 15), Abruf des Hauptzweigs
+  `VOR_PUSH_FETCH_SEKUNDEN` (Standard 60, sonst „nicht erreichbar“). Überschreiten bricht mit Schritt und Grenze ab.
+- **Strg-C / Terminal zu:** beendet den laufenden Schritt samt Unterprozessen und räumt die Arbeitskopie weg; liegen
+  gebliebene `vor-push-*` älter als 6 h räumt der nächste Start auf.
 - **Ohne Prüfung:** Branch auf dem Server löschen, Tags, ein Stand ohne neue Commits gegenüber `origin/main`.
+- **Sicherungs-Push (@TA-025):** `VOR_PUSH_MODUS=sicherung git push origin HEAD:sicherung/<name>` – nur für Branches
+  `sicherung/…`. Konflikt nur als Warnung, geprüft werden nur Lint und Typen; Ausgabe „SICHERUNG – nicht geprüft wie die
+  CI“, Eintrag in `.git/vor-push-sicherung.log`. Für den PR danach normal pushen.
 - `--no-verify` ist nie nötig und bleibt verboten.
+
+### Main-Ampel (Stopp-Regel, @TA-022)
+
+Nach jedem Merge laufen die Pflicht-Prüfungen auf `main`. `scripts/main-ampel.mjs` (Workflow `main-ampel.yml`) setzt auf
+jedem offenen PR den Status „Main-Ampel (Stopp-Regel)“: rot, solange eine Pflicht-Prüfung der Branch-Regel auf `main` rot
+ist; das Label `main-reparatur` lässt einen Reparatur-PR durch. Bei Rot auf `main`: nichts weiter mergen, zuerst reparieren.
 
 ## 0.8 Warten auf den Zustand, nicht auf die Zeit (@TA-021)
 

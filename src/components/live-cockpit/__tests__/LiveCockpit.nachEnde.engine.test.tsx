@@ -8,7 +8,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { Harness } from './engineHarness';
-import { anpfiff, halte, warteSperre } from './engineHarnessSupport';
+import { anpfiff, halte, warteSperre, HALTE_RESERVE_MS, SPERRE_WARTE_MS } from './engineHarnessSupport';
 import { HOLD_MS } from '../../ui/atoms/HoldButton';
 import { T0 } from './enginePhaseFixture';
 
@@ -43,7 +43,7 @@ const zustand = (): HTMLElement => screen.getByTestId('scoreboard-state');
  * 2,5 s; im Commit-Hook bei Last ~40 über der 5-s-Vorgabe. Gewartet wird überall auf den Zustand (waitFor/findBy), nie auf
  * eine Zeit außer den beiden Produktfristen; die Grenze ist deshalb echte Wartezeit plus 10 s Rechenzeit.
  */
-const ENGINE_TEST_MS = HOLD_MS + 60 + 310 + 10_000;
+const ENGINE_TEST_MS = HOLD_MS + HALTE_RESERVE_MS + SPERRE_WARTE_MS + 10_000;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });

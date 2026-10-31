@@ -74,7 +74,9 @@ async function serverAntwortVerarbeitet(): Promise<void> {
   await waitFor(() => { expect(rpc).toHaveBeenCalledWith('public_final_standings', { p_share_code: SHARE_CODE }); });
   await act(async () => {
     await Promise.allSettled(rpc.mock.results.map((r) => r.value as Promise<unknown>));
-    // Ein Durchlauf der Ereignisschleife: withTimeout/parse/setState hängen sich als Folgeschritte an die Antwort.
+    // Ein Durchlauf der Ereignisschleife: withTimeout/parse/setState hängen sich als Folgeschritte (nur Mikroschritte)
+    // an die Antwort. Annahme: zwischen Antwort und setState liegt kein weiterer Zeitgeber. Kommt einer dazu, reicht das
+    // hier nicht mehr – dann auf ein sichtbares Zeichen der verarbeiteten Antwort warten.
     await new Promise((weiter) => { setTimeout(weiter, 0); });
   });
 }

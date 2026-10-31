@@ -43,6 +43,9 @@ export const BEREICHE = [
   { name: 'Global (Tokens, Texte, Grundbausteine, Einstieg)', pfad: /^src\/(design-tokens|styles|i18n|components\/(ui|layout)|App\.tsx|main\.tsx)/, spec: /\/smoke\.spec|dashboard|dialog-actions/ },
 ]
 
+const BUILD_WURZEL = /^(?:index\.html|vite\.config\.ts|playwright\.config\.ts|package(?:-lock)?\.json)$/
+const istBuildDatei = (p) => BUILD_WURZEL.test(p) || p.startsWith('public/')
+
 /** Ohne passenden Bereich: eine geänderte App-Datei bekommt wenigstens den Rauchtest. */
 const RAUCHTEST = /\/smoke\.spec\.ts$/
 
@@ -68,7 +71,8 @@ export function waehleSpecs(geaendert, specs, lese) {
       continue
     }
     if (pfad.startsWith('tests/e2e/') && !OFFLINE_SPEC.test(pfad)) {
-      // Hilfsdatei der Specs (helpers/, fixtures/, selectors/ …): jede Spec, die sie per Namen einbindet.
+      // Hilfsdatei der Specs (helpers/, fixtures/, selectors/ …): jede Spec, die sie per Namen einbindet. Bewusst einfach:
+      // nur direkt eingebundene Hilfen; bindet eine Hilfe eine andere ein, wird die äußere Kette nicht verfolgt.
       const stamm = pfad.split('/').pop().replace(/\.[^.]+$/, '')
       if (/^(cloud|visual|auth-slow|prod-smoke)\//.test(pfad.slice('tests/e2e/'.length))) continue
       for (const s of offline) {
@@ -76,8 +80,10 @@ export function waehleSpecs(geaendert, specs, lese) {
       }
       continue
     }
-    if (pfad === 'playwright.config.ts') {
-      for (const s of offline.filter((x) => RAUCHTEST.test(x))) nimm(s, 'playwright.config.ts geändert')
+    // Build- und Einstiegsdateien (index.html, public/ mit Service-Worker-Teilen, Vite-/Playwright-Konfiguration,
+    // Abhängigkeiten) betreffen jede Seite: mindestens der Rauchtest.
+    if (istBuildDatei(pfad)) {
+      for (const s of offline.filter((x) => RAUCHTEST.test(x))) nimm(s, `${pfad} geändert`)
       continue
     }
     if (!pfad.startsWith('src/') || istSrcTest(pfad)) continue
