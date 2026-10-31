@@ -13,6 +13,7 @@ import type { Tournament } from '../../../types/tournament';
 import { createMockTournament, createMockTeams } from '../../../test/factories';
 import { effectiveRoundCount, repeatRounds } from '../repeatRounds';
 import type { Match } from '../../../types/tournament';
+import { matchTeamIds } from '../../models/matchSlot';
 
 function nikolaus(numberOfRounds: number | undefined, extra: Partial<Tournament> = {}): Tournament {
   return createMockTournament({
@@ -68,6 +69,31 @@ function minGapInSlots(matches: ScheduledMatch[], slotMinutes: number): number {
     for (let i = 1; i < list.length; i++) { min = Math.min(min, (list[i] - list[i - 1]) / 60_000 / slotMinutes); }
   }
   return min;
+}
+
+/** Kleinster Abstand zweier Spiele eines Teams in belegten Zeitfenstern (leere Fenster zählen nicht, wie in der Zeitplanung). */
+function minGapInWindows(matches: readonly Match[]): number {
+  const windows = [...new Set(matches.map((m) => m.slot ?? m.round - 1))].sort((a, b) => a - b);
+  const indexOf = new Map(windows.map((slot, index) => [slot, index]));
+  const last = new Map<string, number>();
+  let min = Number.POSITIVE_INFINITY;
+  for (const m of [...matches].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0))) {
+    const index = indexOf.get(m.slot ?? m.round - 1) ?? 0;
+    for (const team of matchTeamIds(m)) {
+      const previous = last.get(team);
+      if (previous !== undefined) { min = Math.min(min, index - previous); }
+      last.set(team, index);
+    }
+  }
+  return min;
+}
+
+function firstRoundOf(teams: number, fields: number, rest: number): Match[] {
+  const t = createMockTournament({
+    teams: createMockTeams(teams, 1), numberOfTeams: teams, numberOfFields: fields, groupSystem: 'roundRobin',
+    finalsConfig: { preset: 'none' }, minRestSlots: rest, groupPhaseGameDuration: 10, groupPhaseBreakDuration: 0,
+  });
+  return generateFullSchedule({ ...t, numberOfRounds: 1 }).allMatches as unknown as Match[];
 }
 
 describe('@TM-152 Rundenzahl bei „Jeder gegen jeden“ (Nikolaus-Turnier, 6 Teams)', () => {
@@ -155,8 +181,28 @@ describe('@TM-152 Rundenzahl bei „Jeder gegen jeden“ (Nikolaus-Turnier, 6 Te
     expect(ersteRundeVerfehlt).toBeGreaterThan(0);
   });
 
+  it.each([
+    [10, 4, 2], [11, 2, 3], [11, 3, 2], [11, 3, 3], [11, 4, 2], [11, 4, 3], [13, 4, 2], [14, 4, 2], [14, 4, 3],
+    [16, 3, 2], [16, 3, 3], [20, 4, 2], [20, 4, 3], [24, 4, 2],
+  ] as const)('@TM-152 dieselbe Pause wie in der ersten Runde auch bei großen Turnieren: %i Teams, %i Felder, Mindestpause %i, 10 Runden', (teams, fields, rest) => {
+    const firstRound = firstRoundOf(teams, fields, rest);
+    const all = repeatRounds(firstRound, 10, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
+
+    expect(all).toHaveLength(firstRound.length * 10);
+    expect(minGapInWindows(all)).toBeGreaterThanOrEqual(Math.min(minGapInWindows(firstRound), rest + 1));
+  });
+
+  it('@TM-152 Rückfall: reicht das Rechenbudget nicht für die volle Pause, wird sie nur so weit gelockert wie nötig (11 Teams, 2 Felder, Pause 3)', () => {
+    const firstRound = firstRoundOf(11, 2, 3);
+    expect(minGapInWindows(firstRound)).toBe(3);
+    // Budget bewusst knapp: die Suche mit voller Pause scheitert, die mit einem Fenster weniger gelingt
+    const all = repeatRounds(firstRound, 2, { minRestSlots: 3, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0, nodeBudget: 150 });
+
+    expect(minGapInWindows(all)).toBe(2);
+  });
+
   it('@TM-152 Rechenbudget: auch große Turniere mit hoher Mindestpause brauchen für 10 Runden unter 500 ms', () => {
-    for (const [teams, fields, rest] of [[16, 4, 3], [14, 2, 3], [7, 1, 3], [24, 3, 2]] as const) {
+    for (const [teams, fields, rest] of [[16, 4, 3], [14, 2, 3], [7, 1, 3], [24, 3, 2], [20, 4, 3], [22, 4, 3], [14, 4, 3]] as const) {
       const t = createMockTournament({
         teams: createMockTeams(teams, 1), numberOfTeams: teams, numberOfFields: fields, groupSystem: 'roundRobin',
         finalsConfig: { preset: 'none' }, minRestSlots: rest, groupPhaseGameDuration: 10, groupPhaseBreakDuration: 0,
