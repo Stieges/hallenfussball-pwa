@@ -88,11 +88,13 @@ const teamsOfSlots = (slots: Slots): string[][] => slots.map((matches) => matche
 /**
  * Rücksetzsuche: ordnet die Spiele der Runde davor neu in höchstens `slotLimit` Zeitfenster mit je höchstens
  * `maxPerSlot` Spielen hinter ihr an, ohne Verstoß gegen die Mindestpause (innerhalb der Runde und über die Grenze).
- * Volle Fenster zuerst; bevorzugt Spiele der Teams mit den meisten offenen Spielen, dann mit der längsten Pause.
+ * Mit `fixedSizes` hat Fenster i genau `fixedSizes[i]` Spiele (Größenfolge der Runde davor, keine Zusatzfenster),
+ * sonst volle Fenster zuerst. Bevorzugt Spiele der Teams mit den meisten offenen Spielen, dann mit der längsten Pause.
  * Null, wenn im Budget keine Anordnung gefunden.
  */
 function searchArrangement(
   previous: Slots, minRestSlots: number, maxPerSlot: number, slotLimit: number, budget: number,
+  fixedSizes: readonly number[] | null = null,
 ): Match[][] | null {
   const previousCount = previous.length;
   const matches = previous.flat();
@@ -154,6 +156,10 @@ function searchArrangement(
       return false;
     }
 
+    if (fixedSizes !== null) {
+      const size = fixedSizes[slot] ?? 0;
+      return size >= 1 && size <= open && pick(0, size);
+    }
     for (let size = Math.min(maxPerSlot, open); size >= 1; size--) {
       if (pick(0, size)) { return true; }
       if (nodes > budget) { return false; }
@@ -166,9 +172,10 @@ function searchArrangement(
 
 /**
  * Anordnung der nächsten Runde: zuerst eine Drehung der Zeitfenster ohne zusätzlichen Verstoß (unverändert zuerst),
- * sonst die Rücksetzsuche mit der verlangten Pause – erst in gleich vielen Fenstern, dann mit bis zu
- * „Mindestpause + 1“ zusätzlichen Fenstern (kostet Zeit, hält aber die Pause). Erst danach wird die Pause je ein
- * Fenster gelockert, zuletzt die Drehung mit den wenigsten Verstößen.
+ * sonst die Rücksetzsuche mit der verlangten Pause – erst in der Größenfolge der Runde davor (gleiche Fensterzahl,
+ * Turnier wird nicht länger), dann mit variablen Größen und bis zu „Mindestpause + 1“ zusätzlichen Fenstern (kostet
+ * Zeit, hält aber die Pause). Erst danach wird die Pause je ein Fenster gelockert, zuletzt die Drehung mit den
+ * wenigsten Verstößen.
  */
 function arrangeNextRound(previous: Slots, minRestSlots: number, maxPerSlot: number, budget: number): Match[][] {
   const previousTeams = teamsOfSlots(previous);
@@ -182,7 +189,10 @@ function arrangeNextRound(previous: Slots, minRestSlots: number, maxPerSlot: num
   }
   const rotated = best.map((index) => [...previous[index]]);
   if (bestScore === 2 * ownViolations) { return rotated; }
+  const sizes = previous.map((matches) => matches.length);
   for (let rest = minRestSlots; rest >= 0; rest--) {
+    const sameShape = searchArrangement(previous, rest, maxPerSlot, previous.length, budget, sizes);
+    if (sameShape) { return sameShape; }
     for (let extra = 0; extra <= rest + 1; extra++) {
       const found = searchArrangement(previous, rest, maxPerSlot, previous.length + extra, budget);
       if (found) { return found; }
@@ -193,7 +203,8 @@ function arrangeNextRound(previous: Slots, minRestSlots: number, maxPerSlot: num
 
 /**
  * Hängt an die Spiele der ersten Runde die Runden 2 … `rounds` an. Runde k enthält die Spiele der Runde k−1 mit
- * getauschtem Heim/Gast; ihre Zeitfenster liegen hinter der Runde k−1, Felder je Fenster in fester Reihenfolge.
+ * getauschtem Heim/Gast; ihre Zeitfenster liegen hinter der Runde k−1. Felder wie im Fenster gleicher Position der
+ * Runde davor, wenn es gleich viele Spiele hat, sonst die bisher am wenigsten genutzten Felder.
  */
 export function repeatRounds(firstRound: readonly Match[], rounds: number, options: RepeatRoundsOptions): Match[] {
   if (rounds <= 1 || firstRound.length === 0) { return [...firstRound]; }
@@ -213,19 +224,29 @@ export function repeatRounds(firstRound: readonly Match[], rounds: number, optio
 
   const result: Match[] = bySlot.flat();
   const fieldPool = [...new Set(firstRound.map((match) => match.field))].sort((a, b) => a - b);
+  const fieldUse = new Map<number, number>(fieldPool.map((field) => [field, 0]));
+  result.forEach((match) => fieldUse.set(match.field, (fieldUse.get(match.field) ?? 0) + 1));
+  const leastUsed = (count: number): number[] => [...fieldPool]
+    .sort((a, b) => (fieldUse.get(a) ?? 0) - (fieldUse.get(b) ?? 0) || a - b)
+    .slice(0, count)
+    .sort((a, b) => a - b);
   const maxPerSlot = Math.max(...bySlot.map((matches) => matches.length));
   let previous: Match[][] = bySlot;
   let nextSlot = bySlot.length;
   for (let round = 1; round < rounds; round++) {
     const arranged = arrangeNextRound(previous, restSlots, maxPerSlot, options.nodeBudget ?? ROUND_ORDER_NODE_BUDGET);
-    const next = arranged.map((matches) => {
+    const next = arranged.map((matches, position) => {
       const slot = nextSlot++;
+      const fields = previous[position]?.length === matches.length
+        ? previous[position].map((match) => match.field)
+        : leastUsed(matches.length);
+      fields.forEach((field) => fieldUse.set(field, (fieldUse.get(field) ?? 0) + 1));
       return matches.map((match, index): Match => ({
         ...match,
         id: generateGroupStageMatchId(),
         slotA: match.slotB,
         slotB: match.slotA,
-        field: fieldPool[index] ?? match.field,
+        field: fields[index] ?? match.field,
         slot,
         round: slot + 1,
         scheduledTime: timeOf(slot),

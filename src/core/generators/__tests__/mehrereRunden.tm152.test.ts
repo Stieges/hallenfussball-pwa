@@ -192,6 +192,54 @@ describe('@TM-152 Rundenzahl bei „Jeder gegen jeden“ (Nikolaus-Turnier, 6 Te
     expect(minGapInWindows(all)).toBeGreaterThanOrEqual(Math.min(minGapInWindows(firstRound), rest + 1));
   });
 
+  it('@TM-152 Mindestpause 0 und 1: weitere Runden brauchen nie mehr Zeitfenster als die erste (Raster 3–24 Teams, 1–4 Felder, 2/3/4/10 Runden)', () => {
+    const abweichungen: string[] = [];
+    for (let teams = 3; teams <= 24; teams++) {
+      for (const fields of [1, 2, 3, 4]) {
+        for (const rest of [0, 1]) {
+          const firstRound = firstRoundOf(teams, fields, rest);
+          const windows = new Set(firstRound.map((m) => m.slot)).size;
+          for (const rounds of [2, 3, 4, 10]) {
+            const all = repeatRounds(firstRound, rounds, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
+            const count = new Set(all.map((m) => m.slot)).size;
+            if (count !== rounds * windows) { abweichungen.push(`${String(teams)}/${String(fields)}/P${String(rest)}/${String(rounds)}R: ${String(count)} statt ${String(rounds * windows)}`); }
+          }
+        }
+      }
+    }
+    expect(abweichungen).toEqual([]);
+  }, 120_000);
+
+  it('@TM-152 10 Teams, 3 Felder, 3 Runden (Voreinstellung Mindestpause 1): Ende wie 3 × die erste Runde', () => {
+    const t = createMockTournament({
+      teams: createMockTeams(10, 1), numberOfTeams: 10, numberOfFields: 3, groupSystem: 'roundRobin',
+      finalsConfig: { preset: 'none' }, minRestSlots: 1, groupPhaseGameDuration: 10, groupPhaseBreakDuration: 2,
+    });
+    const starts = (rounds: number) => new Set(generateFullSchedule({ ...t, numberOfRounds: rounds }).allMatches.map((m) => m.startTime.getTime())).size;
+
+    expect(starts(3)).toBe(3 * starts(1));
+    expect(starts(4)).toBe(4 * starts(1));
+  });
+
+  const fieldUse = (matches: readonly Match[], fields: number): number[] =>
+    Array.from({ length: fields }, (_, i) => matches.filter((m) => m.field === i + 1).length);
+
+  it.each([3, 10])('@TM-152 Felder wie in der ersten Runde: jede weitere Runde nutzt jedes Feld gleich oft wie Runde 1 (10 Teams, 3 Felder, %i Runden)', (rounds) => {
+    const firstRound = firstRoundOf(10, 3, 1);
+    const all = repeatRounds(firstRound, rounds, { minRestSlots: 1, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
+
+    expect(fieldUse(all, 3)).toEqual(fieldUse(firstRound, 3).map((n) => n * rounds));
+  });
+
+  it.each([[10, 4, 2], [11, 2, 3], [13, 4, 2]] as const)('@TM-152 mit zusätzlichen Fenstern werden die Felder gleichmäßig verteilt, nicht immer ab Feld 1 (%i Teams, %i Felder, Pause %i, 10 Runden)', (teams, fields, rest) => {
+    const firstRound = firstRoundOf(teams, fields, rest);
+    const all = repeatRounds(firstRound, 10, { minRestSlots: rest, slotDurationMinutes: 10, breakBetweenSlotsMinutes: 0 });
+    const spread = (use: number[]): number => Math.max(...use) - Math.min(...use);
+
+    expect(new Set(all.map((m) => m.slot)).size).toBeGreaterThan(10 * new Set(firstRound.map((m) => m.slot)).size);
+    expect(spread(fieldUse(all, fields))).toBeLessThanOrEqual(spread(fieldUse(firstRound, fields)) * 10);
+  });
+
   it('@TM-152 Rückfall: reicht das Rechenbudget nicht für die volle Pause, wird sie nur so weit gelockert wie nötig (11 Teams, 2 Felder, Pause 3)', () => {
     const firstRound = firstRoundOf(11, 2, 3);
     expect(minGapInWindows(firstRound)).toBe(3);
