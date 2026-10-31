@@ -321,7 +321,8 @@
     "gameTimePerMatch": "Game time per match",
     "minutesLocked": "Minutes 🔒",
     "gameTimeLockedHint": "This time cannot be changed here because the schedule is built on it.",
-    "gameTimeLockedWay": "You change times via “Shift times”.",
+    "gameTimeLockedWayDuration": "Before the first kick-off you change it on the tournament page under Settings › “Advanced editing” › “Change game mode”.",
+    "gameTimeLockedWay": "You change kick-off times via “Shift times”.",
     "breakTime": "Break time between matches",
     "minutes": "Minutes"
   },
@@ -381,6 +382,7 @@
     "dateAndTime": "Date & Time",
     "startDate": "Start date",
     "startTime": "Start time",
+    "structureInfoBeforeStart": "These settings determine the schedule. Before the first kick-off you change them on the tournament page under Settings › “Advanced editing”:",
     "structureInfo": "Structure Info (locked)",
     "numberOfTeams": "Number of teams",
     "numberOfGroups": "Number of groups",

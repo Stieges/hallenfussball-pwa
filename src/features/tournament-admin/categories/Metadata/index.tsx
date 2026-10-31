@@ -180,6 +180,7 @@ export function MetadataCategory({
   // @W5-036: der Erklärtext der Struktur-Info folgt dem Zustand (vor dem Anpfiff mit Recht: Weg; danach: Grund; sonst neutral)
   const { state: matchStartState } = useTournamentStartState(tournament);
   const canRestructure = useCan('restructure', tournament.id);
+  const descriptionKey = immutableDescriptionKey(matchStartState, canRestructure);
   const resetDialog = useConfirmDialog({
     title: t('metadata.confirmResetDialog.title'),
     message: t('metadata.confirmReset'),
@@ -412,7 +413,7 @@ export function MetadataCategory({
       {/* Locked Structure Info */}
       <CollapsibleSection icon="🔒" title={t('metadata.structureInfo')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          {tt(immutableDescriptionKey(matchStartState, canRestructure))}
+          {descriptionKey === 'settings.immutableSettings.descriptionBeforeStart' ? t('metadata.structureInfoBeforeStart') : tt(descriptionKey)}
         </p>
 
         <div style={styles.lockedField}>

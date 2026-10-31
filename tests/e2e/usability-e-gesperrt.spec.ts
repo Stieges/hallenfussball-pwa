@@ -38,15 +38,16 @@ test.describe('Usability E: gesperrte Felder am Handy', () => {
   });
 
   for (const g of GERAETE) {
-    test(`@W5-036 @OB-043 ${g.name}: Spielzeit und Pause – Text am Feld nennt Grund und Weg „Zeiten verschieben“`, async ({ page, seedIndexedDB }, testInfo) => {
+    test(`@W5-036 @OB-043 ${g.name}: Spielzeit und Pause – Text am Feld nennt Grund und den Weg „Spielmodus ändern“`, async ({ page, seedIndexedDB }, testInfo) => {
       await page.setViewportSize({ width: g.width, height: g.height });
       await seedIndexedDB({ tournaments: [turnier()] });
       await page.goto(`/#/tournament/${ID}/admin/settings`);
       await page.getByText('Spielzeiten').first().click();
       const grund = page.getByTestId('settings-locked-game-grund');
       await expect(grund).toContainText('weil der Spielplan auf ihr aufbaut');
+      await expect(grund).toContainText('„Erweiterte Bearbeitung“ › „Spielmodus ändern“');
       await expect(grund).toContainText('Zeiten verschieben');
-      await expect(page.getByTestId('settings-locked-break-grund')).toContainText('Zeiten verschieben');
+      await expect(page.getByTestId('settings-locked-break-grund')).toContainText('Spielmodus ändern');
       await expect(page.getByTestId('settings-locked-game')).toHaveAttribute('aria-describedby', /.+/);
       expect(await keinWaagerechtesScrollen(page)).toBe(true);
       await bild(page, `spielzeit-gesperrt-${g.name}-nachher`, testInfo.outputDir);
@@ -57,7 +58,7 @@ test.describe('Usability E: gesperrte Felder am Handy', () => {
       await seedIndexedDB({ tournaments: [turnier()] });
       await page.goto(`/#/tournament/${ID}/admin/metadata`);
       await page.getByText('Struktur-Info').first().click();
-      await expect(page.getByText(/Vor dem ersten Anpfiff änderst du sie über „Erweiterte Bearbeitung“/)).toBeVisible();
+      await expect(page.getByText(/auf der Turnierseite unter Einstellungen › „Erweiterte Bearbeitung“/)).toBeVisible();
       await expect(page.getByText(/nicht mehr geändert werden/)).toHaveCount(0);
       expect(await keinWaagerechtesScrollen(page)).toBe(true);
       await bild(page, `struktur-info-${g.name}-nachher`, testInfo.outputDir);

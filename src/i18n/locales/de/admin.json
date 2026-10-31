@@ -321,7 +321,8 @@
     "gameTimePerMatch": "Spielzeit pro Spiel",
     "minutesLocked": "Minuten 🔒",
     "gameTimeLockedHint": "Diese Zeit lässt sich hier nicht ändern, weil der Spielplan auf ihr aufbaut.",
-    "gameTimeLockedWay": "Uhrzeiten änderst du über „Zeiten verschieben“.",
+    "gameTimeLockedWayDuration": "Vor dem ersten Anpfiff änderst du sie auf der Turnierseite unter Einstellungen › „Erweiterte Bearbeitung“ › „Spielmodus ändern“.",
+    "gameTimeLockedWay": "Anstoßzeiten änderst du über „Zeiten verschieben“.",
     "breakTime": "Pausenzeit zwischen Spielen",
     "minutes": "Minuten"
   },
@@ -381,6 +382,7 @@
     "dateAndTime": "Datum & Zeit",
     "startDate": "Startdatum",
     "startTime": "Startzeit",
+    "structureInfoBeforeStart": "Diese Einstellungen bestimmen den Spielplan. Vor dem ersten Anpfiff änderst du sie auf der Turnierseite unter Einstellungen › „Erweiterte Bearbeitung“:",
     "structureInfo": "Struktur-Info (gesperrt)",
     "numberOfTeams": "Anzahl Teams",
     "numberOfGroups": "Anzahl Gruppen",

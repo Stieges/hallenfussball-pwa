@@ -283,11 +283,11 @@ describe('useEngineEventEditing -- Hinweistext je Sperrgrund (G3)', () => {
     expect(result.current.sides.away.hint).toBe('Erst die Entscheidung treffen');
   });
 
-  it('Strafstoßschießen: Minus deaktiviert, Hinweis verweist auf „Rückgängig“ (@SL-110, @OB-071)', async () => {
+  it('Strafstoßschießen: Minus deaktiviert, Hinweis neutral, ohne Verweis auf eine wirkungslose Funktion (@OB-071, bis L-01 behoben)', async () => {
     const { value, wrapper } = await drawThenFinish({ ...KO, tiebreak: 'shootout' });
     const { result } = renderHook(() => useEngineEventEditing(baseParams(matchOf(value))), { wrapper });
     expect(result.current.sides.home.canMinus).toBe(false);
-    expect(result.current.sides.home.hint).toContain('„Rückgängig“ den letzten Schuss zurück');
+    expect(result.current.sides.home.hint).toContain('nicht zurücknehmbar');
   });
 
   it('Kein Kandidat: Knopf nur deaktiviert, KEIN Hinweis', async () => {

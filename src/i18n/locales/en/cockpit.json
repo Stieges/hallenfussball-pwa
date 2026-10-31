@@ -473,7 +473,7 @@
         "decisionPending": "Make the decision first",
         "staleBase": "Before the last correction – can no longer be reversed",
         "regularGoal": "Goal from regular time – can no longer be reversed",
-        "shootout": "During the $t(sport:events.penaltyShootout), “Undo” reverses the last shot",
+        "shootout": "Not reversible during the $t(sport:events.penaltyShootout)",
         "notAllowed": "Cannot be reversed right now",
         "goalFinished": "Match is over – corrections via the tournament director"
       },
