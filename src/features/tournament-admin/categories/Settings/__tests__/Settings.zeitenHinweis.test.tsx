@@ -15,6 +15,8 @@ vi.unmock('i18next');
 vi.unmock('react-i18next');
 await initRealDeI18n();
 
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../../../../hooks/useTournamentStartState', () => ({ useTournamentStartState: () => ({ state: 'unknown' }) }));
 vi.mock('../../../../../hooks', () => ({ useTournaments: () => ({ saveTournament: vi.fn() }) }));
 vi.mock('../../../../../hooks/useRepository', () => ({ useRepository: () => ({ get: () => Promise.resolve(null) }) }));
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }));

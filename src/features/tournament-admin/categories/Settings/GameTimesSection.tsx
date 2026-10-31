@@ -17,6 +17,8 @@ import { DialogActions } from '../../../../components/ui/molecules/DialogActions
 import { SHIFT_QUERY } from '../../../tournament-management/time-shift/useTimeShift';
 import type { Tournament } from '../../../../types/tournament';
 import { isTournamentClosed } from '../../../../core/services/lifecycle';
+import { useTournamentStartState } from '../../../../hooks/useTournamentStartState';
+import { useCan } from '../../../auth/hooks/useCan';
 
 const row: CSSProperties = { display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs, marginBottom: cssVars.spacing.md };
 const label: CSSProperties = { fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textSecondary };
@@ -73,6 +75,10 @@ export function GameTimesSection({ tournament }: { tournament: Tournament }) {
   const titleId = useId();
   const inputId = useId();
   const canShift = !isTournamentClosed(tournament);
+  // @W5-036: den Weg zur Dauer nennt der Text nur, wenn die App ihn in diesem Zustand anbietet (vor dem ersten Anpfiff, mit Recht)
+  const { state: startState } = useTournamentStartState(tournament);
+  const canRestructure = useCan('restructure', tournament.id);
+  const canEditDuration = canShift && startState === 'not-started' && canRestructure; // abgeschlossen: kein Weg
   const [why, setWhy] = useState(false);
   const toShift = () => {
     setWhy(false);
@@ -90,13 +96,18 @@ export function GameTimesSection({ tournament }: { tournament: Tournament }) {
           <div key={item.key} style={row}>
             <label htmlFor={`${inputId}-${item.key}`} style={label}>{item.name}</label>
             <div style={valueRow}>
-              <input id={`${inputId}-${item.key}`} type="number" value={item.minutes} disabled readOnly style={input} data-testid={`settings-locked-${item.key}`} />
+              <input id={`${inputId}-${item.key}`} type="number" value={item.minutes} disabled readOnly style={input} aria-describedby={`${inputId}-${item.key}-grund`} data-testid={`settings-locked-${item.key}`} />
               <span style={unit}>{tt('timeShift.minutesUnit')}</span>
               <button type="button" style={lockButton} aria-label={tt('timeShift.lockButton', { name: item.name })} onClick={() => setWhy(true)} data-testid={`settings-lock-${item.key}`}>
                 <Icons.Lock size={iconSizeValues.sm} />
               </button>
             </div>
-            <p style={hint}>{t('settingsSection.gameTimeLockedHint')}</p>
+            {/* @W5-036 / @OB-043: Grund der Sperre, und der Weg nur, wenn „Zeiten verschieben“ in diesem Zustand angeboten wird */}
+            <p id={`${inputId}-${item.key}-grund`} style={hint} data-testid={`settings-locked-${item.key}-grund`}>
+              {t('settingsSection.gameTimeLockedHint')}
+              {canEditDuration ? ` ${t('settingsSection.gameTimeLockedWayDuration')}` : ''}
+              {canShift ? ` ${t('settingsSection.gameTimeLockedWay')}` : ''}
+            </p>
           </div>
         ))}
       </CollapsibleSection>

@@ -9,6 +9,8 @@ import { MetadataCategory } from '../index';
 
 // Das Ortsformular braucht Repositories (Ortssuche); hier geht es nur um die Kontaktdaten daneben.
 vi.mock('../../../../../components/LocationForm', () => ({ LocationForm: () => null }));
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../../../../hooks/useTournamentStartState', () => ({ useTournamentStartState: () => ({ state: 'unknown' }) }));
 
 function turnier(showPublic?: boolean): Tournament {
   return {

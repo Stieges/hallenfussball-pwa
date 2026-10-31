@@ -15,6 +15,8 @@ vi.unmock('react-i18next');
 await initRealDeI18n();
 
 const saveTournament = vi.fn<(tournament: Tournament) => Promise<void>>();
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../../../../hooks/useTournamentStartState', () => ({ useTournamentStartState: () => ({ state: 'unknown' }) }));
 vi.mock('../../../../../hooks', () => ({
   useTournaments: () => ({ saveTournament }),
 }));

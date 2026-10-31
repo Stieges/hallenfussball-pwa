@@ -4,6 +4,8 @@
  * @DR-016 Ändert Olli das Regelwerk nach dem ersten Anpfiff, ist das Feld editierbar und die
  * Änderung wird gespeichert. Der nächste Ausdruck zeigt den neuen Text.
  */
+vi.mock('../../../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../../../../hooks/useTournamentStartState', () => ({ useTournamentStartState: () => ({ state: 'unknown' }) }));
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
