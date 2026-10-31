@@ -212,6 +212,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const publishLockRef = useRef(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  // Timer-Handles: beim Unmount löschen, sonst feuert setState nach Ende der Umgebung (CI: "window is not defined").
+  const slideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (slideTimerRef.current) { clearTimeout(slideTimerRef.current); }
+    if (saveNoticeTimerRef.current) { clearTimeout(saveNoticeTimerRef.current); }
+  }, []);
 
   // Use provided onSave or fallback to default saveTournament
   const saveTournament = onSave ?? defaultSaveTournament;
@@ -235,7 +242,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   // Show auto-save confirmation notification
   const showSaveConfirmation = useCallback(() => {
     setShowSaveNotification(true);
-    setTimeout(() => setShowSaveNotification(false), 2000); // Hide after 2 seconds
+    if (saveNoticeTimerRef.current) { clearTimeout(saveNoticeTimerRef.current); }
+    saveNoticeTimerRef.current = setTimeout(() => setShowSaveNotification(false), 2000); // Hide after 2 seconds
   }, []);
 
   // ============================================================================
@@ -280,7 +288,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     void navigate(newPath, { replace: true });
 
     // Clear slide direction after animation completes
-    setTimeout(() => setSlideDirection(null), 300);
+    if (slideTimerRef.current) { clearTimeout(slideTimerRef.current); }
+    slideTimerRef.current = setTimeout(() => setSlideDirection(null), 300);
   }, [wizardHandleStepChange, saveAsDraft, step, navigate, existingTournament?.id]);
 
   // Autosave 1: Periodic autosave every 10 seconds
