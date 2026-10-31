@@ -88,6 +88,10 @@ export function EventList({
         if (event.payload.direction === 'DEC') {
           return t('matchSummary.events.goalDecrement', { team: teamName });
         }
+        // @ZM-186: Eigentor „Eigentor SV Süd, Nr. 4, 6.“ -- schießendes Team, nicht das begünstigte
+        if (event.payload.ownGoal === true) {
+          return t('matchSummary.events.ownGoal', { team: getTeamName(event.payload.ownGoalTeamId), player: numberInfo, minute });
+        }
         let goalText = t('matchSummary.events.goal', { team: teamName, player: numberInfo, minute });
         const assists = event.payload.assists;
         if (assists && assists.length > 0) {

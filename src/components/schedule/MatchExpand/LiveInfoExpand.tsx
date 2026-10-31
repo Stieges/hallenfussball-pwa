@@ -47,6 +47,9 @@ export interface MatchEvent {
   timestampSeconds: number;
   playerNumber?: number;
   direction?: 'INC' | 'DEC';
+  /** @ZM-186: Eigentor -- `teamId` ist das begünstigte, `ownGoalTeamId` das schießende Team. */
+  ownGoal?: boolean;
+  ownGoalTeamId?: string;
   /** F3b2 (Ruling PC30): 'YELLOW' | 'YELLOW_RED' | 'RED' -- unterschieden nur ueber cardKindOf. */
   cardType?: string;
 }

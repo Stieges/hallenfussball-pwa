@@ -37,7 +37,7 @@ function mitZeitstrafe(): Row {
   return reply;
 }
 
-/** Zusätzliche Ereignisse in Spiel 9: Tor Heim ohne Nummer in Minute 12, Tor Heim Nr. 7 bei genau 60 s (Minute 2), Gelbe Karte Gast Nr. 5. */
+/** Zusätzliche Ereignisse in Spiel 9: Tor Heim ohne Nummer in Minute 12, Tor Heim Nr. 7 bei genau 60 s (Minute 2), Gelbe Karte Gast Nr. 5. (Die Liste zeigt nur die 5 jüngsten.) */
 function mitWeiterenEreignissen(): Row {
   const reply = mitZeitstrafe();
   reply.matches = (reply.matches as Row[]).map((m) => (Number(m.match_number) === RUNNING_MATCH_NUMBER
@@ -48,6 +48,22 @@ function mitWeiterenEreignissen(): Row {
         { id: '11111111-2222-4333-8444-666666666661', type: 'GOAL', team_id: m.team_a_id, section: 1, clock_ms: 680_000 },
         { id: '11111111-2222-4333-8444-666666666662', type: 'GOAL', team_id: m.team_a_id, section: 1, clock_ms: 60_000, number: 7 },
         { id: '11111111-2222-4333-8444-666666666663', type: 'YELLOW_CARD', team_id: m.team_b_id, section: 1, clock_ms: 90_000, number: 5 },
+      ],
+    }
+    : m));
+  return reply;
+}
+
+/** Zwei Eigentore des Gasts (Nr. 4 in Minute 6, ohne Nummer in Minute 7) zusätzlich zur Zeitstrafe. */
+function mitEigentoren(): Row {
+  const reply = mitZeitstrafe();
+  reply.matches = (reply.matches as Row[]).map((m) => (Number(m.match_number) === RUNNING_MATCH_NUMBER
+    ? {
+      ...m,
+      events: [
+        ...(m.events as Row[]),
+        { id: '11111111-2222-4333-8444-666666666664', type: 'OWN_GOAL', team_id: m.team_b_id, section: 1, clock_ms: 340_000, number: 4 },
+        { id: '11111111-2222-4333-8444-666666666665', type: 'OWN_GOAL', team_id: m.team_b_id, section: 1, clock_ms: 400_000 },
       ],
     }
     : m));
@@ -145,5 +161,14 @@ describe('@ZM-002 Zuschauer-Seite zeigt Tor und Zeitstrafe als Ereigniszeile (ec
     const zeilen = await screen.findAllByText(/^Gelbe Karte .+, Nr\. 5$/);
     expect(zeilen.length).toBeGreaterThan(0);
     for (const zeile of zeilen) { expect(zeile.parentElement?.textContent).not.toMatch(/\d\d:\d\d|#/); }
+  });
+
+  // @ZM-186: Eigentor des Gasts steht mit dem schießenden Team (Gast), nicht als „Tor <Heim>, Nr. 4“
+  it('@ZM-186 Eigentor: „Eigentor <Gast>, Nr. 4, 6.“, ohne Nummer „Eigentor <Gast>, 7.“; nicht als Tor des Heimteams', async () => {
+    await karteOeffnen(mitEigentoren());
+    const gast = String((await screen.findAllByText(/^Zeitstrafe .+, Nr\. 5, 4\.$/))[0].textContent).replace(/^Zeitstrafe /, '').replace(/, Nr\. 5, 4\.$/, '');
+    expect((await screen.findAllByText(`Eigentor ${gast}, Nr. 4, 6.`)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(`Eigentor ${gast}, 7.`)).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/^Tor .+, Nr\. 4, 6\.$/)).toHaveLength(0);
   });
 });

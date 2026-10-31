@@ -18,6 +18,8 @@ const events = [
   ev('g2', 'GOAL', 680, { teamId: 'nord' }),
   ev('g3', 'GOAL', 60, { teamId: 'nord', playerNumber: 7 }),
   ev('p1', 'TIME_PENALTY', 200, { teamId: 'sued', playerNumber: 5, penaltyDuration: 120 }),
+  ev('o1', 'GOAL', 340, { teamId: 'nord', ownGoal: true, ownGoalTeamId: 'sued', playerNumber: 4 }),
+  ev('o2', 'GOAL', 400, { teamId: 'nord', ownGoal: true, ownGoalTeamId: 'sued' }),
   ev('y1', 'YELLOW_CARD', 90, { teamId: 'sued', playerNumber: 5 }),
 ];
 
@@ -54,5 +56,25 @@ describe('@ZM-002 Liste nach dem Abpfiff', () => {
   it('Gegenbeispiel: keine Uhrzeit-Spalte bei Tor, Zeitstrafe und Karte', () => {
     zeigen();
     expect(document.body.textContent).not.toMatch(/\d\d:\d\d|#/);
+  });
+
+  it('@ZM-186 Eigentor: „Eigentor SV Süd, Nr. 4, 6.“, ohne Nummer „Eigentor SV Süd, 7.“ (schießendes Team, nicht FC Nord)', () => {
+    zeigen();
+    expect(screen.getByText('Eigentor SV Süd, Nr. 4, 6.')).toBeTruthy();
+    expect(screen.getByText('Eigentor SV Süd, 7.')).toBeTruthy();
+    expect(screen.queryByText(/^Tor FC Nord, (Nr\. 4, )?[67]\.$/)).toBeNull();
+  });
+
+  it('@ZM-186 EN: „Own goal SV Süd, No. 4, 6.“', async () => {
+    const { default: i18n } = await import('i18next');
+    const { default: enTournament } = await import('../../../../i18n/locales/en/tournament.json');
+    i18n.addResourceBundle('en', 'tournament', enTournament, true, true);
+    await i18n.changeLanguage('en');
+    try {
+      zeigen();
+      expect(screen.getByText('Own goal SV Süd, No. 4, 6.')).toBeTruthy();
+    } finally {
+      await i18n.changeLanguage('de');
+    }
   });
 });

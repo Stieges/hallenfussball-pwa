@@ -49,6 +49,11 @@ export function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team,
 
   switch (event.type) {
     case 'GOAL':
+      // @ZM-186: Eigentor „Eigentor SV Süd, Nr. 4, 6.“ -- schießendes Team, nicht das begünstigte
+      if (event.ownGoal === true) {
+        const schuetze = event.ownGoalTeamId === homeTeam.id ? homeTeam.name : awayTeam.name;
+        return t('matchExpand.liveInfo.eventOwnGoal', { team: schuetze, player: numberInfo, minute });
+      }
       return t('matchExpand.liveInfo.eventGoal', { team: teamName, player: numberInfo, minute });
     case 'YELLOW_CARD':
       return t('matchExpand.liveInfo.eventYellowCard', { team: teamName, player: numberInfo });
