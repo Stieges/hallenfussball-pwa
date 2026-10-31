@@ -58,6 +58,13 @@ describe('F-01 Kopf der Turnierseite', () => {
     expect(titel.style.fontSize).toContain(cssVars.fontSizes.xxl);
   });
 
+  it('@OB-025 reicht die Breite nicht, bricht der Kopf in eine zweite Zeile um, statt den Titel zu zerhacken', () => {
+    kopf();
+    const kopfzeile = screen.getByText(LANGER_NAME).closest('header')!;
+    expect(kopfzeile.style.flexWrap).toBe('wrap');
+    expect(screen.getByText(LANGER_NAME).parentElement!.style.flex).toBe('1 1 50%');
+  });
+
   it('@OB-022 das Zahnrad ist mindestens 44 × 44 groß', () => {
     kopf();
     const zahnrad = screen.getByTitle('Admin Center öffnen');

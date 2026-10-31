@@ -38,8 +38,11 @@ const headerStyle: CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
+  // @OB-025: reicht die Breite nicht, rutschen die Tasten in eine zweite Zeile; der Titel bleibt lesbar (nie Buchstabe für Buchstabe)
+  flexWrap: 'wrap',
+  rowGap: cssVars.spacing.sm,
 };
-const headerContentStyle: CSSProperties = { flex: 1, minWidth: 0 };
+const headerContentStyle: CSSProperties = { flex: '1 1 50%', minWidth: 0 };
 const backButtonStyle: CSSProperties = {
   padding: cssVars.spacing.sm,
   background: 'transparent',
