@@ -1,10 +1,9 @@
-import { CSSProperties, useMemo } from 'react';
+import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, FinalsPreset } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
 import { effectiveRoundCount } from '../../../core/generators/repeatRounds';
-import { estimateRoundRobinRounds } from '../utils/roundCountEstimate';
 
 // Duration thresholds in minutes
 const DURATION_WARNING_THRESHOLD = 480; // 8 hours
@@ -12,6 +11,8 @@ const DURATION_CRITICAL_THRESHOLD = 600; // 10 hours
 
 interface DurationEstimateProps {
   formData: Partial<Tournament>;
+  /** @TM-153: bei „Jeder gegen jeden“ die Dauer aus dem erzeugten Plan (`useRoundRobinEstimate`), sonst die Formel. */
+  plannedMinutes?: number | null;
 }
 
 /**
@@ -46,13 +47,8 @@ const calculateFinalsMatches = (preset: FinalsPreset, numberOfGroups: number): n
   }
 };
 
-export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) => {
+export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData, plannedMinutes = null }) => {
   const { t } = useTranslation('wizard');
-  // @TM-153: bei „Jeder gegen jeden“ dieselbe Quelle wie „Ende ca.“ – der erzeugte Plan statt der Formel
-  const plannedMinutes = useMemo(
-    () => ((formData.groupSystem ?? 'roundRobin') === 'roundRobin' ? estimateRoundRobinRounds(formData).durationMinutes : null),
-    [formData],
-  );
 
   const teams = formData.numberOfTeams ?? 4;
   const fields = formData.numberOfFields ?? 1;

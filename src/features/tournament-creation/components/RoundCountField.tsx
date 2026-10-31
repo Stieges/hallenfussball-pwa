@@ -2,15 +2,15 @@
  * Rundenzahl bei „Jeder gegen jeden“ (@TM-152, @TM-153): Eingabe 1–10 (Vorbelegung 1) mit Tippfehler-Schutz –
  * zu große oder zu kleine Werte werden auf die Grenze gesetzt und mit „Höchstens 10 Runden“ bzw. „Mindestens 1 Runde“
  * gemeldet. Aufbau wie `NumberStepper` (−, Anzeige, +), die Anzeige ist hier tippbar. Darunter (`RoundCountSummary`)
- * Spielzahl und Ende aus dem erzeugten Plan; Weiter bleibt immer möglich.
+ * Spielzahl und Ende aus dem erzeugten Plan (`useRoundRobinEstimate`); Weiter bleibt immer möglich.
  */
-import { CSSProperties, useEffect, useId, useMemo, useState } from 'react';
+import { CSSProperties, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui';
 import type { Tournament } from '../../../types/tournament';
 import { clampRoundCount, ROUND_COUNT_MAX, ROUND_COUNT_MIN, type RoundCountHint } from '../../../core/generators/repeatRounds';
-import { estimateRoundRobinRounds } from '../utils/roundCountEstimate';
+import type { RoundCountEstimate } from '../utils/roundCountEstimate';
 
 interface RoundCountFieldProps {
   formData: Partial<Tournament>;
@@ -127,19 +127,10 @@ const summaryStyle: CSSProperties = {
   fontWeight: cssVars.fontWeights.semibold,
 };
 
-/** „<n> Spiele · Ende ca. hh:mm“ aus dem erzeugten Plan (@TM-153). */
-export const RoundCountSummary: React.FC<{ formData: Partial<Tournament> }> = ({ formData }) => {
+/** „<n> Spiele · Ende ca. hh:mm“ aus dem erzeugten Plan (@TM-153); die Schätzung rechnet der Schritt einmal. */
+export const RoundCountSummary: React.FC<{ estimate: RoundCountEstimate | null }> = ({ estimate }) => {
   const { t } = useTranslation('wizard');
-  const {
-    numberOfTeams, numberOfFields, numberOfRounds, groupSystem, startTime, timeSlot, teams, groupPhaseGameDuration,
-    groupPhaseBreakDuration, gamePeriods, halftimeBreak, minRestSlots, hostTeamIds, openingMode,
-  } = formData;
-  const estimate = useMemo(() => estimateRoundRobinRounds({
-    numberOfTeams, numberOfFields, numberOfRounds, groupSystem, startTime, timeSlot, teams, groupPhaseGameDuration,
-    groupPhaseBreakDuration, gamePeriods, halftimeBreak, minRestSlots, hostTeamIds, openingMode,
-  }), [numberOfTeams, numberOfFields, numberOfRounds, groupSystem, startTime, timeSlot, teams, groupPhaseGameDuration,
-    groupPhaseBreakDuration, gamePeriods, halftimeBreak, minRestSlots, hostTeamIds, openingMode]);
-  if (estimate.matches === 0) { return null; }
+  if (estimate === null || estimate.matches === 0) { return null; }
   return (
     <p style={summaryStyle} data-testid="wizard-round-summary">
       {estimate.endTime === null

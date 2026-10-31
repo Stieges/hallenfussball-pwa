@@ -20,6 +20,7 @@ import {
   RoundCountField,
   RoundCountSummary,
 } from './components';
+import { useRoundRobinEstimate } from './hooks/useRoundRobinEstimate';
 import { MatchCockpitSettingsPanel } from '../../components/match-settings/MatchCockpitSettingsPanel';
 import { ForfeitScoreField } from '../../components/match-settings/ForfeitScoreField';
 import { changeForfeitScore, effectiveForfeitScore, forfeitScoreLocked } from '../../core/models/forfeit';
@@ -48,6 +49,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   const { t } = useTranslation('wizard');
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
   const isRoundRobin = (formData.groupSystem ?? 'roundRobin') === 'roundRobin';
+  // @TM-153 / Review #423 N1: Plan-Schätzung einmal je Strukturänderung, für Zusammenfassung und Dauer
+  const roundEstimate = useRoundRobinEstimate(formData);
 
   // TOUR-EDIT-STRUCTURE: Strukturfelder sind gesperrt wenn Ergebnisse vorhanden
   const structureFieldsLocked = hasResults;
@@ -250,10 +253,10 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               )}
             </div>
 
-            {isRoundRobin && <RoundCountSummary formData={formData} />}
+            {isRoundRobin && <RoundCountSummary estimate={roundEstimate} />}
 
             {/* Duration Estimate - Always visible as it's important */}
-            <DurationEstimate formData={formData} />
+            <DurationEstimate formData={formData} plannedMinutes={roundEstimate?.durationMinutes ?? null} />
 
             {/* Validation Warnings - Always visible */}
             <ValidationWarnings formData={formData} />
