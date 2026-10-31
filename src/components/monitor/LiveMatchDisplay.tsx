@@ -11,10 +11,10 @@
 
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, getBlockFrames } from '../../design-tokens';
+import { cssVars, displayFontSizes, displayLayout } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
 import { DEFAULT_SPECTATOR_DISPLAY } from '../../core/models/spectatorDisplay';
-import { resolveBoxColors, type BoxFill } from '../../core/models/scoreBoxColors';
+import { resolveBoxColors } from '../../core/models/scoreBoxColors';
 import { LiveMatch } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer, type MatchTimerUhrQuelle } from './MatchTimer';
@@ -54,11 +54,6 @@ export interface LiveMatchDisplayProps {
   uhr?: MatchTimerUhrQuelle;
 }
 
-/** Fläche als eine Farbe: bei der Weste die Mitte (die Ziffer steht darauf, @ZM-156). */
-function flatColorOf(fill: BoxFill): string {
-  return fill.kind === 'solid' ? fill.color : fill.center;
-}
-
 /** Ohne Ansicht (z. B. Vorschau): keine Seite trägt eine Farbe, also Standardfarben Heim/Gast (@ZM-159 Fall A). */
 function standardBoxes(): NonNullable<LiveMatchDisplayProps['boxes']> {
   const { a, b } = resolveBoxColors({ worn: {}, settings: DEFAULT_SPECTATOR_DISPLAY });
@@ -88,13 +83,9 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const isRunning = match.status === 'RUNNING';
   const isPaused = match.status === 'PAUSED';
 
-  // Bis 3.2 (ScoreBox am Monitor) trägt die Weste ihre Mitte als Fläche
   const shown = boxes ?? standardBoxes();
-  const homeColor = flatColorOf(shown.home.fill);
-  const awayColor = flatColorOf(shown.away.fill);
 
   const layout = displayLayout.scoreArea;
-  const frames = getBlockFrames(homeColor, awayColor, themeColors.background, themeColors.text);
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -148,9 +139,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           theme={theme}
           themeColors={themeColors}
           hideScore={hideScore}
-          homeColor={homeColor}
-          awayColor={awayColor}
-          frames={frames}
+          boxes={shown}
           finalScore={finalScore}
           finalRound={finalRound}
         />

@@ -36,7 +36,8 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
     expect(m.boxW / flaecheW).toBeGreaterThanOrEqual(0.32);
     expect(m.boxW / flaecheW).toBeLessThanOrEqual(0.34);
     // Mit Bildrand ist die Fläche verhältnismäßig breiter (z. B. 1184×624 statt 1280×720), der Kasten wird etwas flacher (B-44a4)
-    expect(m.boxH / m.boxW).toBeGreaterThanOrEqual(rand === 0 ? 0.7 : 0.65);
+    // Spielanzeige S3 (Daniel 30.10., Option A): Kasten 36 cqh, Verhältnis 0,62 statt 0,7 (Ecken und Zusatzzeilen brauchen Höhe)
+    expect(m.boxH / m.boxW).toBeGreaterThanOrEqual(rand === 0 ? 0.6 : 0.55);
     expect(m.boxH / m.boxW).toBeLessThanOrEqual(1.2);
   });
 
@@ -80,9 +81,35 @@ describe.each(RESOLUTIONS.flatMap(r => [0, 48].map(rand => ({ ...r, rand }))))('
   it('gesamte Folie passt in die Folienfläche innerhalb des Bildrands (@ME-020): Kopf, Kasten, Namen (2 Zeilen), unterer Bereich, Polster', () => {
     const padding = resolveCss(L.paddingY, m.ctx);
     const header = (parseFloat(L.header) / 100) * flaecheH + resolveCss(L.headerGap, m.ctx);
-    const names = L.nameLines * TEAM_NAME_ZEILENHOEHE * m.name + resolveCss(L.teamNamesGap, m.ctx);
+    // S3: dazu die zwei freigehaltenen Zusatzzeilen unter dem Namen (@ZM-157) und der Abstand Kasten/Name (Ringbreite)
+    const names = L.nameLines * TEAM_NAME_ZEILENHOEHE * m.name + 2 * m.hint * L.clockLineHeight + resolveCss(L.frameWidthStrong, m.ctx);
     const lower = resolveCss(L.lowerHeight, m.ctx);
     expect(header + m.boxH + names + lower + 2 * padding).toBeLessThanOrEqual(flaecheH);
+  });
+
+  it('@ZM-157 Ecken (Leibchen-Zeichen, Pokal) ragen in den Abstand zur Kopfzeile, ohne sie zu berühren (mindestens 1 cqh Luft)', () => {
+    const cup = resolveCss(L.monitorCup, m.ctx);
+    expect(cup / 3 + resolveCss('1cqh', m.ctx)).toBeLessThanOrEqual(resolveCss(L.headerGap, m.ctx) + 0.01);
+  });
+
+  it('@ZM-157 (Variante c) Logo/Initialen außen neben dem Kasten: etwa halb so hoch wie der Kasten und zwischen Kasten und Folienrand, ohne den Rand zu berühren', () => {
+    const kreis = Math.min(resolveCss(L.avatarOutsideHeight, m.ctx), resolveCss(L.avatarOutsideWidthCap, m.ctx));
+    const luecke = resolveCss(L.avatarOutsideGap, m.ctx);
+    const paddingX = resolveCss(L.paddingX, m.ctx);
+    const spalte = (m.ctx.cqw - 2 * paddingX) / 2;
+    const platz = (spalte - m.boxW) / 2 + paddingX; // Kasten (zentriert in der Spalte) bis Folienrand
+    expect(kreis / m.boxH, 'etwa halb so hoch wie der Kasten').toBeGreaterThanOrEqual(0.4);
+    expect(kreis / m.boxH).toBeLessThanOrEqual(0.55);
+    expect(kreis + luecke, 'Kreis samt Lücke liegt innerhalb des Folienrands').toBeLessThanOrEqual(platz);
+    // „WW“ in Mindestschrift passt in den Kreis
+    expect(Math.hypot(2.1 * m.hint, 0.75 * m.hint)).toBeLessThanOrEqual(kreis + 0.01);
+  });
+
+  it('@ZM-157 Logo/Initialen: Kreis fasst zwei breite Versalien („WW“ ≈ 2,1 em breit, Versalienhöhe ≈ 0,75 em) in Mindestschrift, im Kreis statt im Quadrat', () => {
+    // Bildrand bis 5 % der Höhe (TV-Rand, EBU): dort gilt die Zusage; der synthetische 48-px-Rand bei 720 p (13 %) liegt darüber
+    if (rand / h > 0.05) { return; }
+    const kreis = resolveCss(L.avatarSize, m.ctx);
+    expect(Math.hypot(2.1 * m.hint, 0.75 * m.hint)).toBeLessThanOrEqual(kreis + 0.01);
   });
 
   // R5 PR 2 (@ZM-166, @ZM-165): der Text steht ÜBER der Uhr (eine Zeile statt Hinweiszeile darunter), der Balken ist etwa

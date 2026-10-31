@@ -81,7 +81,11 @@
               {
                 "id": "00000001-0000-4000-8000-000000000001",
                 "name": "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921",
-                "group": "A"
+                "group": "A",
+                "logo": {
+                  "type": "base64",
+                  "value": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMxNTY1QzAiLz48cGF0aCBkPSJNMTIgNWw2IDN2NWMwIDMtMi41IDUuNS02IDYuNUM4LjUwMCAxOC41MDAgNiAxNiA2IDEzVjh6IiBmaWxsPSIjRkZGRkZGIi8+PC9zdmc+"
+                }
               },
               {
                 "id": "00000001-0000-4000-8000-000000000002",
@@ -3187,7 +3191,11 @@
               {
                 "id": "00000004-0000-4000-8000-000000000001",
                 "name": "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921",
-                "group": "A"
+                "group": "A",
+                "logo": {
+                  "type": "base64",
+                  "value": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMxNTY1QzAiLz48cGF0aCBkPSJNMTIgNWw2IDN2NWMwIDMtMi41IDUuNS02IDYuNUM4LjUwMCAxOC41MDAgNiAxNiA2IDEzVjh6IiBmaWxsPSIjRkZGRkZGIi8+PC9zdmc+"
+                }
               },
               {
                 "id": "00000004-0000-4000-8000-000000000002",
@@ -3326,7 +3334,11 @@
               {
                 "id": "00000001-0000-4000-8000-000000000001",
                 "name": "Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921",
-                "group": "A"
+                "group": "A",
+                "logo": {
+                  "type": "base64",
+                  "value": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMxNTY1QzAiLz48cGF0aCBkPSJNMTIgNWw2IDN2NWMwIDMtMi41IDUuNS02IDYuNUM4LjUwMCAxOC41MDAgNiAxNiA2IDEzVjh6IiBmaWxsPSIjRkZGRkZGIi8+PC9zdmc+"
+                }
               },
               {
                 "id": "00000001-0000-4000-8000-000000000002",

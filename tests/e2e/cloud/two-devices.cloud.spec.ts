@@ -198,7 +198,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
 
     await anonPage.goto(`/#/display/${E2E_PUBLIC_CUP_ID}/${E2E_PUBLIC_CUP_MONITOR_ID}`);
     await anonPage.waitForLoadState('networkidle');
-    const monitorHomeBlock = anonPage.locator('[data-position="home"]');
+    const monitorHomeBlock = anonPage.getByTestId('live-box-home');
     await expect(monitorHomeBlock).toBeVisible({ timeout: 15000 });
     const before = Number((await monitorHomeBlock.getAttribute('aria-label'))?.split(':')[1]?.trim());
     expect(Number.isFinite(before)).toBe(true);

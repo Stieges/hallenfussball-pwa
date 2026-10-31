@@ -74,10 +74,10 @@ async function berichte(testInfo: TestInfo, titel: string, latenzen: number[]): 
 /** 20 Tore nacheinander; je Tor Latenz = Monitor-Änderung − Cockpit-Änderung (ms). */
 async function zwanzigTore(cockpit: Page, monitor: Page, vorher: number): Promise<number[]> {
   await spurAufzeichnen(cockpit, '__cockpit', '[data-testid="scoreboard-box-links"]', null);
-  await spurAufzeichnen(monitor, '__monitor', '[data-position="home"]', 'aria-label');
+  await spurAufzeichnen(monitor, '__monitor', '[data-testid="live-box-home"]', 'aria-label');
   for (let i = 1; i <= TORE; i++) {
     await enterGoal(cockpit, 'home');
-    await expect(monitor.locator('[data-position="home"]')).toHaveAttribute('aria-label', `Heim: ${vorher + i}`, { timeout: 15_000 });
+    await expect(monitor.locator('[data-testid="live-box-home"]')).toHaveAttribute('aria-label', `Heim: ${vorher + i}`, { timeout: 15_000 });
   }
   const c = await spur(cockpit, '__cockpit');
   const m = await spur(monitor, '__monitor');
@@ -93,7 +93,7 @@ async function zwanzigTore(cockpit: Page, monitor: Page, vorher: number): Promis
 }
 
 /** Öffnet einen Monitor im nicht angemeldeten Kontext und wartet, bis `bereit` sichtbar ist. */
-async function anonymerMonitor(context: BrowserContext, tournamentId: string, monitorId: string, bereit = '[data-position="home"]'): Promise<Page> {
+async function anonymerMonitor(context: BrowserContext, tournamentId: string, monitorId: string, bereit = '[data-testid="live-box-home"]'): Promise<Page> {
   const page = await context.newPage();
   await page.goto(`/#/display/${tournamentId}/${monitorId}`);
   await expect(page.locator(bereit).first()).toBeVisible({ timeout: 15_000 });
@@ -118,15 +118,15 @@ test.describe('R5 Sofort-Kanal: Monitor ohne Anmeldung folgt dem Cockpit', () =>
       await expectEngineMatchRunningUi(olli.page);
       const monitor = await anonymerMonitor(halle, ids.tournamentId, E2E_MONSOFORT_MONITOR_ID);
       const eingang = await anonymerMonitor(halle, ids.tournamentId, E2E_MONSOFORT_EINGANG_MONITOR_ID, 'text=Willkommen');
-      await expect(monitor.locator('[data-position="home"]')).toHaveAttribute('aria-label', 'Heim: 1');
+      await expect(monitor.locator('[data-testid="live-box-home"]')).toHaveAttribute('aria-label', 'Heim: 1');
 
       // @ZM-083: ein Tor – der Feld-Monitor (Live-Folie) blendet ein und zeigt zugleich 2, der Eingang blendet ein.
       await enterGoal(olli.page, 'home');
-      await expect(monitor.locator('[data-position="home"]')).toHaveAttribute('aria-label', 'Heim: 2', { timeout: FRIST_MS + 500 });
+      await expect(monitor.locator('[data-testid="live-box-home"]')).toHaveAttribute('aria-label', 'Heim: 2', { timeout: FRIST_MS + 500 });
       await expect(monitor.getByText('TOR!')).toBeVisible({ timeout: 1_000 });
       await expect(eingang.getByText('TOR!')).toBeVisible({ timeout: FRIST_MS + 500 });
       await expect(monitor.getByText('TOR!')).toBeHidden({ timeout: 6_000 });
-      await expect(monitor.locator('[data-position="home"]')).toHaveAttribute('aria-label', 'Heim: 2');
+      await expect(monitor.locator('[data-testid="live-box-home"]')).toHaveAttribute('aria-label', 'Heim: 2');
 
       const latenzen = await zwanzigTore(olli.page, monitor, 2);
 

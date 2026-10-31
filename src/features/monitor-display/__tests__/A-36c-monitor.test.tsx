@@ -16,7 +16,8 @@ import { AllStandingsSlide } from '../slides/AllStandingsSlide';
 import { LiveSlide } from '../slides/LiveSlide';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
-import { fieldSchedule, MONITOR_ROWS_PER_PAGE, standingsSections } from '../slideContent';
+import { fieldSchedule, standingsSections } from '../slideContent';
+import { displayList } from '../../../design-tokens';
 import { buildMonitorView } from '../monitorView';
 import { liveMatchOf, withView } from './monitorViewHelper';
 import { slide } from './monitorFixture';
@@ -36,11 +37,11 @@ const zeile = (id: string): HTMLElement => {
 };
 const zeilenIds = (): Array<string | null> => screen.queryAllByTestId('monitor-match-row').map(row => row.getAttribute('data-match-id'));
 
-/** Seite der Spielplan-Folie, auf der das Spiel steht (6 Zeilen je Seite, @ZM-129). */
+/** Seite der Spielplan-Folie, auf der das Spiel steht (4 Zeilen je Seite, @ZM-185). */
 function seiteVon(tournament: Tournament, index: number): number {
   const match = tournament.matches[index];
   const position = fieldSchedule(buildMonitorView(tournament), match.field).findIndex(m => m.id === match.id);
-  return Math.floor(position / MONITOR_ROWS_PER_PAGE);
+  return Math.floor(position / displayList.scheduleRowsPerPage);
 }
 
 function spielplan(cup: Hallencup, index: number, tournament: Tournament = cup.tournament) {

@@ -5,7 +5,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
-import { fieldSchedule, pageOf, pagesFor } from '../slideContent';
+import { fieldSchedule, pageOf, pagesFor, scheduleRowsFor } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -21,7 +21,7 @@ interface ScheduleFieldSlideProps {
   page?: number;
 }
 
-/** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, je Seite 6 Zeilen (@ZM-129). */
+/** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, je Seite bis zu 4 Zeilen (bei langen Namen 3) mit dem Logo über dem Namen (@ZM-185). */
 export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page = 0 }: ScheduleFieldSlideProps) {
   const { t } = useTranslation('monitor');
   const themeColors = monitorThemes[resolveTheme(theme)];
@@ -31,8 +31,9 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
   const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
 
   const schedule = fieldSchedule(view, fieldNumber);
-  const pages = pagesFor(schedule.length);
-  const rows = pageOf(schedule, page);
+  const rowsPerPage = scheduleRowsFor(schedule);
+  const pages = pagesFor(schedule.length, rowsPerPage);
+  const rows = pageOf(schedule, page, rowsPerPage);
 
   // B-16e2 (@W2A-031): Kindermodus – kein Ergebnis; die Seitentexte („noch offen“) kommen fertig aus der Ansicht
   const ergebnisseAusgeblendet = !view.rules.results;
@@ -56,6 +57,7 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
             theme={theme}
             showScore={!ergebnisseAusgeblendet}
             showStatus
+            logoPlacement="above"
           />
         ))}
       </div>

@@ -1,7 +1,7 @@
 /**
  * @ZM-151 Die Ergebniskästen auf dem Monitor springen nicht, wenn sich der Zustand des Spiels ändert.
  *
- * Gemessen wird die Bounding-Box beider Ergebniskästen der Live-Folie (`[data-testid="live-block-*"] [data-position]`, der Ring ist
+ * Gemessen wird die Bounding-Box beider Ergebniskästen der Live-Folie (`[data-testid="live-box-*"]`, der Ring ist
  * eine Outline und gehört nicht zur Box) in allen Zuständen, die der Monitor zeigen kann: läuft, Halbzeit-Phase, Verlängerung,
  * Strafstoßschießen läuft, Ende regulär, Ende nach Strafstoßschießen (nur eingetragen, K5g/K5g4) und Ende mit 50-Zeichen-Verlierer (K5g3).
  * Bei 1280×720 und 1920×1080 müssen alle Kästen auf ±1 px gleich liegen. Gegenbeispiel aus dem Szenario: Ende ohne Strafstoß = Ende mit Strafstoß.
@@ -65,7 +65,7 @@ async function beendeFinale(page: Page, werte: { scoreA: number; scoreB: number;
 async function messeKaesten(page: Page): Promise<Kaesten> {
   return page.evaluate(() => {
     const r = (seite: string) => {
-      const b = document.querySelector(`[data-testid="live-block-${seite}"] [data-position]`)?.getBoundingClientRect();
+      const b = document.querySelector(`[data-testid="live-box-${seite}"]`)?.getBoundingClientRect();
       if (!b) { throw new Error(`Kasten ${seite} fehlt`); }
       return { l: b.left, t: b.top, w: b.width, h: b.height };
     };

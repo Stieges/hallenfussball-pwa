@@ -37,7 +37,7 @@ function createMatch(overrides: Partial<LiveMatch> = {}): LiveMatch {
 }
 
 function blockOf(position: 'home' | 'away'): HTMLElement {
-  return document.querySelector<HTMLElement>(`[data-position="${position}"]`)!;
+  return screen.getByTestId(`live-box-${position}`);
 }
 
 describe('Gleich breiter Rahmen beider Kästen', () => {

@@ -775,6 +775,8 @@ export function dehneTexte({ dehnung, teamname, teamSelektor }) {
     const p = n.parentElement
     if (!p || ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'].includes(p.tagName)) continue
     if ([...team].some((t) => t.contains(n))) continue
+    // Initialen/Kürzel (zwei Buchstaben aus dem Namen) sind keine Übersetzung und werden nicht gedehnt; Teamnamen und alles andere schon
+    if (p.closest('[data-initialen]')) continue
     if (!/\p{L}/u.test(n.textContent)) continue
     knoten.push(n)
   }

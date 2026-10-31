@@ -50,6 +50,7 @@ export function NextMatchesSlide({ slide, tournament, view, theme, style, page =
               match={match}
               tournament={tournament}
               theme={theme}
+              logoPlacement="mirrored"
             />
           ))}
         </div>

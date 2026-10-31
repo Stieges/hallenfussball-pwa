@@ -13,7 +13,9 @@ vi.unmock('i18next'); vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../test/realDeI18n';
 await initRealDeI18n();
 
-import { cssVars, displayLayout, displayFontSizes, displayMonitor } from '../../../design-tokens';
+import { cssVars, displayLayout, displayFontSizes, monitorThemes } from '../../../design-tokens';
+import { mixHex } from '../../../design-tokens/displayColor';
+import { DEFAULT_AWAY_BOX_COLOR } from '../../../core/models/spectatorDisplay';
 import { LiveMatchDisplay } from '../LiveMatchDisplay';
 import { buildMonitorView } from '../../../features/monitor-display/monitorView';
 import { liveMatchOf } from '../../../features/monitor-display/__tests__/monitorViewHelper';
@@ -39,27 +41,27 @@ function zeige(cup: Hallencup, tournament = cup.tournament, spiel: number = GAME
   return render(<LiveMatchDisplay match={liveMatchOf(match, tournament)} finalScore={gezeigt?.score} finalRound={gezeigt?.phase === 'final'} />);
 }
 const NUR_ERGEBNIS: Spalten = { score_a: 2, score_b: 2, penalty_score_a: 4, penalty_score_b: 3, decided_by: 'penalty' };
-const kasten = (seite: 'home' | 'away') => screen.getByTestId(`live-block-${seite}`).querySelector<HTMLElement>('[data-position]')!;
+const kasten = (seite: 'home' | 'away') => screen.getByTestId(`live-box-${seite}`);
 const name = (seite: 'home' | 'away') => screen.getByTestId(`live-name-${seite}`).querySelector<HTMLElement>('[data-teamname]')!;
 
 describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () => {
   it('Sieger-Kasten mit Ring in der Primärfarbe und Pokal-Kreis, Verlierer-Kasten abgedunkelt', async () => {
     await ende(NUR_ERGEBNIS);
     expect(kasten('home').dataset.outcome).toBe('winner');
-    expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
-    expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
+    expect(kasten('home').style.outlineWidth).toBe(displayLayout.scoreArea.frameWidthStrong);
+    expect(screen.getByTestId('live-box-home-cup')).toBeInTheDocument();
     // Fixrunde 4: Pokal-Symbol (Mockup: Lucide „trophy“), Beschriftung „Pokal“
-    expect(screen.getByTestId('live-cup-home').querySelector('[data-icon="trophy"]')).not.toBeNull();
-    expect(screen.getByRole('img', { name: 'Pokal' })).toBe(screen.getByTestId('live-cup-home'));
-    expect(screen.getByTestId('live-cup-home').style.width).toBe(displayLayout.scoreArea.monitorCup);
+    expect(screen.getByTestId('live-box-home-cup').querySelector('[data-icon="trophy"]')).not.toBeNull();
+    expect(screen.getByRole('img', { name: 'Heim: 2, Pokal' })).toBe(screen.getByTestId('live-box-home'));
+    expect(screen.getByTestId('live-box-home-cup').style.width).toBe(displayLayout.scoreArea.monitorCup);
     expect(kasten('away').dataset.outcome).toBe('loser');
-    expect(kasten('away').style.backgroundImage).toContain('linear-gradient');
-    // Fixrunde 4: nur ein dezenter Schleier (Teamfarbe bleibt erkennbar), nicht der 70-%-Scrim
-    expect(kasten('away').style.backgroundImage).toContain(`${displayLayout.scoreArea.loserDimShare}`);
-    expect(kasten('away').style.backgroundImage).not.toContain(displayMonitor.overlay);
+    // @ZM-156: der Farbton der Teamfarbe bleibt, gedämpft nur um den Anteil `loserDimShare` zum Hintergrund hin (kein 70-%-Scrim)
+    expect(kasten('away').dataset.color).toBe(DEFAULT_AWAY_BOX_COLOR);
+    expect(kasten('away')).toHaveStyle({ backgroundColor: mixHex(DEFAULT_AWAY_BOX_COLOR, monitorThemes.dark.background, parseFloat(displayLayout.scoreArea.loserDimShare) / 100) });
+    expect(kasten('home').style.backgroundColor).not.toBe('');
     expect(parseFloat(displayLayout.scoreArea.loserDimShare)).toBeLessThanOrEqual(35);
     expect(kasten('away').style.outline).toBe('');
-    expect(screen.queryByTestId('live-cup-away')).toBeNull();
+    expect(screen.queryByTestId('live-box-away-cup')).toBeNull();
   });
 
   it('Verlierer-Name zurückgenommen (Textfarbe zweiter Ordnung, 600), Sieger-Name in voller Stärke (800)', async () => {
@@ -79,7 +81,7 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
     const [beschriftung, zahl] = Array.from(screen.getByTestId('live-penalty').querySelectorAll<HTMLElement>('span'));
     expect(zahl.style.fontSize).toBe(displayFontSizes.teamName);
     expect(beschriftung.style.fontSize).toBe(displayFontSizes.clockHint);
-    expect(screen.queryByTestId('live-after-overtime')).toBeNull();
+    expect(screen.queryByText('nach Verlängerung')).toBeNull();
     expect(container.querySelectorAll('[data-testid*="shootout"], [data-testid*="dots"], [data-testid*="schuetze"]')).toHaveLength(0);
   });
 
@@ -102,10 +104,10 @@ describe('@ZM-147 @ZM-049 K5g4: Ergebnis nur eingetragen (ohne Schüsse)', () =>
 describe('@ZM-049 K5g: mit Verlängerung (2:2 nach Verlängerung, Strafstoß 4:3)', () => {
   it('@ZM-157 „nach Verlängerung“ steht unter dem Namen des Siegers (nicht unter dem Doppelpunkt), daneben unter dem Doppelpunkt das Strafstoß-Ergebnis', async () => {
     await ende({ score_a: 1, score_b: 1, overtime_score_a: 1, overtime_score_b: 1, penalty_score_a: 4, penalty_score_b: 3, decided_by: 'penalty' });
-    expect(screen.getByTestId('live-after-overtime').textContent).toBe('nach Verlängerung');
-    expect(screen.getByTestId('live-name-home')).toContainElement(screen.getByTestId('live-after-overtime'));
-    expect(screen.getByTestId('live-penalty-block')).not.toContainElement(screen.getByTestId('live-after-overtime'));
-    expect(screen.getByLabelText('Heim: 2')).toBeInTheDocument();
+    expect(screen.getByText('nach Verlängerung').textContent).toBe('nach Verlängerung');
+    expect(screen.getByTestId('live-name-home')).toContainElement(screen.getByText('nach Verlängerung'));
+    expect(screen.getByTestId('live-penalty-block')).not.toContainElement(screen.getByText('nach Verlängerung'));
+    expect(screen.getByLabelText(/^Heim: 2/)).toBeInTheDocument();
     expect(screen.getByTestId('live-penalty').textContent).toBe('Strafstoßschießen 4 : 3');
   });
 });
@@ -129,7 +131,7 @@ describe('Gegenbeispiele', () => {
   it('@ZM-156 Halbfinale nach regulärer Zeit: Ring und Pokal am Sieger, aber keine Strafstoß-Zeile und keine Siegerzeile (nur „Endstand“)', async () => {
     await ende({ score_a: 3, score_b: 1, decided_by: 'regular' });
     expect(kasten('home').dataset.outcome).toBe('winner');
-    expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
+    expect(screen.getByTestId('live-box-home-cup')).toBeInTheDocument();
     expect(kasten('away').dataset.outcome).toBe('loser');
     expect(screen.queryByTestId('live-penalty-block')).toBeNull();
     expect(screen.queryByTestId('live-winner')).toBeNull();
@@ -139,59 +141,59 @@ describe('Gegenbeispiele', () => {
   // Spec 4.4/4.5 (Daniel 18.10.): „nach Verlängerung“ erscheint auch ohne Strafstoßschießen
   it('@ZM-156 Spiel um Platz 3, Sieg nach Verlängerung: Ring und Pokal am Sieger, „nach Verlängerung“ unter dem Namen des Siegers (nicht unter „Endstand“, nicht beim Verlierer)', async () => {
     await ende({ score_a: 2, score_b: 2, overtime_score_a: 1, overtime_score_b: 0, decided_by: 'overtime' });
-    expect(screen.getByTestId('live-cup-home')).toBeInTheDocument();
+    expect(screen.getByTestId('live-box-home-cup')).toBeInTheDocument();
     expect(screen.queryByTestId('live-penalty-block')).toBeNull();
-    const zusatz = screen.getByTestId('live-after-overtime');
+    const zusatz = screen.getByText('nach Verlängerung');
     expect(zusatz.textContent).toBe('nach Verlängerung');
     expect(screen.getByTestId('live-name-home')).toContainElement(zusatz);
-    expect(screen.getByTestId('live-name-away').querySelector('[data-testid="live-after-overtime"]')).toBeNull();
+    expect(screen.getByTestId('live-name-away').querySelector('[data-testid$="-addon-0"]')).toBeNull();
     expect(screen.getByTestId('live-lower')).not.toContainElement(zusatz);
     expect(screen.getByTestId('live-endstand').textContent).toBe('Endstand');
   });
 
   it('@ZM-156 Gegenbeispiel: gewinnt der Gast nach Verlängerung, steht „nach Verlängerung“ unter dem Namen des Gasts', async () => {
     await ende({ score_a: 1, score_b: 1, overtime_score_a: 0, overtime_score_b: 1, decided_by: 'overtime' });
-    expect(screen.getByTestId('live-name-away')).toContainElement(screen.getByTestId('live-after-overtime'));
-    expect(screen.getByTestId('live-name-home').querySelector('[data-testid="live-after-overtime"]')).toBeNull();
+    expect(screen.getByTestId('live-name-away')).toContainElement(screen.getByText('nach Verlängerung'));
+    expect(screen.getByTestId('live-name-home').querySelector('[data-testid$="-addon-0"]')).toBeNull();
   });
 
   it('Gegenbeispiel: Sieg in regulärer Zeit zeigt kein „nach Verlängerung“', async () => {
     await ende({ score_a: 3, score_b: 1, decided_by: 'regular' });
-    expect(screen.queryByTestId('live-after-overtime')).toBeNull();
+    expect(screen.queryByText('nach Verlängerung')).toBeNull();
   });
 
   it('@ZM-156 Sieg nach Verlängerung in der Gruppe: Ring und „nach Verlängerung“ unter dem Siegernamen, kein Pokal', async () => {
     await ende({ score_a: 2, score_b: 2, overtime_score_a: 0, overtime_score_b: 1, decided_by: 'overtime' }, undefined, GAME[7]);
     expect(kasten('away').dataset.outcome).toBe('winner');
-    expect(screen.queryByTestId('live-cup-away')).toBeNull();
-    expect(screen.getByTestId('live-name-away')).toContainElement(screen.getByTestId('live-after-overtime'));
+    expect(screen.queryByTestId('live-box-away-cup')).toBeNull();
+    expect(screen.getByTestId('live-name-away')).toContainElement(screen.getByText('nach Verlängerung'));
   });
 
   // Spec 4.5: Pokal nur in der Finalrunde, Ring bei jedem Sieger
   it('@ZM-156 Gruppensieg: Ring um den Sieger-Kasten, Name fett, Verlierer zurückgenommen, aber kein Pokal', async () => {
     await ende({ score_a: 3, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
     expect(kasten('home').dataset.outcome).toBe('winner');
-    expect(kasten('home').style.outline).toContain(displayLayout.scoreArea.frameWidthStrong);
+    expect(kasten('home').style.outlineWidth).toBe(displayLayout.scoreArea.frameWidthStrong);
     expect(name('home').style.fontWeight).toBe(cssVars.fontWeights.extrabold);
     expect(kasten('away').dataset.outcome).toBe('loser');
     expect(name('away').style.fontWeight).toBe(cssVars.fontWeights.semibold);
-    expect(screen.queryByTestId('live-cup-home')).toBeNull();
-    expect(screen.queryByTestId('live-cup-away')).toBeNull();
+    expect(screen.queryByTestId('live-box-home-cup')).toBeNull();
+    expect(screen.queryByTestId('live-box-away-cup')).toBeNull();
   });
 
   it('@ZM-156 Gegenbeispiel: Finalrunde (K.-o.) hat bei jedem Sieg Ring und Pokal', async () => {
     await ende({ score_a: 0, score_b: 2, decided_by: 'regular' });
     expect(kasten('away').dataset.outcome).toBe('winner');
-    expect(screen.getByTestId('live-cup-away')).toBeInTheDocument();
-    expect(screen.queryByTestId('live-cup-home')).toBeNull();
+    expect(screen.getByTestId('live-box-away-cup')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-box-home-cup')).toBeNull();
   });
 
   it('@ZM-156 Unentschieden in der Gruppe: kein Ring, kein Pokal, kein Verlierer, nichts zurückgenommen', async () => {
     await ende({ score_a: 1, score_b: 1, decided_by: 'regular' }, undefined, GAME[7]);
     expect(kasten('home').dataset.outcome).toBeUndefined();
     expect(kasten('away').dataset.outcome).toBeUndefined();
-    expect(screen.queryByTestId('live-cup-home')).toBeNull();
-    expect(screen.queryByTestId('live-cup-away')).toBeNull();
+    expect(screen.queryByTestId('live-box-home-cup')).toBeNull();
+    expect(screen.queryByTestId('live-box-away-cup')).toBeNull();
     expect(name('home').style.fontWeight).toBe(cssVars.fontWeights.bold);
     expect(name('away').style.fontWeight).toBe(cssVars.fontWeights.bold);
   });
@@ -200,6 +202,6 @@ describe('Gegenbeispiele', () => {
     const cup = withCloudColumns(await hf1Besetzt(), GAME.HF1, { match_status: 'running', score_a: 2, score_b: 1 });
     zeige(cup);
     expect(kasten('home').dataset.outcome).toBeUndefined();
-    expect(screen.queryByTestId('live-cup-home')).toBeNull();
+    expect(screen.queryByTestId('live-box-home-cup')).toBeNull();
   });
 });

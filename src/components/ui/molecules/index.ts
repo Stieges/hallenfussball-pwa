@@ -15,6 +15,8 @@ export { MatchClock } from './MatchClock';
 export type { MatchClockProps } from './MatchClock';
 export { ScoreBox } from './ScoreBox';
 export type { ScoreBoxProps } from './ScoreBox';
+export { TeamName } from './TeamName';
+export type { TeamNameProps } from './TeamName';
 
 export { ThumbBar } from './ThumbBar';
 export type { ThumbBarProps, ThumbBarSlot, ThumbBarRolle } from './ThumbBar';

@@ -16,6 +16,31 @@ export const displayList = {
     /** „ursprünglich hh:mm“ und „voraussichtlich“ unter der Uhrzeit (B-27): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
     timeNote: '3.6vh',
   },
+  /** Logo/Initialen vor dem Namen in der Zeile (Spielanzeige S3, Daniel 30.10.): „WW“ bei 3 vh Schrift passt in den Kreis */
+  avatarSize: '6.5vh',
+  /**
+   * Zeilen je Seite auf „Spielplan eines Felds“ (Daniel 31.10., @ZM-185): das Logo steht über dem Namen, die Zeile ist höher.
+   * Nikolaus (15 Spiele) ergibt „Seite 1 / 4“. „Nächste Spiele“ bleibt bei `MONITOR_ROWS_PER_PAGE`.
+   * Höchstwert: „bis zu 4 Spiele je Seite“; lange Namen siehe `scheduleRowsLongNames`.
+   */
+  scheduleRowsPerPage: 4,
+  /** Hat ein Name auf dem Spielplan eines Felds mehr als `nameLinesForFullPage` Zeilen, zeigt die Seite nur so viele Zeilen (Zeilen werden höher, @ZM-185, @ZM-129) */
+  scheduleRowsLongNames: 3,
+  /** Geschätzte Zeichen je Namenszeile einer Spielplan-Zeile (Teamschrift, Zelle ca. 38 vh bei 16:9): Grundlage der Zeilenzahl je Seite, keine Messung */
+  nameCharsPerLine: 18,
+  /** Bis zu so vielen Namenszeilen passen vier Zeilen auf eine Seite */
+  nameLinesForFullPage: 2,
+  /** Abstand Logo/Initialen zu dem Namen darunter (Logo über dem Namen, @ZM-157, @ZM-185) */
+  avatarStackGap: '0.6vh',
+  /**
+   * Breite der Abzeichen-Spalte in der Spielplan-Zeile (@ZM-151, @ZM-185), in em der Abzeichen-Schrift, ohne seitliches Polster:
+   * so breit wie das längste Wort, das in diesem Turnier als Abzeichen vorkommen kann, in Deutsch und Englisch.
+   * `badgeColumnGroup`: ohne K.-o.-Spiele (kein „Verlängerung“, kein „Strafstoßschießen“) | `badgeColumnKnockout`: mit K.-o.-Spielen.
+   * Gemessen im Browser (längstes Wort samt Pausensymbol: ohne K.-o. „Half-time“ 6,2 em, mit K.-o. „Strafstoßschießen“ 9,1 em), nicht aus
+   * der Zeichenzahl geschätzt; `zm185-zeilen.spec.ts` prüft, dass jedes mögliche Wort in beiden Sprachen hineinpasst.
+   */
+  badgeColumnGroup: '6.3em',
+  badgeColumnKnockout: '9.2em',
   /** Abstand zwischen Überschrift und Liste */
   headingGap: '2vh',
   /** Abstand zwischen zwei Zeilen */
@@ -29,6 +54,8 @@ export const displayList = {
   timeFieldWidth: '8.4em',
   /** Trenner/Stand */
   separatorWidth: '2.6em',
+  /** Doppelpunkt zwischen den zwei Kästen einer Zeile: feste Breite, damit Zeilen mit und ohne Kästen gleich breit sind (@ZM-151, @ZM-185) */
+  colonWidth: '0.4em',
   /** Status-Punkt vor der Zeile im Spielplan */
   markerSize: '1.6vh',
   /** Tabelle: Platz | Team | S | U | N | Diff | Pkt (in em der Zeilenschrift) */

@@ -134,6 +134,9 @@ export function useTeamNameFit(
       overflowWrap: 'normal',
       overflow: 'hidden',
     });
+    // Unter `prefers-reduced-motion` setzt die Seite `transition-duration: 0.01ms !important`: die Schrift des Messfelds wäre beim Lesen noch
+    // die vorige und jeder Name fiele auf die Untergrenze (@ZM-125). Inline `important` schlägt die Seitenregel.
+    messfeld.style.setProperty('transition', 'none', 'important');
     // B-44a4: im Elternteil messen, damit Container-Einheiten (cqh) an der Folienfläche aufgelöst werden (@ME-020)
     (el.parentElement ?? document.body).appendChild(messfeld);
 

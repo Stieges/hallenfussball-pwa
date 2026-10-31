@@ -375,6 +375,17 @@ describe('Fehlalarme aus dem Review sind weg', () => {
   })
 })
 
+describe('Langtext-Dehnung und Initialen (S3b)', () => {
+  it('Initialen mit data-initialen werden nicht gedehnt: in der Langtext-Variante gruen', async () => {
+    gruen(await messe('--ziel', FIX('initialen-markiert.html'), '--profil', 'handy-360', '--varianten', 'normal,langtext', ...SCHNELL))
+  })
+  it('Gegenbeispiel: derselbe Text im selben Kreis ohne Markierung wird gedehnt und ist abgeschnitten (HART)', async () => {
+    const r = await messe('--ziel', FIX('initialen-unmarkiert.html'), '--profil', 'handy-360', '--varianten', 'normal,langtext', ...SCHNELL)
+    expect(r.code).toBe(1)
+    expect(hart(r.b).has('text.abgeschnitten')).toBe(true)
+  })
+})
+
 describe('Gegen Schummeln', () => {
   it('Monitor-Profil allein (Rand 0) wird um den Standard-Rand ergaenzt', async () => {
     const r = await messe('--ziel', FIX('monitor-kopf.html'), '--profil', 'monitor-1080-rand0', '--varianten', 'normal', ...SCHNELL)
