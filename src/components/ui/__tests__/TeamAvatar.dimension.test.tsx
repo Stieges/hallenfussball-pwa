@@ -43,7 +43,8 @@ describe('TeamAvatar dimension', () => {
     expect(bild.style.height).toBe(bild.style.width);
     // Die Diagonale des Quadrats (anteil · √2 · Durchmesser) passt in den Durchmesser: jede eingepasste Form liegt im Kreis
     expect(anteil * Math.SQRT2).toBeLessThanOrEqual(1.0);
-    expect(anteil).toBeGreaterThan(0.6);
+    // so groß wie möglich: die Diagonale füllt den Kreis bis auf 2 % (kein ungenutzter Rand, Daniel 31.10. „Logo zu klein“)
+    expect(anteil * Math.SQRT2).toBeGreaterThanOrEqual(0.98);
   });
 
   it('@ZM-185 Gegenbeispiel: ohne Logo steht kein Bild da, die Initialen füllen denselben Kreis', () => {

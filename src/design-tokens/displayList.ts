@@ -21,8 +21,15 @@ export const displayList = {
   /**
    * Zeilen je Seite auf „Spielplan eines Felds“ (Daniel 31.10., @ZM-185): das Logo steht über dem Namen, die Zeile ist höher.
    * Nikolaus (15 Spiele) ergibt „Seite 1 / 4“. „Nächste Spiele“ bleibt bei `MONITOR_ROWS_PER_PAGE`.
+   * Höchstwert: „bis zu 4 Spiele je Seite“; lange Namen siehe `scheduleRowsLongNames`.
    */
   scheduleRowsPerPage: 4,
+  /** Hat ein Name auf dem Spielplan eines Felds mehr als `nameLinesForFullPage` Zeilen, zeigt die Seite nur so viele Zeilen (Zeilen werden höher, @ZM-185, @ZM-129) */
+  scheduleRowsLongNames: 3,
+  /** Geschätzte Zeichen je Namenszeile einer Spielplan-Zeile (Teamschrift, Zelle ca. 38 vh bei 16:9): Grundlage der Zeilenzahl je Seite, keine Messung */
+  nameCharsPerLine: 18,
+  /** Bis zu so vielen Namenszeilen passen vier Zeilen auf eine Seite */
+  nameLinesForFullPage: 2,
   /** Abstand Logo/Initialen zu dem Namen darunter (Logo über dem Namen, @ZM-157, @ZM-185) */
   avatarStackGap: '0.6vh',
   /**

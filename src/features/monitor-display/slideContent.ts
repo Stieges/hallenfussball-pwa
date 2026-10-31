@@ -11,6 +11,7 @@ import { DEFAULT_SLIDE_CONFIG } from '../../types/monitor';
 import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
 import type { ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
+import { monitorSideLabel } from './matchSides';
 import { displayList } from '../../design-tokens';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
@@ -88,6 +89,29 @@ export function standingsSections(tournament: Tournament, view: TournamentView):
   return sections;
 }
 
+/**
+ * Geschätzte Zeilenzahl eines Namens: Wörter nacheinander in Zeilen zu `nameCharsPerLine` Zeichen, Umbruch auch nach einem Bindestrich
+ * (wie im Browser); ein längeres Wort bleibt eine Zeile (kein Wortbruch, @ZM-087). Reine Schätzung ohne Layout.
+ */
+export function estimatedNameLines(name: string): number {
+  const perLine = displayList.nameCharsPerLine;
+  const parts = name.trim().split(/\s+/).flatMap((w) => w.split(/(?<=-)/));
+  let lines = 1;
+  let used = 0;
+  for (const [i, part] of parts.entries()) {
+    const joinsPrevious = i > 0 && !parts[i - 1].endsWith('-');
+    const need = part.length + (joinsPrevious && used > 0 ? 1 : 0);
+    if (used > 0 && used + need > perLine) { lines += 1; used = part.length; } else { used += need; }
+  }
+  return lines;
+}
+
+/** Zeilen je Seite der Folie „Spielplan eines Felds“: höchstens 4, bei einem Namen über zwei Zeilen nur 3 (höhere Zeilen, alle Seiten gleich). */
+export function scheduleRowsFor(schedule: readonly MatchView[]): number {
+  const longest = Math.max(1, ...schedule.flatMap((m) => [m.home, m.away]).map((side) => estimatedNameLines(monitorSideLabel(side))));
+  return longest > displayList.nameLinesForFullPage ? displayList.scheduleRowsLongNames : displayList.scheduleRowsPerPage;
+}
+
 /** Zeilen der Seite `page` (0-basiert). Jede Zeile liegt auf genau einer Seite. */
 export function pageOf<T>(items: readonly T[], page: number, perPage: number = MONITOR_ROWS_PER_PAGE): T[] {
   const start = page * perPage;
@@ -112,7 +136,10 @@ export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | 
     case 'all-standings':
       return Math.max(1, standingsSections(tournament, view).length);
     case 'schedule-field':
-      return pagesFor(fieldSchedule(view, fieldIdToNumber(slide.config.fieldId)).length, displayList.scheduleRowsPerPage);
+      {
+      const schedule = fieldSchedule(view, fieldIdToNumber(slide.config.fieldId));
+      return pagesFor(schedule.length, scheduleRowsFor(schedule));
+    }
     case 'next-matches':
       return pagesFor(nextMatchList(view, slide.config.matchCount).length);
     default:

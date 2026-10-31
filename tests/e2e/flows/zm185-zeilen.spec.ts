@@ -10,7 +10,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
-import { NIKOLAUS, MIT_KO, saeen, oeffneMonitor } from './zm185-helfer';
+import { NIKOLAUS, MIT_KO, TEAMS, nikolausTurnier, saeen, oeffneMonitor } from './zm185-helfer';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
 
@@ -211,6 +211,41 @@ test.describe('@ZM-185 Spielplan eines Felds (Nikolaus-Turnier, 1920×1080)', ()
     const mit = (await messeZeilen(page))[0].status!.w;
     expect(mit, 'mit K.-o. breiter').toBeGreaterThan(ohne + 20);
     for (const r of await wortPasst(page, ALLE)) { expect(r.passt, `„${r.wort}“ (${r.l}) passt in die Spalte`).toBe(true); }
+  });
+});
+
+test.describe('@ZM-185 Spielplan eines Felds mit langen Namen: bis zu 4, hier 3 Spiele je Seite', () => {
+  test.beforeEach(() => { test.skip(test.info().project.name !== 'desktop', 'läuft nur im Projekt desktop'); });
+  const LANG = [{ name: 'Eintracht Oberweiler-Niederstetten 1919' }, ...TEAMS.slice(1)];
+  const AUFLOESUNGEN = [{ width: 1920, height: 1080 }, { width: 1280, height: 720 }, { width: 960, height: 540 }] as const;
+
+  for (const aufloesung of AUFLOESUNGEN) {
+    test(`@ZM-185 Name über zwei Zeilen: 3 Spiele je Seite (15 Spiele: „Seite 1 / 5“), auch mit 4-zeiligen Namen nichts unter dem Bildrand (${aufloesung.width}×${aufloesung.height})`, async ({ page, seedIndexedDB }) => {
+      await page.setViewportSize(aufloesung);
+      await seedIndexedDB({ tournaments: [nikolausTurnier('z185-lang', { theme: 'dark', beendet: 2, teams: LANG })] });
+      await oeffneMonitor(page, 'z185-lang', 'mon-plan');
+      await expect(page.getByText('Seite 1 / 5')).toBeVisible();
+      const zeilen = await messeZeilen(page);
+      expect(zeilen).toHaveLength(3);
+      // Langtext-Lage des Messwerkzeugs: jeder Name 50 Zeichen (vier Zeilen) – die drei Zeilen bleiben im Bild (Rand 5 %)
+      await page.evaluate(() => document.querySelectorAll('[data-teamname]').forEach((e) => { e.textContent = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921'; }));
+      await page.waitForTimeout(300);
+      const unten = await page.evaluate(() => {
+        const letzte = Array.from(document.querySelectorAll('[data-testid="monitor-match-row"]')).pop()!.getBoundingClientRect().bottom;
+        const hinweis = Array.from(document.querySelectorAll('[data-testid="monitor-slide"] *')).filter((el) => /^Seite \d+ \/ \d+$/.test(el.textContent ?? '') && el.children.length === 0).pop();
+        return { letzte, hinweis: hinweis?.getBoundingClientRect().bottom ?? 0, hoehe: window.innerHeight };
+      });
+      expect(unten.letzte, 'letzte Zeile über dem unteren Bildrand (5 %)').toBeLessThanOrEqual(unten.hoehe * 0.95);
+      expect(unten.hinweis, 'Seitenhinweis über dem unteren Bildrand (5 %)').toBeLessThanOrEqual(unten.hoehe * 0.95 + 1);
+    });
+  }
+
+  test('@ZM-185 Gegenbeispiel: normale Namen (Nikolaus) bleiben bei 4 Spielen je Seite, „Seite 1 / 4“', async ({ page, seedIndexedDB }) => {
+    await page.setViewportSize(FULL_HD);
+    await saeen(seedIndexedDB);
+    await oeffneMonitor(page, NIKOLAUS, 'mon-plan');
+    await expect(page.getByText('Seite 1 / 4')).toBeVisible();
+    expect(await messeZeilen(page)).toHaveLength(4);
   });
 });
 

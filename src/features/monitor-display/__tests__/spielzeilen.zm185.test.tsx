@@ -11,7 +11,7 @@ await initRealDeI18n();
 import { displayList } from '../../../design-tokens';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
-import { monitorPageCount, pageOf } from '../slideContent';
+import { estimatedNameLines, monitorPageCount, pageOf } from '../slideContent';
 import { buildMonitorView } from '../monitorView';
 import { buildTournament, slide } from './monitorFixture';
 import { withView } from './monitorViewHelper';
@@ -81,5 +81,24 @@ describe('@ZM-185 Nächste Spiele: gespiegelt', () => {
       expect(heim.firstElementChild!.getAttribute('data-avatar-placement')).toBe('after');
       expect(gast.firstElementChild!.getAttribute('data-avatar-placement')).toBe('before');
     }
+  });
+});
+
+describe('@ZM-185 bis zu 4 Spiele je Seite: lange Namen bekommen 3', () => {
+  it('@ZM-185 geschätzte Namenszeilen: kurzer Name 1, „SG FF Nordheim-Süd 1921“ 2, „Eintracht Oberweiler-Niederstetten 1919“ 3', () => {
+    expect(estimatedNameLines('FC Nord')).toBe(1);
+    expect(estimatedNameLines('SG FF Nordheim-Süd 1921')).toBe(2);
+    expect(estimatedNameLines('Eintracht Oberweiler-Niederstetten 1919')).toBe(3);
+    expect(estimatedNameLines('Fußballgemeinschaft Oberweiler')).toBe(2);
+  });
+
+  it('@ZM-185 ein Name über zwei Zeilen: 3 Spiele je Seite, 15 Spiele ergeben 5 Seiten; Nikolaus mit normalen Namen bleibt bei 4', () => {
+    const t = nikolaus();
+    const langer = { ...t, teams: t.teams.map((team, i) => (i === 0 ? { ...team, name: 'Eintracht Oberweiler-Niederstetten 1919' } : team)) };
+    expect(monitorPageCount(folie, t, buildMonitorView(t))).toBe(4);
+    expect(monitorPageCount(folie, langer, buildMonitorView(langer))).toBe(5);
+    render(<ScheduleFieldSlide slide={folie} {...withView(langer)} theme="dark" style={{}} page={0} />);
+    expect(screen.getAllByTestId('monitor-match-row')).toHaveLength(3);
+    expect(screen.getByText('Seite 1 / 5')).toBeInTheDocument();
   });
 });
