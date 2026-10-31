@@ -60,7 +60,7 @@ async function messung(page: Page, rand: number, profil: string): Promise<{ metr
 
 const SZENEN = [
   { id: 'jeg', kennung: '@ZM-181 @ZM-071 @ZM-177 (Jeder gegen jeden, Standardgruppen A/B gespeichert)', seiten: 1, zeilen: 6, text: /Gesamttabelle/, kein: /Gruppe/ },
-  { id: 'jeg-einzel', kennung: '@ZM-177 @ZM-181 C-MONITOR-TABELLE-UEBERSCHRIFT-GRUPPE (Einzelfolie „Tabelle“, Editor-ID default)', seiten: 1, zeilen: 6, text: /Gesamttabelle/, kein: /Gruppe/ },
+  { id: 'jeg-einzel', kennung: '@ZM-177 @ZM-181 C-MONITOR-TABELLE-UEBERSCHRIFT-GRUPPE (Einzelfolie „Tabelle“ ohne groupId wie im Editor)', seiten: 1, zeilen: 6, text: /Gesamttabelle/, kein: /Gruppe/ },
   { id: 'zwei', kennung: '@ZM-071 (zwei echte Gruppen, Seite 1/2)', seiten: 2, zeilen: 3, text: /Gruppe A/ },
   { id: 'zwei', kennung: '@ZM-071 (zwei echte Gruppen, Seite 2/2)', seiten: 2, zeilen: 3, text: /Gruppe B/, seite: 1 },
 ] as const;

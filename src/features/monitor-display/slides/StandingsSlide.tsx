@@ -25,8 +25,8 @@ export function StandingsSlide({ slide, tournament, theme, style }: StandingsSli
   // „default“ ist die Gruppen-ID, die der Monitor-Editor bei „Jeder gegen jeden“ (eine Gruppe) anbietet; kein Team trägt sie → alle Teams
   const configGroupId = slide.config.groupId;
   const groupId = configGroupId === 'default' && !tournament.teams.some(team => team.group === 'default') ? OVERALL_GROUP : configGroupId;
-  // @ZM-177/@ZM-181: ohne Gruppe (Jeder gegen jeden) heißt die Überschrift „Gesamttabelle“, nicht „Gruppe“
-  const groupName = groupId === OVERALL_GROUP ? t('slides.allStandings.overall') : getGroupDisplayName(tournament, groupId);
+  // @ZM-177/@ZM-181: ohne Gruppe (Jeder gegen jeden; der Editor legt die Folie dort ohne `groupId` an) heißt die Überschrift „Gesamttabelle“
+  const groupName = !configGroupId || groupId === OVERALL_GROUP ? t('slides.allStandings.overall') : getGroupDisplayName(tournament, groupId);
   const { teams, matches } = tournament;
 
   // Calculate standings for this group

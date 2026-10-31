@@ -1,7 +1,8 @@
 /**
- * @ZM-002 Zuschauer-Seite über den echten Übertragungsweg (Antwort in der Form von `public_tournament` -> `createRpcPublicSource` ->
- * `usePublicTournament` -> Spielkarte): Eine Zeitstrafe erscheint wie das Tor als Ereigniszeile „Zeitstrafe <Team> #<Nr>“ mit Spielzeit
- * (Befund C-ZEITSTRAFE-OEFFENTLICH-UNSICHTBAR, Prod-Nachlauf N4). Spiel 9 läuft; Lage aus `payloadFixtures.ts`.
+ * @ZM-002 @ZM-003 Zuschauer-Seite über den echten Übertragungsweg (Antwort in der Form von `public_tournament` -> `createRpcPublicSource` ->
+ * `usePublicTournament` -> Spielkarte): Tor und Zeitstrafe erscheinen als Ereigniszeile „Tor <Team>, Nr. 9, 3.“ bzw.
+ * „Zeitstrafe <Team>, Nr. 5, 4.“ (angefangene Minute, ohne Uhrzeit), ohne Nummer „Tor <Team>, 12.“; Karten nach @ZM-021 „Gelbe Karte <Team>, Nr. 5“
+ * (Befunde C-ZEITSTRAFE-OEFFENTLICH-UNSICHTBAR, C-ZEITSTRAFE-ZEILE-FORMAT). Spiel 9 läuft; Lage aus `payloadFixtures.ts`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -34,6 +35,34 @@ function mitZeitstrafe(): Row {
     }
     : m));
   return reply;
+}
+
+/** Zusätzliche Ereignisse in Spiel 9: Tor Heim ohne Nummer in Minute 12, Tor Heim Nr. 7 bei genau 60 s (Minute 2), Gelbe Karte Gast Nr. 5. */
+function mitWeiterenEreignissen(): Row {
+  const reply = mitZeitstrafe();
+  reply.matches = (reply.matches as Row[]).map((m) => (Number(m.match_number) === RUNNING_MATCH_NUMBER
+    ? {
+      ...m,
+      events: [
+        ...(m.events as Row[]),
+        { id: '11111111-2222-4333-8444-666666666661', type: 'GOAL', team_id: m.team_a_id, section: 1, clock_ms: 680_000 },
+        { id: '11111111-2222-4333-8444-666666666662', type: 'GOAL', team_id: m.team_a_id, section: 1, clock_ms: 60_000, number: 7 },
+        { id: '11111111-2222-4333-8444-666666666663', type: 'YELLOW_CARD', team_id: m.team_b_id, section: 1, clock_ms: 90_000, number: 5 },
+      ],
+    }
+    : m));
+  return reply;
+}
+
+async function karteOeffnen(antwort: Row) {
+  rpcCall.mockImplementation(() => Promise.resolve({ data: antwort, error: null }));
+  render(
+    <RepositoryProvider user={null}>
+      <MemoryRouter initialEntries={['/live/NIK6ST']}><LiveViewScreen shareCode="NIK6ST" /></MemoryRouter>
+    </RepositoryProvider>,
+  );
+  const karte = (await screen.findAllByTestId('match-clock'))[0].closest('[data-match-card]')!;
+  await userEvent.click(karte);
 }
 
 beforeEach(() => {
@@ -95,5 +124,26 @@ describe('@ZM-002 Zuschauer-Seite zeigt Tor und Zeitstrafe als Ereigniszeile (ec
     const zeilen = await screen.findAllByText(/^Tor .+, Nr\. \d+, \d+\.$/);
     expect(zeilen.length).toBeGreaterThan(0);
     for (const zeile of zeilen) { expect(zeile.textContent).not.toMatch(/#|TOR|\d\d:\d\d/); }
+  });
+
+  // @ZM-003: ohne Rückennummer „Tor <Heim>, 12.“; mit Nummer „Tor <Heim>, Nr. 7, 2.“ (genau 60 s ist schon Minute 2, nicht 1)
+  it('@ZM-003 Tor ohne Rückennummer: „Tor <Heim>, 12.“ (nicht „Nr. null“)', async () => {
+    await karteOeffnen(mitWeiterenEreignissen());
+    const heim = String(((await screen.findAllByText(/^Tor .+, 12\.$/))[0]).textContent).replace(/^Tor /, '').replace(/, 12\.$/, '');
+    expect(heim.length).toBeGreaterThan(0);
+    expect(heim).not.toMatch(/Nr\./);
+  });
+
+  it('@ZM-002 Minute ist die angefangene: 40 s -> „Tor <Heim>, Nr. 3, 1.“, genau 60 s -> „Tor <Heim>, Nr. 7, 2.“', async () => {
+    await karteOeffnen(mitWeiterenEreignissen());
+    expect((await screen.findAllByText(/^Tor .+, Nr\. 3, 1\.$/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/^Tor .+, Nr\. 7, 2\.$/)).length).toBeGreaterThan(0);
+  });
+
+  it('@ZM-021 Karte: „Gelbe Karte <Gast>, Nr. 5“ ohne Uhrzeit und ohne „#“', async () => {
+    await karteOeffnen(mitWeiterenEreignissen());
+    const zeilen = await screen.findAllByText(/^Gelbe Karte .+, Nr\. 5$/);
+    expect(zeilen.length).toBeGreaterThan(0);
+    for (const zeile of zeilen) { expect(zeile.parentElement?.textContent).not.toMatch(/\d\d:\d\d|#/); }
   });
 });

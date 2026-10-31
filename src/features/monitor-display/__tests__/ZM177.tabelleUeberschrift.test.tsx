@@ -4,6 +4,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
+import i18n from 'i18next';
+import enMonitor from '../../../i18n/locales/en/monitor.json';
 import { parsePublicPayload } from '../../../core/repositories/publicPayload';
 import { serverAntwort, turnierNordSued } from '../../../core/repositories/__tests__/publicEntscheidungKit';
 import { createDefaultGroups } from '../../../utils/displayNames';
@@ -20,9 +22,10 @@ function viaServer(t: Tournament): Tournament {
   return p.tournament;
 }
 
-const folie = (groupId: string): MonitorSlide => ({ id: 's', type: 'standings', config: { groupId }, duration: null, order: 0 });
+/** Ohne Angabe wie der Monitor-Editor die Folie bei „Jeder gegen jeden“ anlegt (`config: {}`, kein `groupId`). */
+const folie = (groupId?: string): MonitorSlide => ({ id: 's', type: 'standings', config: groupId === undefined ? {} : { groupId }, duration: null, order: 0 });
 
-function ueberschrift(t: Tournament, groupId: string): string {
+function ueberschrift(t: Tournament, groupId?: string): string {
   const { container, unmount } = render(<StandingsSlide slide={folie(groupId)} tournament={t} theme="dark" style={{}} />);
   const text = container.querySelector('h1, h2, h3')?.textContent ?? container.firstElementChild?.firstElementChild?.textContent ?? '';
   unmount();
@@ -33,6 +36,25 @@ describe('@ZM-177 @ZM-181 Einzelfolie „Tabelle“: Überschrift', () => {
   it('Jeder gegen jeden (Editor-ID „default“, Standardgruppen A und B gespeichert): „Gesamttabelle“, nirgends „Gruppe“', () => {
     const t = viaServer({ ...turnierNordSued(), groupSystem: 'roundRobin', numberOfGroups: 2, groups: createDefaultGroups(2) });
     expect(ueberschrift(t, 'default')).toBe('Gesamttabelle');
+  });
+
+  it('Jeder gegen jeden, Folie so angelegt wie im Editor (ohne groupId): „Gesamttabelle“ mit allen Teams', () => {
+    const t = viaServer({ ...turnierNordSued(), groupSystem: 'roundRobin', numberOfGroups: 2, groups: createDefaultGroups(2) });
+    expect(ueberschrift(t)).toBe('Gesamttabelle');
+    const { container, unmount } = render(<StandingsSlide slide={folie()} tournament={t} theme="dark" style={{}} />);
+    expect(container.querySelectorAll('[data-testid="standings-row"]')).toHaveLength(t.teams.length);
+    unmount();
+  });
+
+  it('EN: „Overall standings“ (Überschrift kommt aus der Übersetzung)', async () => {
+    i18n.addResourceBundle('en', 'monitor', enMonitor, true, true);
+    await i18n.changeLanguage('en');
+    try {
+      const t = viaServer({ ...turnierNordSued(), groupSystem: 'roundRobin', numberOfGroups: 2, groups: createDefaultGroups(2) });
+      expect(ueberschrift(t)).toBe('Overall standings');
+    } finally {
+      await i18n.changeLanguage('de');
+    }
   });
 
   it('Gegenbeispiel: Gruppen + Finalrunde, Folie für Gruppe A: Überschrift bleibt „Gruppe A“', () => {
