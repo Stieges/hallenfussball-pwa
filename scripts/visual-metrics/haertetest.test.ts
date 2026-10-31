@@ -333,7 +333,8 @@ describe('@TA-012 Verdeckte Bedienelemente', () => {
     const start = await messe('--app', '/#/archiv', '--erwarte', '[data-testid="footer-impressum-link"]', '--saat', 'hallencup-messlauf', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(start.b.status, start.out).not.toBe('BLOCKED')
     const a = verdeckt(start.b)
-    expect(a.length).toBeGreaterThan(0)
+    // Usability F (F-02, @OB-022): die Fußzeile reserviert jetzt die Höhe der unteren Leiste, die Fuß-Links liegen nicht mehr darunter.
+    // Der Test verlangt nicht, dass die App diesen Fehler hat: gibt es Meldungen, sind sie WARNUNG mit Befund-Kennung, nie HART.
     expect(a.every((x) => x.typ === 'WARNUNG' && JSON.stringify(x).includes('C-FUSS-LINKS-UNTER-LEISTE'))).toBe(true)
     const cockpit = await messe('--app', '/#/tournament/hallencup-messlauf/live?matchId=00000003-0000-4000-8000-000000000016', '--erwarte', '[data-testid="scoreboard"]', '--saat', 'hallencup-messlauf', '--profil', 'desktop-1440', '--varianten', 'normal', ...SCHNELL)
     expect(cockpit.b.status, cockpit.out).not.toBe('BLOCKED')
