@@ -11,7 +11,8 @@
  * @FU-103: Ein neuer Stand von außen, der dieses Spiel nicht ändert, lässt den Entwurf stehen (kein Effekt auf Primitive).
  * @FU-104: Ändert sich der gespeicherte Stand dieses Spiels von außen, während ein Entwurf offen ist, bleibt der Entwurf
  * sichtbar, `changed` nennt den neuen Stand (und den Urheber, sobald `resolveAuthor` ihn liefert), und weder Verlassen
- * noch Enter senden, bis Olli mit `keepDraft` bewusst bei seiner Eingabe bleibt; Escape zeigt den neuen Stand.
+ * noch Enter im zweiten Feld oder die Taste senden, bis Olli mit `keepDraft` bewusst bei seiner Eingabe bleibt; Escape zeigt
+ * den neuen Stand.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ScoreFieldProps } from '../atoms/ScoreDraftInput';
@@ -51,9 +52,9 @@ export interface ScoreDraft {
   fieldProps: (side: ScoreSide) => ScoreFieldProps;
   /** Gesetzt, solange der Hinweis „inzwischen geändert“ gilt (@FU-104) */
   changed: ScoreChangedElsewhere | null;
-  /** Olli bleibt bewusst bei seiner Eingabe: der Hinweis geht, danach senden Verlassen und Enter wieder */
+  /** Olli bleibt bewusst bei seiner Eingabe: der Hinweis geht, danach sendet „Ergebnis speichern“ bzw. Enter im zweiten Feld wieder */
   keepDraft: () => void;
-  /** Beide Felder gefüllt und gültig, nichts gesendet, kein Hinweis „inzwischen geändert“ offen (@FU-101) */
+  /** Beide Felder gefüllt und gültig, anders als der gespeicherte Stand (laufendes Spiel: auch gleich), kein Hinweis „inzwischen geändert“ offen (@FU-101) */
   canSave: boolean;
   /** „Ergebnis speichern“: sendet den Entwurf (einmal) */
   save: () => void;

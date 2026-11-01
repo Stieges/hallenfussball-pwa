@@ -68,7 +68,12 @@ async function trageEin(page: Page, heim: number, gast: number, bestaetigung: 'e
     await page.waitForTimeout(500);
     await expect(page.getByTestId('result-entry-shootout-dialog')).toHaveCount(0);
   }
-  await page.getByRole('button', { name: 'Ergebnis speichern' }).filter({ visible: true }).first().click();
+  if (bestaetigung === 'enter') {
+    // @FU-101: Enter im zweiten Feld wirkt wie „Ergebnis speichern“, mit denselben Rückfragen (hier @FU-094)
+    await gastFeld.press('Enter');
+  } else {
+    await page.getByRole('button', { name: 'Ergebnis speichern' }).filter({ visible: true }).first().click();
+  }
 }
 const ZWEI_ZWEI = /2\s?:\s?2/;
 

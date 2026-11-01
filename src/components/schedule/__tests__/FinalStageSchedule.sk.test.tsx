@@ -420,7 +420,7 @@ describe('@FU-101 @FU-112 @FU-113 Finalrunde, laufendes Spiel (Tabelle und Karte
     expect(screen.queryByTestId(`final-score-save-${HF1}`)).toBeNull();
   });
 
-  it('@FU-113 Gegenbeispiel: ein geplantes Spiel dürfen auch Helfer eintragen („Ergebnis speichern“)', () => {
+  it('@FU-113 Gegenbeispiel: ein geplantes Spiel zeigt „Ergebnis speichern“ (Ablehnung für Helfer am Ende, @HE-042)', () => {
     render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable canEndRunning={false} onScoreChange={vi.fn()} />);
     expect(speichernTabelle().textContent).toBe('Ergebnis speichern');
     expect(speichernKarte().textContent).toBe('Ergebnis speichern');

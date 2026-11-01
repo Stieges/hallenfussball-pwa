@@ -63,6 +63,10 @@ test.describe('@FU-101 @FU-112 Finalrunde: Speichern nur über „Ergebnis speic
     await feld(page, HF2, 'away').click(); // Feld verlassen
     await page.waitForTimeout(1500);
     await expect(speichern(page, HF2)).toBeDisabled();
+    // nichts gespeichert: keine Rückfrage, kein Dialog, die Felder stehen noch (ein beendetes Spiel hätte keine)
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByTestId('result-entry-end-message')).toHaveCount(0);
+    await expect(feld(page, HF2, 'home')).toHaveValue('2');
     await page.reload();
     await page.waitForLoadState('networkidle');
     // Das Spiel läuft weiter: die Felder (nur bei einem nicht beendeten Spiel) stehen noch, leer

@@ -249,7 +249,7 @@ test.describe('@OB-064 Spielplan der Verwaltung, Laptop 1280×800: Tabellenzeile
  */
 const LETZTE_KARTEN = 4;
 const KARTEN_SELEKTOR = '[data-testid^="final-card-"], [data-match-card]';
-const ZIEL_SELEKTOR = 'input:not([type="hidden"]), [data-score-circle], [data-testid^="final-goals-"]';
+const ZIEL_SELEKTOR = 'input:not([type="hidden"]), [data-score-circle], [data-testid^="final-goals-"], [data-testid^="final-score-save-"]';
 const SCHWEBE_LEISTE = '.schedule-action-buttons';
 
 async function scrolleGanzNachUnten(page: Page) {

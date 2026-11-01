@@ -371,6 +371,21 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
       expect(onScoreChange).toHaveBeenCalledWith(3, 1);
     });
 
+    it('@FU-112 laufendes Spiel 0:0: getippte „0“ und „0“ lassen sich bewusst als 0:0 beenden (mit Rückfrage über onScoreChange)', async () => {
+      const user = userEvent.setup();
+      const { onScoreChange, fieldFcNord, fieldSvSued, saveButton } = renderCell({ scoreA: 0, scoreB: 0, isRunning: true });
+      expect(saveButton.disabled).toBe(true);
+      await user.click(fieldFcNord);
+      await user.keyboard('0');
+      await user.click(fieldSvSued);
+      await user.keyboard('0');
+      expect(saveButton.disabled).toBe(false);
+      expect(onScoreChange).not.toHaveBeenCalled();
+      await user.click(saveButton);
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
+      expect(onScoreChange).toHaveBeenCalledWith(0, 0);
+    });
+
     it('@FU-112 Gegenbeispiel: ein geplantes Spiel heißt „Ergebnis speichern“', () => {
       const { saveButton } = renderCell({ isRunning: false });
       expect(saveButton.textContent).not.toMatch(/beenden/);
