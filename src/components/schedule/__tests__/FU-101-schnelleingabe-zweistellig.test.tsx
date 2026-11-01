@@ -12,6 +12,7 @@ import type { ComponentProps } from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MatchScoreCell } from '../MatchScoreCell';
+import { cssVars } from '../../../design-tokens';
 
 const renderCell = (props: Partial<ComponentProps<typeof MatchScoreCell>> = {}) => {
   const onScoreChange = vi.fn();
@@ -170,6 +171,15 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
     await user.tab();
     expect(saveButton.disabled).toBe(true);
     expect(onScoreChange).not.toHaveBeenCalled();
+  });
+
+  it('@FU-101 „Ergebnis speichern“ ist eine Zweittaste (gerahmt, nicht Primärfläche; eine Haupttaste je Ansicht), mindestens 44 px hoch', () => {
+    const { saveButton } = renderCell({ scoreA: 1, scoreB: 1 });
+    expect(saveButton.style.background).toBe(cssVars.colors.surface);
+    expect(saveButton.style.background).not.toBe(cssVars.colors.primary);
+    expect(saveButton.style.border).toContain('1px solid');
+    expect(saveButton.hasAttribute('data-primary')).toBe(false);
+    expect(parseInt(saveButton.style.minHeight, 10)).toBeGreaterThanOrEqual(44);
   });
 
   it('@FU-101 doppeltes Antippen von „Ergebnis speichern“ sendet genau einmal', async () => {
