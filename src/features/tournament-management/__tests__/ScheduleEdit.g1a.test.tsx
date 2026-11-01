@@ -43,6 +43,16 @@ describe('@ZP-100 „Tauschen mit …“ (Weg ohne Ziehen)', () => {
     expect(screen.queryByTestId('swap-with-select')).toBeNull();
   });
 
+  it('@ZP-107 bei Spiel 12 (Gruppenphase) bietet „Tauschen mit …“ nur Gruppenspiele an, kein Halbfinale', () => {
+    const halbfinale = { ...spiel(13, 60, 1), id: 'hf1', phase: 'semifinal', isFinal: true } as ScheduledMatch;
+    const spiel12 = { ...spiel(12, 36, 1), phase: 'groupStage' } as ScheduledMatch;
+    render(<ScheduleSwapWith enabled matches={[...SPIELE, spiel12, halbfinale]} lockedIds={new Set()} onSwap={vi.fn()}><Ausloeser id="s12" /></ScheduleSwapWith>);
+    fireEvent.click(screen.getByText('start-s12'));
+    const werte = within(screen.getByTestId('swap-with-select')).getAllByRole<HTMLOptionElement>('option').map((o) => o.value);
+    expect(werte).not.toContain('hf1');
+    expect(werte).toEqual(['s3', 's5', 's6', 's9']);
+  });
+
   it('@ZP-100 Gegenbeispiel: „Abbrechen“ tauscht nichts', () => {
     const onSwap = vi.fn(() => true);
     render(<ScheduleSwapWith enabled matches={SPIELE} lockedIds={new Set()} onSwap={onSwap}><Ausloeser id="s6" /></ScheduleSwapWith>);
@@ -58,10 +68,10 @@ describe('@ZP-100 „Tauschen mit …“ (Weg ohne Ziehen)', () => {
   });
 });
 
-const toolbar = (changeCount: number) => {
+const toolbar = (changeCount: number, conflictCount = 0) => {
   const tournament = createMockTournament();
   return render(
-    <ScheduleToolbar isEditing onStartEditing={vi.fn()} onSave={vi.fn()} onCancel={vi.fn()} changeCount={changeCount}
+    <ScheduleToolbar isEditing onStartEditing={vi.fn()} onSave={vi.fn()} onCancel={vi.fn()} changeCount={changeCount} conflictCount={conflictCount}
       onUndo={vi.fn()} onRedo={vi.fn()} canUndo={changeCount > 0} canRedo={false} onRedistributeSR={vi.fn()} onRedistributeFields={vi.fn()}
       showSRButton showFieldsButton viewMode="table" onViewModeChange={vi.fn()} tournament={tournament}
       schedule={{ allMatches: [] } as never} standings={[]} />,
@@ -73,6 +83,16 @@ describe('@ZP-101 Leiste im Bearbeiten-Modus', () => {
     toolbar(1);
     expect(screen.getByTestId('schedule-unsaved-count').textContent).toBe('tournament:draft.unsaved');
     expect(screen.getByTestId('schedule-edit-save')).toHaveProperty('disabled', false);
+  });
+
+  it('@ZP-105 ein bestehender Konflikt steht als Hinweis in der Leiste', () => {
+    toolbar(0, 2);
+    expect(screen.getByTestId('schedule-conflict-hint').textContent).toBe('tournament:draft.conflictHint');
+  });
+
+  it('@ZP-105 Gegenbeispiel: ohne Konflikt kein Hinweis', () => {
+    toolbar(0, 0);
+    expect(screen.queryByTestId('schedule-conflict-hint')).toBeNull();
   });
 
   it('@ZP-101 Gegenbeispiel: ohne Änderung steht „Bearbeitungsmodus“, Speichern ist gesperrt', () => {
@@ -95,6 +115,27 @@ describe('@ZP-103 Rückfrage beim Abbrechen', () => {
     expect(draft.confirmDiscard).toHaveBeenCalled();
     expect(within(dialog).getByTestId('confirm-dialog-confirm').textContent).toBe('tournament:draft.discard');
     expect(within(dialog).getByTestId('confirm-dialog-cancel').textContent).toBe('tournament:draft.keepEditing');
+  });
+});
+
+describe('@ZP-102 Konflikt-Dialog vor dem Speichern', () => {
+  it('@ZP-102 die Konfliktliste steht in gültigem HTML (kein Block-Element in einem Absatz), „Trotzdem speichern“ speichert', () => {
+    const konflikt = { id: 'k1', type: 'field_overlap', severity: 'error', matchIds: ['s3', 's4'], message: 'Feld 1 doppelt belegt' };
+    const draft = { discardOpen: false, changeCount: 1, conflicts: [konflikt], conflictOpen: true, closeConflicts: vi.fn(), saveAnyway: vi.fn() } as unknown as ScheduleDraftControls;
+    const edit = { overwriteDialogProps: { isOpen: false, title: '', message: '', onConfirm: vi.fn() } } as unknown as ScheduleEditActions;
+    render(<ScheduleEditDialogs draft={draft} edit={edit} />);
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Feld 1 doppelt belegt')).toBeTruthy();
+    expect(dialog.querySelector('p div, p ul, p li, p p')).toBeNull();
+    fireEvent.click(within(dialog).getByTestId('confirm-dialog-confirm'));
+    expect(draft.saveAnyway).toHaveBeenCalled();
+  });
+
+  it('@ZP-102 Gegenbeispiel: eine Text-Nachricht steht weiter in einem Absatz', () => {
+    const draft = { discardOpen: true, changeCount: 2, conflicts: [], conflictOpen: false, confirmDiscard: vi.fn(), keepEditing: vi.fn() } as unknown as ScheduleDraftControls;
+    const edit = { overwriteDialogProps: { isOpen: false, title: '', message: '', onConfirm: vi.fn() } } as unknown as ScheduleEditActions;
+    render(<ScheduleEditDialogs draft={draft} edit={edit} />);
+    expect(within(screen.getByRole('dialog')).getByText('tournament:draft.discardMessage').tagName).toBe('P');
   });
 });
 

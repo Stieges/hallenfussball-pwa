@@ -628,14 +628,12 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         )}
 
         {/* Auto-reassign buttons (edit mode only); im Spielplan-Reiter verteilt die gemeinsame Werkzeugleiste (Entwurf, @ZP-101) */}
-        {isEditing && !hideToolbar && tournament.refereeConfig?.mode === 'organizer' && (
+        {isEditing && ((!hideToolbar && tournament.refereeConfig?.mode === 'organizer') || conflictResult.conflicts.length > 0) && (
           <div style={{ display: 'flex', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
-            <Button variant="ghost" size="sm" onClick={handleAutoReassign}>
-              SR automatisch zuweisen
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleBalanceWorkloads}>
-              SR-Auslastung ausgleichen
-            </Button>
+            {!hideToolbar && tournament.refereeConfig?.mode === 'organizer' && (<>
+              <Button variant="ghost" size="sm" onClick={handleAutoReassign}>SR automatisch zuweisen</Button>
+              <Button variant="ghost" size="sm" onClick={handleBalanceWorkloads}>SR-Auslastung ausgleichen</Button>
+            </>)}
             {conflictResult.conflicts.length > 0 && (
               <Button
                 variant="ghost"

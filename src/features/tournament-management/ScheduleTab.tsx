@@ -47,6 +47,8 @@ interface ScheduleTabProps {
   currentStandings: Standing[];
   /** Speichert das ganze Turnier. Kein „neu erzeugen“ mehr (Befund C-REGEN-FLAG): der Spielplan wird hier nie neu erzeugt. */
   onTournamentUpdate: (tournament: Tournament) => void;
+  /** Speichern mit Rückmeldung (wirft bei Fehler): „Speichern“ im Bearbeiten-Modus schließt den Entwurf erst danach (@ZP-102) */
+  onTournamentSave?: (tournament: Tournament) => Promise<void>;
   /**
    * A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): local-only state
    * sync (no persistence) — used by result entry so the UI updates immediately without a full
@@ -67,6 +69,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   schedule,
   currentStandings,
   onTournamentUpdate,
+  onTournamentSave,
   onLocalTournamentUpdate,
   onMatchesUpdate,
   onNavigateToCockpit,
@@ -79,7 +82,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const closed = useTournamentClosed(tournament.id); // R3-3 (@LZ-036, @ZP-087): Ergebnis, Schiri, Feld im Spielplan nur vor dem Abschluss
   const canEndRunning = useCan('leadMatches', tournament.id); // @FU-112/@FU-113: Spiel beenden nur Turnierleitung
   // Toast notifications
-  const { showWarning, showSuccess } = useToast();
+  const { showWarning, showSuccess, showError } = useToast();
 
   // View mode: 'table' (classic) or 'grid' (new schedule editor)
   const [viewMode, setViewMode] = useState<ScheduleViewMode>('table');
@@ -89,7 +92,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // ==========================================================================
 
   // Bearbeiten als Entwurf (@ZP-101 bis @ZP-104): Anzeige im Bearbeiten-Modus = Entwurf, gespeichert erst mit „Speichern“
-  const draft = useScheduleDraft({ tournament, schedule, onTournamentUpdate, showSuccess, showWarning });
+  const saveTournament = useCallback(async (t: Tournament) => {
+    if (onTournamentSave) { await onTournamentSave(t); } else { onTournamentUpdate(t); }
+  }, [onTournamentSave, onTournamentUpdate]);
+  const draft = useScheduleDraft({ tournament, schedule, saveTournament, showSuccess, showWarning, showError });
   const { isEditing } = draft;
   const shownSchedule = draft.draftSchedule;
   const edit = useScheduleEditActions({ tournament, draft, onTournamentUpdate, showSuccess, showWarning });
@@ -241,7 +247,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           <ScheduleToolbar
             isEditing={isEditing}
             onStartEditing={draft.startEditing}
-            onSave={draft.save}
+            onSave={draft.save} isSaving={draft.isSaving} conflictCount={draft.conflictCount}
             onCancel={draft.requestCancel}
             changeCount={draft.changeCount}
             onUndo={draft.undo}

@@ -28,6 +28,10 @@ export interface ScheduleToolbarProps {
   onCancel: () => void;
   /** Zahl der Änderungen im Entwurf (@ZP-101: „n Änderungen nicht gespeichert“) */
   changeCount: number;
+  /** Speichern läuft: Taste gesperrt (kein zweites Speichern) */
+  isSaving?: boolean;
+  /** Konflikte im Spielplan: Hinweis in der Leiste (@ZP-105), nur für die Turnierleitung */
+  conflictCount?: number;
 
   // Undo/Redo
   onUndo: () => void;
@@ -64,6 +68,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   onSave,
   onCancel,
   changeCount,
+  isSaving = false,
+  conflictCount = 0,
   onUndo,
   onRedo,
   canUndo,
@@ -203,7 +209,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               variant="primary"
               size="sm"
               onClick={onSave}
-              disabled={changeCount === 0}
+              disabled={changeCount === 0 || isSaving}
               data-testid="schedule-edit-save"
             >
               {t('toolbar.save')}
@@ -217,6 +223,12 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               {t('toolbar.cancel')}
             </Button>
           </>
+        )}
+
+        {canEditSchedule && conflictCount > 0 && (
+          <span style={{ ...editModeBadgeStyle, color: cssVars.colors.warning }} data-testid="schedule-conflict-hint">
+            {t('draft.conflictHint', { count: conflictCount })}
+          </span>
         )}
 
         {/* View Mode Toggle (nach dem Abschluss entfällt er: nur die Tabelle, R3-4 m-2) */}

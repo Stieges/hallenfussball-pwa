@@ -10,20 +10,27 @@ import type { Match, Tournament } from '../../../../types/tournament';
 import { generateFullSchedule } from '../../../../core/generators';
 import { useScheduleDraft } from '../useScheduleDraft';
 import { useScheduleEditActions } from '../useScheduleEditActions';
-import { at, hallencup, matchOf } from '../../schedule-draft/__tests__/draftFixture';
+import { at, hallencup, matchOf, spiel } from '../../schedule-draft/__tests__/draftFixture';
 
-function setup(start: Tournament = hallencup()) {
+function setup(start: Tournament = hallencup(), speichern: 'gelingt' | 'scheitert' = 'gelingt') {
   const onTournamentUpdate = vi.fn();
   const showSuccess = vi.fn();
   const showWarning = vi.fn();
+  const showError = vi.fn();
+  // Speichern mit Rückmeldung: der Entwurf schließt erst, wenn es aufgelöst ist
+  const saveTournament = vi.fn(async (t: Tournament) => {
+    await Promise.resolve();
+    if (speichern === 'scheitert') { throw new Error('abgelehnt'); }
+    onTournamentUpdate(t);
+  });
   const hook = renderHook((p: { tournament: Tournament }) => {
-    const draft = useScheduleDraft({ tournament: p.tournament, schedule: generateFullSchedule(p.tournament), onTournamentUpdate, showSuccess, showWarning });
+    const draft = useScheduleDraft({ tournament: p.tournament, schedule: generateFullSchedule(p.tournament), saveTournament, showSuccess, showWarning, showError });
     const edit = useScheduleEditActions({ tournament: p.tournament, draft, onTournamentUpdate, showSuccess, showWarning });
     return { draft, edit };
   }, { initialProps: { tournament: start } });
   const r = () => hook.result.current;
   const saved = (): Tournament => onTournamentUpdate.mock.calls[0][0] as Tournament;
-  return { r, rerender: hook.rerender, onTournamentUpdate, showSuccess, showWarning, saved };
+  return { r, rerender: hook.rerender, onTournamentUpdate, showSuccess, showWarning, showError, saveTournament, saved };
 }
 
 const ohneSchiri = (t: Tournament): Tournament => ({ ...t, matches: t.matches.map((m) => ({ ...m, referee: undefined })) });
@@ -54,13 +61,13 @@ describe('@ZP-101 Im Bearbeiten-Modus gilt eine Änderung erst nach „Speichern
 });
 
 describe('@ZP-102 „Speichern“ prüft zuerst und übernimmt dann alle Änderungen zusammen', () => {
-  it('@ZP-102 Spiel 6 inzwischen angepfiffen: Spiel 4 wird übernommen, der Tausch nicht, mit Hinweis – ein Update', () => {
+  it('@ZP-102 Spiel 6 inzwischen angepfiffen: Spiel 4 wird übernommen, der Tausch nicht, mit Hinweis – ein Update', async () => {
     const h = setup();
     act(() => { h.r().draft.startEditing(); });
     act(() => { h.r().edit.handleMatchSwap('s6', 's9'); });
     act(() => { h.r().edit.handleRefereeAssignment('s4', 3); });
     h.rerender({ tournament: mit(hallencup(), 's6', { matchStatus: 'running' }) });
-    act(() => { h.r().draft.save(); });
+    await act(async () => { h.r().draft.save(); await Promise.resolve(); await Promise.resolve(); });
     expect(h.onTournamentUpdate).toHaveBeenCalledTimes(1);
     expect(matchOf(h.saved(), 's4').referee).toBe(3);
     expect(matchOf(h.saved(), 's6').scheduledTime).toEqual(at(24));
@@ -69,28 +76,156 @@ describe('@ZP-102 „Speichern“ prüft zuerst und übernimmt dann alle Änderu
     expect(h.r().draft.isEditing).toBe(false);
   });
 
-  it('@ZP-102 ein Konflikt wird vor dem Speichern gezeigt; erst „Trotzdem speichern“ speichert', () => {
+  it('@ZP-102 ein Konflikt wird vor dem Speichern gezeigt; erst „Trotzdem speichern“ speichert', async () => {
     const h = setup();
     act(() => { h.r().draft.startEditing(); });
     act(() => { h.r().edit.handleFieldChange('s4', 1); }); // Spiel 3 und 4 um 15:12 auf Feld 1
-    act(() => { h.r().draft.save(); });
+    await act(async () => { h.r().draft.save(); await Promise.resolve(); await Promise.resolve(); });
     expect(h.r().draft.conflictOpen).toBe(true);
     expect(h.r().draft.conflicts.some((c) => c.type === 'field_overlap')).toBe(true);
     expect(h.onTournamentUpdate).not.toHaveBeenCalled();
-    act(() => { h.r().draft.saveAnyway(); });
+    await act(async () => { await h.r().draft.saveAnyway(); });
     expect(h.onTournamentUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('@ZP-102 Gegenbeispiel: ohne Konflikt speichert „Speichern“ sofort alle Änderungen in einem Update', () => {
+  it('@ZP-102 Gegenbeispiel: ohne Konflikt speichert „Speichern“ sofort alle Änderungen in einem Update', async () => {
     const h = setup();
     act(() => { h.r().draft.startEditing(); });
     act(() => { h.r().edit.handleMatchSwap('s6', 's9'); });
     act(() => { h.r().edit.handleRefereeAssignment('s4', 3); });
-    act(() => { h.r().draft.save(); });
+    await act(async () => { h.r().draft.save(); await Promise.resolve(); await Promise.resolve(); });
     expect(h.onTournamentUpdate).toHaveBeenCalledTimes(1);
     expect(matchOf(h.saved(), 's6').scheduledTime).toEqual(at(48));
     expect(matchOf(h.saved(), 's4').referee).toBe(3);
     expect(h.showWarning).not.toHaveBeenCalled();
+  });
+});
+
+describe('@ZP-102 Speichern gilt erst, wenn es bestätigt ist', () => {
+  it('@ZP-102 scheitert das Speichern, bleibt der Entwurf stehen und die App meldet den Fehler', async () => {
+    const h = setup(hallencup(), 'scheitert');
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s6', 's9'); });
+    await act(async () => { h.r().draft.save(); await Promise.resolve(); await Promise.resolve(); });
+    expect(h.saveTournament).toHaveBeenCalledTimes(1);
+    expect(h.showError).toHaveBeenCalledWith('tournament:draft.saveFailed');
+    expect(h.showSuccess).not.toHaveBeenCalledWith('tournament:actions.changesSaved');
+    expect(h.r().draft.isEditing).toBe(true);
+    expect(h.r().draft.changeCount).toBe(1);
+    expect(matchOf(h.r().draft.draftTournament, 's6').scheduledTime).toEqual(at(48));
+  });
+
+  it('@ZP-102 Gegenbeispiel: bis das Speichern bestätigt ist, bleibt der Entwurf sichtbar (kein Aufflackern des alten Stands)', async () => {
+    const h = setup();
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s6', 's9'); });
+    act(() => { h.r().draft.save(); });
+    expect(h.r().draft.isSaving).toBe(true);
+    expect(h.r().draft.isEditing).toBe(true);
+    expect(matchOf(h.r().draft.draftTournament, 's6').scheduledTime).toEqual(at(48));
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(h.r().draft.isEditing).toBe(false);
+    expect(h.showSuccess).toHaveBeenCalledWith('tournament:actions.changesSaved');
+  });
+});
+
+describe('@ZP-104 Tastenkürzel', () => {
+  it('@ZP-104 Strg+Z nimmt den letzten Schritt zurück', () => {
+    const h = setup();
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleRefereeAssignment('s4', 3); });
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true })); });
+    expect(h.r().draft.changeCount).toBe(0);
+  });
+
+  it.each(['input', 'textarea', 'select'])('@ZP-104 Gegenbeispiel: Strg+Z in einem %s gehört dem Feld, nicht dem Entwurf', (tag) => {
+    const h = setup();
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleRefereeAssignment('s4', 3); });
+    const feld = document.createElement(tag);
+    document.body.appendChild(feld);
+    act(() => { feld.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })); });
+    expect(h.r().draft.changeCount).toBe(1);
+    feld.remove();
+  });
+});
+
+describe('@ZP-105 „Speichern“ fragt nur nach Konflikten, die Ollis Änderungen auslösen', () => {
+  // Pause für Team 1 zwischen Spiel 1 (15:00–15:10) und Spiel 4 (jetzt 15:11) ist schon vor dem Bearbeiten zu kurz (2 Minuten nötig)
+  const mitPausenKonflikt = () => mit(hallencup({ groupPhaseBreakDuration: 2 }), 's4', { scheduledTime: at(11) });
+
+  it('@ZP-105 ein schon bestehender Konflikt: der Tausch wird ohne Rückfrage übernommen, der Konflikt bleibt Hinweis in der Leiste', async () => {
+    const h = setup(mitPausenKonflikt());
+    expect(h.r().draft.conflictCount).toBeGreaterThan(0);
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s6', 's9'); });
+    await act(async () => { h.r().draft.save(); await Promise.resolve(); await Promise.resolve(); });
+    expect(h.r().draft.conflictOpen).toBe(false);
+    expect(h.onTournamentUpdate).toHaveBeenCalledTimes(1);
+    expect(matchOf(h.saved(), 's6').scheduledTime).toEqual(at(48));
+    h.rerender({ tournament: h.saved() });
+    expect(h.r().draft.conflictCount).toBeGreaterThan(0);
+  });
+
+  it('@ZP-105 Aber: erzeugt Ollis Tausch selbst eine Doppelbelegung, fragt die App vor dem Übernehmen nach', async () => {
+    const h = setup(mitPausenKonflikt());
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s9', 's4'); }); // Spiel 9 (Team 3 und 5) um 15:11, wo Spiel 3 Team 5 hat
+    await act(async () => { h.r().draft.save(); await Promise.resolve(); });
+    expect(h.r().draft.conflictOpen).toBe(true);
+    expect(h.r().draft.conflicts.length).toBeGreaterThan(0);
+    expect(h.r().draft.conflicts.every((c) => c.matchIds.some((id) => id === 's9' || id === 's4'))).toBe(true);
+    expect(h.onTournamentUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('@ZP-106 fremde Änderung nicht still überschreiben (Speichern)', () => {
+  it('@ZP-106 Ute hat Spiel 9 verschoben: der Tausch wird nicht übernommen und genannt, Spiel 9 steht weiter auf der neuen Zeit', async () => {
+    const h = setup();
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s6', 's9'); });
+    act(() => { h.r().edit.handleRefereeAssignment('s4', 3); });
+    h.rerender({ tournament: mit(hallencup(), 's9', { scheduledTime: at(58) }) });
+    await act(async () => { h.r().draft.save(); await Promise.resolve(); await Promise.resolve(); });
+    expect(matchOf(h.saved(), 's9').scheduledTime).toEqual(at(58));
+    expect(matchOf(h.saved(), 's6').scheduledTime).toEqual(at(24));
+    expect(matchOf(h.saved(), 's4').referee).toBe(3);
+    expect(h.showWarning).toHaveBeenCalledWith('tournament:draft.notApplied');
+  });
+});
+
+describe('@ZP-107 Getauscht wird nur innerhalb derselben Phase', () => {
+  const mitHalbfinale = () => {
+    const t = hallencup();
+    return { ...t, matches: [...t.matches, spiel(9, { id: 'hf1', matchNumber: 10, phase: 'semifinal', isFinal: true, scheduledTime: at(60) })] };
+  };
+
+  it('@ZP-107 Spiel 9 auf Halbfinale 1 gezogen: nichts getauscht, Meldung „Nur Spiele derselben Phase lassen sich tauschen“', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    let ok: boolean | undefined;
+    act(() => { ok = h.r().edit.handleMatchSwap('s9', 'hf1'); });
+    expect(ok).toBe(false);
+    expect(h.r().draft.changeCount).toBe(0);
+    expect(h.showWarning).toHaveBeenCalledWith('tournament:draft.samePhaseOnly');
+  });
+
+  it('@ZP-107 auch im Raster tauscht ein Ablegen über die Phasengrenze nichts', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    const t = h.r().draft.draftTournament;
+    const [s9, hf] = [matchOf(t, 's9'), matchOf(t, 'hf1')];
+    const getauscht = t.matches.map((m) => (m.id === 's9' ? { ...m, scheduledTime: hf.scheduledTime } : m.id === 'hf1' ? { ...m, scheduledTime: s9.scheduledTime } : m));
+    act(() => { h.r().edit.handleGridChange({ ...t, matches: getauscht }); });
+    expect(h.r().draft.changeCount).toBe(0);
+    expect(h.showWarning).toHaveBeenCalledWith('tournament:draft.samePhaseOnly');
+  });
+
+  it('@ZP-107 Gegenbeispiel: zwei Gruppenspiele lassen sich weiter tauschen', () => {
+    const h = setup(mitHalbfinale());
+    act(() => { h.r().draft.startEditing(); });
+    act(() => { h.r().edit.handleMatchSwap('s9', 's6'); });
+    expect(h.r().draft.changeCount).toBe(1);
   });
 });
 

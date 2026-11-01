@@ -3,7 +3,9 @@
  * Der Entwurf = gespeichertes Turnier + Schritte der Reihe nach. Gespeichert wird erst mit „Speichern“ (ein Update).
  *
  * Rein (kein React). Angepfiffene Spiele (läuft, Halbzeit, beendet) ändern sich nie (@ZP-093): ein Tausch, der eines
- * berührt, entfällt ganz; bei „neu verteilen“ entfällt nur der Eintrag dieses Spiels. Beides wird als `skipped` gemeldet.
+ * berührt, entfällt ganz; bei „neu verteilen“ entfällt nur der Eintrag dieses Spiels. Ebenso wird nichts still
+ * überschrieben (Funktionalität F, @ZP-102): jeder Eintrag trägt den Wert, von dem er ausging (`from`); hat ein anderes
+ * Gerät das Spiel inzwischen geändert, entfällt er. Beides wird als `skipped` gemeldet.
  */
 import type { Match, Tournament } from '../../../types/tournament';
 import { isStartedMatch } from '../../schedule-editor/utils/startedGuard';
@@ -16,6 +18,8 @@ export interface MatchPatch {
   scheduledTime?: Date;
   field?: number;
   referee?: number | null;
+  /** Werte, von denen der Eintrag ausging (je geändertem Feld); weicht der Stand beim Anwenden ab, entfällt er */
+  from: { scheduledTime?: Date; field?: number; referee?: number | null };
 }
 
 export interface DraftStep {
@@ -27,11 +31,12 @@ export interface DraftStep {
   manual?: Record<string, number | null>;
 }
 
-/** Ein nicht übernommener Teil des Entwurfs: der Schritt, die betroffenen Spiele und welches davon angepfiffen ist. */
+/** Ein nicht übernommener Teil des Entwurfs: der Schritt, die betroffenen Spiele, welche angepfiffen bzw. anderswo geändert sind. */
 export interface SkippedChange {
   kind: DraftStepKind;
   matchIds: string[];
   startedIds: string[];
+  changedIds: string[];
 }
 
 export interface DraftResult {
@@ -49,7 +54,18 @@ function applyPatch(match: Match, patch: MatchPatch): Match {
   return next;
 }
 
-/** Wendet die Schritte der Reihe nach auf `base` an; angepfiffene Spiele aus `base` bleiben unberührt. */
+const sameTime = (a: Match['scheduledTime'], b: Match['scheduledTime']): boolean =>
+  (a ? new Date(a).getTime() : null) === (b ? new Date(b).getTime() : null);
+
+/** Steht das Spiel noch auf den Werten, von denen der Eintrag ausging? */
+function unchangedSince(match: Match | null, patch: MatchPatch): boolean {
+  if (!match) { return true; } // unbekanntes Spiel: der Eintrag wird ohnehin übersprungen
+  return (patch.scheduledTime === undefined || sameTime(match.scheduledTime, patch.from.scheduledTime))
+    && (patch.field === undefined || match.field === patch.from.field)
+    && (patch.referee === undefined || (match.referee ?? null) === (patch.from.referee ?? null));
+}
+
+/** Wendet die Schritte der Reihe nach auf `base` an; angepfiffene und anderswo geänderte Spiele bleiben unberührt. */
 export function applyDraftSteps(base: Tournament, steps: readonly DraftStep[]): DraftResult {
   const byId = new Map(base.matches.map((m) => [m.id, m]));
   const started = new Set(base.matches.filter(isStartedMatch).map((m) => m.id));
@@ -59,17 +75,25 @@ export function applyDraftSteps(base: Tournament, steps: readonly DraftStep[]): 
   let appliedSteps = 0;
 
   for (const step of steps) {
-    const touchedStarted = step.patches.map((p) => p.matchId).filter((id) => started.has(id));
-    if (step.atomic && touchedStarted.length > 0) {
-      skipped.push({ kind: step.kind, matchIds: step.patches.map((p) => p.matchId), startedIds: touchedStarted });
+    const blocked = (p: MatchPatch) => ({
+      started: started.has(p.matchId),
+      changed: !started.has(p.matchId) && !unchangedSince(byId.get(p.matchId) ?? null, p),
+    });
+    const touchedStarted = step.patches.filter((p) => blocked(p).started).map((p) => p.matchId);
+    const touchedChanged = step.patches.filter((p) => blocked(p).changed).map((p) => p.matchId);
+    if (step.atomic && touchedStarted.length + touchedChanged.length > 0) {
+      skipped.push({ kind: step.kind, matchIds: step.patches.map((p) => p.matchId), startedIds: touchedStarted, changedIds: touchedChanged });
       continue;
     }
     let appliedAny = false;
+    const skippedIds = new Set<string>();
     for (const patch of step.patches) {
       const match = byId.get(patch.matchId);
       if (!match) { continue; }
-      if (started.has(patch.matchId)) {
-        skipped.push({ kind: step.kind, matchIds: [patch.matchId], startedIds: [patch.matchId] });
+      const b = blocked(patch);
+      if (b.started || b.changed) {
+        skippedIds.add(patch.matchId);
+        skipped.push({ kind: step.kind, matchIds: [patch.matchId], startedIds: b.started ? [patch.matchId] : [], changedIds: b.changed ? [patch.matchId] : [] });
         continue;
       }
       byId.set(patch.matchId, applyPatch(match, patch));
@@ -79,7 +103,7 @@ export function applyDraftSteps(base: Tournament, steps: readonly DraftStep[]): 
       }
     }
     for (const [matchId, value] of Object.entries(step.manual ?? {})) {
-      if (started.has(matchId)) { continue; }
+      if (started.has(matchId) || skippedIds.has(matchId)) { continue; }
       manual = { ...(manual ?? {}), [matchId]: value };
       appliedAny = true;
     }
@@ -104,6 +128,11 @@ export function applyDraftSteps(base: Tournament, steps: readonly DraftStep[]): 
   return { tournament, skipped, appliedSteps };
 }
 
+/** Phase für das Tauschen (@ZP-107): Gruppenphase oder Finalrunde (alle Finalspiele zählen zusammen). */
+export function swapPhaseOf(match: { phase?: string; isFinal?: boolean }): 'group' | 'finals' {
+  return (match.phase ?? (match.isFinal ? 'final' : 'groupStage')) === 'groupStage' ? 'group' : 'finals';
+}
+
 /** Tausch: Spiel A bekommt Uhrzeit und Feld von B und umgekehrt (@ZP-100). `null`, wenn ein Spiel fehlt. */
 export function swapStep(draft: Tournament, matchIdA: string, matchIdB: string): DraftStep | null {
   const a = draft.matches.find((m) => m.id === matchIdA);
@@ -113,8 +142,8 @@ export function swapStep(draft: Tournament, matchIdA: string, matchIdB: string):
     kind: 'swap',
     atomic: true,
     patches: [
-      { matchId: a.id, scheduledTime: b.scheduledTime, field: b.field },
-      { matchId: b.id, scheduledTime: a.scheduledTime, field: a.field },
+      { matchId: a.id, scheduledTime: b.scheduledTime, field: b.field, from: { scheduledTime: a.scheduledTime, field: a.field } },
+      { matchId: b.id, scheduledTime: a.scheduledTime, field: a.field, from: { scheduledTime: b.scheduledTime, field: b.field } },
     ],
   };
 }
@@ -123,18 +152,15 @@ export function swapStep(draft: Tournament, matchIdA: string, matchIdB: string):
 export function refereeStep(draft: Tournament, matchId: string, referee: number | null): DraftStep | null {
   const match = draft.matches.find((m) => m.id === matchId);
   if (!match || (match.referee ?? null) === referee) { return null; }
-  return { kind: 'referee', atomic: true, patches: [{ matchId, referee }], manual: { [matchId]: referee } };
+  return { kind: 'referee', atomic: true, patches: [{ matchId, referee, from: { referee: match.referee ?? null } }], manual: { [matchId]: referee } };
 }
 
 /** Feld eines Spiels; `null`, wenn sich nichts ändert. */
 export function fieldStep(draft: Tournament, matchId: string, field: number): DraftStep | null {
   const match = draft.matches.find((m) => m.id === matchId);
   if (!match || match.field === field) { return null; }
-  return { kind: 'field', atomic: true, patches: [{ matchId, field }] };
+  return { kind: 'field', atomic: true, patches: [{ matchId, field, from: { field: match.field } }] };
 }
-
-const sameTime = (a: Match['scheduledTime'], b: Match['scheduledTime']): boolean =>
-  (a ? new Date(a).getTime() : null) === (b ? new Date(b).getTime() : null);
 
 /** Schritt aus dem Unterschied zweier Spiellisten (Raster: Ablegen auf einen Platz); `null` ohne Unterschied. */
 export function diffStep(before: readonly Match[], after: readonly Match[]): DraftStep | null {
@@ -143,11 +169,11 @@ export function diffStep(before: readonly Match[], after: readonly Match[]): Dra
   for (const next of after) {
     const prev = old.get(next.id);
     if (!prev) { continue; }
-    const patch: MatchPatch = { matchId: next.id };
-    if (!sameTime(prev.scheduledTime, next.scheduledTime) && next.scheduledTime) { patch.scheduledTime = next.scheduledTime; }
-    if (prev.field !== next.field) { patch.field = next.field; }
-    if ((prev.referee ?? null) !== (next.referee ?? null)) { patch.referee = next.referee ?? null; }
-    if (Object.keys(patch).length > 1) { patches.push(patch); }
+    const patch: MatchPatch = { matchId: next.id, from: {} };
+    if (!sameTime(prev.scheduledTime, next.scheduledTime) && next.scheduledTime) { patch.scheduledTime = next.scheduledTime; patch.from.scheduledTime = prev.scheduledTime; }
+    if (prev.field !== next.field) { patch.field = next.field; patch.from.field = prev.field; }
+    if ((prev.referee ?? null) !== (next.referee ?? null)) { patch.referee = next.referee ?? null; patch.from.referee = prev.referee ?? null; }
+    if (Object.keys(patch.from).length > 0) { patches.push(patch); }
   }
   return patches.length > 0 ? { kind: 'move', atomic: true, patches } : null;
 }

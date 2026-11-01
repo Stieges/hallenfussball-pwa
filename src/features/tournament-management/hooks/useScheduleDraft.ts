@@ -8,7 +8,7 @@
  * - „Rückgängig“/„Wiederholen“ gehen Schritt für Schritt; ein Schritt ohne Wirkung entsteht gar nicht (@ZP-104).
  * Ersetzt usePendingChanges + useScheduleHistory (dort waren Tausch und Neuverteilen sofort gespeichert).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
 import type { Tournament } from '../../../types/tournament';
@@ -22,9 +22,11 @@ interface UseScheduleDraftOptions {
   tournament: Tournament;
   /** Spielplan des gespeicherten Turniers (Anzeige ohne Änderungen) */
   schedule: GeneratedSchedule;
-  onTournamentUpdate: (tournament: Tournament) => void;
+  /** Speichert das Turnier; erst wenn es aufgelöst ist, gilt der Entwurf als gespeichert (wirft = nicht gespeichert) */
+  saveTournament: (tournament: Tournament) => Promise<void>;
   showSuccess: (message: string) => void;
   showWarning: (message: string) => void;
+  showError: (message: string) => void;
 }
 
 export interface ScheduleDraftControls {
@@ -38,6 +40,8 @@ export interface ScheduleDraftControls {
   draftSchedule: GeneratedSchedule;
   /** Geänderte Schiedsrichter/Felder je Spiel (Markierung an den Karten) */
   changed: ReturnType<typeof changedValues>;
+  /** Speichern läuft (Taste gesperrt) */
+  isSaving: boolean;
   /** Neuen Schritt anhängen; `null` (keine Wirkung) ergibt keinen Schritt. `true` = angehängt. */
   addStep: (step: DraftStep | null) => boolean;
   canUndo: boolean;
@@ -49,13 +53,25 @@ export interface ScheduleDraftControls {
   confirmDiscard: () => void;
   keepEditing: () => void;
   save: () => void;
-  saveAnyway: () => void;
+  saveAnyway: () => Promise<void>;
+  /** Konflikte, die der Entwurf neu auslöst (Rückfrage vor dem Speichern, @ZP-105) */
   conflicts: ScheduleConflict[];
+  /** Zahl aller Konflikte im angezeigten Stand (Hinweis in der Leiste, @ZP-105) */
+  conflictCount: number;
   conflictOpen: boolean;
   closeConflicts: () => void;
 }
 
-export function useScheduleDraft({ tournament, schedule, onTournamentUpdate, showSuccess, showWarning }: UseScheduleDraftOptions): ScheduleDraftControls {
+function conflictsOf(tournament: Tournament, matches: Tournament['matches']): ScheduleConflict[] {
+  return detectAllConflicts(matches, tournament.teams, {
+    matchDurationMinutes: tournament.groupPhaseGameDuration,
+    minBreakMinutes: tournament.groupPhaseBreakDuration ?? 0,
+    checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
+    checkFieldConflicts: tournament.numberOfFields > 1,
+  });
+}
+
+export function useScheduleDraft({ tournament, schedule, saveTournament, showSuccess, showWarning, showError }: UseScheduleDraftOptions): ScheduleDraftControls {
   const { t } = useTranslation('tournament');
   const [isEditing, setIsEditing] = useState(false);
   const [steps, setSteps] = useState<DraftStep[]>([]);
@@ -63,6 +79,8 @@ export function useScheduleDraft({ tournament, schedule, onTournamentUpdate, sho
   const [discardOpen, setDiscardOpen] = useState(false);
   const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
   const [conflictOpen, setConflictOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const result = useMemo<DraftResult>(() => applyDraftSteps(tournament, isEditing ? steps : []), [tournament, steps, isEditing]);
   const draftTournament = result.tournament;
@@ -107,11 +125,24 @@ export function useScheduleDraft({ tournament, schedule, onTournamentUpdate, sho
     setDiscardOpen(true);
   }, [steps.length, reset]);
 
-  // Speichern: der Entwurf wird zum Zeitpunkt des Speicherns neu auf das aktuelle Turnier angewendet (@ZP-102)
-  const commit = useCallback(() => {
+  // Speichern: der Entwurf wird zum Zeitpunkt des Speicherns neu auf das aktuelle Turnier angewendet (@ZP-102).
+  // Erst nach bestätigtem Speichern wird der Entwurf geschlossen; scheitert es, bleibt er stehen (mit Fehlermeldung).
+  const commit = useCallback(async () => {
+    if (savingRef.current) { return; }
     const final = applyDraftSteps(tournament, steps);
     if (final.appliedSteps > 0) {
-      onTournamentUpdate({ ...final.tournament, updatedAt: new Date().toISOString() });
+      savingRef.current = true;
+      setIsSaving(true);
+      setConflictOpen(false);
+      try {
+        await saveTournament({ ...final.tournament, updatedAt: new Date().toISOString() });
+      } catch {
+        showError(t('draft.saveFailed'));
+        return;
+      } finally {
+        savingRef.current = false;
+        setIsSaving(false);
+      }
       showSuccess(t('actions.changesSaved'));
     }
     if (final.skipped.length > 0) {
@@ -119,31 +150,31 @@ export function useScheduleDraft({ tournament, schedule, onTournamentUpdate, sho
       showWarning(t('draft.notApplied', { list }));
     }
     reset();
-  }, [tournament, steps, onTournamentUpdate, showSuccess, showWarning, t, reset]);
+  }, [tournament, steps, saveTournament, showSuccess, showWarning, showError, t, reset]);
 
+  // @ZP-105: gefragt wird nur nach Konflikten, die der Entwurf neu auslöst; bestehende bleiben Hinweis in der Leiste
   const save = useCallback(() => {
     const final = applyDraftSteps(tournament, steps);
-    const found = final.appliedSteps > 0
-      ? detectAllConflicts(final.tournament.matches, tournament.teams, {
-        matchDurationMinutes: tournament.groupPhaseGameDuration,
-        minBreakMinutes: tournament.groupPhaseBreakDuration ?? 0,
-        checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
-        checkFieldConflicts: tournament.numberOfFields > 1,
-      })
-      : [];
+    const before = new Set(conflictsOf(tournament, tournament.matches).map((c) => c.id));
+    const found = final.appliedSteps > 0 ? conflictsOf(tournament, final.tournament.matches).filter((c) => !before.has(c.id)) : [];
     if (found.length > 0) {
       setConflicts(found);
       setConflictOpen(true);
       return;
     }
-    commit();
+    void commit();
   }, [tournament, steps, commit]);
 
-  // Tastenkürzel nur im Bearbeiten-Modus: Strg/Cmd+Z, Strg+Y bzw. Cmd+Umschalt+Z
+  // Hinweis in der Leiste: Konflikte im angezeigten Stand (Entwurf bzw. gespeichert)
+  const conflictCount = useMemo(() => conflictsOf(tournament, draftTournament.matches).length, [tournament, draftTournament.matches]);
+
+  // Tastenkürzel nur im Bearbeiten-Modus: Strg/Cmd+Z, Strg+Y bzw. Cmd+Umschalt+Z – nicht in Eingabefeldern (dort gilt das Feld)
   useEffect(() => {
     if (!isEditing) { return; }
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) { return; }
+      const ziel = e.target instanceof HTMLElement ? e.target : null;
+      if (ziel && (ziel.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(ziel.tagName))) { return; }
       if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
       if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
     };
@@ -153,6 +184,7 @@ export function useScheduleDraft({ tournament, schedule, onTournamentUpdate, sho
 
   return {
     isEditing,
+    isSaving,
     startEditing,
     changeCount: isEditing ? steps.length : 0,
     draftTournament,
@@ -170,6 +202,7 @@ export function useScheduleDraft({ tournament, schedule, onTournamentUpdate, sho
     save,
     saveAnyway: commit,
     conflicts,
+    conflictCount,
     conflictOpen,
     closeConflicts: useCallback(() => setConflictOpen(false), []),
   };

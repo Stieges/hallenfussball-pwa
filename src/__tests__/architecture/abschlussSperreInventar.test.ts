@@ -64,6 +64,7 @@ const INVENTORY: Record<string, Entry> = {
   [`${ADMIN}categories/Visibility/SpectatorDisplaySection.tsx`]: { gate: `${ADMIN}categories/Visibility/index.tsx`, why: 'canEdit kommt aus useCan(tournamentSettings)' },
   'src/features/schedule-editor/ScheduleEditor.tsx': { gate: `${HOME}ScheduleTab.tsx`, why: 'wird nur im Spielplan eingebunden, abgeschlossen nicht mehr gezeigt' },
   'src/features/schedule-editor/hooks/useScheduleEditor.ts': { gate: `${HOME}ScheduleTab.tsx`, why: 'wie ScheduleEditor' },
+  [`${HOME}ScheduleTab.tsx`]: { gate: `${HOME}ScheduleTab.tsx`, why: 'Spielplan: useCan(manageSchedule) + useTournamentClosed (Speichern des Entwurfs)' },
   [`${HOME}hooks/useScheduleDraft.ts`]: { gate: `${HOME}ScheduleTab.tsx`, why: 'Entwurf des Bearbeitungsmodus (Speichern), Einstieg gesperrt' },
   [`${HOME}hooks/useScheduleEditActions.ts`]: { gate: `${HOME}ScheduleTab.tsx`, why: 'Schiri-Block (sofort speichern): abgeschlossen ohne Eingabe in der Tabelle' },
   [`${HOME}time-shift/useTimeShift.ts`]: { gate: `${HOME}ScheduleTab.tsx`, why: 'Zeiten verschieben (B-26): enabled nur offen' },

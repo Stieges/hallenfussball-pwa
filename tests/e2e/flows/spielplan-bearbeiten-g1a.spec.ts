@@ -38,13 +38,23 @@ function turnier(): Record<string, unknown> {
   };
 }
 
-/** Sichtbare Karten der Gruppenphase: Spielnummer (aus „Spiel n: …“) und Uhrzeit, in Anzeige-Reihenfolge */
+/**
+ * Sichtbare Karten der Gruppenphase: Spielnummer und Uhrzeit, in Anzeige-Reihenfolge. Im Bearbeiten-Modus tragen die
+ * Karten `data-match-number` (Handy- und Desktop-Karte), sonst steht die Nummer in „Spiel n: …“ (aria-label).
+ */
 async function karten(page: Page): Promise<{ nr: number; zeit: string }[]> {
-  return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.group-stage-schedule [aria-label^="Spiel "]')]
+  return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.group-stage-schedule [data-match-number], .group-stage-schedule [aria-label^="Spiel "]')]
     .filter((el) => el.getBoundingClientRect().width > 0)
-    .map((el) => ({ nr: Number(/^Spiel (\d+)/.exec(el.getAttribute('aria-label') ?? '')?.[1]), zeit: /\b(\d{2}:\d{2})\b/.exec(el.innerText)?.[1] ?? '' }))
+    .map((el) => ({
+      nr: Number(el.dataset.matchNumber ?? /^Spiel (\d+)/.exec(el.getAttribute('aria-label') ?? '')?.[1]),
+      zeit: /\b(\d{2}:\d{2})\b/.exec(el.innerText)?.[1] ?? '',
+    }))
     .filter((k, i, alle) => k.nr > 0 && k.zeit !== '' && alle.findIndex((x) => x.nr === k.nr) === i));
 }
+
+/** Karte (Bearbeiten-Modus) und ihr Ziehgriff – Handy-Karte oder Desktop-Karte, je nachdem, welche sichtbar ist */
+const karte = (page: Page, nr: number) => page.locator(`.group-stage-schedule [data-match-number="${nr}"]`).filter({ visible: true }).first();
+const griffVon = (page: Page, nr: number) => karte(page, nr).getByLabel('Ziehen zum Verschieben', { exact: true });
 
 const zeitVon = async (page: Page, nr: number) => (await karten(page)).find((k) => k.nr === nr)?.zeit;
 const nachUhrzeit = (liste: { zeit: string }[]) => liste.every((k, i) => i === 0 || liste[i - 1].zeit <= k.zeit);
@@ -72,19 +82,21 @@ test.describe('G1a Spielplan bearbeiten (offline)', () => {
     await seedIndexedDB({ tournaments: [turnier()] });
   });
 
-  test('@ZP-100 am Handy: Spiel 6 am Griff auf Spiel 3 ziehen tauscht beide, ohne pointercancel, Liste nach Uhrzeit', async ({ page, browserName }, testInfo) => {
-    test.skip(!testInfo.project.use.hasTouch || browserName !== 'chromium', 'echte Touch-Ereignisse über CDP nur im Chromium-Handy-Projekt');
+  test('@ZP-100 per Touch (Handy und Tablet): Spiel 6 am Griff auf Spiel 3 ziehen tauscht beide, ohne pointercancel, Liste nach Uhrzeit', async ({ page, browserName }, testInfo) => {
+    test.skip(!testInfo.project.use.hasTouch || browserName !== 'chromium', 'echte Touch-Ereignisse über CDP nur in Chromium-Projekten mit Touch');
     await oeffnen(page);
     await page.getByTestId('schedule-edit-start').click();
     const vorher = { s3: await zeitVon(page, 3), s6: await zeitVon(page, 6) };
 
-    const griffe = page.getByLabel('Ziehen zum Verschieben', { exact: true }).filter({ visible: true });
-    const griff6 = griffe.nth(5);
+    const griff6 = griffVon(page, 6);
     await expect(griff6).toHaveCSS('touch-action', 'none');
 
-    // Spiel 3 oben im Bild, damit Ziel und Griff gleichzeitig sichtbar sind
-    const karte3 = page.locator('.group-stage-schedule [aria-label^="Spiel 3:"]').filter({ visible: true });
+    // Ziel und Griff symmetrisch um die Bildmitte: so liegen beide möglichst weit weg von den Mitscroll-Zonen am Rand
+    // (lag das Ziel am Tablet oben in der Zone, scrollte die Liste beim Ablegen, und der Tausch traf Spiel 2)
+    const karte3 = karte(page, 3);
     await karte3.evaluate((el) => el.scrollIntoView({ block: 'start' }));
+    const mitte = ((await karte3.boundingBox())!.y + (await karte3.boundingBox())!.height / 2 + (await griff6.boundingBox())!.y + (await griff6.boundingBox())!.height / 2) / 2;
+    await page.evaluate((m) => window.scrollBy(0, Math.round(m - window.innerHeight / 2)), mitte);
     await page.evaluate(() => {
       const w = window as unknown as { __abbrueche: number };
       w.__abbrueche = 0;
@@ -113,12 +125,13 @@ test.describe('G1a Spielplan bearbeiten (offline)', () => {
     await expect(page.getByTestId('schedule-unsaved-count')).toHaveText('1 Änderung nicht gespeichert');
   });
 
-  test('@ZP-100 am Handy: liegt das Ziel außerhalb des Bildschirms, scrollt die Liste beim Ziehen mit – gebremst', async ({ page, browserName }, testInfo) => {
-    test.skip(!testInfo.project.use.hasTouch || browserName !== 'chromium', 'echte Touch-Ereignisse über CDP nur im Chromium-Handy-Projekt');
+  test('@ZP-100 per Touch: liegt das Ziel außerhalb des Bildschirms, scrollt die Liste beim Ziehen mit – gebremst', async ({ page, browserName }, testInfo) => {
+    test.skip(!testInfo.project.use.hasTouch || browserName !== 'chromium', 'echte Touch-Ereignisse über CDP nur in Chromium-Projekten mit Touch');
     await oeffnen(page);
     await page.getByTestId('schedule-edit-start').click();
-    const griff10 = page.getByLabel('Ziehen zum Verschieben', { exact: true }).filter({ visible: true }).nth(9);
+    const griff10 = griffVon(page, 10);
     await griff10.evaluate((el) => el.scrollIntoView({ block: 'end' }));
+    test.skip(await page.evaluate(() => window.scrollY) < 300, 'Liste passt fast ins Fenster: nichts zum Mitscrollen');
     const von = (await griff10.boundingBox())!;
     const start = { x: von.x + von.width / 2, y: von.y + von.height / 2 };
     const cdp = await page.context().newCDPSession(page);

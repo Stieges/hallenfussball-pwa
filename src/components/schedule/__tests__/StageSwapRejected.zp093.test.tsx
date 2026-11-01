@@ -75,6 +75,8 @@ describe.each([
     const { container, rerender } = render(build(swap, vorher));
     ziehe();
     expect(swap).toHaveBeenCalledWith('m1', 'm2');
+    // die Anzeige ordnet nicht selbst um (kein arrayMove): ohne neue Uhrzeiten bleibt die Reihenfolge
+    expect(reihenfolge(container)).toBe('Nord-zuerst');
     // Entwurf: Spiel 1 hat jetzt 14:32, Spiel 2 14:20 – Spiel 2 steht oben, obwohl die Liste in Spielnummer-Folge kommt
     rerender(build(swap, [spiel('m1', 1, 1, 2, phase, '14:32'), spiel('m2', 2, 3, 4, phase, '14:20')]));
     expect(reihenfolge(container)).toBe('Ufer-zuerst');

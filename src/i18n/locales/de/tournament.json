@@ -1895,18 +1895,23 @@
     "overwriteManual_other": "{{count}} Spiele wurden von Hand zugeteilt – trotzdem neu verteilen?",
     "overwriteConfirm": "Neu verteilen",
     "overwriteCancel": "Abbrechen",
-    "notApplied": "Nicht übernommen, weil inzwischen angepfiffen:\n{{list}}",
+    "notApplied": "Nicht übernommen:\n{{list}}",
     "skipped": {
       "swap": "Tausch von Spiel {{a}} und Spiel {{b}}",
       "field": "Feld von Spiel {{a}}",
       "move": "Verschieben von Spiel {{a}}",
       "referee": "Schiedsrichter von Spiel {{a}}",
-      "started": "Spiel {{number}} ist angepfiffen"
+      "started": "Spiel {{number}} ist angepfiffen",
+      "changedElsewhere": "Spiel {{number}} wurde inzwischen auf einem anderen Gerät geändert"
     },
     "swapWith": "Tauschen mit …",
     "swapWithTitle": "Spiel {{number}} tauschen mit …",
     "swapWithLabel": "Zielspiel – Uhrzeit und Feld werden getauscht",
     "swapConfirm": "Tauschen",
-    "swapOption": "Spiel {{number}} · {{time}} · Feld {{field}} · {{home}} – {{away}}"
+    "swapOption": "Spiel {{number}} · {{time}} · Feld {{field}} · {{home}} – {{away}}",
+    "saveFailed": "Speichern fehlgeschlagen – die Änderungen sind noch nicht gespeichert und bleiben im Entwurf.",
+    "conflictHint_one": "{{count}} Konflikt im Spielplan",
+    "conflictHint_other": "{{count}} Konflikte im Spielplan",
+    "samePhaseOnly": "Nur Spiele derselben Phase lassen sich tauschen"
   }
 }

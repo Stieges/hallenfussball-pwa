@@ -11,7 +11,7 @@ import type { Tournament } from '../../../types/tournament';
 import { useConfirmDialog, type ConfirmDialogProps } from '../../../components/ui/ConfirmDialog';
 import { isStartedMatch } from '../../schedule-editor/utils/startedGuard';
 import { redistributeFields } from '../../schedule-editor/utils/autoReassign';
-import { applyDraftSteps, diffStep, fieldStep, refereeStep, swapStep, type DraftStep } from '../schedule-draft/draftSteps';
+import { applyDraftSteps, diffStep, fieldStep, refereeStep, swapPhaseOf, swapStep, type DraftStep } from '../schedule-draft/draftSteps';
 import { matchNumberLookup } from '../schedule-draft/draftTexts';
 import { redistributeOpenReferees } from '../schedule-draft/refereeRedistribution';
 import type { ScheduleDraftControls } from './useScheduleDraft';
@@ -41,6 +41,11 @@ export interface ScheduleEditActions {
   overwriteDialogProps: ConfirmDialogProps;
 }
 
+/** Gehören alle Spiele zur selben Phase (Gruppenphase bzw. Finalrunde)? */
+function samePhase(t: Tournament, ids: readonly string[]): boolean {
+  return new Set(t.matches.filter((m) => ids.includes(m.id)).map(swapPhaseOf)).size <= 1;
+}
+
 export function useScheduleEditActions({ tournament, draft, onTournamentUpdate, showSuccess, showWarning }: UseScheduleEditActionsOptions): ScheduleEditActions {
   const { t } = useTranslation('tournament');
   const { isEditing, draftTournament, addStep } = draft;
@@ -63,6 +68,7 @@ export function useScheduleEditActions({ tournament, draft, onTournamentUpdate, 
       showWarning(t('schedule.startedLocked'));
       return false;
     }
+    if (!samePhase(working, [matchId1, matchId2])) { showWarning(t('draft.samePhaseOnly')); return false; } // @ZP-107
     if (!addStep(swapStep(working, matchId1, matchId2))) { return false; }
     const numberOf = matchNumberLookup(working.matches);
     showSuccess(t('actions.matchesSwapped', { match1: numberOf(matchId1), match2: numberOf(matchId2) }));
@@ -83,7 +89,7 @@ export function useScheduleEditActions({ tournament, draft, onTournamentUpdate, 
     if (!isEditing) { return; }
     const { changes } = redistributeFields(working.matches, working.numberOfFields);
     if (changes.length === 0) { showSuccess(t('actions.fieldsAlreadyOptimal')); return; }
-    addStep({ kind: 'redistributeFields', atomic: false, patches: changes.map((c) => ({ matchId: c.matchId, field: c.newValue as number })) });
+    addStep({ kind: 'redistributeFields', atomic: false, patches: changes.map((c) => ({ matchId: c.matchId, field: c.newValue as number, from: { field: working.matches.find((m) => m.id === c.matchId)?.field } })) });
     showSuccess(t('actions.fieldsRedistributed', { count: changes.length }));
   }, [isEditing, working, addStep, showSuccess, t]);
 
@@ -108,8 +114,12 @@ export function useScheduleEditActions({ tournament, draft, onTournamentUpdate, 
   }, [lockedMatchIds, isEditing, working, addStep, showWarning, t]);
 
   const handleGridChange = useCallback((next: Tournament) => {
-    if (isEditing) { addStep(diffStep(working.matches, next.matches)); }
-  }, [isEditing, working.matches, addStep]);
+    if (!isEditing) { return; }
+    const step = diffStep(working.matches, next.matches);
+    // @ZP-107: ein Ablegen, das Spiele verschiedener Phasen tauscht, tauscht nichts
+    if (step && !samePhase(working, step.patches.map((p) => p.matchId))) { showWarning(t('draft.samePhaseOnly')); return; }
+    addStep(step);
+  }, [isEditing, working, addStep, showWarning, t]);
 
   return {
     handleMatchSwap,

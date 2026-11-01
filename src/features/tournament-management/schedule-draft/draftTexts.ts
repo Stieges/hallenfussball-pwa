@@ -12,7 +12,7 @@ export function matchNumberLookup(matches: readonly Match[]): (matchId: string) 
   return (matchId) => numbers.get(matchId) ?? '?';
 }
 
-/** „Tausch von Spiel 6 und Spiel 9 – Spiel 6 ist angepfiffen“, je nicht übernommener Änderung eine Zeile. */
+/** „Tausch von Spiel 6 und Spiel 9 – Spiel 6 ist angepfiffen“ bzw. „… inzwischen auf einem anderen Gerät geändert“, je Zeile. */
 export function describeSkipped(skipped: readonly SkippedChange[], numberOf: (id: string) => number | string, t: TFunction<'tournament'>): string {
   return skipped.map((entry) => {
     const [a, b] = entry.matchIds.map(numberOf);
@@ -23,7 +23,10 @@ export function describeSkipped(skipped: readonly SkippedChange[], numberOf: (id
         : entry.kind === 'move'
           ? t('draft.skipped.move', { a })
           : t('draft.skipped.referee', { a });
-    const started = entry.startedIds.map((id) => t('draft.skipped.started', { number: numberOf(id) })).join(', ');
-    return `${what} – ${started}`;
+    const why = [
+      ...entry.startedIds.map((id) => t('draft.skipped.started', { number: numberOf(id) })),
+      ...entry.changedIds.map((id) => t('draft.skipped.changedElsewhere', { number: numberOf(id) })),
+    ].join(', ');
+    return `${what} – ${why}`;
   }).join('\n');
 }

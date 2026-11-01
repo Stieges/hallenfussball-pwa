@@ -8,6 +8,7 @@ import type { ScheduledMatch } from '../../../core/generators';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { SwapWithContext, type SwapWithApi } from '../../../components/schedule/swapWithContext';
 import { cssVars } from '../../../design-tokens';
+import { swapPhaseOf } from '../schedule-draft/draftSteps';
 
 interface ScheduleSwapWithProps {
   enabled: boolean;
@@ -28,8 +29,9 @@ export const ScheduleSwapWith: React.FC<ScheduleSwapWithProps> = ({ enabled, mat
   const api = useMemo<SwapWithApi | null>(() => (enabled ? { request: (id) => { setSourceId(id); setTargetId(''); } } : null), [enabled]);
   const source = matches.find((m) => m.id === sourceId);
   const candidates = useMemo(
-    () => [...matches].filter((m) => m.id !== sourceId && !lockedIds.has(m.id)).sort(byTime),
-    [matches, sourceId, lockedIds],
+    // @ZP-107: nur Spiele derselben Phase; @ZP-093: keine angepfiffenen
+    () => [...matches].filter((m) => m.id !== sourceId && !lockedIds.has(m.id) && (!source || swapPhaseOf(m) === swapPhaseOf(source))).sort(byTime),
+    [matches, sourceId, lockedIds, source],
   );
   const chosen = targetId || candidates[0]?.id || '';
   const close = () => { setSourceId(null); setTargetId(''); };

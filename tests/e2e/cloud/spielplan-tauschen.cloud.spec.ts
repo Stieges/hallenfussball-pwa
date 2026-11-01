@@ -57,9 +57,10 @@ async function zeilen(tournamentId: string): Promise<Zeile[]> {
 
 /** Ziehen am Griff mit echten Touch-Ereignissen (CDP), wie am Handy */
 async function ziehe(page: Page, vonNr: number, aufNr: number): Promise<void> {
-  const karte = (nr: number) => page.locator(`.group-stage-schedule [aria-label^="Spiel ${nr}:"]`).filter({ visible: true }).first();
+  // Karten im Bearbeiten-Modus tragen ihre Spielnummer (Handy- und Desktop-Karte), der Griff liegt in der Karte
+  const karte = (nr: number) => page.locator(`.group-stage-schedule [data-match-number="${nr}"]`).filter({ visible: true }).first();
   await karte(aufNr).evaluate((el) => el.scrollIntoView({ block: 'start' }));
-  const griff = page.locator('[data-match-card]', { has: karte(vonNr) }).getByLabel('Ziehen zum Verschieben', { exact: true }).filter({ visible: true }).first();
+  const griff = karte(vonNr).getByLabel('Ziehen zum Verschieben', { exact: true });
   await expect(griff).toHaveCSS('touch-action', 'none');
   const von = (await griff.boundingBox())!;
   const ziel = (await karte(aufNr).boundingBox())!;
@@ -85,9 +86,11 @@ test.describe('G1a: Tausch im Cloud-Turnier erst mit „Speichern“', () => {
     const zweites = await newRoleContext(browser, 'owner');
     try {
       const vorher = await zeilen(tournamentId);
-      // zwei geplante Spiele zu verschiedenen Zeiten: das dritte und das sechste nach Spielnummer
-      const [a, b] = [vorher[2], vorher[5]];
-      expect(a.scheduled_start).not.toBe(b.scheduled_start);
+      // zwei geplante Spiele zu verschiedenen Zeiten, nah beieinander (am Handy beide im Bild): Spiel 3 und das nächste
+      // Spiel mit anderer Anstoßzeit
+      const a = vorher[2];
+      const b = vorher.slice(3).find((z) => z.scheduled_start !== a.scheduled_start)!;
+      expect(b).toBeDefined();
 
       const page = olli.page;
       await page.goto(`/#/tournament/${tournamentId}/schedule`);
@@ -107,6 +110,12 @@ test.describe('G1a: Tausch im Cloud-Turnier erst mit „Speichern“', () => {
       expect(await zeilen(tournamentId)).toEqual(vorher);
 
       await page.getByTestId('schedule-edit-save').click();
+      // @ZP-105: gefragt wird nur, wenn der Tausch selbst einen Konflikt auslöst (im Turniertag-Cup über zwei Felder
+      // möglich, CI-Lauf 41337087128: Dialog blieb offen, DB unverändert) – dann bewusst „Trotzdem speichern“
+      const konflikt = page.getByRole('dialog').filter({ hasText: 'Konflikte gefunden' });
+      await expect(page.getByTestId('schedule-edit-start').or(konflikt)).toBeVisible();
+      if (await konflikt.isVisible()) { await konflikt.getByTestId('confirm-dialog-confirm').click(); }
+      await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
       const getauscht = (z: Zeile[]) => {
         const [na, nb] = [z.find((r) => r.id === a.id)!, z.find((r) => r.id === b.id)!];
         return [na.scheduled_start, na.field, nb.scheduled_start, nb.field];

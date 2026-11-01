@@ -52,7 +52,7 @@ export function redistributeOpenReferees(
     if (startedIds.has(match.id)) { continue; }
     const next = assigned.get(match.id) ?? null;
     const changed = (match.referee ?? null) !== next;
-    if (changed) { patches.push({ matchId: match.id, referee: next }); }
+    if (changed) { patches.push({ matchId: match.id, referee: next, from: { referee: match.referee ?? null } }); }
     if (manualIds.has(match.id)) {
       manual[match.id] = null;
       if (changed) { overwrittenManualIds.push(match.id); }

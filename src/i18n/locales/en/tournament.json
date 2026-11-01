@@ -1895,18 +1895,23 @@
     "overwriteManual_other": "{{count}} matches were assigned manually – redistribute anyway?",
     "overwriteConfirm": "Redistribute",
     "overwriteCancel": "Cancel",
-    "notApplied": "Not applied because kicked off in the meantime:\n{{list}}",
+    "notApplied": "Not applied:\n{{list}}",
     "skipped": {
       "swap": "Swap of match {{a}} and match {{b}}",
       "field": "Field of match {{a}}",
       "move": "Move of match {{a}}",
       "referee": "Referee of match {{a}}",
-      "started": "match {{number}} has kicked off"
+      "started": "match {{number}} has kicked off",
+      "changedElsewhere": "match {{number}} was changed on another device in the meantime"
     },
     "swapWith": "Swap with …",
     "swapWithTitle": "Swap match {{number}} with …",
     "swapWithLabel": "Target match – time and field are swapped",
     "swapConfirm": "Swap",
-    "swapOption": "Match {{number}} · {{time}} · Field {{field}} · {{home}} – {{away}}"
+    "swapOption": "Match {{number}} · {{time}} · Field {{field}} · {{home}} – {{away}}",
+    "saveFailed": "Saving failed – the changes are not saved yet and stay in the draft.",
+    "conflictHint_one": "{{count}} conflict in the schedule",
+    "conflictHint_other": "{{count}} conflicts in the schedule",
+    "samePhaseOnly": "Only matches of the same phase can be swapped"
   }
 }
