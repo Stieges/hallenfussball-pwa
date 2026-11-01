@@ -26,7 +26,7 @@ async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
     await expect(ownerPage.getByTestId('time-shift-preview')).toContainText('Noch nichts geändert');
     await ownerPage.getByTestId('time-shift-confirm').click();
   }
-  await expect(ownerPage.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Min. verschoben', { timeout: SPEICHERN_MS });
+  await expect(ownerPage.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Minuten verschoben', { timeout: SPEICHERN_MS });
   await expect(ursprunglich.first(), 'verschobene Spiele tragen „ursprünglich hh:mm“').toHaveText(/^ursprünglich \d{2}:\d{2}$/, { timeout: SPEICHERN_MS });
   await expect.poll(async () => {
     await ownerPage.reload();

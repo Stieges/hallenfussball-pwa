@@ -119,7 +119,7 @@ test.describe('B-26 Zeiten verschieben (offline)', () => {
     }
     await expect(original(page, 3)).toHaveCount(0);
     const strip = page.getByTestId('time-shift-strip');
-    await expect(strip).toContainText('Zeiten um 10 Min. verschoben');
+    await expect(strip).toContainText('Zeiten um 10 Minuten verschoben');
     await expect(strip).toContainText('Ausdrucke sind veraltet');
     if (BILDER) { await page.screenshot({ path: `${BILDER}/danach-${test.info().project.name}.png` }); }
     // gespeichert: nach dem Neuladen steht weiter „ursprünglich“

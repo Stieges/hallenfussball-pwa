@@ -64,10 +64,10 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
     await expect(page.locator('[data-testid="match-card-live"]')).toHaveCount(0);
   });
 
-  test('@OB-064 Endstände bleiben: Halbfinale 1 „n. V.“ (2:1), Halbfinale 2 „beendet i. E.“ mit (4)/(3)', async ({ page }) => {
-    await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-decision-"]')).toHaveText('n. V.');
+  test('@OB-064 Endstände bleiben: Halbfinale 1 „beendet nach Verlängerung“ (2:1), Halbfinale 2 „beendet nach Strafstoßschießen“ mit (4)/(3)', async ({ page }) => {
+    await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-decision-"]')).toHaveText('beendet nach Verlängerung');
     await expect(karte(page, HALBFINALE_1).locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2');
-    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-decision-"]')).toHaveText('beendet i. E.');
+    await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-decision-"]')).toHaveText('beendet nach Strafstoßschießen');
     await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-penalty-"]').nth(0)).toHaveText('(4)');
     await expect(karte(page, HALBFINALE_2).locator('[data-testid^="final-penalty-"]').nth(1)).toHaveText('(3)');
   });

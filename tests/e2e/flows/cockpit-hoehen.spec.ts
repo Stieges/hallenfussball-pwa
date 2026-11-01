@@ -198,8 +198,8 @@ test.describe('Laptop 1280×720: Einblendung, Zeitstrafen, lange Namen', () => {
     await expect(page.getByTestId('strafen-weitere')).toHaveText('+ 1 weitere (DJK Otting)');
     const karten = page.locator('[data-testid^="strafen-karte-"][data-anteil]');
     await expect(karten).toHaveCount(2);
-    await expect(karten.first()).toContainText('DJK Otting, ohne Nr.');
-    await expect(karten.first()).toContainText('Zeitstrafe 2 Min · seit Spielzeit');
+    await expect(karten.first()).toContainText('DJK Otting, ohne Nummer');
+    await expect(karten.first()).toContainText('Zeitstrafe 2 Minuten · seit Spielzeit');
     expect(await ueberstand(page)).toBeLessThanOrEqual(1);
     await page.waitForTimeout(3300);
     await bildDavon(page, 'strafen-drei-720');

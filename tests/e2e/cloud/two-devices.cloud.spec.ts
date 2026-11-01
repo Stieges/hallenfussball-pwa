@@ -354,7 +354,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await expect(helperStatus).toHaveAttribute('data-pending', '3', { timeout: 5000 });
       await expect(helperStatus).toHaveAttribute('aria-label', /^3 Einträge warten/);
       // Das zweite Gerät sieht davon nichts, solange die Einträge warten.
-      const penaltyRow = (page: Page) => page.locator('span', { hasText: /^⏱ 2 Min / });
+      const penaltyRow = (page: Page) => page.locator('span', { hasText: /^⏱ 2 Minuten / });
       await expect(penaltyRow(ownerPage)).toHaveCount(0);
       // Ohne Unterbrechung weiter eintragen: ein Gegentor.
       await enterGoal(helperPage, 'away');

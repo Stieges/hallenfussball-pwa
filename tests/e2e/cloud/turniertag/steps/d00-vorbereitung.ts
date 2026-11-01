@@ -51,7 +51,7 @@ async function pruefeUeberfaelligkeit(seite: Page, kopieId: string, spielId: str
   const vorher = await tafelZu(new Date(anstoss.getTime() - 10 * 60_000));
   await expect(vorher, `${geraet}: 10 Minuten vor dem Anstoß ist Spiel 1 nicht überfällig`).not.toContainText(/überfällig/, { timeout: 5000 });
   const nachher = await tafelZu(new Date(anstoss.getTime() + 10 * 60_000));
-  await expect(nachher, `${geraet}: 10 Minuten nach dem Anstoß am Datum der Kopie ist Spiel 1 „überfällig 10 Min“`).toContainText('überfällig 10 Min', { timeout: 10000 });
+  await expect(nachher, `${geraet}: 10 Minuten nach dem Anstoß am Datum der Kopie ist Spiel 1 „überfällig 10 Min“`).toContainText('überfällig 10 Min.', { timeout: 10000 });
 }
 
 /**
