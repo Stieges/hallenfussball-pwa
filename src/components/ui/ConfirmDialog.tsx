@@ -280,7 +280,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       }
     >
       <div style={bodyStyle} className="confirm-dialog-inset">
-        <p style={messageStyle}>{message}</p>
+        {typeof message === 'string' ? <p style={messageStyle}>{message}</p> : <div style={messageStyle}>{message}</div>}
         {details && <div style={detailsStyle}>{details}</div>}
       </div>
       <style>{`

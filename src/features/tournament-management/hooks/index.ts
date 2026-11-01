@@ -2,14 +2,14 @@
  * Tournament Management Hooks
  */
 
-export { useScheduleHistory } from './useScheduleHistory';
-export type { ScheduleHistoryControls } from './useScheduleHistory';
+export { useScheduleDraft } from './useScheduleDraft';
+export type { ScheduleDraftControls } from './useScheduleDraft';
 
 export { useCorrectionMode } from './useCorrectionMode';
 export type { CorrectionModeControls } from './useCorrectionMode';
 
-export { usePendingChanges } from './usePendingChanges';
-export type { PendingChangesControls, PendingChanges } from './usePendingChanges';
+export { useScheduleEditActions } from './useScheduleEditActions';
+export type { ScheduleEditActions } from './useScheduleEditActions';
 
 export { useScheduleTabActions } from './useScheduleTabActions';
 

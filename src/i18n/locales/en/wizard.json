@@ -640,5 +640,21 @@
     "message_one": "{{count}} result will be deleted!\n\nThis action cannot be undone.\n\nDo you really want to continue?",
     "message_other": "{{count}} results will be deleted!\n\nThis action cannot be undone.\n\nDo you really want to continue?",
     "confirm": "Reset"
+  },
+  "refereeEditor": {
+    "title": "Manual referee assignment",
+    "expandHint": "Click to expand",
+    "reset": "Restore automatic assignment",
+    "resetTitle": "Reset assignment?",
+    "resetMessage": "The referees of the open matches are redistributed by the rules. Manual assignments of open matches are lost. Matches that have kicked off stay as they are.",
+    "resetConfirm": "Reset",
+    "available": "Available referees:",
+    "matches": "Matches:",
+    "noReferee": "– No referee –",
+    "optionCount_one": "{{label}} ({{count}} match)",
+    "optionCount_other": "{{label}} ({{count}} matches)",
+    "workload_one": "{{count}} match",
+    "workload_other": "{{count}} matches",
+    "matchMeta": "{{time}} • Field {{field}}"
   }
 }

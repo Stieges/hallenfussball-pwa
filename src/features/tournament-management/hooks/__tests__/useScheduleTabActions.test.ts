@@ -27,15 +27,10 @@ function renderActions(h: ScheduleEngine, tournament: Tournament) {
   const showWarning = vi.fn();
   const confirmSpy = vi.spyOn(window, 'confirm');
   const wrapper = ({ children }: { children: ReactNode }) => createElement(MatchEngineContext.Provider, { value: h.value }, children);
+  // G1a: der Hook bekommt gar keinen Speicherweg fürs ganze Turnier mehr – `onTournamentUpdate` bleibt als Wächter-Spion
   const { result } = renderHook(() => useScheduleTabActions({
     tournament,
-    onTournamentUpdate,
-    isEditing: false,
-    saveToHistory: vi.fn(),
-    showSuccess: vi.fn(),
     showWarning,
-    setPendingReferee: vi.fn(),
-    setPendingField: vi.fn(),
     lockFinishedResults: false,
   }), { wrapper });
   const scoreChange = async (matchId: string, a: number, b: number) => {
