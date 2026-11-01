@@ -140,7 +140,8 @@ test.describe('G1a Spielplan bearbeiten (offline)', () => {
     await expect(page.getByText('Spiele 6 und 3 getauscht')).toBeVisible();
     await page.getByTestId('schedule-edit-save').click();
     await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
-    expect(await zeitVon(page, 6)).toBe(vorher.s3);
+    // das gespeicherte Turnier kommt nach dem Speichern über den Speicher zurück (asynchron)
+    await expect.poll(() => zeitVon(page, 6)).toBe(vorher.s3);
     expect(await zeitVon(page, 3)).toBe(vorher.s6);
     expect(nachUhrzeit(await karten(page))).toBe(true);
   });
@@ -158,8 +159,8 @@ test.describe('G1a Spielplan bearbeiten (offline)', () => {
 
     await page.getByTestId('schedule-edit-save').click();
     await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
-    await zweite.reload();
-    await expect(zweite.getByTestId('schedule-edit-start')).toBeVisible();
+    await zweite.goto('/#/');
+    await oeffnen(zweite);
     await expect.poll(() => zeitVon(zweite, 6)).toBe(vorher.s3);
     expect(await zeitVon(zweite, 3)).toBe(vorher.s6);
   });
@@ -173,8 +174,8 @@ test.describe('G1a Spielplan bearbeiten (offline)', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Verwerfen' }).click();
     await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
     expect(await karten(page)).toEqual(vorher);
-    await page.reload();
-    await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
-    expect(await karten(page)).toEqual(vorher);
+    await page.goto('/#/');
+    await oeffnen(page);
+    await expect.poll(() => karten(page)).toEqual(vorher);
   });
 });
