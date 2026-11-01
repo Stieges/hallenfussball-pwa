@@ -1,4 +1,8 @@
-/* Nur für Screenreader: Text bleibt im Barrierefreiheitsbaum, ist aber nicht sichtbar (WCAG-Technik C7). */
+/*
+ * Nur für Screenreader: der Text bleibt im Barrierefreiheitsbaum, ist aber nicht sichtbar (WCAG-Technik C7).
+ * Er bricht in der 1-Pixel-Box um (statt in einer Zeile weit über die Spalte hinaus zu stehen), damit auch die Messung
+ * des sicheren Bildrands am Monitor (@ME-067) keinen Text außerhalb des sichtbaren Inhalts findet.
+ */
 .nurVorlesen {
   position: absolute;
   width: 1px;
@@ -7,6 +11,7 @@
   padding: 0;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   border: 0;
 }
