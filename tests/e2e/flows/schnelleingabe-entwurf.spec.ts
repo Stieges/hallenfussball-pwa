@@ -1,6 +1,6 @@
 /**
  * @FU-103 Beispiel 3 (Befund C-SCHNELLEINGABE-ENTWURF-VERLOREN), offline (Gast): Olli hat im Feld für FC Nord von Halbfinale 1
- * „1“ getippt, die Uhr eines laufenden Spiels auf einem anderen Feld läuft weiter → „1“ und Cursor bleiben, „0“ + Bestätigen
+ * „1“ getippt, die Uhr eines laufenden Spiels auf einem anderen Feld läuft weiter → „1“ und Cursor bleiben, „0“ + „Ergebnis speichern“
  * ergibt 10:2 (SV Süd zeigt schon 2, wie @FU-101). Die Uhr lässt den Spielplan jede Sekunde neu zeichnen; vorher baute das
  * jede Zeile der Finalrunden-Tabelle neu auf, die Eingabe verschwand ohne Hinweis.
  * Vitest: src/components/schedule/__tests__/FU-103-entwurf-bleibt.test.tsx (alle drei Beispiele), FU-104-fremdaenderung.test.tsx.
@@ -58,12 +58,18 @@ function feld(page: Page, seite: 'home' | 'away') {
   return page.getByTestId(`${karte ? 'final' : 'match'}-score-input-${HF1}-${seite}`);
 }
 
+/** „Ergebnis speichern“ (Speichern nur über die Taste, @FU-101): Tabelle `match-score-save-…`, Karte `final-score-save-…`. */
+function speichern(page: Page) {
+  const karte = (page.viewportSize()?.width ?? 0) <= 768;
+  return page.getByTestId(`${karte ? 'final' : 'match'}-score-save-${HF1}`);
+}
+
 test.describe('@FU-103 @FU-101 C-SCHNELLEINGABE-ENTWURF-VERLOREN: der Eintrag bleibt, während ein Spiel auf einem anderen Feld läuft (offline)', () => {
   test.beforeEach(async ({ seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [turnier()] });
   });
 
-  test('@FU-103 @FU-101 Uhr eines laufenden Spiels auf einem anderen Feld läuft weiter: „1“ und Cursor bleiben im Feld für FC Nord, „0“ + Enter ergibt 10:2', async ({ page }) => {
+  test('@FU-103 @FU-101 Uhr eines laufenden Spiels auf einem anderen Feld läuft weiter: „1“ und Cursor bleiben im Feld für FC Nord, „0“ + „Ergebnis speichern“ ergibt 10:2', async ({ page }) => {
     await page.goto(`/#/tournament/${TOURNAMENT}/schedule`);
     // Sofort tippen, sobald das Feld da ist (wie Olli am Turniertag) – keine Wartezeit auf die Ruhe der Seite
     await expect(feld(page, 'away')).toHaveValue('2');
@@ -83,7 +89,7 @@ test.describe('@FU-103 @FU-101 C-SCHNELLEINGABE-ENTWURF-VERLOREN: der Eintrag bl
     await expect(feld(page, 'home')).toHaveValue('10');
     await expect(feld(page, 'away')).toHaveValue('2');
     await test.info().attach('eintrag-nach-takten', { body: await page.screenshot(), contentType: 'image/png' });
-    await page.keyboard.press('Enter');
+    await speichern(page).click();
 
     // @FU-101: Halbfinale 1 ist beendet mit 10:2 – die Felder verschwinden, nur Halbfinale 2 läuft weiter
     await expect(feld(page, 'home')).toHaveCount(0, { timeout: 10_000 });
@@ -118,10 +124,10 @@ test.describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL: Änderung genau di
     const tom = await context.newPage();
     await tom.goto(`/#/tournament/${TOURNAMENT}/schedule`);
     await expect(feld(tom, 'away')).toHaveValue('2');
-    // erst Gast 1 (Heim noch leer: Verlassen speichert nichts), dann Heim 3 und Enter
+    // erst Gast 1 (Heim noch leer: Verlassen speichert nichts), dann Heim 3 und „Ergebnis speichern“
     await feld(tom, 'away').fill('1');
     await feld(tom, 'home').fill('3');
-    await feld(tom, 'home').press('Enter');
+    await speichern(tom).click();
     await expect(feld(tom, 'home')).toHaveCount(0, { timeout: 10_000 });
 
     const hinweis = page.getByRole('status').filter({ hasText: 'Ergebnis wurde inzwischen von einem anderen Gerät geändert (jetzt 3:1)' });

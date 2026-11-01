@@ -82,7 +82,7 @@ describe.each([
 ] as const)('@FU-103 %s: ein angefangener Eintrag bleibt stehen', (_ansicht, prefix) => {
   const feldFcNord = () => screen.getByTestId<HTMLInputElement>(`${prefix}-score-input-${SPIEL_9}-home`);
 
-  it.each(ereignisse)('@FU-103 Wenn %s: „1“ bleibt im Feld für FC Nord, der Cursor bleibt, „0“ + Bestätigen ergibt 10:2', async (_name, ereignis) => {
+  it.each(ereignisse)('@FU-103 Wenn %s: „1“ bleibt im Feld für FC Nord, der Cursor bleibt, „0“ + „Ergebnis speichern“ ergibt 10:2', async (_name, ereignis) => {
     const user = userEvent.setup();
     const onScoreChange = vi.fn();
     const erst = spiele('semifinal');
@@ -97,7 +97,9 @@ describe.each([
     expect(feldFcNord().value).toBe('1');
     expect(document.activeElement).toBe(feldFcNord());
     expect(onScoreChange).not.toHaveBeenCalled();
-    await user.keyboard('0{Enter}');
+    await user.keyboard('0');
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.click(screen.getByTestId(`${prefix}-score-save-${SPIEL_9}`));
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(SPIEL_9, 10, 2);
   });

@@ -67,6 +67,7 @@ describe.each([
 ] as const)('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL %s: Änderung genau dieses Spiels von außen', (_ansicht, prefix, hinweisId) => {
   const feld = (seite: 'home' | 'away') => screen.getByTestId<HTMLInputElement>(`${prefix}-score-input-${SPIEL_9}-${seite}`);
   const hinweis = () => screen.queryByTestId(`${hinweisId}-${SPIEL_9}`);
+  const speichern = () => screen.getByTestId<HTMLButtonElement>(`${prefix}-score-save-${SPIEL_9}`);
 
   async function olliTipptEins(changeAuthorOf: ((id: string) => Promise<string | null>) | undefined = async () => 'Tom') {
     const user = userEvent.setup();
@@ -89,18 +90,20 @@ describe.each([
     expect(onScoreChange).not.toHaveBeenCalled();
   });
 
-  it('@FU-104 Spiel 9 steht noch geplant mit 3:1: Hinweis, „0“ + Enter speichert nichts (nicht still 30:1), Ollis „10“ bleibt sichtbar', async () => {
+  it('@FU-104 Spiel 9 steht noch geplant mit 3:1: Hinweis, „0“ + „Ergebnis speichern“ speichert nichts (nicht still 30:1), Ollis „10“ bleibt sichtbar', async () => {
     const { user, onScoreChange, neu } = await olliTipptEins();
     neu(tomTraegtEin.geplant());
 
     expect(await screen.findByText(HINWEIS_TOM)).toBeTruthy();
-    await user.keyboard('0{Enter}');
+    await user.keyboard('0');
     await user.tab();
+    expect(speichern().disabled).toBe(true); // solange der Hinweis steht, lässt sich nichts senden
+    await user.click(speichern());
     expect(onScoreChange).not.toHaveBeenCalled();
     expect(feld('home').value).toBe('10');
   });
 
-  it('@FU-104 bewusst neu bestätigt („Meine Eingabe behalten“, dann Enter): erst dann wird Ollis 10:2 gesendet', async () => {
+  it('@FU-104 bewusst neu bestätigt („Meine Eingabe behalten“, dann „Ergebnis speichern“): erst dann wird Ollis 10:2 gesendet', async () => {
     const { user, onScoreChange, neu } = await olliTipptEins();
     neu(tomTraegtEin.geplant());
     await user.keyboard('0');
@@ -108,8 +111,7 @@ describe.each([
     expect(onScoreChange).not.toHaveBeenCalled();
     expect(hinweis()).toBeNull();
 
-    await user.click(feld('home'));
-    await user.keyboard('{Enter}');
+    await user.click(speichern());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(SPIEL_9, 10, 2);
   });
@@ -122,7 +124,7 @@ describe.each([
     expect(screen.queryByRole('button', { name: 'Meine Eingabe behalten' })).toBeNull();
   });
 
-  it('@FU-104 Escape verwirft Ollis Eintrag: die Felder zeigen 3:1, der Hinweis ist weg, danach speichert „4“ + Enter normal 4:1', async () => {
+  it('@FU-104 Escape verwirft Ollis Eintrag: die Felder zeigen 3:1, der Hinweis ist weg, danach speichert „4“ + „Ergebnis speichern“ normal 4:1', async () => {
     const { user, onScoreChange, neu } = await olliTipptEins();
     neu(tomTraegtEin.geplant());
     expect(await screen.findByText(HINWEIS_TOM)).toBeTruthy();
@@ -132,7 +134,8 @@ describe.each([
     expect(hinweis()).toBeNull();
 
     await user.click(feld('home'));
-    await user.keyboard('{Backspace}4{Enter}');
+    await user.keyboard('{Backspace}4');
+    await user.click(speichern());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(SPIEL_9, 4, 1);
   });
@@ -157,7 +160,8 @@ describe.each([
 
   it('@FU-104 Gegenbeispiel: Ollis eigenes Speichern (10:2 kommt zurück) zeigt keinen Hinweis', async () => {
     const { user, onScoreChange, neu } = await olliTipptEins();
-    await user.keyboard('0{Enter}');
+    await user.keyboard('0');
+    await user.click(speichern());
     expect(onScoreChange).toHaveBeenCalledWith(SPIEL_9, 10, 2);
     const eigen = spiele({ scoreA: 10, scoreB: 2 });
     neu({ matches: eigen, tournament: ansicht(eigen, { matchStatus: 'finished', scoreA: 10, scoreB: 2 }) });
@@ -183,6 +187,7 @@ describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL eigenes Speichern gegen 
     return { stand, fcNord, svSued };
   }
   const hinweis = () => screen.queryByTestId(`score-changed-${ID}`);
+  const speichern = () => screen.getByTestId(`match-score-save-${ID}`);
 
   it('@FU-104 Gegenbeispiel P3: Ollis 3:1 kommt in zwei Schritten zurück (erst 3, dann 1) – kein Hinweis, die Felder zeigen 3:1', async () => {
     const user = userEvent.setup();
@@ -190,7 +195,8 @@ describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL eigenes Speichern gegen 
     await user.click(fcNord);
     await user.keyboard('3');
     await user.click(svSued);
-    await user.keyboard('1{Enter}');
+    await user.keyboard('1');
+    await user.click(speichern());
 
     stand(3, undefined);
     expect(hinweis()).toBeNull();
@@ -204,7 +210,8 @@ describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL eigenes Speichern gegen 
     const user = userEvent.setup();
     const { stand, fcNord, svSued } = zelle(undefined, 2);
     await user.click(fcNord);
-    await user.keyboard('10{Enter}');
+    await user.keyboard('10');
+    await user.click(speichern());
 
     stand(3, 1);
     expect(await screen.findByText(HINWEIS_TOM)).toBeTruthy();
@@ -217,8 +224,10 @@ describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL eigenes Speichern gegen 
     const user = userEvent.setup();
     const { stand, fcNord } = zelle(undefined, 2, vi.fn().mockResolvedValue(false));
     await user.click(fcNord);
-    await user.keyboard('10{Enter}');
+    await user.keyboard('10');
+    await user.click(speichern());
     await waitFor(() => expect(fcNord.value).toBe(''));
+    await user.click(fcNord);
     await user.keyboard('10');
 
     stand(10, 2);

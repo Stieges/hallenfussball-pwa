@@ -11,7 +11,8 @@ import type { ScheduledMatch } from '../../core/generators';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { MatchClock } from '../ui/molecules/MatchClock';
 import { ScoreDraftInput } from '../ui/atoms';
-import { ScoreChangedHint, ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
+import { entryScore } from './runningEntryScore';
+import { ScoreChangedHint, ScoreDraftHint, ScoreSaveButton, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
@@ -88,7 +89,8 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
   const editable = canEditScore || inCorrectionMode;
   const draft = useScoreDraft({
-    resetKey: match.id, savedA: match.scoreA, savedB: match.scoreB, onCommit: (a, b) => onScoreChange?.(match.id, a, b),
+    resetKey: match.id, savedA: entryScore(match.scoreA, match.scoreB, isRunning), savedB: entryScore(match.scoreB, match.scoreA, isRunning),
+    onCommit: (a, b) => onScoreChange?.(match.id, a, b), allowUnchanged: isRunning,
     resolveAuthor: changeAuthorOf ? () => changeAuthorOf(match.id) : undefined,
   });
 
@@ -191,6 +193,12 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           keepTestId={`final-score-changed-keep-${match.id}`}
           onKeepDraft={editable && !isFinished ? draft.keepDraft : undefined}
         />
+      )}
+
+      {editable && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: cssVars.spacing.xs }}>
+          <ScoreSaveButton testId={`final-score-save-${match.id}`} disabled={!draft.canSave} ending={isRunning && !inCorrectionMode} onSave={draft.save} />
+        </div>
       )}
 
       {clock && <div style={{ marginTop: cssVars.spacing.xs }}><MatchClock clock={clock} size="card" /></div>}

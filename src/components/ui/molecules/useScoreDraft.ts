@@ -1,9 +1,10 @@
 /**
  * useScoreDraft – gemeinsamer Eingabestand für zwei Tor-Felder (@FU-101).
  *
- * Jede Ziffer bleibt lokal. Gespeichert wird erst bei Enter oder beim Verlassen eines Feldes, Escape verwirft.
+ * Jede Ziffer bleibt lokal. Gespeichert wird erst, wenn beide Felder gefüllt sind UND `save` gewählt wird („Ergebnis
+ * speichern“); Verlassen eines Feldes und Enter speichern nichts (Korrektur 2026-11-01), Escape verwirft.
  * Nur ganze Zahlen ab 0 werden angenommen (`-3`, `1e1`, `2,5`, Buchstaben: kein Senden, `invalid` ist gesetzt).
- * Doppelschutz: Enter und danach Verlassen sendet genau einmal. Meldet `onCommit` per Rückgabe `false` (bzw. eine
+ * Doppelschutz: zweimal `save` mit demselben Stand sendet genau einmal. Meldet `onCommit` per Rückgabe `false` (bzw. eine
  * abgelehnte Zusage), dass nichts gespeichert wurde (@FU-093 „Nein“, @FU-097 „Abbrechen“, Ablehnung), zeigen
  * die Felder wieder den gespeicherten Stand, und derselbe Stand lässt sich erneut senden.
  * @FU-103: Ein neuer Stand von außen, der dieses Spiel nicht ändert, lässt den Entwurf stehen (kein Effekt auf Primitive).
@@ -28,6 +29,8 @@ export interface UseScoreDraftOptions {
   onCommit: (scoreA: number, scoreB: number) => ScoreCommitResult;
   /** Wer den Stand dieses Spiels zuletzt geändert hat (@FU-104); `null` = unbekannt */
   resolveAuthor?: () => Promise<string | null>;
+  /** Laufendes Spiel: auch der unveränderte Stand lässt sich senden (Spiel beenden mit dem Stand der Uhr, @FU-112) */
+  allowUnchanged?: boolean;
 }
 
 /** Der gespeicherte Stand hat sich von außen geändert, während ein Entwurf offen war (@FU-104) */
@@ -49,6 +52,10 @@ export interface ScoreDraft {
   changed: ScoreChangedElsewhere | null;
   /** Olli bleibt bewusst bei seiner Eingabe: der Hinweis geht, danach senden Verlassen und Enter wieder */
   keepDraft: () => void;
+  /** Beide Felder gefüllt und gültig, nichts gesendet, kein Hinweis „inzwischen geändert“ offen (@FU-101) */
+  canSave: boolean;
+  /** „Ergebnis speichern“: sendet den Entwurf (einmal) */
+  save: () => void;
 }
 
 const WHOLE_NUMBER = /^\d+$/;
@@ -60,7 +67,7 @@ interface Pair {
   b: number | undefined;
 }
 
-export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAuthor }: UseScoreDraftOptions): ScoreDraft {
+export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAuthor, allowUnchanged = false }: UseScoreDraftOptions): ScoreDraft {
   const [a, setA] = useState(asText(savedA));
   const [b, setB] = useState(asText(savedB));
   const hintId = useId();
@@ -141,7 +148,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     const next: Pair = { a: goalsA, b: goalsB };
     const saved = savedRef.current;
     const sent = sentRef.current;
-    if ((saved.a === goalsA && saved.b === goalsB) || (sent !== null && sent.a === goalsA && sent.b === goalsB)) {
+    if ((!allowUnchanged && saved.a === goalsA && saved.b === goalsB) || (sent !== null && sent.a === goalsA && sent.b === goalsB)) {
       return;
     }
     sentRef.current = next;
@@ -168,7 +175,22 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     } catch {
       showSaved();
     }
-  }, [showSaved]);
+  }, [showSaved, allowUnchanged]);
+
+  /** Ungültige Eingabe zeigt den Hinweis (beim Verlassen und beim Speichern), gesendet wird hier nie */
+  const validate = useCallback((valueA: string, valueB: string, badInputSide: ScoreSide | null) => {
+    const badA = badInputSide === 'a' || (valueA !== '' && !WHOLE_NUMBER.test(valueA));
+    const badB = badInputSide === 'b' || (valueB !== '' && !WHOLE_NUMBER.test(valueB));
+    setInvalidSides({ a: badA, b: badB });
+  }, []);
+
+  const filled = a !== '' && b !== '' && WHOLE_NUMBER.test(a) && WHOLE_NUMBER.test(b);
+  const unchanged = !allowUnchanged && a === asText(savedA) && b === asText(savedB);
+  const canSave = filled && !unchanged && changed === null && !invalidSides.a && !invalidSides.b;
+
+  const save = useCallback(() => {
+    commit(draftRef.current.a, draftRef.current.b, null);
+  }, [commit]);
 
   const fieldProps = (side: ScoreSide): ScoreFieldProps => ({
     value: side === 'a' ? a : b,
@@ -179,11 +201,10 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
       setInvalidSides(NONE_INVALID);
       (side === 'a' ? setA : setB)(event.target.value);
     },
-    onBlur: (event) => commit(a, b, event.currentTarget.validity.badInput ? side : null),
+    onBlur: (event) => validate(a, b, event.currentTarget.validity.badInput ? side : null),
     onKeyDown: (event) => {
       if (event.key === 'Enter') {
-        event.preventDefault();
-        commit(a, b, event.currentTarget.validity.badInput ? side : null);
+        event.preventDefault(); // Enter bestätigt nichts: gespeichert wird nur mit „Ergebnis speichern“
       } else if (event.key === 'Escape') {
         showSaved();
       }
@@ -192,5 +213,5 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
 
   const keepDraft = useCallback(() => { setChanged(null); }, []);
 
-  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps, changed, keepDraft };
+  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps, changed, keepDraft, canSave, save };
 }
