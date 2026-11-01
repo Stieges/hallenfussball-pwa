@@ -36,7 +36,7 @@ describe('@ZP-100 „Tauschen mit …“ (Weg ohne Ziehen)', () => {
     render(<ScheduleSwapWith enabled matches={SPIELE} lockedIds={new Set(['s5'])} onSwap={onSwap}><Ausloeser id="s6" /></ScheduleSwapWith>);
     fireEvent.click(screen.getByText('start-s6'));
     const auswahl = screen.getByTestId('swap-with-select');
-    expect([...auswahl.options].map((o) => o.value)).toEqual(['s3', 's9']);
+    expect(within(auswahl).getAllByRole<HTMLOptionElement>('option').map((o) => o.value)).toEqual(['s3', 's9']);
     fireEvent.change(auswahl, { target: { value: 's3' } });
     fireEvent.click(screen.getByTestId('confirm-dialog-confirm'));
     expect(onSwap).toHaveBeenCalledWith('s6', 's3');

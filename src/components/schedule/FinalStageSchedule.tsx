@@ -209,13 +209,13 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       {...(canDrag ? { ...attributes, ...listeners } : {})}
                     >
                       {canDrag ? '⋮⋮' : '🔒'}
-                      <SwapWithButton matchId={match.id} locked={(status === 'running' || status === 'finished')} />
                     </td>
                   )}
                   <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
                       <span>{match.matchNumber}</span>
                       {rowView?.badge.kind === 'badge' && <MatchStatusBadge model={rowView.badge} size="row" testId={isRunning ? `final-row-live-${match.id}` : undefined} />}
+                      {editingSchedule && <SwapWithButton matchId={match.id} locked={status === 'running' || status === 'finished'} />}
                     </div>
                   </td>
                   {showReferees && (() => {
