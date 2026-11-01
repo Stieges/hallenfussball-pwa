@@ -2,7 +2,8 @@
  * useScoreDraft – gemeinsamer Eingabestand für zwei Tor-Felder (@FU-101).
  *
  * Jede Ziffer bleibt lokal. Gespeichert wird erst, wenn beide Felder gefüllt sind UND `save` gewählt wird („Ergebnis
- * speichern“); Verlassen eines Feldes und Enter speichern nichts (Korrektur 2026-11-01), Escape verwirft.
+ * speichern“); Verlassen eines Feldes speichert nichts (Korrektur 2026-11-01). Enter im ersten Feld springt ins zweite,
+ * Enter im zweiten wirkt wie „Ergebnis speichern“ (nur bei gefüllten, gültigen Feldern). Escape verwirft.
  * Nur ganze Zahlen ab 0 werden angenommen (`-3`, `1e1`, `2,5`, Buchstaben: kein Senden, `invalid` ist gesetzt).
  * Doppelschutz: zweimal `save` mit demselben Stand sendet genau einmal. Meldet `onCommit` per Rückgabe `false` (bzw. eine
  * abgelehnte Zusage), dass nichts gespeichert wurde (@FU-093 „Nein“, @FU-097 „Abbrechen“, Ablehnung), zeigen
@@ -192,10 +193,14 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     commit(draftRef.current.a, draftRef.current.b, null);
   }, [commit]);
 
+  const fieldRefs = useRef<Record<ScoreSide, HTMLInputElement | null>>({ a: null, b: null });
+
   const fieldProps = (side: ScoreSide): ScoreFieldProps => ({
     value: side === 'a' ? a : b,
     invalid: invalidSides[side],
     describedBy: hintId,
+    enterKeyHint: side === 'a' ? 'next' : 'done',
+    inputRef: (element) => { fieldRefs.current[side] = element; },
     onChange: (event) => {
       sentRef.current = null;
       setInvalidSides(NONE_INVALID);
@@ -204,7 +209,14 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     onBlur: (event) => validate(a, b, event.currentTarget.validity.badInput ? side : null),
     onKeyDown: (event) => {
       if (event.key === 'Enter') {
-        event.preventDefault(); // Enter bestätigt nichts: gespeichert wird nur mit „Ergebnis speichern“
+        // @FU-101: Enter im ersten Feld springt ins zweite, im zweiten wirkt es wie „Ergebnis speichern“ (nur bei gefüllten,
+        // gültigen Feldern; sonst nichts). Verlassen eines Feldes speichert nie.
+        event.preventDefault();
+        if (side === 'a') {
+          fieldRefs.current.b?.focus();
+        } else {
+          commit(a, b, event.currentTarget.validity.badInput ? side : null);
+        }
       } else if (event.key === 'Escape') {
         showSaved();
       }

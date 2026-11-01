@@ -52,15 +52,64 @@ describe('@FU-101 Ein zweistelliges Ergebnis lässt sich im Spielplan eintragen'
     expect(onScoreChange).toHaveBeenCalledWith(10, 2);
   });
 
-  it('@FU-101 Enter speichert nichts, auch nicht bei beiden gefüllten Feldern (Speichern nur über die Taste)', async () => {
+  it('@FU-101 Enter im ersten Feld springt ins zweite Feld und speichert nichts', async () => {
     const user = userEvent.setup();
-    const { onScoreChange, fieldFcNord } = renderCell();
+    const { onScoreChange, fieldFcNord, fieldSvSued } = renderCell();
 
     await user.click(fieldFcNord);
     await user.keyboard('10{Enter}');
+    expect(document.activeElement).toBe(fieldSvSued);
     expect(onScoreChange).not.toHaveBeenCalled();
     await user.tab();
     expect(onScoreChange).not.toHaveBeenCalled();
+  });
+
+  it('@FU-101 Enter im zweiten Feld wirkt bei gefüllten Feldern wie „Ergebnis speichern“, genau einmal 10:2', async () => {
+    const user = userEvent.setup();
+    const { onScoreChange, fieldFcNord, fieldSvSued } = renderCell({ scoreB: undefined });
+
+    await user.click(fieldFcNord);
+    await user.keyboard('10{Enter}'); // springt ins zweite Feld
+    await user.keyboard('2');
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.keyboard('{Enter}');
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    expect(onScoreChange).toHaveBeenCalledWith(10, 2);
+    await user.keyboard('{Enter}'); // nochmal Enter: derselbe Stand wird nicht erneut gesendet
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(fieldSvSued);
+  });
+
+  it('@FU-101 Enter im zweiten Feld bei leerem ersten Feld speichert nichts', async () => {
+    const user = userEvent.setup();
+    const { onScoreChange, fieldSvSued } = renderCell({ scoreA: undefined, scoreB: undefined });
+
+    await user.click(fieldSvSued);
+    await user.keyboard('2{Enter}');
+    expect(onScoreChange).not.toHaveBeenCalled();
+  });
+
+  it('@FU-101 Enter im zweiten Feld mit ungültiger Eingabe speichert nichts', async () => {
+    const user = userEvent.setup();
+    const { onScoreChange, fieldFcNord, fieldSvSued } = renderCell({ scoreA: 1, scoreB: 1 });
+    await user.click(fieldSvSued);
+    fireEvent.change(fieldSvSued, { target: { value: '-3' } });
+    await user.keyboard('{Enter}');
+    expect(onScoreChange).not.toHaveBeenCalled();
+    expect(fieldFcNord.value).toBe('1');
+  });
+
+  it('@FU-101 Tab-Reihenfolge Feld 1, Feld 2, „Ergebnis speichern“; Ziffernblock-Taste „weiter“ im ersten, „fertig“ im zweiten Feld', async () => {
+    const user = userEvent.setup();
+    const { fieldFcNord, fieldSvSued, saveButton } = renderCell({ scoreA: 1, scoreB: 1 });
+    expect(fieldFcNord.getAttribute('enterkeyhint')).toBe('next');
+    expect(fieldSvSued.getAttribute('enterkeyhint')).toBe('done');
+    await user.click(fieldFcNord);
+    await user.keyboard('2');
+    await user.tab();
+    expect(document.activeElement).toBe(fieldSvSued);
+    await user.tab();
+    expect(document.activeElement).toBe(saveButton);
   });
 
   it('@FU-101 „Ergebnis speichern“ ist erst wählbar, wenn beide Felder gefüllt sind', async () => {

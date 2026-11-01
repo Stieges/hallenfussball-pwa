@@ -91,7 +91,6 @@ test.describe('@FU-101 @FU-112 Finalrunde: Speichern nur über „Ergebnis speic
     await page.keyboard.type('0');
     await expect(feld(page, HF1, 'home')).toHaveValue('10');
     await feld(page, HF1, 'away').focus(); // Feld verlassen
-    await page.keyboard.press('Enter'); // Enter speichert nichts
     await page.waitForTimeout(1500);
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -107,6 +106,29 @@ test.describe('@FU-101 @FU-112 Finalrunde: Speichern nur über „Ergebnis speic
       await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveText('10');
     } else {
       await expect(page.getByText(/10\s?:\s?2/).filter({ visible: true }).first()).toBeVisible();
+    }
+  });
+
+  test('@FU-101 Tastatur: „3“, Tab, „1“, Enter im zweiten Feld speichert wie „Ergebnis speichern“; Enter im ersten Feld springt nur', async ({ page }) => {
+    await feld(page, HF1, 'home').click();
+    await page.keyboard.type('3');
+    await page.keyboard.press('Enter'); // Enter im ersten Feld: springt ins zweite, speichert nichts
+    await expect(feld(page, HF1, 'away')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab'); // Tab-Reihenfolge Feld 1 → Feld 2
+    await expect(feld(page, HF1, 'away')).toBeFocused();
+    await page.waitForTimeout(500);
+    await expect(feld(page, HF1, 'home')).toHaveValue('3');
+    await page.keyboard.type('1');
+    await page.keyboard.press('Enter');
+    await expect(feld(page, HF1, 'home')).toHaveCount(0, { timeout: 10_000 });
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    if (istKarte(page)) {
+      await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveText('3');
+      await expect(page.getByTestId(`final-goals-${HF1}-away`)).toHaveText('1');
+    } else {
+      await expect(page.getByText(/3\s?:\s?1/).filter({ visible: true }).first()).toBeVisible();
     }
   });
 });

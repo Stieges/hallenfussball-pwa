@@ -122,11 +122,12 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 10, 2);
   });
 
-  it('Enter speichert nichts, die Taste genau einmal 10:2 (auch bei doppeltem Antippen)', async () => {
+  it('@FU-101 Enter im ersten Feld springt ins zweite und speichert nichts, die Taste sendet genau einmal 10:2 (auch bei doppeltem Antippen)', async () => {
     const user = userEvent.setup();
     const { onScoreChange } = rendern(2);
     await user.click(eingabe('home'));
     await user.keyboard('10{Enter}');
+    expect(document.activeElement).toBe(eingabe('away'));
     expect(onScoreChange).not.toHaveBeenCalled();
     await user.dblClick(speichernKarte());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
@@ -164,14 +165,13 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
       expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 10);
     });
 
-    it('Enter im rechten Feld speichert nichts, die Taste genau einmal', async () => {
+    it('@FU-101 Enter im rechten (zweiten) Feld wirkt bei gefüllten Feldern wie „Ergebnis speichern“, genau einmal 2:10', async () => {
       const user = userEvent.setup();
       const onScoreChange = rendernGast();
       await user.click(eingabe('away'));
       await user.keyboard('10{Enter}');
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
       await user.tab();
-      expect(onScoreChange).not.toHaveBeenCalled();
-      await user.click(speichernKarte());
       expect(onScoreChange).toHaveBeenCalledTimes(1);
       expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 10);
     });
