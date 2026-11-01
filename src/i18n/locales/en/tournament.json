@@ -205,7 +205,8 @@
       "restDone_other": "{{count}} more matches recorded as forfeits.",
       "restPartial": "{{done}} more matches recorded, {{skipped}} not (already started or error)."
     },
-    "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped."
+    "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped.",
+    "refereeLocked": "A match that has kicked off (running, half-time or finished) keeps its referee."
   },
   "scheduleActions": {
     "share": "Share"
@@ -978,7 +979,12 @@
     "matchesSwapped": "Matches {{match1}} and {{match2}} swapped",
     "matchAlreadyFinished": "This match is already finished. Use \"Correct result\".",
     "liveMatchWarning": "WARNING: This match is currently LIVE in tournament management!\n\nIf you change the result here, it will overwrite the live management.\n\nDo you want to continue anyway?",
-    "changesSaved": "Schedule changes saved"
+    "changesSaved": "Schedule changes saved",
+    "refereesRedistributed_one": "Referee of {{count}} match redistributed",
+    "refereesRedistributed_other": "Referees of {{count}} matches redistributed",
+    "fieldsRedistributed_one": "Field of {{count}} match redistributed",
+    "fieldsRedistributed_other": "Fields of {{count}} matches redistributed",
+    "refereesReset": "Referees of the open matches redistributed"
   },
   "common": {
     "cancel": "Cancel",
@@ -1871,5 +1877,36 @@
       "table": "Place {{place}} in the table",
       "open": "still open"
     }
+  },
+  "refereeOptions": {
+    "numbered": "Ref {{number}}",
+    "named": "Ref {{number}} ({{name}})"
+  },
+  "draft": {
+    "unsaved_one": "{{count}} change not saved",
+    "unsaved_other": "{{count}} changes not saved",
+    "discardTitle_one": "Discard {{count}} change?",
+    "discardTitle_other": "Discard {{count}} changes?",
+    "discardMessage": "The schedule then stays as it was before editing.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "overwriteTitle": "Overwrite manual assignment?",
+    "overwriteManual_one": "{{count}} match was assigned manually – redistribute anyway?",
+    "overwriteManual_other": "{{count}} matches were assigned manually – redistribute anyway?",
+    "overwriteConfirm": "Redistribute",
+    "overwriteCancel": "Cancel",
+    "notApplied": "Not applied because kicked off in the meantime:\n{{list}}",
+    "skipped": {
+      "swap": "Swap of match {{a}} and match {{b}}",
+      "field": "Field of match {{a}}",
+      "move": "Move of match {{a}}",
+      "referee": "Referee of match {{a}}",
+      "started": "match {{number}} has kicked off"
+    },
+    "swapWith": "Swap with …",
+    "swapWithTitle": "Swap match {{number}} with …",
+    "swapWithLabel": "Target match – time and field are swapped",
+    "swapConfirm": "Swap",
+    "swapOption": "Match {{number}} · {{time}} · Field {{field}} · {{home}} – {{away}}"
   }
 }

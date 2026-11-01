@@ -627,8 +627,8 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
           />
         )}
 
-        {/* Auto-reassign buttons (edit mode only) */}
-        {isEditing && tournament.refereeConfig?.mode === 'organizer' && (
+        {/* Auto-reassign buttons (edit mode only); im Spielplan-Reiter verteilt die gemeinsame Werkzeugleiste (Entwurf, @ZP-101) */}
+        {isEditing && !hideToolbar && tournament.refereeConfig?.mode === 'organizer' && (
           <div style={{ display: 'flex', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
             <Button variant="ghost" size="sm" onClick={handleAutoReassign}>
               SR automatisch zuweisen

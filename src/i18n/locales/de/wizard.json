@@ -640,5 +640,21 @@
     "message_one": "Es wird {{count}} Ergebnis gelöscht!\n\nDiese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?",
     "message_other": "Es werden {{count}} Ergebnisse gelöscht!\n\nDiese Aktion kann nicht rückgängig gemacht werden.\n\nMöchtest du wirklich fortfahren?",
     "confirm": "Zurücksetzen"
+  },
+  "refereeEditor": {
+    "title": "Manuelle Schiedsrichter-Zuweisung",
+    "expandHint": "Klicken zum Aufklappen",
+    "reset": "Automatische Zuweisung wiederherstellen",
+    "resetTitle": "Zuteilung zurücksetzen?",
+    "resetMessage": "Die Schiedsrichter der offenen Spiele werden nach den Regeln neu verteilt. Hand-Zuteilungen offener Spiele gehen dabei verloren. Angepfiffene Spiele bleiben, wie sie sind.",
+    "resetConfirm": "Zurücksetzen",
+    "available": "Verfügbare Schiedsrichter:",
+    "matches": "Spiele:",
+    "noReferee": "– Kein SR –",
+    "optionCount_one": "{{label}} ({{count}} Spiel)",
+    "optionCount_other": "{{label}} ({{count}} Spiele)",
+    "workload_one": "{{count}} Spiel",
+    "workload_other": "{{count}} Spiele",
+    "matchMeta": "{{time}} • Feld {{field}}"
   }
 }

@@ -108,10 +108,10 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
   // ---------------------------------------------------------------------------
 
   const handleSRClick = useCallback(() => {
-    if (refereeOptions.length > 0 && onRefereeChange) {
+    if (refereeOptions.length > 0 && onRefereeChange && !isLocked) { // @ZP-093: angepfiffen = Schiri gesperrt
       setShowSRPopover(true);
     }
-  }, [refereeOptions.length, onRefereeChange]);
+  }, [refereeOptions.length, onRefereeChange, isLocked]);
 
   const handleSRSelect = useCallback(
     (value: number | string | null) => {
@@ -156,6 +156,7 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
     }`,
     borderRight: 'none',
     cursor: canDrag && !isLocked ? 'grab' : 'not-allowed',
+    touchAction: 'none', // @ZP-100: sonst übernimmt der Browser die Geste zum Scrollen (pointercancel)
     color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.lg,
     transition: 'background-color 0.15s ease, border-color 0.15s ease',
@@ -190,7 +191,7 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
     fontSize: cssVars.fontSizes.xs,
     fontWeight: cssVars.fontWeights.medium,
     color: hasReferee ? cssVars.colors.textPrimary : cssVars.colors.textMuted,
-    cursor: refereeOptions.length > 0 ? 'pointer' : 'default',
+    cursor: isLocked ? 'not-allowed' : refereeOptions.length > 0 ? 'pointer' : 'default',
     transition: 'background-color 0.15s ease',
     zIndex: 5,
   };
@@ -243,8 +244,9 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
             ref={srBadgeRef}
             style={srBadgeStyle}
             onClick={handleSRClick}
+            disabled={isLocked}
             onMouseEnter={(e) => {
-              if (refereeOptions.length > 0) {
+              if (refereeOptions.length > 0 && !isLocked) {
                 (e.currentTarget as HTMLElement).style.backgroundColor = cssVars.colors.surfaceHover;
               }
             }}

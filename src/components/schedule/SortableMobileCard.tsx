@@ -17,6 +17,7 @@ import { buildSideContext, matchHeading, matchViewOf, sideDisplay, type SideCont
 import { resultFigures } from './matchResult';
 import { EditableMatchCard, type MatchCardStatus, type RefereeOption } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
+import { SwapWithButton } from './SwapWithButton';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -185,6 +186,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
         isLocked={isLocked}
         hasUnsavedChanges={hasUnsavedChanges}
         referee={displayedRef ?? undefined}
+        refereeName={refereeOptions.find((opt) => opt.value === displayedRef)?.label}
         refereeOptions={showReferees ? refereeOptions : []}
         onRefereeChange={
           onRefereeChange
@@ -235,6 +237,10 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
             </select>
           </div>
         </div>
+      )}
+      {/* @ZP-100: Tauschen ohne Ziehen */}
+      {editingSchedule && (
+        <SwapWithButton matchId={match.id} locked={isLocked} wrapperStyle={{ display: 'flex', justifyContent: 'flex-end', marginTop: cssVars.spacing.xs }} />
       )}
     </div>
   );

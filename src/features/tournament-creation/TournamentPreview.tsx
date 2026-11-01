@@ -406,6 +406,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <RefereeAssignmentEditor
             matches={schedule.allMatches}
             refereeConfig={currentTournament.refereeConfig}
+            teams={currentTournament.teams}
             onAssignmentChange={handleRefereeAssignment}
             onResetAssignments={handleResetRefereeAssignments}
           />

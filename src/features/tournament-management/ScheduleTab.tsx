@@ -8,7 +8,8 @@
  * - Konfliktprüfung beim Speichern
  * - Live-Tabellen-Berechnung
  *
- * Logik in Hooks: useScheduleHistory (Undo/Redo), usePendingChanges (Bearbeiten), useScheduleTabActions (Aktionen);
+ * Logik in Hooks: useScheduleDraft (Bearbeiten als Entwurf, @ZP-101–104), useScheduleEditActions (Tauschen, Schiri, Feld),
+ * useScheduleTabActions (Ergebnis-Eingabe);
  * Status aus einer Quelle, der gemeinsamen Ansicht (`buildTournamentView`, Leitung + Engine-Status, A-36c).
  * Rechte (A-11): nur über useCan -- Bearbeiten, Tauschen, Schiri nur mit manageSchedule (@ZP-040).
  */
@@ -20,15 +21,11 @@ import { useToast } from '../../components/ui/Toast';
 import { cssVars, mediaQueries } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
 import { MatchUpdate } from '../../core/models/types';
-import {
-  useScheduleHistory,
-  usePendingChanges,
-  useScheduleTabActions,
-  useScheduleFilters,
-  getFilterOptions,
-} from './hooks';
+import { useScheduleDraft, useScheduleEditActions, useScheduleTabActions, useScheduleFilters, getFilterOptions } from './hooks';
 import { useScheduleView } from './hooks/useScheduleView';
-import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
+import { ScheduleToolbar, ScheduleViewMode } from './components';
+import { ScheduleEditDialogs } from './components/ScheduleEditDialogs';
+import { ScheduleSwapWith } from './components/ScheduleSwapWith';
 import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPrompt';
 import { useScheduleTakeover } from './hooks/useScheduleTakeover';
 import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
@@ -48,7 +45,8 @@ interface ScheduleTabProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
   currentStandings: Standing[];
-  onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+  /** Speichert das ganze Turnier. Kein „neu erzeugen“ mehr (Befund C-REGEN-FLAG): der Spielplan wird hier nie neu erzeugt. */
+  onTournamentUpdate: (tournament: Tournament) => void;
   /**
    * A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): local-only state
    * sync (no persistence) — used by result entry so the UI updates immediately without a full
@@ -60,6 +58,9 @@ interface ScheduleTabProps {
   /** Callback to navigate to management tab with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
 }
+
+/** Der Entwurf führt den Verlauf selbst (useScheduleDraft); das Raster legt keinen eigenen an. */
+const noHistory = (): void => undefined;
 
 export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   tournament,
@@ -87,39 +88,11 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // CUSTOM HOOKS
   // ==========================================================================
 
-  // Pending changes and edit mode state
-  const {
-    isEditing,
-    pendingChanges,
-    hasUnsavedChanges,
-    setIsEditing,
-    setPendingReferee,
-    setPendingField,
-    handleCancelEdit,
-    handleSaveChanges,
-    handleSaveWithConflicts,
-    showConflictDialog,
-    setShowConflictDialog,
-    detectedConflicts,
-  } = usePendingChanges({
-    tournament,
-    onTournamentUpdate,
-    clearHistory: () => clearHistory(),
-  });
-
-  // Unified Undo/Redo History (shared across both views)
-  const { saveToHistory, handleUndo, handleRedo, clearHistory, canUndo, canRedo } =
-    useScheduleHistory({
-      matches: tournament.matches,
-      onMatchesUpdate: useCallback((matches: Match[]) => {
-        onTournamentUpdate({
-          ...tournament,
-          matches,
-          updatedAt: new Date().toISOString(),
-        }, false);
-      }, [tournament, onTournamentUpdate]),
-      isEditing,
-    });
+  // Bearbeiten als Entwurf (@ZP-101 bis @ZP-104): Anzeige im Bearbeiten-Modus = Entwurf, gespeichert erst mit „Speichern“
+  const draft = useScheduleDraft({ tournament, schedule, onTournamentUpdate, showSuccess, showWarning });
+  const { isEditing } = draft;
+  const shownSchedule = draft.draftSchedule;
+  const edit = useScheduleEditActions({ tournament, draft, onTournamentUpdate, showSuccess, showWarning });
 
   // Die gemeinsame Ansicht der Leitung (A-36c): eine Statusquelle für Karten, Filter und „läuft gerade“
   const { view, locale, liveMatchIds, elapsedSeconds } = useScheduleView(tournament);
@@ -148,8 +121,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // rather than potentially stale tournament.matches (Persistence).
   // ScheduledMatch trägt slotA/slotB unverändert; der Filter liest nur Slots (A-03)
   const sourceMatchesForFiltering = useMemo(() => {
-    return schedule.allMatches as unknown as Match[];
-  }, [schedule.allMatches]);
+    return shownSchedule.allMatches as unknown as Match[];
+  }, [shownSchedule.allMatches]);
 
   const filteredMatches = useMemo(
     () => getFilteredMatches(sourceMatchesForFiltering, tournament.teams),
@@ -222,25 +195,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // B-49 (@FU-081): fremd gesteuertes Feld – „Feld 2 wird gerade von Tom gesteuert“ mit „Spielleitung übernehmen“, danach ins Cockpit
   const takeover = useScheduleTakeover({ tournamentId: tournament.id, showWarning, onTaken: onNavigateToCockpit });
 
-  // Action handlers (extracted for maintainability)
-  const {
-    handleRedistributeSR,
-    handleRedistributeFields,
-    handleMatchSwap,
-    handleScoreChange,
-    handleRefereeAssignment,
-    handleResetRefereeAssignments,
-    handleFieldChange,
-    resultEntry,
-  } = useScheduleTabActions({
+  // Ergebnis-Eingabe (Schnelleingabe); Tauschen/Schiri/Feld stehen in useScheduleEditActions
+  const { handleScoreChange, resultEntry } = useScheduleTabActions({
     tournament,
-    onTournamentUpdate,
-    isEditing,
-    saveToHistory,
-    showSuccess,
     showWarning,
-    setPendingReferee,
-    setPendingField,
     // Korrektur beendeter Spiele im Spielplan: Grund-Auswahl statt Sperre (@EK-063, @EK-004), wie im Cockpit (useCockpitKorrektur).
     // Die Nutzer-Einstellung `lockFinishedResults` verwies auf einen Knopf „Ergebnis korrigieren“, den es hier nicht gibt.
     lockFinishedResults: false,
@@ -273,16 +231,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     WebkitBackdropFilter: 'none',
   } : {};
 
-  // Count conflicts by severity
-  const criticalConflicts = detectedConflicts.filter(c =>
-    c.type === 'team_double_booking' ||
-    c.type === 'referee_double_booking' ||
-    c.type === 'field_overlap'
-  );
-  const warningConflicts = detectedConflicts.filter(c =>
-    c.type === 'break_violation'
-  );
-
   return (
     <>
       <div style={containerStyle} className="schedule-tab-container">
@@ -292,16 +240,16 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           {/* Action Buttons Header */}
           <ScheduleToolbar
             isEditing={isEditing}
-            onStartEditing={() => setIsEditing(true)}
-            onSave={handleSaveChanges}
-            onCancel={handleCancelEdit}
-            hasUnsavedChanges={hasUnsavedChanges}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onRedistributeSR={handleRedistributeSR}
-            onRedistributeFields={handleRedistributeFields}
+            onStartEditing={draft.startEditing}
+            onSave={draft.save}
+            onCancel={draft.requestCancel}
+            changeCount={draft.changeCount}
+            onUndo={draft.undo}
+            onRedo={draft.redo}
+            canUndo={draft.canUndo}
+            canRedo={draft.canRedo}
+            onRedistributeSR={edit.handleRedistributeSR}
+            onRedistributeFields={edit.handleRedistributeFields}
             showSRButton={tournament.refereeConfig?.mode !== 'none'}
             showFieldsButton={tournament.numberOfFields > 1}
             viewMode={viewMode}
@@ -349,19 +297,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} canCreateNotice={canNotice}
                 enabled={canSchedule && !isEditing && !closed}
               >
+              <ScheduleSwapWith enabled={isEditing} matches={shownSchedule.allMatches} lockedIds={edit.lockedMatchIds} onSwap={edit.handleMatchSwap}>
               <ScheduleDisplay
-                schedule={schedule}
+                schedule={shownSchedule}
                 currentStandings={currentStandings}
-                currentMatches={tournament.matches}
+                currentMatches={draft.draftTournament.matches}
                 tournamentTeams={tournament.teams}
                 editable={!closed}
                 editingSchedule={isEditing}
-                pendingChanges={isEditing ? pendingChanges : undefined}
+                pendingChanges={isEditing ? draft.changed : undefined}
                 onScoreChange={closed ? undefined : handleScoreChange}
                 changeAuthorOf={resultEntry.changeAuthor}
-                onRefereeChange={closed ? undefined : handleRefereeAssignment}
-                onFieldChange={closed ? undefined : handleFieldChange}
-                onMatchSwap={isEditing ? handleMatchSwap : undefined}
+                onRefereeChange={closed ? undefined : edit.handleRefereeAssignment}
+                onFieldChange={closed ? undefined : edit.handleFieldChange}
+                onMatchSwap={isEditing ? edit.handleMatchSwap : undefined}
                 view={view}
                 locale={locale}
                 elapsedSeconds={elapsedSeconds}
@@ -370,16 +319,18 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />
+              </ScheduleSwapWith>
               </ScheduleTimeShift>
             )
           ) : (
+            // Raster = zweite Darstellung desselben Entwurfs: Ablegen wird ein Schritt im Entwurf (@ZP-101)
             <ScheduleEditor
-              tournament={tournament}
-              onTournamentUpdate={(updatedTournament) => onTournamentUpdate(updatedTournament, false)}
+              tournament={draft.draftTournament}
+              onTournamentUpdate={edit.handleGridChange}
               onLocalTournamentUpdate={onLocalTournamentUpdate}
               onMatchesUpdate={onMatchesUpdate}
               externalEditMode={isEditing}
-              onBeforeChange={saveToHistory}
+              onBeforeChange={noHistory}
               hideToolbar={true}
               onRejectStarted={() => showWarning(t('schedule.startedLocked'))}
             />
@@ -388,10 +339,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           {/* Manuelle SR-Zuweisung (wenn SR aktiv) */}
           {canSchedule && tournament.refereeConfig && tournament.refereeConfig.mode !== 'none' && (
             <RefereeAssignmentEditor
-              matches={schedule.allMatches}
-              refereeConfig={tournament.refereeConfig}
-              onAssignmentChange={handleRefereeAssignment}
-              onResetAssignments={handleResetRefereeAssignments}
+              matches={shownSchedule.allMatches}
+              refereeConfig={draft.draftTournament.refereeConfig ?? tournament.refereeConfig}
+              teams={tournament.teams}
+              lockedMatchIds={edit.lockedMatchIds}
+              onAssignmentChange={edit.handleRefereeAssignment}
+              onResetAssignments={edit.handleResetRefereeAssignments}
             />
           )}
         </Card>
@@ -401,22 +354,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       {takeover.dialog}
       <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
 
-      {/* Conflict Warning Dialog */}
-      <ConfirmDialog
-        isOpen={showConflictDialog}
-        onClose={() => setShowConflictDialog(false)}
-        onConfirm={handleSaveWithConflicts}
-        title={t('schedule.conflicts.title')}
-        confirmText={t('schedule.conflicts.saveAnyway')}
-        cancelText={t('schedule.conflicts.backToEdit')}
-        variant={criticalConflicts.length > 0 ? 'danger' : 'warning'}
-        message={
-          <ScheduleConflictContent
-            criticalConflicts={criticalConflicts}
-            warningConflicts={warningConflicts}
-          />
-        }
-      />
+      <ScheduleEditDialogs draft={draft} edit={edit} />
 
       {/* Running Match Navigation Dialog */}
       {showRunningMatchDialog && runningMatchInfo && (

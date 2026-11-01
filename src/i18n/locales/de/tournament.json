@@ -205,7 +205,8 @@
       "restDone_other": "{{count}} weitere Spiele als Wertung eingetragen.",
       "restPartial": "{{done}} weitere Spiele gewertet, {{skipped}} nicht (schon angepfiffen oder Fehler)."
     },
-    "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen."
+    "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen.",
+    "refereeLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) behält seinen Schiedsrichter."
   },
   "scheduleActions": {
     "share": "Teilen"
@@ -878,8 +879,8 @@
   "toolbar": {
     "editSchedule": "Spielplan bearbeiten",
     "editMode": "Bearbeitungsmodus",
-    "undo": "Undo",
-    "redo": "Redo",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
     "redistributeSR": "SR verteilen",
     "redistributeFields": "Felder verteilen",
     "save": "Speichern",
@@ -978,7 +979,12 @@
     "matchesSwapped": "Spiele {{match1}} und {{match2}} getauscht",
     "matchAlreadyFinished": "Dieses Spiel ist bereits beendet. Verwende \"Ergebnis korrigieren\".",
     "liveMatchWarning": "WARNUNG: Dieses Spiel läuft gerade LIVE in der Turnierleitung!\n\nWenn du hier das Ergebnis änderst, wird es die Live-Verwaltung überschreiben.\n\nMöchtest du trotzdem fortfahren?",
-    "changesSaved": "Spielplan-Änderungen gespeichert"
+    "changesSaved": "Spielplan-Änderungen gespeichert",
+    "refereesRedistributed_one": "Schiedsrichter von {{count}} Spiel neu verteilt",
+    "refereesRedistributed_other": "Schiedsrichter von {{count}} Spielen neu verteilt",
+    "fieldsRedistributed_one": "Feld von {{count}} Spiel neu verteilt",
+    "fieldsRedistributed_other": "Felder von {{count}} Spielen neu verteilt",
+    "refereesReset": "Schiedsrichter der offenen Spiele neu verteilt"
   },
   "common": {
     "cancel": "Abbrechen",
@@ -1871,5 +1877,36 @@
       "table": "Platz {{place}} der Tabelle",
       "open": "noch offen"
     }
+  },
+  "refereeOptions": {
+    "numbered": "SR {{number}}",
+    "named": "SR {{number}} ({{name}})"
+  },
+  "draft": {
+    "unsaved_one": "{{count}} Änderung nicht gespeichert",
+    "unsaved_other": "{{count}} Änderungen nicht gespeichert",
+    "discardTitle_one": "{{count}} Änderung verwerfen?",
+    "discardTitle_other": "{{count}} Änderungen verwerfen?",
+    "discardMessage": "Der Spielplan bleibt dann so, wie er vor dem Bearbeiten war.",
+    "discard": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten",
+    "overwriteTitle": "Hand-Zuteilung überschreiben?",
+    "overwriteManual_one": "{{count}} Spiel wurde von Hand zugeteilt – trotzdem neu verteilen?",
+    "overwriteManual_other": "{{count}} Spiele wurden von Hand zugeteilt – trotzdem neu verteilen?",
+    "overwriteConfirm": "Neu verteilen",
+    "overwriteCancel": "Abbrechen",
+    "notApplied": "Nicht übernommen, weil inzwischen angepfiffen:\n{{list}}",
+    "skipped": {
+      "swap": "Tausch von Spiel {{a}} und Spiel {{b}}",
+      "field": "Feld von Spiel {{a}}",
+      "move": "Verschieben von Spiel {{a}}",
+      "referee": "Schiedsrichter von Spiel {{a}}",
+      "started": "Spiel {{number}} ist angepfiffen"
+    },
+    "swapWith": "Tauschen mit …",
+    "swapWithTitle": "Spiel {{number}} tauschen mit …",
+    "swapWithLabel": "Zielspiel – Uhrzeit und Feld werden getauscht",
+    "swapConfirm": "Tauschen",
+    "swapOption": "Spiel {{number}} · {{time}} · Feld {{field}} · {{home}} – {{away}}"
   }
 }

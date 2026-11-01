@@ -225,6 +225,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
               <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>SR</label>
               <select
                 value={displayedRef ?? ''}
+                disabled={isRunning || isFinished /* @ZP-093 */}
                 onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value, 10) : null)}
                 style={{ ...selectStyle, border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.borderControl}` }}
               >
@@ -238,6 +239,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
               <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('finals.field')}</label>
               <select
                 value={displayedField ?? 1}
+                disabled={isRunning || isFinished /* @ZP-093 */}
                 onChange={(e) => onFieldChange(match.id, parseInt(e.target.value, 10))}
                 style={{ ...selectStyle, border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.borderControl}` }}
               >

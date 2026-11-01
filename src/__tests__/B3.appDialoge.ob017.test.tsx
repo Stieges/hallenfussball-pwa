@@ -180,7 +180,7 @@ describe('@OB-017 Dialog der App statt Browser-Fenster – ersetzte Stellen', ()
 
     async function waehleSr1FuerSpiel2(onChange: (id: string, ref: number | null) => void) {
       render(<RefereeAssignmentEditor matches={[spiel('m1', 1, 1), spiel('m2', 2, undefined)]} refereeConfig={config} onAssignmentChange={onChange} onResetAssignments={vi.fn()} />);
-      fireEvent.click(screen.getByText(/Manuelle Schiedsrichter-Zuweisung/));
+      fireEvent.click(screen.getByText(/refereeEditor\.title/));
       const selects = screen.getAllByRole('combobox');
       fireEvent.change(selects[1], { target: { value: '1' } });
     }

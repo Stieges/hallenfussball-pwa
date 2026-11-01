@@ -5,16 +5,18 @@
  * - Dropdown/Select für jedes Match zur SR-Änderung
  * - Drag & Drop Interface für komfortable Bedienung
  * - Anzeige der aktuellen Verteilung & Workload
- * - Reset auf automatische Zuweisung
+ * - Reset auf automatische Zuweisung, nach Rückfrage, nur für offene Spiele (@W3-034)
+ * - Angepfiffene Spiele (läuft, Halbzeit, beendet) sind gesperrt (@ZP-093); Auswahl aus `refereeChoices` (@W3-011)
  */
 
 import { CSSProperties, useState } from 'react';
 import { ScheduledMatch } from '../core/generators';
-import { RefereeConfig } from '../types/tournament';
+import { RefereeConfig, Team } from '../types/tournament';
 import { cssVars } from '../design-tokens'
 import { useTranslation } from 'react-i18next';
 import { Select, Button } from './ui';
 import { ConfirmDialog, useConfirmDialog } from './ui/ConfirmDialog';
+import { useRefereeChoices } from './schedule/refereeChoices';
 
 /**
  * Check if a referee is already assigned to an overlapping match
@@ -52,7 +54,12 @@ interface RefereeAssignmentEditorProps {
   matches: ScheduledMatch[];
   refereeConfig: RefereeConfig;
   onAssignmentChange: (matchId: string, refereeNumber: number | null) => void;
+  /** wird erst nach der Rückfrage aufgerufen */
   onResetAssignments: () => void;
+  /** Teams des Turniers (Modus „Teams pfeifen“: Auswahl mit Teamnamen) */
+  teams?: readonly Team[];
+  /** Angepfiffene Spiele: Auswahl gesperrt (@ZP-093) */
+  lockedMatchIds?: ReadonlySet<string>;
 }
 
 export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = ({
@@ -60,8 +67,12 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   refereeConfig,
   onAssignmentChange,
   onResetAssignments,
+  teams,
+  lockedMatchIds,
 }) => {
   const { t } = useTranslation('wizard');
+  const choices = useRefereeChoices(refereeConfig, teams);
+  const resetDialog = useConfirmDialog({ title: t('refereeEditor.resetTitle'), message: t('refereeEditor.resetMessage'), variant: 'warning', confirmText: t('refereeEditor.resetConfirm') });
   // @OB-017: Zeitkonflikt-Rückfrage im Dialog der App, nie als Fenster des Browsers
   const conflictDialog = useConfirmDialog({
     title: t('refereeConflict.title'),
@@ -78,57 +89,28 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     return null;
   }
 
-  const numberOfReferees = refereeConfig.mode === 'organizer'
-    ? (refereeConfig.numberOfReferees ?? 2)
-    : matches.length; // Teams mode: each team can be referee
+  const numberOfReferees = refereeConfig.numberOfReferees ?? 2;
+  const nameOf = (n: number): string => choices.find((c) => c.value === n)?.label ?? String(n);
 
   // Calculate referee workload
   const refereeWorkload: Record<number, number> = {};
-  for (let i = 1; i <= numberOfReferees; i++) {
-    refereeWorkload[i] = 0;
-  }
   matches.forEach(match => {
     if (match.referee) {
       refereeWorkload[match.referee] = (refereeWorkload[match.referee] ?? 0) + 1;
     }
   });
 
-  // Generate referee options
-  const getRefereeOptions = () => {
-    const options: { value: string; label: string }[] = [
-      { value: '', label: '- Kein SR -' }
-    ];
-
-    if (refereeConfig.mode === 'organizer') {
-      for (let i = 1; i <= numberOfReferees; i++) {
-        const name = refereeConfig.refereeNames?.[i] ?? `SR ${i}`;
-        const count = refereeWorkload[i] ?? 0;
-        options.push({
-          value: i.toString(),
-          label: `${name} (${count} Spiele)`
-        });
-      }
-    } else if (refereeConfig.mode === 'teams') {
-      // Teams mode: show team numbers
-      for (let i = 1; i <= numberOfReferees; i++) {
-        const count = refereeWorkload[i] ?? 0;
-        options.push({
-          value: i.toString(),
-          label: `Team ${i} (${count} Spiele)`
-        });
-      }
-    }
-
-    return options;
-  };
+  // Eine Quelle der Auswahl (refereeChoices), hier mit der Zahl der Spiele je Schiedsrichter
+  const refereeOptions = [
+    { value: '', label: t('refereeEditor.noReferee') },
+    ...choices.map((c) => ({ value: String(c.value), label: t('refereeEditor.optionCount', { label: c.label, count: refereeWorkload[c.value] ?? 0 }) })),
+  ];
 
   // Fragt nach, wenn sich die Einteilung zeitlich mit einem anderen Spiel überschneidet; true = zuweisen
   const confirmConflict = async (matchId: string, refereeNumber: number): Promise<boolean> => {
     const conflict = findOverlappingConflict(matches, matchId, refereeNumber);
     if (!conflict) { return true; }
-    const refName = refereeConfig.mode === 'organizer'
-      ? (refereeConfig.refereeNames?.[refereeNumber] ?? `SR ${refereeNumber}`)
-      : `Team ${refereeNumber}`;
+    const refName = nameOf(refereeNumber);
     return conflictDialog.confirm({
       message: t('refereeConflict.message', { refName, matchNumber: conflict.matchNumber, time: conflict.time }),
     });
@@ -156,7 +138,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   const handleDrop = async (e: React.DragEvent, matchId: string) => {
     e.preventDefault();
     const refereeNumber = draggedReferee;
-    if (refereeNumber !== null && await confirmConflict(matchId, refereeNumber)) {
+    if (refereeNumber !== null && !lockedMatchIds?.has(matchId) && await confirmConflict(matchId, refereeNumber)) {
       onAssignmentChange(matchId, refereeNumber);
     }
     setDraggedReferee(null);
@@ -264,11 +246,11 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
         <div>
           <h3 style={titleStyle}>
             <span style={toggleIconStyle}>▼</span>
-            🟨 Manuelle Schiedsrichter-Zuweisung
+            🟨 {t('refereeEditor.title')}
           </h3>
           {isCollapsed && (
             <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: '4px 0 0 24px' }}>
-              Klicken zum Aufklappen
+              {t('refereeEditor.expandHint')}
             </p>
           )}
         </div>
@@ -276,10 +258,11 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
           <div onClick={(e) => e.stopPropagation()}>
             <Button
               variant="secondary"
-              onClick={onResetAssignments}
+              onClick={() => { void resetDialog.confirm().then((ok) => { if (ok) { onResetAssignments(); } }); }}
               style={{ fontSize: cssVars.fontSizes.sm, padding: '8px 16px' }}
+              data-testid="referee-reset"
             >
-              Automatische Zuweisung wiederherstellen
+              {t('refereeEditor.reset')}
             </Button>
           </div>
         )}
@@ -292,7 +275,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
       {refereeConfig.mode === 'organizer' && (
         <>
           <p style={{ fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, marginBottom: '12px' }}>
-            Verfügbare Schiedsrichter:
+            {t('refereeEditor.available')}
           </p>
           <div style={refereeGridStyle}>
             {Array.from({ length: numberOfReferees }, (_, i) => i + 1).map(refNum => (
@@ -307,10 +290,10 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                 }}
               >
                 <div style={{ fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold, marginBottom: '4px' }}>
-                  {refereeConfig.refereeNames?.[refNum] ?? `SR ${refNum}`}
+                  {nameOf(refNum)}
                 </div>
                 <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
-                  {refereeWorkload[refNum] ?? 0} Spiele
+                  {t('refereeEditor.workload', { count: refereeWorkload[refNum] ?? 0 })}
                 </div>
               </div>
             ))}
@@ -320,7 +303,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
 
       {/* Matches List with Dropzones */}
       <p style={{ fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, marginTop: '24px', marginBottom: '12px' }}>
-        Spiele:
+        {t('refereeEditor.matches')}
       </p>
       <div style={matchesListStyle}>
         {matches.map(match => (
@@ -339,11 +322,13 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                 {match.homeTeam} - {match.awayTeam}
               </div>
               <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
-                {match.time} • Feld {match.field}
+                {t('refereeEditor.matchMeta', { time: match.time, field: match.field })}
               </div>
             </div>
             <Select
               label=""
+              disabled={lockedMatchIds?.has(match.id)}
+              data-testid={`referee-select-${match.id}`}
               value={match.referee?.toString() ?? ''}
               onChange={(value) => {
                 const refNum = value ? parseInt(value) : null;
@@ -352,7 +337,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                   onAssignmentChange(match.id, refNum);
                 })();
               }}
-              options={getRefereeOptions()}
+              options={refereeOptions}
             />
           </div>
         ))}
@@ -380,6 +365,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
         }
       `}</style>
       <ConfirmDialog {...conflictDialog.dialogProps} />
+      <ConfirmDialog {...resetDialog.dialogProps} />
     </div>
   );
 };

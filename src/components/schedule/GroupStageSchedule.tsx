@@ -7,21 +7,8 @@
 
 import { CSSProperties, useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  DndContext,
-  DragOverlay,
-  DragStartEvent,
-  DragEndEvent,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
+import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig, RuntimeMatchEvent } from '../../types/tournament';
@@ -43,6 +30,8 @@ import { useLiveMatches } from '../../hooks/useLiveMatches';
 import { SortableMobileCard } from './SortableMobileCard';
 import { SortableDesktopCard } from './SortableDesktopCard';
 import { DesktopCard } from './DesktopCard';
+import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
+import { useRefereeChoices } from './refereeChoices';
 
 // Pending changes during edit mode
 interface PendingChanges {
@@ -111,29 +100,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   canEndRunning = false,
 }) => {
   const { t } = useTranslation('tournament');
-  // DnD State
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  // Local display order - tracks visual order of matches (reorders on drag)
-  const [displayOrder, setDisplayOrder] = useState<string[]>(() =>
-    matches.map(m => m.id)
-  );
-
-  // Sync displayOrder when matches change (e.g., when not in edit mode or on save/reset)
-  useEffect(() => {
-    // Only reset if we're not editing (to preserve drag order during edit)
-    if (!editingSchedule) {
-      setDisplayOrder(matches.map(m => m.id));
-    }
-  }, [matches, editingSchedule]);
-
-  // Also reset when entering edit mode (start fresh from current order)
-  useEffect(() => {
-    if (editingSchedule) {
-      setDisplayOrder(matches.map(m => m.id));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset when entering edit mode, not when matches change
-  }, [editingSchedule]);
+  // Ziehen/Tauschen (@ZP-100): Liste nach Uhrzeit, Tausch über onMatchSwap (Entwurf)
+  const { sensors, sortedMatches, activeMatch, handleDragStart, handleDragEnd, handleDragCancel } = useScheduleDrag(matches, onMatchSwap);
+  // Schiedsrichter-Auswahl aus einer Quelle (Teams pfeifen: Teamnamen, @W3-011)
+  const refereeChoiceList = useRefereeChoices(refereeConfig, tournament?.teams);
 
   // Spielplan 2.0: Expand state for mobile cards
   type ExpandType = 'quick' | 'live' | 'start' | 'summary' | null;
@@ -194,42 +164,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     conflictSource ?? null,
     editingSchedule // Only detect when in edit mode
   );
-
-  // DnD Sensors - require 8px movement before drag starts
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
-  // Handle drag start
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
-
-  // Handle drag end - swap matches visually and notify parent
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (!over || active.id === over.id) { return; }
-
-    const sourceMatchId = active.id as string;
-    const targetMatchId = over.id as string;
-
-    // Call the swap handler to persist change; `false` = abgelehnt (@ZP-093), dann bleibt die Anzeige stehen
-    if (onMatchSwap?.(sourceMatchId, targetMatchId) === false) { return; }
-
-    // Update visual order using arrayMove
-    setDisplayOrder(prevOrder => {
-      const oldIndex = prevOrder.indexOf(sourceMatchId);
-      const newIndex = prevOrder.indexOf(targetMatchId);
-      if (oldIndex === -1 || newIndex === -1) { return prevOrder; }
-      return arrayMove(prevOrder, oldIndex, newIndex);
-    });
-  };
 
   // ============================================================================
   // Spielplan 2.0: Helper functions for MatchCard integration
@@ -495,16 +429,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     }
   }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable, canEndRunning, onScoreChange, forfeit]);
 
-  // Sort matches by displayOrder for rendering
-  const sortedMatches = useMemo(() => {
-    const orderMap = new Map(displayOrder.map((id, index) => [id, index]));
-    return [...matches].sort((a, b) => {
-      const indexA = orderMap.get(a.id) ?? Infinity;
-      const indexB = orderMap.get(b.id) ?? Infinity;
-      return indexA - indexB;
-    });
-  }, [matches, displayOrder]);
-
   if (matches.length === 0) {
     return (
       <div style={{
@@ -523,22 +447,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   // Hide group label for single-group tournaments (or when no groups defined)
   const showGroupLabel = (tournament?.groups?.length ?? 0) > 1;
 
-  // Generate referee options for dropdown (nur Nummern)
-  const getRefereeOptions = () => {
-    if (!refereeConfig) { return []; }
-
-    const numberOfReferees = refereeConfig.mode === 'organizer'
-      ? (refereeConfig.numberOfReferees ?? 2)
-      : matches.length;
-
-    const options = [];
-    for (let i = 1; i <= numberOfReferees; i++) {
-      const name = refereeConfig.refereeNames?.[i];
-      const label = name ? `${i} (${name})` : i.toString();
-      options.push({ value: i, label });
-    }
-    return options;
-  };
+  const refereeOptions = refereeConfig ? refereeChoiceList : [];
 
   // Generate field options for dropdown
   const getFieldOptions = () => {
@@ -549,17 +458,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     return options;
   };
 
-  const refereeOptions = getRefereeOptions();
   const fieldOptions = getFieldOptions();
 
-  // Transform referee options for EditableMatchCard (includes "Kein SR" option)
-  const editableRefereeOptions: RefereeOption[] = [
-    { value: null, label: t('groupStage.noReferee') },
-    ...refereeOptions.map(opt => ({
-      value: opt.value,
-      label: t('groupStage.refereeLabel', { number: opt.label }),
-    })),
-  ];
+  // Auswahl der Karte am Handy: „Kein SR“ + dieselben Einträge wie überall
+  const editableRefereeOptions: RefereeOption[] = [{ value: null, label: t('groupStage.noReferee') }, ...refereeOptions];
 
   // Styles
   const containerStyle: CSSProperties = {
@@ -572,9 +474,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     color: cssVars.colors.primary,
     marginBottom: cssVars.spacing.md,
   };
-
-  // Get active match for drag overlay
-  const activeMatch = activeId ? sortedMatches.find(m => m.id === activeId) : null;
 
   // Render desktop card list (non-edit mode)
   const renderDesktopCardContent = () => (
@@ -666,8 +565,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          autoScroll={SCHEDULE_AUTO_SCROLL}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <div className="desktop-view">
             <SortableContext
@@ -732,8 +633,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          autoScroll={SCHEDULE_AUTO_SCROLL}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <div className="mobile-view">
             <SortableContext
