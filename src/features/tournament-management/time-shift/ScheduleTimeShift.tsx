@@ -117,7 +117,7 @@ export function ScheduleTimeShift({ tournament, schedule, standings, view, onTou
         <TimeShiftStrip
           strip={shift.strip}
           canUndo={shift.restorable}
-          onReprint={() => { setPrinting(true); shift.dismissStrip(); }}
+          onReprint={() => setPrinting(true)}
           onUndo={shift.openRestore}
           onClose={shift.dismissStrip}
         />

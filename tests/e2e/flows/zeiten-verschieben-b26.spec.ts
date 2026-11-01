@@ -150,4 +150,21 @@ test.describe('B-26 Zeiten verschieben (offline)', () => {
     await expect(original(page, 8)).toHaveCount(0);
     await expect(page.getByTestId('time-shift-strip')).toHaveCount(0);
   });
+
+  test('@ZP-099 „Neu drucken“ öffnen und abbrechen: der Streifen steht weiter, mit „Rückgängig“; erst × schließt ihn', async ({ page }) => {
+    await openSchedule(page);
+    await shiftFromFirstOpen(page);
+    const strip = page.getByTestId('time-shift-strip');
+    await expect(strip).toBeVisible();
+    await page.getByTestId('time-shift-reprint').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(strip, 'schon beim Öffnen von „Neu drucken“ steht der Streifen noch').toBeVisible();
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(strip).toBeVisible();
+    await expect(page.getByTestId('zeiten-rueckgaengig')).toBeVisible();
+    await page.getByTestId('time-shift-strip-close').click();
+    await expect(strip).toHaveCount(0);
+  });
 });
