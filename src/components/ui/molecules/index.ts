@@ -30,6 +30,7 @@ export { useScoreDraft } from './useScoreDraft';
 export type { ScoreDraft, ScoreCommitResult, UseScoreDraftOptions, ScoreSide, ScoreChangedElsewhere } from './useScoreDraft';
 export { ScoreDraftHint } from './ScoreDraftHint';
 export { ScoreChangedHint } from './ScoreChangedHint';
+export { ScoreSaveButton } from './ScoreSaveButton';
 
 // Paket TB-B (Gleichstand in der Tabelle): fachfreie Bausteine
 export { TieMarker } from './TieMarker';

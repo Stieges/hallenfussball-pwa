@@ -57,6 +57,8 @@ interface FinalStageScheduleProps {
   tournament?: SideSource;
   /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ (nur Turnierleitung); ohne Angabe keine Taste */
   forfeit?: MatchForfeitActions;
+  /** @FU-112/@FU-113: laufende Spiele beenden und eintragen darf nur die Turnierleitung; ohne Angabe nicht */
+  canEndRunning?: boolean;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -78,6 +80,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   showTitle = true,
   tournament,
   forfeit,
+  canEndRunning = false,
 }) => {
   const { t } = useTranslation('tournament');
   // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams), nie aus gespeichertem Anzeigetext
@@ -255,8 +258,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       matchId={match.id}
                       scoreA={match.scoreA}
                       scoreB={match.scoreB}
-                      editable={editable && onScoreChange !== undefined}
+                      editable={editable && onScoreChange !== undefined && (!isRunning || canEndRunning)}
                       isFinished={status === 'finished'}
+                      isRunning={isRunning}
                       result={result}
                       viewStatus={matchViewOf(sides, match.id)?.status}
                       inCorrectionMode={correctionMatchId === match.id}
@@ -421,7 +425,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               clock={clockOf?.(match.id) ?? null}
               viewStatus={matchView?.status}
               isFinished={isFinished}
-              canEditScore={editable && onScoreChange !== undefined && !isFinished}
+              canEditScore={editable && onScoreChange !== undefined && !isFinished && (status !== 'running' || canEndRunning)}
               inCorrectionMode={correctionMatchId === match.id}
               onScoreChange={onScoreChange}
               onStartCorrection={onStartCorrection}

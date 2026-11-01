@@ -5,7 +5,7 @@
  * Ablauf (zweiter Tab trägt ein, Spiel beendet) prüft tests/e2e/flows/schnelleingabe-entwurf.spec.ts.
  * Je Fall: Text vollständig (nichts abgeschnitten, kein Überlauf, kein waagerechtes Scrollen), Knopf ≥ 44 px, die Messung von
  * `npm run visual:metrics` (messeSeite, HART-Grenzwerte aus grenzwerte.json) ohne neuen HART-Befund gegenüber dem Stand vor dem
- * Hinweis, und das Verhalten: „0“ + Enter sendet nichts, erst nach „Meine Eingabe behalten“ sendet Enter 10:2.
+ * Hinweis, und das Verhalten: „0“ + Enter sendet nichts, erst nach „Meine Eingabe behalten“ sendet „Ergebnis speichern“ 10:2.
  * Bilder: Ordner aus FU104_BILDER (sonst Testausgabe). Läuft nur im Projekt `desktop` am Dev-Server (setzt Fenster selbst).
  */
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -106,16 +106,17 @@ test.describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL Hinweis „inzwisch
           expect(nachher.filter((b) => !vorher.includes(b)), 'kein neuer HART-Befund durch den Hinweis').toEqual([]);
           await bild(page, testInfo.outputDir, `fu104-${g.name}-${thema}-${fall.name}`);
 
-          // Verhalten: „0“ + Enter sendet nichts; erst „Meine Eingabe behalten“ macht Enter wieder wirksam
+          // Verhalten: „0“ + „Ergebnis speichern“ sendet nichts (die Taste ist gesperrt); erst „Meine Eingabe behalten“ macht sie wirksam
           if (fall.knopf) {
+            const speichern = page.getByTestId(`${g.prefix}-score-save-${HF1}`);
             await feld.click();
             await page.keyboard.type('0');
             await page.keyboard.press('Enter');
+            await expect(speichern).toBeDisabled();
             expect(await page.evaluate(() => window.__gesendet)).toEqual([]);
             await knopf.click();
             await expect(hinweis).toHaveCount(0);
-            await feld.click();
-            await page.keyboard.press('Enter');
+            await speichern.click();
             expect(await page.evaluate(() => window.__gesendet)).toEqual([[HF1, 10, 2]]);
           } else {
             expect(await page.evaluate(() => window.__gesendet)).toEqual([]);

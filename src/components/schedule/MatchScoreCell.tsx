@@ -2,15 +2,18 @@ import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, mediaQueries } from '../../design-tokens'
 import type { ViewMatchStatus } from '../../core/view';
+import { entryScore } from './runningEntryScore';
 import { formatTableResult, type ResultFigures } from './matchResult';
 import { ScoreDraftInput } from '../ui/atoms';
-import { ScoreChangedHint, ScoreDraftHint, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
+import { ScoreChangedHint, ScoreDraftHint, ScoreSaveButton, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
   scoreB: number | undefined;
   editable: boolean;
   isFinished: boolean;
+  /** Laufendes Spiel: „Spiel beenden und Ergebnis eintragen“, auch der Stand der Uhr lässt sich senden (@FU-112) */
+  isRunning?: boolean;
   inCorrectionMode: boolean;
   /** Tore, Strafstoß und Sieger (`resultFigures`): zeigt „2:2 (4:3 i. E.)“ bzw. „3:2 n. V.“ statt `scoreA : scoreB` (@OB-064) */
   result?: ResultFigures | null;
@@ -34,6 +37,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   scoreB,
   editable,
   isFinished,
+  isRunning = false,
   inCorrectionMode,
   result,
   viewStatus,
@@ -45,11 +49,11 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 }) => {
   const { t } = useTranslation('tournament');
 
-  // Jede Ziffer bleibt lokal, gespeichert wird erst bei Enter oder beim Verlassen eines Feldes (@FU-101: „1“ dann „0“
-  // ergibt 10:2, nicht 1:2). Escape verwirft, nach „Nein“/Abbruch zeigt die Zelle wieder den gespeicherten Stand.
+  // Jede Ziffer bleibt lokal, gespeichert wird erst mit „Ergebnis speichern“, wenn beide Felder gefüllt sind (@FU-101:
+  // „1“ dann „0“ ergibt 10:2, nicht 1:2; Verlassen eines Feldes speichert nichts). Escape verwirft, nach „Nein“/Abbruch zeigt die Zelle wieder den gespeicherten Stand.
   // @FU-104: ändert ein anderes Gerät genau dieses Spiel, sendet die Zelle den Entwurf erst nach „Meine Eingabe behalten“.
   const draft = useScoreDraft({
-    resetKey: matchId, savedA: scoreA, savedB: scoreB, onCommit: onScoreChange,
+    resetKey: matchId, savedA: entryScore(scoreA, scoreB, isRunning), savedB: entryScore(scoreB, scoreA, isRunning), onCommit: onScoreChange, allowUnchanged: isRunning,
     resolveAuthor: changeAuthorOf ? () => changeAuthorOf(matchId) : undefined,
   });
   const changedHint = (editableNow: boolean) => draft.changed && (
@@ -175,6 +179,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
         />
         {draft.invalid && <ScoreDraftHint id={draft.hintId} testId={`match-score-hint-${matchId}`} />}
         {changedHint(true)}
+        <ScoreSaveButton testId={`match-score-save-${matchId}`} disabled={!draft.canSave} ending={isRunning && !inCorrectionMode} onSave={draft.save} />
       </div>
     );
   }

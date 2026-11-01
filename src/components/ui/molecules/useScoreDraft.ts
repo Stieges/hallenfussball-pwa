@@ -1,15 +1,18 @@
 /**
  * useScoreDraft – gemeinsamer Eingabestand für zwei Tor-Felder (@FU-101).
  *
- * Jede Ziffer bleibt lokal. Gespeichert wird erst bei Enter oder beim Verlassen eines Feldes, Escape verwirft.
+ * Jede Ziffer bleibt lokal. Gespeichert wird erst, wenn beide Felder gefüllt sind UND `save` gewählt wird („Ergebnis
+ * speichern“); Verlassen eines Feldes speichert nichts (Korrektur 2026-11-01). Enter im ersten Feld springt ins zweite,
+ * Enter im zweiten wirkt wie „Ergebnis speichern“ (nur bei gefüllten, gültigen Feldern). Escape verwirft.
  * Nur ganze Zahlen ab 0 werden angenommen (`-3`, `1e1`, `2,5`, Buchstaben: kein Senden, `invalid` ist gesetzt).
- * Doppelschutz: Enter und danach Verlassen sendet genau einmal. Meldet `onCommit` per Rückgabe `false` (bzw. eine
+ * Doppelschutz: zweimal `save` mit demselben Stand sendet genau einmal. Meldet `onCommit` per Rückgabe `false` (bzw. eine
  * abgelehnte Zusage), dass nichts gespeichert wurde (@FU-093 „Nein“, @FU-097 „Abbrechen“, Ablehnung), zeigen
  * die Felder wieder den gespeicherten Stand, und derselbe Stand lässt sich erneut senden.
  * @FU-103: Ein neuer Stand von außen, der dieses Spiel nicht ändert, lässt den Entwurf stehen (kein Effekt auf Primitive).
  * @FU-104: Ändert sich der gespeicherte Stand dieses Spiels von außen, während ein Entwurf offen ist, bleibt der Entwurf
  * sichtbar, `changed` nennt den neuen Stand (und den Urheber, sobald `resolveAuthor` ihn liefert), und weder Verlassen
- * noch Enter senden, bis Olli mit `keepDraft` bewusst bei seiner Eingabe bleibt; Escape zeigt den neuen Stand.
+ * noch Enter im zweiten Feld oder die Taste senden, bis Olli mit `keepDraft` bewusst bei seiner Eingabe bleibt; Escape zeigt
+ * den neuen Stand.
  */
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { ScoreFieldProps } from '../atoms/ScoreDraftInput';
@@ -28,6 +31,8 @@ export interface UseScoreDraftOptions {
   onCommit: (scoreA: number, scoreB: number) => ScoreCommitResult;
   /** Wer den Stand dieses Spiels zuletzt geändert hat (@FU-104); `null` = unbekannt */
   resolveAuthor?: () => Promise<string | null>;
+  /** Laufendes Spiel: auch der unveränderte Stand lässt sich senden (Spiel beenden mit dem Stand der Uhr, @FU-112) */
+  allowUnchanged?: boolean;
 }
 
 /** Der gespeicherte Stand hat sich von außen geändert, während ein Entwurf offen war (@FU-104) */
@@ -47,8 +52,12 @@ export interface ScoreDraft {
   fieldProps: (side: ScoreSide) => ScoreFieldProps;
   /** Gesetzt, solange der Hinweis „inzwischen geändert“ gilt (@FU-104) */
   changed: ScoreChangedElsewhere | null;
-  /** Olli bleibt bewusst bei seiner Eingabe: der Hinweis geht, danach senden Verlassen und Enter wieder */
+  /** Olli bleibt bewusst bei seiner Eingabe: der Hinweis geht, danach sendet „Ergebnis speichern“ bzw. Enter im zweiten Feld wieder */
   keepDraft: () => void;
+  /** Beide Felder gefüllt und gültig, anders als der gespeicherte Stand (laufendes Spiel: auch gleich), kein Hinweis „inzwischen geändert“ offen (@FU-101) */
+  canSave: boolean;
+  /** „Ergebnis speichern“: sendet den Entwurf (einmal) */
+  save: () => void;
 }
 
 const WHOLE_NUMBER = /^\d+$/;
@@ -60,7 +69,7 @@ interface Pair {
   b: number | undefined;
 }
 
-export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAuthor }: UseScoreDraftOptions): ScoreDraft {
+export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAuthor, allowUnchanged = false }: UseScoreDraftOptions): ScoreDraft {
   const [a, setA] = useState(asText(savedA));
   const [b, setB] = useState(asText(savedB));
   const hintId = useId();
@@ -141,7 +150,7 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     const next: Pair = { a: goalsA, b: goalsB };
     const saved = savedRef.current;
     const sent = sentRef.current;
-    if ((saved.a === goalsA && saved.b === goalsB) || (sent !== null && sent.a === goalsA && sent.b === goalsB)) {
+    if ((!allowUnchanged && saved.a === goalsA && saved.b === goalsB) || (sent !== null && sent.a === goalsA && sent.b === goalsB)) {
       return;
     }
     sentRef.current = next;
@@ -168,22 +177,47 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
     } catch {
       showSaved();
     }
-  }, [showSaved]);
+  }, [showSaved, allowUnchanged]);
+
+  /** Ungültige Eingabe zeigt den Hinweis (beim Verlassen und beim Speichern), gesendet wird hier nie */
+  const validate = useCallback((valueA: string, valueB: string, badInputSide: ScoreSide | null) => {
+    const badA = badInputSide === 'a' || (valueA !== '' && !WHOLE_NUMBER.test(valueA));
+    const badB = badInputSide === 'b' || (valueB !== '' && !WHOLE_NUMBER.test(valueB));
+    setInvalidSides({ a: badA, b: badB });
+  }, []);
+
+  const filled = a !== '' && b !== '' && WHOLE_NUMBER.test(a) && WHOLE_NUMBER.test(b);
+  const unchanged = !allowUnchanged && a === asText(savedA) && b === asText(savedB);
+  const canSave = filled && !unchanged && changed === null && !invalidSides.a && !invalidSides.b;
+
+  const save = useCallback(() => {
+    commit(draftRef.current.a, draftRef.current.b, null);
+  }, [commit]);
+
+  const fieldRefs = useRef<Record<ScoreSide, HTMLInputElement | null>>({ a: null, b: null });
 
   const fieldProps = (side: ScoreSide): ScoreFieldProps => ({
     value: side === 'a' ? a : b,
     invalid: invalidSides[side],
     describedBy: hintId,
+    enterKeyHint: side === 'a' ? 'next' : 'done',
+    inputRef: (element) => { fieldRefs.current[side] = element; },
     onChange: (event) => {
       sentRef.current = null;
       setInvalidSides(NONE_INVALID);
       (side === 'a' ? setA : setB)(event.target.value);
     },
-    onBlur: (event) => commit(a, b, event.currentTarget.validity.badInput ? side : null),
+    onBlur: (event) => validate(a, b, event.currentTarget.validity.badInput ? side : null),
     onKeyDown: (event) => {
       if (event.key === 'Enter') {
+        // @FU-101: Enter im ersten Feld springt ins zweite, im zweiten wirkt es wie „Ergebnis speichern“ (nur bei gefüllten,
+        // gültigen Feldern; sonst nichts). Verlassen eines Feldes speichert nie.
         event.preventDefault();
-        commit(a, b, event.currentTarget.validity.badInput ? side : null);
+        if (side === 'a') {
+          fieldRefs.current.b?.focus();
+        } else {
+          commit(a, b, event.currentTarget.validity.badInput ? side : null);
+        }
       } else if (event.key === 'Escape') {
         showSaved();
       }
@@ -192,5 +226,5 @@ export function useScoreDraft({ resetKey, savedA, savedB, onCommit, resolveAutho
 
   const keepDraft = useCallback(() => { setChanged(null); }, []);
 
-  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps, changed, keepDraft };
+  return { invalid: invalidSides.a || invalidSides.b, hintId, fieldProps, changed, keepDraft, canSave, save };
 }

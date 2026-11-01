@@ -107,7 +107,8 @@ async function finalEintrag(context: BrowserContext, heim: number, gast: number)
   await expect(felder.first()).toBeVisible({ timeout: 15_000 });
   await felder.nth(0).fill(String(heim));
   await felder.nth(1).fill(String(gast));
-  await felder.nth(1).press('Enter');
+  // @FU-101: gespeichert wird nur mit der Taste unter den Feldern
+  await plan.locator('[data-testid^="match-score-save-"], [data-testid^="final-score-save-"]').filter({ visible: true }).first().click();
   return plan;
 }
 

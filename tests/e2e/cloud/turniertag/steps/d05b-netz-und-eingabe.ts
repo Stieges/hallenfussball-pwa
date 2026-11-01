@@ -133,8 +133,8 @@ async function schnelleingabe({ browser }: StepContext): Promise<void> {
     await expect(heim, 'beide Ziffern bleiben stehen').toHaveValue('10', { timeout: 3000 });
     // ... speichert die App erst bei Bestätigung: der alte Fehler hätte hier schon 1:2 gespeichert.
     await page.waitForTimeout(2000);
-    expect(await serverStand(spiel.id), 'vor Enter steht am Server nichts (nicht 1:2)').toEqual({ tore: [null, null], arten: [] });
-    await heim.press('Enter');
+    expect(await serverStand(spiel.id), 'vor „Ergebnis speichern“ steht am Server nichts (nicht 1:2)').toEqual({ tore: [null, null], arten: [] });
+    await page.locator(`[data-testid="match-score-save-${spiel.id}"]`).click();
     await expect.poll(async () => (await serverStand(spiel.id)).tore, { message: '10:2 ist gespeichert', timeout: 10000 }).toEqual([10, 2]);
     expect((await serverStand(spiel.id)).arten, 'genau ein Ergebnis-Eintrag, keine Korrektur').toEqual(['RESULT_ENTRY']);
     const eintrag = (await fetchEngineRows(spiel.id))[0];

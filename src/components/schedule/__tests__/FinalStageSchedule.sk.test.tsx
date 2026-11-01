@@ -46,6 +46,8 @@ function halbfinale(partial: Partial<ScheduledMatch> = {}): ScheduledMatch {
 
 const mobile = (container: HTMLElement) => container.querySelector<HTMLElement>('.mobile-view')!;
 const eingabe = (seite: 'home' | 'away') => screen.getByTestId<HTMLInputElement>(`final-score-input-${HF1}-${seite}`);
+const speichernKarte = () => screen.getByTestId<HTMLButtonElement>(`final-score-save-${HF1}`);
+const speichernTabelle = () => screen.getByTestId<HTMLButtonElement>(`match-score-save-${HF1}`);
 
 describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintragbar', () => {
   it('beide Felder nacheinander: erst Heim bleibt stehen, dann Gast speichert 2:1', () => {
@@ -57,8 +59,10 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
     expect(onScoreChange).not.toHaveBeenCalled(); // erst speichern, wenn beide Seiten einen Wert haben
 
     fireEvent.change(eingabe('away'), { target: { value: '1' } });
-    expect(onScoreChange).not.toHaveBeenCalled(); // @FU-101: erst beim Verlassen oder mit Enter
+    expect(onScoreChange).not.toHaveBeenCalled(); // @FU-101: erst mit „Ergebnis speichern“
     fireEvent.blur(eingabe('away'));
+    expect(onScoreChange).not.toHaveBeenCalled(); // Verlassen speichert nichts
+    fireEvent.click(speichernKarte());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 1);
   });
@@ -70,6 +74,8 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
     expect(eingabe('away').value).toBe('0');
     fireEvent.change(eingabe('home'), { target: { value: '3' } });
     fireEvent.blur(eingabe('home'));
+    expect(onScoreChange).not.toHaveBeenCalled();
+    fireEvent.click(speichernKarte());
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 3, 0);
   });
 
@@ -101,7 +107,7 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
     return { ...view, onScoreChange };
   };
 
-  it('Gegeben das Feld für SG Mitte zeigt schon 2: „1“ und „0“ tippen speichert nichts, Verlassen speichert 10:2', async () => {
+  it('Gegeben das Feld für SG Mitte zeigt schon 2: „1“ und „0“ tippen und Verlassen speichern nichts, „Ergebnis speichern“ sendet 10:2', async () => {
     const user = userEvent.setup();
     const { onScoreChange } = rendern(2);
     await user.click(eingabe('home'));
@@ -110,17 +116,20 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
     await user.keyboard('0');
     expect(onScoreChange).not.toHaveBeenCalled();
     await user.tab();
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.click(speichernKarte());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 10, 2);
   });
 
-  it('Enter bestätigt 10:2 genau einmal, auch beim späteren Verlassen', async () => {
+  it('@FU-101 Enter im ersten Feld springt ins zweite und speichert nichts, die Taste sendet genau einmal 10:2 (auch bei doppeltem Antippen)', async () => {
     const user = userEvent.setup();
     const { onScoreChange } = rendern(2);
     await user.click(eingabe('home'));
     await user.keyboard('10{Enter}');
-    expect(onScoreChange).toHaveBeenCalledTimes(1);
-    await user.tab();
+    expect(document.activeElement).toBe(eingabe('away'));
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.dblClick(speichernKarte());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 10, 2);
   });
@@ -142,7 +151,7 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
       return onScoreChange;
     };
 
-    it('„1“ und „0“ im rechten Feld, Verlassen speichert genau einmal 2:10', async () => {
+    it('„1“ und „0“ im rechten Feld, Verlassen speichert nichts, die Taste genau einmal 2:10', async () => {
       const user = userEvent.setup();
       const onScoreChange = rendernGast();
       await user.click(eingabe('away'));
@@ -150,15 +159,18 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
       await user.keyboard('0');
       expect(onScoreChange).not.toHaveBeenCalled();
       await user.tab();
+      expect(onScoreChange).not.toHaveBeenCalled();
+      await user.click(speichernKarte());
       expect(onScoreChange).toHaveBeenCalledTimes(1);
       expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 10);
     });
 
-    it('Enter im rechten Feld speichert genau einmal, auch beim späteren Verlassen', async () => {
+    it('@FU-101 Enter im rechten (zweiten) Feld wirkt bei gefüllten Feldern wie „Ergebnis speichern“, genau einmal 2:10', async () => {
       const user = userEvent.setup();
       const onScoreChange = rendernGast();
       await user.click(eingabe('away'));
       await user.keyboard('10{Enter}');
+      expect(onScoreChange).toHaveBeenCalledTimes(1);
       await user.tab();
       expect(onScoreChange).toHaveBeenCalledTimes(1);
       expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 10);
@@ -194,14 +206,16 @@ describe('@FU-101 Finalrunden-Karte (Handy, Tablet hochkant): zweistelliges Erge
     await user.click(eingabe('home'));
     await user.keyboard('2');
     await user.click(eingabe('away'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('2');
+    await user.click(speichernKarte());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     await waitFor(() => expect([eingabe('home').value, eingabe('away').value]).toEqual(['', '']));
 
     await user.click(eingabe('home'));
     await user.keyboard('2');
     await user.click(eingabe('away'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('2');
+    await user.click(speichernKarte());
     expect(onScoreChange).toHaveBeenCalledTimes(2);
   });
 
@@ -223,7 +237,8 @@ describe('@FU-093 / @FU-097 Finalrunden-Tabelle (Desktop): „Nein“ / „Abbre
     await user.click(tabelle('home'));
     await user.keyboard('2');
     await user.click(tabelle('away'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('2');
+    await user.click(speichernTabelle());
     expect(onScoreChange).toHaveBeenCalledTimes(1);
     expect(onScoreChange).toHaveBeenCalledWith(HF1, 2, 2);
     await waitFor(() => expect([tabelle('home').value, tabelle('away').value]).toEqual(['', '']));
@@ -231,7 +246,8 @@ describe('@FU-093 / @FU-097 Finalrunden-Tabelle (Desktop): „Nein“ / „Abbre
     await user.click(tabelle('home'));
     await user.keyboard('2');
     await user.click(tabelle('away'));
-    await user.keyboard('2{Enter}');
+    await user.keyboard('2');
+    await user.click(speichernTabelle());
     expect(onScoreChange).toHaveBeenCalledTimes(2);
   });
 
@@ -242,7 +258,8 @@ describe('@FU-093 / @FU-097 Finalrunden-Tabelle (Desktop): „Nein“ / „Abbre
     await user.click(tabelle('home'));
     await user.keyboard('2');
     await user.click(tabelle('away'));
-    await user.keyboard('1{Enter}');
+    await user.keyboard('1');
+    await user.click(speichernTabelle());
     await Promise.resolve();
     expect([tabelle('home').value, tabelle('away').value]).toEqual(['2', '1']);
   });
@@ -333,5 +350,79 @@ describe('@OB-064 Finalrunde: Karte (Handy) und Tabelle (Desktop)', () => {
     expect(screen.queryByTestId(`final-decision-${HF1}`)).toBeNull();
     expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('1:0');
     expect(container.querySelector('.match-score-cell-finished')?.textContent).not.toMatch(/n\. V\.|i\. E\./);
+  });
+});
+
+describe('@FU-101 @FU-112 @FU-113 Finalrunde, laufendes Spiel (Tabelle und Karte)', () => {
+  const laeuft = () => ansicht({ matchStatus: 'running', scoreA: 0, scoreB: 0 });
+  const rendernLaufend = (canEndRunning: boolean, onScoreChange: (id: string, a: number, b: number) => ScoreCommitResult = vi.fn()) => {
+    render(
+      <FinalStageSchedule
+        matches={[halbfinale({ scoreA: 0, scoreB: 0 })]}
+        tournament={laeuft()}
+        editable
+        canEndRunning={canEndRunning}
+        onScoreChange={onScoreChange}
+      />,
+    );
+    return onScoreChange;
+  };
+  const tabelle = (seite: 'home' | 'away') => screen.getByTestId<HTMLInputElement>(`match-score-input-${HF1}-${seite}`);
+
+  it('@FU-101 Tippen von „2“ in ein Tor-Feld beendet das laufende Spiel nicht (Tabelle und Karte), die Felder sind leer statt 0', async () => {
+    const user = userEvent.setup();
+    const onScoreChange = rendernLaufend(true);
+    expect([tabelle('home').value, tabelle('away').value, eingabe('home').value, eingabe('away').value]).toEqual(['', '', '', '']);
+
+    await user.click(tabelle('home'));
+    await user.keyboard('2');
+    await user.tab();
+    await user.click(eingabe('home'));
+    await user.keyboard('2');
+    await user.tab();
+    expect(onScoreChange).not.toHaveBeenCalled();
+    expect(speichernTabelle().disabled).toBe(true);
+    expect(speichernKarte().disabled).toBe(true);
+  });
+
+  it('@FU-112 Turnierleitung: „Spiel beenden und Ergebnis eintragen“ sendet 3:1 erst auf Antippen (Tabelle)', async () => {
+    const user = userEvent.setup();
+    const onScoreChange = rendernLaufend(true);
+    expect(speichernTabelle().textContent).toBe('Spiel beenden und Ergebnis eintragen');
+    await user.click(tabelle('home'));
+    await user.keyboard('3');
+    await user.click(tabelle('away'));
+    await user.keyboard('1');
+    expect(onScoreChange).not.toHaveBeenCalled();
+    await user.click(speichernTabelle());
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    expect(onScoreChange).toHaveBeenCalledWith(HF1, 3, 1);
+  });
+
+  it('@FU-112 „Nein“ auf die Rückfrage: das Spiel läuft weiter, die Felder sind wieder leer und lassen sich erneut senden', async () => {
+    const user = userEvent.setup();
+    const onScoreChange = rendernLaufend(true, vi.fn().mockResolvedValue(false));
+    await user.click(eingabe('home'));
+    await user.keyboard('3');
+    await user.click(eingabe('away'));
+    await user.keyboard('1');
+    await user.click(speichernKarte());
+    expect(onScoreChange).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect([eingabe('home').value, eingabe('away').value]).toEqual(['', '']));
+    expect(speichernKarte().disabled).toBe(true);
+  });
+
+  it('@FU-113 Helfer: das laufende Spiel bietet weder Tor-Felder noch „Spiel beenden und Ergebnis eintragen“ an', () => {
+    rendernLaufend(false);
+    expect(screen.queryByTestId(`match-score-input-${HF1}-home`)).toBeNull();
+    expect(screen.queryByTestId(`final-score-input-${HF1}-home`)).toBeNull();
+    expect(screen.queryByTestId(`match-score-save-${HF1}`)).toBeNull();
+    expect(screen.queryByTestId(`final-score-save-${HF1}`)).toBeNull();
+  });
+
+  it('@FU-113 Gegenbeispiel: ein geplantes Spiel zeigt „Ergebnis speichern“ (Ablehnung für Helfer am Ende, @HE-042)', () => {
+    render(<FinalStageSchedule matches={[halbfinale()]} tournament={{ teams }} editable canEndRunning={false} onScoreChange={vi.fn()} />);
+    expect(speichernTabelle().textContent).toBe('Ergebnis speichern');
+    expect(speichernKarte().textContent).toBe('Ergebnis speichern');
   });
 });
