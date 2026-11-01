@@ -2,9 +2,11 @@
 
 ### Eine Quelle, drei Konsumenten
 
-`src/i18n/glossary.json` ist die **normative** Quelle für strittige deutsche
-Fachbegriffe (z.B. "Strafstoßschießen" statt "Elfmeterschießen"). Jeder Eintrag
-hat `de`, `en`, `forbidden_de`, `reason`, `i18nKey`.
+`src/i18n/glossary.json` ist die **normative** Quelle für strittige Fachbegriffe
+(z.B. "Strafstoßschießen" statt "Elfmeterschießen") und für Kürzel. Jeder Eintrag
+hat `de`, `en`, `forbidden_de`, `reason`, `i18nKey`; optional `forbidden_en`,
+`kuerzel`, `tsLint` und `short` (siehe „Kürzel und Kurzformen“). Das Schema steht im
+Kopfkommentar der Datei.
 
 ```
 glossary.json
@@ -28,6 +30,35 @@ glossary.json
 3. In Sprachdateien darf ein Wert auf `sport.json` verweisen statt den
    Begriff zu wiederholen: `"$t(sport:events.penaltyShootout)"`.
 
+### Kürzel und Kurzformen (@OB-075, @OB-076, Daniel 01.11.2026)
+
+**Regel:** Begriffe stehen ausgeschrieben („Halbfinale 1“, „Schiedsrichter 2“, „Gruppe A“, „gegen“, „nach
+Strafstoßschießen“, „10 Minuten“). Eine **Kurzform** gibt es nur, wenn das Glossar sie erlaubt (`short`), und nur an dem
+einen Ort, den `short.context` nennt:
+
+| `short.context` | Wo | Beispiele |
+|---|---|---|
+| `tabellenkopf` | Kopf einer Tabellenspalte | `#`, `Sp.`/`P`, `S U N`/`W D L`, `Diff.`/`GD`, `Pkt.`/`Pts`, `Nr.`/`No.` |
+| `ergebniszelle` | Ergebniszelle | `n. V.`/`a.e.t.` (nach Strafstoßschießen steht „2:2 (4:3)“, keine Kurzform) |
+| `uhr` | Uhr-Beschriftung, Monitor | `Min.`/`min` |
+
+Wie es umgesetzt wird:
+- Kurzformen stehen **nur** im Namensraum `short` (`src/i18n/locales/{de,en}/short.json`), nie als Literal im Code und nie in
+  einem anderen Namensraum. Der Prüfer (`npm run terms:check`) meldet jedes Kürzel aus `forbidden_de` (nur in `de`) und
+  `forbidden_en` (nur in `en`) in jedem Sprachwert außerhalb von `short`, und er verlangt, dass `short.json` genau den
+  `short`-Einträgen des Glossars entspricht.
+- Im Tabellenkopf nutzt man `<ShortLabel term="played" />` (`ui/atoms`): sichtbar die Kurzform, als `title` und für Screenreader
+  der ausgeschriebene Begriff (`sport:tabelle.*`). In PDF-Köpfen: `translate('short:tabellenkopf.…')`. In Texten, die eine
+  Kurzform tragen müssen (Monitor „~5 Min.“): Verschachtelung `$t(short:uhr.minutes)`.
+- Mehrere Wörter in einem Text („Referee 2“, „Group A“, Paarungen) kommen aus der Sprachdatei, nicht aus dem Code
+  (`t('tournament:refereeOptions.numbered', { number })`, `<Versus />`); Minuten mit Zählform:
+  `$t(sport:zeit.minuteCount, {"count": {{minutes}} })` („1 Minute“, „5 Minuten“).
+- Die ESLint-Regel meldet Kürzel in `.ts/.tsx`-Literalen (Kürzel-Begriffe sind groß-/kleinschreibungssensibel und lösen keine
+  „preferred“-Warnung aus). Ausnahmen mit Begründung: `tsLint: false` (interne `matchId` „P3“), Vereinskürzel, Rechtstexte, Fixtures.
+- Neues Kürzel verbieten: Eintrag mit `kuerzel: true`, `forbidden_de`/`forbidden_en`, `i18nKey` (ausgeschriebene Form in
+  `sport.json`) und – falls eine Kurzform erlaubt sein soll – `short` samt Eintrag in `short.json` und `SHORT_TERMS`
+  (`ui/atoms/shortTerms.ts`; der Gleichlauftest `kurzformen.test.ts` prüft es).
+
 ### Neue Sprache hinzufügen
 
 `scripts/check-terminology.cjs` erkennt Sprachverzeichnisse und Namespaces
@@ -35,7 +66,8 @@ dynamisch aus `src/i18n/locales/` — eine neue Sprache wird automatisch
 mitgeprüft (Schlüssel-Parität), ohne das Skript anzufassen. Nur `glossary.json`
 selbst kennt ausschließlich `de`/`en` als normative Felder; eine dritte Sprache
 braucht dafür keine Erweiterung des Glossars, nur vollständige Schlüssel in
-ihrer eigenen `sport.json`.
+ihrer eigenen `sport.json` und `short.json`. Verbotene Kürzel und Kurzformen der
+neuen Sprache bräuchten zusätzliche Felder (`forbidden_<sprache>`, `short.<sprache>`).
 
 ### Die Umlaut/ß-Falle
 
