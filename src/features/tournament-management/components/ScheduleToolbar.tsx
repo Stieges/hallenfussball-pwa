@@ -26,7 +26,12 @@ export interface ScheduleToolbarProps {
   onStartEditing: () => void;
   onSave: () => void;
   onCancel: () => void;
-  hasUnsavedChanges: boolean;
+  /** Zahl der Änderungen im Entwurf (@ZP-101: „n Änderungen nicht gespeichert“) */
+  changeCount: number;
+  /** Speichern läuft: Taste gesperrt (kein zweites Speichern) */
+  isSaving?: boolean;
+  /** Konflikte im Spielplan: Hinweis in der Leiste (@ZP-105), nur für die Turnierleitung */
+  conflictCount?: number;
 
   // Undo/Redo
   onUndo: () => void;
@@ -62,7 +67,9 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   onStartEditing,
   onSave,
   onCancel,
-  hasUnsavedChanges,
+  changeCount,
+  isSaving = false,
+  conflictCount = 0,
   onUndo,
   onRedo,
   canUndo,
@@ -152,8 +159,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
           ) : null
         ) : (
           <>
-            <span style={editModeBadgeStyle}>
-              {t('toolbar.editMode')}
+            <span style={editModeBadgeStyle} data-testid="schedule-unsaved-count" role="status">
+              {changeCount > 0 ? t('draft.unsaved', { count: changeCount }) : t('toolbar.editMode')}
             </span>
 
             {/* Undo/Redo buttons */}
@@ -162,6 +169,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               size="sm"
               onClick={onUndo}
               disabled={!canUndo}
+              data-testid="schedule-edit-undo"
             >
               {t('toolbar.undo')}
             </Button>
@@ -170,6 +178,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               size="sm"
               onClick={onRedo}
               disabled={!canRedo}
+              data-testid="schedule-edit-redo"
             >
               {t('toolbar.redo')}
             </Button>
@@ -180,6 +189,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={onRedistributeSR}
+                data-testid="schedule-redistribute-sr"
               >
                 {t('toolbar.redistributeSR')}
               </Button>
@@ -189,6 +199,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={onRedistributeFields}
+                data-testid="schedule-redistribute-fields"
               >
                 {t('toolbar.redistributeFields')}
               </Button>
@@ -198,7 +209,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               variant="primary"
               size="sm"
               onClick={onSave}
-              disabled={!hasUnsavedChanges && !canUndo}
+              disabled={changeCount === 0 || isSaving}
+              data-testid="schedule-edit-save"
             >
               {t('toolbar.save')}
             </Button>
@@ -206,10 +218,17 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               variant="ghost"
               size="sm"
               onClick={onCancel}
+              data-testid="schedule-edit-cancel"
             >
               {t('toolbar.cancel')}
             </Button>
           </>
+        )}
+
+        {canEditSchedule && conflictCount > 0 && (
+          <span style={{ ...editModeBadgeStyle, color: cssVars.colors.warning }} data-testid="schedule-conflict-hint">
+            {t('draft.conflictHint', { count: conflictCount })}
+          </span>
         )}
 
         {/* View Mode Toggle (nach dem Abschluss entfällt er: nur die Tabelle, R3-4 m-2) */}

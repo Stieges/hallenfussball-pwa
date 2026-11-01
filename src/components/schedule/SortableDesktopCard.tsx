@@ -16,20 +16,11 @@ import { buildSideContext, matchHeading, sideName, type SideContext } from './ma
 import { getGroupShortCode } from '../../utils/displayNames';
 import type { MatchCardStatus } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
+import type { RefereeChoice } from './refereeChoices';
+import { SwapWithButton } from './SwapWithButton';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface RefereeSelectOption {
-  value: number;
-  label: string;
-}
-
-export interface FieldSelectOption {
-  value: number;
-  label: string;
-}
+/** Auswahl-Eintrag (Schiedsrichter aus `refereeChoices`, Feld) */
+type SelectOption = RefereeChoice;
 
 export interface SortableDesktopCardProps {
   /** Match data */
@@ -61,11 +52,11 @@ export interface SortableDesktopCardProps {
   /** Show referee selector */
   showReferees: boolean;
   /** Referee options for dropdown */
-  refereeOptions: RefereeSelectOption[];
+  refereeOptions: SelectOption[];
   /** Show field selector */
   showFields: boolean;
   /** Field options for dropdown */
-  fieldOptions: FieldSelectOption[];
+  fieldOptions: SelectOption[];
   /** Callback when referee changes */
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   /** Callback when field changes */
@@ -170,8 +161,8 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     flex: 1,
     display: 'grid',
     gridTemplateColumns: showReferees
-      ? 'auto auto auto 1fr auto 1fr auto auto'
-      : 'auto auto 1fr auto 1fr auto auto',
+      ? 'auto auto auto 1fr auto 1fr auto auto auto'
+      : 'auto auto 1fr auto 1fr auto auto auto',
     alignItems: 'center',
     gap: cssVars.spacing.md,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
@@ -209,8 +200,8 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
     backgroundColor: cssVars.colors.background,
-    color: cssVars.colors.textPrimary,
-    cursor: 'pointer',
+    color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
+    cursor: isLocked ? 'not-allowed' : 'pointer',
     minWidth: 60,
     // Fix: Prevent all options from rendering at once
     overflow: 'hidden',
@@ -272,7 +263,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div ref={setNodeRef} style={containerStyle} data-match-card>
+    <div ref={setNodeRef} style={containerStyle} data-match-card data-match-number={match.matchNumber}>
       <div style={rowWrapperStyle}>
         {/* Drag Handle */}
         <div
@@ -301,14 +292,13 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
                 const value = e.target.value;
                 onRefereeChange(match.id, value ? parseInt(value) : null);
               }}
+              disabled={isLocked}
               style={srSelectStyle}
               aria-label={t('sortable.referee')}
             >
               <option value="">{t('sortable.refereePlaceholder')}</option>
               {refereeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t('sortable.refereeOption', { label: opt.label })}
-                </option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           )}
@@ -346,6 +336,8 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
           <div style={groupStyle}>
             {showGroupLabel && ((match.label === undefined || match.label === '' ? '' : (matchHeading(match, sides) ?? '')) || (match.group && match.group !== 'all' ? t('matchCard.groupShort', { group: getGroupShortCode(match.group, tournament) }) : ''))}
           </div>
+          {/* @ZP-100: Tauschen ohne Ziehen */}
+          <SwapWithButton matchId={match.id} locked={isLocked} />
         </div>
       </div>
     </div>

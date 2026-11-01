@@ -5,23 +5,10 @@
  * US-SCHEDULE-EDITOR: Now supports Drag & Drop for match swapping in edit mode
  */
 
-import { CSSProperties, useState, useMemo, useEffect } from 'react';
+import { CSSProperties, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  DndContext,
-  DragOverlay,
-  DragStartEvent,
-  DragEndEvent,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-} from '@dnd-kit/sortable';
+import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { SpectatorClock } from '../../core/view';
@@ -36,6 +23,9 @@ import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitActi
 import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
+import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
+import { useRefereeChoices } from './refereeChoices';
+import { SwapWithButton } from './SwapWithButton';
 
 interface PendingChanges {
   refereeAssignments: Record<string, number | null>;
@@ -97,71 +87,10 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
   // Eine Statusquelle: die Ansicht (läuft ∨ unterbrochen = läuft; ohne Ansicht gilt jedes Spiel als geplant)
   const statusOf = (match: ScheduledMatch) => cardStatusOf(matchViewOf(sides, match.id));
-  // DnD State
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  // Local display order - tracks visual order of matches (reorders on drag)
-  const [displayOrder, setDisplayOrder] = useState<string[]>(() =>
-    matches.map(m => m.id)
-  );
-
-  // Sync displayOrder when matches change (e.g., when not in edit mode or on save/reset)
-  useEffect(() => {
-    if (!editingSchedule) {
-      setDisplayOrder(matches.map(m => m.id));
-    }
-  }, [matches, editingSchedule]);
-
-  // Reset when entering edit mode (start fresh from current order)
-  useEffect(() => {
-    if (editingSchedule) {
-      setDisplayOrder(matches.map(m => m.id));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset when entering edit mode, not when matches change
-  }, [editingSchedule]);
-
-  // DnD Sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    if (!over || active.id === over.id) { return; }
-
-    const sourceMatchId = active.id as string;
-    const targetMatchId = over.id as string;
-
-    // `false` = abgelehnt (@ZP-093): die Anzeige ordnet dann nicht um
-    if (onMatchSwap?.(sourceMatchId, targetMatchId) === false) { return; }
-
-    setDisplayOrder(prevOrder => {
-      const oldIndex = prevOrder.indexOf(sourceMatchId);
-      const newIndex = prevOrder.indexOf(targetMatchId);
-      if (oldIndex === -1 || newIndex === -1) { return prevOrder; }
-      return arrayMove(prevOrder, oldIndex, newIndex);
-    });
-  };
-
-  // Sort matches by displayOrder for rendering
-  const sortedMatches = useMemo(() => {
-    const orderMap = new Map(displayOrder.map((id, index) => [id, index]));
-    return [...matches].sort((a, b) => {
-      const indexA = orderMap.get(a.id) ?? Infinity;
-      const indexB = orderMap.get(b.id) ?? Infinity;
-      return indexA - indexB;
-    });
-  }, [matches, displayOrder]);
-
-  // Get active match for drag overlay
-  const activeMatch = activeId ? sortedMatches.find(m => m.id === activeId) : null;
+  // Ziehen/Tauschen (@ZP-100): Liste nach Uhrzeit, Tausch über onMatchSwap (Entwurf)
+  const { sensors, sortedMatches, activeMatch, handleDragStart, handleDragEnd, handleDragCancel } = useScheduleDrag(matches, onMatchSwap);
+  // Schiedsrichter-Auswahl aus einer Quelle (Teams pfeifen: Teamnamen, @W3-011)
+  const refereeChoiceList = useRefereeChoices(refereeConfig, tournament?.teams);
 
   if (matches.length === 0) {
     return (
@@ -179,20 +108,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const showReferees = refereeConfig && refereeConfig.mode !== 'none';
   const showFields = numberOfFields > 1;
 
-  const getRefereeOptions = () => {
-    if (!refereeConfig) { return []; }
-    const numberOfReferees = refereeConfig.mode === 'organizer'
-      ? (refereeConfig.numberOfReferees ?? 2)
-      : matches.length;
-    const options = [];
-    for (let i = 1; i <= numberOfReferees; i++) {
-      const name = refereeConfig.refereeNames?.[i];
-      const label = name ? `${i} (${name})` : i.toString();
-      options.push({ value: i, label });
-    }
-    return options;
-  };
-
   const getFieldOptions = () => {
     const options = [];
     for (let i = 1; i <= numberOfFields; i++) {
@@ -201,7 +116,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     return options;
   };
 
-  const refereeOptions = getRefereeOptions();
+  const refereeOptions = refereeChoiceList;
   const fieldOptions = getFieldOptions();
 
   const containerStyle: CSSProperties = { marginBottom: cssVars.spacing.lg };
@@ -303,6 +218,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
                       <span>{match.matchNumber}</span>
                       {rowView?.badge.kind === 'badge' && <MatchStatusBadge model={rowView.badge} size="row" testId={isRunning ? `final-row-live-${match.id}` : undefined} />}
+                      {editingSchedule && <SwapWithButton matchId={match.id} locked={status === 'running' || status === 'finished'} />}
                     </div>
                   </td>
                   {showReferees && (() => {
@@ -312,7 +228,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     return (
                       <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? cssVars.spacing.xs : cssVars.spacing.sm, backgroundColor: isPendingChange ? cssVars.colors.editorDragActiveBg : undefined }}>
                         {editingSchedule && onRefereeChange ? (
-                          <select value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
+                          <select disabled={(status === 'running' || status === 'finished')} value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
                             <option value="">-</option>
                             {refereeOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                           </select>
@@ -370,7 +286,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     return (
                       <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? cssVars.spacing.xs : cssVars.spacing.sm, backgroundColor: isPendingChange ? cssVars.colors.editorDragActiveBg : undefined }}>
                         {editingSchedule && onFieldChange ? (
-                          <select value={displayedField || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
+                          <select disabled={(status === 'running' || status === 'finished')} value={displayedField || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
                             {fieldOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                           </select>
                         ) : (<span style={{ fontWeight: cssVars.fontWeights.semibold }}>{displayedField || '-'}</span>)}
@@ -429,8 +345,10 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            autoScroll={SCHEDULE_AUTO_SCROLL}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
             <SortableContext
               items={sortedMatches.map(m => m.id)}
@@ -523,7 +441,10 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               fieldOptions={fieldOptions}
               onRefereeChange={onRefereeChange}
               onFieldChange={onFieldChange}
-              extraAction={<MatchForfeitAction matchId={match.id} viewStatus={matchView?.status} forfeit={forfeit} />}
+              extraAction={<>
+                <MatchForfeitAction matchId={match.id} viewStatus={matchView?.status} forfeit={forfeit} />
+                {editingSchedule && <SwapWithButton matchId={match.id} locked={status === 'running' || isFinished} />}
+              </>}
             />
           );
         })}

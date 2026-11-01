@@ -70,7 +70,7 @@ function renderToolbar(tournament: Tournament = hallencupTournament(SHARED)) {
   return render(
     <MemoryRouter>
       <ScheduleToolbar
-        isEditing={false} onStartEditing={noop} onSave={noop} onCancel={noop} hasUnsavedChanges={false}
+        isEditing={false} onStartEditing={noop} onSave={noop} onCancel={noop} changeCount={0}
         onUndo={noop} onRedo={noop} canUndo={false} canRedo={false}
         onRedistributeSR={noop} onRedistributeFields={noop} showSRButton={false} showFieldsButton={false}
         viewMode="table" onViewModeChange={noop}
@@ -413,7 +413,7 @@ function renderToolbarWithRoutes(tournament: Tournament) {
             <>
               <LocationProbe />
               <ScheduleToolbar
-                isEditing={false} onStartEditing={noop} onSave={noop} onCancel={noop} hasUnsavedChanges={false}
+                isEditing={false} onStartEditing={noop} onSave={noop} onCancel={noop} changeCount={0}
                 onUndo={noop} onRedo={noop} canUndo={false} canRedo={false}
                 onRedistributeSR={noop} onRedistributeFields={noop} showSRButton={false} showFieldsButton={false}
                 viewMode="table" onViewModeChange={noop}

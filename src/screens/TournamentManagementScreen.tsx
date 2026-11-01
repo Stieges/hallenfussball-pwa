@@ -253,7 +253,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
                   tournament={tournament}
                   schedule={schedule}
                   currentStandings={currentStandings}
-                  onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+                  onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }} onTournamentSave={saveTournamentOrThrow}
                   onLocalTournamentUpdate={applyRemote}
                   onMatchesUpdate={handleMatchesUpdate}
                   onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
