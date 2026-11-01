@@ -66,8 +66,9 @@ describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
     const participants = section(tokens, '1Teilnehmer', '2Gruppenphase');
     expect(participants.some(t => t.includes(key))).toBe(true);
     // Spiele: Zeile mit dem Namen als eigenes Stück in der Gruppenphase, vor der ersten Tabelle.
+    // Ein langer Name darf in der Zelle an einem Leerzeichen umbrechen (gleich breite Ziffern, T1); dann steht er in zwei Stücken.
     const matches = section(tokens, '2Gruppenphase', '3Tabelle–GruppeA');
-    expect(matches).toContain(key);
+    expect(matches.join('')).toContain(key);
     // Tabelle Gruppe A: Name als eigenes Stück zwischen Titel und Gruppe B.
     const table = section(tokens, '3Tabelle–GruppeA', 'Tabelle–GruppeB');
     expect(table).toContain(key);

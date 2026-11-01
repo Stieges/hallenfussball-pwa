@@ -54,6 +54,11 @@ export function descentEmAus(datei: string): number {
 
 /** Alle Codepunkte, die die cmap der Schriftdatei auf ein Glyph (ungleich .notdef) abbildet. Formate 4 und 12. */
 export function cmapCodepoints(datei: string): Set<number> {
+  return new Set(cmapGlyphen(datei).keys());
+}
+
+/** Codepunkt → Glyph-Nummer laut cmap der Schriftdatei (ohne .notdef). Formate 4 und 12. */
+export function cmapGlyphen(datei: string): Map<number, number> {
   const bytes = ttfBytes(datei);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const anzahl = view.getUint16(4);
@@ -65,7 +70,7 @@ export function cmapCodepoints(datei: string): Set<number> {
     }
   }
   if (cmap === undefined) {throw new Error(`cmap fehlt in ${datei}`);}
-  const codes = new Set<number>();
+  const codes = new Map<number, number>();
   const teiltabellen = view.getUint16(cmap + 2);
   for (let i = 0; i < teiltabellen; i++) {
     const platform = view.getUint16(cmap + 4 + 8 * i);
@@ -94,7 +99,7 @@ export function cmapCodepoints(datei: string): Set<number> {
             const roh = view.getUint16(adresse);
             glyph = roh === 0 ? 0 : (roh + delta) & 0xffff;
           }
-          if (glyph !== 0) {codes.add(code);}
+          if (glyph !== 0) {codes.set(code, glyph);}
         }
       }
     } else if (format === 12) {
@@ -104,12 +109,64 @@ export function cmapCodepoints(datei: string): Set<number> {
         const bis = view.getUint32(start + 20 + 12 * g);
         const glyph = view.getUint32(start + 24 + 12 * g);
         for (let code = von; code <= bis; code++) {
-          if (glyph + (code - von) !== 0) {codes.add(code);}
+          if (glyph + (code - von) !== 0) {codes.set(code, glyph + (code - von));}
         }
       }
     }
   }
   return codes;
+}
+
+/** Tabellenverzeichnis einer Schriftdatei: Tag → Offset. */
+function tabellenOffsets(bytes: Buffer): Map<string, number> {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const tabellen = new Map<string, number>();
+  for (let i = 0; i < view.getUint16(4); i++) {
+    const eintrag = 12 + 16 * i;
+    tabellen.set(String.fromCharCode(...bytes.subarray(eintrag, eintrag + 4)), view.getUint32(eintrag + 8));
+  }
+  return tabellen;
+}
+
+/** Anzahl der Glyphen im Standard-Mac-Satz der Tabelle `post` (Format 2): kleinere Nummern haben keinen eigenen Namen. */
+const MAC_STANDARD_GLYPHS = 258;
+
+/**
+ * Glyph-Name des Zeichens laut `post` (Format 2) und cmap. Eigene Namen („one.tf“, „l.ss02“) kommen im Klartext zurück,
+ * Glyphen aus dem Standard-Mac-Satz als `mac:<Nummer>`: Der Test braucht nur den Unterschied zu den Namen der Merkmale.
+ */
+export function glyphNameAus(datei: string, codepoint: number): string {
+  const bytes = ttfBytes(datei);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const post = tabellenOffsets(bytes).get('post');
+  const glyph = cmapGlyphen(datei).get(codepoint);
+  if (post === undefined || glyph === undefined) {throw new Error(`post oder Glyph für U+${codepoint.toString(16)} fehlt in ${datei}`);}
+  if (view.getUint32(post) !== 0x00020000) {throw new Error(`post-Format 2 erwartet (Glyph-Namen) in ${datei}`);}
+  const anzahl = view.getUint16(post + 32);
+  const indizes = Array.from({ length: anzahl }, (_, i) => view.getUint16(post + 34 + 2 * i));
+  const index = indizes[glyph];
+  if (index === undefined) {throw new Error(`Glyph ${glyph} nicht im post von ${datei}`);}
+  if (index < MAC_STANDARD_GLYPHS) {return `mac:${index}`;}
+  // Namen: Pascal-Strings hinter der Indexliste, Nummer index − 258
+  let lesen = post + 34 + 2 * anzahl;
+  for (let nr = MAC_STANDARD_GLYPHS; ; nr++) {
+    const laenge = view.getUint8(lesen);
+    if (nr === index) {return String.fromCharCode(...bytes.subarray(lesen + 1, lesen + 1 + laenge));}
+    lesen += 1 + laenge;
+  }
+}
+
+/** Vorschubbreite des Zeichens in Einheiten der Schrift (`hmtx`). */
+export function advanceAus(datei: string, codepoint: number): number {
+  const bytes = ttfBytes(datei);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const tabellen = tabellenOffsets(bytes);
+  const hmtx = tabellen.get('hmtx');
+  const hhea = tabellen.get('hhea');
+  const glyph = cmapGlyphen(datei).get(codepoint);
+  if (hmtx === undefined || hhea === undefined || glyph === undefined) {throw new Error(`hmtx, hhea oder Glyph fehlt in ${datei}`);}
+  const metriken = view.getUint16(hhea + 34);
+  return view.getUint16(hmtx + 4 * Math.min(glyph, metriken - 1));
 }
 
 /** Ascent der Regular- und Bold-Datei. */

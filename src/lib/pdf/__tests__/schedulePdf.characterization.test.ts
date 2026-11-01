@@ -144,8 +144,14 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(finale).toBeDefined();
     expect(text).toContain('Spiel um Platz 3');
     if (finale) {
-      expect(text).toContain(sideName(finale, 'A', schedule.allMatches));
-      expect(text).toContain(sideName(finale, 'B', schedule.allMatches));
+      // Die Herkunft („Sieger Halbfinale 1“) darf in der schmalen Zelle am Leerzeichen umbrechen (gleich breite Ziffern, T1):
+      // dann stehen Anfang und Schluss in getrennten Stücken
+      for (const side of ['A', 'B'] as const) {
+        const name = sideName(finale, side, schedule.allMatches);
+        const cut = name.lastIndexOf(' ');
+        const gesetzt = text.includes(name) || (cut > 0 && text.includes(name.slice(0, cut)) && text.includes(name.slice(cut + 1)));
+        expect(gesetzt, `„${name}“ steht im PDF`).toBe(true);
+      }
     }
   });
 

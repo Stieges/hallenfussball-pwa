@@ -51,12 +51,17 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 25.10. (R2 PR 4, @W2A-012): die Vorgabe der Schützen ist 3 statt 5; Text-für-Text verglichen (Vorgabe 5 gegen 3):
  * nur die beiden K.-o.-Zeilen „… 5 Schützen je Team“ → „… 3 Schützen je Team“ (EN „shooters“), Lage unverändert. Stände davor:
  * 92e27f9338d0, 026dca7efbd1, 2ad20180580c, 329ef9fb4fa6, EN 1e5c882d540d.
+ * Neu aufgenommen 02.11. (C-PDF-SCHRIFT-OHNE-MERKMALE, Paket PDF T1): neu geschnittene Schrift mit gleich breiten Ziffern und
+ * Doppelpunkt (alle Ziffern 1328 statt 833–1323 Einheiten), I und l unterscheidbar. Text-für-Text verglichen (Lauf mit alter und neuer
+ * Schrift, alle fünf Fixtures): gleiche Seitenzahl, gleiche Textstücke bis auf die Herkunft der Finalteams, die in den Hochformaten
+ * wegen der breiteren „1“ und „2“ umbricht („Sieger Halbfinale“ / „1“; EN „Loser Semi-final“ / „1“); alles andere verschiebt sich um
+ * Bruchteile eines Millimeters. Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '5e61f5f4ce76',
-  '20 Spiele, hoch': 'fe74f2817606',
-  '12 Spiele, quer': '0fd9a8f07abe',
-  '20 Spiele, quer': '9166518dd987',
+  '12 Spiele, hoch': 'ee37c5de21d3',
+  '20 Spiele, hoch': '574eec8b7779',
+  '12 Spiele, quer': '0bf091cb1408',
+  '20 Spiele, quer': 'c2826c814458',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -71,7 +76,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('78c5516555dd');
+    expect(layoutDigest(pages)).toBe('fb13bbb6d917');
   });
 });
 

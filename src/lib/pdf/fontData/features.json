@@ -1,0 +1,84 @@
+{
+  "source": "Inter 4.1",
+  "frozenFeatures": {
+    "tnum": "0123456789:",
+    "cv05": "alle",
+    "cv08": "alle"
+  },
+  "glyphs": {
+    "0": {
+      "glyph": "zero.tf",
+      "standard": "zero"
+    },
+    "1": {
+      "glyph": "one.tf",
+      "standard": "one"
+    },
+    "2": {
+      "glyph": "two.tf",
+      "standard": "two"
+    },
+    "3": {
+      "glyph": "three.tf",
+      "standard": "three"
+    },
+    "4": {
+      "glyph": "four.tf",
+      "standard": "four"
+    },
+    "5": {
+      "glyph": "five.tf",
+      "standard": "five"
+    },
+    "6": {
+      "glyph": "six.tf",
+      "standard": "six"
+    },
+    "7": {
+      "glyph": "seven.tf",
+      "standard": "seven"
+    },
+    "8": {
+      "glyph": "eight.tf",
+      "standard": "eight"
+    },
+    "9": {
+      "glyph": "nine.tf",
+      "standard": "nine"
+    },
+    "I": {
+      "glyph": "I.1",
+      "standard": "I"
+    },
+    "l": {
+      "glyph": "l.ss02",
+      "standard": "l"
+    }
+  },
+  "digitAdvanceUnits": {
+    "regular": [
+      1328
+    ],
+    "bold": [
+      1324
+    ]
+  },
+  "keptAdvanceUnits": {
+    "regular": {
+      " ": 576,
+      "-": 942,
+      ".": 590,
+      ",": 590,
+      "(": 747,
+      ")": 747
+    },
+    "bold": {
+      " ": 485,
+      "-": 958,
+      ".": 684,
+      ",": 684,
+      "(": 772,
+      ")": 772
+    }
+  }
+}
