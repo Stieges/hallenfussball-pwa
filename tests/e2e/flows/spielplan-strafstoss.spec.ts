@@ -61,13 +61,14 @@ async function trageEin(page: Page, heim: number, gast: number, bestaetigung: 'e
   await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4);
   await page.getByRole('spinbutton').filter({ visible: true }).nth(0).fill(String(heim));
   await page.getByRole('spinbutton').filter({ visible: true }).nth(1).fill(String(gast));
-  // @FU-101: gespeichert wird erst bei Enter oder beim Verlassen des Feldes
+  // @FU-101: gespeichert wird nur mit „Ergebnis speichern“ (Enter und Verlassen des Feldes speichern nichts)
   const gastFeld = page.getByRole('spinbutton').filter({ visible: true }).nth(1);
-  if (bestaetigung === 'enter') {
-    await gastFeld.press('Enter');
-  } else {
+  if (bestaetigung === 'verlassen') {
     await gastFeld.blur();
+    await page.waitForTimeout(500);
+    await expect(page.getByTestId('result-entry-shootout-dialog')).toHaveCount(0);
   }
+  await page.getByRole('button', { name: 'Ergebnis speichern' }).filter({ visible: true }).first().click();
 }
 const ZWEI_ZWEI = /2\s?:\s?2/;
 
