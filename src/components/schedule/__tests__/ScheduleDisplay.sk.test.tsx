@@ -36,7 +36,7 @@ function aktuell(overrides: Record<string, Partial<Match>>): Match[] {
 }
 
 describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', () => {
-  it('Strafstoßschießen am Spiel: Karte zeigt (4)/(3) und „beendet i. E.“, Tabelle „2:2 (4:3 i. E.)“', () => {
+  it('Strafstoßschießen am Spiel: Karte zeigt (4)/(3) und „beendet nach Strafstoßschießen“, Tabelle „2:2 (4:3)“', () => {
     const currentMatches = aktuell({
       [HF1.id]: { scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty', matchStatus: 'finished' },
     });
@@ -45,11 +45,11 @@ describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', ()
     );
     expect(screen.getByTestId(`final-penalty-${HF1.id}-home`).textContent).toBe('(4)');
     expect(screen.getByTestId(`final-penalty-${HF1.id}-away`).textContent).toBe('(3)');
-    expect(screen.getByTestId(`final-decision-${HF1.id}`).textContent).toBe('beendet i. E.');
-    expect(container.textContent).toContain('2:2 (4:3 i. E.)');
+    expect(screen.getByTestId(`final-decision-${HF1.id}`).textContent).toBe('beendet nach Strafstoßschießen');
+    expect(container.textContent).toContain('2:2 (4:3)');
   });
 
-  it('Verlängerung am Spiel: Tore 3 und 2, „n. V.“, Tabelle „3:2 n. V.“', () => {
+  it('Verlängerung am Spiel: Tore 3 und 2, „beendet nach Verlängerung“, Tabelle „3:2 n. V.“', () => {
     const currentMatches = aktuell({
       [HF1.id]: { scoreA: 2, scoreB: 2, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'overtime', matchStatus: 'finished' },
     });
@@ -57,7 +57,7 @@ describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', ()
       <ScheduleDisplay schedule={schedule} currentMatches={currentMatches} view={viewOf(currentMatches, teams)} />,
     );
     expect(screen.getByTestId(`final-goals-${HF1.id}-home`).textContent).toBe('3');
-    expect(screen.getByTestId(`final-decision-${HF1.id}`).textContent).toBe('n. V.');
+    expect(screen.getByTestId(`final-decision-${HF1.id}`).textContent).toBe('beendet nach Verlängerung');
     expect(container.textContent).toContain('3:2 n. V.');
   });
 

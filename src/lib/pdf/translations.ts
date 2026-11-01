@@ -10,7 +10,7 @@ import type { OriginKind, OriginRound } from './origin';
 
 export type PdfLocale = 'de' | 'en';
 
-/** Übersetzt einen Schlüssel unter `tournament` (z. B. `pdf.nr`) mit optionalen Werten. */
+/** Übersetzt einen Schlüssel unter `tournament` (z. B. `pdf.group`) oder mit Namensraum davor (`short:tabellenkopf.rank`) mit optionalen Werten. */
 export type PdfTranslator = (key: string, values?: Record<string, string | number>) => string;
 
 export interface PdfTexts {
@@ -38,7 +38,7 @@ export interface PdfTexts {
   home: string;
   result: string;
   away: string;
-  /** Spaltenkopf „SR“ (@DR-025). */
+  /** Spaltenkopf „Schiedsrichter“ (@DR-025, @OB-075: ausgeschrieben). */
   referee: string;
   /** Kennzeichen unter dem Ergebnis eines laufenden Spiels (@BM-012) und im Kasten eines ausgefallenen (@BM-013). */
   live: string;
@@ -204,6 +204,8 @@ function isoToUtc(isoDate: string): Date | undefined {
 /** Baut alle Texte über den Übersetzer. Schlüssel liegen unter `pdf.*`. */
 export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfTexts {
   const s = (key: string): string => translate(`pdf.${key}`);
+  // Kurzformen im Tabellenkopf (@OB-075) kommen aus dem Namensraum `short` (Glossar: short.context „tabellenkopf“).
+  const head = (key: string): string => translate(`short:tabellenkopf.${key}`);
   const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
 
@@ -220,7 +222,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     matches: s('matches'),
     finalRanking: s('finalRanking'),
     placementPending: { afterFinal: s('placementPending.afterFinal'), afterLast: s('placementPending.afterLast') },
-    nr: s('nr'),
+    nr: head('number'),
     timeHeader: s('timeHeader'),
     field: s('field'),
     group: s('group'),
@@ -233,15 +235,15 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     corrected: time => translate('pdf.corrected', { time }),
     afterOvertime: s('afterOvertime'),
     shootout: s('shootout'),
-    pos: s('pos'),
+    pos: head('rank'),
     team: s('team'),
-    played: s('played'),
-    won: s('won'),
-    drawn: s('drawn'),
-    lost: s('lost'),
+    played: head('played'),
+    won: head('won'),
+    drawn: head('drawn'),
+    lost: head('lost'),
     goals: s('goals'),
-    diff: s('diff'),
-    points: s('points'),
+    diff: head('goalDifference'),
+    points: head('points'),
     thirdPlace: s('thirdPlace'),
     fifthSixth: s('fifthSixth'),
     seventhEighth: s('seventhEighth'),

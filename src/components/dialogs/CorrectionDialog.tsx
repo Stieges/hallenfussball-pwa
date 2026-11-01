@@ -14,6 +14,7 @@ import { cssVars, dialogWidths } from '../../design-tokens';
 import { DialogSurface } from '../ui/molecules/DialogSurface';
 import { useToast } from '../ui/Toast';
 import { CorrectionReason, CORRECTION_REASONS } from '../../types/userProfile';
+import { Versus } from '../ui/atoms';
 
 interface CorrectionDialogProps {
   isOpen: boolean;
@@ -228,7 +229,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
         {/* Match Info */}
         <div style={matchInfoStyle}>
           <div style={matchLabelStyle}>{matchLabel}</div>
-          <div style={teamsStyle}>{teamA} vs {teamB}</div>
+          <div style={teamsStyle}>{teamA} <Versus /> {teamB}</div>
           <div style={originalScoreStyle}>
             <span>{t('correctionDialog.currentResult')}:</span>
             <strong>{originalScoreA} : {originalScoreB}</strong>

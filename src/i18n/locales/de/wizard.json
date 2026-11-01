@@ -26,7 +26,7 @@
       "hintTitle": "Bambini-Turnier",
       "hintText": "Bei Bambini-Turnieren werden Ergebnisse und Tabellen für Zuschauer standardmäßig ausgeblendet. Du kannst dies im nächsten Schritt anpassen."
     },
-    "minuteSuffix": "Min."
+    "minuteSuffix": "Minuten"
   },
   "step2": {
     "title": "Modus & Spielsystem",
@@ -63,14 +63,15 @@
     "summaries": {
       "activeCriteria": "{{count}} aktive Kriterien",
       "refereeNone": "Keine",
-      "refereeCount": "{{count}} SR",
-      "refereeTeams": "Teams stellen SR",
+      "refereeCount_one": "{{count}} Schiedsrichter",
+      "refereeCount_other": "{{count}} Schiedsrichter",
+      "refereeTeams": "Teams stellen Schiedsrichter",
       "time": "{{game}}′ Spiel / {{break}}′ Pause",
       "finalsNone": "Keine",
       "finalsFinalOnly": "Nur Finale",
-      "finalsTop4": "HF + Finale",
-      "finalsTop8": "Mit VF",
-      "finalsTop16": "Mit AF",
+      "finalsTop4": "Halbfinale + Finale",
+      "finalsTop8": "Mit Viertelfinale",
+      "finalsTop16": "Mit Achtelfinale",
       "finalsAllPlaces": "Alle Plätze",
       "specialNone": "Keine",
       "specialBambini": "Bambini-Modus",
@@ -97,7 +98,7 @@
     "startTime": "Startzeit",
     "startTimePlaceholder": "09:00",
     "rulebook": "Regelwerk (optional)",
-    "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
+    "rulebookPlaceholder": "z. B. Richtlinien des Bayerischen Fußball-Verbands für Futsal",
     "rulebookLimit": "Höchstens 80 Zeichen.",
     "rulebookTruncated": "Auf 80 Zeichen gekürzt."
   },
@@ -232,10 +233,10 @@
     "breakBetweenGames": "Pause zwischen Spielen",
     "gamePeriods": "Spielabschnitte",
     "halftimeBreak": "Halbzeitpause",
-    "periodBreakdown": "Das Spiel wird in {{periods}} Abschnitte à {{duration}} Min. unterteilt",
+    "periodBreakdown": "Das Spiel wird in {{periods}} Abschnitte à $t(sport:zeit.minuteCount, {\"count\": {{duration}} }) unterteilt",
     "phaseBreak": "Pause bis Finalrunde",
     "finalsHint": "Die Spielabschnitt-Einstellungen gelten auch für die Finalrunde",
-    "minuteSuffix": "Min"
+    "minuteSuffix": "Minuten"
   },
   "finalsConfig": {
     "title": "Finalrunde",
@@ -288,7 +289,7 @@
     },
     "finalOnly": {
       "label": "Nur Finale",
-      "description2g": "Direktes Finale: 1A vs 1B",
+      "description2g": "Direktes Finale: 1A gegen 1B",
       "description3g": "Beste 2 Teams direkt im Finale",
       "description4g": "Beste 2 Gruppenerste direkt im Finale",
       "descriptionDefault": "Beste 2 Teams direkt im Finale",
@@ -336,7 +337,7 @@
       "description2g": "Halbfinale + Platzierungen 3, 5, 7",
       "explanation2g": "Jedes Team hat noch ein Finalspiel - hohe Beteiligung",
       "label3g": "Top 6 (alle Gruppenersten + -zweite)",
-      "description3g": "6er-Endrunde mit Zwischengruppen oder KO",
+      "description3g": "6er-Endrunde mit Zwischengruppen oder K.-o.-Runde",
       "explanation3g": "Komplex - zwei 3er-Zwischengruppen nötig, viel Zeit erforderlich",
       "label4g": "Alle Plätze (Top 16)",
       "description4g": "Alle Teams in Finalrunde - komplette Platzierungen",
@@ -354,12 +355,12 @@
     "modeLabel": "Schiedsrichter-Modus",
     "modes": {
       "none": "Keine Schiedsrichter",
-      "organizer": "Veranstalter stellt SR (eigene Schiedsrichter)",
-      "teams": "Teams stellen SR (nach eigenem Spiel)"
+      "organizer": "Veranstalter stellt eigene Schiedsrichter",
+      "teams": "Teams stellen Schiedsrichter (nach eigenem Spiel)"
     },
     "modeHint": {
       "organizerMode": "Veranstalter-Modus:",
-      "organizerDescription": "Du bringst eigene Schiedsrichter mit (z.B. SR1, SR2).",
+      "organizerDescription": "Du bringst eigene Schiedsrichter mit (z. B. Schiedsrichter 1, Schiedsrichter 2).",
       "teamsMode": "Teams-Modus:",
       "teamsDescription": "Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld."
     },
@@ -370,13 +371,13 @@
       "enableNames": "Namen der Schiedsrichter angeben",
       "namesTitle": "Schiedsrichter-Namen",
       "namePlaceholder": "Name von Schiedsrichter {{number}}",
-      "nameLabel": "SR {{number}}",
+      "nameLabel": "Schiedsrichter {{number}}",
       "duplicateName": "Dieser Name wird bereits verwendet",
-      "namesHint": "Die Namen erscheinen später im Spielplan statt \"SR1\", \"SR2\", etc."
+      "namesHint": "Die Namen erscheinen später im Spielplan statt „Schiedsrichter 1“, „Schiedsrichter 2“ usw."
     },
     "finalsMode": {
       "label": "Schiedsrichter in Finalphase",
-      "none": "Keine SR in Finalphase",
+      "none": "Keine Schiedsrichter in Finalphase",
       "neutralTeams": "Ausgeschiedene Teams (nicht in Finalrunde)",
       "nonParticipatingTeams": "Unbeteiligte Teams (nicht im aktuellen Spiel)",
       "hintNeutral": "Ausgeschiedene Teams:",
@@ -394,10 +395,10 @@
     "unrealisticDuration": "Geschätzte Dauer von {{hours}}h ist unrealistisch für einen Tag",
     "unrealisticDurationSuggestion": "Erhöhe die Feldanzahl oder reduziere die Teamanzahl",
     "longDuration": "Lange Turnierdauer von ca. {{hours}}h",
-    "longDurationSuggestion": "Mit {{fields}} Feldern oder kürzerer Spieldauer (z.B. {{duration}} Min) verkürzt sich die Dauer",
+    "longDurationSuggestion": "Mit {{fields}} Feldern oder kürzerer Spieldauer (z. B. $t(sport:zeit.minuteCount, {\"count\": {{duration}} })) verkürzt sich die Dauer",
     "unevenGroups": "Ungleiche Gruppengrößen: {{majorCount}}x {{teamsPerGroup}} Teams, 1x {{lastGroupSize}} Teams",
     "unevenGroupsSuggestion": "Für gleichmäßige Gruppen: {{count}} Teams wählen",
-    "tooFewTeams": "Zu wenig Teams für {{groups}} Gruppen (min. {{min}} benötigt)",
+    "tooFewTeams": "Zu wenig Teams für {{groups}} Gruppen (mindestens {{min}} benötigt)",
     "tooFewTeamsSuggestion": "Reduziere die Gruppenanzahl oder erhöhe die Teamanzahl",
     "dfbMismatch": "DFB-Muster passt zu {{patternTeams}} Teams (aktuell: {{currentTeams}})",
     "dfbMismatchSuggestion": "Teamanzahl auf {{count}} ändern oder anderes DFB-Muster wählen",
@@ -411,7 +412,7 @@
   "smartConfig": {
     "title": "Smart-Konfiguration",
     "ariaLabel": "Smart-Konfiguration",
-    "lastConfig": "Letzte Konfiguration: {{teams}} Teams, {{fields}} {{fieldLabel}}, {{duration}}min",
+    "lastConfig": "Letzte Konfiguration: {{teams}} Teams, {{fields}} {{fieldLabel}}, $t(sport:zeit.minuteCount, {\"count\": {{duration}} })",
     "fieldSingular": "Feld",
     "fieldPlural": "Felder",
     "restore": "Wiederherstellen",
@@ -419,6 +420,7 @@
     "timeQuestion": "Wie viel Zeit hast du für das Turnier?",
     "hoursAriaLabel": "Stunden",
     "minutesAriaLabel": "Minuten",
+    "minutesUnit": "Minuten",
     "calculate": "Berechnen",
     "calculateAriaLabel": "Optimale Konfiguration berechnen",
     "constraints": {
@@ -428,7 +430,7 @@
       "fieldCount": "Anzahl Felder:",
       "gameDuration": "Spieldauer:",
       "breakDuration": "Pausendauer:",
-      "minuteSuffix": " Min"
+      "minuteSuffix": " Minuten"
     },
     "result": {
       "title": "Empfohlene Konfiguration",
@@ -436,7 +438,7 @@
       "fields": "Felder",
       "gameDuration": "Spieldauer",
       "pause": "Pause",
-      "minuteSuffix": "Min",
+      "minuteSuffix": "Minuten",
       "structure": "{{groups}}, {{finals}}",
       "groupCount": "{{count}} Gruppen",
       "finalsNone": "keine Finalrunde",
@@ -493,15 +495,15 @@
   },
   "durationEstimate": {
     "estimatedDuration": "Geschätzte Turnierdauer: ",
-    "hoursAndMinutes": "{{hours}}h {{minutes}}min",
-    "minutesOnly": "{{minutes}}min",
+    "hoursAndMinutes": "{{hours}} h $t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
+    "minutesOnly": "$t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
     "matchInfo": "({{matches}} Spiele, {{fields}} {{fieldLabel}})",
     "fieldSingular": "Feld",
     "fieldPlural": "Felder",
-    "groupPhaseBreakdown": "Gruppenphase: {{matches}} Spiele (~{{hours}}h {{minutes}}min)",
-    "finalsBreakdown": "Finalrunde: {{matches}} Spiele (~{{hours}}h {{minutes}}min)",
-    "criticalWarning": "Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {{fields}} Felder oder Spieldauer auf {{duration}} Min reduzieren.",
-    "durationWarning": "Tipp: Mit {{fields}} Feldern ca. {{hours}}h oder mit {{duration}} Min Spieldauer verkürzt sich die Dauer."
+    "groupPhaseBreakdown": "Gruppenphase: {{matches}} Spiele (~{{hours}} h $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }))",
+    "finalsBreakdown": "Finalrunde: {{matches}} Spiele (~{{hours}} h $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }))",
+    "criticalWarning": "Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {{fields}} Felder oder Spieldauer auf $t(sport:zeit.minuteCount, {\"count\": {{duration}} }) reduzieren.",
+    "durationWarning": "Tipp: Mit {{fields}} Feldern ca. {{hours}}h oder mit $t(sport:zeit.minuteCount, {\"count\": {{duration}} }) Spieldauer verkürzt sich die Dauer."
   },
   "placementLogic": {
     "title": "Platzierungslogik",
@@ -523,7 +525,7 @@
     },
     "afterRow": "danach: Strafstoßschießen (Entscheidung der Turnierleitung)",
     "afterRowHint": "Immer die letzte Stufe, kann nicht abgeschaltet werden.",
-    "bfvHelp": "Gilt, wenn Teams in der Tabelle punktgleich sind. Vorbelegt nach den BFV-Regeln für private Hallenturniere. Bleibt nach einer Stufe ein Gleichstand, gilt die nächste.",
+    "bfvHelp": "Gilt, wenn Teams in der Tabelle punktgleich sind. Vorbelegt nach den Regeln des Bayerischen Fußball-Verbands für private Hallenturniere. Bleibt nach einer Stufe ein Gleichstand, gilt die nächste.",
     "directComparisonHint": "Bei drei und mehr Teams eine Sondertabelle aus ihren Spielen untereinander."
   },
   "options": {
@@ -650,7 +652,7 @@
     "resetConfirm": "Zurücksetzen",
     "available": "Verfügbare Schiedsrichter:",
     "matches": "Spiele:",
-    "noReferee": "– Kein SR –",
+    "noReferee": "– Kein Schiedsrichter –",
     "optionCount_one": "{{label}} ({{count}} Spiel)",
     "optionCount_other": "{{label}} ({{count}} Spiele)",
     "workload_one": "{{count}} Spiel",

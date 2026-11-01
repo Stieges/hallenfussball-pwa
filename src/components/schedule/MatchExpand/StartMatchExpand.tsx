@@ -24,6 +24,7 @@ import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
+import { Versus } from '../../ui/atoms';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -183,7 +184,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
           <div style={avatarStyle}>{getTeamInitials(homeTeam.name)}</div>
           <span style={teamNameStyle}>{homeTeam.name}</span>
         </div>
-        <span style={vsStyle}>VS</span>
+        <span style={vsStyle}><Versus /></span>
         <div style={teamContainerStyle}>
           <div style={avatarStyle}>{getTeamInitials(awayTeam.name)}</div>
           <span style={teamNameStyle}>{awayTeam.name}</span>

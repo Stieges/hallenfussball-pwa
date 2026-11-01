@@ -13,6 +13,7 @@ import { getGroupDisplayName } from '../../utils/displayNames';
 import { monitorTeamName } from '../../core/models/teamNameAbbrev';
 import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
 import { TeamAvatar } from '../ui/TeamAvatar';
+import { ShortLabel } from '../ui/atoms';
 import styles from './GroupTables.module.css';
 
 interface GroupTablesProps {
@@ -188,6 +189,8 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   const mobileThStyle: CSSProperties = { ...thStyle, paddingLeft: cssVars.spacing.xs, paddingRight: cssVars.spacing.xs };
   const mobileTdStyle: CSSProperties = { ...tdStyle, paddingLeft: cssVars.spacing.xs, paddingRight: cssVars.spacing.xs };
   const mobileFixedColStyle: CSSProperties = { ...mobileThStyle, textAlign: 'center', whiteSpace: 'nowrap' };
+  // Desktop (@OB-075): Spalten mit Kurzform im Kopf nehmen nur so viel Breite wie ihr Inhalt, statt fester Pixelbreiten.
+  const fixedColStyle: CSSProperties = { ...thStyle, width: '1%', textAlign: 'center', whiteSpace: 'nowrap' };
 
   // Get enabled placement criteria (with fallback if tournament is not provided)
   // Note: placementLogic can be undefined at runtime for older tournaments despite type definition
@@ -217,15 +220,15 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.rank')}</th>
+              <th style={fixedColStyle}><ShortLabel term="rank" /></th>
               <th style={thStyle}>{t('groupTables.columns.team')}</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.played')}</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.won')}</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.drawn')}</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.lost')}</th>
-              <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>{t('groupTables.columns.goals')}</th>
-              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('groupTables.columns.diff')}</th>
-              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('groupTables.columns.points')}</th>
+              <th style={fixedColStyle}><ShortLabel term="played" /></th>
+              <th style={fixedColStyle}><ShortLabel term="won" /></th>
+              <th style={fixedColStyle}><ShortLabel term="drawn" /></th>
+              <th style={fixedColStyle}><ShortLabel term="lost" /></th>
+              <th style={fixedColStyle}>{t('groupTables.columns.goals')}</th>
+              <th style={fixedColStyle}><ShortLabel term="goalDifference" /></th>
+              <th style={fixedColStyle}><ShortLabel term="points" /></th>
             </tr>
           </thead>
           <tbody>
@@ -335,10 +338,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.rank')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}><ShortLabel term="rank" /></th>
               <th style={mobileThStyle}>{t('groupTables.columns.team')}</th>
-              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.points')}</th>
-              <th style={{ ...mobileFixedColStyle, width: '1%' }}>{t('groupTables.columns.diff')}</th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}><ShortLabel term="points" /></th>
+              <th style={{ ...mobileFixedColStyle, width: '1%' }}><ShortLabel term="goalDifference" /></th>
               <th style={{ ...mobileFixedColStyle, width: '1%' }}></th>
             </tr>
           </thead>

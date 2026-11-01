@@ -26,7 +26,7 @@
       "hintTitle": "Bambini Tournament",
       "hintText": "In Bambini tournaments, results and tables are hidden from spectators by default. You can adjust this in the next step."
     },
-    "minuteSuffix": "min"
+    "minuteSuffix": "minutes"
   },
   "step2": {
     "title": "Mode & Game System",
@@ -63,14 +63,15 @@
     "summaries": {
       "activeCriteria": "{{count}} active criteria",
       "refereeNone": "None",
-      "refereeCount": "{{count}} Ref",
+      "refereeCount_one": "{{count}} referee",
+      "refereeCount_other": "{{count}} referees",
       "refereeTeams": "Teams provide referees",
       "time": "{{game}}′ Game / {{break}}′ Break",
       "finalsNone": "None",
       "finalsFinalOnly": "Final only",
-      "finalsTop4": "SF + Final",
-      "finalsTop8": "With QF",
-      "finalsTop16": "With R16",
+      "finalsTop4": "Semifinal + Final",
+      "finalsTop8": "With quarterfinal",
+      "finalsTop16": "With round of 16",
       "finalsAllPlaces": "All places",
       "specialNone": "None",
       "specialBambini": "Bambini mode",
@@ -97,7 +98,7 @@
     "startTime": "Start Time",
     "startTimePlaceholder": "09:00",
     "rulebook": "Rulebook (optional)",
-    "rulebookPlaceholder": "e.g. BFV rules for futsal",
+    "rulebookPlaceholder": "e.g. rules of the Bavarian Football Association for futsal",
     "rulebookLimit": "Up to 80 characters.",
     "rulebookTruncated": "Cut to 80 characters."
   },
@@ -232,10 +233,10 @@
     "breakBetweenGames": "Break Between Games",
     "gamePeriods": "Game Periods",
     "halftimeBreak": "Halftime Break",
-    "periodBreakdown": "The game is divided into {{periods}} periods of {{duration}} min each",
+    "periodBreakdown": "The game is divided into {{periods}} periods of $t(sport:zeit.minuteCount, {\"count\": {{duration}} }) each",
     "phaseBreak": "Break Before Final Round",
     "finalsHint": "Game period settings also apply to the final round",
-    "minuteSuffix": "min"
+    "minuteSuffix": "minutes"
   },
   "finalsConfig": {
     "title": "Final Round",
@@ -336,7 +337,7 @@
       "description2g": "Semifinals + places 3, 5, 7",
       "explanation2g": "Every team has another final match - high participation",
       "label3g": "Top 6 (all group winners + runners-up)",
-      "description3g": "6-team final round with intermediate groups or KO",
+      "description3g": "6-team final round with intermediate groups or knockout stage",
       "explanation3g": "Complex - two 3-team intermediate groups needed, much time required",
       "label4g": "All Places (Top 16)",
       "description4g": "All teams in final round - complete placements",
@@ -359,7 +360,7 @@
     },
     "modeHint": {
       "organizerMode": "Organizer mode:",
-      "organizerDescription": "You bring your own referees (e.g., Ref1, Ref2).",
+      "organizerDescription": "You bring your own referees (e.g., Referee 1, Referee 2).",
       "teamsMode": "Teams mode:",
       "teamsDescription": "Each team referees the next match on the same field after their own game."
     },
@@ -370,9 +371,9 @@
       "enableNames": "Specify referee names",
       "namesTitle": "Referee Names",
       "namePlaceholder": "Name of referee {{number}}",
-      "nameLabel": "Ref {{number}}",
+      "nameLabel": "Referee {{number}}",
       "duplicateName": "This name is already used",
-      "namesHint": "Names will appear in the schedule instead of \"Ref1\", \"Ref2\", etc."
+      "namesHint": "Names will appear in the schedule instead of \"Referee 1\", \"Referee 2\", etc."
     },
     "finalsMode": {
       "label": "Referees in Final Phase",
@@ -394,10 +395,10 @@
     "unrealisticDuration": "Estimated duration of {{hours}}h is unrealistic for one day",
     "unrealisticDurationSuggestion": "Increase field count or reduce team count",
     "longDuration": "Long tournament duration of approx. {{hours}}h",
-    "longDurationSuggestion": "With {{fields}} fields or shorter game time (e.g., {{duration}} min), duration decreases",
+    "longDurationSuggestion": "With {{fields}} fields or shorter game time (e.g., $t(sport:zeit.minuteCount, {\"count\": {{duration}} })), duration decreases",
     "unevenGroups": "Uneven group sizes: {{majorCount}}x {{teamsPerGroup}} teams, 1x {{lastGroupSize}} teams",
     "unevenGroupsSuggestion": "For even groups: choose {{count}} teams",
-    "tooFewTeams": "Too few teams for {{groups}} groups (min. {{min}} needed)",
+    "tooFewTeams": "Too few teams for {{groups}} groups (at least {{min}} needed)",
     "tooFewTeamsSuggestion": "Reduce group count or increase team count",
     "dfbMismatch": "DFB pattern matches {{patternTeams}} teams (current: {{currentTeams}})",
     "dfbMismatchSuggestion": "Change team count to {{count}} or choose different DFB pattern",
@@ -411,7 +412,7 @@
   "smartConfig": {
     "title": "Smart Configuration",
     "ariaLabel": "Smart Configuration",
-    "lastConfig": "Last configuration: {{teams}} teams, {{fields}} {{fieldLabel}}, {{duration}}min",
+    "lastConfig": "Last configuration: {{teams}} teams, {{fields}} {{fieldLabel}}, $t(sport:zeit.minuteCount, {\"count\": {{duration}} })",
     "fieldSingular": "field",
     "fieldPlural": "fields",
     "restore": "Restore",
@@ -419,6 +420,7 @@
     "timeQuestion": "How much time do you have for the tournament?",
     "hoursAriaLabel": "Hours",
     "minutesAriaLabel": "Minutes",
+    "minutesUnit": "minutes",
     "calculate": "Calculate",
     "calculateAriaLabel": "Calculate optimal configuration",
     "constraints": {
@@ -428,7 +430,7 @@
       "fieldCount": "Number of fields:",
       "gameDuration": "Game duration:",
       "breakDuration": "Break duration:",
-      "minuteSuffix": " min"
+      "minuteSuffix": " minutes"
     },
     "result": {
       "title": "Recommended Configuration",
@@ -436,7 +438,7 @@
       "fields": "Fields",
       "gameDuration": "Game Duration",
       "pause": "Break",
-      "minuteSuffix": "min",
+      "minuteSuffix": "minutes",
       "structure": "{{groups}}, {{finals}}",
       "groupCount": "{{count}} groups",
       "finalsNone": "no finals round",
@@ -493,15 +495,15 @@
   },
   "durationEstimate": {
     "estimatedDuration": "Estimated tournament duration: ",
-    "hoursAndMinutes": "{{hours}}h {{minutes}}min",
-    "minutesOnly": "{{minutes}}min",
+    "hoursAndMinutes": "{{hours}} h $t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
+    "minutesOnly": "$t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
     "matchInfo": "({{matches}} matches, {{fields}} {{fieldLabel}})",
     "fieldSingular": "field",
     "fieldPlural": "fields",
-    "groupPhaseBreakdown": "Group stage: {{matches}} matches (~{{hours}}h {{minutes}}min)",
-    "finalsBreakdown": "Final round: {{matches}} matches (~{{hours}}h {{minutes}}min)",
-    "criticalWarning": "This tournament duration is unrealistic for one day. Recommendation: {{fields}} fields or reduce game time to {{duration}} min.",
-    "durationWarning": "Tip: With {{fields}} fields approx. {{hours}}h or with {{duration}} min game time, duration decreases."
+    "groupPhaseBreakdown": "Group stage: {{matches}} matches (~{{hours}} h $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }))",
+    "finalsBreakdown": "Final round: {{matches}} matches (~{{hours}} h $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }))",
+    "criticalWarning": "This tournament duration is unrealistic for one day. Recommendation: {{fields}} fields or reduce game time to $t(sport:zeit.minuteCount, {\"count\": {{duration}} }).",
+    "durationWarning": "Tip: With {{fields}} fields approx. {{hours}}h or with $t(sport:zeit.minuteCount, {\"count\": {{duration}} }) game time, duration decreases."
   },
   "placementLogic": {
     "title": "Placement Logic",
@@ -523,7 +525,7 @@
     },
     "afterRow": "then: penalty shootout (decision of the tournament organiser)",
     "afterRowHint": "Always the last step, cannot be switched off.",
-    "bfvHelp": "Applies when teams are level on points in the table. Preset according to the BFV rules for private indoor tournaments. If a tie remains after one step, the next one applies.",
+    "bfvHelp": "Applies when teams are level on points in the table. Preset according to the rules of the Bavarian Football Association for private indoor tournaments. If a tie remains after one step, the next one applies.",
     "directComparisonHint": "With three or more teams, a mini table from their matches against each other."
   },
   "options": {

@@ -7,6 +7,7 @@
  * (Entscheidungsregel `resolveTiebreakMode`, dieselbe wie im Anpfiff) — eine Quelle, keine zweite Ermittlung.
  * Die Dauer der Uhr kommt aus der Ansicht (`monitorDauerSekunden`, Paket „Monitor-Uhr“, @ZM-039, @ZM-139); der Timer bleibt unverändert.
  */
+import { anzeigeT } from '../../i18n/anzeigeSprache';
 import type { Tournament, Match, Team, TiebreakerMode } from '../../types/tournament';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
 import type { MatchView, ViewMatchStatus } from '../../core/view';
@@ -60,9 +61,9 @@ export function toLiveMatch(shown: MatchView, match: Match, teams: Team[], tourn
   const sideOf = (side: MatchView['home'], key: 'A' | 'B') =>
     sideTeam(side, teams) ?? { id: `${match.id}:${key}`, name: side.label };
 
-  // Derive referee name from referee number
+  // Derive referee name from referee number (Standardbezeichnung in der festen Anzeigesprache des Monitors, @OB-076)
   const refereeTeam = match.referee
-    ? teams.find(t => t.name === `SR${match.referee}` || t.name === `Schiedsrichter ${match.referee}`)
+    ? teams.find(t => t.name === anzeigeT('tournament:refereeOptions.numbered', { number: match.referee }))
     : undefined;
 
   return {

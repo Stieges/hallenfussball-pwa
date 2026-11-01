@@ -34,6 +34,7 @@ import { GroupCompletionTop } from './group-completion/GroupCompletionTop';
 import { GroupStateDetails, GroupStateMarks } from './group-completion/GroupStateHead';
 import { istEineTabelle, medalForRank, type Medal, tabellenAnsichtVorgabe, type TabellenAnsicht } from './tabellenAnsicht';
 import { FinalStandingsPanel } from '../tournament-finish/components/FinalStandingsPanel';
+import { ShortLabel } from '../../components/ui/atoms';
 
 export interface TabellenTabProps {
   tournament: Tournament;
@@ -316,6 +317,9 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
     fontSize: isMobile ? '12px' : cssVars.fontSizes.md,
   };
 
+  // Spalten mit Kurzform im Kopf (@OB-075) nehmen nur so viel Breite wie ihr Inhalt, statt fester Pixelbreiten.
+  const fixedThStyle: CSSProperties = { ...thStyle, width: '1%', textAlign: 'center', whiteSpace: 'nowrap' };
+
   const tdStyle: CSSProperties = {
     padding: isMobile ? '10px 6px' : '12px 16px',
     borderBottom: `1px solid ${cssVars.colors.border}`,
@@ -447,13 +451,13 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                 <th style={thStyle}>{t('ranking.headers.team')}</th>
                 {hasPlayoffs && <th style={{ ...thStyle, width: '120px', textAlign: 'center' }}>{t('ranking.headers.decidedBy')}</th>}
                 {hasGroups && <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('ranking.headers.group')}</th>}
-                <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.played')}</th>
-                <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.won')}</th>
-                <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.drawn')}</th>
-                <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.lost')}</th>
+                <th style={fixedThStyle}><ShortLabel term="played" /></th>
+                <th style={fixedThStyle}><ShortLabel term="won" /></th>
+                <th style={fixedThStyle}><ShortLabel term="drawn" /></th>
+                <th style={fixedThStyle}><ShortLabel term="lost" /></th>
                 <th style={{ ...thStyle, width: '100px', textAlign: 'center' }}>{t('ranking.headers.goals')}</th>
-                <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('ranking.headers.diff')}</th>
-                <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('ranking.headers.points')}</th>
+                <th style={fixedThStyle}><ShortLabel term="goalDifference" /></th>
+                <th style={fixedThStyle}><ShortLabel term="points" /></th>
               </tr>
             </thead>
             <tbody>
@@ -554,10 +558,10 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
           <table style={rankingTableStyle}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('ranking.headers.rankShort')}</th>
+                <th style={fixedThStyle}><ShortLabel term="rank" /></th>
                 <th style={thStyle}>{t('ranking.headers.team')}</th>
-                <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('ranking.headers.points')}</th>
-                <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('ranking.headers.diff')}</th>
+                <th style={fixedThStyle}><ShortLabel term="points" /></th>
+                <th style={fixedThStyle}><ShortLabel term="goalDifference" /></th>
                 <th style={{ ...thStyle, width: '30px', textAlign: 'center' }}></th>
               </tr>
             </thead>

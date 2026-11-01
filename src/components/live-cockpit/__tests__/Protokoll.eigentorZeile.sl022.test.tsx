@@ -1,7 +1,7 @@
 /**
- * Ereignisprotokoll im Cockpit (Desktop-Sidebar und Handy-Liste): @SL-022 ein wirksames Eigentor heißt „Eigentor <schießendes Team>, Nr. <n>“
- * (Befund C-EIGENTOR-PROTOKOLLZEILE); @SL-019 ein Tor „Tor FC Nord, Nr. 7“ (Spielzeit in der Zeitspalte); @SL-083 ohne Nummer
- * „Tor FC Nord, ohne Nr.“. Gegenbeispiel: ein normales Tor ist kein „Eigentor“.
+ * Ereignisprotokoll im Cockpit (Desktop-Sidebar und Handy-Liste): @SL-022 ein wirksames Eigentor heißt „Eigentor <schießendes Team>, Nummer <n>“
+ * (Befund C-EIGENTOR-PROTOKOLLZEILE); @SL-019 ein Tor „Tor FC Nord, Nummer 7“ (Spielzeit in der Zeitspalte); @SL-083 ohne Nummer
+ * „Tor FC Nord, ohne Nummer“. Gegenbeispiel: ein normales Tor ist kein „Eigentor“.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -28,7 +28,7 @@ vi.mock('react-i18next', async () => {
   return { useTranslation: () => ({ t: translate, i18n: { language: locale.current } }) };
 });
 
-/** Eigentor von SV Süd (Nr. 4) bei 5:40: begünstigt ist FC Nord. */
+/** Eigentor von SV Süd (Nummer 4) bei 5:40: begünstigt ist FC Nord. */
 const eigentor: RuntimeMatchEvent = {
   id: 'og', timestampSeconds: 340, type: 'GOAL',
   payload: { teamId: 'fc-nord', ownGoal: true, ownGoalTeamId: 'sv-sued', playerNumber: 4 },
@@ -42,55 +42,55 @@ const teams = { homeTeamName: 'FC Nord', awayTeamName: 'SV Süd', homeTeamId: 'f
 beforeEach(() => { locale.current = 'de'; });
 
 describe('@SL-022 Eigentor im Protokoll', () => {
-  it('Sidebar: „Eigentor SV Süd, Nr. 4“ mit 05:40, keine Zeile „TOR FC Nord“ dafür', () => {
+  it('Sidebar: „Eigentor SV Süd, Nummer 4“ mit 05:40, keine Zeile „TOR FC Nord“ dafür', () => {
     render(<Sidebar events={[eigentor]} {...teams} />);
-    expect(screen.getByText(/Eigentor SV Süd, Nr\. 4/)).toBeTruthy();
+    expect(screen.getByText(/Eigentor SV Süd, Nummer 4/)).toBeTruthy();
     expect(screen.getByText('05:40')).toBeTruthy();
     expect(screen.queryByText(/Tor FC Nord/)).toBeNull();
   });
 
-  it('Handy-Liste: „Eigentor SV Süd, Nr. 4“ statt „TOR FC Nord #4“', () => {
+  it('Handy-Liste: „Eigentor SV Süd, Nummer 4“ statt „TOR FC Nord #4“', () => {
     render(<EventLogBottomSheet isOpen onClose={() => undefined} events={[eigentor]} {...teams} />);
-    expect(screen.getByText(/Eigentor SV Süd, Nr\. 4/)).toBeTruthy();
+    expect(screen.getByText(/Eigentor SV Süd, Nummer 4/)).toBeTruthy();
     expect(screen.queryByText(/Tor FC Nord/)).toBeNull();
   });
 
-  it('EN: „Own goal SV Süd, No. 4“', () => {
+  it('EN: „Own goal SV Süd, number 4“', () => {
     locale.current = 'en';
     render(<Sidebar events={[eigentor]} {...teams} />);
-    expect(screen.getByText(/Own goal SV Süd, No\. 4/)).toBeTruthy();
+    expect(screen.getByText(/Own goal SV Süd, number 4/)).toBeTruthy();
   });
 
-  it('@SL-022 Eigentor ohne Nummer: „Eigentor SV Süd, ohne Nr.“ (nicht „…, Nr. undefined“, nicht FC Nord)', () => {
+  it('@SL-022 Eigentor ohne Nummer: „Eigentor SV Süd, ohne Nummer“ (nicht „…, Nummer undefined“, nicht FC Nord)', () => {
     render(<Sidebar events={[{ ...eigentor, payload: { ...eigentor.payload, playerNumber: undefined } }]} {...teams} />);
-    expect(screen.getByText(/Eigentor SV Süd, ohne Nr\./)).toBeTruthy();
+    expect(screen.getByText(/Eigentor SV Süd, ohne Nummer/)).toBeTruthy();
   });
 
-  it('@SL-019 Tor mit Nummer: „Tor FC Nord, Nr. 9“ mit 01:40 in Sidebar und Handy-Liste', () => {
+  it('@SL-019 Tor mit Nummer: „Tor FC Nord, Nummer 9“ mit 01:40 in Sidebar und Handy-Liste', () => {
     const { unmount } = render(<Sidebar events={[normalesTor]} {...teams} />);
-    expect(screen.getByText(/Tor FC Nord, Nr\. 9/)).toBeTruthy();
+    expect(screen.getByText(/Tor FC Nord, Nummer 9/)).toBeTruthy();
     expect(screen.getByText('01:40')).toBeTruthy();
     expect(screen.queryByText(/Eigentor/)).toBeNull();
     unmount();
     render(<EventLogBottomSheet isOpen onClose={() => undefined} events={[normalesTor]} {...teams} />);
-    expect(screen.getByText(/Tor FC Nord, Nr\. 9/)).toBeTruthy();
+    expect(screen.getByText(/Tor FC Nord, Nummer 9/)).toBeTruthy();
     expect(screen.queryByText(/Eigentor/)).toBeNull();
   });
 
-  it('@SL-083 Tor ohne Nummer: „Tor FC Nord, ohne Nr.“ in Sidebar und Handy-Liste', () => {
+  it('@SL-083 Tor ohne Nummer: „Tor FC Nord, ohne Nummer“ in Sidebar und Handy-Liste', () => {
     const ohne: RuntimeMatchEvent = { ...normalesTor, payload: { teamId: 'fc-nord' } };
     const { unmount } = render(<Sidebar events={[ohne]} {...teams} />);
-    expect(screen.getByText(/Tor FC Nord, ohne Nr\./)).toBeTruthy();
+    expect(screen.getByText(/Tor FC Nord, ohne Nummer/)).toBeTruthy();
     unmount();
     render(<EventLogBottomSheet isOpen onClose={() => undefined} events={[ohne]} {...teams} />);
-    expect(screen.getByText(/Tor FC Nord, ohne Nr\./)).toBeTruthy();
+    expect(screen.getByText(/Tor FC Nord, ohne Nummer/)).toBeTruthy();
   });
 
   it('Handy-Liste EN: Texte kommen aus der Übersetzung (kein festes „TOR“/„Gelbe Karte“)', () => {
     locale.current = 'en';
     const gelb: RuntimeMatchEvent = { id: 'y', timestampSeconds: 30, type: 'YELLOW_CARD', payload: { teamId: 'sv-sued', playerNumber: 5 }, scoreAfter: { home: 0, away: 0 } };
     render(<EventLogBottomSheet isOpen onClose={() => undefined} events={[normalesTor, gelb]} {...teams} />);
-    expect(screen.getByText(/Goal FC Nord, No\. 9/)).toBeTruthy();
+    expect(screen.getByText(/Goal FC Nord, number 9/)).toBeTruthy();
     expect(screen.getByText(/Yellow card SV Süd #5/)).toBeTruthy();
   });
 });

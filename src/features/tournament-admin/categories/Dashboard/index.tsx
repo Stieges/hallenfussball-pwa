@@ -16,6 +16,7 @@ import { slotLabel } from '../../../../core/models/slotLabel';
 import { effectiveFieldCount, effectiveGroupCount } from '../../../../core/view';
 import { lifecycleOf } from '../../../../core/services/lifecycle';
 import { FinishTournamentSection } from '../../../tournament-finish/components/FinishTournamentSection';
+import { Versus } from '../../../../components/ui/atoms';
 
 // =============================================================================
 // PROPS
@@ -459,7 +460,7 @@ export function DashboardCategory({
               <div key={match.id} style={styles.runningMatchItem}>
                 <div>
                   <div style={styles.runningMatchTeams}>
-                    {getSideName(tournament, match.slotA)} vs {getSideName(tournament, match.slotB)}
+                    {getSideName(tournament, match.slotA)} <Versus /> {getSideName(tournament, match.slotB)}
                   </div>
                   <div style={styles.runningMatchField}>
                     {getFieldName(tournament, match.field)}
@@ -488,7 +489,7 @@ export function DashboardCategory({
             </div>
             <div style={styles.nextMatchTeams}>
               <span>{getSideName(tournament, stats.nextMatch.slotA)}</span>
-              <span style={styles.nextMatchVs}>vs</span>
+              <span style={styles.nextMatchVs}><Versus /></span>
               <span>{getSideName(tournament, stats.nextMatch.slotB)}</span>
             </div>
             <div style={styles.nextMatchField}>

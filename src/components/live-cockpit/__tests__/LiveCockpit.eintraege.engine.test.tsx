@@ -65,14 +65,14 @@ const typen = (...t: string[]) => wirksameImLog().filter((e) => t.includes(e.typ
 
 describe('LiveCockpit – Einträge bei angehaltener Uhr (@SL-085)', () => {
   const faelle: [string, (u: Nutzer) => Promise<void>, string, string][] = [
-    ['ein Tor für FC Nord, Nr. 7', async (u) => { await u.click(screen.getByTestId('goal-button-home')); await warteSperre(); await u.click(nummer('7')); }, 'GOAL', 'teama'],
+    ['ein Tor für FC Nord, Nummer 7', async (u) => { await u.click(screen.getByTestId('goal-button-home')); await warteSperre(); await u.click(nummer('7')); }, 'GOAL', 'teama'],
     ['ein Eigentor der Nummer 4 von SV Süd', async (u) => {
       await u.click(screen.getByTestId('goal-button-home')); await warteSperre();
       await u.click(screen.getByRole('button', { name: 'Eigentor (SV Beta)' })); await u.click(nummer('4'));
     }, 'OWN_GOAL', 'teamb'],
     ['ein Foul für SV Süd', async (u) => { await u.click(screen.getByTestId('foul-button-away')); }, 'FOUL', 'teamb'],
-    ['eine Gelbe Karte für SV Süd, Nr. 5', async (u) => { await karte(u, 'away', 'Gelb', '5'); }, 'YELLOW_CARD', 'teamb'],
-    ['eine Zeitstrafe für SV Süd, Nr. 5', async (u) => {
+    ['eine Gelbe Karte für SV Süd, Nummer 5', async (u) => { await karte(u, 'away', 'Gelb', '5'); }, 'YELLOW_CARD', 'teamb'],
+    ['eine Zeitstrafe für SV Süd, Nummer 5', async (u) => {
       await u.click(screen.getByTestId('penalty-button-away')); await warteSperre(); await u.click(nummer('5'));
     }, 'TIME_PENALTY', 'teamb'],
   ];
@@ -134,7 +134,7 @@ describe('LiveCockpit – Einträge in der Halbzeitpause (@SL-087)', () => {
 });
 
 describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gelbe', () => {
-  it('@SL-084 Karte bei 3:12 angetippt, Nr. 5 erst bei 3:25 → die Karte trägt 3:12 und Nr. 5', async () => {
+  it('@SL-084 Karte bei 3:12 angetippt, Nummer 5 erst bei 3:25 → die Karte trägt 3:12 und Nummer 5', async () => {
     const user = userEvent.setup();
     render(<Harness />); await starte(user); zu(192_000);
     await user.click(screen.getByTestId('card-button-away'));
@@ -147,7 +147,7 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     expect(gelb.payload).toMatchObject({ playerNumber: 5 });
   });
 
-  it('@SL-023 Gelb-Rot für Nr. 5 von SV Süd erfasst YELLOW_RED_CARD, nicht RED_CARD', async () => {
+  it('@SL-023 Gelb-Rot für Nummer 5 von SV Süd erfasst YELLOW_RED_CARD, nicht RED_CARD', async () => {
     const user = userEvent.setup();
     render(<Harness />); await starte(user);
     await karte(user, 'away', 'Gelb-Rot', '5');
@@ -156,20 +156,20 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1/5');
   });
 
-  it('@SL-088 zweite Gelbe für Nr. 7: Rückfrage, „Gelb-Rot“ erfasst Gelb-Rot mit einem Tipp', async () => {
+  it('@SL-088 zweite Gelbe für Nummer 7: Rückfrage, „Gelb-Rot“ erfasst Gelb-Rot mit einem Tipp', async () => {
     const user = userEvent.setup();
     render(<Harness />); await starte(user);
     await karte(user, 'away', 'Gelb', '7');
     await waitFor(() => expect(typen('YELLOW_CARD')).toHaveLength(1));
     await karte(user, 'away', 'Gelb', '7');
-    expect(await screen.findByText('Nr. 7 hat schon Gelb')).toBeInTheDocument();
+    expect(await screen.findByText('Nummer 7 hat schon Gelb')).toBeInTheDocument();
     expect(typen('YELLOW_CARD')).toHaveLength(1); // noch nichts Zweites erfasst
     await user.click(screen.getByRole('button', { name: 'Gelb-Rot' }));
     await waitFor(() => expect(typen('YELLOW_RED_CARD')).toHaveLength(1));
     expect(typen('YELLOW_CARD')).toHaveLength(1);
   });
 
-  it('@SL-088 „Trotzdem Gelb“ erfasst eine zweite Gelbe Karte für Nr. 7', async () => {
+  it('@SL-088 „Trotzdem Gelb“ erfasst eine zweite Gelbe Karte für Nummer 7', async () => {
     const user = userEvent.setup();
     render(<Harness />); await starte(user);
     await karte(user, 'away', 'Gelb', '7');
@@ -179,14 +179,14 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     await waitFor(() => expect(typen('YELLOW_CARD')).toHaveLength(2));
   });
 
-  it('@SL-088 Gegenbeispiel: Nr. 7 von FC Nord hat noch kein Gelb, keine Rückfrage', async () => {
+  it('@SL-088 Gegenbeispiel: Nummer 7 von FC Nord hat noch kein Gelb, keine Rückfrage', async () => {
     const user = userEvent.setup();
     render(<Harness />); await starte(user);
     await karte(user, 'away', 'Gelb', '7');
     await waitFor(() => expect(typen('YELLOW_CARD')).toHaveLength(1));
     await karte(user, 'home', 'Gelb', '7');
     await waitFor(() => expect(typen('YELLOW_CARD')).toHaveLength(2));
-    expect(screen.queryByText('Nr. 7 hat schon Gelb')).toBeNull();
+    expect(screen.queryByText('Nummer 7 hat schon Gelb')).toBeNull();
   });
 
   it('@SL-029 Zeitstrafe: Tipp, Nummer 5 — keine Dauer-Auswahl; die Engine setzt die Dauer aus der Regel, die Strafen-Karte zeigt Team und Nummer', async () => {
@@ -198,7 +198,7 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     await user.click(nummer('5'));
     await waitFor(() => expect(typen('TIME_PENALTY')).toHaveLength(1));
     // Am Laptop steht die Strafe als Karte in der rechten Spalte (@SL-186): Team und Nummer, die Restzeit zählt mit der Spieluhr
-    expect(await screen.findByText(/, Nr\. 5$/)).toBeInTheDocument();
+    expect(await screen.findByText(/, Nummer 5$/)).toBeInTheDocument();
     expect(typen('TIME_PENALTY')[0].payload).not.toHaveProperty('durationSeconds');
   });
 

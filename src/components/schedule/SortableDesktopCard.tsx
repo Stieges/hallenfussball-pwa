@@ -18,6 +18,7 @@ import type { MatchCardStatus } from './MatchCard';
 import type { ScheduleConflict } from '../../features/schedule-editor/types';
 import type { RefereeChoice } from './refereeChoices';
 import { SwapWithButton } from './SwapWithButton';
+import { Versus } from '../ui/atoms';
 
 /** Auswahl-Eintrag (Schiedsrichter aus `refereeChoices`, Feld) */
 type SelectOption = RefereeChoice;
@@ -310,7 +311,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
           <div style={{ ...teamNameStyle, textAlign: 'right' }}>{sideName(match, 'A', sides)}</div>
 
           {/* VS */}
-          <div style={vsStyle}>vs</div>
+          <div style={vsStyle}><Versus /></div>
 
           {/* Away Team */}
           <div style={teamNameStyle}>{sideName(match, 'B', sides)}</div>

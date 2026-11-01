@@ -7,6 +7,7 @@
  * Importe/Mocks, z. B. `useEngineCommandWiring.ts`); `useEngineMatchReadiness.ts`,
  * `useScheduleTabActions.ts` und `useCockpitExecution.ts` importieren ab dieser Runde direkt von hier.
  */
+import i18next from 'i18next';
 import type { Match, Tournament, Team } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { matchSideTeamId } from '../core/models/matchSlot';
@@ -77,7 +78,7 @@ export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       fieldId: `field-${match.field}`,
       // @W5-029: Datum = Turnierdatum (wie die Cloud), nicht das Datum, das im Spiel steckt (Kopie mit neuem Datum)
       scheduledKickoff: (kickoffInstant(tournament.startDate ?? tournament.date, match.scheduledTime) ?? new Date()).toISOString(),
-      refereeName: match.referee !== undefined ? `SR ${match.referee}` : undefined,
+      refereeName: match.referee !== undefined ? i18next.t('tournament:refereeOptions.numbered', { number: match.referee }) : undefined,
       homeTeam: { id: ctx.teamAId, name: homeTeam.name },
       awayTeam: { id: ctx.teamBId, name: awayTeam.name },
       version: 0,

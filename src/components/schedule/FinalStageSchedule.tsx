@@ -22,6 +22,7 @@ import { FinalStageMobileCard } from './FinalStageMobileCard';
 import { MatchForfeitAction, type MatchForfeitActions } from './MatchForfeitAction';
 import { cardStatusOf, resultFigures, type ResultFigures } from './matchResult';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
+import { ShortLabel, Versus } from '../ui/atoms';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
 import { useRefereeChoices } from './refereeChoices';
@@ -168,8 +169,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
       <thead>
         <tr>
           {editingSchedule && <th style={{ ...thStyle, width: '30px' }}></th>}
-          <th style={{ ...thStyle, width: '40px' }}>{t('finals.columns.number')}</th>
-          {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('finals.columns.referee')}</th>}
+          <th style={{ ...thStyle, width: '1%', whiteSpace: 'nowrap' }}><ShortLabel term="number" /></th>
+          {showReferees && <th style={{ ...thStyle, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>{t('finals.columns.referee')}</th>}
           <th style={{ ...thStyle, width: '60px' }}>{t('finals.columns.time')}</th>
           <th style={{ ...thStyle, width: '100px' }}>{t('finals.columns.round')}</th>
           <th style={thStyle}>{t('finals.columns.home')}</th>
@@ -384,7 +385,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   </span>
                   <span style={{ color: cssVars.colors.textSecondary }}>{activeMatch.time}</span>
                   <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1 }}>
-                    {sideName(activeMatch, 'A', sides)} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {sideName(activeMatch, 'B', sides)}
+                    {sideName(activeMatch, 'A', sides)} <span style={{ color: cssVars.colors.textMuted }}><Versus /></span> {sideName(activeMatch, 'B', sides)}
                   </span>
                 </div>
               )}

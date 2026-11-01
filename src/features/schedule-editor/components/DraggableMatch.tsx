@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Match, Team } from '../../../types/tournament';
@@ -14,6 +15,7 @@ import { isMatchInProgress } from '../../../core/view';
 import { ScheduleConflict } from '../types';
 import { cssVars } from '../../../design-tokens'
 import { SkippedMatchOverlay, SkippedBadge } from './SkippedMatchOverlay';
+import { Versus } from '../../../components/ui/atoms';
 
 // ============================================================================
 // Types
@@ -68,6 +70,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   draggable = true,
   compact = false,
 }) => {
+  const { t } = useTranslation('tournament');
   // Determine if match can be dragged
   const canDrag =
     isEditing &&
@@ -311,7 +314,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
               <span style={scoreStyle}>{match.scoreB}</span>
             </div>
           ) : (
-            <span style={vsStyle}>vs</span>
+            <span style={vsStyle}><Versus /></span>
           )}
           <span style={awayTeamStyle}>{awayTeamName}</span>
         </div>
@@ -334,7 +337,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
           {/* Referee */}
           {match.referee && (
             <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
-              SR {match.referee}
+              {t('refereeOptions.numbered', { number: match.referee })}
             </span>
           )}
         </div>

@@ -136,7 +136,7 @@ export function balken(page: LayoutPage, w: number, von: number, bis: number): L
  * Spaltenköpfe sind fett (v7.2, `headStyles`), Teamnamen nicht.
  */
 export function istFett(page: LayoutPage, text: LayoutText): boolean {
-  const kopf = page.texts.find(t => t.str.trim() === 'Nr' && Math.abs(t.size - printType.head) <= SIZE_TOL);
+  const kopf = page.texts.find(t => t.str.trim() === 'Nr.' && Math.abs(t.size - printType.head) <= SIZE_TOL);
   const name = page.texts.find(t => t.str.trim() === 'FC Nord' || t.str.trim() === 'SV Süd');
   if (!kopf || !name) {
     throw new Error('Spaltenkopf „Nr“ oder ein Teamname fehlt auf der Seite');
@@ -152,5 +152,5 @@ export function istFett(page: LayoutPage, text: LayoutText): boolean {
  * `undefined`, wenn das Dokument keinen Spaltenkopf hat.
  */
 export function fettKennung(pages: LayoutPage[]): string | undefined {
-  return pages.flatMap(page => page.texts).find(t => t.str.trim() === 'Nr' && Math.abs(t.size - printType.head) <= SIZE_TOL)?.font;
+  return pages.flatMap(page => page.texts).find(t => t.str.trim() === 'Nr.' && Math.abs(t.size - printType.head) <= SIZE_TOL)?.font;
 }

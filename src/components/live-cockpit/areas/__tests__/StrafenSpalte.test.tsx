@@ -29,9 +29,9 @@ describe('@SL-186 Laufende Zeitstrafen stehen als Karten am Laptop', () => {
   it('2 laufende Zeitstrafen: beide als Karte mit großer Restzeit, Spielzeit des Beginns und Balken, ohne „weitere“', () => {
     render(<StrafenSpalte model={modell([strafe('a', 72), strafe('b', 100, 4)])} />);
     expect(screen.getByTestId('strafen-karte-a-rest')).toHaveTextContent('1:12');
-    expect(screen.getByTestId('strafen-karte-a-titel')).toHaveTextContent('DJK Otting, Nr. 9');
-    expect(screen.getByTestId('strafen-karte-a')).toHaveTextContent('Zeitstrafe 2 Min · seit Spielzeit 3:18');
-    expect(screen.getByTestId('strafen-karte-b-titel')).toHaveTextContent('DJK Otting, Nr. 4');
+    expect(screen.getByTestId('strafen-karte-a-titel')).toHaveTextContent('DJK Otting, Nummer 9');
+    expect(screen.getByTestId('strafen-karte-a')).toHaveTextContent('Zeitstrafe 2 Minuten · seit Spielzeit 3:18');
+    expect(screen.getByTestId('strafen-karte-b-titel')).toHaveTextContent('DJK Otting, Nummer 4');
     expect(screen.queryByTestId('strafen-weitere')).toBeNull();
   });
 
@@ -42,18 +42,18 @@ describe('@SL-186 Laufende Zeitstrafen stehen als Karten am Laptop', () => {
     expect(screen.getByTestId('strafen-weitere')).toHaveTextContent('+ 1 weitere (DJK Otting)');
     expect(screen.getAllByRole('listitem')).toHaveLength(2); // Karten stehen in einer Liste, je Karte mit Namen und Restzeit
     expect(screen.getByRole('list')).toBeInTheDocument();
-    expect(screen.getByTestId('strafen-karte-a')).toHaveAttribute('aria-label', 'DJK Otting, Nr. 9, Restzeit 1:12');
+    expect(screen.getByTestId('strafen-karte-a')).toHaveAttribute('aria-label', 'DJK Otting, Nummer 9, Restzeit 1:12');
   });
 
   it('Strafe aus der 1. Halbzeit läuft in der 2. weiter: „seit 1. Halbzeit 9:30“', () => {
     render(<StrafenSpalte model={modell([{ ...strafe('f', 50), seitMs: null, seitErsteHalbzeitMs: 570_000 }])} />);
-    expect(screen.getByTestId('strafen-karte-f')).toHaveTextContent('Zeitstrafe 2 Min · seit 1. Halbzeit 9:30');
+    expect(screen.getByTestId('strafen-karte-f')).toHaveTextContent('Zeitstrafe 2 Minuten · seit 1. Halbzeit 9:30');
   });
 
-  it('ohne Nummer steht „ohne Nr.“, bei einer Strafe aus dem früheren Abschnitt entfällt „seit Spielzeit“', () => {
+  it('ohne Nummer steht „ohne Nummer“, bei einer Strafe aus dem früheren Abschnitt entfällt „seit Spielzeit“', () => {
     render(<StrafenSpalte model={modell([{ ...strafe('o', 50), playerNumber: undefined, seitMs: null }])} />);
-    expect(screen.getByTestId('strafen-karte-o-titel')).toHaveTextContent('DJK Otting, ohne Nr.');
-    expect(screen.getByTestId('strafen-karte-o')).toHaveTextContent('Zeitstrafe 2 Min');
+    expect(screen.getByTestId('strafen-karte-o-titel')).toHaveTextContent('DJK Otting, ohne Nummer');
+    expect(screen.getByTestId('strafen-karte-o')).toHaveTextContent('Zeitstrafe 2 Minuten');
     expect(screen.getByTestId('strafen-karte-o')).not.toHaveTextContent('seit Spielzeit');
   });
 });

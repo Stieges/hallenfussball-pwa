@@ -1,11 +1,11 @@
 /**
  * MatchCardHeader - Kopfzeile der Spielkarte (@OB-064, Mockup Variante D)
  *
- * Links die Anpfiffzeit, rechts Feld, Gruppe/Runde, SR und der Status:
+ * Links die Anpfiffzeit, rechts Feld, Gruppe/Runde, Schiedsrichter und der Status:
  * - Abzeichen der Ansicht mit dem Wort des Zustands (Live, Pause, Halbzeit, …, ausgefallen), ohne Uhr (@OB-065, @OB-066)
  * - gewertet: Kennzeichen „gewertet“ neben dem Abzeichen „Ende“ (@ZM-104)
- * - beendet nach Strafstoßschießen: „beendet i. E.“
- * - nach Verlängerung entschieden: „n. V.“
+ * - beendet nach Strafstoßschießen: „beendet nach Strafstoßschießen“ (@OB-075: keine Kurzform)
+ * - nach Verlängerung entschieden: „beendet nach Verlängerung“ (die Kurzform „n. V.“ steht nur in Ergebniszellen)
  * - regulär beendet oder geplant: kein Zusatz
  */
 import { type CSSProperties } from 'react';
@@ -64,7 +64,7 @@ export const MatchCardHeader: React.FC<MatchCardHeaderProps> = ({
   // Ohne Abzeichen der Ansicht (Aufrufer ohne `MatchView`): grobes Abzeichen aus dem Status, ohne Feinstatus
   const model = badge ?? matchBadgeModel({ status: viewStatus ?? FROM_CARD_STATUS[status] });
   const finishedNote = status === 'finished'
-    ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined
+    ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.finishedOvertime') : undefined
     : undefined;
 
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;

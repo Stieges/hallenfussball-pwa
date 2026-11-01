@@ -9,7 +9,13 @@
  * - Edge cases and boundary conditions
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { initRealGlobalI18n } from '../../../../test/realI18n';
+
+// Meldungen und Bezeichnungen kommen aus den Sprachdateien (@OB-075/@OB-076): echte Texte statt Passthrough-Mock
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+beforeAll(async () => { await initRealGlobalI18n('de'); });
 import {
   detectTeamConflicts,
   detectRefereeConflicts,
@@ -513,7 +519,8 @@ describe('detectBreakViolations', () => {
     expect(conflicts[0].type).toBe('break_violation');
     expect(conflicts[0].severity).toBe('warning');
     expect(conflicts[0].message).toContain('Team A');
-    expect(conflicts[0].message).toContain('2 Min.');
+    expect(conflicts[0].message).toContain('2 Minuten');
+    expect(conflicts[0].message).not.toMatch(/\bMin\b/);
   });
 
   it('should ignore finished and skipped matches', () => {
@@ -756,7 +763,7 @@ describe('groupConflictsByType', () => {
 describe('getConflictTypeLabel', () => {
   it('should return German labels for all conflict types', () => {
     expect(getConflictTypeLabel('team_double_booking')).toBe('Team-Doppelbelegung');
-    expect(getConflictTypeLabel('referee_double_booking')).toBe('SR-Doppelbelegung');
+    expect(getConflictTypeLabel('referee_double_booking')).toBe('Schiedsrichter-Doppelbelegung');
     expect(getConflictTypeLabel('field_overlap')).toBe('Feld-Überschneidung');
     expect(getConflictTypeLabel('break_violation')).toBe('Pausenzeit-Verletzung');
     expect(getConflictTypeLabel('dependency_violation')).toBe('Abhängigkeits-Verletzung');

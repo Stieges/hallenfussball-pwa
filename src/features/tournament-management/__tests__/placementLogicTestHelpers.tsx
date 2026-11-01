@@ -18,6 +18,8 @@
 import type { ReactNode } from 'react';
 import deWizard from '../../../i18n/locales/de/wizard.json';
 import deTournament from '../../../i18n/locales/de/tournament.json';
+import deSport from '../../../i18n/locales/de/sport.json';
+import deShort from '../../../i18n/locales/de/short.json';
 import { MOCK_TOURNAMENT } from '../../../test-data/mockTournament';
 import { calculateStandings } from '../../../utils/calculations';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
@@ -59,9 +61,9 @@ export async function createRealI18nWrapper(): Promise<
     lng: 'de',
     fallbackLng: 'de',
     defaultNS: 'tournament',
-    ns: ['tournament', 'wizard'],
+    ns: ['tournament', 'wizard', 'sport', 'short'],
     resources: {
-      de: { tournament: deTournament, wizard: deWizard },
+      de: { tournament: deTournament, wizard: deWizard, sport: deSport, short: deShort },
     },
     interpolation: { escapeValue: false },
     returnNull: false,

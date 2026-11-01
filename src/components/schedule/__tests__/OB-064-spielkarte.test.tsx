@@ -1,8 +1,8 @@
 /**
  * @OB-064 „Tore folgen der Anordnung der Mannschaften, der Sieger steht fett“ (Record Oberfläche, Paket SK).
  * Werte und Wortlaut aus dem Gherkin des Szenariogrundrisses (Beispiele Z.1–Z.3), Halbfinale 1 „FC Nord gegen SG Mitte“:
- *   Z.1  2:2, FC Nord gewinnt das Strafstoßschießen 4:3 → je Zeile 2 / 2, (4) bei FC Nord, (3) bei SG Mitte, FC Nord fett, Tabelle „2:2 (4:3 i. E.)“
- *   Z.2  3:2 nach Verlängerung für FC Nord             → 3 / 2, Kopfzeile „n. V.“, FC Nord fett, Tabelle „3:2 n. V.“
+ *   Z.1  2:2, FC Nord gewinnt das Strafstoßschießen 4:3 → je Zeile 2 / 2, (4) bei FC Nord, (3) bei SG Mitte, FC Nord fett, Tabelle „2:2 (4:3)“
+ *   Z.2  3:2 nach Verlängerung für FC Nord             → 3 / 2, Kopfzeile „beendet nach Verlängerung“, FC Nord fett, Tabelle „3:2 n. V.“ (@OB-075: nur die Ergebniszelle trägt die Kurzform)
  *   Z.3  1:0 nach regulärer Zeit                        → 1 / 0, kein Zusatz, FC Nord fett, Tabelle „1:0“
  * Regel „Tore folgen der Anordnung“: ein laufendes Spiel zeigt seine Spielzeit in der Kopfzeile der Karte.
  */
@@ -69,7 +69,7 @@ describe('@OB-064 Spielkarte am Handy: Tore je Zeile', () => {
     expect(strafstoss('home')).toBe('(4)');
     expect(strafstoss('away')).toBe('(3)');
     expect(istFett('FC Nord')).toBe(true);
-    expect(screen.getByTestId('match-card-decision').textContent).toBe('beendet i. E.');
+    expect(screen.getByTestId('match-card-decision').textContent).toBe('beendet nach Strafstoßschießen');
   });
 
   it('Z.1 Gegenbeispiel: der Verlierer SG Mitte steht nicht fett', () => {
@@ -78,11 +78,11 @@ describe('@OB-064 Spielkarte am Handy: Tore je Zeile', () => {
     expect(screen.getByText('SG Mitte').style.fontWeight).not.toBe(screen.getByText('FC Nord').style.fontWeight);
   });
 
-  it('Z.2 Verlängerung: 3 und 2, die Kopfzeile nennt „n. V.“, FC Nord fett, kein Strafstoß', () => {
+  it('Z.2 Verlängerung: 3 und 2, die Kopfzeile nennt „beendet nach Verlängerung“, FC Nord fett, kein Strafstoß', () => {
     karte(AUSGANG.verlaengerung, 'finished');
     expect(tore('home')).toBe('3');
     expect(tore('away')).toBe('2');
-    expect(screen.getByTestId('match-card-decision').textContent).toBe('n. V.');
+    expect(screen.getByTestId('match-card-decision').textContent).toBe('beendet nach Verlängerung');
     expect(strafstoss('home')).toBeUndefined();
     expect(istFett('FC Nord')).toBe(true);
   });
@@ -96,9 +96,10 @@ describe('@OB-064 Spielkarte am Handy: Tore je Zeile', () => {
     expect(istFett('FC Nord')).toBe(true);
   });
 
-  it('Z.2/Z.3 Gegenbeispiel: ohne Verlängerung steht kein „n. V.“ auf der Karte', () => {
+  it('Z.2/Z.3 Gegenbeispiel: ohne Verlängerung steht kein „nach Verlängerung“ und kein „n. V.“ auf der Karte', () => {
     const { container } = karte(AUSGANG.regulaer, 'finished');
     expect(container.textContent).not.toContain('n. V.');
+    expect(container.textContent).not.toContain('nach Verlängerung');
     expect(container.textContent).not.toContain('i. E.');
   });
 
@@ -112,7 +113,7 @@ describe('@OB-064 Spielkarte am Handy: Tore je Zeile', () => {
 });
 
 describe('@OB-064 Tabellenzeile am Desktop: Ergebnis waagerecht', () => {
-  it('Z.1: „2:2 (4:3 i. E.)“', () => { expect(tabelle(AUSGANG.strafstoss)).toBe('2:2 (4:3 i. E.)'); });
+  it('Z.1: „2:2 (4:3)“ (@OB-075: keine Kurzform „i. E.“, das Strafstoß-Ergebnis steht in Klammern)', () => { expect(tabelle(AUSGANG.strafstoss)).toBe('2:2 (4:3)'); });
   it('Z.2: „3:2 n. V.“', () => { expect(tabelle(AUSGANG.verlaengerung)).toBe('3:2 n. V.'); });
   it('Z.3: „1:0“ ohne Zusatz', () => { expect(tabelle(AUSGANG.regulaer)).toBe('1:0'); });
   it('Sieger fett: FC Nord (Heim) fett, SG Mitte nicht', () => {
@@ -156,10 +157,10 @@ describe('Regel: laufendes Spiel zeigt sein Abzeichen ohne Uhr und die Restzeit 
 });
 
 describe('Golden Goal ist eine Form der Verlängerung (Z.2 sinngemäß)', () => {
-  it('Spiel durch Golden Goal: Kopfzeile „n. V.“, Tabelle „n. V.“', () => {
+  it('Spiel durch Golden Goal: Kopfzeile „beendet nach Verlängerung“, Tabelle „n. V.“', () => {
     const golden = { scoreA: 1, scoreB: 1, overtimeScoreA: 1, overtimeScoreB: 0, decidedBy: 'goldenGoal' } as const;
     karte(golden, 'finished');
-    expect(screen.getByTestId('match-card-decision').textContent).toBe('n. V.');
+    expect(screen.getByTestId('match-card-decision').textContent).toBe('beendet nach Verlängerung');
     expect(tore('home')).toBe('2');
   });
 });

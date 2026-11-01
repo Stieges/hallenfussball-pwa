@@ -91,7 +91,7 @@ describe('Assistent: Reihenfolge bei Punktgleichheit mit fester letzter Zeile (@
   it('der Hilfetext zum direkten Vergleich nennt die Sondertabelle bei drei und mehr Teams', async () => {
     await zeigeSchritt(entwurf());
     expect(screen.getByText('Bei drei und mehr Teams eine Sondertabelle aus ihren Spielen untereinander.')).toBeInTheDocument();
-    expect(screen.getByText(/Vorbelegt nach den BFV-Regeln für private Hallenturniere/)).toBeInTheDocument();
+    expect(screen.getByText(/Vorbelegt nach den Regeln des Bayerischen Fußball-Verbands für private Hallenturniere/)).toBeInTheDocument();
   });
 });
 

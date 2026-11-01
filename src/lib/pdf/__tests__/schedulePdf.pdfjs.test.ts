@@ -66,8 +66,10 @@ describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
     const participants = section(tokens, '1Teilnehmer', '2Gruppenphase');
     expect(participants.some(t => t.includes(key))).toBe(true);
     // Spiele: Zeile mit dem Namen als eigenes Stück in der Gruppenphase, vor der ersten Tabelle.
+    // Seit @OB-075 (Spaltenköpfe „Schiedsrichter“, „Gruppe“ ausgeschrieben) sind Heim und Gast schmaler: der Name darf in der
+    // Spieltabelle auf zwei Zeilen stehen, die Zeichen müssen vollständig und in Reihenfolge da sein (Zusammenhang der Stücke).
     const matches = section(tokens, '2Gruppenphase', '3Tabelle–GruppeA');
-    expect(matches).toContain(key);
+    expect(matches.join('')).toContain(key);
     // Tabelle Gruppe A: Name als eigenes Stück zwischen Titel und Gruppe B.
     const table = section(tokens, '3Tabelle–GruppeA', 'Tabelle–GruppeB');
     expect(table).toContain(key);

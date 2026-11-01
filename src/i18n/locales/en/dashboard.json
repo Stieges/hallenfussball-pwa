@@ -6,24 +6,20 @@
     "draft": "Draft",
     "archived": "Archived"
   },
-
   "nav": {
     "tournaments": "Tournaments",
     "archive": "Archive",
     "trash": "Trash"
   },
-
   "legacyNotice": {
     "message": "Tournaments in the old format were set aside, not deleted. They can no longer be opened in this version.",
     "dismiss": "Dismiss notice"
   },
-
   "buttons": {
     "import": "Import",
     "newTournament": "New Tournament",
     "limitReached": "Limit Reached"
   },
-
   "emptyState": {
     "noTournaments": "No tournaments yet",
     "noTournamentsHint": "Create your first tournament with the button above",
@@ -35,7 +31,6 @@
     "trashEmpty": "Trash is empty",
     "trashHint": "Deleted tournaments can be restored here."
   },
-
   "sections": {
     "runningTournaments": "Currently running tournaments",
     "upcomingTournaments": "Upcoming tournaments",
@@ -44,7 +39,6 @@
     "tournamentCount": "({{count}} tournaments)",
     "trash": "Trash"
   },
-
   "trash": {
     "retentionInfo": "Tournaments are automatically deleted after {{days}} days.",
     "emptyTrashTitle": "Empty trash?",
@@ -59,7 +53,6 @@
     "restore": "Restore",
     "permanentDelete": "Delete Permanently"
   },
-
   "card": {
     "ariaLabel": "Tournament: {{title}}, {{status}}",
     "ariaLabelExternal": "Tournament: {{title}}, {{status}}, {{source}}",
@@ -79,10 +72,10 @@
       "roundRobin": "Round Robin"
     },
     "placementAbbreviations": {
-      "points": "Pts",
-      "goalDifference": "GD",
-      "goalsFor": "GF",
-      "directComparison": "H2H"
+      "points": "Points",
+      "goalDifference": "Goal difference",
+      "goalsFor": "Goals for",
+      "directComparison": "Head to head"
     },
     "noPlacement": "None",
     "role": {
@@ -92,7 +85,6 @@
       "viewer": "Viewer"
     }
   },
-
   "actions": {
     "open": "Open",
     "copy": "Copy",
@@ -102,7 +94,6 @@
     "permanentDelete": "Delete Permanently",
     "actionsLabel": "Actions"
   },
-
   "search": {
     "placeholder": "Search tournaments...",
     "clearLabel": "Clear search",
@@ -110,7 +101,6 @@
     "filterAriaLabel": "Filter: {{label}} {{activeState}}",
     "filterActive": "(active)"
   },
-
   "import": {
     "stepTitles": {
       "select": "Import Tournament",
@@ -158,7 +148,6 @@
       "goToTournament": "Go to Tournament"
     }
   },
-
   "share": {
     "title": "Share Schedule",
     "shareCode": "Share Code:",

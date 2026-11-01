@@ -5,6 +5,8 @@
  * Extracted to avoid code duplication between MatchCard and MatchCardDesktop.
  */
 
+import i18next from 'i18next';
+
 /**
  * Formats a time string for display.
  * Handles both ISO date strings and pre-formatted HH:MM strings.
@@ -73,7 +75,7 @@ export function getTeamInitials(name: string): string {
  * @returns Formatted referee string or undefined if no referee
  *
  * @example
- * formatReferee(1) // 'SR 1'
+ * formatReferee(1) // 'Schiedsrichter 1' (englische Oberfläche: 'Referee 1', @OB-076)
  * formatReferee(2, 'Max Müller') // 'Max Müller'
  * formatReferee(undefined) // undefined
  */
@@ -87,5 +89,5 @@ export function formatReferee(
   if (refereeName) {
     return refereeName;
   }
-  return `SR ${referee}`;
+  return i18next.t('tournament:refereeOptions.numbered', { number: referee });
 }

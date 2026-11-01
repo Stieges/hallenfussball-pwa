@@ -1,22 +1,42 @@
 {
   "$schema-comment": [
-    "Normatives Terminologie-Glossar. Dies ist die einzige Quelle für verbindliche deutsche Fachbegriffe im Projekt.",
-    "Konsumenten: (1) ESLint-Regel, die verbotene Synonyme im Code markiert, (2) ein Prüfskript, das Vorkommen zählt,",
-    "(3) die Sprachdateien unter src/i18n/locales/**, deren Werte mit 'de' hier übereinstimmen müssen.",
+    "Normatives Terminologie-Glossar. Dies ist die einzige Quelle für verbindliche Fachbegriffe im Projekt (Deutsch und Englisch).",
+    "Konsumenten: (1) ESLint-Regel, die verbotene Formen im Code markiert, (2) ein Prüfskript (scripts/check-terminology.cjs),",
+    "(3) die Sprachdateien unter src/i18n/locales/**, deren Werte mit 'de'/'en' hier übereinstimmen müssen.",
     "",
     "Struktur: ein Objekt 'terms', dessen Keys fachliche Begriffs-IDs sind (camelCase, projektintern, NICHT",
-    "zwingend identisch mit i18n-Keys). Jeder Eintrag hat exakt diese Felder:",
+    "zwingend identisch mit i18n-Keys). Jeder Eintrag hat diese Pflichtfelder:",
     "  de           string   — bevorzugte deutsche Form. Verbindlich für UI-Text, Code-Kommentare, Docs.",
-    "  en           string   — englische Entsprechung (Referenz, z.B. für Code-Bezeichner, keine UI-Vorgabe).",
-    "  forbidden_de string[] — verbotene deutsche Synonyme. Jedes Vorkommen im UI-Text ist ein Verstoß.",
+    "  en           string   — englische Entsprechung (Referenz; der Prüfer vergleicht ohne Groß-/Kleinschreibung).",
+    "  forbidden_de string[] — verbotene Formen im DEUTSCHEN UI-Text (Synonyme oder Kürzel). Jedes Vorkommen ist ein Verstoß.",
     "  reason       string   — Begründung der Wahl, ein Satz, für Menschen (siehe auch docs/GLOSSAR.md).",
-    "  i18nKey      string   — Pfad in src/i18n/locales/de/sport.json (Punktnotation, z.B. 'events.penaltyShootout'),",
-    "                          auf den dieser Begriff zeigt. Der Wert an diesem Pfad MUSS 'de' entsprechen.",
+    "  i18nKey      string   — Pfad in src/i18n/locales/{de,en}/sport.json (Punktnotation, z.B. 'events.penaltyShootout'),",
+    "                          auf den dieser Begriff zeigt. Der Wert an diesem Pfad MUSS 'de' bzw. 'en' entsprechen.",
     "",
-    "Versionierung: additive Änderungen (neue Begriffe) sind unkritisch. Wird ein bestehendes Feld entfernt,",
+    "Optionale Felder (additiv, seit 2026-11-01, @OB-075/@OB-076):",
+    "  forbidden_en string[] — verbotene Formen im ENGLISCHEN UI-Text (z.B. 'SF', 'Ref', 'pens').",
+    "  kuerzel      boolean  — true: alle forbidden_* dieses Begriffs sind Kürzel. Sie werden GROSS-/KLEINSCHREIBUNGSSENSIBEL und",
+    "                          nur als ganzes Wort gesucht (Buchstaben, Ziffern und Unterstrich grenzen ab, bei kleingeschriebenen Kürzeln auch der Bindestrich: „min-width“ trifft nicht),",
+    "                          'preferred'-Warnungen der ESLint-Regel entfallen (Wörter wie 'Gruppe' sind ordentliche Wörter).",
+    "                          Locale-Werte werden vorher von {{Platzhaltern}} und $t(...)-Verweisen befreit.",
+    "  tsLint       boolean  — false: das Kürzel wird nur in Sprachdateien geprüft, nicht in .ts/.tsx-Literalen (z.B. die interne",
+    "                          matchId 'P3', die nie angezeigt wird). Standard: true.",
+    "  short        object   — die EINE erlaubte Kurzform, falls es sie gibt:",
+    "                            de        string — Kurzform auf Deutsch (z.B. 'Sp.')",
+    "                            en        string — Kurzform auf Englisch (z.B. 'P')",
+    "                            context   'tabellenkopf' | 'ergebniszelle' | 'uhr' — der einzige Ort, an dem sie stehen darf",
+    "                            shortKey  string — Pfad in src/i18n/locales/{de,en}/short.json (z.B. 'tabellenkopf.played')",
+    "                          Kurzformen stehen AUSSCHLIESSLICH im Namensraum 'short' (short.json). Der Prüfer verlangt, dass jeder",
+    "                          Wert dort einem Glossar-Eintrag entspricht und dass jede Kurzform an ihrem Ort einen ausgeschriebenen",
+    "                          Begriff (i18nKey) hat, der als title/aria-label gezeigt wird (Komponente ShortLabel).",
+    "                          Ein Kürzel aus forbidden_* ist überall verboten, auch dort, wo es zufällig der Kurzform gleicht,",
+    "                          außer im Namensraum 'short'. Einbuchstabige Kurzformen (S/U/N, W/D/L, P) werden nicht gesucht",
+    "                          (zu viele Fehltreffer), sondern nur über short.json abgesichert.",
+    "",
+    "Versionierung: additive Änderungen (neue Begriffe, optionale Felder) sind unkritisch. Wird ein bestehendes Feld entfernt,",
     "umbenannt oder sein Typ geändert, betrifft das mindestens drei Konsumenten (ESLint-Regel, Prüfskript,",
     "Sprachdateien) — vorher mit den entsprechenden Tasks abstimmen.",
-    "Stand: 2026-09-21, Task 1 von .superpowers/sdd/2026-09-21-terminologie-zentral/"
+    "Stand: 2026-11-01 (Begriffe ausschreiben, @OB-075/@OB-076); Ursprung 2026-09-21, Task 1 von .superpowers/sdd/2026-09-21-terminologie-zentral/"
   ],
   "terms": {
     "penaltyShootout": {
@@ -95,6 +115,265 @@
       "forbidden_de": ["Abgesagt"],
       "reason": "Record-Wortlaut für ein Spiel, das nicht stattfindet (@ZM-104, @DR-001, @DR-019); A-36b, Teilplan A-36 N5 (der Bauplan sagte noch „abgesetzt“).",
       "i18nKey": "status.cancelled"
+    },
+    "semifinal": {
+      "de": "Halbfinale",
+      "en": "semifinal",
+      "forbidden_de": ["HF"],
+      "forbidden_en": ["SF"],
+      "reason": "Daniel 01.11.2026, @OB-075: Runden der Finalrunde werden ausgeschrieben, nie als Kürzel (SF kollidiert zudem mit dem Vereinskürzel „Sportfreunde“).",
+      "i18nKey": "finalsTypes.semifinal",
+      "kuerzel": true
+    },
+    "quarterfinal": {
+      "de": "Viertelfinale",
+      "en": "quarterfinal",
+      "forbidden_de": ["VF"],
+      "forbidden_en": ["QF"],
+      "reason": "Daniel 01.11.2026, @OB-075: Runden der Finalrunde werden ausgeschrieben, nie als Kürzel.",
+      "i18nKey": "finalsTypes.quarterfinal",
+      "kuerzel": true
+    },
+    "roundOf16": {
+      "de": "Achtelfinale",
+      "en": "round of 16",
+      "forbidden_de": ["AF"],
+      "forbidden_en": ["R16"],
+      "reason": "Daniel 01.11.2026, @OB-075: Runden der Finalrunde werden ausgeschrieben, nie als Kürzel.",
+      "i18nKey": "finalsTypes.roundOf16",
+      "kuerzel": true
+    },
+    "thirdPlaceMatch": {
+      "de": "Spiel um Platz 3",
+      "en": "third-place match",
+      "forbidden_de": ["P3"],
+      "forbidden_en": ["P3"],
+      "reason": "Daniel 01.11.2026, @OB-075: Als Anzeige verboten; die interne matchId „P3“ bleibt (deshalb nur in Sprachdateien geprüft).",
+      "i18nKey": "finalsTypes.thirdPlace",
+      "kuerzel": true,
+      "tsLint": false
+    },
+    "knockout": {
+      "de": "K.-o.-Runde",
+      "en": "knockout stage",
+      "forbidden_de": ["KO"],
+      "forbidden_en": ["KO"],
+      "reason": "Daniel 01.11.2026, @OB-075: Einheitliche Schreibweise „K.-o.“ in der Wortverbindung, „KO“ ohne Punkte ist verboten.",
+      "i18nKey": "finalsTypes.knockout",
+      "kuerzel": true
+    },
+    "referee": {
+      "de": "Schiedsrichter",
+      "en": "referee",
+      "forbidden_de": ["SR"],
+      "forbidden_en": ["SR", "Ref"],
+      "reason": "Daniel 01.11.2026, @OB-075: Auch zusammengesetzt („Schiedsrichter 2“ / „Referee 2“) in der gewählten Sprache, kein Kürzel (@OB-076).",
+      "i18nKey": "roles.referee",
+      "kuerzel": true
+    },
+    "group": {
+      "de": "Gruppe",
+      "en": "group",
+      "forbidden_de": ["Gr.", "Gr", "Grp"],
+      "forbidden_en": ["Gr.", "Gr", "Grp"],
+      "reason": "Daniel 01.11.2026, @OB-075: „Gruppe A“ / „Group A“ ausgeschrieben, auch in Spaltenköpfen.",
+      "i18nKey": "tournament.group",
+      "kuerzel": true
+    },
+    "versus": {
+      "de": "gegen",
+      "en": "vs",
+      "forbidden_de": ["vs", "vs.", "VS"],
+      "forbidden_en": [],
+      "reason": "Daniel 01.11.2026, @OB-075: Auf Deutsch „gegen“ (@OB-076); im Englischen bleibt „vs“.",
+      "i18nKey": "tournament.versus",
+      "kuerzel": true
+    },
+    "afterPenalties": {
+      "de": "nach Strafstoßschießen",
+      "en": "on penalties",
+      "forbidden_de": ["i. E.", "i.E.", "i. E"],
+      "forbidden_en": ["pens"],
+      "reason": "Daniel 01.11.2026, @OB-075: Keine Kurzform; in engen Ergebniszellen steht der Stand mit dem Strafstoß-Ergebnis in Klammern („2:2 (4:3)“).",
+      "i18nKey": "phases.afterPenalties",
+      "kuerzel": true
+    },
+    "rank": {
+      "de": "Platz",
+      "en": "position",
+      "forbidden_de": ["Pl.", "Pl"],
+      "forbidden_en": ["Pos", "Pos."],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf nur „#“ (in beiden Sprachen), im Text „Platz“ bzw. „Position“.",
+      "i18nKey": "tabelle.rank",
+      "kuerzel": true,
+      "short": {
+        "de": "#",
+        "en": "#",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.rank"
+      }
+    },
+    "played": {
+      "de": "Spiele",
+      "en": "played",
+      "forbidden_de": ["Sp", "Sp."],
+      "forbidden_en": [],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf „Sp.“ / „P“, im Text ausgeschrieben.",
+      "i18nKey": "tabelle.played",
+      "kuerzel": true,
+      "short": {
+        "de": "Sp.",
+        "en": "P",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.played"
+      }
+    },
+    "won": {
+      "de": "Siege",
+      "en": "won",
+      "forbidden_de": [],
+      "forbidden_en": [],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf „S“ / „W“, im Text ausgeschrieben.",
+      "i18nKey": "tabelle.won",
+      "kuerzel": true,
+      "short": {
+        "de": "S",
+        "en": "W",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.won"
+      }
+    },
+    "drawn": {
+      "de": "Unentschieden",
+      "en": "drawn",
+      "forbidden_de": ["Unent."],
+      "forbidden_en": [],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf „U“ / „D“, im Text ausgeschrieben.",
+      "i18nKey": "tabelle.drawn",
+      "kuerzel": true,
+      "short": {
+        "de": "U",
+        "en": "D",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.drawn"
+      }
+    },
+    "lost": {
+      "de": "Niederlagen",
+      "en": "lost",
+      "forbidden_de": ["Niederl."],
+      "forbidden_en": [],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf „N“ / „L“, im Text ausgeschrieben.",
+      "i18nKey": "tabelle.lost",
+      "kuerzel": true,
+      "short": {
+        "de": "N",
+        "en": "L",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.lost"
+      }
+    },
+    "goalDifference": {
+      "de": "Tordifferenz",
+      "en": "goal difference",
+      "forbidden_de": ["Diff", "Diff."],
+      "forbidden_en": ["GD", "Diff", "Diff."],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf „Diff.“ / „GD“, im Text ausgeschrieben.",
+      "i18nKey": "tabelle.goalDifference",
+      "kuerzel": true,
+      "short": {
+        "de": "Diff.",
+        "en": "GD",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.goalDifference"
+      }
+    },
+    "points": {
+      "de": "Punkte",
+      "en": "points",
+      "forbidden_de": ["Pkt", "Pkt."],
+      "forbidden_en": ["Pts"],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf „Pkt.“ / „Pts“, im Text ausgeschrieben.",
+      "i18nKey": "tabelle.points",
+      "kuerzel": true,
+      "short": {
+        "de": "Pkt.",
+        "en": "Pts",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.points"
+      }
+    },
+    "number": {
+      "de": "Nummer",
+      "en": "number",
+      "forbidden_de": ["Nr.", "Nr"],
+      "forbidden_en": ["No."],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Tabellenkopf „Nr.“ / „No.“, im Text ausgeschrieben („Spiel 5“ statt „Nr. 5“).",
+      "i18nKey": "tabelle.number",
+      "kuerzel": true,
+      "short": {
+        "de": "Nr.",
+        "en": "No.",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.number"
+      }
+    },
+    "minutes": {
+      "de": "Minuten",
+      "en": "minutes",
+      "forbidden_de": ["Min", "Min.", "min", "min."],
+      "forbidden_en": ["Min", "Min.", "min", "min."],
+      "reason": "Daniel 01.11.2026, @OB-075: Im Text ausgeschrieben („10 Minuten je Spiel“); die Kurzform steht nur bei Uhr-Beschriftungen (Monitor, Tafel).",
+      "i18nKey": "zeit.minutes",
+      "kuerzel": true,
+      "short": {
+        "de": "Min.",
+        "en": "min",
+        "context": "uhr",
+        "shortKey": "uhr.minutes"
+      }
+    },
+    "extraTime": {
+      "de": "nach Verlängerung",
+      "en": "after extra time",
+      "forbidden_de": ["n. V.", "n.V."],
+      "forbidden_en": ["a.e.t.", "aet"],
+      "reason": "Daniel 01.11.2026, @OB-075: Die Kurzform steht nur in Ergebniszellen, sonst ausgeschrieben.",
+      "i18nKey": "phases.afterExtraTime",
+      "kuerzel": true,
+      "short": {
+        "de": "n. V.",
+        "en": "a.e.t.",
+        "context": "ergebniszelle",
+        "shortKey": "ergebniszelle.extraTime"
+      }
+    },
+    "directComparison": {
+      "de": "Direktvergleich",
+      "en": "head to head",
+      "forbidden_de": ["DV"],
+      "forbidden_en": ["H2H"],
+      "reason": "Daniel 01.11.2026, @OB-075: Dasselbe Prinzip wie bei den Tabellenbegriffen: Kürzel nur im Tabellenkopf, und dort gibt es für den Direktvergleich keinen.",
+      "i18nKey": "tabelle.directComparison",
+      "kuerzel": true
+    },
+    "goalsFor": {
+      "de": "Tore",
+      "en": "goals for",
+      "forbidden_de": [],
+      "forbidden_en": ["GF"],
+      "reason": "Daniel 01.11.2026, @OB-075: Dasselbe Prinzip: kein Kürzel außerhalb des Tabellenkopfs.",
+      "i18nKey": "tabelle.goalsFor",
+      "kuerzel": true
+    },
+    "bfv": {
+      "de": "Bayerischer Fußball-Verband",
+      "en": "Bavarian Football Association",
+      "forbidden_de": ["BFV"],
+      "forbidden_en": ["BFV"],
+      "reason": "Daniel 01.11.2026, @OB-075: Beim ersten Auftreten je Ansicht ausschreiben; der Prüfer lässt das Kürzel nirgends in Texten zu.",
+      "i18nKey": "organisations.bfv",
+      "kuerzel": true
     }
   }
 }

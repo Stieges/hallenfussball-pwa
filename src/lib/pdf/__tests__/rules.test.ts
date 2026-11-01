@@ -59,7 +59,7 @@ describe('Pflichtzeilen Kopf (@DR-006): Hallencup mit BFV-Regelwerk', () => {
       'Modus: Gruppen + Finalrunde',
       'Wertung: Punkte – Tordifferenz – Tore – direkter Vergleich',
       'Gleichstand auf Platz 1: Strafstoßschießen',
-      'Spielzeit: 10 Min. · Zeitstrafe 2 Min.',
+      'Spielzeit: 10 Minuten · Zeitstrafe 2 Minuten',
       `Regelwerk: ${BFV}`,
     ]);
   });
@@ -75,12 +75,12 @@ describe('Regelzeilen folgen den Einstellungen (@DR-020)', () => {
     [
       'keine Zeitstrafe',
       { matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, timePenaltyDurationSeconds: 0 } },
-      'Spielzeit: 10 Min.',
+      'Spielzeit: 10 Minuten',
     ],
     [
-      'Gruppen 10 Min., Finalrunde 12 Min.',
+      'Gruppen 10 Minuten, Finalrunde 12 Minuten',
       { finalRoundGameDuration: 12 },
-      'Spielzeit: Gruppen 10 Min. · Finalrunde 12 Min. · Zeitstrafe 2 Min.',
+      'Spielzeit: Gruppen 10 Minuten · Finalrunde 12 Minuten · Zeitstrafe 2 Minuten',
     ],
     [
       'Sieg 2, Unentschieden 1',
@@ -124,7 +124,7 @@ describe('Regeln folgen dem erzeugten Plan, nicht der Voreinstellung (Fixliste 1
   it('jeder gegen jeden mit gespeicherter Voreinstellung top-4: keine K.-o.-Zeile, Spielzeit ohne Finalrunde', () => {
     const rules = rulesOf({ groupSystem: 'roundRobin', finalRoundGameDuration: 12, finalsConfig: { preset: 'top-4', tiebreaker: 'shootout' } });
     expect(koLines(rules, de)).toEqual([]);
-    expect(pdfRuleLines(rules, de)).toContain('Spielzeit: 10 Min. · Zeitstrafe 2 Min.');
+    expect(pdfRuleLines(rules, de)).toContain('Spielzeit: 10 Minuten · Zeitstrafe 2 Minuten');
   });
 
   it('eine Gruppe mit top-8: keine K.-o.-Zeile, weil keine Finalrunde entsteht', () => {
@@ -223,7 +223,7 @@ describe('Platzierungsspiel-Benennung und Wortlaute der Zweige (Fixliste 2 und 5
     const rules = rulesOf({
       matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, timePenaltyDurationSeconds: 90 },
     });
-    expect(pdfRuleLines(rules, de)).toContain('Spielzeit: 10 Min. · Zeitstrafe 90 Sek.');
+    expect(pdfRuleLines(rules, de)).toContain('Spielzeit: 10 Minuten · Zeitstrafe 90 Sek.');
   });
 
   it('Niederlagenpunkte ungleich 0: Sieg 3, Unentschieden 2 Punkte, Niederlage 1 Punkt', () => {
@@ -276,7 +276,7 @@ describe('Englischer Wortlaut (@DR-022)', () => {
       'Mode: Groups + final round',
       'Tiebreakers: Points – Goal difference – Goals – head-to-head',
       'Tie for place 1: penalty shootout',
-      'Match time: 10 min · Time penalty 2 min',
+      'Match time: 10 minutes · Time penalty 2 minutes',
       `Rulebook: ${BFV}`,
     ]);
     expect(koLines(rules, en)).toEqual(['Knockout: if drawn, penalty shootout, 3 shooters per team']);

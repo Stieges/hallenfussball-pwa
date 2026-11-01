@@ -37,7 +37,7 @@ function platzZiffern(pages: LayoutPage[]): { kopfzeilen: number; ziffern: strin
   let kopfzeilen = 0;
   const ziffern: string[] = [];
   for (const page of pages) {
-    for (const kopf of page.texts.filter(t => trimmed(t) === 'Pl')) {
+    for (const kopf of page.texts.filter(t => trimmed(t) === '#')) {
       kopfzeilen++;
       for (const t of page.texts) {
         const text = trimmed(t);
@@ -60,7 +60,7 @@ function platzZiffernUnter(pages: LayoutPage[], ueberschrift: string): { kopfzei
   const ziffern: string[] = [];
   for (const page of pages) {
     const titel = page.texts.find(t => trimmed(t) === ueberschrift);
-    const kopf = titel ? page.texts.find(t => trimmed(t) === 'Pl' && t.y > titel.y) : undefined;
+    const kopf = titel ? page.texts.find(t => trimmed(t) === '#' && t.y > titel.y) : undefined;
     if (!kopf) {continue;}
     kopfzeilen++;
     for (const t of page.texts) {

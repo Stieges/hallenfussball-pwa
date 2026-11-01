@@ -70,21 +70,21 @@ describe('TeamColumn', () => {
 
   it('@SL-031 zwei laufende Zeitstrafen stehen beide mit Restzeit da; @SL-086/@SL-032 stehende Restzeit ist markiert', () => {
     render(<TeamColumn {...props({ strafen: [{ id: 'p1', rest: '1:12', nummer: 5, steht: false }, { id: 'p2', rest: '0:40', nummer: 9, steht: true }] })} />);
-    expect(screen.getByTestId('team-penalty-p1')).toHaveTextContent('Nr. 5 · 1:12');
-    expect(screen.getByTestId('team-penalty-p2')).toHaveTextContent('Nr. 9 · 0:40');
+    expect(screen.getByTestId('team-penalty-p1')).toHaveTextContent('Nummer 5 · 1:12');
+    expect(screen.getByTestId('team-penalty-p2')).toHaveTextContent('Nummer 9 · 0:40');
     expect(screen.getByTestId('team-penalty-p2')).toHaveAttribute('data-steht', 'true');
     expect(screen.getByTestId('team-penalty-p1')).toHaveAttribute('data-steht', 'false');
   });
 
-  it('eine Strafe ohne Nummer zeigt „ohne Nr. · Restzeit“', () => {
+  it('eine Strafe ohne Nummer zeigt „ohne Nummer · Restzeit“', () => {
     render(<TeamColumn {...props({ strafen: [{ id: 'p1', rest: '2:00', nummer: null, steht: false }] })} />);
-    expect(screen.getByTestId('team-penalty-p1')).toHaveTextContent('ohne Nr. · 2:00');
+    expect(screen.getByTestId('team-penalty-p1')).toHaveTextContent('ohne Nummer · 2:00');
   });
 
   it.each([
     ['@SL-023 @SL-093 Unterzahl nach Rot mit Restzeit', { unterzahl: { rest: '1:30' } }, 'Unterzahl · 1:30'],
     ['@SL-030 @SL-092 nach Gegentor „darf sich ergänzen“', { darfErgaenzen: true }, 'darf sich ergänzen'],
-    ['@SL-089 Sperr-Hinweis in der Spalte', { gesperrt: [7] }, 'Nr. 7 gesperrt'],
+    ['@SL-089 Sperr-Hinweis in der Spalte', { gesperrt: [7] }, 'Nummer 7 gesperrt'],
   ])('%s', (_n, m, text) => {
     render(<TeamColumn {...props(m)} />);
     expect(screen.getByText(text)).toBeInTheDocument();

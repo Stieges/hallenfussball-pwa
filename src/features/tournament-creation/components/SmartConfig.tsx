@@ -131,7 +131,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
                   className={styles.minutesInput}
                   aria-label={t('smartConfig.minutesAriaLabel')}
                 />
-                <span className={styles.timeUnit}>min</span>
+                <span className={styles.timeUnit}>{t('smartConfig.minutesUnit')}</span>
               </div>
               <button
                 onClick={handleCalculate}

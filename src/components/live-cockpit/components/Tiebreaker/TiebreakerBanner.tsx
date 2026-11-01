@@ -8,10 +8,12 @@
  */
 
 import { type CSSProperties } from 'react';
+import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { cssVars, dialogWidths } from '../../../../design-tokens';
 import { DialogSurface } from '../../../ui/molecules/DialogSurface';
 import { useIsMobile } from '../../../../hooks/useIsMobile';
+import { Versus } from '../../../ui/atoms';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -159,7 +161,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   const getModeDescription = () => {
     switch (tiebreakerMode) {
       case 'overtime-then-shootout':
-        return `Gemäß Turnierregeln wird das Spiel durch Verlängerung (${overtimeMinutes} Min.) und ggf. ${penaltyShootoutTerm} entschieden.`;
+        return `Gemäß Turnierregeln wird das Spiel durch Verlängerung (${i18next.t('sport:zeit.minuteCount', { count: overtimeMinutes })}) und ggf. ${penaltyShootoutTerm} entschieden.`;
       case 'goldenGoal':
         return `Gemäß Turnierregeln wird das Spiel durch ${goldenGoalTerm} entschieden.`;
       case 'shootout':
@@ -202,7 +204,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
           </div>
 
           <div style={teamNamesStyle}>
-            {homeTeamName} vs {awayTeamName}
+            {homeTeamName} <Versus /> {awayTeamName}
           </div>
 
           <div style={descriptionStyle}>
@@ -213,7 +215,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
           <div style={actionsStyle}>
             {tiebreakerMode === 'overtime-then-shootout' && onStartOvertime && (
               <PrimaryButton onClick={onStartOvertime}>
-                ▶️ Verlängerung starten ({overtimeMinutes} Min.)
+                ▶️ Verlängerung starten ({i18next.t('sport:zeit.minuteCount', { count: overtimeMinutes })})
               </PrimaryButton>
             )}
 

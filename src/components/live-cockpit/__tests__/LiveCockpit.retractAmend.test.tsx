@@ -134,7 +134,7 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));
-    expect(await screen.findByText('Tor Nr. 7 zurückgenommen')).toBeTruthy();
+    expect(await screen.findByText('Tor Nummer 7 zurückgenommen')).toBeTruthy();
   });
 
   it('Rueckgaengig: Knopf nennt das Ziel und nimmt es zurueck', async () => {
@@ -146,7 +146,7 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
 
     const undo = screen.getByTestId('match-undo-button');
     // sichtbarer Text „Rückgängig“ (passt in die schmale Zelle), zugänglicher Name nennt das Ziel und enthält den sichtbaren Text (WCAG 2.5.3)
-    expect(undo).toHaveAccessibleName('Rückgängig: Tor Nr. 7 zurücknehmen');
+    expect(undo).toHaveAccessibleName('Rückgängig: Tor Nummer 7 zurücknehmen');
     await user.click(undo);
 
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));
@@ -236,7 +236,7 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
     expect(screen.getByTestId('event-edit-delete-hint')).toHaveTextContent('Korrektur nur durch die Turnierleitung');
   });
 
-  it('G5 Pflicht: Helfer, finished, Tor "Ohne Nr." -> Nummer nachtragen -> AMEND gespeichert, Eintrag nicht mehr offen', async () => {
+  it('G5 Pflicht: Helfer, finished, Tor "Ohne Nummer" -> Nummer nachtragen -> AMEND gespeichert, Eintrag nicht mehr offen', async () => {
     const { value, commands } = await setup();
     await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false);
     await commands.finish(MATCH_ID, CTX, 'helper');

@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import type { SpectatorClock, ViewMatchStatus } from '../../../core/view';
 import { formatTableResult, type ResultFigures } from '../matchResult';
+import { Versus } from '../../ui/atoms';
 
 export type MatchCardStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
@@ -90,7 +91,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
       data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
       data-match-status={isLive ? 'running' : showsResult ? 'finished' : status === 'skipped' ? 'skipped' : 'scheduled'}
     >
-      {showsResult ? <span>{formatTableResult(result, t)}</span> : <span>{viewStatus === 'cancelled' ? t('view.status.cancelled') : 'VS'}</span>}
+      {showsResult ? <span>{formatTableResult(result, t)}</span> : <span>{viewStatus === 'cancelled' ? t('view.status.cancelled') : <Versus />}</span>}
       {viewStatus === 'awarded' && (
         <span style={{ fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.semibold }} data-testid="match-awarded-mark">
           {t('view.status.awarded')}

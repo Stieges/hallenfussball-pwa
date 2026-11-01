@@ -9,7 +9,13 @@
  * - Edge cases
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { initRealGlobalI18n } from '../../../../test/realI18n';
+
+// Standardnamen kommen aus den Sprachdateien (@OB-076): echte Texte statt Passthrough-Mock
+vi.unmock('i18next');
+vi.unmock('react-i18next');
+beforeAll(async () => { await initRealGlobalI18n('de'); });
 import {
   autoReassignReferees,
   redistributeAfterSkip,
@@ -515,8 +521,8 @@ describe('Edge Cases', () => {
     const matches = [createMatch({ referee: 1 })];
     const result = getRefereeStats(matches, config);
 
-    expect(result[0].name).toBe('SR 1'); // Default name
-    expect(result[1].name).toBe('SR 2');
+    expect(result[0].name).toBe('Schiedsrichter 1'); // Default name
+    expect(result[1].name).toBe('Schiedsrichter 2');
   });
 
   it('should handle maxConsecutiveMatches limit', () => {

@@ -13,24 +13,15 @@ export interface TerminologyCheckReport {
   results: TerminologyCheckResult[];
 }
 
-export interface GlossaryTerm {
-  de: string;
-  en: string;
-  forbidden_de: string[];
-  reason: string;
-  i18nKey: string;
-}
+import type { GlossaryEntry, GlossaryPattern } from './lib/glossary-patterns.cjs';
+
+export type GlossaryTerm = GlossaryEntry;
 
 export interface Glossary {
   terms: Record<string, GlossaryTerm>;
 }
 
-export interface ForbiddenPattern {
-  term: string;
-  forbidden: string;
-  reason: string;
-  regex: RegExp;
-}
+export type ForbiddenPattern = GlossaryPattern;
 
 declare const checkTerminology: {
   discoverLocales: (localesDir: string) => string[];
@@ -55,6 +46,8 @@ declare const checkTerminology: {
     patterns: ForbiddenPattern[]
   ) => string[];
   checkGlossaryKeys: (localesDir: string, locales: string[], glossary: Glossary) => string[];
+  /** Kurzformen nur in short.json und genau wie im Glossar (short.*). */
+  checkShortForms: (localesDir: string, locales: string[], glossary: Glossary) => string[];
   runAllChecks: (localesDir?: string, glossaryPath?: string) => TerminologyCheckReport;
 };
 

@@ -5,8 +5,8 @@
     "fieldAria": "Feld {{field}}{{running}}"
   },
   "nextMatch": {
-    "title": "Nächstes Spiel in ~{{minutes}} Min",
-    "vs": "vs",
+    "title": "Nächstes Spiel in ~{{minutes}} $t(short:uhr.minutes)",
+    "vs": "gegen",
     "field": "Feld {{field}}",
     "match": "Spiel {{number}}",
     "group": "Gruppe {{group}}"
@@ -113,13 +113,7 @@
       "deciding": "wird entschieden"
     },
     "header": {
-      "rank": "#",
-      "team": "Team",
-      "won": "S",
-      "drawn": "U",
-      "lost": "N",
-      "goalDiff": "Diff",
-      "points": "Pkt"
+      "team": "Team"
     }
   }
 }

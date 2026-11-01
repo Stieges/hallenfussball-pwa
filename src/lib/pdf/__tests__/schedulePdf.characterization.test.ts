@@ -77,7 +77,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(text).toContain('Modus');
     expect(text).toContain('Gruppen + Finalrunde');
     expect(text).toContain('Spielzeit');
-    expect(text).toContain('10 Min. · Zeitstrafe 2 Min.');
+    expect(text).toContain('10 Minuten · Zeitstrafe 2 Minuten');
   });
 
   it('Teilnehmer: Gruppen A und B, Kennungen A1–B4 in Zuteilungsreihenfolge, nicht alphabetisch (v7.2 gen.py:165–168, Daniel 15.10.)', async () => {
@@ -139,13 +139,16 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     const schedule = hallencupSchedule();
     const pdf = await renderSchedulePdf(schedule, undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
+    // Zeilenumbrüche in Zellen zählen nicht: seit @OB-075 steht „Schiedsrichter“ ausgeschrieben im Kopf, Heim und Gast sind
+    // schmaler, „Sieger Halbfinale 1“ steht dort auf zwei Zeilen (zwei Textstücke). Die Zeichen müssen vollständig da sein.
+    const squashed = text.join('').replace(/\s+/g, '');
     const finale = finalsMatches(schedule).find(m => m.finalType === 'final');
 
     expect(finale).toBeDefined();
     expect(text).toContain('Spiel um Platz 3');
     if (finale) {
-      expect(text).toContain(sideName(finale, 'A', schedule.allMatches));
-      expect(text).toContain(sideName(finale, 'B', schedule.allMatches));
+      expect(squashed).toContain(sideName(finale, 'A', schedule.allMatches).replace(/\s+/g, ''));
+      expect(squashed).toContain(sideName(finale, 'B', schedule.allMatches).replace(/\s+/g, ''));
     }
   });
 

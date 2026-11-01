@@ -30,21 +30,21 @@ describe('TeamSummary (@SL-048)', () => {
     expect(screen.getByTestId('team-name-home')).toHaveTextContent('FC Nord'); // dieselbe Kennung wie die Spalte (E2E-Anker)
     expect(within(feld).getByText('Heim')).toBeInTheDocument();
     expect(within(feld).getByText('Tore (2)')).toBeInTheDocument();
-    expect(within(feld).getByText('Nr. 9, 1:50')).toBeInTheDocument();
-    expect(within(feld).getByText('ohne Nr., 7:10')).toBeInTheDocument();
+    expect(within(feld).getByText('Nummer 9, 1:50')).toBeInTheDocument();
+    expect(within(feld).getByText('ohne Nummer, 7:10')).toBeInTheDocument();
     expect(within(feld).getByText('Karten (0): keine')).toBeInTheDocument();
     expect(within(feld).getByText('Zeitstrafen (1)')).toBeInTheDocument();
-    expect(within(feld).getByText('Nr. 4, 7:40')).toBeInTheDocument();
+    expect(within(feld).getByText('Nummer 4, 7:40')).toBeInTheDocument();
     expect(within(feld).getByText('Fouls: 3')).toBeInTheDocument();
     expect(within(feld).queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('SV Süd: Karten (1) mit Kartensymbol und Nr. 7, „Zeitstrafen (0): keine“', () => {
+  it('SV Süd: Karten (1) mit Kartensymbol und Nummer 7, „Zeitstrafen (0): keine“', () => {
     render(<TeamSummary model={sued} />);
     const feld = screen.getByTestId('team-summary-away');
     expect(within(feld).getByText('Gast')).toBeInTheDocument();
     expect(within(feld).getByText('Karten (1)')).toBeInTheDocument();
-    expect(within(feld).getByText('Nr. 7, 1:15')).toBeInTheDocument();
+    expect(within(feld).getByText('Nummer 7, 1:15')).toBeInTheDocument();
     expect(within(feld).getByTestId('karten-symbol-YELLOW')).toBeInTheDocument();
     expect(within(feld).getByText('Zeitstrafen (0): keine')).toBeInTheDocument();
     expect(within(feld).getByText('Tore (1)')).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('TeamSummary (@SL-048)', () => {
 
   it('ein Eigentor steht als Eigentor in der Liste', () => {
     render(<TeamSummary model={{ ...nord, tore: [{ id: 'g', nummer: 12, zeit: '1:30', eigentor: true }] }} />);
-    expect(screen.getByText('Eigentor Nr. 12, 1:30')).toBeInTheDocument();
+    expect(screen.getByText('Eigentor Nummer 12, 1:30')).toBeInTheDocument();
   });
 
   it('ohne Einträge: „Tore (0): keine“ und „Fouls: 0“ (Gegenbeispiel zu „Tore (2)“)', () => {

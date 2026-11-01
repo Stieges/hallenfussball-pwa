@@ -107,6 +107,60 @@ ruleTester.run('no-hardcoded-sport-terms (forbidden)', rule, {
   ],
 });
 
+
+// --- Kürzel (@OB-075/@OB-076): ausgeschrieben im Anzeigetext, Kurzformen nur über den Namensraum „short“ ---
+const COMPONENT = '/repo/src/components/schedule/MatchCard/MatchCardHeader.tsx';
+ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
+  valid: [
+    // Kurzform im Tabellenkopf kommt aus dem Namensraum „short“, nie als Literal: der Aufruf mit dem Schlüssel ist sauber.
+    { filename: COMPONENT, code: "const kopf = t('short:tabellenkopf.played');", options: ['forbidden'] },
+    // Ausgeschriebene Begriffe sind in jeder Form erlaubt (auch bei „preferred“: Kürzel-Begriffe lösen keine Warnung aus).
+    { filename: COMPONENT, code: "const a = 'Halbfinale 1'; const b = 'Schiedsrichter 2'; const c = 'Gruppe A'; const d = 'gegen';", options: ['forbidden'] },
+    { filename: COMPONENT, code: "const a = 'Gruppe A gegen Gruppe B';", options: ['preferred'] },
+    // Englisches „vs“ ist erlaubt (nur das deutsche ist verboten), aber ohne Sprache im Code bleibt „vs“ im Literal ein Fund: siehe invalid.
+    // Kennungen und CSS sind keine Anzeigetexte: Fehlercodes, Spiel-IDs mit Ziffern, CSS-Funktionen, Medienabfragen.
+    { filename: COMPONENT, code: "const code = 'HF001'; const id = 'SF1'; const q = '(min-width: 600px)'; const g = 'minmax(min(100%, 20rem), 1fr)';", options: ['forbidden'] },
+    { filename: COMPONENT, code: "const css = `grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr))`;", options: ['forbidden'] },
+    // Platzhalter sind keine Kürzel: {{min}} ist eine Variable.
+    { filename: COMPONENT, code: "const text = 'mindestens {{min}} benötigt';", options: ['forbidden'] },
+    // „P3“ ist die interne matchId und nur in Sprachdateien verboten (tsLint: false).
+    { filename: '/repo/src/constants/tournamentSchemas.ts', code: "const matchId = 'P3';", options: ['forbidden'] },
+    // Vereinskürzel (SF = Sportfreunde), Fixtures und Rechtstexte sind ausgenommen.
+    { filename: '/repo/src/core/models/teamNameAbbrev.ts', code: "const kuerzel = ['Sportfreunde', 'SF'];", options: ['forbidden'] },
+    { filename: '/repo/src/core/view/__fixtures__/expected.ts', code: "const k = 'F-HF';", options: ['forbidden'] },
+    { filename: '/repo/src/screens/DatenschutzScreen.tsx', code: 'const el = <p>§ 25 Abs. 2 Nr. 2 TDDDG</p>;', options: ['forbidden'] },
+  ],
+  invalid: [
+    // Jede Zeile des Grundrisses @OB-075 als fester Text im Code
+    { filename: COMPONENT, code: 'const el = <span>HF 1</span>;', options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const label = `SR ${number}`;", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const label = 'Ref 2';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const label = 'Gr. A';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const kopf = 'Pl.';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const kopf = 'Diff.';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const kopf = 'Pts';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const rest = '(4:3 i. E.)';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const rest = '3:2 n. V.';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: 'const el = <span>Team A vs Team B</span>;', options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const dauer = `${minuten} Min.`;", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
+    { filename: COMPONENT, code: "const text = 'Mit AF und VF';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }, { messageId: 'forbiddenAbbreviation' }] },
+  ],
+});
+
+// Meldungstext: nennt den ausgeschriebenen Begriff und den Namensraum der Kurzformen.
+{
+  const { Linter } = require('eslint');
+  const linter = new Linter();
+  const messages = linter.verify(
+    "const kopf = 'Pkt.';",
+    [{ files: ['**/*.tsx'], languageOptions: { ecmaVersion: 2022, sourceType: 'module' }, plugins: { local: { rules: { 'no-hardcoded-sport-terms': rule } } }, rules: { 'local/no-hardcoded-sport-terms': ['error', 'forbidden'] } }],
+    `${process.cwd()}/src/components/schedule/GroupTables.tsx`,
+  );
+  if (messages.length !== 1 || !messages[0].message.includes("t('sport:tabelle.points')") || !messages[0].message.includes('`short`')) {
+    throw new Error(`Kürzel-Meldung nennt weder den ausgeschriebenen Begriff noch den Namensraum short: ${JSON.stringify(messages)}`);
+  }
+}
+
 // --- mode: 'preferred' (registered as local-rules/no-hardcoded-sport-terms-preferred, severity 'warn') ---
 ruleTester.run('no-hardcoded-sport-terms (preferred)', rule, {
   valid: [

@@ -12,6 +12,7 @@
 
 import { type CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
+import { Versus } from '../atoms';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -217,7 +218,7 @@ export const VSContent: React.FC = () => {
     lineHeight: 1,
   };
 
-  return <span style={vsStyle}>VS</span>;
+  return <span style={vsStyle}><Versus /></span>;
 };
 
 export default ProgressRing;

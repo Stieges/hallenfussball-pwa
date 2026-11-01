@@ -83,7 +83,7 @@ describe('@FU-095 Aus einem Fall übernimmt die Turnierleitung einzelne Einträg
     fireEvent.click(screen.getByTestId('klaerung-fall-tor-nord-uebernehmen'));
     const vorschau = screen.getByTestId('klaerung-fall-tor-nord-vorschau');
     expect(vorschau).toHaveTextContent('Neuer Stand: FC Nord 0:0 SV Süd');
-    expect(vorschau).toHaveTextContent('Übernommen: Gelbe Karte SV Süd, Nr. 5');
+    expect(vorschau).toHaveTextContent('Übernommen: Gelbe Karte SV Süd, Nummer 5');
     expect(vorschau).not.toHaveTextContent('Tor');
     expect(decide).not.toHaveBeenCalled(); // erst „Speichern“ speichert
     fireEvent.click(screen.getByTestId('klaerung-fall-tor-nord-speichern'));
@@ -119,15 +119,15 @@ describe('@FU-095 Aus einem Fall übernimmt die Turnierleitung einzelne Einträg
 });
 
 describe('@FU-096 Zusammengehörige Einträge eines Falls lassen sich nur gemeinsam übernehmen', () => {
-  it('Gelbe Karte und Gelb-Rote Karte für SV Süd, Nr. 5 stehen als ein Eintrag mit einem gemeinsamen Häkchen', () => {
+  it('Gelbe Karte und Gelb-Rote Karte für SV Süd, Nummer 5 stehen als ein Eintrag mit einem gemeinsamen Häkchen', () => {
     show([
       review({ eventId: 'gelb', entry: { type: 'YELLOW_CARD', teamId: SUED, clockMs: 60_000, payload: { playerNumber: 5 } } }),
       review({ eventId: 'gelb-rot', entry: { type: 'YELLOW_RED_CARD', teamId: SUED, clockMs: 90_000, payload: { playerNumber: 5 } } }),
     ]);
     fireEvent.click(screen.getByTestId('klaerung-fall-gelb-aufklappen'));
     expect(screen.getAllByRole('checkbox')).toHaveLength(1);
-    expect(screen.getByTestId('klaerung-einheit-gelb')).toHaveTextContent('Gelbe Karte SV Süd, Nr. 5');
-    expect(screen.getByTestId('klaerung-einheit-gelb')).toHaveTextContent('Gelb-Rote Karte SV Süd, Nr. 5');
+    expect(screen.getByTestId('klaerung-einheit-gelb')).toHaveTextContent('Gelbe Karte SV Süd, Nummer 5');
+    expect(screen.getByTestId('klaerung-einheit-gelb')).toHaveTextContent('Gelb-Rote Karte SV Süd, Nummer 5');
   });
 
   it('Gegenbeispiel: zwei Tore verschiedener Teams haben je ein Häkchen', () => {
@@ -229,7 +229,7 @@ describe('@FU-095 „die beiden Tore stehen als verworfen im Verlauf“ (Review 
     const verlauf = await screen.findByTestId('klaerungsliste-verlauf');
     expect(screen.getByTestId('klaerung-verlauf-tor-nord')).toHaveTextContent('Tor FC Nord · Abschnitt 1, 2. Minute – verworfen von Olli');
     expect(screen.getByTestId('klaerung-verlauf-tor-sued')).toHaveTextContent('Tor SV Süd · Abschnitt 1, 2. Minute – verworfen von Olli');
-    expect(screen.getByTestId('klaerung-verlauf-gelb-5')).toHaveTextContent('Gelbe Karte SV Süd, Nr. 5 · Abschnitt 1, 2. Minute – übernommen von Olli');
+    expect(screen.getByTestId('klaerung-verlauf-gelb-5')).toHaveTextContent('Gelbe Karte SV Süd, Nummer 5 · Abschnitt 1, 2. Minute – übernommen von Olli');
     expect(within(verlauf).queryByText(/offen/)).toBeNull();
   });
 

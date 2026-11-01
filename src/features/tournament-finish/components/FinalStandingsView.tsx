@@ -16,6 +16,7 @@ import { ScorerList } from './ScorerList';
 import { TeamName } from './HyphenSafe';
 import { badge, goldRowFirst, goldWinnerCard, goldTrophy, placeNumber, pointsCell, standingsHeader, standingsRow, standingsRowFirst, valueCell, winnerCard, winnerName } from './finalStandingsStyles';
 import { heading, placeList, small, strong, tightStack } from './finishStyles';
+import { ShortLabel } from '../../../components/ui/atoms';
 
 export type FinalStandingsViewTournament = Pick<Tournament, 'groups'> & ShootoutTournament;
 
@@ -81,9 +82,9 @@ export function FinalStandingsView({ tournament, ranking, scorers, provisional, 
             <div style={standingsHeader(true)} data-testid="final-standings-header" aria-hidden="true">
               <span>{t('finalStandings.columns.place')}</span>
               <span>{t('finalStandings.columns.team')}</span>
-              <span style={valueCell} title={t('finalStandings.columns.gamesLong')}>{t('finalStandings.columns.games')}</span>
-              <span style={valueCell} title={t('finalStandings.columns.goalDiffLong')}>{t('finalStandings.columns.goalDiff')}</span>
-              <span style={valueCell} title={t('finalStandings.columns.pointsLong')}>{t('finalStandings.columns.points')}</span>
+              <span style={valueCell}><ShortLabel term="played" /></span>
+              <span style={valueCell}><ShortLabel term="goalDifference" /></span>
+              <span style={valueCell}><ShortLabel term="points" /></span>
             </div>
           )}
           <ol style={{ listStyle: 'none', margin: 0, padding: 0 }} data-testid="final-standings-list">

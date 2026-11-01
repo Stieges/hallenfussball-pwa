@@ -9,6 +9,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { createInstance } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import deTournament from '../../../../i18n/locales/de/tournament.json';
+import deSport from '../../../../i18n/locales/de/sport.json';
+import deShort from '../../../../i18n/locales/de/short.json';
 import { createMockTeams, createMockTournament } from '../../../../test/factories';
 import { testTeamSlot } from '../../../../test/matchSlotFixtures';
 import { buildTournamentView } from '../../../../core/view';
@@ -47,7 +49,7 @@ const BEFORE: MatchStatus[] = Array.from({ length: 8 }, () => 'scheduled');
 
 function renderShift(tournament: Tournament) {
   const i18n = createInstance();
-  void i18n.use(initReactI18next).init({ lng: 'de', resources: { de: { tournament: deTournament } }, interpolation: { escapeValue: false } });
+  void i18n.use(initReactI18next).init({ lng: 'de', resources: { de: { tournament: deTournament, sport: deSport, short: deShort } }, interpolation: { escapeValue: false } });
   const onTournamentUpdate = vi.fn();
   const showSuccess = vi.fn();
   const Harness = ({ t }: { t: Tournament }) => {
@@ -164,7 +166,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
     fireEvent.click(screen.getByTestId('time-shift-confirm'));
     const saved = onTournamentUpdate.mock.calls[0][0] as Tournament;
     rerenderWith(saved);
-    expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Min. verschoben · Ende 11:44');
+    expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Minuten verschoben · Ende 11:44');
     expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Ausdrucke sind veraltet');
     expect(screen.getByTestId('match-original-m8')).toHaveTextContent('ursprünglich 11:24');
     fireEvent.click(screen.getByTestId('zeiten-rueckgaengig'));

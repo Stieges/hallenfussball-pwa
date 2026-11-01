@@ -135,12 +135,12 @@ describe('G73 englische Wortlaute', () => {
     expect(text.join(' ')).not.toContain('Game time');
   });
 
-  it('Zeitzeile mit abweichender Finalrunde: „Final round 12 min“, nicht „Finals“', async () => {
+  it('Zeitzeile mit abweichender Finalrunde: „Final round 12 minutes“, nicht „Finals“', async () => {
     const tournament = hallencupTournament({ finalRoundGameDuration: 12 });
     const { pages } = await layoutOf({ now: NOW, tournament, ...en }, hallencupSchedule(tournament));
     const text = allStrs(pages).join(' ');
 
-    expect(text).toContain('Groups 10 min · Final round 12 min');
+    expect(text).toContain('Groups 10 minutes · Final round 12 minutes');
     expect(text).not.toContain('Finals 12 min');
   });
 

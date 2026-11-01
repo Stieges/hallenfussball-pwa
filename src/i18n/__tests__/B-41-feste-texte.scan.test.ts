@@ -166,15 +166,9 @@ function scanTargets(): string[] {
 /**
  * Ausnahmen (bewusst fest, begründet). Jede Zeile trifft einen Fund; sonst Fehler.
  */
-const EXCEPTIONS: { file: string; text: string; reason: string }[] = [
-  {
-    file: 'features/monitor-display/monitorMatch.ts',
-    text: 'Schiedsrichter {}',
-    reason:
-      'Datenabgleich, kein Anzeigetext: Der Schiedsrichter-Name wird gegen den (deutschen) Teamnamen ' +
-      'aus den Turnierdaten gesucht. Übersetzen würde den Abgleich in der EN-Oberfläche brechen.',
-  },
-];
+const EXCEPTIONS: { file: string; text: string; reason: string }[] = [];
+// Die frühere Ausnahme für `monitorMatch.ts` („Schiedsrichter {n}“ als Datenabgleich) ist weg: die Standardbezeichnung kommt seit
+// @OB-076 über `anzeigeT('tournament:refereeOptions.numbered')` aus der Sprachdatei, nicht mehr als festes Literal.
 
 describe('B-41 Quelltext-Scan: keine festen deutschen Texte auf Zuschauer-Seite und Monitor', () => {
   it('Detektor erkennt deutsche Anzeigetexte und ignoriert t()-Aufrufe (Gegenbeispiele)', () => {

@@ -70,7 +70,6 @@ export const EXPECTED_LABEL = {
 export const EXPECTED_STATE = {
   'F-PAUSE spiel7': { status: 'paused', statusText: { de: 'Pause', en: 'Paused' }, isLive: true, score: [1, 0] },
   'F-PAUSE spiel8': { status: 'running', statusText: { de: 'Live', en: 'Live' }, isLive: true, score: [0, 0] },
-  // eslint-disable-next-line local-rules/no-hardcoded-sport-terms-preferred -- feste Record-Literale (M5), bewusst nicht aus i18n
   'F-AUS spiel9': { status: 'cancelled', statusText: { de: 'ausgefallen', en: 'Cancelled' }, isLive: false },
   'F-NV hf2': { status: 'finished', score: [4, 1], overtime: [3, 0], decidedBy: 'overtime', winner: 'a' },
   'F-ES finale': { status: 'finished', score: [1, 1], penalty: [4, 3], decidedBy: 'penalty', winner: 'a' },

@@ -4,6 +4,7 @@ import { calculateStandings } from '../../../utils/calculations';
 import { monitorTeamName } from '../../../core/models/teamNameAbbrev';
 import { publicTieMarkOf, type GroupTieView } from '../../../core/standings/tieViews';
 import { MonitorTieMark } from './MonitorTieMark';
+import { ShortLabel } from '../../../components/ui/atoms';
 
 export type MonitorColors = (typeof monitorThemes)[keyof typeof monitorThemes];
 export type StandingRows = ReturnType<typeof calculateStandings>;
@@ -45,13 +46,13 @@ export function StandingsTable({ rows, themeColors, tie }: StandingsTableProps) 
         color: themeColors.textMuted,
         fontWeight: cssVars.fontWeights.medium,
       }}>
-        <div>{t('standings.header.rank')}</div>
+        <div><ShortLabel term="rank" /></div>
         <div>{t('standings.header.team')}</div>
-        <div style={number}>{t('standings.header.won')}</div>
-        <div style={number}>{t('standings.header.drawn')}</div>
-        <div style={number}>{t('standings.header.lost')}</div>
-        <div style={number}>{t('standings.header.goalDiff')}</div>
-        <div style={number}>{t('standings.header.points')}</div>
+        <div style={number}><ShortLabel term="won" /></div>
+        <div style={number}><ShortLabel term="drawn" /></div>
+        <div style={number}><ShortLabel term="lost" /></div>
+        <div style={number}><ShortLabel term="goalDifference" /></div>
+        <div style={number}><ShortLabel term="points" /></div>
       </div>
 
       {/* Table Rows: Farbe nur mit Bedeutung – Punkte und Tordifferenz; Siege, Unentschieden, Niederlagen neutral */}

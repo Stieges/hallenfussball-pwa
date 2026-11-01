@@ -28,6 +28,7 @@ import type { MatchUpdate } from '../../../../core/models/types';
 import { useMatchEntryGuard } from '../../../../hooks/useMatchEntryGuard';
 import { keepResultsOnRestore } from './restoreKeepingResults';
 import { exportStatisticsToPDF } from '../../../../lib/pdfStatisticsExporter';
+import i18next from 'i18next';
 
 // =============================================================================
 // PROPS
@@ -766,7 +767,7 @@ export function ExportsCategory({
 
               const entries: AuditEntry[] = [];
               const slotContext = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups };
-              const getMatchLabel = (m: Match) => `${slotLabel(m.slotA, slotContext)} vs ${slotLabel(m.slotB, slotContext)}`;
+              const getMatchLabel = (m: Match) => `${slotLabel(m.slotA, slotContext)} ${i18next.t('sport:tournament.versus')} ${slotLabel(m.slotB, slotContext)}`;
 
               // 1. Tournament Creation
               if (tournament.createdAt) {

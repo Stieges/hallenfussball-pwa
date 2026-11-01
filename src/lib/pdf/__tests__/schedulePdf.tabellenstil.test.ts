@@ -118,7 +118,7 @@ describe('W10 / @BM-022 keine Spielzeile über zwei Seiten', () => {
         return kaestchen(page, printBox.scoreField.w, printBox.scoreField.h, oben - TOL, unten + TOL).length !== 2;
       })
       .map(nr => nr.str.trim());
-    const koepfe = page.texts.filter(t => t.str.trim() === 'Nr' && Math.abs(t.size - printType.head) < SIZE_TOL);
+    const koepfe = page.texts.filter(t => t.str.trim() === 'Nr.' && Math.abs(t.size - printType.head) < SIZE_TOL);
     const fortsetzungen = koepfe.filter(kopf => {
       const kopfUnten = Math.min(...linien.filter(y => y > kopf.y));
       const ersteUnten = Math.min(...linien.filter(y => y > kopfUnten + TOL));
@@ -149,11 +149,11 @@ describe('Kennungs-Schema: eine Gruppe', () => {
     const texte = seite1.texts.map(t => t.str.trim());
 
     expect(texte).toEqual(expect.arrayContaining(['A1', 'A2', 'A3', 'A4']));
-    expect(texte).not.toContain('Gr');
+    expect(texte).not.toContain('Gruppe');
 
     const zwei = hallencupTournament();
     const [mitGruppen] = await lesen(hallencupSchedule(zwei), zwei);
-    expect(mitGruppen.texts.map(t => t.str.trim())).toContain('Gr');
+    expect(mitGruppen.texts.map(t => t.str.trim())).toContain('Gruppe');
   });
 
   it('Jeder gegen jeden (ohne Gruppen): Kennungen A1… statt „1.“, keine Spalte „Gr“', async () => {
@@ -166,6 +166,6 @@ describe('Kennungs-Schema: eine Gruppe', () => {
 
     expect(texte).toEqual(expect.arrayContaining(['A1', 'A2', 'A3', 'A4']));
     expect(texte).not.toContain('1.');
-    expect(texte).not.toContain('Gr');
+    expect(texte).not.toContain('Gruppe');
   });
 });

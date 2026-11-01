@@ -51,12 +51,17 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 25.10. (R2 PR 4, @W2A-012): die Vorgabe der Schützen ist 3 statt 5; Text-für-Text verglichen (Vorgabe 5 gegen 3):
  * nur die beiden K.-o.-Zeilen „… 5 Schützen je Team“ → „… 3 Schützen je Team“ (EN „shooters“), Lage unverändert. Stände davor:
  * 92e27f9338d0, 026dca7efbd1, 2ad20180580c, 329ef9fb4fa6, EN 1e5c882d540d.
+ * Neu aufgenommen 01.11. (@OB-075/@OB-076, Paket „Begriffe ausschreiben“): Spaltenköpfe „Schiedsrichter“ und „Gruppe“ statt „SR“
+ * und „Gr“, „Nr.“/„Sp.“/„Diff.“/„Pkt.“ und „#“ statt „Nr“/„Sp“/„Diff“/„Pkt“/„Pl“ (EN: „Referee“, „Group“, „GD“, „#“), „10 Minuten“
+ * statt „10 Min.“ in der Regelzeile; die Spalte „Schiedsrichter“ ist 27 mm breit (Token printColumns), „Gruppe“ und „Nr.“ weiten
+ * sich auf ihr Kopfwort, Heim und Gast werden in der Gruppenphase und der Finalrunde ca. 5 mm schmaler (Namen brechen früher um).
+ * Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '5e61f5f4ce76',
-  '20 Spiele, hoch': 'fe74f2817606',
-  '12 Spiele, quer': '0fd9a8f07abe',
-  '20 Spiele, quer': '9166518dd987',
+  '12 Spiele, hoch': '1c7e3fec8933',
+  '20 Spiele, hoch': '6b73b2a0a290',
+  '12 Spiele, quer': '27ce3594bc25',
+  '20 Spiele, quer': 'cf33d41e25cf',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -71,7 +76,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('78c5516555dd');
+    expect(layoutDigest(pages)).toBe('5a619e96dd5e');
   });
 });
 

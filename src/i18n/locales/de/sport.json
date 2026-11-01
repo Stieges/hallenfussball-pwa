@@ -30,7 +30,9 @@
     "halftime": "Halbzeit",
     "overtime": "Verlängerung",
     "goldenGoal": "Golden Goal",
-    "regularTime": "Reguläre Spielzeit"
+    "regularTime": "Reguläre Spielzeit",
+    "afterPenalties": "nach Strafstoßschießen",
+    "afterExtraTime": "nach Verlängerung"
   },
   "roles": {
     "referee": "Schiedsrichter",
@@ -48,14 +50,17 @@
     "match": "Spiel",
     "matchWithNumber": "Spiel {{number}}",
     "round": "Runde",
-    "matchday": "Spieltag"
+    "matchday": "Spieltag",
+    "versus": "gegen"
   },
   "finalsTypes": {
     "final": "Finale",
     "semifinal": "Halbfinale",
     "quarterfinal": "Viertelfinale",
+    "roundOf16": "Achtelfinale",
     "thirdPlace": "Spiel um Platz 3",
-    "placement": "Platzierungsspiel"
+    "placement": "Platzierungsspiel",
+    "knockout": "K.-o.-Runde"
   },
   "status": {
     "scheduled": "Geplant",
@@ -134,5 +139,27 @@
     "access": "Helfer-Zugang",
     "checkNumber": "Prüfzahl",
     "approve": "zulassen"
+  },
+  "tabelle": {
+    "rank": "Platz",
+    "played": "Spiele",
+    "won": "Siege",
+    "drawn": "Unentschieden",
+    "lost": "Niederlagen",
+    "goalDifference": "Tordifferenz",
+    "points": "Punkte",
+    "number": "Nummer",
+    "directComparison": "Direktvergleich",
+    "goalsFor": "Tore",
+    "pointsCount_one": "{{count}} Punkt",
+    "pointsCount_other": "{{count}} Punkte"
+  },
+  "zeit": {
+    "minutes": "Minuten",
+    "minuteCount_one": "{{count}} Minute",
+    "minuteCount_other": "{{count}} Minuten"
+  },
+  "organisations": {
+    "bfv": "Bayerischer Fußball-Verband"
   }
 }

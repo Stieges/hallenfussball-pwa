@@ -6,24 +6,20 @@
     "draft": "Entwurf",
     "archived": "Archiviert"
   },
-
   "nav": {
     "tournaments": "Turniere",
     "archive": "Archiv",
     "trash": "Papierkorb"
   },
-
   "legacyNotice": {
     "message": "Turniere im alten Format wurden beiseitegelegt, aber nicht gelöscht. Sie lassen sich in dieser Version nicht mehr öffnen.",
     "dismiss": "Hinweis schließen"
   },
-
   "buttons": {
     "import": "Importieren",
     "newTournament": "Neues Turnier",
     "limitReached": "Limit erreicht"
   },
-
   "emptyState": {
     "noTournaments": "Noch keine Turniere",
     "noTournamentsHint": "Erstelle dein erstes Turnier mit dem Button oben",
@@ -35,7 +31,6 @@
     "trashEmpty": "Der Papierkorb ist leer",
     "trashHint": "Gelöschte Turniere können hier wiederhergestellt werden."
   },
-
   "sections": {
     "runningTournaments": "Aktuell laufende Turniere",
     "upcomingTournaments": "Bevorstehende Turniere",
@@ -44,7 +39,6 @@
     "tournamentCount": "({{count}} Turniere)",
     "trash": "Papierkorb"
   },
-
   "trash": {
     "retentionInfo": "Turniere werden nach {{days}} Tagen automatisch gelöscht.",
     "emptyTrashTitle": "Papierkorb leeren?",
@@ -59,7 +53,6 @@
     "restore": "Wiederherstellen",
     "permanentDelete": "Endgültig löschen"
   },
-
   "card": {
     "ariaLabel": "Turnier: {{title}}, {{status}}",
     "ariaLabelExternal": "Turnier: {{title}}, {{status}}, {{source}}",
@@ -79,10 +72,10 @@
       "roundRobin": "Jeder gegen Jeden"
     },
     "placementAbbreviations": {
-      "points": "Pkt",
-      "goalDifference": "Diff",
+      "points": "Punkte",
+      "goalDifference": "Tordifferenz",
       "goalsFor": "Tore",
-      "directComparison": "DV"
+      "directComparison": "Direktvergleich"
     },
     "noPlacement": "Keine",
     "role": {
@@ -92,7 +85,6 @@
       "viewer": "Zuschauer"
     }
   },
-
   "actions": {
     "open": "Öffnen",
     "copy": "Kopieren",
@@ -102,7 +94,6 @@
     "permanentDelete": "Endgültig löschen",
     "actionsLabel": "Aktionen"
   },
-
   "search": {
     "placeholder": "Turniere suchen...",
     "clearLabel": "Suche leeren",
@@ -110,7 +101,6 @@
     "filterAriaLabel": "Filter: {{label}} {{activeState}}",
     "filterActive": "(aktiv)"
   },
-
   "import": {
     "stepTitles": {
       "select": "Turnier importieren",
@@ -158,7 +148,6 @@
       "goToTournament": "Zum Turnier"
     }
   },
-
   "share": {
     "title": "Spielplan teilen",
     "shareCode": "Share-Code:",

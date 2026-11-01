@@ -83,7 +83,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   const { t } = useTranslation('tournament');
   const decided = result?.winner !== undefined && result.winner !== null;
   const note = isFinished
-    ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined
+    ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.finishedOvertime') : undefined
     : undefined;
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
   const editable = canEditScore || inCorrectionMode;
@@ -160,7 +160,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           {note && <span style={{ fontWeight: cssVars.fontWeights.bold }} data-testid={`final-decision-${match.id}`}>{note}</span>}
         </div>
         <div style={{ display: 'flex', gap: cssVars.spacing.sm, color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.xs }}>
-          {showReferees && displayedRef && <span style={hasPendingRef ? { color: cssVars.colors.primary } : undefined}>SR:{displayedRef}</span>}
+          {showReferees && displayedRef && <span style={hasPendingRef ? { color: cssVars.colors.primary } : undefined}>{t('matchCard.refereePrefix', { referee: displayedRef })}</span>}
           {showFields && displayedField && displayedField > 1 && <span style={hasPendingField ? { color: cssVars.colors.primary } : undefined}>F:{displayedField}</span>}
           <MatchMenuSlot matchId={match.id} />
         </div>
@@ -222,7 +222,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         <div style={{ display: 'flex', gap: cssVars.spacing.sm, marginTop: cssVars.spacing.xs, paddingTop: cssVars.spacing.xs, borderTop: `1px solid ${cssVars.colors.border}` }}>
           {showReferees && onRefereeChange && (
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>SR</label>
+              <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('finals.columns.referee')}</label>
               <select
                 value={displayedRef ?? ''}
                 disabled={isRunning || isFinished /* @ZP-093 */}

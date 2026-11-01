@@ -46,8 +46,8 @@ describe('@W1-039 Zusammenfassung mit den Werten des Nikolaus-Turniers', () => {
     expect(wert('step5-time')).toBe('10:00 Uhr');
     expect(wert('step5-mode')).toBe('Jeder gegen jeden');
     expect(wert('step5-matches')).toBe('15 Spiele');
-    expect(wert('step5-duration')).toBe('10 Min.');
-    expect(wert('step5-break')).toBe('2 Min.');
+    expect(wert('step5-duration')).toBe('10 Minuten');
+    expect(wert('step5-break')).toBe('2 Minuten');
     expect(wert('step5-fields')).toBe('1 Feld');
     expect(within(screen.getByTestId('step5-rules')).getByText('Gleichstand auf Platz 1: Strafstoßschießen')).toBeInTheDocument();
   });

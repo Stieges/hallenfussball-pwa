@@ -13,6 +13,14 @@
  *    werden vor der Prüfung entfernt — das sind Referenzen, keine Fließtexte.
  * 3. Jeder Glossar-Eintrag hat seinen Schlüssel in sport.json, in jeder Sprache,
  *    und der Wert an diesem Pfad entspricht (für de/en) dem jeweiligen Glossar-Feld.
+ * 4. Kurzformen (@OB-075): Kürzel aus forbidden_de / forbidden_en (kuerzel: true)
+ *    sind in jedem Locale-Wert verboten, ausgenommen im Namensraum „short“
+ *    (short.json). Dort muss jeder Wert genau der Kurzform eines Glossar-Eintrags
+ *    entsprechen (short.<de|en>, Ort = short.context), und jede Kurzform des
+ *    Glossars muss dort stehen. So gibt es genau einen Ort für Kurzformen.
+ *
+ * forbidden_de gilt nur für das Locale „de“, forbidden_en nur für „en“.
+ * Schema und Begründung: Kopfkommentar von src/i18n/glossary.json.
  *
  * Sprachverzeichnisse und Namespaces werden zur Laufzeit aus src/i18n/locales/
  * gelesen (dynamische Erfassung), damit eine neue Sprache automatisch mitgeprüft
@@ -48,18 +56,18 @@ const PATHS = {
 // Eigene Grenzen per Lookaround mit einer Zeichenklasse, die deutsche Buchstaben
 // einschließt, vermeiden das. Identischer Ansatz wie in
 // eslint-rules/no-hardcoded-sport-terms.cjs — dieselbe Falle, dieselbe Lösung.
-const GERMAN_WORD_CHAR = 'A-Za-zÀ-ÖØ-öø-ÿ0-9_';
+// Die Muster-Bildung steckt in scripts/lib/glossary-patterns.cjs (gemeinsam mit der ESLint-Regel).
+const {
+  GERMAN_WORD_CHAR,
+  escapeRegExp,
+  wordBoundaryRegex,
+  stripInterpolation,
+  buildPatterns,
+} = require('./lib/glossary-patterns.cjs');
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function wordBoundaryRegex(phrase) {
-  return new RegExp(
-    `(?<![${GERMAN_WORD_CHAR}])${escapeRegExp(phrase)}(?![${GERMAN_WORD_CHAR}])`,
-    'iu'
-  );
-}
+/** Namensraum, in dem Kurzformen stehen dürfen (src/i18n/locales/<sprache>/short.json). */
+const SHORT_NAMESPACE = 'short';
+const SHORT_CONTEXTS = ['tabellenkopf', 'ergebniszelle', 'uhr'];
 
 /**
  * i18next-Verschachtelungen wie "$t(sport:events.penaltyShootout)" sind
@@ -217,23 +225,12 @@ function checkKeyParity(localesDir, locales, namespaces) {
 // =============================================================================
 
 /**
- * @param {{terms: Record<string, {de: string, en: string, forbidden_de: string[], reason: string, i18nKey: string}>}} glossary
- * @returns {Array<{term: string, forbidden: string, reason: string, regex: RegExp}>}
+ * Alle verbotenen Formen des Glossars (forbidden_de für de, forbidden_en für en).
+ * @param {{terms: Record<string, import('./lib/glossary-patterns.d.cts').GlossaryEntry>}} glossary
+ * @returns {import('./lib/glossary-patterns.d.cts').GlossaryPattern[]}
  */
 function buildForbiddenPatterns(glossary) {
-  const patterns = [];
-  for (const [term, entry] of Object.entries(glossary.terms)) {
-    for (const forbidden of entry.forbidden_de) {
-      patterns.push({
-        term,
-        forbidden,
-        reason: entry.reason,
-        // Begriffe mit Kontextregel erfassen auch Beugungen („abgelehnter Eintrag“): nur der Wortanfang zählt.
-        regex: CONTEXT_RULES[forbidden] ? new RegExp(`(?<![${GERMAN_WORD_CHAR}])${escapeRegExp(forbidden)}`, 'iu') : wordBoundaryRegex(forbidden),
-      });
-    }
-  }
-  return patterns;
+  return buildPatterns(glossary, (forbidden) => Boolean(CONTEXT_RULES[forbidden]));
 }
 
 /**
@@ -244,19 +241,25 @@ function checkForbiddenSynonyms(localesDir, locales, namespaces, patterns) {
   const errors = [];
 
   for (const locale of locales) {
+    const localePatterns = patterns.filter((pattern) => pattern.lang === locale);
     for (const namespace of namespaces) {
+      // Kurzformen dürfen nur im Namensraum „short“ stehen; er wird in Check 4 gegen das Glossar geprüft.
+      if (namespace === SHORT_NAMESPACE) continue;
       const data = loadNamespace(localesDir, locale, namespace);
       if (data === null) continue;
 
       const flattened = flatten(data);
       for (const [key, value] of Object.entries(flattened)) {
         if (typeof value !== 'string') continue;
-        const cleaned = stripInterpolationRefs(value);
 
-        for (const pattern of patterns) {
+        const reportedTerms = new Set();
+        for (const pattern of localePatterns) {
+          if (reportedTerms.has(pattern.term)) continue; // „Nr.“ und „Nr“ sind eine Fundstelle
+          const cleaned = pattern.kuerzel ? stripInterpolation(value) : stripInterpolationRefs(value);
           if (pattern.regex.test(cleaned) && contextApplies(pattern.forbidden, cleaned)) {
+            reportedTerms.add(pattern.term);
             errors.push(
-              `Verbotenes Synonym "${pattern.forbidden}" (Begriff "${pattern.term}") in ` +
+              `Verbotenes ${pattern.kuerzel ? 'Kürzel' : 'Synonym'} "${pattern.forbidden}" (Begriff "${pattern.term}") in ` +
                 `src/i18n/locales/${locale}/${namespace}.json, Schlüssel "${key}": "${value}". ` +
                 `${pattern.reason}`
             );
@@ -340,6 +343,80 @@ function checkGlossaryKeys(localesDir, locales, glossary) {
 }
 
 // =============================================================================
+// CHECK 4: KURZFORMEN NUR IM NAMENSRAUM "short"
+// =============================================================================
+
+/**
+ * Prüft, dass short.json (je Sprache) genau die Kurzformen des Glossars führt:
+ * jeder Eintrag mit `short` hat seinen shortKey mit dem Wert short.<sprache>,
+ * der Ort (erster Pfadteil) entspricht short.context, und es gibt keinen Schlüssel,
+ * den kein Glossar-Eintrag beansprucht. Ohne Eintrag im Glossar gibt es keine Kurzform.
+ * @returns {string[]} Fehlermeldungen
+ */
+function checkShortForms(localesDir, locales, glossary) {
+  const errors = [];
+  const claimed = new Set();
+
+  for (const [term, entry] of Object.entries(glossary.terms)) {
+    const short = entry.short;
+    if (!short) continue;
+
+    if (!SHORT_CONTEXTS.includes(short.context)) {
+      errors.push(
+        `Glossar-Begriff "${term}": short.context "${short.context}" ist unbekannt ` +
+          `(erlaubt: ${SHORT_CONTEXTS.join(', ')}).`
+      );
+    }
+    if (typeof short.shortKey !== 'string' || short.shortKey.split('.')[0] !== short.context) {
+      errors.push(
+        `Glossar-Begriff "${term}": short.shortKey "${short.shortKey}" muss mit dem Ort "${short.context}." beginnen.`
+      );
+      continue;
+    }
+    claimed.add(short.shortKey);
+
+    for (const locale of ['de', 'en']) {
+      if (!locales.includes(locale)) continue;
+      const data = loadNamespace(localesDir, locale, SHORT_NAMESPACE);
+      if (data === null) {
+        errors.push(
+          `Glossar-Begriff "${term}": Namespace "${SHORT_NAMESPACE}" fehlt in Sprache "${locale}" ` +
+            `(src/i18n/locales/${locale}/${SHORT_NAMESPACE}.json).`
+        );
+        continue;
+      }
+      const flattened = flatten(data);
+      if (!(short.shortKey in flattened)) {
+        errors.push(
+          `Glossar-Begriff "${term}": Kurzform-Schlüssel "${short.shortKey}" fehlt in ` +
+            `src/i18n/locales/${locale}/${SHORT_NAMESPACE}.json.`
+        );
+      } else if (flattened[short.shortKey] !== short[locale]) {
+        errors.push(
+          `Glossar-Begriff "${term}": Kurzform "${short.shortKey}" in src/i18n/locales/${locale}/${SHORT_NAMESPACE}.json ` +
+            `ist "${flattened[short.shortKey]}", erwartet "${short[locale]}" (glossary.json terms.${term}.short.${locale}).`
+        );
+      }
+    }
+  }
+
+  for (const locale of locales) {
+    const data = loadNamespace(localesDir, locale, SHORT_NAMESPACE);
+    if (data === null) continue;
+    for (const key of Object.keys(flatten(data))) {
+      if (!claimed.has(key)) {
+        errors.push(
+          `Kurzform "${key}" in src/i18n/locales/${locale}/${SHORT_NAMESPACE}.json hat keinen Glossar-Eintrag ` +
+            `mit short.shortKey "${key}". Kurzformen gibt es nur, wenn das Glossar sie erlaubt.`
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
+// =============================================================================
 // MAIN
 // =============================================================================
 
@@ -356,6 +433,7 @@ function runAllChecks(localesDir = PATHS.localesDir, glossaryPath = PATHS.glossa
       errors: checkForbiddenSynonyms(localesDir, locales, namespaces, forbiddenPatterns),
     },
     { check: 'Glossar-Schlüssel', errors: checkGlossaryKeys(localesDir, locales, glossary) },
+    { check: 'Kurzformen', errors: checkShortForms(localesDir, locales, glossary) },
   ];
 
   return { locales, namespaces, results };
@@ -408,6 +486,7 @@ function main() {
     console.log('  1. Schlüssel-Parität: fehlt ein Schlüssel in einer Sprache?');
     console.log('  2. Verbotene Synonyme: siehe src/i18n/glossary.json terms.<id>.forbidden_de');
     console.log('  3. Glossar-Schlüssel: stimmt src/i18n/locales/{de,en}/sport.json mit glossary.json überein?');
+    console.log('  4. Kurzformen: nur in src/i18n/locales/{de,en}/short.json, und dort genau wie im Glossar (short.*)');
     process.exit(1);
   }
 }
@@ -429,5 +508,6 @@ module.exports = {
   checkKeyParity,
   checkForbiddenSynonyms,
   checkGlossaryKeys,
+  checkShortForms,
   runAllChecks,
 };

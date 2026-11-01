@@ -297,14 +297,14 @@ function beendet(ausgang: Cache) {
 }
 
 describe('@OB-064 Finalrunde: Karte (Handy) und Tabelle (Desktop)', () => {
-  it('Z.1 Karte: 2 / 2, (4) bei FC Nord, (3) bei SG Mitte, „beendet i. E.“, FC Nord fett', () => {
+  it('Z.1 Karte: 2 / 2, (4) bei FC Nord, (3) bei SG Mitte, „beendet nach Strafstoßschießen“, FC Nord fett', () => {
     const { container } = beendet(AUSGANG.strafstoss);
     const karte = within(mobile(container));
     expect(screen.getByTestId(`final-goals-${HF1}-home`).textContent).toBe('2');
     expect(screen.getByTestId(`final-goals-${HF1}-away`).textContent).toBe('2');
     expect(screen.getByTestId(`final-penalty-${HF1}-home`).textContent).toBe('(4)');
     expect(screen.getByTestId(`final-penalty-${HF1}-away`).textContent).toBe('(3)');
-    expect(screen.getByTestId(`final-decision-${HF1}`).textContent).toBe('beendet i. E.');
+    expect(screen.getByTestId(`final-decision-${HF1}`).textContent).toBe('beendet nach Strafstoßschießen');
     expect(karte.getByText('FC Nord').getAttribute('data-winner')).toBe('true');
     expect(karte.getByText('SG Mitte').getAttribute('data-winner')).toBeNull();
     // Gewicht aus dem Zeilenstil: Sieger fett, Verlierer nicht
@@ -312,16 +312,16 @@ describe('@OB-064 Finalrunde: Karte (Handy) und Tabelle (Desktop)', () => {
     expect(karte.getByText('SG Mitte').parentElement?.style.fontWeight).not.toBe(cssVars.fontWeights.bold);
   });
 
-  it('Z.1 Tabelle: „2:2 (4:3 i. E.)“', () => {
+  it('Z.1 Tabelle: „2:2 (4:3)“', () => {
     const { container } = beendet(AUSGANG.strafstoss);
-    expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('2:2 (4:3 i. E.)');
+    expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('2:2 (4:3)');
   });
 
-  it('Z.2 Karte: 3 / 2 und „n. V.“, Tabelle „3:2 n. V.“', () => {
+  it('Z.2 Karte: 3 / 2 und „beendet nach Verlängerung“, Tabelle „3:2 n. V.“', () => {
     const { container } = beendet(AUSGANG.verlaengerung);
     expect(screen.getByTestId(`final-goals-${HF1}-home`).textContent).toBe('3');
     expect(screen.getByTestId(`final-goals-${HF1}-away`).textContent).toBe('2');
-    expect(screen.getByTestId(`final-decision-${HF1}`).textContent).toBe('n. V.');
+    expect(screen.getByTestId(`final-decision-${HF1}`).textContent).toBe('beendet nach Verlängerung');
     expect(screen.queryByTestId(`final-penalty-${HF1}-home`)).toBeNull();
     expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('3:2 n. V.');
   });
