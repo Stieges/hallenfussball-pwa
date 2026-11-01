@@ -54,6 +54,12 @@ async function oeffnen(page: Page) {
   await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
 }
 
+/** Seite wirklich neu laden (frisches Dokument, Daten aus dem Speicher); ohne page.reload, das im Vor-Push-Lauf abbrach */
+async function neuLaden(page: Page) {
+  await page.goto('about:blank');
+  await oeffnen(page);
+}
+
 async function tauscheMit(page: Page, von: number, nach: number) {
   await page.getByTestId('schedule-edit-start').click();
   await page.getByTestId(`swap-with-${matchId(von)}`).filter({ visible: true }).first().click();
@@ -159,8 +165,7 @@ test.describe('G1a Spielplan bearbeiten (offline)', () => {
 
     await page.getByTestId('schedule-edit-save').click();
     await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
-    await zweite.goto('/#/');
-    await oeffnen(zweite);
+    await neuLaden(zweite);
     await expect.poll(() => zeitVon(zweite, 6)).toBe(vorher.s3);
     expect(await zeitVon(zweite, 3)).toBe(vorher.s6);
   });
@@ -174,8 +179,7 @@ test.describe('G1a Spielplan bearbeiten (offline)', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Verwerfen' }).click();
     await expect(page.getByTestId('schedule-edit-start')).toBeVisible();
     expect(await karten(page)).toEqual(vorher);
-    await page.goto('/#/');
-    await oeffnen(page);
+    await neuLaden(page);
     await expect.poll(() => karten(page)).toEqual(vorher);
   });
 });
