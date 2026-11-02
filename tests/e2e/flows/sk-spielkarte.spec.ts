@@ -189,7 +189,8 @@ for (const [name, groesse] of [['Handy 360', HANDY], ['Tablet hochkant 768', TAB
       await heim.fill('2');
       await expect(heim).toHaveValue('2'); // vorher sprang das Feld auf leer zurück
       await gast.fill('1');
-      await gast.press('Enter'); // @FU-101: gespeichert wird erst bei Enter oder beim Verlassen des Feldes
+      await expect(karte.locator('[data-testid^="final-score-save-"]')).toBeEnabled();
+      await karte.locator('[data-testid^="final-score-save-"]').click(); // @FU-101: gespeichert wird nur mit „Ergebnis speichern“
       // Das Spiel ist eingetragen: die Eingabefelder weichen den Torzahlen der beendeten Karte
       await expect(karte.locator('[data-testid^="final-goals-"]').nth(0)).toHaveText('2', { timeout: 15000 });
       await expect(karte.locator('[data-testid^="final-goals-"]').nth(1)).toHaveText('1');
@@ -248,7 +249,7 @@ test.describe('@OB-064 Spielplan der Verwaltung, Laptop 1280×800: Tabellenzeile
  */
 const LETZTE_KARTEN = 4;
 const KARTEN_SELEKTOR = '[data-testid^="final-card-"], [data-match-card]';
-const ZIEL_SELEKTOR = 'input:not([type="hidden"]), [data-score-circle], [data-testid^="final-goals-"]';
+const ZIEL_SELEKTOR = 'input:not([type="hidden"]), [data-score-circle], [data-testid^="final-goals-"], [data-testid^="final-score-save-"]';
 const SCHWEBE_LEISTE = '.schedule-action-buttons';
 
 async function scrolleGanzNachUnten(page: Page) {
@@ -309,7 +310,7 @@ for (const [name, groesse, datei] of [
       await karte.scrollIntoViewIfNeeded();
       await karte.locator('input[data-testid$="-home"]').fill('2');
       await karte.locator('input[data-testid$="-away"]').fill('1');
-      await karte.locator('input[data-testid$="-away"]').press('Enter'); // @FU-101
+      await karte.locator('[data-testid^="final-score-save-"]').click(); // @FU-101: nur mit „Ergebnis speichern“
       await expect(karte.locator('[data-testid^="final-goals-"]').nth(1)).toHaveText('1', { timeout: 15000 });
       await scrolleGanzNachUnten(page);
       const befunde = await pruefeLetzteKarten(page, LETZTE_KARTEN);

@@ -2,7 +2,7 @@
  * ScoreDraftInput – Zahlenfeld für Tore, gedacht für `useScoreDraft` (@FU-101).
  * Mindestens 16 px Schrift und Touch-Höhe; Korrekturmodus und ungültige Eingabe sind am Rahmen sichtbar.
  */
-import type { ChangeEvent, CSSProperties, FocusEvent, KeyboardEvent } from 'react';
+import type { ChangeEvent, CSSProperties, FocusEvent, KeyboardEvent, Ref } from 'react';
 import { cssVars } from '../../../design-tokens';
 
 /** Was `useScoreDraft` je Feld liefert */
@@ -15,6 +15,10 @@ export interface ScoreFieldProps {
   invalid: boolean;
   /** Id des Hinweises, solange er sichtbar ist */
   describedBy?: string;
+  /** Ziffernblock-Taste: erstes Feld „next“, zweites „done“ (@FU-101) */
+  enterKeyHint: 'next' | 'done';
+  /** Ref auf das Eingabefeld (Enter im ersten Feld springt ins zweite) */
+  inputRef: Ref<HTMLInputElement>;
 }
 
 export interface ScoreDraftInputProps extends ScoreFieldProps {
@@ -46,10 +50,11 @@ const invalidStyle: CSSProperties = {
 };
 
 export const ScoreDraftInput: React.FC<ScoreDraftInputProps> = ({
-  ariaLabel, testId, inCorrectionMode = false, invalid, describedBy, ...handlers
+  ariaLabel, testId, inCorrectionMode = false, invalid, describedBy, inputRef, ...handlers
 }) => (
   <input
     {...handlers}
+    ref={inputRef}
     type="number"
     inputMode="numeric"
     min="0"

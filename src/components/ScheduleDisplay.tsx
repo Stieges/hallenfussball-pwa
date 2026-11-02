@@ -264,6 +264,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onMatchSwap={onMatchSwap}
           tournament={sideSource}
           forfeit={forfeit}
+          canEndRunning={canEndRunning}
         />
       )}
 

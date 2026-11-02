@@ -21,7 +21,13 @@ import { ScheduleTimeShift } from '../ScheduleTimeShift';
 vi.unmock('i18next');
 vi.unmock('react-i18next');
 vi.mock('../../../match-engine/useMatchEngineContext', () => ({ useMatchEngineContextOptional: () => null }));
-vi.mock('../../../../components/dialogs/PDFExportDialog', () => ({ PDFExportDialog: () => null }));
+vi.mock('../../../../components/dialogs/PDFExportDialog', async () => {
+  const { createElement } = await import('react');
+  return {
+    PDFExportDialog: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+      (isOpen ? createElement('button', { type: 'button', 'data-testid': 'pdf-dialog-cancel', onClick: onClose }, 'Abbrechen') : null),
+  };
+});
 
 const DAY = '2026-11-28';
 const at = (hhmm: string) => new Date(`${DAY}T${hhmm}:00`);
@@ -175,5 +181,54 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
     const restored = onTournamentUpdate.mock.calls[1][0] as Tournament;
     expect(restored.matches.map((m) => hhmm(m.scheduledTime))).toEqual(nikolaus(LIVE).matches.map((m) => hhmm(m.scheduledTime)));
     expect(restored.matches.every((m) => m.originalStart === undefined)).toBe(true);
+  });
+
+  describe('@ZP-099 Der Streifen nach dem Verschieben bleibt, bis Olli ihn schließt', () => {
+    function verschoben() {
+      vi.setSystemTime(berlin('11:15'));
+      const utils = renderShift(nikolaus(LIVE));
+      fireEvent.click(screen.getByTestId('schedule-shift-button'));
+      fireEvent.click(screen.getByTestId('time-shift-proceed'));
+      fireEvent.click(screen.getByTestId('time-shift-confirm'));
+      utils.rerenderWith(utils.onTournamentUpdate.mock.calls[0][0] as Tournament);
+      return utils;
+    }
+
+    it('@ZP-099 „Neu drucken“ öffnen und abbrechen: der Streifen steht weiter, mit „Rückgängig“', () => {
+      verschoben();
+      expect(screen.getByTestId('time-shift-strip')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('time-shift-reprint'));
+      expect(screen.getByTestId('pdf-dialog-cancel')).toBeTruthy(); // der Druck-Dialog ist offen
+      fireEvent.click(screen.getByTestId('pdf-dialog-cancel'));
+      expect(screen.queryByTestId('pdf-dialog-cancel')).toBeNull();
+      expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Min. verschoben');
+      expect(screen.getByTestId('zeiten-rueckgaengig')).toBeTruthy();
+    });
+
+    it('@ZP-099 schon beim Öffnen von „Neu drucken“ steht der Streifen mit „Rückgängig“ noch', () => {
+      verschoben();
+      fireEvent.click(screen.getByTestId('time-shift-reprint'));
+      expect(screen.getByTestId('time-shift-strip')).toBeTruthy();
+      expect(screen.getByTestId('zeiten-rueckgaengig')).toBeTruthy();
+    });
+
+    it('@ZP-099 Olli schließt den Streifen mit ×: er verschwindet', () => {
+      verschoben();
+      fireEvent.click(screen.getByTestId('time-shift-reprint'));
+      fireEvent.click(screen.getByTestId('pdf-dialog-cancel'));
+      fireEvent.click(screen.getByTestId('time-shift-strip-close'));
+      expect(screen.queryByTestId('time-shift-strip')).toBeNull();
+    });
+
+    it('@ZP-099 Olli verschiebt neu: der Streifen zeigt die neue Verschiebung', () => {
+      const { rerenderWith, onTournamentUpdate } = verschoben();
+      fireEvent.click(screen.getByTestId('time-shift-reprint'));
+      fireEvent.click(screen.getByTestId('pdf-dialog-cancel'));
+      fireEvent.click(screen.getByTestId('schedule-shift-button'));
+      fireEvent.click(screen.getByTestId('time-shift-proceed'));
+      fireEvent.click(screen.getByTestId('time-shift-confirm'));
+      rerenderWith(onTournamentUpdate.mock.calls[1][0] as Tournament);
+      expect(screen.getByTestId('time-shift-strip')).toBeTruthy();
+    });
   });
 });

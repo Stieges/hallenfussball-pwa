@@ -767,6 +767,7 @@
     "invalidScore": "Nur ganze Zahlen ab 0 eintragen",
     "changedElsewhere": "Ergebnis wurde inzwischen von {{name}} geändert (jetzt {{score}})",
     "changedElsewhereNoName": "Ergebnis wurde inzwischen von einem anderen Gerät geändert (jetzt {{score}})",
+    "save": "Ergebnis speichern",
     "keepDraft": "Meine Eingabe behalten"
   },
   "sortable": {
