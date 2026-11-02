@@ -617,7 +617,7 @@
     "ariaLabel": "Match {{matchNumber}}: {{homeTeam}} vs {{awayTeam}}",
     "field": "Field {{field}}",
     "groupPrefix": "Group {{group}}",
-    "refereePrefix": "Referee: {{referee}}",
+    "refereePrefix": "Referee {{referee}}",
     "refereeSR": "Referee {{referee}}",
     "groupShort": "Group {{group}}",
     "scoreAriaLive": "Score {{homeScore}}:{{awayScore}}, {{elapsed}}",

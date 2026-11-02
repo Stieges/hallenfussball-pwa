@@ -9,7 +9,7 @@ import type { ReactElement } from 'react';
 import { createRealI18n, type RealLanguage } from '../../../../test/realI18n';
 import { ShortLabel } from '../ShortLabel';
 import { Versus } from '../Versus';
-import { SHORT_TERMS, type ShortTerm } from '../shortTerms';
+import { SHORT_TERMS, type TableHeadTerm } from '../shortTerms';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');
@@ -19,7 +19,7 @@ async function renderIn(lng: RealLanguage, ui: ReactElement) {
   return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>);
 }
 
-const KURZ_LANG: Array<[ShortTerm, RealLanguage, string, string]> = [
+const KURZ_LANG: Array<[TableHeadTerm, RealLanguage, string, string]> = [
   ['rank', 'de', '#', 'Platz'],
   ['rank', 'en', '#', 'Position'],
   ['played', 'de', 'Sp.', 'Spiele'],
@@ -36,22 +36,21 @@ const KURZ_LANG: Array<[ShortTerm, RealLanguage, string, string]> = [
   ['points', 'en', 'Pts', 'Points'],
   ['number', 'de', 'Nr.', 'Nummer'],
   ['number', 'en', 'No.', 'Number'],
-  ['extraTime', 'de', 'n. V.', 'nach Verlängerung'],
-  ['extraTime', 'en', 'a.e.t.', 'after extra time'],
-  ['minutes', 'de', 'Min.', 'Minuten'],
-  ['minutes', 'en', 'min', 'minutes'],
 ];
 
 describe('ShortLabel: Kurzform mit ausgeschriebenem Begriff (@OB-075)', () => {
   it.each(KURZ_LANG)('%s (%s): sichtbar „%s“, Hinweis und Vorlesetext „%s“', async (term, lng, kurz, lang) => {
     const { container } = await renderIn(lng, <ShortLabel term={term} />);
     const wurzel = container.firstElementChild as HTMLElement;
-    expect(wurzel).toHaveAttribute('title', lang);
+    // Maus und Touch: title an der sichtbaren Kurzform
     const sichtbar = wurzel.querySelector('[aria-hidden="true"]');
     expect(sichtbar?.textContent).toBe(kurz);
-    // Der Screenreader liest den ausgeschriebenen Begriff, nicht die Kurzform
-    expect(wurzel.textContent).toContain(lang);
+    expect(sichtbar).toHaveAttribute('title', lang);
+    // Der Screenreader liest den ausgeschriebenen Begriff genau einmal (die Kurzform samt title ist für ihn ausgeblendet)
+    expect(wurzel).not.toHaveAttribute('title');
     expect(screen.getByText(lang)).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByText(lang)).not.toHaveAttribute('title');
+    expect(wurzel.querySelectorAll('[title]')).toHaveLength(1);
   });
 
   it('Gleichlauf: jede Kurzform der Komponente ist ein Schlüssel im Namensraum short und der Begriff ein Schlüssel in sport', () => {

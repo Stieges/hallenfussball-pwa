@@ -19,7 +19,7 @@
  *    entsprechen (short.<de|en>, Ort = short.context), und jede Kurzform des
  *    Glossars muss dort stehen. So gibt es genau einen Ort für Kurzformen.
  *
- * forbidden_de gilt nur für das Locale „de“, forbidden_en nur für „en“.
+ * forbidden_de gilt für „de“ und – außer die Form ist gültiges Englisch (en-Form des Begriffs) – auch für „en“; forbidden_en nur für „en“.
  * Schema und Begründung: Kopfkommentar von src/i18n/glossary.json.
  *
  * Sprachverzeichnisse und Namespaces werden zur Laufzeit aus src/i18n/locales/
@@ -67,7 +67,7 @@ const {
 
 /** Namensraum, in dem Kurzformen stehen dürfen (src/i18n/locales/<sprache>/short.json). */
 const SHORT_NAMESPACE = 'short';
-const SHORT_CONTEXTS = ['tabellenkopf', 'ergebniszelle', 'uhr'];
+const SHORT_CONTEXTS = ['tabellenkopf', 'ergebniszelle'];
 
 /**
  * i18next-Verschachtelungen wie "$t(sport:events.penaltyShootout)" sind
@@ -241,7 +241,10 @@ function checkForbiddenSynonyms(localesDir, locales, namespaces, patterns) {
   const errors = [];
 
   for (const locale of locales) {
-    const localePatterns = patterns.filter((pattern) => pattern.lang === locale);
+    // Deutsche verbotene Formen sind auch in englischen Texten falsch („HF“, „SR“, „Elfmeter“); Ausnahme: der Begriff ist
+    // auch gültiges Englisch (z. B. „vs“, das Glossar führt es als en-Form von „gegen“).
+    const localePatterns = patterns.filter((pattern) => pattern.lang === locale
+      || (locale === 'en' && pattern.lang === 'de' && pattern.forbidden.toLowerCase() !== pattern.en.toLowerCase()));
     for (const namespace of namespaces) {
       // Kurzformen dürfen nur im Namensraum „short“ stehen; er wird in Check 4 gegen das Glossar geprüft.
       if (namespace === SHORT_NAMESPACE) continue;
@@ -353,7 +356,7 @@ function checkGlossaryKeys(localesDir, locales, glossary) {
  * den kein Glossar-Eintrag beansprucht. Ohne Eintrag im Glossar gibt es keine Kurzform.
  * @returns {string[]} Fehlermeldungen
  */
-function checkShortForms(localesDir, locales, glossary) {
+function checkShortForms(localesDir, locales, glossary, namespaces = []) {
   const errors = [];
   const claimed = new Set();
 
@@ -413,6 +416,41 @@ function checkShortForms(localesDir, locales, glossary) {
     }
   }
 
+  return errors.concat(checkShortReferences(localesDir, locales, namespaces, glossary));
+}
+
+/**
+ * Verweise `$t(short:…)` in Sprachwerten außerhalb von „short“ sind nur dort erlaubt, wo das Glossar sie nennt
+ * (short.usedBy, z. B. die Ergebniszelle `tournament:matchResult.overtimeShort`). Sonst ließe sich eine Kurzform
+ * an jeder Stelle einschmuggeln, ohne dass der Ort geprüft wird.
+ * @returns {string[]} Fehlermeldungen
+ */
+function checkShortReferences(localesDir, locales, namespaces, glossary) {
+  const errors = [];
+  const allowed = new Map(); // shortKey -> erlaubte Fundorte
+  for (const entry of Object.values(glossary.terms)) {
+    if (entry.short) allowed.set(entry.short.shortKey, new Set(entry.short.usedBy ?? []));
+  }
+  const referenz = /\$t\(\s*short:([A-Za-z0-9_.]+)/g;
+  for (const locale of locales) {
+    for (const namespace of namespaces) {
+      if (namespace === SHORT_NAMESPACE) continue;
+      const data = loadNamespace(localesDir, locale, namespace);
+      if (data === null) continue;
+      for (const [key, value] of Object.entries(flatten(data))) {
+        if (typeof value !== 'string') continue;
+        for (const found of value.matchAll(referenz)) {
+          const host = `${namespace}:${key}`;
+          if (!allowed.get(found[1])?.has(host)) {
+            errors.push(
+              `Verweis auf die Kurzform "short:${found[1]}" in src/i18n/locales/${locale}/${namespace}.json, Schlüssel "${key}" ` +
+                `ist nicht erlaubt (glossary.json: short.usedBy für "${found[1]}" nennt "${host}" nicht). Kurzformen nur an ihrem Ort.`
+            );
+          }
+        }
+      }
+    }
+  }
   return errors;
 }
 
@@ -433,7 +471,7 @@ function runAllChecks(localesDir = PATHS.localesDir, glossaryPath = PATHS.glossa
       errors: checkForbiddenSynonyms(localesDir, locales, namespaces, forbiddenPatterns),
     },
     { check: 'Glossar-Schlüssel', errors: checkGlossaryKeys(localesDir, locales, glossary) },
-    { check: 'Kurzformen', errors: checkShortForms(localesDir, locales, glossary) },
+    { check: 'Kurzformen', errors: checkShortForms(localesDir, locales, glossary, namespaces) },
   ];
 
   return { locales, namespaces, results };
@@ -509,5 +547,6 @@ module.exports = {
   checkForbiddenSynonyms,
   checkGlossaryKeys,
   checkShortForms,
+  checkShortReferences,
   runAllChecks,
 };

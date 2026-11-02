@@ -2,9 +2,9 @@
  * MatchCardScore - waagerechtes Ergebnis der Tabellenzeile (@OB-064, Paket SK)
  *
  * Heim und Gast stehen in der Tabelle nebeneinander, deshalb steht das Ergebnis waagerecht:
- * - geplant: "VS"
+ * - geplant: das Wort zwischen den Teams in der Sprache der Oberfläche („gegen“ / „vs“, @OB-076)
  * - läuft: "1:0" mit Restzeit darunter
- * - beendet: "1:0", "3:2 n. V." oder "2:2 (4:3 i. E.)"
+ * - beendet: "1:0", "3:2 n. V." oder "2:2 (4:3)"
  *
  * Der Knopf ist das Klickziel ins Cockpit (≥ 44 px hoch). Der frühere Kreis mit Fortschrittsring entfällt.
  */
@@ -31,7 +31,7 @@ export interface MatchCardScoreProps {
   disabled?: boolean;
   /** Match ID for testing */
   matchId?: string;
-  /** Fachlicher Status der Ansicht: „ausgefallen“ statt „VS“, „gewertet“ neben dem Ergebnis (@ZM-104) */
+  /** Fachlicher Status der Ansicht: „ausgefallen“ statt „gegen“/„vs“, „gewertet“ neben dem Ergebnis (@ZM-104) */
   viewStatus?: ViewMatchStatus;
 }
 

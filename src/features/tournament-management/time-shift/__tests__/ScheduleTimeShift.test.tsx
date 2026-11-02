@@ -201,7 +201,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
       expect(screen.getByTestId('pdf-dialog-cancel')).toBeTruthy(); // der Druck-Dialog ist offen
       fireEvent.click(screen.getByTestId('pdf-dialog-cancel'));
       expect(screen.queryByTestId('pdf-dialog-cancel')).toBeNull();
-      expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Min. verschoben');
+      expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Minuten verschoben');
       expect(screen.getByTestId('zeiten-rueckgaengig')).toBeTruthy();
     });
 

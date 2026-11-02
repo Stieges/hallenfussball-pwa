@@ -8,7 +8,7 @@
     "zwingend identisch mit i18n-Keys). Jeder Eintrag hat diese Pflichtfelder:",
     "  de           string   — bevorzugte deutsche Form. Verbindlich für UI-Text, Code-Kommentare, Docs.",
     "  en           string   — englische Entsprechung (Referenz; der Prüfer vergleicht ohne Groß-/Kleinschreibung).",
-    "  forbidden_de string[] — verbotene Formen im DEUTSCHEN UI-Text (Synonyme oder Kürzel). Jedes Vorkommen ist ein Verstoß.",
+    "  forbidden_de string[] — verbotene Formen im DEUTSCHEN UI-Text (Synonyme oder Kürzel). Jedes Vorkommen ist ein Verstoß; der Prüfer meldet sie auch in englischen Texten (außer die Form ist selbst die englische: z.B. 'vs').",
     "  reason       string   — Begründung der Wahl, ein Satz, für Menschen (siehe auch docs/GLOSSAR.md).",
     "  i18nKey      string   — Pfad in src/i18n/locales/{de,en}/sport.json (Punktnotation, z.B. 'events.penaltyShootout'),",
     "                          auf den dieser Begriff zeigt. Der Wert an diesem Pfad MUSS 'de' bzw. 'en' entsprechen.",
@@ -24,8 +24,11 @@
     "  short        object   — die EINE erlaubte Kurzform, falls es sie gibt:",
     "                            de        string — Kurzform auf Deutsch (z.B. 'Sp.')",
     "                            en        string — Kurzform auf Englisch (z.B. 'P')",
-    "                            context   'tabellenkopf' | 'ergebniszelle' | 'uhr' — der einzige Ort, an dem sie stehen darf",
+    "                            context   'tabellenkopf' | 'ergebniszelle' — der einzige Ort, an dem sie stehen darf",
     "                            shortKey  string — Pfad in src/i18n/locales/{de,en}/short.json (z.B. 'tabellenkopf.played')",
+    "                            usedBy    string[] (optional) — Sprachwerte ('namespace:pfad'), die die Kurzform mit $t(short:…) verschachteln dürfen;",
+    "                                      jeder andere Verweis auf short: in Sprachdateien ist ein Fehler. In .ts/.tsx stehen Schlüssel mit",
+    "                                      'short:' nur in den Dateien, die die ESLint-Regel nennt (shortTerms, PDF-Texte, Statistik-Export).",
     "                          Kurzformen stehen AUSSCHLIESSLICH im Namensraum 'short' (short.json). Der Prüfer verlangt, dass jeder",
     "                          Wert dort einem Glossar-Eintrag entspricht und dass jede Kurzform an ihrem Ort einen ausgeschriebenen",
     "                          Begriff (i18nKey) hat, der als title/aria-label gezeigt wird (Komponente ShortLabel).",
@@ -323,15 +326,9 @@
       "en": "minutes",
       "forbidden_de": ["Min", "Min.", "min", "min."],
       "forbidden_en": ["Min", "Min.", "min", "min."],
-      "reason": "Daniel 01.11.2026, @OB-075: Im Text ausgeschrieben („10 Minuten je Spiel“); die Kurzform steht nur bei Uhr-Beschriftungen (Monitor, Tafel).",
+      "reason": "Daniel 01.11.2026, @OB-075: Minuten stehen überall ausgeschrieben („10 Minuten je Spiel“, mit Zählform); es gibt keine Kurzform (auch nicht an der Uhr oder am Monitor).",
       "i18nKey": "zeit.minutes",
-      "kuerzel": true,
-      "short": {
-        "de": "Min.",
-        "en": "min",
-        "context": "uhr",
-        "shortKey": "uhr.minutes"
-      }
+      "kuerzel": true
     },
     "extraTime": {
       "de": "nach Verlängerung",
@@ -345,7 +342,8 @@
         "de": "n. V.",
         "en": "a.e.t.",
         "context": "ergebniszelle",
-        "shortKey": "ergebniszelle.extraTime"
+        "shortKey": "ergebniszelle.extraTime",
+        "usedBy": ["tournament:matchResult.overtimeShort"]
       }
     },
     "directComparison": {

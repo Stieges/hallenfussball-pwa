@@ -95,7 +95,7 @@
     "vor": {
       "spielFeld": "Spiel {{nummer}} · {{feld}}",
       "mindestpause": "{{teamName}} hätte nur {{minuten}} statt {{mindestMinuten}} Minuten Pause",
-      "ueberfaellig": "überfällig {{minuten}} $t(short:uhr.minutes)",
+      "ueberfaellig": "überfällig $t(sport:zeit.minuteCount, {\"count\": {{minuten}} })",
       "gesperrt": "{{team}}: Nummer {{nummer}} ist für dieses Turnier gesperrt",
       "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
       "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",
@@ -537,7 +537,7 @@
       "strafe": "Zeitstrafe {{team}}"
     },
     "strafeKnopf": "Zeitstrafe",
-    "strafeDauer": "{{minuten}} $t(short:uhr.minutes)"
+    "strafeDauer": "$t(sport:zeit.minuteCount, {\"count\": {{minuten}} })"
   },
   "nummer": {
     "titelTor": "Rückennummer – Tor {{team}}",

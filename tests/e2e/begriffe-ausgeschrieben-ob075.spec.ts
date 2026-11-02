@@ -68,7 +68,8 @@ test.describe('@OB-075 / @OB-076 Spielplan der Finalrunde und Spielkarten', () =
     await oeffneSpielplan(page, seedIndexedDB, 'de');
     const text = await sichtbarerText(page);
     expect(text).toContain('Halbfinale 1');
-    expect(text).toMatch(/Schiedsrichter:? 2/);
+    expect(text).toMatch(/Schiedsrichter 2\b/);
+    expect(text).not.toMatch(/Schiedsrichter: /);
     expect(text).toContain('Gruppe A');
     expect(text).not.toMatch(/\bHF\b|\bSR\b|\bGr\.|\bSF\b/);
   });
@@ -77,20 +78,26 @@ test.describe('@OB-075 / @OB-076 Spielplan der Finalrunde und Spielkarten', () =
     await oeffneSpielplan(page, seedIndexedDB, 'en');
     const text = await sichtbarerText(page);
     expect(text).toContain('Semifinal 1');
-    expect(text).toMatch(/Referee:? 2/);
+    expect(text).toMatch(/Referee 2\b/);
+    expect(text).not.toMatch(/Referee: /);
     expect(text).toContain('Group A');
     expect(text).not.toMatch(/\bHF\b|\bSR\b|\bGr\.|\bSF\b|\bRef\b|Schiedsrichter|Halbfinale/);
   });
 
-  test('@OB-076 Englisch: der Schiedsrichter-Block zeigt „Referee 1“ und „Referee 2“ als Auswahl, nicht „SR 1“', async ({ page, seedIndexedDB }) => {
+  test('@OB-076 Englisch: der Schiedsrichter-Block (Bearbeiten-Modus) bietet „Referee 1“ und „Referee 2“ an, nie „SR 1“ oder „Ref 1“', async ({ page, seedIndexedDB }) => {
     await oeffneSpielplan(page, seedIndexedDB, 'en');
-    const optionen = await page.locator('select option').allTextContents();
-    // Die Auswahl der Schiedsrichter gibt es erst im Bearbeiten-Modus der Leitung; ohne sie genügt der Text auf den Karten
-    if (optionen.length > 0) {
-      expect(optionen.join(' ')).not.toMatch(/\bSR\b|\bRef\b/);
-    }
-    const text = await sichtbarerText(page);
-    expect(text).toMatch(/Referee:? [12]/);
+    await page.getByTestId('schedule-edit-start').click();
+    const optionen = (await page.locator('select option').allTextContents()).map((o) => o.trim());
+    expect(optionen).toEqual(expect.arrayContaining(['Referee 1', 'Referee 2']));
+    expect(optionen.join(' | ')).not.toMatch(/\bSR\b|\bRef\b|Schiedsrichter/);
+  });
+
+  test('@OB-076 Deutsch: der Schiedsrichter-Block (Bearbeiten-Modus) bietet „Schiedsrichter 1“ und „Schiedsrichter 2“ an, nie „SR 1“', async ({ page, seedIndexedDB }) => {
+    await oeffneSpielplan(page, seedIndexedDB, 'de');
+    await page.getByTestId('schedule-edit-start').click();
+    const optionen = (await page.locator('select option').allTextContents()).map((o) => o.trim());
+    expect(optionen).toEqual(expect.arrayContaining(['Schiedsrichter 1', 'Schiedsrichter 2']));
+    expect(optionen.join(' | ')).not.toMatch(/\bSR\b/);
   });
 });
 

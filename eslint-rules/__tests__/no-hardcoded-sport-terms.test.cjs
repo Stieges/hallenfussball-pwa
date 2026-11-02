@@ -112,12 +112,15 @@ ruleTester.run('no-hardcoded-sport-terms (forbidden)', rule, {
 const COMPONENT = '/repo/src/components/schedule/MatchCard/MatchCardHeader.tsx';
 ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
   valid: [
-    // Kurzform im Tabellenkopf kommt aus dem Namensraum „short“, nie als Literal: der Aufruf mit dem Schlüssel ist sauber.
-    { filename: COMPONENT, code: "const kopf = t('short:tabellenkopf.played');", options: ['forbidden'] },
     // Ausgeschriebene Begriffe sind in jeder Form erlaubt (auch bei „preferred“: Kürzel-Begriffe lösen keine Warnung aus).
     { filename: COMPONENT, code: "const a = 'Halbfinale 1'; const b = 'Schiedsrichter 2'; const c = 'Gruppe A'; const d = 'gegen';", options: ['forbidden'] },
     { filename: COMPONENT, code: "const a = 'Gruppe A gegen Gruppe B';", options: ['preferred'] },
     // Englisches „vs“ ist erlaubt (nur das deutsche ist verboten), aber ohne Sprache im Code bleibt „vs“ im Literal ein Fund: siehe invalid.
+    // `short:`-Schlüssel an den erlaubten Orten (Zuordnung der Kurzformen, PDF-Texte, Statistik-Export)
+    { filename: '/repo/src/components/ui/atoms/shortTerms.ts', code: "const k = { short: 'short:tabellenkopf.rank' };", options: ['forbidden'] },
+    { filename: '/repo/src/lib/pdf/translations.ts', code: "const head = (key) => translate(`short:tabellenkopf.${key}`);", options: ['forbidden'] },
+    // Ein Wort „short“ ohne Namensraum ist kein Schlüssel
+    { filename: COMPONENT, code: "const a = 'short: kurz'; const b = 'a-short:x';", options: ['forbidden'] },
     // Kennungen und CSS sind keine Anzeigetexte: Fehlercodes, Spiel-IDs mit Ziffern, CSS-Funktionen, Medienabfragen.
     { filename: COMPONENT, code: "const code = 'HF001'; const id = 'SF1'; const q = '(min-width: 600px)'; const g = 'minmax(min(100%, 20rem), 1fr)';", options: ['forbidden'] },
     { filename: COMPONENT, code: "const css = `grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr))`;", options: ['forbidden'] },
@@ -131,6 +134,10 @@ ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
     { filename: '/repo/src/screens/DatenschutzScreen.tsx', code: 'const el = <p>§ 25 Abs. 2 Nr. 2 TDDDG</p>;', options: ['forbidden'] },
   ],
   invalid: [
+    // Kurzformen-Schlüssel an beliebiger Stelle eingeschmuggelt (Mechanismus-Lücke): in Komponenten und als Verschachtelung
+    { filename: COMPONENT, code: "const kopf = t('short:tabellenkopf.played');", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    { filename: COMPONENT, code: "const kopf = 'Spiel $t(short:tabellenkopf.played)';", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    { filename: COMPONENT, code: 'const kopf = <span>{`short:uhr.${x}`}</span>;', options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
     // Jede Zeile des Grundrisses @OB-075 als fester Text im Code
     { filename: COMPONENT, code: 'const el = <span>HF 1</span>;', options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },
     { filename: COMPONENT, code: "const label = `SR ${number}`;", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }] },

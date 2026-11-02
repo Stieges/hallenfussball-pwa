@@ -68,18 +68,18 @@ describe('@OB-076 Spielkarte: Gruppe und Schiedsrichter in der gewählten Sprach
     <MatchCardHeader scheduledTime="13:00" field={1} group="A" showGroupLabel referee={referee} status="scheduled" result={null} />
   );
 
-  it('Englisch: „Group A“ und „Referee: 2“, nie „Gr.“, „SR“ oder „Ref“', async () => {
+  it('Englisch: „Group A“ und „Referee 2“, nie „Gr.“, „SR“ oder „Ref“', async () => {
     const { container } = await renderIn('en', kopf('2'));
     expect(container.textContent).toContain('Group A');
-    expect(container.textContent).toContain('Referee: 2');
-    expect(container.textContent).not.toMatch(/\bGr\.|\bSR\b|\bRef\b/);
+    expect(container.textContent).toContain('Referee 2');
+    expect(container.textContent).not.toMatch(/\bGr\.|\bSR\b|\bRef\b|Referee:/);
   });
 
-  it('Deutsch: „Gruppe A“ und „Schiedsrichter: 2“, nie „Gr.“ oder „SR“', async () => {
+  it('Deutsch: „Gruppe A“ und „Schiedsrichter 2“, nie „Gr.“ oder „SR“', async () => {
     const { container } = await renderIn('de', kopf('2'));
     expect(container.textContent).toContain('Gruppe A');
-    expect(container.textContent).toContain('Schiedsrichter: 2');
-    expect(container.textContent).not.toMatch(/\bGr\.|\bSR\b/);
+    expect(container.textContent).toContain('Schiedsrichter 2');
+    expect(container.textContent).not.toMatch(/\bGr\.|\bSR\b|Schiedsrichter:/);
   });
 
   it('Beendet nach Strafstoßschießen: „beendet nach Strafstoßschießen“, nie „i. E.“; nach Verlängerung ausgeschrieben', async () => {

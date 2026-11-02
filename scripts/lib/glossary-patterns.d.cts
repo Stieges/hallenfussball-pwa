@@ -3,8 +3,9 @@
 export interface GlossaryShort {
   de: string;
   en: string;
-  context: 'tabellenkopf' | 'ergebniszelle' | 'uhr';
+  context: 'tabellenkopf' | 'ergebniszelle';
   shortKey: string;
+  usedBy?: string[];
 }
 
 export interface GlossaryEntry {

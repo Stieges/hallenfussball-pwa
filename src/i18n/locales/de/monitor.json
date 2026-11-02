@@ -5,7 +5,7 @@
     "fieldAria": "Feld {{field}}{{running}}"
   },
   "nextMatch": {
-    "title": "Nächstes Spiel in ~{{minutes}} $t(short:uhr.minutes)",
+    "title": "Nächstes Spiel in ~$t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
     "vs": "gegen",
     "field": "Feld {{field}}",
     "match": "Spiel {{number}}",

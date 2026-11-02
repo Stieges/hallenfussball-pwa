@@ -38,7 +38,7 @@ const GLOSSARY = {
   terms: {
     played: {
       de: 'Spiele', en: 'played', forbidden_de: ['Sp', 'Sp.'], forbidden_en: ['P'], reason: 'Fixture', i18nKey: 'tabelle.played', kuerzel: true,
-      short: { de: 'Sp.', en: 'P', context: 'tabellenkopf', shortKey: 'tabellenkopf.played' },
+      short: { de: 'Sp.', en: 'P', context: 'tabellenkopf', shortKey: 'tabellenkopf.played', usedBy: ['tournament:text.kopf'] },
     },
     versus: { de: 'gegen', en: 'vs', forbidden_de: ['vs', 'VS'], forbidden_en: [], reason: 'Fixture', i18nKey: 'tournament.versus', kuerzel: true },
     semifinal: { de: 'Halbfinale', en: 'semifinal', forbidden_de: ['HF'], forbidden_en: ['SF'], reason: 'Fixture', i18nKey: 'finalsTypes.semifinal', kuerzel: true },
@@ -115,6 +115,29 @@ describe('Prüfer für Kürzel und Kurzformen (@OB-075)', () => {
     const f = sauber();
     f.de.tournament = { text: { x: '{{Sp}} von {{HF}} $t(sport:finalsTypes.semifinal)' } };
     expect(pruefe(f).synonyme).toEqual([]);
+  });
+
+  it('@OB-075 Mechanismus-Lücke: ein Verweis $t(short:…) an einer Stelle, die das Glossar nicht nennt (usedBy), wird gemeldet', () => {
+    const f = sauber();
+    f.de.tournament = { text: { kopf: '$t(short:tabellenkopf.played)', woanders: 'Spiele: $t(short:tabellenkopf.played)' } };
+    const { kurzformen } = pruefe(f);
+    expect(kurzformen).toHaveLength(1);
+    expect(kurzformen[0]).toContain('tournament:text.woanders');
+    expect(kurzformen[0]).toContain('nicht erlaubt');
+  });
+
+  it('@OB-075 ein Verweis auf eine Kurzform ganz ohne usedBy (Tabellenkopf-Kurzform im Fließtext) wird gemeldet', () => {
+    const glossary = JSON.parse(JSON.stringify(GLOSSARY)) as typeof GLOSSARY;
+    delete (glossary.terms.played.short as { usedBy?: string[] }).usedBy;
+    expect(pruefe({ ...sauber(), glossary }).kurzformen).toHaveLength(2); // je Sprache einmal
+  });
+
+  it('@OB-075 verbotene deutsche Formen gelten auch in englischen Texten („HF 1“), außer die Form ist selbst englisch („vs“)', () => {
+    const f = sauber();
+    f.en.tournament = { text: { kopf: '$t(short:tabellenkopf.played)', x: 'HF 1', y: 'A vs B' } };
+    const { synonyme } = pruefe(f);
+    expect(synonyme).toHaveLength(1);
+    expect(synonyme[0]).toContain('"HF"');
   });
 
   it('@OB-076 forbidden_de gilt nur auf Deutsch: „vs“ ist im Englischen erlaubt, „gegen“ im Deutschen', () => {
@@ -334,8 +357,14 @@ describe('@OB-076 zusammengesetzte Bezeichnungen folgen der Sprache', () => {
     expect(i18next.t('cockpit:strafen.dauer', { minuten: 2 })).toBe('Time penalty 2 minutes');
   });
 
-  it('@OB-075 Monitor: „Nächstes Spiel in ~5 Min.“ trägt die Kurzform für Uhr-Beschriftungen aus dem Namensraum short', () => {
-    expect(i18next.t('monitor:nextMatch.title', { minutes: 5 })).toBe('Nächstes Spiel in ~5 Min.');
+  it('@OB-075 Minuten haben keine Kurzform, auch nicht am Monitor und an der Tafel: „~5 Minuten“, „überfällig 7 Minuten“, „1 Minute“', async () => {
+    expect(i18next.t('monitor:nextMatch.title', { minutes: 5 })).toBe('Nächstes Spiel in ~5 Minuten');
+    expect(i18next.t('cockpit:tafel.vor.ueberfaellig', { minuten: 7 })).toBe('überfällig 7 Minuten');
+    expect(i18next.t('cockpit:spalte.strafeDauer', { minuten: 1 })).toBe('1 Minute');
+    expect(i18next.t('short:uhr.minutes', { defaultValue: '' })).toBe('');
+    await initRealGlobalI18n('en');
+    expect(i18next.t('monitor:nextMatch.title', { minutes: 5 })).toBe('Next match in ~5 minutes');
+    expect(i18next.t('cockpit:tafel.vor.ueberfaellig', { minuten: 7 })).toBe('overdue 7 minutes');
   });
 
   it('@OB-075 BFV wird ausgeschrieben, in beiden Sprachen', async () => {

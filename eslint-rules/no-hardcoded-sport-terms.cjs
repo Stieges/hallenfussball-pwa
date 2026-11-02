@@ -111,6 +111,9 @@ module.exports = {
       forbiddenSynonym:
         "'{{ matched }}' ist verboten ({{ reason }}). Stattdessen `t('sport:{{ i18nKey }}')` verwenden " +
         "oder in einer Sprachdatei `$t(sport:{{ i18nKey }})` verschachteln.",
+      shortKeyElsewhere:
+        "Schlüssel des Namensraums `short` ('{{ matched }}') dürfen nur in {{ files }} stehen. Im Tabellenkopf <ShortLabel term=… />, " +
+        "in der Ergebniszelle die Texte aus `matchResult.*` verwenden (Regel: .claude/conventions/TERMINOLOGY.md).",
       forbiddenAbbreviation:
         "'{{ matched }}' ist ein Kürzel und im Anzeigetext verboten ({{ reason }}). Ausgeschrieben `t('sport:{{ i18nKey }}')` " +
         "verwenden; im Tabellenkopf, in Ergebniszellen und bei Uhr-Beschriftungen die Kurzform aus dem Namensraum " +
@@ -155,12 +158,28 @@ module.exports = {
       return {};
     }
 
+    // `short:`-Schlüssel (Kurzformen) nur dort, wo das Glossar den Ort kennt (shortTerms.ts) oder der Text eines Dokuments sie braucht.
+    const SHORT_KEY_FILES = ['/src/components/ui/atoms/shortTerms.ts', '/src/lib/pdf/translations.ts', '/src/lib/pdfStatisticsExporter.ts'];
+    const shortKeyAllowed = SHORT_KEY_FILES.some((f) => normalized.endsWith(f));
+    const SHORT_KEY = /(?:^|[^A-Za-z0-9_-])short:[A-Za-z][A-Za-z0-9_.]*/;
+
     function reasonFor(term) {
       return glossary.terms[term].reason;
     }
 
     function checkText(node, rawText, isJsxText = false) {
       if (typeof rawText !== 'string' || rawText.trim() === '') return;
+
+      if (mode === 'forbidden' && !shortKeyAllowed) {
+        const key = SHORT_KEY.exec(rawText);
+        if (key) {
+          context.report({
+            node,
+            messageId: 'shortKeyElsewhere',
+            data: { matched: key[0].replace(/^[^s]/, ''), files: 'shortTerms.ts, src/lib/pdf/translations.ts und src/lib/pdfStatisticsExporter.ts' },
+          });
+        }
+      }
 
       if (mode === 'forbidden') {
         // {{Platzhalter}} und $t(...)-Verweise sind keine Fließtexte (z.B. {{min}}).

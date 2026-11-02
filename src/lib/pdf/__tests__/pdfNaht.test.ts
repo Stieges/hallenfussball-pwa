@@ -56,6 +56,11 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * statt „10 Min.“ in der Regelzeile; die Spalte „Schiedsrichter“ ist 27 mm breit (Token printColumns), „Gruppe“ und „Nr.“ weiten
  * sich auf ihr Kopfwort, Heim und Gast werden in der Gruppenphase und der Finalrunde ca. 5 mm schmaler (Namen brechen früher um).
  * Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
+ * Text-für-Text verglichen (12 Spiele, hoch, DE und EN; Lauf origin/main gegen diesen Stand, jeweils 336/337 Textstücke): geändert sind nur die
+ * genannten Kopfwörter und Zahlwörter („10 Minuten“, EN „10 minutes“, „Gruppe“/„Group“, „Schiedsrichter“/„Referee“, „#“, „Nr.“, „Sp.“,
+ * „Diff.“, „Pkt.“, EN „GD“) sowie der Umbruch von „Sieger Halbfinale 1“ / „Loser Semi-final 1“ auf zwei Zeilen in der schmaleren Heim- und
+ * Gast-Spalte (ein Textstück mehr). Bild DE und EN gesichtet (Seite 1 und 3, 70 dpi): Köpfe ungebrochen, nichts abgeschnitten, kein
+ * Überlauf; in der Finalrunde steht „2“ von „Loser Semi-final 2“ allein in der zweiten Zeile (Umbruch an der Spaltenbreite).
  */
 const VORHER: Record<string, string> = {
   '12 Spiele, hoch': '1c7e3fec8933',

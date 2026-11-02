@@ -47,7 +47,9 @@ declare const checkTerminology: {
   ) => string[];
   checkGlossaryKeys: (localesDir: string, locales: string[], glossary: Glossary) => string[];
   /** Kurzformen nur in short.json und genau wie im Glossar (short.*). */
-  checkShortForms: (localesDir: string, locales: string[], glossary: Glossary) => string[];
+  checkShortForms: (localesDir: string, locales: string[], glossary: Glossary, namespaces?: string[]) => string[];
+  /** `$t(short:…)` in Sprachwerten nur an den Orten aus short.usedBy. */
+  checkShortReferences: (localesDir: string, locales: string[], namespaces: string[], glossary: Glossary) => string[];
   runAllChecks: (localesDir?: string, glossaryPath?: string) => TerminologyCheckReport;
 };
 

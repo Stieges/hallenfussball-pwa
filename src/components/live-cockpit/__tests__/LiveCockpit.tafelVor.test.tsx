@@ -52,7 +52,7 @@ describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(um(15, 22));
     render(<LiveCockpit {...makeProps(spiel13)} />);
-    expect(screen.getByText('überfällig 7 Min.')).toBeInTheDocument();
+    expect(screen.getByText('überfällig 7 Minuten')).toBeInTheDocument();
     expect(screen.queryByText(/Nichtantritt/i)).toBeNull();
   });
 
@@ -151,8 +151,8 @@ describe('@OB-068 Anstoßzeit nur einmal auf der Tafel (Zeit läuft)', () => {
       vi.setSystemTime(um(15, 22));
       vi.advanceTimersByTime(30_000);
     });
-    expect(screen.getByTestId('scoreboard-ueberfaellig')).toHaveTextContent('überfällig 7 Min.');
-    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('überfällig 7 Min.');
+    expect(screen.getByTestId('scoreboard-ueberfaellig')).toHaveTextContent('überfällig 7 Minuten');
+    expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('überfällig 7 Minuten');
     expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('15:15');
     expect(screen.getAllByText(/überfällig/)).toHaveLength(1);
   });
