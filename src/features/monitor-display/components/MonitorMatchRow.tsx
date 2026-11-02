@@ -38,6 +38,10 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
   const figures = resultFigures(match.score, match.isLive ? 'running' : 'finished');
   const score = figures === null ? '-:-' : `${figures.goalsA}:${figures.goalsB}`;
   const scoreExtra = figures === null ? undefined : tableResultExtra(figures, t);
+  // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
+  const longOf = t as (key: string) => string; // Schlüssel aus dem Namensraum `sport` (Glossar), nicht typisiert
+  const scoreExtraLong = figures?.decision === 'penalty' ? longOf('sport:phases.afterPenalties') : figures?.decision === 'overtime' ? longOf('sport:phases.afterExtraTime') : undefined;
+  const scoreExtraAria = figures?.decision === 'penalty' && figures.penaltyA !== undefined ? `${figures.penaltyA}:${figures.penaltyB} ${scoreExtraLong}` : scoreExtraLong;
   // „ausgefallen“ trägt das Abzeichen (ohne Ergebnis), „gewertet“ steht neben dem Ergebnis (@ZM-104)
   const note = match.status === 'awarded' ? t('view.status.awarded') : undefined;
 
@@ -86,7 +90,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
       >
         {showScore ? score : '–'}
         {showScore && scoreExtra && (
-          <div data-testid="monitor-match-extra" style={{ fontSize: displayList.fontSizes.head, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
+          <div data-testid="monitor-match-extra" title={scoreExtraLong} aria-label={scoreExtraAria} role="note" style={{ fontSize: displayList.fontSizes.head, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
             {scoreExtra}
           </div>
         )}

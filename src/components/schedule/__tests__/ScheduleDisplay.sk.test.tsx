@@ -36,7 +36,7 @@ function aktuell(overrides: Record<string, Partial<Match>>): Match[] {
 }
 
 describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', () => {
-  it('Strafstoßschießen am Spiel: Karte zeigt (4)/(3) und „beendet nach Strafstoßschießen“, Tabelle „2:2 (4:3)“', () => {
+  it('Strafstoßschießen am Spiel: Karte zeigt (4)/(3) und „beendet nach Strafstoßschießen“, Tabelle „2:2 (4:3 i. E.)“', () => {
     const currentMatches = aktuell({
       [HF1.id]: { scoreA: 2, scoreB: 2, penaltyScoreA: 4, penaltyScoreB: 3, decidedBy: 'penalty', matchStatus: 'finished' },
     });
@@ -46,7 +46,7 @@ describe('@OB-064 durchgehend: Spielplan → Finalrunden-Karte und -Tabelle', ()
     expect(screen.getByTestId(`final-penalty-${HF1.id}-home`).textContent).toBe('(4)');
     expect(screen.getByTestId(`final-penalty-${HF1.id}-away`).textContent).toBe('(3)');
     expect(screen.getByTestId(`final-decision-${HF1.id}`).textContent).toBe('beendet nach Strafstoßschießen');
-    expect(container.textContent).toContain('2:2 (4:3)');
+    expect(container.textContent).toContain('2:2 (4:3 i. E.)');
   });
 
   it('Verlängerung am Spiel: Tore 3 und 2, „beendet nach Verlängerung“, Tabelle „3:2 n. V.“', () => {

@@ -70,11 +70,21 @@ function fitHead(doc: jsPDF, head: string, base: number): number {
   return Math.max(base, doc.getTextWidth(head) + 2 * printGap.headPadH + printGap.headFitReserve);
 }
 
+/**
+ * Breite der Zeitspalte: der Token-Wert, mindestens aber die breiteste Uhrzeit („00:00“, die Ziffern sind gleich breit) in der
+ * Schrift der Zeile samt Innenabstand (@DR-001: keine Uhrzeit bricht um, auch „09:00“ steht in einer Zeile).
+ */
+function fitTime(doc: jsPDF, base: number): number {
+  doc.setFont(fontOf(doc), 'bold');
+  doc.setFontSize(printType.time);
+  return Math.max(base, doc.getTextWidth('00:00') + 2 * printGap.bodyPadH + printGap.headFitReserve);
+}
+
 function buildColumns(doc: jsPDF, input: MatchTableInput, ctx: MatchTableContext): Column[] {
   const { t } = ctx;
   const widths = {
     nr: fitHead(doc, t.nr, input.widths.nr),
-    time: fitHead(doc, t.timeHeader, input.widths.time),
+    time: Math.max(fitHead(doc, t.timeHeader, input.widths.time), fitTime(doc, input.widths.time)),
     field: fitHead(doc, t.field, input.widths.field),
     group: input.widths.group === undefined ? undefined : fitHead(doc, t.group, input.widths.group),
     result: input.widths.result,

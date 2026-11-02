@@ -88,6 +88,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       aria-label={label}
+      title={showsResult ? label : undefined}
       data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
       data-match-status={isLive ? 'running' : showsResult ? 'finished' : status === 'skipped' ? 'skipped' : 'scheduled'}
     >

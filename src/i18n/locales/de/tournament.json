@@ -630,6 +630,7 @@
   },
   "matchResult": {
     "overtimeShort": "$t(short:ergebniszelle.extraTime)",
+    "penaltyShort": "$t(short:ergebniszelle.afterPenalties)",
     "finishedPenalty": "beendet nach Strafstoßschießen",
     "running": "läuft",
     "runningElapsed": "läuft {{elapsed}}",
@@ -674,7 +675,7 @@
       "eventYellowCard": "Gelbe Karte {{team}}{{player}}",
       "eventRedCard": "Rote Karte {{team}}{{player}}",
       "eventTimePenalty": "Zeitstrafe {{team}}{{player}}, {{minute}}.",
-      "playerNumber": ", Nummer {{number}}",
+      "playerNumber": ", #{{number}}",
       "eventSubstitution": "Wechsel {{team}}",
       "eventFoul": "Foul {{team}}"
     },
@@ -712,7 +713,7 @@
       "yellowRedCard": "Gelb-Rote Karte {{team}}{{player}}",
       "redCard": "Rote Karte {{team}}{{player}}",
       "timePenalty": "Zeitstrafe {{team}}{{player}}, {{minute}}.",
-      "playerNumber": ", Nummer {{number}}",
+      "playerNumber": ", #{{number}}",
       "substitutionDetail": "Wechsel {{team}}: {{out}} → {{in}}",
       "substitution": "Wechsel {{team}}",
       "foul": "Foul {{team}}",
@@ -1579,7 +1580,7 @@
       "eintrag_other": "{{count}} Einträge von {{author}} (Feld {{field}}) nachträglich eingefügt"
     },
     "zeile": {
-      "mitNummer": "{{what}} {{team}}, Nummer {{nr}}",
+      "mitNummer": "{{what}} {{team}}, #{{nr}}",
       "team": "{{what}} {{team}}",
       "ohneTeam": "{{what}}",
       "minute": "{{line}} · Abschnitt {{section}}, {{minute}}. Minute",

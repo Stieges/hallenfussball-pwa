@@ -1,6 +1,6 @@
 /**
  * E2E: Cockpit Scheibe 3, Team-Spalten und Einträge (Plan Abschluss PR 2, T2-UI Spalten).
- * Ablauf: Anpfiff -> Tor FC Nord Nummer 7 -> Foul SV Süd -> Zeitstrafe SV Süd Nummer 5 -> Gelbe Karte FC Nord Nummer 9, je Schritt
+ * Ablauf: Anpfiff -> Tor FC Nord #7 -> Foul SV Süd -> Zeitstrafe SV Süd #5 -> Gelbe Karte FC Nord #9, je Schritt
  * Stand, Zähler und Marke geprüft. Saat: Spiel 1 FC Nord – SV Süd, 2 × 6 Minuten, Foul-Grenze 5 (Vorgabe).
  * Szenarien: @SL-019, @SL-083 (Tor zählt mit dem ersten Tipp, Nummer als Nachtrag), @SL-033/@SL-099 (Zähler „Foul n/5“),
  * @SL-029/@SL-031 (Zeitstrafe ohne Dauer-Auswahl, Marke mit Restzeit), @SL-084 (Karte), @SL-061/@OB-025 (alles auf einem Gerät
@@ -52,7 +52,7 @@ test.describe('Cockpit Scheibe 3: Team-Spalten und Einträge (Gast, lokal)', () 
     await expect(page.getByTestId('team-name-away')).toHaveText('SV Süd');
     await expect(page.getByTestId('team-fouls-away')).toHaveText('Foul 0/5');
 
-    // Tor FC Nord, Nummer 7: zählt mit dem ersten Tipp, die Nummer kommt als Nachtrag
+    // Tor FC Nord, #7: zählt mit dem ersten Tipp, die Nummer kommt als Nachtrag
     await page.getByTestId('goal-button-home').click();
     await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');
     await wartePicker(page);
@@ -66,16 +66,16 @@ test.describe('Cockpit Scheibe 3: Team-Spalten und Einträge (Gast, lokal)', () 
     await expect(page.getByTestId('team-fouls-away')).toHaveText('Foul 1/5');
     await expect(page.getByTestId('team-fouls-home')).toHaveText('Foul 0/5');
 
-    // Zeitstrafe SV Süd, Nummer 5: ohne Dauer-Auswahl, Marke mit Restzeit in der Spalte
+    // Zeitstrafe SV Süd, #5: ohne Dauer-Auswahl, Marke mit Restzeit in der Spalte
     await page.getByTestId('penalty-button-away').click();
     await wartePicker(page);
     await page.getByTestId('number-picker').getByRole('button', { name: '5', exact: true }).click();
     await expect(page.getByTestId('number-picker')).toBeHidden();
-    // Am Laptop steht die Strafe als Karte in der rechten Spalte (@SL-186: „SV Süd, Nummer 5“), sonst als Marke in der Team-Spalte
-    await expect(page.getByTestId('team-column-away').getByText(/^Nummer 5 · \d+:\d{2}$/).or(page.getByText(/^SV Süd, Nummer 5$/))).toBeVisible();
+    // Am Laptop steht die Strafe als Karte in der rechten Spalte (@SL-186: „SV Süd, #5“), sonst als Marke in der Team-Spalte
+    await expect(page.getByTestId('team-column-away').getByText(/^#5 · \d+:\d{2}$/).or(page.getByText(/^SV Süd, #5$/))).toBeVisible();
     await expect(page.getByTestId('team-fouls-away')).toHaveText('Foul 2/5'); // die Zeitstrafe zählt als Foul
 
-    // Gelbe Karte FC Nord, Nummer 9
+    // Gelbe Karte FC Nord, #9
     await tippeKarte(page, 'home', 'Gelb', 9);
     await expect(page.getByTestId('team-fouls-home')).toHaveText('Foul 1/5');
     await expect(page.getByTestId('scoreboard-box-links')).toHaveText('1');

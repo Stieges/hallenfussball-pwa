@@ -45,7 +45,7 @@ describe('@SL-048 Zusammenfassung statt Tastenblöcke nach dem Ende', () => {
     render(<LiveCockpit {...makeProps(beendet())} />);
     const nord = screen.getByTestId('team-summary-home');
     expect(within(nord).getByText('Tore (2)')).toBeInTheDocument();
-    expect(within(nord).getByText('Nummer 9, 1:50')).toBeInTheDocument();
+    expect(within(nord).getByText('#9, 1:50')).toBeInTheDocument();
     expect(within(nord).getByText('Karten (0): keine')).toBeInTheDocument();
     expect(within(nord).getByText('Zeitstrafen (1)')).toBeInTheDocument();
     expect(within(nord).getByText('Fouls: 3')).toBeInTheDocument();

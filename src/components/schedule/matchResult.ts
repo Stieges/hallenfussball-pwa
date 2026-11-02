@@ -68,21 +68,22 @@ export function cardStatusOf(match: Pick<MatchView, 'status' | 'isLive'> | undef
 }
 
 /** Übersetzungsfunktion, soweit die Formatierung sie braucht (react-i18next `t` passt). */
-export type ResultTranslate = (key: 'matchResult.overtimeShort') => string;
+export type ResultTranslate = (key: 'matchResult.overtimeShort' | 'matchResult.penaltyShort') => string;
 
 /**
- * Zusatz hinter dem Ergebnis (@OB-075): „(4:3)“ nach Strafstoßschießen (ohne Kurzform, das Strafstoß-Ergebnis steht in
- * Klammern), „n. V.“ nach Verlängerung (die einzige Kurzform in einer Ergebniszelle; `matchResult.overtimeShort` verweist auf den Namensraum `short`), sonst keiner.
+ * Zusatz hinter dem Ergebnis einer Tabelle (@OB-075, @OB-064): „(4:3 i. E.)“ nach Strafstoßschießen, „n. V.“ nach Verlängerung
+ * (die beiden Kurzformen, die in einer Ergebniszelle stehen dürfen; `matchResult.penaltyShort` und `matchResult.overtimeShort`
+ * verweisen auf den Namensraum `short`), sonst keiner. Die Spielkarte am Handy schreibt stattdessen „nach Verlängerung“ aus.
  */
 export function tableResultExtra(figures: ResultFigures, t: ResultTranslate): string | undefined {
   if (figures.decision === 'penalty' && figures.penaltyA !== undefined && figures.penaltyB !== undefined) {
-    return `(${figures.penaltyA}:${figures.penaltyB})`;
+    return `(${figures.penaltyA}:${figures.penaltyB} ${t('matchResult.penaltyShort')})`;
   }
   return figures.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined;
 }
 
 /**
- * Tabellenzeile: „2:2 (4:3)“, „3:2 n. V.“, „1:0“. Der Zusatz steht nur, wenn die Entscheidung ihn trägt.
+ * Tabellenzeile: „2:2 (4:3 i. E.)“, „3:2 n. V.“, „1:0“. Der Zusatz steht nur, wenn die Entscheidung ihn trägt.
  */
 export function formatTableResult(figures: ResultFigures, t: ResultTranslate): string {
   const base = `${figures.goalsA}:${figures.goalsB}`;

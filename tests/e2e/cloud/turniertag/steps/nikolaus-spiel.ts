@@ -164,7 +164,7 @@ async function foul(ctx: StepContext): Promise<void> {
   await expect.poll(() => ereignisse(spiel), { timeout: 10000 }).toEqual(['GOAL', 'FOUL']);
 }
 
-/** N4c: eine Gelbe Karte (Nummer 5, Gast) zählt als Foul (@SL-023). */
+/** N4c: eine Gelbe Karte (#5, Gast) zählt als Foul (@SL-023). */
 async function gelbeKarte(ctx: StepContext): Promise<void> {
   const { spiel, handy } = await laufendesSpiel(ctx);
   await tippeKarte(handy, 'away', 'Gelb', 5);
@@ -172,14 +172,14 @@ async function gelbeKarte(ctx: StepContext): Promise<void> {
   await expect.poll(() => ereignisse(spiel), { timeout: 10000 }).toEqual(['GOAL', 'FOUL', 'YELLOW_CARD']);
 }
 
-/** Restzeit der Zeitstrafe (Nummer 9) in Sekunden aus der Spalte des Heimteams, `null` solange sie nicht steht. */
+/** Restzeit der Zeitstrafe (#9) in Sekunden aus der Spalte des Heimteams, `null` solange sie nicht steht. */
 async function strafRestzeit(handy: Page): Promise<number | null> {
-  const text = await handy.getByTestId('team-column-home').getByText(/^Nummer 9 · \d+:\d{2}$/).textContent({ timeout: 3000 }).catch(() => null);
+  const text = await handy.getByTestId('team-column-home').getByText(/^#9 · \d+:\d{2}$/).textContent({ timeout: 3000 }).catch(() => null);
   const treffer = /(\d+):(\d{2})$/.exec(text ?? '');
   return treffer ? Number(treffer[1]) * 60 + Number(treffer[2]) : null;
 }
 
-/** N4d: Zeitstrafe (Nummer 9, Heim) ohne Dauer-Auswahl: die Restzeit beginnt bei der Dauer aus den Turnierregeln (2:00) und zählt mit der Spieluhr herunter (@SL-029). */
+/** N4d: Zeitstrafe (#9, Heim) ohne Dauer-Auswahl: die Restzeit beginnt bei der Dauer aus den Turnierregeln (2:00) und zählt mit der Spieluhr herunter (@SL-029). */
 async function zeitstrafe(ctx: StepContext): Promise<void> {
   const { spiel, handy } = await laufendesSpiel(ctx);
   const dauer = DEFAULT_MATCH_COCKPIT_SETTINGS.timePenaltyDurationSeconds;
@@ -195,7 +195,7 @@ async function zeitstrafe(ctx: StepContext): Promise<void> {
   await expect.poll(() => ereignisse(spiel), { timeout: 10000 }).toEqual(['GOAL', 'FOUL', 'YELLOW_CARD', 'TIME_PENALTY']);
 }
 
-/** N4e: eine zweite Gelbe Karte für Nummer 5: das Cockpit weist darauf hin und bietet Gelb-Rot an (@SL-088). */
+/** N4e: eine zweite Gelbe Karte für #5: das Cockpit weist darauf hin und bietet Gelb-Rot an (@SL-088). */
 async function gelbRot(ctx: StepContext): Promise<void> {
   const { spiel, handy } = await laufendesSpiel(ctx);
   await handy.getByTestId('card-button-away').click();
@@ -203,7 +203,7 @@ async function gelbRot(ctx: StepContext): Promise<void> {
   await wartePicker(handy);
   await handy.getByTestId('number-picker').getByRole('button', { name: '5', exact: true }).click();
   const frage = handy.getByTestId('second-yellow-question');
-  await expect(frage, 'das Cockpit weist darauf hin, dass Nummer 5 schon Gelb hat').toContainText(/5/);
+  await expect(frage, 'das Cockpit weist darauf hin, dass #5 schon Gelb hat').toContainText(/5/);
   await frage.getByRole('button', { name: /Gelb-Rot/ }).click();
   await expect.poll(() => ereignisse(spiel), { timeout: 10000 }).toEqual(['GOAL', 'FOUL', 'YELLOW_CARD', 'TIME_PENALTY', 'YELLOW_RED_CARD']);
 }
@@ -231,7 +231,7 @@ async function endstandQuittung({ browser }: StepContext): Promise<void> {
   await expect(handy.getByTestId('team-summary-home'), 'Zusammenfassung Heim').toBeVisible({ timeout: 3000 });
   await expect(handy.getByTestId('team-summary-away'), 'Zusammenfassung Gast').toBeVisible();
   await expect(handy.getByTestId('team-column-home'), 'keine Tastenblöcke nach dem Abpfiff').toHaveCount(0);
-  await expect(handy.locator('body'), 'Einträge des Spiels: Tor Nummer 7, Gelbe Karte, Zeitstrafe, Gelb-Rot').toContainText(/Nummer 7/, { timeout: 3000 });
+  await expect(handy.locator('body'), 'Einträge des Spiels: Tor #7, Gelbe Karte, Zeitstrafe, Gelb-Rot').toContainText(/#7/, { timeout: 3000 });
 }
 
 export const steps: readonly TurniertagStep[] = [

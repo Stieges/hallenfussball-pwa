@@ -450,7 +450,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
                 <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>{t('ranking.headers.rank')}</th>
                 <th style={thStyle}>{t('ranking.headers.team')}</th>
                 {hasPlayoffs && <th style={{ ...thStyle, width: '120px', textAlign: 'center' }}>{t('ranking.headers.decidedBy')}</th>}
-                {hasGroups && <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('ranking.headers.group')}</th>}
+                {hasGroups && <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}><ShortLabel term="group" /></th>}
                 <th style={fixedThStyle}><ShortLabel term="played" /></th>
                 <th style={fixedThStyle}><ShortLabel term="won" /></th>
                 <th style={fixedThStyle}><ShortLabel term="drawn" /></th>

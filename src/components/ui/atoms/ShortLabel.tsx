@@ -1,14 +1,14 @@
 /**
  * ShortLabel – Kurzform eines Tabellenkopfs mit dem ausgeschriebenen Begriff als Hinweis (@OB-075).
  *
- * Kurzformen („Sp.“, „Pkt.“, „#“) stehen nur im Kopf einer Tabellenspalte – und dort immer mit dem ausgeschriebenen Begriff.
+ * Kurzformen („Sp.“, „Pkt.“, „#“, „SR“, „Gr.“) stehen nur im Kopf einer Tabellenspalte – und dort immer mit dem ausgeschriebenen Begriff.
  * Der Hinweis hat zwei getrennte Wege, damit nichts doppelt vorgelesen wird:
  * - Maus (Darüberfahren) und Tastatur-Zeiger: `title` an der sichtbaren Kurzform, die selbst für Screenreader ausgeblendet ist
  *   (`aria-hidden`; ein `title` an einem versteckten Element liest kein Screenreader vor). Auf Touch-Geräten zeigt `title`
  *   nichts an; dort bleibt nur der Vorlesetext (für Screenreader) als ausgeschriebener Begriff.
  * - Screenreader: der ausgeschriebene Begriff als Text nur zum Vorlesen („Spiele“ statt „Sp“).
  * Beide Texte kommen aus dem Glossar (`short`- und `sport`-Namensraum), nie aus dem Code. Die Kurzform der Ergebniszelle
- * („n. V.“) steht nicht hier, sondern in `matchResult.ts` (Text in der Zelle, die Zelle trägt ihre Bedeutung selbst).
+ * („n. V.“, „i. E.“) steht nicht hier, sondern in `matchResult.ts` (Text in der Zelle, die Zelle trägt ihre Bedeutung selbst).
  */
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
