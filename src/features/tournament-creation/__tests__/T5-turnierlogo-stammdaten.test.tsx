@@ -28,10 +28,13 @@ await initRealDeI18n();
 vi.mock('../../../components/LocationForm', () => ({ LocationForm: () => null }));
 vi.mock('../../../components/ContactForm', () => ({ ContactForm: () => null }));
 
-const memory = vi.hoisted(() => ({ data: new Map<string, unknown>(), failSet: false }));
+const memory = vi.hoisted(() => ({ data: new Map<string, unknown>(), failSet: false, failGet: 0 }));
 vi.mock('../../../core/storage/StorageFactory', () => ({
   createStorage: (): Promise<IStorageAdapter> => Promise.resolve({
-    get: <T,>(key: string) => Promise.resolve((memory.data.has(key) ? structuredClone(memory.data.get(key)) : null) as T | null),
+    get: <T,>(key: string) => {
+      if (memory.failGet > 0) { memory.failGet -= 1; return Promise.reject(new StorageError('Lesen fehlgeschlagen', new Error('UnknownError'))); }
+      return Promise.resolve((memory.data.has(key) ? structuredClone(memory.data.get(key)) : null) as T | null);
+    },
     set: <T,>(key: string, value: T) => {
       if (memory.failSet) { return Promise.reject(new Error('QuotaExceededError')); }
       memory.data.set(key, structuredClone(value)); return Promise.resolve();
@@ -47,6 +50,7 @@ vi.mock('../../../lib/images/prepareTournamentGraphic', () => ({ prepareTourname
 
 import { Step3_Metadata } from '../Step3_Metadata';
 import { tournamentGraphicsStore } from '../../../core/storage/tournamentGraphicsStore';
+import { StorageError } from '../../../core/storage/StorageError';
 
 const BLAU = '#2A2576';
 const GRUEN_APP = printAccent.fallback;
@@ -86,7 +90,7 @@ const waehle = async (prefix: 'turnierlogo' | 'zweite-grafik', file = datei()): 
 const tupfer = (): HTMLElement => screen.getByTestId('akzent-tupfer');
 const gespeichert = () => tournamentGraphicsStore.load(TURNIER_ID);
 
-beforeEach(() => { memory.data.clear(); memory.failSet = false; prepareMock.mockReset(); });
+beforeEach(() => { memory.data.clear(); memory.failSet = false; memory.failGet = 0; prepareMock.mockReset(); });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('@W3-040 Turnierlogo in den Stammdaten', () => {
@@ -292,7 +296,7 @@ describe('@W3-030 / @DR-040 Prüfung beim Hochladen', () => {
     await waehle('turnierlogo');
 
     const fehler = await screen.findByTestId('turnierlogo-fehler');
-    expect(fehler).toHaveTextContent('Die Datei ist größer als 2 MB oder hat zu viele Bildpunkte (mehr als 4000 an einer Seite).');
+    expect(fehler).toHaveTextContent('Die Datei ist größer als 2 MB oder hat zu viele Bildpunkte (mehr als 4.000 an einer Seite).');
   });
 
   it('@W3-030 EN: Grund „Größe“ nennt 2 MB und 4,000 pixels, die Hinweise stehen auf Englisch', async () => {
@@ -354,6 +358,63 @@ describe('@W3-030 / @DR-040 Prüfung beim Hochladen', () => {
     expect(fehler).toHaveTextContent('konnte auf diesem Gerät nicht gespeichert werden');
     expect(screen.queryByTestId('turnierlogo-vorschau')).toBeNull();
     expect(tupfer()).toHaveAttribute('data-accent', GRUEN_APP);
+  });
+});
+
+describe('@DR-024 Gerätespeicher nicht lesbar: die App sagt es, nichts geht still verloren', () => {
+  it('@DR-024 Lesefehler beim Laden (kein beschädigter Eintrag): der Hinweis steht am Logo-Feld, die Felder bleiben bedienbar', async () => {
+    memory.failGet = 1;
+
+    zeige();
+
+    expect(await screen.findByTestId('turnierlogo-fehler')).toHaveTextContent('Die gespeicherten Grafiken konnten auf diesem Gerät nicht geladen werden.');
+    expect(screen.getByTestId('turnierlogo-hochladen')).toBeEnabled(); // der Assistent bleibt benutzbar, „Weiter“ ist nicht gesperrt
+    expect(screen.getByTestId('zweite-grafik-hochladen')).toBeEnabled();
+    expect(screen.getByLabelText(/Turniername/)).toBeInTheDocument();
+  });
+
+  it('Gegenbeispiel: ein Eintrag ohne gültige Form ist kein Ladefehler, es gibt keine Meldung', async () => {
+    memory.data.set(`tournament-graphics-${TURNIER_ID}`, 'kaputt'); // passt nicht zum Schema → leer, ohne Fehler
+
+    zeige();
+
+    await screen.findByTestId('turnierlogo-hochladen');
+    expect(screen.queryByTestId('turnierlogo-fehler')).toBeNull();
+  });
+
+  it('nach einem Ladefehler überschreibt ein Logo-Upload eine vorhandene zweite Grafik nicht still', async () => {
+    const rechts = { dataUrl: dataUrl('UkVDSFRT'), widthPx: 10, heightPx: 10, originalHeightPx: 600 };
+    memory.data.set(`tournament-graphics-${TURNIER_ID}`, { right: rechts });
+    memory.failGet = 1; // nur das Laden beim Öffnen scheitert
+    prepareAnswers(mitAkzent(ok('TElOS1M='), BLAU));
+    zeige();
+    await screen.findByTestId('turnierlogo-fehler');
+    expect(screen.queryByTestId('zweite-grafik-vorschau')).toBeNull();
+
+    await waehle('turnierlogo');
+
+    expect(await screen.findByTestId('turnierlogo-vorschau')).toHaveAttribute('src', dataUrl('TElOS1M='));
+    expect(await screen.findByTestId('zweite-grafik-vorschau')).toHaveAttribute('src', dataUrl('UkVDSFRT'));
+    const stand = await gespeichert();
+    expect(stand.left?.dataUrl).toBe(dataUrl('TElOS1M='));
+    expect(stand.right?.dataUrl).toBe(dataUrl('UkVDSFRT'));
+  });
+
+  it('Gegenbeispiel: lässt sich der Stand auch beim Speichern nicht lesen, wird nichts überschrieben und der Ladefehler steht da', async () => {
+    const rechts = { dataUrl: dataUrl('UkVDSFRT'), widthPx: 10, heightPx: 10, originalHeightPx: 600 };
+    memory.data.set(`tournament-graphics-${TURNIER_ID}`, { right: rechts });
+    memory.failGet = 2; // beim Öffnen und noch einmal vor dem Speichern
+    prepareAnswers(mitAkzent(ok('TElOS1M='), BLAU));
+    zeige();
+    await screen.findByTestId('turnierlogo-fehler');
+
+    await waehle('turnierlogo');
+
+    expect(await screen.findByTestId('turnierlogo-fehler')).toHaveTextContent('nicht geladen werden');
+    expect(screen.queryByTestId('turnierlogo-vorschau')).toBeNull();
+    const stand = await gespeichert();
+    expect(stand.right?.dataUrl).toBe(dataUrl('UkVDSFRT')); // unverändert
+    expect(stand.left).toBeUndefined();
   });
 });
 

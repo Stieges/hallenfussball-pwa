@@ -239,7 +239,7 @@ test.describe('Turnierlogo im Assistenten (gebauter Stand)', () => {
 
     await datei.setInputFiles(pngDatei(await zeichne(page, 4001, 8, 'image/png'), 'breit.png')); // über 4000 Bildpunkte an einer Seite
 
-    await expect(page.getByTestId('turnierlogo-fehler')).toContainText('4000');
+    await expect(page.getByTestId('turnierlogo-fehler')).toContainText('4.000'); // über i18n formatiert (DE mit Punkt, EN „4,000“)
     await expect(page.getByTestId('turnierlogo-fehler')).toContainText('2 MB');
     await expect(page.getByTestId('turnierlogo-vorschau')).toHaveAttribute('src', logoVorher ?? '');
     expect((await storedGraphics(page))[0].value.left?.dataUrl).toBe(logoVorher);
@@ -349,6 +349,7 @@ test.describe('Bundle-Beleg (gebauter Stand)', () => {
   // (gleich auf main). Belegt wird deshalb, was T5 beeinflusst: der Code des Assistenten (Schritt 1 mit den neuen Feldern,
   // Aufbereitung, Akzent) enthält selbst kein jsPDF; es steckt allein im Herstellerblock.
   test('Der Wizard-Chunk mit den neuen Feldern enthält kein jsPDF', async ({ page }) => {
+    test.skip(!process.env.CI_E2E_USE_PREVIEW, 'nur im gebauten Stand (Vorschau von dist/), der Dev-Server liefert keine Chunks');
     const skripte = new Map<string, string>();
     page.on('response', async response => {
       if (response.url().endsWith('.js')) { skripte.set(response.url(), await response.text().catch(() => '')); }

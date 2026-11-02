@@ -128,7 +128,7 @@
       "format": "PNG, JPG oder SVG, bis {{maxMb}} MB",
       "error": {
         "type": "Diese Datei wurde nicht übernommen. Erlaubt sind PNG, JPG und SVG.",
-        "size": "Diese Datei wurde nicht übernommen. Die Datei ist größer als {{maxMb}} MB oder hat zu viele Bildpunkte (mehr als {{maxSide}} an einer Seite).",
+        "size": "Diese Datei wurde nicht übernommen. Die Datei ist größer als {{maxMb}} MB oder hat zu viele Bildpunkte (mehr als {{maxSide, number}} an einer Seite).",
         "unreadable": "Diese Datei wurde nicht übernommen, weil sie sich nicht lesen lässt oder beschädigt ist."
       },
       "accent": {

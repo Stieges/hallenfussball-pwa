@@ -14,14 +14,14 @@ import { cssVars } from '../../../design-tokens';
 import { printAccent } from '../../../design-tokens/print';
 import { printHeader } from '../../../design-tokens/print-header';
 import { requestPersistentStorage } from '../../../core/storage/requestPersistentStorage';
-import type { StoredGraphic, TournamentGraphics } from '../../../core/storage/tournamentGraphicsStore';
+import { tournamentGraphicsStore, type StoredGraphic, type TournamentGraphics } from '../../../core/storage/tournamentGraphicsStore';
 import { useTournamentGraphics } from '../../../hooks/useTournamentGraphics';
 import { accentNameKey } from '../../../lib/color/accentName';
 import { isLowRes, type RejectReason } from '../../../lib/images/graphicRules';
 import { prepareTournamentGraphic } from '../../../lib/images/prepareTournamentGraphic';
 
 type Slot = 'left' | 'right';
-type Problem = { slot: Slot; kind: RejectReason | 'save' };
+type Problem = { slot: Slot; kind: RejectReason | 'save' | 'load' };
 
 const BYTES_PER_MB = 1024 * 1024;
 const accentRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, marginTop: cssVars.spacing.md };
@@ -40,8 +40,23 @@ export function TournamentGraphicsFields({ tournamentId }: TournamentGraphicsFie
   const [preparing, setPreparing] = useState(false);
   const busy = preparing || loading;
 
-  const persist = async (next: TournamentGraphics, slot: Slot): Promise<void> => {
-    const firstGraphic = graphics.left === undefined && graphics.right === undefined;
+  /**
+   * Der Stand, auf dem eine Änderung aufbaut. Nach einem Ladefehler ist `graphics` leer, obwohl auf dem Gerät etwas stehen kann:
+   * dann wird vor dem Speichern neu gelesen, damit eine vorhandene Grafik nicht still überschrieben wird. Lässt sich der Stand
+   * auch jetzt nicht lesen, wird nichts gespeichert und der Ladefehler steht am Feld (@DR-024).
+   */
+  const baseGraphics = async (slot: Slot): Promise<TournamentGraphics | null> => {
+    if (storeError === null || tournamentId === undefined) { return graphics; }
+    try {
+      return await tournamentGraphicsStore.load(tournamentId);
+    } catch {
+      setProblem({ slot, kind: 'load' });
+      return null;
+    }
+  };
+
+  const persist = async (next: TournamentGraphics, slot: Slot, base: TournamentGraphics): Promise<void> => {
+    const firstGraphic = base.left === undefined && base.right === undefined;
     if (!(await save(next))) { setProblem({ slot, kind: 'save' }); return; }
     if (firstGraphic && (next.left !== undefined || next.right !== undefined)) { void requestPersistentStorage(); } // R8: ohne Garantie
   };
@@ -50,11 +65,13 @@ export function TournamentGraphicsFields({ tournamentId }: TournamentGraphicsFie
     setProblem(null);
     setPreparing(true);
     try {
+      const base = await baseGraphics(slot);
+      if (base === null) { return; }
       const result = await prepareTournamentGraphic(file, { computeAccent: slot === 'left' }); // der Akzent kommt nur vom Logo links
       if (!result.ok) { setProblem({ slot, kind: result.reason }); return; }
       await persist(slot === 'left'
-        ? { right: graphics.right, left: result.graphic, ...(result.accent === undefined ? {} : { accent: result.accent }) }
-        : { ...graphics, right: result.graphic }, slot);
+        ? { right: base.right, left: result.graphic, ...(result.accent === undefined ? {} : { accent: result.accent }) }
+        : { ...base, right: result.graphic }, slot, base);
     } finally {
       setPreparing(false);
     }
@@ -64,7 +81,9 @@ export function TournamentGraphicsFields({ tournamentId }: TournamentGraphicsFie
     setProblem(null);
     setPreparing(true);
     try {
-      await persist(slot === 'left' ? { right: graphics.right } : { left: graphics.left, ...(graphics.accent === undefined ? {} : { accent: graphics.accent }) }, slot);
+      const base = await baseGraphics(slot);
+      if (base === null) { return; }
+      await persist(slot === 'left' ? { right: base.right } : { left: base.left, ...(base.accent === undefined ? {} : { accent: base.accent }) }, slot, base);
     } finally {
       setPreparing(false);
     }
@@ -77,6 +96,7 @@ export function TournamentGraphicsFields({ tournamentId }: TournamentGraphicsFie
   const errorText = (slot: Slot, graphic: StoredGraphic | undefined): string | undefined => {
     if (problem === null) { return slot === 'left' && storeError !== null ? t('step3.graphics.loadFailed') : undefined; }
     if (problem.slot !== slot) { return undefined; }
+    if (problem.kind === 'load') { return t('step3.graphics.loadFailed'); }
     if (problem.kind === 'save') { return t(`step3.graphics.${ownKey(slot)}.saveFailed`); }
     const keeps = graphic === undefined ? '' : ` ${t(`step3.graphics.${ownKey(slot)}.keeps`)}`;
     return `${t(`step3.graphics.error.${problem.kind}`, { maxMb: printHeader.logoMaxBytes / BYTES_PER_MB, maxSide: printHeader.logoMaxSidePx })}${keeps}`;
