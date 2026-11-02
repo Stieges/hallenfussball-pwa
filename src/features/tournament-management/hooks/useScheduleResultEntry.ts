@@ -44,7 +44,16 @@ export type ResultEntryPrompt =
 
 export interface ScheduleResultEntry {
   /** `false` = nichts gespeichert (Nein/Abbrechen/Ablehnung), die Eingabe-Zelle zeigt dann wieder den gespeicherten Stand */
-  enterScore: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
+  /**
+   * `knownBase` = der letzte Spielstand-Eintrag, den die Turnierleitung beim Öffnen der Korrektur kannte (`baseAt`); fehlt er, gilt der
+   * Stand der lokalen Kopie. Ist seither ein anderer Stand eingetroffen, wird nichts gespeichert (@FU-082).
+   */
+  enterScore: (matchId: string, scoreA: number, scoreB: number, knownBase?: string | null) => Promise<boolean>;
+  /**
+   * @EK-063 / @FU-082: der Stand eines Spiels beim ÖFFNEN der Korrektur (Kopie anlegen, Server abgleichen, letzten Spielstand-Eintrag merken).
+   * `undefined`, wenn er sich nicht ermitteln lässt (kein Netz, Spiel ohne feststehende Teams): dann gilt der Stand der lokalen Kopie.
+   */
+  baseAt: (matchId: string) => Promise<string | null | undefined>;
   prompt: ResultEntryPrompt | null;
   /** Grund (`reason`), `'yes'` (abgesetzt, beenden), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
@@ -159,7 +168,21 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     return tCockpit(rejectionMessageKey(error));
   }, [staleText, t, tCockpit]);
 
-  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number): Promise<boolean> => {
+  const baseAt = useCallback(async (matchId: string): Promise<string | null | undefined> => {
+    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
+    if (!entry || !context) {
+      return undefined;
+    }
+    try {
+      await context.engine.ensureMatch(entry.matchId, entry.ctx, tournament.id);
+      await context.engine.catchUp(entry.matchId);
+    } catch {
+      return undefined;
+    }
+    return context.engine.view(entry.matchId)?.result.state.lastScoreEventId ?? null;
+  }, [tournament, context]);
+
+  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number, knownBase?: string | null): Promise<boolean> => {
     if (isTournamentClosedById(tournament.id)) {
       // R3-3 (@LZ-036): zweite Linie -- der Spielplan bietet die Eingabe nach dem Abschluss nicht an; kommt sie doch, nie still verwerfen
       showWarning(t('rights.closedSaveBlocked'));
@@ -261,13 +284,10 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
           showWarning(t('actions.matchAlreadyFinished'));
           return false;
         }
-        const currentA = effectiveScoreFor(state, entry.ctx.teamAId);
-        const currentB = effectiveScoreFor(state, entry.ctx.teamBId);
-        const before = score(currentA, currentB);
-        // @EK-063: gesehen hat die Turnierleitung die angezeigte Zahl. Öffnet der Spielplan frisch, ist die lokale Kopie leer (oder alt),
-        // `basedOn` also nicht der aktuelle Stand -- stimmt die angezeigte Zahl mit dem Stand nach `catchUp` überein, ist nichts „inzwischen geändert“.
-        const sawCurrent = match?.scoreA === currentA && match?.scoreB === currentB;
-        if (basedOn !== state.lastScoreEventId && !sawCurrent) {
+        const before = score(effectiveScoreFor(state, entry.ctx.teamAId), effectiveScoreFor(state, entry.ctx.teamBId));
+        // @FU-082: Grundlage ist der Stand beim Öffnen der Korrektur (`knownBase`), nicht der beim Absenden angezeigte
+        const base = knownBase !== undefined ? knownBase : basedOn;
+        if (base !== state.lastScoreEventId) {
           showWarning(await staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
           return false;
         }
@@ -275,7 +295,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         if (!reason) {
           return false;
         }
-        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, state.lastScoreEventId);
+        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, base);
       }
       if (eventId) {
         trackAck(eventId, entry);
@@ -287,5 +307,5 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     }
   }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning, offerTakeover]);
 
-  return { enterScore, prompt, answerPrompt, changeAuthor };
+  return { enterScore, baseAt, prompt, answerPrompt, changeAuthor };
 }

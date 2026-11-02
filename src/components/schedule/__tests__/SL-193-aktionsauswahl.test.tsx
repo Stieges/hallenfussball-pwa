@@ -230,6 +230,19 @@ describe('@SL-193 gewertet und abgesetzt – Gruppenphase und Finalrunde gleich'
       expect(screen.getByText('Spiel wurde abgesetzt')).toBeInTheDocument();
     });
 
+    it(`@SL-193 Gegenbeispiel ${runde}: ein Helfer ohne Aktion bei einem geplanten Spiel (kein Cockpit-Weg) bekommt weder Auswahl noch Hinweis`, () => {
+      const ziel = runde === 'Gruppenphase' ? GRUPPENSPIEL : FINALSPIEL;
+      const current: Match[] = schedule.allMatches.map((m) => matchOf(m, m.id !== ziel.id && m.phase === 'groupStage' ? gespielt(m) : {}));
+      render(
+        <ToastProvider>
+          <ScheduleDisplay schedule={schedule} currentMatches={current} view={viewOf(current, teams)} editable actionRights={HELFER} />
+        </ToastProvider>,
+      );
+      tippe(runde, ziel.id);
+      expect(screen.queryByTestId('match-action-menu')).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
     it(`@SL-193 Gegenbeispiel ${runde}: ein Helfer bei einem beendeten Spiel bekommt die Auswahl, keinen Hinweis`, () => {
       const ziel = zeige(runde, 'beendet', HELFER);
       tippe(runde, ziel.id);

@@ -64,7 +64,7 @@ describe('useCockpitKorrektur', () => {
     await user.clear(screen.getByTestId('cockpit-korrektur-home'));
     await user.type(screen.getByTestId('cockpit-korrektur-home'), '1');
     await user.click(screen.getByTestId('cockpit-korrektur-weiter'));
-    expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-11', 1, 1);
+    expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-11', 1, 1, undefined);
     expect(screen.queryByTestId('cockpit-korrektur-dialog')).toBeNull();
   });
 

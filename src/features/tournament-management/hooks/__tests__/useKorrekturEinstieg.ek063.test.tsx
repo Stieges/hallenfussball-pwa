@@ -77,9 +77,47 @@ describe('@EK-063 ein Dialog für die Korrektur – Spielplan und Cockpit', () =
       await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
       await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '1');
       await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
-      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 1, 1);
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 1, 1, undefined);
       unmount();
     }
+  });
+
+  // @FU-082 (Zusammenspiel @EK-032): Maria öffnet bei 2:1, Olli korrigiert auf 2:2 -- Marias Dialog und ihre Grundlage bleiben beim Öffnungsstand.
+  describe('@FU-082 Stand beim Öffnen des Dialogs bleibt stehen', () => {
+    const view22 = {
+      byId: new Map([['match-7', { id: 'match-7', matchNumber: 7, score: { a: 2, b: 2 }, home: { label: spiel7.homeTeam.name }, away: { label: spiel7.awayTeam.name } }]]),
+    } as unknown as TournamentView;
+    function Plan({ v, baseOf }: { v: TournamentView; baseOf: (id: string) => Promise<string | null | undefined> }) {
+      const k = useSpielplanKorrektur({ view: v, enterScore: mocks.enterScore, baseOf, istLeitung: true });
+      return <div><button type="button" data-testid="plan-korrigieren" onClick={() => { k.onKorrigieren?.('match-7'); }}>Korrigieren</button><div>{k.dialog}</div></div>;
+    }
+
+    it('@FU-082 Anzeige springt auf 2:2, während der Dialog offen ist: „bisher“ bleibt 2:1, „Weiter“ reicht den Öffnungsstand e1 an enterScore', async () => {
+      const user = userEvent.setup();
+      const baseOf = vi.fn().mockResolvedValue('e1');
+      const { rerender } = render(<Plan v={view} baseOf={baseOf} />);
+      await user.click(screen.getByTestId('plan-korrigieren'));
+      expect(baseOf).toHaveBeenCalledExactlyOnceWith('match-7');
+      rerender(<Plan v={view22} baseOf={baseOf} />);
+      const dialog = screen.getByTestId('cockpit-korrektur-dialog');
+      expect(dialog).toHaveTextContent('2:1');
+      expect(dialog).not.toHaveTextContent('2:2');
+      await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
+      await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '3');
+      await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 3, 1, 'e1');
+    });
+
+    it('@FU-082 gescheitertes Abgleichen beim Öffnen (undefined): „Weiter“ speichert trotzdem über enterScore, ohne feste Grundlage', async () => {
+      const user = userEvent.setup();
+      render(<Plan v={view} baseOf={vi.fn().mockRejectedValue(new Error('offline'))} />);
+      await user.click(screen.getByTestId('plan-korrigieren'));
+      const dialog = screen.getByTestId('cockpit-korrektur-dialog');
+      await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
+      await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '3');
+      await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 3, 1, undefined);
+    });
   });
 
   it('@HE-043 @FU-113 Gegenbeispiel: der Helfer bekommt in keinem der beiden Einstiege einen Handler', () => {

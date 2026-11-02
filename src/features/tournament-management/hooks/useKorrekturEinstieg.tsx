@@ -5,7 +5,7 @@
  * Grund-Auswahl @EK-004, `CORRECTION`). Nur die Turnierleitung bekommt einen Handler; der Helfer keinen (@HE-043, @FU-113).
  * Solange die Korrektur offen ist, melden `pause.onBeginn`/`onEnde` das (Countdown des Endstands im Cockpit, @SL-163, @SL-164).
  */
-import { useCallback, useState, type ReactElement } from 'react';
+import { useCallback, useRef, useState, type ReactElement } from 'react';
 import { CockpitKorrekturDialog } from '../components/CockpitKorrekturDialog';
 
 export interface KorrekturSpiel {
@@ -32,23 +32,35 @@ export interface KorrekturEinstieg {
 }
 
 export function useKorrekturEinstieg(options: {
-  enterScore: (matchId: string, home: number, away: number) => Promise<boolean>;
+  enterScore: (matchId: string, home: number, away: number, knownBase?: string | null) => Promise<boolean>;
   spielOf: (matchId: string) => KorrekturSpiel | null;
+  /** Stand beim Öffnen (`useScheduleResultEntry.baseAt`): daran prüft das Speichern, ob inzwischen jemand anderes korrigiert hat (@FU-082) */
+  baseOf?: (matchId: string) => Promise<string | null | undefined>;
   istLeitung: boolean;
   pause?: KorrekturPause;
 }): KorrekturEinstieg {
-  const { enterScore, spielOf, istLeitung, pause = {} } = options;
+  const { enterScore, spielOf, baseOf, istLeitung, pause = {} } = options;
   const { onBeginn, onEnde } = pause;
-  const [offen, setOffen] = useState<string | null>(null);
-  const onKorrigieren = useCallback((matchId: string) => { setOffen(matchId); onBeginn?.(matchId); }, [onBeginn]);
-  const spiel = offen !== null ? spielOf(offen) : null;
+  // Beim Öffnen festgehalten: das „bisher“ des Dialogs und der letzte Spielstand-Eintrag, den die Turnierleitung kannte (@FU-082).
+  // Läuft während des offenen Dialogs ein fremdes Ergebnis ein, bleiben beide stehen; das Speichern lehnt es dann mit Namen ab.
+  const [offen, setOffen] = useState<{ matchId: string; spiel: KorrekturSpiel | null } | null>(null);
+  const baseRef = useRef<Promise<string | null | undefined>>(Promise.resolve(undefined));
+  const onKorrigieren = useCallback((matchId: string) => {
+    baseRef.current = baseOf ? baseOf(matchId).catch(() => undefined) : Promise.resolve(undefined);
+    setOffen({ matchId, spiel: spielOf(matchId) });
+    onBeginn?.(matchId);
+  }, [baseOf, spielOf, onBeginn]);
+  const spiel = offen !== null ? offen.spiel ?? spielOf(offen.matchId) : null;
 
   const dialog = spiel !== null && offen !== null
     ? (
       <CockpitKorrekturDialog
-        key={offen} matchNumber={spiel.number} homeName={spiel.homeName} awayName={spiel.awayName} scoreHome={spiel.scoreHome} scoreAway={spiel.scoreAway}
+        key={offen.matchId} matchNumber={spiel.number} homeName={spiel.homeName} awayName={spiel.awayName} scoreHome={spiel.scoreHome} scoreAway={spiel.scoreAway}
         onAbbrechen={() => { setOffen(null); onEnde?.(); }}
-        onWeiter={(home, away) => { setOffen(null); void enterScore(offen, home, away).finally(() => { onEnde?.(); }); }}
+        onWeiter={(home, away) => {
+          setOffen(null);
+          void baseRef.current.then((base) => enterScore(offen.matchId, home, away, base)).finally(() => { onEnde?.(); });
+        }}
       />
     )
     : null;

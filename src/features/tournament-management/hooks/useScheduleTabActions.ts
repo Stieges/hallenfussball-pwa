@@ -17,9 +17,9 @@ interface UseScheduleTabActionsProps {
 }
 
 interface UseScheduleTabActionsResult {
-  handleScoreChange: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
+  handleScoreChange: (matchId: string, scoreA: number, scoreB: number, knownBase?: string | null) => Promise<boolean>;
   /** A-08f3e2: Rückfrage (Grund bzw. abgesetzt) der Schnelleingabe -- ScheduleTab zeigt sie an. */
-  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt' | 'changeAuthor'>;
+  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt' | 'changeAuthor' | 'baseAt'>;
 }
 
 export function useScheduleTabActions({
@@ -31,12 +31,12 @@ export function useScheduleTabActions({
   // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
   const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults, offerTakeover });
   const { enterScore } = resultEntry;
-  const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
-    return enterScore(matchId, scoreA, scoreB);
+  const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number, knownBase?: string | null) => {
+    return enterScore(matchId, scoreA, scoreB, knownBase);
   }, [enterScore]);
 
   return {
     handleScoreChange,
-    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt, changeAuthor: resultEntry.changeAuthor },
+    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt, changeAuthor: resultEntry.changeAuthor, baseAt: resultEntry.baseAt },
   };
 }

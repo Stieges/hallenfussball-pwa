@@ -262,15 +262,19 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     });
   });
 
-  // @EK-063 (D12, Cloud): der Spielplan öffnet frisch -- die Kopie von Spiel 7 ist leer, die Tabelle zeigt den Endstand 2:1.
-  // Was die Turnierleitung sah, ist die angezeigte Zahl; stimmt sie mit dem Stand nach `catchUp` überein, ist nichts „inzwischen geändert“.
-  describe('@EK-063 Korrektur aus dem frisch geöffneten Spielplan (leere lokale Kopie)', () => {
+  // @EK-063 (D12, Cloud) + @FU-082: Grundlage der Korrektur ist der Stand beim ÖFFNEN des Dialogs (`baseAt`), nicht die Anzeige beim Absenden.
+  describe('@EK-063 @FU-082 Korrektur aus dem Spielplan: Stand beim Öffnen des Dialogs', () => {
     const angezeigt = (a: number, b: number) => ({ [SPIEL_7]: { matchStatus: 'finished' as const, scoreA: a, scoreB: b } });
+    const erst21 = () => h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('e1', { [FC_NORD]: 2, [SV_SUED]: 1 }), 1)], newWatermark: 1 });
 
-    it('@EK-063 Tabelle zeigt 2:1, Server hat 2:1 → Grund-Rückfrage, CORRECTION auf dem Stand e1', async () => {
-      h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('e1', { [FC_NORD]: 2, [SV_SUED]: 1 }), 1)], newWatermark: 1 });
-      const { hook, enter, answer, showWarning } = render(h, { matches: angezeigt(2, 1) });
-      const done = enter(SPIEL_7, 4, 0);
+    it('@EK-063 frisch geöffneter Spielplan (leere Kopie), Server 2:1: Dialog öffnet mit Abgleich, Korrektur auf 4:0 geht durch (CORRECTION auf e1)', async () => {
+      erst21();
+      const { hook, answer, showWarning } = render(h, { matches: angezeigt(2, 1) });
+      let base: string | null | undefined;
+      await act(async () => { base = await hook.result.current.baseAt(SPIEL_7); });
+      expect(base).toBe('e1');
+      let done: Promise<boolean> = Promise.resolve(false);
+      act(() => { done = hook.result.current.enterScore(SPIEL_7, 4, 0, base); });
       await act(async () => { await settle(); });
       expect(hook.result.current.prompt).toMatchObject({ kind: 'reason' });
       await answer('input_error');
@@ -282,14 +286,25 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
       expect(h.api.mock.calls[0][1][0].payload).toMatchObject({ reason: 'input_error', basedOn: 'e1', scores: { [FC_NORD]: 4, [SV_SUED]: 0 } });
     });
 
-    it('@FU-082 Gegenbeispiel: Tabelle zeigt 1:1, Server hat 2:1 → „inzwischen geändert (jetzt 2:1)“, keine Rückfrage', async () => {
-      h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('e1', { [FC_NORD]: 2, [SV_SUED]: 1 }), 1)], newWatermark: 1 });
-      const { hook, enter, showWarning } = render(h, { matches: angezeigt(1, 1) });
-      await enter(SPIEL_7, 4, 0);
+    it('@FU-082 Olli korrigiert auf 2:2, während Marias Dialog bei 2:1 offen ist (Anzeige läuft mit auf 2:2): Maria speichert 3:1 → abgelehnt mit Namen, nichts gesendet', async () => {
+      authors.read.mockResolvedValue(new Map([['e2', { name: 'Olli', role: 'owner' }]]));
+      erst21();
+      const { hook, showWarning } = render(h, { matches: angezeigt(2, 2) });
+      let base: string | null | undefined;
+      await act(async () => { base = await hook.result.current.baseAt(SPIEL_7); });
+      expect(base).toBe('e1'); // beim Öffnen: 2:1
+      // Ollis Korrektur kommt per Realtime an, die lokale Kopie ist schon auf 2:2, bevor Maria speichert
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(correction('e2', { [FC_NORD]: 2, [SV_SUED]: 2 }, 'e1'), 2)], newWatermark: 2 });
+      await act(async () => { await h.engine.catchUp(SPIEL_7); });
+      expect(scoreOf(h, SPIEL_7, FC_NORD, SV_SUED)).toBe('2:2');
+      let saved = true;
+      await act(async () => { saved = await hook.result.current.enterScore(SPIEL_7, 3, 1, base); });
 
+      expect(saved).toBe(false);
       expect(hook.result.current.prompt).toBeNull();
-      expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen geändert (jetzt 2:1)');
+      expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)');
       expect(h.api).not.toHaveBeenCalled();
+      expect((await outbox(h, SPIEL_7))?.pending).toEqual([]);
     });
   });
 
