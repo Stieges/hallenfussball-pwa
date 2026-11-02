@@ -63,7 +63,7 @@ unzip -o -q "$ZIP" 'extras/ttf/Inter-Regular.ttf' 'extras/ttf/Inter-Bold.ttf' -d
 # Namen bleiben für die Prüfung der Glyphen), features.json aus der erzeugten Schrift ableiten.
 cat >"$WORK/build.sh" <<'INNER'
 set -euo pipefail
-pip install -q "fonttools==${FONTTOOLS_VERSION}" >/dev/null 2>&1
+pip install -q --disable-pip-version-check --root-user-action=ignore "fonttools==${FONTTOOLS_VERSION}"
 python - <<'PY'
 import os
 from fontTools.ttLib import TTFont

@@ -52,10 +52,10 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * nur die beiden K.-o.-Zeilen „… 5 Schützen je Team“ → „… 3 Schützen je Team“ (EN „shooters“), Lage unverändert. Stände davor:
  * 92e27f9338d0, 026dca7efbd1, 2ad20180580c, 329ef9fb4fa6, EN 1e5c882d540d.
  * Neu aufgenommen 02.11. (C-PDF-SCHRIFT-OHNE-MERKMALE, Paket PDF T1): neu geschnittene Schrift mit gleich breiten Ziffern und
- * Doppelpunkt (alle Ziffern 1328 statt 833–1323 Einheiten), I und l unterscheidbar. Text-für-Text verglichen (Lauf mit alter und neuer
+ * Doppelpunkt (alle Ziffern Regular 1328 statt 833–1323, Bold 1324 statt 883–1385 Einheiten), I und l unterscheidbar. Text-für-Text verglichen (Lauf mit alter und neuer
  * Schrift, alle fünf Fixtures): gleiche Seitenzahl, gleiche Textstücke bis auf die Herkunft der Finalteams, die in den Hochformaten
  * wegen der breiteren „1“ und „2“ umbricht („Sieger Halbfinale“ / „1“; EN „Loser Semi-final“ / „1“); alles andere verschiebt sich um
- * Bruchteile eines Millimeters. Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
+ * Bruchteile eines Millimeters. Bild DE (Seite 1 und 3) und EN (Seite 3) gesichtet (Review und Umsetzer). Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
  */
 const VORHER: Record<string, string> = {
   '12 Spiele, hoch': 'ee37c5de21d3',
