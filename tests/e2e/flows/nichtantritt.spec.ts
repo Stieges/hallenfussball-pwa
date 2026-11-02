@@ -145,7 +145,7 @@ test.describe('B-12 Nichtantritt – Bildschirmprüfung (T2-UI)', () => {
       await karte.getByText(HEIM).first().click();
       const taste = page.getByTestId('match-action-forfeit');
       await expect(taste).toBeVisible();
-      expect((await taste.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(56);
+      expect(Math.round((await taste.boundingBox())?.height ?? 0)).toBeGreaterThanOrEqual(56); // gerundet: Teilpixel-Höhe 55,99997
       await bild(page, `karte-${groesse.width}`);
       await taste.click();
       await expect(page.getByTestId('forfeit-dialog')).toBeVisible();
