@@ -78,7 +78,12 @@ async function prepare(page: Page, upload: Upload, computeAccent = false): Promi
   }, { upload, computeAccent });
 }
 
+/** Die Module lädt der Dev-Server unter /src/ aus; im gebauten Stand (Vorschau, Vor-Push, CI) gibt es sie nicht. */
+const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
+
 test.describe('Turniergrafik aufbereiten (echter Browser)', () => {
+  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (die Module der App liegen nicht im Build)');
+
   test.beforeEach(async ({ page }) => { await openApp(page); });
 
   test('@W3-030 SVG wird PNG: gespeichert ist data:image/png, kein <svg im Speicher', async ({ page }) => {
