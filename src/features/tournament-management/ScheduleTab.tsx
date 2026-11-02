@@ -182,22 +182,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     setShowRunningMatchDialog(false);
   }, []);
 
-  // Get info about the currently running match for dialog
+  // Nummern für die Rückfrage beim Wechsel (@SL-194): das laufende Spiel, das weiterläuft, und das Ziel
   const runningMatchInfo = useMemo(() => {
-    const runningMatchId = Array.from(liveMatchIds)[0];
-    if (!runningMatchId) { return null; }
-    const match = tournament.matches.find(m => m.id === runningMatchId);
-    const shown = view.byId.get(runningMatchId);
-    if (!match || !shown) { return null; }
-    // Spielseiten aus der Ansicht (@TM-015): Teamname bzw. Herkunft, nie ein gespeicherter Name
-    return {
-      id: runningMatchId,
-      homeName: shown.home.label,
-      awayName: shown.away.label,
-      scoreA: match.scoreA,
-      scoreB: match.scoreB,
-    };
-  }, [liveMatchIds, tournament.matches, view]);
+    const running = tournament.matches.find(m => liveMatchIds.has(m.id) && m.id !== pendingCockpitMatchId);
+    const target = tournament.matches.find(m => m.id === pendingCockpitMatchId);
+    return running ? { running: running.matchNumber ?? '?', target: target?.matchNumber ?? '?' } : null;
+  }, [liveMatchIds, tournament.matches, pendingCockpitMatchId]);
 
   // B-49 (@FU-081): fremd gesteuertes Feld – „Feld 2 wird gerade von Tom gesteuert“ mit „Spielleitung übernehmen“, danach ins Cockpit
   const takeover = useScheduleTakeover({ tournamentId: tournament.id, showWarning, onTaken: onNavigateToCockpit });
@@ -377,7 +367,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           onClose={handleCancelCockpitNavigation}
           onConfirm={handleConfirmCockpitNavigation}
           title={t('schedule.runningMatch.title')}
-          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.homeName, teamB: runningMatchInfo.awayName, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
+          message={t('schedule.runningMatch.message', runningMatchInfo)}
           confirmText={t('schedule.runningMatch.confirmSwitch')}
           cancelText={t('common.cancel')}
           variant="warning"
