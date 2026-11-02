@@ -292,7 +292,7 @@ describe('@W3-030 / @DR-040 Prüfung beim Hochladen', () => {
     await waehle('turnierlogo');
 
     const fehler = await screen.findByTestId('turnierlogo-fehler');
-    expect(fehler).toHaveTextContent('weil sie größer als 2 MB ist oder zu viele Bildpunkte hat (mehr als 4000 an einer Seite).');
+    expect(fehler).toHaveTextContent('Die Datei ist größer als 2 MB oder hat zu viele Bildpunkte (mehr als 4000 an einer Seite).');
   });
 
   it('@W3-030 EN: Grund „Größe“ nennt 2 MB und 4,000 pixels, die Hinweise stehen auf Englisch', async () => {

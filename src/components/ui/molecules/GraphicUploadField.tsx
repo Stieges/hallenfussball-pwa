@@ -54,6 +54,8 @@ const hintStyle: CSSProperties = { margin: `${cssVars.spacing.sm} 0 0`, fontSize
 // Schmaler als der Standard-Knopf (Mockup „Stammdaten MVP“): Vorschau, „Ändern“ und „Entfernen“ stehen bei 390 px in einer Zeile.
 const buttonStyle: CSSProperties = { padding: `0 ${cssVars.spacing.md}` };
 const noticeSlot: CSSProperties = { marginTop: cssVars.spacing.md };
+// Hinweistext in Lesegröße wie im Mockup (der Baustein setzt sonst `sm`).
+const noticeTextStyle: CSSProperties = { fontSize: cssVars.fontSizes.md };
 
 export function GraphicUploadField({
   testIdPrefix, label, optionalHint, src, previewAlt, uploadLabel, changeLabel, removeLabel, formatHint,
@@ -89,8 +91,8 @@ export function GraphicUploadField({
         </div>
       )}
       {children}
-      {warning !== undefined && <div style={noticeSlot}><InlineNotice tone="warn" data-testid={`${testIdPrefix}-warnung`}>{warning}</InlineNotice></div>}
-      {error !== undefined && <div style={noticeSlot}><InlineNotice tone="error" data-testid={`${testIdPrefix}-fehler`}>{error}</InlineNotice></div>}
+      {warning !== undefined && <div style={noticeSlot}><InlineNotice tone="warn" data-testid={`${testIdPrefix}-warnung`}><span style={noticeTextStyle}>{warning}</span></InlineNotice></div>}
+      {error !== undefined && <div style={noticeSlot}><InlineNotice tone="error" data-testid={`${testIdPrefix}-fehler`}><span style={noticeTextStyle}>{error}</span></InlineNotice></div>}
       {deviceHint !== undefined && <p style={hintStyle} data-testid={`${testIdPrefix}-geraet`}>{deviceHint}</p>}
     </div>
   );
