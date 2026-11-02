@@ -51,6 +51,8 @@ const previewStyle: CSSProperties = {
   borderRadius: cssVars.borderRadius.md, padding: cssVars.spacing.xs,
 };
 const hintStyle: CSSProperties = { margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary };
+// Schmaler als der Standard-Knopf (Mockup „Stammdaten MVP“): Vorschau, „Ändern“ und „Entfernen“ stehen bei 390 px in einer Zeile.
+const buttonStyle: CSSProperties = { padding: `0 ${cssVars.spacing.md}` };
 const noticeSlot: CSSProperties = { marginTop: cssVars.spacing.md };
 
 export function GraphicUploadField({
@@ -73,7 +75,7 @@ export function GraphicUploadField({
       {src === undefined ? (
         <>
           <div style={rowStyle}>
-            <Button variant="secondary" onClick={choose} busy={busy} data-testid={`${testIdPrefix}-hochladen`}>{uploadLabel}</Button>
+            <Button variant="secondary" style={buttonStyle} onClick={choose} busy={busy} data-testid={`${testIdPrefix}-hochladen`}>{uploadLabel}</Button>
           </div>
           <p style={hintStyle}>{formatHint}</p>
         </>
@@ -81,8 +83,8 @@ export function GraphicUploadField({
         <div style={rowStyle}>
           <img src={src} alt={previewAlt} data-testid={`${testIdPrefix}-vorschau`} style={previewStyle} />
           <div style={buttonsStyle}>
-            <Button variant="secondary" onClick={choose} busy={busy} data-testid={`${testIdPrefix}-aendern`}>{changeLabel}</Button>
-            <Button variant="secondary" onClick={onRemove} busy={busy} data-testid={`${testIdPrefix}-entfernen`}>{removeLabel}</Button>
+            <Button variant="secondary" style={buttonStyle} onClick={choose} busy={busy} data-testid={`${testIdPrefix}-aendern`}>{changeLabel}</Button>
+            <Button variant="secondary" style={buttonStyle} onClick={onRemove} busy={busy} data-testid={`${testIdPrefix}-entfernen`}>{removeLabel}</Button>
           </div>
         </div>
       )}
