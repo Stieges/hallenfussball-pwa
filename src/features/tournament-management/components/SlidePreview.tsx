@@ -16,6 +16,7 @@ import { COLOR_SCHEMES } from '../../../types/monitor';
 import type { Tournament, Match } from '../../../types/tournament';
 import { slotLabel } from '../../../core/models/slotLabel';
 import { calculateStandings } from '../../../utils/calculations';
+import { Versus } from '../../../components/ui/atoms';
 
 // =============================================================================
 // TYPES
@@ -187,7 +188,7 @@ function ScheduleFieldPreview({ config, tournament }: { config: SlideConfig; tou
                             opacity: 1 - i * 0.15,
                         }}>
                             <span>{getSideName(tournament, m.slotA).slice(0, 6)}</span>
-                            <span style={{ opacity: 0.5 }}>vs</span>
+                            <span style={{ opacity: 0.5 }}><Versus /></span>
                             <span>{getSideName(tournament, m.slotB).slice(0, 6)}</span>
                         </div>
                     ))}

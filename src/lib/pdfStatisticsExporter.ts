@@ -5,6 +5,7 @@ import { Tournament } from '../types/tournament';
 import { calculateScorers, calculateFairPlay, type EngineEventsById } from '../utils/calculations';
 import { pdfKartenFarben } from './pdf/kartenFarben';
 import { printColors, printStroke } from '../design-tokens/print';
+import i18next from 'i18next';
 
 // Reuse styles from pdfExporter (simplified)
 const PDF_STYLE = {
@@ -67,7 +68,7 @@ export async function exportStatisticsToPDF(tournament: Tournament, engineEvents
     if (scorers.length > 0) {
         autoTable(doc, {
             startY: yPos,
-            head: [['Pl.', 'Spieler', 'Team', 'Tore', 'Vorlagen']],
+            head: [[i18next.t('short:tabellenkopf.rank'), 'Spieler', 'Team', 'Tore', 'Vorlagen']],
             body: scorers.map((s, i) => [
                 (i + 1).toString(),
                 s.playerName,
@@ -108,7 +109,7 @@ export async function exportStatisticsToPDF(tournament: Tournament, engineEvents
         startY: yPos,
         // F3b1 (PO 30.09.): keine festen Punktwerte mehr in der Kopfzeile -- die haengen vom
         // Fair-Play-Profil ab (calculateFairPlay nutzt ohne Parameter den Standard DFBNET).
-        head: [['Pl.', 'Team', 'Punkte', 'Gelb', GELB_ROT_LABEL, 'Zeit', 'Rot']],
+        head: [[i18next.t('short:tabellenkopf.rank'), 'Team', 'Punkte', 'Gelb', GELB_ROT_LABEL, 'Zeit', 'Rot']],
         body: fairPlay.map((f, i) => [
             (i + 1).toString(),
             f.teamName,

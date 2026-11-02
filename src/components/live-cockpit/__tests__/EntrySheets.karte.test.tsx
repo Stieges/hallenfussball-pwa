@@ -100,11 +100,11 @@ describe('EntrySheets – Nummer für Karte und Zeitstrafe', () => {
 describe('EntrySheets – Rückfrage zweite Gelbe (@SL-088)', () => {
   const offenGelb: OffenerEintrag = { art: 'karte', seite: 'away', kartenArt: 'YELLOW' };
 
-  it('weist darauf hin, dass Nr. 7 schon Gelb hat, und bietet Gelb-Rot mit einem Tipp an (erster Knopf)', async () => {
+  it('weist darauf hin, dass Nummer 7 schon Gelb hat, und bietet Gelb-Rot mit einem Tipp an (erster Knopf)', async () => {
     const p = props(offenGelb, {}, { nummer: 7 });
     render(<EntrySheets {...p} />);
     const rueckfrage = screen.getByRole('alertdialog');
-    expect(within(rueckfrage).getByText('Nr. 7 hat schon Gelb')).toBeInTheDocument();
+    expect(within(rueckfrage).getByText('Nummer 7 hat schon Gelb')).toBeInTheDocument();
     const knoepfe = within(rueckfrage).getAllByRole('button');
     expect(knoepfe.map((b) => b.textContent)).toEqual(['Gelb-Rot', 'Trotzdem Gelb']);
     await userEvent.setup().click(knoepfe[0]);

@@ -15,9 +15,25 @@ import { ActivityLogCategory } from '../ActivityLog';
 vi.mock('i18next', async () => {
   const actual = await vi.importActual<typeof import('i18next')>('i18next');
   const de = (await import('../../../../i18n/locales/de/tournament.json')).default;
+  const sport = (await import('../../../../i18n/locales/de/sport.json')).default;
   const instance = actual.default.createInstance();
-  await instance.init({ lng: 'de', fallbackLng: false, resources: { de: { tournament: de } }, interpolation: { escapeValue: false } });
+  await instance.init({ lng: 'de', fallbackLng: false, resources: { de: { tournament: de, sport } }, interpolation: { escapeValue: false } });
   return { default: instance };
+});
+
+// Das Wort zwischen den Teams („gegen“, @OB-076) kommt über `useTranslation('sport')` aus der Sprachdatei: dafür die echte
+// Übersetzung; alle anderen Namensräume bleiben beim Durchreichen der Schlüssel wie im globalen Mock.
+vi.mock('react-i18next', async () => {
+  const i18n = (await import('i18next')).default;
+  return {
+    useTranslation: (ns?: string) => ({
+      t: (key: string) => (ns === 'sport' ? (i18n.t as (k: string, o: { ns: string }) => string)(key, { ns }) : `${ns ? `${ns}:` : ''}${key}`),
+      i18n: { language: 'de' },
+    }),
+    Trans: ({ children }: { children: unknown }) => children,
+    I18nextProvider: ({ children }: { children: unknown }) => children,
+    initReactI18next: { type: '3rdParty', init: () => undefined },
+  };
 });
 
 const NORD = testUuid(1);
@@ -49,9 +65,9 @@ describe('DashboardCategory – Spielseiten über slotLabel', () => {
     expect(screen.getByText('Zweiter Gruppe B')).toBeInTheDocument();
   });
 
-  it('@TM-015 laufendes Spiel: „FC Nord vs Zweiter Gruppe B“; Gegenbeispiel: nach Umbenennen der neue Name, kein „ALT“', () => {
+  it('@TM-015 laufendes Spiel: „FC Nord gegen Zweiter Gruppe B“; Gegenbeispiel: nach Umbenennen der neue Name, kein „ALT“', () => {
     renderDashboard(tournamentWith('Nordlicht', { matchStatus: 'running' }));
-    expect(screen.getByText(/Nordlicht vs Zweiter Gruppe B/)).toBeInTheDocument();
+    expect(screen.getByText(/Nordlicht gegen Zweiter Gruppe B/)).toBeInTheDocument();
     expect(screen.queryByText(/ALT/)).toBeNull();
   });
 });
@@ -62,7 +78,7 @@ describe('ActivityLogCategory – Spielseiten über slotLabel', () => {
       matchStatus: 'finished', finishedAt: '2026-10-03T10:00:00.000Z', scoreA: 1, scoreB: 0,
     });
     render(<ActivityLogCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />);
-    expect(screen.getAllByText(/Nordlicht vs Zweiter Gruppe B/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Nordlicht gegen Zweiter Gruppe B/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/ALT/)).toBeNull();
   });
 });

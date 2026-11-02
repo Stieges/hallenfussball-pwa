@@ -8,12 +8,12 @@ import { layoutOf } from './pdfFixtureLayout';
 import { translatorFor } from './pdfText';
 
 const MATCH_HEAD = {
-  de: ['Nr', 'Zeit', 'Feld', 'Gr', 'Heim', 'Ergebnis', 'Gast', 'SR'],
-  en: ['No.', 'Time', 'Pitch', 'Grp', 'Home', 'Result', 'Away', 'Ref.'],
+  de: ['Nr.', 'Zeit', 'Feld', 'Gruppe', 'Heim', 'Ergebnis', 'Gast', 'Schiedsrichter'],
+  en: ['No.', 'Time', 'Pitch', 'Group', 'Home', 'Result', 'Away', 'Referee'],
 } as const;
 const TABLE_HEAD = {
-  de: ['Pl', 'Team', 'Sp', 'S', 'U', 'N', 'Tore', 'Diff', 'Pkt'],
-  en: ['Pos', 'Team', 'P', 'W', 'D', 'L', 'Goals', 'Diff', 'Pts'],
+  de: ['#', 'Team', 'Sp.', 'S', 'U', 'N', 'Tore', 'Diff.', 'Pkt.'],
+  en: ['#', 'Team', 'P', 'W', 'D', 'L', 'Goals', 'GD', 'Pts'],
 } as const;
 
 describe.each(['de', 'en'] as const)('@DR-001 Kopfwörter der Tabellen brechen nicht um (%s)', locale => {

@@ -5,7 +5,7 @@
     "fieldAria": "Field {{field}}{{running}}"
   },
   "nextMatch": {
-    "title": "Next match in ~{{minutes}} min",
+    "title": "Next match in ~$t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
     "vs": "vs",
     "field": "Field {{field}}",
     "match": "Match {{number}}",
@@ -113,13 +113,7 @@
       "deciding": "to be decided"
     },
     "header": {
-      "rank": "#",
-      "team": "Team",
-      "won": "W",
-      "drawn": "D",
-      "lost": "L",
-      "goalDiff": "GD",
-      "points": "Pts"
+      "team": "Team"
     }
   }
 }

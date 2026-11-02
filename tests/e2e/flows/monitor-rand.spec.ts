@@ -100,9 +100,18 @@ async function messe(page: Page, randX: number, randY: number) {
         aussen.push(`${name} [${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.right)},${Math.round(r.bottom)}]`);
       }
     };
+    // Nur für Screenreader versteckter Text (1 × 1 Bildpunkt, abgeschnitten; Vorlesetext der Kurzformen, @OB-075) ist nicht sichtbar
+    // und zählt nicht als Inhalt im Bildrand. Sichtbarer Text außerhalb bleibt ein Befund.
+    const versteckt = (knoten: Node): boolean => {
+      for (let el = knoten.parentElement; el && el !== wurzel; el = el.parentElement) {
+        const st = getComputedStyle(el);
+        if (parseFloat(st.width) <= 1 && parseFloat(st.height) <= 1 && st.overflow === 'hidden') { return true; }
+      }
+      return false;
+    };
     const laeufer = document.createTreeWalker(wurzel, NodeFilter.SHOW_TEXT);
     for (let n = laeufer.nextNode(); n; n = laeufer.nextNode()) {
-      if ((n.textContent ?? '').trim() === '') { continue; }
+      if ((n.textContent ?? '').trim() === '' || versteckt(n)) { continue; }
       const bereich = document.createRange(); bereich.selectNodeContents(n);
       pruefe(`Text „${(n.textContent ?? '').trim().slice(0, 30)}“`, bereich.getBoundingClientRect());
     }
@@ -115,6 +124,31 @@ async function messe(page: Page, randX: number, randY: number) {
     };
   }, { rx: randX, ry: randY });
 }
+
+test.describe('Messung des Bildrands: versteckter Text zählt nicht, sichtbarer schon (@ME-067, @OB-075)', () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+  test.beforeEach(() => { test.skip(test.info().project.name !== 'desktop', 'läuft nur im Projekt desktop'); });
+
+  test('Gegenbeispiel: ein sichtbarer Text im Randstreifen ist ein Befund, derselbe Text nur für Screenreader (1 px, abgeschnitten) nicht', async ({ page, seedIndexedDB }) => {
+    await seed(seedIndexedDB);
+    await oeffne(page, 'standings');
+    const einfuegen = (verstecktText: boolean) => page.evaluate((v) => {
+      const wurzel = document.querySelector('[data-testid="monitor-slide"]')!.firstElementChild as HTMLElement;
+      const el = document.createElement('span');
+      el.id = 'probe-rand';
+      el.textContent = 'Probe im Rand';
+      el.style.cssText = v
+        ? 'position:absolute;left:2px;top:2px;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap'
+        : 'position:absolute;left:2px;top:2px;white-space:nowrap';
+      wurzel.appendChild(el);
+    }, verstecktText);
+    await einfuegen(true);
+    expect((await messe(page, 64, 36)).aussen).toEqual([]);
+    await page.evaluate(() => document.getElementById('probe-rand')?.remove());
+    await einfuegen(false);
+    expect((await messe(page, 64, 36)).aussen.some((a) => a.includes('Probe im Rand'))).toBe(true);
+  });
+});
 
 for (const [breite, hoehe, seitlich, oben] of [[1920, 1080, 96, 54], [1280, 720, 64, 36]] as const) {
   test.describe(`Bildrand ${breite}×${hoehe} (@ME-067)`, () => {

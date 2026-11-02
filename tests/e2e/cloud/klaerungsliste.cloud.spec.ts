@@ -10,11 +10,11 @@
  *
  * Ablauf (zwei Geräte; Olli Desktop, Tom Handy 360 × 640):
  *  1. Tom steuert Feld 2, Spiel 9 läuft. Toms Gerät geht offline (context.setOffline), Olli „Spielleitung übernehmen“.
- *  2. Tom trägt offline ein Tor FC Nord, ein Tor SV Süd und Gelb SV Süd Nr. 5 ein, dann wieder online.
+ *  2. Tom trägt offline ein Tor FC Nord, ein Tor SV Süd und Gelb SV Süd Nummer 5 ein, dann wieder online.
  *  3. Tom: `outbox-notice` zeigt „wird geprüft (3)“ (@FU-038). Spielstand bei Olli unverändert.
  *  4. Olli: `klaerungsliste-knopf` mit Zähler 3 → Dialog (`?klaerung=1`) „3 Einträge von Tom nach Übernahme“.
  *     Aufklappen, beide Tore abwählen, „Übernehmen“ → Vorschau „Neuer Stand: FC Nord 0:0 SV Süd“, „Übernommen: Gelbe Karte
- *     SV Süd, Nr. 5“ → „Speichern“ → Zähler weg, Verlauf: Gelb zählt, Tore verworfen (@FU-095).
+ *     SV Süd, Nummer 5“ → „Speichern“ → Zähler weg, Verlauf: Gelb zählt, Tore verworfen (@FU-095).
  *  5. 360 px: Dialog ohne waagrechten Überlauf (`document.documentElement.scrollWidth <= innerWidth`), jede Taste ≥ 44 px.
  *  6. @HE-056: Olli entfernt Tom (change_helper_access 'revoke'), Tom offline Tor, online → Toms Cockpit
  *     `cockpit-zugriff-entzogen` „Du hast keinen Zugriff mehr – 1 Eintrag an die Turnierleitung übergeben“; Olli sieht

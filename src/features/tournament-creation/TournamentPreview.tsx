@@ -30,6 +30,7 @@ import { joinMeta } from '../../core/view';
 import { appTranslator } from '../../lib/pdf/appTranslator';
 import { dayWithWeekday } from '../../lib/pdf/headerFacts';
 import { buildPdfTexts, resolvePdfLocale } from '../../lib/pdf/translations';
+import i18next from 'i18next';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -252,7 +253,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           </div>
           <div style={infoItemStyle}>
             <span style={labelStyle}>Spieldauer</span>
-            <span style={valueStyle}>{currentTournament.groupPhaseGameDuration} Min.</span>
+            <span style={valueStyle}>{i18next.t('sport:zeit.minuteCount', { count: currentTournament.groupPhaseGameDuration })}</span>
           </div>
         </div>
       </div>

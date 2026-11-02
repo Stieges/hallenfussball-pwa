@@ -400,7 +400,7 @@
     "confirmReset": "Möchtest du alle Änderungen verwerfen und die ursprünglichen Werte wiederherstellen?",
     "changesSaved": "Änderungen wurden gespeichert",
     "rulebook": "Regelwerk (optional)",
-    "rulebookPlaceholder": "z. B. BFV-Richtlinien für Futsal",
+    "rulebookPlaceholder": "z. B. Richtlinien des Bayerischen Fußball-Verbands für Futsal",
     "rulebookLimit": "Höchstens 80 Zeichen.",
     "rulebookTruncated": "Auf 80 Zeichen gekürzt.",
     "confirmResetDialog": {

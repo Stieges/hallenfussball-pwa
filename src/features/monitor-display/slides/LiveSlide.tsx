@@ -10,6 +10,7 @@ import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { toLiveMatch } from '../monitorMatch';
 import { monitorSideLabel, sideTeam } from '../matchSides';
 import { MonitorTimeNotes } from '../components/MonitorTimeCell';
+import { Versus } from '../../../components/ui/atoms';
 
 interface LiveSlideProps {
   slide: MonitorSlide;
@@ -125,7 +126,7 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
                   color: themeColors.textMuted,
                   padding: `0 ${displaySpacing.contentLG}`,
                 }}>
-                  vs
+                  <Versus />
                 </div>
 
                 <div style={{ textAlign: 'center' }}>

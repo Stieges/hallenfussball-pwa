@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DndContext, closestCenter, DragOverlay, Announcements } from '@dnd-kit/core';
 import { buildSideContext, sideName } from '../../components/schedule/matchSides';
 import { Tournament, Match } from '../../types/tournament';
@@ -236,6 +237,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   hideToolbar = false,
   onRejectStarted,
 }) => {
+  const { t } = useTranslation('tournament');
   const [isConflictDialogOpen, setIsConflictDialogOpen] = useState(false);
 
   // =========================================================================
@@ -631,8 +633,8 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         {isEditing && ((!hideToolbar && tournament.refereeConfig?.mode === 'organizer') || conflictResult.conflicts.length > 0) && (
           <div style={{ display: 'flex', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
             {!hideToolbar && tournament.refereeConfig?.mode === 'organizer' && (<>
-              <Button variant="ghost" size="sm" onClick={handleAutoReassign}>SR automatisch zuweisen</Button>
-              <Button variant="ghost" size="sm" onClick={handleBalanceWorkloads}>SR-Auslastung ausgleichen</Button>
+              <Button variant="ghost" size="sm" onClick={handleAutoReassign}>{t('scheduleEditor.autoAssignReferees')}</Button>
+              <Button variant="ghost" size="sm" onClick={handleBalanceWorkloads}>{t('scheduleEditor.balanceReferees')}</Button>
             </>)}
             {conflictResult.conflicts.length > 0 && (
               <Button
@@ -703,7 +705,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         {isEditing && refereeStats.length > 0 && (
           <div style={statsContainerStyle}>
             <span style={{ ...statItemStyle, fontWeight: cssVars.fontWeights.semibold }}>
-              SR-Auslastung:
+              {t('scheduleEditor.refereeWorkload')}
             </span>
             {refereeStats.map(stat => (
               <div key={stat.refereeId} style={statItemStyle}>

@@ -8,11 +8,18 @@
  * Diese Regel verhindert, dass sich das wiederholt.
  *
  * Liest src/i18n/glossary.json (Struktur: { terms: { <id>: { de, en,
- * forbidden_de[], reason, i18nKey } } }) und meldet Zeichenketten-Literale,
+ * forbidden_de[], forbidden_en?[], reason, i18nKey, kuerzel?, tsLint?, short? } } },
+ * Schema im Kopfkommentar der Datei) und meldet Zeichenketten-Literale,
  * Template-Literal-Segmente und JSX-Text in src/**\/*.{ts,tsx}:
  *
- * - `error` für jedes verbotene Synonym aus forbidden_de (z.B. "Elfmeterschießen").
- * - `warn` für die bevorzugte Form (de) selbst — die steht womöglich noch
+ * - `error` für jedes verbotene Synonym aus forbidden_de / forbidden_en (z.B. "Elfmeterschießen").
+ *   Kürzel (Begriffe mit `kuerzel: true`, @OB-075) werden groß-/kleinschreibungssensibel gesucht;
+ *   in .ts/.tsx gibt es dafür keine Ausnahme: Kurzformen im Tabellenkopf, in Ergebniszellen und
+ *   bei Uhr-Beschriftungen kommen aus dem Namensraum `short` (`t('short:tabellenkopf.played')`)
+ *   und stehen nie als Literal im Code. Begriffe mit `tsLint: false` (interne matchId „P3“)
+ *   werden nur in Sprachdateien geprüft.
+ * - `warn` für die bevorzugte Form (de) selbst (nicht bei Kürzel-Begriffen: „Gruppe“ oder „gegen“
+ *   sind gewöhnliche Wörter) — die steht womöglich noch
  *   hartkodiert in Testdaten, Kommentaren oder Demo-Bildschirmen, statt über
  *   t('sport:<i18nKey>') bezogen zu werden. Ein Bruch der gesamten Lint-Kette
  *   dafür wäre unverhältnismäßig (gleiche Abstufung wie prefer-css-vars=warn
@@ -52,48 +59,42 @@ const path = require('path');
 
 const glossaryPath = path.join(__dirname, '..', 'src', 'i18n', 'glossary.json');
 
-/** @type {{ terms: Record<string, { de: string; en: string; forbidden_de: string[]; reason: string; i18nKey: string }> }} */
+const { buildPatterns, stripInterpolation, wordBoundaryRegex } = require('../scripts/lib/glossary-patterns.cjs');
+
+/** @type {{ terms: Record<string, any> }} */
 const glossary = JSON.parse(fs.readFileSync(glossaryPath, 'utf8'));
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+// In .ts/.tsx gibt es keine Sprache: verboten ist jede Form beider Sprachen (außer tsLint: false).
+const allPatterns = buildPatterns(glossary).filter((pattern) => pattern.tsLint);
+// Gleiche Form in beiden Sprachen (z.B. „P3“, „KO“, „Gr.“) nur einmal melden.
+const seen = new Set();
+const forbiddenPatterns = allPatterns.filter((pattern) => {
+  const id = `${pattern.term}|${pattern.forbidden}`;
+  if (seen.has(id)) return false;
+  seen.add(id);
+  return true;
+});
 
-// JS' \b definiert "Wortzeichen" nur als [A-Za-z0-9_] (ASCII) — Umlaute und ß
-// zählen NICHT dazu. Damit würde z.B. \bStrafstoß\b fälschlich INNERHALB von
-// "Strafstoßschießen" matchen, weil \b die Lücke zwischen dem (als "kein
-// Wortzeichen" behandelten) ß und dem folgenden "s" als Wortgrenze liest.
-// Eigene Grenzen per Lookaround mit einer Zeichenklasse, die deutsche Buchstaben
-// einschließt, vermeiden das.
-const GERMAN_WORD_CHAR = 'A-Za-zÀ-ÖØ-öø-ÿ0-9_';
-function wordBoundaryRegex(phrase) {
-  return new RegExp(
-    `(?<![${GERMAN_WORD_CHAR}])${escapeRegExp(phrase)}(?![${GERMAN_WORD_CHAR}])`,
-    'iu',
-  );
-}
-
-/** @type {Array<{ regex: RegExp; term: string; de: string; i18nKey: string }>} */
-const forbiddenPatterns = [];
 /** @type {Array<{ regex: RegExp; term: string; de: string; i18nKey: string }>} */
 const preferredPatterns = [];
-
 for (const [term, entry] of Object.entries(glossary.terms)) {
+  if (entry.kuerzel === true) continue; // Kürzel-Begriffe: nur die verbotenen Kürzel zählen
   preferredPatterns.push({
     regex: wordBoundaryRegex(entry.de),
     term,
     de: entry.de,
     i18nKey: entry.i18nKey,
   });
-  for (const forbidden of entry.forbidden_de) {
-    forbiddenPatterns.push({
-      regex: wordBoundaryRegex(forbidden),
-      term,
-      de: entry.de,
-      i18nKey: entry.i18nKey,
-      matched: forbidden,
-    });
-  }
+}
+
+/** Ein kleingeschriebenes Kürzel („vs“, „min“) ist in einem Literal ohne Leerzeichen kein Anzeigetext (z.B. 'min-content'). */
+function looksLikeIdentifier(pattern, text, isJsxText) {
+  return !isJsxText && /^[a-z]/.test(pattern.forbidden) && !/\s/.test(text);
+}
+
+/** Kleingeschriebenes Kürzel direkt vor „(“ ist eine CSS-Funktion („minmax(min(100%, …)“), kein Anzeigetext. */
+function isCssFunctionCall(pattern, text, match) {
+  return /^[a-z]/.test(pattern.forbidden) && text[match.index + match[0].length] === '(';
 }
 
 /** @type {import('eslint').Rule.RuleModule} */
@@ -110,6 +111,13 @@ module.exports = {
       forbiddenSynonym:
         "'{{ matched }}' ist verboten ({{ reason }}). Stattdessen `t('sport:{{ i18nKey }}')` verwenden " +
         "oder in einer Sprachdatei `$t(sport:{{ i18nKey }})` verschachteln.",
+      shortKeyElsewhere:
+        "Schlüssel des Namensraums `short` ('{{ matched }}') dürfen nur in {{ files }} stehen. Im Tabellenkopf <ShortLabel term=… />, " +
+        "in der Ergebniszelle die Texte aus `matchResult.*` verwenden (Regel: .claude/conventions/TERMINOLOGY.md).",
+      forbiddenAbbreviation:
+        "'{{ matched }}' ist ein Kürzel und im Anzeigetext verboten ({{ reason }}). Ausgeschrieben `t('sport:{{ i18nKey }}')` " +
+        "verwenden; im Tabellenkopf, in Ergebniszellen und bei Uhr-Beschriftungen die Kurzform aus dem Namensraum " +
+        "`short` (Komponente ShortLabel), nie als Literal im Code.",
       preferredFormHardcoded:
         "'{{ matched }}' ist die bevorzugte Form aus src/i18n/glossary.json, aber hartkodiert statt " +
         "über `t('sport:{{ i18nKey }}')` bezogen zu werden.",
@@ -141,25 +149,60 @@ module.exports = {
       '__tests__',          // Testdateien
       'LiveCockpitMockup',  // Demo-Screen, nicht produktiv gerendert
       'MatchCockpitDemoScreen', // Demo-Screen, nicht produktiv gerendert
+      '/src/test/',         // Hilfen der Testumgebung (z. B. realI18n.ts mit der Liste aller Namensräume)
+      '__fixtures__',       // Testdaten mit Kennungen wie „F-HF“, nie angezeigt
+      'teamNameAbbrev',     // Vereinskürzel (SF = Sportfreunde): Datenabgleich, kein Anzeigetext für Begriffe des Glossars
+      '/src/lib/pdf/fontData/', // eingebettete Schriften (Base64), kein Anzeigetext (nur dieser Ordner, nicht jeder Pfad mit „fontData“)
+      'DatenschutzScreen',  // Rechtstext mit wörtlichen Gesetzeszitaten („Nr. 2“)
+      'ImpressumScreen',    // Rechtstext
     ];
     if (allowedPatterns.some((p) => normalized.includes(p))) {
       return {};
     }
 
+    // `short:`-Schlüssel (Kurzformen) nur dort, wo das Glossar den Ort kennt (shortTerms.ts) oder der Text eines Dokuments sie braucht.
+    const SHORT_KEY_FILES = ['/src/components/ui/atoms/shortTerms.ts', '/src/lib/pdf/translations.ts', '/src/lib/pdfStatisticsExporter.ts'];
+    const shortKeyAllowed = SHORT_KEY_FILES.some((f) => normalized.endsWith(f));
+    // Der Namensraum `short` darf auch nicht über Optionen eingeschleust werden (useTranslation('short'), getFixedT(…, 'short'), { ns: 'short' }).
+    const SHORT_NS_FILES = [...SHORT_KEY_FILES, '/src/components/ui/atoms/ShortLabel.tsx'];
+    const shortNsAllowed = mode !== 'forbidden' || SHORT_NS_FILES.some((f) => normalized.endsWith(f));
+    const isShortNs = (node) =>
+      (node.type === 'Literal' && node.value === 'short')
+      || (node.type === 'ArrayExpression' && node.elements.some((e) => e !== null && e.type === 'Literal' && e.value === 'short'));
+    const SHORT_KEY = /(?:^|[^A-Za-z0-9_-])short:[A-Za-z][A-Za-z0-9_.]*/;
+
     function reasonFor(term) {
       return glossary.terms[term].reason;
     }
 
-    function checkText(node, text) {
-      if (typeof text !== 'string' || text.trim() === '') return;
+    function checkText(node, rawText, isJsxText = false) {
+      if (typeof rawText !== 'string' || rawText.trim() === '') return;
+
+      if (mode === 'forbidden' && !shortKeyAllowed) {
+        const key = SHORT_KEY.exec(rawText);
+        if (key) {
+          context.report({
+            node,
+            messageId: 'shortKeyElsewhere',
+            data: { matched: key[0].replace(/^[^s]/, ''), files: 'shortTerms.ts, src/lib/pdf/translations.ts und src/lib/pdfStatisticsExporter.ts' },
+          });
+        }
+      }
 
       if (mode === 'forbidden') {
+        // {{Platzhalter}} und $t(...)-Verweise sind keine Fließtexte (z.B. {{min}}).
+        const text = stripInterpolation(rawText);
+        const reportedTerms = new Set();
         for (const pattern of forbiddenPatterns) {
+          // „Gr.“ und „Gr“, „Min“ und „Min.“ sind eine Fundstelle: je Begriff nur eine Meldung je Text.
+          if (pattern.kuerzel && reportedTerms.has(pattern.term)) continue;
+          if (pattern.kuerzel && looksLikeIdentifier(pattern, text, isJsxText)) continue;
           const match = pattern.regex.exec(text);
-          if (match) {
+          if (match && !(pattern.kuerzel && isCssFunctionCall(pattern, text, match))) {
+            reportedTerms.add(pattern.term);
             context.report({
               node,
-              messageId: 'forbiddenSynonym',
+              messageId: pattern.kuerzel ? 'forbiddenAbbreviation' : 'forbiddenSynonym',
               data: {
                 matched: match[0],
                 reason: reasonFor(pattern.term),
@@ -172,7 +215,7 @@ module.exports = {
       }
 
       for (const pattern of preferredPatterns) {
-        const match = pattern.regex.exec(text);
+        const match = pattern.regex.exec(rawText);
         if (match) {
           context.report({
             node,
@@ -187,6 +230,22 @@ module.exports = {
     }
 
     return {
+      CallExpression(node) {
+        if (shortNsAllowed) return;
+        const callee = node.callee;
+        const name = callee.type === 'Identifier' ? callee.name : callee.type === 'MemberExpression' && callee.property.type === 'Identifier' ? callee.property.name : '';
+        if (['useTranslation', 'getFixedT', 'loadNamespaces', 'hasLoadedNamespace'].includes(name) && node.arguments.some(isShortNs)) {
+          context.report({ node, messageId: 'shortKeyElsewhere', data: { matched: "ns 'short'", files: 'shortTerms.ts, ShortLabel.tsx, src/lib/pdf/translations.ts und src/lib/pdfStatisticsExporter.ts' } });
+        }
+      },
+      Property(node) {
+        if (shortNsAllowed) return;
+        const key = node.key;
+        const keyName = key.type === 'Identifier' ? key.name : key.type === 'Literal' ? String(key.value) : '';
+        if (keyName === 'ns' && isShortNs(node.value)) {
+          context.report({ node, messageId: 'shortKeyElsewhere', data: { matched: "ns: 'short'", files: 'shortTerms.ts, ShortLabel.tsx, src/lib/pdf/translations.ts und src/lib/pdfStatisticsExporter.ts' } });
+        }
+      },
       Literal(node) {
         if (typeof node.value !== 'string') return;
         // TS-Typ-Literale (z.B. 'shootout' | 'overtime-then-shootout') sind
@@ -198,7 +257,7 @@ module.exports = {
         checkText(node, node.value.cooked ?? '');
       },
       JSXText(node) {
-        checkText(node, node.value);
+        checkText(node, node.value, true);
       },
     };
   },

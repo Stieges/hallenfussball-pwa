@@ -5,6 +5,7 @@
 
 import type { FinalsPreset } from '../../../types/tournament';
 import { generatePlayoffMatches, type GroupSizeInfo } from '../../../core/generators/playoffGenerator';
+import i18next from 'i18next';
 
 const STORAGE_KEY = 'smartConfig';
 
@@ -282,7 +283,7 @@ export function buildConstraintsList(constraints: LockedConstraints): string[] {
   if (constraints.fields) {
     list.push(`${constraints.fields} ${constraints.fields === 1 ? 'Feld' : 'Felder'}`);
   }
-  if (constraints.gameDuration) {list.push(`${constraints.gameDuration} Min Spieldauer`);}
-  if (constraints.breakDuration) {list.push(`${constraints.breakDuration} Min Pause`);}
+  if (constraints.gameDuration) {list.push(`${i18next.t('sport:zeit.minuteCount', { count: constraints.gameDuration })} Spieldauer`);}
+  if (constraints.breakDuration) {list.push(`${i18next.t('sport:zeit.minuteCount', { count: constraints.breakDuration })} Pause`);}
   return list;
 }

@@ -22,6 +22,11 @@ import {
   saveStoredConfig,
 } from '../utils/smartConfigCalculator';
 import { testUuid } from '../../../test/testIds';
+import { initRealGlobalI18n } from '../../../test/realI18n';
+
+// Die Liste trägt „10 Minuten Spieldauer“ aus der Sprachdatei (@OB-075): echte Texte statt Passthrough-Mock
+vi.unmock('i18next');
+vi.unmock('react-i18next');
 
 /** Turnier mit groupCount Gruppen (Teams i % groupCount → Gruppe A, B, …) für den echten Generator. */
 const gruppenTurnier = (teams: number, groupCount: number, preset: FinalsPreset): Tournament => {
@@ -210,11 +215,13 @@ describe('@W4-020 Hilfsfunktionen des Smart-Config-Moduls', () => {
     expect(loadStoredConfig()).toEqual({ lastHours: 4 });
   });
 
-  it('buildConstraintsList: Singular bei einem Feld (B-38 @W4-021: keine Gruppen mehr in der Liste)', () => {
+  it('buildConstraintsList: Singular bei einem Feld (B-38 @W4-021: keine Gruppen mehr in der Liste)', async () => {
+    await initRealGlobalI18n('de');
     expect(buildConstraintsList({ teams: 8, fields: 1 })).toEqual(['8 Teams', '1 Feld']);
     expect(
       buildConstraintsList({ fields: 2, gameDuration: 10, breakDuration: 3 })
-    ).toEqual(['2 Felder', '10 Min Spieldauer', '3 Min Pause']);
-    expect(buildConstraintsList({ breakDuration: 3 })).toEqual(['3 Min Pause']);
+    ).toEqual(['2 Felder', '10 Minuten Spieldauer', '3 Minuten Pause']);
+    expect(buildConstraintsList({ breakDuration: 3 })).toEqual(['3 Minuten Pause']);
+    expect(buildConstraintsList({ breakDuration: 1 })).toEqual(['1 Minute Pause']);
   });
 });

@@ -31,7 +31,7 @@ const hallencupMitRegelwerk = (): ReturnType<typeof hallencupTournament> => hall
 function kaesten(page: LayoutPage): Box[] {
   const titel = page.texts.find(t => ohneNummer(t.str) === 'Teilnehmer');
   // Erste Spaltenüberschrift der Spieltabelle markiert das Ende der Teilnehmer
-  const spiele = page.texts.find(t => trimmed(t) === 'Nr' && (titel?.y ?? 0) < t.y);
+  const spiele = page.texts.find(t => trimmed(t) === 'Nr.' && (titel?.y ?? 0) < t.y);
   expect(titel, 'Abschnittstitel „Teilnehmer“').toBeDefined();
   expect(spiele, 'Spaltenkopf der Spieltabelle').toBeDefined();
   return page.rects

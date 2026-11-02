@@ -47,7 +47,7 @@ async function messung(page: Page, rand: number, profil: string): Promise<{ metr
   // Befund C-MONITOR-TABELLENKOPF-KONTRAST (nicht Teil dieses Fixes): Spaltenköpfe der Tabelle (`StandingsTable`, auch Einzelfolie „Tabelle“)
   // und Seitenhinweis „Seite x / y“ (`SlidePageHint`, gedämpfte Farbe) liegen bei 1280×720 und 960×540 unter 4,5:1. Ausgenommen sind nur
   // diese Texte, nur in diesen beiden Profilen und nur bei Werten ≥ 3,0:1; jede weitere Verschlechterung bleibt rot. Grenzwerte unverändert.
-  const kopf = new Set(['#', 'Team', 'S', 'U', 'N', 'Diff', 'Pkt']);
+  const kopf = new Set(['#', 'Team', 'S', 'U', 'N', 'Diff.', 'Pkt.']);
   const bekannt = (b: { metrik: string; ist: unknown; text?: string }) => profil !== '1080'
     && b.metrik === 'kontrast.text'
     && (kopf.has(String(b.text)) || /^Seite \d+ \/ \d+$/.test(String(b.text)))

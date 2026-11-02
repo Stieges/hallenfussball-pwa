@@ -10,6 +10,10 @@ import type { Standing } from '../../../types/tournament';
 import type { PdfLocale, PdfTranslator } from '../translations';
 import deTournament from '../../../i18n/locales/de/tournament.json';
 import enTournament from '../../../i18n/locales/en/tournament.json';
+import deShort from '../../../i18n/locales/de/short.json';
+import enShort from '../../../i18n/locales/en/short.json';
+import deSport from '../../../i18n/locales/de/sport.json';
+import enSport from '../../../i18n/locales/en/sport.json';
 import type { Tournament } from '../../../types/tournament';
 import { hallencupTournament } from './pdfFixture';
 import { lastCapture, resetCapture, type CapturedDoc } from './pdfCapture';
@@ -19,28 +23,59 @@ export type TestPdfOptions = Omit<PDFExportOptions, 'tournament'> & { tournament
 
 export type RenderedPdf = CapturedDoc;
 
-/**
- * Echte Ressourcen statt Schlüssel: die globale i18next-Mock der Testumgebung gibt sonst `pdf.nr` zurück.
- * Fehlt ein Schlüssel, wirft der Übersetzer, damit kein Text still leer bleibt.
- */
-function resourceTranslator(resource: Record<string, unknown>): PdfTranslator {
-  return (key, values) => {
+type Resources = Record<string, Record<string, unknown>>;
+
+/** Wert unter `a.b.c` in einer Ressource; bei Zählformen (`_one`/`_other`) nach den Plural-Regeln der Sprache. */
+function lookup(resource: Record<string, unknown> | undefined, path: string, count: number | undefined, locale: PdfLocale): unknown {
+  const find = (p: string): unknown => {
     let node: unknown = resource;
-    for (const part of key.split('.')) {
+    for (const part of p.split('.')) {
       node = (node as Record<string, unknown> | undefined)?.[part];
     }
-    if (typeof node !== 'string') {
-      throw new Error(`Übersetzung fehlt: tournament:${key}`);
-    }
-    return node.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? `{{${name}}}`));
+    return node;
   };
+  if (count !== undefined) {
+    const plural = find(`${path}_${new Intl.PluralRules(locale).select(count)}`);
+    if (typeof plural === 'string') {
+      return plural;
+    }
+  }
+  return find(path);
 }
 
-const RESOURCES: Record<PdfLocale, Record<string, unknown>> = { de: deTournament, en: enTournament };
+/**
+ * Echte Ressourcen statt Schlüssel: die globale i18next-Mock der Testumgebung gibt sonst `pdf.nr` zurück.
+ * Kennt `Namensraum:Schlüssel`, Zählformen und Verschachtelungen `$t(sport:zeit.minuteCount, {"count": 5})` wie i18next.
+ * Fehlt ein Schlüssel, wirft der Übersetzer, damit kein Text still leer bleibt.
+ */
+function resourceTranslator(locale: PdfLocale, namespaces: Resources): PdfTranslator {
+  const translate: PdfTranslator = (key, values) => {
+    const colon = key.indexOf(':');
+    const ns = colon < 0 ? 'tournament' : key.slice(0, colon);
+    const path = colon < 0 ? key : key.slice(colon + 1);
+    const count = typeof values?.count === 'number' ? values.count : undefined;
+    const node = lookup(namespaces[ns], path, count, locale);
+    if (typeof node !== 'string') {
+      throw new Error(`Übersetzung fehlt: ${ns}:${path}`);
+    }
+    return node
+      .replace(/\$t\(([^,)]+)(?:,\s*(\{[^)]*\}))?\)/g, (_, ref: string, options: string | undefined) => {
+        const nested = options === undefined ? {} : (JSON.parse(options.replace(/\{\{(\w+)\}\}/g, (__, name: string) => String(values?.[name] ?? 0))) as Record<string, string | number>);
+        return translate(ref.trim(), nested);
+      })
+      .replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? `{{${name}}}`));
+  };
+  return translate;
+}
+
+const RESOURCES: Record<PdfLocale, Resources> = {
+  de: { tournament: deTournament, short: deShort, sport: deSport },
+  en: { tournament: enTournament, short: enShort, sport: enSport },
+};
 
 /** Übersetzer mit der echten Ressource der Sprache (für Tests, die `exportScheduleToPDF` direkt aufrufen). */
 export function translatorFor(locale: PdfLocale): PdfTranslator {
-  return resourceTranslator(RESOURCES[locale]);
+  return resourceTranslator(locale, RESOURCES[locale]);
 }
 
 /** Rendert den Export und gibt Dateiname, Seitenmaße und Text je Seite zurück. Vorgabe: Deutsch. */

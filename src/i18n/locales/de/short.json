@@ -1,0 +1,15 @@
+{
+  "tabellenkopf": {
+    "rank": "#",
+    "played": "Sp.",
+    "won": "S",
+    "drawn": "U",
+    "lost": "N",
+    "goalDifference": "Diff.",
+    "points": "Pkt.",
+    "number": "Nr."
+  },
+  "ergebniszelle": {
+    "extraTime": "n. V."
+  }
+}

@@ -24,7 +24,6 @@ import sportGlossary from '../../i18n/glossary.json'
 
 // Re-export types for backwards compatibility
 export type { ScheduledMatch, SchedulePhase, GeneratedSchedule } from './scheduleTypes'
-export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from '../../lib/scheduleRenderer'
 
 // Import internal helpers
 import { SchedulePhase, GeneratedSchedule, ScheduledMatch, ScheduleNotice } from './scheduleTypes'

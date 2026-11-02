@@ -5,6 +5,8 @@
  * BUG-MOD-004 FIX: Properly handles multi-day tournaments
  */
 
+import i18next from 'i18next';
+
 /** Sekunden je Minute (Umrechnung, kein Maß). */
 export const SECONDS_PER_MINUTE = 60;
 
@@ -72,15 +74,15 @@ export function formatElapsedTime(seconds: number): string {
 
 /**
  * Formats a duration in seconds to a human-readable string
- * e.g., 630 -> "10:30 Min"
+ * e.g., 630 -> "10:30 Minuten"
  */
 export function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   if (secs === 0) {
-    return `${mins} Min`;
+    return `${mins} ${i18next.t('sport:zeit.minutes')}`;
   }
-  return `${mins}:${secs.toString().padStart(2, '0')} Min`;
+  return `${mins}:${secs.toString().padStart(2, '0')} ${i18next.t('sport:zeit.minutes')}`;
 }
 
 /**

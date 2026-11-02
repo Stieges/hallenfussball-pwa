@@ -42,7 +42,7 @@ describe('@EK-062 Zuschauer-Seite zeigt das wiedereröffnete Halbfinale 1 mit 2:
     expect(tore('away')).toBe('3');
     expect(strafstoss('home')).toBeUndefined();
     expect(strafstoss('away')).toBeUndefined();
-    expect(document.body.textContent).not.toContain('i. E.');
+    expect(document.body.textContent).not.toContain('Strafstoßschießen');
     expect(result?.winner).toBe('b');
   });
 
@@ -52,13 +52,13 @@ describe('@EK-062 Zuschauer-Seite zeigt das wiedereröffnete Halbfinale 1 mit 2:
     expect(screen.getByTestId(`match-circle-${ID}`).textContent).toBe('2:3');
   });
 
-  it('@EK-062 Gegenbeispiel: erneut 2:2 – (4) bei FC Nord, (3) bei DJK Berg, „beendet i. E.“', async () => {
+  it('@EK-062 Gegenbeispiel: erneut 2:2 – (4) bei FC Nord, (3) bei DJK Berg, „beendet nach Strafstoßschießen“', async () => {
     const result = await karte(false);
     expect(tore('home')).toBe('2');
     expect(tore('away')).toBe('2');
     expect(strafstoss('home')).toBe('(4)');
     expect(strafstoss('away')).toBe('(3)');
-    expect(screen.getByTestId('match-card-decision').textContent).toBe('beendet i. E.');
+    expect(screen.getByTestId('match-card-decision').textContent).toBe('beendet nach Strafstoßschießen');
     expect(result?.winner).toBe('a');
   });
 });

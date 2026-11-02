@@ -1,5 +1,5 @@
 /**
- * B-28 C1 (@DR-025): Spalte „SR“ in Gruppen- und Finaltabellen. Nummer, Name des pfeifenden Teams oder ein leeres
+ * B-28 C1 (@DR-025): Spalte „Schiedsrichter“ in Gruppen- und Finaltabellen (@OB-075: ausgeschrieben, nie „SR“). Nummer, Name des pfeifenden Teams oder ein leeres
  * Schreibfeld, gelesen aus dem fertigen PDF (pdfjs). Die drei Beispiele der Anforderung.
  */
 import { describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ import { finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixt
 import { kaestchenIn, lesen, SIZE_TOL, textsIn, zeileVon, type Zeile } from './pdfScoreSupport';
 
 const GEO = pageGeometry('a4', 'portrait');
-/** Spalte „SR“ der Gruppen- oder der Finaltabelle: Beginn in mm und Breite des Schreibfelds. */
+/** Spalte „Schiedsrichter“ der Gruppen- oder der Finaltabelle: Beginn in mm und Breite des Schreibfelds. */
 const spalte = (tabelle: 'match' | 'finals') => ({
   von: GEO.left + GEO.contentWidth - printColumns[tabelle].referee,
   feld: printColumns[tabelle].referee - 2 * printGap.bodyPadH,
@@ -36,7 +36,7 @@ async function seiten(config: RefereeConfig | undefined, zuteilung: Record<numbe
 const inSpalte = (zeile: Zeile, tabelle: 'match' | 'finals' = 'match') => textsIn(zeile).filter(t => t.x >= spalte(tabelle).von);
 const feld = (zeile: Zeile, tabelle: 'match' | 'finals' = 'match') => kaestchenIn(zeile, spalte(tabelle).feld, printBox.refereeFieldH);
 
-describe('@DR-025 Spalte „SR“', () => {
+describe('@DR-025 Spalte „Schiedsrichter“', () => {
   it('Schiedsrichter Nummer 2 eingetragen: „2“ in der Spalte, kein Schreibfeld', async () => {
     const zeile = zeileVon(await seiten({ mode: 'organizer', numberOfReferees: 2 }, { 7: 2 }), 7);
 
@@ -59,9 +59,9 @@ describe('@DR-025 Spalte „SR“', () => {
     expect(feld(zeile)).toHaveLength(1);
   });
 
-  it('Spaltenkopf „SR“ steht über der Spalte, in Gruppen- und in Finaltabellen', async () => {
+  it('Spaltenkopf „Schiedsrichter“ steht über der Spalte, in Gruppen- und in Finaltabellen', async () => {
     const pages = await seiten(undefined, {});
-    const koepfe = pages.flatMap(page => page.texts.filter(t => t.str.trim() === 'SR' && t.x >= spalte('finals').von));
+    const koepfe = pages.flatMap(page => page.texts.filter(t => t.str.trim() === 'Schiedsrichter' && t.x >= spalte('finals').von));
 
     expect(koepfe.length).toBeGreaterThanOrEqual(3);
   });

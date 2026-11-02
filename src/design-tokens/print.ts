@@ -212,8 +212,8 @@ export const printColumns = {
     field: 10,
     group: 9,
     result: 30,
-    /** Spalte „SR“ (@DR-025): Nummer, Teamname oder Schreibfeld */
-    referee: 24,
+    /** Spalte „Schiedsrichter“ (@DR-025, @OB-075: ausgeschrieben): Nummer, Teamname oder Schreibfeld; breit genug für das Kopfwort (gemessen ≈ 26,6 mm) */
+    referee: 27,
   },
   /** Finalrunde: Ergebnisspalte breiter */
   finals: {
@@ -221,7 +221,8 @@ export const printColumns = {
     time: 17,
     field: 10,
     result: 44,
-    referee: 20,
+    /** Wie bei den Gruppenspielen: das Kopfwort „Schiedsrichter“ bricht nie um (@OB-075). */
+    referee: 27,
   },
   /** Gruppentabellen und Platzierung */
   standings: {

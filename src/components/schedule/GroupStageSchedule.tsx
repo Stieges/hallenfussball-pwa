@@ -32,6 +32,7 @@ import { SortableDesktopCard } from './SortableDesktopCard';
 import { DesktopCard } from './DesktopCard';
 import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
 import { useRefereeChoices } from './refereeChoices';
+import { Versus } from '../ui/atoms';
 
 // Pending changes during edit mode
 interface PendingChanges {
@@ -601,7 +602,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 </span>
                 <span style={{ fontWeight: cssVars.fontWeights.bold, flex: 1 }}>
                   {sideName(activeMatch, 'A', sides)}
-                  <span style={{ color: cssVars.colors.textMuted, padding: `0 ${cssVars.spacing.sm}` }}>vs</span>
+                  <span style={{ color: cssVars.colors.textMuted, padding: `0 ${cssVars.spacing.sm}` }}><Versus /></span>
                   {sideName(activeMatch, 'B', sides)}
                 </span>
                 {hasGroups && (
@@ -716,7 +717,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   {activeMatch.time}
                 </span>
                 <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1, fontSize: cssVars.fontSizes.sm }}>
-                  {sideName(activeMatch, 'A', sides)} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {sideName(activeMatch, 'B', sides)}
+                  {sideName(activeMatch, 'A', sides)} <span style={{ color: cssVars.colors.textMuted }}><Versus /></span> {sideName(activeMatch, 'B', sides)}
                 </span>
               </div>
             )}
@@ -757,7 +758,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   onCircleClick={() => handleCircleClick(match.id)}
                   isExpanded={isExpanded}
                   expandContent={renderExpandContent(match)}
-                  referee={match.referee ? t('groupStage.refereeLabel', { number: match.referee }) : undefined}
+                  referee={match.referee ? String(match.referee) : undefined}
                   hasEvents={hasEvents}
                 />
               </div>

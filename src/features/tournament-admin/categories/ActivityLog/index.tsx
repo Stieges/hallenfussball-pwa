@@ -13,6 +13,7 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match, CorrectionEntry } from '../../../../types/tournament';
 import { slotLabel } from '../../../../core/models/slotLabel';
+import i18next from 'i18next';
 
 // =============================================================================
 // TYPES
@@ -198,7 +199,7 @@ const styles = {
 /** „Heim vs Gast“ über die Slots (@TM-015): Team über die Team-ID, offene Seite über ihre Herkunft. */
 function getMatchLabel(tournament: Tournament, match: Match): string {
   const ctx = { teams: tournament.teams, matches: tournament.matches, groups: tournament.groups };
-  return `${slotLabel(match.slotA, ctx)} vs ${slotLabel(match.slotB, ctx)}`;
+  return `${slotLabel(match.slotA, ctx)} ${i18next.t('sport:tournament.versus')} ${slotLabel(match.slotB, ctx)}`;
 }
 
 function formatDateTime(isoString: string): string {

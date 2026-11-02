@@ -1,0 +1,16 @@
+/*
+ * Nur für Screenreader: der Text bleibt im Barrierefreiheitsbaum, ist aber nicht sichtbar (WCAG-Technik C7).
+ * `nowrap` bleibt: ein Umbruch in der 1-Pixel-Box ließe Screenreader Buchstaben einzeln lesen. Die Randmessung am Monitor
+ * (tests/e2e/flows/monitor-rand.spec.ts, @ME-067) überspringt solchen versteckten Text.
+ */
+.nurVorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

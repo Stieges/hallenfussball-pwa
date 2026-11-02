@@ -400,7 +400,7 @@
     "confirmReset": "Do you want to discard all changes and restore the original values?",
     "changesSaved": "Changes saved",
     "rulebook": "Rulebook (optional)",
-    "rulebookPlaceholder": "e.g. BFV rules for futsal",
+    "rulebookPlaceholder": "e.g. rules of the Bavarian Football Association for futsal",
     "rulebookLimit": "Up to 80 characters.",
     "rulebookTruncated": "Cut to 80 characters.",
     "confirmResetDialog": {

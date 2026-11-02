@@ -62,12 +62,12 @@ beforeEach(async () => {
 });
 
 describe('R3-5b @ET-001 Gruppen-Ausgeschiedene zeigen Spiele, Punkte und Tordifferenz mit Vorzeichen', () => {
-  it('Plätze 5 bis 8: Punkte 4, 3, 0, 0 und Tordifferenz +1, −3, −5, −7; Spaltenköpfe Sp, Diff, Pkt', async () => {
+  it('Plätze 5 bis 8: Punkte 4, 3, 0, 0 und Tordifferenz +1, −3, −5, −7; Spaltenköpfe Sp., Diff., Pkt.', async () => {
     read.mockResolvedValue({ status: 'ok', snapshot: hallencup(), finishedAt: FINISHED_AT });
     render(<FinalStandingsPanel tournament={finished(fertig)} />);
     await screen.findByTestId('final-standings-list');
     const header = within(screen.getByTestId('final-standings-header'));
-    expect([header.getByText('Sp'), header.getByText('Diff'), header.getByText('Pkt')]).toHaveLength(3);
+    expect([header.getByText('Sp.'), header.getByText('Diff.'), header.getByText('Pkt.')]).toHaveLength(3);
     expect(cells('final-standing-points').slice(4)).toEqual(['4', '3', '0', '0']);
     expect(cells('final-standing-diff').slice(4)).toEqual(['+1', '−3', '−5', '−7']);
     expect(cells('final-standing-games').slice(4)).toEqual(['3', '3', '3', '3']);

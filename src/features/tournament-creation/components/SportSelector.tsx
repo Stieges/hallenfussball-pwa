@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { SportId, SportConfig, getAvailableSports } from '../../../config/sports';
 import { useSportTerms } from '../../../hooks/useSportTerms';
+import i18next from 'i18next';
 
 interface SportSelectorProps {
   selectedSportId: SportId | undefined;
@@ -48,7 +49,7 @@ const SportCard: React.FC<SportCardProps> = ({
     const parts: string[] = [];
 
     // Game duration
-    parts.push(`${sport.defaults.gameDuration} Min.`);
+    parts.push(i18next.t('sport:zeit.minuteCount', { count: sport.defaults.gameDuration }));
 
     // Periods if > 1
     if (sport.defaults.periods > 1) {

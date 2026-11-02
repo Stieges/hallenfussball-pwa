@@ -210,7 +210,7 @@ test.describe('Offline-Robustheit des Ausgangs (2)', () => {
       expect((await fetchEngineRows(ids.matchId)).length).toBe(baseRows);
 
       // Gegenprobe: solange Toms Einträge warten, steht die Zeitstrafe nicht im Verlauf des zweiten Geräts.
-      const ownerPenaltyRow = ownerPage.locator('span', { hasText: /^⏱ 2 Min / });
+      const ownerPenaltyRow = ownerPage.locator('span', { hasText: /^⏱ 2 Minuten / });
       await expect(ownerPenaltyRow).toHaveCount(0);
 
       await helperContext.setOffline(false);

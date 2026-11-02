@@ -77,7 +77,7 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(text).toContain('Modus');
     expect(text).toContain('Gruppen + Finalrunde');
     expect(text).toContain('Spielzeit');
-    expect(text).toContain('10 Min. · Zeitstrafe 2 Min.');
+    expect(text).toContain('10 Minuten · Zeitstrafe 2 Minuten');
   });
 
   it('Teilnehmer: Gruppen A und B, Kennungen A1–B4 in Zuteilungsreihenfolge, nicht alphabetisch (v7.2 gen.py:165–168, Daniel 15.10.)', async () => {

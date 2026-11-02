@@ -8,6 +8,7 @@ import type deMonitor from './locales/de/monitor.json';
 import type deSettings from './locales/de/settings.json';
 import type deAdmin from './locales/de/admin.json';
 import type deSport from './locales/de/sport.json';
+import type deShort from './locales/de/short.json';
 import type dePublicView from './locales/de/publicView.json';
 import type deHelpers from './locales/de/helpers.json';
 
@@ -31,6 +32,7 @@ declare module 'i18next' {
       settings: typeof deSettings;
       admin: typeof deAdmin;
       sport: typeof deSport;
+      short: typeof deShort;
       publicView: typeof dePublicView;
       helpers: typeof deHelpers;
     };

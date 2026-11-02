@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Match, Team, RefereeConfig } from '../../../types/tournament';
 import { cssVars } from '../../../design-tokens'
 import { matchTeamIds } from '../../../core/models/matchSlot';
@@ -125,12 +126,13 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
   enabled = true,
   validateChange,
 }) => {
+  const { t } = useTranslation('tournament');
   const [activeSelect, setActiveSelect] = useState<'referee' | 'field' | null>(null);
 
   // Get referee options
   const getRefereeOptions = useCallback((): SelectOption[] => {
     const options: SelectOption[] = [
-      { value: undefined, label: '— Kein SR —', hasConflict: false },
+      { value: undefined, label: `— ${t('matchCard.noReferee')} —`, hasConflict: false },
     ];
 
     if (!refereeConfig || refereeConfig.mode === 'none') {
@@ -141,7 +143,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
       // Organizer-provided referees
       for (let i = 1; i <= refereeConfig.numberOfReferees; i++) {
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
-        const name = refereeConfig.refereeNames?.[i] || `SR ${i}`;
+        const name = refereeConfig.refereeNames?.[i] || t('refereeOptions.numbered', { number: i });
         let hasConflict = false;
         let conflictMessage: string | undefined;
 
@@ -202,7 +204,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
     }
 
     return options;
-  }, [match, teams, refereeConfig, validateChange]);
+  }, [match, teams, refereeConfig, validateChange, t]);
 
   // Get field options
   const getFieldOptions = useCallback((): SelectOption[] => {
@@ -266,7 +268,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
       <div style={{ ...containerStyle, ...disabledStyle }}>
         {showRefereeSelector && (
           <div style={fieldGroupStyle}>
-            <span style={labelStyle}>SR:</span>
+            <span style={labelStyle}>{t('scheduleEditor.refereeLabel')}</span>
             <span style={{ fontSize: cssVars.fontSizes.sm }}>
               {currentRefereeOption?.label ?? '—'}
             </span>
@@ -287,7 +289,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
       {/* Referee Selector */}
       {showRefereeSelector && (
         <div style={fieldGroupStyle}>
-          <span style={labelStyle}>SR:</span>
+          <span style={labelStyle}>{t('scheduleEditor.refereeLabel')}</span>
           <div style={selectContainerStyle}>
             <select
               value={currentReferee ?? ''}

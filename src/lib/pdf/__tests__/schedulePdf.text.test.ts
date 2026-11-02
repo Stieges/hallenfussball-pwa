@@ -74,7 +74,11 @@ describe('Review Focus 5: 50-Zeichen-Name mit ä/ö/ü/ß', () => {
     const text = flatText(pdf);
     // Zellen dürfen umbrechen (zwei bis drei Zeilen), der Name muss als Ganzes erhalten bleiben.
     const joined = text.map(t => t.replace(/\s*\n\s*/g, ' '));
-    expect(joined.filter(t => t === LONG_50).length).toBeGreaterThanOrEqual(2);
+    // Seit @OB-075 (Spaltenköpfe „Schiedsrichter“, „Gruppe“ ausgeschrieben) sind Heim und Gast schmaler: in der Spieltabelle
+    // steht der Name in mehreren Stücken, die Zeichen sind vollständig und in Reihenfolge da. Teilnehmer und Tabelle: ein Stück.
+    const key = LONG_50.replace(/\s+/g, '');
+    expect(joined.join('').replace(/\s+/g, '').split(key).length - 1).toBeGreaterThanOrEqual(3);
+    expect(joined.filter(t => t === LONG_50).length).toBeGreaterThanOrEqual(1);
     expect(text.some(t => t.includes('…'))).toBe(false);
   });
 });

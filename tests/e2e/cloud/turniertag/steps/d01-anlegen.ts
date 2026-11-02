@@ -86,7 +86,7 @@ async function halbfinaleHerkunft(view: (typeof TM015_VIEWS)[number], { asRole, 
     await anonPage.goto(`/#/display/${TURNIERTAG_ID}/${E2E_TURNIERTAG_MONITOR_ID}`);
     await anonPage.waitForLoadState('networkidle');
     await expectPageAnchor(anonPage.getByText('Nächstes Spiel', { exact: true }), 'Hallen-Monitor (LiveSlide)');
-    await expect(anonPage.locator('body')).toHaveText(/Erster Gruppe A\s+vs\s+Zweiter Gruppe B/i, { timeout: 5000 });
+    await expect(anonPage.locator('body')).toHaveText(/Erster Gruppe A\s+gegen\s+Zweiter Gruppe B/i, { timeout: 5000 });
   } else {
     await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
     await anonPage.waitForLoadState('networkidle');
@@ -115,6 +115,6 @@ export const steps: readonly TurniertagStep[] = [
 /**
  * @TM-015 "Hallen-Monitor" läuft vor D8: die Vorbereitung beendet nur die Gruppenspiele auf
  * Feld 1, auf Feld 2 laufen Gruppe A und B noch (Szenario-Vorbedingung). HF1 ist dann das
- * nächste Spiel auf Feld 1 und die LiveSlide zeigt "Erster Gruppe A vs Zweiter Gruppe B".
+ * nächste Spiel auf Feld 1 und die LiveSlide zeigt "Erster Gruppe A gegen Zweiter Gruppe B".
  */
 export const stepsNachGruppenabschluss: readonly TurniertagStep[] = [tm015Step('Hallen-Monitor')];

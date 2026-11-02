@@ -22,7 +22,7 @@
     "yellowCard": "Gelbe Karte für {{teamName}}",
     "yellowRedCard": "Gelb-Rote Karte für {{teamName}}",
     "redCard": "Rote Karte für {{teamName}}",
-    "timePenalty": "{{minutes}} Min Zeitstrafe für {{teamName}}"
+    "timePenalty": "Zeitstrafe von $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }) für {{teamName}}"
   },
   "meldung": {
     "angepfiffen": "Spiel angepfiffen",
@@ -35,7 +35,7 @@
     "foulGrenze": "{{teamName}}: {{count}}. Foul in dieser Halbzeit",
     "schliessen": "Hinweis schließen",
     "zurueckgesetzt": "Spiel {{nummer}} von der Turnierleitung zurückgesetzt",
-    "zeitstrafeAbgelaufen": "Zeitstrafe {{team}} Nr. {{nummer}} abgelaufen",
+    "zeitstrafeAbgelaufen": "Zeitstrafe {{team}} Nummer {{nummer}} abgelaufen",
     "zeitstrafeAbgelaufenOhneNr": "Zeitstrafe {{team}} abgelaufen",
     "tor": "Tor für {{team}}",
     "foul": "Foul für {{team}}",
@@ -95,8 +95,8 @@
     "vor": {
       "spielFeld": "Spiel {{nummer}} · {{feld}}",
       "mindestpause": "{{teamName}} hätte nur {{minuten}} statt {{mindestMinuten}} Minuten Pause",
-      "ueberfaellig": "überfällig {{minuten}} Min",
-      "gesperrt": "{{team}}: Nr. {{nummer}} ist für dieses Turnier gesperrt",
+      "ueberfaellig": "überfällig $t(sport:zeit.minuteCount, {\"count\": {{minuten}} })",
+      "gesperrt": "{{team}}: Nummer {{nummer}} ist für dieses Turnier gesperrt",
       "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
       "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",
       "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest.",
@@ -215,12 +215,12 @@
     "title": "Zeitstrafe",
     "chooseDuration": "Strafzeit wählen",
     "forWhichTeam": "Für welches Team?",
-    "oneMin": "1 Min",
-    "twoMin": "2 Min",
-    "fiveMin": "5 Min",
+    "oneMin": "1 Minute",
+    "twoMin": "2 Minuten",
+    "fiveMin": "5 Minuten",
     "jerseyNumber": "Rückennummer (optional)",
     "cancel": "Abbrechen",
-    "withoutNumber": "Ohne Nr.",
+    "withoutNumber": "Ohne Nummer",
     "save": "Speichern",
     "back": "Zurück",
     "eventDescription": "Zeitstrafe"
@@ -241,7 +241,7 @@
     "title": "Tor für",
     "jerseyNumber": "Rückennummer (optional)",
     "assist": "Assist (optional)",
-    "withoutNumber": "Ohne Nr.",
+    "withoutNumber": "Ohne Nummer",
     "save": "Speichern",
     "jerseyAria": "Rückennummer eingeben",
     "assist1Aria": "Assist 1 Rückennummer",
@@ -254,12 +254,12 @@
     "titel": "Aktive Zeitstrafen",
     "keine": "Keine aktiven Zeitstrafen",
     "restzeit": "Restzeit",
-    "mitNr": "{{team}}, Nr. {{nummer}}",
-    "ohneNr": "{{team}}, ohne Nr.",
-    "dauer": "Zeitstrafe {{minuten}} Min",
-    "dauerSeit": "Zeitstrafe {{minuten}} Min · seit Spielzeit {{zeit}}",
+    "mitNr": "{{team}}, Nummer {{nummer}}",
+    "ohneNr": "{{team}}, ohne Nummer",
+    "dauer": "Zeitstrafe $t(sport:zeit.minuteCount, {\"count\": {{minuten}} })",
+    "dauerSeit": "Zeitstrafe $t(sport:zeit.minuteCount, {\"count\": {{minuten}} }) · seit Spielzeit {{zeit}}",
     "weitere": "+ {{count}} weitere ({{team}})",
-    "dauerSeitErsteHalbzeit": "Zeitstrafe {{minuten}} Min · seit 1. Halbzeit {{zeit}}"
+    "dauerSeitErsteHalbzeit": "Zeitstrafe $t(sport:zeit.minuteCount, {\"count\": {{minuten}} }) · seit 1. Halbzeit {{zeit}}"
   },
   "sidebar": {
     "activePenalties": "Aktive Zeitstrafen",
@@ -268,16 +268,16 @@
     "noEvents": "Noch keine Ereignisse",
     "goalEvent": "Tor {{teamName}}{{player}}",
     "ownGoalEvent": "Eigentor {{teamName}}{{player}}",
-    "playerNumber": ", Nr. {{number}}",
-    "withoutNumber": ", ohne Nr.",
+    "playerNumber": ", Nummer {{number}}",
+    "withoutNumber": ", ohne Nummer",
     "sheetYellowEvent": "Gelbe Karte {{teamName}}",
-    "sheetPenaltyEvent": "{{duration}} Min Zeitstrafe {{teamName}}",
+    "sheetPenaltyEvent": "Zeitstrafe ($t(sport:zeit.minuteCount, {\"count\": {{duration}} })) {{teamName}}",
     "sheetSubstitutionDetail": "Wechsel {{teamName}}: {{out}} → {{in}}",
     "statusOther": "Status: {{status}}",
     "yellowEvent": "Gelb {{teamName}}",
     "yellowRedEvent": "Gelb-Rot {{teamName}}",
     "redEvent": "Rot {{teamName}}",
-    "penaltyEvent": "{{duration}} Min {{teamName}}",
+    "penaltyEvent": "$t(sport:zeit.minuteCount, {\"count\": {{duration}} }) {{teamName}}",
     "substitutionEvent": "Wechsel {{teamName}}",
     "foulEvent": "Foul {{teamName}}",
     "matchStarted": "Spiel gestartet",
@@ -299,7 +299,7 @@
     "paused": "Pausiert",
     "finished": "Beendet",
     "ready": "Bereit",
-    "prepareWarning": "Noch {{minutes}} Min – Nächstes Spiel vorbereiten!"
+    "prepareWarning": "Noch $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }) – Nächstes Spiel vorbereiten!"
   },
   "currentMatch": {
     "title": "Aktuelles Spiel",
@@ -401,7 +401,7 @@
     "decreaseMinutes": "Minuten verringern",
     "increaseSeconds": "Sekunden erhöhen",
     "decreaseSeconds": "Sekunden verringern",
-    "matchDuration": "Spieldauer: {{duration}}:00 Min",
+    "matchDuration": "Spieldauer: {{duration}}:00 Minuten",
     "save": "Speichern",
     "cancel": "Abbrechen"
   },
@@ -489,7 +489,7 @@
         "shootoutKick": "$t(sport:events.penalty)"
       },
       "target": "{{kind}}",
-      "targetNumbered": "{{kind}} Nr. {{number}}",
+      "targetNumbered": "{{kind}} Nummer {{number}}",
       "undoLabel": "{{target}} zurücknehmen",
       "minusAria": "{{target}} für {{teamName}} zurücknehmen",
       "done": "{{target}} zurückgenommen"
@@ -507,8 +507,8 @@
     "zeitstrafen": "Zeitstrafen ({{count}})",
     "zeitstrafenKeine": "Zeitstrafen (0): keine",
     "fouls": "Fouls: {{count}}",
-    "nr": "Nr. {{nummer}}, {{zeit}}",
-    "ohneNr": "ohne Nr., {{zeit}}",
+    "nr": "Nummer {{nummer}}, {{zeit}}",
+    "ohneNr": "ohne Nummer, {{zeit}}",
     "eigentor": "$t(sport:events.ownGoal) {{text}}",
     "karte": {
       "YELLOW": "$t(cardDialog.yellowCard)",
@@ -525,11 +525,11 @@
     "fouls": "Foul {{zaehlt}}/{{grenze}}",
     "foulsOhneGrenze": "Foul · {{zaehlt}}",
     "foulsOhneGrenzeAria": "Foul {{zaehlt}}",
-    "strafe": "Nr. {{nummer}} · {{rest}}",
-    "strafeOhneNr": "ohne Nr. · {{rest}}",
+    "strafe": "Nummer {{nummer}} · {{rest}}",
+    "strafeOhneNr": "ohne Nummer · {{rest}}",
     "unterzahl": "Unterzahl · {{rest}}",
     "ergaenzen": "darf sich ergänzen",
-    "gesperrt": "Nr. {{nummer}} gesperrt",
+    "gesperrt": "Nummer {{nummer}} gesperrt",
     "aria": {
       "tor": "Tor {{team}}",
       "foul": "Foul {{team}}, {{zaehler}}",
@@ -537,14 +537,14 @@
       "strafe": "Zeitstrafe {{team}}"
     },
     "strafeKnopf": "Zeitstrafe",
-    "strafeDauer": "{{minuten}} Min"
+    "strafeDauer": "$t(sport:zeit.minuteCount, {\"count\": {{minuten}} })"
   },
   "nummer": {
     "titelTor": "Rückennummer – Tor {{team}}",
     "eigentor": "Eigentor ({{gegner}})",
     "titelEigentor": "Nummer des Spielers von {{gegner}}",
     "ohneNummer": "ohne Nummer",
-    "andere": "Andere Nr.",
+    "andere": "Andere Nummer",
     "uebernehmen": "Übernehmen",
     "eingabe": "Rückennummer",
     "ungueltig": "Rückennummer: ganze Zahl von 1 bis 99.",
@@ -556,7 +556,7 @@
     "gelb": "Gelb",
     "gelbRot": "Gelb-Rot",
     "rot": "Rot",
-    "schonGelb": "Nr. {{nummer}} hat schon Gelb",
+    "schonGelb": "Nummer {{nummer}} hat schon Gelb",
     "trotzdemGelb": "Trotzdem Gelb"
   },
   "leiste": {

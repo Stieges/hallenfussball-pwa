@@ -56,12 +56,26 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Schrift, alle fünf Fixtures): gleiche Seitenzahl, gleiche Textstücke bis auf die Herkunft der Finalteams, die in den Hochformaten
  * wegen der breiteren „1“ und „2“ umbricht („Sieger Halbfinale“ / „1“; EN „Loser Semi-final“ / „1“); alles andere verschiebt sich um
  * Bruchteile eines Millimeters. Bild DE (Seite 1 und 3) und EN (Seite 3) gesichtet (Review und Umsetzer). Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
+ * Neu aufgenommen 01.11. (@OB-075/@OB-076, Paket „Begriffe ausschreiben“): Spaltenköpfe „Schiedsrichter“ und „Gruppe“ statt „SR“
+ * und „Gr“, „Nr.“/„Sp.“/„Diff.“/„Pkt.“ und „#“ statt „Nr“/„Sp“/„Diff“/„Pkt“/„Pl“ (EN: „Referee“, „Group“, „GD“, „#“), „10 Minuten“
+ * statt „10 Min.“ in der Regelzeile; die Spalte „Schiedsrichter“ ist 27 mm breit (Token printColumns), „Gruppe“ und „Nr.“ weiten
+ * sich auf ihr Kopfwort, Heim und Gast werden in der Gruppenphase und der Finalrunde ca. 5 mm schmaler (Namen brechen früher um).
+ * Stände davor (Stand T1): ee37c5de21d3, 574eec8b7779, 0bf091cb1408, c2826c814458, EN fb13bbb6d917.
+ * Text-für-Text verglichen (12 Spiele, hoch, DE und EN; Lauf origin/main mit T1 gegen diesen Stand, je 337 Textstücke): geändert sind nur die
+ * genannten Kopfwörter und Zahlwörter („10 Minuten“, EN „10 minutes“, „Gruppe“/„Group“, „Schiedsrichter“/„Referee“, „#“, „Nr.“, „Sp.“,
+ * „Diff.“, „Pkt.“, EN „GD“) und der Umbruch der Herkunft der Finalteams in der schmaleren Heim- und Gast-Spalte („Sieger“ / „Halbfinale 1“
+ * statt „Sieger Halbfinale“ / „1“; EN „Winner“ / „Semi-final 1“). Bild DE (Seite 1 und 3) und EN (Seite 1 und 3) gesichtet: Köpfe
+ * ungebrochen, nichts abgeschnitten, kein Überlauf, Heim und Gast in beiden Sprachen lesbar.
+ * Die drei übrigen Prüfsummen (20 Spiele hoch, 12 und 20 Spiele quer) sind ebenfalls Text-für-Text gegen origin/main verglichen (als Menge der
+ * Textstücke, Zählung je Stück): dieselbe Änderung, nämlich nur die oben genannten Wörter (je Seitenkopf „Nr.“, „Schiedsrichter“, „Gruppe“,
+ * „#“, „Sp.“, „Diff.“, „Pkt.“, die Zeitzeile) und in den Hochformaten der Umbruch „Sieger“ / „Halbfinale 1“; im Querformat ändert sich
+ * zusätzlich die Reihenfolge, in der die Kopfzellen ausgegeben werden, nicht ihr Inhalt.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'ee37c5de21d3',
-  '20 Spiele, hoch': '574eec8b7779',
-  '12 Spiele, quer': '0bf091cb1408',
-  '20 Spiele, quer': 'c2826c814458',
+  '12 Spiele, hoch': '6720748dc9c2',
+  '20 Spiele, hoch': '1d9fc9ecc557',
+  '12 Spiele, quer': 'af351460128a',
+  '20 Spiele, quer': 'b0c3148ebdee',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -76,7 +90,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('fb13bbb6d917');
+    expect(layoutDigest(pages)).toBe('e14f54a199ec');
   });
 });
 

@@ -35,7 +35,7 @@ async function halbfinaleElfmeter({ anonPage }: StepContext): Promise<void> {
   const zeile = anonPage.locator('tr', { hasText: 'Halbfinale 1' }).first();
   await expect(zeile, 'Zeile von Halbfinale 1 auf der Zuschauer-Seite').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
   await expect(zeile).toHaveText(/1\s*:\s*1/, { timeout: SOLL_TIMEOUT_MS });
-  await expect(zeile, 'Strafstoß-Vermerk (i. E. / Elfmeterschießen)').toHaveText(/i\.\s?E\.|n\.\s?E\.|Elfmeter|Strafstoß/i, { timeout: SOLL_TIMEOUT_MS });
+  await expect(zeile, 'Strafstoß-Ergebnis in Klammern, z. B. (4:3)').toHaveText(/\(\s*\d+\s*:\s*\d+\s*\)|Strafstoß/i, { timeout: SOLL_TIMEOUT_MS });
 }
 
 /**

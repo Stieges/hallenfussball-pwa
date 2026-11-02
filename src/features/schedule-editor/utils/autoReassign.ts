@@ -8,6 +8,7 @@
  * - Batch change tracking
  */
 
+import i18next from 'i18next';
 import { Match, RefereeConfig } from '../../../types/tournament';
 import { getMatchStartState } from '../../../utils/matchStartState';
 import { MatchChange, ReassignmentResult, ReassignmentOptions } from '../types';
@@ -44,7 +45,7 @@ function calculateRefereeWorkloads(
     workloads.set(i, {
       refereeId: i,
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty referee name should use default
-      name: refereeConfig.refereeNames?.[i] || `SR ${i}`,
+      name: refereeConfig.refereeNames?.[i] || i18next.t('tournament:refereeOptions.numbered', { number: i }),
       assignedMatches: 0,
       consecutiveMatches: 0,
       matchIds: [],
@@ -365,7 +366,7 @@ export function redistributeAfterSkip(
     changes,
     unresolvedConflicts: [],
     message: changes.length > 0
-      ? `SR ${freedReferee} zu Spiel ${changes[0].matchId.slice(-3)} zugewiesen`
+      ? i18next.t('tournament:scheduleEditor.refereeAssigned', { referee: freedReferee, match: changes[0].matchId.slice(-3) })
       : 'Keine Umverteilung möglich',
   };
 }
@@ -586,7 +587,7 @@ export function redistributeAll(
   return {
     refereeChanges: refereeResult.changes,
     fieldChanges: fieldResult.changes,
-    message: `${refereeResult.changes.length} SR-Zuweisungen, ${fieldResult.changes.length} Feld-Zuweisungen angepasst`,
+    message: i18next.t('tournament:scheduleEditor.reassignSummary', { referees: refereeResult.changes.length, fields: fieldResult.changes.length }),
   };
 }
 

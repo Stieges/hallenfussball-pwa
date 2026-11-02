@@ -30,7 +30,9 @@
     "halftime": "Halftime",
     "overtime": "Overtime",
     "goldenGoal": "Golden Goal",
-    "regularTime": "Regular Time"
+    "regularTime": "Regular Time",
+    "afterPenalties": "on penalties",
+    "afterExtraTime": "after extra time"
   },
   "roles": {
     "referee": "Referee",
@@ -48,14 +50,17 @@
     "match": "Match",
     "matchWithNumber": "Match {{number}}",
     "round": "Round",
-    "matchday": "Matchday"
+    "matchday": "Matchday",
+    "versus": "vs"
   },
   "finalsTypes": {
     "final": "Final",
     "semifinal": "Semifinal",
     "quarterfinal": "Quarterfinal",
-    "thirdPlace": "Third Place Match",
-    "placement": "Placement Match"
+    "roundOf16": "Round of 16",
+    "thirdPlace": "Third-place match",
+    "placement": "Placement Match",
+    "knockout": "Knockout stage"
   },
   "status": {
     "scheduled": "Scheduled",
@@ -134,5 +139,27 @@
     "access": "helper access",
     "checkNumber": "check number",
     "approve": "approve"
+  },
+  "tabelle": {
+    "rank": "Position",
+    "played": "Played",
+    "won": "Won",
+    "drawn": "Drawn",
+    "lost": "Lost",
+    "goalDifference": "Goal difference",
+    "points": "Points",
+    "number": "Number",
+    "directComparison": "Head to head",
+    "goalsFor": "Goals for",
+    "pointsCount_one": "{{count}} point",
+    "pointsCount_other": "{{count}} points"
+  },
+  "zeit": {
+    "minutes": "minutes",
+    "minuteCount_one": "{{count}} minute",
+    "minuteCount_other": "{{count}} minutes"
+  },
+  "organisations": {
+    "bfv": "Bavarian Football Association"
   }
 }

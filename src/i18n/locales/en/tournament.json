@@ -3,8 +3,8 @@
     "title": "Group Stage",
     "scheduleTitle": "Schedule",
     "noMatches": "No matches available",
-    "noReferee": "No Ref",
-    "refereeLabel": "Ref {{number}}"
+    "noReferee": "No referee",
+    "refereeLabel": "Referee {{number}}"
   },
   "finals": {
     "title": "Final Round",
@@ -12,8 +12,7 @@
     "correct": "Correct",
     "field": "Field",
     "columns": {
-      "number": "No.",
-      "referee": "Ref",
+      "referee": "Referee",
       "time": "Time",
       "round": "Round",
       "home": "Home",
@@ -37,15 +36,8 @@
       "showAfterGames": "The table will be shown after the first matches."
     },
     "columns": {
-      "rank": "Pos",
       "team": "Team",
-      "played": "P",
-      "won": "W",
-      "drawn": "D",
-      "lost": "L",
-      "goals": "Goals",
-      "diff": "GD",
-      "points": "Pts"
+      "goals": "Goals"
     },
     "overall": "Overall standings",
     "currentlyPlaying": "Currently playing",
@@ -61,7 +53,6 @@
   "finalRankings": {
     "title": "Final Rankings",
     "columns": {
-      "rank": "Pos",
       "team": "Team",
       "decision": "Decided by"
     },
@@ -578,17 +569,10 @@
     "noResultsInfo": "Rankings will be shown after the first matches.",
     "headers": {
       "rank": "Rank",
-      "rankShort": "Pos",
       "team": "Team",
       "decidedBy": "Decided by",
       "group": "Group",
-      "played": "P",
-      "won": "W",
-      "drawn": "D",
-      "lost": "L",
-      "goals": "Goals",
-      "diff": "GD",
-      "points": "Pts"
+      "goals": "Goals"
     },
     "details": {
       "matches": "Played",
@@ -607,8 +591,8 @@
     "groupStage": "Group Stage",
     "finalRound": "Final Round",
     "existingResultsMessage": "This match already has results!\n\nCurrent score: {{homeScore}}:{{awayScore}}\n\nIf you start the match now, existing results will be deleted and replaced with live capture (starting at 0:0).",
-    "matchDetails": "Match #{{number}}: {{home}} vs {{away}}",
-    "switchMatchMessage": "Match #{{number}} is still running!\n\n{{home}} vs {{away}}\nCurrent score: {{homeScore}}:{{awayScore}}\n\nIf you switch to another match, the running match will be automatically ended.",
+    "matchDetails": "Match {{number}}: {{home}} vs {{away}}",
+    "switchMatchMessage": "Match {{number}} is still running!\n\n{{home}} vs {{away}}\nCurrent score: {{homeScore}}:{{awayScore}}\n\nIf you switch to another match, the running match will be automatically ended.",
     "endAndSwitch": "End match & switch",
     "field": "Field {{number}}",
     "selectMatch": "Select match (optional - next match is selected automatically):",
@@ -628,14 +612,14 @@
     "cannotMove": "Match cannot be moved",
     "dragToMove": "Drag to move",
     "changeReferee": "Change referee",
-    "noReferee": "No Ref",
+    "noReferee": "No referee",
     "locked": "Locked (running/finished)",
     "ariaLabel": "Match {{matchNumber}}: {{homeTeam}} vs {{awayTeam}}",
     "field": "Field {{field}}",
-    "groupPrefix": "Gr. {{group}}",
-    "refereePrefix": "Ref: {{referee}}",
-    "refereeSR": "Ref {{referee}}",
-    "groupShort": "Gr. {{group}}",
+    "groupPrefix": "Group {{group}}",
+    "refereePrefix": "Referee {{referee}}",
+    "refereeSR": "Referee {{referee}}",
+    "groupShort": "Group {{group}}",
     "scoreAriaLive": "Score {{homeScore}}:{{awayScore}}, {{elapsed}}",
     "live": "Live",
     "startMatch": "Start match",
@@ -645,13 +629,13 @@
     "chooseReferee": "Choose referee"
   },
   "matchResult": {
-    "penaltyShort": "pens",
-    "overtimeShort": "a.e.t.",
-    "finishedPenalty": "ended on pens",
+    "overtimeShort": "$t(short:ergebniszelle.extraTime)",
+    "finishedPenalty": "ended on penalties",
     "running": "live",
     "runningElapsed": "live {{elapsed}}",
     "scoreAriaPenalty": "Final score {{homeScore}}:{{awayScore}}, $t(sport:events.penaltyShootout) {{homePenalty}}:{{awayPenalty}}",
-    "scoreAriaOvertime": "Final score {{homeScore}}:{{awayScore}} after extra time"
+    "scoreAriaOvertime": "Final score {{homeScore}}:{{awayScore}} after extra time",
+    "finishedOvertime": "ended after extra time"
   },
   "conflict": {
     "teamDoubleBooking": "Team double booking",
@@ -690,7 +674,7 @@
       "eventYellowCard": "Yellow card {{team}}{{player}}",
       "eventRedCard": "Red card {{team}}{{player}}",
       "eventTimePenalty": "Time penalty {{team}}{{player}}, {{minute}}.",
-      "playerNumber": ", No. {{number}}",
+      "playerNumber": ", number {{number}}",
       "eventSubstitution": "Substitution {{team}}",
       "eventFoul": "Foul {{team}}"
     },
@@ -728,7 +712,7 @@
       "yellowRedCard": "Yellow-red card {{team}}{{player}}",
       "redCard": "Red card {{team}}{{player}}",
       "timePenalty": "Time penalty {{team}}{{player}}, {{minute}}.",
-      "playerNumber": ", No. {{number}}",
+      "playerNumber": ", number {{number}}",
       "substitutionDetail": "Substitution {{team}}: {{out}} → {{in}}",
       "substitution": "Substitution {{team}}",
       "foul": "Foul {{team}}",
@@ -788,8 +772,8 @@
   },
   "sortable": {
     "referee": "Referee",
-    "refereePlaceholder": "Ref -",
-    "refereeOption": "Ref {{label}}",
+    "refereePlaceholder": "Referee -",
+    "refereeOption": "Referee {{label}}",
     "fieldLabel": "Field"
   },
   "field": {
@@ -922,12 +906,8 @@
   },
   "standings": {
     "table": "Table",
-    "rank": "Pos",
     "team": "Team",
-    "played": "P",
-    "goals": "Goals",
-    "diff": "GD",
-    "points": "Pts"
+    "goals": "Goals"
   },
   "nextMatch": {
     "matchNumber": "Match {{number}}",
@@ -1062,28 +1042,20 @@
       "afterFinal": "The final ranking is decided after the final",
       "afterLast": "The final ranking is decided after the last match"
     },
-    "nr": "No.",
     "timeHeader": "Time",
     "field": "Pitch",
-    "group": "Grp",
+    "group": "Group",
     "home": "Home",
     "result": "Result",
     "away": "Away",
-    "referee": "Ref.",
+    "referee": "Referee",
     "live": "live",
     "skipped": "not played",
     "corrected": "corrected {{time}}",
     "afterOvertime": "after extra time",
     "shootout": "Penalty shootout",
-    "pos": "Pos",
     "team": "Team",
-    "played": "P",
-    "won": "W",
-    "drawn": "D",
-    "lost": "L",
     "goals": "Goals",
-    "diff": "Diff",
-    "points": "Pts",
     "thirdPlace": "Match for 3rd place",
     "fifthSixth": "Match for 5th place",
     "seventhEighth": "Match for 7th place",
@@ -1097,7 +1069,7 @@
     "kicker": {
       "plan": "Schedule"
     },
-    "durationMinutes": "{{minutes}} min",
+    "durationMinutes": "$t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
     "modeGroupsAndFinals": "Groups + final round",
     "modeRoundRobin": "Round robin",
     "unrenderableName": "Team name “{{name}}” contains characters that are printed as “?” in the PDF",
@@ -1408,7 +1380,7 @@
       "intro": "All {{count}} matches of {{name}} are decided. Check the table before you close it.",
       "intro_all": "All {{count}} matches are decided. Check the table before you close it.",
       "rankAria": "Table",
-      "rankLine": "{{points}} pts · {{goals}} · {{diff}}",
+      "rankLine": "$t(sport:tabelle.pointsCount, {\"count\": {{points}} }) · {{goals}} · {{diff}}",
       "effectTitle": "Fills afterwards: {{list}}.",
       "effectItem": "{{label}} {{side}} {{team}}",
       "effectOthers": "The other groups are still in progress, their places stay open.",
@@ -1496,7 +1468,7 @@
     "fromHintOne": "Applies to all matches from there on pitch {{field}}.",
     "fromHintPreset": "Taken from the match list: from match {{number}}. You can pick another match.",
     "by": "By",
-    "minutesUnit": "min",
+    "minutesUnit": "minutes",
     "lessMinute": "One minute less",
     "moreMinute": "One minute more",
     "minutesField": "Minutes",
@@ -1552,8 +1524,8 @@
     "toastPlanEarlier": "Schedule moved {{minutes}} minutes earlier.",
     "toastPlanLater": "Schedule moved {{minutes}} minutes later.",
     "toastRestored": "Original times restored.",
-    "stripLater": "Times shifted by {{minutes}} min · end {{end}}",
-    "stripEarlier": "Times moved {{minutes}} min earlier · end {{end}}",
+    "stripLater": "Times shifted by $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }) · end {{end}}",
+    "stripEarlier": "Times moved $t(sport:zeit.minuteCount, {\"count\": {{minutes}} }) earlier · end {{end}}",
     "stripPrints": "Printouts are outdated",
     "stripReprint": "Print again",
     "stripUndo": "Undo …",
@@ -1607,7 +1579,7 @@
       "eintrag_other": "{{count}} entries from {{author}} (field {{field}}) inserted afterwards"
     },
     "zeile": {
-      "mitNummer": "{{what}} {{team}}, no. {{nr}}",
+      "mitNummer": "{{what}} {{team}}, number {{nr}}",
       "team": "{{what}} {{team}}",
       "ohneTeam": "{{what}}",
       "minute": "{{line}} · period {{section}}, minute {{minute}}",
@@ -1702,7 +1674,7 @@
       "winner": "Winner",
       "shootout": "Place 1 decided by penalty shootout: {{winner}}:{{loser}} against {{other}}",
       "podium": "Final standings: places 1 to 3",
-      "points": "{{points}} pts",
+      "points": "$t(sport:tabelle.pointsCount, {\"count\": {{points}} })",
       "showAll": "Show all {{count}} places",
       "hideAll": "Show fewer places",
       "allPlaces": "Final standings: all places",
@@ -1829,13 +1801,7 @@
     "showFewerScorers": "Show fewer scorers",
     "columns": {
       "place": "Place",
-      "team": "Team",
-      "games": "P",
-      "gamesLong": "Played",
-      "goalDiff": "GD",
-      "goalDiffLong": "Goal difference",
-      "points": "Pts",
-      "pointsLong": "Points"
+      "team": "Team"
     },
     "valueLabel": {
       "games": "Played {{value}}",
@@ -1880,8 +1846,8 @@
     }
   },
   "refereeOptions": {
-    "numbered": "Ref {{number}}",
-    "named": "Ref {{number}} ({{name}})"
+    "numbered": "Referee {{number}}",
+    "named": "Referee {{number}} ({{name}})"
   },
   "draft": {
     "unsaved_one": "{{count}} change not saved",
@@ -1914,5 +1880,14 @@
     "conflictHint_one": "{{count}} conflict in the schedule",
     "conflictHint_other": "{{count}} conflicts in the schedule",
     "samePhaseOnly": "Only matches of the same phase can be swapped"
+  },
+  "scheduleEditor": {
+    "autoAssignReferees": "Assign referees automatically",
+    "balanceReferees": "Balance referee workload",
+    "refereeWorkload": "Referee workload:",
+    "refereeLabel": "Referee:",
+    "refereeAssigned": "Referee {{referee}} assigned to match {{match}}",
+    "reassignSummary": "{{referees}} referee assignments, {{fields}} field assignments adjusted",
+    "breakViolation": "Team \"{{team}}\" has only a break of $t(sport:zeit.minuteCount, {\"count\": {{pause}} }) (at least $t(sport:zeit.minuteCount, {\"count\": {{min}} }) required)"
   }
 }

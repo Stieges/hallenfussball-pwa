@@ -9,3 +9,8 @@ export { ScoreDraftInput } from './ScoreDraftInput';
 export type { ScoreDraftInputProps, ScoreFieldProps } from './ScoreDraftInput';
 export { TextTag } from './TextTag';
 export type { TextTagProps } from './TextTag';
+export { ShortLabel } from './ShortLabel';
+export type { ShortLabelProps } from './ShortLabel';
+export { SHORT_TERMS } from './shortTerms';
+export type { ShortTerm, TableHeadTerm } from './shortTerms';
+export { Versus } from './Versus';

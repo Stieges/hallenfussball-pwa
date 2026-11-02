@@ -6,7 +6,6 @@
  */
 
 import { type CSSProperties } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import type { SpectatorClock } from '../../core/view';
@@ -63,7 +62,6 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   hasEvents = false,
   clock,
 }) => {
-  const { t } = useTranslation('tournament');
   const sides = sideContext ?? buildSideContext(tournament, [match]);
   const matchView = matchViewOf(sides, match.id);
 
@@ -86,7 +84,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         matchNumber={match.matchNumber}
         scheduledTime={match.time}
         field={match.field}
-        referee={match.referee ? t('matchCard.refereeSR', { referee: match.referee }) : undefined}
+        referee={match.referee ? String(match.referee) : undefined}
         group={matchHeading(match, sides) ?? (match.group && !isSingleGroupId(match.group) ? getGroupShortCode(match.group, tournament) : undefined)}
         showGroupLabel={showGroupLabel}
         homeTeam={sideDisplay(match, 'A', sides)}

@@ -140,7 +140,7 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
     requires: 'Verfügbarkeit von Verlängerung als Tiebreaker-Option',
     missing:
       'Ob Verlängerung angeboten wird, hängt heute allein von rules.defaultTiebreaker ' +
-      '(\'overtime-then-shootout\' vs. \'shootout\' vs. \'goldenGoal\') sowie der freien ' +
+      '(\'overtime-then-shootout\', \'shootout\' oder \'goldenGoal\') sowie der freien ' +
       'Tiebreaker-Auswahl im Cockpit ab — hasOvertime wird nirgends gelesen und könnte vom ' +
       'tatsächlich gewählten Tiebreaker-Modus abweichen, ohne dass es auffiele.',
   },

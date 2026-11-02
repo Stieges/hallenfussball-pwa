@@ -12,6 +12,7 @@ import deMonitor from './locales/de/monitor.json';
 import deSettings from './locales/de/settings.json';
 import deAdmin from './locales/de/admin.json';
 import deSport from './locales/de/sport.json';
+import deShort from './locales/de/short.json';
 import dePublicView from './locales/de/publicView.json';
 import deHelpers from './locales/de/helpers.json';
 
@@ -25,6 +26,7 @@ import enMonitor from './locales/en/monitor.json';
 import enSettings from './locales/en/settings.json';
 import enAdmin from './locales/en/admin.json';
 import enSport from './locales/en/sport.json';
+import enShort from './locales/en/short.json';
 import enPublicView from './locales/en/publicView.json';
 import enHelpers from './locales/en/helpers.json';
 
@@ -85,6 +87,7 @@ export const NAMESPACES = [
   'settings',
   'admin',
   'sport',
+  'short',
   'publicView',
   'helpers',
 ] as const;
@@ -108,6 +111,7 @@ void i18n.use(initReactI18next).init({
       settings: deSettings,
       admin: deAdmin,
       sport: deSport,
+      short: deShort,
       publicView: dePublicView,
       helpers: deHelpers,
     },
@@ -122,6 +126,7 @@ void i18n.use(initReactI18next).init({
       settings: enSettings,
       admin: enAdmin,
       sport: enSport,
+      short: enShort,
       publicView: enPublicView,
       helpers: enHelpers,
     },

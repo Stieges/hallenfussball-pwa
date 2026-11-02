@@ -31,7 +31,7 @@ describe('TeamColumn am Laptop', () => {
 
   it('Gegenprobe: am Handy (nicht breit) steht die Marke weiter unter den Tasten', () => {
     render(<TeamColumn {...props({ strafen: [{ id: 'p1', rest: '1:12', nummer: 5, steht: false }] }, { breit: false, kompakt: true })} />);
-    expect(screen.getByTestId('team-penalty-p1')).toHaveTextContent('Nr. 5 · 1:12');
+    expect(screen.getByTestId('team-penalty-p1')).toHaveTextContent('Nummer 5 · 1:12');
   });
 
   it('@SL-187 Tor und Foul-Reihe nehmen die Mindesthöhe aus der Stufe (`--cockpit-tor`, `--cockpit-fuss`), der Kopf aus `--cockpit-kopf`', () => {
