@@ -63,3 +63,7 @@ export { ChipChoice } from './ChipChoice';
 export type { ChipChoiceProps, ChipOption } from './ChipChoice';
 export { TeamDetailsToggle } from './TeamDetailsToggle';
 export type { TeamDetailsToggleProps } from './TeamDetailsToggle';
+
+// T5 (@W3-030, @W3-040): Grafik hochladen, fachfrei
+export { GraphicUploadField } from './GraphicUploadField';
+export type { GraphicUploadFieldProps } from './GraphicUploadField';

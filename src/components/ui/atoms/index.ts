@@ -7,6 +7,8 @@ export type { KartenSymbolProps } from './KartenSymbol';
 export { kartenFlaecheStil } from './kartenFlaeche';
 export { ScoreDraftInput } from './ScoreDraftInput';
 export type { ScoreDraftInputProps, ScoreFieldProps } from './ScoreDraftInput';
+export { ColorDot } from './ColorDot';
+export type { ColorDotProps } from './ColorDot';
 export { TextTag } from './TextTag';
 export type { TextTagProps } from './TextTag';
 export { ShortLabel } from './ShortLabel';
