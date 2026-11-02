@@ -130,6 +130,7 @@ ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
     { filename: '/repo/src/constants/tournamentSchemas.ts', code: "const matchId = 'P3';", options: ['forbidden'] },
     // Vereinskürzel (SF = Sportfreunde), Fixtures und Rechtstexte sind ausgenommen.
     { filename: '/repo/src/core/models/teamNameAbbrev.ts', code: "const kuerzel = ['Sportfreunde', 'SF'];", options: ['forbidden'] },
+    { filename: '/repo/src/lib/pdf/fontData/bold.ts', code: "export const data = 'AAEAAAAPAIAAAwBwAF AF xyz';", options: ['forbidden'] },
     { filename: '/repo/src/core/view/__fixtures__/expected.ts', code: "const k = 'F-HF';", options: ['forbidden'] },
     { filename: '/repo/src/screens/DatenschutzScreen.tsx', code: 'const el = <p>§ 25 Abs. 2 Nr. 2 TDDDG</p>;', options: ['forbidden'] },
   ],

@@ -151,6 +151,7 @@ module.exports = {
       'MatchCockpitDemoScreen', // Demo-Screen, nicht produktiv gerendert
       '__fixtures__',       // Testdaten mit Kennungen wie „F-HF“, nie angezeigt
       'teamNameAbbrev',     // Vereinskürzel (SF = Sportfreunde): Datenabgleich, kein Anzeigetext für Begriffe des Glossars
+      'fontData',           // eingebettete Schriften (Base64), kein Anzeigetext
       'DatenschutzScreen',  // Rechtstext mit wörtlichen Gesetzeszitaten („Nr. 2“)
       'ImpressumScreen',    // Rechtstext
     ];
