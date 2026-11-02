@@ -84,25 +84,20 @@ export function getInitials(name: string): string {
 }
 
 /**
- * Load an image from a File
+ * Load an image from a File (decode() statt onload: WebKit hat bei SVG-Blobs Lücken)
  */
 async function loadImage(file: File): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(file);
+  try {
     const img = new Image();
-    const url = URL.createObjectURL(file);
-
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
-    };
-
     img.src = url;
-  });
+    await img.decode();
+    return img;
+  } catch {
+    throw new Error('Failed to load image');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
@@ -154,21 +149,13 @@ export async function processLogo(
     throw new Error(`File too large: ${Math.round(file.size / 1024 / 1024)}MB. Maximum: 5MB`);
   }
 
-  // For SVG, handle separately (no compression needed)
-  if (file.type === 'image/svg+xml') {
-    const base64 = await blobToBase64(file);
-    return {
-      type: 'base64',
-      value: base64,
-      sizeKB: Math.round(file.size / 1024),
-    };
-  }
+  // SVG wird gerastert und als PNG gespeichert (@W3-030: nie ein SVG ablegen, es kann Skripte enthalten); der Rest
+  // läuft über die Komprimierung. Ein SVG im Bildelement führt keine Skripte aus.
+  const isSvg = file.type === 'image/svg+xml';
+  const source = isSvg ? file : await compressImage(file);
 
-  // Compress the image first
-  const compressed = await compressImage(file);
-
-  // Load the compressed image
-  const img = await loadImage(compressed);
+  // Load the image
+  const img = await loadImage(source);
 
   // Create canvas with target size
   const canvas = document.createElement('canvas');
@@ -214,10 +201,10 @@ export async function processLogo(
   ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
 
   // Convert to WebP blob
-  const mimeType = config.format === 'webp'
-    ? 'image/webp'
-    : config.format === 'png'
-      ? 'image/png'
+  const mimeType = isSvg || config.format === 'png'
+    ? 'image/png'
+    : config.format === 'webp'
+      ? 'image/webp'
       : 'image/jpeg';
 
   const blob = await new Promise<Blob>((resolve, reject) => {

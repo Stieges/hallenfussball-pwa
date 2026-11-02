@@ -16,6 +16,15 @@ export const printHeader = {
   /** Pixelgrenze einer Grafik (aus dem Dateikopf gelesen, vor dem Dekodieren): höchstens 4000 Bildpunkte je Seite und 16 Megapixel. */
   logoMaxSidePx: 4000,
   logoMaxPixels: 16_000_000,
+  /**
+   * Ablage einer Turniergrafik beim Hochladen (@W3-030, PDF-Paket T4): Höhe höchstens 600 Bildpunkte (bei 20 mm Druckhöhe
+   * etwa 760 dpi), Breite höchstens 1200; nie hochskaliert. JPEG wird mit dieser Qualität neu kodiert.
+   */
+  logoStoreMaxHeightPx: 600,
+  logoStoreMaxWidthPx: 1200,
+  logoJpegQuality: 0.9,
+  /** Warnung „im Druck unscharf“ (@DR-040): Originalhöhe unter 236 Bildpunkten (scharf bei 20 mm Höhe und 300 dpi). */
+  logoWarnBelowHeightPx: 236,
   /** Titel: höchstens drei Zeilen (@BM-021). Passt er bei voller Schrift nicht, wird die Schrift in Schritten kleiner. */
   titleMaxLines: 3,
   titleMinPt: 18,
