@@ -3,12 +3,16 @@ import { cssVars, displaySizes } from '../../design-tokens';
 import { Button } from './Button';
 import { TeamAvatar } from './TeamAvatar';
 import { DialogSurface } from './molecules/DialogSurface';
+import { useTranslation } from 'react-i18next';
 import {
   processLogo,
   validateLogoFile,
   createTeamLogo,
+  LogoError,
+  MAX_UPLOAD_SIZE,
   SUPPORTED_MIME_TYPES,
   CropArea,
+  type LogoRejectReason,
 } from '../../utils/logoProcessor';
 import { TeamLogo } from '../../types/tournament';
 
@@ -39,7 +43,10 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     currentLogo?.type === 'base64' ? currentLogo.value : null
   );
+  const { t } = useTranslation('wizard');
   const [error, setError] = useState<string | null>(null);
+  // C-TEAMLOGO-FEHLERTEXT-ENGLISCH: nie die rohe Fehlermeldung zeigen, immer den übersetzten Text nach Grund
+  const reasonText = useCallback((reason: LogoRejectReason | 'generic'): string => t(`step4.logoDialogError.${reason}`, { maxMb: MAX_UPLOAD_SIZE / (1024 * 1024) }), [t]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [cropArea, setCropArea] = useState<CropArea>({ x: 0.5, y: 0.5, scale: 1 });
@@ -54,7 +61,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
 
     const validation = validateLogoFile(file);
     if (!validation.valid) {
-      setError(validation.error ?? 'Invalid file');
+      setError(reasonText(validation.reason ?? 'generic'));
       return;
     }
 
@@ -65,7 +72,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
     setPreviewUrl(url);
     setStep('preview');
     setCropArea({ x: 0.5, y: 0.5, scale: 1 });
-  }, []);
+  }, [reasonText]);
 
   // Handle paste events for clipboard images
   useEffect(() => {
@@ -118,7 +125,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
   const handleSave = async () => {
     if (!selectedFile && !currentLogo) {return;}
     if (!disclaimerAccepted) {
-      setError('Bitte bestätige die Nutzungsrechte');
+      setError(t('step4.logoDialogError.consent'));
       return;
     }
 
@@ -135,7 +142,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
         onSave(currentLogo);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler bei der Verarbeitung');
+      setError(reasonText(err instanceof LogoError ? err.reason : 'generic'));
     } finally {
       setIsProcessing(false);
     }
