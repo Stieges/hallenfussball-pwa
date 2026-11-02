@@ -167,7 +167,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     }
   }, [liveMatchIds, canControlTimer, showWarning, onNavigateToCockpit, t]);
 
-  // Handler to confirm navigation (ends running match)
+  // Handler to confirm navigation (das laufende Spiel läuft weiter, @SL-194)
   const handleConfirmCockpitNavigation = useCallback(() => {
     if (pendingCockpitMatchId) {
       onNavigateToCockpit?.(pendingCockpitMatchId);

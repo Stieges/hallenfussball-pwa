@@ -5,7 +5,6 @@
  */
 
 import { type CSSProperties } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 
 // ---------------------------------------------------------------------------
@@ -17,7 +16,6 @@ interface ScoreHeaderProps {
   awayTeamName: string;
   homeScore: number;
   awayScore: number;
-  onEditScore?: () => void;
   compact?: boolean;
 }
 
@@ -30,10 +28,8 @@ export function ScoreHeader({
   awayTeamName,
   homeScore,
   awayScore,
-  onEditScore,
   compact = false,
 }: ScoreHeaderProps) {
-  const { t } = useTranslation('tournament');
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -95,22 +91,6 @@ export function ScoreHeader({
     color: cssVars.colors.textSecondary,
   };
 
-  const editButtonStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    backgroundColor: 'transparent',
-    color: cssVars.colors.primary,
-    border: `1px solid ${cssVars.colors.primary}`,
-    borderRadius: cssVars.borderRadius.md,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.medium,
-    cursor: 'pointer',
-    minHeight: 40,
-  };
-
   return (
     <div style={containerStyle}>
       <div style={teamsRowStyle}>
@@ -126,16 +106,6 @@ export function ScoreHeader({
           <span style={teamNameStyle}>{awayTeamName}</span>
         </div>
       </div>
-      {onEditScore && (
-        <button
-          style={editButtonStyle}
-          onClick={onEditScore}
-          aria-label={t('matchSummary.editScore')}
-          data-testid="match-summary-edit-score"
-        >
-          ✏️ {t('matchSummary.editScore')}
-        </button>
-      )}
     </div>
   );
 }

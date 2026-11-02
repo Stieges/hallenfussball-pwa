@@ -16,6 +16,7 @@ import { GeneratedSchedule } from '../core/generators';
 import type { TournamentView, ViewLocale } from '../core/view';
 import { Standing, Match, Team } from '../types/tournament';
 import type { ScheduleSource } from './schedule/scheduleSource';
+import { useLiveMatches } from '../hooks/useLiveMatches';
 import { useElapsedSeconds } from './schedule/useTickingNow';
 import { ViewTimeNotes } from './schedule/ViewTimeNotes';
 import type { MatchForfeitActions } from './schedule/MatchForfeitAction';
@@ -170,6 +171,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     view,
     locale,
   }), [tournamentTeams, schedule.teams, schedule.tournament.id, schedule.tournament.groups, schedule.allMatches, view, locale]);
+  // Live-Daten mit Ereignissen: EIN Abonnement für Gruppen- und Finalrunde und das Protokoll der Aktionsauswahl (@FU-080)
+  const { liveMatches } = useLiveMatches(schedule.tournament.id);
   const clockOf = useSpectatorClocks(view, useElapsedSeconds(view, currentMatches, elapsedSeconds));
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
@@ -216,6 +219,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       {/* Group Stage Schedule */}
       {filteredGroupPhaseMatches.length > 0 && (
         <GroupStageSchedule
+          liveMatches={liveMatches}
           matches={filteredGroupPhaseMatches}
           hasGroups={hasGroups}
           refereeConfig={schedule.refereeConfig}
@@ -250,6 +254,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       {/* Final Stage Schedule */}
       {filteredFinalPhaseMatches.length > 0 && (
         <FinalStageSchedule
+          liveMatches={liveMatches}
           matches={filteredFinalPhaseMatches}
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}

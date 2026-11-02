@@ -45,6 +45,16 @@ describe('@SL-193 Beschriftungen der Aktionen', () => {
     expect(t('tournament:actionMenu.actions.correct')).toBe('Correct result');
   });
 
+  it('@SL-193 Hinweis für Helfer ohne Aktion: Deutsch wörtlich, Englisch übersetzt', async () => {
+    await initRealGlobalI18n('de');
+    expect(t('tournament:actionMenu.noAction.awarded')).toBe('Spiel wurde gewertet');
+    expect(t('tournament:actionMenu.noAction.cancelled')).toBe('Spiel wurde abgesetzt');
+    await initRealGlobalI18n('en');
+    expect(t('tournament:actionMenu.noAction.awarded')).toBe('Match was awarded');
+    expect(t('tournament:actionMenu.noAction.cancelled')).toBe('Match was called off');
+    await initRealGlobalI18n('de');
+  });
+
   it('@OB-075 ausgeschrieben: weder „SR“ noch „HF“ noch „Ref.“ in der Auswahl (Deutsch und Englisch)', async () => {
     for (const lang of ['de', 'en'] as const) {
       await initRealGlobalI18n(lang);

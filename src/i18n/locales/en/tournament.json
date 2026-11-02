@@ -9,7 +9,6 @@
   "finals": {
     "title": "Final Round",
     "noMatches": "No matches available",
-    "correct": "Correct",
     "field": "Field",
     "columns": {
       "referee": "Referee",
@@ -702,7 +701,6 @@
   "matchSummary": {
     "title": "Match Summary",
     "close": "Close",
-    "editScore": "Edit score",
     "events": {
       "title": "Match Events",
       "goalDecrement": "−1 {{team}}",
@@ -761,7 +759,6 @@
     "live": "Live"
   },
   "scoreCell": {
-    "correctResult": "Correct result",
     "goalsOf": "Goals {{team}}",
     "homeFallback": "Home",
     "awayFallback": "Away",
@@ -1910,6 +1907,10 @@
       "protocol": "View log"
     },
     "teamsMissing": "The teams of this match are not known yet.",
+    "noAction": {
+      "awarded": "Match was awarded",
+      "cancelled": "Match was called off"
+    },
     "choose": {
       "refereeTitle": "Referee for match {{number}}",
       "refereeLabel": "Referee",

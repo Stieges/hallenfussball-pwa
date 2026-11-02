@@ -14,6 +14,7 @@
 import { useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ScheduledMatch } from '../../../core/generators';
+import type { LiveMatch } from '../../live-cockpit/types';
 import { ActionSheet, type ActionSheetItem } from '../../ui/molecules/ActionSheet';
 import { MatchTimeShiftContext } from '../matchTimeShiftContext';
 import type { MatchForfeitActions } from '../MatchForfeitAction';
@@ -21,12 +22,14 @@ import { matchViewOf, sideDisplay, type SideContext } from '../matchSides';
 import type { RefereeChoice } from '../refereeChoices';
 import { MatchChoiceDialog, type MatchChoiceKind } from './MatchChoiceDialog';
 import { MatchProtocolSheet } from './MatchProtocolSheet';
-import { matchActionsFor, NEEDS_BOTH_TEAMS, type MatchActionId, type MatchActionRights } from './matchActions';
+import { useOptionalToast } from '../../ui/Toast';
+import { actionPhaseOf, matchActionsFor, NEEDS_BOTH_TEAMS, type MatchActionId, type MatchActionRights } from './matchActions';
 
 export interface UseMatchActionMenuArgs {
   /** Rechte (`useCan`); fehlt = Auswahl aus */
   rights: MatchActionRights | undefined;
-  tournamentId: string | undefined;
+  /** Live-Daten des Spielplans (schon abonniert); das Protokoll liest daraus */
+  liveMatches: ReadonlyMap<string, LiveMatch>;
   matches: readonly ScheduledMatch[];
   sides: SideContext;
   numberOfFields: number;
@@ -51,7 +54,7 @@ export interface MatchActionMenu {
 type Follow = { kind: MatchChoiceKind | 'protocol'; matchId: string } | null;
 
 export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMenu {
-  const { rights, tournamentId, matches, sides, numberOfFields, refereeChoices, onEnterResult, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit } = args;
+  const { rights, liveMatches, matches, sides, numberOfFields, refereeChoices, onEnterResult, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit } = args;
   const { t } = useTranslation('tournament');
   const shiftFrom = useContext(MatchTimeShiftContext)?.shiftFrom;
   const [openId, setOpenId] = useState<string | null>(null);
@@ -76,9 +79,13 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
     });
   }, [rights, sides, onEnterResult, onNavigateToCockpit, shiftFrom, onRefereeChange, refereeChoices.length, onFieldChange, numberOfFields, forfeit, onCorrect]);
 
+  // @SL-193: ein Helfer ohne Aktion bei einem gewerteten oder abgesetzten Spiel bekommt einen kurzen Hinweis statt einer leeren Auswahl
+  const toast = useOptionalToast();
   const open = useCallback((id: string) => {
-    if (actionsOf(id).length > 0) { setOpenId(id); }
-  }, [actionsOf]);
+    if (actionsOf(id).length > 0) { setOpenId(id); return; }
+    const phase = actionPhaseOf(matchViewOf(sides, id)?.status);
+    if (rights && (phase === 'awarded' || phase === 'cancelled')) { toast?.showInfo(t(`actionMenu.noAction.${phase}`)); }
+  }, [actionsOf, sides, rights, toast, t]);
   const close = useCallback(() => { setOpenId(null); }, []);
 
   const run = useCallback((action: MatchActionId, id: string) => {
@@ -147,7 +154,7 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
         )}
         {follow?.kind === 'protocol' && followMatch !== undefined && (
           <MatchProtocolSheet
-            tournamentId={tournamentId ?? ''}
+            liveMatches={liveMatches}
             matchId={follow.matchId}
             home={sideDisplay(followMatch, 'A', sides)}
             away={sideDisplay(followMatch, 'B', sides)}
@@ -156,7 +163,7 @@ export function useMatchActionMenu(args: UseMatchActionMenuArgs): MatchActionMen
         )}
       </>
     );
-  }, [openId, follow, matchOf, close, t, sides, actionsOf, run, refereeChoices, numberOfFields, onRefereeChange, onFieldChange, tournamentId]);
+  }, [openId, follow, matchOf, close, t, sides, actionsOf, run, refereeChoices, numberOfFields, onRefereeChange, onFieldChange, liveMatches]);
 
   return { enabled: rights !== undefined, open, element };
 }

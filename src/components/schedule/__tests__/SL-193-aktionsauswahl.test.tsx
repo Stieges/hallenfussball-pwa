@@ -14,10 +14,18 @@ vi.unmock('react-i18next');
 import { initRealDeI18n } from '../../../test/realDeI18n';
 await initRealDeI18n();
 
-const live = vi.hoisted(() => ({ calls: [] as string[], matches: new Map<string, unknown>() }));
-vi.mock('../../../hooks/useLiveMatches', () => ({
-  useLiveMatches: (tournamentId: string) => { live.calls.push(tournamentId); return { liveMatches: live.matches }; },
-}));
+const live = vi.hoisted(() => ({ calls: [] as string[], active: 0, matches: new Map<string, unknown>() }));
+vi.mock('../../../hooks/useLiveMatches', async () => {
+  const { useEffect } = await import('react');
+  return {
+    // `active` zählt die offenen Abonnements (Einhängen +1, Aushängen -1): jedes Abonnement hängt am Kanal des Turniers
+    useLiveMatches: (tournamentId: string) => {
+      live.calls.push(tournamentId);
+      useEffect(() => { live.active += 1; return () => { live.active -= 1; }; }, []);
+      return { liveMatches: live.matches };
+    },
+  };
+});
 
 import { generateFullSchedule, type GeneratedSchedule, type ScheduledMatch } from '../../../core/generators';
 import { teamSlot } from '../../../core/models/matchSlot';
@@ -25,6 +33,7 @@ import type { Match, Team } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
 import { testUuid } from '../../../test/testIds';
 import { ScheduleDisplay } from '../../ScheduleDisplay';
+import { ToastProvider } from '../../ui/Toast';
 import { MatchTimeShiftContext } from '../matchTimeShiftContext';
 import type { MatchActionRights } from '../actionMenu/matchActions';
 import { matchOf, viewOf, type Cache } from './scheduleViewFixture';
@@ -86,14 +95,14 @@ function zeige(runde: 'Gruppenphase' | 'Finalrunde', zustand: keyof typeof ZUSTA
     : m.phase === 'groupStage' ? gespielt(m) : {}));
   const view = viewOf(current, teams, { tournament: { numberOfFields: 2, refereeConfig: turnier.refereeConfig } });
   render(
-    <MatchTimeShiftContext.Provider value={{ originalTimeOf: () => undefined, shiftFrom: spies.shift }}>
+    <ToastProvider><MatchTimeShiftContext.Provider value={{ originalTimeOf: () => undefined, shiftFrom: spies.shift }}>
       <ScheduleDisplay
         schedule={schedule} currentMatches={current} view={view} editable actionRights={rights}
         onNavigateToCockpit={spies.cockpit} onCorrect={spies.correct} onScoreChange={spies.score}
         onRefereeChange={spies.referee} onFieldChange={spies.field} forfeit={{ mark: spies.mark, revoke: spies.revoke }}
         canEndRunning={rights.lead}
       />
-    </MatchTimeShiftContext.Provider>,
+    </MatchTimeShiftContext.Provider></ToastProvider>,
   );
   return ziel;
 }
@@ -107,7 +116,7 @@ const menue = () => screen.getByTestId('match-action-menu');
 const eintraege = () => within(menue()).getAllByRole('listitem').map((li) => li.textContent ?? '');
 const aktion = (name: string) => screen.getByTestId(`match-action-${name}`);
 
-beforeEach(() => { vi.clearAllMocks(); live.calls.length = 0; live.matches = new Map(); });
+beforeEach(() => { vi.clearAllMocks(); live.calls.length = 0; live.active = 0; live.matches = new Map(); });
 
 describe('@SL-193 Auswahl beim Tipp auf ein Spiel – Gruppenphase und Finalrunde gleich', () => {
   for (const runde of ['Gruppenphase', 'Finalrunde'] as const) {
@@ -181,9 +190,53 @@ describe('@SL-193 Auswahl beim Tipp auf ein Spiel – Gruppenphase und Finalrund
     tippe('Finalrunde', unbesetzt.id);
     expect(aktion('enterResult')).toHaveAttribute('aria-disabled', 'true');
     expect(aktion('enterResult')).toHaveTextContent('Die Teams dieses Spiels stehen noch nicht fest.');
+    expect(aktion('forfeit')).toHaveAttribute('aria-disabled', 'true');
+    expect(aktion('forfeit')).toHaveTextContent('Die Teams dieses Spiels stehen noch nicht fest.');
     act(() => { fireEvent.click(aktion('forfeit')); });
     expect(spies.mark).not.toHaveBeenCalled();
+    act(() => { fireEvent.click(aktion('enterResult')); });
+    expect(spies.score).not.toHaveBeenCalled();
   });
+});
+
+describe('@SL-193 gewertet und abgesetzt – Gruppenphase und Finalrunde gleich', () => {
+  const GEWERTET: Cache = { matchStatus: 'finished', scoreA: 0, scoreB: 2, decidedBy: 'forfeit' };
+  const ABGESETZT: Cache = { matchStatus: 'skipped' };
+
+  for (const runde of ['Gruppenphase', 'Finalrunde'] as const) {
+    it(`@SL-193 ${runde} gewertet: die Turnierleitung sieht „Wertung zurücknehmen“`, () => {
+      const ziel = zeige(runde, 'geplant', LEITUNG, { cache: GEWERTET });
+      tippe(runde, ziel.id);
+      expect(eintraege()).toEqual(['Wertung zurücknehmen']);
+    });
+
+    it(`@SL-193 ${runde} abgesetzt: die Turnierleitung sieht „Ergebnis eintragen“`, () => {
+      const ziel = zeige(runde, 'geplant', LEITUNG, { cache: ABGESETZT });
+      tippe(runde, ziel.id);
+      expect(eintraege()).toEqual(['Ergebnis eintragen']);
+    });
+
+    it(`@SL-193 ${runde} gewertet: ein Helfer bekommt keine leere Auswahl, sondern den Hinweis „Spiel wurde gewertet“`, () => {
+      const ziel = zeige(runde, 'geplant', HELFER, { cache: GEWERTET });
+      tippe(runde, ziel.id);
+      expect(screen.queryByTestId('match-action-menu')).toBeNull();
+      expect(screen.getByText('Spiel wurde gewertet')).toBeInTheDocument();
+    });
+
+    it(`@SL-193 ${runde} abgesetzt: ein Helfer bekommt keine leere Auswahl, sondern den Hinweis „Spiel wurde abgesetzt“`, () => {
+      const ziel = zeige(runde, 'geplant', HELFER, { cache: ABGESETZT });
+      tippe(runde, ziel.id);
+      expect(screen.queryByTestId('match-action-menu')).toBeNull();
+      expect(screen.getByText('Spiel wurde abgesetzt')).toBeInTheDocument();
+    });
+
+    it(`@SL-193 Gegenbeispiel ${runde}: ein Helfer bei einem beendeten Spiel bekommt die Auswahl, keinen Hinweis`, () => {
+      const ziel = zeige(runde, 'beendet', HELFER);
+      tippe(runde, ziel.id);
+      expect(screen.getByTestId('match-action-menu')).toBeInTheDocument();
+      expect(screen.queryByText(/Spiel wurde (gewertet|abgesetzt)/)).toBeNull();
+    });
+  }
 });
 
 describe('@SL-193 die Aktionen führen die vorhandenen Wege aus', () => {
@@ -341,12 +394,22 @@ describe('@FU-080 @FU-082 Protokoll ansehen (Befund C-PROTOKOLL-OHNE-EINSTIEG)',
       expect(within(blatt).queryByText(/Bearbeiten/)).toBeNull();
     });
 
-    it(`@FU-082 ${runde} beendet: das Protokoll fragt useLiveMatches mit der Kennung des Turniers (nicht leer)`, () => {
-      const ziel = zeige(runde, 'beendet', HELFER);
-      tippe(runde, ziel.id);
-      act(() => { fireEvent.click(aktion('protocol')); });
+    it(`@FU-082 ${runde} beendet: der Spielplan fragt useLiveMatches mit der Kennung des Turniers (nicht leer)`, () => {
+      zeige(runde, 'beendet', HELFER);
       expect(live.calls).toContain('turnier-7');
       expect(live.calls).not.toContain('');
+    });
+
+    // Zwei Abonnements auf demselben Kanal: das Schließen des Protokolls nähme das des Spielplans mit.
+    it(`@FU-082 ${runde} beendet: das Protokoll öffnet kein zweites Abonnement; nach dem Schließen hat der Spielplan seines noch`, () => {
+      const ziel = zeige(runde, 'beendet', HELFER);
+      expect(live.active).toBe(1);
+      tippe(runde, ziel.id);
+      act(() => { fireEvent.click(aktion('protocol')); });
+      expect(screen.getByTestId('event-log-sheet')).toBeInTheDocument();
+      expect(live.active).toBe(1);
+      act(() => { fireEvent.keyDown(document, { key: 'Escape' }); });
+      expect(live.active).toBe(1);
     });
   }
 

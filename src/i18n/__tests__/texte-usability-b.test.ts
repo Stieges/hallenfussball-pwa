@@ -48,12 +48,6 @@ describe('@OB-072 Die App spricht Olli durchgehend mit „du“ an', () => {
     expect(ANREDE.test('Möchten Sie fortfahren?'.replace(DRITTE_PERSON, '$1'))).toBe(true);
   });
 
-  it('die Warnung ohne Recht zum Korrigieren spricht mit „du“', () => {
-    const quelle = readFileSync(join(__dirname, '..', '..', 'features', 'tournament-management', 'hooks', 'useCorrectionMode.ts'), 'utf8');
-    expect(quelle).toContain('Du hast keine Berechtigung');
-    expect(quelle).not.toMatch(/Sie haben keine/);
-  });
-
   it('der Bereich mit Lösch- und Rücksetz-Aktionen heißt „Gefahrenbereich“, nirgends „Danger Zone“ oder „Kritische Aktionen“', () => {
     const admin = flatten(load('de', 'admin.json'));
     expect(pick('de', 'admin.json', 'dangerZone.title')).toBe('Gefahrenbereich');

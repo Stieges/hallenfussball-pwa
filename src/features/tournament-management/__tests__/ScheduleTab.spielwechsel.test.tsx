@@ -38,8 +38,9 @@ const base = createMockTournament({ id: 'hallencup-ost', title: 'Hallencup Ost',
 const schedule = generateFullSchedule(base);
 const spiel = (nummer: number) => schedule.allMatches.find((m) => m.matchNumber === nummer)!;
 
-function renderTab(laeuft: boolean) {
-  const matches = schedule.allMatches.map((m) => (laeuft && m.matchNumber === 5
+function renderTab(laeuft: boolean | number[]) {
+  const laufend = laeuft === true ? [5] : laeuft === false ? [] : laeuft;
+  const matches = schedule.allMatches.map((m) => (laufend.includes(m.matchNumber ?? -1)
     ? { ...m, matchStatus: 'running' as const, scoreA: 1, scoreB: 0 }
     : m)) as unknown as Tournament['matches'];
   const tournament: Tournament = { ...base, matches };
@@ -101,6 +102,16 @@ describe('@SL-194 Rückfrage beim Wechsel zu einem anderen Spiel', () => {
     await anpfeifenBeiSpiel6(user);
     expect(onNavigateToCockpit).toHaveBeenCalledExactlyOnceWith(spiel(6).id);
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  // Das Ziel selbst darf laufen: genannt wird das ANDERE laufende Spiel, nie das Ziel („Spiel 3 läuft weiter … zu Spiel 3“)
+  it('@SL-194 Gegenbeispiel: läuft das Ziel (Spiel 3) und dazu Spiel 5, nennt die Frage Spiel 5 als weiterlaufend', async () => {
+    const user = userEvent.setup();
+    renderTab([3, 5]);
+    await user.click(screen.getAllByTestId(`match-name-${spiel(3).id}-home`)[0]);
+    await user.click(await screen.findByTestId('match-action-toCockpit'));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Spiel 5 läuft weiter. Trotzdem zu Spiel 3 wechseln?');
   });
 
   it('@SL-194 die alte Beschriftung „Trotzdem wechseln“ ist weg (sie klang nach Beenden)', async () => {

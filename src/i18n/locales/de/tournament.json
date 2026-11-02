@@ -9,7 +9,6 @@
   "finals": {
     "title": "Finalrunde",
     "noMatches": "Keine Spiele vorhanden",
-    "correct": "Korrigieren",
     "field": "Feld",
     "columns": {
       "referee": "Schiedsrichter",
@@ -702,7 +701,6 @@
   "matchSummary": {
     "title": "Spielzusammenfassung",
     "close": "Schließen",
-    "editScore": "Ergebnis bearbeiten",
     "events": {
       "title": "Spielereignisse",
       "goalDecrement": "−1 {{team}}",
@@ -761,7 +759,6 @@
     "live": "Live"
   },
   "scoreCell": {
-    "correctResult": "Ergebnis korrigieren",
     "goalsOf": "Tore {{team}}",
     "homeFallback": "Heim",
     "awayFallback": "Gast",
@@ -1910,6 +1907,10 @@
       "protocol": "Protokoll ansehen"
     },
     "teamsMissing": "Die Teams dieses Spiels stehen noch nicht fest.",
+    "noAction": {
+      "awarded": "Spiel wurde gewertet",
+      "cancelled": "Spiel wurde abgesetzt"
+    },
     "choose": {
       "refereeTitle": "Schiedsrichter für Spiel {{number}}",
       "refereeLabel": "Schiedsrichter",

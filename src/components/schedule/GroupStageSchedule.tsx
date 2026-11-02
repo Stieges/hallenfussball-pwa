@@ -25,7 +25,8 @@ import {
 } from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand, SummaryExpand } from './MatchExpand';
 import { useMatchConflictsFromTournament, type ConflictSource } from '../../features/schedule-editor/hooks/useMatchConflicts';
-import { useLiveMatches } from '../../hooks/useLiveMatches';
+import type { LiveMatch } from '../live-cockpit/types';
+import { NO_LIVE_MATCHES } from './noLiveMatches';
 import { SortableMobileCard } from './SortableMobileCard';
 import { SortableDesktopCard } from './SortableDesktopCard';
 import { DesktopCard } from './DesktopCard';
@@ -63,6 +64,8 @@ interface GroupStageScheduleProps {
   clockOf?: (matchId: string) => SpectatorClock | null;
   /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
   tournament?: ScheduleSource;
+  /** Live-Daten mit Ereignissen (ein Abonnement in `ScheduleDisplay`, geteilt mit dem Protokoll der Aktionsauswahl) */
+  liveMatches?: ReadonlyMap<string, LiveMatch>;
   /**
    * Turnierdaten für die Konflikterkennung im Bearbeitungsmodus. Ohne Angabe gibt es keine Konflikt-Markierung
    * (ScheduleDisplay kennt weder Spieldauer noch Pause und gibt sie nicht an).
@@ -96,6 +99,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onCorrect,
   clockOf,
   tournament,
+  liveMatches = NO_LIVE_MATCHES,
   conflictSource,
   onMatchSwap,
   onNavigateToCockpit,
@@ -113,9 +117,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   type ExpandType = 'quick' | 'live' | 'start' | 'summary' | null;
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [expandType, setExpandType] = useState<ExpandType>(null);
-
-  // Get live match data including events
-  const { liveMatches } = useLiveMatches(tournament?.id ?? '');
 
   // Close expand when pressing Escape
   useEffect(() => {
@@ -184,7 +185,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   // Eine Tippfläche je Spiel (Karte und Tore): die Aktionsauswahl (@SL-193); „Ergebnis eintragen“ öffnet die Schnelleingabe der Karte
   const openQuickEntry = useCallback((matchId: string) => { setExpandedMatchId(matchId); setExpandType('quick'); }, []);
   const menu = useMatchActionMenu({
-    rights: actionRights, tournamentId: tournament?.id, matches, sides, numberOfFields, refereeChoices: refereeChoiceList,
+    rights: actionRights, liveMatches, matches, sides, numberOfFields, refereeChoices: refereeChoiceList,
     onEnterResult: onScoreChange ? openQuickEntry : undefined, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit,
   });
 

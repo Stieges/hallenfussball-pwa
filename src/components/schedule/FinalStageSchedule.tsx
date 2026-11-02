@@ -26,6 +26,8 @@ import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { ShortLabel, Versus } from '../ui/atoms';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
+import type { LiveMatch } from '../live-cockpit/types';
+import { NO_LIVE_MATCHES } from './noLiveMatches';
 import { useRefereeChoices } from './refereeChoices';
 import { SwapWithButton } from './SwapWithButton';
 import { MatchActionTrigger } from './actionMenu/MatchActionTrigger';
@@ -64,6 +66,8 @@ interface FinalStageScheduleProps {
   showTitle?: boolean;
   /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
   tournament?: ScheduleSource;
+  /** Live-Daten des Spielplans (ein Abonnement in `ScheduleDisplay`): das Protokoll der Aktionsauswahl liest daraus (@FU-080) */
+  liveMatches?: ReadonlyMap<string, LiveMatch>;
   /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ (nur Turnierleitung); ohne Angabe keine Taste */
   forfeit?: MatchForfeitActions;
   /** @FU-112/@FU-113: laufende Spiele beenden und eintragen darf nur die Turnierleitung; ohne Angabe nicht */
@@ -89,6 +93,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   onMatchSwap,
   showTitle = true,
   tournament,
+  liveMatches = NO_LIVE_MATCHES,
   forfeit,
   canEndRunning = false,
 }) => {
@@ -103,7 +108,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const refereeChoiceList = useRefereeChoices(refereeConfig, tournament?.teams);
   // Eine Tippfläche je Spiel: die Aktionsauswahl (@SL-193); „Ergebnis eintragen“ setzt den Fokus auf das Eingabefeld des Spiels
   const menu = useMatchActionMenu({
-    rights: actionRights, tournamentId: tournament?.id, matches, sides, numberOfFields, refereeChoices: refereeChoiceList,
+    rights: actionRights, liveMatches, matches, sides, numberOfFields, refereeChoices: refereeChoiceList,
     onEnterResult: onScoreChange ? focusScoreInput : undefined, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit,
   });
   const openMenu = menu.enabled && !editingSchedule ? menu.open : undefined;
