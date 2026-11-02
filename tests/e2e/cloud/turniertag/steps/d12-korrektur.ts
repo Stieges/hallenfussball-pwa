@@ -3,13 +3,9 @@
  *
  * Die Korrektur schreibt ein Engine-Ereignis `CORRECTION` in `match_events` (nicht mehr in `match_corrections`).
  * Gherkin @EK-063: Einstieg im Spielplan beim beendeten Spiel ODER im Cockpit, immer derselbe Dialog.
- *  - D12: Spielplan-Weg. Auf main ist er NICHT angeschlossen: `MatchScoreCell` zeigt `correction-button-<id>` nur mit
- *    `onStartCorrection`, ScheduleTab reicht keinen Handler durch (A-08e, Daniel 15.10. Frage 1 = A: kein Korrektur-Knopf
- *    im Spielplan bis B-24); der Weg Ergebnis-Kreis -> `match-summary-edit-score` blendet `onEditScore` ebenfalls nur
- *    mit Handler ein. Der Dialog (`correction-score-a/b`, `correction-confirm-button`) ist erst erreichbar, wenn B-24
- *    den Einstieg baut (Besitzer B-24, W4). Der Schritt behält die Erwartung (CORRECTION-Ereignis, Stand 4:0) und ist expectedFail.
- *    @EK-063 verlangt im Dialog "bisher und neu UND die Auswahl des Grunds": die Grund-Auswahl (`correction-reason`) ist
- *    Pflicht und wird im Schritt ausgefüllt; der Besitzer ergänzt den Marker beim Bauen (heute hat das Auswahlfeld keinen).
+ *  - D12: Spielplan-Weg (G2 Spur A, @SL-193): Tipp aufs beendete Spiel → Aktionsauswahl → „Ergebnis korrigieren“ → derselbe Dialog
+ *    wie im Cockpit (`cockpit-korrektur-*`: bisher und neu) → „Weiter“ → Auswahl des Grunds (`result-entry-reason`, Pflicht).
+ *    Der frühere Weg über `correction-button-<id>` / `correction-score-a` ist entfernt.
  *  - D12b: Cockpit-Einstieg (`match-correction-button`), Besitzer B-25 (W5), auf einem BEENDETEN Spiel (Gruppenspiel 4,
  *    nach D8 beendet; @EK-063: "nachdem er das Spiel selbst geleitet hat und es abgepfiffen ist").
  */
@@ -25,23 +21,25 @@ async function korrekturImSpielplan({ asRole }: StepContext): Promise<void> {
   const ownerPage = await asRole('owner');
   await openTurniertagPath(ownerPage, '/schedule');
   await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
-  const knopf = ownerPage.locator(`[data-testid="correction-button-${match.id}"]`);
+  const kreis = ownerPage.locator(`[data-testid="match-circle-${match.id}"]:visible`);
   await expect(async () => {
     for (const fraction of [0, 0.3, 0.6, 1]) {
       await ownerPage.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), fraction);
       await ownerPage.waitForTimeout(250);
-      if (await knopf.isVisible().catch(() => false)) {
+      if (await kreis.first().isVisible().catch(() => false)) {
         return;
       }
     }
-    expect(await knopf.isVisible(), 'Korrigieren-Knopf des beendeten Spiels').toBe(true);
+    expect(await kreis.first().isVisible(), 'Karte des beendeten Spiels').toBe(true);
   }).toPass({ timeout: 20000 });
-  await knopf.click();
-  await ownerPage.locator('[data-testid="correction-score-a"]').fill('4');
-  await ownerPage.locator('[data-testid="correction-score-b"]').fill('0');
-  // @EK-063: die Auswahl des Grunds gehört zum Dialog (Pflicht); ein anderer als der vorbelegte Grund wird gewählt.
-  await ownerPage.locator('[data-testid="correction-reason"]').selectOption({ index: 1 });
-  await ownerPage.locator('[data-testid="correction-confirm-button"]').click();
+  await kreis.first().click();
+  await ownerPage.getByTestId('match-action-correct').click();
+  await ownerPage.getByTestId('cockpit-korrektur-home').fill('4');
+  await ownerPage.getByTestId('cockpit-korrektur-away').fill('0');
+  await ownerPage.getByTestId('cockpit-korrektur-weiter').click();
+  // @EK-063: die Auswahl des Grunds gehört zum Dialog (Pflicht)
+  await ownerPage.getByTestId('result-entry-reason').selectOption('input_error');
+  await ownerPage.getByTestId('result-entry-save').click();
   // Ereignis: genau eine neue CORRECTION-Zeile mit dem neuen Stand je Team.
   await expect.poll(async () => (await fetchEngineRows(match.id)).filter((row) => row.type === 'CORRECTION').length, {
     message: 'Korrektur erzeugt ein CORRECTION-Ereignis in match_events', timeout: 10000,
@@ -66,6 +64,6 @@ async function korrekturImCockpit({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D12', title: 'Ergebnis eines beendeten Spiels im Spielplan korrigieren (CORRECTION in match_events)', scenarios: ['@EK-063'], befunde: ['C-KORREKTUR-EINSTIEG-FEHLT'], owner: 'B-24', expectedFail: true, run: korrekturImSpielplan },
+  { id: 'D12', title: 'Ergebnis eines beendeten Spiels im Spielplan korrigieren (CORRECTION in match_events)', scenarios: ['@EK-063'], owner: 'B-24', expectedFail: false, run: korrekturImSpielplan },
   { id: 'D12b', title: 'Korrektur aus dem Cockpit der Turnierleitung (gleicher Dialog)', scenarios: ['@EK-063'], owner: 'B-25', expectedFail: true, run: korrekturImCockpit },
 ];

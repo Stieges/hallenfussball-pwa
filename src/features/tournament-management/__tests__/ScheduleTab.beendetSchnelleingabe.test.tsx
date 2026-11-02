@@ -1,6 +1,7 @@
 /**
- * Befund C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL (K1): ein beendetes Gruppenspiel öffnet im Spielplan die Schnelleingabe,
- * und „Speichern“ tat still nichts. Pflichttest echter Weg wie ScheduleTab.direkteintrag.test.tsx (echter
+ * Befund C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL (K1): ein beendetes Gruppenspiel öffnete im Spielplan die Schnelleingabe,
+ * und „Speichern“ tat still nichts. Seit G2 Spur A beginnt die Korrektur in der Aktionsauswahl („Ergebnis korrigieren“, @SL-193):
+ * derselbe Dialog wie im Cockpit (@EK-063), danach die Grund-Auswahl. Pflichttest echter Weg wie ScheduleTab.direkteintrag.test.tsx (echter
  * `useTournamentManager`, echte `OfflineRepository`, echter Engine-Kontext, Server-RPC gemockt).
  * Szenarien: @EK-063 (Korrektur beginnt im Spielplan), @EK-004 (ohne Grund keine Korrektur), @EK-001 (Korrektur mit
  * Grund), @FU-080 (geplantes Spiel speichert wie bisher), @HE-042 (Helfer: nur Turnierleitung).
@@ -9,7 +10,7 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Standing, Team, Tournament } from '../../../types/tournament';
 
@@ -48,7 +49,7 @@ vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: ()
 const actorRole = vi.hoisted((): { current: 'leitung' | 'helper' } => ({ current: 'leitung' }));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => actorRole.current }));
 // A-11: Rechte nur über useCan (der Stub usePermissions ist gelöscht) -- hier die Turnierleitung, alles erlaubt.
-vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: (permission: string) => actorRole.current === 'leitung' || permission === 'writeMatchData' }));
 // UR: Olli ist angemeldet und Eigentümer von „T“; Antwort der Lesefunktion je Test.
 vi.mock('../../auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: true, user: { id: 'olli', name: 'Olli' } }) }));
 vi.mock('../../auth/hooks/useMyTournamentRole', () => ({ useMyTournamentRole: () => ({ role: 'owner', isLoading: false }) }));
@@ -140,13 +141,29 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     return { view, card };
   }
 
-  /** Öffnet die Schnelleingabe der ersten Karte, tippt Tore (je Team) und drückt „Speichern“. */
-  async function quickEntry(card: () => HTMLElement, home: number, away: number) {
+  /** Tipp auf die erste Karte und eine Aktion der Auswahl (@SL-193). */
+  async function chooseAction(card: () => HTMLElement, action: string) {
     act(() => { fireEvent.click(within(card()).getAllByText(HOME?.name ?? '')[0]); });
+    const item = await screen.findByTestId(`match-action-${action}`);
+    act(() => { fireEvent.click(item); });
+  }
+
+  /** „Ergebnis eintragen“ der ersten Karte: tippt Tore (je Team) und drückt „Speichern“. */
+  async function quickEntry(card: () => HTMLElement, home: number, away: number) {
+    await chooseAction(card, 'enterResult');
     const expand = await within(card()).findByTestId('quick-score-expand');
     for (let i = 0; i < home; i++) { fireEvent.click(within(expand).getByLabelText(`${HOME?.name} Tor hinzufügen`)); }
     for (let i = 0; i < away; i++) { fireEvent.click(within(expand).getByLabelText(`${AWAY?.name} Tor hinzufügen`)); }
     await act(async () => { fireEvent.click(within(expand).getByTestId('quick-score-save-btn')); await settle(); });
+  }
+
+  /** „Ergebnis korrigieren“: Dialog mit bisher und neu, „Weiter“ führt in die Grund-Auswahl (@EK-063). */
+  async function correct(card: () => HTMLElement, home: number, away: number) {
+    await chooseAction(card, 'correct');
+    const dialog = await screen.findByTestId('cockpit-korrektur-dialog');
+    fireEvent.change(within(dialog).getByTestId('cockpit-korrektur-home'), { target: { value: String(home) } });
+    fireEvent.change(within(dialog).getByTestId('cockpit-korrektur-away'), { target: { value: String(away) } });
+    await act(async () => { fireEvent.click(within(dialog).getByTestId('cockpit-korrektur-weiter')); await settle(); });
   }
 
   /** Spiel 1 ist beendet (3:1), eingetragen durch die Turnierleitung über die Engine. */
@@ -159,12 +176,12 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     h.api.mockClear();
   }
 
-  it('@EK-063:teil beendet → Speichern startet die Korrektur: Grund-Auswahl mit bisher 3:1 und neu 4:1, noch nichts gesendet', async () => {
+  it('@EK-063 beendet → „Ergebnis korrigieren“ → Weiter startet die Korrektur: Grund-Auswahl mit bisher 3:1 und neu 4:1, noch nichts gesendet', async () => {
     await finishFirstMatch();
     const { view, card } = await renderSchedule();
     expect(card().textContent).toMatch(/3\s*:\s*1/); // Ausgangslage: Spiel ist beendet und zeigt 3:1
 
-    await quickEntry(card, 1, 0);
+    await correct(card, 4, 1);
 
     const dialog = await view.findByTestId('result-entry-reason-dialog');
     expect(dialog.textContent).toContain('bisher 3:1 – neu 4:1');
@@ -175,7 +192,7 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     await finishFirstMatch();
     const { view, card } = await renderSchedule();
     expect(view.getByTestId('home-points').textContent).toBe('3'); // Ausgangslage: 3:1 gewonnen
-    await quickEntry(card, 0, 2);
+    await correct(card, 3, 3);
     await view.findByTestId('result-entry-reason-dialog');
 
     fireEvent.change(view.getByTestId('result-entry-reason'), { target: { value: 'input_error' } });
@@ -189,7 +206,7 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
   it('@EK-004 Abbrechen sendet nichts: die Zeile zeigt weiter 3:1', async () => {
     await finishFirstMatch();
     const { view, card } = await renderSchedule();
-    await quickEntry(card, 1, 0);
+    await correct(card, 4, 1);
     await view.findByTestId('result-entry-reason-dialog');
 
     await act(async () => { fireEvent.click(view.getByTestId('result-entry-cancel')); await settle(); });
@@ -199,18 +216,15 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     expect(card().textContent).not.toMatch(/4\s*:\s*1/);
   });
 
-  it('@EK-063:teil beendet → Zusammenfassung → „Ergebnis ändern“ tut nicht still nichts, sondern öffnet die Schnelleingabe mit Grund-Weg', async () => {
+  it('@EK-063 Gegenbeispiel: der Tipp auf ein beendetes Spiel öffnet die Auswahl, nicht die Zusammenfassung mit „Ergebnis ändern“', async () => {
     await finishFirstMatch();
-    const { view, card } = await renderSchedule();
+    const { card } = await renderSchedule();
 
     act(() => { fireEvent.click(within(card()).getByTestId(`match-circle-${FIRST.id}`)); });
-    const edit = await within(card()).findByTestId('match-summary-edit-score');
-    act(() => { fireEvent.click(edit); });
 
-    const expand = await within(card()).findByTestId('quick-score-expand');
-    fireEvent.click(within(expand).getByLabelText(`${HOME?.name} Tor hinzufügen`));
-    await act(async () => { fireEvent.click(within(expand).getByTestId('quick-score-save-btn')); await settle(); });
-    expect((await view.findByTestId('result-entry-reason-dialog')).textContent).toContain('bisher 3:1 – neu 4:1');
+    expect(await screen.findByTestId('match-action-menu')).toBeTruthy();
+    expect(screen.queryByTestId('match-summary-edit-score')).toBeNull();
+    expect(screen.queryByTestId('quick-score-expand')).toBeNull();
   });
 
   it('Gegenbeispiel @FU-080: ein geplantes Spiel speichert wie bisher (RESULT_ENTRY, keine Grund-Auswahl)', async () => {
@@ -223,15 +237,16 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     expect(card().textContent).toMatch(/3\s*:\s*1/);
   });
 
-  it('Gegenbeispiel @HE-042: als Helfer keine Korrektur, sondern der Hinweis „Korrektur nur durch die Turnierleitung“', async () => {
+  it('Gegenbeispiel @HE-042 @FU-113: ein Helfer sieht bei einem beendeten Spiel kein „Ergebnis korrigieren“, nur „Protokoll ansehen"; es wird nichts gesendet', async () => {
     await finishFirstMatch();
     actorRole.current = 'helper';
     const { view, card } = await renderSchedule();
 
-    await quickEntry(card, 1, 0);
+    act(() => { fireEvent.click(within(card()).getAllByText(HOME?.name ?? '')[0]); });
 
+    expect(await screen.findByTestId('match-action-protocol')).toBeTruthy();
+    expect(screen.queryByTestId('match-action-correct')).toBeNull();
     expect(view.queryByTestId('result-entry-reason-dialog')).toBeNull();
-    expect(await view.findByText('Korrektur nur durch die Turnierleitung')).toBeTruthy();
     expect(h.api).not.toHaveBeenCalled();
   });
 });

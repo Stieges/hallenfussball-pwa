@@ -30,6 +30,7 @@ import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPromp
 import { useScheduleTakeover } from './hooks/useScheduleTakeover';
 import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
 import { useScheduleForfeit } from './hooks/useScheduleForfeit';
+import { useSpielplanKorrektur } from './hooks/useSpielplanKorrektur';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
@@ -205,12 +206,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { handleScoreChange, resultEntry } = useScheduleTabActions({
     tournament,
     showWarning,
-    // Korrektur beendeter Spiele im Spielplan: Grund-Auswahl statt Sperre (@EK-063, @EK-004), wie im Cockpit (useCockpitKorrektur).
-    // Die Nutzer-Einstellung `lockFinishedResults` verwies auf einen Knopf „Ergebnis korrigieren“, den es hier nicht gibt.
+    // Korrektur beendeter Spiele: Grund-Auswahl statt Sperre (@EK-063, @EK-004); der Einstieg ist „Ergebnis korrigieren“ (useSpielplanKorrektur).
     lockFinishedResults: false,
     offerTakeover: takeover.offerTakeover,
   });
 
+  // „Ergebnis korrigieren“ (@EK-063): derselbe Dialog und derselbe Weg wie im Cockpit
+  const korrektur = useSpielplanKorrektur({ view, enterScore: handleScoreChange, istLeitung: canEndRunning });
   // Aktionsauswahl je Spiel (@SL-193): Rechte aus useCan; im Bearbeiten-Modus gelten die Auswahlfelder der Karten
   const actionRights = useMemo(() => (isEditing ? undefined : { lead: canEndRunning, play: canControlTimer, schedule: canSchedule }), [isEditing, canEndRunning, canControlTimer, canSchedule]);
 
@@ -326,6 +328,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
                 canEndRunning={canEndRunning}
                 actionRights={actionRights}
+                onCorrect={korrektur.onKorrigieren}
                 forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />
@@ -360,6 +363,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         </Card>
       </div>
 
+      {korrektur.dialog}
       <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} />
       {takeover.dialog}
       <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
