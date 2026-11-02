@@ -40,16 +40,19 @@ einen Ort, den `short.context` nennt:
 |---|---|---|
 | `tabellenkopf` | Kopf einer Tabellenspalte | `#`, `Sp.`/`P`, `S U N`/`W D L`, `Diff.`/`GD`, `Pkt.`/`Pts`, `Nr.`/`No.` |
 | `ergebniszelle` | Ergebniszelle | `n. V.`/`a.e.t.` (nach Strafstoßschießen steht „2:2 (4:3)“, keine Kurzform) |
-| `uhr` | Uhr-Beschriftung, Monitor | `Min.`/`min` |
 
 Wie es umgesetzt wird:
 - Kurzformen stehen **nur** im Namensraum `short` (`src/i18n/locales/{de,en}/short.json`), nie als Literal im Code und nie in
-  einem anderen Namensraum. Der Prüfer (`npm run terms:check`) meldet jedes Kürzel aus `forbidden_de` (nur in `de`) und
-  `forbidden_en` (nur in `en`) in jedem Sprachwert außerhalb von `short`, und er verlangt, dass `short.json` genau den
+  einem anderen Namensraum. Der Prüfer (`npm run terms:check`) meldet jedes Kürzel aus `forbidden_de` (in `de`, und in `en`, außer die
+  Form ist selbst englisch wie „vs“) und `forbidden_en` (nur in `en`) in jedem Sprachwert außerhalb von `short`, und er verlangt, dass `short.json` genau den
   `short`-Einträgen des Glossars entspricht.
 - Im Tabellenkopf nutzt man `<ShortLabel term="played" />` (`ui/atoms`): sichtbar die Kurzform, als `title` und für Screenreader
-  der ausgeschriebene Begriff (`sport:tabelle.*`). In PDF-Köpfen: `translate('short:tabellenkopf.…')`. In Texten, die eine
-  Kurzform tragen müssen (Monitor „~5 Min.“): Verschachtelung `$t(short:uhr.minutes)`.
+  der ausgeschriebene Begriff (`sport:tabelle.*`): `title` hängt an der sichtbaren, für Screenreader ausgeblendeten Kurzform (Maus und Touch), der
+  Vorlesetext ist ein eigener, nur für Screenreader sichtbarer Text – so liest nichts doppelt vor. In PDF-Köpfen: `translate('short:tabellenkopf.…')`. In Texten, die eine
+  Kurzform tragen müssen: Verschachtelung `$t(short:…)` – nur an den Stellen, die das Glossar unter `short.usedBy` nennt (heute nur `tournament:matchResult.overtimeShort`);
+  in `.ts/.tsx` dürfen Schlüssel mit `short:` nur in `shortTerms.ts`, `src/lib/pdf/translations.ts` und `src/lib/pdfStatisticsExporter.ts` stehen
+  (ESLint-Regel `no-hardcoded-sport-terms`, Meldung `shortKeyElsewhere`).
+  Minuten haben keine Kurzform, auch nicht an der Uhr oder am Monitor („~5 Minuten“).
 - Mehrere Wörter in einem Text („Referee 2“, „Group A“, Paarungen) kommen aus der Sprachdatei, nicht aus dem Code
   (`t('tournament:refereeOptions.numbered', { number })`, `<Versus />`); Minuten mit Zählform:
   `$t(sport:zeit.minuteCount, {"count": {{minutes}} })` („1 Minute“, „5 Minuten“).
