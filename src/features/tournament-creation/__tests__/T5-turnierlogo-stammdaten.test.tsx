@@ -183,6 +183,22 @@ describe('@W3-040 Turnierlogo in den Stammdaten', () => {
     expect(await gespeichert()).toEqual({ right: expect.objectContaining({ dataUrl: dataUrl('UkVDSFRT') }) });
   });
 
+  it('@W3-040 Entfernen der zweiten Grafik lässt Logo und Tupfer stehen (Gegenbeispiel)', async () => {
+    prepareAnswers(mitAkzent(ok('TElOS1M='), BLAU), ok('UkVDSFRT'));
+    zeige();
+    await waehle('turnierlogo');
+    await waitFor(() => expect(tupfer()).toHaveAttribute('data-accent', BLAU));
+    await waehle('zweite-grafik');
+    await screen.findByTestId('zweite-grafik-vorschau');
+
+    fireEvent.click(screen.getByTestId('zweite-grafik-entfernen'));
+
+    await waitFor(() => expect(screen.queryByTestId('zweite-grafik-vorschau')).toBeNull());
+    expect(tupfer()).toHaveAttribute('data-accent', BLAU);
+    expect(screen.getByTestId('turnierlogo-vorschau')).toHaveAttribute('src', dataUrl('TElOS1M='));
+    expect(await gespeichert()).toEqual({ left: expect.objectContaining({ dataUrl: dataUrl('TElOS1M=') }), accent: BLAU });
+  });
+
   it('@W3-040 Hinweis „Nur auf diesem Gerät gespeichert. …“ steht unter dem Logo-Feld, nicht unter der zweiten Grafik (F1)', async () => {
     prepareAnswers(mitAkzent(ok('TElOS1M='), BLAU));
     zeige();
