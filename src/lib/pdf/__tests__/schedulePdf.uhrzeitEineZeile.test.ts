@@ -10,6 +10,7 @@ import { testUuid } from '../../../test/testIds';
 import { hallencupTournament } from './pdfFixture';
 import { layoutOf } from './pdfFixtureLayout';
 import { translatorFor } from './pdfText';
+import { printGap } from '../../../design-tokens/print';
 
 const LANGE_NAMEN = [
   'Fußballverein Großmehring-Bergheim 1921 e. V.', 'Turn- und Sportverein Oberammergau-Unterammergau', 'Sportgemeinschaft Hohenpeißenberg-Peiting',
@@ -50,5 +51,25 @@ describe('@DR-001 keine Uhrzeit bricht um', () => {
       const gebrochen = pages.some(page => page.texts.some((t, i) => t.str.trim() === `${zeit.split(':')[0]}:` && page.texts[i + 1]?.str.trim() === minuten));
       expect(gebrochen, `Spielzeit ${zeit} nicht in „HH:“ und „MM“ zerlegt`).toBe(false);
     }
+
+    // Geometrie: die gezeichnete Zeitspalte ist mindestens so breit wie die breiteste Uhrzeit samt Innenabstand. Die Spalten haben keine
+    // Rahmenlinien; ihre Breite folgt aus den Mitten der zentrierten Zellen (Nr.-Spalte beginnt am linken Tabellenrand):
+    //   Mitte Nr = links + Wnr/2,  Mitte Zeit = links + Wnr + Wzeit/2  =>  Wzeit = 2·(Mitte Zeit − links) − 4·(Mitte Nr − links)
+    const MITTE = (t: { x: number; w: number }) => t.x + t.w / 2;
+    let geprueft = 0;
+    for (const page of pages) {
+      const links = Math.min(...page.lines.map(l => Math.min(l.x1, l.x2)));
+      for (const zeit of page.texts.filter(t => /^\d{2}:\d{2}$/.test(t.str.trim()))) {
+        const nr = page.texts
+          .filter(t => Math.abs(t.y - zeit.y) < 2 && t.x < zeit.x && /^\d+$/.test(t.str.trim()))
+          .sort((a, b) => b.x - a.x)[0];
+        if (nr === undefined) { continue; }
+        const breite = 2 * (MITTE(zeit) - links) - 4 * (MITTE(nr) - links);
+        expect(breite, `Zeitspalte neben ${zeit.str}: Breite ${breite.toFixed(2)} mm, Uhrzeit ${zeit.w.toFixed(2)} mm + Innenabstand`)
+          .toBeGreaterThanOrEqual(zeit.w + 2 * printGap.bodyPadH - 0.05);
+        geprueft += 1;
+      }
+    }
+    expect(geprueft, 'es wurden Spielzeilen vermessen').toBeGreaterThan(0);
   });
 });

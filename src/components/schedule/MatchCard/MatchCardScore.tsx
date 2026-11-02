@@ -4,7 +4,7 @@
  * Heim und Gast stehen in der Tabelle nebeneinander, deshalb steht das Ergebnis waagerecht:
  * - geplant: das Wort zwischen den Teams in der Sprache der Oberfläche („gegen“ / „vs“, @OB-076)
  * - läuft: "1:0" mit Restzeit darunter
- * - beendet: "1:0", "3:2 n. V." oder "2:2 (4:3)"
+ * - beendet: "1:0", "3:2 n. V." oder "2:2 (4:3 i. E.)"
  *
  * Der Knopf ist das Klickziel ins Cockpit (≥ 44 px hoch). Der frühere Kreis mit Fortschrittsring entfällt.
  */

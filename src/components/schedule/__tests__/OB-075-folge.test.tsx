@@ -11,6 +11,7 @@ import type { ReactElement } from 'react';
 import { MatchCardDesktop } from '../MatchCard/MatchCardDesktop';
 import { MatchCardHeader } from '../MatchCard/MatchCardHeader';
 import { MatchCard } from '../MatchCard';
+import { MatchScoreCell } from '../MatchScoreCell';
 import { ShortLabel } from '../../ui/atoms/ShortLabel';
 import { formatTableResult, type ResultFigures } from '../matchResult';
 import { createRealI18n, type RealLanguage } from '../../../test/realI18n';
@@ -50,8 +51,8 @@ describe('@OB-075 Tabellenkopf: Schiedsrichter und Gruppe mit ausgeschriebenem H
 
 describe('@OB-075 Ergebniszelle einer Tabelle: „i. E.“ und „n. V.“ mit ausgeschriebenem Begriff', () => {
   it.each([
-    ['de', 'i. E.', 'Strafstoßschießen', '3:2 n. V.', 'nach Verlängerung'],
-    ['en', 'pens', 'Penalty Shootout', '3:2 a.e.t.', 'after extra time'],
+    ['de', 'i. E.', 'nach Strafstoßschießen', '3:2 n. V.', 'nach Verlängerung'],
+    ['en', 'pens', 'on penalties', '3:2 a.e.t.', 'after extra time'],
   ] as const)('%s: Tabellenzeile zeigt „2:2 (4:3 %s)“ und „%s“ zum Darüberfahren und Vorlesen; „%s“ bei Verlängerung', async (lng, kurzE, langE, tabelleV, langV) => {
     const { i18n } = await renderIn(lng, <span />);
     const t = (key: 'matchResult.overtimeShort' | 'matchResult.penaltyShort') => i18n.t(key, { ns: 'tournament' });
@@ -67,8 +68,9 @@ describe('@OB-075 Ergebniszelle einer Tabelle: „i. E.“ und „n. V.“ mit a
       );
       const knopf = within(zeile.container).getByTestId('match-circle-hf1');
       expect(knopf.textContent).toBe(text);
-      expect(knopf.getAttribute('title')?.toLowerCase()).toContain(langer.toLowerCase());
-      expect(knopf.getAttribute('aria-label')?.toLowerCase()).toContain(langer.toLowerCase());
+      // Glossar-Langform wörtlich („nach Strafstoßschießen“ / „on penalties“), nicht nur ein Wortteil
+      expect(knopf.getAttribute('title')).toContain(langer);
+      expect(knopf.getAttribute('aria-label')).toContain(langer);
       zeile.unmount();
     }
   });
@@ -128,5 +130,31 @@ describe('@W3-031 Schiedsrichter im Spielplan: „Schiedsrichter 2“, „SR“ 
     const zeile = await renderIn(lng, <MatchCardDesktop matchId="m4" matchNumber={4} scheduledTime="13:00" field={1} referee="2" group="A" showGroupLabel homeTeam={NORD} awayTeam={MITTE} status="scheduled" />);
     expect(within(zeile.container).getByText(erwartet)).toBeInTheDocument();
     expect(zeile.container.textContent).not.toMatch(/\bSR\b|\bRef\b|\bGr\.|\bGrp\b/);
+  });
+});
+
+describe('@OB-075 Finalrunden-Tabelle: Ergebniszelle (MatchScoreCell) mit ausgeschriebenem Begriff', () => {
+  const zelle = (ergebnis: ResultFigures) => (
+    <MatchScoreCell matchId="hf1" scoreA={ergebnis.goalsA} scoreB={ergebnis.goalsB} editable={false} isFinished inCorrectionMode={false} result={ergebnis} onScoreChange={() => true} />
+  );
+
+  it.each([
+    ['de', '2:2 (4:3 i. E.)', strafstoss, '(4:3 i. E.)', 'nach Strafstoßschießen', '4:3 nach Strafstoßschießen'],
+    ['de', '3:2 n. V.', verlaengerung, 'n. V.', 'nach Verlängerung', 'nach Verlängerung'],
+    ['en', '2:2 (4:3 pens)', strafstoss, '(4:3 pens)', 'on penalties', '4:3 on penalties'],
+    ['en', '3:2 a.e.t.', verlaengerung, 'a.e.t.', 'after extra time', 'after extra time'],
+  ] as const)('%s: Zelle zeigt „%s“, die Kurzform trägt den ausgeschriebenen Begriff als title und Vorlesetext', async (lng, zellenText, ergebnis, kurz, lang, vorlesen) => {
+    const { container } = await renderIn(lng, zelle(ergebnis));
+    expect(container.querySelector('.match-score-cell-finished > span')?.textContent).toBe(zellenText);
+    const extra = within(container).getByTestId('match-score-extra-hf1');
+    expect(extra.textContent).toBe(kurz);
+    expect(extra.getAttribute('title')).toBe(lang);
+    expect(extra.getAttribute('aria-label')).toBe(vorlesen);
+  });
+
+  it('Gegenbeispiel: reguläres Ergebnis „1:0“ trägt keine Kurzform und keinen Hinweis', async () => {
+    const { container } = await renderIn('de', zelle(regulaer));
+    expect(container.querySelector('.match-score-cell-finished > span')?.textContent).toBe('1:0');
+    expect(within(container).queryByTestId('match-score-extra-hf1')).toBeNull();
   });
 });

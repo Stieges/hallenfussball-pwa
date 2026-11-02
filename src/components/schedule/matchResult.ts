@@ -7,6 +7,7 @@
  */
 import type { FinalScore, MatchView } from '../../core/view';
 import type { Match } from '../../types/tournament';
+import { SHORT_TERMS } from '../ui/atoms/shortTerms';
 
 export type ResultStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
@@ -80,6 +81,25 @@ export function tableResultExtra(figures: ResultFigures, t: ResultTranslate): st
     return `(${figures.penaltyA}:${figures.penaltyB} ${t('matchResult.penaltyShort')})`;
   }
   return figures.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined;
+}
+
+/** Übersetzungsfunktion für die ausgeschriebenen Begriffe der Kurzformen (Namensraum `sport`, Zuordnung in `SHORT_TERMS`). */
+export type ResultLongTranslate = (key: typeof SHORT_TERMS.afterPenalties.long | typeof SHORT_TERMS.extraTime.long) => string;
+
+/**
+ * Ausgeschriebener Begriff zur Kurzform der Ergebniszelle (@OB-075): `long` für Darüberfahren („nach Strafstoßschießen“), `spoken` für
+ * Screenreader (bei Strafstoßschießen samt Ergebnis „4:3 nach Strafstoßschießen“). Ohne Entscheidung gibt es nichts zu erklären.
+ */
+export function tableResultExtraTerms(figures: ResultFigures, t: ResultLongTranslate): { long: string; spoken: string } | undefined {
+  if (figures.decision === 'penalty') {
+    const long = t(SHORT_TERMS.afterPenalties.long);
+    return { long, spoken: figures.penaltyA !== undefined && figures.penaltyB !== undefined ? `${figures.penaltyA}:${figures.penaltyB} ${long}` : long };
+  }
+  if (figures.decision === 'overtime') {
+    const long = t(SHORT_TERMS.extraTime.long);
+    return { long, spoken: long };
+  }
+  return undefined;
 }
 
 /**

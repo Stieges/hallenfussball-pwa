@@ -100,18 +100,29 @@ describe('@OB-075 Rückennummer in Sperr-Hinweis, Strafen-Leiste und Klärungsli
   });
 });
 
+/** Alle Sprachdateien aller Namensräume (Pfad `../locales/<Sprache>/<Namensraum>.json`). */
+const SPRACHDATEIEN = import.meta.glob<unknown>('../locales/*/*.json', { eager: true, import: 'default' });
+
+/** Werte, die trotz „Nummer/Number <Platzhalter>“ keine Rückennummer sind (Pfad `<Sprache>:<Namensraum>.<Schlüssel>`), mit Begründung. */
+const KEINE_RUECKENNUMMER = new Set([
+  'en:admin.teamHelpers.approve.numberLabel', // Freigabe-Code der Helfer („Number {{number}}“), keine Rückennummer
+]);
+
 describe('@OB-075 Gegenbeispiel: in keiner Sprachdatei steht ein Satz mit „Nr. <Zahl>“, „No. <Zahl>“ oder „Nummer {{…}}“ für eine Rückennummer', () => {
-  it.each(SPRACHEN)('%s: kein Wert mit Nummern-Wort vor einem Platzhalter der Rückennummer', async (lng) => {
-    const namen = ['cockpit', 'tournament', 'publicView', 'monitor', 'helpers', 'wizard'];
+  it.each(SPRACHEN)('%s: kein Wert mit Nummern-Wort vor einem Platzhalter der Rückennummer (alle Namensräume)', async (lng) => {
+    const dateien = Object.entries(SPRACHDATEIEN).filter(([pfad]) => pfad.startsWith(`../locales/${lng}/`));
+    expect(dateien.length).toBeGreaterThan(5);
     const treffer: string[] = [];
     const gehe = (knoten: unknown, pfad: string) => {
       if (typeof knoten === 'string') {
-        if (/\b(Nr\.?|No\.?|Nummer|[Nn]umber) ?(\d|\{\{(nummer|number|nr|playerNumber)\}\})/.test(knoten) && !/Spiel \{\{|Match \{\{|Game \{\{|Zahl|Number \{\{number\}\}$/.test(knoten)) { treffer.push(`${pfad}: ${knoten}`); }
+        if (/\b(Nr\.?|No\.?|Nummer|[Nn]umber) ?(\d|\{\{(nummer|number|nr|playerNumber)\}\})/.test(knoten) && !KEINE_RUECKENNUMMER.has(pfad)) { treffer.push(`${pfad}: ${knoten}`); }
       } else if (knoten !== null && typeof knoten === 'object') {
         Object.entries(knoten).forEach(([k, v]) => gehe(v, `${pfad}.${k}`));
       }
     };
-    for (const ns of namen) { gehe((await import(`../locales/${lng}/${ns}.json`)).default, `${lng}:${ns}`); }
+    for (const [pfad, inhalt] of dateien) {
+      gehe(inhalt, `${lng}:${pfad.replace(/^.*\//, '').replace(/\.json$/, '')}`);
+    }
     expect(treffer).toEqual([]);
   });
 });

@@ -634,7 +634,7 @@
     "finishedPenalty": "ended on penalties",
     "running": "live",
     "runningElapsed": "live {{elapsed}}",
-    "scoreAriaPenalty": "Final score {{homeScore}}:{{awayScore}}, $t(sport:events.penaltyShootout) {{homePenalty}}:{{awayPenalty}}",
+    "scoreAriaPenalty": "Final score {{homeScore}}:{{awayScore}}, {{homePenalty}}:{{awayPenalty}} $t(sport:phases.afterPenalties)",
     "scoreAriaOvertime": "Final score {{homeScore}}:{{awayScore}} after extra time",
     "finishedOvertime": "ended after extra time"
   },

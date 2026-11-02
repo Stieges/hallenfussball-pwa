@@ -7,7 +7,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { MatchView } from '../../../core/view';
 import type { MonitorTheme } from '../../../types/monitor';
 import { getFieldDisplayName } from '../../../utils/displayNames';
-import { resultFigures, tableResultExtra } from '../../../components/schedule/matchResult';
+import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../../components/schedule/matchResult';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
 import { MonitorTimeCell } from './MonitorTimeCell';
@@ -25,7 +25,7 @@ interface MonitorMatchRowProps {
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung (optional Ergebnis und Bezeichnung). */
 export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false }: MonitorMatchRowProps) {
-  const { t } = useTranslation('tournament');
+  const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
   const cell: CSSProperties = {
@@ -39,9 +39,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
   const score = figures === null ? '-:-' : `${figures.goalsA}:${figures.goalsB}`;
   const scoreExtra = figures === null ? undefined : tableResultExtra(figures, t);
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
-  const longOf = t as (key: string) => string; // Schlüssel aus dem Namensraum `sport` (Glossar), nicht typisiert
-  const scoreExtraLong = figures?.decision === 'penalty' ? longOf('sport:phases.afterPenalties') : figures?.decision === 'overtime' ? longOf('sport:phases.afterExtraTime') : undefined;
-  const scoreExtraAria = figures?.decision === 'penalty' && figures.penaltyA !== undefined ? `${figures.penaltyA}:${figures.penaltyB} ${scoreExtraLong}` : scoreExtraLong;
+  const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
   // „ausgefallen“ trägt das Abzeichen (ohne Ergebnis), „gewertet“ steht neben dem Ergebnis (@ZM-104)
   const note = match.status === 'awarded' ? t('view.status.awarded') : undefined;
 
@@ -90,7 +88,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
       >
         {showScore ? score : '–'}
         {showScore && scoreExtra && (
-          <div data-testid="monitor-match-extra" title={scoreExtraLong} aria-label={scoreExtraAria} role="note" style={{ fontSize: displayList.fontSizes.head, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
+          <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={{ fontSize: displayList.fontSizes.head, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
             {scoreExtra}
           </div>
         )}

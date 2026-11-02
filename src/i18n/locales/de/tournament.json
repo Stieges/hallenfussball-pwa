@@ -634,7 +634,7 @@
     "finishedPenalty": "beendet nach Strafstoßschießen",
     "running": "läuft",
     "runningElapsed": "läuft {{elapsed}}",
-    "scoreAriaPenalty": "Endstand {{homeScore}}:{{awayScore}}, $t(sport:events.penaltyShootout) {{homePenalty}}:{{awayPenalty}}",
+    "scoreAriaPenalty": "Endstand {{homeScore}}:{{awayScore}}, {{homePenalty}}:{{awayPenalty}} $t(sport:phases.afterPenalties)",
     "scoreAriaOvertime": "Endstand {{homeScore}}:{{awayScore}} nach Verlängerung",
     "finishedOvertime": "beendet nach Verlängerung"
   },
