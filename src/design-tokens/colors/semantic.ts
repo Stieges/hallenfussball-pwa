@@ -66,6 +66,7 @@ export const semanticColorsDark = {
   surfaceDarkMedium: 'rgba(0, 0, 0, 0.2)',
   surfaceVariant: palette.neutral[700],
   surfaceElevated: palette.neutral[800], // For elevated cards
+  surfacePaper: palette.neutral[0], // Papierfläche: immer Weiß, im dunklen und im hellen Thema gleich (Vorschau von Grafiken wie im Druck)
 
   // ---------------------------------------------------------------------------
   // Text Colors (WCAG AA validated)

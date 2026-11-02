@@ -7,7 +7,6 @@
  */
 import { useId, useRef, type ChangeEvent, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { cssVars, componentSizes } from '../../../design-tokens';
-import { palette } from '../../../design-tokens/colors/palette';
 import { Button } from '../Button';
 import { InlineNotice } from './InlineNotice';
 
@@ -47,7 +46,7 @@ const buttonsStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: cs
 // Die Vorschau steht auf weißem Grund wie das Papier, damit ein durchsichtiges Logo so aussieht wie im Druck.
 const previewStyle: CSSProperties = {
   width: componentSizes.graphicPreview, height: componentSizes.graphicPreview, objectFit: 'contain', flex: 'none',
-  background: palette.neutral[0], border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
+  background: cssVars.colors.surfacePaper, border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
   borderRadius: cssVars.borderRadius.md, padding: cssVars.spacing.xs,
 };
 const hintStyle: CSSProperties = { margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary };

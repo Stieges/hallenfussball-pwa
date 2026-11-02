@@ -44,6 +44,7 @@ describe('GraphicUploadField', () => {
     const vorschau = screen.getByTestId('turnierlogo-vorschau');
     expect(vorschau).toHaveAttribute('src', BILD);
     expect(vorschau).toHaveAccessibleName('Vorschau Turnierlogo');
+    expect(vorschau.style.background).toBe('var(--color-surface-paper)'); // Papierfläche, nie eine feste Farbe
     expect(screen.getByTestId('turnierlogo-aendern')).toHaveTextContent('Ändern');
     expect(screen.getByTestId('turnierlogo-entfernen')).toHaveTextContent('Entfernen');
     expect(screen.queryByTestId('turnierlogo-hochladen')).toBeNull();

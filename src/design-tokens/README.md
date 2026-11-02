@@ -83,6 +83,10 @@ colors.warning      // #FF9100
 colors.success      // #4CAF50
 ```
 
+#### Papierfläche: `colors.surfacePaper`
+
+`colors.surfacePaper` (`--color-surface-paper`) ist die Papierfläche: **immer Weiß, in hellem und dunklem Thema gleich** (auch im hohen Kontrast). Sie steht hinter Vorschauen, die so aussehen sollen wie im Druck, etwa das Turnierlogo und die zweite Grafik im Assistenten (durchsichtige Logos zeigen sich auf Weiß wie auf dem Papier). Keine Themenfläche: Text darauf bleibt dunkel, für Karten und Dialoge gilt `surface`/`surfaceElevated`. Nie `palette.neutral[0]` direkt in einer Oberfläche importieren.
+
 #### Rand-Rollen: Bedien-Rand oder Trennlinie
 
 | Rolle | Token | Wann | Kontrast |

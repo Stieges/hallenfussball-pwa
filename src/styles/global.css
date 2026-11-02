@@ -100,6 +100,7 @@
   --color-surface-dark-medium: rgba(0, 0, 0, 0.2);
   --color-surface-variant: #475569;
   --color-surface-elevated: #1E293B;
+  --color-surface-paper: #FFFFFF; /* Papierfläche: in allen Themen Weiß */
   --color-surface-highlight: rgba(255, 255, 255, 0.05);
 
   /* ===========================================
@@ -693,6 +694,7 @@ html[data-font-size="x-large"] {
   --color-surface-dark-medium: #F1F5F9;
   --color-surface-variant: #E2E8F0;
   --color-surface-elevated: #FFFFFF;
+  --color-surface-paper: #FFFFFF; /* Papierfläche: in allen Themen Weiß */
   --color-surface-highlight: rgba(0, 0, 0, 0.03);
 
   /* ===========================================
@@ -1080,6 +1082,7 @@ html[data-font-size="x-large"] {
   --color-surface: rgba(255, 255, 255, 0.08);
   --color-surface-solid: #1A1A1A;
   --color-surface-elevated: #222222;
+  --color-surface-paper: #FFFFFF; /* Papierfläche: in allen Themen Weiß */
 
   /* ===========================================
      Focus Ring (Very Visible)
