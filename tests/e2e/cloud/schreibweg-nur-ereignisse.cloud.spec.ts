@@ -184,6 +184,8 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     await expectScore(ids.matchId, 1, 1, 'finished');
     await helperPage.reload();
     await helperPage.waitForLoadState('networkidle');
+    // `?matchId=` ist nach dem ersten Öffnen verbraucht (C-MATCHID-URL-BLEIBT): dasselbe Spiel nach dem Neuladen erneut öffnen
+    await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expect(helperPage.getByText(`Tor ${ids.awayTeamName}, Nummer 9`)).toBeVisible({ timeout: 15000 });
 
     // Server: dieselbe Nachtragung auf die gesetzte Nummer lehnt er für den Helfer ab.

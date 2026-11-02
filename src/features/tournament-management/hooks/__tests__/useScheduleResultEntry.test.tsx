@@ -262,6 +262,37 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     });
   });
 
+  // @EK-063 (D12, Cloud): der Spielplan öffnet frisch -- die Kopie von Spiel 7 ist leer, die Tabelle zeigt den Endstand 2:1.
+  // Was die Turnierleitung sah, ist die angezeigte Zahl; stimmt sie mit dem Stand nach `catchUp` überein, ist nichts „inzwischen geändert“.
+  describe('@EK-063 Korrektur aus dem frisch geöffneten Spielplan (leere lokale Kopie)', () => {
+    const angezeigt = (a: number, b: number) => ({ [SPIEL_7]: { matchStatus: 'finished' as const, scoreA: a, scoreB: b } });
+
+    it('@EK-063 Tabelle zeigt 2:1, Server hat 2:1 → Grund-Rückfrage, CORRECTION auf dem Stand e1', async () => {
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('e1', { [FC_NORD]: 2, [SV_SUED]: 1 }), 1)], newWatermark: 1 });
+      const { hook, enter, answer, showWarning } = render(h, { matches: angezeigt(2, 1) });
+      const done = enter(SPIEL_7, 4, 0);
+      await act(async () => { await settle(); });
+      expect(hook.result.current.prompt).toMatchObject({ kind: 'reason' });
+      await answer('input_error');
+      await done;
+      await settle();
+
+      expect(showWarning).not.toHaveBeenCalled();
+      expect(sentTypes(h)).toEqual([['CORRECTION']]);
+      expect(h.api.mock.calls[0][1][0].payload).toMatchObject({ reason: 'input_error', basedOn: 'e1', scores: { [FC_NORD]: 4, [SV_SUED]: 0 } });
+    });
+
+    it('@FU-082 Gegenbeispiel: Tabelle zeigt 1:1, Server hat 2:1 → „inzwischen geändert (jetzt 2:1)“, keine Rückfrage', async () => {
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('e1', { [FC_NORD]: 2, [SV_SUED]: 1 }), 1)], newWatermark: 1 });
+      const { hook, enter, showWarning } = render(h, { matches: angezeigt(1, 1) });
+      await enter(SPIEL_7, 4, 0);
+
+      expect(hook.result.current.prompt).toBeNull();
+      expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen geändert (jetzt 2:1)');
+      expect(h.api).not.toHaveBeenCalled();
+    });
+  });
+
   // @FU-104: Tom trägt für Spiel 9 an seinem Gerät 3:1 ein, während Olli tippt -- der Hinweis nennt Toms Namen.
   describe('@FU-104 Name dessen, der genau dieses Spiel inzwischen geändert hat', () => {
     const tomsEintrag = () => h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('t1', { [SV_SUED]: 3, [FC_NORD]: 1 }), 1)], newWatermark: 1 });

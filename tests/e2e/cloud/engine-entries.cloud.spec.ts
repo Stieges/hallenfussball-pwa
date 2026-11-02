@@ -96,6 +96,8 @@ test.describe('Engine-Einträge über Geräte', () => {
 
     await ownerPage.reload();
     await ownerPage.waitForLoadState('networkidle');
+    // `?matchId=` ist nach dem ersten Öffnen verbraucht (C-MATCHID-URL-BLEIBT): dasselbe Spiel nach dem Neuladen erneut öffnen
+    await openCockpit(ownerPage, ids.tournamentId, ids.matchId);
     const helperPage = await asRole('helper');
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     for (const page of [ownerPage, helperPage]) {
@@ -150,6 +152,8 @@ test.describe('Engine-Einträge über Geräte', () => {
     await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '0', { timeout: 10000 });
     await helperPage.reload();
     await helperPage.waitForLoadState('networkidle');
+    // `?matchId=` ist nach dem ersten Öffnen verbraucht (C-MATCHID-URL-BLEIBT): dasselbe Spiel nach dem Neuladen erneut öffnen
+    await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expect(helperPage.getByText(`Tor ${ids.awayTeamName}, Nummer 5`)).toBeVisible({ timeout: 15000 });
     await expect(helperPage.locator('[data-testid="scoreboard-box-links"]')).toHaveText('1');
     await expect(helperPage.locator('[data-testid="scoreboard-box-rechts"]')).toHaveText('1');

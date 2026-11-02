@@ -261,8 +261,13 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
           showWarning(t('actions.matchAlreadyFinished'));
           return false;
         }
-        const before = score(effectiveScoreFor(state, entry.ctx.teamAId), effectiveScoreFor(state, entry.ctx.teamBId));
-        if (basedOn !== state.lastScoreEventId) {
+        const currentA = effectiveScoreFor(state, entry.ctx.teamAId);
+        const currentB = effectiveScoreFor(state, entry.ctx.teamBId);
+        const before = score(currentA, currentB);
+        // @EK-063: gesehen hat die Turnierleitung die angezeigte Zahl. Öffnet der Spielplan frisch, ist die lokale Kopie leer (oder alt),
+        // `basedOn` also nicht der aktuelle Stand -- stimmt die angezeigte Zahl mit dem Stand nach `catchUp` überein, ist nichts „inzwischen geändert“.
+        const sawCurrent = match?.scoreA === currentA && match?.scoreB === currentB;
+        if (basedOn !== state.lastScoreEventId && !sawCurrent) {
           showWarning(await staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
           return false;
         }
@@ -270,7 +275,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         if (!reason) {
           return false;
         }
-        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, basedOn);
+        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, state.lastScoreEventId);
       }
       if (eventId) {
         trackAck(eventId, entry);
