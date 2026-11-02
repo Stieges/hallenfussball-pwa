@@ -66,6 +66,10 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * „Diff.“, „Pkt.“, EN „GD“) und der Umbruch der Herkunft der Finalteams in der schmaleren Heim- und Gast-Spalte („Sieger“ / „Halbfinale 1“
  * statt „Sieger Halbfinale“ / „1“; EN „Winner“ / „Semi-final 1“). Bild DE (Seite 1 und 3) und EN (Seite 1 und 3) gesichtet: Köpfe
  * ungebrochen, nichts abgeschnitten, kein Überlauf, Heim und Gast in beiden Sprachen lesbar.
+ * Die drei übrigen Prüfsummen (20 Spiele hoch, 12 und 20 Spiele quer) sind ebenfalls Text-für-Text gegen origin/main verglichen (als Menge der
+ * Textstücke, Zählung je Stück): dieselbe Änderung, nämlich nur die oben genannten Wörter (je Seitenkopf „Nr.“, „Schiedsrichter“, „Gruppe“,
+ * „#“, „Sp.“, „Diff.“, „Pkt.“, die Zeitzeile) und in den Hochformaten der Umbruch „Sieger“ / „Halbfinale 1“; im Querformat ändert sich
+ * zusätzlich die Reihenfolge, in der die Kopfzellen ausgegeben werden, nicht ihr Inhalt.
  */
 const VORHER: Record<string, string> = {
   '12 Spiele, hoch': '6720748dc9c2',
