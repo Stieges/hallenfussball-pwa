@@ -7,6 +7,8 @@
  * Bildschirm-Tokens stehen in den übrigen Dateien dieses Ordners.
  */
 
+import { palette } from './colors/palette';
+
 /** Papier: nur Schwarz und Weiß, dazu das 12-%-Raster für Tabellenköpfe. Kein Grau im Text. */
 export const printColors = {
   /** --ink: Text, Linien, Rahmen */
@@ -15,6 +17,21 @@ export const printColors = {
   paper: [255, 255, 255],
   /** --tint: 12 % Schwarz (#e0e0e0), nur Tabellenköpfe */
   tint: [224, 224, 224],
+} as const;
+
+/**
+ * Akzentfarbe des Spielplans und des Aushangs (@DR-001, @DR-041). Die Farbe selbst kommt aus dem Turnierlogo
+ * (`lib/color/accent.ts`) und läuft nur über `PdfInput.accent`; ohne Logo gilt das Grün der App.
+ */
+export const printAccent = {
+  /** Rückfall ohne Turnierlogo oder ohne brauchbare Farbe: Primärgrün der App (#047857, 5,48 : 1 gegen Weiß). */
+  fallback: palette.emerald[700],
+  /** Eine farbige Linie hebt sich gegen Weiß mindestens im Verhältnis 3 : 1 ab (@DR-001). */
+  minContrast: 3,
+  /** Hellster Grauwert (0–255) des Zebra-Tons: 222 ≈ 13 % Schwarz, über der Untergrenze `printLimits.tintMinPercent`. */
+  zebraMaxGray: 222,
+  /** Kleinster Grauwert-Abstand Akzentlinie ↔ Zebra, damit beide schwarzweiß unterscheidbar bleiben (@DR-001 letzte Zeile). */
+  minGrayGap: 60,
 } as const;
 
 /** Untergrenzen (@DR-001). Die Tests lesen sie hier, nie eine zweite Zahl im Test. */

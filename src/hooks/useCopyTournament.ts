@@ -7,10 +7,17 @@
  * Die Liste der Startseite enthält angemeldet nur Kopfdaten (`teams: []`, `matches: []`, siehe
  * `SupabaseRepository.listForCurrentUser`). Deshalb wird das Original vor dem Kopieren über `repository.get` voll
  * geladen. Scheitert das, wird nichts angelegt (C-COPY-DASH, @W5-025).
+ *
+ * Die Turniergrafiken liegen nur auf dem Gerät (@W3-030) und gehören nicht zum Turnier: Die Kopie bekommt sie mit
+ * `tournamentGraphicsStore.copy`, das Original bleibt unverändert. Das ist der einzige Kopierweg (Dashboard, Admin
+ * Center, Probe-Kopie). Scheitert nur das Kopieren der Grafik (etwa Speicher voll), entsteht die Kopie trotzdem; der
+ * Fehler geht an Sentry, die Kopie druckt dann ohne Logo.
  */
 import { useCallback } from 'react';
 import { buildCopiedTournament } from '../core/models/tournamentCopy';
 import { generateTournamentId, generateUniqueId } from '../utils/idGenerator';
+import { tournamentGraphicsStore } from '../core/storage/tournamentGraphicsStore';
+import { captureFeatureError } from '../lib/sentry';
 import { useRepository } from './useRepository';
 import type { Tournament } from '../types/tournament';
 
@@ -32,6 +39,11 @@ export function useCopyTournament(saveTournament: (tournament: Tournament) => Pr
         startDate,
       });
       await saveTournament(copy);
+      try {
+        await tournamentGraphicsStore.copy(original.id, copy.id);
+      } catch (error) {
+        captureFeatureError(error instanceof Error ? error : new Error(String(error)), 'tournament-copy', 'copyGraphics', { tournamentId: copy.id });
+      }
       return copy;
     },
     [repository, saveTournament],

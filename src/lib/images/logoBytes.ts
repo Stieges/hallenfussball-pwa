@@ -72,6 +72,12 @@ export function imageSizeOf(logo: LogoImage): PixelSize | undefined {
     if (bytes[at] !== 0xff) {
       return undefined;
     }
+    while (bytes[at + 1] === 0xff && at + 1 < bytes.length) {
+      at++; // Füllbytes (FF FF …) vor einem Marker sind erlaubt und kein Marker
+    }
+    if (at + 9 >= bytes.length) {
+      return undefined;
+    }
     const marker = bytes[at + 1];
     if (marker >= 0xc0 && marker <= 0xcf && !SOF_MARKERS_EXCLUDED.has(marker)) {
       return { height: view.getUint16(at + 5), width: view.getUint16(at + 7) };

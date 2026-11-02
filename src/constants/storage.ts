@@ -25,6 +25,12 @@ export const STORAGE_KEYS = {
 
   /** Tournament-specific data */
   tournament: (tournamentId: string) => `tournament-${tournamentId}`,
+
+  /**
+   * Turniergrafiken (Turnierlogo, zweite Grafik) nur auf diesem Gerät (@W3-030, PDF-Paket T3). Eigener Schlüssel je
+   * Turnier-ID, nie im Turnier-Objekt und nie in `TOURNAMENTS`: so kennt kein Mapper und kein Abgleich mit der Cloud ihn.
+   */
+  tournamentGraphics: (tournamentId: string) => `tournament-graphics-${tournamentId}`,
 } as const;
 
 /**
