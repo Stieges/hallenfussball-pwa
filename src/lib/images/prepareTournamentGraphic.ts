@@ -10,6 +10,7 @@
 import { printHeader } from '../../design-tokens/print-header';
 import type { StoredGraphic } from '../../core/storage/tournamentGraphicsStore';
 import { accentFromPixels, type PixelImage } from '../color/accent';
+import { imageSizeOf } from './logoBytes';
 import { browserGraphicPort } from './browserGraphicPort';
 import { SIGNATURE_BYTES, detectKind, isLowRes, storedSize, type GraphicKind, type RejectReason, type Size } from './graphicRules';
 
@@ -43,6 +44,8 @@ export async function prepareTournamentGraphic(file: File, options: PrepareOptio
   const head = new Uint8Array(await file.slice(0, SIGNATURE_BYTES).arrayBuffer());
   const kind = detectKind(head, file.type, file.name);
   if (kind === undefined) { return reject('type'); }
+  // Pixelgrenze aus dem Dateikopf, bevor dekodiert wird: ein kleines PNG kann 16000 × 16000 Bildpunkte haben (etwa 1 GB RGBA).
+  if (kind !== 'svg' && (await exceedsPixelLimit(file, kind))) { return reject('size'); }
 
   let decoded: DecodedImage;
   try {
@@ -62,12 +65,22 @@ export async function prepareTournamentGraphic(file: File, options: PrepareOptio
     return {
       ok: true,
       graphic: { dataUrl: rendered.dataUrl, widthPx: size.width, heightPx: size.height, originalHeightPx },
-      warnLowRes: isLowRes(originalHeightPx),
-      ...(options.computeAccent === true ? optionalAccent(accentFromPixels(rendered.pixels)) : {}),
+      // Ein SVG ist Vektor und warnt nie, auch wenn es breit und die abgelegte Höhe klein ist.
+      warnLowRes: !vector && isLowRes(originalHeightPx),
+      // Die 64-px-Grenze des Akzents gilt für das Original (bei SVG für die gezeichneten Maße), nicht für die Ablage.
+      ...(options.computeAccent === true ? optionalAccent(accentFromPixels(rendered.pixels, vector ? size : decoded)) : {}),
     };
   } catch {
     return reject('unreadable');
   }
+}
+
+async function exceedsPixelLimit(file: File, kind: Exclude<GraphicKind, 'svg'>): Promise<boolean> {
+  const dimensions = imageSizeOf({ data: new Uint8Array(await file.arrayBuffer()), format: kind === 'png' ? 'PNG' : 'JPEG' });
+  if (dimensions === undefined) { return false; } // Kopf unlesbar: der Decoder entscheidet („unreadable“)
+  return dimensions.width > printHeader.logoMaxSidePx
+    || dimensions.height > printHeader.logoMaxSidePx
+    || dimensions.width * dimensions.height > printHeader.logoMaxPixels;
 }
 
 const optionalAccent = (accent: string | undefined): { accent?: string } => (accent === undefined ? {} : { accent });

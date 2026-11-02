@@ -108,9 +108,10 @@ export function darkenForPrint(hex: string): string {
 /**
  * Akzentfarbe (`#RRGGBB`, für den Druck schon abgedunkelt) aus den Pixeln des Turnierlogos. `undefined`, wenn das
  * Logo zu klein ist (kürzere Seite unter 64 Bildpunkten) oder keine brauchbare Farbe hat; dann gilt das Grün der App.
+ * `original`: Maße des Originals für die Mindestgröße, wenn `image` schon verkleinert ist (sonst die Maße von `image`).
  */
-export function accentFromPixels(image: PixelImage): string | undefined {
-  if (Math.min(image.width, image.height) < accentRules.minSidePx) { return undefined; }
+export function accentFromPixels(image: PixelImage, original: { width: number; height: number } = image): string | undefined {
+  if (Math.min(original.width, original.height) < accentRules.minSidePx) { return undefined; }
   const chosen = winner(candidatesOf(image));
   return chosen === undefined ? undefined : darkenForPrint(chosen.hex);
 }
@@ -132,10 +133,9 @@ export function zebraTone(accent: string): string {
     g: paper.g - (paper.g - base.g) * share,
     b: paper.b - (paper.b - base.b) * share,
   });
-  // Der Anteil wird wie im Rechenweg der Notiz fortlaufend addiert (Fließkomma): so trifft der Ton die dort
-  // genannten Werte auf das Bit (etwa #DAE4C9), nicht ein Rundungsfall daneben.
-  for (let share: number = accentRules.zebraStartShare; share < 1; share += accentRules.zebraStepShare) {
-    const tone = mix(share);
+  const steps = Math.ceil((1 - accentRules.zebraStartShare) / accentRules.zebraStepShare);
+  for (let i = 0; i < steps; i++) {
+    const tone = mix(accentRules.zebraStartShare + i * accentRules.zebraStepShare);
     if (grayOf(tone) <= printAccent.zebraMaxGray) { return tone; }
   }
   return accent;

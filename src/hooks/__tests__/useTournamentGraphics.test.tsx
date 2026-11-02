@@ -101,4 +101,21 @@ describe('useTournamentGraphics', () => {
     expect(result.current.graphics).toEqual({});
     expect(result.current.error).toBeNull();
   });
+
+  it('@W3-030 wechselt die Turnier-ID, wird ein alter Fehler zurückgesetzt', async () => {
+    const quota = Object.assign(new Error('Speicher voll'), { name: 'QuotaExceededError' });
+    const storage = memoryStorage();
+    const store = createTournamentGraphicsStore(() => Promise.resolve(storage));
+    const { result, rerender } = renderHook(({ id }) => useTournamentGraphics(id, store), { initialProps: { id: 't1' } });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    storage.set = () => Promise.reject(quota);
+    await act(async () => { await result.current.save(LOGO); });
+    expect(result.current.error).toBe(quota);
+
+    rerender({ id: 't2' });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBeNull();
+    expect(result.current.graphics).toEqual({});
+  });
 });

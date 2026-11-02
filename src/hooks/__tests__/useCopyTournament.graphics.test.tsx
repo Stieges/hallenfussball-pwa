@@ -99,7 +99,10 @@ describe('@W3-030 es gibt genau einen Kopierweg (Dashboard, Admin Center und Pro
   }
 
   it('@W3-030 nur useCopyTournament.ts baut eine Kopie (buildCopiedTournament); jede andere Stelle müsste F6 selbst erfüllen', () => {
-    const users = sources(SRC).filter((file) => readFileSync(file, 'utf8').includes('buildCopiedTournament(') && !file.endsWith('tournamentCopy.ts'));
+    // Eingegrenzt auf die Ordner, in denen ein Kopierweg liegen kann (ein Scan über ganz src brauchte kalt 27 s)
+    const roots = ['hooks', 'features', 'screens'].map((dir) => join(SRC, dir));
+    const files = [...roots.flatMap((dir) => sources(dir)), join(SRC, 'App.tsx')];
+    const users = files.filter((file) => readFileSync(file, 'utf8').includes('buildCopiedTournament('));
 
     expect(users.map((file) => file.slice(SRC.length + 1))).toEqual(['hooks/useCopyTournament.ts']);
   });

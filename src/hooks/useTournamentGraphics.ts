@@ -37,11 +37,13 @@ export function useTournamentGraphics(
   useEffect(() => {
     if (tournamentId === undefined) {
       setGraphics(EMPTY);
+      setError(null);
       setLoading(false);
       return undefined;
     }
     let current = true;
     setLoading(true);
+    setError(null); // ein Fehler gehört zum Turnier, bei dem er auftrat
     store.load(tournamentId)
       .then((loaded) => { if (current) { setGraphics(loaded); } })
       .catch((cause: unknown) => { if (current) { setGraphics(EMPTY); setError(asError(cause)); } })

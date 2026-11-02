@@ -3,7 +3,9 @@
  * Gherkin: @W3-030 (Grafiken nur auf dem hochladenden Gerät, andere Geräte drucken ohne), @DR-024 (ohne Eintrag: leer,
  * kein Fehler), @W3-030 Kopie auf demselben Gerät (F6).
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LocalStorageAdapter } from '../LocalStorageAdapter';
+import { StorageError } from '../StorageError';
 import type { IStorageAdapter } from '../IStorageAdapter';
 import { STORAGE_KEYS } from '../../../constants/storage';
 import { createTournamentGraphicsStore, type StoredGraphic, type TournamentGraphics } from '../tournamentGraphicsStore';
@@ -117,5 +119,57 @@ describe('@W3-030 Gerätespeicher für Turniergrafiken', () => {
 
     await expect(store.save('t1', { left: graphic('TkVV') })).rejects.toBe(quota);
     expect(await store.load('t1')).toEqual(logos);
+  });
+
+  it('@W3-030 ein SVG wird abgelehnt: save wirft, nichts wird geschrieben (nur data:image/png oder data:image/jpeg)', async () => {
+    const { storage, store } = setup();
+    const svg: StoredGraphic = { ...graphic('x'), dataUrl: 'data:image/svg+xml;base64,PHN2Zz4=' };
+
+    await expect(store.save('t1', { left: svg })).rejects.toThrow();
+    expect(storage.data.size).toBe(0);
+  });
+
+  it('@W3-030 ein SVG im Speicher (von außen hineingeraten) wird beim Laden nicht geliefert', async () => {
+    const { storage, store } = setup();
+    storage.data.set('tournament-graphics-t1', { left: { ...graphic('x'), dataUrl: 'data:image/svg+xml;base64,PHN2Zz4=' } });
+
+    await expect(store.load('t1')).resolves.toEqual({});
+  });
+
+  it('@W3-030 JPEG wird akzeptiert', async () => {
+    const { store } = setup();
+    const jpeg: StoredGraphic = { ...graphic('x'), dataUrl: 'data:image/jpeg;base64,/9j/' };
+
+    await store.save('t1', { left: jpeg });
+
+    expect((await store.load('t1')).left).toEqual(jpeg);
+  });
+});
+
+describe('@DR-024 beschädigter Eintrag im localStorage-Rückfall', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('@DR-024 kaputtes JSON im localStorage: leere Grafiken wie bei IndexedDB, kein StorageError', async () => {
+    vi.stubGlobal('localStorage', { getItem: () => '{kaputt', setItem: () => undefined, removeItem: () => undefined });
+    const store = createTournamentGraphicsStore(() => Promise.resolve(new LocalStorageAdapter()));
+
+    await expect(store.load('t1')).resolves.toEqual({});
+  });
+
+  it('@DR-024 ein Lesefehler des Speichers (StorageError) liefert ebenfalls leere Grafiken', async () => {
+    const storage = memoryStorage();
+    storage.get = () => Promise.reject(new StorageError('kaputt'));
+    const store = createTournamentGraphicsStore(() => Promise.resolve(storage));
+
+    await expect(store.load('t1')).resolves.toEqual({});
+  });
+
+  it('Gegenbeispiel: ein anderer Fehler (kein StorageError) wird nicht verschluckt', async () => {
+    const storage = memoryStorage();
+    const boom = new Error('unerwartet');
+    storage.get = () => Promise.reject(boom);
+    const store = createTournamentGraphicsStore(() => Promise.resolve(storage));
+
+    await expect(store.load('t1')).rejects.toBe(boom);
   });
 });

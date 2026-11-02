@@ -76,6 +76,14 @@ describe('@DR-041 Akzentfarbe aus dem Turnierlogo (Beispieltabelle)', () => {
     expect(accentFromPixels(blau(64))).toBe('#2A2576');
   });
 
+  it('@DR-041 die Grenze gilt für die angegebenen Originalmaße, nicht für die abgelegten Pixel (1200 × 60 aus 4000 × 200)', () => {
+    const abgelegt = paint(1200, 60, [[opaque('#2A2576'), 1200 * 60]]);
+
+    expect(accentFromPixels(abgelegt)).toBeUndefined();
+    expect(accentFromPixels(abgelegt, { width: 4000, height: 200 })).toBe('#2A2576');
+    expect(accentFromPixels(abgelegt, { width: 4000, height: 63 })).toBeUndefined();
+  });
+
   it('@DR-041 Kürzere Seite zählt: 64 × 600 genügt, 600 × 63 nicht', () => {
     expect(accentFromPixels(paint(64, 600, [[opaque('#2A2576'), 64 * 600]]))).toBe('#2A2576');
     expect(accentFromPixels(paint(600, 63, [[opaque('#2A2576'), 600 * 63]]))).toBeUndefined();
@@ -177,7 +185,7 @@ describe('@DR-041 abgedunkelt im gleichen Farbton', () => {
 describe('@DR-001 Zebra-Ton und Graustufen', () => {
   it.each([
     ['TSV-Blau', '#2A2576', '#DDDCE9'],
-    ['TSV-Grün', '#6A9329', '#DAE4C9'],
+    ['TSV-Grün', '#6A9329', '#DAE4CA'],
     ['App-Grün', '#047857', '#CFE5DF'],
     ['Gelb abgedunkelt', '#B09200', '#E9E0B8'],
   ])('@DR-001 Zebra-Ton zu %s %s ist %s bei Grauwert 222', (_name, akzent, erwartet) => {

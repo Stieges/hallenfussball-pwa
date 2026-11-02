@@ -10,11 +10,12 @@
 import { z } from 'zod';
 import { STORAGE_KEYS } from '../../constants/storage';
 import type { IStorageAdapter } from './IStorageAdapter';
+import { StorageError } from './StorageError';
 import { createStorage } from './StorageFactory';
 
 const StoredGraphicSchema = z.object({
-  /** `data:image/png;base64,…` oder `data:image/jpeg;base64,…`; nie SVG (@W3-030). */
-  dataUrl: z.string().startsWith('data:image/'),
+  /** Nur `data:image/png;base64,…` oder `data:image/jpeg;base64,…`; nie SVG (@W3-030), auch nicht von außen hineingeraten. */
+  dataUrl: z.string().regex(/^data:image\/(png|jpeg);base64,/),
   widthPx: z.number().positive(),
   heightPx: z.number().positive(),
   /** Höhe vor dem Verkleinern: daraus kommt die Warnung „unscharf“ (@DR-040). */
@@ -32,9 +33,9 @@ export type StoredGraphic = z.infer<typeof StoredGraphicSchema>;
 export type TournamentGraphics = z.infer<typeof TournamentGraphicsSchema>;
 
 export interface TournamentGraphicsStore {
-  /** Die Grafiken des Turniers; ohne Eintrag oder bei beschädigtem Eintrag `{}` (kein Fehler). */
+  /** Die Grafiken des Turniers; ohne Eintrag oder bei beschädigtem Eintrag (auch kaputtes JSON im localStorage) `{}`, kein Fehler. */
   load(tournamentId: string): Promise<TournamentGraphics>;
-  /** Ersetzt den Eintrag; ein leerer Satz entfernt ihn. Wirft bei Speicherfehlern (Quote). */
+  /** Ersetzt den Eintrag; ein leerer Satz entfernt ihn. Wirft bei Speicherfehlern (Quote) und bei ungültigen Daten (SVG). */
   save(tournamentId: string, graphics: TournamentGraphics): Promise<void>;
   /** Entfernt den Eintrag dieses Turniers. */
   remove(tournamentId: string): Promise<void>;
@@ -45,19 +46,27 @@ export interface TournamentGraphicsStore {
 export function createTournamentGraphicsStore(getStorage: () => Promise<IStorageAdapter> = createStorage): TournamentGraphicsStore {
   async function load(tournamentId: string): Promise<TournamentGraphics> {
     const storage = await getStorage();
-    const raw = await storage.get<unknown>(STORAGE_KEYS.tournamentGraphics(tournamentId));
+    let raw: unknown;
+    try {
+      raw = await storage.get<unknown>(STORAGE_KEYS.tournamentGraphics(tournamentId));
+    } catch (error) {
+      // localStorage-Rückfall: beschädigtes JSON wirft einen StorageError; wie bei IndexedDB gilt das als „keine Grafik“.
+      if (error instanceof StorageError) { return {}; }
+      throw error;
+    }
     const parsed = TournamentGraphicsSchema.safeParse(raw);
     return parsed.success ? parsed.data : {};
   }
 
   async function save(tournamentId: string, graphics: TournamentGraphics): Promise<void> {
+    const checked = TournamentGraphicsSchema.parse(graphics); // wirft bei SVG oder falschen Maßen
     const storage = await getStorage();
     const key = STORAGE_KEYS.tournamentGraphics(tournamentId);
-    if (graphics.left === undefined && graphics.right === undefined) {
+    if (checked.left === undefined && checked.right === undefined) {
       await storage.delete(key);
       return;
     }
-    await storage.set(key, graphics);
+    await storage.set(key, checked);
   }
 
   async function remove(tournamentId: string): Promise<void> {

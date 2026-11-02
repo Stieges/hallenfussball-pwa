@@ -19,6 +19,27 @@ function fileOf(head: number[], size: number, name: string, type: string): File 
 }
 const png = (size = 1000): File => fileOf(PNG_HEAD, size, 'logo.png', 'image/png');
 const jpg = (size = 1000): File => fileOf(JPEG_HEAD, size, 'logo.jpg', 'image/jpeg');
+/** PNG mit gefälschtem IHDR: nur Signatur, Blocklänge, „IHDR“, Breite, Höhe (reicht für die Maße aus dem Kopf). */
+function pngWithSize(width: number, height: number): File {
+  const bytes = new Uint8Array(33);
+  bytes.set(PNG_HEAD);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(8, 13);
+  bytes.set([0x49, 0x48, 0x44, 0x52], 12);
+  view.setUint32(16, width);
+  view.setUint32(20, height);
+  return new File([bytes], 'gross.png', { type: 'image/png' });
+}
+
+/** JPEG mit gefälschtem SOF0-Block (Höhe und Breite je 16 Bit). */
+function jpegWithSize(width: number, height: number): File {
+  const bytes = new Uint8Array(40);
+  bytes.set([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08]);
+  const view = new DataView(bytes.buffer);
+  view.setUint16(7, height);
+  view.setUint16(9, width);
+  return new File([bytes], 'gross.jpg', { type: 'image/jpeg' });
+}
 const svg = (): File => new File(['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>'], 'logo.svg', { type: 'image/svg+xml' });
 
 const blue = (width: number, height: number): PixelImage => {
@@ -59,13 +80,41 @@ describe('@W3-030 Prüfung vor dem Aufbereiten', () => {
     expect(await prepareTournamentGraphic(fake1, { port: fake })).toEqual({ ok: false, reason: 'type' });
   });
 
-  it('@W3-030 über 2 MB: Grund „Größe“ (size); Grenze 2 097 152 Byte gilt noch, 2 097 153 nicht', async () => {
-    const { fake } = port({ width: 800, height: 600 });
+  it('@W3-030 über 2 MB: Grund „Größe“ (size) ohne zu dekodieren; Grenze 2 097 152 Byte gilt noch, 2 097 153 nicht', async () => {
+    const { fake, decode } = port({ width: 800, height: 600 });
     const grenze = printHeader.logoMaxBytes;
 
     expect(grenze).toBe(2_097_152);
     expect((await prepareTournamentGraphic(png(grenze), { port: fake })).ok).toBe(true);
+    decode.mockClear();
     expect(await prepareTournamentGraphic(png(grenze + 1), { port: fake })).toEqual({ ok: false, reason: 'size' });
+    expect(decode).not.toHaveBeenCalled();
+  });
+
+  it('@W3-030 Pixelgrenze vor dem Dekodieren: ein PNG mit 16000 × 16000 px im Kopf ist „size“, decode wird nicht aufgerufen', async () => {
+    const { fake, decode } = port({ width: 16000, height: 16000 });
+
+    expect(await prepareTournamentGraphic(pngWithSize(16000, 16000), { port: fake })).toEqual({ ok: false, reason: 'size' });
+    expect(decode).not.toHaveBeenCalled();
+  });
+
+  it('@W3-030 Pixelgrenze: eine Seite über logoMaxSidePx (4001) ist „size“, auch bei JPEG', async () => {
+    const { fake, decode } = port({ width: 10, height: 10 });
+
+    expect(await prepareTournamentGraphic(pngWithSize(4001, 100), { port: fake })).toEqual({ ok: false, reason: 'size' });
+    expect(await prepareTournamentGraphic(pngWithSize(100, 4001), { port: fake })).toEqual({ ok: false, reason: 'size' });
+    expect(await prepareTournamentGraphic(jpegWithSize(5000, 100), { port: fake })).toEqual({ ok: false, reason: 'size' });
+    expect(decode).not.toHaveBeenCalled();
+  });
+
+  it('@W3-030 Gegenbeispiel: 4000 × 4000 px (genau die Grenze) und 4000 × 200 werden dekodiert und verkleinert', async () => {
+    const quadrat = port({ width: 4000, height: 4000 });
+    const breit = port({ width: 4000, height: 200 });
+
+    expect((await prepareTournamentGraphic(pngWithSize(4000, 4000), { port: quadrat.fake })).ok).toBe(true);
+    expect((await prepareTournamentGraphic(jpegWithSize(4000, 200), { port: breit.fake })).ok).toBe(true);
+    expect(quadrat.decode).toHaveBeenCalledTimes(1);
+    expect(breit.decode).toHaveBeenCalledTimes(1);
   });
 
   it('@W3-030 PNG, JPG und SVG werden angenommen', async () => {
@@ -179,6 +228,23 @@ describe('@W3-030 Format der Ablage', () => {
   });
 });
 
+describe('@DR-040 breites SVG', () => {
+  it('@DR-040 ein SVG mit 2000 × 200 wird als 1200 × 120 abgelegt und warnt nicht (Vektor, kein Pixelmangel)', async () => {
+    const { fake, render } = port({ width: 2000, height: 200 });
+
+    const result = await prepareTournamentGraphic(svg(), { port: fake });
+
+    expect(render).toHaveBeenCalledWith(expect.anything(), { width: 1200, height: 120 }, 'image/png', expect.anything());
+    expect(result).toMatchObject({ ok: true, warnLowRes: false, graphic: { widthPx: 1200, heightPx: 120 } });
+  });
+
+  it('@DR-040 Gegenbeispiel: ein Raster mit 2000 × 200 warnt (Höhe 200 unter 236)', async () => {
+    const result = await prepareTournamentGraphic(png(), { port: port({ width: 2000, height: 200 }).fake });
+
+    expect(result).toMatchObject({ ok: true, warnLowRes: true });
+  });
+});
+
 describe('@DR-041 Akzent nur für die linke Grafik', () => {
   it('@DR-041 mit computeAccent steht der Akzent aus den gezeichneten Pixeln im Ergebnis (Blau, 100 × 100 genügt)', async () => {
     const result = await prepareTournamentGraphic(png(), { port: port({ width: 100, height: 100 }).fake, computeAccent: true });
@@ -196,6 +262,18 @@ describe('@DR-041 Akzent nur für die linke Grafik', () => {
     const result = await prepareTournamentGraphic(png(), { port: port({ width: 63, height: 63 }).fake, computeAccent: true });
 
     expect(result).toMatchObject({ ok: true, warnLowRes: true });
+    expect(result.ok && result.accent).toBeUndefined();
+  });
+
+  it('@DR-041 die 64-px-Grenze gilt für die Originalmaße: 4000 × 200 wird 1200 × 60 abgelegt und hat trotzdem einen Akzent', async () => {
+    const result = await prepareTournamentGraphic(png(), { port: port({ width: 4000, height: 200 }).fake, computeAccent: true });
+
+    expect(result).toMatchObject({ ok: true, graphic: { widthPx: 1200, heightPx: 60 }, accent: '#2A2576' });
+  });
+
+  it('@DR-041 Gegenbeispiel: 4000 × 63 hat keinen Akzent (Originalhöhe unter 64)', async () => {
+    const result = await prepareTournamentGraphic(png(), { port: port({ width: 4000, height: 63 }).fake, computeAccent: true });
+
     expect(result.ok && result.accent).toBeUndefined();
   });
 });
