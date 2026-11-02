@@ -134,7 +134,7 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));
-    expect(await screen.findByText('Tor Nummer 7 zurückgenommen')).toBeTruthy();
+    expect(await screen.findByText('Tor #7 zurückgenommen')).toBeTruthy();
   });
 
   it('Rueckgaengig: Knopf nennt das Ziel und nimmt es zurueck', async () => {
@@ -146,7 +146,7 @@ describe('LiveCockpit -- RETRACT/AMEND (C3b-1)', () => {
 
     const undo = screen.getByTestId('match-undo-button');
     // sichtbarer Text „Rückgängig“ (passt in die schmale Zelle), zugänglicher Name nennt das Ziel und enthält den sichtbaren Text (WCAG 2.5.3)
-    expect(undo).toHaveAccessibleName('Rückgängig: Tor Nummer 7 zurücknehmen');
+    expect(undo).toHaveAccessibleName('Rückgängig: Tor #7 zurücknehmen');
     await user.click(undo);
 
     await waitFor(async () => expect(await pendingOf(value, 'RETRACT')).toHaveLength(1));

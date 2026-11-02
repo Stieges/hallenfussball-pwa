@@ -1,7 +1,7 @@
 /**
  * @OB-064 „Tore folgen der Anordnung der Mannschaften, der Sieger steht fett“ (Record Oberfläche, Paket SK).
  * Werte und Wortlaut aus dem Gherkin des Szenariogrundrisses (Beispiele Z.1–Z.3), Halbfinale 1 „FC Nord gegen SG Mitte“:
- *   Z.1  2:2, FC Nord gewinnt das Strafstoßschießen 4:3 → je Zeile 2 / 2, (4) bei FC Nord, (3) bei SG Mitte, FC Nord fett, Tabelle „2:2 (4:3)“
+ *   Z.1  2:2, FC Nord gewinnt das Strafstoßschießen 4:3 → je Zeile 2 / 2, (4) bei FC Nord, (3) bei SG Mitte, FC Nord fett, Tabelle „2:2 (4:3 i. E.)“ (@OB-075: „i. E.“ nur in der Ergebniszelle der Tabelle)
  *   Z.2  3:2 nach Verlängerung für FC Nord             → 3 / 2, Kopfzeile „beendet nach Verlängerung“, FC Nord fett, Tabelle „3:2 n. V.“ (@OB-075: nur die Ergebniszelle trägt die Kurzform)
  *   Z.3  1:0 nach regulärer Zeit                        → 1 / 0, kein Zusatz, FC Nord fett, Tabelle „1:0“
  * Regel „Tore folgen der Anordnung“: ein laufendes Spiel zeigt seine Spielzeit in der Kopfzeile der Karte.
@@ -113,7 +113,7 @@ describe('@OB-064 Spielkarte am Handy: Tore je Zeile', () => {
 });
 
 describe('@OB-064 Tabellenzeile am Desktop: Ergebnis waagerecht', () => {
-  it('Z.1: „2:2 (4:3)“ (@OB-075: keine Kurzform „i. E.“, das Strafstoß-Ergebnis steht in Klammern)', () => { expect(tabelle(AUSGANG.strafstoss)).toBe('2:2 (4:3)'); });
+  it('Z.1: „2:2 (4:3 i. E.)“ (@OB-075: „i. E.“ steht in der Ergebniszelle der Tabelle)', () => { expect(tabelle(AUSGANG.strafstoss)).toBe('2:2 (4:3 i. E.)'); });
   it('Z.2: „3:2 n. V.“', () => { expect(tabelle(AUSGANG.verlaengerung)).toBe('3:2 n. V.'); });
   it('Z.3: „1:0“ ohne Zusatz', () => { expect(tabelle(AUSGANG.regulaer)).toBe('1:0'); });
   it('Sieger fett: FC Nord (Heim) fett, SG Mitte nicht', () => {

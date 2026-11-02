@@ -33,17 +33,17 @@ const mitStrafe = (remainingMs: number): PhaseView =>
 describe('LiveCockpit – abgelaufene Zeitstrafe (@SL-096)', () => {
   beforeEach(() => { ansicht.aktuell = mitStrafe(800); });
 
-  it('@SL-096 @SL-031 die Strafen-Karte „SV Süd, Nummer 5“ zeigt die Restzeit 0:00; läuft die Strafe ab, meldet die Meldezeile „Zeitstrafe SV Süd Nummer 5 abgelaufen“, Uhr und Stand bleiben sichtbar', () => {
+  it('@SL-096 @SL-031 die Strafen-Karte „SV Süd, #5“ zeigt die Restzeit 0:00; läuft die Strafe ab, meldet die Meldezeile „Zeitstrafe SV Süd #5 abgelaufen“, Uhr und Stand bleiben sichtbar', () => {
     const match = makeLiveMatch();
     const { rerender } = render(<LiveCockpit {...makeProps(match)} />);
     // Am Laptop steht die laufende Strafe als Karte in der rechten Spalte (@SL-186), nicht mehr als Marke unter den Tasten
-    expect(screen.getByTestId('strafen-karte-p1-titel')).toHaveTextContent('SV Süd, Nummer 5');
+    expect(screen.getByTestId('strafen-karte-p1-titel')).toHaveTextContent('SV Süd, #5');
     expect(screen.getByTestId('strafen-karte-p1-rest')).toHaveTextContent('0:00');
 
     ansicht.aktuell = makePhaseView();
     rerender(<LiveCockpit {...makeProps(match)} />);
 
-    expect(screen.getByTestId('notice-line')).toHaveTextContent('Zeitstrafe SV Süd Nummer 5 abgelaufen');
+    expect(screen.getByTestId('notice-line')).toHaveTextContent('Zeitstrafe SV Süd #5 abgelaufen');
     expect(screen.queryByTestId('strafen-karte-p1')).toBeNull();
     expect(screen.getByTestId('scoreboard-clock')).toBeVisible();
     expect(screen.getByTestId('scoreboard-score')).toBeVisible();

@@ -29,9 +29,9 @@ describe('@SL-186 Laufende Zeitstrafen stehen als Karten am Laptop', () => {
   it('2 laufende Zeitstrafen: beide als Karte mit großer Restzeit, Spielzeit des Beginns und Balken, ohne „weitere“', () => {
     render(<StrafenSpalte model={modell([strafe('a', 72), strafe('b', 100, 4)])} />);
     expect(screen.getByTestId('strafen-karte-a-rest')).toHaveTextContent('1:12');
-    expect(screen.getByTestId('strafen-karte-a-titel')).toHaveTextContent('DJK Otting, Nummer 9');
+    expect(screen.getByTestId('strafen-karte-a-titel')).toHaveTextContent('DJK Otting, #9');
     expect(screen.getByTestId('strafen-karte-a')).toHaveTextContent('Zeitstrafe 2 Minuten · seit Spielzeit 3:18');
-    expect(screen.getByTestId('strafen-karte-b-titel')).toHaveTextContent('DJK Otting, Nummer 4');
+    expect(screen.getByTestId('strafen-karte-b-titel')).toHaveTextContent('DJK Otting, #4');
     expect(screen.queryByTestId('strafen-weitere')).toBeNull();
   });
 
@@ -42,7 +42,7 @@ describe('@SL-186 Laufende Zeitstrafen stehen als Karten am Laptop', () => {
     expect(screen.getByTestId('strafen-weitere')).toHaveTextContent('+ 1 weitere (DJK Otting)');
     expect(screen.getAllByRole('listitem')).toHaveLength(2); // Karten stehen in einer Liste, je Karte mit Namen und Restzeit
     expect(screen.getByRole('list')).toBeInTheDocument();
-    expect(screen.getByTestId('strafen-karte-a')).toHaveAttribute('aria-label', 'DJK Otting, Nummer 9, Restzeit 1:12');
+    expect(screen.getByTestId('strafen-karte-a')).toHaveAttribute('aria-label', 'DJK Otting, #9, Restzeit 1:12');
   });
 
   it('Strafe aus der 1. Halbzeit läuft in der 2. weiter: „seit 1. Halbzeit 9:30“', () => {

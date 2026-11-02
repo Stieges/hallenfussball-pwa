@@ -70,12 +70,20 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Textstücke, Zählung je Stück): dieselbe Änderung, nämlich nur die oben genannten Wörter (je Seitenkopf „Nr.“, „Schiedsrichter“, „Gruppe“,
  * „#“, „Sp.“, „Diff.“, „Pkt.“, die Zeitzeile) und in den Hochformaten der Umbruch „Sieger“ / „Halbfinale 1“; im Querformat ändert sich
  * zusätzlich die Reihenfolge, in der die Kopfzellen ausgegeben werden, nicht ihr Inhalt.
+ * Neu aufgenommen 02.11. (Glossar-Folge, @OB-075/@DR-025/@DR-001): Spaltenköpfe „SR“ (EN „Ref“) und „Gr.“ (EN „Grp“) statt „Schiedsrichter“/„Referee“
+ * und „Gruppe“/„Group“ (Kurzformen im Tabellenkopf, Daniel 02.11.); die Zeitspalte ist mindestens so breit wie „00:00“ in der Schrift der Zeile
+ * (+0,7 mm, @DR-001: keine Uhrzeit bricht um), dadurch wird die Gruppen-Spalte schmaler (kürzeres Kopfwort) und Heim/Gast ändern ihre Breite um
+ * Bruchteile eines Millimeters. Text-für-Text verglichen (Lauf origin/main 5e440d09 gegen diesen Stand, alle vier Fixtures DE, EN hoch 12 und 20
+ * Spiele und EN quer, je Textstück gezählt): gleiche Seitenzahlen; geändert sind nur die Kopfwörter („Gruppe“ → „Gr.“, „Schiedsrichter“ → „SR“; EN
+ * „Group“ → „Grp“, „Referee“ → „Ref“) und der Umbruch einzelner Herkunftstexte („Zweiter Gruppe A“ → „Zweiter Gruppe“ / „A“; EN „Loser Semi-final“ /
+ * „1“ → „Loser“ / „Semi-final 1“). Bild DE (Seite 1 und 3) und EN (Seite 1 und 3) gesichtet. Stände davor: 6720748dc9c2, 1d9fc9ecc557,
+ * af351460128a, b0c3148ebdee, EN e14f54a199ec.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '6720748dc9c2',
-  '20 Spiele, hoch': '1d9fc9ecc557',
-  '12 Spiele, quer': 'af351460128a',
-  '20 Spiele, quer': 'b0c3148ebdee',
+  '12 Spiele, hoch': '2341a1c44ae0',
+  '20 Spiele, hoch': '126de4bc7787',
+  '12 Spiele, quer': 'b6ad6663d3d7',
+  '20 Spiele, quer': '255675713334',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -90,7 +98,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('e14f54a199ec');
+    expect(layoutDigest(pages)).toBe('d04aeeb0a9b1');
   });
 });
 

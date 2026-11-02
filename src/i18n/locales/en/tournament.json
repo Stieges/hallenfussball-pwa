@@ -630,10 +630,11 @@
   },
   "matchResult": {
     "overtimeShort": "$t(short:ergebniszelle.extraTime)",
+    "penaltyShort": "$t(short:ergebniszelle.afterPenalties)",
     "finishedPenalty": "ended on penalties",
     "running": "live",
     "runningElapsed": "live {{elapsed}}",
-    "scoreAriaPenalty": "Final score {{homeScore}}:{{awayScore}}, $t(sport:events.penaltyShootout) {{homePenalty}}:{{awayPenalty}}",
+    "scoreAriaPenalty": "Final score {{homeScore}}:{{awayScore}}, {{homePenalty}}:{{awayPenalty}} $t(sport:phases.afterPenalties)",
     "scoreAriaOvertime": "Final score {{homeScore}}:{{awayScore}} after extra time",
     "finishedOvertime": "ended after extra time"
   },
@@ -674,7 +675,7 @@
       "eventYellowCard": "Yellow card {{team}}{{player}}",
       "eventRedCard": "Red card {{team}}{{player}}",
       "eventTimePenalty": "Time penalty {{team}}{{player}}, {{minute}}.",
-      "playerNumber": ", number {{number}}",
+      "playerNumber": ", #{{number}}",
       "eventSubstitution": "Substitution {{team}}",
       "eventFoul": "Foul {{team}}"
     },
@@ -712,7 +713,7 @@
       "yellowRedCard": "Yellow-red card {{team}}{{player}}",
       "redCard": "Red card {{team}}{{player}}",
       "timePenalty": "Time penalty {{team}}{{player}}, {{minute}}.",
-      "playerNumber": ", number {{number}}",
+      "playerNumber": ", #{{number}}",
       "substitutionDetail": "Substitution {{team}}: {{out}} → {{in}}",
       "substitution": "Substitution {{team}}",
       "foul": "Foul {{team}}",
@@ -1579,7 +1580,7 @@
       "eintrag_other": "{{count}} entries from {{author}} (field {{field}}) inserted afterwards"
     },
     "zeile": {
-      "mitNummer": "{{what}} {{team}}, number {{nr}}",
+      "mitNummer": "{{what}} {{team}}, #{{nr}}",
       "team": "{{what}} {{team}}",
       "ohneTeam": "{{what}}",
       "minute": "{{line}} · period {{section}}, minute {{minute}}",
