@@ -42,18 +42,19 @@ export type ResultEntryPrompt =
   | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string }
   | EndPrompt;
 
+/** Der angezeigte Stand beim Öffnen der Korrektur (Tore Team A : Tore Team B, ohne Strafstoßschießen) */
+export interface KnownScore {
+  a: number;
+  b: number;
+}
+
 export interface ScheduleResultEntry {
   /** `false` = nichts gespeichert (Nein/Abbrechen/Ablehnung), die Eingabe-Zelle zeigt dann wieder den gespeicherten Stand */
   /**
-   * `knownBase` = der letzte Spielstand-Eintrag, den die Turnierleitung beim Öffnen der Korrektur kannte (`baseAt`); fehlt er, gilt der
-   * Stand der lokalen Kopie. Ist seither ein anderer Stand eingetroffen, wird nichts gespeichert (@FU-082).
+   * `knownScore` = der Stand, den die Turnierleitung beim Öffnen der Korrektur sah (@FU-082, @EK-032). Weicht der Stand nach dem Abgleich
+   * davon ab, wird nichts gespeichert: „inzwischen von <Name> geändert (jetzt x:y)“. Fehlt er, gilt der Stand der lokalen Kopie.
    */
-  enterScore: (matchId: string, scoreA: number, scoreB: number, knownBase?: string | null) => Promise<boolean>;
-  /**
-   * @EK-063 / @FU-082: der Stand eines Spiels beim ÖFFNEN der Korrektur (Kopie anlegen, Server abgleichen, letzten Spielstand-Eintrag merken).
-   * `undefined`, wenn er sich nicht ermitteln lässt (kein Netz, Spiel ohne feststehende Teams): dann gilt der Stand der lokalen Kopie.
-   */
-  baseAt: (matchId: string) => Promise<string | null | undefined>;
+  enterScore: (matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore) => Promise<boolean>;
   prompt: ResultEntryPrompt | null;
   /** Grund (`reason`), `'yes'` (abgesetzt, beenden), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
@@ -168,21 +169,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     return tCockpit(rejectionMessageKey(error));
   }, [staleText, t, tCockpit]);
 
-  const baseAt = useCallback(async (matchId: string): Promise<string | null | undefined> => {
-    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
-    if (!entry || !context) {
-      return undefined;
-    }
-    try {
-      await context.engine.ensureMatch(entry.matchId, entry.ctx, tournament.id);
-      await context.engine.catchUp(entry.matchId);
-    } catch {
-      return undefined;
-    }
-    return context.engine.view(entry.matchId)?.result.state.lastScoreEventId ?? null;
-  }, [tournament, context]);
-
-  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number, knownBase?: string | null): Promise<boolean> => {
+  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore): Promise<boolean> => {
     if (isTournamentClosedById(tournament.id)) {
       // R3-3 (@LZ-036): zweite Linie -- der Spielplan bietet die Eingabe nach dem Abschluss nicht an; kommt sie doch, nie still verwerfen
       showWarning(t('rights.closedSaveBlocked'));
@@ -284,10 +271,15 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
           showWarning(t('actions.matchAlreadyFinished'));
           return false;
         }
-        const before = score(effectiveScoreFor(state, entry.ctx.teamAId), effectiveScoreFor(state, entry.ctx.teamBId));
-        // @FU-082: Grundlage ist der Stand beim Öffnen der Korrektur (`knownBase`), nicht der beim Absenden angezeigte
-        const base = knownBase !== undefined ? knownBase : basedOn;
-        if (base !== state.lastScoreEventId) {
+        const currentA = effectiveScoreFor(state, entry.ctx.teamAId);
+        const currentB = effectiveScoreFor(state, entry.ctx.teamBId);
+        const before = score(currentA, currentB);
+        // @FU-082: Maßstab ist der Stand beim Öffnen des Dialogs, den die Turnierleitung sah (`knownScore`, eingefroren) -- weder die beim
+        // Absenden angezeigte Zahl noch die lokale Kopie, die frisch geöffnet leer oder alt sein kann (@EK-063, D12).
+        const changed = knownScore !== undefined
+          ? knownScore.a !== currentA || knownScore.b !== currentB
+          : basedOn !== state.lastScoreEventId;
+        if (changed) {
           showWarning(await staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
           return false;
         }
@@ -295,7 +287,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         if (!reason) {
           return false;
         }
-        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, base);
+        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, state.lastScoreEventId);
       }
       if (eventId) {
         trackAck(eventId, entry);
@@ -307,5 +299,5 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     }
   }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning, offerTakeover]);
 
-  return { enterScore, baseAt, prompt, answerPrompt, changeAuthor };
+  return { enterScore, prompt, answerPrompt, changeAuthor };
 }

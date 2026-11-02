@@ -6,7 +6,7 @@
 
 import { useCallback } from 'react';
 import { Tournament } from '../../../types/tournament';
-import { useScheduleResultEntry, type ScheduleResultEntry } from './useScheduleResultEntry';
+import { useScheduleResultEntry, type KnownScore, type ScheduleResultEntry } from './useScheduleResultEntry';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
@@ -17,9 +17,9 @@ interface UseScheduleTabActionsProps {
 }
 
 interface UseScheduleTabActionsResult {
-  handleScoreChange: (matchId: string, scoreA: number, scoreB: number, knownBase?: string | null) => Promise<boolean>;
+  handleScoreChange: (matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore) => Promise<boolean>;
   /** A-08f3e2: Rückfrage (Grund bzw. abgesetzt) der Schnelleingabe -- ScheduleTab zeigt sie an. */
-  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt' | 'changeAuthor' | 'baseAt'>;
+  resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt' | 'changeAuthor'>;
 }
 
 export function useScheduleTabActions({
@@ -31,12 +31,12 @@ export function useScheduleTabActions({
   // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
   const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults, offerTakeover });
   const { enterScore } = resultEntry;
-  const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number, knownBase?: string | null) => {
-    return enterScore(matchId, scoreA, scoreB, knownBase);
+  const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore) => {
+    return enterScore(matchId, scoreA, scoreB, knownScore);
   }, [enterScore]);
 
   return {
     handleScoreChange,
-    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt, changeAuthor: resultEntry.changeAuthor, baseAt: resultEntry.baseAt },
+    resultEntry: { prompt: resultEntry.prompt, answerPrompt: resultEntry.answerPrompt, changeAuthor: resultEntry.changeAuthor },
   };
 }

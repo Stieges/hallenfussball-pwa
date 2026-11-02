@@ -77,46 +77,55 @@ describe('@EK-063 ein Dialog für die Korrektur – Spielplan und Cockpit', () =
       await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
       await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '1');
       await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
-      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 1, 1, undefined);
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 1, 1, { a: 2, b: 1 });
       unmount();
     }
   });
 
-  // @FU-082 (Zusammenspiel @EK-032): Maria öffnet bei 2:1, Olli korrigiert auf 2:2 -- Marias Dialog und ihre Grundlage bleiben beim Öffnungsstand.
+  // @FU-082 (Zusammenspiel @EK-032): Maria öffnet bei 2:1, Olli korrigiert auf 2:2 -- Marias Dialog und ihr Vergleichsstand bleiben beim Öffnungsstand.
   describe('@FU-082 Stand beim Öffnen des Dialogs bleibt stehen', () => {
-    const view22 = {
-      byId: new Map([['match-7', { id: 'match-7', matchNumber: 7, score: { a: 2, b: 2 }, home: { label: spiel7.homeTeam.name }, away: { label: spiel7.awayTeam.name } }]]),
-    } as unknown as TournamentView;
-    function Plan({ v, baseOf }: { v: TournamentView; baseOf: (id: string) => Promise<string | null | undefined> }) {
-      const k = useSpielplanKorrektur({ view: v, enterScore: mocks.enterScore, baseOf, istLeitung: true });
-      return <div><button type="button" data-testid="plan-korrigieren" onClick={() => { k.onKorrigieren?.('match-7'); }}>Korrigieren</button><div>{k.dialog}</div></div>;
+    const viewMit = (spiele: Array<[string, number, number, number]>) => ({
+      byId: new Map(spiele.map(([id, nr, a, b]) => [id, { id, matchNumber: nr, score: { a, b }, home: { label: 'FC Nord' }, away: { label: 'SV Süd' } }])),
+    }) as unknown as TournamentView;
+    const view22 = viewMit([['match-7', 7, 2, 2], ['match-8', 8, 0, 3]]);
+    const view21 = viewMit([['match-7', 7, 2, 1], ['match-8', 8, 0, 3]]);
+    function Plan({ v }: { v: TournamentView }) {
+      const k = useSpielplanKorrektur({ view: v, enterScore: mocks.enterScore, istLeitung: true });
+      return (
+        <div>
+          <button type="button" data-testid="plan-7" onClick={() => { k.onKorrigieren?.('match-7'); }}>Korrigieren 7</button>
+          <button type="button" data-testid="plan-8" onClick={() => { k.onKorrigieren?.('match-8'); }}>Korrigieren 8</button>
+          <div>{k.dialog}</div>
+        </div>
+      );
     }
 
-    it('@FU-082 Anzeige springt auf 2:2, während der Dialog offen ist: „bisher“ bleibt 2:1, „Weiter“ reicht den Öffnungsstand e1 an enterScore', async () => {
+    it('@FU-082 Anzeige springt auf 2:2, während der Dialog offen ist: „bisher“ bleibt 2:1, „Weiter“ reicht 2:1 an enterScore', async () => {
       const user = userEvent.setup();
-      const baseOf = vi.fn().mockResolvedValue('e1');
-      const { rerender } = render(<Plan v={view} baseOf={baseOf} />);
-      await user.click(screen.getByTestId('plan-korrigieren'));
-      expect(baseOf).toHaveBeenCalledExactlyOnceWith('match-7');
-      rerender(<Plan v={view22} baseOf={baseOf} />);
+      const { rerender } = render(<Plan v={view21} />);
+      await user.click(screen.getByTestId('plan-7'));
+      rerender(<Plan v={view22} />);
       const dialog = screen.getByTestId('cockpit-korrektur-dialog');
       expect(dialog).toHaveTextContent('2:1');
       expect(dialog).not.toHaveTextContent('2:2');
       await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
       await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '3');
       await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
-      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 3, 1, 'e1');
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 3, 1, { a: 2, b: 1 });
     });
 
-    it('@FU-082 gescheitertes Abgleichen beim Öffnen (undefined): „Weiter“ speichert trotzdem über enterScore, ohne feste Grundlage', async () => {
+    it('@FU-082 erneutes Öffnen eines anderen Spiels: „Weiter“ reicht den Stand dieses Spiels (0:3), nicht den des zuerst geöffneten', async () => {
       const user = userEvent.setup();
-      render(<Plan v={view} baseOf={vi.fn().mockRejectedValue(new Error('offline'))} />);
-      await user.click(screen.getByTestId('plan-korrigieren'));
+      render(<Plan v={view21} />);
+      await user.click(screen.getByTestId('plan-7'));
+      await user.click(within(screen.getByTestId('cockpit-korrektur-dialog')).getByTestId('cockpit-korrektur-cancel'));
+      await user.click(screen.getByTestId('plan-8'));
       const dialog = screen.getByTestId('cockpit-korrektur-dialog');
+      expect(dialog).toHaveTextContent('Ergebnis von Spiel 8 korrigieren');
       await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
-      await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '3');
+      await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '1');
       await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
-      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 3, 1, undefined);
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-8', 1, 3, { a: 0, b: 3 });
     });
   });
 

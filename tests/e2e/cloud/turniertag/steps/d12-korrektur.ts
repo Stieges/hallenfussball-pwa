@@ -51,8 +51,8 @@ async function korrekturImSpielplan({ asRole }: StepContext): Promise<void> {
   // Neuer Stand: das Spiel steht in der Cloud auf 4:0.
   await expect.poll(async () => {
     const m = (await fetchTurniertagMatches()).find((x) => x.id === match.id);
-    return [m?.score_a, m?.score_b];
-  }, { message: 'Ergebnis des Spiels nach der Korrektur', timeout: 10000 }).toEqual([4, 0]);
+    return [m?.score_a, m?.score_b, m?.match_status];
+  }, { message: 'Ergebnis des Spiels nach der Korrektur (das Spiel bleibt beendet)', timeout: 10000 }).toEqual([4, 0, 'finished']);
 }
 
 async function korrekturImCockpit({ asRole }: StepContext): Promise<void> {

@@ -202,7 +202,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   });
 
   // „Ergebnis korrigieren“ (@EK-063): derselbe Dialog und derselbe Weg wie im Cockpit
-  const korrektur = useSpielplanKorrektur({ view, enterScore: handleScoreChange, baseOf: resultEntry.baseAt, istLeitung: canEndRunning });
+  const korrektur = useSpielplanKorrektur({ view, enterScore: handleScoreChange, istLeitung: canEndRunning });
   // Aktionsauswahl je Spiel (@SL-193): Rechte aus useCan; im Bearbeiten-Modus gelten die Auswahlfelder der Karten
   const actionRights = useMemo(() => (isEditing ? undefined : { lead: canEndRunning, play: canControlTimer, schedule: canSchedule }), [isEditing, canEndRunning, canControlTimer, canSchedule]);
 

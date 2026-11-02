@@ -36,7 +36,7 @@ export function useCockpitKorrektur(
     const stand = liveMatchFinalScore(match);
     return { number: match.number, homeName: match.homeTeam.name, awayName: match.awayTeam.name, scoreHome: stand.a, scoreAway: stand.b };
   }, [liveMatches]);
-  const einstieg = useKorrekturEinstieg({ enterScore: resultEntry.enterScore, spielOf, baseOf: resultEntry.baseAt, istLeitung, pause });
+  const einstieg = useKorrekturEinstieg({ enterScore: resultEntry.enterScore, spielOf, istLeitung, pause });
 
   const prompt = resultEntry.prompt ? <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} /> : null;
   return { onKorrigieren: einstieg.onKorrigieren, dialoge: einstieg.dialog ?? prompt };

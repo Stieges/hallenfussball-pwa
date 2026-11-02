@@ -203,6 +203,31 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     expect(view.getByTestId('home-points').textContent).toBe('1');
   });
 
+  it('@FU-082 Olli korrigiert auf 3:3, während Marias Dialog bei 3:1 offen ist: „Weiter“ → Hinweis „inzwischen von Olli geändert (jetzt 3:3)“, keine Grund-Rückfrage, nichts gesendet', async () => {
+    await finishFirstMatch();
+    authors.read.mockResolvedValue(new Map([['e-olli', { name: 'Olli', role: 'owner' }]]));
+    const { view, card } = await renderSchedule();
+    await chooseAction(card, 'correct');
+    const dialog = await screen.findByTestId('cockpit-korrektur-dialog');
+    expect(dialog).toHaveTextContent('3:1');
+    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === FIRST.id)!;
+    // Der Server kennt die Eintragung der Turnierleitung (3:1) und danach Ollis Korrektur auf 3:3
+    const eintrag = h.engine.view(entry.matchId)!.result.state.lastScoreEventId!;
+    h.fetchConfirmed.mockResolvedValue({
+      events: [
+        { id: eintrag, type: 'RESULT_ENTRY', actor: 'leitung', at: Date.now() - 1000, section: null, clockMs: null, teamId: null, seq: 1, payload: { scores: { [entry.ctx.teamAId]: 3, [entry.ctx.teamBId]: 1 } } },
+        { id: 'e-olli', type: 'CORRECTION', actor: 'leitung', at: Date.now(), section: null, clockMs: null, teamId: null, seq: 2, payload: { scores: { [entry.ctx.teamAId]: 3, [entry.ctx.teamBId]: 3 }, reason: 'input_error', basedOn: eintrag } },
+      ],
+      newWatermark: 2,
+    });
+    fireEvent.change(within(dialog).getByTestId('cockpit-korrektur-home'), { target: { value: '4' } });
+    await act(async () => { fireEvent.click(within(dialog).getByTestId('cockpit-korrektur-weiter')); await settle(); });
+
+    expect(await view.findByText('Spiel 1 wurde inzwischen von Olli geändert (jetzt 3:3)')).toBeInTheDocument();
+    expect(view.queryByTestId('result-entry-reason-dialog')).toBeNull();
+    expect(h.api).not.toHaveBeenCalled();
+  });
+
   it('@EK-004 Abbrechen sendet nichts: die Zeile zeigt weiter 3:1', async () => {
     await finishFirstMatch();
     const { view, card } = await renderSchedule();

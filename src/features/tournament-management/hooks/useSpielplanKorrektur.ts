@@ -4,20 +4,20 @@
  */
 import { useCallback } from 'react';
 import type { TournamentView } from '../../../core/view';
+import type { KnownScore } from './useScheduleResultEntry';
 import { useKorrekturEinstieg, type KorrekturEinstieg, type KorrekturSpiel } from './useKorrekturEinstieg';
 
 export function useSpielplanKorrektur(options: {
   view: TournamentView;
-  enterScore: (matchId: string, home: number, away: number, knownBase?: string | null) => Promise<boolean>;
-  baseOf?: (matchId: string) => Promise<string | null | undefined>;
+  enterScore: (matchId: string, home: number, away: number, knownScore?: KnownScore) => Promise<boolean>;
   /** Turnierleitung (`leadMatches`); der Helfer bekommt keinen Handler (@HE-042, @FU-113) */
   istLeitung: boolean;
 }): KorrekturEinstieg {
-  const { view, enterScore, baseOf, istLeitung } = options;
+  const { view, enterScore, istLeitung } = options;
   const spielOf = useCallback((matchId: string): KorrekturSpiel | null => {
     const match = view.byId.get(matchId);
     if (match?.score === undefined) { return null; }
     return { number: match.matchNumber ?? 0, homeName: match.home.label, awayName: match.away.label, scoreHome: match.score.a, scoreAway: match.score.b };
   }, [view]);
-  return useKorrekturEinstieg({ enterScore, spielOf, baseOf, istLeitung });
+  return useKorrekturEinstieg({ enterScore, spielOf, istLeitung });
 }
