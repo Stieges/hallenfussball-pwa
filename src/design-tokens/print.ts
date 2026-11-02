@@ -301,3 +301,9 @@ export const printMetrics = {
   placeSentenceAdvance: 6,
   placeTextLift: 1.5,
 } as const;
+
+/** Zeitangaben im Kopf des Spielplans (@DR-031). */
+export const printSchedule = {
+  /** „Ende ca.“ wird auf ein Vielfaches dieser Minutenzahl gerundet („ca.“ und eine minutengenaue Zeit widersprechen sich). */
+  endRoundMinutes: 5,
+} as const;
