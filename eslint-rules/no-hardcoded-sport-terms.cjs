@@ -149,6 +149,7 @@ module.exports = {
       '__tests__',          // Testdateien
       'LiveCockpitMockup',  // Demo-Screen, nicht produktiv gerendert
       'MatchCockpitDemoScreen', // Demo-Screen, nicht produktiv gerendert
+      '/src/test/',         // Hilfen der Testumgebung (z. B. realI18n.ts mit der Liste aller Namensräume)
       '__fixtures__',       // Testdaten mit Kennungen wie „F-HF“, nie angezeigt
       'teamNameAbbrev',     // Vereinskürzel (SF = Sportfreunde): Datenabgleich, kein Anzeigetext für Begriffe des Glossars
       '/src/lib/pdf/fontData/', // eingebettete Schriften (Base64), kein Anzeigetext (nur dieser Ordner, nicht jeder Pfad mit „fontData“)

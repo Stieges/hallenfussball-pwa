@@ -85,7 +85,8 @@
     "pdf": {
       "pfade": [
         "src/lib/pdfExporter.ts",
-        "src/lib/pdfStatisticsExporter.ts"
+        "src/lib/pdfStatisticsExporter.ts",
+        "src/lib/scheduleRenderer.ts"
       ],
       "floors": {
         "statements": 8,

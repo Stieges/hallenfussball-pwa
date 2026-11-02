@@ -129,6 +129,8 @@ ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
     // „P3“ ist die interne matchId und nur in Sprachdateien verboten (tsLint: false).
     { filename: '/repo/src/constants/tournamentSchemas.ts', code: "const matchId = 'P3';", options: ['forbidden'] },
     // Vereinskürzel (SF = Sportfreunde), Fixtures und Rechtstexte sind ausgenommen.
+    // Hilfen der Testumgebung führen alle Namensräume auf
+    { filename: '/repo/src/test/realI18n.ts', code: "const o = { ns: ['sport', 'short'] };", options: ['forbidden'] },
     // Der Namensraum `short` über Optionen: erlaubt in ShortLabel.tsx
     { filename: '/repo/src/components/ui/atoms/ShortLabel.tsx', code: "const { t } = useTranslation('short');", options: ['forbidden'] },
     { filename: '/repo/src/core/models/teamNameAbbrev.ts', code: "const kuerzel = ['Sportfreunde', 'SF'];", options: ['forbidden'] },
