@@ -129,8 +129,9 @@ ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
     // „P3“ ist die interne matchId und nur in Sprachdateien verboten (tsLint: false).
     { filename: '/repo/src/constants/tournamentSchemas.ts', code: "const matchId = 'P3';", options: ['forbidden'] },
     // Vereinskürzel (SF = Sportfreunde), Fixtures und Rechtstexte sind ausgenommen.
-    // Hilfen der Testumgebung führen alle Namensräume auf
+    // Nur die beiden Test-Helfer, die alle Namensräume laden, dürfen den Namensraum `short` nennen (Review #433, 🔵)
     { filename: '/repo/src/test/realI18n.ts', code: "const o = { ns: ['sport', 'short'] };", options: ['forbidden'] },
+    { filename: '/repo/src/test/realDeI18n.ts', code: "const o = { ns: ['sport', 'short'] }; const t = useTranslation('short');", options: ['forbidden'] },
     // Der Namensraum `short` über Optionen: erlaubt in ShortLabel.tsx
     { filename: '/repo/src/components/ui/atoms/ShortLabel.tsx', code: "const { t } = useTranslation('short');", options: ['forbidden'] },
     { filename: '/repo/src/core/models/teamNameAbbrev.ts', code: "const kuerzel = ['Sportfreunde', 'SF'];", options: ['forbidden'] },
@@ -139,6 +140,12 @@ ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
     { filename: '/repo/src/screens/DatenschutzScreen.tsx', code: 'const el = <p>§ 25 Abs. 2 Nr. 2 TDDDG</p>;', options: ['forbidden'] },
   ],
   invalid: [
+    // Die Ausnahme für `src/test/` ist eng: andere Dateien dort prüft die Regel in voller Breite (Namensraum und Fachbegriffe)
+    { filename: '/repo/src/test/testUtils.tsx', code: "const { t } = useTranslation('short');", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    { filename: '/repo/src/test/mocks/anything.ts', code: "const o = { ns: ['sport', 'short'] };", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    { filename: '/repo/src/test/testUtils.tsx', code: "const text = 'HF 1 gegen SR 2';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }, { messageId: 'forbiddenAbbreviation' }] },
+    // In den beiden Helfern ist nur die Namensraum-Prüfung aus; Kürzel in Texten werden auch dort gemeldet
+    { filename: '/repo/src/test/realI18n.ts', code: "const text = 'HF 1 gegen SR 2';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }, { messageId: 'forbiddenAbbreviation' }] },
     // Namensraum-Option: der Namensraum `short` lässt sich auch ohne „short:“-Schlüssel einschleusen
     { filename: COMPONENT, code: "const { t } = useTranslation('short');", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
     { filename: COMPONENT, code: "const t = i18n.getFixedT('de', 'short');", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },

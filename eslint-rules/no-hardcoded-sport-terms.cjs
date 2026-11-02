@@ -149,7 +149,6 @@ module.exports = {
       '__tests__',          // Testdateien
       'LiveCockpitMockup',  // Demo-Screen, nicht produktiv gerendert
       'MatchCockpitDemoScreen', // Demo-Screen, nicht produktiv gerendert
-      '/src/test/',         // Hilfen der Testumgebung (z. B. realI18n.ts mit der Liste aller Namensräume)
       '__fixtures__',       // Testdaten mit Kennungen wie „F-HF“, nie angezeigt
       'teamNameAbbrev',     // Vereinskürzel (SF = Sportfreunde): Datenabgleich, kein Anzeigetext für Begriffe des Glossars
       '/src/lib/pdf/fontData/', // eingebettete Schriften (Base64), kein Anzeigetext (nur dieser Ordner, nicht jeder Pfad mit „fontData“)
@@ -164,7 +163,10 @@ module.exports = {
     const SHORT_KEY_FILES = ['/src/components/ui/atoms/shortTerms.ts', '/src/lib/pdf/translations.ts', '/src/lib/pdfStatisticsExporter.ts'];
     const shortKeyAllowed = SHORT_KEY_FILES.some((f) => normalized.endsWith(f));
     // Der Namensraum `short` darf auch nicht über Optionen eingeschleust werden (useTranslation('short'), getFixedT(…, 'short'), { ns: 'short' }).
-    const SHORT_NS_FILES = [...SHORT_KEY_FILES, '/src/components/ui/atoms/ShortLabel.tsx'];
+    // Die beiden Test-Helfer laden alle Namensräume (auch `short`) für echte Texte; nur die Namensraum-Prüfung ist für sie aus,
+    // alle anderen Prüfungen gelten dort wie überall in `src/test/` (Review #433).
+    const TEST_I18N_FILES = ['/src/test/realI18n.ts', '/src/test/realDeI18n.ts'];
+    const SHORT_NS_FILES = [...SHORT_KEY_FILES, '/src/components/ui/atoms/ShortLabel.tsx', ...TEST_I18N_FILES];
     const shortNsAllowed = mode !== 'forbidden' || SHORT_NS_FILES.some((f) => normalized.endsWith(f));
     const isShortNs = (node) =>
       (node.type === 'Literal' && node.value === 'short')
