@@ -58,18 +58,17 @@ function section(tokens: string[], startToken: string, endToken?: string): strin
 }
 
 describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
-  it.each(SPECIAL)('„%s“ steht je Ort einzeln: Teilnehmer, Spiele und Tabelle', async name => {
+  it.each(SPECIAL)('„%s“ steht je Ort unverändert im PDF: Teilnehmer, Spiele (auch umbrochen) und Tabelle', async name => {
     const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
     const tokens = tokensOf((await extractPdfText(bytes)).pages);
     const key = squash(name);
     // Teilnehmer: Zeile je Gruppe mit „n. Name“ (B-28a3-3b, kompakt); der Name steht in einem Stück.
     const participants = section(tokens, '1Teilnehmer', '2Gruppenphase');
     expect(participants.some(t => t.includes(key))).toBe(true);
-    // Spiele: Zeile mit dem Namen als eigenes Stück in der Gruppenphase, vor der ersten Tabelle.
-    // Seit @OB-075 (Spaltenköpfe „Schiedsrichter“, „Gruppe“ ausgeschrieben) sind Heim und Gast schmaler: der Name darf in der
-    // Spieltabelle auf zwei Zeilen stehen, die Zeichen müssen vollständig und in Reihenfolge da sein (Zusammenhang der Stücke).
+    // Spiele: Der Name steht in der Gruppenphase, vor der ersten Tabelle, als Stück oder – wenn die Zelle an einem Leerzeichen
+    // umbricht (gleich breite Ziffern, T1) – als zwei aufeinanderfolgende Stücke. Jedes Zeichen kommt unverändert an (@BM-048).
     const matches = section(tokens, '2Gruppenphase', '3Tabelle–GruppeA');
-    expect(matches.join('')).toContain(key);
+    expect(matches.some((t, i) => t === key || t + (matches[i + 1] ?? '') === key)).toBe(true);
     // Tabelle Gruppe A: Name als eigenes Stück zwischen Titel und Gruppe B.
     const table = section(tokens, '3Tabelle–GruppeA', 'Tabelle–GruppeB');
     expect(table).toContain(key);

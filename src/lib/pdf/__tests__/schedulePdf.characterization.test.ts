@@ -139,16 +139,19 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     const schedule = hallencupSchedule();
     const pdf = await renderSchedulePdf(schedule, undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
-    // Zeilenumbrüche in Zellen zählen nicht: seit @OB-075 steht „Schiedsrichter“ ausgeschrieben im Kopf, Heim und Gast sind
-    // schmaler, „Sieger Halbfinale 1“ steht dort auf zwei Zeilen (zwei Textstücke). Die Zeichen müssen vollständig da sein.
-    const squashed = text.join('').replace(/\s+/g, '');
     const finale = finalsMatches(schedule).find(m => m.finalType === 'final');
 
     expect(finale).toBeDefined();
     expect(text).toContain('Spiel um Platz 3');
     if (finale) {
-      expect(squashed).toContain(sideName(finale, 'A', schedule.allMatches).replace(/\s+/g, ''));
-      expect(squashed).toContain(sideName(finale, 'B', schedule.allMatches).replace(/\s+/g, ''));
+      // Die Herkunft („Sieger Halbfinale 1“) darf in der schmalen Zelle am Leerzeichen umbrechen (gleich breite Ziffern, T1):
+      // dann stehen Anfang und Schluss in zwei aufeinanderfolgenden Stücken (oder in einem mit Zeilenumbruch)
+      const flat = text.map(t => t.replace(/\s+/g, ' ').trim());
+      for (const side of ['A', 'B'] as const) {
+        const name = sideName(finale, side, schedule.allMatches);
+        const gesetzt = flat.some((t, i) => t === name || `${t} ${flat[i + 1] ?? ''}` === name);
+        expect(gesetzt, `„${name}“ steht im PDF`).toBe(true);
+      }
     }
   });
 

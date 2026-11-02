@@ -51,22 +51,27 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 25.10. (R2 PR 4, @W2A-012): die Vorgabe der Schützen ist 3 statt 5; Text-für-Text verglichen (Vorgabe 5 gegen 3):
  * nur die beiden K.-o.-Zeilen „… 5 Schützen je Team“ → „… 3 Schützen je Team“ (EN „shooters“), Lage unverändert. Stände davor:
  * 92e27f9338d0, 026dca7efbd1, 2ad20180580c, 329ef9fb4fa6, EN 1e5c882d540d.
+ * Neu aufgenommen 02.11. (C-PDF-SCHRIFT-OHNE-MERKMALE, Paket PDF T1): neu geschnittene Schrift mit gleich breiten Ziffern und
+ * Doppelpunkt (alle Ziffern Regular 1328 statt 833–1323, Bold 1324 statt 883–1385 Einheiten), I und l unterscheidbar. Text-für-Text verglichen (Lauf mit alter und neuer
+ * Schrift, alle fünf Fixtures): gleiche Seitenzahl, gleiche Textstücke bis auf die Herkunft der Finalteams, die in den Hochformaten
+ * wegen der breiteren „1“ und „2“ umbricht („Sieger Halbfinale“ / „1“; EN „Loser Semi-final“ / „1“); alles andere verschiebt sich um
+ * Bruchteile eines Millimeters. Bild DE (Seite 1 und 3) und EN (Seite 3) gesichtet (Review und Umsetzer). Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
  * Neu aufgenommen 01.11. (@OB-075/@OB-076, Paket „Begriffe ausschreiben“): Spaltenköpfe „Schiedsrichter“ und „Gruppe“ statt „SR“
  * und „Gr“, „Nr.“/„Sp.“/„Diff.“/„Pkt.“ und „#“ statt „Nr“/„Sp“/„Diff“/„Pkt“/„Pl“ (EN: „Referee“, „Group“, „GD“, „#“), „10 Minuten“
  * statt „10 Min.“ in der Regelzeile; die Spalte „Schiedsrichter“ ist 27 mm breit (Token printColumns), „Gruppe“ und „Nr.“ weiten
  * sich auf ihr Kopfwort, Heim und Gast werden in der Gruppenphase und der Finalrunde ca. 5 mm schmaler (Namen brechen früher um).
- * Stände davor: 5e61f5f4ce76, fe74f2817606, 0fd9a8f07abe, 9166518dd987, EN 78c5516555dd.
- * Text-für-Text verglichen (12 Spiele, hoch, DE und EN; Lauf origin/main gegen diesen Stand, jeweils 336/337 Textstücke): geändert sind nur die
+ * Stände davor (Stand T1): ee37c5de21d3, 574eec8b7779, 0bf091cb1408, c2826c814458, EN fb13bbb6d917.
+ * Text-für-Text verglichen (12 Spiele, hoch, DE und EN; Lauf origin/main mit T1 gegen diesen Stand, je 337 Textstücke): geändert sind nur die
  * genannten Kopfwörter und Zahlwörter („10 Minuten“, EN „10 minutes“, „Gruppe“/„Group“, „Schiedsrichter“/„Referee“, „#“, „Nr.“, „Sp.“,
- * „Diff.“, „Pkt.“, EN „GD“) sowie der Umbruch von „Sieger Halbfinale 1“ / „Loser Semi-final 1“ auf zwei Zeilen in der schmaleren Heim- und
- * Gast-Spalte (ein Textstück mehr). Bild DE und EN gesichtet (Seite 1 und 3, 70 dpi): Köpfe ungebrochen, nichts abgeschnitten, kein
- * Überlauf; in der Finalrunde steht „2“ von „Loser Semi-final 2“ allein in der zweiten Zeile (Umbruch an der Spaltenbreite).
+ * „Diff.“, „Pkt.“, EN „GD“) und der Umbruch der Herkunft der Finalteams in der schmaleren Heim- und Gast-Spalte („Sieger“ / „Halbfinale 1“
+ * statt „Sieger Halbfinale“ / „1“; EN „Winner“ / „Semi-final 1“). Bild DE (Seite 1 und 3) und EN (Seite 1 und 3) gesichtet: Köpfe
+ * ungebrochen, nichts abgeschnitten, kein Überlauf, Heim und Gast in beiden Sprachen lesbar.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '1c7e3fec8933',
-  '20 Spiele, hoch': '6b73b2a0a290',
-  '12 Spiele, quer': '27ce3594bc25',
-  '20 Spiele, quer': 'cf33d41e25cf',
+  '12 Spiele, hoch': '6720748dc9c2',
+  '20 Spiele, hoch': '1d9fc9ecc557',
+  '12 Spiele, quer': 'af351460128a',
+  '20 Spiele, quer': 'b0c3148ebdee',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -81,7 +86,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('5a619e96dd5e');
+    expect(layoutDigest(pages)).toBe('e14f54a199ec');
   });
 });
 
