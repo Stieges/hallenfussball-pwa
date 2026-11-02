@@ -86,7 +86,7 @@ jobs:
           if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps chromium; else npx playwright install --with-deps chromium; fi
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           # Dieselbe Version wie lokal genutzt (siehe docs/TESTUMGEBUNG.md, Abschnitt
           # "Voraussetzungen") und wie in supabase-drift-check.yml -- fest gepinnt, nicht
