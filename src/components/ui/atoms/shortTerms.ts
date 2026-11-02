@@ -12,10 +12,13 @@ export const SHORT_TERMS = {
   goalDifference: { short: 'short:tabellenkopf.goalDifference', long: 'sport:tabelle.goalDifference' },
   points: { short: 'short:tabellenkopf.points', long: 'sport:tabelle.points' },
   number: { short: 'short:tabellenkopf.number', long: 'sport:tabelle.number' },
+  referee: { short: 'short:tabellenkopf.referee', long: 'sport:roles.referee' },
+  group: { short: 'short:tabellenkopf.group', long: 'sport:tournament.group' },
+  afterPenalties: { short: 'short:ergebniszelle.afterPenalties', long: 'sport:phases.afterPenalties' },
   extraTime: { short: 'short:ergebniszelle.extraTime', long: 'sport:phases.afterExtraTime' },
 } as const;
 
 export type ShortTerm = keyof typeof SHORT_TERMS;
 
 /** Kurzformen, die im Kopf einer Tabellenspalte stehen dürfen. */
-export type TableHeadTerm = Extract<ShortTerm, 'rank' | 'played' | 'won' | 'drawn' | 'lost' | 'goalDifference' | 'points' | 'number'>;
+export type TableHeadTerm = Extract<ShortTerm, 'rank' | 'played' | 'won' | 'drawn' | 'lost' | 'goalDifference' | 'points' | 'number' | 'referee' | 'group'>;

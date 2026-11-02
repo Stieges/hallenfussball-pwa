@@ -15,10 +15,11 @@ const datei = (covered: number, total: number) => ({
   functions: werte(covered, total),
   branches: werte(covered, total),
 })
-const floors = (kern: number) => ({
+// Jeder Pfad eines Bereichs muss in der Messung Dateien haben (Review #433): `zuschauer` gibt es nur, wo die Messung dazu Dateien enthaelt.
+const floors = (kern: number, mitZuschauer = false) => ({
   bereiche: {
     kern: { pfade: ['src/core/'], floors: { statements: kern, branches: kern, functions: kern, lines: kern } },
-    zuschauer: { pfade: ['src/features/public-view/'], floors: { statements: 0, branches: 0, functions: 0, lines: 0 } },
+    ...(mitZuschauer ? { zuschauer: { pfade: ['src/features/public-view/'], floors: { statements: 0, branches: 0, functions: 0, lines: 0 } } } : {}),
   },
 })
 
@@ -45,7 +46,7 @@ describe('coverage-report.mjs', () => {
       [join(ordner, 'src/features/public-view/Ungeladen.tsx')]: datei(0, 10),
     }
     const s = schreibe('coverage/coverage-summary.json', summary)
-    const f = schreibe('coverage-floors.json', floors(0))
+    const f = schreibe('coverage-floors.json', floors(0, true))
     const r = lauf('--summary', s, '--floors', f, 'zuschauer')
     expect(r.status).toBe(0)
     expect(r.stdout).toMatch(/zuschauer\s+2\s+50\.00/)
@@ -102,7 +103,7 @@ describe('coverage-report.mjs', () => {
       [join(ordner, 'src/features/public-view/Klein.tsx')]: datei(10, 10),
       [join(ordner, 'src/features/public-view/Gross.tsx')]: datei(0, 90),
     })
-    const f = schreibe('coverage-floors.json', floors(0))
+    const f = schreibe('coverage-floors.json', floors(0, true))
     const r = lauf('--summary', s, '--floors', f, 'zuschauer')
     expect(r.stdout).toMatch(/zuschauer\s+2\s+10\.00/)
   })
@@ -139,6 +140,7 @@ describe('coverage-report.mjs', () => {
       total: datei(0, 0),
       [join(ordner, 'src/core/match/a.ts')]: datei(95, 100),
       [join(ordner, 'src/core/storage/b.ts')]: datei(10, 100),
+      [join(ordner, 'src/extra/c.ts')]: datei(10, 100),
     })
     const haupt = schreibe('haupt-floors.json', floors(0))
     const lauf2 = (pfade: string[]) => {
@@ -151,5 +153,52 @@ describe('coverage-report.mjs', () => {
     expect(eng.status).toBe(1)
     expect(eng.stderr).toMatch(/Pfad "src\/core\/" des Hauptzweigs ist nicht mehr im Bereich/)
     expect(lauf2(['src/core/', 'src/extra/']).status).toBe(0)
+  })
+})
+
+describe('coverage-report.mjs: Pfade, die es nicht mehr gibt (Review #433)', () => {
+  const mehrPfade = (zweiterPfad: string) => ({
+    bereiche: {
+      kern: { pfade: ['src/core/', zweiterPfad], floors: { statements: 0, branches: 0, functions: 0, lines: 0 } },
+    },
+  })
+  const messung = () =>
+    schreibe('coverage/coverage-summary.json', { total: datei(0, 0), [join(ordner, 'src/core/a.ts')]: datei(10, 10) })
+
+  it('ein Pfad des Bereichs, zu dem keine Datei der Messung gehoert, laesst die Pruefung scheitern (auch wenn andere Pfade Dateien liefern)', () => {
+    const f = schreibe('coverage-floors.json', mehrPfade('src/umbenannt/'))
+    const r = lauf('--summary', messung(), '--floors', f, 'kern')
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/kern: Pfad "src\/umbenannt\/" nennt keine Datei der Messung/)
+  })
+
+  it('Gegenprobe: liefert jeder Pfad Dateien (Ordner und Dateiname-Vorsatz), besteht die Pruefung', () => {
+    const summary = schreibe('coverage/coverage-summary.json', {
+      total: datei(0, 0),
+      [join(ordner, 'src/core/a.ts')]: datei(10, 10),
+      [join(ordner, 'src/screens/LiveViewScreen.tsx')]: datei(5, 10),
+    })
+    const f = schreibe('coverage-floors.json', mehrPfade('src/screens/LiveViewScreen'))
+    expect(lauf('--summary', summary, '--floors', f, 'kern').status).toBe(0)
+  })
+})
+
+describe('coverage-report.mjs: entfallene Pfade im Ratchet (Review #433)', () => {
+  it('ein Pfad des Hauptzweigs, zu dem die Messung keine Datei mehr kennt, darf entfallen; ein Pfad mit Dateien nicht', () => {
+    const s = schreibe('coverage/coverage-summary.json', {
+      total: datei(0, 0),
+      [join(ordner, 'src/core/a.ts')]: datei(10, 10),
+      [join(ordner, 'src/hooks/h.ts')]: datei(10, 10),
+    })
+    const bereich = (pfade: string[]) => ({ bereiche: { kern: { pfade, floors: { statements: 0, branches: 0, functions: 0, lines: 0 } } } })
+    const haupt = schreibe('haupt-floors.json', bereich(['src/core/', 'src/hooks/', 'src/gone/']))
+    const ohneGone = schreibe('coverage-floors.json', bereich(['src/core/', 'src/hooks/']))
+    const ok = spawnSync('node', [SKRIPT, '--root', ordner, '--summary', s, '--floors', ohneGone, '--base-floors', haupt], { encoding: 'utf8' })
+    expect(ok.status, ok.stderr).toBe(0)
+    const ohneHooks = schreibe('coverage-floors.json', bereich(['src/core/', 'src/gone/']))
+    const rot = spawnSync('node', [SKRIPT, '--root', ordner, '--summary', s, '--floors', ohneHooks, '--base-floors', haupt], { encoding: 'utf8' })
+    expect(rot.status).toBe(1)
+    expect(rot.stderr).toMatch(/Pfad "src\/hooks\/" des Hauptzweigs ist nicht mehr im Bereich/)
+    expect(rot.stderr).toMatch(/Pfad "src\/gone\/" nennt keine Datei der Messung/)
   })
 })

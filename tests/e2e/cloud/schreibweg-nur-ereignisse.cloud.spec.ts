@@ -170,8 +170,8 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);
     await expect(helperPage.locator('[data-testid="scoreboard-state"]')).toHaveText('Ende', { timeout: 15000 });
 
-    // Gegenbeispiel: die schon gesetzte Nummer 7 ist gesperrt, es entsteht kein Eintrag.
-    await helperPage.getByRole('button', { name: `Tor ${ids.homeTeamName}, Nummer 7 bearbeiten` }).click();
+    // Gegenbeispiel: die schon gesetzte #7 ist gesperrt, es entsteht kein Eintrag.
+    await helperPage.getByRole('button', { name: `Tor ${ids.homeTeamName}, #7 bearbeiten` }).click();
     await expect(helperPage.locator('[data-testid="event-edit-locked"]')).toHaveText('Korrektur nur durch die Turnierleitung');
     await helperPage.keyboard.press('Escape');
     expect((await fetchEngineRows(ids.matchId)).length).toBe(seeded);
@@ -184,7 +184,7 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     await expectScore(ids.matchId, 1, 1, 'finished');
     await helperPage.reload();
     await helperPage.waitForLoadState('networkidle');
-    await expect(helperPage.getByText(`Tor ${ids.awayTeamName}, Nummer 9`)).toBeVisible({ timeout: 15000 });
+    await expect(helperPage.getByText(`Tor ${ids.awayTeamName}, #9`)).toBeVisible({ timeout: 15000 });
 
     // Server: dieselbe Nachtragung auf die gesetzte Nummer lehnt er für den Helfer ab.
     const locked = await appendAsRole('helper', ids.matchId, [

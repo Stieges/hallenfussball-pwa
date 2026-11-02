@@ -93,16 +93,16 @@ function baseParams(match: ReturnType<typeof matchOf>, extra: Partial<Parameters
 describe('useEngineEventEditing -- Engine-Spiel', () => {
   beforeEach(() => { mockActor.current = 'helper'; });
 
-  it('G1a: Rueckgaengig-Beschriftung nennt das Ziel ("Tor Nummer 7 zurücknehmen"), Toast nennt es erneut', async () => {
+  it('G1a: Rueckgaengig-Beschriftung nennt das Ziel ("Tor #7 zurücknehmen"), Toast nennt es erneut', async () => {
     const { value, commands, wrapper } = await setup();
     await commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 7 });
     const params = baseParams(matchOf(value));
     const { result } = renderHook(() => useEngineEventEditing(params), { wrapper });
 
     expect(result.current.canUndo).toBe(true);
-    expect(result.current.undoLabel).toBe('Tor Nummer 7 zurücknehmen');
+    expect(result.current.undoLabel).toBe('Tor #7 zurücknehmen');
     await act(async () => { await result.current.undo(); });
-    expect(params.notify.success).toHaveBeenCalledWith('Tor Nummer 7 zurückgenommen');
+    expect(params.notify.success).toHaveBeenCalledWith('Tor #7 zurückgenommen');
     const copy = await value.store.load(value.accountId, MATCH_ID);
     expect(copy?.pending.some((e) => e.type === 'RETRACT')).toBe(true);
   });
@@ -114,7 +114,7 @@ describe('useEngineEventEditing -- Engine-Spiel', () => {
     await commands.amend(MATCH_ID, CTX, 'helper', goalId, { playerNumber: 9 }, []);
     const params = baseParams(matchOf(value));
     const { result } = renderHook(() => useEngineEventEditing(params), { wrapper });
-    expect(result.current.undoLabel).toBe('Tor Nummer 9 zurücknehmen');
+    expect(result.current.undoLabel).toBe('Tor #9 zurücknehmen');
   });
 
   it('G4: Toast erst NACH aufgeloestem submit (nicht davor)', async () => {
@@ -142,9 +142,9 @@ describe('useEngineEventEditing -- Engine-Spiel', () => {
     const { result } = renderHook(() => useEngineEventEditing(params), { wrapper });
     expect(result.current.sides.home.canMinus).toBe(true);
     expect(result.current.sides.away.canMinus).toBe(false);
-    expect(result.current.sides.home.label).toBe('Tor Nummer 4 für Heim zurücknehmen');
+    expect(result.current.sides.home.label).toBe('Tor #4 für Heim zurücknehmen');
     await act(async () => { await result.current.minus('home'); });
-    expect(params.notify.success).toHaveBeenCalledWith('Tor Nummer 4 zurückgenommen');
+    expect(params.notify.success).toHaveBeenCalledWith('Tor #4 zurückgenommen');
   });
 
   it('G1b/G3: Helfer, finished -> alles gesperrt mit Text; Tor-Knopf-Hinweis (F L516)', async () => {
@@ -200,7 +200,7 @@ describe('useEngineEventEditing -- Engine-Spiel', () => {
     const amend = copy!.pending.find((e) => e.type === 'AMEND')!;
     expect(amend.payload).toEqual({ playerNumber: 7 });
     expect(amend.payload).not.toHaveProperty('incomplete');
-    expect(params.notify.success).toHaveBeenCalledWith('Tor Nummer 7 aktualisiert');
+    expect(params.notify.success).toHaveBeenCalledWith('Tor #7 aktualisiert');
   });
 
   it('G10: geleertes Feld -> clear [playerNumber]; keine Aenderung -> nichts gesendet', async () => {
@@ -242,7 +242,7 @@ describe('useEngineEventEditing -- Engine-Spiel', () => {
     const params = baseParams(matchOf(value));
     const { result } = renderHook(() => useEngineEventEditing(params), { wrapper });
     await act(async () => { await result.current.remove(cardId); });
-    expect(params.notify.success).toHaveBeenCalledWith('Rote Karte Nummer 2 zurückgenommen');
+    expect(params.notify.success).toHaveBeenCalledWith('Rote Karte #2 zurückgenommen');
   });
 
   it('lokale Ablehnung: Fehler-Toast, kein Erfolgs-Toast', async () => {

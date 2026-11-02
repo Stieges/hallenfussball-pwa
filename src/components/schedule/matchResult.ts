@@ -7,6 +7,7 @@
  */
 import type { FinalScore, MatchView } from '../../core/view';
 import type { Match } from '../../types/tournament';
+import { SHORT_TERMS } from '../ui/atoms/shortTerms';
 
 export type ResultStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
@@ -68,21 +69,41 @@ export function cardStatusOf(match: Pick<MatchView, 'status' | 'isLive'> | undef
 }
 
 /** Übersetzungsfunktion, soweit die Formatierung sie braucht (react-i18next `t` passt). */
-export type ResultTranslate = (key: 'matchResult.overtimeShort') => string;
+export type ResultTranslate = (key: 'matchResult.overtimeShort' | 'matchResult.penaltyShort') => string;
 
 /**
- * Zusatz hinter dem Ergebnis (@OB-075): „(4:3)“ nach Strafstoßschießen (ohne Kurzform, das Strafstoß-Ergebnis steht in
- * Klammern), „n. V.“ nach Verlängerung (die einzige Kurzform in einer Ergebniszelle; `matchResult.overtimeShort` verweist auf den Namensraum `short`), sonst keiner.
+ * Zusatz hinter dem Ergebnis einer Tabelle (@OB-075, @OB-064): „(4:3 i. E.)“ nach Strafstoßschießen, „n. V.“ nach Verlängerung
+ * (die beiden Kurzformen, die in einer Ergebniszelle stehen dürfen; `matchResult.penaltyShort` und `matchResult.overtimeShort`
+ * verweisen auf den Namensraum `short`), sonst keiner. Die Spielkarte am Handy schreibt stattdessen „nach Verlängerung“ aus.
  */
 export function tableResultExtra(figures: ResultFigures, t: ResultTranslate): string | undefined {
   if (figures.decision === 'penalty' && figures.penaltyA !== undefined && figures.penaltyB !== undefined) {
-    return `(${figures.penaltyA}:${figures.penaltyB})`;
+    return `(${figures.penaltyA}:${figures.penaltyB} ${t('matchResult.penaltyShort')})`;
   }
   return figures.decision === 'overtime' ? t('matchResult.overtimeShort') : undefined;
 }
 
+/** Übersetzungsfunktion für die ausgeschriebenen Begriffe der Kurzformen (Namensraum `sport`, Zuordnung in `SHORT_TERMS`). */
+export type ResultLongTranslate = (key: typeof SHORT_TERMS.afterPenalties.long | typeof SHORT_TERMS.extraTime.long) => string;
+
 /**
- * Tabellenzeile: „2:2 (4:3)“, „3:2 n. V.“, „1:0“. Der Zusatz steht nur, wenn die Entscheidung ihn trägt.
+ * Ausgeschriebener Begriff zur Kurzform der Ergebniszelle (@OB-075): `long` für Darüberfahren („nach Strafstoßschießen“), `spoken` für
+ * Screenreader (bei Strafstoßschießen samt Ergebnis „4:3 nach Strafstoßschießen“). Ohne Entscheidung gibt es nichts zu erklären.
+ */
+export function tableResultExtraTerms(figures: ResultFigures, t: ResultLongTranslate): { long: string; spoken: string } | undefined {
+  if (figures.decision === 'penalty') {
+    const long = t(SHORT_TERMS.afterPenalties.long);
+    return { long, spoken: figures.penaltyA !== undefined && figures.penaltyB !== undefined ? `${figures.penaltyA}:${figures.penaltyB} ${long}` : long };
+  }
+  if (figures.decision === 'overtime') {
+    const long = t(SHORT_TERMS.extraTime.long);
+    return { long, spoken: long };
+  }
+  return undefined;
+}
+
+/**
+ * Tabellenzeile: „2:2 (4:3 i. E.)“, „3:2 n. V.“, „1:0“. Der Zusatz steht nur, wenn die Entscheidung ihn trägt.
  */
 export function formatTableResult(figures: ResultFigures, t: ResultTranslate): string {
   const base = `${figures.goalsA}:${figures.goalsB}`;

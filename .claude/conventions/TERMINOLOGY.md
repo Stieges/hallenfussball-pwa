@@ -38,8 +38,10 @@ einen Ort, den `short.context` nennt:
 
 | `short.context` | Wo | Beispiele |
 |---|---|---|
-| `tabellenkopf` | Kopf einer Tabellenspalte | `#`, `Sp.`/`P`, `S U N`/`W D L`, `Diff.`/`GD`, `Pkt.`/`Pts`, `Nr.`/`No.` |
-| `ergebniszelle` | Ergebniszelle | `n. V.`/`a.e.t.` (nach Strafstoßschießen steht „2:2 (4:3)“, keine Kurzform) |
+| `tabellenkopf` | Kopf einer Tabellenspalte | `#`, `Sp.`/`P`, `S U N`/`W D L`, `Diff.`/`GD`, `Pkt.`/`Pts`, `Nr.`/`No.` (Spielnummer), `SR`/`Ref`, `Gr.`/`Grp` |
+| `ergebniszelle` | Ergebniszelle einer Tabelle | `n. V.`/`a.e.t.`, `i. E.`/`pens` („2:2 (4:3 i. E.)“, „3:2 n. V.“); die Spielkarte am Handy schreibt „nach Verlängerung“ aus (@OB-064) |
+
+**Rückennummer** steht immer als „#12“ (Deutsch und Englisch), nie als „Nr. 12“ oder „No. 12“; `Nr.`/`No.` ist nur der Kopf der Spalte mit der Spielnummer.
 
 Wie es umgesetzt wird:
 - Kurzformen stehen **nur** im Namensraum `short` (`src/i18n/locales/{de,en}/short.json`), nie als Literal im Code und nie in
@@ -49,7 +51,7 @@ Wie es umgesetzt wird:
 - Im Tabellenkopf nutzt man `<ShortLabel term="played" />` (`ui/atoms`): sichtbar die Kurzform, als `title` und für Screenreader
   der ausgeschriebene Begriff (`sport:tabelle.*`): `title` hängt an der sichtbaren, für Screenreader ausgeblendeten Kurzform (Maus und Touch), der
   Vorlesetext ist ein eigener, nur für Screenreader sichtbarer Text – so liest nichts doppelt vor. In PDF-Köpfen: `translate('short:tabellenkopf.…')`. In Texten, die eine
-  Kurzform tragen müssen: Verschachtelung `$t(short:…)` – nur an den Stellen, die das Glossar unter `short.usedBy` nennt (heute nur `tournament:matchResult.overtimeShort`);
+  Kurzform tragen müssen: Verschachtelung `$t(short:…)` – nur an den Stellen, die das Glossar unter `short.usedBy` nennt (heute `tournament:matchResult.overtimeShort` und `tournament:matchResult.penaltyShort`);
   in `.ts/.tsx` dürfen Schlüssel mit `short:` nur in `shortTerms.ts`, `src/lib/pdf/translations.ts` und `src/lib/pdfStatisticsExporter.ts` stehen
   (ESLint-Regel `no-hardcoded-sport-terms`, Meldung `shortKeyElsewhere`).
   Minuten haben keine Kurzform, auch nicht an der Uhr oder am Monitor („~5 Minuten“).

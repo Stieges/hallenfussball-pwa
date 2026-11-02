@@ -202,10 +202,10 @@ for (const [name, groesse] of [['Handy 360', HANDY], ['Tablet hochkant 768', TAB
 test.describe('@OB-064 Spielplan der Verwaltung, Laptop 1280×800: Tabellenzeile waagerecht', () => {
   test.beforeEach(async ({ page }) => { await oeffneSpielplan(page, LAPTOP); });
 
-  test('Halbfinale 1 „2:1 n. V.“, Halbfinale 2 „0:0 (4:3)“, Gruppenspiel „3:1“', async ({ page }) => {
+  test('Halbfinale 1 „2:1 n. V.“, Halbfinale 2 „0:0 (4:3 i. E.)“, Gruppenspiel „3:1“', async ({ page }) => {
     const zellen = page.locator('.match-score-cell-finished');
     await expect(zellen.nth(0)).toHaveText(/^2:1 n\. V\./);
-    await expect(zellen.nth(1)).toHaveText(/^0:0 \(4:3\)/);
+    await expect(zellen.nth(1)).toHaveText(/^0:0 \(4:3 i\. E\.\)/);
     await expect(page.locator('[data-testid^="match-circle-"]').first()).toHaveText('3:1');
     await zellen.nth(0).scrollIntoViewIfNeeded();
     await bild(page, 'desktop-1280-tabelle-finalrunde', page.locator('.final-stage-schedule .desktop-view'));

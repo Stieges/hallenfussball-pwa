@@ -1,6 +1,6 @@
 /**
  * @ZM-002 @ZM-003 @ZM-021 Ereignisliste nach dem Abpfiff (Zuschauer-Seite, beendetes Spiel): dieselben Zeilen wie in der laufenden Liste –
- * „Tor FC Nord, Nummer 9, 3.“, „Tor FC Nord, 12.“, „Zeitstrafe SV Süd, Nummer 5, 4.“, „Gelbe Karte SV Süd, Nummer 5“ (Minute statt Uhrzeit).
+ * „Tor FC Nord, #9, 3.“, „Tor FC Nord, 12.“, „Zeitstrafe SV Süd, #5, 4.“, „Gelbe Karte SV Süd, #5“ (Minute statt Uhrzeit).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -28,9 +28,9 @@ function zeigen() {
 }
 
 describe('@ZM-002 Liste nach dem Abpfiff', () => {
-  it('Tor mit Nummer: „Tor FC Nord, Nummer 9, 3.“', () => {
+  it('Tor mit Nummer: „Tor FC Nord, #9, 3.“', () => {
     zeigen();
-    expect(screen.getByText('Tor FC Nord, Nummer 9, 3.')).toBeTruthy();
+    expect(screen.getByText('Tor FC Nord, #9, 3.')).toBeTruthy();
   });
 
   it('@ZM-003 Tor ohne Nummer: „Tor FC Nord, 12.“', () => {
@@ -40,39 +40,39 @@ describe('@ZM-002 Liste nach dem Abpfiff', () => {
 
   it('genau 60 s ist Minute 2', () => {
     zeigen();
-    expect(screen.getByText('Tor FC Nord, Nummer 7, 2.')).toBeTruthy();
+    expect(screen.getByText('Tor FC Nord, #7, 2.')).toBeTruthy();
   });
 
-  it('Zeitstrafe: „Zeitstrafe SV Süd, Nummer 5, 4.“ (ohne „2 Min“ und „#“)', () => {
+  it('Zeitstrafe: „Zeitstrafe SV Süd, #5, 4.“ (ohne „2 Min“, die Nummer als „#5“, nie „Nr. 5“)', () => {
     zeigen();
-    expect(screen.getByText('Zeitstrafe SV Süd, Nummer 5, 4.')).toBeTruthy();
+    expect(screen.getByText('Zeitstrafe SV Süd, #5, 4.')).toBeTruthy();
   });
 
-  it('@ZM-021 Karte: „Gelbe Karte SV Süd, Nummer 5“', () => {
+  it('@ZM-021 Karte: „Gelbe Karte SV Süd, #5“', () => {
     zeigen();
-    expect(screen.getByText('Gelbe Karte SV Süd, Nummer 5')).toBeTruthy();
+    expect(screen.getByText('Gelbe Karte SV Süd, #5')).toBeTruthy();
   });
 
   it('Gegenbeispiel: keine Uhrzeit-Spalte bei Tor, Zeitstrafe und Karte', () => {
     zeigen();
-    expect(document.body.textContent).not.toMatch(/\d\d:\d\d|#/);
+    expect(document.body.textContent).not.toMatch(/\d\d:\d\d|\bNr\.|\bNo\./);
   });
 
-  it('@ZM-186 Eigentor: „Eigentor SV Süd, Nummer 4, 6.“, ohne Nummer „Eigentor SV Süd, 7.“ (schießendes Team, nicht FC Nord)', () => {
+  it('@ZM-186 Eigentor: „Eigentor SV Süd, #4, 6.“, ohne Nummer „Eigentor SV Süd, 7.“ (schießendes Team, nicht FC Nord)', () => {
     zeigen();
-    expect(screen.getByText('Eigentor SV Süd, Nummer 4, 6.')).toBeTruthy();
+    expect(screen.getByText('Eigentor SV Süd, #4, 6.')).toBeTruthy();
     expect(screen.getByText('Eigentor SV Süd, 7.')).toBeTruthy();
-    expect(screen.queryByText(/^Tor FC Nord, (Nummer 4, )?[67]\.$/)).toBeNull();
+    expect(screen.queryByText(/^Tor FC Nord, (#4, )?[67]\.$/)).toBeNull();
   });
 
-  it('@ZM-186 EN: „Own goal SV Süd, number 4, 6.“', async () => {
+  it('@ZM-186 EN: „Own goal SV Süd, #4, 6.“', async () => {
     const { default: i18n } = await import('i18next');
     const { default: enTournament } = await import('../../../../i18n/locales/en/tournament.json');
     i18n.addResourceBundle('en', 'tournament', enTournament, true, true);
     await i18n.changeLanguage('en');
     try {
       zeigen();
-      expect(screen.getByText('Own goal SV Süd, number 4, 6.')).toBeTruthy();
+      expect(screen.getByText('Own goal SV Süd, #4, 6.')).toBeTruthy();
     } finally {
       await i18n.changeLanguage('de');
     }

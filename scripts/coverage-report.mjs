@@ -149,6 +149,13 @@ function main() {
       `${name.padEnd(22)}${String(anzahl).padStart(5)}  ${fmt(pct.statements)}    ${fmt(pct.branches)}   ${fmt(pct.functions)}   ${fmt(pct.lines)}   ${METRIKEN.map((m) => f[m]).join(' / ')}`,
     )
     if (anzahl === 0 && METRIKEN.some((m) => f[m] > 0)) fehler.push(`${name}: keine Datei der Messung liegt im Bereich (Pfade ${b.pfade.join(', ')})`)
+    // Ein Pfad, den es nicht mehr gibt (Ordner umbenannt oder gelöscht), darf nicht stillschweigend übersprungen werden,
+    // solange andere Pfade des Bereichs noch Dateien liefern: die Messung enthält jede Datei von src/ (auch ungetestete mit 0 %, @TA-001).
+    for (const pfad of b.pfade) {
+      if (![...dateien.keys()].some((datei) => datei.startsWith(pfad))) {
+        fehler.push(`${name}: Pfad "${pfad}" nennt keine Datei der Messung (umbenannt oder gelöscht? coverage-floors.json anpassen)`)
+      }
+    }
     for (const m of METRIKEN) {
       if (pct[m] < f[m]) fehler.push(`${name}.${m}: gemessen ${pct[m]} < Untergrenze ${f[m]}`)
       const alt = hauptFloors?.bereiche?.[name]?.floors?.[m]
@@ -164,7 +171,9 @@ function main() {
         continue
       }
       // Pfade sind geschuetzt: Verengen (Hauptzweig-Pfad nicht mehr abgedeckt) ist verboten, Erweitern erlaubt.
+      // Ausnahme: ein Pfad, zu dem die Messung keine Datei mehr kennt (umbenannt oder gelöscht), darf entfallen – er schützt nichts mehr.
       for (const alt of b.pfade) {
+        if (![...dateien.keys()].some((datei) => datei.startsWith(alt))) continue
         if (!neu.pfade.some((p) => alt.startsWith(p))) fehler.push(`${name}: Pfad "${alt}" des Hauptzweigs ist nicht mehr im Bereich (Verengen verboten)`)
       }
       if (gewaehlt.includes(name)) continue
