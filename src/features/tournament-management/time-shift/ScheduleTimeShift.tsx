@@ -87,6 +87,7 @@ export function ScheduleTimeShift({ tournament, schedule, standings, view, onTou
         return m === undefined ? undefined : clockText(originalStartToShow(m));
       },
       ...(enabled ? {
+        shiftFrom: open,
         renderMenu: (id: string) => {
           const m = byId.get(id);
           if (m?.scheduledTime === undefined) {

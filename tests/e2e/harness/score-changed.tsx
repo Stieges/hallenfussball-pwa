@@ -64,7 +64,6 @@ function zeichne(art: Fremd | null): void {
           tournament={tournament}
           editable
           onScoreChange={(id, a, b) => { window.__gesendet.push([id, a, b]); }}
-          onStartCorrection={() => undefined}
           changeAuthorOf={async () => (name === '' ? null : name)}
         />
       </div>

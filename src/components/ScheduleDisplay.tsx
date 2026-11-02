@@ -19,6 +19,7 @@ import type { ScheduleSource } from './schedule/scheduleSource';
 import { useElapsedSeconds } from './schedule/useTickingNow';
 import { ViewTimeNotes } from './schedule/ViewTimeNotes';
 import type { MatchForfeitActions } from './schedule/MatchForfeitAction';
+import type { MatchActionRights } from './schedule/actionMenu/matchActions';
 import { useSpectatorClocks } from './schedule/useSpectatorClocks';
 import {
   TournamentHeader,
@@ -72,10 +73,10 @@ interface ScheduleDisplayProps {
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
   /** Wer ein Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ der Schnelleingabe (@FU-104) */
   changeAuthorOf?: (matchId: string) => Promise<string | null>;
-  /** Match ID currently in correction mode */
-  correctionMatchId?: string | null;
-  /** Callback when starting correction mode */
-  onStartCorrection?: (matchId: string) => void;
+  /** Rechte der Turnierleitung bzw. des Helfers: mit ihnen öffnet der Tipp auf ein Spiel die Aktionsauswahl (@SL-193); ohne sie (Zuschauer, Vorschau) nicht */
+  actionRights?: MatchActionRights;
+  /** „Ergebnis korrigieren“ in der Aktionsauswahl: derselbe Dialog wie im Cockpit (@EK-063) */
+  onCorrect?: (matchId: string) => void;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   /** `false` = abgelehnt (angepfiffenes Spiel, @ZP-093): die Anzeige ordnet dann nicht um */
   onMatchSwap?: (matchId1: string, matchId2: string) => boolean;
@@ -114,8 +115,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onFieldChange,
   onScoreChange,
   changeAuthorOf,
-  correctionMatchId,
-  onStartCorrection,
+  actionRights,
+  onCorrect,
   onMatchSwap,
   onNavigateToCockpit,
   canEndRunning,
@@ -224,8 +225,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
-          correctionMatchId={correctionMatchId}
-          onStartCorrection={onStartCorrection}
+          actionRights={actionRights}
+          onCorrect={onCorrect}
           clockOf={clockOf}
           tournament={sideSource}
           onMatchSwap={onMatchSwap}
@@ -257,8 +258,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
-          correctionMatchId={correctionMatchId}
-          onStartCorrection={onStartCorrection}
+          actionRights={actionRights}
+          onCorrect={onCorrect}
+          onNavigateToCockpit={onNavigateToCockpit}
           changeAuthorOf={changeAuthorOf}
           clockOf={clockOf}
           onMatchSwap={onMatchSwap}

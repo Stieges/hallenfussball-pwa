@@ -14,7 +14,8 @@ import { ScheduledMatch } from '../../core/generators';
 import type { SpectatorClock } from '../../core/view';
 import { RefereeConfig } from '../../types/tournament';
 import type { ScoreCommitResult } from '../ui/molecules';
-import { buildSideContext, matchViewOf, sideDisplay, sideName, type SideSource } from './matchSides';
+import { buildSideContext, matchViewOf, sideDisplay, sideName } from './matchSides';
+import type { ScheduleSource } from './scheduleSource';
 import { finalMatchLabel } from './finalMatchLabel';
 import { MatchScoreCell } from './MatchScoreCell';
 import { FinalSortableRow } from './FinalSortableRow';
@@ -27,6 +28,10 @@ import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
 import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
 import { useRefereeChoices } from './refereeChoices';
 import { SwapWithButton } from './SwapWithButton';
+import { MatchActionTrigger } from './actionMenu/MatchActionTrigger';
+import { focusScoreInput } from './actionMenu/focusScoreInput';
+import { useMatchActionMenu } from './actionMenu/useMatchActionMenu';
+import type { MatchActionRights } from './actionMenu/matchActions';
 
 interface PendingChanges {
   refereeAssignments: Record<string, number | null>;
@@ -45,8 +50,11 @@ interface FinalStageScheduleProps {
   editingSchedule?: boolean;
   /** Pending changes during edit mode (not yet saved) */
   pendingChanges?: PendingChanges;
-  correctionMatchId?: string | null;
-  onStartCorrection?: (matchId: string) => void;
+  /** Rechte der Turnierleitung bzw. des Helfers; mit ihnen öffnet der Tipp auf ein Spiel die Aktionsauswahl (@SL-193) */
+  actionRights?: MatchActionRights;
+  /** „Ergebnis korrigieren“: derselbe Dialog wie im Cockpit (@EK-063) */
+  onCorrect?: (matchId: string) => void;
+  onNavigateToCockpit?: (matchId: string) => void;
   /** Wer ein Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ der Schnelleingabe (@FU-104) */
   changeAuthorOf?: (matchId: string) => Promise<string | null>;
   clockOf?: (matchId: string) => SpectatorClock | null; // Restzeit laufender Spiele (@ZM-162)
@@ -55,7 +63,7 @@ interface FinalStageScheduleProps {
   /** Whether to show the section title (default: true) */
   showTitle?: boolean;
   /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
-  tournament?: SideSource;
+  tournament?: ScheduleSource;
   /** B-12: „Nicht angetreten“ / „Wertung zurücknehmen“ (nur Turnierleitung); ohne Angabe keine Taste */
   forfeit?: MatchForfeitActions;
   /** @FU-112/@FU-113: laufende Spiele beenden und eintragen darf nur die Turnierleitung; ohne Angabe nicht */
@@ -73,8 +81,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   editable = false,
   editingSchedule = false,
   pendingChanges,
-  correctionMatchId,
-  onStartCorrection,
+  actionRights,
+  onCorrect,
+  onNavigateToCockpit,
   changeAuthorOf,
   clockOf,
   onMatchSwap,
@@ -92,6 +101,13 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const { sensors, sortedMatches, activeMatch, handleDragStart, handleDragEnd, handleDragCancel } = useScheduleDrag(matches, onMatchSwap);
   // Schiedsrichter-Auswahl aus einer Quelle (Teams pfeifen: Teamnamen, @W3-011)
   const refereeChoiceList = useRefereeChoices(refereeConfig, tournament?.teams);
+  // Eine Tippfläche je Spiel: die Aktionsauswahl (@SL-193); „Ergebnis eintragen“ setzt den Fokus auf das Eingabefeld des Spiels
+  const menu = useMatchActionMenu({
+    rights: actionRights, tournamentId: tournament?.id, matches, sides, numberOfFields, refereeChoices: refereeChoiceList,
+    onEnterResult: onScoreChange ? focusScoreInput : undefined, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit,
+  });
+  const openMenu = menu.enabled && !editingSchedule ? menu.open : undefined;
+  const inlineForfeit = menu.enabled ? undefined : forfeit; // „Nicht angetreten“ steht dann in der Auswahl
 
   if (matches.length === 0) {
     return (
@@ -109,16 +125,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const showReferees = refereeConfig && refereeConfig.mode !== 'none';
   const showFields = numberOfFields > 1;
 
-  const getFieldOptions = () => {
-    const options = [];
-    for (let i = 1; i <= numberOfFields; i++) {
-      options.push({ value: i, label: i.toString() });
-    }
-    return options;
-  };
-
-  const refereeOptions = refereeChoiceList;
-  const fieldOptions = getFieldOptions();
+  const fieldOptions = Array.from({ length: numberOfFields }, (_, i) => ({ value: i + 1, label: String(i + 1) }));
 
   const containerStyle: CSSProperties = { marginBottom: cssVars.spacing.lg };
   const titleStyle: CSSProperties = {
@@ -197,6 +204,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               isFinished={status === 'finished'}
               editingSchedule={editingSchedule}
               canSwap={onMatchSwap !== undefined}
+              onActivate={openMenu}
             >
               {({ attributes, listeners, canDrag, isDragging }) => (
                 <>
@@ -217,7 +225,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   )}
                   <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-                      <span>{match.matchNumber}</span>
+                      {openMenu ? <MatchActionTrigger matchId={match.id} matchNumber={match.matchNumber} onOpen={openMenu}>{match.matchNumber}</MatchActionTrigger> : <span>{match.matchNumber}</span>}
                       {rowView?.badge.kind === 'badge' && <MatchStatusBadge model={rowView.badge} size="row" testId={isRunning ? `final-row-live-${match.id}` : undefined} />}
                       {editingSchedule && <SwapWithButton matchId={match.id} locked={status === 'running' || status === 'finished'} />}
                     </div>
@@ -231,7 +239,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                         {editingSchedule && onRefereeChange ? (
                           <select disabled={(status === 'running' || status === 'finished')} value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ width: '100%', padding: cssVars.spacing.xs, border: `1px solid ${isPendingChange ? cssVars.colors.primary : cssVars.colors.borderControl}`, borderRadius: cssVars.borderRadius.sm, fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: cssVars.colors.background, color: cssVars.colors.textPrimary }}>
                             <option value="">-</option>
-                            {refereeOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                            {refereeChoiceList.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                           </select>
                         ) : (<span style={{ fontWeight: cssVars.fontWeights.semibold }}>{displayedRef ?? '-'}</span>)}
                       </td>
@@ -264,14 +272,12 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                       isRunning={isRunning}
                       result={result}
                       viewStatus={matchViewOf(sides, match.id)?.status}
-                      inCorrectionMode={correctionMatchId === match.id}
                       nameA={sideName(match, 'A', sides)}
                       nameB={sideName(match, 'B', sides)}
                       onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
-                      onStartCorrection={onStartCorrection ? () => onStartCorrection(match.id) : undefined}
                       changeAuthorOf={changeAuthorOf}
                     />
-                    <MatchForfeitAction matchId={match.id} viewStatus={rowView?.status} forfeit={forfeit} />
+                    <MatchForfeitAction matchId={match.id} viewStatus={rowView?.status} forfeit={inlineForfeit} />
                   </td>
                   <td style={{
                     ...teamCellStyle,
@@ -427,9 +433,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               viewStatus={matchView?.status}
               isFinished={isFinished}
               canEditScore={editable && onScoreChange !== undefined && !isFinished && (status !== 'running' || canEndRunning)}
-              inCorrectionMode={correctionMatchId === match.id}
               onScoreChange={onScoreChange}
-              onStartCorrection={onStartCorrection}
+              onOpenActions={openMenu}
               changeAuthorOf={changeAuthorOf}
               showReferees={!!showReferees}
               showFields={showFields}
@@ -438,12 +443,12 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               displayedField={hasPendingField ? pendingChanges.fieldAssignments[match.id] : match.field}
               hasPendingRef={hasPendingRef}
               hasPendingField={hasPendingField}
-              refereeOptions={refereeOptions}
+              refereeOptions={refereeChoiceList}
               fieldOptions={fieldOptions}
               onRefereeChange={onRefereeChange}
               onFieldChange={onFieldChange}
               extraAction={<>
-                <MatchForfeitAction matchId={match.id} viewStatus={matchView?.status} forfeit={forfeit} />
+                <MatchForfeitAction matchId={match.id} viewStatus={matchView?.status} forfeit={inlineForfeit} />
                 {editingSchedule && <SwapWithButton matchId={match.id} locked={status === 'running' || isFinished} />}
               </>}
             />
@@ -451,18 +456,13 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
         })}
       </div>
 
+      {menu.element}
+
       <style>{`
         .final-stage-schedule .mobile-view { display: none; }
         ${mediaQueries.tabletDown} {
           .final-stage-schedule .desktop-view { display: none; }
           .final-stage-schedule .mobile-view { display: block; }
-        }
-        /* Mobile correction button hover/active */
-        .final-stage-schedule .correction-btn-mobile:hover,
-        .final-stage-schedule .correction-btn-mobile:active {
-          background: ${cssVars.colors.accent} !important;
-          color: white !important;
-          border-color: ${cssVars.colors.accent} !important;
         }
         @media (min-width: 768px) and (max-width: 1024px) {
           .final-stage-schedule table { font-size: 12px; }

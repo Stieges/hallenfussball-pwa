@@ -211,6 +211,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     offerTakeover: takeover.offerTakeover,
   });
 
+  // Aktionsauswahl je Spiel (@SL-193): Rechte aus useCan; im Bearbeiten-Modus gelten die Auswahlfelder der Karten
+  const actionRights = useMemo(() => (isEditing ? undefined : { lead: canEndRunning, play: canControlTimer, schedule: canSchedule }), [isEditing, canEndRunning, canControlTimer, canSchedule]);
+
   // B-12: „nicht angetreten“ und „Wertung zurücknehmen“ -- Bedienung nur für die Turnierleitung (@SL-118)
   const forfeit = useScheduleForfeit({ tournament, showWarning, showSuccess });
   const forfeitActions = useMemo(
@@ -322,6 +325,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
                 canEndRunning={canEndRunning}
+                actionRights={actionRights}
                 forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />

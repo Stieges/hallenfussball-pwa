@@ -22,17 +22,11 @@ import { cup, NAMEN } from '../helpers/laptopCup';
 const ID = 'e2e-nichtantritt-cup';
 const BILDER = process.env.NICHTANTRITT_BILDER ?? '';
 // Spiel 1: FC Nord (Heim) gegen SV Süd (Gast), Wertung 2:0 (Vorgabe)
-const SPIEL_1 = '00000000-0000-4000-8000-000000000910';
 const HEIM = NAMEN[0];
 const GAST = NAMEN[1];
 
 function nichtantrittCup() {
   return { ...cup(), id: ID, title: 'Nichtantritt-Cup' };
-}
-
-/** Spielplan rendert Handy- und Desktop-Karte; nur die sichtbare zählt. */
-function sichtbar(page: Page, testId: string) {
-  return page.locator(`[data-testid="${testId}"]:visible`).first();
 }
 
 async function bild(page: Page, name: string): Promise<void> {
@@ -53,7 +47,7 @@ async function dialogAusSpielplan(page: Page): Promise<void> {
   await spielplan(page);
   const karte = page.locator('[data-match-card]:visible').filter({ hasText: HEIM }).first();
   await karte.getByText(HEIM).first().click();
-  await sichtbar(page, `forfeit-mark-${SPIEL_1}`).click();
+  await page.getByTestId('match-action-forfeit').click(); // @SL-193: Tipp auf die Karte, dann „Nicht angetreten“
   await expect(page.getByTestId('forfeit-dialog')).toBeVisible();
 }
 
@@ -115,11 +109,12 @@ test.describe('B-12 Nichtantritt (Turnierleitung, lokal)', () => {
     // @W2A-026 zurücknehmen: Spiel wieder offen, „Nicht angetreten“ wieder da
     const karte = page.locator('[data-match-card]:visible').filter({ hasText: HEIM }).first();
     await karte.getByText(HEIM).first().click();
-    await sichtbar(page, `forfeit-revoke-${SPIEL_1}`).click();
+    await page.getByTestId('match-action-revokeForfeit').click();
     await expect(page.getByTestId('confirm-dialog-confirm')).toHaveText('Wertung zurücknehmen');
     await page.getByTestId('confirm-dialog-confirm').click();
     await expect(page.getByText('gewertet')).toHaveCount(0);
-    await expect(sichtbar(page, `forfeit-mark-${SPIEL_1}`)).toBeVisible();
+    await karte.getByText(HEIM).first().click();
+    await expect(page.getByTestId('match-action-forfeit')).toBeVisible();
   });
 
   test('@SL-174 im Cockpit öffnet „Mehr“ → „Nicht angetreten“ denselben Dialog; @SL-175 nach dem Anpfiff steht er dort nicht', async ({ page }) => {
@@ -148,9 +143,9 @@ test.describe('B-12 Nichtantritt – Bildschirmprüfung (T2-UI)', () => {
       await spielplan(page);
       const karte = page.locator('[data-match-card]:visible').filter({ hasText: HEIM }).first();
       await karte.getByText(HEIM).first().click();
-      const taste = sichtbar(page, `forfeit-mark-${SPIEL_1}`);
+      const taste = page.getByTestId('match-action-forfeit');
       await expect(taste).toBeVisible();
-      expect((await taste.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect((await taste.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(56);
       await bild(page, `karte-${groesse.width}`);
       await taste.click();
       await expect(page.getByTestId('forfeit-dialog')).toBeVisible();
