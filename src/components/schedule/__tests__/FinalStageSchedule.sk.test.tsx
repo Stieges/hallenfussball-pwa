@@ -328,9 +328,9 @@ describe('@OB-064 Finalrunde: Karte (Handy) und Tabelle (Desktop)', () => {
     expect(karte.getByText('SG Mitte').parentElement?.style.fontWeight).not.toBe(cssVars.fontWeights.bold);
   });
 
-  it('Z.1 Tabelle: „2:2 (4:3)“', () => {
+  it('Z.1 Tabelle: „2:2 (4:3 i. E.)“', () => {
     const { container } = beendet(AUSGANG.strafstoss);
-    expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('2:2 (4:3)');
+    expect(container.querySelector('.match-score-cell-finished')?.textContent).toContain('2:2 (4:3 i. E.)');
   });
 
   it('Z.2 Karte: 3 / 2 und „beendet nach Verlängerung“, Tabelle „3:2 n. V.“', () => {

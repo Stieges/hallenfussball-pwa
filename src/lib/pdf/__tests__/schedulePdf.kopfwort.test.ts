@@ -8,8 +8,8 @@ import { layoutOf } from './pdfFixtureLayout';
 import { translatorFor } from './pdfText';
 
 const MATCH_HEAD = {
-  de: ['Nr.', 'Zeit', 'Feld', 'Gruppe', 'Heim', 'Ergebnis', 'Gast', 'Schiedsrichter'],
-  en: ['No.', 'Time', 'Pitch', 'Group', 'Home', 'Result', 'Away', 'Referee'],
+  de: ['Nr.', 'Zeit', 'Feld', 'Gr.', 'Heim', 'Ergebnis', 'Gast', 'SR'],
+  en: ['No.', 'Time', 'Pitch', 'Grp', 'Home', 'Result', 'Away', 'Ref'],
 } as const;
 const TABLE_HEAD = {
   de: ['#', 'Team', 'Sp.', 'S', 'U', 'N', 'Tore', 'Diff.', 'Pkt.'],

@@ -39,7 +39,7 @@
     "Versionierung: additive Änderungen (neue Begriffe, optionale Felder) sind unkritisch. Wird ein bestehendes Feld entfernt,",
     "umbenannt oder sein Typ geändert, betrifft das mindestens drei Konsumenten (ESLint-Regel, Prüfskript,",
     "Sprachdateien) — vorher mit den entsprechenden Tasks abstimmen.",
-    "Stand: 2026-11-01 (Begriffe ausschreiben, @OB-075/@OB-076); Ursprung 2026-09-21, Task 1 von .superpowers/sdd/2026-09-21-terminologie-zentral/"
+    "Stand: 2026-11-02 (Kurzformen SR/Ref, Gr./Grp, i. E., @OB-075); 2026-11-01 (Begriffe ausschreiben, @OB-075/@OB-076); Ursprung 2026-09-21, Task 1 von .superpowers/sdd/2026-09-21-terminologie-zentral/"
   ],
   "terms": {
     "penaltyShootout": {
@@ -170,18 +170,30 @@
       "en": "referee",
       "forbidden_de": ["SR"],
       "forbidden_en": ["SR", "Ref"],
-      "reason": "Daniel 01.11.2026, @OB-075: Auch zusammengesetzt („Schiedsrichter 2“ / „Referee 2“) in der gewählten Sprache, kein Kürzel (@OB-076).",
+      "reason": "Daniel 01.11.2026, @OB-075: Auch zusammengesetzt („Schiedsrichter 2“ / „Referee 2“) in der gewählten Sprache, kein Kürzel (@OB-076). Daniel 02.11.2026: im Kopf einer Tabellenspalte „SR“ / „Ref“, mit ausgeschriebenem Begriff als Hinweis.",
       "i18nKey": "roles.referee",
-      "kuerzel": true
+      "kuerzel": true,
+      "short": {
+        "de": "SR",
+        "en": "Ref",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.referee"
+      }
     },
     "group": {
       "de": "Gruppe",
       "en": "group",
       "forbidden_de": ["Gr.", "Gr", "Grp"],
       "forbidden_en": ["Gr.", "Gr", "Grp"],
-      "reason": "Daniel 01.11.2026, @OB-075: „Gruppe A“ / „Group A“ ausgeschrieben, auch in Spaltenköpfen.",
+      "reason": "Daniel 01.11.2026, @OB-075: „Gruppe A“ / „Group A“ ausgeschrieben. Daniel 02.11.2026: im Kopf einer Tabellenspalte „Gr.“ / „Grp“, mit ausgeschriebenem Begriff als Hinweis.",
       "i18nKey": "tournament.group",
-      "kuerzel": true
+      "kuerzel": true,
+      "short": {
+        "de": "Gr.",
+        "en": "Grp",
+        "context": "tabellenkopf",
+        "shortKey": "tabellenkopf.group"
+      }
     },
     "versus": {
       "de": "gegen",
@@ -197,9 +209,16 @@
       "en": "on penalties",
       "forbidden_de": ["i. E.", "i.E.", "i. E"],
       "forbidden_en": ["pens"],
-      "reason": "Daniel 01.11.2026, @OB-075: Keine Kurzform; in engen Ergebniszellen steht der Stand mit dem Strafstoß-Ergebnis in Klammern („2:2 (4:3)“).",
+      "reason": "Daniel 01.11.2026, @OB-075: Im Text ausgeschrieben. Daniel 02.11.2026: in der Ergebniszelle einer Tabelle „i. E.“ („2:2 (4:3 i. E.)“), mit ausgeschriebenem Begriff als Hinweis.",
       "i18nKey": "phases.afterPenalties",
-      "kuerzel": true
+      "kuerzel": true,
+      "short": {
+        "de": "i. E.",
+        "en": "pens",
+        "context": "ergebniszelle",
+        "shortKey": "ergebniszelle.afterPenalties",
+        "usedBy": ["tournament:matchResult.penaltyShort"]
+      }
     },
     "rank": {
       "de": "Platz",
@@ -335,7 +354,7 @@
       "en": "after extra time",
       "forbidden_de": ["n. V.", "n.V."],
       "forbidden_en": ["a.e.t.", "aet"],
-      "reason": "Daniel 01.11.2026, @OB-075: Die Kurzform steht nur in Ergebniszellen, sonst ausgeschrieben.",
+      "reason": "Daniel 01.11.2026, @OB-075: Die Kurzform steht nur in Ergebniszellen einer Tabelle, sonst ausgeschrieben (die Spielkarte am Handy schreibt „nach Verlängerung“, @OB-064).",
       "i18nKey": "phases.afterExtraTime",
       "kuerzel": true,
       "short": {

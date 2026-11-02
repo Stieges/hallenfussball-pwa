@@ -49,8 +49,6 @@
     "zuschauer": {
       "pfade": [
         "src/screens/LiveViewScreen",
-        "src/screens/PublicLiveViewScreen",
-        "src/screens/PublicTournamentViewScreen",
         "src/features/public-view/"
       ],
       "floors": {
@@ -85,8 +83,7 @@
     "pdf": {
       "pfade": [
         "src/lib/pdfExporter.ts",
-        "src/lib/pdfStatisticsExporter.ts",
-        "src/lib/scheduleRenderer.ts"
+        "src/lib/pdfStatisticsExporter.ts"
       ],
       "floors": {
         "statements": 8,

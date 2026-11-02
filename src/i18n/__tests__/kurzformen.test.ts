@@ -26,7 +26,7 @@ vi.unmock('react-i18next');
 const { runAllChecks } = checkTerminology;
 
 /** Übersetzer wie `useTranslation('tournament').t` in der Ergebniszelle. */
-const tTournament = (key: 'matchResult.overtimeShort'): string => i18next.t(key, { ns: 'tournament' });
+const tTournament = (key: 'matchResult.overtimeShort' | 'matchResult.penaltyShort'): string => i18next.t(key, { ns: 'tournament' });
 
 type Tree = { [key: string]: string | Tree };
 
@@ -289,11 +289,11 @@ describe('@OB-075 Beispielzeilen des Szenariogrundrisses (echte Texte)', () => {
     expect(i18next.t('sport:tabelle.points')).toBe('Points');
   });
 
-  it('@OB-075 Strafstoßschießen (Deutsch): „nach Strafstoßschießen“, nie „i. E.“; in der Ergebniszelle „2:2 (4:3)“', () => {
+  it('@OB-075 Strafstoßschießen (Deutsch): im Text „nach Strafstoßschießen“, nie „i. E.“; nur in der Ergebniszelle „2:2 (4:3 i. E.)“', () => {
     expect(i18next.t('sport:phases.afterPenalties')).toBe('nach Strafstoßschießen');
     expect(i18next.t('tournament:matchResult.finishedPenalty')).toBe('beendet nach Strafstoßschießen');
     const figures: ResultFigures = { goalsA: 2, goalsB: 2, penaltyA: 4, penaltyB: 3, winner: 'a', decision: 'penalty' };
-    expect(formatTableResult(figures, tTournament)).toBe('2:2 (4:3)');
+    expect(formatTableResult(figures, tTournament)).toBe('2:2 (4:3 i. E.)');
   });
 
   it('@OB-075 Strafstoßschießen (Englisch): „on penalties“, nie „pens“', async () => {

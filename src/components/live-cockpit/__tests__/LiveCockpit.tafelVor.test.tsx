@@ -69,14 +69,14 @@ describe('LiveCockpit: Tafel vor dem Anpfiff', () => {
     expect(screen.getByTestId('match-start-button')).toBeEnabled();
   });
 
-  it('@SL-089 „Nummer 7 ist für dieses Turnier gesperrt“ steht vor dem Anpfiff in der Tafel; es sperrt nichts (der Anpfiff bleibt möglich)', () => {
+  it('@SL-089 „#7 ist für dieses Turnier gesperrt“ steht vor dem Anpfiff in der Tafel; es sperrt nichts (der Anpfiff bleibt möglich)', () => {
     render(<LiveCockpit {...makeProps(spiel13, { sperrHinweise: [{ teamId: 'tsv-west', playerNumber: 7, ausSpielNummer: 8 }] })} />);
-    expect(within(screen.getByTestId('scoreboard')).getByText('TSV West: Nummer 7 ist für dieses Turnier gesperrt')).toBeInTheDocument();
+    expect(within(screen.getByTestId('scoreboard')).getByText('TSV West: #7 ist für dieses Turnier gesperrt')).toBeInTheDocument();
     expect(screen.getByTestId('match-start-button')).toBeEnabled();
   });
 
   // Im laufenden Spiel steht der Sperr-Hinweis in der Team-Spalte (Aufgabe 3.3); das Tor trotzdem erfassen prüft 3.4.
-  it.todo('@SL-089 im laufenden Spiel steht der Sperr-Hinweis in der Team-Spalte und das Tor für Nummer 7 lässt sich erfassen (Aufgabe 3.3/3.4)');
+  it.todo('@SL-089 im laufenden Spiel steht der Sperr-Hinweis in der Team-Spalte und das Tor für #7 lässt sich erfassen (Aufgabe 3.3/3.4)');
 
   it('@SL-015 nach der Übernahme: „Spielzeit beruht auf Toms Gerät – bitte prüfen“', () => {
     render(<LiveCockpit {...makeProps(makeLiveMatch(), { uebernahmeVon: 'Tom' })} />);

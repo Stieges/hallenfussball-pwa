@@ -30,10 +30,10 @@ function setup(view: PhaseView, matchId = 'match-11') {
 }
 
 describe('usePenaltyExpiryNotice', () => {
-  it('@SL-096 eine Strafe von SV Süd, Nummer 5, die mit 0,8 s Rest endet, meldet „Zeitstrafe SV Süd Nummer 5 abgelaufen“ (Stufe 2)', () => {
+  it('@SL-096 eine Strafe von SV Süd, #5, die mit 0,8 s Rest endet, meldet „Zeitstrafe SV Süd #5 abgelaufen“ (Stufe 2)', () => {
     const { rerender, melde } = setup(mitStrafe(800));
     rerender({ view: ohneStrafe(), matchId: 'match-11' });
-    expect(melde).toHaveBeenCalledWith(2, 'Zeitstrafe SV Süd Nummer 5 abgelaufen');
+    expect(melde).toHaveBeenCalledWith(2, 'Zeitstrafe SV Süd #5 abgelaufen');
   });
 
   it('@SL-096 ohne Rückennummer: „Zeitstrafe SV Süd abgelaufen“', () => {

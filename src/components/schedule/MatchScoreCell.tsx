@@ -1,9 +1,9 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { ViewMatchStatus } from '../../core/view';
 import { entryScore } from './runningEntryScore';
-import { formatTableResult, type ResultFigures } from './matchResult';
+import { tableResultExtra, tableResultExtraTerms, type ResultFigures } from './matchResult';
 import { ScoreDraftInput } from '../ui/atoms';
 import { ScoreChangedHint, ScoreDraftHint, ScoreSaveButton, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
 const finishedStyle: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.xs };
@@ -46,7 +46,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   onScoreChange,
   changeAuthorOf,
 }) => {
-  const { t } = useTranslation('tournament');
+  const { t } = useTranslation(['tournament', 'sport']);
 
   // Jede Ziffer bleibt lokal, gespeichert wird erst mit „Ergebnis speichern“, wenn beide Felder gefüllt sind (@FU-101:
   // „1“ dann „0“ ergibt 10:2, nicht 1:2; Verlassen eines Feldes speichert nichts). Escape verwirft, nach „Nein“/Abbruch zeigt die Zelle wieder den gespeicherten Stand.
@@ -65,9 +65,23 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   );
   const placeholder = viewStatus === 'cancelled' ? t('view.status.cancelled') : '___ : ___';
   const awardedMark = viewStatus === 'awarded' ? ` ${t('view.status.awarded')}` : '';
-  const shownResult = result === undefined || result === null
+  // Tabelle: „2:2 (4:3 i. E.)“ / „3:2 n. V.“ – die Kurzform trägt den ausgeschriebenen Begriff als title und Vorlesetext (@OB-075)
+  const extra = result === undefined || result === null ? undefined : tableResultExtra(result, t);
+  const extraTerms = result === undefined || result === null ? undefined : tableResultExtraTerms(result, t);
+  const shownResult: ReactNode = result === undefined || result === null
     ? (typeof scoreA === 'number' && typeof scoreB === 'number' && viewStatus === undefined ? `${scoreA} : ${scoreB}` : placeholder)
-    : `${formatTableResult(result, t)}${awardedMark}`;
+    : (
+      <>
+        {`${result.goalsA}:${result.goalsB}`}
+        {extra !== undefined && (
+          <>
+            {' '}
+            <span data-testid={`match-score-extra-${matchId}`} title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note">{extra}</span>
+          </>
+        )}
+        {awardedMark}
+      </>
+    );
 
   // Beendet: nur lesen. Die Korrektur beginnt in der Aktionsauswahl des Spiels, im selben Dialog wie im Cockpit (@EK-063).
   if (isFinished) {

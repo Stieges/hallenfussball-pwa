@@ -59,9 +59,9 @@ describe('@DR-025 Spalte „Schiedsrichter“', () => {
     expect(feld(zeile)).toHaveLength(1);
   });
 
-  it('Spaltenkopf „Schiedsrichter“ steht über der Spalte, in Gruppen- und in Finaltabellen', async () => {
+  it('Spaltenkopf „SR“ (@OB-075, vorgelesen „Schiedsrichter“) steht über der Spalte, in Gruppen- und in Finaltabellen', async () => {
     const pages = await seiten(undefined, {});
-    const koepfe = pages.flatMap(page => page.texts.filter(t => t.str.trim() === 'Schiedsrichter' && t.x >= spalte('finals').von));
+    const koepfe = pages.flatMap(page => page.texts.filter(t => t.str.trim() === 'SR' && t.x >= spalte('finals').von));
 
     expect(koepfe.length).toBeGreaterThanOrEqual(3);
   });

@@ -7,9 +7,12 @@
     "lost": "L",
     "goalDifference": "GD",
     "points": "Pts",
-    "number": "No."
+    "number": "No.",
+    "referee": "Ref",
+    "group": "Grp"
   },
   "ergebniszelle": {
-    "extraTime": "a.e.t."
+    "extraTime": "a.e.t.",
+    "afterPenalties": "pens"
   }
 }

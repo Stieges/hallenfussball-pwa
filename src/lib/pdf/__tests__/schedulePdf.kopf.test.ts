@@ -255,16 +255,18 @@ describe('Teilnehmer und Schiedsrichter', () => {
     expect(zeile?.size ?? 0).toBeGreaterThanOrEqual(printLimits.teamPt - SIZE_TOL);
   });
 
-  it('@DR-025 / @OB-075 die Spalte trägt „Schiedsrichter“ ausgeschrieben, nie „SR“ (Spalte mit Nummer oder leerem Feld)', async () => {
+  it('@DR-025 / @OB-075 die Spalte trägt den Kopf „SR“ (Kurzform im Tabellenkopf), im Text steht nie „SR“ (Spalte mit Nummer oder leerem Feld)', async () => {
     const tournament = hallencupMitRegelwerk({ refereeConfig: { mode: 'organizer', numberOfReferees: 2 } });
     const schedule = hallencupSchedule(tournament);
     expect(schedule.allMatches.some(m => m.referee !== undefined), 'Schiedsrichter sind eingeteilt').toBe(true);
 
     const { pages } = await layoutOf({ tournament }, schedule);
-    expect(pages[0].texts.some(t => trimmed(t) === 'Schiedsrichter'), 'Spaltenkopf').toBe(true);
+    expect(pages[0].texts.some(t => trimmed(t) === 'SR'), 'Spaltenkopf „SR“').toBe(true);
     for (const page of pages) {
       for (const t of page.texts) {
-        expect(trimmed(t)).not.toMatch(/\bSR\b/);
+        // „SR“ steht nur als eigenes Textstück im Spaltenkopf, nie in einem Satz oder vor einer Nummer („SR 2“)
+        expect(trimmed(t)).not.toMatch(/\bSR\b.+|.+\bSR\b/);
+        expect(trimmed(t)).not.toMatch(/Schiedsrichter$/);
       }
     }
   });

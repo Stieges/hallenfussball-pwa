@@ -149,11 +149,12 @@ describe('Kennungs-Schema: eine Gruppe', () => {
     const texte = seite1.texts.map(t => t.str.trim());
 
     expect(texte).toEqual(expect.arrayContaining(['A1', 'A2', 'A3', 'A4']));
+    expect(texte).not.toContain('Gr.');
     expect(texte).not.toContain('Gruppe');
 
     const zwei = hallencupTournament();
     const [mitGruppen] = await lesen(hallencupSchedule(zwei), zwei);
-    expect(mitGruppen.texts.map(t => t.str.trim())).toContain('Gruppe');
+    expect(mitGruppen.texts.map(t => t.str.trim())).toContain('Gr.');
   });
 
   it('Jeder gegen jeden (ohne Gruppen): Kennungen A1… statt „1.“, keine Spalte „Gr“', async () => {
@@ -166,6 +167,7 @@ describe('Kennungs-Schema: eine Gruppe', () => {
 
     expect(texte).toEqual(expect.arrayContaining(['A1', 'A2', 'A3', 'A4']));
     expect(texte).not.toContain('1.');
+    expect(texte).not.toContain('Gr.');
     expect(texte).not.toContain('Gruppe');
   });
 });
