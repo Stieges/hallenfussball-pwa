@@ -439,6 +439,15 @@ function checkShortReferences(localesDir, locales, namespaces, glossary) {
       if (data === null) continue;
       for (const [key, value] of Object.entries(flatten(data))) {
         if (typeof value !== 'string') continue;
+        // Namensraum-Option: $t(tabellenkopf.points, {"ns": "short"}) schleust die Kurzform ohne „short:“ ein
+        for (const call of value.matchAll(/\$t\(([^)]*)\)/g)) {
+          if (/["']?ns["']?\s*:\s*(["']short["']|\[[^\]]*["']short["'])/.test(call[1])) {
+            errors.push(
+              `Verschachtelung mit der Namensraum-Option „short“ ($t(${call[1].trim()})) in src/i18n/locales/${locale}/${namespace}.json, Schlüssel "${key}" ` +
+                `ist nicht erlaubt: Kurzformen nur über short.usedBy (glossary.json) und mit dem Schlüssel „short:…“.`
+            );
+          }
+        }
         for (const found of value.matchAll(referenz)) {
           const host = `${namespace}:${key}`;
           if (!allowed.get(found[1])?.has(host)) {

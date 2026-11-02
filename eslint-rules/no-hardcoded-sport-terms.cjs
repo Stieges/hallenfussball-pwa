@@ -151,7 +151,7 @@ module.exports = {
       'MatchCockpitDemoScreen', // Demo-Screen, nicht produktiv gerendert
       '__fixtures__',       // Testdaten mit Kennungen wie „F-HF“, nie angezeigt
       'teamNameAbbrev',     // Vereinskürzel (SF = Sportfreunde): Datenabgleich, kein Anzeigetext für Begriffe des Glossars
-      'fontData',           // eingebettete Schriften (Base64), kein Anzeigetext
+      '/src/lib/pdf/fontData/', // eingebettete Schriften (Base64), kein Anzeigetext (nur dieser Ordner, nicht jeder Pfad mit „fontData“)
       'DatenschutzScreen',  // Rechtstext mit wörtlichen Gesetzeszitaten („Nr. 2“)
       'ImpressumScreen',    // Rechtstext
     ];
@@ -162,6 +162,12 @@ module.exports = {
     // `short:`-Schlüssel (Kurzformen) nur dort, wo das Glossar den Ort kennt (shortTerms.ts) oder der Text eines Dokuments sie braucht.
     const SHORT_KEY_FILES = ['/src/components/ui/atoms/shortTerms.ts', '/src/lib/pdf/translations.ts', '/src/lib/pdfStatisticsExporter.ts'];
     const shortKeyAllowed = SHORT_KEY_FILES.some((f) => normalized.endsWith(f));
+    // Der Namensraum `short` darf auch nicht über Optionen eingeschleust werden (useTranslation('short'), getFixedT(…, 'short'), { ns: 'short' }).
+    const SHORT_NS_FILES = [...SHORT_KEY_FILES, '/src/components/ui/atoms/ShortLabel.tsx'];
+    const shortNsAllowed = mode !== 'forbidden' || SHORT_NS_FILES.some((f) => normalized.endsWith(f));
+    const isShortNs = (node) =>
+      (node.type === 'Literal' && node.value === 'short')
+      || (node.type === 'ArrayExpression' && node.elements.some((e) => e !== null && e.type === 'Literal' && e.value === 'short'));
     const SHORT_KEY = /(?:^|[^A-Za-z0-9_-])short:[A-Za-z][A-Za-z0-9_.]*/;
 
     function reasonFor(term) {
@@ -223,6 +229,22 @@ module.exports = {
     }
 
     return {
+      CallExpression(node) {
+        if (shortNsAllowed) return;
+        const callee = node.callee;
+        const name = callee.type === 'Identifier' ? callee.name : callee.type === 'MemberExpression' && callee.property.type === 'Identifier' ? callee.property.name : '';
+        if (['useTranslation', 'getFixedT', 'loadNamespaces', 'hasLoadedNamespace'].includes(name) && node.arguments.some(isShortNs)) {
+          context.report({ node, messageId: 'shortKeyElsewhere', data: { matched: "ns 'short'", files: 'shortTerms.ts, ShortLabel.tsx, src/lib/pdf/translations.ts und src/lib/pdfStatisticsExporter.ts' } });
+        }
+      },
+      Property(node) {
+        if (shortNsAllowed) return;
+        const key = node.key;
+        const keyName = key.type === 'Identifier' ? key.name : key.type === 'Literal' ? String(key.value) : '';
+        if (keyName === 'ns' && isShortNs(node.value)) {
+          context.report({ node, messageId: 'shortKeyElsewhere', data: { matched: "ns: 'short'", files: 'shortTerms.ts, ShortLabel.tsx, src/lib/pdf/translations.ts und src/lib/pdfStatisticsExporter.ts' } });
+        }
+      },
       Literal(node) {
         if (typeof node.value !== 'string') return;
         // TS-Typ-Literale (z.B. 'shootout' | 'overtime-then-shootout') sind

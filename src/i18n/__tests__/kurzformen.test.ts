@@ -126,6 +126,25 @@ describe('Prüfer für Kürzel und Kurzformen (@OB-075)', () => {
     expect(kurzformen[0]).toContain('nicht erlaubt');
   });
 
+  it('@OB-075 Namensraum-Option: $t(tabellenkopf.points, {"ns": "short"}) schleust die Kurzform ohne „short:“ ein und wird gemeldet', () => {
+    const f = sauber();
+    f.de.tournament = { text: { kopf: '$t(short:tabellenkopf.played)', punkte: 'Ihr habt 3 $t(tabellenkopf.points, {"ns": "short"})' } };
+    const { kurzformen } = pruefe(f);
+    expect(kurzformen).toHaveLength(1);
+    expect(kurzformen[0]).toContain('Namensraum-Option');
+    expect(kurzformen[0]).toContain('tournament.json');
+    // Einfache Anführungszeichen und Liste von Namensräumen zählen ebenso
+    const g = sauber();
+    g.de.tournament = { text: { kopf: '$t(short:tabellenkopf.played)', a: "$t(x, {'ns': 'short'})", b: '$t(x, {"ns": ["sport", "short"]})' } };
+    expect(pruefe(g).kurzformen).toHaveLength(2);
+  });
+
+  it('@OB-075 Gegenbeispiel: die Namensraum-Option eines anderen Namensraums („ns“: „sport“) wird nicht gemeldet', () => {
+    const f = sauber();
+    f.de.tournament = { text: { kopf: '$t(short:tabellenkopf.played)', ok: '$t(zeit.minuteCount, {"ns": "sport", "count": 3})' } };
+    expect(pruefe(f).kurzformen).toEqual([]);
+  });
+
   it('@OB-075 ein Verweis auf eine Kurzform ganz ohne usedBy (Tabellenkopf-Kurzform im Fließtext) wird gemeldet', () => {
     const glossary = JSON.parse(JSON.stringify(GLOSSARY)) as typeof GLOSSARY;
     delete (glossary.terms.played.short as { usedBy?: string[] }).usedBy;

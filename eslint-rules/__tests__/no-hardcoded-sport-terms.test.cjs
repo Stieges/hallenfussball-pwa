@@ -129,12 +129,22 @@ ruleTester.run('no-hardcoded-sport-terms (Kürzel)', rule, {
     // „P3“ ist die interne matchId und nur in Sprachdateien verboten (tsLint: false).
     { filename: '/repo/src/constants/tournamentSchemas.ts', code: "const matchId = 'P3';", options: ['forbidden'] },
     // Vereinskürzel (SF = Sportfreunde), Fixtures und Rechtstexte sind ausgenommen.
+    // Der Namensraum `short` über Optionen: erlaubt in ShortLabel.tsx
+    { filename: '/repo/src/components/ui/atoms/ShortLabel.tsx', code: "const { t } = useTranslation('short');", options: ['forbidden'] },
     { filename: '/repo/src/core/models/teamNameAbbrev.ts', code: "const kuerzel = ['Sportfreunde', 'SF'];", options: ['forbidden'] },
     { filename: '/repo/src/lib/pdf/fontData/bold.ts', code: "export const data = 'AAEAAAAPAIAAAwBwAF AF xyz';", options: ['forbidden'] },
     { filename: '/repo/src/core/view/__fixtures__/expected.ts', code: "const k = 'F-HF';", options: ['forbidden'] },
     { filename: '/repo/src/screens/DatenschutzScreen.tsx', code: 'const el = <p>§ 25 Abs. 2 Nr. 2 TDDDG</p>;', options: ['forbidden'] },
   ],
   invalid: [
+    // Namensraum-Option: der Namensraum `short` lässt sich auch ohne „short:“-Schlüssel einschleusen
+    { filename: COMPONENT, code: "const { t } = useTranslation('short');", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    { filename: COMPONENT, code: "const t = i18n.getFixedT('de', 'short');", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    { filename: COMPONENT, code: "const s = t('tabellenkopf.points', { ns: 'short' });", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    { filename: COMPONENT, code: "const { t } = useTranslation(['sport', 'short']);", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
+    // Die fontData-Ausnahme gilt nur für src/lib/pdf/fontData/, nicht für jeden Pfad mit „fontData“
+    { filename: '/repo/src/components/fontDataX.tsx', code: "const text = 'HF 1 gegen SR 2';", options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }, { messageId: 'forbiddenAbbreviation' }] },
+    { filename: '/repo/src/components/fontDataDemo/Demo.tsx', code: 'const el = <p>HF 1 gegen SR 2</p>;', options: ['forbidden'], errors: [{ messageId: 'forbiddenAbbreviation' }, { messageId: 'forbiddenAbbreviation' }] },
     // Kurzformen-Schlüssel an beliebiger Stelle eingeschmuggelt (Mechanismus-Lücke): in Komponenten und als Verschachtelung
     { filename: COMPONENT, code: "const kopf = t('short:tabellenkopf.played');", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
     { filename: COMPONENT, code: "const kopf = 'Spiel $t(short:tabellenkopf.played)';", options: ['forbidden'], errors: [{ messageId: 'shortKeyElsewhere' }] },
