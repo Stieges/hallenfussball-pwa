@@ -163,12 +163,13 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   // Anzeige-Daten der Spielseiten: aktuelle Teams, Gruppen und alle Spiele (Vorgänger auch bei aktivem Filter)
   const sideSource = useMemo(() => ({
+    id: schedule.tournament.id, // Kennung des Turniers: Protokoll und Live-Daten der Spiele (@SL-193, @FU-080)
     teams: tournamentTeams ?? schedule.teams,
     groups: schedule.tournament.groups,
     matches: schedule.allMatches,
     view,
     locale,
-  }), [tournamentTeams, schedule.teams, schedule.tournament.groups, schedule.allMatches, view, locale]);
+  }), [tournamentTeams, schedule.teams, schedule.tournament.id, schedule.tournament.groups, schedule.allMatches, view, locale]);
   const clockOf = useSpectatorClocks(view, useElapsedSeconds(view, currentMatches, elapsedSeconds));
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
