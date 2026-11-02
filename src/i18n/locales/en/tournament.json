@@ -108,8 +108,8 @@
     },
     "runningMatch": {
       "title": "Running Match",
-      "message": "{{teamA}} vs {{teamB}} ({{scoreA}}:{{scoreB}}) is currently playing.",
-      "confirmSwitch": "Switch anyway"
+      "message": "Match {{running}} keeps running. Switch to match {{target}} anyway?",
+      "confirmSwitch": "Switch"
     },
     "koAfterSend": "Knockout places will be filled after sending",
     "skip": {
@@ -197,7 +197,8 @@
       "restPartial": "{{done}} more matches recorded, {{skipped}} not (already started or error)."
     },
     "startedLocked": "A match that has kicked off (running, half-time or finished) keeps its slot and field. It can be neither dragged nor swapped.",
-    "refereeLocked": "A match that has kicked off (running, half-time or finished) keeps its referee."
+    "refereeLocked": "A match that has kicked off (running, half-time or finished) keeps its referee.",
+    "fieldConflict": "Field not changed: {{message}}"
   },
   "scheduleActions": {
     "share": "Share"
@@ -1889,5 +1890,33 @@
     "refereeAssigned": "Referee {{referee}} assigned to match {{match}}",
     "reassignSummary": "{{referees}} referee assignments, {{fields}} field assignments adjusted",
     "breakViolation": "Team \"{{team}}\" has only a break of $t(sport:zeit.minuteCount, {\"count\": {{pause}} }) (at least $t(sport:zeit.minuteCount, {\"count\": {{min}} }) required)"
+  },
+  "actionMenu": {
+    "title": "Match {{number}}",
+    "pairing": "{{home}} vs {{away}}",
+    "open": "Actions for match {{number}}",
+    "close": "Close",
+    "actions": {
+      "enterResult": "Enter result",
+      "kickOff": "Start in cockpit",
+      "shiftFrom": "Shift from here",
+      "changeReferee": "Change referee",
+      "changeField": "Change field",
+      "forfeit": "Did not show up",
+      "revokeForfeit": "Withdraw forfeit",
+      "toCockpit": "Go to cockpit",
+      "endAndEnter": "End match and enter result",
+      "correct": "Correct result",
+      "protocol": "View log"
+    },
+    "teamsMissing": "The teams of this match are not known yet.",
+    "choose": {
+      "refereeTitle": "Referee for match {{number}}",
+      "refereeLabel": "Referee",
+      "fieldTitle": "Field for match {{number}}",
+      "fieldLabel": "Field",
+      "save": "Apply",
+      "cancel": "Cancel"
+    }
   }
 }
