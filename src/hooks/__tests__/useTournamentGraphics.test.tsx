@@ -7,6 +7,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useTournamentGraphics } from '../useTournamentGraphics';
 import { createTournamentGraphicsStore, type StoredGraphic, type TournamentGraphics } from '../../core/storage/tournamentGraphicsStore';
 import type { IStorageAdapter } from '../../core/storage/IStorageAdapter';
+import { StorageError } from '../../core/storage/StorageError';
 
 function memoryStorage(failOnSet?: Error): IStorageAdapter {
   const data = new Map<string, unknown>();
@@ -116,6 +117,19 @@ describe('useTournamentGraphics', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBeNull();
+    expect(result.current.graphics).toEqual({});
+  });
+
+  it('@DR-024 konnte die hinterlegte Grafik nicht gelesen werden (Lesefehler des Speichers), setzt der Hook den Fehler statt still leer zu sein', async () => {
+    const storage = memoryStorage();
+    const readError = new StorageError("Failed to get key 'k' from IndexedDB", new DOMException('Lesefehler', 'UnknownError'));
+    storage.get = () => Promise.reject(readError);
+    const store = createTournamentGraphicsStore(() => Promise.resolve(storage));
+
+    const { result } = renderHook(() => useTournamentGraphics('t1', store));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.error).toBe(readError);
     expect(result.current.graphics).toEqual({});
   });
 });

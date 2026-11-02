@@ -156,12 +156,13 @@ describe('@DR-024 beschädigter Eintrag im localStorage-Rückfall', () => {
     await expect(store.load('t1')).resolves.toEqual({});
   });
 
-  it('@DR-024 ein Lesefehler des Speichers (StorageError) liefert ebenfalls leere Grafiken', async () => {
+  it('@DR-024 ein echter Lesefehler des Speichers (StorageError ohne kaputte Daten, wie IndexedDB UnknownError) wird geworfen, nicht zu {}', async () => {
     const storage = memoryStorage();
-    storage.get = () => Promise.reject(new StorageError('kaputt'));
+    const readError = new StorageError("Failed to get key 'k' from IndexedDB", new DOMException('Lesefehler', 'UnknownError'));
+    storage.get = () => Promise.reject(readError);
     const store = createTournamentGraphicsStore(() => Promise.resolve(storage));
 
-    await expect(store.load('t1')).resolves.toEqual({});
+    await expect(store.load('t1')).rejects.toBe(readError);
   });
 
   it('Gegenbeispiel: ein anderer Fehler (kein StorageError) wird nicht verschluckt', async () => {

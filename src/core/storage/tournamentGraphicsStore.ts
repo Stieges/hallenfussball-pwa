@@ -33,7 +33,7 @@ export type StoredGraphic = z.infer<typeof StoredGraphicSchema>;
 export type TournamentGraphics = z.infer<typeof TournamentGraphicsSchema>;
 
 export interface TournamentGraphicsStore {
-  /** Die Grafiken des Turniers; ohne Eintrag oder bei beschädigtem Eintrag (auch kaputtes JSON im localStorage) `{}`, kein Fehler. */
+  /** Die Grafiken des Turniers; ohne Eintrag oder bei beschädigtem Eintrag (auch kaputtes JSON im localStorage) `{}`, kein Fehler; ein echter Lesefehler wirft. */
   load(tournamentId: string): Promise<TournamentGraphics>;
   /** Ersetzt den Eintrag; ein leerer Satz entfernt ihn. Wirft bei Speicherfehlern (Quote) und bei ungültigen Daten (SVG). */
   save(tournamentId: string, graphics: TournamentGraphics): Promise<void>;
@@ -50,8 +50,10 @@ export function createTournamentGraphicsStore(getStorage: () => Promise<IStorage
     try {
       raw = await storage.get<unknown>(STORAGE_KEYS.tournamentGraphics(tournamentId));
     } catch (error) {
-      // localStorage-Rückfall: beschädigtes JSON wirft einen StorageError; wie bei IndexedDB gilt das als „keine Grafik“.
-      if (error instanceof StorageError) { return {}; }
+      // Nur beschädigte Daten (localStorage-Rückfall: JSON.parse wirft, der StorageError trägt den SyntaxError) gelten wie
+      // bei IndexedDB als „keine Grafik“. Ein echter Lesefehler (IndexedDB UnknownError u. a.) wird geworfen, damit die App
+      // ihn zeigt (@DR-024: konnte die Datei nicht geladen werden, sagt die App das).
+      if (error instanceof StorageError && error.originalError instanceof SyntaxError) { return {}; }
       throw error;
     }
     const parsed = TournamentGraphicsSchema.safeParse(raw);

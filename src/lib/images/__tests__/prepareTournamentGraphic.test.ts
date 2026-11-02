@@ -40,6 +40,15 @@ function jpegWithSize(width: number, height: number): File {
   view.setUint16(9, width);
   return new File([bytes], 'gross.jpg', { type: 'image/jpeg' });
 }
+/** JPEG mit Füllbytes (FF FF) vor dem SOF-Marker, wie sie die Norm erlaubt. */
+function jpegWithFillBytes(width: number, height: number): File {
+  const bytes = new Uint8Array(48);
+  bytes.set([0xff, 0xd8, 0xff, 0xff, 0xff, 0xc0, 0x00, 0x11, 0x08]);
+  const view = new DataView(bytes.buffer);
+  view.setUint16(9, height);
+  view.setUint16(11, width);
+  return new File([bytes], 'fuell.jpg', { type: 'image/jpeg' });
+}
 const svg = (): File => new File(['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>'], 'logo.svg', { type: 'image/svg+xml' });
 
 const blue = (width: number, height: number): PixelImage => {
@@ -104,6 +113,13 @@ describe('@W3-030 Prüfung vor dem Aufbereiten', () => {
     expect(await prepareTournamentGraphic(pngWithSize(4001, 100), { port: fake })).toEqual({ ok: false, reason: 'size' });
     expect(await prepareTournamentGraphic(pngWithSize(100, 4001), { port: fake })).toEqual({ ok: false, reason: 'size' });
     expect(await prepareTournamentGraphic(jpegWithSize(5000, 100), { port: fake })).toEqual({ ok: false, reason: 'size' });
+    expect(decode).not.toHaveBeenCalled();
+  });
+
+  it('@W3-030 ein JPEG mit Füllbytes FF FF vor dem SOF und 16000 × 16000 px kommt an der Pixelgrenze nicht vorbei', async () => {
+    const { fake, decode } = port({ width: 16000, height: 16000 });
+
+    expect(await prepareTournamentGraphic(jpegWithFillBytes(16000, 16000), { port: fake })).toEqual({ ok: false, reason: 'size' });
     expect(decode).not.toHaveBeenCalled();
   });
 
