@@ -6,8 +6,11 @@
  * (`useCan`); ob ein Weg in der Ansicht angeschlossen ist, sagt `wired` (kein stummer Knopf).
  *
  * Zusätzlich zur Tabelle (Ränder, die das Szenario nicht nennt, aber der Spielplan schon kannte):
- * - gewertet („nicht angetreten“): die Turnierleitung kann die Wertung zurücknehmen (@W2A-026)
- * - abgesetzt: die Turnierleitung kann trotzdem ein Ergebnis eintragen (@FU-093)
+ * - gewertet („nicht angetreten“): die Turnierleitung kann die Wertung zurücknehmen (@W2A-026); vor G2 Spur A schon über die
+ *   Taste „Wertung zurücknehmen“ an der Spielkarte erreichbar (MatchForfeitAction, `viewStatus === 'awarded'`)
+ * - abgesetzt: die Turnierleitung kann trotzdem ein Ergebnis eintragen (@FU-093); vor G2 Spur A öffnete der Tipp auf die Karte
+ *   die Schnelleingabe auch bei abgesetzten Spielen (GroupStageSchedule.handleCardClick), die Rückfrage „trotzdem eintragen?“ blieb
+ * Beide bleiben, damit keine bestehende Funktion verloren geht.
  */
 import type { ViewMatchStatus } from '../../../core/view';
 
