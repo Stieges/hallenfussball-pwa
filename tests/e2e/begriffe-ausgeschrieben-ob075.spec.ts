@@ -63,10 +63,10 @@ async function oeffneSpielplan(page: Page, seed: Seed, sprache: 'de' | 'en'): Pr
 
 const sichtbarerText = (page: Page): Promise<string> => page.locator('body').innerText();
 
-/** Der sichtbare Text ohne die Köpfe der Tabellen: dort ist die Kurzform („SR“/„Ref“) erlaubt, mit ausgeschriebenem Hinweis (@OB-075). */
+/** Der sichtbare Text ohne die Tabellenköpfe mit Kurzform (ShortLabel, `data-short-term`): dort ist die Kurzform („SR“/„Ref“) erlaubt, mit ausgeschriebenem Hinweis (@OB-075). */
 async function textOhneTabellenkopf(page: Page): Promise<string> {
   let text = await sichtbarerText(page);
-  for (const kopf of await page.locator('thead th').allInnerTexts()) {
+  for (const kopf of await page.locator('thead th:has([data-short-term])').allInnerTexts()) {
     if (kopf.trim() !== '') { text = text.split(kopf).join(''); }
   }
   return text;

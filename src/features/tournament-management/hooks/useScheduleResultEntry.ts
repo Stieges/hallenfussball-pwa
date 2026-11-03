@@ -313,7 +313,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
         ? (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores
         : undefined;
       if (onStale && current) {
-        onStale({ message, now: { a: current[entry.ctx.teamAId] ?? 0, b: current[entry.ctx.teamBId] ?? 0 } }); // @EK-032 (Server lehnt ab)
+        onStale({ message, now: { a: current[entry.ctx.teamAId] ?? 0, b: current[entry.ctx.teamBId] ?? 0 } }); // @EK-032 (lokal: Fremdänderung während der Grund-Rückfrage, STALE_BASE aus buildEvents)
       } else {
         showWarning(message);
       }

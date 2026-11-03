@@ -411,6 +411,32 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
       expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)');
     });
 
+    // @EK-032: Maria hat die Grund-Rückfrage schon offen (Dialog bei 2:1 geöffnet, kein Unterschied zum Server), da läuft Ollis Korrektur per Realtime ein.
+    it('@EK-032 Olli korrigiert auf 2:2, während Marias Grund-Rückfrage offen ist: nach der Antwort onStale mit Namen und Stand 2:2, kein Toast, nichts gesendet', async () => {
+      oli();
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [e1()], newWatermark: 1 });
+      const { hook, answer, showWarning } = render(h);
+      const onStale = vi.fn();
+      let done: Promise<boolean> = Promise.resolve(true);
+      act(() => { done = hook.result.current.enterScore(SPIEL_7, 3, 1, bisher21, onStale); });
+      await act(async () => { await settle(); });
+      expect(hook.result.current.prompt).toMatchObject({ kind: 'reason', before: '2:1', after: '3:1' });
+
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [e2()], newWatermark: 2 });
+      await act(async () => { await h.engine.catchUp(SPIEL_7); }); // Ollis Korrektur kommt per Realtime, während die Rückfrage offen ist
+      expect(scoreOf(h, SPIEL_7, FC_NORD, SV_SUED)).toBe('2:2');
+      await answer('input_error');
+      const saved = await done;
+      await settle();
+
+      expect(saved).toBe(false);
+      expect(onStale).toHaveBeenCalledExactlyOnceWith({ message: 'Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)', now: { a: 2, b: 2 } });
+      expect(showWarning).not.toHaveBeenCalled();
+      expect(h.api).not.toHaveBeenCalled();
+      expect((await outbox(h, SPIEL_7))?.pending).toEqual([]);
+      expect(scoreOf(h, SPIEL_7, FC_NORD, SV_SUED)).toBe('2:2');
+    });
+
     // N11 (Opus-Review #436): der Vergleich gilt für beide Seiten und zählt kein Strafstoßschießen.
     it('@FU-082 Olli ändert nur die Heim-Seite (2:1 → 3:1), Maria speichert 4:0 → abgelehnt, jetzt 3:1', async () => {
       oli();

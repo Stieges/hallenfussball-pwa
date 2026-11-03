@@ -8,6 +8,7 @@
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '../../../components/ui/Input';
+import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import { DialogActions } from '../../../components/ui/molecules/DialogActions';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { cssVars, dialogWidths } from '../../../design-tokens';
@@ -32,11 +33,6 @@ const rowStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: cssVar
 const fieldStyle: CSSProperties = { flex: '1 1 0', minWidth: 0 };
 const hintStyle: CSSProperties = { margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.md };
 
-const staleStyle: CSSProperties = {
-  margin: 0, padding: cssVars.spacing.sm, fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary,
-  background: cssVars.colors.warningBannerBg, border: `1px solid ${cssVars.colors.warningBannerBorder}`, borderRadius: cssVars.borderRadius.sm,
-};
-
 const asCount = (value: string): number | null => (/^\d+$/.test(value.trim()) ? Number(value.trim()) : null);
 
 export function CockpitKorrekturDialog({ matchNumber, homeName, awayName, scoreHome, scoreAway, staleHint, onWeiter, onAbbrechen }: CockpitKorrekturDialogProps) {
@@ -52,7 +48,7 @@ export function CockpitKorrekturDialog({ matchNumber, homeName, awayName, scoreH
     <DialogSurface isOpen onClose={onAbbrechen} maxWidth={dialogWidths.md} accent={cssVars.colors.warning} labelledBy="cockpit-korrektur-title">
       <div style={bodyStyle} data-testid="cockpit-korrektur-dialog">
         <h2 id="cockpit-korrektur-title" style={titleStyle}>{t('correctionDialog.titleMatch', { number: matchNumber })}</h2>
-        {staleHint !== undefined && <p role="alert" data-testid="cockpit-korrektur-stale" style={staleStyle}>{staleHint}</p>}
+        {staleHint !== undefined && <InlineNotice tone="warn" data-testid="cockpit-korrektur-stale">{staleHint}</InlineNotice>}
         <p style={textStyle}>{t('correctionDialog.currentResult')}: {homeName} {scoreHome}:{scoreAway} {awayName}</p>
         <div style={rowStyle}>
           <div style={fieldStyle}>
