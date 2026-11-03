@@ -4,7 +4,7 @@
  * Strafstoßschießen, Finale mit Verlängerung und Strafstoßschießen), @DR-018 (jedes Spiel in der Vorlage).
  */
 import { describe, expect, it } from 'vitest';
-import { printBox, printGap, printType } from '../../../design-tokens/print';
+import { printBox, printGap, printLimits, printType } from '../../../design-tokens/print';
 import type { Match, Tournament } from '../../../types/tournament';
 import { finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { hallencupMitStand, kaestchenIn, SIZE_TOL, textsIn, TOL, zeileVon, type Zeile } from './pdfScoreSupport';
@@ -97,10 +97,13 @@ describe('@DR-004 @DR-019 Spiel ohne Ergebnis: Felder fürs Ergebnis und, je nac
 });
 
 describe('@DR-019 laufend, ausgefallen, beendet', () => {
-  it('laufendes Finale: „läuft“, Felder fürs Ergebnis und die kleinen Felder seiner Runde', async () => {
-    const zeile = zeileVon(await seiten({ [FINALE]: { matchStatus: 'running', scoreA: 1, scoreB: 1 } }), FINALE);
+  // @DR-019: ein laufendes Spiel (auch in der Halbzeit) steht wie ein Spiel ohne Ergebnis da, auch das Finale: Felder der Runde,
+  // kein „läuft“, kein Zwischenstand (1:1 ist gesetzt und darf nicht erscheinen)
+  it.each(['running', 'paused'] as const)('laufendes Finale (%s): Felder fürs Ergebnis und die kleinen Felder seiner Runde, kein „läuft“, kein Zwischenstand', async status => {
+    const zeile = zeileVon(await seiten({ [FINALE]: { matchStatus: status, scoreA: 1, scoreB: 1 } }), FINALE);
 
-    expect(wort(zeile, 'läuft')).toBeDefined();
+    expect(wort(zeile, 'läuft')).toBeUndefined();
+    expect(textsIn(zeile).some(t => /^\d$/.test(t.str.trim()) && t.size >= printLimits.resultPt - 0.05)).toBe(false);
     expect(gross(zeile)).toHaveLength(2);
     expect(klein(zeile)).toHaveLength(4);
   });

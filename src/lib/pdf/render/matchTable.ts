@@ -16,7 +16,7 @@ import type { PageGeometry } from '../layout';
 import type { ScoreSpec } from '../scoreLayout';
 import type { StatefulMatch } from '../tournamentState';
 import type { PdfTexts } from '../translations';
-import { drawLiveBar, drawRefereeField, drawScoreCell, scoreCellMinHeight, scoreSpecFor } from './scoreCell';
+import { drawRefereeField, drawScoreCell, scoreCellMinHeight, scoreSpecFor } from './scoreCell';
 import { drawTeamCell, teamCellMinHeight } from './teamCell';
 import { fontOf } from '../fonts';
 import { matchTableOptions, pad } from './matchTables';
@@ -147,11 +147,6 @@ export function renderMatchTable(doc: jsPDF, input: MatchTableInput, ctx: MatchT
       switch (columns[data.column.index].key) {
         case 'result':
           drawScoreCell(doc, cell, row.spec);
-          break;
-        case 'nr':
-          if (row.spec.kind === 'live') {
-            drawLiveBar(doc, cell);
-          }
           break;
         case 'home':
         case 'away':

@@ -167,8 +167,6 @@ export const printBox = {
   /** .score gap: Abstand Kästchen ↔ Doppelpunkt, Breite des Doppelpunkts */
   scoreGap: 1,
   colonWidth: 2,
-  /** tr.live td:first-child border-left: Balken links an der Zeile */
-  liveBar: 1.8,
   /** Abstand Kasten → Kennzeichen darunter (.mark margin-top), Abstand Zeilen kleiner Felder (.pen margin-top) */
   markGap: 0.5,
   penGap: 1.2,

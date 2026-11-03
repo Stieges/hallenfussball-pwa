@@ -103,6 +103,19 @@ describe('@DR-031 PLZ und Ort bleiben zusammen (kurze Straße)', () => {
   });
 });
 
+describe('@DR-031 sehr langer Ort ohne Bindestrich', () => {
+  it('„83329 Großwalsertalerhochebene Ober“ passt nicht in eine Zeile: Umbruch an normalen Leerzeichen, nichts über den Block, nichts gekürzt', async () => {
+    const { pages } = await handzettelPdf(FALL_A, { tournament: { location: { name: 'Bergader Arena', street: 'Am Sportplatz 7', postalCode: '83329', city: 'Großwalsertalerhochebene Ober' } } });
+    const kasten = block(pages[0]);
+    const halle = woZelle(pages[0]).find(t => t.str.trim() === 'Bergader Arena');
+    const adresse = woZelle(pages[0]).filter(t => t.y > (halle?.y ?? 0));
+
+    expect(ohneLeer(adresse)).toBe('AmSportplatz7,83329GroßwalsertalerhochebeneOber');
+    expect(adresse.length).toBeGreaterThanOrEqual(3);
+    adresse.forEach(t => expect(t.x + t.w).toBeLessThanOrEqual(kasten.x + kasten.w - printSheetHead.factsPadH + TOL));
+  });
+});
+
 describe.each(['de', 'en'] as const)('@DR-031 langer Hallenname und lange Adresse (%s)', locale => {
   const erwartet = (): string => `${HALLE_LANG}${ADRESSE_LANG.street},${ADRESSE_LANG.postalCode} ${ADRESSE_LANG.city}`.replace(/\s/g, '');
 

@@ -101,7 +101,7 @@ function wrapAtJoin(text: string, join: string, width: number, pt: number, measu
       current = joined;
     }
   }
-  return [...lines, ...(current === '' ? [] : [current])].flatMap(line => (measure.width(line, pt, 'normal') > width ? wrapName(line, width, pt, measure) : [line]));
+  return [...lines, ...(current === '' ? [] : [current])].flatMap(line => (measure.width(line, pt, 'normal') > width ? wrapName(line.replace(/\u00a0/g, ' '), width, pt, measure) : [line]));
 }
 
 function factCell(key: FactKey, h: HeaderInput, x: number, top: number, width: number, measure: TextMeasure): { cell: FactCell; height: number } {

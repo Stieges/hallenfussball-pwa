@@ -59,7 +59,6 @@ export interface PdfTexts {
   /** Spaltenkopf „Schiedsrichter“ (@DR-025, @OB-075: ausgeschrieben). */
   referee: string;
   /** Kennzeichen unter dem Ergebnis eines laufenden Spiels (@BM-012) und im Kasten eines ausgefallenen (@BM-013). */
-  live: string;
   skipped: string;
   /** „korrigiert 14:52“ (@BM-013); `time` kommt aus `formatClock`. */
   corrected: (time: string) => string;
@@ -249,7 +248,6 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     result: s('result'),
     away: s('away'),
     referee: head('referee'),
-    live: s('live'),
     skipped: s('skipped'),
     corrected: time => translate('pdf.corrected', { time }),
     afterOvertime: s('afterOvertime'),
