@@ -24,14 +24,16 @@ import {
   type RefereeOption,
 } from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand, SummaryExpand } from './MatchExpand';
-import { MatchSummary } from './MatchSummary';
 import { useMatchConflictsFromTournament, type ConflictSource } from '../../features/schedule-editor/hooks/useMatchConflicts';
-import { useLiveMatches } from '../../hooks/useLiveMatches';
+import type { LiveMatch } from '../live-cockpit/types';
+import { NO_LIVE_MATCHES } from './noLiveMatches';
 import { SortableMobileCard } from './SortableMobileCard';
 import { SortableDesktopCard } from './SortableDesktopCard';
 import { DesktopCard } from './DesktopCard';
 import { SCHEDULE_AUTO_SCROLL, useScheduleDrag } from './useScheduleDrag';
 import { useRefereeChoices } from './refereeChoices';
+import { useMatchActionMenu } from './actionMenu/useMatchActionMenu';
+import type { MatchActionRights } from './actionMenu/matchActions';
 import { Versus } from '../ui/atoms';
 
 // Pending changes during edit mode
@@ -53,13 +55,17 @@ interface GroupStageScheduleProps {
   editingSchedule?: boolean;
   /** Pending changes during edit mode (not yet saved) */
   pendingChanges?: PendingChanges;
-  correctionMatchId?: string | null;
-  onStartCorrection?: (matchId: string) => void;
+  /** Rechte der Turnierleitung bzw. des Helfers; mit ihnen öffnet der Tipp auf ein Spiel die Aktionsauswahl (@SL-193) */
+  actionRights?: MatchActionRights;
+  /** „Ergebnis korrigieren“: derselbe Dialog wie im Cockpit (@EK-063) */
+  onCorrect?: (matchId: string) => void;
   /** Gespielte Sekunden eines laufenden Spiels (Kopfzeile der Karte, @OB-064); ohne Angabe steht nur „läuft“ */
   /** Restzeit eines laufenden Spiels (`useSpectatorClocks`, @ZM-162); ohne Angabe keine Uhr */
   clockOf?: (matchId: string) => SpectatorClock | null;
   /** Teams, Gruppen, Spiele und die gemeinsame Ansicht (Status, Seiten, Endstand) */
   tournament?: ScheduleSource;
+  /** Live-Daten mit Ereignissen (ein Abonnement in `ScheduleDisplay`, geteilt mit dem Protokoll der Aktionsauswahl) */
+  liveMatches?: ReadonlyMap<string, LiveMatch>;
   /**
    * Turnierdaten für die Konflikterkennung im Bearbeitungsmodus. Ohne Angabe gibt es keine Konflikt-Markierung
    * (ScheduleDisplay kennt weder Spieldauer noch Pause und gibt sie nicht an).
@@ -89,10 +95,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   editable: _editable = false,
   editingSchedule = false,
   pendingChanges,
-  correctionMatchId: _correctionMatchId,
-  onStartCorrection: _onStartCorrection,
+  actionRights,
+  onCorrect,
   clockOf,
   tournament,
+  liveMatches = NO_LIVE_MATCHES,
   conflictSource,
   onMatchSwap,
   onNavigateToCockpit,
@@ -110,13 +117,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   type ExpandType = 'quick' | 'live' | 'start' | 'summary' | null;
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [expandType, setExpandType] = useState<ExpandType>(null);
-
-  // Match Summary state (for finished match circle click)
-  const [showMatchSummary, setShowMatchSummary] = useState(false);
-  const [summaryMatchId, setSummaryMatchId] = useState<string | null>(null);
-
-  // Get live match data including events
-  const { liveMatches } = useLiveMatches(tournament?.id ?? '');
 
   // Close expand when pressing Escape
   useEffect(() => {
@@ -179,12 +179,23 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     [view],
   );
 
+  // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext
+  const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
+
+  // Eine Tippfläche je Spiel (Karte und Tore): die Aktionsauswahl (@SL-193); „Ergebnis eintragen“ öffnet die Schnelleingabe der Karte
+  const openQuickEntry = useCallback((matchId: string) => { setExpandedMatchId(matchId); setExpandType('quick'); }, []);
+  const menu = useMatchActionMenu({
+    rights: actionRights, liveMatches, matches, sides, numberOfFields, refereeChoices: refereeChoiceList,
+    onEnterResult: onScoreChange ? openQuickEntry : undefined, onNavigateToCockpit, onCorrect, onRefereeChange, onFieldChange, forfeit,
+  });
+
   /*
    * Handle card body click - opens QuickScore expand for non-live matches
    */
   const handleCardClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }
+    if (menu.enabled) { menu.open(matchId); return; }
 
     const status = getMatchStatus(match);
 
@@ -230,6 +241,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   const handleCircleClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }
+    if (menu.enabled) { menu.open(matchId); return; }
 
     const status = getMatchStatus(match);
 
@@ -265,37 +277,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
    * Handle score save from expand
    */
   const handleExpandSave = useCallback((matchId: string, homeScore: number, awayScore: number) => {
-    // Check if match is already finished
-    const match = matches.find(m => m.id === matchId);
-    if (!match) { return; }
-
-    const isFinished = getMatchStatus(match) === 'finished';
-
-    if (isFinished) {
-      // Beendet: nie still verwerfen (C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL, @EK-063). Der Korrektur-Weg mit Grund ist
-      // entweder der übergebene Handler (Korrektur-Dialog) oder die Schnelleingabe selbst: `onScoreChange` fragt bei
-      // einem beendeten Spiel den Grund ab (@EK-004), Helfer bekommen den Hinweis „nur Turnierleitung“ (@HE-042).
-      setExpandedMatchId(null);
-      setExpandType(null);
-      if (_onStartCorrection) {
-        _onStartCorrection(matchId);
-        return;
-      }
-      const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
-      if (typeof matchWithHandler.onStartCorrection === 'function') {
-        matchWithHandler.onStartCorrection(matchId);
-        return;
-      }
-      onScoreChange?.(matchId, homeScore, awayScore);
-      return;
-    }
-
-    if (onScoreChange) {
-      onScoreChange(matchId, homeScore, awayScore);
-    }
+    // Beendete Spiele öffnen hier nie die Schnelleingabe: ihre Korrektur beginnt in der Aktionsauswahl (@EK-063)
+    onScoreChange?.(matchId, homeScore, awayScore);
     setExpandedMatchId(null);
     setExpandType(null);
-  }, [matches, getMatchStatus, onScoreChange, _onStartCorrection]);
+  }, [onScoreChange]);
 
   /**
    * Handle expand cancel/close
@@ -318,9 +304,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     onNavigateToCockpit?.(matchId);
   }, [onNavigateToCockpit]);
 
-  // Spielseiten: Namen immer aus der Ansicht (Slots, aktuelle Teams; @TM-015), nie aus gespeichertem Anzeigetext
-  const sides = useMemo(() => buildSideContext(tournament, matches), [tournament, matches]);
-
   /**
    * Unified render function for expand content (used by both mobile and desktop)
    */
@@ -331,7 +314,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     const homeTeam = sideDisplay(match, 'A', sides);
     const awayTeam = sideDisplay(match, 'B', sides);
-    const forfeitAction = <MatchForfeitAction matchId={match.id} viewStatus={matchViewOf(sides, match.id)?.status} forfeit={forfeit} />;
+    // „Nicht angetreten“ steht in der Aktionsauswahl (@SL-193); die Taste in den Feldern der Karte nur ohne Auswahl
+    const forfeitAction = menu.enabled ? undefined : <MatchForfeitAction matchId={match.id} viewStatus={matchViewOf(sides, match.id)?.status} forfeit={forfeit} />;
 
     switch (expandType) {
       case 'quick':
@@ -407,19 +391,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             homeTeamId={homeTeam.id}
             awayTeamId={awayTeam.id}
             events={events} // Pass events
-            onEditScore={_editable ? () => {
-              // Ohne Korrektur-Handler öffnet „Ergebnis ändern“ die Schnelleingabe, deren Speichern den Grund abfragt
-              // (C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL, @EK-063) -- nie still schließen.
-              const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
-              const correctionHandler = _onStartCorrection ?? matchWithHandler.onStartCorrection;
-              if (typeof correctionHandler === 'function') {
-                setExpandedMatchId(null);
-                setExpandType(null);
-                correctionHandler(match.id);
-              } else {
-                setExpandType('quick');
-              }
-            } : undefined}
             onClose={handleExpandClose}
             extraAction={forfeitAction}
           />
@@ -428,7 +399,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _onStartCorrection, _editable, canEndRunning, onScoreChange, forfeit]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, sides, liveMatches, clockOf, _editable, canEndRunning, onScoreChange, forfeit, menu.enabled]);
 
   if (matches.length === 0) {
     return (
@@ -767,61 +738,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         </div>
       )}
 
-      {/* Match Summary for finished matches */}
-      {showMatchSummary && summaryMatchId && (() => {
-        const match = matches.find(m => m.id === summaryMatchId);
-        if (!match) { return null; }
-
-        // Get live match data for events
-        const liveMatch = liveMatches.get(summaryMatchId);
-        const liveEvents = liveMatch?.events;
-
-        // Prefer persisted events from match object
-        const sourceEvents = match.events ?? liveEvents;
-        const events: RuntimeMatchEvent[] = sourceEvents
-          ? (sourceEvents).map(e => ({
-            ...e,
-            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty string matchId should use fallback
-            matchId: e.matchId || summaryMatchId,
-            scoreAfter: e.scoreAfter,
-          }))
-          : [];
-
-        return (
-          <MatchSummary
-            isOpen={showMatchSummary}
-            onClose={() => {
-              setShowMatchSummary(false);
-              setSummaryMatchId(null);
-            }}
-            homeScore={match.scoreA ?? 0}
-            awayScore={match.scoreB ?? 0}
-            homeTeamId={sideDisplay(match, 'A', sides).id}
-            awayTeamId={sideDisplay(match, 'B', sides).id}
-            homeTeamName={sideName(match, 'A', sides)}
-            awayTeamName={sideName(match, 'B', sides)}
-            events={events}
-            onEditScore={_editable ? () => {
-              // Close summary and start correction flow
-              setShowMatchSummary(false);
-              setSummaryMatchId(null);
-
-              if (_onStartCorrection) {
-                _onStartCorrection(summaryMatchId);
-              } else {
-                const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
-                const correctionHandler = matchWithHandler.onStartCorrection;
-                if (typeof correctionHandler === 'function') {
-                  correctionHandler(summaryMatchId);
-                } else {
-                  setExpandedMatchId(summaryMatchId);
-                  setExpandType('quick');
-                }
-              }
-            } : undefined}
-          />
-        );
-      })()}
+      {menu.element}
 
       <style>{`
         /* Hide mobile view by default */
@@ -837,14 +754,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           .group-stage-schedule .mobile-view {
             display: block;
           }
-        }
-
-        /* Mobile correction button hover/active */
-        .correction-btn-mobile:hover,
-        .correction-btn-mobile:active {
-          background: ${cssVars.colors.primary} !important;
-          color: white !important;
-          border-color: ${cssVars.colors.primary} !important;
         }
 
         /* Tablet: Keep table but adjust sizing */

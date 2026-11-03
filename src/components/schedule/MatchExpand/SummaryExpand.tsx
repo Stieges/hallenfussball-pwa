@@ -13,7 +13,6 @@ export interface SummaryExpandProps {
     homeTeamId: string;
     awayTeamId: string;
     events: RuntimeMatchEvent[];
-    onEditScore?: () => void;
     onEditEvent?: (event: RuntimeMatchEvent) => void;
     onClose?: () => void;
     /** B-12: weitere Aktion der Turnierleitung (z. B. „Wertung zurücknehmen“) */
@@ -28,7 +27,6 @@ export function SummaryExpand({
     homeTeamId,
     awayTeamId,
     events,
-    onEditScore,
     onEditEvent,
     extraAction,
 }: SummaryExpandProps) {
@@ -66,7 +64,6 @@ export function SummaryExpand({
                 awayTeamName={awayTeamName}
                 homeScore={homeScore}
                 awayScore={awayScore}
-                onEditScore={onEditScore}
                 compact
             />
 

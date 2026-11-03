@@ -10,6 +10,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, shadowSemantics } from '../../design-tokens';
+import { isInteractiveTarget } from './actionMenu/isInteractiveTarget';
 
 export interface FinalSortableRowRenderProps {
   attributes: ReturnType<typeof useSortable>['attributes'];
@@ -25,13 +26,15 @@ interface FinalSortableRowProps {
   editingSchedule: boolean;
   /** Tauschen ist angeschlossen (`onMatchSwap`) */
   canSwap: boolean;
+  /** Tipp auf die Zeile (nicht auf Eingaben und Tasten darin): öffnet die Aktionsauswahl des Spiels (@SL-193) */
+  onActivate?: (matchId: string) => void;
   children: (props: FinalSortableRowRenderProps) => ReactNode;
 }
 
 const OUTLINE_INSET = `calc(-1 * ${cssVars.borderWidth.thin})`;
 const DROP_TARGET_WIDTH = `calc(${cssVars.borderWidth.thin} + ${cssVars.borderWidth.medium})`;
 
-export const FinalSortableRow: React.FC<FinalSortableRowProps> = ({ matchId, isRunning, isFinished, editingSchedule, canSwap, children }) => {
+export const FinalSortableRow: React.FC<FinalSortableRowProps> = ({ matchId, isRunning, isFinished, editingSchedule, canSwap, onActivate, children }) => {
   const canDrag = editingSchedule && canSwap && !isRunning && !isFinished;
 
   const {
@@ -74,7 +77,12 @@ export const FinalSortableRow: React.FC<FinalSortableRowProps> = ({ matchId, isR
   };
 
   return (
-    <tr ref={setNodeRef} style={style}>
+    <tr
+      ref={setNodeRef}
+      style={onActivate ? { ...style, cursor: 'pointer' } : style}
+      data-testid={`final-row-${matchId}`}
+      onClick={onActivate ? (e) => { if (!isInteractiveTarget(e.target)) { onActivate(matchId); } } : undefined}
+    >
       {children({ attributes, listeners, canDrag, isDragging })}
     </tr>
   );

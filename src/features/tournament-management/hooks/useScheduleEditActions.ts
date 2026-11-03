@@ -14,7 +14,7 @@ import { redistributeFields } from '../../schedule-editor/utils/autoReassign';
 import { applyDraftSteps, diffStep, fieldStep, refereeStep, swapPhaseOf, swapStep, type DraftStep } from '../schedule-draft/draftSteps';
 import { matchNumberLookup } from '../schedule-draft/draftTexts';
 import { redistributeOpenReferees } from '../schedule-draft/refereeRedistribution';
-import type { ScheduleDraftControls } from './useScheduleDraft';
+import { conflictsOf, type ScheduleDraftControls } from './useScheduleDraft';
 
 interface UseScheduleEditActionsOptions {
   /** gespeichertes Turnier */
@@ -110,8 +110,15 @@ export function useScheduleEditActions({ tournament, draft, onTournamentUpdate, 
 
   const handleFieldChange = useCallback((matchId: string, fieldNumber: number) => {
     if (lockedMatchIds.has(matchId)) { showWarning(t('schedule.startedLocked')); return; }
-    if (isEditing) { addStep(fieldStep(working, matchId, fieldNumber)); }
-  }, [lockedMatchIds, isEditing, working, addStep, showWarning, t]);
+    const step = fieldStep(working, matchId, fieldNumber);
+    if (isEditing) { addStep(step); return; }
+    if (!step) { return; }
+    // Direkt am Spiel (Aktionsmenü, @SL-193): sofort speichern, aber nie mit einem neuen Konflikt (zwei Spiele auf einem Feld)
+    const before = new Set(conflictsOf(tournament, tournament.matches).map((c) => c.id));
+    const fresh = conflictsOf(tournament, applyDraftSteps(tournament, [step]).tournament.matches).filter((c) => !before.has(c.id));
+    if (fresh.length > 0) { showWarning(t('schedule.fieldConflict', { message: fresh[0].message })); return; }
+    applyNow(step);
+  }, [lockedMatchIds, isEditing, working, tournament, addStep, applyNow, showWarning, t]);
 
   const handleGridChange = useCallback((next: Tournament) => {
     if (!isEditing) { return; }

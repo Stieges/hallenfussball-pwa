@@ -674,5 +674,9 @@
     "hoechstens": "höchstens {{zeit}}",
     "abbrechen": "Abbrechen",
     "fortsetzen": "Fortsetzen"
+  },
+  "eventLog": {
+    "title": "Ereignisprotokoll",
+    "empty": "Noch keine Ereignisse aufgezeichnet"
   }
 }

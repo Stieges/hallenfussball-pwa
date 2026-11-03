@@ -289,7 +289,7 @@ describe('@W3-030 / @DR-040 Prüfung beim Hochladen', () => {
     expect(fehler).toHaveAttribute('role', 'alert');
   });
 
-  it('@W3-030 Grund „Größe“ nennt beide Grenzen: 2 MB und 4000 Bildpunkte an einer Seite', async () => {
+  it('@W3-030 Grund „Größe“ nennt beide Grenzen: 2 MB und 4.000 Bildpunkte an einer Seite', async () => {
     prepareAnswers({ ok: false, reason: 'size' });
     zeige();
 

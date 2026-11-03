@@ -1,12 +1,11 @@
 /**
- * A-08e (Ruling Controller 2026-10-15, "kein stummer Knopf"): der Korrigieren-Knopf im Spielplan
- * erscheint nur, wenn ein Handler uebergeben ist. Bis B-24 gibt es keinen Korrektur-Weg -- ohne
- * Handler (ScheduleTab uebergibt keinen mehr) darf kein wirkungsloser Knopf stehen.
- * Pflichttest: echte Schedule-Kette (Generator -> ScheduleDisplay -> Gruppen-/K.-o.-Plan), alle Spiele beendet.
- * Gegenbeispiel (B-24): mit Handler ist der Knopf da und ruft den Handler mit der Spielkennung.
+ * @EK-063 (G2 Spur A): Die Korrektur beginnt in der Aktionsauswahl des Spiels („Ergebnis korrigieren“, im selben Dialog wie im
+ * Cockpit). Der alte Korrigieren-Knopf an Zeile und Karte der Finalrunde ist entfernt (A-08e „kein stummer Knopf“ bleibt):
+ * Auch mit Rechten und Korrektur-Handler steht an beendeten Spielen kein eigener Knopf, nur der Ergebnis-Text.
+ * Pflichttest echter Weg: ScheduleDisplay -> Gruppen-/K.-o.-Plan, alle Spiele beendet.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { generateFullSchedule } from '../../../core/generators';
 import type { Team } from '../../../types/tournament';
 import { createMockTournament } from '../../../test/factories';
@@ -33,30 +32,24 @@ const finalIds = schedule.phases.filter((p) => p.name !== 'groupStage').flatMap(
 const buttons = (container: HTMLElement): Element[] =>
   Array.from(container.querySelectorAll('[data-testid^="correction-button-"], .correction-btn-mobile'));
 
-describe('A-08e Korrigieren-Knopf nur mit Handler', () => {
-  it('Spielplan mit Gruppen- und K.-o.-Phase, alle Spiele beendet, OHNE Handler: kein Korrigieren-Knopf', () => {
+describe('@EK-063 kein eigener Korrigieren-Knopf an der Spielkarte', () => {
+  it('Spielplan mit Gruppen- und K.-o.-Phase, alle Spiele beendet, ohne Rechte: kein Korrigieren-Knopf', () => {
     expect(finalIds.length).toBeGreaterThan(0);
     const { container } = render(<ScheduleDisplay schedule={schedule} editable view={view} currentMatches={allFinished} />);
     expect(buttons(container)).toHaveLength(0);
   });
 
-  it('Gegenbeispiel (B-24): MIT Handler zeigt der K.-o.-Plan den Knopf je beendetem Spiel und ruft den Handler', () => {
-    const onStartCorrection = vi.fn();
-    const { container, getByTestId } = render(
-      <ScheduleDisplay schedule={schedule} editable view={view} currentMatches={allFinished} onStartCorrection={onStartCorrection} />,
+  it('Gegenbeispiel: auch mit Rechten der Turnierleitung und Korrektur-Handler steht kein Knopf an Zeile oder Karte, die Korrektur liegt in der Auswahl', () => {
+    const { container } = render(
+      <ScheduleDisplay schedule={schedule} editable view={view} currentMatches={allFinished} actionRights={{ lead: true, play: true, schedule: true }} onCorrect={vi.fn()} />,
     );
-    expect(buttons(container).length).toBeGreaterThanOrEqual(finalIds.length);
-    fireEvent.click(getByTestId(`correction-button-${finalIds[0]}`));
-    expect(onStartCorrection).toHaveBeenCalledWith(finalIds[0]);
+    expect(buttons(container)).toHaveLength(0);
   });
 
-  it('MatchScoreCell beendet ohne Handler: Ergebnis sichtbar, kein Knopf; mit Handler: Knopf', () => {
-    const props = { matchId: 'm1', scoreA: 2, scoreB: 1, editable: true, isFinished: true, inCorrectionMode: false, onScoreChange: vi.fn() };
-    const without = render(<MatchScoreCell {...props} />);
-    expect(without.container.textContent).toContain('2 : 1');
-    expect(without.queryByTestId('correction-button-m1')).toBeNull();
-    without.unmount();
-    const withHandler = render(<MatchScoreCell {...props} onStartCorrection={vi.fn()} />);
-    expect(withHandler.getByTestId('correction-button-m1')).toBeInTheDocument();
+  it('MatchScoreCell beendet: Ergebnis sichtbar, kein Knopf', () => {
+    const props = { matchId: 'm1', scoreA: 2, scoreB: 1, editable: true, isFinished: true, onScoreChange: vi.fn() };
+    const cell = render(<MatchScoreCell {...props} />);
+    expect(cell.container.textContent).toContain('2 : 1');
+    expect(cell.queryByTestId('correction-button-m1')).toBeNull();
   });
 });

@@ -30,6 +30,7 @@ import { ScheduleResultEntryPrompt } from './components/ScheduleResultEntryPromp
 import { useScheduleTakeover } from './hooks/useScheduleTakeover';
 import { ScheduleForfeitPrompt } from './components/ScheduleForfeitPrompt';
 import { useScheduleForfeit } from './hooks/useScheduleForfeit';
+import { useSpielplanKorrektur } from './hooks/useSpielplanKorrektur';
 import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
@@ -166,7 +167,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     }
   }, [liveMatchIds, canControlTimer, showWarning, onNavigateToCockpit, t]);
 
-  // Handler to confirm navigation (ends running match)
+  // Handler to confirm navigation (das laufende Spiel läuft weiter, @SL-194)
   const handleConfirmCockpitNavigation = useCallback(() => {
     if (pendingCockpitMatchId) {
       onNavigateToCockpit?.(pendingCockpitMatchId);
@@ -181,22 +182,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     setShowRunningMatchDialog(false);
   }, []);
 
-  // Get info about the currently running match for dialog
+  // Nummern für die Rückfrage beim Wechsel (@SL-194): das laufende Spiel, das weiterläuft, und das Ziel
   const runningMatchInfo = useMemo(() => {
-    const runningMatchId = Array.from(liveMatchIds)[0];
-    if (!runningMatchId) { return null; }
-    const match = tournament.matches.find(m => m.id === runningMatchId);
-    const shown = view.byId.get(runningMatchId);
-    if (!match || !shown) { return null; }
-    // Spielseiten aus der Ansicht (@TM-015): Teamname bzw. Herkunft, nie ein gespeicherter Name
-    return {
-      id: runningMatchId,
-      homeName: shown.home.label,
-      awayName: shown.away.label,
-      scoreA: match.scoreA,
-      scoreB: match.scoreB,
-    };
-  }, [liveMatchIds, tournament.matches, view]);
+    const running = tournament.matches.find(m => liveMatchIds.has(m.id) && m.id !== pendingCockpitMatchId);
+    const target = tournament.matches.find(m => m.id === pendingCockpitMatchId);
+    return running ? { running: running.matchNumber ?? '?', target: target?.matchNumber ?? '?' } : null;
+  }, [liveMatchIds, tournament.matches, pendingCockpitMatchId]);
 
   // B-49 (@FU-081): fremd gesteuertes Feld – „Feld 2 wird gerade von Tom gesteuert“ mit „Spielleitung übernehmen“, danach ins Cockpit
   const takeover = useScheduleTakeover({ tournamentId: tournament.id, showWarning, onTaken: onNavigateToCockpit });
@@ -205,11 +196,15 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { handleScoreChange, resultEntry } = useScheduleTabActions({
     tournament,
     showWarning,
-    // Korrektur beendeter Spiele im Spielplan: Grund-Auswahl statt Sperre (@EK-063, @EK-004), wie im Cockpit (useCockpitKorrektur).
-    // Die Nutzer-Einstellung `lockFinishedResults` verwies auf einen Knopf „Ergebnis korrigieren“, den es hier nicht gibt.
+    // Korrektur beendeter Spiele: Grund-Auswahl statt Sperre (@EK-063, @EK-004); der Einstieg ist „Ergebnis korrigieren“ (useSpielplanKorrektur).
     lockFinishedResults: false,
     offerTakeover: takeover.offerTakeover,
   });
+
+  // „Ergebnis korrigieren“ (@EK-063): derselbe Dialog und derselbe Weg wie im Cockpit
+  const korrektur = useSpielplanKorrektur({ view, enterScore: handleScoreChange, istLeitung: canEndRunning });
+  // Aktionsauswahl je Spiel (@SL-193): Rechte aus useCan; im Bearbeiten-Modus gelten die Auswahlfelder der Karten
+  const actionRights = useMemo(() => (isEditing ? undefined : { lead: canEndRunning, play: canControlTimer, schedule: canSchedule }), [isEditing, canEndRunning, canControlTimer, canSchedule]);
 
   // B-12: „nicht angetreten“ und „Wertung zurücknehmen“ -- Bedienung nur für die Turnierleitung (@SL-118)
   const forfeit = useScheduleForfeit({ tournament, showWarning, showSuccess });
@@ -322,6 +317,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
                 elapsedSeconds={elapsedSeconds}
                 onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
                 canEndRunning={canEndRunning}
+                actionRights={actionRights}
+                onCorrect={korrektur.onKorrigieren}
                 forfeit={forfeitActions}
                 visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
               />
@@ -356,6 +353,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         </Card>
       </div>
 
+      {korrektur.dialog}
       <ScheduleResultEntryPrompt prompt={resultEntry.prompt} answerPrompt={resultEntry.answerPrompt} />
       {takeover.dialog}
       <ScheduleForfeitPrompt prompt={forfeit.prompt} answerPrompt={forfeit.answerPrompt} />
@@ -369,7 +367,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           onClose={handleCancelCockpitNavigation}
           onConfirm={handleConfirmCockpitNavigation}
           title={t('schedule.runningMatch.title')}
-          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.homeName, teamB: runningMatchInfo.awayName, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
+          message={t('schedule.runningMatch.message', runningMatchInfo)}
           confirmText={t('schedule.runningMatch.confirmSwitch')}
           cancelText={t('common.cancel')}
           variant="warning"
