@@ -5,6 +5,7 @@
  *
  * Immer A4 hoch (@DR-026): `PdfInput.orientation` ändert am Modell nichts (Querformat = MVP+, Lücke L3).
  */
+import { getLocationAddressLine } from '../../../utils/locationHelpers';
 import { getGroupDisplayName, getGroupShortCode } from '../../../utils/displayNames';
 import { dayWithWeekday } from '../headerFacts';
 import { resultState } from '../matchResult';
@@ -22,6 +23,8 @@ import { planRows, type RowsPlan } from './pagePlan';
 import { ascent, descent } from './text';
 import type { ColumnKey, HeaderBlock, LinkArea, MatchRowsBlock, PageModel, ScheduleModel, ScheduleModelSource } from './types';
 
+/** Geschütztes Leerzeichen: hält PLZ und Ort zusammen. */
+const NBSP = '\u00a0';
 /** Toleranz beim Vergleich von Höhen in mm. */
 const FLOW_EPS = 0.01;
 /** Anstoßzeit, dann Feld, dann Nummer: die Tabelle liest sich nach der Uhr, auch wenn der Plan anders geordnet ist. */
@@ -84,7 +87,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
       small: [],
     };
   });
-  const rowTexts: RowTexts = { live: t.live, skipped: t.skipped, overtime: t.afterOvertime, shootout: t.shootout };
+  const rowTexts: RowTexts = { skipped: t.skipped, overtime: t.afterOvertime, shootout: t.shootout };
   const labels: Partial<Record<ColumnKey, string>> = { nr: t.nr, time: t.timeHeader, field: t.field, group: t.group, home: t.home, result: t.result, away: t.away, referee: t.referee };
 
   // Kopf (Eckdaten ohne Halle oder Datum lassen die Angabe ganz weg, @DR-031)
@@ -92,9 +95,8 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   const duration = entries.find(e => e.kind === 'duration')?.line ?? '';
   // „Ablauf“: Zahl der Spiele, mit Finalrunde „28 Spiele, davon 8 Finalspiele“ (@DR-031)
   const flowText = finalCount > 0 ? sheet.flowWithFinals(groupMatches.length + finalCount, finalCount) : sheet.flowMatches(groupMatches.length);
-  // Adresse der Halle: „Straße Nr., PLZ Ort“ in einer eigenen Zeile unter der Halle (@DR-031); ohne Angaben leer
-  const place = schedule.tournament.location;
-  const address = [place?.street?.trim() ?? '', [place?.postalCode?.trim() ?? '', place?.city?.trim() ?? ''].filter(part => part !== '').join(' ')].filter(part => part !== '').join(', ');
+  // Adresse der Halle: „Straße Nr., PLZ Ort“ in eigenen Zeilen unter der Halle (@DR-031); PLZ und Ort mit geschütztem Leerzeichen zusammen
+  const address = getLocationAddressLine(schedule.tournament).replace(/, ([^,]*)$/, (_all, place: string) => `, ${place.replace(/ /g, NBSP)}`);
   const headerInput: HeaderInput = {
     title: schedule.tournament.title,
     subtitle: [sheet.titleSuffix, schedule.tournament.ageClass?.trim() ?? '', input.organizerName].filter(part => part !== '').join(t.rules.join),

@@ -146,12 +146,15 @@ describe('@DR-025 Spalte „SR“', () => {
 describe('@DR-019 Zustände im Modell', () => {
   const opts = { options: { includeScores: true } };
 
-  it('@DR-019 läuft und Halbzeit: „läuft“ mit Linien; beendet: Ergebnis; ausgefallen: „ausgefallen“ ohne Linien', () => {
+  it('@DR-019 läuft und Halbzeit: wie ohne Ergebnis, zwei Linien und kein Text; beendet: Ergebnis; ausgefallen: „ausgefallen“ ohne Linien', () => {
     const live = rowsOf(modelOf(mitStandA(), opts).model);
     const half = rowsOf(modelOf(mitStandA(FALL_A, true), opts).model);
 
-    expect(live[6].cell).toMatchObject({ kind: 'lines', live: true });
-    expect(half[6].cell).toMatchObject({ kind: 'lines', live: true });
+    for (const row of [live[6], half[6]]) {
+      expect(row.cell.kind).toBe('lines');
+      expect(row.lines).toHaveLength(2);
+      expect(row.cell.runs.map(r => r.text)).toEqual([':']);
+    }
     expect(live[0].cell).toMatchObject({ kind: 'score', a: '2', b: '1' });
     expect(live[5].cell).toMatchObject({ kind: 'text', text: 'ausgefallen' });
     expect(live[5].lines).toEqual([]);
@@ -162,8 +165,8 @@ describe('@DR-019 Zustände im Modell', () => {
     const blank = rowsOf(modelOf(mitStandA(), { options: { edition: 'blank', includeScores: true } }).model);
 
     expect(hidden[5].cell.kind).toBe('text');
-    expect(hidden[0].cell).toMatchObject({ kind: 'lines', live: false });
-    expect(blank[5].cell).toMatchObject({ kind: 'lines', live: false });
+    expect(hidden[0].cell.kind).toBe('lines');
+    expect(blank[5].cell.kind).toBe('lines');
     expect(blank[0].lines).toHaveLength(2);
   });
 

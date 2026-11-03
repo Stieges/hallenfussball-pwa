@@ -39,6 +39,8 @@ describe.each(['de', 'en'] as const)('@DR-031 Adresse unter der Halle (%s)', loc
 
     expect(halle).toBeDefined();
     expect(ohneLeer(adresse)).toBe('MühlbergerWeg5,83329WagingamSee');
+    // bevorzugt nach dem Komma umbrechen, PLZ und Ort bleiben zusammen
+    expect(adresse.map(t => t.str.trim().replace(/\u00a0/g, ' '))).toEqual(['Mühlberger Weg 5,', '83329 Waging am See']);
     adresse.forEach(t => {
       expect(t.x).toBeCloseTo(halle?.x ?? 0, 1);
       expect(t.size).toBeCloseTo(printSheetHead.factMidPt, 1);
@@ -63,6 +65,41 @@ describe('@DR-031 keine Leerzeile ohne Adresse (Zelle bestimmt die Blockhöhe)',
 
     expect(block(mit.pages[0]).h - block(ohne.pages[0]).h).toBeGreaterThanOrEqual(3 * adv - TOL);
     expect(block(mit.pages[0]).h - block(ohne.pages[0]).h).toBeLessThanOrEqual(3 * adv + TOL);
+  });
+});
+
+describe.each(['de', 'en'] as const)('@DR-031 Hallenname mit mehr als zwei Zeilen eine Stufe kleiner (%s)', locale => {
+  const hallZeilen = (page: LayoutPage): LayoutText[] => woZelle(page).filter(t => t.str.trim() !== '' && t.size > printSheetHead.factMidPt + 0.1 && t.str.trim() !== (locale === 'de' ? 'Wo' : 'Where'));
+
+  it('@DR-031 langer Name: 12 pt fett, vollständig, weniger Zeilen und niedrigerer Block als in 14 pt', async () => {
+    const { pages } = await handzettelPdf(FALL_B_HALLE, { locale });
+    const zeilen = hallZeilen(pages[0]);
+
+    expect(ohneLeer(zeilen)).toBe(HALLE_LANG.replace(/\s/g, ''));
+    zeilen.forEach(t => {
+      expect(t.size).toBeCloseTo(printSheetHead.factHallSmallPt, 1);
+      expect(t.font, 'fett: dieselbe Schrift wie die fette Bezeichnung „Wo“').toBe(wo(pages[0]).font);
+    });
+    expect(zeilen.length, 'weniger als die vier Zeilen in 14 pt').toBeLessThan(4);
+    expect(zeilen.length).toBeLessThanOrEqual(3);
+    expect(block(pages[0]).h, 'niedriger als in dc253769 (14 pt: rund 56 mm)').toBeLessThan(52);
+  });
+
+  it('Gegenprobe: kurze Namen (Fall a, b) bleiben in 14 pt', async () => {
+    for (const fall of [FALL_A, FALL_B]) {
+      const { pages } = await handzettelPdf(fall, { locale });
+      hallZeilen(pages[0]).filter(t => t.size > 12.5 && t.size < 15).forEach(t => expect(t.size).toBeCloseTo(printSheetHead.factBigPt, 1));
+      expect(pages[0].texts.some(t => t.str.trim() === (fall === FALL_A ? 'Bergader Arena' : 'TuS Halle') && Math.abs(t.size - printSheetHead.factBigPt) < 0.1)).toBe(true);
+    }
+  });
+});
+
+describe('@DR-031 PLZ und Ort bleiben zusammen (kurze Straße)', () => {
+  it('„Am Sportplatz 7,“ / „83329 Waging am See“ statt „… 83329 Waging“ / „am See“', async () => {
+    const { pages } = await handzettelPdf(FALL_A, { tournament: { location: { name: 'Bergader Arena', street: 'Am Sportplatz 7', postalCode: '83329', city: 'Waging am See' } } });
+    const adresse = woZelle(pages[0]).filter(t => t.y > (woZelle(pages[0]).find(x => x.str.trim() === 'Bergader Arena')?.y ?? 0));
+
+    expect(adresse.map(t => t.str.trim().replace(/\u00a0/g, ' '))).toEqual(['Am Sportplatz 7,', '83329 Waging am See']);
   });
 });
 
@@ -106,7 +143,7 @@ describe.each(['de', 'en'] as const)('@DR-031 langer Hallenname und lange Adress
 });
 
 describe.each(['de', 'en'] as const)('@DR-020 Spielzeit je Runde (%s): Gruppen 10, Finalrunde 12 Minuten', locale => {
-  it('@DR-020 drei Zeilen in der Zelle, alle Wörter da, „Ablauf“ bleibt, 20 Spiele auf Seite 1', async () => {
+  it('@DR-020 drei Zeilen in der Zelle, alle Wörter da, „Ablauf“ bleibt, kein Spiel geht verloren (der höhere Block drängt Spiele auf Seite 2, dort mindestens 3)', async () => {
     const { pages } = await handzettelPdf(FALL_B, { locale, tournament: { finalRoundGameDuration: 12 } });
     const page = pages[0];
     const kopf = page.texts.find(t => ['Spielzeit', 'Match time'].includes(t.str.trim()));
@@ -119,6 +156,8 @@ describe.each(['de', 'en'] as const)('@DR-020 Spielzeit je Runde (%s): Gruppen 1
     expect(text).toContain(locale === 'de' ? 'Finalrunde12Minuten' : 'Finalround12minutes');
     expect(text).toContain(locale === 'de' ? 'Zeitstrafe2Minuten' : 'Timepenalty2minutes');
     expect(ablauf, '„Ablauf“ bleibt').toBeDefined();
-    expect(page.texts.filter(t => /^\d{1,2}$/.test(t.str.trim()) && t.x < 25 && Math.abs(t.size - printType.nr) < 0.05)).toHaveLength(20);
+    const nr = (p: LayoutPage): number => p.texts.filter(t => /^\d{1,2}$/.test(t.str.trim()) && t.x < 25 && Math.abs(t.size - printType.nr) < 0.05).length;
+    expect(nr(page) + nr(pages[1])).toBe(20);
+    if (nr(page) < 20) { expect(nr(pages[1])).toBeGreaterThanOrEqual(3); }
   });
 });

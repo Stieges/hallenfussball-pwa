@@ -128,8 +128,10 @@ function factCell(key: FactKey, h: HeaderInput, x: number, top: number, width: n
     }
   } else if (key === 'where') {
     // Halle und Adresse brechen an Leerzeichen oder Bindestrich um und werden nie gekürzt; die Zelle wird dafür höher (@DR-031)
-    wrapName(h.hall, width, s.factBigPt, measure, 'bold').forEach(text => line(text, s.factBigPt, 'bold'));
-    if (h.address !== '') { wrapName(h.address, width, s.factMidPt, measure).forEach(text => line(text, s.factMidPt, 'normal')); }
+    const big = wrapName(h.hall, width, s.factBigPt, measure, 'bold');
+    const hallPt = big.length > s.hallMaxLines ? s.factHallSmallPt : s.factBigPt;
+    (hallPt === s.factBigPt ? big : wrapName(h.hall, width, hallPt, measure, 'bold')).forEach(text => line(text, hallPt, 'bold'));
+    if (h.address !== '') { wrapAtJoin(h.address, ', ', width, s.factMidPt, measure).forEach(text => line(text, s.factMidPt, 'normal')); }
   } else {
     for (const text of wrapAtJoin(key === 'duration' ? h.duration : h.flow, h.join, width, s.factMidPt, measure)) {
       line(text, s.factMidPt, 'normal');

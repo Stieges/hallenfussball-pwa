@@ -28,7 +28,7 @@ const zeile = (page: LayoutPage, nr: number): LayoutText[] => {
 };
 const linienDerZeile = (page: LayoutPage, nr: number): LayoutLine[] => {
   const n = page.texts.find(t => t.str.trim() === String(nr) && Math.abs(t.size - printType.nr) < 0.05);
-  return n ? schreiblinien(page).filter(l => l.y1 > n.y - 1 && l.y1 < n.y + 5) : [];
+  return n ? schreiblinien(page).filter(l => l.y1 > n.y - 3 && l.y1 < n.y + 3) : [];
 };
 
 describe.each([['a', FALL_A], ['b', FALL_B], ['c', FALL_C], ['b-lang', FALL_B_LANG]] as const)('@DR-034 Schreiblinie (Fall %s), jede Seite', (_name, fall) => {
@@ -36,8 +36,8 @@ describe.each([['a', FALL_A], ['b', FALL_B], ['c', FALL_C], ['b-lang', FALL_B_LA
     const { pages } = await handzettelPdf(fall);
 
     pages.forEach((page, i) => {
-      // Zeilenoberkanten: Kanten der Zebra-Flächen und die Unterkante der Linie unter dem Spaltenkopf
-      const kopfLinien = page.lines.filter(l => horizontal(l) && l.width > 0.4 && Math.abs(l.x2 - l.x1) > 150 && l.color === '#000000').map(l => l.y1 + l.width / 2);
+      // Zeilenoberkanten: Kanten der Zebra-Flächen, Unterkante der Linie unter dem Spaltenkopf und der Stundentrenner in der Zeile
+      const kopfLinien = page.lines.filter(l => horizontal(l) && l.width > 0.4 && Math.abs(l.x2 - l.x1) > 150).map(l => l.y1 + l.width / 2);
       const kanten = [...fläche(page).flatMap(r => [r.y, r.y + r.h]), ...kopfLinien];
       schreiblinien(page).forEach(l => {
         const oben = Math.max(...kanten.filter(k => k <= l.y1 + 0.01));
@@ -113,18 +113,17 @@ describe('@DR-034 Doppelpunkt statt Kasten, Zebra statt Trennstriche', () => {
 describe('@DR-019 Zustände der Gruppenspiele ohne Farbe unterscheidbar', () => {
   const stand = (halbzeit = false, includeScores = true) => handzettelPdf(mitStandA(FALL_A, halbzeit), { options: { includeScores } });
 
-  it('@DR-019 Spiel 7 läuft: „läuft“ und je eine leere Schreiblinie für Heim und Gast', async () => {
-    const { pages } = await stand();
+  // Ein laufendes Spiel (auch in der Halbzeit) steht wie ein Spiel ohne Ergebnis da: zwei leere Linien, kein „läuft“, kein Zwischenstand.
+  // Der Zwischenstand 3:2 ist im Modell gesetzt und darf nirgends erscheinen.
+  it.each([['de', false], ['de', true], ['en', false], ['en', true]] as const)('@DR-019 Spiel 7 laufend (%s, Halbzeit %s): genau zwei leere Schreiblinien, kein „läuft“/„live“, kein Zwischenstand', async (locale, halbzeit) => {
+    const fall = { ...mitStandA(FALL_A, halbzeit), spiele: mitStandA(FALL_A, halbzeit).spiele.map(s => (s.nr === 7 ? { ...s, zustand: { status: halbzeit ? ('paused' as const) : ('running' as const), a: 3, b: 2 } } : s)) };
+    const { pages } = await handzettelPdf(fall, { locale, options: { includeScores: true } });
+    const texte = zeile(pages[0], 7).map(t => t.str.trim());
 
-    expect(zeile(pages[0], 7).map(t => t.str.trim())).toContain('läuft');
     expect(linienDerZeile(pages[0], 7)).toHaveLength(2);
-  });
-
-  it('@DR-019 Halbzeit: ebenfalls „läuft“ mit zwei Linien', async () => {
-    const { pages } = await stand(true);
-
-    expect(zeile(pages[0], 7).map(t => t.str.trim())).toContain('läuft');
-    expect(linienDerZeile(pages[0], 7)).toHaveLength(2);
+    expect(texte.some(t => /läuft|live|running|in progress/i.test(t))).toBe(false);
+    expect(zeile(pages[0], 7).filter(t => /^\d$/.test(t.str.trim()) && t.size >= printLimits.resultPt - 0.05)).toEqual([]);
+    expect(texte).toContain(':');
   });
 
   it('@DR-019 Spiel 6 ausgefallen: „ausgefallen“ ohne Schreiblinien, auch bei ausgeblendeten Ergebnissen', async () => {
@@ -146,7 +145,6 @@ describe('@DR-019 Zustände der Gruppenspiele ohne Farbe unterscheidbar', () => 
     const leer = await handzettelPdf(mitStandA(FALL_A), { options: { edition: 'blank' } });
     expect(zeile(leer.pages[0], 6).map(t => t.str.trim())).not.toContain('ausgefallen');
     expect(linienDerZeile(leer.pages[0], 6)).toHaveLength(2);
-    expect(strs(leer.pages[0])).not.toContain('läuft');
   });
 });
 
@@ -223,11 +221,12 @@ describe('@DR-001 Farben und Größen', () => {
     expect(zebraTone(printAccentDefault.line).toLowerCase()).toBe(printAccentDefault.tint.toLowerCase());
   });
 
-  it('@DR-001 Zustände ohne Farbe unterscheidbar: jedes Kennzeichen steht als Text (läuft, ausgefallen, Ziffern)', async () => {
+  it('@DR-001 Zustände ohne Farbe unterscheidbar: „ausgefallen“ und Ziffern stehen als Text, ein laufendes Spiel steht wie eines ohne Ergebnis da', async () => {
     const { pages } = await handzettelPdf(mitStandA(FALL_A), { options: { includeScores: true } });
     const texte = pages[0].texts.map(t => t.str.trim());
 
-    expect(texte).toEqual(expect.arrayContaining(['läuft', 'ausgefallen']));
+    expect(texte).toContain('ausgefallen');
+    expect(texte).not.toContain('läuft');
   });
 
   it('@DR-001 keine Uhrzeit bricht um: jede Uhrzeit der Zeit-Spalte ist ein ganzes HH:MM, Teamnamen mindestens 12 pt', async () => {

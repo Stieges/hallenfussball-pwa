@@ -12,8 +12,8 @@ import type { TiebreakerMode, TiebreakerRoundKey } from '../../../../types/tourn
 /** Ergebnis bzw. Zustand eines Spiels (@DR-019); fehlt er, ist das Spiel geplant. */
 export type FallZustand =
   | { status: 'finished'; a: number; b: number; overtime?: readonly [number, number]; penalty?: readonly [number, number] }
-  | { status: 'running' }
-  | { status: 'paused' }
+  | { status: 'running'; a?: number; b?: number }
+  | { status: 'paused'; a?: number; b?: number }
   | { status: 'skipped' };
 
 export interface FallSpiel {

@@ -123,7 +123,7 @@ export type SmallLineKind = 'overtime' | 'shootout';
  */
 export type ResultCell =
   | { kind: 'score'; a: string; b: string; marks: string[]; runs: TextRun[] }
-  | { kind: 'lines'; live: boolean; small: SmallLineKind[]; runs: TextRun[] }
+  | { kind: 'lines'; small: SmallLineKind[]; runs: TextRun[] }
   | { kind: 'text'; text: string; runs: TextRun[] };
 
 /** Eine Spielzeile, Gruppenspiel oder Finalrunde. */

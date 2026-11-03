@@ -95,7 +95,7 @@ export const printHourRule = {
    * Der Trenner liegt nicht an der Zeilengrenze, sondern so viel tiefer in der neuen Stunde: Die Schreiblinie der Zeile davor ist nur
    * `aboveRowBottom` (3 mm) über der Grenze und hält so den Abstand von mindestens 4 mm zu jedem anderen Strich (@DR-034).
    */
-  inset: 0.7,
+  inset: 0.75,
 } as const;
 
 /** Übrige Trennstriche (Mockup `handzettel.css`). Akzent: `head`, `round`; schwarz: `tableHead`, `foot`. */
@@ -151,6 +151,9 @@ export const printSheetHead = {
   factLabelPt: 8,
   factBigPt: 14,
   factMidPt: 11,
+  /** Hallenname, der in 14 pt mehr als `hallMaxLines` Zeilen braucht: eine Stufe kleiner, weiter fett und vollständig (@DR-031). */
+  factHallSmallPt: 12,
+  hallMaxLines: 2,
   factLineHeight: 1.2,
   factsPadV: 2.5,
   factsPadH: 3,
@@ -197,11 +200,9 @@ export const printMatchTable = {
   scoreGap: 3,
   /** Text „läuft“, „ausgefallen“, Kennzeichen „korrigiert“: Abstand zum Zeilenboden bzw. zur Mitte. */
   liveInset: 1,
-  /** „läuft“: Grundlinie so weit unter der Schreiblinie (die Linie liegt `aboveRowBottom` über dem Zeilenboden). */
-  liveBelowLine: 2.6,
   markGap: 0.8,
   /** Doppelpunkt zwischen den Schreiblinien: Grundlinie so weit über der Linie. */
-  colonLift: 1.6,
+  colonLift: 0.6,
   /** Beschriftung kleiner Linien (Verlängerung, Strafstoßschießen) über den Linien. */
   smallLabelPt: 7.5,
   smallLabelRise: 3.2,

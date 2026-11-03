@@ -81,11 +81,12 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 03.11. (Paket PDF T7a, Seitenmodell + Zeichenschicht): Seite 1 und Folgeseiten der Gruppenspiele im Handzettel-Bild
  * (Kopf mit Eckdaten, Zebra, Schreiblinien, Adresse in der Fußzeile, keine Teilnehmerliste, immer A4 hoch). Bild der Fixtures a, b, c
  * gesichtet. Die Querformat-Fixtures entfallen (@DR-026, MVP+). Mit „Ablauf“ in den Eckdaten und den Gruppenzeichen (@DR-031, @DR-001).
- * Neu aufgenommen 03.11. (@DR-034, 5 mm Schreibraum): Schreiblinie 3 mm statt 4 mm über dem Zeilenboden, Zeileninhalt 1 mm tiefer, Stundentrenner 0,7 mm tiefer in der Stunde; verglichen mit dem Stand davor: gleiche Textstücke in gleicher Reihenfolge, gleiche Seitenzahl, gleiche Zahl von Füllungen und Linien je Seite, es ändert sich nur die Lage (Stände davor: 7216a62abeb3, 8d29266cc850, EN 92afa4a2e407). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
+ * Neu aufgenommen 03.11. (@DR-034, 5 mm Schreibraum): Schreiblinie 3 mm statt 4 mm über dem Zeilenboden, Zeileninhalt 1 mm tiefer, Stundentrenner 0,7 mm tiefer in der Stunde; verglichen mit dem Stand davor: gleiche Textstücke in gleicher Reihenfolge, gleiche Seitenzahl, gleiche Zahl von Füllungen und Linien je Seite, es ändert sich nur die Lage (Stände davor: 7216a62abeb3, 8d29266cc850, EN 92afa4a2e407).
+ * Neu aufgenommen 03.11. (@DR-034, Zeilen mit Stundentrenner höher, Doppelpunkt näher an der Linie, Trenner 0,75 mm): wieder gleiche Textstücke, Seitenzahl und Zahl der Füllungen und Linien, nur Lage und Höhen ändern sich (Stände davor: e45bc8f4ce78, 6125467d3f7e, EN 5c377ebc616f). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'e45bc8f4ce78',
-  '20 Spiele, hoch': '6125467d3f7e',
+  '12 Spiele, hoch': 'd0a24a8c6d9f',
+  '20 Spiele, hoch': '4b8fec7ed423',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -100,7 +101,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('5c377ebc616f');
+    expect(layoutDigest(pages)).toBe('ea3feed6e2d2');
   });
 });
 

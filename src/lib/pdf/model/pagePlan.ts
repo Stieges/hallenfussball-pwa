@@ -6,7 +6,7 @@
  */
 import { printMatchRow, printMatchTable, printRowPad, printZebra } from '../../../design-tokens/print-sheet';
 import type { TextMeasure } from './measure';
-import { buildHead, buildRow, layoutColumns, naturalHeight, type ColumnFlags, type RowSource, type RowTexts } from './matchRows';
+import { buildHead, buildRow, layoutColumns, minRowHeight, naturalHeight, type ColumnFlags, type RowSource, type RowTexts } from './matchRows';
 import type { ColumnKey, FitStep, MatchRowsBlock, MatchRowModel } from './types';
 
 /** Satzspiegel, wie `pageGeometry` ihn liefert (nur die Maße, die die Planung braucht). */
@@ -59,7 +59,9 @@ export function planRows(input: RowsPlanInput): RowsPlan {
   const firstBody = input.firstTop + head;
   const firstCap = frame.bottom - firstBody;
   const nextCap = frame.bottom - (frame.continuationTop + head);
-  const heights = (pad: number): number[] => sources.map(src => naturalHeight(src, cols, pad, measure));
+  // Stundentrenner: vor der ersten Zeile einer neuen Stunde (auf einer Folgeseite zeichnet die erste Zeile keinen, braucht den Platz aber nicht)
+  const hourStart = (i: number): boolean => i > 0 && sources[i - 1].hour !== sources[i].hour;
+  const heights = (pad: number): number[] => sources.map((src, i) => naturalHeight(src, cols, pad, measure, hourStart(i)));
 
   let fit: FitStep = 'normal';
   let rowHeights = heights(printRowPad.normal);
@@ -76,7 +78,7 @@ export function planRows(input: RowsPlanInput): RowsPlan {
     pages = [sources.map((_, i) => i)];
     if (fit === 'normal') {
       const grow = Math.min((firstCap - sum(rowHeights)) / Math.max(1, sources.length), Math.max(0, printMatchRow.maxHeight - printMatchRow.minHeight));
-      rowHeights = rowHeights.map(h => (h === printMatchRow.minHeight ? h + grow : h));
+      rowHeights = rowHeights.map((h, i) => (h === minRowHeight(hourStart(i)) ? Math.min(printMatchRow.maxHeight, h + grow) : h));
     }
   }
 

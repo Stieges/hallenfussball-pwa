@@ -11,7 +11,7 @@ import type { MatchRowModel, ScheduleModel, WriteLine } from '../types';
 import { modelOf } from './modelSupport';
 
 const TOL = printWriteLine.tolerance;
-const TEXTS: RowTexts = { live: 'läuft', skipped: 'ausgefallen', overtime: 'nach Verlängerung', shootout: 'Strafstoßschießen' };
+const TEXTS: RowTexts = { skipped: 'ausgefallen', overtime: 'nach Verlängerung', shootout: 'Strafstoßschießen' };
 
 function source(partial: Partial<RowSource> = {}): RowSource {
   return { matchId: 'm1', number: 12, time: '10:00', hour: 10, home: 'FC Nord', away: 'SV Süd', state: { kind: 'empty' }, referee: '', small: [], ...partial };
@@ -53,11 +53,11 @@ describe('@DR-004 Schreiblinien statt Kästen', () => {
 });
 
 describe('@DR-019 Ergebniszelle je Zustand', () => {
-  it('@DR-019 laufendes Spiel: „läuft“ und je eine leere Schreiblinie für Heim und Gast', () => {
+  it('@DR-019 laufendes Spiel: je eine leere Schreiblinie für Heim und Gast, kein „läuft“', () => {
     const row = rowOf(source({ state: { kind: 'live' } }));
 
-    expect(row.cell).toMatchObject({ kind: 'lines', live: true });
-    expect(textsOf(row)).toContain('läuft');
+    expect(row.cell.kind).toBe('lines');
+    expect(textsOf(row)).toEqual([':']);
     expect(row.lines).toHaveLength(2);
   });
 
@@ -159,7 +159,7 @@ describe('@DR-034 Abstand der Schreiblinien (auf jeder Seite)', () => {
     expect(rows.map(r => r.zebra).slice(0, 4)).toEqual([false, true, false, true]);
   });
 
-  it('Gegenbeispiel @DR-034 mit Stand „läuft“ und „ausgefallen“ bleibt der Abstand gewahrt', () => {
+  it('Gegenbeispiel @DR-034 mit laufenden und ausgefallenen Spielen bleibt der Abstand gewahrt', () => {
     const { model, geo } = modelOf(mitStandA(), { options: { includeScores: true } });
     const strokes = otherStrokes(model, geo.footRuleY, 0);
     const rows = model.pages[0].blocks.flatMap(b => (b.kind === 'matchRows' ? b.rows : []));

@@ -143,25 +143,20 @@ export function findLocationByName(
 }
 
 /**
- * Gibt Adresszeile im Format "Straße, Stadt" zurück (für PDF/Vorschau)
- * Format: "Mozartstraße 9, Waging am See"
+ * Gibt die Adresszeile „Straße, PLZ Ort“ zurück (PDF und Vorschau), z. B. „Mozartstraße 9, 83329 Waging am See“.
+ * Die PLZ steht nur zusammen mit dem Ort, nie allein; fehlt eine Angabe, fällt sie samt Komma weg.
  */
 export function getLocationAddressLine(tournament: { location?: LocationDetails }): string {
   const { location } = tournament;
 
   if (!location) {return '';}
 
-  const parts: string[] = [];
+  const street = location.street?.trim() ?? '';
+  const city = location.city?.trim() ?? '';
+  const postalCode = location.postalCode?.trim() ?? '';
+  const place = city === '' ? '' : [postalCode, city].filter(part => part !== '').join(' ');
 
-  if (location.street) {
-    parts.push(location.street);
-  }
-
-  if (location.city) {
-    parts.push(location.city);
-  }
-
-  return parts.join(', ');
+  return [street, place].filter(part => part !== '').join(', ');
 }
 
 /**

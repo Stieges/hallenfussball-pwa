@@ -27,7 +27,7 @@ export interface ColumnFlags {
 }
 
 /** Beschriftungen, die in der Zeile vorkommen (alle übersetzt). */
-export interface RowTexts { live: string; skipped: string; overtime: string; shootout: string }
+export interface RowTexts { skipped: string; overtime: string; shootout: string }
 
 /** Eine Spielzeile, wie das Modell sie bekommt: fertig angezeigte Namen, Zustand, Schiedsrichter. */
 export interface RowSource {
@@ -85,15 +85,24 @@ export function refereeLinesIn(label: string, col: ColumnModel, measure: TextMea
   return label === '' ? [] : wrapName(label, col.w - printMatchTable.refInset, printMatchTable.refPt, measure);
 }
 
-/** Höhe einer Zeile ohne Dehnung bei Polster `pad`. */
-export function naturalHeight(src: RowSource, cols: ColumnModel[], pad: number, measure: TextMeasure): number {
+/**
+ * Kleinste Zeilenhöhe: `minHeight`; eine Zeile mit Stundentrenner braucht zusätzlich Platz für den Trenner, damit über der Linie bis
+ * zur Unterkante des Trenners noch `minWriteSpace` frei bleiben (@DR-034).
+ */
+export function minRowHeight(hourRule: boolean): number {
+  const withRule = printWriteLine.aboveRowBottom + printWriteLine.minWriteSpace + printHourRule.inset + printHourRule.stroke;
+  return hourRule ? Math.max(printMatchRow.minHeight, withRule) : printMatchRow.minHeight;
+}
+
+/** Höhe einer Zeile ohne Dehnung bei Polster `pad`; `hourRule`: über der Zeile liegt ein Stundentrenner. */
+export function naturalHeight(src: RowSource, cols: ColumnModel[], pad: number, measure: TextMeasure, hourRule = false): number {
   const home = column(cols, 'home');
   const away = column(cols, 'away');
   const referee = column(cols, 'referee');
   const names = Math.max(home ? nameLinesIn(src.home, home, measure).length : 1, away ? nameLinesIn(src.away, away, measure).length : 1, 1);
   const refLines = referee ? refereeLinesIn(src.referee, referee, measure).length : 0;
   const text = Math.max(names * advanceMm(printType.body, printMatchRow.lineHeight), refLines * advanceMm(printMatchTable.refPt, printMatchRow.lineHeight));
-  return Math.max(printMatchRow.minHeight, text + 2 * pad);
+  return Math.max(minRowHeight(hourRule), text + 2 * pad);
 }
 
 /** Spaltenkopf: Beschriftungen fett, Linie darunter. `top` ist die Oberkante. */
@@ -155,9 +164,9 @@ function cellOf(src: RowSource, cols: ColumnModel[], top: number, height: number
     const runs = [run(texts.skipped, cx, centeredBaseline(top + height / 2 + printMatchRow.contentDrop, printType.cancel), printType.cancel, 'normal', 'center')];
     return { cell: { kind: 'text', text: texts.skipped, runs }, lines: [] };
   }
-  const live = state.kind === 'live';
-  const runs = [colonRun, ...(live ? [run(texts.live, cx, lineY + printMatchTable.liveBelowLine, printType.mark, 'bold', 'center')] : [])];
-  return { cell: { kind: 'lines', live, small: src.small, runs }, lines };
+  // Ein laufendes Spiel (auch in der Halbzeit) steht wie ein Spiel ohne Ergebnis da: leere Schreiblinien, kein Text, kein Zwischenstand (@DR-019)
+  const runs = [colonRun];
+  return { cell: { kind: 'lines', small: src.small, runs }, lines };
 }
 
 /** Kleine Linien der Regel der Runde in der Spalte `shootout` (@DR-019), auf derselben Grundlinie wie die Ergebnislinien. */

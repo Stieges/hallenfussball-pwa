@@ -45,6 +45,10 @@ function zustandFelder(zustand: FallZustand | undefined): Partial<Match> {
   if (!zustand) {
     return { matchStatus: 'scheduled' };
   }
+  if (zustand.status === 'running' || zustand.status === 'paused') {
+    // Zwischenstand im Modell: erscheint im Ausdruck nie (@DR-019)
+    return { matchStatus: zustand.status, ...(zustand.a === undefined ? {} : { scoreA: zustand.a, scoreB: zustand.b ?? 0 }) };
+  }
   if (zustand.status !== 'finished') {
     return { matchStatus: zustand.status };
   }
