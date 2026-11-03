@@ -26,8 +26,11 @@ describe.each(['de', 'en'] as const)('@DR-001 Kopfwörter der Tabellen brechen n
     }
     // Gruppenphase und jede Finalrunden-Tabelle tragen „Zeit“: auf jeder Tabelle steht das Wort vollständig
     const tables = strs.filter(s => s === MATCH_HEAD[locale][1]).length;
+    // Die Gruppenspiele haben „SR“ nur mit Einträgen (@DR-025): im Hallencup ohne Schiedsrichter fehlt der Kopf dort; die Finalrunde
+    // trägt ihn bis T7b (Finalrunde als Modell) in jeder Tabelle
+    const referee = MATCH_HEAD[locale][7];
     for (const word of MATCH_HEAD[locale].filter(w => w !== MATCH_HEAD[locale][2] && w !== MATCH_HEAD[locale][3])) {
-      expect(strs.filter(s => s === word).length, `„${word}“ je Tabelle`).toBe(tables);
+      expect(strs.filter(s => s === word).length, `„${word}“ je Tabelle`).toBe(word === referee ? tables - 1 : tables);
     }
   });
 

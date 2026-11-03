@@ -1,7 +1,7 @@
 /**
  * Anzeige des Schiedsrichters in der Spalte „SR“ (B-28 C1, @DR-025). Rein. Ohne Eintrag am Spiel bleibt die Anzeige
- * leer; die Spalte zeichnet dann ein Schreibfeld. Mit Eintrag: die Nummer, bei „Teams pfeifen“ der Teamname, bei
- * eingetragenen Namen der Name (`getRefereeDisplayName`).
+ * leer (gibt es nirgends einen Eintrag, hat der Spielplan keine Spalte). Mit Eintrag: die Nummer, bei „Teams pfeifen“ der
+ * Teamname, nie der Name einer Person (C-SR-PERSONENNAME-IM-PDF; Personennamen im Ausdruck sind MVP+, @DR-042).
  */
 import { getRefereeDisplayName, type GeneratedSchedule, type ScheduledMatch } from '../../core/generators';
 
@@ -16,6 +16,10 @@ export function refereeLabelFor(schedule: Pick<GeneratedSchedule, 'refereeConfig
     }
     // Nummer ohne zugehöriges Team (veraltete Zuteilung): die Nummer zeigen statt abzubrechen
     const unknownTeam = schedule.refereeConfig?.mode === 'teams' && (number < 1 || number > schedule.teams.length);
-    return unknownTeam ? String(number) : getRefereeDisplayName(number, schedule.refereeConfig, schedule.teams);
+    // Veranstalter-Modus: nur die Nummer, auch wenn ein Name eingetragen ist (Personendaten, @DR-025 Beispiel 3)
+    if (unknownTeam || schedule.refereeConfig?.mode !== 'teams') {
+      return String(number);
+    }
+    return getRefereeDisplayName(number, { ...schedule.refereeConfig, refereeNames: undefined }, schedule.teams);
   };
 }

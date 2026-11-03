@@ -58,19 +58,16 @@ function section(tokens: string[], startToken: string, endToken?: string): strin
 }
 
 describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
-  it.each(SPECIAL)('„%s“ steht je Ort unverändert im PDF: Teilnehmer, Spiele (auch umbrochen) und Tabelle', async name => {
+  it.each(SPECIAL)('„%s“ steht je Ort unverändert im PDF: Spiele (auch umbrochen) und Tabelle (@DR-002: keine Teilnehmerliste)', async name => {
     const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
     const tokens = tokensOf((await extractPdfText(bytes)).pages);
     const key = squash(name);
-    // Teilnehmer: Zeile je Gruppe mit „n. Name“ (B-28a3-3b, kompakt); der Name steht in einem Stück.
-    const participants = section(tokens, '1Teilnehmer', '2Gruppenphase');
-    expect(participants.some(t => t.includes(key))).toBe(true);
-    // Spiele: Der Name steht in der Gruppenphase, vor der ersten Tabelle, als Stück oder – wenn die Zelle an einem Leerzeichen
-    // umbricht (gleich breite Ziffern, T1) – als zwei aufeinanderfolgende Stücke. Jedes Zeichen kommt unverändert an (@BM-048).
-    const matches = section(tokens, '2Gruppenphase', '3Tabelle–GruppeA');
+    // Spiele: Der Name steht in den Gruppenspielen, vor der ersten Tabelle, als Stück oder – wenn die Zelle an einem Leerzeichen
+    // umbricht – als zwei aufeinanderfolgende Stücke. Jedes Zeichen kommt unverändert an (@BM-048).
+    const matches = section(tokens, tokens[0] ?? '', '1Tabelle–GruppeA');
     expect(matches.some((t, i) => t === key || t + (matches[i + 1] ?? '') === key)).toBe(true);
     // Tabelle Gruppe A: Name als eigenes Stück zwischen Titel und Gruppe B.
-    const table = section(tokens, '3Tabelle–GruppeA', 'Tabelle–GruppeB');
+    const table = section(tokens, '1Tabelle–GruppeA', 'Tabelle–GruppeB');
     expect(table).toContain(key);
   });
 
@@ -81,15 +78,13 @@ describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
 });
 
 describe('@DR-014 Kyrillisch und Griechisch aus dem PDF gelesen', () => {
-  it.each(['Динамо Север', 'Ολυμπιακός'])('„%s“ steht je Ort einzeln: Teilnehmer, Spiele und Tabelle', async name => {
+  it.each(['Динамо Север', 'Ολυμπιακός'])('„%s“ steht je Ort einzeln: Spiele und Tabelle', async name => {
     const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
     const tokens = tokensOf((await extractPdfText(bytes)).pages);
     const key = squash(name);
-    const participants = section(tokens, '1Teilnehmer', '2Gruppenphase');
-    expect(participants.some(t => t.includes(key))).toBe(true);
-    const matches = section(tokens, '2Gruppenphase', '3Tabelle–GruppeA');
+    const matches = section(tokens, tokens[0] ?? '', '1Tabelle–GruppeA');
     expect(matches).toContain(key);
-    const table = section(tokens, '3Tabelle–GruppeA', 'Tabelle–GruppeB');
+    const table = section(tokens, '1Tabelle–GruppeA', 'Tabelle–GruppeB');
     expect(table).toContain(key);
   });
 
@@ -117,10 +112,10 @@ describe('Sprache: EN-Plan ohne deutsche Wörter', () => {
     // und werden erst mit B-35 (`slotLabel`) übersetzt. Nur dieses Muster wird herausgenommen.
     const text = pdf.pages.flat().join(' ').replace(/Gruppe [A-Z] - \d\. Platz/g, '');
     // Negativliste: deutsche Wörter aus Titeln, Phasen und Gruppen.
-    for (const word of ['Finalspiele', 'Halbfinale', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Teilnehmer', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum']) {
+    for (const word of ['Finalspiele', 'Halbfinale', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum', 'Heim', 'Ergebnis', 'Gast', 'Beginn', 'SPIELZEIT', 'ABLAUF', 'WANN']) {
       expect(text, word).not.toContain(word);
     }
-    for (const word of ['Group stage', 'Group A', 'Teams', 'Standings', 'Final ranking', 'Final round']) {
+    for (const word of ['Group A', 'Standings', 'Final ranking', 'Final round', 'Home', 'Result', 'Away', 'Start', 'MATCH TIME', 'WHERE']) {
       expect(text, word).toContain(word);
     }
   });
@@ -133,11 +128,11 @@ describe('Sprache des Dokuments', () => {
     expect(pdfLanguage(await pdfBytes(schedule, 'en'))).toBe('en');
   });
 
-  it('EN-Lauf: englischer Abschnittstitel im gerenderten PDF, kein deutscher', async () => {
+  it('@DR-022 EN-Lauf: englische Spaltenköpfe im gerenderten PDF, keine deutschen', async () => {
     const pdf = await extractPdfText(await pdfBytes(generateFullSchedule(hallencupTournament(), 'de'), 'en'));
     const text = pdf.pages.flat().join(' ');
-    expect(text).toContain('Group stage');
-    expect(text).not.toContain('Gruppenphase');
+    expect(text).toContain('Home');
+    expect(text).not.toContain('Heim');
   });
 });
 

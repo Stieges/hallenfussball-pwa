@@ -370,8 +370,8 @@ describe('@DR-022 Spielplan: die Sprache kommt allein aus dem Eingang', () => {
       const { pages } = await kopfPdf({ locale: 'de' });
       const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
 
-      expect(text).toContain('Teilnehmer');
-      expect(text).not.toContain('Participants');
+      expect(text).toContain('Heim');
+      expect(text).not.toContain('Home');
       expect(text, 'Datum nach deutscher Schreibweise').toMatch(/14\.11\.2026/);
     } finally {
       i18next.language = app;

@@ -4,7 +4,7 @@
  * Strafstoßschießen, Finale mit Verlängerung und Strafstoßschießen), @DR-018 (jedes Spiel in der Vorlage).
  */
 import { describe, expect, it } from 'vitest';
-import { printBox, printGap, printType } from '../../../design-tokens/print';
+import { printBox, printGap, printLimits, printType } from '../../../design-tokens/print';
 import type { Match, Tournament } from '../../../types/tournament';
 import { finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { hallencupMitStand, kaestchenIn, SIZE_TOL, textsIn, TOL, zeileVon, type Zeile } from './pdfScoreSupport';
@@ -85,14 +85,6 @@ describe('@DR-004 @DR-019 Spiel ohne Ergebnis: Felder fürs Ergebnis und, je nac
     expect(wort(zeile, 'Strafstoßschießen')).toBeUndefined();
   });
 
-  it('Gegenbeispiel Gruppenspiel: keine kleinen Felder und keine Beschriftung', async () => {
-    const zeile = zeileVon(await seiten(), 10);
-
-    expect(gross(zeile)).toHaveLength(2);
-    expect(klein(zeile)).toEqual([]);
-    expect(wort(zeile, 'Strafstoßschießen')).toBeUndefined();
-  });
-
   it('Vorlage (Fassung zum Ausfüllen): auch das beendete Finale steht mit leeren Feldern, kleine Felder inklusive', async () => {
     const zeile = zeileVon(
       await seiten({ [FINALE]: { matchStatus: 'finished', scoreA: 2, scoreB: 1 } }, { edition: 'blank', includeScores: false }),
@@ -105,17 +97,13 @@ describe('@DR-004 @DR-019 Spiel ohne Ergebnis: Felder fürs Ergebnis und, je nac
 });
 
 describe('@DR-019 laufend, ausgefallen, beendet', () => {
-  it('Spiel 12 läuft: „läuft“ und je ein leeres Feld für Heim und Gast', async () => {
-    const zeile = zeileVon(await seiten({ 12: { matchStatus: 'running', scoreA: 1, scoreB: 0 } }), 12);
+  // @DR-019: ein laufendes Spiel (auch in der Halbzeit) steht wie ein Spiel ohne Ergebnis da, auch das Finale: Felder der Runde,
+  // kein „läuft“, kein Zwischenstand (1:1 ist gesetzt und darf nicht erscheinen)
+  it.each(['running', 'paused'] as const)('laufendes Finale (%s): Felder fürs Ergebnis und die kleinen Felder seiner Runde, kein „läuft“, kein Zwischenstand', async status => {
+    const zeile = zeileVon(await seiten({ [FINALE]: { matchStatus: status, scoreA: 1, scoreB: 1 } }), FINALE);
 
-    expect(gross(zeile)).toHaveLength(2);
-    expect(wort(zeile, 'läuft')).toBeDefined();
-  });
-
-  it('laufendes Finale: „läuft“, Felder fürs Ergebnis und die kleinen Felder seiner Runde', async () => {
-    const zeile = zeileVon(await seiten({ [FINALE]: { matchStatus: 'running', scoreA: 1, scoreB: 1 } }), FINALE);
-
-    expect(wort(zeile, 'läuft')).toBeDefined();
+    expect(wort(zeile, 'läuft')).toBeUndefined();
+    expect(textsIn(zeile).some(t => /^\d$/.test(t.str.trim()) && t.size >= printLimits.resultPt - 0.05)).toBe(false);
     expect(gross(zeile)).toHaveLength(2);
     expect(klein(zeile)).toHaveLength(4);
   });
@@ -190,11 +178,4 @@ describe('C1-F S2 Finalzeilen: Polster wie v7.2 (1,8 mm)', () => {
     expect(unten, 'Abstand unten').toBeGreaterThanOrEqual(printGap.finalPadV - TOL);
   });
 
-  it('Gegenbeispiel: Gruppenzeilen behalten das schmale Polster (printGap.bodyPadV)', async () => {
-    const zeile = zeileVon(await seiten(), 10);
-    const felder = gross(zeile);
-    const oben = Math.min(...felder.map(f => f.y)) - zeile.top;
-
-    expect(oben).toBeLessThan(printGap.finalPadV);
-  });
 });

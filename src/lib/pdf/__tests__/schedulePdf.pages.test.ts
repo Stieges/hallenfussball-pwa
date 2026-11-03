@@ -25,13 +25,13 @@ function spielnummern(page: LayoutPage): number[] {
 }
 
 describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihenfolge', () => {
-  it('Seite 1 Teilnehmer und Gruppenspiele, Seite 2 Tabellen, Seite 3 Finalrunde und Platzierung (zweispaltig, @DR-009)', async () => {
+  it('Seite 1 Kopf und Gruppenspiele (keine Teilnehmerliste), Seite 2 Tabellen, Seite 3 Finalrunde und Platzierung (zweispaltig, @DR-009)', async () => {
     expect(groupMatches(hallencupSchedule())).toHaveLength(12);
     const { pages } = await layoutOf();
 
     expect(pages).toHaveLength(3);
-    expect(pageText(pages[0])).toContain('Teilnehmer');
-    expect(pageText(pages[0])).toContain('Gruppenphase');
+    expect(pageText(pages[0])).toContain('Beginn');
+    expect(pageText(pages[0])).not.toContain('Teilnehmer');
     expect(pageText(pages[0])).not.toContain('Tabelle – Gruppe A');
     expect(pageText(pages[1])).toContain('Tabelle – Gruppe A');
     expect(pageText(pages[1])).not.toContain('Platzierung');
@@ -112,16 +112,13 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
     expect(aufSeite1.length + folge.length).toBe(30);
   });
 
-  it('Gegenbeispiel: quer mit 5er-Gruppen bekommt eine Folgeseite mit Kurzkopf, Tabellen beginnen trotzdem neu', async () => {
+  it('@DR-002 Querformat angefordert: trotzdem A4 hoch (210 × 297), Tabellen beginnen neu', async () => {
     const { pages, width, height } = await layoutOf({ orientation: 'landscape' }, zwanzigSchedule());
 
-    expect(width).toBeCloseTo(297, 1);
-    expect(height).toBeCloseTo(210, 1);
-    const folge = pages[1];
-    expect(folge.texts.some(t => t.str === 'Hallencup Nord' && Math.abs(t.size - printType.titleShort) <= TOL)).toBe(true);
-    expect(folge.texts.some(t => t.str === '20')).toBe(true);
+    expect(width).toBeCloseTo(210, 1);
+    expect(height).toBeCloseTo(297, 1);
     const tabellen = pages.findIndex(p => pageText(p).includes('Tabelle – Gruppe A'));
-    expect(tabellen).toBeGreaterThan(1);
+    expect(tabellen).toBeGreaterThan(0);
     expect(pages[tabellen].texts.some(t => t.str === '20')).toBe(false);
   });
 });

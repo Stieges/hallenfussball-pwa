@@ -11,7 +11,7 @@ import type { Team } from '../../../types/tournament';
 import { pageGeometry } from '../layout';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import { HALLENCUP_ID, HALLENCUP_STANDINGS, finalsMatches, hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { readLayout, type LayoutPage } from './pdfjsLayout';
+import { readLayout, readMetadata, type LayoutPage } from './pdfjsLayout';
 import { mitStand, SIZE_TOL, TOL, textsIn, waagerecht, senkrecht, zeileVon } from './pdfScoreSupport';
 import { translatorFor } from './pdfText';
 import { squash } from './pdfjsText';
@@ -35,14 +35,15 @@ function halbfinaleBesetzt(): { schedule: ReturnType<typeof hallencupSchedule>; 
   return { schedule: stand.schedule, nummer: hf.matchNumber };
 }
 
-async function seiten(edition: 'plan' | 'blank', options: Partial<PDFExportOptions> = {}, tournament = hallencupTournament()): Promise<{ pages: LayoutPage[]; nummer: number }> {
+async function seiten(edition: 'plan' | 'blank', options: Partial<PDFExportOptions> = {}, tournament = hallencupTournament()): Promise<{ pages: LayoutPage[]; nummer: number; bytes: Uint8Array }> {
   const { schedule, nummer } = halbfinaleBesetzt();
   const { doc } = await buildSchedulePdf({
     schedule,
     standings: HALLENCUP_STANDINGS,
     options: { locale: 'de', translate: translatorFor('de'), tournament, edition, now: TOM, includeScores: true, ...options },
   });
-  return { pages: await readLayout(new Uint8Array(doc.output('arraybuffer'))), nummer };
+  const bytes = new Uint8Array(doc.output('arraybuffer'));
+  return { pages: await readLayout(bytes), nummer, bytes };
 }
 
 const ziffern = (texte: Array<{ str: string; size: number }>): string[] =>
@@ -54,10 +55,12 @@ const tabellenSeite = (pages: LayoutPage[]): LayoutPage => {
 };
 
 describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfinale 1 besetzt', () => {
-  it('Kicker „Spielplan“, wie in der Fassung mit Ergebnissen (Daniel 16.10.)', async () => {
-    const { pages } = await seiten('blank');
+  it('@DR-005 oben im PDF steht „Spielplan“ am Anfang der Zeile unter dem Titel, wie in der Fassung mit Ergebnissen, ohne Zusatz', async () => {
+    const { pages, bytes } = await seiten('blank');
+    const meta = await readMetadata(bytes);
 
-    expect(pages[0].texts.some(t => t.str.trim() === 'Spielplan')).toBe(true);
+    expect(meta.title).toBe('Hallencup Nord – Spielplan');
+    expect(pages[0].texts.some(t => t.str.startsWith('Spielplan · '))).toBe(true);
     expect(pages[0].texts.some(t => /zum ausfüllen|ohne ergebnisse/i.test(t.str))).toBe(false);
   });
 

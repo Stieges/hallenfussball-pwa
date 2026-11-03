@@ -50,12 +50,10 @@ export interface PdfFixture {
   schedule: () => GeneratedSchedule;
 }
 
-/** Die vier Pflicht-Fixtures: 12 und 20 Spiele, jeweils hoch und quer. */
+/** Die Pflicht-Fixtures: 12 und 20 Spiele, hoch (Querformat ist MVP+, @DR-026; ein Test liegt in `schedulePdf.pages.test.ts`). */
 export const FIXTURES: PdfFixture[] = [
   { name: '12 Spiele, hoch', options: {}, schedule: hallencupSchedule },
   { name: '20 Spiele, hoch', options: {}, schedule: zwanzigSchedule },
-  { name: '12 Spiele, quer', options: { orientation: 'landscape' }, schedule: hallencupSchedule },
-  { name: '20 Spiele, quer', options: { orientation: 'landscape' }, schedule: zwanzigSchedule },
 ];
 
 /** Titeltext ohne die laufende Abschnittsnummer („4 Halbfinale“ → „Halbfinale“, B-28 C3). */

@@ -142,10 +142,9 @@ describe('Sprache des Dokuments', () => {
   it('EN-Lauf: englische Abschnittstitel, kein deutscher Titel', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { locale: 'en' });
     const text = flatText(pdf);
-    expect(text).toContain('2 Group stage');
-    expect(text).toContain('1 Teams');
-    expect(text).not.toContain('2 Gruppenphase');
-    expect(text).not.toContain('1 Teilnehmer');
+    expect(text).toContain('1 Standings – Group A');
+    expect(text).not.toContain('Gruppenphase');
+    expect(text).not.toContain('Tabelle');
     expect(text).not.toContain('Kein Datum');
   });
 });

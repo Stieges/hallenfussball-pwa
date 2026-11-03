@@ -9,6 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { continuationTop, pageGeometry, tableMargins } from '../layout';
+import { printAccentDefault } from '../../../design-tokens/print-sheet';
 import { matchTableOptions } from '../render/matchTables';
 import { printColors, printFont, printLimits, printType, printUnit } from '../../../design-tokens/print';
 import { FIXTURES, layoutOf, zwanzigSchedule } from './pdfFixtureLayout';
@@ -32,6 +33,9 @@ function schwarzProzent(hex: string): number {
   const grau = Number.parseInt(hex.slice(1, 3), 16);
   return ((printColors.paper[0] - grau) / printColors.paper[0]) * 100;
 }
+
+/** Farbe auf ±2 je Kanal gleich (pdfjs liest die Farbe nach der Umrechnung in 0–1). */
+const nahe = (a: string, b: string): boolean => [1, 3, 5].every(i => Math.abs(Number.parseInt(a.slice(i, i + 2), 16) - Number.parseInt(b.slice(i, i + 2), 16)) <= 2);
 
 const istBlackOderWhite = (hex: string): boolean => hex === SCHWARZ || hex === WEISS;
 
@@ -92,7 +96,7 @@ describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
 
   it('M1 Tabellen: kein Tabelleninhalt unterhalb der Satzspiegel-Unterkante, darunter nur die Fußzeile mit ihrer Linie', async () => {
     const { pages } = await layoutOf(options, schedule());
-    const { bottom, footRuleY } = pageGeometry('a4', options.orientation ?? 'portrait');
+    const { bottom, footRuleY } = pageGeometry('a4', options.orientation ?? 'portrait', 1, 2);
 
     pages.forEach((page, i) => {
       const fuss = page.texts.filter(t => t.y > footRuleY);
@@ -100,17 +104,18 @@ describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
       page.texts.filter(t => !fuss.includes(t)).forEach(t =>
         expect(t.y, `Seite ${i + 1} „${t.str}“`).toBeLessThanOrEqual(bottom + TOL));
       page.rects.forEach(r => expect(r.y + r.h, `Seite ${i + 1} Füllung`).toBeLessThanOrEqual(bottom + TOL));
-      page.lines.filter(l => Math.abs(l.y1 - footRuleY) > TOL).forEach(l =>
+      // unter der Fußlinie steht nur die Fußzeile samt Unterstreichung der Adresse (@DR-038)
+      page.lines.filter(l => Math.abs(l.y1 - footRuleY) > TOL && l.y1 < footRuleY).forEach(l =>
         expect(Math.max(l.y1, l.y2), `Seite ${i + 1} Linie`).toBeLessThanOrEqual(bottom + TOL));
     });
   });
 
-  it('Farben: im Inhalt nur Schwarz, Weiß und das Raster, kein Grau im Text', async () => {
+  it('Farben: im Inhalt nur Schwarz, Weiß, das Raster und der Akzent auf Linien (@DR-001), kein Grau im Text', async () => {
     const { pages } = await layoutOf(options, schedule());
 
     pages.forEach((page, i) => {
       const raster = new Set(page.rects.map(r => r.fill).filter((f): f is string => Boolean(f) && !istBlackOderWhite(f ?? '')));
-      page.colors.forEach(c => expect(istBlackOderWhite(c) || raster.has(c), `Seite ${i + 1} Farbe ${c}`).toBe(true));
+      page.colors.forEach(c => expect(istBlackOderWhite(c) || raster.has(c) || nahe(c, printAccentDefault.line), `Seite ${i + 1} Farbe ${c}`).toBe(true));
     });
   });
 

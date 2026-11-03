@@ -4,89 +4,33 @@
  * @BM-032/@ZM-102 (EN „to be decided“), @W1-031 (Ansprechpartner), @DR-015 (K.-o.-Zeile).
  */
 import { describe, expect, it } from 'vitest';
-import { schedulePdfFilename } from '../filename';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { layoutOf } from './pdfFixtureLayout';
+import { readMetadata, readLayout } from './pdfjsLayout';
+import { buildSchedulePdf } from '../schedulePdf';
 import type { LayoutPage } from './pdfjsLayout';
 import { translatorFor } from './pdfText';
 
 const NOW = new Date(2026, 10, 14, 15, 7);
 const strs = (page: LayoutPage): string[] => page.texts.map(t => t.str.trim()).filter(s => s !== '');
 const allStrs = (pages: LayoutPage[]): string[] => pages.flatMap(strs);
+async function handzettelLike(edition: 'plan' | 'blank', locale: 'de' | 'en'): Promise<{ pages: LayoutPage[]; bytes: Uint8Array }> {
+  const tournament = hallencupTournament();
+  const { doc } = await buildSchedulePdf({ schedule: hallencupSchedule(tournament), standings: undefined, options: { tournament, locale, translate: translatorFor(locale), edition, now: NOW } });
+  const bytes = new Uint8Array(doc.output('arraybuffer'));
+  return { pages: await readLayout(bytes), bytes };
+}
+/** Text von Seite 1 ohne Leerraum: Regelzeilen fließen und brechen zwischen Wörtern um. */
+const flat = (page: LayoutPage): string => page.texts.map(t => t.str).join('').replace(/\s/g, '');
 const en = { locale: 'en' as const, translate: translatorFor('en') };
 
-describe('G57 @BM-052 Kopfzeile „Spielplan“ steht auf dem normalen Spielplan', () => {
-  it('Spielplan: erste Zeile der Seite 1 ist „Spielplan“, über dem Turniernamen', async () => {
-    const { pages } = await layoutOf({ now: NOW });
-    const kicker = pages[0].texts.find(t => t.str.trim() === 'Spielplan');
-    const titel = pages[0].texts.find(t => t.str.trim() === 'Hallencup Nord');
+describe('G57 @BM-052 @DR-005 „Spielplan“ ohne Zusatz in beiden Fassungen: Titel der Datei (Kicker entfällt im Handzettel)', () => {
+  it.each([['plan', 'de', 'Spielplan'], ['blank', 'de', 'Spielplan'], ['blank', 'en', 'Schedule']] as const)('Fassung %s (%s): Titel „Hallencup Nord – %s“, kein Zusatz im Text', async (edition, locale, wort) => {
+    const { pages, bytes } = await handzettelLike(edition, locale);
 
-    expect(kicker, 'Kopfzeile „Spielplan“').toBeDefined();
-    expect(kicker && titel ? kicker.y : 0).toBeLessThan(titel?.y ?? 0);
-  });
-
-  it('@BM-052 @DR-005 der Spielplan ohne Ergebnisse trägt oben ebenfalls „Spielplan“, ohne Zusatz und ohne Aufforderung (Daniel 16.10.)', async () => {
-    const { pages } = await layoutOf({ now: NOW, edition: 'blank' });
-
-    expect(strs(pages[0])).toContain('Spielplan');
-    expect(strs(pages[0]).filter(s => /zum Ausfüllen|ohne Ergebnisse|eintragen/i.test(s))).toEqual([]);
-  });
-
-  it('EN: der Spielplan ohne Ergebnisse trägt oben „Schedule“, ohne Zusatz', async () => {
-    const { pages } = await layoutOf({ now: NOW, edition: 'blank', ...en });
-
-    expect(strs(pages[0])).toContain('Schedule');
-    expect(strs(pages[0]).filter(s => /fill in|without results/i.test(s))).toEqual([]);
-  });
-
-  it('Gegenbeispiel: nur die erste Seite trägt die Kopfzeile', async () => {
-    const { pages } = await layoutOf({ now: NOW });
-
-    pages.slice(1).forEach(page => expect(strs(page)).not.toContain('Spielplan'));
-  });
-
-  it('EN: Kopfzeile „Schedule“', async () => {
-    const { pages } = await layoutOf({ now: NOW, ...en });
-
-    expect(strs(pages[0])).toContain('Schedule');
-  });
-});
-
-describe('G59 Dateiname wie im Record (@BM-027): <Titel>_Spielplan_<Datum>_<HHmm>.pdf', () => {
-  it('Hallencup Nord, 14.11.2026 15:07', () => {
-    expect(schedulePdfFilename('Hallencup Nord', NOW)).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
-  });
-
-  it('Umlaute bleiben, Leerraum und unzulässige Zeichen werden „_“, mehrere hintereinander ein „_“', () => {
-    expect(schedulePdfFilename('Süd/Ost: Cup  ', new Date(2026, 0, 5, 8, 3))).toBe('Süd_Ost_Cup_Spielplan_2026-01-05_0803.pdf');
-  });
-
-  it('Gegenbeispiel: nur unzulässige Zeichen ergeben „Turnier“, kein leerer Name', () => {
-    expect(schedulePdfFilename('?*', NOW)).toBe('Turnier_Spielplan_2026-11-14_1507.pdf');
-  });
-
-  it('@BM-052 @BM-027 Spielplan ohne Ergebnisse: Zusatz „ohne-Ergebnisse“ (Daniel 16.10.)', () => {
-    expect(schedulePdfFilename('Hallencup Nord', NOW, 'blank')).toBe('Hallencup_Nord_Spielplan_ohne-Ergebnisse_2026-11-14_1507.pdf');
-  });
-
-  it('Gegenbeispiel: der Spielplan mit Ergebnissen trägt keinen Zusatz', () => {
-    expect(schedulePdfFilename('Hallencup Nord', NOW, 'plan')).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
-  });
-});
-
-describe('G70 @DR-011 englisches Datum im Kopf wie in der Fußzeile: 14.11.2026', () => {
-  it('EN: „Saturday, 14.11.2026 · Start 13:00 …“, nie 11/14/2026', async () => {
-    const { pages } = await layoutOf({ now: NOW, ...en });
-    const text = allStrs(pages).join(' ');
-
-    expect(text).toContain('Saturday, 14.11.2026');
-    expect(text).not.toContain('11/14/2026');
-  });
-
-  it('DE bleibt „Samstag, 14.11.2026“', async () => {
-    const { pages } = await layoutOf({ now: NOW });
-
-    expect(allStrs(pages).join(' ')).toContain('Samstag, 14.11.2026');
+    expect((await readMetadata(bytes)).title).toBe(`Hallencup Nord – ${wort}`);
+    expect(strs(pages[0]).some(s => s.startsWith(`${wort} · `)), 'Zeile unter dem Titel beginnt mit dem Wort').toBe(true);
+    expect(strs(pages[0]).filter(s => /zum Ausfüllen|ohne Ergebnisse|fill in|without results|eintragen/i.test(s))).toEqual([]);
   });
 });
 
@@ -97,19 +41,19 @@ describe('G71 @DR-020 „Modus: Gruppen + Finalrunde“', () => {
   ] as const)('%s: Zeile %s', async (locale, label, value) => {
     const { pages } = await layoutOf({ now: NOW, locale, translate: translatorFor(locale) });
 
-    expect(strs(pages[0])).toEqual(expect.arrayContaining([label, value]));
-    expect(strs(pages[0])).not.toContain(locale === 'de' ? 'Gruppen + Finale' : 'Groups + Finals');
+    expect(flat(pages[0])).toContain(`${label}:${value}`.replace(/\s/g, ''));
+    expect(flat(pages[0])).not.toContain((locale === 'de' ? 'Gruppen + Finale·' : 'Groups + Finals·').replace(/\s/g, ''));
   });
 });
 
 describe('G72 @DR-006 @DR-020 Regelzeile „Wertung“, „Platzierung“ bleibt der Block der Plätze', () => {
   it('DE: Kopf nennt „Wertung“ mit den Kriterien, nicht „Platzierung“', async () => {
     const { pages } = await layoutOf({ now: NOW });
-    const kopf = strs(pages[0]).slice(0, 20);
+    const kopf = flat(pages[0]);
 
-    expect(kopf).toContain('Wertung');
-    expect(kopf).toContain('Punkte – Tordifferenz – Tore – direkter Vergleich');
-    expect(kopf).not.toContain('Platzierung');
+    expect(kopf).toContain('Wertung:');
+    expect(kopf).toContain('Punkte–Tordifferenz–Tore–direkterVergleich');
+    expect(kopf).not.toContain('Platzierung:');
   });
 
   it('Gegenbeispiel: der Block der Plätze heißt weiter „Platzierung“', async () => {
@@ -121,7 +65,7 @@ describe('G72 @DR-006 @DR-020 Regelzeile „Wertung“, „Platzierung“ bleibt
   it('EN: „Tiebreakers“ in der Regelzeile, „Final ranking“ für den Block', async () => {
     const { pages } = await layoutOf({ now: NOW, ...en });
 
-    expect(strs(pages[0]).slice(0, 20)).toContain('Tiebreakers');
+    expect(flat(pages[0])).toContain('Tiebreakers:');
     expect(allStrs(pages).some(s => /^\d+ Final ranking$/.test(s))).toBe(true);
   });
 });
@@ -131,7 +75,7 @@ describe('G73 englische Wortlaute', () => {
     const { pages } = await layoutOf({ now: NOW, ...en });
     const text = allStrs(pages);
 
-    expect(text).toContain('Match time');
+    expect(text).toContain('MATCH TIME');
     expect(text.join(' ')).not.toContain('Game time');
   });
 

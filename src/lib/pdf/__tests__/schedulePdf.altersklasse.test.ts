@@ -18,14 +18,13 @@ describe('Altersklasse im PDF', () => {
     expect(texte.filter(s => /^[·•|–-]\s/.test(s))).toEqual([]);
   });
 
-  it('Gegenbeispiel @W2B-024: angegeben steht die Zeile „Altersklasse“ mit dem Wert genau so da', async () => {
+  it('Gegenbeispiel @W2B-024: angegeben steht „U11“ genau so da, ohne Umrechnung wie „E-Jugend“', async () => {
     const texte = await kopfTexte('U11');
-    expect(texte).toContain('Altersklasse');
-    expect(texte).toContain('U11');
-    expect(texte).not.toContain('E-Jugend');
+    expect(texte.some(s => s.includes('U11'))).toBe(true);
+    expect(texte.some(s => s.includes('E-Jugend'))).toBe(false);
   });
 
   it.each(['E2-Jugend', 'AH'])('@W2B-023 @W2B-026 „%s“ steht im Kopf', async wert => {
-    expect(await kopfTexte(wert)).toContain(wert);
+    expect((await kopfTexte(wert)).some(s => s.includes(wert))).toBe(true);
   });
 });

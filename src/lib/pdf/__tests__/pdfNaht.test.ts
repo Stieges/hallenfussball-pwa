@@ -78,12 +78,19 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * „Group“ → „Grp“, „Referee“ → „Ref“) und der Umbruch einzelner Herkunftstexte („Zweiter Gruppe A“ → „Zweiter Gruppe“ / „A“; EN „Loser Semi-final“ /
  * „1“ → „Loser“ / „Semi-final 1“). Bild DE (Seite 1 und 3) und EN (Seite 1 und 3) gesichtet. Stände davor: 6720748dc9c2, 1d9fc9ecc557,
  * af351460128a, b0c3148ebdee, EN e14f54a199ec.
+ * Neu aufgenommen 03.11. (Paket PDF T7a, Seitenmodell + Zeichenschicht): Seite 1 und Folgeseiten der Gruppenspiele im Handzettel-Bild
+ * (Kopf mit Eckdaten, Zebra, Schreiblinien, Adresse in der Fußzeile, keine Teilnehmerliste, immer A4 hoch). Bild der Fixtures a, b, c
+ * gesichtet. Die Querformat-Fixtures entfallen (@DR-026, MVP+). Mit „Ablauf“ in den Eckdaten und den Gruppenzeichen (@DR-031, @DR-001).
+ * Neu aufgenommen 03.11. (@DR-034, 5 mm Schreibraum): Schreiblinie 3 mm statt 4 mm über dem Zeilenboden, Zeileninhalt 1 mm tiefer, Stundentrenner 0,7 mm tiefer in der Stunde; verglichen mit dem Stand davor: gleiche Textstücke in gleicher Reihenfolge, gleiche Seitenzahl, gleiche Zahl von Füllungen und Linien je Seite, es ändert sich nur die Lage (Stände davor: 7216a62abeb3, 8d29266cc850, EN 92afa4a2e407).
+ * Neu aufgenommen 03.11. (@DR-034, Zeilen mit Stundentrenner höher, Doppelpunkt näher an der Linie, Trenner 0,75 mm): wieder gleiche Textstücke, Seitenzahl und Zahl der Füllungen und Linien, nur Lage und Höhen ändern sich (Stände davor: e45bc8f4ce78, 6125467d3f7e, EN 5c377ebc616f).
+ * Neu aufgenommen 03.11. (@DR-031, Bezeichnungen „Wann“, „Wo“, „Spielzeit“, „Ablauf“ in Versalien mit Sperrung und Akzentstrich): gleiche Seitenzahl; geändert sind nur diese vier Textstücke (Versalien, EN „WHEN“, „WHERE“, „MATCH TIME“, „MATCHES“) und je ein Strich mehr im Kopf (Stände davor: d0a24a8c6d9f, 4b8fec7ed423, EN ea3feed6e2d2).
+ * Neu aufgenommen 03.11. (@DR-024, Titel und Zeile darunter mittig im freien Platz): gleiche Textstücke und Seitenzahl, nur die x-Lage der Titelzeilen ändert sich (Stände davor: bfd83224a3d3, 1030955f1569, EN 39c333f4c7be).
+ * Neu aufgenommen 03.11. (@DR-024, Kurzkopf der Folgeseiten mittig): wieder gleiche Textstücke und Seitenzahl, nur die x-Lage von Titel und Zeile im Kurzkopf ändert sich (Stände davor: b8b53fc00c3f, cdbe4c898d6e, EN 40ac67e9e46e).
+ * Neu aufgenommen 03.11. (@DR-024, Titel 26 pt mit 2 mm Luft darüber und darunter): gleiche Textstücke, Seitenzahl und Zahl der Füllungen und Linien je Seite (Lauf gegen den Stand davor); es ändern sich nur die Höhenlagen ab dem Titel (Stände davor: e96bd7631edc, 95b69a12d525, EN fa095c9a84f8). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '2341a1c44ae0',
-  '20 Spiele, hoch': '126de4bc7787',
-  '12 Spiele, quer': 'b6ad6663d3d7',
-  '20 Spiele, quer': '255675713334',
+  '12 Spiele, hoch': 'e109befcec2b',
+  '20 Spiele, hoch': '9947181a693b',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -98,7 +105,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('d04aeeb0a9b1');
+    expect(layoutDigest(pages)).toBe('e38b6350af9f');
   });
 });
 

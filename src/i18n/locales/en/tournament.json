@@ -1048,7 +1048,6 @@
     "result": "Result",
     "away": "Away",
     "referee": "Referee",
-    "live": "live",
     "skipped": "not played",
     "corrected": "corrected {{time}}",
     "afterOvertime": "after extra time",
@@ -1130,6 +1129,20 @@
     "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
     "closedAt": "Final result – closed on {{date}} at {{time}}",
     "matches": "Matches",
+    "sheet": {
+      "when": "When",
+      "where": "Where",
+      "duration": "Match time",
+      "flow": "Matches",
+      "begin": "Start {{clock}}",
+      "endApprox": "End approx. {{clock}}",
+      "flowWithFinals_one": "{{total}} matches, {{count}} of them a final",
+      "flowWithFinals_other": "{{total}} matches, {{count}} of them finals",
+      "flowMatches_one": "{{count}} match",
+      "flowMatches_other": "{{count}} matches",
+      "titleSuffix": "Schedule",
+      "footerLink": "Live results and current times:"
+    },
     "qrCaption": {
       "results": "Live results",
       "plan": "Schedule on your phone"

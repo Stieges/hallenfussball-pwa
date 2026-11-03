@@ -39,7 +39,8 @@ describe('App-Sprache ohne explizite Optionen', () => {
     const bytes = await build();
     expect(pdfLanguage(bytes)).toBe('de');
     const text = (await extractPdfText(bytes)).pages.flat().join(' ');
-    expect(text).toContain('Gruppenphase');
+    expect(text).toContain('Heim');
+    expect(text).not.toContain('Home');
   });
 
   it('App auf Englisch: /Lang en und englische Titel', async () => {
@@ -47,8 +48,8 @@ describe('App-Sprache ohne explizite Optionen', () => {
     const bytes = await build();
     expect(pdfLanguage(bytes)).toBe('en');
     const text = (await extractPdfText(bytes)).pages.flat().join(' ');
-    expect(text).toContain('Group stage');
-    expect(text).not.toContain('Gruppenphase');
+    expect(text).toContain('Home');
+    expect(text).not.toContain('Heim');
     await i18next.changeLanguage('de');
   });
 });

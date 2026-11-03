@@ -5,7 +5,7 @@
  * weiß, Linien in `printStroke.box`.
  */
 import type jsPDF from 'jspdf';
-import { printBox, printColors, printStroke } from '../../../design-tokens/print';
+import { printColors, printStroke } from '../../../design-tokens/print';
 import type { TiebreakerMode } from '../../../types/tournament';
 import type { ResultState } from '../matchResult';
 import { refereeFieldRect, scoreCellLayout, scoreContentHeight, type Rect, type ScoreSpec, type SmallRow } from '../scoreLayout';
@@ -38,8 +38,6 @@ export function scoreSpecFor(state: ResultState, mode: TiebreakerMode | undefine
   switch (state.kind) {
     case 'skipped':
       return { kind: 'skipped', label: t.skipped, rows: [] };
-    case 'live':
-      return { kind: 'live', label: t.live, rows: empty };
     case 'final':
       return {
         kind: 'final',
@@ -77,12 +75,6 @@ export function drawScoreCell(doc: jsPDF, cell: Rect, spec: ScoreSpec): void {
     doc.setFontSize(piece.size);
     doc.text(piece.text, piece.x, piece.y, { align: 'center' });
   }
-}
-
-/** Balken links an der Zeile eines laufenden Spiels (ohne Farbe erkennbar). */
-export function drawLiveBar(doc: jsPDF, cell: Rect): void {
-  setInk(doc);
-  doc.rect(cell.x, cell.y, printBox.liveBar, cell.h, 'F');
 }
 
 /** Leeres Schreibfeld in der Spalte „SR“. */

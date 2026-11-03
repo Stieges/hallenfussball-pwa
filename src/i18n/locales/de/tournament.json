@@ -1048,7 +1048,6 @@
     "result": "Ergebnis",
     "away": "Gast",
     "referee": "Schiedsrichter",
-    "live": "läuft",
     "skipped": "ausgefallen",
     "corrected": "korrigiert {{time}}",
     "afterOvertime": "nach Verlängerung",
@@ -1130,6 +1129,20 @@
     "footer": "{{title}} · {{stand}} · Seite {{page}} von {{total}}",
     "closedAt": "Endstand – abgeschlossen am {{date}} um {{time}}",
     "matches": "Spiele",
+    "sheet": {
+      "when": "Wann",
+      "where": "Wo",
+      "duration": "Spielzeit",
+      "flow": "Ablauf",
+      "begin": "Beginn {{clock}}",
+      "endApprox": "Ende ca. {{clock}}",
+      "flowWithFinals_one": "{{total}} Spiele, davon {{count}} Finalspiel",
+      "flowWithFinals_other": "{{total}} Spiele, davon {{count}} Finalspiele",
+      "flowMatches_one": "{{count}} Spiel",
+      "flowMatches_other": "{{count}} Spiele",
+      "titleSuffix": "Spielplan",
+      "footerLink": "Live-Ergebnisse und aktuelle Zeiten:"
+    },
     "qrCaption": {
       "results": "Live-Ergebnisse",
       "plan": "Spielplan aufs Handy"

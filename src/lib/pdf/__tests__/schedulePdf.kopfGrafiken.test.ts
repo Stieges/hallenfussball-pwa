@@ -5,7 +5,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import { printHeader } from '../../../design-tokens/print-header';
-import { printType } from '../../../design-tokens/print';
 import { pageGeometry } from '../layout';
 import { hallencupTournament } from './pdfFixture';
 import { bboxOf, expectedMatrix, headBottom, kopfPdf, overlaps, qrRects, textBox, titleLines, TOL } from './pdfKopfSupport';
@@ -75,42 +74,6 @@ describe('@DR-023 @DR-024 zwei Grafiken links und rechts', () => {
     expect(bboxOf(qrRects(pages[0])).w).toBeGreaterThanOrEqual(MIN_QR_MM);
     expect(qrRects(pages[0]).length).toBeGreaterThan(0);
     expectedMatrix('ABC123');
-  });
-});
-
-describe('@DR-023 fehlt eine Grafik, entsteht keine Lücke', () => {
-  it.each([
-    ['nur links', { logoLeft: fixtureLogo(SIDE_ASPECT) }],
-    ['nur rechts', { logoRight: fixtureLogo(SIDE_ASPECT) }],
-  ])('%s: eine Grafik, der Titel bleibt zentriert', async (_name, extra) => {
-    const { pages } = await kopfPdf(extra);
-    const lines = titleLines(pages[0], printType.title - TOL);
-    const centerPage = geo.left + geo.contentWidth / 2;
-
-    expect(pages[0].images).toHaveLength(1);
-    expect(lines.length).toBeGreaterThan(0);
-    lines.forEach(t => expect(Math.abs(t.x + t.w / 2 - centerPage), `„${t.str}“`).toBeLessThanOrEqual(1));
-  });
-
-  it('keine Grafik: kein Bild, Titel über der vollen Breite (breiter als mit Grafiken möglich)', async () => {
-    const tournament = hallencupTournament({ title: SIXTY });
-    const { pages } = await kopfPdf({}, tournament);
-    const lines = titleLines(pages[0], printType.title - TOL);
-    const widest = Math.max(...lines.map(t => t.w));
-
-    expect(pages[0].images).toHaveLength(0);
-    expect(widest).toBeGreaterThan(geo.contentWidth - 2 * (printHeader.logoMaxWidth + printHeader.logoGap));
-    expect(lines.length).toBeLessThanOrEqual(printHeader.titleMaxLines);
-  });
-
-  it('keine Grafik: erste Angabe unverändert unter dem Titel (kein reservierter Streifen)', async () => {
-    const { pages } = await kopfPdf();
-    const lines = titleLines(pages[0], printType.title - TOL);
-    const veranstalter = pages[0].texts.find(t => t.str.trim() === 'Veranstalter');
-
-    expect(veranstalter).toBeDefined();
-    const erwartet = lines[lines.length - 1].y + 6; // Abstand Titel → erste Angabe laut headBlockGap
-    expect(veranstalter!.y).toBeCloseTo(erwartet, 0);
   });
 });
 

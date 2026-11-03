@@ -8,7 +8,6 @@ import type { Tournament } from '../../../types/tournament';
 import { generateLiveUrl } from '../../../utils/shareUtils';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
-import { ohneNummer } from './pdfFixtureLayout';
 import type { Box, LayoutPage, LayoutText } from './pdfjsLayout';
 import { readLayout } from './pdfjsLayout';
 import { translatorFor } from './pdfText';
@@ -39,9 +38,9 @@ export async function kopfPdf(
 
 export const scheduleOf = (tournament: Tournament): GeneratedSchedule => generateFullSchedule(tournament, 'de');
 
-/** Unterkante des Kopfs auf Seite 1: Grundlinie der Überschrift „Teilnehmer“. */
+/** Unterkante des Kopfs auf Seite 1: Grundlinie des Spaltenkopfs der Gruppenspiele („Nr.“, englisch „No.“). */
 export function headBottom(page: LayoutPage): number {
-  return page.texts.find(t => ohneNummer(t.str) === 'Teilnehmer')?.y ?? Number.POSITIVE_INFINITY;
+  return page.texts.find(t => ['Nr.', 'No.'].includes(t.str.trim()))?.y ?? Number.POSITIVE_INFINITY;
 }
 
 /** Schwarze Füllungen im Kopf von Seite 1: die Module des QR-Codes. */
@@ -89,5 +88,5 @@ export function overlaps(a: Box, b: Box): boolean {
 
 /** Titelzeilen von Seite 1: die Textstücke in Titelgröße (26 pt oder kleiner nur im Titelband, größer als Kopfangaben). */
 export function titleLines(page: LayoutPage, minSize: number): LayoutText[] {
-  return page.texts.filter(t => t.size >= minSize && t.y < headBottom(page) && t.str.trim() !== '' && ohneNummer(t.str) !== 'Teilnehmer');
+  return page.texts.filter(t => t.size >= minSize && t.y < headBottom(page) && t.str.trim() !== '' && !['Nr.', 'No.'].includes(t.str.trim()));
 }

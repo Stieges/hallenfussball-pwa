@@ -9,8 +9,10 @@
  */
 import type { jsPDF } from 'jspdf';
 import { printColors, printMetrics, printStroke, printType } from '../../../design-tokens/print';
-import type { PageGeometry } from '../layout';
+import { printSheetHead } from '../../../design-tokens/print-sheet';
+import { ascentMm, descentMm, type PageGeometry } from '../layout';
 import { fontOf } from '../fonts';
+import { drawLinks, drawUnderline } from './links';
 import { clipToWidth } from './textFit';
 
 /** Inhalt der Fußzeile, fertig übersetzt. */
@@ -22,6 +24,11 @@ export interface FooterContent {
   contact: string | undefined;
   /** Zusammenbau „{Titel} · {Stand} · Seite x von y“ (`standText.footerLine`). */
   line: (title: string, stand: string, page: number, total: number) => string;
+  /**
+   * Adresse der Zuschauer-Seite in einer eigenen ersten Zeile, davor ein Satz (@DR-038): `address` ohne „https://“ ist
+   * fett, unterstrichen und antippbar; fehlt es (nicht online geteilt), gibt es weder Zeile noch Link.
+   */
+  link?: { prefix: string; address: string; url: string };
 }
 
 function setFooterFace(doc: jsPDF): void {
@@ -38,11 +45,27 @@ function mainRows(doc: jsPDF, content: FooterContent, width: number, page: numbe
   return doc.splitTextToSize(content.line(content.title, content.stand, page, total), width) as string[];
 }
 
-/** Alle Zeilen einer Seite: Hauptfußzeile, dann der Kontakt (auf Breite gekürzt). */
+/** Alle Zeilen einer Seite: Adresse (falls geteilt), Hauptfußzeile, dann der Kontakt (auf Breite gekürzt). */
 export function footerRows(doc: jsPDF, content: FooterContent, width: number, page: number, total: number): string[] {
   setFooterFace(doc);
   const contact = content.contact === undefined ? [] : [clipToWidth(doc, content.contact, width)];
-  return [...mainRows(doc, content, width, page, total), ...contact];
+  const link = content.link === undefined ? [] : [`${content.link.prefix} ${content.link.address}`];
+  return [...link, ...mainRows(doc, content, width, page, total), ...contact];
+}
+
+/** Adresszeile: Satz normal, Adresse fett mit einer Unterstreichung und einer Link-Fläche über genau der Adresse. */
+function drawLinkRow(doc: jsPDF, link: NonNullable<FooterContent['link']>, left: number, y: number): void {
+  const family = fontOf(doc);
+  doc.setFont(family, 'normal');
+  doc.setFontSize(printType.foot);
+  doc.text(link.prefix, left, y);
+  const x = left + doc.getTextWidth(`${link.prefix} `);
+  doc.setFont(family, 'bold');
+  doc.text(link.address, x, y);
+  const width = doc.getTextWidth(link.address);
+  drawUnderline(doc, { x1: x, x2: x + width, y: y + printSheetHead.underlineDrop });
+  drawLinks(doc, [{ url: link.url, x, y: y - ascentMm(printType.foot), w: width, h: ascentMm(printType.foot) + descentMm(printType.foot) }]);
+  doc.setFont(family, 'normal');
 }
 
 /** Zeilen, die der Satzspiegel freihalten muss: Maximum über die denkbar breiteste Seitenzahl. */
@@ -59,8 +82,13 @@ export function drawFooters(doc: jsPDF, geo: PageGeometry, content: FooterConten
     doc.setLineWidth(printStroke.foot);
     doc.line(geo.left, geo.footRuleY, geo.left + geo.contentWidth, geo.footRuleY);
     const rows = footerRows(doc, content, geo.contentWidth, page, total);
-    rows.forEach((row, index) => {
-      doc.text(row, geo.left, geo.footerY + index * printMetrics.footAdvance);
+    const first = content.link === undefined ? 0 : 1;
+    if (content.link) {
+      drawLinkRow(doc, content.link, geo.left, geo.footerY);
+    }
+    setFooterFace(doc);
+    rows.slice(first).forEach((row, index) => {
+      doc.text(row, geo.left, geo.footerY + (index + first) * printMetrics.footAdvance);
     });
   }
 }

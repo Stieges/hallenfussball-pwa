@@ -12,7 +12,8 @@ import { getLocationName } from '../../utils/locationHelpers';
 import type { LogoImage } from '../images/logoBytes';
 import { fontOf, registerPdfFonts, type PdfFontMode } from './fonts';
 import type { PageGeometry, PdfFormat, PdfOrientation } from './layout';
-import type { PDFExportOptions } from './pdfOptions';
+import { printAccentDefault } from '../../design-tokens/print-sheet';
+import type { PDFExportOptions, PdfAccent } from './pdfOptions';
 import type { RankEntry } from './placement';
 import { appTranslator } from './appTranslator';
 import { guardDocText } from './printable';
@@ -41,6 +42,8 @@ export interface PdfInput {
   translate: PdfTranslator;
   graphics: { left: LogoImage | undefined; right: LogoImage | undefined };
   orientation: PdfOrientation;
+  /** Akzent für Linien und helle Flächen; Vorgabe: Grün der App (@DR-041 „keins“). */
+  accent: PdfAccent;
   viewerBaseUrl: string | undefined;
   /** Wünsche des Dialogs und Angaben des Veranstalters (nur Spielplan). */
   wish: { standings: boolean; scores: boolean; viewerResultsHidden: boolean };
@@ -65,6 +68,7 @@ export function toPdfInput({ schedule, standings, options }: SchedulePdfInput): 
     translate: options.translate ?? appTranslator(locale),
     graphics: { left: options.logoLeft, right: options.logoRight },
     orientation: options.orientation ?? 'portrait',
+    accent: options.accent ?? printAccentDefault,
     viewerBaseUrl: options.viewerBaseUrl,
     wish: { standings: options.includeStandings ?? true, scores: options.includeScores ?? false, viewerResultsHidden: options.viewerResultsHidden === true },
     organizerName: options.organizerName ?? schedule.tournament.organizer ?? '',

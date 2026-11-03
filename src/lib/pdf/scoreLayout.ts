@@ -15,7 +15,7 @@ export interface SmallRow { label: string; a?: number; b?: number }
 
 /** Inhalt der Zelle: `skipped` zeigt nur den Kasten mit `label`, alle anderen zwei Kästchen. */
 export interface ScoreSpec {
-  kind: 'final' | 'live' | 'empty' | 'skipped';
+  kind: 'final' | 'empty' | 'skipped';
   scoreA?: number;
   scoreB?: number;
   /** Kennzeichen unter dem Kasten („läuft“, „korrigiert 14:52“) oder Text im Kasten „ausgefallen“. */
@@ -81,7 +81,7 @@ export function scoreCellLayout(cell: Rect, spec: ScoreSpec): ScoreLayout {
 
   if (hasMark(spec)) {
     top += printBox.markGap;
-    texts.push({ text: spec.label ?? '', x: cx, y: baselineFrom(top, printType.mark), size: printType.mark, bold: spec.kind === 'live' });
+    texts.push({ text: spec.label ?? '', x: cx, y: baselineFrom(top, printType.mark), size: printType.mark, bold: false });
     top += lineHeight(printType.mark);
   }
 
