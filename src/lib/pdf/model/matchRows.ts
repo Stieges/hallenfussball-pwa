@@ -23,8 +23,13 @@ export interface ColumnFlags {
   field: boolean;
   group: boolean;
   referee: boolean;
-  /** Zahl der kleinen Paare der Finalrunde; ab 1 gibt es die Spalte `shootout` (Paare stehen untereinander, @DR-019). */
+  /**
+   * Zahl der kleinen Paare der Finalrunde (@DR-019). Ab 1 gibt es die Spalte `shootout` neben dem Ergebnis, außer die Paare stehen
+   * unter den Ergebnislinien (`smallBelow`, @DR-037: reicht der Platz für die Namenslinie nicht).
+   */
   smallPairs: number;
+  /** Kleine Linien stehen unter den Linien fürs Ergebnis statt daneben; dann gibt es keine Spalte `shootout`. */
+  smallBelow?: boolean;
   /** Breite der Spalte „SR“ aus ihrem Inhalt (gemessen, höchstens `printMatchTable.cols.referee`); ohne Angabe die volle Breite. */
   refereeWidth?: number;
 }
@@ -58,14 +63,14 @@ export interface RowSource {
 export function layoutColumns(left: number, width: number, flags: ColumnFlags): ColumnModel[] {
   const c = flags.finals ? { ...printMatchTable.cols, ...printFinals.cols } : printMatchTable.cols;
   const refW = flags.referee ? Math.min(c.referee, flags.refereeWidth ?? c.referee) : 0;
-  const shootoutW = flags.smallPairs === 0 ? 0 : printFinals.pairColumn;
+  const shootoutW = flags.smallPairs === 0 || flags.smallBelow === true ? 0 : printFinals.pairColumn;
   const fixed = c.nr + c.time + (flags.field ? c.field : 0) + (flags.group ? c.group : 0) + c.result + shootoutW + refW;
   const side = (width - fixed) / 2;
   const plan: Array<[ColumnKey, number]> = [['nr', c.nr], ['time', c.time]];
   if (flags.field) { plan.push(['field', c.field]); }
   if (flags.group) { plan.push(['group', c.group]); }
   plan.push(['home', side], ['result', c.result]);
-  if (flags.smallPairs > 0) { plan.push(['shootout', shootoutW]); }
+  if (shootoutW > 0) { plan.push(['shootout', shootoutW]); }
   plan.push(['away', side]);
   if (flags.referee) { plan.push(['referee', refW]); }
   let x = left;
@@ -77,6 +82,17 @@ export function layoutColumns(left: number, width: number, flags: ColumnFlags): 
 }
 
 export const column = (cols: ColumnModel[], key: ColumnKey): ColumnModel | undefined => cols.find(c => c.key === key);
+
+/**
+ * Passen die kleinen Linien neben das Ergebnis, ohne dass die Namenslinie unter `printWriteLine.nameMin` fällt (@DR-037)? Sonst
+ * stehen sie darunter. Gemessen an der Breite einer Seite der Namen: Rest nach den festen Spalten (Nummer, Zeit, Feld, Ergebnis, SR,
+ * Spalte der kleinen Linien), geteilt durch zwei, abzüglich der Abstände der Linie zu den Spaltenkanten.
+ */
+export function smallBeside(width: number, flags: ColumnFlags): boolean {
+  const cols = layoutColumns(0, width, { ...flags, smallPairs: flags.smallPairs, smallBelow: false });
+  const home = cols.find(c => c.key === 'home');
+  return home !== undefined && home.w - printWriteLine.nameInset - printFinals.nameOuter >= printWriteLine.nameMin;
+}
 
 /** Zeilen eines Namens in seiner Spalte. */
 export function nameLinesIn(name: string, col: ColumnModel, measure: TextMeasure): string[] {

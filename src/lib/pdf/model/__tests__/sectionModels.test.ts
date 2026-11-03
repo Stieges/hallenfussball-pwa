@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { printWriteLine } from '../../../../design-tokens/print-sheet';
-import { FALL_A, FALL_B, fallBLang, mitRegelnDR019 } from '../../__tests__/fixtures/handzettelFaelle';
+import { FALL_A, FALL_B, FALL_B_SR, fallBLang, mitRegelnDR019 } from '../../__tests__/fixtures/handzettelFaelle';
 import { splitRows } from '../pagePlan';
 import { modelOf } from './modelSupport';
 import type { Block, FinalsBlock, RankingBlock, StandingsTableBlock } from '../types';
@@ -114,5 +114,88 @@ describe('@DR-035 @DR-037 @DR-034 Tabellen und Finalrunde im Modell', () => {
       const { model, geo } = modelOf(fall);
       for (const b of model.pages.flatMap(p => p.blocks)) { expect(b.top + b.height).toBeLessThanOrEqual(geo.bottom + 0.01); }
     }
+  });
+});
+
+describe('@DR-037 @DR-034 kleine Linien neben oder unter dem Ergebnis', () => {
+  const rowsOf = (fall: Parameters<typeof modelOf>[0]) => finalsOf(blocks(fall)).rounds.flatMap(r => r.rows);
+  const klein = (row: ReturnType<typeof rowsOf>[number]) => row.lines.filter(l => l.kind === 'small');
+  const ergebnis = (row: ReturnType<typeof rowsOf>[number]) => row.lines.filter(l => l.kind === 'result');
+
+  it('ohne SR- und Feldspalte (b): kleine Linien 7 mm neben dem Ergebnis auf derselben Linie, waagerecht ≥ 4 mm Abstand zu den Linien nebenan, Namenslinie ≥ 50 mm', () => {
+    for (const row of rowsOf(FALL_B)) {
+      const [r1, r2] = ergebnis(row);
+      const [k1, k2] = klein(row);
+      const namen = row.lines.filter(l => l.kind === 'name');
+
+      expect(k1.x2 - k1.x1).toBeCloseTo(printWriteLine.small, 5);
+      expect(k1.y).toBeCloseTo(r1.y, 5);
+      expect(k1.x1 - r2.x2).toBeGreaterThanOrEqual(printWriteLine.minGapToStroke - printWriteLine.tolerance);
+      expect(k1.x1 - r1.x2).toBeGreaterThan(0);
+      expect(namen[1].x1 - k2.x2).toBeGreaterThanOrEqual(printWriteLine.minGapToStroke - printWriteLine.tolerance);
+      expect(r1.x1 - namen[0].x2).toBeGreaterThanOrEqual(printWriteLine.minGapToStroke - printWriteLine.tolerance);
+      for (const l of namen) { expect(l.x2 - l.x1).toBeGreaterThanOrEqual(printWriteLine.nameMin); }
+    }
+  });
+
+  it('mit Spalte „SR“ (b mit Schiedsrichtern): jede Namenslinie ≥ 50 mm, die kleinen Linien stehen unter den Ergebnislinien, mittig, ≥ 4 mm und mit 5 mm Schreibraum darüber, die Zeile ist höher', () => {
+    const mit = rowsOf(FALL_B_SR);
+    const ohne = rowsOf(FALL_B);
+
+    expect(mit).toHaveLength(8);
+    mit.forEach((row, i) => {
+      const [r1, r2] = ergebnis(row);
+      const [k1, k2] = klein(row);
+
+      for (const l of row.lines.filter(x => x.kind === 'name')) { expect(l.x2 - l.x1, `Spiel ${row.number}`).toBeGreaterThanOrEqual(printWriteLine.nameMin); }
+      expect(k1.y - r1.y).toBeGreaterThanOrEqual(Math.max(printWriteLine.minWriteSpace, printWriteLine.minGapToStroke) - printWriteLine.tolerance);
+      expect((k1.x1 + k2.x2) / 2).toBeCloseTo((r1.x1 + r2.x2) / 2, 5);
+      expect(row.box.h).toBeGreaterThan(ohne[i].box.h);
+      for (const l of row.lines) { expect(l.y - row.box.y).toBeGreaterThanOrEqual(printWriteLine.minWriteSpace); }
+    });
+  });
+
+  it('mit SR-Spalte und zwei Paaren (Verlängerung, Strafstoßschießen): beide Reihen unter dem Ergebnis, je 5 mm Schreibraum, Abstände ≥ 4 mm', () => {
+    const rows = finalsOf(blocks({ ...mitRegelnDR019(FALL_B_SR) })).rounds.flatMap(r => r.rows);
+    const finale = rows.find(r => r.number === 28);
+    const ys = [...new Set((finale ? klein(finale) : []).map(l => l.y))].sort((a, b) => a - b);
+
+    expect(ys).toHaveLength(2);
+    expect(ys[1] - ys[0]).toBeGreaterThanOrEqual(printWriteLine.minWriteSpace);
+    expect(ys[0] - (finale ? ergebnis(finale)[0].y : 0)).toBeGreaterThanOrEqual(printWriteLine.minWriteSpace);
+  });
+
+  it('Gegenbeispiel: nur ein Feld (a) hat keine Finalrunde; mit zwei Feldern stehen die kleinen Linien ebenfalls unten', () => {
+    const rows = finalsOf(blocks(FALL_B, { tournament: { numberOfFields: 2 } })).rounds.flatMap(r => r.rows);
+
+    expect(rows.every(r => klein(r)[0].y > ergebnis(r)[0].y)).toBe(true);
+  });
+});
+
+describe('@DR-036 Strafstoß-Zeile nur ohne Finalrunde und bei einer Gruppe', () => {
+  it('Gegenbeispiel: mehrere Gruppen ohne Finalrunde, Regel für Platz 1 eingestellt → keine Strafstoß-Zeile', () => {
+    const ohneFinale = { ...FALL_B, finale: undefined };
+    const bs = blocks(ohneFinale, { tournament: { placementsToPlayOut: [1], groupSystem: 'groupsAndFinals', finalsConfig: { preset: 'none' } } });
+
+    expect(bs.some(b => b.kind === 'standingsTable')).toBe(true);
+    expect(bs.some(b => b.kind === 'shootout')).toBe(false);
+  });
+});
+
+describe('@DR-033 Umbruch an der Stunde: eine Stunde beginnt eine Zeile vor dem natürlichen Umbruch', () => {
+  const hoehen = Array.from({ length: 20 }, () => 10);
+
+  it('bricht dort, wo die Stunde beginnt, auch wenn noch eine Zeile Platz wäre; danach folgen mindestens 3 Zeilen', () => {
+    const starts = hoehen.map((_, i) => i === 16);
+    const pages = splitRows(hoehen, [180, 200], 3, { starts, maxFree: 25 });
+
+    expect(pages.map(p => p.length)).toEqual([16, 4]);
+  });
+
+  it('beginnt die Stunde erst zwei Zeilen vor dem Ende, bleiben der Folgeseite mindestens 3 Zeilen (die Schlussregel schiebt eine Zeile nach)', () => {
+    const starts = hoehen.map((_, i) => i === 18);
+    const pages = splitRows(hoehen, [190, 200], 3, { starts, maxFree: 25 });
+
+    expect(pages[1].length).toBeGreaterThanOrEqual(3);
   });
 });

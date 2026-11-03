@@ -95,6 +95,7 @@ export function fallMatches(fall: HandzettelFall): Match[] {
       id: fallMatchId(fall, f.nr), round: f.nr, field: 1, slot: f.nr - 1, matchNumber: f.nr,
       slotA: { kind: 'pending', source: quelleA }, slotB: { kind: 'pending', source: quelleB }, originA: quelleA, originB: quelleB,
       isFinal: true, phase: f.runde === 'thirdPlace' ? 'final' : f.runde, ...finalType, scheduledTime: anpfiff(fall, f.zeit),
+      ...(f.sr === undefined ? {} : { referee: f.sr }),
       ...zustandFelder(f.zustand),
     };
   });

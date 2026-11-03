@@ -25,17 +25,18 @@ function spielnummern(page: LayoutPage): number[] {
 }
 
 describe('@DR-002 Seitenaufbau: 12 Spiele und die übrigen Abschnitte in fester Reihenfolge', () => {
-  it('Seite 1 Kopf und Gruppenspiele (keine Teilnehmerliste), Seite 2 Tabellen, darunter Finalrunde und Platzierung, weil sie dort ganz Platz haben (zweispaltig, @DR-009)', async () => {
+  it('Seite 1 Kopf und Gruppenspiele (keine Teilnehmerliste), Seite 2 Tabellen, Seite 3 Finalrunde und Platzierung: mit zwei Feldern stehen die kleinen Linien unter dem Ergebnis, die Finalrunde ist höher und hat auf der Tabellenseite nicht ganz Platz (@DR-037, zweispaltig, @DR-009)', async () => {
     expect(groupMatches(hallencupSchedule())).toHaveLength(12);
     const { pages } = await layoutOf();
 
-    expect(pages).toHaveLength(2);
+    expect(pages).toHaveLength(3);
     expect(pageText(pages[0])).toContain('Beginn');
     expect(pageText(pages[0])).not.toContain('Teilnehmer');
     expect(pageText(pages[0])).not.toContain('Gruppe A');
     expect(pageText(pages[1])).toContain('Gruppe A');
-    expect(pageText(pages[1])).toContain('SPIEL UM PLATZ 3');
-    expect(pageText(pages[1])).toContain('Platzierung');
+    expect(pageText(pages[1])).not.toContain('Platzierung');
+    expect(pageText(pages[2])).toContain('SPIEL UM PLATZ 3');
+    expect(pageText(pages[2])).toContain('Platzierung');
   });
 
   it('Gegenbeispiel: ohne Tabellen entfällt die Tabellenseite, die Platzierung bleibt auf Seite 2', async () => {

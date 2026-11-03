@@ -10,11 +10,10 @@ import { koLines } from '../rules';
 import { printState } from '../matchResult';
 import { sideInfo } from '../matchSides';
 import type { StatefulMatch } from '../tournamentState';
-import { groupPhaseOpen } from '../tournamentState';
 import { finalRounds, roundTitle, smallKindsFor } from './finalRounds';
 import { refereeWidthOf, type ModelEnv } from './env';
 import { buildFinalsRow, finalsRowMetrics } from './finalsRows';
-import { buildHead, layoutColumns, type RowSource } from './matchRows';
+import { buildHead, layoutColumns, smallBeside, type RowSource } from './matchRows';
 import { wrapName } from './nameLines';
 import type { Placeable, Splittable } from './sectionFlow';
 import { ascent, centeredBaseline, run } from './text';
@@ -57,22 +56,22 @@ export function finalsParts(env: ModelEnv): Splittable | undefined {
   const { input, t, geo } = source;
   const finals = input.schedule.phases.filter(p => p.name !== 'groupStage').flatMap(p => p.matches) as StatefulMatch[];
   if (finals.length === 0) { return undefined; }
-  const groupPhase = input.schedule.phases.find(p => p.name === 'groupStage');
-  const tentative = input.edition !== 'final' && input.state.closed !== true && groupPhase !== undefined && groupPhaseOpen(groupPhase.matches);
   const rounds = finalRounds(finals).map(round => ({
     key: round.key,
     sources: round.matches.map(match => sourceOf(env, match, smallKindsFor(round.key, env.rules.finalsConfig))),
   }));
   const all = rounds.flatMap(round => round.sources);
   const refereeWidth = refereeWidthOf(all.map(src => src.referee), t.referee, measure);
-  const cols = layoutColumns(geo.left, geo.contentWidth, {
+  const flags = {
     finals: true,
     field: input.schedule.numberOfFields > 1,
     group: false,
     referee: all.some(src => src.referee !== ''),
     smallPairs: 1,
     ...(refereeWidth === undefined ? {} : { refereeWidth }),
-  });
+  };
+  // Reicht der Platz neben dem Ergebnis nicht für eine Namenslinie von 50 mm (Spalte „SR“ oder „Feld“), stehen die kleinen Linien darunter (@DR-037)
+  const cols = layoutColumns(geo.left, geo.contentWidth, { ...flags, smallBelow: !smallBeside(geo.contentWidth, flags) });
   const labels: Partial<Record<ColumnKey, string>> = { nr: t.nr, time: t.timeHeader, field: t.field, home: t.home, result: t.result, away: t.away, referee: t.referee };
   const heights = rounds.map(round => printFinals.roundHeight + round.sources.reduce((sum, src) => sum + finalsRowMetrics(src, cols, measure).height, 0));
   const koHeight = koBlock(env, 0).height;
@@ -95,9 +94,6 @@ export function finalsParts(env: ModelEnv): Splittable | undefined {
         const roundTop = cursor;
         const base = centeredBaseline(roundTop + printFinals.roundHeight / 2 + printRule.round, printMatchTable.headPt);
         const title = [run(upper(roundTitle(round.key, t)), geo.left + printMatchTable.nameInner, base, printMatchTable.headPt, 'bold')];
-        if (tentative) {
-          title.push(run(t.timesTentative, geo.left + printMatchTable.nameInner + measure.width(title[0].text, printMatchTable.headPt, 'bold') + printMetrics.roundNoteGap, base, printType.roundNote, 'normal'));
-        }
         cursor += printFinals.roundHeight;
         const before = rounds.slice(0, from + index).reduce((sum, r) => sum + r.sources.length, 0);
         const rows = round.sources.map((src, i) => {

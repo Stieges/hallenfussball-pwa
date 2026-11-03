@@ -56,8 +56,9 @@ describe('@DR-009 Platzierung unter der Tabelle', () => {
     expect(pageOf(pages, 'Platzierung')).toBeGreaterThan(tabellenSeite(pages));
   });
 
-  it('@DR-002 mit Finalrunde: Finalrunde und Platzierung folgen auf der Seite der Tabellen, wenn sie dort ganz Platz haben', async () => {
-    const { pages } = await kopfPdf();
+  it('@DR-002 mit Finalrunde: Finalrunde und Platzierung folgen auf der Seite der Tabellen, wenn sie dort ganz Platz haben (ein Feld)', async () => {
+    const tournament = hallencupTournament({ numberOfFields: 1 });
+    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
     const finale = pageOf(pages, 'Halbfinale');
 
     expect(finale).toBeGreaterThan(spielSeite(pages));

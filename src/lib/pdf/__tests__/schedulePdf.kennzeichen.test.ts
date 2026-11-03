@@ -5,10 +5,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
-import { printGap, printLimits, printType } from '../../../design-tokens/print';
+import { printGap, printType } from '../../../design-tokens/print';
 import { pageGeometry } from '../layout';
 import type { MatchStatus } from '../../../types/tournament';
-import type { StatefulMatch, StatefulSchedule } from '../tournamentState';
+import type { StatefulSchedule } from '../tournamentState';
+import { translatorFor } from './pdfText';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { dreissigSchedule, layoutOf, pageText } from './pdfFixtureLayout';
 import type { LayoutPage } from './pdfjsLayout';
@@ -16,9 +17,6 @@ import type { LayoutPage } from './pdfjsLayout';
 const NOW = new Date(2026, 10, 14, 15, 7);
 
 const strings = (page: LayoutPage): string[] => page.texts.map(t => t.str);
-/** Textstücke in der Größe eines Abschnittstitels (13 pt, 11,5 pt) einer Seite. */
-const titel = (page: LayoutPage): string[] => page.texts.filter(t => Math.abs(t.size - printType.h2) < 0.05 || Math.abs(t.size - printType.caption) < 0.05).map(t => t.str);
-
 /** Plan, dessen Gruppenspiele alle (oder keines) im Zustand `status` stehen, wie der Dialog sie einmischt. */
 function mitGruppenstatus(schedule: GeneratedSchedule, status: MatchStatus | undefined, nur?: number): StatefulSchedule {
   const merge = <M extends { phase?: string; matchNumber: number }>(m: M): M =>
@@ -111,62 +109,29 @@ describe('G8 Kurzkopf der Folgeseiten: Titel · Altersklasse · Datum · Abschni
   });
 });
 
-describe('W7 „Uhrzeiten voraussichtlich“ in der Finalrunde, solange die Gruppenphase läuft', () => {
-  const NOTE = 'Uhrzeiten voraussichtlich';
+describe('@DR-001 Die Uhrzeiten der Finalrunde stehen ohne den Zusatz „voraussichtlich“ (DE und EN)', () => {
+  const kein = (pages: LayoutPage[]): void => pages.forEach(page => expect(pageText(page)).not.toMatch(/voraussichtlich|expected|estimated/i));
 
-  it('Gruppenphase offen: jede Runden-Überschrift trägt den Hinweis, mindestens 7,5 pt', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), undefined));
-    const hinweise = pages[1].texts.filter(t => t.str === NOTE);
-
-    expect(hinweise).toHaveLength(3);
-    hinweise.forEach(t => expect(t.size).toBeGreaterThanOrEqual(printLimits.minFontPt));
-  });
-
-  it('Gruppenphase abgeschlossen (alle beendet): kein Hinweis auf keiner Seite', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), 'finished'));
-
-    pages.forEach(page => expect(pageText(page)).not.toContain(NOTE));
-  });
-
-  it('Gruppenphase abgeschlossen, ein Spiel ausgefallen: kein Hinweis (es wird nicht mehr gespielt)', async () => {
-    const plan = mitGruppenstatus(hallencupSchedule(), 'finished');
-    plan.phases.forEach(p => (p.matches as StatefulMatch[]).forEach(m => { if (m.matchNumber === 5) { m.matchStatus = 'skipped'; } }));
-    const { pages } = await layoutOf({ now: NOW }, plan);
-
-    pages.forEach(page => expect(pageText(page)).not.toContain(NOTE));
-  });
-
-  it('Gegenbeispiel: ein Gruppenspiel fehlt noch (11 von 12 beendet) → Hinweis steht', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), 'finished', 11));
-
-    expect(pages[1].texts.filter(t => t.str === NOTE).length).toBeGreaterThan(0);
-  });
-
-  it('Gegenbeispiel: ein laufendes Spiel zählt nicht als abgeschlossen', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), 'running'));
-
-    expect(pages[1].texts.filter(t => t.str === NOTE).length).toBeGreaterThan(0);
-  });
-
-  it('Gegenbeispiel: die Gruppenphase selbst und die Titel der Gruppenspiele tragen den Hinweis nie', async () => {
+  it('Gruppenphase offen, DE: keine Seite trägt den Zusatz, die Rundenzeile heißt nur „HALBFINALE“', async () => {
     const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), undefined));
 
-    expect(titel(pages[0])).not.toContain(NOTE);
-    expect(pageText(pages[0])).not.toContain(NOTE);
+    kein(pages);
+    expect(pages.flatMap(strings).map(t => t.trim())).toContain('HALBFINALE');
   });
 
-  it('F2 Fassung final und abgeschlossenes Turnier: kein Hinweis, auch wenn Gruppenspiele keinen Status tragen', async () => {
-    const offen = mitGruppenstatus(hallencupSchedule(), undefined);
-    for (const extra of [{ edition: 'final' as const }, { closed: true }]) {
-      const { pages } = await layoutOf({ now: NOW, ...extra }, offen);
-      pages.forEach(page => expect(pageText(page)).not.toContain(NOTE));
+  it('Gruppenphase offen, EN: keine Seite trägt „Times expected“', async () => {
+    const { pages } = await layoutOf({ now: NOW, locale: 'en', translate: translatorFor('en') }, mitGruppenstatus(hallencupSchedule(), undefined));
+
+    kein(pages);
+    expect(pages.flatMap(strings).map(t => t.trim())).toContain('SEMI-FINALS');
+  });
+
+  it('Gegenbeispiel: auch laufende Spiele, abgeschlossene Gruppenphase und die Fassungen ohne Ergebnisse und final tragen ihn nie', async () => {
+    for (const plan of [mitGruppenstatus(hallencupSchedule(), 'running'), mitGruppenstatus(hallencupSchedule(), 'finished', 11), mitGruppenstatus(hallencupSchedule(), 'finished')]) {
+      kein((await layoutOf({ now: NOW }, plan)).pages);
     }
-  });
-
-  it('F2 Gegenbeispiel: Fassung Spielplan und zum Ausfüllen mit offener Gruppenphase tragen den Hinweis weiter', async () => {
-    for (const edition of ['plan', 'blank'] as const) {
-      const { pages } = await layoutOf({ now: NOW, edition }, mitGruppenstatus(hallencupSchedule(), undefined));
-      expect(pages[1].texts.some(t => t.str === NOTE)).toBe(true);
+    for (const extra of [{ edition: 'blank' as const }, { edition: 'final' as const }, { closed: true }]) {
+      kein((await layoutOf({ now: NOW, ...extra }, mitGruppenstatus(hallencupSchedule(), undefined))).pages);
     }
   });
 });

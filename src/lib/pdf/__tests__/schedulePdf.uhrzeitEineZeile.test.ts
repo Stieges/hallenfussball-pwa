@@ -10,7 +10,7 @@ import { testUuid } from '../../../test/testIds';
 import { hallencupTournament } from './pdfFixture';
 import { layoutOf } from './pdfFixtureLayout';
 import { translatorFor } from './pdfText';
-import { printGap } from '../../../design-tokens/print';
+import { printFinals } from '../../../design-tokens/print-sheet';
 
 const LANGE_NAMEN = [
   'Fußballverein Großmehring-Bergheim 1921 e. V.', 'Turn- und Sportverein Oberammergau-Unterammergau', 'Sportgemeinschaft Hohenpeißenberg-Peiting',
@@ -66,7 +66,7 @@ describe('@DR-001 keine Uhrzeit bricht um', () => {
         if (nr === undefined) { continue; }
         const breite = 2 * (MITTE(zeit) - links) - 4 * (MITTE(nr) - links);
         expect(breite, `Zeitspalte neben ${zeit.str}: Breite ${breite.toFixed(2)} mm, Uhrzeit ${zeit.w.toFixed(2)} mm + Innenabstand`)
-          .toBeGreaterThanOrEqual(zeit.w + 2 * printGap.bodyPadH - 0.05);
+          .toBeGreaterThanOrEqual(zeit.w + 2 * printFinals.timeInset - 0.05);
         geprueft += 1;
       }
     }

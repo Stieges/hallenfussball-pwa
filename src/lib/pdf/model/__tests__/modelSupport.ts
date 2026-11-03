@@ -49,7 +49,7 @@ export function modelOf(fall: HandzettelFall, opts: ModelOptions = {}): ModelCas
   const schedule = withTournamentState(fallSchedule(fall, locale, opts.tournament ?? {}), tournament);
   const options: PDFExportOptions = {
     tournament, locale, translate: translatorFor(locale), now: FALL_NOW, viewerBaseUrl: BASE_URL,
-    hallName: fall.halle, organizerName: fall.veranstalter, ...opts.options,
+    hallName: fall.halle, organizerName: fall.veranstalter, ...(fall.kontakt === undefined ? {} : { contact: fall.kontakt }), ...opts.options,
   };
   const input = toPdfInput({ schedule, standings: undefined, options });
   const t = buildPdfTexts(input.translate, locale);

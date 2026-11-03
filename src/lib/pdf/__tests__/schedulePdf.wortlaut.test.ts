@@ -87,14 +87,6 @@ describe('G73 englische Wortlaute', () => {
     expect(text).toContain('Groups 10 minutes · Final round 12 minutes');
     expect(text).not.toContain('Finals 12 min');
   });
-
-  it('„Times expected“ über den Finalspielen', async () => {
-    const { pages } = await layoutOf({ now: NOW, ...en });
-    const text = allStrs(pages);
-
-    expect(text).toContain('Times expected');
-    expect(text).not.toContain('Times provisional');
-  });
 });
 
 describe('G62 @BM-032 @ZM-102 englisch „to be decided“ für einen offenen Platz', () => {

@@ -26,28 +26,74 @@ function fussbereich(page: LayoutPage): { linie: number; texte: LayoutText[] } {
   return { linie, texte: page.texts.filter(t => t.y > linie) };
 }
 
-describe('@BM-010 @ZP-052 Fußzeile: Titel · Stand · Seite x von y auf jeder Seite', () => {
-  it('Hallencup Nord, 14.11. 15:07: Seite x von 2 mit x = Seitenindex', async () => {
+/** Textstücke der Fußzeile einer Seite, ohne die Adresszeile: erst „Titel · Stand“, dann „Seite x von y“ (eigenes Textstück). */
+const fussTexte = (page: LayoutPage): LayoutText[] => fussbereich(page).texte;
+const seitenText = (page: LayoutPage): LayoutText | undefined => fussTexte(page).find(t => SEITE.test(t.str) || /Page \d+ of \d+/.test(t.str));
+
+describe('@DR-044 @BM-010 @ZP-052 Fußzeile: feste Plätze, links Titel · Stand, rechts unten Seite x von y', () => {
+  it('Hallencup Nord, 14.11. 15:07: „Hallencup Nord · Stand 14.11. 15:07“ links und „Seite x von 2“ rechts, jede Seite', async () => {
     const { pages } = await layoutOf({ now: NOW });
 
-    expect(pages).toHaveLength(2);
+    expect(pages).toHaveLength(3);
     pages.forEach((page, i) => {
-      const zeile = `Hallencup Nord · Stand 14.11. 15:07 · Seite ${i + 1} von 2`;
-      expect(page.texts.map(t => t.str), `Seite ${i + 1}`).toContain(zeile);
+      const texte = fussTexte(page).map(t => t.str.trim());
+      expect(texte, `Seite ${i + 1}`).toContain('Hallencup Nord · Stand 14.11. 15:07');
+      expect(texte, `Seite ${i + 1}`).toContain(`Seite ${i + 1} von 3`);
     });
   });
 
-  it('Gegenbeispiel: ein anderer Zeitpunkt ergibt eine andere Zeile, die Zeit kommt aus now', async () => {
+  it('die Adresse steht links oben, darunter Titel · Stand; „Seite x von y“ rechts auf der untersten Zeile, auf jeder Seite an derselben Stelle', async () => {
+    const { pages, width } = await layoutOf({ now: NOW });
+    const orte = pages.map(page => seitenText(page));
+
+    orte.forEach(t => expect(t).toBeDefined());
+    const ersteSeite = orte[0]!;
+    orte.forEach(t => {
+      expect(t?.x).toBeCloseTo(ersteSeite.x + (t?.w ?? 0) - ersteSeite.w, 1);
+      expect((t?.x ?? 0) + (t?.w ?? 0), 'rechte Kante = rechter Rand').toBeCloseTo(width - printPage.margin.right, 1);
+      expect(t?.y).toBeCloseTo(ersteSeite.y, 2);
+    });
+    const { texte } = fussbereich(pages[0]);
+    const adresse = texte.find(t => t.str.includes('Live-Ergebnisse'));
+    const stand = texte.find(t => t.str.startsWith('Hallencup Nord · Stand'));
+    expect(adresse?.y ?? 0).toBeLessThan(stand?.y ?? 0);
+    expect(adresse?.x).toBeCloseTo(printPage.margin.left, 1);
+    expect(stand?.x).toBeCloseTo(printPage.margin.left, 1);
+  });
+
+  it('Gegenbeispiel: ein langer Turniername ändert den Platz von „Seite x von y“ nicht, er bricht in seiner Spalte um', async () => {
+    const lang = hallencupTournament({ title: 'Internationaler Hallenfußball-Wintercup der Sportgemeinschaft Nordheim und Umgebung 2026' });
+    const kurz = await layoutOf({ now: NOW });
+    const { pages } = await layoutOf({ now: NOW, tournament: lang }, generateFullSchedule(lang, 'de'));
+    const adresseY = pages[0].texts.find(t => t.str.includes('Live-Ergebnisse'))?.y ?? 0;
+    const links = pages[0].texts.filter(t => t.str.trim() !== '' && t.y > adresseY + 0.5 && t.y > fussbereich(pages[0]).linie && t.x < 100);
+
+    expect(seitenText(pages[0])?.x).toBeCloseTo(seitenText(kurz.pages[0])?.x ?? 0, 1);
+    expect(new Set(links.map(t => Math.round(t.y))).size, 'Titel in mehreren Zeilen').toBeGreaterThan(2);
+    links.forEach(t => expect(t.x + t.w).toBeLessThan((seitenText(pages[0])?.x ?? 0) - 1));
+  });
+
+  it('Gegenbeispiel: ein anderer Zeitpunkt ergibt einen anderen Stand, die Zeit kommt aus now', async () => {
     const { pages } = await layoutOf({ now: new Date(2026, 5, 3, 9, 5) });
 
-    expect(pages[0].texts.map(t => t.str)).toContain('Hallencup Nord · Stand 03.06. 09:05 · Seite 1 von 2');
+    expect(fussTexte(pages[0]).map(t => t.str.trim())).toContain('Hallencup Nord · Stand 03.06. 09:05');
     expect(pageText(pages[0])).not.toContain('14.11. 15:07');
   });
 
   it('EN: „As of“ und „Page x of y“', async () => {
     const { pages } = await layoutOf({ now: NOW, locale: 'en', translate: translatorFor('en') });
 
-    expect(pages[1].texts.map(t => t.str)).toContain('Hallencup Nord · As of 14.11. 15:07 · Page 2 of 2');
+    expect(fussTexte(pages[1]).map(t => t.str.trim())).toEqual(expect.arrayContaining(['Hallencup Nord · As of 14.11. 15:07', 'Page 2 of 3']));
+  });
+
+  it('die Fußzeile hat auf allen Seiten dieselbe Höhe und Lage (Linie und unterste Zeile)', async () => {
+    const { pages } = await layoutOf({ now: NOW, contact: 'Max Mustermann · 0171 1234567 · fussballjugend@tsv-waging.de' });
+    const [erste, ...rest] = pages.map(page => ({ linie: fussbereich(page).linie, unten: Math.max(...fussTexte(page).map(t => t.y)) }));
+
+    rest.forEach(seite => {
+      expect(seite.linie).toBeCloseTo(erste.linie, 2);
+      expect(seite.unten).toBeCloseTo(erste.unten, 2);
+    });
   });
 });
 
@@ -60,7 +106,7 @@ describe('@BM-023 @DR-021 Netzhinweis: ohne Verbindung steht er auf jeder Seite'
     pages.forEach((page, i) => {
       const fuss = fussbereich(page).texte.map(t => t.str).join(' ');
       expect(fuss, `Seite ${i + 1}`).toContain(HINWEIS);
-      expect(fuss, `Seite ${i + 1}`).toContain(`Seite ${i + 1} von 2`);
+      expect(fuss, `Seite ${i + 1}`).toContain(`Seite ${i + 1} von 3`);
     });
   });
 
@@ -97,14 +143,33 @@ describe('@DR-001 Fußzeile samt Unterlängen oberhalb des Rands (B5b)', () => {
   });
 });
 
-describe('@W1-031 @W1-032 Kontakt in der Fußzeile nur auf Übergabe', () => {
-  it('mit contact: der Kontakt steht auf jeder Seite, die Seitenzahl bleibt', async () => {
-    const { pages } = await layoutOf({ now: NOW, contact: 'Anna Muster, 0170 1234567' });
+describe('@DR-044 @W1-031 @W1-032 Ansprechpartner in der Fußzeile nur auf Übergabe, nie gekürzt', () => {
+  const KONTAKT = 'Max Mustermann · 0171 1234567 · fussballjugend@tsv-waging.de';
+
+  it('mit contact: eine eigene Zeile „Ansprechpartner: Name · Telefon · E-Mail“ auf jeder Seite, die Seitenzahl bleibt rechts unten', async () => {
+    const { pages } = await layoutOf({ now: NOW, contact: KONTAKT });
 
     pages.forEach((page, i) => {
-      const fuss = fussbereich(page).texte.map(t => t.str).join(' ');
-      expect(fuss, `Seite ${i + 1}`).toContain('Anna Muster, 0170 1234567');
-      expect(fuss).toMatch(SEITE);
+      const texte = fussTexte(page).map(t => t.str.trim());
+      expect(texte, `Seite ${i + 1}`).toContain(`Ansprechpartner: ${KONTAKT}`);
+      expect(texte.some(t => SEITE.test(t))).toBe(true);
+    });
+  });
+
+  it('EN: „Contact person: …“', async () => {
+    const { pages } = await layoutOf({ now: NOW, contact: KONTAKT, locale: 'en', translate: translatorFor('en') });
+
+    expect(fussTexte(pages[0]).map(t => t.str.trim())).toContain(`Contact person: ${KONTAKT}`);
+  });
+
+  it('ein langer Kontakt wird nie gekürzt: er bricht um und steht vollständig da, ohne „…“', async () => {
+    const lang = 'Anna Beispielfrau-Mustermann, Jugendleiterin Fußball · 0170 1234567 · anna.beispielfrau-mustermann@tsv-beispielstadt-fussball.example';
+    const { pages } = await layoutOf({ now: NOW, contact: lang });
+
+    pages.forEach(page => {
+      const fuss = fussTexte(page).map(t => t.str).join(' ').replace(/\s+/g, ' ');
+      expect(fuss).not.toContain('…');
+      for (const wort of lang.split(' ')) { expect(fuss, wort).toContain(wort); }
     });
   });
 
@@ -114,11 +179,9 @@ describe('@W1-031 @W1-032 Kontakt in der Fußzeile nur auf Übergabe', () => {
       const { pages } = await layoutOf({ now: NOW, contact });
       pages.forEach((page, i) => {
         expect(pageText(page)).not.toMatch(/Ansprechpartner|Anna/);
-        // gleiche Fußzeile an gleicher Stelle wie ohne Eingang
         expect(fussbereich(page).linie).toBeCloseTo(fussbereich(ohne.pages[i]).linie, 2);
       });
     }
-    ohne.pages.forEach(page => expect(pageText(page)).not.toContain('Ansprechpartner'));
   });
 });
 
@@ -127,7 +190,7 @@ describe('@BM-035 @DR-011 Fassung final: statt „Stand …“ steht die Abschlu
     const { pages } = await layoutOf({ now: NOW, edition: 'final', closedAt: new Date(2026, 10, 14, 17, 40) });
 
     pages.forEach((page, i) => {
-      expect(page.texts.map(t => t.str), `Seite ${i + 1}`).toContain(`Hallencup Nord · Endstand – abgeschlossen am 14.11.2026 um 17:40 · Seite ${i + 1} von 2`);
+      expect(fussTexte(page).map(t => t.str.trim()), `Seite ${i + 1}`).toEqual(expect.arrayContaining(['Hallencup Nord · Endstand – abgeschlossen am 14.11.2026 um 17:40', `Seite ${i + 1} von 3`]));
       expect(pageText(page)).not.toContain('Stand 14.11.');
     });
   });

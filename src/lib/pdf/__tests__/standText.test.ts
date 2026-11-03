@@ -2,7 +2,7 @@
  * B-28a3-4 Punkt 3: Stand-, Fußzeilen- und Abschlusstext über `t()` (DE und EN, wörtlich). Szenarien: @ZP-052, @BM-023.
  */
 import { describe, expect, it } from 'vitest';
-import { closedLine, footerLine, standLine } from '../standText';
+import { closedLine, pageLabel, standLine } from '../standText';
 import { translatorFor } from './pdfText';
 
 const JETZT = new Date(2026, 10, 14, 15, 7);
@@ -30,17 +30,13 @@ describe('@ZP-052 Stand im Spielplan-PDF', () => {
   });
 });
 
-describe('@ZP-052 Fußzeile: Titel · Stand · Seite', () => {
-  it('DE: „Hallencup Nord · Stand 14.11. 15:07 · Seite 2 von 3“', () => {
-    expect(footerLine('Hallencup Nord', standLine(JETZT, true, de), 2, 3, de)).toBe(
-      'Hallencup Nord · Stand 14.11. 15:07 · Seite 2 von 3',
-    );
+describe('@DR-044 Fußzeile: „Seite x von y“ ist ein eigener Text', () => {
+  it('DE: „Seite 2 von 3“', () => {
+    expect(pageLabel(2, 3, de)).toBe('Seite 2 von 3');
   });
 
-  it('EN: „Hallencup Nord · As of 14.11. 15:07 · Page 2 of 3“', () => {
-    expect(footerLine('Hallencup Nord', standLine(JETZT, true, en), 2, 3, en)).toBe(
-      'Hallencup Nord · As of 14.11. 15:07 · Page 2 of 3',
-    );
+  it('EN: „Page 2 of 3“', () => {
+    expect(pageLabel(2, 3, en)).toBe('Page 2 of 3');
   });
 });
 

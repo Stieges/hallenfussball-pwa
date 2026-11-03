@@ -21,7 +21,7 @@ import { openDocument, toPdfInput, type SchedulePdfInput } from './pdfInput';
 import { dayOf } from './headerFacts';
 import { schedulePdfFilename } from './filename';
 import { buildHints, hintNotes, type PdfHints } from './notes';
-import { closedLine, footerLine, standLine } from './standText';
+import { closedLine, pageLabel, standLine } from './standText';
 import { pdfContentRules } from './visibility';
 import { countFooterLines, drawFooters, type FooterContent } from './render/footer';
 import { drawMatchRows } from './render/matchRowsDraw';
@@ -121,7 +121,8 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
     title: schedule.tournament.title,
     stand: edition === 'final' && closedAt ? closedLine(closedAt, translate) : standLine(now, online, translate),
     contact: contactRow(contact, t),
-    line: (title, stand, page, total) => footerLine(title, stand, page, total, translate),
+    join: t.rules.join,
+    pageLabel: (page, total) => pageLabel(page, total, translate),
     ...(qr ? { link: { prefix: t.sheet.footerLink, address: shortViewerAddress(qr.url), url: qr.url } } : {}),
   };
   const contentWidth = pageGeometry('a4', orientation).contentWidth;

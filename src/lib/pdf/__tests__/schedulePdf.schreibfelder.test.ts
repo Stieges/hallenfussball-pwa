@@ -43,7 +43,10 @@ const { halbfinale: HF, platz3: P3, finale: FINALE } = finalNummern();
  */
 const UNTER_DER_LINIE = 4.5;
 const STUFE = printWriteLine.minWriteSpace + 4;
-const fenster = (zeile: Zeile, paare: number): Zeile => ({ ...zeile, top: zeile.nr.y - 5, bottom: zeile.nr.y + UNTER_DER_LINIE + (paare - 1) * STUFE });
+/** Der Hallencup hat zwei Felder: die kleinen Linien stehen unter dem Ergebnis, die erste Stufe liegt `minWriteSpace` darunter (@DR-037). */
+const ERSTE_STUFE = printWriteLine.minWriteSpace;
+const fenster = (zeile: Zeile, paare: number): Zeile => ({ ...zeile, top: zeile.nr.y - 5, bottom: zeile.nr.y + UNTER_DER_LINIE + ERSTE_STUFE + (paare - 1) * STUFE });
+const mitte = (l: { x1: number; x2: number }): number => (l.x1 + l.x2) / 2;
 
 /** Linien fürs Ergebnis (schmal, 10 mm) und kleine Linien (8 mm) einer Zeile, jede ein einziger Strich, von oben nach unten. */
 const gross = (zeile: Zeile) => linienIn(zeile).filter(l => Math.abs(Math.abs(l.x2 - l.x1) - printWriteLine.resultNarrow) <= TOL);
@@ -54,8 +57,8 @@ async function seiten(updates: Record<number, Partial<Match>> = {}, options: Rec
   return hallencupMitStand(updates, REGELN, options);
 }
 
-describe('@DR-004 @DR-019 Spiel ohne Ergebnis: Linien fürs Ergebnis und, je nach Regel der Runde, kleine Linien', () => {
-  it('Halbfinale (bei Gleichstand direkt Strafstoßschießen): zwei Linien fürs Ergebnis, daneben ein Paar kleiner Linien „Strafstoßschießen“ auf derselben Linie', async () => {
+describe('@DR-004 @DR-019 @DR-037 Spiel ohne Ergebnis: Linien fürs Ergebnis und, je nach Regel der Runde, kleine Linien darunter (zwei Felder: kein Platz daneben)', () => {
+  it('Halbfinale (bei Gleichstand direkt Strafstoßschießen): zwei Linien fürs Ergebnis, darunter ein Paar kleiner Linien „Strafstoßschießen“, mittig und mit 5 mm Schreibraum', async () => {
     const zeile = fenster(zeileVon(await seiten(), HF), 1);
     const grosse = gross(zeile);
     const kleine = klein(zeile);
@@ -65,8 +68,8 @@ describe('@DR-004 @DR-019 Spiel ohne Ergebnis: Linien fürs Ergebnis und, je nac
     expect(kleine).toHaveLength(2);
     expect(titel, 'Beschriftung').toBeDefined();
     expect(Math.abs((titel?.size ?? 0) - printFinals.smallPt)).toBeLessThanOrEqual(SIZE_TOL);
-    expect(Math.abs(kleine[0].y1 - grosse[0].y1), 'kleine Linien fluchten mit den Linien fürs Ergebnis').toBeLessThanOrEqual(TOL);
-    // Beschriftung unter den Linien: über den Linien bleibt der Schreibraum frei (@DR-034)
+    expect(kleine[0].y1 - grosse[0].y1, 'Schreibraum über der unteren Reihe').toBeGreaterThanOrEqual(printWriteLine.minWriteSpace - TOL);
+    expect((mitte(kleine[0]) + mitte(kleine[1])) / 2, 'Paar mittig unter dem Ergebnis').toBeCloseTo((mitte(grosse[0]) + mitte(grosse[1])) / 2, 1);
     expect(titel?.y ?? 0).toBeGreaterThan(kleine[0].y1);
     expect(wort(zeile, 'nach Verlängerung')).toBeUndefined();
   });
@@ -81,7 +84,8 @@ describe('@DR-004 @DR-019 Spiel ohne Ergebnis: Linien fürs Ergebnis und, je nac
     expect(grosse).toHaveLength(2);
     expect(kleine).toHaveLength(4);
     expect(verlaengerung && schiessen).toBeTruthy();
-    expect(Math.abs(kleine[0].y1 - grosse[0].y1), 'erstes Paar fluchtet mit den Linien fürs Ergebnis').toBeLessThanOrEqual(TOL);
+    expect(kleine[0].y1 - grosse[0].y1).toBeGreaterThanOrEqual(printWriteLine.minWriteSpace - TOL);
+    expect(kleine[2].y1 - kleine[0].y1, 'Schreibraum über dem zweiten Paar').toBeGreaterThanOrEqual(printWriteLine.minWriteSpace - TOL);
     expect(verlaengerung?.y ?? 0).toBeGreaterThan(kleine[0].y1);
     expect(verlaengerung?.y ?? 0).toBeLessThan(kleine[2].y1);
     expect(schiessen?.y ?? 0).toBeGreaterThan(kleine[2].y1);

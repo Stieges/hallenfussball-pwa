@@ -77,8 +77,6 @@ export interface PdfTexts {
   /** Abschnitte, die keinen eigenen Titel tragen, im Untertitel des Kurzkopfs (G8): „Tabellen“, „Finalrunde“. */
   sectionTables: string;
   sectionFinals: string;
-  /** Hinweis hinter den Runden-Überschriften der Finalrunde, solange die Gruppenphase läuft (W7). */
-  timesTentative: string;
   /** Ansprechpartner: Feldname in Hinweisen und Zeile „Ansprechpartner: …“ in der Fußzeile (nur mit Häkchen, @W1-031). */
   contact: string;
   contactLine: (contact: string) => string;
@@ -263,7 +261,6 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     kicker: { plan: s('kicker.plan') },
     sectionTables: s('sectionTables'),
     sectionFinals: s('sectionFinals'),
-    timesTentative: s('timesTentative'),
     contact: s('contact'),
     contactLine: contact => translate('pdf.contactLine', { contact }),
     fontFallbackNote: s('fontFallbackNote'),

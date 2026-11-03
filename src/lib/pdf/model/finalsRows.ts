@@ -5,7 +5,9 @@
  *
  * Formeln (Tokens in `print-sheet.ts`): Linie = Oberkante + `above`, `above` = max(`minWriteSpace`, Namenszeilen über der Grundlinie);
  * darunter `below` (Herkunft samt Abstand). Stehen zwei kleine Paare (Verlängerung, Strafstoßschießen), liegt das zweite eine
- * Stufe tiefer, damit über jeder Linie 5 mm frei bleiben und die Beschriftungen sich nicht berühren.
+ * Stufe tiefer, damit über jeder Linie 5 mm frei bleiben und die Beschriftungen sich nicht berühren. Fehlt die Spalte `shootout`
+ * (@DR-037: die Namenslinie bliebe sonst unter 50 mm), stehen die kleinen Paare unter den Linien fürs Ergebnis, mittig auf ihnen
+ * und mit 5 mm Schreibraum über jeder Linie; die Zeile ist dann um diese Stufe höher.
  */
 import { printType } from '../../../design-tokens/print';
 import { printFinals, printMatchRow, printMatchTable, printWriteLine } from '../../../design-tokens/print-sheet';
@@ -23,6 +25,12 @@ const below = (): number => textBelow() + printFinals.bottomPad;
 /** Abstand der Linien zweier kleiner Paare: Beschriftung des ersten plus Schreibraum über dem zweiten. */
 const pairStep = (): number => textBelow() + printWriteLine.minWriteSpace;
 
+/** Die kleinen Linien stehen unter dem Ergebnis, weil es keine Spalte neben ihm gibt. */
+const stackedBelow = (src: RowSource, cols: ColumnModel[]): boolean => src.small.length > 0 && column(cols, 'shootout') === undefined;
+/** Zusätzliche Höhe der Zeile für die Paare: unter dem Ergebnis eine Stufe Schreibraum, jedes weitere Paar eine Stufe. */
+const extraHeight = (src: RowSource, cols: ColumnModel[]): number =>
+  (stackedBelow(src, cols) ? printWriteLine.minWriteSpace : 0) + Math.max(0, src.small.length - 1) * pairStep();
+
 /** Zeilenzahl eines Teamnamens in seiner Spalte; 0 bei offenem Platz (Herkunft statt Name). */
 function nameCount(name: string, origin: string | undefined, col: ColumnModel | undefined, measure: TextMeasure): number {
   return origin !== undefined || col === undefined ? 0 : nameLinesIn(name, col, measure).length;
@@ -38,8 +46,8 @@ export function finalsRowMetrics(src: RowSource, cols: ColumnModel[], measure: T
     1
   );
   const adv = advanceMm(printType.body, printMatchRow.lineHeight);
-  const above = Math.max(printWriteLine.minWriteSpace, printFinals.baselineRise + (lines - 1) * adv + ascent(printType.body) + printFinals.bottomPad);
-  return { above, height: above + below() + Math.max(0, src.small.length - 1) * pairStep() };
+  const above = printFinals.baselineRise + (lines - 1) * adv + ascent(printType.body) + printFinals.bottomPad;
+  return { above, height: above + below() + extraHeight(src, cols) };
 }
 
 function sideOf(name: string, origin: string | undefined, col: ColumnModel, key: 'home' | 'away', lineY: number, measure: TextMeasure): { side: SideModel; line?: WriteLine } {
@@ -58,17 +66,20 @@ function sideOf(name: string, origin: string | undefined, col: ColumnModel, key:
 }
 
 /** Kleine Paare in der Spalte `shootout`: je Art eine Stufe; bei einem beendeten Spiel steht der Wert statt der Linien. */
-function smallOf(src: RowSource, col: ColumnModel | undefined, lineY: number, texts: RowTexts): { lines: WriteLine[]; runs: TextRun[] } {
+function smallOf(src: RowSource, cols: ColumnModel[], lineY: number, texts: RowTexts): { lines: WriteLine[]; runs: TextRun[] } {
   const lines: WriteLine[] = [];
   const runs: TextRun[] = [];
+  const stacked = stackedBelow(src, cols);
+  const col = stacked ? column(cols, 'result') : column(cols, 'shootout');
   if (!col || src.state.kind === 'skipped') { return { lines, runs }; }
   const done = src.state.kind === 'final' ? src.state : undefined;
   const mid = col.x + col.w / 2;
+  const first = stacked ? printWriteLine.minWriteSpace : 0;
   const half = printWriteLine.small + printWriteLine.smallColon / 2;
   src.small.forEach((kind, i) => {
     const value = kind === 'overtime' ? done?.overtime : done?.penalty;
     if (done && !value) { return; }
-    const y = lineY + i * pairStep();
+    const y = lineY + first + i * pairStep();
     const label = kind === 'overtime' ? texts.overtime : texts.shootout;
     if (value) {
       runs.push(run(`${value.a} : ${value.b}`, mid, y - printFinals.baselineRise, printType.body, 'bold', 'center'));
@@ -94,7 +105,7 @@ export function buildFinalsRow(
   const home = sideOf(src.home, src.homeOrigin, get('home'), 'home', lineY, measure);
   const away = sideOf(src.away, src.awayOrigin, get('away'), 'away', lineY, measure);
   const { cell, lines } = cellOf(src, cols, top, height, texts, { lineY, centerY: base - capHalf() });
-  const small = smallOf(src, column(cols, 'shootout'), lineY, texts);
+  const small = smallOf(src, cols, lineY, texts);
   const refCol = column(cols, 'referee');
   const refLines = refCol ? refereeLinesIn(src.referee, refCol, measure) : [];
   const refAdv = advanceMm(printMatchTable.refPt, printMatchRow.lineHeight);
@@ -108,7 +119,7 @@ export function buildFinalsRow(
     box: { x: bounds.left, y: top, w: bounds.width, h: height },
     zebra,
     nr: run(String(src.number), nr.x + nr.w / 2, base, printType.nr, 'normal', 'center'),
-    time: run(src.time, time.x + printMatchTable.timeInset, base, printType.time, 'bold', 'left'),
+    time: run(src.time, time.x + printFinals.timeInset, base, printType.time, 'bold', 'left'),
     home: home.side,
     cell: { ...cell, runs: [...cell.runs, ...small.runs] },
     away: away.side,

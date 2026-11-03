@@ -1055,7 +1055,6 @@
     "seventhEighth": "Match for 7th place",
     "sectionTables": "Standings",
     "sectionFinals": "Final round",
-    "timesTentative": "Times expected",
     "contact": "Contact person",
     "contactLine": "Contact person: {{contact}}",
     "fontFallbackNote": "Special characters may appear as ?. The font could not be loaded. The PDF is created with a substitute font, all content is included.",
@@ -1127,7 +1126,7 @@
     },
     "stand": "As of {{date}} {{time}}",
     "offlineNote": "– offline, entries from other devices may be missing",
-    "footer": "{{title}} · {{stand}} · Page {{page}} of {{total}}",
+    "pageOf": "Page {{page}} of {{total}}",
     "closedAt": "Final result – closed on {{date}} at {{time}}",
     "matches": "Matches",
     "sheet": {
@@ -1174,8 +1173,8 @@
       },
       "winner": "Winner {{round}} {{n}}",
       "loser": "Loser {{round}} {{n}}",
-    "winnerOfMatch": "Winner match {{n}}",
-    "loserOfMatch": "Loser match {{n}}",
+      "winnerOfMatch": "Winner match {{n}}",
+      "loserOfMatch": "Loser match {{n}}",
       "undecided": "to be decided"
     },
     "finalTable": "Final standings"

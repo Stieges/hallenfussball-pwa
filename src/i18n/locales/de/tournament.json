@@ -1055,7 +1055,6 @@
     "seventhEighth": "Spiel um Platz 7",
     "sectionTables": "Tabellen",
     "sectionFinals": "Finalrunde",
-    "timesTentative": "Uhrzeiten voraussichtlich",
     "contact": "Ansprechpartner",
     "contactLine": "Ansprechpartner: {{contact}}",
     "fontFallbackNote": "Sonderzeichen können als ? erscheinen. Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.",
@@ -1127,7 +1126,7 @@
     },
     "stand": "Stand {{date}} {{time}}",
     "offlineNote": "– ohne Verbindung, Einträge anderer Geräte können fehlen",
-    "footer": "{{title}} · {{stand}} · Seite {{page}} von {{total}}",
+    "pageOf": "Seite {{page}} von {{total}}",
     "closedAt": "Endstand – abgeschlossen am {{date}} um {{time}}",
     "matches": "Spiele",
     "sheet": {
@@ -1174,8 +1173,8 @@
       },
       "winner": "Sieger {{round}} {{n}}",
       "loser": "Verlierer {{round}} {{n}}",
-    "winnerOfMatch": "Sieger Spiel {{n}}",
-    "loserOfMatch": "Verlierer Spiel {{n}}",
+      "winnerOfMatch": "Sieger Spiel {{n}}",
+      "loserOfMatch": "Verlierer Spiel {{n}}",
       "undecided": "noch offen"
     },
     "finalTable": "Abschlusstabelle"

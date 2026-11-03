@@ -73,12 +73,13 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
 });
 
 describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als it.fails', () => {
-  it('@BM-010 jede Seite trägt „Hallencup Nord · Stand 14.11. 15:07 · Seite x von y“ (gebaut in C3, Nachweis am PDF in schedulePdf.fusszeile.test.ts)', async () => {
+  it('@BM-010 @DR-044 jede Seite trägt „Hallencup Nord · Stand 14.11. 15:07“ und „Seite x von y“ (Nachweis am PDF in schedulePdf.fusszeile.test.ts)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, SCHEDULE_OPTIONS);
-    const zeile = /^Hallencup Nord · Stand \d{2}\.\d{2}\. \d{2}:\d{2} · Seite (\d+) von (\d+)$/;
+    const seite = /^Seite (\d+) von (\d+)$/;
 
     pdf.pages.forEach((page, i) => {
-      const treffer = page.map(t => zeile.exec(t)).find(m => m !== null);
+      expect(page, `Seite ${i + 1}`).toContain('Hallencup Nord · Stand 14.11. 15:07');
+      const treffer = page.map(t => seite.exec(t)).find(m => m !== null);
       expect(treffer?.[1], `Seite ${i + 1}`).toBe(String(i + 1));
       expect(treffer?.[2], `Seite ${i + 1}`).toBe(String(pdf.pages.length));
     });

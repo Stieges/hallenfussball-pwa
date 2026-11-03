@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { printLimits } from '../../../design-tokens/print';
 import { printFinals, printTableGrid, printWriteLine } from '../../../design-tokens/print-sheet';
-import { FALL_A, FALL_B, fallBLang, mitRegelnDR019 } from './fixtures/handzettelFaelle';
+import { FALL_A, FALL_B, FALL_B_KONTAKT, FALL_B_SR, fallBLang, mitRegelnDR019 } from './fixtures/handzettelFaelle';
 import { handzettelPdf } from './handzettelPdf';
 import type { LayoutLine, LayoutPage } from './pdfjsLayout';
 import { hallencupMitStand } from './pdfScoreSupport';
@@ -114,5 +114,32 @@ describe('@DR-039 Lesereihenfolge', () => {
 
     expect(texte[0]).toContain('Franz');
     expect(texte.at(-1)).toMatch(/Seite 2 von/);
+  });
+});
+
+describe('@DR-037 @DR-034 Finalrunde mit Spalte „SR“ am fertigen PDF', () => {
+  it('jede Namenslinie ≥ 50 mm, die kleinen Linien unter den Ergebnislinien, Schreibraum ≥ 5 mm auch für die untere Reihe', async () => {
+    const { pages } = await handzettelPdf(FALL_B_SR);
+    const seite = pages.find(p => p.texts.some(t => t.str.trim() === 'Sieger Spiel 22'))!;
+    const linien = seite.lines.filter(l => waag(l) && Math.abs(l.width - printWriteLine.stroke) < 0.02);
+    const namen = linien.filter(l => laenge(l) >= printWriteLine.nameMin - TOL);
+    const klein = linien.filter(l => Math.abs(laenge(l) - printWriteLine.small) < TOL);
+    const ergebnis = linien.filter(l => Math.abs(laenge(l) - printWriteLine.resultNarrow) < TOL);
+
+    expect(namen.length).toBeGreaterThanOrEqual(16);
+    expect(klein.length).toBe(16);
+    for (const k of klein) {
+      const darueber = ergebnis.filter(r => r.y1 < k.y1 && Math.abs((r.x1 + r.x2) / 2 - k.x1) < laenge(r) + 5);
+      const naechste = Math.max(...darueber.map(r => r.y1));
+      expect(k.y1 - naechste).toBeGreaterThanOrEqual(printWriteLine.minWriteSpace - TOL);
+    }
+  });
+});
+
+describe('@DR-044 Fall mit Ansprechpartner (b, erfunden)', () => {
+  it('eigene Zeile „Ansprechpartner: Max Mustermann · 0171 1234567 · fussballjugend@tsv-waging.de“, ungekürzt, auf jeder Seite', async () => {
+    const { pages } = await handzettelPdf(FALL_B_KONTAKT);
+
+    pages.forEach(page => expect(page.texts.map(t => t.str.trim())).toContain('Ansprechpartner: Max Mustermann · 0171 1234567 · fussballjugend@tsv-waging.de'));
   });
 });

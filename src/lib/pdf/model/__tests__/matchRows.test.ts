@@ -45,7 +45,7 @@ describe('@DR-004 Schreiblinien statt Kästen', () => {
   });
 });
 
-describe('@DR-019 Ergebniszelle je Zustand (kleine Linien der Finalrunde: finalsRows.test.ts)', () => {
+describe('@DR-019 Ergebniszelle je Zustand (kleine Linien der Finalrunde: sectionModels.test.ts)', () => {
   it('@DR-019 laufendes Spiel: je eine leere Schreiblinie für Heim und Gast, kein „läuft“', () => {
     const row = rowOf(source({ state: { kind: 'live' } }));
 

@@ -35,12 +35,11 @@ export const printWriteLine = {
   colonNarrow: 5,
   colonPt: 14,
   /** Kleine Linien für Verlängerung und Strafstoßschießen (@DR-019): 8 mm, Doppelpunkt 4 mm, 3 mm neben dem Ergebnis. */
-  small: 8,
+  small: 7,
   smallColon: 4,
-  smallGap: 3,
   /** Namenslinie eines offenen Finalplatzes (@DR-037): mindestens 50 mm, 3,5 mm vor bzw. nach den Ergebnislinien. */
   nameMin: 50,
-  nameInset: 3.5,
+  nameInset: 3.75,
   /** Strafstoßschießen um Platz 1 (@DR-036): Trefferlinie 11 mm; die Teamlinien füllen den Rest. */
   shootoutHits: 11,
   /** Platzierung (@DR-005, @DR-009): Zeile 9 mm, Linie 2,5 mm über dem Zeilenboden, Nummer 7 mm breit, Spaltenabstand 8 mm. */
@@ -221,9 +220,6 @@ export const printMatchTable = {
   markGap: 0.8,
   /** Doppelpunkt zwischen den Schreiblinien: Grundlinie so weit über der Linie. */
   colonLift: 0.6,
-  /** Beschriftung kleiner Linien (Verlängerung, Strafstoßschießen) über den Linien. */
-  smallLabelPt: 7.5,
-  smallLabelRise: 3.2,
 } as const;
 
 /** Fußzeile mit Adresse (@DR-038): Adresse als Link in einer eigenen Zeile. */
@@ -238,7 +234,9 @@ export const printFooterLink = {
  * darunter stehen die Herkunft und die Beschriftung kleiner Linien (7,5 pt); reicht das nicht, wird die Zeile höher.
  */
 export const printFinals = {
-  cols: { nr: 6.5, time: 16, field: 10, result: 25.5, referee: 26.5 },
+  cols: { nr: 5.8, time: 14.7, field: 10, result: 25.5, referee: 25.5 },
+  /** Abstand der Uhrzeit zur linken Spaltenkante (schmaler als bei den Gruppenspielen). */
+  timeInset: 1,
   /** Zeile mit dem Rundennamen (Rundenlinie in Akzent oben); der Name steht darunter in `headPt`. */
   roundHeight: 5.6,
   /** Herkunft und Beschriftungen unter den Linien. */
@@ -246,11 +244,11 @@ export const printFinals = {
   textGap: 0.5,
   bottomPad: 0.6,
   /** Namenslinie: Abstand zur Spaltenkante außen (zum Ergebnis hin gilt `printWriteLine.nameInset`). */
-  nameOuter: 0.75,
+  nameOuter: 0.4,
   /** Grundlinie von Nummer, Zeit und Name über der Linie (Schrift sitzt auf der Linie), mm. */
   baselineRise: 0.8,
   /** Kleine Linien der Regel: Paar untereinander, Abstand der Linien, wenn zwei Paare stehen (Beschriftung + Schreibraum). */
-  pairColumn: 22.5,
+  pairColumn: 25.5,
   /** Abstand Hinweis „K.-o.: …“ → Spaltenkopf. */
   koGap: 1.5,
 } as const;

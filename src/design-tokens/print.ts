@@ -108,18 +108,8 @@ export const printType = {
   mark: 9,
   /** .cancel: Text „ausgefallen“ im Kasten */
   cancel: 11,
-  /** .pen-done */
-  penDone: 9,
-  /** tr.round td */
-  round: 11,
-  /** tr.round td .note */
-  roundNote: 9,
   /** .ko-line, .rules-line */
   note: 10.5,
-  /** table.s caption */
-  caption: 11.5,
-  /** .rank */
-  rank: 11.5,
   /** .foot */
   foot: 9,
 } as const;
@@ -143,7 +133,6 @@ export const printGap = {
   /** h2 margin oben und unten */
   h2Top: 4,
   h2Bottom: 1.8,
-  bodyPadH: 1.5,
   /** Kopf Seite 1: Abstand Unterkante Text → Kopflinie (v7.2 .head padding-bottom 2,5 mm plus Unterlänge) */
   headPadBottom: 3.2,
   /** Kurzkopf (Folgeseiten): Gesamthöhe bis zum Inhalt bei einer Titelzeile, Grundlinien von Titel und Untertitel, Linie */
@@ -205,10 +194,10 @@ export const printMetrics = {
   /** Fußzeile (9 pt × 1,2): Zeilenabstand; Seitenzahl für die Breitenmessung (größte erwartete) */
   footAdvance: 3.8,
   footWorstPage: 99,
+  /** Abstand zwischen der linken Spalte der Fußzeile und „Seite x von y“ (@DR-044), mm */
+  footColumnGap: 4,
   /** Hinweise an den Nutzer zeigen von einem langen Freitext (Regelwerk) höchstens diese Zeichen */
   noteExcerptMax: 60,
-  /** Runden-Überschrift: Abstand Titel → Hinweis „Uhrzeiten voraussichtlich“ */
-  roundNoteGap: 3,
 } as const;
 
 /** Zeitangaben im Kopf des Spielplans (@DR-031). */

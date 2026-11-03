@@ -37,6 +37,8 @@ export interface FallFinalSpiel {
   heim: FallHerkunft;
   gast: FallHerkunft;
   zustand?: FallZustand;
+  /** Schiedsrichter-Nummer (@DR-025). */
+  sr?: number;
 }
 
 export interface HandzettelFall {
@@ -67,6 +69,8 @@ export interface HandzettelFall {
   regelwerk?: string;
   /** Zeitstrafe in Sekunden; Mockup b hat keine (Spielzeit „10 Min. je Spiel“), sonst gilt die Vorgabe 120. */
   zeitstrafeSek?: number;
+  /** Ansprechpartner der Fußzeile (@DR-044, nur mit Häkchen „öffentlich zeigen“): erfunden, kein Mockup-Fall. */
+  kontakt?: string;
   /** Erwartungen aus dem Mockup (NOTIZ.md „Korrekturen nach Review“). */
   mockup: { endeCa: string; seiten: number; zeilenhoehe: number; ergebnisLinie: number };
 }
@@ -146,7 +150,7 @@ const B_SPIELE: FallSpiel[] = [
 });
 
 /** Finalrunde von b (Mockup): Viertelfinale über Kreuz, Halbfinale, Spiel um Platz 3, Finale, alle 12 Minuten ab 14:08. */
-const B_FINALE: FallFinalSpiel[] = [
+export const B_FINALE: FallFinalSpiel[] = [
   { nr: 21, zeit: '14:08', runde: 'quarterfinal', heim: { rang: 1, gruppe: 'A' }, gast: { rang: 4, gruppe: 'B' } },
   { nr: 22, zeit: '14:20', runde: 'quarterfinal', heim: { rang: 2, gruppe: 'A' }, gast: { rang: 3, gruppe: 'B' } },
   { nr: 23, zeit: '14:32', runde: 'quarterfinal', heim: { rang: 3, gruppe: 'A' }, gast: { rang: 2, gruppe: 'B' } },
@@ -237,3 +241,14 @@ export function mitStandA(fall: HandzettelFall = FALL_A, halbzeit = false): Hand
 
 /** Feste Uhr der PDF-Tests (Stand-Zeile, @DR-001): Turniertag a/c, 17:35 (Spiel 7 läuft). */
 export const FALL_NOW = new Date(2026, 10, 28, 17, 35);
+
+/** b mit Ansprechpartner in der Fußzeile (@DR-044): eigener Fall, die Mockup-Fälle a, b, c bleiben unverändert. */
+export const FALL_B_KONTAKT: HandzettelFall = { ...FALL_B, kontakt: 'Max Mustermann · 0171 1234567 · fussballjugend@tsv-waging.de' };
+
+/** b mit Schiedsrichter-Spalte in Gruppenspielen und Finalrunde (@DR-037: dann reicht der Platz neben dem Ergebnis nicht). */
+export const FALL_B_SR: HandzettelFall = {
+  ...FALL_B,
+  schiedsrichterNamen: ['Eins', 'Zwei', 'Drei'],
+  spiele: FALL_B.spiele.map((spiel, i) => ({ ...spiel, sr: (i % 3) + 1 })),
+  finale: (FALL_B.finale ?? []).map((spiel, i) => ({ ...spiel, sr: (i % 3) + 1 })),
+};
