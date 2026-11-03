@@ -48,13 +48,13 @@ const ROUND_OF_LABEL: Partial<Record<SlotKey, OriginRound>> = {
 };
 
 /** Das, was die Herkunft vom Vorgängerspiel braucht. */
-export type OriginMatch = Pick<ScheduledMatch, 'id' | 'label'>;
+export type OriginMatch = Pick<ScheduledMatch, 'id' | 'label' | 'matchNumber'>;
 
 /**
- * Klartext der gespeicherten Herkunft eines Platzes (A-36a `originA/B`, @DR-005, @DR-018) in der Sprache des
- * Dokuments: Gruppenrang → „Zweiter Gruppe A“, Ergebnis eines Vorgängerspiels → „Sieger Halbfinale 1“. Runde und
- * Nummer kommen aus der Bezeichnung des Vorgängers („1. Halbfinale“). `undefined`, wenn sich das Vorgängerspiel nicht
- * finden lässt oder eine eigene Bezeichnung trägt.
+ * Klartext der gespeicherten Herkunft eines Platzes (A-36a `originA/B`, @DR-005, @DR-018, @DR-037) in der Sprache des
+ * Dokuments: Gruppenrang → „1. Gruppe A“, Ergebnis eines Vorgängerspiels → „Sieger Spiel 25“ über die Spielnummer des
+ * Vorgängers (nur im PDF, die Texte der App bleiben). Ohne Spielnummer fällt es auf Runde und Nummer aus der Bezeichnung
+ * des Vorgängers zurück („Sieger Halbfinale 1“). `undefined`, wenn sich das Vorgängerspiel nicht finden lässt.
  */
 export function sourceLabel(
   source: SlotSource,
@@ -65,7 +65,11 @@ export function sourceLabel(
   if (source.kind === 'groupRank') {
     return t.origin.groupPlace(source.rank, groupName ? groupName(source.group) : t.groupLabel(source.group, `Gruppe ${source.group}`));
   }
-  const label = matches.find(m => m.id === source.matchId)?.label;
+  const previous = matches.find(m => m.id === source.matchId);
+  if (previous !== undefined && Number.isFinite(previous.matchNumber)) {
+    return t.origin.fromMatch(source.role, previous.matchNumber);
+  }
+  const label = previous?.label;
   const described = label === undefined ? undefined : describeMatchLabel(label);
   if (described === undefined || !('key' in described)) {
     return undefined;

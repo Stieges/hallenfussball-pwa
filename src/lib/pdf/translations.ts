@@ -36,13 +36,8 @@ export interface PdfTexts {
   hall: string;
   matchDuration: string;
   mode: string;
-  /** Kopfzeile „Termin“ (B-28a3-4F, N2: eine Zeile wie v7.2). */
-  appointment: string;
-  /** Wert der Terminzeile: Tag, Beginn, Ende voraussichtlich, Felder. */
-  appointmentLine: (parts: { day: string; start: string; end: string; fields: string }) => string;
   /** Anzahl der Felder: „1 Feld“, „2 Felder“. */
   fields: (count: number) => string;
-  participants: string;
   groupStage: string;
   /** Abschnitt der Spiele bei „Jeder gegen jeden“ (statt „Gruppenphase“). */
   matches: string;
@@ -58,7 +53,7 @@ export interface PdfTexts {
   away: string;
   /** Spaltenkopf „Schiedsrichter“ (@DR-025, @OB-075: ausgeschrieben). */
   referee: string;
-  /** Kennzeichen unter dem Ergebnis eines laufenden Spiels (@BM-012) und im Kasten eines ausgefallenen (@BM-013). */
+  /** Text für ein ausgefallenes Spiel (@BM-013); ein laufendes Spiel trägt keinen Text, nur Linien (@DR-019). */
   skipped: string;
   /** „korrigiert 14:52“ (@BM-013); `time` kommt aus `formatClock`. */
   corrected: (time: string) => string;
@@ -100,12 +95,16 @@ export interface PdfTexts {
   origin: {
     groupPlace: (place: number, group: string) => string;
     fromRound: (kind: OriginKind, round: OriginRound, n: number) => string;
+    /** „Sieger Spiel 25“ über die Spielnummer des Vorgängers (@DR-037). */
+    fromMatch: (kind: OriginKind, number: number) => string;
     /** Gruppen-Herkunft, solange die Tabellen ausgeblendet sind (@BM-032). */
     undecided: string;
   };
-  modeGroupsAndFinals: string;
+  /** „2 Gruppen + Finalrunde“ (@DR-020): die Zahl der Gruppen als Ziffer. */
+  modeGroupsAndFinals: (groups: number) => string;
+  /** Strafstoßschießen um Platz 1 (@DR-036): Überschrift und Beschriftung der Trefferlinien. */
+  shootoutLine: { title: string; hits: string };
   modeRoundRobin: string;
-  standingsOfGroup: (group: string) => string;
   durationMinutes: (minutes: number) => string;
   tournamentTitle: string;
   ageClass: string;
@@ -232,10 +231,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     hall: s('hall'),
     matchDuration: s('matchDuration'),
     mode: s('mode'),
-    appointment: s('appointment'),
-    appointmentLine: parts => translate('pdf.appointmentLine', parts),
     fields: count => (count === 1 ? s('fieldOne') : translate('pdf.fieldMany', { n: count })),
-    participants: s('participants'),
     groupStage: s('groupStage'),
     matches: s('matches'),
     finalRanking: s('finalRanking'),
@@ -282,11 +278,12 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
         return translate('pdf.origin.groupPlace', { place: ordinal, group });
       },
       fromRound: (kind, round, n) => translate(`pdf.origin.${kind}`, { round: s(`origin.round.${round}`), n }),
+      fromMatch: (kind, number) => translate(`pdf.origin.${kind}OfMatch`, { n: number }),
       undecided: s('origin.undecided'),
     },
-    modeGroupsAndFinals: s('modeGroupsAndFinals'),
+    modeGroupsAndFinals: groups => translate('pdf.modeGroupsAndFinals', { count: groups }),
+    shootoutLine: { title: s('shootoutLine.title'), hits: s('shootoutLine.hits') },
     modeRoundRobin: s('modeRoundRobin'),
-    standingsOfGroup: group => translate('pdf.standingsOfGroup', { group }),
     durationMinutes: minutes => translate('pdf.durationMinutes', { minutes }),
     tournamentTitle: s('tournamentTitle'),
     ageClass: s('ageClass'),

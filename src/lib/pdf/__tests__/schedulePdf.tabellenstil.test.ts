@@ -21,8 +21,9 @@ describe('C1-F S1 Zeilenlinien nicht übermalt', () => {
   it('Finalseite: ebenfalls keine weiße Füllung in den Tabellen', async () => {
     const tournament = hallencupTournament();
     const pages = await lesen(hallencupSchedule(tournament), tournament);
-    const finale = pages.find(page => page.texts.some(t => ohneNummer(t.str) === 'Halbfinale'));
-    const titel = finale?.texts.find(t => ohneNummer(t.str) === 'Halbfinale');
+    const istHalbfinale = (str: string): boolean => ohneNummer(str).toLocaleLowerCase('de') === 'halbfinale';
+    const finale = pages.find(page => page.texts.some(t => istHalbfinale(t.str)));
+    const titel = finale?.texts.find(t => istHalbfinale(t.str));
 
     const platzierung = finale?.texts.find(t => ohneNummer(t.str) === 'Platzierung');
 

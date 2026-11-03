@@ -27,12 +27,12 @@ function fussbereich(page: LayoutPage): { linie: number; texte: LayoutText[] } {
 }
 
 describe('@BM-010 @ZP-052 Fußzeile: Titel · Stand · Seite x von y auf jeder Seite', () => {
-  it('Hallencup Nord, 14.11. 15:07: Seite x von 3 mit x = Seitenindex', async () => {
+  it('Hallencup Nord, 14.11. 15:07: Seite x von 2 mit x = Seitenindex', async () => {
     const { pages } = await layoutOf({ now: NOW });
 
-    expect(pages).toHaveLength(3);
+    expect(pages).toHaveLength(2);
     pages.forEach((page, i) => {
-      const zeile = `Hallencup Nord · Stand 14.11. 15:07 · Seite ${i + 1} von 3`;
+      const zeile = `Hallencup Nord · Stand 14.11. 15:07 · Seite ${i + 1} von 2`;
       expect(page.texts.map(t => t.str), `Seite ${i + 1}`).toContain(zeile);
     });
   });
@@ -40,14 +40,14 @@ describe('@BM-010 @ZP-052 Fußzeile: Titel · Stand · Seite x von y auf jeder S
   it('Gegenbeispiel: ein anderer Zeitpunkt ergibt eine andere Zeile, die Zeit kommt aus now', async () => {
     const { pages } = await layoutOf({ now: new Date(2026, 5, 3, 9, 5) });
 
-    expect(pages[0].texts.map(t => t.str)).toContain('Hallencup Nord · Stand 03.06. 09:05 · Seite 1 von 3');
+    expect(pages[0].texts.map(t => t.str)).toContain('Hallencup Nord · Stand 03.06. 09:05 · Seite 1 von 2');
     expect(pageText(pages[0])).not.toContain('14.11. 15:07');
   });
 
   it('EN: „As of“ und „Page x of y“', async () => {
     const { pages } = await layoutOf({ now: NOW, locale: 'en', translate: translatorFor('en') });
 
-    expect(pages[1].texts.map(t => t.str)).toContain('Hallencup Nord · As of 14.11. 15:07 · Page 2 of 3');
+    expect(pages[1].texts.map(t => t.str)).toContain('Hallencup Nord · As of 14.11. 15:07 · Page 2 of 2');
   });
 });
 
@@ -60,7 +60,7 @@ describe('@BM-023 @DR-021 Netzhinweis: ohne Verbindung steht er auf jeder Seite'
     pages.forEach((page, i) => {
       const fuss = fussbereich(page).texte.map(t => t.str).join(' ');
       expect(fuss, `Seite ${i + 1}`).toContain(HINWEIS);
-      expect(fuss, `Seite ${i + 1}`).toContain(`Seite ${i + 1} von 3`);
+      expect(fuss, `Seite ${i + 1}`).toContain(`Seite ${i + 1} von 2`);
     });
   });
 
@@ -127,7 +127,7 @@ describe('@BM-035 @DR-011 Fassung final: statt „Stand …“ steht die Abschlu
     const { pages } = await layoutOf({ now: NOW, edition: 'final', closedAt: new Date(2026, 10, 14, 17, 40) });
 
     pages.forEach((page, i) => {
-      expect(page.texts.map(t => t.str), `Seite ${i + 1}`).toContain(`Hallencup Nord · Endstand – abgeschlossen am 14.11.2026 um 17:40 · Seite ${i + 1} von 3`);
+      expect(page.texts.map(t => t.str), `Seite ${i + 1}`).toContain(`Hallencup Nord · Endstand – abgeschlossen am 14.11.2026 um 17:40 · Seite ${i + 1} von 2`);
       expect(pageText(page)).not.toContain('Stand 14.11.');
     });
   });

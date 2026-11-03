@@ -15,12 +15,11 @@ import { drawQrSymbol, qrSide } from './qrCode';
 import { clipToWidth } from './textFit';
 
 /**
- * Kurzkopf der Folgeseiten: Titelzeilen (umbrochen) und Untertitel je Seite. Der Untertitel nennt Altersklasse, Datum
- * und den Abschnitt, der oben auf der Seite steht (G8), und ist erst nach dem Satz bekannt.
+ * Kurzkopf der Folgeseiten: Titelzeilen (umbrochen); der Untertitel je Seite nennt Altersklasse, Datum und den Abschnitt, der
+ * oben auf der Seite steht (G8, `PageModel.section`).
  */
 export interface ShortHeadText {
   titleLines: string[];
-  subtitleFor: (page: number) => string;
   /** Zuschauer-QR rechts im Kurzkopf (@DR-003, mindestens 20 mm); Titel und Untertitel enden links davon. */
   qr?: boolean[][];
   /** Zuschauer-Adresse: der QR jeder Folgeseite ist ein Link (@DR-038). */
@@ -52,16 +51,8 @@ export function shortHeadTitleLines(doc: jsPDF, title: string, width: number): s
   return [...lines.slice(0, MAX_TITLE_LINES - 1), `${last.trimEnd()}…`];
 }
 
-/** Zeichnet den Kurzkopf auf jede Seite ab der zweiten. Wird nach dem Satz aufgerufen, vor den Seitenzahlen. */
-export function drawShortHeads(doc: jsPDF, geo: PageGeometry, head: ShortHeadText): void {
-  const total = doc.getNumberOfPages();
-  for (let page = 2; page <= total; page++) {
-    doc.setPage(page);
-    drawShortHead(doc, head, geo, head.subtitleFor(page));
-  }
-}
-
-function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry, subtitle: string): void {
+/** Zeichnet den Kurzkopf der aktuellen Seite (ab der zweiten) als Erstes, vor ihrem Inhalt (@DR-039, Lesereihenfolge). */
+export function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry, subtitle: string): void {
   const extra = (head.titleLines.length - 1) * printMetrics.shortTitleAdvance;
   doc.setTextColor(...printColors.ink);
   doc.setFont(fontOf(doc), 'bold');

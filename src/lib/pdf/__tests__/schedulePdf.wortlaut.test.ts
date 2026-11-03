@@ -34,10 +34,10 @@ describe('G57 @BM-052 @DR-005 „Spielplan“ ohne Zusatz in beiden Fassungen: T
   });
 });
 
-describe('G71 @DR-020 „Modus: Gruppen + Finalrunde“', () => {
+describe('G71 @DR-020 „Modus: 2 Gruppen + Finalrunde“ (Zahl der Gruppen als Ziffer)', () => {
   it.each([
-    ['de', 'Modus', 'Gruppen + Finalrunde'],
-    ['en', 'Mode', 'Groups + final round'],
+    ['de', 'Modus', '2 Gruppen + Finalrunde'],
+    ['en', 'Mode', '2 groups + final round'],
   ] as const)('%s: Zeile %s', async (locale, label, value) => {
     const { pages } = await layoutOf({ now: NOW, locale, translate: translatorFor(locale) });
 
@@ -59,14 +59,14 @@ describe('G72 @DR-006 @DR-020 Regelzeile „Wertung“, „Platzierung“ bleibt
   it('Gegenbeispiel: der Block der Plätze heißt weiter „Platzierung“', async () => {
     const { pages } = await layoutOf({ now: NOW });
 
-    expect(allStrs(pages).some(s => /^\d+ Platzierung$/.test(s))).toBe(true);
+    expect(allStrs(pages)).toContain('Platzierung');
   });
 
   it('EN: „Tiebreakers“ in der Regelzeile, „Final ranking“ für den Block', async () => {
     const { pages } = await layoutOf({ now: NOW, ...en });
 
     expect(flat(pages[0])).toContain('Tiebreakers:');
-    expect(allStrs(pages).some(s => /^\d+ Final ranking$/.test(s))).toBe(true);
+    expect(allStrs(pages)).toContain('Final ranking');
   });
 });
 

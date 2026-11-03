@@ -20,12 +20,12 @@ describe('@BM-032 Veranstalter-PDF bei ausgeschaltetem Schalter „Gruppentabell
     const texte = alleTexte(pages);
     const text = squash(texte.join(' '));
 
-    expect(texte.some(t => /Tabelle\s*–\s*Gruppe/.test(t)), 'Gruppentabelle').toBe(false);
-    expect(texte.some(t => /^\d+\s*Platzierung$/.test(t)), 'Platzierung').toBe(false);
-    expect(text).not.toContain(squash('Erster Gruppe A'));
-    expect(text).not.toContain(squash('Zweiter Gruppe B'));
+    expect(texte.some(t => t.trim() === 'Gruppe A'), 'Gruppentabelle').toBe(false);
+    expect(texte.some(t => t.trim() === 'Platzierung'), 'Platzierung').toBe(false);
+    expect(text).not.toContain(squash('1. Gruppe A'));
+    expect(text).not.toContain(squash('2. Gruppe B'));
     expect(text).toContain(squash('noch offen'));
-    expect(text).toContain(squash('Sieger Halbfinale 1'));
+    expect(text).toMatch(/SiegerSpiel\d+/);
   });
 
   it('Gegenbeispiel: Schalter an – Tabellen, Platzierung und Gruppen-Herkunft stehen im Dokument', async () => {
@@ -33,9 +33,9 @@ describe('@BM-032 Veranstalter-PDF bei ausgeschaltetem Schalter „Gruppentabell
     const texte = alleTexte(pages);
     const text = squash(texte.join(' '));
 
-    expect(texte.some(t => /Tabelle\s*–\s*Gruppe/.test(t))).toBe(true);
-    expect(texte.some(t => /^\d+\s*Platzierung$/.test(t))).toBe(true);
-    expect(text).toContain(squash('Erster Gruppe A'));
+    expect(texte.some(t => t.trim() === 'Gruppe A')).toBe(true);
+    expect(texte.some(t => t.trim() === 'Platzierung')).toBe(true);
+    expect(text).toContain(squash('1. Gruppe A'));
     expect(text).not.toContain(squash('noch offen'));
   });
 
@@ -43,8 +43,8 @@ describe('@BM-032 Veranstalter-PDF bei ausgeschaltetem Schalter „Gruppentabell
     const { pages } = await kopfPdf({ audience: 'viewer' }, mitTabellen, hallencupSchedule(mitTabellen));
     const texte = alleTexte(pages);
 
-    expect(texte.some(t => /Tabelle\s*–\s*Gruppe/.test(t))).toBe(false);
-    expect(texte.some(t => /^\d+\s*Platzierung$/.test(t))).toBe(false);
+    expect(texte.some(t => t.trim() === 'Gruppe A')).toBe(false);
+    expect(texte.some(t => t.trim() === 'Platzierung')).toBe(false);
   });
 });
 

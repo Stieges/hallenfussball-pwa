@@ -43,16 +43,9 @@ describe('@DR-004 Schreiblinien statt Kästen', () => {
     expect(narrow.x2 - narrow.x1).toBeCloseTo(printWriteLine.resultNarrow, 5);
     expect(narrow.x2 - narrow.x1).toBeGreaterThanOrEqual(printWriteLine.resultNarrow);
   });
-
-  it('@DR-004 K.-o.-Spiel hat kleine Linien der Runde neben dem Ergebnis', () => {
-    const row = rowOf(source({ small: ['overtime', 'shootout'] }), { field: false, group: false, referee: false, smallPairs: 2 });
-
-    expect(row.lines.filter(l => l.kind === 'small')).toHaveLength(4);
-    expect(textsOf(row)).toEqual(expect.arrayContaining(['nach Verlängerung', 'Strafstoßschießen']));
-  });
 });
 
-describe('@DR-019 Ergebniszelle je Zustand', () => {
+describe('@DR-019 Ergebniszelle je Zustand (kleine Linien der Finalrunde: finalsRows.test.ts)', () => {
   it('@DR-019 laufendes Spiel: je eine leere Schreiblinie für Heim und Gast, kein „läuft“', () => {
     const row = rowOf(source({ state: { kind: 'live' } }));
 
@@ -68,24 +61,6 @@ describe('@DR-019 Ergebniszelle je Zustand', () => {
     expect(row.lines).toEqual([]);
   });
 
-  it('@DR-019 Finalrunde Halbfinale: nur kleine Linien „Strafstoßschießen“, fluchtend mit den Ergebnislinien', () => {
-    const row = rowOf(source({ small: ['shootout'] }), { field: false, group: false, referee: false, smallPairs: 1 });
-    const small = row.lines.filter(l => l.kind === 'small');
-    const result = row.lines.filter(l => l.kind === 'result');
-
-    expect(small).toHaveLength(2);
-    expect(textsOf(row)).toContain('Strafstoßschießen');
-    expect(textsOf(row)).not.toContain('nach Verlängerung');
-    expect(Math.abs(small[0].y - result[0].y)).toBeLessThanOrEqual(TOL);
-  });
-
-  it('@DR-019 Finale mit Verlängerung: beide kleinen Linienpaare auf der Grundlinie der Ergebnislinien', () => {
-    const row = rowOf(source({ small: ['overtime', 'shootout'] }), { field: false, group: false, referee: false, smallPairs: 2 });
-    const ys = row.lines.map(l => l.y);
-
-    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThanOrEqual(TOL);
-  });
-
   it('@DR-019 beendetes Spiel: das Ergebnis steht als Zahlen, keine Linien', () => {
     const row = rowOf(source({ state: { kind: 'final', scoreA: 2, scoreB: 1 } }));
 
@@ -93,11 +68,6 @@ describe('@DR-019 Ergebniszelle je Zustand', () => {
     expect(row.lines).toEqual([]);
   });
 
-  it('Gegenbeispiel @DR-019 ein ausgefallenes K.-o.-Spiel hat auch dann keine kleinen Linien', () => {
-    const row = rowOf(source({ state: { kind: 'skipped' }, small: ['shootout'] }), { field: false, group: false, referee: false, smallPairs: 1 });
-
-    expect(row.lines).toEqual([]);
-  });
 });
 
 /** Alle waagerechten Striche, gegen die eine Schreiblinie Abstand halten muss (@DR-034), ohne die Linie selbst. */

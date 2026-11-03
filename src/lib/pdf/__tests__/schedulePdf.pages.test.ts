@@ -24,19 +24,18 @@ function spielnummern(page: LayoutPage): number[] {
     .map(t => Number(t.str));
 }
 
-describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihenfolge', () => {
-  it('Seite 1 Kopf und Gruppenspiele (keine Teilnehmerliste), Seite 2 Tabellen, Seite 3 Finalrunde und Platzierung (zweispaltig, @DR-009)', async () => {
+describe('@DR-002 Seitenaufbau: 12 Spiele und die übrigen Abschnitte in fester Reihenfolge', () => {
+  it('Seite 1 Kopf und Gruppenspiele (keine Teilnehmerliste), Seite 2 Tabellen, darunter Finalrunde und Platzierung, weil sie dort ganz Platz haben (zweispaltig, @DR-009)', async () => {
     expect(groupMatches(hallencupSchedule())).toHaveLength(12);
     const { pages } = await layoutOf();
 
-    expect(pages).toHaveLength(3);
+    expect(pages).toHaveLength(2);
     expect(pageText(pages[0])).toContain('Beginn');
     expect(pageText(pages[0])).not.toContain('Teilnehmer');
-    expect(pageText(pages[0])).not.toContain('Tabelle – Gruppe A');
-    expect(pageText(pages[1])).toContain('Tabelle – Gruppe A');
-    expect(pageText(pages[1])).not.toContain('Platzierung');
-    expect(pageText(pages[2])).toContain('Spiel um Platz 3');
-    expect(pageText(pages[2])).toContain('Platzierung');
+    expect(pageText(pages[0])).not.toContain('Gruppe A');
+    expect(pageText(pages[1])).toContain('Gruppe A');
+    expect(pageText(pages[1])).toContain('SPIEL UM PLATZ 3');
+    expect(pageText(pages[1])).toContain('Platzierung');
   });
 
   it('Gegenbeispiel: ohne Tabellen entfällt die Tabellenseite, die Platzierung bleibt auf Seite 2', async () => {
@@ -70,7 +69,7 @@ describe('@DR-002 Seitenaufbau: 12 Spiele passen auf drei Seiten in fester Reihe
     pages.forEach((page, i) => {
       expect(page.texts.filter(t => !SEITENZAHL.test(t.str)).length, `Seite ${i + 1}`).toBeGreaterThan(0);
     });
-    expect(pageText(pages[1])).toContain('Tabelle');
+    expect(pageText(pages[1])).toContain('Gruppe A');
     expect(pageText(pages[1])).toContain('Platzierung');
   });
 });
@@ -81,9 +80,9 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
     expect(groupMatches(schedule)).toHaveLength(30);
     const { pages } = await layoutOf({}, schedule);
 
-    // Die Zeilen sind mit den Kästchen höher (B-28 C1, 8 mm): 30 Spiele brauchen mehr Seiten; die zweispaltige Platzierung (C2) steht noch auf der Finalseite
-    // Mit geteiltem Turnier trägt jeder Kurzkopf den QR (@DR-003, C4-F): die Folgeseiten fassen weniger Zeilen, es sind 5 Seiten
-    expect(pages).toHaveLength(5);
+    // Mit geteiltem Turnier trägt jeder Kurzkopf den QR (@DR-003, C4-F): die Folgeseiten fassen weniger Zeilen. Zwei Seiten Spiele,
+    // dann eine Seite mit den Tabellen (zwei Gruppen zu sechs Teams); Finalrunde und Platzierung haben dort nicht ganz Platz und folgen auf einer neuen Seite.
+    expect(pages).toHaveLength(4);
     pages.forEach((page, i) => {
       expect(pageText(page), `Seite ${i + 1}`).toContain(`Seite ${i + 1} von ${pages.length}`);
     });
@@ -98,7 +97,7 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
     expect(Math.abs((kurzkopf?.size ?? 0) - printType.titleShort)).toBeLessThanOrEqual(TOL);
     expect(folge.texts.some(t => t.str === 'Heim')).toBe(true);
     expect(folge.texts.some(t => t.str === 'Gast')).toBe(true);
-    expect(pageText(pages[0])).not.toContain('Tabelle – Gruppe A');
+    expect(pageText(pages[0])).not.toContain('Gruppe A');
   });
 
   it('Spielnummern: lückenlos und ohne Doppel über alle Seiten, die Folgeseite setzt direkt fort', async () => {
@@ -117,7 +116,7 @@ describe('@DR-002 Folgeseite: 30 Spiele laufen über Seite 1 hinaus, Folgeseite 
 
     expect(width).toBeCloseTo(210, 1);
     expect(height).toBeCloseTo(297, 1);
-    const tabellen = pages.findIndex(p => pageText(p).includes('Tabelle – Gruppe A'));
+    const tabellen = pages.findIndex(p => pageText(p).includes('Gruppe A'));
     expect(tabellen).toBeGreaterThan(0);
     expect(pages[tabellen].texts.some(t => t.str === '20')).toBe(false);
   });

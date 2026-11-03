@@ -1,23 +1,20 @@
 /**
- * Hilfen für die Tests der Ergebniszelle, der Schreibfelder und der Spieltabellen (B-28 C1). Nur Tests.
- * Eine Spielzeile wird im fertigen PDF über ihre Spielnummer gefunden: die Zahl in der Nr-Spalte, die Zeilenlinien
- * darüber und darunter begrenzen die Zeile. Kästchen sind Rechtecke mit Strich: pdfjs liefert drei ihrer vier
- * Kanten (die schließende fehlt), deshalb zählen zwei Waagerechte gleicher Länge im Abstand der Höhe und die
- * Senkrechte rechts.
+ * Hilfen für die Tests der Ergebniszelle, der Schreiblinien und der Spieltabellen (B-28 C1, T7a, T7b). Nur Tests.
+ * Eine Spielzeile wird im fertigen PDF über ihre Spielnummer gefunden: die Zahl in der Nr-Spalte; die Grenze zur Nachbarzeile
+ * liegt mittig zwischen zwei Spielnummern (Zebra-Flächen statt Trennlinien, @DR-034).
  */
 import type { GeneratedSchedule } from '../../../core/generators';
 import { printColumns, printType } from '../../../design-tokens/print';
+import { printMatchTable } from '../../../design-tokens/print-sheet';
 import type { Match, Tournament } from '../../../types/tournament';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import { pageGeometry } from '../layout';
 import { withTournamentState } from '../tournamentState';
 import { hallencupSchedule, hallencupTournament, matchByNumber } from './pdfFixture';
-import { readLayout, type Box, type LayoutLine, type LayoutPage, type LayoutRect, type LayoutText } from './pdfjsLayout';
+import { readLayout, type LayoutLine, type LayoutPage, type LayoutText } from './pdfjsLayout';
 import { translatorFor } from './pdfText';
 
 export const TOL = 0.1;
-/** Eine Zeilenlinie reicht mindestens über diese Strecke (mm); der Gitterrand eines Kästchens ist kürzer. */
-const MINDESTLAENGE_ZEILENLINIE = 100;
 export const SIZE_TOL = 0.05;
 
 /** Plan und Turnier mit Stand: `updates` je Spielnummer wie `Match`-Felder des Turniers, eingemischt über die Fassade. */
@@ -77,58 +74,40 @@ const laenge = (l: LayoutLine): number => Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
 export const waagerecht = (l: LayoutLine): boolean => Math.abs(l.y1 - l.y2) < TOL;
 export const senkrecht = (l: LayoutLine): boolean => Math.abs(l.x1 - l.x2) < TOL;
 
-/** Höhen (y) der Zeilenlinien: autoTable zieht sie zellenweise, zusammen ergeben sie eine Linie über die Tabelle. */
-export function zeilenLinien(page: LayoutPage): number[] {
-  const laengeJeHoehe = new Map<number, number>();
-  for (const l of page.lines.filter(waagerecht)) {
-    const y = Math.round(l.y1 * 10) / 10;
-    laengeJeHoehe.set(y, (laengeJeHoehe.get(y) ?? 0) + laenge(l));
-  }
-  return [...laengeJeHoehe].filter(([, summe]) => summe > MINDESTLAENGE_ZEILENLINIE).map(([y]) => y).sort((a, b) => a - b);
-}
+/**
+ * Platz vor der ersten bzw. nach der letzten Spielnummer einer Seite, soweit Herkunft und kleine Linien noch zur Zeile gehören (mm):
+ * unten reicht er bis unter das zweite Paar kleiner Linien samt Beschriftung, bleibt aber über der nächsten Überschrift.
+ */
+const RAND_OBEN = 6;
+const RAND_UNTEN = 14;
 
-/** Zeile der Spielnummer `nummer`: Zahl in der Nr-Spalte (Schrift `printType.nr`), begrenzt von den Zeilenlinien. */
+/**
+ * Zeile der Spielnummer `nummer`: die Zahl in der Nr-Spalte (Schrift `printType.nr`). Die Zeilen trennt seit der Mockup-Runde 2 keine
+ * Linie, sondern eine helle Fläche; die Grenze zur Nachbarzeile liegt darum mittig zwischen zwei Spielnummern.
+ */
 export function zeileVon(pages: LayoutPage[], nummer: number): Zeile {
   const links = pageGeometry('a4', 'portrait').left;
   for (const [index, page] of pages.entries()) {
-    const nr = page.texts.find(t =>
-      t.str.trim() === String(nummer) && Math.abs(t.size - printType.nr) <= SIZE_TOL && t.x >= links && t.x < links + printColumns.match.nr);
-    if (!nr) {continue;}
-    const linien = zeilenLinien(page);
-    const oben = Math.max(...linien.filter(y => y < nr.y));
-    const unten = Math.min(...linien.filter(y => y > nr.y));
-    return { page, nr, top: oben, bottom: unten, index };
+    const nummern = page.texts
+      .filter(t => Math.abs(t.size - printType.nr) <= SIZE_TOL && t.x >= links && t.x < links + printColumns.match.nr && /^\d+$/.test(t.str.trim()))
+      .sort((a, b) => a.y - b.y);
+    const stelle = nummern.findIndex(t => t.str.trim() === String(nummer));
+    if (stelle < 0) {continue;}
+    const nr = nummern[stelle];
+    const davor = nummern[stelle - 1];
+    const danach = nummern[stelle + 1];
+    return { page, nr, top: davor ? (davor.y + nr.y) / 2 : nr.y - RAND_OBEN, bottom: danach ? (nr.y + danach.y) / 2 : nr.y + RAND_UNTEN, index };
   }
   throw new Error(`Spiel ${nummer} steht in keiner Nr-Spalte`);
 }
 
-/** Textstücke der Zeile (zwischen den Zeilenlinien). */
+/** Textstücke der Zeile (zwischen ihrer oberen und unteren Grenze). */
 export const textsIn = (zeile: Zeile): LayoutText[] =>
   zeile.page.texts.filter(t => t.y > zeile.top && t.y < zeile.bottom);
 
-/** Kästchen der Größe `w` × `h` in einem senkrechten Bereich. */
-export function kaestchen(page: LayoutPage, w: number, h: number, von = -Infinity, bis = Infinity): Box[] {
-  const waag = page.lines.filter(l => waagerecht(l) && Math.abs(laenge(l) - w) <= TOL);
-  const senk = page.lines.filter(l => senkrecht(l) && Math.abs(laenge(l) - h) <= TOL);
-  const gefunden: Box[] = [];
-  for (const oben of waag) {
-    const x = Math.min(oben.x1, oben.x2);
-    const unten = waag.find(l => Math.abs(Math.min(l.x1, l.x2) - x) <= TOL && Math.abs(l.y1 - oben.y1 - h) <= TOL);
-    const rechts = senk.some(l => Math.abs(l.x1 - (x + w)) <= TOL && Math.abs(Math.min(l.y1, l.y2) - oben.y1) <= TOL);
-    if (unten && rechts && oben.y1 >= von && unten.y1 <= bis) {
-      gefunden.push({ x, y: oben.y1, w, h });
-    }
-  }
-  return gefunden.sort((a, b) => a.y - b.y || a.x - b.x);
-}
-
-/** Kästchen der Größe `w` × `h` innerhalb der Zeile. */
-export const kaestchenIn = (zeile: Zeile, w: number, h: number): Box[] => kaestchen(zeile.page, w, h, zeile.top, zeile.bottom);
-
-/** Schwarz gefüllte Rechtecke der Breite `w` (Balken) in einem senkrechten Bereich. */
-export function balken(page: LayoutPage, w: number, von: number, bis: number): LayoutRect[] {
-  return page.rects.filter(r => r.fill === '#000000' && Math.abs(r.w - w) <= TOL && r.y >= von - TOL && r.y + r.h <= bis + TOL);
-}
+/** Waagerechte Linien der Zeile, mindestens `mindestens` mm lang. */
+export const linienIn = (zeile: Zeile, mindestens = 0): LayoutLine[] =>
+  zeile.page.lines.filter(l => waagerecht(l) && l.y1 > zeile.top && l.y1 < zeile.bottom && laenge(l) >= mindestens);
 
 /**
  * Ist das Textstück fett gesetzt? Die eingebetteten Schnitte tragen denselben Schriftnamen („pdfSans“), `bold` aus
@@ -136,7 +115,7 @@ export function balken(page: LayoutPage, w: number, von: number, bis: number): L
  * Spaltenköpfe sind fett (v7.2, `headStyles`), Teamnamen nicht.
  */
 export function istFett(page: LayoutPage, text: LayoutText): boolean {
-  const kopf = page.texts.find(t => t.str.trim() === 'Nr.' && Math.abs(t.size - printType.head) <= SIZE_TOL);
+  const kopf = page.texts.find(t => t.str.trim() === 'Nr.' && Math.abs(t.size - printMatchTable.headPt) <= SIZE_TOL);
   const name = page.texts.find(t => t.str.trim() === 'FC Nord' || t.str.trim() === 'SV Süd');
   if (!kopf || !name) {
     throw new Error('Spaltenkopf „Nr“ oder ein Teamname fehlt auf der Seite');
@@ -152,5 +131,5 @@ export function istFett(page: LayoutPage, text: LayoutText): boolean {
  * `undefined`, wenn das Dokument keinen Spaltenkopf hat.
  */
 export function fettKennung(pages: LayoutPage[]): string | undefined {
-  return pages.flatMap(page => page.texts).find(t => t.str.trim() === 'Nr.' && Math.abs(t.size - printType.head) <= SIZE_TOL)?.font;
+  return pages.flatMap(page => page.texts).find(t => t.str.trim() === 'Nr.' && Math.abs(t.size - printMatchTable.headPt) <= SIZE_TOL)?.font;
 }

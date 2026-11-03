@@ -39,14 +39,14 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     expect(pdf.filename).toBe('Hallencup_Nord_Spielplan_2026-11-14_1507.pdf');
   });
 
-  it('Finalrunde: Untertitel „Spiel um Platz 3“ und beide Teams des Finales', async () => {
+  it('Finalrunde: Rundenname „SPIEL UM PLATZ 3“ (Versalien) und beide Teams des Finales', async () => {
     const schedule = hallencupSchedule();
     const pdf = await renderSchedulePdf(schedule, undefined, SCHEDULE_OPTIONS);
     const text = flatText(pdf);
     const finale = finalsMatches(schedule).find(m => m.finalType === 'final');
 
     expect(finale).toBeDefined();
-    expect(text).toContain('Spiel um Platz 3');
+    expect(text).toContain('SPIEL UM PLATZ 3');
     if (finale) {
       // Die Herkunft („Sieger Halbfinale 1“) darf in der schmalen Zelle am Leerzeichen umbrechen (gleich breite Ziffern, T1):
       // dann stehen Anfang und Schluss in zwei aufeinanderfolgenden Stücken (oder in einem mit Zeilenumbruch)
@@ -59,10 +59,10 @@ describe('schedulePdf – Charakterisierung heute (B-28a0, @BM-009)', () => {
     }
   });
 
-  it('Gegenbeispiel: includeStandings false → keine Zeile „Tabelle – Gruppe A“', async () => {
+  it('Gegenbeispiel: includeStandings false → keine Tabelle der Gruppe A', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { ...SCHEDULE_OPTIONS, includeStandings: false });
 
-    expect(flatText(pdf)).not.toContain('Tabelle – Gruppe A');
+    expect(flatText(pdf)).not.toContain('Gruppe A');
   });
 
   it('Die Hinweiszeile „Ergebnisse bitte nach Spielende eintragen“ entfällt (B-28a3-3b)', async () => {
@@ -87,13 +87,13 @@ describe('IST-Abweichungen gegen Anforderung (B-28a0): Bestand grün, Ziel als i
   it('IST @BM-032: Platzierung bleibt auch bei ausgeschalteten Tabellen (Bestand)', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { ...SCHEDULE_OPTIONS, includeStandings: false });
 
-    // Überschrift des Blocks mit den Plätzen („5 Platzierung“); die Regelzeile heißt seit G72 „Wertung“
-    expect(flatText(pdf).some(t => /^\d+ Platzierung$/.test(t))).toBe(true);
+    // Überschrift des Blocks mit den Plätzen („Platzierung“); die Regelzeile heißt seit G72 „Wertung“
+    expect(flatText(pdf).some(t => t === 'Platzierung')).toBe(true);
   });
 
   it.fails('@BM-032 C-KIDS-PDF Ziel: ohne Tabellen keine Platzierung', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { ...SCHEDULE_OPTIONS, includeStandings: false });
 
-    expect(flatText(pdf).some(t => /^\d+ Platzierung$/.test(t))).toBe(false);
+    expect(flatText(pdf).some(t => t === 'Platzierung')).toBe(false);
   });
 });

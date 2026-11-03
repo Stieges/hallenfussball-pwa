@@ -40,6 +40,9 @@ export interface ModelOptions {
   geo?: (geo: PageGeometry) => PageGeometry;
 }
 
+/** Seiten der Gruppenspiele (Seite 1 und ihre Folgeseiten); danach folgen Tabellen, Finalrunde und Platzierung (T7b). */
+export const matchPages = (model: ScheduleModel): ScheduleModel['pages'] => model.pages.filter(page => page.section === 'matches');
+
 export function modelOf(fall: HandzettelFall, opts: ModelOptions = {}): ModelCase {
   const locale = opts.locale ?? 'de';
   const tournament = fallTournament(fall, opts.tournament ?? {});

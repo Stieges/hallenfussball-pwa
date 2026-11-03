@@ -21,16 +21,17 @@ describe.each(['de', 'en'] as const)('@DR-001 Kopfwörter der Tabellen brechen n
     const { pages } = await layoutOf({ locale, translate: translatorFor(locale), includeScores: true }, hallencupSchedule());
     const strs = pages.flatMap(p => p.texts.map(t => t.str.trim()));
 
-    for (const word of MATCH_HEAD[locale]) {
+    // ohne „SR“: die Spalte gibt es nur mit Einträgen (@DR-025)
+    for (const word of MATCH_HEAD[locale].filter(w => w !== MATCH_HEAD[locale][7])) {
       expect(strs.filter(s => s === word).length, `Kopfwort „${word}“`).toBeGreaterThanOrEqual(1);
     }
-    // Gruppenphase und jede Finalrunden-Tabelle tragen „Zeit“: auf jeder Tabelle steht das Wort vollständig
+    // Die Gruppenspiele und die Finalrunde tragen je einen Spaltenkopf: auf jeder Tabelle steht das Wort vollständig
     const tables = strs.filter(s => s === MATCH_HEAD[locale][1]).length;
-    // Die Gruppenspiele haben „SR“ nur mit Einträgen (@DR-025): im Hallencup ohne Schiedsrichter fehlt der Kopf dort; die Finalrunde
-    // trägt ihn bis T7b (Finalrunde als Modell) in jeder Tabelle
+    expect(tables).toBe(2);
+    // „SR“ gibt es nur mit Einträgen (@DR-025): im Hallencup ohne Schiedsrichter fehlt der Kopf in beiden Tabellen
     const referee = MATCH_HEAD[locale][7];
     for (const word of MATCH_HEAD[locale].filter(w => w !== MATCH_HEAD[locale][2] && w !== MATCH_HEAD[locale][3])) {
-      expect(strs.filter(s => s === word).length, `„${word}“ je Tabelle`).toBe(word === referee ? tables - 1 : tables);
+      expect(strs.filter(s => s === word).length, `„${word}“ je Tabelle`).toBe(word === referee ? 0 : tables);
     }
   });
 
@@ -38,8 +39,10 @@ describe.each(['de', 'en'] as const)('@DR-001 Kopfwörter der Tabellen brechen n
     const { pages } = await layoutOf({ locale, translate: translatorFor(locale), includeScores: true }, hallencupSchedule(hallencupTournament()));
     const strs = pages.flatMap(p => p.texts.map(t => t.str.trim()));
 
-    for (const word of TABLE_HEAD[locale]) {
+    // Mit mehreren Gruppen trägt der Kopf der Teamspalte den Gruppennamen („Gruppe A“) statt „Team“
+    for (const word of TABLE_HEAD[locale].filter(w => w !== 'Team')) {
       expect(strs, `Kopfwort „${word}“`).toContain(word);
     }
+    expect(strs).toContain(locale === 'de' ? 'Gruppe A' : 'Group A');
   });
 });

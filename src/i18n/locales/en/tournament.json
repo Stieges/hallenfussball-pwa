@@ -1029,13 +1029,9 @@
     "hall": "Hall",
     "matchDuration": "Match duration",
     "mode": "Format",
-    "appointment": "Date",
-    "appointmentLine": "{{day}} · Start {{start}} · Expected end {{end}} · {{fields}}",
     "fieldOne": "1 field",
     "fieldMany": "{{n}} fields",
-    "participants": "Teams",
     "groupStage": "Group stage",
-    "standingsOfGroup": "Standings – {{group}}",
     "finalRanking": "Final ranking",
     "placementPending": {
       "afterFinal": "The final ranking is decided after the final",
@@ -1068,7 +1064,12 @@
       "plan": "Schedule"
     },
     "durationMinutes": "$t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
-    "modeGroupsAndFinals": "Groups + final round",
+    "modeGroupsAndFinals_one": "1 group + final round",
+    "modeGroupsAndFinals_other": "{{count}} groups + final round",
+    "shootoutLine": {
+      "title": "Penalty shootout for 1st place (only if tied)",
+      "hits": "Goals"
+    },
     "modeRoundRobin": "Round robin",
     "unrenderableName": "Team name “{{name}}” contains characters that are printed as “?” in the PDF",
     "phase": {
@@ -1173,6 +1174,8 @@
       },
       "winner": "Winner {{round}} {{n}}",
       "loser": "Loser {{round}} {{n}}",
+    "winnerOfMatch": "Winner match {{n}}",
+    "loserOfMatch": "Loser match {{n}}",
       "undecided": "to be decided"
     },
     "finalTable": "Final standings"

@@ -28,7 +28,7 @@ vi.mock('jspdf', async (importOriginal) => {
 });
 
 const OPTIONS = { locale: 'de' as const, includeStandings: true };
-/** Finalzeile im Mitschnitt: Nr, Zeit, Feld, Heim, leere Ergebnis-Zelle, Doppelpunkt, kleine Felder (Doppelpunkt), Gast. */
+/** Finalzeile im Mitschnitt (T7b): Nr, Zeit, Feld, Herkunft Heim, Doppelpunkt der Ergebnislinien, kleine Linien (Doppelpunkt, Beschriftung), Herkunft Gast. */
 const FINAL_ZEILE = 12;
 
 /** Gruppentabelle A: Berg und Nord mit 6 Pkt., Berg vor Nord durch Tordifferenz +3 gegen +1. */
@@ -63,7 +63,7 @@ const PLATZIERUNG = [
 ];
 
 describe('Finalrunde gegen HEUTE (B-28a0 Fixrunde 1, @BM-009)', () => {
-  it('Finalrunde: jede Zeile trägt Nr, Zeit, Feld, Heim, leere Ergebniszelle, Gast in Spielseiten-Reihenfolge', async () => {
+  it('Finalrunde: jede Zeile trägt Nr, Zeit, Feld, Heim (Herkunft), Doppelpunkt der Ergebnislinien, Gast (Herkunft) in Spielseiten-Reihenfolge', async () => {
     const schedule = hallencupSchedule();
     const text = flatText(await renderSchedulePdf(schedule, undefined, OPTIONS));
     const finals = finalsMatches(schedule);
@@ -72,16 +72,13 @@ describe('Finalrunde gegen HEUTE (B-28a0 Fixrunde 1, @BM-009)', () => {
     for (const m of finals) {
       const zeile = rowFrom(text, m.matchNumber, m.time, FINAL_ZEILE);
       expect(zeile[2], `Feld Spiel ${m.matchNumber}`).toBe(String(m.field));
-      // Die Herkunft im Klartext („Verlierer Halbfinale 1“) bricht in der Zelle um: die Heim-Zeilen reichen bis zur leeren Ergebniszelle
-      const ergebnis = zeile.indexOf('', 3);
-      expect(zeile.slice(3, ergebnis).join(' ').replace(/\s+/g, ' '), `Heim Spiel ${m.matchNumber}`).toBe(sideName(m, 'A', schedule.allMatches));
-      expect(zeile[ergebnis], `Ergebniszelle Spiel ${m.matchNumber}`).toBe('');
-      expect(zeile[ergebnis + 1], `Doppelpunkt Spiel ${m.matchNumber}`).toBe(':');
-      expect(zeile.slice(ergebnis + 1).join(' ').replace(/\s+/g, ' '), `Gast Spiel ${m.matchNumber} nach dem Ergebnis`).toContain(sideName(m, 'B', schedule.allMatches));
+      expect(zeile[3], `Heim Spiel ${m.matchNumber}`).toBe(sideName(m, 'A', schedule.allMatches));
+      expect(zeile[4], `Doppelpunkt Spiel ${m.matchNumber}`).toBe(':');
+      expect(zeile.slice(4).join(' ').replace(/\s+/g, ' '), `Gast Spiel ${m.matchNumber} nach dem Ergebnis`).toContain(sideName(m, 'B', schedule.allMatches));
     }
   });
 
-  it('Finalrunde: Zeilen in Spielnummern-Reihenfolge, „Spiel um Platz 3“ steht über seiner Zeile', async () => {
+  it('Finalrunde: Zeilen in Spielnummern-Reihenfolge, „SPIEL UM PLATZ 3“ steht über seiner Zeile', async () => {
     const schedule = hallencupSchedule();
     const text = flatText(await renderSchedulePdf(schedule, undefined, OPTIONS));
     const finals = [...finalsMatches(schedule)].sort((a, b) => a.matchNumber - b.matchNumber);
@@ -94,7 +91,7 @@ describe('Finalrunde gegen HEUTE (B-28a0 Fixrunde 1, @BM-009)', () => {
     const platz3 = finals.find(m => m.finalType === 'thirdPlace');
     expect(platz3).toBeDefined();
     if (platz3) {
-      const untertitel = text.indexOf('Spiel um Platz 3');
+      const untertitel = text.indexOf('SPIEL UM PLATZ 3');
       const zeile = positionen[finals.indexOf(platz3)] ?? -1;
       expect(untertitel).toBeGreaterThan(-1);
       expect(untertitel).toBeLessThan(zeile);
@@ -125,15 +122,15 @@ describe('Gruppentabellen und Platzierung mit echten Standings (B-28a0 Fixrunde 
   it('@DR-009 Platzierung gesamt zeigt keine Rangfolge nach Punkten (C-RANK-FIN), auch mit gespielten Spielen', async () => {
     const text = flatText(await renderSchedulePdf(hallencupSchedule(), HALLENCUP_STANDINGS, OPTIONS));
 
-    expect(text.some(t => /^\d+ Platzierung$/.test(t)), 'Überschrift Platzierung').toBe(true);
+    expect(text.some(t => t === 'Platzierung'), 'Überschrift Platzierung').toBe(true);
     expect(containsSequence(text, PLATZIERUNG)).toBe(false);
   });
 
   it('Gegenbeispiel: ohne Tabellen bleibt die Platzierung ohne Punkte-Rangfolge', async () => {
     const text = flatText(await renderSchedulePdf(hallencupSchedule(), HALLENCUP_STANDINGS, { ...OPTIONS, includeStandings: false }));
 
-    expect(text).not.toContain('Tabelle – Gruppe A');
-    expect(text.some(t => /^\d+ Platzierung$/.test(t)), 'Überschrift Platzierung').toBe(true);
+    expect(text).not.toContain('Gruppe A');
+    expect(text.some(t => t === 'Platzierung'), 'Überschrift Platzierung').toBe(true);
     expect(containsSequence(text, PLATZIERUNG)).toBe(false);
   });
 });

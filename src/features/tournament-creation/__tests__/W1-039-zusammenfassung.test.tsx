@@ -74,10 +74,10 @@ describe('@W1-039 Zusammenfassung mit den Werten des Nikolaus-Turniers', () => {
     expect(angezeigt).toContain('Regelwerk: BFV-Richtlinien');
   });
 
-  it('Gegenbeispiel Gruppen + Finale: Modus „Gruppen + Finalrunde“, nicht „Jeder gegen jeden“', () => {
+  it('Gegenbeispiel Gruppen + Finale: Modus „2 Gruppen + Finalrunde“ (eine Quelle mit dem PDF-Kopf, @DR-020), nicht „Jeder gegen jeden“', () => {
     const teams = Array.from({ length: 8 }, (_, i): Team => ({ id: testUuid(50 + i), name: `Team ${i + 1}`, group: i < 4 ? 'A' : 'B' }));
     zusammenfassung(nikolaus({ groupSystem: 'groupsAndFinals', numberOfGroups: 2, numberOfTeams: 8, teams }));
-    expect(wert('step5-mode')).toBe('Gruppen + Finalrunde');
+    expect(wert('step5-mode')).toBe('2 Gruppen + Finalrunde');
     expect(screen.queryByText('Jeder gegen jeden')).toBeNull();
   });
 

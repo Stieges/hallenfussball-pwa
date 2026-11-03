@@ -1,27 +1,32 @@
 /**
- * Seitenmodell des Spielplans (T6): aus dem aufgelösten PDF-Eingang, den Texten und einer Messfunktion entstehen Seite 1
- * (Kopf, Spaltenkopf, Gruppenspiele) und die Folgeseiten der Gruppenspiele. Rein, ohne jsPDF. Tabellen, Finalrunde und
- * Platzierung zeichnet bis T7b der Bestand (`render/finalsTables.ts` u. a.); ihre Seiten hängt `schedulePdf.ts` an.
+ * Seitenmodell des Spielplans (T6, T7b): aus dem aufgelösten PDF-Eingang, den Texten und einer Messfunktion entstehen Seite 1
+ * (Kopf, Spaltenkopf, Gruppenspiele), die Folgeseiten der Gruppenspiele und danach die Seiten der Tabellen, der Finalrunde und der
+ * Platzierung (`sectionFlow.ts`). Rein, ohne jsPDF.
  *
  * Immer A4 hoch (@DR-026): `PdfInput.orientation` ändert am Modell nichts (Querformat = MVP+, Lücke L3).
  */
 import { getLocationAddressLine } from '../../../utils/locationHelpers';
-import { getGroupDisplayName, getGroupShortCode } from '../../../utils/displayNames';
+import { getGroupShortCode } from '../../../utils/displayNames';
 import { dayWithWeekday } from '../headerFacts';
-import { resultState } from '../matchResult';
+import { continuationTop } from '../layout';
+import { printState, type ResultState } from '../matchResult';
 import { sideLabel } from '../matchSides';
-import { refereeLabelFor } from '../refereeLabel';
-import { pdfRuleEntries, pdfRulesFrom } from '../rules';
+import { placementState } from '../placement';
+import { pdfRuleEntries } from '../rules';
 import type { StatefulMatch } from '../tournamentState';
-import { pdfContentRules } from '../visibility';
-import { printMatchTable, printSheetHead } from '../../../design-tokens/print-sheet';
+import { printSheetHead } from '../../../design-tokens/print-sheet';
 import { roundEndTime } from './endTime';
+import { modelEnv, refereeWidthOf } from './env';
+import { finalsParts } from './finalsModel';
 import { buildHeader, type HeaderInput } from './headerModel';
 import type { TextMeasure } from './measure';
-import type { RowSource, RowTexts } from './matchRows';
+import type { RowSource } from './matchRows';
 import { planRows, type RowsPlan } from './pagePlan';
+import { rankingParts } from './rankingModel';
+import { flowSections, type FlowPage } from './sectionFlow';
+import { shootoutPlaceable, tableParts } from './tablesModel';
 import { ascent, descent } from './text';
-import type { ColumnKey, HeaderBlock, LinkArea, MatchRowsBlock, PageModel, ScheduleModel, ScheduleModelSource } from './types';
+import type { ColumnKey, HeaderBlock, LinkArea, PageModel, ScheduleModel, ScheduleModelSource } from './types';
 
 /** Geschütztes Leerzeichen: hält PLZ und Ort zusammen. */
 const NBSP = '\u00a0';
@@ -40,20 +45,10 @@ export function documentTitle(title: string, suffix: string): string {
 /** Baut das Seitenmodell der Gruppenspiele mit Kopf. */
 export function buildScheduleModel(source: ScheduleModelSource, measure: TextMeasure): ScheduleModel {
   const { input, t, geo } = source;
-  const { schedule, tournament, edition } = input;
-  const content = pdfContentRules(tournament, input.audience, input.viewerBaseUrl);
-  const includeScores = input.wish.scores && content.results;
-  const rules = pdfRulesFrom(tournament, schedule);
+  const { schedule, edition } = input;
+  const env = modelEnv(source, measure);
+  const { rules, rowTexts, sideCtx, refLabel } = env;
   const entries = pdfRuleEntries(rules, t);
-  const refLabel = refereeLabelFor(schedule);
-  const sideCtx = {
-    t,
-    isTeam: (name: string) => schedule.teams.some(team => team.name === name),
-    groupName: (id: string) => t.groupLabel(id, getGroupDisplayName(id, schedule.tournament)),
-    hidePendingOrigin: content.hidePendingOrigin,
-    originOnly: edition === 'blank',
-    matches: schedule.allMatches,
-  };
 
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   const finalCount = schedule.phases.filter(p => p.name !== 'groupStage').reduce((n, p) => n + p.matches.length, 0);
@@ -62,11 +57,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   // Gruppenzeichen wechseln je Gruppe nach dem Buchstaben, nicht nach dem ersten Anstoß: A eckig, B rund, C eckig … (@DR-001)
   const groupOrder = [...groups].sort();
   const multipleGroups = groups.length > 1;
-  const stateOf = (match: StatefulMatch): ReturnType<typeof resultState> => {
-    // „ausgefallen“ steht auch bei ausgeblendeten Ergebnissen; leere Linien statt „ausgefallen“ hat nur die Fassung ohne Ergebnisse (@DR-019)
-    if (edition !== 'blank' && match.matchStatus === 'skipped') { return { kind: 'skipped' }; }
-    return resultState(match, { edition, results: includeScores });
-  };
+  const stateOf = (match: StatefulMatch): ResultState => printState(match, { edition, results: env.includeScores });
   const rows: RowSource[] = groupMatches.map(match => {
     const state = stateOf(match);
     const group = multipleGroups && match.group !== undefined
@@ -87,13 +78,12 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
       small: [],
     };
   });
-  const rowTexts: RowTexts = { skipped: t.skipped, overtime: t.afterOvertime, shootout: t.shootout };
   const labels: Partial<Record<ColumnKey, string>> = { nr: t.nr, time: t.timeHeader, field: t.field, group: t.group, home: t.home, result: t.result, away: t.away, referee: t.referee };
 
   // Kopf (Eckdaten ohne Halle oder Datum lassen die Angabe ganz weg, @DR-031)
   const sheet = t.sheet;
   const upper = (text: string): string => text.toLocaleUpperCase(input.locale);
-  const duration = entries.find(e => e.kind === 'duration')?.line ?? '';
+  const duration = entries.find(e => e.kind === 'duration')?.value ?? '';
   // „Ablauf“: Zahl der Spiele, mit Finalrunde „28 Spiele, davon 8 Finalspiele“ (@DR-031)
   const flowText = finalCount > 0 ? sheet.flowWithFinals(groupMatches.length + finalCount, finalCount) : sheet.flowMatches(groupMatches.length);
   // Adresse der Halle: „Straße Nr., PLZ Ort“ in eigenen Zeilen unter der Halle (@DR-031); PLZ und Ort mit geschütztem Leerzeichen zusammen
@@ -109,16 +99,14 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
     join: t.rules.join,
     hall: input.hallName.trim(),
     address,
-    duration: duration.includes(': ') ? duration.slice(duration.indexOf(': ') + 2) : duration,
+    duration,
     flow: groupMatches.length + finalCount > 0 ? flowText : '',
     rules: entries.filter((e): e is typeof e & { kind: 'mode' | 'tiebreak' | 'playOut' | 'rulebook' } => e.kind !== 'duration'),
     graphicsAspect: source.graphicsAspect,
-    ...(source.qr ? { qr: { url: source.qr.url, modules: source.qr.modules, caption: input.wish.viewerResultsHidden || !content.results ? t.qrCaption.plan : t.qrCaption.results } } : {}),
+    ...(source.qr ? { qr: { url: source.qr.url, modules: source.qr.modules, caption: input.wish.viewerResultsHidden || !env.resultsVisible ? t.qrCaption.plan : t.qrCaption.results } } : {}),
   };
   // Breite der Spalte „SR“: breitester Eintrag oder Kopf, mit Rand; Teamnamen („Teams pfeifen“) füllen den Token (@DR-032, @DR-033)
-  const refEntries = rows.map(r => r.referee).filter(label => label !== '');
-  const refereeWidth = refEntries.length === 0 ? undefined
-    : Math.max(...refEntries.map(label => measure.width(label, printMatchTable.refPt, 'normal')), measure.width(labels.referee ?? '', printMatchTable.headPt, 'bold')) + 2 * printMatchTable.refInset;
+  const refereeWidth = refereeWidthOf(rows.map(r => r.referee), labels.referee ?? '', measure);
   const frameOf = { left: geo.left, top: geo.top, width: geo.contentWidth };
   const layoutWith = (input: HeaderInput): { header: HeaderBlock; plan: RowsPlan } => {
     const built = buildHeader(input, frameOf, measure);
@@ -152,15 +140,38 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
       links.push({ url: header.qr.url, x: underline.x1, y: cap.y - ascent(cap.pt), w: underline.x2 - underline.x1, h: ascent(cap.pt) + descent(cap.pt) });
     }
   }
-  const blocks: MatchRowsBlock[] = plan.blocks;
-  const pages: PageModel[] = blocks.length === 0
-    ? [{ number: 1, blocks: [header], qr: header.qr ? 'large' : null, links }]
-    : blocks.map((block, index) => ({
-      number: index + 1,
-      blocks: index === 0 ? [header, block] : [block],
-      qr: source.qr ? (index === 0 ? 'large' : 'small') : null,
-      links: index === 0 ? links : [],
-    }));
+  // Seiten der Gruppenspiele, dann Tabellen, Finalrunde und Platzierung (@DR-002)
+  const matchPages: FlowPage[] = plan.blocks.length === 0
+    ? [{ section: 'matches', blocks: [header], y: header.top + header.height }]
+    : plan.blocks.map((block, index) => ({ section: 'matches', blocks: index === 0 ? [header, block] : [block], y: block.top + block.height }));
+  const hasFinalRound = finalCount > 0;
+  const placement = placementState({ edition, ranking: input.state.ranking, closed: input.state.closed, teamCount: schedule.teams.length });
+  // Jeder gegen jeden in einer Gruppe ohne Finalrunde, abgeschlossen (@DR-009): die Tabelle heißt „Abschlusstabelle“ und ist die
+  // Platzierung, der Block „Platzierung“ entfällt. Vorher und in der Fassung ohne Ergebnisse bleibt er.
+  const singleGroup = new Set(schedule.teams.map(team => team.group).filter(Boolean)).size <= 1;
+  const finalTable = env.includeStandings && placement === 'final' && !hasFinalRound && singleGroup;
+  const tables = env.includeStandings && schedule.teams.length > 0 ? tableParts(env, finalTable ? input.state.ranking : undefined) : [];
+  // Strafstoßschießen um Platz 1 unter der Tabelle (@DR-036): Jeder gegen jeden in einer Gruppe, nur wenn die Regel eingestellt ist
+  if (tables.length > 0 && singleGroup && !hasFinalRound && placement !== 'final' && rules.placementsToPlayOut.includes(1)) {
+    tables.push(shootoutPlaceable(env));
+  }
+  const finals = finalsParts(env);
+  const flowed = flowSections(
+    matchPages,
+    {
+      tables,
+      ...(finals ? { finals } : {}),
+      ...(finalTable || !env.tablesVisible ? {} : { ranking: rankingParts(env, placement, input.state.ranking, hasFinalRound) }),
+    },
+    { top: continuationTop(geo), bottom: geo.bottom }
+  );
+  const pages: PageModel[] = flowed.map((page, index) => ({
+    number: index + 1,
+    section: page.section,
+    blocks: page.blocks,
+    qr: source.qr ? (index === 0 ? 'large' : 'small') : null,
+    links: index === 0 ? links : [],
+  }));
   return {
     meta: { title: documentTitle(schedule.tournament.title, sheet.titleSuffix), lang: input.locale },
     format: 'a4-portrait',

@@ -9,18 +9,21 @@
  * - Ergebnislinien liegen mittig in der Spalte „Ergebnis“: Linie, Doppelpunkt, Linie.
  */
 import { printType } from '../../../design-tokens/print';
-import { printGroupMark, printHourRule, printMatchRow, printMatchTable, printWriteLine } from '../../../design-tokens/print-sheet';
+import { printFinals, printGroupMark, printHourRule, printMatchRow, printMatchTable, printWriteLine } from '../../../design-tokens/print-sheet';
 import type { ResultState } from '../matchResult';
 import type { TextMeasure } from './measure';
 import { wrapName } from './nameLines';
 import { advanceMm, centeredBaseline, run } from './text';
 import type { ColumnKey, ColumnModel, GroupMark, MatchHeadModel, MatchRowModel, ResultCell, SideModel, SmallLineKind, TextRun, WriteLine } from './types';
 
-/** Welche Spalten es gibt. `shootout` und `narrow` brauchen nur die Finalrunde (T7b) und die Spalte „SR“. */
+/** Welche Spalten es gibt. `shootout` gibt es nur in der Finalrunde (T7b). */
 export interface ColumnFlags {
+  /** Finalrunde: schmalere feste Spalten (`printFinals.cols`), kleine Linien untereinander in einer Spalte (@DR-037). */
+  finals?: boolean;
   field: boolean;
   group: boolean;
   referee: boolean;
+  /** Zahl der kleinen Paare der Finalrunde; ab 1 gibt es die Spalte `shootout` (Paare stehen untereinander, @DR-019). */
   smallPairs: number;
   /** Breite der Spalte „SR“ aus ihrem Inhalt (gemessen, höchstens `printMatchTable.cols.referee`); ohne Angabe die volle Breite. */
   refereeWidth?: number;
@@ -39,6 +42,9 @@ export interface RowSource {
   group?: { code: string; shape: GroupMark['shape'] };
   home: string;
   away: string;
+  /** Herkunft eines offenen Finalplatzes („Sieger Spiel 25“): der Platz hat eine Namenslinie, `home`/`away` bleibt leer (@DR-037). */
+  homeOrigin?: string;
+  awayOrigin?: string;
   state: ResultState;
   /** Kennzeichen unter dem Ergebnis eines korrigierten Spiels („korrigiert 14:52“). */
   markText?: string;
@@ -48,14 +54,11 @@ export interface RowSource {
   small: SmallLineKind[];
 }
 
-/** Breite der kleinen Linien eines Paars (Linie, Doppelpunkt, Linie). */
-const pairWidth = (): number => 2 * printWriteLine.small + printWriteLine.smallColon;
-
 /** Spalten in Reihenfolge, Heim und Gast teilen den Rest gleich; die Spalte „SR“ ist so breit wie ihr Inhalt (@DR-025: nur Nummer oder Teamname), nie breiter als der Token. */
 export function layoutColumns(left: number, width: number, flags: ColumnFlags): ColumnModel[] {
-  const c = printMatchTable.cols;
+  const c = flags.finals ? { ...printMatchTable.cols, ...printFinals.cols } : printMatchTable.cols;
   const refW = flags.referee ? Math.min(c.referee, flags.refereeWidth ?? c.referee) : 0;
-  const shootoutW = flags.smallPairs === 0 ? 0 : flags.smallPairs * pairWidth() + (flags.smallPairs + 1) * printWriteLine.smallGap;
+  const shootoutW = flags.smallPairs === 0 ? 0 : printFinals.pairColumn;
   const fixed = c.nr + c.time + (flags.field ? c.field : 0) + (flags.group ? c.group : 0) + c.result + shootoutW + refW;
   const side = (width - fixed) / 2;
   const plan: Array<[ColumnKey, number]> = [['nr', c.nr], ['time', c.time]];
@@ -73,7 +76,7 @@ export function layoutColumns(left: number, width: number, flags: ColumnFlags): 
   });
 }
 
-const column = (cols: ColumnModel[], key: ColumnKey): ColumnModel | undefined => cols.find(c => c.key === key);
+export const column = (cols: ColumnModel[], key: ColumnKey): ColumnModel | undefined => cols.find(c => c.key === key);
 
 /** Zeilen eines Namens in seiner Spalte. */
 export function nameLinesIn(name: string, col: ColumnModel, measure: TextMeasure): string[] {
@@ -134,12 +137,16 @@ function sideOf(lines: string[], col: ColumnModel, top: number, height: number):
   return { name: lines, runs };
 }
 
-function cellOf(src: RowSource, cols: ColumnModel[], top: number, height: number, texts: RowTexts): { cell: ResultCell; lines: WriteLine[] } {
+/** Lage der Ergebniszelle in der Zeile: Höhe der Schreiblinien und Mitte des Inhalts (Ziffern, „ausgefallen“). */
+export interface CellGeometry { lineY: number; centerY: number }
+
+export function cellOf(src: RowSource, cols: ColumnModel[], top: number, height: number, texts: RowTexts, geometry?: CellGeometry): { cell: ResultCell; lines: WriteLine[] } {
   const col = column(cols, 'result');
   const cx = (col?.x ?? 0) + (col?.w ?? 0) / 2;
   const bottom = top + height;
-  const lineY = bottom - printWriteLine.aboveRowBottom;
-  const narrow = column(cols, 'referee') !== undefined || column(cols, 'shootout') !== undefined;
+  const lineY = geometry?.lineY ?? bottom - printWriteLine.aboveRowBottom;
+  const middle = geometry?.centerY ?? top + height / 2 + printMatchRow.contentDrop;
+  const narrow = column(cols, 'referee') !== undefined || column(cols, 'shootout') !== undefined || (col?.w ?? 0) < 2 * printWriteLine.result + printWriteLine.colon;
   const w = narrow ? printWriteLine.resultNarrow : printWriteLine.result;
   const colon = narrow ? printWriteLine.colonNarrow : printWriteLine.colon;
   const colonRun = run(':', cx, lineY - printMatchTable.colonLift, printWriteLine.colonPt, 'bold', 'center');
@@ -150,7 +157,7 @@ function cellOf(src: RowSource, cols: ColumnModel[], top: number, height: number
   const state = src.state;
   if (state.kind === 'final') {
     const marks = src.markText === undefined ? [] : [src.markText];
-    const centerY = top + height / 2 + printMatchRow.contentDrop - (marks.length > 0 ? printMatchTable.markGap + printMatchTable.liveInset : 0);
+    const centerY = middle - (marks.length > 0 ? printMatchTable.markGap + printMatchTable.liveInset : 0);
     const base = centeredBaseline(centerY, printType.result);
     const runs = [
       run(String(state.scoreA), cx - printMatchTable.scoreGap, base, printType.result, 'bold', 'right'),
@@ -161,30 +168,12 @@ function cellOf(src: RowSource, cols: ColumnModel[], top: number, height: number
     return { cell: { kind: 'score', a: String(state.scoreA), b: String(state.scoreB), marks, runs }, lines: [] };
   }
   if (state.kind === 'skipped') {
-    const runs = [run(texts.skipped, cx, centeredBaseline(top + height / 2 + printMatchRow.contentDrop, printType.cancel), printType.cancel, 'normal', 'center')];
+    const runs = [run(texts.skipped, cx, centeredBaseline(middle, printType.cancel), printType.cancel, 'normal', 'center')];
     return { cell: { kind: 'text', text: texts.skipped, runs }, lines: [] };
   }
   // Ein laufendes Spiel (auch in der Halbzeit) steht wie ein Spiel ohne Ergebnis da: leere Schreiblinien, kein Text, kein Zwischenstand (@DR-019)
   const runs = [colonRun];
   return { cell: { kind: 'lines', small: src.small, runs }, lines };
-}
-
-/** Kleine Linien der Regel der Runde in der Spalte `shootout` (@DR-019), auf derselben Grundlinie wie die Ergebnislinien. */
-function smallOf(src: RowSource, cols: ColumnModel[], lineY: number, texts: RowTexts): { lines: WriteLine[]; runs: TextRun[] } {
-  const col = column(cols, 'shootout');
-  if (!col || src.state.kind === 'skipped' || src.state.kind === 'final') { return { lines: [], runs: [] }; }
-  const lines: WriteLine[] = [];
-  const runs: TextRun[] = [];
-  src.small.forEach((kind, i) => {
-    const x0 = col.x + printWriteLine.smallGap + i * (pairWidth() + printWriteLine.smallGap);
-    const mid = x0 + pairWidth() / 2;
-    lines.push({ kind: 'small', x1: x0, x2: x0 + printWriteLine.small, y: lineY }, { kind: 'small', x1: x0 + printWriteLine.small + printWriteLine.smallColon, x2: x0 + pairWidth(), y: lineY });
-    runs.push(
-      run(':', mid, lineY - printMatchTable.colonLift, printType.mark, 'bold', 'center'),
-      run(kind === 'overtime' ? texts.overtime : texts.shootout, mid, lineY - printMatchTable.smallLabelRise, printMatchTable.smallLabelPt, 'normal', 'center')
-    );
-  });
-  return { lines, runs };
 }
 
 /** Baut eine Zeile an `top` mit `height`. */
@@ -193,14 +182,12 @@ export function buildRow(
   texts: RowTexts, measure: TextMeasure, bounds: { left: number; width: number }
 ): MatchRowModel {
   const mid = top + height / 2 + printMatchRow.contentDrop;
-  const bottom = top + height;
   const get = (key: ColumnKey): ColumnModel => column(cols, key) ?? { key, x: 0, w: 0 };
   const homeCol = get('home');
   const awayCol = get('away');
   const nr = get('nr');
   const time = get('time');
   const { cell, lines } = cellOf(src, cols, top, height, texts);
-  const small = smallOf(src, cols, bottom - printWriteLine.aboveRowBottom, texts);
   const groupCol = column(cols, 'group');
   const group: GroupMark | undefined = groupCol && src.group
     ? {
@@ -224,13 +211,15 @@ export function buildRow(
     nr: rowRun(String(src.number), nr.x + nr.w / 2, printType.nr, 'normal', 'center'),
     time: rowRun(src.time, time.x + printMatchTable.timeInset, printType.time, 'bold', 'left'),
     home: sideOf(nameLinesIn(src.home, homeCol, measure), homeCol, top, height),
-    cell: { ...cell, runs: [...cell.runs, ...small.runs] },
+    cell,
     away: sideOf(nameLinesIn(src.away, awayCol, measure), awayCol, top, height),
-    lines: [...lines, ...small.lines],
+    lines,
   };
   if (flags.hourRule) {
     model.ruleAbove = { kind: 'hour', x1: bounds.left, x2: bounds.left + bounds.width, y: top + printHourRule.inset + printHourRule.stroke / 2 };
   }
+  const fieldCol = column(cols, 'field');
+  if (fieldCol && src.field !== undefined) { model.field = rowRun(src.field, fieldCol.x + fieldCol.w / 2, printType.nr, 'normal', 'center'); }
   if (group) { model.group = group; }
   if (referee) { model.referee = referee; }
   return model;

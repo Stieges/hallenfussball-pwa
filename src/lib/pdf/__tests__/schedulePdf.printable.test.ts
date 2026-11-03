@@ -81,7 +81,7 @@ describe('@DR-012 „?“ steht an der Stelle des Zeichens, in allen gedruckten 
     const texte = alleTexte(pages);
 
     expect(texte).toContain('Cup ? Nord');
-    expect(texte).toContain('Cup ? Nord · Stand 14.11. 15:07 · Seite 1 von 3');
+    expect(texte).toContain('Cup ? Nord · Stand 14.11. 15:07 · Seite 1 von 2');
     expect(texte.some(s => s.includes('⚽'))).toBe(false);
   });
 
@@ -199,8 +199,8 @@ describe('B6 @DR-013 Rückfall: Schrift lädt nicht → PDF mit Standardschrift 
     const pdf = await extractPdfText(new Uint8Array(build.doc.output('arraybuffer')));
 
     expect(build.notes).toEqual(['Sonderzeichen können als ? erscheinen. Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.']);
-    expect(pdf.pages.length).toBeGreaterThanOrEqual(3);
-    expect(pdf.pages.flat()).toContain('Hallencup Nord · Stand 14.11. 15:07 · Seite 1 von 3');
+    expect(pdf.pages.length).toBeGreaterThanOrEqual(2);
+    expect(pdf.pages.flat()).toContain('Hallencup Nord · Stand 14.11. 15:07 · Seite 1 von 2');
     expect(pdf.pages.flat()).toContain('FC Nord');
   });
 

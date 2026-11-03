@@ -9,12 +9,12 @@ import type { PdfAccent } from '../pdfOptions';
 import { drawFill, drawGroupMark, drawRuns } from './runs';
 import { drawRule, drawWriteLines } from './writeLine';
 
-/** Texte einer Zeile als eine geschlossene Folge: Nummer, Zeit, Gruppe, Heim, Ergebnis, Gast, Schiedsrichter (@DR-039). */
+/** Texte einer Zeile als eine geschlossene Folge: Nummer, Zeit, Feld, Gruppe, Heim, Ergebnis, Gast, Schiedsrichter (@DR-039). */
 export function rowRuns(row: MatchRowModel): TextRun[] {
-  return [row.nr, row.time, ...(row.group ? [row.group.text] : []), ...row.home.runs, ...row.cell.runs, ...row.away.runs, ...(row.referee ?? [])];
+  return [row.nr, row.time, ...(row.field ? [row.field] : []), ...(row.group ? [row.group.text] : []), ...row.home.runs, ...row.cell.runs, ...row.away.runs, ...(row.referee ?? [])];
 }
 
-function drawRow(doc: jsPDF, row: MatchRowModel, accent: PdfAccent): void {
+export function drawRow(doc: jsPDF, row: MatchRowModel, accent: PdfAccent): void {
   if (row.zebra) {
     drawFill(doc, { kind: 'zebra', ...row.box }, accent);
   }

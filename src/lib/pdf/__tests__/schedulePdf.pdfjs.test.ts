@@ -64,10 +64,10 @@ describe('@BM-048 aus dem PDF gelesen (pdfjs, ToUnicode)', () => {
     const key = squash(name);
     // Spiele: Der Name steht in den Gruppenspielen, vor der ersten Tabelle, als Stück oder – wenn die Zelle an einem Leerzeichen
     // umbricht – als zwei aufeinanderfolgende Stücke. Jedes Zeichen kommt unverändert an (@BM-048).
-    const matches = section(tokens, tokens[0] ?? '', '1Tabelle–GruppeA');
+    const matches = section(tokens, tokens[0] ?? '', 'GruppeA');
     expect(matches.some((t, i) => t === key || t + (matches[i + 1] ?? '') === key)).toBe(true);
-    // Tabelle Gruppe A: Name als eigenes Stück zwischen Titel und Gruppe B.
-    const table = section(tokens, '1Tabelle–GruppeA', 'Tabelle–GruppeB');
+    // Tabelle Gruppe A: Name als eigenes Stück zwischen dem Kopf „Gruppe A“ und dem Kopf „Gruppe B“.
+    const table = section(tokens, 'GruppeA', 'GruppeB');
     expect(table).toContain(key);
   });
 
@@ -82,9 +82,9 @@ describe('@DR-014 Kyrillisch und Griechisch aus dem PDF gelesen', () => {
     const bytes = await pdfBytes(scheduleWithNames([name, ...HALLENCUP_TEAMS.slice(1).map(t => t.name)]));
     const tokens = tokensOf((await extractPdfText(bytes)).pages);
     const key = squash(name);
-    const matches = section(tokens, tokens[0] ?? '', '1Tabelle–GruppeA');
+    const matches = section(tokens, tokens[0] ?? '', 'GruppeA');
     expect(matches).toContain(key);
-    const table = section(tokens, '1Tabelle–GruppeA', 'Tabelle–GruppeB');
+    const table = section(tokens, 'GruppeA', 'GruppeB');
     expect(table).toContain(key);
   });
 
@@ -112,10 +112,10 @@ describe('Sprache: EN-Plan ohne deutsche Wörter', () => {
     // und werden erst mit B-35 (`slotLabel`) übersetzt. Nur dieses Muster wird herausgenommen.
     const text = pdf.pages.flat().join(' ').replace(/Gruppe [A-Z] - \d\. Platz/g, '');
     // Negativliste: deutsche Wörter aus Titeln, Phasen und Gruppen.
-    for (const word of ['Finalspiele', 'Halbfinale', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum', 'Heim', 'Ergebnis', 'Gast', 'Beginn', 'SPIELZEIT', 'ABLAUF', 'WANN']) {
+    for (const word of ['Finalspiele', 'Halbfinale', 'HALBFINALE', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum', 'Heim', 'Ergebnis', 'Gast', 'Beginn', 'SPIELZEIT', 'ABLAUF', 'WANN']) {
       expect(text, word).not.toContain(word);
     }
-    for (const word of ['Group A', 'Standings', 'Final ranking', 'Final round', 'Home', 'Result', 'Away', 'Start', 'MATCH TIME', 'WHERE']) {
+    for (const word of ['Group A', 'Standings', 'Final ranking', 'SEMI-FINALS', 'Home', 'Result', 'Away', 'Start', 'MATCH TIME', 'WHERE']) {
       expect(text, word).toContain(word);
     }
   });

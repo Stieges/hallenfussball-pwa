@@ -74,11 +74,10 @@ describe('Review Focus 5: 50-Zeichen-Name mit ä/ö/ü/ß', () => {
     const text = flatText(pdf);
     // Zellen dürfen umbrechen (zwei bis drei Zeilen), der Name muss als Ganzes erhalten bleiben.
     const joined = text.map(t => t.replace(/\s*\n\s*/g, ' '));
-    // Seit @OB-075 (Spaltenköpfe „Schiedsrichter“, „Gruppe“ ausgeschrieben) sind Heim und Gast schmaler: in der Spieltabelle
-    // steht der Name in mehreren Stücken, die Zeichen sind vollständig und in Reihenfolge da. Teilnehmer und Tabelle: ein Stück.
+    // Heim und Gast sind schmal und die Tabelle der Gruppe bricht lange Namen an Leerzeichen um (@DR-032): der Name steht in mehreren
+    // Stücken, die Zeichen sind vollständig und in Reihenfolge da.
     const key = LONG_50.replace(/\s+/g, '');
     expect(joined.join('').replace(/\s+/g, '').split(key).length - 1).toBeGreaterThanOrEqual(3);
-    expect(joined.filter(t => t === LONG_50).length).toBeGreaterThanOrEqual(1);
     expect(text.some(t => t.includes('…'))).toBe(false);
   });
 });
@@ -139,10 +138,11 @@ describe('Nicht darstellbare Zeichen: Hinweis, PDF entsteht trotzdem', () => {
 });
 
 describe('Sprache des Dokuments', () => {
-  it('EN-Lauf: englische Abschnittstitel, kein deutscher Titel', async () => {
+  it('EN-Lauf: englische Titel der Tabellen und Runden, kein deutscher Titel', async () => {
     const pdf = await renderSchedulePdf(hallencupSchedule(), undefined, { locale: 'en' });
     const text = flatText(pdf);
-    expect(text).toContain('1 Standings – Group A');
+    expect(text).toContain('Group A');
+    expect(text).toContain('SEMI-FINALS');
     expect(text).not.toContain('Gruppenphase');
     expect(text).not.toContain('Tabelle');
     expect(text).not.toContain('Kein Datum');

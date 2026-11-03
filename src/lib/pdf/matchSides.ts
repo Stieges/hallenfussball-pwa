@@ -16,7 +16,7 @@ import type { PdfTexts } from './translations';
 export interface PdfSideContext {
   /** Tabellen aus (B-28 C5, @ZM-102; gilt nicht für die Fassung zum Ausfüllen, @DR-018): offene Gruppen-Herkunft wird „noch offen“, Sieger/Verlierer bleiben; ein besetzter Platz zeigt den Teamnamen. */
   hidePendingOrigin?: boolean;
-  /** Fassung zum Ausfüllen (B-28 C6): ein Finalplatz zeigt immer seine Herkunft, nie das feststehende Team. */
+  /** Fassung ohne Ergebnisse (B-28 C6): ein Finalplatz zeigt immer seine Herkunft, nie das feststehende Team. */
   originOnly?: boolean;
   /** Spiele des Plans: benennen das Vorgängerspiel einer Sieger-/Verlierer-Herkunft („Halbfinale 1“). */
   matches?: readonly OriginMatch[];
@@ -36,22 +36,31 @@ function sideOrigin(match: ScheduledMatch, side: 'A' | 'B'): SlotSource | undefi
   return stored ?? (slot === undefined ? undefined : slotSource(slot));
 }
 
-/** Anzeige der Seite `A` (Heim) oder `B` (Gast) eines Spiels. */
-export function sideLabel(match: ScheduledMatch, side: 'A' | 'B', ctx: PdfSideContext = {}): string {
+/** Ein Spielplatz: ein feststehendes Team oder, bei einem offenen Platz, seine Herkunft (@DR-037). */
+export type SideInfo = { team: string } | { origin: string };
+
+/** Was auf der Seite `A` (Heim) oder `B` (Gast) eines Spiels steht und ob es ein Team oder eine Herkunft ist. */
+export function sideInfo(match: ScheduledMatch, side: 'A' | 'B', ctx: PdfSideContext = {}): SideInfo {
   const shown = side === 'A' ? match.homeTeam : match.awayTeam;
   if (!ctx.t) {
-    return shown;
+    return { team: shown };
   }
   const source = sideOrigin(match, side);
   const fromSource = source === undefined ? undefined : sourceLabel(source, ctx.t, ctx.matches ?? [], ctx.groupName);
   if (ctx.isTeam?.(shown) === true) {
-    // Nur die Fassung zum Ausfüllen zeigt für einen besetzten Finalplatz die Herkunft (nie den Teamnamen); bei
+    // Nur die Fassung ohne Ergebnisse zeigt für einen besetzten Finalplatz die Herkunft (nie den Teamnamen); bei
     // ausgeschalteten Tabellen steht der Teamname ohne Herkunft (@ZM-102), „noch offen“ gilt nur für offene Plätze.
-    return ctx.originOnly === true && match.phase !== 'groupStage' ? fromSource ?? ctx.t.origin.undecided : shown;
+    return ctx.originOnly === true && match.phase !== 'groupStage' ? { origin: fromSource ?? ctx.t.origin.undecided } : { team: shown };
   }
-  // „noch offen“ nur für Spielplan und Zuschauer; die Fassung zum Ausfüllen zeigt immer die Herkunft (@DR-018)
+  // „noch offen“ nur für Spielplan und Zuschauer; die Fassung ohne Ergebnisse zeigt immer die Herkunft (@DR-018)
   if (ctx.hidePendingOrigin === true && ctx.originOnly !== true && (source?.kind === 'groupRank' || isGroupOrigin(shown))) {
-    return ctx.t.origin.undecided;
+    return { origin: ctx.t.origin.undecided };
   }
-  return fromSource ?? originLabel(shown, ctx.t, ctx.groupName);
+  return { origin: fromSource ?? originLabel(shown, ctx.t, ctx.groupName) };
+}
+
+/** Anzeige der Seite `A` (Heim) oder `B` (Gast) eines Spiels. */
+export function sideLabel(match: ScheduledMatch, side: 'A' | 'B', ctx: PdfSideContext = {}): string {
+  const info = sideInfo(match, side, ctx);
+  return 'team' in info ? info.team : info.origin;
 }
