@@ -171,11 +171,13 @@ export function buildHeader(h: HeaderInput, frame: HeaderFrame, measure: TextMea
   const titleRight = right - (rightSize ? rightSize.w + printHeader.logoGap : 0);
   const title = titleOf(h.title, titleRight - titleLeft, measure);
   const titleAdv = advanceMm(title.pt, s.titleLineHeight);
-  const titleRuns = title.lines.map((text, i) => run(text, titleLeft, top + ascent(title.pt) + i * titleAdv, title.pt, 'bold'));
+  // Ausrichtung nach Token: mittig im freien Titelbereich zwischen den Grafiken (@DR-024), jede Zeile einzeln
+  const titleX = s.titleAlign === 'center' ? (titleLeft + titleRight) / 2 : titleLeft;
+  const titleRuns = title.lines.map((text, i) => run(text, titleX, top + ascent(title.pt) + i * titleAdv, title.pt, 'bold', s.titleAlign));
   let textBottom = top + ascent(title.pt) + (title.lines.length - 1) * titleAdv + descent(title.pt);
   if (h.subtitle !== '') {
     const base = textBottom + s.subtitleGap + ascent(s.subtitlePt);
-    titleRuns.push(...wrapName(h.subtitle, titleRight - titleLeft, s.subtitlePt, measure).map((text, i) => run(text, titleLeft, base + i * advanceMm(s.subtitlePt, s.factLineHeight), s.subtitlePt, 'normal')));
+    titleRuns.push(...wrapName(h.subtitle, titleRight - titleLeft, s.subtitlePt, measure).map((text, i) => run(text, titleX, base + i * advanceMm(s.subtitlePt, s.factLineHeight), s.subtitlePt, 'normal', s.titleAlign)));
     textBottom = titleRuns[titleRuns.length - 1].y + descent(s.subtitlePt);
   }
   const imagesBottom = top + Math.max(leftSize?.h ?? 0, rightSize?.h ?? 0);

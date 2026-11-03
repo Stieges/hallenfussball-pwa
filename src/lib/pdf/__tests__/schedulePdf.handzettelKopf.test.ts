@@ -171,62 +171,45 @@ describe('@DR-006 @DR-020 Regelzeile unter den Eckdaten', () => {
   });
 });
 
-describe('@DR-024 Titelband ohne Lücke in vier Lagen', () => {
+describe('@DR-024 Titel und Zeile darunter mittig im freien Platz', () => {
   const LANG = 'Internationaler Hallenfußball-Wintercup der Sportgemeinschaft Nordheim 2026';
-  const titel = (page: LayoutPage): LayoutText[] => {
-    const wann = page.texts.find(t => t.str.trim() === 'WANN')?.y ?? 0;
-    return page.texts.filter(t => t.size >= printHeader.titleMinPt - 0.05 && t.y < wann);
+  const wannY = (page: LayoutPage): number => page.texts.find(t => t.str.trim() === 'WANN' || t.str.trim() === 'WHEN')?.y ?? 0;
+  /** Titel- und Untertitelzeilen oberhalb der Eckdaten. */
+  const kopfZeilen = (page: LayoutPage): LayoutText[] => page.texts.filter(t => t.y < wannY(page) - 1 && t.str.trim() !== '');
+  const freierPlatz = (page: LayoutPage): { von: number; bis: number } => {
+    const bilder = [...page.images].sort((a, b) => a.x - b.x);
+    const links = bilder.find(i => i.x < 100);
+    const rechts = bilder.find(i => i.x >= 100);
+    return { von: links ? links.x + links.w + printHeader.logoGap : LEFT, bis: rechts ? rechts.x - printHeader.logoGap : RIGHT };
   };
-  const bereich = (lines: LayoutText[]): { von: number; bis: number } => ({
-    von: Math.min(...lines.map(t => t.x)),
-    bis: Math.max(...lines.map(t => t.x + t.w)),
-  });
-  const lage = async (links: boolean, rechts: boolean) => {
+  const lagen: Array<[string, boolean, boolean]> = [['beide Grafiken', true, true], ['nur links', true, false], ['nur rechts', false, true], ['keine Grafik', false, false]];
+
+  it.each(lagen)('@DR-024 %s: jede Zeile liegt mittig im freien Platz (±0,3 mm), nichts überlappt die Grafiken, kein Platzhalter', async (_n, links, rechts) => {
     const logos = { ...(links ? { logoLeft: fixtureLogo(1) } : {}), ...(rechts ? { logoRight: fixtureLogo(1) } : {}) };
     const { pages } = await handzettelPdf(FALL_A, { tournament: { title: LANG }, options: logos });
-    return { page: pages[0], lines: titel(pages[0]) };
-  };
+    const page = pages[0];
+    const platz = freierPlatz(page);
+    const zeilen = kopfZeilen(page);
 
-  it('@DR-024 beide Grafiken: der Titel steht zwischen ihnen', async () => {
-    const { page, lines } = await lage(true, true);
-    const [l, r] = [...page.images].sort((a, b) => a.x - b.x);
-
-    expect(page.images).toHaveLength(2);
-    expect(bereich(lines).von).toBeGreaterThanOrEqual(l.x + l.w - TOL);
-    expect(bereich(lines).bis).toBeLessThanOrEqual(r.x + TOL);
-  });
-
-  it('@DR-024 nur links: der Titel beginnt rechts der Grafik und reicht bis zum rechten Rand', async () => {
-    const both = bereich((await lage(true, true)).lines);
-    const { page, lines } = await lage(true, false);
-    const [l] = page.images;
-
-    expect(page.images).toHaveLength(1);
-    expect(bereich(lines).von).toBeGreaterThanOrEqual(l.x + l.w - TOL);
-    expect(bereich(lines).bis).toBeLessThanOrEqual(RIGHT + TOL);
-    expect(bereich(lines).bis, 'nutzt den Platz rechts').toBeGreaterThan(both.bis + 1);
-  });
-
-  it('@DR-024 nur rechts: der Titel beginnt am linken Rand und endet vor der Grafik', async () => {
-    const both = bereich((await lage(true, true)).lines);
-    const { page, lines } = await lage(false, true);
-    const [r] = page.images;
-
-    expect(page.images).toHaveLength(1);
-    expect(bereich(lines).von).toBeCloseTo(LEFT, 0);
-    expect(bereich(lines).bis).toBeLessThanOrEqual(r.x + TOL);
-    expect(bereich(lines).von, 'nutzt den Platz links').toBeLessThan(both.von - 1);
-  });
-
-  it('@DR-024 keine Grafik: der Titel beginnt am linken Rand, kein Bild, kein Platzhalter „Logo“, keine leere Fläche', async () => {
-    const { page, lines } = await lage(false, false);
-
-    expect(page.images).toHaveLength(0);
-    expect(bereich(lines).von).toBeCloseTo(LEFT, 0);
+    expect(page.images).toHaveLength((links ? 1 : 0) + (rechts ? 1 : 0));
+    expect(zeilen.length).toBeGreaterThanOrEqual(3);
+    zeilen.forEach(t => {
+      expect(t.x + t.w / 2, `„${t.str}“ mittig`).toBeCloseTo((platz.von + platz.bis) / 2, 0);
+      expect(Math.abs(t.x + t.w / 2 - (platz.von + platz.bis) / 2), `„${t.str}“`).toBeLessThanOrEqual(0.3);
+      expect(t.x).toBeGreaterThanOrEqual(platz.von - 0.3);
+      expect(t.x + t.w).toBeLessThanOrEqual(platz.bis + 0.3);
+    });
     expect(strs(page).some(s => /logo/i.test(s))).toBe(false);
-    // außer dem Eckdaten-Block gibt es oberhalb der Kopflinie keine Fläche
-    const kopfLinie = Math.min(...page.lines.filter(l => Math.abs(l.y1 - l.y2) < 0.01 && Math.abs(l.x2 - l.x1) > 150).map(l => l.y1));
-    expect(page.rects.filter(r => r.y + r.h < kopfLinie && r.w > 1 && r.h > 1)).toEqual([]);
+  });
+
+  it.each([['de', FALL_A], ['de', FALL_B], ['de', FALL_C], ['en', FALL_A], ['en', FALL_B], ['en', FALL_C]] as const)('@DR-024 Fall %s/%s ohne Grafik: Titel und Zeile mittig über der vollen Satzbreite; Eckdaten, Regelzeile und Tabelle linksbündig', async (locale, fall) => {
+    const { pages } = await handzettelPdf(fall, { locale });
+    const page = pages[0];
+
+    kopfZeilen(page).forEach(t => expect(Math.abs(t.x + t.w / 2 - (LEFT + RIGHT) / 2), `„${t.str}“`).toBeLessThanOrEqual(0.3));
+    expect(page.texts.find(t => ['WANN', 'WHEN'].includes(t.str.trim()))?.x).toBeCloseTo(LEFT + printSheetHead.factsPadH, 0);
+    expect(page.texts.find(t => /^(Modus|Mode):/.test(t.str))?.x).toBeCloseTo(LEFT, 0);
+    expect(page.texts.find(t => ['Nr.', 'No.'].includes(t.str.trim()))?.x ?? 0).toBeLessThan(LEFT + 6);
   });
 });
 

@@ -94,43 +94,63 @@ describe('@DR-006 und @DR-020 Spielzeit und Regelzeile', () => {
   });
 });
 
-const titleStart = (h: HeaderBlock): number => Math.min(...h.title.filter(r => r.weight === 'bold').map(r => r.x));
 const titleLines = (h: HeaderBlock): TextRun[] => h.title.filter(r => r.weight === 'bold');
+/** Fake-Messung (2,0 / 2,2 mm je Zeichen): Ausdehnung einer zentrierten Zeile. */
+const extent = (r: TextRun): { von: number; bis: number } => {
+  const w = [...r.text].length * (r.weight === 'bold' ? 2.2 : 2);
+  return { von: r.x - w / 2, bis: r.x + w / 2 };
+};
+/** Freier Titelbereich zwischen den Grafiken (Satzspiegel 15 bis 195 mm). */
+const titleArea = (h: HeaderBlock): { von: number; bis: number } => {
+  const l = h.images.find(i => i.side === 'left');
+  const r = h.images.find(i => i.side === 'right');
+  return { von: 15 + (l ? l.w + printHeader.logoGap : 0), bis: 195 - (r ? r.w + printHeader.logoGap : 0) };
+};
 
-describe('@DR-024 Titel ohne Lücke in allen vier Lagen', () => {
-  const [left, right] = [15, 195];
+describe('@DR-024 Titel ohne Lücke in allen vier Lagen, mittig im freien Platz', () => {
+  const lagen: Array<[string, { left?: number; right?: number }]> = [['beide Grafiken', { left: 1, right: 1 }], ['nur links', { left: 1 }], ['nur rechts', { right: 1 }], ['keine', {}]];
 
-  it('@DR-024 beide Grafiken: Titel zwischen ihnen, je höchstens 20 mm hoch (@DR-023)', () => {
+  it.each(lagen)('@DR-024 %s: Titel und Zeile darunter liegen mittig im freien Titelbereich, jede Zeile einzeln, ohne Überlappung mit den Grafiken', (_n, aspect) => {
+    const h = headerOf(FALL_B, { graphicsAspect: aspect });
+    const area = titleArea(h);
+
+    expect(h.title.length).toBeGreaterThan(1);
+    h.title.forEach(r => {
+      expect(r.align).toBe('center');
+      const e = extent(r);
+      expect((e.von + e.bis) / 2, `„${r.text}“ mittig`).toBeCloseTo((area.von + area.bis) / 2, 0);
+      expect(e.von, `„${r.text}“ links`).toBeGreaterThanOrEqual(area.von - 0.3);
+      expect(e.bis, `„${r.text}“ rechts`).toBeLessThanOrEqual(area.bis + 0.3);
+    });
+  });
+
+  it('@DR-024 beide Grafiken: je höchstens 20 mm hoch (@DR-023), Seite links und rechts', () => {
     const h = headerOf(FALL_B, { graphicsAspect: { left: 1, right: 1 } });
 
     expect(h.images.map(i => i.side)).toEqual(['left', 'right']);
     for (const image of h.images) { expect(image.h).toBeLessThanOrEqual(printHeader.logoMaxHeight); }
-    expect(titleStart(h)).toBe(left + h.images[0].w + printHeader.logoGap);
   });
 
-  it('@DR-024 nur links: der Titel reicht bis zum rechten Rand', () => {
-    const both = headerOf(FALL_B, { graphicsAspect: { left: 1, right: 1 } });
-    const onlyLeft = headerOf(FALL_B, { graphicsAspect: { left: 1 } });
-
-    expect(titleStart(onlyLeft)).toBe(titleStart(both));
-    expect(titleLines(onlyLeft).length).toBeLessThan(titleLines(both).length);
+  it('@DR-024 nur links: der Titel nutzt den Platz rechts (weniger Zeilen als mit beiden)', () => {
+    expect(titleLines(headerOf(FALL_B, { graphicsAspect: { left: 1 } })).length).toBeLessThan(titleLines(headerOf(FALL_B, { graphicsAspect: { left: 1, right: 1 } })).length);
   });
 
-  it('@DR-024 nur rechts: der Titel beginnt am linken Rand', () => {
-    const h = headerOf(FALL_B, { graphicsAspect: { right: 1 } });
+  it('@DR-024 nur rechts: Grafik am rechten Rand; keine von beiden: volle Breite, keine leere Fläche, kein „Logo“', () => {
+    const rechts = headerOf(FALL_B, { graphicsAspect: { right: 1 } });
+    const keine = headerOf(FALL_B);
 
-    expect(titleStart(h)).toBe(left);
-    expect(h.images.map(i => i.side)).toEqual(['right']);
-    expect(h.images[0].x + h.images[0].w).toBeCloseTo(right, 5);
+    expect(rechts.images.map(i => i.side)).toEqual(['right']);
+    expect(rechts.images[0].x + rechts.images[0].w).toBeCloseTo(195, 5);
+    expect(keine.images).toEqual([]);
+    expect(keine.title.map(r => r.text).join(' ')).not.toMatch(/Logo/);
+    expect(titleLines(keine)).toHaveLength(1);
   });
 
-  it('@DR-024 keine von beiden: der Titel hat die volle Breite, keine leere Fläche, kein „Logo“', () => {
+  it('@DR-031 Eckdaten, Regelzeile bleiben linksbündig', () => {
     const h = headerOf(FALL_B);
 
-    expect(titleStart(h)).toBe(left);
-    expect(h.images).toEqual([]);
-    expect(h.title.map(r => r.text).join(' ')).not.toMatch(/Logo/);
-    expect(titleLines(h)).toHaveLength(1);
+    expect(h.rules.every(r => r.align === 'left')).toBe(true);
+    expect(h.facts.cells.flatMap(c => c.runs).every(r => r.align === 'left')).toBe(true);
   });
 });
 
