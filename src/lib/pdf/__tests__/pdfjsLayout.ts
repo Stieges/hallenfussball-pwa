@@ -1,6 +1,7 @@
 /**
  * Maß-Werkzeug (B-28a3-1): liest Text mit Position und Größe sowie Rechtecke und Linien mit Farbe aus einem
- * fertigen PDF (pdfjs-dist, echtes Dokument). Alle Maße in mm, Ursprung oben links, Größe der Schrift in pt.
+ * fertigen PDF (pdfjs-dist, echtes Dokument). Alle Maße in mm, Ursprung oben links, Größe der Schrift in pt. Dazu je
+ * Seite die Link-Flächen (`getAnnotations`, @DR-038) und für das Dokument Titel und Sprache (`getMetadata`, @DR-039).
  * Nur für Tests. Ein Fehler in der Umrechnung (pt → mm) würde jeden Maßtest falsch machen; der Selbsttest
  * `pdfjsLayout.test.ts` prüft deshalb ein Mini-PDF mit bekannten Maßen.
  */
@@ -19,8 +20,18 @@ export interface LayoutText {
 }
 export interface LayoutRect { x: number; y: number; w: number; h: number; fill?: string; stroke?: string }
 export interface LayoutLine { x1: number; y1: number; x2: number; y2: number; width: number; color: string }
+/** Link-Fläche einer Seite (Annotation `Link` mit Ziel-Adresse), in mm. */
+export interface LayoutLink { x: number; y: number; w: number; h: number; url: string }
 /** Eine Seite: Text, Rechtecke, Linien und alle im Inhalt gesetzten Farben (hex, auch für Text). */
-export interface LayoutPage { texts: LayoutText[]; rects: LayoutRect[]; lines: LayoutLine[]; colors: string[]; /** Eingebettete Bilder als Rahmen in mm (B-28 C4). */ images: Box[] }
+export interface LayoutPage {
+  texts: LayoutText[]; rects: LayoutRect[]; lines: LayoutLine[]; colors: string[];
+  /** Eingebettete Bilder als Rahmen in mm (B-28 C4). */
+  images: Box[];
+  /** Link-Flächen mit Adresse (PDF-Paket V1); andere Annotationen zählen nicht. */
+  links: LayoutLink[];
+}
+/** Eigenschaften der Datei: Titel und Sprache aus dem Info-Verzeichnis bzw. dem Katalog (`/Lang`). */
+export interface LayoutMeta { title: string | undefined; lang: string | undefined }
 export interface Box { x: number; y: number; w: number; h: number }
 
 type Matrix = [number, number, number, number, number, number];
@@ -148,6 +159,16 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
     }
   });
 
+  const links: LayoutLink[] = [];
+  for (const note of (await page.getAnnotations()) as Array<{ subtype?: string; url?: string; rect?: number[] }>) {
+    const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = note.rect ?? [];
+    if (note.subtype === 'Link' && typeof note.url === 'string') {
+      const a = toMm(Math.min(x1, x2), Math.max(y1, y2));
+      const b = toMm(Math.max(x1, x2), Math.min(y1, y2));
+      links.push({ x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y, url: note.url });
+    }
+  }
+
   const content = await page.getTextContent();
   const texts: LayoutText[] = [];
   for (const item of content.items) {
@@ -157,7 +178,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
     const name = (page.commonObjs.has(item.fontName) ? page.commonObjs.get(item.fontName)?.name : '') ?? '';
     texts.push({ str: item.str, x: p.x, y: p.y, size: Math.hypot(t[0], t[1]), bold: /bold/i.test(name), w: item.width * MM_PER_PT, font: item.fontName });
   }
-  return { texts, rects, lines, colors: [...colors].sort(), images };
+  return { texts, rects, lines, colors: [...colors].sort(), images, links };
 }
 
 /** Alle Seiten eines PDFs (Bytes). Die Bytes werden kopiert, pdfjs übergibt sie an den Worker. */
@@ -168,6 +189,17 @@ export async function readLayout(bytes: Uint8Array): Promise<LayoutPage[]> {
     pages.push(await readPage(await doc.getPage(n)));
   }
   return pages;
+}
+
+/** Titel und Sprache der Datei (@DR-039). pdfjs liefert die Sprache des Katalogs als `Language` im Info-Objekt. */
+export async function readMetadata(bytes: Uint8Array): Promise<LayoutMeta> {
+  const doc = await pdfjs.getDocument({ data: bytes.slice(), useSystemFonts: false, standardFontDataUrl: STANDARD_FONTS }).promise;
+  const { info } = await doc.getMetadata();
+  const fields = info as { Title?: unknown; Language?: unknown };
+  return {
+    title: typeof fields.Title === 'string' ? fields.Title : undefined,
+    lang: typeof fields.Language === 'string' ? fields.Language : undefined,
+  };
 }
 
 const inside = (b: Box, r: Box, tol = 0.05): boolean =>
