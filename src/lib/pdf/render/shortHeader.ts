@@ -8,6 +8,7 @@ import type { jsPDF } from 'jspdf';
 import { printColors, printGap, printMetrics, printStroke, printType } from '../../../design-tokens/print';
 import type { PageGeometry } from '../layout';
 import { fontOf } from '../fonts';
+import { printSheetHead } from '../../../design-tokens/print-sheet';
 import { printHeader } from '../../../design-tokens/print-header';
 import { drawLinks } from './links';
 import { drawQrSymbol, qrSide } from './qrCode';
@@ -65,11 +66,14 @@ function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry, subti
   doc.setTextColor(...printColors.ink);
   doc.setFont(fontOf(doc), 'bold');
   doc.setFontSize(printType.titleShort);
+  // mittig im freien Platz neben dem QR (@DR-024), jede Zeile einzeln
+  const free = geo.contentWidth - shortQrColumn(head.qr);
+  const centerX = geo.left + free / 2;
   head.titleLines.forEach((line, index) => {
-    doc.text(line, geo.left, geo.top + printGap.shortHeadTitleBaseline + index * printMetrics.shortTitleAdvance);
+    doc.text(line, centerX, geo.top + printGap.shortHeadTitleBaseline + index * printMetrics.shortTitleAdvance, { align: printSheetHead.titleAlign });
   });
   doc.setFontSize(printType.subtitle);
-  doc.text(clipToWidth(doc, subtitle, geo.contentWidth - shortQrColumn(head.qr)), geo.left, geo.top + printGap.shortHeadSubBaseline + extra);
+  doc.text(clipToWidth(doc, subtitle, free), centerX, geo.top + printGap.shortHeadSubBaseline + extra, { align: printSheetHead.titleAlign });
   // Die Linie steht über dem Satzspiegel, auch wenn der QR den Kurzkopf höher macht
   const rule = geo.top + geo.shortHeadHeight - (printGap.shortHeadHeight - printGap.shortHeadRule);
   doc.setDrawColor(...printColors.ink);

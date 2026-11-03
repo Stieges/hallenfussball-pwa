@@ -200,6 +200,11 @@ describe('@DR-024 Titel und Zeile darunter mittig im freien Platz', () => {
       expect(t.x + t.w).toBeLessThanOrEqual(platz.bis + 0.3);
     });
     expect(strs(page).some(s => /logo/i.test(s))).toBe(false);
+    if (!links && !rechts) {
+      // „keine leere Fläche“: oberhalb der Kopflinie nur Text, keine Füllung, kein Rahmen
+      const kopfLinie = Math.min(...page.lines.filter(l => Math.abs(l.y1 - l.y2) < 0.01 && Math.abs(l.x2 - l.x1) > 150 && l.width > 0.4).map(l => l.y1));
+      expect(page.rects.filter(r => r.y + r.h < kopfLinie && r.w > 1 && r.h > 1)).toEqual([]);
+    }
   });
 
   it.each([['de', FALL_A], ['de', FALL_B], ['de', FALL_C], ['en', FALL_A], ['en', FALL_B], ['en', FALL_C]] as const)('@DR-024 Fall %s/%s ohne Grafik: Titel und Zeile mittig über der vollen Satzbreite; Eckdaten, Regelzeile und Tabelle linksbündig', async (locale, fall) => {
@@ -300,5 +305,22 @@ describe.each([
     // Block gleich hoch wie vor der Änderung: Abstand der zweiten Zeile von der ersten (gemessen am Stand davor)
     const zweite = page.texts.find(t => t.str.trim() === labels[2]);
     expect((zweite?.y ?? 0) - (texts[0]?.y ?? 0)).toBeCloseTo(abstand, 0);
+  });
+});
+
+describe.each(['de', 'en'] as const)('@DR-024 Kurzkopf der Folgeseiten: Titel und Zeile darunter mittig im freien Platz (%s)', locale => {
+  it.each([['a', FALL_A], ['b', FALL_B]] as const)('Fall %s Seite 2: Mitte jeder Zeile ±0,3 mm auf der Mitte des Platzes links vom QR, keine Überlappung mit dem QR', async (_n, fall) => {
+    const { pages } = await handzettelPdf(fall, { locale });
+    const page = pages[1];
+    const qr = page.links.find(l => l.y < 40);
+    const zeilen = page.texts.filter(t => t.y < 40 && t.str.trim() !== '');
+    const platz = { von: LEFT, bis: (qr?.x ?? RIGHT) - printHeader.qrColumnGap };
+
+    expect(qr, 'QR im Kurzkopf').toBeDefined();
+    expect(zeilen.length).toBeGreaterThanOrEqual(2);
+    zeilen.forEach(t => {
+      expect(Math.abs(t.x + t.w / 2 - (platz.von + platz.bis) / 2), `„${t.str}“`).toBeLessThanOrEqual(0.3);
+      expect(t.x + t.w, `„${t.str}“ vor dem QR`).toBeLessThanOrEqual((qr?.x ?? RIGHT) + 0.3);
+    });
   });
 });

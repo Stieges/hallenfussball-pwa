@@ -172,7 +172,7 @@ export function buildHeader(h: HeaderInput, frame: HeaderFrame, measure: TextMea
   const title = titleOf(h.title, titleRight - titleLeft, measure);
   const titleAdv = advanceMm(title.pt, s.titleLineHeight);
   // Ausrichtung nach Token: mittig im freien Titelbereich zwischen den Grafiken (@DR-024), jede Zeile einzeln
-  const titleX = s.titleAlign === 'center' ? (titleLeft + titleRight) / 2 : titleLeft;
+  const titleX = (titleLeft + titleRight) / 2;
   const titleRuns = title.lines.map((text, i) => run(text, titleX, top + ascent(title.pt) + i * titleAdv, title.pt, 'bold', s.titleAlign));
   let textBottom = top + ascent(title.pt) + (title.lines.length - 1) * titleAdv + descent(title.pt);
   if (h.subtitle !== '') {

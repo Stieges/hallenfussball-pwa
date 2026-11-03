@@ -141,8 +141,8 @@ export const printSheetHead = {
   titleStepPt: 2,
   titleMaxLines: 3,
   titleLineHeight: 1.12,
-  /** Ausrichtung von Titel und Zeile darunter im freien Titelbereich (@DR-024): `center` mittig, `left` linksbündig. */
-  titleAlign: 'center' as 'left' | 'center',
+  /** Titel und Zeile darunter stehen mittig im freien Titelbereich, auf Seite 1 und im Kurzkopf der Folgeseiten (@DR-024). */
+  titleAlign: 'center' as const,
   subtitlePt: 11,
   subtitleGap: 1,
   /** Abstand Unterkante Text/Grafik → Kopflinie (Akzent, 1,5 pt). */
