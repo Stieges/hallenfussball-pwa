@@ -97,6 +97,24 @@ describe('@DR-044 @BM-010 @ZP-052 Fußzeile: feste Plätze, links Titel · Stand
   });
 });
 
+describe('@DR-044 „Seite x von y“ steht rechts unten: auf der untersten Zeile, rechtsbündig am Rand', () => {
+  const lang = hallencupTournament({ title: 'Internationaler Hallenfußball-Wintercup der Sportgemeinschaft Nordheim und Umgebung 2026' });
+
+  it.each([
+    ['mit Ansprechpartner', { contact: 'Max Mustermann · 0171 1234567 · fussballjugend@tsv-waging.de' }, undefined],
+    ['mit langem Titel', {}, lang],
+  ])('%s: y der Seitenzahl = größtes y der Fußzeilentexte, rechte Kante = rechter Rand', async (_n, extra, tournament) => {
+    const { pages, width } = await layoutOf({ now: NOW, ...extra, ...(tournament ? { tournament } : {}) }, tournament ? generateFullSchedule(tournament, 'de') : undefined);
+
+    pages.forEach(page => {
+      const seite = seitenText(page)!;
+      const unten = Math.max(...fussTexte(page).filter(t => t.str.trim() !== '').map(t => t.y));
+      expect(seite.y).toBeCloseTo(unten, 2);
+      expect(seite.x + seite.w).toBeCloseTo(width - printPage.margin.right, 1);
+    });
+  });
+});
+
 describe('@BM-023 @DR-021 Netzhinweis: ohne Verbindung steht er auf jeder Seite', () => {
   const HINWEIS = 'Stand 14.11. 15:07 – ohne Verbindung, Einträge anderer Geräte können fehlen';
 

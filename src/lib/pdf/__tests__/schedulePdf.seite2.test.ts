@@ -143,3 +143,20 @@ describe('@DR-044 Fall mit Ansprechpartner (b, erfunden)', () => {
     pages.forEach(page => expect(page.texts.map(t => t.str.trim())).toContain('Ansprechpartner: Max Mustermann · 0171 1234567 · fussballjugend@tsv-waging.de'));
   });
 });
+
+describe('@DR-037 Uhrzeit und Namenslinie der Finalrunde (echte Schrift)', () => {
+  it('rechte Kante der Zeit ↔ Beginn der Namenslinie mindestens 1,5 mm, ohne und mit SR-Spalte', async () => {
+    for (const fall of [FALL_B, FALL_B_SR]) {
+      const { pages } = await handzettelPdf(fall);
+      const seite = pages.find(p => p.texts.some(t => t.str.trim() === 'Sieger Spiel 22'))!;
+      const zeiten = seite.texts.filter(t => /^1[45]:\d\d$/.test(t.str.trim()));
+      const namen = seite.lines.filter(l => waag(l) && laenge(l) >= printWriteLine.nameMin - TOL);
+
+      expect(zeiten).toHaveLength(8);
+      for (const z of zeiten) {
+        const linie = namen.filter(l => Math.abs(l.y1 - z.y) < 2 && Math.min(l.x1, l.x2) > z.x).sort((a, b) => a.x1 - b.x1)[0];
+        expect(Math.min(linie.x1, linie.x2) - (z.x + z.w), `${z.str}`).toBeGreaterThanOrEqual(1.5);
+      }
+    }
+  });
+});

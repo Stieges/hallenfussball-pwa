@@ -87,12 +87,13 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 03.11. (@DR-024, Titel und Zeile darunter mittig im freien Platz): gleiche Textstücke und Seitenzahl, nur die x-Lage der Titelzeilen ändert sich (Stände davor: bfd83224a3d3, 1030955f1569, EN 39c333f4c7be).
  * Neu aufgenommen 03.11. (@DR-024, Kurzkopf der Folgeseiten mittig): wieder gleiche Textstücke und Seitenzahl, nur die x-Lage von Titel und Zeile im Kurzkopf ändert sich (Stände davor: b8b53fc00c3f, cdbe4c898d6e, EN 40ac67e9e46e).
  * Neu aufgenommen 03.11. (@DR-024, Titel 26 pt mit 2 mm Luft darüber und darunter): gleiche Textstücke, Seitenzahl und Zahl der Füllungen und Linien je Seite (Lauf gegen den Stand davor); es ändern sich nur die Höhenlagen ab dem Titel (Stände davor: e96bd7631edc, 95b69a12d525, EN fa095c9a84f8). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
+ * Neu aufgenommen 04.11. (T7b Fixrunde 2): Abstand der Uhrzeit zur Namenslinie der Finalrunde (nameOuter 2,15 statt 0,4, Spalte der kleinen Linien 22 mm); nur die Lage in der Finalrunde ändert sich (Stände davor: a64320e43d7b, 02572b3b81d3, EN b2fd943f59c8).
  * Neu aufgenommen 04.11. (T7b Fixrunde): Fußzeile mit festen Plätzen (@DR-044: „Titel · Stand“ und „Seite x von y“ getrennt, rechts unten), kein „voraussichtlich“ mehr (@DR-001), kleine Linien der Finalrunde unter dem Ergebnis bei Feld- oder SR-Spalte (@DR-037, 7 mm, Abstände ≥ 4 mm, @DR-034); die Hallencup-Fixtures haben zwei Felder, die Finalrunde ist höher. Stände davor: f8c2732ccd42, d8ef4c756344, EN b4202197d563.
  * Neu aufgenommen 03.11. (Paket PDF T7b, Seite 2 ff.): Tabellen mit Gruppenzeichen und Raster, Strafstoß-Zeile, Finalrunde mit Namenslinien und Herkunft unter der Linie, Platzierung, Modus „2 Gruppen + Finalrunde“, Kurzkopf vor dem Inhalt, Feldnummern; keine Abschnittstitel und -nummern mehr, Finalrunde und Platzierung auf der Seite der Tabellen, wenn sie dort ganz Platz haben. Bild der Fixtures a, b, c, b-lang gesichtet (Stände davor: e109befcec2b, 9947181a693b, EN e38b6350af9f).
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'a64320e43d7b',
-  '20 Spiele, hoch': '02572b3b81d3',
+  '12 Spiele, hoch': 'bf37a0b4ba7f',
+  '20 Spiele, hoch': '47cbcae2d933',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -107,7 +108,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('b2fd943f59c8');
+    expect(layoutDigest(pages)).toBe('134575c38710');
   });
 });
 

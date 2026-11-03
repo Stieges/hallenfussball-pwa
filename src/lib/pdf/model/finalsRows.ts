@@ -46,7 +46,7 @@ export function finalsRowMetrics(src: RowSource, cols: ColumnModel[], measure: T
     1
   );
   const adv = advanceMm(printType.body, printMatchRow.lineHeight);
-  const above = printFinals.baselineRise + (lines - 1) * adv + ascent(printType.body) + printFinals.bottomPad;
+  const above = Math.max(printWriteLine.minWriteSpace, printFinals.baselineRise + (lines - 1) * adv + ascent(printType.body) + printFinals.bottomPad);
   return { above, height: above + below() + extraHeight(src, cols) };
 }
 
@@ -73,7 +73,8 @@ function smallOf(src: RowSource, cols: ColumnModel[], lineY: number, texts: RowT
   const col = stacked ? column(cols, 'result') : column(cols, 'shootout');
   if (!col || src.state.kind === 'skipped') { return { lines, runs }; }
   const done = src.state.kind === 'final' ? src.state : undefined;
-  const mid = col.x + col.w / 2;
+  // Neben dem Ergebnis steht das Paar links in der Spalte, 3,75 mm von der Kante (Abstand ≥ 4 mm zu den Linien beidseits); darunter mittig
+  const mid = stacked ? col.x + col.w / 2 : col.x + printWriteLine.nameInset + (2 * printWriteLine.small + printWriteLine.smallColon) / 2;
   const first = stacked ? printWriteLine.minWriteSpace : 0;
   const half = printWriteLine.small + printWriteLine.smallColon / 2;
   src.small.forEach((kind, i) => {
@@ -87,7 +88,9 @@ function smallOf(src: RowSource, cols: ColumnModel[], lineY: number, texts: RowT
       lines.push({ kind: 'small', x1: mid - half, x2: mid - half + printWriteLine.small, y }, { kind: 'small', x1: mid + half - printWriteLine.small, x2: mid + half, y });
       runs.push(run(':', mid, y - printMatchTable.colonLift, printType.mark, 'bold', 'center'));
     }
-    runs.push(run(label, mid, y + printFinals.textGap + ascent(printFinals.smallPt), printFinals.smallPt, 'normal', 'center'));
+    // Die lange Beschriftung endet neben dem Ergebnis rechtsbündig an der Spalte (Abstand zur Herkunft des Gasts), darunter mittig
+    const labelY = y + printFinals.textGap + ascent(printFinals.smallPt);
+    runs.push(stacked ? run(label, mid, labelY, printFinals.smallPt, 'normal', 'center') : run(label, col.x + col.w, labelY, printFinals.smallPt, 'normal', 'right'));
   });
   return { lines, runs };
 }

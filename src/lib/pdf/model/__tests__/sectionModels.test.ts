@@ -199,3 +199,11 @@ describe('@DR-033 Umbruch an der Stunde: eine Stunde beginnt eine Zeile vor dem 
     expect(pages[1].length).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe('@DR-033 zwei Stundenanfänge in Reichweite (Opus-Delta)', () => {
+  it('20 Zeilen à 10 mm, Kapazität 190, Stundenanfänge bei Zeile 15 und 18: bricht an der Stunde bei 15 (danach 5 Zeilen), nicht bei 18 mit nur 2 Zeilen dahinter', () => {
+    const starts = Array.from({ length: 20 }, (_, i) => i === 15 || i === 18);
+
+    expect(splitRows(Array.from({ length: 20 }, () => 10), [190, 200], 3, { starts, maxFree: 50 }).map(p => p.length)).toEqual([15, 5]);
+  });
+});

@@ -33,8 +33,9 @@ export interface HourBreaks { starts: boolean[]; maxFree: number }
 /**
  * Zeilen auf Seiten verteilen (Greedy). Muss umgebrochen werden, bricht die Seite bevorzugt vor der ersten Zeile einer neuen Stunde,
  * sodass die Folgeseite mit einer vollen Stunde beginnt (@DR-033); das gilt nur, wenn die Seite dabei voll genutzt bleibt (höchstens
- * `maxFree` mm frei). Sonst bricht sie dort, wo der Platz endet. Die letzte Seite bekommt danach mindestens `minRows` Zeilen,
- * wenn es mehr als eine gibt (die Schleife am Ende, auch nach einem Umbruch an der Stunde).
+ * `maxFree` mm frei) und danach noch mindestens `minRows` Zeilen folgen (sonst gälte der spätere von zwei Stundenanfängen und die
+ * Schlussregel zöge Zeilen nach). Sonst bricht sie dort, wo der Platz endet. Die letzte Seite bekommt mindestens `minRows` Zeilen,
+ * wenn es mehr als eine gibt.
  */
 export function splitRows(heights: number[], capacities: number[], minRows: number, hours?: HourBreaks): number[][] {
   const pages: number[][] = [[]];
@@ -48,7 +49,7 @@ export function splitRows(heights: number[], capacities: number[], minRows: numb
       let cut = i;
       for (let j = i; hours && j > first; j--) {
         if (cap - sum(heights.slice(first, j)) > hours.maxFree) { break; }
-        if (hours.starts[j]) { cut = j; break; }
+        if (hours.starts[j] && heights.length - j >= minRows) { cut = j; break; }
       }
       current.length = cut - first;
       pages.push([]);

@@ -244,11 +244,11 @@ export const printFinals = {
   textGap: 0.5,
   bottomPad: 0.6,
   /** Namenslinie: Abstand zur Spaltenkante außen (zum Ergebnis hin gilt `printWriteLine.nameInset`). */
-  nameOuter: 0.4,
+  nameOuter: 2.15,
   /** Grundlinie von Nummer, Zeit und Name über der Linie (Schrift sitzt auf der Linie), mm. */
   baselineRise: 0.8,
   /** Kleine Linien der Regel: Paar untereinander, Abstand der Linien, wenn zwei Paare stehen (Beschriftung + Schreibraum). */
-  pairColumn: 25.5,
+  pairColumn: 22,
   /** Abstand Hinweis „K.-o.: …“ → Spaltenkopf. */
   koGap: 1.5,
 } as const;
