@@ -63,6 +63,7 @@ export const semanticColorsLight = {
   surfaceDarkMedium: palette.neutral[100],
   surfaceVariant: palette.neutral[200],
   surfaceElevated: palette.neutral[0], // White with shadow
+  surfacePaper: palette.neutral[0], // Papierfläche: immer Weiß, im dunklen und im hellen Thema gleich
 
   // ---------------------------------------------------------------------------
   // Text Colors (WCAG AA validated for light backgrounds)

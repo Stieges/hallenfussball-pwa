@@ -105,6 +105,8 @@ export const componentSizes = {
   emptyStateMinHeight: '300px',
   /** Haarlinie: 1 px, z. B. für unsichtbare, aber vorlesbare Bereiche */
   hairline: '1px',
+  /** Kante der Vorschau einer hochgeladenen Grafik (Turnierlogo, zweite Grafik in den Stammdaten, @W3-040) */
+  graphicPreview: '64px',
 } as const;
 
 /**

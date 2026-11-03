@@ -1,6 +1,20 @@
 import imageCompression from 'browser-image-compression';
 import { TeamLogo } from '../types/tournament';
 
+/** Warum eine Logo-Datei nicht verarbeitet werden kann; die Oberfläche übersetzt den Grund (nie die Fehlermeldung). */
+export type LogoRejectReason = 'type' | 'size' | 'unreadable';
+
+/** Fehler beim Aufbereiten eines Team-Logos mit Grund. `message` ist nur für Logs, nicht für die Anzeige. */
+export class LogoError extends Error {
+  readonly reason: LogoRejectReason;
+
+  constructor(reason: LogoRejectReason, message: string) {
+    super(message);
+    this.name = 'LogoError';
+    this.reason = reason;
+  }
+}
+
 /**
  * Logo processing configuration
  */
@@ -94,7 +108,7 @@ async function loadImage(file: File): Promise<HTMLImageElement> {
     await img.decode();
     return img;
   } catch {
-    throw new Error('Failed to load image');
+    throw new LogoError('unreadable', 'Failed to load image');
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -141,12 +155,12 @@ export async function processLogo(
 ): Promise<ProcessedLogo> {
   // Validate file type
   if (!SUPPORTED_MIME_TYPES.includes(file.type)) {
-    throw new Error(`Unsupported file type: ${file.type}. Supported: PNG, JPEG, WebP, SVG, GIF`);
+    throw new LogoError('type', `Unsupported file type: ${file.type}. Supported: PNG, JPEG, WebP, SVG, GIF`);
   }
 
   // Validate file size
   if (file.size > MAX_UPLOAD_SIZE) {
-    throw new Error(`File too large: ${Math.round(file.size / 1024 / 1024)}MB. Maximum: 5MB`);
+    throw new LogoError('size', `File too large: ${Math.round(file.size / 1024 / 1024)}MB. Maximum: 5MB`);
   }
 
   // SVG wird gerastert und als PNG gespeichert (@W3-030: nie ein SVG ablegen, es kann Skripte enthalten); der Rest
@@ -163,7 +177,7 @@ export async function processLogo(
   canvas.height = config.targetSize;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    throw new Error('Failed to get canvas 2D context');
+    throw new LogoError('unreadable', 'Failed to get canvas 2D context');
   }
 
   // Clear with transparent background
@@ -209,7 +223,7 @@ export async function processLogo(
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('Canvas conversion failed'))),
+      (b) => (b ? resolve(b) : reject(new LogoError('unreadable', 'Canvas conversion failed'))),
       mimeType,
       config.quality
     );
@@ -243,21 +257,9 @@ export function createTeamLogo(
 /**
  * Validate if a file is a valid image for logo upload
  */
-export function validateLogoFile(file: File): { valid: boolean; error?: string } {
-  if (!SUPPORTED_MIME_TYPES.includes(file.type)) {
-    return {
-      valid: false,
-      error: `Nicht unterstütztes Format: ${file.type.split('/')[1] || file.type}. Unterstützt: PNG, JPEG, WebP, SVG, GIF`,
-    };
-  }
-
-  if (file.size > MAX_UPLOAD_SIZE) {
-    return {
-      valid: false,
-      error: `Datei zu groß: ${Math.round(file.size / 1024 / 1024)}MB. Maximum: 5MB`,
-    };
-  }
-
+export function validateLogoFile(file: File): { valid: boolean; reason?: LogoRejectReason } {
+  if (!SUPPORTED_MIME_TYPES.includes(file.type)) { return { valid: false, reason: 'type' }; }
+  if (file.size > MAX_UPLOAD_SIZE) { return { valid: false, reason: 'size' }; }
   return { valid: true };
 }
 
