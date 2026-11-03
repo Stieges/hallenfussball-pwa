@@ -345,6 +345,99 @@ describe('A-08f3e2 Schnelleingabe über Server-Einträge', () => {
     });
   });
 
+  // @EK-032: Wer als Zweiter speichert, sieht die erste Korrektur und arbeitet auf dem neuen Stand weiter -- `onStale` übernimmt die Ablehnung
+  // (Hinweis mit Namen + neuer Stand), die Meldung am Rand entfällt; gesendet wird nichts.
+  describe('@EK-032 Ablehnung meldet Hinweis und neuen Stand an den Dialog', () => {
+    const e1 = () => seq(resultEntry('e1', { [FC_NORD]: 2, [SV_SUED]: 1 }), 1);
+    const e2 = () => seq(correction('e2', { [FC_NORD]: 2, [SV_SUED]: 2 }, 'e1'), 2);
+    const e2heim = () => seq(correction('e2', { [FC_NORD]: 3, [SV_SUED]: 1 }, 'e1'), 2);
+    const bisher21 = { a: 2, b: 1 };
+    const oli = () => authors.read.mockResolvedValue(new Map([['e2', { name: 'Olli', role: 'owner' }]]));
+
+    it('@EK-032 Olli hat auf 2:2 geändert, Maria speichert 3:1: onStale mit Namen und Stand 2:2, keine Meldung am Rand, nichts gesendet, Spiel bleibt 2:2', async () => {
+      oli();
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [e1(), e2()], newWatermark: 2 });
+      const { hook, showWarning } = render(h);
+      const onStale = vi.fn();
+      let saved = true;
+      await act(async () => { saved = await hook.result.current.enterScore(SPIEL_7, 3, 1, bisher21, onStale); });
+
+      expect(saved).toBe(false);
+      expect(onStale).toHaveBeenCalledExactlyOnceWith({ message: 'Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)', now: { a: 2, b: 2 } });
+      expect(showWarning).not.toHaveBeenCalled();
+      expect(hook.result.current.prompt).toBeNull();
+      expect(h.api).not.toHaveBeenCalled();
+      expect(scoreOf(h, SPIEL_7, FC_NORD, SV_SUED)).toBe('2:2');
+    });
+
+    it('@EK-032 auf dem neuen Stand weiter: Maria speichert erneut 3:1 mit knownScore 2:2 → Grund-Rückfrage „2:2 → 3:1“, dann CORRECTION auf e2', async () => {
+      oli();
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [e1(), e2()], newWatermark: 2 });
+      const { hook, answer, showWarning } = render(h);
+      await act(async () => { await hook.result.current.enterScore(SPIEL_7, 3, 1, bisher21, vi.fn()); });
+      const onStale = vi.fn();
+      let done: Promise<boolean> = Promise.resolve(false);
+      act(() => { done = hook.result.current.enterScore(SPIEL_7, 3, 1, { a: 2, b: 2 }, onStale); });
+      await act(async () => { await settle(); });
+      expect(hook.result.current.prompt).toMatchObject({ kind: 'reason', before: '2:2', after: '3:1' });
+      await answer('input_error');
+      await done;
+      await settle();
+
+      expect(onStale).not.toHaveBeenCalled();
+      expect(showWarning).not.toHaveBeenCalled();
+      expect(sentTypes(h)).toEqual([['CORRECTION']]);
+      expect(h.api.mock.calls[0][1][0].payload).toMatchObject({ basedOn: 'e2', scores: { [FC_NORD]: 3, [SV_SUED]: 1 } });
+    });
+
+    it('@EK-032 Gegenbeispiel: ohne Fremdänderung wird onStale nicht gerufen, die Grund-Rückfrage kommt', async () => {
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [e1()], newWatermark: 1 });
+      const { hook, answer } = render(h);
+      const onStale = vi.fn();
+      let done: Promise<boolean> = Promise.resolve(false);
+      act(() => { done = hook.result.current.enterScore(SPIEL_7, 3, 1, bisher21, onStale); });
+      await act(async () => { await settle(); });
+      expect(hook.result.current.prompt).toMatchObject({ kind: 'reason', before: '2:1', after: '3:1' });
+      await answer('input_error');
+      await done;
+      expect(onStale).not.toHaveBeenCalled();
+    });
+
+    it('@EK-032 ohne onStale (Schnelleingabe) bleibt die Meldung am Rand wie bisher', async () => {
+      oli();
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [e1(), e2()], newWatermark: 2 });
+      const { hook, showWarning } = render(h);
+      await act(async () => { await hook.result.current.enterScore(SPIEL_7, 3, 1, bisher21); });
+      expect(lastWarning(showWarning)).toBe('Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)');
+    });
+
+    // N11 (Opus-Review #436): der Vergleich gilt für beide Seiten und zählt kein Strafstoßschießen.
+    it('@FU-082 Olli ändert nur die Heim-Seite (2:1 → 3:1), Maria speichert 4:0 → abgelehnt, jetzt 3:1', async () => {
+      oli();
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [e1(), e2heim()], newWatermark: 2 });
+      const { hook } = render(h);
+      const onStale = vi.fn();
+      await act(async () => { await hook.result.current.enterScore(SPIEL_7, 4, 0, bisher21, onStale); });
+      expect(onStale).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ now: { a: 3, b: 1 } }));
+      expect(h.api).not.toHaveBeenCalled();
+    });
+
+    it('@FU-082 K.-o.-Spiel 2:2 n. E. 4:3, angezeigt 2:2: Korrektur auf 3:2 ohne Fremdänderung geht durch (Strafstoßtore zählen nicht)', async () => {
+      const ergebnis = seq({ ...resultEntry('k1', { [HEIM]: 2, [GAST]: 2 }), payload: { scores: { [HEIM]: 2, [GAST]: 2 }, shootout: { [HEIM]: 4, [GAST]: 3 } } }, 1);
+      h.fetchConfirmed.mockResolvedValueOnce({ events: [ergebnis], newWatermark: 1 });
+      const { hook, answer, showWarning } = render(h);
+      const onStale = vi.fn();
+      let done: Promise<boolean> = Promise.resolve(false);
+      act(() => { done = hook.result.current.enterScore(HALBFINALE_1, 3, 2, { a: 2, b: 2 }, onStale); });
+      await act(async () => { await settle(); });
+      expect(hook.result.current.prompt).toMatchObject({ kind: 'reason', before: '2:2', after: '3:2' });
+      await answer('input_error');
+      await done;
+      expect(onStale).not.toHaveBeenCalled();
+      expect(showWarning).not.toHaveBeenCalled();
+    });
+  });
+
   // @FU-104: Tom trägt für Spiel 9 an seinem Gerät 3:1 ein, während Olli tippt -- der Hinweis nennt Toms Namen.
   describe('@FU-104 Name dessen, der genau dieses Spiel inzwischen geändert hat', () => {
     const tomsEintrag = () => h.fetchConfirmed.mockResolvedValueOnce({ events: [seq(resultEntry('t1', { [SV_SUED]: 3, [FC_NORD]: 1 }), 1)], newWatermark: 1 });

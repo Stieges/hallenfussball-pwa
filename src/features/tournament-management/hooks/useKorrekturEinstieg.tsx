@@ -7,7 +7,7 @@
  */
 import { useCallback, useState, type ReactElement } from 'react';
 import { CockpitKorrekturDialog } from '../components/CockpitKorrekturDialog';
-import type { KnownScore } from './useScheduleResultEntry';
+import type { EnterScore } from './useScheduleResultEntry';
 
 export interface KorrekturSpiel {
   number: number;
@@ -33,7 +33,7 @@ export interface KorrekturEinstieg {
 }
 
 export function useKorrekturEinstieg(options: {
-  enterScore: (matchId: string, home: number, away: number, knownScore?: KnownScore) => Promise<boolean>;
+  enterScore: EnterScore;
   spielOf: (matchId: string) => KorrekturSpiel | null;
   istLeitung: boolean;
   pause?: KorrekturPause;
@@ -41,22 +41,34 @@ export function useKorrekturEinstieg(options: {
   const { enterScore, spielOf, istLeitung, pause = {} } = options;
   const { onBeginn, onEnde } = pause;
   // Beim Öffnen festgehalten: das „bisher“ des Dialogs (@FU-082). Läuft während des offenen Dialogs ein fremdes Ergebnis ein oder liegt es
-  // schon am Server, bleibt es stehen; das Speichern vergleicht damit und lehnt dann mit Namen ab.
-  const [offen, setOffen] = useState<{ matchId: string; spiel: KorrekturSpiel | null } | null>(null);
+  // schon am Server, bleibt es stehen; das Speichern vergleicht damit und lehnt dann mit Namen ab. Dann (@EK-032) öffnet derselbe Dialog
+  // mit dem neuen Stand als „bisher“ und dem Hinweis; dieser Stand ist die neue Basis, gesendet wird erst beim erneuten Speichern.
+  const [offen, setOffen] = useState<{ matchId: string; spiel: KorrekturSpiel | null; hinweis: string | null; sendet: boolean } | null>(null);
   const onKorrigieren = useCallback((matchId: string) => {
-    setOffen({ matchId, spiel: spielOf(matchId) });
+    setOffen({ matchId, spiel: spielOf(matchId), hinweis: null, sendet: false });
     onBeginn?.(matchId);
   }, [spielOf, onBeginn]);
   const spiel = offen !== null ? offen.spiel ?? spielOf(offen.matchId) : null;
 
-  const dialog = spiel !== null && offen !== null
+  const dialog = spiel !== null && offen !== null && !offen.sendet
     ? (
       <CockpitKorrekturDialog
-        key={offen.matchId} matchNumber={spiel.number} homeName={spiel.homeName} awayName={spiel.awayName} scoreHome={spiel.scoreHome} scoreAway={spiel.scoreAway}
+        key={`${offen.matchId}:${spiel.scoreHome}:${spiel.scoreAway}`} matchNumber={spiel.number} homeName={spiel.homeName} awayName={spiel.awayName}
+        scoreHome={spiel.scoreHome} scoreAway={spiel.scoreAway} staleHint={offen.hinweis ?? undefined}
         onAbbrechen={() => { setOffen(null); onEnde?.(); }}
         onWeiter={(home, away) => {
-          setOffen(null);
-          void enterScore(offen.matchId, home, away, { a: spiel.scoreHome, b: spiel.scoreAway }).finally(() => { onEnde?.(); });
+          // Während die Grund-Auswahl bzw. das Senden läuft, ist der Dialog ausgeblendet (Prompt und Dialog nie zugleich, @SL-163).
+          setOffen({ ...offen, sendet: true });
+          let abgelehnt = false;
+          void enterScore(offen.matchId, home, away, { a: spiel.scoreHome, b: spiel.scoreAway }, ({ message, now }) => {
+            abgelehnt = true;
+            setOffen({ matchId: offen.matchId, spiel: { ...spiel, scoreHome: now.a, scoreAway: now.b }, hinweis: message, sendet: false });
+          }).finally(() => {
+            if (!abgelehnt) {
+              setOffen(null);
+              onEnde?.();
+            }
+          });
         }}
       />
     )

@@ -77,7 +77,7 @@ describe('@EK-063 ein Dialog für die Korrektur – Spielplan und Cockpit', () =
       await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
       await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '1');
       await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
-      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 1, 1, { a: 2, b: 1 });
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 1, 1, { a: 2, b: 1 }, expect.any(Function));
       unmount();
     }
   });
@@ -111,7 +111,7 @@ describe('@EK-063 ein Dialog für die Korrektur – Spielplan und Cockpit', () =
       await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
       await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '3');
       await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
-      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 3, 1, { a: 2, b: 1 });
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-7', 3, 1, { a: 2, b: 1 }, expect.any(Function));
     });
 
     it('@FU-082 erneutes Öffnen eines anderen Spiels: „Weiter“ reicht den Stand dieses Spiels (0:3), nicht den des zuerst geöffneten', async () => {
@@ -125,7 +125,75 @@ describe('@EK-063 ein Dialog für die Korrektur – Spielplan und Cockpit', () =
       await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
       await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), '1');
       await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
-      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-8', 1, 3, { a: 0, b: 3 });
+      expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-8', 1, 3, { a: 0, b: 3 }, expect.any(Function));
+    });
+  });
+
+  // @EK-032: Wer als Zweiter speichert, sieht die erste Korrektur und arbeitet auf dem neuen Stand weiter (Cockpit UND Spielplan, derselbe Dialog).
+  describe('@EK-032 Ablehnung wegen Fremdänderung: der Dialog bleibt offen mit dem neuen Stand', () => {
+    const hinweis = 'Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)';
+    const abgelehnt = () => mocks.enterScore.mockImplementationOnce(async (_id: string, _h: number, _a: number, _known: unknown, onStale?: (info: unknown) => void) => {
+      onStale?.({ message: hinweis, now: { a: 2, b: 2 } });
+      return false;
+    });
+    const tippe = async (user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement, home: string, away: string) => {
+      await user.clear(within(dialog).getByTestId('cockpit-korrektur-home'));
+      await user.type(within(dialog).getByTestId('cockpit-korrektur-home'), home);
+      await user.clear(within(dialog).getByTestId('cockpit-korrektur-away'));
+      await user.type(within(dialog).getByTestId('cockpit-korrektur-away'), away);
+    };
+
+    it.each([[Spielplan, 'plan-korrigieren'], [Cockpit, 'cockpit-korrigieren']] as const)('@EK-032 Maria öffnet bei 2:1, Olli hat auf 2:2 geändert: Dialog bleibt offen, Hinweis mit Namen, bisher 2:2; erneut 3:1 geht mit Basis 2:2 durch', async (Einstieg, knopf) => {
+      const user = userEvent.setup();
+      abgelehnt();
+      render(<Einstieg istLeitung />);
+      await user.click(screen.getByTestId(knopf));
+      await tippe(user, screen.getByTestId('cockpit-korrektur-dialog'), '3', '1');
+      await user.click(screen.getByTestId('cockpit-korrektur-weiter'));
+
+      expect(mocks.enterScore).toHaveBeenCalledTimes(1);
+      expect(mocks.enterScore.mock.calls[0].slice(0, 4)).toEqual(['match-7', 3, 1, { a: 2, b: 1 }]);
+      const dialog = await screen.findByTestId('cockpit-korrektur-dialog');
+      expect(within(dialog).getByTestId('cockpit-korrektur-stale')).toHaveTextContent(hinweis);
+      expect(dialog).toHaveTextContent('Aktuelles Ergebnis: FC Nord 2:2 SV Süd');
+      expect(dialog).not.toHaveTextContent(/2:1/);
+      expect(screen.getAllByTestId('cockpit-korrektur-dialog')).toHaveLength(1);
+
+      // Maria arbeitet auf dem neuen Stand weiter: 3:1 erneut speichern, Basis ist jetzt 2:2
+      await tippe(user, dialog, '3', '1');
+      await user.click(within(dialog).getByTestId('cockpit-korrektur-weiter'));
+      expect(mocks.enterScore).toHaveBeenCalledTimes(2);
+      expect(mocks.enterScore.mock.calls[1].slice(0, 4)).toEqual(['match-7', 3, 1, { a: 2, b: 2 }]);
+      await vi.waitFor(() => { expect(screen.queryByTestId('cockpit-korrektur-dialog')).toBeNull(); });
+    });
+
+    it.each([[Spielplan, 'plan-korrigieren'], [Cockpit, 'cockpit-korrigieren']] as const)('@EK-032 Gegenbeispiel: ohne Fremdänderung schließt der Dialog nach dem Speichern, kein Hinweis', async (Einstieg, knopf) => {
+      const user = userEvent.setup();
+      render(<Einstieg istLeitung />);
+      await user.click(screen.getByTestId(knopf));
+      await tippe(user, screen.getByTestId('cockpit-korrektur-dialog'), '3', '1');
+      await user.click(screen.getByTestId('cockpit-korrektur-weiter'));
+      await vi.waitFor(() => { expect(screen.queryByTestId('cockpit-korrektur-dialog')).toBeNull(); });
+      expect(screen.queryByTestId('cockpit-korrektur-stale')).toBeNull();
+    });
+
+    it('@EK-032 der Countdown des Endstands bleibt angehalten, solange der Dialog nach der Ablehnung offen ist (onEnde erst nach Speichern oder Abbruch)', async () => {
+      const user = userEvent.setup();
+      const pause = { onBeginn: vi.fn(), onEnde: vi.fn() };
+      function Mit() {
+        const k = useCockpitKorrektur(tournament, liveMatches, true, pause);
+        return <div><button type="button" data-testid="k" onClick={() => { k.onKorrigieren?.('match-7'); }}>K</button><div>{k.dialoge}</div></div>;
+      }
+      abgelehnt();
+      render(<Mit />);
+      await user.click(screen.getByTestId('k'));
+      await tippe(user, screen.getByTestId('cockpit-korrektur-dialog'), '3', '1');
+      await user.click(screen.getByTestId('cockpit-korrektur-weiter'));
+      const dialog = await screen.findByTestId('cockpit-korrektur-stale');
+      expect(dialog).toBeInTheDocument();
+      expect(pause.onEnde).not.toHaveBeenCalled();
+      await user.click(screen.getByTestId('cockpit-korrektur-cancel'));
+      expect(pause.onEnde).toHaveBeenCalledTimes(1);
     });
   });
 

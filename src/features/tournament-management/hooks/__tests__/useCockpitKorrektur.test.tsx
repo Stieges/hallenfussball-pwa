@@ -64,7 +64,7 @@ describe('useCockpitKorrektur', () => {
     await user.clear(screen.getByTestId('cockpit-korrektur-home'));
     await user.type(screen.getByTestId('cockpit-korrektur-home'), '1');
     await user.click(screen.getByTestId('cockpit-korrektur-weiter'));
-    expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-11', 1, 1, { a: 2, b: 1 }); // der beim Öffnen gezeigte Stand 2:1 (@FU-082)
+    expect(mocks.enterScore).toHaveBeenCalledExactlyOnceWith('match-11', 1, 1, { a: 2, b: 1 }, expect.any(Function)); // der beim Öffnen gezeigte Stand 2:1 (@FU-082)
     expect(screen.queryByTestId('cockpit-korrektur-dialog')).toBeNull();
   });
 

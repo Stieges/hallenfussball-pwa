@@ -203,16 +203,8 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
     expect(view.getByTestId('home-points').textContent).toBe('1');
   });
 
-  it('@FU-082 Olli korrigiert auf 3:3, während Marias Dialog bei 3:1 offen ist: „Weiter“ → Hinweis „inzwischen von Olli geändert (jetzt 3:3)“, keine Grund-Rückfrage, nichts gesendet', async () => {
-    await finishFirstMatch();
-    authors.read.mockResolvedValue(new Map([['e-olli', { name: 'Olli', role: 'owner' }]]));
-    const { view, card } = await renderSchedule();
-    await chooseAction(card, 'correct');
-    const dialog = await screen.findByTestId('cockpit-korrektur-dialog');
-    expect(dialog).toHaveTextContent('3:1');
-    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === FIRST.id)!;
-    // Der Server kennt die Eintragung der Turnierleitung (3:1) und danach Ollis Korrektur auf 3:3
-    const eintrag = h.engine.view(entry.matchId)!.result.state.lastScoreEventId!;
+  /** Der Server kennt die Eintragung der Turnierleitung (3:1) und danach Ollis Korrektur auf 3:3. */
+  function serverMitOllisKorrektur(entry: ReturnType<typeof buildValidMatches>[number], eintrag: string) {
     h.fetchConfirmed.mockResolvedValue({
       events: [
         { id: eintrag, type: 'RESULT_ENTRY', actor: 'leitung', at: Date.now() - 1000, section: null, clockMs: null, teamId: null, seq: 1, payload: { scores: { [entry.ctx.teamAId]: 3, [entry.ctx.teamBId]: 1 } } },
@@ -220,12 +212,53 @@ describe('C-GRUPPE-BEENDET-SCHNELLEINGABE-STILL: beendetes Gruppenspiel im Spiel
       ],
       newWatermark: 2,
     });
+  }
+
+  it('@FU-082 @EK-032 Olli korrigiert auf 3:3, während Marias Dialog bei 3:1 offen ist: „Weiter“ → derselbe Dialog bleibt offen mit Hinweis „von Olli geändert (jetzt 3:3)“ und bisher 3:3, kein Toast, keine Grund-Rückfrage, nichts gesendet; erneut 4:3 → Grund-Rückfrage „bisher 3:3 – neu 4:3“', async () => {
+    await finishFirstMatch();
+    authors.read.mockResolvedValue(new Map([['e-olli', { name: 'Olli', role: 'owner' }]]));
+    const { view, card } = await renderSchedule();
+    await chooseAction(card, 'correct');
+    const dialog = await screen.findByTestId('cockpit-korrektur-dialog');
+    expect(dialog).toHaveTextContent('3:1');
+    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === FIRST.id)!;
+    serverMitOllisKorrektur(entry, h.engine.view(entry.matchId)!.result.state.lastScoreEventId!);
     fireEvent.change(within(dialog).getByTestId('cockpit-korrektur-home'), { target: { value: '4' } });
     await act(async () => { fireEvent.click(within(dialog).getByTestId('cockpit-korrektur-weiter')); await settle(); });
 
-    expect(await view.findByText('Spiel 1 wurde inzwischen von Olli geändert (jetzt 3:3)')).toBeInTheDocument();
+    const offen = await screen.findByTestId('cockpit-korrektur-dialog');
+    expect(within(offen).getByTestId('cockpit-korrektur-stale')).toHaveTextContent('Spiel 1 wurde inzwischen von Olli geändert (jetzt 3:3)');
+    expect(offen).toHaveTextContent(/Aktuelles Ergebnis: .* 3:3 /);
+    expect(offen).not.toHaveTextContent('3:1');
+    expect(screen.getAllByText(/inzwischen von Olli geändert/)).toHaveLength(1); // nicht zusätzlich als Toast
     expect(view.queryByTestId('result-entry-reason-dialog')).toBeNull();
     expect(h.api).not.toHaveBeenCalled();
+
+    // Maria arbeitet auf dem neuen Stand weiter und speichert erneut: jetzt kommt die Grund-Rückfrage mit 3:3 als bisher
+    fireEvent.change(within(offen).getByTestId('cockpit-korrektur-home'), { target: { value: '4' } });
+    await act(async () => { fireEvent.click(within(offen).getByTestId('cockpit-korrektur-weiter')); await settle(); });
+    expect((await view.findByTestId('result-entry-reason-dialog')).textContent).toContain('bisher 3:3 – neu 4:3');
+    expect(screen.queryByTestId('cockpit-korrektur-dialog')).toBeNull();
+    expect(h.api).not.toHaveBeenCalled();
+  });
+
+  // N12 (Opus-Review #436): das Spiel steht am Server auf 3:1 und der Spielplan zeigt 3:1, die lokale Kopie ist aber leer (D12). Ohne
+  // `knownScore` in der Verdrahtung (useScheduleTabActions) würde das fälschlich als „inzwischen geändert“ abgelehnt.
+  it('@EK-063 @FU-082 frisch geöffneter Spielplan (leere Kopie), Server 3:1 = angezeigt: Korrektur auf 4:1 → Grund-Rückfrage, kein „inzwischen geändert“', async () => {
+    const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === FIRST.id)!;
+    h.fetchConfirmed.mockResolvedValue({
+      events: [{ id: 'e1', type: 'RESULT_ENTRY', actor: 'leitung', at: Date.now() - 1000, section: null, clockMs: null, teamId: null, seq: 1, payload: { scores: { [entry.ctx.teamAId]: 3, [entry.ctx.teamBId]: 1 } } }],
+      newWatermark: 1,
+    });
+    stores.raw.set('tournaments', [{ ...tournament, matches: tournament.matches.map((m) => (m.id === FIRST.id ? { ...m, matchStatus: 'finished', scoreA: 3, scoreB: 1 } : m)) }]);
+    const { view, card } = await renderSchedule();
+    expect(h.engine.view(entry.matchId)?.result.state.lastScoreEventId ?? null).toBeNull(); // Ausgangslage: Kopie leer
+    expect(card().textContent).toMatch(/3\s*:\s*1/);
+
+    await correct(card, 4, 1);
+
+    expect((await view.findByTestId('result-entry-reason-dialog')).textContent).toContain('bisher 3:1 – neu 4:1');
+    expect(screen.queryByText(/inzwischen/)).toBeNull();
   });
 
   it('@EK-004 Abbrechen sendet nichts: die Zeile zeigt weiter 3:1', async () => {
