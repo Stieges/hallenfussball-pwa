@@ -68,6 +68,12 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
       setStatus('unsupported');
       return;
     }
+    if (document.visibilityState !== 'visible') {
+      // @ME-006: Ein unsichtbares Fenster wird nicht angefragt; keine Ablehnung, keine Meldung. Die Rückkehr in den
+      // Vordergrund (visibilitychange) stellt die Anfrage nach.
+      setStatus('idle');
+      return;
+    }
     const nr = ++anfrageNr.current;
     laeuft.current = true;
     setStatus('pending');
@@ -96,6 +102,11 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
       clearTimeout(timer);
       if (!aktiv.current || nr !== anfrageNr.current) { return; }
       laeuft.current = false;
+      if (document.visibilityState !== 'visible') {
+        // Die Seite wurde während der Anfrage unsichtbar (Rennen): kein „denied“, keine Meldung, neue Anfrage beim Sichtbarwerden.
+        setStatus('idle');
+        return;
+      }
       setStatus('denied');
       if (!fehlerGemeldet.current) {
         fehlerGemeldet.current = true;

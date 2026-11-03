@@ -38,18 +38,25 @@ function offeneAnfrage() {
   return { request, zusagen: (s: Sentinel) => zusagen(s), ablehnen: (e: Error) => ablehnen(e) };
 }
 
+/** Setzt die Sichtbarkeit der Seite (jsdom liefert keinen festen Wert); wird in afterEach zurückgenommen. */
+function sichtbarkeit(zustand: 'visible' | 'hidden'): void {
+  Object.defineProperty(document, 'visibilityState', { value: zustand, configurable: true });
+}
+
 async function vorspulen(ms: number): Promise<void> {
   await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sichtbarkeit('visible');
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
 });
 
 afterEach(() => {
   vi.useRealTimers();
   Reflect.deleteProperty(navigator, 'wakeLock');
+  Reflect.deleteProperty(document, 'visibilityState');
 });
 
 describe('useWakeLock Zustand (@ME-006, @ME-064, @SL-122)', () => {
@@ -225,5 +232,63 @@ describe('useWakeLock Zustand (@ME-006, @ME-064, @SL-122)', () => {
     await vorspulen(0);
     expect(s.release).toHaveBeenCalledTimes(1);
     expect(result.current.status).toBe('idle');
+  });
+});
+
+describe('useWakeLock Sichtbarkeit (@ME-006 Grundriss: Fenster nicht sichtbar)', () => {
+  it('Start bei unsichtbarer Seite: keine Anfrage, Status bleibt „idle“, keine Ablehnung, keine Meldung', async () => {
+    sichtbarkeit('hidden');
+    const request = vi.fn().mockRejectedValue(Object.assign(new Error('nicht sichtbar'), { name: 'NotAllowedError' }));
+    installiere(request);
+    const { result } = renderHook(() => useWakeLock(true));
+    await vorspulen(WAKE_LOCK_ANSWER_TIMEOUT_MS * 2);
+    expect(request).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('idle');
+    expect(result.current.status).not.toBe('denied');
+    expect(captureFeatureError).not.toHaveBeenCalled();
+  });
+
+  it('unsichtbar gestartet, dann sichtbar: genau eine Anfrage, bei Erfolg „granted“', async () => {
+    sichtbarkeit('hidden');
+    const request = vi.fn().mockResolvedValue(sentinel());
+    installiere(request);
+    const { result } = renderHook(() => useWakeLock(true));
+    await vorspulen(0);
+    expect(request).not.toHaveBeenCalled();
+    sichtbarkeit('visible');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await vorspulen(0);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(result.current.status).toBe('granted');
+  });
+
+  it('Gegenbeispiel: sichtbar gestartet, Browser lehnt ab: wie bisher „denied“ und genau eine Fehlermeldung', async () => {
+    sichtbarkeit('visible');
+    installiere(vi.fn().mockRejectedValue(Object.assign(new Error('nein'), { name: 'NotAllowedError' })));
+    const { result } = renderHook(() => useWakeLock(true));
+    await vorspulen(0);
+    expect(result.current.status).toBe('denied');
+    expect(captureFeatureError).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel Rennen: Browser wirft NotAllowedError, weil die Seite inzwischen unsichtbar ist: kein „denied“, keine Meldung, neue Anfrage beim Sichtbarwerden', async () => {
+    const request = vi.fn()
+      .mockImplementationOnce(async () => {
+        sichtbarkeit('hidden');
+        throw Object.assign(new Error('nicht sichtbar'), { name: 'NotAllowedError' });
+      })
+      .mockResolvedValueOnce(sentinel());
+    installiere(request);
+    const { result } = renderHook(() => useWakeLock(true));
+    await vorspulen(0);
+    expect(result.current.status).not.toBe('denied');
+    expect(captureFeatureError).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledTimes(1);
+    sichtbarkeit('visible');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await vorspulen(0);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(result.current.status).toBe('granted');
+    expect(captureFeatureError).not.toHaveBeenCalled();
   });
 });
