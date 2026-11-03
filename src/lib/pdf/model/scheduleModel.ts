@@ -6,7 +6,6 @@
  * Immer A4 hoch (@DR-026): `PdfInput.orientation` ändert am Modell nichts (Querformat = MVP+, Lücke L3).
  */
 import { getGroupDisplayName, getGroupShortCode } from '../../../utils/displayNames';
-import { getLocationAddressLine } from '../../../utils/locationHelpers';
 import { dayWithWeekday } from '../headerFacts';
 import { resultState } from '../matchResult';
 import { sideLabel } from '../matchSides';
@@ -93,7 +92,9 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   const duration = entries.find(e => e.kind === 'duration')?.line ?? '';
   // „Ablauf“: Zahl der Spiele, mit Finalrunde „28 Spiele, davon 8 Finalspiele“ (@DR-031)
   const flowText = finalCount > 0 ? sheet.flowWithFinals(groupMatches.length + finalCount, finalCount) : sheet.flowMatches(groupMatches.length);
-  const address = getLocationAddressLine(schedule.tournament);
+  // Adresse der Halle: „Straße Nr., PLZ Ort“ in einer eigenen Zeile unter der Halle (@DR-031); ohne Angaben leer
+  const place = schedule.tournament.location;
+  const address = [place?.street?.trim() ?? '', [place?.postalCode?.trim() ?? '', place?.city?.trim() ?? ''].filter(part => part !== '').join(' ')].filter(part => part !== '').join(', ');
   const headerInput: HeaderInput = {
     title: schedule.tournament.title,
     subtitle: [sheet.titleSuffix, schedule.tournament.ageClass?.trim() ?? '', input.organizerName].filter(part => part !== '').join(t.rules.join),
@@ -103,7 +104,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
     end: sheet.endApprox(roundEndTime(t.formatClock(schedule.endTime))),
     join: t.rules.join,
     hall: input.hallName.trim(),
-    address: address ?? '',
+    address,
     duration: duration.includes(': ') ? duration.slice(duration.indexOf(': ') + 2) : duration,
     flow: groupMatches.length + finalCount > 0 ? flowText : '',
     rules: entries.filter((e): e is typeof e & { kind: 'mode' | 'tiebreak' | 'playOut' | 'rulebook' } => e.kind !== 'duration'),

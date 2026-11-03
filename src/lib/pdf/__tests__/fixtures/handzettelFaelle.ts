@@ -106,6 +106,7 @@ const NIKOLAUS_BASIS = {
 export const FALL_A: HandzettelFall = {
   ...NIKOLAUS_BASIS,
   name: 'a',
+  adresse: { street: 'Mühlberger Weg 5', postalCode: '83329', city: 'Waging am See' },
   teams: NIKOLAUS_TEAMS.map(name => ({ name })),
   spiele: nikolausSpiele(NIKOLAUS_TEAMS, false),
   mockup: { endeCa: '19:00', seiten: 2, zeilenhoehe: 11, ergebnisLinie: 12 },
@@ -198,6 +199,11 @@ export function fallBLang(anzahl: 1 | 2, mitKurzname = false): HandzettelFall {
 }
 
 export const FALL_B_LANG: HandzettelFall = fallBLang(1);
+
+/** b mit langem Hallennamen und langer Adresse (@DR-031): beides bricht in der Spalte „Wo“ um, nichts wird gekürzt. */
+export const HALLE_LANG = 'Dreifachturnhalle des Chiemgau-Gymnasiums Traunstein';
+export const ADRESSE_LANG = { street: 'Dr.-Johann-Sebastian-Mayr-Straße 117', postalCode: '83278', city: 'Traunstein-Haslach' } as const;
+export const FALL_B_HALLE: HandzettelFall = { ...FALL_B, name: 'b-lang', halle: HALLE_LANG, adresse: ADRESSE_LANG };
 
 /**
  * b mit je Runde anderer Regel, damit jede Zeile von @DR-019 vorkommt: Halbfinale direkt Strafstoßschießen, Finale erst

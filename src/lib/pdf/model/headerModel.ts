@@ -127,8 +127,9 @@ function factCell(key: FactKey, h: HeaderInput, x: number, top: number, width: n
       line(h.end, s.factBigPt, 'normal');
     }
   } else if (key === 'where') {
-    line(h.hall, s.factBigPt, 'bold');
-    if (h.address !== '') { line(h.address, s.factMidPt, 'normal'); }
+    // Halle und Adresse brechen an Leerzeichen oder Bindestrich um und werden nie gekürzt; die Zelle wird dafür höher (@DR-031)
+    wrapName(h.hall, width, s.factBigPt, measure, 'bold').forEach(text => line(text, s.factBigPt, 'bold'));
+    if (h.address !== '') { wrapName(h.address, width, s.factMidPt, measure).forEach(text => line(text, s.factMidPt, 'normal')); }
   } else {
     for (const text of wrapAtJoin(key === 'duration' ? h.duration : h.flow, h.join, width, s.factMidPt, measure)) {
       line(text, s.factMidPt, 'normal');
