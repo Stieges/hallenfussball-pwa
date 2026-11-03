@@ -63,10 +63,19 @@ async function oeffneSpielplan(page: Page, seed: Seed, sprache: 'de' | 'en'): Pr
 
 const sichtbarerText = (page: Page): Promise<string> => page.locator('body').innerText();
 
+/** Der sichtbare Text ohne die Köpfe der Tabellen: dort ist die Kurzform („SR“/„Ref“) erlaubt, mit ausgeschriebenem Hinweis (@OB-075). */
+async function textOhneTabellenkopf(page: Page): Promise<string> {
+  let text = await sichtbarerText(page);
+  for (const kopf of await page.locator('thead th').allInnerTexts()) {
+    if (kopf.trim() !== '') { text = text.split(kopf).join(''); }
+  }
+  return text;
+}
+
 test.describe('@OB-075 / @OB-076 Spielplan der Finalrunde und Spielkarten', () => {
   test('@OB-075 Deutsch: „Halbfinale 1“, „Schiedsrichter 2“, „Gruppe A“ – nie „HF 1“, „SR 2“, „Gr. A“', async ({ page, seedIndexedDB }) => {
     await oeffneSpielplan(page, seedIndexedDB, 'de');
-    const text = await sichtbarerText(page);
+    const text = await textOhneTabellenkopf(page);
     expect(text).toContain('Halbfinale 1');
     expect(text).toMatch(/Schiedsrichter 2\b/);
     expect(text).not.toMatch(/Schiedsrichter: /);
@@ -76,7 +85,7 @@ test.describe('@OB-075 / @OB-076 Spielplan der Finalrunde und Spielkarten', () =
 
   test('@OB-075 Englisch: „Semifinal 1“, @OB-076 „Referee 2“ und „Group A“ – nie „SF 1“, „Ref 2“, „SR 2“', async ({ page, seedIndexedDB }) => {
     await oeffneSpielplan(page, seedIndexedDB, 'en');
-    const text = await sichtbarerText(page);
+    const text = await textOhneTabellenkopf(page);
     expect(text).toContain('Semifinal 1');
     expect(text).toMatch(/Referee 2\b/);
     expect(text).not.toMatch(/Referee: /);
