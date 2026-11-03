@@ -71,7 +71,7 @@ describe('@DR-031 Eckdaten statt Formularzeilen', () => {
 
 describe('@DR-006 und @DR-020 Spielzeit und Regelzeile', () => {
   it('@DR-006 die Spielzeit mit Zeitstrafe steht bei den Eckdaten, nicht in der Regelzeile', () => {
-    const h = headerOf(FALL_B);
+    const h = headerOf({ ...FALL_B, zeitstrafeSek: 120 });
     const duration = h.facts.cells.find(c => c.key === 'duration')!.runs.map(r => r.text).join(' ');
 
     expect(duration).toContain('10 Minuten');

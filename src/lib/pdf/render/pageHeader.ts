@@ -9,7 +9,8 @@ import type { PdfAccent } from '../pdfOptions';
 import { drawLogo, type PlacedLogo } from './headerGraphics';
 import { drawQrSymbol } from './qrCode';
 import { drawFill, drawRuns } from './runs';
-import { drawRule } from './writeLine';
+import { drawRule, drawStroke, rgbOf } from './writeLine';
+import { printSheetHead } from '../../../design-tokens/print-sheet';
 
 /** Schon geprüfte und bemessene Grafiken (`usableLogo`); fehlt eine, hat das Modell ihren Platz nicht vorgesehen (@DR-024). */
 export interface HeaderPictures { left?: PlacedLogo; right?: PlacedLogo }
@@ -25,6 +26,7 @@ export function drawPageHeader(doc: jsPDF, block: HeaderBlock, pictures: HeaderP
   drawFill(doc, block.facts.fill, accent);
   for (const cell of block.facts.cells) {
     drawRuns(doc, cell.runs);
+    drawStroke(doc, cell.mark, printSheetHead.factMarkStroke, rgbOf(accent.line));
   }
   drawRuns(doc, block.rules);
   if (block.qr && qr) {

@@ -5,6 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { printLimits, printPage, printType } from '../../../design-tokens/print';
+import { printSheetHead } from '../../../design-tokens/print-sheet';
+import { grayOf } from '../../color/accent';
 import { printHeader } from '../../../design-tokens/print-header';
 import { FALL_A, FALL_B, FALL_C } from './fixtures/handzettelFaelle';
 import { fallSchedule } from './fixtures/handzettelTurnier';
@@ -45,8 +47,8 @@ describe('@DR-031 Eckdaten im hellen Block', () => {
 
   it('@DR-031 keine Liste Bezeichnung/Wert: Bezeichnungen und Werte stehen in zwei Spalten, nicht je Zeile untereinander', async () => {
     const { pages } = await handzettelPdf(FALL_B);
-    const wann = pages[0].texts.find(t => t.str.trim() === 'Wann');
-    const wo = pages[0].texts.find(t => t.str.trim() === 'Wo');
+    const wann = pages[0].texts.find(t => t.str.trim() === 'WANN');
+    const wo = pages[0].texts.find(t => t.str.trim() === 'WO');
 
     expect(wann && wo ? Math.abs(wann.y - wo.y) : 99).toBeLessThanOrEqual(TOL);
     expect(wann && wo ? wo.x - wann.x : 0).toBeGreaterThan(50);
@@ -55,7 +57,7 @@ describe('@DR-031 Eckdaten im hellen Block', () => {
   it('@DR-031 ohne Halle: keine leere Bezeichnung „Wo“ und kein „·“ am Rand', async () => {
     const { pages } = await handzettelPdf(FALL_A, { tournament: { location: { name: '' } }, options: { hallName: '' } });
 
-    expect(strs(pages[0])).not.toContain('Wo');
+    expect(strs(pages[0])).not.toContain('WO');
     expect(strs(pages[0]).filter(s => s === '·' || (s.startsWith('·') && !/^·\s*Ende/.test(s)))).toEqual([]);
   });
 
@@ -72,14 +74,14 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
   it('@DR-031 Fall a: unter „Ablauf“ steht „15 Spiele“', async () => {
     const { pages } = await handzettelPdf(FALL_A);
 
-    expect(flat(pages[0])).toContain('Ablauf15Spiele');
+    expect(flat(pages[0])).toContain('ABLAUF15Spiele');
   });
 
   it('@DR-031 Fall b: unter „Ablauf“ steht „28 Spiele, davon 8 Finalspiele“ in einer Zeile', async () => {
     const { pages } = await handzettelPdf(FALL_B);
     const zeile = pages[0].texts.find(t => t.str.includes('28 Spiele, davon 8 Finalspiele'));
 
-    expect(strs(pages[0])).toContain('Ablauf');
+    expect(strs(pages[0])).toContain('ABLAUF');
     expect(zeile, 'Text in einem Stück, ohne Umbruch').toBeDefined();
   });
 
@@ -87,13 +89,13 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
     const { pages } = await handzettelPdf(FALL_B, { locale: 'en' });
 
     expect(pages[0].texts.some(t => t.str.includes('28 matches, 8 of them finals'))).toBe(true);
-    expect(strs(pages[0]), 'Bezeichnung der Zelle ≠ Titelzusatz „Schedule“').toContain('Matches');
+    expect(strs(pages[0]), 'Bezeichnung der Zelle ≠ Titelzusatz „Schedule“').toContain('MATCHES');
   });
 
   it('@DR-031 Gegenprobe: würde „Ablauf“ den Block höher machen (ohne Halle: dritte Angabe in einer neuen Zeile), fällt er weg', async () => {
     const { pages } = await handzettelPdf(FALL_A, { tournament: { location: { name: '' } }, options: { hallName: '' } });
 
-    expect(strs(pages[0])).not.toContain('Ablauf');
+    expect(strs(pages[0])).not.toContain('ABLAUF');
     expect(flat(pages[0])).not.toContain('15Spiele');
   });
 
@@ -111,7 +113,7 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
   it('@DR-031 ab zweistelliger Finalspielzahl passt „Ablauf“ nicht in eine Zeile und entfällt, ganz und ohne Bruchstück', async () => {
     const { pages } = await handzettelPdf(ZEHN_FINALSPIELE);
 
-    expect(strs(pages[0])).not.toContain('Ablauf');
+    expect(strs(pages[0])).not.toContain('ABLAUF');
     expect(flat(pages[0])).not.toContain('Finalspiele');
   });
 
@@ -119,8 +121,8 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
     const mit = await handzettelPdf(FALL_B);
     const ohne = await handzettelPdf(ZEHN_FINALSPIELE);
 
-    expect(strs(mit.pages[0])).toContain('Ablauf');
-    expect(strs(ohne.pages[0])).not.toContain('Ablauf');
+    expect(strs(mit.pages[0])).toContain('ABLAUF');
+    expect(strs(ohne.pages[0])).not.toContain('ABLAUF');
     expect(spielzeilen(mit.pages[0])).toBe(spielzeilen(ohne.pages[0]));
     expect(spielzeilen(mit.pages[0])).toBe(20);
   });
@@ -150,9 +152,9 @@ describe('@DR-005 „Spielplan“ am Anfang der Zeile unter dem Titel', () => {
 
 describe('@DR-006 @DR-020 Regelzeile unter den Eckdaten', () => {
   it('@DR-006 Spielzeit mit Zeitstrafe steht bei den Eckdaten, „Modus“ und „Wertung“ in einer Regelzeile darunter', async () => {
-    const { pages } = await handzettelPdf(FALL_B, { tournament: { rulebook: 'BFV-Richtlinien' } });
+    const { pages } = await handzettelPdf({ ...FALL_B, zeitstrafeSek: 120 }, { tournament: { rulebook: 'BFV-Richtlinien' } });
     const kopf = flat(pages[0]);
-    const spielzeit = pages[0].texts.find(t => t.str.trim() === 'Spielzeit');
+    const spielzeit = pages[0].texts.find(t => t.str.trim() === 'SPIELZEIT');
     const modus = pages[0].texts.find(t => t.str.trim().startsWith('Modus'));
 
     expect(kopf).toContain('Zeitstrafe2Minuten');
@@ -172,7 +174,7 @@ describe('@DR-006 @DR-020 Regelzeile unter den Eckdaten', () => {
 describe('@DR-024 Titelband ohne Lücke in vier Lagen', () => {
   const LANG = 'Internationaler Hallenfußball-Wintercup der Sportgemeinschaft Nordheim 2026';
   const titel = (page: LayoutPage): LayoutText[] => {
-    const wann = page.texts.find(t => t.str.trim() === 'Wann')?.y ?? 0;
+    const wann = page.texts.find(t => t.str.trim() === 'WANN')?.y ?? 0;
     return page.texts.filter(t => t.size >= printHeader.titleMinPt - 0.05 && t.y < wann);
   };
   const bereich = (lines: LayoutText[]): { von: number; bis: number } => ({
@@ -288,5 +290,32 @@ describe('@DR-003 QR-Code im Kopf', () => {
     const punkt = Math.min(...pages[0].rects.filter(r => r.fill === '#000000' && r.w < 3 && r.h < 3 && r.y < 90).map(r => r.w));
     const rand = (pages[0].links[0].w - module(pages[0]).w) / 2;
     expect(rand).toBeGreaterThanOrEqual(4 * punkt - 0.15);
+  });
+});
+
+describe.each([
+  ['de', ['WANN', 'WO', 'SPIELZEIT', 'ABLAUF']],
+  ['en', ['WHEN', 'WHERE', 'MATCH TIME', 'MATCHES']],
+] as const)('@DR-031 Bezeichnungen im hellen Block (%s)', (locale, labels) => {
+  it.each([['a', FALL_A, 17.2], ['b', FALL_B, 20.6]] as const)('@DR-031 Fall %s: Versalien, fett, 8 pt, je Bezeichnung ein kurzer Akzentstrich; der Block wird nicht höher', async (_n, fall, abstand) => {
+    const { pages } = await handzettelPdf(fall, { locale });
+    const page = pages[0];
+    const texts = labels.map(l => page.texts.find(t => t.str.trim() === l));
+    const bold = page.texts[0].font;
+
+    texts.forEach((t, i) => {
+      expect(t, labels[i]).toBeDefined();
+      expect(t?.size).toBeCloseTo(printSheetHead.factLabelPt, 1);
+      expect(t?.font, 'fett wie der Titel').toBe(bold);
+      const strich = page.lines.filter(l => Math.abs(l.y1 - l.y2) < 0.01 && t !== undefined && l.y1 > t.y && l.y1 < t.y + 1.2 && Math.abs(Math.abs(l.x2 - l.x1) - printSheetHead.factMarkLength) < 0.1 && Math.abs(l.x1 - t.x) < 0.2);
+      expect(strich, `${labels[i]}: ein Strich in Akzentfarbe`).toHaveLength(1);
+      expect(strich[0].width).toBeCloseTo(printSheetHead.factMarkStroke, 2);
+      // Akzent = Grün der App (±2 je Kanal), schwarzweiß als dunkles Grau sichtbar
+      expect(Math.abs(Number.parseInt(strich[0].color.slice(3, 5), 16) - 0x78)).toBeLessThanOrEqual(2);
+      expect(grayOf(strich[0].color)).toBeLessThan(128);
+    });
+    // Block gleich hoch wie vor der Änderung: Abstand der zweiten Zeile von der ersten (gemessen am Stand davor)
+    const zweite = page.texts.find(t => t.str.trim() === labels[2]);
+    expect((zweite?.y ?? 0) - (texts[0]?.y ?? 0)).toBeCloseTo(abstand, 0);
   });
 });

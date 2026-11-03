@@ -34,6 +34,8 @@ export interface TextRun {
   align: 'left' | 'center' | 'right';
   /** Unterstreichung eines Links (@DR-038): genau ein Strich, schon vermessen. */
   underline?: HLine;
+  /** Zeichenabstand in mm (Sperrung der Bezeichnungen im Eckdaten-Block, @DR-031); fehlt = keiner. */
+  charSpace?: number;
 }
 
 /** Schreiblinie (@DR-034): ein dünner schwarzer Strich, auf dem von Hand eingetragen wird. */
@@ -71,7 +73,8 @@ interface BlockBase {
 
 /** Eckdaten im hellen Block (@DR-031). Fehlt eine Angabe (etwa die Halle), fehlt ihr Feld ganz. */
 export type FactKey = 'when' | 'where' | 'duration' | 'flow';
-export interface FactCell { key: FactKey; runs: TextRun[] }
+/** `mark`: kurzer Strich in Akzentfarbe unter der Bezeichnung (@DR-031). */
+export interface FactCell { key: FactKey; runs: TextRun[]; mark: HLine }
 export interface FactsModel { fill: Fill; cells: FactCell[] }
 
 /** Kopf von Seite 1: Grafiken, Titelband ohne Lücke (@DR-024), Eckdaten, Regelzeile (@DR-020), QR mit Beschriftung. */

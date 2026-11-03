@@ -152,7 +152,7 @@ describe('F3 Breitenmessung: gemessen wird, was gedruckt wird', () => {
     pages.forEach((page, i) => {
       page.texts.forEach(t => expect(t.x + t.w, `Seite ${i + 1} „${t.str}“`).toBeLessThanOrEqual(rechts + TOL));
     });
-    const wann = pages[0].texts.find(t => t.str.trim() === 'Wann')?.y ?? 0;
+    const wann = pages[0].texts.find(t => t.str.trim() === 'WANN')?.y ?? 0;
     const titelText = pages[0].texts.filter(t => t.size >= 17.9 && t.y < wann).map(t => t.str.trim()).join('');
     expect(titelText, 'jedes Zeichen gedruckt, nichts gekürzt').toBe(gedruckt);
   });

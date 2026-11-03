@@ -63,6 +63,10 @@ export interface HandzettelFall {
   akzent: string;
   logoLinks: boolean;
   grafikRechts: boolean;
+  /** Regelwerk im Kopf (Mockup a, c: „BFV-Regelwerk für private Turniere“). */
+  regelwerk?: string;
+  /** Zeitstrafe in Sekunden; Mockup b hat keine (Spielzeit „10 Min. je Spiel“), sonst gilt die Vorgabe 120. */
+  zeitstrafeSek?: number;
   /** Erwartungen aus dem Mockup (NOTIZ.md „Korrekturen nach Review“). */
   mockup: { endeCa: string; seiten: number; zeilenhoehe: number; ergebnisLinie: number };
 }
@@ -106,7 +110,7 @@ const NIKOLAUS_BASIS = {
 export const FALL_A: HandzettelFall = {
   ...NIKOLAUS_BASIS,
   name: 'a',
-  adresse: { street: 'Mühlberger Weg 5', postalCode: '83329', city: 'Waging am See' },
+  regelwerk: 'BFV-Regelwerk für private Turniere',
   teams: NIKOLAUS_TEAMS.map(name => ({ name })),
   spiele: nikolausSpiele(NIKOLAUS_TEAMS, false),
   mockup: { endeCa: '19:00', seiten: 2, zeilenhoehe: 11, ergebnisLinie: 12 },
@@ -115,6 +119,7 @@ export const FALL_A: HandzettelFall = {
 export const FALL_C: HandzettelFall = {
   ...NIKOLAUS_BASIS,
   name: 'c',
+  regelwerk: 'BFV-Regelwerk für private Turniere',
   teams: LANGE_TEAMS.map(name => ({ name })),
   spiele: nikolausSpiele(LANGE_TEAMS, true),
   schiedsrichterNamen: ['Paul Schmidt', 'Aylin Yılmaz', 'Jonas Müller-Lüdenscheidt'],
@@ -165,6 +170,7 @@ export const FALL_B: HandzettelFall = {
   pauseMin: 2,
   teams: [...GRUPPE_A.map(name => ({ name, gruppe: 'A' as const })), ...GRUPPE_B.map(name => ({ name, gruppe: 'B' as const }))],
   spiele: B_SPIELE,
+  zeitstrafeSek: 0,
   finale: B_FINALE,
   entscheidung: { quarterfinal: 'shootout', semifinal: 'shootout', placement: 'shootout', final: 'shootout' },
   akzent: '#008F4C',
@@ -197,6 +203,9 @@ export function fallBLang(anzahl: 1 | 2, mitKurzname = false): HandzettelFall {
     spiele: FALL_B.spiele.map(s => ({ ...s, heim: umbenennen(s.heim), gast: umbenennen(s.gast) })),
   };
 }
+
+/** a mit Adresse der Halle (@DR-031): gleiche Daten wie a, das Mockup hat keine Adresse. */
+export const FALL_A_ADRESSE: HandzettelFall = { ...FALL_A, name: 'a', adresse: { street: 'Mühlberger Weg 5', postalCode: '83329', city: 'Waging am See' } };
 
 export const FALL_B_LANG: HandzettelFall = fallBLang(1);
 

@@ -19,7 +19,8 @@ export function drawRuns(doc: jsPDF, runs: readonly TextRun[]): void {
   for (const run of runs) {
     doc.setFont(family, run.weight);
     doc.setFontSize(run.pt);
-    doc.text(run.text, run.x, run.y, run.align === 'left' ? undefined : { align: run.align });
+    const options = { ...(run.align === 'left' ? {} : { align: run.align }), ...(run.charSpace === undefined ? {} : { charSpace: run.charSpace }) };
+    doc.text(run.text, run.x, run.y, Object.keys(options).length === 0 ? undefined : options);
     if (run.underline) {
       drawUnderline(doc, run.underline);
     }

@@ -114,6 +114,8 @@ function factCell(key: FactKey, h: HeaderInput, x: number, top: number, width: n
     y += adv;
   };
   line(h.labels[key], s.factLabelPt, 'bold');
+  runs[0] = { ...runs[0], charSpace: s.factLabelCharSpace };
+  const markY = runs[0].y + s.factMarkDrop;
   if (key === 'when') {
     if (h.date !== '') { line(h.date, s.factBigPt, 'bold'); }
     if (timesWidth(h, measure) <= width) {
@@ -137,7 +139,7 @@ function factCell(key: FactKey, h: HeaderInput, x: number, top: number, width: n
       line(text, s.factMidPt, 'normal');
     }
   }
-  return { cell: { key, runs }, height: y - top };
+  return { cell: { key, runs, mark: { x1: x, x2: x + s.factMarkLength, y: markY } }, height: y - top };
 }
 
 function ruleWords(rules: RuleInput[]): Word[] {

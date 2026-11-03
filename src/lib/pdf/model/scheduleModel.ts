@@ -92,6 +92,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
 
   // Kopf (Eckdaten ohne Halle oder Datum lassen die Angabe ganz weg, @DR-031)
   const sheet = t.sheet;
+  const upper = (text: string): string => text.toLocaleUpperCase(input.locale);
   const duration = entries.find(e => e.kind === 'duration')?.line ?? '';
   // „Ablauf“: Zahl der Spiele, mit Finalrunde „28 Spiele, davon 8 Finalspiele“ (@DR-031)
   const flowText = finalCount > 0 ? sheet.flowWithFinals(groupMatches.length + finalCount, finalCount) : sheet.flowMatches(groupMatches.length);
@@ -100,7 +101,8 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   const headerInput: HeaderInput = {
     title: schedule.tournament.title,
     subtitle: [sheet.titleSuffix, schedule.tournament.ageClass?.trim() ?? '', input.organizerName].filter(part => part !== '').join(t.rules.join),
-    labels: { when: sheet.when, where: sheet.where, duration: sheet.duration, flow: sheet.flow },
+    // Bezeichnungen in Versalien (die Texte in tournament.json bleiben normal geschrieben), in der Sprache des Dokuments
+    labels: { when: upper(sheet.when), where: upper(sheet.where), duration: upper(sheet.duration), flow: upper(sheet.flow) },
     date: schedule.tournament.date ? dayWithWeekday(schedule.tournament.date, t) : '',
     begin: sheet.begin(t.formatClock(schedule.startTime)),
     end: sheet.endApprox(roundEndTime(t.formatClock(schedule.endTime))),

@@ -75,7 +75,7 @@ describe('G73 englische Wortlaute', () => {
     const { pages } = await layoutOf({ now: NOW, ...en });
     const text = allStrs(pages);
 
-    expect(text).toContain('Match time');
+    expect(text).toContain('MATCH TIME');
     expect(text.join(' ')).not.toContain('Game time');
   });
 

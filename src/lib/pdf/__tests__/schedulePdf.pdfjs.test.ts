@@ -112,10 +112,10 @@ describe('Sprache: EN-Plan ohne deutsche Wörter', () => {
     // und werden erst mit B-35 (`slotLabel`) übersetzt. Nur dieses Muster wird herausgenommen.
     const text = pdf.pages.flat().join(' ').replace(/Gruppe [A-Z] - \d\. Platz/g, '');
     // Negativliste: deutsche Wörter aus Titeln, Phasen und Gruppen.
-    for (const word of ['Finalspiele', 'Halbfinale', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum', 'Heim', 'Ergebnis', 'Gast', 'Beginn', 'Spielzeit', 'Ablauf', 'Wann']) {
+    for (const word of ['Finalspiele', 'Halbfinale', 'Viertelfinale', 'Gruppe ', 'Gruppenphase', 'Tabelle', 'Platzierung', 'Spiel um Platz', 'Kein Datum', 'Heim', 'Ergebnis', 'Gast', 'Beginn', 'SPIELZEIT', 'ABLAUF', 'WANN']) {
       expect(text, word).not.toContain(word);
     }
-    for (const word of ['Group A', 'Standings', 'Final ranking', 'Final round', 'Home', 'Result', 'Away', 'Start', 'Match time', 'Where']) {
+    for (const word of ['Group A', 'Standings', 'Final ranking', 'Final round', 'Home', 'Result', 'Away', 'Start', 'MATCH TIME', 'WHERE']) {
       expect(text, word).toContain(word);
     }
   });

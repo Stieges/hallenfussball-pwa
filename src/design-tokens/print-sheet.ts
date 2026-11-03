@@ -149,6 +149,11 @@ export const printSheetHead = {
   belowRule: 3,
   /** Eckdaten: Beschriftung 8 pt, Hauptwert 14 pt, Nebenwert 11 pt (Abstand der Grafik zum Titel: `printHeader.logoGap`). */
   factLabelPt: 8,
+  /** Bezeichnungen im Eckdaten-Block: Versalien mit Sperrung (mm je Zeichen), darunter ein kurzer Akzentstrich (Länge mm, Abstand zur Grundlinie mm). */
+  factLabelCharSpace: 0.25,
+  factMarkLength: 6,
+  factMarkStroke: pt(0.75),
+  factMarkDrop: 0.6,
   factBigPt: 14,
   factMidPt: 11,
   /** Hallenname, der in 14 pt mehr als `hallMaxLines` Zeilen braucht: eine Stufe kleiner, weiter fett und vollständig (@DR-031). */

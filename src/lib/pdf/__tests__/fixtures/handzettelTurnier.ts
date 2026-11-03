@@ -7,7 +7,7 @@ import { generateFullSchedule, type GeneratedSchedule } from '../../../../core/g
 import { TeamIdSchema, type MatchSlot, type SlotSource } from '../../../../core/models/schemas/MatchSlotSchema';
 import { createMockTournament } from '../../../../test/factories';
 import { testUuid } from '../../../../test/testIds';
-import type { Match, PlacementCriterion, Team, Tournament } from '../../../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS, type Match, type PlacementCriterion, type Team, type Tournament } from '../../../../types/tournament';
 import { FALL_SHARE_CODE, type FallHerkunft, type FallSpiel, type FallZustand, type HandzettelFall } from './handzettelFaelle';
 
 /** Nummernkreis je Fall: Teams ab Basis + 1, Spiele ab Basis × 10 + Spielnummer. */
@@ -108,6 +108,8 @@ export function fallTournament(fall: HandzettelFall, overrides: Partial<Tourname
   const wertung = mitFinale ? ['points', 'directComparison', 'goalDifference', 'goalsFor'] : ['points', 'goalDifference', 'goalsFor', 'directComparison'];
   return createMockTournament({
     id: `fall-${fall.name}`,
+    ...(fall.regelwerk === undefined ? {} : { rulebook: fall.regelwerk }),
+    ...(fall.zeitstrafeSek === undefined ? {} : { matchCockpitSettings: { ...DEFAULT_MATCH_COCKPIT_SETTINGS, timePenaltyDurationSeconds: fall.zeitstrafeSek } }),
     title: fall.titel,
     ageClass: fall.altersklasse,
     organizer: fall.veranstalter,

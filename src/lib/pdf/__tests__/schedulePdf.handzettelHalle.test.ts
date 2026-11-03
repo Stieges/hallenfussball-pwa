@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { printSheetHead } from '../../../design-tokens/print-sheet';
 import { printType } from '../../../design-tokens/print';
-import { FALL_A, FALL_B, FALL_B_HALLE, ADRESSE_LANG, HALLE_LANG } from './fixtures/handzettelFaelle';
+import { FALL_A, FALL_A_ADRESSE, FALL_B, FALL_B_HALLE, ADRESSE_LANG, HALLE_LANG } from './fixtures/handzettelFaelle';
 import { handzettelPdf } from './handzettelPdf';
 import type { LayoutPage, LayoutRect, LayoutText } from './pdfjsLayout';
 
@@ -17,14 +17,14 @@ const block = (page: LayoutPage): LayoutRect => {
   return r;
 };
 const wo = (page: LayoutPage): LayoutText => {
-  const t = page.texts.find(x => ['Wo', 'Where'].includes(x.str.trim()));
+  const t = page.texts.find(x => ['WO', 'WHERE'].includes(x.str.trim()));
   if (!t) { throw new Error('Spalte „Wo“ fehlt'); }
   return t;
 };
 /** Textstücke der Zelle „Wo“: rechts von ihrer Bezeichnung, oberhalb der zweiten Zeile des Blocks. */
 const woZelle = (page: LayoutPage): LayoutText[] => {
   const kopf = wo(page);
-  const zweite = page.texts.find(t => ['Spielzeit', 'Match time'].includes(t.str.trim()));
+  const zweite = page.texts.find(t => ['SPIELZEIT', 'MATCH TIME'].includes(t.str.trim()));
   const rechts = block(page).x + block(page).w;
   return page.texts.filter(t => t.x >= kopf.x - 0.5 && t.x < rechts && t.y >= kopf.y && t.y < (zweite?.y ?? 0) - 1 && t.str.trim() !== '');
 };
@@ -32,7 +32,7 @@ const ohneLeer = (texts: LayoutText[]): string => texts.map(t => t.str).join('')
 
 describe.each(['de', 'en'] as const)('@DR-031 Adresse unter der Halle (%s)', locale => {
   it('@DR-031 „Bergader Arena“ und darunter „Mühlberger Weg 5, 83329 Waging am See“ in eigenen Zeilen unter der Halle', async () => {
-    const { pages } = await handzettelPdf(FALL_A, { locale });
+    const { pages } = await handzettelPdf(FALL_A_ADRESSE, { locale });
     const zelle = woZelle(pages[0]);
     const halle = zelle.find(t => t.str.trim() === 'Bergader Arena');
     const adresse = zelle.filter(t => t.y > (halle?.y ?? 0));
@@ -49,10 +49,10 @@ describe.each(['de', 'en'] as const)('@DR-031 Adresse unter der Halle (%s)', loc
   });
 
   it('@DR-031 ohne Adresse steht nur die Halle, ohne leere Zeile; der Block wird nicht höher', async () => {
-    const mit = await handzettelPdf(FALL_A, { locale });
+    const mit = await handzettelPdf(FALL_A_ADRESSE, { locale });
     const ohne = await handzettelPdf(FALL_A, { locale, tournament: { location: { name: 'Bergader Arena' } } });
 
-    expect(woZelle(ohne.pages[0]).map(t => t.str.trim())).toEqual([locale === 'de' ? 'Wo' : 'Where', 'Bergader Arena']);
+    expect(woZelle(ohne.pages[0]).map(t => t.str.trim())).toEqual([locale === 'de' ? 'WO' : 'WHERE', 'Bergader Arena']);
     expect(block(ohne.pages[0]).h).toBeLessThanOrEqual(block(mit.pages[0]).h + TOL);
   });
 });
@@ -69,7 +69,7 @@ describe('@DR-031 keine Leerzeile ohne Adresse (Zelle bestimmt die Blockhöhe)',
 });
 
 describe.each(['de', 'en'] as const)('@DR-031 Hallenname mit mehr als zwei Zeilen eine Stufe kleiner (%s)', locale => {
-  const hallZeilen = (page: LayoutPage): LayoutText[] => woZelle(page).filter(t => t.str.trim() !== '' && t.size > printSheetHead.factMidPt + 0.1 && t.str.trim() !== (locale === 'de' ? 'Wo' : 'Where'));
+  const hallZeilen = (page: LayoutPage): LayoutText[] => woZelle(page).filter(t => t.str.trim() !== '' && t.size > printSheetHead.factMidPt + 0.1 && t.str.trim() !== (locale === 'de' ? 'WO' : 'WHERE'));
 
   it('@DR-031 langer Name: 12 pt fett, vollständig, weniger Zeilen und niedrigerer Block als in 14 pt', async () => {
     const { pages } = await handzettelPdf(FALL_B_HALLE, { locale });
@@ -121,7 +121,7 @@ describe.each(['de', 'en'] as const)('@DR-031 langer Hallenname und lange Adress
 
   it('@DR-031 jedes Wort gedruckt, nie gekürzt, Umbruch nur an Leerzeichen oder Bindestrich', async () => {
     const { pages } = await handzettelPdf(FALL_B_HALLE, { locale });
-    const zelle = woZelle(pages[0]).filter(t => t.str.trim() !== (locale === 'de' ? 'Wo' : 'Where'));
+    const zelle = woZelle(pages[0]).filter(t => t.str.trim() !== (locale === 'de' ? 'WO' : 'WHERE'));
     const stuecke = new Set(`${HALLE_LANG} ${ADRESSE_LANG.street}, ${ADRESSE_LANG.postalCode} ${ADRESSE_LANG.city}`.split(/(?<=-)|\s+/).filter(s => s !== ''));
 
     expect(ohneLeer(zelle)).toBe(erwartet());
@@ -147,7 +147,7 @@ describe.each(['de', 'en'] as const)('@DR-031 langer Hallenname und lange Adress
     });
     expect(regel?.y ?? 0, 'Regelzeile unter dem Block').toBeGreaterThan(kasten.y + kasten.h);
     // „Ablauf“ steht in der zweiten Zeile des Blocks und macht ihn nicht höher: er bleibt
-    expect(strs(page)).toContain(locale === 'de' ? 'Ablauf' : 'Matches');
+    expect(strs(page)).toContain(locale === 'de' ? 'ABLAUF' : 'MATCHES');
     // der höhere Block drängt Spiele auf die Folgeseite (mindestens 3 dort, @DR-033), keines geht verloren
     const nummern = (p: LayoutPage): number => p.texts.filter(t => /^\d{1,2}$/.test(t.str.trim()) && t.x < 25 && Math.abs(t.size - printType.nr) < 0.05).length;
     expect(nummern(page) + nummern(pages[1])).toBe(20);
@@ -157,10 +157,10 @@ describe.each(['de', 'en'] as const)('@DR-031 langer Hallenname und lange Adress
 
 describe.each(['de', 'en'] as const)('@DR-020 Spielzeit je Runde (%s): Gruppen 10, Finalrunde 12 Minuten', locale => {
   it('@DR-020 drei Zeilen in der Zelle, alle Wörter da, „Ablauf“ bleibt, kein Spiel geht verloren (der höhere Block drängt Spiele auf Seite 2, dort mindestens 3)', async () => {
-    const { pages } = await handzettelPdf(FALL_B, { locale, tournament: { finalRoundGameDuration: 12 } });
+    const { pages } = await handzettelPdf({ ...FALL_B, zeitstrafeSek: 120 }, { locale, tournament: { finalRoundGameDuration: 12 } });
     const page = pages[0];
-    const kopf = page.texts.find(t => ['Spielzeit', 'Match time'].includes(t.str.trim()));
-    const ablauf = page.texts.find(t => ['Ablauf', 'Matches'].includes(t.str.trim()));
+    const kopf = page.texts.find(t => ['SPIELZEIT', 'MATCH TIME'].includes(t.str.trim()));
+    const ablauf = page.texts.find(t => ['ABLAUF', 'MATCHES'].includes(t.str.trim()));
     const zelle = page.texts.filter(t => t.x < 60 && t.y > (kopf?.y ?? 0) && t.y < (kopf?.y ?? 0) + 14 && t.str.trim() !== '');
     const text = ohneLeer(zelle);
 

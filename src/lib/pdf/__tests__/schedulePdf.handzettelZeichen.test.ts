@@ -246,10 +246,10 @@ describe('@DR-022 englische App: feste Texte des Spielplans auf Englisch', () =>
     const { pages } = await handzettelPdf(FALL_B, { locale: 'en' });
     const kopf = pages[0].texts.map(t => t.str).join('').replace(/\s/g, '');
 
-    expect(kopf).toContain('When');
+    expect(kopf).toContain('WHEN');
     expect(kopf).toContain('Start10:00·Endapprox.');
-    expect(kopf).toContain('Wheretheplay'.slice(0, 5));
-    expect(kopf).toContain('Matchtime');
+    expect(kopf).toContain('WHERE');
+    expect(kopf).toContain('MATCHTIME');
     expect(kopf).not.toMatch(/Beginn|Wann|Spielzeit/);
     expect(strs(pages[0])).toContain('TSV Waging');
   });
