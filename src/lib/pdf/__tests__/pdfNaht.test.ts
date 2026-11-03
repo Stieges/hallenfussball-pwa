@@ -85,11 +85,12 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 03.11. (@DR-034, Zeilen mit Stundentrenner höher, Doppelpunkt näher an der Linie, Trenner 0,75 mm): wieder gleiche Textstücke, Seitenzahl und Zahl der Füllungen und Linien, nur Lage und Höhen ändern sich (Stände davor: e45bc8f4ce78, 6125467d3f7e, EN 5c377ebc616f).
  * Neu aufgenommen 03.11. (@DR-031, Bezeichnungen „Wann“, „Wo“, „Spielzeit“, „Ablauf“ in Versalien mit Sperrung und Akzentstrich): gleiche Seitenzahl; geändert sind nur diese vier Textstücke (Versalien, EN „WHEN“, „WHERE“, „MATCH TIME“, „MATCHES“) und je ein Strich mehr im Kopf (Stände davor: d0a24a8c6d9f, 4b8fec7ed423, EN ea3feed6e2d2).
  * Neu aufgenommen 03.11. (@DR-024, Titel und Zeile darunter mittig im freien Platz): gleiche Textstücke und Seitenzahl, nur die x-Lage der Titelzeilen ändert sich (Stände davor: bfd83224a3d3, 1030955f1569, EN 39c333f4c7be).
- * Neu aufgenommen 03.11. (@DR-024, Kurzkopf der Folgeseiten mittig): wieder gleiche Textstücke und Seitenzahl, nur die x-Lage von Titel und Zeile im Kurzkopf ändert sich (Stände davor: b8b53fc00c3f, cdbe4c898d6e, EN 40ac67e9e46e). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
+ * Neu aufgenommen 03.11. (@DR-024, Kurzkopf der Folgeseiten mittig): wieder gleiche Textstücke und Seitenzahl, nur die x-Lage von Titel und Zeile im Kurzkopf ändert sich (Stände davor: b8b53fc00c3f, cdbe4c898d6e, EN 40ac67e9e46e).
+ * Neu aufgenommen 03.11. (@DR-024, Titel 26 pt mit 2 mm Luft darüber und darunter): gleiche Textstücke, Seitenzahl und Zahl der Füllungen und Linien je Seite (Lauf gegen den Stand davor); es ändern sich nur die Höhenlagen ab dem Titel (Stände davor: e96bd7631edc, 95b69a12d525, EN fa095c9a84f8). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'e96bd7631edc',
-  '20 Spiele, hoch': '95b69a12d525',
+  '12 Spiele, hoch': 'e109befcec2b',
+  '20 Spiele, hoch': '9947181a693b',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -104,7 +105,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('fa095c9a84f8');
+    expect(layoutDigest(pages)).toBe('e38b6350af9f');
   });
 });
 

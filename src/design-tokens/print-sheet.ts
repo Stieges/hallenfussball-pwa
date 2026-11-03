@@ -136,7 +136,13 @@ export const printAccentDefault = {
  * Beschriftung 8 pt, Hauptwert 14 pt, Nebenwert 11 pt; Regelzeile 10,5 pt. Uhrzeiten stehen in 14 pt (@DR-031).
  */
 export const printSheetHead = {
-  titlePt: 24,
+  titlePt: 26,
+  /**
+   * Mehr Luft über und unter dem Titel als bei den übrigen Kopfzeilen, mm (@DR-024): je 2 mm. Dann bleiben im Fall b („Hallencup Nord“,
+   * 20 Gruppenspiele) alle Spiele auf Seite 1 in Stufe „normal"; ab etwa 3 mm je Seite rutschen drei Spiele auf Seite 2.
+   */
+  titleAirTop: 2,
+  titleAirBottom: 2,
   titleMinPt: 18,
   titleStepPt: 2,
   titleMaxLines: 3,

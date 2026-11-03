@@ -324,3 +324,19 @@ describe.each(['de', 'en'] as const)('@DR-024 Kurzkopf der Folgeseiten: Titel un
     });
   });
 });
+
+describe.each(['de', 'en'] as const)('@DR-024 Titel in 26 pt fett (%s)', locale => {
+  it('Fall a: der Titel steht in 26 pt in der fetten Schrift', async () => {
+    const { pages } = await handzettelPdf(FALL_A, { locale });
+    const titel = pages[0].texts.find(t => t.str.trim() === 'Nikolaus-Turnier');
+
+    expect(titel?.size).toBeCloseTo(26, 1);
+    expect(titel?.font).toBe(pages[0].texts.find(t => ['WANN', 'WHEN'].includes(t.str.trim()))?.font);
+  });
+
+  it('Gegenprobe zur Verdrängung: der größere Titel mit Luft verdrängt in Fall b („Hallencup Nord“, 20 Gruppenspiele) kein Spiel von Seite 1', async () => {
+    const { pages } = await handzettelPdf(FALL_B, { locale });
+
+    expect(pages[0].texts.filter(t => /^\d{1,2}$/.test(t.str.trim()) && t.x < 25 && Math.abs(t.size - printType.nr) < 0.05)).toHaveLength(20);
+  });
+});

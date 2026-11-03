@@ -171,17 +171,18 @@ export function buildHeader(h: HeaderInput, frame: HeaderFrame, measure: TextMea
   const titleRight = right - (rightSize ? rightSize.w + printHeader.logoGap : 0);
   const title = titleOf(h.title, titleRight - titleLeft, measure);
   const titleAdv = advanceMm(title.pt, s.titleLineHeight);
+  const titleTop = top + s.titleAirTop;
   // Ausrichtung nach Token: mittig im freien Titelbereich zwischen den Grafiken (@DR-024), jede Zeile einzeln
   const titleX = (titleLeft + titleRight) / 2;
-  const titleRuns = title.lines.map((text, i) => run(text, titleX, top + ascent(title.pt) + i * titleAdv, title.pt, 'bold', s.titleAlign));
-  let textBottom = top + ascent(title.pt) + (title.lines.length - 1) * titleAdv + descent(title.pt);
+  const titleRuns = title.lines.map((text, i) => run(text, titleX, titleTop + ascent(title.pt) + i * titleAdv, title.pt, 'bold', s.titleAlign));
+  let textBottom = titleTop + ascent(title.pt) + (title.lines.length - 1) * titleAdv + descent(title.pt);
   if (h.subtitle !== '') {
     const base = textBottom + s.subtitleGap + ascent(s.subtitlePt);
     titleRuns.push(...wrapName(h.subtitle, titleRight - titleLeft, s.subtitlePt, measure).map((text, i) => run(text, titleX, base + i * advanceMm(s.subtitlePt, s.factLineHeight), s.subtitlePt, 'normal', s.titleAlign)));
     textBottom = titleRuns[titleRuns.length - 1].y + descent(s.subtitlePt);
   }
   const imagesBottom = top + Math.max(leftSize?.h ?? 0, rightSize?.h ?? 0);
-  const ruleY = Math.max(textBottom, imagesBottom) + s.bandPadBottom + printRule.head / 2;
+  const ruleY = Math.max(textBottom, imagesBottom) + s.bandPadBottom + s.titleAirBottom + printRule.head / 2;
 
   // QR rechts, Eckdaten und Regelzeile links daneben
   const factsTop = ruleY + printRule.head / 2 + s.belowRule;

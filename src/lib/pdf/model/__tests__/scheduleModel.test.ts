@@ -195,11 +195,21 @@ describe('Abgleich mit der echten Schrift (jsPDF-Adapter, T1)', () => {
   it('@DR-033 mit Inter statt der Fake-Messung: Fall b-lang mit einem langen Namen braucht die Stufe „eng“ und bleibt auf Seite 1', async () => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     await registerPdfFonts(doc);
-    const { model } = modelOf(fallBLang(1), { measure: jspdfMeasure(doc, fontOf(doc)) });
+    const { model } = modelOf(fallBLang(1), { measure: jspdfMeasure(doc, fontOf(doc)), geo: g => ({ ...g, bottom: g.bottom + 5 }) });
 
     expect(model.fit).toBe('tight');
     expect(model.pages).toHaveLength(1);
     expect(model.pages[0].blocks.map(b => b.kind)).toEqual(['header', 'matchRows']);
+  });
+
+  it('@DR-033 mit Inter und dem größeren Titel: b-lang auf dem Satzspiegel von heute läuft auf der Folgeseite mit mindestens 3 Spielen weiter', async () => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    await registerPdfFonts(doc);
+    const { model } = modelOf(fallBLang(1), { measure: jspdfMeasure(doc, fontOf(doc)) });
+    const second = model.pages[1]?.blocks.find(b => b.kind === 'matchRows');
+
+    expect(model.fit).toBe('nextPage');
+    expect(second?.kind === 'matchRows' ? second.rows.length : 0).toBeGreaterThanOrEqual(3);
   });
 
   it('@DR-032 mit Inter: „SV Kirchanschöring“ passt in eine Zeile, der lange Name bricht nach „/“', async () => {
