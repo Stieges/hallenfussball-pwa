@@ -4,12 +4,12 @@
  */
 import { useCallback } from 'react';
 import type { TournamentView } from '../../../core/view';
-import type { KnownScore } from './useScheduleResultEntry';
+import type { EnterScore } from './useScheduleResultEntry';
 import { useKorrekturEinstieg, type KorrekturEinstieg, type KorrekturSpiel } from './useKorrekturEinstieg';
 
 export function useSpielplanKorrektur(options: {
   view: TournamentView;
-  enterScore: (matchId: string, home: number, away: number, knownScore?: KnownScore) => Promise<boolean>;
+  enterScore: EnterScore;
   /** Turnierleitung (`leadMatches`); der Helfer bekommt keinen Handler (@HE-042, @FU-113) */
   istLeitung: boolean;
 }): KorrekturEinstieg {

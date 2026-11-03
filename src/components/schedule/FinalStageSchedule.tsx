@@ -185,7 +185,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
         <tr>
           {editingSchedule && <th style={{ ...thStyle, width: '30px' }}></th>}
           <th style={{ ...thStyle, width: '1%', whiteSpace: 'nowrap' }}><ShortLabel term="number" /></th>
-          {showReferees && <th style={{ ...thStyle, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}>{t('finals.columns.referee')}</th>}
+          {showReferees && <th style={{ ...thStyle, width: '1%', whiteSpace: 'nowrap', textAlign: 'center' }}><ShortLabel term="referee" /></th>}
           <th style={{ ...thStyle, width: '60px' }}>{t('finals.columns.time')}</th>
           <th style={{ ...thStyle, width: '100px' }}>{t('finals.columns.round')}</th>
           <th style={thStyle}>{t('finals.columns.home')}</th>
