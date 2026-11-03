@@ -80,11 +80,12 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * af351460128a, b0c3148ebdee, EN e14f54a199ec.
  * Neu aufgenommen 03.11. (Paket PDF T7a, Seitenmodell + Zeichenschicht): Seite 1 und Folgeseiten der Gruppenspiele im Handzettel-Bild
  * (Kopf mit Eckdaten, Zebra, Schreiblinien, Adresse in der Fußzeile, keine Teilnehmerliste, immer A4 hoch). Bild der Fixtures a, b, c
- * gesichtet. Die Querformat-Fixtures entfallen (@DR-026, MVP+). Mit „Ablauf“ in den Eckdaten und den Gruppenzeichen (@DR-031, @DR-001). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
+ * gesichtet. Die Querformat-Fixtures entfallen (@DR-026, MVP+). Mit „Ablauf“ in den Eckdaten und den Gruppenzeichen (@DR-031, @DR-001).
+ * Neu aufgenommen 03.11. (@DR-034, 5 mm Schreibraum): Schreiblinie 3 mm statt 4 mm über dem Zeilenboden, Zeileninhalt 1 mm tiefer, Stundentrenner 0,7 mm tiefer in der Stunde; verglichen mit dem Stand davor: gleiche Textstücke in gleicher Reihenfolge, gleiche Seitenzahl, gleiche Zahl von Füllungen und Linien je Seite, es ändert sich nur die Lage (Stände davor: 7216a62abeb3, 8d29266cc850, EN 92afa4a2e407). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '7216a62abeb3',
-  '20 Spiele, hoch': '8d29266cc850',
+  '12 Spiele, hoch': 'e45bc8f4ce78',
+  '20 Spiele, hoch': '6125467d3f7e',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -99,7 +100,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('92afa4a2e407');
+    expect(layoutDigest(pages)).toBe('5c377ebc616f');
   });
 });
 

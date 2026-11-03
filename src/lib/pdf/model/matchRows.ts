@@ -121,7 +121,7 @@ function sideOf(lines: string[], col: ColumnModel, top: number, height: number):
   const adv = advanceMm(printType.body, printMatchRow.lineHeight);
   const right = col.key === 'home';
   const x = right ? col.x + col.w - printMatchTable.nameInner : col.x + printMatchTable.nameInner;
-  const runs = lines.map((text, i) => run(text, x, centeredBaseline(top + height / 2 + (i - (lines.length - 1) / 2) * adv, printType.body), printType.body, 'normal', right ? 'right' : 'left'));
+  const runs = lines.map((text, i) => run(text, x, centeredBaseline(top + height / 2 + printMatchRow.contentDrop + (i - (lines.length - 1) / 2) * adv, printType.body), printType.body, 'normal', right ? 'right' : 'left'));
   return { name: lines, runs };
 }
 
@@ -141,7 +141,7 @@ function cellOf(src: RowSource, cols: ColumnModel[], top: number, height: number
   const state = src.state;
   if (state.kind === 'final') {
     const marks = src.markText === undefined ? [] : [src.markText];
-    const centerY = top + height / 2 - (marks.length > 0 ? printMatchTable.markGap + printMatchTable.liveInset : 0);
+    const centerY = top + height / 2 + printMatchRow.contentDrop - (marks.length > 0 ? printMatchTable.markGap + printMatchTable.liveInset : 0);
     const base = centeredBaseline(centerY, printType.result);
     const runs = [
       run(String(state.scoreA), cx - printMatchTable.scoreGap, base, printType.result, 'bold', 'right'),
@@ -152,11 +152,11 @@ function cellOf(src: RowSource, cols: ColumnModel[], top: number, height: number
     return { cell: { kind: 'score', a: String(state.scoreA), b: String(state.scoreB), marks, runs }, lines: [] };
   }
   if (state.kind === 'skipped') {
-    const runs = [run(texts.skipped, cx, centeredBaseline(top + height / 2, printType.cancel), printType.cancel, 'normal', 'center')];
+    const runs = [run(texts.skipped, cx, centeredBaseline(top + height / 2 + printMatchRow.contentDrop, printType.cancel), printType.cancel, 'normal', 'center')];
     return { cell: { kind: 'text', text: texts.skipped, runs }, lines: [] };
   }
   const live = state.kind === 'live';
-  const runs = [colonRun, ...(live ? [run(texts.live, cx, bottom - printMatchTable.liveInset, printType.mark, 'bold', 'center')] : [])];
+  const runs = [colonRun, ...(live ? [run(texts.live, cx, lineY + printMatchTable.liveBelowLine, printType.mark, 'bold', 'center')] : [])];
   return { cell: { kind: 'lines', live, small: src.small, runs }, lines };
 }
 
@@ -183,7 +183,7 @@ export function buildRow(
   src: RowSource, cols: ColumnModel[], top: number, height: number, flags: { zebra: boolean; hourRule: boolean },
   texts: RowTexts, measure: TextMeasure, bounds: { left: number; width: number }
 ): MatchRowModel {
-  const mid = top + height / 2;
+  const mid = top + height / 2 + printMatchRow.contentDrop;
   const bottom = top + height;
   const get = (key: ColumnKey): ColumnModel => column(cols, key) ?? { key, x: 0, w: 0 };
   const homeCol = get('home');
@@ -220,7 +220,7 @@ export function buildRow(
     lines: [...lines, ...small.lines],
   };
   if (flags.hourRule) {
-    model.ruleAbove = { kind: 'hour', x1: bounds.left, x2: bounds.left + bounds.width, y: top + printHourRule.stroke / 2 };
+    model.ruleAbove = { kind: 'hour', x1: bounds.left, x2: bounds.left + bounds.width, y: top + printHourRule.inset + printHourRule.stroke / 2 };
   }
   if (group) { model.group = group; }
   if (referee) { model.referee = referee; }

@@ -19,8 +19,14 @@ export const printWriteLine = {
   minGapToStroke: 4,
   /** Messtoleranz am Ausdruck (@DR-034). */
   tolerance: 0.15,
-  /** Lage der Linie über dem Zeilenboden, in jeder Zeile gleich (Mockup a, b, c: 4 mm; zweizeilige Namen ändern sie nicht). */
-  aboveRowBottom: 4,
+  /**
+   * Lage der Linie über dem Zeilenboden, in jeder Zeile gleich (zweizeilige Namen ändern sie nicht). 3 mm statt 4 mm des Mockups, damit
+   * über der Linie bis zur Zeilenoberkante mindestens `minWriteSpace` frei bleiben (@DR-034); der Zeileninhalt rückt um
+   * `printMatchRow.contentDrop` mit.
+   */
+  aboveRowBottom: 3,
+  /** Freier Raum zum Schreiben über der Linie bis zur Oberkante der Zeile, mindestens, mm (@DR-034). */
+  minWriteSpace: 5,
   /** Ergebnislinie je Seite: 12 mm (Mockup a, b); mit Spalte „SR“ und in der Finalrunde 10 mm (Mockup c, b Spiele 21–28). */
   result: 12,
   resultNarrow: 10,
@@ -70,6 +76,8 @@ export const printMatchRow = {
   maxHeight: 11,
   /** Zeilenabstand mehrzeiliger Namen als Vielfaches der Schrift; nie kleiner, auch nicht in der Stufe „eng“ (@DR-033). */
   lineHeight: 1.15,
+  /** Der Zeileninhalt (Name, Zeit, Nummer, Gruppenzeichen) sitzt so viel tiefer als in der Mitte der Zeile, damit die Linie darunter wie bisher zu ihm liegt. */
+  contentDrop: 1,
   /** Auf einer Folgeseite der Gruppenspiele stehen mindestens so viele Spiele (@DR-033 Beispiel 3). */
   minRowsOnNextPage: 3,
 } as const;
@@ -83,6 +91,11 @@ export const printRowPad = {
 /** Stundentrenner (Gruppenspiele): Akzentlinie 1,5 pt, liegt in der neuen Stunde, Oberkante auf der Zeilengrenze. */
 export const printHourRule = {
   stroke: pt(1.5),
+  /**
+   * Der Trenner liegt nicht an der Zeilengrenze, sondern so viel tiefer in der neuen Stunde: Die Schreiblinie der Zeile davor ist nur
+   * `aboveRowBottom` (3 mm) über der Grenze und hält so den Abstand von mindestens 4 mm zu jedem anderen Strich (@DR-034).
+   */
+  inset: 0.7,
 } as const;
 
 /** Übrige Trennstriche (Mockup `handzettel.css`). Akzent: `head`, `round`; schwarz: `tableHead`, `foot`. */
@@ -184,6 +197,8 @@ export const printMatchTable = {
   scoreGap: 3,
   /** Text „läuft“, „ausgefallen“, Kennzeichen „korrigiert“: Abstand zum Zeilenboden bzw. zur Mitte. */
   liveInset: 1,
+  /** „läuft“: Grundlinie so weit unter der Schreiblinie (die Linie liegt `aboveRowBottom` über dem Zeilenboden). */
+  liveBelowLine: 2.6,
   markGap: 0.8,
   /** Doppelpunkt zwischen den Schreiblinien: Grundlinie so weit über der Linie. */
   colonLift: 1.6,

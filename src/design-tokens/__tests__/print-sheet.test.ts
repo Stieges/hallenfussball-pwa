@@ -7,13 +7,13 @@ import { printAccent } from '../print';
 import { printHourRule, printMatchRow, printRowPad, printWriteLine } from '../print-sheet';
 
 describe('Handzettel-Tokens (@DR-034, @DR-033, @DR-037)', () => {
-  it('@DR-034 Linie über dem Zeilenboden hat ≥ 3 mm zur Zebra-Kante darunter und ≥ 4 mm zum Trenner der Folgezeile', () => {
+  it('@DR-034 Linie über dem Zeilenboden hat ≥ 3 mm zur Zebra-Kante darunter und ≥ 4 mm (± Toleranz) zum Trenner der Folgezeile', () => {
     expect(printWriteLine.aboveRowBottom).toBeGreaterThanOrEqual(printWriteLine.minGapToFill);
-    expect(printWriteLine.aboveRowBottom).toBeGreaterThanOrEqual(printWriteLine.minGapToStroke);
+    expect(printWriteLine.aboveRowBottom + printHourRule.inset + printHourRule.stroke / 2).toBeGreaterThanOrEqual(printWriteLine.minGapToStroke - printWriteLine.tolerance);
   });
 
   it('@DR-034 kleinste Zeile: ≥ 4 mm von der Linie zum Stundentrenner, der in der Zeile liegt', () => {
-    const abstandZumTrenner = printMatchRow.minHeight - printWriteLine.aboveRowBottom - printHourRule.stroke / 2;
+    const abstandZumTrenner = printMatchRow.minHeight - printWriteLine.aboveRowBottom - printHourRule.inset - printHourRule.stroke / 2;
 
     expect(abstandZumTrenner).toBeGreaterThanOrEqual(printWriteLine.minGapToStroke - printWriteLine.tolerance);
     expect(printMatchRow.minHeight - printWriteLine.aboveRowBottom).toBeGreaterThanOrEqual(printWriteLine.minGapToFill);

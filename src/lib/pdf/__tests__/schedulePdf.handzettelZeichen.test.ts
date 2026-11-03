@@ -8,7 +8,7 @@ import { printAccent, printLimits, printType } from '../../../design-tokens/prin
 import { printAccentDefault, printGroupMark, printWriteLine } from '../../../design-tokens/print-sheet';
 import { getContrastRatio } from '../../colorUtils';
 import { grayOf, zebraTone } from '../../color/accent';
-import { FALL_A, FALL_B, FALL_C, mitStandA } from './fixtures/handzettelFaelle';
+import { FALL_A, FALL_B, FALL_B_LANG, FALL_C, mitStandA } from './fixtures/handzettelFaelle';
 import { handzettelPdf } from './handzettelPdf';
 import type { LayoutLine, LayoutPage, LayoutRect, LayoutText } from './pdfjsLayout';
 
@@ -31,7 +31,21 @@ const linienDerZeile = (page: LayoutPage, nr: number): LayoutLine[] => {
   return n ? schreiblinien(page).filter(l => l.y1 > n.y - 1 && l.y1 < n.y + 5) : [];
 };
 
-describe.each([['a', FALL_A], ['b', FALL_B], ['c', FALL_C]] as const)('@DR-034 Schreiblinie (Fall %s), jede Seite', (_name, fall) => {
+describe.each([['a', FALL_A], ['b', FALL_B], ['c', FALL_C], ['b-lang', FALL_B_LANG]] as const)('@DR-034 Schreiblinie (Fall %s), jede Seite', (_name, fall) => {
+  it('@DR-034 über der Schreiblinie bleiben bis zur Oberkante der Zeile mindestens 5 mm zum Schreiben frei', async () => {
+    const { pages } = await handzettelPdf(fall);
+
+    pages.forEach((page, i) => {
+      // Zeilenoberkanten: Kanten der Zebra-Flächen und die Unterkante der Linie unter dem Spaltenkopf
+      const kopfLinien = page.lines.filter(l => horizontal(l) && l.width > 0.4 && Math.abs(l.x2 - l.x1) > 150 && l.color === '#000000').map(l => l.y1 + l.width / 2);
+      const kanten = [...fläche(page).flatMap(r => [r.y, r.y + r.h]), ...kopfLinien];
+      schreiblinien(page).forEach(l => {
+        const oben = Math.max(...kanten.filter(k => k <= l.y1 + 0.01));
+        expect(l.y1 - oben, `Seite ${i + 1} Linie bei y=${l.y1.toFixed(1)}`).toBeGreaterThanOrEqual(printWriteLine.minWriteSpace - TOL);
+      });
+    });
+  });
+
   it('@DR-034 jede Schreiblinie ist ein einziger Strich', async () => {
     const { pages } = await handzettelPdf(fall);
 
@@ -60,6 +74,12 @@ describe.each([['a', FALL_A], ['b', FALL_B], ['c', FALL_C]] as const)('@DR-034 S
 });
 
 describe('@DR-034 Doppelpunkt statt Kasten, Zebra statt Trennstriche', () => {
+  it('@DR-034 Gegenprobe: Fall b hat weiter 20 Spiele auf Seite 1', async () => {
+    const { pages } = await handzettelPdf(FALL_B);
+
+    expect(pages[0].texts.filter(t => /^\d{1,2}$/.test(t.str.trim()) && t.x < 25 && Math.abs(t.size - printType.nr) < 0.05)).toHaveLength(20);
+  });
+
   it('@DR-034 bei Spiel 12 je eine Linie für Heim und Gast, getrennt durch einen Doppelpunkt, ohne Kasten', async () => {
     const { pages } = await handzettelPdf(FALL_B);
     const linien = linienDerZeile(pages[0], 12).sort((a, b) => a.x1 - b.x1);
