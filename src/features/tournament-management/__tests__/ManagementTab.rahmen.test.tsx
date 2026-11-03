@@ -4,6 +4,7 @@
  * LiveCockpit ist ein Stub; geprüft wird die Verdrahtung in `ManagementTab`. Spiel 11 läuft auf Feld 1, Spiel 12 auf Feld 2, Feld 3 hat kein Spiel.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useState } from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom';
@@ -265,6 +266,49 @@ describe('Rahmen und Feldwahl im Live-Reiter (Plan LT-2)', () => {
     await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toBeInTheDocument());
     act(() => { window.dispatchEvent(new CustomEvent('storage-quota-warning', { detail: { message: 'Speicher fast voll', timestamp: 1 } })); });
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+/** Wie TournamentManagementScreen: `initialMatchId` aus `?matchId=` der Adresse, nach dem Verbrauch gelöscht. */
+function ZumCockpit({ matchId }: { matchId: string }) {
+  const [offen, setOffen] = useState<string | null>(matchId);
+  return (
+    <CockpitFrameProvider>
+      <ManagementTab tournament={{ ...tournament, numberOfFields: 2 }} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()}
+        initialMatchId={offen} onInitialMatchConsumed={() => setOffen(null)} />
+      <Sonde />
+    </CockpitFrameProvider>
+  );
+}
+
+describe('@SL-194 C-MATCHID-URL-BLEIBT: ?matchId= verlässt die Adresse nach dem Öffnen', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentRole = 'collaborator';
+    liveMatches.clear();
+    liveMatches.set(SPIEL_11, live(SPIEL_11, 11, 'field-1', NORD, SUED, 'RUNNING'));
+    liveMatches.set(SPIEL_12, live(SPIEL_12, 12, 'field-2', WEST, MITTE, 'RUNNING'));
+    liveMatches.set(SPIEL_13, live(SPIEL_13, 13, 'field-1', WEST, MITTE, 'NOT_STARTED'));
+  });
+
+  it('Spiel 12 per ?matchId= geöffnet: das Cockpit zeigt Spiel 12, die Adresse nennt nur noch das Feld (?f=2) und ersetzt den Eintrag', async () => {
+    render(<MemoryRouter initialEntries={[`/tournament/tournament-1/live?matchId=${SPIEL_12}`]}><ZumCockpit matchId={SPIEL_12} /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('cockpit-stub')).toHaveAttribute('data-match-id', SPIEL_12));
+    await waitFor(() => expect(sonde().getAttribute('data-suche')).not.toContain('matchId'));
+    expect(sonde()).toHaveAttribute('data-suche', '?f=2');
+    expect(sonde()).toHaveAttribute('data-navigation', 'REPLACE'); // Zurück führt nicht in die alte Adresse mit ?matchId=
+  });
+
+  it('Gegenbeispiel: eine unbekannte Spiel-Kennung verschwindet ebenfalls aus der Adresse (Neu laden springt nicht ins Leere)', async () => {
+    render(<MemoryRouter initialEntries={['/tournament/tournament-1/live?matchId=gibt-es-nicht']}><ZumCockpit matchId="gibt-es-nicht" /></MemoryRouter>);
+    await waitFor(() => expect(sonde().getAttribute('data-suche')).not.toContain('matchId'));
+  });
+
+  it('Gegenbeispiel: ohne ?matchId= bleibt die Adresse unberührt (kein ersetzter Eintrag nur zum Aufräumen)', async () => {
+    zeige('/tournament/tournament-1/live');
+    await screen.findByTestId('cockpit-slim-header');
+    expect(sonde()).toHaveAttribute('data-suche', '');
+    expect(sonde()).not.toHaveAttribute('data-navigation', 'REPLACE');
   });
 });
 

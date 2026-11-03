@@ -63,3 +63,7 @@ export { ChipChoice } from './ChipChoice';
 export type { ChipChoiceProps, ChipOption } from './ChipChoice';
 export { TeamDetailsToggle } from './TeamDetailsToggle';
 export type { TeamDetailsToggleProps } from './TeamDetailsToggle';
+
+// G2 Spur A (@SL-193): Auswahl beschrifteter Aktionen, fachfrei
+export { ActionSheet } from './ActionSheet';
+export type { ActionSheetProps, ActionSheetItem } from './ActionSheet';

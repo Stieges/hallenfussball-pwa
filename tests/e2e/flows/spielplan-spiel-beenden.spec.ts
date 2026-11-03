@@ -70,7 +70,7 @@ async function anpfiff(page: Page): Promise<void> {
 }
 
 /**
- * Gruppenspiel im Spielplan: Zeile von Spiel 1 antippen (läuft → Live-Info), „Spiel beenden und Ergebnis eintragen“ wählen,
+ * Gruppenspiel im Spielplan: Zeile von Spiel 1 antippen (läuft → Aktionsauswahl), „Spiel beenden und Ergebnis eintragen“ wählen,
  * Stand mit den Toren-Knöpfen setzen und speichern (@FU-112: „wählt … und trägt 3:1 ein“).
  */
 async function beendenImSpielplan(plan: Page, heim: number, gast: number): Promise<void> {
@@ -80,7 +80,7 @@ async function beendenImSpielplan(plan: Page, heim: number, gast: number): Promi
   // Der Klick-außerhalb-Hörer der Karte ist erst 100 ms nach dem Aufklappen scharf. Ein Mensch tippt später; ohne diese
   // Pause klickt Playwright vorher und der Test bliebe auch mit dem alten Fehler (@FU-112: Eingabe klappt sofort zu) grün.
   await plan.waitForTimeout(300);
-  await plan.getByTestId('end-and-enter-btn').filter({ visible: true }).first().click();
+  await plan.getByTestId('match-action-endAndEnter').click(); // @SL-193: Tipp aufs Spiel, dann „Spiel beenden und Ergebnis eintragen“
   const expand = plan.getByTestId('quick-score-expand').filter({ visible: true }).first();
   await expect(expand).toBeVisible();
   const plus = expand.getByRole('button', { name: /Tor hinzufügen/ });

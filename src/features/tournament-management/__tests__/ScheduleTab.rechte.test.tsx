@@ -79,7 +79,7 @@ describe('@ZP-040 Wer den Zeitplan ändern darf – Spielplan der Verwaltung', (
     const user = userEvent.setup();
     const onNavigateToCockpit = renderTab();
     await user.click(screen.getAllByTestId(`match-circle-${firstId}`)[0]);
-    await user.click(screen.getAllByTestId('start-match-confirm-btn')[0]);
+    await user.click(await screen.findByTestId('match-action-toCockpit')); // @SL-193: für den Helfer „Zum Cockpit“
     expect(onNavigateToCockpit).toHaveBeenCalledWith(firstId);
   });
 

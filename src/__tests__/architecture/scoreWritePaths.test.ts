@@ -129,11 +129,6 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     reason:
       'Lesende Abbildung für Anzeige/Export: baut nur ein Anzeige- bzw. Exportobjekt, speichert nichts (Textparameter)',
   },
-  'features/tournament-management/ScheduleTab.tsx': {
-    count: 4,
-    reason:
-      'Lesende Abbildung für Anzeige/Export: baut nur ein Anzeige- bzw. Exportobjekt, speichert nichts (Textparameter des Wechsel-Hinweises)',
-  },
 };
 
 /** Dateien bzw. Ordner, die NIE in der Erlaubnisliste stehen duerfen (Plan A-08e Punkt 3). */

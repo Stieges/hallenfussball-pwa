@@ -26,6 +26,7 @@ test.describe('Spielplan: Ergebnis direkt eintragen', () => {
       await page.waitForLoadState('networkidle');
       const card = page.locator('[data-match-card]').filter({ hasText: ids.homeTeamName }).first();
       await card.getByText(ids.homeTeamName).first().click();
+      await page.getByTestId('match-action-enterResult').click(); // @SL-193: Tipp aufs Spiel, dann „Ergebnis eintragen“
       const expand = card.getByTestId('quick-score-expand');
       await expect(expand).toBeVisible();
       for (let i = 0; i < 3; i++) { await expand.getByLabel(`${ids.homeTeamName} Tor hinzufügen`).click(); }

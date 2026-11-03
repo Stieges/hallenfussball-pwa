@@ -29,7 +29,7 @@ function finalkarte(badge: MatchBadgeModel) {
   return render(
     <FinalStageMobileCard
       match={match} label="Finale" homeName="FC Nord" awayName="DJK Berg" homePending={false} awayPending={false}
-      result={null} isRunning isFinished={false} badge={badge} canEditScore={false} inCorrectionMode={false}
+      result={null} isRunning isFinished={false} badge={badge} canEditScore={false}
       showReferees={false} showFields={false} editingSchedule={false} displayedRef={undefined} displayedField={undefined}
       hasPendingRef={false} hasPendingField={false} refereeOptions={[]} fieldOptions={[]}
     />,

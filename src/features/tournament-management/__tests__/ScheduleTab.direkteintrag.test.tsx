@@ -9,7 +9,7 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Standing, Team, Tournament } from '../../../types/tournament';
 
@@ -135,6 +135,7 @@ describe('A-08f3e2 Pflichttest echter Weg: Spielplan → Server-Eintrag (@FU-080
     await act(async () => { await settle(); });
     const card = (): HTMLElement => view.container.querySelector('[data-match-card]')!;
     act(() => { fireEvent.click(within(card()).getAllByText(HOME?.name ?? '')[0]); });
+    act(() => { fireEvent.click(screen.getByTestId('match-action-enterResult')); }); // @SL-193: Tipp → Auswahl → „Ergebnis eintragen“
     const expand = await within(card()).findByTestId('quick-score-expand');
     for (let i = 0; i < home; i++) { fireEvent.click(within(expand).getByLabelText(`${HOME?.name} Tor hinzufügen`)); }
     for (let i = 0; i < away; i++) { fireEvent.click(within(expand).getByLabelText(`${AWAY?.name} Tor hinzufügen`)); }

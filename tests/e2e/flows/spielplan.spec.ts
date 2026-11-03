@@ -207,7 +207,7 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
     }
   });
 
-  test('Mobile: Card-Tap öffnet Quick-Score Expand', async ({ page }) => {
+  test('Mobile: Card-Tap öffnet die Aktionsauswahl, „Ergebnis eintragen“ dann die Quick-Score Eingabe (@SL-193)', async ({ page }) => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
@@ -215,6 +215,7 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
     // On mobile viewport, we should see cards. Click on the first match card.
     const matchCard = page.locator('[role="article"]').first();
     await matchCard.click();
+    await page.getByTestId('match-action-enterResult').click();
 
     // THEN - Quick-Score Expand should be visible
     // Wait for expand animation
@@ -410,7 +411,7 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
     }
   });
 
-  test('Circle-Tap bei geplantem Spiel zeigt Start-Dialog', async ({ page }) => {
+  test('Circle-Tap bei geplantem Spiel zeigt die Aktionsauswahl mit „Im Cockpit anpfeifen“ (@SL-193)', async ({ page }) => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
@@ -424,11 +425,9 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
       // THEN - Start match dialog should appear
       await page.waitForTimeout(300);
 
-      // Look for start-match-expand which should appear for scheduled matches
-      const startExpand = page.getByTestId('start-match-expand').first();
-
-      // Use proper assertion
-      await expect(startExpand).toBeVisible({ timeout: 5000 });
+      // Die Auswahl des Spiels mit „Im Cockpit anpfeifen“ (statt des früheren Start-Fensters in der Karte)
+      await expect(page.getByTestId('match-action-menu')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId('match-action-kickOff')).toHaveText('Im Cockpit anpfeifen');
     } else {
       // If no scheduled matches are visible, skip test (all matches may have started)
       test.skip(true, 'No scheduled matches visible - test conditions not met');

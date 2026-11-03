@@ -35,6 +35,7 @@ async function enter31(page: Page): Promise<void> {
   // Unter 768 px rendert der Spielplan die mobile Karte; die Desktop-Karte ist ausgeblendet.
   const card = page.locator('[data-match-card]:visible').filter({ hasText: ids.homeTeamName }).first();
   await card.getByText(ids.homeTeamName).first().click();
+  await page.getByTestId('match-action-enterResult').click(); // @SL-193: Tipp aufs Spiel, dann „Ergebnis eintragen“
   const expand = card.getByTestId('quick-score-expand');
   // Bei 360 px liegen die schwebenden Tasten „Teilen“/„Als PDF“ über der Schnelleingabe (Nebenbefund, älterer
   // Code); dieser Test prüft den Kopf, die Tasten werden deshalb direkt ausgelöst.

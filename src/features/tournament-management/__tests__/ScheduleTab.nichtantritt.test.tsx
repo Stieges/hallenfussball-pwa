@@ -4,11 +4,12 @@
  * Testwerte aus dem Gherkin: @W2A-022 (Team fehlt → 2:0 für den Gegner, als Wertung gekennzeichnet), @W2A-024/@TM-063
  * (beide fehlen → je 0 Punkte, 0:2 Tore, keiner gewinnt), @W2A-026 (Wertung zurücknehmen → Spiel wieder offen, Tabelle neu),
  * @FU-119 (angepfiffenes Spiel: keine Taste), @SL-118 (Helfer sieht die Taste nicht).
+ * Der Weg ist die Aktionsauswahl des Spiels (@SL-193): Tipp auf die Karte, dann „Nicht angetreten“ bzw. „Wertung zurücknehmen“.
  */
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Standing, Team, Tournament } from '../../../types/tournament';
 
@@ -47,7 +48,7 @@ vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: ()
 const role = vi.hoisted(() => ({ current: 'leitung' }));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => role.current }));
 // A-11: Rechte nur über useCan (der Stub usePermissions ist gelöscht) -- hier die Turnierleitung, alles erlaubt.
-vi.mock('../../auth/hooks/useCan', () => ({ useCan: () => true }));
+vi.mock('../../auth/hooks/useCan', () => ({ useCan: (permission: string) => role.current === 'leitung' || permission === 'writeMatchData' }));
 // UR: Olli ist angemeldet und Eigentümer von „T“; Antwort der Lesefunktion je Test.
 vi.mock('../../auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: true, user: { id: 'olli', name: 'Olli' } }) }));
 vi.mock('../../auth/hooks/useMyTournamentRole', () => ({ useMyTournamentRole: () => ({ role: 'owner', isLoading: false }) }));
@@ -106,6 +107,7 @@ function Host() {
       tournament={current} schedule={schedule} currentStandings={currentStandings}
       onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }} onLocalTournamentUpdate={applyRemote}
       onMatchesUpdate={(updates) => { void repo.updateMatches('T', updates); }}
+      onNavigateToCockpit={vi.fn()}
     /></>
   );
 }
@@ -139,13 +141,15 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
     await act(async () => { await settle(); });
     const card = (): HTMLElement => view.container.querySelector('[data-match-card]')!;
     act(() => { fireEvent.click(within(card()).getAllByText(HOME?.name ?? '')[0]); });
-    await within(card()).findByTestId('quick-score-expand');
+    await screen.findByTestId('match-action-menu');
     return { view, card };
   }
+  /** „Nicht angetreten“ in der geöffneten Auswahl */
+  const clickForfeit = async () => { fireEvent.click(await screen.findByTestId('match-action-forfeit')); };
 
   async function markAs(choice: 'A' | 'B' | 'both') {
     const opened = await openFirstCard();
-    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await clickForfeit();
     await opened.view.findByTestId('forfeit-dialog');
     fireEvent.click(opened.view.getByTestId(`forfeit-choice-${choice}`));
     await act(async () => { fireEvent.click(opened.view.getByTestId('forfeit-confirm')); await settle(); });
@@ -182,7 +186,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
 
   it('Abbruch in der Rückfrage → nichts gesendet, Spiel bleibt geplant', async () => {
     const opened = await openFirstCard();
-    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await clickForfeit();
     await opened.view.findByTestId('forfeit-dialog');
     expect((opened.view.getByTestId('forfeit-confirm') as HTMLButtonElement).disabled).toBe(true); // ohne Auswahl gesperrt
     await act(async () => { fireEvent.click(opened.view.getByTestId('forfeit-cancel')); await settle(); });
@@ -193,9 +197,10 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
   it('@W2A-026 Wertung zurücknehmen → Spiel wieder offen, Tabelle neu berechnet, Taste „Nicht angetreten“ wieder da', async () => {
     const { view, card } = await markAs('A');
     expect(view.getByTestId('away-points').textContent).toBe('3');
-    const revoke = await within(card()).findAllByTestId(`forfeit-revoke-${FIRST.id}`);
-    expect(within(card()).queryAllByTestId(`forfeit-mark-${FIRST.id}`)).toHaveLength(0); // gewertet: nur noch „zurücknehmen“
-    fireEvent.click(revoke[0]);
+    act(() => { fireEvent.click(within(card()).getAllByText(HOME?.name ?? '')[0]); });
+    const revoke = await screen.findByTestId('match-action-revokeForfeit');
+    expect(screen.queryByTestId('match-action-forfeit')).toBeNull(); // gewertet: nur noch „zurücknehmen“
+    fireEvent.click(revoke);
     await view.findByText(/Die Wertung wird zurückgenommen/);
     await act(async () => { fireEvent.click(view.getAllByRole('button', { name: 'Wertung zurücknehmen' }).at(-1)!); await settle(); });
     expect(h.api.mock.calls.at(-1)?.[1].map((event) => event.type)).toEqual(['REOPEN']);
@@ -205,14 +210,15 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
 
   it('@SL-118 Gegenbeispiel: ein Helfer sieht die Taste „Nicht angetreten“ nicht', async () => {
     role.current = 'helper';
-    const { card } = await openFirstCard();
-    expect(within(card()).queryAllByTestId(`forfeit-mark-${FIRST.id}`)).toHaveLength(0);
+    await openFirstCard();
+    expect(screen.getByTestId('match-action-toCockpit')).toBeTruthy(); // der Helfer behält den Weg ins Cockpit
+    expect(screen.queryByTestId('match-action-forfeit')).toBeNull();
   });
 
   // @FU-119 „Wenn Olli bei Spiel 9 ‚nicht angetreten‘ wählen will“ -- ein anderes Gerät pfeift an, die Karte zeigt es sofort.
   it('@FU-119 Spiel wird angepfiffen → die Taste „Nicht angetreten“ verschwindet, nichts gesendet', async () => {
-    const opened = await openFirstCard();
-    expect(within(opened.card()).queryAllByTestId(`forfeit-mark-${FIRST.id}`).length).toBeGreaterThan(0);
+    await openFirstCard();
+    expect(screen.getByTestId('match-action-forfeit')).toBeTruthy();
     const entry = buildValidMatches(tournament).find((candidate) => candidate.externalId === FIRST.id)!;
     await h.engine.ensureMatch(entry.matchId, entry.ctx, 'T');
     const rules: MatchRules = {
@@ -223,7 +229,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
     await commands.start(entry.matchId, entry.ctx, 'leitung', rules);
     await act(async () => { await settle(); });
     h.api.mockClear();
-    expect(within(opened.card()).queryAllByTestId(`forfeit-mark-${FIRST.id}`)).toHaveLength(0);
+    expect(screen.queryByTestId('match-action-forfeit')).toBeNull();
     expect(h.api).not.toHaveBeenCalled();
   });
 
@@ -231,7 +237,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
   // erst ‚Wertung eintragen‘ speichert“
   it('@SL-174 „Nur dieses Spiel“ vorgewählt, daneben „abgereist“, gespeichert erst mit „Wertung eintragen“', async () => {
     const opened = await openFirstCard();
-    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await clickForfeit();
     await opened.view.findByTestId('forfeit-dialog');
     fireEvent.click(opened.view.getByTestId('forfeit-choice-A'));
     expect(opened.view.queryByTestId('forfeit-rest-hint')).toBeNull(); // vorgewählt: nur dieses Spiel
@@ -243,7 +249,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
   // Eintragen ‚TSV West gewinnt 2:0 (Wertung)‘“ – fehlt das Heimteam, nennt die Vorschau den Sieger mit seinen Toren zuerst.
   it('@SL-174 Vorschau: fehlt das Heimteam, zeigt der Dialog „<Gast> gewinnt 2:0 (Wertung)“', async () => {
     const opened = await openFirstCard();
-    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await clickForfeit();
     await opened.view.findByTestId('forfeit-dialog');
     fireEvent.click(opened.view.getByTestId('forfeit-choice-A'));
     expect(opened.view.getByTestId('forfeit-summary').textContent).toBe(`${AWAY?.name} gewinnt 2:0 (Wertung)`);
@@ -251,7 +257,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
 
   it('@SL-174 Gegenprobe: fehlt das Gastteam, zeigt der Dialog „<Heim> gewinnt 2:0 (Wertung)“', async () => {
     const opened = await openFirstCard();
-    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await clickForfeit();
     await opened.view.findByTestId('forfeit-dialog');
     fireEvent.click(opened.view.getByTestId('forfeit-choice-B'));
     expect(opened.view.getByTestId('forfeit-summary').textContent).toBe(`${HOME?.name} gewinnt 2:0 (Wertung)`);
@@ -268,7 +274,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
     h.api.mockClear();
 
     const opened = await openFirstCard();
-    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await clickForfeit();
     await opened.view.findByTestId('forfeit-dialog');
     fireEvent.click(opened.view.getByTestId('forfeit-choice-A'));
     fireEvent.click(opened.view.getByTestId('forfeit-scope-rest'));
@@ -299,7 +305,7 @@ describe('B-12 Nichtantritt im Spielplan der Turnierleitung', () => {
 
   async function abgereistAb(beforeConfirm?: () => void): Promise<ReturnType<typeof render>> {
     const opened = await openFirstCard();
-    fireEvent.click(within(opened.card()).getAllByTestId(`forfeit-mark-${FIRST.id}`)[0]);
+    await clickForfeit();
     await opened.view.findByTestId('forfeit-dialog');
     fireEvent.click(opened.view.getByTestId('forfeit-choice-A'));
     fireEvent.click(opened.view.getByTestId('forfeit-scope-rest'));

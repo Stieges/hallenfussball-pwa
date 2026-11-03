@@ -8,6 +8,8 @@ export interface MatchTimeShiftSlotsValue {
   tentativeOf?: (matchId: string) => boolean;
   /** ⋮-Knopf je Spiel; fehlt = kein Menü */
   renderMenu?: (matchId: string) => ReactNode;
+  /** „Ab hier verschieben“ aus der Aktionsauswahl des Spiels (@SL-193): öffnet den Dialog ab diesem Spiel; fehlt = nicht angeboten */
+  shiftFrom?: (matchId: string) => void;
 }
 
 export const MatchTimeShiftContext = createContext<MatchTimeShiftSlotsValue | null>(null);

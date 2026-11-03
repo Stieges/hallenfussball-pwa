@@ -67,11 +67,17 @@ export function useFieldMatchSelection(p: FieldMatchSelectionParams): FieldMatch
     if (!initialMatchId) { return; }
     const match = schedule.allMatches.find((m) => m.id === initialMatchId);
     if (match) {
-      schreibeFeld(match.field);
       setSelectedMatchId(initialMatchId);
     }
+    // Die Kennung ist verbraucht: aus der Adresse nehmen (ersetzt den Eintrag), sonst springt Neu laden aufs alte Spiel (C-MATCHID-URL-BLEIBT)
+    setParams((alt) => {
+      const neu = new URLSearchParams(alt);
+      neu.delete(MATCH_PARAM);
+      if (match) { neu.set(FELD_PARAM, String(match.field)); }
+      return neu;
+    }, { replace: true });
     onInitialMatchConsumed?.();
-  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed, schreibeFeld]);
+  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed, setParams]);
 
   const fieldMatches = useMemo(() => matchesOfFieldInPlayOrder(schedule.allMatches, feld), [schedule.allMatches, feld]);
 

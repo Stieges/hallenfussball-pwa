@@ -180,7 +180,7 @@ describe.each([
 describe('@FU-104 C-SCHNELLEINGABE-FREMDAENDERUNG-STILL eigenes Speichern gegen Änderung von außen (Zelle)', () => {
   const ID = 'spiel-9';
   function zelle(scoreA: number | undefined, scoreB: number | undefined, onScoreChange: (a: number, b: number) => Promise<boolean> | undefined = vi.fn()) {
-    const props = { matchId: ID, editable: true, isFinished: false, inCorrectionMode: false, onScoreChange, changeAuthorOf: async () => 'Tom' };
+    const props = { matchId: ID, editable: true, isFinished: false, onScoreChange, changeAuthorOf: async () => 'Tom' };
     const utils = render(<MatchScoreCell {...props} scoreA={scoreA} scoreB={scoreB} />);
     const stand = (a: number | undefined, b: number | undefined) => utils.rerender(<MatchScoreCell {...props} scoreA={a} scoreB={b} />);
     const [fcNord, svSued] = utils.getAllByRole('spinbutton') as HTMLInputElement[];

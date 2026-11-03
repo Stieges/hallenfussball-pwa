@@ -23,7 +23,6 @@ const renderCell = (props: Partial<ComponentProps<typeof MatchScoreCell>> = {}) 
       scoreB={2}
       editable
       isFinished={false}
-      inCorrectionMode={false}
       onScoreChange={onScoreChange}
       {...props}
     />,
