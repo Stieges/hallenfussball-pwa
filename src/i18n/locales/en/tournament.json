@@ -1134,7 +1134,7 @@
       "when": "When",
       "where": "Where",
       "duration": "Match time",
-      "flow": "Schedule",
+      "flow": "Matches",
       "begin": "Start {{clock}}",
       "endApprox": "End approx. {{clock}}",
       "flowWithFinals_one": "{{total}} matches, {{count}} of them a final",

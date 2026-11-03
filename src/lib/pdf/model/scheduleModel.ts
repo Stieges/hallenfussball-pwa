@@ -14,20 +14,17 @@ import { refereeLabelFor } from '../refereeLabel';
 import { pdfRuleEntries, pdfRulesFrom } from '../rules';
 import type { StatefulMatch } from '../tournamentState';
 import { pdfContentRules } from '../visibility';
-import { printSheetHead } from '../../../design-tokens/print-sheet';
+import { printMatchTable, printSheetHead } from '../../../design-tokens/print-sheet';
 import { roundEndTime } from './endTime';
 import { buildHeader, type HeaderInput } from './headerModel';
 import type { TextMeasure } from './measure';
 import type { RowSource, RowTexts } from './matchRows';
 import { planRows, type RowsPlan } from './pagePlan';
 import { ascent, descent } from './text';
-import type { ColumnKey, FitStep, HeaderBlock, LinkArea, MatchRowsBlock, PageModel, ScheduleModel, ScheduleModelSource } from './types';
+import type { ColumnKey, HeaderBlock, LinkArea, MatchRowsBlock, PageModel, ScheduleModel, ScheduleModelSource } from './types';
 
 /** Toleranz beim Vergleich von Höhen in mm. */
 const FLOW_EPS = 0.01;
-/** Stufen der Reserve-Regel (@DR-033) in der Reihenfolge ihrer Schwere. */
-const FIT_RANK: Record<FitStep, number> = { normal: 0, shortNames: 1, tight: 2, nextPage: 3 };
-
 /** Anstoßzeit, dann Feld, dann Nummer: die Tabelle liest sich nach der Uhr, auch wenn der Plan anders geordnet ist. */
 function inKickoffOrder(matches: StatefulMatch[]): StatefulMatch[] {
   return [...matches].sort((a, b) => a.startTime.getTime() - b.startTime.getTime() || a.field - b.field || a.matchNumber - b.matchNumber);
@@ -60,6 +57,8 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   const finalCount = schedule.phases.filter(p => p.name !== 'groupStage').reduce((n, p) => n + p.matches.length, 0);
   const groupMatches = inKickoffOrder((groupPhase?.matches ?? []));
   const groups = [...new Set(groupMatches.map(m => m.group).filter((g): g is string => g !== undefined && g !== ''))];
+  // Gruppenzeichen wechseln je Gruppe nach dem Buchstaben, nicht nach dem ersten Anstoß: A eckig, B rund, C eckig … (@DR-001)
+  const groupOrder = [...groups].sort();
   const multipleGroups = groups.length > 1;
   const stateOf = (match: StatefulMatch): ReturnType<typeof resultState> => {
     // „ausgefallen“ steht auch bei ausgeblendeten Ergebnissen; leere Linien statt „ausgefallen“ hat nur die Fassung ohne Ergebnisse (@DR-019)
@@ -69,7 +68,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   const rows: RowSource[] = groupMatches.map(match => {
     const state = stateOf(match);
     const group = multipleGroups && match.group !== undefined
-      ? { code: getGroupShortCode(match.group, schedule.tournament), shape: groups.indexOf(match.group) % 2 === 0 ? ('square' as const) : ('circle' as const) }
+      ? { code: getGroupShortCode(match.group, schedule.tournament), shape: groupOrder.indexOf(match.group) % 2 === 0 ? ('square' as const) : ('circle' as const) }
       : undefined;
     return {
       matchId: match.id,
@@ -111,12 +110,16 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
     graphicsAspect: source.graphicsAspect,
     ...(source.qr ? { qr: { url: source.qr.url, modules: source.qr.modules, caption: input.wish.viewerResultsHidden || !content.results ? t.qrCaption.plan : t.qrCaption.results } } : {}),
   };
+  // Breite der Spalte „SR“: breitester Eintrag oder Kopf, mit Rand; Teamnamen („Teams pfeifen“) füllen den Token (@DR-032, @DR-033)
+  const refEntries = rows.map(r => r.referee).filter(label => label !== '');
+  const refereeWidth = refEntries.length === 0 ? undefined
+    : Math.max(...refEntries.map(label => measure.width(label, printMatchTable.refPt, 'normal')), measure.width(labels.referee ?? '', printMatchTable.headPt, 'bold')) + 2 * printMatchTable.refInset;
   const frameOf = { left: geo.left, top: geo.top, width: geo.contentWidth };
   const layoutWith = (input: HeaderInput): { header: HeaderBlock; plan: RowsPlan } => {
     const built = buildHeader(input, frameOf, measure);
     const planned = planRows({
       sources: rows,
-      flags: { field: schedule.numberOfFields > 1, group: multipleGroups, referee: rows.some(r => r.referee !== ''), smallPairs: 0 },
+      flags: { field: schedule.numberOfFields > 1, group: multipleGroups, referee: rows.some(r => r.referee !== ''), smallPairs: 0, ...(refereeWidth === undefined ? {} : { refereeWidth }) },
       texts: rowTexts,
       labels,
       frame: { left: geo.left, width: geo.contentWidth, bottom: geo.bottom, continuationTop: geo.top + geo.shortHeadHeight },
@@ -125,12 +128,12 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
     });
     return { header: built, plan: planned };
   };
-  // „Ablauf“ (@DR-031): nur, wenn er den Block nicht höher macht und kein Spiel von Seite 1 verdrängt; sonst fällt die Angabe weg
+  // „Ablauf“ (@DR-031) steht nur, wenn er den Block nicht höher macht. Ein Spiel von Seite 1 kann er nur über einen höheren Kopf
+  // verdrängen, und der Kopf wächst nur mit dem Block; die Höhe des Blocks ist darum die ganze Bedingung.
   let { header, plan } = layoutWith(headerInput);
   if (headerInput.flow !== '') {
     const lean = layoutWith({ ...headerInput, flow: '' });
-    const rowsOnFirst = (p: RowsPlan): number => p.blocks[0]?.rows.length ?? 0;
-    if (header.facts.fill.h > lean.header.facts.fill.h + FLOW_EPS || rowsOnFirst(plan) < rowsOnFirst(lean.plan) || plan.blocks.length > lean.plan.blocks.length || FIT_RANK[plan.fit] > FIT_RANK[lean.plan.fit]) {
+    if (header.facts.fill.h > lean.header.facts.fill.h + FLOW_EPS) {
       ({ header, plan } = lean);
     }
   }

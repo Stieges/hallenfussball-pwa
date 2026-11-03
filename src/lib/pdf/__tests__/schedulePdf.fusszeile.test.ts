@@ -141,8 +141,10 @@ describe('@BM-035 @DR-011 Fassung final: statt „Stand …“ steht die Abschlu
 });
 
 describe('F3 Breitenmessung: gemessen wird, was gedruckt wird', () => {
-  it('C-PDF-TITEL-LANGES-WORT @DR-001 ein Titel aus einem einzigen sehr langen Wort bleibt im Satzspiegel (Schrift bis zum Mindestmaß, dann zeichenweise geteilt, nie gekürzt)', async () => {
-    const titel = '⚽'.repeat(60);
+  it.each([
+    ['Ersatzzeichen', '⚽'.repeat(60), '?'.repeat(60)],
+    ['Buchstaben', 'Donaudampfschifffahrtsgesellschaftskapitaensmuetzenfabrikationsleitungsstelle'.repeat(2), 'Donaudampfschifffahrtsgesellschaftskapitaensmuetzenfabrikationsleitungsstelle'.repeat(2)],
+  ])('C-PDF-TITEL-LANGES-WORT @DR-001 ein Titel aus einem einzigen sehr langen Wort aus %s bleibt im Satzspiegel, ungekürzt (Schrift bis zum Mindestmaß, dann zeichenweise geteilt)', async (_art, titel, gedruckt) => {
     const tournament = hallencupTournament({ title: titel });
     const { pages, width } = await layoutOf({ now: NOW, tournament, online: false }, generateFullSchedule(tournament, 'de'));
     const rechts = width - printPage.margin.right;
@@ -150,9 +152,9 @@ describe('F3 Breitenmessung: gemessen wird, was gedruckt wird', () => {
     pages.forEach((page, i) => {
       page.texts.forEach(t => expect(t.x + t.w, `Seite ${i + 1} „${t.str}“`).toBeLessThanOrEqual(rechts + TOL));
     });
-    const zeichen = pages[0].texts.filter(t => t.str.includes('?')).map(t => t.str.replace(/[^?]/g, '').length);
-    expect(zeichen.reduce((a, n) => a + n, 0), 'kein Zeichen gekürzt').toBeGreaterThanOrEqual(60);
-    expect(pages[0].texts.some(t => t.str.includes('…'))).toBe(false);
+    const wann = pages[0].texts.find(t => t.str.trim() === 'Wann')?.y ?? 0;
+    const titelText = pages[0].texts.filter(t => t.size >= 17.9 && t.y < wann).map(t => t.str.trim()).join('');
+    expect(titelText, 'jedes Zeichen gedruckt, nichts gekürzt').toBe(gedruckt);
   });
 });
 

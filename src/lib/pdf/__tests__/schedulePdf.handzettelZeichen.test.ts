@@ -223,7 +223,7 @@ describe('@DR-001 Farben und Größen', () => {
 });
 
 describe('@DR-022 englische App: feste Texte des Spielplans auf Englisch', () => {
-  it('@DR-022 neue Texte „Beginn“, „Ende ca.“, „je Spiel“ mit englischer Fassung, Teamnamen unverändert', async () => {
+  it('@DR-022 englische App: Eckdaten („When“, „Start … End approx.“, „Match time“) englisch, deutsche Wörter fehlen, Teamnamen unverändert', async () => {
     const { pages } = await handzettelPdf(FALL_B, { locale: 'en' });
     const kopf = pages[0].texts.map(t => t.str).join('').replace(/\s/g, '');
 

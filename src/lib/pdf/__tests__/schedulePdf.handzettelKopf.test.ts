@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { printLimits, printPage, printType } from '../../../design-tokens/print';
 import { printHeader } from '../../../design-tokens/print-header';
-import { FALL_A, FALL_B, FALL_B_LANG, FALL_C } from './fixtures/handzettelFaelle';
+import { FALL_A, FALL_B, FALL_C } from './fixtures/handzettelFaelle';
 import { fallSchedule } from './fixtures/handzettelTurnier';
 import { handzettelPdf } from './handzettelPdf';
 import { fixtureLogo } from './pdfLogoFixture';
@@ -87,6 +87,7 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
     const { pages } = await handzettelPdf(FALL_B, { locale: 'en' });
 
     expect(pages[0].texts.some(t => t.str.includes('28 matches, 8 of them finals'))).toBe(true);
+    expect(strs(pages[0]), 'Bezeichnung der Zelle ≠ Titelzusatz „Schedule“').toContain('Matches');
   });
 
   it('@DR-031 Gegenprobe: würde „Ablauf“ den Block höher machen (ohne Halle: dritte Angabe in einer neuen Zeile), fällt er weg', async () => {
@@ -96,13 +97,32 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
     expect(flat(pages[0])).not.toContain('15Spiele');
   });
 
-  it('@DR-031 Gegenprobe: verdrängt „Ablauf“ ein Spiel von Seite 1, fällt er weg und alle Spiele bleiben dort', async () => {
-    const { pages } = await handzettelPdf(FALL_B_LANG);
-    const spiele = pages[0].texts.filter(t => /^\d{1,2}$/.test(t.str.trim()) && t.x < 25 && Math.abs(t.size - printType.nr) < 0.05).length;
-    const ohneAblauf = !strs(pages[0]).includes('Ablauf');
+  // Fall b mit zwei weiteren Finalspielen: zehn Finalspiele, „38 Spiele, davon 10 Finalspiele“ ist eine Ziffer länger als die Zelle
+  const ZEHN_FINALSPIELE = {
+    ...FALL_B,
+    finale: [
+      ...(FALL_B.finale ?? []),
+      { nr: 29, zeit: '15:44', runde: 'quarterfinal' as const, heim: { rang: 1, gruppe: 'A' as const }, gast: { rang: 1, gruppe: 'B' as const } },
+      { nr: 30, zeit: '15:56', runde: 'quarterfinal' as const, heim: { rang: 2, gruppe: 'A' as const }, gast: { rang: 2, gruppe: 'B' as const } },
+    ],
+  };
+  const spielzeilen = (page: LayoutPage): number => page.texts.filter(t => /^\d{1,2}$/.test(t.str.trim()) && t.x < 25 && Math.abs(t.size - printType.nr) < 0.05).length;
 
-    // mit Ablauf hätte Seite 1 weniger Spiele: das Modell wählt die Fassung ohne, solange sie mehr Spiele auf Seite 1 hält
-    expect(ohneAblauf || spiele >= 19).toBe(true);
+  it('@DR-031 ab zweistelliger Finalspielzahl passt „Ablauf“ nicht in eine Zeile und entfällt, ganz und ohne Bruchstück', async () => {
+    const { pages } = await handzettelPdf(ZEHN_FINALSPIELE);
+
+    expect(strs(pages[0])).not.toContain('Ablauf');
+    expect(flat(pages[0])).not.toContain('Finalspiele');
+  });
+
+  it('@DR-031 „Ablauf“ verdrängt kein Spiel von Seite 1: mit und ohne Angabe stehen gleich viele Gruppenspiele dort', async () => {
+    const mit = await handzettelPdf(FALL_B);
+    const ohne = await handzettelPdf(ZEHN_FINALSPIELE);
+
+    expect(strs(mit.pages[0])).toContain('Ablauf');
+    expect(strs(ohne.pages[0])).not.toContain('Ablauf');
+    expect(spielzeilen(mit.pages[0])).toBe(spielzeilen(ohne.pages[0]));
+    expect(spielzeilen(mit.pages[0])).toBe(20);
   });
 });
 

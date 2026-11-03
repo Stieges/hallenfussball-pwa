@@ -17,7 +17,14 @@ import { advanceMm, centeredBaseline, run } from './text';
 import type { ColumnKey, ColumnModel, GroupMark, MatchHeadModel, MatchRowModel, ResultCell, SideModel, SmallLineKind, TextRun, WriteLine } from './types';
 
 /** Welche Spalten es gibt. `shootout` und `narrow` brauchen nur die Finalrunde (T7b) und die Spalte „SR“. */
-export interface ColumnFlags { field: boolean; group: boolean; referee: boolean; smallPairs: number }
+export interface ColumnFlags {
+  field: boolean;
+  group: boolean;
+  referee: boolean;
+  smallPairs: number;
+  /** Breite der Spalte „SR“ aus ihrem Inhalt (gemessen, höchstens `printMatchTable.cols.referee`); ohne Angabe die volle Breite. */
+  refereeWidth?: number;
+}
 
 /** Beschriftungen, die in der Zeile vorkommen (alle übersetzt). */
 export interface RowTexts { live: string; skipped: string; overtime: string; shootout: string }
@@ -44,11 +51,12 @@ export interface RowSource {
 /** Breite der kleinen Linien eines Paars (Linie, Doppelpunkt, Linie). */
 const pairWidth = (): number => 2 * printWriteLine.small + printWriteLine.smallColon;
 
-/** Spalten in Reihenfolge, Heim und Gast teilen den Rest gleich. */
+/** Spalten in Reihenfolge, Heim und Gast teilen den Rest gleich; die Spalte „SR“ ist so breit wie ihr Inhalt (@DR-025: nur Nummer oder Teamname), nie breiter als der Token. */
 export function layoutColumns(left: number, width: number, flags: ColumnFlags): ColumnModel[] {
   const c = printMatchTable.cols;
+  const refW = flags.referee ? Math.min(c.referee, flags.refereeWidth ?? c.referee) : 0;
   const shootoutW = flags.smallPairs === 0 ? 0 : flags.smallPairs * pairWidth() + (flags.smallPairs + 1) * printWriteLine.smallGap;
-  const fixed = c.nr + c.time + (flags.field ? c.field : 0) + (flags.group ? c.group : 0) + c.result + shootoutW + (flags.referee ? c.referee : 0);
+  const fixed = c.nr + c.time + (flags.field ? c.field : 0) + (flags.group ? c.group : 0) + c.result + shootoutW + refW;
   const side = (width - fixed) / 2;
   const plan: Array<[ColumnKey, number]> = [['nr', c.nr], ['time', c.time]];
   if (flags.field) { plan.push(['field', c.field]); }
@@ -56,7 +64,7 @@ export function layoutColumns(left: number, width: number, flags: ColumnFlags): 
   plan.push(['home', side], ['result', c.result]);
   if (flags.smallPairs > 0) { plan.push(['shootout', shootoutW]); }
   plan.push(['away', side]);
-  if (flags.referee) { plan.push(['referee', c.referee]); }
+  if (flags.referee) { plan.push(['referee', refW]); }
   let x = left;
   return plan.map(([key, w]) => {
     const column = { key, x, w };

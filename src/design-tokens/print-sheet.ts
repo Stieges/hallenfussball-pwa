@@ -134,7 +134,7 @@ export const printSheetHead = {
   bandPadBottom: 2.5,
   /** Abstand Kopflinie → Eckdaten. */
   belowRule: 3,
-  /** Abstand der Grafik zum Titel (wie `printHeader.logoGap`). */
+  /** Eckdaten: Beschriftung 8 pt, Hauptwert 14 pt, Nebenwert 11 pt (Abstand der Grafik zum Titel: `printHeader.logoGap`). */
   factLabelPt: 8,
   factBigPt: 14,
   factMidPt: 11,
@@ -145,11 +145,16 @@ export const printSheetHead = {
   factsRowGap: 2,
   /** Mindestbreite der zweiten Spalte; die erste gibt nach, wenn der Block schmal ist. */
   factsSecondColMin: 50,
+  /** Luft der ersten Eckdaten-Spalte hinter Datum und Uhrzeiten, mm. */
+  factsFirstColReserve: 1,
   rulePt: 10.5,
   ruleLineHeight: 1.3,
   /** Abstand Eckdaten-Block → Regelzeile. */
   ruleGap: 2.5,
-  /** Abstand zwischen Eckdaten-Spalte und QR. */
+  /**
+   * Abstand zwischen Eckdaten-Spalte und QR. Mit 3,5 mm passt „28 Spiele, davon 8 Finalspiele“ (55,5 mm in Inter 11 pt) mit rund
+   * 0,45 mm Luft in die Zelle „Ablauf“; ab 10 Finalspielen (eine Ziffer mehr) bricht der Text um und „Ablauf“ entfällt (@DR-031).
+   */
   qrGap: 3.5,
   qrCaptionPt: 10.5,
   qrCaptionGap: 1,

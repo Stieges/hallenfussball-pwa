@@ -197,7 +197,7 @@ export function buildHeader(h: HeaderInput, frame: HeaderFrame, measure: TextMea
   const blockW = width - qrWidth;
   const innerW = blockW - 2 * s.factsPadH;
   // Erste Spalte so breit wie Datum und Uhrzeiten (14 pt, eine Zeile), (Mockup 72 mm); die zweite behält mindestens ihre Mindestbreite
-  const needed = Math.max(timesWidth(h, measure), measure.width(h.date, s.factBigPt, 'bold')) + 1;
+  const needed = Math.max(timesWidth(h, measure), measure.width(h.date, s.factBigPt, 'bold')) + s.factsFirstColReserve;
   const col1 = Math.min(needed, innerW - s.factsColGap - s.factsSecondColMin);
   const widths = [col1, innerW - s.factsColGap - col1];
   const present: FactKey[] = [
