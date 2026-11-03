@@ -114,18 +114,17 @@ describe('@BM-051 @BM-028 Olli: Toolbar → „Als PDF“ → Wahl der Fassung',
     expect(karte).not.toHaveTextContent('zum Ausfüllen');
   });
 
-  it('@BM-052 Spielplan ohne Ergebnisse: das PDF trägt oben „Spielplan“ und heißt „…_Spielplan_ohne-Ergebnisse_…“', async () => {
+  it('@BM-052 Spielplan ohne Ergebnisse: das PDF trägt keinen Zusatz im Text und heißt „…_Spielplan_ohne-Ergebnisse_…“ (Titel der Datei: schedulePdf.handzettelKopf)', async () => {
     renderToolbar();
     openDialog();
     fireEvent.click(screen.getByTestId('pdf-choice-blank'));
     await save();
 
-    expect(lastCapture()?.pages[0]).toContain('Spielplan');
     expect(text()).not.toMatch(/zum Ausfüllen|ohne Ergebnisse/);
     expect(lastCapture()?.filename).toBe('Hallencup_Nord_Spielplan_ohne-Ergebnisse_2026-11-14_1507.pdf');
   });
 
-  it('Gegenbeispiel Vorbelegung: „Spielplan“ mit Kopfzeile „Spielplan“, hoch, nie „zum Ausfüllen“', async () => {
+  it('Gegenbeispiel Vorbelegung: „Spielplan“, hoch, nie „zum Ausfüllen“', async () => {
     renderToolbar();
     openDialog();
     await save();
@@ -133,7 +132,6 @@ describe('@BM-051 @BM-028 Olli: Toolbar → „Als PDF“ → Wahl der Fassung',
     const captured = lastCapture();
     expect(captured?.pageWidth).toBeLessThan(captured?.pageHeight ?? 0);
     expect(text()).not.toContain('zum Ausfüllen');
-    expect(captured?.pages[0]).toContain('Spielplan');
   });
 
   it('@DR-026 keine Wahl „quer“ und keine freie Wahl „Mit Spielstand“ oder „Tabellen einschließen“', () => {

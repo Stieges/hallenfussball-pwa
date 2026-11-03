@@ -45,7 +45,7 @@ describe('@DR-003 @BM-009 @BM-043 geteiltes Turnier: der QR steht auf Seite 1', 
 
     expect(box.w).toBeGreaterThanOrEqual(MIN_EDGE_MM);
     expect(Math.abs(box.w - box.h)).toBeLessThanOrEqual(TOL);
-    expect(pages[0].rects.filter(r => r.fill !== '#000000' && r.y < headBottom(pages[0]) && r.w > 0).map(r => r.fill), 'keine Fläche unter dem Symbol außer Papier').toEqual([]);
+    expect(pages[0].rects.filter(r => r.fill !== '#000000' && r.y < headBottom(pages[0]) && r.w > 0 && r.x < box.x + box.w && r.x + r.w > box.x && r.y < box.y + box.h && r.y + r.h > box.y).map(r => r.fill), 'keine Fläche unter dem Symbol außer Papier').toEqual([]);
   });
 
   it('Ruhezone von 4 Modulen: weder Text noch Linie noch Füllung außer dem Symbol', async () => {
@@ -59,7 +59,8 @@ describe('@DR-003 @BM-009 @BM-043 geteiltes Turnier: der QR steht auf Seite 1', 
 
     const fremdeModule = qrRects(pages[0]).filter(r => r.x < box.x - TOL || r.y < box.y - TOL || r.x + r.w > box.x + box.w + TOL || r.y + r.h > box.y + box.h + TOL);
     expect(fremdeModule).toEqual([]);
-    expect(pages[0].texts.filter(t => inside(textBox(t))).map(t => t.str)).toEqual([]);
+    // pdfjs setzt Leerzeichen-Stücke zwischen weit getrennte Textstücke einer Zeile; sie sind kein gedruckter Text
+    expect(pages[0].texts.filter(t => t.str.trim() !== '' && inside(textBox(t))).map(t => t.str)).toEqual([]);
     expect(pages[0].lines.filter(l => inside({ x: Math.min(l.x1, l.x2), y: Math.min(l.y1, l.y2), w: Math.abs(l.x2 - l.x1), h: Math.abs(l.y2 - l.y1) })).length).toBe(0);
   });
 
@@ -120,8 +121,9 @@ describe('@ZM-064 nicht geteilt: kein QR und keine leere Fläche', () => {
     const geo = pageGeometry('a4', 'portrait');
     const geteilt = await kopfPdf({ organizerName: lang });
     const privat = await kopfPdf({ organizerName: lang }, hallencupTournament({ isPublic: false }));
+    // Breite des hellen Eckdaten-Blocks: ohne QR füllt er die ganze Breite
     const rechtsterRand = (pdf: Awaited<ReturnType<typeof kopfPdf>>): number =>
-      Math.max(...pdf.pages[0].texts.filter(t => t.size >= printType.meta - TOL && t.size <= printType.meta + TOL && t.y > 20 && t.y < headBottom(pdf.pages[0]) - 3).map(t => t.x + t.w));
+      Math.max(...pdf.pages[0].rects.filter(r => r.fill !== '#000000' && r.y < headBottom(pdf.pages[0]) && r.w > 50).map(r => r.x + r.w));
 
     expect(rechtsterRand(privat)).toBeGreaterThan(rechtsterRand(geteilt) + 10);
     expect(rechtsterRand(privat)).toBeLessThanOrEqual(geo.left + geo.contentWidth + TOL);

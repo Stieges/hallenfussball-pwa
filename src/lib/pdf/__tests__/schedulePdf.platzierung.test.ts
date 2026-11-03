@@ -62,7 +62,8 @@ async function platzierung(
     ...folgeseiten.flatMap(p => p.texts),
   ].filter(t => t.str.trim() !== '' && !kurzkopf.includes(t.str.trim()));
   // Die Fußzeile (Text und Linie unter `footRuleY`) gehört nicht zur Platzierung (B-28 C3)
-  const fuss = pageGeometry('a4', 'portrait').footRuleY;
+  // zwei Fußzeilen: Adresse der Zuschauer-Seite (@DR-038) und Stand/Seite
+  const fuss = pageGeometry('a4', 'portrait', 1, 2).footRuleY;
   const zeilen = darunter.filter(t => t.y < fuss); // Reihenfolge des Dokuments (Seiten nacheinander)
   const sätze = zeilen.filter(t => t.str.trim().startsWith('Die Platzierung'));
   // pdfjs fasst Platznummer und Teamname einer Zeile zu einem Textstück zusammen („1. SC Ost“)

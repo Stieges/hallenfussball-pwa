@@ -104,7 +104,9 @@ describe('C-PDF-SCHRIFT-OHNE-MERKMALE gleich breite Ziffern ändern keine Satzze
 describe('@DR-001 Uhrzeiten in der Zeit-Spalte (Spielplan-Review 01.11.: „09:00“ brach als „09:0“ / „0“ um)', () => {
   it.each(['09:00', '10:00', '20:00'])('@DR-001 Uhrzeit „%s“ steht in einer Zeile, jedes Spiel zeigt eine volle Uhrzeit', async start => {
     const { pages } = await kopfPdf({}, hallencupTournament({ timeSlot: start }));
-    const zeiten = pages.flatMap(page => page.texts).filter(text => Math.abs(text.size - printType.time) < SIZE_TOLERANCE_PT && text.str.trim() !== '');
+    const kopf = pages[0].texts.find(text => text.str.trim() === 'Zeit');
+    // nur die Zeit-Spalte: unter dem Spaltenkopf (die Eckdaten darüber tragen „Beginn 10:00“ in einem Stück mit Wort)
+    const zeiten = pages.flatMap(page => page.texts).filter(text => Math.abs(text.size - printType.time) < SIZE_TOLERANCE_PT && /\d/.test(text.str) && text.y > (kopf?.y ?? 0));
 
     expect(zeiten.length).toBeGreaterThanOrEqual(12);
     for (const zeit of zeiten) {

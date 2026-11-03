@@ -78,12 +78,13 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * „Group“ → „Grp“, „Referee“ → „Ref“) und der Umbruch einzelner Herkunftstexte („Zweiter Gruppe A“ → „Zweiter Gruppe“ / „A“; EN „Loser Semi-final“ /
  * „1“ → „Loser“ / „Semi-final 1“). Bild DE (Seite 1 und 3) und EN (Seite 1 und 3) gesichtet. Stände davor: 6720748dc9c2, 1d9fc9ecc557,
  * af351460128a, b0c3148ebdee, EN e14f54a199ec.
+ * Neu aufgenommen 03.11. (Paket PDF T7a, Seitenmodell + Zeichenschicht): Seite 1 und Folgeseiten der Gruppenspiele im Handzettel-Bild
+ * (Kopf mit Eckdaten, Zebra, Schreiblinien, Adresse in der Fußzeile, keine Teilnehmerliste, immer A4 hoch). Bild der Fixtures a, b, c
+ * gesichtet. Die Querformat-Fixtures entfallen (@DR-026, MVP+). Mit „Ablauf“ in den Eckdaten und den Gruppenzeichen (@DR-031, @DR-001). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': '2341a1c44ae0',
-  '20 Spiele, hoch': '126de4bc7787',
-  '12 Spiele, quer': 'b6ad6663d3d7',
-  '20 Spiele, quer': '255675713334',
+  '12 Spiele, hoch': 'df75f2d8db68',
+  '20 Spiele, hoch': '3d7d43300840',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -98,7 +99,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('d04aeeb0a9b1');
+    expect(layoutDigest(pages)).toBe('6030179f8e7a');
   });
 });
 

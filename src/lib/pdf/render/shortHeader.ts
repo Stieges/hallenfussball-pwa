@@ -9,6 +9,7 @@ import { printColors, printGap, printMetrics, printStroke, printType } from '../
 import type { PageGeometry } from '../layout';
 import { fontOf } from '../fonts';
 import { printHeader } from '../../../design-tokens/print-header';
+import { drawLinks } from './links';
 import { drawQrSymbol, qrSide } from './qrCode';
 import { clipToWidth } from './textFit';
 
@@ -21,6 +22,8 @@ export interface ShortHeadText {
   subtitleFor: (page: number) => string;
   /** Zuschauer-QR rechts im Kurzkopf (@DR-003, mindestens 20 mm); Titel und Untertitel enden links davon. */
   qr?: boolean[][];
+  /** Zuschauer-Adresse: der QR jeder Folgeseite ist ein Link (@DR-038). */
+  qrUrl?: string;
 }
 
 /** Breite der QR-Spalte im Kurzkopf samt Abstand zum Text; 0 ohne QR. */
@@ -75,5 +78,8 @@ function drawShortHead(doc: jsPDF, head: ShortHeadText, geo: PageGeometry, subti
   if (head.qr) {
     const side = qrSide(head.qr.length, printHeader.qrEdgeShort);
     drawQrSymbol(doc, head.qr, printHeader.qrEdgeShort, geo.left + geo.contentWidth - side, geo.top);
+    if (head.qrUrl !== undefined) {
+      drawLinks(doc, [{ url: head.qrUrl, x: geo.left + geo.contentWidth - side, y: geo.top, w: side, h: side }]);
+    }
   }
 }

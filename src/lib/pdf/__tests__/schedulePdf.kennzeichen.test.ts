@@ -33,42 +33,42 @@ function mitGruppenstatus(schedule: GeneratedSchedule, status: MatchStatus | und
 }
 
 describe('Abschnittsnummern: fortlaufend über die vorhandenen Abschnitte', () => {
-  it('alle fünf Abschnitte: 1 Teilnehmer, 2 Gruppenphase, 3 Tabellen, 4 Finalrunde, 5 Platzierung', async () => {
+  it('alle Abschnitte nach den Gruppenspielen: 1 Tabellen, 2 Finalrunde, 3 Platzierung (Teilnehmerliste und Titel der Gruppenspiele gibt es nicht, @DR-002)', async () => {
     const { pages } = await layoutOf({ now: NOW });
 
-    expect(strings(pages[0])).toEqual(expect.arrayContaining(['1 Teilnehmer', '2 Gruppenphase']));
-    expect(strings(pages[1])).toContain('3 Tabelle – Gruppe A');
+    expect(strings(pages[0]).filter(s => /^\d+ (Teilnehmer|Gruppenphase|Spiele)$/.test(s))).toEqual([]);
+    expect(strings(pages[1])).toContain('1 Tabelle – Gruppe A');
     // nur der erste Titel eines Abschnitts trägt die Nummer
     expect(strings(pages[1])).toContain('Tabelle – Gruppe B');
-    expect(strings(pages[2])).toEqual(expect.arrayContaining(['4 Halbfinale', 'Spiel um Platz 3', 'Finale', '5 Platzierung']));
+    expect(strings(pages[2])).toEqual(expect.arrayContaining(['2 Halbfinale', 'Spiel um Platz 3', 'Finale', '3 Platzierung']));
   });
 
   it('ein Abschnitt fehlt (keine Tabellen): die Zählung rückt auf, ohne Lücke', async () => {
     const { pages } = await layoutOf({ now: NOW, includeStandings: false });
     const alle = pages.flatMap(strings);
 
-    expect(alle).toEqual(expect.arrayContaining(['1 Teilnehmer', '2 Gruppenphase', '3 Halbfinale', '4 Platzierung']));
-    expect(alle.some(s => s.startsWith('5 '))).toBe(false);
-    expect(alle.some(s => s.startsWith('3 Tabelle'))).toBe(false);
+    expect(alle).toEqual(expect.arrayContaining(['1 Halbfinale', '2 Platzierung']));
+    expect(alle.some(s => s.startsWith('3 '))).toBe(false);
+    expect(alle.some(s => s.includes('Tabelle –'))).toBe(false);
   });
 
-  it('ein Abschnitt fehlt (keine Finalrunde): Tabellen sind 3, Platzierung 4', async () => {
+  it('ein Abschnitt fehlt (keine Finalrunde): Tabellen sind 1, Platzierung 2', async () => {
     const ohneFinale = generateFullSchedule(
       hallencupTournament({ finalsConfig: { preset: 'none' }, finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false } }),
       'de'
     );
     const alle = (await layoutOf({ now: NOW }, ohneFinale)).pages.flatMap(strings);
 
-    expect(alle).toEqual(expect.arrayContaining(['1 Teilnehmer', '2 Gruppenphase', '3 Tabelle – Gruppe A', '4 Platzierung']));
-    expect(alle.some(s => /^[56] /.test(s))).toBe(false);
+    expect(alle).toEqual(expect.arrayContaining(['1 Tabelle – Gruppe A', '2 Platzierung']));
+    expect(alle.some(s => /^[3-6] /.test(s))).toBe(false);
   });
 
-  it('Jeder gegen jeden: Abschnitt „Spiele“ trägt die Nummer 2, „Gruppenphase“ kommt nicht vor', async () => {
+  it('Jeder gegen jeden: weder „Gruppenphase“ noch „Spiele“ als Titel, die Platzierung trägt die Nummer 1', async () => {
     const teams = hallencupTournament().teams.map(team => ({ ...team, group: undefined }));
     const tournament = hallencupTournament({ teams, groupSystem: 'roundRobin' });
     const alle = (await layoutOf({ now: NOW, tournament }, generateFullSchedule(tournament, 'de'))).pages.flatMap(page => page.texts.map(t => t.str.trim()));
 
-    expect(alle).toEqual(expect.arrayContaining(['1 Teilnehmer', '2 Spiele']));
+    expect(alle).toContain('1 Platzierung');
     expect(alle.some(s => s.includes('Gruppenphase'))).toBe(false);
   });
 
@@ -78,7 +78,7 @@ describe('Abschnittsnummern: fortlaufend über die vorhandenen Abschnitte', () =
 
     expect(alle.filter(s => /^\d+ \d+ /.test(s))).toEqual([]);
     const titel2 = pages.flatMap(titel);
-    expect(titel2.filter(s => s === 'Teilnehmer' || s === 'Gruppenphase' || s === 'Platzierung')).toEqual([]);
+    expect(titel2.filter(s => s === 'Tabelle – Gruppe A' || s === 'Platzierung')).toEqual([]);
   });
 });
 

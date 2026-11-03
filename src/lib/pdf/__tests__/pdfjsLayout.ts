@@ -29,6 +29,8 @@ export interface LayoutPage {
   images: Box[];
   /** Link-Flächen mit Adresse (PDF-Paket V1); andere Annotationen zählen nicht. */
   links: LayoutLink[];
+  /** Füllfarbe (hex) zum Zeitpunkt jedes Textzeichnens, in Zeichenreihenfolge: so ist die Textfarbe prüfbar (@DR-001). */
+  textColors: string[];
 }
 /** Eigenschaften der Datei: Titel und Sprache aus dem Info-Verzeichnis bzw. dem Katalog (`/Lang`). */
 export interface LayoutMeta { title: string | undefined; lang: string | undefined }
@@ -90,6 +92,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
   const lines: LayoutLine[] = [];
   const images: Box[] = [];
   const colors = new Set<string>();
+  const textColors: string[] = [];
   const stack: Array<{ ctm: Matrix; fill: string; stroke: string; lw: number }> = [];
   let ctm: Matrix = IDENTITY;
   let fill = '#000000';
@@ -142,6 +145,9 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
         images.push({ x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y });
         break;
       }
+      case OPS.showText: case OPS.showSpacedText: textColors.push(fill); break;
+      case OPS.setFillGray: fill = colorOf([args[0], args[0], args[0]]); colors.add(fill); break;
+      case OPS.setStrokeGray: stroke = colorOf([args[0], args[0], args[0]]); colors.add(stroke); break;
       case OPS.setFillRGBColor: fill = colorOf(args); colors.add(fill); break;
       case OPS.setStrokeRGBColor: stroke = colorOf(args); colors.add(stroke); break;
       case OPS.setLineWidth: lw = args[0] as number; break;
@@ -178,7 +184,7 @@ async function readPage(page: pdfjs.PDFPageProxy): Promise<LayoutPage> {
     const name = (page.commonObjs.has(item.fontName) ? page.commonObjs.get(item.fontName)?.name : '') ?? '';
     texts.push({ str: item.str, x: p.x, y: p.y, size: Math.hypot(t[0], t[1]), bold: /bold/i.test(name), w: item.width * MM_PER_PT, font: item.fontName });
   }
-  return { texts, rects, lines, colors: [...colors].sort(), images, links };
+  return { texts, rects, lines, colors: [...colors].sort(), images, links, textColors };
 }
 
 /** Alle Seiten eines PDFs (Bytes). Die Bytes werden kopiert, pdfjs übergibt sie an den Worker. */

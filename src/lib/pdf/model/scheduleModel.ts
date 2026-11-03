@@ -19,9 +19,14 @@ import { roundEndTime } from './endTime';
 import { buildHeader, type HeaderInput } from './headerModel';
 import type { TextMeasure } from './measure';
 import type { RowSource, RowTexts } from './matchRows';
-import { planRows } from './pagePlan';
+import { planRows, type RowsPlan } from './pagePlan';
 import { ascent, descent } from './text';
-import type { ColumnKey, LinkArea, MatchRowsBlock, PageModel, ScheduleModel, ScheduleModelSource } from './types';
+import type { ColumnKey, FitStep, HeaderBlock, LinkArea, MatchRowsBlock, PageModel, ScheduleModel, ScheduleModelSource } from './types';
+
+/** Toleranz beim Vergleich von Höhen in mm. */
+const FLOW_EPS = 0.01;
+/** Stufen der Reserve-Regel (@DR-033) in der Reihenfolge ihrer Schwere. */
+const FIT_RANK: Record<FitStep, number> = { normal: 0, shortNames: 1, tight: 2, nextPage: 3 };
 
 /** Anstoßzeit, dann Feld, dann Nummer: die Tabelle liest sich nach der Uhr, auch wenn der Plan anders geordnet ist. */
 function inKickoffOrder(matches: StatefulMatch[]): StatefulMatch[] {
@@ -107,17 +112,29 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
     graphicsAspect: source.graphicsAspect,
     ...(source.qr ? { qr: { url: source.qr.url, modules: source.qr.modules, caption: input.wish.viewerResultsHidden || !content.results ? t.qrCaption.plan : t.qrCaption.results } } : {}),
   };
-  const header = buildHeader(headerInput, { left: geo.left, top: geo.top, width: geo.contentWidth }, measure);
-
-  const plan = planRows({
-    sources: rows,
-    flags: { field: schedule.numberOfFields > 1, group: multipleGroups, referee: rows.some(r => r.referee !== ''), smallPairs: 0 },
-    texts: rowTexts,
-    labels,
-    frame: { left: geo.left, width: geo.contentWidth, bottom: geo.bottom, continuationTop: geo.top + geo.shortHeadHeight },
-    firstTop: header.top + header.height + printSheetHead.belowHead,
-    measure,
-  });
+  const frameOf = { left: geo.left, top: geo.top, width: geo.contentWidth };
+  const layoutWith = (input: HeaderInput): { header: HeaderBlock; plan: RowsPlan } => {
+    const built = buildHeader(input, frameOf, measure);
+    const planned = planRows({
+      sources: rows,
+      flags: { field: schedule.numberOfFields > 1, group: multipleGroups, referee: rows.some(r => r.referee !== ''), smallPairs: 0 },
+      texts: rowTexts,
+      labels,
+      frame: { left: geo.left, width: geo.contentWidth, bottom: geo.bottom, continuationTop: geo.top + geo.shortHeadHeight },
+      firstTop: built.top + built.height + printSheetHead.belowHead,
+      measure,
+    });
+    return { header: built, plan: planned };
+  };
+  // „Ablauf“ (@DR-031): nur, wenn er den Block nicht höher macht und kein Spiel von Seite 1 verdrängt; sonst fällt die Angabe weg
+  let { header, plan } = layoutWith(headerInput);
+  if (headerInput.flow !== '') {
+    const lean = layoutWith({ ...headerInput, flow: '' });
+    const rowsOnFirst = (p: RowsPlan): number => p.blocks[0]?.rows.length ?? 0;
+    if (header.facts.fill.h > lean.header.facts.fill.h + FLOW_EPS || rowsOnFirst(plan) < rowsOnFirst(lean.plan) || plan.blocks.length > lean.plan.blocks.length || FIT_RANK[plan.fit] > FIT_RANK[lean.plan.fit]) {
+      ({ header, plan } = lean);
+    }
+  }
 
   const links: LinkArea[] = [];
   if (header.qr && header.qrCaption) {

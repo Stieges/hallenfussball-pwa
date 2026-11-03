@@ -1,12 +1,12 @@
 /**
  * Spielplan-PDF: baut das Dokument (`buildSchedulePdf`) und speichert es (`exportScheduleToPDF`).
  *
- * Aufbau in fester Reihenfolge (B-28a3-2, B-28a3-3b): Seite 1 mit Kopf (Kicker, Titel, Angaben, Regelzeilen),
- * Teilnehmer und Gruppenspielen (Überlauf auf Folgeseiten), dann Gruppentabellen (neue Seite, optional), dann
- * Finalrunde mit K.-o.-Zeilen und Platzierung (neue Seite). Jede Folgeseite trägt den Kurzkopf, jede Seite die
- * Fußzeile mit Stand und Seitenzahl (B-28 C3). Abschnittstitel tragen laufende Nummern. Leere Abschnitte entfallen.
- * A4 hoch, Vorgabe; quer über `orientation`. Die Geometrie kommt aus `layout.ts`, Farben und Maße aus
- * `design-tokens/print.ts`.
+ * Aufbau in fester Reihenfolge (@DR-002): Seite 1 mit Kopf (Titel, Eckdaten, Regelzeile, QR) und Gruppenspielen
+ * (Überlauf auf Folgeseiten mit wiederholtem Spaltenkopf), dann Gruppentabellen (neue Seite, optional), dann Finalrunde
+ * mit K.-o.-Zeilen und Platzierung (neue Seite). Seite 1 und die Folgeseiten der Gruppenspiele baut das Seitenmodell
+ * (`model/*`, T6) und zeichnet `render/pageHeader.ts` und `render/matchRowsDraw.ts` 1:1 (T7a); Tabellen, Finalrunde und
+ * Platzierung zeichnet bis T7b der Bestand. Jede Folgeseite trägt den Kurzkopf, jede Seite die Fußzeile mit Stand,
+ * Seitenzahl und Adresse. Immer A4 hoch (@DR-026), auch wenn quer angefordert wird. Maße aus `design-tokens/print*.ts`.
  *
  * Bauen und Speichern sind getrennt: `buildSchedulePdf` liefert das Dokument, den Dateinamen und die Hinweise
  * (Zeichen, die als „?“ erscheinen, Ersatzschrift) VOR dem Speichern (@DR-012).
@@ -15,11 +15,12 @@ import type jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
-import { qrModules } from '../qr/publicQr';
-import { pageGeometry, startPage } from './layout';
-import type { PDFExportOptions } from './pdfOptions';
+import { fontOf } from './fonts';
+import { qrModules, shortViewerAddress } from '../qr/publicQr';
+import { ascentMm, pageGeometry, startPage } from './layout';
+import type { PDFExportOptions, PdfAccent } from './pdfOptions';
 import { openDocument, toPdfInput, type SchedulePdfInput } from './pdfInput';
-import { dayOf, headerFacts, ruleFacts } from './headerFacts';
+import { dayOf } from './headerFacts';
 import { schedulePdfFilename } from './filename';
 import { buildHints, hintNotes, type PdfHints } from './notes';
 import { planSections, type SectionKey } from './sections';
@@ -27,7 +28,6 @@ import { closedLine, footerLine, standLine } from './standText';
 import { groupPhaseOpen } from './tournamentState';
 import { pdfContentRules } from './visibility';
 import { countFooterLines, drawFooters, type FooterContent } from './render/footer';
-import { renderGroupStage } from './render/groupTables';
 import type { MatchTableContext } from './render/matchTable';
 import { refereeLabelFor } from './refereeLabel';
 import { renderFinalsSection } from './render/finalsTables';
@@ -35,13 +35,18 @@ import { renderGroupStandings } from './render/standings';
 import { renderBlankStandings } from './render/blankStandings';
 import { placementState } from './placement';
 import { renderRanking } from './render/ranking';
-import { renderHeader } from './render/header';
+import { drawMatchRows } from './render/matchRowsDraw';
+import { drawPageHeader, type HeaderPictures } from './render/pageHeader';
+import { drawLinks } from './render/links';
 import { usableLogo } from './render/headerGraphics';
+import { printGap, printType } from '../../design-tokens/print';
 import { printHeader } from '../../design-tokens/print-header';
 import { qrSide } from './render/qrCode';
 import { drawShortHeads, shortHeadTitleLines, shortQrColumn } from './render/shortHeader';
-import { renderParticipants } from './render/participants';
-import { koLines, pdfRuleEntries, pdfRulesFrom, placementLine } from './rules';
+import { jspdfMeasure } from './model/measure';
+import { buildScheduleModel } from './model/scheduleModel';
+import type { PageModel } from './model/types';
+import { koLines, pdfRulesFrom, placementLine } from './rules';
 import type { PdfTexts } from './translations';
 import { ageClassText } from '../../core/view';
 
@@ -68,10 +73,23 @@ function contactRow(contact: string | undefined, t: PdfTexts): string | undefine
   return text === '' ? undefined : t.contactLine(text);
 }
 
+/** Eine Seite des Seitenmodells zeichnen: Blöcke in Modellreihenfolge, dann ihre Links (@DR-038). */
+function drawModelPage(doc: jsPDF, page: PageModel, pictures: HeaderPictures, qr: boolean[][] | undefined, accent: PdfAccent): void {
+  for (const block of page.blocks) {
+    if (block.kind === 'header') {
+      drawPageHeader(doc, block, pictures, qr, accent);
+    } else if (block.kind === 'matchRows') {
+      drawMatchRows(doc, block, accent);
+    }
+  }
+  drawLinks(doc, page.links);
+}
+
 /** Baut das Spielplan-PDF, ohne es zu speichern. */
 export async function buildSchedulePdf(source: SchedulePdfInput): Promise<SchedulePdfBuild> {
   const { schedule, options } = source;
-  const input = toPdfInput(source);
+  // Immer A4 hoch (@DR-026, Lücke L3): Querformat ist MVP+, eine Anforderung „quer“ ändert nichts
+  const input = { ...toPdfInput(source), orientation: 'portrait' as const };
   const { tournament, translate, edition, audience, now, online, orientation, contact, organizerName, hallName } = input;
   const { ranking, closed, closedAt, standings } = input.state;
 
@@ -101,7 +119,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   });
   const notes = hintNotes(hints, t);
   // Zuschauer-QR nur bei online geteiltem Turnier (@ZM-064)
-  const qr = content.qrUrl === null ? undefined : { modules: qrModules(content.qrUrl), caption: options.viewerResultsHidden === true || !content.results ? t.qrCaption.plan : t.qrCaption.results };
+  const qr = content.qrUrl === null ? undefined : { url: content.qrUrl, modules: qrModules(content.qrUrl) };
 
   // Fußzeile und Kurzkopf vor dem Seitenmaß messen: sie bestimmen, wo der Satzspiegel endet bzw. Folgeseiten beginnen
   const footer: FooterContent = {
@@ -109,6 +127,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
     stand: edition === 'final' && closedAt ? closedLine(closedAt, translate) : standLine(now, online, translate),
     contact: contactRow(contact, t),
     line: (title, stand, page, total) => footerLine(title, stand, page, total, translate),
+    ...(qr ? { link: { prefix: t.sheet.footerLink, address: shortViewerAddress(qr.url), url: qr.url } } : {}),
   };
   const contentWidth = pageGeometry('a4', orientation).contentWidth;
   const shortHeadTitle = shortHeadTitleLines(doc, schedule.tournament.title, contentWidth - shortQrColumn(qr?.modules));
@@ -124,8 +143,6 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   const finalTable = includeStandings && placement === 'final' && finalPhases.length === 0 && singleGroup;
   const hasTables = includeStandings && (finalTable || schedule.teams.some(team => team.group));
   const present: SectionKey[] = [
-    'participants',
-    ...(groupPhase ? (['groupStage'] as const) : []),
     ...(hasTables ? (['tables'] as const) : []),
     ...(finalPhases.length > 0 ? (['finals'] as const) : []),
     ...(finalTable || !content.tables ? [] : (['ranking'] as const)),
@@ -134,23 +151,27 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   // Jeder gegen jeden hat keine Gruppen: der Abschnitt heißt „Spiele“ (Controller, B-28a3-4)
   const groupStageName = rules.groupSystem === 'roundRobin' ? t.matches : t.groupStage;
 
-  // Seite 1: Kopf mit Regelzeilen, Teilnehmer, Gruppenspiele (Folgeseiten bei Platzmangel)
-  let yPos = renderHeader(
-    doc,
+  // Seitenmodell (T6): Seite 1 mit Kopf und Gruppenspielen, dazu ihre Folgeseiten; gezeichnet wird es 1:1 (T7a)
+  const model = buildScheduleModel(
     {
-      // Kopfzeile nennt den Inhalt (@BM-052, @DR-005, Daniel 16.10.): „Spielplan“ in beiden Fassungen, der Unterschied steht
-      // im Dateinamen; der Endstand trägt seine Zeile in der Fußzeile
-      kicker: edition === 'blank' || edition === 'plan' ? t.kicker.plan : undefined,
-      title: schedule.tournament.title,
-      facts: [...headerFacts(schedule, t, organizerName, hallName), ...ruleFacts(pdfRuleEntries(rules, t))],
-      separator: t.rules.join,
-      logoLeft,
-      logoRight,
-      qr,
+      input,
+      geo,
+      t,
+      graphicsAspect: { ...(logoLeft ? { left: logoLeft.w / logoLeft.h } : {}), ...(logoRight ? { right: logoRight.w / logoRight.h } : {}) },
+      ...(qr ? { qr: { url: qr.url, modules: qr.modules.length } } : {}),
     },
-    geo
+    jspdfMeasure(doc, fontOf(doc))
   );
-  yPos = renderParticipants(doc, schedule, t, geo, yPos, sections.handle('participants'));
+  // Titel und Sprache der Datei (@DR-039); die Sprache setzt `openDocument`
+  doc.setDocumentProperties({ title: model.meta.title });
+  model.pages.forEach((page, index) => {
+    if (index > 0) {
+      doc.addPage();
+    }
+    drawModelPage(doc, page, { left: logoLeft, right: logoRight }, qr?.modules, input.accent);
+  });
+  const lastBlock = model.pages.at(-1)?.blocks.at(-1);
+  let yPos = lastBlock ? lastBlock.top + lastBlock.height + printGap.sectionGap + ascentMm(printType.h2) : geo.top;
 
   // Ergebnis je Spiel aus seinem Zustand (matchResult), Schiedsrichter aus dem Plan (@DR-025)
   const tableContext: MatchTableContext = {
@@ -167,10 +188,6 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
       matches: schedule.allMatches,
     },
   };
-
-  if (groupPhase) {
-    yPos = renderGroupStage(doc, groupPhase.matches, tableContext, schedule.numberOfFields, geo, yPos, schedule.tournament, groupStageName, sections.handle('groupStage'));
-  }
 
   // Gruppentabellen, eigene Seite (nur wenn es Gruppen gibt und sie gewünscht sind)
   if (hasTables) {
@@ -218,8 +235,9 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   drawShortHeads(doc, geo, {
     titleLines: shortHeadTitle,
     qr: qr?.modules,
+    qrUrl: qr?.url,
     subtitleFor: page => {
-      const key = sections.keyAtTop(page);
+      const key = page <= model.pages.length ? 'groupStage' : sections.keyAtTop(page);
       return [ageClassText(schedule.tournament.ageClass), dayOf(schedule, t), key ? sectionNames[key] : ''].filter(part => part !== '').join(t.rules.join);
     },
   });

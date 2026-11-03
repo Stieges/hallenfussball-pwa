@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { HALLENCUP_TEAMS, hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { printColumns } from '../../../design-tokens/print';
+import { printWriteLine } from '../../../design-tokens/print-sheet';
 import { layoutOf } from './pdfFixtureLayout';
 import type { LayoutPage } from './pdfjsLayout';
 
@@ -15,7 +16,7 @@ const TOL = 0.5;
 function kantenJeZeile(page: LayoutPage): { heim: number[]; gast: number[] } {
   const heim: number[] = [];
   const gast: number[] = [];
-  const doppelpunkte = page.texts.filter(t => t.str.trim() === ':');
+  const doppelpunkte = page.texts.filter(t => t.str.trim() === ':' && Math.abs(t.size - printWriteLine.colonPt) < 0.1);
   for (const dp of doppelpunkte) {
     const zeile = page.texts.filter(t => Math.abs(t.y - dp.y) < 3 && NAMEN.includes(t.str.trim()));
     zeile.filter(t => t.x + t.w < dp.x).forEach(t => heim.push(t.x + t.w));
@@ -25,12 +26,9 @@ function kantenJeZeile(page: LayoutPage): { heim: number[]; gast: number[] } {
 }
 
 describe('Punkt 7: Heim endet am Ergebnis, Gast beginnt am Ergebnis', () => {
-  it.each([
-    ['hoch', {}],
-    ['quer', { orientation: 'landscape' as const }],
-  ])('Gruppenspiele %s: rechte Kante aller Heim-Namen gleich, linke Kante aller Gast-Namen gleich', async (_name, extra) => {
+  it('Gruppenspiele: rechte Kante aller Heim-Namen gleich, linke Kante aller Gast-Namen gleich', async () => {
     const tournament = hallencupTournament();
-    const { pages } = await layoutOf({ tournament, ...extra }, hallencupSchedule(tournament));
+    const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
     const heim: number[] = [];
     const gast: number[] = [];
     pages.forEach(page => {
@@ -48,7 +46,7 @@ describe('Punkt 7: Heim endet am Ergebnis, Gast beginnt am Ergebnis', () => {
     expect(hMax - hMin, 'rechte Kante Heim').toBeLessThanOrEqual(TOL);
     expect(gMax - gMin, 'linke Kante Gast').toBeLessThanOrEqual(TOL);
     // Nahe am Ergebnis: Heim endet und Gast beginnt innerhalb der Ergebnisspalte (Breite als Token)
-    const ergebnisse = pages.flatMap(page => page.texts.filter(t => t.str.trim() === ':'));
+    const ergebnisse = pages.flatMap(page => page.texts.filter(t => t.str.trim() === ':' && Math.abs(t.size - printWriteLine.colonPt) < 0.1));
     const mitte = Math.min(...ergebnisse.map(t => t.x));
     expect(mitte - hMax, 'Heim-Ende vor dem Ergebnis').toBeLessThan(printColumns.match.result);
     expect(gMin - mitte, 'Gast-Beginn nach dem Ergebnis').toBeLessThan(printColumns.match.result);

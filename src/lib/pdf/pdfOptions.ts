@@ -8,7 +8,15 @@ import type { RankEntry } from './placement';
 import type { PdfAudience } from './visibility';
 import type { PdfLocale, PdfTranslator } from './translations';
 
+/**
+ * Akzent des Spielplans (@DR-001, @DR-041): Linienfarbe und heller Ton für Flächen (Zebra, Eckdaten), beide `#rrggbb`.
+ * Der Aufrufer rechnet beides (im Aufrufer, nicht hier); das Druckmodul rechnet keine Farbe aus (T2, Wächtertest).
+ */
+export interface PdfAccent { line: string; tint: string }
+
 export interface PDFExportOptions {
+  /** Akzent aus dem Turnierlogo (T8 liefert ihn); ohne Angabe gilt das Grün der App (`printAccentDefault`). */
+  accent?: PdfAccent;
   /**
    * Sprache des Dokuments (@DR-022: Ausdrucke folgen durchgängig dieser Sprache, auch der Aushang). Die Sprache kommt
    * nur über `PdfInput.locale`; nur `toPdfInput` setzt sie ersatzweise aus der App-Sprache (Vorbereitung @DR-028: Wahl im Dialog).
