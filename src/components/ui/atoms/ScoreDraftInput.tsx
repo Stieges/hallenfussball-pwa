@@ -24,7 +24,6 @@ export interface ScoreFieldProps {
 export interface ScoreDraftInputProps extends ScoreFieldProps {
   ariaLabel: string;
   testId: string;
-  inCorrectionMode?: boolean;
 }
 
 const baseStyle: CSSProperties = {
@@ -40,17 +39,12 @@ const baseStyle: CSSProperties = {
   color: cssVars.colors.textPrimary,
 };
 
-const correctionStyle: CSSProperties = {
-  border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.warning}`,
-  backgroundColor: cssVars.colors.warningLight,
-};
-
 const invalidStyle: CSSProperties = {
   border: `${cssVars.borderWidth.medium} solid ${cssVars.colors.error}`,
 };
 
 export const ScoreDraftInput: React.FC<ScoreDraftInputProps> = ({
-  ariaLabel, testId, inCorrectionMode = false, invalid, describedBy, inputRef, ...handlers
+  ariaLabel, testId, invalid, describedBy, inputRef, ...handlers
 }) => (
   <input
     {...handlers}
@@ -64,6 +58,6 @@ export const ScoreDraftInput: React.FC<ScoreDraftInputProps> = ({
     aria-invalid={invalid || undefined}
     aria-describedby={invalid ? describedBy : undefined}
     data-testid={testId}
-    style={{ ...baseStyle, ...(inCorrectionMode ? correctionStyle : {}), ...(invalid ? invalidStyle : {}) }}
+    style={{ ...baseStyle, ...(invalid ? invalidStyle : {}) }}
   />
 );

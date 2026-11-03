@@ -79,6 +79,7 @@ export const cssColors = {
   surfaceDarkMedium: 'var(--color-surface-dark-medium)',
   surfaceVariant: 'var(--color-surface-variant)',
   surfaceElevated: 'var(--color-surface-elevated)',
+  surfacePaper: 'var(--color-surface-paper)',
   surfaceHighlight: 'var(--color-surface-highlight)',
 
   // ---------------------------------------------------------------------------

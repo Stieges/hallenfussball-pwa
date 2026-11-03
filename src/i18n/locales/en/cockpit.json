@@ -674,5 +674,9 @@
     "hoechstens": "at most {{zeit}}",
     "abbrechen": "Cancel",
     "fortsetzen": "Resume"
+  },
+  "eventLog": {
+    "title": "Event log",
+    "empty": "No events recorded yet"
   }
 }

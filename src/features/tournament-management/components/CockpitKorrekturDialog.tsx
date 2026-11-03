@@ -2,11 +2,13 @@
  * CockpitKorrekturDialog (B-10a2, @SL-159): erster Schritt der Korrektur aus dem Cockpit nach dem Abpfiff – das bisherige Ergebnis und die
  * zwei Felder für das korrigierte Ergebnis. „Weiter“ führt in die Grund-Auswahl der Korrektur (`ScheduleResultEntryPrompt`, Grundpflicht
  * @EK-004); ohne Änderung bleibt „Weiter“ gesperrt und der Hinweis nennt den Grund. Abbruch speichert nichts.
+ * @EK-032: lehnt das Speichern ab, weil jemand das Spiel inzwischen geändert hat, bleibt der Dialog offen (`staleHint` mit Namen, „bisher“ = neuer Stand).
  * Fläche `DialogSurface`, Fuß `DialogActions`, Eingaben über `Input` (Schrift ≥ 16 px).
  */
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '../../../components/ui/Input';
+import { InlineNotice } from '../../../components/ui/molecules/InlineNotice';
 import { DialogActions } from '../../../components/ui/molecules/DialogActions';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
 import { cssVars, dialogWidths } from '../../../design-tokens';
@@ -18,6 +20,8 @@ export interface CockpitKorrekturDialogProps {
   /** Das bisher geltende Ergebnis (ohne Strafstoßschießen). */
   scoreHome: number;
   scoreAway: number;
+  /** @EK-032: Hinweis „Spiel 7 wurde inzwischen von Olli geändert (jetzt 2:2)“; `scoreHome`/`scoreAway` zeigen dann schon den neuen Stand. */
+  staleHint?: string;
   onWeiter: (home: number, away: number) => void;
   onAbbrechen: () => void;
 }
@@ -31,7 +35,7 @@ const hintStyle: CSSProperties = { margin: 0, color: cssVars.colors.textSecondar
 
 const asCount = (value: string): number | null => (/^\d+$/.test(value.trim()) ? Number(value.trim()) : null);
 
-export function CockpitKorrekturDialog({ matchNumber, homeName, awayName, scoreHome, scoreAway, onWeiter, onAbbrechen }: CockpitKorrekturDialogProps) {
+export function CockpitKorrekturDialog({ matchNumber, homeName, awayName, scoreHome, scoreAway, staleHint, onWeiter, onAbbrechen }: CockpitKorrekturDialogProps) {
   const { t } = useTranslation('tournament');
   const [home, setHome] = useState(String(scoreHome));
   const [away, setAway] = useState(String(scoreAway));
@@ -44,6 +48,7 @@ export function CockpitKorrekturDialog({ matchNumber, homeName, awayName, scoreH
     <DialogSurface isOpen onClose={onAbbrechen} maxWidth={dialogWidths.md} accent={cssVars.colors.warning} labelledBy="cockpit-korrektur-title">
       <div style={bodyStyle} data-testid="cockpit-korrektur-dialog">
         <h2 id="cockpit-korrektur-title" style={titleStyle}>{t('correctionDialog.titleMatch', { number: matchNumber })}</h2>
+        {staleHint !== undefined && <InlineNotice tone="warn" data-testid="cockpit-korrektur-stale">{staleHint}</InlineNotice>}
         <p style={textStyle}>{t('correctionDialog.currentResult')}: {homeName} {scoreHome}:{scoreAway} {awayName}</p>
         <div style={rowStyle}>
           <div style={fieldStyle}>

@@ -38,8 +38,6 @@ export interface MatchSummaryProps {
   awayTeamName: string;
   /** Match events */
   events: RuntimeMatchEvent[];
-  /** Callback to edit the score */
-  onEditScore?: () => void;
   /** Callback to edit an event */
   onEditEvent?: (event: RuntimeMatchEvent) => void;
 }
@@ -58,7 +56,6 @@ function MatchSummaryDialog({
   homeTeamName,
   awayTeamName,
   events,
-  onEditScore,
   onEditEvent,
 }: MatchSummaryProps) {
   const { t } = useTranslation('tournament');
@@ -144,7 +141,6 @@ function MatchSummaryDialog({
             awayTeamName={awayTeamName}
             homeScore={homeScore}
             awayScore={awayScore}
-            onEditScore={onEditScore}
           />
 
           {/* Events */}
@@ -181,7 +177,6 @@ function MatchSummarySheet({
   homeTeamName,
   awayTeamName,
   events,
-  onEditScore,
   onEditEvent,
 }: MatchSummaryProps) {
   const { t } = useTranslation('tournament');
@@ -218,7 +213,6 @@ function MatchSummarySheet({
           awayTeamName={awayTeamName}
           homeScore={homeScore}
           awayScore={awayScore}
-          onEditScore={onEditScore}
           compact
         />
 

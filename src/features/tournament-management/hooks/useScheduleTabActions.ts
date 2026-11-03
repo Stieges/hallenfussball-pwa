@@ -6,7 +6,7 @@
 
 import { useCallback } from 'react';
 import { Tournament } from '../../../types/tournament';
-import { useScheduleResultEntry, type ScheduleResultEntry } from './useScheduleResultEntry';
+import { useScheduleResultEntry, type KnownScore, type ScheduleResultEntry, type StaleInfo } from './useScheduleResultEntry';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
@@ -17,7 +17,7 @@ interface UseScheduleTabActionsProps {
 }
 
 interface UseScheduleTabActionsResult {
-  handleScoreChange: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
+  handleScoreChange: (matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore, onStale?: (info: StaleInfo) => void) => Promise<boolean>;
   /** A-08f3e2: Rückfrage (Grund bzw. abgesetzt) der Schnelleingabe -- ScheduleTab zeigt sie an. */
   resultEntry: Pick<ScheduleResultEntry, 'prompt' | 'answerPrompt' | 'changeAuthor'>;
 }
@@ -31,8 +31,8 @@ export function useScheduleTabActions({
   // A-08f3e2: die Schnelleingabe schreibt nur noch Server-Einträge (useScheduleResultEntry), nie den Spielstand selbst.
   const resultEntry = useScheduleResultEntry({ tournament, showWarning, lockFinishedResults, offerTakeover });
   const { enterScore } = resultEntry;
-  const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
-    return enterScore(matchId, scoreA, scoreB);
+  const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore, onStale?: (info: StaleInfo) => void) => {
+    return enterScore(matchId, scoreA, scoreB, knownScore, onStale);
   }, [enterScore]);
 
   return {

@@ -5,8 +5,6 @@
 export { useScheduleDraft } from './useScheduleDraft';
 export type { ScheduleDraftControls } from './useScheduleDraft';
 
-export { useCorrectionMode } from './useCorrectionMode';
-export type { CorrectionModeControls } from './useCorrectionMode';
 
 export { useScheduleEditActions } from './useScheduleEditActions';
 export type { ScheduleEditActions } from './useScheduleEditActions';

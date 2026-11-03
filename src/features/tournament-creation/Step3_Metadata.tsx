@@ -7,6 +7,7 @@ import { cssVars } from '../../design-tokens'
 import { localDateIso } from '../../core/view';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
+import { TournamentGraphicsFields } from './components/TournamentGraphicsFields';
 
 interface Step3Props {
   formData: Partial<Tournament>;
@@ -45,6 +46,8 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         placeholder={t('step3.organizerPlaceholder')}
         style={{ marginTop: '16px' }}
       />
+
+      <TournamentGraphicsFields tournamentId={formData.id} />
 
       <RulebookField
         label={t('step3.rulebook')}

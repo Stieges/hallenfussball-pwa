@@ -62,7 +62,8 @@ export interface ScheduleDraftControls {
   closeConflicts: () => void;
 }
 
-function conflictsOf(tournament: Tournament, matches: Tournament['matches']): ScheduleConflict[] {
+/** Konflikte der Spiele eines Turniers (Zeiten, Felder, Schiedsrichter, Pausen); auch für Änderungen direkt am Spiel. */
+export function conflictsOf(tournament: Tournament, matches: Tournament['matches']): ScheduleConflict[] {
   return detectAllConflicts(matches, tournament.teams, {
     matchDurationMinutes: tournament.groupPhaseGameDuration,
     minBreakMinutes: tournament.groupPhaseBreakDuration ?? 0,

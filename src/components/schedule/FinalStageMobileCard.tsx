@@ -16,6 +16,8 @@ import { ScoreChangedHint, ScoreDraftHint, ScoreSaveButton, useScoreDraft, type 
 import type { MatchBadgeModel, SpectatorClock, ViewMatchStatus } from '../../core/view';
 import type { ResultFigures } from './matchResult';
 import { MatchMenuSlot, OriginalTimeNote } from './MatchTimeShiftSlots';
+import { MatchActionTrigger } from './actionMenu/MatchActionTrigger';
+import { isInteractiveTarget } from './actionMenu/isInteractiveTarget';
 
 export interface FinalMobileOption {
   value: number;
@@ -41,9 +43,9 @@ export interface FinalStageMobileCardProps {
   viewStatus?: ViewMatchStatus;
   /** Tore dürfen eingetragen werden (Verwaltung, Spiel nicht beendet) */
   canEditScore: boolean;
-  inCorrectionMode: boolean;
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => ScoreCommitResult;
-  onStartCorrection?: (matchId: string) => void;
+  /** Öffnet die Aktionsauswahl des Spiels (@SL-193); fehlt = Karte nicht antippbar */
+  onOpenActions?: (matchId: string) => void;
   /** Wer dieses Spiel zuletzt geändert hat, für den Hinweis „inzwischen geändert“ (@FU-104) */
   changeAuthorOf?: (matchId: string) => Promise<string | null>;
   showReferees: boolean;
@@ -77,8 +79,8 @@ const selectStyle: CSSProperties = {
 
 export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props) => {
   const {
-    match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore, inCorrectionMode,
-    onScoreChange, onStartCorrection, changeAuthorOf, showReferees, showFields, editingSchedule, displayedRef, displayedField,
+    match, label, homeName, awayName, homePending, awayPending, result, isRunning, isFinished, badge, clock, viewStatus, canEditScore,
+    onScoreChange, onOpenActions, changeAuthorOf, showReferees, showFields, editingSchedule, displayedRef, displayedField,
     hasPendingRef, hasPendingField, refereeOptions, fieldOptions, onRefereeChange, onFieldChange, extraAction,
   } = props;
   const { t } = useTranslation('tournament');
@@ -87,7 +89,7 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     ? result?.decision === 'penalty' ? t('matchResult.finishedPenalty') : result?.decision === 'overtime' ? t('matchResult.finishedOvertime') : undefined
     : undefined;
   const statusNote = viewStatus === 'awarded' ? t('view.status.awarded') : undefined;
-  const editable = canEditScore || inCorrectionMode;
+  const editable = canEditScore;
   const draft = useScoreDraft({
     resetKey: match.id, savedA: entryScore(match.scoreA, match.scoreB, isRunning), savedB: entryScore(match.scoreB, match.scoreA, isRunning),
     onCommit: (a, b) => onScoreChange?.(match.id, a, b), allowUnchanged: isRunning,
@@ -118,7 +120,6 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         {editable ? (
           <ScoreDraftInput
             {...draft.fieldProps(side)}
-            inCorrectionMode={inCorrectionMode}
             testId={`final-score-input-${match.id}-${rowKey}`}
             ariaLabel={t('scoreCell.goalsOf', { team: name })}
           />
@@ -144,7 +145,9 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
   return (
     <div
       data-testid={`final-card-${match.id}`}
+      onClick={onOpenActions ? (e) => { if (!isInteractiveTarget(e.target)) { onOpenActions(match.id); } } : undefined}
       style={{
+        ...(onOpenActions ? { cursor: 'pointer' } : {}),
         backgroundColor: isRunning ? cssVars.colors.statusLiveRowBg : cssVars.colors.background,
         border: `2px solid ${isRunning ? cssVars.colors.statusLive : cssVars.colors.accent}`,
         borderRadius: cssVars.borderRadius.md,
@@ -154,7 +157,13 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs, color: cssVars.colors.textSecondary }}>
-          <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.accent }}>#{match.matchNumber}</span>
+          {onOpenActions ? (
+            <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.accent }}>
+              <MatchActionTrigger matchId={match.id} matchNumber={match.matchNumber} onOpen={onOpenActions}>#{match.matchNumber}</MatchActionTrigger>
+            </span>
+          ) : (
+            <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.accent }}>#{match.matchNumber}</span>
+          )}
           <span>•</span>
           <span>{match.time}<OriginalTimeNote matchId={match.id} /></span>
           {badge?.kind === 'badge' && <MatchStatusBadge model={badge} size="card" testId={isRunning ? `final-live-${match.id}` : undefined} />}
@@ -197,32 +206,11 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
 
       {editable && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: cssVars.spacing.xs }}>
-          <ScoreSaveButton testId={`final-score-save-${match.id}`} disabled={!draft.canSave} ending={isRunning && !inCorrectionMode} onSave={draft.save} />
+          <ScoreSaveButton testId={`final-score-save-${match.id}`} disabled={!draft.canSave} ending={isRunning} onSave={draft.save} />
         </div>
       )}
 
       {clock && <div style={{ marginTop: cssVars.spacing.xs }}><MatchClock clock={clock} size="card" /></div>}
-
-      {isFinished && !inCorrectionMode && onStartCorrection && (
-        <button
-          onClick={() => onStartCorrection(match.id)}
-          style={{
-            marginTop: cssVars.spacing.xs,
-            padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-            minHeight: cssVars.touchTargets.minimum,
-            fontSize: cssVars.fontSizes.xs,
-            color: cssVars.colors.textSecondary,
-            backgroundColor: 'transparent',
-            border: `1px solid ${cssVars.colors.borderControl}`,
-            borderRadius: cssVars.borderRadius.sm,
-            cursor: 'pointer',
-            width: '100%',
-          }}
-          className="correction-btn-mobile"
-        >
-          {t('finals.correct')}
-        </button>
-      )}
 
       {extraAction}
 

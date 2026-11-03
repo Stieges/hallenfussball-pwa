@@ -270,10 +270,11 @@ export default defineConfig({
       },
     },
     {
-      // B-17 Fixrunde 2 (Daniel 15.10.): Desktop Safari (WebKit) nur für die Monitor-Spec. Die übrige Suite
+      // B-17 Fixrunde 2 (Daniel 15.10.): Desktop Safari (WebKit) nur für die Monitor-Spec (und seit T5 die Logo-Upload-Spec: SVG und
+      // createImageBitmap verhalten sich in WebKit anders, @W3-030). Die übrige Suite
       // bleibt bei Chromium. Lokal vorher: `npx playwright install webkit`.
       name: 'desktop-webkit',
-      testMatch: /(monitor-dauerbetrieb|cockpit-tasten|cockpit-hoehen)\.spec\.ts$/,
+      testMatch: /(monitor-dauerbetrieb|cockpit-tasten|cockpit-hoehen|turnierlogo-pdf)\.spec\.ts$/,
       use: {
         ...devices['Desktop Safari'],
         viewport: { width: 1280, height: 720 },

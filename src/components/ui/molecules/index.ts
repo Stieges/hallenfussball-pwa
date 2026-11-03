@@ -63,3 +63,11 @@ export { ChipChoice } from './ChipChoice';
 export type { ChipChoiceProps, ChipOption } from './ChipChoice';
 export { TeamDetailsToggle } from './TeamDetailsToggle';
 export type { TeamDetailsToggleProps } from './TeamDetailsToggle';
+
+// T5 (@W3-030, @W3-040): Grafik hochladen, fachfrei
+export { GraphicUploadField } from './GraphicUploadField';
+export type { GraphicUploadFieldProps } from './GraphicUploadField';
+
+// G2 Spur A (@SL-193): Auswahl beschrifteter Aktionen, fachfrei
+export { ActionSheet } from './ActionSheet';
+export type { ActionSheetProps, ActionSheetItem } from './ActionSheet';

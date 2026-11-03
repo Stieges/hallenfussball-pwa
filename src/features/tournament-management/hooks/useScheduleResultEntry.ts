@@ -42,9 +42,28 @@ export type ResultEntryPrompt =
   | { kind: 'shootout'; matchNumber: number; score: string; homeName: string; awayName: string }
   | EndPrompt;
 
+/** Der angezeigte Stand beim Öffnen der Korrektur (Tore Team A : Tore Team B, ohne Strafstoßschießen) */
+export interface KnownScore {
+  a: number;
+  b: number;
+}
+
+/** Der Stand hat sich seit dem Öffnen der Korrektur geändert (@EK-032): Hinweis mit Namen und der neue Stand (Team A : Team B). */
+export interface StaleInfo {
+  message: string;
+  now: KnownScore;
+}
+
+export type EnterScore = (matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore, onStale?: (info: StaleInfo) => void) => Promise<boolean>;
+
 export interface ScheduleResultEntry {
   /** `false` = nichts gespeichert (Nein/Abbrechen/Ablehnung), die Eingabe-Zelle zeigt dann wieder den gespeicherten Stand */
-  enterScore: (matchId: string, scoreA: number, scoreB: number) => Promise<boolean>;
+  /**
+   * `knownScore` = der Stand, den die Turnierleitung beim Öffnen der Korrektur sah (@FU-082, @EK-032). Weicht der Stand nach dem Abgleich
+   * davon ab, wird nichts gespeichert: „inzwischen von <Name> geändert (jetzt x:y)“. Fehlt er, gilt der Stand der lokalen Kopie.
+   * `onStale` (@EK-032): übernimmt diese Ablehnung (Hinweis und neuer Stand) statt der Meldung am Rand -- der Korrekturdialog bleibt dann offen.
+   */
+  enterScore: EnterScore;
   prompt: ResultEntryPrompt | null;
   /** Grund (`reason`), `'yes'` (abgesetzt, beenden), Strafstoßstand `'4:3'` (`shootout`) oder `null` = Abbruch. */
   answerPrompt: (answer: string | null) => void;
@@ -159,7 +178,7 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
     return tCockpit(rejectionMessageKey(error));
   }, [staleText, t, tCockpit]);
 
-  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number): Promise<boolean> => {
+  const enterScore = useCallback(async (matchId: string, scoreA: number, scoreB: number, knownScore?: KnownScore, onStale?: (info: StaleInfo) => void): Promise<boolean> => {
     if (isTournamentClosedById(tournament.id)) {
       // R3-3 (@LZ-036): zweite Linie -- der Spielplan bietet die Eingabe nach dem Abschluss nicht an; kommt sie doch, nie still verwerfen
       showWarning(t('rights.closedSaveBlocked'));
@@ -261,23 +280,43 @@ export function useScheduleResultEntry(options: UseScheduleResultEntryOptions): 
           showWarning(t('actions.matchAlreadyFinished'));
           return false;
         }
-        const before = score(effectiveScoreFor(state, entry.ctx.teamAId), effectiveScoreFor(state, entry.ctx.teamBId));
-        if (basedOn !== state.lastScoreEventId) {
-          showWarning(await staleText(entry, before)); // M-1: inzwischen geändert -- keine Rückfrage
+        const currentA = effectiveScoreFor(state, entry.ctx.teamAId);
+        const currentB = effectiveScoreFor(state, entry.ctx.teamBId);
+        const before = score(currentA, currentB);
+        // @FU-082: Maßstab ist der Stand beim Öffnen des Dialogs, den die Turnierleitung sah (`knownScore`, eingefroren) -- weder die beim
+        // Absenden angezeigte Zahl noch die lokale Kopie, die frisch geöffnet leer oder alt sein kann (@EK-063, D12).
+        const changed = knownScore !== undefined
+          ? knownScore.a !== currentA || knownScore.b !== currentB
+          : basedOn !== state.lastScoreEventId;
+        if (changed) {
+          const message = await staleText(entry, before); // M-1: inzwischen geändert -- keine Rückfrage
+          if (onStale) {
+            onStale({ message, now: { a: currentA, b: currentB } }); // @EK-032: der Dialog bleibt offen und zeigt den neuen Stand
+          } else {
+            showWarning(message);
+          }
           return false;
         }
         const reason = await ask({ kind: 'reason', matchNumber: entry.meta.number, before, after: score(scoreA, scoreB) });
         if (!reason) {
           return false;
         }
-        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, basedOn);
+        eventId = await commands.correct(id, entry.ctx, actor, scores, reason, state.lastScoreEventId);
       }
       if (eventId) {
         trackAck(eventId, entry);
       }
       return true;
     } catch (error) {
-      showWarning(await rejectionText(error, entry));
+      const message = await rejectionText(error, entry);
+      const current = error instanceof MatchCommandRejectedError && error.code === ERROR_CODES.STALE_BASE
+        ? (error.detail as { currentScores?: Record<string, number> } | undefined)?.currentScores
+        : undefined;
+      if (onStale && current) {
+        onStale({ message, now: { a: current[entry.ctx.teamAId] ?? 0, b: current[entry.ctx.teamBId] ?? 0 } }); // @EK-032 (lokal: Fremdänderung während der Grund-Rückfrage, STALE_BASE aus buildEvents)
+      } else {
+        showWarning(message);
+      }
       return false;
     }
   }, [tournament, context, commands, actor, lockFinishedResults, showWarning, t, ask, trackAck, rejectionText, staleText, endWarning, offerTakeover]);

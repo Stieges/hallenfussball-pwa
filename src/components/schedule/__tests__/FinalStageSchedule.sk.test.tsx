@@ -85,10 +85,9 @@ describe('C-FINALRUNDE-MOBIL-EINGABE: offenes Finalrunden-Spiel am Handy eintrag
     expect(screen.getByTestId(`final-goals-${HF1}-home`).textContent).toBe('–');
   });
 
-  it('Gegenbeispiel: ein beendetes Spiel bleibt gesperrt (Korrigieren statt Eingabe)', () => {
+  it('Gegenbeispiel: ein beendetes Spiel bleibt gesperrt (die Korrektur beginnt in der Aktionsauswahl)', () => {
     render(
-      <FinalStageSchedule matches={[halbfinale({ scoreA: 1, scoreB: 0 })]} tournament={ansicht({ matchStatus: 'finished', scoreA: 1, scoreB: 0 })} editable onScoreChange={vi.fn()}
-        onStartCorrection={vi.fn()} />,
+      <FinalStageSchedule matches={[halbfinale({ scoreA: 1, scoreB: 0 })]} tournament={ansicht({ matchStatus: 'finished', scoreA: 1, scoreB: 0 })} editable onScoreChange={vi.fn()} />,
     );
     expect(screen.queryByTestId(`final-score-input-${HF1}-home`)).toBeNull();
   });

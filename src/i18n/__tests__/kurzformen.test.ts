@@ -362,9 +362,9 @@ describe('@OB-076 zusammengesetzte Bezeichnungen folgen der Sprache', () => {
     expect(paarung()).toBe('DJK Kammer gegen TSV Petting');
     await initRealGlobalI18n('en');
     expect(paarung()).toBe('DJK Kammer vs TSV Petting');
-    expect(i18next.t('tournament:schedule.runningMatch.message', { teamA: 'DJK Kammer', teamB: 'TSV Petting', scoreA: 1, scoreB: 0 })).toContain('DJK Kammer vs TSV Petting');
+    expect(i18next.t('tournament:matchCard.ariaLabel', { matchNumber: 7, homeTeam: 'DJK Kammer', awayTeam: 'TSV Petting' })).toContain('DJK Kammer vs TSV Petting');
     await initRealGlobalI18n('de');
-    expect(i18next.t('tournament:schedule.runningMatch.message', { teamA: 'DJK Kammer', teamB: 'TSV Petting', scoreA: 1, scoreB: 0 })).toContain('DJK Kammer gegen TSV Petting');
+    expect(i18next.t('tournament:matchCard.ariaLabel', { matchNumber: 7, homeTeam: 'DJK Kammer', awayTeam: 'TSV Petting' })).toContain('DJK Kammer gegen TSV Petting');
   });
 
   it('@OB-076 Minuten: in beiden Sprachen mit Zählform („1 Minute“, „5 Minuten“ / „1 minute“, „5 minutes“)', async () => {

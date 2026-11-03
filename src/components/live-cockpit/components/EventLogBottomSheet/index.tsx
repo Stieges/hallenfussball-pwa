@@ -147,12 +147,12 @@ export function EventLogBottomSheet({
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="Ereignisprotokoll"
+      title={t('eventLog.title')}
       testId="event-log-sheet"
     >
       {sortedEvents.length === 0 && resultEntries.ids.length === 0 ? (
         <div style={emptyStyle}>
-          Noch keine Ereignisse aufgezeichnet
+          {t('eventLog.empty')}
         </div>
       ) : (
         <div style={listStyle}>

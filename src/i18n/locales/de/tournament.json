@@ -9,7 +9,6 @@
   "finals": {
     "title": "Finalrunde",
     "noMatches": "Keine Spiele vorhanden",
-    "correct": "Korrigieren",
     "field": "Feld",
     "columns": {
       "referee": "Schiedsrichter",
@@ -108,8 +107,8 @@
     },
     "runningMatch": {
       "title": "Laufendes Spiel",
-      "message": "{{teamA}} gegen {{teamB}} ({{scoreA}}:{{scoreB}}) läuft gerade.",
-      "confirmSwitch": "Trotzdem wechseln"
+      "message": "Spiel {{running}} läuft weiter. Trotzdem zu Spiel {{target}} wechseln?",
+      "confirmSwitch": "Wechseln"
     },
     "koAfterSend": "K.-o.-Plätze werden nach dem Senden besetzt",
     "skip": {
@@ -197,7 +196,8 @@
       "restPartial": "{{done}} weitere Spiele gewertet, {{skipped}} nicht (schon angepfiffen oder Fehler)."
     },
     "startedLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) bleibt auf seinem Platz und Feld. Es lässt sich weder ziehen noch tauschen.",
-    "refereeLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) behält seinen Schiedsrichter."
+    "refereeLocked": "Ein angepfiffenes Spiel (läuft, Halbzeit oder beendet) behält seinen Schiedsrichter.",
+    "fieldConflict": "Feld nicht geändert: {{message}}"
   },
   "scheduleActions": {
     "share": "Teilen"
@@ -702,7 +702,6 @@
   "matchSummary": {
     "title": "Spielzusammenfassung",
     "close": "Schließen",
-    "editScore": "Ergebnis bearbeiten",
     "events": {
       "title": "Spielereignisse",
       "goalDecrement": "−1 {{team}}",
@@ -761,7 +760,6 @@
     "live": "Live"
   },
   "scoreCell": {
-    "correctResult": "Ergebnis korrigieren",
     "goalsOf": "Tore {{team}}",
     "homeFallback": "Heim",
     "awayFallback": "Gast",
@@ -1890,5 +1888,37 @@
     "refereeAssigned": "Schiedsrichter {{referee}} zu Spiel {{match}} zugewiesen",
     "reassignSummary": "{{referees}} Schiedsrichter-Zuweisungen, {{fields}} Feld-Zuweisungen angepasst",
     "breakViolation": "Team „{{team}}“ hat nur $t(sport:zeit.minuteCount, {\"count\": {{pause}} }) Pause (mindestens $t(sport:zeit.minuteCount, {\"count\": {{min}} }) erforderlich)"
+  },
+  "actionMenu": {
+    "title": "Spiel {{number}}",
+    "pairing": "{{home}} gegen {{away}}",
+    "open": "Aktionen für Spiel {{number}}",
+    "close": "Schließen",
+    "actions": {
+      "enterResult": "Ergebnis eintragen",
+      "kickOff": "Im Cockpit anpfeifen",
+      "shiftFrom": "Ab hier verschieben",
+      "changeReferee": "Schiedsrichter ändern",
+      "changeField": "Feld ändern",
+      "forfeit": "Nicht angetreten",
+      "revokeForfeit": "Wertung zurücknehmen",
+      "toCockpit": "Zum Cockpit",
+      "endAndEnter": "Spiel beenden und Ergebnis eintragen",
+      "correct": "Ergebnis korrigieren",
+      "protocol": "Protokoll ansehen"
+    },
+    "teamsMissing": "Die Teams dieses Spiels stehen noch nicht fest.",
+    "noAction": {
+      "awarded": "Spiel wurde gewertet",
+      "cancelled": "Spiel wurde abgesetzt"
+    },
+    "choose": {
+      "refereeTitle": "Schiedsrichter für Spiel {{number}}",
+      "refereeLabel": "Schiedsrichter",
+      "fieldTitle": "Feld für Spiel {{number}}",
+      "fieldLabel": "Feld",
+      "save": "Übernehmen",
+      "cancel": "Abbrechen"
+    }
   }
 }

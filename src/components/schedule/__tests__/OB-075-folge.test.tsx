@@ -135,7 +135,7 @@ describe('@W3-031 Schiedsrichter im Spielplan: „Schiedsrichter 2“, „SR“ 
 
 describe('@OB-075 Finalrunden-Tabelle: Ergebniszelle (MatchScoreCell) mit ausgeschriebenem Begriff', () => {
   const zelle = (ergebnis: ResultFigures) => (
-    <MatchScoreCell matchId="hf1" scoreA={ergebnis.goalsA} scoreB={ergebnis.goalsB} editable={false} isFinished inCorrectionMode={false} result={ergebnis} onScoreChange={() => true} />
+    <MatchScoreCell matchId="hf1" scoreA={ergebnis.goalsA} scoreB={ergebnis.goalsB} editable={false} isFinished result={ergebnis} onScoreChange={() => true} />
   );
 
   it.each([

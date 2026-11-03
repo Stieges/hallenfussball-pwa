@@ -1,8 +1,8 @@
 /**
- * A-08e (Frage 1 = A, Daniel 15.10.): kein Korrektur-Knopf im Spielplan bis B-24.
+ * Der frühere Korrekturweg (Taste „Korrigieren“ an der Zelle, CorrectionDialog) ist weg: die Korrektur beginnt seit G2 Spur A
+ * in der Aktionsauswahl des Spiels (@SL-193) und öffnet denselben Dialog wie im Cockpit (@EK-063); siehe SL-193-aktionsauswahl.test.tsx.
  * Pflichttest echter Weg: ScheduleTab mit echten Hooks und echtem Spielplan (alle Spiele beendet, Turnierleitung
- * mit Berechtigung): kein Korrektur-Einstieg, kein CorrectionDialog, onMatchesUpdate 0x.
- * Der Hook behaelt Zustand + Start/Abbruch fuer B-24 (useCorrectionMode.test.tsx).
+ * mit Berechtigung): keine Taste an der Zelle, kein CorrectionDialog, onMatchesUpdate 0x.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
@@ -25,7 +25,7 @@ const teams: Team[] = ['A', 'B'].flatMap((group, g) =>
   [1, 2, 3, 4].map((n) => ({ id: testUuid(g * 10 + n), name: `Team ${group}${n}`, group })),
 );
 
-describe('ScheduleTab ohne Korrektur-Altpfad (A-08e, Frage 1 = A)', () => {
+describe('ScheduleTab ohne Korrektur-Altpfad (Korrektur nur über die Aktionsauswahl, @SL-193)', () => {
   it('beendete Spiele: kein Korrektur-Knopf, kein Korrektur-Dialog, onMatchesUpdate 0x', () => {
     const base = createMockTournament({
       teams, numberOfTeams: 8, numberOfGroups: 2, numberOfFields: 1, groupSystem: 'groupsAndFinals',

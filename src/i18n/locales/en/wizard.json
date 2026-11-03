@@ -100,7 +100,55 @@
     "rulebook": "Rulebook (optional)",
     "rulebookPlaceholder": "e.g. rules of the Bavarian Football Association for futsal",
     "rulebookLimit": "Up to 80 characters.",
-    "rulebookTruncated": "Cut to 80 characters."
+    "rulebookTruncated": "Cut to 80 characters.",
+    "graphics": {
+      "logo": {
+        "label": "Tournament logo",
+        "optional": "(optional)",
+        "upload": "Upload logo",
+        "change": "Change",
+        "remove": "Remove",
+        "previewAlt": "Tournament logo preview",
+        "device": "Saved on this device only. Printouts from other devices appear without a logo.",
+        "lowRes": "The logo is only {{height}} pixels high and may look blurry in print. It is used anyway and appears in the header of the schedule. At least {{min}} pixels of height are recommended.",
+        "keeps": "The current logo stays.",
+        "saveFailed": "The logo could not be saved on this device. Storage is full or blocked. The current logo stays."
+      },
+      "second": {
+        "label": "Second graphic on the right",
+        "optional": "(optional, e.g. sponsor)",
+        "upload": "Upload graphic",
+        "change": "Change",
+        "remove": "Remove",
+        "previewAlt": "Second graphic preview",
+        "lowRes": "The graphic is only {{height}} pixels high and may look blurry in print. It is used anyway and appears in the header of the schedule. At least {{min}} pixels of height are recommended.",
+        "keeps": "The current graphic stays.",
+        "saveFailed": "The graphic could not be saved on this device. Storage is full or blocked. The current graphic stays."
+      },
+      "format": "PNG, JPG or SVG, up to {{maxMb}} MB",
+      "error": {
+        "type": "This file was not accepted. Allowed are PNG, JPG and SVG.",
+        "size": "This file was not accepted. It is larger than {{maxMb}} MB or has too many pixels (more than {{maxSide, number}} on one side).",
+        "unreadable": "This file was not accepted. It cannot be read or is damaged."
+      },
+      "accent": {
+        "label": "Color for schedule and poster",
+        "appGreen": "App green",
+        "names": {
+          "red": "Red",
+          "orange": "Orange",
+          "yellow": "Yellow",
+          "green": "Green",
+          "teal": "Teal",
+          "blue": "Blue",
+          "purple": "Purple",
+          "pink": "Pink",
+          "brown": "Brown",
+          "gray": "Gray"
+        }
+      },
+      "loadFailed": "The saved graphics could not be loaded on this device."
+    }
   },
   "location": {
     "label": "Venue",
@@ -170,6 +218,13 @@
       "unbalanced": "Uneven group sizes ({{distribution}})",
       "unbalancedAction": "Distribute evenly for fairer schedule",
       "distribution": "Group distribution: {{distribution}}"
+    },
+    "logoDialogError": {
+      "type": "This file format is not supported. Allowed are PNG, JPG, WebP, SVG and GIF.",
+      "size": "The file is larger than {{maxMb}} MB.",
+      "unreadable": "The file could not be read. Please choose another file.",
+      "generic": "The logo could not be processed. Please try another file.",
+      "consent": "Please confirm the usage rights."
     }
   },
   "step5": {

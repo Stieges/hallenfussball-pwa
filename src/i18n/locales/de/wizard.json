@@ -100,7 +100,55 @@
     "rulebook": "Regelwerk (optional)",
     "rulebookPlaceholder": "z. B. Richtlinien des Bayerischen Fußball-Verbands für Futsal",
     "rulebookLimit": "Höchstens 80 Zeichen.",
-    "rulebookTruncated": "Auf 80 Zeichen gekürzt."
+    "rulebookTruncated": "Auf 80 Zeichen gekürzt.",
+    "graphics": {
+      "logo": {
+        "label": "Turnierlogo",
+        "optional": "(optional)",
+        "upload": "Logo hochladen",
+        "change": "Ändern",
+        "remove": "Entfernen",
+        "previewAlt": "Vorschau Turnierlogo",
+        "device": "Nur auf diesem Gerät gespeichert. Ausdrucke von anderen Geräten erscheinen ohne Logo.",
+        "lowRes": "Das Logo ist nur {{height}} Bildpunkte hoch und kann im Druck unscharf wirken. Es wird trotzdem übernommen und steht im Kopf des Spielplans. Empfohlen sind mindestens {{min}} Bildpunkte Höhe.",
+        "keeps": "Das bisherige Logo bleibt.",
+        "saveFailed": "Das Logo konnte auf diesem Gerät nicht gespeichert werden. Der Speicher ist voll oder gesperrt. Das bisherige Logo bleibt."
+      },
+      "second": {
+        "label": "Zweite Grafik rechts",
+        "optional": "(optional, z. B. Sponsor)",
+        "upload": "Grafik hochladen",
+        "change": "Ändern",
+        "remove": "Entfernen",
+        "previewAlt": "Vorschau zweite Grafik",
+        "lowRes": "Die Grafik ist nur {{height}} Bildpunkte hoch und kann im Druck unscharf wirken. Die Grafik wird trotzdem übernommen und steht im Kopf des Spielplans. Empfohlen sind mindestens {{min}} Bildpunkte Höhe.",
+        "keeps": "Die bisherige Grafik bleibt.",
+        "saveFailed": "Die Grafik konnte auf diesem Gerät nicht gespeichert werden. Der Speicher ist voll oder gesperrt. Die bisherige Grafik bleibt."
+      },
+      "format": "PNG, JPG oder SVG, bis {{maxMb}} MB",
+      "error": {
+        "type": "Diese Datei wurde nicht übernommen. Erlaubt sind PNG, JPG und SVG.",
+        "size": "Diese Datei wurde nicht übernommen. Die Datei ist größer als {{maxMb}} MB oder hat zu viele Bildpunkte (mehr als {{maxSide, number}} an einer Seite).",
+        "unreadable": "Diese Datei wurde nicht übernommen, weil sie sich nicht lesen lässt oder beschädigt ist."
+      },
+      "accent": {
+        "label": "Farbe für Spielplan und Aushang",
+        "appGreen": "Grün der App",
+        "names": {
+          "red": "Rot",
+          "orange": "Orange",
+          "yellow": "Gelb",
+          "green": "Grün",
+          "teal": "Türkis",
+          "blue": "Blau",
+          "purple": "Violett",
+          "pink": "Rosa",
+          "brown": "Braun",
+          "gray": "Grau"
+        }
+      },
+      "loadFailed": "Die gespeicherten Grafiken konnten auf diesem Gerät nicht geladen werden."
+    }
   },
   "location": {
     "label": "Veranstaltungsort",
@@ -170,6 +218,13 @@
       "unbalanced": "Ungleiche Gruppengrößen ({{distribution}})",
       "unbalancedAction": "Für faireren Spielplan gleichmäßig verteilen",
       "distribution": "Gruppenverteilung: {{distribution}}"
+    },
+    "logoDialogError": {
+      "type": "Dieses Dateiformat wird nicht unterstützt. Erlaubt sind PNG, JPG, WebP, SVG und GIF.",
+      "size": "Die Datei ist größer als {{maxMb}} MB.",
+      "unreadable": "Die Datei konnte nicht gelesen werden. Bitte eine andere Datei wählen.",
+      "generic": "Das Logo konnte nicht verarbeitet werden. Bitte eine andere Datei versuchen.",
+      "consent": "Bitte bestätige die Nutzungsrechte."
     }
   },
   "step5": {
