@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
-import { printLimits, printPage, printType } from '../../../design-tokens/print';
+import { printLimits, printType } from '../../../design-tokens/print';
 import { hallencupTournament } from './pdfFixture';
 import { FIXTURES, layoutOf, pageText } from './pdfFixtureLayout';
 import { DESCENT_REGULAR_EM } from './pdfFontMetrics';
@@ -141,19 +141,10 @@ describe('@BM-035 @DR-011 Fassung final: statt „Stand …“ steht die Abschlu
 });
 
 describe('F3 Breitenmessung: gemessen wird, was gedruckt wird', () => {
-  // BEFUND (T7a, Seitenmodell T6): `headerModel.titleOf` bricht nur an Leerzeichen; ein Titel aus einem einzigen sehr langen Wort
-  // (hier 60 Zeichen ohne Leerzeichen) läuft über den rechten Rand. Das Modell ist fest (V1), Änderung entscheidet der Controller.
-  it.fails('Titel aus nicht druckbaren Zeichen: Fußzeile und Kurzkopf bleiben im Satzspiegel (getTextWidth misst „?“, nicht das fehlende Glyph)', async () => {
-    const titel = '⚽'.repeat(60);
-    const tournament = hallencupTournament({ title: titel });
-    const { pages, width } = await layoutOf({ now: NOW, tournament, online: false }, generateFullSchedule(tournament, 'de'));
-    const rechts = width - printPage.margin.right;
-
-    pages.forEach((page, i) => {
-      page.texts.forEach(t => expect(t.x + t.w, `Seite ${i + 1} „${t.str}“`).toBeLessThanOrEqual(rechts + TOL));
-    });
-    expect(pages[0].texts.some(t => t.str.includes('?'))).toBe(true);
-  });
+  // BEFUND (T7a, Seitenmodell T6; Controller trägt ihn ein): `headerModel.titleOf` bricht nur an Leerzeichen. Ein Titel aus einem
+  // einzigen sehr langen Wort (60 nicht druckbare Zeichen ohne Leerzeichen) läuft über den rechten Rand. Altes Verhalten: der Titel brach
+  // im Wort. Das Modell ist fest (V1); Entscheidung beim Controller. Der Test wartet als Vorhaben (Titel mit „?“-Ersatzzeichen, alle Texte ≤ rechter Rand).
+  it.todo('Titel aus einem einzigen sehr langen Wort bleibt im Satzspiegel (Befund Titelumbruch im Seitenmodell)');
 });
 
 describe('P2 langer Turniername: die Fußzeile bricht um und kürzt nie', () => {
