@@ -5,7 +5,7 @@
  * Quelle: `mockups/runde-2026-10-30/handzettel/` (NOTIZ.md, Abschnitt „Korrekturen nach Review“ maßgeblich, und
  * `handzettel.css`); Abstände nach @DR-034. Der Probedruck entscheidet endgültig.
  */
-import { printUnit } from './print';
+import { printAccent, printUnit } from './print';
 
 const pt = (value: number): number => value * printUnit.mmPerPt;
 
@@ -107,4 +107,87 @@ export const printTableGrid = {
 export const printGroupMark = {
   size: 5.2,
   stroke: pt(1.25),
+} as const;
+
+/**
+ * Akzent ohne Turnierlogo (@DR-041 „keins“): Linie = App-Grün, helle Fläche = dasselbe Grün mit Weiß gemischt
+ * (`zebraTone('#047857')` aus `lib/color/accent.ts`; ein Test hält beides gleich). Das Druckmodul rechnet nicht selbst.
+ */
+export const printAccentDefault = {
+  line: printAccent.fallback,
+  tint: '#CFE5DF',
+} as const;
+
+/**
+ * Kopf von Seite 1 (Mockup `handzettel.css`: .kopf, .eck, .regel, .qr). Titel 24 pt, Eckdaten im hellen Block mit
+ * Beschriftung 8 pt, Hauptwert 14 pt, Nebenwert 11 pt; Regelzeile 10,5 pt. Uhrzeiten stehen in 14 pt (@DR-031).
+ */
+export const printSheetHead = {
+  titlePt: 24,
+  titleMinPt: 18,
+  titleStepPt: 2,
+  titleMaxLines: 3,
+  titleLineHeight: 1.12,
+  subtitlePt: 11,
+  subtitleGap: 1,
+  /** Abstand Unterkante Text/Grafik → Kopflinie (Akzent, 1,5 pt). */
+  bandPadBottom: 2.5,
+  /** Abstand Kopflinie → Eckdaten. */
+  belowRule: 3,
+  /** Abstand der Grafik zum Titel (wie `printHeader.logoGap`). */
+  factLabelPt: 8,
+  factBigPt: 14,
+  factMidPt: 11,
+  factLineHeight: 1.2,
+  factsPadV: 2.5,
+  factsPadH: 3,
+  factsColGap: 3,
+  factsRowGap: 2,
+  /** Mindestbreite der zweiten Spalte; die erste gibt nach, wenn der Block schmal ist. */
+  factsSecondColMin: 50,
+  rulePt: 10.5,
+  ruleLineHeight: 1.3,
+  /** Abstand Eckdaten-Block → Regelzeile. */
+  ruleGap: 2.5,
+  /** Abstand zwischen Eckdaten-Spalte und QR. */
+  qrGap: 5,
+  qrCaptionPt: 10.5,
+  qrCaptionGap: 1,
+  /** Abstand Unterstreichung → Grundlinie der Beschriftung. */
+  underlineDrop: 0.6,
+  /** Abstand Kopf → Spaltenkopf der Spiele. */
+  belowHead: 2,
+  /** Abstand der Unterstreichung zur Schrift allgemein, Strichstärke der Unterstreichung. */
+  underlineStroke: pt(0.75),
+} as const;
+
+/** Spieltabelle (Mockup `.spiele`): Spaltenbreiten, Spaltenkopf, Innenabstände der Namen. */
+export const printMatchTable = {
+  /** Feste Spalten in mm; Heim und Gast teilen den Rest. */
+  cols: { nr: 8, time: 17, field: 10, group: 9, result: 30, referee: 26.5 },
+  headHeight: 6,
+  headPt: 8.5,
+  /** Namen: Abstand zum Ergebnis (innen) und zur Spaltenkante (außen). */
+  nameInner: 1.4,
+  nameOuter: 0.6,
+  /** Zeit: Abstand zur linken Spaltenkante. */
+  timeInset: 2,
+  /** Zeilen der Referee-Spalte: Abstand links, Schrift. */
+  refInset: 1.5,
+  refPt: 10.5,
+  /** Ergebnis: Zahlen links/rechts vom Doppelpunkt. */
+  scoreGap: 3,
+  /** Text „läuft“, „ausgefallen“, Kennzeichen „korrigiert“: Abstand zum Zeilenboden bzw. zur Mitte. */
+  liveInset: 1,
+  markGap: 0.8,
+  /** Doppelpunkt zwischen den Schreiblinien: Grundlinie so weit über der Linie. */
+  colonLift: 1.6,
+  /** Beschriftung kleiner Linien (Verlängerung, Strafstoßschießen) über den Linien. */
+  smallLabelPt: 7.5,
+  smallLabelRise: 3.2,
+} as const;
+
+/** Fußzeile mit Adresse (@DR-038): Adresse als Link in einer eigenen Zeile. */
+export const printFooterLink = {
+  underlineStroke: pt(0.75),
 } as const;

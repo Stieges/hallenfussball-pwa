@@ -12,6 +12,7 @@
  */
 import type { PdfInput } from '../pdfInput';
 import type { PdfLocale, PdfTexts } from '../translations';
+import type { PageGeometry } from '../layout';
 import type { FontWeight, TextMeasure } from './measure';
 
 /** Rechteck: `x`, `y` linke obere Ecke. */
@@ -97,8 +98,8 @@ export interface ShortHeaderBlock extends BlockBase {
   rule: RuleLine;
 }
 
-/** Spalten einer Spieltabelle. `shootout` nur in der Finalrunde, `referee` nur mit Einträgen (@DR-025). */
-export type ColumnKey = 'nr' | 'time' | 'group' | 'home' | 'result' | 'shootout' | 'away' | 'referee';
+/** Spalten einer Spieltabelle. `field` nur bei mehr als einem Feld, `shootout` nur in der Finalrunde, `referee` nur mit Einträgen (@DR-025). */
+export type ColumnKey = 'nr' | 'time' | 'field' | 'group' | 'home' | 'result' | 'shootout' | 'away' | 'referee';
 export interface ColumnModel { key: ColumnKey; x: number; w: number }
 
 /** Spaltenkopf einer Spieltabelle; auf jeder Folgeseite wiederholt (@DR-002, @DR-033). */
@@ -231,7 +232,8 @@ export interface PageModel {
   qr: 'large' | 'small' | null;
   /** QR, Beschriftung und Adresse der Fußzeile als Link (@DR-038); leer ohne Online-Teilen. */
   links: LinkArea[];
-  footer: FooterModel;
+  /** Fußzeile der Seite; bis T7b zeichnet `render/footer.ts` sie für alle Seiten aus dem Dokumentzustand (Seitenzahl insgesamt). */
+  footer?: FooterModel;
 }
 
 /**
@@ -254,6 +256,8 @@ export interface ScheduleModel {
 /** Eingang des Seitenmodells: der aufgelöste PDF-Eingang, die Texte und, was das Modell aus Bildern und QR braucht. */
 export interface ScheduleModelSource {
   input: PdfInput;
+  /** Satzspiegel (Ränder, Kurzkopf, Fußzeile) aus `pageGeometry`. */
+  geo: PageGeometry;
   t: PdfTexts;
   /** Seitenverhältnis (Breite ÷ Höhe) je hinterlegter und ladbarer Grafik; fehlt eine, rückt der Titel nach (@DR-024). */
   graphicsAspect: { left?: number; right?: number };

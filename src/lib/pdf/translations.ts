@@ -13,6 +13,24 @@ export type PdfLocale = 'de' | 'en';
 /** Übersetzt einen Schlüssel unter `tournament` (z. B. `pdf.group`) oder mit Namensraum davor (`short:tabellenkopf.rank`) mit optionalen Werten. */
 export type PdfTranslator = (key: string, values?: Record<string, string | number>) => string;
 
+/** Texte des Handzettels (Eckdaten im Kopf, Titel der Datei; `pdf.sheet.*`, @DR-031, @DR-039). */
+export interface PdfSheetTexts {
+  when: string;
+  where: string;
+  duration: string;
+  flow: string;
+  /** „Beginn 10:00“ und „Ende ca. 15:45“ (die Zeit ist schon auf 5 Minuten gerundet). */
+  begin: (clock: string) => string;
+  endApprox: (clock: string) => string;
+  flowGroup: (count: number) => string;
+  flowFinals: (count: number) => string;
+  flowMatches: (count: number) => string;
+  /** Zusatz im Titel der Datei: „Hallencup Nord – Spielplan“ (en: „Schedule“). */
+  titleSuffix: string;
+  /** Adresse der Zuschauer-Seite in der Fußzeile, davor ein Satz („Live-Ergebnisse und aktuelle Zeiten:“). */
+  footerLink: string;
+}
+
 export interface PdfTexts {
   organizer: string;
   hall: string;
@@ -107,6 +125,7 @@ export interface PdfTexts {
   formatClock: (date: Date) => string;
   /** Texte der Regelzeilen im Kopf und der K.-o.-Zeilen (`pdf.rules.*`, B-28a3-3a). */
   rules: PdfRuleTexts;
+  sheet: PdfSheetTexts;
 }
 
 /** Texte der Regelzeilen (`pdf.rules.*`). Die Kriterien tragen die Wortlaute aus @DR-020. */
@@ -290,5 +309,18 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     },
     formatClock: date => clock.format(date),
     rules: buildRuleTexts(translate, s, locale),
+    sheet: {
+      when: s('sheet.when'),
+      where: s('sheet.where'),
+      duration: s('sheet.duration'),
+      flow: s('sheet.flow'),
+      begin: clock => translate('pdf.sheet.begin', { clock }),
+      endApprox: clock => translate('pdf.sheet.endApprox', { clock }),
+      flowGroup: count => translate('pdf.sheet.flowGroup', { count }),
+      flowFinals: count => translate('pdf.sheet.flowFinals', { count }),
+      flowMatches: count => translate('pdf.sheet.flowMatches', { count }),
+      titleSuffix: s('sheet.titleSuffix'),
+      footerLink: s('sheet.footerLink'),
+    },
   };
 }
