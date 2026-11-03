@@ -120,6 +120,7 @@ describe('@BM-051 @BM-028 Olli: Toolbar → „Als PDF“ → Wahl der Fassung',
     fireEvent.click(screen.getByTestId('pdf-choice-blank'));
     await save();
 
+    expect(lastCapture()?.pages[0].some(t => t.startsWith('Spielplan'))).toBe(true);
     expect(text()).not.toMatch(/zum Ausfüllen|ohne Ergebnisse/);
     expect(lastCapture()?.filename).toBe('Hallencup_Nord_Spielplan_ohne-Ergebnisse_2026-11-14_1507.pdf');
   });
@@ -132,6 +133,7 @@ describe('@BM-051 @BM-028 Olli: Toolbar → „Als PDF“ → Wahl der Fassung',
     const captured = lastCapture();
     expect(captured?.pageWidth).toBeLessThan(captured?.pageHeight ?? 0);
     expect(text()).not.toContain('zum Ausfüllen');
+    expect(captured?.pages[0].some(t => t.startsWith('Spielplan'))).toBe(true);
   });
 
   it('@DR-026 keine Wahl „quer“ und keine freie Wahl „Mit Spielstand“ oder „Tabellen einschließen“', () => {

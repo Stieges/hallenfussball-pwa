@@ -83,8 +83,8 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * gesichtet. Die Querformat-Fixtures entfallen (@DR-026, MVP+). Mit „Ablauf“ in den Eckdaten und den Gruppenzeichen (@DR-031, @DR-001). Stände davor: 2341a1c44ae0, 126de4bc7787, EN d04aeeb0a9b1.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'df75f2d8db68',
-  '20 Spiele, hoch': '3d7d43300840',
+  '12 Spiele, hoch': '7216a62abeb3',
+  '20 Spiele, hoch': '8d29266cc850',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -99,7 +99,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('6030179f8e7a');
+    expect(layoutDigest(pages)).toBe('92afa4a2e407');
   });
 });
 

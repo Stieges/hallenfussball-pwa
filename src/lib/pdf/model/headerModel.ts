@@ -51,12 +51,33 @@ export function qrBoxSide(modules: number, edge: number): number {
   return edge + (2 * printHeader.qrQuietModules * edge) / modules;
 }
 
+/** Teilt eine Zeile, die auch allein nicht in `width` passt, zeichenweise (nur wenn kein Umbruch an Leerzeichen, „-“ oder „/“ reicht). */
+function splitHard(line: string, width: number, pt: number, measure: TextMeasure): string[] {
+  const out: string[] = [];
+  let current = '';
+  for (const char of line) {
+    if (current !== '' && measure.width(current + char, pt, 'bold') > width) {
+      out.push(current);
+      current = char;
+    } else {
+      current += char;
+    }
+  }
+  return current === '' ? out : [...out, current];
+}
+
+/**
+ * Titel: erst die Schrift schrittweise bis `titleMinPt` verkleinern, solange er nicht in `titleMaxLines` Zeilen und die
+ * Breite passt (@BM-021); passt ein einzelnes Wort auch dann nicht, wird es zeichenweise geteilt, damit nichts über den Rand
+ * läuft (@DR-001) und nichts gekürzt wird.
+ */
 function titleOf(title: string, width: number, measure: TextMeasure): { lines: string[]; pt: number } {
   let pt: number = printSheetHead.titlePt;
   for (;;) {
     const lines = wrapName(title, width, pt, measure, 'bold');
-    if (lines.length <= printSheetHead.titleMaxLines || pt - printSheetHead.titleStepPt < printSheetHead.titleMinPt) {
-      return { lines, pt };
+    const tooWide = lines.some(line => measure.width(line, pt, 'bold') > width);
+    if ((lines.length <= printSheetHead.titleMaxLines && !tooWide) || pt - printSheetHead.titleStepPt < printSheetHead.titleMinPt) {
+      return { lines: lines.flatMap(line => (measure.width(line, pt, 'bold') > width ? splitHard(line, width, pt, measure) : [line])), pt };
     }
     pt -= printSheetHead.titleStepPt;
   }

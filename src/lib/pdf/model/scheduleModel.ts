@@ -92,13 +92,12 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   // Kopf (Eckdaten ohne Halle oder Datum lassen die Angabe ganz weg, @DR-031)
   const sheet = t.sheet;
   const duration = entries.find(e => e.kind === 'duration')?.line ?? '';
-  const flowParts = rules.groupSystem === 'roundRobin'
-    ? [sheet.flowMatches(groupMatches.length)]
-    : [...(groupMatches.length > 0 ? [sheet.flowGroup(groupMatches.length)] : []), ...(finalCount > 0 ? [sheet.flowFinals(finalCount)] : [])];
+  // „Ablauf“: Zahl der Spiele, mit Finalrunde „28 Spiele, davon 8 Finalspiele“ (@DR-031)
+  const flowText = finalCount > 0 ? sheet.flowWithFinals(groupMatches.length + finalCount, finalCount) : sheet.flowMatches(groupMatches.length);
   const address = getLocationAddressLine(schedule.tournament);
   const headerInput: HeaderInput = {
     title: schedule.tournament.title,
-    subtitle: [schedule.tournament.ageClass?.trim() ?? '', input.organizerName].filter(part => part !== '').join(t.rules.join),
+    subtitle: [sheet.titleSuffix, schedule.tournament.ageClass?.trim() ?? '', input.organizerName].filter(part => part !== '').join(t.rules.join),
     labels: { when: sheet.when, where: sheet.where, duration: sheet.duration, flow: sheet.flow },
     date: schedule.tournament.date ? dayWithWeekday(schedule.tournament.date, t) : '',
     begin: sheet.begin(t.formatClock(schedule.startTime)),
@@ -107,7 +106,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
     hall: input.hallName.trim(),
     address: address ?? '',
     duration: duration.includes(': ') ? duration.slice(duration.indexOf(': ') + 2) : duration,
-    flow: flowParts.join(t.rules.join),
+    flow: groupMatches.length + finalCount > 0 ? flowText : '',
     rules: entries.filter((e): e is typeof e & { kind: 'mode' | 'tiebreak' | 'playOut' | 'rulebook' } => e.kind !== 'duration'),
     graphicsAspect: source.graphicsAspect,
     ...(source.qr ? { qr: { url: source.qr.url, modules: source.qr.modules, caption: input.wish.viewerResultsHidden || !content.results ? t.qrCaption.plan : t.qrCaption.results } } : {}),

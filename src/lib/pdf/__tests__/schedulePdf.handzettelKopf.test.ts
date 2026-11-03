@@ -75,12 +75,18 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
     expect(flat(pages[0])).toContain('Ablauf15Spiele');
   });
 
-  it('@DR-031 Fall b: „20 Gruppenspiele · 8 Finalspiele“ steht nur, wenn es in einer Zeile in die Zelle passt; sonst fällt „Ablauf“ ganz weg (kein Bruchstück)', async () => {
+  it('@DR-031 Fall b: unter „Ablauf“ steht „28 Spiele, davon 8 Finalspiele“ in einer Zeile', async () => {
     const { pages } = await handzettelPdf(FALL_B);
-    const kopf = flat(pages[0]);
+    const zeile = pages[0].texts.find(t => t.str.includes('28 Spiele, davon 8 Finalspiele'));
 
-    // mit Zellenbreite des Mockups passt der Text nicht in eine Zeile (Inter 11 pt): der Block bliebe nicht gleich hoch
-    expect(kopf.includes('Ablauf20Gruppenspiele·8Finalspiele') || (!kopf.includes('Ablauf') && !kopf.includes('Finalspiele'))).toBe(true);
+    expect(strs(pages[0])).toContain('Ablauf');
+    expect(zeile, 'Text in einem Stück, ohne Umbruch').toBeDefined();
+  });
+
+  it('@DR-031 Fall b englisch: „28 matches, 8 of them finals“', async () => {
+    const { pages } = await handzettelPdf(FALL_B, { locale: 'en' });
+
+    expect(pages[0].texts.some(t => t.str.includes('28 matches, 8 of them finals'))).toBe(true);
   });
 
   it('@DR-031 Gegenprobe: würde „Ablauf“ den Block höher machen (ohne Halle: dritte Angabe in einer neuen Zeile), fällt er weg', async () => {
@@ -97,6 +103,28 @@ describe('@DR-031 „Ablauf“ in der Eckdaten-Zelle', () => {
 
     // mit Ablauf hätte Seite 1 weniger Spiele: das Modell wählt die Fassung ohne, solange sie mehr Spiele auf Seite 1 hält
     expect(ohneAblauf || spiele >= 19).toBe(true);
+  });
+});
+
+describe('@DR-005 „Spielplan“ am Anfang der Zeile unter dem Titel', () => {
+  const untertitel = (page: LayoutPage): string | undefined => page.texts.find(t => t.str.startsWith('Spielplan') || t.str.startsWith('Schedule'))?.str;
+
+  it.each(['plan', 'blank'] as const)('@DR-005 Fassung %s: „Spielplan · U13 · TuS Traunreut“, ohne Zusatz', async edition => {
+    const { pages } = await handzettelPdf(FALL_B, { options: { edition } });
+
+    expect(untertitel(pages[0])).toBe('Spielplan · U13 · TuS Traunreut');
+  });
+
+  it('@DR-005 englische App: „Schedule · …“', async () => {
+    const { pages } = await handzettelPdf(FALL_B, { locale: 'en' });
+
+    expect(untertitel(pages[0])).toBe('Schedule · U13 · TuS Traunreut');
+  });
+
+  it('@DR-005 ohne Altersklasse und Veranstalter steht nur „Spielplan“, kein „·“ am Rand', async () => {
+    const { pages } = await handzettelPdf(FALL_B, { tournament: { ageClass: '', organizer: '' }, options: { organizerName: '' } });
+
+    expect(untertitel(pages[0])).toBe('Spielplan');
   });
 });
 

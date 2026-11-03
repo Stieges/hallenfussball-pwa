@@ -29,6 +29,7 @@ describe('G57 @BM-052 @DR-005 „Spielplan“ ohne Zusatz in beiden Fassungen: T
     const { pages, bytes } = await handzettelLike(edition, locale);
 
     expect((await readMetadata(bytes)).title).toBe(`Hallencup Nord – ${wort}`);
+    expect(strs(pages[0]).some(s => s.startsWith(`${wort} · `)), 'Zeile unter dem Titel beginnt mit dem Wort').toBe(true);
     expect(strs(pages[0]).filter(s => /zum Ausfüllen|ohne Ergebnisse|fill in|without results|eintragen/i.test(s))).toEqual([]);
   });
 });

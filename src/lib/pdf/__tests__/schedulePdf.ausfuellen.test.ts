@@ -55,11 +55,12 @@ const tabellenSeite = (pages: LayoutPage[]): LayoutPage => {
 };
 
 describe('@DR-005 @BM-052 Pflichtfall: Tom um 15:07, Spiel 11 steht 2:1, Halbfinale 1 besetzt', () => {
-  it('@DR-005 „Spielplan“ ohne Zusatz, wie in der Fassung mit Ergebnissen: Titel der Datei und kein „ohne Ergebnisse“ im Text (Kicker entfällt im Handzettel)', async () => {
+  it('@DR-005 oben im PDF steht „Spielplan“ am Anfang der Zeile unter dem Titel, wie in der Fassung mit Ergebnissen, ohne Zusatz', async () => {
     const { pages, bytes } = await seiten('blank');
     const meta = await readMetadata(bytes);
 
     expect(meta.title).toBe('Hallencup Nord – Spielplan');
+    expect(pages[0].texts.some(t => t.str.startsWith('Spielplan · '))).toBe(true);
     expect(pages[0].texts.some(t => /zum ausfüllen|ohne ergebnisse/i.test(t.str))).toBe(false);
   });
 

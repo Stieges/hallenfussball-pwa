@@ -22,8 +22,8 @@ export interface PdfSheetTexts {
   /** „Beginn 10:00“ und „Ende ca. 15:45“ (die Zeit ist schon auf 5 Minuten gerundet). */
   begin: (clock: string) => string;
   endApprox: (clock: string) => string;
-  flowGroup: (count: number) => string;
-  flowFinals: (count: number) => string;
+  /** „28 Spiele, davon 8 Finalspiele“ (Gesamtzahl, davon Finalspiele; @DR-031). */
+  flowWithFinals: (total: number, finals: number) => string;
   flowMatches: (count: number) => string;
   /** Zusatz im Titel der Datei: „Hallencup Nord – Spielplan“ (en: „Schedule“). */
   titleSuffix: string;
@@ -316,8 +316,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
       flow: s('sheet.flow'),
       begin: clock => translate('pdf.sheet.begin', { clock }),
       endApprox: clock => translate('pdf.sheet.endApprox', { clock }),
-      flowGroup: count => translate('pdf.sheet.flowGroup', { count }),
-      flowFinals: count => translate('pdf.sheet.flowFinals', { count }),
+      flowWithFinals: (total, finals) => translate('pdf.sheet.flowWithFinals', { total, count: finals }),
       flowMatches: count => translate('pdf.sheet.flowMatches', { count }),
       titleSuffix: s('sheet.titleSuffix'),
       footerLink: s('sheet.footerLink'),

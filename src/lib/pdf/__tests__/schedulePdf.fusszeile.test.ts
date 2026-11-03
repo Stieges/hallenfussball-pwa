@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
-import { printLimits, printType } from '../../../design-tokens/print';
+import { printLimits, printPage, printType } from '../../../design-tokens/print';
 import { hallencupTournament } from './pdfFixture';
 import { FIXTURES, layoutOf, pageText } from './pdfFixtureLayout';
 import { DESCENT_REGULAR_EM } from './pdfFontMetrics';
@@ -141,10 +141,19 @@ describe('@BM-035 @DR-011 Fassung final: statt „Stand …“ steht die Abschlu
 });
 
 describe('F3 Breitenmessung: gemessen wird, was gedruckt wird', () => {
-  // BEFUND (T7a, Seitenmodell T6; Controller trägt ihn ein): `headerModel.titleOf` bricht nur an Leerzeichen. Ein Titel aus einem
-  // einzigen sehr langen Wort (60 nicht druckbare Zeichen ohne Leerzeichen) läuft über den rechten Rand. Altes Verhalten: der Titel brach
-  // im Wort. Das Modell ist fest (V1); Entscheidung beim Controller. Der Test wartet als Vorhaben (Titel mit „?“-Ersatzzeichen, alle Texte ≤ rechter Rand).
-  it.todo('Titel aus einem einzigen sehr langen Wort bleibt im Satzspiegel (Befund Titelumbruch im Seitenmodell)');
+  it('C-PDF-TITEL-LANGES-WORT @DR-001 ein Titel aus einem einzigen sehr langen Wort bleibt im Satzspiegel (Schrift bis zum Mindestmaß, dann zeichenweise geteilt, nie gekürzt)', async () => {
+    const titel = '⚽'.repeat(60);
+    const tournament = hallencupTournament({ title: titel });
+    const { pages, width } = await layoutOf({ now: NOW, tournament, online: false }, generateFullSchedule(tournament, 'de'));
+    const rechts = width - printPage.margin.right;
+
+    pages.forEach((page, i) => {
+      page.texts.forEach(t => expect(t.x + t.w, `Seite ${i + 1} „${t.str}“`).toBeLessThanOrEqual(rechts + TOL));
+    });
+    const zeichen = pages[0].texts.filter(t => t.str.includes('?')).map(t => t.str.replace(/[^?]/g, '').length);
+    expect(zeichen.reduce((a, n) => a + n, 0), 'kein Zeichen gekürzt').toBeGreaterThanOrEqual(60);
+    expect(pages[0].texts.some(t => t.str.includes('…'))).toBe(false);
+  });
 });
 
 describe('P2 langer Turniername: die Fußzeile bricht um und kürzt nie', () => {

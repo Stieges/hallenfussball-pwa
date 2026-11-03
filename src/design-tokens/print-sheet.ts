@@ -150,7 +150,7 @@ export const printSheetHead = {
   /** Abstand Eckdaten-Block → Regelzeile. */
   ruleGap: 2.5,
   /** Abstand zwischen Eckdaten-Spalte und QR. */
-  qrGap: 5,
+  qrGap: 3.5,
   qrCaptionPt: 10.5,
   qrCaptionGap: 1,
   /** Abstand Unterstreichung → Grundlinie der Beschriftung. */
