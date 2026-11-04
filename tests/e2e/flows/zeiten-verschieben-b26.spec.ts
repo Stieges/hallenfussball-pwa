@@ -115,16 +115,16 @@ test.describe('B-26 Zeiten verschieben (offline)', () => {
     await openSchedule(page);
     await shiftFromFirstOpen(page);
     for (const n of [4, 8]) {
-      await expect(original(page, n)).toHaveText(`ursprünglich ${clock(kickoff(n))}`);
+      await expect(original(page, n)).toHaveText(`(war ${clock(kickoff(n))})`);
     }
     await expect(original(page, 3)).toHaveCount(0);
     const strip = page.getByTestId('time-shift-strip');
     await expect(strip).toContainText('Zeiten um 10 Minuten verschoben');
     await expect(strip).toContainText('Ausdrucke sind veraltet');
     if (BILDER) { await page.screenshot({ path: `${BILDER}/danach-${test.info().project.name}.png` }); }
-    // gespeichert: nach dem Neuladen steht weiter „ursprünglich“
+    // gespeichert: nach dem Neuladen steht weiter „(war …)“
     await reloadSchedule(page);
-    await expect(original(page, 4)).toHaveText(`ursprünglich ${clock(kickoff(4))}`);
+    await expect(original(page, 4)).toHaveText(`(war ${clock(kickoff(4))})`);
   });
 
   test('@ZP-098 ⋮ am laufenden Spiel nicht wählbar, am geplanten Spiel mit „ab Spiel“ vorbelegt', async ({ page }) => {

@@ -121,9 +121,9 @@ async function anpfiffzeitAnzeige({ browser }: StepContext): Promise<void> {
   await expectPageAnchor(zeileSpiel1(zuschauer), 'Zeile von Spiel 1 auf der Zuschauer-Seite');
   await expect(zeileSpiel1(zuschauer), 'Zuschauer-Seite: Spiel 1 ist live').toContainText(/live/i, { timeout: 5000 });
   await expect(zeileSpiel1(zuschauer), `Zuschauer-Seite: bei Spiel 1 steht die Anpfiffzeit ${echt}`).toContainText(`angepfiffen ${echt}`, { timeout: 5000 });
-  await expect(zeileSpiel1(zuschauer)).not.toContainText(/ursprünglich/);
+  await expect(zeileSpiel1(zuschauer)).not.toContainText(/\(war \d/);
   await expect(zeileSpiel2(zuschauer)).toContainText('16:40');
-  await expect(zeileSpiel2(zuschauer)).not.toContainText(/ursprünglich/);
+  await expect(zeileSpiel2(zuschauer)).not.toContainText(/\(war \d/);
   const monitor = await oeffneMonitor(browser);
   await expect(monitor.locator('body'), `Hallenmonitor: angepfiffen ${echt}`).toContainText(`angepfiffen ${echt}`, { timeout: 5000 });
 }

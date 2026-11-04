@@ -157,7 +157,7 @@ async function zeitplanVorziehen({ asRole, browser }: StepContext): Promise<void
   // ohne Neuladen innerhalb von 10 Sekunden (@ZP-090)
   const zeile1 = zuschauer.locator('[aria-label="Spiel 1: TSV Waging rot gegen TSV 1921 Fridolfing"]:visible');
   const zeile2 = zuschauer.locator('[aria-label="Spiel 2: DJK Otting gegen TSV Waging blau"]:visible');
-  await expect(zeile1, 'Zuschauer-Seite: Spiel 1 um 16:15, ursprünglich 16:30').toContainText(/16:15[\s\S]*ursprünglich 16:30/, { timeout: 10000 });
+  await expect(zeile1, 'Zuschauer-Seite: Spiel 1 um 16:15, (war 16:30)').toContainText(/16:15[\s\S]*\(war 16:30\)/, { timeout: 10000 });
   await expect(zeile2, 'Zuschauer-Seite: Spiel 2 um 16:25').toContainText('16:25', { timeout: 10000 });
   await expect(monitor.locator('body'), 'Hallenmonitor: Nächstes Spiel 16:15').toContainText(/Nächstes Spiel[\s\S]*16:15/, { timeout: 10000 });
   await expect(tom.getByTestId('scoreboard'), 'Toms Helfer-Handy: Spiel 1 um 16:15').toContainText('16:15', { timeout: 10000 });

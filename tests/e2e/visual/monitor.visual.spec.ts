@@ -183,9 +183,9 @@ for (const [abfrage, bild] of [['', 'monitor-rand.png'], ['?rand=0', 'monitor-ra
 
 /**
  * B-27 (@ZP-003, @ZP-004, @ZP-046): Folie „Nächste Spiele“ nach dem Verschieben um 10 Minuten: groß die neue Uhrzeit, klein
- * „ursprünglich hh:mm“ darunter; das dritte Spiel ist nicht verschoben und trägt nichts. Nur das Desktop-Profil (1280×720).
+ * „(war hh:mm)“ daneben; das dritte Spiel ist nicht verschoben und trägt nichts. Nur das Desktop-Profil (1280×720).
  */
-test('Monitor: Nächste Spiele mit ursprünglicher Uhrzeit', async ({ page, seedIndexedDB }) => {
+test('Monitor: Nächste Spiele mit „(war hh:mm)“', async ({ page, seedIndexedDB }) => {
   test.skip(test.info().project.name !== 'visual-desktop', 'Monitor nur im Querformat (1280×720)');
   await freezeClock(page);
 

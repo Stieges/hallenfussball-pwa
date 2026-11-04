@@ -2,7 +2,7 @@
  * D13 Zeitplan verschieben. Besitzer: B-26 (gebaut).
  * Die Turnierleitung verschiebt im Spielplan-Reiter über „Zeiten verschieben“ (`schedule-shift-button`) ab dem nächsten
  * geplanten Spiel um 10 Minuten nach hinten: ab dem ersten Anpfiff mit Vorschau und Bestätigung (@ZP-012, @ZP-017).
- * Danach tragen die verschobenen Spiele „ursprünglich hh:mm“, auch nach dem Neuladen (Stand aus der Cloud).
+ * Danach tragen die verschobenen Spiele „(war hh:mm)“, auch nach dem Neuladen (Stand aus der Cloud).
  */
 import { expect } from '@playwright/test';
 import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
@@ -17,7 +17,7 @@ async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
   await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
   await expectSollMarker(ownerPage, 'schedule-shift-button');
   const ursprunglich = ownerPage.locator('[data-testid^="match-original-"]:visible');
-  await expect(ursprunglich, 'vor dem Verschieben steht nirgends „ursprünglich“').toHaveCount(0);
+  await expect(ursprunglich, 'vor dem Verschieben steht nirgends „(war …)“').toHaveCount(0);
   await ownerPage.getByTestId('schedule-shift-button').click();
   const weiter = ownerPage.getByTestId('time-shift-proceed');
   const mitVorschau = (await weiter.innerText()).includes('Vorschau');
@@ -27,7 +27,7 @@ async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
     await ownerPage.getByTestId('time-shift-confirm').click();
   }
   await expect(ownerPage.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Minuten verschoben', { timeout: SPEICHERN_MS });
-  await expect(ursprunglich.first(), 'verschobene Spiele tragen „ursprünglich hh:mm“').toHaveText(/^ursprünglich \d{2}:\d{2}$/, { timeout: SPEICHERN_MS });
+  await expect(ursprunglich.first(), 'verschobene Spiele tragen „(war hh:mm)“').toHaveText(/^\(war \d{2}:\d{2}\)$/, { timeout: SPEICHERN_MS });
   await expect.poll(async () => {
     await ownerPage.reload();
     await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
