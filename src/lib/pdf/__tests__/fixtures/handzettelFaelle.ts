@@ -255,8 +255,8 @@ export const FALL_B_SR: HandzettelFall = {
   finale: (FALL_B.finale ?? []).map((spiel, i) => ({ ...spiel, sr: (i % 3) + 1 })),
 };
 
-/** Teams, die pfeifen: kein Wort länger als die SR-Spalte (ein Wort bricht nie mitten durch, @DR-032): 5 = „SG Grabenstätt/Chieming/Übersee“. */
-const SR_TEAMS = [5, 6, 7, 9, 10, 3, 4, 8];
+/** Alle Teams der Mockup-Daten pfeifen reihum (@DR-025 „pfeifendes Team“, Nummer = Nummer des Teams); b-lang: 5 = „SG Grabenstätt/Chieming/Übersee“. */
+const SR_TEAMS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /** b-lang (langer Name „SG Grabenstätt/Chieming/Übersee“, Team 5) mit „Teams pfeifen“ in Gruppenspielen und Finalrunde (@DR-037, @DR-025). */
 export const FALL_B_SR_TEAM: HandzettelFall = {
