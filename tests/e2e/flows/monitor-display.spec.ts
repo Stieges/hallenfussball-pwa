@@ -115,21 +115,24 @@ async function setupTournamentWithMonitor(seedIndexedDB: TestOptions['seedIndexe
 test.describe('Monitor Display', () => {
 
   test.describe('MON-D01/D02: Error States', () => {
-    test('zeigt Fehler bei ungültiger Tournament-ID', async ({ page }) => {
+    // @ME-009 @ME-016 @ME-034: statt eines Fehlertexts eine ruhige Seite, ohne Kennung und ohne Taste „Zurück“
+    test('zeigt bei ungültiger Tournament-ID die ruhige Seite „Warte auf Verbindung“', async ({ page }) => {
       // HashRouter requires /#/ prefix for routes
       await page.goto('/#/display/invalid-tournament/monitor-1');
 
-      // Use data-testid for reliable element selection (Best Practice)
-      await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId('monitor-waiting-message')).toHaveText('Warte auf Verbindung', { timeout: 10000 });
+      await expect(page.getByTestId('monitor-waiting-state')).not.toContainText('invalid-tournament');
+      await expect(page.getByRole('button')).toHaveCount(0);
     });
 
-    test('zeigt Fehler bei ungültiger Monitor-ID', async ({ page, seedIndexedDB }) => {
+    test('zeigt bei ungültiger Monitor-ID die ruhige Seite „Warte auf Verbindung“', async ({ page, seedIndexedDB }) => {
       await setupTournamentWithMonitor(seedIndexedDB, {});
       // HashRouter requires /#/ prefix for routes
       await page.goto('/#/display/test-tournament/invalid-monitor');
 
-      // Use data-testid for reliable element selection (Best Practice)
-      await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId('monitor-waiting-message')).toHaveText('Warte auf Verbindung', { timeout: 10000 });
+      await expect(page.getByTestId('monitor-waiting-state')).not.toContainText('invalid-monitor');
+      await expect(page.getByRole('button')).toHaveCount(0);
     });
   });
 
@@ -153,7 +156,7 @@ test.describe('Monitor Display', () => {
       // Alter Leerzustand und Fehlertext dürfen nie erscheinen
       await expect(page.getByTestId('monitor-no-slides-message')).toHaveCount(0);
       await expect(page.getByTestId('monitor-no-slides-state')).toHaveCount(0);
-      await expect(page.getByTestId('monitor-error-message')).toHaveCount(0);
+      await expect(page.getByTestId('monitor-waiting-state')).toHaveCount(0);
     });
   });
 

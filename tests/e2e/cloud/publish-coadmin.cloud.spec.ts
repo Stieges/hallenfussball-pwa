@@ -39,7 +39,7 @@
  * Aufruf von `/#/live/<code>` (derselbe Weg wie `public-view.cloud.spec.ts`) zeigt "Freigabe-Cup".
  *
  * Fixrunde 3 (N17, Minor): Negativkontrolle vor dem Klick -- der anonyme Monitor-Aufruf zeigt
- * VORHER `[data-testid="monitor-error-message"]` mit "Turnier nicht gefunden" (RLS lässt den
+ * VORHER `[data-testid="monitor-waiting-state"]` mit "Warte auf Verbindung" (RLS lässt den
  * privaten Freigabe-Cup nicht durch, `MonitorDisplayPage.tsx:1061-1065`), NICHT den Sponsor.
  * Ohne diesen Vorher-Zustand wäre nicht belegt, dass der Sponsor NACHHER wegen der Freigabe
  * erscheint (könnte z.B. auch unabhängig von `is_public` sichtbar sein).
@@ -102,7 +102,7 @@ test('coadmin macht den Freigabe-Cup öffentlich -- Sichtbarkeit, Share-Code und
     // steuert die Turnierleitung ja direkt“; @ZM-066, @ZM-101, Befund C-MONITOR-TEILEN): ein EINGERICHTETER Monitor zeigt
     // das Turnier unabhängig vom öffentlichen Teilen. Die Grenzen prüft diese Kontrolle deshalb so:
     //  (a) Negativkontrolle: ein NICHT eingerichteter (unbekannter) Monitor-Link desselben Turniers liefert vor der
-    //      Freigabe „Turnier nicht gefunden“ und zeigt den Sponsor nicht;
+    //      Freigabe die ruhige Seite „Warte auf Verbindung“ und zeigt den Sponsor nicht;
     //  (b) der eingerichtete Monitor zeigt den Sponsor schon vor der Freigabe;
     //  (c) die Zuschauer-Seite liefert ein nicht freigegebenes Turnier nicht aus (@ZM-068) -- unten nach dem
     //      Zurücknehmen geprüft, weil der Freigabe-Cup vor der Freigabe noch keinen Code hat.
@@ -110,9 +110,11 @@ test('coadmin macht den Freigabe-Cup öffentlich -- Sichtbarkeit, Share-Code und
     expect(unbekannterMonitor).not.toBe(E2E_RELEASE_CUP_MONITOR_ID);
     await anonPage.goto(`/#/display/${E2E_RELEASE_CUP_ID}/${unbekannterMonitor}`);
     await anonPage.waitForLoadState('networkidle');
-    await expect(anonPage.locator('[data-testid="monitor-error-message"]')).toContainText('Turnier nicht gefunden', {
+    // @ME-016: die ruhige Seite „Warte auf Verbindung“ ohne Kennung des Turniers statt eines Fehlertexts
+    await expect(anonPage.locator('[data-testid="monitor-waiting-state"]')).toContainText('Warte auf Verbindung', {
       timeout: 15000,
     });
+    await expect(anonPage.locator('[data-testid="monitor-waiting-state"]')).not.toContainText(E2E_RELEASE_CUP_ID);
     await expect(anonPage.getByText(E2E_RELEASE_CUP_SPONSOR_NAME)).toHaveCount(0);
 
     await anonPage.goto(`/#/display/${E2E_RELEASE_CUP_ID}/${E2E_RELEASE_CUP_MONITOR_ID}`);
