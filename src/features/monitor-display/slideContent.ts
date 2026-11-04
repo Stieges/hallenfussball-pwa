@@ -13,9 +13,7 @@ import type { ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
-
-/** Zeilen je Seite bis B-17 misst (@ZM-129). */
-export const MONITOR_ROWS_PER_PAGE = 6;
+import { listColumns, listPages, SCHEDULE_MAX_ROWS, type ListColumns } from './listRows';
 
 function compareNumbers(x: number, y: number): number {
   if (x === y) { return 0; }
@@ -87,20 +85,29 @@ export function standingsSections(tournament: Tournament, view: TournamentView):
   return sections;
 }
 
-/** Zeilen der Seite `page` (0-basiert). Jede Zeile liegt auf genau einer Seite. */
-export function pageOf<T>(items: readonly T[], page: number, perPage: number = MONITOR_ROWS_PER_PAGE): T[] {
-  const start = page * perPage;
-  return items.slice(start, start + perPage);
+/** Seiten und Spalten einer Listen-Folie: `pages[page]` sind die Zeilen der Seite, `columns` gelten für alle Seiten (@ZM-187). */
+export interface ListLayout {
+  pages: MatchView[][];
+  columns: ListColumns;
 }
 
-/** Anzahl Seiten für `items` Zeilen; mindestens eine (auch bei null Zeilen). */
-export function pagesFor(items: number, perPage: number = MONITOR_ROWS_PER_PAGE): number {
-  return Math.max(1, Math.ceil(items / perPage));
+/** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188). */
+export function scheduleFieldLayout(view: TournamentView, field: number): ListLayout {
+  const schedule = fieldSchedule(view, field);
+  const columns = listColumns(schedule, true);
+  return { pages: listPages(schedule, columns, SCHEDULE_MAX_ROWS), columns };
+}
+
+/** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188). */
+export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined): ListLayout {
+  const list = nextMatchList(view, matchCount);
+  const columns = listColumns(list, false);
+  return { pages: listPages(list, columns), columns };
 }
 
 /**
  * Seitenzahl einer Folie für den Takt (B-16f1, f3). Alle Tabellen: ein Abschnitt je Seite. Spielplan und
- * Nächste Spiele: je MONITOR_ROWS_PER_PAGE Zeilen. Andere Folien: eine Seite. B-17 misst die Seitenzahl.
+ * Nächste Spiele: nach Höhe der Zeilen (`listRows.ts`). Andere Folien: eine Seite.
  */
 export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null, view?: TournamentView | null, end?: MonitorEnd): number {
   // Folien nach dem Abschluss (R3-7, @ZM-129): Seiten aus dem gespeicherten Endstand, ohne Tabelle und Ansicht
@@ -111,9 +118,9 @@ export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | 
     case 'all-standings':
       return Math.max(1, standingsSections(tournament, view).length);
     case 'schedule-field':
-      return pagesFor(fieldSchedule(view, fieldIdToNumber(slide.config.fieldId)).length);
+      return scheduleFieldLayout(view, fieldIdToNumber(slide.config.fieldId)).pages.length;
     case 'next-matches':
-      return pagesFor(nextMatchList(view, slide.config.matchCount).length);
+      return nextMatchesLayout(view, slide.config.matchCount).pages.length;
     default:
       return 1;
   }

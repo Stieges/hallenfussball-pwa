@@ -12,6 +12,8 @@ import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
 import { LiveSlide } from '../slides/LiveSlide';
 import { displayList } from '../../../design-tokens';
 import { initRealDeI18n } from '../../../test/realDeI18n';
+import { anzeigeT } from '../../../i18n/anzeigeSprache';
+import enTournament from '../../../i18n/locales/en/tournament.json';
 import { buildTournament, slide, withMatch, withPlayoffs } from './monitorFixture';
 import { withView } from './monitorViewHelper';
 
@@ -38,25 +40,25 @@ function naechste(tournament: ReturnType<typeof buildTournament>) {
 const zeile = (id: string): HTMLElement => document.querySelector<HTMLElement>(`[data-testid="monitor-match-row"][data-match-id="${id}"]`)!;
 
 describe('B-27 Monitor „Nächste Spiele“: ursprüngliche Uhrzeit', () => {
-  it('@ZP-003 @ZP-004 Spiel 8 steht um 14:30 groß, klein „ursprünglich 14:20“', () => {
+  it('@ZP-003 @ZP-004 Spiel 8 steht um 14:30 groß, klein „(war 14:20)“', () => {
     naechste(mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' }));
     const row = within(zeile('match-8'));
     expect(row.getByTestId('monitor-match-time')).toHaveTextContent(/^14:30/);
-    expect(row.getByTestId('monitor-match-original')).toHaveTextContent('ursprünglich 14:20');
+    expect(row.getByTestId('monitor-match-original')).toHaveTextContent('(war 14:20)');
   });
 
-  it('@ZP-004 ab 1 Minute Abweichung (14:21 statt 14:20) steht „ursprünglich“ dabei', () => {
+  it('@ZP-004 ab 1 Minute Abweichung (14:21 statt 14:20) steht „(war …)“ dabei', () => {
     naechste(mitZeiten({ shown: '14:21', original: '14:20' }, { shown: '14:40' }));
-    expect(within(zeile('match-8')).getByTestId('monitor-match-original')).toHaveTextContent('ursprünglich 14:20');
+    expect(within(zeile('match-8')).getByTestId('monitor-match-original')).toHaveTextContent('(war 14:20)');
   });
 
   it('@ZP-005 Gegenbeispiel: stimmt die Uhrzeit wieder überein, verschwindet der Zusatz', () => {
     naechste(mitZeiten({ shown: '14:20', original: '14:20' }, { shown: '14:40' }));
     expect(within(zeile('match-8')).queryByTestId('monitor-match-original')).toBeNull();
-    expect(document.body.textContent).not.toContain('ursprünglich');
+    expect(document.body.textContent).not.toContain('(war');
   });
 
-  it('@ZP-049 Gegenbeispiel: Planung vor dem ersten Anpfiff (keine ursprüngliche Uhrzeit) zeigt kein „ursprünglich“', () => {
+  it('@ZP-049 Gegenbeispiel: Planung vor dem ersten Anpfiff (keine ursprüngliche Uhrzeit) zeigt kein „(war …)“', () => {
     naechste(mitZeiten({ shown: '14:30' }, { shown: '14:50' }));
     expect(screen.queryByTestId('monitor-match-original')).toBeNull();
   });
@@ -93,25 +95,35 @@ describe('B-27 Monitor „Nächste Spiele“: ursprüngliche Uhrzeit', () => {
 describe('B-27 Monitor „Spielplan eines Felds“: K.-o.-Uhrzeiten sind voraussichtlich (@ZM-105)', () => {
   const tournament = buildTournament({ matches: withPlayoffs().map((m) => (m.id.startsWith('po-') ? { ...m, isFinal: true } : m)).map((m) => (m.id === 'po-p3' ? { ...m, scheduledTime: at('15:30'), originalStart: at('15:20') } : m)) });
 
-  it('Spiel um Platz 3 steht als „voraussichtlich“ mit „ursprünglich 15:20“, Gruppenspiele ohne „voraussichtlich“', () => {
+  it('Spiel um Platz 3 steht als „voraussichtlich“ mit „(war 15:20)“, Gruppenspiele ohne „voraussichtlich“', () => {
     render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: 'field-1' })} {...withView(tournament)} theme="dark" style={{}} />);
     const p3 = within(zeile('po-p3'));
     expect(p3.getByTestId('monitor-match-tentative')).toHaveTextContent('voraussichtlich');
-    expect(p3.getByTestId('monitor-match-original')).toHaveTextContent('ursprünglich 15:20');
+    expect(p3.getByTestId('monitor-match-original')).toHaveTextContent('(war 15:20)');
     expect(within(zeile('match-9')).queryByTestId('monitor-match-tentative')).toBeNull();
   });
 });
 
-describe('B-27 Monitor „Live“, nächstes Spiel: Uhrzeit mit „ursprünglich“ (@ZP-003)', () => {
-  it('Feld 2 hat kein laufendes Spiel: „Anstoß 14:30“ und klein „ursprünglich 14:20“', () => {
+describe('B-27 Monitor „Live“, nächstes Spiel: Uhrzeit mit „(war …)“ (@ZP-003)', () => {
+  it('Feld 2 hat kein laufendes Spiel: „Anstoß 14:30“ und klein „(war 14:20)“', () => {
     const t = mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' });
     render(<LiveSlide slide={slide('live', { fieldId: 'field-2' })} {...withView(t)} performanceSettings={performanceSettings} theme="dark" style={{}} />);
     expect(document.body.textContent).toMatch(/Anstoß 14:30/);
-    expect(screen.getByTestId('monitor-next-original')).toHaveTextContent('ursprünglich 14:20');
+    expect(screen.getByTestId('monitor-next-original')).toHaveTextContent('(war 14:20)');
   });
 
-  it('Gegenbeispiel: ohne Verschiebung steht kein „ursprünglich“ beim nächsten Spiel', () => {
+  it('Gegenbeispiel: ohne Verschiebung steht kein „(war …)“ beim nächsten Spiel', () => {
     render(<LiveSlide slide={slide('live', { fieldId: 'field-2' })} {...withView(mitZeiten({ shown: '14:20' }, { shown: '14:40' }))} performanceSettings={performanceSettings} theme="dark" style={{}} />);
     expect(screen.queryByTestId('monitor-next-original')).toBeNull();
+  });
+});
+
+describe('@ZP-001 Wortlaut „(war hh:mm)“ gilt wörtlich, auf jeder Ausgabe aus derselben Quelle', () => {
+  it('Deutsch: „(war 15:30)“, nicht „ursprünglich“', () => {
+    expect(anzeigeT('tournament:timeShift.original', { time: '15:30' })).toBe('(war 15:30)');
+  });
+
+  it('Englisch hat dasselbe Muster mit „(was {{time}})“', () => {
+    expect(enTournament.timeShift.original).toBe('(was {{time}})');
   });
 });

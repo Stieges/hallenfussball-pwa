@@ -1465,7 +1465,7 @@
   "timeShift": {
     "button": "Shift times",
     "listHint": "Use ⋮ on a match to shift from there.",
-    "original": "originally {{time}}",
+    "original": "(was {{time}})",
     "tentative": "expected",
     "dialogTitle": "Shift times",
     "close": "Close",

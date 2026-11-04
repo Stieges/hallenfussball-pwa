@@ -65,7 +65,7 @@ async function vorspulenInSchritten(ms: number, schritt = 1_000): Promise<void> 
 async function starte(data: Tournament): Promise<void> {
   liefere(data);
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
 }
 
@@ -188,8 +188,8 @@ describe('@ZM-130 Zeile 3: Seitenwechsel über die gerenderte Seite (echter Poll
   });
 });
 
-describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer Seite', () => {
-  it('Seiten 6, 6 und 1 Zeilen; die Vereinigung ist alle 13 Uhrzeiten, keine doppelt', async () => {
+describe('@ZM-129 @ZM-185 Spielplan mit 13 Spielen: 4 Seiten mit bis zu 4 Spielen, jede Zeile genau auf einer Seite', () => {
+  it('Seiten 4, 4, 4 und 1 Zeilen; die Vereinigung ist alle 13 Uhrzeiten, keine doppelt', async () => {
     await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele() }), [slide('schedule-field', { fieldId: 'field-1' })]));
     expect(screen.getByText(/^Seite \d+ \/ \d+$/)).toBeInTheDocument();
     const seite1 = uhrzeiten();
@@ -197,22 +197,30 @@ describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer
     const seite2 = uhrzeiten();
     await vorspulenInSchritten(15_000);
     const seite3 = uhrzeiten();
-    expect(seite1).toHaveLength(6);
-    expect(seite2).toHaveLength(6);
-    expect(seite3).toEqual(['15:00']);
-    const alle = [...seite1, ...seite2, ...seite3];
+    await vorspulenInSchritten(15_000);
+    const seite4 = uhrzeiten();
+    expect(seite1).toHaveLength(4);
+    expect(seite2).toHaveLength(4);
+    expect(seite3).toHaveLength(4);
+    expect(seite4).toEqual(['15:00']);
+    const alle = [...seite1, ...seite2, ...seite3, ...seite4];
     expect(new Set(alle).size).toBe(13);
     expect(alle).toHaveLength(13);
   });
 });
 
-describe('@ZM-129 Nächste Spiele mit 8 offenen Spielen (matchCount 10): 2 Seiten, 6 und 2 Zeilen', () => {
-  it('Seite 1 zeigt 14:00 bis 14:25, nach 15 s Seite 2 mit 14:30 und 14:35 über den echten Takt', async () => {
+describe('@ZM-129 @ZM-188 Nächste Spiele mit 8 offenen Spielen (matchCount 10): mehrere Seiten, jedes Spiel auf genau einer', () => {
+  it('die Seiten folgen einander über den echten Takt; zusammen alle acht Uhrzeiten in Reihenfolge, keine doppelt', async () => {
     await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele().slice(0, 8) }), [slide('next-matches', { matchCount: 10 })]));
-    expect(screen.getByText(/^Seite \d+ \/ \d+$/)).toBeInTheDocument();
-    expect(uhrzeiten()).toEqual(['14:00', '14:05', '14:10', '14:15', '14:20', '14:25']);
-    await vorspulenInSchritten(15_000);
-    expect(uhrzeiten()).toEqual(['14:30', '14:35']);
+    const hinweis = screen.getByText(/^Seite \d+ \/ \d+$/).textContent ?? '';
+    const seiten = Number(/\/ (\d+)$/.exec(hinweis)?.[1] ?? '1');
+    expect(seiten).toBeGreaterThanOrEqual(2);
+    const alle: (string | undefined)[] = [];
+    for (let seite = 0; seite < seiten; seite += 1) {
+      alle.push(...uhrzeiten());
+      await vorspulenInSchritten(15_000);
+    }
+    expect(alle).toEqual(['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35']);
   });
 });
 

@@ -1,0 +1,140 @@
+/**
+ * Zeilen und Seiten der Listen-Folien „Spielplan eines Felds“ und „Nächste Spiele“ (@ZM-187, @ZM-188, @ZM-185, @ZM-129): reine
+ * Funktionen ohne React.
+ *
+ * Seiten nach Höhe statt nach fester Zeilenzahl: Jede Zeile kostet so viel Höhe, wie ihre höchste Zelle (Uhrzeit mit „(war …)“,
+ * Teamnamen mit voraussichtlichem Umbruch) braucht, und eine Seite fasst, was in die Bildhöhe passt, höchstens `maxRows` Spiele.
+ * Nichts ist abgeschnitten (@ZM-188). Das Modell rechnet aus den Tokens der Folie (`displayList`) und nimmt ein Querformat 16:9
+ * mit dem vorbelegten Bildrand an; es ist vorsichtig, lieber eine Seite mehr als eine abgeschnittene Zeile. Die Seitenzahl
+ * braucht der Takt vor dem Zeichnen, darum wird sie gerechnet und nicht im Bild gemessen; `visual:metrics` und die Browser-Tests
+ * messen im Bild nach, ob das Modell hält.
+ *
+ * Die Spalten einer Folie hängen nur an allen Spielen der Folie, nie an der Seite oder am Zustand eines Spiels: ändert sich ein
+ * Spiel, rückt keine Zeile (@ZM-187).
+ */
+import { displayFontSizes, displayLayout, displayList, displayMonitor } from '../../design-tokens';
+import type { MatchView } from '../../core/view';
+import { monitorSideLabel } from './matchSides';
+
+/** Spalten, die in jeder Zeile einer Folie gleich da sind oder in keiner. */
+export interface ListColumns {
+  /** Abzeichen mit Zustandswort (und „gewertet“ darunter): sobald ein Spiel der Folie eines trägt. */
+  status: boolean;
+  /** Spielbezeichnung („Halbfinale 1“): sobald ein Spiel der Folie eine trägt. */
+  label: boolean;
+}
+
+/** Spalten der Folie aus allen ihren Spielen (nicht nur denen der Seite). Nur der Spielplan zeigt Abzeichen. */
+export function listColumns(matches: readonly MatchView[], showStatus: boolean): ListColumns {
+  return {
+    status: showStatus && matches.some(m => m.badge.kind === 'badge'),
+    label: matches.some(m => m.labelText !== undefined && m.labelText !== ''),
+  };
+}
+
+/** Spiele je Seite des Spielplans höchstens (@ZM-185: bis zu 4, bei sehr langen Namen weniger). */
+export const SCHEDULE_MAX_ROWS = 4;
+
+/** Zahl am Anfang eines Token-Werts („3.6vh“, „max(3.2cqh, 3vh)“, „11em“). */
+function num(token: string): number {
+  return parseFloat(token.replace(/^max\(/, ''));
+}
+
+const FONT = num(displayList.fontSizes.team);
+/** Zeilenhöhe der Schrift (Inter, `normal`), gemessen am Bild: 31 px bei 25,9 px Schrift. */
+const LINE = 1.2;
+/** Breite eines Zeichens in em der Schrift, vorsichtig (gemessen: 2,05 vh bei 3,6 vh Schrift = 0,57 em). */
+const CHAR_EM = 0.6;
+/** Querformat 16:9: Breite in Einheiten der Bildhöhe. */
+const WIDTH_VH = (100 * 16) / 9;
+const OVERSCAN = displayMonitor.overscan.defaultPercent;
+/** Rahmen einer Zeile oben und unten in vh (1 px bei 720 Zeilen, aufgerundet). */
+const ROW_BORDER = 0.3;
+/** Rest des Bildes für Überschrift (Zeile, Abstand), Seitenhinweis (Zeile, Abstand) und Reserve. */
+const CHROME = num(displayList.fontSizes.heading) * LINE + num(displayList.headingGap)
+  + num(displayList.fontSizes.head) * LINE + num(displayList.rowGap) + 1.5;
+
+/** Höhe der Zeilen-Fläche einer Seite in vh. */
+const AVAILABLE = 100 - 2 * OVERSCAN - CHROME;
+
+/** Breite eines Teamnamens in Zeichen je Zeile (Heim und Gast gleich breit). */
+function charsPerLine(cols: ListColumns): number {
+  const gaps = 4 + (cols.status ? 1 : 0) + (cols.label ? 1 : 0) - 1;
+  const fixed = num(displayList.timeFieldWidth) * FONT + num(displayList.separatorWidth) * FONT
+    + (cols.status ? num(displayLayout.scoreArea.badgeWidth) * num(displayFontSizes.liveBadge) : 0)
+    + (cols.label ? num(displayList.labelWidth) * FONT : 0);
+  const inner = WIDTH_VH * (1 - (2 * OVERSCAN) / 100) - 2 * num(displayList.rowPaddingX) - gaps * num(displayList.cellGap) - fixed;
+  return Math.max(1, Math.floor(inner / 2 / (CHAR_EM * FONT)));
+}
+
+/** Teile, an denen der Browser umbrechen darf (nach Leerzeichen und nach Bindestrich); `space` = ein Leerzeichen steht davor. */
+function breakParts(text: string): { len: number; space: boolean }[] {
+  const parts: { len: number; space: boolean }[] = [];
+  let space = false;
+  for (const m of text.matchAll(/(\s+)|([^\s-]+-?|-)/g)) {
+    if (m[1] !== undefined) { space = true; } else {
+      parts.push({ len: [...m[2]].length, space: space && parts.length > 0 });
+      space = false;
+    }
+  }
+  return parts;
+}
+
+/** Zeilen, die ein Name bei `perLine` Zeichen belegt (Umbruch an Leerzeichen und Bindestrichen, überlange Wörter brechen). */
+export function nameLines(text: string, perLine: number): number {
+  let lines = 1;
+  let used = 0;
+  for (const { len, space } of breakParts(text)) {
+    const joined = used === 0 ? len : used + (space ? 1 : 0) + len;
+    if (used !== 0 && joined > perLine) {
+      lines += 1;
+      used = 0;
+    }
+    const start = used === 0 ? len : used + (space ? 1 : 0) + len;
+    if (start > perLine && used === 0) {
+      lines += Math.ceil(len / perLine) - 1;
+      used = len % perLine === 0 ? perLine : len % perLine;
+    } else {
+      used = start;
+    }
+  }
+  return lines;
+}
+
+/** Höhe einer Zeile in vh: Polster und Rahmen plus höchste Zelle (Uhrzeit/Feld/„voraussichtlich“ oder Namen). */
+export function rowHeight(match: MatchView, cols: ListColumns): number {
+  const perLine = charsPerLine(cols);
+  const names = Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
+  const label = cols.label && match.labelText ? nameLines(match.labelText, Math.max(1, Math.floor(num(displayList.labelWidth) / CHAR_EM))) : 1;
+  const timeCell = num(displayList.fontSizes.time) * LINE + FONT * LINE * (match.kickoffTentative ? 2 : 1);
+  const content = Math.max(timeCell, Math.max(names, label) * FONT * LINE);
+  return 2 * num(displayList.rowPaddingY) + ROW_BORDER + content;
+}
+
+/**
+ * Seiten einer Listen-Folie: so viele Spiele hintereinander, wie in die Höhe passen, höchstens `maxRows`; ein Spiel, das allein
+ * zu hoch ist, steht allein. Jedes Spiel steht auf genau einer Seite. Mindestens eine Seite (auch ohne Spiele).
+ */
+export function listPages(matches: readonly MatchView[], cols: ListColumns, maxRows: number = Number.POSITIVE_INFINITY): MatchView[][] {
+  const gap = num(displayList.rowGap);
+  const pages: MatchView[][] = [[]];
+  let used = 0;
+  for (const match of matches) {
+    const height = rowHeight(match, cols);
+    const current = pages[pages.length - 1];
+    const next = current.length === 0 ? height : used + gap + height;
+    if (current.length > 0 && (next > AVAILABLE || current.length >= maxRows)) {
+      pages.push([match]);
+      used = height;
+    } else {
+      current.push(match);
+      used = next;
+    }
+  }
+  return pages;
+}
+
+/** Seite (0-basiert), auf der das Spiel `matchId` steht; -1, wenn es in keiner Seite steht. */
+export function pageIndexOf(pages: readonly (readonly MatchView[])[], matchId: string): number {
+  return pages.findIndex(page => page.some(m => m.id === matchId));
+}

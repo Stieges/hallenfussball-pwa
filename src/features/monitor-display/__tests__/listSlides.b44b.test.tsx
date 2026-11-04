@@ -185,21 +185,25 @@ describe('Tabellen: Farbe nur mit Bedeutung', () => {
 });
 
 describe('@ZM-125 dichte Folien blättern statt zu verkleinern', () => {
-  it('mehr als 6 offene Spiele ergeben mehrere Seiten, die Schrift bleibt gleich', () => {
+  it('neun offene Spiele passen nicht in ein Bild: mehrere Seiten, jedes Spiel auf genau einer, die Schrift bleibt gleich', () => {
     const many = Array.from({ length: 9 }, (_, i) => ({
       ...FIXTURE_MATCHES[2], id: `x-${i}`, matchNumber: 20 + i, scheduledTime: new Date(2026, 9, 10, 15, i),
     }));
     const t = buildTournament({ matches: many });
     const s = slide('next-matches', { matchCount: 9 });
-    expect(monitorPageCount(s, t, withView(t).view)).toBe(2);
-    const { unmount } = render(<NextMatchesSlide slide={s} {...withView(t)} theme="dark" style={{}} page={0} />);
-    const first = screen.getAllByTestId('monitor-match-row');
-    expect(first).toHaveLength(6);
-    const size0 = screen.getAllByText('DJK Berg')[0].style.fontSize;
-    unmount();
-    render(<NextMatchesSlide slide={s} {...withView(t)} theme="dark" style={{}} page={1} />);
-    expect(screen.getAllByTestId('monitor-match-row')).toHaveLength(3);
-    expect(screen.getAllByText('DJK Berg')[0].style.fontSize).toBe(size0);
+    const seiten = monitorPageCount(s, t, withView(t).view);
+    expect(seiten).toBeGreaterThanOrEqual(2);
+    const ids: string[] = [];
+    let size0 = '';
+    for (let page = 0; page < seiten; page += 1) {
+      const { unmount } = render(<NextMatchesSlide slide={s} {...withView(t)} theme="dark" style={{}} page={page} />);
+      ids.push(...screen.getAllByTestId('monitor-match-row').map(row => row.getAttribute('data-match-id') ?? ''));
+      const size = screen.getAllByText('DJK Berg')[0].style.fontSize;
+      size0 = size0 === '' ? size : size0;
+      expect(size).toBe(size0);
+      unmount();
+    }
+    expect(ids).toEqual(many.map(m => m.id));
   });
 });
 

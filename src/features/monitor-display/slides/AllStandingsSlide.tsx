@@ -8,6 +8,7 @@ import { groupTieView } from '../../../core/standings/tieViews';
 import { calculateStandings } from '../../../utils/calculations';
 import { getGroupDisplayName, resolveTheme } from '../monitorDisplayHelpers';
 import { finalRoundMatches, standingsSections, type StandingsSection } from '../slideContent';
+import { listColumns } from '../listRows';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { StandingsTable } from '../components/StandingsTable';
 import { SlidePageHint } from '../components/SlidePageHint';
@@ -56,6 +57,7 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: 
     );
   }
 
+  const finalColumns = listColumns(finalRoundMatches(view), false);
   return (
     <div style={style}>
       <SlideHeading icon="finals" color={colors.text}>{t('slides.allStandings.finals')}</SlideHeading>
@@ -72,6 +74,7 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: 
             tournament={tournament}
             theme={theme}
             showScore={match.status === 'finished' || match.status === 'awarded'}
+            columns={finalColumns}
           />
         ))}
       </div>

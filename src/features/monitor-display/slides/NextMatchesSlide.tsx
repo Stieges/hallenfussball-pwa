@@ -5,7 +5,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { resolveTheme } from '../monitorDisplayHelpers';
-import { nextMatchList, pageOf, pagesFor } from '../slideContent';
+import { nextMatchesLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -17,7 +17,7 @@ interface NextMatchesSlideProps {
   view: TournamentView;
   theme: MonitorTheme;
   style: CSSProperties;
-  /** Seite der Folie (B-16f3), 0-basiert; ab 7 Zeilen blättert die Folie (@ZM-129). */
+  /** Seite der Folie (B-16f3), 0-basiert; blättert, sobald die Zeilen nicht in die Bildhöhe passen (@ZM-129, @ZM-188). */
   page?: number;
 }
 
@@ -25,9 +25,9 @@ interface NextMatchesSlideProps {
 export function NextMatchesSlide({ slide, tournament, view, theme, style, page = 0 }: NextMatchesSlideProps) {
   const { t } = useTranslation('monitor');
   const colors = monitorThemes[resolveTheme(theme)];
-  const list = nextMatchList(view, slide.config.matchCount);
-  const rows = pageOf(list, page);
-  const pages = pagesFor(list.length);
+  const { pages: allPages, columns } = nextMatchesLayout(view, slide.config.matchCount);
+  const pages = allPages.length;
+  const rows = allPages[Math.min(Math.max(page, 0), pages - 1)];
 
   return (
     <div style={style}>
@@ -50,6 +50,7 @@ export function NextMatchesSlide({ slide, tournament, view, theme, style, page =
               match={match}
               tournament={tournament}
               theme={theme}
+              columns={columns}
             />
           ))}
         </div>

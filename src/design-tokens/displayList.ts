@@ -13,8 +13,12 @@ export const displayList = {
     team: '3.6vh',
     /** Tabellenkopf und Seitenhinweis (mindestens 3 % der Bildhöhe) */
     head: '3vh',
-    /** „ursprünglich hh:mm“ und „voraussichtlich“ unter der Uhrzeit (B-27): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
+    /** „(war hh:mm)“ neben und „voraussichtlich“ unter der Uhrzeit (B-27): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
     timeNote: '3.6vh',
+    /** Uhrzeit der Zeile (gültige, neue Uhrzeit): deutlich größer als der Zusatz „(war hh:mm)“ (@ZM-188, @ZP-046) */
+    time: '4.4vh',
+    /** Zusatz unter dem Abzeichen („gewertet“) und unter dem Stand („(4:3 i. E.)“): wie Tabellenkopf, nie kleiner (@ZM-125) */
+    note: '3vh',
   },
   /** Abstand zwischen Überschrift und Liste */
   headingGap: '2vh',
@@ -25,10 +29,14 @@ export const displayList = {
   rowPaddingX: '2vh',
   /** Abstand zwischen den Zellen einer Zeile */
   cellGap: '2vh',
-  /** Spalte Uhrzeit über Feld (und Hinweisen, B-27): feste Breite in em der Zeilenschrift, früher Uhrzeit 3,4 em + Feld 5 em */
-  timeFieldWidth: '8.4em',
-  /** Trenner/Stand */
-  separatorWidth: '2.6em',
+  /** Spalte Uhrzeit (daneben „(war hh:mm)“ in einer Zeile) über Feld: feste Breite in em der Zeilenschrift (@ZM-188) */
+  timeFieldWidth: '9.4em',
+  /** Abstand zwischen Uhrzeit und „(war hh:mm)“ in einer Zeile */
+  timeNoteGap: '1vh',
+  /** Trenner/Stand: feste Breite, damit die Spalte in jeder Zeile gleich breit ist (@ZM-187); „(4:3 i. E.)“ unter dem Stand ragt höchstens in den Zellenabstand */
+  separatorWidth: '3.4em',
+  /** Spalte der Spielbezeichnung („Halbfinale 1“): feste Breite in em der Zeilenschrift, in jeder Zeile der Folie, sobald ein Spiel eine trägt (@ZM-187) */
+  labelWidth: '5em',
   /** Status-Punkt vor der Zeile im Spielplan */
   markerSize: '1.6vh',
   /** Tabelle: Platz | Team | S | U | N | Diff | Pkt (in em der Zeilenschrift) */
@@ -37,6 +45,4 @@ export const displayList = {
   headingIconSize: '1em',
   /** Abstand zwischen Überschrift-Symbol und Wort */
   headingIconGap: '1.2vh',
-  /** Bezeichnung einer Zeile (Spielbezeichnung) höchstens so breit */
-  labelMaxWidth: '25%',
 } as const;

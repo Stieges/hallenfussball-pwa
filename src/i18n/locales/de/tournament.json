@@ -1465,7 +1465,7 @@
   "timeShift": {
     "button": "Zeiten verschieben",
     "listHint": "Über ⋮ am Spiel ab dort verschieben.",
-    "original": "ursprünglich {{time}}",
+    "original": "(war {{time}})",
     "tentative": "voraussichtlich",
     "dialogTitle": "Zeiten verschieben",
     "close": "Schließen",

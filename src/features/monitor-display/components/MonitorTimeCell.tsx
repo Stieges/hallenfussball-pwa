@@ -11,7 +11,7 @@ interface MonitorTimeNotesProps {
   testIdPrefix: string;
 }
 
-/** Kleine Zeilen unter einer Uhrzeit: „voraussichtlich“ (@ZM-105) und „ursprünglich hh:mm“ (@ZP-004, @ZP-046). */
+/** Kleine Zeilen unter einer Uhrzeit (Live-Folie, nächstes Spiel): „voraussichtlich“ (@ZM-105) und „(war hh:mm)“ (@ZP-004, @ZP-046). */
 export function MonitorTimeNotes({ match, color, testIdPrefix }: MonitorTimeNotesProps) {
   const { t } = useTranslation('tournament');
   const note: CSSProperties = { fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.normal, color };
@@ -35,15 +35,23 @@ interface MonitorTimeCellProps {
 }
 
 /**
- * Uhrzeit einer Spielzeile im Stil der Spiellisten (Mockup Schiedsrichter): groß die gültige Uhrzeit, darunter klein das Feld
- * (später „Feld · SR“, R5), darunter die Hinweise. Feste Breite: die Namensspalten ändern sich nie durch einen Hinweis (@ZM-087).
+ * Uhrzeit einer Spielzeile im Stil der Spiellisten (Mockup Schiedsrichter): in einer Zeile groß die gültige Uhrzeit und klein
+ * „(war hh:mm)“ (@ZM-188, @ZP-046), darunter klein das Feld (später „Feld · SR“, R5), darunter „voraussichtlich“. Feste Breite;
+ * Uhrzeit und „(war …)“ brechen nie um, die Namensspalten ändern sich nie durch einen Hinweis (@ZM-087, @ZM-187).
  */
 export function MonitorTimeCell({ match, fieldName, color, fieldColor, noteColor, style }: MonitorTimeCellProps) {
+  const { t } = useTranslation('tournament');
+  const note: CSSProperties = { fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.normal, color: noteColor };
   return (
-    <div data-testid="monitor-match-time" style={{ ...style, color, flex: `0 0 ${displayList.timeFieldWidth}` }}>
-      <div>{match.kickoff?.time ?? '–'}</div>
+    <div data-testid="monitor-match-time" style={{ ...style, color, flex: `0 0 ${displayList.timeFieldWidth}`, minWidth: 0 }}>
+      <div data-testid="monitor-match-clockline" style={{ display: 'flex', alignItems: 'baseline', gap: displayList.timeNoteGap, whiteSpace: 'nowrap' }}>
+        <span data-testid="monitor-match-clock" style={{ fontSize: displayList.fontSizes.time }}>{match.kickoff?.time ?? '–'}</span>
+        {match.originalKickoff && (
+          <span data-testid="monitor-match-original" style={note}>{t('timeShift.original', { time: match.originalKickoff.time })}</span>
+        )}
+      </div>
       <div data-testid="monitor-match-field" style={{ fontWeight: cssVars.fontWeights.normal, color: fieldColor }}>{fieldName}</div>
-      <MonitorTimeNotes match={match} color={noteColor} testIdPrefix="monitor-match" />
+      {match.kickoffTentative && <div data-testid="monitor-match-tentative" style={note}>{t('timeShift.tentative')}</div>}
     </div>
   );
 }

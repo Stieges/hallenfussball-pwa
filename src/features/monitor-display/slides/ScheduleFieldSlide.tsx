@@ -5,7 +5,7 @@ import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
-import { fieldSchedule, pageOf, pagesFor } from '../slideContent';
+import { scheduleFieldLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -21,7 +21,7 @@ interface ScheduleFieldSlideProps {
   page?: number;
 }
 
-/** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, je Seite 6 Zeilen (@ZM-129). */
+/** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, Seiten nach Höhe, höchstens 4 Spiele je Seite (@ZM-129, @ZM-185, @ZM-188). */
 export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page = 0 }: ScheduleFieldSlideProps) {
   const { t } = useTranslation('monitor');
   const themeColors = monitorThemes[resolveTheme(theme)];
@@ -30,9 +30,9 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
   const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
 
-  const schedule = fieldSchedule(view, fieldNumber);
-  const pages = pagesFor(schedule.length);
-  const rows = pageOf(schedule, page);
+  const { pages: allPages, columns } = scheduleFieldLayout(view, fieldNumber);
+  const pages = allPages.length;
+  const rows = allPages[Math.min(Math.max(page, 0), pages - 1)];
 
   // B-16e2 (@W2A-031): Kindermodus – kein Ergebnis; die Seitentexte („noch offen“) kommen fertig aus der Ansicht
   const ergebnisseAusgeblendet = !view.rules.results;
@@ -55,7 +55,7 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
             tournament={tournament}
             theme={theme}
             showScore={!ergebnisseAusgeblendet}
-            showStatus
+            columns={columns}
           />
         ))}
       </div>

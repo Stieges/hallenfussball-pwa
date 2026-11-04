@@ -10,6 +10,7 @@ import { getFieldDisplayName } from '../../../utils/displayNames';
 import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../../components/schedule/matchResult';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
+import type { ListColumns } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
 
 interface MonitorMatchRowProps {
@@ -19,12 +20,15 @@ interface MonitorMatchRowProps {
   theme: MonitorTheme;
   /** Ergebnis anzeigen (Spielplan, f3); die Folie „Nächste Spiele“ zeigt nie ein Ergebnis. */
   showScore?: boolean;
-  /** Abzeichen mit dem Wort des Zustands vorn (Spielplan, @OB-066, @ZM-071); Standard aus. */
-  showStatus?: boolean;
+  /**
+   * Spalten der ganzen Folie (@ZM-187): Abzeichen mit dem Wort des Zustands vorn (Spielplan, @OB-066, @ZM-071) und Spielbezeichnung
+   * hinten. Eine Spalte steht in jeder Zeile der Folie oder in keiner, auch wenn das Spiel dieser Zeile nichts hineinschreibt.
+   */
+  columns: ListColumns;
 }
 
-/** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung (optional Ergebnis und Bezeichnung). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false }: MonitorMatchRowProps) {
+/** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung, Stand und Zusätze an festen Stellen (@ZM-187). */
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns }: MonitorMatchRowProps) {
   const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
@@ -40,7 +44,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
   const scoreExtra = figures === null ? undefined : tableResultExtra(figures, t);
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
   const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
-  // „ausgefallen“ trägt das Abzeichen (ohne Ergebnis), „gewertet“ steht neben dem Ergebnis (@ZM-104)
+  // „ausgefallen“ trägt das Abzeichen (ohne Ergebnis), „gewertet“ steht unter dem Abzeichen (@ZM-104, @ZM-187)
   const note = match.status === 'awarded' ? t('view.status.awarded') : undefined;
 
   return (
@@ -60,10 +64,11 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
         border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
       }}
     >
-      {showStatus && (
-        // Feste Breite: die Spalten springen nicht, auch wenn ein Spiel noch kein Abzeichen trägt (@ZM-151)
-        <div data-testid="monitor-match-status" style={{ flex: `0 0 ${displayLayout.scoreArea.badgeWidth}`, display: 'flex', fontSize: displayFontSizes.liveBadge }}>
+      {columns.status && (
+        // Feste Breite in jeder Zeile der Folie: die Spalten springen nicht, auch wenn ein Spiel noch kein Abzeichen trägt (@ZM-151, @ZM-187)
+        <div data-testid="monitor-match-status" style={{ flex: `0 0 ${displayLayout.scoreArea.badgeWidth}`, display: 'flex', flexDirection: 'column', fontSize: displayFontSizes.liveBadge }}>
           {match.badge.kind === 'badge' && <MatchStatusBadge model={match.badge} size="display" tone={monitorBadgeTone(colors)} />}
+          {note && <div data-testid="monitor-match-note" style={{ fontSize: displayList.fontSizes.note, color: colors.text, textAlign: 'center', whiteSpace: 'nowrap' }}>{note}</div>}
         </div>
       )}
       <MonitorTimeCell
@@ -79,8 +84,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
         data-testid="monitor-match-separator"
         style={{
           ...cell,
-          flex: '0 0 auto',
-          minWidth: displayList.separatorWidth,
+          flex: `0 0 ${displayList.separatorWidth}`,
           textAlign: 'center',
           fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
           color: showScore ? colors.text : colors.textMuted,
@@ -88,17 +92,14 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
       >
         {showScore ? score : '–'}
         {showScore && scoreExtra && (
-          <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={{ fontSize: displayList.fontSizes.head, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
+          <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={{ fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
             {scoreExtra}
           </div>
         )}
       </div>
       <div data-teamname style={{ ...cell, flex: '1 1 0' }}>{monitorSideLabel(match.away)}</div>
-      {match.labelText && (
-        <div style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: displayList.labelMaxWidth }}>{match.labelText}</div>
-      )}
-      {note && (
-        <div data-testid="monitor-match-note" style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: displayList.labelMaxWidth }}>{note}</div>
+      {columns.label && (
+        <div data-testid="monitor-match-label" style={{ ...cell, color: colors.textMuted, flex: `0 0 ${displayList.labelWidth}` }}>{match.labelText}</div>
       )}
     </div>
   );
