@@ -27,19 +27,40 @@ export interface RowsPlan { fit: FitStep; blocks: MatchRowsBlock[] }
 
 const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);
 
-/** Zeilen auf Seiten verteilen (Greedy); die letzte Seite bekommt mindestens `minRows` Zeilen, wenn es mehr als eine gibt. */
-export function splitRows(heights: number[], capacities: number[], minRows: number): number[][] {
+/** Umbruch an der Stunde (@DR-033): welche Zeilen eine neue Stunde beginnen und wie viel Platz Seite 1 dabei höchstens frei lassen darf. */
+export interface HourBreaks { starts: boolean[]; maxFree: number }
+
+/**
+ * Zeilen auf Seiten verteilen (Greedy). Muss umgebrochen werden, bricht die Seite bevorzugt vor der ersten Zeile einer neuen Stunde,
+ * sodass die Folgeseite mit einer vollen Stunde beginnt (@DR-033); das gilt nur, wenn die Seite dabei voll genutzt bleibt (höchstens
+ * `maxFree` mm frei) und danach noch mindestens `minRows` Zeilen folgen (sonst gälte der spätere von zwei Stundenanfängen und die
+ * Schlussregel zöge Zeilen nach). Sonst bricht sie dort, wo der Platz endet. Die letzte Seite bekommt mindestens `minRows` Zeilen,
+ * wenn es mehr als eine gibt.
+ */
+export function splitRows(heights: number[], capacities: number[], minRows: number, hours?: HourBreaks): number[][] {
   const pages: number[][] = [[]];
   let used = 0;
-  heights.forEach((h, index) => {
+  let i = 0;
+  while (i < heights.length) {
+    const current = pages[pages.length - 1];
     const cap = capacities[Math.min(pages.length - 1, capacities.length - 1)] ?? 0;
-    if (used + h > cap && pages[pages.length - 1].length > 0) {
+    if (used + heights[i] > cap && current.length > 0) {
+      const first = current[0];
+      let cut = i;
+      for (let j = i; hours && j > first; j--) {
+        if (cap - sum(heights.slice(first, j)) > hours.maxFree) { break; }
+        if (hours.starts[j] && heights.length - j >= minRows) { cut = j; break; }
+      }
+      current.length = cut - first;
       pages.push([]);
       used = 0;
+      i = cut;
+      continue;
     }
-    pages[pages.length - 1].push(index);
-    used += h;
-  });
+    current.push(i);
+    used += heights[i];
+    i += 1;
+  }
   for (;;) {
     const last = pages[pages.length - 1];
     const before = pages[pages.length - 2];
@@ -73,7 +94,7 @@ export function planRows(input: RowsPlanInput): RowsPlan {
   if (sum(rowHeights) > firstCap) {
     fit = 'nextPage';
     rowHeights = heights(printRowPad.normal);
-    pages = splitRows(rowHeights, [firstCap, nextCap], printMatchRow.minRowsOnNextPage);
+    pages = splitRows(rowHeights, [firstCap, nextCap], printMatchRow.minRowsOnNextPage, { starts: sources.map((_, index) => hourStart(index)), maxFree: printMatchRow.hourBreakMaxFree });
   } else {
     pages = [sources.map((_, i) => i)];
     if (fit === 'normal') {
@@ -100,7 +121,7 @@ export function planRows(input: RowsPlanInput): RowsPlan {
 
 /**
  * Folgen Finalrunde und Platzierung auf der Seite der Tabellen? Nur, wenn beide dort ganz Platz haben (@DR-002),
- * sonst beginnen sie auf einer neuen Seite. Die Zeichnung der Finalrunde folgt in T7b; die Entscheidung steht hier.
+ * sonst beginnen sie auf einer neuen Seite. `sectionFlow.ts` ruft sie auf.
  */
 export function finalsOnTablesPage(remaining: number, finalsHeight: number, rankingHeight: number, gap: number): boolean {
   return finalsHeight + (rankingHeight > 0 ? gap + rankingHeight : 0) <= remaining;

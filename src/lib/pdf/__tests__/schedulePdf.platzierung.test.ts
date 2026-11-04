@@ -5,7 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
-import { printFont, printGap, printLimits, printMetrics, printUnit } from '../../../design-tokens/print';
+import { printFont, printGap, printLimits, printUnit } from '../../../design-tokens/print';
+import { printWriteLine } from '../../../design-tokens/print-sheet';
 import { pageGeometry } from '../layout';
 import { buildSchedulePdf, type PDFExportOptions } from '../schedulePdf';
 import type { RankEntry } from '../placement';
@@ -19,6 +20,8 @@ import { storedSchedule } from './storedSchedule';
 const LINE_MIN_LENGTH = 40;
 const FLAT_TOL = 0.01;
 const SIZE_TOL = 0.05;
+/** Textstücke gelten als auf einer Grundlinie, wenn ihre y-Werte so nah sind (mm). */
+const LINE_FLAT = 0.6;
 const SATZ_FINALE = 'Die Platzierung steht nach dem Finale fest';
 const SATZ_LETZTES = 'Die Platzierung steht nach dem letzten Spiel fest';
 
@@ -66,15 +69,21 @@ async function platzierung(
   const fuss = pageGeometry('a4', 'portrait', 1, 2).footRuleY;
   const zeilen = darunter.filter(t => t.y < fuss); // Reihenfolge des Dokuments (Seiten nacheinander)
   const sätze = zeilen.filter(t => t.str.trim().startsWith('Die Platzierung'));
-  // pdfjs fasst Platznummer und Teamname einer Zeile zu einem Textstück zusammen („1. SC Ost“)
+  // Platznummer („1.“) und Teamname einer Zeile sind getrennte Textstücke auf einer Grundlinie; der Name gehört zur Nummer links davon
   // zweispaltig gezeichnet (Zeile für Zeile links, rechts): nach Platznummer ordnen
   const platzNr = (t: { str: string }): number => Number(/^\d+/.exec(t.str.trim())?.[0]);
-  const platzZeilen = zeilen.filter(t => /^\d+\./.test(t.str.trim())).sort((a, b) => platzNr(a) - platzNr(b));
-  const nummern = platzZeilen.map(t => /^\d+\./.exec(t.str.trim())?.[0] ?? '');
+  const platzZeilen = zeilen.filter(t => /^\d+\.$/.test(t.str.trim())).sort((a, b) => platzNr(a) - platzNr(b));
+  const nummern = platzZeilen.map(t => t.str.trim());
+  const nameZu = (nr: { x: number; y: number }): { str: string; size: number } | undefined => {
+    const namen = zeilen.filter(t => Math.abs(t.y - nr.y) < LINE_FLAT && t.x > nr.x && t.str.trim() !== '' && !/^\d+\.$/.test(t.str.trim()));
+    const nah = namen.sort((a, b) => a.x - b.x)[0];
+    return nah ? { str: nah.str.trim(), size: nah.size } : undefined;
+  };
+  const namen = platzZeilen.map(nameZu).filter((w): w is { str: string; size: number } => w !== undefined);
   const weitere = [
-    ...platzZeilen.map(t => ({ str: t.str.trim().replace(/^\d+\.\s*/, ''), size: t.size })).filter(w => w.str !== ''),
+    ...namen,
     ...zeilen
-      .filter(t => !sätze.includes(t) && !platzZeilen.includes(t) && !/^Seite \d+ von \d+$/.test(t.str.trim()))
+      .filter(t => !sätze.includes(t) && !platzZeilen.includes(t) && !namen.some(n => n.str === t.str.trim() && platzZeilen.some(nr => Math.abs(nr.y - t.y) < LINE_FLAT && nr.x < t.x)) && !/^Seite \d+ von \d+$/.test(t.str.trim()))
       .map(t => ({ str: t.str.trim(), size: t.size })),
   ];
   const linien = [
@@ -229,7 +238,7 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     expect(nr.map(t => t.str.trim())).toEqual(NUMMERN_8);
     for (const t of links) {expect(t.x + t.w, t.str).toBeCloseTo(links[0].x + links[0].w, 0);}
     for (const t of rechts) {expect(t.x + t.w, t.str).toBeCloseTo(rechts[0].x + rechts[0].w, 0);}
-    expect(rechts[0].x).toBeGreaterThan(links[0].x + pageGeometry('a4', 'portrait').contentWidth / 2 - printMetrics.placeNumberWidth);
+    expect(rechts[0].x).toBeGreaterThan(links[0].x + pageGeometry('a4', 'portrait').contentWidth / 2 - printWriteLine.rankNumberWidth);
     links.forEach((t, i) => expect(rechts[i].y, `Zeile ${i + 1}`).toBeCloseTo(t.y, 1));
   });
 
@@ -237,9 +246,9 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const { pages } = await platzierung();
     const links = nummernDer(pages[pages.length - 1]).slice(0, 4);
 
-    expect(printMetrics.placeRowHeight).toBeGreaterThanOrEqual(8);
+    expect(printWriteLine.rankRowHeight).toBeGreaterThanOrEqual(8);
     for (let i = 1; i < links.length; i++) {
-      expect(links[i].y - links[i - 1].y).toBeGreaterThanOrEqual(printMetrics.placeRowHeight - SIZE_TOL);
+      expect(links[i].y - links[i - 1].y).toBeGreaterThanOrEqual(printWriteLine.rankRowHeight - SIZE_TOL);
     }
   });
 
@@ -247,11 +256,12 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const { pages } = await platzierung({ ranking: ENDSTAND, closed: true });
     const seite = pages[pages.length - 1];
     const geo = pageGeometry('a4', 'portrait');
-    const zeilen = seite.texts.filter(t => /^\d+\. /.test(t.str.trim()));
+    const titel = seite.texts.find(t => ohneNummer(t.str) === 'Platzierung');
+    const zeilen = seite.texts.filter(t => titel && t.y > titel.y && t.str.trim() !== '' && !/^Seite \d/.test(t.str.trim()) && t.y < geo.footRuleY);
 
-    expect(zeilen).toHaveLength(8);
+    expect(zeilen.filter(t => /^\d+\.$/.test(t.str.trim()))).toHaveLength(8);
     const mitte = geo.left + geo.contentWidth / 2;
-    expect(zeilen.filter(t => t.x < mitte)).toHaveLength(4);
+    expect(zeilen.filter(t => t.x < mitte && /^\d+\.$/.test(t.str.trim()))).toHaveLength(4);
     for (const t of zeilen.filter(t => t.x < mitte)) {expect(t.x + t.w, t.str).toBeLessThan(mitte);}
   });
 
@@ -264,7 +274,7 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const mitte = geo.left + geo.contentWidth / 2;
     const titel = seite.texts.find(t => ohneNummer(t.str) === 'Platzierung');
     const links = seite.texts.filter(t => titel && t.y > titel.y && t.x < mitte && !/^Seite \d/.test(t.str.trim()) && t.str.trim() !== '' && ohneNummer(t.str) !== 'Platzierung');
-    const ersteZeile = links.filter(t => t.y < (links.find(x => /^\d+\./.test(x.str.trim()) && x.str.trim().startsWith("2."))?.y ?? Infinity) - SIZE_TOL);
+    const ersteZeile = links.filter(t => t.y < (links.find(x => x.str.trim() === '2.')?.y ?? Infinity) - SIZE_TOL);
     const gesamt = ersteZeile.map(t => t.str.trim()).join(' ');
 
     expect(lang.length).toBe(50);
@@ -275,8 +285,8 @@ describe('@DR-009 Platzierung zweispaltig', () => {
       expect(t.x + t.w, t.str).toBeLessThan(mitte);
     }
     // Zeilenpaar bleibt gleich hoch: Platz 5 (rechts) steht auf der Höhe von Platz 1 (links)
-    const fuenf = seite.texts.find(t => t.str.trim().startsWith("5."));
-    const eins = seite.texts.find(t => t.str.trim().startsWith("1."));
+    const fuenf = seite.texts.find(t => t.str.trim() === '5.');
+    const eins = seite.texts.find(t => t.str.trim() === '1.');
     expect(fuenf?.y).toBeCloseTo(eins?.y ?? -1, 1);
   });
 
@@ -290,17 +300,18 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const titel = seite.texts.find(t => ohneNummer(t.str) === 'Platzierung');
     if (!titel) {throw new Error('Überschrift fehlt');}
     const liste = seite.texts.filter(t => t.y > titel.y && t.str.trim() !== '' && !/^Seite \d/.test(t.str.trim()));
-    const platz = (n: number) => liste.find(t => new RegExp(`^${n}\\.`).test(t.str.trim()));
-    const [eins, zwei, fuenf, sechs] = [platz(1), platz(2), platz(5), platz(6)];
-    if (!eins || !zwei || !fuenf || !sechs) {throw new Error('Platzzeilen fehlen');}
-    const namenRechts = liste.filter(t => t.x > mitte && t.y >= fuenf.y - SIZE_TOL && t.y < sechs.y - SIZE_TOL);
+    const platz = (n: number) => liste.find(t => t.str.trim() === `${n}.`);
+    const [eins, zwei, fuenf] = [platz(1), platz(2), platz(5)];
+    if (!eins || !zwei || !fuenf) {throw new Error('Platzzeilen fehlen');}
+    // Nummer und Schreiblinie stehen auf der letzten Namenszeile, weitere Zeilen des Namens stehen darüber (die Zeile wächst nach oben)
+    const namenRechts = liste.filter(t => t.x > mitte && t.y <= fuenf.y + SIZE_TOL && t.y > fuenf.y - 3 * printWriteLine.rankRowHeight);
     const letzteZeile = Math.max(...namenRechts.map(t => t.y));
 
     expect(new Set(namenRechts.map(t => Math.round(t.y))).size).toBeGreaterThan(1);
     expect(new Set(namenRechts.map(t => Math.round(t.y))).size).toBeLessThanOrEqual(3);
     expect(namenRechts.map(t => t.str.trim()).join(' ')).toContain('Hintertupfingen');
     expect(fuenf.y).toBeCloseTo(eins.y, 1);
-    expect(zwei.y - letzteZeile).toBeGreaterThanOrEqual(printMetrics.placeRowHeight - SIZE_TOL);
+    expect(zwei.y - letzteZeile).toBeGreaterThanOrEqual(printWriteLine.rankRowHeight - SIZE_TOL);
     for (const t of namenRechts) {expect(t.x + t.w, t.str).toBeLessThanOrEqual(geo.left + geo.contentWidth + SIZE_TOL);}
     for (const t of liste.filter(t => t.x < mitte)) {expect(t.x + t.w, t.str).toBeLessThan(mitte);}
   });
@@ -314,7 +325,7 @@ describe('@DR-009 Platzierung zweispaltig', () => {
     const darueber = [...seite.lines.map(l => l.y1), ...seite.rects.map(r => r.y + r.h)].filter(y => y < titel.y);
     const unterkanteDarueber = Math.max(...darueber);
 
-    expect(seite.texts.some(t => t.str.trim() === 'Finale')).toBe(true);
+    expect(seite.texts.some(t => t.str.trim() === 'FINALE')).toBe(true);
     expect(titel.y - titel.size * printUnit.mmPerPt * printFont.ascentEm).toBeGreaterThanOrEqual(unterkanteDarueber + printGap.sectionGap - SIZE_TOL);
     for (const t of nummernDer(seite)) {expect(t.y).toBeLessThanOrEqual(geo.bottom);}
   });

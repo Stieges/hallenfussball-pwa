@@ -1,6 +1,7 @@
 /**
  * B-28 C4 – Platzierung ohne Finalrunde beginnt keine eigene Seite (Daniel 15.10., @DR-009): sie steht direkt unter
- * der Tabelle, wenn sie auf die Seite passt. Mit Finalrunde beginnt die Finalrunde weiter auf einer eigenen Seite.
+ * der Tabelle, wenn sie auf die Seite passt. Mit Finalrunde folgen Finalrunde und Platzierung auf der Seite der Tabellen, wenn
+ * sie dort ganz Platz haben, sonst auf einer neuen Seite (@DR-002).
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule } from '../../../core/generators';
@@ -15,7 +16,11 @@ import type { RankEntry } from '../placement';
 import { testUuid } from '../../../test/testIds';
 
 /** Seite der Überschrift (die letzte mit dem Wort als eigenem Textstück; „Platzierung“ steht auch als Bezeichnung im Kopf). */
-const pageOf = (pages: LayoutPage[], title: string): number => pages.map(p => p.texts.some(t => ohneNummer(t.str) === title)).lastIndexOf(true);
+const pageOf = (pages: LayoutPage[], title: string): number => pages.map(p => p.texts.some(t => ohneNummer(t.str).toLocaleLowerCase('de') === title.toLocaleLowerCase('de'))).lastIndexOf(true);
+/** Seite der Gruppenspiele: die erste Seite mit dem Spaltenkopf der Spiele („Nr.“); die Finalrunde trägt ihn ebenfalls. */
+const spielSeite = (pages: LayoutPage[]): number => pages.findIndex(p => p.texts.some(t => t.str.trim() === 'Nr.'));
+/** Seite der Gruppentabelle: die erste Seite mit dem Spaltenkopf „Sp.“. */
+const tabellenSeite = (pages: LayoutPage[]): number => pages.findIndex(p => p.texts.some(t => t.str.trim() === 'Sp.'));
 
 function jederGegenJeden(count: number) {
   const teams: Team[] = Array.from({ length: count }, (_, i) => ({ id: testUuid(i), name: `Team ${String.fromCharCode(65 + i)}`, group: undefined }));
@@ -24,12 +29,14 @@ function jederGegenJeden(count: number) {
 }
 
 describe('@DR-009 Platzierung unter der Tabelle', () => {
-  it('Jeder gegen jeden mit 5 Teams: Spiele und Platzierung auf derselben Seite, ein Blatt', async () => {
+  it('Jeder gegen jeden mit 5 Teams: Seite 1 mit den Spielen, Seite 2 mit der Tabelle und darunter der Platzierung', async () => {
     const { tournament, schedule } = jederGegenJeden(5);
     const { pages } = await kopfPdf({}, tournament, schedule);
 
-    expect(pageOf(pages, 'Platzierung')).toBe(pageOf(pages, 'Spiele'));
-    expect(pages).toHaveLength(1);
+    expect(pageOf(pages, 'Platzierung')).toBe(1);
+    expect(tabellenSeite(pages)).toBe(1);
+    expect(spielSeite(pages)).toBe(0);
+    expect(pages).toHaveLength(2);
   });
 
   it('Gruppen ohne Finalrunde (preset none): Platzierung direkt unter den Tabellen, nicht auf einer eigenen Seite', async () => {
@@ -38,25 +45,37 @@ describe('@DR-009 Platzierung unter der Tabelle', () => {
       finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
     });
     const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
-    const tabellen = pages.map((p, i) => (p.texts.some(t => ohneNummer(t.str).startsWith('Tabelle')) ? i : -1)).filter(i => i >= 0);
+    const tabellen = pages.map((p, i) => (p.texts.some(t => ohneNummer(t.str).startsWith('Gruppe A')) ? i : -1)).filter(i => i >= 0);
 
     expect(pageOf(pages, 'Platzierung')).toBe(Math.max(...tabellen));
   });
 
-  it('Gegenbeispiel: passt die Platzierung nicht mehr auf die Seite, folgt sie auf der nächsten', async () => {
-    const { tournament, schedule } = jederGegenJeden(12);
+  it('Gegenbeispiel: passt die Platzierung nicht mehr unter die Tabelle, folgt sie auf der nächsten Seite', async () => {
+    const { tournament, schedule } = jederGegenJeden(16);
     const { pages } = await kopfPdf({}, tournament, schedule);
-    expect(pageOf(pages, 'Platzierung')).toBeGreaterThan(pageOf(pages, 'Spiele'));
+    expect(pageOf(pages, 'Platzierung')).toBeGreaterThan(tabellenSeite(pages));
   });
 
-  it('Gegenbeispiel: mit Finalrunde beginnt die Finalrunde auf einer eigenen Seite, die Platzierung folgt dort', async () => {
-    const { pages } = await kopfPdf();
+  it('@DR-002 mit Finalrunde: Finalrunde und Platzierung folgen auf der Seite der Tabellen, wenn sie dort ganz Platz haben (ein Feld)', async () => {
+    const tournament = hallencupTournament({ numberOfFields: 1 });
+    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
     const finale = pageOf(pages, 'Halbfinale');
 
-    expect(finale).toBeGreaterThan(pageOf(pages, 'Gruppenphase'));
-    expect(pages[finale].texts.some(t => ohneNummer(t.str) === 'Gruppenphase')).toBe(false);
+    expect(finale).toBeGreaterThan(spielSeite(pages));
+    expect(pageOf(pages, 'Gruppe A')).toBe(finale);
     expect(pageOf(pages, 'Platzierung')).toBe(finale);
     expect(HALLENCUP_TEAMS.length).toBeGreaterThan(0);
+  });
+
+  it('@DR-002 Gegenbeispiel: haben Finalrunde und Platzierung auf der Seite der Tabellen nicht ganz Platz, beginnen beide auf einer neuen Seite', async () => {
+    const teams: Team[] = Array.from({ length: 12 }, (_, i) => ({ id: testUuid(i), name: `Verein ${String.fromCharCode(65 + i)}`, group: i < 6 ? 'A' : 'B' }));
+    const tournament = hallencupTournament({ teams, numberOfTeams: 12 });
+    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament, 'de'));
+    const tabellen = pageOf(pages, 'Gruppe A');
+    const finale = pageOf(pages, 'Halbfinale');
+
+    expect(finale).toBeGreaterThan(tabellen);
+    expect(pageOf(pages, 'Platzierung')).toBe(finale);
   });
 });
 
@@ -78,8 +97,8 @@ describe('@DR-009 Platzprüfung: die Platzierung bricht nie unter den Satzspiege
 });
 
 describe('@DR-009 Abschlusstabelle bei Jeder gegen jeden in einer Gruppe ohne Finalrunde', () => {
-  const heading = (pages: LayoutPage[], name: string) =>
-    pages.flatMap(p => p.texts).find(t => ohneNummer(t.str) === name && Math.abs(t.size - printType.h2) < 0.1 || ohneNummer(t.str) === name && Math.abs(t.size - printType.caption) < 0.1);
+  /** Überschrift „Platzierung“ (13 pt) bzw. Kopf der Abschlusstabelle (Spaltenkopf, 8,5 pt fett). */
+  const heading = (pages: LayoutPage[], name: string) => pages.flatMap(p => p.texts).find(t => ohneNummer(t.str) === name);
 
   function ranking(count: number): RankEntry[] {
     const { tournament } = jederGegenJeden(count);

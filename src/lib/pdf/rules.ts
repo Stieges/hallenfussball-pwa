@@ -30,7 +30,7 @@ export type PdfRules = Pick<
   | 'pointSystem'
   | 'finalsConfig'
   | 'matchCockpitSettings'
-> & { rulebook?: string; koSlots: KoKey[]; placementsToPlayOut: number[] };
+> & { rulebook?: string; koSlots: KoKey[]; placementsToPlayOut: number[]; groupCount: number };
 
 /**
  * Adapter: Turnier und erzeugter Plan → Eingang. Solange `rulebook` am Turnier fehlt, liefert er `undefined`.
@@ -50,19 +50,24 @@ export function pdfRulesFrom(tournament: Tournament, schedule: Pick<GeneratedSch
     rulebook,
     koSlots: schedule ? koSlotsFrom(schedule.allMatches.filter(m => m.phase !== 'groupStage')) : [],
     placementsToPlayOut: effectivePlacementsToPlayOut(tournament),
+    // Zahl der Gruppen für „2 Gruppen + Finalrunde“: Einstellung, sonst die Gruppen der Teams (@DR-020)
+    groupCount: (tournament.numberOfGroups ?? 0) > 0 ? (tournament.numberOfGroups ?? 1) : Math.max(1, new Set(tournament.teams.map(team => team.group).filter(Boolean)).size),
   };
 }
 
 /** Art einer Regelzeile; die Zusammenfassung im Assistenten zeigt `tiebreak`, `playOut` und `rulebook` unverändert. */
 export type PdfRuleKind = 'mode' | 'tiebreak' | 'playOut' | 'duration' | 'rulebook';
 
+/** Eine Regelzeile; `value` ist bei der Spielzeit nur der Wert ohne die Bezeichnung (der Kopf stellt sie als Eckdatum dar). */
+export interface PdfRuleEntry { kind: PdfRuleKind; line: string; value?: string }
+
 /**
  * Regelzeilen des Kopfs in fester Reihenfolge: Modus, Wertung, Gleichstand auf auszuspielenden Plätzen (@DR-020, nur wenn
  * es solche Plätze gibt), Spielzeit, Regelwerk (nur wenn nicht leer). Eine Quelle für PDF und Zusammenfassung.
  */
-export function pdfRuleEntries(rules: PdfRules, t: PdfTexts): Array<{ kind: PdfRuleKind; line: string }> {
+export function pdfRuleEntries(rules: PdfRules, t: PdfTexts): PdfRuleEntry[] {
   const { label } = t.rules;
-  const entries: Array<{ kind: PdfRuleKind; line: string }> = [{ kind: 'mode', line: `${label.mode}: ${modeText(rules, t)}` }];
+  const entries: PdfRuleEntry[] = [{ kind: 'mode', line: `${label.mode}: ${modeText(rules, t)}` }];
   const placement = placementLine(rules, t);
   if (placement !== '') {
     entries.push({ kind: 'tiebreak', line: placement });
@@ -70,7 +75,8 @@ export function pdfRuleEntries(rules: PdfRules, t: PdfTexts): Array<{ kind: PdfR
   if (rules.placementsToPlayOut.length > 0) {
     entries.push({ kind: 'playOut', line: t.rules.playOut(rules.placementsToPlayOut) });
   }
-  entries.push({ kind: 'duration', line: `${label.duration}: ${durationText(rules, t)}` });
+  const duration = durationText(rules, t);
+  entries.push({ kind: 'duration', line: `${label.duration}: ${duration}`, value: duration });
   const rulebook = rules.rulebook?.trim() ?? '';
   if (rulebook !== '') {
     entries.push({ kind: 'rulebook', line: `${label.rulebook}: ${rulebook}` });
@@ -118,7 +124,7 @@ export function koLines(rules: PdfRules, t: PdfTexts): string[] {
 
 /** Text des Modus (Jeder gegen jeden / Gruppen + Finalrunde), auch für die Zusammenfassung. */
 export function modeText(rules: PdfRules, t: PdfTexts): string {
-  return rules.groupSystem === 'groupsAndFinals' ? t.modeGroupsAndFinals : t.rules.modeRoundRobin;
+  return rules.groupSystem === 'groupsAndFinals' ? t.modeGroupsAndFinals(rules.groupCount) : t.rules.modeRoundRobin;
 }
 
 function placementText(rules: PdfRules, t: PdfTexts): string {

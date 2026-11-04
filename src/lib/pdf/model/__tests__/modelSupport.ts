@@ -40,13 +40,16 @@ export interface ModelOptions {
   geo?: (geo: PageGeometry) => PageGeometry;
 }
 
+/** Seiten der Gruppenspiele (Seite 1 und ihre Folgeseiten); danach folgen Tabellen, Finalrunde und Platzierung (T7b). */
+export const matchPages = (model: ScheduleModel): ScheduleModel['pages'] => model.pages.filter(page => page.section === 'matches');
+
 export function modelOf(fall: HandzettelFall, opts: ModelOptions = {}): ModelCase {
   const locale = opts.locale ?? 'de';
   const tournament = fallTournament(fall, opts.tournament ?? {});
   const schedule = withTournamentState(fallSchedule(fall, locale, opts.tournament ?? {}), tournament);
   const options: PDFExportOptions = {
     tournament, locale, translate: translatorFor(locale), now: FALL_NOW, viewerBaseUrl: BASE_URL,
-    hallName: fall.halle, organizerName: fall.veranstalter, ...opts.options,
+    hallName: fall.halle, organizerName: fall.veranstalter, ...(fall.kontakt === undefined ? {} : { contact: fall.kontakt }), ...opts.options,
   };
   const input = toPdfInput({ schedule, standings: undefined, options });
   const t = buildPdfTexts(input.translate, locale);

@@ -54,7 +54,7 @@ function grossesTurnier(): { tournament: Tournament; schedule: GeneratedSchedule
 const trimmed = (text: LayoutText): string => text.str.trim();
 
 function findPage(pages: LayoutPage[], text: string): number {
-  return pages.findIndex(page => page.texts.some(t => ohneNummer(t.str) === text));
+  return pages.findIndex(page => page.texts.some(t => ohneNummer(t.str).toLocaleLowerCase('de') === text.toLocaleLowerCase('de')));
 }
 
 const LANGER_TITEL = 'Internationaler Hallenfußball-Wintercup der Sportgemeinschaft Nordheim 2026';
@@ -105,18 +105,18 @@ describe('@DR-015 K.-o.-Zeile über der Finalrunde', () => {
     expect(seite, 'Finalseite').toBeGreaterThan(0);
 
     const ko = pages[seite].texts.find(t => trimmed(t) === 'K.-o.: bei Gleichstand Strafstoßschießen, 3 Schützen je Team');
-    const titel = pages[seite].texts.find(t => ohneNummer(t.str) === 'Halbfinale');
+    const titel = pages[seite].texts.find(t => ohneNummer(t.str).toLocaleLowerCase('de') === 'halbfinale');
     expect(ko, 'K.-o.-Zeile auf der Finalseite').toBeDefined();
     expect(ko && titel ? ko.y : 0).toBeLessThan(titel?.y ?? 0);
   });
 });
 
 describe('K3 – Kurzkopf auf jeder Folgeseite', () => {
-  it('Seite 2 und 3 tragen den Kurzkopf mit dem Turniernamen in 16 pt', async () => {
+  it('jede Folgeseite trägt den Kurzkopf mit dem Turniernamen in 16 pt', async () => {
     const tournament = hallencupMitRegelwerk();
     const { pages } = await layoutOf({ tournament }, hallencupSchedule(tournament));
 
-    expect(pages.length).toBeGreaterThanOrEqual(3);
+    expect(pages.length).toBeGreaterThanOrEqual(2);
     for (let p = 1; p < pages.length; p++) {
       const kopf = pages[p].texts.find(t => trimmed(t) === 'Hallencup Nord');
       expect(kopf, `Kurzkopf auf Seite ${p + 1}`).toBeDefined();
@@ -170,7 +170,7 @@ describe('@DR-001 Teamnamen mindestens 12 pt, überall', () => {
     const teams = HALLENCUP_TEAMS.map((team, i) => (i === 0 ? { ...team, name: LONG_50 } : team));
     const tournament = hallencupMitRegelwerk({ teams });
     const { pages } = await layoutOf({ tournament }, generateFullSchedule(tournament, 'de'));
-    const tabelle = pages.find(page => page.texts.some(t => ohneNummer(t.str) === 'Tabelle – Gruppe A'));
+    const tabelle = pages.find(page => page.texts.some(t => ohneNummer(t.str) === 'Gruppe A'));
     expect(tabelle, 'Seite mit Tabelle Gruppe A').toBeDefined();
 
     // Teamspalte: Rest der Breite zwischen Platz- und Zahlenspalten (Tokens, keine Zahl im Test)

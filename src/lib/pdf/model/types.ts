@@ -121,8 +121,8 @@ export interface SideModel {
 export type SmallLineKind = 'overtime' | 'shootout';
 
 /**
- * Inhalt der Ergebniszelle je Zustand (@DR-019): `score` mit Ziffern und Kennzeichen, `lines` zum Eintragen (auch
- * „läuft“), `text` für „ausgefallen“. Die Schreiblinien selbst stehen in `MatchRowModel.lines`.
+ * Inhalt der Ergebniszelle je Zustand (@DR-019): `score` mit Ziffern und Kennzeichen, `lines` zum Eintragen (auch ein laufendes
+ * oder unterbrochenes Spiel, ohne „läuft“), `text` für „ausgefallen“. Die Schreiblinien selbst stehen in `MatchRowModel.lines`.
  */
 export type ResultCell =
   | { kind: 'score'; a: string; b: string; marks: string[]; runs: TextRun[] }
@@ -140,6 +140,8 @@ export interface MatchRowModel {
   ruleAbove?: RuleLine;
   nr: TextRun;
   time: TextRun;
+  /** Nummer des Feldes, nur bei mehr als einem Feld. */
+  field?: TextRun;
   group?: GroupMark;
   home: SideModel;
   cell: ResultCell;
@@ -156,8 +158,11 @@ export interface MatchRowsBlock extends BlockBase {
   rows: MatchRowModel[];
 }
 
-/** Eine Runde der Finalrunde: Rundenname als eigene Zeile über einem Rundentrenner, darunter ihre Spiele. */
-export interface FinalsRoundModel { title: TextRun; rule: RuleLine; rows: MatchRowModel[] }
+/**
+ * Eine Runde der Finalrunde: Rundenname als eigene Zeile, darüber der Rundentrenner in Akzent (nicht vor der ersten Runde,
+ * dort steht die Linie des Spaltenkopfs), darunter ihre Spiele.
+ */
+export interface FinalsRoundModel { title: TextRun[]; rule?: RuleLine; rows: MatchRowModel[] }
 
 /** Finalrunde (@DR-019, @DR-037); die K.-o.-Regel steht als `TextBlock` davor (@DR-006, @DR-015). */
 export interface FinalsBlock extends BlockBase {
@@ -166,46 +171,33 @@ export interface FinalsBlock extends BlockBase {
   rounds: FinalsRoundModel[];
 }
 
-/** Spalte einer Gruppentabelle; der Kopf ist die Kurzform (@OB-075). */
-export type StandingsKey = 'rank' | 'team' | 'played' | 'won' | 'drawn' | 'lost' | 'goals' | 'diff' | 'points';
-export interface StandingsColumn { key: StandingsKey; w: number; label: string }
+/** Waagerechte oder senkrechte Strecke (Raster der Gruppentabellen). */
+export interface Segment { x1: number; y1: number; x2: number; y2: number }
 
 /**
- * Gruppentabelle. Gezeichnet mit `jspdf-autotable` ab `top` (`grid`: Kästchen mit grauem Raster, @DR-035; `zebra`:
- * Fassung mit Werten). Die Höhe rechnet das Modell aus `headHeight` und `rowHeight`; die Zeichenschicht setzt die
- * Zeilenhöhe fest, damit autotable nicht abweicht.
+ * Gruppentabelle (@DR-035), fertig vermessen: Kopf- und Zebra-Flächen, Raster (nur in der Fassung ohne Ergebnisse,
+ * `grid`, grau) und alle Texte in Lesereihenfolge (Kopf, dann Zeile für Zeile). `group` trägt das Gruppenzeichen im Kopf.
  */
 export interface StandingsTableBlock extends BlockBase {
   kind: 'standingsTable';
-  x: number;
-  w: number;
+  fills: Fill[];
+  grid: Segment[];
   group?: GroupMark;
-  caption: string;
-  columns: StandingsColumn[];
-  headHeight: number;
-  rowHeight: number;
-  /** Team und Zellen in Spaltenreihenfolge ohne `team`; leer in der Fassung ohne Ergebnisse. */
-  rows: Array<{ team: string[]; cells: string[] }>;
-  style: 'grid' | 'zebra';
+  runs: TextRun[];
 }
 
 /** Strafstoßschießen um Platz 1 (@DR-036): Überschrift, Linien für beide Teams und ihre Treffer, ohne Kasten. */
 export interface ShootoutBlock extends BlockBase {
   kind: 'shootout';
-  title: TextRun;
-  /** Doppelpunkt zwischen den Treffern und die Beschriftungen „Team“, „Treffer“, „Team“. */
   runs: TextRun[];
   lines: WriteLine[];
 }
 
-/** Ein Platz der Platzierung (@DR-005, @DR-009): Nummer und Name oder Schreiblinie. */
-export interface RankEntryModel { place: number; number: TextRun; name?: TextRun; line?: WriteLine }
-
-/** Platzierung, zweispaltig; nach dem Abschluss in einer Gruppe entfällt sie (@DR-009, „Abschlusstabelle“). */
+/** Platzierung, zweispaltig (@DR-005, @DR-009): Überschrift, Satz vor dem Abschluss, je Platz Nummer und Linie bzw. Name. */
 export interface RankingBlock extends BlockBase {
   kind: 'ranking';
-  title: TextRun;
-  entries: RankEntryModel[];
+  runs: TextRun[];
+  lines: WriteLine[];
 }
 
 /** Abschnittstitel und Hinweise (K.-o.-Regel über der Finalrunde, Tabellentitel). */
@@ -227,9 +219,14 @@ export type Block =
 /** Fußzeile (@DR-001): Adresse (Link), Hinweis, „Stand … · Seite x von y“; zuletzt gelesen (@DR-039). */
 export interface FooterModel { rule: RuleLine; runs: TextRun[] }
 
+/** Abschnitt, der oben auf einer Seite beginnt: bestimmt die Zeile „… · Tabellen“ im Kurzkopf der Folgeseiten. */
+export type PageSection = 'matches' | 'tables' | 'finals' | 'ranking';
+
 export interface PageModel {
   /** Seitennummer ab 1. */
   number: number;
+  /** Abschnitt oben auf der Seite (Kurzkopf der Folgeseiten, @DR-024). */
+  section: PageSection;
   blocks: Block[];
   /** Größe des QR auf dieser Seite; `null` ohne Online-Teilen (@DR-038 Gegenbeispiel). */
   qr: 'large' | 'small' | null;

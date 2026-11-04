@@ -41,7 +41,7 @@ function platzZiffern(pages: LayoutPage[]): { kopfzeilen: number; ziffern: strin
       kopfzeilen++;
       for (const t of page.texts) {
         const text = trimmed(t);
-        if (t.y > kopf.y && t.x >= spalte.links && t.x < spalte.rechts && /^\d+$/.test(text) && Math.abs(t.size - printType.tableSBody) <= SIZE_TOL) {
+        if (t.y > kopf.y && t.x >= spalte.links && t.x < spalte.rechts && /^\d+$/.test(text) && Math.abs(t.size - printType.body) <= SIZE_TOL) {
           ziffern.push(text);
         }
       }

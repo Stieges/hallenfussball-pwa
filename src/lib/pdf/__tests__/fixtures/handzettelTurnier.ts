@@ -95,6 +95,7 @@ export function fallMatches(fall: HandzettelFall): Match[] {
       id: fallMatchId(fall, f.nr), round: f.nr, field: 1, slot: f.nr - 1, matchNumber: f.nr,
       slotA: { kind: 'pending', source: quelleA }, slotB: { kind: 'pending', source: quelleB }, originA: quelleA, originB: quelleB,
       isFinal: true, phase: f.runde === 'thirdPlace' ? 'final' : f.runde, ...finalType, scheduledTime: anpfiff(fall, f.zeit),
+      ...(f.sr === undefined ? {} : { referee: f.sr }),
       ...zustandFelder(f.zustand),
     };
   });
@@ -130,6 +131,7 @@ export function fallTournament(fall: HandzettelFall, overrides: Partial<Tourname
     matches: fallMatches(fall),
     finalsConfig: mitFinale ? { preset: 'top-8', placements: [3], tiebreakerByRound: { ...fall.entscheidung } } : { preset: 'none' },
     finals: { final: mitFinale, thirdPlace: mitFinale, fifthSixth: false, seventhEighth: false },
+    ...(fall.teamsPfeifen ? { refereeConfig: { mode: 'teams' as const } } : {}),
     ...(fall.schiedsrichterNamen
       ? { refereeConfig: { mode: 'organizer' as const, numberOfReferees: fall.schiedsrichterNamen.length, refereeNames: Object.fromEntries(fall.schiedsrichterNamen.map((n, i) => [i + 1, n])) } }
       : {}),

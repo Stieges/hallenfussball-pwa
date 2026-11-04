@@ -59,7 +59,8 @@ describe('A-12a Gegenbeispiel Impact: Halbfinale in Phase semifinal reißen die 
     // Zeilen der Finalrunde: Spielnummer gefolgt von der Uhrzeit (rowFrom-Muster), in Textreihenfolge
     const rowAt = (number: number, time: string) => text.findIndex((t, i) => t === String(number) && text[i + 1] === time);
     const rows = finals.map((m) => rowAt(m.matchNumber, m.time));
-    const heading = (title: string) => text.findIndex((t) => t === title || t.endsWith(` ${title}`));
+    // Rundennamen stehen in Versalien („HALBFINALE“, „SPIEL UM PLATZ 3“, „FINALE“)
+    const heading = (title: string) => text.findIndex((t) => t === title.toLocaleUpperCase('de'));
 
     expect(finals.map((m) => m.label)).toEqual(ORDER);
     expect(rows.every((p) => p >= 0)).toBe(true);
@@ -68,8 +69,8 @@ describe('A-12a Gegenbeispiel Impact: Halbfinale in Phase semifinal reißen die 
     expect(heading('Halbfinale')).toBeLessThan(rows[0]);
     expect(rows[1]).toBeLessThan(heading('Spiel um Platz 3'));
     expect(heading('Spiel um Platz 3')).toBeLessThan(rows[2]);
-    expect(rows[2]).toBeLessThan(text.lastIndexOf('Finale'));
-    expect(text.lastIndexOf('Finale')).toBeLessThan(rows[3]);
+    expect(rows[2]).toBeLessThan(heading('Finale'));
+    expect(heading('Finale')).toBeLessThan(rows[3]);
   });
 
   it('A-12a Monitor: Halbfinale gehören zur Finalrunde (Folie „Finalrunde“, Pokal/Ring), Reihenfolge HF1, HF2, Platz 3, Finale', async () => {

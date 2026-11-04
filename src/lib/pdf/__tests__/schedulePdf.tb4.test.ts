@@ -19,11 +19,11 @@ vi.mock('jspdf', async (importOriginal) => {
   return { ...mod, default: capturingJsPdf(mod.default), jsPDF: capturingJsPdf(mod.jsPDF) };
 });
 
-/** Textstücke der Tabelle „Tabelle – Gruppe A“ (bis zur Tabelle der Gruppe B). */
+/** Textstücke der Tabelle der Gruppe A (ab dem Kopf „Gruppe A“ bis zur Tabelle der Gruppe B). */
 function tabelleGruppeA(text: string[]): string[] {
-  const von = text.findIndex((t) => t.endsWith('Tabelle – Gruppe A'));
-  const bis = text.findIndex((t) => t.endsWith('Tabelle – Gruppe B'));
-  expect(von, 'Titel „Tabelle – Gruppe A“').toBeGreaterThan(-1);
+  const von = text.findIndex((t) => t.trim() === 'Gruppe A');
+  const bis = text.findIndex((t) => t.trim() === 'Gruppe B');
+  expect(von, 'Kopf „Gruppe A“').toBeGreaterThan(-1);
   return text.slice(von, bis > von ? bis : undefined);
 }
 /** Platzziffer (Zelle vor dem Teamnamen) in einem Tabellenabschnitt. */

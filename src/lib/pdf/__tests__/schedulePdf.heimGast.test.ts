@@ -46,7 +46,9 @@ describe('Punkt 7: Heim endet am Ergebnis, Gast beginnt am Ergebnis', () => {
     expect(hMax - hMin, 'rechte Kante Heim').toBeLessThanOrEqual(TOL);
     expect(gMax - gMin, 'linke Kante Gast').toBeLessThanOrEqual(TOL);
     // Nahe am Ergebnis: Heim endet und Gast beginnt innerhalb der Ergebnisspalte (Breite als Token)
-    const ergebnisse = pages.flatMap(page => page.texts.filter(t => t.str.trim() === ':' && Math.abs(t.size - printWriteLine.colonPt) < 0.1));
+    // Die Finalrunde hat eigene, schmalere Spalten (@DR-037): gemessen wird an den Seiten der Gruppenspiele
+    const spiele = pages.filter(page => kantenJeZeile(page).heim.length > 0);
+    const ergebnisse = spiele.flatMap(page => page.texts.filter(t => t.str.trim() === ':' && Math.abs(t.size - printWriteLine.colonPt) < 0.1));
     const mitte = Math.min(...ergebnisse.map(t => t.x));
     expect(mitte - hMax, 'Heim-Ende vor dem Ergebnis').toBeLessThan(printColumns.match.result);
     expect(gMin - mitte, 'Gast-Beginn nach dem Ergebnis').toBeLessThan(printColumns.match.result);

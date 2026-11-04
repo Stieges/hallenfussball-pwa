@@ -39,7 +39,7 @@ export async function handzettelPdf(fall: HandzettelFall, opts: HandzettelOption
     standings: undefined,
     options: {
       tournament, locale, translate: translatorFor(locale), now: FALL_NOW, viewerBaseUrl: BASE_URL,
-      hallName: fall.halle, organizerName: fall.veranstalter, ...opts.options,
+      hallName: fall.halle, organizerName: fall.veranstalter, ...(fall.kontakt === undefined ? {} : { contact: fall.kontakt }), ...opts.options,
     },
   });
   const bytes = new Uint8Array(doc.output('arraybuffer'));

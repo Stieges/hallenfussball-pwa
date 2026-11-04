@@ -4,7 +4,7 @@
  * Regex-Quantoren zählen nicht als Maß, sie sind aber in der Ausnahmeliste begründet, wo sie vorkommen.
  *
  * Die Ausnahmeliste ist kurz und begründet. Jede Zeile muss treffen (sonst meldet der Test eine veraltete Ausnahme).
- * Rest nach B-28 C1: nur Standings und Datum.
+ * Rest: nur das Datum.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -58,7 +58,6 @@ interface Exception { file: string; pattern: RegExp; reason: string }
 
 /** Bestand heute. Jede Ausnahme nennt Datei, Muster in der Zeile und den Grund. */
 export const EXCEPTIONS: Exception[] = [
-  { file: 'render/standings.ts', pattern: /^\d+: \{ halign/, reason: 'Spaltenindizes der Tabelle Gruppe (Sp, S, U, N, Tore, Diff, Pkt); ersetzt durch Spaltenschlüssel' },
   { file: 'translations.ts', pattern: /ISO_DATE = |Number\(match\[/, reason: 'Regex-Quantoren und Teile des Datums JJJJ-MM-TT; kein Maß' },
 ];
 

@@ -1029,13 +1029,9 @@
     "hall": "Halle",
     "matchDuration": "Spielzeit",
     "mode": "Modus",
-    "appointment": "Termin",
-    "appointmentLine": "{{day}} · Beginn {{start}} · Ende voraussichtlich {{end}} · {{fields}}",
     "fieldOne": "1 Feld",
     "fieldMany": "{{n}} Felder",
-    "participants": "Teilnehmer",
     "groupStage": "Gruppenphase",
-    "standingsOfGroup": "Tabelle – {{group}}",
     "finalRanking": "Platzierung",
     "placementPending": {
       "afterFinal": "Die Platzierung steht nach dem Finale fest",
@@ -1059,7 +1055,6 @@
     "seventhEighth": "Spiel um Platz 7",
     "sectionTables": "Tabellen",
     "sectionFinals": "Finalrunde",
-    "timesTentative": "Uhrzeiten voraussichtlich",
     "contact": "Ansprechpartner",
     "contactLine": "Ansprechpartner: {{contact}}",
     "fontFallbackNote": "Sonderzeichen können als ? erscheinen. Die Schrift konnte nicht geladen werden. Das PDF wird mit einer Ersatzschrift erstellt, alle Inhalte sind enthalten.",
@@ -1068,7 +1063,12 @@
       "plan": "Spielplan"
     },
     "durationMinutes": "$t(sport:zeit.minuteCount, {\"count\": {{minutes}} })",
-    "modeGroupsAndFinals": "Gruppen + Finalrunde",
+    "modeGroupsAndFinals_one": "1 Gruppe + Finalrunde",
+    "modeGroupsAndFinals_other": "{{count}} Gruppen + Finalrunde",
+    "shootoutLine": {
+      "title": "Strafstoßschießen um Platz 1 (nur bei Gleichstand)",
+      "hits": "Treffer"
+    },
     "modeRoundRobin": "Jeder gegen Jeden",
     "unrenderableName": "Teamname „{{name}}“ enthält Zeichen, die im PDF als „?“ gedruckt werden",
     "phase": {
@@ -1126,7 +1126,7 @@
     },
     "stand": "Stand {{date}} {{time}}",
     "offlineNote": "– ohne Verbindung, Einträge anderer Geräte können fehlen",
-    "footer": "{{title}} · {{stand}} · Seite {{page}} von {{total}}",
+    "pageOf": "Seite {{page}} von {{total}}",
     "closedAt": "Endstand – abgeschlossen am {{date}} um {{time}}",
     "matches": "Spiele",
     "sheet": {
@@ -1159,10 +1159,10 @@
     "logoUnusableRight": "Die rechte Grafik im Kopf konnte nicht verwendet werden und fehlt im PDF",
     "origin": {
       "place": {
-        "first": "Erster",
-        "second": "Zweiter",
-        "third": "Dritter",
-        "fourth": "Vierter"
+        "first": "1.",
+        "second": "2.",
+        "third": "3.",
+        "fourth": "4."
       },
       "placeNth": "{{n}}.",
       "groupPlace": "{{place}} {{group}}",
@@ -1173,6 +1173,8 @@
       },
       "winner": "Sieger {{round}} {{n}}",
       "loser": "Verlierer {{round}} {{n}}",
+      "winnerOfMatch": "Sieger Spiel {{n}}",
+      "loserOfMatch": "Verlierer Spiel {{n}}",
       "undecided": "noch offen"
     },
     "finalTable": "Abschlusstabelle"

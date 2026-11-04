@@ -1,7 +1,7 @@
 /**
  * Ergebnis eines Spiels im PDF als Zustand (B-28a3-4, Punkt 1; Regeln aus @BM-011, @BM-012, @BM-013, @BM-045).
- * Rückgabe ist ein Zustand, kein Text: Ziffern nur bei `final`, `live` zeigt ein laufendes Spiel ohne Ziffern.
- * Zeichnen folgt in a3-5. Nur Rechnen, ohne Zeichnen.
+ * Rückgabe ist ein Zustand, kein Text: Ziffern nur bei `final`; `live` (laufend oder unterbrochen) steht im Ausdruck wie `empty`,
+ * ohne „läuft“ und ohne Zwischenstand (@DR-019). Nur Rechnen, ohne Zeichnen.
  */
 import type { StatefulMatch } from './tournamentState';
 
@@ -78,4 +78,16 @@ export function resultState(match: StatefulMatch, options: ResultOptions = {}): 
 /** Neuer `MatchStatus`-Wert ohne Zweig oben: `tsc` meldet es hier (C-MATCHSTATUS-OHNE-PAUSED). */
 function assertNeverStatus(status: never): never {
   throw new Error(`Unbekannter Spielstatus: ${String(status)}`);
+}
+
+/**
+ * Zustand für den Ausdruck (@DR-019): „ausgefallen“ steht auch bei ausgeblendeten Ergebnissen; leere Linien statt „ausgefallen“
+ * hat nur die Fassung ohne Ergebnisse. Ein laufendes oder unterbrochenes Spiel steht wie ein Spiel ohne Ergebnis da, ohne „läuft“
+ * und ohne Zwischenstand; das Modell zeichnet für `live` leere Linien.
+ */
+export function printState(match: StatefulMatch, options: ResultOptions): ResultState {
+  if (options.edition !== 'blank' && match.matchStatus === 'skipped') {
+    return { kind: 'skipped' };
+  }
+  return resultState(match, options);
 }

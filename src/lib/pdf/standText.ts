@@ -1,6 +1,6 @@
 /**
  * Stand, Fußzeile und Abschluss des Spielplan-PDFs als Text (B-28a3-4, Punkt 3). Alle Wörter kommen über `t()`
- * (Schlüssel `pdf.stand`, `pdf.offlineNote`, `pdf.footer`, `pdf.closedAt`; DE und EN). Datum und Uhrzeit sind
+ * (Schlüssel `pdf.stand`, `pdf.offlineNote`, `pdf.pageOf`, `pdf.closedAt`; DE und EN). Datum und Uhrzeit sind
  * Zahlen im Format TT.MM. und HH:mm.
  */
 import type { PdfTranslator } from './translations';
@@ -21,9 +21,9 @@ export function standLine(now: Date, online: boolean, translate: PdfTranslator):
   return online ? base : `${base} ${translate('pdf.offlineNote')}`;
 }
 
-/** Fußzeile „{Titel} · Stand TT.MM. HH:mm · Seite x von y“ (a3-6 zeichnet sie). */
-export function footerLine(title: string, stand: string, page: number, total: number, translate: PdfTranslator): string {
-  return translate('pdf.footer', { title, stand, page, total });
+/** „Seite 2 von 3“ rechts unten in der Fußzeile (@DR-044). */
+export function pageLabel(page: number, total: number, translate: PdfTranslator): string {
+  return translate('pdf.pageOf', { page, total });
 }
 
 /** Endstand-Fassung: „Endstand – abgeschlossen am 14.11.2026 um 17:40“ (@BM-035, @DR-011; B-28a3-4F F2, mit Jahr). */

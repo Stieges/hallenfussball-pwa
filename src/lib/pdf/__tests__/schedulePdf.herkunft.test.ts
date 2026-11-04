@@ -1,6 +1,7 @@
 /**
  * B-28 C4 – Herkunft offener Plätze wird nie roh gedruckt (Befund Zuschauer-Zuordnung Punkt 2; @DR-001 Ausnahmeliste,
- * @BM-032): „group-a-2nd“ wird „Zweiter Gruppe A“, „semi1-winner“ wird „Sieger Halbfinale 1“, in der Sprache des Dokuments.
+ * @BM-032, @DR-037): „group-a-2nd“ wird „2. Gruppe A“, ein Sieger „Sieger Spiel 25“ (Nummer des Vorgängerspiels), in der Sprache
+ * des Dokuments. Nur ein Rohschlüssel ohne Vorgängerspiel („semi1-winner“) bleibt „Sieger Halbfinale 1“.
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
@@ -34,10 +35,10 @@ function mitRohschluesseln(schedule: GeneratedSchedule, keys: Array<[string, str
 
 describe('originLabel (rein)', () => {
   it.each([
-    ['group-a-1st', 'Erster Gruppe A'],
-    ['group-b-2nd', 'Zweiter Gruppe B'],
-    ['GROUP-C-3RD', 'Dritter Gruppe C'],
-    ['Group-d-4th', 'Vierter Gruppe D'],
+    ['group-a-1st', '1. Gruppe A'],
+    ['group-b-2nd', '2. Gruppe B'],
+    ['GROUP-C-3RD', '3. Gruppe C'],
+    ['Group-d-4th', '4. Gruppe D'],
     ['semi1-winner', 'Sieger Halbfinale 1'],
     ['semi2-loser', 'Verlierer Halbfinale 2'],
     ['qf3-winner', 'Sieger Viertelfinale 3'],
@@ -83,10 +84,11 @@ describe('Herkunft im PDF', () => {
     const { pages } = await kopfPdf({}, hallencupTournament(), schedule);
     const text = squash(pages.flatMap(p => p.texts.map(t => t.str)).join(' '));
 
-    expect(text).toContain(squash('Erster Gruppe A'));
-    expect(text).toContain(squash('Zweiter Gruppe B'));
-    expect(text).toContain(squash('Sieger Halbfinale 1'));
-    expect(text).toContain(squash('Verlierer Halbfinale 2'));
+    // Der Plan trägt die Herkunft gespeichert (Vorgängerspiel mit Nummer): sie gilt vor dem Rohschlüssel am Spiel
+    expect(text).toContain(squash('1. Gruppe A'));
+    expect(text).toContain(squash('2. Gruppe B'));
+    expect(text).toMatch(/SiegerSpiel\d+/);
+    expect(text).toMatch(/VerliererSpiel\d+/);
     expect(text).not.toMatch(/group-|-winner|-loser/i);
   });
 
@@ -96,7 +98,7 @@ describe('Herkunft im PDF', () => {
     const text = squash(pages.flatMap(p => p.texts.map(t => t.str)).join(' '));
 
     expect(text).toContain(squash('1st in Group A'));
-    expect(text).toContain(squash('Winner Semi-final 1'));
+    expect(text).toMatch(/Winnermatch\d+/);
     expect(text).not.toMatch(/group-|-winner|-loser/i);
   });
 
@@ -118,36 +120,40 @@ describe('Herkunft im PDF', () => {
 });
 
 describe('@DR-022 @DR-001 echter Generator: Herkunft aus dem Rohschlüssel, in der Sprache des Dokuments', () => {
-  it('DE: „Erster Gruppe A“, „Sieger Halbfinale 1“; kein „Gruppe A - 2. Platz“, kein „HF“', async () => {
+  it('DE: „1. Gruppe A“, „Sieger Spiel 13“ über die Nummer des Vorgängerspiels; kein „Gruppe A - 2. Platz“, kein „HF“', async () => {
     const tournament = hallencupTournament();
-    const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament));
+    const schedule = generateFullSchedule(tournament);
+    const { pages } = await kopfPdf({}, tournament, schedule);
     const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
+    const halbfinale = schedule.allMatches.filter(m => m.phase === 'semifinal').sort((a, b) => a.matchNumber - b.matchNumber);
 
-    expect(squash(text)).toContain(squash('Erster Gruppe A'));
-    expect(squash(text)).toContain(squash('Zweiter Gruppe B'));
-    expect(squash(text)).toContain(squash('Sieger Halbfinale 1'));
-    expect(squash(text)).toContain(squash('Verlierer Halbfinale 2'));
+    expect(squash(text)).toContain(squash('1. Gruppe A'));
+    expect(squash(text)).toContain(squash('2. Gruppe B'));
+    expect(squash(text)).toContain(squash(`Sieger Spiel ${halbfinale[0].matchNumber}`));
+    expect(squash(text)).toContain(squash(`Verlierer Spiel ${halbfinale[1].matchNumber}`));
     expect(text).not.toMatch(/Gruppe [A-Z] - \d\. Platz/);
     expect(text).not.toMatch(/\bHF\b/);
   });
 
   it('EN: englische Herkunft, kein deutsches Wort, kein „HF“', async () => {
     const tournament = hallencupTournament();
-    const { pages } = await kopfPdf({ locale: 'en', translate: translatorFor('en') }, tournament, generateFullSchedule(tournament));
+    const schedule = generateFullSchedule(tournament);
+    const { pages } = await kopfPdf({ locale: 'en', translate: translatorFor('en') }, tournament, schedule);
     const text = pages.flatMap(p => p.texts.map(t => t.str)).join(' ');
+    const halbfinale = schedule.allMatches.find(m => m.phase === 'semifinal');
 
     expect(squash(text)).toContain(squash('1st in Group A'));
-    expect(squash(text)).toContain(squash('Winner Semi-final 1'));
+    expect(squash(text)).toContain(squash(`Winner match ${halbfinale?.matchNumber ?? 0}`));
     expect(text).not.toMatch(/Gruppe|Sieger|Verlierer|\bHF\b|Platz\b/);
   });
 
-  it('eigene Gruppennamen bleiben erhalten: „Erster Löwen“', async () => {
+  it('eigene Gruppennamen bleiben erhalten: „1. Löwen“', async () => {
     const tournament = hallencupTournament({ groups: [{ id: 'A', customName: 'Löwen' }, { id: 'B', customName: 'Tiger' }] });
     const { pages } = await kopfPdf({}, tournament, generateFullSchedule(tournament));
     const text = squash(pages.flatMap(p => p.texts.map(t => t.str)).join(' '));
 
-    expect(text).toContain(squash('Erster Löwen'));
-    expect(text).toContain(squash('Zweiter Tiger'));
+    expect(text).toContain(squash('1. Löwen'));
+    expect(text).toContain(squash('2. Tiger'));
   });
 
   it('Gegenbeispiel: ein besetztes Spiel zeigt den Teamnamen, nicht die Herkunft', () => {
@@ -156,6 +162,6 @@ describe('@DR-022 @DR-001 echter Generator: Herkunft aus dem Rohschlüssel, in d
     const besetzt = { ...match!, homeTeam: 'FC Nord' };
 
     expect(sideLabel(besetzt, 'A', { t: de, isTeam: name => name === 'FC Nord' })).toBe('FC Nord');
-    expect(sideLabel(match!, 'A', { t: de, isTeam: name => name === 'FC Nord' })).toBe('Erster Gruppe A');
+    expect(sideLabel(match!, 'A', { t: de, isTeam: name => name === 'FC Nord' })).toBe('1. Gruppe A');
   });
 });

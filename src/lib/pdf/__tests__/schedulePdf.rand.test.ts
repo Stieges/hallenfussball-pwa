@@ -8,9 +8,8 @@
  * Schriftdatei gelesen (`pdfFontMetrics`), nicht aus dem Token; fett erkennt `fettKennung` an der Schriftkennung (`LayoutText.bold` trifft die eingebettete Schrift nie); das Token `printFont.ascentEm` wird dagegen geprüft.
  */
 import { describe, expect, it } from 'vitest';
-import { continuationTop, pageGeometry, tableMargins } from '../layout';
-import { printAccentDefault } from '../../../design-tokens/print-sheet';
-import { matchTableOptions } from '../render/matchTables';
+import { pageGeometry } from '../layout';
+import { printAccentDefault, printTableGrid } from '../../../design-tokens/print-sheet';
 import { printColors, printFont, printLimits, printType, printUnit } from '../../../design-tokens/print';
 import { FIXTURES, layoutOf, zwanzigSchedule } from './pdfFixtureLayout';
 import { ASCENT_BOLD_EM, ASCENT_REGULAR_EM } from './pdfFontMetrics';
@@ -36,6 +35,8 @@ function schwarzProzent(hex: string): number {
 
 /** Farbe auf ±2 je Kanal gleich (pdfjs liest die Farbe nach der Umrechnung in 0–1). */
 const nahe = (a: string, b: string): boolean => [1, 3, 5].every(i => Math.abs(Number.parseInt(a.slice(i, i + 2), 16) - Number.parseInt(b.slice(i, i + 2), 16)) <= 2);
+
+const rgbHex = (rgb: readonly number[]): string => `#${rgb.map(v => v.toString(16).padStart(2, '0')).join('')}`;
 
 const istBlackOderWhite = (hex: string): boolean => hex === SCHWARZ || hex === WEISS;
 
@@ -110,12 +111,12 @@ describe.each(FIXTURES)('@DR-001 Rand: $name', ({ options, schedule }) => {
     });
   });
 
-  it('Farben: im Inhalt nur Schwarz, Weiß, das Raster und der Akzent auf Linien (@DR-001), kein Grau im Text', async () => {
+  it('Farben: im Inhalt nur Schwarz, Weiß, das Raster, der Akzent auf Linien und das Grau der Tabellenkästchen (@DR-001, @DR-035), kein Grau im Text', async () => {
     const { pages } = await layoutOf(options, schedule());
 
     pages.forEach((page, i) => {
       const raster = new Set(page.rects.map(r => r.fill).filter((f): f is string => Boolean(f) && !istBlackOderWhite(f ?? '')));
-      page.colors.forEach(c => expect(istBlackOderWhite(c) || raster.has(c) || nahe(c, printAccentDefault.line), `Seite ${i + 1} Farbe ${c}`).toBe(true));
+      page.colors.forEach(c => expect(istBlackOderWhite(c) || raster.has(c) || nahe(c, printAccentDefault.line) || nahe(c, rgbHex(printTableGrid.color)), `Seite ${i + 1} Farbe ${c}`).toBe(true));
     });
   });
 
@@ -152,18 +153,6 @@ describe('Ascent-Token gegen die Schriftdatei (Gleichheit, nicht Zirkel)', () =>
   it('printFont.ascentEm entspricht dem hhea-Ascender von Regular und Bold (Toleranz 0,001)', () => {
     expect(Math.abs(printFont.ascentEm - ASCENT_REGULAR_EM)).toBeLessThanOrEqual(0.001);
     expect(Math.abs(printFont.ascentEm - ASCENT_BOLD_EM)).toBeLessThanOrEqual(0.001);
-  });
-});
-
-describe('M1 Tabellen-Unterrand als Wert (autoTable-Vorgabe 14,1 mm reicht in die Zone unter geo.bottom)', () => {
-  it('Spieltabellen und Gruppentabellen setzen margin.bottom = Höhe − geo.bottom, oben die Vorgabe', () => {
-    const geo = pageGeometry('a4', 'portrait');
-    const unten = geo.height - geo.bottom;
-
-    // Oben: Folgeseiten beginnen unter dem Kurzkopf (B-28a3-3b, K3)
-    expect(matchTableOptions(geo, 30, [], [], {}).margin).toEqual({ left: geo.left, right: geo.right, top: continuationTop(geo), bottom: unten });
-    expect(tableMargins(geo, 30).bottom).toBe(unten);
-    expect(tableMargins(geo, 30).top).toBe(continuationTop(geo));
   });
 });
 

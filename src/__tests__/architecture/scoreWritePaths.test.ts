@@ -114,11 +114,6 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     reason:
       'Lesende Abbildung für den PDF-Export: Ergebniszustand einer Zeile (ResultState) aus dem Spiel, speichert nichts',
   },
-  'lib/pdf/render/scoreCell.ts': {
-    count: 2,
-    reason:
-      'Lesende Abbildung für den PDF-Export: Inhalt der Ergebniszelle aus dem Ergebniszustand, speichert nichts',
-  },
   'components/schedule/CorrectionBanner.tsx': {
     count: 2,
     reason:

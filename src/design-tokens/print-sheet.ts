@@ -35,12 +35,11 @@ export const printWriteLine = {
   colonNarrow: 5,
   colonPt: 14,
   /** Kleine Linien für Verlängerung und Strafstoßschießen (@DR-019): 8 mm, Doppelpunkt 4 mm, 3 mm neben dem Ergebnis. */
-  small: 8,
+  small: 7,
   smallColon: 4,
-  smallGap: 3,
   /** Namenslinie eines offenen Finalplatzes (@DR-037): mindestens 50 mm, 3,5 mm vor bzw. nach den Ergebnislinien. */
   nameMin: 50,
-  nameInset: 3.5,
+  nameInset: 3.75,
   /** Strafstoßschießen um Platz 1 (@DR-036): Trefferlinie 11 mm; die Teamlinien füllen den Rest. */
   shootoutHits: 11,
   /** Platzierung (@DR-005, @DR-009): Zeile 9 mm, Linie 2,5 mm über dem Zeilenboden, Nummer 7 mm breit, Spaltenabstand 8 mm. */
@@ -80,6 +79,11 @@ export const printMatchRow = {
   contentDrop: 1,
   /** Auf einer Folgeseite der Gruppenspiele stehen mindestens so viele Spiele (@DR-033 Beispiel 3). */
   minRowsOnNextPage: 3,
+  /**
+   * Seitenumbruch an einem Stundentrenner (@DR-033): Seite 1 gilt als voll genutzt, wenn nach dem Umbruch höchstens so viel Platz
+   * frei bleibt, mm (etwa vier enge Zeilen). Das Record nennt keine Zahl; Auslegung zur Bestätigung.
+   */
+  hourBreakMaxFree: 35,
 } as const;
 
 /** Polster über und unter dem Namen in einer Spielzeile (@DR-033 Beispiel 2): normal 1 mm (Mockup c), eng 0. */
@@ -216,12 +220,60 @@ export const printMatchTable = {
   markGap: 0.8,
   /** Doppelpunkt zwischen den Schreiblinien: Grundlinie so weit über der Linie. */
   colonLift: 0.6,
-  /** Beschriftung kleiner Linien (Verlängerung, Strafstoßschießen) über den Linien. */
-  smallLabelPt: 7.5,
-  smallLabelRise: 3.2,
 } as const;
 
 /** Fußzeile mit Adresse (@DR-038): Adresse als Link in einer eigenen Zeile. */
 export const printFooterLink = {
   underlineStroke: pt(0.75),
+} as const;
+
+/**
+ * Finalrunde (@DR-019, @DR-034, @DR-037): schmalere feste Spalten als bei den Gruppenspielen, damit die Namenslinien eines
+ * offenen Platzes mindestens `printWriteLine.nameMin` lang bleiben (mit einem Feld und ohne Spalte „SR“ 50,5 mm; mit Feld oder
+ * „SR“ reicht der Platz nicht, dort sind die Linien kürzer). Die Linie liegt `printWriteLine.minWriteSpace` unter der Zeilenoberkante,
+ * darunter stehen die Herkunft und die Beschriftung kleiner Linien (7,5 pt); reicht das nicht, wird die Zeile höher.
+ */
+export const printFinals = {
+  cols: { nr: 5.4, time: 15.1, field: 10, result: 25.5, referee: 23 },
+  /** Abstand der Uhrzeit zur linken Spaltenkante (schmaler als bei den Gruppenspielen). */
+  timeInset: 1,
+  /** Zeile mit dem Rundennamen (Rundenlinie in Akzent oben); der Name steht darunter in `headPt`. */
+  roundHeight: 5.6,
+  /** Herkunft und Beschriftungen unter den Linien. */
+  smallPt: 7.5,
+  textGap: 0.5,
+  bottomPad: 0.6,
+  /** Namenslinie: Abstand zur Spaltenkante außen (zum Ergebnis hin gilt `printWriteLine.nameInset`). */
+  nameOuter: 1.7,
+  /** Abstand des Schiedsrichter-Eintrags zur Spaltenkante in der Finalrunde (schmaler, damit „Grabenstätt/“ in die Spalte passt). */
+  refInset: 1,
+  /** Grundlinie von Nummer, Zeit und Name über der Linie (Schrift sitzt auf der Linie), mm. */
+  baselineRise: 0.8,
+  /** Kleine Linien der Regel: Paar untereinander, Abstand der Linien, wenn zwei Paare stehen (Beschriftung + Schreibraum). */
+  pairColumn: 22,
+  /** Abstand Hinweis „K.-o.: …“ → Spaltenkopf. */
+  koGap: 1.5,
+} as const;
+
+/** Gruppentabellen (@DR-035): Zeilenhöhe, Innenabstände, Abstand der Tabellen; Raster grau (`printTableGrid`). */
+export const printStandings = {
+  headHeight: 6.5,
+  rowMin: 8.5,
+  rowPad: 0.8,
+  nameInset: 2,
+  /** Spalte „Tore“ in der Fassung ohne Ergebnisse trägt einen Doppelpunkt zum Eintragen (fett). */
+  colonPt: 12,
+} as const;
+
+/** Strafstoßschießen um Platz 1 (@DR-036) und Platzierung (@DR-005, @DR-009): Maße der Zeilen. */
+export const printTail = {
+  titlePt: 10.5,
+  titleBand: 5,
+  /** Strafstoßschießen: Schreibraum über den Linien, Abstand der Teilblöcke, Beschriftung („Team“, „Treffer“). */
+  shootoutGap: 5,
+  shootoutColon: 6,
+  /** Platzierung: Überschrift (13 pt), Satz davor, Abstand zur Liste. */
+  rankTitleBand: 8,
+  rankSentenceBand: 5.5,
+  rankNumberPt: 12,
 } as const;

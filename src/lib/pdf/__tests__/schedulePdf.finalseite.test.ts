@@ -14,10 +14,10 @@ import { storedSchedule } from './storedSchedule';
 
 const trimmed = (text: LayoutText): string => text.str.trim();
 
-/** Position einer Überschrift im Dokument: Seite und Höhe, damit Seiten sich vergleichen lassen. */
+/** Position einer Überschrift im Dokument (Rundennamen stehen in Versalien): Seite und Höhe, damit Seiten sich vergleichen lassen. */
 function position(pages: LayoutPage[], text: string): number {
   for (let i = 0; i < pages.length; i++) {
-    const treffer = pages[i].texts.find(t => ohneNummer(t.str) === text);
+    const treffer = pages[i].texts.find(t => ohneNummer(t.str).toLocaleLowerCase('de') === text.toLocaleLowerCase('de'));
     if (treffer) {return i * 1000 + treffer.y;}
   }
   return -1;

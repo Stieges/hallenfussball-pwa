@@ -1,14 +1,15 @@
 /**
- * B-28 C3 – Kennzeichen im Text: Abschnittsnummern (Daniel 15.10.), Kurzkopf der Folgeseiten (G8), „Uhrzeiten
+ * B-28 C3 – Kennzeichen im Text: Abschnitte ohne Nummern (Mockup-Runde 2), Kurzkopf der Folgeseiten (G8), „Uhrzeiten
  * voraussichtlich“ (W7, @DR-001 Zustand „voraussichtlich“). Nachweise am echten PDF (pdfjs).
  * Szenarien: @BM-052 (Kopf/Abschnitte), @DR-002 (Folgeseiten), @DR-001.
  */
 import { describe, expect, it } from 'vitest';
 import { generateFullSchedule, type GeneratedSchedule } from '../../../core/generators';
-import { printGap, printLimits, printType } from '../../../design-tokens/print';
+import { printGap, printType } from '../../../design-tokens/print';
 import { pageGeometry } from '../layout';
 import type { MatchStatus } from '../../../types/tournament';
-import type { StatefulMatch, StatefulSchedule } from '../tournamentState';
+import type { StatefulSchedule } from '../tournamentState';
+import { translatorFor } from './pdfText';
 import { hallencupSchedule, hallencupTournament } from './pdfFixture';
 import { dreissigSchedule, layoutOf, pageText } from './pdfFixtureLayout';
 import type { LayoutPage } from './pdfjsLayout';
@@ -16,9 +17,6 @@ import type { LayoutPage } from './pdfjsLayout';
 const NOW = new Date(2026, 10, 14, 15, 7);
 
 const strings = (page: LayoutPage): string[] => page.texts.map(t => t.str);
-/** Abschnittstitel (13 pt fett) einer Seite. */
-const titel = (page: LayoutPage): string[] => page.texts.filter(t => Math.abs(t.size - printType.h2) < 0.05 || Math.abs(t.size - printType.caption) < 0.05).map(t => t.str);
-
 /** Plan, dessen Gruppenspiele alle (oder keines) im Zustand `status` stehen, wie der Dialog sie einmischt. */
 function mitGruppenstatus(schedule: GeneratedSchedule, status: MatchStatus | undefined, nur?: number): StatefulSchedule {
   const merge = <M extends { phase?: string; matchNumber: number }>(m: M): M =>
@@ -32,53 +30,52 @@ function mitGruppenstatus(schedule: GeneratedSchedule, status: MatchStatus | und
   };
 }
 
-describe('Abschnittsnummern: fortlaufend über die vorhandenen Abschnitte', () => {
-  it('alle Abschnitte nach den Gruppenspielen: 1 Tabellen, 2 Finalrunde, 3 Platzierung (Teilnehmerliste und Titel der Gruppenspiele gibt es nicht, @DR-002)', async () => {
+describe('Abschnitte nach den Gruppenspielen: Tabellen, Finalrunde, Platzierung ohne Nummern (@DR-002, Mockup-Runde 2)', () => {
+  /** Seitenindex, auf dem der Text als eigenes Textstück vorkommt; −1, wenn er fehlt. */
+  const seiteVon = (pages: LayoutPage[], text: string): number => pages.findIndex(page => strings(page).some(s => s.trim() === text));
+
+  it('Tabellen auf einer neuen Seite, danach Finalrunde und Platzierung in dieser Reihenfolge; keine Titel „Teilnehmer“, „Gruppenphase“, „Spiele“ und keine Nummern', async () => {
     const { pages } = await layoutOf({ now: NOW });
+    const alle = pages.flatMap(strings).map(s => s.trim());
 
     expect(strings(pages[0]).filter(s => /^\d+ (Teilnehmer|Gruppenphase|Spiele)$/.test(s))).toEqual([]);
-    expect(strings(pages[1])).toContain('1 Tabelle – Gruppe A');
-    // nur der erste Titel eines Abschnitts trägt die Nummer
-    expect(strings(pages[1])).toContain('Tabelle – Gruppe B');
-    expect(strings(pages[2])).toEqual(expect.arrayContaining(['2 Halbfinale', 'Spiel um Platz 3', 'Finale', '3 Platzierung']));
+    expect(seiteVon(pages, 'Gruppe A')).toBeGreaterThan(0);
+    expect(seiteVon(pages, 'Gruppe A')).toBeLessThanOrEqual(seiteVon(pages, 'HALBFINALE'));
+    expect(seiteVon(pages, 'HALBFINALE')).toBeLessThanOrEqual(seiteVon(pages, 'Platzierung'));
+    expect(alle.filter(s => /^\d+ (Tabelle|Halbfinale|Platzierung|Tabellen|Finalrunde)/.test(s))).toEqual([]);
   });
 
-  it('ein Abschnitt fehlt (keine Tabellen): die Zählung rückt auf, ohne Lücke', async () => {
+  it('ohne Tabellen: Finalrunde auf einer neuen Seite, keine Tabelle, keine „Tabelle –“-Titel', async () => {
     const { pages } = await layoutOf({ now: NOW, includeStandings: false });
     const alle = pages.flatMap(strings);
 
-    expect(alle).toEqual(expect.arrayContaining(['1 Halbfinale', '2 Platzierung']));
-    expect(alle.some(s => s.startsWith('3 '))).toBe(false);
+    expect(seiteVon(pages, 'HALBFINALE')).toBeGreaterThan(0);
+    expect(seiteVon(pages, 'Platzierung')).toBeGreaterThanOrEqual(seiteVon(pages, 'HALBFINALE'));
     expect(alle.some(s => s.includes('Tabelle –'))).toBe(false);
+    expect(alle).not.toContain('Gruppe A');
   });
 
-  it('ein Abschnitt fehlt (keine Finalrunde): Tabellen sind 1, Platzierung 2', async () => {
+  it('ohne Finalrunde: Tabellen, darunter die Platzierung', async () => {
     const ohneFinale = generateFullSchedule(
       hallencupTournament({ finalsConfig: { preset: 'none' }, finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false } }),
       'de'
     );
-    const alle = (await layoutOf({ now: NOW }, ohneFinale)).pages.flatMap(strings);
+    const { pages } = await layoutOf({ now: NOW }, ohneFinale);
 
-    expect(alle).toEqual(expect.arrayContaining(['1 Tabelle – Gruppe A', '2 Platzierung']));
-    expect(alle.some(s => /^[3-6] /.test(s))).toBe(false);
+    expect(seiteVon(pages, 'Gruppe A')).toBeGreaterThan(0);
+    expect(seiteVon(pages, 'Platzierung')).toBe(seiteVon(pages, 'Gruppe A'));
+    expect(pages.flatMap(strings).some(s => s.includes('FINALE'))).toBe(false);
   });
 
-  it('Jeder gegen jeden: weder „Gruppenphase“ noch „Spiele“ als Titel, die Platzierung trägt die Nummer 1', async () => {
+  it('Jeder gegen jeden: eine Tabelle „Team“, dann die Platzierung; weder „Gruppenphase“ noch „Spiele“ als Titel', async () => {
     const teams = hallencupTournament().teams.map(team => ({ ...team, group: undefined }));
     const tournament = hallencupTournament({ teams, groupSystem: 'roundRobin' });
-    const alle = (await layoutOf({ now: NOW, tournament }, generateFullSchedule(tournament, 'de'))).pages.flatMap(page => page.texts.map(t => t.str.trim()));
+    const { pages } = await layoutOf({ now: NOW, tournament }, generateFullSchedule(tournament, 'de'));
+    const alle = pages.flatMap(page => page.texts.map(t => t.str.trim()));
 
-    expect(alle).toContain('1 Platzierung');
+    expect(alle).toContain('Team');
+    expect(alle).toContain('Platzierung');
     expect(alle.some(s => s.includes('Gruppenphase'))).toBe(false);
-  });
-
-  it('Gegenbeispiel: ein Titel trägt die Nummer genau einmal (keine „3 3 …“, keine Nummer an Folgetiteln)', async () => {
-    const { pages } = await layoutOf({ now: NOW });
-    const alle = pages.flatMap(strings);
-
-    expect(alle.filter(s => /^\d+ \d+ /.test(s))).toEqual([]);
-    const titel2 = pages.flatMap(titel);
-    expect(titel2.filter(s => s === 'Tabelle – Gruppe A' || s === 'Platzierung')).toEqual([]);
   });
 });
 
@@ -89,11 +86,12 @@ describe('G8 Kurzkopf der Folgeseiten: Titel · Altersklasse · Datum · Abschni
     return page.texts.find(t => Math.abs(t.size - printType.subtitle) < 0.05 && Math.abs(t.y - grundlinie) < 0.05)?.str;
   };
 
-  it('Tabellen- und Finalseite nennen ihren Abschnitt', async () => {
+  it('die Seite der Tabellen nennt ihren Abschnitt, die Seite der Finalrunde ihren (ohne Tabellen)', async () => {
     const { pages } = await layoutOf({ now: NOW });
 
     expect(kurzkopf(pages[1])).toBe('D-Junioren · 14.11.2026 · Tabellen');
-    expect(kurzkopf(pages[2])).toBe('D-Junioren · 14.11.2026 · Finalrunde');
+    const ohneTabellen = await layoutOf({ now: NOW, includeStandings: false });
+    expect(kurzkopf(ohneTabellen.pages[1])).toBe('D-Junioren · 14.11.2026 · Finalrunde');
   });
 
   it('Seite 1 trägt keinen Kurzkopf; die Folgeseite einer langen Spieltabelle nennt die Gruppenphase', async () => {
@@ -111,62 +109,29 @@ describe('G8 Kurzkopf der Folgeseiten: Titel · Altersklasse · Datum · Abschni
   });
 });
 
-describe('W7 „Uhrzeiten voraussichtlich“ in der Finalrunde, solange die Gruppenphase läuft', () => {
-  const NOTE = 'Uhrzeiten voraussichtlich';
+describe('@DR-001 Die Uhrzeiten der Finalrunde stehen ohne den Zusatz „voraussichtlich“ (DE und EN)', () => {
+  const kein = (pages: LayoutPage[]): void => pages.forEach(page => expect(pageText(page)).not.toMatch(/voraussichtlich|expected|estimated/i));
 
-  it('Gruppenphase offen: jede Runden-Überschrift trägt den Hinweis, mindestens 7,5 pt', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), undefined));
-    const hinweise = pages[2].texts.filter(t => t.str === NOTE);
-
-    expect(hinweise).toHaveLength(3);
-    hinweise.forEach(t => expect(t.size).toBeGreaterThanOrEqual(printLimits.minFontPt));
-  });
-
-  it('Gruppenphase abgeschlossen (alle beendet): kein Hinweis auf keiner Seite', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), 'finished'));
-
-    pages.forEach(page => expect(pageText(page)).not.toContain(NOTE));
-  });
-
-  it('Gruppenphase abgeschlossen, ein Spiel ausgefallen: kein Hinweis (es wird nicht mehr gespielt)', async () => {
-    const plan = mitGruppenstatus(hallencupSchedule(), 'finished');
-    plan.phases.forEach(p => (p.matches as StatefulMatch[]).forEach(m => { if (m.matchNumber === 5) { m.matchStatus = 'skipped'; } }));
-    const { pages } = await layoutOf({ now: NOW }, plan);
-
-    pages.forEach(page => expect(pageText(page)).not.toContain(NOTE));
-  });
-
-  it('Gegenbeispiel: ein Gruppenspiel fehlt noch (11 von 12 beendet) → Hinweis steht', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), 'finished', 11));
-
-    expect(pages[2].texts.filter(t => t.str === NOTE).length).toBeGreaterThan(0);
-  });
-
-  it('Gegenbeispiel: ein laufendes Spiel zählt nicht als abgeschlossen', async () => {
-    const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), 'running'));
-
-    expect(pages[2].texts.filter(t => t.str === NOTE).length).toBeGreaterThan(0);
-  });
-
-  it('Gegenbeispiel: die Gruppenphase selbst und die Titel der Gruppenspiele tragen den Hinweis nie', async () => {
+  it('Gruppenphase offen, DE: keine Seite trägt den Zusatz, die Rundenzeile heißt nur „HALBFINALE“', async () => {
     const { pages } = await layoutOf({ now: NOW }, mitGruppenstatus(hallencupSchedule(), undefined));
 
-    expect(titel(pages[0])).not.toContain(NOTE);
-    expect(pageText(pages[0])).not.toContain(NOTE);
+    kein(pages);
+    expect(pages.flatMap(strings).map(t => t.trim())).toContain('HALBFINALE');
   });
 
-  it('F2 Fassung final und abgeschlossenes Turnier: kein Hinweis, auch wenn Gruppenspiele keinen Status tragen', async () => {
-    const offen = mitGruppenstatus(hallencupSchedule(), undefined);
-    for (const extra of [{ edition: 'final' as const }, { closed: true }]) {
-      const { pages } = await layoutOf({ now: NOW, ...extra }, offen);
-      pages.forEach(page => expect(pageText(page)).not.toContain(NOTE));
+  it('Gruppenphase offen, EN: keine Seite trägt „Times expected“', async () => {
+    const { pages } = await layoutOf({ now: NOW, locale: 'en', translate: translatorFor('en') }, mitGruppenstatus(hallencupSchedule(), undefined));
+
+    kein(pages);
+    expect(pages.flatMap(strings).map(t => t.trim())).toContain('SEMI-FINALS');
+  });
+
+  it('Gegenbeispiel: auch laufende Spiele, abgeschlossene Gruppenphase und die Fassungen ohne Ergebnisse und final tragen ihn nie', async () => {
+    for (const plan of [mitGruppenstatus(hallencupSchedule(), 'running'), mitGruppenstatus(hallencupSchedule(), 'finished', 11), mitGruppenstatus(hallencupSchedule(), 'finished')]) {
+      kein((await layoutOf({ now: NOW }, plan)).pages);
     }
-  });
-
-  it('F2 Gegenbeispiel: Fassung Spielplan und zum Ausfüllen mit offener Gruppenphase tragen den Hinweis weiter', async () => {
-    for (const edition of ['plan', 'blank'] as const) {
-      const { pages } = await layoutOf({ now: NOW, edition }, mitGruppenstatus(hallencupSchedule(), undefined));
-      expect(pages[2].texts.some(t => t.str === NOTE)).toBe(true);
+    for (const extra of [{ edition: 'blank' as const }, { edition: 'final' as const }, { closed: true }]) {
+      kein((await layoutOf({ now: NOW, ...extra }, mitGruppenstatus(hallencupSchedule(), undefined))).pages);
     }
   });
 });
