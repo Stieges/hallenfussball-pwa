@@ -56,7 +56,7 @@ describe('MonitorDisplayPage – Heartbeat (C-MON-HEARTBEAT-JE-POLL)', () => {
   });
 
   it('feuert über 60 s (Polls alle 5 s) nur alle 30 s – nicht je Poll', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     const start = heartbeatCalls();
 
@@ -69,7 +69,7 @@ describe('MonitorDisplayPage – Heartbeat (C-MON-HEARTBEAT-JE-POLL)', () => {
   });
 
   it('genau ein Heartbeat bei 30 000 ms, keiner bei 29 999 ms', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     const start = heartbeatCalls();
 
@@ -84,7 +84,7 @@ describe('MonitorDisplayPage – Heartbeat (C-MON-HEARTBEAT-JE-POLL)', () => {
   });
 
   it('@ME-064:teil Befund C-HEARTBEAT: die Seite sendet die Kennung des Monitors aus dem Turnier (mon-1) und den Wachhalten-Zustand', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
 
     const aufrufe = rpc.mock.calls.filter(([name]) => name === 'record_monitor_heartbeat').map(([, args]) => args as Record<string, unknown>);

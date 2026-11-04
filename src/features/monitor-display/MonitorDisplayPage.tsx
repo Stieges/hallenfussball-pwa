@@ -51,7 +51,7 @@ import { useMonitorHeartbeat } from './useMonitorHeartbeat';
 import { SlideRenderer } from './slides/SlideRenderer';
 import { TransitionWrapper } from './components/TransitionWrapper';
 import { CacheIndicator } from './components/CacheIndicator';
-import { MonitorLoadingView, MonitorErrorView } from './components/MonitorStatusViews';
+import { MonitorLoadingView, MonitorWaitingView } from './components/MonitorStatusViews';
 import { SlideDots, MonitorKeyframes } from './components/MonitorChrome';
 import { containerStyle } from './components/monitorStyles';
 
@@ -62,7 +62,6 @@ import { containerStyle } from './components/monitorStyles';
 interface MonitorDisplayPageProps {
   tournamentId: string;
   monitorId: string;
-  onBack?: () => void;
 }
 
 /**
@@ -79,7 +78,6 @@ const monitorPollIntervalMs = (m: TournamentMonitor | null, origin: DisplayOrigi
 function MonitorDisplayPageContent({
   tournamentId,
   monitorId,
-  onBack,
 }: MonitorDisplayPageProps) {
   // Datenquelle (stabil je Ziel) und Abruf-/Zustandsregeln in den Bausteinen (B-16b2)
   const displaySource = useMemo(
@@ -215,7 +213,7 @@ function MonitorDisplayPageContent({
   }
 
   if (error || !tournament || !monitor || !view) {
-    return <MonitorErrorView error={error} onBack={onBack} />;
+    return <MonitorWaitingView />;
   }
 
   return (

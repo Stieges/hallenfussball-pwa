@@ -79,7 +79,7 @@ async function vorspulen(ms: number): Promise<void> {
 async function starteMonitor(data: Tournament): Promise<void> {
   supabaseGet.mockImplementation(async () => structuredClone(data));
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   await vorspulen(0);
 }
 

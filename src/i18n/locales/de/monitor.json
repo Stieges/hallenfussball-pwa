@@ -97,10 +97,9 @@
   "dauerbetrieb": {
     "wakeLockHint": "Bildschirm kann ausgehen – Energiesparen prüfen"
   },
+  "waiting": "Warte auf Verbindung",
   "loading": "Lade Display...",
   "error": {
-    "notFound": "Konfiguration nicht gefunden",
-    "back": "← Zurück",
     "connection": "Turnier konnte nicht geladen werden: Verbindung zum Server fehlgeschlagen. Der nächste Versuch läuft automatisch.",
     "tournamentNotFound": "Turnier nicht gefunden: {{id}}. Läuft dieser Bildschirm auf einem anderen Gerät als der Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf \"Mit Link teilbar\" stehen.",
     "monitorNotFound": "Monitor nicht gefunden: {{id}}",

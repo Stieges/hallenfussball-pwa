@@ -62,21 +62,21 @@ describe('MonitorDisplayPage — leeres Folienprogramm bleibt nie leer (F-04)', 
 
   it('Leeres Programm mit QR-Möglichkeit zeigt die Zuschauer-QR-Folie', async () => {
     supabaseGet.mockResolvedValue(tournamentWithEmptyProgramme({ isPublic: true, shareCode: 'ABC123' }));
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(screen.getByTestId('qr-code')).toBeInTheDocument());
     expect(screen.queryByTestId('monitor-no-slides-state')).not.toBeInTheDocument();
   });
 
   it('Leeres Programm ohne QR-Möglichkeit zeigt die nächste immer darstellbare Folie (Spielplan)', async () => {
     supabaseGet.mockResolvedValue(tournamentWithEmptyProgramme({ isPublic: false }));
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(screen.getByText(/Spielplan/)).toBeInTheDocument());
     expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 
   it('Gegenbeispiel: „Keine Slides konfiguriert" erscheint bei leerem Programm nie', async () => {
     supabaseGet.mockResolvedValue(tournamentWithEmptyProgramme({ isPublic: true, shareCode: 'ABC123' }));
-    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(container.textContent).toContain('Hallencup Ost'));
     expect(container.textContent).not.toMatch(/Keine Slides konfiguriert/);
     expect(screen.queryByTestId('monitor-no-slides-message')).not.toBeInTheDocument();

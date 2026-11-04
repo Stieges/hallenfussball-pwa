@@ -62,10 +62,11 @@ async function vorspulen(ms: number): Promise<void> {
 }
 
 /** Rendert die Seite. `wurzel()` liefert den Rahmen der geladenen Seite (erst nach dem Laden gültig). */
-function seite(onBack = vi.fn()) {
-  const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={onBack} />);
+function seite() {
+  const adresse = window.location.href;
+  const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   const wurzel = (): HTMLElement => container.querySelector('[lang="de"] > div')!;
-  return { onBack, wurzel };
+  return { adresse, wurzel };
 }
 
 beforeEach(() => {
@@ -127,30 +128,30 @@ describe('Tasten ohne Wirkung und ohne Verlassen der Seite (@ME-022, @ME-003)', 
   // schalten nicht weiter.“ Vorher hielt die Leertaste an und schalteten die Pfeile weiter (Gegenbeispiel zum Soll).
 
   it('Escape: die Seite bleibt offen, zeigt weiter die Folie, und nichts springt zur Startseite', async () => {
-    const { onBack } = seite();
+    const { adresse } = seite();
     await vorspulen(0);
     const e = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
     act(() => { window.dispatchEvent(e); });
-    expect(onBack).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(adresse);
     expect(e.defaultPrevented).toBe(true);
     expect(screen.getByText('Folie A')).toBeInTheDocument();
   });
 
   it('Escape bei gesetztem fullscreenElement: die Seite bleibt offen (der Browser beendet nur das Vollbild)', async () => {
     Object.defineProperty(document, 'fullscreenElement', { value: document.documentElement, configurable: true });
-    const { onBack } = seite();
+    const { adresse } = seite();
     await vorspulen(0);
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(onBack).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(adresse);
     expect(screen.getByText('Folie A')).toBeInTheDocument();
   });
 
   it('Leertaste verlässt die Seite nicht, hält nichts an und zeigt kein Pausen-Badge', async () => {
-    const { onBack } = seite();
+    const { adresse } = seite();
     await vorspulen(0);
     const e = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
     act(() => { window.dispatchEvent(e); });
-    expect(onBack).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(adresse);
     expect(e.defaultPrevented).toBe(true);
     expect(screen.queryByTestId('monitor-pause-indicator')).not.toBeInTheDocument();
     await vorspulen(4_000);
@@ -158,14 +159,14 @@ describe('Tasten ohne Wirkung und ohne Verlassen der Seite (@ME-022, @ME-003)', 
   });
 
   it('Backspace und Pfeiltasten verlassen die Seite nicht und schalten nicht weiter', async () => {
-    const { onBack } = seite();
+    const { adresse } = seite();
     await vorspulen(0);
     for (const key of ['Backspace', 'ArrowRight', 'ArrowLeft']) {
       const e = new KeyboardEvent('keydown', { key, cancelable: true });
       act(() => { window.dispatchEvent(e); });
       expect(e.defaultPrevented, key).toBe(true);
     }
-    expect(onBack).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(adresse);
     expect(screen.getByText('Folie A')).toBeInTheDocument();
   });
 
@@ -229,11 +230,11 @@ describe('Vollbild ohne Standard-API und Mac-Navigation (B-17 Fixrunde 2)', () =
   });
 
   it('Cmd+[ verlässt die Seite nicht (Mac-Weg zurück)', async () => {
-    const { onBack } = seite();
+    const { adresse } = seite();
     await vorspulen(0);
     const e = new KeyboardEvent('keydown', { key: '[', metaKey: true, cancelable: true });
     act(() => { window.dispatchEvent(e); });
     expect(e.defaultPrevented).toBe(true);
-    expect(onBack).not.toHaveBeenCalled();
+    expect(window.location.href).toBe(adresse);
   });
 });

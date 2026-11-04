@@ -52,7 +52,7 @@ describe('MonitorDisplayPage — Datenherkunft (L2)', () => {
   beforeEach(() => { vi.clearAllMocks(); supabaseGet.mockResolvedValue(cloudTournament); localGet.mockResolvedValue(null); });
 
   it('L2: lädt das Turnier aus Supabase, wenn lokal nichts liegt', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(supabaseGet).toHaveBeenCalledWith('tour-1'));
     await waitFor(() => expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument());
   });
@@ -60,7 +60,7 @@ describe('MonitorDisplayPage — Datenherkunft (L2)', () => {
   // R5 PR 1 (ersetzt „L2: useLiveMatches auf Anon-Realtime“): der Monitor hört – auch ohne Anmeldung – auf das
   // Änderungssignal seines Turniers (Zone 1 „Änderungssignal“), nicht mehr auf Tabellen-Änderungen.
   it('R5: abonniert das öffentliche Änderungssignal display:<turnier> genau einmal', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(channelSpy).toHaveBeenCalledWith('display:tour-1', { config: { private: false } }));
     await waitFor(() => expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument());
     expect(channelSpy).toHaveBeenCalledTimes(1);
@@ -68,7 +68,7 @@ describe('MonitorDisplayPage — Datenherkunft (L2)', () => {
 
   it('Regression: fällt auf localStorage zurück, wenn die Cloud nichts liefert', async () => {
     supabaseGet.mockResolvedValue(null); localGet.mockResolvedValue(cloudTournament);
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(localGet).toHaveBeenCalledWith('tour-1'));
     await waitFor(() => expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument());
   });
@@ -98,12 +98,12 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
   });
 
   it('Critical: ein Poll-Aussetzer nach erfolgreichem Laden lässt den Bildschirm nicht auf der Fehlerseite einfrieren', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
 
     // Initial-Load (aus einem useEffect direkt beim Mount) läuft über Microtasks, kein Timer nötig.
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
-    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-waiting-state')).not.toBeInTheDocument();
 
     // Poll 2: Cloud UND lokal liefern nichts — genau das Zielgerät dieses Tasks
     // (Hallen-TV ohne eigenen localStorage-Stand) bei einem einzelnen WLAN-Aussetzer.
@@ -111,18 +111,18 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
-    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-waiting-state')).not.toBeInTheDocument();
 
     // Poll 3: erholt sich wieder.
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
-    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-waiting-state')).not.toBeInTheDocument();
   });
 
   it('Important: ein vollständig fehlgeschlagener Poll (Cloud UND lokal leer) rührt die Signal-Anbindung nicht an', async () => {
     // Deckt den Fall ab, in dem BEIDE Quellen nichts liefern: Der Hallen-TV hat keinen
     // eigenen localStorage-Stand; das Änderungssignal bleibt abonniert (kein Ab- und Wiederanmelden).
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(channelSpy).toHaveBeenCalledTimes(1);
@@ -141,7 +141,7 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     // greift also nicht. Ohne den F-324-Guard liefe der Code bis setDataSource('local')
     // durch, meldete die Realtime-Subscription ab und ersetzte die frischen Cloud-Daten
     // durch die (womöglich veraltete) lokale Kopie.
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
@@ -156,7 +156,7 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
 
     expect(screen.queryByText('Veralteter lokaler Stand')).not.toBeInTheDocument();
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
-    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-waiting-state')).not.toBeInTheDocument();
   });
 
   it('N1: ein dauerhaft lokal bedienter Bildschirm nimmt lokale Änderungen weiterhin auf', async () => {
@@ -168,7 +168,7 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     supabaseGet.mockRejectedValue(new Error('offline'));
     localGet.mockResolvedValue(cloudTournament);
 
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
 
@@ -207,8 +207,8 @@ describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler 
     vi.useRealTimers();
   });
 
-  it('Important: ein gelöschter Monitor wird nach erfolgreichem Laden sichtbar gemeldet (kein hadData-Schutz)', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  it('@ME-016 Important: ein gelöschter Monitor wird nach erfolgreichem Laden als ruhige Seite gezeigt (kein hadData-Schutz)', async () => {
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
 
@@ -217,12 +217,13 @@ describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler 
     supabaseGet.mockResolvedValueOnce({ ...cloudTournament, monitors: [] });
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
-    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
-    expect(screen.getByTestId('monitor-error-message')).toHaveTextContent('Monitor nicht gefunden: mon-1');
+    // @ME-016: ruhige Seite, kein Fehlertext, keine Kennung des Monitors
+    expect(screen.getByTestId('monitor-waiting-state')).toHaveTextContent('Warte auf Verbindung');
+    expect(screen.getByTestId('monitor-waiting-state')).not.toHaveTextContent('mon-1');
   });
 
-  it('Important: ein bestätigt gelöschtes Turnier wird sichtbar gemeldet, obwohl vorher schon Daten da waren', async () => {
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  it('@ME-034 Important: ein bestätigt gelöschtes Turnier zeigt die ruhige Seite, obwohl vorher schon Daten da waren', async () => {
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
 
@@ -233,8 +234,10 @@ describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler 
     localGet.mockResolvedValueOnce(null);
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
-    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
-    expect(screen.getByTestId('monitor-error-message')).toHaveTextContent('Turnier nicht gefunden: tour-1');
+    // @ME-034: ruhige Seite, keine Turnier-Kennung, kein Verweis auf Einstellungen
+    expect(screen.getByTestId('monitor-waiting-state')).toHaveTextContent('Warte auf Verbindung');
+    expect(screen.getByTestId('monitor-waiting-state')).not.toHaveTextContent('tour-1');
+    expect(screen.queryByText(/nicht gefunden|Sichtbarkeit/)).toBeNull();
   });
 });
 
@@ -247,7 +250,7 @@ describe('MonitorDisplayPage — Wake Lock (L7)', () => {
   it('L7: fordert Wake Lock an, sobald der Monitor geladen ist', async () => {
     const request = vi.fn().mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
     Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(request).toHaveBeenCalledWith('screen'));
   });
 
@@ -255,8 +258,8 @@ describe('MonitorDisplayPage — Wake Lock (L7)', () => {
     supabaseGet.mockResolvedValue(null); localGet.mockResolvedValue(null);
     const request = vi.fn();
     Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
-    await waitFor(() => expect(screen.getByText(/Turnier nicht gefunden/)).toBeInTheDocument());
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
+    await waitFor(() => expect(screen.getByTestId('monitor-waiting-state')).toBeInTheDocument());
     expect(request).not.toHaveBeenCalled();
   });
 });
@@ -285,10 +288,10 @@ describe('MonitorDisplayPage — Fix 1: Erstladen-Fehlschlag erholt sich automat
     supabaseGet.mockRejectedValueOnce(new Error('network blip'));
     localGet.mockResolvedValueOnce(null);
 
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
+    expect(screen.getByTestId('monitor-waiting-state')).toBeInTheDocument();
 
     // Ohne Fix 1 pollt die Seite ab hier nie wieder (Poll-Effekt war auf `monitor` gated,
     // der wegen des Fehlschlags nie gesetzt wurde) — der Bildschirm bliebe für den Rest
@@ -298,7 +301,7 @@ describe('MonitorDisplayPage — Fix 1: Erstladen-Fehlschlag erholt sich automat
     await act(async () => { await vi.advanceTimersByTimeAsync(FAST_RETRY_MS); });
 
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
-    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-waiting-state')).not.toBeInTheDocument();
   });
 });
 
@@ -313,15 +316,16 @@ describe('MonitorDisplayPage — Fix 1: Erstladen-Fehlschlag erholt sich automat
 describe('MonitorDisplayPage — Fix 6: Erstladen-Fehler unterscheidet Netzwerk von Sichtbarkeit', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('Critical: ein Cloud-Reject beim Erstladen zeigt die Verbindungs-Meldung, nicht die Sichtbarkeits-Meldung', async () => {
+  it('@ME-009 Critical: ein Cloud-Reject beim Erstladen zeigt „Warte auf Verbindung“, keinen Fehlertext und keinen Hinweis auf Einstellungen', async () => {
     supabaseGet.mockRejectedValueOnce(new Error('network blip'));
     localGet.mockResolvedValueOnce(null);
 
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
 
-    await waitFor(() => expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument());
-    const message = screen.getByTestId('monitor-error-message').textContent ?? '';
-    expect(message).toContain('Verbindung zum Server fehlgeschlagen');
-    expect(message).not.toContain('Sichtbarkeits-Einstellungen');
+    await waitFor(() => expect(screen.getByTestId('monitor-waiting-state')).toBeInTheDocument());
+    const seite = screen.getByTestId('monitor-waiting-state');
+    expect(seite).toHaveTextContent('Warte auf Verbindung');
+    expect(seite.textContent).not.toMatch(/fehlgeschlagen|Sichtbarkeit|tour-1/);
+    expect(seite.querySelector('button')).toBeNull();
   });
 });

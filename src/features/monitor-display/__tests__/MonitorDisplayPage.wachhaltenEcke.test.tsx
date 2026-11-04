@@ -144,7 +144,7 @@ describe('W4 und Wortlaut (@ME-006, i18n)', () => {
 
     localGet.mockResolvedValue(null);
     await vorspulen(30_000);
-    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
+    expect(screen.getByTestId('monitor-waiting-state')).toBeInTheDocument();
 
     localGet.mockResolvedValue(monitorTurnier());
     await vorspulen(30_000);

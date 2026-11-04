@@ -74,7 +74,7 @@ test('Monitor: laufendes Spiel', async ({ page, seedIndexedDB }) => {
   await page.goto(`/#/display/${TOURNAMENT_ID}/visual-monitor-1`);
   await page.waitForLoadState('networkidle');
   // Fehler-/Leerzustand darf nicht auftreten -- sonst würde ein leerer Monitor-Screen geprüft.
-  await expect(page.getByTestId('monitor-error-state')).not.toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('monitor-waiting-state')).not.toBeVisible({ timeout: 5000 });
   await expect(page.getByTestId('monitor-no-slides-state')).not.toBeVisible({ timeout: 5000 });
   await expect(page.getByText('FC Nordstadt')).toBeVisible({ timeout: 10000 });
 
@@ -128,7 +128,7 @@ test('Monitor: Nächste Spiele mit Vereinskürzeln', async ({ page, seedIndexedD
 
   await page.goto('/#/display/visual-monitor-kuerzel/visual-monitor-kuerzel-1');
   await page.waitForLoadState('networkidle');
-  await expect(page.getByTestId('monitor-error-state')).not.toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('monitor-waiting-state')).not.toBeVisible({ timeout: 5000 });
   await expect(page.getByText('SG FF Nordheim-Süd 1921')).toBeVisible({ timeout: 10000 });
   await expect(page.getByText('TSV Ost')).toBeVisible();
 
@@ -170,7 +170,7 @@ for (const [abfrage, bild] of [['', 'monitor-rand.png'], ['?rand=0', 'monitor-ra
 
     await page.goto(`/#/display/visual-monitor-rand/visual-monitor-rand-1${abfrage}`);
     await page.waitForLoadState('networkidle');
-    await expect(page.getByTestId('monitor-error-state')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('monitor-waiting-state')).not.toBeVisible({ timeout: 5000 });
     await expect(page.getByTestId('monitor-slide')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('FC Nordstadt').first()).toBeVisible({ timeout: 10000 });
 
@@ -218,7 +218,7 @@ test('Monitor: Nächste Spiele mit ursprünglicher Uhrzeit', async ({ page, seed
 
   await page.goto('/#/display/visual-monitor-urspruenglich/visual-monitor-urspruenglich-1');
   await page.waitForLoadState('networkidle');
-  await expect(page.getByTestId('monitor-error-state')).not.toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('monitor-waiting-state')).not.toBeVisible({ timeout: 5000 });
   await expect(page.getByTestId('monitor-match-original').first()).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('monitor-match-original')).toHaveCount(2);
 

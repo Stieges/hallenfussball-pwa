@@ -58,7 +58,7 @@ export async function vorspulen(ms: number): Promise<void> {
 }
 
 export function seite() {
-  return render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  return render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
 }
 
 export const hinweis = () => screen.queryByTestId('monitor-wakelock-hint');
