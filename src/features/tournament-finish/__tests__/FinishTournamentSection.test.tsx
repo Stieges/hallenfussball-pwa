@@ -55,8 +55,8 @@ const { FinishTournamentSection } = await import('../components/FinishTournament
 let fertig: Tournament;
 const onReload = vi.fn().mockResolvedValue(undefined);
 
-function zeige(t: Tournament) {
-  return render(<MemoryRouter><FinishTournamentSection tournament={t} onReload={onReload} /></MemoryRouter>);
+function zeige(t: Tournament, placement?: 'overview' | 'schedule') {
+  return render(<MemoryRouter><FinishTournamentSection tournament={t} onReload={onReload} placement={placement} /></MemoryRouter>);
 }
 
 beforeEach(async () => {
@@ -86,6 +86,57 @@ describe('@LZ-007 Ist alles entschieden, schlägt die App den Abschluss vor', ()
     fireEvent.click(screen.getByTestId('tournament-finish-open'));
     expect(screen.getByTestId('finish-dialog')).toBeInTheDocument();
     expect(finishSpy.start).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('@LZ-007 Der Vorschlag steht auch oben im Spielplan', () => {
+  it('im Spielplan: Vorschlag mit Taste „Turnier abschließen“, die den Dialog öffnet', () => {
+    zeige(fertig, 'schedule');
+    const karte = screen.getByTestId('finish-suggestion');
+    expect(karte).toHaveTextContent('Alles entschieden – Endstand prüfen und Turnier abschließen');
+    fireEvent.click(within(karte).getByTestId('tournament-finish-open'));
+    expect(screen.getByTestId('finish-dialog')).toBeInTheDocument();
+    expect(finishSpy.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('Gegenbeispiel: ist etwas offen, zeigt der Spielplan weder Vorschlag noch Stand-Karte', () => {
+    env.reviews = [review()];
+    zeige(fertig, 'schedule');
+    expect(screen.queryByTestId('finish-suggestion')).toBeNull();
+    expect(screen.queryByTestId('finish-status')).toBeNull();
+    expect(screen.queryByTestId('tournament-finish-open')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ein Helfer sieht den Vorschlag im Spielplan nicht', () => {
+    roleMock.current = 'collaborator';
+    zeige(fertig, 'schedule');
+    expect(screen.queryByTestId('finish-suggestion')).toBeNull();
+  });
+});
+
+describe('@LZ-093 Vor dem ersten Anpfiff sagt die Verwaltung, wann das Turnier abgeschlossen werden kann', () => {
+  const frisch = (): Tournament => ({ ...fertig, lifecycleStatus: 'fixed' as const, matches: fertig.matches.map((m) => ({ ...m, matchStatus: 'scheduled' as const })) });
+
+  it('Übersicht: „Abschließen kannst du, sobald alle Spiele entschieden sind“ steht da, ohne Taste', () => {
+    zeige(frisch());
+    expect(screen.getByTestId('finish-not-yet')).toHaveTextContent('Abschließen kannst du, sobald alle Spiele entschieden sind');
+    expect(screen.queryByTestId('tournament-finish-open')).toBeNull();
+  });
+
+  it('Gegenbeispiel: im Spielplan steht der Satz nicht, nur der Vorschlag bei „alles entschieden“', () => {
+    zeige(frisch(), 'schedule');
+    expect(screen.queryByTestId('finish-not-yet')).toBeNull();
+  });
+
+  it('Gegenbeispiel: ein Helfer sieht den Satz nicht', () => {
+    roleMock.current = 'collaborator';
+    zeige(frisch());
+    expect(screen.queryByTestId('finish-not-yet')).toBeNull();
+  });
+
+  it('Gegenbeispiel: läuft das Turnier, steht der Satz nicht mehr da', () => {
+    zeige(fertig);
+    expect(screen.queryByTestId('finish-not-yet')).toBeNull();
   });
 });
 

@@ -1645,6 +1645,7 @@
     "section": {
       "suggestionTitle": "Alles entschieden",
       "suggestionText": "Alles entschieden – Endstand prüfen und Turnier abschließen.",
+      "notYet": "Abschließen kannst du, sobald alle Spiele entschieden sind",
       "statusTitle": "Turnierstand",
       "gamesDone": "{{done}} von {{total}} Spielen beendet.",
       "reviewsOpen_one": "{{count}} Eintrag in der Klärungsliste ist noch offen.",

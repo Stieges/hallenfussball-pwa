@@ -1645,6 +1645,7 @@
     "section": {
       "suggestionTitle": "Everything decided",
       "suggestionText": "Everything decided – check the final standings and close the tournament.",
+      "notYet": "You can close the tournament once all games are decided",
       "statusTitle": "Tournament status",
       "gamesDone": "{{done}} of {{total}} games finished.",
       "reviewsOpen_one": "{{count}} entry in the review list is still open.",

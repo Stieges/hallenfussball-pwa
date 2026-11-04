@@ -26,6 +26,7 @@ import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../featur
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
+import { FinishTournamentSection } from '../features/tournament-finish/components/FinishTournamentSection';
 import { TabellenTabMitAdresse } from '../features/tournament-management/TabellenTabMitAdresse';
 import { StandingTieProvider } from '../features/tournament-management/standings/StandingTieProvider';
 import { GroupCompletionProvider } from '../features/tournament-management/group-completion/GroupCompletionProvider';
@@ -249,6 +250,9 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           <StandingTieProvider tournamentId={tournamentId} onChanged={reloadFresh}>
             <GroupCompletionProvider tournament={tournament}>
               {activeTab === 'schedule' && (
+                <>
+                {/* @LZ-007: ist alles entschieden, steht der Vorschlag zum Abschließen oben im Spielplan */}
+                <FinishTournamentSection tournament={tournament} onReload={reloadFresh} placement="schedule" />
                 <ScheduleTab
                   tournament={tournament}
                   schedule={schedule}
@@ -258,6 +262,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
                   onMatchesUpdate={handleMatchesUpdate}
                   onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
                 />
+                </>
               )}
               {activeTab === 'tabellen' && (
                 <TabellenTabMitAdresse
