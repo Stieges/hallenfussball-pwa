@@ -54,8 +54,8 @@ export function modelEnv(source: ScheduleModelSource, measure: TextMeasure): Mod
 }
 
 /** Breite der Spalte „SR“: breitester Eintrag oder Kopf, mit Rand; `undefined` ohne Einträge (@DR-025, @DR-032). */
-export function refereeWidthOf(labels: string[], head: string, measure: TextMeasure): number | undefined {
+export function refereeWidthOf(labels: string[], head: string, measure: TextMeasure, inset: number = printMatchTable.refInset): number | undefined {
   const entries = labels.filter(label => label !== '');
   if (entries.length === 0) { return undefined; }
-  return Math.max(...entries.map(label => measure.width(label, printMatchTable.refPt, 'normal')), measure.width(head, printMatchTable.headPt, 'bold')) + 2 * printMatchTable.refInset;
+  return Math.max(...entries.map(label => measure.width(label, printMatchTable.refPt, 'normal')), measure.width(head, printMatchTable.headPt, 'bold')) + 2 * inset;
 }

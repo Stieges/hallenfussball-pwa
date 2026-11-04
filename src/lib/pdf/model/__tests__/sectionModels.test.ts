@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { printWriteLine } from '../../../../design-tokens/print-sheet';
-import { FALL_A, FALL_B, FALL_B_SR, fallBLang, mitRegelnDR019 } from '../../__tests__/fixtures/handzettelFaelle';
+import { FALL_A, FALL_B, FALL_B_SR, FALL_B_SR_TEAM, fallBLang, mitRegelnDR019 } from '../../__tests__/fixtures/handzettelFaelle';
 import { splitRows } from '../pagePlan';
 import { modelOf } from './modelSupport';
 import type { Block, FinalsBlock, RankingBlock, StandingsTableBlock } from '../types';
@@ -205,5 +205,17 @@ describe('@DR-033 zwei Stundenanfänge in Reichweite (Opus-Delta)', () => {
     const starts = Array.from({ length: 20 }, (_, i) => i === 15 || i === 18);
 
     expect(splitRows(Array.from({ length: 20 }, () => 10), [190, 200], 3, { starts, maxFree: 50 }).map(p => p.length)).toEqual([15, 5]);
+  });
+});
+
+describe('@DR-037 @DR-034 „Teams pfeifen“ in der Finalrunde', () => {
+  it('über jeder Linie bleiben ≥ 5 mm bis zur Oberkante der Zeile, die Namenslinien sind ≥ 50 mm', () => {
+    const rows = finalsOf(blocks(FALL_B_SR_TEAM)).rounds.flatMap(r => r.rows);
+
+    expect(rows).toHaveLength(8);
+    for (const row of rows) {
+      for (const l of row.lines) { expect(l.y - row.box.y).toBeGreaterThanOrEqual(printWriteLine.minWriteSpace); }
+      for (const l of row.lines.filter(x => x.kind === 'name')) { expect(l.x2 - l.x1).toBeGreaterThanOrEqual(printWriteLine.nameMin); }
+    }
   });
 });

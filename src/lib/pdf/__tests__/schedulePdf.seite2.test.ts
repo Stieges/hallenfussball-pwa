@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { printLimits } from '../../../design-tokens/print';
 import { printFinals, printTableGrid, printWriteLine } from '../../../design-tokens/print-sheet';
-import { FALL_A, FALL_B, FALL_B_KONTAKT, FALL_B_SR, fallBLang, mitRegelnDR019 } from './fixtures/handzettelFaelle';
+import { FALL_A, FALL_B, FALL_B_KONTAKT, FALL_B_SR, FALL_B_SR_TEAM, fallBLang, mitRegelnDR019 } from './fixtures/handzettelFaelle';
 import { handzettelPdf } from './handzettelPdf';
 import type { LayoutLine, LayoutPage } from './pdfjsLayout';
 import { hallencupMitStand } from './pdfScoreSupport';
@@ -158,5 +158,19 @@ describe('@DR-037 Uhrzeit und Namenslinie der Finalrunde (echte Schrift)', () =>
         expect(Math.min(linie.x1, linie.x2) - (z.x + z.w), `${z.str}`).toBeGreaterThanOrEqual(1.5);
       }
     }
+  });
+});
+
+describe('@DR-037 @DR-025 „Teams pfeifen“: Teamnamen in der SR-Spalte der Finalrunde', () => {
+  it.each(['de', 'en'] as const)('%s: jede Namenslinie ≥ 50 mm, der Teamname bricht in seiner Spalte um und ragt nicht über den Rand', async locale => {
+    const { pages } = await handzettelPdf(FALL_B_SR_TEAM, { locale });
+    const seite = pages.find(p => p.texts.some(t => /^(Sieger|Winner) (Spiel|match) 22$/.test(t.str.trim())))!;
+    const namen = seite.lines.filter(l => waag(l) && Math.abs(l.width - printWriteLine.stroke) < 0.02 && laenge(l) >= printWriteLine.nameMin - TOL);
+    const rechts = 210 - 15;
+    const sr = seite.texts.filter(t => t.str.trim() !== '' && t.x > rechts - printFinals.cols.referee + 1);
+
+    expect(namen.length).toBeGreaterThanOrEqual(16);
+    expect(sr.length).toBeGreaterThan(0);
+    for (const t of sr) { expect(t.x + t.w, t.str).toBeLessThanOrEqual(rechts + TOL); }
   });
 });

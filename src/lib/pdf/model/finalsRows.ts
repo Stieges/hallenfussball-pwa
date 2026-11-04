@@ -42,7 +42,7 @@ export function finalsRowMetrics(src: RowSource, cols: ColumnModel[], measure: T
   const lines = Math.max(
     nameCount(src.home, src.homeOrigin, column(cols, 'home'), measure),
     nameCount(src.away, src.awayOrigin, column(cols, 'away'), measure),
-    referee ? refereeLinesIn(src.referee, referee, measure).length : 0,
+    referee ? refereeLinesIn(src.referee, referee, measure, printFinals.refInset).length : 0,
     1
   );
   const adv = advanceMm(printType.body, printMatchRow.lineHeight);
@@ -110,10 +110,10 @@ export function buildFinalsRow(
   const { cell, lines } = cellOf(src, cols, top, height, texts, { lineY, centerY: base - capHalf() });
   const small = smallOf(src, cols, lineY, texts);
   const refCol = column(cols, 'referee');
-  const refLines = refCol ? refereeLinesIn(src.referee, refCol, measure) : [];
+  const refLines = refCol ? refereeLinesIn(src.referee, refCol, measure, printFinals.refInset) : [];
   const refAdv = advanceMm(printMatchTable.refPt, printMatchRow.lineHeight);
   const referee = refCol && refLines.length > 0
-    ? refLines.map((text, i) => run(text, refCol.x + printMatchTable.refInset, base - (refLines.length - 1 - i) * refAdv, printMatchTable.refPt, 'normal'))
+    ? refLines.map((text, i) => run(text, refCol.x + printFinals.refInset, base - (refLines.length - 1 - i) * refAdv, printMatchTable.refPt, 'normal'))
     : undefined;
   const fieldCol = column(cols, 'field');
   const model: MatchRowModel = {

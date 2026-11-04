@@ -61,7 +61,7 @@ export function finalsParts(env: ModelEnv): Splittable | undefined {
     sources: round.matches.map(match => sourceOf(env, match, smallKindsFor(round.key, env.rules.finalsConfig))),
   }));
   const all = rounds.flatMap(round => round.sources);
-  const refereeWidth = refereeWidthOf(all.map(src => src.referee), t.referee, measure);
+  const refereeWidth = refereeWidthOf(all.map(src => src.referee), t.referee, measure, printFinals.refInset);
   const flags = {
     finals: true,
     field: input.schedule.numberOfFields > 1,

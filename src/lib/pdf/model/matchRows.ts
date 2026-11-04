@@ -100,8 +100,8 @@ export function nameLinesIn(name: string, col: ColumnModel, measure: TextMeasure
 }
 
 /** Zeilen des Schiedsrichter-Eintrags in seiner Spalte. */
-export function refereeLinesIn(label: string, col: ColumnModel, measure: TextMeasure): string[] {
-  return label === '' ? [] : wrapName(label, col.w - printMatchTable.refInset, printMatchTable.refPt, measure);
+export function refereeLinesIn(label: string, col: ColumnModel, measure: TextMeasure, inset: number = printMatchTable.refInset): string[] {
+  return label === '' ? [] : wrapName(label, col.w - inset, printMatchTable.refPt, measure);
 }
 
 /**

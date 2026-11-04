@@ -131,6 +131,7 @@ export function fallTournament(fall: HandzettelFall, overrides: Partial<Tourname
     matches: fallMatches(fall),
     finalsConfig: mitFinale ? { preset: 'top-8', placements: [3], tiebreakerByRound: { ...fall.entscheidung } } : { preset: 'none' },
     finals: { final: mitFinale, thirdPlace: mitFinale, fifthSixth: false, seventhEighth: false },
+    ...(fall.teamsPfeifen ? { refereeConfig: { mode: 'teams' as const } } : {}),
     ...(fall.schiedsrichterNamen
       ? { refereeConfig: { mode: 'organizer' as const, numberOfReferees: fall.schiedsrichterNamen.length, refereeNames: Object.fromEntries(fall.schiedsrichterNamen.map((n, i) => [i + 1, n])) } }
       : {}),

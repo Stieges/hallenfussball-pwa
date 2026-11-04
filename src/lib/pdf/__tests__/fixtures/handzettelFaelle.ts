@@ -61,6 +61,8 @@ export interface HandzettelFall {
   entscheidung?: Readonly<Partial<Record<TiebreakerRoundKey, TiebreakerMode>>>;
   /** Schiedsrichter-Modus Veranstalter mit eingetragenen Namen (Mockup c); im PDF stehen nur die Nummern. */
   schiedsrichterNamen?: readonly string[];
+  /** „Teams pfeifen“ (@DR-025): die Nummer am Spiel ist die Nummer des Teams, im PDF steht sein Name. */
+  teamsPfeifen?: boolean;
   /** Akzent des Mockups (aus dem Wappen bzw. App-Grün) und hinterlegte Grafiken. */
   akzent: string;
   logoLinks: boolean;
@@ -251,4 +253,15 @@ export const FALL_B_SR: HandzettelFall = {
   schiedsrichterNamen: ['Eins', 'Zwei', 'Drei'],
   spiele: FALL_B.spiele.map((spiel, i) => ({ ...spiel, sr: (i % 3) + 1 })),
   finale: (FALL_B.finale ?? []).map((spiel, i) => ({ ...spiel, sr: (i % 3) + 1 })),
+};
+
+/** Teams, die pfeifen: kein Wort länger als die SR-Spalte (ein Wort bricht nie mitten durch, @DR-032): 5 = „SG Grabenstätt/Chieming/Übersee“. */
+const SR_TEAMS = [5, 6, 7, 9, 10, 3, 4, 8];
+
+/** b-lang (langer Name „SG Grabenstätt/Chieming/Übersee“, Team 5) mit „Teams pfeifen“ in Gruppenspielen und Finalrunde (@DR-037, @DR-025). */
+export const FALL_B_SR_TEAM: HandzettelFall = {
+  ...fallBLang(1),
+  teamsPfeifen: true,
+  spiele: fallBLang(1).spiele.map((spiel, i) => ({ ...spiel, sr: SR_TEAMS[i % SR_TEAMS.length] })),
+  finale: (FALL_B.finale ?? []).map((spiel, i) => ({ ...spiel, sr: SR_TEAMS[i % SR_TEAMS.length] })),
 };

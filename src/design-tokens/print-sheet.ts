@@ -234,7 +234,7 @@ export const printFooterLink = {
  * darunter stehen die Herkunft und die Beschriftung kleiner Linien (7,5 pt); reicht das nicht, wird die Zeile höher.
  */
 export const printFinals = {
-  cols: { nr: 5.8, time: 14.7, field: 10, result: 25.5, referee: 25.5 },
+  cols: { nr: 5.4, time: 15.1, field: 10, result: 25.5, referee: 23 },
   /** Abstand der Uhrzeit zur linken Spaltenkante (schmaler als bei den Gruppenspielen). */
   timeInset: 1,
   /** Zeile mit dem Rundennamen (Rundenlinie in Akzent oben); der Name steht darunter in `headPt`. */
@@ -244,7 +244,9 @@ export const printFinals = {
   textGap: 0.5,
   bottomPad: 0.6,
   /** Namenslinie: Abstand zur Spaltenkante außen (zum Ergebnis hin gilt `printWriteLine.nameInset`). */
-  nameOuter: 2.15,
+  nameOuter: 1.7,
+  /** Abstand des Schiedsrichter-Eintrags zur Spaltenkante in der Finalrunde (schmaler, damit „Grabenstätt/“ in die Spalte passt). */
+  refInset: 1,
   /** Grundlinie von Nummer, Zeit und Name über der Linie (Schrift sitzt auf der Linie), mm. */
   baselineRise: 0.8,
   /** Kleine Linien der Regel: Paar untereinander, Abstand der Linien, wenn zwei Paare stehen (Beschriftung + Schreibraum). */
