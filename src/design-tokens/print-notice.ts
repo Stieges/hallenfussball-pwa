@@ -4,6 +4,8 @@
  * Aufruf, QR, Schritte, „Oder im Browser eintippen:“ mit Adresse.
  */
 export const printNotice = {
+  /** Akzentlinie unter dem Titel (@DR-041): 1,5 pt in der Akzentfarbe, über die Breite des Satzspiegels; Abstand zum Titel in mm. */
+  accentRule: { strokePt: 1.5, gapAbove: 2 },
   /** Turniername: volle Schrift, darunter schrittweise kleiner, nie gekürzt, höchstens zwei Zeilen (@BM-007). */
   titlePt: 40,
   titleMinPt: 18,

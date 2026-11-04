@@ -5,6 +5,7 @@
  * während des Bauens geschlossen (`reset`), gilt der Lauf nicht mehr und speichert nichts.
  */
 import { useCallback, useRef, useState } from 'react';
+import type { TournamentGraphics } from '../../../core/storage/tournamentGraphicsStore';
 import { hasHints } from '../../../lib/pdf/notes';
 import { buildChoice, type BuildContext, type BuiltPdf, type PdfChoice } from './buildChoice';
 
@@ -24,7 +25,22 @@ export interface PdfExportState {
 
 const START: PdfExportState = { choice: 'schedule', step: 'form', busy: false, failed: false, notShared: false, pending: undefined, savedName: '' };
 
-export function usePdfExport(context: Omit<BuildContext, 'now'>, initial: PdfChoice = 'schedule') {
+/**
+ * Was der Dialog hereingibt: der Kontext des Bauens ohne Zeitpunkt und Grafiken, dazu das Laden der Grafiken aus dem
+ * Gerätespeicher. Geladen wird im Lauf selbst, kurz vor dem Bauen: so gibt es kein Fenster, in dem ein schneller Klick
+ * ohne Grafik baut. Ein Lesefehler bricht nichts ab: das PDF entsteht ohne Grafiken, der Hinweis sagt es (@DR-024).
+ */
+export type PdfExportContext = Omit<BuildContext, 'now' | 'graphics' | 'graphicsUnreadable'> & { loadGraphics: () => Promise<TournamentGraphics> };
+
+async function graphicsOf(load: () => Promise<TournamentGraphics>): Promise<Pick<BuildContext, 'graphics' | 'graphicsUnreadable'>> {
+  try {
+    return { graphics: await load() };
+  } catch {
+    return { graphicsUnreadable: true };
+  }
+}
+
+export function usePdfExport(context: PdfExportContext, initial: PdfChoice = 'schedule') {
   const [state, setState] = useState<PdfExportState>({ ...START, choice: initial });
   /** Zeitpunkt des Stands: beim Öffnen und bei jedem Zurück zur Wahl neu; Dialog-Hinweis und PDF nennen denselben (G69). */
   const [now, setNow] = useState(() => new Date());
@@ -43,7 +59,8 @@ export function usePdfExport(context: Omit<BuildContext, 'now'>, initial: PdfCho
     const mine = run.current;
     setState(s => ({ ...s, busy: true, failed: false, notShared: false }));
     try {
-      const result = await buildChoice(state.choice, { ...context, now });
+      const { loadGraphics, ...build } = context;
+      const result = await buildChoice(state.choice, { ...build, ...(await graphicsOf(loadGraphics)), now });
       if (mine !== run.current) {
         return;
       }
