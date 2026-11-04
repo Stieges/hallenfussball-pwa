@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   istAbgefangenerTastendruck, istAbgefangeneTaste, istBrowserQuelle, istCacheTaste, istEingabeZiel, istVollbildTaste,
-  MAUSZEIGER_RUHE_MS, VOLLBILD_TASTE,
+  MAUSZEIGER_RUHE_MS, VOLLBILD_TASTE, wakeLockHinweisNoetig,
 } from '../monitorDauerbetrieb';
 
 const taste = (key: string, extra: Partial<KeyboardEvent> = {}) =>
@@ -24,6 +24,20 @@ describe('istAbgefangeneTaste (@ME-003, @ME-022)', () => {
   it('Gegenbeispiel: die Taste „c“ (Cache-Anzeige) und Buchstaben werden nicht abgefangen', () => {
     expect(istAbgefangeneTaste('c')).toBe(false);
     expect(istAbgefangeneTaste('f')).toBe(false);
+  });
+});
+
+describe('wakeLockHinweisNoetig (@ME-006)', () => {
+  it('idle (nicht angefragt, etwa weil das Fenster nicht sichtbar ist) braucht keinen Hinweis', () => {
+    expect(wakeLockHinweisNoetig('idle')).toBe(false);
+  });
+
+  it.each(['denied', 'unsupported', 'noAnswer'] as const)('%s braucht den Hinweis', (status) => {
+    expect(wakeLockHinweisNoetig(status)).toBe(true);
+  });
+
+  it.each(['pending', 'granted', 'released'] as const)('Gegenbeispiel: %s zeigt am Monitor nichts', (status) => {
+    expect(wakeLockHinweisNoetig(status)).toBe(false);
   });
 });
 
