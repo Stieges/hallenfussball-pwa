@@ -207,7 +207,7 @@ describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler 
     vi.useRealTimers();
   });
 
-  it('@ME-016 Important: ein gelöschter Monitor wird nach erfolgreichem Laden als ruhige Seite gezeigt (kein hadData-Schutz)', async () => {
+  it('@ME-016 (nur als Übergang erfüllt: ruhige Seite statt „Dieser Bildschirm ist frei – Code“, bis B-20 baut) Important: ein gelöschter Monitor wird nach erfolgreichem Laden als ruhige Seite gezeigt (kein hadData-Schutz)', async () => {
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
@@ -217,12 +217,12 @@ describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler 
     supabaseGet.mockResolvedValueOnce({ ...cloudTournament, monitors: [] });
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
-    // @ME-016: ruhige Seite, kein Fehlertext, keine Kennung des Monitors
+    // @ME-016 (Übergang bis B-20: „frei – Code“ gibt es noch nicht): ruhige Seite, kein Fehlertext, keine Kennung des Monitors
     expect(screen.getByTestId('monitor-waiting-state')).toHaveTextContent('Warte auf Verbindung');
     expect(screen.getByTestId('monitor-waiting-state')).not.toHaveTextContent('mon-1');
   });
 
-  it('@ME-034 Important: ein bestätigt gelöschtes Turnier zeigt die ruhige Seite, obwohl vorher schon Daten da waren', async () => {
+  it('@ME-034 (nur als Übergang erfüllt, „frei – Code“ folgt mit B-20) Important: ein bestätigt gelöschtes Turnier zeigt die ruhige Seite, obwohl vorher schon Daten da waren', async () => {
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
@@ -234,7 +234,7 @@ describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler 
     localGet.mockResolvedValueOnce(null);
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
-    // @ME-034: ruhige Seite, keine Turnier-Kennung, kein Verweis auf Einstellungen
+    // @ME-034 (Übergang bis B-20): ruhige Seite, keine Turnier-Kennung, kein Verweis auf Einstellungen
     expect(screen.getByTestId('monitor-waiting-state')).toHaveTextContent('Warte auf Verbindung');
     expect(screen.getByTestId('monitor-waiting-state')).not.toHaveTextContent('tour-1');
     expect(screen.queryByText(/nicht gefunden|Sichtbarkeit/)).toBeNull();

@@ -120,6 +120,24 @@ describe('@ZM-187 Auf den Listen-Folien verschiebt keine Zeile die anderen', () 
   });
 });
 
+describe('@ME-067 @ZM-188 Die Seitenteilung richtet sich nach dem wirksamen Bildrand', () => {
+  it('bei 10 % Rand passen weniger Zeilen auf eine Seite als bei 0 %, die Seitenzahl des Takts stimmt mit der Folie überein', () => {
+    const t = listenTurnier({ namen: 'lang', verschoben: true });
+    const { view } = withView(t);
+    const seiten = (overscan: number) => nextMatchesLayout(view, 15, { overscan, notice: false }).pages;
+    expect(seiten(10).length).toBeGreaterThan(seiten(0).length);
+    expect(monitorPageCount(naechste, t, view, undefined, { overscan: 10, notice: false })).toBe(seiten(10).length);
+    render(<NextMatchesSlide slide={naechste} {...withView(t)} theme="dark" style={{}} overscanPercent={10} page={seiten(10).length - 1} />);
+    expect(screen.getByText(`Seite ${String(seiten(10).length)} / ${String(seiten(10).length)}`)).toBeInTheDocument();
+  });
+
+  it('der Hinweis oben nimmt Platz: mit Hinweis nie mehr Zeilen je Seite als ohne', () => {
+    const { view } = withView(listenTurnier({ namen: 'lang' }));
+    const maxZeilen = (notice: boolean) => Math.max(...scheduleFieldLayout(view, 1, { overscan: 5, notice }).pages.map(p => p.length));
+    expect(maxZeilen(true)).toBeLessThanOrEqual(maxZeilen(false));
+  });
+});
+
 describe('@ZM-188 Jede Zeile einer Listen-Folie liegt ganz im Bild', () => {
   const verschoben = (namen: ListenTurnierOptions['namen']) => listenTurnier({ namen, verschoben: true, gewertet: true });
 

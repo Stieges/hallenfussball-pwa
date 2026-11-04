@@ -155,9 +155,9 @@ function MonitorDisplayPageContent({
       slides,
       defaultDurationSec: defaultSlideDuration,
       matches: ruleMatches,
-      pageCount: (slide) => monitorPageCount(slide, tournament, view, end),
+      pageCount: (slide) => monitorPageCount(slide, tournament, view, end, { overscan: overscanPercent, notice: false }),
     }),
-    [slides, defaultSlideDuration, tournament, view, ruleMatches, end]
+    [slides, defaultSlideDuration, tournament, view, ruleMatches, end, overscanPercent]
   );
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
     ? (monitor?.transitionDuration ?? 0)

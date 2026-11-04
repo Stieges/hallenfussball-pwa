@@ -100,10 +100,6 @@
   "waiting": "Waiting for connection",
   "loading": "Loading display...",
   "error": {
-    "connection": "The tournament could not be loaded: connection to the server failed. The next attempt runs automatically.",
-    "tournamentNotFound": "Tournament not found: {{id}}. If this screen runs on a different device than the organizer laptop, the tournament must be set to \"Shareable by link\" in the visibility settings.",
-    "monitorNotFound": "Monitor not found: {{id}}",
-    "fetchFailed": "Error while loading",
     "cloudTimeout": "Cloud request aborted after {{ms}} ms (timeout)"
   },
   "standings": {

@@ -71,13 +71,13 @@ export function SlideRenderer({ slide, tournament, view, performanceSettings, th
       return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
 
     case 'schedule-field':
-      return <ScheduleFieldSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
+      return <ScheduleFieldSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} overscanPercent={overscanPercent} hinweisHoehe={hinweisHoehe} />;
 
     case 'sponsor':
       return <SponsorSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
 
     case 'next-matches':
-      return <NextMatchesSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
+      return <NextMatchesSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} overscanPercent={overscanPercent} hinweisHoehe={hinweisHoehe} />;
 
     case 'all-standings':
       return <AllStandingsSlide tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;

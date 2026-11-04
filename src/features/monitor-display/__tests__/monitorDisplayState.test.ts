@@ -36,8 +36,6 @@ const snapshot = (origin: 'cloud' | 'local', lookupFailed: boolean, mon: Tournam
   lookupFailed,
 });
 
-const CONNECTION = 'Turnier konnte nicht geladen werden: Verbindung zum Server fehlgeschlagen. Der nächste Versuch läuft automatisch.';
-const NOT_FOUND = 'Turnier nicht gefunden: tour-1. Läuft dieser Bildschirm auf einem anderen Gerät als der Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Mit Link teilbar" stehen.';
 
 describe('applyDelta – Lade-Regeln', () => {
   it('(1) missing + Daten + lookupFailed → gleiche Referenz', () => {
@@ -45,19 +43,19 @@ describe('applyDelta – Lade-Regeln', () => {
     expect(applyDelta(state, { kind: 'missing', lookupFailed: true }, ctx)).toBe(state);
   });
 
-  it('(2) missing + lookupFailed ohne Daten → Verbindungs-Text', () => {
+  it('(2) missing + lookupFailed ohne Daten → Grund „connection“ (ruhige Seite, kein Text)', () => {
     const next = applyDelta(initialDisplayState, { kind: 'missing', lookupFailed: true }, ctx);
-    expect(next.error).toBe(CONNECTION);
+    expect(next.error).toBe('connection');
     expect(next.loading).toBe(false);
     expect(next.hasData).toBe(false);
   });
 
   it('(3) missing ohne lookupFailed → „Turnier nicht gefunden“, auch mit Daten (bestätigt weg)', () => {
     const next = applyDelta(withData('cloud'), { kind: 'missing', lookupFailed: false }, ctx);
-    expect(next.error).toBe(NOT_FOUND);
+    expect(next.error).toBe('tournamentNotFound');
     expect(next.loading).toBe(false);
     const fresh = applyDelta(initialDisplayState, { kind: 'missing', lookupFailed: false }, ctx);
-    expect(fresh.error).toBe(NOT_FOUND);
+    expect(fresh.error).toBe('tournamentNotFound');
   });
 
   it('(4) F-324: lokaler Snapshot + lookupFailed + Daten + Stand cloud → gleiche Referenz', () => {
@@ -81,12 +79,12 @@ describe('applyDelta – Lade-Regeln', () => {
 
   it('(5) monitor null → „Monitor nicht gefunden“, auch mit Daten', () => {
     const next = applyDelta(withData('cloud'), snapshot('cloud', false, null), ctx);
-    expect(next.error).toBe('Monitor nicht gefunden: mon-1');
+    expect(next.error).toBe('monitorNotFound');
     expect(next.loading).toBe(false);
   });
 
   it('(6) Erfolg → Daten, error null, lastFetch = now', () => {
-    const next = applyDelta({ ...initialDisplayState, error: 'alt' }, snapshot('cloud', false), ctx);
+    const next = applyDelta({ ...initialDisplayState, error: 'connection' }, snapshot('cloud', false), ctx);
     expect(next.tournament).toBe(tournament);
     expect(next.monitor).toBe(monitor);
     expect(next.origin).toBe('cloud');
@@ -105,7 +103,7 @@ describe('applyDelta – Lade-Regeln', () => {
 describe('applyFetchError', () => {
   it('(7) ohne Daten → Fehler, loading false', () => {
     const next = applyFetchError(initialDisplayState, new Error('Netz weg'));
-    expect(next.error).toBe('Netz weg');
+    expect(next.error).toBe('fetchFailed');
     expect(next.loading).toBe(false);
   });
 
@@ -114,7 +112,7 @@ describe('applyFetchError', () => {
     expect(applyFetchError(state, new Error('Netz weg'))).toBe(state);
   });
 
-  it('Nicht-Error-Wert → Standardtext', () => {
-    expect(applyFetchError(initialDisplayState, 'kaputt').error).toBe('Fehler beim Laden');
+  it('Nicht-Error-Wert → derselbe Grund, nie ein Text', () => {
+    expect(applyFetchError(initialDisplayState, 'kaputt').error).toBe('fetchFailed');
   });
 });

@@ -35,7 +35,7 @@ const folie = (szene === 'plan'
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <I18nextProvider i18n={anzeigeI18n()}>
     <div style={{ ...containerStyle, containerType: 'size' }}>
-      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', containerType: 'size' }} data-testid="monitor-slide" data-pages={monitorPageCount(folie, turnier, view)}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', containerType: 'size' }} data-testid="monitor-slide" data-pages={monitorPageCount(folie, turnier, view, undefined, { overscan: rand, notice: false })}>
         <SlideRenderer slide={folie} tournament={turnier} view={view} performanceSettings={PERFORMANCE_PROFILES.high} theme="dark" overscanPercent={rand} page={seite} />
       </div>
     </div>

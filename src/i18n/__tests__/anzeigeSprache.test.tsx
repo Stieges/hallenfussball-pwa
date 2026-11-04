@@ -100,10 +100,10 @@ describe('Feste Anzeigesprache (B-41 Fixrunde 1)', () => {
     expect(i18n.t('admin:visibility.printQr')).toBe('Print QR code');
   });
 
-  it('Nicht-React: anzeigeT liefert Deutsch, applyFetchError meldet den deutschen Standardtext', () => {
-    expect(anzeigeT('monitor:error.connection')).toMatch(/^Turnier konnte nicht geladen werden/);
+  it('Nicht-React: anzeigeT liefert Deutsch, die Warte-Seite ist deutsch, applyFetchError meldet nur einen Grund', () => {
+    expect(anzeigeT('monitor:waiting')).toBe('Warte auf Verbindung');
     const next = applyFetchError(initialDisplayState, 'kein Fehlerobjekt');
-    expect(next.error).toBe('Fehler beim Laden');
+    expect(next.error).toBe('fetchFailed');
   });
 
   it('Zuschauer-Seite: Nicht-gefunden-Ansicht zeigt „Zur Startseite“ (nicht englisch)', async () => {

@@ -4,17 +4,22 @@
  * Regeln wörtlich aus MonitorDisplayPage.loadData (Lade-Regeln). Die Seite nutzt diese Bausteine
  * noch nicht; die Verdrahtung folgt in B-16b2.
  */
-import { anzeigeT } from '../../i18n/anzeigeSprache';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import type { DisplayDelta, DisplayOrigin } from './monitorDataSource';
+
+/**
+ * Warum der Monitor keinen Stand hat. Nur ein Grund, nie ein Text: die Seite zeigt in jedem Fall die ruhige Seite
+ * „Warte auf Verbindung“, ohne Kennung und ohne Fehlertext (@ME-009, @ME-016, @ME-034).
+ */
+export type MonitorDisplayError = 'connection' | 'tournamentNotFound' | 'monitorNotFound' | 'fetchFailed';
 
 export interface MonitorDisplayState {
   tournament: Tournament | null;
   monitor: TournamentMonitor | null;
   origin: DisplayOrigin | null;
   loading: boolean;
-  error: string | null;
+  error: MonitorDisplayError | null;
   lastFetch: number;
   hasData: boolean;
 }
@@ -40,14 +45,6 @@ export interface DisplayContext {
   guardOrigin?: DisplayOrigin | null;
 }
 
-function connectionError(): string {
-  return anzeigeT('monitor:error.connection');
-}
-
-function notFoundError(tournamentId: string): string {
-  return anzeigeT('monitor:error.tournamentNotFound', { id: tournamentId });
-}
-
 /**
  * Wendet einen Abruf-Ergebnis-Delta an. Gibt bei „nichts ändern“ dieselbe Referenz zurück.
  */
@@ -71,10 +68,10 @@ export function applyDelta(
       return state;
     }
     if (delta.lookupFailed) {
-      return { ...state, error: connectionError(), loading: false };
+      return { ...state, error: 'connection', loading: false };
     }
     // Sauber bestätigt weg – auch mit vorhandenen Daten sichtbar machen.
-    return { ...state, error: notFoundError(ctx.tournamentId), loading: false };
+    return { ...state, error: 'tournamentNotFound', loading: false };
   }
 
   // F-324: Ein Cloud-Aussetzer darf einen laufenden Bildschirm nicht auf die lokale Kopie
@@ -86,7 +83,7 @@ export function applyDelta(
 
   if (!delta.monitor) {
     // Turnier-Abruf war erfolgreich; der Monitor existiert nicht mehr. Kein hasData-Schutz.
-    return { ...state, error: anzeigeT('monitor:error.monitorNotFound', { id: ctx.monitorId }), loading: false };
+    return { ...state, error: 'monitorNotFound', loading: false };
   }
 
   return {
@@ -104,13 +101,13 @@ export function applyDelta(
 /**
  * Abruf-Fehler: Mit vorhandenen Daten bleibt der Bildschirm unverändert.
  */
-export function applyFetchError(state: MonitorDisplayState, err: unknown): MonitorDisplayState {
+export function applyFetchError(state: MonitorDisplayState, _err?: unknown): MonitorDisplayState {
   if (state.hasData) {
     return state;
   }
   return {
     ...state,
-    error: err instanceof Error ? err.message : anzeigeT('monitor:error.fetchFailed'),
+    error: 'fetchFailed',
     loading: false,
   };
 }

@@ -4,6 +4,7 @@ import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
+import { wirksamerRand } from '../overscan';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
 import { scheduleFieldLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
@@ -19,18 +20,23 @@ interface ScheduleFieldSlideProps {
   style: CSSProperties;
   /** Seite der Folie (B-16f3), 0-basiert. */
   page?: number;
+  /** Wirksamer Bildrand in Prozent (@ME-067); bestimmt, wie viele Zeilen auf eine Seite passen. */
+  overscanPercent?: number;
+  /** Der Wachhalten-Hinweis nimmt oben Platz (@ME-006). */
+  hinweisHoehe?: string;
 }
 
 /** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, Seiten nach Höhe, höchstens 4 Spiele je Seite (@ZM-129, @ZM-185, @ZM-188). */
-export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page = 0 }: ScheduleFieldSlideProps) {
+export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page = 0, overscanPercent, hinweisHoehe }: ScheduleFieldSlideProps) {
   const { t } = useTranslation('monitor');
+  const frame = { overscan: wirksamerRand(overscanPercent, null), notice: hinweisHoehe !== undefined };
   const themeColors = monitorThemes[resolveTheme(theme)];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
   const fieldName = field?.customName ?? field?.defaultName ?? t('fieldSelector.field', { field: fieldNumber });
 
-  const { pages: allPages, columns } = scheduleFieldLayout(view, fieldNumber);
+  const { pages: allPages, columns } = scheduleFieldLayout(view, fieldNumber, frame);
   const pages = allPages.length;
   const rows = allPages[Math.min(Math.max(page, 0), pages - 1)];
 

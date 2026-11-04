@@ -5,7 +5,7 @@
  * Seiten nach Höhe statt nach fester Zeilenzahl: Jede Zeile kostet so viel Höhe, wie ihre höchste Zelle (Uhrzeit mit „(war …)“,
  * Teamnamen mit voraussichtlichem Umbruch) braucht, und eine Seite fasst, was in die Bildhöhe passt, höchstens `maxRows` Spiele.
  * Nichts ist abgeschnitten (@ZM-188). Das Modell rechnet aus den Tokens der Folie (`displayList`) und nimmt ein Querformat 16:9
- * mit dem vorbelegten Bildrand an; es ist vorsichtig, lieber eine Seite mehr als eine abgeschnittene Zeile. Die Seitenzahl
+ * mit dem wirksamen Bildrand und dem Hinweis (`ListFrame`) an; es ist vorsichtig, lieber eine Seite mehr als eine abgeschnittene Zeile. Die Seitenzahl
  * braucht der Takt vor dem Zeichnen, darum wird sie gerechnet und nicht im Bild gemessen; `visual:metrics` und die Browser-Tests
  * messen im Bild nach, ob das Modell hält.
  *
@@ -47,7 +47,19 @@ const LINE = 1.2;
 const CHAR_EM = 0.6;
 /** Querformat 16:9: Breite in Einheiten der Bildhöhe. */
 const WIDTH_VH = (100 * 16) / 9;
-const OVERSCAN = displayMonitor.overscan.defaultPercent;
+
+/** Rahmen der Seite, in dem die Folie steht: wirksamer Bildrand in Prozent (@ME-067, 0–10) und ob der Wachhalten-Hinweis oben Platz nimmt (@ME-006). */
+export interface ListFrame {
+  overscan: number;
+  notice: boolean;
+}
+
+/** Vorbelegter Rahmen: Standard-Bildrand, kein Hinweis. */
+export const DEFAULT_FRAME: ListFrame = { overscan: displayMonitor.overscan.defaultPercent, notice: false };
+
+/** Höhe des Hinweises in vh (Schrift mal Zeilenhöhe plus Polster und Rahmen oben und unten). */
+const NOTICE_VH = num(displayFontSizes.notice) * displayLayout.scoreArea.noticeLineHeight
+  + 2 * (num(displayLayout.scoreArea.noticePadY) + num(displayLayout.scoreArea.noticeBorderWidth));
 /** Rahmen einer Zeile oben und unten in vh (1 px bei 720 Zeilen, aufgerundet). */
 const ROW_BORDER = 0.3;
 /** Rest des Bildes für Überschrift (Zeile, Abstand), Seitenhinweis (Zeile, Abstand) und Reserve. */
@@ -55,15 +67,17 @@ const CHROME = num(displayList.fontSizes.heading) * LINE + num(displayList.headi
   + num(displayList.fontSizes.head) * LINE + num(displayList.rowGap) + 1.5;
 
 /** Höhe der Zeilen-Fläche einer Seite in vh. */
-const AVAILABLE = 100 - 2 * OVERSCAN - CHROME;
+function availableHeight(frame: ListFrame): number {
+  return 100 - 2 * frame.overscan - (frame.notice ? NOTICE_VH : 0) - CHROME;
+}
 
 /** Breite eines Teamnamens in Zeichen je Zeile (Heim und Gast gleich breit). */
-function charsPerLine(cols: ListColumns): number {
+function charsPerLine(cols: ListColumns, frame: ListFrame): number {
   const gaps = 4 + (cols.status ? 1 : 0) + (cols.label ? 1 : 0) - 1;
   const fixed = num(displayList.timeFieldWidth) * FONT + num(displayList.separatorWidth) * FONT
     + (cols.status ? num(displayLayout.scoreArea.badgeWidth) * num(displayFontSizes.liveBadge) : 0)
     + (cols.label ? num(displayList.labelWidth) * FONT : 0);
-  const inner = WIDTH_VH * (1 - (2 * OVERSCAN) / 100) - 2 * num(displayList.rowPaddingX) - gaps * num(displayList.cellGap) - fixed;
+  const inner = WIDTH_VH * (1 - (2 * frame.overscan) / 100) - 2 * num(displayList.rowPaddingX) - gaps * num(displayList.cellGap) - fixed;
   return Math.max(1, Math.floor(inner / 2 / (CHAR_EM * FONT)));
 }
 
@@ -102,8 +116,8 @@ export function nameLines(text: string, perLine: number): number {
 }
 
 /** Höhe einer Zeile in vh: Polster und Rahmen plus höchste Zelle (Uhrzeit/Feld/„voraussichtlich“ oder Namen). */
-export function rowHeight(match: MatchView, cols: ListColumns): number {
-  const perLine = charsPerLine(cols);
+export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME): number {
+  const perLine = charsPerLine(cols, frame);
   const names = Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
   const label = cols.label && match.labelText ? nameLines(match.labelText, Math.max(1, Math.floor(num(displayList.labelWidth) / CHAR_EM))) : 1;
   const timeCell = num(displayList.fontSizes.time) * LINE + FONT * LINE * (match.kickoffTentative ? 2 : 1);
@@ -115,15 +129,16 @@ export function rowHeight(match: MatchView, cols: ListColumns): number {
  * Seiten einer Listen-Folie: so viele Spiele hintereinander, wie in die Höhe passen, höchstens `maxRows`; ein Spiel, das allein
  * zu hoch ist, steht allein. Jedes Spiel steht auf genau einer Seite. Mindestens eine Seite (auch ohne Spiele).
  */
-export function listPages(matches: readonly MatchView[], cols: ListColumns, maxRows: number = Number.POSITIVE_INFINITY): MatchView[][] {
+export function listPages(matches: readonly MatchView[], cols: ListColumns, maxRows: number = Number.POSITIVE_INFINITY, frame: ListFrame = DEFAULT_FRAME): MatchView[][] {
+  const available = availableHeight(frame);
   const gap = num(displayList.rowGap);
   const pages: MatchView[][] = [[]];
   let used = 0;
   for (const match of matches) {
-    const height = rowHeight(match, cols);
+    const height = rowHeight(match, cols, frame);
     const current = pages[pages.length - 1];
     const next = current.length === 0 ? height : used + gap + height;
-    if (current.length > 0 && (next > AVAILABLE || current.length >= maxRows)) {
+    if (current.length > 0 && (next > available || current.length >= maxRows)) {
       pages.push([match]);
       used = height;
     } else {

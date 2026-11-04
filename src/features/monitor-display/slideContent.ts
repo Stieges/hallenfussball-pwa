@@ -13,7 +13,7 @@ import type { ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
-import { listColumns, listPages, SCHEDULE_MAX_ROWS, type ListColumns } from './listRows';
+import { DEFAULT_FRAME, listColumns, listPages, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
 
 function compareNumbers(x: number, y: number): number {
   if (x === y) { return 0; }
@@ -92,24 +92,24 @@ export interface ListLayout {
 }
 
 /** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188). */
-export function scheduleFieldLayout(view: TournamentView, field: number): ListLayout {
+export function scheduleFieldLayout(view: TournamentView, field: number, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const schedule = fieldSchedule(view, field);
   const columns = listColumns(schedule, true);
-  return { pages: listPages(schedule, columns, SCHEDULE_MAX_ROWS), columns };
+  return { pages: listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame), columns };
 }
 
 /** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188). */
-export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined): ListLayout {
+export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const list = nextMatchList(view, matchCount);
   const columns = listColumns(list, false);
-  return { pages: listPages(list, columns), columns };
+  return { pages: listPages(list, columns, undefined, frame), columns };
 }
 
 /**
  * Seitenzahl einer Folie für den Takt (B-16f1, f3). Alle Tabellen: ein Abschnitt je Seite. Spielplan und
  * Nächste Spiele: nach Höhe der Zeilen (`listRows.ts`). Andere Folien: eine Seite.
  */
-export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null, view?: TournamentView | null, end?: MonitorEnd): number {
+export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null, view?: TournamentView | null, end?: MonitorEnd, frame: ListFrame = DEFAULT_FRAME): number {
   // Folien nach dem Abschluss (R3-7, @ZM-129): Seiten aus dem gespeicherten Endstand, ohne Tabelle und Ansicht
   if (slide.type === 'final-standings') { return end?.kind === 'final' ? rankingPages(end.ranking).length : 1; }
   if (slide.type === 'final-scorers') { return end?.kind === 'final' && end.scorers !== null ? scorerPages(end.scorers).length : 1; }
@@ -118,9 +118,9 @@ export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | 
     case 'all-standings':
       return Math.max(1, standingsSections(tournament, view).length);
     case 'schedule-field':
-      return scheduleFieldLayout(view, fieldIdToNumber(slide.config.fieldId)).pages.length;
+      return scheduleFieldLayout(view, fieldIdToNumber(slide.config.fieldId), frame).pages.length;
     case 'next-matches':
-      return nextMatchesLayout(view, slide.config.matchCount).pages.length;
+      return nextMatchesLayout(view, slide.config.matchCount, frame).pages.length;
     default:
       return 1;
   }

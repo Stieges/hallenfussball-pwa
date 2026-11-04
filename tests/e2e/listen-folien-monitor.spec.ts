@@ -1,7 +1,7 @@
 /**
  * Monitor-Listen-Folien im Browser (Regel T2-UI; @ZM-187, @ZM-188, @ZM-185, @ZM-150, @ZP-046) – über den Prüfstand
  * tests/e2e/harness/listen-folien-monitor.html. Echte Folien-Komponenten, Tokens, Texte, Turnier „Nikolaus-Turnier“ (6 Teams, 15 Spiele).
- * Profile 1280×720 und 1920×1080 bei Standard-Bildrand. Gemessen wird die Lage im Bild: jede Zeile und „Seite x / y“ liegen ganz im Bild,
+ * Profile 1280×720 und 1920×1080 bei Bildrand 0, 5 und 10 % (@ME-067). Gemessen wird die Lage im Bild: jede Zeile und „Seite x / y“ liegen ganz im Bild,
  * Zeilen überlappen nicht, dieselben Spalten stehen in jeder Zeile an derselben Stelle, „(war hh:mm)“ steht neben der Uhrzeit und bricht nie um.
  * Bilder: Ordner aus LISTEN_FOLIEN_BILDER. Nur am Dev-Server (gehört nicht in den Build).
  */
@@ -17,6 +17,9 @@ const SZENEN = [
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=8' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
 ] as const;
+
+/** Bildrand in Prozent der Folie (@ME-067: 0 bis 10): die Seitenzahl richtet sich nach dem wirksamen Rand. */
+const RAENDER = [0, 5, 10] as const;
 
 const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 
@@ -45,13 +48,14 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
 
   for (const szene of SZENEN) {
     for (const p of PROFILE) {
-      test(`${szene.kennung}, ${p.name}: jede Zeile und „Seite x / y“ ganz im Bild, gleiche Spalten, „(war …)“ in einer Zeile`, async ({ browser }, testInfo) => {
+     for (const rand of RAENDER) {
+      test(`${szene.kennung}, ${p.name}, Rand ${String(rand)} %: jede Zeile und „Seite x / y“ ganz im Bild, gleiche Spalten, „(war …)“ in einer Zeile`, async ({ browser }, testInfo) => {
         test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
         const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
         const page = await ctx.newPage();
         const ordner = process.env.LISTEN_FOLIEN_BILDER ?? testInfo.outputDir;
         mkdirSync(ordner, { recursive: true });
-        const url = (seite: number) => `/tests/e2e/harness/listen-folien-monitor.html?szene=${szene.id}&seite=${String(seite)}&namen=${szene.namen}${szene.zusatz}`;
+        const url = (seite: number) => `/tests/e2e/harness/listen-folien-monitor.html?szene=${szene.id}&seite=${String(seite)}&namen=${szene.namen}&rand=${String(rand)}${szene.zusatz}`;
         await page.goto(url(0));
         await expect(page.getByTestId('monitor-slide')).toBeVisible();
         const seiten = Number(await page.getByTestId('monitor-slide').getAttribute('data-pages'));
@@ -91,6 +95,7 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
         if (szene.id === 'plan') { expect(seiten, '@ZM-185: bei 15 Spielen und höchstens 4 je Seite mindestens 4 Seiten').toBeGreaterThanOrEqual(4); }
         await ctx.close();
       });
+     }
     }
   }
 });

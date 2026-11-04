@@ -19,7 +19,7 @@ describe('MonitorStatusViews', () => {
     expect(screen.getByTestId('monitor-waiting-state')).toHaveTextContent(/^Warte auf Verbindung$/);
   });
 
-  it('@ME-016 Gegenbeispiel: keine Taste, kein Fehlerzustand, keine Fehlerfarbe', () => {
+  it('@ME-016 (Übergang, „frei – Code“ folgt mit B-20) Gegenbeispiel: keine Taste, kein Fehlerzustand, keine Fehlerfarbe', () => {
     render(<MonitorWaitingView />);
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.queryByTestId('monitor-error-state')).toBeNull();
