@@ -5,6 +5,7 @@
  */
 import { printFont, printGap, printMetrics, printPage, printType, printUnit } from '../../design-tokens/print';
 import { printFormat } from '../../design-tokens/print-format';
+import { printHeader } from '../../design-tokens/print-header';
 
 /** Angeboten wird A4; A3 und A2 sind vorbereitet (`print-format.ts`). */
 export type PdfFormat = 'a4' | 'a3' | 'a2';
@@ -38,7 +39,7 @@ export interface PageGeometry {
  * verschiebt den Satzspiegel der Folgeseiten nach unten. `footerLines` ist die Zahl der Fußzeilen (`render/footer.ts`);
  * die Fußzeile steht samt Unterlänge der letzten Zeile oberhalb des unteren Rands (@DR-001, B5b), der Satzspiegel
  * endet über der Fußlinie. `shortQrSide` ist die Kante des QR-Blocks im Kurzkopf (0 ohne QR, @DR-003): der Kurzkopf ist
- * dann mindestens so hoch wie der Block.
+ * dann mindestens so hoch wie der Block plus `printHeader.qrRuleGap`: die Kopflinie liegt unter der Ruhezone, nicht in ihr.
  */
 export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, shortTitleLines = 1, footerLines = 1, shortQrSide = 0): PageGeometry {
   const { scale, [orientation]: size } = printFormat[format];
@@ -55,7 +56,7 @@ export function pageGeometry(format: PdfFormat, orientation: PdfOrientation, sho
     top: margin.top,
     shortHeadHeight: Math.max(
       printGap.shortHeadHeight + (shortTitleLines - 1) * printMetrics.shortTitleAdvance,
-      shortQrSide > 0 ? shortQrSide + printGap.shortHeadHeight - printGap.shortHeadRule : 0
+      shortQrSide > 0 ? shortQrSide + printHeader.qrRuleGap + printGap.shortHeadHeight - printGap.shortHeadRule : 0
     ),
     bottom: footRuleY - printGap.footSpace,
     footRuleY,

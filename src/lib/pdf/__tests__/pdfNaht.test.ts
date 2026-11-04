@@ -91,10 +91,15 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Neu aufgenommen 04.11. (T7b Fixrunde 2): Abstand der Uhrzeit zur Namenslinie der Finalrunde (nameOuter 2,15 statt 0,4, Spalte der kleinen Linien 22 mm); nur die Lage in der Finalrunde ändert sich (Stände davor: a64320e43d7b, 02572b3b81d3, EN b2fd943f59c8).
  * Neu aufgenommen 04.11. (T7b Fixrunde): Fußzeile mit festen Plätzen (@DR-044: „Titel · Stand“ und „Seite x von y“ getrennt, rechts unten), kein „voraussichtlich“ mehr (@DR-001), kleine Linien der Finalrunde unter dem Ergebnis bei Feld- oder SR-Spalte (@DR-037, 7 mm, Abstände ≥ 4 mm, @DR-034); die Hallencup-Fixtures haben zwei Felder, die Finalrunde ist höher. Stände davor: f8c2732ccd42, d8ef4c756344, EN b4202197d563.
  * Neu aufgenommen 03.11. (Paket PDF T7b, Seite 2 ff.): Tabellen mit Gruppenzeichen und Raster, Strafstoß-Zeile, Finalrunde mit Namenslinien und Herkunft unter der Linie, Platzierung, Modus „2 Gruppen + Finalrunde“, Kurzkopf vor dem Inhalt, Feldnummern; keine Abschnittstitel und -nummern mehr, Finalrunde und Platzierung auf der Seite der Tabellen, wenn sie dort ganz Platz haben. Bild der Fixtures a, b, c, b-lang gesichtet (Stände davor: e109befcec2b, 9947181a693b, EN e38b6350af9f).
+ * Neu aufgenommen 04.11. (T9, C-PDF-QR-RAND-FOLGESEITE, @DR-003): Kopflinie des Kurzkopfs 1 mm unter der Ruhezone des QR statt in ihr
+ * (`printHeader.qrRuleGap`). Text-für-Text verglichen (Lauf main 5a28cc09 gegen diesen Stand, 12 und 20 Spiele DE, 12 Spiele EN): gleiche
+ * Seitenzahl, gleiche Textstücke in gleicher Reihenfolge, gleiche Zahl von Füllungen und Linien je Seite; Seite 1 unverändert, auf den
+ * Folgeseiten liegt der Inhalt unter dem Kurzkopf genau 1,0 mm tiefer (Kurzkopf-Titel, -Zeile und Fußzeile unverändert). Die Zeilenhöhen
+ * (C-PDF-ENGE-STUFE-UNTERLAENGE) ändern hier nichts: die Hallencup-Namen sind einzeilig. Stände davor: c271743aa44b, 8f4a61f67824, EN 2ee274eadb3b.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'c271743aa44b',
-  '20 Spiele, hoch': '8f4a61f67824',
+  '12 Spiele, hoch': 'eb36e29082e2',
+  '20 Spiele, hoch': 'cb15518a4350',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -109,7 +114,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('2ee274eadb3b');
+    expect(layoutDigest(pages)).toBe('54751521beb2');
   });
 });
 

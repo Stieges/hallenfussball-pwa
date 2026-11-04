@@ -158,7 +158,7 @@ export async function buildSchedulePdf(source: SchedulePdfInput): Promise<Schedu
   // Die Fußzeile aller Seiten zuletzt: ein Vorlese-Programm liest sie nach dem Inhalt der Seite (@DR-039)
   drawFooters(doc, geo, footer);
 
-  return { doc, notes, hints, filename: schedulePdfFilename(schedule.tournament.title, now, edition) };
+  return { doc, notes, hints, filename: schedulePdfFilename(schedule.tournament.title, now, { plan: t.sheet.titleSuffix, withoutResults: t.sheet.fileWithoutResults }, edition) };
 }
 
 /** Baut das Spielplan-PDF und speichert es. Rückgabe: Hinweise für den Nutzer (leer, wenn keine). */

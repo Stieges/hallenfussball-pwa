@@ -12,6 +12,7 @@ import { refereeLabelFor } from '../../refereeLabel';
 import { FALL_A, FALL_B, FALL_C, fallBLang, mitStandA } from '../../__tests__/fixtures/handzettelFaelle';
 import { jspdfMeasure } from '../measure';
 import type { MatchRowModel, MatchRowsBlock, ScheduleModel } from '../types';
+import type { PageGeometry } from '../../layout';
 import { matchPages, modelOf } from './modelSupport';
 
 const blocksOf = (model: ScheduleModel): MatchRowsBlock[] => matchPages(model).flatMap(p => p.blocks.filter((b): b is MatchRowsBlock => b.kind === 'matchRows'));
@@ -70,9 +71,18 @@ function lineHeightFactor(row: MatchRowModel): number {
   return (b.y - a.y) / (a.pt * printUnit.mmPerPt);
 }
 
+/**
+ * Seite 1 so viel länger (mm), dass die Lage des Beispiels eintritt. Seit T9 (C-PDF-ENGE-STUFE-UNTERLAENGE) zählt die Höhe einer Zeile mit
+ * mehrzeiligem Namen Ober- und Unterlänge und den Platz eines Stundentrenners mit; b-lang lag vorher genau auf der Kante (0 bis 2,5 mm
+ * Luft) und braucht jetzt 2 bis 3,5 mm mehr. Die Namen der Fälle bleiben unverändert. Gemessene Bereiche: Fake-Messung b-lang (2 lange
+ * Namen) eng ab +1, normal ab +17; b-lang (1 langer Name) normal ab +2; Inter b-lang (1) eng ab +6, normal ab +14.
+ */
+const LAGE = { engFake: 5, normalFake: 5, engInter: 10 } as const;
+const laenger = (mm: number) => ({ geo: (g: PageGeometry): PageGeometry => ({ ...g, bottom: g.bottom + mm }) });
+
 describe('@DR-033 Reserve-Regel bei Platzmangel', () => {
   it('@DR-033 Beispiel 2: eng gesetzt bleibt auf Seite 1, die Schrift wird nicht kleiner', () => {
-    const { model } = modelOf(fallBLang(2));
+    const { model } = modelOf(fallBLang(2), laenger(LAGE.engFake));
 
     expect(model.fit).toBe('tight');
     expect(matchPages(model)).toHaveLength(1);
@@ -81,7 +91,7 @@ describe('@DR-033 Reserve-Regel bei Platzmangel', () => {
 
   it('@DR-033 passt alles, bleibt es beim normalen Polster', () => {
     expect(modelOf(FALL_B).model.fit).toBe('normal');
-    expect(modelOf(fallBLang(1)).model.fit).toBe('normal');
+    expect(modelOf(fallBLang(1), laenger(LAGE.normalFake)).model.fit).toBe('normal');
   });
 
   it('@DR-033 der Zeilenabstand mehrzeiliger Namen sinkt in keiner Stufe unter das 1,15-Fache', () => {
@@ -195,7 +205,7 @@ describe('Abgleich mit der echten Schrift (jsPDF-Adapter, T1)', () => {
   it('@DR-033 mit Inter statt der Fake-Messung: Fall b-lang mit einem langen Namen braucht die Stufe „eng“ und bleibt auf Seite 1', async () => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     await registerPdfFonts(doc);
-    const { model } = modelOf(fallBLang(1), { measure: jspdfMeasure(doc, fontOf(doc)), geo: g => ({ ...g, bottom: g.bottom + 5 }) });
+    const { model } = modelOf(fallBLang(1), { measure: jspdfMeasure(doc, fontOf(doc)), ...laenger(LAGE.engInter) });
 
     expect(model.fit).toBe('tight');
     expect(matchPages(model)).toHaveLength(1);

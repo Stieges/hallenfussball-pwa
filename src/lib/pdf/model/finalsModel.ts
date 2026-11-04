@@ -7,7 +7,7 @@
 import { printMetrics, printType } from '../../../design-tokens/print';
 import { printFinals, printMatchTable, printRule, printZebra } from '../../../design-tokens/print-sheet';
 import { koLines } from '../rules';
-import { printState } from '../matchResult';
+import { printState, resultMarkText } from '../matchResult';
 import { sideInfo } from '../matchSides';
 import type { StatefulMatch } from '../tournamentState';
 import { finalRounds, roundTitle, smallKindsFor } from './finalRounds';
@@ -22,6 +22,7 @@ import type { Block, ColumnKey, FinalsBlock, FinalsRoundModel, TextBlock } from 
 function sourceOf(env: ModelEnv, match: StatefulMatch, small: RowSource['small']): RowSource {
   const { t, input } = env.source;
   const state = printState(match, { edition: input.edition, results: env.includeScores });
+  const markText = resultMarkText(state, t);
   const home = sideInfo(match, 'A', env.sideCtx);
   const away = sideInfo(match, 'B', env.sideCtx);
   return {
@@ -35,7 +36,7 @@ function sourceOf(env: ModelEnv, match: StatefulMatch, small: RowSource['small']
     ...('origin' in home ? { homeOrigin: home.origin } : {}),
     ...('origin' in away ? { awayOrigin: away.origin } : {}),
     state,
-    ...(state.kind === 'final' && state.mark ? { markText: t.corrected(t.formatClock(state.mark.at)) } : {}),
+    ...(markText === undefined ? {} : { markText }),
     referee: env.refLabel(match),
     small,
   };

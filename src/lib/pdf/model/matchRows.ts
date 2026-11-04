@@ -3,8 +3,9 @@
  * über `TextMeasure`, gezeichnet wird in `render/matchRowsDraw.ts`. Alle Positionen in mm ab der Papierecke.
  *
  * Formeln (Tokens in `print-sheet.ts`):
- * - Namenszeile = Schrift `printType.body` × `printMatchRow.lineHeight`; Zeilenhöhe = max(`minHeight`, Zeilen × Namenszeile
- *   + 2 × Polster), die Spalte „SR“ zählt mit ihren Zeilen (Schrift `refPt`).
+ * - Namenszeile = Schrift `printType.body` × `printMatchRow.lineHeight`; Zeilenhöhe = max(`minHeight`, (Zeilen − 1) × Namenszeile
+ *   + Ober- und Unterlänge + 2 × Polster, mit Stundentrenner + dessen Platz), die Spalte „SR“ zählt mit ihren Zeilen (Schrift `refPt`).
+ * - Der Inhalt sitzt `contentDrop` unter der Zeilenmitte, höchstens so weit, dass die Unterlänge im Zeilenboden bleibt (`contentMid`).
  * - Schreiblinie = Zeilenboden − `printWriteLine.aboveRowBottom`, in jeder Zeile gleich, auch bei mehrzeiligem Namen.
  * - Ergebnislinien liegen mittig in der Spalte „Ergebnis“: Linie, Doppelpunkt, Linie.
  */
@@ -13,7 +14,7 @@ import { printFinals, printGroupMark, printHourRule, printMatchRow, printMatchTa
 import type { ResultState } from '../matchResult';
 import type { TextMeasure } from './measure';
 import { wrapName } from './nameLines';
-import { advanceMm, centeredBaseline, run } from './text';
+import { advanceMm, ascent, centeredBaseline, descent, run } from './text';
 import type { ColumnKey, ColumnModel, GroupMark, MatchHeadModel, MatchRowModel, ResultCell, SideModel, SmallLineKind, TextRun, WriteLine } from './types';
 
 /** Welche Spalten es gibt. `shootout` gibt es nur in der Finalrunde (T7b). */
@@ -51,7 +52,7 @@ export interface RowSource {
   homeOrigin?: string;
   awayOrigin?: string;
   state: ResultState;
-  /** Kennzeichen unter dem Ergebnis eines korrigierten Spiels („korrigiert 14:52“). */
+  /** Kennzeichen unter dem Ergebnis eines gewerteten oder korrigierten Spiels („gewertet“, „korrigiert 14:52“, @DR-001). */
   markText?: string;
   /** Nur Nummer oder pfeifendes Team (@DR-025); leer = nichts eingetragen. */
   referee: string;
@@ -113,15 +114,42 @@ export function minRowHeight(hourRule: boolean): number {
   return hourRule ? Math.max(printMatchRow.minHeight, withRule) : printMatchRow.minHeight;
 }
 
-/** Höhe einer Zeile ohne Dehnung bei Polster `pad`; `hourRule`: über der Zeile liegt ein Stundentrenner. */
-export function naturalHeight(src: RowSource, cols: ColumnModel[], pad: number, measure: TextMeasure, hourRule = false): number {
+/** Ausdehnung des Zeileninhalts über und unter seiner Mitte, mit Ober- und Unterlänge: Namen (`printType.body`) und Spalte „SR“ (`refPt`). */
+export interface ContentReach { up: number; down: number }
+
+function reachOf(lines: number, pt: number): ContentReach {
+  if (lines === 0) { return { up: 0, down: 0 }; }
+  const half = ((lines - 1) / 2) * advanceMm(pt, printMatchRow.lineHeight);
+  const capHalf = centeredBaseline(0, pt);
+  return { up: half + ascent(pt) - capHalf, down: half + capHalf + descent(pt) };
+}
+
+/** Wie weit der Inhalt einer Zeile über und unter ihre Mitte reicht (T9, C-PDF-ENGE-STUFE-UNTERLAENGE). */
+export function contentReach(src: RowSource, cols: ColumnModel[], measure: TextMeasure): ContentReach {
   const home = column(cols, 'home');
   const away = column(cols, 'away');
   const referee = column(cols, 'referee');
-  const names = Math.max(home ? nameLinesIn(src.home, home, measure).length : 1, away ? nameLinesIn(src.away, away, measure).length : 1, 1);
-  const refLines = referee ? refereeLinesIn(src.referee, referee, measure).length : 0;
-  const text = Math.max(names * advanceMm(printType.body, printMatchRow.lineHeight), refLines * advanceMm(printMatchTable.refPt, printMatchRow.lineHeight));
-  return Math.max(minRowHeight(hourRule), text + 2 * pad);
+  const names = reachOf(Math.max(home ? nameLinesIn(src.home, home, measure).length : 1, away ? nameLinesIn(src.away, away, measure).length : 1, 1), printType.body);
+  const ref = reachOf(referee ? refereeLinesIn(src.referee, referee, measure).length : 0, printMatchTable.refPt);
+  return { up: Math.max(names.up, ref.up), down: Math.max(names.down, ref.down) };
+}
+
+/**
+ * Mitte des Zeileninhalts: `contentDrop` unter der Zeilenmitte, aber nur so weit, dass die Unterlänge der letzten Zeile über dem
+ * Zeilenboden bleibt (@DR-033, @DR-001). Bei einzeiligen Zeilen ist das immer der volle `contentDrop`.
+ */
+export function contentMid(top: number, height: number, reach: ContentReach): number {
+  return top + height / 2 + Math.min(printMatchRow.contentDrop, Math.max(0, height / 2 - reach.down));
+}
+
+/**
+ * Höhe einer Zeile ohne Dehnung bei Polster `pad`; `hourRule`: über der Zeile liegt ein Stundentrenner. Der Inhalt zählt mit Ober- und
+ * Unterlänge, der Trenner mit seinem Platz über dem Inhalt: so ragt in keiner Stufe ein Text über die Zeile oder in den Trenner.
+ */
+export function naturalHeight(src: RowSource, cols: ColumnModel[], pad: number, measure: TextMeasure, hourRule = false): number {
+  const reach = contentReach(src, cols, measure);
+  const ruleRoom = hourRule ? printHourRule.inset + printHourRule.stroke : 0;
+  return Math.max(minRowHeight(hourRule), reach.up + reach.down + 2 * pad + ruleRoom);
 }
 
 /** Spaltenkopf: Beschriftungen fett, Linie darunter. `top` ist die Oberkante. */
@@ -145,11 +173,11 @@ export function buildHead(cols: ColumnModel[], top: number, labels: Partial<Reco
   };
 }
 
-function sideOf(lines: string[], col: ColumnModel, top: number, height: number): SideModel {
+function sideOf(lines: string[], col: ColumnModel, mid: number): SideModel {
   const adv = advanceMm(printType.body, printMatchRow.lineHeight);
   const right = col.key === 'home';
   const x = right ? col.x + col.w - printMatchTable.nameInner : col.x + printMatchTable.nameInner;
-  const runs = lines.map((text, i) => run(text, x, centeredBaseline(top + height / 2 + printMatchRow.contentDrop + (i - (lines.length - 1) / 2) * adv, printType.body), printType.body, 'normal', right ? 'right' : 'left'));
+  const runs = lines.map((text, i) => run(text, x, centeredBaseline(mid + (i - (lines.length - 1) / 2) * adv, printType.body), printType.body, 'normal', right ? 'right' : 'left'));
   return { name: lines, runs };
 }
 
@@ -197,13 +225,13 @@ export function buildRow(
   src: RowSource, cols: ColumnModel[], top: number, height: number, flags: { zebra: boolean; hourRule: boolean },
   texts: RowTexts, measure: TextMeasure, bounds: { left: number; width: number }
 ): MatchRowModel {
-  const mid = top + height / 2 + printMatchRow.contentDrop;
+  const mid = contentMid(top, height, contentReach(src, cols, measure));
   const get = (key: ColumnKey): ColumnModel => column(cols, key) ?? { key, x: 0, w: 0 };
   const homeCol = get('home');
   const awayCol = get('away');
   const nr = get('nr');
   const time = get('time');
-  const { cell, lines } = cellOf(src, cols, top, height, texts);
+  const { cell, lines } = cellOf(src, cols, top, height, texts, { lineY: top + height - printWriteLine.aboveRowBottom, centerY: mid });
   const groupCol = column(cols, 'group');
   const group: GroupMark | undefined = groupCol && src.group
     ? {
@@ -226,9 +254,9 @@ export function buildRow(
     zebra: flags.zebra,
     nr: rowRun(String(src.number), nr.x + nr.w / 2, printType.nr, 'normal', 'center'),
     time: rowRun(src.time, time.x + printMatchTable.timeInset, printType.time, 'bold', 'left'),
-    home: sideOf(nameLinesIn(src.home, homeCol, measure), homeCol, top, height),
+    home: sideOf(nameLinesIn(src.home, homeCol, measure), homeCol, mid),
     cell,
-    away: sideOf(nameLinesIn(src.away, awayCol, measure), awayCol, top, height),
+    away: sideOf(nameLinesIn(src.away, awayCol, measure), awayCol, mid),
     lines,
   };
   if (flags.hourRule) {

@@ -5,8 +5,11 @@
  */
 import type { StatefulMatch } from './tournamentState';
 
-/** Markierung unter dem Ergebnis: korrigiert, mit Zeit der letzten Korrektur. */
-export interface ResultMark { kind: 'corrected'; at: Date }
+/**
+ * Markierung unter dem Ergebnis (@DR-001, @BM-013): gewertet (Nichtantritt, `decidedBy: 'forfeit'`) oder korrigiert mit der Zeit der
+ * letzten Korrektur. Beides zugleich: „gewertet“ – es sagt, dass das Spiel nicht gespielt wurde; der Platz reicht nur für ein Kennzeichen.
+ */
+export type ResultMark = { kind: 'awarded' } | { kind: 'corrected'; at: Date };
 
 /** Zwei Tore-Zahlen eines Spielabschnitts (nach Verlängerung, Strafstoßschießen). */
 export interface ScorePair { a: number; b: number }
@@ -52,7 +55,9 @@ export function resultState(match: StatefulMatch, options: ResultOptions = {}): 
       }
       const korrigiert = match.correctionHistory?.at(-1);
       const state: ResultState = { kind: 'final', scoreA: match.scoreA, scoreB: match.scoreB };
-      if (korrigiert) {
+      if (match.decidedBy === 'forfeit') {
+        state.mark = { kind: 'awarded' };
+      } else if (korrigiert) {
         state.mark = { kind: 'corrected', at: new Date(korrigiert.timestamp) };
       }
       if (match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
@@ -90,4 +95,12 @@ export function printState(match: StatefulMatch, options: ResultOptions): Result
     return { kind: 'skipped' };
   }
   return resultState(match, options);
+}
+
+/** Text des Kennzeichens unter dem Ergebnis: „gewertet“ bzw. „korrigiert 14:52“; ohne Kennzeichen `undefined`. */
+export function resultMarkText(state: ResultState, t: { awarded: string; corrected: (time: string) => string; formatClock: (date: Date) => string }): string | undefined {
+  if (state.kind !== 'final' || state.mark === undefined) {
+    return undefined;
+  }
+  return state.mark.kind === 'awarded' ? t.awarded : t.corrected(t.formatClock(state.mark.at));
 }

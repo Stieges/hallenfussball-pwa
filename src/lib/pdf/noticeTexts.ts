@@ -9,6 +9,8 @@ export interface NoticeTexts {
   call: string;
   steps: string[];
   addressLabel: string;
+  /** Art des Dokuments in Titel der Datei und Dateiname („Aushang“, englisch „Poster“; @DR-039 sinngemäß). */
+  titleSuffix: string;
 }
 
 /** Zuschauer sehen im Kindermodus oder bei ausgeblendeten Ergebnissen nur den Spielplan. */
@@ -22,5 +24,6 @@ export function buildNoticeTexts(translate: PdfTranslator, showsResults: boolean
     call: s(showsResults ? 'callResults' : 'callPlan'),
     steps: [s('step1'), s('step2'), s('step3')],
     addressLabel: s('addressLabel'),
+    titleSuffix: s('titleSuffix'),
   };
 }
