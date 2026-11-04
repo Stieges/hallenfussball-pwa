@@ -4,12 +4,13 @@
  * zu melden gibt) → Speichern → „PDF gespeichert“. Der Dialog folgt den Sichtbarkeits-Schaltern des Turniers; die freie
  * Wahl „Mit Spielstand“ und „Tabellen einschließen“ gibt es nicht mehr. Nur A4 hoch.
  */
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
 import { InlineNotice } from '../ui/molecules';
 import { cssVars } from '../../design-tokens';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { tournamentGraphicsStore } from '../../core/storage/tournamentGraphicsStore';
 import type { GeneratedSchedule } from '../../core/generators';
 import type { Standing, Tournament } from '../../types/tournament';
 import { stempel } from '../../lib/pdf/standText';
@@ -38,7 +39,9 @@ export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standin
   const { t } = useTranslation('tournament');
   const { isOnline } = useOnlineStatus();
   const viewer = audience === 'viewer';
-  const { state, now, select, save, saveAnyway, reset } = usePdfExport({ tournament, schedule, standings, audience, online: isOnline });
+  // Grafiken dieses Geräts (@W3-030): bei jedem Speichern frisch aus dem Gerätespeicher gelesen (usePdfExport); ohne Eintrag geht es ohne Logo weiter (@DR-024)
+  const loadGraphics = useCallback(() => tournamentGraphicsStore.load(tournament.id), [tournament.id]);
+  const { state, now, select, save, saveAnyway, reset } = usePdfExport({ tournament, schedule, standings, audience, online: isOnline, loadGraphics });
 
   // Beim Öffnen beginnt jeder Dialog bei der Wahl, mit frischem Stand (ein während des Bauens geschlossener Lauf ist verworfen)
   useEffect(() => {

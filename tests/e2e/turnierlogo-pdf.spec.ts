@@ -14,6 +14,8 @@ import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
 import { test, expect } from './helpers/test-fixtures';
 import { t } from './helpers/i18n';
+import { gleicheFarbe, linienFarben, pdfNachKlick } from './helpers/pdfDownload';
+import { buildVisualTournament } from './visual/helpers';
 
 const LOGOS = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'logos');
 const fixture = (name: string): Buffer => readFileSync(join(LOGOS, name));
@@ -364,5 +366,140 @@ test.describe('Bundle-Beleg (gebauter Stand)', () => {
     expect(wizard[0][1]).not.toContain('jsPDF');
     const mitJsPdf = [...skripte.entries()].filter(([, text]) => text.includes('jsPDF')).map(([url]) => url.split('/').pop());
     expect(mitJsPdf.every(name => (name ?? '').startsWith("pdf-vendor-"))).toBe(true); // jsPDF nur im Herstellerblock
+  });
+});
+
+// T8 (PDF-Paket PR 5): Spielplan und Aushang aus dem Dialog „Als PDF“ tragen Logo, zweite Grafik und Akzent des Geräts
+test.describe('Turnierlogo im PDF (gebauter Stand)', () => {
+  const MM_PRO_PT = 25.4 / 72;
+  const TURNIER = 'Logo-PDF-Turnier';
+
+  /** Entwurf im Assistenten anlegen, Grafiken hochladen, Autosave abwarten; liefert die Turnier-ID des Entwurfs. */
+  async function entwurfMitGrafiken(page: Page, grafiken: { links?: Buffer; rechts?: Buffer }): Promise<string> {
+    await page.goto('/#/tournament/new');
+    await expect(page.getByTestId('turnierlogo-feld')).toBeVisible();
+    await nameFeld(page).fill(TURNIER);
+    if (grafiken.links) {
+      await page.getByTestId('turnierlogo-datei').setInputFiles(pngDatei(grafiken.links, 'wappen.png'));
+      await expect(page.getByTestId('turnierlogo-vorschau')).toBeVisible();
+    }
+    if (grafiken.rechts) {
+      await page.getByTestId('zweite-grafik-datei').setInputFiles(pngDatei(grafiken.rechts, 'sponsor.png'));
+      await expect(page.getByTestId('zweite-grafik-vorschau')).toBeVisible();
+    }
+    await expect.poll(async () => (await storedGraphics(page)).length).toBe(1);
+    await page.evaluate(() => window.dispatchEvent(new Event('beforeunload', { cancelable: true })));
+    await expect.poll(() => savedDraftId(page, TURNIER)).toBeTruthy();
+    return (await savedDraftId(page, TURNIER)) ?? '';
+  }
+
+  /** Dasselbe Turnier als geteiltes, veröffentlichtes Turnier unter derselben ID: die Grafiken im Gerätespeicher bleiben. */
+  const alsGeteiltesTurnier = (id: string) => buildVisualTournament({ id, title: TURNIER, extra: { isPublic: true, shareCode: 'ABC123' } });
+
+  async function oeffneDialog(page: Page, id: string): Promise<void> {
+    await page.goto(`/#/tournament/${id}/schedule`);
+    await page.getByTestId('schedule-action-pdf').click();
+    await expect(page.getByTestId('pdf-save')).toBeVisible();
+  }
+
+  test('@DR-041 @W3-040 Upload → „Als PDF“ → Spielplan und Aushang: Bild oben links ≤ 20 mm, Akzent in den Linien, Text schwarz', async ({ page, seedIndexedDB }) => {
+    const id = await entwurfMitGrafiken(page, { links: fixture('mehrfarbig.png') });
+    const akzent = (await tupfer(page).getAttribute('data-accent')) ?? '';
+    expect(akzent).toMatch(HEX);
+    expect(akzent).not.toBe(GRUEN_APP);
+    await seedIndexedDB({ tournaments: [alsGeteiltesTurnier(id)] });
+    await oeffneDialog(page, id);
+
+    const plan = await pdfNachKlick(page, 'pdf-save');
+
+    expect(plan.pages[0].images).toHaveLength(1);
+    expect(plan.pages[0].images[0].h).toBeLessThanOrEqual(20.05);
+    expect(plan.pages[0].images[0].y).toBeLessThan(30);
+    expect(plan.pages[0].images[0].x).toBeLessThan(25);
+    expect(linienFarben(plan.pages).some(c => gleicheFarbe(c, akzent))).toBe(true);
+    expect(linienFarben(plan.pages).some(c => gleicheFarbe(c, GRUEN_APP))).toBe(false);
+    plan.pages.forEach(p => p.textColors.forEach(c => expect(c).toBe('#000000')));
+
+    await page.getByTestId('pdf-close').click();
+    await page.getByTestId('schedule-action-pdf').click();
+    await page.getByTestId('pdf-choice-notice').click();
+    const aushang = await pdfNachKlick(page, 'pdf-save');
+    const [seite] = aushang.pages;
+    const titel = seite.texts.filter(x => x.size > 30);
+    const bild = seite.images[0];
+    const linie = seite.lines.filter(l => gleicheFarbe(l.color, akzent));
+
+    expect(seite.images).toHaveLength(1);
+    expect(bild.h).toBeLessThanOrEqual(20.05);
+    expect(bild.y + bild.h).toBeLessThanOrEqual(Math.min(...titel.map(x => x.y - x.size * 0.3)) + 0.3); // Grafikzeile über dem Titel
+    expect(linie).toHaveLength(1);
+    expect(linie[0].width).toBeCloseTo(1.5 * MM_PRO_PT, 2);
+    expect(linie[0].y1).toBeGreaterThan(Math.max(...titel.map(x => x.y)));
+    seite.textColors.forEach(c => expect(c).toBe('#000000'));
+  });
+
+  test('@DR-023 @DR-040 beide Grafiken: links Wappen, rechts zweite Grafik; ein 141-px-Logo steht im Kopf des Spielplans', async ({ page, seedIndexedDB }) => {
+    const id = await entwurfMitGrafiken(page, { links: await zeichne(page, 300, 141, 'image/png'), rechts: await zeichne(page, 300, 300, 'image/png', ['#c00000', '#ffffff']) });
+    await seedIndexedDB({ tournaments: [alsGeteiltesTurnier(id)] });
+    await oeffneDialog(page, id);
+
+    const plan = await pdfNachKlick(page, 'pdf-save');
+    const [links, rechts] = [...plan.pages[0].images].sort((a, b) => a.x - b.x);
+    const titel = plan.pages[0].texts.filter(x => Math.abs(x.size - 26) < 0.5);
+
+    expect(plan.pages[0].images).toHaveLength(2);
+    expect(links.x).toBeLessThan(25);
+    expect(rechts.x + rechts.w).toBeGreaterThan(185);
+    expect(titel.length).toBeGreaterThan(0);
+    titel.forEach(x => {
+      expect(x.x).toBeGreaterThanOrEqual(links.x + links.w - 0.1);
+      expect(x.x + x.w).toBeLessThanOrEqual(rechts.x + 0.1);
+    });
+  });
+
+  test('@DR-041 nur rechte Grafik: kein Akzent aus ihr, die Linien im PDF sind das Grün der App', async ({ page, seedIndexedDB }) => {
+    const id = await entwurfMitGrafiken(page, { rechts: fixture('mehrfarbig.png') });
+    await seedIndexedDB({ tournaments: [alsGeteiltesTurnier(id)] });
+    await oeffneDialog(page, id);
+
+    const plan = await pdfNachKlick(page, 'pdf-save');
+
+    expect(plan.pages[0].images).toHaveLength(1);
+    expect(plan.pages[0].images[0].x).toBeGreaterThan(100); // rechts
+    expect(linienFarben(plan.pages).some(c => gleicheFarbe(c, GRUEN_APP))).toBe(true);
+  });
+
+  test('@W3-030 anderer Browser-Kontext ohne Speicher (Co-Admin): kein Bild, Grün der App, Titel ohne Lücke', async ({ page, browser, seedIndexedDB }) => {
+    const id = await entwurfMitGrafiken(page, { links: fixture('mehrfarbig.png') });
+    await seedIndexedDB({ tournaments: [alsGeteiltesTurnier(id)] });
+    const zweiter = await browser.newContext({ baseURL: page.url().split('#')[0] });
+    const fremd = await zweiter.newPage();
+    try {
+      await fremd.addInitScript((consent) => { localStorage.setItem('app:consent', JSON.stringify(consent)); }, { errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 });
+      await fremd.goto('/#/');
+      await fremd.evaluate(async (daten) => new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('hallenfussball', 1);
+        open.onupgradeneeded = () => { if (!open.result.objectStoreNames.contains('cache')) { open.result.createObjectStore('cache', { keyPath: 'key' }); } };
+        open.onerror = () => reject(new Error('IndexedDB nicht lesbar'));
+        open.onsuccess = () => {
+          const tx = open.result.transaction('cache', 'readwrite');
+          tx.objectStore('cache').put({ key: 'tournaments', value: daten });
+          tx.oncomplete = () => { open.result.close(); resolve(); };
+        };
+      }), [alsGeteiltesTurnier(id)]);
+      await fremd.reload();
+      await oeffneDialog(fremd, id);
+
+      const plan = await pdfNachKlick(fremd, 'pdf-save');
+      const titel = plan.pages[0].texts.filter(x => Math.abs(x.size - 26) < 0.5);
+
+      expect(await storedGraphics(fremd)).toEqual([]);
+      expect(plan.pages[0].images).toHaveLength(0);
+      expect(linienFarben(plan.pages).some(c => gleicheFarbe(c, GRUEN_APP))).toBe(true);
+      expect(titel.length).toBeGreaterThan(0);
+      titel.forEach(x => expect(Math.abs(x.x + x.w / 2 - 105)).toBeLessThanOrEqual(0.5)); // mittig über der vollen Breite
+    } finally {
+      await zweiter.close();
+    }
   });
 });

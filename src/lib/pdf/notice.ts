@@ -17,6 +17,7 @@ import { buildNoticeTexts, noticeShowsResults, type NoticeTexts } from './notice
 import { openDocument, renderContext, type PdfInput, type RenderContext } from './pdfInput';
 import { drawLogo, usableLogo } from './render/headerGraphics';
 import { drawQrSymbol, qrSide } from './render/qrCode';
+import { drawStroke, rgbOf } from './render/writeLine';
 
 /** Ergebnis: das fertige Dokument oder die Fehlerart. Nicht geteilt: kein Aushang (Hinweis im Dialog, C8). */
 export type NoticeBuild =
@@ -122,6 +123,12 @@ export async function buildNoticePdf(input: PdfInput): Promise<NoticeBuild> {
   doc.setFontSize(fit.pt);
   fit.lines.forEach((line, i) => doc.text(line, center, y + ascentMm(fit.pt) + i * advanceOf(fit.pt, printNotice.titleLineEm), { align: 'center' }));
   y += ascentMm(fit.pt) + (fit.lines.length - 1) * advanceOf(fit.pt, printNotice.titleLineEm) + descentMm(fit.pt);
+
+  // Akzentlinie unter dem Titel (@DR-041, @DR-017): nur die Linie trägt die Farbe, der Text bleibt schwarz
+  const ruleY = y + printNotice.accentRule.gapAbove;
+  drawStroke(doc, { x1: geo.left, x2: right, y: ruleY }, printNotice.accentRule.strokePt * printUnit.mmPerPt, rgbOf(input.accent.line));
+  doc.setDrawColor(...printColors.ink);
+  y = ruleY;
 
   // Aufruf direkt unter dem Titel (G54), in der Sprache des Eingangs (@DR-022)
   const notice = buildNoticeTexts(input.translate, noticeShowsResults(input.tournament));

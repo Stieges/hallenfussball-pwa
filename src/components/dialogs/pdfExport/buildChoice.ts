@@ -5,8 +5,10 @@
  */
 import type jsPDF from 'jspdf';
 import type { GeneratedSchedule } from '../../../core/generators';
+import type { TournamentGraphics } from '../../../core/storage/tournamentGraphicsStore';
 import type { Standing, Tournament } from '../../../types/tournament';
 import { getLocationName } from '../../../utils/locationHelpers';
+import { graphicsOptions } from './graphicsOptions';
 import { buildNoticePdf } from '../../../lib/pdf/notice';
 import type { PdfHints } from '../../../lib/pdf/notes';
 import { toPdfInput } from '../../../lib/pdf/pdfInput';
@@ -41,6 +43,10 @@ export interface BuildContext {
   /** Hat das Gerät Netz? Ohne Netz trägt jede Fußzeile „ohne Verbindung“ (@DR-021). */
   online: boolean;
   now: Date;
+  /** Grafiken dieses Geräts (Gerätespeicher, @W3-030); fehlen sie (anderes Gerät), druckt das PDF ohne sie (@DR-024). */
+  graphics?: TournamentGraphics;
+  /** Der Gerätespeicher ließ sich nicht lesen: das PDF entsteht ohne Grafiken, der Hinweis nennt es (@DR-024). */
+  graphicsUnreadable?: boolean;
 }
 
 export interface BuiltPdf {
@@ -67,16 +73,18 @@ export async function buildChoice(choice: PdfChoice, ctx: BuildContext): Promise
     ...(tournament.organizer?.trim() ? { organizerName: tournament.organizer } : {}),
     ...publicContactOption(tournament),
     hallName: getLocationName(tournament),
+    ...graphicsOptions(ctx.graphics),
   };
+  const withStoreHint = (hints: PdfHints): PdfHints => (ctx.graphicsUnreadable === true ? { ...hints, logos: ['left', 'right'] } : hints);
 
   if (choice === 'notice') {
     const built = await buildNoticePdf(toPdfInput({ schedule, standings, options }));
-    return built.ok ? { ok: true, pdf: { doc: built.doc, filename: built.filename, hints: built.hints } } : { ok: false, reason: built.reason };
+    return built.ok ? { ok: true, pdf: { doc: built.doc, filename: built.filename, hints: withStoreHint(built.hints) } } : { ok: false, reason: built.reason };
   }
   if (choice === 'final') {
     // Der Endstand wird erst mit C10 (A-19/A-21a) angeboten; die Karte ist bis dahin ausgegraut und nie wählbar.
     throw new Error('Endstand-PDF ist noch nicht verfügbar');
   }
   const built = await buildSchedulePdf({ schedule, standings, options });
-  return { ok: true, pdf: { doc: built.doc, filename: built.filename, hints: built.hints } };
+  return { ok: true, pdf: { doc: built.doc, filename: built.filename, hints: withStoreHint(built.hints) } };
 }
