@@ -96,10 +96,13 @@ export function layoutDigest(pages: LayoutPage[]): string {
  * Seitenzahl, gleiche Textstücke in gleicher Reihenfolge, gleiche Zahl von Füllungen und Linien je Seite; Seite 1 unverändert, auf den
  * Folgeseiten liegt der Inhalt unter dem Kurzkopf genau 1,0 mm tiefer (Kurzkopf-Titel, -Zeile und Fußzeile unverändert). Die Zeilenhöhen
  * (C-PDF-ENGE-STUFE-UNTERLAENGE) ändern hier nichts: die Hallencup-Namen sind einzeilig. Stände davor: c271743aa44b, 8f4a61f67824, EN 2ee274eadb3b.
+ * Neu aufgenommen 04.11. (Fixrunde 2 zu PR #444, @DR-035): Tabellen auch mit Ergebnissen mit grauem Raster statt Zebra. Verglichen mit dem
+ * Stand davor (12 und 20 Spiele DE, 12 EN): gleiche Seiten und Textstücke an gleicher Stelle; nur auf der Tabellenseite fallen die vier
+ * Zebra-Flächen weg, dazu 32 bzw. 34 graue Rasterlinien (#8c8c8c). Stände davor: eb36e29082e2, cb15518a4350, EN 54751521beb2.
  */
 const VORHER: Record<string, string> = {
-  '12 Spiele, hoch': 'eb36e29082e2',
-  '20 Spiele, hoch': 'cb15518a4350',
+  '12 Spiele, hoch': 'bb0eb12c2174',
+  '20 Spiele, hoch': 'ef7548de2ddf',
 };
 
 describe('@DR-001 Naht: Spielplan-Muster vorher = nachher', () => {
@@ -114,7 +117,7 @@ describe('@DR-022 Naht EN: Spielplan englisch (Änderungsmelder, Kopfwörter ung
   it('12 Spiele, hoch, englisch: Prüfsumme des Layouts', async () => {
     const { pages } = await layoutOf({ locale: 'en', translate: translatorFor('en'), now: STAND }, hallencupSchedule());
 
-    expect(layoutDigest(pages)).toBe('54751521beb2');
+    expect(layoutDigest(pages)).toBe('a715392c7a0c');
   });
 });
 

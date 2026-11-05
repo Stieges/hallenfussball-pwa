@@ -1,5 +1,5 @@
 /**
- * Gruppentabelle zeichnen (T7b, @DR-035): helle Flächen für Kopf und Zebra-Zeilen, in der Fassung ohne Ergebnisse das graue Raster,
+ * Gruppentabelle zeichnen (T7b, @DR-035): helle Fläche für den Kopf, in beiden Fassungen das graue Raster,
  * das Gruppenzeichen im Kopf und alle Texte in Lesereihenfolge. Das Modell hat alles gemessen; hier steht keine Rechnung.
  */
 import type { jsPDF } from 'jspdf';

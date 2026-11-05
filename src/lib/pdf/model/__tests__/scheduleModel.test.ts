@@ -89,6 +89,13 @@ describe('@DR-033 Reserve-Regel bei Platzmangel', () => {
     for (const r of rowsOf(model)) { for (const run of [...r.home.runs, ...r.away.runs]) { expect(run.pt).toBeGreaterThanOrEqual(printLimits.teamPt); } }
   });
 
+  it('@DR-033 Beispiel 2 auf dem Satzspiegel von heute (Fake-Messung, ohne Verlängerung): b-lang mit einem langen Namen eng auf Seite 1', () => {
+    const { model } = modelOf(fallBLang(1));
+
+    expect(model.fit).toBe('tight');
+    expect(matchPages(model)).toHaveLength(1);
+  });
+
   it('@DR-033 passt alles, bleibt es beim normalen Polster', () => {
     expect(modelOf(FALL_B).model.fit).toBe('normal');
     expect(modelOf(fallBLang(1), laenger(LAGE.normalFake)).model.fit).toBe('normal');

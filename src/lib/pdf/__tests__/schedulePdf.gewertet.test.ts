@@ -81,3 +81,17 @@ describe.each(['de', 'en'] as const)('@DR-001 gewertet (%s)', locale => {
     expect(pages.flatMap(p => p.texts).filter(t => t.str.includes(MARK[locale]))).toHaveLength(2);
   });
 });
+
+describe('@DR-001 gewertet und korrigiert zugleich (Entscheidung Daniel, Review N2)', () => {
+  it('@DR-001 ein gewertetes Spiel mit Korrektur trägt genau „gewertet“, kein „korrigiert“', async () => {
+    const matches = stand().map((m): Match => (m.matchNumber === 4
+      ? { ...m, correctionHistory: [{ timestamp: new Date(2026, 10, 15, 10, 50).toISOString(), previousScoreA: 3, previousScoreB: 0, newScoreA: 2, newScoreB: 0 }] }
+      : m));
+    const { pages } = await handzettelPdf(FALL_B, { tournament: { matches }, options: { includeScores: true } });
+    const { texts } = rowTexts(pages, '10:36', '10:48');
+
+    expect(texts.filter(t => Math.abs(t.size - printType.mark) < 0.1).map(t => t.str.trim())).toEqual(['gewertet']);
+    expect(pages.flatMap(p => p.texts).some(t => t.str.includes('korrigiert'))).toBe(false);
+  });
+});
+

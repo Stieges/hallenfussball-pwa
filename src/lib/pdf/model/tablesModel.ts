@@ -3,8 +3,8 @@
  * Raster und Texte stehen mit Position im Modell, die Zeichenschicht rechnet nichts.
  *
  * Tabelle: Spaltenkopf (Kurzformen, @OB-075) in heller Fläche, darunter je Team eine Zeile von `max(rowMin, Namenszeilen × Zeilenabstand
- * + 2 × Polster)` Höhe, in allen Zeilen gleich. Fassung ohne Ergebnisse: Kästchen mit grauem Raster und ein Doppelpunkt in „Tore“;
- * mit Ergebnissen: Zebra statt Linien.
+ * + 2 × Polster)` Höhe, in allen Zeilen gleich. Beide Fassungen: Kästchen mit grauem Raster (@DR-035, auch mit Ergebnissen, Fixrunde 2
+ * zu PR #444); die Fassung ohne Ergebnisse trägt zusätzlich einen Doppelpunkt in „Tore“.
  */
 import { getGroupShortCode } from '../../../utils/displayNames';
 import type { Standing, Team } from '../../../types/tournament';
@@ -77,7 +77,6 @@ function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 's
       let y = top + printStandings.headHeight;
       rows.forEach((row, index) => {
         const mid = y + rowH / 2;
-        if (!blank && index % 2 === 1) { fills.push({ kind: 'zebra', x: geo.left, y, w: geo.contentWidth, h: rowH }); }
         cols.forEach((c, k) => {
           if (c.key === 'team') {
             names[index].forEach((line, i) => runs.push(run(line, c.x + printStandings.nameInset, centeredBaseline(mid + (i - (names[index].length - 1) / 2) * adv, printType.body), printType.body, 'normal')));
@@ -89,12 +88,11 @@ function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 's
         });
         y += rowH;
       });
-      if (blank) {
-        const rights = [...cols.map(c => c.x), geo.left + geo.contentWidth];
-        const ys = [top, top + printStandings.headHeight, ...rows.map((_, i) => top + printStandings.headHeight + (i + 1) * rowH)];
-        ys.forEach(at => grid.push({ x1: geo.left, y1: at, x2: geo.left + geo.contentWidth, y2: at }));
-        rights.forEach(at => grid.push({ x1: at, y1: top, x2: at, y2: top + height }));
-      }
+      // Graues Raster in beiden Fassungen, vor dem ersten Ergebnis wie danach (@DR-035); die Zeilen trennt das Raster, ohne Zebra
+      const rights = [...cols.map(c => c.x), geo.left + geo.contentWidth];
+      const ys = [top, top + printStandings.headHeight, ...rows.map((_, i) => top + printStandings.headHeight + (i + 1) * rowH)];
+      ys.forEach(at => grid.push({ x1: geo.left, y1: at, x2: geo.left + geo.contentWidth, y2: at }));
+      rights.forEach(at => grid.push({ x1: at, y1: top, x2: at, y2: top + height }));
       const block: StandingsTableBlock = { kind: 'standingsTable', top, height, fills, grid, runs };
       if (mark) {
         const size = printGroupMark.size;

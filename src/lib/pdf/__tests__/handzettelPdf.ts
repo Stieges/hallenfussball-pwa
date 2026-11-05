@@ -3,7 +3,7 @@
  * durch `buildSchedulePdf`, gelesen wird über pdfjs (`pdfjsLayout`). Feste Zeit, feste Schrift: die Erwartungen rechnen
  * sich von Hand nach. Nur für Tests.
  */
-import type { Tournament } from '../../../types/tournament';
+import type { Standing, Tournament } from '../../../types/tournament';
 import { buildSchedulePdf } from '../schedulePdf';
 import type { PDFExportOptions } from '../pdfOptions';
 import { withTournamentState } from '../tournamentState';
@@ -19,6 +19,8 @@ export interface HandzettelOptions {
   locale?: PdfLocale;
   tournament?: Partial<Tournament>;
   options?: Partial<PDFExportOptions>;
+  /** Tabellenstand wie im Dialog (`calculateStandingsPerGroup`); ohne Angabe der Anfangsstand. */
+  standings?: Standing[];
 }
 
 export interface HandzettelPdf {
@@ -36,7 +38,7 @@ export async function handzettelPdf(fall: HandzettelFall, opts: HandzettelOption
   const schedule = withTournamentState(fallSchedule(fall, locale, opts.tournament ?? {}), tournament);
   const { doc, notes } = await buildSchedulePdf({
     schedule,
-    standings: undefined,
+    standings: opts.standings,
     options: {
       tournament, locale, translate: translatorFor(locale), now: FALL_NOW, viewerBaseUrl: BASE_URL,
       hallName: fall.halle, organizerName: fall.veranstalter, ...(fall.kontakt === undefined ? {} : { contact: fall.kontakt }), ...opts.options,
