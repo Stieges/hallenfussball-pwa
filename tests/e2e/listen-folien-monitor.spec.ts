@@ -204,10 +204,10 @@ test.describe('Finalrunde in „Alle Tabellen“ (keine Seitenaufteilung, @ZM-18
 
   for (const p of PROFILE) {
     for (const rand of RAENDER) {
-      test(`6 Finalspiele, ${p.name}, Rand ${String(rand)} %: Zeilen ganz im Bild (Befund C-… wenn nicht)`, async ({ browser }, testInfo) => {
+      test(`6 Finalspiele, ${p.name}, Rand ${String(rand)} %: C-MONITOR-FINALRUNDE-OHNE-SEITEN Zeilen ganz im Bild`, async ({ browser }, testInfo) => {
         test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
         // Befund: die Finalrunde hat keine Seitenaufteilung und läuft mit langen Namen und 6 Spielen unten aus dem Bild (an die Koordination gemeldet); rot erwartet, bis sie geteilt wird
-        test.fail(true, 'Befund: Finalrunde in „Alle Tabellen“ ohne Seitenaufteilung');
+        test.fail(true, 'C-MONITOR-FINALRUNDE-OHNE-SEITEN: Finalrunde in „Alle Tabellen“ ohne Seitenaufteilung');
         const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
         const page = await ctx.newPage();
         await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=finale&seite=1&namen=lang&rand=${String(rand)}&finale=6`);
