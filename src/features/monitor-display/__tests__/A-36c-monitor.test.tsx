@@ -164,7 +164,7 @@ describe('@ZM-104 F-AUS / F-WERT: ausgefallen und gewertet', () => {
     const cup = withCloudColumns(aus, GAME[10], { score_a: 2, score_b: 0, match_status: 'finished', decided_by: 'forfeit' });
     spielplan(cup, GAME[10]);
     const row = zeile(idOf(cup, GAME[10]));
-    expect(within(row).getByTestId('monitor-match-separator').textContent).toBe('2:0');
+    expect(within(row).getByTestId('monitor-match-score').textContent).toBe('2:0');
     expect(within(row).getByTestId('monitor-match-note').textContent).toBe('gewertet');
     document.body.innerHTML = '';
 

@@ -117,6 +117,10 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         >
           {showScore ? score : '–'}
         </div>
+        {/* „gewertet“ steht klein unter dem Stand, Stelle und Stil wie „(4:3 i. E.)“ (wie im PDF); eine Wertung hat kein Strafstoßschießen */}
+        {showScore && !scoreExtra && match.status === 'awarded' && (
+          <div data-testid="monitor-match-note" style={extraStyle}>{t('view.status.awarded')}</div>
+        )}
         {showScore && scoreExtra && (
           <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={extraStyle}>
             {scoreExtra}

@@ -54,7 +54,6 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
   const war: CSSProperties = { ...small, fontSize: displayList.fontSizes.timeNote };
   const hasState = match.badge.kind === 'badge';
   const tentative = match.kickoffTentative;
-  const awarded = match.status === 'awarded' ? t('view.status.awarded') : null;
   return (
     // Die Zelle ist nur so hoch wie die Uhrzeit-Zeile: sie steht senkrecht mittig in der Zeile, die Zusätze hängen darunter (außerhalb des Flusses)
     <div data-testid="monitor-match-time" style={{ ...style, color, flex: `0 0 ${displayList.timeFieldWidth}`, minWidth: 0, position: 'relative', height: `calc(${displayList.fontSizes.time} * 1.2)` }}>
@@ -69,7 +68,6 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
       {(reserveState || hasState) && (
         <div data-testid="monitor-match-status" style={{ ...small, display: 'flex', alignItems: 'center', gap: displayList.timeNoteGap, minHeight: '1.2em' }}>
           {hasState && <MatchStatusBadge model={match.badge} size="zeile" tone={tone} />}
-          {awarded !== null && <span data-testid="monitor-match-note">{awarded}</span>}
           {/* Angesetzte Spiele tragen kein Abzeichen: „voraussichtlich“ und Zustand treten nie zugleich auf, beide teilen die Zeile */}
           {tentative && reserveState && <span data-testid="monitor-match-tentative" style={{ fontSize: displayList.fontSizes.note }}>{t('timeShift.tentative')}</span>}
         </div>

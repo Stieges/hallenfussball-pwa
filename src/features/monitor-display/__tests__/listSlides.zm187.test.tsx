@@ -79,13 +79,16 @@ describe('@ZM-187 Auf den Listen-Folien verschiebt keine Zeile die anderen', () 
     }
   });
 
-  it('„Spielplan Feld 1“: das Wort „gewertet“ steht in der Spalte des Abzeichens, keine Spalte nur in dieser Zeile', () => {
+  it('„Spielplan Feld 1“: „gewertet“ steht klein unter dem Stand (nicht in der Uhrzeit-Zelle), die Zeilenhöhe bleibt gleich', () => {
     const t = mitSpiel6(listenTurnier({ beendet: 5 }), GEWERTET);
     const zeilen = zeigen(t, 'plan', seiteVonSpiel6(t, 'plan'));
     const gewertet = zeilen.find(z => z.id === SPIEL6)!;
     expect(gewertet.zeile.textContent).toContain('gewertet');
-    expect(gewertet.zeile.querySelector('[data-testid="monitor-match-note"]')?.parentElement?.getAttribute('data-testid')).toBe('monitor-match-status');
-    for (const z of zeilen) { expect(z.zeile.querySelector('[data-testid="monitor-match-status"]'), z.id).not.toBeNull(); }
+    const note = gewertet.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-note"]')!;
+    expect(note.parentElement?.getAttribute('data-testid'), 'unter dem Stand').toBe('monitor-match-separator');
+    expect(note.style.position, 'außerhalb des Flusses wie „(4:3 i. E.)“').toBe('absolute');
+    expect(gewertet.zeile.querySelector('[data-testid="monitor-match-time"]')!.textContent, 'nicht in der Uhrzeit-Zelle').not.toContain('gewertet');
+    expect(new Set(zeilen.map(z => z.zeile.style.minHeight)).size, 'Zeilenhöhe bleibt gleich').toBe(1);
   });
 
   it('die Spalten hängen an der ganzen Folie, nicht an der Seite: auch auf Seiten ohne Abzeichen steht die Spalte in jeder Zeile', () => {
