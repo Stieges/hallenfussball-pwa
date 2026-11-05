@@ -27,6 +27,8 @@ export interface PdfSheetTexts {
   flowMatches: (count: number) => string;
   /** Zusatz im Titel der Datei: „Hallencup Nord – Spielplan“ (en: „Schedule“). */
   titleSuffix: string;
+  /** Zusatz der Fassung ohne Ergebnisse im Dateinamen („ohne-Ergebnisse“, @BM-052). */
+  fileWithoutResults: string;
   /** Adresse der Zuschauer-Seite in der Fußzeile, davor ein Satz („Live-Ergebnisse und aktuelle Zeiten:“). */
   footerLink: string;
 }
@@ -55,8 +57,9 @@ export interface PdfTexts {
   referee: string;
   /** Text für ein ausgefallenes Spiel (@BM-013); ein laufendes Spiel trägt keinen Text, nur Linien (@DR-019). */
   skipped: string;
-  /** „korrigiert 14:52“ (@BM-013); `time` kommt aus `formatClock`. */
+  /** „korrigiert 14:52“ (@BM-013); `time` kommt aus `formatClock`. Gewertet (Nichtantritt): „gewertet“ (@DR-001). */
   corrected: (time: string) => string;
+  awarded: string;
   /** Beschriftung der kleinen Felder in K.-o.-Spielen (@DR-019). */
   afterOvertime: string;
   shootout: string;
@@ -244,6 +247,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
     referee: head('referee'),
     skipped: s('skipped'),
     corrected: time => translate('pdf.corrected', { time }),
+    awarded: s('awarded'),
     afterOvertime: s('afterOvertime'),
     shootout: s('shootout'),
     pos: head('rank'),
@@ -311,6 +315,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
       flowWithFinals: (total, finals) => translate('pdf.sheet.flowWithFinals', { total, count: finals }),
       flowMatches: count => translate('pdf.sheet.flowMatches', { count }),
       titleSuffix: s('sheet.titleSuffix'),
+      fileWithoutResults: s('sheet.fileWithoutResults'),
       footerLink: s('sheet.footerLink'),
     },
   };

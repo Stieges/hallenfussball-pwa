@@ -61,8 +61,8 @@ export const printZebra = {
 } as const;
 
 /**
- * Zeilen der Spieltabelle (@DR-033). Höhe einer Zeile = größter Wert aus `minHeight` und Namenszeilen ×
- * Schriftgröße × `lineHeight` + 2 × Polster (`printRowPad`); einzeilige Zeilen dürfen bis `maxHeight` wachsen, wenn
+ * Zeilen der Spieltabelle (@DR-033). Höhe einer Zeile = größter Wert aus `minHeight` und dem Namensblock mit Ober- und Unterlänge
+ * (Zeilenabstand Schriftgröße × `lineHeight`) + 2 × Polster (`printRowPad`); einzeilige Zeilen dürfen bis `maxHeight` wachsen, wenn
  * Seite 1 Platz hat.
  */
 export const printMatchRow = {

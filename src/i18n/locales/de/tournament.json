@@ -1046,6 +1046,7 @@
     "referee": "Schiedsrichter",
     "skipped": "ausgefallen",
     "corrected": "korrigiert {{time}}",
+    "awarded": "gewertet",
     "afterOvertime": "nach Verlängerung",
     "shootout": "Strafstoßschießen",
     "team": "Team",
@@ -1141,6 +1142,7 @@
       "flowMatches_one": "{{count}} Spiel",
       "flowMatches_other": "{{count}} Spiele",
       "titleSuffix": "Spielplan",
+      "fileWithoutResults": "ohne-Ergebnisse",
       "footerLink": "Live-Ergebnisse und aktuelle Zeiten:"
     },
     "qrCaption": {
@@ -1148,6 +1150,7 @@
       "plan": "Spielplan aufs Handy"
     },
     "notice": {
+      "titleSuffix": "Aushang",
       "callPlan": "Spielplan aufs Handy",
       "callResults": "Spielplan und Ergebnisse aufs Handy",
       "step1": "1. Kamera-App am Handy öffnen",

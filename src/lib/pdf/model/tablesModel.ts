@@ -3,8 +3,8 @@
  * Raster und Texte stehen mit Position im Modell, die Zeichenschicht rechnet nichts.
  *
  * Tabelle: Spaltenkopf (Kurzformen, @OB-075) in heller Fläche, darunter je Team eine Zeile von `max(rowMin, Namenszeilen × Zeilenabstand
- * + 2 × Polster)` Höhe, in allen Zeilen gleich. Fassung ohne Ergebnisse: Kästchen mit grauem Raster und ein Doppelpunkt in „Tore“;
- * mit Ergebnissen: Zebra statt Linien.
+ * + 2 × Polster)` Höhe, in allen Zeilen gleich. Beide Fassungen: Kästchen mit grauem Raster (@DR-035, auch mit Ergebnissen, Fixrunde 2
+ * zu PR #444); die Fassung ohne Ergebnisse trägt zusätzlich einen Doppelpunkt in „Tore“.
  */
 import { getGroupShortCode } from '../../../utils/displayNames';
 import type { Standing, Team } from '../../../types/tournament';
@@ -33,14 +33,18 @@ function columnsOf(left: number, width: number): Array<{ key: Key; x: number; w:
   });
 }
 
-/** Werte einer Zeile; null bleibt leer (Fassung mit Ergebnissen, vor dem ersten Spiel). */
-function valuesOf(standing: Standing, place: string): string[] {
-  const num = (n: number): string => (n > 0 ? String(n) : '');
+/**
+ * Werte einer Zeile (@DR-035): sobald das Turnier ein erstes Ergebnis hat (`filled`), steht in jedem Kästchen eine Zahl, auch 0 und
+ * auch bei einem Team ohne Spiel; vorher bleiben alle Kästchen leer zum Selbstausfüllen.
+ */
+function valuesOf(standing: Standing, place: string, filled: boolean): string[] {
+  if (!filled) {
+    return COLUMN_KEYS.map(() => '');
+  }
   const diff = standing.goalDifference;
   return [
-    place, '', num(standing.played), num(standing.won), num(standing.drawn), num(standing.lost),
-    standing.goalsFor > 0 || standing.goalsAgainst > 0 ? `${standing.goalsFor}:${standing.goalsAgainst}` : '',
-    diff === 0 ? '' : diff > 0 ? `+${diff}` : String(diff), num(standing.points),
+    place, '', String(standing.played), String(standing.won), String(standing.drawn), String(standing.lost),
+    `${standing.goalsFor}:${standing.goalsAgainst}`, diff > 0 ? `+${diff}` : String(diff), String(standing.points),
   ];
 }
 
@@ -77,7 +81,6 @@ function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 's
       let y = top + printStandings.headHeight;
       rows.forEach((row, index) => {
         const mid = y + rowH / 2;
-        if (!blank && index % 2 === 1) { fills.push({ kind: 'zebra', x: geo.left, y, w: geo.contentWidth, h: rowH }); }
         cols.forEach((c, k) => {
           if (c.key === 'team') {
             names[index].forEach((line, i) => runs.push(run(line, c.x + printStandings.nameInset, centeredBaseline(mid + (i - (names[index].length - 1) / 2) * adv, printType.body), printType.body, 'normal')));
@@ -89,12 +92,11 @@ function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 's
         });
         y += rowH;
       });
-      if (blank) {
-        const rights = [...cols.map(c => c.x), geo.left + geo.contentWidth];
-        const ys = [top, top + printStandings.headHeight, ...rows.map((_, i) => top + printStandings.headHeight + (i + 1) * rowH)];
-        ys.forEach(at => grid.push({ x1: geo.left, y1: at, x2: geo.left + geo.contentWidth, y2: at }));
-        rights.forEach(at => grid.push({ x1: at, y1: top, x2: at, y2: top + height }));
-      }
+      // Graues Raster in beiden Fassungen, vor dem ersten Ergebnis wie danach (@DR-035); die Zeilen trennt das Raster, ohne Zebra
+      const rights = [...cols.map(c => c.x), geo.left + geo.contentWidth];
+      const ys = [top, top + printStandings.headHeight, ...rows.map((_, i) => top + printStandings.headHeight + (i + 1) * rowH)];
+      ys.forEach(at => grid.push({ x1: geo.left, y1: at, x2: geo.left + geo.contentWidth, y2: at }));
+      rights.forEach(at => grid.push({ x1: at, y1: top, x2: at, y2: top + height }));
       const block: StandingsTableBlock = { kind: 'standingsTable', top, height, fills, grid, runs };
       if (mark) {
         const size = printGroupMark.size;
@@ -121,6 +123,8 @@ export function tableParts(env: ModelEnv, finalOrder: RankEntry[] | undefined): 
   const blank = edition === 'blank';
   const groups = groupsOf(schedule.teams, finalOrder !== undefined);
   const all = input.state.standings ?? schedule.initialStandings;
+  // Das erste Ergebnis des Turniers (nicht nur der Gruppe) füllt alle Tabellen (@DR-035)
+  const filled = finalOrder !== undefined || all.some(standing => standing.played > 0);
   const placeOf = (id: string): number => finalOrder?.find(entry => entry.team.id === id)?.place ?? Number.MAX_SAFE_INTEGER;
   return groups.map((group, index) => {
     const teams = group === '' ? schedule.teams : schedule.teams.filter(team => team.group === group);
@@ -132,10 +136,9 @@ export function tableParts(env: ModelEnv, finalOrder: RankEntry[] | undefined): 
     }
     const inGroup = all.filter(standing => teams.some(team => team.id === standing.team.id));
     const ordered = finalOrder ? [...inGroup].sort((a, b) => placeOf(a.team.id) - placeOf(b.team.id)) : inGroup;
-    const played = finalOrder !== undefined || ordered.some(standing => standing.played > 0);
     const rows = ordered.map((standing, i) => ({
       name: standing.team.name,
-      cells: valuesOf(standing, played ? String(finalOrder ? placeOf(standing.team.id) : standing.place ?? i + 1) : ''),
+      cells: valuesOf(standing, String(finalOrder ? placeOf(standing.team.id) : standing.place ?? i + 1), filled),
     }));
     return tablePlaceable(env, caption, mark, rows, false);
   });

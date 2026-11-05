@@ -35,6 +35,11 @@ export const printHeader = {
   qrEdgeShort: 21,
   /** Ruhezone um das Symbol in Modulen (Norm: 4). */
   qrQuietModules: 4,
+  /**
+   * Kurzkopf der Folgeseiten (@DR-003): Abstand von der Unterkante der Ruhezone bis zur Mitte der Kopflinie. Mindestens die halbe
+   * Strichstärke der Linie (0,25 mm), damit sie nicht im weißen Rand liegt; der Rest ist Reserve für den Druck (T9, C-PDF-QR-RAND-FOLGESEITE).
+   */
+  qrRuleGap: 1,
   /** Beschriftung unter dem QR (@DR-010): Schriftgröße und Abstand zur Ruhezone. */
   qrCaptionPt: 8.5,
   qrCaptionGap: 1,

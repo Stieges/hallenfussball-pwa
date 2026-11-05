@@ -9,7 +9,7 @@ import { getLocationAddressLine } from '../../../utils/locationHelpers';
 import { getGroupShortCode } from '../../../utils/displayNames';
 import { dayWithWeekday } from '../headerFacts';
 import { continuationTop } from '../layout';
-import { printState, type ResultState } from '../matchResult';
+import { printState, resultMarkText, type ResultState } from '../matchResult';
 import { sideLabel } from '../matchSides';
 import { placementState } from '../placement';
 import { pdfRuleEntries } from '../rules';
@@ -60,6 +60,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
   const stateOf = (match: StatefulMatch): ResultState => printState(match, { edition, results: env.includeScores });
   const rows: RowSource[] = groupMatches.map(match => {
     const state = stateOf(match);
+    const markText = resultMarkText(state, t);
     const group = multipleGroups && match.group !== undefined
       ? { code: getGroupShortCode(match.group, schedule.tournament), shape: groupOrder.indexOf(match.group) % 2 === 0 ? ('square' as const) : ('circle' as const) }
       : undefined;
@@ -73,7 +74,7 @@ export function buildScheduleModel(source: ScheduleModelSource, measure: TextMea
       home: sideLabel(match, 'A', sideCtx),
       away: sideLabel(match, 'B', sideCtx),
       state,
-      ...(state.kind === 'final' && state.mark ? { markText: t.corrected(t.formatClock(state.mark.at)) } : {}),
+      ...(markText === undefined ? {} : { markText }),
       referee: refLabel(match),
       small: [],
     };

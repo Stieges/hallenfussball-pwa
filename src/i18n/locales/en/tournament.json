@@ -1044,8 +1044,9 @@
     "result": "Result",
     "away": "Away",
     "referee": "Referee",
-    "skipped": "not played",
+    "skipped": "cancelled",
     "corrected": "corrected {{time}}",
+    "awarded": "awarded",
     "afterOvertime": "after extra time",
     "shootout": "Penalty shootout",
     "team": "Team",
@@ -1141,6 +1142,7 @@
       "flowMatches_one": "{{count}} match",
       "flowMatches_other": "{{count}} matches",
       "titleSuffix": "Schedule",
+      "fileWithoutResults": "without-results",
       "footerLink": "Live results and current times:"
     },
     "qrCaption": {
@@ -1148,6 +1150,7 @@
       "plan": "Schedule on your phone"
     },
     "notice": {
+      "titleSuffix": "Poster",
       "callPlan": "Schedule on your phone",
       "callResults": "Schedule and results on your phone",
       "step1": "1. Open the camera app on your phone",

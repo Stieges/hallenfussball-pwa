@@ -5,6 +5,7 @@
  * darunter die Schritte zum Scannen und zuletzt „Oder im Browser eintippen:“ mit der Adresse ohne `https://` in
  * mindestens 20 pt (G54, G55). Die Sprache ist allein `PdfInput.locale` (@DR-022, einsprachig). Nur Schwarz auf Papier,
  * kein Sponsor-Text, kein Stand. Nicht geteilt: kein Aushang, sondern die Fehlerart `notShared`.
+ * Titel und Sprache der Datei wie beim Spielplan (@DR-039), der QR ist ein Link zur Zuschauer-Seite (@DR-038; T9, C-PDF-AUSHANG-METADATEN).
  */
 import type jsPDF from 'jspdf';
 import { printColors, printUnit } from '../../design-tokens/print';
@@ -16,7 +17,9 @@ import { ascentMm, descentMm, pageGeometry } from './layout';
 import { buildNoticeTexts, noticeShowsResults, type NoticeTexts } from './noticeTexts';
 import { openDocument, renderContext, type PdfInput, type RenderContext } from './pdfInput';
 import { drawLogo, usableLogo } from './render/headerGraphics';
+import { drawLinks } from './render/links';
 import { drawQrSymbol, qrSide } from './render/qrCode';
+import { documentTitle } from './model/scheduleModel';
 import { drawStroke, rgbOf } from './render/writeLine';
 
 /** Ergebnis: das fertige Dokument oder die Fehlerart. Nicht geteilt: kein Aushang (Hinweis im Dialog, C8). */
@@ -130,14 +133,17 @@ export async function buildNoticePdf(input: PdfInput): Promise<NoticeBuild> {
   doc.setDrawColor(...printColors.ink);
   y = ruleY;
 
-  // Aufruf direkt unter dem Titel (G54), in der Sprache des Eingangs (@DR-022)
+  // Aufruf direkt unter dem Titel (G54), in der Sprache des Eingangs (@DR-022); Titel der Datei wie beim Spielplan (@DR-039), die Sprache setzt `openDocument`
   const notice = buildNoticeTexts(input.translate, noticeShowsResults(input.tournament));
+  doc.setDocumentProperties({ title: documentTitle(title, notice.titleSuffix) });
   y = centered(ctx, notice.call, center, geo.contentWidth, y + printNotice.callGap, printNotice.callPt, 'bold');
 
   // QR: Vektor, mittig; die Ruhezone ist Teil der Fläche und der Abstand zu Aufruf und Schritten
   const modules = qrModules(url);
   const side = qrSide(modules.length, printNotice.qrEdge);
   drawQrSymbol(doc, modules, printNotice.qrEdge, center - side / 2, y);
+  // Der QR ist antippbar und führt zur Zuschauer-Seite, wie beim Spielplan (@DR-038)
+  drawLinks(doc, [{ url, x: center - side / 2, y, w: side, h: side }]);
   y += side;
 
   // Schritte zum Scannen, zuletzt „Oder im Browser eintippen:“ mit der Adresse (führt zur selben Adresse wie der QR)
@@ -147,5 +153,5 @@ export async function buildNoticePdf(input: PdfInput): Promise<NoticeBuild> {
     y = centered(ctx, line, center, geo.contentWidth, y, printNotice.addressPt, 'bold');
   }
 
-  return { ok: true, doc, notes, hints, filename: noticePdfFilename(title) };
+  return { ok: true, doc, notes, hints, filename: noticePdfFilename(title, notice.titleSuffix) };
 }
