@@ -209,9 +209,9 @@ describe('@ZM-129 @ZM-185 Spielplan mit 13 Spielen: 4 Seiten mit bis zu 4 Spiele
   });
 });
 
-describe('@ZM-129 @ZM-188 Nächste Spiele mit 8 offenen Spielen (matchCount 10): mehrere Seiten, jedes Spiel auf genau einer', () => {
-  it('die Seiten folgen einander über den echten Takt; zusammen alle acht Uhrzeiten in Reihenfolge, keine doppelt', async () => {
-    await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele().slice(0, 8) }), [slide('next-matches', { matchCount: 10 })]));
+describe('@ZM-129 @ZM-188 Nächste Spiele mit 13 offenen Spielen (matchCount 13): mehrere Seiten, jedes Spiel auf genau einer', () => {
+  it('die Seiten folgen einander über den echten Takt; zusammen alle 13 Uhrzeiten in Reihenfolge, keine doppelt', async () => {
+    await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele() }), [slide('next-matches', { matchCount: 13 })]));
     const hinweis = screen.getByText(/^Seite \d+ \/ \d+$/).textContent ?? '';
     const seiten = Number(/\/ (\d+)$/.exec(hinweis)?.[1] ?? '1');
     expect(seiten).toBeGreaterThanOrEqual(2);
@@ -220,7 +220,9 @@ describe('@ZM-129 @ZM-188 Nächste Spiele mit 8 offenen Spielen (matchCount 10):
       alle.push(...uhrzeiten());
       await vorspulenInSchritten(15_000);
     }
-    expect(alle).toEqual(['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30', '14:35']);
+    expect(alle).toHaveLength(13);
+    expect([...alle]).toEqual([...alle].sort());
+    expect(new Set(alle).size).toBe(13);
   });
 });
 

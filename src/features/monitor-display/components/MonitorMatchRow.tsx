@@ -1,8 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
-import { MatchStatusBadge } from '../../../components/ui/molecules/MatchStatusBadge';
-import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
+import { cssVars, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MatchView } from '../../../core/view';
 import type { MonitorTheme } from '../../../types/monitor';
@@ -10,6 +8,7 @@ import { getFieldDisplayName } from '../../../utils/displayNames';
 import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../../components/schedule/matchResult';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
+import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
 import type { ListColumns } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
 
@@ -21,8 +20,8 @@ interface MonitorMatchRowProps {
   /** Ergebnis anzeigen (Spielplan, f3); die Folie „Nächste Spiele“ zeigt nie ein Ergebnis. */
   showScore?: boolean;
   /**
-   * Spalten der ganzen Folie (@ZM-187): Abzeichen mit dem Wort des Zustands vorn (Spielplan, @OB-066, @ZM-071) und Spielbezeichnung
-   * hinten. Eine Spalte steht in jeder Zeile der Folie oder in keiner, auch wenn das Spiel dieser Zeile nichts hineinschreibt.
+   * Zusatzzeilen der ganzen Folie (@ZM-187, @ZM-189): Zustand (Spielplan) und Feld (Nächste Spiele bei mehreren Feldern) stehen unter der
+   * Uhrzeit, in jeder Zeile der Folie oder in keiner; es gibt keine eigenen Spalten dafür.
    */
   columns: ListColumns;
 }
@@ -44,8 +43,6 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
   const scoreExtra = figures === null ? undefined : tableResultExtra(figures, t);
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
   const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
-  // „ausgefallen“ trägt das Abzeichen (ohne Ergebnis), „gewertet“ steht unter dem Abzeichen (@ZM-104, @ZM-187)
-  const note = match.status === 'awarded' ? t('view.status.awarded') : undefined;
 
   return (
     <div
@@ -64,19 +61,12 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
       }}
     >
-      {columns.status && (
-        // Feste Breite in jeder Zeile der Folie: die Spalten springen nicht, auch wenn ein Spiel noch kein Abzeichen trägt (@ZM-151, @ZM-187)
-        <div data-testid="monitor-match-status" style={{ flex: `0 0 ${displayLayout.scoreArea.badgeWidth}`, display: 'flex', flexDirection: 'column', fontSize: displayFontSizes.liveBadge }}>
-          {match.badge.kind === 'badge' && <MatchStatusBadge model={match.badge} size="display" tone={monitorBadgeTone(colors)} />}
-          {note && <div data-testid="monitor-match-note" style={{ fontSize: displayList.fontSizes.note, color: colors.text, textAlign: 'center', whiteSpace: 'nowrap' }}>{note}</div>}
-        </div>
-      )}
       <MonitorTimeCell
         match={match}
-        fieldName={getFieldDisplayName(match.field, tournament)}
+        fieldName={columns.field ? getFieldDisplayName(match.field, tournament) : undefined}
+        reserveState={columns.state}
         color={colors.text}
-        fieldColor={colors.textMuted}
-        noteColor={colors.text}
+        tone={monitorBadgeTone(colors)}
         style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
       />
       <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{monitorSideLabel(match.home)}</div>
@@ -98,9 +88,6 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         )}
       </div>
       <div data-teamname style={{ ...cell, flex: '1 1 0' }}>{monitorSideLabel(match.away)}</div>
-      {columns.label && (
-        <div data-testid="monitor-match-label" style={{ ...cell, color: colors.textMuted, flex: `0 0 ${displayList.labelWidth}` }}>{match.labelText}</div>
-      )}
     </div>
   );
 }

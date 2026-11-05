@@ -16,20 +16,20 @@ import { displayFontSizes, displayLayout, displayList, displayMonitor } from '..
 import type { MatchView } from '../../core/view';
 import { monitorSideLabel } from './matchSides';
 
-/** Spalten, die in jeder Zeile einer Folie gleich da sind oder in keiner. */
+/**
+ * Zusatzzeilen unter der Uhrzeit, die in jeder Zeile einer Folie gleich da sind oder in keiner (@ZM-187, @ZM-189). Es gibt keine eigenen
+ * Spalten für Zustand, Feld oder Bezeichnung: alles steht unter der Uhrzeit.
+ */
 export interface ListColumns {
-  /** Abzeichen mit Zustandswort (und „gewertet“ darunter): sobald ein Spiel der Folie eines trägt. */
-  status: boolean;
-  /** Spielbezeichnung („Halbfinale 1“): sobald ein Spiel der Folie eine trägt. */
-  label: boolean;
+  /** Zeile für den Zustand („Live“, „Ende“ …) und „gewertet“: im Spielplan in jeder Zeile reserviert, damit nichts springt. */
+  state: boolean;
+  /** Zeile mit dem Feld: nur bei mehreren Feldern und nur in „Nächste Spiele“ (@ZM-189). */
+  field: boolean;
 }
 
-/** Spalten der Folie aus allen ihren Spielen (nicht nur denen der Seite). Nur der Spielplan zeigt Abzeichen. */
-export function listColumns(matches: readonly MatchView[], showStatus: boolean): ListColumns {
-  return {
-    status: showStatus && matches.some(m => m.badge.kind === 'badge'),
-    label: matches.some(m => m.labelText !== undefined && m.labelText !== ''),
-  };
+/** Zusatzzeilen der Folie. `showState` nur im Spielplan; `matches` aller Felder entscheidet, ob es mehrere Felder gibt. */
+export function listColumns(showState: boolean, showField: boolean, allMatches: readonly MatchView[]): ListColumns {
+  return { state: showState, field: showField && new Set(allMatches.map(m => m.field)).size > 1 };
 }
 
 /** Spiele je Seite des Spielplans höchstens (@ZM-185: bis zu 4, bei sehr langen Namen weniger). */
@@ -72,11 +72,9 @@ function availableHeight(frame: ListFrame): number {
 }
 
 /** Breite eines Teamnamens in Zeichen je Zeile (Heim und Gast gleich breit). */
-function charsPerLine(cols: ListColumns, frame: ListFrame): number {
-  const gaps = 4 + (cols.status ? 1 : 0) + (cols.label ? 1 : 0) - 1;
-  const fixed = num(displayList.timeFieldWidth) * FONT + num(displayList.separatorWidth) * FONT
-    + (cols.status ? num(displayLayout.scoreArea.badgeWidth) * num(displayFontSizes.liveBadge) : 0)
-    + (cols.label ? num(displayList.labelWidth) * FONT : 0);
+function charsPerLine(frame: ListFrame): number {
+  const gaps = 3;
+  const fixed = num(displayList.timeFieldWidth) * FONT + num(displayList.separatorWidth) * FONT;
   const inner = WIDTH_VH * (1 - (2 * frame.overscan) / 100) - 2 * num(displayList.rowPaddingX) - gaps * num(displayList.cellGap) - fixed;
   return Math.max(1, Math.floor(inner / 2 / (CHAR_EM * FONT)));
 }
@@ -117,11 +115,13 @@ export function nameLines(text: string, perLine: number): number {
 
 /** Höhe einer Zeile in vh: Polster und Rahmen plus höchste Zelle (Uhrzeit/Feld/„voraussichtlich“ oder Namen). */
 export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME): number {
-  const perLine = charsPerLine(cols, frame);
+  const perLine = charsPerLine(frame);
   const names = Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
-  const label = cols.label && match.labelText ? nameLines(match.labelText, Math.max(1, Math.floor(num(displayList.labelWidth) / CHAR_EM))) : 1;
-  const timeCell = num(displayList.fontSizes.time) * LINE + FONT * LINE * (match.kickoffTentative ? 2 : 1);
-  const content = Math.max(timeCell, Math.max(names, label) * FONT * LINE);
+  const note = num(displayList.fontSizes.note) * LINE;
+  const timeLines = (cols.state ? note : 0) + (cols.field ? FONT * LINE : 0) + (match.kickoffTentative ? note : 0)
+    + (match.labelText ? note : 0);
+  const timeCell = num(displayList.fontSizes.time) * LINE + timeLines;
+  const content = Math.max(timeCell, names * FONT * LINE);
   return 2 * num(displayList.rowPaddingY) + ROW_BORDER + content;
 }
 

@@ -14,7 +14,7 @@ const PROFILE = [{ name: '1080', width: 1920, height: 1080 }, { name: '720', wid
 const SZENEN = [
   { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1' },
   { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1' },
-  { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=8' },
+  { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=10' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
 ] as const;
 
@@ -41,6 +41,41 @@ async function zeilen(page: Page): Promise<Kasten[]> {
       zeitUeberbreit: zeit.scrollWidth > zeit.clientWidth + 1,
     };
   }));
+}
+
+/** Wörter der Teamnamen, die auf mehr als einer Zeile stehen (Bruch mitten im Wort, wie `titel.wortbruch` der visuellen Messung). */
+async function zerbrocheneWoerter(page: Page, hoechstens: number): Promise<string[]> {
+  return page.evaluate((grenze) => {
+    const kaputt: string[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>('[data-teamname]')) {
+      const knoten = el.firstChild;
+      if (knoten?.nodeType !== Node.TEXT_NODE) { continue; }
+      const text = knoten.textContent ?? '';
+      for (const treffer of text.matchAll(/[^\s-]+/g)) {
+        const bereich = document.createRange();
+        bereich.setStart(knoten, treffer.index);
+        bereich.setEnd(knoten, treffer.index + treffer[0].length);
+        const zeilen = new Set([...bereich.getClientRects()].map((r) => Math.round(r.top)));
+        if (zeilen.size > 1 && treffer[0].length <= grenze) { kaputt.push(treffer[0]); }
+      }
+    }
+    return kaputt;
+  }, hoechstens);
+}
+
+/** Passt das längste Zustandswort („Strafstoßschießen“) ganz in die Zeitspalte? Gemessen mit der Schrift der Zustandszeile. */
+async function zustandswortPasst(page: Page): Promise<{ wort: number; spalte: number }> {
+  return page.evaluate(() => {
+    const zeile = document.querySelector<HTMLElement>('[data-testid="monitor-match-status"]')!;
+    const spalte = zeile.closest<HTMLElement>('[data-testid="monitor-match-time"]')!;
+    const probe = document.createElement('span');
+    probe.textContent = 'Strafstoßschießen';
+    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:700;padding:0 0.4em;gap:0.3em';
+    zeile.appendChild(probe);
+    const breite = probe.getBoundingClientRect().width + 0.9 * parseFloat(getComputedStyle(probe).fontSize);
+    probe.remove();
+    return { wort: breite, spalte: spalte.clientWidth };
+  });
 }
 
 test.describe('Monitor Listen-Folien (T2-UI)', () => {
@@ -87,11 +122,17 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
           for (const spalte of ['zeit', 'heim', 'stand', 'gast'] as const) {
             expect(new Set(kaesten.map((k) => Math.round(k[spalte]))).size, `Seite ${String(seite + 1)}: Spalte ${spalte} steht in jeder Zeile an derselben Stelle`).toBe(1);
           }
+          // bis 5 % Rand stehen auch 23 Zeichen ganz da, bei 10 % bleiben „Fußballgemeinschaft“ (19) und kürzere ganz
+          expect(await zerbrocheneWoerter(page, rand === 10 ? 19 : 99), `Seite ${String(seite + 1)}: kein Teamname bricht mitten im Wort`).toEqual([]);
+          if (szene.id === 'plan') {
+            const { wort, spalte } = await zustandswortPasst(page);
+            expect(wort, `Seite ${String(seite + 1)}: „Strafstoßschießen“ passt ganz in die Zeitspalte`).toBeLessThanOrEqual(spalte);
+          }
           gesehen.push(...kaesten.map((k) => k.id));
           await page.screenshot({ path: join(ordner, `${szene.id}-${szene.namen}-${p.name}-s${String(seite + 1)}.png`) });
         }
         expect(new Set(gesehen).size, 'jedes Spiel steht auf genau einer Seite').toBe(gesehen.length);
-        expect(gesehen.length).toBe(szene.id === 'plan' ? 15 : 8);
+        expect(gesehen.length).toBe(szene.id === 'plan' ? 15 : Number(/anzahl=(\d+)/.exec(szene.zusatz)![1]));
         if (szene.id === 'plan') { expect(seiten, '@ZM-185: bei 15 Spielen und höchstens 4 je Seite mindestens 4 Seiten').toBeGreaterThanOrEqual(4); }
         await ctx.close();
       });

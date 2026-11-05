@@ -57,7 +57,7 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: 
     );
   }
 
-  const finalColumns = listColumns(finalRoundMatches(view), false);
+  const finalColumns = listColumns(false, false, view.matches);
   return (
     <div style={style}>
       <SlideHeading icon="finals" color={colors.text}>{t('slides.allStandings.finals')}</SlideHeading>

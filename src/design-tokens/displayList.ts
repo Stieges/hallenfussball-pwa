@@ -30,13 +30,11 @@ export const displayList = {
   /** Abstand zwischen den Zellen einer Zeile */
   cellGap: '2vh',
   /** Spalte Uhrzeit (daneben „(war hh:mm)“ in einer Zeile) über Feld: feste Breite in em der Zeilenschrift (@ZM-188) */
-  timeFieldWidth: '9.4em',
+  timeFieldWidth: '9.6em',
   /** Abstand zwischen Uhrzeit und „(war hh:mm)“ in einer Zeile */
   timeNoteGap: '1vh',
   /** Trenner/Stand: feste Breite, damit die Spalte in jeder Zeile gleich breit ist (@ZM-187); „(4:3 i. E.)“ unter dem Stand ragt höchstens in den Zellenabstand */
   separatorWidth: '3.4em',
-  /** Spalte der Spielbezeichnung („Halbfinale 1“): feste Breite in em der Zeilenschrift, in jeder Zeile der Folie, sobald ein Spiel eine trägt (@ZM-187) */
-  labelWidth: '5em',
   /** Status-Punkt vor der Zeile im Spielplan */
   markerSize: '1.6vh',
   /** Tabelle: Platz | Team | S | U | N | Diff | Pkt (in em der Zeilenschrift) */

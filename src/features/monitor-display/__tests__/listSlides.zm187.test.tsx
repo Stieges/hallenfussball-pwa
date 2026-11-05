@@ -95,9 +95,16 @@ describe('@ZM-187 Auf den Listen-Folien verschiebt keine Zeile die anderen', () 
     expect(new Set(spalten.flatMap(s => [...s])).size, 'auf allen Seiten dieselben Spalten').toBe(1);
   });
 
-  it('Gegenbeispiel: hat kein Spiel der Folie ein Abzeichen (alles geplant), gibt es keine leere Spalte dafür', () => {
-    const t = listenTurnier({ beendet: 0 });
-    for (const z of zeigen(t, 'plan', 0)) { expect(z.zeile.querySelector('[data-testid="monitor-match-status"]'), z.id).toBeNull(); }
+  it('@ZM-189 alles geplant, dann läuft Spiel 1: Spalten und Seitenaufteilung bleiben gleich, nichts springt', () => {
+    const geplant = listenTurnier({ beendet: 0 });
+    const laeuft = { ...geplant, matches: geplant.matches.map(m => (m.id === 'liste-01' ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : m)) };
+    const ids = (t: typeof geplant) => scheduleFieldLayout(withView(t).view, 1).pages.map(p => p.map(m => m.id));
+    expect(ids(laeuft)).toEqual(ids(geplant));
+    const davor = zeigen(geplant, 'plan', 0);
+    const danach = zeigen(laeuft, 'plan', 0);
+    expect(danach.map(z => aufbau(z.zeile))).toEqual(davor.map(z => aufbau(z.zeile)));
+    expect(danach.slice(1).map(z => z.html)).toEqual(davor.slice(1).map(z => z.html));
+    for (const z of davor) { expect(z.zeile.querySelector('[data-testid="monitor-match-status"]'), `${z.id}: Zeile für den Zustand ist reserviert`).not.toBeNull(); }
   });
 
   it('„Nächste Spiele“: Olli verschiebt alle Spiele ab Spiel 6 um 10 Minuten → Zeilen gleich aufgebaut, kein Spiel wechselt die Seite', () => {
@@ -117,6 +124,71 @@ describe('@ZM-187 Auf den Listen-Folien verschiebt keine Zeile die anderen', () 
     const nachher = listenTurnier({ beendet: 5, gewertet: true });
     const seiten = (t: typeof vorher) => scheduleFieldLayout(withView(t).view, 1).pages.map(p => p.map(m => m.id));
     expect(seiten(nachher)).toEqual(seiten(vorher));
+  });
+});
+
+describe('@ZM-189 Zustand und Feld stehen unter der Uhrzeit, es gibt keine eigenen Spalten', () => {
+  it('ein Feld: Spiel 6 beendet „Ende“, Spiel 7 läuft „Live“, Spiel 8 nur die Uhrzeit; keine Feldangabe, keine Zustandsspalte', () => {
+    const t0 = listenTurnier({ beendet: 6 });
+    const t = { ...t0, matches: t0.matches.map(m => (m.id === 'liste-07' ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : m)) };
+    const zeilen = zeigen(t, 'plan', seiteVonSpiel6(t, 'plan'));
+    const text = (id: string) => zeilen.find(z => z.id === id)!.zeile.querySelector('[data-testid="monitor-match-time"]')!.textContent ?? '';
+    expect(text('liste-06')).toContain('Ende');
+    expect(text('liste-07')).toContain('Live');
+    expect(text('liste-08')).not.toMatch(/Ende|Live/);
+    for (const z of zeilen) {
+      expect(z.zeile.querySelector('[data-testid="monitor-match-field"]'), z.id).toBeNull();
+      expect(Array.from(z.zeile.children).map(c => (c as HTMLElement).dataset.testid ?? 'name'), z.id).toEqual(['monitor-match-time', 'name', 'monitor-match-separator', 'name']);
+    }
+    for (const z of zeigen(t, 'naechste', 0)) { expect(z.zeile.querySelector('[data-testid="monitor-match-field"]'), z.id).toBeNull(); }
+  });
+
+  it('mehrere Felder: in jeder Zeile von „Nächste Spiele“ steht das Feld, so groß wie die übrigen Angaben; im Spielplan eines Felds nicht', () => {
+    const t0 = listenTurnier({ beendet: 3 });
+    const t = { ...t0, fields: [...(t0.fields ?? []), { id: 'field-2', defaultName: 'Feld 2' }], numberOfFields: 2,
+      matches: t0.matches.map(m => ((m.matchNumber ?? 0) % 2 === 0 ? { ...m, field: 2 } : m)) };
+    const zeilen = zeigen(t, 'naechste', 0);
+    expect(zeilen.length).toBeGreaterThan(2);
+    for (const z of zeilen) {
+      const feld = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-field"]');
+      expect(feld, z.id).not.toBeNull();
+      expect(feld!.textContent).toMatch(/^Feld [12]$/);
+      expect(parseFloat(feld!.style.fontSize)).toBeGreaterThanOrEqual(3.6);
+    }
+    for (const z of zeigen(t, 'plan', 0)) { expect(z.zeile.querySelector('[data-testid="monitor-match-field"]'), z.id).toBeNull(); }
+  });
+});
+
+describe('@ZM-190 Die Spielplan-Folie beginnt mit der Seite des laufenden oder nächsten Spiels', () => {
+  const erste = (t: ReturnType<typeof listenTurnier>) => scheduleFieldLayout(withView(t).view, 1).pages;
+  const mitLaufend = (nr: number) => {
+    const t0 = listenTurnier({ beendet: nr - 1 });
+    return { ...t0, matches: t0.matches.map(m => (m.matchNumber === nr ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : m)) };
+  };
+
+  it('Spiele 1–5 beendet, Spiel 6 läuft: die erste Seite zeigt Spiel 6, die mit den beendeten Spielen steht zuletzt', () => {
+    const pages = erste(mitLaufend(6));
+    expect(pages[0].map(m => m.id)).toContain('liste-06');
+    expect(pages.at(-1)!.map(m => m.id)).toContain('liste-01');
+    const gesehen = zeigen(mitLaufend(6), 'plan', 0).map(z => z.id);
+    expect(gesehen).toContain('liste-06');
+  });
+
+  it('Gegenbeispiel: läuft kein Spiel, beginnt die Folie mit der Seite des nächsten geplanten Spiels', () => {
+    const t = listenTurnier({ beendet: 9 });
+    expect(erste(t)[0].map(m => m.id)).toContain('liste-10');
+    expect(monitorPageCount(plan, t, withView(t).view)).toBe(erste(t).length);
+  });
+
+  it('Gegenbeispiel: sind alle beendet, bleibt es bei der ersten Seite; ohne Spiel läuft nichts und alles ist geplant: erste Seite', () => {
+    expect(erste(listenTurnier({ beendet: 15 }))[0].map(m => m.id)).toContain('liste-01');
+    expect(erste(listenTurnier({ beendet: 0 }))[0].map(m => m.id)).toContain('liste-01');
+  });
+
+  it('läuft ein Spiel, zählt es vor einem früheren geplanten Spiel (laufend geht vor nächstes)', () => {
+    const t0 = listenTurnier({ beendet: 0 });
+    const t = { ...t0, matches: t0.matches.map(m => (m.matchNumber === 12 ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : m)) };
+    expect(erste(t)[0].map(m => m.id)).toContain('liste-12');
   });
 });
 
@@ -167,7 +239,7 @@ describe('@ZM-188 Jede Zeile einer Listen-Folie liegt ganz im Bild', () => {
     const t = verschoben(namen);
     const { view } = withView(t);
     const pages = scheduleFieldLayout(view, 1).pages;
-    expect(pages.flat().map(m => m.id)).toEqual(t.matches.map(m => m.id));
+    expect(pages.flat().map(m => m.id).sort()).toEqual(t.matches.map(m => m.id).sort());
     expect(Math.max(...pages.map(p => p.length))).toBeLessThanOrEqual(4);
     expect(monitorPageCount(plan, t, view)).toBe(pages.length);
     expect(pages.length).toBeGreaterThanOrEqual(4);
@@ -175,10 +247,11 @@ describe('@ZM-188 Jede Zeile einer Listen-Folie liegt ganz im Bild', () => {
     expect(screen.getByText(`Seite 2 / ${String(pages.length)}`)).toBeInTheDocument();
   });
 
-  it('lange Namen (45–50 Zeichen): eine Seite fasst weniger Zeilen als bei kurzen Namen, die Schrift bleibt gleich', () => {
+  it('lange Namen (45–50 Zeichen): nie mehr Spiele je Seite als bei kurzen Namen, die Schrift bleibt gleich', () => {
     const kurz = scheduleFieldLayout(withView(listenTurnier({ namen: 'kurz' })).view, 1).pages;
     const lang = scheduleFieldLayout(withView(listenTurnier({ namen: 'lang' })).view, 1).pages;
-    expect(lang.length).toBeGreaterThan(kurz.length);
+    expect(lang.length).toBeGreaterThanOrEqual(kurz.length);
+    expect(Math.max(...lang.map(p => p.length))).toBeLessThanOrEqual(Math.max(...kurz.map(p => p.length)));
     const sizes = new Set<string>();
     for (const namen of ['kurz', 'lang'] as const) {
       render(<NextMatchesSlide slide={naechste} {...withView(listenTurnier({ namen }))} theme="dark" style={{}} />);

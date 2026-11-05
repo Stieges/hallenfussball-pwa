@@ -91,17 +91,28 @@ export interface ListLayout {
   columns: ListColumns;
 }
 
-/** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188). */
-export function scheduleFieldLayout(view: TournamentView, field: number, frame: ListFrame = DEFAULT_FRAME): ListLayout {
-  const schedule = fieldSchedule(view, field);
-  const columns = listColumns(schedule, true);
-  return { pages: listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame), columns };
+/**
+ * Reihenfolge der Seiten des Spielplans (@ZM-190): die Seite des laufenden Spiels zuerst, sonst die des nächsten geplanten, dann die
+ * folgenden im Durchlauf, die mit den beendeten Spielen zuletzt; sind alle beendet (oder keins offen), bleibt es bei der ersten Seite.
+ */
+export function pagesFromCurrent(pages: MatchView[][]): MatchView[][] {
+  const holds = (test: (m: MatchView) => boolean): number => pages.findIndex(page => page.some(test));
+  const live = holds(m => m.isLive);
+  const start = live >= 0 ? live : Math.max(0, holds(m => m.isUpcoming));
+  return [...pages.slice(start), ...pages.slice(0, start)];
 }
 
-/** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188). */
+/** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188), beginnend beim laufenden oder nächsten Spiel (@ZM-190). */
+export function scheduleFieldLayout(view: TournamentView, field: number, frame: ListFrame = DEFAULT_FRAME): ListLayout {
+  const schedule = fieldSchedule(view, field);
+  const columns = listColumns(true, false, schedule);
+  return { pages: pagesFromCurrent(listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame)), columns };
+}
+
+/** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188); bei mehreren Feldern mit dem Feld in jeder Zeile (@ZM-189). */
 export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const list = nextMatchList(view, matchCount);
-  const columns = listColumns(list, false);
+  const columns = listColumns(false, true, view.matches);
   return { pages: listPages(list, columns, undefined, frame), columns };
 }
 
