@@ -1,5 +1,6 @@
 import React, { useState, CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens';
+import { fillNeedsRim, initialsColorOn } from './teamAvatarColors';
 import { TeamLogo, TeamColors } from '../../types/tournament';
 
 /**
@@ -16,6 +17,9 @@ const AVATAR_SIZES = {
 } as const;
 
 type AvatarSize = keyof typeof AVATAR_SIZES;
+
+/** Entspricht `fontSizes.xs` (0,6875 rem bei 16 px). */
+const MIN_INITIALS_PX = 11;
 
 interface TeamAvatarProps {
   /** Team data with name, optional logo and colors */
@@ -95,7 +99,9 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
 
   const pixelSize = AVATAR_SIZES[size];
   const ringWidth = size === 'xs' ? 2 : size === 'sm' ? 2 : 3;
-  const fontSize = Math.round(pixelSize * 0.4);
+  // Initialen nie kleiner als 11 px (Token `fontSizes.xs`), auch im kleinsten Abzeichen (Durchsicht Z16)
+  const scaledFontSize = Math.round(pixelSize * 0.4);
+  const fontSize = scaledFontSize < MIN_INITIALS_PX ? cssVars.fontSizes.xs : `${scaledFontSize}px`;
 
   const logo = team.logo;
   const hasLogo = logo && logo.type !== 'initials' && !imageError;
@@ -104,6 +110,8 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
   const pending = team.pending === true;
   const initials = pending ? '' : getInitials(team.name);
   const bgColor = getBackgroundColor(team.name, team.logo?.backgroundColor ?? team.colors?.primary);
+  const showsFill = !pending && !(hasLogo && imageLoaded);
+  const needsRim = showsFill && fillNeedsRim(bgColor);
 
   const containerStyles: CSSProperties = {
     position: 'relative',
@@ -122,14 +130,16 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: pending || (hasLogo && imageLoaded) ? 'transparent' : bgColor,
-    color: '#FFFFFF',
-    fontSize: `${fontSize}px`,
+    color: initialsColorOn(bgColor),
+    fontSize,
     fontWeight: cssVars.fontWeights.bold,
     fontFamily: cssVars.fontFamilies.body,
     textTransform: 'uppercase',
     userSelect: 'none',
     border: pending
       ? `1px dashed ${cssVars.colors.textPlaceholder}`
+      : needsRim
+        ? `${cssVars.borderWidth.medium} solid ${cssVars.colors.textSecondary}`
       : showColorRing && team.colors?.primary
         ? `${ringWidth}px solid ${team.colors.primary}`
         : `1px solid ${cssVars.colors.border}`,
@@ -155,7 +165,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
   };
 
   return (
-    <div style={containerStyles} data-testid={testId}>
+    <div style={containerStyles} data-testid={testId ?? 'team-avatar'}>
       <div style={avatarStyles} aria-hidden={pending ? 'true' : undefined}>
         {logoUrl && (
           <img
@@ -167,7 +177,8 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
             onError={() => setImageError(true)}
           />
         )}
-        <div style={initialsContainerStyles}>
+        {/* Initialen sind höchstens zwei Zeichen; das Messwerkzeug dehnt Texte künstlich (Pseudo-Langtext) */}
+        <div style={initialsContainerStyles} data-truncate-ok="Initialen: höchstens 2 Zeichen, Langtext-Dehnung des Messwerkzeugs ist kein echter Inhalt">
           {initials}
         </div>
       </div>

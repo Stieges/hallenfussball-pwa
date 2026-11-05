@@ -31,7 +31,7 @@ async function oeffne(page: Page) {
   await expect(page.locator('[data-testid^="match-row-time-"]').first()).toBeVisible({ timeout: 25000 });
 }
 
-const spalte = async (page: Page, zeile: string) => (await page.locator(`[role="row"]:has([data-testid="${zeile}"])`).locator('text=/^Feld 1$|^Feld 2$/').first().boundingBox())?.x;
+const spalte = async (page: Page, zeile: string) => (await page.locator(`[role="article"]:has([data-testid="${zeile}"])`).locator('text=/^Feld 1$|^Feld 2$/').first().boundingBox())?.x;
 
 test.describe('@OB-065 Abzeichen statt Uhrzeit in der Tabellenzeile', () => {
   test('@OB-065 Live-Zeile: „Live“ statt Uhrzeit, geplante Zeile: Uhrzeit; „Feld“ steht in beiden an derselben x-Position (±1 px)', async ({ page }) => {

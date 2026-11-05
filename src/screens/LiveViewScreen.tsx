@@ -81,8 +81,8 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
 
 
   // Die gemeinsame Ansicht der Zuschauer (A-36c): Status, Seitentexte, Endstand und Sichtbarkeit nur von hier
-  // Der gespeicherte Endstand (R3-6): erst nach dem Abschluss, im selben Takt, ohne Neuladen
-  const finalStandings = usePublicFinalStandings(shareCode, tournament !== null);
+  // Der gespeicherte Endstand (R3-6): im Takt erst nach dem Abschluss (Z20), ohne Neuladen
+  const finalStandings = usePublicFinalStandings(shareCode, tournament !== null, tournament?.lifecycleStatus === 'finished');
   const view = usePublicView(tournament, schedule, fetchedAtMs, finalStandings);
 
   // Styles
@@ -120,7 +120,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     return <PublicLoadingView shareCode={shareCode} />;
   }
   if (loadingState === 'not-found') {
-    return <PublicNotFoundView shareCode={shareCode} />;
+    return <PublicNotFoundView />;
   }
   if (loadingState === 'error') {
     return <PublicErrorView errorMessage={errorMessage} />;
@@ -241,9 +241,10 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
           </>
         )}
 
-        {tab === 'standings' && (
-          <PublicStandingsTab tournament={tournament} standings={currentStandings} />
-        )}
+        {/* Nach dem Abschluss steht im Reiter „Tabellen“ der gespeicherte Endstand, nie eine zweite, live gerechnete Platzierung (@ET-044) */}
+        {tab === 'standings' && (showsFinalStandings(view, finalStandings)
+          ? <PublicFinalStandingsBlock tournament={tournament} view={view} finalStandings={finalStandings} scheduleTitle={false} />
+          : <PublicStandingsTab tournament={tournament} standings={currentStandings} />)}
 
         {tab === 'settings' && (
           <PublicInfoTab

@@ -69,7 +69,7 @@ describe('@ZM-004 Gegenbeispiel: ohne Gruppentabellen bleibt der Spielplan mit S
     // Spiel 7 fest verankert: der Spielkreis muss existieren, dann Status, Paarung und Stand in derselben Karte
     const kreis = screen.getByTestId(`match-circle-${m7!.id}`);
     expect(kreis).toHaveAttribute('data-match-status', 'running');
-    const karte = kreis.closest<HTMLElement>('[role="row"]');
+    const karte = kreis.closest<HTMLElement>('[role="article"]');
     expect(karte).not.toBeNull();
     expect(within(karte!).getByText(m7!.homeTeam)).toBeInTheDocument();
     expect(within(karte!).getByText(m7!.awayTeam)).toBeInTheDocument();

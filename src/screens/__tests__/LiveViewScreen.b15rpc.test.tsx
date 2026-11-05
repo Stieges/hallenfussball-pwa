@@ -145,15 +145,15 @@ describe('Weg (b) an der Zuschauer-Seite', () => {
     const vorher = heimTore();
     ok = false;
     await advance(3 * TAKT);
-    expect(screen.queryByText('Turnier nicht gefunden')).toBeNull();
+    expect(screen.queryByText('Turnier nicht gefunden oder nicht öffentlich')).toBeNull();
     expect(heimTore()).toEqual(vorher);
     expect(screen.getByTestId('public-connection-hint')).toBeTruthy();
   });
 
-  it('@ZM-109 nur „not_found“ vom Server zeigt „Turnier nicht gefunden“', async () => {
+  it('@ZM-109 nur „not_found“ vom Server zeigt „Turnier nicht gefunden oder nicht öffentlich“', async () => {
     rpcCall.mockResolvedValue({ data: { state: 'not_found' }, error: null });
     seite();
     await advance(0);
-    expect(screen.getByText('Turnier nicht gefunden')).toBeTruthy();
+    expect(screen.getByText('Turnier nicht gefunden oder nicht öffentlich')).toBeTruthy();
   });
 });

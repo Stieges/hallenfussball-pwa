@@ -41,7 +41,13 @@ const filterLabelStyle: CSSProperties = {
   minWidth: '60px',
 };
 
+/** Tippfläche mindestens 44 × 44 px (Token `touchTargets.minimum`), die Schrift bleibt klein (Durchsicht Z16). */
 const chipStyle = (active: boolean): CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: cssVars.touchTargets.minimum,
+  minWidth: cssVars.touchTargets.minimum,
   padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
   borderRadius: cssVars.borderRadius.full,
   fontSize: cssVars.fontSizes.sm,
@@ -72,7 +78,7 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
         <div style={filterRowStyle}>
           <span style={filterLabelStyle}>{t('filter.group')}</span>
           <button
-            style={chipStyle(selectedGroup === null)}
+            style={chipStyle(selectedGroup === null)} aria-pressed={selectedGroup === null}
             onClick={() => onGroupChange(null)}
           >
             {t('filter.all')}
@@ -80,7 +86,7 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
           {groups.map((group) => (
             <button
               key={group}
-              style={chipStyle(selectedGroup === group)}
+              style={chipStyle(selectedGroup === group)} aria-pressed={selectedGroup === group}
               onClick={() => onGroupChange(group)}
             >
               {tSport('tournament.groupWithLetter', { letter: group })}
@@ -93,19 +99,19 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
       <div style={filterRowStyle}>
         <span style={filterLabelStyle}>{t('filter.phase')}</span>
         <button
-          style={chipStyle(selectedPhase === 'all')}
+          style={chipStyle(selectedPhase === 'all')} aria-pressed={selectedPhase === 'all'}
           onClick={() => onPhaseChange('all')}
         >
           {t('filter.all')}
         </button>
         <button
-          style={chipStyle(selectedPhase === 'groupStage')}
+          style={chipStyle(selectedPhase === 'groupStage')} aria-pressed={selectedPhase === 'groupStage'}
           onClick={() => onPhaseChange('groupStage')}
         >
           {tSport('tournament.groupStage')}
         </button>
         <button
-          style={chipStyle(selectedPhase === 'final')}
+          style={chipStyle(selectedPhase === 'final')} aria-pressed={selectedPhase === 'final'}
           onClick={() => onPhaseChange('final')}
         >
           {tSport('tournament.finals')}
@@ -116,25 +122,25 @@ export const PublicFilterBar: React.FC<PublicFilterBarProps> = ({
       <div style={filterRowStyle}>
         <span style={filterLabelStyle}>{t('filter.status')}</span>
         <button
-          style={chipStyle(selectedStatus === 'all')}
+          style={chipStyle(selectedStatus === 'all')} aria-pressed={selectedStatus === 'all'}
           onClick={() => onStatusChange('all')}
         >
           {t('filter.all')}
         </button>
         <button
-          style={chipStyle(selectedStatus === 'scheduled')}
+          style={chipStyle(selectedStatus === 'scheduled')} aria-pressed={selectedStatus === 'scheduled'}
           onClick={() => onStatusChange('scheduled')}
         >
           {tSport('status.scheduled')}
         </button>
         <button
-          style={chipStyle(selectedStatus === 'live')}
+          style={chipStyle(selectedStatus === 'live')} aria-pressed={selectedStatus === 'live'}
           onClick={() => onStatusChange('live')}
         >
           {t('filter.live')}
         </button>
         <button
-          style={chipStyle(selectedStatus === 'finished')}
+          style={chipStyle(selectedStatus === 'finished')} aria-pressed={selectedStatus === 'finished'}
           onClick={() => onStatusChange('finished')}
         >
           {tSport('status.finished')}

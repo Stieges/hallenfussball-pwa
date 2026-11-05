@@ -18,11 +18,13 @@ describe('PublicStatusViews (B-13d1)', () => {
     expect(screen.getByText(`Code: ${SHARE_CODE}`)).toBeInTheDocument();
   });
 
-  it('Nicht gefunden nennt den Code und bietet die Startseite an', () => {
-    render(<PublicNotFoundView shareCode={SHARE_CODE} />);
-    expect(screen.getByText('Turnier nicht gefunden')).toBeInTheDocument();
-    expect(screen.getByText(SHARE_CODE)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Zur Startseite' })).toBeInTheDocument();
+  it('@ZM-066 @ZM-068 Nicht gefunden: der Wortlaut des Records, ohne Code und ohne Knopf (ein nicht geteiltes Turnier und ein unbekannter Code sehen dasselbe)', () => {
+    const { container } = render(<PublicNotFoundView />);
+    expect(screen.getByRole('heading', { name: 'Turnier nicht gefunden oder nicht öffentlich' })).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(container.textContent).not.toContain(SHARE_CODE);
+    expect(container.textContent).not.toMatch(/Startseite|freigegeben|ungültig/);
   });
 
   it('Fehler zeigt die Fehlermeldung, sonst den Standardtext', () => {

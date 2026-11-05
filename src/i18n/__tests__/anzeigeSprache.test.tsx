@@ -106,10 +106,10 @@ describe('Feste Anzeigesprache (B-41 Fixrunde 1)', () => {
     expect(next.error).toBe('fetchFailed');
   });
 
-  it('Zuschauer-Seite: Nicht-gefunden-Ansicht zeigt „Zur Startseite“ (nicht englisch)', async () => {
+  it('Zuschauer-Seite: Nicht-gefunden-Ansicht zeigt den deutschen Hinweis des Records (@ZM-068), nicht englisch', async () => {
     liveViewMit(null);
-    expect(await screen.findByRole('button', { name: 'Zur Startseite' })).toBeInTheDocument();
-    expect(screen.queryByText('Go to start page')).toBeNull();
+    expect(await screen.findByRole('heading', { name: 'Turnier nicht gefunden oder nicht öffentlich' })).toBeInTheDocument();
+    expect(screen.queryByText('Tournament not found or not public')).toBeNull();
     expect(i18n.language).toBe('en');
   });
 

@@ -191,11 +191,11 @@ describe('Zuschauer-Seite (LiveViewScreen) – Charakterisierung', () => {
   });
 
   describe('Bestand (ohne Kennung, heutiges Verhalten)', () => {
-    it('Bestand: Nicht gefunden – beide Quellen liefern null → Hinweis "Turnier nicht gefunden"', async () => {
+    it('Bestand: Nicht gefunden – beide Quellen liefern null → Hinweis "Turnier nicht gefunden oder nicht öffentlich"', async () => {
       supabaseGet.mockResolvedValue(null);
       localGet.mockResolvedValue(null);
       renderScreen();
-      expect(await screen.findByText('Turnier nicht gefunden')).toBeInTheDocument();
+      expect(await screen.findByText('Turnier nicht gefunden oder nicht öffentlich')).toBeInTheDocument();
     });
 
     it('Bestand: Supabase wirft → lokaler Rückfall zeigt das Turnier', async () => {

@@ -30,10 +30,10 @@ import {
 // `two-devices`/`offline`/`publish-coadmin`) -- keine zweite, gleichzeitige Instanz mehr, die
 // denselben Datensatz ändert. (b) Der Zielwert ist nicht mehr "+1" (2:0 -> 3:0, ein Wert, der
 // im Seed bereits zweimal vorkommt), sondern ein Wert, der in KEINEM Public-Cup-Spiel vorkommen
-// kann (`97`), UND die Prüfung ist an die Zeile DES GEÄNDERTEN SPIELS gebunden (`role="row"` +
+// kann (`97`), UND die Prüfung ist an die Zeile DES GEÄNDERTEN SPIELS gebunden (`role="article"` +
 // `aria-label` mit beiden Team-Namen, `MatchCardDesktop.tsx:218-219`), nicht an einen freien
-// Text irgendwo auf der Seite. `role="row"` ist NUR die Desktop-Kartenvariante (Mobile nutzt
-// `role="article"`, `MatchCard.tsx:230`) -- exakt EIN Treffer, kein `:visible`-Filter nötig.
+// Text irgendwo auf der Seite. `role="article"` tragen Desktop- und Mobile-Karte (Mobile:
+// `role="article"`, `MatchCard.tsx:230`) -- sichtbar ist immer nur eine der beiden Karten, `getByRole` blendet die andere aus (exakt EIN Treffer).
 // =============================================================================
 
 /** Ziel-Heimtore für Test 3 -- kann in keinem Public-Cup-Spiel natürlich vorkommen (N1). */
@@ -207,7 +207,7 @@ test.describe('Public-View', () => {
   test('@ZM-068 unbekannter Code auf /#/live zeigt den Hinweis ohne Turniernamen', async ({ page }) => {
     await page.goto('/#/live/ZZZZZZ');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Turnier nicht gefunden', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Turnier nicht gefunden oder nicht öffentlich', { exact: true })).toBeVisible({ timeout: 15000 });
     for (const name of ['Public-Cup', 'Live-Cup', 'Entwurf-Cup']) {
       await expect(page.getByText(name, { exact: true })).toHaveCount(0);
     }
@@ -231,10 +231,10 @@ test.describe('Public-View', () => {
 
       matchInfo = await getFirstFinishedMatchWithTeams(E2E_PUBLIC_CUP_ID);
 
-      // N1: an die Zeile DES GEÄNDERTEN SPIELS gebunden (role="row" + beide Team-Namen im
+      // N1: an die Zeile DES GEÄNDERTEN SPIELS gebunden (role="article" + beide Team-Namen im
       // aria-label), nicht an freien Text -- UND ein Zielwert, der in keinem anderen
       // Public-Cup-Spiel vorkommen kann.
-      const matchRow = page.getByRole('row', {
+      const matchRow = page.getByRole('article', {
         name: new RegExp(`${escapeRegExp(matchInfo.homeTeamName)}.*${escapeRegExp(matchInfo.awayTeamName)}`, 'i'),
       });
 

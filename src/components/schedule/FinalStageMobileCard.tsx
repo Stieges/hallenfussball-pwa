@@ -181,7 +181,8 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
         style={{
           fontSize: cssVars.fontSizes.sm,
           fontWeight: cssVars.fontWeights.bold,
-          color: cssVars.colors.accent,
+          // Textfarbe statt Akzent: Amber auf der Tönung (bei laufendem Spiel zusätzlich auf der roten Zeilentönung) erreichte im hellen Design nur 3,99 bis 4,28 : 1 (Durchsicht Z16)
+          color: cssVars.colors.textPrimary,
           marginBottom: cssVars.spacing.xs,
           textAlign: 'center',
           backgroundColor: cssVars.colors.accentLight,

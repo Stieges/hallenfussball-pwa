@@ -4,9 +4,7 @@
     "code": "Code: {{code}}"
   },
   "notFound": {
-    "title": "Turnier nicht gefunden",
-    "body": "Der Code <strong>{{code}}</strong> ist ungültig oder das Turnier wurde nicht freigegeben.",
-    "home": "Zur Startseite"
+    "title": "Turnier nicht gefunden oder nicht öffentlich"
   },
   "error": {
     "title": "Fehler beim Laden",

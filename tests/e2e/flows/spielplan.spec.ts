@@ -213,7 +213,7 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
 
     // WHEN - Tap on a match card (not the score circle)
     // On mobile viewport, we should see cards. Click on the first match card.
-    const matchCard = page.locator('[role="article"]').first();
+    const matchCard = page.locator('[role="article"]:visible').first();
     await matchCard.click();
     await page.getByTestId('match-action-enterResult').click();
 
@@ -292,7 +292,7 @@ test.describe('Spielplan 2.0 - Desktop Layout', () => {
     await navigateToSpielplan(page);
 
     // WHEN - Click on a match row
-    const matchRow = page.locator('.desktop-view [role="row"]').first();
+    const matchRow = page.locator('.desktop-view [role="article"]').first();
     if (await matchRow.isVisible()) {
       await matchRow.click();
 
@@ -521,7 +521,7 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
     await navigateToSpielplan(page);
 
     // Click on a card to open expand
-    const matchCard = page.locator('.desktop-view [role="row"], .mobile-view > div > div').first();
+    const matchCard = page.locator('.desktop-view [role="article"], .mobile-view > div > div').first();
     if (await matchCard.isVisible()) {
       await matchCard.click();
       await page.waitForTimeout(300);
@@ -545,7 +545,7 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
     await navigateToSpielplan(page);
 
     // Open expand and get initial score
-    const matchCard = page.locator('.desktop-view [role="row"], .mobile-view > div > div').first();
+    const matchCard = page.locator('.desktop-view [role="article"], .mobile-view > div > div').first();
     if (await matchCard.isVisible()) {
       await matchCard.click();
       await page.waitForTimeout(300);
@@ -573,7 +573,7 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
     await navigateToSpielplan(page);
 
     // Open expand
-    const matchCard = page.locator('.desktop-view [role="row"], .mobile-view > div > div').first();
+    const matchCard = page.locator('.desktop-view [role="article"], .mobile-view > div > div').first();
     if (await matchCard.isVisible()) {
       await matchCard.click();
       await page.waitForTimeout(300);
@@ -640,7 +640,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
     // WHEN - Try to click on the live match card
     const liveMatchCard = page.locator('.group-stage-schedule').first();
-    const cardContent = liveMatchCard.locator('[role="row"], > div > div').first();
+    const cardContent = liveMatchCard.locator('[role="article"], > div > div').first();
 
     if (await cardContent.isVisible()) {
       await cardContent.click();
@@ -705,7 +705,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
     await page.waitForTimeout(500);
 
     // WHEN - Edit the score in Spielplan
-    const matchCard = page.locator('.desktop-view [role="row"], .mobile-view > div > div').first();
+    const matchCard = page.locator('.desktop-view [role="article"], .mobile-view > div > div').first();
     if (await matchCard.isVisible()) {
       await matchCard.click();
       await page.waitForTimeout(300);
@@ -818,7 +818,7 @@ test.describe('Spielplan 2.0 - Accessibility', () => {
     await navigateToSpielplan(page);
 
     // THEN - Cards should have aria-label for screen readers
-    const matchRow = page.locator('[role="row"]').first();
+    const matchRow = page.locator('[role="article"]').first();
     if (await matchRow.isVisible()) {
       const ariaLabel = await matchRow.getAttribute('aria-label');
       expect(ariaLabel).toBeTruthy();

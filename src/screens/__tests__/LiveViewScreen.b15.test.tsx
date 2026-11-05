@@ -222,7 +222,7 @@ describe('Änderungen ohne Neuladen (Fake-Timer)', () => {
     expect(screen.getByTestId('public-connection-hint').textContent).toBe('Stand von 14:32 – keine Verbindung');
     // der Stand ist noch da, und es steht nicht „Turnier nicht gefunden“ da
     expect(tore(cup, GAME[7])).toEqual(['1', '0']);
-    expect(screen.queryByText('Turnier nicht gefunden')).toBeNull();
+    expect(screen.queryByText('Turnier nicht gefunden oder nicht öffentlich')).toBeNull();
   });
 
   it('@ZM-037 kommt das Netz zurück, verschwindet der Hinweis und der aktuelle Stand steht da', async () => {

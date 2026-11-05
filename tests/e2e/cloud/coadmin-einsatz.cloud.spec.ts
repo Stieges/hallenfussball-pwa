@@ -129,7 +129,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
     }
   });
 
-  test('@BM-070 Z2 Co-Admin nimmt das Teilen zurück: der Zuschauer-Link zeigt danach "Turnier nicht gefunden"', async ({ browser, page: anonymous }) => {
+  test('@BM-070 Z2 Co-Admin nimmt das Teilen zurück: der Zuschauer-Link zeigt danach "Turnier nicht gefunden oder nicht öffentlich"', async ({ browser, page: anonymous }) => {
     test.setTimeout(120_000);
     const cup = await cloneReleaseCup('z2');
     const maria = await newRoleContext(browser, 'coadmin');
@@ -153,7 +153,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       await anonymous.goto(`/#/live/${code}`);
       await anonymous.reload();
       await anonymous.waitForLoadState('networkidle');
-      await expect(anonymous.getByText('Turnier nicht gefunden', { exact: true })).toBeVisible({ timeout: 15000 });
+      await expect(anonymous.getByText('Turnier nicht gefunden oder nicht öffentlich', { exact: true })).toBeVisible({ timeout: 15000 });
     } finally {
       await safeCleanup('Z2 Kopie löschen', () => deleteCup(cup.id));
       await maria.context.close();
