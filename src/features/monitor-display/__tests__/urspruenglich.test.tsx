@@ -94,10 +94,10 @@ describe('B-27 Monitor „Nächste Spiele“: ursprüngliche Uhrzeit', () => {
   });
 });
 
-describe('B-27 Monitor „Spielplan eines Felds“: K.-o.-Uhrzeiten sind voraussichtlich (@ZM-105)', () => {
+describe('B-27 Monitor „Spielplan eines Felds“: K.-o.-Uhrzeiten mit Bezeichnung, ohne „voraussichtlich“ (@ZM-105)', () => {
   const tournament = buildTournament({ matches: withPlayoffs().map((m) => (m.id.startsWith('po-') ? { ...m, isFinal: true } : m)).map((m) => (m.id === 'po-p3' ? { ...m, scheduledTime: at('15:30'), originalStart: at('15:20') } : m)) });
 
-  it('Spiel um Platz 3 steht als „voraussichtlich“ mit „(war 15:20)“, Gruppenspiele ohne „voraussichtlich“', () => {
+  it('Spiel um Platz 3 steht mit Bezeichnung und „(war 15:20)“, ohne „voraussichtlich“; Gruppenspiele ohne Bezeichnung', () => {
     // die Zeilen sind höher, die Spiele verteilen sich auf mehrere Seiten: jedes Spiel auf seiner Seite ansehen
     const seite = (id: string) => pageIndexOf(scheduleFieldLayout(withView(tournament).view, 1).pages, id);
     const zeigen = (id: string) => {
@@ -105,10 +105,12 @@ describe('B-27 Monitor „Spielplan eines Felds“: K.-o.-Uhrzeiten sind vorauss
       return within(zeile(id));
     };
     const p3 = zeigen('po-p3');
-    expect(p3.getByTestId('monitor-match-tentative')).toHaveTextContent('voraussichtlich');
+    expect(p3.getByTestId('monitor-match-label')).toHaveTextContent('Spiel um Platz 3');
+    expect(p3.queryByTestId('monitor-match-tentative')).toBeNull();
     expect(p3.getByTestId('monitor-match-original')).toHaveTextContent('(war 15:20)');
     cleanup();
-    expect(zeigen('match-9').queryByTestId('monitor-match-tentative')).toBeNull();
+    expect(zeigen('match-9').queryByTestId('monitor-match-label')).toBeNull();
+    expect(document.body.textContent).not.toContain('voraussichtlich');
   });
 });
 

@@ -60,6 +60,8 @@ export const DEFAULT_FRAME: ListFrame = { overscan: displayMonitor.overscan.defa
 /** Höhe des Hinweises in vh (Schrift mal Zeilenhöhe plus Polster und Rahmen oben und unten). */
 const NOTICE_VH = num(displayFontSizes.notice) * displayLayout.scoreArea.noticeLineHeight
   + 2 * (num(displayLayout.scoreArea.noticePadY) + num(displayLayout.scoreArea.noticeBorderWidth));
+/** Abstand der Überschrift einer Zeile von der Innenkante der Zeilenkarte in vh (MonitorMatchRow). */
+export const LABEL_TOP = 0.4;
 /** Rahmen einer Zeile oben und unten in vh (1 px bei 720 Zeilen, aufgerundet). */
 const ROW_BORDER = 0.3;
 /** Rest des Bildes für Überschrift (Zeile, Abstand), Seitenhinweis (Zeile, Abstand) und Reserve. */
@@ -135,10 +137,16 @@ export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame 
   const note = num(displayList.fontSizes.note) * LINE;
   const padY = num(displayList.rowPaddingY);
   const unterMitte = (zeile: number, zusatz: number): number => (zusatz === 0 ? zeile : 2 * (zeile / 2 + Math.max(0, zusatz - 0.8 * padY)));
-  const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0) + (!cols.state && match.kickoffTentative ? note : 0) + (match.labelText ? note : 0);
+  const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0);
   const timeCell = unterMitte(num(displayList.fontSizes.time) * LINE, zusatzZeit);
-  const scoreCell = unterMitte(num(displayList.fontSizes.score) * LINE, reserveExtra ? note : 0);
-  const content = Math.max(timeCell, names * FONT * LINE, scoreCell);
+  // Überschrift („Halbfinale 1“) oben mittig in der Zeilenkarte (LABEL_TOP unter der Innenkante, außerhalb des Flusses), „(4:3 i. E.)“/„gewertet“
+  // unten: Stand und Namen müssen unterhalb der Überschrift beginnen. Maß vom oberen Inhaltsrand (Polster abgezogen) bis zur Unterkante der Überschrift.
+  const ueberschrift = match.labelText ? num(displayList.fontSizes.timeNote) * LINE + LABEL_TOP - padY : 0;
+  const unten = reserveExtra ? Math.max(0, note - 0.8 * padY) : 0;
+  const scoreLine = num(displayList.fontSizes.score) * LINE;
+  const scoreCell = ueberschrift > 0 || unten > 0 ? 2 * (scoreLine / 2 + Math.max(ueberschrift, unten)) : scoreLine;
+  const namen = names * FONT * LINE + 2 * Math.max(0, ueberschrift);
+  const content = Math.max(timeCell, namen, scoreCell);
   return 2 * padY + ROW_BORDER + content;
 }
 
@@ -168,14 +176,20 @@ export function listPages(matches: readonly MatchView[], cols: ListColumns, maxR
 
 /**
  * Seiten wie `listPages`, aber gleichmäßig verteilt („2 + 2“ statt „3 + 1“): die Seitenzahl n bleibt die des Höhenmodells, jede Seite bekommt
- * höchstens ceil(Spiele / n) Spiele. Passt eine so gebildete Seite nicht in die Höhe (sehr verschieden hohe Zeilen), bleibt es bei `listPages`.
+ * höchstens ceil(Spiele / n) Spiele (7 Spiele auf 3 Seiten: 3 + 2 + 2). Passt eine so gebildete Seite nicht in die Höhe (sehr verschieden hohe Zeilen), bleibt es bei `listPages`.
  */
 export function listPagesBalanced(matches: readonly MatchView[], cols: ListColumns, maxRows: number = Number.POSITIVE_INFINITY, frame: ListFrame = DEFAULT_FRAME): MatchView[][] {
   const pages = listPages(matches, cols, maxRows, frame);
   if (pages.length < 2) { return pages; }
-  const per = Math.ceil(matches.length / pages.length);
+  const base = Math.floor(matches.length / pages.length);
+  const mehr = matches.length % pages.length;
   const chunks: MatchView[][] = [];
-  for (let i = 0; i < matches.length; i += per) { chunks.push(matches.slice(i, i + per)); }
+  let von = 0;
+  for (let i = 0; i < pages.length; i += 1) {
+    const anzahl = base + (i < mehr ? 1 : 0);
+    chunks.push(matches.slice(von, von + anzahl));
+    von += anzahl;
+  }
   const available = availableHeight(frame);
   const gap = num(displayList.rowGap);
   const fits = (chunk: readonly MatchView[]): boolean => chunk.length <= maxRows

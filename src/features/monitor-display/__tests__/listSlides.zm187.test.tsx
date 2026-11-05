@@ -46,7 +46,7 @@ function zeigen(t: ReturnType<typeof listenTurnier>, art: 'plan' | 'naechste', p
 
 /** Aufbau einer Zeile: Spalten in Reihenfolge mit ihrer festen Breite – ohne den Inhalt. */
 function aufbau(zeile: HTMLElement): string {
-  return Array.from(zeile.children).map(c => `${(c as HTMLElement).dataset.testid ?? (c as HTMLElement).getAttribute('data-teamname') ?? '?'}:${(c as HTMLElement).style.flex}`).join('|');
+  return Array.from(zeile.children).filter(c => (c as HTMLElement).style.position !== 'absolute').map(c => `${(c as HTMLElement).dataset.testid ?? (c as HTMLElement).getAttribute('data-teamname') ?? '?'}:${(c as HTMLElement).style.flex}`).join('|');
 }
 
 function mitSpiel6(t: ReturnType<typeof listenTurnier>, patch: Partial<Match>) {
@@ -198,59 +198,58 @@ describe('@ZM-190 Startseite der Spielplan-Folie: laufendes, sonst nächstes Spi
   });
 });
 
-describe('@ZM-189 Eine Stufe für alle Zusatzzeilen unter der Uhrzeit', () => {
-  it('Zustand, „voraussichtlich“ und Bezeichnung haben dieselbe Schriftgröße (Token note), „(war …)“ steht in der Uhrzeitzeile', () => {
-    const t0 = listenTurnier({ beendet: 5, verschoben: true });
-    const t = { ...t0, matches: t0.matches.map(m => (m.id === 'liste-07'
-      ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0, label: 'Halbfinale 1', isFinal: true } : m)) };
-    const zeile = zeigen(t, 'plan', pageIndexOf(scheduleFieldLayout(withView(t).view, 1).pages, 'liste-07')).find(z => z.id === 'liste-07')!.zeile;
-    const stufen = ['monitor-match-status', 'monitor-match-label', 'monitor-match-tentative']
-      .map(id => zeile.querySelector<HTMLElement>(`[data-testid="${id}"]`)).filter(e => e !== null).map(e => e.style.fontSize);
-    expect(stufen.length).toBeGreaterThanOrEqual(2);
-    expect(new Set(stufen)).toEqual(new Set([displayList.fontSizes.note]));
-  });
-});
-
-describe('@ZM-189 Stufe der Zusatzzeilen, direkt an der Zeitzelle', () => {
-  it('Feld, Zustand, „voraussichtlich“ und Bezeichnung: alle in der Stufe note', () => {
+describe('@ZM-189 Eine Stufe für die Zusatzzeilen unter der Uhrzeit, Bezeichnung als Überschrift der Zeile', () => {
+  it('Feld und Zustand: alle in der Stufe note (direkt an der Zeitzelle)', () => {
     const base = withView(listenTurnier({ beendet: 5 })).view.byId.get('liste-06')!;
-    const match = { ...base, kickoffTentative: true, labelText: 'Halbfinale 1', badge: { kind: 'badge' as const, state: 'live' as const } };
+    const match = { ...base, badge: { kind: 'badge' as const, state: 'live' as const } };
     render(<MonitorTimeCell match={match} fieldName="Feld 2" reserveState color="#fff" style={{}} />);
-    for (const id of ['monitor-match-field', 'monitor-match-status', 'monitor-match-tentative', 'monitor-match-label']) {
+    for (const id of ['monitor-match-field', 'monitor-match-status']) {
       expect(screen.getByTestId(id).style.fontSize, id).toBe(displayList.fontSizes.note);
     }
   });
+
+  it('die Bezeichnung steht nicht mehr in der Uhrzeit-Zelle, sondern als fette Überschrift oben mittig in der Zeile (außerhalb des Flusses)', async () => {
+    const { AllStandingsSlide } = await import('../slides/AllStandingsSlide');
+    const t = listenTurnier({ beendet: 3, finale: 3 });
+    render(<AllStandingsSlide tournament={t} view={withView(t).view} theme="dark" style={{}} page={1} />);
+    for (const zeile of screen.getAllByTestId('monitor-match-row')) {
+      const label = zeile.querySelector<HTMLElement>('[data-testid="monitor-match-label"]')!;
+      expect(label.parentElement, 'Überschrift der Zeile').toBe(zeile);
+      expect(label.style.position).toBe('absolute');
+      expect(label.style.textAlign).toBe('center');
+      expect(label.style.fontWeight).toBe(cssVars.fontWeights.bold);
+      expect(label.style.fontSize).toBe(displayList.fontSizes.timeNote);
+      expect(zeile.querySelector('[data-testid="monitor-match-time"]')!.textContent).not.toContain('Halbfinale');
+    }
+  });
 });
 
-describe('@ZM-105 @ZM-189 „voraussichtlich“ teilt sich die Zustandszeile, Finalrunde in „Alle Tabellen“ zeigt es nicht', () => {
+describe('@ZM-105 K.-o.-Uhrzeiten stehen mit Bezeichnung und ohne „voraussichtlich“ (Spielplan, Nächste Spiele, Alle Tabellen)', () => {
   const finale = () => { const t = listenTurnier({ beendet: 3, finale: 3 }); return { t, view: withView(t).view }; };
 
-  it('Spielplan: „voraussichtlich“ steht in der Zustandszeile (keine eigene Zeile), nie zugleich mit einem Zustand', () => {
+  it('Spielplan: die Finalspiele tragen ihre Bezeichnung, nirgends „voraussichtlich“', () => {
     const { t } = finale();
-    const zeile = zeigen(t, 'plan', pageIndexOf(scheduleFieldLayout(withView(t).view, 1).pages, 'liste-05')).find(z => z.id === 'liste-05')!.zeile;
-    expect(zeile.querySelectorAll('[data-testid="monitor-match-tentative"]'), 'genau einmal, nicht zusätzlich als eigene Zeile').toHaveLength(1);
-    const wort = zeile.querySelector('[data-testid="monitor-match-tentative"]')!;
-    expect(wort.parentElement?.getAttribute('data-testid')).toBe('monitor-match-status');
-    expect(zeile.querySelector('[data-testid="monitor-match-status"] [data-testid="match-status-badge"]')).toBeNull();
+    const seite = pageIndexOf(scheduleFieldLayout(withView(t).view, 1).pages, 'liste-05');
+    const zeilen = zeigen(t, 'plan', seite);
+    expect(zeilen.find(z => z.id === 'liste-05')!.zeile.querySelector('[data-testid="monitor-match-label"]')).toHaveTextContent('Halbfinale');
+    for (const z of zeilen) { expect(z.html, z.id).not.toContain('voraussichtlich'); }
   });
 
-  it('Nächste Spiele: ohne Zustandszeile steht „voraussichtlich“ in einer eigenen Zeile', () => {
+  it('Nächste Spiele: mit Bezeichnung, ohne „voraussichtlich“', () => {
     const { t } = finale();
-    const zeile = zeigen(t, 'naechste', 0).find(z => z.id === 'liste-04')!.zeile;
-    expect(zeile.querySelector('[data-testid="monitor-match-tentative"]')!.parentElement?.getAttribute('data-testid')).toBe('monitor-match-zusatz');
+    const zeilen = zeigen(t, 'naechste', 0);
+    expect(zeilen.some(z => z.zeile.querySelector('[data-testid="monitor-match-label"]') !== null)).toBe(true);
+    for (const z of zeilen) { expect(z.html, z.id).not.toContain('voraussichtlich'); }
   });
 
-  it('„Alle Tabellen“, Finalrunde: drei angesetzte Finalspiele zeigen je genau einmal „voraussichtlich“ und die Bezeichnung (@ZM-105)', async () => {
+  it('„Alle Tabellen“, Finalrunde: drei Finalspiele mit Bezeichnung, ohne „voraussichtlich“', async () => {
     const { AllStandingsSlide } = await import('../slides/AllStandingsSlide');
     const { t, view } = finale();
-    render(<AllStandingsSlide tournament={t} view={view} theme="dark" style={{}} page={1} />);
+    const { container } = render(<AllStandingsSlide tournament={t} view={view} theme="dark" style={{}} page={1} />);
     const zeilen = screen.getAllByTestId('monitor-match-row');
     expect(zeilen).toHaveLength(3);
-    for (const z of zeilen) {
-      expect(z.querySelectorAll('[data-testid="monitor-match-tentative"]')).toHaveLength(1);
-      expect(z.querySelector('[data-testid="monitor-match-tentative"]')).toHaveTextContent('voraussichtlich');
-      expect(z.querySelectorAll('[data-testid="monitor-match-label"]')).toHaveLength(1);
-    }
+    for (const z of zeilen) { expect(z.querySelectorAll('[data-testid="monitor-match-label"]')).toHaveLength(1); }
+    expect(container.textContent).not.toContain('voraussichtlich');
   });
 });
 
@@ -460,16 +459,30 @@ describe('C-MONITOR-FINALRUNDE-OHNE-SEITEN @ZM-185 Die Finalrunde blättert nach
   const proSeiteListe = (t: ReturnType<typeof listenTurnier>, overscan: number) =>
     standingsSections(t, withView(t).view, { overscan, notice: false }).filter(a => a.kind === 'finals').map(a => (a.kind === 'finals' ? a.matches.length : 0));
 
-  it('der Bildrand zählt: 4 Finalspiele mit kurzen Namen: bei 0 % eine Seite mit 4, bei 5 und 10 % zwei Seiten gleichmäßig 2 + 2 (nicht 3 + 1)', () => {
+  it('der Bildrand zählt: 4 Finalspiele mit kurzen Namen: bei 0 und 5 % eine Seite mit 4 (die Überschrift braucht weniger Höhe), bei 10 % gleichmäßig 2 + 2', () => {
     const t = listenTurnier({ namen: 'kurz', beendet: 3, finale: 4 });
     expect(proSeiteListe(t, 0)).toEqual([4]);
-    expect(proSeiteListe(t, 5)).toEqual([2, 2]);
+    expect(proSeiteListe(t, 5)).toEqual([4]);
     expect(proSeiteListe(t, 10)).toEqual([2, 2]);
   });
 
-  it('6 Finalspiele mit langen Namen: 3 + 3 bei jedem Rand; die Seiten sind gleichmäßig gefüllt (Unterschied höchstens 1)', () => {
+  it('gleichmäßig verteilt: die Seiten einer Finalrunde unterscheiden sich um höchstens ein Spiel („2 + 2“ statt „3 + 1“), für 3 bis 8 Spiele, kurze und lange Namen, 0/5/10 % Rand', () => {
+    for (const namen of ['kurz', 'lang'] as const) {
+      for (let n = 3; n <= 8; n += 1) {
+        const t = listenTurnier({ namen, beendet: 3, finale: n });
+        for (const rand of [0, 5, 10]) {
+          const seiten = proSeiteListe(t, rand);
+          expect(Math.max(...seiten) - Math.min(...seiten), `${namen} ${String(n)} Spiele, Rand ${String(rand)}: ${JSON.stringify(seiten)}`).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
+  it('6 Finalspiele mit langen Namen: 3 + 3 bei 0 und 5 %, 2 + 2 + 2 bei 10 % Rand', () => {
     const t = listenTurnier({ namen: 'lang', beendet: 3, finale: 6 });
-    for (const rand of [0, 5, 10]) { expect(proSeiteListe(t, rand)).toEqual([3, 3]); }
+    expect(proSeiteListe(t, 0)).toEqual([3, 3]);
+    expect(proSeiteListe(t, 5)).toEqual([3, 3]);
+    expect(proSeiteListe(t, 10)).toEqual([2, 2, 2]);
   });
 
   it('Render: AllStandingsSlide reicht den Bildrand durch – 4 Finalspiele zeigen bei 0 % vier Zeilen, bei 10 % zwei je Seite', async () => {
