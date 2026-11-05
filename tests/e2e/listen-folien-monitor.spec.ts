@@ -12,8 +12,8 @@ import { test, expect } from '@playwright/test';
 
 const PROFILE = [{ name: '1080', width: 1920, height: 1080 }, { name: '720', width: 1280, height: 720 }] as const;
 const SZENEN = [
-  { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1' },
-  { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1' },
+  { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
+  { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
   { id: 'plan', namen: 'bindestrich', kennung: '@ZM-188 Spielplan Feld 1, Namen mit Bindestrich-Wort an jeder Umbruchstelle', zusatz: '&verschoben=1' },
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=10' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
@@ -69,6 +69,30 @@ async function zerbrocheneWoerter(page: Page, hoechstens: number): Promise<strin
     }
     return kaputt;
   }, hoechstens);
+}
+
+/**
+ * Grundlinien je Zeile: Uhrzeit, Heim, Stand und Gast stehen auf einer Linie (±2 px), auch mit „(4:3 i. E.)“ unter dem Stand.
+ * Gemessen mit einer unsichtbaren Marke (Breite und Höhe 0) am Anfang der ersten Zeile des Elements: ihre Unterkante liegt auf der Grundlinie.
+ */
+async function grundlinien(page: Page): Promise<{ id: string; abweichung: number }[]> {
+  return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-row"]')].map((zeile) => {
+    const ziele = [
+      zeile.querySelector<HTMLElement>('[data-testid="monitor-match-clock"]')!,
+      zeile.querySelectorAll<HTMLElement>('[data-teamname]')[0],
+      zeile.querySelector<HTMLElement>('[data-testid="monitor-match-separator"]')!,
+      zeile.querySelectorAll<HTMLElement>('[data-teamname]')[1],
+    ];
+    const unten = ziele.map((el) => {
+      const marke = document.createElement('span');
+      marke.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
+      el.insertBefore(marke, el.firstChild);
+      const wert = marke.getBoundingClientRect().bottom;
+      marke.remove();
+      return wert;
+    });
+    return { id: zeile.dataset.matchId ?? '', abweichung: Math.max(...unten) - Math.min(...unten) };
+  }));
 }
 
 /** Passt das längste Zustandswort („Strafstoßschießen“) ganz in die Zeitspalte? Gemessen mit der Schrift der Zustandszeile. */
@@ -135,6 +159,10 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
           if (szene.id === 'plan') {
             const { wort, spalte } = await zustandswortPasst(page);
             expect(wort, `Seite ${String(seite + 1)}: „Strafstoßschießen“ passt ganz in die Zeitspalte`).toBeLessThanOrEqual(spalte);
+          }
+          // bei 10 % Rand brechen 23-Zeichen-Wörter mitten im Wort; die Marke der Messung rutscht dann auf eine eigene Zeile, darum nur bis 5 %
+          for (const g of rand === 10 ? [] : await grundlinien(page)) {
+            expect(g.abweichung, `${g.id}: Uhrzeit, Teamnamen und Stand stehen auf einer Grundlinie (±2 px)`).toBeLessThanOrEqual(2);
           }
           gesehen.push(...kaesten.map((k) => k.id));
           await page.screenshot({ path: join(ordner, `${szene.id}-${szene.namen}-${p.name}-s${String(seite + 1)}.png`) });

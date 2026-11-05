@@ -70,7 +70,8 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
       data-status={match.status}
       style={{
         display: 'flex',
-        alignItems: 'center',
+        // Uhrzeit, Teamnamen und Stand stehen auf einer gemeinsamen Grundlinie (erste Zeile); Zusatzzeilen hängen darunter
+        alignItems: 'baseline',
         gap: displayList.cellGap,
         width: '100%',
         padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,

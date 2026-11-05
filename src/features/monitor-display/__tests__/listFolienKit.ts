@@ -27,6 +27,8 @@ export interface ListenTurnierOptions {
   gewertet?: boolean;
   /** Spiele ab Spiel 7 um 10 Minuten nach hinten verschoben, „(war hh:mm)“ */
   verschoben?: boolean;
+  /** Spiel 3 endet 2:2 und wird im Strafstoßschießen 4:3 entschieden („(4:3 i. E.)“ unter dem Stand) */
+  strafstoss?: boolean;
   /** Anzahl beendeter Spiele von Spiel 1 an (Vorgabe 5) */
   beendet?: number;
 }
@@ -42,7 +44,7 @@ function paarungen(): Array<[number, number]> {
 }
 
 export function listenTurnier(opts: ListenTurnierOptions = {}): Tournament {
-  const { namen = 'kurz', gewertet = false, verschoben = false, beendet = 5 } = opts;
+  const { namen = 'kurz', gewertet = false, verschoben = false, strafstoss = false, beendet = 5 } = opts;
   const liste = namen === 'lang' ? LANGE_NAMEN : namen === 'bindestrich' ? BINDESTRICH_NAMEN : KURZE_NAMEN;
   const teams: Team[] = liste.map((name, i) => ({ id: testUuid(i + 1), name }));
   const matches: Match[] = paarungen().map(([a, b], i): Match => {
@@ -51,6 +53,9 @@ export function listenTurnier(opts: ListenTurnierOptions = {}): Tournament {
       id: `liste-${String(nr).padStart(2, '0')}`, matchNumber: nr, round: nr, field: 1, ...vs(testUuid(a), testUuid(b)),
       matchStatus: 'scheduled', scheduledTime: AM(nr),
     };
+    if (strafstoss && nr === 3) {
+      return { ...basis, matchStatus: 'finished', scoreA: 2, scoreB: 2, decidedBy: 'penalty', penaltyScoreA: 4, penaltyScoreB: 3 };
+    }
     if (nr <= beendet) {
       return { ...basis, matchStatus: 'finished', scoreA: (nr % 3) + 1, scoreB: nr % 2, decidedBy: 'regular' };
     }
