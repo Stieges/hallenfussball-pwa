@@ -4,9 +4,11 @@
  * (nächstes Spiel). Wirkliche deutsche Texte; das Turnier ist das Beispiel „Hallencup Nord“ der Monitor-Fixture.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import type { Match } from '../../../types/tournament';
 import type { PerformanceSettings } from '../../../types/monitor';
+import { pageIndexOf } from '../listRows';
+import { scheduleFieldLayout } from '../slideContent';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
 import { LiveSlide } from '../slides/LiveSlide';
@@ -96,11 +98,17 @@ describe('B-27 Monitor „Spielplan eines Felds“: K.-o.-Uhrzeiten sind vorauss
   const tournament = buildTournament({ matches: withPlayoffs().map((m) => (m.id.startsWith('po-') ? { ...m, isFinal: true } : m)).map((m) => (m.id === 'po-p3' ? { ...m, scheduledTime: at('15:30'), originalStart: at('15:20') } : m)) });
 
   it('Spiel um Platz 3 steht als „voraussichtlich“ mit „(war 15:20)“, Gruppenspiele ohne „voraussichtlich“', () => {
-    render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: 'field-1' })} {...withView(tournament)} theme="dark" style={{}} />);
-    const p3 = within(zeile('po-p3'));
+    // die Zeilen sind höher, die Spiele verteilen sich auf mehrere Seiten: jedes Spiel auf seiner Seite ansehen
+    const seite = (id: string) => pageIndexOf(scheduleFieldLayout(withView(tournament).view, 1).pages, id);
+    const zeigen = (id: string) => {
+      render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: 'field-1' })} {...withView(tournament)} theme="dark" style={{}} page={seite(id)} />);
+      return within(zeile(id));
+    };
+    const p3 = zeigen('po-p3');
     expect(p3.getByTestId('monitor-match-tentative')).toHaveTextContent('voraussichtlich');
     expect(p3.getByTestId('monitor-match-original')).toHaveTextContent('(war 15:20)');
-    expect(within(zeile('match-9')).queryByTestId('monitor-match-tentative')).toBeNull();
+    cleanup();
+    expect(zeigen('match-9').queryByTestId('monitor-match-tentative')).toBeNull();
   });
 });
 

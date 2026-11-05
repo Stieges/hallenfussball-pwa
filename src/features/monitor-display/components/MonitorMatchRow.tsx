@@ -9,7 +9,7 @@ import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../..
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
 import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
-import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, type ListColumns, type ListFrame } from '../listRows';
+import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, type ListColumns, type ListFrame } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
 
 interface MonitorMatchRowProps {
@@ -63,7 +63,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
   const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
 
-  const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap', minHeight: '1.2em', lineHeight: 1.2 };
+  const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
 
   return (
     <div
@@ -72,8 +72,9 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
       data-status={match.status}
       style={{
         display: 'flex',
-        // Uhrzeit, Teamnamen und Stand stehen auf einer gemeinsamen Grundlinie (erste Zeile); Zusatzzeilen hängen darunter
-        alignItems: 'baseline',
+        // Uhrzeit, Teamnamen und Stand stehen senkrecht mittig (gemeinsame Mittelachse); Zusatzzeilen hängen darunter, außerhalb des Flusses
+        alignItems: 'center',
+        minHeight: `${String(rowHeight(match, columns, frame, reserveExtra))}vh`,
         gap: displayList.cellGap,
         width: '100%',
         padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
@@ -99,6 +100,9 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
           // Breite in em der Namensschrift (nicht der Standschrift): fest in jeder Zeile (@ZM-151, @ZM-187), listRows.ts rechnet auf derselben Basis
           flex: `0 0 ${displayList.separatorWidth}`,
           textAlign: 'center',
+          // nur so hoch wie der Stand: mittig in der Zeile, „(4:3 i. E.)“ hängt darunter (außerhalb des Flusses)
+          position: 'relative',
+          height: `calc(${displayList.fontSizes.score} * 1.2)`,
         }}
       >
         <div
@@ -118,8 +122,6 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
             {scoreExtra}
           </div>
         )}
-        {/* Die Zeile für „(4:3 i. E.)“ ist je Folie reserviert, nicht je Spiel: die Zeilenhöhe ändert sich nie durch Ergebnis oder Strafstoß (@ZM-187) */}
-        {reserveExtra && !(showScore && scoreExtra) && <div data-testid="monitor-match-extra-platz" aria-hidden="true" style={extraStyle} />}
       </div>
       <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
     </div>

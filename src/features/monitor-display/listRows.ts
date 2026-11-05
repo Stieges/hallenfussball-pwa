@@ -123,18 +123,23 @@ export function nameLines(text: string, perLine: number): number {
   return lines;
 }
 
-/** Höhe einer Zeile in vh: Polster und Rahmen plus höchste Zelle (Uhrzeit/Feld/„voraussichtlich“ oder Namen). */
-export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME): number {
+/**
+ * Höhe einer Zeile in vh (Polster, Rahmen, Inhalt). Uhrzeit, Teamnamen und Stand stehen senkrecht mittig; Zusatzzeilen hängen
+ * außerhalb des Flusses direkt unter Uhrzeit bzw. Stand (@ZM-189). Damit sie nicht abgeschnitten werden, muss der Inhalt die Zusatzzeilen
+ * unterhalb der Mittelachse aufnehmen: 2 × (halbe Zeile + Zusatzhöhe), die Zusätze dürfen ins untere Polster ragen. `reserveExtra`:
+ * Zeile für „(4:3 i. E.)“ unter dem Stand freihalten (Spielplan, Finalrunde).
+ */
+export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME, reserveExtra: boolean = cols.state): number {
   const perLine = nameCharsPerLine(frame);
   const names = Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
   const note = num(displayList.fontSizes.note) * LINE;
-  const timeLines = (cols.state ? note : 0) + (cols.field ? note : 0) + (match.kickoffTentative ? note : 0)
-    + (match.labelText ? note : 0);
-  const timeCell = num(displayList.fontSizes.time) * LINE + timeLines;
-  // Stand mit reservierter Zeile für „(4:3 i. E.)“ im Spielplan (cols.state)
-  const scoreCell = num(displayList.fontSizes.score) * LINE + (cols.state ? note : 0);
+  const padY = num(displayList.rowPaddingY);
+  const unterMitte = (zeile: number, zusatz: number): number => (zusatz === 0 ? zeile : 2 * (zeile / 2 + Math.max(0, zusatz - 0.8 * padY)));
+  const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0) + (match.kickoffTentative || match.phase === 'final' ? note : 0) + (match.labelText ? note : 0);
+  const timeCell = unterMitte(num(displayList.fontSizes.time) * LINE, zusatzZeit);
+  const scoreCell = unterMitte(num(displayList.fontSizes.score) * LINE, reserveExtra ? note : 0);
   const content = Math.max(timeCell, names * FONT * LINE, scoreCell);
-  return 2 * num(displayList.rowPaddingY) + ROW_BORDER + content;
+  return 2 * padY + ROW_BORDER + content;
 }
 
 /**

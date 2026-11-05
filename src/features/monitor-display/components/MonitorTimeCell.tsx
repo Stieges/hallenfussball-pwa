@@ -55,13 +55,15 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
   const hasState = match.badge.kind === 'badge';
   const awarded = match.status === 'awarded' ? t('view.status.awarded') : null;
   return (
-    <div data-testid="monitor-match-time" style={{ ...style, color, flex: `0 0 ${displayList.timeFieldWidth}`, minWidth: 0 }}>
-      <div data-testid="monitor-match-clockline" style={{ display: 'flex', alignItems: 'baseline', gap: displayList.timeNoteGap, whiteSpace: 'nowrap' }}>
+    // Die Zelle ist nur so hoch wie die Uhrzeit-Zeile: sie steht senkrecht mittig in der Zeile, die Zusätze hängen darunter (außerhalb des Flusses)
+    <div data-testid="monitor-match-time" style={{ ...style, color, flex: `0 0 ${displayList.timeFieldWidth}`, minWidth: 0, position: 'relative', height: `calc(${displayList.fontSizes.time} * 1.2)` }}>
+      <div data-testid="monitor-match-clockline" style={{ display: 'flex', alignItems: 'baseline', gap: displayList.timeNoteGap, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
         <span data-testid="monitor-match-clock" style={{ fontSize: displayList.fontSizes.time }}>{match.kickoff?.time ?? '–'}</span>
         {match.originalKickoff && (
           <span data-testid="monitor-match-original" style={war}>{t('timeShift.original', { time: match.originalKickoff.time })}</span>
         )}
       </div>
+      <div data-testid="monitor-match-zusatz" style={{ position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 }}>
       {fieldName !== undefined && <div data-testid="monitor-match-field" style={{ ...note, fontWeight: cssVars.fontWeights.semibold }}>{fieldName}</div>}
       {(reserveState || hasState) && (
         <div data-testid="monitor-match-status" style={{ ...small, display: 'flex', alignItems: 'center', gap: displayList.timeNoteGap, minHeight: '1.2em' }}>
@@ -71,6 +73,7 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
       )}
       {match.kickoffTentative && <div data-testid="monitor-match-tentative" style={note}>{t('timeShift.tentative')}</div>}
       {match.labelText && <div data-testid="monitor-match-label" style={note}>{match.labelText}</div>}
+      </div>
     </div>
   );
 }

@@ -368,11 +368,20 @@ describe('@ZM-151 @ZM-187 VISUAL-DESIGN § 8: der Stand ist mindestens 1,5 × Na
     expect(zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!.style.fontWeight).toBe(cssVars.fontWeights.bold);
   });
 
-  it('die Zeile für „(4:3 i. E.)“ ist in jeder Spielplan-Zeile reserviert, die Zeilenhöhe ändert sich nie durch einen Strafstoß', () => {
-    const t = listenTurnier({ beendet: 5 });
-    for (const z of zeigen(t, 'plan', 0)) {
-      expect(z.zeile.querySelector('[data-testid="monitor-match-extra"], [data-testid="monitor-match-extra-platz"]'), z.id).not.toBeNull();
-    }
+  it('Zeilenhöhe fest: eine Zeile mit „(4:3 i. E.)“ hat dieselbe Mindesthöhe wie jede andere (kurze Namen), der Strafstoß hängt außerhalb des Flusses', () => {
+    const t = listenTurnier({ beendet: 5, strafstoss: true });
+    const zeilen = zeigen(t, 'plan', 0);
+    expect(zeilen.some(z => z.zeile.querySelector('[data-testid="monitor-match-extra"]') !== null)).toBe(true);
+    expect(new Set(zeilen.map(z => z.zeile.style.minHeight)).size).toBe(1);
+    const extra = zeilen.map(z => z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-extra"]')).find(e => e !== null)!;
+    expect(extra.style.position).toBe('absolute');
+  });
+
+  it('Mittelachse: Uhrzeit-Zeile, Namen und Stand sind Teil einer mittig ausgerichteten Zeile; Zusätze hängen absolut darunter', () => {
+    const t = listenTurnier({ beendet: 5, gewertet: true });
+    const zeile = zeigen(t, 'plan', 0)[0].zeile;
+    expect(zeile.style.alignItems).toBe('center');
+    expect(zeile.querySelector<HTMLElement>('[data-testid="monitor-match-zusatz"]')!.style.position).toBe('absolute');
   });
 });
 
@@ -387,8 +396,7 @@ describe('@ZM-187 Die Zeile für den Strafstoß ist je Folie reserviert, nicht j
     render(<AllStandingsSlide tournament={t} view={view} theme="dark" style={{}} page={1} />);
     const zeilen = screen.getAllByTestId('monitor-match-row');
     expect(zeilen.length).toBe(3);
-    for (const z of zeilen) {
-      expect(z.querySelector('[data-testid="monitor-match-extra"], [data-testid="monitor-match-extra-platz"]')).not.toBeNull();
-    }
+    // offene und beendete Finalspiele: dieselbe Mindesthöhe, die Zeile wird nicht höher, wenn ein Finalspiel endet
+    expect(new Set(zeilen.map(z => z.style.minHeight)).size).toBe(1);
   });
 });

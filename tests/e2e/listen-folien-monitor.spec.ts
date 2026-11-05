@@ -72,34 +72,20 @@ async function zerbrocheneWoerter(page: Page, hoechstens: number): Promise<strin
 }
 
 /**
- * Grundlinien je Zeile: Uhrzeit, Heim, Stand und Gast stehen auf einer Linie (±2 px), auch mit „(4:3 i. E.)“ unter dem Stand.
- * Gemessen mit einer unsichtbaren Marke (Breite und Höhe 0) am Anfang der ersten Zeile des Elements: ihre Unterkante liegt auf der Grundlinie.
+ * Mittelachsen je Zeile: Uhrzeit-Zeile, Namensblöcke und Stand stehen senkrecht mittig in der Zeile (±2 px), auch mit mehrzeiligen Namen,
+ * „Ende“/„gewertet“ unter der Uhrzeit und „(4:3 i. E.)“ unter dem Stand (@ZM-189).
  */
-async function grundlinien(page: Page): Promise<{ id: string; abweichung: number }[]> {
+async function mittelachsen(page: Page): Promise<{ id: string; abweichung: number; zeile: number; ausMitte: number }[]> {
   return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-row"]')].map((zeile) => {
+    const mitte = (el: Element): number => { const r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2; };
     const ziele = [
-      zeile.querySelector<HTMLElement>('[data-testid="monitor-match-clock"]')!,
-      zeile.querySelectorAll<HTMLElement>('[data-teamname]')[0],
-      zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!,
-      zeile.querySelectorAll<HTMLElement>('[data-teamname]')[1],
+      zeile.querySelector('[data-testid="monitor-match-clockline"]')!,
+      ...zeile.querySelectorAll('[data-teamname]'),
+      zeile.querySelector('[data-testid="monitor-match-score"]')!,
     ];
-    const unten = ziele.map((el) => {
-      // Marke hinter dem ersten Zeichen, beides in einem nowrap-Stück: die Marke erzwingt auch bei überlangen Wörtern keine eigene Zeile
-      const lauf = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      const text = lauf.nextNode()!;
-      const rest = (text as Text).splitText(1);
-      const huelle = document.createElement('span');
-      huelle.style.whiteSpace = 'nowrap';
-      const marke = document.createElement('span');
-      marke.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
-      text.parentNode!.insertBefore(huelle, rest);
-      huelle.append(text, marke);
-      const wert = marke.getBoundingClientRect().bottom;
-      huelle.replaceWith(text);
-      text.parentNode!.normalize();
-      return wert;
-    });
-    return { id: zeile.dataset.matchId ?? '', abweichung: Math.max(...unten) - Math.min(...unten) };
+    const werte = ziele.map(mitte);
+    const rahmen = zeile.getBoundingClientRect();
+    return { id: zeile.dataset.matchId ?? '', abweichung: Math.max(...werte) - Math.min(...werte), zeile: rahmen.height, ausMitte: Math.abs(werte[0] - (rahmen.top + rahmen.bottom) / 2) };
   }));
 }
 
@@ -179,9 +165,13 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
             const { wort, spalte } = await zustandswortPasst(page);
             expect(wort, `Seite ${String(seite + 1)}: „Strafstoßschießen“ passt ganz in die Zeitspalte`).toBeLessThanOrEqual(spalte);
           }
-          // bei 10 % Rand brechen 23-Zeichen-Wörter hart; die Marke der Messung misst dann nicht die erste Zeile (bekannte Grenze), darum dort ohne
-          for (const g of rand === 10 && szene.namen === 'lang' ? [] : await grundlinien(page)) {
-            expect(g.abweichung, `${g.id}: Uhrzeit, Teamnamen und Stand stehen auf einer Grundlinie (±2 px)`).toBeLessThanOrEqual(2);
+          const achsen = await mittelachsen(page);
+          for (const g of achsen) {
+            expect(g.abweichung, `${g.id}: Uhrzeit, Teamnamen und Stand haben eine gemeinsame Mittelachse (±2 px)`).toBeLessThanOrEqual(2);
+            expect(g.ausMitte, `${g.id}: die Achse liegt in der Mitte der Zeile (±2 px)`).toBeLessThanOrEqual(2);
+          }
+          if (szene.id === 'plan' && szene.namen === 'kurz' && szene.zusatz.includes('strafstoss')) {
+            expect(new Set(achsen.map((g) => Math.round(g.zeile))).size, 'Zeilenhöhe fest: auch die Zeile mit „(4:3 i. E.)“ ist gleich hoch').toBe(1);
           }
           for (const n of await namensplatz(page)) {
             expect(n.breite, `Seite ${String(seite + 1)}: das Modell nimmt nie mehr Namensplatz an, als real da ist`).toBeGreaterThanOrEqual(n.modell);
