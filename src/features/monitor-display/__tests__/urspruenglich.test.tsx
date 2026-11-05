@@ -1,5 +1,5 @@
 /**
- * B-27 Monitor: groß die neue Uhrzeit, klein „ursprünglich hh:mm“ (@ZP-003, @ZP-004, @ZP-005, @ZP-046, @ZP-049) und
+ * B-27 Monitor: groß die neue Uhrzeit, klein „(war hh:mm)“ (@ZP-003, @ZP-004, @ZP-005, @ZP-046, @ZP-049), ohne
  * „voraussichtlich“ bei K.-o.-Spielen (@ZM-105) auf den Folien „Nächste Spiele“, „Spielplan eines Felds“ und „Live“
  * (nächstes Spiel). Wirkliche deutsche Texte; das Turnier ist das Beispiel „Hallencup Nord“ der Monitor-Fixture.
  */
@@ -132,7 +132,6 @@ describe('B-27 Monitor „Live“, nächstes Spiel: K.-o.-Spiel ohne „voraussi
   it('Feld 2: nächstes Spiel ist ein Finalspiel mit neuer Uhrzeit: „Anstoß 14:30“, „(war 14:20)“, kein „voraussichtlich“', () => {
     const matches = withMatch('match-8', { isFinal: true, label: 'Finale', scheduledTime: at('14:30'), originalStart: at('14:20') });
     const ansicht = withView(buildTournament({ matches }));
-    expect(ansicht.view.matches.find((m) => m.id === 'match-8')?.kickoffTentative, 'Vorbedingung: das Ansichtsmodell kennzeichnet die Zeit weiter als vorläufig').toBe(true);
     render(<LiveSlide slide={slide('live', { fieldId: 'field-2' })} {...ansicht} performanceSettings={performanceSettings} theme="dark" style={{}} />);
     expect(document.body.textContent).toMatch(/Anstoß 14:30/);
     expect(screen.getByTestId('monitor-next-original')).toHaveTextContent('(war 14:20)');

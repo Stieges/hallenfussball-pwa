@@ -136,7 +136,6 @@ function matchView(match: Match, input: TournamentViewInput, options: ViewOption
     field: match.field,
     ...(kickoff === undefined ? {} : { kickoff }),
     ...(originalKickoff === undefined ? {} : { originalKickoff }),
-    kickoffTentative: final && status === 'scheduled',
     phase: final ? 'final' : 'groupStage',
     ...(match.group === undefined ? {} : { group: match.group }),
     ...(match.label === undefined || match.label === '' ? {} : { labelText: matchLabelText(match.label, options.locale) }),
