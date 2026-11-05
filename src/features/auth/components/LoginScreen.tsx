@@ -25,6 +25,7 @@ import { AUTH_ERRORS } from '../constants';
 import { loginStyles as styles } from './LoginScreen.styles';
 import { dialogWidths } from '../../../design-tokens';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
+import { LegalLinks, type LegalPath } from '../../../components/layout/LegalLinks';
 import { LoginResetPasswordDialog, LoginMagicLinkDialog, LoginSuccessDialog } from './LoginDialogs';
 import { OfflineBanner } from './OfflineBanner';
 import { ConnectingIndicator } from './ConnectingIndicator';
@@ -64,6 +65,8 @@ interface LoginScreenProps {
   onContinueAsGuest?: () => void;
   /** Called when user wants to go back/close */
   onBack?: () => void;
+  /** @RE-001: öffnet Impressum bzw. Datenschutz (ohne Angabe: keine Links im Dialog) */
+  onNavigateToLegal?: (path: LegalPath) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
@@ -71,6 +74,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onNavigateToRegister,
   onContinueAsGuest,
   onBack,
+  onNavigateToLegal,
 }) => {
   const { t } = useTranslation('auth');
   const { login, sendMagicLink, loginWithGoogle, continueAsGuest, resetPassword, connectionState, reconnect } = useAuth();
@@ -452,6 +456,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             {t('login.register')}
           </button>
         </p>
+
+        {/* @RE-001: Impressum und Datenschutz ohne Anmeldung, auch wenn dieser Dialog die Fußzeile verdeckt */}
+        {onNavigateToLegal && <LegalLinks testIdPrefix="auth" onOpen={onNavigateToLegal} />}
       </div>
     </DialogSurface>
   );

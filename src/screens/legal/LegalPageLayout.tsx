@@ -4,7 +4,7 @@
  * Features:
  * - Back button at top
  * - Title (h1)
- * - Last updated date at bottom
+ * - Stand unter dem Titel
  * - Consistent styling
  * - Scroll to top on mount
  *
@@ -88,13 +88,11 @@ export function LegalPageLayout({
     color: cssVars.colors.textPrimary,
   };
 
-  const footerStyle: CSSProperties = {
-    marginTop: cssVars.spacing.xl,
-    paddingTop: cssVars.spacing.lg,
-    borderTop: `1px solid ${cssVars.colors.border}`,
+  const standStyle: CSSProperties = {
+    marginTop: `calc(-1 * ${cssVars.spacing.md})`,
+    marginBottom: cssVars.spacing.lg,
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textMuted,
-    fontStyle: 'italic',
+    color: cssVars.colors.textSecondary,
   };
 
   // ---------------------------------------------------------------------------
@@ -115,12 +113,9 @@ export function LegalPageLayout({
         </button>
 
         <h1 style={titleStyle}>{title}</h1>
+        <p style={standStyle} data-testid="legal-stand">Stand: {lastUpdated}</p>
 
         <article>{children}</article>
-
-        <footer style={footerStyle}>
-          Stand: {lastUpdated}
-        </footer>
       </main>
     </div>
   );

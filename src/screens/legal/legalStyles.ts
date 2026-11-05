@@ -33,6 +33,7 @@ export const sectionStyles = {
     lineHeight: 1.6,
     color: cssVars.colors.textSecondary,
     marginBottom: cssVars.spacing.md,
+    overflowWrap: 'anywhere',
   } as CSSProperties,
 
   strong: {
@@ -57,6 +58,7 @@ export const sectionStyles = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
+    tableLayout: 'fixed',
     marginBottom: cssVars.spacing.md,
   } as CSSProperties,
 
@@ -67,6 +69,7 @@ export const sectionStyles = {
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.sm,
+    overflowWrap: 'anywhere',
   } as CSSProperties,
 
   td: {
@@ -74,6 +77,8 @@ export const sectionStyles = {
     borderBottom: `1px solid ${cssVars.colors.border}`,
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
+    overflowWrap: 'anywhere',
+    verticalAlign: 'top',
   } as CSSProperties,
 
   list: {
@@ -86,5 +91,6 @@ export const sectionStyles = {
     lineHeight: 1.6,
     color: cssVars.colors.textSecondary,
     marginBottom: cssVars.spacing.xs,
+    overflowWrap: 'anywhere',
   } as CSSProperties,
 };

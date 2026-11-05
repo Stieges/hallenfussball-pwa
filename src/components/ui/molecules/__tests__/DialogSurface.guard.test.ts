@@ -183,7 +183,6 @@ describe('T1 Dialogbreiten kommen nur aus dialogWidths', () => {
   const DATEIEN = [
     'components/ui/molecules/DialogSurface.tsx',
     'components/dialogs/Dialog.tsx',
-    'components/dialogs/ConsentDialog.tsx',
     'components/ui/ConfirmDialog.tsx',
     'features/auth/components/RoleChangeDialog.tsx',
     'features/auth/components/TransferOwnershipDialog.tsx',

@@ -7,6 +7,8 @@ import './i18n';
 
 // Font: Inter Variable (self-hosted via @fontsource for offline capability)
 import '@fontsource-variable/inter';
+// Font: Bebas Neue (Anzeigeschrift, selbst ausgeliefert statt von Google Fonts, @RE-003; Lizenz OFL-1.1)
+import '@fontsource/bebas-neue/latin-400.css';
 
 import App from './App';
 import './styles/global.css';

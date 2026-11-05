@@ -121,21 +121,9 @@
     }
   },
   "privacy": {
-    "errorTracking": {
-      "label": "Error-Tracking",
-      "description": "Anonymisierte Fehlerberichte senden"
-    },
-    "sessionReplay": {
-      "label": "Session Replay",
-      "description": "Anonymisierte Sitzungsaufzeichnungen zur Fehlerbehebung"
-    },
-    "revoke": {
-      "label": "Einwilligung widerrufen",
-      "description": "Alle Tracking-Einstellungen zurücksetzen",
-      "action": "Widerrufen",
-      "confirmMessage": "Möchtest du deine Datenschutz-Einwilligung widerrufen?\n\nDies deaktiviert Error-Tracking und Session-Replay. Beim nächsten App-Start wirst du erneut nach deiner Einwilligung gefragt.",
-      "successMessage": "Deine Einwilligung wurde widerrufen.",
-      "dialogTitle": "Einwilligung widerrufen"
+    "errorReports": {
+      "label": "Fehlerberichte senden",
+      "description": "Hilft, Fehler zu finden. Ohne Namen, ohne IP-Adresse, ohne Aufzeichnung. Gilt für dieses Gerät."
     }
   },
   "legal": {

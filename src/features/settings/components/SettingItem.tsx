@@ -32,6 +32,8 @@ interface BaseProps {
   isPro?: boolean;
   /** Optional: zusätzliche Styles */
   style?: CSSProperties;
+  /** Optional: data-testid am Schalter (toggle) */
+  testId?: string;
 }
 
 interface ToggleProps extends BaseProps {
@@ -88,6 +90,8 @@ export const SettingItem: React.FC<SettingItemProps> = (props) => {
             type="button"
             role="switch"
             aria-checked={value}
+            aria-label={label}
+            data-testid={props.testId}
             onClick={() => !disabled && onChange(!value)}
             style={{
               ...styles.toggle,

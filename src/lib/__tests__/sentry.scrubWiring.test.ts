@@ -13,9 +13,6 @@ vi.mock('@sentry/react', () => ({
   replayIntegration: vi.fn(() => ({ name: 'Replay' })),
   close: vi.fn(),
 }));
-vi.mock('../consent', () => ({
-  getConsentStatus: () => ({ errorTracking: true, sessionReplay: false, timestamp: 0, version: 1 }),
-}));
 
 interface InitOptionen {
   beforeSend: (event: ErrorEvent, hint: EventHint) => ErrorEvent | null;

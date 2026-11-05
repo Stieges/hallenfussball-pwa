@@ -11,7 +11,6 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ConsentDialog } from '../ConsentDialog';
 import { Dialog } from '../Dialog';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { BottomSheet } from '../../ui/BottomSheet';
@@ -29,10 +28,6 @@ import {
 const THEMES: ThemeName[] = ['light', 'dark'];
 
 const KINDS: Array<{ name: string; mount: () => void }> = [
-  {
-    name: 'der Dialog „Datenschutz-Einstellungen“',
-    mount: () => render(<ConsentDialog isOpen onConsent={vi.fn()} />),
-  },
   {
     name: 'eine Rückfrage „Spiel wirklich beenden?“',
     mount: () =>
