@@ -1044,7 +1044,7 @@
     "result": "Result",
     "away": "Away",
     "referee": "Referee",
-    "skipped": "not played",
+    "skipped": "cancelled",
     "corrected": "corrected {{time}}",
     "awarded": "awarded",
     "afterOvertime": "after extra time",

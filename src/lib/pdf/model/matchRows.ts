@@ -41,7 +41,7 @@ export interface RowTexts {
   overtime: string;
   shootout: string;
   /** Schrift für „ausgefallen“ in einer Ergebnisspalte von `maxWidth` mm (@DR-045): Ergebnisgröße, höchstens so groß, dass es passt. */
-  skippedPt?: (maxWidth: number) => number;
+  skippedPt: (maxWidth: number) => number;
 }
 
 /** Eine Spielzeile, wie das Modell sie bekommt: fertig angezeigte Namen, Zustand, Schiedsrichter. */
@@ -219,7 +219,7 @@ export function cellOf(src: RowSource, cols: ColumnModel[], top: number, height:
   }
   if (state.kind === 'skipped') {
     // Fett und so groß wie die Ergebnisse, aber nie breiter als die Spalte (@DR-045)
-    const pt = texts.skippedPt?.((col?.w ?? 0) - 2 * printMatchTable.nameInner) ?? printType.result;
+    const pt = texts.skippedPt((col?.w ?? 0) - 2 * printMatchTable.nameInner);
     const runs = [run(texts.skipped, cx, centeredBaseline(middle, pt), pt, 'bold', 'center')];
     return { cell: { kind: 'text', text: texts.skipped, runs }, lines: [] };
   }

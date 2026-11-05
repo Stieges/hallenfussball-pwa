@@ -17,6 +17,10 @@ import { FALL_A, FALL_B, FALL_C, mitStandA, type HandzettelFall } from './fixtur
 import { fallMatches, fallTournament } from './fixtures/handzettelTurnier';
 import { handzettelPdf } from './handzettelPdf';
 import type { LayoutPage, LayoutText } from './pdfjsLayout';
+import type { PdfLocale } from '../translations';
+
+/** Text für ein ausgefallenes Spiel je Sprache (`pdf.skipped`; EN wie das Glossar „cancelled“). */
+const AUSGEFALLEN = { de: 'ausgefallen', en: 'cancelled' } as const;
 
 const TOL = 0.05;
 /** Spiel 6 des Nikolaus-Turniers: TSV Waging blau – DJK Kammer, 17:20. */
@@ -31,9 +35,9 @@ function doppelt(fall: HandzettelFall, nr: number): Match[] {
   });
 }
 
-async function pdfVon(fall: HandzettelFall, matches: Match[], includeScores = true) {
+async function pdfVon(fall: HandzettelFall, matches: Match[], includeScores = true, locale: PdfLocale = 'de') {
   return handzettelPdf(fall, {
-    tournament: { matches }, options: { includeScores },
+    locale, tournament: { matches }, options: { includeScores },
     standings: calculateStandingsPerGroup(fallTournament(fall, { matches })),
   });
 }
@@ -81,14 +85,28 @@ describe('@DR-045 ausgefallen im Spielplan mit Ergebnissen', () => {
     expect(text!.size).toBeCloseTo(ziffer!.size, 1);
   });
 
-  it('@DR-045 in der Tabelle zählt das Spiel nach der Wertung: beide Teams 1 Spiel, 0 Punkte, 0:2 Tore', async () => {
+  it('@DR-045 in der Tabelle zählt das Spiel nach der Wertung: für beide Teams eine Niederlage mit 0:2 Toren, 0 Punkte daraus', async () => {
     const { pages } = await pdfVon(FALL_A, doppelt(FALL_A, NR));
     const tabelle = pages.find(p => p.texts.some(t => t.str.trim() === 'Pkt.'))!;
-    for (const team of ['TSV Waging blau']) {
+    // DJK Kammer hat zusätzlich Spiel 1 mit 2:1 gewonnen
+    for (const [team, erwartet] of [['TSV Waging blau', ['1', '0', '0', '1', '0:2', '-2', '0']], ['DJK Kammer', ['2', '1', '0', '1', '2:3', '-1', '3']]] as const) {
       const name = tabelle.texts.find(t => t.str.trim() === team)!;
       const werte = tabelle.texts.filter(t => Math.abs(t.y - name.y) < 1 && t.x > name.x + name.w).map(t => t.str.trim()).filter(s => s !== '');
-      expect(werte, team).toEqual(['1', '0', '0', '1', '0:2', '-2', '0']);
+      expect(werte, team).toEqual(erwartet);
     }
+  });
+
+  it('@DR-045 englische Fassung: „cancelled“ fett wie die Ergebnisse, keine Wertungstore, kein Zusatz', async () => {
+    const { pages } = await pdfVon(FALL_A, doppelt(FALL_A, NR), true, 'en');
+    const reihe = zeile(pages[0], '17:20', '17:30');
+    const text = reihe.find(t => t.str.trim() === AUSGEFALLEN.en);
+    const ziffer = zeile(pages[0], '16:30', '16:40').find(t => /^\d+$/.test(t.str.trim()) && t.size > printType.time);
+
+    expect(text).toBeDefined();
+    expect(text!.font, 'fetter Schnitt wie die Ziffern').toBe(ziffer!.font);
+    expect(text!.size).toBeGreaterThan(printType.cancel + TOL);
+    expect(reihe.filter(t => /^\d+$/.test(t.str.trim()) && t.size > printType.time).map(t => t.str), 'keine Wertungstore').toEqual([]);
+    expect(reihe.some(t => /awarded|corrected|not played/.test(t.str)), 'kein Zusatz, nicht „not played“').toBe(false);
   });
 
   it('@DR-019 auch bei ausgeblendeten Ergebnissen steht „ausgefallen“, ohne Schreiblinien', async () => {
@@ -108,29 +126,32 @@ describe('@DR-045 der Text bleibt in der Spalte „Ergebnis“, die Zeile wird n
     model.pages.flatMap(p => p.blocks.flatMap(b => (b.kind === 'matchRows' ? b.rows : b.kind === 'finals' ? b.rounds.flatMap(r => r.rows) : [])));
 
   it.each([
-    ['Nikolaus, Spiel 6', FALL_A, 6],
-    ['lange Namen und Spalte „SR“ (Fall c), Spiel 6', FALL_C, 6],
-    ['Finalrunde (Fall b), Viertelfinale 21', FALL_B, 21],
-  ] as [string, HandzettelFall, number][])('%s', async (_name, fall, nr) => {
+    ['Nikolaus, Spiel 6', FALL_A, 6, 'de'],
+    ['lange Namen und Spalte „SR“ (Fall c), Spiel 6', FALL_C, 6, 'de'],
+    ['Finalrunde (Fall b), Viertelfinale 21', FALL_B, 21, 'de'],
+    ['englisch: Nikolaus, Spiel 6', FALL_A, 6, 'en'],
+    ['englisch: lange Namen und Spalte „SR“ (Fall c), Spiel 6', FALL_C, 6, 'en'],
+    ['englisch: Finalrunde 25,5 mm (Fall b), Viertelfinale 21', FALL_B, 21, 'en'],
+  ] as [string, HandzettelFall, number, PdfLocale][])('%s', async (_name, fall, nr, locale) => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     await registerPdfFonts(doc);
     const measure = jspdfMeasure(doc, fontOf(doc));
-    const { model } = modelOf(fall, { measure, tournament: { matches: doppelt(fall, nr) }, options: { includeScores: true } });
-    const mitText = modelOf(fall, { measure, options: { includeScores: true } }).model;
+    const { model } = modelOf(fall, { measure, locale, tournament: { matches: doppelt(fall, nr) }, options: { includeScores: true } });
+    const mitText = modelOf(fall, { measure, locale, options: { includeScores: true } }).model;
     const rows = rowsOf(model);
     const row = rows.find(r => r.number === nr)!;
     const ohne = rowsOf(mitText).find(r => r.number === nr)!;
     const block = model.pages.flatMap(p => p.blocks).find(b => (b.kind === 'matchRows' ? b.rows.includes(row) : b.kind === 'finals' && b.rounds.some(r => r.rows.includes(row))))!;
     const cols = block.kind === 'matchRows' || block.kind === 'finals' ? block.head.columns : [];
     const col = cols.find(c => c.key === 'result')!;
-    const run = row.cell.runs.find(r => r.text === 'ausgefallen')!;
+    const run = row.cell.runs.find(r => r.text === AUSGEFALLEN[locale])!;
     const w = measure.width(run.text, run.pt, run.weight);
 
     expect(run.weight).toBe('bold');
     expect(run.x - w / 2).toBeGreaterThanOrEqual(col.x - TOL);
     expect(run.x + w / 2).toBeLessThanOrEqual(col.x + col.w + TOL);
     expect(row.box.h, 'nicht höher als dieselbe Zeile ohne Ergebnis').toBeLessThanOrEqual(ohne.box.h + TOL);
-    expect(run.y + run.pt * printFont.descentEm * printUnit.mmPerPt, 'Unterlänge des „g“ in der Zeile').toBeLessThanOrEqual(row.box.y + row.box.h + TOL);
+    expect(run.y + run.pt * printFont.descentEm * printUnit.mmPerPt, 'Unterlänge in der Zeile').toBeLessThanOrEqual(row.box.y + row.box.h + TOL);
     expect(matchPages(model).length).toBe(matchPages(mitText).length);
   });
 });

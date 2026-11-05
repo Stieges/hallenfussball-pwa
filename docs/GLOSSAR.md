@@ -88,3 +88,7 @@ Die englischen Wörter sind eine Controller-Entscheidung (18.10.2026), das Gherk
 
 **Abweichung zu `glossary.json`:** Das Abzeichen sagt auf Englisch „Penalties“ (Kurzform, Controller bestätigt 18.10.2026); `glossary.json` führt für das
 Strafstoßschießen „penalty shootout“ (`events.penaltyShootout`) und gilt für alle Fließtexte weiter.
+
+**ausgefallen** – Bedeutung (Daniel 2026-11-05): „ausgefallen“ meint ein Spiel, das nicht stattgefunden hat und gewertet wird
+(Nichtantritts-Wertung; fehlen beide Teams: je 0 Punkte, Gegentore nach der eingestellten Wertung). Ein Spiel, das ohne Wertung entfällt,
+ist begrifflich etwas anderes; dafür gibt es noch keinen eigenen Begriff (Befund C-AUSGEFALLEN-OHNE-WERTUNG). Glossar-Eintrag: `cancelledMatch`.

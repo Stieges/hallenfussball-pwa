@@ -3,6 +3,7 @@
  * Seite. Modell mit Fake-Messfunktion (2,0 / 2,2 mm je Zeichen). Die Erwartungen stammen aus dem Gherkin, die Zahlen aus den Tokens.
  */
 import { describe, expect, it } from 'vitest';
+import { printType } from '../../../../design-tokens/print';
 import { printWriteLine } from '../../../../design-tokens/print-sheet';
 import { FAKE_MEASURE } from '../../__tests__/fixtures/fakeMeasure';
 import { FALL_A, FALL_B, FALL_C, fallBLang, mitStandA } from '../../__tests__/fixtures/handzettelFaelle';
@@ -11,7 +12,8 @@ import type { MatchRowModel, ScheduleModel, WriteLine } from '../types';
 import { modelOf } from './modelSupport';
 
 const TOL = printWriteLine.tolerance;
-const TEXTS: RowTexts = { skipped: 'ausgefallen', overtime: 'nach Verlängerung', shootout: 'Strafstoßschießen' };
+/** Schrift für „ausgefallen“: in diesen Modelltests fest die Ergebnisgröße (die Anpassung an die Spalte prüft `schedulePdf.ausgefallen.test.ts`). */
+const TEXTS: RowTexts = { skipped: 'ausgefallen', overtime: 'nach Verlängerung', shootout: 'Strafstoßschießen', skippedPt: () => printType.result };
 
 function source(partial: Partial<RowSource> = {}): RowSource {
   return { matchId: 'm1', number: 12, time: '10:00', hour: 10, home: 'FC Nord', away: 'SV Süd', state: { kind: 'empty' }, referee: '', small: [], ...partial };

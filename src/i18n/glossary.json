@@ -116,7 +116,7 @@
       "de": "Ausgefallen",
       "en": "cancelled",
       "forbidden_de": ["Abgesagt"],
-      "reason": "Record-Wortlaut für ein Spiel, das nicht stattfindet (@ZM-104, @DR-001, @DR-019); A-36b, Teilplan A-36 N5 (der Bauplan sagte noch „abgesetzt“).",
+      "reason": "Record-Wortlaut für ein Spiel, das nicht stattfindet (@ZM-104, @DR-001, @DR-019); A-36b, Teilplan A-36 N5 (der Bauplan sagte noch „abgesetzt“). Bedeutung (Daniel 2026-11-05): ‚ausgefallen‘ meint ein Spiel, das nicht stattgefunden hat und gewertet wird (Nichtantritts-Wertung; fehlen beide Teams: je 0 Punkte, Gegentore nach der eingestellten Wertung). Ein Spiel, das ohne Wertung entfällt, ist begrifflich etwas anderes; dafür gibt es noch keinen eigenen Begriff (Befund C-AUSGEFALLEN-OHNE-WERTUNG).",
       "i18nKey": "status.cancelled"
     },
     "semifinal": {
