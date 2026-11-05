@@ -17,6 +17,8 @@ export const displayList = {
     timeNote: '3.6vh',
     /** Uhrzeit der Zeile (gültige, neue Uhrzeit): deutlich größer als der Zusatz „(war hh:mm)“ (@ZM-188, @ZP-046) */
     time: '4.4vh',
+    /** Stand in der Zeile (1,5 × Teamname, VISUAL-DESIGN § 8; mindestens so groß wie die Uhrzeit) */
+    score: '5.4vh',
     /** Zusatz unter dem Abzeichen („gewertet“) und unter dem Stand („(4:3 i. E.)“): wie Tabellenkopf, nie kleiner (@ZM-125) */
     note: '3vh',
   },
@@ -34,7 +36,7 @@ export const displayList = {
   /** Abstand zwischen Uhrzeit und „(war hh:mm)“ in einer Zeile */
   timeNoteGap: '1vh',
   /** Trenner/Stand: feste Breite, damit die Spalte in jeder Zeile gleich breit ist (@ZM-187); „(4:3 i. E.)“ unter dem Stand ragt höchstens in den Zellenabstand */
-  separatorWidth: '3.4em',
+  separatorWidth: '4.6em',
   /** Status-Punkt vor der Zeile im Spielplan */
   markerSize: '1.6vh',
   /** Tabelle: Platz | Team | S | U | N | Diff | Pkt (in em der Zeilenschrift) */

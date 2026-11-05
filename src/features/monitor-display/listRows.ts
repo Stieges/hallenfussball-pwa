@@ -131,7 +131,9 @@ export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame 
   const timeLines = (cols.state ? note : 0) + (cols.field ? note : 0) + (match.kickoffTentative ? note : 0)
     + (match.labelText ? note : 0);
   const timeCell = num(displayList.fontSizes.time) * LINE + timeLines;
-  const content = Math.max(timeCell, names * FONT * LINE);
+  // Stand mit reservierter Zeile für „(4:3 i. E.)“ im Spielplan (cols.state)
+  const scoreCell = num(displayList.fontSizes.score) * LINE + (cols.state ? note : 0);
+  const content = Math.max(timeCell, names * FONT * LINE, scoreCell);
   return 2 * num(displayList.rowPaddingY) + ROW_BORDER + content;
 }
 

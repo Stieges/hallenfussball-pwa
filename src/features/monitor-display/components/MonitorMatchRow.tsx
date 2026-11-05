@@ -61,6 +61,8 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
   const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
 
+  const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap', minHeight: '1.2em', lineHeight: 1.2 };
+
   return (
     <div
       data-testid="monitor-match-row"
@@ -93,16 +95,21 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
           ...cell,
           flex: `0 0 ${displayList.separatorWidth}`,
           textAlign: 'center',
+          // Stand: 1,5 × Namensschrift, so fett wie die Uhrzeit (VISUAL-DESIGN § 8); feste Breite, damit nichts springt (@ZM-151, @ZM-187)
+          fontSize: displayList.fontSizes.score,
+          lineHeight: 1.2,
           fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
           color: showScore ? colors.text : colors.textMuted,
         }}
       >
         {showScore ? score : '–'}
         {showScore && scoreExtra && (
-          <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={{ fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
+          <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={extraStyle}>
             {scoreExtra}
           </div>
         )}
+        {/* Zeile für „(4:3 i. E.)“ ist im Spielplan in jeder Zeile reserviert: die Zeilenhöhe ändert sich nie durch einen Strafstoß (@ZM-187) */}
+        {showScore && !scoreExtra && <div data-testid="monitor-match-extra-platz" aria-hidden="true" style={extraStyle} />}
       </div>
       <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
     </div>
