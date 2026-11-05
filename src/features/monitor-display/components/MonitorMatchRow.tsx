@@ -26,6 +26,8 @@ interface MonitorMatchRowProps {
   columns: ListColumns;
   /** Rahmen der Folie (Bildrand, Hinweis): bestimmt, wie viele Zeichen eine Namenszeile fasst (@ZM-188). */
   frame?: ListFrame;
+  /** Zeile unter dem Stand für „(4:3 i. E.)“ in jeder Zeile der Folie freihalten; Vorgabe: im Spielplan (`columns.state`). */
+  reserveExtra?: boolean;
 }
 
 /**
@@ -43,7 +45,7 @@ function NameText({ name, perLine }: { name: string; perLine: number }) {
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung, Stand und Zusätze an festen Stellen (@ZM-187). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns, frame = DEFAULT_FRAME }: MonitorMatchRowProps) {
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns, frame = DEFAULT_FRAME, reserveExtra = columns.state }: MonitorMatchRowProps) {
   const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
   const perLine = nameCharsPerLine(frame);
@@ -94,23 +96,30 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         data-testid="monitor-match-separator"
         style={{
           ...cell,
+          // Breite in em der Namensschrift (nicht der Standschrift): fest in jeder Zeile (@ZM-151, @ZM-187), listRows.ts rechnet auf derselben Basis
           flex: `0 0 ${displayList.separatorWidth}`,
           textAlign: 'center',
-          // Stand: 1,5 × Namensschrift, so fett wie die Uhrzeit (VISUAL-DESIGN § 8); feste Breite, damit nichts springt (@ZM-151, @ZM-187)
-          fontSize: displayList.fontSizes.score,
-          lineHeight: 1.2,
-          fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
-          color: showScore ? colors.text : colors.textMuted,
         }}
       >
-        {showScore ? score : '–'}
+        <div
+          data-testid="monitor-match-score"
+          style={{
+            // Stand: 1,5 × Namensschrift, so fett wie die Uhrzeit (VISUAL-DESIGN § 8)
+            fontSize: displayList.fontSizes.score,
+            lineHeight: 1.2,
+            fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
+            color: showScore ? colors.text : colors.textMuted,
+          }}
+        >
+          {showScore ? score : '–'}
+        </div>
         {showScore && scoreExtra && (
           <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={extraStyle}>
             {scoreExtra}
           </div>
         )}
-        {/* Zeile für „(4:3 i. E.)“ ist im Spielplan in jeder Zeile reserviert: die Zeilenhöhe ändert sich nie durch einen Strafstoß (@ZM-187) */}
-        {showScore && !scoreExtra && <div data-testid="monitor-match-extra-platz" aria-hidden="true" style={extraStyle} />}
+        {/* Die Zeile für „(4:3 i. E.)“ ist je Folie reserviert, nicht je Spiel: die Zeilenhöhe ändert sich nie durch Ergebnis oder Strafstoß (@ZM-187) */}
+        {reserveExtra && !(showScore && scoreExtra) && <div data-testid="monitor-match-extra-platz" aria-hidden="true" style={extraStyle} />}
       </div>
       <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
     </div>

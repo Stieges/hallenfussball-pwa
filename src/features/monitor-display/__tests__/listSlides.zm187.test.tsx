@@ -349,27 +349,46 @@ describe('@ZM-151 @ZM-187 VISUAL-DESIGN § 8: der Stand ist mindestens 1,5 × Na
     const zeilen = zeigen(t, 'plan', seiteVonSpiel6(t, 'plan'));
     expect(zeilen.length).toBeGreaterThan(2);
     for (const z of zeilen) {
-      const stand = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-separator"]')!;
+      const spalte = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-separator"]')!;
+      const stand = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!;
       const name = z.zeile.querySelector<HTMLElement>('[data-teamname]')!;
       const uhr = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-clock"]')!;
       expect(vh(stand.style.fontSize), `${z.id}: Stand ≥ 1,5 × Namensschrift`).toBeGreaterThanOrEqual(1.5 * vh(name.style.fontSize));
       expect(vh(stand.style.fontSize), `${z.id}: Stand ≥ Uhrzeit`).toBeGreaterThanOrEqual(vh(uhr.style.fontSize));
-      expect(stand.style.flex, `${z.id}: feste Breite`).toBe(`0 0 ${displayList.separatorWidth}`);
+      expect(spalte.style.flex, `${z.id}: feste Breite`).toBe(`0 0 ${displayList.separatorWidth}`);
+      expect(spalte.style.fontSize, `${z.id}: die Breite in em gilt für die Namensschrift, nicht für die Standschrift`).toBe(name.style.fontSize);
     }
     // geplante Spiele („-:-“) und beendete tragen dieselbe Größe und Breite
-    expect(new Set(zeilen.map(z => z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-separator"]')!.style.fontSize)).size).toBe(1);
+    expect(new Set(zeilen.map(z => z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!.style.fontSize)).size).toBe(1);
   });
 
   it('fett wie die Uhrzeit: Stand mit Ergebnis ist bold, die Uhrzeit semibold – der Stand nie dünner', () => {
     const t = listenTurnier({ beendet: 5 });
     const zeile = zeigen(t, 'plan', 0)[0].zeile;
-    expect(zeile.querySelector<HTMLElement>('[data-testid="monitor-match-separator"]')!.style.fontWeight).toBe(cssVars.fontWeights.bold);
+    expect(zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!.style.fontWeight).toBe(cssVars.fontWeights.bold);
   });
 
   it('die Zeile für „(4:3 i. E.)“ ist in jeder Spielplan-Zeile reserviert, die Zeilenhöhe ändert sich nie durch einen Strafstoß', () => {
     const t = listenTurnier({ beendet: 5 });
     for (const z of zeigen(t, 'plan', 0)) {
       expect(z.zeile.querySelector('[data-testid="monitor-match-extra"], [data-testid="monitor-match-extra-platz"]'), z.id).not.toBeNull();
+    }
+  });
+});
+
+describe('@ZM-187 Die Zeile für den Strafstoß ist je Folie reserviert, nicht je Spiel', () => {
+  it('Finalrunde in „Alle Tabellen“: offene und beendete Finalspiele tragen dieselbe reservierte Zeile (die Zeile wird nicht höher, wenn ein Finalspiel endet)', async () => {
+    const { AllStandingsSlide } = await import('../slides/AllStandingsSlide');
+    const t0 = listenTurnier({ beendet: 3 });
+    const t = { ...t0, matches: t0.matches.map(m => (m.matchNumber !== undefined && m.matchNumber >= 4 && m.matchNumber <= 6
+      ? { ...m, phase: 'final' as const, isFinal: true, label: 'Halbfinale', ...(m.matchNumber === 4 ? { matchStatus: 'finished' as const, scoreA: 1, scoreB: 0, decidedBy: 'regular' as const } : {}) }
+      : m)) };
+    const { view } = withView(t);
+    render(<AllStandingsSlide tournament={t} view={view} theme="dark" style={{}} page={1} />);
+    const zeilen = screen.getAllByTestId('monitor-match-row');
+    expect(zeilen.length).toBe(3);
+    for (const z of zeilen) {
+      expect(z.querySelector('[data-testid="monitor-match-extra"], [data-testid="monitor-match-extra-platz"]')).not.toBeNull();
     }
   });
 });

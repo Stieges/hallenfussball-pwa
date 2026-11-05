@@ -80,19 +80,38 @@ async function grundlinien(page: Page): Promise<{ id: string; abweichung: number
     const ziele = [
       zeile.querySelector<HTMLElement>('[data-testid="monitor-match-clock"]')!,
       zeile.querySelectorAll<HTMLElement>('[data-teamname]')[0],
-      zeile.querySelector<HTMLElement>('[data-testid="monitor-match-separator"]')!,
+      zeile.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!,
       zeile.querySelectorAll<HTMLElement>('[data-teamname]')[1],
     ];
     const unten = ziele.map((el) => {
+      // Marke hinter dem ersten Zeichen, beides in einem nowrap-Stück: die Marke erzwingt auch bei überlangen Wörtern keine eigene Zeile
+      const lauf = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const text = lauf.nextNode()!;
+      const rest = (text as Text).splitText(1);
+      const huelle = document.createElement('span');
+      huelle.style.whiteSpace = 'nowrap';
       const marke = document.createElement('span');
       marke.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
-      el.insertBefore(marke, el.firstChild);
+      text.parentNode!.insertBefore(huelle, rest);
+      huelle.append(text, marke);
       const wert = marke.getBoundingClientRect().bottom;
-      marke.remove();
+      huelle.replaceWith(text);
+      text.parentNode!.normalize();
       return wert;
     });
     return { id: zeile.dataset.matchId ?? '', abweichung: Math.max(...unten) - Math.min(...unten) };
   }));
+}
+
+/** Fasst der Namensplatz mindestens so viele Zeichen, wie das Modell der Seitenaufteilung annimmt (0,57 em je Zeichen, @ZM-188)? */
+async function namensplatz(page: Page): Promise<{ breite: number; modell: number }[]> {
+  return page.evaluate(() => {
+    const modellZeichen = Number(document.querySelector('[data-testid="monitor-slide"]')!.getAttribute('data-namechars'));
+    return [...document.querySelectorAll<HTMLElement>('[data-teamname]')].map((el) => {
+      const schrift = parseFloat(getComputedStyle(el).fontSize);
+      return { breite: el.getBoundingClientRect().width, modell: modellZeichen * 0.57 * schrift };
+    });
+  });
 }
 
 /** Passt das längste Zustandswort („Strafstoßschießen“) ganz in die Zeitspalte? Gemessen mit der Schrift der Zustandszeile. */
@@ -160,9 +179,12 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
             const { wort, spalte } = await zustandswortPasst(page);
             expect(wort, `Seite ${String(seite + 1)}: „Strafstoßschießen“ passt ganz in die Zeitspalte`).toBeLessThanOrEqual(spalte);
           }
-          // bei 10 % Rand brechen 23-Zeichen-Wörter mitten im Wort; die Marke der Messung rutscht dann auf eine eigene Zeile, darum nur bis 5 %
-          for (const g of rand === 10 ? [] : await grundlinien(page)) {
+          // bei 10 % Rand brechen 23-Zeichen-Wörter hart; die Marke der Messung misst dann nicht die erste Zeile (bekannte Grenze), darum dort ohne
+          for (const g of rand === 10 && szene.namen === 'lang' ? [] : await grundlinien(page)) {
             expect(g.abweichung, `${g.id}: Uhrzeit, Teamnamen und Stand stehen auf einer Grundlinie (±2 px)`).toBeLessThanOrEqual(2);
+          }
+          for (const n of await namensplatz(page)) {
+            expect(n.breite, `Seite ${String(seite + 1)}: das Modell nimmt nie mehr Namensplatz an, als real da ist`).toBeGreaterThanOrEqual(n.modell);
           }
           gesehen.push(...kaesten.map((k) => k.id));
           await page.screenshot({ path: join(ordner, `${szene.id}-${szene.namen}-${p.name}-s${String(seite + 1)}.png`) });
@@ -173,6 +195,32 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
         await ctx.close();
       });
      }
+    }
+  }
+});
+
+test.describe('Finalrunde in „Alle Tabellen“ (keine Seitenaufteilung, @ZM-187)', () => {
+  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
+
+  for (const p of PROFILE) {
+    for (const rand of RAENDER) {
+      test(`6 Finalspiele, ${p.name}, Rand ${String(rand)} %: Zeilen ganz im Bild (Befund C-… wenn nicht)`, async ({ browser }, testInfo) => {
+        test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
+        // Befund: die Finalrunde hat keine Seitenaufteilung und läuft mit langen Namen und 6 Spielen unten aus dem Bild (an die Koordination gemeldet); rot erwartet, bis sie geteilt wird
+        test.fail(true, 'Befund: Finalrunde in „Alle Tabellen“ ohne Seitenaufteilung');
+        const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
+        const page = await ctx.newPage();
+        await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=finale&seite=1&namen=lang&rand=${String(rand)}&finale=6`);
+        await expect(page.getByTestId('monitor-slide')).toBeVisible();
+        await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
+        const ordner = process.env.LISTEN_FOLIEN_BILDER ?? testInfo.outputDir;
+        mkdirSync(ordner, { recursive: true });
+        await page.screenshot({ path: join(ordner, `finale-${p.name}-rand${String(rand)}.png`) });
+        const kaesten = await zeilen(page);
+        expect(kaesten).toHaveLength(6);
+        for (const k of kaesten) { expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height); }
+        await ctx.close();
+      });
     }
   }
 });

@@ -35,7 +35,7 @@ export const displayList = {
   timeFieldWidth: '9.6em',
   /** Abstand zwischen Uhrzeit und „(war hh:mm)“ in einer Zeile */
   timeNoteGap: '1vh',
-  /** Trenner/Stand: feste Breite, damit die Spalte in jeder Zeile gleich breit ist (@ZM-187); „(4:3 i. E.)“ unter dem Stand ragt höchstens in den Zellenabstand */
+  /** Trenner/Stand: feste Breite in em der Namensschrift (nicht der Standschrift), damit die Spalte in jeder Zeile gleich breit ist (@ZM-187); „(4:3 i. E.)“ unter dem Stand ragt höchstens in den Zellenabstand */
   separatorWidth: '4.6em',
   /** Status-Punkt vor der Zeile im Spielplan */
   markerSize: '1.6vh',
