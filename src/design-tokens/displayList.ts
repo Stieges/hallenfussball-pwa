@@ -13,7 +13,7 @@ export const displayList = {
     team: '3.6vh',
     /** Tabellenkopf und Seitenhinweis (mindestens 3 % der Bildhöhe) */
     head: '3vh',
-    /** „(war hh:mm)“ neben und „voraussichtlich“ unter der Uhrzeit (B-27): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
+    /** Eine Stufe für „(war hh:mm)“ neben der Uhrzeit und die Bezeichnung als Überschrift der Zeile („Halbfinale 1“): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
     timeNote: '3.6vh',
     /** Uhrzeit der Zeile (gültige, neue Uhrzeit): deutlich größer als der Zusatz „(war hh:mm)“ (@ZM-188, @ZP-046) */
     time: '4.4vh',
@@ -35,6 +35,8 @@ export const displayList = {
   timeFieldWidth: '9.6em',
   /** Abstand zwischen Uhrzeit und „(war hh:mm)“ in einer Zeile */
   timeNoteGap: '1vh',
+  /** Abstand der Überschrift (Bezeichnung) von der Innenkante der Zeilenkarte (MonitorMatchRow, Zeilenhöhe in listRows) */
+  labelTop: '0.4vh',
   /** Trenner/Stand: feste Breite in em der Namensschrift (nicht der Standschrift), damit die Spalte in jeder Zeile gleich breit ist (@ZM-187); „(4:3 i. E.)“ unter dem Stand ragt höchstens in den Zellenabstand */
   separatorWidth: '4.6em',
   /** Status-Punkt vor der Zeile im Spielplan */

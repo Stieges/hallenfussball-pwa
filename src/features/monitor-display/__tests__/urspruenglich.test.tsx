@@ -128,6 +128,18 @@ describe('B-27 Monitor „Live“, nächstes Spiel: Uhrzeit mit „(war …)“ 
   });
 });
 
+describe('B-27 Monitor „Live“, nächstes Spiel: K.-o.-Spiel ohne „voraussichtlich“ (@ZM-105)', () => {
+  it('Feld 2: nächstes Spiel ist ein Finalspiel mit neuer Uhrzeit: „Anstoß 14:30“, „(war 14:20)“, kein „voraussichtlich“', () => {
+    const matches = withMatch('match-8', { isFinal: true, label: 'Finale', scheduledTime: at('14:30'), originalStart: at('14:20') });
+    const ansicht = withView(buildTournament({ matches }));
+    expect(ansicht.view.matches.find((m) => m.id === 'match-8')?.kickoffTentative, 'Vorbedingung: das Ansichtsmodell kennzeichnet die Zeit weiter als vorläufig').toBe(true);
+    render(<LiveSlide slide={slide('live', { fieldId: 'field-2' })} {...ansicht} performanceSettings={performanceSettings} theme="dark" style={{}} />);
+    expect(document.body.textContent).toMatch(/Anstoß 14:30/);
+    expect(screen.getByTestId('monitor-next-original')).toHaveTextContent('(war 14:20)');
+    expect(document.body.textContent).not.toContain('voraussichtlich');
+  });
+});
+
 describe('@ZP-001 Wortlaut „(war hh:mm)“ gilt wörtlich, auf jeder Ausgabe aus derselben Quelle', () => {
   it('Deutsch: „(war 15:30)“, nicht „ursprünglich“', () => {
     expect(anzeigeT('tournament:timeShift.original', { time: '15:30' })).toBe('(war 15:30)');

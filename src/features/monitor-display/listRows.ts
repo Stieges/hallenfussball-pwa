@@ -60,8 +60,6 @@ export const DEFAULT_FRAME: ListFrame = { overscan: displayMonitor.overscan.defa
 /** Höhe des Hinweises in vh (Schrift mal Zeilenhöhe plus Polster und Rahmen oben und unten). */
 const NOTICE_VH = num(displayFontSizes.notice) * displayLayout.scoreArea.noticeLineHeight
   + 2 * (num(displayLayout.scoreArea.noticePadY) + num(displayLayout.scoreArea.noticeBorderWidth));
-/** Abstand der Überschrift einer Zeile von der Innenkante der Zeilenkarte in vh (MonitorMatchRow). */
-export const LABEL_TOP = 0.4;
 /** Rahmen einer Zeile oben und unten in vh (1 px bei 720 Zeilen, aufgerundet). */
 const ROW_BORDER = 0.3;
 /** Rest des Bildes für Überschrift (Zeile, Abstand), Seitenhinweis (Zeile, Abstand) und Reserve. */
@@ -139,9 +137,9 @@ export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame 
   const unterMitte = (zeile: number, zusatz: number): number => (zusatz === 0 ? zeile : 2 * (zeile / 2 + Math.max(0, zusatz - 0.8 * padY)));
   const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0);
   const timeCell = unterMitte(num(displayList.fontSizes.time) * LINE, zusatzZeit);
-  // Überschrift („Halbfinale 1“) oben mittig in der Zeilenkarte (LABEL_TOP unter der Innenkante, außerhalb des Flusses), „(4:3 i. E.)“/„gewertet“
+  // Überschrift („Halbfinale 1“) oben mittig in der Zeilenkarte (displayList.labelTop unter der Innenkante, außerhalb des Flusses), „(4:3 i. E.)“/„gewertet“
   // unten: Stand und Namen müssen unterhalb der Überschrift beginnen. Maß vom oberen Inhaltsrand (Polster abgezogen) bis zur Unterkante der Überschrift.
-  const ueberschrift = match.labelText ? num(displayList.fontSizes.timeNote) * LINE + LABEL_TOP - padY : 0;
+  const ueberschrift = match.labelText ? num(displayList.fontSizes.timeNote) * LINE + num(displayList.labelTop) - padY : 0;
   const unten = reserveExtra ? Math.max(0, note - 0.8 * padY) : 0;
   const scoreLine = num(displayList.fontSizes.score) * LINE;
   const scoreCell = ueberschrift > 0 || unten > 0 ? 2 * (scoreLine / 2 + Math.max(ueberschrift, unten)) : scoreLine;

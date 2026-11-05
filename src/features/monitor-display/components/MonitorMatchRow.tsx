@@ -9,7 +9,7 @@ import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../..
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
 import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
-import { DEFAULT_FRAME, LABEL_TOP, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, type ListColumns, type ListFrame } from '../listRows';
+import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, type ListColumns, type ListFrame } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
 
 interface MonitorMatchRowProps {
@@ -87,7 +87,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
     >
       {/* Spielbezeichnung („Halbfinale 1“) als Überschrift der Zeile: oben mittig in der Zeilenkarte, außerhalb des Flusses (Platz rechnet rowHeight ein) */}
       {match.labelText && (
-        <div data-testid="monitor-match-label" style={{ position: 'absolute', top: `${String(LABEL_TOP)}vh`, left: 0, right: 0, textAlign: 'center', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
+        <div data-testid="monitor-match-label" style={{ position: 'absolute', top: displayList.labelTop, left: 0, right: 0, textAlign: 'center', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
       )}
       <MonitorTimeCell
         match={match}

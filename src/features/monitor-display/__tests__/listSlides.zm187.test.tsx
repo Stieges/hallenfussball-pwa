@@ -10,7 +10,7 @@ import { MonitorTimeCell } from '../components/MonitorTimeCell';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
 import { listFrame, monitorPageCount, nextMatchesLayout, scheduleFieldLayout, standingsSections, startPage } from '../slideContent';
-import { nameLines, pageIndexOf } from '../listRows';
+import { listColumns, listPages, listPagesBalanced, nameLines, pageIndexOf, rowHeight } from '../listRows';
 import { cssVars, displayList } from '../../../design-tokens';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { slide } from './monitorFixture';
@@ -464,6 +464,19 @@ describe('C-MONITOR-FINALRUNDE-OHNE-SEITEN @ZM-185 Die Finalrunde blättert nach
     expect(proSeiteListe(t, 0)).toEqual([4]);
     expect(proSeiteListe(t, 5)).toEqual([4]);
     expect(proSeiteListe(t, 10)).toEqual([2, 2]);
+  });
+
+  it('Rückfall auf die Seitenteilung nach Höhe: passt eine gleichmäßig verteilte Seite nicht in die Bildhöhe (sehr ungleich hohe Zeilen), bleibt es bei der gemessenen Teilung', () => {
+    const alle = [...withView(listenTurnier({ namen: 'kurz', beendet: 0, finale: 8 })).view.matches, ...withView(listenTurnier({ namen: 'lang', beendet: 0, finale: 8 })).view.matches];
+    const cols = listColumns(true, false, alle);
+    const rahmen = { overscan: 10, notice: false };
+    const mitHoehe = (vh: number, nr: number) => ({ ...(alle.find(m => Math.abs(rowHeight(m, cols, rahmen) - vh) < 0.05)!), id: `ungleich-${String(nr)}` });
+    // Zeilenhöhen 18,4 / 22,7 / 27,0 / 18,4 / 18,4 vh bei 10 % Rand: die Höhen kommen aus dem Modell, nicht aus festen Pixeln
+    const spiele = [mitHoehe(18.4, 1), mitHoehe(22.7, 2), mitHoehe(27, 3), mitHoehe(18.4, 4), mitHoehe(18.4, 5)];
+    const greedy = listPages(spiele, cols, Number.POSITIVE_INFINITY, rahmen);
+    expect(greedy.map(p => p.length), 'Vorbedingung: nach Höhe 2 + 3').toEqual([2, 3]);
+    // Die Seitenteilung nach Höhe hat das dritte Spiel nicht mehr auf die erste Seite gelegt: die gleichmäßige erste Seite (3 Spiele) passt also nicht.
+    expect(listPagesBalanced(spiele, cols, Number.POSITIVE_INFINITY, rahmen).map(p => p.map(m => m.id))).toEqual(greedy.map(p => p.map(m => m.id)));
   });
 
   it('gleichmäßig verteilt: die Seiten einer Finalrunde unterscheiden sich um höchstens ein Spiel („2 + 2“ statt „3 + 1“), für 3 bis 8 Spiele, kurze und lange Namen, 0/5/10 % Rand', () => {
