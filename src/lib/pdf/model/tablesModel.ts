@@ -33,14 +33,18 @@ function columnsOf(left: number, width: number): Array<{ key: Key; x: number; w:
   });
 }
 
-/** Werte einer Zeile; null bleibt leer (Fassung mit Ergebnissen, vor dem ersten Spiel). */
-function valuesOf(standing: Standing, place: string): string[] {
-  const num = (n: number): string => (n > 0 ? String(n) : '');
+/**
+ * Werte einer Zeile (@DR-035): sobald das Turnier ein erstes Ergebnis hat (`filled`), steht in jedem Kästchen eine Zahl, auch 0 und
+ * auch bei einem Team ohne Spiel; vorher bleiben alle Kästchen leer zum Selbstausfüllen.
+ */
+function valuesOf(standing: Standing, place: string, filled: boolean): string[] {
+  if (!filled) {
+    return COLUMN_KEYS.map(() => '');
+  }
   const diff = standing.goalDifference;
   return [
-    place, '', num(standing.played), num(standing.won), num(standing.drawn), num(standing.lost),
-    standing.goalsFor > 0 || standing.goalsAgainst > 0 ? `${standing.goalsFor}:${standing.goalsAgainst}` : '',
-    diff === 0 ? '' : diff > 0 ? `+${diff}` : String(diff), num(standing.points),
+    place, '', String(standing.played), String(standing.won), String(standing.drawn), String(standing.lost),
+    `${standing.goalsFor}:${standing.goalsAgainst}`, diff > 0 ? `+${diff}` : String(diff), String(standing.points),
   ];
 }
 
@@ -119,6 +123,8 @@ export function tableParts(env: ModelEnv, finalOrder: RankEntry[] | undefined): 
   const blank = edition === 'blank';
   const groups = groupsOf(schedule.teams, finalOrder !== undefined);
   const all = input.state.standings ?? schedule.initialStandings;
+  // Das erste Ergebnis des Turniers (nicht nur der Gruppe) füllt alle Tabellen (@DR-035)
+  const filled = finalOrder !== undefined || all.some(standing => standing.played > 0);
   const placeOf = (id: string): number => finalOrder?.find(entry => entry.team.id === id)?.place ?? Number.MAX_SAFE_INTEGER;
   return groups.map((group, index) => {
     const teams = group === '' ? schedule.teams : schedule.teams.filter(team => team.group === group);
@@ -130,10 +136,9 @@ export function tableParts(env: ModelEnv, finalOrder: RankEntry[] | undefined): 
     }
     const inGroup = all.filter(standing => teams.some(team => team.id === standing.team.id));
     const ordered = finalOrder ? [...inGroup].sort((a, b) => placeOf(a.team.id) - placeOf(b.team.id)) : inGroup;
-    const played = finalOrder !== undefined || ordered.some(standing => standing.played > 0);
     const rows = ordered.map((standing, i) => ({
       name: standing.team.name,
-      cells: valuesOf(standing, played ? String(finalOrder ? placeOf(standing.team.id) : standing.place ?? i + 1) : ''),
+      cells: valuesOf(standing, String(finalOrder ? placeOf(standing.team.id) : standing.place ?? i + 1), filled),
     }));
     return tablePlaceable(env, caption, mark, rows, false);
   });

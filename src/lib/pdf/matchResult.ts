@@ -87,11 +87,13 @@ function assertNeverStatus(status: never): never {
 
 /**
  * Zustand für den Ausdruck (@DR-019): „ausgefallen“ steht auch bei ausgeblendeten Ergebnissen; leere Linien statt „ausgefallen“
- * hat nur die Fassung ohne Ergebnisse. Ein laufendes oder unterbrochenes Spiel steht wie ein Spiel ohne Ergebnis da, ohne „läuft“
+ * hat nur die Fassung ohne Ergebnisse; ein Spiel, zu dem beide Teams nicht angetreten sind, steht ebenso als „ausgefallen“ (@DR-045). Ein laufendes oder unterbrochenes Spiel steht wie ein Spiel ohne Ergebnis da, ohne „läuft“
  * und ohne Zwischenstand; das Modell zeichnet für `live` leere Linien.
  */
 export function printState(match: StatefulMatch, options: ResultOptions): ResultState {
-  if (options.edition !== 'blank' && match.matchStatus === 'skipped') {
+  // Beide Teams nicht angetreten: im Ausdruck „ausgefallen“, nie die Wertungstore als Ergebnis (@DR-045)
+  const bothAbsent = match.matchStatus === 'finished' && match.decidedBy === 'forfeit' && match.forfeitAbsent === 'both';
+  if (options.edition !== 'blank' && (match.matchStatus === 'skipped' || bothAbsent)) {
     return { kind: 'skipped' };
   }
   return resultState(match, options);

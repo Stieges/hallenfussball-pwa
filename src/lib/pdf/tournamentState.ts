@@ -3,7 +3,7 @@
  * aus `tournament.matches`. Vorher stand das Einmischen im Dialog `PDFExportDialog.tsx`; hier ist es testbar.
  */
 import type { GeneratedSchedule, ScheduledMatch, SchedulePhase } from '../../core/generators';
-import type { CorrectionEntry, MatchDecidedBy, MatchStatus, Tournament } from '../../types/tournament';
+import type { CorrectionEntry, ForfeitAbsent, MatchDecidedBy, MatchStatus, Tournament } from '../../types/tournament';
 
 /** Plan-Spiel mit dem Turnierstand, den das PDF braucht. */
 export interface StatefulMatch extends ScheduledMatch {
@@ -15,6 +15,8 @@ export interface StatefulMatch extends ScheduledMatch {
   overtimeScoreA?: number;
   overtimeScoreB?: number;
   decidedBy?: MatchDecidedBy;
+  /** Wer bei einer Wertung fehlte; „both“ = beide nicht angetreten, im Ausdruck „ausgefallen“ (@DR-045). */
+  forfeitAbsent?: ForfeitAbsent;
 }
 
 export type StatefulSchedule = GeneratedSchedule & {
@@ -41,6 +43,7 @@ export function withTournamentState(schedule: GeneratedSchedule, tournament: Tou
       overtimeScoreA: tm.overtimeScoreA,
       overtimeScoreB: tm.overtimeScoreB,
       decidedBy: tm.decidedBy,
+      forfeitAbsent: tm.forfeitAbsent,
     };
   };
   return {

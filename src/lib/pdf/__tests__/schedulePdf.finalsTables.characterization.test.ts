@@ -33,18 +33,18 @@ const FINAL_ZEILE = 12;
 
 /** Gruppentabelle A: Berg und Nord mit 6 Pkt., Berg vor Nord durch Tordifferenz +3 gegen +1. */
 const TABELLE_A = [
-  '1', 'DJK Berg', '3', '2', '1', '5:2', '+3', '6',
-  '2', 'FC Nord', '3', '2', '1', '4:3', '+1', '6',
+  '1', 'DJK Berg', '3', '2', '0', '1', '5:2', '+3', '6',
+  '2', 'FC Nord', '3', '2', '0', '1', '4:3', '+1', '6',
   '3', 'SV Süd', '3', '1', '1', '1', '3:4', '-1', '4',
-  '4', 'TuS Tal', '3', '3', '1:4', '-3',
+  '4', 'TuS Tal', '3', '0', '0', '3', '1:4', '-3', '0',
 ];
 
-/** Gruppentabelle B: West 9 Pkt. mit +6, Ost 4 Pkt. mit 0 (Diff leer), Mitte -2, Hof -4. */
+/** Gruppentabelle B: West 9 Pkt. mit +6, Ost 4 Pkt. mit Diff „0“ (seit @DR-035 vom 05.11. steht jede 0), Mitte -2, Hof -4. */
 const TABELLE_B = [
-  '1', 'TSV West', '3', '3', '7:1', '+6', '9',
-  '2', 'SC Ost', '3', '1', '1', '1', '3:3', '4',
-  '3', 'FC Mitte', '3', '1', '2', '3:5', '-2', '3',
-  '4', 'SV Hof', '3', '1', '2', '2:6', '-4', '1',
+  '1', 'TSV West', '3', '3', '0', '0', '7:1', '+6', '9',
+  '2', 'SC Ost', '3', '1', '1', '1', '3:3', '0', '4',
+  '3', 'FC Mitte', '3', '1', '0', '2', '3:5', '-2', '3',
+  '4', 'SV Hof', '3', '0', '1', '2', '2:6', '-4', '1',
 ];
 
 /**
@@ -113,8 +113,8 @@ describe('Gruppentabellen und Platzierung mit echten Standings (B-28a0 Fixrunde 
     const geliefert = [{ ...nord, place: 1 }, { ...berg, place: 2 }, ...rest];
     const text = flatText(await renderSchedulePdf(hallencupSchedule(), geliefert, OPTIONS));
 
-    const umgestellt = [...TABELLE_A.slice(8, 16), ...TABELLE_A.slice(0, 8)].map((zelle, i) => (i === 0 ? '1' : i === 8 ? '2' : zelle));
-    expect(containsSequence(text, [...umgestellt, ...TABELLE_A.slice(16)]), 'Tabelle Gruppe A in gelieferter Reihenfolge').toBe(true);
+    const umgestellt = [...TABELLE_A.slice(9, 18), ...TABELLE_A.slice(0, 9)].map((zelle, i) => (i === 0 ? '1' : i === 9 ? '2' : zelle));
+    expect(containsSequence(text, [...umgestellt, ...TABELLE_A.slice(18)]), 'Tabelle Gruppe A in gelieferter Reihenfolge').toBe(true);
     // Gegenbeispiel: die alte Reihenfolge (Berg vor Nord) steht nicht mehr da.
     expect(containsSequence(text, TABELLE_A)).toBe(false);
   });

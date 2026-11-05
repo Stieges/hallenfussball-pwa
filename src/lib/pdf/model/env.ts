@@ -4,6 +4,7 @@
  */
 import { getGroupDisplayName } from '../../../utils/displayNames';
 import type { ScheduledMatch } from '../../../core/generators';
+import { printType } from '../../../design-tokens/print';
 import { printMatchTable } from '../../../design-tokens/print-sheet';
 import type { PdfSideContext } from '../matchSides';
 import { refereeLabelFor } from '../refereeLabel';
@@ -49,7 +50,10 @@ export function modelEnv(source: ScheduleModelSource, measure: TextMeasure): Mod
       matches: schedule.allMatches,
     },
     refLabel: refereeLabelFor(schedule),
-    rowTexts: { skipped: t.skipped, overtime: t.afterOvertime, shootout: t.shootout },
+    rowTexts: {
+      skipped: t.skipped, overtime: t.afterOvertime, shootout: t.shootout,
+      skippedPt: maxWidth => Math.max(printType.cancel, Math.min(printType.result, (printType.result * maxWidth) / measure.width(t.skipped, printType.result, 'bold'))),
+    },
   };
 }
 

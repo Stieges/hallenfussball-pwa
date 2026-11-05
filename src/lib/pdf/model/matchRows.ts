@@ -36,7 +36,13 @@ export interface ColumnFlags {
 }
 
 /** Beschriftungen, die in der Zeile vorkommen (alle übersetzt). */
-export interface RowTexts { skipped: string; overtime: string; shootout: string }
+export interface RowTexts {
+  skipped: string;
+  overtime: string;
+  shootout: string;
+  /** Schrift für „ausgefallen“ in einer Ergebnisspalte von `maxWidth` mm (@DR-045): Ergebnisgröße, höchstens so groß, dass es passt. */
+  skippedPt?: (maxWidth: number) => number;
+}
 
 /** Eine Spielzeile, wie das Modell sie bekommt: fertig angezeigte Namen, Zustand, Schiedsrichter. */
 export interface RowSource {
@@ -212,7 +218,9 @@ export function cellOf(src: RowSource, cols: ColumnModel[], top: number, height:
     return { cell: { kind: 'score', a: String(state.scoreA), b: String(state.scoreB), marks, runs }, lines: [] };
   }
   if (state.kind === 'skipped') {
-    const runs = [run(texts.skipped, cx, centeredBaseline(middle, printType.cancel), printType.cancel, 'normal', 'center')];
+    // Fett und so groß wie die Ergebnisse, aber nie breiter als die Spalte (@DR-045)
+    const pt = texts.skippedPt?.((col?.w ?? 0) - 2 * printMatchTable.nameInner) ?? printType.result;
+    const runs = [run(texts.skipped, cx, centeredBaseline(middle, pt), pt, 'bold', 'center')];
     return { cell: { kind: 'text', text: texts.skipped, runs }, lines: [] };
   }
   // Ein laufendes Spiel (auch in der Halbzeit) steht wie ein Spiel ohne Ergebnis da: leere Schreiblinien, kein Text, kein Zwischenstand (@DR-019)
