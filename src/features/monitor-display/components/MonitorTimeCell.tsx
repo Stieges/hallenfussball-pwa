@@ -33,8 +33,6 @@ interface MonitorTimeCellProps {
   fieldName?: string;
   /** Zeile für den Zustand reservieren (Spielplan): sie steht in jeder Zeile, auch wenn das Spiel noch keinen Zustand hat (@ZM-187). */
   reserveState: boolean;
-  /** „voraussichtlich“ zeigen (@ZM-105); in „Alle Tabellen“ entfällt es. Bei reserviertem Zustand steht es in der Zustandszeile. */
-  showTentative?: boolean;
   color: string;
   tone?: MatchStatusBadgeTone;
   style: CSSProperties;
@@ -46,7 +44,7 @@ interface MonitorTimeCellProps {
  * und die Spielbezeichnung. Keine eigenen Spalten (@ZM-189). Uhrzeit und „(war …)“ brechen nie um; die Namensspalten ändern sich nie
  * durch einen Hinweis (@ZM-087, @ZM-187).
  */
-export function MonitorTimeCell({ match, fieldName, reserveState, showTentative = true, color, tone, style }: MonitorTimeCellProps) {
+export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, style }: MonitorTimeCellProps) {
   const { t } = useTranslation('tournament');
   // Eine Stufe für alle Zusatzzeilen unter der Uhrzeit: Feld, Zustand, „gewertet“, „voraussichtlich“, Bezeichnung (Token `note`)
   const small: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color, whiteSpace: 'nowrap' };
@@ -55,7 +53,7 @@ export function MonitorTimeCell({ match, fieldName, reserveState, showTentative 
   // „(war hh:mm)“ steht in der Uhrzeit-Zeile und hat die Stufe `timeNote`
   const war: CSSProperties = { ...small, fontSize: displayList.fontSizes.timeNote };
   const hasState = match.badge.kind === 'badge';
-  const tentative = showTentative && match.kickoffTentative;
+  const tentative = match.kickoffTentative;
   const awarded = match.status === 'awarded' ? t('view.status.awarded') : null;
   return (
     // Die Zelle ist nur so hoch wie die Uhrzeit-Zeile: sie steht senkrecht mittig in der Zeile, die Zusätze hängen darunter (außerhalb des Flusses)

@@ -193,55 +193,47 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
   }
 });
 
-test.describe('Finalrunde in „Alle Tabellen“ (keine Seitenaufteilung, @ZM-187)', () => {
+test.describe('Finalrunde in „Alle Tabellen“ blättert nach gemessener Höhe (@ZM-185, @ZM-187, @ZM-105)', () => {
   test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
 
-  for (const p of PROFILE) {
-    for (const rand of RAENDER) {
-      test(`6 Finalspiele, ${p.name}, Rand ${String(rand)} %: C-MONITOR-FINALRUNDE-OHNE-SEITEN Zeilen ganz im Bild`, async ({ browser }, testInfo) => {
-        test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
-        // Befund: die Finalrunde hat keine Seitenaufteilung und läuft mit langen Namen und 6 Spielen unten aus dem Bild (an die Koordination gemeldet); rot erwartet, bis sie geteilt wird
-        test.fail(true, 'C-MONITOR-FINALRUNDE-OHNE-SEITEN: Finalrunde in „Alle Tabellen“ ohne Seitenaufteilung');
-        const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
-        const page = await ctx.newPage();
-        await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=finale&seite=1&namen=lang&rand=${String(rand)}&finale=6`);
-        await expect(page.getByTestId('monitor-slide')).toBeVisible();
-        await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
-        const ordner = process.env.LISTEN_FOLIEN_BILDER ?? testInfo.outputDir;
-        mkdirSync(ordner, { recursive: true });
-        await page.screenshot({ path: join(ordner, `finale-${p.name}-rand${String(rand)}.png`) });
-        const kaesten = await zeilen(page);
-        expect(kaesten).toHaveLength(6);
-        for (const k of kaesten) { expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height); }
-        await ctx.close();
-      });
-    }
-  }
-});
-
-test.describe('Finalrunde in „Alle Tabellen“, 4 Spiele mit kurzen Namen (@ZM-187)', () => {
-  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
-
-  for (const p of PROFILE) {
-    for (const rand of RAENDER) {
-      test(`4 Finalspiele, ${p.name}, Rand ${String(rand)} %: alle Zeilen ganz im Bild, Zusätze in der Zeile`, async ({ browser }, testInfo) => {
-        test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
-        const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
-        const page = await ctx.newPage();
-        await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=finale&seite=1&namen=kurz&rand=${String(rand)}&finale=4`);
-        await expect(page.getByTestId('monitor-slide')).toBeVisible();
-        await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
-        const ordner = process.env.LISTEN_FOLIEN_BILDER ?? testInfo.outputDir;
-        mkdirSync(ordner, { recursive: true });
-        await page.screenshot({ path: join(ordner, `finale4-${p.name}-rand${String(rand)}.png`) });
-        const kaesten = await zeilen(page);
-        expect(kaesten).toHaveLength(4);
-        for (const k of kaesten) {
-          expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
-          expect(k.zusatzUnten, `${k.id}: Zusätze in der Zeile`).toBeLessThanOrEqual(k.unten + 0.5);
+  for (const anzahl of [4, 6]) {
+    for (const namen of ['kurz', 'lang'] as const) {
+      for (const p of PROFILE) {
+        for (const rand of RAENDER) {
+          test(`${String(anzahl)} Finalspiele, Namen ${namen}, ${p.name}, Rand ${String(rand)} %: alle Zeilen und Zusätze ganz im Bild, jedes Spiel einmal, mit „voraussichtlich“`, async ({ browser }, testInfo) => {
+            test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
+            const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
+            const page = await ctx.newPage();
+            const url = (seite: number) => `/tests/e2e/harness/listen-folien-monitor.html?szene=finale&seite=${String(seite)}&namen=${namen}&rand=${String(rand)}&finale=${String(anzahl)}`;
+            await page.goto(url(1));
+            await expect(page.getByTestId('monitor-slide')).toBeVisible();
+            const seiten = Number(await page.getByTestId('monitor-slide').getAttribute('data-pages'));
+            const ordner = process.env.LISTEN_FOLIEN_BILDER ?? testInfo.outputDir;
+            mkdirSync(ordner, { recursive: true });
+            const gesehen: string[] = [];
+            for (let seite = 1; seite < seiten; seite += 1) {
+              if (seite > 1) { await page.goto(url(seite)); }
+              await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
+              await page.screenshot({ path: join(ordner, `finale${String(anzahl)}-${namen}-${p.name}-rand${String(rand)}-s${String(seite)}.png`) });
+              const kaesten = await zeilen(page);
+              expect(kaesten.length).toBeGreaterThan(0);
+              for (const k of kaesten) {
+                expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
+                expect(k.zusatzUnten, `${k.id}: Zusätze in der Zeile`).toBeLessThanOrEqual(k.unten + 0.5);
+              }
+              const hinweis = page.getByText(`Seite ${String(seite + 1)} / ${String(seiten)}`);
+              await expect(hinweis).toBeVisible();
+              const h = await hinweis.boundingBox();
+              expect(h!.y + h!.height, 'Seitenhinweis im Bild').toBeLessThanOrEqual(p.height);
+              await expect(page.getByTestId('monitor-match-tentative')).toHaveCount(kaesten.length);
+              gesehen.push(...kaesten.map((k) => k.id));
+            }
+            expect(gesehen, 'jedes Finalspiel genau einmal').toHaveLength(anzahl);
+            expect(new Set(gesehen).size).toBe(anzahl);
+            await ctx.close();
+          });
         }
-        await ctx.close();
-      });
+      }
     }
   }
 });

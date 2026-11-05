@@ -129,13 +129,13 @@ export function nameLines(text: string, perLine: number): number {
  * unterhalb der Mittelachse aufnehmen: 2 × (halbe Zeile + Zusatzhöhe), die Zusätze dürfen ins untere Polster ragen. `reserveExtra`:
  * Zeile für „(4:3 i. E.)“ unter dem Stand freihalten (Spielplan, Finalrunde).
  */
-export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME, reserveExtra: boolean = cols.state, showTentative: boolean = true): number {
+export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME, reserveExtra: boolean = cols.state): number {
   const perLine = nameCharsPerLine(frame);
   const names = Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
   const note = num(displayList.fontSizes.note) * LINE;
   const padY = num(displayList.rowPaddingY);
   const unterMitte = (zeile: number, zusatz: number): number => (zusatz === 0 ? zeile : 2 * (zeile / 2 + Math.max(0, zusatz - 0.8 * padY)));
-  const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0) + (!cols.state && showTentative && match.kickoffTentative ? note : 0) + (match.labelText ? note : 0);
+  const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0) + (!cols.state && match.kickoffTentative ? note : 0) + (match.labelText ? note : 0);
   const timeCell = unterMitte(num(displayList.fontSizes.time) * LINE, zusatzZeit);
   const scoreCell = unterMitte(num(displayList.fontSizes.score) * LINE, reserveExtra ? note : 0);
   const content = Math.max(timeCell, names * FONT * LINE, scoreCell);

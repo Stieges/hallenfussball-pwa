@@ -9,7 +9,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MonitorTimeCell } from '../components/MonitorTimeCell';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
-import { listFrame, monitorPageCount, nextMatchesLayout, scheduleFieldLayout, startPage } from '../slideContent';
+import { listFrame, monitorPageCount, nextMatchesLayout, scheduleFieldLayout, standingsSections, startPage } from '../slideContent';
 import { nameLines, pageIndexOf } from '../listRows';
 import { cssVars, displayList } from '../../../design-tokens';
 import { initRealDeI18n } from '../../../test/realDeI18n';
@@ -237,12 +237,17 @@ describe('@ZM-105 @ZM-189 „voraussichtlich“ teilt sich die Zustandszeile, Fi
     expect(zeile.querySelector('[data-testid="monitor-match-tentative"]')!.parentElement?.getAttribute('data-testid')).toBe('monitor-match-zusatz');
   });
 
-  it('Gegenbeispiel: „Alle Tabellen“, Finalrunde: kein „voraussichtlich“ (nur die Bezeichnung)', async () => {
+  it('„Alle Tabellen“, Finalrunde: drei angesetzte Finalspiele zeigen je genau einmal „voraussichtlich“ und die Bezeichnung (@ZM-105)', async () => {
     const { AllStandingsSlide } = await import('../slides/AllStandingsSlide');
     const { t, view } = finale();
     render(<AllStandingsSlide tournament={t} view={view} theme="dark" style={{}} page={1} />);
-    expect(screen.queryByTestId('monitor-match-tentative')).toBeNull();
-    expect(screen.getAllByTestId('monitor-match-label').length).toBe(3);
+    const zeilen = screen.getAllByTestId('monitor-match-row');
+    expect(zeilen).toHaveLength(3);
+    for (const z of zeilen) {
+      expect(z.querySelectorAll('[data-testid="monitor-match-tentative"]')).toHaveLength(1);
+      expect(z.querySelector('[data-testid="monitor-match-tentative"]')).toHaveTextContent('voraussichtlich');
+      expect(z.querySelectorAll('[data-testid="monitor-match-label"]')).toHaveLength(1);
+    }
   });
 });
 
@@ -425,5 +430,34 @@ describe('@ZM-187 Die Zeile für den Strafstoß ist je Folie reserviert, nicht j
     expect(zeilen.length).toBe(3);
     // offene und beendete Finalspiele: dieselbe Mindesthöhe, die Zeile wird nicht höher, wenn ein Finalspiel endet
     expect(new Set(zeilen.map(z => z.style.minHeight)).size).toBe(1);
+  });
+});
+
+describe('C-MONITOR-FINALRUNDE-OHNE-SEITEN @ZM-185 Die Finalrunde blättert nach gemessener Höhe, Tabellen zuerst', () => {
+  it('6 Finalspiele mit langen Namen: mehrere Finalseiten hinter der Tabelle, jedes Spiel auf genau einer, der Takt kennt dieselbe Seitenzahl', () => {
+    const t = listenTurnier({ namen: 'lang', beendet: 3, finale: 6 });
+    const { view } = withView(t);
+    const abschnitte = standingsSections(t, view);
+    expect(abschnitte[0].kind, 'Tabellen zuerst').not.toBe('finals');
+    const finalSeiten = abschnitte.filter((a): a is Extract<typeof a, { kind: 'finals' }> => a.kind === 'finals');
+    expect(finalSeiten.length).toBeGreaterThanOrEqual(2);
+    expect(finalSeiten.flatMap(a => a.matches.map(m => m.id))).toHaveLength(6);
+    expect(new Set(finalSeiten.flatMap(a => a.matches.map(m => m.id))).size).toBe(6);
+    expect(abschnitte.slice(0, abschnitte.length - finalSeiten.length).every(a => a.kind !== 'finals')).toBe(true);
+    expect(monitorPageCount(slide('all-standings'), t, view)).toBe(abschnitte.length);
+  });
+
+  it('Gegenbeispiel: 2 Finalspiele mit kurzen Namen bleiben auf einer Seite, ohne Finalspiele gibt es keine Finalseite', () => {
+    const kurz = listenTurnier({ namen: 'kurz', beendet: 3, finale: 2 });
+    expect(standingsSections(kurz, withView(kurz).view).filter(a => a.kind === 'finals')).toHaveLength(1);
+    const keine = listenTurnier({ namen: 'kurz', beendet: 3 });
+    expect(standingsSections(keine, withView(keine).view).filter(a => a.kind === 'finals')).toHaveLength(0);
+  });
+
+  it('der Bildrand zählt: bei 10 % Rand passen nie mehr Finalspiele auf eine Seite als bei 0 %', () => {
+    const t = listenTurnier({ namen: 'lang', beendet: 3, finale: 6 });
+    const { view } = withView(t);
+    const proSeite = (overscan: number) => Math.max(...standingsSections(t, view, { overscan, notice: false }).filter(a => a.kind === 'finals').map(a => (a.kind === 'finals' ? a.matches.length : 0)));
+    expect(proSeite(10)).toBeLessThanOrEqual(proSeite(0));
   });
 });

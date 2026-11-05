@@ -70,19 +70,30 @@ export function groupIds(tournament: Tournament): string[] {
   return standingsGroups(tournament.teams).map(g => g.group).filter(id => id !== OVERALL_GROUP);
 }
 
-/** Ein Abschnitt der Folie „Alle Tabellen / Finalrunde“: eine Gruppentabelle oder die Finalrunde. */
-export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'overall' } | { kind: 'finals' };
+/** Ein Abschnitt der Folie „Alle Tabellen / Finalrunde“: eine Gruppentabelle oder eine Seite der Finalrunde. */
+export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'overall' } | { kind: 'finals'; matches: MatchView[] };
 
 /**
- * Abschnitte je Seite (R-f3): je Gruppe eine Tabelle, danach die Finalrunde, wenn es Finalspiele gibt.
+ * Abschnitte je Seite (R-f3): je Gruppe eine Tabelle zuerst, danach die Finalrunde. Die Finalrunde blättert nach gemessener Höhe wie der
+ * Spielplan (`listPages`, @ZM-185, „dichte Folien blättern statt die Schrift zu verkleinern“): jede Seite der Finalrunde ist ein eigener
+ * Abschnitt, also eine Seite der Folie – der Takt, „Seite x / y“ und die Seitendauer bleiben wie bei allen blätternden Folien. So wird
+ * nie etwas abgeschnitten, und eine Tabelle springt nie, wenn die Finalrunde wächst (sie steht hinter den Tabellen).
  * Ohne Gruppen (Jeder gegen Jeden, Controller-Ruling B-16f3 Fixrunde 1): eine Gesamttabelle über alle Teams.
  */
-export function standingsSections(tournament: Tournament, view: TournamentView): StandingsSection[] {
+export function standingsSections(tournament: Tournament, view: TournamentView, frame: ListFrame = DEFAULT_FRAME): StandingsSection[] {
   const ids = groupIds(tournament);
   const sections: StandingsSection[] = ids.map(groupId => ({ kind: 'group', groupId }));
   if (ids.length === 0 && tournament.teams.length > 0) { sections.push({ kind: 'overall' }); }
-  if (finalRoundMatches(view).length > 0) { sections.push({ kind: 'finals' }); }
+  const finals = finalRoundMatches(view);
+  if (finals.length > 0) {
+    for (const matches of listPages(finals, finalColumns(view), undefined, frame)) { sections.push({ kind: 'finals', matches }); }
+  }
   return sections;
+}
+
+/** Spalten der Finalrunde: wie im Spielplan mit reservierter Zustandszeile („voraussichtlich“ bzw. Zustand), darunter die Bezeichnung. */
+export function finalColumns(view: TournamentView): ListColumns {
+  return listColumns(true, false, view.matches);
 }
 
 /** Seiten und Spalten einer Listen-Folie: `pages[page]` sind die Zeilen der Seite, `columns` gelten für alle Seiten (@ZM-187). */
@@ -132,7 +143,7 @@ export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | 
   if (!tournament || !view || !('config' in slide)) { return 1; }
   switch (slide.type) {
     case 'all-standings':
-      return Math.max(1, standingsSections(tournament, view).length);
+      return Math.max(1, standingsSections(tournament, view, frame).length);
     case 'schedule-field':
       return scheduleFieldLayout(view, fieldIdToNumber(slide.config.fieldId), frame).pages.length;
     case 'next-matches':

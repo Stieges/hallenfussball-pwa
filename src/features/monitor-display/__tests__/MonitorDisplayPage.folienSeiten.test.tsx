@@ -82,7 +82,8 @@ afterEach(() => {
 const zeilen = () => screen.queryAllByTestId('monitor-match-row');
 
 /** Turnier mit Finalrunde: die Playoff-Spiele tragen `isFinal` (wie der Generator sie setzt). */
-const mitFinalrunde = (): Match[] => withPlayoffs().map(m => (m.id.startsWith('po-') ? { ...m, isFinal: true } : m));
+// ohne Spiel um Platz 3: drei Finalspiele (mit Zustandszeile und Bezeichnung) passen auf eine Seite, die Finalrunde ist eine Seite (Mehrseitigkeit: listSlides.zm187.test.tsx)
+const mitFinalrunde = (): Match[] => withPlayoffs().filter(m => m.id !== 'po-p3').map(m => (m.id.startsWith('po-') ? { ...m, isFinal: true } : m));
 
 /** 13 Spiele auf Feld 1, je 5 Minuten versetzt ab 14:00 (Uhrzeiten sind einmalig). */
 const dreizehnSpiele = (): Match[] => Array.from({ length: 13 }, (_, i) => ({

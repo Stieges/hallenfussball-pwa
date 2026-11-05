@@ -53,8 +53,12 @@ describe('@TM-015 @ZM-102 Monitor: Herkunft offener Plätze, besetzter Platz ohn
   it('@TM-015 F-HF Finalrunde: HF1 „FC Nord“ gegen „Zweiter Gruppe B“, Finale Heim „Sieger Halbfinale 1“', async () => {
     const cup = await fHF();
     const view = buildMonitorView(cup.tournament);
-    const finals = standingsSections(cup.tournament, view).findIndex(s => s.kind === 'finals');
-    render(<AllStandingsSlide {...withView(cup.tournament)} theme="dark" style={{}} page={finals} />);
+    // die Finalrunde blättert nach Höhe: jedes Spiel auf der Seite ansehen, auf der es steht
+    const abschnitte = standingsSections(cup.tournament, view);
+    const seitenVon = (id: string) => abschnitte.findIndex(s => s.kind === 'finals' && s.matches.some(m => m.id === id));
+    for (const seite of new Set([seitenVon(idOf(cup, GAME.HF1)), seitenVon(idOf(cup, GAME.FINAL))])) {
+      render(<AllStandingsSlide {...withView(cup.tournament)} theme="dark" style={{}} page={seite} />);
+    }
     const erwartet = EXPECTED_PLAN['F-HF'];
     const hf1 = within(zeile(idOf(cup, GAME.HF1)));
     expect(hf1.getByText(erwartet.hf1Home.label.de)).toBeInTheDocument();

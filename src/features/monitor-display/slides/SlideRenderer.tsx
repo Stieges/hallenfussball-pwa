@@ -82,7 +82,7 @@ export function SlideRenderer({ slide, tournament, view, performanceSettings, th
       return <NextMatchesSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} overscanPercent={overscanPercent} />;
 
     case 'all-standings':
-      return <AllStandingsSlide tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
+      return <AllStandingsSlide tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} overscanPercent={overscanPercent} />;
 
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;

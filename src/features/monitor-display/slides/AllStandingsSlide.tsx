@@ -7,8 +7,8 @@ import type { MonitorTheme } from '../../../types/monitor';
 import { groupTieView } from '../../../core/standings/tieViews';
 import { calculateStandings } from '../../../utils/calculations';
 import { getGroupDisplayName, resolveTheme } from '../monitorDisplayHelpers';
-import { finalRoundMatches, standingsSections, type StandingsSection } from '../slideContent';
-import { listColumns } from '../listRows';
+import { finalColumns, standingsSections, type StandingsSection } from '../slideContent';
+import { wirksamerRand } from '../overscan';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { StandingsTable } from '../components/StandingsTable';
 import { SlidePageHint } from '../components/SlidePageHint';
@@ -22,13 +22,16 @@ interface AllStandingsSlideProps {
   style: CSSProperties;
   /** Seite = Abschnitt (R-f3), 0-basiert. */
   page?: number;
+  /** Wirksamer Bildrand in Prozent (@ME-067): bestimmt, wie viele Finalspiele auf eine Seite passen. */
+  overscanPercent?: number;
 }
 
 /** Folie „Alle Tabellen / Finalrunde“ (@ZM-071, @ZM-089): ein Abschnitt je Seite, nur bei öffentlichen Ergebnissen. */
-export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: AllStandingsSlideProps) {
+export function AllStandingsSlide({ tournament, view, theme, style, page = 0, overscanPercent }: AllStandingsSlideProps) {
   const { t } = useTranslation('monitor');
   const colors = monitorThemes[resolveTheme(theme)];
-  const sections = standingsSections(tournament, view);
+  const frame = { overscan: wirksamerRand(overscanPercent, null), notice: false };
+  const sections = standingsSections(tournament, view, frame);
   const index = Math.min(Math.max(page, 0), Math.max(sections.length - 1, 0));
   const section: StandingsSection | undefined = sections[index];
   if (!section) {
@@ -57,7 +60,7 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: 
     );
   }
 
-  const finalColumns = listColumns(false, false, view.matches);
+  const columns = finalColumns(view);
   return (
     <div style={style}>
       <SlideHeading icon="finals" color={colors.text}>{t('slides.allStandings.finals')}</SlideHeading>
@@ -67,16 +70,15 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: 
         gap: displayList.rowGap,
         width: '100%',
       }}>
-        {finalRoundMatches(view).map(match => (
+        {section.matches.map(match => (
           <MonitorMatchRow
             key={match.id}
             match={match}
             tournament={tournament}
             theme={theme}
             showScore={match.status === 'finished' || match.status === 'awarded'}
-            columns={finalColumns}
-            reserveExtra
-            showTentative={false}
+            columns={columns}
+            frame={frame}
           />
         ))}
       </div>
