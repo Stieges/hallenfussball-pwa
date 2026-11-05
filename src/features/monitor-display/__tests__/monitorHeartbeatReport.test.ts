@@ -31,6 +31,11 @@ describe('wakeLockReport – Meldung an die Verwaltung (B-48b)', () => {
     expect(wakeLockReport('unsupported', imBrowser)).toBe('denied');
   });
 
+  it('@ME-006 ein unsichtbares Fenster fragt nicht an und bleibt idle: das meldet nichts (null), auch nicht als Ablehnung', () => {
+    expect(wakeLockReport('idle', imBrowser)).toBeNull();
+    expect(wakeLockReport('idle', imBrowser)).not.toBe('denied');
+  });
+
   it('ohne Antwort und ohne Anfrage meldet er nichts (null = unbekannt)', () => {
     expect(wakeLockReport('idle', imBrowser)).toBeNull();
     expect(wakeLockReport('pending', imBrowser)).toBeNull();

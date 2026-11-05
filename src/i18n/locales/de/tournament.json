@@ -1468,7 +1468,7 @@
   "timeShift": {
     "button": "Zeiten verschieben",
     "listHint": "Über ⋮ am Spiel ab dort verschieben.",
-    "original": "ursprünglich {{time}}",
+    "original": "(war {{time}})",
     "tentative": "voraussichtlich",
     "dialogTitle": "Zeiten verschieben",
     "close": "Schließen",
@@ -1518,8 +1518,8 @@
     "warnBuffer_other": "Feld {{field}}: zwischen Spiel {{before}} und {{after}} nur {{gap}} statt {{count}} Minuten Pause.",
     "warnOverlap": "Feld {{field}}: Spiel {{before}} und Spiel {{after}} überschneiden sich um {{minutes}} Minuten.",
     "warnCanConfirm": "Du kannst trotzdem bestätigen.",
-    "infoOriginal": "Bei {{matches}} steht „ursprünglich“ dabei (unter 30 Minuten bis zum Anpfiff). „Übernehmen“ gilt sofort, ohne Vorschau.",
-    "infoPlanning": "Das ist früh genug und noch Planung: Es steht kein „ursprünglich“ dabei. Vor dem ersten Anpfiff gilt „Übernehmen“ sofort, ohne Vorschau.",
+    "infoOriginal": "Bei {{matches}} steht „(war …)“ dabei (unter 30 Minuten bis zum Anpfiff). „Übernehmen“ gilt sofort, ohne Vorschau.",
+    "infoPlanning": "Das ist früh genug und noch Planung: Es steht kein „(war …)“ dabei. Vor dem ersten Anpfiff gilt „Übernehmen“ sofort, ohne Vorschau.",
     "preview": "Vorschau ansehen",
     "apply": "Übernehmen",
     "cancel": "Abbrechen",
@@ -1648,6 +1648,7 @@
     "section": {
       "suggestionTitle": "Alles entschieden",
       "suggestionText": "Alles entschieden – Endstand prüfen und Turnier abschließen.",
+      "notYet": "Abschließen kannst du, sobald alle Spiele entschieden sind",
       "statusTitle": "Turnierstand",
       "gamesDone": "{{done}} von {{total}} Spielen beendet.",
       "reviewsOpen_one": "{{count}} Eintrag in der Klärungsliste ist noch offen.",

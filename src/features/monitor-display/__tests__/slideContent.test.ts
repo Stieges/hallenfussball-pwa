@@ -7,12 +7,9 @@ import type { MonitorSlide } from '../../../types/monitor';
 import { buildTournament } from './monitorFixture';
 import { buildMonitorView } from '../monitorView';
 import {
-  MONITOR_ROWS_PER_PAGE,
   compareKickoff,
   fieldSchedule,
   monitorPageCount,
-  pageOf,
-  pagesFor,
   upcomingMatches,
 } from '../slideContent';
 
@@ -153,32 +150,6 @@ describe('fieldSchedule – Spielplan eines Feldes', () => {
   it('mehr als sechs Spiele: alle bleiben enthalten (kein slice)', () => {
     const liste = Array.from({ length: 9 }, (_, i) => spiel(`s${i}`, { field: 1, matchNumber: i + 1, scheduledTime: um(9, i) }));
     expect(fieldSchedule(ansicht(liste), 1)).toHaveLength(9);
-  });
-});
-
-describe('pageOf / pagesFor – Seiten', () => {
-  it('Standard sind sechs Zeilen je Seite', () => {
-    expect(MONITOR_ROWS_PER_PAGE).toBe(6);
-  });
-
-  it('13 Zeilen → 3 Seiten, jede Zeile genau auf einer Seite', () => {
-    const zeilen = Array.from({ length: 13 }, (_, i) => `z${i}`);
-    const seiten = pagesFor(zeilen.length);
-    expect(seiten).toBe(3);
-    const alle = Array.from({ length: seiten }, (_, p) => pageOf(zeilen, p));
-    expect(alle.flat()).toEqual(zeilen);
-    expect(alle.map(s => s.length)).toEqual([6, 6, 1]);
-  });
-
-  it('pagesFor ist mindestens 1, auch ohne Zeilen', () => {
-    expect(pagesFor(0)).toBe(1);
-    expect(pagesFor(6)).toBe(1);
-    expect(pagesFor(7)).toBe(2);
-  });
-
-  it('pageOf mit eigener Zeilenzahl', () => {
-    expect(pageOf([1, 2, 3, 4, 5], 1, 2)).toEqual([3, 4]);
-    expect(pageOf([1, 2, 3], 5)).toEqual([]);
   });
 });
 

@@ -26,6 +26,8 @@ vi.mock('../../features/klaerungsliste/KlaerungslisteEinstieg', () => ({ Klaerun
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({
   EngineOutboxHeaderStatus: ({ tournament }: { tournament: { id: string } }) => <span data-testid="engine-outbox-kopf">{tournament.id}</span>,
 }));
+// Der Vorschlag „Turnier abschließen“ im Spielplan (@LZ-007) braucht den Datenzugang; dieser Test prüft ihn nicht
+vi.mock('../../features/tournament-finish/components/FinishTournamentSection', () => ({ FinishTournamentSection: () => null }));
 vi.mock('../../features/tournament-management/ScheduleTab', () => ({ ScheduleTab: () => <p>Spielplan-Tab</p> }));
 vi.mock('../../features/tournament-management/TeamsTab', () => ({ TeamsTab: () => <p>Teams-Tab</p> }));
 vi.mock('../../features/tournament-management/ManagementTab', () => ({ ManagementTab: () => <p>Live-Tab</p> }));

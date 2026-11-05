@@ -33,12 +33,14 @@ interface SlideRendererProps {
   pinnedMatchId?: string | null;
   /** Seite der Folie (B-16f1, ausgewertet ab f3). */
   page?: number;
+  /** Startseite des Spielplans (@ZM-190): beim Eintritt festgehalten, die Folie beginnt mit dieser Seite. */
+  pageStart?: number;
   /** Der Monitor nach dem Abschluss (R3-7): Endstand aus dem gespeicherten Stand des Servers, Kindermodus oder `none`. */
   end?: MonitorEnd;
 }
 
 /** Wählt die Folien-Komponente nach Typ; unbekannte Typen fallen auf die Zuschauer-QR-Folie. */
-export function SlideRenderer({ slide, tournament, view, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0, end = { kind: 'none' } }: SlideRendererProps) {
+export function SlideRenderer({ slide, tournament, view, performanceSettings, theme, overscanPercent, hinweisHoehe, pinnedMatchId, page = 0, pageStart = 0, end = { kind: 'none' } }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -71,16 +73,16 @@ export function SlideRenderer({ slide, tournament, view, performanceSettings, th
       return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
 
     case 'schedule-field':
-      return <ScheduleFieldSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
+      return <ScheduleFieldSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} pageStart={pageStart} overscanPercent={overscanPercent} />;
 
     case 'sponsor':
       return <SponsorSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
 
     case 'next-matches':
-      return <NextMatchesSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
+      return <NextMatchesSlide slide={slide} tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} overscanPercent={overscanPercent} />;
 
     case 'all-standings':
-      return <AllStandingsSlide tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} />;
+      return <AllStandingsSlide tournament={tournament} view={view} theme={theme} style={slideStyle} page={page} overscanPercent={overscanPercent} />;
 
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;

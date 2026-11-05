@@ -3,6 +3,7 @@
  *   Läuft + alles entschieden    → Vorschlag „Alles entschieden – Endstand prüfen und Turnier abschließen“ (Haupttaste)
  *   Läuft + etwas offen          → Karte „Turnierstand“ mit „Turnier abschließen“ als zweiter Taste (öffnet Dialog A, @LZ-008)
  *   Abgeschlossen                → Zustand C (`FinishedStateSection`)
+ *   Festgelegt, vor dem Anpfiff  → der Satz „Abschließen kannst du, sobald alle Spiele entschieden sind“ (@LZ-093)
  * Nur mit Recht `manageLifecycle` (Helfer: bietet die App das nicht an, @LZ-022) und nur für Turniere mit Konto (E9). Der Dienst
  * bekommt den frisch gelesenen rohen Cloud-Stand, nie die Überlagerung der Anzeige (Review #393 H-2).
  */
@@ -20,20 +21,27 @@ import { useMatchReviews } from '../../klaerungsliste/useMatchReviews';
 import { finishFacts, lateFinishHint, shouldSuggestFinish } from '../model/finishSummary';
 import { useServerLifecyclePoll } from '../hooks/useServerLifecyclePoll';
 import { FinishedStateSection } from './FinishedStateSection';
-import { FinishSectionCards } from './FinishSectionCards';
+import { FinishNotYetCard, FinishSectionCards } from './FinishSectionCards';
 import { FinishTournamentDialog } from './FinishTournamentDialog';
 
 /** Abstand nach unten nur, wenn der Bereich etwas zeigt (kein leerer Rahmen im Dashboard, Review #395 M-1). */
 const gap = { marginBottom: cssVars.spacing.lg } as const;
+/** Im Spielplan steht der Vorschlag über der Karte des Spielplans, mit demselben Rand wie sie. */
+const scheduleGap = { padding: `${cssVars.spacing.md} ${cssVars.spacing.md} 0` } as const;
 
 export interface FinishTournamentSectionProps {
   /** Das Turnier der Ansicht (kann mit der Spielsteuerung überlagert sein; nur zur Anzeige und für die Vorschlags-Regel). */
   tournament: Tournament;
   /** Turnier frisch neu laden (nach dem Abschluss, nach „Stand neu laden“). */
   onReload: () => Promise<void> | void;
+  /**
+   * Wo der Bereich steht: `overview` (Übersicht der Verwaltung) zeigt alles – Vorschlag, Stand, Satz vor dem Anpfiff, Zustand
+   * „abgeschlossen“; `schedule` (oben im Spielplan) nur den Vorschlag, sobald alles entschieden ist (@LZ-007).
+   */
+  placement?: 'overview' | 'schedule';
 }
 
-export function FinishTournamentSection({ tournament, onReload }: FinishTournamentSectionProps) {
+export function FinishTournamentSection({ tournament, onReload, placement = 'overview' }: FinishTournamentSectionProps) {
   const navigate = useNavigate();
   const { tournamentRepository } = useRepositories();
   // Ruling #394 H-1: nach dem Abschluss ist `manageLifecycle` gesperrt – dieser Bereich liest nur und bleibt offen
@@ -62,8 +70,14 @@ export function FinishTournamentSection({ tournament, onReload }: FinishTourname
   if (!canManage || local) {
     return null;
   }
+  if (placement === 'schedule' && !(lifecycle === 'running' && suggest)) {
+    return null;
+  }
   if (lifecycle === 'finished') {
     return <div style={gap}><FinishedStateSection tournament={tournament} showLate /></div>;
+  }
+  if (lifecycle === 'fixed') {
+    return <div style={gap}><FinishNotYetCard /></div>;
   }
   if (lifecycle !== 'running') {
     return null;
@@ -72,8 +86,8 @@ export function FinishTournamentSection({ tournament, onReload }: FinishTourname
   const closeDialog = (): void => { setOpen(false); };
   const jump = (target: string): void => { setOpen(false); void navigate(target); };
   return (
-    <div style={gap}>
-      <FinishSectionCards suggest={suggest} facts={facts} openReviews={openReviews} lateSince={lateHint} onOpen={() => { setOpen(true); }} />
+    <div style={placement === 'schedule' ? scheduleGap : gap}>
+      <FinishSectionCards suggest={suggest} facts={facts} openReviews={openReviews} lateSince={placement === 'schedule' ? null : lateHint} onOpen={() => { setOpen(true); }} />
       <FinishTournamentDialog
         isOpen={open} tournament={tournament} finish={finish} onClose={closeDialog} onJump={jump}
         onReloadState={async () => { await reloadFresh(); }}

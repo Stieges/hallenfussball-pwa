@@ -75,32 +75,32 @@ describe('B-27 Zuschauer-Seite: ursprüngliche Uhrzeit', () => {
     localStorage.clear();
   });
 
-  it('@ZP-004 Spiel 2 steht um 15:40 mit „ursprünglich 15:30“', async () => {
+  it('@ZP-004 Spiel 2 steht um 15:40 mit „(war 15:30)“', async () => {
     const { tournament, spiel2 } = turnier({ shown: '15:40', original: '15:30' });
     await zeigen(tournament);
     expect(original(spiel2.id).length).toBeGreaterThan(0);
-    expect(original(spiel2.id)[0]).toHaveTextContent('ursprünglich 15:30');
+    expect(original(spiel2.id)[0]).toHaveTextContent('(war 15:30)');
   });
 
-  it('@ZP-005 Gegenbeispiel: stimmt die Uhrzeit wieder überein, steht kein „ursprünglich“ dabei', async () => {
+  it('@ZP-005 Gegenbeispiel: stimmt die Uhrzeit wieder überein, steht kein „(war …)“ dabei', async () => {
     const { tournament, spiel2 } = turnier({ shown: '15:30', original: '15:30' });
     await zeigen(tournament);
     expect(original(spiel2.id)).toEqual([]);
-    expect(screen.queryAllByText(/ursprünglich 15:30/)).toEqual([]);
+    expect(screen.queryAllByText(/\(war 15:30\)/)).toEqual([]);
   });
 
   it('@ZP-049 Gegenbeispiel: Planung vor dem ersten Anpfiff (keine ursprüngliche Uhrzeit) zeigt bei keinem Spiel „ursprünglich“', async () => {
     const { tournament } = turnier({ shown: '15:40' });
     const ohne = { ...tournament, matches: tournament.matches.map((m) => ({ ...m, originalStart: undefined })) };
     const { container } = await zeigen(ohne);
-    expect(container.textContent).not.toMatch(/ursprünglich/);
+    expect(container.textContent).not.toMatch(/\(war/);
   });
 
   it('@ZM-105 K.-o.-Uhrzeiten stehen als „voraussichtlich“, auch mit ihrer ursprünglichen; Gruppenspiele nicht', async () => {
     const { tournament, spiel2, finale } = turnier({ shown: '15:40', original: '15:30' });
     await zeigen(tournament);
     expect(screen.queryAllByTestId(`match-tentative-${finale.id}`)[0]).toHaveTextContent('voraussichtlich');
-    expect(original(finale.id)[0]).toHaveTextContent('ursprünglich 16:55');
+    expect(original(finale.id)[0]).toHaveTextContent('(war 16:55)');
     expect(screen.queryAllByTestId(`match-tentative-${spiel2.id}`)).toEqual([]);
   });
 });

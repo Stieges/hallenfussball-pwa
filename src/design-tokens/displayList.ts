@@ -13,8 +13,14 @@ export const displayList = {
     team: '3.6vh',
     /** Tabellenkopf und Seitenhinweis (mindestens 3 % der Bildhöhe) */
     head: '3vh',
-    /** „ursprünglich hh:mm“ und „voraussichtlich“ unter der Uhrzeit (B-27): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
+    /** Eine Stufe für „(war hh:mm)“ neben der Uhrzeit und die Bezeichnung als Zwischenzeile über der Zeilenkarte („Halbfinale 1“): Lesetext-Stufe der Zeile (nah-Untergrenze 3,6 %); @ZP-046 verlangt mehr, Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN */
     timeNote: '3.6vh',
+    /** Uhrzeit der Zeile (gültige, neue Uhrzeit): deutlich größer als der Zusatz „(war hh:mm)“ (@ZM-188, @ZP-046) */
+    time: '4.4vh',
+    /** Stand in der Zeile (1,5 × Teamname, VISUAL-DESIGN § 8; mindestens so groß wie die Uhrzeit) */
+    score: '5.4vh',
+    /** Zusatz unter dem Abzeichen („gewertet“) und unter dem Stand („(4:3 i. E.)“): wie Tabellenkopf, nie kleiner (@ZM-125) */
+    note: '3vh',
   },
   /** Abstand zwischen Überschrift und Liste */
   headingGap: '2vh',
@@ -25,10 +31,14 @@ export const displayList = {
   rowPaddingX: '2vh',
   /** Abstand zwischen den Zellen einer Zeile */
   cellGap: '2vh',
-  /** Spalte Uhrzeit über Feld (und Hinweisen, B-27): feste Breite in em der Zeilenschrift, früher Uhrzeit 3,4 em + Feld 5 em */
-  timeFieldWidth: '8.4em',
-  /** Trenner/Stand */
-  separatorWidth: '2.6em',
+  /** Spalte Uhrzeit (daneben „(war hh:mm)“ in einer Zeile) über Feld: feste Breite in em der Zeilenschrift (@ZM-188) */
+  timeFieldWidth: '9.6em',
+  /** Abstand zwischen Uhrzeit und „(war hh:mm)“ in einer Zeile */
+  timeNoteGap: '1vh',
+  /** Abstand der Zwischenzeile (Spielbezeichnung) von der Zeilenkarte darunter (MonitorMatchRow, Zeilenhöhe in listRows) */
+  labelGap: '0.4vh',
+  /** Trenner/Stand: feste Breite in em der Namensschrift (nicht der Standschrift), damit die Spalte in jeder Zeile gleich breit ist (@ZM-187); „(4:3 i. E.)“ unter dem Stand ragt höchstens in den Zellenabstand */
+  separatorWidth: '4.6em',
   /** Status-Punkt vor der Zeile im Spielplan */
   markerSize: '1.6vh',
   /** Tabelle: Platz | Team | S | U | N | Diff | Pkt (in em der Zeilenschrift) */
@@ -37,6 +47,4 @@ export const displayList = {
   headingIconSize: '1em',
   /** Abstand zwischen Überschrift-Symbol und Wort */
   headingIconGap: '1.2vh',
-  /** Bezeichnung einer Zeile (Spielbezeichnung) höchstens so breit */
-  labelMaxWidth: '25%',
 } as const;

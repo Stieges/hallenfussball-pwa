@@ -45,6 +45,8 @@ const SZENEN: Szene[] = [
   { id: 'dlg-done-by', kennung: 'H-5 @LZ-026', sichtbar: 'finish-error', text: /Das Turnier hat Maria bereits abgeschlossen/, haupt: 'finish-back' },
   { id: 'vw-vorschlag', kennung: '@LZ-007', sichtbar: 'finish-suggestion', text: /Alles entschieden – Endstand prüfen und Turnier abschließen/, haupt: 'tournament-finish-open' },
   { id: 'vw-ohne', kennung: '@LZ-008', sichtbar: 'finish-status', text: /Einträge in der Klärungsliste sind noch offen/, nicht: ['finish-suggestion'] },
+  { id: 'vw-vorab', kennung: '@LZ-093', sichtbar: 'finish-not-yet', text: /Abschließen kannst du, sobald alle Spiele entschieden sind/, nicht: ['tournament-finish-open', 'finish-suggestion'] },
+  { id: 'sp-vorschlag', kennung: '@LZ-007 (oben im Spielplan)', sichtbar: 'finish-suggestion', text: /Alles entschieden – Endstand prüfen und Turnier abschließen/, haupt: 'tournament-finish-open' },
   { id: 'vw-spaet', kennung: '@LZ-005', sichtbar: 'finish-late-hint', text: /Das letzte Spiel war am/ },
   { id: 'c', kennung: '@LZ-009 @LZ-039 @LZ-091', sichtbar: 'tournament-ended', text: /Wieder öffnen geht nur über den Betreiber/, haupt: 'public-view-open', hauptText: 'Zuschauer-Ansicht öffnen' },
   { id: 'c-leer', kennung: '@LZ-009', sichtbar: 'late-entries-empty', text: /Bisher ist nach dem Abschluss nichts eingetroffen/, haupt: 'public-view-open' },

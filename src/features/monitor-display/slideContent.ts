@@ -9,13 +9,11 @@ import type { Tournament } from '../../types/tournament';
 import type { MatchView, TournamentView } from '../../core/view';
 import { DEFAULT_SLIDE_CONFIG } from '../../types/monitor';
 import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
-import type { ProgramSlide } from './slideProgramme';
+import { SPIELPLAN_FALLBACK_SLIDE, type ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
-
-/** Zeilen je Seite bis B-17 misst (@ZM-129). */
-export const MONITOR_ROWS_PER_PAGE = 6;
+import { DEFAULT_FRAME, listColumns, listPages, listPagesBalanced, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
 
 function compareNumbers(x: number, y: number): number {
   if (x === y) { return 0; }
@@ -72,48 +70,84 @@ export function groupIds(tournament: Tournament): string[] {
   return standingsGroups(tournament.teams).map(g => g.group).filter(id => id !== OVERALL_GROUP);
 }
 
-/** Ein Abschnitt der Folie „Alle Tabellen / Finalrunde“: eine Gruppentabelle oder die Finalrunde. */
-export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'overall' } | { kind: 'finals' };
+/** Ein Abschnitt der Folie „Alle Tabellen / Finalrunde“: eine Gruppentabelle oder eine Seite der Finalrunde. */
+export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'overall' } | { kind: 'finals'; matches: MatchView[] };
 
 /**
- * Abschnitte je Seite (R-f3): je Gruppe eine Tabelle, danach die Finalrunde, wenn es Finalspiele gibt.
+ * Abschnitte je Seite (R-f3): je Gruppe eine Tabelle zuerst, danach die Finalrunde. Die Finalrunde blättert nach gemessener Höhe wie der
+ * Spielplan (`listPages`, @ZM-185, „dichte Folien blättern statt die Schrift zu verkleinern“): jede Seite der Finalrunde (gleichmäßig verteilt, „2 + 2“) ist ein eigener
+ * Abschnitt, also eine Seite der Folie – der Takt, „Seite x / y“ und die Seitendauer bleiben wie bei allen blätternden Folien. So wird
+ * nie etwas abgeschnitten, und eine Tabelle springt nie, wenn die Finalrunde wächst (sie steht hinter den Tabellen).
  * Ohne Gruppen (Jeder gegen Jeden, Controller-Ruling B-16f3 Fixrunde 1): eine Gesamttabelle über alle Teams.
  */
-export function standingsSections(tournament: Tournament, view: TournamentView): StandingsSection[] {
+export function standingsSections(tournament: Tournament, view: TournamentView, frame: ListFrame = DEFAULT_FRAME): StandingsSection[] {
   const ids = groupIds(tournament);
   const sections: StandingsSection[] = ids.map(groupId => ({ kind: 'group', groupId }));
   if (ids.length === 0 && tournament.teams.length > 0) { sections.push({ kind: 'overall' }); }
-  if (finalRoundMatches(view).length > 0) { sections.push({ kind: 'finals' }); }
+  const finals = finalRoundMatches(view);
+  if (finals.length > 0) {
+    for (const matches of listPagesBalanced(finals, finalColumns(view), undefined, frame)) { sections.push({ kind: 'finals', matches }); }
+  }
   return sections;
 }
 
-/** Zeilen der Seite `page` (0-basiert). Jede Zeile liegt auf genau einer Seite. */
-export function pageOf<T>(items: readonly T[], page: number, perPage: number = MONITOR_ROWS_PER_PAGE): T[] {
-  const start = page * perPage;
-  return items.slice(start, start + perPage);
+/** Spalten der Finalrunde: wie im Spielplan mit reservierter Zustandszeile unter der Uhrzeit; die Bezeichnung steht als Zwischenzeile über der Zeilenkarte. */
+export function finalColumns(view: TournamentView): ListColumns {
+  return listColumns(true, false, view.matches);
 }
 
-/** Anzahl Seiten für `items` Zeilen; mindestens eine (auch bei null Zeilen). */
-export function pagesFor(items: number, perPage: number = MONITOR_ROWS_PER_PAGE): number {
-  return Math.max(1, Math.ceil(items / perPage));
+/** Seiten und Spalten einer Listen-Folie: `pages[page]` sind die Zeilen der Seite, `columns` gelten für alle Seiten (@ZM-187). */
+export interface ListLayout {
+  pages: MatchView[][];
+  columns: ListColumns;
+}
+
+/**
+ * Startseite des Spielplans (@ZM-190): die Seite des laufenden Spiels, sonst die des nächsten geplanten; sind alle beendet (oder keins
+ * offen), die erste. Die Seiten selbst bleiben in Anpfiff-Reihenfolge; die Folie hält den Versatz beim Eintritt fest (`useListenStart`),
+ * damit sich eine Seite während des Zeigens nie auf andere Spiele ändert (@ZM-187).
+ */
+export function startPage(pages: readonly (readonly MatchView[])[]): number {
+  const holds = (test: (m: MatchView) => boolean): number => pages.findIndex(page => page.some(test));
+  const live = holds(m => m.isLive);
+  return live >= 0 ? live : Math.max(0, holds(m => m.isUpcoming));
+}
+
+/** Der Rahmen einer Listen-Folie: wirksamer Bildrand; auf der Ersatzfolie, die den Wachhalten-Hinweis zeigen kann, ist sein Platz immer reserviert. */
+export function listFrame(slide: ProgramSlide, overscan: number): ListFrame {
+  return { overscan, notice: slide === SPIELPLAN_FALLBACK_SLIDE };
+}
+
+/** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188). */
+export function scheduleFieldLayout(view: TournamentView, field: number, frame: ListFrame = DEFAULT_FRAME): ListLayout {
+  const schedule = fieldSchedule(view, field);
+  const columns = listColumns(true, false, schedule);
+  return { pages: listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame), columns };
+}
+
+/** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188); bei mehreren Feldern mit dem Feld in jeder Zeile (@ZM-189). */
+export function nextMatchesLayout(view: TournamentView, matchCount: number | undefined, frame: ListFrame = DEFAULT_FRAME): ListLayout {
+  const list = nextMatchList(view, matchCount);
+  const columns = listColumns(false, true, view.matches);
+  return { pages: listPages(list, columns, undefined, frame), columns };
 }
 
 /**
  * Seitenzahl einer Folie für den Takt (B-16f1, f3). Alle Tabellen: ein Abschnitt je Seite. Spielplan und
- * Nächste Spiele: je MONITOR_ROWS_PER_PAGE Zeilen. Andere Folien: eine Seite. B-17 misst die Seitenzahl.
+ * Nächste Spiele: nach Höhe der Zeilen (`listRows.ts`). Andere Folien: eine Seite.
  */
-export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null, view?: TournamentView | null, end?: MonitorEnd): number {
+export function monitorPageCount(slide: ProgramSlide, tournament?: Tournament | null, view?: TournamentView | null, end?: MonitorEnd, frame: ListFrame = DEFAULT_FRAME): number {
   // Folien nach dem Abschluss (R3-7, @ZM-129): Seiten aus dem gespeicherten Endstand, ohne Tabelle und Ansicht
   if (slide.type === 'final-standings') { return end?.kind === 'final' ? rankingPages(end.ranking).length : 1; }
   if (slide.type === 'final-scorers') { return end?.kind === 'final' && end.scorers !== null ? scorerPages(end.scorers).length : 1; }
   if (!tournament || !view || !('config' in slide)) { return 1; }
   switch (slide.type) {
     case 'all-standings':
-      return Math.max(1, standingsSections(tournament, view).length);
+      return Math.max(1, standingsSections(tournament, view, frame).length);
     case 'schedule-field':
-      return pagesFor(fieldSchedule(view, fieldIdToNumber(slide.config.fieldId)).length);
+      return scheduleFieldLayout(view, fieldIdToNumber(slide.config.fieldId), frame).pages.length;
     case 'next-matches':
-      return pagesFor(nextMatchList(view, slide.config.matchCount).length);
+      return nextMatchesLayout(view, slide.config.matchCount, frame).pages.length;
     default:
       return 1;
   }

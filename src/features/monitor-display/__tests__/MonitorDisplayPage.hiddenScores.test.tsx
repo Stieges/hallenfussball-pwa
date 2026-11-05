@@ -39,7 +39,7 @@ import { MonitorDisplayPage } from '../MonitorDisplayPage';
 async function renderMonitor(tournament: Tournament, slides: MonitorSlide[]): Promise<void> {
   supabaseGet.mockResolvedValue(attachMonitor(tournament, withMonitor({ slides })));
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   // Ohne echte Übersetzung steht der Schlüssel `monitor:loading` statt „Lade Display...“ – beides abwarten.
   await waitFor(() => expect(screen.queryByText(/Lade Display\.\.\.|monitor:loading/)).not.toBeInTheDocument());
 }
@@ -64,7 +64,7 @@ async function sponsorMonitorMitAenderung(flags: Partial<Tournament>, nachher: P
   const monitor = withMonitor({ slides: [slide('sponsor', { sponsorId: 'sp-1' })] });
   supabaseGet.mockResolvedValue(attachMonitor(spiel8(flags), monitor));
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   supabaseGet.mockResolvedValue(attachMonitor(spiel8(flags, nachher), monitor));
   await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });

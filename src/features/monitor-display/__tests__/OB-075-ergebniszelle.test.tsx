@@ -15,7 +15,8 @@ vi.mock('../../../hooks/useLiveMatches', () => ({
 }));
 
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
-import { MONITOR_ROWS_PER_PAGE, fieldSchedule } from '../slideContent';
+import { scheduleFieldLayout } from '../slideContent';
+import { pageIndexOf } from '../listRows';
 import { buildMonitorView } from '../monitorView';
 import { withView } from './monitorViewHelper';
 import { slide } from './monitorFixture';
@@ -25,8 +26,8 @@ afterEach(cleanup);
 
 function finaleAmMonitor(cup: Hallencup) {
   const spiel = cup.tournament.matches[GAME.FINAL];
-  const position = fieldSchedule(buildMonitorView(cup.tournament), spiel.field).findIndex(m => m.id === spiel.id);
-  render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: `field-${spiel.field}` })} {...withView(cup.tournament)} theme="dark" style={{}} page={Math.floor(position / MONITOR_ROWS_PER_PAGE)} />);
+  const seite = pageIndexOf(scheduleFieldLayout(buildMonitorView(cup.tournament), spiel.field).pages, spiel.id);
+  render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: `field-${spiel.field}` })} {...withView(cup.tournament)} theme="dark" style={{}} page={seite} />);
   const zeile = screen.getAllByTestId('monitor-match-row').find(r => r.getAttribute('data-match-id') === spiel.id);
   if (zeile === undefined) { throw new Error('Finale fehlt in der Folie'); }
   return zeile;

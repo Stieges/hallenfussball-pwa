@@ -1,6 +1,5 @@
-import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayColors, displayFontSizes, displaySpacing } from '../../../design-tokens';
+import { displayColors, displayFontSizes } from '../../../design-tokens';
 import { containerStyle } from './monitorStyles';
 
 /** Ladezustand der Monitor-Seite. */
@@ -15,42 +14,21 @@ export function MonitorLoadingView() {
   );
 }
 
-const backButtonStyle: CSSProperties = {
-  marginTop: displaySpacing.sectionMD,
-  padding: `${displaySpacing.contentMD} ${displaySpacing.contentXL}`,
-  fontSize: displayFontSizes.bodyMD,
-  background: displayColors.primary,
-  color: displayColors.textPrimary,
-  border: 'none',
-  borderRadius: cssVars.borderRadius.md,
-  cursor: 'pointer',
-};
-
-interface MonitorErrorViewProps {
-  error: string | null | undefined;
-  onBack?: () => void;
-}
-
-/** Fehlerzustand: Meldung, „← Zurück“ nur wenn die Seite einen Rückweg hat. */
-export function MonitorErrorView({ error, onBack }: MonitorErrorViewProps) {
+/**
+ * Ruhige Seite, solange der Monitor keinen Stand hat (@ME-009, @ME-016, @ME-034): ohne Netz, unbekanntes oder nicht geteiltes
+ * Turnier, gelöschter Monitor. Nie ein Fehlertext, keine Kennung, keine Taste – der Monitor fragt von selbst weiter an
+ * und zeigt dann den Stand (Auftrag Hallen-Bildschirm: kein Fehlertext, nie leeres Bild).
+ */
+export function MonitorWaitingView() {
   const { t } = useTranslation('monitor');
   return (
-    <div style={containerStyle} data-testid="monitor-error-state">
+    <div style={containerStyle} data-testid="monitor-waiting-state" role="status">
       <div
-        data-testid="monitor-error-message"
-        style={{
-          fontSize: displayFontSizes.headingMD,
-          color: displayColors.error,
-          marginBottom: displaySpacing.sectionMD,
-        }}
+        data-testid="monitor-waiting-message"
+        style={{ fontSize: displayFontSizes.headingLG, color: displayColors.textSecondary }}
       >
-        {error ?? t('error.notFound')}
+        {t('waiting')}
       </div>
-      {onBack && (
-        <button onClick={onBack} style={backButtonStyle}>
-          {t('error.back')}
-        </button>
-      )}
     </div>
   );
 }

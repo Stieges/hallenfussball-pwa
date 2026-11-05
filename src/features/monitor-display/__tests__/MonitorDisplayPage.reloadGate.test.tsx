@@ -91,7 +91,7 @@ function setupSw(): void {
 async function starte(data: Tournament): Promise<void> {
   liefere(data);
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
 }
 
@@ -204,7 +204,7 @@ describe('MonitorDisplayPage — Neulade-Tor (B-19b, @ZM-124, @ZM-128, @ME-012, 
     __fireRegisteredSW({ update } as unknown as ServiceWorkerRegistration);
     supabaseGet.mockRejectedValue(new RepositoryError('get', 'Failed to fetch'));
     localGet.mockResolvedValue(monitorTurnier(undefined, programmLive(true)));
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(10_000);
     expect(screen.getByLabelText('Heim: 1')).toBeInTheDocument();
     expect(update).not.toHaveBeenCalled();

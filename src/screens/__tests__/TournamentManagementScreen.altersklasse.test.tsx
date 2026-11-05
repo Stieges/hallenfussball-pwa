@@ -34,6 +34,8 @@ vi.mock('../../features/tournament-management/ManagementTab', () => {
   }
   return { ManagementTab: Stub };
 });
+// Der Vorschlag „Turnier abschließen“ im Spielplan (@LZ-007) braucht den Datenzugang; dieser Test prüft ihn nicht
+vi.mock('../../features/tournament-finish/components/FinishTournamentSection', () => ({ FinishTournamentSection: () => null }));
 vi.mock('../../features/tournament-management/ScheduleTab', () => ({ ScheduleTab: () => <div data-testid="schedule-stub" /> }));
 vi.mock('../../components/layout/AuthSection', () => ({ AuthSection: () => <div data-testid="auth-stub" /> }));
 vi.mock('../../features/tournament-management/components/EngineOutboxHeaderStatus', () => ({ EngineOutboxHeaderStatus: () => null }));

@@ -50,10 +50,8 @@ async function renderMonitor(tournament: Tournament, slides: MonitorSlide[]) {
   const monitor = withMonitor({ slides });
   supabaseGet.mockResolvedValue(attachMonitor(tournament, monitor));
   localGet.mockResolvedValue(null);
-  const onBack = vi.fn();
-  render(<MonitorDisplayPage tournamentId={tournament.id} monitorId={monitor.id} onBack={onBack} />);
+  render(<MonitorDisplayPage tournamentId={tournament.id} monitorId={monitor.id} />);
   await waitFor(() => expect(screen.queryByText('Lade Display...')).not.toBeInTheDocument(), { timeout: 5_000 });
-  return { onBack };
 }
 
 /** Tabellen-Tests: Spiel 7 läuft noch und zählt sonst mit seinem Zwischenstand (siehe Bestand unten). */
@@ -77,7 +75,7 @@ async function ladeUndAendere(slides: MonitorSlide[], vorher: Tournament, nachhe
   const monitor = withMonitor({ slides });
   supabaseGet.mockResolvedValue(attachMonitor(vorher, monitor));
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId={monitor.id} onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId={monitor.id} />);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
   supabaseGet.mockResolvedValue(attachMonitor(nachher, monitor));
   await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
@@ -166,11 +164,11 @@ describe('MonitorDisplayPage — Tasten (Bestand)', { timeout: 15_000 }, () => {
   });
 
   // B-17 (@ME-022, Befund C-MONITOR-DAUERBETRIEB): Escape verlässt die Seite nicht mehr; das alte Verhalten
-  // (Rücksprung zur Startseite) war der Fehler. Vorher: onBack einmal aufgerufen.
-  it('B-17: Escape ruft onBack nicht auf, die Seite bleibt offen', async () => {
-    const { onBack } = await renderMonitor(buildTournament(), zweiFolien());
+  // (Rücksprung zur Startseite) war der Fehler; die Seite hat keinen Rückweg mehr (@ME-009).
+  it('B-17: Escape lässt die Seite offen, die Folie bleibt stehen', async () => {
+    await renderMonitor(buildTournament(), zweiFolien());
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(onBack).not.toHaveBeenCalled();
+    expect(screen.getByText('Erste Folie')).toBeInTheDocument();
   });
 
   it('Bestand: Taste c blendet die Cache-Anzeige ein', async () => {

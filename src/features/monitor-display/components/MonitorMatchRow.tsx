@@ -1,8 +1,6 @@
-import type { CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cssVars, displayFontSizes, displayLayout, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
-import { MatchStatusBadge } from '../../../components/ui/molecules/MatchStatusBadge';
-import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
+import { cssVars, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { MatchView } from '../../../core/view';
 import type { MonitorTheme } from '../../../types/monitor';
@@ -10,6 +8,8 @@ import { getFieldDisplayName } from '../../../utils/displayNames';
 import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../../components/schedule/matchResult';
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
+import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
+import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, rowHeight, type ListColumns, type ListFrame } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
 
 interface MonitorMatchRowProps {
@@ -19,14 +19,36 @@ interface MonitorMatchRowProps {
   theme: MonitorTheme;
   /** Ergebnis anzeigen (Spielplan, f3); die Folie „Nächste Spiele“ zeigt nie ein Ergebnis. */
   showScore?: boolean;
-  /** Abzeichen mit dem Wort des Zustands vorn (Spielplan, @OB-066, @ZM-071); Standard aus. */
-  showStatus?: boolean;
+  /**
+   * Zusatzzeilen der ganzen Folie (@ZM-187, @ZM-189): Zustand (Spielplan) und Feld (Nächste Spiele bei mehreren Feldern) stehen unter der
+   * Uhrzeit, in jeder Zeile der Folie oder in keiner; es gibt keine eigenen Spalten dafür.
+   */
+  columns: ListColumns;
+  /** Rahmen der Folie (Bildrand, Hinweis): bestimmt, wie viele Zeichen eine Namenszeile fasst (@ZM-188). */
+  frame?: ListFrame;
+  /** Zeile unter dem Stand für „(4:3 i. E.)“ in jeder Zeile der Folie freihalten; Vorgabe: im Spielplan (`columns.state`). */
+  reserveExtra?: boolean;
 }
 
-/** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung (optional Ergebnis und Bezeichnung). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, showStatus = false }: MonitorMatchRowProps) {
+/**
+ * Teamname mit Bindestrich-Wörtern, die zusammenbleiben, solange sie in eine Zeile passen (@ZM-188): nur die Darstellung (`nowrap`),
+ * der Text bleibt unverändert, Suche und Vorlesen sehen den echten Bindestrich.
+ */
+function NameText({ name, perLine }: { name: string; perLine: number }) {
+  return (
+    <>
+      {name.split(/(\s+)/).map((teil, i) => (hyphenWordStaysTogether(teil, perLine)
+        ? <span key={i} style={{ whiteSpace: 'nowrap' }}>{teil}</span>
+        : teil))}
+    </>
+  );
+}
+
+/** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung, Stand und Zusätze an festen Stellen (@ZM-187). */
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns, frame = DEFAULT_FRAME, reserveExtra = columns.state }: MonitorMatchRowProps) {
   const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
+  const perLine = nameCharsPerLine(frame);
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
   const cell: CSSProperties = {
     fontSize: displayList.fontSizes.team,
@@ -40,66 +62,101 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, s
   const scoreExtra = figures === null ? undefined : tableResultExtra(figures, t);
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
   const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
-  // „ausgefallen“ trägt das Abzeichen (ohne Ergebnis), „gewertet“ steht neben dem Ergebnis (@ZM-104)
-  const note = match.status === 'awarded' ? t('view.status.awarded') : undefined;
 
+  const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.text, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
+
+  const labelId = useId();
+  const cardHeight = rowHeight({ ...match, labelText: undefined }, columns, frame, reserveExtra);
   return (
     <div
-      data-testid="monitor-match-row"
-      data-match-id={match.id}
-      data-status={match.status}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: displayList.cellGap,
-        width: '100%',
-        padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
-        boxSizing: 'border-box',
-        background: colors.surface,
-        borderRadius: displayMonitor.radius.card,
-        border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
-      }}
+      data-testid="monitor-match-block"
+      data-height-vh={String(rowHeight(match, columns, frame, reserveExtra))}
+      role={match.labelText ? 'group' : undefined}
+      aria-labelledby={match.labelText ? labelId : undefined}
+      style={{ width: '100%' }}
     >
-      {showStatus && (
-        // Feste Breite: die Spalten springen nicht, auch wenn ein Spiel noch kein Abzeichen trägt (@ZM-151)
-        <div data-testid="monitor-match-status" style={{ flex: `0 0 ${displayLayout.scoreArea.badgeWidth}`, display: 'flex', fontSize: displayFontSizes.liveBadge }}>
-          {match.badge.kind === 'badge' && <MatchStatusBadge model={match.badge} size="display" tone={monitorBadgeTone(colors)} />}
+      {/* Spielbezeichnung („Halbfinale 1“) als Zwischenzeile über der Karte, waagrecht mittig über der Standspalte (Spalten wie in der Karte, listRows rechnet die Höhe ein) */}
+      {match.labelText && (
+        <div
+          data-testid="monitor-match-labelline"
+          style={{
+            display: 'flex', gap: displayList.cellGap, width: '100%', boxSizing: 'border-box', fontSize: displayList.fontSizes.team,
+            // Rand nur links und rechts (wie die Karte): oben und unten würde die Zeile höher als in listRows gerechnet
+            padding: `0 ${displayList.rowPaddingX}`, borderStyle: 'solid', borderColor: 'transparent', borderWidth: `0 ${cssVars.borderWidth.thin}`, marginBottom: displayList.labelGap,
+          }}
+        >
+          <div style={{ flex: `0 0 ${displayList.timeFieldWidth}` }} />
+          <div style={{ flex: '1 1 0' }} />
+          <div style={{ flex: `0 0 ${displayList.separatorWidth}`, display: 'flex', justifyContent: 'center' }}>
+            <div id={labelId} data-testid="monitor-match-label" style={{ whiteSpace: 'nowrap', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
+          </div>
+          <div style={{ flex: '1 1 0' }} />
         </div>
       )}
-      <MonitorTimeCell
-        match={match}
-        fieldName={getFieldDisplayName(match.field, tournament)}
-        color={colors.text}
-        fieldColor={colors.textMuted}
-        noteColor={colors.text}
-        style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
-      />
-      <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{monitorSideLabel(match.home)}</div>
       <div
-        data-testid="monitor-match-separator"
+        data-testid="monitor-match-row"
+        data-match-id={match.id}
+        data-status={match.status}
         style={{
-          ...cell,
-          flex: '0 0 auto',
-          minWidth: displayList.separatorWidth,
-          textAlign: 'center',
-          fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
-          color: showScore ? colors.text : colors.textMuted,
+          display: 'flex',
+          // Uhrzeit, Teamnamen und Stand stehen senkrecht mittig (gemeinsame Mittelachse); Zusatzzeilen hängen darunter, außerhalb des Flusses
+          alignItems: 'center',
+          minHeight: `${String(cardHeight)}vh`,
+          position: 'relative',
+          gap: displayList.cellGap,
+          width: '100%',
+          padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
+          boxSizing: 'border-box',
+          background: colors.surface,
+          borderRadius: displayMonitor.radius.card,
+          border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
         }}
       >
-        {showScore ? score : '–'}
-        {showScore && scoreExtra && (
-          <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={{ fontSize: displayList.fontSizes.head, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap' }}>
-            {scoreExtra}
+        <MonitorTimeCell
+          match={match}
+          fieldName={columns.field ? getFieldDisplayName(match.field, tournament) : undefined}
+          reserveState={columns.state}
+          color={colors.text}
+          tone={monitorBadgeTone(colors)}
+          style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
+        />
+        <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}><NameText name={monitorSideLabel(match.home)} perLine={perLine} /></div>
+        <div
+          data-testid="monitor-match-separator"
+          style={{
+            ...cell,
+            // Breite in em der Namensschrift (nicht der Standschrift): fest in jeder Zeile (@ZM-151, @ZM-187), listRows.ts rechnet auf derselben Basis
+            flex: `0 0 ${displayList.separatorWidth}`,
+            textAlign: 'center',
+            // nur so hoch wie der Stand: mittig in der Zeile, „(4:3 i. E.)“ hängt darunter (außerhalb des Flusses)
+            position: 'relative',
+            height: `calc(${displayList.fontSizes.score} * 1.2)`,
+          }}
+        >
+          <div
+            data-testid="monitor-match-score"
+            style={{
+              // Stand: 1,5 × Namensschrift, so fett wie die Uhrzeit (VISUAL-DESIGN § 8)
+              fontSize: displayList.fontSizes.score,
+              lineHeight: 1.2,
+              fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
+              color: showScore ? colors.text : colors.textMuted,
+            }}
+          >
+            {showScore ? score : '–'}
           </div>
-        )}
+          {/* „gewertet“ steht klein unter dem Stand, Stelle und Stil wie „(4:3 i. E.)“ (wie im PDF); eine Wertung hat kein Strafstoßschießen */}
+          {showScore && !scoreExtra && match.status === 'awarded' && (
+            <div data-testid="monitor-match-note" style={extraStyle}>{t('view.status.awarded')}</div>
+          )}
+          {showScore && scoreExtra && (
+            <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={extraStyle}>
+              {scoreExtra}
+            </div>
+          )}
+        </div>
+        <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
       </div>
-      <div data-teamname style={{ ...cell, flex: '1 1 0' }}>{monitorSideLabel(match.away)}</div>
-      {match.labelText && (
-        <div style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: displayList.labelMaxWidth }}>{match.labelText}</div>
-      )}
-      {note && (
-        <div data-testid="monitor-match-note" style={{ ...cell, color: colors.textMuted, flex: '0 1 auto', maxWidth: displayList.labelMaxWidth }}>{note}</div>
-      )}
     </div>
   );
 }

@@ -79,7 +79,7 @@ function liefere(data: Tournament): void {
 async function starte(data: Tournament): Promise<void> {
   liefere(data);
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   await vorspulen(0);
 }
 
@@ -203,7 +203,7 @@ describe('MonitorDisplayPage — Anzeigedauer je Folie (@ZM-130, Fake-Timer)', (
     });
     supabaseGet.mockResolvedValue(daten);
     localGet.mockResolvedValue(null);
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(0);
     await vorspulenPruefend(15_000, () => {
       expect(opazitaet('Einzige Folie')).toBe('1');
@@ -327,7 +327,7 @@ describe('MonitorDisplayPage — Datenweg (Bestand, ergänzend zu dataSource-Tes
   it('Bestand: vor dem ersten Monitor-Laden pollt die Seite alle 2 s (Grenzen 1 999 / 2 000 ms)', async () => {
     supabaseGet.mockRejectedValue(new Error('offline'));
     localGet.mockResolvedValue(null);
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(0);
     const start = supabaseGet.mock.calls.length;
     await vorspulen(1_999);
@@ -351,7 +351,7 @@ describe('MonitorDisplayPage — Datenweg (Bestand, ergänzend zu dataSource-Tes
   it('Bestand: hängende Cloud-Anfrage wird bei 4 000 ms abgebrochen, der lokale Abruf startet erst dann', async () => {
     supabaseGet.mockReturnValue(new Promise<never>(() => undefined));
     localGet.mockResolvedValue(null);
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(3_999);
     expect(localGet).not.toHaveBeenCalled();
     await vorspulen(1);

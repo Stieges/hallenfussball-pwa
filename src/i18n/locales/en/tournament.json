@@ -1468,7 +1468,7 @@
   "timeShift": {
     "button": "Shift times",
     "listHint": "Use ⋮ on a match to shift from there.",
-    "original": "originally {{time}}",
+    "original": "(was {{time}})",
     "tentative": "expected",
     "dialogTitle": "Shift times",
     "close": "Close",
@@ -1518,8 +1518,8 @@
     "warnBuffer_other": "Pitch {{field}}: only {{gap}} instead of {{count}} minutes break between match {{before}} and {{after}}.",
     "warnOverlap": "Pitch {{field}}: match {{before}} and match {{after}} overlap by {{minutes}} minutes.",
     "warnCanConfirm": "You can still confirm.",
-    "infoOriginal": "{{matches}} show “originally” (less than 30 minutes until kick-off). “Apply” takes effect immediately, without preview.",
-    "infoPlanning": "This is early enough and still planning: no “originally” is shown. Before the first kick-off, “Apply” takes effect immediately, without preview.",
+    "infoOriginal": "{{matches}} show “(was …)” (less than 30 minutes until kick-off). “Apply” takes effect immediately, without preview.",
+    "infoPlanning": "This is early enough and still planning: no “(was …)” is shown. Before the first kick-off, “Apply” takes effect immediately, without preview.",
     "preview": "Show preview",
     "apply": "Apply",
     "cancel": "Cancel",
@@ -1648,6 +1648,7 @@
     "section": {
       "suggestionTitle": "Everything decided",
       "suggestionText": "Everything decided – check the final standings and close the tournament.",
+      "notYet": "You can close the tournament once all games are decided",
       "statusTitle": "Tournament status",
       "gamesDone": "{{done}} of {{total}} games finished.",
       "reviewsOpen_one": "{{count}} entry in the review list is still open.",

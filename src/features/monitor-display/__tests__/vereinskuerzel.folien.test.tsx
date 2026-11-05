@@ -56,7 +56,7 @@ describe('@ZM-087 Monitor-Folien zeigen das Vereinskürzel nach Liste', () => {
 
   it('Nächste Spiele: „SG FF Nordheim-Süd 1921“ in der Zeile, kein „…“, keine Initialen', () => {
     const { container } = render(<NextMatchesSlide slide={slide('next-matches')} {...withView(mitName(VOLL))} theme="dark" style={{}} />);
-    expect(screen.getAllByText(KUERZEL).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, el) => el?.hasAttribute('data-teamname') === true && el.textContent === KUERZEL).length).toBeGreaterThan(0); // der Bindestrich-Teil steht in einem eigenen Element (@ZM-188)
     expect(container.textContent).not.toContain('…');
     expect(container.textContent).not.toMatch(INITIALEN);
     expect(container.textContent).not.toContain(VOLL);
@@ -70,7 +70,7 @@ describe('@ZM-087 Monitor-Folien zeigen das Vereinskürzel nach Liste', () => {
 
   it('Spielplan Feld: Name gekürzt, jede Namenszelle trägt die Markierung data-teamname', () => {
     const { container } = render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: 'field-1' })} {...withView(mitName(VOLL))} theme="dark" style={{}} />);
-    expect(screen.getAllByText(KUERZEL).length).toBeGreaterThan(0);
+    expect(screen.getAllByText((_, el) => el?.hasAttribute('data-teamname') === true && el.textContent === KUERZEL).length).toBeGreaterThan(0); // der Bindestrich-Teil steht in einem eigenen Element (@ZM-188)
     for (const el of Array.from(container.querySelectorAll('[data-teamname]'))) {
       expect(el.textContent).not.toContain(VOLL);
     }

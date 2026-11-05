@@ -6,6 +6,9 @@
  *
  * Kein Zustand blockiert die Seite: Ausnahmen der Schnittstelle werden gefangen und als `denied` gewertet.
  *
+ * Ist die Seite nicht sichtbar (Hintergrund-Tab, verdecktes Fenster), fragt der Hook nicht an und bleibt `idle`; das gilt weder als
+ * Ablehnung noch erzeugt es eine Meldung oder einen Hinweis. Erst die Rückkehr in den Vordergrund stellt die Anfrage (@ME-006).
+ *
  * @see docs/concepts/MATCH-COCKPIT-PRO-KONZEPT.md Section 3.5
  */
 
@@ -17,7 +20,7 @@ export const WAKE_LOCK_ANSWER_TIMEOUT_MS = 5000;
 
 /**
  * Zustand der Zusage.
- * - `idle`: nicht angefordert
+ * - `idle`: nicht angefordert, auch weil die Seite gerade nicht sichtbar ist (@ME-006: keine Ablehnung, kein Hinweis, keine Meldung)
  * - `pending`: Anfrage läuft, noch keine Antwort
  * - `granted`: zugesagt
  * - `denied`: abgelehnt (oder Ausnahme der Schnittstelle)

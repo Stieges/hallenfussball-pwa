@@ -79,7 +79,7 @@ describe('MonitorDisplayPage — Leertaste ohne Wirkung (@ME-022, B-17 Fixrunde)
   it('Leertaste bei 5 s hält Folie A nicht an: Folie B kommt nach den 15 s der Dauer, kein Pausen-Badge', async () => {
     liefere(monitorTurnier());
     localGet.mockResolvedValue(null);
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(0);
     expect(screen.getByText('Folie A')).toBeInTheDocument();
 
@@ -95,7 +95,7 @@ describe('MonitorDisplayPage — Leertaste ohne Wirkung (@ME-022, B-17 Fixrunde)
   it('Spielplan-Zeile: Seite A links, Seite B rechts (Feld 1: FC Nord 1:0 SV Süd)', async () => {
     liefere(attachMonitor(buildTournament(), withMonitor({ slides: [slide('schedule-field', { fieldId: 'field-1' })] })));
     localGet.mockResolvedValue(null);
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(0);
     // B-16f3: Zeile mit Uhrzeit und Feld; geprüft wird nur die Reihenfolge der Teams (A vor B) und der Stand.
     const zeile = screen.getByText('FC Nord').closest('[data-testid="monitor-match-row"]')?.textContent ?? '';
@@ -108,7 +108,7 @@ describe('MonitorDisplayPage — Heim/Gast der Live-Folie und nächstes Spiel (B
   it('Live-Folie Feld 1 mit laufendem Spiel 7: FC Nord (Heim) steht vor SV Süd (Gast)', async () => {
     liefere(attachMonitor(buildTournament(), withMonitor({ slides: [slide('live', { fieldId: 'field-1' })] })));
     localGet.mockResolvedValue(null);
-    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(0);
     const text = container.textContent ?? '';
     expect(text.indexOf('FC Nord')).toBeGreaterThanOrEqual(0);
@@ -125,7 +125,7 @@ describe('MonitorDisplayPage — Heim/Gast der Live-Folie und nächstes Spiel (B
       withMonitor({ slides: [slide('live', { fieldId: 'field-1' })] }),
     ));
     localGet.mockResolvedValue(null);
-    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await vorspulen(0);
     expect(container.querySelector('[data-testid="qr-code"]')).not.toBeNull();
     expect(container.textContent ?? '').not.toContain('Nächstes Spiel');

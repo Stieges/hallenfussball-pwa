@@ -62,7 +62,7 @@ async function zeigeUm(zeit: Date, t: ReturnType<typeof turnier>) {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(zeit);
   supabaseGet.mockResolvedValue(t);
-  return render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  return render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
 }
 
 describe('Monitor mit nur der Live-Folie vor dem Anpfiff (@ZM-138, @ZP-090)', () => {
@@ -157,7 +157,7 @@ describe('Der Beginn der Vorlaufzeit erreicht den laufenden Monitor ohne Neulade
     vi.setSystemTime(new Date(Date.UTC(2026, 11, 5, 14, 24, 50)));
     const t = turnier({ spiele: [spiel('m1', 1, 1, 15, 30)], folien: [slide('live', { fieldId: 'field-1' })] });
     supabaseGet.mockImplementation(async () => structuredClone(t)); // jeder Abruf liefert neue Objekte
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(screen.queryByText('Nächstes Spiel')).not.toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(15_000); }); // ein Abruf alle 10 s (Profil „low“)

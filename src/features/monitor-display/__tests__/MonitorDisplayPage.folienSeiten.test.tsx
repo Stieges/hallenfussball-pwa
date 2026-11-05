@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { Match, Tournament } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
+import { listenTurnier } from './listFolienKit';
 import {
   attachMonitor, buildTournament, FIXTURE_TEAMS, slide, withMonitor, withPlayoffs, withScheduledTimes,
 } from './monitorFixture';
@@ -65,7 +66,7 @@ async function vorspulenInSchritten(ms: number, schritt = 1_000): Promise<void> 
 async function starte(data: Tournament): Promise<void> {
   liefere(data);
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
 }
 
@@ -81,7 +82,8 @@ afterEach(() => {
 const zeilen = () => screen.queryAllByTestId('monitor-match-row');
 
 /** Turnier mit Finalrunde: die Playoff-Spiele tragen `isFinal` (wie der Generator sie setzt). */
-const mitFinalrunde = (): Match[] => withPlayoffs().map(m => (m.id.startsWith('po-') ? { ...m, isFinal: true } : m));
+// ohne Spiel um Platz 3: drei Finalspiele (mit Zustandszeile und Bezeichnung) passen auf eine Seite, die Finalrunde ist eine Seite (Mehrseitigkeit: listSlides.zm187.test.tsx)
+const mitFinalrunde = (): Match[] => withPlayoffs().filter(m => m.id !== 'po-p3').map(m => (m.id.startsWith('po-') ? { ...m, isFinal: true } : m));
 
 /** 13 Spiele auf Feld 1, je 5 Minuten versetzt ab 14:00 (Uhrzeiten sind einmalig). */
 const dreizehnSpiele = (): Match[] => Array.from({ length: 13 }, (_, i) => ({
@@ -188,8 +190,8 @@ describe('@ZM-130 Zeile 3: Seitenwechsel über die gerenderte Seite (echter Poll
   });
 });
 
-describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer Seite', () => {
-  it('Seiten 6, 6 und 1 Zeilen; die Vereinigung ist alle 13 Uhrzeiten, keine doppelt', async () => {
+describe('@ZM-129 @ZM-185 Spielplan mit 13 Spielen: 4 Seiten mit bis zu 4 Spielen, jede Zeile genau auf einer Seite', () => {
+  it('Seiten 4, 4, 4 und 1 Zeilen; die Vereinigung ist alle 13 Uhrzeiten, keine doppelt', async () => {
     await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele() }), [slide('schedule-field', { fieldId: 'field-1' })]));
     expect(screen.getByText(/^Seite \d+ \/ \d+$/)).toBeInTheDocument();
     const seite1 = uhrzeiten();
@@ -197,22 +199,89 @@ describe('@ZM-129 Spielplan mit 13 Spielen: 3 Seiten, jede Zeile genau auf einer
     const seite2 = uhrzeiten();
     await vorspulenInSchritten(15_000);
     const seite3 = uhrzeiten();
-    expect(seite1).toHaveLength(6);
-    expect(seite2).toHaveLength(6);
-    expect(seite3).toEqual(['15:00']);
-    const alle = [...seite1, ...seite2, ...seite3];
+    await vorspulenInSchritten(15_000);
+    const seite4 = uhrzeiten();
+    expect(seite1).toHaveLength(4);
+    expect(seite2).toHaveLength(4);
+    expect(seite3).toHaveLength(4);
+    expect(seite4).toEqual(['15:00']);
+    const alle = [...seite1, ...seite2, ...seite3, ...seite4];
     expect(new Set(alle).size).toBe(13);
     expect(alle).toHaveLength(13);
   });
 });
 
-describe('@ZM-129 Nächste Spiele mit 8 offenen Spielen (matchCount 10): 2 Seiten, 6 und 2 Zeilen', () => {
-  it('Seite 1 zeigt 14:00 bis 14:25, nach 15 s Seite 2 mit 14:30 und 14:35 über den echten Takt', async () => {
-    await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele().slice(0, 8) }), [slide('next-matches', { matchCount: 10 })]));
-    expect(screen.getByText(/^Seite \d+ \/ \d+$/)).toBeInTheDocument();
-    expect(uhrzeiten()).toEqual(['14:00', '14:05', '14:10', '14:15', '14:20', '14:25']);
-    await vorspulenInSchritten(15_000);
-    expect(uhrzeiten()).toEqual(['14:30', '14:35']);
+describe('@ZM-190 @ZM-187 Spielplan: die Startseite wird beim Eintritt festgehalten, nicht bei jedem Poll neu gerechnet', () => {
+  const ids = () => zeilen().map(z => z.getAttribute('data-match-id'));
+  const plan = [slide('schedule-field', { fieldId: 'field-1' }, 15)];
+  const zustand = (laeuft: number) => {
+    const t = listenTurnier({ beendet: 3 });
+    return monitorTurnier({
+      ...t,
+      matches: t.matches.map(m => {
+        if (m.matchNumber === 4) { return laeuft === 4 ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : { ...m, matchStatus: 'finished' as const, scoreA: 1, scoreB: 0, decidedBy: 'regular' as const }; }
+        return m;
+      }),
+    }, plan);
+  };
+
+  it('Spiel 4 läuft in Zeile 4 auf Seite 1; nach dem Abpfiff zeigt dieselbe Seite bis zum nächsten Takt dieselben Zeilen; der nächste Durchlauf beginnt mit der Seite von Spiel 5, keine Seite doppelt', async () => {
+    await starte(zustand(4));
+    const erste = ['liste-01', 'liste-02', 'liste-03', 'liste-04'];
+    expect(ids()).toEqual(erste);
+    liefere(zustand(0));
+    await vorspulenInSchritten(5_000);
+    expect(ids(), 'Abpfiff von Spiel 4: dieselbe Seite, dieselben Zeilen').toEqual(erste);
+    const folge: Array<Array<string | null>> = [];
+    for (let i = 0; i < 4; i += 1) {
+      await vorspulenInSchritten(i === 0 ? 10_000 : 15_000);
+      folge.push(ids());
+    }
+    // Durchlauf: Seite 2, 3, 4 – und beim nächsten Eintritt die Seite von Spiel 5 (= Seite 2)
+    expect(folge[0]).toEqual(['liste-05', 'liste-06', 'liste-07', 'liste-08']);
+    expect(folge[1]).toEqual(['liste-09', 'liste-10', 'liste-11', 'liste-12']);
+    expect(folge[2]).toEqual(['liste-13', 'liste-14', 'liste-15']);
+    expect(folge[3], 'der nächste Eintritt beginnt mit der Seite des nächsten geplanten Spiels (5)').toEqual(folge[0]);
+  });
+
+  it('Kaltstart (Daten kommen asynchron): Spiele 1–5 beendet, Spiel 6 läuft → die erste angezeigte Seite zeigt Spiel 6; ein späterer Abpfiff verschiebt sie nicht', async () => {
+    const t = listenTurnier({ beendet: 5 });
+    const laeuft = (nr: number | null) => monitorTurnier({
+      ...t,
+      matches: t.matches.map(m => (m.matchNumber === 6
+        ? (nr === 6 ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : { ...m, matchStatus: 'finished' as const, scoreA: 1, scoreB: 0, decidedBy: 'regular' as const })
+        : m)),
+    }, plan);
+    await starte(laeuft(6));
+    const erste = ids();
+    expect(erste, 'erste Seite zeigt das laufende Spiel 6').toContain('liste-06');
+    liefere(laeuft(null));
+    await vorspulenInSchritten(5_000);
+    expect(ids(), 'nach dem ersten Rechnen mit Daten verschiebt der Abpfiff die Seite nicht').toEqual(erste);
+  });
+
+  it('Gegenbeispiel: ändert sich nur der Stand mitten im Zeigen, bleibt die Seite stehen (kein Sprung auf andere Spiele)', async () => {
+    await starte(zustand(4));
+    const vorher = ids();
+    for (let i = 0; i < 3; i += 1) { liefere(zustand(i % 2 === 0 ? 0 : 4)); await vorspulenInSchritten(3_000); }
+    expect(ids()).toEqual(vorher);
+  });
+});
+
+describe('@ZM-129 @ZM-188 Nächste Spiele mit 13 offenen Spielen (matchCount 13): mehrere Seiten, jedes Spiel auf genau einer', () => {
+  it('die Seiten folgen einander über den echten Takt; zusammen alle 13 Uhrzeiten in Reihenfolge, keine doppelt', async () => {
+    await starte(monitorTurnier(buildTournament({ matches: dreizehnSpiele() }), [slide('next-matches', { matchCount: 13 })]));
+    const hinweis = screen.getByText(/^Seite \d+ \/ \d+$/).textContent ?? '';
+    const seiten = Number(/\/ (\d+)$/.exec(hinweis)?.[1] ?? '1');
+    expect(seiten).toBeGreaterThanOrEqual(2);
+    const alle: (string | undefined)[] = [];
+    for (let seite = 0; seite < seiten; seite += 1) {
+      alle.push(...uhrzeiten());
+      await vorspulenInSchritten(15_000);
+    }
+    expect(alle).toHaveLength(13);
+    expect([...alle]).toEqual([...alle].sort());
+    expect(new Set(alle).size).toBe(13);
   });
 });
 

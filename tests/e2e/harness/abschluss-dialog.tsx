@@ -4,7 +4,7 @@
  * der Abschluss-Dienst (ein fester Zustand), weil Konto, Server und ein abgeschlossenes Turnier offline fehlen. Nur Testumgebung,
  * nicht Teil des Builds. Beispiel wie in den abgenommenen Mockups (Nikolaus-Turnier, 6 Teams, Strafstoßschießen 4:3 um Platz 1).
  * Adresse: `?szene=<id>` (`&sprache=en`); ids: dlg-a, dlg-alang, dlg-b, dlg-blang, dlg-bw, dlg-bt, dlg-nonet, dlg-busy, dlg-unconf,
- * dlg-err, dlg-stale, dlg-done-by, vw-vorschlag, vw-ohne, vw-spaet, c, c-leer.
+ * dlg-err, dlg-stale, dlg-done-by, vw-vorschlag, vw-ohne, vw-spaet, vw-vorab (@LZ-093), sp-vorschlag (@LZ-007: Vorschlag oben im Spielplan), c, c-leer.
  */
 import { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
@@ -20,7 +20,7 @@ import { prepareFinish } from '../../../src/core/services/finishPreparation';
 import { nikolausFertig, preflightFor } from '../../../src/core/services/__tests__/finishKit';
 import { NK } from '../../../src/core/standings/__tests__/groupCompletionKit';
 import { FinishTournamentDialog } from '../../../src/features/tournament-finish/components/FinishTournamentDialog';
-import { FinishSectionCards } from '../../../src/features/tournament-finish/components/FinishSectionCards';
+import { FinishNotYetCard, FinishSectionCards } from '../../../src/features/tournament-finish/components/FinishSectionCards';
 import { FinishedStateView } from '../../../src/features/tournament-finish/components/FinishedStateView';
 import { finishFacts } from '../../../src/features/tournament-finish/model/finishSummary';
 
@@ -114,11 +114,11 @@ function Seite() {
   const finish: FinishTournamentApi = { state, start: () => Promise.resolve(), confirm: () => Promise.resolve(), retry: () => Promise.resolve(), reset: () => undefined };
   const hintergrund = (
     <div style={{ padding: cssVars.spacing.md, display: 'grid', gap: cssVars.spacing.md, maxWidth: '1040px', margin: '0 auto' }}>
-      <h2 style={{ margin: 0 }}>Verwaltung</h2>
-      <FinishSectionCards suggest={szene !== 'vw-ohne' && !szene.startsWith('dlg-a')} facts={facts} openReviews={szene === 'vw-ohne' || szene.startsWith('dlg-a') ? 2 : 0} lateSince={szene === 'vw-spaet' ? '2026-10-12T16:00:00.000Z' : null} onOpen={noop} />
+      <h2 style={{ margin: 0 }}>{szene === 'sp-vorschlag' ? 'Spielplan' : 'Verwaltung'}</h2>
+      {szene === 'vw-vorab' ? <FinishNotYetCard /> : <FinishSectionCards suggest={szene !== 'vw-ohne' && !szene.startsWith('dlg-a')} facts={facts} openReviews={szene === 'vw-ohne' || szene.startsWith('dlg-a') ? 2 : 0} lateSince={szene === 'vw-spaet' ? '2026-10-12T16:00:00.000Z' : null} onOpen={noop} />}
     </div>
   );
-  if (szene.startsWith('vw-')) {
+  if (szene.startsWith('vw-') || szene === 'sp-vorschlag') {
     return hintergrund;
   }
   if (szene === 'c' || szene === 'c-leer') {

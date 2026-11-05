@@ -4,8 +4,9 @@ import { displayList, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
+import { wirksamerRand } from '../overscan';
 import { resolveTheme } from '../monitorDisplayHelpers';
-import { nextMatchList, pageOf, pagesFor } from '../slideContent';
+import { listFrame, nextMatchesLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -17,17 +18,20 @@ interface NextMatchesSlideProps {
   view: TournamentView;
   theme: MonitorTheme;
   style: CSSProperties;
-  /** Seite der Folie (B-16f3), 0-basiert; ab 7 Zeilen blättert die Folie (@ZM-129). */
+  /** Seite der Folie (B-16f3), 0-basiert; blättert, sobald die Zeilen nicht in die Bildhöhe passen (@ZM-129, @ZM-188). */
   page?: number;
+  /** Wirksamer Bildrand in Prozent (@ME-067); bestimmt, wie viele Zeilen auf eine Seite passen. */
+  overscanPercent?: number;
 }
 
 /** Folie „Nächste Spiele“ (@ZM-071, @ZM-078): die nächsten offenen Spiele über alle Felder, nie ein Ergebnis. */
-export function NextMatchesSlide({ slide, tournament, view, theme, style, page = 0 }: NextMatchesSlideProps) {
+export function NextMatchesSlide({ slide, tournament, view, theme, style, page = 0, overscanPercent }: NextMatchesSlideProps) {
   const { t } = useTranslation('monitor');
+  const frame = listFrame(slide, wirksamerRand(overscanPercent, null));
   const colors = monitorThemes[resolveTheme(theme)];
-  const list = nextMatchList(view, slide.config.matchCount);
-  const rows = pageOf(list, page);
-  const pages = pagesFor(list.length);
+  const { pages: allPages, columns } = nextMatchesLayout(view, slide.config.matchCount, frame);
+  const pages = allPages.length;
+  const rows = allPages[Math.min(Math.max(page, 0), pages - 1)];
 
   return (
     <div style={style}>
@@ -50,6 +54,8 @@ export function NextMatchesSlide({ slide, tournament, view, theme, style, page =
               match={match}
               tournament={tournament}
               theme={theme}
+              columns={columns}
+            frame={frame}
             />
           ))}
         </div>

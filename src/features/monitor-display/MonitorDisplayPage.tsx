@@ -37,21 +37,22 @@ import {
   alleUebersprungen, liveSpielLaeuft, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
-import { monitorPageCount } from './slideContent';
+import { listFrame, monitorPageCount, startPage, scheduleFieldLayout } from './slideContent';
+import { useListenStart } from './useListenStart';
 import { applyEnd } from './monitorEnd';
 import { useMonitorEnd } from './useMonitorEnd';
 import { buildMonitorRuleMatches, buildMonitorView } from './monitorView';
 import { NowSourceContext } from '../../components/schedule/useTickingNow';
 import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
-import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
+import { fieldIdToNumber, getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
 import { createMonitorSource, type DisplayOrigin } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
 import { useMonitorHeartbeat } from './useMonitorHeartbeat';
 import { SlideRenderer } from './slides/SlideRenderer';
 import { TransitionWrapper } from './components/TransitionWrapper';
 import { CacheIndicator } from './components/CacheIndicator';
-import { MonitorLoadingView, MonitorErrorView } from './components/MonitorStatusViews';
+import { MonitorLoadingView, MonitorWaitingView } from './components/MonitorStatusViews';
 import { SlideDots, MonitorKeyframes } from './components/MonitorChrome';
 import { containerStyle } from './components/monitorStyles';
 
@@ -62,7 +63,6 @@ import { containerStyle } from './components/monitorStyles';
 interface MonitorDisplayPageProps {
   tournamentId: string;
   monitorId: string;
-  onBack?: () => void;
 }
 
 /**
@@ -79,7 +79,6 @@ const monitorPollIntervalMs = (m: TournamentMonitor | null, origin: DisplayOrigi
 function MonitorDisplayPageContent({
   tournamentId,
   monitorId,
-  onBack,
 }: MonitorDisplayPageProps) {
   // Datenquelle (stabil je Ziel) und Abruf-/Zustandsregeln in den Bausteinen (B-16b2)
   const displaySource = useMemo(
@@ -157,9 +156,9 @@ function MonitorDisplayPageContent({
       slides,
       defaultDurationSec: defaultSlideDuration,
       matches: ruleMatches,
-      pageCount: (slide) => monitorPageCount(slide, tournament, view, end),
+      pageCount: (slide) => monitorPageCount(slide, tournament, view, end, listFrame(slide, overscanPercent)),
     }),
-    [slides, defaultSlideDuration, tournament, view, ruleMatches, end]
+    [slides, defaultSlideDuration, tournament, view, ruleMatches, end, overscanPercent]
   );
   const transitionMs = performanceSettings.enableTransitions && monitor?.transition !== 'none'
     ? (monitor?.transitionDuration ?? 0)
@@ -175,6 +174,13 @@ function MonitorDisplayPageContent({
       && alleUebersprungen(slides, ruleMatches ?? [], ansichtZeitMs);
     return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
   }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, ruleMatches, ansichtZeitMs]);
+
+  // @ZM-190: Startseite des Spielplans, beim Eintritt in die Folie festgehalten (nicht bei jedem Poll neu)
+  const listenStart = useListenStart(slideState.currentIndex, slideState.page, () => {
+    if (currentSlide?.type !== 'schedule-field' || !('config' in currentSlide)) { return 0; }
+    if (!view) { return null; }
+    return startPage(scheduleFieldLayout(view, fieldIdToNumber(currentSlide.config.fieldId), listFrame(currentSlide, overscanPercent)).pages);
+  });
 
   // B-17 (@ME-006): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
   // und nur auf den Ersatzfolien, solange gar kein Programm eingerichtet ist (monitor.slides leer), bzw. einer QR-Folie des Programms
@@ -215,7 +221,7 @@ function MonitorDisplayPageContent({
   }
 
   if (error || !tournament || !monitor || !view) {
-    return <MonitorErrorView error={error} onBack={onBack} />;
+    return <MonitorWaitingView />;
   }
 
   return (
@@ -247,6 +253,7 @@ function MonitorDisplayPageContent({
               hinweisHoehe={hinweisZeigt ? displayLayout.noticeHeight : undefined}
               pinnedMatchId={slideState.pinnedMatchId}
               page={slideState.page}
+              pageStart={listenStart}
               end={end}
             />
           </TransitionWrapper></NowSourceContext.Provider>

@@ -63,7 +63,7 @@ describe('MonitorDisplayPage — Zuschauer-QR zeigt die Live-Adresse (F-03)', ()
 
   it('QR-Wert ist die öffentliche Zuschauer-Adresse /#/live/ABC123 und enthält nie /tournament/', async () => {
     supabaseGet.mockResolvedValue(tournamentWith({ isPublic: true, shareCode: 'ABC123' }));
-    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(screen.getByTestId('qr-code')).toBeInTheDocument());
     const value = screen.getByTestId('qr-code').getAttribute('data-value') ?? '';
     expect(value).toMatch(/\/#\/live\/ABC123$/);
@@ -72,14 +72,14 @@ describe('MonitorDisplayPage — Zuschauer-QR zeigt die Live-Adresse (F-03)', ()
 
   it('Ohne isPublic keinen QR – auch nicht mit Share-Code (F11: Spielplan-Folie)', async () => {
     supabaseGet.mockResolvedValue(tournamentWith({ isPublic: false, shareCode: 'ABC123' }));
-    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(container.textContent).toContain('Spielplan'));
     expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });
 
   it('Ohne Share-Code keinen QR – auch wenn öffentlich (F11: Spielplan-Folie)', async () => {
     supabaseGet.mockResolvedValue(tournamentWith({ isPublic: true }));
-    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    const { container } = render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
     await waitFor(() => expect(container.textContent).toContain('Spielplan'));
     expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
   });

@@ -73,7 +73,7 @@ async function vor(ms: number): Promise<void> {
 async function starte(data: Tournament): Promise<void> {
   liefere(data);
   localGet.mockResolvedValue(null);
-  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+  render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });
 }
 

@@ -657,9 +657,6 @@ function AppContent() {
           <MonitorDisplayPage
             tournamentId={monitorDisplayParamsFromUrl.tournamentId}
             monitorId={monitorDisplayParamsFromUrl.monitorId}
-            onBack={() => {
-              void navigate('/');
-            }}
           />
         )}
 

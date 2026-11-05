@@ -54,3 +54,16 @@ export function FinishSectionCards({ suggest, facts, openReviews, lateSince, onO
     </div>
   );
 }
+
+/**
+ * Vor dem ersten Anpfiff (@LZ-093): statt eines fehlenden Bereichs der Satz, wann die Turnierleitung abschließen kann. Keine Taste –
+ * es gibt noch nichts abzuschließen.
+ */
+export function FinishNotYetCard() {
+  const { t } = useTranslation('tournament');
+  return (
+    <section style={card} data-testid="finish-not-yet" aria-labelledby="finish-not-yet-text">
+      <p id="finish-not-yet-text" style={text}>{t('finish.section.notYet')}</p>
+    </section>
+  );
+}

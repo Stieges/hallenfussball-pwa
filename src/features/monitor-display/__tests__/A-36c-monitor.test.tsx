@@ -16,7 +16,8 @@ import { AllStandingsSlide } from '../slides/AllStandingsSlide';
 import { LiveSlide } from '../slides/LiveSlide';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
-import { fieldSchedule, MONITOR_ROWS_PER_PAGE, standingsSections } from '../slideContent';
+import { scheduleFieldLayout, standingsSections } from '../slideContent';
+import { pageIndexOf } from '../listRows';
 import { buildMonitorView } from '../monitorView';
 import { liveMatchOf, withView } from './monitorViewHelper';
 import { slide } from './monitorFixture';
@@ -36,11 +37,10 @@ const zeile = (id: string): HTMLElement => {
 };
 const zeilenIds = (): Array<string | null> => screen.queryAllByTestId('monitor-match-row').map(row => row.getAttribute('data-match-id'));
 
-/** Seite der Spielplan-Folie, auf der das Spiel steht (6 Zeilen je Seite, @ZM-129). */
+/** Seite der Spielplan-Folie, auf der das Spiel steht (nach Höhe, @ZM-129, @ZM-188). */
 function seiteVon(tournament: Tournament, index: number): number {
   const match = tournament.matches[index];
-  const position = fieldSchedule(buildMonitorView(tournament), match.field).findIndex(m => m.id === match.id);
-  return Math.floor(position / MONITOR_ROWS_PER_PAGE);
+  return pageIndexOf(scheduleFieldLayout(buildMonitorView(tournament), match.field).pages, match.id);
 }
 
 function spielplan(cup: Hallencup, index: number, tournament: Tournament = cup.tournament) {
@@ -53,8 +53,12 @@ describe('@TM-015 @ZM-102 Monitor: Herkunft offener Plätze, besetzter Platz ohn
   it('@TM-015 F-HF Finalrunde: HF1 „FC Nord“ gegen „Zweiter Gruppe B“, Finale Heim „Sieger Halbfinale 1“', async () => {
     const cup = await fHF();
     const view = buildMonitorView(cup.tournament);
-    const finals = standingsSections(cup.tournament, view).findIndex(s => s.kind === 'finals');
-    render(<AllStandingsSlide {...withView(cup.tournament)} theme="dark" style={{}} page={finals} />);
+    // die Finalrunde blättert nach Höhe: jedes Spiel auf der Seite ansehen, auf der es steht
+    const abschnitte = standingsSections(cup.tournament, view);
+    const seitenVon = (id: string) => abschnitte.findIndex(s => s.kind === 'finals' && s.matches.some(m => m.id === id));
+    for (const seite of new Set([seitenVon(idOf(cup, GAME.HF1)), seitenVon(idOf(cup, GAME.FINAL))])) {
+      render(<AllStandingsSlide {...withView(cup.tournament)} theme="dark" style={{}} page={seite} />);
+    }
     const erwartet = EXPECTED_PLAN['F-HF'];
     const hf1 = within(zeile(idOf(cup, GAME.HF1)));
     expect(hf1.getByText(erwartet.hf1Home.label.de)).toBeInTheDocument();
@@ -160,7 +164,7 @@ describe('@ZM-104 F-AUS / F-WERT: ausgefallen und gewertet', () => {
     const cup = withCloudColumns(aus, GAME[10], { score_a: 2, score_b: 0, match_status: 'finished', decided_by: 'forfeit' });
     spielplan(cup, GAME[10]);
     const row = zeile(idOf(cup, GAME[10]));
-    expect(within(row).getByTestId('monitor-match-separator').textContent).toBe('2:0');
+    expect(within(row).getByTestId('monitor-match-score').textContent).toBe('2:0');
     expect(within(row).getByTestId('monitor-match-note').textContent).toBe('gewertet');
     document.body.innerHTML = '';
 

@@ -174,7 +174,7 @@ describe('B-26 Zeiten verschieben im Spielplan', () => {
     rerenderWith(saved);
     expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Zeiten um 10 Minuten verschoben · Ende 11:44');
     expect(screen.getByTestId('time-shift-strip')).toHaveTextContent('Ausdrucke sind veraltet');
-    expect(screen.getByTestId('match-original-m8')).toHaveTextContent('ursprünglich 11:24');
+    expect(screen.getByTestId('match-original-m8')).toHaveTextContent('(war 11:24)');
     fireEvent.click(screen.getByTestId('zeiten-rueckgaengig'));
     expect(screen.getByTestId('time-shift-restore-preview')).toHaveTextContent('1 Spiel verschiebt sich');
     fireEvent.click(screen.getByTestId('time-shift-confirm'));

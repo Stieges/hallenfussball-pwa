@@ -120,7 +120,7 @@ describe('useMonitorDisplayData', () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it('Ziel-Wechsel: fehlt das neue Turnier nach einem echten Fehler, ist der Fehlertext sichtbar (nicht unterdrückt)', async () => {
+  it('Ziel-Wechsel: fehlt das neue Turnier nach einem echten Fehler, ist der Fehlergrund gesetzt (nicht unterdrückt, die Seite zeigt die ruhige Seite)', async () => {
     const fetchT1 = vi.fn<MonitorDataSource['fetch']>().mockResolvedValue(snapshot());
     const fetchT2 = vi.fn<MonitorDataSource['fetch']>().mockResolvedValue({ kind: 'missing', lookupFailed: true });
     const { result, rerender } = renderHook(
@@ -132,7 +132,7 @@ describe('useMonitorDisplayData', () => {
 
     rerender({ src: { fetch: fetchT2 }, t: target('tour-2') });
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(result.current.error).toMatch(/Verbindung zum Server fehlgeschlagen/);
+    expect(result.current.error).toBe('connection');
     expect(result.current.loading).toBe(false);
   });
 

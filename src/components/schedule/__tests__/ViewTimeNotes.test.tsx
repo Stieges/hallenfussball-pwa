@@ -23,9 +23,9 @@ function Karte() {
 }
 
 describe('ViewTimeNotes', () => {
-  it('@ZP-004 @ZM-105 ohne Spielplan der Leitung: „ursprünglich 15:30“ und „voraussichtlich“ aus der Ansicht, kein ⋮', () => {
+  it('@ZP-004 @ZM-105 ohne Spielplan der Leitung: „(war 15:30)“ und „voraussichtlich“ aus der Ansicht, kein ⋮', () => {
     render(<ViewTimeNotes view={view}><Karte /></ViewTimeNotes>);
-    expect(screen.getByTestId('match-original-m1')).toHaveTextContent('ursprünglich 15:30');
+    expect(screen.getByTestId('match-original-m1')).toHaveTextContent('(war 15:30)');
     expect(screen.getByTestId('match-tentative-m1')).toHaveTextContent('voraussichtlich');
     expect(screen.queryByTestId('menu-m1')).toBeNull();
   });
@@ -37,7 +37,7 @@ describe('ViewTimeNotes', () => {
       </MatchTimeShiftContext.Provider>,
     );
     expect(screen.getByTestId('menu-m1')).toBeInTheDocument();
-    expect(screen.getByTestId('match-original-m1')).toHaveTextContent('ursprünglich 10:00');
+    expect(screen.getByTestId('match-original-m1')).toHaveTextContent('(war 10:00)');
     expect(screen.queryByTestId('match-tentative-m1')).toBeNull();
   });
 });
