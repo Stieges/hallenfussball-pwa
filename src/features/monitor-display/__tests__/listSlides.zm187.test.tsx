@@ -457,10 +457,58 @@ describe('C-MONITOR-FINALRUNDE-OHNE-SEITEN @ZM-185 Die Finalrunde blättert nach
     expect(standingsSections(keine, withView(keine).view).filter(a => a.kind === 'finals')).toHaveLength(0);
   });
 
-  it('der Bildrand zählt: bei 10 % Rand passen nie mehr Finalspiele auf eine Seite als bei 0 %', () => {
+  const proSeiteListe = (t: ReturnType<typeof listenTurnier>, overscan: number) =>
+    standingsSections(t, withView(t).view, { overscan, notice: false }).filter(a => a.kind === 'finals').map(a => (a.kind === 'finals' ? a.matches.length : 0));
+
+  it('der Bildrand zählt: 4 Finalspiele mit kurzen Namen: bei 0 % eine Seite mit 4, bei 5 und 10 % zwei Seiten gleichmäßig 2 + 2 (nicht 3 + 1)', () => {
+    const t = listenTurnier({ namen: 'kurz', beendet: 3, finale: 4 });
+    expect(proSeiteListe(t, 0)).toEqual([4]);
+    expect(proSeiteListe(t, 5)).toEqual([2, 2]);
+    expect(proSeiteListe(t, 10)).toEqual([2, 2]);
+  });
+
+  it('6 Finalspiele mit langen Namen: 3 + 3 bei jedem Rand; die Seiten sind gleichmäßig gefüllt (Unterschied höchstens 1)', () => {
     const t = listenTurnier({ namen: 'lang', beendet: 3, finale: 6 });
+    for (const rand of [0, 5, 10]) { expect(proSeiteListe(t, rand)).toEqual([3, 3]); }
+  });
+
+  it('Render: AllStandingsSlide reicht den Bildrand durch – 4 Finalspiele zeigen bei 0 % vier Zeilen, bei 10 % zwei je Seite', async () => {
+    const { AllStandingsSlide } = await import('../slides/AllStandingsSlide');
+    const t = listenTurnier({ namen: 'kurz', beendet: 3, finale: 4 });
     const { view } = withView(t);
-    const proSeite = (overscan: number) => Math.max(...standingsSections(t, view, { overscan, notice: false }).filter(a => a.kind === 'finals').map(a => (a.kind === 'finals' ? a.matches.length : 0)));
-    expect(proSeite(10)).toBeLessThanOrEqual(proSeite(0));
+    const zeilenBei = (overscanPercent: number): number => {
+      const { unmount } = render(<AllStandingsSlide tournament={t} view={view} theme="dark" style={{}} page={1} overscanPercent={overscanPercent} />);
+      const n = screen.getAllByTestId('monitor-match-row').length;
+      unmount();
+      return n;
+    };
+    expect(zeilenBei(0)).toBe(4);
+    expect(zeilenBei(10)).toBe(2);
+  });
+
+  it('Spielplan: die Seitenaufteilung bleibt höhenmodellgleich greedy (4 + 4 + 4 + 3 bei 15 Spielen), das Ausgleichen gilt nur für die Finalrunde', () => {
+    const pages = scheduleFieldLayout(withView(listenTurnier({ namen: 'kurz', beendet: 3 })).view, 1).pages;
+    expect(pages.map(p => p.length)).toEqual([4, 4, 4, 3]);
+  });
+});
+
+describe('@ZM-104 @ZM-189 Kontrast der Zusätze unter dem Stand: „gewertet“ und „(4:3 i. E.)“ in der Textfarbe des Monitors', () => {
+  it('dieselbe Farbe wie die Uhrzeit-Zelle (mit „(war …)“), mindestens 7:1 gegen die Zeilenfläche in Dark und Light', async () => {
+    const { contrastRatio } = await import('../../../test/contrast');
+    const { monitorThemes } = await import('../../../design-tokens');
+    for (const theme of ['dark', 'light'] as const) {
+      const strafstoss = listenTurnier({ beendet: 5, strafstoss: true });
+      const { unmount } = render(<ScheduleFieldSlide slide={plan} {...withView(strafstoss)} theme={theme} style={{}} page={0} />);
+      const extra = document.querySelector<HTMLElement>('[data-testid="monitor-match-extra"]')!;
+      const zeit = extra.closest('[data-testid="monitor-match-row"]')!.querySelector<HTMLElement>('[data-testid="monitor-match-time"]')!;
+      expect(extra.style.color, `${theme}: Strafstoß-Zeile`).toBe(zeit.style.color);
+      unmount();
+      const gewertet = mitSpiel6(listenTurnier({ beendet: 5 }), { matchStatus: 'finished', scoreA: 3, scoreB: 0, decidedBy: 'forfeit', forfeitAbsent: 'B' });
+      const r = render(<ScheduleFieldSlide slide={plan} {...withView(gewertet)} theme={theme} style={{}} page={seiteVonSpiel6(gewertet, 'plan')} />);
+      const note = document.querySelector<HTMLElement>('[data-testid="monitor-match-note"]')!;
+      expect(note.style.color, `${theme}: „gewertet“`).toBe(zeit.style.color);
+      r.unmount();
+      expect(contrastRatio(monitorThemes[theme].text, monitorThemes[theme].surface), `${theme}: Text gegen Zeilenfläche`).toBeGreaterThanOrEqual(7);
+    }
   });
 });

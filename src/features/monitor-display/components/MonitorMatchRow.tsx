@@ -63,7 +63,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
   // Kurzform („i. E.“, „n. V.“) immer mit ausgeschriebenem Begriff für Darüberfahren und Screenreader (@OB-075)
   const extraTerms = figures === null ? undefined : tableResultExtraTerms(figures, t);
 
-  const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.textMuted, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
+  const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.text, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
 
   return (
     <div

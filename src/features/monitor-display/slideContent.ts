@@ -13,7 +13,7 @@ import { SPIELPLAN_FALLBACK_SLIDE, type ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
-import { DEFAULT_FRAME, listColumns, listPages, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
+import { DEFAULT_FRAME, listColumns, listPages, listPagesBalanced, SCHEDULE_MAX_ROWS, type ListColumns, type ListFrame } from './listRows';
 
 function compareNumbers(x: number, y: number): number {
   if (x === y) { return 0; }
@@ -75,7 +75,7 @@ export type StandingsSection = { kind: 'group'; groupId: string } | { kind: 'ove
 
 /**
  * Abschnitte je Seite (R-f3): je Gruppe eine Tabelle zuerst, danach die Finalrunde. Die Finalrunde blättert nach gemessener Höhe wie der
- * Spielplan (`listPages`, @ZM-185, „dichte Folien blättern statt die Schrift zu verkleinern“): jede Seite der Finalrunde ist ein eigener
+ * Spielplan (`listPages`, @ZM-185, „dichte Folien blättern statt die Schrift zu verkleinern“): jede Seite der Finalrunde (gleichmäßig verteilt, „2 + 2“) ist ein eigener
  * Abschnitt, also eine Seite der Folie – der Takt, „Seite x / y“ und die Seitendauer bleiben wie bei allen blätternden Folien. So wird
  * nie etwas abgeschnitten, und eine Tabelle springt nie, wenn die Finalrunde wächst (sie steht hinter den Tabellen).
  * Ohne Gruppen (Jeder gegen Jeden, Controller-Ruling B-16f3 Fixrunde 1): eine Gesamttabelle über alle Teams.
@@ -86,7 +86,7 @@ export function standingsSections(tournament: Tournament, view: TournamentView, 
   if (ids.length === 0 && tournament.teams.length > 0) { sections.push({ kind: 'overall' }); }
   const finals = finalRoundMatches(view);
   if (finals.length > 0) {
-    for (const matches of listPages(finals, finalColumns(view), undefined, frame)) { sections.push({ kind: 'finals', matches }); }
+    for (const matches of listPagesBalanced(finals, finalColumns(view), undefined, frame)) { sections.push({ kind: 'finals', matches }); }
   }
   return sections;
 }

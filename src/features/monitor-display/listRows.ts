@@ -166,6 +166,23 @@ export function listPages(matches: readonly MatchView[], cols: ListColumns, maxR
   return pages;
 }
 
+/**
+ * Seiten wie `listPages`, aber gleichmäßig verteilt („2 + 2“ statt „3 + 1“): die Seitenzahl n bleibt die des Höhenmodells, jede Seite bekommt
+ * höchstens ceil(Spiele / n) Spiele. Passt eine so gebildete Seite nicht in die Höhe (sehr verschieden hohe Zeilen), bleibt es bei `listPages`.
+ */
+export function listPagesBalanced(matches: readonly MatchView[], cols: ListColumns, maxRows: number = Number.POSITIVE_INFINITY, frame: ListFrame = DEFAULT_FRAME): MatchView[][] {
+  const pages = listPages(matches, cols, maxRows, frame);
+  if (pages.length < 2) { return pages; }
+  const per = Math.ceil(matches.length / pages.length);
+  const chunks: MatchView[][] = [];
+  for (let i = 0; i < matches.length; i += per) { chunks.push(matches.slice(i, i + per)); }
+  const available = availableHeight(frame);
+  const gap = num(displayList.rowGap);
+  const fits = (chunk: readonly MatchView[]): boolean => chunk.length <= maxRows
+    && chunk.reduce((sum, m, i) => sum + rowHeight(m, cols, frame) + (i === 0 ? 0 : gap), 0) <= available;
+  return chunks.every(fits) ? chunks : pages;
+}
+
 /** Seite (0-basiert), auf der das Spiel `matchId` steht; -1, wenn es in keiner Seite steht. */
 export function pageIndexOf(pages: readonly (readonly MatchView[])[], matchId: string): number {
   return pages.findIndex(page => page.some(m => m.id === matchId));
