@@ -6,7 +6,7 @@ import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { wirksamerRand } from '../overscan';
 import { fieldIdToNumber, resolveTheme } from '../monitorDisplayHelpers';
-import { scheduleFieldLayout } from '../slideContent';
+import { listFrame, scheduleFieldLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -22,14 +22,14 @@ interface ScheduleFieldSlideProps {
   page?: number;
   /** Wirksamer Bildrand in Prozent (@ME-067); bestimmt, wie viele Zeilen auf eine Seite passen. */
   overscanPercent?: number;
-  /** Der Wachhalten-Hinweis nimmt oben Platz (@ME-006). */
-  hinweisHoehe?: string;
+  /** Startseite (@ZM-190), beim Eintritt festgehalten: die Folie zeigt zuerst diese Seite, die übrigen folgen im Durchlauf. */
+  pageStart?: number;
 }
 
 /** Spielplan eines Feldes (@ZM-071): alle Spiele in Anpfiff-Reihenfolge mit Uhrzeit, Seiten nach Höhe, höchstens 4 Spiele je Seite (@ZM-129, @ZM-185, @ZM-188). */
-export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page = 0, overscanPercent, hinweisHoehe }: ScheduleFieldSlideProps) {
+export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page = 0, pageStart = 0, overscanPercent }: ScheduleFieldSlideProps) {
   const { t } = useTranslation('monitor');
-  const frame = { overscan: wirksamerRand(overscanPercent, null), notice: hinweisHoehe !== undefined };
+  const frame = listFrame(slide, wirksamerRand(overscanPercent, null));
   const themeColors = monitorThemes[resolveTheme(theme)];
 
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
@@ -38,7 +38,8 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
 
   const { pages: allPages, columns } = scheduleFieldLayout(view, fieldNumber, frame);
   const pages = allPages.length;
-  const rows = allPages[Math.min(Math.max(page, 0), pages - 1)];
+  // Seite im Durchlauf (0 = Startseite) → Seite in Anpfiff-Reihenfolge; die beendeten Seiten folgen zuletzt (@ZM-190)
+  const rows = allPages[(Math.min(Math.max(page, 0), pages - 1) + pageStart) % pages];
 
   // B-16e2 (@W2A-031): Kindermodus – kein Ergebnis; die Seitentexte („noch offen“) kommen fertig aus der Ansicht
   const ergebnisseAusgeblendet = !view.rules.results;
@@ -62,6 +63,7 @@ export function ScheduleFieldSlide({ slide, tournament, view, theme, style, page
             theme={theme}
             showScore={!ergebnisseAusgeblendet}
             columns={columns}
+            frame={frame}
           />
         ))}
       </div>

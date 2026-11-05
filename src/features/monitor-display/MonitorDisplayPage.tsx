@@ -37,14 +37,15 @@ import {
   alleUebersprungen, liveSpielLaeuft, selectDisplayableSlides, SPIELPLAN_FALLBACK_SLIDE, ZUSCHAUER_QR_SLIDE, type SlideProgram,
 } from './slideProgramme';
 import { isSlideShowable } from './publicVisibility';
-import { monitorPageCount } from './slideContent';
+import { listFrame, monitorPageCount, startPage, scheduleFieldLayout } from './slideContent';
+import { useListenStart } from './useListenStart';
 import { applyEnd } from './monitorEnd';
 import { useMonitorEnd } from './useMonitorEnd';
 import { buildMonitorRuleMatches, buildMonitorView } from './monitorView';
 import { NowSourceContext } from '../../components/schedule/useTickingNow';
 import { useSlideshow } from './useSlideshow';
 import { useReloadGate } from './useReloadGate';
-import { getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
+import { fieldIdToNumber, getPerformanceSettings, resolveTheme } from './monitorDisplayHelpers';
 import { createMonitorSource, type DisplayOrigin } from './monitorDataSource';
 import { useMonitorDisplayData } from './useMonitorDisplayData';
 import { useMonitorHeartbeat } from './useMonitorHeartbeat';
@@ -155,7 +156,7 @@ function MonitorDisplayPageContent({
       slides,
       defaultDurationSec: defaultSlideDuration,
       matches: ruleMatches,
-      pageCount: (slide) => monitorPageCount(slide, tournament, view, end, { overscan: overscanPercent, notice: false }),
+      pageCount: (slide) => monitorPageCount(slide, tournament, view, end, listFrame(slide, overscanPercent)),
     }),
     [slides, defaultSlideDuration, tournament, view, ruleMatches, end, overscanPercent]
   );
@@ -173,6 +174,12 @@ function MonitorDisplayPageContent({
       && alleUebersprungen(slides, ruleMatches ?? [], ansichtZeitMs);
     return rueckfallAktiv ? rueckfallFolie : slides[slideState.currentIndex] ?? null;
   }, [slides, slideState.currentIndex, slideState.pinnedMatchId, rueckfallFolie, ruleMatches, ansichtZeitMs]);
+
+  // @ZM-190: Startseite des Spielplans, beim Eintritt in die Folie festgehalten (nicht bei jedem Poll neu)
+  const listenStart = useListenStart(slideState.currentIndex, slideState.page, () => {
+    if (currentSlide?.type !== 'schedule-field' || !('config' in currentSlide) || !view) { return 0; }
+    return startPage(scheduleFieldLayout(view, fieldIdToNumber(currentSlide.config.fieldId), listFrame(currentSlide, overscanPercent)).pages);
+  });
 
   // B-17 (@ME-006): 10-s-Hinweis als Ecke, nur ohne laufendes Spiel auf dem Feld (Regeln in useWakeLockHinweis)
   // und nur auf den Ersatzfolien, solange gar kein Programm eingerichtet ist (monitor.slides leer), bzw. einer QR-Folie des Programms
@@ -245,6 +252,7 @@ function MonitorDisplayPageContent({
               hinweisHoehe={hinweisZeigt ? displayLayout.noticeHeight : undefined}
               pinnedMatchId={slideState.pinnedMatchId}
               page={slideState.page}
+              pageStart={listenStart}
               end={end}
             />
           </TransitionWrapper></NowSourceContext.Provider>

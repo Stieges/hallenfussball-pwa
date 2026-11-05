@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { Match, Tournament } from '../../../types/tournament';
 import { looseVs } from '../../../test/matchSlotFixtures';
+import { listenTurnier } from './listFolienKit';
 import {
   attachMonitor, buildTournament, FIXTURE_TEAMS, slide, withMonitor, withPlayoffs, withScheduledTimes,
 } from './monitorFixture';
@@ -206,6 +207,47 @@ describe('@ZM-129 @ZM-185 Spielplan mit 13 Spielen: 4 Seiten mit bis zu 4 Spiele
     const alle = [...seite1, ...seite2, ...seite3, ...seite4];
     expect(new Set(alle).size).toBe(13);
     expect(alle).toHaveLength(13);
+  });
+});
+
+describe('@ZM-190 @ZM-187 Spielplan: die Startseite wird beim Eintritt festgehalten, nicht bei jedem Poll neu gerechnet', () => {
+  const ids = () => zeilen().map(z => z.getAttribute('data-match-id'));
+  const plan = [slide('schedule-field', { fieldId: 'field-1' }, 15)];
+  const zustand = (laeuft: number) => {
+    const t = listenTurnier({ beendet: 3 });
+    return monitorTurnier({
+      ...t,
+      matches: t.matches.map(m => {
+        if (m.matchNumber === 4) { return laeuft === 4 ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : { ...m, matchStatus: 'finished' as const, scoreA: 1, scoreB: 0, decidedBy: 'regular' as const }; }
+        return m;
+      }),
+    }, plan);
+  };
+
+  it('Spiel 4 läuft in Zeile 4 auf Seite 1; nach dem Abpfiff zeigt dieselbe Seite bis zum nächsten Takt dieselben Zeilen; der nächste Durchlauf beginnt mit der Seite von Spiel 5, keine Seite doppelt', async () => {
+    await starte(zustand(4));
+    const erste = ['liste-01', 'liste-02', 'liste-03', 'liste-04'];
+    expect(ids()).toEqual(erste);
+    liefere(zustand(0));
+    await vorspulenInSchritten(5_000);
+    expect(ids(), 'Abpfiff von Spiel 4: dieselbe Seite, dieselben Zeilen').toEqual(erste);
+    const folge: Array<Array<string | null>> = [];
+    for (let i = 0; i < 4; i += 1) {
+      await vorspulenInSchritten(i === 0 ? 10_000 : 15_000);
+      folge.push(ids());
+    }
+    // Durchlauf: Seite 2, 3, 4 – und beim nächsten Eintritt die Seite von Spiel 5 (= Seite 2)
+    expect(folge[0]).toEqual(['liste-05', 'liste-06', 'liste-07', 'liste-08']);
+    expect(folge[1]).toEqual(['liste-09', 'liste-10', 'liste-11', 'liste-12']);
+    expect(folge[2]).toEqual(['liste-13', 'liste-14', 'liste-15']);
+    expect(folge[3], 'der nächste Eintritt beginnt mit der Seite des nächsten geplanten Spiels (5)').toEqual(folge[0]);
+  });
+
+  it('Gegenbeispiel: ändert sich nur der Stand mitten im Zeigen, bleibt die Seite stehen (kein Sprung auf andere Spiele)', async () => {
+    await starte(zustand(4));
+    const vorher = ids();
+    for (let i = 0; i < 3; i += 1) { liefere(zustand(i % 2 === 0 ? 0 : 4)); await vorspulenInSchritten(3_000); }
+    expect(ids()).toEqual(vorher);
   });
 });
 

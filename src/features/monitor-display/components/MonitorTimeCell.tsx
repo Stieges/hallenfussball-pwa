@@ -46,9 +46,12 @@ interface MonitorTimeCellProps {
  */
 export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, style }: MonitorTimeCellProps) {
   const { t } = useTranslation('tournament');
+  // Eine Stufe für alle Zusatzzeilen unter der Uhrzeit: Feld, Zustand, „gewertet“, „voraussichtlich“, Bezeichnung (Token `note`)
   const small: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color, whiteSpace: 'nowrap' };
   // Feld, „voraussichtlich“ und Bezeichnung dürfen umbrechen (lange Texte laufen sonst aus der Spalte); nur Uhrzeit und Zustand nicht
-  const note: CSSProperties = { ...small, fontSize: displayList.fontSizes.timeNote, whiteSpace: 'normal', overflowWrap: 'break-word' };
+  const note: CSSProperties = { ...small, whiteSpace: 'normal', overflowWrap: 'break-word' };
+  // „(war hh:mm)“ steht in der Uhrzeit-Zeile und hat die Stufe `timeNote`
+  const war: CSSProperties = { ...small, fontSize: displayList.fontSizes.timeNote };
   const hasState = match.badge.kind === 'badge';
   const awarded = match.status === 'awarded' ? t('view.status.awarded') : null;
   return (
@@ -56,7 +59,7 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
       <div data-testid="monitor-match-clockline" style={{ display: 'flex', alignItems: 'baseline', gap: displayList.timeNoteGap, whiteSpace: 'nowrap' }}>
         <span data-testid="monitor-match-clock" style={{ fontSize: displayList.fontSizes.time }}>{match.kickoff?.time ?? '–'}</span>
         {match.originalKickoff && (
-          <span data-testid="monitor-match-original" style={note}>{t('timeShift.original', { time: match.originalKickoff.time })}</span>
+          <span data-testid="monitor-match-original" style={war}>{t('timeShift.original', { time: match.originalKickoff.time })}</span>
         )}
       </div>
       {fieldName !== undefined && <div data-testid="monitor-match-field" style={{ ...note, fontWeight: cssVars.fontWeights.semibold }}>{fieldName}</div>}
@@ -67,7 +70,7 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
         </div>
       )}
       {match.kickoffTentative && <div data-testid="monitor-match-tentative" style={note}>{t('timeShift.tentative')}</div>}
-      {match.labelText && <div data-testid="monitor-match-label" style={{ ...small, whiteSpace: 'normal', overflowWrap: 'break-word' }}>{match.labelText}</div>}
+      {match.labelText && <div data-testid="monitor-match-label" style={note}>{match.labelText}</div>}
     </div>
   );
 }

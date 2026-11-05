@@ -14,6 +14,7 @@ const PROFILE = [{ name: '1080', width: 1920, height: 1080 }, { name: '720', wid
 const SZENEN = [
   { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1' },
   { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1' },
+  { id: 'plan', namen: 'bindestrich', kennung: '@ZM-188 Spielplan Feld 1, Namen mit Bindestrich-Wort an jeder Umbruchstelle', zusatz: '&verschoben=1' },
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=10' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
 ] as const;
@@ -47,16 +48,23 @@ async function zeilen(page: Page): Promise<Kasten[]> {
 async function zerbrocheneWoerter(page: Page, hoechstens: number): Promise<string[]> {
   return page.evaluate((grenze) => {
     const kaputt: string[] = [];
+    const zeilenVon = (knoten: Node, von: number, bis: number): number => {
+      const bereich = document.createRange();
+      bereich.setStart(knoten, von);
+      bereich.setEnd(knoten, bis);
+      return new Set([...bereich.getClientRects()].map((r) => Math.round(r.top))).size;
+    };
     for (const el of document.querySelectorAll<HTMLElement>('[data-teamname]')) {
-      const knoten = el.firstChild;
-      if (knoten?.nodeType !== Node.TEXT_NODE) { continue; }
-      const text = knoten.textContent ?? '';
-      for (const treffer of text.matchAll(/[^\s-]+/g)) {
-        const bereich = document.createRange();
-        bereich.setStart(knoten, treffer.index);
-        bereich.setEnd(knoten, treffer.index + treffer[0].length);
-        const zeilen = new Set([...bereich.getClientRects()].map((r) => Math.round(r.top)));
-        if (zeilen.size > 1 && treffer[0].length <= grenze) { kaputt.push(treffer[0]); }
+      const lauf = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let knoten = lauf.nextNode(); knoten !== null; knoten = lauf.nextNode()) {
+        for (const treffer of (knoten.textContent ?? '').matchAll(/[^\s]+/g)) {
+          const wort = treffer[0];
+          // „Nordheim-Süd“ (bis 14 Zeichen) bleibt ganz auf einer Zeile (@ZM-188); jedes Stück zwischen Bindestrichen immer
+          if (wort.includes('-') && wort.length <= 14 && zeilenVon(knoten, treffer.index, treffer.index + wort.length) > 1) { kaputt.push(wort); }
+          for (const stueck of wort.matchAll(/[^-]+/g)) {
+            if (stueck[0].length <= grenze && zeilenVon(knoten, treffer.index + stueck.index, treffer.index + stueck.index + stueck[0].length) > 1) { kaputt.push(stueck[0]); }
+          }
+        }
       }
     }
     return kaputt;

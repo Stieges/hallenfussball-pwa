@@ -9,7 +9,7 @@ import { resultFigures, tableResultExtra, tableResultExtraTerms } from '../../..
 import { resolveTheme } from '../monitorDisplayHelpers';
 import { monitorSideLabel } from '../matchSides';
 import { monitorBadgeTone } from '../../../components/ui/molecules/matchStatusBadgeStyle';
-import type { ListColumns } from '../listRows';
+import { DEFAULT_FRAME, hyphenWordStaysTogether, nameCharsPerLine, type ListColumns, type ListFrame } from '../listRows';
 import { MonitorTimeCell } from './MonitorTimeCell';
 
 interface MonitorMatchRowProps {
@@ -24,12 +24,29 @@ interface MonitorMatchRowProps {
    * Uhrzeit, in jeder Zeile der Folie oder in keiner; es gibt keine eigenen Spalten dafür.
    */
   columns: ListColumns;
+  /** Rahmen der Folie (Bildrand, Hinweis): bestimmt, wie viele Zeichen eine Namenszeile fasst (@ZM-188). */
+  frame?: ListFrame;
+}
+
+/**
+ * Teamname mit Bindestrich-Wörtern, die zusammenbleiben, solange sie in eine Zeile passen (@ZM-188): nur die Darstellung (`nowrap`),
+ * der Text bleibt unverändert, Suche und Vorlesen sehen den echten Bindestrich.
+ */
+function NameText({ name, perLine }: { name: string; perLine: number }) {
+  return (
+    <>
+      {name.split(/(\s+)/).map((teil, i) => (hyphenWordStaysTogether(teil, perLine)
+        ? <span key={i} style={{ whiteSpace: 'nowrap' }}>{teil}</span>
+        : teil))}
+    </>
+  );
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung, Stand und Zusätze an festen Stellen (@ZM-187). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns }: MonitorMatchRowProps) {
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns, frame = DEFAULT_FRAME }: MonitorMatchRowProps) {
   const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
+  const perLine = nameCharsPerLine(frame);
   // B-44b (@ZM-125, @ZM-087): Schrift relativ zur Bildhöhe, Namen umbrechen statt zu kürzen
   const cell: CSSProperties = {
     fontSize: displayList.fontSizes.team,
@@ -69,7 +86,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         tone={monitorBadgeTone(colors)}
         style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
       />
-      <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}>{monitorSideLabel(match.home)}</div>
+      <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}><NameText name={monitorSideLabel(match.home)} perLine={perLine} /></div>
       <div
         data-testid="monitor-match-separator"
         style={{
@@ -87,7 +104,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
           </div>
         )}
       </div>
-      <div data-teamname style={{ ...cell, flex: '1 1 0' }}>{monitorSideLabel(match.away)}</div>
+      <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
     </div>
   );
 }

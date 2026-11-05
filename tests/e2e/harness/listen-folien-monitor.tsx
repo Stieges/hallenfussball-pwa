@@ -2,7 +2,7 @@
  * Prüfstand Monitor-Listen-Folien „Spielplan Feld 1“ und „Nächste Spiele“ (Regel T2-UI; @ZM-187, @ZM-188, @ZM-185): ECHTE Folien-Komponente
  * (`SlideRenderer`), Design-Tokens, feste Anzeigesprache, Rahmen wie die Monitor-Seite. Turnier aus dem Kit `listFolienKit` (6 Teams,
  * 15 Spiele auf Feld 1). Nur Testumgebung, nicht Teil des Builds.
- * Adresse: `?szene=plan|naechste&seite=<n>&namen=kurz|lang&verschoben=1&gewertet=1&rand=<Prozent>&anzahl=<Spiele>`.
+ * Adresse: `?szene=plan|naechste&seite=<n>&namen=kurz|lang|bindestrich&verschoben=1&gewertet=1&rand=<Prozent>&anzahl=<Spiele>`.
  */
 import ReactDOM from 'react-dom/client';
 import '../../../src/i18n';
@@ -25,7 +25,7 @@ const rand = Number(q.get('rand') ?? '5');
 const anzahl = Number(q.get('anzahl') ?? '15');
 
 const turnier = listenTurnier({
-  namen: q.get('namen') === 'lang' ? 'lang' : 'kurz', verschoben: q.get('verschoben') === '1', gewertet: q.get('gewertet') === '1',
+  namen: q.get('namen') === 'lang' ? 'lang' : q.get('namen') === 'bindestrich' ? 'bindestrich' : 'kurz', verschoben: q.get('verschoben') === '1', gewertet: q.get('gewertet') === '1',
 });
 const view = buildMonitorView(turnier);
 const folie = (szene === 'plan'

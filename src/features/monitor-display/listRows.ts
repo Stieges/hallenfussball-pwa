@@ -72,22 +72,32 @@ function availableHeight(frame: ListFrame): number {
 }
 
 /** Breite eines Teamnamens in Zeichen je Zeile (Heim und Gast gleich breit). */
-function charsPerLine(frame: ListFrame): number {
+export function nameCharsPerLine(frame: ListFrame): number {
   const gaps = 3;
   const fixed = num(displayList.timeFieldWidth) * FONT + num(displayList.separatorWidth) * FONT;
   const inner = WIDTH_VH * (1 - (2 * frame.overscan) / 100) - 2 * num(displayList.rowPaddingX) - gaps * num(displayList.cellGap) - fixed;
   return Math.max(1, Math.floor(inner / 2 / (CHAR_EM * FONT)));
 }
 
-/** Teile, an denen der Browser umbrechen darf (nach Leerzeichen und nach Bindestrich); `space` = ein Leerzeichen steht davor. */
-function breakParts(text: string): { len: number; space: boolean }[] {
+/**
+ * Ein Wort mit Bindestrich bleibt zusammen, solange es in eine Zeile passt (@ZM-188): „Nordheim-Süd“ bricht nicht am Bindestrich,
+ * erst ein zu langes Wort („Oberweiler-Niederstetten“) bricht dort.
+ */
+export function hyphenWordStaysTogether(word: string, perLine: number): boolean {
+  return word.includes('-') && [...word].length <= perLine;
+}
+
+/** Teile, an denen der Browser umbrechen darf (nach Leerzeichen, nach Bindestrich nur bei zu langem Wort); `space` = ein Leerzeichen steht davor. */
+function breakParts(text: string, perLine: number): { len: number; space: boolean }[] {
   const parts: { len: number; space: boolean }[] = [];
   let space = false;
-  for (const m of text.matchAll(/(\s+)|([^\s-]+-?|-)/g)) {
-    if (m[1] !== undefined) { space = true; } else {
-      parts.push({ len: [...m[2]].length, space: space && parts.length > 0 });
-      space = false;
-    }
+  for (const m of text.matchAll(/(\s+)|([^\s]+)/g)) {
+    if (m[1] !== undefined) { space = true; continue; }
+    const word = m[2];
+    const stays = hyphenWordStaysTogether(word, perLine);
+    const pieces = stays ? [word] : word.match(/[^-]+-?|-/g) ?? [];
+    pieces.forEach((piece, i) => { parts.push({ len: [...piece].length, space: i === 0 && space && parts.length > 0 }); });
+    space = false;
   }
   return parts;
 }
@@ -96,7 +106,7 @@ function breakParts(text: string): { len: number; space: boolean }[] {
 export function nameLines(text: string, perLine: number): number {
   let lines = 1;
   let used = 0;
-  for (const { len, space } of breakParts(text)) {
+  for (const { len, space } of breakParts(text, perLine)) {
     const joined = used === 0 ? len : used + (space ? 1 : 0) + len;
     if (used !== 0 && joined > perLine) {
       lines += 1;
@@ -115,10 +125,10 @@ export function nameLines(text: string, perLine: number): number {
 
 /** Höhe einer Zeile in vh: Polster und Rahmen plus höchste Zelle (Uhrzeit/Feld/„voraussichtlich“ oder Namen). */
 export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame = DEFAULT_FRAME): number {
-  const perLine = charsPerLine(frame);
+  const perLine = nameCharsPerLine(frame);
   const names = Math.max(nameLines(monitorSideLabel(match.home), perLine), nameLines(monitorSideLabel(match.away), perLine));
   const note = num(displayList.fontSizes.note) * LINE;
-  const timeLines = (cols.state ? note : 0) + (cols.field ? FONT * LINE : 0) + (match.kickoffTentative ? note : 0)
+  const timeLines = (cols.state ? note : 0) + (cols.field ? note : 0) + (match.kickoffTentative ? note : 0)
     + (match.labelText ? note : 0);
   const timeCell = num(displayList.fontSizes.time) * LINE + timeLines;
   const content = Math.max(timeCell, names * FONT * LINE);

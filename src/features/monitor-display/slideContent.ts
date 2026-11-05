@@ -9,7 +9,7 @@ import type { Tournament } from '../../types/tournament';
 import type { MatchView, TournamentView } from '../../core/view';
 import { DEFAULT_SLIDE_CONFIG } from '../../types/monitor';
 import { standingsGroups, OVERALL_GROUP } from '../../core/models/standingsGroups';
-import type { ProgramSlide } from './slideProgramme';
+import { SPIELPLAN_FALLBACK_SLIDE, type ProgramSlide } from './slideProgramme';
 import { fieldIdToNumber } from './monitorDisplayHelpers';
 import { rankingPages, scorerPages } from './finalPages';
 import type { MonitorEnd } from './monitorEnd';
@@ -92,21 +92,26 @@ export interface ListLayout {
 }
 
 /**
- * Reihenfolge der Seiten des Spielplans (@ZM-190): die Seite des laufenden Spiels zuerst, sonst die des nächsten geplanten, dann die
- * folgenden im Durchlauf, die mit den beendeten Spielen zuletzt; sind alle beendet (oder keins offen), bleibt es bei der ersten Seite.
+ * Startseite des Spielplans (@ZM-190): die Seite des laufenden Spiels, sonst die des nächsten geplanten; sind alle beendet (oder keins
+ * offen), die erste. Die Seiten selbst bleiben in Anpfiff-Reihenfolge; die Folie hält den Versatz beim Eintritt fest (`useListenStart`),
+ * damit sich eine Seite während des Zeigens nie auf andere Spiele ändert (@ZM-187).
  */
-export function pagesFromCurrent(pages: MatchView[][]): MatchView[][] {
+export function startPage(pages: readonly (readonly MatchView[])[]): number {
   const holds = (test: (m: MatchView) => boolean): number => pages.findIndex(page => page.some(test));
   const live = holds(m => m.isLive);
-  const start = live >= 0 ? live : Math.max(0, holds(m => m.isUpcoming));
-  return [...pages.slice(start), ...pages.slice(0, start)];
+  return live >= 0 ? live : Math.max(0, holds(m => m.isUpcoming));
 }
 
-/** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188), beginnend beim laufenden oder nächsten Spiel (@ZM-190). */
+/** Der Rahmen einer Listen-Folie: wirksamer Bildrand; auf der Ersatzfolie, die den Wachhalten-Hinweis zeigen kann, ist sein Platz immer reserviert. */
+export function listFrame(slide: ProgramSlide, overscan: number): ListFrame {
+  return { overscan, notice: slide === SPIELPLAN_FALLBACK_SLIDE };
+}
+
+/** Spielplan eines Felds: alle Spiele des Felds, nach Höhe auf Seiten verteilt, höchstens `SCHEDULE_MAX_ROWS` je Seite (@ZM-185, @ZM-188). */
 export function scheduleFieldLayout(view: TournamentView, field: number, frame: ListFrame = DEFAULT_FRAME): ListLayout {
   const schedule = fieldSchedule(view, field);
   const columns = listColumns(true, false, schedule);
-  return { pages: pagesFromCurrent(listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame)), columns };
+  return { pages: listPages(schedule, columns, SCHEDULE_MAX_ROWS, frame), columns };
 }
 
 /** „Nächste Spiele“: die nächsten offenen Spiele, nach Höhe auf Seiten verteilt; jede Paarung auf genau einer Seite (@ZM-150, @ZM-188); bei mehreren Feldern mit dem Feld in jeder Zeile (@ZM-189). */

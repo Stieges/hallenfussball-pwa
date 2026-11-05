@@ -6,10 +6,12 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { MonitorTimeCell } from '../components/MonitorTimeCell';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
-import { monitorPageCount, nextMatchesLayout, scheduleFieldLayout } from '../slideContent';
-import { pageIndexOf } from '../listRows';
+import { listFrame, monitorPageCount, nextMatchesLayout, scheduleFieldLayout, startPage } from '../slideContent';
+import { nameLines, pageIndexOf } from '../listRows';
+import { displayList } from '../../../design-tokens';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { slide } from './monitorFixture';
 import { withView } from './monitorViewHelper';
@@ -153,42 +155,83 @@ describe('@ZM-189 Zustand und Feld stehen unter der Uhrzeit, es gibt keine eigen
       const feld = z.zeile.querySelector<HTMLElement>('[data-testid="monitor-match-field"]');
       expect(feld, z.id).not.toBeNull();
       expect(feld!.textContent).toMatch(/^Feld [12]$/);
-      expect(parseFloat(feld!.style.fontSize)).toBeGreaterThanOrEqual(3.6);
+      expect(feld!.style.fontSize, 'eine Stufe mit den übrigen Zusatzzeilen').toBe(displayList.fontSizes.note);
     }
     for (const z of zeigen(t, 'plan', 0)) { expect(z.zeile.querySelector('[data-testid="monitor-match-field"]'), z.id).toBeNull(); }
   });
 });
 
-describe('@ZM-190 Die Spielplan-Folie beginnt mit der Seite des laufenden oder nächsten Spiels', () => {
-  const erste = (t: ReturnType<typeof listenTurnier>) => scheduleFieldLayout(withView(t).view, 1).pages;
+describe('@ZM-190 Startseite der Spielplan-Folie: laufendes, sonst nächstes Spiel', () => {
+  const start = (t: ReturnType<typeof listenTurnier>) => { const p = scheduleFieldLayout(withView(t).view, 1).pages; return p[startPage(p)].map(m => m.id); };
   const mitLaufend = (nr: number) => {
     const t0 = listenTurnier({ beendet: nr - 1 });
     return { ...t0, matches: t0.matches.map(m => (m.matchNumber === nr ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : m)) };
   };
 
-  it('Spiele 1–5 beendet, Spiel 6 läuft: die erste Seite zeigt Spiel 6, die mit den beendeten Spielen steht zuletzt', () => {
-    const pages = erste(mitLaufend(6));
-    expect(pages[0].map(m => m.id)).toContain('liste-06');
-    expect(pages.at(-1)!.map(m => m.id)).toContain('liste-01');
-    const gesehen = zeigen(mitLaufend(6), 'plan', 0).map(z => z.id);
-    expect(gesehen).toContain('liste-06');
+  it('Spiele 1–5 beendet, Spiel 6 läuft: die Startseite zeigt Spiel 6', () => {
+    expect(start(mitLaufend(6))).toContain('liste-06');
   });
 
-  it('Gegenbeispiel: läuft kein Spiel, beginnt die Folie mit der Seite des nächsten geplanten Spiels', () => {
+  it('die Seiten selbst bleiben in Anpfiff-Reihenfolge (keine Drehung in der Aufteilung)', () => {
+    const pages = scheduleFieldLayout(withView(mitLaufend(6)).view, 1).pages;
+    expect(pages.flat().map(m => m.id)).toEqual(listenTurnier().matches.map(m => m.id));
+  });
+
+  it('Gegenbeispiel: läuft kein Spiel, ist es die Seite des nächsten geplanten Spiels', () => {
     const t = listenTurnier({ beendet: 9 });
-    expect(erste(t)[0].map(m => m.id)).toContain('liste-10');
-    expect(monitorPageCount(plan, t, withView(t).view)).toBe(erste(t).length);
+    expect(start(t)).toContain('liste-10');
+    expect(monitorPageCount(plan, t, withView(t).view)).toBe(scheduleFieldLayout(withView(t).view, 1).pages.length);
   });
 
-  it('Gegenbeispiel: sind alle beendet, bleibt es bei der ersten Seite; ohne Spiel läuft nichts und alles ist geplant: erste Seite', () => {
-    expect(erste(listenTurnier({ beendet: 15 }))[0].map(m => m.id)).toContain('liste-01');
-    expect(erste(listenTurnier({ beendet: 0 }))[0].map(m => m.id)).toContain('liste-01');
+  it('Gegenbeispiel: alle beendet oder alles geplant: erste Seite', () => {
+    expect(start(listenTurnier({ beendet: 15 }))).toContain('liste-01');
+    expect(start(listenTurnier({ beendet: 0 }))).toContain('liste-01');
   });
 
-  it('läuft ein Spiel, zählt es vor einem früheren geplanten Spiel (laufend geht vor nächstes)', () => {
+  it('laufend geht vor einem früheren geplanten Spiel', () => {
     const t0 = listenTurnier({ beendet: 0 });
     const t = { ...t0, matches: t0.matches.map(m => (m.matchNumber === 12 ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : m)) };
-    expect(erste(t)[0].map(m => m.id)).toContain('liste-12');
+    expect(start(t)).toContain('liste-12');
+  });
+});
+
+describe('@ZM-189 Eine Stufe für alle Zusatzzeilen unter der Uhrzeit', () => {
+  it('Zustand, „voraussichtlich“ und Bezeichnung haben dieselbe Schriftgröße (Token note), „(war …)“ steht in der Uhrzeitzeile', () => {
+    const t0 = listenTurnier({ beendet: 5, verschoben: true });
+    const t = { ...t0, matches: t0.matches.map(m => (m.id === 'liste-07'
+      ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0, label: 'Halbfinale 1', isFinal: true } : m)) };
+    const zeile = zeigen(t, 'plan', pageIndexOf(scheduleFieldLayout(withView(t).view, 1).pages, 'liste-07')).find(z => z.id === 'liste-07')!.zeile;
+    const stufen = ['monitor-match-status', 'monitor-match-label', 'monitor-match-tentative']
+      .map(id => zeile.querySelector<HTMLElement>(`[data-testid="${id}"]`)).filter(e => e !== null).map(e => e.style.fontSize);
+    expect(stufen.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(stufen)).toEqual(new Set([displayList.fontSizes.note]));
+  });
+});
+
+describe('@ZM-189 Stufe der Zusatzzeilen, direkt an der Zeitzelle', () => {
+  it('Feld, Zustand, „voraussichtlich“ und Bezeichnung: alle in der Stufe note', () => {
+    const base = withView(listenTurnier({ beendet: 5 })).view.byId.get('liste-06')!;
+    const match = { ...base, kickoffTentative: true, labelText: 'Halbfinale 1', badge: { kind: 'badge' as const, state: 'live' as const } };
+    render(<MonitorTimeCell match={match} fieldName="Feld 2" reserveState color="#fff" style={{}} />);
+    for (const id of ['monitor-match-field', 'monitor-match-status', 'monitor-match-tentative', 'monitor-match-label']) {
+      expect(screen.getByTestId(id).style.fontSize, id).toBe(displayList.fontSizes.note);
+    }
+  });
+});
+
+describe('@ME-006 @ME-067 Takt und Folie rechnen mit demselben Rahmen', () => {
+  it('auf der Ersatzfolie (Hinweis möglich) ist der Platz immer reserviert: Seitenzahl des Takts = der Folie, mit und ohne Hinweis, Rand 10 %, lange Namen', async () => {
+    const { SPIELPLAN_FALLBACK_SLIDE } = await import('../slideProgramme');
+    const t = listenTurnier({ namen: 'lang', verschoben: true });
+    const { view } = withView(t);
+    expect(listFrame(SPIELPLAN_FALLBACK_SLIDE, 10).notice).toBe(true);
+    expect(listFrame(plan, 10).notice).toBe(false);
+    const takt = monitorPageCount(SPIELPLAN_FALLBACK_SLIDE, t, view, undefined, listFrame(SPIELPLAN_FALLBACK_SLIDE, 10));
+    const seiten = (n: boolean) => scheduleFieldLayout(view, 1, { overscan: 10, notice: n }).pages.length;
+    expect(takt).toBe(seiten(true));
+    // die Folie rechnet mit demselben Rahmen, unabhängig davon, ob der Hinweis gerade steht
+    render(<ScheduleFieldSlide slide={SPIELPLAN_FALLBACK_SLIDE} {...withView(t)} theme="dark" style={{}} overscanPercent={10} page={0} />);
+    expect(screen.getByText(`Seite 1 / ${String(takt)}`)).toBeInTheDocument();
   });
 });
 
@@ -269,5 +312,31 @@ describe('@ZM-188 Jede Zeile einer Listen-Folie liegt ganz im Bild', () => {
     expect(pages.flat()).toHaveLength(8);
     expect(new Set(pages.flat().map(m => m.id)).size).toBe(8);
     expect(monitorPageCount(slide('next-matches', { matchCount: 8 }), t, view)).toBe(pages.length);
+  });
+});
+
+describe('@ZM-188 Namen mit Bindestrich brechen vor dem Bindestrich-Wort, solange es in eine Zeile passt', () => {
+  const zeigeName = (name: string) => {
+    const t0 = listenTurnier({ beendet: 5 });
+    const t = { ...t0, teams: t0.teams.map((tm, i) => (i === 0 ? { ...tm, name } : tm)) };
+    render(<NextMatchesSlide slide={naechste} {...withView(t)} theme="dark" style={{}} />);
+    return Array.from(document.querySelectorAll<HTMLElement>('[data-teamname]')).find(el => el.textContent?.includes(name.split(' ').at(-1) ?? ''))!;
+  };
+
+  it('„Nordheim-Süd“ bleibt zusammen (nowrap), der Text bleibt unverändert mit echtem Bindestrich', () => {
+    const el = zeigeName('Hallenfreunde Nordheim-Süd');
+    expect(el.textContent).toBe('Hallenfreunde Nordheim-Süd');
+    const zusammen = Array.from(el.querySelectorAll<HTMLElement>('span')).filter(sp => sp.style.whiteSpace === 'nowrap');
+    expect(zusammen.map(sp => sp.textContent)).toEqual(['Nordheim-Süd']);
+  });
+
+  it('Gegenbeispiel: ein zu langes Wort („Oberweiler-Niederstetten“ mit 24 Zeichen bei Rand 10 %) darf am Bindestrich brechen, kein nowrap', () => {
+    const el = zeigeName('Eintracht Oberweiler-Niederstetten');
+    expect(Array.from(el.querySelectorAll<HTMLElement>('span')).some(sp => sp.style.whiteSpace === 'nowrap' && sp.textContent?.includes('Niederstetten'))).toBe(false);
+  });
+
+  it('die Zeilenschätzung kennt das: „Hallenfreunde Nordheim-Süd“ braucht bei knapper Breite zwei Zeilen, nie drei', () => {
+    expect(nameLines('Hallenfreunde Nordheim-Süd', 16)).toBe(2);
+    expect(nameLines('Oberweiler-Niederstetten', 16)).toBe(2);
   });
 });

@@ -6,7 +6,7 @@ import type { TournamentView } from '../../../core/view';
 import type { MonitorSlide, MonitorTheme } from '../../../types/monitor';
 import { wirksamerRand } from '../overscan';
 import { resolveTheme } from '../monitorDisplayHelpers';
-import { nextMatchesLayout } from '../slideContent';
+import { listFrame, nextMatchesLayout } from '../slideContent';
 import { MonitorMatchRow } from '../components/MonitorMatchRow';
 import { SlidePageHint } from '../components/SlidePageHint';
 import { SlideHeading } from '../components/SlideHeading';
@@ -22,14 +22,12 @@ interface NextMatchesSlideProps {
   page?: number;
   /** Wirksamer Bildrand in Prozent (@ME-067); bestimmt, wie viele Zeilen auf eine Seite passen. */
   overscanPercent?: number;
-  /** Der Wachhalten-Hinweis nimmt oben Platz (@ME-006). */
-  hinweisHoehe?: string;
 }
 
 /** Folie „Nächste Spiele“ (@ZM-071, @ZM-078): die nächsten offenen Spiele über alle Felder, nie ein Ergebnis. */
-export function NextMatchesSlide({ slide, tournament, view, theme, style, page = 0, overscanPercent, hinweisHoehe }: NextMatchesSlideProps) {
+export function NextMatchesSlide({ slide, tournament, view, theme, style, page = 0, overscanPercent }: NextMatchesSlideProps) {
   const { t } = useTranslation('monitor');
-  const frame = { overscan: wirksamerRand(overscanPercent, null), notice: hinweisHoehe !== undefined };
+  const frame = listFrame(slide, wirksamerRand(overscanPercent, null));
   const colors = monitorThemes[resolveTheme(theme)];
   const { pages: allPages, columns } = nextMatchesLayout(view, slide.config.matchCount, frame);
   const pages = allPages.length;
@@ -57,6 +55,7 @@ export function NextMatchesSlide({ slide, tournament, view, theme, style, page =
               tournament={tournament}
               theme={theme}
               columns={columns}
+            frame={frame}
             />
           ))}
         </div>

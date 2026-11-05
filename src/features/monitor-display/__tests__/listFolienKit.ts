@@ -15,11 +15,14 @@ export const LANGE_NAMEN = [
   'Spielgemeinschaft Hammerau Piding Anger Nordwest',
   'Hallenfreunde Bergheim Teisendorf Land Mannschaft 1928',
   'Jugendspielgemeinschaft Chiemgau Ost Mannschaft Zwei',
-  'Traunsteiner Hallenkicker Haslach Vereinigte 2010 Team',
+  'Eintracht Oberweiler-Niederstetten Hallenteam 1919',
 ] as const;
 
+/** Namen, bei denen je nach Breite der Umbruch genau am Bindestrich liegen würde (@ZM-188): „Nordheim-Süd“ nach Vorwörtern wachsender Länge. */
+export const BINDESTRICH_NAMEN = [0, 1, 2, 3, 4, 5].map(n => `Hallenfreunde${'e'.repeat(n)} Nordheim-Süd`);
+
 export interface ListenTurnierOptions {
-  namen?: 'kurz' | 'lang';
+  namen?: 'kurz' | 'lang' | 'bindestrich';
   /** Spiel 6 gewertet 3:0 (Nichtantritt) */
   gewertet?: boolean;
   /** Spiele ab Spiel 7 um 10 Minuten nach hinten verschoben, „(war hh:mm)“ */
@@ -40,7 +43,7 @@ function paarungen(): Array<[number, number]> {
 
 export function listenTurnier(opts: ListenTurnierOptions = {}): Tournament {
   const { namen = 'kurz', gewertet = false, verschoben = false, beendet = 5 } = opts;
-  const liste = namen === 'lang' ? LANGE_NAMEN : KURZE_NAMEN;
+  const liste = namen === 'lang' ? LANGE_NAMEN : namen === 'bindestrich' ? BINDESTRICH_NAMEN : KURZE_NAMEN;
   const teams: Team[] = liste.map((name, i) => ({ id: testUuid(i + 1), name }));
   const matches: Match[] = paarungen().map(([a, b], i): Match => {
     const nr = i + 1;
