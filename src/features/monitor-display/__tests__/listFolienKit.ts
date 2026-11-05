@@ -31,6 +31,8 @@ export interface ListenTurnierOptions {
   strafstoss?: boolean;
   /** So viele Spiele nach den beendeten sind Finalspiele (Phase „Finalrunde“, Bezeichnung „Halbfinale n“) */
   finale?: number;
+  /** Zwei Felder: jedes zweite Spiel läuft auf Feld 2 */
+  felder?: 1 | 2;
   /** Anzahl beendeter Spiele von Spiel 1 an (Vorgabe 5) */
   beendet?: number;
 }
@@ -46,13 +48,13 @@ function paarungen(): Array<[number, number]> {
 }
 
 export function listenTurnier(opts: ListenTurnierOptions = {}): Tournament {
-  const { namen = 'kurz', gewertet = false, verschoben = false, strafstoss = false, finale = 0, beendet = 5 } = opts;
+  const { namen = 'kurz', gewertet = false, verschoben = false, strafstoss = false, finale = 0, felder = 1, beendet = 5 } = opts;
   const liste = namen === 'lang' ? LANGE_NAMEN : namen === 'bindestrich' ? BINDESTRICH_NAMEN : KURZE_NAMEN;
   const teams: Team[] = liste.map((name, i) => ({ id: testUuid(i + 1), name }));
   const matches: Match[] = paarungen().map(([a, b], i): Match => {
     const nr = i + 1;
     const basis: Match = {
-      id: `liste-${String(nr).padStart(2, '0')}`, matchNumber: nr, round: nr, field: 1, ...vs(testUuid(a), testUuid(b)),
+      id: `liste-${String(nr).padStart(2, '0')}`, matchNumber: nr, round: nr, field: felder === 2 && nr % 2 === 0 ? 2 : 1, ...vs(testUuid(a), testUuid(b)),
       matchStatus: 'scheduled', scheduledTime: AM(nr),
     };
     if (finale > 0 && nr > beendet && nr <= beendet + finale) {
@@ -73,7 +75,7 @@ export function listenTurnier(opts: ListenTurnierOptions = {}): Tournament {
     return basis;
   });
   return buildTournament({
-    id: 'tour-liste', title: 'Nikolaus-Turnier', teams, matches, fields: FIXTURE_FIELDS.slice(0, 1), numberOfFields: 1,
+    id: 'tour-liste', title: 'Nikolaus-Turnier', teams, matches, fields: FIXTURE_FIELDS.slice(0, felder), numberOfFields: felder,
     groupSystem: 'roundRobin', date: '2026-11-28',
   });
 }

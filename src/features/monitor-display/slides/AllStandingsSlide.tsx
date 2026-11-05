@@ -76,6 +76,7 @@ export function AllStandingsSlide({ tournament, view, theme, style, page = 0 }: 
             showScore={match.status === 'finished' || match.status === 'awarded'}
             columns={finalColumns}
             reserveExtra
+            showTentative={false}
           />
         ))}
       </div>

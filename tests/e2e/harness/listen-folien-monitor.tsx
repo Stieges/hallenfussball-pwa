@@ -26,7 +26,7 @@ const rand = Number(q.get('rand') ?? '5');
 const anzahl = Number(q.get('anzahl') ?? '15');
 
 const turnier = listenTurnier({
-  namen: q.get('namen') === 'lang' ? 'lang' : q.get('namen') === 'bindestrich' ? 'bindestrich' : 'kurz', verschoben: q.get('verschoben') === '1', gewertet: q.get('gewertet') === '1', strafstoss: q.get('strafstoss') === '1', finale: Number(q.get('finale') ?? '0'),
+  namen: q.get('namen') === 'lang' ? 'lang' : q.get('namen') === 'bindestrich' ? 'bindestrich' : 'kurz', verschoben: q.get('verschoben') === '1', gewertet: q.get('gewertet') === '1', strafstoss: q.get('strafstoss') === '1', finale: Number(q.get('finale') ?? '0'), felder: q.get('felder') === '2' ? 2 : 1,
 });
 const view = buildMonitorView(turnier);
 const folie = (szene === 'finale'

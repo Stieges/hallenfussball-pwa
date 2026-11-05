@@ -28,6 +28,8 @@ interface MonitorMatchRowProps {
   frame?: ListFrame;
   /** Zeile unter dem Stand für „(4:3 i. E.)“ in jeder Zeile der Folie freihalten; Vorgabe: im Spielplan (`columns.state`). */
   reserveExtra?: boolean;
+  /** „voraussichtlich“ bei K.-o.-Spielen zeigen (@ZM-105); in „Alle Tabellen“ nicht. */
+  showTentative?: boolean;
 }
 
 /**
@@ -45,7 +47,7 @@ function NameText({ name, perLine }: { name: string; perLine: number }) {
 }
 
 /** Eine Zeile einer Spielliste: Uhrzeit, Feld, Paarung, Stand und Zusätze an festen Stellen (@ZM-187). */
-export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns, frame = DEFAULT_FRAME, reserveExtra = columns.state }: MonitorMatchRowProps) {
+export function MonitorMatchRow({ match, tournament, theme, showScore = false, columns, frame = DEFAULT_FRAME, reserveExtra = columns.state, showTentative = true }: MonitorMatchRowProps) {
   const { t } = useTranslation(['tournament', 'sport']);
   const colors = monitorThemes[resolveTheme(theme)];
   const perLine = nameCharsPerLine(frame);
@@ -74,7 +76,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         display: 'flex',
         // Uhrzeit, Teamnamen und Stand stehen senkrecht mittig (gemeinsame Mittelachse); Zusatzzeilen hängen darunter, außerhalb des Flusses
         alignItems: 'center',
-        minHeight: `${String(rowHeight(match, columns, frame, reserveExtra))}vh`,
+        minHeight: `${String(rowHeight(match, columns, frame, reserveExtra, showTentative))}vh`,
         gap: displayList.cellGap,
         width: '100%',
         padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
@@ -88,6 +90,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         match={match}
         fieldName={columns.field ? getFieldDisplayName(match.field, tournament) : undefined}
         reserveState={columns.state}
+        showTentative={showTentative}
         color={colors.text}
         tone={monitorBadgeTone(colors)}
         style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}

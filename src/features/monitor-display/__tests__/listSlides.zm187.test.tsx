@@ -219,6 +219,33 @@ describe('@ZM-189 Stufe der Zusatzzeilen, direkt an der Zeitzelle', () => {
   });
 });
 
+describe('@ZM-105 @ZM-189 „voraussichtlich“ teilt sich die Zustandszeile, Finalrunde in „Alle Tabellen“ zeigt es nicht', () => {
+  const finale = () => { const t = listenTurnier({ beendet: 3, finale: 3 }); return { t, view: withView(t).view }; };
+
+  it('Spielplan: „voraussichtlich“ steht in der Zustandszeile (keine eigene Zeile), nie zugleich mit einem Zustand', () => {
+    const { t } = finale();
+    const zeile = zeigen(t, 'plan', pageIndexOf(scheduleFieldLayout(withView(t).view, 1).pages, 'liste-05')).find(z => z.id === 'liste-05')!.zeile;
+    expect(zeile.querySelectorAll('[data-testid="monitor-match-tentative"]'), 'genau einmal, nicht zusätzlich als eigene Zeile').toHaveLength(1);
+    const wort = zeile.querySelector('[data-testid="monitor-match-tentative"]')!;
+    expect(wort.parentElement?.getAttribute('data-testid')).toBe('monitor-match-status');
+    expect(zeile.querySelector('[data-testid="monitor-match-status"] [data-testid="match-status-badge"]')).toBeNull();
+  });
+
+  it('Nächste Spiele: ohne Zustandszeile steht „voraussichtlich“ in einer eigenen Zeile', () => {
+    const { t } = finale();
+    const zeile = zeigen(t, 'naechste', 0).find(z => z.id === 'liste-04')!.zeile;
+    expect(zeile.querySelector('[data-testid="monitor-match-tentative"]')!.parentElement?.getAttribute('data-testid')).toBe('monitor-match-zusatz');
+  });
+
+  it('Gegenbeispiel: „Alle Tabellen“, Finalrunde: kein „voraussichtlich“ (nur die Bezeichnung)', async () => {
+    const { AllStandingsSlide } = await import('../slides/AllStandingsSlide');
+    const { t, view } = finale();
+    render(<AllStandingsSlide tournament={t} view={view} theme="dark" style={{}} page={1} />);
+    expect(screen.queryByTestId('monitor-match-tentative')).toBeNull();
+    expect(screen.getAllByTestId('monitor-match-label').length).toBe(3);
+  });
+});
+
 describe('@ME-006 @ME-067 Takt und Folie rechnen mit demselben Rahmen', () => {
   it('auf der Ersatzfolie (Hinweis möglich) ist der Platz immer reserviert: Seitenzahl des Takts = der Folie, mit und ohne Hinweis, Rand 10 %, lange Namen', async () => {
     const { SPIELPLAN_FALLBACK_SLIDE } = await import('../slideProgramme');

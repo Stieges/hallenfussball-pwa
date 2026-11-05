@@ -33,6 +33,8 @@ interface MonitorTimeCellProps {
   fieldName?: string;
   /** Zeile für den Zustand reservieren (Spielplan): sie steht in jeder Zeile, auch wenn das Spiel noch keinen Zustand hat (@ZM-187). */
   reserveState: boolean;
+  /** „voraussichtlich“ zeigen (@ZM-105); in „Alle Tabellen“ entfällt es. Bei reserviertem Zustand steht es in der Zustandszeile. */
+  showTentative?: boolean;
   color: string;
   tone?: MatchStatusBadgeTone;
   style: CSSProperties;
@@ -44,7 +46,7 @@ interface MonitorTimeCellProps {
  * und die Spielbezeichnung. Keine eigenen Spalten (@ZM-189). Uhrzeit und „(war …)“ brechen nie um; die Namensspalten ändern sich nie
  * durch einen Hinweis (@ZM-087, @ZM-187).
  */
-export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, style }: MonitorTimeCellProps) {
+export function MonitorTimeCell({ match, fieldName, reserveState, showTentative = true, color, tone, style }: MonitorTimeCellProps) {
   const { t } = useTranslation('tournament');
   // Eine Stufe für alle Zusatzzeilen unter der Uhrzeit: Feld, Zustand, „gewertet“, „voraussichtlich“, Bezeichnung (Token `note`)
   const small: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color, whiteSpace: 'nowrap' };
@@ -53,6 +55,7 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
   // „(war hh:mm)“ steht in der Uhrzeit-Zeile und hat die Stufe `timeNote`
   const war: CSSProperties = { ...small, fontSize: displayList.fontSizes.timeNote };
   const hasState = match.badge.kind === 'badge';
+  const tentative = showTentative && match.kickoffTentative;
   const awarded = match.status === 'awarded' ? t('view.status.awarded') : null;
   return (
     // Die Zelle ist nur so hoch wie die Uhrzeit-Zeile: sie steht senkrecht mittig in der Zeile, die Zusätze hängen darunter (außerhalb des Flusses)
@@ -69,9 +72,11 @@ export function MonitorTimeCell({ match, fieldName, reserveState, color, tone, s
         <div data-testid="monitor-match-status" style={{ ...small, display: 'flex', alignItems: 'center', gap: displayList.timeNoteGap, minHeight: '1.2em' }}>
           {hasState && <MatchStatusBadge model={match.badge} size="zeile" tone={tone} />}
           {awarded !== null && <span data-testid="monitor-match-note">{awarded}</span>}
+          {/* Angesetzte Spiele tragen kein Abzeichen: „voraussichtlich“ und Zustand treten nie zugleich auf, beide teilen die Zeile */}
+          {tentative && reserveState && <span data-testid="monitor-match-tentative" style={{ fontSize: displayList.fontSizes.note }}>{t('timeShift.tentative')}</span>}
         </div>
       )}
-      {match.kickoffTentative && <div data-testid="monitor-match-tentative" style={note}>{t('timeShift.tentative')}</div>}
+      {tentative && !reserveState && <div data-testid="monitor-match-tentative" style={note}>{t('timeShift.tentative')}</div>}
       {match.labelText && <div data-testid="monitor-match-label" style={note}>{match.labelText}</div>}
       </div>
     </div>

@@ -15,6 +15,8 @@ const SZENEN = [
   { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
   { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
   { id: 'plan', namen: 'bindestrich', kennung: '@ZM-188 Spielplan Feld 1, Namen mit Bindestrich-Wort an jeder Umbruchstelle', zusatz: '&verschoben=1' },
+  { id: 'plan', namen: 'kurz', kennung: '@ZM-105 @ZM-189 Spielplan Feld 1 mit Finalspielen (Bezeichnung, voraussichtlich in der Zustandszeile)', zusatz: '&verschoben=1&finale=3' },
+  { id: 'naechste', namen: 'kurz', kennung: '@ZM-189 Nächste Spiele, zwei Felder (Feld in jeder Zeile) mit Finalspielen', zusatz: '&felder=2&finale=3&anzahl=8' },
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=10' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
 ] as const;
@@ -24,7 +26,7 @@ const RAENDER = [0, 5, 10] as const;
 
 const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 
-interface Kasten { id: string; links: number; rechts: number; oben: number; unten: number; zeit: number; heim: number; stand: number; gast: number; uhr: string; war: string | null; warUnterUhr: boolean; zeitUeberbreit: boolean }
+interface Kasten { zusatzUnten: number; id: string; links: number; rechts: number; oben: number; unten: number; zeit: number; heim: number; stand: number; gast: number; uhr: string; war: string | null; warUnterUhr: boolean; zeitUeberbreit: boolean }
 
 async function zeilen(page: Page): Promise<Kasten[]> {
   return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-row"]')].map((r) => {
@@ -35,6 +37,7 @@ async function zeilen(page: Page): Promise<Kasten[]> {
     const zeit = r.querySelector<HTMLElement>('[data-testid="monitor-match-clockline"]')!;
     const teams = r.querySelectorAll<HTMLElement>('[data-teamname]');
     return {
+      zusatzUnten: Math.max(0, ...[...r.querySelectorAll<HTMLElement>('[data-testid="monitor-match-zusatz"], [data-testid="monitor-match-extra"]')].map((e) => e.getBoundingClientRect().bottom)),
       id: r.dataset.matchId ?? '', links: b.left, rechts: b.right, oben: b.top, unten: b.bottom,
       zeit: x('[data-testid="monitor-match-time"]'), heim: teams[0].getBoundingClientRect().left, stand: x('[data-testid="monitor-match-separator"]'), gast: teams[1].getBoundingClientRect().left,
       uhr: uhr.textContent ?? '', war: war?.textContent ?? null,
@@ -144,6 +147,7 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
           expect(h!.y + h!.height, `Seite ${String(seite + 1)}: „Seite x / y“ liegt im Bild`).toBeLessThanOrEqual(p.height);
           for (const k of kaesten) {
             expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
+            expect(k.zusatzUnten, `${k.id}: Zusätze unter Uhrzeit und Stand liegen ganz in der Zeile (nicht abgeschnitten)`).toBeLessThanOrEqual(k.unten + 0.5);
             expect(k.oben, `${k.id}: Oberkante im Bild`).toBeGreaterThanOrEqual(0);
             expect(k.rechts, `${k.id}: Rand rechts im Bild`).toBeLessThanOrEqual(p.width);
             expect(k.links, `${k.id}: Rand links im Bild`).toBeGreaterThanOrEqual(0);
@@ -209,6 +213,33 @@ test.describe('Finalrunde in „Alle Tabellen“ (keine Seitenaufteilung, @ZM-18
         const kaesten = await zeilen(page);
         expect(kaesten).toHaveLength(6);
         for (const k of kaesten) { expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height); }
+        await ctx.close();
+      });
+    }
+  }
+});
+
+test.describe('Finalrunde in „Alle Tabellen“, 4 Spiele mit kurzen Namen (@ZM-187)', () => {
+  test.skip(imGebautenStand, 'Prüfstand nur am Dev-Server (gehört nicht in den Build)');
+
+  for (const p of PROFILE) {
+    for (const rand of RAENDER) {
+      test(`4 Finalspiele, ${p.name}, Rand ${String(rand)} %: alle Zeilen ganz im Bild, Zusätze in der Zeile`, async ({ browser }, testInfo) => {
+        test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt das Fenster selbst)');
+        const ctx = await browser.newContext({ viewport: { width: p.width, height: p.height }, colorScheme: 'dark', serviceWorkers: 'block', locale: 'de-DE' });
+        const page = await ctx.newPage();
+        await page.goto(`/tests/e2e/harness/listen-folien-monitor.html?szene=finale&seite=1&namen=kurz&rand=${String(rand)}&finale=4`);
+        await expect(page.getByTestId('monitor-slide')).toBeVisible();
+        await page.evaluate(() => document.fonts.ready.then(() => new Promise((res) => { requestAnimationFrame(() => { requestAnimationFrame(res); }); })));
+        const ordner = process.env.LISTEN_FOLIEN_BILDER ?? testInfo.outputDir;
+        mkdirSync(ordner, { recursive: true });
+        await page.screenshot({ path: join(ordner, `finale4-${p.name}-rand${String(rand)}.png`) });
+        const kaesten = await zeilen(page);
+        expect(kaesten).toHaveLength(4);
+        for (const k of kaesten) {
+          expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
+          expect(k.zusatzUnten, `${k.id}: Zusätze in der Zeile`).toBeLessThanOrEqual(k.unten + 0.5);
+        }
         await ctx.close();
       });
     }
