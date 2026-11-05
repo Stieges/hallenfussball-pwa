@@ -102,7 +102,7 @@ describe('B-27 Monitor „Spielplan eines Felds“: K.-o.-Uhrzeiten mit Bezeichn
     const seite = (id: string) => pageIndexOf(scheduleFieldLayout(withView(tournament).view, 1).pages, id);
     const zeigen = (id: string) => {
       render(<ScheduleFieldSlide slide={slide('schedule-field', { fieldId: 'field-1' })} {...withView(tournament)} theme="dark" style={{}} page={seite(id)} />);
-      return within(zeile(id));
+      return within(zeile(id).parentElement!);
     };
     const p3 = zeigen('po-p3');
     expect(p3.getByTestId('monitor-match-label')).toHaveTextContent('Spiel um Platz 3');

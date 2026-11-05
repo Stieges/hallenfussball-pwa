@@ -124,7 +124,7 @@ export function nameLines(text: string, perLine: number): number {
 }
 
 /**
- * Höhe einer Zeile in vh (Polster, Rahmen, Inhalt). Uhrzeit, Teamnamen und Stand stehen senkrecht mittig; Zusatzzeilen hängen
+ * Höhe eines Spiels in vh (Zwischenzeile mit der Bezeichnung, falls vorhanden, plus Zeilenkarte aus Polster, Rahmen, Inhalt). Uhrzeit, Teamnamen und Stand stehen senkrecht mittig; Zusatzzeilen hängen
  * außerhalb des Flusses direkt unter Uhrzeit bzw. Stand (@ZM-189). Damit sie nicht abgeschnitten werden, muss der Inhalt die Zusatzzeilen
  * unterhalb der Mittelachse aufnehmen: 2 × (halbe Zeile + Zusatzhöhe), die Zusätze dürfen ins untere Polster ragen. `reserveExtra`:
  * Zeile für „(4:3 i. E.)“ unter dem Stand freihalten (Spielplan, Finalrunde).
@@ -137,15 +137,14 @@ export function rowHeight(match: MatchView, cols: ListColumns, frame: ListFrame 
   const unterMitte = (zeile: number, zusatz: number): number => (zusatz === 0 ? zeile : 2 * (zeile / 2 + Math.max(0, zusatz - 0.8 * padY)));
   const zusatzZeit = (cols.state ? note : 0) + (cols.field ? note : 0);
   const timeCell = unterMitte(num(displayList.fontSizes.time) * LINE, zusatzZeit);
-  // Überschrift („Halbfinale 1“) oben mittig in der Zeilenkarte (displayList.labelTop unter der Innenkante, außerhalb des Flusses), „(4:3 i. E.)“/„gewertet“
-  // unten: Stand und Namen müssen unterhalb der Überschrift beginnen. Maß vom oberen Inhaltsrand (Polster abgezogen) bis zur Unterkante der Überschrift.
-  const ueberschrift = match.labelText ? num(displayList.fontSizes.timeNote) * LINE + num(displayList.labelTop) - padY : 0;
+  // Die Spielbezeichnung („Halbfinale 1“) ist eine eigene Zwischenzeile über der Zeilenkarte und gehört zum Spiel (Höhe: Zeile plus Abstand)
+  const zwischenzeile = match.labelText ? num(displayList.fontSizes.timeNote) * LINE + num(displayList.labelGap) : 0;
   const unten = reserveExtra ? Math.max(0, note - 0.8 * padY) : 0;
   const scoreLine = num(displayList.fontSizes.score) * LINE;
-  const scoreCell = ueberschrift > 0 || unten > 0 ? 2 * (scoreLine / 2 + Math.max(ueberschrift, unten)) : scoreLine;
-  const namen = names * FONT * LINE + 2 * Math.max(0, ueberschrift);
+  const scoreCell = unten > 0 ? 2 * (scoreLine / 2 + unten) : scoreLine;
+  const namen = names * FONT * LINE;
   const content = Math.max(timeCell, namen, scoreCell);
-  return 2 * padY + ROW_BORDER + content;
+  return zwischenzeile + 2 * padY + ROW_BORDER + content;
 }
 
 /**

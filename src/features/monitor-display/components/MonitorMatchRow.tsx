@@ -65,7 +65,26 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
 
   const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.text, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
 
+  const cardHeight = rowHeight({ ...match, labelText: undefined }, columns, frame, reserveExtra);
   return (
+    <div data-testid="monitor-match-block" style={{ width: '100%' }}>
+      {/* Spielbezeichnung („Halbfinale 1“) als Zwischenzeile über der Karte, waagrecht mittig über der Standspalte (Spalten wie in der Karte, listRows rechnet die Höhe ein) */}
+      {match.labelText && (
+        <div
+          data-testid="monitor-match-labelline"
+          style={{
+            display: 'flex', gap: displayList.cellGap, width: '100%', boxSizing: 'border-box', fontSize: displayList.fontSizes.team,
+            padding: `0 ${displayList.rowPaddingX}`, border: `${cssVars.borderWidth.thin} solid transparent`, marginBottom: displayList.labelGap,
+          }}
+        >
+          <div style={{ flex: `0 0 ${displayList.timeFieldWidth}` }} />
+          <div style={{ flex: '1 1 0' }} />
+          <div style={{ flex: `0 0 ${displayList.separatorWidth}`, display: 'flex', justifyContent: 'center' }}>
+            <div data-testid="monitor-match-label" style={{ whiteSpace: 'nowrap', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
+          </div>
+          <div style={{ flex: '1 1 0' }} />
+        </div>
+      )}
     <div
       data-testid="monitor-match-row"
       data-match-id={match.id}
@@ -74,7 +93,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         display: 'flex',
         // Uhrzeit, Teamnamen und Stand stehen senkrecht mittig (gemeinsame Mittelachse); Zusatzzeilen hängen darunter, außerhalb des Flusses
         alignItems: 'center',
-        minHeight: `${String(rowHeight(match, columns, frame, reserveExtra))}vh`,
+        minHeight: `${String(cardHeight)}vh`,
         position: 'relative',
         gap: displayList.cellGap,
         width: '100%',
@@ -85,10 +104,6 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
       }}
     >
-      {/* Spielbezeichnung („Halbfinale 1“) als Überschrift der Zeile: oben mittig in der Zeilenkarte, außerhalb des Flusses (Platz rechnet rowHeight ein) */}
-      {match.labelText && (
-        <div data-testid="monitor-match-label" style={{ position: 'absolute', top: displayList.labelTop, left: 0, right: 0, textAlign: 'center', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
-      )}
       <MonitorTimeCell
         match={match}
         fieldName={columns.field ? getFieldDisplayName(match.field, tournament) : undefined}
@@ -133,6 +148,7 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
         )}
       </div>
       <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
+    </div>
     </div>
   );
 }

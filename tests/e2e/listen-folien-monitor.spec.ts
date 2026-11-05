@@ -15,7 +15,7 @@ const SZENEN = [
   { id: 'plan', namen: 'kurz', kennung: '@ZM-187 @ZM-188 Spielplan Feld 1, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
   { id: 'plan', namen: 'lang', kennung: '@ZM-188 @ZM-087 Spielplan Feld 1, Namen mit 45–50 Zeichen, verschoben und gewertet', zusatz: '&verschoben=1&gewertet=1&strafstoss=1' },
   { id: 'plan', namen: 'bindestrich', kennung: '@ZM-188 Spielplan Feld 1, Namen mit Bindestrich-Wort an jeder Umbruchstelle', zusatz: '&verschoben=1' },
-  { id: 'plan', namen: 'kurz', kennung: '@ZM-105 @ZM-189 Spielplan Feld 1 mit Finalspielen (Bezeichnung als Überschrift der Zeile, ohne „voraussichtlich“)', zusatz: '&verschoben=1&finale=3' },
+  { id: 'plan', namen: 'kurz', kennung: '@ZM-105 @ZM-189 Spielplan Feld 1 mit Finalspielen (Bezeichnung als Zwischenzeile über der Karte, ohne „voraussichtlich“)', zusatz: '&verschoben=1&finale=3' },
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-189 Nächste Spiele, zwei Felder (Feld in jeder Zeile) mit Finalspielen', zusatz: '&felder=2&finale=3&anzahl=8' },
   { id: 'naechste', namen: 'kurz', kennung: '@ZM-188 @ZP-046 Nächste Spiele, verschoben', zusatz: '&verschoben=1&anzahl=10' },
   { id: 'naechste', namen: 'lang', kennung: '@ZM-150 @ZM-188 Nächste Spiele, acht Spiele mit Namen von 45–50 Zeichen, verschoben', zusatz: '&verschoben=1&anzahl=8' },
@@ -38,23 +38,20 @@ async function zeilen(page: Page): Promise<Kasten[]> {
     const teams = r.querySelectorAll<HTMLElement>('[data-teamname]');
     return {
       labelProbleme: (() => {
-        // Überschrift der Zeile: ganz in der Zeile und über keinem Namen (Textrechtecke der Namen) und nicht über Uhrzeit oder Stand
-        const label = r.querySelector<HTMLElement>('[data-testid="monitor-match-label"]');
+        // Zwischenzeile über der Karte: ganz über der Karte ihres Spiels, waagrecht mittig über der Standspalte (± 2 px) und über keiner Karte
+        const label = r.parentElement!.querySelector<HTMLElement>('[data-testid="monitor-match-label"]');
         if (label === null) { return []; }
         const textRange = document.createRange();
         textRange.selectNodeContents(label);
         const l = textRange.getBoundingClientRect();
         const probleme: string[] = [];
-        if (l.top < b.top - 0.5 || l.bottom > b.bottom + 0.5) { probleme.push('Überschrift ragt aus der Zeile'); }
+        if (l.bottom > b.top + 0.5) { probleme.push('Bezeichnung liegt nicht über der Karte'); }
+        const stand = r.querySelector<HTMLElement>('[data-testid="monitor-match-separator"]')!.getBoundingClientRect();
+        if (Math.abs((l.left + l.right) / 2 - (stand.left + stand.right) / 2) > 2) { probleme.push('Bezeichnung nicht mittig über der Standspalte'); }
         const schneidet = (a: DOMRect, c: DOMRect): boolean => a.left < c.right && a.right > c.left && a.top < c.bottom && a.bottom > c.top;
-        const ziele = [...r.querySelectorAll<HTMLElement>('[data-teamname]')].flatMap((el) => {
-          const lauf = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-          const rechtecke: DOMRect[] = [];
-          for (let k = lauf.nextNode(); k !== null; k = lauf.nextNode()) { const rg = document.createRange(); rg.selectNodeContents(k); rechtecke.push(...rg.getClientRects()); }
-          return rechtecke;
-        });
-        ziele.push(r.querySelector<HTMLElement>('[data-testid="monitor-match-clock"]')!.getBoundingClientRect(), r.querySelector<HTMLElement>('[data-testid="monitor-match-score"]')!.getBoundingClientRect());
-        if (ziele.some((z) => schneidet(l, z))) { probleme.push('Überschrift überdeckt Namen, Uhrzeit oder Stand'); }
+        for (const andere of document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-row"]')) {
+          if (schneidet(l, andere.getBoundingClientRect())) { probleme.push('Bezeichnung überdeckt eine Zeilenkarte'); }
+        }
         return probleme;
       })(),
       zusatzUnten: Math.max(0, ...[...r.querySelectorAll<HTMLElement>('[data-testid="monitor-match-zusatz"], [data-testid="monitor-match-extra"]')].map((e) => e.getBoundingClientRect().bottom)),
@@ -168,7 +165,7 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
           for (const k of kaesten) {
             expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
             expect(k.zusatzUnten, `${k.id}: Zusätze unter Uhrzeit und Stand liegen ganz in der Zeile (nicht abgeschnitten)`).toBeLessThanOrEqual(k.unten + 0.5);
-            expect(k.labelProbleme, `${k.id}: Überschrift der Zeile`).toEqual([]);
+            expect(k.labelProbleme, `${k.id}: Zwischenzeile`).toEqual([]);
             expect(k.oben, `${k.id}: Oberkante im Bild`).toBeGreaterThanOrEqual(0);
             expect(k.rechts, `${k.id}: Rand rechts im Bild`).toBeLessThanOrEqual(p.width);
             expect(k.links, `${k.id}: Rand links im Bild`).toBeGreaterThanOrEqual(0);
@@ -241,7 +238,7 @@ test.describe('Finalrunde in „Alle Tabellen“ blättert nach gemessener Höhe
               for (const k of kaesten) {
                 expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
                 expect(k.zusatzUnten, `${k.id}: Zusätze in der Zeile`).toBeLessThanOrEqual(k.unten + 0.5);
-                expect(k.labelProbleme, `${k.id}: Überschrift der Zeile`).toEqual([]);
+                expect(k.labelProbleme, `${k.id}: Zwischenzeile`).toEqual([]);
               }
               const hinweis = page.getByText(`Seite ${String(seite + 1)} / ${String(seiten)}`);
               await expect(hinweis).toBeVisible();
