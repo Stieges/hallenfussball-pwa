@@ -243,6 +243,22 @@ describe('@ZM-190 @ZM-187 Spielplan: die Startseite wird beim Eintritt festgehal
     expect(folge[3], 'der nächste Eintritt beginnt mit der Seite des nächsten geplanten Spiels (5)').toEqual(folge[0]);
   });
 
+  it('Kaltstart (Daten kommen asynchron): Spiele 1–5 beendet, Spiel 6 läuft → die erste angezeigte Seite zeigt Spiel 6; ein späterer Abpfiff verschiebt sie nicht', async () => {
+    const t = listenTurnier({ beendet: 5 });
+    const laeuft = (nr: number | null) => monitorTurnier({
+      ...t,
+      matches: t.matches.map(m => (m.matchNumber === 6
+        ? (nr === 6 ? { ...m, matchStatus: 'running' as const, scoreA: 0, scoreB: 0 } : { ...m, matchStatus: 'finished' as const, scoreA: 1, scoreB: 0, decidedBy: 'regular' as const })
+        : m)),
+    }, plan);
+    await starte(laeuft(6));
+    const erste = ids();
+    expect(erste, 'erste Seite zeigt das laufende Spiel 6').toContain('liste-06');
+    liefere(laeuft(null));
+    await vorspulenInSchritten(5_000);
+    expect(ids(), 'nach dem ersten Rechnen mit Daten verschiebt der Abpfiff die Seite nicht').toEqual(erste);
+  });
+
   it('Gegenbeispiel: ändert sich nur der Stand mitten im Zeigen, bleibt die Seite stehen (kein Sprung auf andere Spiele)', async () => {
     await starte(zustand(4));
     const vorher = ids();

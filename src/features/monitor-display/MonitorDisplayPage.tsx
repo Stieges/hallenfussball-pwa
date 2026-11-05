@@ -177,7 +177,8 @@ function MonitorDisplayPageContent({
 
   // @ZM-190: Startseite des Spielplans, beim Eintritt in die Folie festgehalten (nicht bei jedem Poll neu)
   const listenStart = useListenStart(slideState.currentIndex, slideState.page, () => {
-    if (currentSlide?.type !== 'schedule-field' || !('config' in currentSlide) || !view) { return 0; }
+    if (currentSlide?.type !== 'schedule-field' || !('config' in currentSlide)) { return 0; }
+    if (!view) { return null; }
     return startPage(scheduleFieldLayout(view, fieldIdToNumber(currentSlide.config.fieldId), listFrame(currentSlide, overscanPercent)).pages);
   });
 
