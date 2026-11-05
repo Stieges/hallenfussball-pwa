@@ -70,10 +70,10 @@ describe('@DR-045 ausgefallen im Spielplan mit Ergebnissen', () => {
   });
 
   /**
-   * BEFUND (offen, Entscheidung Daniel): „ausgefallen“ fett in 18 pt ist 36,9 mm breit, die Spalte „Ergebnis“ 30 mm (Finalrunde 25,5 mm).
+   * BEFUND C-PDF-AUSGEFALLEN-GROESSE (offen, Entscheidung Daniel): „ausgefallen“ fett in 18 pt ist 36,9 mm breit, die Spalte „Ergebnis“ 30 mm (Finalrunde 25,5 mm).
    * In der Spalte zu bleiben (Vorgabe Fixrunde) geht vor; die Schrift wird so groß, wie es passt (Gruppenspiele etwa 13,3 pt).
    */
-  it.fails('@DR-045 „ausgefallen“ so groß wie die Ergebnisse der anderen Spiele (18 pt) – Befund: passt nicht in die Spalte', async () => {
+  it.fails('@DR-045 C-PDF-AUSGEFALLEN-GROESSE „ausgefallen“ so groß wie die Ergebnisse der anderen Spiele (18 pt) – passt nicht in die Spalte', async () => {
     const { pages } = await pdfVon(FALL_A, doppelt(FALL_A, NR));
     const text = zeile(pages[0], '17:20', '17:30').find(t => t.str.trim() === 'ausgefallen');
     const ziffer = zeile(pages[0], '16:30', '16:40').find(t => /^\d+$/.test(t.str.trim()) && t.size > printType.time);
