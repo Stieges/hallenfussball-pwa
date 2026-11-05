@@ -222,6 +222,9 @@ describe('@ZM-189 Eine Stufe für die Zusatzzeilen unter der Uhrzeit, Bezeichnun
       expect(zwischenzeile.parentElement, 'Zwischenzeile und Karte bilden einen Block (nie getrennt)').toBe(zeile.parentElement);
       expect(label.style.position, 'im Fluss, nicht absolut in der Karte').toBe('');
       expect(zeile.contains(label), 'nicht innerhalb der Karte').toBe(false);
+      expect(zeile.parentElement!.getAttribute('role'), 'Block ist eine Gruppe, benannt durch die Bezeichnung').toBe('group');
+      expect(zeile.parentElement!.getAttribute('aria-labelledby')).toBe(label.id);
+      expect(zwischenzeile.style.borderWidth, 'Rand der Zwischenzeile nur links/rechts, sonst wäre sie höher als in listRows gerechnet').toMatch(/^0(px)? /);
       expect(label.style.fontWeight).toBe(cssVars.fontWeights.bold);
       expect(label.style.fontSize).toBe(displayList.fontSizes.timeNote);
       expect(zeile.querySelector('[data-testid="monitor-match-time"]')!.textContent).not.toContain('Halbfinale');

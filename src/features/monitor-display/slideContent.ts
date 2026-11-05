@@ -91,7 +91,7 @@ export function standingsSections(tournament: Tournament, view: TournamentView, 
   return sections;
 }
 
-/** Spalten der Finalrunde: wie im Spielplan mit reservierter Zustandszeile unter der Uhrzeit; die Bezeichnung steht als Überschrift der Zeile. */
+/** Spalten der Finalrunde: wie im Spielplan mit reservierter Zustandszeile unter der Uhrzeit; die Bezeichnung steht als Zwischenzeile über der Zeilenkarte. */
 export function finalColumns(view: TournamentView): ListColumns {
   return listColumns(true, false, view.matches);
 }

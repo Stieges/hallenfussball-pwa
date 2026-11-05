@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useId, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars, displayList, displayMonitor, monitorThemes } from '../../../design-tokens';
 import type { Tournament } from '../../../types/tournament';
@@ -65,90 +65,98 @@ export function MonitorMatchRow({ match, tournament, theme, showScore = false, c
 
   const extraStyle: CSSProperties = { fontSize: displayList.fontSizes.note, fontWeight: cssVars.fontWeights.normal, color: colors.text, whiteSpace: 'nowrap', position: 'absolute', top: '100%', left: 0, right: 0, lineHeight: 1.2 };
 
+  const labelId = useId();
   const cardHeight = rowHeight({ ...match, labelText: undefined }, columns, frame, reserveExtra);
   return (
-    <div data-testid="monitor-match-block" style={{ width: '100%' }}>
+    <div
+      data-testid="monitor-match-block"
+      data-height-vh={String(rowHeight(match, columns, frame, reserveExtra))}
+      role={match.labelText ? 'group' : undefined}
+      aria-labelledby={match.labelText ? labelId : undefined}
+      style={{ width: '100%' }}
+    >
       {/* Spielbezeichnung („Halbfinale 1“) als Zwischenzeile über der Karte, waagrecht mittig über der Standspalte (Spalten wie in der Karte, listRows rechnet die Höhe ein) */}
       {match.labelText && (
         <div
           data-testid="monitor-match-labelline"
           style={{
             display: 'flex', gap: displayList.cellGap, width: '100%', boxSizing: 'border-box', fontSize: displayList.fontSizes.team,
-            padding: `0 ${displayList.rowPaddingX}`, border: `${cssVars.borderWidth.thin} solid transparent`, marginBottom: displayList.labelGap,
+            // Rand nur links und rechts (wie die Karte): oben und unten würde die Zeile höher als in listRows gerechnet
+            padding: `0 ${displayList.rowPaddingX}`, borderStyle: 'solid', borderColor: 'transparent', borderWidth: `0 ${cssVars.borderWidth.thin}`, marginBottom: displayList.labelGap,
           }}
         >
           <div style={{ flex: `0 0 ${displayList.timeFieldWidth}` }} />
           <div style={{ flex: '1 1 0' }} />
           <div style={{ flex: `0 0 ${displayList.separatorWidth}`, display: 'flex', justifyContent: 'center' }}>
-            <div data-testid="monitor-match-label" style={{ whiteSpace: 'nowrap', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
+            <div id={labelId} data-testid="monitor-match-label" style={{ whiteSpace: 'nowrap', fontSize: displayList.fontSizes.timeNote, fontWeight: cssVars.fontWeights.bold, color: colors.text, lineHeight: 1.2 }}>{match.labelText}</div>
           </div>
           <div style={{ flex: '1 1 0' }} />
         </div>
       )}
-    <div
-      data-testid="monitor-match-row"
-      data-match-id={match.id}
-      data-status={match.status}
-      style={{
-        display: 'flex',
-        // Uhrzeit, Teamnamen und Stand stehen senkrecht mittig (gemeinsame Mittelachse); Zusatzzeilen hängen darunter, außerhalb des Flusses
-        alignItems: 'center',
-        minHeight: `${String(cardHeight)}vh`,
-        position: 'relative',
-        gap: displayList.cellGap,
-        width: '100%',
-        padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
-        boxSizing: 'border-box',
-        background: colors.surface,
-        borderRadius: displayMonitor.radius.card,
-        border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
-      }}
-    >
-      <MonitorTimeCell
-        match={match}
-        fieldName={columns.field ? getFieldDisplayName(match.field, tournament) : undefined}
-        reserveState={columns.state}
-        color={colors.text}
-        tone={monitorBadgeTone(colors)}
-        style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
-      />
-      <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}><NameText name={monitorSideLabel(match.home)} perLine={perLine} /></div>
       <div
-        data-testid="monitor-match-separator"
+        data-testid="monitor-match-row"
+        data-match-id={match.id}
+        data-status={match.status}
         style={{
-          ...cell,
-          // Breite in em der Namensschrift (nicht der Standschrift): fest in jeder Zeile (@ZM-151, @ZM-187), listRows.ts rechnet auf derselben Basis
-          flex: `0 0 ${displayList.separatorWidth}`,
-          textAlign: 'center',
-          // nur so hoch wie der Stand: mittig in der Zeile, „(4:3 i. E.)“ hängt darunter (außerhalb des Flusses)
+          display: 'flex',
+          // Uhrzeit, Teamnamen und Stand stehen senkrecht mittig (gemeinsame Mittelachse); Zusatzzeilen hängen darunter, außerhalb des Flusses
+          alignItems: 'center',
+          minHeight: `${String(cardHeight)}vh`,
           position: 'relative',
-          height: `calc(${displayList.fontSizes.score} * 1.2)`,
+          gap: displayList.cellGap,
+          width: '100%',
+          padding: `${displayList.rowPaddingY} ${displayList.rowPaddingX}`,
+          boxSizing: 'border-box',
+          background: colors.surface,
+          borderRadius: displayMonitor.radius.card,
+          border: `${cssVars.borderWidth.thin} solid ${colors.border}`,
         }}
       >
+        <MonitorTimeCell
+          match={match}
+          fieldName={columns.field ? getFieldDisplayName(match.field, tournament) : undefined}
+          reserveState={columns.state}
+          color={colors.text}
+          tone={monitorBadgeTone(colors)}
+          style={{ ...cell, fontWeight: cssVars.fontWeights.semibold }}
+        />
+        <div data-teamname style={{ ...cell, flex: '1 1 0', textAlign: 'right' }}><NameText name={monitorSideLabel(match.home)} perLine={perLine} /></div>
         <div
-          data-testid="monitor-match-score"
+          data-testid="monitor-match-separator"
           style={{
-            // Stand: 1,5 × Namensschrift, so fett wie die Uhrzeit (VISUAL-DESIGN § 8)
-            fontSize: displayList.fontSizes.score,
-            lineHeight: 1.2,
-            fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
-            color: showScore ? colors.text : colors.textMuted,
+            ...cell,
+            // Breite in em der Namensschrift (nicht der Standschrift): fest in jeder Zeile (@ZM-151, @ZM-187), listRows.ts rechnet auf derselben Basis
+            flex: `0 0 ${displayList.separatorWidth}`,
+            textAlign: 'center',
+            // nur so hoch wie der Stand: mittig in der Zeile, „(4:3 i. E.)“ hängt darunter (außerhalb des Flusses)
+            position: 'relative',
+            height: `calc(${displayList.fontSizes.score} * 1.2)`,
           }}
         >
-          {showScore ? score : '–'}
-        </div>
-        {/* „gewertet“ steht klein unter dem Stand, Stelle und Stil wie „(4:3 i. E.)“ (wie im PDF); eine Wertung hat kein Strafstoßschießen */}
-        {showScore && !scoreExtra && match.status === 'awarded' && (
-          <div data-testid="monitor-match-note" style={extraStyle}>{t('view.status.awarded')}</div>
-        )}
-        {showScore && scoreExtra && (
-          <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={extraStyle}>
-            {scoreExtra}
+          <div
+            data-testid="monitor-match-score"
+            style={{
+              // Stand: 1,5 × Namensschrift, so fett wie die Uhrzeit (VISUAL-DESIGN § 8)
+              fontSize: displayList.fontSizes.score,
+              lineHeight: 1.2,
+              fontWeight: showScore ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
+              color: showScore ? colors.text : colors.textMuted,
+            }}
+          >
+            {showScore ? score : '–'}
           </div>
-        )}
+          {/* „gewertet“ steht klein unter dem Stand, Stelle und Stil wie „(4:3 i. E.)“ (wie im PDF); eine Wertung hat kein Strafstoßschießen */}
+          {showScore && !scoreExtra && match.status === 'awarded' && (
+            <div data-testid="monitor-match-note" style={extraStyle}>{t('view.status.awarded')}</div>
+          )}
+          {showScore && scoreExtra && (
+            <div data-testid="monitor-match-extra" title={extraTerms?.long} aria-label={extraTerms?.spoken} role="note" style={extraStyle}>
+              {scoreExtra}
+            </div>
+          )}
+        </div>
+        <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
       </div>
-      <div data-teamname style={{ ...cell, flex: '1 1 0' }}><NameText name={monitorSideLabel(match.away)} perLine={perLine} /></div>
-    </div>
     </div>
   );
 }

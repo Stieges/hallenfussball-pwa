@@ -26,7 +26,7 @@ const RAENDER = [0, 5, 10] as const;
 
 const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 
-interface Kasten { labelProbleme: string[]; zusatzUnten: number; id: string; links: number; rechts: number; oben: number; unten: number; zeit: number; heim: number; stand: number; gast: number; uhr: string; war: string | null; warUnterUhr: boolean; zeitUeberbreit: boolean }
+interface Kasten { blockAbweichung: number; labelProbleme: string[]; zusatzUnten: number; id: string; links: number; rechts: number; oben: number; unten: number; zeit: number; heim: number; stand: number; gast: number; uhr: string; war: string | null; warUnterUhr: boolean; zeitUeberbreit: boolean }
 
 async function zeilen(page: Page): Promise<Kasten[]> {
   return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-testid="monitor-match-row"]')].map((r) => {
@@ -36,7 +36,11 @@ async function zeilen(page: Page): Promise<Kasten[]> {
     const war = r.querySelector<HTMLElement>('[data-testid="monitor-match-original"]');
     const zeit = r.querySelector<HTMLElement>('[data-testid="monitor-match-clockline"]')!;
     const teams = r.querySelectorAll<HTMLElement>('[data-teamname]');
+    const block = r.parentElement!;
+    const sollPx = (parseFloat(block.dataset.heightVh ?? '0') / 100) * window.innerHeight;
     return {
+      // Höhe von Oberkante der Zwischenzeile (bzw. der Karte) bis Unterkante der Karte gegen die Zeilenhöhe aus dem Modell (listRows)
+      blockAbweichung: Math.abs(block.getBoundingClientRect().height - sollPx),
       labelProbleme: (() => {
         // Zwischenzeile über der Karte: ganz über der Karte ihres Spiels, waagrecht mittig über der Standspalte (± 2 px) und über keiner Karte
         const label = r.parentElement!.querySelector<HTMLElement>('[data-testid="monitor-match-label"]');
@@ -166,6 +170,7 @@ test.describe('Monitor Listen-Folien (T2-UI)', () => {
             expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
             expect(k.zusatzUnten, `${k.id}: Zusätze unter Uhrzeit und Stand liegen ganz in der Zeile (nicht abgeschnitten)`).toBeLessThanOrEqual(k.unten + 0.5);
             expect(k.labelProbleme, `${k.id}: Zwischenzeile`).toEqual([]);
+            expect(k.blockAbweichung, `${k.id}: Höhe von Zwischenzeile plus Karte = Zeilenhöhe aus dem Modell (± 1 px)`).toBeLessThanOrEqual(1);
             expect(k.oben, `${k.id}: Oberkante im Bild`).toBeGreaterThanOrEqual(0);
             expect(k.rechts, `${k.id}: Rand rechts im Bild`).toBeLessThanOrEqual(p.width);
             expect(k.links, `${k.id}: Rand links im Bild`).toBeGreaterThanOrEqual(0);
@@ -239,6 +244,7 @@ test.describe('Finalrunde in „Alle Tabellen“ blättert nach gemessener Höhe
                 expect(k.unten, `${k.id}: Unterkante im Bild`).toBeLessThanOrEqual(p.height);
                 expect(k.zusatzUnten, `${k.id}: Zusätze in der Zeile`).toBeLessThanOrEqual(k.unten + 0.5);
                 expect(k.labelProbleme, `${k.id}: Zwischenzeile`).toEqual([]);
+            expect(k.blockAbweichung, `${k.id}: Höhe von Zwischenzeile plus Karte = Zeilenhöhe aus dem Modell (± 1 px)`).toBeLessThanOrEqual(1);
               }
               const hinweis = page.getByText(`Seite ${String(seite + 1)} / ${String(seiten)}`);
               await expect(hinweis).toBeVisible();
