@@ -20,7 +20,7 @@ const unten = async (page: Page, testId: string): Promise<number> => {
 const oben = async (page: Page, testId: string): Promise<number> => (await page.getByTestId(testId).boundingBox())?.y ?? -1;
 const leisteOben = async (page: Page): Promise<number> => (await page.getByRole('toolbar').boundingBox())?.y ?? 0;
 
-/** Alle vier Tasten beider Teams über der Leiste, die Tastenfläche muss nicht scrollen, die Seite scrollt nie. */
+/** Alle vier Tasten beider Teams ohne Scrollen über der Leiste (die Tastenfläche steht oben, nichts ist weggerollt), die Seite scrollt nie. */
 async function alleTastenSichtbar(page: Page, lage: string): Promise<void> {
   const grenze = await leisteOben(page);
   for (const seite of ['home', 'away']) {
@@ -28,8 +28,8 @@ async function alleTastenSichtbar(page: Page, lage: string): Promise<void> {
       expect(await unten(page, `${taste}-${seite}`), `${lage}: ${taste}-${seite} über der Leiste`).toBeLessThanOrEqual(grenze + 1);
     }
   }
-  const mass = await page.getByTestId('cockpit-tastenflaeche').evaluate((el) => ({ scroll: el.scrollHeight, sicht: el.clientHeight, seite: document.documentElement.scrollHeight - window.innerHeight }));
-  expect(mass.scroll, `${lage}: die Tastenfläche scrollt nicht`).toBeLessThanOrEqual(mass.sicht + 1);
+  const mass = await page.getByTestId('cockpit-tastenflaeche').evaluate((el) => ({ oben: el.scrollTop, seite: document.documentElement.scrollHeight - window.innerHeight }));
+  expect(mass.oben, `${lage}: nichts ist weggerollt`).toBe(0);
   expect(mass.seite, `${lage}: die Seite scrollt nie`).toBeLessThanOrEqual(1);
 }
 

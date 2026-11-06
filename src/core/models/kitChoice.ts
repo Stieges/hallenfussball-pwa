@@ -5,7 +5,7 @@
  * - `ersteLeibchenWahl`: Vorbelegung – bei Konflikt die Heimseite mit der Leibchenfarbe des Turniers, sonst kein Leibchen.
  * - `leibchenGegenGegner`: @SL-151 – die Leibchenfarbe ist der Trikotfarbe des Gegners zu ähnlich.
  * - `kitAusWahl`: das `kit`, das beim Anpfiff mitgeht; die Wahl gilt nur für dieses Spiel.
- * - `vorschauKaesten`: Kästen und Team-Köpfe vor dem Anpfiff in den echten Trikotfarben, ohne Ausweichfarbe der Zuschauer-Kästen (@SL-196).
+ * - `vorschauKaesten`: Kästen und Team-Köpfe vor dem Anpfiff in den echten Trikotfarben, ohne Ausweichfarbe der Zuschauer-Kästen, Leibchen als Zeichen (@SL-196).
  */
 import { palette } from '../../design-tokens/colors/palette';
 import { DEFAULT_BIB_COLOR, kitConflictWithLuminance, normalizeKitColor, type KitConflict, type KitSide, type MatchKit, compactKit } from './kit';
@@ -75,16 +75,15 @@ export function kitAusWahl(farben: TrikotFarben, wahl: LeibchenWahl): MatchKit {
 }
 
 /**
- * @SL-196: Kästen vor dem Anpfiff in den echten Trikotfarben, mit der gewählten Weste (Mitte Leibchen, Streifen Trikot).
- * Ohne Trikotfarbe einer Seite gilt deren Standardfarbe aus `standard` (dieselbe wie ohne Teamfarben).
+ * @SL-196: Kästen vor dem Anpfiff in den echten Trikotfarben („beide Kästen und Team-Köpfe Blau“), die gewählte Leibchen-Seite nur mit dem
+ * Leibchen-Zeichen; die Weste (Leibchen über dem Trikot) zeigt die Anzeige erst ab dem Anpfiff. Ohne Trikotfarbe einer Seite gilt deren
+ * Standardfarbe aus `standard` (dieselbe wie ohne Teamfarben).
  */
 export function vorschauKaesten(farben: TrikotFarben, wahl: LeibchenWahl, standard: { a: SideBox; b: SideBox }): { a: SideBox; b: SideBox } {
   const seite = (s: KitSide): SideBox => {
     const trikot = normalizeKitColor(farben[s]);
     const grund: string = trikot ?? (standard[s].fill.kind === 'vest' ? standard[s].fill.stripes : standard[s].fill.color);
-    const fill: BoxFill = wahl.bibSide === s
-      ? { kind: 'vest', center: normalizeKitColor(wahl.bibColor) ?? DEFAULT_BIB_COLOR, stripes: grund }
-      : { kind: 'solid', color: grund };
+    const fill: BoxFill = { kind: 'solid', color: grund };
     return { fill, bib: wahl.bibSide === s };
   };
   return { a: seite('a'), b: seite('b') };

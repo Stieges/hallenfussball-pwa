@@ -101,9 +101,9 @@ describe('@SL-196 vor dem Anpfiff die echten Trikotfarben, keine Ausweichfarbe',
     expect(kaesten.b.fill).toEqual({ kind: 'solid', color: BLAU });
   });
 
-  it('@SL-196 mit Leibchen für Heim: Weste (Mitte Leibchen, Streifen Trikot), Gast in seinem Blau', () => {
+  it('@SL-196 mit Leibchen für Heim vorbelegt: beide Kästen Blau, Heim mit dem Leibchen-Zeichen (die Weste erst ab dem Anpfiff)', () => {
     const kaesten = vorschauKaesten({ a: BLAU, b: BLAU }, { bibSide: 'a', bibColor: TURNIER_GELB }, STANDARD);
-    expect(kaesten.a).toEqual({ fill: { kind: 'vest', center: TURNIER_GELB, stripes: BLAU }, bib: true });
+    expect(kaesten.a).toEqual({ fill: { kind: 'solid', color: BLAU }, bib: true });
     expect(kaesten.b).toEqual({ fill: { kind: 'solid', color: BLAU }, bib: false });
   });
 

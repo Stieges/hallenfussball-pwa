@@ -63,14 +63,16 @@ describe('@SL-137 gleiche Farbe: Hinweis, „Leibchen für …“ je Seite, Heim
 });
 
 describe('@SL-196 vor dem Anpfiff die echten Trikotfarben', () => {
-  it('@SL-196 Blau gegen Blau: beide Köpfe Blau (Heim mit Weste), keine Ausweichfarbe für den Gast', () => {
+  it('@SL-196 Blau gegen Blau: beide Kästen und Köpfe Blau (Heim mit Leibchen-Zeichen), keine Ausweichfarbe für den Gast', () => {
     // Die Kästen des Spiels (Hallenmonitor) hätten für den Gast die Ausweichfarbe Rot
     const kasten = { home: { fill: { kind: 'solid' as const, color: BLAU }, bib: false }, away: { fill: { kind: 'solid' as const, color: ROT }, bib: false } };
     render(<LiveCockpit {...makeProps(spiel12(), { leibchen: leibchen(BLAU, BLAU), kasten })} />);
     expect(screen.getByTestId('scoreboard-farb-hinweis')).toBeInTheDocument();
     expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-color', BLAU);
     expect(screen.getByTestId('scoreboard-box-rechts')).toHaveAttribute('data-color', BLAU);
-    expect(screen.getByTestId('scoreboard-box-links')).toHaveAttribute('data-stripes', BLAU);
+    expect(screen.getByTestId('scoreboard-box-links')).toHaveAttribute('data-color', BLAU);
+    expect(screen.getByTestId('scoreboard-box-links-bib')).toBeInTheDocument();
+    expect(screen.getByTestId('team-head-home')).toHaveAttribute('data-color', BLAU);
   });
 });
 

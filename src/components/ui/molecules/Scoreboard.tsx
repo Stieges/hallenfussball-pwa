@@ -140,7 +140,8 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
         <span style={rechts}>
           {kopfRechts}
           {tonHinweis && <Abzeichen hoehe={hoehe} label={tonHinweis.label} kurz={tonHinweis.kurz} icon={<TafelIcons.VolumeOff size={icon} />} onAntippen={tonHinweis.onAntippen} testId={id('ton')} />}
-          {wachhaltenHinweis && <Abzeichen hoehe={hoehe} label={wachhaltenHinweis.label} kurz={wachhaltenHinweis.kurz} icon={<TafelIcons.Lock size={icon} />} onAntippen={wachhaltenHinweis.onAntippen} testId={id('wachhalten')} />}
+          {/* Neben weiteren Abzeichen nur das Schloss (voller Wortlaut als Name der Taste), damit die Kopfzeile einzeilig bleibt und die Tafel nicht wächst */}
+          {wachhaltenHinweis && <Abzeichen hoehe={hoehe} label={wachhaltenHinweis.label} kurz={tonHinweis || model.eintraegeWartenText ? '' : wachhaltenHinweis.kurz} icon={<TafelIcons.Lock size={icon} />} onAntippen={wachhaltenHinweis.onAntippen} testId={id('wachhalten')} />}
           {model.eintraegeWartenText && <Abzeichen hoehe={hoehe} label={model.eintraegeWartenText} kurz={tonHinweis ? (model.eintraegeWartenKurz ?? undefined) : undefined} icon={<Icons.Upload size={icon} />} testId={id('eintraege-warten')} />}
           {model.helferAnfragenText && <Abzeichen hoehe={hoehe} label={model.helferAnfragenText} icon={<Icons.Users size={icon} />} onAntippen={onHelferAnfragen} testId={id('helfer-anfragen')} />}
         </span>
