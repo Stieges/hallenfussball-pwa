@@ -28,6 +28,11 @@ export interface NextMatchRowProps {
   testId: string;
   /** Der Platz bleibt reserviert, die Zeile ist nicht zu sehen (Handy vor der Vorwarnung, @SL-155: die Tasten springen nie). */
   verborgen?: boolean;
+  /**
+   * Handy (@SL-155, Cockpit-Paket K5/K12): die Zeile steht in der Tafel im Platz der Meldezeile, füllt ihn und reserviert keinen eigenen
+   * Streifen über den Tasten. Dunkle Tafelfarben, der Rahmen als `outline` (kein Platzbedarf), Text bricht um.
+   */
+  aufTafel?: boolean;
 }
 
 const zeileStil = (modus: NextMatchRowProps['modus']): CSSProperties => ({
@@ -37,6 +42,12 @@ const zeileStil = (modus: NextMatchRowProps['modus']): CSSProperties => ({
   // Gleiche Außenmaße in jedem Modus (@SL-155 „die Tasten springen nie“): der Rahmen ist immer mittel breit, nur die Farbe wechselt
   border: `${cssVars.borderWidth.medium} solid ${modus === 'vorwarnung' ? cssVars.colors.nextWarnBorder : cssVars.colors.border}`,
   borderRadius: cssVars.borderRadius.md,
+});
+const tafelStil = (modus: NextMatchRowProps['modus']): CSSProperties => ({
+  ...zeileStil(modus), height: '100%', columnGap: cssVars.spacing.xs, rowGap: 0, alignContent: 'center', padding: `0 ${cssVars.spacing.sm}`,
+  background: cssVars.colors.noticeLineBg, color: cssVars.colors.scoreboardText, lineHeight: cssVars.lineHeights.bodySm, border: 0,
+  outline: `${cssVars.borderWidth.medium} solid ${modus === 'vorwarnung' ? cssVars.colors.nextWarnBorder : cssVars.colors.scoreboardDivider}`,
+  outlineOffset: `calc(-1 * ${cssVars.borderWidth.medium})`,
 });
 const labelStil: CSSProperties = { fontWeight: cssVars.fontWeights.bold };
 const teamStil: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs };
@@ -67,10 +78,11 @@ export function NextMatchRow(p: NextMatchRowProps): ReactElement {
       data-blinken={p.blinken ? 'true' : undefined}
       data-verborgen={p.verborgen ? 'true' : undefined}
       aria-hidden={p.verborgen ? true : undefined}
-      style={p.verborgen ? { ...zeileStil(p.modus), visibility: 'hidden' } : zeileStil(p.modus)}
+      data-auf-tafel={p.aufTafel ? 'true' : undefined}
+      style={p.aufTafel ? tafelStil(p.modus) : p.verborgen ? { ...zeileStil(p.modus), visibility: 'hidden' } : zeileStil(p.modus)}
       onAnimationEnd={(e) => { if (e.target === e.currentTarget) { p.onBlinkEnde?.(); } }}
     >
-      <span style={{ display: 'inline-flex', color: cssVars.colors.textSecondary }}><MatchIcons.Calendar size={16} /></span>
+      <span style={{ display: 'inline-flex', color: p.aufTafel ? cssVars.colors.scoreboardTextMuted : cssVars.colors.textSecondary }}><MatchIcons.Calendar size={16} /></span>
       <span style={labelStil}>{p.label}</span>{' '}
       <span>{p.spielText}</span>{' '}
       <span aria-hidden="true">·</span>{' '}

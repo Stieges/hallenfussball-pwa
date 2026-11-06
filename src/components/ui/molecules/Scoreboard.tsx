@@ -16,14 +16,15 @@ import { pairFrameStrength } from './scoreBoxStyle';
 import styles from './Scoreboard.module.css';
 import { Icons } from '../Icons';
 import { TafelIcons } from '../IconsTafel';
+import { MatchIcons } from '../IconsMatch';
 import { MatchStatusBadge } from './MatchStatusBadge';
 import { Abzeichen } from './ScoreboardAbzeichen';
 import { ueberstandVon, zeileHoehe } from './scoreboardAbzeichenMasse';
 import { ScoreboardDesktop } from './ScoreboardDesktop';
-import type { ScoreboardSeite, ScoreboardProps } from './scoreboardTypes';
+import type { ScoreboardSeite, ScoreboardStrafe, ScoreboardProps } from './scoreboardTypes';
 
 export type {
-  ScoreboardSeite, ScoreboardBalken, ScoreboardUhr, ScoreboardModel, ScoreboardAbzeichenKnopf, ScoreboardProps,
+  ScoreboardSeite, ScoreboardStrafe, ScoreboardBalken, ScoreboardUhr, ScoreboardModel, ScoreboardAbzeichenKnopf, ScoreboardProps,
 } from './scoreboardTypes';
 
 // Die Tafel ist in beiden Themes dunkel; `ScoreBox` rechnet Kontrast und Rahmen aus Hex-Werten (keine CSS-Variablen möglich)
@@ -93,7 +94,7 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
   // Markierung ohne Layoutwirkung (B1: „die Tafel springt nicht“): Outline statt Rand und Innenabstand
   const markierung = uhr?.steht ? cssVars.colors.scoreboardHighlight : uhr?.ton === 'ok' ? cssVars.colors.scoreboardOk : null;
   const uhrFlaeche: CSSProperties = {
-    ...(gestapelt ? { gridColumn: '1 / -1', gridRow: 2, width: '100%' } : { gridColumn: 2, gridRow: 1 }), textAlign: 'center', minWidth: 0, margin: '0 auto', borderRadius: cssVars.borderRadius.md,
+    ...(gestapelt ? { gridColumn: '1 / -1', gridRow: 2, width: '100%' } : { gridColumn: 2, gridRow: 1 }), position: 'relative', textAlign: 'center', minWidth: 0, margin: '0 auto', borderRadius: cssVars.borderRadius.md,
     outline: markierung ? `calc(${cssVars.borderWidth.thin} * 2) dashed ${markierung}` : undefined,
     outlineOffset: markierung ? cssVars.spacing.xs : undefined,
   };
@@ -133,7 +134,9 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
             ? <span style={ueberfaellig} data-testid={id('ueberfaellig')}>{model.ueberfaelligText}</span>
             : <MatchStatusBadge model={model.badge} size="card" surface="scoreboard" testId={id('abzeichen')} />}
         </span>
-        <span style={abschnitt}>{model.abschnittText}</span>
+        {model.farbHinweis
+          ? <span style={{ ...abschnitt, color: cssVars.colors.scoreboardHighlight, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs }} data-testid={id('farb-hinweis')}><MatchIcons.Shirt size={icon} />{model.farbHinweis}</span>
+          : <span style={abschnitt}>{model.abschnittText}</span>}
         <span style={rechts}>
           {kopfRechts}
           {tonHinweis && <Abzeichen hoehe={hoehe} label={tonHinweis.label} kurz={tonHinweis.kurz} icon={<TafelIcons.VolumeOff size={icon} />} onAntippen={tonHinweis.onAntippen} testId={id('ton')} />}
@@ -156,8 +159,11 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
             {uhr && (
               <>
                 {uhr.label && <div style={{ ...klein, fontWeight: cssVars.fontWeights.bold, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: cssVars.spacing.xs }}>{uhr.steht && <TafelIcons.Pause size={iconSizeValues.xs} />}{uhr.label}</div>}
-                <ClockDigits text={uhr.rest} style={uhrZahl} testId={id('clock-rest')} />
+                {uhr.vorsatz
+                  ? <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: cssVars.spacing.xs }}><span style={{ ...uhrZahl, fontSize: `calc(${uhrZahl.fontSize as string} * 0.5)` }} data-testid={id('clock-vorsatz')}>{uhr.vorsatz}</span><ClockDigits text={uhr.rest} style={uhrZahl} testId={id('clock-rest')} /></div>
+                  : <ClockDigits text={uhr.rest} style={uhrZahl} testId={id('clock-rest')} />}
                 <div style={{ ...klein, minHeight: gross ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm }} data-testid={id('clock-sub')}>{uhr.unterzeile ?? uhr.gespielt}</div>
+                {gestapelt && <TafelStrafen links={model.links.strafen} rechts={model.rechts.strafen} gross={gross} testId={testId} />}
               </>
             )}
           </div>
@@ -182,4 +188,35 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
       {meldezeile}
     </section>
   );
+}
+
+/**
+ * Laufende Zeitstrafen in der Tafel (@SL-029, @SL-031; Cockpit-Paket K7): links und rechts neben „Restzeit“ und der Zeile unter der Uhr,
+ * unter dem Kasten ihres Teams – im ersten Bild, ohne eigenen Platz (die Tafel wird nicht höher, nichts springt). Bis zu zwei je Seite in
+ * diesen beiden Zeilen (weitere stehen mit in der zweiten). Stehende Uhr: gedämpft, die Restzeit läuft nicht.
+ */
+function TafelStrafen({ links = [], rechts = [], gross, testId }: { links?: ScoreboardStrafe[]; rechts?: ScoreboardStrafe[]; gross: boolean; testId?: string }): ReactElement | null {
+  if (links.length === 0 && rechts.length === 0) { return null; }
+  const zeile = gross ? cssVars.lineHeights.bodyMd : cssVars.lineHeights.bodySm;
+  const spalte = (wo: 'links' | 'rechts', strafen: ScoreboardStrafe[]): ReactElement => (
+    <div style={{
+      position: 'absolute', top: 0, bottom: 0, [wo === 'links' ? 'left' : 'right']: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      alignItems: wo === 'links' ? 'flex-start' : 'flex-end', pointerEvents: 'none',
+    }}>
+      {[strafen.slice(0, 1), strafen.slice(1)].map((teil, zeilenIndex) => (
+        <span key={zeilenIndex} style={{ display: 'flex', gap: cssVars.spacing.sm, minHeight: zeile, alignItems: 'center' }}>
+          {teil.map((strafe) => (
+            <span key={strafe.id} role="img" aria-label={strafe.aria} data-testid={testId ? `${testId}-strafe-${strafe.id}` : undefined} data-steht={String(strafe.steht)} style={{
+              display: 'inline-flex', alignItems: 'center', gap: cssVars.spacing.xs, fontSize: gross ? cssVars.fontSizes.md : cssVars.fontSizes.sm, lineHeight: zeile,
+              fontWeight: cssVars.fontWeights.bold, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+              color: strafe.steht ? cssVars.colors.scoreboardTextMuted : cssVars.colors.scoreboardHighlight,
+            }}>
+              <MatchIcons.Stopwatch size={iconSizeValues.xs} />{strafe.text}
+            </span>
+          ))}
+        </span>
+      ))}
+    </div>
+  );
+  return <>{spalte('links', links)}{spalte('rechts', rechts)}</>;
 }

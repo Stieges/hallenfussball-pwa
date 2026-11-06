@@ -72,7 +72,9 @@ export function ScoreboardDesktop({ model, stufe, meldezeile, onHelferAnfragen, 
         </span>
         {/* Die Einblendung ersetzt nur den Kopftext (@SL-183): „Live“ und die Knöpfe rechts bleiben sichtbar und klickbar; `aria-live` bleibt im Baum */}
         <span className={desktop.kopfFeld}>
-          <span className={desktop.kopfText} data-testid={id('kopf-text')}>{model.kopfText ?? model.abschnittText}</span>
+          {model.farbHinweis
+            ? <span className={desktop.kopfText} style={{ color: cssVars.colors.scoreboardHighlight }} data-testid={id('farb-hinweis')}>{model.farbHinweis}</span>
+            : <span className={desktop.kopfText} data-testid={id('kopf-text')}>{model.kopfText ?? model.abschnittText}</span>}
           <div className={desktop.einblendung}>{meldezeile}</div>
         </span>
         <span className={desktop.abzeichen}>
@@ -102,7 +104,9 @@ export function ScoreboardDesktop({ model, stufe, meldezeile, onHelferAnfragen, 
               style={markierung ? { outline: `calc(${cssVars.borderWidth.thin} * 2) dashed ${markierung}`, outlineOffset: cssVars.spacing.xs } : undefined}
             >
               {uhr.label && <div className={desktop.etikett}>{uhr.steht && <TafelIcons.Pause size={icon} />}{uhr.label}</div>}
-              <ClockDigits text={uhr.rest} style={uhrZahl(uhrFarbe)} testId={id('clock-rest')} />
+              {uhr.vorsatz
+                ? <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: cssVars.spacing.xs }}><span style={{ ...uhrZahl(uhrFarbe), fontSize: `calc(${String(uhrZahl(uhrFarbe).fontSize)} * 0.5)` }} data-testid={id('clock-vorsatz')}>{uhr.vorsatz}</span><ClockDigits text={uhr.rest} style={uhrZahl(uhrFarbe)} testId={id('clock-rest')} /></div>
+                : <ClockDigits text={uhr.rest} style={uhrZahl(uhrFarbe)} testId={id('clock-rest')} />}
               {uhr.balken && <ZeitBalken anteil={uhr.balken.anteil} ton={uhr.balken.ton} testId={id('zeitbalken')} />}
               {/* Die gespielte Zeit steht in der Kopfzeile; die Zeile unter der Uhr nur dort, wo sie etwas anderes sagt (Pause, Endstand) */}
               {uhr.gespielt === null && <div className={desktop.unterzeile} data-testid={id('clock-sub')}>{uhr.unterzeile}</div>}

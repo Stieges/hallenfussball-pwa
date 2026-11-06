@@ -16,6 +16,7 @@ import type { StrafenModel } from '../model/toStrafenModel';
 import { TeamColumn, type TeamColumnProps } from './TeamColumn';
 import { TeamSummary } from './TeamSummary';
 import styles from './LegacyAreas.module.css';
+import type { AnpfiffTeile } from './anpfiffTeile';
 
 export interface LegacyPlayAreaProps {
   match: LiveMatch;
@@ -33,6 +34,8 @@ export interface LegacyPlayAreaProps {
   columns: { links: Omit<TeamColumnProps, 'kompakt' | 'breit'>; rechts: Omit<TeamColumnProps, 'kompakt' | 'breit'> };
   /** Nach dem Abpfiff statt der Tastenblöcke: Tore, Karten, Zeitstrafen, Fouls je Team (@SL-048); in Anzeige-Reihenfolge. */
   zusammenfassung?: { links: TeamSummaryModel; rechts: TeamSummaryModel } | null;
+  /** Vor dem Anpfiff die Leibchen-Wahl (@SL-137, @SL-148): je Spalte die Taste im Platz der Tor-Taste, darunter Farbe und Hinweise. */
+  anpfiff?: AnpfiffTeile | null;
   sidebar: {
     /** Laufende Zeitstrafen als Karten (@SL-186). */
     strafen: StrafenModel;
@@ -43,9 +46,9 @@ export interface LegacyPlayAreaProps {
 const cls = (...names: Array<string | false>): string => names.filter(Boolean).join(' ');
 
 export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
-  const { match, naechstes, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, zusammenfassung, sidebar } = props;
-  const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links']): ReactElement => (
-    <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} />
+  const { match, naechstes, isMobile, isDesktop, kopf, zustand, strafstossForm, columns, zusammenfassung, sidebar, anpfiff } = props;
+  const spalte = (spaltenProps: LegacyPlayAreaProps['columns']['links'], vorAnpfiff: ReactNode): ReactElement => (
+    <TeamColumn {...spaltenProps} kompakt={isMobile} breit={isDesktop} vorAnpfiff={vorAnpfiff} strafenInTafel={!isDesktop} />
   );
 
   return (
@@ -56,11 +59,12 @@ export function LegacyPlayArea(props: LegacyPlayAreaProps): ReactElement {
         <div data-testid="cockpit-tastenflaeche" className={cls(styles.scoreboard, isMobile && styles.scoreboardMobile, isDesktop && styles.scoreboardBreit, !isDesktop && styles.scoreboardDaumen)}>
           {zustand === 'strafstoss' && strafstossForm ? strafstossForm : zustand !== 'entscheidung' && (
             /* Team-Spalten – „Seiten tauschen“ vertauscht nur die Anzeige */
-            <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile, isDesktop && styles.scoreRowBreit)}>
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links)}
-              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts)}
+            <div className={cls(styles.scoreRow, isMobile && styles.scoreRowMobile, isDesktop && !anpfiff && styles.scoreRowBreit)}>
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.links} breit={isDesktop} /> : spalte(columns.links, anpfiff?.links)}
+              {zusammenfassung ? <TeamSummary model={zusammenfassung.rechts} breit={isDesktop} /> : spalte(columns.rechts, anpfiff?.rechts)}
             </div>
           )}
+          {anpfiff?.unten}
         </div>
       </div>
 

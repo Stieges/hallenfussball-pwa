@@ -24,6 +24,11 @@ export interface TeamHeadBarProps {
   stripeTestId?: string;
   /** Füllt die Höhe seiner Zeile: in der Tastenspalte sind beide Köpfe gleich hoch, auch wenn ein Name dreizeilig umbricht. */
   fuellend?: boolean;
+  /**
+   * Handy (K5/K11, @SL-061): ein Kopf so flach wie möglich – „Heim“/„Gast“ steht rechts in der ersten Zeile, der Name fließt darum herum
+   * (kurze Namen einzeilig), die Weste als schmale Streifen am Rand, damit der Name die Breite behält und nie im Wort bricht.
+   */
+  kompakt?: boolean;
 }
 
 /**
@@ -32,7 +37,52 @@ export interface TeamHeadBarProps {
  */
 const LANGER_NAME = 16;
 
-export function TeamHeadBar({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
+export function TeamHeadBar(props: TeamHeadBarProps): ReactElement {
+  return props.kompakt ? <TeamHeadBarKompakt {...props} /> : <TeamHeadBarNormal {...props} />;
+}
+
+/** Weste am Handy: schmale Streifen fester Breite statt eines Anteils der Fläche (der Name behält die Breite, K11). */
+function schmaleWeste(fill: BoxFill): CSSProperties {
+  if (fill.kind !== 'vest') { return { backgroundColor: fill.color }; }
+  const breite = cssVars.spacing.sm;
+  return {
+    backgroundColor: fill.center,
+    backgroundImage: `linear-gradient(90deg, ${fill.stripes} ${breite}, ${fill.center} ${breite}, ${fill.center} calc(100% - ${breite}), ${fill.stripes} calc(100% - ${breite}))`,
+  };
+}
+
+function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
+  const text = fillTextColor(fill);
+  const lang = name.length > LANGER_NAME;
+  const rand = fill.kind === 'vest' ? `calc(${cssVars.spacing.sm} + ${cssVars.spacing.xs})` : cssVars.spacing.sm;
+  const kopf: CSSProperties = {
+    display: 'block', boxSizing: 'border-box', minWidth: 0, padding: `${cssVars.spacing.xs} ${rand}`, borderRadius: cssVars.borderRadius.md,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderSolid}`, color: text, ...(fuellend ? { flex: '1 1 auto' } : {}), ...schmaleWeste(fill),
+  };
+  const zeilenHoehe = lang ? cssVars.lineHeights.bodySm : cssVars.lineHeights.bodyMd;
+  const seite: CSSProperties = {
+    float: 'right', marginLeft: cssVars.spacing.xs, fontSize: cssVars.fontSizes.labelMd, fontWeight: cssVars.fontWeights.bold, textTransform: 'uppercase', lineHeight: zeilenHoehe,
+  };
+  const nameStil: CSSProperties = {
+    margin: 0, minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: zeilenHoehe,
+    fontSize: lang ? cssVars.fontSizes.sm : cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold,
+  };
+  return (
+    <div style={kopf} data-testid={testId} data-fill={fill.kind} data-kompakt="true" data-color={fill.kind === 'vest' ? fill.center : fill.color}>
+      <span style={seite}>{label}</span>
+      <p data-teamname="" data-testid={nameTestId} style={nameStil}>
+        {bib && (
+          <span role="img" aria-label={bib.ariaLabel} data-testid={`${testId}-leibchen`} style={{ display: 'inline-flex', verticalAlign: 'middle', marginRight: cssVars.spacing.xs }}>
+            <MatchIcons.Shirt size={iconSizeValues.xs} />
+          </span>
+        )}
+        {name}
+      </p>
+    </div>
+  );
+}
+
+function TeamHeadBarNormal({ name, label, fill, bib = null, breit = false, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
   const gestapelt = name.length > LANGER_NAME; // auch am Laptop: „Heim“/„Gast“ über dem langen Namen, sonst bricht er am Bindestrich (VISUAL-DESIGN § 2, `titel.wortbruch`)
   const kopf: CSSProperties = {
@@ -45,7 +95,7 @@ export function TeamHeadBar({ name, label, fill, bib = null, breit = false, fuel
     ...fillSurface(fill),
   };
   const nameStil: CSSProperties = {
-    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: breit ? 'break-word' : 'anywhere', lineHeight: cssVars.lineHeights.bodyMd,
+    margin: 0, flex: gestapelt ? 'none' : '1 1 0', minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: cssVars.lineHeights.bodyMd,
     fontSize: breit ? 'var(--cockpit-kopf-schrift, var(--font-size-title-lg))' : `clamp(${cssVars.fontSizes.md}, 4vw, ${cssVars.fontSizes.lg})`, fontWeight: cssVars.fontWeights.bold,
     display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs,
   };

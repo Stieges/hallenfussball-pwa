@@ -16,6 +16,8 @@ interface ButtonProps {
   'aria-label'?: string;
   /** Tastenkürzel des Knopfs für Hilfstechnik, z. B. „1“ (Cockpit, @SL-153) */
   'aria-keyshortcuts'?: string;
+  /** Umschalt-Taste: gewählt oder nicht (z. B. Leibchen-Seite im Cockpit, @SL-137) */
+  'aria-pressed'?: boolean;
   /** Tooltip (z. B. Klartext zu einem reinen Symbol-Knopf, @OB-021) */
   title?: string;
   /** Button type attribute */
@@ -65,6 +67,7 @@ export const Button: React.FC<ButtonProps> = ({
   style = {},
   'aria-label': ariaLabel,
   'aria-keyshortcuts': ariaKeyshortcuts,
+  'aria-pressed': ariaPressed,
   title,
   type = 'button',
   pressEffect = true,
@@ -190,6 +193,7 @@ export const Button: React.FC<ButtonProps> = ({
       style={combinedStyles}
       aria-label={ariaLabel}
       aria-keyshortcuts={ariaKeyshortcuts}
+      aria-pressed={ariaPressed}
       title={title}
       aria-disabled={blocked}
       aria-busy={busy ?? loading}

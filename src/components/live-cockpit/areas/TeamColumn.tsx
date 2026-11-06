@@ -28,20 +28,28 @@ export interface TeamColumnProps {
   breit?: boolean;
   /** Tastenkürzel dieser Seite (@SL-153): Tor `1`/`2`, Foul `F`/`J`; ohne Angabe (Schalter aus, kein Laptop) weder Hinweis noch `aria-keyshortcuts`. */
   taste?: { tor: string; foul: string };
+  /** Vor dem Anpfiff im Platz der Tor-Taste: „Leibchen für …“ dieses Teams (@SL-137, @SL-148). */
+  vorAnpfiff?: ReactNode;
+  /** Die laufenden Strafen stehen in der Tafel (Handy, Tablet hochkant, K7): keine Marken unter den Tasten. */
+  strafenInTafel?: boolean;
 }
 
 // Beide Spalten teilen sich die Zeilen der Spaltenreihe (Subgrid): gleich hoch laufen Kopf, Tor und Knopfreihe, ohne dass der Kopf Platz für drei Namenszeilen
 // reservieren muss; der längere Name macht beide Köpfe höher (@OB-025). Kopf (mit Zähler), Tor, Knopfreihe, Zusatzzeilen = vier Zeilen.
-const spalteStil: CSSProperties = { display: 'grid', gridTemplateRows: 'subgrid', gridRow: 'span 4', rowGap: cssVars.spacing.sm, minWidth: 0 };
+const spalteStil = (kompakt: boolean): CSSProperties => ({ display: 'grid', gridTemplateRows: 'subgrid', gridRow: 'span 4', rowGap: kompakt ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0 });
 const zaehlerStil: CSSProperties = { fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, fontWeight: cssVars.fontWeights.semibold };
 // Volle Fläche in der Primärfarbe, Schrift in „auf Primär“ (Kontrast ≥ 4,5 : 1, VISUAL-DESIGN § 5), kein Verlauf
-const torStil = (breit: boolean): CSSProperties => ({
+const torStil = (breit: boolean, kompakt: boolean): CSSProperties => ({
+  // Handy: genau Haupttasten-Höhe (56 px), damit Tor, Foul, Zeitstrafe und Karte über der Daumenleiste stehen (@SL-061, K5)
+  ...(kompakt ? { height: cssVars.touchTargets.primary, paddingTop: 0, paddingBottom: 0 } : {}),
   // Laptop (Mockup): doppelte Mindesthöhe, damit das Tor die größte Fläche der Spalte ist; sonst Haupttasten-Größe
   position: 'relative', minHeight: breit ? 'var(--cockpit-tor, var(--sizing-cockpit-tor-normal))' : cssVars.touchTargets.primary, width: '100%', ...(breit ? { padding: cssVars.spacing.xs } : {}), background: cssVars.colors.primary, color: cssVars.colors.onPrimary,
 });
+// Handy: Foul, Zeitstrafe und Karte nebeneinander, Symbol über der kurzen Beschriftung (K5, @SL-061): eine Reihe statt drei
 const knopfStil = (kompakt: boolean, breit: boolean): CSSProperties => ({
-  position: 'relative', minHeight: breit ? 'var(--cockpit-fuss, var(--sizing-cockpit-fuss-normal))' : cssVars.touchTargets.minimum, flexDirection: kompakt ? 'row' : 'column', gap: kompakt ? cssVars.spacing.xs : 0,
-  padding: kompakt || breit ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0,
+  position: 'relative', minHeight: breit ? 'var(--cockpit-fuss, var(--sizing-cockpit-fuss-normal))' : cssVars.touchTargets.minimum, flexDirection: 'column', gap: 0,
+  padding: kompakt ? `${cssVars.spacing.xs} 0` : breit ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0,
+  ...(kompakt ? { fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm, whiteSpace: 'nowrap' } : {}),
 });
 const markeStil = (steht: boolean): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning,
@@ -64,7 +72,7 @@ const kbdChipStil = (aufPrimaer: boolean): CSSProperties => ({
   color: aufPrimaer ? cssVars.colors.onPrimary : cssVars.colors.textSecondary,
 });
 
-export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false, taste }: TeamColumnProps): ReactElement {
+export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKarte, kompakt = false, breit = false, taste, vorAnpfiff, strafenInTafel = false }: TeamColumnProps): ReactElement {
   const { t } = useTranslation('cockpit');
   const chips = useFeinerZeiger() && taste !== undefined;
   const { seite, name, fouls, strafen, kartenArten } = model;
@@ -77,18 +85,19 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
   const zeigeStrafe = knoepfe.zeitstrafe && kartenArten.timePenalty;
   const reiheStil: CSSProperties = {
     display: 'grid', gap: cssVars.spacing.xs,
-    gridTemplateColumns: kompakt ? '1fr' : `repeat(${[knoepfe.foul, zeigeStrafe, zeigeKarte].filter(Boolean).length || 1}, 1fr)`,
+    gridTemplateColumns: `repeat(${[knoepfe.foul, zeigeStrafe, zeigeKarte].filter(Boolean).length || 1}, 1fr)`,
   };
 
   return (
-    <section style={spalteStil} data-testid={`team-column-${seite}`} aria-label={name}>
+    <section style={spalteStil(kompakt)} data-testid={`team-column-${seite}`} aria-label={name}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
-      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} fuellend />
+      <TeamKopf seite={seite} name={name} kasten={model.kasten} breit={breit} kompakt={kompakt} fuellend />
       {/* Der Zähler steht im Foul-Knopf (Laptop-Mockup Stand 4); eine eigene Zeile nur ohne Foul-Knopf (Halbzeitpause, Nur-Lesen) */}
-      {!knoepfe.foul && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
+      {!knoepfe.foul && !(kompakt && model.vorAnpfiff) && <div style={zaehlerStil} data-testid={`team-fouls-${seite}`}>{foulText}</div>}
       </div>
+      {!knoepfe.tor && vorAnpfiff}
       {knoepfe.tor && (
-        <Button size="lg" icon={<MatchIcons.Ball />} style={torStil(breit)} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
+        <Button size="lg" icon={<MatchIcons.Ball />} style={torStil(breit, kompakt)} data-primary data-testid={`goal-button-${seite}`} onClick={onTor}
           aria-keyshortcuts={taste?.tor} aria-label={t('spalte.aria.tor', { team: name })}>{t('spalte.tor')}{chips && <kbd aria-hidden="true" data-testid={`tor-taste-${seite}`} style={kbdChipStil(true)}>{taste.tor}</kbd>}</Button>
       )}
       <div style={reiheStil} data-testid={`team-row3-${seite}`}>
@@ -102,8 +111,11 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
         {zeigeStrafe && (
           <Button variant="secondary" icon={<MatchIcons.Stopwatch />} style={knopfStil(kompakt, breit)} data-testid={`penalty-button-${seite}`} onClick={onZeitstrafe}
             aria-label={t('spalte.aria.strafe', { team: name })}>
-            <span style={breit ? einzeilig : zweizeilig}>{t('spalte.strafeKnopf')}</span>{' '}
-            <span style={breit ? einzeilig : zweizeilig}>{t('spalte.strafeDauer', { minuten: model.zeitstrafeMinuten })}</span>
+            {/* Handy: Dauer als Uhr „2:00“ hinter der Stoppuhr – „2 Minuten“ passt nicht in die Reihe, eine Kurzform gibt es nicht (@OB-075, K5) */}
+            {kompakt ? <span>{`${String(model.zeitstrafeMinuten)}:00`}</span> : (
+              <><span style={breit ? einzeilig : zweizeilig}>{t('spalte.strafeKnopf')}</span>{' '}
+              <span style={breit ? einzeilig : zweizeilig}>{t('spalte.strafeDauer', { minuten: model.zeitstrafeMinuten })}</span></>
+            )}
           </Button>
         )}
         {zeigeKarte && (
@@ -113,7 +125,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.sm, minWidth: 0 }}>
       {/* Am Laptop stehen die laufenden Strafen als Karten in der rechten Spalte (@SL-186), nicht noch einmal unter den Tasten */}
-      {strafen.length > 0 && !breit && (
+      {strafen.length > 0 && !breit && !strafenInTafel && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: cssVars.spacing.xs }}>
           {strafen.map((s) => (
             <span key={s.id} style={markeStil(s.steht)} data-testid={`team-penalty-${s.id}`} data-steht={String(s.steht)}>

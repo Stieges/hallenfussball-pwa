@@ -41,6 +41,8 @@ export interface ScoreboardAreaProps {
   helferAnfragen?: number;
   onHelferAnfragen?: () => void;
   tonHinweis?: ScoreboardAbzeichenKnopf | null;
+  /** Bildschirm kann sich sperren (@SL-122): bis zum Antippen. */
+  wachhaltenHinweis?: ScoreboardAbzeichenKnopf | null;
   /** Übergang bis zum schmalen Kopf (Aufgabe 3.8): Verbindungsanzeige. */
   sync?: ReactNode;
   fieldName?: string;
@@ -53,6 +55,16 @@ export interface ScoreboardAreaProps {
   uebernahmeVon?: string | null;
   /** @FU-115: wer das Spiel im Spielplan beendet hat (`useEingetragenVon`). */
   eingetragenVon?: string | null;
+  /**
+   * Handy (@SL-155, K5/K12): Zeile „Nächstes“ im Platz der Meldezeile, solange keine Meldung steht – kein eigener Streifen über den Tasten,
+   * die Tasten springen nie. `naechstesNamen`: Teamnamen des nächsten Spiels (lange Namen reservieren drei Zeilen).
+   */
+  naechstes?: ReactNode;
+  naechstesNamen?: readonly string[];
+  /** Vor dem Anpfiff: gleiche (`same`) oder zu ähnliche (`similar`) Trikotfarben (@SL-196); die Tafel weist darauf hin. */
+  farbKonflikt?: 'same' | 'similar' | 'none';
+  /** Spielzeit aus den Regeln vor dem Anpfiff (@SL-197). */
+  spielzeit?: { abschnitte: number; abschnittSekunden: number } | null;
 }
 
 /** Anstoßzeit als `HH:MM` (24 Stunden, auch in der englischen Anzeige) in Ortszeit; unlesbar → leer. */
@@ -68,8 +80,9 @@ function anstossText(kickoff: string | undefined, sprache: string): string {
 const LANGER_NAME = 16;
 
 /** Reservierte Zeilen der Meldezeile: am Handy 2, bei langen Namen 3, sonst 1 (je Spiel aus den Teamnamen); ändert sich im Spiel nie (B3). */
-function meldezeilen(match: LiveMatch | null, size: ScoreboardAreaProps['size']): 1 | 2 | 3 {
-  const lang = match !== null && Math.max(match.homeTeam.name.length, match.awayTeam.name.length) > LANGER_NAME;
+function meldezeilen(match: LiveMatch | null, size: ScoreboardAreaProps['size'], naechste: readonly string[] = []): 1 | 2 | 3 {
+  const namen = [...(match ? [match.homeTeam.name, match.awayTeam.name] : []), ...naechste];
+  const lang = namen.some((name) => name.length > LANGER_NAME);
   // Am Handy passt auch „SV Südpark: 5. Foul in dieser Halbzeit“ nicht in eine Zeile: mindestens 2, bei langem Namen 3 (N1)
   if (size !== 'compact') { return 1; }
   return lang ? 3 : 2;
@@ -84,7 +97,7 @@ function noticeIcon(stufe: NoticeStufe | undefined): ReactElement | undefined {
 }
 
 export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
-  const { match, phase, view, settings, order, size, stufe, kasten, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null, eingetragenVon = null } = props;
+  const { match, phase, view, settings, order, size, stufe, kasten, notices, eintraegeWarten, helferAnfragen = 0, onHelferAnfragen, tonHinweis, wachhaltenHinweis = null, sync, fieldName, tournamentName, leer = null, mindestpause = null, sperrHinweise = [], uebernahmeVon = null, eingetragenVon = null, naechstes = null, naechstesNamen, farbKonflikt = 'none', spielzeit = null } = props;
   const { t, i18n } = useTranslation('cockpit');
   // Takt nur vor dem Anpfiff: „überfällig N Min“ (@OB-068) (@SL-118); sonst steht der Wert still
   const jetztMs = useNow(phase.zustand === 'vorAnpfiff' ? 30_000 : null);
@@ -93,12 +106,25 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
     () => toScoreboardModel({
       match, phase, view, links: order.links, rechts: order.rechts, uhrArt: settings.clockMode,
       schlussphaseMinuten: settings.finalPhaseMinutes, kasten, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName,
-      vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon }, eingetragenVon,
+      vor: { anstoss: anstossText(kickoff, i18n.language), mindestpause, sperrHinweise, leer, uebernahmeVon, spielzeit, farbHinweis: farbKonflikt === 'none' ? null : t(farbKonflikt === 'same' ? 'anpfiff.hinweisGleich' : 'anpfiff.hinweisAehnlich') }, eingetragenVon,
     }, alsUebersetzer(t)),
-    [match, phase, view, kasten, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, t, i18n.language],
+    [match, phase, view, kasten, order.links, order.rechts, settings.clockMode, settings.finalPhaseMinutes, eintraegeWarten, helferAnfragen, jetztMs, fieldName, tournamentName, kickoff, mindestpause, sperrHinweise, leer, uebernahmeVon, eingetragenVon, farbKonflikt, spielzeit, t, i18n.language],
   );
   // @SL-152: solange die Quittung steht, sagt sie dasselbe genauer („Abgepfiffen · 2:1 gespeichert“); nur diese Meldung entfällt
   const meldung = notices.aktuell?.kennung === 'abgepfiffen' && model.quittungText ? null : notices.aktuell;
+  const meldezeile = (
+    <NoticeLine
+      testId="notice-line"
+      text={meldung?.text ?? null}
+      onClose={meldung?.stufe === 1 ? notices.schliesse : undefined}
+      closeLabel={t('meldung.schliessen')}
+      icon={noticeIcon(meldung?.stufe)}
+      size={size === 'compact' ? 'compact' : 'regular'}
+      zeilen={meldezeilen(match, size, naechstesNamen)}
+      art={size === 'wide' ? 'einblendung' : 'zeile'}
+      stufe={meldung?.stufe}
+    />
+  );
   return (
     <Scoreboard
       testId="scoreboard"
@@ -107,20 +133,15 @@ export function ScoreboardArea(props: ScoreboardAreaProps): ReactElement {
       stufe={stufe}
       onHelferAnfragen={helferAnfragen > 0 ? onHelferAnfragen : undefined}
       tonHinweis={tonHinweis}
+      wachhaltenHinweis={wachhaltenHinweis}
       kopfRechts={sync}
-      meldezeile={(
-        <NoticeLine
-          testId="notice-line"
-          text={meldung?.text ?? null}
-          onClose={meldung?.stufe === 1 ? notices.schliesse : undefined}
-          closeLabel={t('meldung.schliessen')}
-          icon={noticeIcon(meldung?.stufe)}
-          size={size === 'compact' ? 'compact' : 'regular'}
-          zeilen={meldezeilen(match, size)}
-          art={size === 'wide' ? 'einblendung' : 'zeile'}
-          stufe={meldung?.stufe}
-        />
-      )}
+      meldezeile={size === 'compact' ? (
+        // Handy: ohne Meldung steht hier die Zeile „Nächstes“; eine Meldung hat Vorrang und verdrängt sie für ihre Dauer (K12)
+        <div style={{ position: 'relative' }}>
+          {meldezeile}
+          {!meldung && naechstes && <div style={{ position: 'absolute', inset: 0 }}>{naechstes}</div>}
+        </div>
+      ) : meldezeile}
     />
   );
 }

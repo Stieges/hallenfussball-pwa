@@ -1,7 +1,7 @@
 /**
- * E2E: Tafel und Tastenfläche am Handy (Plan Cockpit v2 A3): @SL-179 Doppelpunkt der Kästen senkrecht über dem der Uhr, @SL-061 kleine Handys:
- * Tor ohne Scrollen, Foul/Zeitstrafe/Karte durch Scrollen der Tastenfläche, Tafel und Leiste fest; @SL-155 Platz der Zeile „Nächstes“ bleibt
- * reserviert (die Tasten springen nie, F3 Variante R). Läuft in der CI im schlanken Projekt `cockpit-390x664` (unter 800 px: die Tastenfläche scrollt) und in `mobile-sm`/`mobile-md` (ab 800 px: alles ohne Scrollen), lokal zusätzlich in `cockpit-360x640`; Laptop siehe `cockpit-hoehen` (PR B).
+ * E2E: Tafel und Tastenfläche am Handy (Plan Cockpit v2 A3): @SL-179 Doppelpunkt der Kästen senkrecht über dem der Uhr, @SL-061 Tor ohne
+ * Scrollen, Tafel und Leiste fest. Cockpit-Paket K5/K12 (05.11.): Foul, Zeitstrafe und Karte stehen in einer Reihe und ebenfalls ohne Scrollen
+ * da; die Zeile „Nächstes“ steht am Handy in der Tafel (Platz der Meldezeile) statt in einem reservierten Streifen – die Tasten springen nie. Läuft in der CI im schlanken Projekt `cockpit-390x664` und in `mobile-sm`/`mobile-md`, lokal zusätzlich in `cockpit-360x640`; Laptop siehe `cockpit-hoehen` (PR B).
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
@@ -33,11 +33,10 @@ test.describe('Cockpit am Handy: Tafel und Tastenfläche (Gast, lokal)', () => {
     });
   }
 
-  test('@SL-061 Tor beider Teams ohne Scrollen; unter 800 px Höhe scrollt nur die Tastenfläche, Tafel und Leiste bleiben stehen', async ({ page, seedIndexedDB }) => {
+  test('@SL-061 Tor, Foul, Zeitstrafe und Karte beider Teams ohne Scrollen über der Leiste (Cockpit-Paket K5)', async ({ page, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [cup()] });
     await anpfeifen(page);
     await anAnfangRollen(page);
-    const hoehe = page.viewportSize()?.height ?? 0;
     const leisteOben = (await page.getByRole('toolbar').boundingBox())?.y ?? 0;
     const flaeche = page.getByTestId('cockpit-tastenflaeche');
     for (const id of ['goal-button-home', 'goal-button-away']) {
@@ -46,32 +45,21 @@ test.describe('Cockpit am Handy: Tafel und Tastenfläche (Gast, lokal)', () => {
     }
     const mass = await flaeche.evaluate((el) => ({ scroll: el.scrollHeight, sicht: el.clientHeight, seite: document.documentElement.scrollHeight - window.innerHeight }));
     expect(mass.seite, 'die Seite selbst scrollt nie').toBeLessThanOrEqual(1);
-    if (hoehe >= 800) {
-      expect(mass.scroll, 'ab 800 px Höhe passt die Tastenfläche ohne Scrollen').toBeLessThanOrEqual(mass.sicht + 1);
-      return;
-    }
-    expect(mass.scroll, 'unter 800 px Höhe ist die Tastenfläche höher als ihr Platz').toBeGreaterThan(mass.sicht);
-    const tafelOben = await oben(page, 'scoreboard');
-    const leisteAlt = leisteOben;
-    await flaeche.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    // Cockpit-Paket K5: Foul, Zeitstrafe und Karte ebenfalls ohne Scrollen, auch unter 800 px Höhe (Wächter: cockpit-handy-waechter)
+    expect(mass.scroll, 'die Tastenfläche passt ohne Scrollen').toBeLessThanOrEqual(mass.sicht + 1);
     for (const id of ['foul-button-home', 'penalty-button-away', 'card-button-away']) {
       const box = await page.getByTestId(id).boundingBox();
-      expect((box?.y ?? 0) + (box?.height ?? 0), `${id} nach dem Scrollen über der Leiste`).toBeLessThanOrEqual(leisteOben + 1);
+      expect((box?.y ?? 0) + (box?.height ?? 0), `${id} ohne Scrollen über der Leiste`).toBeLessThanOrEqual(leisteOben + 1);
     }
-    expect(await oben(page, 'scoreboard'), 'Tafel steht fest').toBe(tafelOben);
-    expect((await page.getByRole('toolbar').boundingBox())?.y, 'Leiste steht fest').toBe(leisteAlt);
   });
 
-  test('@SL-155 der Platz der Zeile „Nächstes“ bleibt davor reserviert: wird sie sichtbar, stehen die Tasten unverändert (sie springen nie)', async ({ page, seedIndexedDB }) => {
+  test('@SL-155 kein reservierter Streifen: vor der Vorwarnung steht die Zeile nicht da, die Team-Köpfe folgen direkt auf die Tafel', async ({ page, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [cup({ minuten: 4, perioden: 1 })] });
     await anpfeifen(page);
-    const zeile = page.getByTestId('cockpit-naechstes');
-    await expect(zeile).toHaveAttribute('data-verborgen', 'true');
-    const davor = { tor: await oben(page, 'goal-button-home'), foul: await oben(page, 'foul-button-home') };
-    expect((await zeile.boundingBox())?.height ?? 0, 'der Streifen hat Höhe, obwohl die Zeile nicht zu sehen ist').toBeGreaterThan(20);
-    await zeile.evaluate((el) => { el.style.visibility = 'visible'; }); // so sieht die Zeile ab 3:00 aus: gleicher Platz
-    expect(await oben(page, 'goal-button-home')).toBe(davor.tor);
-    expect(await oben(page, 'foul-button-home')).toBe(davor.foul);
+    await expect(page.getByTestId('cockpit-naechstes')).toHaveCount(0);
+    const tafel = await page.getByTestId('scoreboard').boundingBox();
+    const kopf = await oben(page, 'team-head-home');
+    expect(kopf - ((tafel?.y ?? 0) + (tafel?.height ?? 0)), 'zwischen Tafel und Team-Kopf kein leerer Streifen').toBeLessThanOrEqual(16);
   });
 
   test('@SL-155 echter Übergang 3:01 → 3:00 (Uhr vorgespult): die Zeile erscheint, Tor, Foul und Zeile selbst bleiben an ihrem Platz und gleich groß', async ({ page, seedIndexedDB }) => {
@@ -80,22 +68,20 @@ test.describe('Cockpit am Handy: Tafel und Tastenfläche (Gast, lokal)', () => {
     await anpfeifen(page);
     const zeile = page.getByTestId('cockpit-naechstes');
     await page.clock.fastForward(55_000); // Restzeit etwa 3:05
-    await expect(zeile).toHaveAttribute('data-verborgen', 'true');
-    const davor = { tor: await oben(page, 'goal-button-home'), foul: await oben(page, 'foul-button-home'), zeile: await zeile.boundingBox() };
+    await expect(zeile).toHaveCount(0);
+    const davor = { tor: await oben(page, 'goal-button-home'), foul: await oben(page, 'foul-button-home'), tafel: await page.getByTestId('scoreboard').boundingBox() };
     await page.clock.fastForward(10_000); // Restzeit etwa 2:55: die Vorwarnung ist aktiv
-    await expect(zeile).not.toHaveAttribute('data-verborgen', 'true');
     await expect(zeile).toHaveAttribute('data-modus', 'vorwarnung');
-    const danach = { tor: await oben(page, 'goal-button-home'), foul: await oben(page, 'foul-button-home'), zeile: await zeile.boundingBox() };
+    await expect(zeile).toHaveAttribute('data-auf-tafel', 'true');
+    const danach = { tor: await oben(page, 'goal-button-home'), foul: await oben(page, 'foul-button-home'), tafel: await page.getByTestId('scoreboard').boundingBox() };
     expect(danach.tor, 'Tor springt nicht').toBe(davor.tor);
     expect(danach.foul, 'Foul springt nicht').toBe(davor.foul);
-    expect(danach.zeile?.height, 'gleiche Höhe der Zeile in allen Modi').toBe(davor.zeile?.height);
-    expect(danach.zeile?.width).toBe(davor.zeile?.width);
+    expect(danach.tafel?.height, 'die Tafel bleibt gleich hoch').toBe(davor.tafel?.height);
   });
 
   test('@SL-155 ab 3:00 steht die Zeile da (Vorwarnung), davor nicht', async ({ page, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [cup({ minuten: 3, perioden: 1 })] });
     await anpfeifen(page);
-    await expect(page.getByTestId('cockpit-naechstes')).not.toHaveAttribute('data-verborgen', 'true');
     await expect(page.getByTestId('cockpit-naechstes')).toBeVisible();
   });
 });

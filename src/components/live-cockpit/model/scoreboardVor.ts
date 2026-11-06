@@ -16,6 +16,10 @@ export interface ScoreboardVorInput {
   leer: LeerGrund | null;
   /** Name des Geräts, von dem das Spiel übernommen wurde (@SL-015). */
   uebernahmeVon: string | null;
+  /** Gleiche oder zu ähnliche Trikotfarbe vor dem Anpfiff (@SL-196), schon übersetzt; sonst `null`. */
+  farbHinweis?: string | null;
+  /** Spielzeit aus den Turnierregeln (@SL-197): Zahl der Abschnitte und Länge eines Abschnitts in Sekunden. */
+  spielzeit?: { abschnitte: number; abschnittSekunden: number } | null;
 }
 
 interface VorMatch {
@@ -32,6 +36,7 @@ export interface ScoreboardVorErgebnis {
   kopfText: string | null;
   hinweise: string[];
   leerAnzeige: ScoreboardModel['leerAnzeige'];
+  farbHinweis: string | null;
 }
 
 interface VorEingang {
@@ -43,6 +48,11 @@ interface VorEingang {
   vor?: ScoreboardVorInput;
 }
 
+/** Sekunden als `m:ss` (Spielzeit aus den Regeln). */
+function formatMinuten(sekunden: number): string {
+  return `${String(Math.floor(sekunden / 60))}:${String(sekunden % 60).padStart(2, '0')}`;
+}
+
 /** Minuten seit der angesetzten Anstoßzeit, ganz; `0`, wenn sie nicht lesbar ist oder noch bevorsteht. */
 function ueberfaelligMinuten(kickoff: string, jetztMs: number): number {
   const angesetzt = Date.parse(kickoff);
@@ -51,7 +61,7 @@ function ueberfaelligMinuten(kickoff: string, jetztMs: number): number {
 
 export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorErgebnis {
   const { match, phase, vor } = input;
-  const leer: ScoreboardVorErgebnis = { uhr: null, ueberfaelligText: null, kopfText: null, hinweise: [], leerAnzeige: null };
+  const leer: ScoreboardVorErgebnis = { uhr: null, ueberfaelligText: null, kopfText: null, hinweise: [], leerAnzeige: null, farbHinweis: null };
   if (!vor) { return leer; }
   const hinweise: string[] = [];
   const kopfText = input.tournamentName ?? null;
@@ -60,9 +70,16 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
   let ueberfaelligText: string | null = null;
 
   if (phase.zustand === 'vorAnpfiff' && match) {
-    uhr = {
+    // @SL-197: groß die Spielzeit aus den Regeln („9:00“, bei Abschnitten „2 × 4:00“), darunter „Anstoß 9:10 · Spiel 1 · Feld 1“; ohne Regeln die Anstoßzeit wie bisher
+    const zeit = vor.spielzeit && vor.spielzeit.abschnittSekunden > 0 ? vor.spielzeit : null;
+    const spielFeld = t('tafel.vor.spielFeld', { nummer: match.number, feld: input.fieldName ?? '' });
+    uhr = zeit ? {
+      rest: formatMinuten(zeit.abschnittSekunden), vorsatz: zeit.abschnitte > 1 ? t('tafel.vor.abschnitteMal', { anzahl: zeit.abschnitte }) : null,
+      gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft', label: t('tafel.uhr.spielzeit'),
+      unterzeile: vor.anstoss ? t('tafel.vor.anstossSpielFeld', { zeit: vor.anstoss, spielFeld }) : spielFeld,
+    } : {
       rest: vor.anstoss, gespielt: null, schlussphase: false, steht: false, hervorgehoben: false, ton: 'gedaempft',
-      label: t('tafel.uhr.anstoss'), unterzeile: t('tafel.vor.spielFeld', { nummer: match.number, feld: input.fieldName ?? '' }),
+      label: t('tafel.uhr.anstoss'), unterzeile: spielFeld,
     };
     if (vor.mindestpause) { hinweise.push(t('tafel.vor.mindestpause', { ...vor.mindestpause })); }
     const minuten = ueberfaelligMinuten(match.scheduledKickoff, input.jetztMs);
@@ -88,5 +105,6 @@ export function scoreboardVor(input: VorEingang, t: Uebersetzer): ScoreboardVorE
   }
 
   const istVorZustand = phase.zustand === 'vorAnpfiff' || phase.zustand === 'wartetAufHerkunft' || phase.zustand === 'keinSpiel';
-  return { uhr, ueberfaelligText, kopfText: istVorZustand ? kopfText : null, hinweise, leerAnzeige };
+  const farbHinweis = phase.zustand === 'vorAnpfiff' ? vor.farbHinweis ?? null : null;
+  return { uhr, ueberfaelligText, kopfText: istVorZustand ? kopfText : null, hinweise, leerAnzeige, farbHinweis };
 }

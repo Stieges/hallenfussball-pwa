@@ -39,6 +39,8 @@ export interface ThumbBarAreaProps {
   onChooseTiebreak?: (wahl: TiebreakWahl) => void;
   /** Schalter „Tastenkürzel“ (Vorgabe an): aus → keine Hinweise und kein `aria-keyshortcuts` (@SL-189). */
   tastenAn?: boolean;
+  /** Vor dem Anpfiff bei Farbkonflikt: pfeift ohne Leibchen an (@SL-149); ohne Handler keine Taste. */
+  onOhneLeibchen?: () => void;
 }
 
 const klebtUnten = { flex: 'none', position: 'sticky', bottom: 0, zIndex: cssVars.zIndex.sticky } as const;
@@ -59,7 +61,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
   const rueckgaengig = controls.onUndo ?? (() => undefined);
 
   // „Spiel fortsetzen“ nur mit Handler (30 Sekunden Endstand, einmal, Ende durch Ablauf; LT-6); „Korrigieren“ mit Weg und Leitungsrecht (@SL-159).
-  const modell = leisteFuer(phase, { layout, istLeitung, fortsetzenMoeglich: controls.onFortsetzen !== undefined, korrigierenMoeglich: p.onKorrigieren !== undefined });
+  const modell = leisteFuer(phase, { layout, istLeitung, fortsetzenMoeglich: controls.onFortsetzen !== undefined, korrigierenMoeglich: p.onKorrigieren !== undefined, ohneLeibchenMoeglich: p.onOhneLeibchen !== undefined });
   if (modell.aktionen.length === 0) { return null; }
 
   if (!kannSteuern) {
@@ -94,6 +96,7 @@ export function ThumbBarArea(p: ThumbBarAreaProps): ReactElement | null {
           ariaLabel: controls.undoLabel ? t('leiste.rueckgaengigAria', { ziel: controls.undoLabel }) : undefined,
         });
       }
+      case 'ohneLeibchen': return p.onOhneLeibchen ? aktion(t('leiste.ohneLeibchen'), 'anpfiff-ohne-leibchen', 'neben', p.onOhneLeibchen, <MatchIcons.Play />) : null;
       case 'ereignisse': return aktion(t('leiste.ereignisse'), 'match-event-log-button', 'neben', controls.onEventLog, <MatchIcons.List />);
       case 'mehr': return aktion(t('leiste.mehr'), 'cockpit-more-button', 'mehr', controls.onMore, <MatchIcons.More />);
       case 'abpfiffHalten':

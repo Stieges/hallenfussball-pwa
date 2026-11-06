@@ -34,7 +34,7 @@ import { useEngineMatchInit } from './hooks/useEngineMatchInit';
 import { useCockpitKorrektur } from './hooks/useCockpitKorrektur';
 import { laeuftAufFeld, useCockpitFieldControl } from './hooks/useCockpitFieldControl';
 import { toMatchSummary } from './model/toMatchSummary';
-import { toCockpitBoxes } from './model/toCockpitBoxes';
+import { toCockpitBoxes, toCockpitLeibchen, toCockpitSpielzeit } from './model/toCockpitBoxes';
 import { CockpitSlimHeader } from '../../components/live-cockpit/frame/CockpitSlimHeader';
 import { StorageWarningBanner } from '../../components/StorageWarningBanner';
 import { FeldWahl } from '../../components/live-cockpit/frame/FeldWahl';
@@ -126,6 +126,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, [nameOf, ownName]);
   // @SL-176: Kästen wie am Hallenmonitor (getragene Farbe, Einstellung „Teamfarben in den Ergebniskästen“)
   const kasten = useMemo(() => toCockpitBoxes(tournament, currentMatchData?.id), [tournament, currentMatchData?.id]);
+  const leibchen = useMemo(() => toCockpitLeibchen(tournament, currentMatchData?.id), [tournament, currentMatchData?.id]); // @SL-137, @SL-196
+  const spielzeit = useMemo(() => toCockpitSpielzeit(tournament, currentMatchData?.id), [tournament, currentMatchData?.id]); // @SL-197
   const currentMatch = useMemo(() =>
     currentMatchData ? liveMatches.get(currentMatchData.id) ?? null : null,
     [currentMatchData, liveMatches]
@@ -230,12 +232,13 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
             onNichtAngetreten={istLeitung ? (matchId) => { void forfeit.markForfeit(matchId); } : undefined}
             currentMatch={currentMatch}
             kasten={kasten}
+            leibchen={leibchen} spielzeit={spielzeit}
             onTastenuebersicht={() => setTastenHilfe(true)}
             sperrHinweise={sperrHinweise}
             eintragAutor={eintragAutor}
             lastFinishedMatch={lastFinishedMatch}
             upcomingMatches={upcomingMatches}
-            onStart={(matchId) => { void hookHandleStart(matchId); }}
+            onStart={(matchId, wahl) => { void hookHandleStart(matchId, wahl); }}
             onPause={(matchId) => { void handlePause(matchId); }}
             onResume={(matchId) => { void handleResume(matchId); }}
             onFinish={handleFinishAndReset}

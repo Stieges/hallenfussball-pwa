@@ -10,7 +10,7 @@ import type { CockpitPhase } from './cockpitPhase';
 
 export type LeistenAktion =
   | 'anpfiff' | 'pause' | 'weiter' | 'wiederanpfiff' | 'anpfiffVerlaengerung' | 'entscheidung'
-  | 'abpfiffHalten' | 'rueckgaengig' | 'ereignisse' | 'weiterNaechstes' | 'fortsetzen' | 'korrigieren' | 'mehr';
+  | 'abpfiffHalten' | 'rueckgaengig' | 'ereignisse' | 'weiterNaechstes' | 'fortsetzen' | 'korrigieren' | 'mehr' | 'ohneLeibchen';
 
 export interface LeisteKontext {
   layout: 'daumen' | 'breit';
@@ -20,6 +20,8 @@ export interface LeisteKontext {
   fortsetzenMoeglich: boolean;
   /** „Korrigieren“ ist verdrahtet und möglich (B-24 / LT-5). */
   korrigierenMoeglich: boolean;
+  /** Vor dem Anpfiff bei gleicher oder zu ähnlicher Trikotfarbe: „Ohne Leibchen anpfeifen“ neben dem Anpfiff (@SL-149). */
+  ohneLeibchenMoeglich?: boolean;
 }
 
 export interface LeisteModell {
@@ -63,6 +65,9 @@ function nachAbpfiff(k: LeisteKontext): LeistenAktion[] {
 export function leisteFuer(phase: CockpitPhase, k: LeisteKontext): LeisteModell {
   if (phase.zustand === 'abgepfiffen') {
     return { layout: k.layout, hinweis: k.istLeitung ? null : 'beendetHelfer', aktionen: nachAbpfiff(k) };
+  }
+  if (phase.zustand === 'vorAnpfiff' && k.ohneLeibchenMoeglich) {
+    return { layout: k.layout, hinweis: null, aktionen: ['anpfiff', 'ohneLeibchen', 'mehr'] };
   }
   return { layout: k.layout, hinweis: null, aktionen: [...FESTE[phase.zustand][k.layout]] };
 }
