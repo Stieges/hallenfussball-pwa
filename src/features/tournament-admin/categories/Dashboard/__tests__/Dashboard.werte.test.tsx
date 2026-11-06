@@ -91,9 +91,9 @@ describe('Dashboard Statuskopf (@LZ-001, @LZ-006)', () => {
     expect(screen.queryByText('● LIVE')).not.toBeInTheDocument();
     expect(screen.queryByText('1 Spiel läuft')).not.toBeInTheDocument();
   });
-  it('@LZ-001 festgelegt, nichts angepfiffen: „Festgelegt“', () => {
+  it('@LZ-001 fertiggestellt, nichts angepfiffen: „Bereit“', () => {
     kopf(nikolaus({ lifecycleStatus: 'fixed' }));
-    expect(screen.getByText('Festgelegt')).toBeInTheDocument();
+    expect(screen.getByText('Bereit')).toBeInTheDocument();
   });
   it('Gegenbeispiel: ein Spiel läuft gerade → „LIVE“ vor „Läuft“', () => {
     kopf(nikolaus({ matches: [{ id: 'm1', field: 1, matchStatus: 'running', slot: 0 }] as Tournament['matches'], lifecycleStatus: 'fixed' }));

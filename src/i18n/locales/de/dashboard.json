@@ -1,10 +1,11 @@
 {
   "status": {
     "running": "Läuft",
-    "upcoming": "Bevorstehend",
-    "finished": "Beendet",
+    "upcoming": "Bereit",
+    "finished": "Abgeschlossen",
+    "cancelled": "Abgebrochen",
     "draft": "Entwurf",
-    "archived": "Archiviert"
+    "archived": "Abgeschlossen"
   },
   "nav": {
     "tournaments": "Turniere",
@@ -32,8 +33,9 @@
     "trashHint": "Gelöschte Turniere können hier wiederhergestellt werden."
   },
   "sections": {
+    "today": "Heute",
     "runningTournaments": "Aktuell laufende Turniere",
-    "upcomingTournaments": "Bevorstehende Turniere",
+    "upcomingTournaments": "Kommende Turniere",
     "savedDrafts": "Gespeicherte Entwürfe",
     "archive": "Archiv",
     "tournamentCount": "({{count}} Turniere)",
@@ -58,7 +60,7 @@
     "ariaLabelExternal": "Turnier: {{title}}, {{status}}, {{source}}",
     "lateFinishNotice": "Das letzte Spiel war am {{date}}. Das Turnier läuft noch – schließe es in der Verwaltung ab.",
     "statusLabel": "Status: {{status}}",
-    "draftNotice": "Entwurf - Noch nicht veröffentlicht",
+    "draftNotice": "Entwurf – noch nicht fertiggestellt",
     "labels": {
       "dateTime": "Datum & Uhrzeit",
       "location": "Ort",
@@ -98,8 +100,7 @@
     "placeholder": "Turniere suchen...",
     "clearLabel": "Suche leeren",
     "filterLabel": "Filter:",
-    "filterAriaLabel": "Filter: {{label}} {{activeState}}",
-    "filterActive": "(aktiv)"
+    "filterAriaLabelActive": "{{label}}, gewählt"
   },
   "import": {
     "stepTitles": {
@@ -111,7 +112,8 @@
     },
     "errors": {
       "unknownFormat": "Unbekanntes Dateiformat. Bitte eine JSON- oder CSV-Datei auswählen.",
-      "readError": "Fehler beim Lesen der Datei"
+      "readError": "Fehler beim Lesen der Datei",
+      "saveFailed": "Das Turnier konnte nicht gespeichert werden. Es ist nichts importiert. Bitte versuche es erneut."
     },
     "select": {
       "dropHere": "Datei hier ablegen",
@@ -143,9 +145,11 @@
       "import": "Importieren"
     },
     "success": {
-      "message": "\"{{title}}\" wurde erfolgreich importiert!",
-      "hint": "Das Turnier wurde als Entwurf gespeichert und kann jetzt bearbeitet werden.",
-      "goToTournament": "Zum Turnier"
+      "message": "\"{{title}}\" ist importiert.",
+      "hintReady": "Das Turnier steht auf der Startseite im Zustand „Bereit“.",
+      "hintNoSchedule": "Das Turnier steht als Entwurf auf der Startseite. Spielplan noch erstellen.",
+      "done": "Fertig",
+      "createSchedule": "Spielplan erstellen"
     }
   },
   "share": {

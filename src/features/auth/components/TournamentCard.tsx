@@ -56,7 +56,7 @@ const statusConfig: Record<
     bgColor: cssVars.colors.statusLiveBg,
   },
   upcoming: {
-    label: 'Geplant',
+    label: 'Bereit',
     icon: '📅',
     color: cssVars.colors.statusUpcoming,
     bgColor: cssVars.colors.statusUpcomingBg,

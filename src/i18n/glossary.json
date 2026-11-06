@@ -39,7 +39,7 @@
     "Versionierung: additive Änderungen (neue Begriffe, optionale Felder) sind unkritisch. Wird ein bestehendes Feld entfernt,",
     "umbenannt oder sein Typ geändert, betrifft das mindestens drei Konsumenten (ESLint-Regel, Prüfskript,",
     "Sprachdateien) — vorher mit den entsprechenden Tasks abstimmen.",
-    "Stand: 2026-11-02 (Kurzformen SR/Ref, Gr./Grp, i. E., @OB-075); 2026-11-01 (Begriffe ausschreiben, @OB-075/@OB-076); Ursprung 2026-09-21, Task 1 von .superpowers/sdd/2026-09-21-terminologie-zentral/"
+    "Stand: 2026-11-06 (Zustandswörter Bereit/Fertigstellen/Abgeschlossen, @LZ-001); 2026-11-02 (Kurzformen SR/Ref, Gr./Grp, i. E., @OB-075); 2026-11-01 (Begriffe ausschreiben, @OB-075/@OB-076); Ursprung 2026-09-21, Task 1 von .superpowers/sdd/2026-09-21-terminologie-zentral/"
   ],
   "terms": {
     "penaltyShootout": {
@@ -391,6 +391,53 @@
       "reason": "Daniel 01.11.2026, @OB-075: Beim ersten Auftreten je Ansicht ausschreiben; der Prüfer lässt das Kürzel nirgends in Texten zu.",
       "i18nKey": "organisations.bfv",
       "kuerzel": true
+    },
+    "lifecycleReady": {
+      "de": "Bereit",
+      "en": "Ready",
+      "forbidden_de": ["Festgelegt", "Bevorstehend"],
+      "reason": "Daniel 06.11.2026, @LZ-001: Zustand eines fertiggestellten, noch nicht angepfiffenen Turniers. 'Festgelegt' gefiel nicht, 'Geplant' ist als Spielzustand und im Profil vergeben, 'Veröffentlicht' stimmt ohne Netz nicht. Groß- und Kleinschreibung zählt: 'festgelegt' im Satz (Reihenfolge festgelegt) bleibt erlaubt.",
+      "i18nKey": "lifecycle.ready",
+      "kuerzel": true,
+      "tsLint": false
+    },
+    "finalizeTournament": {
+      "de": "Turnier fertigstellen",
+      "en": "Finalise tournament",
+      "forbidden_de": ["Turnier festlegen"],
+      "reason": "Daniel 06.11.2026, @LZ-001: Die Taste im Assistenten heißt 'Turnier fertigstellen' (auch ohne Netz). Das Verb 'festlegen' im allgemeinen Sinn bleibt (Reihenfolge, Leibchen).",
+      "i18nKey": "lifecycle.finalize"
+    },
+    "backToDraft": {
+      "de": "Zurück zum Entwurf",
+      "en": "Back to draft",
+      "forbidden_de": ["Festlegen zurücknehmen"],
+      "reason": "Daniel 06.11.2026, @LZ-001: Der Weg vom Zustand 'Bereit' zurück zum Entwurf, nur vor dem ersten Anpfiff.",
+      "i18nKey": "lifecycle.backToDraft"
+    },
+    "upcomingTournaments": {
+      "de": "Kommende Turniere",
+      "en": "Upcoming tournaments",
+      "forbidden_de": ["Bevorstehende Turniere", "Festgelegte Turniere"],
+      "reason": "Daniel 06.11.2026, @LZ-001: Abschnitt der Startseite für bereite, noch nicht angepfiffene Turniere.",
+      "i18nKey": "lifecycle.upcomingTournaments"
+    },
+    "lifecycleFinished": {
+      "de": "Abgeschlossen",
+      "en": "Completed",
+      "forbidden_de": ["Archiviert"],
+      "forbidden_en": ["Archived"],
+      "reason": "Daniel 06.11.2026, @LZ-001: Die Karte im Archiv trägt denselben Zustand wie überall, nicht 'Archiviert'. Groß- und Kleinschreibung zählt: 'archivierte Turniere' bleibt als Beschreibung des Reiters erlaubt.",
+      "i18nKey": "lifecycle.finished",
+      "kuerzel": true,
+      "tsLint": false
+    },
+    "lifecycleCancelled": {
+      "de": "Abgebrochen",
+      "en": "Cancelled",
+      "forbidden_de": [],
+      "reason": "Daniel 06.11.2026, @LZ-001: Eigener Zustand im Archiv (MVP+), nicht 'Archiviert' oder 'Abgeschlossen'.",
+      "i18nKey": "lifecycle.cancelled"
     }
   }
 }
