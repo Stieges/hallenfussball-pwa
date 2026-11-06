@@ -231,6 +231,10 @@ pending_assertions_for() {
     20261119_001_gatherings.sql)
       echo "gatherings-tables-rls-no-client-writes gatherings-select-policy gatherings-rpcs-definer-authenticated-only gatherings-public-read gatherings-guards public-read-core-unchanged"
       ;;
+    # A1b Monitore der Veranstaltung (@VA-034 bis @VA-043): gathering_screens, Umschalten, Bildschirm-Abfrage per Schluessel
+    20261120_002_gathering_screens.sql)
+      echo "gathering-screens-table-no-client-rights gathering-screens-rpcs gathering-screens-guards"
+      ;;
     *)
       return 1
       ;;
@@ -737,6 +741,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "gatherings-rpcs-definer-authenticated-only"
   "gatherings-public-read"
   "gatherings-guards"
+  # A1b Monitore der Veranstaltung (20261120_002_gathering_screens.sql, @VA-034 bis @VA-043): Bildschirme nur ueber Server-Funktionen.
+  "gathering-screens-table-no-client-rights"
+  "gathering-screens-rpcs"
+  "gathering-screens-guards"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
