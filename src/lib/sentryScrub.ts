@@ -6,7 +6,7 @@
 import type { Breadcrumb, Event as SentryEvent } from '@sentry/react';
 
 const JOIN_CODE = /(\/join\/)[^/?#\s&]+/gi;
-const TOKEN_PARAM = /([?&#]token=)[^&#\s]*/gi;
+const TOKEN_PARAM = /([?&#](?:access_token|refresh_token|provider_token|token_hash|token|code)=)[^&#\s]*/gi;
 
 /** `/join/ABCDEFGH23` → `/join/***`, `token=abc` → `token=***`; jede andere Adresse bleibt unverändert. */
 export function scrubUrl(value: string): string {

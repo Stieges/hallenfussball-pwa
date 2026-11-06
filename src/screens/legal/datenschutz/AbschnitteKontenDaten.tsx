@@ -2,12 +2,13 @@
  * Datenschutzerklärung, Abschnitte 5 bis 9: Konto, Helfer, Turnierdaten, Hallenmonitore, Datenbank (Supabase).
  * Text aus der freigegebenen Endfassung (@RE-004).
  */
+import { sectionStyles } from '../legalStyles';
 import { Section, Paragraph, Strong, BulletList, ExternalLink } from '../DatenschutzSections';
 
 export function AbschnitteKontenDaten() {
   return (
     <>
-      <Section number={5} title={<>Konto für Turnierleitung und <span style={{ whiteSpace: 'nowrap' }}>Co-Admins</span></>}>
+      <Section number={5} title={<>Konto für Turnierleitung und <span style={sectionStyles.nowrap}>Co-Admins</span></>}>
         <BulletList
           items={[
             'Daten: E-Mail-Adresse, Passwort (nur als Prüfwert, nicht lesbar), Anzeigename, Rolle, Einstellungen, Zeitpunkte von Anmeldung und Änderungen. Bei Co-Admins zusätzlich: wer sie eingeladen hat, die Einladungs-E-Mail und wann sie die Einladung angenommen haben.',

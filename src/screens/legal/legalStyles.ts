@@ -50,6 +50,10 @@ export const sectionStyles = {
     fontSize: cssVars.fontSizes.sm,
   } as CSSProperties,
 
+  nowrap: {
+    whiteSpace: 'nowrap',
+  } as CSSProperties,
+
   link: {
     color: cssVars.colors.primary,
     textDecoration: 'underline',

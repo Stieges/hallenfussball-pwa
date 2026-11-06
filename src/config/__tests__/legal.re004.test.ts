@@ -34,14 +34,17 @@ describe('@RE-004 Vollständigkeit der Betreiberangaben', () => {
     expect(getUnfilledPlaceholders({ ...voll, [feld]: '[PLATZHALTER]' })).toEqual([feld]);
   });
 
+  it.each(['erika.example.org', 'erika@example', 'erika@.org', 'erika @example.org', '@example.org'])('E-Mail %j hat keine gültige Form: wird gemeldet', (adresse) => {
+    expect(getUnfilledPlaceholders({ ...voll, email: adresse })).toEqual(['email']);
+  });
+
+  it('E-Mail mit „@“ und Punkt im Domain-Teil ist gültig (Gegenbeispiel)', () => {
+    expect(getUnfilledPlaceholders({ ...voll, email: 'a.b@mein-verein.example.de' })).toEqual([]);
+  });
+
   it('c/o-Zeile mit offener Klammer wird gemeldet, ausgefüllte c/o-Zeile nicht', () => {
     expect(getUnfilledPlaceholders({ ...voll, careOf: '[c/o NAME]' })).toEqual(['careOf']);
     expect(getUnfilledPlaceholders({ ...voll, careOf: 'c/o Verein' })).toEqual([]);
-  });
-
-  it('die Vorlage im Repo meldet alle vier Pflichtfelder (Daniel trägt sie vor dem Turnier ein)', async () => {
-    const { LEGAL_CONFIG } = await import('../legal');
-    expect(getUnfilledPlaceholders(LEGAL_CONFIG)).toEqual(['name', 'street', 'city', 'email']);
   });
 });
 

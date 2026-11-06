@@ -5,6 +5,8 @@
  * Text aus der freigegebenen Endfassung (@RE-004).
  */
 import { Section, Paragraph, Strong, BulletList, DataTable, ExternalLink } from '../DatenschutzSections';
+import { Link } from 'react-router-dom';
+import { sectionStyles } from '../legalStyles';
 import { Betreiberemail } from '../BetreiberAngaben';
 import { LEGAL_CONFIG } from '../../../config/legal';
 
@@ -45,7 +47,7 @@ export function AbschnitteFehlerRechte() {
             <>Die <Strong>IP-Adresse wird nicht gespeichert.</Strong> Technisch erreicht sie Sentry beim Empfang trotzdem kurz, wird aber nicht abgelegt. Es gibt <Strong>keine Aufzeichnung deiner Bildschirm-Sitzung.</Strong></>,
             'Zweck: Fehler finden und beheben, damit die App am Turniertag zuverlässig läuft',
             'Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer funktionierenden App). Die Fehlerberichte sind eingeschaltet, ohne dass du zustimmen musst.',
-            <><Strong>Widerspruch:</Strong> Du kannst Fehlerberichte jederzeit in den Einstellungen der App abschalten (Art. 21 DSGVO). Das gilt ab dann für dieses Gerät.</>,
+            <><Strong>Widerspruch:</Strong> Du kannst Fehlerberichte jederzeit in den <Link to="/settings" style={sectionStyles.link} data-testid="datenschutz-einstellungen-link">Einstellungen der App</Link> abschalten (Art. 21 DSGVO). Das gilt ab dann für dieses Gerät.</>,
             'Das Fehlertool legt dafür keine eigenen Einträge auf deinem Gerät an.',
             'Mit Sentry besteht ein Vertrag zur Auftragsverarbeitung. Für mögliche Zugriffe aus den USA gelten das EU-US Data Privacy Framework, bei dem Sentry zertifiziert ist, und Standardvertragsklauseln.',
             'Speicherdauer: höchstens 90 Tage.',

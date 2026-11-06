@@ -42,6 +42,11 @@ export const LEGAL_CONFIG: LegalConfig = {
 /** Pflichtfelder, die der Betreiber ausfüllen muss (`careOf` ist optional). */
 const REQUIRED_FIELDS = ['name', 'street', 'city', 'email'] as const;
 
+/** Grobe Form einer E-Mail-Adresse: etwas@etwas.etwas (ein Tippfehler im Impressum fiele sonst erst im Betrieb auf). */
+export function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 /** Ein Wert gilt als Platzhalter, wenn er leer ist oder noch eine Angabe in eckigen Klammern enthält. */
 export function isPlaceholder(value: string): boolean {
   const trimmed = value.trim();
@@ -52,7 +57,7 @@ export function isPlaceholder(value: string): boolean {
  * Namen der Felder, die noch leer oder Platzhalter sind. `careOf` zählt nur, wenn etwas drinsteht, das noch in Klammern steht.
  */
 export function getUnfilledPlaceholders(config: LegalConfig = LEGAL_CONFIG): string[] {
-  const unfilled: string[] = REQUIRED_FIELDS.filter((field) => isPlaceholder(config[field]));
+  const unfilled: string[] = REQUIRED_FIELDS.filter((field) => isPlaceholder(config[field]) || (field === 'email' && !isValidEmail(config.email)));
   if (config.careOf.trim() !== '' && isPlaceholder(config.careOf)) {
     unfilled.push('careOf');
   }

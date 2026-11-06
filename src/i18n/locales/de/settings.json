@@ -133,16 +133,5 @@
   "settingItem": {
     "openAriaLabel": "{{label}} öffnen",
     "proBadge": "Pro-Feature"
-  },
-  "consent": {
-    "title": "Datenschutz-Einstellungen",
-    "description": "Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern. Optional kannst du Session-Replays aktivieren, um uns bei der Fehlerbehebung zu helfen.",
-    "necessary": "Notwendig:",
-    "necessaryDescription": "Anonymisierte Fehlerberichte (keine persönlichen Daten)",
-    "optional": "Optional:",
-    "optionalDescription": "Session-Replays zur Fehlerbehebung (Texte werden maskiert)",
-    "acceptAll": "Alle akzeptieren",
-    "acceptNecessary": "Nur notwendige",
-    "privacyLink": "Datenschutzerklärung"
   }
 }

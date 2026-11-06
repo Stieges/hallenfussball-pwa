@@ -160,7 +160,7 @@ test.describe('@RE-002 Einstellungen: Schalter „Fehlerberichte senden“', () 
 test.describe('@RE-003 Keine fremden Server', () => {
   const ERLAUBT_ALS_PROTOKOLL = new Set(['data:', 'blob:', 'about:']);
 
-  for (const seite of [{ id: 'dashboard', route: '/#/' }, { id: 'zuschauer', route: '/#/live/MESS26' }, { id: 'helfer-einstieg', route: '/#/join/ABCD2345' }, { id: 'anmeldung', route: '/#/login' }, { id: 'impressum', route: '/#/impressum' }, { id: 'datenschutz', route: '/#/datenschutz' }]) {
+  for (const seite of [{ id: 'dashboard', route: '/#/' }, { id: 'zuschauer', route: '/#/live/MESS26' }, { id: 'helfer-einstieg', route: '/#/join/ABCD2345' }, { id: 'anmeldung', route: '/#/login' }, { id: 'impressum', route: '/#/impressum' }, { id: 'datenschutz', route: '/#/datenschutz' }, { id: 'monitor', route: `/#/display/${TURNIER}/mon-live` }, { id: 'wizard', route: `/#/tournament/${TURNIER}/edit?step=1` }, { id: 'einstellungen', route: '/#/settings' }]) {
     test(`@RE-003 ${seite.id}: Anfragen gehen nur an die App selbst (Datenbank und Fehlerbericht-Dienst gibt es offline nicht)`, async ({ page, baseURL }, testInfo) => {
       test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
       const eigene = new URL(baseURL ?? 'http://localhost:3000').origin;
@@ -182,6 +182,14 @@ test.describe('@RE-003 Keine fremden Server', () => {
       expect(fremde, `Anfragen an fremde Herkunft (${seite.id})`).toEqual([]);
     });
   }
+
+  test('@RE-002 aus der Datenschutzerklärung führt „Einstellungen der App“ ohne Anmeldung zum Schalter', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');
+    await oeffne(page, GERAETE[0], '/#/datenschutz');
+    await page.getByTestId('datenschutz-einstellungen-link').click();
+    await expect(page).toHaveURL(/#\/settings$/);
+    await expect(page.getByTestId('settings-error-reports-toggle')).toBeVisible();
+  });
 
   test('@RE-003 die Anzeigeschrift kommt als Datei von der App selbst', async ({ page, baseURL }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'nur Projekt desktop (setzt Fenster selbst)');

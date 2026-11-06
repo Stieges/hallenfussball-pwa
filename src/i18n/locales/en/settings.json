@@ -133,16 +133,5 @@
   "settingItem": {
     "openAriaLabel": "Open {{label}}",
     "proBadge": "Pro Feature"
-  },
-  "consent": {
-    "title": "Privacy Settings",
-    "description": "We use anonymized error tracking to improve the app. Optionally, you can enable session replays to help us fix issues.",
-    "necessary": "Necessary:",
-    "necessaryDescription": "Anonymized error reports (no personal data)",
-    "optional": "Optional:",
-    "optionalDescription": "Session replays for debugging (text is masked)",
-    "acceptAll": "Accept All",
-    "acceptNecessary": "Necessary Only",
-    "privacyLink": "Privacy Policy"
   }
 }
