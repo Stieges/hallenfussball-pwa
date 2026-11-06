@@ -71,13 +71,14 @@ test.describe('@RE-001 Einstieg frei, Impressum und Datenschutz überall', () =>
       await expect(erste).toBeVisible({ timeout: 25000 });
       await expect(page.locator('[role="dialog"], [aria-modal="true"]')).toHaveCount(0);
       expect(await page.evaluate(() => window.localStorage.getItem('app:consent'))).toBeNull();
-      await erste.scrollIntoViewIfNeeded();
+      // Mittig scrollen: „sichtbar im Fenster“ schließt die fest stehende Tab-Leiste am unteren Rand ein (erlaubtes Randelement)
+      await erste.evaluate((el) => el.scrollIntoView({ block: 'center' }));
       expect(await istOben(page, erste), 'nichts liegt über dem Spielplan').toBe(true);
       await bild(page, `zuschauer-erster-besuch-${g.name}`);
 
       const impressum = page.getByTestId('footer-impressum-link');
       const datenschutz = page.getByTestId('footer-datenschutz-link');
-      await impressum.scrollIntoViewIfNeeded();
+      await impressum.evaluate((el) => el.scrollIntoView({ block: 'center' }));
       await expect(impressum).toBeVisible();
       await expect(datenschutz).toBeVisible();
       expect(await istOben(page, '[data-testid="footer-impressum-link"]'), 'Link „Impressum“ ist nicht verdeckt').toBe(true);
@@ -100,7 +101,7 @@ test.describe('@RE-001 Einstieg frei, Impressum und Datenschutz überall', () =>
         }
 
         const impressum = page.getByTestId(seite.impressum);
-        await impressum.scrollIntoViewIfNeeded();
+        await impressum.evaluate((el) => el.scrollIntoView({ block: 'center' }));
         await expect(impressum).toBeVisible();
         await expect(page.getByTestId(seite.datenschutz)).toBeVisible();
 
