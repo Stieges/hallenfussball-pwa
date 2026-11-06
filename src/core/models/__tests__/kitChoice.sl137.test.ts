@@ -3,7 +3,9 @@
  * Werte aus dem Gherkin (docs/anforderungen/2026-10-02_spiel-leiten.md), nicht aus dem Code.
  */
 import { describe, expect, it } from 'vitest';
+import { kitConflictWithLuminance } from '../kit';
 import {
+  leibchenFarbeFuer,
   ersteLeibchenWahl, kitAusWahl, kitHinweis, leibchenFarbenMit, leibchenGegenGegner, trikotFarben, vorschauKaesten,
 } from '../kitChoice';
 import { teamSlot } from '../matchSlot';
@@ -83,6 +85,18 @@ describe('@SL-139/@SL-173 sehr ähnliche Farben (Grenzen aus der Anforderung)', 
 });
 
 describe('@SL-151 Leibchenfarbe der Farbe des Gegners zu ähnlich', () => {
+  it('@SL-151 Vorbelegung Weiß (Heim) gegen Gelb, Turnier-Leibchen Gelb: nicht Gelb, sondern die erste Farbe ohne Konflikt zum Gegner', () => {
+    const wahl = ersteLeibchenWahl({ a: WEISS, b: GELB_SV_SUED }, TURNIER_GELB);
+    expect(wahl.bibSide).toBe('a');
+    expect(wahl.bibColor).not.toBe(TURNIER_GELB);
+    expect(kitConflictWithLuminance(wahl.bibColor, GELB_SV_SUED)).toBe('none');
+  });
+
+  it('@SL-151 Gegenprobe: ist die Turnier-Leibchenfarbe konfliktfrei, bleibt sie (Rot gegen Rot, Gelb)', () => {
+    expect(ersteLeibchenWahl({ a: ROT, b: ROT }, TURNIER_GELB).bibColor).toBe(TURNIER_GELB);
+    expect(leibchenFarbeFuer({ a: GELB_SV_SUED, b: WEISS }, 'b', BLAU)).toBe(BLAU);
+  });
+
   it('@SL-151 SV Süd Gelb, TSV Ost Weiß mit gelben Leibchen → Hinweis', () => {
     expect(leibchenGegenGegner({ a: GELB_SV_SUED, b: WEISS }, { bibSide: 'b', bibColor: GELB_LEIBCHEN })).toBe(true);
   });

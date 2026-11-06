@@ -701,7 +701,6 @@
     "festlegen": "Leibchen festlegen",
     "leibchenFuer": "Leibchen für {{team}}",
     "farbeLabel": "Leibchen: {{farbe}}",
-    "gegnerAehnlich": "Die Leibchen von {{team}} sind dem Trikot von {{gegner}} zu ähnlich",
     "ohneAnpfeifen": "Ohne Leibchen anpfeifen",
     "farbe": {
       "gelb": "Gelb",
@@ -712,6 +711,8 @@
       "weiss": "Weiß",
       "turnier": "Farbe des Turniers"
     },
-    "leibchen": "Leibchen"
+    "leibchen": "Leibchen",
+    "farbeZuAehnlich": "{{farbe}} – zu ähnlich wie das Trikot von {{gegner}}",
+    "gegnerAehnlichKurz": "Leibchen zu ähnlich wie der Gegner"
   }
 }

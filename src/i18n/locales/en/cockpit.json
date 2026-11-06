@@ -701,7 +701,6 @@
     "festlegen": "Assign bibs",
     "leibchenFuer": "Bibs for {{team}}",
     "farbeLabel": "Bibs: {{farbe}}",
-    "gegnerAehnlich": "The bibs of {{team}} are too similar to the kit of {{gegner}}",
     "ohneAnpfeifen": "Kick off without bibs",
     "farbe": {
       "gelb": "Yellow",
@@ -712,6 +711,8 @@
       "weiss": "White",
       "turnier": "Tournament colour"
     },
-    "leibchen": "Bibs"
+    "leibchen": "Bibs",
+    "farbeZuAehnlich": "{{farbe}} – too similar to the kit of {{gegner}}",
+    "gegnerAehnlichKurz": "Bibs too similar to the opponent"
   }
 }

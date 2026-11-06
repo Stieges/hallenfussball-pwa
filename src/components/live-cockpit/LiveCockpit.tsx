@@ -184,7 +184,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
       uebernahmeVon={props.uebernahmeVon}
       eingetragenVon={eingetragenVon}
       naechstes={isMobile ? naechstesZeile : null}
-      farbKonflikt={phase.zustand === 'vorAnpfiff' ? leibchen?.hinweis : undefined} spielzeit={props.spielzeit}
+      farbKonflikt={phase.zustand === 'vorAnpfiff' ? (leibchen?.gegnerAehnlich ? 'gegner' : leibchen?.hinweis) : undefined} spielzeit={props.spielzeit}
       naechstesNamen={naechstesSpiel ? [naechstesSpiel.homeTeam.name, naechstesSpiel.awayTeam.name] : undefined}
       // A4 (C-SYNC): rendert selbst nichts außerhalb des Cloud-Modus. I4 (W1, Nachtrag
       // Fixrunde 1): rejectedCount/reviewCount aus dem echten Sender (useEngineOutboxSummary).

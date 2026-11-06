@@ -119,4 +119,21 @@ test.describe('Cockpit am kleinen Handy: alle Tasten ohne Scrollen', () => {
     await alleTastenSichtbar(page, 'Meldung, Zeitstrafen, rote Karte');
     await bild(page, `waechter-${testInfo.project.name}-strafen-karte`);
   });
+
+  test('@SL-151 Leibchen dem Gegner zu ähnlich: Vorbelegung ohne Konflikt, gewählte Konfliktfarbe → Warnsatz vollständig über der Leiste (50 Zeichen)', async ({ page, seedIndexedDB }, testInfo) => {
+    // Weiß (Heim) gegen Gelb (Gast, 50 Zeichen): Turnier-Leibchen Gelb wäre dem Gast zu ähnlich
+    await seedIndexedDB({ tournaments: [cup({ namen: ['FC Teisendorf', NAME_50, 'TSV Ost', 'FC West'], farben: ['#FFFFFF', '#FFEB3B', '#2E8B57', '#C0392B'], minuten: 9, perioden: 1 })] });
+    await page.goto(`/#/tournament/${ID}/live`);
+    await expect(page.getByTestId('match-start-button')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('anpfiff-leibchen-farbe-gelb')).toHaveAttribute('data-zu-aehnlich', 'true');
+    await expect(page.getByTestId('anpfiff-leibchen-farbe-gelb')).toHaveAttribute('aria-pressed', 'false');
+    await page.getByTestId('anpfiff-leibchen-farbe-gelb').click();
+    const satz = page.getByTestId('scoreboard-farb-hinweis');
+    await expect(satz).toHaveText('Leibchen zu ähnlich wie der Gegner');
+    const mass = await satz.evaluate((el) => ({ ueberlauf: el.scrollWidth - el.clientWidth, unten: el.getBoundingClientRect().bottom, rechts: el.getBoundingClientRect().right, breite: window.innerWidth }));
+    expect(mass.ueberlauf, 'Warnsatz nicht abgeschnitten').toBeLessThanOrEqual(0);
+    expect(mass.rechts).toBeLessThanOrEqual(mass.breite);
+    expect(mass.unten, 'Warnsatz über der Leiste').toBeLessThanOrEqual(await leisteOben(page));
+    await bild(page, `waechter-${testInfo.project.name}-leibchen-gegner`);
+  });
 });

@@ -57,17 +57,13 @@ const farbKnopf = (farbe: string, gewaehlt: boolean): CSSProperties => ({
   outline: gewaehlt ? `${cssVars.borderWidth.medium} solid ${cssVars.colors.primary}` : undefined, outlineOffset: gewaehlt ? cssVars.borderWidth.medium : undefined,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer', flex: 'none',
 });
-const hinweisZeile: CSSProperties = {
-  display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.xs, margin: 0, fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm,
-  fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary,
-};
-const hinweisSymbol: CSSProperties = { display: 'inline-flex', flex: 'none', color: cssVars.colors.warning, minHeight: cssVars.lineHeights.bodySm, alignItems: 'center' };
 
 /** Unter den Spalten: „Leibchen festlegen“ (ohne Konflikt), die Leibchenfarbe und der Hinweis Leibchen gegen Gegner (@SL-151). */
 export function AnpfiffLeibchen({ zustand, teams }: AnpfiffLeibchenProps): ReactElement {
   const { t } = useTranslation('cockpit');
-  const { wahl, hinweis, gegnerAehnlich, farben } = zustand;
+  const { wahl, hinweis, farben } = zustand;
   const name = (seite: KitSide): string => (seite === 'a' ? teams.a : teams.b);
+  const gegner = wahl.bibSide === null ? '' : name(wahl.bibSide === 'a' ? 'b' : 'a');
   const farbName = (farbe: string): string => t(`anpfiff.farbe.${leibchenFarbName(farbe) ?? 'turnier'}`);
 
   return (
@@ -80,18 +76,19 @@ export function AnpfiffLeibchen({ zustand, teams }: AnpfiffLeibchenProps): React
       {wahl.bibSide !== null && (
         <div style={farbReihe} role="group" aria-label={t('anpfiff.farbeLabel', { farbe: farbName(wahl.bibColor) })}>
           {farben.map((farbe) => (
-            <button key={farbe} type="button" aria-pressed={wahl.bibColor === farbe} aria-label={farbName(farbe)} style={farbKnopf(farbe, wahl.bibColor === farbe)}
+            <button key={farbe} type="button" aria-pressed={wahl.bibColor === farbe} style={farbKnopf(farbe, wahl.bibColor === farbe)}
+              aria-label={zustand.zuAehnlich(farbe) ? t('anpfiff.farbeZuAehnlich', { farbe: farbName(farbe), gegner }) : farbName(farbe)}
+              data-zu-aehnlich={zustand.zuAehnlich(farbe) ? 'true' : undefined}
               data-testid={`anpfiff-leibchen-farbe-${leibchenFarbName(farbe) ?? 'turnier'}`} onClick={() => zustand.waehleFarbe(farbe)}>
-              {wahl.bibColor === farbe && <span style={{ display: 'inline-flex', color: fillTextColor({ kind: 'solid', color: farbe }) }}><Icons.Check size={iconSizeValues.sm} /></span>}
+              {/* Gewählt: Häkchen; dem Gegner zu ähnlich: Warnzeichen (nicht nur die Farbe trägt die Bedeutung, @SL-151) */}
+              {(wahl.bibColor === farbe || zustand.zuAehnlich(farbe)) && (
+                <span style={{ display: 'inline-flex', color: fillTextColor({ kind: 'solid', color: farbe }) }}>
+                  {wahl.bibColor === farbe ? <Icons.Check size={iconSizeValues.sm} /> : <Icons.AlertTriangle size={iconSizeValues.sm} />}
+                </span>
+              )}
             </button>
           ))}
         </div>
-      )}
-      {gegnerAehnlich && wahl.bibSide !== null && (
-        <p style={hinweisZeile} role="status" data-testid="anpfiff-leibchen-gegner">
-          <span style={hinweisSymbol} aria-hidden="true"><Icons.AlertTriangle size={iconSizeValues.sm} /></span>
-          {t('anpfiff.gegnerAehnlich', { team: name(wahl.bibSide), gegner: name(wahl.bibSide === 'a' ? 'b' : 'a') })}
-        </p>
       )}
     </div>
   );

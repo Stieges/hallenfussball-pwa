@@ -2,7 +2,8 @@
  * Leibchen-Wahl in der Anpfiff-Ansicht (@SL-137, @SL-138, @SL-148, @SL-149, @SL-151, @SL-173): reine Regeln ohne React.
  *
  * - `kitHinweis`: Hinweis auf gleiche bzw. zu ähnliche Trikotfarben (ΔE2000 und Helligkeit, `kitConflictWithLuminance`).
- * - `ersteLeibchenWahl`: Vorbelegung – bei Konflikt die Heimseite mit der Leibchenfarbe des Turniers, sonst kein Leibchen.
+ * - `ersteLeibchenWahl`: Vorbelegung – bei Konflikt die Heimseite mit der Leibchenfarbe des Turniers, sonst kein Leibchen; ist sie dem Gegner
+ *   zu ähnlich (@SL-151), die erste wählbare Farbe ohne Konflikt (`leibchenFarbeFuer`).
  * - `leibchenGegenGegner`: @SL-151 – die Leibchenfarbe ist der Trikotfarbe des Gegners zu ähnlich.
  * - `kitAusWahl`: das `kit`, das beim Anpfiff mitgeht; die Wahl gilt nur für dieses Spiel.
  * - `vorschauKaesten`: Kästen und Team-Köpfe vor dem Anpfiff in den echten Trikotfarben, ohne Ausweichfarbe der Zuschauer-Kästen, Leibchen als Zeichen (@SL-196).
@@ -52,12 +53,29 @@ export function kitHinweis(farben: TrikotFarben): KitConflict {
 }
 
 /** @SL-137/@SL-138: bei Konflikt die Heimseite mit Leibchen vorbelegt, sonst ohne Leibchen. */
-export function ersteLeibchenWahl(farben: TrikotFarben, turnierFarbe: string): LeibchenWahl {
-  const bibColor = normalizeKitColor(turnierFarbe) ?? DEFAULT_BIB_COLOR;
-  return { bibSide: kitHinweis(farben) === 'none' ? null : 'a', bibColor };
+const andere = (seite: KitSide): KitSide => (seite === 'a' ? 'b' : 'a');
+
+/** @SL-151: Leibchenfarbe gegen die Trikotfarbe des Gegners der Seite `seite` (ΔE2000 < 30 oder Helligkeit < 1,5 : 1). */
+export function leibchenFarbeZuAehnlich(farben: TrikotFarben, seite: KitSide, farbe: string): boolean {
+  return kitConflictWithLuminance(farbe, farben[andere(seite)]) !== 'none';
 }
 
-const andere = (seite: KitSide): KitSide => (seite === 'a' ? 'b' : 'a');
+/**
+ * @SL-137/@SL-151: Leibchenfarbe für `seite` – die des Turniers, wenn sie dem Gegner nicht zu ähnlich ist, sonst die erste wählbare Farbe
+ * ohne Konflikt; haben alle einen, bleibt die des Turniers (der Hinweis sagt es).
+ */
+export function leibchenFarbeFuer(farben: TrikotFarben, seite: KitSide, turnierFarbe: string): string {
+  const reihe = leibchenFarbenMit(turnierFarbe);
+  return reihe.find((farbe) => !leibchenFarbeZuAehnlich(farben, seite, farbe)) ?? reihe[0];
+}
+
+export function ersteLeibchenWahl(farben: TrikotFarben, turnierFarbe: string): LeibchenWahl {
+  const konflikt = kitHinweis(farben) !== 'none';
+  return {
+    bibSide: konflikt ? 'a' : null,
+    bibColor: konflikt ? leibchenFarbeFuer(farben, 'a', turnierFarbe) : normalizeKitColor(turnierFarbe) ?? DEFAULT_BIB_COLOR,
+  };
+}
 
 /** @SL-151: Leibchenfarbe gegen die Trikotfarbe des Gegners (dieselbe Grenze wie der Hinweis); ohne Leibchen nie. */
 export function leibchenGegenGegner(farben: TrikotFarben, wahl: LeibchenWahl): boolean {

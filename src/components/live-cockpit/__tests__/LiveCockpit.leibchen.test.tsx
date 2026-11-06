@@ -3,7 +3,7 @@
  * Gherkin: docs/anforderungen/2026-10-02_spiel-leiten.md. Teams und Farben wie in den Szenarien (SV Süd, FC Nord, TSV Ost).
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
 import { makeLiveMatch, makeProps } from './cockpitFixtures';
@@ -113,16 +113,27 @@ describe('@SL-138/@SL-148 ohne Konflikt: kein Hinweis, Leibchen freiwillig', () 
 });
 
 describe('@SL-151 Leibchenfarbe der Farbe des Gegners zu ähnlich', () => {
-  it('@SL-151 SV Süd Gelb, TSV Ost Weiß mit gelben Leibchen → Hinweis; Tom ändert auf Blau → kein Hinweis, Anpfiff mit Blau', async () => {
+  it('@SL-151 Vorbelegung: Weiß (Heim) gegen Gelb, Turnier-Leibchen Gelb → Heim bekommt eine Farbe ohne Konflikt, Gelb ist gekennzeichnet', () => {
+    render(<LiveCockpit {...makeProps(spiel14(), { leibchen: { farben: { a: WEISS, b: GELB_SV_SUED }, turnierFarbe: TURNIER_GELB } })} />);
+    const gewaehlt = screen.getAllByRole('button', { pressed: true }).find((k) => k.getAttribute('data-testid')?.startsWith('anpfiff-leibchen-farbe-'));
+    expect(gewaehlt?.getAttribute('data-testid')).not.toBe('anpfiff-leibchen-farbe-gelb');
+    expect(gewaehlt).not.toHaveAttribute('data-zu-aehnlich');
+    expect(screen.getByTestId('anpfiff-leibchen-farbe-gelb')).toHaveAttribute('data-zu-aehnlich', 'true');
+    expect(screen.getByTestId('anpfiff-leibchen-farbe-gelb')).toHaveAccessibleName('Gelb – zu ähnlich wie das Trikot von TSV Ost');
+    // kein Hinweis auf Leibchen gegen Gegner, die Tafel nennt die ähnlichen Trikots
+    expect(screen.getByTestId('scoreboard-farb-hinweis')).toHaveTextContent('Sehr ähnliche Trikotfarben');
+  });
+
+  it('@SL-151 SV Süd Gelb, TSV Ost Weiß: Tom wählt für TSV Ost Gelb → die Tafel sagt „Leibchen zu ähnlich wie der Gegner“; Blau → kein Hinweis, Anpfiff mit Blau', async () => {
     const u = userEvent.setup();
     const props = makeProps(spiel14(), { leibchen: { farben: { a: GELB_SV_SUED, b: WEISS }, turnierFarbe: GELB_SV_SUED } });
     render(<LiveCockpit {...props} />);
-    // Weiß gegen Gelb ist selbst schon zu ähnlich (@SL-139): Heim vorbelegt; Tom wählt TSV Ost
     await u.click(screen.getByRole('button', { name: 'Leibchen für TSV Ost' }));
-    expect(screen.getByTestId('anpfiff-leibchen-gegner')).toHaveTextContent('Die Leibchen von TSV Ost sind dem Trikot von SV Süd zu ähnlich');
-    const farben = screen.getByRole('group', { name: /Leibchen:/ });
-    await u.click(within(farben).getByRole('button', { name: 'Blau' }));
-    expect(screen.queryByTestId('anpfiff-leibchen-gegner')).toBeNull();
+    expect(screen.getByTestId('scoreboard-farb-hinweis')).not.toHaveTextContent('Leibchen zu ähnlich');
+    await u.click(screen.getByTestId('anpfiff-leibchen-farbe-turnier'));
+    expect(screen.getByTestId('scoreboard-farb-hinweis')).toHaveTextContent('Leibchen zu ähnlich wie der Gegner');
+    await u.click(screen.getByTestId('anpfiff-leibchen-farbe-blau'));
+    expect(screen.getByTestId('scoreboard-farb-hinweis')).not.toHaveTextContent('Leibchen zu ähnlich');
     await u.click(screen.getByTestId('match-start-button'));
     expect(props.onStart).toHaveBeenCalledWith('spiel-14', { bibSide: 'b', bibColor: BLAU });
   });
