@@ -143,7 +143,7 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
     width: '48px',
     height: '28px',
     borderRadius: cssVars.borderRadius.full,
-    background: isActive ? `${cssVars.colors.primary}15` : 'transparent',
+    background: isActive ? cssVars.colors.primaryLight : 'transparent',
     transition: 'background 0.2s ease',
   });
 

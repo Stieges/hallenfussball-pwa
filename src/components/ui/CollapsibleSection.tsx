@@ -42,7 +42,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         };
       case 'live':
         return {
-          border: `${cssVars.colors.statusLive}40`,
+          border: cssVars.colors.statusLive,
           bg: cssVars.colors.statusLiveBg,
           headerBg: cssVars.colors.statusLiveBg,
           titleColor: cssVars.colors.statusLive,
