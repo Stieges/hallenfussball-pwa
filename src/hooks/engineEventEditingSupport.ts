@@ -68,5 +68,7 @@ export const KIND_KEYS = {
   foul: 'engine.retract.kind.foul',
   substitution: 'engine.retract.kind.substitution',
   shootoutKick: 'engine.retract.kind.shootoutKick',
+  matchStart: 'engine.retract.kind.matchStart',
+  clockAdjust: 'engine.retract.kind.clockAdjust',
 } as const satisfies Record<TargetKind, string>;
 

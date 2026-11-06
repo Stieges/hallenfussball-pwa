@@ -14,7 +14,15 @@ describe('scrubUrl', () => {
     expect(scrubUrl('https://app.example/#/invite?token=geheim123&a=1')).toBe('https://app.example/#/invite?token=***&a=1');
     expect(scrubUrl('https://app.example/?token=abc#/x')).toBe('https://app.example/?token=***#/x');
   });
+  it.each(['access_token', 'refresh_token', 'provider_token', 'token_hash', 'code'])('@RE-002 Anmelde-Rückkehr: %s= wird unkenntlich (Adresse, Hash, Breadcrumb)', (name) => {
+    expect(scrubUrl(`https://app.example/#/auth/callback?${name}=geheim&a=1`)).toBe(`https://app.example/#/auth/callback?${name}=***&a=1`);
+    expect(scrubUrl(`https://app.example/#/auth/callback#${name}=geheim&expires_in=3600`)).toBe(`https://app.example/#/auth/callback#${name}=***&expires_in=3600`);
+    const out = scrubBreadcrumb({ category: 'navigation', data: { to: `/auth/callback?${name}=geheim` } });
+    expect(out.data).toEqual({ to: `/auth/callback?${name}=***` });
+  });
   it.each([
+    'https://app.example/#/auth/callback?codes=1&mycode=2',
+    'https://app.example/#/login?access_tokens=1',
     'https://app.example/#/live/ABC123',
     'https://app.example/#/tournament/t-1/live?f=2',
     'https://app.example/#/joint/ABCDEFGH23',

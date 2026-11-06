@@ -17,6 +17,7 @@ import type { MehrPunkt } from '../model/mehrPunkte';
 import type { CockpitControls, Side } from '../model/cockpitTypes';
 import type { PhaseView } from '../engine/phaseView';
 import type { LiveCockpitProps } from '../types';
+import type { LeibchenWahl } from '../../../core/models/kitChoice';
 import type { UseCockpitNoticesReturn } from './useCockpitNotices';
 import { useClockControls } from './useClockControls';
 import { useCockpitClock } from './useCockpitClock';
@@ -43,6 +44,8 @@ export interface CockpitCommandsArgs {
   engineView: PhaseView | null;
   /** Ansicht der Tafel (Engine oder Ersatz aus dem `LiveMatch`): daraus die Restzeit der Rückfrage beim Abpfiff. */
   view?: PhaseView | null;
+  /** Leibchen-Wahl der Anpfiff-Ansicht (@SL-137, @SL-149): geht mit dem Anpfiff mit; ohne sie die Vorbelegung. */
+  anpfiffWahl?: () => LeibchenWahl;
 }
 
 export interface CockpitCommands {
@@ -58,7 +61,7 @@ export interface CockpitCommands {
   onSidebarEventEdit?: LegacyPlayAreaProps['sidebar']['onEventEdit'];
 }
 
-export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView, view }: CockpitCommandsArgs): CockpitCommands {
+export function useCockpitCommands({ props, settings, sound, flows, sides, melde, engineView, view, anpfiffWahl }: CockpitCommandsArgs): CockpitCommands {
   const { t } = useTranslation('cockpit');
   const { currentMatch: match, onStart, onPause, onResume, onFinish, onGoal, onAdjustTime, onUpdateSettings } = props;
   const readOnly = !props.kannSteuern;
@@ -124,7 +127,7 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     match, abschnittspause: cockpitClock.abschnittspause,
     // Der Tipp auf Anpfiff/Pause/Weiter gibt den Ton frei (Browser-Geste); ein schwebender Hinweis entfällt.
     sound: { aktiviere: () => { if (settings.soundEnabled && !sound.isActivated) { void sound.activate(); } } },
-    onStart: (id) => { onStart(id); showSuccess(t('meldung.angepfiffen')); },
+    onStart: (id) => { if (anpfiffWahl) { onStart(id, anpfiffWahl()); } else { onStart(id); } showSuccess(t('meldung.angepfiffen')); },
     onPause: (id) => { onPause(id); showInfo(t('meldung.pausiert')); },
     onResume: (id) => { onResume(id); showSuccess(t('meldung.fortgesetzt')); },
     onStartSection: cockpitClock.wiederanpfiff,
@@ -150,10 +153,10 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     if (!match || readOnly) { return; } // ohne Steuer keine Korrektur, auch nicht im Rennen zwischen Klick und Effekt (S3, @SL-018)
     // Ohne Engine-Ansicht (Ersatz-Ansicht aus dem LiveMatch) bleibt der bisherige Weg über `onAdjustTime`, mit Meldung.
     if (!engineView) {
-      // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
-      const elapsed = settings.timerDirection === 'countdown' ? match.durationSeconds - neuSekunden : neuSekunden;
-      onAdjustTime?.(match.id, elapsed);
-      showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(neuSekunden / 60)}:${(neuSekunden % 60).toString().padStart(2, '0')}` }));
+      // Der Dialog meldet immer die gespielte Zeit, auch im Countdown (er rechnet die Restzeit selbst um, @SL-198)
+      onAdjustTime?.(match.id, neuSekunden);
+      const angezeigt = settings.timerDirection === 'countdown' ? match.durationSeconds - neuSekunden : neuSekunden; // Meldung in der Zählweise der Uhr
+      showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(angezeigt / 60)}:${(angezeigt % 60).toString().padStart(2, '0')}` }));
       return;
     }
     const { clockMs, previousClockMs } = korrekturUhrstaende(engineView, neuSekunden);

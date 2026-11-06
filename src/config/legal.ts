@@ -1,103 +1,65 @@
 /**
- * Legal Configuration
+ * Angaben des Betreibers (@RE-004) – die EINE Stelle für Name, Anschrift und E-Mail.
  *
- * Central configuration for legal pages (Impressum, Datenschutz).
- * All placeholders must be replaced before production launch!
- *
- * Search for "[PLATZHALTER:" to find all values that need to be filled.
+ * Impressum und Datenschutzerklärung lesen nur diese Felder. Vor dem Turnier die Werte in `[…]` ersetzen.
+ * Solange ein Pflichtfeld leer ist oder noch in eckigen Klammern steht, baut der Produktions-Build nicht
+ * (Vite-Prüfung `scripts/vite/legalCheckPlugin.ts`, scharf mit `LEGAL_REQUIRE_COMPLETE=1`); im Dev-/Test-Build gibt es nur eine Warnung.
  */
 
 export interface LegalConfig {
-  company: {
-    name: string;
-    street: string;
-    city: string;
-    country: string;
-  };
-  contact: {
-    email: string;
-    phone?: string;
-  };
-  tax?: {
-    vatId?: string;
-  };
-  register?: {
-    court?: string;
-    number?: string;
-  };
-  responsible: {
-    name: string;
-    address: string;
-  };
+  /** Vor- und Nachname des Betreibers */
+  name: string;
+  /** Optional: Zeile „c/o …“ (leerer Text blendet die Zeile aus) */
+  careOf: string;
+  street: string;
+  /** PLZ und Ort */
+  city: string;
+  email: string;
+  /** Aufsichtsbehörde (Standard: Bayern; ändern, falls der Betreiber woanders wohnt) */
   supervisoryAuthority: {
     name: string;
     address: string;
     url: string;
   };
+  /** Stand der Texte */
   lastUpdated: string;
 }
 
-/**
- * Legal configuration with placeholders.
- *
- * BEFORE LAUNCH: Replace all [PLATZHALTER: ...] values with real data!
- */
 export const LEGAL_CONFIG: LegalConfig = {
-  company: {
-    name: '[PLATZHALTER: Name / Firma]',
-    street: '[PLATZHALTER: Straße und Hausnummer]',
-    city: '[PLATZHALTER: PLZ und Ort]',
-    country: '[PLATZHALTER: Land]',
-  },
-  contact: {
-    email: '[PLATZHALTER: E-Mail-Adresse]',
-    phone: '[PLATZHALTER: Telefonnummer]', // optional - can be removed
-  },
-  tax: {
-    vatId: '[PLATZHALTER: USt-IdNr.]', // optional - remove section if not applicable
-  },
-  register: {
-    court: '[PLATZHALTER: Registergericht]', // optional - remove section if not applicable
-    number: '[PLATZHALTER: Registernummer]',
-  },
-  responsible: {
-    name: '[PLATZHALTER: Name]',
-    address: '[PLATZHALTER: Anschrift]',
-  },
+  name: '[VORNAME NACHNAME]',
+  careOf: '', // optional, z. B. 'c/o Vorname Nachname'
+  street: '[STRASSE NR]',
+  city: '[PLZ ORT]',
+  email: '[E-MAIL]',
   supervisoryAuthority: {
-    // Choose based on company location (see RECHTLICHE-SEITEN-KONZEPT.md Anhang A)
-    name: '[PLATZHALTER: Name der Behörde]',
-    address: '[PLATZHALTER: Anschrift]',
-    url: '[PLATZHALTER: URL]',
+    name: 'Bayerisches Landesamt für Datenschutzaufsicht (BayLDA)',
+    address: 'Promenade 18, 91522 Ansbach (Postanschrift: Postfach 1349, 91504 Ansbach)',
+    url: 'https://www.lda.bayern.de',
   },
-  lastUpdated: '[PLATZHALTER: Datum]', // e.g., "Januar 2025"
+  lastUpdated: 'November 2026',
 };
 
-/**
- * Helper to check if a value is still a placeholder
- */
+/** Pflichtfelder, die der Betreiber ausfüllen muss (`careOf` ist optional). */
+const REQUIRED_FIELDS = ['name', 'street', 'city', 'email'] as const;
+
+/** Grobe Form einer E-Mail-Adresse: etwas@etwas.etwas (ein Tippfehler im Impressum fiele sonst erst im Betrieb auf). */
+export function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+/** Ein Wert gilt als Platzhalter, wenn er leer ist oder noch eine Angabe in eckigen Klammern enthält. */
 export function isPlaceholder(value: string): boolean {
-  return value.startsWith('[PLATZHALTER:');
+  const trimmed = value.trim();
+  return trimmed === '' || /\[[^\]]*\]/.test(trimmed);
 }
 
 /**
- * Helper to get all unfilled placeholders
- * Useful for validation before launch
+ * Namen der Felder, die noch leer oder Platzhalter sind. `careOf` zählt nur, wenn etwas drinsteht, das noch in Klammern steht.
  */
-export function getUnfilledPlaceholders(): string[] {
-  const unfilled: string[] = [];
-
-  const checkObject = (obj: Record<string, unknown>, prefix = '') => {
-    for (const [key, value] of Object.entries(obj)) {
-      const path = prefix ? `${prefix}.${key}` : key;
-      if (typeof value === 'string' && isPlaceholder(value)) {
-        unfilled.push(path);
-      } else if (typeof value === 'object' && value !== null) {
-        checkObject(value as Record<string, unknown>, path);
-      }
-    }
-  };
-
-  checkObject(LEGAL_CONFIG as unknown as Record<string, unknown>);
+export function getUnfilledPlaceholders(config: LegalConfig = LEGAL_CONFIG): string[] {
+  const unfilled: string[] = REQUIRED_FIELDS.filter((field) => isPlaceholder(config[field]) || (field === 'email' && !isValidEmail(config.email)));
+  if (config.careOf.trim() !== '' && isPlaceholder(config.careOf)) {
+    unfilled.push('careOf');
+  }
   return unfilled;
 }

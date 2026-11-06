@@ -3,10 +3,10 @@
  * den Navigations-Breadcrumbs enthält den Hash, also auch `/join/<Helfer-Code>` und `?token=`. Der Code ist kein Zugang (S-1),
  * öffnet aber den Weg zu einer Anfrage; ein Einladungs-Token öffnet mehr. Beides wird auf `***` gekürzt, alles andere bleibt.
  */
-import type { Breadcrumb, ErrorEvent } from '@sentry/react';
+import type { Breadcrumb, Event as SentryEvent } from '@sentry/react';
 
 const JOIN_CODE = /(\/join\/)[^/?#\s&]+/gi;
-const TOKEN_PARAM = /([?&#]token=)[^&#\s]*/gi;
+const TOKEN_PARAM = /([?&#](?:access_token|refresh_token|provider_token|token_hash|token|code)=)[^&#\s]*/gi;
 
 /** `/join/ABCDEFGH23` → `/join/***`, `token=abc` → `token=***`; jede andere Adresse bleibt unverändert. */
 export function scrubUrl(value: string): string {
@@ -32,7 +32,7 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
   return breadcrumb;
 }
 
-export function scrubEventUrls(event: ErrorEvent): ErrorEvent {
+export function scrubEventUrls<T extends SentryEvent>(event: T): T {
   if (event.request?.url) {
     event.request.url = scrubUrl(event.request.url);
   }
@@ -41,4 +41,17 @@ export function scrubEventUrls(event: ErrorEvent): ErrorEvent {
   }
   event.breadcrumbs?.forEach((breadcrumb) => scrubBreadcrumb(breadcrumb));
   return event;
+}
+
+/**
+ * Nutzerdaten im Bericht auf die zufällige Kennung kürzen (@RE-002): keine IP-Adresse, keine E-Mail, kein Name, kein Ort.
+ * Ohne Kennung entfällt das ganze Nutzerobjekt.
+ */
+export function scrubEventUser(event: SentryEvent): void {
+  const id = event.user?.id;
+  if (id === undefined) {
+    delete event.user;
+    return;
+  }
+  event.user = { id };
 }

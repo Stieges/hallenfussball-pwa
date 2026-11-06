@@ -210,7 +210,7 @@ const OB002: FunktionFall[] = [
     pruefen: async () => {
       const { DatenschutzScreen } = await import('../screens/DatenschutzScreen');
       const { container } = renderInRouter(
-        <DatenschutzScreen onBack={vi.fn()} onOpenCookieSettings={vi.fn()} />
+        <DatenschutzScreen onBack={vi.fn()} />
       );
       expectRendered(container);
       oeffneAlleAbschnitte(container);

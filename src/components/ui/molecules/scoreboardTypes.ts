@@ -13,7 +13,11 @@ export interface ScoreboardSeite {
   label?: string;
   /** Kasten dieser Anzeigeseite: getragene Farbe wie am Hallenmonitor (@SL-176, `MatchView.boxes`); fehlt er, bleibt der Kasten neutral. */
   kasten?: SideBox;
+  /** Laufende Zeitstrafen dieser Seite mit Restzeit (@SL-029, @SL-031): stehen am Handy und Tablet in der Tafel neben der Uhr. */
+  strafen?: ScoreboardStrafe[];
 }
+/** `text` sichtbar („#5 1:58“), `aria` vorgelesen („Zeitstrafe #5, noch 1:58“); `steht`: Uhr steht, die Restzeit läuft nicht. */
+export interface ScoreboardStrafe { id: string; text: string; aria: string; steht: boolean }
 /**
  * `schlussphase`: nur Uhr-Art „durchlaufend, letzte Minute angehalten“ in ihrer Schlussphase (@SL-003, @SL-136) → Uhr in
  * `scoreboardFinalPhase` (Violett). `ton`: gedämpft (Pause, Endstand) oder grün (Pause vorbei, Wiederanpfiff).
@@ -29,6 +33,8 @@ export interface ScoreboardUhr {
   /** Zeile unter der Uhr („Spielzeit 3:12“); fehlt sie, steht `gespielt`. */
   unterzeile?: string | null;
   ton?: 'gedaempft' | 'ok';
+  /** Kleiner Vorsatz vor den Ziffern, vor dem Anpfiff bei mehreren Abschnitten „2 ד (@SL-197). */
+  vorsatz?: string | null;
 }
 export interface ScoreboardModel {
   /** Zustands-Abzeichen ohne Uhr (@OB-065, @OB-066): dasselbe Molekül wie die Spielkarte. */
@@ -44,6 +50,8 @@ export interface ScoreboardModel {
   /** Kopfzeile am Laptop (@SL-180): „Spiel 3 · Feld 1 · 2. Halbzeit · Gespielt 4:06“; Teile ohne Wert entfallen. */
   kopfText?: string | null;
   hinweise: string[];
+  /** Vor dem Anpfiff bei gleicher oder zu ähnlicher Trikotfarbe (@SL-196, @SL-137): steht in der Kopfzeile statt des Turniernamens. */
+  farbHinweis?: string | null;
   eintraegeWartenText: string | null;
   /** Nur die Zahl: steht statt des vollen Wortlauts, wenn neben dem Zustand auch das Ton-Abzeichen Platz braucht (C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE). */
   eintraegeWartenKurz?: string | null;

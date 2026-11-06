@@ -225,7 +225,7 @@ describe('Saat fuer die App-Messung (SM, @TA-011)', () => {
     expect(r.b.laeufe).toHaveLength(1)
   })
   it('ohne --saat bleibt das Verhalten: dieselbe Ansicht ist nicht erreichbar, BLOCKED "Erwartete Ansicht fehlt"', async () => {
-    const r = await messe('--app', '/#/', '--erwarte', LISTE, '--klick', 'role=button[name=/notwendig|necessary/i]', '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
+    const r = await messe('--app', '/#/', '--erwarte', LISTE, '--profil', 'handy-360', '--varianten', 'normal', ...SCHNELL)
     expect(r.code).toBe(3)
     expect(gruende(r.b)).toMatch(/Erwartete Ansicht fehlt/)
   })

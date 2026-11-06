@@ -191,7 +191,7 @@ describe('TeamColumn', () => {
       expect(el.style.hyphens).not.toBe('auto'); // VISUAL-DESIGN § 2: Teamnamen trennen nie
       expect(el).not.toHaveAttribute('lang');
     }
-    expect(name.style.overflowWrap).toBe('anywhere'); // Handy: ein Wort, das allein nicht passt, bricht lieber als dass es herausragt (Laptop: break-word, siehe TeamColumn.laptop.test)
+    expect(name.style.overflowWrap).toBe('normal'); // K11/@OB-058: der Name bricht nur zwischen Wörtern, nie mitten im Wort („Wagin/g“), auch mit Weste
   });
 
   it('@OB-025 die Schrift des Namens ist eine Stufe zwischen mittel und groß (kleiner statt kürzen), nie darunter', () => {

@@ -9,3 +9,4 @@
  * @see https://fontsource.org/
  */
 declare module '@fontsource-variable/inter';
+declare module '@fontsource/bebas-neue/400.css';

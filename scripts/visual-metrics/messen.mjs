@@ -32,7 +32,7 @@ const HILFE = `Aufruf:
   --ziel <url|datei>        Mockup-Datei (Geraet = Viewport, ohne Rahmen) oder lokales Preview
   --erwarte <css>           Pflicht fuer App: Element der erwarteten Ansicht (sonst BLOCKED)
   --saat <name>             feste Testdaten (scripts/visual-metrics/saat/<name>.json) vor dem ersten Laden in
-                            IndexedDB/localStorage ablegen und die Einwilligung setzen (z. B. hallencup-messlauf)
+                            IndexedDB/localStorage ablegen (z. B. hallencup-messlauf)
   --stub <datei>/<zustand>  Server-Antworten per Netz-Stub (scripts/visual-metrics/stubs/<datei>.json): Build mit lokaler Scheinadresse,
                             alle Aufrufe daran beantwortet der Stub (nur fuer --app; kein Datenbank-Stand, keine Migration)
   --bilder <ordner>         je Lauf hell/de/normal ein Bild nach <ordner>/<name>-<profil>.png (Sichtvergleich gegen das Mockup)
@@ -40,7 +40,7 @@ const HILFE = `Aufruf:
                             weitere Optionen (--themen, --sprachen, --varianten, --ohne-axe, --screenshots, --aus) gelten fuer jede
                             Ansicht; --profil <p> ersetzt das Profil der App-Ansichten, --monitor-profil <p> das der Monitor-Folien;
                             --nur <id,id> misst nur diese Ansichten
-  --klick <selektor>        Vorbedingung, mehrfach (z. B. Datenschutz-Abfrage: 'role=button[name=/notwendig/i]'); 'warte:<ms>' wartet statt zu klicken, 'scroll:oben' rollt alles an den Anfang
+  --klick <selektor>        Vorbedingung, mehrfach (z. B. einen Dialog öffnen: 'role=button[name=/Neues Turnier/i]'); 'warte:<ms>' wartet statt zu klicken, 'scroll:oben' rollt alles an den Anfang
   --profil <liste>          app (Standard) | monitor | handy | tablet | desktop | reflow | Profilname(n)
                             Profile: ${Object.keys(PROFILE).join(', ')}
                             Monitor-Profile laufen immer paarweise (Rand 0 + Standard)

@@ -172,9 +172,12 @@ async function gelbeKarte(ctx: StepContext): Promise<void> {
   await expect.poll(() => ereignisse(spiel), { timeout: 10000 }).toEqual(['GOAL', 'FOUL', 'YELLOW_CARD']);
 }
 
-/** Restzeit der Zeitstrafe (#9) in Sekunden aus der Spalte des Heimteams, `null` solange sie nicht steht. */
+/**
+ * Restzeit der Zeitstrafe (#9) in Sekunden, `null` solange sie nicht steht. Am Handy steht sie in der Tafel neben der Uhr (Cockpit-Paket K7,
+ * @SL-029/@SL-031: „#9 1:58“ mit Stoppuhr), nicht mehr unter den Tasten der Spalte.
+ */
 async function strafRestzeit(handy: Page): Promise<number | null> {
-  const text = await handy.getByTestId('team-column-home').getByText(/^#9 · \d+:\d{2}$/).textContent({ timeout: 3000 }).catch(() => null);
+  const text = await handy.getByTestId('scoreboard').locator('[data-testid^="scoreboard-strafe-"]').filter({ hasText: /^#9 \d+:\d{2}$/ }).first().textContent({ timeout: 3000 }).catch(() => null);
   const treffer = /(\d+):(\d{2})$/.exec(text ?? '');
   return treffer ? Number(treffer[1]) * 60 + Number(treffer[2]) : null;
 }
@@ -187,7 +190,7 @@ async function zeitstrafe(ctx: StepContext): Promise<void> {
   await wartePicker(handy);
   await handy.getByTestId('number-picker').getByRole('button', { name: '9', exact: true }).click();
   await expect(handy.getByTestId('number-picker')).toBeHidden();
-  await expect.poll(() => strafRestzeit(handy), { message: 'Restzeit der Zeitstrafe in der Spalte', timeout: 5000 }).not.toBeNull();
+  await expect.poll(() => strafRestzeit(handy), { message: 'Restzeit der Zeitstrafe in der Tafel', timeout: 5000 }).not.toBeNull();
   const erste = (await strafRestzeit(handy)) ?? 0;
   expect(erste, `die Restzeit beginnt bei der Dauer aus den Turnierregeln (${dauer} s)`).toBeLessThanOrEqual(dauer);
   expect(erste, 'die Restzeit ist frisch (höchstens 30 s nach dem Eintrag)').toBeGreaterThan(dauer - 30);

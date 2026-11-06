@@ -517,6 +517,7 @@ function AppContent() {
             onNavigateToRegister={() => void navigate('/register')}
             onBack={() => void navigate(-1)}
             onContinueAsGuest={() => void navigate('/')}
+            onNavigateToLegal={(path) => void navigate(path)}
           />
         )}
 
@@ -525,6 +526,7 @@ function AppContent() {
             onSuccess={() => void navigate('/')}
             onNavigateToLogin={() => void navigate('/login')}
             onBack={() => void navigate(-1)}
+            onNavigateToLegal={(path) => void navigate(path)}
           />
         )}
 
@@ -672,10 +674,6 @@ function AppContent() {
             onBack={() => {
               void navigate(-1); // Go back to previous page
             }}
-            onOpenCookieSettings={() => {
-              // TODO: Integrate with Cookie Banner when implemented
-              // Cookie banner will be added in a future commit
-            }}
           />
         )}
 
@@ -713,15 +711,10 @@ function AppContent() {
         )}
       </Suspense>
 
-      {/* Footer - shown on main screens (not on public/invite flows or legal pages) */}
-      {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && !isLegalPath && (
-        <AppFooter
-          untereLeiste={isDashboardPath || isTournamentPath}
-          onOpenCookieSettings={() => {
-            // TODO: Integrate with Cookie Banner when implemented
-            // Cookie banner will be added in a future commit
-          }}
-        />
+      {/* Fußzeile mit Impressum und Datenschutz auf jeder Seite ohne Anmeldung (@RE-001): Zuschauer, Helfer-Einstieg, Anmeldung,
+          Verwaltung. Nicht auf Monitor/Kiosk (@ME-003) und nicht auf den Rechtstexten selbst; im Cockpit-Rahmen blendet AppFooter sie aus. */}
+      {!isMonitorDisplayPath && !isLegalPath && (
+        <AppFooter untereLeiste={isDashboardPath || isTournamentPath} untereLeisteJederBreite={isPublicLivePath} />
       )}
 
       {/* Confirm Dialogs */}

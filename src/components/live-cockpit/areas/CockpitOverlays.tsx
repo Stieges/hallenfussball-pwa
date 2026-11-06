@@ -113,6 +113,7 @@ export function CockpitOverlays(props: CockpitOverlaysProps): ReactElement {
         minSeconds={zeit?.min ?? 0}
         maxSeconds={zeit?.max ?? 0}
         minIsGoal={zeit?.minIsGoal ?? false}
+        countdown={settings.timerDirection === 'countdown'}
       />
 
       <FinishConfirm

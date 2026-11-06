@@ -25,6 +25,7 @@
   "include": [
     "src",
     "tests",
+    "scripts/vite",
     "playwright.config.ts",
     "playwright.auth-slow.config.ts",
     "playwright.prod-smoke.config.ts"

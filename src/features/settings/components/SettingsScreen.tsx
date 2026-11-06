@@ -13,7 +13,7 @@
  * @see docs/concepts/SETTINGS-KONZEPT.md
  */
 
-import React, { CSSProperties, useState, useCallback, useEffect } from 'react';
+import React, { CSSProperties, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
@@ -25,13 +25,8 @@ import { SettingItem } from './SettingItem';
 import { BaseThemeSelector } from './BaseThemeSelector';
 import { FontSizeSelector } from './FontSizeSelector';
 import { BaseTheme } from '../types/settings.types';
-import {
-  getConsentStatus,
-  setConsentStatus,
-  revokeConsent,
-  type ConsentStatus,
-} from '../../../lib/consent';
-import { reinitializeSentry } from '../../../lib/sentry';
+import { isErrorReportingEnabled, setErrorReportingEnabled } from '../../../lib/errorReportPreference';
+import { applyErrorReportingPreference } from '../../../lib/sentry';
 import { useToast } from '../../../components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from '../../../components/ui/ConfirmDialog';
 
@@ -67,53 +62,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     variant: 'warning',
     confirmText: t('data.forceUpdate.action'),
   });
-  const revokeDialog = useConfirmDialog({
-    title: t('privacy.revoke.dialogTitle'),
-    message: t('privacy.revoke.confirmMessage'),
-    variant: 'warning',
-    confirmText: t('privacy.revoke.action'),
-  });
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { fontSize, setFontSize } = useSettings();
 
-  // Consent state
-  const [consent, setConsent] = useState<ConsentStatus | null>(() =>
-    getConsentStatus()
-  );
+  // @RE-002: Fehlerberichte senden (je Gerät gespeichert, vorbelegt an)
+  const [errorReports, setErrorReports] = useState<boolean>(() => isErrorReportingEnabled());
 
-  // Sync consent state with localStorage on mount
-  useEffect(() => {
-    setConsent(getConsentStatus());
+  const handleErrorReportsChange = useCallback((value: boolean) => {
+    setErrorReportingEnabled(value);
+    setErrorReports(value);
+    void applyErrorReportingPreference();
   }, []);
-
-  // Handle consent toggle changes
-  const handleConsentChange = useCallback(
-    (key: 'errorTracking' | 'sessionReplay', value: boolean) => {
-      const currentConsent = getConsentStatus();
-      if (!currentConsent) {
-        // If no consent exists, create new one
-        const newConsent = {
-          errorTracking: key === 'errorTracking' ? value : false,
-          sessionReplay: key === 'sessionReplay' ? value : false,
-        };
-        setConsentStatus(newConsent);
-        setConsent(getConsentStatus());
-      } else {
-        // Update existing consent
-        const updatedConsent = {
-          errorTracking:
-            key === 'errorTracking' ? value : currentConsent.errorTracking,
-          sessionReplay:
-            key === 'sessionReplay' ? value : currentConsent.sessionReplay,
-        };
-        setConsentStatus(updatedConsent);
-        setConsent(getConsentStatus());
-      }
-      // Reinitialize Sentry with new consent
-      void reinitializeSentry();
-    },
-    []
-  );
 
   // Force update: Clear Service Worker + Caches + Reload
   const [isClearing, setIsClearing] = useState(false);
@@ -161,17 +120,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       showError(t('data.forceUpdate.errorMessage'));
     }
   }, [t, forceUpdateDialog, showError]);
-
-  // Handle consent revocation
-  const handleRevokeConsent = useCallback(async () => {
-    const confirmed = await revokeDialog.confirm();
-    if (confirmed) {
-      revokeConsent();
-      setConsent(null);
-      void reinitializeSentry();
-      showSuccess(t('privacy.revoke.successMessage'));
-    }
-  }, [t, revokeDialog, showSuccess]);
 
   // Map current theme to BaseTheme
   const currentBaseTheme: BaseTheme = theme;
@@ -349,29 +297,12 @@ ${t('support.emailBody')}
           <SettingItem
             variant="toggle"
             icon="📊"
-            label={t('privacy.errorTracking.label')}
-            description={t('privacy.errorTracking.description')}
-            value={consent?.errorTracking ?? false}
-            onChange={(value) => handleConsentChange('errorTracking', value)}
+            label={t('privacy.errorReports.label')}
+            description={t('privacy.errorReports.description')}
+            value={errorReports}
+            onChange={handleErrorReportsChange}
+            testId="settings-error-reports-toggle"
           />
-          <SettingItem
-            variant="toggle"
-            icon="🎬"
-            label={t('privacy.sessionReplay.label')}
-            description={t('privacy.sessionReplay.description')}
-            value={consent?.sessionReplay ?? false}
-            onChange={(value) => handleConsentChange('sessionReplay', value)}
-          />
-          {consent && (
-            <SettingItem
-              variant="action"
-              icon="🗑️"
-              label={t('privacy.revoke.label')}
-              description={t('privacy.revoke.description')}
-              actionLabel={t('privacy.revoke.action')}
-              onClick={() => { void handleRevokeConsent(); }}
-            />
-          )}
         </SettingsCategory>
 
         {/* Rechtliches */}
@@ -391,7 +322,6 @@ ${t('support.emailBody')}
         </SettingsCategory>
       </div>
       <ConfirmDialog {...forceUpdateDialog.dialogProps} />
-      <ConfirmDialog {...revokeDialog.dialogProps} />
     </div>
   );
 };

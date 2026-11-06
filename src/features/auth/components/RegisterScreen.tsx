@@ -26,6 +26,7 @@ import { validateRegistrationCode } from '../utils/validateRegistrationCode';
 import { registerStyles as styles } from './RegisterScreen.styles';
 import { dialogWidths } from '../../../design-tokens';
 import { DialogSurface } from '../../../components/ui/molecules/DialogSurface';
+import { LegalLinks, type LegalPath } from '../../../components/layout/LegalLinks';
 import { AUTH_ERRORS } from '../constants';
 import { RegisterEmailConfirmationDialog, RegisterSuccessDialog } from './RegisterDialogs';
 import { OfflineBanner } from './OfflineBanner';
@@ -37,12 +38,15 @@ interface RegisterScreenProps {
   onNavigateToLogin?: () => void;
   /** Called when user wants to go back/close */
   onBack?: () => void;
+  /** @RE-001: öffnet Impressum bzw. Datenschutz (ohne Angabe: keine Links im Dialog) */
+  onNavigateToLegal?: (path: LegalPath) => void;
 }
 
 export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onSuccess,
   onNavigateToLogin,
   onBack,
+  onNavigateToLegal,
 }) => {
   const { t } = useTranslation('auth');
   const { register, loginWithGoogle, isGuest, connectionState, reconnect } = useAuth();
@@ -442,6 +446,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         <p style={styles.legal}>
           {t('register.legal')}
         </p>
+
+        {/* @RE-001: Impressum und Datenschutz ohne Anmeldung, auch wenn dieser Dialog die Fußzeile verdeckt */}
+        {onNavigateToLegal && <LegalLinks testIdPrefix="auth" onOpen={onNavigateToLegal} />}
       </div>
     </DialogSurface>
   );

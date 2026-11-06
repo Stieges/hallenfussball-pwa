@@ -72,10 +72,8 @@ describe('@SL-124 Ein Eintrag braucht nur wenige Tipps', () => {
 });
 
 describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
-  // Befund C-COCKPIT-UNDO-ANPFIFF-FEHLT: die Engine nimmt MATCH_START zurück (core/match/handlers/retract.ts, Fixtures 60a–60e),
-  // aber `undoTarget` (core/match/client/retractTargets.ts, KIND_BY_TYPE) bietet den Anpfiff dem Cockpit nicht als Ziel an.
-  // `src/core/**` gehört Spur A (Ruling R-LT2); der Test steht deshalb als it.fails, bis dort MATCH_START aufgenommen ist.
-  it.fails('@SL-066 Rückgängig direkt nach dem Anpfiff nimmt den Anpfiff zurück (Befund C-COCKPIT-UNDO-ANPFIFF-FEHLT, Ziel Spur A)', async () => {
+  // Befund C-COCKPIT-UNDO-ANPFIFF-FEHLT behoben: `undoTarget` (KIND_BY_TYPE) bietet den Anpfiff als Ziel an (Cockpit-Paket K9).
+  it('@SL-066 Rückgängig direkt nach dem Anpfiff nimmt den Anpfiff zurück', async () => {
     const u = userEvent.setup();
     render(<Harness />); await anpfiff(u);
     await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
@@ -148,11 +146,11 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1'));
     };
 
-    // Befund C-COCKPIT-UNDO-ANPFIFF-FEHLT (um CLOCK_ADJUST erweitert): `KIND_BY_TYPE` kennt kein CLOCK_ADJUST, die Engine nimmt es zurück
-    // (Fixture 61a-uhrkorrektur-zuruecknehmen.json). Rückgängig trifft deshalb das Foul statt der Korrektur.
-    it.fails('@SL-109 hat Tom die Spielzeit von 3:30 auf 3:10 korrigiert → steht die Spielzeit wieder auf dem Stand ohne die Korrektur, das Foul zählt weiter (Befund C-COCKPIT-UNDO-ANPFIFF-FEHLT, Ziel Spur A)', async () => {
+    // Befund C-COCKPIT-UNDO-ANPFIFF-FEHLT (um CLOCK_ADJUST erweitert) behoben: die Uhr-Korrektur ist Ziel von Rückgängig (Cockpit-Paket K9).
+    it('@SL-109 hat Tom die Spielzeit von 3:30 auf 3:10 korrigiert → steht die Spielzeit wieder auf dem Stand ohne die Korrektur, das Foul zählt weiter', async () => {
       const u = userEvent.setup();
-      render(<Harness turnier={ZWEI_ABSCHNITTE} />); await FOUL_BEI_2_00(u);
+      render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={{ timerDirection: 'elapsed' }} />); // Uhr aufwärts (@SL-198): „weniger“ = gespielte Zeit − 10 s
+      await FOUL_BEI_2_00(u);
       zu(210_000);
       await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 3:30'));
       await u.click(screen.getByTestId('cockpit-more-button'));

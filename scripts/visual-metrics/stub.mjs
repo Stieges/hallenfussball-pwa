@@ -4,7 +4,7 @@
 //   --stub helfer-join/e1     Datei stubs/helfer-join.json, Zustand "e1"
 // Zustand: { rpc: { <funktion>: { json } | { fehler: { code, message } } | { abbruch: true } },
 //            geraet: { id } (optional: anonyme Gerätesitzung eines Helfer-Handys im Speicher),
-//            einwilligung: true (Datenschutz-Abfrage vorab beantwortet), signup: "ok" | "429" (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
+//            signup: "ok" | "429" (optional, Standard "ok"), konto: { id, name } (optional: angemeldetes Konto im Speicher),
 //            rest: { <tabelle>: [Zeile, …] } (optional: Antworten auf /rest/v1/<tabelle>, sonst leer),
 //            ausgang: <N> (optional, nur mit konto: N wartende Einträge des Kontos in der lokalen Kopie, z. B. e4 „Erst verbinden“ @HE-092) }
 // Kein Code in src/ (Testumgebung ≠ Produktivcode). Nie gegen Produktion: die Adresse ist fest 127.0.0.1.
@@ -77,11 +77,6 @@ export async function installiereStub(ctx, stub) {
   if (z.ausgang) {
     if (!z.konto) throw new Error(`Stub ${stub.name}: "ausgang" braucht "konto"`)
     await installiereSaat(ctx, ausgangSaat(z.konto.id, z.ausgang))
-  }
-  if (z.einwilligung) {
-    // Zustände mit Dialog über der Seite (Rückfrage): die Datenschutz-Abfrage vorab beantworten, sonst deckt sie den Dialog zu
-    const wert = JSON.stringify({ errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 })
-    await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v) } catch { /* gesperrt */ } }, ['app:consent', wert])
   }
   // Zweite Sicherung neben der festen Stub-Adresse: auch ein falsch gebauter Lauf erreicht kein echtes Projekt.
   await ctx.route((url) => istEchtesSupabase(url), (route) => route.abort('blockedbyclient'))

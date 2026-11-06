@@ -26,6 +26,8 @@ export interface TeamColumnModel {
   gesperrt: number[];
   zeitstrafeMinuten: number;
   kartenArten: EnabledCards;
+  /** Vor dem Anpfiff: am Handy entfällt die Zeile mit dem Foul-Zähler (0), der Platz gehört der Leibchen-Wahl (K5). */
+  vorAnpfiff?: boolean;
 }
 
 export interface TeamColumnInput {
@@ -62,6 +64,7 @@ export function toTeamColumnModel(input: TeamColumnInput): TeamColumnModel {
     gesperrt: input.sperrHinweise.filter((h) => h.teamId === team.id).map((h) => h.playerNumber),
     zeitstrafeMinuten: Math.round(input.zeitstrafeSekunden / 60),
     kartenArten: input.kartenArten,
+    vorAnpfiff: input.zustand === 'vorAnpfiff',
   };
 }
 

@@ -121,21 +121,9 @@
     }
   },
   "privacy": {
-    "errorTracking": {
-      "label": "Error Tracking",
-      "description": "Send anonymized error reports"
-    },
-    "sessionReplay": {
-      "label": "Session Replay",
-      "description": "Anonymized session recordings for debugging"
-    },
-    "revoke": {
-      "label": "Revoke Consent",
-      "description": "Reset all tracking settings",
-      "action": "Revoke",
-      "confirmMessage": "Would you like to revoke your privacy consent?\n\nThis will disable error tracking and session replay. You will be asked for consent again on the next app start.",
-      "successMessage": "Your consent has been revoked.",
-      "dialogTitle": "Revoke consent"
+    "errorReports": {
+      "label": "Send error reports",
+      "description": "Helps find bugs. No names, no IP address, no recordings. Applies to this device."
     }
   },
   "legal": {
@@ -145,16 +133,5 @@
   "settingItem": {
     "openAriaLabel": "Open {{label}}",
     "proBadge": "Pro Feature"
-  },
-  "consent": {
-    "title": "Privacy Settings",
-    "description": "We use anonymized error tracking to improve the app. Optionally, you can enable session replays to help us fix issues.",
-    "necessary": "Necessary:",
-    "necessaryDescription": "Anonymized error reports (no personal data)",
-    "optional": "Optional:",
-    "optionalDescription": "Session replays for debugging (text is masked)",
-    "acceptAll": "Accept All",
-    "acceptNecessary": "Necessary Only",
-    "privacyLink": "Privacy Policy"
   }
 }

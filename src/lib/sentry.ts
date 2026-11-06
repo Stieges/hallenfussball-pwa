@@ -1,16 +1,16 @@
 /**
- * Sentry Integration - DSGVO-konform
+ * Sentry Integration - DSGVO-konform (@RE-002)
  *
  * - Initialisierung nur in Produktion
- * - Session Replay nur mit explizitem Consent
- * - PII wird automatisch entfernt
+ * - Läuft ohne Einwilligung (berechtigtes Interesse), abschaltbar in den Einstellungen („Fehlerberichte senden“)
+ * - Keine Sitzungsaufzeichnung, keine IP-Adresse, keine Nutzerdaten außer einer zufälligen Kennung
  *
  * @module sentry
  */
 
 import * as Sentry from '@sentry/react';
-import { getConsentStatus } from './consent';
-import { scrubBreadcrumb, scrubEventUrls } from './sentryScrub';
+import { isErrorReportingEnabled } from './errorReportPreference';
+import { scrubBreadcrumb, scrubEventUrls, scrubEventUser } from './sentryScrub';
 
 let isInitialized = false;
 
@@ -19,16 +19,11 @@ let isInitialized = false;
  *
  * - Skips in development mode
  * - Skips if no DSN configured
- * - Skips if user hasn't given consent
- * - Enables Session Replay only with explicit consent
+ * - Skips if the user switched error reports off on this device
  */
 export function initSentry(): void {
   // Only in production
   if (!import.meta.env.PROD) {
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.log('[Sentry] Skipped in development mode');
-    }
     return;
   }
 
@@ -43,27 +38,9 @@ export function initSentry(): void {
     return;
   }
 
-  const consent = getConsentStatus();
-
-  // Without consent: No tracking
-  if (!consent?.errorTracking) {
-    // eslint-disable-next-line no-console
-    console.log('[Sentry] No consent, skipping initialization');
+  // Aus = nichts senden (auch nach Neuladen)
+  if (!isErrorReportingEnabled()) {
     return;
-  }
-
-  // Using ReturnType to get the correct integration type
-  const integrations: ReturnType<typeof Sentry.replayIntegration>[] = [];
-
-  // Session Replay only with explicit consent
-  if (consent.sessionReplay) {
-    integrations.push(
-      Sentry.replayIntegration({
-        // DSGVO: Mask all text and block all media
-        maskAllText: true,
-        blockAllMedia: true,
-      })
-    );
   }
 
   Sentry.init({
@@ -71,18 +48,17 @@ export function initSentry(): void {
     environment: import.meta.env.MODE,
     release: `hallenfussball-pwa@${__BUILD_HASH__}`,
 
+    // Keine Standard-Personendaten (IP, Cookies, Header); keine Sitzungsaufzeichnung (keine Replay-Integration)
+    sendDefaultPii: false,
+
     // Sampling Rates
     tracesSampleRate: 0.1, // 10% of transactions
-    replaysSessionSampleRate: consent.sessionReplay ? 0.1 : 0, // 10% of sessions
-    replaysOnErrorSampleRate: consent.sessionReplay ? 1.0 : 0, // 100% on errors
-
-    integrations,
 
     // Remove PII
     beforeSend(event) {
-      // Remove IP address
-      if (event.user) {
-        delete event.user.ip_address;
+      // Gerät hat abgeschaltet, nachdem das Ereignis entstand: nichts senden
+      if (!isErrorReportingEnabled()) {
+        return null;
       }
 
       // Minimize request data
@@ -91,7 +67,18 @@ export function initSentry(): void {
         delete event.request.headers;
       }
 
+      // Keine IP-Adresse, keine E-Mail, kein Name: nur die zufällige Kennung bleibt
+      scrubEventUser(event);
+
       // A-17b: Helfer-Code (`/join/<code>`) und `token=` nie an Sentry (HashRouter: steht in jeder Adresse)
+      return scrubEventUrls(event);
+    },
+
+    beforeSendTransaction(event) {
+      if (!isErrorReportingEnabled()) {
+        return null;
+      }
+      scrubEventUser(event);
       return scrubEventUrls(event);
     },
 
@@ -103,22 +90,16 @@ export function initSentry(): void {
   });
 
   isInitialized = true;
-  if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
-    console.log('[Sentry] Initialized', { sessionReplay: consent.sessionReplay });
-  }
 }
 
 /**
- * Re-initialize after consent change
- * (e.g., if user later enables Session Replay)
+ * Nach dem Umschalten in den Einstellungen: aus = Client schließen (sendet nichts mehr), an = neu starten.
  */
-export async function reinitializeSentry(): Promise<void> {
+export async function applyErrorReportingPreference(): Promise<void> {
   if (!import.meta.env.PROD) {
     return;
   }
 
-  // Close Sentry client and reinitialize
   await Sentry.close();
   isInitialized = false;
   initSentry();
@@ -309,8 +290,8 @@ export async function collectBootContext(): Promise<BootContext> {
  * so it doesn't pollute the Issues stream — appears under Discover/Events with
  * the `boot` tag for ad-hoc querying.
  *
- * No-op in dev (where Sentry isn't initialized). Safe to call before consent
- * is given; if Sentry isn't initialized, captureMessage's existing dev-mode
+ * No-op in dev (where Sentry isn't initialized). Safe to call when error reports
+ * are switched off; if Sentry isn't initialized, captureMessage's existing dev-mode
  * branch logs to console instead.
  */
 export async function captureBootContext(): Promise<void> {

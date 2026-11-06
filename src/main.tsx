@@ -7,6 +7,8 @@ import './i18n';
 
 // Font: Inter Variable (self-hosted via @fontsource for offline capability)
 import '@fontsource-variable/inter';
+// Font: Bebas Neue (Anzeigeschrift, selbst ausgeliefert statt von Google Fonts, @RE-003; Lizenz OFL-1.1)
+import '@fontsource/bebas-neue/400.css';
 
 import App from './App';
 import './styles/global.css';
@@ -88,7 +90,7 @@ initInertPolyfill().catch((error) => {
   console.error('Failed to initialize inert polyfill:', error);
 });
 
-// Initialize Sentry error tracking (only in production, with consent)
+// Initialize Sentry error tracking (only in production; switchable in settings, @RE-002)
 // Must be called early to catch all errors
 initSentry();
 

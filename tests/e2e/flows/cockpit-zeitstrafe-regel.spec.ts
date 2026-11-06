@@ -35,18 +35,20 @@ test.describe('Spielregeln aus den Einstellungen (@W2A-016, @W2A-029, @W2A-012)'
     await seedIndexedDB({ tournaments: [cupMitZeitstrafe(60)] });
     await anpfeifen(page);
     const knopf = page.getByTestId('penalty-button-away');
-    await expect(knopf).toContainText('Zeitstrafe 1 Min');
+    // Handy (Cockpit-Paket K5): die Taste zeigt die Dauer als „1:00“, der zugängliche Name nennt „Zeitstrafe <Team>, 1:00“; sonst „Zeitstrafe 1 Min“
+    await expect(knopf).toContainText(/Zeitstrafe 1 Min|^1:00$/);
+    await expect(knopf).toHaveAccessibleName(/^Zeitstrafe .+/);
     await bild(page, `cockpit-zeitstrafe-1min-${testInfo.project.name}`);
     await knopf.click();
     await wartePicker(page);
     await expect(page.getByText(/Dauer/)).toHaveCount(0);
     await page.getByTestId('number-picker').getByRole('button', { name: '5', exact: true }).click();
     await expect(page.getByTestId('number-picker')).toBeHidden();
-    // Handy: Marke „#5 · 1:00“ unter den Tasten der Team-Spalte; Laptop/Desktop (seit #386): Karte „<Team>, #5, Restzeit 1:00“
-    // in der Strafen-Spalte (accessible name). Beide Wege nennen Team Gast, #5 und Restzeit 1:00 bzw. 0:5x.
+    // Handy und Tablet hochkant (Cockpit-Paket K7): „#5 1:00“ in der Tafel; Laptop/Desktop (seit #386): Karte „<Team>, #5, Restzeit 1:00“
+    // in der Strafen-Spalte (accessible name). Beide Wege nennen #5 und Restzeit 1:00 bzw. 0:5x.
     const gast = (await page.getByTestId('team-column-away').getAttribute('aria-label')) ?? '';
     expect(gast).not.toBe('');
-    const marke = page.getByTestId('team-column-away').getByText(/^#5 · (1:00|0:5\d)$/);
+    const marke = page.getByTestId('scoreboard').getByText(/^#5 (1:00|0:5\d)$/);
     const karte = page.getByRole('listitem', { name: new RegExp(`^${gast.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, #5, Restzeit (1:00|0:5\\d)$`) });
     await expect(marke.or(karte)).toBeVisible();
     await bild(page, `cockpit-zeitstrafe-1min-laeuft-${testInfo.project.name}`);
@@ -55,7 +57,7 @@ test.describe('Spielregeln aus den Einstellungen (@W2A-016, @W2A-029, @W2A-012)'
   test('@W2A-029 laufendes Spiel mit 2 Min: nach der Umstellung auf 1 Minute nennt der Knopf weiter 2 Min', async ({ page, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [cupMitZeitstrafe(120)] });
     await anpfeifen(page);
-    await expect(page.getByTestId('penalty-button-away')).toContainText('Zeitstrafe 2 Min');
+    await expect(page.getByTestId('penalty-button-away')).toContainText(/Zeitstrafe 2 Min|^2:00$/);
     // Turnierleitung stellt in den Einstellungen (Admin → Match Cockpit) auf 1 Minute um
     await page.goto(`/#/tournament/${ID}/admin/match-cockpit`);
     const dauer = page.getByTestId('settings-time-penalty-duration');
@@ -63,7 +65,7 @@ test.describe('Spielregeln aus den Einstellungen (@W2A-016, @W2A-029, @W2A-012)'
     await dauer.selectOption('60');
     await expect(dauer).toHaveValue('60');
     await page.goto(`/#/tournament/${ID}/live`);
-    await expect(page.getByTestId('penalty-button-away')).toContainText('Zeitstrafe 2 Min', { timeout: 15000 });
+    await expect(page.getByTestId('penalty-button-away')).toContainText(/Zeitstrafe 2 Min|^2:00$/, { timeout: 15000 });
   });
 
   test('@W2A-012 Turnier-Einstellungen ohne gespeicherte Schützenzahl: vorbelegt 3', async ({ page, seedIndexedDB }, testInfo) => {

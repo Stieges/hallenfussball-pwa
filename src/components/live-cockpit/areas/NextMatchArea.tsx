@@ -25,9 +25,11 @@ export interface NextMatchAreaProps {
    * Vorwarnung und nach dem Abpfiff – davor bleibt ihr Platz reserviert, die Tasten springen nie (@SL-155, F3 Variante R).
    */
   layout?: 'daumen' | 'breit';
+  /** Handy: die Zeile steht in der Tafel im Platz der Meldezeile und erscheint erst ab der Vorwarnung bzw. nach dem Abpfiff, ohne eigenen Streifen. */
+  aufTafel?: boolean;
 }
 
-export function NextMatchArea({ naechstes, phase, restSpielMs, layout = 'breit' }: NextMatchAreaProps): ReactElement | null {
+export function NextMatchArea({ naechstes, phase, restSpielMs, layout = 'breit', aufTafel = false }: NextMatchAreaProps): ReactElement | null {
   const { t } = useTranslation('cockpit');
   const reduziert = usePrefersReducedMotion();
   const aktiv = naechstes !== null && vorwarnungAktiv(phase, restSpielMs);
@@ -42,7 +44,8 @@ export function NextMatchArea({ naechstes, phase, restSpielMs, layout = 'breit' 
 
   if (naechstes === null) { return null; }
   const farben = naechstes.farben ?? { home: null, away: null };
-  const verborgen = layout === 'daumen' && !aktiv && phase.zustand !== 'abgepfiffen';
+  const verborgen = (aufTafel || layout === 'daumen') && !aktiv && phase.zustand !== 'abgepfiffen';
+  if (aufTafel && verborgen) { return null; }
   return (
     <NextMatchRow
       label={t('naechstes.label')}
@@ -54,6 +57,7 @@ export function NextMatchArea({ naechstes, phase, restSpielMs, layout = 'breit' 
       blinken={aktiv && !reduziert && blinktNoch && geblinktFuer === id}
       onBlinkEnde={() => setBlinktNoch(false)}
       verborgen={verborgen}
+      aufTafel={aufTafel}
       testId="cockpit-naechstes"
     />
   );

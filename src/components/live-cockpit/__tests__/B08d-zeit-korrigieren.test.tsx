@@ -36,6 +36,8 @@ vi.mock('../../../components/ui/Toast/ToastContext', () => ({
 
 // Spiel 11: 2 x 6 Minuten, 1 Minute Halbzeitpause.
 const ZWEI_ABSCHNITTE = { groupPhaseGameDuration: 12, gamePeriods: 2, halftimeBreak: 1 };
+// @SL-011/@SL-012/@SL-077 sprechen von der gespielten Zeit: die Uhr läuft aufwärts (@SL-198 Zeile 2); Countdown siehe TimeAdjustDialog.sl198
+const AUFWAERTS = { timerDirection: 'elapsed' as const };
 const zu = (ms: number): void => { vi.setSystemTime(T0 + ms); };
 
 beforeEach(() => {
@@ -81,7 +83,7 @@ async function zeitDialog(user: ReturnType<typeof userEvent.setup>): Promise<HTM
 describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
   it('@SL-011 Pflichttest echter Weg: 2. Abschnitt 5:20 → 4:50, Anzeige folgt, die Uhr läuft von 4:50 weiter', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur />);
     await zurZweitenHalbzeit(user);
     zu(740_000); // zweiter Abschnitt bei 5:20
     await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:20'));
@@ -102,7 +104,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     let store: LocalMatchStore | null = null;
     let konto = '';
     const fabrik: SenderFabrik = (s, accountId, tournamentId) => { store = s; konto = accountId; return storeSender(s, accountId, tournamentId); };
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur senderFabrik={fabrik} />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur senderFabrik={fabrik} />);
     await zurZweitenHalbzeit(user);
     zu(743_000); // Tom hat vergessen anzuhalten: die Uhr läuft, 5:23
     await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:23'));
@@ -124,7 +126,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
 
   it('@SL-011 Gegenbeispiel: steht die Uhr genau auf 5:20, ist der erste Schritt 5:10', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur />);
     await zurZweitenHalbzeit(user);
     zu(740_000);
     await waitFor(() => expect(uhrSub()).toHaveTextContent('Gespielt 5:20'));
@@ -136,7 +138,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
 
   it('@SL-012 Gegenbeispiel: über 6:00 hinaus geht es nicht, Abbrechen lässt die Uhr stehen', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur />);
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(180_000); // erster Abschnitt bei 3:00
@@ -154,7 +156,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
 
   it('@SL-077 nach dem Tor bei 5:10 stellt die Uhr nicht davor zurück; Hinweis mit dem Tor', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur />);
     await zurZweitenHalbzeit(user);
     zu(730_000); // 5:10 im zweiten Abschnitt: Tor für Heim
     await user.click(await screen.findByTestId('goal-button-home'));
@@ -176,7 +178,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     let store: LocalMatchStore | null = null;
     let konto = '';
     const fabrik: SenderFabrik = (s, accountId, tournamentId) => { store = s; konto = accountId; return storeSender(s, accountId, tournamentId); };
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur senderFabrik={fabrik} />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur senderFabrik={fabrik} />);
     await zurZweitenHalbzeit(user);
     zu(730_000); // Tor für Heim bei 5:10
     await user.click(await screen.findByTestId('goal-button-home'));
@@ -199,7 +201,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
 
   it('@SL-079 in der Halbzeitpause bietet das Cockpit keine Zeitkorrektur an', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur />);
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     expect(await zeitPunktDa(user)).toBe(true);
@@ -210,7 +212,7 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
 
   it('@SL-079 Zeile 2: nach dem Abpfiff (2:1) bietet das Cockpit keine Zeitkorrektur an', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} zeitKorrektur />);
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={AUFWAERTS} zeitKorrektur />);
     await zurZweitenHalbzeit(user);
     zu(500_000);
     for (const seite of ['home', 'home', 'away']) {
@@ -223,5 +225,22 @@ describe('LiveCockpit: Spielzeit korrigieren (B-08d)', () => {
     await waitFor(() => expect(zustand()).toHaveTextContent('Ende'));
     expect(screen.getByTestId('scoreboard-score')).toHaveTextContent('2:1');
     expect(await zeitPunktDa(user)).toBe(false);
+  });
+});
+
+describe('@SL-198 Countdown (Vorgabe): der Dialog zeigt die Restzeit wie die Uhr, „10 Sekunden mehr“ erhöht sie', () => {
+  it('@SL-198 9 Minuten, Uhr zeigt 5:20 → Dialog 5:20 → „10 Sekunden mehr“ → 5:30 → nach „Übernehmen“ zeigt die Uhr 5:30', async () => {
+    const user = userEvent.setup();
+    render(<Harness turnier={{ groupPhaseGameDuration: 9, gamePeriods: 1, halftimeBreak: 0 }} zeitKorrektur />);
+    await anpfiff(user);
+    await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
+    zu(220_000); // gespielt 3:40, Restzeit 5:20
+    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('5:20'));
+    const dialog = await zeitDialog(user);
+    expect(within(dialog).getByTestId('time-adjust-stepper')).toHaveTextContent('5:20');
+    await user.click(within(dialog).getByRole('button', { name: '10 Sekunden mehr' }));
+    expect(within(dialog).getByTestId('time-adjust-stepper')).toHaveTextContent('5:30');
+    await user.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
+    await waitFor(() => expect(screen.getByTestId('scoreboard-clock-rest')).toHaveTextContent('5:30'));
   });
 });

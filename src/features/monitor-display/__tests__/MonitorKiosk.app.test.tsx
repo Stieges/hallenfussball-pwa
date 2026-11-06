@@ -144,11 +144,11 @@ describe('Kiosk-Route Monitor (B-19a, @ME-003, @OB-028)', { timeout: 15_000 }, (
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('Gegenbeispiel „/“ (Verwaltung): Offline-Hinweis und Einwilligung bleiben', async () => {
+  it('Gegenbeispiel „/“ (Verwaltung): Offline-Hinweis bleibt; es gibt keinen Einwilligungsdialog mehr (@RE-001)', async () => {
     online.value = false;
     await rendere('/');
     expect(await screen.findByTestId('offline-banner', {}, LADEZEIT)).toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   // Gegenproben zu W1/W2: auf „/“ erscheinen die Hinweise tatsächlich (sonst wäre die Kiosk-Prüfung leer).

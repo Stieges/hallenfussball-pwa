@@ -19,8 +19,7 @@
  * Ein kurzer Inhalt wird nicht gestreckt (die Fläche ist so hoch wie ihr Inhalt, höchstens `maxHeight`).
  * Am Blatt trägt der Fuß den Safe-Area-Abstand. Ohne Slots bleibt alles wie zuvor (Fläche scrollt als Ganzes).
  *
- * Verbindliche Vorgaben: @OB-055 (deckende Fläche, Kontrast), @OB-056 (Einwilligung
- * – Schließen-Verhalten über `dismissible`).
+ * Verbindliche Vorgaben: @OB-055 (deckende Fläche, Kontrast); Schließen-Verhalten über `dismissible`.
  */
 import { CSSProperties, ReactNode, RefObject, useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -90,7 +89,7 @@ export interface DialogSurfaceProps {
   isOpen: boolean;
   /** Schließen: Esc, Zurück-Taste, Abdunkelung (wenn erlaubt). */
   onClose?: () => void;
-  /** false = Esc und Zurück-Taste schließen nicht (Einwilligung, @OB-056). Standard: true. */
+  /** false = Esc und Zurück-Taste schließen nicht (z. B. Eingaben, die nicht verloren gehen dürfen). Standard: true. */
   dismissible?: boolean;
   /** Klick auf die Abdunkelung schließt. Standard: true (nur wirksam, wenn dismissible). */
   closeOnBackdropClick?: boolean;
