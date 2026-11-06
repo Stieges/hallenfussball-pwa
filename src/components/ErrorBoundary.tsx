@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
 
-    // Report to Sentry (only in production, with consent)
+    // Report to Sentry (only in production; switchable in settings, @RE-002)
     captureFeatureError(error, 'react', 'error-boundary', {
       componentStack: errorInfo.componentStack,
     });

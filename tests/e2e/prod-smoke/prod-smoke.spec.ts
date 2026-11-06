@@ -23,13 +23,13 @@ const MODE = process.env.PROD_SMOKE_MODE === 'voll' ? 'voll' : 'kurz';
 const DAUER_TITEL = 'ZZ-Rauchtest-Dauer';
 const EXPECTED_SHA = (process.env.PROD_SMOKE_EXPECTED_SHA ?? '').slice(0, 8);
 
-const CONSENT = { errorTracking: false, sessionReplay: false, timestamp: Date.now(), version: 1 };
 const FUTURE_DATE = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
 async function setzeEinwilligung(context: BrowserContext): Promise<void> {
-  await context.addInitScript((consent) => {
-    window.localStorage.setItem('app:consent', JSON.stringify(consent));
-  }, CONSENT);
+  // Der Smoke-Test sendet keine Fehlerberichte an Sentry (@RE-002: Schalter „Fehlerberichte senden“ aus)
+  await context.addInitScript(() => {
+    window.localStorage.setItem('app:errorReports', 'off');
+  });
 }
 
 /** Eines der Bündel, die index.html einbindet oder vorlädt, trägt die Version (Sentry-Release `hallenfussball-pwa@<8 Zeichen>`). */

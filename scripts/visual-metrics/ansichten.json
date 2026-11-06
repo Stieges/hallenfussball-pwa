@@ -4,16 +4,24 @@
   "beschreibung": "Pflicht-Ansichten der visuellen Prüfung (Skill visuelle-pruefung); npm run visual:metrics -- --ansichten pflicht. Pfade sind Hash-Routen der App (HashRouter).",
   "ansichten": [
     {
-      "id": "datenschutz-abfrage",
-      "titel": "Dialog Datenschutz-Abfrage",
+      "id": "zuschauer-erster-besuch",
+      "titel": "Zuschauer-Seite beim ersten Besuch: kein Dialog, Fußzeile mit Impressum und Datenschutz (@RE-001)",
       "gruppen": [
         "pflicht"
       ],
-      "app": "/#/",
-      "erwarte": "[data-testid=\"dialog-surface\"]",
-      "profil": "app",
-      "saat": false,
-      "hinweis": "ohne Saat: die Saat setzt die Einwilligung"
+      "app": "/#/live/MESS26",
+      "erwarte": "[data-testid=\"footer-impressum-link\"]",
+      "profil": "app"
+    },
+    {
+      "id": "datenschutz",
+      "titel": "Datenschutzerklärung",
+      "gruppen": [
+        "pflicht"
+      ],
+      "app": "/#/datenschutz",
+      "erwarte": "[data-testid=\"legal-back-button\"]",
+      "profil": "app"
     },
     {
       "id": "startseite-leer",
@@ -24,9 +32,6 @@
       "app": "/#/",
       "erwarte": "[data-testid=\"dashboard-import-trigger\"]",
       "profil": "app",
-      "klick": [
-        "role=button[name=/notwendig|necessary/i]"
-      ],
       "saat": false
     },
     {

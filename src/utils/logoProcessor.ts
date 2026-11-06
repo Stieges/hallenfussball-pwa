@@ -133,7 +133,7 @@ async function compressImage(file: File): Promise<File> {
   const options = {
     maxSizeMB: 0.1, // 100KB max
     maxWidthOrHeight: 256, // Intermediate size before final resize
-    useWebWorker: true,
+    useWebWorker: false, // @RE-003: der Worker lädt sonst Code von cdn.jsdelivr.net
     fileType: 'image/webp' as const,
   };
 

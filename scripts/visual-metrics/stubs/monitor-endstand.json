@@ -175,8 +175,7 @@
      }
     }
    }
-  },
-  "einwilligung": true
+  }
  },
  "e2": {
   "rpc": {
@@ -382,8 +381,7 @@
      }
     }
    }
-  },
-  "einwilligung": true
+  }
  },
  "e3": {
   "rpc": {
@@ -611,8 +609,7 @@
      }
     }
    }
-  },
-  "einwilligung": true
+  }
  },
  "e4": {
   "rpc": {
@@ -723,7 +720,6 @@
      "status": "none"
     }
    }
-  },
-  "einwilligung": true
+  }
  }
 }

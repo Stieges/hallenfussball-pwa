@@ -156,7 +156,10 @@ vi.mock('../../features/auth/hooks/useTournamentMembers', () => ({
 // ---------------------------------------------------------------------------
 
 export const VERBOTENE_ANKUENDIGUNG =
-  /\bComing Soon\b|\bkommt bald\b|\bBald\b|folgt später|in einer späteren Version|in Kürze|\bsoon\b|later version/i;
+  /\bComing Soon\b|\bkommt bald\b|\bBald\b|folgt später|in einer späteren Version|\bin Kürze\b|\bsoon\b|later version/i;
+
+/** „Das Wichtigste in Kürze“ ist die Überschrift der Datenschutzerklärung (@RE-004), keine Ankündigung einer Funktion. */
+const UEBERSCHRIFT_KEINE_ANKUENDIGUNG = /Das Wichtigste in Kürze/g;
 
 export const SRC_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const LOCALE_MARKER = join('i18n', 'locales');
@@ -188,7 +191,7 @@ export function findeAnkuendigungen(language: 'de' | 'en'): string[] {
   for (const file of walkFiles(SRC_ROOT)) {
     if (file.includes(LOCALE_MARKER)) { continue; }
     if (!/\.(ts|tsx)$/.test(file)) { continue; }
-    const text = readFileSync(file, 'utf8');
+    const text = readFileSync(file, 'utf8').replace(UEBERSCHRIFT_KEINE_ANKUENDIGUNG, '');
     const match = VERBOTENE_ANKUENDIGUNG.exec(text);
     if (match) {
       treffer.push(`${file}: ${match[0]}`);

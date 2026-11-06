@@ -17,12 +17,6 @@ import { ToastProvider } from '../components/ui/Toast';
 vi.mock('../features/auth/hooks/useCan', () => ({ useCan: () => true }));
 // LocationForm zieht Ort-Vorschläge aus useTournaments (RepositoryContext) – hier ohne Turniere
 vi.mock('../hooks/useTournaments', () => ({ useTournaments: () => ({ tournaments: [], loading: false, saveTournament: vi.fn() }) }));
-// localStorage ist in der Testumgebung ersetzt: die Einwilligung kommt aus dem Modul
-vi.mock('../lib/consent', async (orig) => ({
-  ...(await orig<typeof import('../lib/consent')>()),
-  getConsentStatus: () => ({ errorTracking: true, sessionReplay: false, timestamp: 1, version: 1 }),
-  revokeConsent: vi.fn(),
-}));
 vi.mock('../features/auth/hooks/useAuth', () => ({ useAuth: () => ({ isAuthenticated: false }) }));
 vi.mock('../features/auth/hooks/useTournamentMembers', () => ({ useTournamentMembers: () => ({ myMembership: null, isLoading: false }) }));
 
@@ -140,18 +134,6 @@ describe('@OB-017 Dialog der App statt Browser-Fenster – ersetzte Stellen', ()
     await user.click(screen.getByTestId('confirm-dialog-cancel'));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expectKeinBrowserFenster();
-  });
-
-  it('App-Einstellungen: „Einwilligung widerrufen“ fragt im Dialog der App nach und meldet danach in der App', async () => {
-    const user = userEvent.setup();
-    const { container } = renderSettings();
-    container.querySelectorAll('[role="button"][aria-expanded="false"]').forEach((abschnitt) => fireEvent.click(abschnitt));
-
-    await user.click(await screen.findByRole('button', { name: 'settings:privacy.revoke.action' }));
-    await user.click(await screen.findByTestId('confirm-dialog-confirm'));
-
-    expect(await screen.findByText('settings:privacy.revoke.successMessage')).toBeInTheDocument();
     expectKeinBrowserFenster();
   });
 

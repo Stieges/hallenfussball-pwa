@@ -13,7 +13,6 @@ import { useAnnounceCockpitFrame } from '../live-cockpit/frame/cockpitFrame';
 vi.mock('../../lib/supabase', () => ({ isSupabaseConfigured: false, supabase: {} }));
 vi.mock('../OfflineBanner', () => ({ OfflineBanner: () => <div data-testid="offline-banner" /> }));
 vi.mock('../StorageWarningBanner', () => ({ StorageWarningBanner: () => <div data-testid="storage-warning" /> }));
-vi.mock('../dialogs/ConsentDialog', () => ({ ConsentDialog: () => null }));
 vi.mock('../layout/Footer', () => ({ Footer: () => <footer data-testid="app-footer" /> }));
 
 function Rahmen({ aktiv }: { aktiv: boolean }) {

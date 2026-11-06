@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "postbuild": "node scripts/check-pdf-font-precache.cjs",
+    "postbuild": "node scripts/check-pdf-font-precache.cjs && node scripts/check-external-hosts.mjs",
     "preview": "vite preview",
     "test:sw-precache": "rm -rf dist-swcheck && VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= vite build --outDir dist-swcheck && node scripts/check-sw-precache.mjs dist-swcheck",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
@@ -50,6 +50,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/bebas-neue": "^5.3.0",
     "@sentry/react": "^10.75.1",
     "@supabase/supabase-js": "^2.117.3",
     "@types/qrcode": "^1.5.6",

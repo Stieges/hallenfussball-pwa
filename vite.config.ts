@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { VitePWA } from 'vite-plugin-pwa'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
+import { legalCheckPlugin } from './scripts/vite/legalCheckPlugin'
 
 // Build identifier — short Vercel commit SHA in production, timestamp marker locally.
 // Injected at build time via `define` and consumed by Sentry release-tag + boot-context telemetry.
@@ -23,6 +24,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    // @RE-004: Betreiberangaben vollständig? Warnung; mit LEGAL_REQUIRE_COMPLETE=1 (Produktions-Build) bricht der Bau ab
+    legalCheckPlugin(),
     // PWA Plugin - Enables offline functionality
     VitePWA({
       // 'prompt' gives our swRegistration.setupSwAutoReload control over the
@@ -70,36 +73,6 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // Runtime caching for external resources
         runtimeCaching: [
-          {
-            // Cache Google Fonts
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            // Cache Google Fonts stylesheets
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
           {
             // Cache Supabase API responses for public views
             // NetworkFirst: Try network, fall back to cache for offline support
