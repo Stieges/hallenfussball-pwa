@@ -436,8 +436,10 @@
       "de": "Abgebrochen",
       "en": "Cancelled",
       "forbidden_de": [],
-      "reason": "Daniel 06.11.2026, @LZ-001: Eigener Zustand im Archiv (MVP+), nicht 'Archiviert' oder 'Abgeschlossen'.",
-      "i18nKey": "lifecycle.cancelled"
+      "reason": "Daniel 06.11.2026, @LZ-001: Eigener Zustand im Archiv (MVP+), nicht 'Archiviert' oder 'Abgeschlossen'. kuerzel:true nur, damit die Lint-Regel das alltägliche Wort 'abgebrochen' in Code-Texten (Fehlermeldungen, Kommentare) nicht als hartkodierten Begriff meldet.",
+      "i18nKey": "lifecycle.cancelled",
+      "kuerzel": true,
+      "tsLint": false
     }
   }
 }
