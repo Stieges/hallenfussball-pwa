@@ -64,6 +64,17 @@ MUTATIONS = {
     # R0: Mitglieder direkt ueber die Schnittstelle
     "G22-mitglieder": [("  IF current_user IN ('authenticated', 'anon') THEN\n    RAISE EXCEPTION 'GATHERING_NOT_ALLOWED: Mitglieder",
                         "  IF false THEN\n    RAISE EXCEPTION 'GATHERING_NOT_ALLOWED: Mitglieder")],
+    # Review #449 B7: endgueltiges Loeschen setzt die Version der Veranstaltung nicht
+    "G23-loeschen-version": [("FOR EACH ROW WHEN (OLD.gathering_id IS NOT NULL)\n",
+                              "FOR EACH ROW WHEN (false AND OLD.gathering_id IS NOT NULL)\n")],
+    # Review #449 B7: Turniere ohne FOR UPDATE (Wettlauf: die zweite Veranstaltung meldet keinen Konflikt)
+    "G24-sperre-turniere": [("  PERFORM 1 FROM public.tournaments t WHERE t.id = ANY (v_add || v_remove) ORDER BY t.id FOR UPDATE;\n", "")],
+    # Review #449 B7: Umbenennen ohne Rechtepruefung
+    "G25-recht-umbenennen": [("IF NOT public.has_gathering_permission(p_gathering_id, 'editGathering') THEN", "IF false THEN")],
+    # Review #449 B7: Loeschen ohne Rechtepruefung
+    "G26-recht-loeschen": [("IF NOT public.has_gathering_permission(p_gathering_id, 'deleteGathering') THEN", "IF false THEN")],
+    # Review #449 B5: Obergrenze je Veranstaltung
+    "G27-grenze-veranstaltung": [("> c_max_per_gathering THEN", "> c_max_per_gathering + 1000 THEN")],
 }
 
 

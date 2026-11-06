@@ -17,11 +17,12 @@
 --      tournaments_touch_gathering_*: Papierkorb, Zurueckholen und endgueltiges Loeschen eines zugeordneten Turniers setzen
 --      gatherings.updated_at (monotone Version, @ZM-180).
 --   4. tournaments_guard_lifecycle woertlich aus 20261113_003 (md5 a7ce4fa88b5e62997bf26bcecdfc9a0a), nur c_free um
---      gathering_id erweitert (@VA-019, @VA-015 Z. 3).
+--      gathering_id erweitert (@VA-019, @VA-015 Z. 3); Fassung dieser Datei md5 3958921a7e64a12f2d4b87e530b28d73.
 --   5. Funktionen has_gathering_permission, create_gathering, rename_gathering, delete_gathering, set_gathering_tournaments
 --      (SECURITY DEFINER, search_path fest, EXECUTE nur authenticated) und public_gathering (anon, authenticated,
 --      service_role). public_view.public_payload woertlich aus 20261117_104 (zuletzt gueltige Fassung, md5
---      9a606911268600767bd20c5ad7e6f66d; 20261118_004/_007/_008 ersetzen sie nicht), nur um gathering_code ergaenzt: nur fuer
+--      9a606911268600767bd20c5ad7e6f66d; 20261118_004/_007/_008 ersetzen sie nicht; Fassung dieser Datei md5
+--      339aea3bc0ecc439185def6a93cb59c6), nur um gathering_code ergaenzt: nur fuer
 --      audience 'viewer', nur wenn das Turnier oeffentlich ist und zu einer Veranstaltung gehoert (@VA-013, @VA-014).
 --   6. Rechte: REVOKE ALL auf beiden Tabellen fuer PUBLIC, anon, authenticated; SELECT auf gatherings fuer authenticated
 --      (RLS: nur readGathering), SELECT fuer ci_schema_reader (Schema-Dump des Drift-Checks).
@@ -48,7 +49,8 @@
 --   HF005 (vergeben) · HF006 GATHERING_NOT_ALLOWED (Recht fehlt, kein echtes Konto, Turnier eines anderen Kontos,
 --   direktes Schreiben von tournaments.gathering_id) · HF007 GATHERING_CONFLICT (Turnier gehoert schon zu einer anderen
 --   Veranstaltung) · HF008 GATHERING_NOT_FOUND (Veranstaltung oder Turnier fehlt oder liegt im Papierkorb) ·
---   HF009 GATHERING_LIMIT (mehr als 50 je Konto) · HF010 GATHERING_NAME_INVALID (leer, zu lang, Steuerzeichen).
+--   HF009 GATHERING_LIMIT (mehr als 50 je Konto) · HF010 GATHERING_NAME_INVALID (leer, zu lang, Steuerzeichen) ·
+--   HF011 GATHERING_TOO_MANY (mehr als 50 Turniere je Veranstaltung; Review #449 B5).
 --   Dazu 22023 GATHERING_INVALID_INPUT (dasselbe Turnier in add und remove).
 --
 -- Bestandsdaten: keine Aenderung; alle Turniere starten ohne Veranstaltung (gathering_id NULL), die Turnierantwort eines
@@ -89,13 +91,14 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
     RAISE EXCEPTION '20261119_001_gatherings: Voraussetzungen fehlen -- zuerst 20261110_002, 20261113_003 und 20261117_104 einspielen';
   END IF;
-  -- Nie still eine andere Fassung ueberschreiben: Waechter aus 20261113_003, public_payload aus 20261117_104 -- oder diese Datei.
+  -- Nie still eine andere Fassung ueberschreiben: Waechter aus 20261113_003, public_payload aus 20261117_104 -- oder genau
+  -- die Fassung dieser Datei (md5 des Funktionstexts, nicht nur der Stempel: eine spaetere Fassung mit Stempel bricht ab).
   SELECT prosrc INTO v_guard FROM pg_proc WHERE oid = 'public.tournaments_guard_lifecycle()'::regprocedure;
-  IF md5(v_guard) <> 'a7ce4fa88b5e62997bf26bcecdfc9a0a' AND position('20261119_001' IN v_guard) = 0 THEN
+  IF md5(v_guard) NOT IN ('a7ce4fa88b5e62997bf26bcecdfc9a0a', '3958921a7e64a12f2d4b87e530b28d73') THEN
     RAISE EXCEPTION '20261119_001_gatherings: tournaments_guard_lifecycle hat eine unbekannte Fassung (md5 %) -- erst klaeren', md5(v_guard);
   END IF;
   SELECT prosrc INTO v_payload FROM pg_proc WHERE oid = 'public_view.public_payload(uuid,bigint,text,text)'::regprocedure;
-  IF md5(v_payload) <> '9a606911268600767bd20c5ad7e6f66d' AND position('20261119_001' IN v_payload) = 0 THEN
+  IF md5(v_payload) NOT IN ('9a606911268600767bd20c5ad7e6f66d', '339aea3bc0ecc439185def6a93cb59c6') THEN
     RAISE EXCEPTION '20261119_001_gatherings: public_view.public_payload hat eine unbekannte Fassung (md5 %) -- erst klaeren', md5(v_payload);
   END IF;
 END $$;
@@ -108,7 +111,7 @@ CREATE TABLE IF NOT EXISTS public.gatherings (
   owner_id              uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name                  text NOT NULL CONSTRAINT gatherings_name_valid
                           CHECK (char_length(btrim(name)) BETWEEN 1 AND 80
-                                 AND name !~ '[\u0001-\u001F\u007F-\u009F­؜ᅟᅠ᠎​-‏‪-‮⁠-⁯ㅤ﻿ﾠ￹-￻\U000E0000-\U000E007F]'),
+                                 AND name !~ '[\u0001-\u001F\u007F-\u009F\u00AD\u061C\u115F\u1160\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB\U000E0000-\U000E007F]'),
   share_code            text NOT NULL CONSTRAINT gatherings_share_code_format CHECK (share_code ~ '^[A-Z0-9]{6}$'),
   share_code_created_at timestamptz NOT NULL DEFAULT now(),
   created_at            timestamptz NOT NULL DEFAULT now(),
@@ -133,7 +136,7 @@ CREATE TABLE IF NOT EXISTS public.gathering_members (
   role           text NOT NULL CONSTRAINT gathering_members_role_check CHECK (role IN ('co-admin', 'helper')),
   label          text CONSTRAINT gathering_members_label_valid
                    CHECK (label IS NULL OR (char_length(btrim(label)) BETWEEN 1 AND 40
-                                            AND label !~ '[\u0001-\u001F\u007F-\u009F­؜ᅟᅠ᠎​-‏‪-‮⁠-⁯ㅤ﻿ﾠ￹-￻\U000E0000-\U000E007F]')),
+                                            AND label !~ '[\u0001-\u001F\u007F-\u009F\u00AD\u061C\u115F\u1160\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB\U000E0000-\U000E007F]')),
   allowed_fields integer[],
   invited_by     uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   invited_at     timestamptz DEFAULT now(),
@@ -297,7 +300,7 @@ DECLARE
   v_name text := btrim(coalesce(p_name, ''));
 BEGIN
   IF char_length(v_name) NOT BETWEEN 1 AND 80
-     OR v_name ~ '[\u0001-\u001F\u007F-\u009F­؜ᅟᅠ᠎​-‏‪-‮⁠-⁯ㅤ﻿ﾠ￹-￻\U000E0000-\U000E007F]' THEN
+     OR v_name ~ '[\u0001-\u001F\u007F-\u009F\u00AD\u061C\u115F\u1160\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB\U000E0000-\U000E007F]' THEN
     RAISE EXCEPTION 'GATHERING_NAME_INVALID: Name leer, laenger als 80 Zeichen oder mit Steuerzeichen.' USING ERRCODE = 'HF010';
   END IF;
   RETURN v_name;
@@ -398,6 +401,7 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
+  c_max_per_gathering constant integer := 50;
   v_owner uuid;
   v_add uuid[] := coalesce(p_add, '{}'::uuid[]);
   v_remove uuid[] := coalesce(p_remove, '{}'::uuid[]);
@@ -439,13 +443,17 @@ BEGIN
   UPDATE public.tournaments t SET gathering_id = NULL
    WHERE t.id = ANY (v_remove) AND t.gathering_id = p_gathering_id;
   GET DIAGNOSTICS v_removed = ROW_COUNT;
+  -- Obergrenze je Veranstaltung (public_gathering ist fuer anon aufrufbar und rechnet je Turnier); ganz oder gar nicht.
+  IF (SELECT count(*) FROM public.tournaments t WHERE t.gathering_id = p_gathering_id) > c_max_per_gathering THEN
+    RAISE EXCEPTION 'GATHERING_TOO_MANY: hoechstens % Turniere je Veranstaltung.', c_max_per_gathering USING ERRCODE = 'HF011';
+  END IF;
   -- Monotone Version: ein geloestes Turnier faellt aus dem Maximum, die Veranstaltung traegt den Zeitpunkt (@ZM-180).
   UPDATE public.gatherings SET updated_at = now() WHERE id = p_gathering_id;
   RETURN jsonb_build_object('added', v_added, 'removed', v_removed);
 END;
 $$;
 COMMENT ON FUNCTION public.set_gathering_tournaments(uuid, uuid[], uuid[]) IS
-  '20261119_001 (@VA-016, @VA-019, @VA-021): ordnet Turniere zu bzw. loest sie, ganz oder gar nicht, wiederholbar; nur Turniere des Eigentuemers der Veranstaltung, nicht im Papierkorb, hoechstens eine Veranstaltung je Turnier; abgeschlossene erlaubt. Recht assignTournaments. Antwort {added, removed}. Fehler HF006, HF007, HF008, 22023.';
+  '20261119_001 (@VA-016, @VA-019, @VA-021): ordnet Turniere zu bzw. loest sie, ganz oder gar nicht, wiederholbar; nur Turniere des Eigentuemers der Veranstaltung, nicht im Papierkorb, hoechstens eine Veranstaltung je Turnier; abgeschlossene erlaubt. Recht assignTournaments. Antwort {added, removed}. Hoechstens 50 Turniere je Veranstaltung. Fehler HF006, HF007, HF008, HF011, 22023.';
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 5c. Oeffentlicher Abruf (@VA-001 bis @VA-004, @VA-006, @VA-012, @VA-014; Positivliste)

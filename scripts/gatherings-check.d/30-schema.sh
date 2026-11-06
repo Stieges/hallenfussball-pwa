@@ -64,6 +64,15 @@ check S "public_view: weiter 12 Funktionen im Sicherheitskern, keine neue (publi
 check S "Bestand: kein Turnier gehoert nach dem Einspielen zu einer Veranstaltung" "0" \
   "$(q "SELECT count(*) FROM public.tournaments WHERE (to_jsonb(tournaments) ->> 'gathering_id') IS NOT NULL;")"
 
+# Rechte-Assertions des Drift-Checks (scripts/db_privilege_assertions.sql) als ci_schema_reader, wie live (Review #449 🔴1):
+# jede Zeile "|t", darunter die fuenf gatherings-* und public-read-core-unchanged.
+PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
+  | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
+PRIV_RED="$( (grep -v '|t$' <<<"$PRIV_OUT" || true) | head -5 | tr '\n' ';')"
+PRIV_GA="$( (grep -E '^(gatherings-[a-z-]+|public-read-core-unchanged)\|t$' <<<"$PRIV_OUT" || true) | grep -c . || true)"
+check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t (gatherings-* und public-read-core-unchanged dabei)" \
+  "keine|6" "${PRIV_RED:-keine}|$PRIV_GA"
+
 # --- W: zweites Einspielen -------------------------------------------------------------------------------------------
 if [[ "${WITH_MIGRATION:-1}" -eq 1 ]]; then
   schema_dump > "$WORK/schema_nach1.sql"
@@ -78,6 +87,13 @@ fi
 # --- X: Rueckweg und Fail-fast -----------------------------------------------------------------------------------------
 if [[ "${SKIP_X:-0}" -ne 1 && "${WITH_MIGRATION:-1}" -eq 1 ]]; then
   stop_rest
+  # Fail-fast (Review #449 🟡3): eine spaetere Fassung des Waechters, die den Stempel 20261119_001 traegt, aber einen anderen
+  # Text hat -> erneutes Einspielen bricht ab, statt sie still zurueckzudrehen.
+  q "SELECT pg_get_functiondef('public.tournaments_guard_lifecycle()'::regprocedure);" > "$WORK/guard_eigen.sql"
+  psql_stdin <<<"$(sed 's/^BEGIN$/BEGIN -- 20261119_001 spaetere Fassung/' "$WORK/guard_eigen.sql");" >/dev/null
+  check X "Fail-fast: Waechter mit Stempel 20261119_001, aber fremdem Text -> erneutes Einspielen bricht ab" "abgebrochen|unbekannte Fassung" \
+    "$(psql_stdin < "$TARGET_FILE" >/dev/null 2>"$WORK/f0.err" && echo gelaufen || echo abgebrochen)|$(grep -o 'unbekannte Fassung' "$WORK/f0.err" | head -1)"
+  psql_stdin <<<"$(cat "$WORK/guard_eigen.sql");" >/dev/null
   if psql_stdin < "$ROLLBACK_FILE" >/dev/null 2>"$WORK/x.err"; then x="ok"; else x="fehler: $(tail -2 "$WORK/x.err")"; fi
   schema_dump > "$WORK/schema_zurueck.sql"
   check X "Rueckweg laeuft in einem Block, Schema (public, public_view) = vor der Migration" "ok|gleich" \

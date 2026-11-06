@@ -182,6 +182,10 @@ MEND_FILE=""
 # 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET): fasst append_match_events neu (Basis 20261117_005, spaetes Fortsetzen -> Klaerung).
 # Das erneute Einspielen von 20261117_005 in der Idempotenz-Kette stellte die alte Fassung wieder her -- danach wieder einspielen.
 FS_FILE=""
+# 20261119_001 (A1 Veranstaltung): fasst tournaments_guard_lifecycle (c_free + gathering_id) und public_view.public_payload
+# neu -- das erneute 20261113_003 in der Idempotenz-Kette stellte den Waechter ohne gathering_id wieder her (Assertion
+# gatherings-guards), deshalb danach wieder einspielen. Setzt 20261113_003 und 20261117_104 voraus.
+GA_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   if [[ "$(basename "$line")" == "$TARGET_MIGRATION" ]]; then
@@ -244,6 +248,10 @@ while IFS= read -r line; do
   if [[ "$(basename "$line")" == "20261118_009_fortsetzen_spaet.sql" ]]; then
     [[ "$MODE" == "without-sw" ]] && continue
     FS_FILE="$line"
+  fi
+  if [[ "$(basename "$line")" == "20261119_001_gatherings.sql" ]]; then
+    [[ "$MODE" == "without-sw" ]] && continue
+    GA_FILE="$line"
   fi
   # A-13b-S: 20261110_006 bringt den Trigger matches_guard_ga4_columns (Erwartung der Trigger-Listen in 9d).
   [[ "$(basename "$line")" == "20261110_006_group_completion.sql" ]] && A13BS_APPLIED=1
@@ -337,6 +345,8 @@ if [[ "$MODE" != "without-migration" ]]; then
   # W-M: das erneute 20261113_003 oben setzt finish_open_items/final_standings_payload auf die Fassung ohne W-M zurueck,
   # 008: ebenso public_final_standings auf die Fassung ohne Zweig B.
   if [[ "$MODE" != "without-sw" ]]; then psql_stdin < "$WM_FILE"; psql_stdin < "$MEND_FILE"; fi
+  # A1: das erneute 20261113_003 oben setzt tournaments_guard_lifecycle auf c_free ohne gathering_id zurueck.
+  if [[ -n "$GA_FILE" ]]; then psql_stdin < "$GA_FILE"; fi
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.

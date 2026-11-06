@@ -44,5 +44,5 @@ jobs:
       - name: Gegenprobe A (ohne 20261119_001 muessen V, Z, P, A und T ROT sein)
         run: bash scripts/gatherings-check.sh --without-migration
 
-      - name: Gegenprobe B (jede der Mutationen G1-G22 muss mindestens eine Pruefung ROT machen)
+      - name: Gegenprobe B (jede der Mutationen G1-G27 muss mindestens eine Pruefung ROT machen)
         run: bash scripts/gatherings-check.sh --gegenprobe

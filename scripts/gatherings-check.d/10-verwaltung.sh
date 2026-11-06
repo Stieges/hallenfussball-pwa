@@ -27,6 +27,15 @@ check V "anon ohne Sitzung darf create_gathering nicht ausfuehren (42501)" "err:
 for bad in "''" "'   '" "repeat('x', 81)" "'TSV' || chr(7) || 'Waging'" "'TSV' || chr(8203) || 'Waging'"; do
   check V "Name $bad -> HF010" "err:HF010" "$(tx "$(who "$U_OLLI") $(try "SELECT public.create_gathering($bad)::text")")"
 done
+# Review #449 🟡2: die Zeichenklasse steht als \u-Schreibweise (wie 20261110_008); je ein Zeichen jeder Gruppe -> HF010.
+HIDDEN_CODES="1 31 127 159 173 1564 4447 4448 6158 8203 8207 8234 8238 8288 8303 12644 65279 65440 65529 65531 917504 917631"
+HIDDEN_SQL=""
+for cp in $HIDDEN_CODES; do HIDDEN_SQL="$HIDDEN_SQL
+$(try "SELECT public.create_gathering('TSV' || chr($cp) || 'Waging')::text")"; done
+check V "jede Gruppe unsichtbarer und Richtungs-Zeichen im Namen -> HF010 (22 Zeichen, Klasse wie 20261110_008)" \
+  "$(for _ in $HIDDEN_CODES; do printf 'err:HF010|'; done | sed 's/|$//')" "$(tx "$(who "$U_OLLI") $HIDDEN_SQL")"
+check V "Gegenprobe: dieselben Zeichen sind Teil eines gueltigen Namens, wenn sie fehlen (Umlaut, Bindestrich, Punkt gehen)" "ok:true" \
+  "$(tx "$(who "$U_OLLI") $(try "SELECT (public.create_gathering('Hallenturniere TSV Waging-Süd 28./29.11.') ->> 'id') IS NOT NULL")")"
 check V "Name mit 80 Zeichen gelingt" "ok:true|80" \
   "$(tx "$(who "$U_OLLI") $(try "SELECT (public.create_gathering(repeat('x', 80)) ->> 'id') IS NOT NULL")
 $(who super) $(val "(SELECT max(char_length(name)) FROM public.gatherings WHERE owner_id = '$U_OLLI')")")"
@@ -154,6 +163,17 @@ $(try "SELECT $(setg "$G1" "$(ids "$T_E")" "$NOIDS")")
 $(try "SELECT $(setg "$G1" "$NOIDS" "$(ids "$T_E")")")
 $(who super) $(val "(SELECT lifecycle_status FROM public.tournaments WHERE id = '$T_E')")
 $(val "(SELECT md5(string_agg(m::text, '' ORDER BY m.id)) FROM public.matches m WHERE m.tournament_id = '$T_E') = current_setting('va.e')")")"
+# Obergrenze je Veranstaltung (Review #449 B5): 49 zugeordnet, eins mehr geht (50), zwei mehr -> HF011, nichts zugeordnet.
+CAP_SETUP="$SETUP_G $(who super)
+INSERT INTO public.tournaments (owner_id, title, date, number_of_teams, group_phase_duration, gathering_id)
+SELECT '$U_OLLI', 'Probe ' || n, current_date + 10, 2, 10, '$G1' FROM generate_series(1, 49) AS n;"
+check Z "Obergrenze: 50 Turniere je Veranstaltung gehen, das 51. -> HF011 und nichts wird zugeordnet" \
+  'err:HF011|NULL|ok:{"added": 1, "removed": 0}|50' \
+  "$(tx "$CAP_SETUP $(who "$U_OLLI")
+$(try "SELECT $(setg "$G1" "$(ids "$T_F1" "$T_D")" "$NOIDS")")
+$(who super) $(val "(SELECT gathering_id FROM public.tournaments WHERE id = '$T_F1')")
+$(who "$U_OLLI") $(try "SELECT $(setg "$G1" "$(ids "$T_F1")" "$NOIDS")")
+$(who super) $(val "(SELECT count(*) FROM public.tournaments WHERE gathering_id = '$G1')")")"
 # Optimistic Lock (@VA-021 Z. 3): Ollis Tablet hat F2 vor der Zuordnung geladen (version v), speichert danach per CAS und
 # per Upsert ohne das Feld -- kein Konflikt, die Zuordnung bleibt.
 OL_SETUP="$SETUP_G
