@@ -74,7 +74,7 @@ async function zeilenImSpielplan(seite: Page): Promise<string[]> {
     for (const bruchteil of [0, 0.5, 1]) {
       await seite.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), bruchteil);
       await seite.waitForTimeout(200);
-      const zeilen = await seite.getByRole('row').evaluateAll((els) =>
+      const zeilen = await seite.getByRole('article').or(seite.getByRole('row')).evaluateAll((els) =>
         els.map((el) => ({ label: el.getAttribute('aria-label') ?? '', text: (el as HTMLElement).innerText.trim() }))
       );
       for (const { label, text } of zeilen) {

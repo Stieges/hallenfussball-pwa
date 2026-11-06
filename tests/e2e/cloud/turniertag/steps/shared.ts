@@ -131,7 +131,7 @@ export async function openSpielplanFinalrunde(page: Page): Promise<void> {
 /**
  * Beschriftungen der vier Finalrunden-Spiele im Spielplan der Turnierleitung ("<Heim> gegen <Gast>"),
  * in Anzeigereihenfolge (Halbfinale 1 zuerst). Der Spielplan zeigt sie je nach Renderzustand als
- * Karten (`role="row"`, `aria-label="Spiel <n>: <Heim> gegen <Gast>"`) oder als Tabelle der
+ * Karten (`role="article"`, `aria-label="Spiel <n>: <Heim> gegen <Gast>"`) oder als Tabelle der
  * Finalrunde (`tr` mit Nr., Zeit, Runde, Heim, Ergebnis, Gast, Feld); beide Quellen werden gelesen.
  * Die Liste rendert nur Zeilen im Umfeld des sichtbaren Bereichs: beim Warten über die Seite scrollen.
  */
@@ -141,7 +141,7 @@ export async function finalrundeLabels(page: Page): Promise<string[]> {
     orderByLabel.set(label, Math.min(order, orderByLabel.get(label) ?? order));
   };
   const collect = async (): Promise<void> => {
-    const cards = await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
+    const cards = await page.getByRole('article').or(page.getByRole('row')).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
     for (const label of cards) {
       const match = /^Spiel (\d+): (.+)$/.exec(label);
       if (match) {
@@ -223,7 +223,7 @@ export async function finalrundeLabelOf(
   let zeile: string | undefined;
   let karte: string | undefined;
   const collect = async (): Promise<void> => {
-    const cards = await page.getByRole('row').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
+    const cards = await page.getByRole('article').or(page.getByRole('row')).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? ''));
     for (const label of cards) {
       const m = /^Spiel \d+: (.+)$/.exec(label);
       if (m?.[1] === expected) {

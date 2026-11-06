@@ -15,7 +15,7 @@ vi.unmock('react-i18next');
 await initRealDeI18n();
 
 const view = {
-  byId: new Map([['m1', { originalKickoff: { date: '2026-11-28', time: '15:30' }, kickoffTentative: true }]]),
+  byId: new Map([['m1', { originalKickoff: { date: '2026-11-28', time: '15:30' } }]]),
 } as unknown as TournamentView;
 
 function Karte() {
@@ -23,10 +23,10 @@ function Karte() {
 }
 
 describe('ViewTimeNotes', () => {
-  it('@ZP-004 @ZM-105 ohne Spielplan der Leitung: „(war 15:30)“ und „voraussichtlich“ aus der Ansicht, kein ⋮', () => {
-    render(<ViewTimeNotes view={view}><Karte /></ViewTimeNotes>);
+  it('@ZP-004 @ZM-105 ohne Spielplan der Leitung: „(war 15:30)“ aus der Ansicht, kein „voraussichtlich“, kein ⋮', () => {
+    const { container } = render(<ViewTimeNotes view={view}><Karte /></ViewTimeNotes>);
     expect(screen.getByTestId('match-original-m1')).toHaveTextContent('(war 15:30)');
-    expect(screen.getByTestId('match-tentative-m1')).toHaveTextContent('voraussichtlich');
+    expect(container.textContent).not.toMatch(/voraussichtlich/i);
     expect(screen.queryByTestId('menu-m1')).toBeNull();
   });
 
@@ -38,6 +38,5 @@ describe('ViewTimeNotes', () => {
     );
     expect(screen.getByTestId('menu-m1')).toBeInTheDocument();
     expect(screen.getByTestId('match-original-m1')).toHaveTextContent('(war 10:00)');
-    expect(screen.queryByTestId('match-tentative-m1')).toBeNull();
   });
 });

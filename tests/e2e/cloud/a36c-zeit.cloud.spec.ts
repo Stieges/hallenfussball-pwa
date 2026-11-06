@@ -31,7 +31,7 @@ test.describe('A-36c F-ZEIT (@ZM-111)', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Public-Cup', { exact: true }).first()).toBeVisible({ timeout: 15000 });
     const karte = page.locator('[data-match-card]', { has: page.getByTestId(`match-goals-${zeile.id}-home`) }).first();
-    const zeile2 = page.getByRole('row', { name: /.+/ }).filter({ has: page.getByTestId(`match-circle-${zeile.id}`) }).first();
+    const zeile2 = page.getByRole('article', { name: /.+/ }).filter({ has: page.getByTestId(`match-circle-${zeile.id}`) }).first();
     // Handy-Karte (Kopfzeile) bzw. Desktop-Zeile: beide tragen die Uhrzeit des Spiels
     await expect(async () => {
       const sichtbar = (await karte.isVisible().catch(() => false)) ? karte : zeile2;

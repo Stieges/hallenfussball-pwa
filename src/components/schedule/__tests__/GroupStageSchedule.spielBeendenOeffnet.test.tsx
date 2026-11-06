@@ -38,7 +38,7 @@ describe('@FU-112 Spiel beenden und Ergebnis eintragen öffnet die Eingabe', () 
     const view = viewOf([matchOf(spiel, { matchStatus: 'running', scoreA: 0, scoreB: 0 })], teams);
     render(<GroupStageSchedule matches={[spiel]} hasGroups tournament={{ teams, view }} editable canEndRunning onScoreChange={vi.fn()} />);
 
-    await user.click(screen.getByRole('row', { name: /^Spiel 9:/ }));
+    await user.click(screen.getByRole('article', { name: /^Spiel 9:/ }));
     await new Promise((r) => setTimeout(r, 200)); // der Schließen-Hörer ist erst nach 100 ms scharf
     const knopf = (await screen.findAllByTestId('end-and-enter-btn'))[0];
     // Wie im Browser: Beim Umschalten nimmt React den angeklickten Knopf aus der Seite, bevor der Klick am document ankommt.
@@ -64,7 +64,7 @@ describe('@FU-112 Spiel beenden und Ergebnis eintragen öffnet die Eingabe', () 
       </div>,
     );
 
-    await user.click(screen.getByRole('row', { name: /^Spiel 9:/ }));
+    await user.click(screen.getByRole('article', { name: /^Spiel 9:/ }));
     expect((await screen.findAllByTestId('end-and-enter-btn')).length).toBeGreaterThan(0);
     await new Promise((r) => setTimeout(r, 200)); // der Schließen-Hörer ist erst nach 100 ms scharf
     await user.click(screen.getByTestId('ausserhalb'));

@@ -1,9 +1,11 @@
 /**
  * Zustandsansichten der Zuschauer-Seite: Laden, Nicht gefunden, Fehler (B-13d1).
- * Texte und Aufbau wörtlich aus LiveViewScreen übernommen.
+ * „Nicht gefunden“ ist ein ruhiger Hinweis mit dem Wortlaut des Records (@ZM-066, @ZM-068): ohne Code, ohne Knopf – ein nicht geteiltes
+ * Turnier und ein unbekannter Code sehen dasselbe und erfahren nicht, ob es das Turnier gibt; ein Knopf ins Verwaltungs-Dashboard
+ * hat auf der Zuschauer-Seite nichts zu suchen (Durchsicht Z13).
  */
 import { CSSProperties } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { publicPageContainerStyle, publicPageContentStyle } from '../publicPageStyles';
 import { Card } from '../../../components/ui/Card';
@@ -52,26 +54,17 @@ export const PublicLoadingView: React.FC<{ shareCode: string }> = ({ shareCode }
   );
 };
 
-export const PublicNotFoundView: React.FC<{ shareCode: string }> = ({ shareCode }) => {
+export const PublicNotFoundView: React.FC = () => {
   const { t } = useTranslation('publicView');
   return (
   <div style={publicPageContainerStyle}>
     <div style={publicPageContentStyle}>
       <Card>
-        <div style={errorContainerStyle}>
-          <div style={errorIconStyle}>🔍</div>
-          <h2 style={{ fontSize: cssVars.fontSizes.xl, marginBottom: cssVars.spacing.md }}>
+        <div style={errorContainerStyle} data-testid="public-not-found">
+          <div style={errorIconStyle} aria-hidden="true">🔍</div>
+          <h2 style={{ fontSize: cssVars.fontSizes.xl }}>
             {t('notFound.title')}
           </h2>
-          <p style={{ color: cssVars.colors.textMuted, marginBottom: cssVars.spacing.lg }}>
-            <Trans i18nKey="notFound.body" ns="publicView" values={{ code: shareCode }} components={{ strong: <strong /> }} />
-          </p>
-          <Button
-            variant="secondary"
-            onClick={() => window.location.href = '/'}
-          >
-            {t('notFound.home')}
-          </Button>
         </div>
       </Card>
     </div>

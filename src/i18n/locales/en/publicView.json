@@ -4,9 +4,7 @@
     "code": "Code: {{code}}"
   },
   "notFound": {
-    "title": "Tournament not found",
-    "body": "The code <strong>{{code}}</strong> is invalid or the tournament has not been shared.",
-    "home": "Go to start page"
+    "title": "Tournament not found or not public"
   },
   "error": {
     "title": "Error while loading",

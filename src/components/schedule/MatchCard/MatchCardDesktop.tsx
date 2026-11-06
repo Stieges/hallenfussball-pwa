@@ -199,7 +199,8 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         onClick={handleRowClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        role="row"
+        // Artikel wie die Karte auf dem Handy: `role="row"` verlangt Tabellenzellen und eine Tabelle darüber (axe aria-required-children, Durchsicht Z16)
+        role="article"
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty matchNumber should display as empty
         aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       >

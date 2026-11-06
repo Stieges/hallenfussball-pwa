@@ -32,7 +32,7 @@ describe('@ZP-004 ab 1 Minute Abweichung steht die ursprüngliche Uhrzeit dabei'
     ['1 Minute nach hinten', '15:31', '15:30'],
     ['10 Minuten nach hinten', '15:40', '15:30'],
     ['5 Minuten nach vorn', '15:25', '15:30'],
-  ])('%s: groß %s, klein „ursprünglich %s“', (_name, shown, original) => {
+  ])('%s: groß %s, klein „(war %s)“', (_name, shown, original) => {
     const id = idOf(GAME[9]);
     const match = viewOf(withTimes(id, shown, original)).byId.get(id);
     expect(match?.kickoff?.time).toBe(shown);
@@ -112,15 +112,11 @@ describe('@ZP-049 @ZP-090 @ZP-091 wann nach dem Verschieben „ursprünglich“ 
   });
 });
 
-describe('@ZM-105 Uhrzeiten der K.-o.-Spiele sind „voraussichtlich“, auch verschoben mit ihrer ursprünglichen (@ZP-048)', () => {
-  it('Finale steht verschoben um 17:05 als „voraussichtlich“ mit „ursprünglich 16:55“', () => {
+describe('@ZM-105 @ZP-010 Uhrzeiten der K.-o.-Spiele stehen ohne „voraussichtlich“, verschoben mit „(war hh:mm)“ (@ZP-048)', () => {
+  it('Finale steht verschoben um 17:05 mit der ursprünglichen Uhrzeit 16:55 und ohne Merkmal „vorläufig“', () => {
     const id = idOf(GAME.FINAL);
     const final = viewOf(withTimes(id, '17:05', '16:55')).byId.get(id);
-    expect(final).toMatchObject({ kickoffTentative: true, kickoff: { time: '17:05' }, originalKickoff: { time: '16:55' } });
-  });
-
-  it('Gegenbeispiel: ein verschobenes Gruppenspiel ist nicht „voraussichtlich“', () => {
-    const id = idOf(GAME[9]);
-    expect(viewOf(withTimes(id, '15:40', '15:30')).byId.get(id)?.kickoffTentative).toBe(false);
+    expect(final).toMatchObject({ kickoff: { time: '17:05' }, originalKickoff: { time: '16:55' } });
+    expect(final).not.toHaveProperty('kickoffTentative');
   });
 });
