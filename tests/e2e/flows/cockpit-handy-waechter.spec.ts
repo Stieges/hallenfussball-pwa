@@ -7,6 +7,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { anpfeifen, bild, cup, ID, NAME_50 } from '../helpers/laptopCup';
+import { tippeKarte, tippeTor, tippeZeitstrafe } from '../helpers/cockpitNeu';
 
 const BLAU = '#1565C0';
 const BLAU_2 = '#1E56D9';
@@ -20,17 +21,37 @@ const unten = async (page: Page, testId: string): Promise<number> => {
 const oben = async (page: Page, testId: string): Promise<number> => (await page.getByTestId(testId).boundingBox())?.y ?? -1;
 const leisteOben = async (page: Page): Promise<number> => (await page.getByRole('toolbar').boundingBox())?.y ?? 0;
 
-/** Alle vier Tasten beider Teams ohne Scrollen über der Leiste (die Tastenfläche steht oben, nichts ist weggerollt), die Seite scrollt nie. */
+/** Team-Köpfe: der Name steht vollständig da, ohne Überlauf und ohne Kürzung (@OB-025, @OB-058; Review #448 P1). */
+async function namenVollstaendig(page: Page, lage: string): Promise<void> {
+  for (const seite of ['home', 'away']) {
+    const mass = await page.getByTestId(`team-name-${seite}`).evaluate((el) => {
+      const kopf = el.closest('[data-testid^="team-head-"]')?.getBoundingClientRect();
+      const woerter = [...el.querySelectorAll('span')].map((w) => w.getBoundingClientRect());
+      return {
+        ueberlauf: el.scrollWidth - el.clientWidth, text: el.textContent ?? '', ellipse: getComputedStyle(el).textOverflow,
+        draussen: kopf ? woerter.filter((w) => w.right > kopf.right + 1 || w.left < kopf.left - 1).length : -1,
+      };
+    });
+    expect(mass.ueberlauf, `${lage}: team-name-${seite} läuft nicht über`).toBeLessThanOrEqual(0);
+    expect(mass.draussen, `${lage}: jedes Wort von team-name-${seite} steht im Kopf`).toBe(0);
+    expect(mass.text, `${lage}: team-name-${seite} ohne „…“`).not.toContain('…');
+    expect(mass.ellipse).not.toBe('ellipsis');
+  }
+}
+
+/** Alle vier Tasten beider Teams ohne Scrollen über der Leiste (Tastenfläche oben), die Seite scrollt nie, die Namen stehen voll da. */
 async function alleTastenSichtbar(page: Page, lage: string): Promise<void> {
+  // Ein Klick von Playwright rollt das Ziel ins Bild; gemessen wird die Ansicht, wie Tom sie hat: Tastenfläche oben
+  await page.getByTestId('cockpit-tastenflaeche').evaluate((el) => { el.scrollTop = 0; });
   const grenze = await leisteOben(page);
   for (const seite of ['home', 'away']) {
     for (const taste of TASTEN) {
       expect(await unten(page, `${taste}-${seite}`), `${lage}: ${taste}-${seite} über der Leiste`).toBeLessThanOrEqual(grenze + 1);
     }
   }
-  const mass = await page.getByTestId('cockpit-tastenflaeche').evaluate((el) => ({ oben: el.scrollTop, seite: document.documentElement.scrollHeight - window.innerHeight }));
-  expect(mass.oben, `${lage}: nichts ist weggerollt`).toBe(0);
+  const mass = await page.getByTestId('cockpit-tastenflaeche').evaluate(() => ({ seite: document.documentElement.scrollHeight - window.innerHeight }));
   expect(mass.seite, `${lage}: die Seite scrollt nie`).toBeLessThanOrEqual(1);
+  await namenVollstaendig(page, lage);
 }
 
 test.describe('Cockpit am kleinen Handy: alle Tasten ohne Scrollen', () => {
@@ -45,6 +66,8 @@ test.describe('Cockpit am kleinen Handy: alle Tasten ohne Scrollen', () => {
     await expect(page.getByTestId('scoreboard-farb-hinweis')).toBeVisible();
     // @SL-196: echte Trikotfarben – der Gast steht in Blau, nicht in der Ausweichfarbe
     await expect(page.getByTestId('team-head-away')).toHaveAttribute('data-color', BLAU_2);
+    await expect(page.getByTestId('team-name-away')).toHaveText(NAME_50);
+    await namenVollstaendig(page, 'vor dem Anpfiff');
     const grenze = await leisteOben(page);
     for (const id of ['anpfiff-leibchen-heim', 'anpfiff-leibchen-gast', 'anpfiff-leibchen-farbe-gelb']) {
       expect(await unten(page, id), `${id} über der Leiste`).toBeLessThanOrEqual(grenze + 1);
@@ -83,5 +106,17 @@ test.describe('Cockpit am kleinen Handy: alle Tasten ohne Scrollen', () => {
     expect(await oben(page, 'card-button-away'), 'Karte springt nicht').toBe(davor.karte);
     await alleTastenSichtbar(page, 'Vorwarnung');
     await bild(page, `waechter-${testInfo.project.name}-vorwarnung`);
+  });
+
+  test('@SL-061 @SL-031 Meldung, zwei Zeitstrafen und rote Karte (Sperr-Hinweis), 50 Zeichen: alle Tasten bleiben über der Leiste', async ({ page, seedIndexedDB }, testInfo) => {
+    await seedIndexedDB({ tournaments: [cup({ namen: ['TSV Waging', NAME_50, 'TSV Ost', 'FC West'], minuten: 9, perioden: 1 })] });
+    await anpfeifen(page);
+    await tippeZeitstrafe(page, 'away');
+    await tippeZeitstrafe(page, 'away');
+    await tippeKarte(page, 'home', 'Rot', 4);
+    await tippeTor(page, 'away'); // Meldung „Tor für …“ in der Meldezeile
+    await expect(page.locator('[data-testid^="scoreboard-strafe-"]')).toHaveCount(2); // beide Zeitstrafen mit Restzeit in der Tafel
+    await alleTastenSichtbar(page, 'Meldung, Zeitstrafen, rote Karte');
+    await bild(page, `waechter-${testInfo.project.name}-strafen-karte`);
   });
 });

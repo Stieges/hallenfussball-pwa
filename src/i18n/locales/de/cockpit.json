@@ -105,7 +105,7 @@
       "abschnitteMal": "{{anzahl}} ×",
       "anstossSpielFeld": "Anstoß {{zeit}} · {{spielFeld}}"
     },
-    "wachhaltenSymbol": "Bildschirm kann sich sperren – antippen zum Ausblenden",
+    "wachhaltenSymbol": "Bildschirm kann sich sperren, die Uhr läuft weiter",
     "tonAus": "Ton aus",
     "tonAusAntippen": "Ton für das Spielende ist aus – antippen zum Einschalten",
     "eintraegeWarten_one": "1 Eintrag wartet",
@@ -220,8 +220,8 @@
     "apply": "Übernehmen",
     "restInSection": "Restzeit im Abschnitt",
     "limitMinRest": "mindestens {{zeit}}",
-    "limitMaxRestGoal": "wegen des Tors bei {{eintrag}} höchstens {{zeit}}",
-    "limitMaxRestEntry": "wegen eines Eintrags bei {{eintrag}} höchstens {{zeit}}"
+    "limitMaxRestGoal": "wegen des Tors höchstens {{zeit}}",
+    "limitMaxRestEntry": "wegen eines Eintrags höchstens {{zeit}}"
   },
   "timePenalty": {
     "title": "Zeitstrafe",
@@ -548,7 +548,8 @@
       "tor": "Tor {{team}}",
       "foul": "Foul {{team}}, {{zaehler}}",
       "karte": "Karte {{team}}",
-      "strafe": "Zeitstrafe {{team}}"
+      "strafe": "Zeitstrafe {{team}}",
+      "strafeDauer": "Zeitstrafe {{team}}, {{zeit}}"
     },
     "strafeKnopf": "Zeitstrafe",
     "strafeDauer": "$t(sport:zeit.minuteCount, {\"count\": {{minuten}} })"

@@ -66,7 +66,7 @@ export function TimeAdjustDialog({
   const anzeigeMax = countdown ? maxSeconds - minSeconds : maxSeconds;
   const eintragText = formatMmSs(minSeconds);
   const hinweisEintrag = countdown
-    ? t(minIsGoal ? 'timeAdjust.limitMaxRestGoal' : 'timeAdjust.limitMaxRestEntry', { eintrag: eintragText, zeit: formatMmSs(anzeigeMax) })
+    ? t(minIsGoal ? 'timeAdjust.limitMaxRestGoal' : 'timeAdjust.limitMaxRestEntry', { zeit: formatMmSs(anzeigeMax) }) // nur Restzeit, keine gemischte Zeitbasis
     : t(minIsGoal ? 'timeAdjust.limitMinGoal' : 'timeAdjust.limitMinEntry', { zeit: eintragText });
   const hinweisGrenze = countdown ? t('timeAdjust.limitMinRest', { zeit: formatMmSs(0) }) : t('timeAdjust.limitMax', { zeit: formatMmSs(maxSeconds) });
 

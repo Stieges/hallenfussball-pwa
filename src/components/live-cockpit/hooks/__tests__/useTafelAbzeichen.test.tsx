@@ -15,19 +15,30 @@ import { useTafelAbzeichen } from '../useTafelAbzeichen';
 
 const t = (key: string): string => key;
 const ton = { an: true, freigegeben: true, aktiviere: vi.fn() };
-const hook = (zustand: CockpitZustand, wachhalten = true, matchId = 'spiel-11') =>
-  renderHook((p: { zustand: CockpitZustand }) => useTafelAbzeichen({ zustand: p.zustand, matchId, ton, wachhalten, t }), { initialProps: { zustand } });
+const melde = vi.fn();
+const hook = (zustand: CockpitZustand, wachhalten = true, matchId = 'spiel-11', quittungMitFolgespiel = false) =>
+  renderHook((p: { zustand: CockpitZustand }) => useTafelAbzeichen({ zustand: p.zustand, matchId, ton, wachhalten, t, quittungMitFolgespiel, melde }), { initialProps: { zustand } });
 
 beforeEach(() => { wake.enabled = []; wake.status = 'idle'; });
 
 describe('Bildschirm wach ab dem Anpfiff', () => {
-  it.each(['laeuft', 'pausiert', 'halbzeitpause', 'abgepfiffen'] as const)('@SL-059 im Zustand %s fordert das Cockpit den Bildschirm an', (zustand) => {
+  it.each(['laeuft', 'pausiert', 'halbzeitpause'] as const)('@SL-059 im Zustand %s fordert das Cockpit den Bildschirm an', (zustand) => {
     hook(zustand);
     expect(wake.enabled.at(-1)).toBe(true);
   });
 
   it.each(['vorAnpfiff', 'keinSpiel', 'wartetAufHerkunft'] as const)('@SL-060 ohne laufendes Spiel (%s) gilt die Sperre des Geräts', (zustand) => {
     hook(zustand);
+    expect(wake.enabled.at(-1)).toBe(false);
+  });
+
+  it('@SL-152 nach dem Abpfiff nur während der 30-Sekunden-Quittung mit Folgespiel', () => {
+    hook('abgepfiffen', true, 'spiel-11', true);
+    expect(wake.enabled.at(-1)).toBe(true);
+  });
+
+  it('@SL-060 Gegenbeispiel: abgepfiffen ohne laufende Quittung, ausgefallen oder letztes Spiel des Felds → Sperre des Geräts', () => {
+    hook('abgepfiffen', true, 'spiel-11', false);
     expect(wake.enabled.at(-1)).toBe(false);
   });
 
@@ -45,6 +56,8 @@ describe('@SL-122 Abzeichen, wenn das Gerät den Bildschirm nicht anlassen kann'
     act(() => { result.current.wachhaltenHinweis?.onAntippen(); });
     rerender({ zustand: 'laeuft' });
     expect(result.current.wachhaltenHinweis).toBeNull();
+    // Antippen zeigt den vollen Text in der Meldezeile (am Handy steht neben anderen Abzeichen nur das Schloss)
+    expect(melde).toHaveBeenCalledWith(1, 'tafel.wachhaltenSymbol');
   });
 
   it('Gegenbeispiel: zugesagt → kein Abzeichen', () => {

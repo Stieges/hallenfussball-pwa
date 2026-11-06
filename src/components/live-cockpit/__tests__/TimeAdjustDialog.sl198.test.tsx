@@ -48,7 +48,7 @@ describe('@SL-198 Zählweise der Uhr im Dialog', () => {
   it('@SL-198 Countdown: die Grenzen stehen als Restzeit da – höchstens bis zum Tor, mindestens 0:00', () => {
     // Tor bei gespielt 2:00 → Restzeit höchstens 7:00; die Uhr steht bei Restzeit 5:20
     dialog({ gespielt: NEUN_MINUTEN - 320, countdown: true, min: 120, minIsGoal: true });
-    expect(screen.getByTestId('time-adjust-grenze-eintrag')).toHaveTextContent('wegen des Tors bei 2:00 höchstens 7:00');
+    expect(screen.getByTestId('time-adjust-grenze-eintrag')).toHaveTextContent('wegen des Tors höchstens 7:00');
     expect(screen.getByTestId('time-adjust-grenze')).toHaveTextContent('mindestens 0:00');
     expect(screen.getByText('Restzeit im Abschnitt')).toBeInTheDocument();
     for (let i = 0; i < 30; i += 1) { fireEvent.click(mehr()); }

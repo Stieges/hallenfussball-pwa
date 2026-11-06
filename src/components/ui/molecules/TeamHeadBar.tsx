@@ -4,7 +4,7 @@
  * Reine Anzeige: Fläche und Farben kommen aus derselben Rechnung wie die Kästen und der Hallenmonitor (`resolveBoxColors`).
  * Der Name wird nie gekürzt und nie getrennt (VISUAL-DESIGN § 1/§ 2): er bricht um.
  */
-import type { CSSProperties, ReactElement } from 'react';
+import { Fragment, type CSSProperties, type ReactElement } from 'react';
 import type { BoxFill } from '../../../core/models/scoreBoxColors';
 import { cssVars, iconSizeValues } from '../../../design-tokens';
 import { MatchIcons } from '../IconsMatch';
@@ -63,7 +63,8 @@ function Woerter({ name }: { name: string }): ReactElement {
   return (
     <>
       {woerter.map((wort, index) => (
-        <span key={`${String(index)}-${wort}`} style={{ whiteSpace: 'nowrap' }}>{wort}{index < woerter.length - 1 ? ' ' : ''}</span>
+        // Das Leerzeichen steht AUSSERHALB des Wortes: nur dort darf die Zeile umbrechen (sonst bleibt der ganze Name einzeilig und läuft über)
+        <Fragment key={`${String(index)}-${wort}`}><span style={{ whiteSpace: 'nowrap' }}>{wort}</span>{index < woerter.length - 1 ? ' ' : null}</Fragment>
       ))}
     </>
   );

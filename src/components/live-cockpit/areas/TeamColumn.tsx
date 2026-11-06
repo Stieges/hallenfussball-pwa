@@ -111,7 +111,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
         )}
         {zeigeStrafe && (
           <Button variant="secondary" icon={<MatchIcons.Stopwatch />} style={knopfStil(kompakt, breit)} data-testid={`penalty-button-${seite}`} onClick={onZeitstrafe}
-            aria-label={t('spalte.aria.strafe', { team: name })}>
+            aria-label={kompakt ? t('spalte.aria.strafeDauer', { team: name, zeit: `${String(model.zeitstrafeMinuten)}:00` }) : t('spalte.aria.strafe', { team: name })}>
             {/* Handy: Dauer als Uhr „2:00“ hinter der Stoppuhr – „2 Minuten“ passt nicht in die Reihe, eine Kurzform gibt es nicht (@OB-075, K5) */}
             {kompakt ? <span>{`${String(model.zeitstrafeMinuten)}:00`}</span> : (
               <><span style={breit ? einzeilig : zweizeilig}>{t('spalte.strafeKnopf')}</span>{' '}

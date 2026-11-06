@@ -51,6 +51,19 @@ describe('@SL-029/@SL-031 laufende Zeitstrafen stehen in der Tafel', () => {
     expect(rechts).not.toContainElement(screen.getByTestId('scoreboard-strafe-p3'));
   });
 
+  it('@SL-031 drei Zeitstrafen eines Teams: zwei mit Restzeit, die dritte als „+1“, vorgelesen mit Nummer und Restzeit', () => {
+    render(<ScoreboardArea {...area({ penalties: [
+      { id: 'p1', teamId: 'fc-nord', playerNumber: 7, remainingMs: 72_000 },
+      { id: 'p2', teamId: 'fc-nord', playerNumber: 8, remainingMs: 80_000 },
+      { id: 'p3', teamId: 'fc-nord', playerNumber: 9, remainingMs: 100_000 },
+    ] })} />);
+    expect(screen.getByTestId('scoreboard-strafe-p1')).toBeInTheDocument();
+    expect(screen.getByTestId('scoreboard-strafe-p2')).toBeInTheDocument();
+    expect(screen.queryByTestId('scoreboard-strafe-p3')).toBeNull();
+    expect(screen.getByTestId('scoreboard-strafen-weitere-rechts')).toHaveTextContent('+1');
+    expect(screen.getByTestId('scoreboard-strafen-weitere-rechts')).toHaveAccessibleName('Zeitstrafe #9, noch 1:40');
+  });
+
   it('@SL-086 steht die Uhr, steht auch die Restzeit (gedämpft markiert)', () => {
     render(<ScoreboardArea {...area({ status: 'paused', penalties: [{ id: 'p1', teamId: 'sv-sued', playerNumber: 5, remainingMs: 118_000 }] })} />);
     expect(screen.getByTestId('scoreboard-strafe-p1')).toHaveAttribute('data-steht', 'true');

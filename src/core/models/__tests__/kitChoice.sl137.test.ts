@@ -71,6 +71,8 @@ describe('@SL-139/@SL-173 sehr ähnliche Farben (Grenzen aus der Anforderung)', 
     ['Rot/Weiß', ROT, WEISS, 'none'],
     ['Rot/Grün (Helligkeit, @SL-173)', '#D32F2F', '#2E7D32', 'similar'],
     ['Gelb/Blau', '#FFEB3B', BLAU, 'none'],
+    ['Rot/Blau (Helligkeit 1,02:1, @SL-173)', '#C62828', BLAU, 'similar'],
+    ['Rot #D32F2F/Weiß (Helligkeit 4,98:1, @SL-173)', '#D32F2F', WEISS, 'none'],
   ])('%s → %s', (_zeile, a, b, erwartet) => {
     expect(kitHinweis({ a, b })).toBe(erwartet);
   });

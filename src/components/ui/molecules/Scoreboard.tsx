@@ -140,7 +140,7 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
         <span style={rechts}>
           {kopfRechts}
           {tonHinweis && <Abzeichen hoehe={hoehe} label={tonHinweis.label} kurz={tonHinweis.kurz} icon={<TafelIcons.VolumeOff size={icon} />} onAntippen={tonHinweis.onAntippen} testId={id('ton')} />}
-          {/* Neben weiteren Abzeichen nur das Schloss (voller Wortlaut als Name der Taste), damit die Kopfzeile einzeilig bleibt und die Tafel nicht wächst */}
+          {/* Neben weiteren Abzeichen nur das Schloss (voller Wortlaut als Name der Taste, Antippen zeigt ihn in der Meldezeile), damit die Kopfzeile einzeilig bleibt */}
           {wachhaltenHinweis && <Abzeichen hoehe={hoehe} label={wachhaltenHinweis.label} kurz={tonHinweis || model.eintraegeWartenText ? '' : wachhaltenHinweis.kurz} icon={<TafelIcons.Lock size={icon} />} onAntippen={wachhaltenHinweis.onAntippen} testId={id('wachhalten')} />}
           {model.eintraegeWartenText && <Abzeichen hoehe={hoehe} label={model.eintraegeWartenText} kurz={tonHinweis ? (model.eintraegeWartenKurz ?? undefined) : undefined} icon={<Icons.Upload size={icon} />} testId={id('eintraege-warten')} />}
           {model.helferAnfragenText && <Abzeichen hoehe={hoehe} label={model.helferAnfragenText} icon={<Icons.Users size={icon} />} onAntippen={onHelferAnfragen} testId={id('helfer-anfragen')} />}
@@ -194,7 +194,7 @@ function ScoreboardKompakt({ model, size, stufe, meldezeile, onHelferAnfragen, t
 /**
  * Laufende Zeitstrafen in der Tafel (@SL-029, @SL-031; Cockpit-Paket K7): links und rechts neben „Restzeit“ und der Zeile unter der Uhr,
  * unter dem Kasten ihres Teams – im ersten Bild, ohne eigenen Platz (die Tafel wird nicht höher, nichts springt). Bis zu zwei je Seite in
- * diesen beiden Zeilen (weitere stehen mit in der zweiten). Stehende Uhr: gedämpft, die Restzeit läuft nicht.
+ * diesen beiden Zeilen; weitere als „+1“ (vorgelesen mit Nummer und Restzeit), damit nichts in „Spielzeit …“ läuft. Stehende Uhr: gedämpft.
  */
 function TafelStrafen({ links = [], rechts = [], gross, testId }: { links?: ScoreboardStrafe[]; rechts?: ScoreboardStrafe[]; gross: boolean; testId?: string }): ReactElement | null {
   if (links.length === 0 && rechts.length === 0) { return null; }
@@ -204,7 +204,7 @@ function TafelStrafen({ links = [], rechts = [], gross, testId }: { links?: Scor
       position: 'absolute', top: 0, bottom: 0, [wo === 'links' ? 'left' : 'right']: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
       alignItems: wo === 'links' ? 'flex-start' : 'flex-end', pointerEvents: 'none',
     }}>
-      {[strafen.slice(0, 1), strafen.slice(1)].map((teil, zeilenIndex) => (
+      {[strafen.slice(0, 1), strafen.slice(1, 2)].map((teil, zeilenIndex) => (
         <span key={zeilenIndex} style={{ display: 'flex', gap: cssVars.spacing.sm, minHeight: zeile, alignItems: 'center' }}>
           {teil.map((strafe) => (
             <span key={strafe.id} role="img" aria-label={strafe.aria} data-testid={testId ? `${testId}-strafe-${strafe.id}` : undefined} data-steht={String(strafe.steht)} style={{
@@ -215,6 +215,12 @@ function TafelStrafen({ links = [], rechts = [], gross, testId }: { links?: Scor
               <MatchIcons.Stopwatch size={iconSizeValues.xs} />{strafe.text}
             </span>
           ))}
+          {zeilenIndex === 1 && strafen.length > 2 && (
+            <span role="img" aria-label={strafen.slice(2).map((strafe) => strafe.aria).join(', ')} data-testid={testId ? `${testId}-strafen-weitere-${wo}` : undefined}
+              style={{ fontSize: gross ? cssVars.fontSizes.md : cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.scoreboardHighlight, lineHeight: zeile }}>
+              {`+${String(strafen.length - 2)}`}
+            </span>
+          )}
         </span>
       ))}
     </div>

@@ -118,7 +118,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = (props) => {
   const tx = useMemo(() => alsUebersetzer(t), [t]);
   // Abzeichen Ton (nur im angepfiffenen Spiel) und Bildschirm wach ab dem Anpfiff (@SL-059, @SL-122)
   const { tonHinweis, wachhaltenHinweis } = useTafelAbzeichen({
-    zustand: phase.zustand, matchId: currentMatch?.id, wachhalten: cockpitSettings.wakeLockEnabled, t: tx,
+    zustand: phase.zustand, matchId: currentMatch?.id, wachhalten: cockpitSettings.wakeLockEnabled, t: tx, melde: notices.melde, quittungMitFolgespiel: (view?.quittungRestMs ?? 0) > 0 && view?.status !== 'skipped' && upcomingMatches.length > 0,
     ton: { an: cockpitSettings.soundEnabled, freigegeben: sound.isActivated, aktiviere: () => { void sound.activate(); } },
   });
   const teams = useMemo(() => (currentMatch ? { home: currentMatch.homeTeam, away: currentMatch.awayTeam } : null), [currentMatch]);

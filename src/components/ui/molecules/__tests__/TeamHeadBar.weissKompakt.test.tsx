@@ -38,6 +38,10 @@ describe('K5/K11 Handy-Kopf', () => {
     expect((kopf.firstElementChild as HTMLElement).style.float).toBe('right');
     expect(screen.getByTestId('name').style.overflowWrap).toBe('normal');
     expect(screen.getByTestId('name').style.hyphens).toBe('manual');
+    // Review #448 P1: die Leerzeichen stehen zwischen den Wörtern, nicht in ihnen – nur dort darf die Zeile umbrechen
+    const woerter = [...screen.getByTestId('name').querySelectorAll('span')].map((w) => w.textContent ?? '');
+    expect(woerter).toEqual(['Sportgemeinschaft', 'Fußballfreunde', 'Nordheim-Süd', '1921']);
+    expect(screen.getByTestId('name')).toHaveTextContent(NAME_50);
   });
 
   it('Weste: schmale Streifen fester Breite statt eines Anteils der Fläche (der Name behält die Breite)', () => {
