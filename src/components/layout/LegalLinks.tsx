@@ -33,8 +33,6 @@ export function LegalLinks({ testIdPrefix, onOpen }: LegalLinksProps) {
     textDecoration: 'underline',
     textUnderlineOffset: cssVars.spacing.xs,
     cursor: 'pointer',
-    background: 'none',
-    border: 'none',
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     font: 'inherit',
     minHeight: cssVars.touchTargets.minimum,
@@ -49,25 +47,25 @@ export function LegalLinks({ testIdPrefix, onOpen }: LegalLinksProps) {
 
   return (
     <nav style={containerStyle} aria-label={t('footer.legalLinksLabel')}>
-      <button
-        type="button"
+      <a
+        href="#/impressum"
         style={linkStyle}
-        onClick={() => onOpen('/impressum')}
+        onClick={(e) => { e.preventDefault(); onOpen('/impressum'); }}
         aria-label={t('footer.impressumAriaLabel')}
         data-testid={`${testIdPrefix}-impressum-link`}
       >
         {t('footer.impressum')}
-      </button>
+      </a>
       {!isMobile && <span style={separatorStyle}>•</span>}
-      <button
-        type="button"
+      <a
+        href="#/datenschutz"
         style={linkStyle}
-        onClick={() => onOpen('/datenschutz')}
+        onClick={(e) => { e.preventDefault(); onOpen('/datenschutz'); }}
         aria-label={t('footer.datenschutzAriaLabel')}
         data-testid={`${testIdPrefix}-datenschutz-link`}
       >
         {t('footer.datenschutz')}
-      </button>
+      </a>
     </nav>
   );
 }
