@@ -68,9 +68,15 @@ check S "Bestand: kein Turnier gehoert nach dem Einspielen zu einer Veranstaltun
 # jede Zeile "|t", darunter die fuenf gatherings-* und public-read-core-unchanged.
 PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
   | docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$C" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 2>&1 || true)"
-PRIV_RED="$( (grep -v '|t$' <<<"$PRIV_OUT" || true) | head -5 | tr '\n' ';')"
+# Assertions spaeterer Migrationen mit eigenem Harness (OWN_HARNESS_LATER, hier nicht eingespielt) zaehlen nicht: Namen aus
+# der festen Zuordnung in db-drift-check.sh (pending_assertions_for), wie public-payload-check.sh.
+PRIV_LATER=""
+for later_name in ${OWN_HARNESS_LATER:-}; do
+  PRIV_LATER="$PRIV_LATER $(awk -v n="    $later_name)" '$0 == n { getline; if ($0 ~ /echo "/) { sub(/^[^"]*"/, ""); sub(/"[^"]*$/, ""); print } }' "$REPO_ROOT/scripts/db-drift-check.sh")"
+done
+PRIV_RED="$( (grep -v '|t$' <<<"$PRIV_OUT" || true) | while IFS= read -r line; do [[ " $PRIV_LATER " == *" ${line%%|*} "* ]] || echo "$line"; done | head -5 | tr '\n' ';')"
 PRIV_GA="$( (grep -E '^(gatherings-[a-z-]+|public-read-core-unchanged)\|t$' <<<"$PRIV_OUT" || true) | grep -c . || true)"
-check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t (gatherings-* und public-read-core-unchanged dabei)" \
+check S "db_privilege_assertions.sql als ci_schema_reader: jede Zeile |t (ohne spaetere Migrationen mit eigenem Harness; gatherings-* und public-read-core-unchanged dabei)" \
   "keine|6" "${PRIV_RED:-keine}|$PRIV_GA"
 
 # --- W: zweites Einspielen -------------------------------------------------------------------------------------------
