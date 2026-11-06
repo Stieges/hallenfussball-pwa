@@ -9,7 +9,7 @@ import { getClockDisplay, type ClockMode } from '../../../core/match/clockDispla
 import type { LiveMatch } from '../types';
 import type { PhaseView } from '../engine/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
-import type { ScoreboardModel, ScoreboardSeite, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
+import type { ScoreboardModel, ScoreboardSeite, ScoreboardStrafe, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
 import { zeitBalkenLaufend, zeitBalkenPause } from '../../../core/view/zeitBalken';
 import { matchBadgeModel, type MatchBadgeModel } from '../../../core/view/badge';
 import { viewStatus } from '../../../core/view/status';
@@ -188,6 +188,22 @@ function uhrOf(input: ScoreboardInput, t: Uebersetzer): UhrErgebnis {
   return { uhr: null, hinweise };
 }
 
+/** Laufende Zeitstrafen einer Seite für die Tafel (@SL-029, @SL-031): „#5 1:58“, ohne Nummer nur die Restzeit; steht die Uhr, steht auch die Restzeit. */
+function strafenOf(input: ScoreboardInput, seite: Side, t: Uebersetzer): ScoreboardStrafe[] {
+  const teamId = input.match ? (seite === 'home' ? input.match.homeTeam.id : input.match.awayTeam.id) : null;
+  if (teamId === null || !input.view) { return []; }
+  const steht = input.phase.zustand !== 'laeuft';
+  return input.view.penalties.filter((p) => p.teamId === teamId).map((p) => {
+    const rest = formatUhr(p.remainingMs / 1000);
+    const nummer = p.playerNumber;
+    return {
+      id: p.id, steht,
+      text: nummer === undefined ? t('tafel.strafeOhneNr', { rest }) : t('tafel.strafe', { nummer, rest }),
+      aria: nummer === undefined ? t('tafel.strafeOhneNrAria', { rest }) : t('tafel.strafeAria', { nummer, rest }),
+    };
+  });
+}
+
 /** Quittung nach dem Abpfiff (@SL-152): „Abgepfiffen · 2:1 gespeichert“, nur in den 30 Sekunden danach und nur für ein beendetes Spiel. */
 function quittungTextOf(input: ScoreboardInput, links: ScoreboardSeite, rechts: ScoreboardSeite, t: Uebersetzer): string | null {
   const { view, match } = input;
@@ -209,7 +225,10 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   const stand = endstand ? { home: endstand.a, away: endstand.b } : { home: 0, away: 0 };
   const seite = (anzeige: 'links' | 'rechts'): ScoreboardSeite => {
     const s = input[anzeige];
-    return { name: match ? (s === 'home' ? match.homeTeam.name : match.awayTeam.name) : '', tore: s === 'home' ? stand.home : stand.away, label: t(s === 'home' ? 'spalte.heim' : 'spalte.gast'), ...(input.kasten ? { kasten: input.kasten[s] } : {}) };
+    return {
+      name: match ? (s === 'home' ? match.homeTeam.name : match.awayTeam.name) : '', tore: s === 'home' ? stand.home : stand.away, label: t(s === 'home' ? 'spalte.heim' : 'spalte.gast'),
+      ...(input.kasten ? { kasten: input.kasten[s] } : {}), strafen: strafenOf(input, s, t),
+    };
   };
   const links = seite('links');
   const rechts = seite('rechts');
@@ -224,7 +243,7 @@ export function toScoreboardModel(input: ScoreboardInput, t: Uebersetzer): Score
   return {
     kopfText: kopfText || null,
     badge: badgeOf(input), links, rechts,
-    uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, input.view, input.eingetragenVon, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige,
+    uhr: uhr ?? vor.uhr, abschnittText: abschnittTextOf(phase, input.view, input.eingetragenVon, t) ?? vor.kopfText, hinweise: [...hinweise, ...vor.hinweise], leerAnzeige: vor.leerAnzeige, farbHinweis: vor.farbHinweis,
     ueberfaelligText: vor.ueberfaelligText, quittungText: quittungTextOf(input, links, rechts, t),
     eintraegeWartenText: input.eintraegeWarten > 0 ? t('tafel.eintraegeWarten', { count: input.eintraegeWarten }) : null,
     eintraegeWartenKurz: input.eintraegeWarten > 0 ? String(input.eintraegeWarten) : null,

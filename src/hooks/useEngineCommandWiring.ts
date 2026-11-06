@@ -22,7 +22,14 @@ import { serverRulesFor } from './engineServerRules';
 import { buildValidMatches } from './useEngineMatches';
 import { mapCardTypeToEngine, type EngineCommandHandlers, type GoalHandlerOptions } from './engineCommandWiringTypes';
 import { rejectionMessageKey } from './engineCommandWiringHelpers';
-import { defaultKit } from '../core/models/kit';
+import { defaultKit, type MatchKit } from '../core/models/kit';
+import { kitAusWahl, trikotFarben, type LeibchenWahl } from '../core/models/kitChoice';
+import type { Match } from '../types/tournament';
+
+/** Das `kit` des Anpfiffs: die Wahl der Anpfiff-Ansicht (@SL-137, @SL-149), ohne Wahl die Vorbelegung (`defaultKit`). */
+function kitBeimAnpfiff(match: Match, tournament: Tournament, leibchen: LeibchenWahl | undefined): MatchKit {
+  return leibchen ? kitAusWahl(trikotFarben(match, tournament.teams), leibchen) : defaultKit(match, tournament.teams, tournament);
+}
 
 export type { EngineCommandHandlers } from './engineCommandWiringTypes';
 
@@ -96,7 +103,7 @@ export function useEngineCommandWiring(
   /** Ruft `commands.start` fuer ein Spiel auf, dessen lokale Engine-Kopie bereits existiert
    * (Vorbedingung von `MatchCommands.submit`, sonst "keine lokale Kopie"-Wurf). */
   const startViaCommands = useCallback(
-    async (matchId: string): Promise<boolean> => {
+    async (matchId: string, leibchen?: LeibchenWahl): Promise<boolean> => {
       if (!commands) {
         return false;
       }
@@ -106,8 +113,8 @@ export function useEngineCommandWiring(
       }
       try {
         const match = tournament.matches.find((m) => m.id === matchId);
-        // A-30a (F1): kit geht bei jedem Anpfiff mit – bis zur Leibchen-Wahl (Cockpit-Scheibe 3) die Vorbelegung.
-        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, match), match && defaultKit(match, tournament.teams, tournament));
+        // A-30a (F1): kit geht bei jedem Anpfiff mit – die Wahl der Anpfiff-Ansicht (@SL-137, @SL-149), ohne sie die Vorbelegung
+        await commands.start(matchId, ctx, actor, serverRulesFor(tournament, match), match && kitBeimAnpfiff(match, tournament, leibchen));
         return true;
       } catch (error) {
         handleEngineError(error);
@@ -118,9 +125,9 @@ export function useEngineCommandWiring(
   );
 
   const handleStart = useCallback(
-    async (matchId: string): Promise<boolean> => {
+    async (matchId: string, leibchen?: LeibchenWahl): Promise<boolean> => {
       if (isEngineMatch(matchId) && commands) {
-        return startViaCommands(matchId);
+        return startViaCommands(matchId, leibchen);
       }
       // P3: engine-bestimmt, aber noch KEINE Engine-Ansicht -- ERST `ensureEngineMatchReady`, DANN
       // `commands.start`. Kein Engine-Weg (kein Engine-Spiel, `null` von `ensureEngineMatchReady`):
@@ -133,7 +140,7 @@ export function useEngineCommandWiring(
       try {
         const ready = await ensureEngineMatchReady(matchId);
         if (ready) {
-          return startViaCommands(matchId);
+          return startViaCommands(matchId, leibchen);
         }
         // W1: `null` ist ein erwartbarer Fall (kein Engine-Spiel / Server noch ohne Ereignisse), kein Fehler.
         await reject();

@@ -19,13 +19,15 @@ export interface TeamKopfProps {
   breit?: boolean;
   /** In der Tastenspalte: der Kopf füllt die gemeinsame Zeile, beide Köpfe sind gleich hoch. */
   fuellend?: boolean;
+  /** Handy: flacher Kopf, „Heim“/„Gast“ rechts in der ersten Zeile (K5/K11). */
+  kompakt?: boolean;
 }
 
-export function TeamKopf({ seite, name, kasten, breit = false, fuellend = false }: TeamKopfProps): ReactElement {
+export function TeamKopf({ seite, name, kasten, breit = false, fuellend = false, kompakt = false }: TeamKopfProps): ReactElement {
   const { t } = useTranslation('cockpit');
   return (
     <TeamHeadBar
-      name={name} label={t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')} fill={kasten.fill} breit={breit} fuellend={fuellend}
+      name={name} label={t(seite === 'home' ? 'spalte.heim' : 'spalte.gast')} fill={kasten.fill} breit={breit} fuellend={fuellend} kompakt={kompakt}
       bib={kasten.bib ? { ariaLabel: t('spalte.leibchen') } : null}
       testId={`team-head-${seite}`} nameTestId={`team-name-${seite}`}
     />

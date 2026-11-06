@@ -59,7 +59,8 @@
       "schuesse": "Schüsse",
       "anstoss": "Anstoß",
       "gespielt": "Gespielt",
-      "strafstoss": "$t(sport:events.penaltyShootout)"
+      "strafstoss": "$t(sport:events.penaltyShootout)",
+      "spielzeit": "Spielzeit"
     },
     "unterzeile": {
       "spielzeit": "Spielzeit {{zeit}}",
@@ -100,9 +101,11 @@
       "reihenfolgeNurLeitung": "Nur die Turnierleitung ändert die Reihenfolge",
       "keinSpielMehr": "Auf {{feld}} folgt kein Spiel mehr",
       "wartetOffline": "Dein Gerät hat kein Netz – dein Stand kann veraltet sein. Die Besetzung steht am Server vielleicht schon fest.",
-      "wartetAuf": "Wartet auf: {{grund}}"
+      "wartetAuf": "Wartet auf: {{grund}}",
+      "abschnitteMal": "{{anzahl}} ×",
+      "anstossSpielFeld": "Anstoß {{zeit}} · {{spielFeld}}"
     },
-    "wachhaltenSymbol": "Bildschirm kann sich sperren – antippen zum Ausblenden",
+    "wachhaltenSymbol": "Bildschirm kann sich sperren, die Uhr läuft trotzdem",
     "tonAus": "Ton aus",
     "tonAusAntippen": "Ton für das Spielende ist aus – antippen zum Einschalten",
     "eintraegeWarten_one": "1 Eintrag wartet",
@@ -110,7 +113,12 @@
     "helferAnfragen_one": "1 Helfer-Anfrage",
     "helferAnfragen_other": "{{count}} Helfer-Anfragen",
     "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}",
-    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}"
+    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}",
+    "wachhaltenKurz": "Sperre möglich",
+    "strafe": "#{{nummer}} {{rest}}",
+    "strafeOhneNr": "{{rest}}",
+    "strafeAria": "Zeitstrafe #{{nummer}}, noch {{rest}}",
+    "strafeOhneNrAria": "Zeitstrafe ohne Nummer, noch {{rest}}"
   },
   "ariaLive": {
     "running": "Spiel läuft",
@@ -209,7 +217,11 @@
     "limitMinGoal": "wegen des Tors bei {{zeit}} frühestens {{zeit}}",
     "limitMinEntry": "wegen eines Eintrags bei {{zeit}} frühestens {{zeit}}",
     "cancel": "Abbrechen",
-    "apply": "Übernehmen"
+    "apply": "Übernehmen",
+    "restInSection": "Restzeit im Abschnitt",
+    "limitMinRest": "mindestens {{zeit}}",
+    "limitMaxRestGoal": "wegen des Tors höchstens {{zeit}}",
+    "limitMaxRestEntry": "wegen eines Eintrags höchstens {{zeit}}"
   },
   "timePenalty": {
     "title": "Zeitstrafe",
@@ -486,7 +498,9 @@
         "timePenalty": "$t(sport:events.timePenalty)",
         "foul": "Foul",
         "substitution": "Wechsel",
-        "shootoutKick": "$t(sport:events.penalty)"
+        "shootoutKick": "$t(sport:events.penalty)",
+        "matchStart": "Anpfiff",
+        "clockAdjust": "Uhr-Korrektur"
       },
       "target": "{{kind}}",
       "targetNumbered": "{{kind}} #{{number}}",
@@ -534,7 +548,8 @@
       "tor": "Tor {{team}}",
       "foul": "Foul {{team}}, {{zaehler}}",
       "karte": "Karte {{team}}",
-      "strafe": "Zeitstrafe {{team}}"
+      "strafe": "Zeitstrafe {{team}}",
+      "strafeDauer": "Zeitstrafe {{team}}, {{zeit}}"
     },
     "strafeKnopf": "Zeitstrafe",
     "strafeDauer": "$t(sport:zeit.minuteCount, {\"count\": {{minuten}} })"
@@ -587,7 +602,8 @@
     "nurZusehen_other": "Du kannst nur noch zusehen – {{count}} Einträge an die Turnierleitung übergeben",
     "tasteLeertaste": "Leertaste",
     "tasteRueckgaengigStrg": "Strg+Z",
-    "tasteRueckgaengigCmd": "Cmd+Z"
+    "tasteRueckgaengigCmd": "Cmd+Z",
+    "ohneLeibchen": "Ohne Leibchen anpfeifen"
   },
   "abpfiff": {
     "label": "Abpfiff",
@@ -678,5 +694,25 @@
   "eventLog": {
     "title": "Ereignisprotokoll",
     "empty": "Noch keine Ereignisse aufgezeichnet"
+  },
+  "anpfiff": {
+    "hinweisGleich": "Gleiche Trikotfarbe",
+    "hinweisAehnlich": "Sehr ähnliche Trikotfarben",
+    "festlegen": "Leibchen festlegen",
+    "leibchenFuer": "Leibchen für {{team}}",
+    "farbeLabel": "Leibchen: {{farbe}}",
+    "ohneAnpfeifen": "Ohne Leibchen anpfeifen",
+    "farbe": {
+      "gelb": "Gelb",
+      "orange": "Orange",
+      "gruen": "Grün",
+      "blau": "Blau",
+      "rot": "Rot",
+      "weiss": "Weiß",
+      "turnier": "Farbe des Turniers"
+    },
+    "leibchen": "Leibchen",
+    "farbeZuAehnlich": "{{farbe}} – zu ähnlich wie das Trikot von {{gegner}}",
+    "gegnerAehnlichKurz": "Leibchen zu ähnlich wie der Gegner"
   }
 }

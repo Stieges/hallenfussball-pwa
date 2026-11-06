@@ -238,6 +238,7 @@ W_A="$(uuid_for team:winter-a)"; W_B="$(uuid_for team:winter-b)"; D_A="$(uuid_fo
 S1="$(uuid_for match:spiel-1)"; S7="$(uuid_for match:spiel-7)"; S8="$(uuid_for match:spiel-8)"; S9="$(uuid_for match:spiel-9)"
 HF1="$(uuid_for match:halbfinale-1)"; HF2="$(uuid_for match:halbfinale-2)"; M_WINTER="$(uuid_for match:winter-1)"
 M_DEL="$(uuid_for match:del-1)"; S_NEU="$(uuid_for match:spiel-15-neu)"; T_NEU="$(uuid_for team:fc-neu)"
+S_ZURUECK="$(uuid_for match:spiel-10-anpfiff-zurueck)"
 E() { uuid_for "event:$1"; }
 SHARE="HCNORD"
 # Fingerabdruck der Grundlage einer Entscheidung wie src/core/standings/decisionBasis (JSON.stringify: points, criteria,
@@ -862,6 +863,27 @@ apply_basis_followup() {
   done
 }
 
+# @SL-066 (Muster @ZM-180, Review #448 P5): ein versehentlicher Anpfiff, sofort zurueckgenommen, steht in der oeffentlichen
+# Antwort wieder „vor Anpfiff“ -- ohne Uhr und ohne Live-Zustand. Eigenes Spiel 10 (Feld 2), erst nach den Messungen angelegt,
+# damit Versionen, Bestand und Byte-Messung der uebrigen Pruefungen unveraendert bleiben.
+run_anpfiff_zurueck() {
+  psql_stdin <<SQL
+INSERT INTO public.matches (id, tournament_id, round, field, match_number, scheduled_start, group_letter, phase, team_a_id, team_b_id)
+VALUES ('$S_ZURUECK', '$T', 5, 2, 10, '14:55', 'B', 'groupStage', '$SG_MITTE', '$DJK_BERG');
+SQL
+  local m
+  ev MATCH_START "$(E zurueck-start)" '{"clockMs":null}'
+  send "$U_OLLI" "$S_ZURUECK"; need_accepted "Spiel 10 Anpfiff" "accepted"
+  m="$(match_of "$(pub anon null)" "$S_ZURUECK")"
+  check P "@SL-066 Gegenprobe: nach dem Anpfiff laeuft Spiel 10 oeffentlich (Status, Live-Zustand)" "running|running" \
+    "$(jq -r '"\(.match_status)|\(.live_state.status // "keiner")"' <<<"$m" 2>/dev/null)"
+  ev RETRACT "$(E zurueck-retract)" "{\"at\":2000,\"clockMs\":null,\"targetId\":\"$(E zurueck-start)\"}"
+  send "$U_OLLI" "$S_ZURUECK"; need_accepted "Spiel 10 Anpfiff zurueckgenommen" "accepted"
+  m="$(match_of "$(pub anon null)" "$S_ZURUECK")"
+  check P "@SL-066 @ZM-180 Anpfiff zurueckgenommen: Spiel 10 oeffentlich vor Anpfiff, ohne Uhr und ohne Live" "scheduled|null|null|true" \
+    "$(jq -r '"\(.match_status)|\(.timer_start_time)|\(.actual_start)|\(.live_state == null or .live_state.status == "scheduled")"' <<<"$m" 2>/dev/null)"
+}
+
 summary() {
   local i
   echo
@@ -1023,6 +1045,7 @@ start_rest
 run_probes
 run_assertions
 run_measurement
+run_anpfiff_zurueck
 
 # --- W: idempotent -----------------------------------------------------------------------------------------------
 stop_rest

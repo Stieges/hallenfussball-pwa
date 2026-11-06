@@ -215,7 +215,7 @@ export default defineConfig({
     {
       // Cockpit Scheibe 3 (Plan Abschluss PR 2): kleinstes Handy mit 360 × 640, nur die Cockpit-Specs (@SL-061, @OB-025).
       name: 'cockpit-360x640',
-      testMatch: /cockpit-(s3|laptop|endstand|fortsetzen|tasten|handy-platz|tafel-masse|teamfarben)\.spec\.ts/,
+      testMatch: /cockpit-(s3|laptop|endstand|fortsetzen|tasten|handy-platz|handy-waechter|tafel-masse|teamfarben)\.spec\.ts/,
       use: {
         viewport: { width: 360, height: 640 },
         deviceScaleFactor: 3,
@@ -226,10 +226,10 @@ export default defineConfig({
       },
     },
     {
-      // Cockpit Paket A (@SL-061, @SL-179, @SL-155): kleines Handy mit Browserleisten (390 × 664, unter 800 px: die Tastenfläche scrollt). Schlank:
-      // nur die Tafel-Maß-Spec, damit die Prüfung „Tafel und Leiste fest, Tor im Bild, Doppelpunkt-Achse, reservierter Streifen“ in der CI läuft.
+      // Cockpit Paket A (@SL-061, @SL-179, @SL-155): kleines Handy mit Browserleisten (390 × 664). Schlank: nur Tafel-Maß und Wächter
+      // (Cockpit-Paket K5: alle Tasten ohne Scrollen, „Nächstes“ in der Tafel), damit die Prüfung in der CI läuft.
       name: 'cockpit-390x664',
-      testMatch: /cockpit-tafel-masse\.spec\.ts/,
+      testMatch: /cockpit-(tafel-masse|handy-waechter)\.spec\.ts/,
       use: {
         viewport: { width: 390, height: 664 },
         deviceScaleFactor: 3,

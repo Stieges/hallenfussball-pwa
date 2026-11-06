@@ -64,7 +64,7 @@ describe('TeamColumn am Laptop', () => {
     const { unmount } = render(<TeamColumn {...props({ name: lang })} />);
     const name = screen.getByTestId('team-name-away');
     expect(screen.getByTestId('team-head-away')).toHaveAttribute('data-gestapelt', 'true');
-    expect(name.style.overflowWrap).toBe('break-word'); // nicht „anywhere“: ein Wort bricht nie mitten im Wort
+    expect(name.style.overflowWrap).toBe('normal'); // K11/@OB-058: weder „anywhere“ noch „break-word“ – ein Wort bricht nie mitten im Wort
     expect(name.style.hyphens).toBe('manual');
     unmount();
     render(<TeamColumn {...props({ name: 'SV Süd' })} />);

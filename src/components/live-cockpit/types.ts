@@ -12,6 +12,7 @@ import type { GoalHandlerOptions } from '../../hooks/engineCommandWiringTypes';
 import type { LeerGrund } from './model/cockpitPhase';
 import type { MindestpauseHinweis } from './model/cockpitTypes';
 import type { LiveCockpitLeisteProps, MatchSummaryFarben } from './typesLeiste';
+import type { LeibchenWahl } from '../../core/models/kitChoice';
 
 // ---------------------------------------------------------------------------
 // Spiel-Typen (B-06: aus dem gelöschten match-cockpit/MatchCockpit.tsx hierher umgezogen)
@@ -165,7 +166,8 @@ export interface LiveCockpitProps extends LiveCockpitLeisteProps {
   /** Upcoming matches for proactive hints */
   upcomingMatches: MatchSummary[];
   // Event Handlers - Required (match MatchCockpit signature with matchId)
-  onStart(matchId: string): void;
+  /** `leibchen`: Wahl der Anpfiff-Ansicht (@SL-137, @SL-149); ohne Angabe die Vorbelegung. */
+  onStart(matchId: string, leibchen?: LeibchenWahl): void;
   onPause(matchId: string): void;
   onResume(matchId: string): void;
   /** Liefert (optional, als `Promise<string | null>`) die ID des gesendeten Endes, damit Ton und Vibration genau einmal je Ende kommen (B-08c). */

@@ -59,7 +59,8 @@
       "schuesse": "Shots",
       "anstoss": "Kick-off",
       "gespielt": "Played",
-      "strafstoss": "$t(sport:events.penaltyShootout)"
+      "strafstoss": "$t(sport:events.penaltyShootout)",
+      "spielzeit": "Match time"
     },
     "unterzeile": {
       "spielzeit": "Played {{zeit}}",
@@ -100,9 +101,11 @@
       "reihenfolgeNurLeitung": "Only the organisers can change the order",
       "keinSpielMehr": "No more matches on {{feld}}",
       "wartetOffline": "Your device has no network – your data may be out of date. The line-up may already be set on the server.",
-      "wartetAuf": "Waiting for: {{grund}}"
+      "wartetAuf": "Waiting for: {{grund}}",
+      "abschnitteMal": "{{anzahl}} ×",
+      "anstossSpielFeld": "Kick-off {{zeit}} · {{spielFeld}}"
     },
-    "wachhaltenSymbol": "Screen may lock – tap to dismiss",
+    "wachhaltenSymbol": "The screen may lock, the clock keeps running",
     "tonAus": "Sound off",
     "tonAusAntippen": "Full-time sound is off – tap to turn on",
     "eintraegeWarten_one": "1 entry waiting",
@@ -110,7 +113,12 @@
     "helferAnfragen_one": "1 helper request",
     "helferAnfragen_other": "{{count}} helper requests",
     "ariaStand": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}",
-    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}"
+    "ariaStandStrafstoss": "{{links}} {{linksTore}}, {{rechts}} {{rechtsTore}}, $t(sport:events.penaltyShootout) {{linksStrafstoss}}:{{rechtsStrafstoss}}",
+    "wachhaltenKurz": "May lock",
+    "strafe": "#{{nummer}} {{rest}}",
+    "strafeOhneNr": "{{rest}}",
+    "strafeAria": "Time penalty #{{nummer}}, {{rest}} left",
+    "strafeOhneNrAria": "Time penalty without number, {{rest}} left"
   },
   "ariaLive": {
     "running": "Match running",
@@ -209,7 +217,11 @@
     "limitMinGoal": "because of the goal at {{zeit}}, at least {{zeit}}",
     "limitMinEntry": "because of an entry at {{zeit}}, at least {{zeit}}",
     "cancel": "Cancel",
-    "apply": "Apply"
+    "apply": "Apply",
+    "restInSection": "Time remaining in section",
+    "limitMinRest": "at least {{zeit}}",
+    "limitMaxRestGoal": "because of the goal, at most {{zeit}}",
+    "limitMaxRestEntry": "because of an entry, at most {{zeit}}"
   },
   "timePenalty": {
     "title": "Time Penalty",
@@ -486,7 +498,9 @@
         "timePenalty": "$t(sport:events.timePenalty)",
         "foul": "Foul",
         "substitution": "Substitution",
-        "shootoutKick": "$t(sport:events.penalty)"
+        "shootoutKick": "$t(sport:events.penalty)",
+        "matchStart": "Kick-off",
+        "clockAdjust": "Clock correction"
       },
       "target": "{{kind}}",
       "targetNumbered": "{{kind}} #{{number}}",
@@ -534,7 +548,8 @@
       "tor": "Goal {{team}}",
       "foul": "Foul {{team}}, {{zaehler}}",
       "karte": "Card {{team}}",
-      "strafe": "Time penalty {{team}}"
+      "strafe": "Time penalty {{team}}",
+      "strafeDauer": "Time penalty {{team}}, {{zeit}}"
     },
     "strafeKnopf": "Time penalty",
     "strafeDauer": "$t(sport:zeit.minuteCount, {\"count\": {{minuten}} })"
@@ -587,7 +602,8 @@
     "nurZusehen_other": "You can only watch now – {{count}} entries handed to the organisers",
     "tasteLeertaste": "Space",
     "tasteRueckgaengigStrg": "Ctrl+Z",
-    "tasteRueckgaengigCmd": "Cmd+Z"
+    "tasteRueckgaengigCmd": "Cmd+Z",
+    "ohneLeibchen": "Kick off without bibs"
   },
   "abpfiff": {
     "label": "End match",
@@ -678,5 +694,25 @@
   "eventLog": {
     "title": "Event log",
     "empty": "No events recorded yet"
+  },
+  "anpfiff": {
+    "hinweisGleich": "Same kit colour",
+    "hinweisAehnlich": "Very similar kit colours",
+    "festlegen": "Assign bibs",
+    "leibchenFuer": "Bibs for {{team}}",
+    "farbeLabel": "Bibs: {{farbe}}",
+    "ohneAnpfeifen": "Kick off without bibs",
+    "farbe": {
+      "gelb": "Yellow",
+      "orange": "Orange",
+      "gruen": "Green",
+      "blau": "Blue",
+      "rot": "Red",
+      "weiss": "White",
+      "turnier": "Tournament colour"
+    },
+    "leibchen": "Bibs",
+    "farbeZuAehnlich": "{{farbe}} – too similar to the kit of {{gegner}}",
+    "gegnerAehnlichKurz": "Bibs too similar to the opponent"
   }
 }

@@ -45,7 +45,8 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 describe('Mehr → Uhr korrigieren (K10)', () => {
   it('K10 @SL-011 Mehr → „Uhr korrigieren“ öffnet den Dialog ohne onAdjustTime; +10 Sekunden → genau ein CLOCK_ADJUST', async () => {
     const user = userEvent.setup();
-    render(<Harness turnier={ZWEI_ABSCHNITTE} />); // zeitKorrektur nicht gesetzt: kein onAdjustTime am Cockpit
+    // Uhr aufwärts (@SL-198 Zeile 2): „10 Sekunden mehr“ = gespielte Zeit + 10 s
+    render(<Harness turnier={ZWEI_ABSCHNITTE} einstellungen={{ timerDirection: 'elapsed' }} />); // zeitKorrektur nicht gesetzt: kein onAdjustTime am Cockpit
     await anpfiff(user);
     await waitFor(() => expect(zustand()).toHaveTextContent('Live'));
     zu(60_000);

@@ -318,6 +318,9 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
   test('@SL-156 vor den letzten drei Minuten bleibt die Zeile „Nächstes“ ruhig', async ({ page, seedIndexedDB }) => {
     await seedIndexedDB({ tournaments: [cup({ minuten: 4, perioden: 1 })] });
     await anpfeifen(page);
+    // Handy (Cockpit-Paket K12): vor der Vorwarnung steht die Zeile gar nicht da (kein reservierter Streifen); sonst ruhig
+    const handy = (page.viewportSize()?.width ?? 0) < 768;
+    if (handy) { await expect(page.getByTestId('cockpit-naechstes')).toHaveCount(0); return; }
     await expect(page.getByTestId('cockpit-naechstes')).toHaveAttribute('data-modus', 'normal');
   });
 
@@ -327,10 +330,16 @@ test.describe('Cockpit ohne Scrollen und im Rahmen (Gast, lokal)', () => {
     const zeile = page.getByTestId('cockpit-naechstes');
     await expect(zeile).toHaveAttribute('data-modus', 'vorwarnung');
     await expect(zeile).toHaveAttribute('data-blinken', 'true');
-    await expect(zeile).toHaveCSS('border-top-width', '2px');
-    const tafel = await page.getByTestId('scoreboard').boundingBox();
-    const z = await zeile.boundingBox();
-    expect((tafel?.y ?? 0) + (tafel?.height ?? 0)).toBeLessThanOrEqual((z?.y ?? 0) + 1);
+    // Handy (K12): die Zeile steht in der Tafel, ihr Rahmen ist eine Kontur (kein Platzbedarf); sonst unter der Tafel mit Rand
+    if (await zeile.getAttribute('data-auf-tafel') === 'true') {
+      await expect(zeile).toHaveCSS('outline-width', '2px');
+      expect(await page.getByTestId('scoreboard').evaluate((tafel, z) => tafel.contains(z), await zeile.elementHandle())).toBe(true);
+    } else {
+      await expect(zeile).toHaveCSS('border-top-width', '2px');
+      const tafel = await page.getByTestId('scoreboard').boundingBox();
+      const z = await zeile.boundingBox();
+      expect((tafel?.y ?? 0) + (tafel?.height ?? 0)).toBeLessThanOrEqual((z?.y ?? 0) + 1);
+    }
     await bild(page, `${testInfo.project.name}-vorwarnung`);
   });
 

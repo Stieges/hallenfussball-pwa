@@ -52,8 +52,8 @@ describe('Cockpit-Hülle – Struktur (Scheibe 1, ohne Sichtänderung)', () => {
       expect(flaeche).toContainElement(screen.getByTestId('goal-button-home'));
       expect(flaeche).toContainElement(screen.getByTestId('goal-button-away'));
       expect(flaeche).not.toContainElement(screen.getByTestId('scoreboard'));
-      expect(flaeche).not.toContainElement(screen.getByTestId('cockpit-naechstes'));
-      expect(screen.getByTestId('cockpit-naechstes')).toHaveAttribute('data-verborgen', 'true'); // Platz reserviert, Zeile erst ab 3:00
+      // Cockpit-Paket K12: am Handy kein reservierter Streifen – die Zeile „Nächstes“ steht erst ab 3:00, dann in der Tafel (Platz der Meldezeile)
+      expect(screen.queryByTestId('cockpit-naechstes')).toBeNull();
     } finally {
       window.innerWidth = alt;
     }
