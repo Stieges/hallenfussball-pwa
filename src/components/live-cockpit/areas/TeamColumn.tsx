@@ -49,7 +49,8 @@ const torStil = (breit: boolean, kompakt: boolean): CSSProperties => ({
 const knopfStil = (kompakt: boolean, breit: boolean): CSSProperties => ({
   position: 'relative', minHeight: breit ? 'var(--cockpit-fuss, var(--sizing-cockpit-fuss-normal))' : cssVars.touchTargets.minimum, flexDirection: 'column', gap: 0,
   padding: kompakt ? `${cssVars.spacing.xs} 0` : breit ? cssVars.spacing.xs : cssVars.spacing.sm, minWidth: 0,
-  ...(kompakt ? { fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm, whiteSpace: 'nowrap' } : {}),
+  // längere Übersetzungen brechen zwischen Wörtern um, statt über den Nachbarknopf zu laufen (visual:metrics, Variante langtext)
+  ...(kompakt ? { fontSize: cssVars.fontSizes.sm, lineHeight: cssVars.lineHeights.bodySm, whiteSpace: 'normal', textAlign: 'center' } : {}),
 });
 const markeStil = (steht: boolean): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning,

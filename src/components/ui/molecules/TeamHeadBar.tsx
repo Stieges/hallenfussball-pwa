@@ -51,9 +51,28 @@ function schmaleWeste(fill: BoxFill): CSSProperties {
   };
 }
 
+/** Ab dieser Wortlänge (z. B. „Oberweiler-Niederstetten“) wird die Schrift am Handy noch kleiner, damit das Wort in eine Zeile passt (kleiner statt getrennt). */
+const LANGES_WORT = 18;
+
+/**
+ * Handy-Kopf: Name mit Wörtern, die nie umbrechen (`titel.wortbruch`, @OB-058), auch nicht am Bindestrich („Nordheim-/Süd“). Umgebrochen wird nur zwischen
+ * den Wörtern; der Text bleibt derselbe.
+ */
+function Woerter({ name }: { name: string }): ReactElement {
+  const woerter = name.split(' ');
+  return (
+    <>
+      {woerter.map((wort, index) => (
+        <span key={`${String(index)}-${wort}`} style={{ whiteSpace: 'nowrap' }}>{wort}{index < woerter.length - 1 ? ' ' : ''}</span>
+      ))}
+    </>
+  );
+}
+
 function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, testId, nameTestId }: TeamHeadBarProps): ReactElement {
   const text = fillTextColor(fill);
   const lang = name.length > LANGER_NAME;
+  const langesWort = Math.max(...name.split(' ').map((wort) => wort.length)) > LANGES_WORT;
   const rand = fill.kind === 'vest' ? `calc(${cssVars.spacing.sm} + ${cssVars.spacing.xs})` : cssVars.spacing.sm;
   const kopf: CSSProperties = {
     display: 'block', boxSizing: 'border-box', minWidth: 0, padding: `${cssVars.spacing.xs} ${rand}`, borderRadius: cssVars.borderRadius.md,
@@ -65,7 +84,7 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
   };
   const nameStil: CSSProperties = {
     margin: 0, minWidth: 0, hyphens: 'manual', overflowWrap: 'normal', wordBreak: 'normal', lineHeight: zeilenHoehe,
-    fontSize: lang ? cssVars.fontSizes.sm : cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold,
+    fontSize: langesWort ? cssVars.fontSizes.xs : lang ? cssVars.fontSizes.sm : cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold,
   };
   return (
     <div style={kopf} data-testid={testId} data-fill={fill.kind} data-kompakt="true" data-color={fill.kind === 'vest' ? fill.center : fill.color}>
@@ -76,7 +95,7 @@ function TeamHeadBarKompakt({ name, label, fill, bib = null, fuellend = false, t
             <MatchIcons.Shirt size={iconSizeValues.xs} />
           </span>
         )}
-        {name}
+        <Woerter name={name} />
       </p>
     </div>
   );
