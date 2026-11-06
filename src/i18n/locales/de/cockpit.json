@@ -105,7 +105,7 @@
       "abschnitteMal": "{{anzahl}} ×",
       "anstossSpielFeld": "Anstoß {{zeit}} · {{spielFeld}}"
     },
-    "wachhaltenSymbol": "Bildschirm kann sich sperren, die Uhr läuft weiter",
+    "wachhaltenSymbol": "Bildschirm kann sich sperren, die Uhr läuft trotzdem",
     "tonAus": "Ton aus",
     "tonAusAntippen": "Ton für das Spielende ist aus – antippen zum Einschalten",
     "eintraegeWarten_one": "1 Eintrag wartet",
