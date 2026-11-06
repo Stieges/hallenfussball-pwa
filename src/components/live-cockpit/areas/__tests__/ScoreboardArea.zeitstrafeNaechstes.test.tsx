@@ -10,7 +10,7 @@ import { ScoreboardArea, type ScoreboardAreaProps } from '../ScoreboardArea';
 import { cockpitPhaseOf } from '../../model/cockpitPhase';
 import { makeLiveMatch, makePhaseView } from '../../__tests__/cockpitFixtures';
 import type { CockpitNotice } from '../../hooks/useCockpitNotices';
-import type { PhasePenalty } from '../../engine/phaseView';
+import type { PhasePenalty } from '../../../../core/match/client/phaseView';
 
 vi.unmock('i18next');
 vi.unmock('react-i18next');

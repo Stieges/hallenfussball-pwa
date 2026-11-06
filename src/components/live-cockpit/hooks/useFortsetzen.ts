@@ -7,7 +7,7 @@
  * Restzeit; kommt es erst spät am Server an, legt der Server es zur Klärung (@SL-147, Migration 20261118_009).
  */
 import { useCallback, useEffect, useState } from 'react';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import { fortsetzenMoeglich, fortsetzenUhrMs, restGrenzenOf, type RestGrenzen } from '../model/fortsetzen';
 
 export interface FortsetzenArgs {

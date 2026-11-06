@@ -16,7 +16,7 @@ import { useCockpitCommands } from '../useCockpitCommands';
 import type { ReactNode } from 'react';
 import type { MatchEngineContextValue } from '../../../../features/match-engine/matchEngineContextInstance';
 import { MatchEngineContext } from '../../../../features/match-engine/matchEngineContextInstance';
-import { phaseViewOf, type PhaseView } from '../../engine/phaseView';
+import { phaseViewOf, type PhaseView } from '../../../../core/match/client/phaseView';
 import { makeFlows } from '../../__tests__/entryFlowsMock';
 import { REGEL_2X6, spielAnlegen, zu } from '../../__tests__/enginePhaseFixture';
 

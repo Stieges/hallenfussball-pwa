@@ -3,7 +3,7 @@
  * Abschnittszeit, der bisherige Stand ist Abschnittsbeginn + gespielte Zeit. Der Abschnittsbeginn auf der
  * Spieluhr ist `limitClockMs - sectionLimitMs` (siehe `PhaseView`). Rein, ohne React.
  */
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 
 export interface KorrekturUhrstaende {
   clockMs: number;

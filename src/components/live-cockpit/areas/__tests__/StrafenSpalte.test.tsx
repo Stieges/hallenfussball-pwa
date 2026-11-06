@@ -7,7 +7,7 @@ import { render, screen } from '@testing-library/react';
 import { initRealDeI18n } from '../../../../test/realDeI18n';
 import { StrafenSpalte } from '../StrafenSpalte';
 import { toStrafenModel, KEINE_STRAFEN } from '../../model/toStrafenModel';
-import type { PhasePenalty } from '../../engine/phaseView';
+import type { PhasePenalty } from '../../../../core/match/client/phaseView';
 import { makeLiveMatch, KASTEN_HEIM, KASTEN_GAST } from '../../__tests__/cockpitFixtures';
 
 vi.unmock('i18next');

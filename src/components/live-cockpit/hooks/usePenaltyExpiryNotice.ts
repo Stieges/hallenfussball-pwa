@@ -4,7 +4,7 @@
  * (Gegentor, Rücknahme, Abpfiff), gilt nicht als abgelaufen (`abgelaufeneStrafen`).
  */
 import { useEffect, useRef } from 'react';
-import type { PhasePenalty, PhaseView } from '../engine/phaseView';
+import type { PhasePenalty, PhaseView } from '../../../core/match/client/phaseView';
 import { abgelaufeneStrafen } from '../model/penaltyExpiry';
 import type { Uebersetzer } from '../model/cockpitTypes';
 import type { NoticeStufe } from './useCockpitNotices';

@@ -5,7 +5,7 @@
 import type { SperrHinweis } from '../../../core/match';
 import type { SideBox } from '../../../core/models/scoreBoxColors';
 import type { EnabledCards } from '../../../types/tournament';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { LiveMatch } from '../types';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
 import type { Side } from './cockpitTypes';

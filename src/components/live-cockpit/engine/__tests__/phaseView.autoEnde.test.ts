@@ -3,7 +3,7 @@
  * (`limitAt`), `reopenCount`. Testwerte aus @SL-005 (2 x 6 Minuten, 1 Minute Pause), @SL-006, @SL-008.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { phaseViewOf, type PhaseView } from '../phaseView';
+import { phaseViewOf, type PhaseView } from '../../../../core/match/client/phaseView';
 import { REGEL_2X6, T0, spielAnlegen, zu, type EngineSpiel } from '../../__tests__/enginePhaseFixture';
 
 beforeEach(() => {

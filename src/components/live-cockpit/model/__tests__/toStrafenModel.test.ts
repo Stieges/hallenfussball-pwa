@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { toStrafenModel, KEINE_STRAFEN, STRAFEN_KARTEN_JE_TEAM } from '../toStrafenModel';
-import type { PhasePenalty } from '../../engine/phaseView';
+import type { PhasePenalty } from '../../../../core/match/client/phaseView';
 import { makeLiveMatch, KASTEN_HEIM, KASTEN_GAST } from '../../__tests__/cockpitFixtures';
 
 const match = makeLiveMatch({ homeTeam: { id: 'tsv-petting', name: 'TSV Petting' }, awayTeam: { id: 'djk-otting', name: 'DJK Otting' } });
