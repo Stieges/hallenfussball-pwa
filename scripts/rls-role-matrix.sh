@@ -184,6 +184,8 @@
 #   scripts/rls-role-matrix.sh --without-fs        # Alles ("nachher"), aber OHNE 20261118_009 (spaetes „Spiel fortsetzen“
 #                                                   # -> Klaerungsliste) -- die Zeilen (rls-matrix.d/spur-zz-fortsetzen-spaet.sh)
 #                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
+#   scripts/rls-role-matrix.sh --without-gatherings # Alles ("nachher"), aber OHNE 20261119_001 (A1 Veranstaltung) -- die
+#                                                   # Zeilen (rls-matrix.d/spur-zzz-veranstaltung.sh) muessen hier ROT sein.
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -304,6 +306,9 @@ WITH_WM_REQ=1
 WITH_MEND_REQ=1
 # 20261118_009 (C-REOPEN-NACH-ABPFIFF-SPAET): im Modus "nachher" einspielen (Gegenprobe --without-fs laesst sie weg; braucht _005).
 WITH_FS_REQ=1
+# A1 Veranstaltung: 20261119_001 im Modus "nachher" einspielen (Gegenprobe --without-gatherings laesst sie weg; braucht B-14
+# und A-21a-S).
+WITH_GA_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -395,6 +400,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-fs)
       WITH_FS_REQ=0
+      shift
+      ;;
+    --without-gatherings)
+      WITH_GA_REQ=0
       shift
       ;;
     -h|--help)
@@ -832,6 +841,19 @@ if [[ "$WITH_A35" -eq 1 && "$WITH_FS_REQ" -eq 1 ]]; then
 elif [[ "$WITH_A35" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, Fortsetzen-Gegenprobe (ohne 20261118_009)"
 fi
+# A1 Veranstaltung (20261119_001, @VA-011, @VA-021): gatherings, gathering_members (RLS, eine Lese-Policy), tournaments.gathering_id
+# nur ueber Server-Funktionen. Prueft die Fassungen von tournaments_guard_lifecycle (A-21a-S) und public_payload (B-14)
+# (Fail-fast); --without-gatherings ist die Gegenprobe.
+GA_FILE="$(find_migration 20261119_001)"
+WITH_GA=0
+if [[ "$WITH_B14" -eq 1 && "$WITH_A21AS" -eq 1 && "$WITH_GA_REQ" -eq 1 ]]; then
+  WITH_GA=1
+  echo "Migration einspielen: $(basename "$GA_FILE")" >&2
+  psql_stdin < "$GA_FILE"
+  MODE_LABEL="$MODE_LABEL + Veranstaltung (20261119_001)"
+elif [[ "$WITH_B14" -eq 1 && "$WITH_A21AS" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, Veranstaltung-Gegenprobe (ohne 20261119_001)"
+fi
 
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
@@ -879,6 +901,11 @@ fi
 if [[ "$WITH_A35" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 1))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 3))
+fi
+# A1 Veranstaltung: gatherings (eine Lese-Policy gatherings_select) und gathering_members (ohne Policy) sind RLS-aktiv.
+if [[ "$WITH_GA" -eq 1 ]]; then
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 1))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 2))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -2437,7 +2464,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_MEND_REQ" -eq 1 && "$WITH_FS_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_MEND_REQ" -eq 1 && "$WITH_FS_REQ" -eq 1 && "$WITH_GA_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

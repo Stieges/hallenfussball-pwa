@@ -44,6 +44,7 @@
   },
   "tournament": {
     "groupStage": "Group Stage",
+    "gathering": "Event",
     "finals": "Finals",
     "group": "Group",
     "groupWithLetter": "Group {{letter}}",

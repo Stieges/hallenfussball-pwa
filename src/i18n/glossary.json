@@ -391,6 +391,13 @@
       "reason": "Daniel 01.11.2026, @OB-075: Beim ersten Auftreten je Ansicht ausschreiben; der Prüfer lässt das Kürzel nirgends in Texten zu.",
       "i18nKey": "organisations.bfv",
       "kuerzel": true
+    },
+    "gathering": {
+      "de": "Veranstaltung",
+      "en": "event",
+      "forbidden_de": [],
+      "reason": "Daniel 06.11.2026 (Record Veranstaltung, A1): mehrere Turniere eines Kontos unter einem Link, eigene Ebene über den Turnieren (später darüber die Turnierserie). Nicht verwechseln mit „Veranstalter“ (Feld organizer, die Person oder der Verein, der ein Turnier ausrichtet). In Datenbank und Code heißt sie gathering, weil „event“ im Bestand das Ereignis im Spiel ist (match_events, correctEvents).",
+      "i18nKey": "tournament.gathering"
     }
   }
 }

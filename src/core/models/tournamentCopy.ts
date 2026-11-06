@@ -165,6 +165,8 @@ export function buildCopiedTournament(
     serverVersion: undefined,
     ownUploadsFrom: undefined,
     changeRevision: undefined,
+    // Die Kopie gehört zu keiner Veranstaltung (@VA-020); der Server setzt das Feld beim Anlegen ohnehin auf NULL
+    gatheringId: undefined,
     // Abschlüsse und Verlauf gehören zum Original (GA4 A-13b-C): die Kopie hat neue Team-IDs, nichts ist abgeschlossen, und Namen
     // und Gründe der Turnierleitung wandern nicht mit
     groupCompletions: undefined,

@@ -1,0 +1,48 @@
+name: Veranstaltung
+
+# A1 Veranstaltung am Server (supabase/migrations/20261119_001_gatherings.sql, Record Veranstaltung, Umsetzungsvorgabe A1).
+# scripts/gatherings-check.sh spielt Baseline + alle neueren Migrationen in einen eigenen Wegwerf-Container supabase/postgres
+# (dazu ein Wegwerf-PostgREST fuer die echte Server-Antwort, @ZM-180) und prueft Verwaltung, Zuordnung, oeffentlichen Abruf,
+# Version, Turnierantwort, Schema/Rechte, zweites Einspielen und Rueckweg (@VA-011, @VA-014, @VA-016, @VA-019, @VA-020,
+# @VA-021). Die beiden Gegenproben beweisen, dass der Check Fehler auch erkennt. Pfadfilter wie klaerungsliste.yml.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261119_001_gatherings_rollback.sql'
+      - 'scripts/gatherings-check.sh'
+      - 'scripts/gatherings-check.d/**'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/gatherings.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261119_001_gatherings_rollback.sql'
+      - 'scripts/gatherings-check.sh'
+      - 'scripts/gatherings-check.d/**'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/gatherings.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  gatherings:
+    name: Veranstaltung (gatherings, Postgres-Wegwerfcontainer + PostgREST)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Veranstaltung pruefen
+        # Exit 1 bei jeder Abweichung. Container und Netz werden per trap entfernt.
+        run: bash scripts/gatherings-check.sh
+
+      - name: Gegenprobe A (ohne 20261119_001 muessen V, Z, P, A und T ROT sein)
+        run: bash scripts/gatherings-check.sh --without-migration
+
+      - name: Gegenprobe B (jede der Mutationen G1-G27 muss mindestens eine Pruefung ROT machen)
+        run: bash scripts/gatherings-check.sh --gegenprobe
