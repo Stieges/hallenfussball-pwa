@@ -153,10 +153,10 @@ export function useCockpitCommands({ props, settings, sound, flows, sides, melde
     if (!match || readOnly) { return; } // ohne Steuer keine Korrektur, auch nicht im Rennen zwischen Klick und Effekt (S3, @SL-018)
     // Ohne Engine-Ansicht (Ersatz-Ansicht aus dem LiveMatch) bleibt der bisherige Weg über `onAdjustTime`, mit Meldung.
     if (!engineView) {
-      // Im Countdown stellt der Nutzer die Restzeit ein: verstrichen = Dauer - Rest.
-      const elapsed = settings.timerDirection === 'countdown' ? match.durationSeconds - neuSekunden : neuSekunden;
-      onAdjustTime?.(match.id, elapsed);
-      showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(neuSekunden / 60)}:${(neuSekunden % 60).toString().padStart(2, '0')}` }));
+      // Der Dialog meldet immer die gespielte Zeit, auch im Countdown (er rechnet die Restzeit selbst um, @SL-198)
+      onAdjustTime?.(match.id, neuSekunden);
+      const angezeigt = settings.timerDirection === 'countdown' ? match.durationSeconds - neuSekunden : neuSekunden; // Meldung in der Zählweise der Uhr
+      showInfo(t('meldung.zeitGesetzt', { zeit: `${Math.floor(angezeigt / 60)}:${(angezeigt % 60).toString().padStart(2, '0')}` }));
       return;
     }
     const { clockMs, previousClockMs } = korrekturUhrstaende(engineView, neuSekunden);

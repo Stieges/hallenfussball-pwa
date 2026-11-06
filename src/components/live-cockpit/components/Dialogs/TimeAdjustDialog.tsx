@@ -5,6 +5,10 @@
  * oder anderer Eintrag, sonst 0:00); Obergrenze: die Länge des Abschnitts. Der Stepper kappt an den Grenzen,
  * die Hinweise nennen sie. Der Dialog meldet nur die neue Spielzeit; das Senden macht die Hülle über die
  * Engine (`adjustClock`). Szenarien: @SL-011, @SL-012, @SL-077.
+ *
+ * @SL-198 (C-COCKPIT-ZEIT-KORRIGIEREN-GEGENLAEUFIG): der Dialog zeigt und ändert die Zeit in der Zählweise der Uhr. Läuft sie als Restzeit
+ * (`countdown`), zeigt er die Restzeit des Abschnitts, „10 Sekunden mehr“ erhöht die Restzeit, und die Grenzen stehen als Restzeit da
+ * (höchstens bis zum jüngsten Eintrag, mindestens 0:00). Gemeldet wird immer die gespielte Zeit (die Engine rechnet in Spielzeit).
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +33,8 @@ export interface TimeAdjustDialogProps {
   maxSeconds: number;
   /** Die Untergrenze stammt von einem Tor (für den Hinweistext). */
   minIsGoal: boolean;
+  /** Zählweise der Uhr im Cockpit (`timerDirection`): `countdown` = Restzeit, sonst gespielte Zeit (@SL-198). */
+  countdown?: boolean;
 }
 
 /** Sekunden als `m:ss` (Minuten ohne führende Null). */
@@ -37,7 +43,7 @@ function formatMmSs(sekunden: number): string {
 }
 
 export function TimeAdjustDialog({
-  isOpen, onClose, onConfirm, currentSeconds, minSeconds, maxSeconds, minIsGoal,
+  isOpen, onClose, onConfirm, currentSeconds, minSeconds, maxSeconds, minIsGoal, countdown = false,
 }: TimeAdjustDialogProps) {
   const { t } = useTranslation('cockpit');
   // Eingabe; `null` = noch nicht geändert, dann gilt die laufende Spielzeit (die Uhr tickt weiter).
@@ -54,10 +60,15 @@ export function TimeAdjustDialog({
   }
 
   const hasChanged = seconds !== currentSeconds;
-  const minText = formatMmSs(minSeconds);
-  const hinweisMin = minIsGoal
-    ? t('timeAdjust.limitMinGoal', { zeit: minText })
-    : t('timeAdjust.limitMinEntry', { zeit: minText });
+  // Anzeige in der Zählweise der Uhr: Restzeit = Länge des Abschnitts − gespielte Zeit; die Grenzen kehren sich dabei um (@SL-198)
+  const zeige = (gespielt: number): number => (countdown ? maxSeconds - gespielt : gespielt);
+  const anzeigeMin = countdown ? 0 : minSeconds;
+  const anzeigeMax = countdown ? maxSeconds - minSeconds : maxSeconds;
+  const eintragText = formatMmSs(minSeconds);
+  const hinweisEintrag = countdown
+    ? t(minIsGoal ? 'timeAdjust.limitMaxRestGoal' : 'timeAdjust.limitMaxRestEntry', { eintrag: eintragText, zeit: formatMmSs(anzeigeMax) })
+    : t(minIsGoal ? 'timeAdjust.limitMinGoal' : 'timeAdjust.limitMinEntry', { zeit: eintragText });
+  const hinweisGrenze = countdown ? t('timeAdjust.limitMinRest', { zeit: formatMmSs(0) }) : t('timeAdjust.limitMax', { zeit: formatMmSs(maxSeconds) });
 
   const schliesse = (): void => { setEingabe(null); onClose(); };
 
@@ -71,30 +82,30 @@ export function TimeAdjustDialog({
     >
       <div style={styles.dialog}>
         <h2 id="time-adjust-dialog-title" style={styles.title}>{t('timeAdjust.title')}</h2>
-        <p style={styles.label}>{t('timeAdjust.inSection')}</p>
+        <p style={styles.label}>{t(countdown ? 'timeAdjust.restInSection' : 'timeAdjust.inSection')}</p>
 
         <div style={styles.stepper}>
           <TimeStepper
-            value={seconds}
-            min={minSeconds}
-            max={maxSeconds}
+            value={zeige(seconds)}
+            min={anzeigeMin}
+            max={anzeigeMax}
             step={STEP_SECONDS}
             format={formatMmSs}
             labelDecrease={t('timeAdjust.decrease')}
             labelIncrease={t('timeAdjust.increase')}
-            onChange={setEingabe}
+            onChange={(wert) => { setEingabe(countdown ? maxSeconds - wert : wert); }}
             testId="time-adjust-stepper"
           />
         </div>
 
         <div style={styles.limits}>
-          {minSeconds > 0 && <p style={styles.limit}>{hinweisMin}</p>}
-          <p style={styles.limit}>{t('timeAdjust.limitMax', { zeit: formatMmSs(maxSeconds) })}</p>
+          {minSeconds > 0 && <p style={styles.limit} data-testid="time-adjust-grenze-eintrag">{hinweisEintrag}</p>}
+          <p style={styles.limit} data-testid="time-adjust-grenze">{hinweisGrenze}</p>
         </div>
 
         {hasChanged && (
           <div style={styles.changeIndicator}>
-            {formatMmSs(currentSeconds)} → {formatMmSs(seconds)}
+            {formatMmSs(zeige(currentSeconds))} → {formatMmSs(zeige(seconds))}
           </div>
         )}
 

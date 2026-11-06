@@ -86,10 +86,11 @@ describe('useCockpitCommands – Foul, Zeitstrafe, Karte (Aufgabe 3.5)', () => {
 });
 
 describe('useCockpitCommands – Uhr und Bedienung', () => {
-  it('Zeit anpassen im Countdown: Restzeit 4:00 bei 10 Minuten Spielzeit ergibt 360 s verstrichen', () => {
+  // @SL-198: der Dialog rechnet die Restzeit selbst in gespielte Zeit um und meldet immer die gespielte Zeit; die Meldung nennt die Restzeit
+  it('@SL-198 Zeit anpassen im Countdown: Restzeit 4:00 bei 10 Minuten Spielzeit (gespielt 360 s) → 360 s verstrichen, Meldung „4:00“', () => {
     const onAdjustTime = vi.fn();
     const { hook, melde } = setup({ props: { onAdjustTime }, settings: { timerDirection: 'countdown' } });
-    hook.result.current.overlayHandlers.confirmTimeAdjust(240);
+    hook.result.current.overlayHandlers.confirmTimeAdjust(360);
     expect(onAdjustTime).toHaveBeenCalledWith('match-11', 360);
     expect(melde).toHaveBeenCalledWith(3, 'Zeit auf 4:00 gesetzt');
   });
