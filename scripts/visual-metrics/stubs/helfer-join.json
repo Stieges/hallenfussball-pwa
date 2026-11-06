@@ -49,8 +49,7 @@
   "konto": {
    "id": "00000000-0000-4000-8000-0000000000b1",
    "name": "Greta"
-  },
-  "einwilligung": true
+  }
  },
  "e4": {
   "rpc": {
@@ -71,7 +70,6 @@
    "id": "00000000-0000-4000-8000-0000000000b1",
    "name": "Greta"
   },
-  "einwilligung": true,
   "ausgang": 2
  },
  "e5": {

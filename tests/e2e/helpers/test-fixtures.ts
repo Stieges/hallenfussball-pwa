@@ -2,17 +2,6 @@ import { test as base } from '@playwright/test';
 
 
 /**
- * Consent status structure matching lib/consent.ts
- * Set errorTracking: true to bypass ConsentDialog in E2E tests.
- */
-const TEST_CONSENT_STATUS = {
-    errorTracking: true,
-    sessionReplay: false,
-    timestamp: Date.now(),
-    version: 1,
-};
-
-/**
  * IndexedDB configuration matching src/core/storage/IndexedDBAdapter.ts
  */
 const INDEXED_DB_CONFIG = {
@@ -40,26 +29,10 @@ export type TestOptions = {
 /**
  * Custom test instance with reset functionality
  *
- * Automatically sets consent status to bypass ConsentDialog in tests.
- *
  * IMPORTANT: The app uses IndexedDB as primary storage.
  * Use seedIndexedDB() to seed test data, not seedLocalStorage().
  */
 export const test = base.extend<TestOptions>({
-    // Auto-set consent before each test to bypass ConsentDialog
-    page: async ({ page }, use) => {
-        // Add init script that runs BEFORE any JavaScript on the page
-        // This sets consent before the app loads (preventing ConsentDialog)
-        await page.addInitScript((consent) => {
-            localStorage.setItem('app:consent', JSON.stringify(consent));
-        }, TEST_CONSENT_STATUS);
-
-        // DO NOT navigate here - let tests control navigation
-        // Tests using seedIndexedDB need to seed BEFORE the app loads
-        // to avoid storage singleton caching issues
-        await use(page);
-    },
-
     seedIndexedDB: async ({ page }, use) => {
         const seedFn = async (data: Record<string, unknown>) => {
             // Navigate to app first (initializes storage, but we'll seed and reload)
@@ -87,7 +60,7 @@ export const test = base.extend<TestOptions>({
                         const transaction = db.transaction(config.storeName, 'readwrite');
                         const store = transaction.objectStore(config.storeName);
 
-                        // Write new data (don't clear - keep consent and other data)
+                        // Write new data (don't clear - keep other data)
                         Object.entries(data).forEach(([key, value]) => {
                             store.put({ key, value });
                         });

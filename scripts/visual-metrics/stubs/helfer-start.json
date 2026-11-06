@@ -3,7 +3,6 @@
   "geraet": {
    "id": "00000000-0000-4000-8000-0000000000aa"
   },
-  "einwilligung": true,
   "rpc": {
    "helper_access_status": {
     "json": {

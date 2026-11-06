@@ -13,7 +13,7 @@ import { sectionStyles } from './legalStyles';
 // ---------------------------------------------------------------------------
 
 interface SectionProps {
-  title: string;
+  title: ReactNode;
   number: number;
   children: ReactNode;
 }
