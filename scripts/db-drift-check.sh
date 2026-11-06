@@ -227,6 +227,10 @@ pending_assertions_for() {
     20261118_009_fortsetzen_spaet.sql)
       echo "fortsetzen-spaet-append-reopen-review"
       ;;
+    # A1 Veranstaltung (@VA-011, @VA-021): gatherings, gathering_members, Server-Funktionen, gathering_code in public_payload
+    20261119_001_gatherings.sql)
+      echo "gatherings-tables-rls-no-client-writes gatherings-select-policy gatherings-rpcs-definer-authenticated-only gatherings-public-read gatherings-guards public-read-core-unchanged"
+      ;;
     *)
       return 1
       ;;
@@ -727,6 +731,12 @@ PRIVILEGE_ASSERTION_NAMES=(
   "monitor-endstand-public-reopen"
   # C-REOPEN-NACH-ABPFIFF-SPAET (20261118_009, @SL-147 Z. 2, @ZM-180): spaetes Fortsetzen des Helfers -> Klaerungsliste.
   "fortsetzen-spaet-append-reopen-review"
+  # A1 Veranstaltung (20261119_001_gatherings.sql, @VA-011, @VA-021): Schreiben nur ueber Server-Funktionen.
+  "gatherings-tables-rls-no-client-writes"
+  "gatherings-select-policy"
+  "gatherings-rpcs-definer-authenticated-only"
+  "gatherings-public-read"
+  "gatherings-guards"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

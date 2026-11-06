@@ -1220,12 +1220,15 @@ SELECT 'public-read-reshare-keeps-code',
 -- b066d903d80edc87778e7e65b2958366). 007 live seit 30.10.2026 (md5(prosrc) config_for ad6a688f…).
 -- Mitgezogen fuer 20261118_008_monitor_endstand.sql (U): config_for gibt clockMode/finalPhaseMinutes heraus (vorher, Fassung
 -- 007: d9d204bec11e731e6b68287dd79d0bfc). 008 live seit 30.10.2026 (md5(prosrc) config_for 4aed3d49…).
+-- Mitgezogen fuer 20261119_001_gatherings.sql (A1 Veranstaltung): public_payload gibt gathering_code fuer Zuschauer heraus
+-- (vorher, Fassung 008: 764632d34bde5c11bfce47b6afbadb9f). Bis zum Einspielen von 20261119_001 laesst der Drift-Check die
+-- Zeile aus (Liste der noch nicht eingespielten Migrationen).
 UNION ALL
 SELECT 'public-read-core-unchanged',
        coalesce((SELECT count(*) = 12
                         AND md5(string_agg(pg_get_functiondef(p.oid), E'\n'
                                            ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)))
-                            = '764632d34bde5c11bfce47b6afbadb9f'
+                            = '7544746eff25aabcb93314c5c159b56a'
                    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                   WHERE n.nspname = 'public_view'
                      OR p.oid IN (to_regprocedure('public.public_tournament(text,bigint)'),
@@ -1419,4 +1422,59 @@ SELECT 'fortsetzen-spaet-append-reopen-review',
                         AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
                         AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                    FROM pg_proc p WHERE p.oid = to_regprocedure('public.append_match_events(uuid,jsonb,integer,uuid)')), false)
+-- ---------------------------------------------------------------------------------------------------------------
+-- A1 Veranstaltung (20261119_001_gatherings.sql, @VA-011, @VA-021, @VA-019): Schreiben nur ueber Server-Funktionen,
+-- Lesen nur readGathering, oeffentlich nur public_gathering. Vor dem Live-Einspielen: "f" (vom Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Tabellen: RLS an; anon nichts; authenticated nur SELECT auf gatherings, nichts auf gathering_members; ci_schema_reader SELECT.
+UNION ALL
+SELECT 'gatherings-tables-rls-no-client-writes',
+       coalesce((SELECT bool_and(c.relrowsecurity) AND count(*) = 2 FROM pg_class c
+                  WHERE c.oid IN (to_regclass('public.gatherings'), to_regclass('public.gathering_members'))), false)
+       AND coalesce((SELECT bool_and(NOT has_table_privilege('anon', t, p)
+                                     AND (has_table_privilege('authenticated', t, p) = (t = 'public.gatherings' AND p = 'SELECT')))
+                       FROM unnest(ARRAY['public.gatherings', 'public.gathering_members']) AS t,
+                            unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'MAINTAIN']) AS p
+                      WHERE to_regclass(t) IS NOT NULL), false)
+       AND coalesce(has_table_privilege('ci_schema_reader', 'public.gatherings', 'SELECT')
+                    AND has_table_privilege('ci_schema_reader', 'public.gathering_members', 'SELECT'), false)
+-- (2) genau eine Policy: gatherings_select, nur authenticated, has_gathering_permission(id, 'readGathering')
+UNION ALL
+SELECT 'gatherings-select-policy',
+       coalesce((SELECT count(*) = 1 AND bool_and(p.policyname = 'gatherings_select' AND p.cmd = 'SELECT'
+                                                  AND p.roles = ARRAY['authenticated']::name[]
+                                                  AND p.qual LIKE '%has_gathering_permission(id, ''readGathering''::text)%')
+                   FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename IN ('gatherings', 'gathering_members')), false)
+-- (3) Verwaltung: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated (nicht anon, service_role, PUBLIC)
+UNION ALL
+SELECT 'gatherings-rpcs-definer-authenticated-only',
+       coalesce((SELECT count(*) = 5 AND bool_and(p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                                                  AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                                  AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                                  AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                                                  AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.has_gathering_permission(uuid,text)'), to_regprocedure('public.create_gathering(text)'),
+                                  to_regprocedure('public.rename_gathering(uuid,text)'), to_regprocedure('public.delete_gathering(uuid)'),
+                                  to_regprocedure('public.set_gathering_tournaments(uuid,uuid[],uuid[])'))), false)
+-- (4) oeffentlicher Abruf: SECURITY DEFINER, search_path fest, anon + authenticated, nicht PUBLIC; Positivliste am Text
+UNION ALL
+SELECT 'gatherings-public-read',
+       coalesce((SELECT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('anon', p.oid, 'EXECUTE') AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+                        AND position('FROM st s WHERE coalesce(s.is_public, false)' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.public_gathering(text)')), false)
+-- (5) Schutz: tournaments_protect_gathering_id (BEFORE INSERT OR UPDATE, INVOKER), touch-Trigger, Mitglieder-Waechter aktiv;
+--     Abschluss-Sperre laesst gathering_id frei (@VA-019).
+UNION ALL
+SELECT 'gatherings-guards',
+       coalesce((SELECT count(*) = 4 FROM pg_trigger t
+                  WHERE NOT t.tgisinternal AND t.tgenabled = 'O'
+                    AND t.tgname IN ('tournaments_protect_gathering_id', 'tournaments_touch_gathering_trash',
+                                     'tournaments_touch_gathering_delete', 'gathering_members_guard')), false)
+       AND coalesce((SELECT NOT p.prosecdef AND position('NEW.gathering_id := NULL;' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournaments_protect_gathering_id()')), false)
+       AND coalesce((SELECT position('''config'', ''gathering_id''];' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournaments_guard_lifecycle()')), false)
 ;
