@@ -1,7 +1,8 @@
 /**
  * TournamentCard Component (@OB-079): zeigt nur, was man zum Finden braucht.
- * Zeile 1: Name (höchstens zwei Zeilen, kein Wortbruch), Zustandswort, Menü. Zeile 2: Zeit (unter „Heute“ nur die Uhrzeit,
- * sonst Tag und Uhrzeit) und Ort. Altersklasse, Modus, Veranstalter und Platzierung stehen in der Übersicht des Turniers.
+ * Zeile 1: Name in voller Breite (höchstens zwei Zeilen, kein Wortbruch, nie abgeschnitten). Zeile 2: links Zeit (unter „Heute“ nur die
+ * Uhrzeit, sonst Tag und Uhrzeit) und darunter der Ort, rechts Zustandswort und Menü. Altersklasse, Modus, Veranstalter und Platzierung
+ * stehen in der Übersicht des Turniers.
  */
 
 import { isTournamentClosed, lifecycleOf } from '../core/services/lifecycle';
@@ -45,20 +46,23 @@ const titleStyle: CSSProperties = {
   color: cssVars.colors.textPrimary,
   lineHeight: cssVars.lineHeights.bodyMd,
   margin: 0,
-  // höchstens zwei Zeilen, nie ein Wort trennen (@OB-058)
+  // nie ein Wort trennen, nie abschneiden (@OB-058); in voller Breite bleiben auch 50 Zeichen bei zwei Zeilen
   overflowWrap: 'normal',
   wordBreak: 'normal',
   hyphens: 'manual',
-  display: '-webkit-box',
-  WebkitBoxOrient: 'vertical',
-  WebkitLineClamp: 2,
-  overflow: 'hidden',
 };
 
-const metaRowStyle: CSSProperties = {
+const rowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'space-between',
   gap: cssVars.spacing.sm,
+};
+
+const metaStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  flex: '1 1 0',
   minWidth: 0,
   fontSize: cssVars.fontSizes.md,
   color: cssVars.colors.textSecondary,
@@ -175,59 +179,60 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           }
         }}
       >
-        {/* Zeile 1: Name, Zustandswort, Menü */}
-        <div style={badgeContainerStyle}>
-          <h3 style={{ ...titleStyle, flex: '1 1 0', minWidth: 0 }} title={tournament.title}>{tournament.title}</h3>
-          {tournament.isExternal && tournament.externalSource && (
-            <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
-              {tournament.externalSource}
-            </span>
-          )}
-          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show badge if categoryLabel or draft */}
-          {(categoryLabel || tournament.status === 'draft') && (
-            <span
-              style={{ ...statusBadgeStyle, ...badgeColors }}
-              aria-label={t('card.statusLabel', { status: getCategoryDisplayLabel() })}
-            >
-              {tournament.status === 'draft' ? t('status.draft') : getCategoryDisplayLabel()}
-            </span>
-          )}
-          {/* Action Menu - Only show if actions available */}
-          {hasActions && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <TournamentActionMenu
-                tournament={tournament}
-                category={category}
-                onOpen={onClick}
-                onCopy={onCopy}
-                onShare={onShare}
-                onDelete={deleteHandler}
-                testId={`tournament-${tournament.id}-actions`}
-              />
-            </div>
-          )}
-        </div>
+        {/* Zeile 1: Name in voller Breite */}
+        <h3 style={titleStyle} title={tournament.title}>{tournament.title}</h3>
 
-        {/* Zeile 2: Zeit und Ort (einzeilig, der Ort wird mit Auslassung gekürzt) */}
-        <div style={metaRowStyle} data-testid="card-meta">
-          <span style={{ whiteSpace: 'nowrap', fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }} data-testid="card-time">{timeText}</span>
-          {location !== '' && (
-            <>
-              <span aria-hidden="true">·</span>
+        {/* Zeile 2: links Zeit und Ort (Ort einzeilig, mit Auslassung), rechts Zustandswort und Menü */}
+        <div style={rowStyle}>
+          <div style={metaStyle} data-testid="card-meta">
+            <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
+              <span style={{ whiteSpace: 'nowrap', fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }} data-testid="card-time">{timeText}</span>
+              {myRole !== undefined && myRole !== 'owner' && (
+                <TextTag testId={`tournament-role-${tournament.id}`}>
+                  {t(`card.role.${myRole}`)}
+                </TextTag>
+              )}
+            </div>
+            {location !== '' && (
               <span
                 title={location}
                 data-testid="card-location"
-                style={{ minWidth: 0, flex: '1 1 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               >
                 {location}
               </span>
-            </>
-          )}
-          {myRole !== undefined && myRole !== 'owner' && (
-            <TextTag testId={`tournament-role-${tournament.id}`}>
-              {t(`card.role.${myRole}`)}
-            </TextTag>
-          )}
+            )}
+          </div>
+          <div style={badgeContainerStyle}>
+            {tournament.isExternal && tournament.externalSource && (
+              <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
+                {tournament.externalSource}
+              </span>
+            )}
+            {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show badge if categoryLabel or draft */}
+            {(categoryLabel || tournament.status === 'draft') && (
+              <span
+                style={{ ...statusBadgeStyle, ...badgeColors }}
+                aria-label={t('card.statusLabel', { status: getCategoryDisplayLabel() })}
+              >
+                {tournament.status === 'draft' ? t('status.draft') : getCategoryDisplayLabel()}
+              </span>
+            )}
+            {/* Action Menu - Only show if actions available */}
+            {hasActions && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <TournamentActionMenu
+                  tournament={tournament}
+                  category={category}
+                  onOpen={onClick}
+                  onCopy={onCopy}
+                  onShare={onShare}
+                  onDelete={deleteHandler}
+                  testId={`tournament-${tournament.id}-actions`}
+                />
+              </div>
+            )}
+          </div>
         </div>
         <LateFinishNotice tournament={tournament} mayFinish={myRole !== undefined && canWithListedRole(myRole, 'manageLifecycle')} />
       </article>

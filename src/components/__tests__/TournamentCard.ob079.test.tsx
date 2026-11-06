@@ -46,12 +46,14 @@ describe('@OB-079 Inhalt der Karte', () => {
     expect(karte.querySelector('dl')).toBeNull();
   });
 
-  it('der Name bricht an Leerzeichen um, nie im Wort, höchstens zwei Zeilen', () => {
+  it('der Name steht in voller Breite, bricht an Leerzeichen um, nie im Wort und wird nie abgeschnitten', () => {
     render(<TournamentCard tournament={f2} categoryLabel="upcoming" inToday />);
     const titel = screen.getByRole('heading', { name: 'F2-Junioren Hallenturnier' });
     expect(titel.style.wordBreak).toBe('normal');
     expect(titel.style.overflowWrap).toBe('normal');
-    expect(titel.style.webkitLineClamp).toBe('2');
+    // nie abgeschnitten (kein line-clamp): 50 Zeichen bleiben in voller Breite bei zwei Zeilen
+    expect(titel.style.webkitLineClamp).toBe('');
+    expect(titel.style.overflow).toBe('');
   });
 
   it('der Ort ist einzeilig und wird mit Auslassung gekürzt', () => {

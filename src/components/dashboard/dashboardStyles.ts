@@ -7,7 +7,7 @@ import { cssVars } from '../../design-tokens';
 export function gridStyle(isMobile: boolean): CSSProperties {
   return {
     display: 'grid',
-    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+    gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'repeat(auto-fill, minmax(300px, 1fr))',
     gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
   };
 }

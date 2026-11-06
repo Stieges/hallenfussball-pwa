@@ -37,9 +37,10 @@ export const statusBadgeStyle: CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-/** Zeile 1 der Karte: Name links (nimmt den Rest), Zustandswort und Menü rechts. */
+/** Zeile 2 der Karte rechts: Zustandswort und Menü. */
 export const badgeContainerStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
+  flexShrink: 0,
   gap: cssVars.spacing.sm,
 };
