@@ -9,6 +9,7 @@
  * - G1b: nach dem Abpfiff (`finished`) ist Zuruecknehmen fuer ALLE gesperrt -- nur in der Oberflaeche,
  *   die Engine bleibt unveraendert (Plan §8 Zeile 1). Die Sperre greift VOR dem Probelauf.
  * - G2: Minus sucht rueckwaerts in `state.goals` (deckt OWN_GOAL des Gegners ab).
+ * - Anpfiff und Uhr-Korrektur sind Ziele (@SL-066, @SL-109); ein gesperrter Anpfiff (> 30 s) gibt keinen Hinweis (@SL-067).
  * - Zulaessigkeit sonst per Probelauf `applyEvent(RETRACT)` (deckt STALE_BASE, Verlaengerung, Shootout ab).
  */
 import { applyEvent } from '../applyEvent';
@@ -35,7 +36,9 @@ export type TargetKind =
   | 'timePenalty'
   | 'foul'
   | 'substitution'
-  | 'shootoutKick';
+  | 'shootoutKick'
+  | 'matchStart'
+  | 'clockAdjust';
 
 export interface RetractTarget {
   id: string;
@@ -71,7 +74,13 @@ const KIND_BY_TYPE: Partial<Record<EventType, TargetKind>> = {
   FOUL: 'foul',
   SUBSTITUTION: 'substitution',
   SHOOTOUT_KICK: 'shootoutKick',
+  // @SL-066/@SL-067: versehentlicher Anpfiff (≤ 30 s, ohne Eintrag – die Regel prüft die Engine); @SL-109: die Uhr-Korrektur
+  MATCH_START: 'matchStart',
+  CLOCK_ADJUST: 'clockAdjust',
 };
+
+/** Ein nicht mehr zurücknehmbarer Anpfiff ist kein Hinweis wert (@SL-067: „nimmt Rückgängig nichts zurück“, wie ohne Eintrag). */
+const STILL_GESPERRT: ReadonlySet<EventType> = new Set<EventType>(['MATCH_START']);
 
 function ownEvent(state: MatchState, id: string): EngineEvent | undefined {
   return Object.hasOwn(state.accepted, id) ? state.accepted[id] : undefined;
@@ -143,7 +152,8 @@ function pickTarget(input: TargetInput, candidates: readonly EngineEvent[]): Tar
   }
   const gate = statusGate(input);
   if (gate !== null) {
-    return { target: null, blockReason: gate };
+    // Nur ein Anpfiff als Kandidat (Spiel ohne Eintrag): kein Hinweis, wie ohne Kandidat (@SL-067)
+    return candidates.every((event) => STILL_GESPERRT.has(event.type)) ? { target: null, blockReason: null } : { target: null, blockReason: gate };
   }
   let firstReason: BlockReason | null = null;
   for (const event of candidates) {
@@ -154,7 +164,9 @@ function pickTarget(input: TargetInput, candidates: readonly EngineEvent[]): Tar
         ? { target: null, blockReason: 'notAllowed' }
         : { target: describeTarget(input.state, event, kind), blockReason: null };
     }
-    firstReason ??= reasonFor(input.state, event, code);
+    if (!STILL_GESPERRT.has(event.type)) {
+      firstReason ??= reasonFor(input.state, event, code);
+    }
   }
   return { target: null, blockReason: firstReason };
 }
