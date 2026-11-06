@@ -671,6 +671,8 @@ export function mapTournamentFromSupabase(
     isPublic: row.is_public ?? false,
     shareCode: row.share_code ?? undefined,
     shareCodeCreatedAt: row.share_code_created_at ?? undefined,
+    // A1 (@VA-021): Veranstaltung nur lesen -- mapTournamentToSupabase schreibt gathering_id nie (Zuordnung nur am Server)
+    ...(row.gathering_id ? { gatheringId: row.gathering_id } : {}),
     // Read-Time-Backfill: Bestandsturniere tragen kein config.publishedAt. Ein Turnier mit
     // status 'published' gilt als bereits freigegeben (created_at als Freigabezeit) — sonst
     // würde der Wizard-Statuswechsel auf 'draft' (SettingsTab.tsx) es nachträglich entwerten.

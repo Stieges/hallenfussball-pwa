@@ -6,6 +6,9 @@
  * (generate_typescript_types), nicht aus einem Wegwerf-Container. Damit ist die Datei wieder
  * deckungsgleich mit der Produktion. PostgrestVersion "14.1": so liefern sie seit dem 23.10.
  * MCP-Werkzeug UND CLI (Typ-Drift-Check, Lauf 40012473086, Live-Seite "14.1").
+ * 2026-11-06 (A1 Veranstaltung, PR feat/veranstaltung-a1): Tabellen gatherings/gathering_members, tournaments.gathering_id und
+ * die Funktionen von 20261119_001 aus einem Wegwerf-Container (Baseline + alle Migrationen) erzeugt -- bis zum Einspielen
+ * von 20261119_001 in der Produktion meldet der Typ-Drift-Check genau diese Zeilen.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -315,6 +318,86 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gathering_members: {
+        Row: {
+          accepted_at: string | null
+          allowed_fields: number[] | null
+          created_at: string
+          declined_at: string | null
+          gathering_id: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          label: string | null
+          role: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          allowed_fields?: number[] | null
+          created_at?: string
+          declined_at?: string | null
+          gathering_id: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          label?: string | null
+          role: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          allowed_fields?: number[] | null
+          created_at?: string
+          declined_at?: string | null
+          gathering_id?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          label?: string | null
+          role?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gathering_members_gathering_id_fkey"
+            columns: ["gathering_id"]
+            isOneToOne: false
+            referencedRelation: "gatherings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gatherings: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          share_code: string
+          share_code_created_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          share_code: string
+          share_code_created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          share_code?: string
+          share_code_created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       group_completions: {
         Row: {
@@ -1669,6 +1752,7 @@ export type Database = {
           final_round_duration: number | null
           finals_config: Json | null
           finished_at: string | null
+          gathering_id: string | null
           group_phase_break: number | null
           group_phase_duration: number
           id: string
@@ -1707,6 +1791,7 @@ export type Database = {
           final_round_duration?: number | null
           finals_config?: Json | null
           finished_at?: string | null
+          gathering_id?: string | null
           group_phase_break?: number | null
           group_phase_duration: number
           id?: string
@@ -1745,6 +1830,7 @@ export type Database = {
           final_round_duration?: number | null
           finals_config?: Json | null
           finished_at?: string | null
+          gathering_id?: string | null
           group_phase_break?: number | null
           group_phase_duration?: number
           id?: string
@@ -1772,7 +1858,15 @@ export type Database = {
           updated_at?: string | null
           version?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tournaments_gathering_id_fkey"
+            columns: ["gathering_id"]
+            isOneToOne: false
+            referencedRelation: "gatherings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1821,6 +1915,7 @@ export type Database = {
         Returns: Json
       }
       compute_match_state: { Args: { p_match_id: string }; Returns: Json }
+      create_gathering: { Args: { p_name: string }; Returns: Json }
       decide_join_request: {
         Args: {
           p_accept: boolean
@@ -1830,6 +1925,7 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_gathering: { Args: { p_gathering_id: string }; Returns: undefined }
       display_final_standings:
         | { Args: { p_tournament_id: string }; Returns: Json }
         | {
@@ -1863,8 +1959,13 @@ export type Database = {
         }
         Returns: Json
       }
+      gathering_name_or_fail: { Args: { p_name: string }; Returns: string }
       generate_helper_code: { Args: never; Returns: string }
       generate_share_code: { Args: never; Returns: string }
+      has_gathering_permission: {
+        Args: { p_gathering_id: string; p_permission: string }
+        Returns: boolean
+      }
       has_tournament_permission: {
         Args: { p_permission: string; p_tournament_id: string }
         Returns: boolean
@@ -1961,6 +2062,7 @@ export type Database = {
         Returns: boolean
       }
       public_final_standings: { Args: { p_share_code: string }; Returns: Json }
+      public_gathering: { Args: { p_code: string }; Returns: Json }
       public_tournament: {
         Args: { share_code: string; since_version?: number }
         Returns: Json
@@ -1992,6 +2094,10 @@ export type Database = {
           share_code: string
           share_code_created_at: string
         }[]
+      }
+      rename_gathering: {
+        Args: { p_gathering_id: string; p_name: string }
+        Returns: undefined
       }
       reopen_group: {
         Args: {
@@ -2038,6 +2144,10 @@ export type Database = {
         Returns: Json
       }
       server_time: { Args: never; Returns: Json }
+      set_gathering_tournaments: {
+        Args: { p_add: string[]; p_gathering_id: string; p_remove: string[] }
+        Returns: Json
+      }
       take_field_control: {
         Args: {
           p_device_id: string

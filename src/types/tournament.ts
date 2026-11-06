@@ -568,6 +568,11 @@ export interface Tournament {
    * Höherer Cloud-Wert → ganze Kopie übernehmen (Regel Q gilt). Fehlt die Spalte: 0.
    */
   changeRevision?: number;
+  /**
+   * A1 Veranstaltung (@VA-021, Migration 20261119_001): `tournaments.gathering_id`. Nur aus der Cloud gelesen (Startseite,
+   * Verweis); die Zuordnung schreibt allein der Server (`set_gathering_tournaments`), die Mapper geben das Feld nie aus.
+   */
+  gatheringId?: string;
 
   // Multi-User / Cloud Sync
   /** User ID of the tournament owner (for cloud sync) */
