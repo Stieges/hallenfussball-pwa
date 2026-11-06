@@ -4,8 +4,8 @@
 -- bildet diese Datei den Teil von storage.buckets/storage.objects nach, den die Migration und die Pruefungen brauchen
 -- (Spaltennamen wie im Storage-Dienst, RLS an, Rechte fuer anon/authenticated wie dort). Nie in eine echte Datenbank.
 -- Einspielen als supabase_admin (im Image gehoert das Schema storage supabase_admin). Eigentuemer der Tabellen wird wie
--- im Storage-Dienst supabase_storage_admin; postgres wird Mitglied dieser Rolle -- Annahme wie auf der gehosteten
--- Plattform, wo postgres Policies auf storage.objects anlegen darf. Vor dem Einspielen live pruefen (Kopf der Migration).
+-- im Storage-Dienst supabase_storage_admin; postgres ist wie live NICHT Mitglied (darf keine Policy anlegen), hat aber
+-- Tabellenrechte. Die Policies kommen aus dem Handschritt supabase/handschritte/20261121_001_hallenton_storage_policies.sql.
 CREATE TABLE IF NOT EXISTS storage.buckets (
   id                 text PRIMARY KEY,
   name               text NOT NULL UNIQUE,
@@ -39,4 +39,5 @@ GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;
 GRANT ALL ON TABLE storage.objects, storage.buckets TO anon, authenticated, service_role;
 ALTER TABLE storage.buckets OWNER TO supabase_storage_admin;
 ALTER TABLE storage.objects OWNER TO supabase_storage_admin;
-GRANT supabase_storage_admin TO postgres;
+-- wie live (Pruefung 06.11.): postgres hat Tabellenrechte, ist aber NICHT Mitglied von supabase_storage_admin
+GRANT ALL ON TABLE storage.objects, storage.buckets TO postgres;

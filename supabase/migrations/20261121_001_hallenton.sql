@@ -1,7 +1,7 @@
 -- supabase/migrations/20261121_001_hallenton.sql
 -- Hallenton – Server-Teil (Plan „Paket Hallenton“ H2, Task 5). Record docs/anforderungen/2026-10-15_hallenton.md,
 -- Regeln 1–4. Szenarien (Server-Teil): @HT-001, @HT-002, @HT-015, @HT-016, @HT-017, @HT-022, @HT-025, @HT-026, @HT-027,
---   @HT-028, @HT-038, @HT-039, @HT-040, @HT-042, @HT-044; Lebenszeichen des leitenden Geraets fuer „Handy ohne Netz“
+--   @HT-028, @HT-038, @HT-039, @HT-040, @HT-042, @HT-044, @HT-046, @HT-047 (Server-Teil); Lebenszeichen des leitenden Geraets fuer „Handy ohne Netz“
 --   (@HT-034/@HT-035/@HT-036, Server liefert nur das Alter); Testton ohne Sperre bei laufendem Spiel (@HT-017 Z. 5: die
 --   Rueckfrage ist Sache der Oberflaeche); @HT-024 nur die Einstellung „Ton bei Tor“ je Feld.
 --
@@ -23,15 +23,33 @@
 --        hall_test_tone_request(tid, field)                                    manageScreens, hoechstens 1 je 3 s und Feld
 --        hall_test_tone_ack(tid, field, device_id, test_id)                    manageScreens, nur zugeordnetes Geraet
 --        hall_sound_settings_set(tid, halftime, halftime_path, end_path, goal_fields[])  manageScreens
---        hall_sound_status(tid, device_id)            manageScreens: alles; nur writeMatchData: Zustand/Alter je Feld
+--        hall_output_heard(tid, field)                                         manageScreens, „Gehört“ (@HT-049)
+--        hall_sound_status(tid, device_id)            manageScreens: alles; nur writeMatchData: Zustand/Alter/Hinweis je Feld
+--      Nach dem Turnierende (tournament_is_closed: finished/cancelled, @HT-046) lehnen die AENDERNDEN Wege ab
+--      (55000 TOURNAMENT_FINISHED): Zuordnen/Abloesen, Tonwahl, Testton ausloesen, Hochladen/Loeschen eigener Ton. Lesen,
+--      Lebenszeichen, Lebenszeichen der Leitung, Quittung und Ausschalten bleiben erlaubt (Status bleibt sichtbar).
+--      Hinweis „Prüfen“ (@HT-047): das Lebenszeichen meldet ein Anzeichen (p_output_changed) -- nur drei Anlaesse,
+--      erkannt am Geraet: Ausgabe-Verzoegerung springt um mehr als 50 ms, Browser meldet geaenderte Geraete, Ton-Ausgabe
+--      ohne Zutun unterbrochen (Neuladen/Verdecken zaehlen nicht). Der Server setzt output_hint_at (Serverzeit), kein
+--      freier Text. outputHint gilt, bis danach ein Testton gespielt wurde oder jemand mit manageScreens „Gehört“
+--      waehlt (hall_output_heard, @HT-049, loescht das Anzeichen). Den Hinweis sieht auch das Cockpit des Felds
+--      (writeMatchData, @HT-050), ohne Geraetedaten. @HT-048 ist entfallen, der Server baut dafuer nichts.
+--      Ein offener Testton geht nur an den Lautsprecher, solange er juenger als 10 s ist.
 --      Alle Zeitangaben in den Antworten rechnet der Server (serverNow, ageMs) – die Uhr des Geraets zaehlt nie (@HT-042).
 --      Kein Realtime-Kanal: der Testton erreicht den Lautsprecher ueber die Antwort auf sein Lebenszeichen (@HT-044:
 --      auf einem oeffentlichen Kanal koennte jeder senden).
 --   5. Eigener Ton (Storage, nur wenn das Schema storage.buckets/objects existiert – im reinen Postgres-Container der
 --      Pruefskripte fehlt es, dann NOTICE und nichts): Bucket 'hallenton-sounds' (oeffentlich lesbar nur ueber den
---      vollen, nicht erratbaren Namen; ≤ 1 MB; MP3/WAV), Pfad <tid>/<uuid>.mp3|wav. Policies auf storage.objects:
---      INSERT/SELECT/DELETE nur mit manageScreens, INSERT hoechstens 10 Dateien je Turnier, KEIN UPDATE (kein
---      Ueberschreiben, auch kein upsert). Lesen fuer Lautsprecher ueber die oeffentliche Adresse; Auflisten nur mit Recht.
+--      vollen, nicht erratbaren Namen; ≤ 1 MB; MP3/WAV), Pfad <tid>/<uuid>.mp3|wav, Policy-Hilfe
+--      hall_sound_object_allowed. Die drei Policies auf storage.objects (INSERT/SELECT/DELETE nur mit manageScreens,
+--      INSERT hoechstens 10 Dateien je Turnier, Hochladen/Loeschen nicht nach dem Turnierende, KEIN UPDATE) sind ein
+--      HANDSCHRITT nach dieser Migration: supabase/handschritte/20261121_001_hallenton_storage_policies.sql (live gehoert
+--      storage.objects supabase_storage_admin, postgres darf dort keine Policy anlegen). Bis dahin verweigert der Bucket
+--      jeden Zugriff ausser dem Lesen ueber die oeffentliche Adresse.
+--   Loeschen des Turniers: Zeilen in hall_* kaskadieren (FK), Dateien im Bucket NICHT. Die App loescht beim Loeschen
+--   des Turniers (Papierkorb) die Dateien <tid>/* ueber die Storage-Schnittstelle (list + remove; im Papierkorb erlauben
+--   die Policies nur noch Auflisten und Loeschen). Vor einem endgueltigen Loeschen ohne App: Dashboard → Storage → hallenton-sounds →
+--   Ordner <tid> loeschen. Kein Zeitplan-Job (Daniel 06.11.: zuerst Datenuebersicht).
 --   6. public.hall_sound_purge_ended() (ohne EXECUTE fuer Client-Rollen): loescht Lautsprecher- und Lebenszeichen-Zeilen
 --      (Geraetename, Zeitpunkt, Grund) von Turnieren, die seit mehr als 1 Tag beendet, abgebrochen oder geloescht sind
 --      (DSGVO Art. 5 Abs. 1 lit. e). Wann und wie oft sie laeuft, legt Daniel fest (offener Punkt im Record).
@@ -41,18 +59,21 @@
 --   Helfer, Helfer-Zugang, Bildschirm, Mitarbeiter ohne manageScreens: weder Lautsprecher bestimmen, noch Lebenszeichen
 --   „bereit“, noch Testton, noch Tonwahl, noch Hochladen (@HT-022, @HT-044). Anon hat auf keine Funktion EXECUTE.
 -- Voraussetzungen (Fail-fast): has_tournament_permission + is_real_account (20261110_002), field_control (20261110_003),
---   tournaments.finished_at/lifecycle_status (20261113_003), Rolle ci_schema_reader.
--- Bestandsdaten: keine. Idempotent: CREATE TABLE IF NOT EXISTS, CREATE OR REPLACE, DROP POLICY IF EXISTS, ON CONFLICT.
+--   tournaments.finished_at/lifecycle_status + tournament_is_closed (20261113_003), Rolle ci_schema_reader.
+-- Fehlercodes: nur Standard-SQLSTATE (42501, 22023, 55000), keine HF-Codes.
+-- Bestandsdaten: keine. Idempotent: CREATE TABLE IF NOT EXISTS, CREATE OR REPLACE, ON CONFLICT.
 --
 -- RUECKWEG: supabase/rollbacks/20261121_001_hallenton_rollback.sql (erzeugt mit
 --   `bash scripts/hallenton-check.sh --print-rueckweg`, belegt dort in Kategorie X: Schema danach = vorher). Vorher die
 --   App auf den Stand ohne Hallenton-Client (sonst meldet der Unterpunkt „nicht erreichbar“). Der Rueckweg loescht alle
 --   Zuordnungen, Lebenszeichen und die Tonwahl; hochgeladene Dateien im Bucket bleiben liegen, bis Daniel sie im
---   Dashboard loescht (der Rueckweg entfernt Policies und, wenn leer, den Bucket).
+--   Dashboard loescht (der Rueckweg entfernt den Bucket, wenn er leer ist). Reihenfolge: ZUERST den Rueckweg des
+--   Handschritts (Policies weg, Dashboard), dann diese Datei -- sonst bricht sie ab (Policies haengen an
+--   hall_sound_object_allowed).
 --
 -- Produktion: nur nach Daniels Freigabe (SQL + SHA). Dieser Branch spielt nichts ein. Typen-PR noetig (neue RPCs).
--- Vor dem Einspielen live lesend pruefen: Rolle postgres darf Policies auf storage.objects anlegen
---   (SELECT pg_has_role('postgres', (SELECT relowner FROM pg_class WHERE oid = 'storage.objects'::regclass), 'USAGE')).
+-- Einspiel-Reihenfolge: 1. diese Migration, 2. Handschritt supabase/handschritte/20261121_001_hallenton_storage_policies.sql
+--   im Dashboard, 3. Pruefung (Abfragen im Kopf des Handschritts, Assertions hallenton-* im Drift-Check).
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';
@@ -65,6 +86,9 @@ BEGIN
   IF to_regprocedure('public.has_tournament_permission(uuid,text)') IS NULL
      OR to_regprocedure('public.is_real_account()') IS NULL THEN
     RAISE EXCEPTION '20261121_001_hallenton: has_tournament_permission/is_real_account fehlen -- zuerst 20261110_002 einspielen';
+  END IF;
+  IF to_regprocedure('public.tournament_is_closed(uuid)') IS NULL THEN
+    RAISE EXCEPTION '20261121_001_hallenton: tournament_is_closed fehlt -- zuerst 20261113_003 einspielen';
   END IF;
   IF to_regclass('public.field_control') IS NULL THEN
     RAISE EXCEPTION '20261121_001_hallenton: field_control fehlt -- zuerst 20261110_003 einspielen';
@@ -94,6 +118,7 @@ CREATE TABLE IF NOT EXISTS public.hall_speakers (
   test_id           uuid,
   test_requested_at timestamptz,
   test_played_at    timestamptz,
+  output_hint_at    timestamptz,
   PRIMARY KEY (tournament_id, field_id),
   CONSTRAINT hall_speakers_field_range CHECK (field_id BETWEEN 1 AND 99),
   CONSTRAINT hall_speakers_device_name_form CHECK (char_length(device_name) BETWEEN 1 AND 60 AND device_name = btrim(device_name)),
@@ -111,6 +136,10 @@ COMMENT ON COLUMN public.hall_speakers.state IS
    (vom Browser schlafen gelegt) | custom_sound_failed (eigener Ton nicht geladen, spielt Hupe 1) | volume_zero
    (Lautstaerke 0 %). „meldet sich nicht“ ergibt sich aus dem Alter von last_seen (Server), „keine Verbindung“ zeigt nur
    das Geraet selbst.';
+COMMENT ON COLUMN public.hall_speakers.output_hint_at IS
+  'Serverzeit des letzten Anzeichens eines Wechsels des Audio-Ausgangs (@HT-047: Ausgabe-Verzoegerung springt > 50 ms,
+   Browser meldet geaenderte Geraete, Ton-Ausgabe ohne Zutun unterbrochen). Hinweis gilt, bis danach ein Testton gespielt
+   oder „Gehört“ gewaehlt wurde (hall_output_heard setzt NULL, @HT-049).';
 
 CREATE TABLE IF NOT EXISTS public.hall_field_leads (
   tournament_id uuid        NOT NULL REFERENCES public.tournaments(id) ON DELETE CASCADE,
@@ -202,6 +231,21 @@ BEGIN
 END;
 $$;
 
+-- Nach dem Turnierende (abgeschlossen oder abgebrochen) keine Aenderung mehr (@HT-046) -- gleiche Lesart und gleicher
+-- Fehler wie guard_closed_tournament (55000 TOURNAMENT_FINISHED).
+CREATE OR REPLACE FUNCTION public.hall_require_open(p_tournament_id uuid) RETURNS void
+LANGUAGE plpgsql STABLE
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF public.tournament_is_closed(p_tournament_id) THEN
+    RAISE EXCEPTION 'TOURNAMENT_FINISHED: Turnier ist abgeschlossen (hallenton, Turnier %).', p_tournament_id
+      USING ERRCODE = '55000';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.hall_require_open(uuid) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.hall_ms(timestamptz) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.hall_checked_fields(uuid, integer[]) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.hall_require(uuid, text) FROM PUBLIC, anon, authenticated, service_role;
@@ -224,6 +268,7 @@ DECLARE
   v_occupied jsonb;
 BEGIN
   PERFORM public.hall_require(p_tournament_id, 'manageScreens');
+  PERFORM public.hall_require_open(p_tournament_id);
   IF p_device_id IS NULL OR char_length(v_name) NOT BETWEEN 1 AND 60 THEN
     RAISE EXCEPTION 'hallenton: device invalid' USING ERRCODE = '22023';
   END IF;
@@ -248,7 +293,8 @@ BEGIN
     last_seen         = CASE WHEN s.device_id = EXCLUDED.device_id THEN s.last_seen ELSE NULL END,
     test_id           = CASE WHEN s.device_id = EXCLUDED.device_id THEN s.test_id ELSE NULL END,
     test_requested_at = CASE WHEN s.device_id = EXCLUDED.device_id THEN s.test_requested_at ELSE NULL END,
-    test_played_at    = CASE WHEN s.device_id = EXCLUDED.device_id THEN s.test_played_at ELSE NULL END;
+    test_played_at    = CASE WHEN s.device_id = EXCLUDED.device_id THEN s.test_played_at ELSE NULL END,
+    output_hint_at    = CASE WHEN s.device_id = EXCLUDED.device_id THEN s.output_hint_at ELSE NULL END;
 
   RETURN jsonb_build_object('status', 'assigned', 'fields', to_jsonb(v_fields),
                             'replaced', coalesce(v_occupied, '[]'::jsonb));
@@ -285,9 +331,10 @@ $$;
 -- 4. Lebenszeichen des Lautsprechers (@HT-039, @HT-042, @HT-044) mit Testton und Leitungs-Alter in der Antwort
 -- ---------------------------------------------------------------------------------------------------------------
 -- Nimmt nur Felder an, denen p_device_id zugeordnet ist; sonst je Feld 'superseded' (anderes Geraet) bzw. 'unassigned'
--- (kein Lautsprecher mehr). Antwort je Feld: status, offener Testton {testId, ageMs}, Leitung {ageMs} -- Alter vom Server.
+-- (kein Lautsprecher mehr). Antwort je Feld: status, offener Testton {testId, ageMs} (nur juenger als 10 s), Leitung
+-- {ageMs} -- Alter vom Server. p_output_changed = true: Anzeichen eines Ausgangswechsels (@HT-047), Server setzt die Zeit.
 CREATE OR REPLACE FUNCTION public.hall_speaker_heartbeat(p_tournament_id uuid, p_device_id uuid, p_fields integer[],
-                                                         p_state text)
+                                                         p_state text, p_output_changed boolean DEFAULT false)
 RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -306,7 +353,8 @@ BEGIN
   v_fields := public.hall_checked_fields(p_tournament_id, p_fields);
 
   UPDATE public.hall_speakers s
-     SET state = p_state, last_seen = v_now
+     SET state = p_state, last_seen = v_now,
+         output_hint_at = CASE WHEN coalesce(p_output_changed, false) THEN v_now ELSE s.output_hint_at END
    WHERE s.tournament_id = p_tournament_id AND s.field_id = ANY (v_fields) AND s.device_id = p_device_id;
 
   SELECT jsonb_agg(jsonb_build_object(
@@ -314,6 +362,7 @@ BEGIN
            'status', CASE WHEN s.field_id IS NULL THEN 'unassigned'
                           WHEN s.device_id = p_device_id THEN 'ok' ELSE 'superseded' END,
            'test', CASE WHEN s.device_id = p_device_id AND s.test_id IS NOT NULL AND s.test_played_at IS NULL
+                         AND s.test_requested_at > v_now - interval '10 seconds'
                         THEN jsonb_build_object('testId', s.test_id,
                                                 'ageMs', public.hall_ms(v_now) - public.hall_ms(s.test_requested_at)) END,
            'lead', CASE WHEN s.device_id = p_device_id AND l.field_id IS NOT NULL
@@ -352,7 +401,9 @@ BEGIN
 
   SELECT jsonb_build_object('state', s.state,
                             'ageMs', CASE WHEN s.last_seen IS NULL THEN NULL
-                                          ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END)
+                                          ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END,
+                            'outputHint', s.output_hint_at IS NOT NULL
+                                          AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at))
     INTO v_speaker
     FROM public.hall_speakers s WHERE s.tournament_id = p_tournament_id AND s.field_id = v_field;
 
@@ -388,6 +439,7 @@ DECLARE
   v_test uuid := gen_random_uuid();
 BEGIN
   PERFORM public.hall_require(p_tournament_id, 'manageScreens');
+  PERFORM public.hall_require_open(p_tournament_id);
   v_field := (public.hall_checked_fields(p_tournament_id, ARRAY[p_field]))[1];
   SELECT * INTO v_row FROM public.hall_speakers s
    WHERE s.tournament_id = p_tournament_id AND s.field_id = v_field FOR UPDATE;
@@ -439,6 +491,29 @@ BEGIN
 END;
 $$;
 
+-- „Gehört“ nach dem Testton (@HT-049): nimmt den Hinweis „Prüfen“ fuer dieses Feld weg, auch wenn Olli es auf einem
+-- anderen Geraet waehlt. Loescht nur das Anzeichen (output_hint_at); kein Ton, keine Bereitschaft, kein Testton (@HT-044).
+-- Nach dem Turnierende gesperrt (@HT-046). Ein neues Anzeichen im naechsten Lebenszeichen setzt den Hinweis wieder.
+CREATE OR REPLACE FUNCTION public.hall_output_heard(p_tournament_id uuid, p_field integer)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_field integer;
+BEGIN
+  PERFORM public.hall_require(p_tournament_id, 'manageScreens');
+  PERFORM public.hall_require_open(p_tournament_id);
+  v_field := (public.hall_checked_fields(p_tournament_id, ARRAY[p_field]))[1];
+  UPDATE public.hall_speakers s SET output_hint_at = NULL
+   WHERE s.tournament_id = p_tournament_id AND s.field_id = v_field;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'no_speaker');
+  END IF;
+  RETURN jsonb_build_object('status', 'heard');
+END;
+$$;
+
 -- ---------------------------------------------------------------------------------------------------------------
 -- 7. Tonwahl je Turnier (@HT-025, @HT-027, @HT-024)
 -- ---------------------------------------------------------------------------------------------------------------
@@ -453,6 +528,7 @@ DECLARE
   v_goal integer[] := '{}';
 BEGIN
   PERFORM public.hall_require(p_tournament_id, 'manageScreens');
+  PERFORM public.hall_require_open(p_tournament_id);
   IF coalesce(cardinality(p_goal_tone_fields), 0) > 0 THEN
     v_goal := public.hall_checked_fields(p_tournament_id, p_goal_tone_fields);
   END IF;
@@ -475,8 +551,10 @@ $$;
 -- 8. Stand lesen (@HT-001, @HT-016, @HT-039, @HT-040, @HT-042)
 -- ---------------------------------------------------------------------------------------------------------------
 -- manageScreens (Turnierleitung, Co-Admin): je Feld mit Lautsprecher {field, deviceName, isThisDevice, state,
---   assignedAt, lastSeen, ageMs, test{testId, requestedAt, playedAt}}, Leitung je Feld {field, ageMs}, Tonwahl.
--- nur writeMatchData (Helfer, Mitarbeiter -- fuer den Cockpit-Hinweis): je Feld mit Lautsprecher {field, state, ageMs};
+--   assignedAt, outputHint, lastSeen, ageMs, test{testId, requestedAt, playedAt}}, Leitung je Feld {field, ageMs},
+--   Tonwahl, closed (Turnier abgeschlossen/abgebrochen, @HT-046: lesen ja, aendern nein).
+-- nur writeMatchData (Helfer, Mitarbeiter -- fuer den Cockpit-Hinweis, @HT-040/@HT-050): je Feld mit Lautsprecher
+--   {field, state, ageMs, outputHint};
 --   kein Geraetename, kein Testton, keine Tonwahl.
 -- sonst 42501. Felder ohne Lautsprecher fehlen in der Liste (neutral, @HT-016).
 CREATE OR REPLACE FUNCTION public.hall_sound_status(p_tournament_id uuid, p_device_id uuid DEFAULT NULL)
@@ -503,16 +581,21 @@ BEGIN
       'speakers', coalesce((SELECT jsonb_agg(jsonb_build_object(
                      'field', s.field_id, 'state', s.state,
                      'ageMs', CASE WHEN s.last_seen IS NULL THEN NULL
-                                   ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END) ORDER BY s.field_id)
+                                   ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END,
+                     'outputHint', s.output_hint_at IS NOT NULL
+                                   AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at)) ORDER BY s.field_id)
                     FROM public.hall_speakers s WHERE s.tournament_id = p_tournament_id), '[]'::jsonb));
   END IF;
 
   RETURN jsonb_build_object(
     'serverNow', public.hall_ms(v_now),
+    'closed', public.tournament_is_closed(p_tournament_id),
     'speakers', coalesce((SELECT jsonb_agg(jsonb_build_object(
                    'field', s.field_id, 'deviceName', s.device_name,
                    'isThisDevice', coalesce(s.device_id = p_device_id, false),
                    'state', s.state, 'assignedAt', public.hall_ms(s.assigned_at),
+                   'outputHint', s.output_hint_at IS NOT NULL
+                                 AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at),
                    'lastSeen', public.hall_ms(s.last_seen),
                    'ageMs', CASE WHEN s.last_seen IS NULL THEN NULL
                                  ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END,
@@ -572,29 +655,34 @@ COMMENT ON FUNCTION public.hall_sound_purge_ended() IS
 -- ---------------------------------------------------------------------------------------------------------------
 REVOKE ALL ON FUNCTION public.hall_speaker_assign(uuid, integer[], uuid, text, boolean) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.hall_speaker_release(uuid, integer[], uuid) FROM PUBLIC, anon, service_role;
-REVOKE ALL ON FUNCTION public.hall_speaker_heartbeat(uuid, uuid, integer[], text) FROM PUBLIC, anon, service_role;
+REVOKE ALL ON FUNCTION public.hall_speaker_heartbeat(uuid, uuid, integer[], text, boolean) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.hall_field_lead_heartbeat(uuid, integer, uuid) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.hall_test_tone_request(uuid, integer) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.hall_test_tone_ack(uuid, integer, uuid, uuid) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.hall_sound_settings_set(uuid, text, text, text, integer[]) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.hall_sound_status(uuid, uuid) FROM PUBLIC, anon, service_role;
+REVOKE ALL ON FUNCTION public.hall_output_heard(uuid, integer) FROM PUBLIC, anon, service_role;
 REVOKE ALL ON FUNCTION public.hall_sound_purge_ended() FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.hall_speaker_assign(uuid, integer[], uuid, text, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.hall_speaker_release(uuid, integer[], uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.hall_speaker_heartbeat(uuid, uuid, integer[], text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.hall_speaker_heartbeat(uuid, uuid, integer[], text, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.hall_field_lead_heartbeat(uuid, integer, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.hall_test_tone_request(uuid, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.hall_test_tone_ack(uuid, integer, uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.hall_sound_settings_set(uuid, text, text, text, integer[]) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.hall_sound_status(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.hall_output_heard(uuid, integer) TO authenticated;
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 11. Eigener Ton: Bucket und Policies (nur wenn das Storage-Schema existiert)
 -- ---------------------------------------------------------------------------------------------------------------
--- Policy-Hilfe: Pfad <tid>/<uuid>.mp3|wav (klein geschrieben), Recht manageScreens, Turnier nicht im Papierkorb; beim
+-- Policy-Hilfe: Pfad <tid>/<uuid>.mp3|wav (klein geschrieben), Recht manageScreens, Turnier nicht im Papierkorb.
+-- p_op 'insert' | 'delete' | 'select': Hochladen und Loeschen nur, solange das Turnier nicht abgeschlossen ist (@HT-046);
+-- im Papierkorb nur noch Auflisten und Loeschen (Aufraeumen: Storage kaskadiert nicht -- die App entfernt die Dateien <tid>/* ueber
+-- die Storage-Schnittstelle beim Loeschen des Turniers, bevor es endgueltig geloescht wird);
 -- Hochladen zusaetzlich hoechstens 10 Dateien je Turnier. EXECUTE fuer authenticated (Policies laufen im Kontext des
 -- Aufrufers), nie anon.
-CREATE OR REPLACE FUNCTION public.hall_sound_object_allowed(p_name text, p_for_insert boolean)
+CREATE OR REPLACE FUNCTION public.hall_sound_object_allowed(p_name text, p_op text)
 RETURNS boolean
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
@@ -602,17 +690,30 @@ AS $$
 DECLARE
   c_max_files constant integer := 10;
   v_tid uuid;
+  v_deleted boolean;
   v_count integer;
 BEGIN
+  IF p_op IS NULL OR p_op NOT IN ('insert', 'delete', 'select') THEN
+    RETURN false;
+  END IF;
   IF p_name IS NULL OR p_name !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav)$' THEN
     RETURN false;
   END IF;
   v_tid := split_part(p_name, '/', 1)::uuid;
-  IF NOT EXISTS (SELECT 1 FROM public.tournaments t WHERE t.id = v_tid AND t.deleted_at IS NULL)
+  SELECT t.deleted_at IS NOT NULL INTO v_deleted FROM public.tournaments t WHERE t.id = v_tid;
+  IF v_deleted IS NULL
      OR NOT public.has_tournament_permission(v_tid, 'manageScreens') THEN
     RETURN false;
   END IF;
-  IF p_for_insert THEN
+  -- Papierkorb: nur noch aufraeumen (Auflisten + Loeschen der eigenen Toene, Storage kaskadiert nicht)
+  IF v_deleted AND p_op = 'insert' THEN
+    RETURN false;
+  END IF;
+  -- @HT-046: nach dem Turnierende kein Hochladen/Loeschen (ausser beim Aufraeumen im Papierkorb)
+  IF NOT v_deleted AND p_op IN ('insert', 'delete') AND public.tournament_is_closed(v_tid) THEN
+    RETURN false;
+  END IF;
+  IF p_op = 'insert' THEN
     IF to_regclass('storage.objects') IS NULL THEN
       RETURN false;
     END IF;
@@ -625,13 +726,19 @@ BEGIN
   RETURN true;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.hall_sound_object_allowed(text, boolean) FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.hall_sound_object_allowed(text, boolean) TO authenticated;
+REVOKE ALL ON FUNCTION public.hall_sound_object_allowed(text, text) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.hall_sound_object_allowed(text, text) TO authenticated;
 
+-- Bucket: legt die Migration an (postgres hat live INSERT auf storage.buckets). Die drei Policies auf storage.objects
+-- legt sie NICHT an: storage.objects gehoert live supabase_storage_admin, postgres ist nicht Mitglied -- CREATE POLICY
+-- scheitert dort („must be owner“). Die Policies sind ein Handschritt:
+--   supabase/handschritte/20261121_001_hallenton_storage_policies.sql (Dashboard-SQL-Editor bzw. Storage-Policy-UI).
+-- Ohne die Policies bleibt der Bucket sicher: keine Policy fuer authenticated/anon = Hochladen, Auflisten und Loeschen
+-- verweigert; Lesen nur ueber die oeffentliche Adresse mit dem vollen Namen (der Bucket ist anfangs leer).
 DO $$
 BEGIN
   IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
-    RAISE NOTICE '20261121_001_hallenton: storage.buckets/objects fehlen hier -- Bucket und Policies uebersprungen';
+    RAISE NOTICE '20261121_001_hallenton: storage.buckets/objects fehlen hier -- Bucket uebersprungen';
     RETURN;
   END IF;
   INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -640,17 +747,6 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET
     public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit,
     allowed_mime_types = EXCLUDED.allowed_mime_types;
-
-  EXECUTE 'DROP POLICY IF EXISTS hallenton_sounds_insert ON storage.objects';
-  EXECUTE 'DROP POLICY IF EXISTS hallenton_sounds_select ON storage.objects';
-  EXECUTE 'DROP POLICY IF EXISTS hallenton_sounds_delete ON storage.objects';
-  EXECUTE $p$CREATE POLICY hallenton_sounds_insert ON storage.objects FOR INSERT TO authenticated
-    WITH CHECK (bucket_id = 'hallenton-sounds' AND public.hall_sound_object_allowed(name, true))$p$;
-  EXECUTE $p$CREATE POLICY hallenton_sounds_select ON storage.objects FOR SELECT TO authenticated
-    USING (bucket_id = 'hallenton-sounds' AND public.hall_sound_object_allowed(name, false))$p$;
-  EXECUTE $p$CREATE POLICY hallenton_sounds_delete ON storage.objects FOR DELETE TO authenticated
-    USING (bucket_id = 'hallenton-sounds' AND public.hall_sound_object_allowed(name, false))$p$;
-  -- Bewusst KEINE UPDATE-Policy: kein Ueberschreiben (auch kein upsert), kein Umbenennen/Verschieben.
 END
 $$;
 

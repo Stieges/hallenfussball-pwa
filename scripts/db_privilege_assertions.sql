@@ -1099,10 +1099,22 @@ SELECT 'lifecycle-guard-triggers-complete',
                                            'match_event_authors',
                                            -- A-35 (20261117_005): schreibt nur append_match_events nach closed_intake bzw. der Trigger auf
                                            -- field_control (selbst gesperrt) -- nach dem Abschluss unerreichbar
-                                           'match_reviews', 'field_control_log', 'revoked_device_contacts',
-                                           -- Hallenton (20261121_001): Lebenszeichen/Zuordnung/Tonwahl wie monitor_heartbeats,
-                                           -- schreiben nur die Definer-RPCs hall_*, kein Spielstand
-                                           'hall_speakers', 'hall_field_leads', 'hall_sound_settings')
+                                           'match_reviews', 'field_control_log', 'revoked_device_contacts')
+                    -- Hallenton (20261121_001): hall_speakers, hall_field_leads, hall_sound_settings ohne Sperr-Trigger,
+                    -- weil Lebenszeichen, Quittung und Ausschalten nach dem Abschluss erlaubt bleiben (Status sichtbar).
+                    -- Die Ausnahme gilt NUR, solange jeder AENDERNDE Weg (Zuordnen, Tonwahl, Testton) hall_require_open
+                    -- aufruft und diese tournament_is_closed prueft (Hochladen/Loeschen: Assertion
+                    -- hallenton-closed-tournament-blocks-changes) -- faellt die Pruefung weg, verlangt diese Zeile wieder
+                    -- den Sperr-Trigger.
+                    AND NOT (cl.relname IN ('hall_speakers', 'hall_field_leads', 'hall_sound_settings')
+                             AND coalesce((SELECT count(*) = 4 AND bool_and(position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0)
+                                             FROM pg_proc p
+                                            WHERE p.oid IN (to_regprocedure('public.hall_speaker_assign(uuid,integer[],uuid,text,boolean)'),
+                                                            to_regprocedure('public.hall_test_tone_request(uuid,integer)'),
+                                                            to_regprocedure('public.hall_sound_settings_set(uuid,text,text,text,integer[])'),
+                                      to_regprocedure('public.hall_output_heard(uuid,integer)'))), false)
+                             AND coalesce((SELECT position('IF public.tournament_is_closed(p_tournament_id) THEN' IN p.prosrc) > 0
+                                             FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_require_open(uuid)')), false))
                     AND NOT EXISTS (SELECT 1 FROM pg_trigger t
                                      WHERE t.tgrelid = cl.oid AND t.tgname = cl.relname || '_guard_closed'
                                        AND t.tgfoid = to_regprocedure('public.guard_closed_tournament()')
@@ -1496,11 +1508,11 @@ SELECT 'hallenton-tables-rls-no-client-access',
                                      AND has_table_privilege('ci_schema_reader', c.oid, 'SELECT'))
                    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                   WHERE n.nspname = 'public' AND c.relname IN ('hall_speakers', 'hall_field_leads', 'hall_sound_settings')), false)
--- (2) Acht RPCs: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated -- has_function_privilege('anon', …) = false,
+-- (2) Neun RPCs: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated -- has_function_privilege('anon', …) = false,
 --     kein PUBLIC, kein service_role (@HT-044: ein Fremder ohne Anmeldung erreicht keine davon).
 UNION ALL
 SELECT 'hallenton-rpcs-definer-authenticated-only',
-       coalesce((SELECT count(*) = 8
+       coalesce((SELECT count(*) = 9
                         AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
                                      AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
                                      AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
@@ -1510,24 +1522,26 @@ SELECT 'hallenton-rpcs-definer-authenticated-only',
                    FROM pg_proc p
                   WHERE p.oid IN (to_regprocedure('public.hall_speaker_assign(uuid,integer[],uuid,text,boolean)'),
                                   to_regprocedure('public.hall_speaker_release(uuid,integer[],uuid)'),
-                                  to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text)'),
+                                  to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text,boolean)'),
                                   to_regprocedure('public.hall_field_lead_heartbeat(uuid,integer,uuid)'),
                                   to_regprocedure('public.hall_test_tone_request(uuid,integer)'),
                                   to_regprocedure('public.hall_test_tone_ack(uuid,integer,uuid,uuid)'),
                                   to_regprocedure('public.hall_sound_settings_set(uuid,text,text,text,integer[])'),
-                                  to_regprocedure('public.hall_sound_status(uuid,uuid)'))), false)
+                                  to_regprocedure('public.hall_sound_status(uuid,uuid)'),
+                                  to_regprocedure('public.hall_output_heard(uuid,integer)'))), false)
 -- (3) Rechtepruefung im Rumpf: sieben RPCs mit manageScreens (Turnierleitung, Co-Admin), das Lebenszeichen der Leitung mit
 --     writeMatchData UND Steuer des Felds; der Stand mit manageScreens (voll) bzw. writeMatchData (Zustand je Feld).
 UNION ALL
 SELECT 'hallenton-rpcs-check-permission',
-       coalesce((SELECT count(*) = 6 AND bool_and(position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0)
+       coalesce((SELECT count(*) = 7 AND bool_and(position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0)
                    FROM pg_proc p
                   WHERE p.oid IN (to_regprocedure('public.hall_speaker_assign(uuid,integer[],uuid,text,boolean)'),
                                   to_regprocedure('public.hall_speaker_release(uuid,integer[],uuid)'),
-                                  to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text)'),
+                                  to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text,boolean)'),
                                   to_regprocedure('public.hall_test_tone_request(uuid,integer)'),
                                   to_regprocedure('public.hall_test_tone_ack(uuid,integer,uuid,uuid)'),
-                                  to_regprocedure('public.hall_sound_settings_set(uuid,text,text,text,integer[])'))), false)
+                                  to_regprocedure('public.hall_sound_settings_set(uuid,text,text,text,integer[])'),
+                                  to_regprocedure('public.hall_output_heard(uuid,integer)'))), false)
        AND coalesce((SELECT position('PERFORM public.hall_require(p_tournament_id, ''writeMatchData'');' IN p.prosrc) > 0
                             AND position('fc.holder_user_id = auth.uid() AND fc.holder_device_id = p_device_id' IN p.prosrc) > 0
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_field_lead_heartbeat(uuid,integer,uuid)')), false)
@@ -1540,7 +1554,7 @@ SELECT 'hallenton-rpcs-check-permission',
 -- (4) Interne Hilfen und das Loeschen nach Turnierende: kein EXECUTE fuer anon/authenticated/service_role, kein PUBLIC.
 UNION ALL
 SELECT 'hallenton-internal-no-client-execute',
-       coalesce((SELECT count(*) = 4
+       coalesce((SELECT count(*) = 5
                         AND bool_and(NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                                      AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
                                      AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
@@ -1550,6 +1564,7 @@ SELECT 'hallenton-internal-no-client-execute',
                   WHERE p.oid IN (to_regprocedure('public.hall_ms(timestamp with time zone)'),
                                   to_regprocedure('public.hall_checked_fields(uuid,integer[])'),
                                   to_regprocedure('public.hall_require(uuid,text)'),
+                                  to_regprocedure('public.hall_require_open(uuid)'),
                                   to_regprocedure('public.hall_sound_purge_ended()'))), false)
 -- (5) Lebenszeichen ohne Browser-Kennzeichen: Grund aus fester Liste, Geraetename 1-60 Zeichen, keine Spalte user_agent.
 UNION ALL
@@ -1562,33 +1577,57 @@ SELECT 'hallenton-heartbeat-fixed-reasons-no-user-agent',
        AND NOT EXISTS (SELECT 1 FROM pg_attribute a
                         WHERE a.attrelid IN (to_regclass('public.hall_speakers'), to_regclass('public.hall_field_leads'))
                           AND a.attname IN ('user_agent', 'ip', 'ip_address') AND NOT a.attisdropped)
--- (6) Eigener Ton: Policy-Hilfe EXECUTE nur authenticated. Policies auf storage.objects (nur wenn das Storage-Schema
---     existiert -- im reinen Postgres-Container der CI fehlt es, live immer da): INSERT/SELECT/DELETE fuer authenticated
---     ueber die Hilfe, keine UPDATE- oder ALL-Policy auf storage.objects (kein Ueberschreiben, kein upsert).
+-- (6) Nach dem Turnierende (@HT-046): die aendernden Wege pruefen tournament_is_closed -- Zuordnen, Tonwahl, Testton, „Gehört“ ueber
+--     hall_require_open (55000 TOURNAMENT_FINISHED), Hochladen/Loeschen in der Policy-Hilfe. Lebenszeichen, Quittung und
+--     Ausschalten ohne Sperre (Status bleibt sichtbar).
 UNION ALL
-SELECT 'hallenton-storage-policies-manage-screens-no-update',
+SELECT 'hallenton-closed-tournament-blocks-changes',
+       coalesce((SELECT position('IF public.tournament_is_closed(p_tournament_id) THEN' IN p.prosrc) > 0
+                        AND position('USING ERRCODE = ''55000''' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_require_open(uuid)')), false)
+       AND coalesce((SELECT count(*) = 4 AND bool_and(position('PERFORM public.hall_require_open(p_tournament_id);' IN p.prosrc) > 0)
+                       FROM pg_proc p
+                      WHERE p.oid IN (to_regprocedure('public.hall_speaker_assign(uuid,integer[],uuid,text,boolean)'),
+                                      to_regprocedure('public.hall_test_tone_request(uuid,integer)'),
+                                      to_regprocedure('public.hall_sound_settings_set(uuid,text,text,text,integer[])'),
+                                      to_regprocedure('public.hall_output_heard(uuid,integer)'))), false)
+       AND coalesce((SELECT position('IF NOT v_deleted AND p_op IN (''insert'', ''delete'') AND public.tournament_is_closed(v_tid) THEN' IN p.prosrc) > 0
+                            AND position('IF v_deleted AND p_op = ''insert'' THEN' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_sound_object_allowed(text,text)')), false)
+-- (7) Policy-Hilfe fuer den eigenen Ton: Definer, search_path fest, EXECUTE nur authenticated, prueft manageScreens,
+--     hoechstens 10 Dateien je Turnier.
+UNION ALL
+SELECT 'hallenton-storage-helper-authenticated-only',
        coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
                         AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
                         AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
                         AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0)
                         AND position('public.has_tournament_permission(v_tid, ''manageScreens'')' IN p.prosrc) > 0
                         AND position('c_max_files constant integer := 10;' IN p.prosrc) > 0
-                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_sound_object_allowed(text,boolean)')), false)
-       AND (NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                         WHERE n.nspname = 'storage' AND c.relname = 'objects')
-            OR (coalesce((SELECT count(*) = 3
-                                 AND bool_and(pp.roles = ARRAY['authenticated']::name[] AND pp.permissive = 'PERMISSIVE')
-                                 AND bool_or(pp.policyname = 'hallenton_sounds_insert' AND pp.cmd = 'INSERT'
-                                             AND pp.with_check LIKE '%bucket_id = ''hallenton-sounds''::text%'
-                                             AND pp.with_check LIKE '%hall_sound_object_allowed(name, true)%')
-                                 AND bool_or(pp.policyname = 'hallenton_sounds_select' AND pp.cmd = 'SELECT'
-                                             AND pp.qual LIKE '%bucket_id = ''hallenton-sounds''::text%'
-                                             AND pp.qual LIKE '%hall_sound_object_allowed(name, false)%')
-                                 AND bool_or(pp.policyname = 'hallenton_sounds_delete' AND pp.cmd = 'DELETE'
-                                             AND pp.qual LIKE '%bucket_id = ''hallenton-sounds''::text%'
-                                             AND pp.qual LIKE '%hall_sound_object_allowed(name, false)%')
-                            FROM pg_policies pp
-                           WHERE pp.schemaname = 'storage' AND pp.tablename = 'objects' AND pp.policyname LIKE 'hallenton\_%'), false)
-                AND NOT EXISTS (SELECT 1 FROM pg_policies pp
-                                 WHERE pp.schemaname = 'storage' AND pp.tablename = 'objects' AND pp.cmd IN ('UPDATE', 'ALL'))))
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_sound_object_allowed(text,text)')), false)
+-- (8) Handschritt supabase/handschritte/20261121_001_hallenton_storage_policies.sql: genau die drei Policies mit diesem
+--     Wortlaut (INSERT/SELECT/DELETE, nur authenticated, permissiv), keine UPDATE-Policy. Live immer gepruefte Zeile; nur
+--     im reinen Postgres-Container der CI fehlt storage.objects ganz, dann gilt sie als erfuellt.
+UNION ALL
+SELECT 'hallenton-storage-policies-present',
+       NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = 'storage' AND c.relname = 'objects')
+       OR coalesce((SELECT string_agg(pp.policyname || '|' || pp.cmd || '|' || pp.roles::text || '|' || pp.permissive || '|'
+                                      || coalesce(replace(pp.qual, 'public.', ''), '') || '|'
+                                      || coalesce(replace(pp.with_check, 'public.', ''), ''), ' # ' ORDER BY pp.policyname)
+                      FROM pg_policies pp
+                     WHERE pp.schemaname = 'storage' AND pp.tablename = 'objects' AND pp.policyname LIKE 'hallenton\_%')
+                   = 'hallenton_sounds_delete|DELETE|{authenticated}|PERMISSIVE|((bucket_id = ''hallenton-sounds''::text) AND hall_sound_object_allowed(name, ''delete''::text))|'
+                     || ' # hallenton_sounds_insert|INSERT|{authenticated}|PERMISSIVE||((bucket_id = ''hallenton-sounds''::text) AND hall_sound_object_allowed(name, ''insert''::text))'
+                     || ' # hallenton_sounds_select|SELECT|{authenticated}|PERMISSIVE|((bucket_id = ''hallenton-sounds''::text) AND hall_sound_object_allowed(name, ''select''::text))|', false)
+-- (9) Keine fremde Policy oeffnet den Bucket: auf storage.objects keine UPDATE/ALL-Policy, die hallenton-sounds nennt,
+--     und keine Policy ohne Bucket-Filter (bucket_id) -- die vorhandenen Dashboard-Policies (Logos, Sponsoren, Exporte)
+--     sollen je auf ihren Bucket filtern. Ohne storage.objects (CI-Container) erfuellt.
+UNION ALL
+SELECT 'hallenton-storage-no-open-policy',
+       NOT EXISTS (SELECT 1 FROM pg_policies pp
+                    WHERE pp.schemaname = 'storage' AND pp.tablename = 'objects'
+                      AND ((pp.cmd IN ('UPDATE', 'ALL')
+                            AND (coalesce(pp.qual, '') || coalesce(pp.with_check, '')) LIKE '%hallenton-sounds%')
+                           OR (coalesce(pp.qual, '') || coalesce(pp.with_check, '')) NOT LIKE '%bucket_id%'))
 ;

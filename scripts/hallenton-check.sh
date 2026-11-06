@@ -27,13 +27,15 @@
 # Aufrufoptionen:
 #   bash scripts/hallenton-check.sh                      normaler Lauf, Exit 0 nur ohne Abweichung
 #   bash scripts/hallenton-check.sh --without-migration  Gegenprobe: ohne die Migration -> R ROT (Exit 0)
-#   bash scripts/hallenton-check.sh --gegenprobe         je Mutation (M1-M12) ein Lauf; Exit 0 NUR, wenn JEDE rot faerbt
+#   bash scripts/hallenton-check.sh --gegenprobe         je Mutation (M1-M19) ein Lauf; Exit 0 NUR, wenn JEDE rot faerbt
 #                                                        (GEGENPROBE_NUR="M1 M3" schraenkt ein)
 #   bash scripts/hallenton-check.sh --print-rueckweg     Rueckweg ausgeben, ohne Container
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts an einem lokalen Supabase-Stack -- eigener Wegwerf-Container,
 # wird am Ende entfernt (trap). Harness nur im Container: scripts/lib/hallenton-storage-stub.sql bildet
-# storage.buckets/objects nach (das Image bringt das Schema leer mit).
+# storage.buckets/objects nach (das Image bringt das Schema leer mit; Eigentuemer supabase_storage_admin wie live,
+# postgres NICHT Mitglied). Der Handschritt supabase/handschritte/20261121_001_hallenton_storage_policies.sql laeuft
+# nach der Migration als supabase_admin (wie im Dashboard); die Migration allein muss ohne Eigentuemerrechte laufen.
 #
 set -euo pipefail
 
@@ -55,9 +57,10 @@ BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 TARGET_NAME="20261121_001_hallenton.sql"
 TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
 STORAGE_STUB="$REPO_ROOT/scripts/lib/hallenton-storage-stub.sql"
+HANDSTEP_FILE="$REPO_ROOT/supabase/handschritte/20261121_001_hallenton_storage_policies.sql"
 CONTAINER_PREFIX="hallenton-check-$$"
 CURRENT_CONTAINER=""
-NEW_ASSERTIONS="hallenton-tables-rls-no-client-access hallenton-rpcs-definer-authenticated-only hallenton-rpcs-check-permission hallenton-internal-no-client-execute hallenton-heartbeat-fixed-reasons-no-user-agent hallenton-storage-policies-manage-screens-no-update"
+NEW_ASSERTIONS="hallenton-tables-rls-no-client-access hallenton-rpcs-definer-authenticated-only hallenton-rpcs-check-permission hallenton-internal-no-client-execute hallenton-heartbeat-fixed-reasons-no-user-agent hallenton-closed-tournament-blocks-changes hallenton-storage-helper-authenticated-only hallenton-storage-policies-present hallenton-storage-no-open-policy"
 
 rueckweg_sql() {
   cat <<'RW'
@@ -65,17 +68,19 @@ rueckweg_sql() {
 -- RUECKWEG zu supabase/migrations/20261121_001_hallenton.sql (Hallenton, Server-Teil). Liegt bewusst NICHT in
 -- supabase/migrations (wird nie nachgespielt). Erzeugt mit `bash scripts/hallenton-check.sh --print-rueckweg`; belegt in
 -- scripts/hallenton-check.sh (Kategorie X: Schema public danach = Stand vor der Migration, Storage-Policies weg).
--- Vorher: App auf den Stand ohne Hallenton-Client. Wirkung: alle Zuordnungen, Lebenszeichen und die Tonwahl entfallen
+-- Vorher: App auf den Stand ohne Hallenton-Client und den Rueckweg des Handschritts
+-- supabase/handschritte/20261121_001_hallenton_storage_policies.sql (Policies weg, Dashboard). Wirkung: alle Zuordnungen, Lebenszeichen und die Tonwahl entfallen
 -- (der Abpfiff-Ton config.matchCockpitSettings.soundId bleibt). Hochgeladene Dateien bleiben im Bucket; ist er leer,
 -- entfaellt er, sonst bleibt er (Hinweis) und Daniel loescht die Dateien im Dashboard.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 DO $rw$
 BEGIN
+  IF EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects'
+                AND policyname IN ('hallenton_sounds_insert', 'hallenton_sounds_select', 'hallenton_sounds_delete')) THEN
+    RAISE EXCEPTION 'Rueckweg 20261121_001: zuerst die Storage-Policies hallenton_sounds_* entfernen (Rueckweg des Handschritts) -- nichts geaendert';
+  END IF;
   IF to_regclass('storage.objects') IS NOT NULL THEN
-    EXECUTE 'DROP POLICY IF EXISTS hallenton_sounds_insert ON storage.objects';
-    EXECUTE 'DROP POLICY IF EXISTS hallenton_sounds_select ON storage.objects';
-    EXECUTE 'DROP POLICY IF EXISTS hallenton_sounds_delete ON storage.objects';
     BEGIN
       DELETE FROM storage.buckets b
        WHERE b.id = 'hallenton-sounds'
@@ -89,16 +94,18 @@ BEGIN
   END IF;
 END
 $rw$;
-DROP FUNCTION IF EXISTS public.hall_sound_object_allowed(text, boolean);
+DROP FUNCTION IF EXISTS public.hall_sound_object_allowed(text, text);
 DROP FUNCTION IF EXISTS public.hall_sound_purge_ended();
+DROP FUNCTION IF EXISTS public.hall_output_heard(uuid, integer);
 DROP FUNCTION IF EXISTS public.hall_sound_status(uuid, uuid);
 DROP FUNCTION IF EXISTS public.hall_sound_settings_set(uuid, text, text, text, integer[]);
 DROP FUNCTION IF EXISTS public.hall_test_tone_ack(uuid, integer, uuid, uuid);
 DROP FUNCTION IF EXISTS public.hall_test_tone_request(uuid, integer);
 DROP FUNCTION IF EXISTS public.hall_field_lead_heartbeat(uuid, integer, uuid);
-DROP FUNCTION IF EXISTS public.hall_speaker_heartbeat(uuid, uuid, integer[], text);
+DROP FUNCTION IF EXISTS public.hall_speaker_heartbeat(uuid, uuid, integer[], text, boolean);
 DROP FUNCTION IF EXISTS public.hall_speaker_release(uuid, integer[], uuid);
 DROP FUNCTION IF EXISTS public.hall_speaker_assign(uuid, integer[], uuid, text, boolean);
+DROP FUNCTION IF EXISTS public.hall_require_open(uuid);
 DROP FUNCTION IF EXISTS public.hall_require(uuid, text);
 DROP FUNCTION IF EXISTS public.hall_checked_fields(uuid, integer[]);
 DROP FUNCTION IF EXISTS public.hall_ms(timestamptz);
@@ -167,6 +174,17 @@ psql_value() {
   docker exec -i -e PGOPTIONS="-c client_min_messages=warning" "$CURRENT_CONTAINER" psql -U postgres -X -v ON_ERROR_STOP=1 -q -tA
 }
 q() { psql_value <<<"$1" 2>&1 || true; }
+psql_admin() { # wie Dashboard/Storage-Eigentuemer (nur Testcontainer)
+  docker exec -i -e PGPASSWORD=postgres -e PGOPTIONS="-c client_min_messages=warning" "$CURRENT_CONTAINER" psql -h 127.0.0.1 -U supabase_admin -d postgres -X -v ON_ERROR_STOP=1 -q
+}
+apply_target() { psql_stdin < "${1:-$TARGET_FILE}"; psql_admin < "$HANDSTEP_FILE"; }
+drop_handstep_policies() {
+  psql_admin <<'SQL'
+DROP POLICY IF EXISTS hallenton_sounds_insert ON storage.objects;
+DROP POLICY IF EXISTS hallenton_sounds_select ON storage.objects;
+DROP POLICY IF EXISTS hallenton_sounds_delete ON storage.objects;
+SQL
+}
 schema_dump() { docker exec "$CURRENT_CONTAINER" pg_dump -U postgres --schema-only --schema=public postgres | grep -vE '^\\(un)?restrict '; }
 counts() { python3 "$REPO_ROOT/scripts/db_catalog_counts.py" /dev/stdin <<<"$1"; }
 count_of() { python3 -c "import json,sys; print(json.load(sys.stdin)['$2'])" <<<"$1"; }
@@ -255,6 +273,7 @@ short() {
     "fehler:42501: permission denied for table"*) r="kein-tabellenrecht" ;;
     "fehler:42501: new row violates row-level security policy"*) r="rls" ;;
     "fehler:22023:"*) r="ungueltig" ;;
+    "fehler:55000: TOURNAMENT_FINISHED"*) r="geschlossen" ;;
     "fehler:23514:"*) r="pruefregel" ;;
   esac
   echo "$r|$c"
@@ -284,6 +303,9 @@ ROW_R() { echo "SELECT coalesce((SELECT device_id::text || ':' || coalesce(state
 REVOKED="DELETE FROM public.tournament_collaborators WHERE id = '$(uuid_for membership:maria)';
 INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at, declined_at, label)
 VALUES ('$(uuid_for membership:maria)', '$T_NORD', '$U_MARIA', 'co-admin', now(), now(), 'Maria');"
+CLOSED="SET LOCAL app.lifecycle_write = 'on';
+UPDATE public.tournaments SET lifecycle_status = 'finished', finished_at = now() WHERE id = '$T_NORD';
+RESET app.lifecycle_write;"
 OBJ() { echo "$T_NORD/$(uuid_for "obj:$1").${2:-mp3}"; }
 UPLOAD() { echo "WITH i AS (INSERT INTO storage.objects (bucket_id, name, owner) VALUES ('hallenton-sounds', '$1', auth.uid()) RETURNING 1) SELECT 'r:' || count(*) FROM i;"; }
 TEN_FILES="INSERT INTO storage.objects (bucket_id, name) SELECT 'hallenton-sounds', '$T_NORD/' || md5('f' || g)::uuid || '.mp3' FROM generate_series(1, 10) g;"
@@ -373,10 +395,10 @@ run_probes() {
 
   # --- Stand: Inhalte je Sicht (Helfer ohne Geraetename) --------------------------------------------------
   check R "@HT-001 Olli liest: Feld 1 „Rechner der Turnierleitung“, isThisDevice, Zustand, Alter 4000 ms vom Server" \
-    "voll:{\"test\": null, \"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\", \"deviceName\": \"$NAME_R\", \"isThisDevice\": true}|1" \
+    "voll:{\"test\": null, \"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\", \"deviceName\": \"$NAME_R\", \"outputHint\": false, \"isThisDevice\": true}|1" \
     "$(probe "$U_OLLI" "$SPEAKER_R" "SELECT 'r:voll:' || (s - 'assignedAt' - 'lastSeen')::text FROM jsonb_array_elements(public.hall_sound_status('$T_NORD'::uuid, '$D_R'::uuid) -> 'speakers') s;" "1")"
   check R "@HT-040 Tom (Helfer) liest nur Zustand und Alter, ohne Geraetename" \
-    "knapp:{\"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\"}|1" \
+    "knapp:{\"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\", \"outputHint\": false}|1" \
     "$(probe "$U_TOM" "$SPEAKER_R" "$(STATUS_KIND "$T_NORD")" "1")"
   check R "@HT-016 Feld 2 ohne Lautsprecher fehlt in der Liste (neutral)" "1|1" \
     "$(probe "$U_OLLI" "$SPEAKER_R" "SELECT 'r:' || jsonb_array_length(public.hall_sound_status('$T_NORD'::uuid) -> 'speakers');" "1")"
@@ -545,6 +567,90 @@ $(ACK "$T_NORD" 1 "$D_R" "$TEST_ID")" "SELECT CASE WHEN test_played_at = now() T
   check R "Bucket: oeffentlich lesbar ueber den Namen, 1 MB, MP3/WAV" "true|1048576|{audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave}" \
     "$(q "SELECT public || '|' || file_size_limit || '|' || allowed_mime_types::text FROM storage.buckets WHERE id = 'hallenton-sounds';")"
 
+  # --- @HT-046 nach dem Turnierende: lesen ja, aendern nein ------------------------------------------------------
+  check R "@HT-046 abgeschlossen: Olli bestimmt einen Lautsprecher -> geschlossen" "geschlossen|keine" \
+    "$(short "$(probe "$U_OLLI" "$CLOSED" "$(ASSIGN "$T_NORD" 1 "$D_R" "$NAME_R")" "$(ROW_R 1)")")"
+  check R "@HT-046 abgeschlossen: Clara loest den Rechner durch ein zweites Geraet ab -> geschlossen" "geschlossen|$D_R:not_activated" \
+    "$(short "$(probe "$U_CLARA" "$SPEAKER_R $CLOSED" "$(ASSIGN "$T_NORD" 1 "$D_Z" "Zweites Geraet" true)" "$(ROW_R 1)")")"
+  check R "@HT-046 abgeschlossen: Olli waehlt den Ton -> geschlossen" "geschlossen|0" \
+    "$(short "$(probe "$U_OLLI" "$CLOSED" "$(SETTINGS "$T_NORD" "'horn-2'" NULL NULL "")" "SELECT count(*) FROM public.hall_sound_settings")")"
+  check R "@HT-046 abgeschlossen: Olli loest den Testton aus -> geschlossen" "geschlossen|nein" \
+    "$(short "$(probe "$U_OLLI" "$SPEAKER_R $CLOSED" "$(TEST "$T_NORD" 1)" "SELECT CASE WHEN test_id IS NULL THEN 'nein' ELSE 'ja' END FROM public.hall_speakers WHERE field_id = 1")")"
+  check R "@HT-046 abgeschlossen: Olli laedt einen eigenen Ton hoch -> abgelehnt (RLS)" "rls|0" \
+    "$(short "$(probe "$U_OLLI" "$CLOSED" "$(UPLOAD "$(OBJ geschlossen)")" "SELECT count(*) FROM storage.objects")")"
+  check R "@HT-046 abgeschlossen: Olli loescht einen eigenen Ton -> 0 Zeilen" "0|1" \
+    "$(short "$(probe "$U_OLLI" "$ONE_FILE $CLOSED" "WITH d AS (DELETE FROM storage.objects WHERE bucket_id = 'hallenton-sounds' RETURNING 1) SELECT 'r:' || count(*) FROM d;" "SELECT count(*) FROM storage.objects")")"
+  check R "@HT-046 abgebrochen (cancelled) sperrt genauso: Testton -> geschlossen" "geschlossen|nein" \
+    "$(short "$(probe "$U_OLLI" "$SPEAKER_R SET LOCAL app.lifecycle_write = 'on'; UPDATE public.tournaments SET lifecycle_status = 'cancelled' WHERE id = '$T_NORD'; RESET app.lifecycle_write;" "$(TEST "$T_NORD" 1)" "SELECT CASE WHEN test_id IS NULL THEN 'nein' ELSE 'ja' END FROM public.hall_speakers WHERE field_id = 1")")"
+  check R "@HT-046 abgeschlossen: Stand lesbar (Status je Feld, Toene, closed=true)" "true:1:horn-3|1" \
+    "$(probe "$U_OLLI" "$SPEAKER_R INSERT INTO public.hall_sound_settings (tournament_id, halftime_sound) VALUES ('$T_NORD', 'horn-3'); $CLOSED" "SELECT 'r:' || (r ->> 'closed') || ':' || jsonb_array_length(r -> 'speakers') || ':' || (r -> 'settings' ->> 'halftimeSound') FROM (SELECT public.hall_sound_status('$T_NORD'::uuid) r) x;" "1")"
+  check R "@HT-046 abgeschlossen: Lebenszeichen, Quittung, Ausschalten bleiben erlaubt" "ok,acked,released|0" \
+    "$(probe "$U_OLLI" "$SPEAKER_R_TEST $CLOSED" "$(HB "$T_NORD" "$D_R" 1 ready)
+$(ACK "$T_NORD" 1 "$D_R" "$TEST_ID")
+$(RELEASE "$T_NORD" 1 "$D_R")" "SELECT count(*) FROM public.hall_speakers")"
+  check R "@HT-046 abgeschlossen: Lebenszeichen der Leitung bleibt erlaubt (Tom haelt die Steuer)" "ok|1" \
+    "$(probe "$U_TOM" "$(HOLDER "$U_TOM" "$D_H") $CLOSED" "$(LEAD "$T_NORD" 1 "$D_H")" "SELECT count(*) FROM public.hall_field_leads")"
+  check R "@HT-046 abgeschlossen: Helfer Tom bleibt beim Zuordnen abgelehnt (Recht vor Sperre)" "abgelehnt|keine" \
+    "$(short "$(probe "$U_TOM" "$CLOSED" "$(ASSIGN "$T_NORD" 1 "$D_R" "$NAME_R")" "$(ROW_R 1)")")"
+
+  # --- @HT-047 Hinweis „Ausgang eventuell geaendert“ ----------------------------------------------------------------
+  local hint_status="SELECT 'r:' || (s ->> 'outputHint') FROM jsonb_array_elements(public.hall_sound_status('$T_NORD'::uuid) -> 'speakers') s;"
+  check R "@HT-047 nach dem Testton um 14:02 meldet der Rechner ein Anzeichen -> outputHint true, Zeit vom Server" "ok,true|jetzt" \
+    "$(probe "$U_OLLI" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET test_played_at = now() - interval '5 minutes';" \
+      "SELECT 'r:' || (public.hall_speaker_heartbeat('$T_NORD'::uuid, '$D_R'::uuid, '{1}'::int[], 'ready', true) ->> 'status');
+$hint_status" "SELECT CASE WHEN output_hint_at = now() THEN 'jetzt' ELSE coalesce(output_hint_at::text, 'NULL') END FROM public.hall_speakers")"
+  check R "@HT-047 Z. 6 nichts geschehen (Lebenszeichen ohne Anzeichen) -> outputHint false, Zustand bleibt ready" "ok,false|ready" \
+    "$(probe "$U_OLLI" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET test_played_at = now() - interval '5 minutes';" \
+      "$(HB "$T_NORD" "$D_R" 1 ready)
+$hint_status" "SELECT state FROM public.hall_speakers")"
+  check R "@HT-047 ein danach gespielter Testton nimmt den Hinweis weg" "false|1" \
+    "$(probe "$U_OLLI" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET output_hint_at = now() - interval '2 minutes', test_played_at = now() - interval '1 minute';" "$hint_status" "1")"
+  check R "@HT-047 Hinweis ohne jeden Testton -> outputHint true" "true|1" \
+    "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET output_hint_at = now();" "$hint_status" "1")"
+  check R "@HT-050 Cockpit des Felds (Helfer Tom) sieht den Hinweis, ohne Geraetedaten" "knapp:{\"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\", \"outputHint\": true}|1" \
+    "$(probe "$U_TOM" "$SPEAKER_R UPDATE public.hall_speakers SET output_hint_at = now();" "$(STATUS_KIND "$T_NORD")" "1")"
+  check R "@HT-047 abgeloestes Geraet kann keinen Hinweis setzen" "1=superseded|NULL" \
+    "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET device_id = '$D_Z';" "SELECT 'r:' || (SELECT string_agg((f ->> 'field') || '=' || (f ->> 'status'), ';') FROM jsonb_array_elements(public.hall_speaker_heartbeat('$T_NORD'::uuid, '$D_R'::uuid, '{1}'::int[], 'ready', true) -> 'fields') f);" "SELECT coalesce(output_hint_at::text, 'NULL') FROM public.hall_speakers")"
+  check R "@HT-047 Ablösen setzt den Hinweis zurueck" "assigned|NULL" \
+    "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET output_hint_at = now();" "$(ASSIGN "$T_NORD" 1 "$D_Z" "Zweites Geraet" true)" "SELECT coalesce(output_hint_at::text, 'NULL') FROM public.hall_speakers")"
+
+  # --- @HT-049 „Gehört“ nimmt den Hinweis weg, auch vom Handy -----------------------------------------------------
+  local hinted="$SPEAKER_R_TEST UPDATE public.hall_speakers SET output_hint_at = now() - interval '1 minute';"
+  check R "@HT-049 Olli waehlt „Gehört“ auf seinem Handy -> heard, Hinweis weg, Zustand/Testton/Geraet unveraendert" "heard,false|NULL:$D_R:not_activated:offen" \
+    "$(probe "$U_OLLI" "$hinted" "SELECT 'r:' || (public.hall_output_heard('$T_NORD'::uuid, 1) ->> 'status');
+$hint_status" "SELECT coalesce(output_hint_at::text, 'NULL') || ':' || device_id || ':' || state || ':' || CASE WHEN test_played_at IS NULL THEN 'offen' ELSE 'gespielt' END FROM public.hall_speakers")"
+  check R "@HT-049 Clara (Co-Admin) waehlt „Gehört“ -> heard" "heard|NULL" \
+    "$(probe "$U_CLARA" "$hinted" "SELECT 'r:' || (public.hall_output_heard('$T_NORD'::uuid, 1) ->> 'status');" "SELECT coalesce(output_hint_at::text, 'NULL') FROM public.hall_speakers")"
+  check R "@HT-049 nach „Gehört“ setzt ein neues Anzeichen den Hinweis wieder" "heard,ok,true|1" \
+    "$(probe "$U_OLLI" "$hinted" "SELECT 'r:' || (public.hall_output_heard('$T_NORD'::uuid, 1) ->> 'status');
+SELECT 'r:' || (public.hall_speaker_heartbeat('$T_NORD'::uuid, '$D_R'::uuid, '{1}'::int[], 'ready', true) ->> 'status');
+$hint_status" "1")"
+  for entry in "Tom (Helfer-Zugang):$U_TOM:abgelehnt" "Mia (Mitarbeiterin):$U_MIA:abgelehnt" "Hallenmonitor Halle (Bildschirm):$U_SCREEN:abgelehnt" "Greta (Konto, fremd):$U_GRETA:abgelehnt" "Fremder ohne Anmeldung (anon)::kein-execute"; do
+    IFS=: read -r name uid e_manage <<<"$entry"
+    check R "@HT-044/@HT-049 $name waehlt „Gehört“ -> $e_manage, Hinweis bleibt" "$e_manage|gesetzt" \
+      "$(short "$(probe "$uid" "$hinted" "SELECT 'r:' || (public.hall_output_heard('$T_NORD'::uuid, 1) ->> 'status');" "SELECT CASE WHEN output_hint_at IS NULL THEN 'weg' ELSE 'gesetzt' END FROM public.hall_speakers")")"
+  done
+  check R "@HT-046/@HT-049 abgeschlossen: „Gehört“ -> geschlossen, Hinweis bleibt" "geschlossen|gesetzt" \
+    "$(short "$(probe "$U_OLLI" "$hinted $CLOSED" "SELECT 'r:' || (public.hall_output_heard('$T_NORD'::uuid, 1) ->> 'status');" "SELECT CASE WHEN output_hint_at IS NULL THEN 'weg' ELSE 'gesetzt' END FROM public.hall_speakers")")"
+  check R "@HT-049 Feld ohne Lautsprecher -> no_speaker" "no_speaker|1" \
+    "$(probe "$U_OLLI" "$hinted" "SELECT 'r:' || (public.hall_output_heard('$T_NORD'::uuid, 2) ->> 'status');" "1")"
+  check R "@HT-050 Lebenszeichen der Leitung bringt den Hinweis mit (Tom haelt die Steuer)" "ok:true|1" \
+    "$(probe "$U_TOM" "$(HOLDER "$U_TOM" "$D_H") $hinted" "SELECT 'r:' || (r ->> 'status') || ':' || (r -> 'speaker' ->> 'outputHint') FROM (SELECT public.hall_field_lead_heartbeat('$T_NORD'::uuid, 1, '$D_H'::uuid) r) x;" "1")"
+
+  # --- Papierkorb: eigene Toene aufraeumen (Storage kaskadiert nicht) -------------------------------------------
+  check R "Papierkorb: Olli loescht den eigenen Ton des geloeschten Altturniers -> 1" "1|0" \
+    "$(short "$(probe "$U_OLLI" "INSERT INTO storage.objects (bucket_id, name) VALUES ('hallenton-sounds', '$T_ALT/$SOUND1.mp3');" "WITH d AS (DELETE FROM storage.objects WHERE bucket_id = 'hallenton-sounds' RETURNING 1) SELECT 'r:' || count(*) FROM d;" "SELECT count(*) FROM storage.objects")")"
+  check R "Papierkorb: Olli laedt im geloeschten Altturnier hoch -> abgelehnt (RLS)" "rls|0" \
+    "$(short "$(probe "$U_OLLI" "" "$(UPLOAD "$T_ALT/$SOUND1.mp3")" "SELECT count(*) FROM storage.objects")")"
+  check R "Papierkorb: Greta (fremd) loescht nichts" "0|1" \
+    "$(short "$(probe "$U_GRETA" "INSERT INTO storage.objects (bucket_id, name) VALUES ('hallenton-sounds', '$T_ALT/$SOUND1.mp3');" "WITH d AS (DELETE FROM storage.objects WHERE bucket_id = 'hallenton-sounds' RETURNING 1) SELECT 'r:' || count(*) FROM d;" "SELECT count(*) FROM storage.objects")")"
+
+  # --- Testton aelter als 10 s geht nicht mehr an den Lautsprecher --------------------------------------------------
+  check R "offener Testton vor 11 s angefordert -> nicht mehr im Lebenszeichen" "null|1" \
+    "$(probe "$U_OLLI" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET test_requested_at = now() - interval '11 seconds';" "SELECT 'r:' || coalesce(f ->> 'test', 'null') FROM jsonb_array_elements(public.hall_speaker_heartbeat('$T_NORD'::uuid, '$D_R'::uuid, '{1}'::int[], 'ready') -> 'fields') f;" "1")"
+  check R "offener Testton vor 9 s angefordert -> noch im Lebenszeichen (ageMs 9000)" "9000|1" \
+    "$(probe "$U_OLLI" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET test_requested_at = now() - interval '9 seconds';" "SELECT 'r:' || (f -> 'test' ->> 'ageMs') FROM jsonb_array_elements(public.hall_speaker_heartbeat('$T_NORD'::uuid, '$D_R'::uuid, '{1}'::int[], 'ready') -> 'fields') f;" "1")"
+
   # --- Loeschen nach Turnierende (DSGVO) -------------------------------------------------------------------------
   check R "Loeschen nach Turnierende: Nord seit 2 Tagen beendet -> Zeilen weg, Sued (laeuft) bleibt, Tonwahl bleibt" "2|0:1:1" \
     "$(probe "$U_OLLI" "$SPEAKER_R
@@ -572,8 +678,12 @@ run_assertions() { # <erwartet t|f fuer die neuen Zeilen>
   for f in ${AFTER[@]+"${AFTER[@]}"}; do later="$later $(after_assertions "$(basename "$f")")"; done
   for a in $NEW_ASSERTIONS; do later="$later $a"; done
   check S "Rechte-Assertion: keine fremde Zeile |f" "" "$(grep -v '|t$' <<<"$priv" | grep -vE "^($(echo $later | tr ' ' '|'))\\|" || true)"
+  local w
   for a in $NEW_ASSERTIONS; do
-    check S "Rechte-Assertion: $a |$want" "$a|$want" "$(grep -E "^$a\|" <<<"$priv" || true)"
+    w="$want"
+    # vorher: ohne Hallenton-Policies oeffnet auch keine fremde Policy den Bucket
+    [[ "$a" == hallenton-storage-no-open-policy ]] && w=t
+    check S "Rechte-Assertion: $a |$w" "$a|$w" "$(grep -E "^$a\|" <<<"$priv" || true)"
   done
   names_sql="$(grep -E '^[a-z0-9-]+\|[tf]$' <<<"$priv" | cut -d'|' -f1 | sort)"
   names_sh="$(awk '/^PRIVILEGE_ASSERTION_NAMES=\(/{f=1; next} f && /^\)/{exit} f' "$REPO_ROOT/scripts/db-drift-check.sh" | grep -oE '^  "[a-z0-9-]+"' | tr -d ' "' | sort)"
@@ -581,7 +691,7 @@ run_assertions() { # <erwartet t|f fuer die neuen Zeilen>
   check S "Drift-Check-Zuordnung: pending_assertions_for nennt fuer $TARGET_NAME genau die neuen Namen" "$NEW_ASSERTIONS" "$(after_assertions "$TARGET_NAME")"
 }
 FN_STATE_SQL="SELECT string_agg(p.proname || ':' || p.prosecdef || ':' || coalesce(p.proconfig::text, '-') || ':' || has_function_privilege('anon', p.oid, 'EXECUTE') || ':' || has_function_privilege('authenticated', p.oid, 'EXECUTE') || ':' || has_function_privilege('service_role', p.oid, 'EXECUTE') || ':' || (EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0))::text, ' # ' ORDER BY p.proname) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'hall\\_%';"
-FN_STATE_EXP="hall_checked_fields:false:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_field_lead_heartbeat:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_ms:false:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_require:false:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_sound_object_allowed:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_sound_purge_ended:true:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_sound_settings_set:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_sound_status:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_speaker_assign:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_speaker_heartbeat:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_speaker_release:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_test_tone_ack:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_test_tone_request:true:{\"search_path=public, pg_temp\"}:false:true:false:false"
+FN_STATE_EXP="hall_checked_fields:false:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_field_lead_heartbeat:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_ms:false:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_output_heard:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_require:false:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_require_open:false:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_sound_object_allowed:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_sound_purge_ended:true:{\"search_path=public, pg_temp\"}:false:false:false:false # hall_sound_settings_set:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_sound_status:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_speaker_assign:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_speaker_heartbeat:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_speaker_release:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_test_tone_ack:true:{\"search_path=public, pg_temp\"}:false:true:false:false # hall_test_tone_request:true:{\"search_path=public, pg_temp\"}:false:true:false:false"
 TABLE_STATE_SQL="SELECT string_agg(c.relname || ':' || c.relrowsecurity || ':' || (SELECT count(*) FROM pg_policy pol WHERE pol.polrelid = c.oid) || ':' || has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE') || ':' || has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE') || ':' || has_table_privilege('ci_schema_reader', c.oid, 'SELECT') || ':' || has_table_privilege('ci_schema_reader', c.oid, 'INSERT'), ' # ' ORDER BY c.relname) FROM pg_class c WHERE c.relnamespace = 'public'::regnamespace AND c.relname LIKE 'hall\\_%' AND c.relkind = 'r';"
 STORAGE_POL_SQL="SELECT coalesce(string_agg(policyname || '|' || cmd || '|' || roles::text, ' # ' ORDER BY policyname), 'keine') FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects';"
 DATA_SQL="SELECT (SELECT count(*) FROM public.hall_speakers) || ':' || (SELECT count(*) FROM public.hall_field_leads) || ':' || (SELECT count(*) FROM public.hall_sound_settings) || ':' || (SELECT count(*) FROM storage.buckets) || ':' || (SELECT count(*) FROM storage.objects);"
@@ -589,7 +699,7 @@ DATA_SQL="SELECT (SELECT count(*) FROM public.hall_speakers) || ':' || (SELECT c
 apply_before() {
   local f
   echo "Storage-Nachbau + ${#BEFORE[@]} Migration(en) vor $TARGET_NAME einspielen..." >&2
-  docker exec -i -e PGPASSWORD=postgres -e PGOPTIONS="-c client_min_messages=warning" "$CURRENT_CONTAINER" psql -h 127.0.0.1 -U supabase_admin -d postgres -X -v ON_ERROR_STOP=1 -q < "$STORAGE_STUB"
+  psql_admin < "$STORAGE_STUB"
   for f in "${BEFORE[@]}"; do psql_stdin < "$f"; done
   setup_data
 }
@@ -599,17 +709,24 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   # Jede Mutation: Rueckweg, Mutante einspielen, Zeilen + Assertions -> muss rot sein.
   MUTATIONS=(
     "M1|Lebenszeichen ohne Geraete-Pruefung (abgeloestes Geraet meldet „bereit“)|   WHERE s.tournament_id = p_tournament_id AND s.field_id = ANY (v_fields) AND s.device_id = p_device_id;\n\n  SELECT jsonb_agg|   WHERE s.tournament_id = p_tournament_id AND s.field_id = ANY (v_fields);\n\n  SELECT jsonb_agg"
-    "M2|Zuordnen mit writeMatchData statt manageScreens (Helfer bestimmt den Lautsprecher)|  PERFORM public.hall_require(p_tournament_id, 'manageScreens');\n  IF p_device_id IS NULL OR char_length(v_name)|  PERFORM public.hall_require(p_tournament_id, 'writeMatchData');\n  IF p_device_id IS NULL OR char_length(v_name)"
+    "M2|Zuordnen mit writeMatchData statt manageScreens (Helfer bestimmt den Lautsprecher)|  PERFORM public.hall_require(p_tournament_id, 'manageScreens');\n  PERFORM public.hall_require_open(p_tournament_id);\n  IF p_device_id IS NULL OR char_length(v_name)|  PERFORM public.hall_require(p_tournament_id, 'writeMatchData');\n  PERFORM public.hall_require_open(p_tournament_id);\n  IF p_device_id IS NULL OR char_length(v_name)"
     "M3|Testton behaelt EXECUTE fuer PUBLIC (anon erreicht die Funktion)|REVOKE ALL ON FUNCTION public.hall_test_tone_request(uuid, integer) FROM PUBLIC, anon, service_role;\n|"
     "M4|keine 3-s-Sperre beim Testton|  c_min_gap constant interval := interval '3 seconds';|  c_min_gap constant interval := interval '0 seconds';"
     "M5|Lebenszeichen der Leitung ohne Steuer-Pruefung|                    AND fc.holder_user_id = auth.uid() AND fc.holder_device_id = p_device_id) THEN|                    AND true) THEN"
     "M6|Grund nicht aus fester Liste in der Funktion (Tabelle meldet 23514 statt 22023)|     OR p_state IS NULL\n     OR p_state NOT IN ('ready', 'not_activated', 'background', 'slept', 'custom_sound_failed', 'volume_zero') THEN|     OR p_state IS NULL THEN"
     "M7|Helfer bekommt den vollen Stand (Geraetename, Testton, Tonwahl)|  IF NOT v_full THEN\n    RETURN|  IF false THEN\n    RETURN"
-    "M8|Hochladen ohne Recht-Pruefung (nur Bucket)|    WITH CHECK (bucket_id = 'hallenton-sounds' AND public.hall_sound_object_allowed(name, true))|    WITH CHECK (bucket_id = 'hallenton-sounds')"
+    "M8|Policy-Hilfe ohne Recht-Pruefung (Helfer laedt hoch)|     OR NOT public.has_tournament_permission(v_tid, 'manageScreens') THEN\n    RETURN false;|     THEN\n    RETURN false;"
     "M9|11 statt 10 Dateien je Turnier|  c_max_files constant integer := 10;|  c_max_files constant integer := 11;"
     "M10|Abloesen ohne Rueckfrage (occupied entfaellt)|  IF v_occupied IS NOT NULL AND NOT coalesce(p_replace, false) THEN|  IF false THEN"
     "M11|Papierkorb-Pruefung weg|     OR NOT EXISTS (SELECT 1 FROM public.tournaments t WHERE t.id = p_tournament_id AND t.deleted_at IS NULL)\n     OR NOT public.has_tournament_permission(p_tournament_id, p_permission) THEN|     OR NOT public.has_tournament_permission(p_tournament_id, p_permission) THEN"
     "M12|Quittung ohne Geraete-Pruefung|  IF NOT FOUND OR v_row.device_id <> p_device_id THEN|  IF NOT FOUND THEN"
+    "M13|Zuordnen nach dem Turnierende erlaubt|  PERFORM public.hall_require_open(p_tournament_id);\n  IF p_device_id IS NULL OR char_length(v_name)|  IF p_device_id IS NULL OR char_length(v_name)"
+    "M14|Hochladen/Loeschen nach dem Turnierende erlaubt|  IF NOT v_deleted AND p_op IN ('insert', 'delete') AND public.tournament_is_closed(v_tid) THEN|  IF false THEN"
+    "M15|Hinweis ignoriert den spaeteren Testton|                                 AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at),|                                 AND true,"
+    "M16|Testton ohne Altersgrenze ausgeliefert|                         AND s.test_requested_at > v_now - interval '10 seconds'\n|"
+    "M17|„Gehört“ mit writeMatchData (Helfer nimmt den Hinweis weg)|  PERFORM public.hall_require(p_tournament_id, 'manageScreens');\n  PERFORM public.hall_require_open(p_tournament_id);\n  v_field := (public.hall_checked_fields(p_tournament_id, ARRAY[p_field]))[1];\n  UPDATE public.hall_speakers s SET output_hint_at = NULL|  PERFORM public.hall_require(p_tournament_id, 'writeMatchData');\n  PERFORM public.hall_require_open(p_tournament_id);\n  v_field := (public.hall_checked_fields(p_tournament_id, ARRAY[p_field]))[1];\n  UPDATE public.hall_speakers s SET output_hint_at = NULL"
+    "M18|Cockpit-Sicht ohne Hinweis (@HT-050)|                     'outputHint', s.output_hint_at IS NOT NULL\n                                   AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at)) ORDER BY s.field_id)|                     'outputHint', false) ORDER BY s.field_id)"
+    "M19|Papierkorb erlaubt auch Hochladen|  IF v_deleted AND p_op = 'insert' THEN|  IF false THEN"
   )
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then
     SEL=()
@@ -619,7 +736,7 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   start_container gegenprobe
   psql_stdin < "$BASELINE_FILE"
   apply_before
-  psql_stdin < "$TARGET_FILE"
+  apply_target
   RED_TOTAL=0
   for mut in "${MUTATIONS[@]}"; do
     IFS='|' read -r mid mtext mfrom mto <<<"$mut"
@@ -634,8 +751,9 @@ if text.count(frm) != 1:
     sys.exit(f"Mutation: Stelle nicht genau einmal gefunden: {frm!r} ({text.count(frm)}x)")
 open(dst, 'w', encoding='utf-8').write(text.replace(frm, to))
 PY
+    drop_handstep_policies
     rueckweg_sql | psql_stdin
-    psql_stdin < "$mutated"
+    apply_target "$mutated"
     reset_counts
     echo "--- GEGENPROBE $mid: $mtext ---"
     run_probes >"$WORK_DIR/$mid.out"
@@ -648,6 +766,7 @@ PY
       echo "::error::GEGENPROBE $mid blieb gruen (zahnlos)"
     fi
   done
+  drop_handstep_policies
   rueckweg_sql | psql_stdin
   echo
   echo "Gegenprobe: $RED_TOTAL von ${#MUTATIONS[@]} Mutationen rot."
@@ -691,9 +810,13 @@ STORAGE_POL_BEFORE="$(q "$STORAGE_POL_SQL")"
 check S "vorher: keine Policy auf storage.objects (Nachbau)" "keine" "$STORAGE_POL_BEFORE"
 echo "Ziel: $TARGET_NAME" >&2
 psql_stdin < "$TARGET_FILE"
+check S "Migration allein (ohne Eigentuemerrechte an storage.objects): Bucket da, noch keine Policy -> Zugriff verweigert" "1|keine|rls" \
+  "$(q "SELECT count(*) FROM storage.buckets WHERE id = 'hallenton-sounds';")|$(q "$STORAGE_POL_SQL")|$(short "$(probe "$U_OLLI" "" "$(UPLOAD "$(OBJ ohne-policy)")" "1")" | cut -d'|' -f1)"
+echo "INFO        postgres rolbypassrls im Testcontainer: $(q "SELECT rolbypassrls FROM pg_roles WHERE rolname = 'postgres';") (live vor dem Einspielen pruefen)"
+psql_admin < "$HANDSTEP_FILE"
 
 # --- S nachher --------------------------------------------------------------------------------------------
-check S "Funktionen: 13 hall_*, RPCs Definer + nur authenticated, Hilfen ohne Client-EXECUTE, nirgends PUBLIC" "$FN_STATE_EXP" "$(q "$FN_STATE_SQL")"
+check S "Funktionen: 15 hall_*, RPCs Definer + nur authenticated, Hilfen ohne Client-EXECUTE, nirgends PUBLIC" "$FN_STATE_EXP" "$(q "$FN_STATE_SQL")"
 check S "Tabellen: RLS an, keine Policy, kein Recht fuer anon/authenticated, ci_schema_reader nur SELECT" \
   "hall_field_leads:true:0:false:false:true:false # hall_sound_settings:true:0:false:false:true:false # hall_speakers:true:0:false:false:true:false" "$(q "$TABLE_STATE_SQL")"
 check S "Storage-Policies: insert/select/delete fuer authenticated, kein UPDATE" \
@@ -706,7 +829,7 @@ check S "Realtime: keine der neuen Tabellen in supabase_realtime (kein Kanal, @H
   "$(q "SELECT count(*) FROM pg_publication_tables WHERE schemaname = 'public' AND tablename LIKE 'hall\\_%';")"
 DUMP_AFTER="$(schema_dump)"
 COUNTS_AFTER="$(counts "$DUMP_AFTER")"
-for dim_exp in tables:3 rls_tables:3 policies:0 functions:13 triggers:0; do
+for dim_exp in tables:3 rls_tables:3 policies:0 functions:15 triggers:0; do
   dim="${dim_exp%%:*}"
   check S "Katalogzaehlung $dim: Zuwachs ${dim_exp#*:}" "${dim_exp#*:}" $(( $(count_of "$COUNTS_AFTER" "$dim") - $(count_of "$COUNTS_BEFORE" "$dim") ))
 done
@@ -718,10 +841,12 @@ run_probes
 psql_stdin <<SQL
 INSERT INTO public.hall_speakers (tournament_id, field_id, device_id, device_name, state, last_seen) VALUES ('$T_NORD', 1, '$D_R', '$NAME_R', 'ready', now());
 INSERT INTO public.hall_sound_settings (tournament_id, halftime_sound) VALUES ('$T_NORD', 'horn-3');
+SQL
+psql_admin <<SQL
 INSERT INTO storage.objects (bucket_id, name) VALUES ('hallenton-sounds', '$T_NORD/$SOUND1.mp3');
 SQL
 W_DATA="$(q "$DATA_SQL")"
-set +e; psql_stdin < "$TARGET_FILE" >/dev/null 2>&1; W_RC=$?; set -e
+set +e; { psql_stdin < "$TARGET_FILE" && psql_admin < "$HANDSTEP_FILE"; } >/dev/null 2>&1; W_RC=$?; set -e
 check W "zweites Einspielen: Exit 0, Schema wie nach dem ersten, Daten gleich" "0|identisch|gleich" \
   "$W_RC|$([[ "$(schema_dump)" == "$DUMP_AFTER" ]] && echo identisch || echo verschieden)|$([[ "$(q "$DATA_SQL")" == "$W_DATA" ]] && echo gleich || echo verschieden)"
 check W "nach dem zweiten Einspielen: Funktionen und Storage-Policies gleich" "$FN_STATE_EXP|3" \
@@ -730,6 +855,10 @@ check W "nach dem zweiten Einspielen: Funktionen und Storage-Policies gleich" "$
 # --- X: Rueckweg ------------------------------------------------------------------------------------------
 check X "Rueckweg-Datei supabase/rollbacks/20261121_001_hallenton_rollback.sql = --print-rueckweg" "identisch" \
   "$([[ "$(cat "$REPO_ROOT/supabase/rollbacks/20261121_001_hallenton_rollback.sql" 2>/dev/null)" == "$(rueckweg_sql)" ]] && echo identisch || echo verschieden)"
+set +e; X0_OUT="$(rueckweg_sql | docker exec -i "$CURRENT_CONTAINER" psql -U postgres -X -v ON_ERROR_STOP=1 -q 2>&1)"; X0_RC=$?; set -e
+check X "Rueckweg mit Policies noch da: bricht ab, nichts geaendert" "abbruch|ja|identisch" \
+  "$([[ "$X0_RC" -ne 0 ]] && echo abbruch || echo lief)|$([[ "$X0_OUT" == *"zuerst die Storage-Policies hallenton_sounds_* entfernen"* ]] && echo ja || echo "nein: $X0_OUT")|$([[ "$(schema_dump)" == "$DUMP_AFTER" ]] && echo identisch || echo verschieden)"
+drop_handstep_policies
 set +e; X_OUT="$(rueckweg_sql | docker exec -i "$CURRENT_CONTAINER" psql -U postgres -X -v ON_ERROR_STOP=1 -q 2>&1)"; X_RC=$?; set -e
 check X "Rueckweg mit Datei im Bucket: laeuft, Bucket bleibt mit Hinweis" "0|ja|1" \
   "$X_RC|$([[ "$X_OUT" == *"Bucket hallenton-sounds enthaelt Dateien und bleibt"* ]] && echo ja || echo "nein: $X_OUT")|$(q "SELECT count(*) FROM storage.buckets WHERE id = 'hallenton-sounds';")"
@@ -737,14 +866,15 @@ check X "nach dem Rueckweg: Schema public = vor der Migration (pg_dump identisch
   "$([[ "$(schema_dump)" == "$DUMP_BEFORE" ]] && echo identisch || echo verschieden)"
 [[ "$(schema_dump)" == "$DUMP_BEFORE" ]] || { diff <(echo "$DUMP_BEFORE") <(schema_dump) | head -40 || true; }
 check X "nach dem Rueckweg: Storage-Policies weg" "$STORAGE_POL_BEFORE" "$(q "$STORAGE_POL_SQL")"
-psql_stdin <<'SQL'
+psql_admin <<'SQL'
 DELETE FROM storage.objects WHERE bucket_id = 'hallenton-sounds';
 SQL
-psql_stdin < "$TARGET_FILE"
+apply_target
 check X "danach erneut einspielbar (Schema = erstes Einspielen)" "identisch" "$([[ "$(schema_dump)" == "$DUMP_AFTER" ]] && echo identisch || echo verschieden)"
+drop_handstep_policies
 rueckweg_sql | psql_stdin
 check X "Rueckweg mit leerem Bucket: Bucket entfaellt" "0" "$(q "SELECT count(*) FROM storage.buckets WHERE id = 'hallenton-sounds';")"
-psql_stdin < "$TARGET_FILE"
+apply_target
 
 for f in ${AFTER[@]+"${AFTER[@]}"}; do
   psql_stdin < "$f"

@@ -233,7 +233,7 @@ pending_assertions_for() {
       ;;
     # Hallenton (@HT-022/@HT-044): Zuordnung, Lebenszeichen, Testton, Tonwahl, eigener Ton (scripts/hallenton-check.sh)
     20261121_001_hallenton.sql)
-      echo "hallenton-tables-rls-no-client-access hallenton-rpcs-definer-authenticated-only hallenton-rpcs-check-permission hallenton-internal-no-client-execute hallenton-heartbeat-fixed-reasons-no-user-agent hallenton-storage-policies-manage-screens-no-update"
+      echo "hallenton-tables-rls-no-client-access hallenton-rpcs-definer-authenticated-only hallenton-rpcs-check-permission hallenton-internal-no-client-execute hallenton-heartbeat-fixed-reasons-no-user-agent hallenton-closed-tournament-blocks-changes hallenton-storage-helper-authenticated-only hallenton-storage-policies-present hallenton-storage-no-open-policy"
       ;;
     *)
       return 1
@@ -747,7 +747,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "hallenton-rpcs-check-permission"
   "hallenton-internal-no-client-execute"
   "hallenton-heartbeat-fixed-reasons-no-user-agent"
-  "hallenton-storage-policies-manage-screens-no-update"
+  "hallenton-closed-tournament-blocks-changes"
+  "hallenton-storage-helper-authenticated-only"
+  "hallenton-storage-policies-present"
+  "hallenton-storage-no-open-policy"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
