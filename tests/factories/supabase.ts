@@ -145,6 +145,8 @@ export function createTournamentRow(
     // A-21a-S (20261113_003): Lebenszyklus, DB-Default 'draft' (passt zu status 'draft').
     lifecycle_status: 'draft',
     finished_at: null,
+    // A1 Veranstaltung (20261119_001): Turnier ohne Veranstaltung
+    gathering_id: null,
     deleted_at: null,
     last_modified_by: null,
     created_at: '2026-01-01T00:00:00Z',

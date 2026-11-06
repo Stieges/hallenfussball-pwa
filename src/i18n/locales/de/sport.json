@@ -44,6 +44,7 @@
   },
   "tournament": {
     "groupStage": "Gruppenphase",
+    "gathering": "Veranstaltung",
     "finals": "Finalrunde",
     "group": "Gruppe",
     "groupWithLetter": "Gruppe {{letter}}",

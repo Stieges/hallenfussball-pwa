@@ -92,3 +92,15 @@ Strafstoßschießen „penalty shootout“ (`events.penaltyShootout`) und gilt f
 **ausgefallen** – Bedeutung (Daniel 2026-11-05): „ausgefallen“ meint ein Spiel, das nicht stattgefunden hat und gewertet wird
 (Nichtantritts-Wertung; fehlen beide Teams: je 0 Punkte, Gegentore nach der eingestellten Wertung). Ein Spiel, das ohne Wertung entfällt,
 ist begrifflich etwas anderes; dafür gibt es noch keinen eigenen Begriff (Befund C-AUSGEFALLEN-OHNE-WERTUNG). Glossar-Eintrag: `cancelledMatch`.
+
+## Veranstaltung
+
+**Bevorzugt:** Veranstaltung (Englisch „event“)
+**Nicht verwechseln mit:** Veranstalter
+
+Eine Veranstaltung fasst mehrere Turniere eines Kontos unter einem Link und einem QR-Code zusammen, etwa die sechs
+Jugendturniere eines Wochenendes in derselben Halle (Adresse `/veranstaltung/<Code>`). Sie ist eine eigene Ebene über den
+Turnieren; eine spätere Turnierserie fasst mehrere Veranstaltungen zusammen. Der „Veranstalter“ dagegen ist die Person oder
+der Verein, der ein einzelnes Turnier ausrichtet (Feld `organizer`). In Datenbank und Code heißt die Veranstaltung
+`gathering` (Tabelle `gatherings`, Feld `tournaments.gathering_id`, i18n-Namensraum `gathering`), weil „event“ im Bestand
+das Ereignis im Spiel bezeichnet (`match_events`, Recht `correctEvents`). Glossar-Eintrag: `gathering`.
