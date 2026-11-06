@@ -23,7 +23,9 @@ import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { canWithListedRole } from '../features/auth/hooks/useCan';
 import { TextTag } from './ui/atoms';
 import { LateFinishNotice } from './LateFinishNotice';
-import { badgeContainerStyle, headerStyle, infoGridStyle, infoItemStyle, statusBadgeColors, valueStyle } from './tournamentCardStyles';
+import { badgeContainerStyle, headerStyle, infoGridStyle, infoItemStyle, statusBadgeColors, statusBadgeStyle, valueStyle } from './tournamentCardStyles';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { lifecycleOf } from '../core/services/lifecycle';
 import { ageClassText } from '../core/view';
 
 /** Map categoryLabel to TournamentActionMenu category */
@@ -53,6 +55,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   testId,
 }) => {
   const { t } = useTranslation('dashboard');
+  const isMobile = useIsMobile();
   // @LZ-003 / W4: Papierkorb nur vor dem ersten Anpfiff — gleiche gemeinsame
   // Anpfiff-Funktion wie „Turnier löschen" (DangerZone) und „Im Wizard bearbeiten".
   // P1: Live-Abfrage nur, wenn ein Papierkorb angeboten werden könnte.
@@ -88,6 +91,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const getCategoryDisplayLabel = (): string => {
     if (tournament.status === 'draft') { return t('status.draft'); }
     if (!categoryLabel) { return t('status.draft'); }
+    // @LZ-001: im Archiv trägt die Karte dasselbe Wort wie der Zustand – Abgeschlossen oder Abgebrochen
+    if (categoryLabel === 'archived') { return lifecycleOf(tournament) === 'cancelled' ? t('status.cancelled') : t('status.finished'); }
     const key = `status.${categoryLabel}`;
     return t(key, { defaultValue: categoryLabel });
   };
@@ -115,6 +120,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     transition: 'all 0.2s ease',
     border: `1px solid ${cssVars.colors.border}`,
     position: 'relative',
+    // Am Handy knapper Innenabstand: der Titel braucht die Breite (@OB-058), die Karte soll früh sichtbar sein (@OB-078)
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.xl,
   };
 
   const cardHoverStyle: CSSProperties = {
@@ -128,17 +135,6 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
     margin: 0,
-    paddingRight: '120px', // Space for badge(s)
-  };
-
-  const badgeStyle: CSSProperties = {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.xs,
-    fontWeight: cssVars.fontWeights.bold,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    whiteSpace: 'nowrap',
   };
 
   const labelStyle: CSSProperties = {
@@ -193,7 +189,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           }
         }}
       >
-        {/* Badge container - absolute positioned top-right */}
+        {/* Zustandsschild und Menü: eigene Zeile über dem Titel */}
         <div style={badgeContainerStyle}>
           {tournament.isExternal && tournament.externalSource && (
             <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
@@ -203,7 +199,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show badge if categoryLabel or draft */}
           {(categoryLabel || tournament.status === 'draft') && (
             <span
-              style={{ ...badgeStyle, ...badgeColors }}
+              style={{ ...statusBadgeStyle, ...badgeColors }}
               aria-label={t('card.statusLabel', { status: getCategoryDisplayLabel() })}
             >
               {tournament.status === 'draft' ? t('status.draft') : getCategoryDisplayLabel()}

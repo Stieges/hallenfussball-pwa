@@ -10,10 +10,11 @@
 import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '../ui/Icons';
-import { cssVars } from '../../design-tokens'
+import { cssVars, iconSizeValues } from '../../design-tokens';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import type { FilterChip } from '../../utils/startseiteAbschnitte';
 
-export type FilterChip = 'running' | 'upcoming' | 'finished' | 'draft';
+export type { FilterChip };
 
 interface SearchFilterBarProps {
   searchQuery: string;
@@ -27,7 +28,6 @@ interface ChipConfig {
   id: FilterChip;
   label: string;
   icon: React.ReactNode;
-  color: string;
 }
 
 export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
@@ -44,26 +44,17 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     {
       id: 'running',
       label: t('status.running'),
-      icon: <Icons.Play size={14} />,
-      color: cssVars.colors.statusLive,
+      icon: <Icons.Play size={iconSizeValues.xs} />,
     },
     {
       id: 'upcoming',
       label: t('status.upcoming'),
-      icon: <Icons.Calendar size={14} />,
-      color: cssVars.colors.statusUpcoming,
-    },
-    {
-      id: 'finished',
-      label: t('status.finished'),
-      icon: <Icons.Check size={14} />,
-      color: cssVars.colors.statusFinished,
+      icon: <Icons.Calendar size={iconSizeValues.xs} />,
     },
     {
       id: 'draft',
       label: t('status.draft'),
-      icon: <Icons.Save size={14} />,
-      color: cssVars.colors.statusDraft,
+      icon: <Icons.Save size={iconSizeValues.xs} />,
     },
   ];
 
@@ -134,7 +125,8 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     alignItems: 'center',
   };
 
-  const getChipStyle = (chip: ChipConfig, isActive: boolean): CSSProperties => ({
+  // @OB-077: ein gesetzter Filter ist auch ohne Farbe erkennbar – Häkchen, Fettschrift, gefüllter Grund (wie ChipChoice)
+  const getChipStyle = (isActive: boolean): CSSProperties => ({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -143,12 +135,12 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     minHeight: cssVars.touchTargets.minimum,
     borderRadius: cssVars.borderRadius.lg,
     fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.medium,
+    fontWeight: isActive ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    border: `1px solid ${isActive ? chip.color : cssVars.colors.borderControl}`,
-    background: isActive ? `${chip.color}15` : 'transparent',
-    color: isActive ? chip.color : cssVars.colors.textSecondary,
+    border: `${cssVars.borderWidth.thin} solid ${isActive ? cssVars.colors.primary : cssVars.colors.borderControl}`,
+    background: isActive ? cssVars.colors.primaryLight : 'transparent',
+    color: isActive ? cssVars.colors.textPrimary : cssVars.colors.textSecondary,
     whiteSpace: 'nowrap',
   });
 
@@ -202,13 +194,14 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
             <button
               key={chip.id}
               onClick={() => onFilterToggle(chip.id)}
-              style={getChipStyle(chip, isActive)}
+              style={getChipStyle(isActive)}
               type="button"
               aria-pressed={isActive}
-              aria-label={t('search.filterAriaLabel', { label: chip.label, activeState: isActive ? t('search.filterActive') : '' })}
+              aria-label={isActive ? t('search.filterAriaLabelActive', { label: chip.label }) : chip.label}
               data-testid={`filter-chip-${chip.id}`}
+              data-active={isActive}
             >
-              {chip.icon}
+              {isActive ? <Icons.Check size={iconSizeValues.xs} color={cssVars.colors.primary} /> : chip.icon}
               <span>{chip.label}</span>
             </button>
           );

@@ -216,6 +216,7 @@ function AppContent() {
     softDeleteTournament,
     restoreTournament,
     permanentDeleteTournament,
+    emptyTrash,
   } = useTournaments();
   const copyTournament = useCopyTournament(saveTournament);
   // @W5-028: Name der Kopie vor dem Speichern bestätigen
@@ -293,6 +294,20 @@ function AppContent() {
       }
     }
   }, [permanentDeleteDialog, permanentDeleteTournament, showError, t]);
+  // @LZ-094: „Papierkorb leeren“ fragt auf der Startseite einmal; hier wird gelöscht. Was sich nicht löschen lässt, steht mit Namen in der Meldung.
+  const handleEmptyTrash = useCallback(async () => {
+    try {
+      const { failed } = await emptyTrash();
+      if (failed.length > 0) {
+        captureFeatureError(new Error('emptyTrash: not all deleted'), 'tournament', 'emptyTrash', { failed: failed.length });
+        showError(t('errors.emptyTrashFailed', { names: failed.map((f) => `„${f.title}“`).join(', ') }));
+      }
+    } catch (error) {
+      console.error('[App] Failed to empty trash:', error);
+      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'emptyTrash'); }
+      showError(t('errors.deleteTournament'));
+    }
+  }, [emptyTrash, showError, t]);
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const wizardTournament = selectedTournament ?? (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined);
@@ -415,33 +430,26 @@ function AppContent() {
     await handleSoftDelete(id, title);
   };
 
-  const handleImportTournament = async (tournament: Tournament) => {
+  // @W1-041: speichert beim Tippen auf „Importieren“, erst danach meldet der Dialog „Import erfolgreich“. Scheitert das
+  // Speichern, wirft die Funktion; der Dialog bleibt in der Vorschau und zeigt den Fehler (nichts ist importiert).
+  const handleImportTournament = async (tournament: Tournament): Promise<void> => {
     try {
-      const hasMatches = tournament.matches.length > 0;
-
-      if (hasMatches) {
-        // Complete import → Set status to 'published' (ready to use)
-        const completeTournament: Tournament = {
-          ...tournament,
-          status: 'published', // Complete imports are ready to use
-        };
-        await saveTournament(completeTournament);
-        // Dashboard will auto-refresh via useTournaments hook
+      if (tournament.matches.length > 0) {
+        // Vollständiger Import: mit Spielplan, „Bereit“ auf der Startseite
+        await saveTournament({ ...tournament, status: 'published' });
       } else {
-        // Partial import → Open wizard at Step 2 to generate schedule
-        const tournamentWithStep = {
-          ...tournament,
-          lastVisitedStep: 2, // Go to Mode/System step
-        };
-        await saveTournament(tournamentWithStep);
-        // Navigate to wizard with step 2 via URL
-        void navigate(`/tournament/${tournament.id}/edit?step=2`);
+        // Teilimport (Teamliste): Entwurf, der Assistent öffnet beim Weiter bei Schritt 2 (Spielplan erstellen)
+        await saveTournament({ ...tournament, lastVisitedStep: 2 });
       }
     } catch (error) {
       console.error('[App] Failed to import tournament:', error);
       if (error instanceof Error) { captureFeatureError(error, 'tournament', 'import'); }
-      showError(t('errors.importTournament'));
+      throw error;
     }
+  };
+
+  const handleContinueImport = (tournament: Tournament) => {
+    void navigate(`/tournament/${tournament.id}/edit?step=2`);
   };
 
   // Handler for copying/duplicating a tournament
@@ -567,10 +575,12 @@ function AppContent() {
             onCreateNew={() => void navigate('/tournament/new')}
             onTournamentClick={handleTournamentClick}
             onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
-            onImportTournament={(tournament) => void handleImportTournament(tournament)}
+            onImportTournament={handleImportTournament}
+            onContinueImport={handleContinueImport}
             onSoftDelete={(id, title) => void handleSoftDelete(id, title)}
             onRestore={(id, title) => void handleRestore(id, title)}
             onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
+            onEmptyTrash={() => void handleEmptyTrash()}
             onCopyTournament={setCopySource}
             onNavigateToLogin={() => void navigate('/login')}
             onNavigateToRegister={() => void navigate('/register')}

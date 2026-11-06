@@ -6,34 +6,48 @@ import type { CSSProperties } from 'react';
 import { cssVars } from '../design-tokens';
 import type { Tournament } from '../types/tournament';
 
-export function statusBadgeColors(status: Tournament['status'], categoryLabel?: string): { background: string; color: string } {
+/**
+ * Zustandsschild: Schrift immer `textPrimary` (Kontrast, Regel 5), der Zustand steht im Wort und am Rand in seiner Farbe
+ * (@LZ-001, Farbe allein trägt nichts).
+ */
+export function statusBadgeColors(status: Tournament['status'], categoryLabel?: string): { background: string; color: string; borderColor: string } {
+  const text = cssVars.colors.textPrimary;
   if (status === 'draft') {
-    return { background: cssVars.colors.statusDraftBg, color: cssVars.colors.statusDraft };
+    return { background: cssVars.colors.statusDraftBg, color: text, borderColor: cssVars.colors.statusDraft };
   }
   switch (categoryLabel) {
     case 'running':
-      return { background: cssVars.colors.statusLiveBg, color: cssVars.colors.statusLive };
+      return { background: cssVars.colors.statusLiveBg, color: text, borderColor: cssVars.colors.statusLive };
     case 'upcoming':
-      return { background: cssVars.colors.statusUpcomingBg, color: cssVars.colors.statusUpcoming };
+      return { background: cssVars.colors.statusUpcomingBg, color: text, borderColor: cssVars.colors.statusUpcoming };
     case 'finished':
-      return { background: cssVars.colors.statusFinishedBg, color: cssVars.colors.statusFinished };
+      return { background: cssVars.colors.statusFinishedBg, color: text, borderColor: cssVars.colors.statusFinished };
     default:
-      return { background: cssVars.colors.surface, color: cssVars.colors.textSecondary };
+      return { background: cssVars.colors.surface, color: text, borderColor: cssVars.colors.border };
   }
 }
 
+export const statusBadgeStyle: CSSProperties = {
+  padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+  borderRadius: cssVars.borderRadius.sm,
+  border: `${cssVars.borderWidth.thin} solid transparent`,
+  fontSize: cssVars.fontSizes.sm,
+  fontWeight: cssVars.fontWeights.semibold,
+  whiteSpace: 'nowrap',
+};
+
 export const headerStyle: CSSProperties = {
-  marginTop: cssVars.spacing.xl, // Space below badge
   marginBottom: cssVars.spacing.md,
 };
 
+/** Schild und Menü stehen in einer eigenen Zeile über dem Titel (der Titel nutzt die volle Breite, kein Platzhalter nötig). */
 export const badgeContainerStyle: CSSProperties = {
-  position: 'absolute',
-  top: cssVars.spacing.md,
-  right: cssVars.spacing.md,
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'flex-end',
+  flexWrap: 'wrap',
   gap: cssVars.spacing.sm,
+  marginBottom: cssVars.spacing.xs,
 };
 
 export const infoGridStyle: CSSProperties = {

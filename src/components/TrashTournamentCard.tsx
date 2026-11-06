@@ -128,7 +128,7 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
   };
 
   return (
-    <Card style={cardStyle} onClick={onClick}>
+    <Card style={cardStyle} onClick={onClick} data-testid={`trash-card-${tournament.id}`}>
       <div style={contentStyle}>
         <div style={infoStyle}>
           <h3 style={titleStyle}>{tournament.title}</h3>

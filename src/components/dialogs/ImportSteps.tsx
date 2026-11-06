@@ -258,9 +258,13 @@ export interface PreviewStepProps {
   tournament: Tournament;
   onBack: () => void;
   onImport: () => void;
+  /** Das Turnier wird gerade gespeichert: Tasten gesperrt (kein doppeltes Importieren). */
+  isSaving?: boolean;
+  /** Speichern ist gescheitert: nichts ist importiert, der Dialog bleibt in der Vorschau. */
+  error?: string;
 }
 
-export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) => {
+export const PreviewStep = ({ tournament, onBack, onImport, isSaving = false, error = '' }: PreviewStepProps) => {
   const { t } = useTranslation('dashboard');
   const previewContainerStyle: CSSProperties = {
     background: cssVars.colors.surface,
@@ -337,11 +341,28 @@ export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) 
         </div>
       </div>
 
+      {error && (
+        <div
+          role="alert"
+          data-testid="import-save-error"
+          style={{
+            padding: cssVars.spacing.md,
+            background: cssVars.colors.errorLight,
+            border: `1px solid ${cssVars.colors.error}`,
+            borderRadius: cssVars.borderRadius.sm,
+            color: cssVars.colors.error,
+            fontSize: cssVars.fontSizes.sm,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       <div style={buttonGroupStyle}>
-        <Button variant="secondary" size="md" onClick={onBack} fullWidth>
+        <Button variant="secondary" size="md" onClick={onBack} fullWidth disabled={isSaving}>
           {t('import.preview.back')}
         </Button>
-        <Button variant="primary" size="md" onClick={onImport} fullWidth data-testid="import-confirm">
+        <Button variant="primary" size="md" onClick={onImport} fullWidth disabled={isSaving} data-testid="import-confirm">
           {t('import.preview.import')}
         </Button>
       </div>
@@ -355,10 +376,12 @@ export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) 
 
 export interface SuccessStepProps {
   tournament: Tournament;
+  /** Die Datei bringt einen Spielplan mit: das Turnier steht „Bereit“ auf der Startseite. Sonst fehlt der Spielplan noch. */
+  hasSchedule: boolean;
   onComplete: () => void;
 }
 
-export const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
+export const SuccessStep = ({ tournament, hasSchedule, onComplete }: SuccessStepProps) => {
   const { t } = useTranslation('dashboard');
   const successContainerStyle: CSSProperties = {
     textAlign: 'center',
@@ -388,13 +411,13 @@ export const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
         <p style={messageStyle}>
           {t('import.success.message', { title: tournament.title })}
         </p>
-        <p style={subMessageStyle}>
-          {t('import.success.hint')}
+        <p style={subMessageStyle} data-testid="import-success-hint">
+          {hasSchedule ? t('import.success.hintReady') : t('import.success.hintNoSchedule')}
         </p>
       </div>
 
       <Button variant="primary" size="md" onClick={onComplete} fullWidth data-testid="import-success-go">
-        {t('import.success.goToTournament')}
+        {hasSchedule ? t('import.success.done') : t('import.success.createSchedule')}
       </Button>
     </>
   );
