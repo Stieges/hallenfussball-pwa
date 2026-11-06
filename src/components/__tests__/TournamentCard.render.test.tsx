@@ -31,11 +31,11 @@ function tournamentWith(extra: Partial<Tournament>): Tournament {
 beforeEach(() => vi.clearAllMocks());
 
 describe('TournamentCard — Darstellung (Dashboard)', () => {
-  it('zeigt Ablage-Infos (Ort, Altersklasse)', () => {
+  it('zeigt den Ort, aber nicht die Altersklasse (@OB-079)', () => {
     render(<TournamentCard tournament={tournamentWith({})} />);
 
     expect(screen.getByText('Halle Süd')).toBeInTheDocument();
-    expect(screen.getByText('U11')).toBeInTheDocument();
+    expect(screen.queryByText('U11')).toBeNull();
   });
 
   it('zeigt das Entwurfs-Badge für ein Draft-Turnier', () => {

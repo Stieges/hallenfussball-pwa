@@ -48,16 +48,16 @@ describe('@LZ-001 Wort auf der Karte', () => {
 });
 
 describe('@OB-078 Karte am Handy', () => {
-  it('der Titel hat keinen Platzhalter für das Schild (kein rechter Innenabstand von 120 px), die Karte am Handy den Abstand md', () => {
+  it('der Titel hat keinen Platzhalter für das Schild (kein rechter Innenabstand von 120 px), die Karte am Handy knappen Abstand (sm oben, md seitlich)', () => {
     render(<TournamentCard tournament={turnier({})} categoryLabel="upcoming" />);
     expect(screen.getByRole('heading', { name: 'F2-Junioren Hallenturnier' }).style.paddingRight).toBe('');
-    expect(screen.getByTestId('tournament-card-t1').style.padding).toBe(cssVars.spacing.md);
+    expect(screen.getByTestId('tournament-card-t1').style.padding).toBe(`${cssVars.spacing.sm} ${cssVars.spacing.md}`);
   });
 
-  it('Gegenbeispiel: ab Tablet bleibt der weite Innenabstand', () => {
+  it('Gegenbeispiel: ab Tablet gilt der weitere Innenabstand (md oben, lg seitlich)', () => {
     hoisted.mobile = false;
     render(<TournamentCard tournament={turnier({})} categoryLabel="upcoming" />);
-    expect(screen.getByTestId('tournament-card-t1').style.padding).toBe(cssVars.spacing.xl);
+    expect(screen.getByTestId('tournament-card-t1').style.padding).toBe(`${cssVars.spacing.md} ${cssVars.spacing.lg}`);
     hoisted.mobile = true;
   });
 });

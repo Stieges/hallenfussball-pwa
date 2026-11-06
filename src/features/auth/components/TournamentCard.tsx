@@ -7,6 +7,7 @@
  */
 
 import React, { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import type { TournamentRole, TournamentMembership } from '../types/auth.types';
 import { RoleBadge } from './RoleBadge';
@@ -47,28 +48,28 @@ interface TournamentCardProps {
  */
 const statusConfig: Record<
   TournamentDisplayStatus,
-  { label: string; icon: string; color: string; bgColor: string }
+  { labelKey: 'status.running' | 'status.upcoming' | 'status.finished' | 'status.draft'; icon: string; color: string; bgColor: string }
 > = {
   live: {
-    label: 'Live',
+    labelKey: 'status.running',
     icon: '🔴',
     color: cssVars.colors.statusLive,
     bgColor: cssVars.colors.statusLiveBg,
   },
   upcoming: {
-    label: 'Bereit',
+    labelKey: 'status.upcoming',
     icon: '📅',
     color: cssVars.colors.statusUpcoming,
     bgColor: cssVars.colors.statusUpcomingBg,
   },
   finished: {
-    label: 'Abgeschlossen',
+    labelKey: 'status.finished',
     icon: '✅',
     color: cssVars.colors.statusFinished,
     bgColor: cssVars.colors.statusFinishedBg,
   },
   draft: {
-    label: 'Entwurf',
+    labelKey: 'status.draft',
     icon: '📝',
     color: cssVars.colors.statusDraft,
     bgColor: cssVars.colors.statusDraftBg,
@@ -116,6 +117,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   onClick,
   style,
 }) => {
+  const { t } = useTranslation('dashboard');
   const status = statusConfig[tournament.status];
   const roleDescription = getRoleDescription(membership.role, teamNames);
 
@@ -148,7 +150,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             }}
           >
             <span style={styles.statusIcon}>{status.icon}</span>
-            {status.label}
+            {t(status.labelKey)}
           </span>
           <span style={styles.separator}>·</span>
           <span style={styles.meta}>{tournament.teamCount} Teams</span>

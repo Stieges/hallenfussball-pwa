@@ -33,6 +33,7 @@ import {
 import { AppFooter } from './components/layout/AppFooter';
 import { useRahmenWurzelStil } from './components/live-cockpit/frame/cockpitFrame';
 import { captureFeatureError } from './lib/sentry';
+import { useDashboardActions } from './hooks/useDashboardActions';
 import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
 import { isTournamentClosed } from './core/services/lifecycle';
@@ -294,20 +295,8 @@ function AppContent() {
       }
     }
   }, [permanentDeleteDialog, permanentDeleteTournament, showError, t]);
-  // @LZ-094: „Papierkorb leeren“ fragt auf der Startseite einmal; hier wird gelöscht. Was sich nicht löschen lässt, steht mit Namen in der Meldung.
-  const handleEmptyTrash = useCallback(async () => {
-    try {
-      const { failed } = await emptyTrash();
-      if (failed.length > 0) {
-        captureFeatureError(new Error('emptyTrash: not all deleted'), 'tournament', 'emptyTrash', { failed: failed.length });
-        showError(t('errors.emptyTrashFailed', { names: failed.map((f) => `„${f.title}“`).join(', ') }));
-      }
-    } catch (error) {
-      console.error('[App] Failed to empty trash:', error);
-      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'emptyTrash'); }
-      showError(t('errors.deleteTournament'));
-    }
-  }, [emptyTrash, showError, t]);
+  // @LZ-094 (Papierkorb leeren) und @W1-041 (Import): Aktionen der Startseite, siehe useDashboardActions
+  const dashboardActions = useDashboardActions({ saveTournament, emptyTrash });
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const wizardTournament = selectedTournament ?? (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined);
@@ -428,28 +417,6 @@ function AppContent() {
   // Legacy delete handler (for backwards compatibility)
   const handleDeleteTournament = async (id: string, title: string) => {
     await handleSoftDelete(id, title);
-  };
-
-  // @W1-041: speichert beim Tippen auf „Importieren“, erst danach meldet der Dialog „Import erfolgreich“. Scheitert das
-  // Speichern, wirft die Funktion; der Dialog bleibt in der Vorschau und zeigt den Fehler (nichts ist importiert).
-  const handleImportTournament = async (tournament: Tournament): Promise<void> => {
-    try {
-      if (tournament.matches.length > 0) {
-        // Vollständiger Import: mit Spielplan, „Bereit“ auf der Startseite
-        await saveTournament({ ...tournament, status: 'published' });
-      } else {
-        // Teilimport (Teamliste): Entwurf, der Assistent öffnet beim Weiter bei Schritt 2 (Spielplan erstellen)
-        await saveTournament({ ...tournament, lastVisitedStep: 2 });
-      }
-    } catch (error) {
-      console.error('[App] Failed to import tournament:', error);
-      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'import'); }
-      throw error;
-    }
-  };
-
-  const handleContinueImport = (tournament: Tournament) => {
-    void navigate(`/tournament/${tournament.id}/edit?step=2`);
   };
 
   // Handler for copying/duplicating a tournament
@@ -575,12 +542,12 @@ function AppContent() {
             onCreateNew={() => void navigate('/tournament/new')}
             onTournamentClick={handleTournamentClick}
             onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
-            onImportTournament={handleImportTournament}
-            onContinueImport={handleContinueImport}
+            onImportTournament={dashboardActions.importTournament}
+            onContinueImport={dashboardActions.continueImport}
             onSoftDelete={(id, title) => void handleSoftDelete(id, title)}
             onRestore={(id, title) => void handleRestore(id, title)}
             onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
-            onEmptyTrash={() => void handleEmptyTrash()}
+            onEmptyTrash={() => void dashboardActions.emptyTrashWithReport()}
             onCopyTournament={setCopySource}
             onNavigateToLogin={() => void navigate('/login')}
             onNavigateToRegister={() => void navigate('/register')}

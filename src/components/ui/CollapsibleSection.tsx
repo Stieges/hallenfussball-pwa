@@ -13,6 +13,8 @@ interface CollapsibleSectionProps {
   variant?: 'default' | 'primary' | 'secondary' | 'live';
   /** Optional data-testid */
   testId?: string;
+  /** Knappere Abstände (Handy: alle Turniere des Tages ohne Scrollen, @OB-079) */
+  compact?: boolean;
 }
 
 export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
@@ -23,6 +25,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   badge,
   variant = 'default',
   testId,
+  compact = false,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -59,8 +62,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const variantStyles = getVariantStyles();
 
   const containerStyle: CSSProperties = {
-    marginTop: cssVars.spacing.lg,
-    border: `1px solid ${variantStyles.border}`,
+    marginTop: compact ? cssVars.spacing.sm : cssVars.spacing.lg,
+    border: `${cssVars.borderWidth.thin} solid ${variantStyles.border}`,
     borderRadius: cssVars.borderRadius.md,
     overflow: 'hidden',
     background: variantStyles.bg,
@@ -70,7 +73,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     display: 'flex',
     alignItems: 'center',
     gap: cssVars.spacing.sm,
-    padding: cssVars.spacing.md,
+    padding: compact ? cssVars.spacing.sm : cssVars.spacing.md,
     background: variantStyles.headerBg,
     cursor: 'pointer',
     userSelect: 'none',
@@ -102,7 +105,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   };
 
   const contentStyle: CSSProperties = {
-    padding: isOpen ? cssVars.spacing.md : `0 ${cssVars.spacing.md}`,
+    padding: isOpen ? (compact ? cssVars.spacing.sm : cssVars.spacing.md) : `0 ${compact ? cssVars.spacing.sm : cssVars.spacing.md}`,
     maxHeight: isOpen ? '50000px' : '0',
     overflow: 'hidden',
     transition: 'all 0.3s ease-in-out',

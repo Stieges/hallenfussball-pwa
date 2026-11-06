@@ -118,4 +118,20 @@ describe('@W1-041 Import speichert vor „Import erfolgreich“', () => {
     await user.click(screen.getByTestId('import-confirm'));
     expect(onImport).toHaveBeenCalledTimes(1);
   });
+
+  it('Gegenbeispiel: während des Speicherns schließen weder Esc noch das Kreuz den Dialog; danach schließt Esc wieder', async () => {
+    const user = userEvent.setup();
+    let fertig: () => void = () => undefined;
+    const onImport = vi.fn(() => new Promise<void>((resolve) => { fertig = resolve; }));
+    const { onClose } = zeige(onImport);
+    await bisVorschau(user);
+    await user.click(screen.getByTestId('import-confirm'));
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(onClose).not.toHaveBeenCalled();
+    fertig();
+    await screen.findByTestId('import-success-go');
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

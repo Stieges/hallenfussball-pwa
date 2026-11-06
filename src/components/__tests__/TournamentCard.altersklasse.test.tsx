@@ -1,5 +1,6 @@
 /**
- * Turnierkarte: Altersklasse (Record Wizard-Regelprofile @W2B-022, @W2B-024, @W2B-026).
+ * Turnierkarte: Altersklasse steht NICHT auf der Karte (@OB-079, löst @W2B-022/-024/-026 für die Karte ab: die Altersklasse steht in
+ * der Übersicht des Turniers). Siehe TournamentCard.ob079.test.tsx für das ganze Szenario.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -18,20 +19,13 @@ function karte(ageClass: string) {
   return render(<TournamentCard tournament={tournament} />);
 }
 
-describe('Turnierkarte zeigt die Altersklasse nur, wenn sie angegeben ist', () => {
-  it('@W2B-022 leer: weder Bezeichnung noch Wert', () => {
-    karte('');
+describe('Turnierkarte zeigt keine Altersklasse (@OB-079)', () => {
+  it.each(['', '   ', 'U11', 'E2-Jugend', 'AH'])('Altersklasse „%s“: weder Zeile noch Bezeichnung noch Wert auf der Karte', (wert) => {
+    karte(wert);
     expect(screen.queryByTestId('tournament-card-age-class')).toBeNull();
     expect(screen.queryByText('card.labels.ageClass')).toBeNull();
-  });
-
-  it('@W2B-022 nur Leerzeichen zählt als leer', () => {
-    karte('   ');
-    expect(screen.queryByTestId('tournament-card-age-class')).toBeNull();
-  });
-
-  it.each(['U11', 'E2-Jugend', 'AH'])('@W2B-024 @W2B-026 „%s“ steht genau so da', (wert) => {
-    karte(wert);
-    expect(screen.getByTestId('tournament-card-age-class')).toHaveTextContent(wert);
+    if (wert.trim() !== '') {
+      expect(screen.queryByText(wert)).toBeNull();
+    }
   });
 });

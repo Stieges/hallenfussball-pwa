@@ -8,7 +8,7 @@ export function gridStyle(isMobile: boolean): CSSProperties {
   return {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
+    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
   };
 }
 

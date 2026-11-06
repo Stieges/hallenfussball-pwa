@@ -30,39 +30,16 @@ export function statusBadgeColors(status: Tournament['status'], categoryLabel?: 
 export const statusBadgeStyle: CSSProperties = {
   padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
   borderRadius: cssVars.borderRadius.sm,
-  border: `${cssVars.borderWidth.thin} solid transparent`,
+  borderWidth: cssVars.borderWidth.thin,
+  borderStyle: 'solid',
   fontSize: cssVars.fontSizes.sm,
   fontWeight: cssVars.fontWeights.semibold,
   whiteSpace: 'nowrap',
 };
 
-export const headerStyle: CSSProperties = {
-  marginBottom: cssVars.spacing.md,
-};
-
-/** Schild und Menü stehen in einer eigenen Zeile über dem Titel (der Titel nutzt die volle Breite, kein Platzhalter nötig). */
+/** Zeile 1 der Karte: Name links (nimmt den Rest), Zustandswort und Menü rechts. */
 export const badgeContainerStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-end',
-  flexWrap: 'wrap',
   gap: cssVars.spacing.sm,
-  marginBottom: cssVars.spacing.xs,
-};
-
-export const infoGridStyle: CSSProperties = {
-  display: 'grid',
-  gap: cssVars.spacing.md,
-};
-
-export const infoItemStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: cssVars.spacing.xs,
-};
-
-export const valueStyle: CSSProperties = {
-  fontSize: cssVars.fontSizes.md,
-  color: cssVars.colors.textPrimary,
-  fontWeight: cssVars.fontWeights.medium,
 };

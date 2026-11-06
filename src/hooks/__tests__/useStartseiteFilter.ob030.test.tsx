@@ -6,14 +6,14 @@
 import { describe, it, expect } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { useStartseiteFilter } from '../useStartseiteFilter';
 
 const wrapper = (eintrag: string) => ({ children }: { children: ReactNode }) => (
   <MemoryRouter initialEntries={[eintrag]}>{children}</MemoryRouter>
 );
 function mitAdresse(eintrag: string) {
-  return renderHook(() => ({ filter: useStartseiteFilter(), ort: useLocation() }), { wrapper: wrapper(eintrag) });
+  return renderHook(() => ({ filter: useStartseiteFilter(), ort: useLocation(), navigate: useNavigate() }), { wrapper: wrapper(eintrag) });
 }
 
 describe('@OB-030 Suche und Filter der Startseite stehen in der Adresse', () => {
@@ -47,5 +47,20 @@ describe('@OB-030 Suche und Filter der Startseite stehen in der Adresse', () => 
   it('Gegenbeispiel: der alte Link mit dem entfernten Filter „finished“ setzt keinen Filter', () => {
     const { result } = mitAdresse('/?s=finished');
     expect(result.current.filter.activeFilters).toEqual([]);
+  });
+
+  it('@OB-031 Zurück geht einen Filter zurück; Tippen in der Suche ist kein eigener Schritt', () => {
+    const { result } = mitAdresse('/');
+    act(() => result.current.filter.toggleFilter('running'));
+    act(() => result.current.filter.toggleFilter('draft'));
+    act(() => result.current.filter.setSearchQuery('F'));
+    act(() => result.current.filter.setSearchQuery('F1'));
+    expect(result.current.ort.search).toBe('?s=running%2Cdraft&q=F1');
+    // ein Schritt zurück: die Suche (ersetzt) ist kein Schritt, der letzte Filter schon
+    act(() => { void result.current.navigate(-1); });
+    expect(result.current.filter.activeFilters).toEqual(['running']);
+    act(() => { void result.current.navigate(-1); });
+    expect(result.current.filter.activeFilters).toEqual([]);
+    expect(result.current.ort.search).toBe('');
   });
 });

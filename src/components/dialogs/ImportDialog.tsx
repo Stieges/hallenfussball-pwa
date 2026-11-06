@@ -39,8 +39,6 @@ export const ImportDialog = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Schließt jemand den Dialog während des Speicherns, darf die späte Antwort keinen Schritt mehr setzen
-  const sessionRef = useRef(0);
 
   const resetState = () => {
     setStep('select');
@@ -53,9 +51,15 @@ export const ImportDialog = ({
   };
 
   const handleClose = () => {
-    sessionRef.current += 1;
     resetState();
     onClose();
+  };
+
+  // Während des Speicherns schließt weder X noch Esc noch ein Tipp daneben: sonst bliebe offen, ob das Turnier gespeichert ist
+  const handleCloseRequest = () => {
+    if (!isSaving) {
+      handleClose();
+    }
   };
 
   const processFile = async (file: File) => {
@@ -123,22 +127,15 @@ export const ImportDialog = ({
     if (!tournament || isSaving) {
       return;
     }
-    const session = sessionRef.current;
     setIsSaving(true);
     setSaveError('');
     try {
       await onImport(tournament);
-      if (session === sessionRef.current) {
-        setStep('success');
-      }
+      setStep('success');
     } catch {
-      if (session === sessionRef.current) {
-        setSaveError(t('import.errors.saveFailed'));
-      }
+      setSaveError(t('import.errors.saveFailed'));
     } finally {
-      if (session === sessionRef.current) {
-        setIsSaving(false);
-      }
+      setIsSaving(false);
     }
   };
 
@@ -169,7 +166,7 @@ export const ImportDialog = ({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={handleClose} title={getStepTitle()} maxWidth="550px">
+    <Dialog isOpen={isOpen} onClose={handleCloseRequest} title={getStepTitle()} maxWidth="550px">
       <div style={containerStyle}>
         {step === 'select' && (
           <SelectStep

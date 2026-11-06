@@ -61,9 +61,9 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
-    gap: cssVars.spacing.md,
+    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
     alignItems: isMobile ? 'stretch' : 'center',
-    marginBottom: cssVars.spacing.lg,
+    marginBottom: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
   };
 
   const searchContainerStyle: CSSProperties = {
@@ -88,7 +88,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     paddingLeft: '40px', // Space for icon
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.borderControl}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.borderControl}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     // @OB-022: Eingabeschrift mindestens 16 Bildpunkte (kein Zoom auf iOS), Feldhöhe mindestens 44

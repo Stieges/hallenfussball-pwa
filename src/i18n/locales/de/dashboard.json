@@ -60,6 +60,7 @@
     "ariaLabelExternal": "Turnier: {{title}}, {{status}}, {{source}}",
     "lateFinishNotice": "Das letzte Spiel war am {{date}}. Das Turnier läuft noch – schließe es in der Verwaltung ab.",
     "statusLabel": "Status: {{status}}",
+    "noDate": "Kein Datum",
     "draftNotice": "Entwurf – noch nicht fertiggestellt",
     "labels": {
       "dateTime": "Datum & Uhrzeit",

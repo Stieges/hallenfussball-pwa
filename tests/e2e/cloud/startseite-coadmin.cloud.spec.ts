@@ -70,9 +70,13 @@ async function captureCard(page: import('@playwright/test').Page, id: string): P
   if (original) { await page.setViewportSize(original); }
 }
 
-/** Abschnitte „Bevorstehend“ (zu, wenn ein Turnier läuft) und „Entwürfe“ (immer zu) aufklappen, bevor die Karte geprüft wird. */
-async function openSection(page: import('@playwright/test').Page, section: 'upcoming' | 'draft'): Promise<void> {
-  const toggle = page.locator(`[data-testid="section-${section}"] [aria-expanded]`).first();
+/**
+ * Den Abschnitt der Karte aufklappen (falls zu), bevor die Karte geprüft wird. Der Abschnitt hängt vom Datum ab („Heute“ bei einem
+ * Turnier von heute, sonst „Kommende Turniere“, Entwürfe immer zu), darum wird er über die Karte gesucht, nicht über seinen Namen.
+ */
+async function openSectionOfCard(page: import('@playwright/test').Page, cardSelector: string): Promise<void> {
+  const section = page.locator('[data-testid^="section-"]', { has: page.locator(cardSelector) });
+  const toggle = section.locator('[aria-expanded]').first();
   await expect(toggle).toBeVisible({ timeout: 15000 });
   if ((await toggle.getAttribute('aria-expanded')) === 'false') {
     await toggle.click();
@@ -117,14 +121,14 @@ test.describe('CA-5 Startseite der Co-Admin', () => {
       // @HE-085: Betreiber trägt Maria ein → nach dem Neuladen Karte mit „Co-Admin“
       await enterCoAdmin(CUP, userId, before.owner_id);
       await page.reload();
-      await openSection(page, 'upcoming');
+      await openSectionOfCard(page, card(CUP));
       const cupCard = page.locator(card(CUP));
       await expect(cupCard).toBeVisible({ timeout: 15000 });
       await expect(cupCard.locator(`[data-testid="tournament-role-${CUP}"]`)).toHaveText('Co-Admin');
       await captureCard(page, CUP);
 
       // „Löschen“ fehlt – geprüft am Entwurf, wo der Eigentümer es angeboten bekommt (Gegenbeispiel unten)
-      await openSection(page, 'draft');
+      await openSectionOfCard(page, card(DRAFT));
       const draftCard = page.locator(card(DRAFT));
       await expect(draftCard.locator(`[data-testid="tournament-role-${DRAFT}"]`)).toHaveText('Co-Admin');
       await page.locator(`[data-testid="tournament-${DRAFT}-actions-trigger"]`).click();
@@ -146,7 +150,8 @@ test.describe('CA-5 Startseite der Co-Admin', () => {
       await page.reload();
       await expect(page.locator('[data-testid="section-draft"]')).toBeVisible({ timeout: 15000 });
       await expect(page.locator(card(CUP))).toHaveCount(0);
-      await expect(page.locator('[data-testid="section-upcoming"]')).toHaveCount(0);
+      // kein Abschnitt (Heute, Kommende Turniere) enthält die Karte mehr
+      await expect(page.locator('[data-testid^="section-"]', { has: page.locator(card(CUP)) })).toHaveCount(0);
       expect(await localCopyIds(page)).toContain(CUP); // ausgeblendet, nicht gelöscht
       // nichts hochgeladen: Turnier gehört weiter Olli, Titel unverändert, nicht gelöscht
       expect(await cupRow()).toEqual(before);
@@ -163,7 +168,7 @@ test.describe('CA-5 Startseite der Co-Admin', () => {
   test('Gegenbeispiel Eigentümer: Karte ohne Marke, beim Entwurf wird „Löschen“ angeboten', async ({ asRole }) => {
     const page = await asRole('owner');
     await page.goto('/#/');
-    await openSection(page, 'draft');
+    await openSectionOfCard(page, card(DRAFT));
     const draftCard = page.locator(card(DRAFT));
     await expect(draftCard).toBeVisible({ timeout: 15000 });
     await expect(draftCard.locator(`[data-testid="tournament-role-${DRAFT}"]`)).toHaveCount(0);

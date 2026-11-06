@@ -105,9 +105,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   }, [trashedTournaments]);
 
   const containerStyle: CSSProperties = {
-    padding: isMobile ? '20px 16px' : '40px 20px',
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.xl} ${cssVars.spacing.lg}`,
     // Den Platz über der festen unteren Leiste reserviert die Fußzeile (Footer, @OB-022), hier nur der normale Abstand
-    paddingBottom: isMobile ? cssVars.spacing.lg : '40px',
+    paddingBottom: isMobile ? cssVars.spacing.lg : cssVars.spacing.xl,
+    // Token layout.contentMaxWidth folgt (Frage an Daniel)
     maxWidth: '1200px',
     margin: '0 auto',
     minHeight: isMobile ? '100vh' : 'auto',
@@ -127,7 +128,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   return (
     <div style={containerStyle}>
       {/* Header Group */}
-      <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
+      <div style={{ marginBottom: isMobile ? cssVars.spacing.md : cssVars.spacing.xl }}>
         {/* Top Row: Title + Auth */}
         <div style={{
           display: 'flex',
@@ -135,8 +136,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           alignItems: 'center',
           // Bei langem Konto-Text (andere Sprache) rutscht die Konto-Gruppe unter den Titel statt über den Rand (@OB-021)
           flexWrap: 'wrap',
-          gap: cssVars.spacing.md,
-          marginBottom: isMobile ? '16px' : '24px',
+          gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
+          marginBottom: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
         }}>
           <h1 style={{ ...titleStyle, margin: 0 }}>{getAppTitle()}</h1>
 

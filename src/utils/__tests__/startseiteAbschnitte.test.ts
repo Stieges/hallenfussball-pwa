@@ -83,6 +83,13 @@ describe('@OB-078 Am Turniertag stehen die Turniere des Tages oben', () => {
     expect(a.heute).toEqual([]);
   });
 
+  it('Gegenbeispiel: derselbe Tag in einem anderen Monat oder Jahr (28.10.2026, 28.11.2025) ist nicht „Heute“', () => {
+    const t = [turnier('Oktober', '2026-10-28', '09:00'), turnier('Vorjahr', '2025-11-28', '09:00'), turnier('Heute', '2026-11-28', '09:00')];
+    const a = baueStartseiteAbschnitte(t, { now: sa(8, 0), search: '', filters: [] });
+    expect(ids(a.heute)).toEqual(['Heute']);
+    expect(ids(a.upcoming).sort()).toEqual(['Oktober', 'Vorjahr']);
+  });
+
   it('Gegenbeispiel: ein Turnier ohne Datum fällt nicht in „Heute“ und stürzt nichts ab', () => {
     const ohne = { id: 'x', title: 'x', status: 'published', teams: [], matches: [] } as unknown as Tournament;
     const a = baueStartseiteAbschnitte([ohne], { now: sa(8, 0), search: '', filters: [] });

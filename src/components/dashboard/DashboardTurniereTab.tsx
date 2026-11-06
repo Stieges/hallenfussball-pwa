@@ -54,7 +54,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
     && abschnitte.upcoming.length === 0 && abschnitte.draft.length === 0;
   const gefiltert = searchQuery !== '' || activeFilters.length > 0;
 
-  const karten = (list: Tournament[]): ReactNode =>
+  const karten = (list: Tournament[], inToday = false): ReactNode =>
     list.map((tournament) => {
       // Das Wort auf der Karte folgt dem Zustand des Turniers, nicht dem Abschnitt (@LZ-001)
       const kategorie = categorizeTournament(tournament);
@@ -64,6 +64,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           key={tournament.id}
           tournament={tournament}
           categoryLabel={categoryLabel}
+          inToday={inToday}
           onClick={() => onTournamentClick(tournament)}
           onCopy={onCopyTournament ? () => onCopyTournament(tournament) : undefined}
           // Laufende Turniere lassen sich nicht löschen
@@ -94,9 +95,10 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           icon={<Icons.Calendar size={iconSizeValues.sm} color={cssVars.colors.primary} />}
           badge={abschnitte.heute.length}
           defaultOpen
+          compact={isMobile}
           testId="section-heute"
         >
-          <div style={gridStyle(isMobile)}>{karten(abschnitte.heute)}</div>
+          <div style={gridStyle(isMobile)}>{karten(abschnitte.heute, true)}</div>
         </CollapsibleSection>
       )}
 
@@ -107,6 +109,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           badge={abschnitte.running.length}
           defaultOpen
           variant="live"
+          compact={isMobile}
           testId="section-running"
         >
           <div style={gridStyle(isMobile)}>{karten(abschnitte.running)}</div>
@@ -119,6 +122,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           icon={<Icons.Calendar size={iconSizeValues.sm} color={cssVars.colors.statusUpcoming} />}
           badge={abschnitte.upcoming.length}
           defaultOpen
+          compact={isMobile}
           testId="section-upcoming"
         >
           <div style={gridStyle(isMobile)}>{karten(abschnitte.upcoming)}</div>
@@ -131,6 +135,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           icon={<Icons.Save size={iconSizeValues.sm} color={cssVars.colors.statusDraft} />}
           badge={abschnitte.draft.length}
           defaultOpen={false}
+          compact={isMobile}
           testId="section-draft"
         >
           <div style={gridStyle(isMobile)}>{karten(abschnitte.draft)}</div>

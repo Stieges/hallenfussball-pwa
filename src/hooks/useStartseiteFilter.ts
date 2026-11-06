@@ -1,7 +1,7 @@
 /**
  * Suche und Filter der Startseite stehen in der Adresse (@OB-030, URL-ROUTING): `?q=F1&s=running,draft`.
- * Neu laden oder ein geteilter Link stellt beides wieder her. Tippen ersetzt den Eintrag, damit die Zurück-Taste nicht
- * jeden Buchstaben einzeln zurückgeht.
+ * Neu laden oder ein geteilter Link stellt beides wieder her. Tippen in der Suche ersetzt den Eintrag, damit die Zurück-Taste nicht
+ * jeden Buchstaben einzeln zurückgeht; das Umschalten eines Filters ist ein eigener Verlaufseintrag (Zurück geht einen Filter zurück, @OB-031).
  */
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -35,7 +35,7 @@ export function useStartseiteFilter(): StartseiteFilter {
       const updated = current.includes(filter) ? current.filter((f) => f !== filter) : [...current, filter];
       if (updated.length === 0) { next.delete('s'); } else { next.set('s', updated.join(',')); }
       return next;
-    }, { replace: true });
+    });
   }, [setSearchParams]);
 
   return { searchQuery, activeFilters, setSearchQuery, toggleFilter };

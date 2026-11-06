@@ -120,6 +120,9 @@ const HeaderOfflineBadge: React.FC<{
   );
 };
 
+/** „Registrieren“: schmales Polster, damit die Kopfzeile der Turnierseite am Tablet nicht umbricht oder überläuft. */
+const registerButtonStyle: CSSProperties = { padding: `${cssVars.spacing.sm} ${cssVars.spacing.xs}` };
+
 export const AuthSection: React.FC<AuthSectionProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
@@ -405,7 +408,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
 
           {/* Registrieren Button */}
           {!isMobile && (
-            <Button variant="secondary" size="sm" onClick={onNavigateToRegister} data-testid="auth-guest-register-button">
+            <Button variant="secondary" size="sm" onClick={onNavigateToRegister} style={registerButtonStyle} data-testid="auth-guest-register-button">
               {t('actions.register')}
             </Button>
           )}
@@ -457,7 +460,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
             </button>
 
             {/* Registrieren (Zweittaste, @OB-040: eine Haupttaste je Ansicht) */}
-            <Button variant="secondary" size="sm" onClick={onNavigateToRegister} data-testid="auth-register-button">
+            <Button variant="secondary" size="sm" onClick={onNavigateToRegister} style={registerButtonStyle} data-testid="auth-register-button">
               {t('actions.register')}
             </Button>
           </>
@@ -656,7 +659,7 @@ const styles: Record<string, CSSProperties> = {
   // Buttons
   ghostButton: {
     minHeight: cssVars.touchTargets.minimum,
-    padding: `0 ${cssVars.spacing.md}`,
+    padding: `0 ${cssVars.spacing.xs}`,
     background: 'transparent',
     color: cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.md,
