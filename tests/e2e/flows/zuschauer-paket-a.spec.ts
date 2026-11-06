@@ -1,6 +1,6 @@
 /**
  * Zuschauer-Paket A (Durchsicht 05.11.2026): „(war hh:mm)“ ohne „voraussichtlich“ (@ZM-105, @ZP-046), lesbare Initialen bei weißem
- * und gelbem Trikot (C-ZUSCHAUER-INITIALEN-WEISS, Farbregel @ZM-159, Kontrast @ZM-107), Filter-Tasten mit 44 px Tippfläche (Z16),
+ * und gelbem Trikot (C-ZUSCHAUER-INITIALEN-WEISS, Farbregel @ZM-159, Kontrast @OB-055), Filter-Tasten mit 44 px Tippfläche (Z16),
  * Spielkarten ohne axe-Verstoß aria-required-children, ruhiger Hinweis bei unbekanntem Turnier (@ZM-068).
  *
  * Saat `hallencup-messlauf` mit Änderungen: Name mit 50 Zeichen (Team 1), weißes und gelbes Trikot, Spiel 15 um 10 Minuten verschoben.
@@ -71,7 +71,7 @@ for (const groesse of GROESSEN) {
       test.skip(test.info().project.name !== 'desktop', 'setzt das Fenster selbst');
     });
 
-    test('Z16 jede Filter-Taste ist mindestens 44 × 44 px groß', async ({ page }) => {
+    test('@OB-022 Z16 jede Filter-Taste ist mindestens 44 × 44 px groß', async ({ page }) => {
       await oeffne(page, groesse.width, groesse.height);
       const tasten = page.locator('[data-testid="public-filter-bar"] button');
       expect(await tasten.count()).toBeGreaterThan(6);

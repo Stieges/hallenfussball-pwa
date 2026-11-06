@@ -1,7 +1,6 @@
 /**
  * R3-6 Zuschauer-Seite fragt den gespeicherten Endstand im 10-Sekunden-Takt, sobald das Turnier abgeschlossen ist (@LZ-077 Z. 1, @ZM-011,
- * @ZM-069, @ZM-109); davor höchstens einmal beim Öffnen (Z20, Qualitätsregel „vor dem Abschluss höchstens eine Server-Funktion je
- * 10 Sekunden“, Szenario fehlt: Entwurf C der Durchsicht 2026-11-05). Fake-Timer; die Abfrage ist eine Attrappe.
+ * @ZM-069, @ZM-109); davor höchstens einmal beim Öffnen (@ZM-193, Durchsicht Z20). Fake-Timer; die Abfrage ist eine Attrappe.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -31,12 +30,14 @@ describe('usePublicFinalStandings', () => {
     // der Spielplan-Abruf meldet den Abschluss, der Server hat jetzt den Endstand
     reply = FINAL;
     rerender({ finished: true });
-    await advance(10_000);
+    await advance(0);
+    // der Wechsel auf „abgeschlossen“ löst sofort eine Abfrage aus (nicht erst nach einem Takt): zweiter Aufruf, Endstand da
+    expect(read).toHaveBeenCalledTimes(2);
     expect(result.current.status).toBe('final');
     expect(read).toHaveBeenCalledWith('ABC123');
   });
 
-  it('Z20 vor dem Abschluss wird der Endstand nicht im Takt erfragt: einmal beim Öffnen, danach nichts mehr', async () => {
+  it('@ZM-193 vor dem Abschluss wird der Endstand nicht im Takt erfragt: einmal beim Öffnen, danach nichts mehr', async () => {
     const read = vi.fn(() => Promise.resolve({ status: 'none' }));
     renderHook(() => usePublicFinalStandings('ABC123', true, false, read));
     await advance(0);
@@ -44,7 +45,7 @@ describe('usePublicFinalStandings', () => {
     expect(read).toHaveBeenCalledTimes(1);
   });
 
-  it('Z20 Gegenbeispiel: nach dem Abschluss wird er alle 10 Sekunden erfragt (Wechsel ohne Neuladen, @LZ-077)', async () => {
+  it('@ZM-193 Gegenbeispiel: nach dem Abschluss wird er alle 10 Sekunden erfragt (Wechsel ohne Neuladen, @LZ-077)', async () => {
     const read = vi.fn(() => Promise.resolve({ status: 'none' }));
     renderHook(() => usePublicFinalStandings('ABC123', true, true, read));
     await advance(0);
@@ -52,7 +53,7 @@ describe('usePublicFinalStandings', () => {
     expect(read).toHaveBeenCalledTimes(4);
   });
 
-  it('Z20 Gegenbeispiel: nach der Rückkehr in den Vordergrund wird auch vor dem Abschluss einmal erfragt', async () => {
+  it('@ZM-193 Gegenbeispiel: nach der Rückkehr in den Vordergrund wird auch vor dem Abschluss einmal erfragt', async () => {
     const read = vi.fn(() => Promise.resolve({ status: 'none' }));
     renderHook(() => usePublicFinalStandings('ABC123', true, false, read));
     await advance(0);

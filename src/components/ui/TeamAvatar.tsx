@@ -1,5 +1,6 @@
 import React, { useState, CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens';
+// eslint-disable-next-line local-rules/prefer-css-vars -- die Zahl des Tokens (rem) wird gebraucht, kein Stil
+import { cssVars, fontSizes } from '../../design-tokens';
 import { fillNeedsRim, initialsColorOn } from './teamAvatarColors';
 import { TeamLogo, TeamColors } from '../../types/tournament';
 
@@ -18,8 +19,9 @@ const AVATAR_SIZES = {
 
 type AvatarSize = keyof typeof AVATAR_SIZES;
 
-/** Entspricht `fontSizes.xs` (0,6875 rem bei 16 px). */
-const MIN_INITIALS_PX = 11;
+/** Untergrenze der Initialen aus dem Token `fontSizes.xs` (rem bei 16 px Grundschrift, 11 px). */
+// eslint-disable-next-line local-rules/prefer-css-vars -- Zahl, kein Stil
+const MIN_INITIALS_PX = parseFloat(fontSizes.xs) * 16;
 
 interface TeamAvatarProps {
   /** Team data with name, optional logo and colors */

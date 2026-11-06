@@ -1,7 +1,6 @@
 /**
  * Zuschauer-Paket A, Seiten-Ebene: Reiter „Tabellen“ nach dem Abschluss (@ET-044, C-ZUSCHAUER-TABELLE-NEBEN-ENDSTAND, Durchsicht Z11) und
- * Abrufe des Endstands (Z20; Szenario fehlt: Entwurf C der Durchsicht 2026-11-05 „vor dem Abschluss höchstens eine Server-Funktion je
- * 10 Sekunden“). Gemockt nur die Datenquellen und die Antwort von `public_final_standings`; die Seite ist echt.
+ * Abrufe des Endstands (@ZM-193, Durchsicht Z20: vor dem Abschluss kein Endstand im Takt). Gemockt nur die Datenquellen und die Antwort von `public_final_standings`; die Seite ist echt.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.unmock('i18next');
@@ -90,7 +89,7 @@ describe('Z11 @ET-044 Reiter „Tabellen“ nach dem Abschluss = Endstand', () =
   });
 });
 
-describe('Z20 Abrufe des Endstands auf der Zuschauer-Seite', () => {
+describe('@ZM-193 Abrufe des Endstands auf der Zuschauer-Seite', () => {
   const finalAbrufe = (): number => rpc.mock.calls.filter(([name]) => name === 'public_final_standings').length;
   const takt = async (): Promise<void> => {
     await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
@@ -107,6 +106,23 @@ describe('Z20 Abrufe des Endstands auf der Zuschauer-Seite', () => {
     await waitFor(() => { expect(finalAbrufe()).toBe(1); });
     await takt(); await takt(); await takt();
     expect(finalAbrufe()).toBe(1);
+  });
+
+  it('@ZM-193 wird das Turnier abgeschlossen, während die Seite offen ist, steht der Endstand spätestens einen Takt danach da', async () => {
+    await renderAt({ ...buildLiveViewTournament(), lifecycleStatus: 'fixed' }, { status: 'none' }, '');
+    await waitFor(() => { expect(finalAbrufe()).toBe(1); });
+    expect(screen.queryByTestId('final-standings-list')).toBeNull();
+    // Abschluss auf dem Server: Spielplan meldet „abgeschlossen“, der Endstand liegt vor
+    supabaseGet.mockResolvedValue(finished());
+    rpc.mockImplementation((name: string) => Promise.resolve(name === 'public_final_standings' ? { data: stored(), error: null } : { data: null, error: { message: 'x' } }));
+    // Der heutige Leseweg (Adapter a) hat keinen eigenen Takt für den Spielplan: die Seite holt ihn bei Rückkehr in den Vordergrund
+    for (const state of ['hidden', 'visible']) {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+      await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await Promise.resolve(); });
+    }
+    await takt();
+    expect(await screen.findByTestId('final-standings-list')).toBeInTheDocument();
+    expect(placeNames()).toEqual(NAMES);
   });
 
   it('Gegenbeispiel: nach dem Abschluss wird der Endstand mit jedem Takt erfragt', async () => {

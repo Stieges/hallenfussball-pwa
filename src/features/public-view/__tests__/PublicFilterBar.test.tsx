@@ -75,7 +75,7 @@ describe('PublicFilterBar (B-13d2)', () => {
     expect(props.onStatusChange).toHaveBeenCalledWith('finished');
   });
 
-  it('Z16 jede Filter-Taste hat eine Tippfläche von mindestens 44 × 44 px (Token), die Wahl steht auch ohne Farbe fest (aria-pressed)', () => {
+  it('@OB-022 Z16 jede Filter-Taste hat eine Tippfläche von mindestens 44 × 44 px (Token), die Wahl steht auch ohne Farbe fest (aria-pressed)', () => {
     renderBar({ selectedStatus: 'live' });
     const tasten = screen.getAllByRole('button');
     expect(tasten.length).toBeGreaterThan(8);

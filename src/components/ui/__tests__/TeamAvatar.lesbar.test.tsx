@@ -1,6 +1,6 @@
 /**
  * Initialen im Team-Abzeichen sind lesbar, auch bei weißen und gelben Trikots (C-ZUSCHAUER-INITIALEN-WEISS, Durchsicht Z5; Farbregel
- * @ZM-159, Kontrast @ZM-107): Schrift mindestens 4,5 : 1 zur Füllung, kräftiger Rand bei sehr heller oder sehr dunkler Füllung,
+ * @ZM-159, Kontrast @OB-055): Schrift mindestens 4,5 : 1 zur Füllung, kräftiger Rand bei sehr heller oder sehr dunkler Füllung,
  * Initialen mindestens 11 px. Erwartung aus der Anforderung (Kontrast nach WCAG), nicht aus dem Code abgelesen.
  */
 import { describe, it, expect } from 'vitest';

@@ -1,7 +1,7 @@
 /**
  * usePublicFinalStandings (R3-6; @LZ-074, @LZ-075, @LZ-077, @ZM-011): der gespeicherte Endstand für die Zuschauer-Seite.
  * Im Takt des Spielplans (`usePolling`, 10 Sekunden im Vordergrund) wird nur gefragt, solange das Turnier abgeschlossen ist oder ein
- * Endstand schon da ist (Z20, Qualitätsregel „vor dem Abschluss höchstens eine Server-Funktion je 10 Sekunden“): davor genügt der
+ * Endstand schon da ist (@ZM-193, Durchsicht Z20): davor genügt der
  * Spielplan-Abruf, der Endstand wird einmal beim Öffnen und bei Rückkehr in den Vordergrund oder ins Netz erfragt (ein Turnier, das
  * über den Betreiber wieder geöffnet wurde, zeigt ihn so auch beim ersten Öffnen, @LZ-077). Meldet der Spielplan den Abschluss,
  * wird sofort gefragt, also erscheint der Endstand ohne Neuladen nach höchstens einem Takt. Nach dem Wiederöffnen über den Betreiber (@LZ-091) liefert der Server ihn unverändert weiter, bis neu abgeschlossen
