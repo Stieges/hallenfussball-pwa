@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PublicFilterBar, type PublicFilterBarProps } from '../components/PublicFilterBar';
+import { cssVars, touchTargets } from '../../../design-tokens';
 
 vi.unmock('i18next'); vi.unmock('react-i18next'); // B-41: echte DE-Texte, siehe src/test/realDeI18n.ts
 await (await import('../../../test/realDeI18n')).initRealDeI18n();
@@ -72,5 +73,18 @@ describe('PublicFilterBar (B-13d2)', () => {
     expect(props.onStatusChange).toHaveBeenCalledWith('live');
     fireEvent.click(screen.getByRole('button', { name: 'Beendet' }));
     expect(props.onStatusChange).toHaveBeenCalledWith('finished');
+  });
+
+  it('@OB-022 Z16 jede Filter-Taste hat eine Tippfläche von mindestens 44 × 44 px (Token), die Wahl steht auch ohne Farbe fest (aria-pressed)', () => {
+    renderBar({ selectedStatus: 'live' });
+    const tasten = screen.getAllByRole('button');
+    expect(tasten.length).toBeGreaterThan(8);
+    for (const taste of tasten) {
+      expect(taste.style.minHeight).toBe(cssVars.touchTargets.minimum);
+      expect(taste.style.minWidth).toBe(cssVars.touchTargets.minimum);
+    }
+    expect(touchTargets.minimum).toBe('44px');
+    expect(screen.getByRole('button', { name: '🔴 Live' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Beendet' })).toHaveAttribute('aria-pressed', 'false');
   });
 });

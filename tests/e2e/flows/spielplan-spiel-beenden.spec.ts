@@ -74,7 +74,7 @@ async function anpfiff(page: Page): Promise<void> {
  * Stand mit den Toren-Knöpfen setzen und speichern (@FU-112: „wählt … und trägt 3:1 ein“).
  */
 async function beendenImSpielplan(plan: Page, heim: number, gast: number): Promise<void> {
-  const zeile = plan.getByRole('row', { name: /^Spiel 1:/ });
+  const zeile = plan.getByRole('article', { name: /^Spiel 1:/ });
   await expect(zeile).toBeVisible({ timeout: 15_000 });
   await zeile.click();
   // Der Klick-außerhalb-Hörer der Karte ist erst 100 ms nach dem Aufklappen scharf. Ein Mensch tippt später; ohne diese

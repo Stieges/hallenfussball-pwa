@@ -1469,7 +1469,6 @@
     "button": "Shift times",
     "listHint": "Use ⋮ on a match to shift from there.",
     "original": "(was {{time}})",
-    "tentative": "expected",
     "dialogTitle": "Shift times",
     "close": "Close",
     "direction": "Direction",

@@ -1,6 +1,6 @@
 /**
- * B-27 Zuschauer-Seite: groß die neue Uhrzeit, klein „ursprünglich hh:mm“ (@ZP-004, @ZP-005, @ZP-049) und „voraussichtlich“
- * bei K.-o.-Spielen (@ZM-105). Gemockt nur die Datenquellen; die Screen-Logik ist echt (wie hideScoresStandings.test.tsx).
+ * B-27 Zuschauer-Seite: groß die neue Uhrzeit, klein „(war hh:mm)“ in derselben Zeile (@ZP-004, @ZP-005, @ZP-049, @ZP-046); K.-o.-Spiele
+ * stehen mit Bezeichnung und ohne „voraussichtlich“ (@ZM-105, @ZP-010, seit 2026-11-05). Gemockt nur die Datenquellen; die Screen-Logik ist echt (wie hideScoresStandings.test.tsx).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -96,11 +96,20 @@ describe('B-27 Zuschauer-Seite: ursprüngliche Uhrzeit', () => {
     expect(container.textContent).not.toMatch(/\(war/);
   });
 
-  it('@ZM-105 K.-o.-Uhrzeiten stehen als „voraussichtlich“, auch mit ihrer ursprünglichen; Gruppenspiele nicht', async () => {
-    const { tournament, spiel2, finale } = turnier({ shown: '15:40', original: '15:30' });
-    await zeigen(tournament);
-    expect(screen.queryAllByTestId(`match-tentative-${finale.id}`)[0]).toHaveTextContent('voraussichtlich');
+  it('@ZM-105 @ZP-010 K.-o.-Uhrzeiten stehen ohne „voraussichtlich“, verschoben mit „(war 16:55)“; kein Zusatz auf der ganzen Seite', async () => {
+    const { tournament, finale } = turnier({ shown: '15:40', original: '15:30' });
+    const { container } = await zeigen(tournament);
     expect(original(finale.id)[0]).toHaveTextContent('(war 16:55)');
-    expect(screen.queryAllByTestId(`match-tentative-${spiel2.id}`)).toEqual([]);
+    expect(container.textContent).not.toMatch(/voraussichtlich/i);
+    expect(container.textContent).not.toMatch(/ursprünglich/i);
+  });
+
+  it('@ZP-046 die neue Uhrzeit und „(war …)“ stehen in einer Zeile: dasselbe Element trägt beide, kein Block-Umbruch', async () => {
+    const { tournament, finale } = turnier({ shown: '15:40', original: '15:30' });
+    await zeigen(tournament);
+    const note = original(finale.id)[0];
+    expect(note.parentElement?.textContent).toMatch(/17:05\s*\(war 16:55\)/);
+    expect(note.style.display).toBe('inline');
+    expect(note.style.whiteSpace).toBe('nowrap');
   });
 });

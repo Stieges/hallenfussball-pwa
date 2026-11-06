@@ -2,7 +2,8 @@
  * Endstand auf der Zuschauer-Seite (R3-6; @LZ-074, @LZ-075, @ET-044, @ET-045, @ZM-011, @ZM-012, @ZM-102): der beim Abschluss gespeicherte
  * Endstand oben, Spielplan darunter. Dieselbe Darstellung wie in der App (`FinalStandingsView`), Platz 1 in Gold. Nie neu gerechnet
  * und nie vor dem Abschluss: ohne `final` vom Server steht hier nichts (auch kein vorläufiger Stand). Torschützen nur, wenn die
- * Antwort sie trägt (Schalter). Kindermodus (E7): statt des Endstands „Turnier beendet – danke fürs Mitspielen“, abhängig vom öffentlichen Stand (abgeschlossen ∧ Kindermodus), nicht vom Server-Endstand.
+ * Antwort sie trägt (Schalter). Nach dem Abschluss zeigt auch der Reiter „Tabellen“ diesen Endstand statt der live gerechneten
+ * Tabellen (@ET-044, C-ZUSCHAUER-TABELLE-NEBEN-ENDSTAND). Kindermodus (E7): statt des Endstands „Turnier beendet – danke fürs Mitspielen“, abhängig vom öffentlichen Stand (abgeschlossen ∧ Kindermodus), nicht vom Server-Endstand.
  * Tabellen für Zuschauer aus: keine Herkunft, keine Zahlen (@ZM-102).
  */
 import { CSSProperties } from 'react';
@@ -19,6 +20,8 @@ export interface PublicFinalStandingsProps {
   tournament: Tournament;
   view: TournamentView;
   finalStandings: PublicFinalStandings;
+  /** Überschrift „Spielplan“ unter dem Endstand (Reiter „Spiele“); im Reiter „Tabellen“ steht der Endstand allein (@ET-044) */
+  scheduleTitle?: boolean;
 }
 
 const kidsStyle: CSSProperties = {
@@ -47,7 +50,7 @@ export const PublicEndedBadge: React.FC = () => {
   );
 };
 
-export const PublicFinalStandingsBlock: React.FC<PublicFinalStandingsProps> = ({ tournament, view, finalStandings }) => {
+export const PublicFinalStandingsBlock: React.FC<PublicFinalStandingsProps> = ({ tournament, view, finalStandings, scheduleTitle = true }) => {
   const { t } = useTranslation('publicView');
   if (showsKidsEnded(tournament, view)) {
     return <p style={kidsStyle} data-testid="final-standings-kids">{t('liveView.endedKids')}</p>;
@@ -66,7 +69,7 @@ export const PublicFinalStandingsBlock: React.FC<PublicFinalStandingsProps> = ({
         variant="public"
         hideTableDetails={!view.rules.tables}
       />
-      <h2 style={titleStyle}>{t('liveView.scheduleTitle')}</h2>
+      {scheduleTitle && <h2 style={titleStyle}>{t('liveView.scheduleTitle')}</h2>}
     </>
   );
 };

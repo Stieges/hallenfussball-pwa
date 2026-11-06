@@ -176,7 +176,7 @@ test('coadmin macht den Freigabe-Cup öffentlich -- Sichtbarkeit, Share-Code und
     expect(privat.ok, `Teilen zurücknehmen: ${String(privat.status)}`).toBe(true);
     await anonPage.goto(`/#/live/${after.shareCode}`);
     await anonPage.waitForLoadState('networkidle');
-    await expect(anonPage.getByText('Turnier nicht gefunden', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(anonPage.getByText('Turnier nicht gefunden oder nicht öffentlich', { exact: true })).toBeVisible({ timeout: 15000 });
     await expect(anonPage.getByText(E2E_RELEASE_CUP_TITLE, { exact: true })).toHaveCount(0);
   } finally {
     // I6/N16: unabhängig vom Ausgang zurücksetzen, per `safeCleanup()` (s. Kopfkommentar).

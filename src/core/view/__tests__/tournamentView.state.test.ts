@@ -134,11 +134,14 @@ describe('@ZM-111 @ZM-141 F-ZEIT: Ortszeit des Turniers, läuft / als Nächstes 
     expect(m).toMatchObject({ status: 'finished', isLive: false, isUpcoming: false, score: { a: 2, b: 1 } });
   });
 
-  it('@ZM-105 Uhrzeiten der K.-o.-Spiele sind voraussichtlich, Gruppenspiele nicht', () => {
+  it('@ZM-105 K.-o.-Spiele tragen ihre Bezeichnung und die aktuelle Uhrzeit, kein Merkmal „vorläufig“', () => {
     const v = build(zeit);
-    expect(v.byId.get(idOf(zeit, GAME.HF1))?.kickoffTentative).toBe(true);
-    expect(v.byId.get(idOf(zeit, GAME.FINAL))?.kickoffTentative).toBe(true);
-    expect(v.byId.get(idOf(zeit, GAME[9]))?.kickoffTentative).toBe(false);
+    for (const index of [GAME.HF1, GAME.FINAL]) {
+      const match = v.byId.get(idOf(zeit, index));
+      expect(match?.labelText).toBeTruthy();
+      expect(match?.kickoff?.time).toBeTruthy();
+      expect(match).not.toHaveProperty('kickoffTentative');
+    }
   });
 });
 
