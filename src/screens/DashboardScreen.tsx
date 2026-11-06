@@ -133,12 +133,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          // Bei langem Konto-Text (andere Sprache) rutscht die Konto-Gruppe unter den Titel statt über den Rand (@OB-021)
+          flexWrap: 'wrap',
           gap: cssVars.spacing.md,
           marginBottom: isMobile ? '16px' : '24px',
         }}>
           <h1 style={{ ...titleStyle, margin: 0 }}>{getAppTitle()}</h1>
 
-          <div style={{ flexShrink: 0 }}>
+          <div style={{ flexShrink: 0, marginLeft: 'auto' }}>
             <AuthSection
               onNavigateToLogin={onNavigateToLogin}
               onNavigateToRegister={onNavigateToRegister}
