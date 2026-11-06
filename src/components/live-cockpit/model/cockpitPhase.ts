@@ -1,4 +1,4 @@
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 
 export type CockpitZustand =
   | 'vorAnpfiff' | 'laeuft' | 'pausiert' | 'halbzeitpause' | 'pauseVorVerlaengerung'

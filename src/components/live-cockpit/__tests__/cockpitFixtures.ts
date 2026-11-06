@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import type { LiveCockpitProps } from '../types';
 import type { LiveMatch } from '../../../core/models/LiveMatch';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 
 export const NAME_50 = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 

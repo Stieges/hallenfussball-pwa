@@ -11,7 +11,7 @@ import type { MatchCockpitSettings } from '../../../types/tournament';
 import { Icons } from '../../ui/Icons';
 import { NoticeLine } from '../../ui';
 import { Scoreboard, type ScoreboardAbzeichenKnopf } from '../../ui/molecules/Scoreboard';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { UseCockpitNoticesReturn, NoticeStufe } from '../hooks/useCockpitNotices';
 import type { CockpitPhase } from '../model/cockpitPhase';
 import type { MindestpauseHinweis, Side } from '../model/cockpitTypes';

@@ -3,7 +3,7 @@
  * Regulär: Rest des laufenden Abschnitts plus alle noch folgenden regulären Abschnitte (@SL-133: im ersten von zwei
  * Abschnitten à 6 Minuten bei 4:00 noch 8:00); in der Verlängerung nur deren Rest (@SL-010). Rein, ohne React.
  */
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 
 export function restzeitSpielMs(view: Pick<PhaseView, 'phase' | 'section' | 'sections' | 'sectionElapsedMs' | 'sectionLimitMs'>): number {
   const restImAbschnitt = Math.max(0, view.sectionLimitMs - view.sectionElapsedMs);

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import { cockpitPhaseOf, type CockpitPhase, type CockpitPhaseInput, type LeerGrund } from '../model/cockpitPhase';
 
 /** Spec § 4.3: eine Stelle zum Umschalten auf das Status-Modell von A-36. */

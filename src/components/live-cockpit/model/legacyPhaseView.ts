@@ -4,7 +4,7 @@
  * `LiveMatch` nicht (S1): ein Abschnitt, keine Pausen-Restzeit. Rein, ohne React.
  */
 import type { LiveMatch } from '../types';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 
 /** Was die Ersatz-Ansicht vom Spiel liest. */
 export type LegacyPhaseMatch = Pick<LiveMatch, 'status' | 'playPhase' | 'awaitingTiebreakerChoice' | 'durationSeconds' | 'tiebreakerMode'>;

@@ -8,7 +8,7 @@ import type { SperrHinweis } from '../../../core/match';
 import type { MatchCockpitSettings } from '../../../types/tournament';
 import type { CockpitKasten } from '../typesFarben';
 import type { TeamColumnProps } from '../areas/TeamColumn';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { CockpitPhase } from '../model/cockpitPhase';
 import type { Side } from '../model/cockpitTypes';
 import { teamKnoepfe, toTeamColumnModel } from '../model/toTeamColumnModel';

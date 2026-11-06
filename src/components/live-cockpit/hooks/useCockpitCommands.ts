@@ -15,7 +15,7 @@ import type { CockpitDialogState, CockpitOverlayHandlers } from '../areas/Cockpi
 import type { LegacyPlayAreaProps } from '../areas/LegacyPlayArea';
 import type { MehrPunkt } from '../model/mehrPunkte';
 import type { CockpitControls, Side } from '../model/cockpitTypes';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { LiveCockpitProps } from '../types';
 import type { LeibchenWahl } from '../../../core/models/kitChoice';
 import type { UseCockpitNoticesReturn } from './useCockpitNotices';

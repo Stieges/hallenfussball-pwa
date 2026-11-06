@@ -3,7 +3,7 @@
  * Testwerte aus dem Gherkin: @SL-013/@SL-029 (Strafe seit 2:00, Dauer aus den Turnierregeln), @SL-186 („Zeitstrafe 2 Min · seit Spielzeit …“).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { phaseViewOf, type PhaseView } from '../phaseView';
+import { phaseViewOf, type PhaseView } from '../../../../core/match/client/phaseView';
 import { REGEL_2X10, REGEL_2X6, spielAnlegen, zu, type EngineSpiel, type Geraet } from '../../__tests__/enginePhaseFixture';
 
 beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); zu(0); });

@@ -9,7 +9,7 @@ import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { LiveCockpit } from '../LiveCockpit';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import { makeLiveMatch, makePhaseView, makeProps } from './cockpitFixtures';
 
 vi.unmock('i18next');

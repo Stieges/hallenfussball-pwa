@@ -3,7 +3,7 @@
  * von Hand bei 4 Minuten; die Quittung beginnt mit dem Abpfiff-Ereignis (`finishedAt`) und dauert 30 Sekunden.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { phaseViewOf, type PhaseView } from '../phaseView';
+import { phaseViewOf, type PhaseView } from '../../../../core/match/client/phaseView';
 import { REGEL_2X6, spielAnlegen, zu, type EngineSpiel } from '../../__tests__/enginePhaseFixture';
 
 beforeEach(() => {

@@ -8,7 +8,7 @@
  * Grenzen der Restzeit wie bei „Uhr korrigieren“ (@SL-012, @SL-077): die Spielzeit liegt vor dem Ende des Abschnitts und nicht
  * vor dem jüngsten Eintrag des Abschnitts.
  */
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 
 /** Schritt des Reglers in Sekunden (wie „Uhr korrigieren“). */
 export const FORTSETZEN_SCHRITT_S = 10;

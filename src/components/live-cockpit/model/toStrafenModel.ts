@@ -6,7 +6,7 @@
  * nicht zurückgenommene Strafen und keine nach dem Abpfiff (@SL-097). Teamfarbe am Randstreifen wie im Ergebniskasten (@SL-176).
  */
 import type { SideBox } from '../../../core/models/scoreBoxColors';
-import type { PhasePenalty } from '../engine/phaseView';
+import type { PhasePenalty } from '../../../core/match/client/phaseView';
 import type { LiveMatch } from '../types';
 import type { CockpitKasten } from '../typesFarben';
 import { formatUhr } from './toScoreboardModel';

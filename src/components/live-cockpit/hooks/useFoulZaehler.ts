@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { useFoulCounts, zaehleFouls } from '../../../hooks/useFoulCounts';
 import { useFoulThresholdWarning } from '../../../hooks/useFoulThresholdWarning';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { LiveMatch } from '../types';
 
 export interface FoulZaehler { halbzeit: { home: number; away: number }; gesamt: { home: number; away: number } }
