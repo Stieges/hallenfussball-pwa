@@ -231,6 +231,10 @@ pending_assertions_for() {
     20261119_001_gatherings.sql)
       echo "gatherings-tables-rls-no-client-writes gatherings-select-policy gatherings-rpcs-definer-authenticated-only gatherings-public-read gatherings-guards public-read-core-unchanged"
       ;;
+    # Hallenton (@HT-022/@HT-044): Zuordnung, Lebenszeichen, Testton, Tonwahl, eigener Ton (scripts/hallenton-check.sh)
+    20261121_001_hallenton.sql)
+      echo "hallenton-tables-rls-no-client-access hallenton-rpcs-definer-authenticated-only hallenton-rpcs-check-permission hallenton-internal-no-client-execute hallenton-heartbeat-fixed-reasons-no-user-agent hallenton-storage-policies-manage-screens-no-update"
+      ;;
     *)
       return 1
       ;;
@@ -737,6 +741,13 @@ PRIVILEGE_ASSERTION_NAMES=(
   "gatherings-rpcs-definer-authenticated-only"
   "gatherings-public-read"
   "gatherings-guards"
+  # Hallenton (20261121_001_hallenton.sql, eigener Block am Ende von db_privilege_assertions.sql)
+  "hallenton-tables-rls-no-client-access"
+  "hallenton-rpcs-definer-authenticated-only"
+  "hallenton-rpcs-check-permission"
+  "hallenton-internal-no-client-execute"
+  "hallenton-heartbeat-fixed-reasons-no-user-agent"
+  "hallenton-storage-policies-manage-screens-no-update"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

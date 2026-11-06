@@ -1099,7 +1099,10 @@ SELECT 'lifecycle-guard-triggers-complete',
                                            'match_event_authors',
                                            -- A-35 (20261117_005): schreibt nur append_match_events nach closed_intake bzw. der Trigger auf
                                            -- field_control (selbst gesperrt) -- nach dem Abschluss unerreichbar
-                                           'match_reviews', 'field_control_log', 'revoked_device_contacts')
+                                           'match_reviews', 'field_control_log', 'revoked_device_contacts',
+                                           -- Hallenton (20261121_001): Lebenszeichen/Zuordnung/Tonwahl wie monitor_heartbeats,
+                                           -- schreiben nur die Definer-RPCs hall_*, kein Spielstand
+                                           'hall_speakers', 'hall_field_leads', 'hall_sound_settings')
                     AND NOT EXISTS (SELECT 1 FROM pg_trigger t
                                      WHERE t.tgrelid = cl.oid AND t.tgname = cl.relname || '_guard_closed'
                                        AND t.tgfoid = to_regprocedure('public.guard_closed_tournament()')
@@ -1477,4 +1480,115 @@ SELECT 'gatherings-guards',
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournaments_protect_gathering_id()')), false)
        AND coalesce((SELECT position('''config'', ''gathering_id''];' IN p.prosrc) > 0
                        FROM pg_proc p WHERE p.oid = to_regprocedure('public.tournaments_guard_lifecycle()')), false)
+-- ===============================================================================================================
+-- Hallenton (20261121_001_hallenton.sql, Record Hallenton @HT-022/@HT-044): eigener Block, Pruefskript
+-- scripts/hallenton-check.sh, Rollen-Zeilen scripts/rls-matrix.d/spur-hallenton.sh.
+-- ===============================================================================================================
+-- (1) Drei Tabellen: RLS an, keine Policy, kein Tabellenrecht fuer PUBLIC/anon/authenticated; SELECT nur ci_schema_reader.
+UNION ALL
+SELECT 'hallenton-tables-rls-no-client-access',
+       coalesce((SELECT count(*) = 3
+                        AND bool_and(c.relrowsecurity)
+                        AND bool_and(NOT EXISTS (SELECT 1 FROM pg_policy pol WHERE pol.polrelid = c.oid))
+                        AND bool_and(NOT has_table_privilege('anon', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                                     AND NOT has_table_privilege('authenticated', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN')
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a WHERE a.grantee = 0)
+                                     AND has_table_privilege('ci_schema_reader', c.oid, 'SELECT'))
+                   FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                  WHERE n.nspname = 'public' AND c.relname IN ('hall_speakers', 'hall_field_leads', 'hall_sound_settings')), false)
+-- (2) Acht RPCs: SECURITY DEFINER, search_path fest, EXECUTE nur authenticated -- has_function_privilege('anon', …) = false,
+--     kein PUBLIC, kein service_role (@HT-044: ein Fremder ohne Anmeldung erreicht keine davon).
+UNION ALL
+SELECT 'hallenton-rpcs-definer-authenticated-only',
+       coalesce((SELECT count(*) = 8
+                        AND bool_and(p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                                     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                                     AND p.proacl IS NOT NULL
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.hall_speaker_assign(uuid,integer[],uuid,text,boolean)'),
+                                  to_regprocedure('public.hall_speaker_release(uuid,integer[],uuid)'),
+                                  to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text)'),
+                                  to_regprocedure('public.hall_field_lead_heartbeat(uuid,integer,uuid)'),
+                                  to_regprocedure('public.hall_test_tone_request(uuid,integer)'),
+                                  to_regprocedure('public.hall_test_tone_ack(uuid,integer,uuid,uuid)'),
+                                  to_regprocedure('public.hall_sound_settings_set(uuid,text,text,text,integer[])'),
+                                  to_regprocedure('public.hall_sound_status(uuid,uuid)'))), false)
+-- (3) Rechtepruefung im Rumpf: sieben RPCs mit manageScreens (Turnierleitung, Co-Admin), das Lebenszeichen der Leitung mit
+--     writeMatchData UND Steuer des Felds; der Stand mit manageScreens (voll) bzw. writeMatchData (Zustand je Feld).
+UNION ALL
+SELECT 'hallenton-rpcs-check-permission',
+       coalesce((SELECT count(*) = 6 AND bool_and(position('PERFORM public.hall_require(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0)
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.hall_speaker_assign(uuid,integer[],uuid,text,boolean)'),
+                                  to_regprocedure('public.hall_speaker_release(uuid,integer[],uuid)'),
+                                  to_regprocedure('public.hall_speaker_heartbeat(uuid,uuid,integer[],text)'),
+                                  to_regprocedure('public.hall_test_tone_request(uuid,integer)'),
+                                  to_regprocedure('public.hall_test_tone_ack(uuid,integer,uuid,uuid)'),
+                                  to_regprocedure('public.hall_sound_settings_set(uuid,text,text,text,integer[])'))), false)
+       AND coalesce((SELECT position('PERFORM public.hall_require(p_tournament_id, ''writeMatchData'');' IN p.prosrc) > 0
+                            AND position('fc.holder_user_id = auth.uid() AND fc.holder_device_id = p_device_id' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_field_lead_heartbeat(uuid,integer,uuid)')), false)
+       AND coalesce((SELECT position('v_full := public.has_tournament_permission(p_tournament_id, ''manageScreens'');' IN p.prosrc) > 0
+                            AND position('NOT public.has_tournament_permission(p_tournament_id, ''writeMatchData'')' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_sound_status(uuid,uuid)')), false)
+       AND coalesce((SELECT position('t.deleted_at IS NULL' IN p.prosrc) > 0
+                            AND position('NOT public.has_tournament_permission(p_tournament_id, p_permission)' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_require(uuid,text)')), false)
+-- (4) Interne Hilfen und das Loeschen nach Turnierende: kein EXECUTE fuer anon/authenticated/service_role, kein PUBLIC.
+UNION ALL
+SELECT 'hallenton-internal-no-client-execute',
+       coalesce((SELECT count(*) = 4
+                        AND bool_and(NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                     AND NOT has_function_privilege('service_role', p.oid, 'EXECUTE')
+                                     AND p.proacl IS NOT NULL
+                                     AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.hall_ms(timestamp with time zone)'),
+                                  to_regprocedure('public.hall_checked_fields(uuid,integer[])'),
+                                  to_regprocedure('public.hall_require(uuid,text)'),
+                                  to_regprocedure('public.hall_sound_purge_ended()'))), false)
+-- (5) Lebenszeichen ohne Browser-Kennzeichen: Grund aus fester Liste, Geraetename 1-60 Zeichen, keine Spalte user_agent.
+UNION ALL
+SELECT 'hallenton-heartbeat-fixed-reasons-no-user-agent',
+       coalesce((SELECT pg_get_constraintdef(con.oid) = 'CHECK (((state IS NULL) OR (state = ANY (ARRAY[''ready''::text, ''not_activated''::text, ''background''::text, ''slept''::text, ''custom_sound_failed''::text, ''volume_zero''::text]))))'
+                   FROM pg_constraint con WHERE con.conrelid = to_regclass('public.hall_speakers') AND con.conname = 'hall_speakers_state_check'), false)
+       AND coalesce((SELECT position('char_length(device_name) >= 1' IN pg_get_constraintdef(con.oid)) > 0
+                            AND position('char_length(device_name) <= 60' IN pg_get_constraintdef(con.oid)) > 0
+                       FROM pg_constraint con WHERE con.conrelid = to_regclass('public.hall_speakers') AND con.conname = 'hall_speakers_device_name_form'), false)
+       AND NOT EXISTS (SELECT 1 FROM pg_attribute a
+                        WHERE a.attrelid IN (to_regclass('public.hall_speakers'), to_regclass('public.hall_field_leads'))
+                          AND a.attname IN ('user_agent', 'ip', 'ip_address') AND NOT a.attisdropped)
+-- (6) Eigener Ton: Policy-Hilfe EXECUTE nur authenticated. Policies auf storage.objects (nur wenn das Storage-Schema
+--     existiert -- im reinen Postgres-Container der CI fehlt es, live immer da): INSERT/SELECT/DELETE fuer authenticated
+--     ueber die Hilfe, keine UPDATE- oder ALL-Policy auf storage.objects (kein Ueberschreiben, kein upsert).
+UNION ALL
+SELECT 'hallenton-storage-policies-manage-screens-no-update',
+       coalesce((SELECT p.prosecdef AND p.proconfig @> ARRAY['search_path=public, pg_temp']
+                        AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                        AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                        AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0)
+                        AND position('public.has_tournament_permission(v_tid, ''manageScreens'')' IN p.prosrc) > 0
+                        AND position('c_max_files constant integer := 10;' IN p.prosrc) > 0
+                   FROM pg_proc p WHERE p.oid = to_regprocedure('public.hall_sound_object_allowed(text,boolean)')), false)
+       AND (NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                         WHERE n.nspname = 'storage' AND c.relname = 'objects')
+            OR (coalesce((SELECT count(*) = 3
+                                 AND bool_and(pp.roles = ARRAY['authenticated']::name[] AND pp.permissive = 'PERMISSIVE')
+                                 AND bool_or(pp.policyname = 'hallenton_sounds_insert' AND pp.cmd = 'INSERT'
+                                             AND pp.with_check LIKE '%bucket_id = ''hallenton-sounds''::text%'
+                                             AND pp.with_check LIKE '%hall_sound_object_allowed(name, true)%')
+                                 AND bool_or(pp.policyname = 'hallenton_sounds_select' AND pp.cmd = 'SELECT'
+                                             AND pp.qual LIKE '%bucket_id = ''hallenton-sounds''::text%'
+                                             AND pp.qual LIKE '%hall_sound_object_allowed(name, false)%')
+                                 AND bool_or(pp.policyname = 'hallenton_sounds_delete' AND pp.cmd = 'DELETE'
+                                             AND pp.qual LIKE '%bucket_id = ''hallenton-sounds''::text%'
+                                             AND pp.qual LIKE '%hall_sound_object_allowed(name, false)%')
+                            FROM pg_policies pp
+                           WHERE pp.schemaname = 'storage' AND pp.tablename = 'objects' AND pp.policyname LIKE 'hallenton\_%'), false)
+                AND NOT EXISTS (SELECT 1 FROM pg_policies pp
+                                 WHERE pp.schemaname = 'storage' AND pp.tablename = 'objects' AND pp.cmd IN ('UPDATE', 'ALL'))))
 ;
