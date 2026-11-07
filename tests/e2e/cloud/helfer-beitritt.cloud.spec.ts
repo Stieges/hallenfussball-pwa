@@ -9,12 +9,16 @@
  * nicht (hier wird nie zurückgesetzt oder gesät). Darum läuft der Block nur mit `E2E_STACK_HAS_008=1` und ist sonst `fixme`
  * mit Grund. Die CI (`e2e-cloud.yml`) baut den Stack aus den Repo-Migrationen und setzt die Variable. Die Leitungs-Seite (Team & Helfer, A-18a) gibt es noch nicht:
  * Zulassen läuft deshalb über die Schnittstelle `decide_join_request` mit der Prüfzahl des Helfer-Handys (S-1).
+ *
+ * Eigener Cup (`E2E_HELFER_BEITRITT_CUP_ID`) mit dem Folgetag als Turniertag (`helperCupDate.ts`): Auf dem Live-Cup („heute“)
+ * lief der Code ab, sobald der Lauf über Mitternacht ging (@HE-010, Lauf 42308242655). Jeder Test schließt seine Geräte
+ * (Kontexte) am Ende, sonst bleiben ihre Seiten im Worker offen und tauchen im Fehlerbild des nächsten Tests auf.
  */
 import type { Browser, BrowserContext } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { restAsRole } from './restAsRole';
 import { loginAsRole } from './helpers';
-import { E2E_LIVE_CUP_ID, E2E_USERS } from './testData';
+import { E2E_HELFER_BEITRITT_CUP_ID, E2E_USERS } from './testData';
 
 const HAS_008 = process.env.E2E_STACK_HAS_008 === '1';
 
@@ -25,14 +29,20 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
   });
 
   async function helperCode(): Promise<string> {
-    const res = await restAsRole('owner', 'POST', 'rpc/ensure_helper_code', { p_tournament_id: E2E_LIVE_CUP_ID });
+    const res = await restAsRole('owner', 'POST', 'rpc/ensure_helper_code', { p_tournament_id: E2E_HELFER_BEITRITT_CUP_ID });
     expect(res.status).toBe(200);
     return (res.json as { code: string }).code;
   }
 
+  const devices: BrowserContext[] = [];
+  test.afterEach(async () => {
+    await Promise.all(devices.splice(0).map((context) => context.close()));
+  });
+
   // Frischer Kontext je Gerät, die Datenschutz-Abfrage vorab beantwortet (wie `fixtures.ts`): sonst deckt ihr Dialog die Seite zu.
   async function newDevice(browser: Browser): Promise<BrowserContext> {
     const context = await browser.newContext();
+    devices.push(context);
     const consent = { errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 };
     await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
     return context;
@@ -47,7 +57,7 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     const shown = Number(await helper.getByTestId('check-number').innerText());
     expect(shown).toBeGreaterThanOrEqual(10);
 
-    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_LIVE_CUP_ID });
+    const list = await restAsRole('owner', 'POST', 'rpc/list_helper_access', { p_tournament_id: E2E_HELFER_BEITRITT_CUP_ID });
     const request = (list.json as { requests: { id: string; name: string; checkNumber: number }[] }).requests.find((r) => r.name === 'Tom');
     expect(request?.checkNumber).toBe(shown);
     const decided = await restAsRole('owner', 'POST', 'rpc/decide_join_request', { p_request_id: request?.id, p_accept: true, p_field: 2, p_check_number: shown });
@@ -62,7 +72,7 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
 
   test('@HE-089 Konto scannt: Rückfrage; „Weiter“ meldet nur das Handy ab, der Laptop (eigene Anmeldung) bleibt angemeldet', async ({ browser }) => {
     const code = await helperCode();
-    // Greta = `stranger` leitet den Live-Cup nicht (sonst @HE-091). Handy und Laptop melden sich je selbst an: getrennte Sitzungen,
+    // Greta = `stranger` leitet den Cup nicht (sonst @HE-091). Handy und Laptop melden sich je selbst an: getrennte Sitzungen,
     // denn `signOut({ scope: 'local' })` beendet genau die Sitzung des Handys.
     const open = async () => {
       const page = await (await newDevice(browser)).newPage();
