@@ -8,8 +8,8 @@
  *   ebenso keins, das seit mehr als 5 s bekannt ist und noch nicht gespielt wurde. Ein Ende durch eine Korrektur über die
  *   Grenze zählt ab der Korrektur (`enden.ts`, Controller 07.11.).
  * - Regel 4: jedes Ende genau einmal (Schlüssel im Gedächtnis); Enden innerhalb 1 s ergeben einen Ton – Abpfiff-Ton, wenn
- *   eines davon ein Abpfiff ist, nur bei vorhersehbaren Enden; meldet der Ton ein schon eingetretenes Ende (von Hand), zählt
- *   dessen Tonart (@HT-032). Ein Ende bis 1 s nach einem gespielten Ton geht in diesem auf.
+ *   eines davon ein Abpfiff ist, gleich welches Ende zuerst ankommt (@HT-032). Ein Ende bis 1 s neben einem gespielten Ton
+ *   geht in diesem auf.
  */
 import { feldEndeOf, restBisGrenzeMs, type FeldEnde } from './enden';
 import type { GeplanterTon, HallTonArt, HallTonWarnung, PlanEingabe, PlanErgebnis, TonGedaechtnis } from './types';
@@ -46,10 +46,8 @@ function inGespieltemTonAufgegangen(gespieltUm: readonly number[], endeAt: numbe
 
 function tonAus(gruppe: readonly Kandidat[]): GeplanterTon {
   const at = gruppe[0].zeit;
-  // ein schon eingetretenes Ende tönt bereits mit seiner Art; vorhersehbare Enden entscheiden nur unter sich
-  const eingetreten = gruppe.filter((k) => !k.ende.vorhergesagt);
-  const massgeblich = eingetreten.length > 0 ? eingetreten : gruppe;
-  const art: HallTonArt = massgeblich.some((k) => k.ende.art === 'abpfiff') ? 'abpfiff' : 'halbzeit';
+  // ist eines der Enden ein Abpfiff, ist es der Abpfiff-Ton – gleich, welches Ende zuerst ankommt (@HT-032 Zeilen 3, 4)
+  const art: HallTonArt = gruppe.some((k) => k.ende.art === 'abpfiff') ? 'abpfiff' : 'halbzeit';
   const felder: string[] = [];
   for (const k of gruppe) {
     if (!felder.includes(k.feldId)) {

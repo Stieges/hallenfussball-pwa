@@ -94,13 +94,13 @@ describe('@HT-032 Zwei Enden innerhalb von 1 Sekunde ergeben an einem Gerät ein
     expect(Math.abs(gespielt[1].at - ende12)).toBeLessThanOrEqual(1000);
   });
 
-  it('@HT-032 Tom beendet den ersten Abschnitt von Spiel 11 von Hand, 0,5 Sekunden danach endet Spiel 12 → einmal der Halbzeit-Ton, für Spiel 12 kein weiterer Ton', () => {
+  it('@HT-032 Tom beendet den ersten Abschnitt von Spiel 11 von Hand, 0,5 Sekunden danach endet Spiel 12 → am Rechner einmal der Abpfiff-Ton, und kein zweiter Ton (Wortlaut 07.11.)', () => {
     const vonHand = T0 + 200_000;
     const erster = anpfiff();
     const spiel11 = feld('feld-1', CTX_11, erster, [...erster, ev('SECTION_END', vonHand, 1, 200_000)], vonHand);
     const spiel12 = spiel12EndetUm(vonHand + 500);
     const { gespielt } = lauf((jetzt) => [spiel11(jetzt), spiel12(jetzt)], vonHand - 3000, vonHand + 10_000);
-    expect(gespielt.map((t) => t.art)).toEqual(['halbzeit']);
+    expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
   });
 });
 
@@ -183,11 +183,8 @@ describe('@HT-032 im 1-s-Takt des Einbaus (Ton genau zu seinem Zeitpunkt, Plan n
       expect(zeile4()).toHaveLength(1);
     });
 
-    // Kommt die Nachricht vom Ende von Hand erst mit der nächsten Abfrage nach dem Ende von Spiel 12 an (Versatz 50 und
-    // 950 ms bei 300 ms Laufzeit), ist dessen Abpfiff-Ton schon erklungen – Befund im Bericht (Fixrunde 1, F1-1).
-    const nachrichtVorSpiel12 = versatzMs === 300;
-    (nachrichtVorSpiel12 ? it : it.fails)(`@HT-032 Zeile 4, Versatz ${versatzMs} ms: … → einmal der Halbzeit-Ton`, () => {
-      expect(zeile4().map((t) => t.art)).toEqual(['halbzeit']);
+    it(`@HT-032 Zeile 4, Versatz ${versatzMs} ms: … → am Rechner einmal der Abpfiff-Ton, und kein zweiter Ton`, () => {
+      expect(zeile4().map((t) => t.art)).toEqual(['abpfiff']);
     });
 
     it(`@HT-032 Zeile 2, Versatz ${versatzMs} ms: 2 Sekunden Abstand → für jedes Spiel einmal der Abpfiff-Ton`, () => {
