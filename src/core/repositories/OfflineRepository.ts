@@ -564,6 +564,10 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      */
     async syncUp(): Promise<void> {
         try {
+            // @FU-106/@FU-109 (Wackler verwerfen-konflikt:177): VOR dem Lesen der Kopien festhalten, welche verworfen sind. Endet
+            // die Merkung während des Server-Abrufs unten (Übernahme des Server-Stands), trägt `localT` trotzdem noch den
+            // verworfenen Inhalt – er darf nie hochgeladen werden.
+            const discardedAtRead = new Set(this._mutationQueue.scopesNeedingCloudCopy());
             // A-07e: nur eigene Kopien des Kontos (Gast-Kopien nie hochladen)
             const localList = await this.localListForAccount();
 
@@ -577,7 +581,7 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
                     }
                     // Auflage A2 (review-ca67, Regel Q): eigene wartende, laufende oder gescheiterte Einträge entscheidet die
                     // Warteschlange bzw. die Klärung – syncUp schiebt die Kopie nicht daran vorbei (sonst stilles Überschreiben)
-                    if (this.queueGuard.hasOwnChanges(localT.id)) {
+                    if (this.queueGuard.hasOwnChanges(localT.id) || discardedAtRead.has(localT.id)) {
                         continue;
                     }
                     // Try to get from cloud to check existence/version
