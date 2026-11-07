@@ -40,7 +40,8 @@ async function anonymerMonitor(context: BrowserContext, tournamentId: string): P
 async function zuschauerSeite(context: BrowserContext): Promise<Page> {
   const page = await context.newPage();
   await page.goto(`/#/live/${E2E_MONZEITSTRAFE_SHARE_CODE}`);
-  await expect(page.locator('[data-match-card], [role="article"]').first()).toBeVisible({ timeout: 15_000 });
+  // Die sichtbare Spielkarte ist ein Artikel; weitere [data-match-card]-Knoten der Seite sind verborgen
+  await expect(page.getByRole('article').first()).toBeVisible({ timeout: 15_000 });
   return page;
 }
 
@@ -69,10 +70,10 @@ test.describe('Zeitstrafe am Monitor und auf der Zuschauer-Seite (echte Server-A
       const monitor = await anonymerMonitor(halle, ids.tournamentId);
       const zuschauer = await zuschauerSeite(handy);
       const kreisGast = monitor.locator('[data-testid="live-penalties-away"] [data-zeitstrafe]');
-      const hinweisGast = zuschauer.getByTestId(`match-time-penalty-${ids.matchId}-away`);
+      const hinweisGast = zuschauer.getByTestId(`match-time-penalty-${ids.matchId}-away`).filter({ visible: true });
       // Gegenbeispiel vorab: ohne Strafe kein Kreis und kein Hinweis
       await expect(monitor.locator('[data-zeitstrafe]')).toHaveCount(0);
-      await expect(zuschauer.getByTestId(`match-time-penalty-${ids.matchId}-home`)).toHaveCount(0);
+      await expect(zuschauer.getByTestId(`match-time-penalty-${ids.matchId}-home`).filter({ visible: true })).toHaveCount(0);
 
       // Wenn Olli im Cockpit eine Zeitstrafe für die Rückennummer 5 des Gastteams einträgt
       await olli.page.getByTestId('penalty-button-away').click();
