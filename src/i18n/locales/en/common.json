@@ -41,6 +41,7 @@
   },
   "errors": {
     "deleteTournament": "Failed to delete tournament. Please try again.",
+    "emptyTrashFailed": "Not deleted: {{names}}. The other tournaments in the trash are deleted. Please try again.",
     "restoreTournament": "Failed to restore \"{{title}}\". Please try again.",
     "importTournament": "Failed to import tournament. Please try again.",
     "copyTournament": "Failed to copy tournament. Please try again.",

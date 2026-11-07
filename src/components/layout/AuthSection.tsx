@@ -120,6 +120,9 @@ const HeaderOfflineBadge: React.FC<{
   );
 };
 
+/** „Registrieren“: schmales Polster, damit die Kopfzeile der Turnierseite am Tablet nicht umbricht oder überläuft. */
+const registerButtonStyle: CSSProperties = { padding: `${cssVars.spacing.sm} ${cssVars.spacing.xs}` };
+
 export const AuthSection: React.FC<AuthSectionProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
@@ -405,14 +408,9 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
 
           {/* Registrieren Button */}
           {!isMobile && (
-            <button
-              type="button"
-              onClick={onNavigateToRegister}
-              style={styles.primaryButton}
-              data-testid="auth-guest-register-button"
-            >
+            <Button variant="secondary" size="sm" onClick={onNavigateToRegister} style={registerButtonStyle} data-testid="auth-guest-register-button">
               {t('actions.register')}
-            </button>
+            </Button>
           )}
         </div>
 
@@ -461,15 +459,10 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               {t('actions.login')}
             </button>
 
-            {/* Registrieren (Primary) */}
-            <button
-              type="button"
-              onClick={onNavigateToRegister}
-              style={styles.primaryButton}
-              data-testid="auth-register-button"
-            >
+            {/* Registrieren (Zweittaste, @OB-040: eine Haupttaste je Ansicht) */}
+            <Button variant="secondary" size="sm" onClick={onNavigateToRegister} style={registerButtonStyle} data-testid="auth-register-button">
               {t('actions.register')}
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -609,7 +602,7 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     width: '100%',
-    padding: `${cssVars.spacing.sm}px ${cssVars.spacing.md}px`,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     background: 'transparent',
     border: 'none',
     fontSize: cssVars.fontSizes.md,
@@ -635,7 +628,7 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: cssVars.spacing.xs,
     height: 36,
-    padding: `0 ${cssVars.spacing.sm}px`,
+    padding: `0 ${cssVars.spacing.sm}`,
     background: cssVars.colors.surfaceElevated,
     color: cssVars.colors.textTertiary,
     fontSize: cssVars.fontSizes.sm,
@@ -665,25 +658,12 @@ const styles: Record<string, CSSProperties> = {
 
   // Buttons
   ghostButton: {
-    height: 40,
-    padding: `0 ${cssVars.spacing.md}px`,
+    minHeight: cssVars.touchTargets.minimum,
+    padding: `0 ${cssVars.spacing.xs}`,
     background: 'transparent',
     color: cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.medium,
-    borderRadius: cssVars.borderRadius.md,
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-
-  primaryButton: {
-    height: 40,
-    padding: `0 ${cssVars.spacing.lg}px`,
-    background: cssVars.colors.primary,
-    color: cssVars.colors.onPrimary,
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.semibold,
     borderRadius: cssVars.borderRadius.md,
     border: 'none',
     cursor: 'pointer',

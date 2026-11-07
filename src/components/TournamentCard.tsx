@@ -1,30 +1,29 @@
 /**
- * TournamentCard Component
- *
- * Displays tournament summary in dashboard:
- * - Titel
- * - Datum (Beginn)
- * - Ort
- * - Altersklasse
- * - Modus (Jeder gegen Jeden / Gruppen + Finale)
- * - Action menu (dropdown on desktop, bottom sheet on mobile)
+ * TournamentCard Component (@OB-079): zeigt nur, was man zum Finden braucht.
+ * Zeile 1: Name in voller Breite (höchstens zwei Zeilen, kein Wortbruch, nie abgeschnitten). Zeile 2: Altersklasse · Zeit (unter „Heute“
+ * nur die Uhrzeit, sonst Tag und Uhrzeit); die Altersklasse unterscheidet gleichnamige Turniere. Dahinter der Zustand mit Symbol und Wort,
+ * aber nur wenn er vom Normalfall „Bereit“ abweicht (Läuft, Abgeschlossen, Abgebrochen). Zeile 3: Ort, nie gekürzt (er bricht notfalls um),
+ * rechts daneben das Schild der eigenen Rolle (macht die Karte nicht höher). Das Menü steht rechts neben Zeile 2 und 3.
+ * Modus, Veranstalter und Platzierung stehen in der Übersicht des Turniers.
  */
 
 import { isTournamentClosed } from '../core/services/lifecycle';
-import { CSSProperties } from 'react';
+import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tournament, PlacementCriterion, GroupSystem } from '../types/tournament';
+import { Tournament } from '../types/tournament';
 import { Card } from './ui';
-import { cssVars } from '../design-tokens'
+import { cssVars } from '../design-tokens';
+import { ageClassText } from '../core/view';
 import { getLocationName } from '../utils/locationHelpers';
-import { formatTournamentDate } from '../utils/tournamentCategories';
+import { formatCardTime } from '../utils/formatCardTime';
 import { TournamentActionMenu } from './TournamentActionMenu';
 import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { canWithListedRole } from '../features/auth/hooks/useCan';
 import { TextTag } from './ui/atoms';
 import { LateFinishNotice } from './LateFinishNotice';
-import { badgeContainerStyle, headerStyle, infoGridStyle, infoItemStyle, statusBadgeColors, valueStyle } from './tournamentCardStyles';
-import { ageClassText } from '../core/view';
+import { StateMark } from './ui/molecules/StateMark';
+import { cardStateOf, hasVisibleStateMark, STATE_MARK, STATE_WORD_KEY } from './tournamentCardState';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 /** Map categoryLabel to TournamentActionMenu category */
 type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
@@ -33,6 +32,8 @@ interface TournamentCardProps {
   tournament: Tournament;
   onClick?: () => void;
   categoryLabel?: string; // Optional: "running", "upcoming", "draft", "archived", etc.
+  /** Steht die Karte unter „Heute“? Dann zeigt sie nur die Uhrzeit, sonst Tag und Uhrzeit (@OB-079). */
+  inToday?: boolean;
   /** Soft delete callback (moves to trash) */
   onSoftDelete?: () => void;
   /** Copy/duplicate callback */
@@ -43,16 +44,88 @@ interface TournamentCardProps {
   testId?: string;
 }
 
+const titleStyle: CSSProperties = {
+  fontSize: cssVars.fontSizes.lg,
+  fontWeight: cssVars.fontWeights.semibold,
+  color: cssVars.colors.textPrimary,
+  lineHeight: cssVars.lineHeights.bodyMd,
+  margin: 0,
+  // nie ein Wort trennen, nie abschneiden (@OB-058); in voller Breite bleiben auch 50 Zeichen bei zwei Zeilen
+  overflowWrap: 'normal',
+  wordBreak: 'normal',
+  hyphens: 'manual',
+};
+
+const gridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  columnGap: cssVars.spacing.sm,
+  alignItems: 'center',
+};
+
+const lineStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: cssVars.spacing.sm,
+  minWidth: 0,
+};
+
+const placeRowStyle: CSSProperties = {
+  gridColumn: 1,
+  gridRow: 2,
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: cssVars.spacing.xs,
+  minWidth: 0,
+};
+
+const locationStyle: CSSProperties = {
+  flex: '1 1 0',
+  minWidth: 0,
+  fontSize: cssVars.fontSizes.md,
+  color: cssVars.colors.textSecondary,
+};
+
+const menuSlotStyle: CSSProperties = { gridColumn: 2, gridRow: '1 / span 2', alignSelf: 'center' };
+
+/**
+ * Das Schild steht rechts in der Zeile des Orts; ohne Ort trotzdem rechts. Es ist höher als eine Textzeile (Rand + Innenabstand);
+ * der negative Spielraum oben und unten hält die Zeile so hoch wie den Ort allein: das Schild macht die Karte nicht höher (@OB-079).
+ */
+const roleSlotStyle: CSSProperties = { flex: 'none', marginLeft: 'auto', marginBlock: `calc(-1 * ${cssVars.spacing.xs})` };
+
+const whenStyle: CSSProperties = {
+  fontWeight: cssVars.fontWeights.semibold,
+  color: cssVars.colors.textPrimary,
+  fontSize: cssVars.fontSizes.md,
+};
+
+const externalBadgeStyle: CSSProperties = {
+  padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+  borderRadius: cssVars.borderRadius.sm,
+  fontSize: cssVars.fontSizes.sm,
+  fontWeight: cssVars.fontWeights.medium,
+  background: cssVars.colors.statusExternalBg,
+  color: cssVars.colors.statusExternal,
+  whiteSpace: 'nowrap',
+};
+
 export const TournamentCard: React.FC<TournamentCardProps> = ({
   tournament,
   onClick,
   categoryLabel,
+  inToday = false,
   onSoftDelete,
   onCopy,
   onShare,
   testId,
 }) => {
-  const { t } = useTranslation('dashboard');
+  const { t, i18n } = useTranslation('dashboard');
+  const isMobile = useIsMobile();
+  // Offenes Aktionsmenü: die Karte liegt über ihren Nachbarn, egal wo der Zeiger steht oder ob mit der Tastatur geöffnet (@OB-080)
+  const [menuOpen, setMenuOpen] = useState(false);
   // @LZ-003 / W4: Papierkorb nur vor dem ersten Anpfiff — gleiche gemeinsame
   // Anpfiff-Funktion wie „Turnier löschen" (DangerZone) und „Im Wizard bearbeiten".
   // P1: Live-Abfrage nur, wenn ein Papierkorb angeboten werden könnte.
@@ -62,35 +135,6 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const { state: matchStartState } = useTournamentStartState(tournament, {
     enabled: Boolean(onSoftDelete) && mayDelete,
   });
-
-  // Helper functions that need t()
-  const getGroupSystemLabel = (groupSystem?: GroupSystem): string => {
-    switch (groupSystem) {
-      case 'groupsAndFinals':
-        return t('card.groupSystem.groupsAndFinals');
-      case 'roundRobin':
-      default:
-        return t('card.groupSystem.roundRobin');
-    }
-  };
-
-  const getPlacementAbbreviation = (id: string): string => {
-    const key = `card.placementAbbreviations.${id}`;
-    return t(key, { defaultValue: id });
-  };
-
-  const formatPlacementLogic = (placementLogic: PlacementCriterion[]): string => {
-    const active = placementLogic.filter(p => p.enabled);
-    if (active.length === 0) { return t('card.noPlacement'); }
-    return active.map(p => getPlacementAbbreviation(p.id)).join(' > ');
-  };
-
-  const getCategoryDisplayLabel = (): string => {
-    if (tournament.status === 'draft') { return t('status.draft'); }
-    if (!categoryLabel) { return t('status.draft'); }
-    const key = `status.${categoryLabel}`;
-    return t(key, { defaultValue: categoryLabel });
-  };
 
   // Map categoryLabel to TournamentCategory
   const getCategory = (): TournamentCategory => {
@@ -113,56 +157,44 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'all 0.2s ease',
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     position: 'relative',
+    // Am Handy knapper Innenabstand, rechts am knappsten (das Menü-Feld bringt eigenen Rand mit): alle Turniere des Tages sollen ohne Scrollen
+    // sichtbar sein, und Ort und Rollen-Schild bei 360 Bildpunkten in einer Zeile stehen (@OB-079)
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.sm} ${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    zIndex: menuOpen ? cssVars.zIndex.raised : 'auto',
   };
 
+  // Jede Karte ist ein eigener Stapelkontext (`backdrop-filter` der Card, beim Darüberfahren zusätzlich `transform`): das Aktionsmenü ragt bei
+  // den kompakten Karten in die nächste Karte hinein und läge sonst unter ihr, nicht klickbar (@OB-079, @OB-080). Darum liegt die Karte mit
+  // offenem Menü über allen anderen (`zIndex` in cardStyle), unabhängig von der Maus; die Karte unter der Maus hebt sich nur sichtbar, nicht im
+  // Stapel (sonst läge eine Nachbarkarte, über die der Zeiger fährt, wieder über dem offenen Menü).
   const cardHoverStyle: CSSProperties = {
     ...cardStyle,
     transform: 'translateY(-2px)',
     boxShadow: cssVars.shadows.md,
   };
+  const cardRestStyle: CSSProperties = { ...cardStyle, transform: 'none' };
 
-  const titleStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xl,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-    margin: 0,
-    paddingRight: '120px', // Space for badge(s)
-  };
-
-  const badgeStyle: CSSProperties = {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.xs,
-    fontWeight: cssVars.fontWeights.bold,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    whiteSpace: 'nowrap',
-  };
-
-  const labelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xs,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    color: cssVars.colors.textSecondary,
-    fontWeight: cssVars.fontWeights.medium,
-  };
-
-  const badgeColors = statusBadgeColors(tournament.status, categoryLabel);
-
+  const cardState = cardStateOf(tournament, categoryLabel);
   // Check if we need to show action menu (has any action handlers)
   const hasActions = onClick !== undefined || onCopy !== undefined || onShare !== undefined || deleteHandler !== undefined;
 
-  const externalBadgeStyle: CSSProperties = {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: '10px',
-    fontWeight: cssVars.fontWeights.medium,
-    background: cssVars.colors.statusExternalBg,
-    color: cssVars.colors.statusExternal,
-    whiteSpace: 'nowrap',
-  };
+  const location = getLocationName(tournament);
+  const timeText = formatCardTime(tournament, i18n.language, !inToday, t('card.noDate'));
+  const ageClass = ageClassText(tournament.ageClass);
+  // Der aria-label der Karte überdeckt ihren Inhalt: Zustand (nur wenn er nicht „Bereit“ ist), Altersklasse, Zeit, Ort, Rolle und Quelle
+  // gehören hinein (sonst liest der Screenreader nur den Namen vor). Leere Teile entfallen, damit kein loses Komma bleibt.
+  const showRole = myRole !== undefined && myRole !== 'owner';
+  const ariaLabel = [
+    t('card.ariaLabelTitle', { title: tournament.title }),
+    cardState === 'ready' ? '' : t(STATE_WORD_KEY[cardState]),
+    ageClass,
+    timeText !== '' ? timeText : t('sections.today'),
+    location,
+    showRole ? t(`card.role.${myRole}`) : '',
+    tournament.externalSource ?? '',
+  ].filter((part) => part !== '').join(', ');
 
   return (
     <Card
@@ -175,7 +207,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       }}
       onMouseLeave={(e) => {
         if (onClick) {
-          Object.assign(e.currentTarget.style, cardStyle);
+          Object.assign(e.currentTarget.style, cardRestStyle);
         }
       }}
       data-testid={testId ?? `tournament-card-${tournament.id}`}
@@ -183,9 +215,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       <article
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
-        aria-label={tournament.externalSource
-          ? t('card.ariaLabelExternal', { title: tournament.title, status: getCategoryDisplayLabel(), source: tournament.externalSource })
-          : t('card.ariaLabel', { title: tournament.title, status: getCategoryDisplayLabel() })}
+        aria-label={ariaLabel}
         onKeyDown={(e) => {
           if (onClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
@@ -193,25 +223,47 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           }
         }}
       >
-        {/* Badge container - absolute positioned top-right */}
-        <div style={badgeContainerStyle}>
-          {tournament.isExternal && tournament.externalSource && (
-            <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
-              {tournament.externalSource}
-            </span>
-          )}
-          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show badge if categoryLabel or draft */}
-          {(categoryLabel || tournament.status === 'draft') && (
-            <span
-              style={{ ...badgeStyle, ...badgeColors }}
-              aria-label={t('card.statusLabel', { status: getCategoryDisplayLabel() })}
-            >
-              {tournament.status === 'draft' ? t('status.draft') : getCategoryDisplayLabel()}
-            </span>
+        {/* Zeile 1: Name in voller Breite */}
+        <h3 style={titleStyle} title={tournament.title}>{tournament.title}</h3>
+
+        {/* Zeile 2: Altersklasse · Zeit und Zustandswort; Zeile 3: Ort in der Breite neben dem Menü, das beide Zeilen rechts begleitet (der Ort wird nie gekürzt) */}
+        <div style={gridStyle}>
+          <div style={{ ...lineStyle, gridColumn: 1, gridRow: 1 }}>
+            {(ageClass !== '' || timeText !== '') && (
+              <span style={whenStyle}>
+                {ageClass !== '' && <span data-testid="card-age-class">{ageClass}</span>}
+                {ageClass !== '' && timeText !== '' && ' · '}
+                {timeText !== '' && <span data-testid="card-time">{timeText}</span>}
+              </span>
+            )}
+            {tournament.isExternal && tournament.externalSource && (
+              <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
+                {tournament.externalSource}
+              </span>
+            )}
+            {hasVisibleStateMark(cardState) && (
+              <StateMark dense tone={STATE_MARK[cardState].tone} symbol={STATE_MARK[cardState].symbol} data-testid="card-state">
+                {t(STATE_WORD_KEY[cardState])}
+              </StateMark>
+            )}
+          </div>
+          {(location !== '' || showRole) && (
+            <div style={placeRowStyle}>
+              {location !== '' && (
+                <div style={locationStyle} data-testid="card-location">
+                  {location}
+                </div>
+              )}
+              {showRole && (
+                <div style={roleSlotStyle}>
+                  <TextTag testId={`tournament-role-${tournament.id}`}>{t(`card.role.${myRole}`)}</TextTag>
+                </div>
+              )}
+            </div>
           )}
           {/* Action Menu - Only show if actions available */}
           {hasActions && (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div style={menuSlotStyle} onClick={(e) => e.stopPropagation()}>
               <TournamentActionMenu
                 tournament={tournament}
                 category={category}
@@ -220,82 +272,11 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 onShare={onShare}
                 onDelete={deleteHandler}
                 testId={`tournament-${tournament.id}-actions`}
+                onMenuOpenChange={setMenuOpen}
               />
             </div>
           )}
         </div>
-
-        <div style={headerStyle}>
-          <h3 style={titleStyle}>{tournament.title}</h3>
-          {myRole !== undefined && myRole !== 'owner' && (
-            <div style={{ marginTop: cssVars.spacing.sm }}>
-              <TextTag testId={`tournament-role-${tournament.id}`}>
-                {t(`card.role.${myRole}`)}
-              </TextTag>
-            </div>
-          )}
-        </div>
-
-        <dl style={infoGridStyle}>
-          <div style={infoItemStyle}>
-            <dt style={labelStyle}>{t('card.labels.dateTime')}</dt>
-            <dd style={{ ...valueStyle, margin: 0 }}>{formatTournamentDate(tournament)}</dd>
-          </div>
-
-          <div style={infoItemStyle}>
-            <dt style={labelStyle}>{t('card.labels.location')}</dt>
-            <dd style={{ ...valueStyle, margin: 0 }}>{getLocationName(tournament)}</dd>
-          </div>
-
-          {ageClassText(tournament.ageClass) !== '' && (
-            <div style={infoItemStyle} data-testid="tournament-card-age-class">
-              <dt style={labelStyle}>{t('card.labels.ageClass')}</dt>
-              <dd style={{ ...valueStyle, margin: 0 }}>{ageClassText(tournament.ageClass)}</dd>
-            </div>
-          )}
-
-          <div style={infoItemStyle}>
-            <dt style={labelStyle}>{t('card.labels.mode')}</dt>
-            <dd style={{ ...valueStyle, margin: 0 }}>{getGroupSystemLabel(tournament.groupSystem)}</dd>
-          </div>
-
-          {tournament.organizer && (
-            <div style={infoItemStyle}>
-              <dt style={labelStyle}>{t('card.labels.organizer')}</dt>
-              <dd style={{ ...valueStyle, margin: 0 }}>{tournament.organizer}</dd>
-            </div>
-          )}
-
-          {tournament.placementLogic.length > 0 && (
-            <div style={infoItemStyle}>
-              <dt style={labelStyle}>{t('card.labels.placement')}</dt>
-              <dd style={{
-                ...valueStyle,
-                margin: 0,
-                fontSize: cssVars.fontSizes.sm,
-                color: cssVars.colors.textSecondary,
-              }}>
-                {formatPlacementLogic(tournament.placementLogic)}
-              </dd>
-            </div>
-          )}
-
-          {tournament.status === 'draft' && (
-            <div
-              style={{
-                marginTop: cssVars.spacing.sm,
-                padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-                background: cssVars.colors.statusDraftBg,
-                borderRadius: cssVars.borderRadius.sm,
-                fontSize: cssVars.fontSizes.sm,
-                color: cssVars.colors.textSecondary,
-              }}
-              role="status"
-            >
-              {t('card.draftNotice')}
-            </div>
-          )}
-        </dl>
         <LateFinishNotice tournament={tournament} mayFinish={myRole !== undefined && canWithListedRole(myRole, 'manageLifecycle')} />
       </article>
     </Card>

@@ -33,6 +33,7 @@ import {
 import { AppFooter } from './components/layout/AppFooter';
 import { useRahmenWurzelStil } from './components/live-cockpit/frame/cockpitFrame';
 import { captureFeatureError } from './lib/sentry';
+import { useDashboardActions } from './hooks/useDashboardActions';
 import { AppChrome, SwUpdateNoticeSlot } from './components/AppChrome';
 import { lazyWithRetry } from './lib/lazyWithRetry';
 import { isTournamentClosed } from './core/services/lifecycle';
@@ -216,6 +217,7 @@ function AppContent() {
     softDeleteTournament,
     restoreTournament,
     permanentDeleteTournament,
+    emptyTrash,
   } = useTournaments();
   const copyTournament = useCopyTournament(saveTournament);
   // @W5-028: Name der Kopie vor dem Speichern bestätigen
@@ -293,6 +295,8 @@ function AppContent() {
       }
     }
   }, [permanentDeleteDialog, permanentDeleteTournament, showError, t]);
+  // @LZ-094 (Papierkorb leeren) und @W1-041 (Import): Aktionen der Startseite, siehe useDashboardActions
+  const dashboardActions = useDashboardActions({ saveTournament, emptyTrash });
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const wizardTournament = selectedTournament ?? (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined);
@@ -413,35 +417,6 @@ function AppContent() {
   // Legacy delete handler (for backwards compatibility)
   const handleDeleteTournament = async (id: string, title: string) => {
     await handleSoftDelete(id, title);
-  };
-
-  const handleImportTournament = async (tournament: Tournament) => {
-    try {
-      const hasMatches = tournament.matches.length > 0;
-
-      if (hasMatches) {
-        // Complete import → Set status to 'published' (ready to use)
-        const completeTournament: Tournament = {
-          ...tournament,
-          status: 'published', // Complete imports are ready to use
-        };
-        await saveTournament(completeTournament);
-        // Dashboard will auto-refresh via useTournaments hook
-      } else {
-        // Partial import → Open wizard at Step 2 to generate schedule
-        const tournamentWithStep = {
-          ...tournament,
-          lastVisitedStep: 2, // Go to Mode/System step
-        };
-        await saveTournament(tournamentWithStep);
-        // Navigate to wizard with step 2 via URL
-        void navigate(`/tournament/${tournament.id}/edit?step=2`);
-      }
-    } catch (error) {
-      console.error('[App] Failed to import tournament:', error);
-      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'import'); }
-      showError(t('errors.importTournament'));
-    }
   };
 
   // Handler for copying/duplicating a tournament
@@ -567,10 +542,12 @@ function AppContent() {
             onCreateNew={() => void navigate('/tournament/new')}
             onTournamentClick={handleTournamentClick}
             onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
-            onImportTournament={(tournament) => void handleImportTournament(tournament)}
+            onImportTournament={dashboardActions.importTournament}
+            onContinueImport={dashboardActions.continueImport}
             onSoftDelete={(id, title) => void handleSoftDelete(id, title)}
             onRestore={(id, title) => void handleRestore(id, title)}
             onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
+            onEmptyTrash={() => void dashboardActions.emptyTrashWithReport()}
             onCopyTournament={setCopySource}
             onNavigateToLogin={() => void navigate('/login')}
             onNavigateToRegister={() => void navigate('/register')}

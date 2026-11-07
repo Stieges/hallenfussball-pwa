@@ -74,6 +74,7 @@ const INVENTORY: Record<string, Entry> = {
   'src/screens/TournamentCreationScreen.tsx': { gate: 'src/App.tsx', why: 'Wizard (alle 5 Schritte) öffnet abgeschlossen nicht, App.tsx zeigt den Hinweis' },
   // --- bewusst frei ---
   'src/hooks/useCopyTournament.ts': { free: 'Kopie/Probe-Kopie legt ein NEUES Turnier an (@LZ-037: Ablage bleibt)' },
+  'src/hooks/useDashboardActions.ts': { free: 'Import legt ein NEUES Turnier an (neue Kennung, @W1-041); Papierkorb leeren löscht nur Turniere im Papierkorb' },
   'src/services/api.ts': { free: 'alte HTTP-Schnittstelle ohne Aufrufer in der Oberfläche' },
 };
 

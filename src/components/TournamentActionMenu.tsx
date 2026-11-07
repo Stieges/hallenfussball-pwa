@@ -36,6 +36,8 @@ interface TournamentActionMenuProps {
   onPermanentDelete?: () => void;
   /** Test ID for E2E tests */
   testId?: string;
+  /** Desktop-Menü geöffnet/geschlossen (die Karte hebt sich dann über ihre Nachbarn, @OB-080) */
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
 export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
@@ -48,6 +50,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
   onRestore,
   onPermanentDelete,
   testId,
+  onMenuOpenChange,
 }) => {
   const { t } = useTranslation('dashboard');
   const isMobile = useIsMobile();
@@ -192,6 +195,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
     <ActionMenu
       items={actionItems}
       testId={testId}
+      onOpenChange={onMenuOpenChange}
     />
   );
 };

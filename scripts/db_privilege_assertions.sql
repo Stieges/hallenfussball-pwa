@@ -1630,4 +1630,69 @@ SELECT 'hallenton-storage-no-open-policy',
                       AND ((pp.cmd IN ('UPDATE', 'ALL')
                             AND (coalesce(pp.qual, '') || coalesce(pp.with_check, '')) LIKE '%hallenton-sounds%')
                            OR (coalesce(pp.qual, '') || coalesce(pp.with_check, '')) NOT LIKE '%bucket_id%'))
+-- ---------------------------------------------------------------------------------------------------------------
+-- A1b Monitore der Veranstaltung (20261122_001_gathering_screens.sql, @VA-034 bis @VA-041, @VA-043): Bildschirme nur ueber
+-- Server-Funktionen, Schluessel nie fuer Clients lesbar, Abfrage nur per Schluessel. Vor dem Live-Einspielen: "f" (vom
+-- Drift-Check bis dahin ausgelassen).
+-- ---------------------------------------------------------------------------------------------------------------
+-- (1) Tabelle: RLS an, keine Policy, anon/authenticated nichts, ci_schema_reader SELECT.
+UNION ALL
+SELECT 'gathering-screens-table-no-client-rights',
+       coalesce((SELECT c.relrowsecurity FROM pg_class c WHERE c.oid = to_regclass('public.gathering_screens')), false)
+       AND NOT EXISTS (SELECT 1 FROM pg_policies p WHERE p.schemaname = 'public' AND p.tablename = 'gathering_screens')
+       AND coalesce((SELECT bool_and(NOT has_table_privilege(r, 'public.gathering_screens', p))
+                       FROM unnest(ARRAY['anon', 'authenticated']) AS r,
+                            unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'MAINTAIN']) AS p
+                      WHERE to_regclass('public.gathering_screens') IS NOT NULL), false)
+       AND coalesce(has_table_privilege('ci_schema_reader', 'public.gathering_screens', 'SELECT'), false)
+-- (2) Funktionen: SECURITY DEFINER mit festem search_path; Verwaltung/Umschalten/Status nur authenticated; Bildschirm-Abfrage
+--     und Endstand anon + authenticated; interne Hilfen ohne EXECUTE fuer Client-Rollen; nie PUBLIC.
+UNION ALL
+SELECT 'gathering-screens-rpcs',
+       coalesce((SELECT count(*) = 9 AND bool_and(p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                                                  AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                                  AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                                  AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
+                   FROM pg_proc p
+                  WHERE p.oid IN (to_regprocedure('public.create_gathering_screen(uuid,text,jsonb,jsonb)'),
+                                  to_regprocedure('public.update_gathering_screen(uuid,text,jsonb,jsonb)'),
+                                  to_regprocedure('public.rotate_gathering_screen_key(uuid)'),
+                                  to_regprocedure('public.delete_gathering_screen(uuid)'),
+                                  to_regprocedure('public.adopt_tournament_monitor(uuid,uuid,text)'),
+                                  to_regprocedure('public.set_gathering_screen_location(uuid,text)'),
+                                  to_regprocedure('public.set_gathering_on_screen(uuid,boolean)'),
+                                  to_regprocedure('public.gathering_screen_status(uuid)'),
+                                  to_regprocedure('public.gathering_screens_overview(uuid)'))), false)
+       AND coalesce((SELECT count(*) = 2 AND bool_and(p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp']
+                                                      AND has_function_privilege('anon', p.oid, 'EXECUTE')
+                                                      AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                                      AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
+                       FROM pg_proc p
+                      WHERE p.oid IN (to_regprocedure('public.gathering_screen_display(text,bigint)'),
+                                      to_regprocedure('public.gathering_screen_final_standings(text)'))), false)
+       AND coalesce((SELECT count(*) = 11 AND bool_and(NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                                                       AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+                                                       AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
+                       FROM pg_proc p
+                      WHERE p.oid IN (to_regprocedure('public.gathering_screen_reason(uuid,uuid)'),
+                                      to_regprocedure('public.gathering_tournament_list(uuid)'),
+                                      to_regprocedure('public.tournaments_clear_on_screen()'),
+                                      to_regprocedure('public.gathering_clear_ineligible_on_screen(uuid)'),
+                                      to_regprocedure('public.gathering_lock_for_screens(uuid)'),
+                                      to_regprocedure('public.gathering_on_screen_for_caller(uuid)'),
+                                      to_regprocedure('public.gathering_screen_tournament_or_fail(uuid)'),
+                                      to_regprocedure('public.gathering_public_on_screen(uuid)'),
+                                      to_regprocedure('public.gathering_location_key(text)'),
+                                      to_regprocedure('public.gathering_screen_config_check(jsonb,jsonb)'),
+                                      to_regprocedure('public.gathering_screen_new_key()'))), false)
+-- (3) Waechter: das Turnier in der Halle kommt nie still zurueck (Trigger aktiv); Schluessel-Format und Zulaessigkeit am Text.
+UNION ALL
+SELECT 'gathering-screens-guards',
+       coalesce((SELECT count(*) = 3 FROM pg_trigger t
+                  WHERE NOT t.tgisinternal AND t.tgenabled = 'O'
+                    AND t.tgname IN ('tournaments_clear_on_screen', 'tournaments_clear_on_screen_delete',
+                                     'gathering_screens_updated_at')), false)
+       AND coalesce((SELECT position('p_key !~ ''^[0-9a-f]{32}$''' IN p.prosrc) > 0
+                            AND position('public.gathering_screen_reason(v_g.id, v_g.on_screen_tournament_id) IS NULL' IN p.prosrc) > 0
+                       FROM pg_proc p WHERE p.oid = to_regprocedure('public.gathering_screen_display(text,bigint)')), false)
 ;

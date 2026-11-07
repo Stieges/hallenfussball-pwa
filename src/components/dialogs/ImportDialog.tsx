@@ -16,7 +16,10 @@ import { SelectStep, WarningsStep, PreviewStep, SuccessStep } from './ImportStep
 export interface ImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportComplete: (tournament: Tournament) => void;
+  /** Speichert das Turnier (@W1-041: erst danach meldet der Dialog „Import erfolgreich“). Wirft, wenn das Speichern scheitert. */
+  onImport: (tournament: Tournament) => Promise<void>;
+  /** Weiter zum Spielplan, nur nach dem Import einer Datei ohne Spielplan; das Turnier ist dann schon gespeichert. */
+  onContinue: (tournament: Tournament) => void;
 }
 
 type ImportStep = 'select' | 'warnings' | 'preview' | 'success';
@@ -24,7 +27,8 @@ type ImportStep = 'select' | 'warnings' | 'preview' | 'success';
 export const ImportDialog = ({
   isOpen,
   onClose,
-  onImportComplete,
+  onImport,
+  onContinue,
 }: ImportDialogProps) => {
   const { t } = useTranslation('dashboard');
   const [step, setStep] = useState<ImportStep>('select');
@@ -32,6 +36,8 @@ export const ImportDialog = ({
   const [error, setError] = useState<string>('');
   const [validationResult, setValidationResult] = useState<ImportValidationResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetState = () => {
@@ -40,11 +46,20 @@ export const ImportDialog = ({
     setError('');
     setValidationResult(null);
     setSelectedFile(null);
+    setIsSaving(false);
+    setSaveError('');
   };
 
   const handleClose = () => {
     resetState();
     onClose();
+  };
+
+  // Während des Speicherns schließt weder X noch Esc noch ein Tipp daneben: sonst bliebe offen, ob das Turnier gespeichert ist
+  const handleCloseRequest = () => {
+    if (!isSaving) {
+      handleClose();
+    }
   };
 
   const processFile = async (file: File) => {
@@ -107,17 +122,31 @@ export const ImportDialog = ({
     }
   };
 
-  const handleImport = () => {
-    if (validationResult?.tournament) {
+  const handleImport = async () => {
+    const tournament = validationResult?.tournament;
+    if (!tournament || isSaving) {
+      return;
+    }
+    setIsSaving(true);
+    setSaveError('');
+    try {
+      await onImport(tournament);
       setStep('success');
+    } catch {
+      setSaveError(t('import.errors.saveFailed'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  const hasSchedule = (validationResult?.tournament?.matches.length ?? 0) > 0;
+
   const handleComplete = () => {
-    if (validationResult?.tournament) {
-      onImportComplete(validationResult.tournament);
-      handleClose();
+    const tournament = validationResult?.tournament;
+    if (tournament && !hasSchedule) {
+      onContinue(tournament);
     }
+    handleClose();
   };
 
   const containerStyle: CSSProperties = {
@@ -137,7 +166,7 @@ export const ImportDialog = ({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={handleClose} title={getStepTitle()} maxWidth="550px">
+    <Dialog isOpen={isOpen} onClose={handleCloseRequest} title={getStepTitle()} maxWidth="550px">
       <div style={containerStyle}>
         {step === 'select' && (
           <SelectStep
@@ -165,13 +194,16 @@ export const ImportDialog = ({
           <PreviewStep
             tournament={validationResult.tournament}
             onBack={() => validationResult.warnings.length > 0 ? setStep('warnings') : setStep('select')}
-            onImport={handleImport}
+            onImport={() => void handleImport()}
+            isSaving={isSaving}
+            error={saveError}
           />
         )}
 
         {step === 'success' && validationResult?.tournament && (
           <SuccessStep
             tournament={validationResult.tournament}
+            hasSchedule={hasSchedule}
             onComplete={handleComplete}
           />
         )}

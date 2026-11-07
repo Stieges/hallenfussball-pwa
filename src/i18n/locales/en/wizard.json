@@ -646,19 +646,19 @@
     "reasonScheduleIncomplete_other": "The schedule cannot be completed as it is: {{count}} matches do not fit."
   },
   "publish": {
-    "button": "Finalise",
+    "button": "Finalise tournament",
     "loading": "Finalising …",
-    "success": "Tournament successfully finalised.",
-    "explanationPrivate": "The schedule is locked in. Afterwards the tournament is not public; only tournament directors, helpers and monitors can see it.",
-    "explanationPublic": "The schedule is locked in. Afterwards anyone with the link can watch.",
-    "explanationLocal": "The schedule is locked in. The tournament stays only on this device.",
+    "success": "Tournament finalised.",
+    "explanationPrivate": "The schedule is then fixed. Afterwards the tournament is not public; only tournament directors, helpers and monitors can see it.",
+    "explanationPublic": "The schedule is then fixed. Afterwards anyone with the link can watch.",
+    "explanationLocal": "The schedule is then fixed. The tournament stays only on this device.",
     "explanationChangeable": "You can still change team names and results afterwards, the structure only until the first kick-off.",
-    "explanationOffline": "The schedule is locked in. Without a connection the tournament stays on this device for now.",
-    "shareFailed": "The tournament is set, but the spectator link is not live yet. Share it again in the Admin Center under Visibility."
+    "explanationOffline": "The schedule is then fixed. Without a connection the tournament stays on this device for now.",
+    "shareFailed": "The tournament is finalised, but the spectator link is not live yet. Share it again in the Admin Center under Visibility."
   },
   "preview": {
     "hintLabel": "Note:",
-    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it does not appear in the overview. You can save the schedule as a PDF now or go back to editing.",
+    "hintBody": "This is a preview of your tournament. As long as the tournament is not finalised, it is listed as a draft in the overview. You can save the schedule as a PDF now or go back to editing.",
     "edit": "Edit"
   },
   "schedule": {
