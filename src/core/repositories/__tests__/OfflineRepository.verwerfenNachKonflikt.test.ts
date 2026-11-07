@@ -365,6 +365,31 @@ describe('Verwerfen einer abgelehnten Änderung nach einem Konflikt', () => {
       expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false);
     });
 
+    it('@FU-109 der Abruf nach dem Verwerfen hängt über die Rückkehr der Verbindung hinaus und endet mit Zeitüberschreitung: spätestens 10 s nach der Rückkehr zeigt das Gerät den Stand des Servers (Wackler verwerfen-konflikt:177)', async () => {
+      // CI-Diagnose (Lauf 42416872908, DIAG-Protokoll): beim Wechsel ohne Netz beginnt ein Abruf, der bis nach der Rückkehr
+      // der Verbindung offen bleibt; das Signal „online“ trifft auf „läuft schon“ und wird übergangen. Endet dieser Abruf
+      // nicht mit Erfolg, sondern nach CLOUD_READ_TIMEOUT_MS, stieß bisher nichts die Übernahme erneut an.
+      vi.stubGlobal('window', new EventTarget()); // Zuhörer „online“ der Warteschlange (GenericMutationQueue)
+      const { cloud, olli, savesVorher } = await ohneKonfliktImDeadLetter();
+      net.online = false; // Hallen-WLAN weg
+      cloud.fake.getWithMatchRevisions.mockImplementationOnce(() => new Promise(() => undefined)); // hängt
+
+      verwerfen(olli);
+      await flush();
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(true);
+      await vi.advanceTimersByTimeAsync(3000);
+
+      net.online = true; // Server wieder erreichbar
+      window.dispatchEvent(new Event('online'));
+      await flush();
+      await vi.advanceTimersByTimeAsync(10_000);
+      await flush();
+
+      expect(stored(), '@FU-109: Stand des Servers spätestens 10 s nach der Rückkehr').toMatchObject({ title: 'Live-Cup', version: 7 });
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false); // Hinweis „Verworfen – …“ weg
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
+    });
+
     it('@FU-107 Verwerfen löscht kein Turnier, das noch nie beim Server war', async () => {
       session.userId = OLLI;
       const neu = { ...liveCup(0, { title: 'Hallen-Cup Ost' }), ownerId: OLLI };

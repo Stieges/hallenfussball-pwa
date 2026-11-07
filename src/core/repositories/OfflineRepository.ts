@@ -150,6 +150,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private readonly queueGuard: CloudQueueGuard;
     /** @FU-106: laufende Übernahmen nach „Verwerfen“ eines Konflikts (eine je Turnier) und ihre Zuhörer (Anzeige nachladen). */
     private readonly discardAdoptions = new Set<string>();
+    /** @FU-109: während eines laufenden Versuchs angestoßen (z. B. „online“) – nach dessen Ende erneut lesen. */
+    private readonly discardAdoptionsAgain = new Set<string>();
     private readonly cloudCopyListeners = new Map<string, Set<() => void>>();
 
     constructor(
@@ -168,11 +170,16 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     /** @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): gemerkte Turniere frisch lesen; die Übernahme erzwingt `readAndAdopt`. */
     private adoptAfterDiscard(): void {
         for (const id of this._mutationQueue.scopesNeedingCloudCopy()) {
-            if (this.discardAdoptions.has(id)) { continue; }
+            // @FU-109 (Wackler verwerfen-konflikt:177): ein Anstoß („online“) während eines laufenden Versuchs geht nicht
+            // verloren – der laufende kann noch ohne Netz begonnen haben und scheitern; danach wird neu gelesen.
+            if (this.discardAdoptions.has(id)) { this.discardAdoptionsAgain.add(id); continue; }
             this.discardAdoptions.add(id);
             void this.get(id, { fresh: true })
                 .catch((error: unknown) => { if (error instanceof Error) { captureFeatureError(error, 'repository', 'adoptAfterDiscard', { tournamentId: id }); } })
-                .finally(() => this.discardAdoptions.delete(id));
+                .finally(() => {
+                    this.discardAdoptions.delete(id);
+                    if (this.discardAdoptionsAgain.delete(id)) { this.adoptAfterDiscard(); }
+                });
         }
     }
 
