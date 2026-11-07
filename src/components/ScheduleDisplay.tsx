@@ -173,7 +173,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   }), [tournamentTeams, schedule.teams, schedule.tournament.id, schedule.tournament.groups, schedule.allMatches, view, locale]);
   // Live-Daten mit Ereignissen: EIN Abonnement für Gruppen- und Finalrunde und das Protokoll der Aktionsauswahl (@FU-080)
   const { liveMatches } = useLiveMatches(schedule.tournament.id);
-  const clockOf = useSpectatorClocks(view, useElapsedSeconds(view, currentMatches, elapsedSeconds));
+  // Mit den Spielen (Ereignisse, live_state) trägt die Uhr der Karte laufende Zeitstrafen beim Team (@ZM-184)
+  const clockOf = useSpectatorClocks(view, useElapsedSeconds(view, currentMatches, elapsedSeconds), currentMatches);
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
   const filteredGroupPhaseMatches = useMemo(() => {

@@ -180,6 +180,9 @@ export const E2E_MONSOFORT_EINGANG_MONITOR_ID = e2eUuid('monitor:engine-cup:MONS
 export const E2E_MONSCHLECHT_MONITOR_ID = e2eUuid('monitor:engine-cup:MONSCHLECHT:feld-1');
 /** R5 PR 2 (Fall „Uhr“, @ZM-176): Feld-Monitor mit Live-Folie Feld 1 für den Uhr-Vergleich mit dem Cockpit. */
 export const E2E_MONUHR_MONITOR_ID = e2eUuid('monitor:engine-cup:MONUHR:feld-1');
+/** @ZM-182/@ZM-184: Feld-Monitor (Live-Folie Feld 1) und fester Share-Code der Zuschauer-Seite für die Zeitstrafe. */
+export const E2E_MONZEITSTRAFE_MONITOR_ID = e2eUuid('monitor:engine-cup:MONZEITSTRAFE:feld-1');
+export const E2E_MONZEITSTRAFE_SHARE_CODE = 'E2EZST';
 
 /**
  * Fixrunde 2 (N3, Ruling AA; vorher Fixrunde 1/I2/Ruling V, damals noch am Entwurf-Cup):

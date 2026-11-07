@@ -16,3 +16,5 @@ export type { ShortLabelProps } from './ShortLabel';
 export { SHORT_TERMS } from './shortTerms';
 export type { ShortTerm, TableHeadTerm } from './shortTerms';
 export { Versus } from './Versus';
+export { StrafKreis } from './StrafKreis';
+export type { StrafKreisProps } from './StrafKreis';

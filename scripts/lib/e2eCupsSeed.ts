@@ -26,6 +26,8 @@ import {
   E2E_MONSOFORT_EINGANG_MONITOR_ID,
   E2E_MONSCHLECHT_MONITOR_ID,
   E2E_MONUHR_MONITOR_ID,
+  E2E_MONZEITSTRAFE_MONITOR_ID,
+  E2E_MONZEITSTRAFE_SHARE_CODE,
   E2E_ZWEITES_TURNIER_ID,
   E2E_ZWEITES_TURNIER_TITLE,
   ENGINE_CUP_SEED_NOW_START_OFFSET_MS,
@@ -207,7 +209,7 @@ async function seedOneEngineCup(
       },
     ];
   }
-  if (cup.slug === 'MONSOFORT' || cup.slug === 'MONSCHLECHT' || cup.slug === 'MONUHR') {
+  if (cup.slug === 'MONSOFORT' || cup.slug === 'MONSCHLECHT' || cup.slug === 'MONUHR' || cup.slug === 'MONZEITSTRAFE') {
     // R5 PR 1/2 (monitor-sofort.cloud.spec.ts): Feld-Monitor mit Live-Folie Feld 1, bei MONSOFORT dazu „Eingang“.
     const nowIso = new Date().toISOString();
     const monitor = (id: string, name: string, slide: MonitorSlide) => ({
@@ -224,9 +226,25 @@ async function seedOneEngineCup(
       ]
       : cup.slug === 'MONUHR'
         ? [monitor(E2E_MONUHR_MONITOR_ID, 'Feld 1', feld1(E2E_MONUHR_MONITOR_ID))]
-        : [monitor(E2E_MONSCHLECHT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSCHLECHT_MONITOR_ID))];
+        : cup.slug === 'MONZEITSTRAFE'
+          ? [monitor(E2E_MONZEITSTRAFE_MONITOR_ID, 'Feld 1', feld1(E2E_MONZEITSTRAFE_MONITOR_ID))]
+          : [monitor(E2E_MONSCHLECHT_MONITOR_ID, 'Feld 1', feld1(E2E_MONSCHLECHT_MONITOR_ID))];
+  }
+  if (cup.slug === 'MONZEITSTRAFE') {
+    tournament.publishedAt = new Date().toISOString(); // Backstop von make_tournament_public()
   }
   await ownerRepo.save(tournament);
+  if (cup.slug === 'MONZEITSTRAFE') {
+    // @ZM-184: Zuschauer-Seite über einen festen Share-Code (Muster Turniertag-Cup)
+    const { error: publicError } = await deps.ownerClient.rpc('make_tournament_public', { tournament_id: tournament.id });
+    if (publicError) {
+      throw new Error(`make_tournament_public(${cup.slug}): ${publicError.message}`);
+    }
+    const { error: codeError } = await deps.admin.from('tournaments').update({ share_code: E2E_MONZEITSTRAFE_SHARE_CODE }).eq('id', tournament.id);
+    if (codeError) {
+      throw new Error(`Fester Share-Code ${cup.slug}: ${codeError.message}`);
+    }
+  }
   if (cup.helper) {
     if (!helperId) {
       throw new Error(`Engine-Cup ${cup.slug} braucht einen Helfer, aber keiner wurde übergeben.`);

@@ -10,6 +10,7 @@ import { cssVars } from '../../design-tokens';
 import type { ScheduledMatch } from '../../core/generators';
 import { MatchStatusBadge } from '../ui/molecules/MatchStatusBadge';
 import { MatchClock } from '../ui/molecules/MatchClock';
+import { ZeitstrafeHinweis } from '../ui/molecules/ZeitstrafeHinweis';
 import { ScoreDraftInput } from '../ui/atoms';
 import { entryScore } from './runningEntryScore';
 import { ScoreChangedHint, ScoreDraftHint, ScoreSaveButton, useScoreDraft, type ScoreCommitResult } from '../ui/molecules';
@@ -116,7 +117,10 @@ export const FinalStageMobileCard: React.FC<FinalStageMobileCardProps> = (props)
           fontStyle: pending ? 'italic' : 'normal',
         }}
       >
-        <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`final-name-${match.id}-${rowKey}`}>{name}</span>
+        {/* @ZM-184: laufende Zeitstrafe beim Team */}
+        <ZeitstrafeHinweis liste={clock?.zeitstrafen?.[rowKey]} testId={`match-time-penalty-${match.id}-${rowKey}`}>
+          <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`final-name-${match.id}-${rowKey}`}>{name}</span>
+        </ZeitstrafeHinweis>
         {editable ? (
           <ScoreDraftInput
             {...draft.fieldProps(side)}

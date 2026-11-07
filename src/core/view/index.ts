@@ -18,6 +18,7 @@ export {
 } from './badge';
 export { monitorUhrOf, monitorUhrMitSperre, type MonitorUhrModell, type MonitorUhrEingabe, type MonitorUhrText } from './monitorUhr';
 export { zeitBalkenLaufend, zeitBalkenPause, BALKEN_TON_SCHLUSSPHASE, type ZeitBalkenModell, type ZeitBalkenTon } from './zeitBalken';
+export { laufendeZeitstrafen, zeitstrafeRestText, hatZeitstrafen, KEINE_ZEITSTRAFEN, type OeffentlicheZeitstrafe, type OeffentlicheZeitstrafen, type ZeitstrafenEingabe } from './zeitstrafen';
 export { spectatorClockOf, spectatorClockForMatch, formatRemaining, type SpectatorClock, type SpectatorClockInput, type SpectatorSectionKey } from './spectatorClock';
 export { viewStatus, viewStatusText, isLive, isUpcoming, isMatchInProgress } from './status';
 export { sideView } from './sides';

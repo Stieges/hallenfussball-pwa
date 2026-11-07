@@ -609,6 +609,8 @@
     "groups": "Groups"
   },
   "matchCard": {
+    "timePenalty": "$t(sport:events.timePenalty) #{{number}} · {{rest}}",
+    "timePenaltyNoNumber": "$t(sport:events.timePenalty) · {{rest}}",
     "cannotMove": "Match cannot be moved",
     "dragToMove": "Drag to move",
     "changeReferee": "Change referee",

@@ -39,7 +39,9 @@
     "penaltyNumbers": "{{home}} : {{away}}",
     "winnerAria": "Trophy",
     "afterOvertime": "after extra time",
-    "winnerLine": "<name>{{name}}</name> wins"
+    "winnerLine": "<name>{{name}}</name> wins",
+    "penaltyAria": "$t(sport:events.timePenalty) shirt number {{number}}, {{rest}} left",
+    "penaltyAriaNoNumber": "$t(sport:events.timePenalty) without shirt number, {{rest}} left"
   },
   "timer": {
     "pause": "Pause",

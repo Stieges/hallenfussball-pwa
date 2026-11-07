@@ -64,6 +64,8 @@ export function LiveSlide({ slide, tournament, view, theme, style, pinnedMatchId
             match: shown, liveState: runningMatch.liveState, timerStartTime: runningMatch.timerStartTime,
             timerElapsedSeconds: runningMatch.timerElapsedSeconds, steht: shown.status === 'paused',
           }}
+          // @ZM-182/@ZM-192: laufende Zeitstrafen aus den öffentlichen Ereignissen (ohne „Ereignisse je Spiel“ liefert der Server keine)
+          zeitstrafenQuelle={{ events: runningMatch.events, liveState: runningMatch.liveState }}
         />
       </div>
     );

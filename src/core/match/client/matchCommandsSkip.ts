@@ -6,7 +6,7 @@
  * Stapel im Ausgang.
  */
 import { applyEvent } from '../applyEvent';
-import type { EngineEvent, ErrorCode, MatchContext } from '../types';
+import type { EngineEvent, ErrorCode, MatchContext, MatchState } from '../types';
 import { ERROR_CODES, type Actor } from '../types';
 import type { MatchCommandsStore } from './MatchCommands';
 import type { MatchEngineView } from './MatchEngine';
@@ -25,6 +25,19 @@ export const UNSKIP_SPEC: CommandSpec = { type: 'UNSKIP', teamId: null, payload:
 /** @FU-080/@FU-093: Ergebnis direkt eintragen. */
 export function resultEntrySpec(scores: TeamScores): CommandSpec {
   return { type: 'RESULT_ENTRY', teamId: null, payload: { scores: { ...scores } } };
+}
+
+/**
+ * Zeitstrafe ohne Dauer: die Dauer der Spielregel beim Anpfiff (`rules.penaltySeconds`) kommt in den Eintrag (@ZM-182,
+ * @ZM-184). Monitor und Zuschauer-Seite kennen die Regel nicht und rechnen die Restzeit aus dem öffentlichen Eintrag; die
+ * Engine rechnet mit derselben Zahl (`payload.durationSeconds ?? rules.penaltySeconds`).
+ */
+function withPenaltyDuration(spec: CommandSpec, state: MatchState): CommandSpec['payload'] {
+  const seconds = state.rules?.penaltySeconds;
+  if (spec.type !== 'TIME_PENALTY' || spec.payload.durationSeconds !== undefined || seconds === undefined || seconds <= 0) {
+    return spec.payload;
+  }
+  return { ...spec.payload, durationSeconds: seconds };
 }
 
 export type BuiltEvents =
@@ -59,7 +72,7 @@ export function buildEvents(
       clockMs,
       teamId: spec.teamId,
       targetId: spec.targetId ?? null,
-      payload: spec.payload,
+      payload: withPenaltyDuration(spec, current.result.state),
     };
     const result = applyEvent(current.result.state, event, ctx);
     if (result.status === 'rejected') {
