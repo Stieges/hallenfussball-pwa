@@ -14,11 +14,12 @@
  */
 import { getDeviceId } from '../../core/device/deviceId';
 import { onOwnFieldsNoted, ownFieldsByTournament } from '../../core/fieldControl/ownFields';
-import { hallSoundStatus, hallSpeakerHeartbeat, hallTestToneAck } from '../../core/repositories/hallentonRpc';
+import { hallSoundStatus, hallSpeakerHeartbeat, hallTestToneAck, type HallStatusVoll } from '../../core/repositories/hallentonRpc';
+import { isTournamentClosed } from '../../core/services/lifecycle';
 import { supabase } from '../../lib/supabase';
 import type { Tournament } from '../../types/tournament';
 import type { MatchEngineContextValue } from '../match-engine/matchEngineContextInstance';
-import { geraetSpieler, geraetStand, istGeschlafen, setzeEinschaltung, type Einschaltung } from './lautsprecherGeraet';
+import { geraetSpieler, geraetStand, istGeschlafen, setzeEinschaltung, setzeLebenszeichenFehler, type Einschaltung } from './lautsprecherGeraet';
 import { erzeugeBrowserAusgangsSignale } from './runtime/ausgangsSignale';
 import { erzeugeFeldStand } from './runtime/feldStand';
 import type { PlanSpiel } from './runtime/feldStandSpiele';
@@ -31,6 +32,7 @@ import { browserKanalSpeicher, erzeugeLautsprecherKanal, KANAL_NAME, type Lautsp
 import { planAusTurnier } from './runtime/lokalerSpielplan';
 import { erzeugeBrowserTaktQuelle } from './runtime/taktQuelle';
 import { tonWahlAus } from './runtime/tonWahl';
+import { einzelnZugleich } from './runtime/tonWahlWechsel';
 import { echterZeitgeber } from './runtime/zeitgeber';
 
 /** Bucket der eigenen Töne (Migration 20261121_001_hallenton, öffentlich lesbar über den vollen Pfad). */
@@ -57,14 +59,28 @@ export function erzeugeBrowserKanal(): LautsprecherKanal {
 
 type LadeTurnier = (turnierId: string) => Promise<Tournament | null>;
 
-/** Tonwahl des Turniers: Abpfiff-Hupe aus der lokalen Turnierkopie, Halbzeit und eigene Töne aus `hall_sound_status`. */
-export async function leseTonWahl(turnierId: string, ladeTurnier: LadeTurnier): Promise<Record<TonArt, TonWahl>> {
+/** Zuletzt vom Server gelesene Tonwahl je Turnier (für „Anhören“ ohne Warten aufs Netz, K5). */
+const zuletztGelesen = new Map<string, HallStatusVoll['settings']>();
+
+/**
+ * Tonwahl des Turniers: Abpfiff-Hupe aus der lokalen Turnierkopie (`ladeTurnier` liest nur lokal, W2), Halbzeit und eigene
+ * Töne aus `hall_sound_status`. `server: false` nimmt die zuletzt gelesene Wahl, ohne aufs Netz zu warten.
+ */
+export async function leseTonWahl(turnierId: string, ladeTurnier: LadeTurnier, { server = true }: { server?: boolean } = {}): Promise<Record<TonArt, TonWahl>> {
   const [turnier, status] = await Promise.all([
     ladeTurnier(turnierId).catch(() => null),
-    hallSoundStatus(supabase, { p_tournament_id: turnierId, p_device_id: getDeviceId() }),
+    server ? hallSoundStatus(supabase, { p_tournament_id: turnierId, p_device_id: getDeviceId() }) : Promise.resolve(null),
   ]);
-  const settings = status.ok && status.sicht === 'voll' ? status.settings : null;
-  return tonWahlAus(turnier?.matchCockpitSettings?.soundId, settings, oeffentlicheUrl);
+  if (status?.ok && status.sicht === 'voll') {
+    zuletztGelesen.set(turnierId, status.settings);
+  }
+  return tonWahlAus(turnier?.matchCockpitSettings?.soundId, zuletztGelesen.get(turnierId) ?? null, oeffentlicheUrl);
+}
+
+/** K5: sofort mit der lokal bekannten Wahl, die Wahl vom Server im Hintergrund neu lesen. */
+export function leseTonWahlSofort(turnierId: string, ladeTurnier: LadeTurnier): Promise<Record<TonArt, TonWahl>> {
+  void leseTonWahl(turnierId, ladeTurnier).catch(() => undefined);
+  return leseTonWahl(turnierId, ladeTurnier, { server: false });
 }
 
 let steuerStand: SteuerStandMerker | null = null;
@@ -124,15 +140,14 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
       });
       neuLesen();
     },
-    leseTonWahl: () => leseTonWahl(turnierId, ladeTurnier),
+    leseTonWahl: () => leseTonWahlSofort(turnierId, ladeTurnier),
   });
-  function neuLesen(): void {
-    void leseTonWahl(turnierId, ladeTurnier).then((wahl) => {
-      if (!beendet) {
-        laufzeit.setzeTonWahl(wahl);
-      }
-    });
-  }
+  /** Nach jedem Lebenszeichen des tönenden Tabs; eine laufende Abfrage wird nicht verdoppelt (W2). */
+  const neuLesen = einzelnZugleich(() => leseTonWahl(turnierId, ladeTurnier).then((wahl) => {
+    if (!beendet) {
+      laufzeit.setzeTonWahl(wahl);
+    }
+  }));
   const lebenszeichen = erzeugeLebenszeichen({
     turnierId,
     felder,
@@ -151,6 +166,15 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
       setzeEinschaltung(bleiben.length > 0 ? { ...einschaltung, felder: bleiben } : null);
     },
     nachLebenszeichen: neuLesen,
+    turnierBeendet: async () => {
+      const turnier = await ladeTurnier(turnierId).catch(() => null);
+      return turnier !== null && isTournamentClosed(turnier);
+    },
+    beiFehler: (grund) => {
+      if (!beendet) {
+        setzeLebenszeichenFehler(grund);
+      }
+    },
   });
   return {
     laufzeit,

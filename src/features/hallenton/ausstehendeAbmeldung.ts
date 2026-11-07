@@ -1,6 +1,7 @@
 /**
- * Ausschalten ohne Netz (H3b-3, Restpunkt aus H3b-2b, @HT-038): `ausschalten()` stoppt den Lautsprecher lokal sofort. Scheitert
- * `hall_speaker_release` am Netz, merkt sich das Gerät die Abmeldung (`hallenton:abmelden`) und holt sie nach – beim Start der
+ * Ausschalten ohne Netz (H3b-3, Restpunkt aus H3b-2b, @HT-038): `ausschalten()` merkt sich die Abmeldung (`hallenton:abmelden`),
+ * stoppt den Lautsprecher lokal sofort und fragt erst dann den Server (Fixrunde 1, W3). Erst ein Erfolg oder ein Fehler außer
+ * dem Netz verwirft die gemerkte Abmeldung; sonst holt das Gerät sie nach – beim Start der
  * App, wenn das Netz zurückkommt (`online`) und alle 30 s, solange sie offen ist. Bis dahin sieht die Verwaltung
  * „meldet sich nicht“, danach „kein Hallen-Lautsprecher“.
  *
@@ -52,6 +53,13 @@ export function vergissAbmeldung(): void {
   }
 }
 
+/** Verwirft die offene Abmeldung nur, wenn sie noch genau `erwartet` ist (inzwischen nichts Neues gemerkt oder verworfen). */
+export function vergissAbmeldungWenn(erwartet: AusstehendeAbmeldung): void {
+  if (JSON.stringify(ausstehendeAbmeldung()) === JSON.stringify(erwartet)) {
+    vergissAbmeldung();
+  }
+}
+
 /** Holt eine offene Abmeldung nach; `true`, wenn danach keine mehr offen ist. */
 export async function abmeldungNachholen(client: Client): Promise<boolean> {
   const offen = ausstehendeAbmeldung();
@@ -67,9 +75,7 @@ export async function abmeldungNachholen(client: Client): Promise<boolean> {
     if (!ergebnis.ok && ergebnis.grund === 'netz') {
       return false;
     }
-    if (JSON.stringify(ausstehendeAbmeldung()) === JSON.stringify(offen)) {
-      vergissAbmeldung(); // nur, wenn inzwischen nichts Neues gemerkt oder verworfen wurde
-    }
+    vergissAbmeldungWenn(offen);
     return true;
   } finally {
     laeuft = false;

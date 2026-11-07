@@ -50,6 +50,19 @@ describe('@HT-017 „Testton in der Halle“ am Lautsprecher mit Quittung', () =
     expect(a.tab.toene()).toHaveLength(1);
   });
 
+  it('K1 ohne Speicher (gesperrtes localStorage) und mit verlorener Quittung → trotzdem kein zweiter Ton', async () => {
+    const uhr = new ManuelleUhr(T0);
+    const server = new FalscherHallServer(() => uhr.jetzt());
+    server.zuordnen(1, 'laptop');
+    const a = new LzTab({ start: T0, uhr, geraet: new FalschesGeraet(), server, name: 'A', ohneSpeicher: true });
+    await a.starte();
+    await a.vor(2000);
+    a.ackNetz = false;
+    await server.testtonAnfordern({ p_tournament_id: TID, p_field: 1 });
+    await a.vor(12_000);
+    expect(a.tab.toene()).toHaveLength(1);
+  });
+
   it('@HT-017 nicht bereit – Ton nicht aktiviert → kein Ton und keine Quittung (die Verwaltung sieht kein „gespielt“)', async () => {
     const { server, tab, anfordern } = lage();
     const a = tab('A');
@@ -150,13 +163,13 @@ describe('@HT-044 Ein Fremder kann keinen Ton in der Halle auslösen', () => {
     expect(a.tab.toene()).toEqual([]);
   });
 
-  it('@HT-044 der Server lehnt ab (kein Recht) → kein Ton, der Lautsprecher bleibt, wie er ist', async () => {
+  it('@HT-044 der Server lehnt ab (kein Recht) → kein Ton; eine einzelne Ablehnung schaltet nicht ab (erst dreimal, K2)', async () => {
     const { server, tab, anfordern } = lage();
     const a = tab('A');
     await a.starte();
     await anfordern();
     server.fehler = 'kein_recht';
-    await a.vor(12_000);
+    await a.vor(7000);
     expect(a.tab.toene()).toEqual([]);
     expect(a.tab.laufzeit.getSnapshot().rolle).toBe('toent');
   });

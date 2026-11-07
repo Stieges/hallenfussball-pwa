@@ -160,7 +160,32 @@ describe('Regel 1 – abgelöst oder abgemeldet: lokal abschalten, kein Ton dana
     expect(a.abgeloest).toEqual([[1]]);
   });
 
-  it('Turnierende (55000) → still abschalten, keine weiteren Lebenszeichen', async () => {
+  it('W1 Turnierende: das Lebenszeichen bleibt am Server „ok“, die lokale Turnierkopie ist abgeschlossen → der wartende Tab wird nach höchstens 30 s still', async () => {
+    const { server, tab } = lage();
+    const a = tab('A');
+    await a.starte({ aktivieren: false });
+    await a.vor(7000);
+    expect(server.lebenszeichen.length).toBe(2);
+    a.turnierBeendet = true; // „Hallencup Nord“ abgeschlossen; der Server antwortet weiter ok (kein hall_require_open)
+    await a.vor(30_000);
+    expect(a.tab.laufzeit.getSnapshot().rolle).toBe('still');
+    const vorher = server.lebenszeichen.length;
+    await a.vor(30_000);
+    expect(server.lebenszeichen.length).toBe(vorher);
+    expect(a.endePruefungen).toBeLessThanOrEqual(3); // höchstens alle 30 s, nur lokal
+  });
+
+  it('W1 nach dem Turnierende neu geladen → der wartende Tab meldet gar nicht erst', async () => {
+    const { server, tab } = lage();
+    const a = tab('A');
+    a.turnierBeendet = true;
+    await a.starte({ aktivieren: false });
+    await a.vor(20_000);
+    expect(server.lebenszeichen).toEqual([]);
+    expect(a.tab.laufzeit.getSnapshot().rolle).toBe('still');
+  });
+
+  it('W1 Schutz: antwortet der Server doch einmal 55000, schaltet der Lautsprecher ebenfalls still ab', async () => {
     const { server, tab } = lage();
     const a = tab('A');
     await a.starte();
@@ -168,9 +193,34 @@ describe('Regel 1 – abgelöst oder abgemeldet: lokal abschalten, kein Ton dana
     server.fehler = 'turnier_beendet';
     await a.vor(6000);
     expect(a.tab.laufzeit.getSnapshot().rolle).toBe('still');
+  });
+
+  it('K2 kein Recht mehr (Co-Admin entfernt): dreimal in Folge → still wie ein Gast, keine weiteren Lebenszeichen', async () => {
+    const { server, tab } = lage();
+    const a = tab('A');
+    await a.starte({ aktivieren: false });
+    await a.vor(1000);
+    server.fehler = 'kein_recht';
+    await a.vor(9000);
+    expect(a.tab.laufzeit.getSnapshot().rolle).toBe('wartet'); // zweimal: noch nicht
+    await a.vor(6000);
+    expect(a.tab.laufzeit.getSnapshot().rolle).toBe('still');
     const vorher = server.aufrufe.length;
     await a.vor(20_000);
     expect(server.aufrufe.length).toBe(vorher);
+  });
+
+  it('K2 ungültig (Feldzahl verkleinert) → der Grund ist sichtbar, ein späterer Erfolg setzt ihn zurück', async () => {
+    const { server, tab } = lage();
+    const a = tab('A');
+    await a.starte({ aktivieren: false });
+    server.fehler = 'ungueltig';
+    await a.vor(6000);
+    expect(a.fehler.at(-1)).toBe('ungueltig');
+    expect(a.tab.laufzeit.getSnapshot().rolle).toBe('wartet');
+    server.fehler = null;
+    await a.vor(6000);
+    expect(a.fehler.at(-1)).toBeNull();
   });
 
   it('Gegenbeispiel: still (Gast/Turnierende über den Feldstand) → kein Lebenszeichen', async () => {

@@ -1,31 +1,24 @@
 /**
- * Lebenszeichen des Hallen-Lautsprechers (H3b-3, Plan „Lebenszeichen“): `hall_speaker_heartbeat` alle 5 s mit dem Zustand des
- * Geräts und den Anzeichen eines Ausgangswechsels (@HT-047), dazu der Testton in der Halle mit Quittung (@HT-017).
+ * Lebenszeichen des Hallen-Lautsprechers (H3b-3): `hall_speaker_heartbeat` alle 5 s mit Zustand und Anzeichen eines
+ * Ausgangswechsels (@HT-047), dazu der Testton in der Halle mit Quittung (@HT-017).
  *
- * Genau ein Tab je Gerät meldet – auch ohne aktivierten Tab, sonst sähe die Verwaltung „meldet sich nicht“ statt „Ton nicht
- * aktiviert“ (@HT-012, @HT-013). Weg: eine zweite Web-Lock-Sperre nur fürs Melden (`hallenton-melden`):
- * - Melden darf nur, wer sie hält. Der tönende Tab (Ton-Sperre `hallenton`) meldet immer, aus dem Worker-Takt (`beimTakt`),
- *   damit ein minimierter Lautsprecher weiter meldet (@HT-029).
- * - Ein wartender Tab meldet nur, solange kein anderer Tab tönt (keine fremde Meldung im Kanal, `lautsprecherKanal.ts`).
- *   Tönt ein anderer Tab, gibt er die Melde-Sperre frei und stellt sich zurück, bis die fremde Meldung verschwindet; der
- *   tönende Tab steht dann schon in der Warteschlange und übernimmt. Eine laufende Anfrage endet vor der Freigabe – so
- *   melden nie zwei Tabs zugleich, und die letzte Meldung ist die des tönenden Tabs.
- * - Zwischen den 5-s-Meldungen meldet ein geänderter Zustand sofort (höchstens einmal je Sekunde), etwa `background`, sobald
- *   die Wache im Hauptthread einen Aussetzer des Takts meldet (@HT-014).
- *
+ * Genau ein Tab je Gerät meldet, auch ohne aktivierten Tab (@HT-012, @HT-013), über die Melde-Sperre `hallenton-melden`:
+ * - Der tönende Tab meldet immer, aus dem Worker-Takt (`beimTakt`, minimiert weiter, @HT-029). Ein wartender Tab nur, solange
+ *   keine fremde Meldung im Kanal steht; sonst gibt er die Sperre nach seiner laufenden Anfrage frei – nie zwei Melder zugleich.
+ * - Ein geänderter Zustand meldet sofort (höchstens 1/s), etwa `background` aus der Wache im Hauptthread (@HT-014).
  * Antwort:
- * - `superseded`/`unassigned` für ein Feld (Regel 1): lokal abschalten (`abgeloest`, die Laufzeit stoppt vor dem Speichern,
- *   kein Ton danach); die übrigen Felder bleiben eingeschaltet.
- * - `turnier_beendet` (55000): still abschalten.
- * - Offener Testton (Serverzeit ≤ 10 s, nicht schon von diesem Gerät gespielt): nur der tönende Tab spielt ihn einmal
- *   (`jetztSpielen('abpfiff')`), dann `hall_test_tone_ack` (@HT-017). Ging die Quittung verloren, quittiert er beim nächsten
- *   Lebenszeichen erneut, ohne den Ton zu wiederholen. Ohne aktivierten Tab kein Ton und keine Quittung. Ein
- *   Ton entsteht nie aus dem Inhalt einer Kanal-Nachricht, nur aus der Antwort des Servers (@HT-044).
- * - Danach liest der tönende Tab die Tonwahl neu (`nachLebenszeichen`, k-neu-2).
- * Kein `p_output_changed` geht verloren: Anzeichen bleiben offen, bis ein Lebenszeichen mit ihnen angekommen ist.
+ * - `superseded`/`unassigned` (Regel 1): lokal abschalten (`abgeloest`, kein Ton danach); die übrigen Felder bleiben.
+ * - Turnierende (Fixrunde 1, W1): Der Server antwortet auch danach `ok` (kein `hall_require_open` – die Brief-Annahme „55000“
+ *   traf nicht zu). Jeder Tab prüft höchstens alle 30 s die lokale Turnierkopie (`turnierBeendet`) und schaltet still ab,
+ *   auch der wartende; das erste Lebenszeichen wartet auf die erste Prüfung. 55000 bleibt als Schutz.
+ * - `kein_recht` dreimal in Folge: still wie ein Gast; jeder Fehlergrund geht an `beiFehler`, ein Erfolg setzt ihn zurück (K2).
+ * - Offener Testton (Serverzeit + Laufzeit ≤ 10 s, nicht schon gespielt – Speicher und Instanz, K1): nur der tönende Tab spielt
+ *   ihn einmal, dann `hall_test_tone_ack`; eine verlorene Quittung wird ohne zweiten Ton nachgeholt. Nie aus Kanal-Inhalten
+ *   (@HT-044). Danach liest der tönende Tab die Tonwahl neu (`nachLebenszeichen`, k-neu-2).
+ * Anzeichen bleiben offen, bis ein Lebenszeichen mit ihnen angekommen ist.
  */
 import type {
-  HallArgs, HallErgebnis, HallHeartbeatAntwort, HallSpeakerState, HallTestAckAntwort,
+  HallArgs, HallErgebnis, HallFehlerGrund, HallHeartbeatAntwort, HallSpeakerState, HallTestAckAntwort,
 } from '../../../core/repositories/hallentonRpc';
 import type { AusgangsSignale } from './ausgangsSignale';
 import type { GeraeteSperre } from './geraeteSperre';
@@ -42,6 +35,10 @@ export const LEBENSZEICHEN_MIN_ABSTAND_MS = 1000;
 export const TESTTON_MAX_ALTER_MS = 10_000;
 export const MELDE_SPERRE_NAME = 'hallenton-melden';
 export const TESTTOENE_SCHLUESSEL = 'hallenton:testtoene';
+/** Turnierende aus der lokalen Kopie höchstens so oft prüfen (ms). */
+export const TURNIERENDE_PRUEF_MS = 30_000;
+/** So viele `kein_recht` in Folge schalten still ab. */
+export const KEIN_RECHT_GRENZE = 3;
 const TESTTOENE_MAX = 20;
 const PRUEF_MS = 1000;
 
@@ -69,6 +66,10 @@ export interface LebenszeichenDeps {
   /** Regel 1: abgelöst oder abgemeldet; `bleiben` = Felder, die das Gerät noch hat (leer = ganz aus). */
   abgeloest: (bleiben: number[]) => void;
   nachLebenszeichen?: () => void;
+  /** Turnier abgeschlossen oder abgebrochen? (lokale Turnierkopie, W1) */
+  turnierBeendet?: () => Promise<boolean>;
+  /** Fehlergrund des letzten Lebenszeichens; `null` nach einem Erfolg (K2). */
+  beiFehler?: (grund: HallFehlerGrund | null) => void;
 }
 
 export interface Lebenszeichen {
@@ -99,6 +100,10 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
   let anzeichenOffen = false;
   let ausgang: AusgangsSignale | null = null;
   const ab: Array<() => void> = [];
+  const gespieltHier = new Set<string>(); // K1: auch ohne Speicher kein zweiter Ton
+  let endeGeprueftUm: number | null = null;
+  let endePruefungLaeuft = false;
+  let keinRechtInFolge = 0;
 
   const snapshot = () => d.laufzeit.getSnapshot();
   const fremdeMeldung = (): boolean => d.kanal.lesen() !== null && d.kanal.eigenesAlter() === null;
@@ -130,6 +135,28 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
     }
   }
 
+  /** W1: höchstens alle 30 s; `true` = noch keine Prüfung abgeschlossen (dann wird nicht gemeldet). */
+  function turnierendeOffen(): boolean {
+    const pruef = d.turnierBeendet;
+    if (!pruef) {
+      return false;
+    }
+    const jetzt = d.zeitgeber.jetzt();
+    if (!endePruefungLaeuft && (endeGeprueftUm === null || jetzt - endeGeprueftUm >= TURNIERENDE_PRUEF_MS)) {
+      endePruefungLaeuft = true;
+      void pruef().catch(() => false).then((beendet) => {
+        endePruefungLaeuft = false;
+        endeGeprueftUm = d.zeitgeber.jetzt();
+        if (beendet && gestartet) {
+          d.laufzeit.stillAbschalten();
+        } else {
+          pruefen();
+        }
+      });
+    }
+    return endeGeprueftUm === null;
+  }
+
   function pruefen(): void {
     if (!gestartet) {
       return;
@@ -137,6 +164,9 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
     const { rolle } = snapshot();
     if (rolle === 'aus' || rolle === 'still') {
       loslassen('aus');
+      return;
+    }
+    if (turnierendeOffen()) {
       return;
     }
     if (!sollMelden()) {
@@ -188,9 +218,11 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
   }
 
   function verarbeiten(antwort: HallErgebnis<HallHeartbeatAntwort>, gesendetUm: number, mitAnzeichen: boolean): void {
+    d.beiFehler?.(antwort.ok ? null : antwort.grund);
+    keinRechtInFolge = !antwort.ok && antwort.grund === 'kein_recht' ? keinRechtInFolge + 1 : 0;
     if (!antwort.ok) {
-      if (antwort.grund === 'turnier_beendet') {
-        d.laufzeit.stillAbschalten();
+      if (antwort.grund === 'turnier_beendet' || keinRechtInFolge >= KEIN_RECHT_GRENZE) {
+        d.laufzeit.stillAbschalten(); // 55000 als Schutz; kein Recht mehr wie ein Gast
       }
       return;
     }
@@ -217,7 +249,7 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
   }
 
   function spieleTestton(antwort: HallHeartbeatAntwort, unterwegsMs: number): void {
-    const gespielt = gespielteTests(d.speicher);
+    const gespielt = [...new Set([...gespielteTests(d.speicher), ...gespieltHier])];
     const tests = antwort.fields.flatMap((f) => (f.status === 'ok' && f.test ? [{ feld: f.field, testId: f.test.testId, ageMs: f.test.ageMs }] : []));
     // schon gespielt, aber die Quittung ging verloren (der Server bietet ihn weiter an): nur quittieren, nie ein zweiter Ton
     quittieren(tests.filter((t) => gespielt.includes(t.testId)));
@@ -226,6 +258,9 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
       return; // stumm oder 0 %: nicht gespielt, also keine Quittung
     }
     ausgang?.testtonGespielt();
+    for (const t of offen) {
+      gespieltHier.add(t.testId);
+    }
     schreib(d.speicher, TESTTOENE_SCHLUESSEL, JSON.stringify([...gespielt, ...offen.map((t) => t.testId)].slice(-TESTTOENE_MAX)));
     quittieren(offen);
   }

@@ -9,7 +9,6 @@
  * Keine Oberfläche: gibt `null` zurück.
  */
 import { useEffect, useSyncExternalStore } from 'react';
-import { useRepositories } from '../../core/contexts/RepositoryContext';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { attachReloadGate } from '../../lib/swRegistration';
@@ -17,6 +16,7 @@ import { useMatchEngineContextOptional } from '../match-engine/useMatchEngineCon
 import { abmeldungNachholen, ABMELDEN_NEU_MS } from './ausstehendeAbmeldung';
 import { browserSteuerStand, erzeugeBrowserKanal, erzeugeBrowserLaufzeit } from './browserLaufzeit';
 import { erzeugeBrowserLeitung, setzeLeitung } from './leitungGeraet';
+import { ladeTurnierLokal } from './lokalesTurnier';
 import { abonniereGeraet, geraetStand, setzeLaufzeit } from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
 import { verbindeLautsprecherReloadTor } from './runtime/lautsprecherReloadTor';
@@ -26,7 +26,6 @@ const nieAbonniert = (): (() => void) => () => undefined;
 
 export function HallLautsprecherLaufzeit(): null {
   const engine = useMatchEngineContextOptional();
-  const { tournamentRepository } = useRepositories();
   const { einschaltung, laufzeit } = useSyncExternalStore(abonniereGeraet, geraetStand, geraetStand);
   const konto = engine !== null && engine.accountId !== 'guest' && isSupabaseConfigured && supabase !== null;
   const aktiv = einschaltung !== null && konto;
@@ -50,7 +49,7 @@ export function HallLautsprecherLaufzeit(): null {
     if (!konto || engine === null) {
       return undefined;
     }
-    const leitung = erzeugeBrowserLeitung({ engine, ladeTurnier: (id) => tournamentRepository.get(id) });
+    const leitung = erzeugeBrowserLeitung({ engine, ladeTurnier: ladeTurnierLokal }); // W2: nur lokal
     setzeLeitung(leitung);
     leitung.start();
     const nachholen = (): void => {
@@ -65,7 +64,7 @@ export function HallLautsprecherLaufzeit(): null {
       window.removeEventListener('online', nachholen);
       window.clearInterval(takt);
     };
-  }, [konto, engine, tournamentRepository]);
+  }, [konto, engine]);
 
   useEffect(() => {
     const aktuell = geraetStand().einschaltung;
@@ -75,7 +74,7 @@ export function HallLautsprecherLaufzeit(): null {
     const { laufzeit: neu, starten, beenden } = erzeugeBrowserLaufzeit({
       einschaltung: aktuell,
       engine,
-      ladeTurnier: (id) => tournamentRepository.get(id),
+      ladeTurnier: ladeTurnierLokal, // W2: nur lokal, kein Abgleich mit der Cloud je Lebenszeichen
     });
     setzeLaufzeit(neu);
     starten();
@@ -83,7 +82,7 @@ export function HallLautsprecherLaufzeit(): null {
       beenden();
       setzeLaufzeit(null);
     };
-  }, [aktiv, turnierId, felderSchluessel, engine, tournamentRepository]);
+  }, [aktiv, turnierId, felderSchluessel, engine]);
 
   const snapshot: LaufzeitSnapshot | null = useSyncExternalStore(
     laufzeit?.subscribe ?? nieAbonniert,

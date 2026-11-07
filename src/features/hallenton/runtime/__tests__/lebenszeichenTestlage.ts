@@ -31,6 +31,8 @@ export class FalscheGeraeteMelder implements GeraeteMelder {
 export interface LzOptionen extends TabOptionen {
   server: FalscherHallServer;
   deviceId?: string;
+  /** Kein Speicher für gespielte Testtöne (gesperrtes `localStorage`, K1). */
+  ohneSpeicher?: boolean;
 }
 
 export class LzTab {
@@ -43,6 +45,10 @@ export class LzTab {
   netz = true;
   /** Nur die Quittung scheitert am Netz. */
   ackNetz = true;
+  /** Lokale Turnierkopie: abgeschlossen (W1). */
+  turnierBeendet = false;
+  endePruefungen = 0;
+  readonly fehler: Array<string | null> = [];
 
   constructor(o: LzOptionen) {
     this.tab = new Tab(o);
@@ -63,7 +69,14 @@ export class LzTab {
         heartbeat: (args) => (this.netz ? server.heartbeat(this.name, args) : Promise.resolve(ohneNetz)),
         ack: (args) => (this.netz && this.ackNetz ? server.ack(args) : Promise.resolve(ohneNetz)),
       },
-      speicher: this.tab.geraet.speicher,
+      speicher: o.ohneSpeicher ? null : this.tab.geraet.speicher,
+      turnierBeendet: () => {
+        this.endePruefungen += 1;
+        return Promise.resolve(this.turnierBeendet);
+      },
+      beiFehler: (grund) => {
+        this.fehler.push(grund);
+      },
       abgeloest: (bleiben) => {
         this.tab.laufzeit.stop();
         this.abgeloest.push(bleiben);

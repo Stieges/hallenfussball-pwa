@@ -11,6 +11,9 @@ import { FalscherSpeicher } from '../../../test/hallenton/falschesGeraet';
 import { erzeugeHallTonSpieler } from '../runtime/hallTonSpieler';
 import { __setzeGeraetFuerTests, GERAET_SCHLUESSEL, geraetStand } from '../lautsprecherGeraet';
 import type { LeitungLebenszeichen, LeitungStand } from '../runtime/leitungLebenszeichen';
+import { ManuelleUhr } from '../../../test/hallenton/manuelleUhr';
+import { noteFieldControlList, resetOwnFieldsForTests } from '../../../core/fieldControl/ownFields';
+import { einzelnZugleich } from '../runtime/tonWahlWechsel';
 
 const sb = vi.hoisted((): { client: unknown } => ({ client: null }));
 const konto = vi.hoisted(() => ({ accountId: 'konto-olli' }));
@@ -34,15 +37,18 @@ vi.mock('../../../hooks/useWakeLock', () => ({
   useWakeLock: () => ({ status: 'idle', request: vi.fn(), release: vi.fn() }),
 }));
 const turnier = vi.hoisted((): { wert: unknown } => ({ wert: null }));
-const repos = vi.hoisted(() => ({ tournamentRepository: { get: () => Promise.resolve(turnier.wert) } }));
+const repos = vi.hoisted(() => ({ tournamentRepository: { get: vi.fn(() => Promise.resolve(turnier.wert)) } }));
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => repos }));
+// Fixrunde 1 (W2): Hallenton liest die Turnierkopie nur lokal; das Doppel zählt die Lesevorgänge
+const lokal = vi.hoisted(() => ({ aufrufe: 0 }));
+vi.mock('../lokalesTurnier', () => ({ ladeTurnierLokal: () => { lokal.aufrufe += 1; return Promise.resolve(turnier.wert); } }));
 vi.mock('../../match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => engineKontext(konto.accountId),
 }));
 
 import { HallLautsprecherLaufzeit } from '../HallLautsprecherLaufzeit';
 import { ABMELDEN_SCHLUESSEL } from '../ausstehendeAbmeldung';
-import { aktuelleLeitung, setzeLeitung } from '../leitungGeraet';
+import { aktuelleLeitung, erzeugeBrowserLeitung, PLAN_NEU_MS, setzeLeitung } from '../leitungGeraet';
 import { useHallCockpitHinweis } from '../useHallCockpitHinweis';
 import { useHallLautsprecher } from '../useHallLautsprecher';
 import { useHallStatus } from '../useHallStatus';
@@ -74,6 +80,9 @@ const aufrufe = (fn: string) => falsch.rpcLog.filter((r) => r.fn === fn);
 beforeEach(() => {
   geladen = [];
   turnier.wert = null;
+  lokal.aufrufe = 0;
+  repos.tournamentRepository.get.mockClear();
+  resetOwnFieldsForTests();
   konto.accountId = 'konto-olli';
   const speicher = new FalscherSpeicher();
   vi.mocked(localStorage.getItem).mockImplementation((k: string) => speicher.getItem(k));
@@ -221,5 +230,129 @@ describe('useHallCockpitHinweis(tid, feldId) – Datenseite für H4', () => {
     act(() => { setzeLeitung(leitungMit(null)); });
     rerender({ feld: 'field-1' });
     expect(result.current).toEqual({ art: 'keiner' });
+  });
+});
+
+describe('Fixrunde 1 – W2: Hallenton liest die Turnierkopie nur lokal, die Leitung nur bei angepfiffenem Spiel', () => {
+  const plan = { id: TID, matches: [{ id: 'spiel-11', field: 1, round: 1, matchNumber: 11, slotA: { kind: 'team', teamId: 'sv-sued' }, slotB: { kind: 'team', teamId: 'fc-nord' } }] };
+  function leitungMit(status: string | null) {
+    const uhr = new ManuelleUhr(0);
+    const rpc = vi.fn(() => Promise.resolve({ ok: true as const, status: 'ok' as const, serverNow: 0, speaker: null }));
+    const leitung = erzeugeBrowserLeitung({
+      engine: { engine: { view: () => (status ? { result: { state: { status } } } : null) } } as never,
+      ladeTurnier: () => { lokal.aufrufe += 1; return Promise.resolve(turnier.wert as never); },
+      rpc,
+      zeitgeber: uhr.gruppe('leitung'),
+    });
+    return { uhr, rpc, leitung };
+  }
+  async function vor(uhr: ManuelleUhr, ms: number): Promise<void> {
+    for (let t = 0; t < ms; t += 500) {
+      uhr.vorruecken(500);
+      await act(async () => { await Promise.resolve(); });
+    }
+  }
+
+  it('Toms Handy steuert Feld 1, kein Spiel angepfiffen → kein Lebenszeichen, kein Lesevorgang in der Cloud, die lokale Kopie höchstens alle 30 s', async () => {
+    turnier.wert = plan;
+    noteFieldControlList(TID, [{ field: 1, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine: true, claimedAt: null }]);
+    const { uhr, rpc, leitung } = leitungMit(null);
+    leitung.start();
+    await vor(uhr, 60_000);
+    leitung.stop();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(repos.tournamentRepository.get).not.toHaveBeenCalled();
+    expect(lokal.aufrufe).toBeLessThanOrEqual(60_000 / PLAN_NEU_MS + 1);
+  });
+
+  it('unlesbare lokale Kopie → kein Lebenszeichen, und gelesen wird trotzdem höchstens alle 30 s', async () => {
+    turnier.wert = { id: TID, matches: [{ id: 'spiel-11', field: 1 }] }; // ohne Seiten: planAusTurnier wirft
+    noteFieldControlList(TID, [{ field: 1, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine: true, claimedAt: null }]);
+    const { uhr, rpc, leitung } = leitungMit('running');
+    leitung.start();
+    await vor(uhr, 60_000);
+    leitung.stop();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(lokal.aufrufe).toBeLessThanOrEqual(60_000 / PLAN_NEU_MS + 1);
+  });
+
+  it('@HT-034 Spiel 11 läuft nach der eigenen Engine → Lebenszeichen der Leitung alle 5 s', async () => {
+    turnier.wert = plan;
+    noteFieldControlList(TID, [{ field: 1, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine: true, claimedAt: null }]);
+    const { uhr, rpc, leitung } = leitungMit('running');
+    leitung.start();
+    await vor(uhr, 20_000);
+    leitung.stop();
+    expect(rpc.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(repos.tournamentRepository.get).not.toHaveBeenCalled();
+  });
+
+  it('der Baustein liest für Lebenszeichen, Tonwahl und Turnierende nie über das Cloud-Repository', async () => {
+    turnier.wert = { ...plan, matchCockpitSettings: { soundId: 'horn-2' } };
+    einschalten();
+    render(<HallLautsprecherLaufzeit />);
+    await warten();
+    await act(async () => { await geraetStand().laufzeit?.tonAktivieren(); });
+    await warten();
+    expect(lokal.aufrufe).toBeGreaterThan(0);
+    expect(repos.tournamentRepository.get).not.toHaveBeenCalled();
+  });
+
+  it('die Tonwahl wird nicht doppelt gelesen, solange eine Abfrage läuft', async () => {
+    let offen: () => void = () => undefined;
+    const lauf = vi.fn(() => new Promise<void>((r) => { offen = r; }));
+    const neuLesen = einzelnZugleich(lauf);
+    neuLesen();
+    neuLesen();
+    neuLesen();
+    expect(lauf).toHaveBeenCalledTimes(1);
+    offen();
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    neuLesen();
+    expect(lauf).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Fixrunde 1 – W3, K5, K6', () => {
+  it('W3 @HT-038 „Aus“ im schwachen WLAN (Antwort hängt) → der Lautsprecher ist sofort aus, die Abmeldung ist gemerkt', async () => {
+    einschalten();
+    render(<HallLautsprecherLaufzeit />);
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    await warten();
+    const laufzeit = geraetStand().laufzeit;
+    expect(laufzeit?.getSnapshot().rolle).toBe('wartet');
+    falsch.haengendeRpcs.add('hall_speaker_release');
+    act(() => { void result.current.ausschalten(); });
+    expect(laufzeit?.getSnapshot().rolle).toBe('aus'); // gestoppt: kein geplanter Ton erklingt mehr
+    expect(result.current.rolle).toBe('keiner');
+    expect(JSON.parse(localStorage.getItem(ABMELDEN_SCHLUESSEL) ?? 'null')).toEqual({ turnierId: TID, felder: [1] });
+    await warten();
+    expect(geraetStand().laufzeit).toBeNull();
+  });
+
+  it('W3 die Abmeldung kommt an → die gemerkte Abmeldung ist verworfen', async () => {
+    einschalten();
+    falsch.rpcDaten.hall_speaker_release = { status: 'released', fields: [1] };
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    await act(async () => { await result.current.ausschalten(); });
+    expect(localStorage.getItem(ABMELDEN_SCHLUESSEL)).toBeNull();
+  });
+
+  it('K6 Einschalten scheitert am Netz → die offene Abmeldung bleibt', async () => {
+    localStorage.setItem(ABMELDEN_SCHLUESSEL, JSON.stringify({ turnierId: TID, felder: [1] }));
+    falsch.netz = 'fehler';
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    await act(async () => { await result.current.einschalten([1], 'Rechner der Turnierleitung'); });
+    expect(JSON.parse(localStorage.getItem(ABMELDEN_SCHLUESSEL) ?? 'null')).toEqual({ turnierId: TID, felder: [1] });
+  });
+
+  it('K5 @HT-023 „Hier anhören“ wartet nicht aufs Netz: hall_sound_status hängt, der Ton erklingt trotzdem mit der Hupe des Turniers', async () => {
+    turnier.wert = { matches: [], matchCockpitSettings: { soundId: 'horn-3' } };
+    falsch.haengendeRpcs.add('hall_sound_status');
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    let gespielt = false;
+    await act(async () => { gespielt = await result.current.hierAnhoeren('abpfiff'); });
+    expect(gespielt).toBe(true);
+    expect(geladen).toContain('/sounds/horn-3.mp3');
   });
 });

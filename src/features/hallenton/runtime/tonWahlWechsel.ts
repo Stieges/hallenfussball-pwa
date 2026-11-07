@@ -93,3 +93,20 @@ export function erzeugeTonWahlHalter({ spieler, start, lesen, geladen }: TonWahl
     },
   };
 }
+
+/**
+ * Fixrunde 1 (W2): Neu-Lesen der Tonwahl nach dem Lebenszeichen höchstens einmal zugleich – solange eine Abfrage
+ * (`hall_sound_status` + lokale Kopie) läuft, startet keine zweite. Rückgabe: der Auslöser.
+ */
+export function einzelnZugleich(lauf: () => Promise<unknown>): () => void {
+  let laeuft = false;
+  return () => {
+    if (laeuft) {
+      return;
+    }
+    laeuft = true;
+    void lauf().catch(() => undefined).finally(() => {
+      laeuft = false;
+    });
+  };
+}
