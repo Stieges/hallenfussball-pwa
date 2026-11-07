@@ -96,6 +96,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           badge={abschnitte.heute.length}
           defaultOpen
           compact={isMobile}
+          overflowWhenOpen="visible"
           testId="section-heute"
         >
           <div style={gridStyle(isMobile)}>{karten(abschnitte.heute, true)}</div>
@@ -110,6 +111,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           defaultOpen
           variant="live"
           compact={isMobile}
+          overflowWhenOpen="visible"
           testId="section-running"
         >
           <div style={gridStyle(isMobile)}>{karten(abschnitte.running)}</div>
@@ -123,6 +125,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           badge={abschnitte.upcoming.length}
           defaultOpen
           compact={isMobile}
+          overflowWhenOpen="visible"
           testId="section-upcoming"
         >
           <div style={gridStyle(isMobile)}>{karten(abschnitte.upcoming)}</div>
@@ -136,6 +139,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
           badge={abschnitte.draft.length}
           defaultOpen={false}
           compact={isMobile}
+          overflowWhenOpen="visible"
           testId="section-draft"
         >
           <div style={gridStyle(isMobile)}>{karten(abschnitte.draft)}</div>

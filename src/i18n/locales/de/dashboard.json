@@ -56,8 +56,10 @@
     "permanentDelete": "Endgültig löschen"
   },
   "card": {
-    "ariaLabel": "Turnier: {{title}}, {{status}}, {{time}}{{location}}",
-    "ariaLabelExternal": "Turnier: {{title}}, {{status}}, {{time}}{{location}}, {{source}}",
+    "ariaLabel": "Turnier: {{title}}, {{status}}, {{time}}, {{location}}",
+    "ariaLabelNoLocation": "Turnier: {{title}}, {{status}}, {{time}}",
+    "ariaLabelExternal": "Turnier: {{title}}, {{status}}, {{time}}, {{location}}, {{source}}",
+    "ariaLabelExternalNoLocation": "Turnier: {{title}}, {{status}}, {{time}}, {{source}}",
     "lateFinishNotice": "Das letzte Spiel war am {{date}}. Das Turnier läuft noch – schließe es in der Verwaltung ab.",
     "statusLabel": "Status: {{status}}",
     "noDate": "Kein Datum",

@@ -139,15 +139,25 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden braucht', 
       const kopieren = page.getByTestId('action-menu-item-copy');
       await expect(kopieren).toBeVisible();
       await bild(page, `ob079-menue-${groesse.width}`);
-      // Trefferprüfung am Eintrag: ein vom Abschnitt abgeschnittener Eintrag liegt zwar im DOM, ist aber nicht das oberste Element an seiner Stelle
-      // (Playwrights click() scrollt den abgeschnittenen Bereich vorher sichtbar und würde das verdecken, darum Mausklick an der Stelle)
+      // Trefferprüfung an jedem Eintrag, auch am letzten („Löschen“): ein vom Abschnitt abgeschnittener Eintrag liegt zwar im DOM, ist aber nicht das
+      // oberste Element an seiner Stelle (Playwrights click() scrollt den abgeschnittenen Bereich vorher sichtbar und würde das verdecken)
+      const eintraege = page.locator('[data-testid^="action-menu-item-"]');
+      const anzahl = await eintraege.count();
+      expect(anzahl).toBeGreaterThanOrEqual(3);
+      for (let i = 0; i < anzahl; i += 1) {
+        const eintrag = eintraege.nth(i);
+        const id = await eintrag.getAttribute('data-testid');
+        const box = await eintrag.boundingBox();
+        expect(box, `Eintrag ${id}`).not.toBeNull();
+        const px = box!.x + box!.width / 2;
+        const py = box!.y + box!.height / 2;
+        const oben = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[data-testid^="action-menu-item-"]')?.getAttribute('data-testid') ?? null, [px, py]);
+        expect(oben, `oberstes Element an der Stelle von ${id}`).toBe(id);
+        expect(py).toBeLessThan(groesse.height);
+      }
       const box = await kopieren.boundingBox();
-      expect(box).not.toBeNull();
       const x = box!.x + box!.width / 2;
       const y = box!.y + box!.height / 2;
-      const oben = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.closest('[data-testid^="action-menu-item-"]')?.getAttribute('data-testid') ?? null, [x, y]);
-      expect(oben, 'oberstes Element an der Stelle von „Kopieren“').toBe('action-menu-item-copy');
-      expect(y).toBeLessThan(groesse.height);
       await page.mouse.click(x, y);
       await expect(page.getByTestId('copy-dialog-name')).toBeVisible();
     });

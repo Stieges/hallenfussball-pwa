@@ -157,7 +157,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     title: tournament.title,
     status: getCategoryDisplayLabel(),
     time: timeText !== '' ? timeText : t('sections.today'),
-    location: location !== '' ? `, ${location}` : '',
+    location,
   };
 
   return (
@@ -180,8 +180,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
         aria-label={tournament.externalSource
-          ? t('card.ariaLabelExternal', { ...labelParams, source: tournament.externalSource })
-          : t('card.ariaLabel', labelParams)}
+          ? t(location !== '' ? 'card.ariaLabelExternal' : 'card.ariaLabelExternalNoLocation', { ...labelParams, source: tournament.externalSource })
+          : t(location !== '' ? 'card.ariaLabel' : 'card.ariaLabelNoLocation', labelParams)}
         onKeyDown={(e) => {
           if (onClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();

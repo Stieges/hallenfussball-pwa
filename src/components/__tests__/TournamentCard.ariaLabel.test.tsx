@@ -29,7 +29,7 @@ describe('@OB-079 aria-label der Karte', () => {
   it('nennt Name, Zustand, Zeit und Ort', () => {
     render(<TournamentCard tournament={turnier()} categoryLabel="upcoming" onClick={vi.fn()} />);
     expect(labelOf()).toMatch(/^card\.ariaLabel\|/);
-    expect(optionen(labelOf())).toMatchObject({ title: 'F2-Junioren Hallenturnier', time: 'Sa 28.11. · 08:30', location: ', Bergader SportARENA' });
+    expect(optionen(labelOf())).toMatchObject({ title: 'F2-Junioren Hallenturnier', time: 'Sa 28.11. · 08:30', location: 'Bergader SportARENA' });
   });
 
   it('unter „Heute“ steht nur die Uhrzeit', () => {
@@ -40,11 +40,17 @@ describe('@OB-079 aria-label der Karte', () => {
   it('externes Turnier: eigener Schlüssel mit Quelle und ebenfalls Zeit und Ort', () => {
     render(<TournamentCard tournament={turnier({ externalSource: 'Datei' })} categoryLabel="upcoming" onClick={vi.fn()} />);
     expect(labelOf()).toMatch(/^card\.ariaLabelExternal\|/);
-    expect(optionen(labelOf())).toMatchObject({ source: 'Datei', location: ', Bergader SportARENA' });
+    expect(optionen(labelOf())).toMatchObject({ source: 'Datei', location: 'Bergader SportARENA' });
   });
 
-  it('Gegenbeispiel: ohne Ort bleibt kein loses Komma', () => {
+  it('Gegenbeispiel: ohne Ort gilt der Schlüssel ohne Ort (kein loses Komma in der Übersetzung)', () => {
     render(<TournamentCard tournament={turnier({ location: { name: '' } })} categoryLabel="upcoming" onClick={vi.fn()} />);
-    expect(optionen(labelOf()).location).toBe('');
+    expect(labelOf()).toMatch(/^card\.ariaLabelNoLocation\|/);
+  });
+
+  it('Gegenbeispiel: externes Turnier ohne Ort: Schlüssel ohne Ort, mit Quelle', () => {
+    render(<TournamentCard tournament={turnier({ location: { name: '' }, externalSource: 'Datei' })} categoryLabel="upcoming" onClick={vi.fn()} />);
+    expect(labelOf()).toMatch(/^card\.ariaLabelExternalNoLocation\|/);
+    expect(optionen(labelOf()).source).toBe('Datei');
   });
 });

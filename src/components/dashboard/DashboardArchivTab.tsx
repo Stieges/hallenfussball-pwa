@@ -66,6 +66,7 @@ export const DashboardArchivTab: React.FC<DashboardArchivTabProps> = ({
               icon={<Icons.Calendar size={iconSizeValues.xs} color={cssVars.colors.textSecondary} />}
               badge={tournamentsForYear.length}
               defaultOpen={index === 0} // jüngstes Jahr offen
+              overflowWhenOpen="visible"
               testId={`archive-year-${year}`}
             >
               <div style={gridStyle(isMobile)}>
