@@ -30,8 +30,8 @@ async function zeige(lng: RealLanguage) {
 
 describe('@ZM-192 Kreis ohne Wort, Restzeit nur für Bildschirmleser', () => {
   it.each([
-    ['de', ['Zeitstrafe Rückennummer 5, noch 1:30', 'Zeitstrafe ohne Rückennummer, noch 1:23']],
-    ['en', ['Time Penalty shirt number 5, 1:30 left', 'Time Penalty without shirt number, 1:23 left']],
+    ['de', ['Zeitstrafe #5, noch 1:30', 'Zeitstrafe ohne Rückennummer, noch 1:23']],
+    ['en', ['Time Penalty #5, 1:30 left', 'Time Penalty without shirt number, 1:23 left']],
   ] as const)('@ZM-192 %s: sichtbar „5“ und eine leere Scheibe, gesprochen Art, Nummer und Restzeit', async (lng, labels) => {
     const kreise = await zeige(lng);
     expect(kreise.map((k) => k.textContent)).toEqual(['5', '']);
