@@ -188,9 +188,6 @@ test.describe('Zeiten verschieben kommt über den Server bei den Zuschauern an (
       }], { feldFreigeben: true });
       expect(start.results.map((r) => r.status)).toEqual(['accepted']);
       const page = olli.page;
-      const netz: string[] = [];
-      page.on('response', (r) => { if (r.url().includes('/rest/v1/') && r.request().method() !== 'GET') { netz.push(`${r.request().method()} ${r.status()} ${r.url().split('/rest/v1/')[1]?.slice(0, 90)}`); } });
-      page.on('requestfailed', (r) => { if (r.url().includes('/rest/v1/')) { netz.push(`FAILED ${r.method()} ${r.failure()?.errorText} ${r.url().split('/rest/v1/')[1]?.slice(0, 90)}`); } });
       await page.goto(`/#/tournament/${id}/schedule`);
       await page.getByTestId('schedule-shift-button').click();
       const weiter = page.getByTestId('time-shift-proceed');
@@ -198,15 +195,19 @@ test.describe('Zeiten verschieben kommt über den Server bei den Zuschauern an (
       await weiter.click();
       await page.getByTestId('time-shift-confirm').click();
       await expect(page.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Minuten verschoben');
+      // Neustart, bevor das Speichern beim Server angekommen ist (@FU-007): die Warteschlange sendet aus dem Speicher
       await page.reload();
-      try {
-        await expect.poll(async () => (await zeilen(id)).filter((z) => z.original_start !== null).length, {
-          message: 'nach dem Neuladen steht die Verschiebung in der Datenbank (matches.original_start)', timeout: 30_000,
-        }).toBeGreaterThan(0);
-      } finally {
-        const [t] = await svc('GET', `/rest/v1/tournaments?id=eq.${id}&select=version,change_revision`);
-        process.stdout.write(`\nDIAG-NEULADEN version=${JSON.stringify(t)}\n${netz.join('\n')}\nDIAG-NEULADEN-ENDE\n`);
+      await expect.poll(async () => (await zeilen(id)).filter((z) => z.original_start !== null).length, {
+        message: 'nach dem Neuladen steht die Verschiebung in der Datenbank (matches.original_start)', timeout: 30_000,
+      }).toBeGreaterThan(0);
+      const nachher = await zeilen(id);
+      const alt = new Map(vorher.map((z) => [z.id, z.scheduled_start]));
+      for (const z of nachher.filter((r) => r.original_start !== null)) {
+        expect([z.scheduled_start, z.original_start], `Spiel ${z.match_number}`).toEqual([plus(alt.get(z.id)!, 10), alt.get(z.id)]);
       }
+      const abgelegt = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('mutation_queue_failed_v1') && !k.endsWith(':cloud-copy'))
+        .map((k) => `${k}=${(JSON.parse(localStorage.getItem(k) ?? '[]') as unknown[]).length}`));
+      process.stdout.write(`\nDIAG-ABGELEGT ${abgelegt.join(' ')}\n`);
     } finally {
       await olli.context.close();
       await deleteCup(id);
