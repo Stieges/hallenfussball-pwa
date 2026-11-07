@@ -11,7 +11,7 @@ import { phaseViewOf } from '../../match/client/phaseView';
 import { monitorUhrOf } from '../../view/monitorUhr';
 import type { ClockMode } from '../../match/clockDisplay';
 import type { EngineEvent, MatchContext, MatchState } from '../../match';
-import { LEERES_GEDAECHTNIS, planeHallToene, type FeldStand } from '..';
+import { LEERES_GEDAECHTNIS, planeHallToene, uhrsprungMs, type FeldStand } from '..';
 import {
   ABSCHNITT_MS, CTX_11, CTX_HF, ENDE_A2, T0, ev, koRegeln, lauf, server, stand, stateAus, zweiterAbschnitt,
 } from './hallentonFixtures';
@@ -133,6 +133,19 @@ describe('@HT-005 Angehaltene Uhr kurz vor Schluss verschiebt den Hallenton mit'
     expect(plan(ENDE_A2 - 30_000).abfrageTaktMs).toBeNull();
     expect(plan(ENDE_A2 - 15_000).abfrageTaktMs).toBe(1000);
   });
+
+  it('@HT-005 während der angehaltenen 20 Sekunden fragt das Gerät jede Sekunde nach (Uhr steht 8 s vor dem Ende)', () => {
+    const plan = (jetzt: number) => planeHallToene({ felder: felder(jetzt), serverNow: jetzt }, LEERES_GEDAECHTNIS);
+    for (const jetzt of [bei552 + 1000, bei552 + 10_000, bei552 + 19_000]) {
+      expect(plan(jetzt).abfrageTaktMs).toBe(1000);
+    }
+  });
+
+  it('@HT-005 Gegenprobe: steht die Uhr weit vor dem Ende, bleibt der normale Takt', () => {
+    const frueh = [...log, ev('PAUSE', ENDE_A2 - 120_000, 2, null)];
+    const plan = planeHallToene({ felder: [stand(stateAus(frueh), CTX_11, server(0), ENDE_A2 - 119_700)], serverNow: ENDE_A2 - 100_000 }, LEERES_GEDAECHTNIS);
+    expect(plan.abfrageTaktMs).toBeNull();
+  });
 });
 
 describe('@HT-006 Eine korrigierte Uhr verschiebt den Hallenton', () => {
@@ -164,6 +177,29 @@ describe('@HT-010 Eine falsch gehende Uhr am Lautsprecher-Gerät verschiebt den 
     expect(Math.abs(plan.toene[0].at - cockpitEnde)).toBeLessThanOrEqual(1000);
     geraet = plan.toene[0].at + 20_000;
     expect(Math.abs(sync.serverNow() - cockpitEnde)).toBeLessThanOrEqual(1000);
+  });
+
+  it('@HT-010 springt die Geräteuhr im Spiel um 20 s vor, erkennt das Gerät den Sprung; nach neuem Abgleich liegt der Ton wieder auf der Grenze', async () => {
+    const state = stateAus(zweiterAbschnitt());
+    const cockpitEnde = phaseViewOf(state, CTX_11, ENDE_A2 - 60_000).limitAt ?? 0;
+    let server = ENDE_A2 - 60_000;
+    let sprung = 0;
+    let mono = 0;
+    const sync = new ClockSync(async () => server, () => server + sprung, { get: () => null, set: () => undefined });
+    await sync.sync();
+    const vorher = { wandMs: server + sprung, monoMs: mono };
+    // 5 s später stellt das System die Uhr 20 s vor
+    server += 5000;
+    mono += 5000;
+    sprung = 20_000;
+    expect(uhrsprungMs(vorher, { wandMs: server + sprung, monoMs: mono })).toBe(20_000);
+    // ohne neuen Abgleich läge die Planzeit 20 s daneben; nach dem Abgleich plant das Gerät wieder genau
+    expect(sync.serverNow() - server).toBe(20_000);
+    await sync.sync();
+    const jetzt = sync.serverNow();
+    const plan = planeHallToene({ felder: [stand(state, CTX_11, { art: 'server', antwortAlterMs: 0 }, jetzt)], serverNow: jetzt }, LEERES_GEDAECHTNIS);
+    expect(plan.toene[0].at).toBe(cockpitEnde);
+    expect(jetzt).toBe(server);
   });
 });
 

@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { phaseViewOf } from '../../match/client/phaseView';
 import { LEERES_GEDAECHTNIS, cockpitTonSchweigt, planeHallToene, type FeldStand } from '..';
 import {
-  ABSCHNITT_MS, COCKPIT, CTX_11, CTX_12, ENDE_A2, PAUSE_MS, T0, ev, lauf, server, stand, stateAus, zweiterAbschnitt,
+  ABSCHNITT_MS, COCKPIT, CTX_11, CTX_12, ENDE_A2, PAUSE_MS, T0, TAKT_VERSAETZE, ev, lauf, laufImTakt, server, stand, stateAus,
+  zweiterAbschnitt,
 } from './hallentonFixtures';
 
 const LAUFZEIT_MS = 300;
@@ -27,6 +28,19 @@ function vomServer(jetzt: number, alterMs = 0): FeldStand {
 /** Eigenes Cockpit: das Ende von selbst steht sofort im eigenen Stand. */
 function vomCockpit(jetzt: number): FeldStand {
   return jetzt < ENDE_A2 ? stand(laeuft11, CTX_11, COCKPIT, T0) : stand(beendet11, CTX_11, COCKPIT, ENDE_A2);
+}
+
+/** @HT-033 Zeile 7: Feld 1 nach Server (Spiel 11), Feld 2 nach eigenem Cockpit (Spiel 12 endet 0,5 s nach Spiel 11). */
+function zeile7Felder(): (jetzt: number) => FeldStand[] {
+  // Spiel 12 auf Feld 2 endet 0,5 s nach Spiel 11
+  const start12 = ENDE_A2 + 500 - (2 * ABSCHNITT_MS + PAUSE_MS);
+  const laeuft12 = stateAus(zweiterAbschnitt(start12), CTX_12);
+  const ende12 = ENDE_A2 + 500;
+  const beendet12 = stateAus([...zweiterAbschnitt(start12), ev('MATCH_END', ende12, 2, 2 * ABSCHNITT_MS)], CTX_12);
+  return (jetzt: number): FeldStand[] => [
+    vomServer(jetzt),
+    jetzt < ende12 ? stand(laeuft12, CTX_12, COCKPIT, start12, 'feld-2') : stand(beendet12, CTX_12, COCKPIT, ende12, 'feld-2'),
+  ];
 }
 
 const cockpitGrenze = phaseViewOf(laeuft11, CTX_11, ENDE_A2 - 10_000).limitAt ?? 0;
@@ -83,15 +97,7 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
   });
 
   it('@HT-033 Zeile 7: F1 leitet das Handy, F2 der Laptop, Laptop für beide → F1 nach Server, F2 nach eigenem Stand; gleichzeitig = ein Ton', () => {
-    // Spiel 12 auf Feld 2 endet 0,5 s nach Spiel 11
-    const start12 = ENDE_A2 + 500 - (2 * ABSCHNITT_MS + PAUSE_MS);
-    const laeuft12 = stateAus(zweiterAbschnitt(start12), CTX_12);
-    const ende12 = ENDE_A2 + 500;
-    const beendet12 = stateAus([...zweiterAbschnitt(start12), ev('MATCH_END', ende12, 2, 2 * ABSCHNITT_MS)], CTX_12);
-    const felder = (jetzt: number): FeldStand[] => [
-      vomServer(jetzt),
-      jetzt < ende12 ? stand(laeuft12, CTX_12, COCKPIT, start12, 'feld-2') : stand(beendet12, CTX_12, COCKPIT, ende12, 'feld-2'),
-    ];
+    const felder = zeile7Felder();
     const { gespielt } = lauf(felder, ENDE_A2 - 3000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
     expect(gespielt[0].felder).toEqual(['feld-1', 'feld-2']);
@@ -113,6 +119,7 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
   });
 
   it('@HT-033 Zeile 11: Laptop leitet selbst ohne Netz → einmal nach eigenem Stand, keine Warnung „Keine Verbindung“', () => {
+    // Grenze des Tests: `eigenesCockpit` kennt kein Netz – fachlich gleich Zeile 2; geprüft wird, dass ohne Server keine Warnung kommt
     const { gespielt } = lauf((jetzt) => [vomCockpit(jetzt)], ENDE_A2 - 3000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
     const plan = planeHallToene({ felder: [vomCockpit(ENDE_A2 - 1000)], serverNow: ENDE_A2 - 1000 }, LEERES_GEDAECHTNIS);
@@ -127,6 +134,14 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
     expect(Math.abs(gespielt[0].at - cockpitGrenze)).toBeLessThanOrEqual(1000);
     expect(cockpitTonSchweigt('feld-1', [])).toBe(false);
   });
+});
+
+describe('@HT-033 Zeile 7 im 1-s-Takt des Einbaus', () => {
+  for (const versatzMs of TAKT_VERSAETZE) {
+    it(`@HT-033 Zeile 7, Versatz ${versatzMs} ms: F1 nach Server, F2 nach eigenem Stand, gleichzeitig = ein Ton`, () => {
+      expect(laufImTakt(zeile7Felder(), ENDE_A2 - 3000, ENDE_A2 + 6000, { versatzMs })).toHaveLength(1);
+    });
+  }
 });
 
 describe('Regel 3: Cockpit-Ton schweigt am Lautsprecher', () => {

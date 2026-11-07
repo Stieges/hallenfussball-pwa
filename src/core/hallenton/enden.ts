@@ -37,6 +37,24 @@ function artNachEnde(nachher: MatchState): HallTonArt {
   return nachher.status === 'section_break' ? 'halbzeit' : 'abpfiff';
 }
 
+/** Ereignisse, die die Spieluhr neu verankern (Anpfiff, Weiter, Abschnitt, Fortsetzen, Korrektur). */
+const UHR_ANKER = new Set(['MATCH_START', 'RESUME', 'SECTION_START', 'REOPEN', 'CLOCK_ADJUST']);
+
+/**
+ * Frühester Zeitpunkt, zu dem ein Ende bekannt sein kann: der letzte wirksame Uhr-Anker. Ein Ende, das erst durch eine
+ * Korrektur über die Grenze entsteht, „liegt“ damit beim Zeitpunkt der Korrektur, nicht bei der rechnerischen Grenze
+ * (Controller 07.11.: die 5 s zählen ab dem Moment, in dem der Lautsprecher das Ende kennt).
+ */
+function letzterUhrAnkerAt(state: MatchState): number {
+  let at = Number.NEGATIVE_INFINITY;
+  for (const event of Object.values(state.accepted)) {
+    if (UHR_ANKER.has(event.type) && !state.retracted.includes(event.id) && event.at > at) {
+      at = event.at;
+    }
+  }
+  return at;
+}
+
 /** Zeitpunkt des letzten wirksamen Abpfiffs (für Strafstoßschießen und offene Entscheidung, die keinen eigenen tragen). */
 function letzterAbpfiffAt(state: MatchState): number | null {
   let at: number | null = null;
@@ -63,19 +81,23 @@ function vorhergesagtesEnde(state: MatchState, ctx: MatchContext, serverNow: num
   const art: HallTonArt = result.status === 'accepted' ? artNachEnde(result.state) : type === 'SECTION_END' ? 'halbzeit' : 'abpfiff';
   return {
     schluessel: endeSchluessel({ matchId: ctx.matchId, phase: state.phase, section: state.section, reopenCount: view.reopenCount }),
-    at: view.limitAt, art, vorhergesagt: true,
+    at: Math.max(view.limitAt, letzterUhrAnkerAt(state)), art, vorhergesagt: true,
   };
 }
 
 function beobachtetesEnde(state: MatchState, ctx: MatchContext, reopenCount: number): FeldEnde | null {
   const sections = state.rules?.sections ?? 1;
   const ende = (phase: EndeKennung['phase'], section: number, at: number | null, art: HallTonArt): FeldEnde | null =>
-    at === null ? null : { schluessel: endeSchluessel({ matchId: ctx.matchId, phase, section, reopenCount }), at, art, vorhergesagt: false };
+    at === null ? null : {
+      schluessel: endeSchluessel({ matchId: ctx.matchId, phase, section, reopenCount }),
+      at: Math.max(at, letzterUhrAnkerAt(state)), art, vorhergesagt: false,
+    };
   switch (state.status) {
     case 'section_break':
-      // vor der Verlängerung steht `section` schon auf sections + 1; beendet ist der letzte reguläre Abschnitt
+      // vor der Verlängerung steht `section` schon auf sections + 1; beendet ist der letzte reguläre Abschnitt, und zwar mit
+      // dem Abpfiff – nach einer offenen Entscheidung ist `breakStartedAt` erst der Zeitpunkt der Wahl (Review M2)
       return state.phase === 'overtime'
-        ? ende('regular', sections, state.breakStartedAt, 'halbzeit')
+        ? ende('regular', sections, letzterAbpfiffAt(state), 'halbzeit')
         : ende('regular', state.section, state.breakStartedAt, 'halbzeit');
     case 'decision_pending':
       return ende('regular', state.section, letzterAbpfiffAt(state), 'abpfiff');
@@ -87,6 +109,19 @@ function beobachtetesEnde(state: MatchState, ctx: MatchContext, reopenCount: num
     default:
       return null;
   }
+}
+
+/**
+ * Restzeit bis zur Grenze des Abschnitts in ms bei laufender oder angehaltener Uhr (regulär oder Verlängerung); sonst `null`.
+ * Grundlage der engen Abfrage ab 15 s vor dem Ende, auch bei angehaltener Uhr (@HT-005, Review I1).
+ */
+export function restBisGrenzeMs(state: MatchState, ctx: MatchContext, serverNow: number): number | null {
+  if (state.rules === null || (state.status !== 'running' && state.status !== 'paused') ||
+    (state.phase !== 'regular' && state.phase !== 'overtime')) {
+    return null;
+  }
+  const view = phaseViewOf(state, ctx, serverNow);
+  return view.limitClockMs - view.playedMs;
 }
 
 /** Das nächste bzw. gerade gemeldete Ende des Spiels; `null` ohne Anpfiff (Regeln fehlen), bei stehender Uhr und ohne Ende. */

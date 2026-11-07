@@ -128,3 +128,38 @@ export function lauf(
   }
   return { gespielt, gedaechtnis };
 }
+
+/**
+ * Takt-Nachbau nach dem Einbau-Vertrag (H3b): geplant wird nur alle `taktMs` (erster Plan bei `von + versatzMs`), ein
+ * geplanter Ton erklingt genau zu seinem `at` (Wecker), ein neuer Plan ersetzt die noch nicht gespielten Töne.
+ * Zeitraster 10 ms.
+ */
+export function laufImTakt(
+  felderZu: (jetzt: number) => FeldStand[],
+  von: number,
+  bis: number,
+  { taktMs = 1000, versatzMs = 0 }: { taktMs?: number; versatzMs?: number } = {},
+): GespielterTon[] {
+  let gedaechtnis = LEERES_GEDAECHTNIS;
+  let eingeplant: ReturnType<typeof planeHallToene>['toene'] = [];
+  const gespielt: GespielterTon[] = [];
+  let naechsterPlan = von + versatzMs;
+  for (let jetzt = von; jetzt <= bis; jetzt += 10) {
+    if (jetzt >= naechsterPlan) {
+      const plan = planeHallToene({ felder: felderZu(jetzt), serverNow: jetzt }, gedaechtnis);
+      gedaechtnis = plan.gedaechtnis;
+      eingeplant = plan.toene;
+      naechsterPlan += taktMs;
+    }
+    const faellig = eingeplant.filter((ton) => ton.at <= jetzt);
+    eingeplant = eingeplant.filter((ton) => ton.at > jetzt);
+    for (const ton of faellig) {
+      gespielt.push({ at: jetzt, art: ton.art, schluessel: ton.schluessel, felder: ton.felder });
+      gedaechtnis = hallTonGespielt(gedaechtnis, ton, jetzt);
+    }
+  }
+  return gespielt;
+}
+
+/** Versätze des 1-s-Takts gegen das Ende, mit denen die Takt-Tests laufen. */
+export const TAKT_VERSAETZE = [50, 300, 950] as const;

@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import type { EngineEvent, MatchContext } from '../../match';
 import { LEERES_GEDAECHTNIS, planeHallToene, type FeldStand } from '..';
 import {
-  ABSCHNITT_MS, CTX_11, CTX_12, ENDE_A1, ENDE_A2, PAUSE_MS, T0, anpfiff, ev, lauf, server, stand, stateAus, zweiterAbschnitt,
+  ABSCHNITT_MS, CTX_11, CTX_12, ENDE_A1, ENDE_A2, PAUSE_MS, T0, TAKT_VERSAETZE, anpfiff, ev, lauf, laufImTakt, server, stand,
+  stateAus, zweiterAbschnitt,
 } from './hallentonFixtures';
 
 const LAUFZEIT_MS = 300;
@@ -160,4 +161,111 @@ describe('Gegenbeispiel: Korrektur über die Grenze', () => {
     expect(gespielt).toHaveLength(1);
     expect(gespielt[0].at - vor).toBeLessThanOrEqual(1000);
   });
+});
+
+describe('@HT-032 im 1-s-Takt des Einbaus (Ton genau zu seinem Zeitpunkt, Plan nur jede Sekunde)', () => {
+  for (const versatzMs of TAKT_VERSAETZE) {
+    it(`@HT-032 Zeile 1, Versatz ${versatzMs} ms: Spiel 11 endet, 0,5 s danach Spiel 12 → einmal der Abpfiff-Ton`, () => {
+      const spiel12 = spiel12EndetUm(ENDE_A2 + 500);
+      const gespielt = laufImTakt((jetzt) => [spiel11Endet(jetzt), spiel12(jetzt)], ENDE_A2 - 3000, ENDE_A2 + 10_000, { versatzMs });
+      expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
+    });
+
+    const zeile4 = () => {
+      const vonHand = T0 + 200_000;
+      const erster = anpfiff();
+      const spiel11 = feld('feld-1', CTX_11, erster, [...erster, ev('SECTION_END', vonHand, 1, 200_000)], vonHand);
+      const spiel12 = spiel12EndetUm(vonHand + 500);
+      return laufImTakt((jetzt) => [spiel11(jetzt), spiel12(jetzt)], vonHand - 3000, vonHand + 10_000, { versatzMs });
+    };
+
+    it(`@HT-032 Zeile 4, Versatz ${versatzMs} ms: erster Abschnitt von Spiel 11 von Hand beendet, 0,5 s danach endet Spiel 12 → genau ein Ton`, () => {
+      expect(zeile4()).toHaveLength(1);
+    });
+
+    // Kommt die Nachricht vom Ende von Hand erst mit der nächsten Abfrage nach dem Ende von Spiel 12 an (Versatz 50 und
+    // 950 ms bei 300 ms Laufzeit), ist dessen Abpfiff-Ton schon erklungen – Befund im Bericht (Fixrunde 1, F1-1).
+    const nachrichtVorSpiel12 = versatzMs === 300;
+    (nachrichtVorSpiel12 ? it : it.fails)(`@HT-032 Zeile 4, Versatz ${versatzMs} ms: … → einmal der Halbzeit-Ton`, () => {
+      expect(zeile4().map((t) => t.art)).toEqual(['halbzeit']);
+    });
+
+    it(`@HT-032 Zeile 2, Versatz ${versatzMs} ms: 2 Sekunden Abstand → für jedes Spiel einmal der Abpfiff-Ton`, () => {
+      const spiel12 = spiel12EndetUm(ENDE_A2 + 2000);
+      const gespielt = laufImTakt((jetzt) => [spiel11Endet(jetzt), spiel12(jetzt)], ENDE_A2 - 3000, ENDE_A2 + 10_000, { versatzMs });
+      expect(gespielt.map((t) => t.art)).toEqual(['abpfiff', 'abpfiff']);
+    });
+  }
+});
+
+describe('Bedenken 1 (Controller 07.11.): die 5 s zählen ab dem Moment, in dem der Lautsprecher das Ende kennt', () => {
+  it('@HT-006 Tom stellt die Uhr 20 s über die Grenze: genau ein Ton, sobald die Korrektur bekannt ist', () => {
+    const korrektur = ENDE_A2 - 60_000;
+    const ueber = [...log11, ev('CLOCK_ADJUST', korrektur, 2, 2 * ABSCHNITT_MS + 20_000)];
+    const felder = (jetzt: number): FeldStand[] => [
+      jetzt < korrektur + LAUFZEIT_MS
+        ? stand(stateAus(log11), CTX_11, server(0), T0)
+        : stand(stateAus(ueber), CTX_11, server(0), korrektur + LAUFZEIT_MS),
+    ];
+    const gespielt = laufImTakt(felder, korrektur - 2000, ENDE_A2 + 5000, { versatzMs: 300 });
+    expect(gespielt).toHaveLength(1);
+    expect(gespielt[0].at - korrektur).toBeLessThanOrEqual(1300);
+  });
+
+  it('@HT-006 Uhr 20 s über die Grenze, am Lautsprecher kommt gleich das beendete Spiel an: genau ein Ton', () => {
+    const korrektur = ENDE_A2 - 60_000;
+    const ueber = [...log11, ev('CLOCK_ADJUST', korrektur, 2, 2 * ABSCHNITT_MS + 20_000)];
+    // das Cockpit beendet sofort mit der Grenze als Zeitpunkt (20 s vor der Korrektur)
+    const beendet = [...ueber, ev('MATCH_END', korrektur - 20_000, 2, 2 * ABSCHNITT_MS)];
+    const felder = (jetzt: number): FeldStand[] => [
+      jetzt < korrektur + LAUFZEIT_MS
+        ? stand(stateAus(log11), CTX_11, server(0), T0)
+        : stand(stateAus(beendet), CTX_11, server(0), korrektur + LAUFZEIT_MS),
+    ];
+    const gespielt = laufImTakt(felder, korrektur - 2000, ENDE_A2 + 5000, { versatzMs: 300 });
+    expect(gespielt).toHaveLength(1);
+  });
+
+  it('@HT-013 ein Ende, 4 s danach bekannt und erst 5,5 s nach dem Ende geplant, tönt noch (5 s ab Bekanntwerden)', () => {
+    const beendet = stateAus([...log11, ev('MATCH_END', ENDE_A2, 2, 2 * ABSCHNITT_MS)]);
+    const plan = planeHallToene({ felder: [stand(beendet, CTX_11, server(0), ENDE_A2 + 4000)], serverNow: ENDE_A2 + 5500 }, LEERES_GEDAECHTNIS);
+    expect(plan.toene).toHaveLength(1);
+  });
+
+  it('@HT-013 ein Ende, erst 5,5 s danach bekannt, tönt nicht', () => {
+    const beendet = stateAus([...log11, ev('MATCH_END', ENDE_A2, 2, 2 * ABSCHNITT_MS)]);
+    const plan = planeHallToene({ felder: [stand(beendet, CTX_11, server(0), ENDE_A2 + 5500)], serverNow: ENDE_A2 + 5500 }, LEERES_GEDAECHTNIS);
+    expect(plan.toene).toEqual([]);
+  });
+
+  it('@HT-013 ein bekanntes Ende, das mehr als 5 s nach Bekanntwerden noch nicht gespielt ist, tönt nicht mehr', () => {
+    const beendet = stateAus([...log11, ev('MATCH_END', ENDE_A2, 2, 2 * ABSCHNITT_MS)]);
+    const plan = planeHallToene({ felder: [stand(beendet, CTX_11, server(0), ENDE_A2 + 1000)], serverNow: ENDE_A2 + 6500 }, LEERES_GEDAECHTNIS);
+    expect(plan.toene).toEqual([]);
+  });
+});
+
+describe('@HT-032 Gegenbeispiel im 1-s-Takt des Einbaus', () => {
+  for (const versatzMs of TAKT_VERSAETZE) {
+    it(`@HT-032 Versatz ${versatzMs} ms: Spiel 12 sollte 0,8 s nach Spiel 11 enden, Tom hält vorher an – sein späteres Ende tönt eigens`, () => {
+      const start12 = ENDE_A2 + 800 - SPIELDAUER_MS;
+      const log12 = zweiterAbschnitt(start12);
+      const halt = ENDE_A2 + 300;
+      const angehalten = [...log12, ev('PAUSE', halt, 2, null)];
+      const weiter = [...angehalten, ev('RESUME', halt + 20_000, 2, null)];
+      const ende12 = halt + 20_500;
+      const stufen = [
+        { ab: T0, state: stateAus(log12, CTX_12) },
+        { ab: halt, state: stateAus(angehalten, CTX_12) },
+        { ab: halt + 20_000, state: stateAus(weiter, CTX_12) },
+        { ab: ende12, state: stateAus([...weiter, ev('MATCH_END', ende12, 2, 2 * ABSCHNITT_MS)], CTX_12) },
+      ];
+      const spiel12 = (jetzt: number): FeldStand => {
+        const stufe = [...stufen].reverse().find((s) => jetzt >= s.ab + LAUFZEIT_MS) ?? stufen[0];
+        return stand(stufe.state, CTX_12, server(0), stufe.ab + LAUFZEIT_MS, 'feld-2');
+      };
+      const gespielt = laufImTakt((jetzt) => [spiel11Endet(jetzt), spiel12(jetzt)], ENDE_A2 - 3000, ende12 + 5000, { versatzMs });
+      expect(gespielt.map((t) => t.felder)).toEqual([['feld-1', 'feld-2'], ['feld-2']]);
+    });
+  }
 });

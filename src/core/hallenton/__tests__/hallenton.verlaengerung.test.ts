@@ -119,6 +119,33 @@ describe('@HT-031 Verlängerung, Golden Goal und Strafstoßschießen haben feste
     expect(Math.abs(gespielt[0].at - ENDE_VL)).toBeLessThanOrEqual(1000);
   });
 
+  it('@HT-031 „Entscheidung offen“: die reguläre Spielzeit läuft bei 1:1 ab, die Regel ist noch offen → einmal der Abpfiff-Ton, auch nach der Wahl der Verlängerung kein weiterer', () => {
+    const offen = { ...koRegeln('shootout'), tiebreak: null };
+    const bisVorEnde = [ev('MATCH_START', T0, 1, null, { payload: { rules: offen } }), ...regulaerBisVorEnde('shootout').slice(1)];
+    const zuEnde = [...bisVorEnde, ev('MATCH_END', ENDE_REGULAER, 2, 600_000)];
+    const wahl = ENDE_REGULAER + 20_000;
+    const gewaehlt = [...zuEnde, ev('TIEBREAK_CHOICE', wahl, 2, null, { actor: 'leitung', payload: { choice: 'overtime' } })];
+    expect(stateAus(zuEnde, CTX_HF).status).toBe('decision_pending');
+    expect(stateAus(gewaehlt, CTX_HF).status).toBe('section_break');
+    const felder = ausServer([
+      { ab: T0, log: bisVorEnde },
+      { ab: ENDE_REGULAER, log: zuEnde },
+      { ab: wahl, log: gewaehlt },
+    ]);
+    const { gespielt } = lauf(felder, ENDE_REGULAER - 3000, wahl + 10_000, 100);
+    expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
+    expect(Math.abs(gespielt[0].at - ENDE_REGULAER)).toBeLessThanOrEqual(1000);
+  });
+
+  it('@HT-031 „Entscheidung offen“: ein Lautsprecher, der erst nach der Wahl dazukommt, tönt zur Wahl nicht nach (Ende liegt 20 s zurück)', () => {
+    const offen = { ...koRegeln('shootout'), tiebreak: null };
+    const zuEnde = [ev('MATCH_START', T0, 1, null, { payload: { rules: offen } }), ...regulaerBisVorEnde('shootout').slice(1), ev('MATCH_END', ENDE_REGULAER, 2, 600_000)];
+    const wahl = ENDE_REGULAER + 20_000;
+    const gewaehlt = [...zuEnde, ev('TIEBREAK_CHOICE', wahl, 2, null, { actor: 'leitung', payload: { choice: 'overtime' } })];
+    const felder = ausServer([{ ab: wahl, log: gewaehlt }]);
+    expect(lauf(felder, wahl + 300, wahl + 8000, 100).gespielt).toEqual([]);
+  });
+
   describe('Golden-Goal-Tor zurückgenommen', () => {
     const tor = ANPFIFF_VL + 70_000;
     const torEreignis = ev('GOAL', tor, 3, 670_000, { teamId: NORD });
