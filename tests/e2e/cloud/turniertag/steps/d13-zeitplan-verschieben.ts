@@ -18,6 +18,9 @@ async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
   await expectSollMarker(ownerPage, 'schedule-shift-button');
   const ursprunglich = ownerPage.locator('[data-testid^="match-original-"]:visible');
   await expect(ursprunglich, 'vor dem Verschieben steht nirgends „(war …)“').toHaveCount(0);
+  const diag: string[] = [];
+  ownerPage.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') { diag.push(`console ${m.type()}: ${m.text().slice(0, 600)}`); } });
+  ownerPage.on('response', async (r) => { if (r.url().includes('/rest/v1/') && r.request().method() !== 'GET') { let b = ''; try { b = (await r.text()).slice(0, 400); } catch { b = '?'; } diag.push(`resp ${r.request().method()} ${r.status()} ${r.url().split('/rest/v1/')[1]?.slice(0, 160)} :: ${b}`); } });
   await ownerPage.getByTestId('schedule-shift-button').click();
   const weiter = ownerPage.getByTestId('time-shift-proceed');
   const mitVorschau = (await weiter.innerText()).includes('Vorschau');
@@ -28,6 +31,10 @@ async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
   }
   await expect(ownerPage.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Minuten verschoben', { timeout: SPEICHERN_MS });
   await expect(ursprunglich.first(), 'verschobene Spiele tragen „(war hh:mm)“').toHaveText(/^\(war \d{2}:\d{2}\)$/, { timeout: SPEICHERN_MS });
+  await ownerPage.waitForTimeout(12000);
+  const status = await ownerPage.locator('[data-testid="sync-status"]').first().evaluate((el) => el.outerHTML.slice(0, 600)).catch(() => 'kein sync-status');
+  const rejected = await ownerPage.locator('[data-testid="sync-status-rejected"]').count();
+  process.stdout.write(`\nDIAG-D13 sync-status=${status} rejected=${rejected}\n${diag.join('\n')}\nDIAG-D13-ENDE\n`);
   await expect.poll(async () => {
     await ownerPage.reload();
     await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
