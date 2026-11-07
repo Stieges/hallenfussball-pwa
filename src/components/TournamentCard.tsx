@@ -186,7 +186,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         <div style={rowStyle}>
           <div style={metaStyle} data-testid="card-meta">
             <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
-              <span style={{ whiteSpace: 'nowrap', fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }} data-testid="card-time">{timeText}</span>
+              <span style={{ minWidth: 0, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }} data-testid="card-time">{timeText}</span>
               {myRole !== undefined && myRole !== 'owner' && (
                 <TextTag testId={`tournament-role-${tournament.id}`}>
                   {t(`card.role.${myRole}`)}
@@ -197,6 +197,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
               <span
                 title={location}
                 data-testid="card-location"
+                data-truncate-ok="Ort einzeilig mit Auslassung, vollständig im title (@OB-079)"
                 style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               >
                 {location}
