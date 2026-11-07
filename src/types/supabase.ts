@@ -9,6 +9,9 @@
  * 2026-11-06 (A1 Veranstaltung, PR feat/veranstaltung-a1): Tabellen gatherings/gathering_members, tournaments.gathering_id und
  * die Funktionen von 20261119_001 aus einem Wegwerf-Container (Baseline + alle Migrationen) erzeugt -- bis zum Einspielen
  * von 20261119_001 in der Produktion meldet der Typ-Drift-Check genau diese Zeilen.
+ * 2026-11-07 (Hallenton, PR #455): nach dem Einspielen von 20261121_001 aus der Produktion per Supabase-CLI
+ * (gen types typescript --schema public, wie der Typ-Drift-Check) erzeugt: hall_speakers, hall_field_leads,
+ * hall_sound_settings und die hall_*-Funktionen. Damit wieder deckungsgleich mit der Produktion.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -442,6 +445,120 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "group_completions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hall_field_leads: {
+        Row: {
+          device_id: string
+          field_id: number
+          last_seen: string
+          tournament_id: string
+        }
+        Insert: {
+          device_id: string
+          field_id: number
+          last_seen?: string
+          tournament_id: string
+        }
+        Update: {
+          device_id?: string
+          field_id?: number
+          last_seen?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_field_leads_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hall_sound_settings: {
+        Row: {
+          end_custom_path: string | null
+          goal_tone_fields: number[]
+          halftime_custom_path: string | null
+          halftime_sound: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          end_custom_path?: string | null
+          goal_tone_fields?: number[]
+          halftime_custom_path?: string | null
+          halftime_sound?: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          end_custom_path?: string | null
+          goal_tone_fields?: number[]
+          halftime_custom_path?: string | null
+          halftime_sound?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_sound_settings_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hall_speakers: {
+        Row: {
+          assigned_at: string
+          device_id: string
+          device_name: string
+          field_id: number
+          last_seen: string | null
+          output_hint_at: string | null
+          state: string | null
+          test_id: string | null
+          test_played_at: string | null
+          test_requested_at: string | null
+          tournament_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          device_id: string
+          device_name: string
+          field_id: number
+          last_seen?: string | null
+          output_hint_at?: string | null
+          state?: string | null
+          test_id?: string | null
+          test_played_at?: string | null
+          test_requested_at?: string | null
+          tournament_id: string
+        }
+        Update: {
+          assigned_at?: string
+          device_id?: string
+          device_name?: string
+          field_id?: number
+          last_seen?: string | null
+          output_hint_at?: string | null
+          state?: string | null
+          test_id?: string | null
+          test_played_at?: string | null
+          test_requested_at?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_speakers_tournament_id_fkey"
             columns: ["tournament_id"]
             isOneToOne: false
             referencedRelation: "tournaments"
@@ -1962,6 +2079,87 @@ export type Database = {
       gathering_name_or_fail: { Args: { p_name: string }; Returns: string }
       generate_helper_code: { Args: never; Returns: string }
       generate_share_code: { Args: never; Returns: string }
+      hall_checked_fields: {
+        Args: { p_fields: number[]; p_tournament_id: string }
+        Returns: number[]
+      }
+      hall_field_lead_heartbeat: {
+        Args: { p_device_id: string; p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
+      hall_ms: { Args: { p_ts: string }; Returns: number }
+      hall_output_heard: {
+        Args: { p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
+      hall_require: {
+        Args: { p_permission: string; p_tournament_id: string }
+        Returns: undefined
+      }
+      hall_require_open: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
+      hall_sound_object_allowed: {
+        Args: { p_name: string; p_op: string }
+        Returns: boolean
+      }
+      hall_sound_purge_ended: { Args: never; Returns: number }
+      hall_sound_settings_set: {
+        Args: {
+          p_end_custom_path: string
+          p_goal_tone_fields: number[]
+          p_halftime_custom_path: string
+          p_halftime_sound: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_sound_status: {
+        Args: { p_device_id?: string; p_tournament_id: string }
+        Returns: Json
+      }
+      hall_speaker_assign: {
+        Args: {
+          p_device_id: string
+          p_device_name: string
+          p_fields: number[]
+          p_replace?: boolean
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_speaker_heartbeat: {
+        Args: {
+          p_device_id: string
+          p_fields: number[]
+          p_output_changed?: boolean
+          p_state: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_speaker_release: {
+        Args: {
+          p_device_id: string
+          p_fields: number[]
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_test_tone_ack: {
+        Args: {
+          p_device_id: string
+          p_field: number
+          p_test_id: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_test_tone_request: {
+        Args: { p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
       has_gathering_permission: {
         Args: { p_gathering_id: string; p_permission: string }
         Returns: boolean
