@@ -22,6 +22,8 @@
 --   hallenton_sounds_insert | INSERT | {authenticated} |  | ((bucket_id = 'hallenton-sounds'::text) AND hall_sound_object_allowed(name, 'insert'::text))
 --   hallenton_sounds_select | SELECT | {authenticated} | ((bucket_id = 'hallenton-sounds'::text) AND hall_sound_object_allowed(name, 'select'::text)) |
 --   Danach die Assertion hallenton-storage-policies-present (scripts/db_privilege_assertions.sql) im Drift-Check: |t.
+--   Ist sie rot (z. B. weil der Policy-Editor in Weg B den Ausdruck anders ablegt): den Ausdruck in pg_policies mit dem
+--   Wortlaut oben vergleichen und die POLICY korrigieren (DROP + Block oben) -- NICHT die Assertion anpassen.
 --   Ebenfalls lesend: SELECT rolbypassrls FROM pg_roles WHERE rolname = 'postgres';  -- muss t sein, sonst zaehlt die
 --   Grenze von 10 Dateien unter RLS (dann Daniel fragen).
 --

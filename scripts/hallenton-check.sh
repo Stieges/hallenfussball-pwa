@@ -395,7 +395,7 @@ run_probes() {
 
   # --- Stand: Inhalte je Sicht (Helfer ohne Geraetename) --------------------------------------------------
   check R "@HT-001 Olli liest: Feld 1 „Rechner der Turnierleitung“, isThisDevice, Zustand, Alter 4000 ms vom Server" \
-    "voll:{\"test\": null, \"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\", \"deviceName\": \"$NAME_R\", \"outputHint\": false, \"isThisDevice\": true}|1" \
+    "voll:{\"test\": null, \"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\", \"hintAt\": null, \"deviceName\": \"$NAME_R\", \"outputHint\": false, \"isThisDevice\": true}|1" \
     "$(probe "$U_OLLI" "$SPEAKER_R" "SELECT 'r:voll:' || (s - 'assignedAt' - 'lastSeen')::text FROM jsonb_array_elements(public.hall_sound_status('$T_NORD'::uuid, '$D_R'::uuid) -> 'speakers') s;" "1")"
   check R "@HT-040 Tom (Helfer) liest nur Zustand und Alter, ohne Geraetename" \
     "knapp:{\"ageMs\": 4000, \"field\": 1, \"state\": \"not_activated\", \"outputHint\": false}|1" \
@@ -603,7 +603,7 @@ $hint_status" "SELECT CASE WHEN output_hint_at = now() THEN 'jetzt' ELSE coalesc
     "$(probe "$U_OLLI" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET test_played_at = now() - interval '5 minutes';" \
       "$(HB "$T_NORD" "$D_R" 1 ready)
 $hint_status" "SELECT state FROM public.hall_speakers")"
-  check R "@HT-047 ein danach gespielter Testton nimmt den Hinweis weg" "false|1" \
+  check R "@HT-049 ein danach gespielter Testton nimmt den Hinweis NICHT weg (Pille bleibt bis „Gehört“)" "true|1" \
     "$(probe "$U_OLLI" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET output_hint_at = now() - interval '2 minutes', test_played_at = now() - interval '1 minute';" "$hint_status" "1")"
   check R "@HT-047 Hinweis ohne jeden Testton -> outputHint true" "true|1" \
     "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET output_hint_at = now();" "$hint_status" "1")"
@@ -613,6 +613,15 @@ $hint_status" "SELECT state FROM public.hall_speakers")"
     "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET device_id = '$D_Z';" "SELECT 'r:' || (SELECT string_agg((f ->> 'field') || '=' || (f ->> 'status'), ';') FROM jsonb_array_elements(public.hall_speaker_heartbeat('$T_NORD'::uuid, '$D_R'::uuid, '{1}'::int[], 'ready', true) -> 'fields') f);" "SELECT coalesce(output_hint_at::text, 'NULL') FROM public.hall_speakers")"
   check R "@HT-047 Ablösen setzt den Hinweis zurueck" "assigned|NULL" \
     "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET output_hint_at = now();" "$(ASSIGN "$T_NORD" 1 "$D_Z" "Zweites Geraet" true)" "SELECT coalesce(output_hint_at::text, 'NULL') FROM public.hall_speakers")"
+
+  check R "@HT-050 Z. 4 Cockpit (Tom) sieht den Hinweis auch nach dem gespielten Testton, bis „Gehört“" "true|1" \
+    "$(probe "$U_TOM" "$SPEAKER_R_TEST UPDATE public.hall_speakers SET output_hint_at = now() - interval '2 minutes', test_played_at = now() - interval '1 minute';" "SELECT 'r:' || (s ->> 'outputHint') FROM jsonb_array_elements(public.hall_sound_status('$T_NORD'::uuid) -> 'speakers') s;" "1")"
+  check R "@HT-049 hintAt = Serverzeit des Anzeichens (fuer „Gespielt 14:02 – Gehört?“)" "ja|1" \
+    "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET output_hint_at = now() - interval '2 minutes';" "SELECT 'r:' || CASE WHEN (s ->> 'hintAt')::bigint = floor(extract(epoch FROM now() - interval '2 minutes') * 1000)::bigint THEN 'ja' ELSE 'nein' END FROM jsonb_array_elements(public.hall_sound_status('$T_NORD'::uuid) -> 'speakers') s;" "1")"
+  check R "N-M1 nach „Gehört“ holt ein neuer Testton keinen alten Hinweis zurueck" "heard,requested,false|1" \
+    "$(probe "$U_OLLI" "$SPEAKER_R UPDATE public.hall_speakers SET output_hint_at = now() - interval '2 minutes';" "SELECT 'r:' || (public.hall_output_heard('$T_NORD'::uuid, 1) ->> 'status');
+$(TEST "$T_NORD" 1)
+$hint_status" "1")"
 
   # --- @HT-049 „Gehört“ nimmt den Hinweis weg, auch vom Handy -----------------------------------------------------
   local hinted="$SPEAKER_R_TEST UPDATE public.hall_speakers SET output_hint_at = now() - interval '1 minute';"
@@ -722,10 +731,10 @@ if [[ "$MODE" == "gegenprobe" ]]; then
     "M12|Quittung ohne Geraete-Pruefung|  IF NOT FOUND OR v_row.device_id <> p_device_id THEN|  IF NOT FOUND THEN"
     "M13|Zuordnen nach dem Turnierende erlaubt|  PERFORM public.hall_require_open(p_tournament_id);\n  IF p_device_id IS NULL OR char_length(v_name)|  IF p_device_id IS NULL OR char_length(v_name)"
     "M14|Hochladen/Loeschen nach dem Turnierende erlaubt|  IF NOT v_deleted AND p_op IN ('insert', 'delete') AND public.tournament_is_closed(v_tid) THEN|  IF false THEN"
-    "M15|Hinweis ignoriert den spaeteren Testton|                                 AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at),|                                 AND true,"
+    "M15|gespielter Testton loescht den Hinweis (vor „Gehört“)|                   'outputHint', s.output_hint_at IS NOT NULL,|                   'outputHint', s.output_hint_at IS NOT NULL AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at),"
     "M16|Testton ohne Altersgrenze ausgeliefert|                         AND s.test_requested_at > v_now - interval '10 seconds'\n|"
     "M17|„Gehört“ mit writeMatchData (Helfer nimmt den Hinweis weg)|  PERFORM public.hall_require(p_tournament_id, 'manageScreens');\n  PERFORM public.hall_require_open(p_tournament_id);\n  v_field := (public.hall_checked_fields(p_tournament_id, ARRAY[p_field]))[1];\n  UPDATE public.hall_speakers s SET output_hint_at = NULL|  PERFORM public.hall_require(p_tournament_id, 'writeMatchData');\n  PERFORM public.hall_require_open(p_tournament_id);\n  v_field := (public.hall_checked_fields(p_tournament_id, ARRAY[p_field]))[1];\n  UPDATE public.hall_speakers s SET output_hint_at = NULL"
-    "M18|Cockpit-Sicht ohne Hinweis (@HT-050)|                     'outputHint', s.output_hint_at IS NOT NULL\n                                   AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at)) ORDER BY s.field_id)|                     'outputHint', false) ORDER BY s.field_id)"
+    "M18|Cockpit-Sicht ohne Hinweis (@HT-050)|                     'outputHint', s.output_hint_at IS NOT NULL) ORDER BY s.field_id)|                     'outputHint', false) ORDER BY s.field_id)"
     "M19|Papierkorb erlaubt auch Hochladen|  IF v_deleted AND p_op = 'insert' THEN|  IF false THEN"
   )
   if [[ -n "${GEGENPROBE_NUR:-}" ]]; then

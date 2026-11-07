@@ -31,8 +31,9 @@
 --      Hinweis „Prüfen“ (@HT-047): das Lebenszeichen meldet ein Anzeichen (p_output_changed) -- nur drei Anlaesse,
 --      erkannt am Geraet: Ausgabe-Verzoegerung springt um mehr als 50 ms, Browser meldet geaenderte Geraete, Ton-Ausgabe
 --      ohne Zutun unterbrochen (Neuladen/Verdecken zaehlen nicht). Der Server setzt output_hint_at (Serverzeit), kein
---      freier Text. outputHint gilt, bis danach ein Testton gespielt wurde oder jemand mit manageScreens „Gehört“
---      waehlt (hall_output_heard, @HT-049, loescht das Anzeichen). Den Hinweis sieht auch das Cockpit des Felds
+--      freier Text. outputHint gilt, bis jemand mit manageScreens „Gehört“ waehlt (hall_output_heard, @HT-049, loescht
+--      das Anzeichen) oder ein neues Geraet ablöst -- ein gespielter Testton allein nimmt ihn NICHT weg (die Pille
+--      „Gespielt 14:02 – Gehört / Nicht gehört“ bleibt stehen, bis Olli antwortet, @HT-049/@HT-050). Den Hinweis sieht auch das Cockpit des Felds
 --      (writeMatchData, @HT-050), ohne Geraetedaten. @HT-048 ist entfallen, der Server baut dafuer nichts.
 --      Ein offener Testton geht nur an den Lautsprecher, solange er juenger als 10 s ist.
 --      Alle Zeitangaben in den Antworten rechnet der Server (serverNow, ageMs) – die Uhr des Geraets zaehlt nie (@HT-042).
@@ -138,8 +139,8 @@ COMMENT ON COLUMN public.hall_speakers.state IS
    das Geraet selbst.';
 COMMENT ON COLUMN public.hall_speakers.output_hint_at IS
   'Serverzeit des letzten Anzeichens eines Wechsels des Audio-Ausgangs (@HT-047: Ausgabe-Verzoegerung springt > 50 ms,
-   Browser meldet geaenderte Geraete, Ton-Ausgabe ohne Zutun unterbrochen). Hinweis gilt, bis danach ein Testton gespielt
-   oder „Gehört“ gewaehlt wurde (hall_output_heard setzt NULL, @HT-049).';
+   Browser meldet geaenderte Geraete, Ton-Ausgabe ohne Zutun unterbrochen). Hinweis gilt, bis „Gehört“ gewaehlt wurde
+   (hall_output_heard setzt NULL, @HT-049) oder ein neues Geraet abloest; ein gespielter Testton allein loescht ihn nicht.';
 
 CREATE TABLE IF NOT EXISTS public.hall_field_leads (
   tournament_id uuid        NOT NULL REFERENCES public.tournaments(id) ON DELETE CASCADE,
@@ -402,8 +403,7 @@ BEGIN
   SELECT jsonb_build_object('state', s.state,
                             'ageMs', CASE WHEN s.last_seen IS NULL THEN NULL
                                           ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END,
-                            'outputHint', s.output_hint_at IS NOT NULL
-                                          AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at))
+                            'outputHint', s.output_hint_at IS NOT NULL)
     INTO v_speaker
     FROM public.hall_speakers s WHERE s.tournament_id = p_tournament_id AND s.field_id = v_field;
 
@@ -551,7 +551,7 @@ $$;
 -- 8. Stand lesen (@HT-001, @HT-016, @HT-039, @HT-040, @HT-042)
 -- ---------------------------------------------------------------------------------------------------------------
 -- manageScreens (Turnierleitung, Co-Admin): je Feld mit Lautsprecher {field, deviceName, isThisDevice, state,
---   assignedAt, outputHint, lastSeen, ageMs, test{testId, requestedAt, playedAt}}, Leitung je Feld {field, ageMs},
+--   assignedAt, outputHint, hintAt, lastSeen, ageMs, test{testId, requestedAt, playedAt}}, Leitung je Feld {field, ageMs},
 --   Tonwahl, closed (Turnier abgeschlossen/abgebrochen, @HT-046: lesen ja, aendern nein).
 -- nur writeMatchData (Helfer, Mitarbeiter -- fuer den Cockpit-Hinweis, @HT-040/@HT-050): je Feld mit Lautsprecher
 --   {field, state, ageMs, outputHint};
@@ -582,8 +582,7 @@ BEGIN
                      'field', s.field_id, 'state', s.state,
                      'ageMs', CASE WHEN s.last_seen IS NULL THEN NULL
                                    ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END,
-                     'outputHint', s.output_hint_at IS NOT NULL
-                                   AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at)) ORDER BY s.field_id)
+                     'outputHint', s.output_hint_at IS NOT NULL) ORDER BY s.field_id)
                     FROM public.hall_speakers s WHERE s.tournament_id = p_tournament_id), '[]'::jsonb));
   END IF;
 
@@ -594,8 +593,8 @@ BEGIN
                    'field', s.field_id, 'deviceName', s.device_name,
                    'isThisDevice', coalesce(s.device_id = p_device_id, false),
                    'state', s.state, 'assignedAt', public.hall_ms(s.assigned_at),
-                   'outputHint', s.output_hint_at IS NOT NULL
-                                 AND (s.test_played_at IS NULL OR s.output_hint_at > s.test_played_at),
+                   'outputHint', s.output_hint_at IS NOT NULL,
+                   'hintAt', public.hall_ms(s.output_hint_at),
                    'lastSeen', public.hall_ms(s.last_seen),
                    'ageMs', CASE WHEN s.last_seen IS NULL THEN NULL
                                  ELSE public.hall_ms(v_now) - public.hall_ms(s.last_seen) END,
