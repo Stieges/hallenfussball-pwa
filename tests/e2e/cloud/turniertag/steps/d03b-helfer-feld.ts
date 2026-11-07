@@ -1,6 +1,7 @@
 /**
  * D3b Helfer leitet ein Spiel auf seinem Feld, auf dem Handy (390 x 844, Touch). Besitzer: A-16/A-17/A-18, A-27.
- * Soll (@HE-082, @HE-083): der Helfer trägt auf seinem Feld ein Tor ein, ein fremdes Feld ist für ihn gesperrt.
+ * Soll: der Helfer trägt auf seinem Feld ein Tor ein, ein fremdes Feld ist für ihn gesperrt. @HE-082/@HE-083 (Server-Grenzen: Gerät ohne
+ * Zulassung bzw. außerhalb seines Turniers legt nichts an) prüft dieser Schritt nicht – sie sind in den Prüfskripten der Geräte-Rollen belegt.
  * Heute scheitert der Schritt am Zulassungs-Marker (kein Feld je Helfer).
  */
 import { expect } from '@playwright/test';
@@ -30,5 +31,5 @@ async function helferLeitetSeinFeld({ browser }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D3b', title: 'Helfer leitet ein Spiel auf seinem Feld (Handy), fremdes Feld gesperrt', scenarios: ['@HE-082', '@HE-083'], owner: 'A-16/A-17/A-18, A-27', expectedFail: true, run: helferLeitetSeinFeld },
+  { id: 'D3b', title: 'Helfer leitet ein Spiel auf seinem Feld (Handy), fremdes Feld gesperrt', scenarios: [], owner: 'A-16/A-17/A-18, A-27', expectedFail: true, run: helferLeitetSeinFeld },
 ];

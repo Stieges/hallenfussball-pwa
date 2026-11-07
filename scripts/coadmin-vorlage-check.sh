@@ -566,16 +566,14 @@ SET LOCAL ROLE authenticated;
 INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, invited_by, invited_at, accepted_at)
   VALUES ('$T_ORIG', '$U_GRETA', 'co-admin', '$U_OLLI', now(), now());
 ROLLBACK;"
-  if [[ "$A27_GUARD" -eq 1 ]]; then
-    if [[ "$RC" -ne 0 ]]; then ok "V6 Olli traegt Greta ueber die Schnittstelle ein: abgelehnt (A-27-Guard)"; else bad "V6 Schnittstelle lehnt ab" "INSERT als Eigentuemer fuer ein fremdes Konto gelang trotz A-27-Guard"; fi
-    contains "V6 Ablehnungsgrund" "niemand wird ohne eigene Anfrage Mitglied" "$OUT"
+  # A-27 ist gebaut (Guard protect_device_roles, 20261110_002_device_roles.sql): ohne Guard ist das eine Abweichung, keine bekannte Luecke mehr.
+  [[ "$A27_GUARD" -eq 1 ]] || bad "V6 A-27-Guard vorhanden" "Trigger protect_device_roles fehlt (Migration 20261110_002_device_roles.sql nicht eingespielt?)"
+  if [[ "$RC" -ne 0 ]]; then
+    ok "V6 @HE-062 Olli traegt Greta ueber die Schnittstelle ein: abgelehnt (A-27-Guard)"
   else
-    if [[ "$RC" -ne 0 ]]; then
-      ok "V6 Olli traegt Greta ueber die Schnittstelle ein: abgelehnt"
-    else
-      gap "V6 @HE-062 vor A-27: die Schnittstelle NIMMT den Eintrag des Eigentuemers fuer ein fremdes Konto an (collaborators_insert_v3 = manageMembers); schliesst mit A-27 (protect_device_roles)"
-    fi
+    bad "V6 @HE-062 Schnittstelle lehnt ab" "INSERT als Eigentuemer fuer ein fremdes Konto gelang"
   fi
+  contains "V6 @HE-062 Ablehnungsgrund" "niemand wird ohne eigene Anfrage Mitglied" "$OUT"
   eq "V6 nach dem Versuch ist keine Zeile fuer Greta uebrig (immer zurueckgerollt)" "0" "$(collab_rows "$T_ORIG" "$U_GRETA")"
   # Gegenstueck: die Vorlage als Wartungsrolle gelingt (V1) -- hier noch einmal fuer ein weiteres Konto, danach austragen
   run_tpl 1 "$M_GRETA" "$T_ORIG"; eq "V6 Vorlage (Wartungsrolle) traegt Greta ein" "0:1" "$RC:$(collab_rows "$T_ORIG" "$U_GRETA")"

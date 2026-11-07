@@ -124,10 +124,10 @@ async function monitorEinrichten({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D0a', title: 'Turnier im Wizard anlegen (1 und 2 Gruppen, Halbfinal-Regel, Wertung)', scenarios: ['@TM-004', '@W2A-025'], befunde: ['C-FINALPHASE-AUS-ID'], owner: 'A-12a/b (GA4-Oberfläche)', expectedFail: true, run: wizardAnlegen },
+  { id: 'D0a', title: 'Turnier im Wizard anlegen (1 und 2 Gruppen, Halbfinal-Regel)', scenarios: ['@TM-004'], befunde: ['C-FINALPHASE-AUS-ID'], owner: 'A-12a/b (GA4-Oberfläche)', expectedFail: true, run: wizardAnlegen },
   { id: 'D0b', title: 'Kopie fürs Proben: Spiel 1 steht am Datum der Kopie, auf jedem Gerät', scenarios: ['@W5-029'], owner: 'Anstoß aus Turnierdatum und Uhrzeit (gebaut, #296)', expectedFail: false, run: kopieFuersProben },
   { id: 'D16', title: 'Spielplan auf Anfang setzen, Spiel zurücksetzen (auf der Kopie fürs Proben)', scenarios: ['@SA-001', '@SA-015'], owner: 'A-33/B-36 (Stufe 3)', expectedFail: true, run: aufAnfang },
-  { id: 'D0c', title: 'Anmelden am Turniertag: kein Registrieren, ehrliche Hinweise, Sitzung im langsamen Netz', scenarios: ['@AN-005', '@AN-006', '@AN-010', '@AN-015'], befunde: ['C-REG', 'C-SMTP', 'C-SITZUNG-STILL'], owner: 'A-27 / B-30 / B-31', expectedFail: true, run: anmeldenTurniertag },
+  { id: 'D0c', title: 'Anmelden am Turniertag: kein Registrieren, ehrliche Hinweise, Sitzung im langsamen Netz', scenarios: ['@AN-005', '@AN-010', '@AN-015'], befunde: ['C-REG', 'C-SMTP', 'C-SITZUNG-STILL'], owner: 'A-27 / B-30 / B-31', expectedFail: true, run: anmeldenTurniertag },
   { id: 'D0d', title: 'Turnier teilen: Aushang mit QR drucken', scenarios: ['@BM-001'], owner: 'A-36d / C9-C11', expectedFail: true, run: turnierTeilen },
   { id: 'D0e', title: 'Monitor einrichten: aus der Ferne neu laden', scenarios: ['@ME-028'], owner: 'MS3 / B-18 / B-48b/c', expectedFail: true, run: monitorEinrichten },
 ];

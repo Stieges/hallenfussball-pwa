@@ -14,7 +14,6 @@ import type { StepContext, TurniertagStep } from './types';
 interface DirektCase {
   key: string;
   seite: string;
-  expectedFail: boolean;
   open: (ctx: StepContext) => Promise<void>;
 }
 
@@ -22,7 +21,6 @@ const CASES: readonly DirektCase[] = [
   {
     key: 'Spielplan Gruppe B',
     seite: 'den Spielplan des Hallencup Ost, gefiltert auf Gruppe B',
-    expectedFail: false,
     open: async ({ asRole }) => {
       const page = await asRole('owner');
       await page.goto(`/#/tournament/${TURNIERTAG_ID}/schedule?g=B`);
@@ -36,7 +34,6 @@ const CASES: readonly DirektCase[] = [
   {
     key: 'Admin Center Sichtbarkeit',
     seite: 'das Admin Center des Hallencup Ost, Bereich Sichtbarkeit',
-    expectedFail: false,
     open: async ({ asRole }) => {
       const page = await asRole('owner');
       await page.goto(`/#/tournament/${TURNIERTAG_ID}/admin/visibility`);
@@ -48,7 +45,6 @@ const CASES: readonly DirektCase[] = [
   {
     key: 'Wizard Schritt 3',
     seite: 'Schritt 3 beim Anlegen des Entwurfs',
-    expectedFail: false,
     open: async ({ asRole }) => {
       const page = await asRole('owner');
       await page.goto(`/#/tournament/${E2E_DRAFT_CUP_ID}/edit?step=3`);
@@ -62,7 +58,6 @@ const CASES: readonly DirektCase[] = [
   {
     key: 'Cockpit Spiel 9',
     seite: 'das Cockpit von Spiel 9',
-    expectedFail: false,
     open: async ({ asRole }) => {
       const { groupMatches } = await fetchTurniertagBracket();
       const match = groupMatches[8];
@@ -77,7 +72,6 @@ const CASES: readonly DirektCase[] = [
   {
     key: 'App-Einstellungen',
     seite: 'die Einstellungen der App',
-    expectedFail: false,
     open: async ({ asRole }) => {
       const page = await asRole('owner');
       await page.goto('/#/settings');
@@ -91,7 +85,8 @@ export const steps: readonly TurniertagStep[] = CASES.map<TurniertagStep>((c) =>
   id: `@OB-029 ${c.key}`,
   title: `Direktaufruf: ${c.seite}`,
   scenarios: ['@OB-029'],
-  owner: c.expectedFail ? 'Routing-Auftrag Oberfläche (A-24)' : 'A-24 (Direktaufruf je Seite)',
-  expectedFail: c.expectedFail,
+  owner: 'A-24 (Direktaufruf je Seite)',
+  // Alle Zeilen sind erfüllt; literal statt je Fall, damit kein Fall als „bedingt rot“ zählt (rote-tests-analyse, @OB-029).
+  expectedFail: false,
   run: c.open,
 }));
