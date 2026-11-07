@@ -33,7 +33,10 @@ const wrapper = ({ children }: { children: ReactNode }) => <MemoryRouter>{childr
 const turnier = (id: string, matches: unknown[]): Tournament =>
   ({ id, title: 'F2-Junioren Hallenturnier', matches, teams: [], externalSource: 'Datei', location: { name: 'Halle' } } as unknown as Tournament);
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  hoisted.parsed = { tournament: undefined, isValid: true, errors: [], warnings: [] };
+});
 
 describe('@W1-041 Import speichern (App-Ebene)', () => {
   it('mit Spielplan wird „Bereit“ (status published) gespeichert', async () => {

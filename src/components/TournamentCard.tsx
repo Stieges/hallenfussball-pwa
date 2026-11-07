@@ -1,8 +1,8 @@
 /**
  * TournamentCard Component (@OB-079): zeigt nur, was man zum Finden braucht.
- * Zeile 1: Name in voller Breite (höchstens zwei Zeilen, kein Wortbruch, nie abgeschnitten). Zeile 2: links Zeit (unter „Heute“ nur die
- * Uhrzeit, sonst Tag und Uhrzeit) und darunter der Ort, rechts Zustandswort und Menü. Altersklasse, Modus, Veranstalter und Platzierung
- * stehen in der Übersicht des Turniers.
+ * Zeile 1: Name in voller Breite (höchstens zwei Zeilen, kein Wortbruch, nie abgeschnitten). Zeile 2: Zeit (unter „Heute“ nur die
+ * Uhrzeit, sonst Tag und Uhrzeit) und Zustandswort. Zeile 3: Ort, nie gekürzt. Das Menü steht rechts neben Zeile 2 und 3.
+ * Altersklasse, Modus, Veranstalter und Platzierung stehen in der Übersicht des Turniers.
  */
 
 import { isTournamentClosed, lifecycleOf } from '../core/services/lifecycle';
@@ -18,7 +18,7 @@ import { useTournamentStartState } from '../hooks/useTournamentStartState';
 import { canWithListedRole } from '../features/auth/hooks/useCan';
 import { TextTag } from './ui/atoms';
 import { LateFinishNotice } from './LateFinishNotice';
-import { badgeContainerStyle, statusBadgeColors, statusBadgeStyle } from './tournamentCardStyles';
+import { statusBadgeColors, statusBadgeStyle } from './tournamentCardStyles';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 /** Map categoryLabel to TournamentActionMenu category */
@@ -52,20 +52,19 @@ const titleStyle: CSSProperties = {
   hyphens: 'manual',
 };
 
-const rowStyle: CSSProperties = {
-  display: 'flex',
+const gridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  columnGap: cssVars.spacing.sm,
   alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: cssVars.spacing.sm,
 };
 
-const metaStyle: CSSProperties = {
+const lineStyle: CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
-  flex: '1 1 0',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: cssVars.spacing.sm,
   minWidth: 0,
-  fontSize: cssVars.fontSizes.md,
-  color: cssVars.colors.textSecondary,
 };
 
 const externalBadgeStyle: CSSProperties = {
@@ -153,6 +152,13 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
   const location = getLocationName(tournament);
   const timeText = formatCardTime(tournament, i18n.language, !inToday, t('card.noDate'));
+  // Der aria-label der Karte überdeckt ihren Inhalt: Zeit und Ort gehören hinein (sonst liest der Screenreader nur Name und Zustand vor)
+  const labelParams = {
+    title: tournament.title,
+    status: getCategoryDisplayLabel(),
+    time: timeText !== '' ? timeText : t('sections.today'),
+    location: location !== '' ? `, ${location}` : '',
+  };
 
   return (
     <Card
@@ -174,8 +180,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
         aria-label={tournament.externalSource
-          ? t('card.ariaLabelExternal', { title: tournament.title, status: getCategoryDisplayLabel(), source: tournament.externalSource })
-          : t('card.ariaLabel', { title: tournament.title, status: getCategoryDisplayLabel() })}
+          ? t('card.ariaLabelExternal', { ...labelParams, source: tournament.externalSource })
+          : t('card.ariaLabel', labelParams)}
         onKeyDown={(e) => {
           if (onClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
@@ -186,29 +192,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         {/* Zeile 1: Name in voller Breite */}
         <h3 style={titleStyle} title={tournament.title}>{tournament.title}</h3>
 
-        {/* Zeile 2: links Zeit und Ort (Ort einzeilig, mit Auslassung), rechts Zustandswort und Menü */}
-        <div style={rowStyle}>
-          <div style={metaStyle} data-testid="card-meta">
-            <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
-              <span style={{ minWidth: 0, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }} data-testid="card-time">{timeText}</span>
-              {myRole !== undefined && myRole !== 'owner' && (
-                <TextTag testId={`tournament-role-${tournament.id}`}>
-                  {t(`card.role.${myRole}`)}
-                </TextTag>
-              )}
-            </div>
-            {location !== '' && (
-              <span
-                title={location}
-                data-testid="card-location"
-                data-truncate-ok="Ort einzeilig mit Auslassung, vollständig im title (@OB-079)"
-                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-              >
-                {location}
-              </span>
+        {/* Zeile 2: Zeit und Zustandswort; Zeile 3: Ort in der Breite neben dem Menü, das beide Zeilen rechts begleitet (der Ort wird nie gekürzt) */}
+        <div style={gridStyle}>
+          <div style={{ ...lineStyle, gridColumn: 1, gridRow: 1 }}>
+            {timeText !== '' && (
+              <span style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md }} data-testid="card-time">{timeText}</span>
             )}
-          </div>
-          <div style={badgeContainerStyle}>
             {tournament.isExternal && tournament.externalSource && (
               <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
                 {tournament.externalSource}
@@ -223,21 +212,31 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 {tournament.status === 'draft' ? t('status.draft') : getCategoryDisplayLabel()}
               </span>
             )}
-            {/* Action Menu - Only show if actions available */}
-            {hasActions && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <TournamentActionMenu
-                  tournament={tournament}
-                  category={category}
-                  onOpen={onClick}
-                  onCopy={onCopy}
-                  onShare={onShare}
-                  onDelete={deleteHandler}
-                  testId={`tournament-${tournament.id}-actions`}
-                />
-              </div>
+            {myRole !== undefined && myRole !== 'owner' && (
+              <TextTag testId={`tournament-role-${tournament.id}`}>
+                {t(`card.role.${myRole}`)}
+              </TextTag>
             )}
           </div>
+          {location !== '' && (
+            <div style={{ gridColumn: 1, gridRow: 2, minWidth: 0, fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary }} data-testid="card-location">
+              {location}
+            </div>
+          )}
+          {/* Action Menu - Only show if actions available */}
+          {hasActions && (
+            <div style={{ gridColumn: 2, gridRow: '1 / span 2', alignSelf: 'center' }} onClick={(e) => e.stopPropagation()}>
+              <TournamentActionMenu
+                tournament={tournament}
+                category={category}
+                onOpen={onClick}
+                onCopy={onCopy}
+                onShare={onShare}
+                onDelete={deleteHandler}
+                testId={`tournament-${tournament.id}-actions`}
+              />
+            </div>
+          )}
         </div>
         <LateFinishNotice tournament={tournament} mayFinish={myRole !== undefined && canWithListedRole(myRole, 'manageLifecycle')} />
       </article>

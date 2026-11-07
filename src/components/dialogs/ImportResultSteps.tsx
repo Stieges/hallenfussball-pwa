@@ -150,7 +150,7 @@ export const SuccessStep = ({ tournament, hasSchedule, onComplete }: SuccessStep
   };
 
   const iconStyle: CSSProperties = {
-    fontSize: '64px',
+    fontSize: '64px', // Token fehlt (Symbol der Erfolgsmeldung; Frage an Daniel), unverändert aus ImportSteps übernommen
     marginBottom: cssVars.spacing.lg,
   };
 

@@ -27,7 +27,6 @@ describe('@OB-079 Inhalt der Karte', () => {
     expect(screen.getByText('dashboard:status.upcoming')).toBeInTheDocument();
     expect(screen.getByTestId('card-time')).toHaveTextContent(/^08:30$/);
     expect(screen.getByTestId('card-location')).toHaveTextContent('Bergader SportARENA');
-    expect(screen.getByTestId('card-location')).toHaveAttribute('title', 'Bergader SportARENA');
   });
 
   it('außerhalb von „Heute“: Tag und Uhrzeit („Sa 28.11. · 08:30“)', () => {
@@ -56,11 +55,12 @@ describe('@OB-079 Inhalt der Karte', () => {
     expect(titel.style.overflow).toBe('');
   });
 
-  it('der Ort ist einzeilig und wird mit Auslassung gekürzt', () => {
+  it('der Ort wird nie mit Auslassung gekürzt (er bricht notfalls um)', () => {
     render(<TournamentCard tournament={f2} categoryLabel="upcoming" inToday />);
     const ort = screen.getByTestId('card-location');
-    expect(ort.style.whiteSpace).toBe('nowrap');
-    expect(ort.style.textOverflow).toBe('ellipsis');
+    expect(ort.style.textOverflow).toBe('');
+    expect(ort.style.whiteSpace).toBe('');
+    expect(ort).toHaveTextContent('Bergader SportARENA');
   });
 
   it('Gegenbeispiel: ohne Ort steht kein leerer Trenner da; ohne Datum steht „card.noDate“', () => {
@@ -94,7 +94,16 @@ describe('@OB-079 Zeitformat in beiden Sprachen', () => {
     expect(formatCardTime(f2, sprache, mitTag, 'kein Datum')).toBe(erwartet);
   });
 
-  it('Gegenbeispiel: ohne Uhrzeit fällt die Zeit auf das Datumsfeld oder den Ersatztext zurück', () => {
+  it('Gegenbeispiel: ohne Uhrzeit steht nur der Tag („Sa 28.11.“), unter „Heute“ nichts; nie das rohe Datumsfeld', () => {
+    const ohneZeit = { id: 'a', startDate: '2026-11-28', startTime: undefined } as unknown as Tournament;
+    expect(formatCardTime(ohneZeit, 'de', true, 'Kein Datum')).toBe('Sa 28.11.');
+    expect(formatCardTime(ohneZeit, 'en', true, 'No date')).toBe('Sat 28 Nov');
+    expect(formatCardTime(ohneZeit, 'de', false, 'Kein Datum')).toBe('');
+    const altesFormat = { id: 'b', date: '28.11.2026' } as unknown as Tournament;
+    expect(formatCardTime(altesFormat, 'de', true, 'Kein Datum')).toBe('Sa 28.11.');
+  });
+
+  it('Gegenbeispiel: ohne jedes Datum steht der Ersatztext', () => {
     const t = { id: 'a', date: '', startDate: undefined } as unknown as Tournament;
     expect(formatCardTime(t, 'de', true, 'Kein Datum')).toBe('Kein Datum');
   });

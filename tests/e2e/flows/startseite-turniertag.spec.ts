@@ -112,6 +112,47 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden braucht', 
     await bild(page, 'ob079-heute');
   });
 
+  test('der Ort steht bei 360 vollständig da, auf allen drei Karten (nicht gekürzt)', async ({ page }) => {
+    await oeffne(page, { lage: 'bereit' });
+    const karten = page.getByTestId('section-heute').locator(KARTE);
+    for (let i = 0; i < 3; i += 1) {
+      const m = await karten.nth(i).getByTestId('card-location').evaluate((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return { text: range.getBoundingClientRect().width, box: el.clientWidth, scroll: el.scrollWidth, gekuerzt: getComputedStyle(el).textOverflow === 'ellipsis' };
+      });
+      // streng, ohne Toleranz: schon ein Bruchteil eines Bildpunkts über der Feldbreite lässt den Browser mit „…“ kürzen
+      expect(m.text, `Ort der Karte ${i + 1}: Text ${m.text} px, Feld ${m.box} px`).toBeLessThanOrEqual(m.box);
+      expect(m.gekuerzt, `Ort der Karte ${i + 1} wird mit Auslassung gekürzt`).toBe(false);
+    }
+  });
+
+  for (const groesse of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }]) {
+    test(`das Menü der letzten Karte unter „Heute“ ist bei ${groesse.width}×${groesse.height} nicht abgeschnitten: „Kopieren“ lässt sich klicken`, async ({ page }) => {
+      await page.setViewportSize(groesse);
+      await oeffne(page, { lage: 'bereit' });
+      await page.setViewportSize(groesse);
+      const letzte = page.getByTestId('section-heute').locator(KARTE).last();
+      await expect(letzte).toHaveAttribute('data-testid', 'tournament-card-tw-d');
+      await letzte.scrollIntoViewIfNeeded();
+      await page.getByTestId('tournament-tw-d-actions-trigger').click();
+      const kopieren = page.getByTestId('action-menu-item-copy');
+      await expect(kopieren).toBeVisible();
+      await bild(page, `ob079-menue-${groesse.width}`);
+      // Trefferprüfung am Eintrag: ein vom Abschnitt abgeschnittener Eintrag liegt zwar im DOM, ist aber nicht das oberste Element an seiner Stelle
+      // (Playwrights click() scrollt den abgeschnittenen Bereich vorher sichtbar und würde das verdecken, darum Mausklick an der Stelle)
+      const box = await kopieren.boundingBox();
+      expect(box).not.toBeNull();
+      const x = box!.x + box!.width / 2;
+      const y = box!.y + box!.height / 2;
+      const oben = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.closest('[data-testid^="action-menu-item-"]')?.getAttribute('data-testid') ?? null, [x, y]);
+      expect(oben, 'oberstes Element an der Stelle von „Kopieren“').toBe('action-menu-item-copy');
+      expect(y).toBeLessThan(groesse.height);
+      await page.mouse.click(x, y);
+      await expect(page.getByTestId('copy-dialog-name')).toBeVisible();
+    });
+  }
+
   test('außerhalb von „Heute“ steht Tag und Uhrzeit', async ({ page }) => {
     await oeffne(page, { lage: 'bereit' });
     await expect(page.getByTestId('section-upcoming').getByTestId('tournament-card-tw-g').getByTestId('card-time')).toHaveText('So 29.11. · 08:30');

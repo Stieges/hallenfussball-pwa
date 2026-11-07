@@ -25,7 +25,8 @@ describe('Turnierkarte zeigt keine Altersklasse (@OB-079)', () => {
     expect(screen.queryByTestId('tournament-card-age-class')).toBeNull();
     expect(screen.queryByText('card.labels.ageClass')).toBeNull();
     if (wert.trim() !== '') {
-      expect(screen.queryByText(wert)).toBeNull();
+      // nicht nur als eigener Text, auch nicht mitten in einer anderen Zeile (z. B. „08:30 U11“)
+      expect(screen.getByTestId('tournament-card-t1')).not.toHaveTextContent(wert);
     }
   });
 });

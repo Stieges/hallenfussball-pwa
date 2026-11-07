@@ -1,4 +1,4 @@
-import { CSSProperties, ReactNode, useState } from 'react';
+import { CSSProperties, ReactNode, useEffect, useState } from 'react';
 import { cssVars } from '../../design-tokens'
 
 interface CollapsibleSectionProps {
@@ -28,6 +28,18 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   compact = false,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  // Offen und ausgeklappt bleibt nichts abgeschnitten (das Aktionsmenü einer Karte ragt aus dem Abschnitt); `hidden` gilt nur beim
+  // Auf- und Zuklappen (Animation), danach `visible` (@OB-079).
+  const [settled, setSettled] = useState(defaultOpen);
+  useEffect(() => {
+    if (!isOpen) {
+      setSettled(false);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setSettled(true), 350);
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
+  const overflow = isOpen && settled ? 'visible' : 'hidden';
 
   const getVariantStyles = (): { border: string; bg: string; headerBg: string; titleColor?: string } => {
     switch (variant) {
@@ -65,7 +77,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     marginTop: compact ? cssVars.spacing.sm : cssVars.spacing.lg,
     border: `${cssVars.borderWidth.thin} solid ${variantStyles.border}`,
     borderRadius: cssVars.borderRadius.md,
-    overflow: 'hidden',
+    overflow,
     background: variantStyles.bg,
   };
 
@@ -76,6 +88,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     padding: compact ? cssVars.spacing.sm : cssVars.spacing.md,
     minHeight: cssVars.touchTargets.minimum, // @OB-022: Kopfzeile ist die Bedienfläche (auch im knappen Abstand)
     background: variantStyles.headerBg,
+    // ohne abschneidenden Rahmen trägt die Kopfzeile ihre oberen Rundungen selbst
+    borderRadius: isOpen ? `${cssVars.borderRadius.md} ${cssVars.borderRadius.md} 0 0` : cssVars.borderRadius.md,
     cursor: 'pointer',
     userSelect: 'none',
     transition: 'background 0.2s',
@@ -108,7 +122,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const contentStyle: CSSProperties = {
     padding: isOpen ? (compact ? cssVars.spacing.sm : cssVars.spacing.md) : `0 ${compact ? cssVars.spacing.sm : cssVars.spacing.md}`,
     maxHeight: isOpen ? '50000px' : '0',
-    overflow: 'hidden',
+    overflow,
     transition: 'all 0.3s ease-in-out',
     opacity: isOpen ? 1 : 0,
   };
