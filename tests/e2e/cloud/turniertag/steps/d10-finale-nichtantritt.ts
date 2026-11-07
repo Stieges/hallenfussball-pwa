@@ -62,5 +62,5 @@ async function nichtantritt({ anonPage }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: ['@W2A-022'], owner: 'A-25/B-12', expectedFail: false, run: nichtantritt },
+  { id: 'D10', title: 'Nichtantritt im Spiel um Platz 3: 2:0 als Wertung', scenarios: ['@W2A-022'], owner: 'A-14 (Weiterrücken aus dem Halbfinale: Platz 3 und Finale bleiben nach Ergebnissen über die Server-Funktion unbesetzt – besetzt nur der Resolver der App); Nichtantritt A-25/B-12 gebaut', expectedFail: true, run: nichtantritt },
 ];

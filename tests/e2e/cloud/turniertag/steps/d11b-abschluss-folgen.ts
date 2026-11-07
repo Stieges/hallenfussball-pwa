@@ -99,7 +99,7 @@ export const steps: readonly TurniertagStep[] = [
 
 /** Nach D13 (Zeitplan verschieben). */
 export const stepsNachZeitplan: readonly TurniertagStep[] = [
-  { id: 'D13b', title: 'Zeiten ehrlich: Zuschauer-Seite zeigt die neue Uhrzeit und klein „(war …)“', scenarios: ['@ZP-004'], owner: 'B-26, B-27 (gebaut)', expectedFail: false, run: zeitenEhrlich },
+  { id: 'D13b', title: 'Zeiten ehrlich: Zuschauer-Seite zeigt die neue Uhrzeit und klein „(war …)“', scenarios: ['@ZP-004'], owner: 'B-26/B-27: die Verschiebung aus D13 erreicht die Cloud nicht (matches.original_start bleibt leer, Zuschauer-Seite ohne „(war …)“) – neuer Befund, PR #465', expectedFail: true, run: zeitenEhrlich },
   { id: 'D13c', title: 'Hallenton an Abschnittsende und Spielende', scenarios: ['@HT-001', '@HT-004'], owner: 'B-46', expectedFail: true, run: hallenton },
 ];
 
