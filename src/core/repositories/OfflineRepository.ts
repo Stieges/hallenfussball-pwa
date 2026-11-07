@@ -168,6 +168,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     /** @FU-106 (Befund C-VERWERFEN-BEHAELT-VERALTETEN-STAND): gemerkte Turniere frisch lesen; die Übernahme erzwingt `readAndAdopt`. */
     private adoptAfterDiscard(): void {
         for (const id of this._mutationQueue.scopesNeedingCloudCopy()) {
+            // eslint-disable-next-line no-console
+            console.debug('[DIAG] adoptAfterDiscard', id, 'laeuft schon:', this.discardAdoptions.has(id));
             if (this.discardAdoptions.has(id)) { continue; }
             this.discardAdoptions.add(id);
             void this.get(id, { fresh: true })
@@ -287,6 +289,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
      */
     private syncFromCloud(id: string, firstCopy?: boolean, fresh?: boolean): Promise<Tournament | null> {
         const running = this.cloudReads.get(id);
+        // eslint-disable-next-line no-console
+        console.debug('[DIAG] syncFromCloud', id, 'laeuft:', !!running, 'fresh:', !!fresh, 'firstCopy:', firstCopy);
         if (running) {
             if (fresh) { this.cloudReadRerun.add(id); }
             return running;
@@ -304,6 +308,8 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
     private async readAndAdopt(id: string, firstCopy?: boolean): Promise<{ tournament: Tournament; whole: boolean } | null> {
         const before = this.queueGuard.snapshot(id); // A-08f3c2 (H1): Stand der Warteschlange vor dem Lesen
         const read = await withCloudReadTimeout(this.supabaseRepo.getWithMatchRevisions(id));
+        // eslint-disable-next-line no-console
+        console.debug('[DIAG] readAndAdopt gelesen', id, 'null:', !read);
         if (!read) {
             // Auflage A1: Turnier weg/unsichtbar. `null` heißt nur noch „nicht gefunden“; ein Abbruch wirft und lässt die Merkung
             // stehen (Befund C-VERWERFEN-MERKUNG-BEI-ABBRUCH, @FU-109)
@@ -315,7 +321,13 @@ export class OfflineRepository implements ITournamentRepository, ServerRevisionS
             wholeAllowed: () => this.queueGuard.mayAdoptWhole(id, before),
             // A-15c: ein ohne Netz abgeschlossener, noch nicht gesendeter Abschluss bleibt sichtbar, bis der Server antwortet
             keepLocalCompletions: () => this._mutationQueue.hasPendingOf(id, ['COMPLETE_GROUP']) };
-        const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => decideCloudAdoption(local, read, stored, options));
+        const adoption = await this.localRepo.adoptCloudRead(id, (local, stored) => {
+            const decision = decideCloudAdoption(local, read, stored, options);
+            const after = this.queueGuard.snapshot(id);
+            // eslint-disable-next-line no-console
+            console.debug('[DIAG] readAndAdopt', id, JSON.stringify({ discarded, firstCopy, before, after, failed: this._mutationQueue.needsCloudCopy(id), mayWhole: this.queueGuard.mayAdoptWhole(id, before), local: local ? { v: local.version, sv: local.serverVersion, rev: local.changeRevision, ort: local.location?.name, owner: local.ownerId } : null, cloud: { v: read.tournament.version, rev: read.tournament.changeRevision, ort: read.tournament.location?.name }, save: decision.save !== undefined, patch: decision.patch !== undefined }));
+            return decision;
+        });
         this.serverRevisions.record(id, adoption.revisions);
         if (discarded && adoption.save !== undefined) {
             this._mutationQueue.forgetCloudCopy(id);
