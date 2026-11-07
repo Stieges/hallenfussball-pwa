@@ -5,6 +5,7 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { neuLaden } from '../helpers/neuLaden';
 
 const NORD = '00000000-0000-4000-8000-0000000000b1';
 const SUED = '00000000-0000-4000-8000-0000000000b2';
@@ -141,7 +142,7 @@ test.describe('@FU-094 Spielplan: K.-o.-Unentschieden mit Strafstoßschießen ei
     await page.getByTestId('result-entry-shootout-cancel').click({ timeout: 5_000 });
 
     await expect(page.getByTestId('result-entry-shootout-dialog')).toHaveCount(0);
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Sieger Halbfinale 1').filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByRole('spinbutton').filter({ visible: true })).toHaveCount(4); // Halbfinale weiter offen

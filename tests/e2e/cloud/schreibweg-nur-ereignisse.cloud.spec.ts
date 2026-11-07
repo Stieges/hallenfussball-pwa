@@ -24,6 +24,7 @@ import {
 import { fetchMatchRow } from './helpers';
 import { restAsRole, serviceRest } from './restAsRole';
 import { engineCupIds, engineEventId, type EngineCupSlug } from './testData';
+import { neuLaden } from '../helpers/neuLaden';
 
 function goal(teamId: string, clockMs: number): AppendAsRoleEvent {
   return { id: randomUUID(), type: 'GOAL', at: Date.now(), section: 1, clockMs, teamId, targetId: null, payload: {} };
@@ -182,7 +183,7 @@ test.describe('Schreibweg nur über Ereignisse', () => {
     await helperPage.locator('[data-testid="event-edit-save"]').click();
     await expect.poll(async () => (await fetchEngineRows(ids.matchId)).slice(seeded).map((row) => [row.type, row.target_event_id]), { timeout: 10000 }).toEqual([['AMEND', goalAwayId]]);
     await expectScore(ids.matchId, 1, 1, 'finished');
-    await helperPage.reload();
+    await neuLaden(helperPage);
     await helperPage.waitForLoadState('networkidle');
     // `?matchId=` ist nach dem ersten Öffnen verbraucht (C-MATCHID-URL-BLEIBT): dasselbe Spiel nach dem Neuladen erneut öffnen
     await openCockpit(helperPage, ids.tournamentId, ids.matchId);

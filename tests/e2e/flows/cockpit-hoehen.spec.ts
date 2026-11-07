@@ -11,6 +11,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { tippeZeitstrafe, tippeTor } from '../helpers/cockpitNeu';
 import { anpfeifen, cup, BILDER, NAME_50 } from '../helpers/laptopCup';
+import { neuLaden } from '../helpers/neuLaden';
 
 const NAMEN = ['TSV Petting', 'DJK Otting', 'TSV Waging rot', 'DJK Kammer'];
 const FARBEN = ['#6B21A8', '#2E7D32', '#C0392B', '#1E56D9'];
@@ -164,7 +165,7 @@ test.describe('Laptop 1280×720: Einblendung, Zeitstrafen, lange Namen', () => {
 
   test('@SL-183 während der Einblendung bleiben „Live“ und der Knopf „Ton aus“ sichtbar und klickbar; nur der Kopftext wird ersetzt', async ({ page, seedIndexedDB }) => {
     await vorbereiten(page, seedIndexedDB);
-    await page.reload(); // nach dem Neuladen ist der Ton wieder gesperrt: „Ton aus“ steht in der Kopfzeile
+    await neuLaden(page); // nach dem Neuladen ist der Ton wieder gesperrt: „Ton aus“ steht in der Kopfzeile
     await expect(page.getByTestId('match-pause-button')).toBeVisible();
     const ton = page.getByTestId('scoreboard-ton');
     await expect(ton).toBeVisible();

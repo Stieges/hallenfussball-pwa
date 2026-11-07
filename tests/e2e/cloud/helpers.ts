@@ -12,6 +12,7 @@ import { E2E_USERS, E2E_TEST_PASSWORD, type E2EUserKey } from './testData';
 import { getLocalSupabaseStatus } from '../../../scripts/lib/localSupabaseStatus';
 import { assertLocalSupabaseTarget } from '../../../scripts/lib/assertLocalSupabaseTarget';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
+import { neuLaden } from '../helpers/neuLaden';
 
 // =============================================================================
 // LOGIN (über die Oberfläche, Brief Abschnitt 2)
@@ -516,7 +517,7 @@ export async function seedGuestTournament(page: Page, title: string): Promise<st
     });
     return draft.id;
   }, title);
-  await page.reload();
+  await neuLaden(page);
   await page.waitForLoadState('networkidle');
   return id;
 }

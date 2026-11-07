@@ -1,4 +1,5 @@
 import { test as base } from '@playwright/test';
+import { neuLaden } from './neuLaden';
 
 
 /**
@@ -79,7 +80,7 @@ export const test = base.extend<TestOptions>({
             }, { data, config: INDEXED_DB_CONFIG });
 
             // Reload to pick up the seeded data (JS singleton resets on reload)
-            await page.reload();
+            await neuLaden(page);
             await page.waitForLoadState('networkidle');
         };
         await use(seedFn);
@@ -95,7 +96,7 @@ export const test = base.extend<TestOptions>({
                     localStorage.setItem(key, JSON.stringify(value));
                 });
             }, data);
-            await page.reload(); // Reload to pick up changes
+            await neuLaden(page); // Reload to pick up changes
             await page.waitForLoadState('domcontentloaded');
         };
         await use(seedFn);

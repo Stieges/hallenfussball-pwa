@@ -19,6 +19,7 @@ import { test, expect } from './fixtures';
 import { restAsRole } from './restAsRole';
 import { loginAsRole } from './helpers';
 import { E2E_HELFER_BEITRITT_CUP_ID, E2E_USERS } from './testData';
+import { neuLaden } from '../helpers/neuLaden';
 
 const HAS_008 = process.env.E2E_STACK_HAS_008 === '1';
 
@@ -85,7 +86,7 @@ test.describe('Helfer-Beitritt per QR (A-17b)', () => {
     await expect(phone.getByTestId('join-account-text')).toContainText(E2E_USERS.stranger.displayName);
     await phone.getByTestId('join-account-continue').click();
     await expect(phone.getByTestId('join-submit')).toBeVisible();
-    await laptop.reload();
+    await neuLaden(laptop);
     await expect(laptop.getByTestId('auth-avatar-button')).toBeVisible({ timeout: 15000 });
     await expect(laptop.getByTestId('join-account-continue')).toHaveCount(0);
   });

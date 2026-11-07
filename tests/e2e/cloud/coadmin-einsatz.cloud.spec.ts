@@ -28,6 +28,7 @@ import {
   addMember, cloneReleaseCup, coAdminRightsExpected, createAccount, cupRow, deleteAccount, deleteCup, localCopy, loginWithPassword,
   restWithToken, runVorlage, svc, type ClonedCup, type LocalCopy,
 } from './coadminEinsatz';
+import { neuLaden } from '../helpers/neuLaden';
 
 /** Zeichenmenge des Servers (`generate_share_code`): kein 0, O, 1, I. */
 const SERVER_CODE = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -151,7 +152,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       expect((await cupRow(cup.id)).share_code).toBe(code);
 
       await anonymous.goto(`/#/live/${code}`);
-      await anonymous.reload();
+      await neuLaden(anonymous);
       await anonymous.waitForLoadState('networkidle');
       await expect(anonymous.getByText('Turnier nicht gefunden oder nicht öffentlich', { exact: true })).toBeVisible({ timeout: 15000 });
     } finally {
@@ -367,7 +368,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       expect(rights.every((row) => row[0] === id)).toBe(true);
 
       // @HE-085/@HE-088: nach dem Neuladen steht die Karte "Co-Admin" auf der Startseite, Maria öffnet das Turnier
-      await device.page.reload();
+      await neuLaden(device.page);
       await expectCard(device.page, original.id);
       await expect(device.page.locator(`[data-testid="tournament-role-${original.id}"]`)).toHaveText('Co-Admin');
       await device.page.locator(cardOf(original.id)).click();
@@ -397,7 +398,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
       expect(await notFoundPageText(device.page, kopieUrl)).toBe(unknown);
       expect(runVorlage('1', kopie.id, email).status).toBe(0);
       await device.page.goto(kopieUrl);
-      await device.page.reload();
+      await neuLaden(device.page);
       await expect(device.page.getByText(kopie.title).first()).toBeVisible({ timeout: 15000 });
 
       // @HE-087: Betreiber trägt Maria aus dem Original aus; das schon offene Gerät kann nichts mehr eintragen.
@@ -430,7 +431,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
 
       // nach dem Neuladen: Karte weg (auch nicht als "nur lokales" Turnier), die Kopie bleibt; Konto und frühere Einträge bleiben
       await device.page.goto('/#/');
-      await device.page.reload();
+      await neuLaden(device.page);
       await expectCard(device.page, kopie.id);
       await expect(device.page.locator(cardOf(original.id))).toHaveCount(0);
       expect(await svc('GET', `/rest/v1/profiles?id=eq.${id}&select=id`)).toHaveLength(1);

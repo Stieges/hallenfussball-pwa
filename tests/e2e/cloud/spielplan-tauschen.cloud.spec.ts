@@ -14,6 +14,7 @@ import { test, expect } from './fixtures';
 import { newRoleContext } from './engineHelpers';
 import { deleteCup, svc } from './coadminEinsatz';
 import { E2E_TURNIERTAG_CUP_ID } from './testData';
+import { neuLaden } from '../helpers/neuLaden';
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
@@ -128,7 +129,7 @@ test.describe('G1a: Tausch im Cloud-Turnier erst mit „Speichern“', () => {
       const zeit = (z: string | null) => (z ?? '').slice(0, 5);
       const karteB = zweites.page.locator(`.group-stage-schedule [aria-label^="Spiel ${b.match_number}:"]`).filter({ visible: true }).first();
       await expect(karteB).toContainText(zeit(a.scheduled_start), { timeout: 15000 });
-      await page.reload();
+      await neuLaden(page);
       await page.waitForTimeout(12000);
       expect(getauscht(await zeilen(tournamentId))).toEqual([b.scheduled_start, b.field, a.scheduled_start, a.field]);
       await expect(page.getByTestId('sync-status-rejected')).toHaveCount(0);

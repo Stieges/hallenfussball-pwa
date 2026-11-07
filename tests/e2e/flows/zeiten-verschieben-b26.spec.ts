@@ -7,6 +7,7 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { neuLaden } from '../helpers/neuLaden';
 
 const TOURNAMENT = 'b26-zeiten-verschieben-offline';
 const TEAMS = Array.from({ length: 6 }, (_, i) => `00000000-0000-4000-8000-0000000026a${i}`);
@@ -68,9 +69,9 @@ const original = (page: Page, n: number) => page.getByTestId(`match-original-${M
 /** Neu laden; ein Dialog räumt beim Schließen seinen Verlaufseintrag (history.back) auf – bricht das Laden daran ab, einmal wiederholen. */
 async function reloadSchedule(page: Page): Promise<void> {
   try {
-    await page.reload();
+    await neuLaden(page);
   } catch {
-    await page.reload();
+    await neuLaden(page);
   }
   await expect(page.getByTestId('schedule-shift-button')).toBeVisible();
 }

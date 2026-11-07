@@ -14,6 +14,7 @@
 
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
+import { neuLaden } from '../helpers/neuLaden';
 
 // F-113 lehnt Startdaten in der Vergangenheit ab — Testdatum muss dynamisch
 // in der Zukunft liegen, sonst bricht der Test nach Ablauf eines Fixdatums.
@@ -338,7 +339,7 @@ test.describe('Tournament Creation Wizard', () => {
     await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL(/\?step=4/);
 
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
 
     // URL muss step=4 bewahren (Content selbst kann durch fehlende Vorgänger-Steps

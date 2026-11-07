@@ -13,6 +13,7 @@
 
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
+import { neuLaden } from '../helpers/neuLaden';
 
 test.describe('App Settings', () => {
 
@@ -43,7 +44,7 @@ test.describe('App Settings', () => {
       await expect(htmlElement).toHaveAttribute('data-theme', 'dark', { timeout: 5000 });
 
       // Theme wird persistiert (nach Reload noch aktiv)
-      await page.reload();
+      await neuLaden(page);
       await page.waitForLoadState('networkidle');
       const persistedTheme = await htmlElement.getAttribute('data-theme');
       expect(persistedTheme).toBe('dark');
@@ -98,7 +99,7 @@ test.describe('App Settings', () => {
       expect(newState).not.toBe(initialState);
 
       // Persistiert nach Reload
-      await page.reload();
+      await neuLaden(page);
       await page.waitForLoadState('networkidle');
 
       const audioToggleAfterReload = page.getByLabel(/Audio|Sound/i);
@@ -248,7 +249,7 @@ test.describe('App Settings', () => {
       await languageSelect.selectOption({ index: 0 });
 
       // Language persists after reload
-      await page.reload();
+      await neuLaden(page);
       await page.waitForLoadState('networkidle');
 
       const languageAfterReload = page.getByLabel(/Sprache|Language/i);

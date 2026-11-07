@@ -10,6 +10,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { E2E_LIVE_CUP_ID } from './testData';
+import { neuLaden } from '../helpers/neuLaden';
 
 const MATCH = '00000000-0000-4000-8000-0000000000b5';
 const eintrag = (eventId: string, type: string, clockMs: number, payload: Record<string, unknown> = {}) => ({
@@ -83,7 +84,7 @@ test('@FU-132 T2-UI: Zähler im Cockpit-Kopf bei 360 px – kein Umbruch, Uhr un
   await expect(page.getByTestId('klaerungsliste-knopf-cockpit')).toHaveCount(0);
 
   antwort.faelle = ANTWORT;
-  await page.reload();
+  await neuLaden(page);
   const mit = await messen();
   const zaehler = page.getByTestId('klaerungsliste-knopf-cockpit');
   await expect(zaehler).toBeVisible({ timeout: 20_000 });

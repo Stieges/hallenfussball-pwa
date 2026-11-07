@@ -22,6 +22,7 @@ import { fetchQueuedMutationTypes, queueKeys, safeCleanup } from './helpers';
 import { restAsRole } from './restAsRole';
 import { E2E_USERS } from './testData';
 import { cloneReleaseCup, cupRow, deleteCup, localCopy, type ClonedCup } from './coadminEinsatz';
+import { neuLaden } from '../helpers/neuLaden';
 
 const KONFLIKT_TEXT = 'Turnier wurde inzwischen auf einem anderen Gerät geändert';
 const VERWERFEN_UND_LADEN = 'Verwerfen und aktuellen Stand laden';
@@ -135,7 +136,7 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       const entryId = await intoDeadLetter(maria.page, mariaId, cup.id, { conflict: true, lastError: 'Turnier wurde zwischenzeitlich verändert. Bitte neu laden.' });
       await maria.context.setOffline(false);
       await openAdmin(maria.page, cup);
-      await maria.page.reload();
+      await neuLaden(maria.page);
       await maria.page.waitForLoadState('networkidle');
       expect((await localCopy(maria.page, cup.id))?.locationName, 'Regel Q: der Eintrag schützt die Kopie').toBe('Marias Halle');
 
@@ -189,7 +190,7 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       const entryId = await intoDeadLetter(olli.page, olliId, cup.id, { conflict: false, lastError: 'Spiel zeigt noch auf ein Team, das gelöscht würde' });
       await olli.context.setOffline(false);
       await openAdmin(olli.page, cup);
-      await olli.page.reload();
+      await neuLaden(olli.page);
       await olli.page.waitForLoadState('networkidle');
       // Cockpit einmal mit Verbindung öffnen (ohne Neuladen danach): sein Code-Teil wird verzögert geladen und fehlte
       // später ohne Netz („Lade…“)
