@@ -1,30 +1,31 @@
 /**
- * Feldstand des Hallen-Lautsprechers (H3b-2a, Plan „H3b – Einbau“, Einbau-Vertrag des Planers): was das Gerät je Feld
+ * Feldstand des Hallen-Lautsprechers (H3b-2a/2b, Plan „H3b – Einbau“, Einbau-Vertrag des Planers): was das Gerät je Feld
  * sicher weiß, als `FeldStand` für `planeHallToene`. Ohne React, alle Abhängigkeiten injiziert.
  *
- * - Spielplan alle 10 s und sofort, wenn das aktuelle Spiel eines Felds endet; das aktuelle Spiel je Feld wie das Cockpit
- *   (`aktuellesSpielJeFeld`). Ein Spiel, das gerade vom Feld geht, bleibt 10 s gehalten, damit sein Ende (z. B. von Hand,
- *   @HT-007) beim Planer ankommt, bevor das nächste Spiel das Feld übernimmt.
- * - Eine Sammelabfrage der Ereignisse je Takt für alle aktuellen Spiele (Wasserstand je Spiel, neues Spiel ab 0), Stand
- *   mit `reduceMatch` nur im Speicher: ein voller `MatchState` ohne lokale Ausstehende.
- * - Regel 2 (@HT-033 Zeilen 1, 3, 10, 11): Leitet das Gerät das Feld, gilt der Stand der eigenen Engine
- *   (`quelle = eigenesCockpit`), sonst der Stand am Server mit dem Alter der letzten Antwort.
- * - Eine unlesbare Ereigniszeile betrifft nur ihr Spiel: Sein Stand bleibt beim alten, seine Antwort altert (kein Ton nach
- *   falschem Stand, Warnung des Planers), die übrigen Felder bleiben frisch (`unlesbareSpiele`).
- * - Zwei Zeitwerte: `letzteAntwortAt` (Serverzeit der letzten erfolgreichen Sammelabfrage; bleibt bei Fehler oder Abbruch
- *   stehen, @HT-011) und `bekanntSeit` je Feld (Serverzeit der letzten Änderung des Stands, @HT-051).
- * - Takt: 1 s, solange auf einem Lautsprecher-Feld ein Spiel angepfiffen ist (@HT-007), sonst 5 s; der Takt des Planers
- *   gilt, wenn er kürzer ist; ist die letzte Antwort älter als 3 s, sofort und eng (N-2). Ein neues aktuelles Spiel wird
- *   sofort abgefragt.
- * - Ohne echtes Konto (`is_real_account`) nicht verfügbar; nach Turnierende (abgeschlossen oder 55000) still aus.
- * Alle Zeiten sind Serverzeit (`serverNow`), die Uhr des Geräts zählt nie (@HT-010).
+ * - Spielplan alle 10 s und sofort, wenn das aktuelle Spiel eines Felds endet; das aktuelle Spiel je Feld wie das Cockpit.
+ *   Ein Spiel, das vom Feld geht, bleibt 10 s gehalten, damit sein Ende (z. B. von Hand, @HT-007) noch ankommt.
+ * - Eine Sammelabfrage der Ereignisse je Takt für alle aktuellen Spiele (Wasserstand je Spiel), Stand mit `reduceMatch` nur
+ *   im Speicher. Eine unlesbare Zeile betrifft nur ihr Spiel: seine Antwort altert, die übrigen bleiben frisch.
+ * - Regel 2 (@HT-033 Zeilen 1, 3, 10, 11): Leitet das Gerät das Feld, gilt die eigene Engine (`eigenesCockpit`), sonst der
+ *   Server mit dem Alter der Antwort. Hinkt die eigene Engine dem Server hinterher (ihr fehlt ein schon angenommener
+ *   Eintrag), gilt bis zum Aufholen der Server (Zeile 10, Befund 6b).
+ * - Zwei Zeitwerte: `letzteAntwortAt` (letzte erfolgreiche Sammelabfrage, @HT-011) und `bekanntSeit` je Feld (@HT-051).
+ * - Takt: 1 s bei angepfiffenem Spiel (laufend/angehalten, @HT-007), sonst 5 s, Minimum mit dem Planer; nach einem
+ *   gescheiterten Versuch eng (N-2, Ruling 2b). Halbzeitpause, offene Entscheidung und Strafstoßschießen bleiben bei 5 s:
+ *   aus ihnen folgt kein Ton, der früher bekannt sein müsste (Bericht H3b-2b, Befund 3). Ein neues Spiel sofort abfragen.
+ * - Ohne echtes Konto nicht verfügbar; nach Turnierende (abgeschlossen oder 55000) still aus. Solange die Konto-Prüfung
+ *   aussteht (Start ohne Netz), gilt der lokale Spielplan: ein selbst geleitetes Feld tönt nach dem eigenen Cockpit, die
+ *   übrigen warnen (@HT-033 Zeile 11, Befund 6a).
+ * Lesen je Takt einmal in der Reihenfolge `aktualisieren` → `staende` (`staende` merkt `bekanntSeit` und das Halten);
+ * `naechsterAbfrageTaktMs` liest nur den zuletzt gewählten Stand. Alle Zeiten sind Serverzeit (@HT-010).
  */
 import { reduceMatch, type MatchContext, type MatchState } from '../../../core/match';
 import type { EngineEventWithSeq } from '../../../core/match/client';
-import { ANTWORT_MAX_ALTER_MS, type FeldStand } from '../../../core/hallenton';
+import type { FeldStand } from '../../../core/hallenton';
 import type { FeldKennung } from './aktuellesSpielJeFeld';
 import { ladeEreignisse, ladeSpielplan, pruefeEchtesKonto, type AbfrageErgebnis, type FeldStandClient } from './feldStandAbfragen';
-import { erzeugeFeldWahl, feldSpielStatusAus, istAngepfiffen, planSpielAus, standKennung, type PlanSpiel } from './feldStandSpiele';
+import { erzeugeBekanntSeitMerker } from './feldStandMerker';
+import { engineHinkt, erzeugeFeldWahl, feldSpielStatusAus, istAngepfiffen, planSpielAus, type PlanSpiel } from './feldStandSpiele';
 import { echterZeitgeber, type Zeitgeber } from './zeitgeber';
 
 export const SPIELPLAN_TAKT_MS = 10_000;
@@ -47,6 +48,8 @@ export interface FeldStandDeps {
   leiteIchFeld: (feld: number) => boolean;
   /** Stand der eigenen Engine (`view(matchId)?.result.state`); `null`, wenn sie das Spiel nicht kennt. */
   eigeneSicht: (matchId: string) => MatchState | null;
+  /** Spielplan aus der lokalen Turnierkopie, solange der Server keinen geliefert hat (Start ohne Netz, Befund 6a). */
+  lokalerSpielplan?: () => readonly PlanSpiel[] | null;
   /** Zeitgeber für den Abbruch nach 3 s; im Test `ManuelleUhr`. */
   zeitgeber?: Zeitgeber;
 }
@@ -56,9 +59,11 @@ export interface FeldStandQuelle {
   aktualisieren(nowServer: number, planerTaktMs?: number | null): Promise<void>;
   /** Stand je Lautsprecher-Feld mit Spiel (zwei bekannte Teams); leer, solange nicht verfügbar. */
   staende(): FeldStand[];
-  /** Abstand der Sammelabfragen in ms (1000 oder 5000, ggf. kürzer nach Planer). */
+  /** Abstand der Sammelabfragen in ms (1000 oder 5000, ggf. kürzer nach Planer); liest nur, ändert nichts. */
   naechsterAbfrageTaktMs(planerTaktMs?: number | null): number;
   letzteAntwortAt(): number | null;
+  /** Ist der letzte Versuch am Netz (Konto, Spielplan, Sammelabfrage) gescheitert? (N-2, Warnung im Ruhezustand) */
+  letzterVersuchGescheitert(): boolean;
   verfuegbarkeit(): FeldStandVerfuegbarkeit;
   /** Spiel-IDs, deren Ereignisse diese App nicht lesen kann (Diagnose, z. B. „App aktualisieren“). */
   unlesbareSpiele(): string[];
@@ -76,13 +81,6 @@ interface ServerSpiel {
   unlesbar: boolean;
 }
 
-interface FeldMerker {
-  matchId: string;
-  art: FeldStand['quelle']['art'];
-  kennung: string;
-  bekanntSeit: number;
-}
-
 export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
   const zeitgeber = deps.zeitgeber ?? echterZeitgeber;
   let verfuegbar: FeldStandVerfuegbarkeit = deps.client ? 'pruefe' : 'nichtVerfuegbar';
@@ -93,8 +91,10 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
   let ereignisVersuchAt: number | null = null;
   let laeuft: Promise<void> | null = null;
   let kontoVersuchAt: number | null = null;
+  let gescheitert = false;
+  let letzteWahl = new Map<FeldKennung, PlanSpiel>();
   const serverSpiele = new Map<string, ServerSpiel>();
-  const merker = new Map<FeldKennung, FeldMerker>();
+  const merker = erzeugeBekanntSeitMerker();
   const feldWahl = erzeugeFeldWahl();
 
   const felder = (): number[] => [...new Set(deps.lautsprecherFelder())].sort((a, b) => a - b);
@@ -105,10 +105,12 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     verfuegbar = 'turnierBeendet';
     plan = null;
     serverSpiele.clear();
-    merker.clear();
+    merker.leeren();
   }
 
-  function fehlschlag(ergebnis: AbfrageErgebnis<unknown>): void {
+  /** k6: nur Konto und Sammelabfrage zählen für N-2; ein gescheiterter Spielplan lässt die Antwort nicht altern. */
+  function fehlschlag(ergebnis: AbfrageErgebnis<unknown>, zaehlt = true): void {
+    gescheitert ||= zaehlt;
     if (!ergebnis.ok && ergebnis.grund === 'turnierBeendet') {
       beenden();
     }
@@ -117,39 +119,32 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
   /** Aktuelles Spiel je Lautsprecher-Feld; leitet das Gerät ein Feld, zählt für die Wahl der Status der eigenen Engine. */
   function aktuelleSpiele(now: number): Map<FeldKennung, PlanSpiel> {
     const eigene = felder();
-    if (plan === null || eigene.length === 0) {
-      return new Map();
+    const quelle = plan ?? deps.lokalerSpielplan?.() ?? null;
+    if (quelle === null || eigene.length === 0) {
+      letzteWahl = new Map();
+      return letzteWahl;
     }
-    const spiele = plan.map((spiel) => {
+    const spiele = quelle.map((spiel) => {
       const eigen = eigene.includes(spiel.field) ? eigenerStand(spiel.field, spiel.id) : null;
       return eigen ? { ...spiel, status: feldSpielStatusAus(eigen) } : spiel;
     });
-    return feldWahl(spiele, eigene, now);
+    letzteWahl = feldWahl(spiele, eigene, now);
+    return letzteWahl;
   }
 
   /** `bekanntSeit` bleibt, solange der Stand gleich bleibt – auch beim Wechsel der Quelle (@HT-033 Zeile 10). */
-  function merke(kennung: FeldKennung, matchId: string, art: FeldMerker['art'], state: MatchState, geaendertAt: number, now: number): number {
-    const stand = standKennung(state);
-    const alt = merker.get(kennung);
-    if (alt?.matchId === matchId && alt.kennung === stand) {
-      merker.set(kennung, { ...alt, art });
-      return alt.bekanntSeit;
-    }
-    const ausDaten = alt?.matchId === matchId && alt.art === art && art === 'server';
-    const bekanntSeit = ausDaten ? geaendertAt : now;
-    merker.set(kennung, { matchId, art, kennung: stand, bekanntSeit });
-    if (alt?.matchId === matchId && state.status === 'finished') {
+  function merke(kennung: FeldKennung, matchId: string, art: FeldStand['quelle']['art'], state: MatchState, geaendertAt: number, now: number): number {
+    const gemerkt = merker.merke(kennung, matchId, art, state, geaendertAt, now);
+    if (gemerkt.spielEndete) {
       spielplanFaellig = true; // das aktuelle Spiel ist zu Ende: das nächste ohne 10 s Warten kennen
     }
-    return bekanntSeit;
+    return gemerkt.bekanntSeit;
   }
 
-  function antwortAlterMs(now: number, seit: number | null = letzteAntwortAt): number {
-    return seit === null ? Number.POSITIVE_INFINITY : now - seit;
-  }
+  const antwortAlterMs = (now: number, seit: number | null): number => (seit === null ? Number.POSITIVE_INFINITY : now - seit);
 
   function staende(): FeldStand[] {
-    if (verfuegbar !== 'verfuegbar') {
+    if (verfuegbar !== 'verfuegbar' && verfuegbar !== 'pruefe') {
       return [];
     }
     const now = deps.serverNow();
@@ -159,12 +154,12 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
         continue;
       }
       const eigen = eigenerStand(spiel.field, spiel.id);
-      if (eigen) {
+      const server = serverSpiele.get(spiel.id);
+      if (eigen && !engineHinkt(eigen, server?.state)) {
         const bekanntSeit = merke(kennung, spiel.id, 'eigenesCockpit', eigen, now, now);
         ergebnis.push({ feldId: kennung, ctx: spiel.ctx, state: eigen, quelle: { art: 'eigenesCockpit' }, bekanntSeit });
         continue;
       }
-      const server = serverSpiele.get(spiel.id);
       const state = server?.state ?? reduceMatch([], spiel.ctx).state;
       const bekanntSeit = merke(kennung, spiel.id, 'server', state, server?.geaendertAt ?? now, now);
       ergebnis.push({ feldId: kennung, ctx: spiel.ctx, state, quelle: { art: 'server', antwortAlterMs: antwortAlterMs(now, server ? server.antwortAt : letzteAntwortAt) }, bekanntSeit });
@@ -172,11 +167,11 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     return ergebnis;
   }
 
-  function naechsterAbfrageTaktMs(planerTaktMs: number | null = null, now = deps.serverNow()): number {
-    if (antwortAlterMs(now) > ANTWORT_MAX_ALTER_MS) {
-      return TAKT_ANGEPFIFFEN_MS; // N-2: veraltete Antwort → sofort und eng nachfragen
+  function naechsterAbfrageTaktMs(planerTaktMs: number | null, wahl: ReadonlyMap<FeldKennung, PlanSpiel>): number {
+    if (gescheitert) {
+      return TAKT_ANGEPFIFFEN_MS; // N-2 (Ruling 2b): nach einem gescheiterten Versuch sofort und eng nachfragen
     }
-    const angepfiffen = [...aktuelleSpiele(now).values()].some((spiel) => {
+    const angepfiffen = [...wahl.values()].some((spiel) => {
       const state = eigenerStand(spiel.field, spiel.id) ?? serverSpiele.get(spiel.id)?.state;
       return istAngepfiffen(state?.status ?? spiel.status);
     });
@@ -194,7 +189,7 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     spielplanVersuchAt = now;
     const ergebnis = await ladeSpielplan(client, deps.turnierId, zeitgeber);
     if (!ergebnis.ok) {
-      fehlschlag(ergebnis);
+      fehlschlag(ergebnis, false);
       return;
     }
     if (ergebnis.wert.abgeschlossen) {
@@ -206,10 +201,11 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
   }
 
   async function ladeStaende(client: FeldStandClient, now: number, planerTaktMs: number | null): Promise<void> {
-    const aktuelle = [...aktuelleSpiele(now).values()].flatMap((spiel) => (spiel.ctx ? [spiel.ctx] : []));
+    const wahl = aktuelleSpiele(now);
+    const aktuelle = [...wahl.values()].flatMap((spiel) => (spiel.ctx ? [spiel.ctx] : []));
     // ein neues aktuelles Spiel sofort abfragen, sonst im Takt
     const neuesSpiel = aktuelle.some((ctx) => !serverSpiele.has(ctx.matchId));
-    if (!neuesSpiel && ereignisVersuchAt !== null && now - ereignisVersuchAt < naechsterAbfrageTaktMs(planerTaktMs, now)) {
+    if (!neuesSpiel && ereignisVersuchAt !== null && now - ereignisVersuchAt < naechsterAbfrageTaktMs(planerTaktMs, wahl)) {
       return;
     }
     for (const matchId of serverSpiele.keys()) {
@@ -222,8 +218,9 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     }
     for (const ctx of aktuelle) {
       if (!serverSpiele.has(ctx.matchId)) {
-        // neues aktuelles Spiel: Wasserstand 0, Stand ab dem leeren Log
-        serverSpiele.set(ctx.matchId, { ctx, log: [], wasserstand: 0, state: reduceMatch([], ctx).state, geaendertAt: now, antwortAt: null, unlesbar: false });
+        // neues aktuelles Spiel: Wasserstand 0, Stand ab dem leeren Log; das Alter erbt die letzte Antwort (N1), damit es
+        // bis zur ersten eigenen Antwort nicht als „nie beantwortet“ warnt – scheitert sie, altert es wie alle
+        serverSpiele.set(ctx.matchId, { ctx, log: [], wasserstand: 0, state: reduceMatch([], ctx).state, geaendertAt: now, antwortAt: letzteAntwortAt, unlesbar: false });
       }
     }
     ereignisVersuchAt = now;
@@ -235,6 +232,7 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     }
     const antwortAt = deps.serverNow();
     letzteAntwortAt = antwortAt;
+    gescheitert = false;
     for (const ctx of aktuelle) {
       const spiel = serverSpiele.get(ctx.matchId);
       if (spiel) {
@@ -279,7 +277,8 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     }
     await ladePlan(client, now);
     if (verfuegbar === 'verfuegbar') {
-      await ladeStaende(client, now, planerTaktMs);
+      // Befund 5: die Zeit nach dem Spielplan neu lesen (er kann bis zu 3 s hängen)
+      await ladeStaende(client, deps.serverNow(), planerTaktMs);
     }
   }
 
@@ -291,8 +290,9 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
       return laeuft;
     },
     staende,
-    naechsterAbfrageTaktMs: (planerTaktMs = null) => naechsterAbfrageTaktMs(planerTaktMs),
+    naechsterAbfrageTaktMs: (planerTaktMs = null) => naechsterAbfrageTaktMs(planerTaktMs, letzteWahl),
     letzteAntwortAt: () => letzteAntwortAt,
+    letzterVersuchGescheitert: () => gescheitert,
     verfuegbarkeit: () => verfuegbar,
     unlesbareSpiele: () => [...serverSpiele.values()].filter((spiel) => spiel.unlesbar).map((spiel) => spiel.ctx.matchId),
   };

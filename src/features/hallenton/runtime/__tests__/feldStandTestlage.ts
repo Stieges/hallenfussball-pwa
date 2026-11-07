@@ -9,6 +9,7 @@ import { CTX_11, CTX_12, T0 } from '../../../../core/hallenton/__tests__/hallent
 import { FalscherSupabase } from '../../../../test/hallenton/falscherSupabase';
 import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
 import { erzeugeFeldStand, type FeldStandQuelle } from '../feldStand';
+import type { PlanSpiel } from '../feldStandSpiele';
 
 export const TID = '22222222-2222-4222-8222-222222222222';
 
@@ -29,6 +30,10 @@ export interface LageOptionen {
   start?: number;
   felder?: number[];
   spiele?: Record<string, unknown>[];
+  /** Spielplan aus der lokalen Turnierkopie (Start ohne Netz, Befund 6a). */
+  lokalerSpielplan?: () => readonly PlanSpiel[] | null;
+  /** Gemeinsame Uhr mit Takt und Spieler (H3b-2b). */
+  uhr?: ManuelleUhr;
 }
 
 export class Lage {
@@ -41,8 +46,8 @@ export class Lage {
   felder: number[];
   private seq = 100;
 
-  constructor({ start = T0, felder = [1], spiele }: LageOptionen = {}) {
-    this.uhr = new ManuelleUhr(start);
+  constructor({ start = T0, felder = [1], spiele, lokalerSpielplan, uhr }: LageOptionen = {}) {
+    this.uhr = uhr ?? new ManuelleUhr(start);
     this.felder = felder;
     this.sb.tabellen.tournaments = [{ id: TID, date: '2026-11-28', lifecycle_status: 'fixed' }];
     this.sb.tabellen.matches = spiele ?? [spielZeile(CTX_11, 1, 11, '14:12:00'), spielZeile(CTX_12, 1, 12, '14:24:00')];
@@ -53,6 +58,7 @@ export class Lage {
       lautsprecherFelder: () => this.felder,
       leiteIchFeld: (feld) => this.leite.has(feld),
       eigeneSicht: (matchId) => this.eigene.get(matchId) ?? null,
+      lokalerSpielplan,
       zeitgeber: this.uhr.gruppe('haupt'),
     });
   }

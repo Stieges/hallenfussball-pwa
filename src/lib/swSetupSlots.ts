@@ -56,8 +56,8 @@ export interface SwAutoReloadHandle {
   onMaybeIdle: () => Promise<void>;
   /** Removes listeners, intervals and the dialog observer (hook cleanup). */
   dispose: () => void;
-  /** Ein Neulade-Tor wurde gesetzt oder gelöst: Zustand neu bewerten (B-19b). */
-  onGateChanged: () => void;
+  /** Ein Halter des Neulade-Tors kam hinzu (`added`) oder ging: Zustand neu bewerten (B-19b). */
+  onGateChanged: (added?: ReloadGate) => void;
   /** Unlesbare Antwort (B-19b, @ME-032): sofort neu laden, sobald eine neue Version da ist. */
   reloadNow: () => void;
 }
@@ -66,22 +66,65 @@ export interface SwAutoReloadHandle {
  * Einsteckbares Neulade-Tor (B-19b, @ZM-124, @ZM-128, @ME-012). Ist ein Tor gesetzt, entscheidet es statt der
  * Leerlauf-Prüfung, ob neu geladen werden darf; zusätzlich entfallen Toast und Update-Hinweis. Ohne Tor bleibt
  * alles wie bisher.
+ *
+ * Zusammensetzbar (Hallenton H3b-2b): mehrere Halter (z. B. Monitor und Hallen-Lautsprecher) melden sich je an und ab;
+ * neu geladen wird nur, wenn alle zustimmen.
  */
 export interface ReloadGate {
   /** true = jetzt darf neu geladen werden. Ein Wurf zählt als false. */
   allowsReload: () => boolean;
   /** Eine neue Version wartet (einmal je Version; auch wenn das Tor erst danach gesetzt wird). */
   onUpdateWaiting?: () => void;
+  /**
+   * Auch der Eilpfad (@ME-032, unlesbare Antwort) wartet auf diesen Halter, solange er nein sagt (Hallen-Lautsprecher: ein
+   * Neuladen nimmt die Freigabe „Ton aktivieren“, @HT-013). Ohne Angabe überstimmt der Eilpfad den Halter wie bisher.
+   */
+  blocksUrgent?: boolean;
+  /** Zusammengesetztes Tor: sagt ein Halter mit `blocksUrgent` nein? */
+  urgentBlocked?: () => boolean;
 }
 
-let reloadGate: ReloadGate | null = null;
+const reloadGateHolders = new Set<ReloadGate>();
 
+function holderAllows(gate: ReloadGate): boolean {
+  try {
+    return gate.allowsReload();
+  } catch {
+    return false;
+  }
+}
+
+/** Das zusammengesetzte Tor aller Halter; `null`, solange sich keiner angemeldet hat. */
 export function getReloadGate(): ReloadGate | null {
-  return reloadGate;
+  if (reloadGateHolders.size === 0) {
+    return null;
+  }
+  const holders = [...reloadGateHolders];
+  return {
+    allowsReload: () => holders.every(holderAllows),
+    urgentBlocked: () => holders.some((gate) => gate.blocksUrgent === true && !holderAllows(gate)),
+    onUpdateWaiting: () => {
+      let firstError: unknown = null;
+      for (const gate of holders) {
+        try {
+          gate.onUpdateWaiting?.();
+        } catch (err) {
+          firstError ??= err;
+        }
+      }
+      if (firstError !== null) {
+        throw firstError;
+      }
+    },
+  };
 }
 
-export function setReloadGateSlot(gate: ReloadGate | null): void {
-  reloadGate = gate;
+/** Meldet einen Halter an; die Rückgabe meldet ihn wieder ab. */
+export function addReloadGateHolder(gate: ReloadGate): () => void {
+  reloadGateHolders.add(gate);
+  return () => {
+    reloadGateHolders.delete(gate);
+  };
 }
 
 /** Ersetzbare Options-Slots: werden bei Folgeaufrufen getauscht. */
@@ -118,5 +161,5 @@ export function replaceSwSetupSlots(slots: SwOptionSlots): void {
 export function __resetSwForTests(): void {
   instance?.handle.dispose();
   instance = undefined;
-  reloadGate = null;
+  reloadGateHolders.clear();
 }
