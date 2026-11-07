@@ -208,10 +208,17 @@ async function helferOhneEndstandPdf({ asRole }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
   const tom = await asRole('helper');
   await openNikolausPath(tom, '/schedule');
-  await tom.getByTestId('schedule-action-pdf').click();
-  await expect(tom.getByTestId('pdf-choice-schedule'), 'Dialog geladen, „Spielplan“ vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
-  await expect(tom.getByTestId('pdf-choice-final'), 'Helfer: keine Karte „Endstand“').toHaveCount(0);
-  await tom.keyboard.press('Escape');
+  // Nach dem Abschluss führt der Weg des Helfers zum Endstand (@HE-098 Z. 2); bietet die Seite trotzdem „Als PDF“, fehlt darin der Endstand
+  await expect(tom.getByTestId('final-standings-list').or(tom.getByTestId('schedule-action-pdf')).first(), 'Seite geladen').toBeVisible({ timeout: 15_000 });
+  const pdfKnopf = tom.getByTestId('schedule-action-pdf');
+  if ((await pdfKnopf.count()) > 0) {
+    await pdfKnopf.click();
+    await expect(tom.getByTestId('pdf-choice-schedule'), 'Dialog geladen, „Spielplan“ vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+    await expect(tom.getByTestId('pdf-choice-final'), 'Helfer: keine Karte „Endstand“').toHaveCount(0);
+    await tom.keyboard.press('Escape');
+  } else {
+    test.info().annotations.push({ type: 'N8f', description: 'Helfer sieht nach dem Abschluss keinen Spielplan mit „Als PDF“ (Weg zum Endstand)' });
+  }
   await openNikolausPath(tom, '/standings');
   await expect(tom.getByTestId('final-standings-list'), 'Helfer liest den Endstand').toBeVisible({ timeout: 15_000 });
   await expect(tom.getByTestId('final-standings-pdf'), 'Helfer: kein „Als PDF“ in der Endstand-Ansicht').toHaveCount(0);
