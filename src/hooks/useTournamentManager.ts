@@ -92,20 +92,36 @@ export function useTournamentManager(tournamentId: string) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // @HE-086/@HE-085 (Wackler CA-7 Z5): das Fenster bleibt beim Wechsel der Turnier-Adresse stehen. Der Stand des vorigen
+    // Turniers gilt ab sofort nicht mehr (Laden-Anzeige statt fremdem Inhalt), und ein noch laufendes Laden des vorigen
+    // Turniers landet nie unter der neuen Adresse.
+    const activeIdRef = useRef(tournamentId);
+    activeIdRef.current = tournamentId;
+    const [stateId, setStateId] = useState(tournamentId);
+    if (stateId !== tournamentId) {
+        setStateId(tournamentId);
+        setTournament(null);
+        setError(null);
+        setIsLoading(true);
+    }
+
     // Load Tournament
     const loadTournament = useCallback(async (options?: { fresh?: boolean }) => {
         if (!tournamentId) {return;}
+        const stillActive = () => activeIdRef.current === tournamentId;
 
         try {
             if (!options?.fresh) { setIsLoading(true); } // A-08f3b: Laden-Anzeige nur beim ersten Laden
             const data = await service.loadTournament(tournamentId, options);
+            if (!stillActive()) { return; }
             setTournament(data);
             setError(null);
         } catch (err) {
+            if (!stillActive()) { return; }
             console.error('Failed to load tournament:', err);
             setError('Fehler beim Laden des Turniers');
         } finally {
-            setIsLoading(false);
+            if (stillActive()) { setIsLoading(false); }
         }
     }, [service, tournamentId]);
 
@@ -180,7 +196,7 @@ export function useTournamentManager(tournamentId: string) {
         const sanitized = stripEngineOverlayFields(updated, tournament, overlaidMatchIdsRef.current);
         try {
             await service.updateTournament(sanitized);
-            setTournament(sanitized);
+            if (activeIdRef.current === sanitized.id) { setTournament(sanitized); } // @HE-086: nie unter fremder Adresse
             // @W5-027: die Turnierliste der Startseite (eigene Hook-Instanz in App.tsx) lädt bei diesem
             // Ereignis neu, sonst bliebe eine archivierte Kopie bis zum Neuladen auf der Startseite stehen.
             window.dispatchEvent(new Event('tournament-updated'));
