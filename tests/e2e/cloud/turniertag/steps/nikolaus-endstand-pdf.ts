@@ -114,11 +114,30 @@ async function imTurnierVorgewaehlt({ asRole }: StepContext): Promise<void> {
 }
 
 /**
- * N8b2 (@DR-048 Z. 2 wörtlich): ab der Startseite höchstens 3 Tipps – Karte, „Als PDF“, Speichern. Heute steht ein abgeschlossenes Turnier
- * sofort im Archiv (ein Tipp mehr); das ändert @OB-081 (#451: bis Tagesende unter „Heute“).
+ * N8b2 (@DR-048 Z. 2 wörtlich): ab der Startseite höchstens 3 Tipps – Karte, „Als PDF“, Speichern. Ein heute abgeschlossenes Turnier steht
+ * bis Tagesende unter „Heute“ (@OB-081, #451).
  */
 async function abStartseite({ asRole }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
+  // „heute abgeschlossen“ (@OB-081) heißt: Turniertag heute. Der Nikolaus-Seed hat einen festen Tag; für diesen Schritt steht er auf heute
+  const [{ date: seedTag }] = await getRows<{ date: string }>(`tournaments?id=eq.${NIKOLAUS.tournamentId}&select=date`, 'Turniertag');
+  const heute = new Date().toLocaleDateString('sv-SE'); // Ortszeit des Rechners = Ortszeit des Browsers (kein timezoneId gesetzt)
+  setzeTurniertag(heute);
+  try {
+    await startseitePdf(asRole);
+  } finally {
+    setzeTurniertag(seedTag);
+  }
+}
+
+/** Turniertag des (abgeschlossenen) Turniers setzen: Datenbank-Eigentümer mit dem Server-Schalter (wie `setzeSchalter`). */
+function setzeTurniertag(tag: string): void {
+  expect(tag, 'Datum JJJJ-MM-TT').toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET date = '${tag}' WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
+  execFileSync('docker', ['exec', '-i', 'supabase_db_hallenfussball-pwa', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
+}
+
+async function startseitePdf(asRole: StepContext['asRole']): Promise<void> {
   const seite = await asRole('owner');
   await seite.goto('/#/');
   const { tippe, anzahl } = tippZaehler();
@@ -267,7 +286,7 @@ async function verwaltungAmHandy({ browser }: StepContext): Promise<void> {
 export const steps: readonly TurniertagStep[] = [
   { id: 'N8a', title: 'Endstand-PDF aus der Endstand-Ansicht (Reiter Tabellen): Olli und Maria, ≤ 3 Tipps, Abschlusszeile, Plätze wie gespeichert', scenarios: ['@DR-048', '@DR-011'], befunde: ['C-ENDSTAND-PDF-GESPERRT'], owner: 'Paket Endstand-PDF', expectedFail: false, run: ausEndstandAnsicht },
   { id: 'N8b', title: 'Endstand-PDF im Turnier: „Endstand“ im Dialog vorgewählt, Abschlusszeile, Plätze wie gespeichert', scenarios: ['@DR-048', '@DR-011', '@DR-009'], befunde: ['C-ENDSTAND-PDF-GESPERRT'], owner: 'Paket Endstand-PDF', expectedFail: false, run: imTurnierVorgewaehlt },
-  { id: 'N8b2', title: 'Endstand-PDF ab der Startseite in ≤ 3 Tipps (abgeschlossen bleibt bis Tagesende unter „Heute“)', scenarios: ['@DR-048', '@OB-081'], owner: '#451 (@OB-081 Startseite)', expectedFail: true, run: abStartseite },
+  { id: 'N8b2', title: 'Endstand-PDF ab der Startseite in ≤ 3 Tipps (abgeschlossen bleibt bis Tagesende unter „Heute“)', scenarios: ['@DR-048', '@OB-081'], owner: 'Paket Endstand-PDF (Startseite seit #451)', expectedFail: false, run: abStartseite },
   { id: 'N8c', title: 'Zuschauer-Seite: Endstand-PDF nach dem Abschluss mit Plätzen und Ergebnissen', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerEndstand },
   { id: 'N8d', title: 'Zuschauer-Seite im Kindermodus: kein Endstand-PDF', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerKindermodus },
   { id: 'N8d2', title: 'Zuschauer-Seite mit ausgeblendeten Tabellen: kein Endstand-PDF', scenarios: ['@DR-050'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerTabellenAus },
