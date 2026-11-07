@@ -88,20 +88,13 @@ const locationStyle: CSSProperties = {
   color: cssVars.colors.textSecondary,
 };
 
-/**
- * Das Menü-Feld (44 px) ragt in den Innenabstand der Karte: Das Symbol bleibt sichtbar im Rand, der Text daneben gewinnt Breite, damit Ort
- * und Schild bei 360 Bildpunkten in einer Zeile stehen (@OB-079).
- */
-const menuSlotStyle: CSSProperties = { gridColumn: 2, gridRow: '1 / span 2', alignSelf: 'center', marginRight: `calc(-1 * ${cssVars.spacing.sm})` };
+const menuSlotStyle: CSSProperties = { gridColumn: 2, gridRow: '1 / span 2', alignSelf: 'center' };
 
 /**
  * Das Schild steht rechts in der Zeile des Orts; ohne Ort trotzdem rechts. Es ist höher als eine Textzeile (Rand + Innenabstand);
  * der negative Spielraum oben und unten hält die Zeile so hoch wie den Ort allein: das Schild macht die Karte nicht höher (@OB-079).
  */
 const roleSlotStyle: CSSProperties = { flex: 'none', marginLeft: 'auto', marginBlock: `calc(-1 * ${cssVars.spacing.xs})` };
-
-/** Die Zustandsmarke ist höher als die Textzeile; halber Spielraum, damit drei Karten am Handy ohne Scrollen passen (@OB-079). */
-const stateSlotStyle: CSSProperties = { display: 'flex', minWidth: 0, marginBlock: `calc(-1 * ${cssVars.spacing.xs} / 2)` };
 
 const whenStyle: CSSProperties = {
   fontWeight: cssVars.fontWeights.semibold,
@@ -164,8 +157,9 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     transition: 'all 0.2s ease',
     border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     position: 'relative',
-    // Am Handy knapper Innenabstand: alle Turniere des Tages sollen ohne Scrollen sichtbar sein (@OB-079)
-    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    // Am Handy knapper Innenabstand, rechts am knappsten (das Menü-Feld bringt eigenen Rand mit): alle Turniere des Tages sollen ohne Scrollen
+    // sichtbar sein, und Ort und Rollen-Schild bei 360 Bildpunkten in einer Zeile stehen (@OB-079)
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.sm} ${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
   };
 
   // Die Karte unter der Maus liegt über ihren Nachbarn: das Aktionsmenü ragt bei den kompakten Karten in die nächste Karte hinein und
@@ -244,11 +238,9 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
               </span>
             )}
             {hasVisibleStateMark(cardState) && (
-              <span style={stateSlotStyle}>
-                <StateMark tone={STATE_MARK[cardState].tone} symbol={STATE_MARK[cardState].symbol} data-testid="card-state">
-                  {t(STATE_WORD_KEY[cardState])}
-                </StateMark>
-              </span>
+              <StateMark dense tone={STATE_MARK[cardState].tone} symbol={STATE_MARK[cardState].symbol} data-testid="card-state">
+                {t(STATE_WORD_KEY[cardState])}
+              </StateMark>
             )}
           </div>
           {(location !== '' || showRole) && (
