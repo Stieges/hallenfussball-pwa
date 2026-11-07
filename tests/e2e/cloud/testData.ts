@@ -135,6 +135,13 @@ export const E2E_RELEASE_CUP_ID = e2eUuid('tournament:release-cup');
  */
 export const E2E_TEAM_HELFER_CUP_ID = e2eUuid('tournament:team-helfer-cup');
 export const E2E_TEAM_HELFER_CUP_TITLE = 'Team-Helfer-Cup';
+/**
+ * Eigener Cup NUR für `helfer-beitritt.cloud.spec.ts` (A-17b): Der Turniertag liegt auf dem Folgetag des Säens
+ * (`helperCupDate.ts`), damit der Helfer-Code nicht mitten in einem Lauf über Mitternacht abläuft (@HE-010). Der Live-Cup
+ * bleibt „heute“ (andere Specs brauchen das). Owner olli, zwei Felder, vier Teams.
+ */
+export const E2E_HELFER_BEITRITT_CUP_ID = e2eUuid('tournament:helfer-beitritt-cup');
+export const E2E_HELFER_BEITRITT_CUP_TITLE = 'Helfer-Beitritt-Cup';
 
 /** Titel der Testturniere (`scripts/e2e-seed.ts` UND `tests/e2e/cloud/smoke.spec.ts`
  *  importieren von hier — keine literale Zweitstelle). */

@@ -60,6 +60,8 @@ import {
   E2E_RELEASE_CUP_ID,
   E2E_TEAM_HELFER_CUP_ID,
   E2E_TEAM_HELFER_CUP_TITLE,
+  E2E_HELFER_BEITRITT_CUP_ID,
+  E2E_HELFER_BEITRITT_CUP_TITLE,
   E2E_LIVE_CUP_TITLE,
   E2E_PUBLIC_CUP_TITLE,
   E2E_DRAFT_CUP_TITLE,
@@ -86,6 +88,7 @@ import {
   legacyCupIds,
   e2eUuid,
 } from '../tests/e2e/cloud/testData';
+import { helperJoinCupDate } from '../tests/e2e/cloud/helperCupDate';
 
 import { TournamentCreationService } from '../src/core/services/TournamentCreationService';
 import { localDateIso } from '../src/core/view/time';
@@ -357,6 +360,7 @@ async function main(): Promise<void> {
     E2E_STRANGER_CUP_ID,
     E2E_RELEASE_CUP_ID,
     E2E_TEAM_HELFER_CUP_ID,
+    E2E_HELFER_BEITRITT_CUP_ID,
     E2E_TURNIERTAG_CUP_ID,
     ...Object.values(E2E_NIKOLAUS_CUPS).map((cup) => cup.tournamentId),
     ...E2E_ENGINE_CUPS.map((cup) => engineCupIds(cup.slug).tournamentId),
@@ -783,14 +787,17 @@ async function main(): Promise<void> {
   }
 
   // Team-Helfer-Cup (A-18a): eigener Cup für helfer-team.cloud.spec.ts, Owner olli, coadmin als Co-Admin.
-  log('Lege Team-Helfer-Cup an…');
+  // Turniertag = Folgetag des Säens (helperCupDate.ts): mit „heute“ lief der Helfer-Code ab, sobald der Lauf über
+  // Mitternacht ging (@HE-010, Lauf 42308242655).
+  const helperCupDate = helperJoinCupDate(seedNow);
+  log(`Lege Team-Helfer-Cup an (Turniertag ${helperCupDate})…`);
   const teamHelferCup = buildScheduledTournament(
     service,
     {
       id: E2E_TEAM_HELFER_CUP_ID,
       title: E2E_TEAM_HELFER_CUP_TITLE,
       ageClass: 'U15',
-      date: localDateIso(),
+      date: helperCupDate,
       timeSlot: '09:00 - 16:00',
       startTime: '09:00',
       location: { name: 'Sporthalle Testumgebung' },
@@ -816,6 +823,28 @@ async function main(): Promise<void> {
   if (teamHelferCoadminError) {
     throw new Error(`Mitgliedschaft coadmin (Team-Helfer-Cup): ${teamHelferCoadminError.message}`);
   }
+
+  // Helfer-Beitritt-Cup (A-17b): eigener Cup für helfer-beitritt.cloud.spec.ts, Owner olli, zwei Felder (Zulassen mit
+  // Feld 2), Turniertag wie beim Team-Helfer-Cup der Folgetag des Säens.
+  log(`Lege Helfer-Beitritt-Cup an (Turniertag ${helperCupDate})…`);
+  const helferBeitrittCup = buildScheduledTournament(
+    service,
+    {
+      id: E2E_HELFER_BEITRITT_CUP_ID,
+      title: E2E_HELFER_BEITRITT_CUP_TITLE,
+      ageClass: 'U15',
+      date: helperCupDate,
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Sporthalle Testumgebung' },
+      numberOfFields: 2,
+      numberOfTeams: 4,
+      teams: [1, 2, 3, 4].map((n) => ({ id: e2eUuid(`team:helfer-beitritt-cup:${n}`), name: `Helfer-Beitritt Team ${n}` })),
+    },
+    /* isPublic */ false
+  );
+  helferBeitrittCup.publishedAt = nowIso;
+  await ownerRepo.save(helferBeitrittCup);
 
   // ---------------------------------------------------------------------------
   // 3.8 Fremd-Cup: Eigentümer stranger, privat
