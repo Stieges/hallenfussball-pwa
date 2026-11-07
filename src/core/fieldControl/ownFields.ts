@@ -7,6 +7,27 @@ import type { FieldControlInfo } from '../repositories/fieldControlRpc';
 
 const own = new Map<string, number[]>();
 
+/** `tournamentId` null: alles geleert (Abmelden, Kontowechsel). */
+export type OwnFieldsListener = (tournamentId: string | null, fields: readonly number[]) => void;
+const listeners = new Set<OwnFieldsListener>();
+
+/**
+ * Jeder gelesene Stand (auch unverändert), etwa damit der Hallen-Lautsprecher ihn für ein Neuladen ohne Netz merkt
+ * (H3b-3, Befund 6a). Rückgabe: abmelden.
+ */
+export function onOwnFieldsNoted(fn: OwnFieldsListener): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+function notify(tournamentId: string | null, fields: readonly number[]): void {
+  for (const fn of [...listeners]) {
+    fn(tournamentId, fields);
+  }
+}
+
 /** Neuer Stand eines Turniers: nur die Felder mit `isMine`; ohne eigenes Feld fällt das Turnier heraus. */
 export function noteFieldControlList(tournamentId: string, list: readonly FieldControlInfo[]): void {
   const fields = list.filter((info) => info.isMine).map((info) => info.field).sort((a, b) => a - b);
@@ -15,6 +36,7 @@ export function noteFieldControlList(tournamentId: string, list: readonly FieldC
   } else {
     own.set(tournamentId, fields);
   }
+  notify(tournamentId, fields);
 }
 
 export function ownFieldsByTournament(): Record<string, readonly number[]> {
@@ -27,6 +49,7 @@ export function ownFieldsByTournament(): Record<string, readonly number[]> {
  */
 export function clearOwnFields(): void {
   own.clear();
+  notify(null, []);
 }
 
 /** Nur für Tests. */
