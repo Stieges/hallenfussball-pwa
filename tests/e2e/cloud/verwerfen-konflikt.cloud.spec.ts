@@ -17,6 +17,7 @@
 import path from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+test.use({ trace: 'on' }); // DIAG C-GERAET-FOLGT-WACKELT: nicht mergen
 import { fetchUserIdByEmail, newRoleContext } from './engineHelpers';
 import { fetchQueuedMutationTypes, queueKeys, safeCleanup } from './helpers';
 import { restAsRole } from './restAsRole';

@@ -20,6 +20,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+test.use({ trace: 'on' }); // DIAG C-GERAET-FOLGT-WACKELT: nicht mergen
 import { expectEngineMatchRunningUi, fetchReviewRows, fetchUserIdByEmail, newRoleContext, openCockpit } from './engineHelpers';
 import { enterGoal, fetchFailedMutationTypes, fetchMatchRow, fetchQueuedMutationTypes, newFreshContext, readSessionAccessToken, safeCleanup } from './helpers';
 import { restAsRole, serviceRest } from './restAsRole';
