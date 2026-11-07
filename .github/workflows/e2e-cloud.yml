@@ -117,7 +117,7 @@ jobs:
           # Der Stack oben entsteht aus den Migrationen des Repos, also mit 20261110_008_helper_join.sql (A-16):
           # die Helfer-Beitritts-Specs (helfer-beitritt.cloud.spec.ts, A-17b) laufen hier statt fixme.
           E2E_STACK_HAS_008: '1'
-        run: bash scripts/require-local-stack.sh && npx playwright test --project=cloud-desktop tests/e2e/cloud/verwerfen-konflikt.cloud.spec.ts:177 tests/e2e/cloud/coadmin-einsatz.cloud.spec.ts:319 --repeat-each=25 --retries=0 --trace=on
+        run: bash scripts/require-local-stack.sh && npx playwright test --project=cloud-desktop tests/e2e/cloud/verwerfen-konflikt.cloud.spec.ts tests/e2e/cloud/coadmin-einsatz.cloud.spec.ts -g "@FU-109|@FU-108|Z5 " --repeat-each=25 --retries=0 --trace=on
 
       - name: Supabase-Diagnose einsammeln
         if: failure()
