@@ -117,7 +117,7 @@ jobs:
           # Der Stack oben entsteht aus den Migrationen des Repos, also mit 20261110_008_helper_join.sql (A-16):
           # die Helfer-Beitritts-Specs (helfer-beitritt.cloud.spec.ts, A-17b) laufen hier statt fixme.
           E2E_STACK_HAS_008: '1'
-        run: bash scripts/require-local-stack.sh && npx playwright test --project=cloud-desktop tests/e2e/cloud/turniertag.spec.ts tests/e2e/cloud/zeiten-verschieben.cloud.spec.ts --retries=0 --trace=on
+        run: bash scripts/require-local-stack.sh && npx playwright test --project=cloud-desktop tests/e2e/cloud/turniertag.spec.ts tests/e2e/cloud/zeiten-verschieben.cloud.spec.ts tests/e2e/cloud/nikolaus.spec.ts -g "Turniertag-Durchstich|Zeiten verschieben kommt|N5 Zeitplan" --retries=0 --trace=on
 
       - name: Supabase-Diagnose einsammeln
         if: failure()
