@@ -54,13 +54,14 @@ export function usePdfExport(context: PdfExportContext, initial: PdfChoice = 'sc
     setState(s => ({ ...s, step: 'form', busy: false, pending: undefined, failed: false, notShared: false, savedName: '' }));
   }, []);
 
-  const save = useCallback(async () => {
+  /** Baut und speichert `choice` (Vorgabe: die gewählte Karte); der Dialog reicht die angezeigte Wahl herein (Vorwahl, @DR-048). */
+  const save = useCallback(async (choice: PdfChoice = state.choice) => {
     run.current += 1;
     const mine = run.current;
     setState(s => ({ ...s, busy: true, failed: false, notShared: false }));
     try {
       const { loadGraphics, ...build } = context;
-      const result = await buildChoice(state.choice, { ...build, ...(await graphicsOf(loadGraphics)), now });
+      const result = await buildChoice(choice, { ...build, ...(await graphicsOf(loadGraphics)), now });
       if (mine !== run.current) {
         return;
       }

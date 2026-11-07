@@ -11,9 +11,10 @@ import { test } from './fixtures';
 import { steps as plan } from './turniertag/steps/nikolaus-plan';
 import { steps as spiel } from './turniertag/steps/nikolaus-spiel';
 import { steps as tabelle } from './turniertag/steps/nikolaus-tabelle';
+import { steps as endstandPdf } from './turniertag/steps/nikolaus-endstand-pdf';
 import type { TurniertagStep } from './turniertag/steps/types';
 
-export const NIKOLAUS_STEPS: readonly TurniertagStep[] = [...plan, ...spiel, ...tabelle];
+export const NIKOLAUS_STEPS: readonly TurniertagStep[] = [...plan, ...spiel, ...tabelle, ...endstandPdf];
 
 // ÜBERGANG bis zur Zählerregel für Schritt-Specs (Folge F4, Plattform/TM-1): Die Befunde der erwartet roten Schritte stehen je Schritt in `befunde`
 // (Wächter TM-1). Die Kennung im Titel steht nur hier, damit der Szenario-Zähler (`test.fail` im Rumpf ohne Verweis) nicht steigt;

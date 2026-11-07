@@ -1,8 +1,9 @@
 /**
  * Wahlschritt des PDF-Dialogs (B-28 C8, Mockup „PDF-Dialog“): Karten „Spielplan“, „Spielplan ohne Ergebnisse“, „Endstand“
- * (bis zum Abschluss ausgegraut, G44) und „Aushang mit QR-Code“ (ohne Online-Teilen ausgegraut, @ZM-064), darunter die
- * Hinweise zu Sichtbarkeit, Netz und Fehler und die Zeile „Format: A4 hoch“ (@DR-026, keine Wahl „quer“). Zuschauer
- * (`audience viewer`) sehen nur „Spielplan“ ohne Wahl (@BM-057, G47).
+ * (bis zum Abschluss ausgegraut, G44, @DR-011; nur Turnierleitung und Co-Admin, @DR-048) und „Aushang mit QR-Code“ (ohne
+ * Online-Teilen ausgegraut, @ZM-064), darunter die Hinweise zu Sichtbarkeit, Netz und Fehler und die Zeile „Format: A4 hoch“
+ * (@DR-026, keine Wahl „quer“). Was angeboten wird, entscheidet `pdfOffers`. Zuschauer (`audience viewer`) sehen nur „Spielplan“
+ * ohne Wahl (@BM-057, G47), nach dem Abschluss die Wahl „Spielplan“ oder „Endstand“ (@BM-041).
  */
 import type { CSSProperties, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import { cssVars, iconSizeValues, letterSpacing } from '../../../design-tokens';
 import { Icons } from '../../ui/Icons';
 import { ChoiceCard, InlineNotice } from '../../ui/molecules';
 import type { PdfChoice } from './buildChoice';
+import type { OfferReason, PdfOffers } from './pdfOffers';
 
 export interface PdfFormStepProps {
   viewer: boolean;
@@ -17,8 +19,8 @@ export interface PdfFormStepProps {
   onChoice: (choice: PdfChoice) => void;
   /** Das Turnier ist online geteilt (Aushang möglich). */
   shared: boolean;
-  /** Der Endstand ist wählbar (erst nach dem Abschluss, C10). */
-  finalAvailable: boolean;
+  /** Karten und ihr Zustand (`pdfOffers`). */
+  offers: PdfOffers;
   hideScores: boolean;
   hideTables: boolean;
   /** „TT.MM.“ und „HH:mm“, gesetzt wenn das Gerät kein Netz hat (@DR-021, G69). */
@@ -27,9 +29,19 @@ export interface PdfFormStepProps {
   notShared: boolean;
   /** Wege zu den Schaltern; ohne Angabe erscheint nur der Text. */
   onOpenVisibility?: () => void;
-  /** A-11 @ZM-019: „Aushang mit QR-Code“ nur mit Recht auf Turniereinstellungen (Aufrufer fragt useCan). Vorgabe: ja. */
-  canCreateNotice?: boolean;
 }
+
+/** Gründe einer ausgegrauten Karte (Texte unter `pdfExport.reasons`; „Erst nach Abschluss“ und „Erst nach dem Online-Teilen“ an der Karte). */
+type ReasonKey = 'pdfExport.cards.final.reason' | 'pdfExport.cards.notice.reason' | `pdfExport.reasons.${Exclude<OfferReason, 'notFinished' | 'notShared'>}`;
+const reasonKey = (reason: OfferReason | undefined): ReasonKey | undefined => {
+  if (reason === undefined) {
+    return undefined;
+  }
+  if (reason === 'notFinished') {
+    return 'pdfExport.cards.final.reason';
+  }
+  return reason === 'notShared' ? 'pdfExport.cards.notice.reason' : `pdfExport.reasons.${reason}`;
+};
 
 const groupLabel: CSSProperties = {
   margin: `${cssVars.spacing.md} 0 ${cssVars.spacing.sm}`,
@@ -55,21 +67,28 @@ const link: CSSProperties = {
   cursor: 'pointer',
 };
 
-export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, hideScores, hideTables, offlineStamp, failed, notShared, onOpenVisibility, canCreateNotice = true }: PdfFormStepProps) => {
+export const PdfFormStep = ({ viewer, choice, onChoice, shared, offers, hideScores, hideTables, offlineStamp, failed, notShared, onOpenVisibility }: PdfFormStepProps) => {
   const { t } = useTranslation('tournament');
-  const card = (id: PdfChoice, icon: ReactNode, disabled: boolean, reasonKey?: 'pdfExport.cards.final.reason' | 'pdfExport.cards.notice.reason') => (
-    <ChoiceCard
-      key={id}
-      data-testid={`pdf-choice-${id}`}
-      icon={icon}
-      title={t(`pdfExport.cards.${id}.title`)}
-      description={t(`pdfExport.cards.${id}.description`)}
-      selected={choice === id}
-      disabled={disabled}
-      reason={reasonKey ? t(reasonKey) : undefined}
-      onSelect={() => onChoice(id)}
-    />
-  );
+  const card = (id: PdfChoice, icon: ReactNode) => {
+    const offer = offers[id];
+    if (offer === null) {
+      return null;
+    }
+    const key = offer.available ? undefined : reasonKey(offer.reason);
+    return (
+      <ChoiceCard
+        key={id}
+        data-testid={`pdf-choice-${id}`}
+        icon={icon}
+        title={t(`pdfExport.cards.${id}.title`)}
+        description={t(viewer && id === 'schedule' ? 'pdfExport.viewer.description' : `pdfExport.cards.${id}.description`)}
+        selected={choice === id}
+        disabled={!offer.available}
+        reason={key === undefined ? undefined : t(key)}
+        onSelect={() => onChoice(id)}
+      />
+    );
+  };
   const visibilityKey = hideScores && hideTables ? 'resultsAndTables' : hideScores ? 'results' : hideTables ? 'tables' : undefined;
   // Beide Wege führen zu den Schaltern der Verwaltung; die Beschriftung nennt, was dort geschieht (Mockup)
   const wayLink = (label: string, testId: string) =>
@@ -79,7 +98,12 @@ export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, 
 
   return (
     <div style={stack}>
-      {viewer ? (
+      {viewer && offers.final !== null ? (
+        <div style={cards} role="radiogroup" aria-label={t('pdfExport.groups.print')}>
+          {card('schedule', <Icons.Calendar size={iconSizeValues.sm} />)}
+          {card('final', <Icons.Trophy size={iconSizeValues.sm} />)}
+        </div>
+      ) : viewer ? (
         <>
           <div data-testid="pdf-viewer-plan">
             <strong>{t('pdfExport.cards.schedule.title')}</strong>
@@ -91,15 +115,15 @@ export const PdfFormStep = ({ viewer, choice, onChoice, shared, finalAvailable, 
         <div>
           <div style={groupLabel}>{t('pdfExport.groups.print')}</div>
           <div style={cards} role="radiogroup" aria-label={t('pdfExport.groups.print')}>
-            {card('schedule', <Icons.Calendar size={iconSizeValues.sm} />, false)}
-            {card('blank', <Icons.Edit size={iconSizeValues.sm} />, false)}
-            {card('final', <Icons.Trophy size={iconSizeValues.sm} />, !finalAvailable, 'pdfExport.cards.final.reason')}
+            {card('schedule', <Icons.Calendar size={iconSizeValues.sm} />)}
+            {card('blank', <Icons.Edit size={iconSizeValues.sm} />)}
+            {card('final', <Icons.Trophy size={iconSizeValues.sm} />)}
           </div>
-          {canCreateNotice ? (
+          {offers.notice !== null ? (
             <>
               <div style={groupLabel}>{t('pdfExport.groups.hang')}</div>
               <div style={cards} role="radiogroup" aria-label={t('pdfExport.groups.hang')}>
-                {card('notice', <Icons.QrCode size={iconSizeValues.sm} />, !shared, 'pdfExport.cards.notice.reason')}
+                {card('notice', <Icons.QrCode size={iconSizeValues.sm} />)}
               </div>
             </>
           ) : null}

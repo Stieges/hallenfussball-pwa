@@ -986,7 +986,7 @@ export function ExportsCategory({
 
       {/* PDF Export Dialog */}
       <PDFExportDialog isOpen={showPDFDialog} onClose={() => setShowPDFDialog(false)} tournament={tournament} schedule={schedule}
-        standings={standings} canCreateNotice={canNotice} />
+        standings={standings} canCreateNotice={canNotice} canCreateFinal={canNotice} />
     </CategoryPage>
   );
 }

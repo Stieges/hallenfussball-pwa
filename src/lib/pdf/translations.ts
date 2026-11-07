@@ -29,6 +29,8 @@ export interface PdfSheetTexts {
   titleSuffix: string;
   /** Zusatz der Fassung ohne Ergebnisse im Dateinamen („ohne-Ergebnisse“, @BM-052). */
   fileWithoutResults: string;
+  /** Art im Dateinamen des Endstand-PDFs („Endstand“, en: „Final-standings“; @DR-011). */
+  fileFinal: string;
   /** Adresse der Zuschauer-Seite in der Fußzeile, davor ein Satz („Live-Ergebnisse und aktuelle Zeiten:“). */
   footerLink: string;
 }
@@ -316,6 +318,7 @@ export function buildPdfTexts(translate: PdfTranslator, locale: PdfLocale): PdfT
       flowMatches: count => translate('pdf.sheet.flowMatches', { count }),
       titleSuffix: s('sheet.titleSuffix'),
       fileWithoutResults: s('sheet.fileWithoutResults'),
+      fileFinal: s('sheet.fileFinal'),
       footerLink: s('sheet.footerLink'),
     },
   };

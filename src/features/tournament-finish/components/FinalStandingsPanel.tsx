@@ -5,22 +5,39 @@
  *   lesbar, steht ein Hinweis, kein errechneter Ersatz.
  * - sonst: der Endstand, wie er gerade steht (`computeFinalStandings`, `computeScorers`), gekennzeichnet „vorläufig“ (@ET-042).
  * Turnierleitung und Helfer lesen dieselbe Zeile (`writeMatchData`); Helfer landen nach dem Abschluss über `/standings` hier.
+ * Über dem gespeicherten Endstand steht „Als PDF“ (@DR-048 Z. 3): öffnet den PDF-Dialog mit vorgewähltem „Endstand“, nur für
+ * Turnierleitung und Co-Admin (Recht tournamentSettings, nach dem Abschluss offen); Helfer sehen den Knopf nicht.
  */
-import type { Tournament } from '../../../types/tournament';
+import type { GeneratedSchedule } from '../../../core/generators';
+import type { Standing, Tournament } from '../../../types/tournament';
 import { computeFinalStandings } from '../../../core/standings/finalStandings';
+import { cssVars } from '../../../design-tokens';
+import { FinalStandingsPdfButton } from './FinalStandingsPdfButton';
 import { useStoredFinalStandingsReload } from '../hooks/useStoredFinalStandings';
 import { useProvisionalScorers } from '../hooks/useProvisionalScorers';
 import { FinalStandingsView } from './FinalStandingsView';
 import { FinalStandingsStatus } from './FinalStandingsStatus';
 
-export function FinalStandingsPanel({ tournament }: { tournament: Tournament }) {
+export interface FinalStandingsPanelProps {
+  tournament: Tournament;
+  /** Für „Als PDF“ (@DR-048 Z. 3); ohne Spielplan kein Knopf. */
+  schedule?: GeneratedSchedule;
+  standings?: Standing[];
+}
+
+export function FinalStandingsPanel({ tournament, schedule, standings = [] }: FinalStandingsPanelProps) {
   const finished = tournament.lifecycleStatus === 'finished';
   const { state: stored, reload } = useStoredFinalStandingsReload(tournament.id, finished, tournament.finishedAt);
   const provisionalScorers = useProvisionalScorers(tournament, !finished);
 
   if (finished) {
     if (stored.status === 'ok') {
-      return <FinalStandingsView tournament={tournament} ranking={stored.snapshot.ranking} scorers={stored.snapshot.scorers} provisional={false} finishedAt={stored.finishedAt} />;
+      return (
+        <div style={{ display: 'grid', gap: cssVars.spacing.md }}>
+          {schedule !== undefined && <FinalStandingsPdfButton tournament={tournament} schedule={schedule} standings={standings} />}
+          <FinalStandingsView tournament={tournament} ranking={stored.snapshot.ranking} scorers={stored.snapshot.scorers} provisional={false} finishedAt={stored.finishedAt} />
+        </div>
+      );
     }
     const kind = stored.status === 'loading' ? 'loading' : stored.status === 'none' ? 'missing' : 'unavailable';
     return <FinalStandingsStatus kind={kind} onRetry={reload} />;

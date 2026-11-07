@@ -233,6 +233,11 @@
     "viewer": {
       "description": "All matches with time, pitch and teams as a PDF to save or print."
     },
+    "reasons": {
+      "loading": "Loading the saved final standings …",
+      "unavailable": "The saved final standings can't be read right now. Open again with a connection.",
+      "hidden": "Results or tables are hidden from spectators – without them the PDF shows no places."
+    },
     "format": "Format: A4 portrait",
     "hints": {
       "title": "Before saving",
@@ -584,6 +589,7 @@
     }
   },
   "management": {
+    "adminEntry": "Manage",
     "existingResults": "Existing results",
     "startAnyway": "Start anyway",
     "runningMatch": "Running match",
@@ -1143,6 +1149,7 @@
       "flowMatches_other": "{{count}} matches",
       "titleSuffix": "Schedule",
       "fileWithoutResults": "without-results",
+      "fileFinal": "Final-standings",
       "footerLink": "Live results and current times:"
     },
     "qrCaption": {

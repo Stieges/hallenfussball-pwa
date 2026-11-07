@@ -233,6 +233,11 @@
     "viewer": {
       "description": "Alle Spiele mit Zeit, Feld und Teams als PDF zum Speichern oder Drucken."
     },
+    "reasons": {
+      "loading": "Der gespeicherte Endstand wird geladen …",
+      "unavailable": "Der gespeicherte Endstand ist gerade nicht lesbar. Mit Netz noch einmal öffnen.",
+      "hidden": "Ergebnisse oder Tabellen sind für Zuschauer ausgeblendet – ohne sie zeigt das PDF keine Plätze."
+    },
     "format": "Format: A4 hoch",
     "hints": {
       "title": "Vor dem Speichern",
@@ -584,6 +589,7 @@
     }
   },
   "management": {
+    "adminEntry": "Verwaltung",
     "existingResults": "Vorhandene Ergebnisse",
     "startAnyway": "Trotzdem starten",
     "runningMatch": "Laufendes Spiel",
@@ -1143,6 +1149,7 @@
       "flowMatches_other": "{{count}} Spiele",
       "titleSuffix": "Spielplan",
       "fileWithoutResults": "ohne-Ergebnisse",
+      "fileFinal": "Endstand",
       "footerLink": "Live-Ergebnisse und aktuelle Zeiten:"
     },
     "qrCaption": {

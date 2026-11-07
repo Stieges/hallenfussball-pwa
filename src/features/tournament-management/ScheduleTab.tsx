@@ -79,7 +79,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // A-11: Cockpit-Hinweis bei laufendem Spiel = Spielbetrieb; Spielplan ändern = manageSchedule; Aushang (@ZM-019)
   const canControlTimer = useCan('writeMatchData', tournament.id);
   const canSchedule = useCan('manageSchedule', tournament.id);
-  const canNotice = useCan('tournamentSettings', tournament.id, { openAfterClose: true }); // Aushang druckt nur den Link der öffentlichen Ansicht: bleibt nach dem Abschluss (@LZ-037 Z. 5)
+  // Aushang druckt nur den Link der öffentlichen Ansicht, das Endstand-PDF nur den gespeicherten Endstand: beides bleibt nach dem Abschluss
+  // (@LZ-037 Z. 5); das Endstand-PDF bekommen Turnierleitung und Co-Admin, Helfer nicht (@DR-048) – dasselbe Recht tournamentSettings
+  const canNotice = useCan('tournamentSettings', tournament.id, { openAfterClose: true });
   const closed = useTournamentClosed(tournament.id); // R3-3 (@LZ-036, @ZP-087): Ergebnis, Schiri, Feld im Spielplan nur vor dem Abschluss
   const canEndRunning = useCan('leadMatches', tournament.id); // @FU-112/@FU-113: Spiel beenden nur Turnierleitung
   // Toast notifications
@@ -258,7 +260,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             tournament={tournament}
             schedule={schedule}
             standings={currentStandings}
-            canEditSchedule={canSchedule} canCreateNotice={canNotice} hideViewToggle={closed}
+            canEditSchedule={canSchedule} canCreateNotice={canNotice} canCreateFinal={canNotice} hideViewToggle={closed}
           />
 
           {/* US-VIEWER-FILTERS: Filter Bar */}
@@ -295,7 +297,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
               // B-26: Zeiten verschieben (@ZP-094, @ZP-098) – Taste, ⋮ je Spiel, „ursprünglich“, Dialog, Vorschau, Streifen
               <ScheduleTimeShift
                 tournament={tournament} schedule={schedule} standings={currentStandings} view={view}
-                onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} canCreateNotice={canNotice}
+                onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} canCreateNotice={canNotice} canCreateFinal={canNotice}
                 enabled={canSchedule && !isEditing && !closed}
               >
               <ScheduleSwapWith enabled={isEditing} matches={shownSchedule.allMatches} lockedIds={edit.lockedMatchIds} onSwap={edit.handleMatchSwap}>
