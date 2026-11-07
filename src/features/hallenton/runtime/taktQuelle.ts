@@ -25,7 +25,8 @@ export interface TaktQuelle {
   stop(): void;
   /** Takt alle 250 ms; `mono` ist die monotone Zeit des Workers in ms (`timeOrigin + now`). */
   onTakt(fn: (mono: number) => void): () => void;
-  onWeckruf(fn: (id: string) => void): () => void;
+  /** Weckruf mit `mono` des Workers beim Auslösen (verspätet, wenn der Worker aussetzte). */
+  onWeckruf(fn: (id: string, mono: number) => void): () => void;
   onAussetzer(fn: (ereignis: AussetzerEreignis) => void): () => void;
   onFehler(fn: () => void): () => void;
   /** Weckruf in `inMs` ms; dieselbe Kennung ersetzt den alten. `false`, wenn die Quelle nicht läuft. */
@@ -60,7 +61,7 @@ class Zuhoerer<T> {
   }
 }
 
-type VomWorker = { art: 'takt'; mono: number } | { art: 'weckruf'; id: string };
+type VomWorker = { art: 'takt'; mono: number } | { art: 'weckruf'; id: string; mono: number };
 
 function alsVomWorker(daten: unknown): VomWorker | null {
   if (!daten || typeof daten !== 'object') {
@@ -70,15 +71,15 @@ function alsVomWorker(daten: unknown): VomWorker | null {
   if (n.art === 'takt' && typeof n.mono === 'number') {
     return { art: 'takt', mono: n.mono };
   }
-  if (n.art === 'weckruf' && typeof n.id === 'string') {
-    return { art: 'weckruf', id: n.id };
+  if (n.art === 'weckruf' && typeof n.id === 'string' && typeof n.mono === 'number') {
+    return { art: 'weckruf', id: n.id, mono: n.mono };
   }
   return null;
 }
 
 export function erzeugeTaktQuelle({ erzeugeWorker, zeitgeber }: TaktQuelleAbhaengigkeiten): TaktQuelle {
   const takte = new Zuhoerer<number>();
-  const weckrufe = new Zuhoerer<string>();
+  const weckrufe = new Zuhoerer<{ id: string; mono: number }>();
   const aussetzer = new Zuhoerer<AussetzerEreignis>();
   const fehler = new Zuhoerer<undefined>();
   let zustand: TaktZustand = 'aus';
@@ -119,7 +120,7 @@ export function erzeugeTaktQuelle({ erzeugeWorker, zeitgeber }: TaktQuelleAbhaen
       return;
     }
     if (nachricht.art === 'weckruf') {
-      weckrufe.melden(nachricht.id);
+      weckrufe.melden({ id: nachricht.id, mono: nachricht.mono });
       return;
     }
     const jetzt = zeitgeber.jetzt();
@@ -162,7 +163,7 @@ export function erzeugeTaktQuelle({ erzeugeWorker, zeitgeber }: TaktQuelleAbhaen
       zustand = 'aus';
     },
     onTakt: (fn) => takte.an(fn),
-    onWeckruf: (fn) => weckrufe.an(fn),
+    onWeckruf: (fn) => weckrufe.an(({ id, mono }) => fn(id, mono)),
     onAussetzer: (fn) => aussetzer.an(fn),
     onFehler: (fn) => fehler.an(() => fn()),
     wecken(id, inMs) {

@@ -54,14 +54,37 @@ describe('hallTonSpieler', () => {
     expect(kontext.quellen).toHaveLength(0);
   });
 
-  it('@HT-012 „Ton aktivieren“ ruft resume() und macht den Spieler bereit', async () => {
+  it('@HT-012 „Ton aktivieren“ ruft resume() und macht den Spieler mit geladenem Abpfiff-Ton bereit', async () => {
     const { spieler, kontext } = aufbau();
+    await spieler.laden({ abpfiff: 'horn-1', halbzeit: 'horn-1' });
     const zustaende: string[] = [];
     spieler.onZustand((z) => zustaende.push(z));
     expect(await spieler.aktivieren()).toBe(true);
     expect(kontext.resumeAufrufe).toBe(1);
     expect(spieler.zustand()).toBe('ready');
     expect(zustaende).toEqual(['ready']);
+  });
+
+  it('@HT-012 konnte das Gerät den Abpfiff-Ton nicht laden, gilt es als „Ton nicht aktiviert“, und der Klick lädt ihn neu', async () => {
+    const kontext = new FalscherAudioKontext();
+    let netz = false;
+    const ladeDaten = vi.fn((url: string) => (netz && HUPEN[url] ? Promise.resolve(HUPEN[url]) : Promise.reject(new TypeError('Failed to fetch'))));
+    const spieler = erzeugeHallTonSpieler({ erzeugeKontext: () => kontext, ladeDaten, speicher: null });
+    await spieler.laden({ abpfiff: 'horn-2', halbzeit: 'horn-1' });
+    expect(await spieler.aktivieren()).toBe(false);
+    expect(spieler.zustand()).toBe('not_activated');
+    netz = true;
+    expect(await spieler.aktivieren()).toBe(true);
+    expect(ladeDaten).toHaveBeenCalledWith('/sounds/horn-2.mp3');
+    expect(spieler.zustand()).toBe('ready');
+    expect(spieler.planen('a', 'abpfiff', 1)).toBe(true);
+  });
+
+  it('@HT-012 ohne geladenen Ton (laden() nie aufgerufen) ist der Spieler auch nach „Ton aktivieren“ nicht bereit', async () => {
+    const { spieler, kontext } = aufbau();
+    expect(await spieler.aktivieren()).toBe(false);
+    expect(kontext.resumeAufrufe).toBe(1);
+    expect(spieler.zustand()).toBe('not_activated');
   });
 
   it('@HT-012 Gegenbeispiel: verweigert der Browser die Freigabe, bleibt „not_activated“', async () => {
@@ -265,6 +288,7 @@ describe('hallTonSpieler', () => {
     const spieler = erzeugeHallTonSpieler({ erzeugeKontext: () => kontext, ladeDaten: () => Promise.reject(new TypeError('Failed to fetch')), speicher: null });
     expect(await spieler.laden({ abpfiff: 'horn-1', halbzeit: 'horn-2' })).toEqual({ abpfiff: 'fehlt', halbzeit: 'fehlt' });
     await spieler.aktivieren();
+    expect(spieler.zustand()).toBe('not_activated');
     expect(spieler.planen('a', 'abpfiff', 1)).toBe(false);
   });
 

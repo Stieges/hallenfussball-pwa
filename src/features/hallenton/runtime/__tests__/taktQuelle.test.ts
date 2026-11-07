@@ -35,7 +35,7 @@ describe('taktQuelle', () => {
   it('@HT-029 Weckruf zum angefragten Zeitpunkt aus dem Worker', () => {
     const { quelle, uhr } = erzeugeFalscheTaktQuelle();
     const weckrufe: Array<{ id: string; bei: number }> = [];
-    quelle.onWeckruf((id) => weckrufe.push({ id, bei: uhr.jetzt() }));
+    quelle.onWeckruf((id, mono) => weckrufe.push({ id, bei: mono }));
     quelle.start();
     quelle.wecken('abpfiff-s11', 117_000);
     uhr.vorruecken(116_999);
@@ -60,7 +60,7 @@ describe('taktQuelle', () => {
   it('@HT-029 Weckruf auch dann, wenn der Worker kurz aussetzt (bis 1,6 s): er kommt verspätet, aber er kommt', () => {
     const takt = erzeugeFalscheTaktQuelle();
     const weckrufe: number[] = [];
-    takt.quelle.onWeckruf(() => weckrufe.push(takt.uhr.jetzt()));
+    takt.quelle.onWeckruf((_id, mono) => weckrufe.push(mono));
     takt.quelle.start();
     takt.quelle.wecken('a', 1000);
     takt.uhr.vorruecken(900);

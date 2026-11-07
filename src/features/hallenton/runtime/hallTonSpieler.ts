@@ -12,7 +12,7 @@
  *   turnierweit (@HT-023). Abpfiff-Ton auf 0 % oder stumm → Zustand `volume_zero` (@HT-039).
  */
 import type { AudioKontext, AudioPuffer, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
-import { gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type Speicher, type TonArt } from './tonEinstellungen';
+import { browserSpeicher, gespeicherteLautstaerke, lies, schreib, LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type Speicher, type TonArt } from './tonEinstellungen';
 
 export type { AudioKontext, AudioPuffer, AudioZiel, GainKnoten, KompressorKnoten, QuellKnoten } from './webAudioTypen';
 export { LAUTSTAERKE_SCHLUESSEL, STUMM_SCHLUESSEL, type Speicher, type TonArt } from './tonEinstellungen';
@@ -71,6 +71,7 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   let stumm = lies(speicher, STUMM_SCHLUESSEL) === 'true';
   let puffer: Record<TonArt, AudioPuffer | null> = { abpfiff: null, halbzeit: null };
   let eigenerTonFehlt: Record<TonArt, boolean> = { abpfiff: false, halbzeit: false };
+  let letzteWahl: Record<TonArt, TonWahl> | null = null;
   let ladeRunde = 0;
   let jetztZaehler = 0;
   let letzterZustand: SpielerZustand = 'not_activated';
@@ -79,7 +80,8 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
   const zuhoerer = new Set<(zustand: SpielerZustand) => void>();
 
   const berechne = (): SpielerZustand => {
-    if (!aktiviert || kontextWert?.state !== 'running') {
+    // @HT-012: ohne spielbaren Abpfiff-Ton gilt das Gerät ebenso als „Ton nicht aktiviert“ (der Klick lädt neu)
+    if (!aktiviert || kontextWert?.state !== 'running' || puffer.abpfiff === null) {
       return 'not_activated';
     }
     if (stumm || lautstaerke.abpfiff === 0) {
@@ -170,6 +172,8 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     trennen(eintrag);
   };
 
+  // Ein Ton mit vergangener Startzeit spielt sofort (Web Audio): die 5-s-Regel von @HT-013 („kein altes Ende nachholen“)
+  // muss deshalb der Planer halten, der Spieler prüft sie nicht.
   const planen = (id: string, art: TonArt, startAtAudioSec: number): boolean => {
     const ton = puffer[art];
     if (berechne() === 'not_activated' || stumm || lautstaerke[art] === 0 || !ton) {
@@ -196,6 +200,33 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
     return true;
   };
 
+  const laden = async (toene: Record<TonArt, TonWahl>): Promise<Record<TonArt, LadeStand>> => {
+    letzteWahl = toene;
+    const runde = ++ladeRunde;
+    const rueckfall = await hupe('horn-1');
+    const neuePuffer: Record<TonArt, AudioPuffer | null> = { abpfiff: null, halbzeit: null };
+    const neuFehlt: Record<TonArt, boolean> = { abpfiff: false, halbzeit: false };
+    const stand: Record<TonArt, LadeStand> = { abpfiff: 'fehlt', halbzeit: 'fehlt' };
+    for (const art of ARTEN) {
+      const wahl = toene[art];
+      const geladen = typeof wahl === 'string' ? await hupe(wahl) : await eigenerTon(wahl.eigeneUrl);
+      if (geladen) {
+        neuePuffer[art] = geladen;
+        stand[art] = 'geladen';
+      } else if (typeof wahl !== 'string') {
+        neuFehlt[art] = true;
+        neuePuffer[art] = rueckfall;
+        stand[art] = rueckfall ? 'rueckfall' : 'fehlt';
+      }
+    }
+    if (runde === ladeRunde) {
+      puffer = neuePuffer;
+      eigenerTonFehlt = neuFehlt;
+      bewerten();
+    }
+    return stand;
+  };
+
   return {
     async aktivieren() {
       const k = kontext();
@@ -206,34 +237,13 @@ export function erzeugeHallTonSpieler({ erzeugeKontext, ladeDaten, speicher }: H
       } catch {
         // verweigert: der Zustand bleibt not_activated
       }
+      if (puffer.abpfiff === null && letzteWahl) {
+        await laden(letzteWahl); // @HT-012: der Klick lädt einen nicht geladenen Abpfiff-Ton neu
+      }
       bewerten();
-      return k.state === 'running';
+      return berechne() !== 'not_activated';
     },
-    async laden(toene) {
-      const runde = ++ladeRunde;
-      const rueckfall = await hupe('horn-1');
-      const neuePuffer: Record<TonArt, AudioPuffer | null> = { abpfiff: null, halbzeit: null };
-      const neuFehlt: Record<TonArt, boolean> = { abpfiff: false, halbzeit: false };
-      const stand: Record<TonArt, LadeStand> = { abpfiff: 'fehlt', halbzeit: 'fehlt' };
-      for (const art of ARTEN) {
-        const wahl = toene[art];
-        const geladen = typeof wahl === 'string' ? await hupe(wahl) : await eigenerTon(wahl.eigeneUrl);
-        if (geladen) {
-          neuePuffer[art] = geladen;
-          stand[art] = 'geladen';
-        } else if (typeof wahl !== 'string') {
-          neuFehlt[art] = true;
-          neuePuffer[art] = rueckfall;
-          stand[art] = rueckfall ? 'rueckfall' : 'fehlt';
-        }
-      }
-      if (runde === ladeRunde) {
-        puffer = neuePuffer;
-        eigenerTonFehlt = neuFehlt;
-        bewerten();
-      }
-      return stand;
-    },
+    laden,
     planen,
     abbrechen,
     jetztSpielen(art) {
@@ -278,14 +288,6 @@ async function holeDaten(url: string): Promise<ArrayBuffer> {
     throw new Error(`Ton nicht ladbar (${antwort.status})`);
   }
   return antwort.arrayBuffer();
-}
-
-function browserSpeicher(): Speicher | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
 }
 
 /** Spieler mit echtem `AudioContext`, `fetch` und `localStorage` (Browser). */

@@ -124,7 +124,7 @@ function fehler(grund: HallFehlerGrund): HallFehler {
 
 function grundFuer(error: unknown): HallFehlerGrund {
   const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
-  if (typeof code === 'string' && code in FEHLER_JE_CODE) {
+  if (typeof code === 'string' && Object.hasOwn(FEHLER_JE_CODE, code)) {
     return FEHLER_JE_CODE[code] ?? 'antwort_unbekannt';
   }
   return isCloudReadTimeout(error) || isTransientMutationError(error) ? 'netz' : 'antwort_unbekannt';

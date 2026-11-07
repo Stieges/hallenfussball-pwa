@@ -40,3 +40,12 @@ export function gespeicherteLautstaerke(speicher: Speicher | null): Record<TonAr
   const werte = roh && typeof roh === 'object' ? (roh as Partial<Record<TonArt, unknown>>) : {};
   return { abpfiff: gueltigeProzent(werte.abpfiff) ?? 100, halbzeit: gueltigeProzent(werte.halbzeit) ?? 100 };
 }
+
+/** `localStorage` des Browsers; `null`, wenn der Zugriff gesperrt ist. */
+export function browserSpeicher(): Speicher | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}

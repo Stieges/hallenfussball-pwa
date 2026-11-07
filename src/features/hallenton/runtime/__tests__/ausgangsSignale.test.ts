@@ -88,6 +88,21 @@ describe('ausgangsSignale (@HT-047)', () => {
     expect(signale.abholen()).toEqual(['unterbrochen']);
   });
 
+  it('@HT-047 Zeile 3 Gegenbeispiel: eine angekündigte eigene Unterbrechung bleibt nicht hängen und schluckt keine spätere', () => {
+    const { kontext, signale } = gegebenBereitMitTestton();
+    kontext.zustandSetzen('suspended');
+    signale.abholen();
+    signale.eigeneUnterbrechung(); // angekündigt, während die Ausgabe schon ausgesetzt ist
+    kontext.zustandSetzen('running');
+    kontext.zustandSetzen('suspended');
+    expect(signale.abholen()).toEqual(['unterbrochen']);
+    signale.eigeneUnterbrechung();
+    kontext.zustandSetzen('interrupted'); // erster Wechsel nach der Ankündigung: zählt nicht
+    kontext.zustandSetzen('running');
+    kontext.zustandSetzen('suspended'); // zweiter, ohne Zutun
+    expect(signale.abholen()).toEqual(['unterbrochen']);
+  });
+
   it('@HT-047 Zeile 4: die App war minimiert und ist wieder vorn → kein Anzeichen', () => {
     const { kontext, signale } = gegebenBereitMitTestton();
     // Minimieren ändert weder Geräte noch Ausgabe noch die gemessene Verzögerung; die Signale hören nicht auf die Sichtbarkeit.

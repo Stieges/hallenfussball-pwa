@@ -129,6 +129,16 @@ describe('hallSpeakerHeartbeat (hall_speaker_heartbeat)', () => {
     expect(await hallSpeakerHeartbeat(null, args)).toEqual({ ok: false, grund: 'netz' });
   });
 
+  it('Gegenbeispiel: Netzfehler ohne Wurf, wie supabase-js ihn liefert (code leer, „Failed to fetch“) → netz', async () => {
+    const { client } = clientWith({ data: null, error: { code: '', message: 'TypeError: Failed to fetch' } });
+    expect(await hallSpeakerHeartbeat(client, args)).toEqual({ ok: false, grund: 'netz' });
+  });
+
+  it('Gegenbeispiel: unbekannter Server-Code (Funktion fehlt, PGRST202) oder Prototyp-Schlüssel → antwort_unbekannt', async () => {
+    expect(await hallSpeakerHeartbeat(clientWith({ data: null, error: { code: 'PGRST202', message: 'Could not find the function' } }).client, args)).toEqual({ ok: false, grund: 'antwort_unbekannt' });
+    expect(await hallSpeakerHeartbeat(clientWith({ data: null, error: { code: 'constructor', message: 'x' } }).client, args)).toEqual({ ok: false, grund: 'antwort_unbekannt' });
+  });
+
   it('Gegenbeispiel: die Antwort hängt → nach dem Zeitlimit netz', async () => {
     vi.useFakeTimers();
     const { client } = clientWith(() => new Promise<RpcResult>(() => undefined));

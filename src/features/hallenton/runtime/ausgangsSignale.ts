@@ -31,7 +31,7 @@ export interface AusgangsSignale {
   testtonGespielt(): void;
   /** Verzögerung jetzt messen (z. B. im Takt), damit ein kurzer Sprung zwischen zwei Lebenszeichen nicht verloren geht. */
   messen(): void;
-  /** Die App unterbricht die Ausgabe gleich selbst (`suspend()`): der nächste Wechsel zählt nicht. */
+  /** Die App unterbricht die laufende Ausgabe gleich selbst (`suspend()`): der nächste Wechsel zählt nicht. */
   eigeneUnterbrechung(): void;
   /** Anzeichen seit dem letzten Abholen, danach zurückgesetzt. */
   abholen(): AusgangsAnzeichen[];
@@ -69,15 +69,12 @@ export function erzeugeAusgangsSignale({ kontext, geraete }: { kontext: Ausgangs
   const beiZustand = (): void => {
     const neu = kontext.state;
     const unterbrochen = letzterZustand === 'running' && (neu === 'suspended' || neu === 'interrupted');
+    const eigene = eigeneAusstehend;
+    eigeneAusstehend = false; // gilt nur für den nächsten Wechsel, gleich welcher Art (bleibt nie hängen)
     letzterZustand = neu;
-    if (!unterbrochen) {
-      return;
+    if (unterbrochen && !eigene) {
+      offen.add('unterbrochen');
     }
-    if (eigeneAusstehend) {
-      eigeneAusstehend = false;
-      return;
-    }
-    offen.add('unterbrochen');
   };
 
   const beiGeraeten = (): void => {
@@ -94,7 +91,7 @@ export function erzeugeAusgangsSignale({ kontext, geraete }: { kontext: Ausgangs
     },
     messen,
     eigeneUnterbrechung() {
-      eigeneAusstehend = true;
+      eigeneAusstehend = kontext.state === 'running';
     },
     abholen() {
       messen();
