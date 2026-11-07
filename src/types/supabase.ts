@@ -12,9 +12,9 @@
  * 2026-11-07 (Hallenton, PR #455): nach dem Einspielen von 20261121_001 aus der Produktion per Supabase-CLI
  * (gen types typescript --schema public, wie der Typ-Drift-Check) erzeugt: hall_speakers, hall_field_leads,
  * hall_sound_settings und die hall_*-Funktionen. Damit wieder deckungsgleich mit der Produktion.
- * 2026-11-06 (A1b Monitore der Veranstaltung, PR feat/veranstaltung-a1b): Tabelle gathering_screens, die Spalten
- * gatherings.on_screen_tournament_id/on_screen_since/screen_location_name und die Funktionen von 20261122_001 ebenso aus
- * einem Wegwerf-Container -- bis zum Einspielen von 20261122_001 meldet der Typ-Drift-Check genau diese Zeilen.
+ * 2026-11-07 (A1b Monitore der Veranstaltung, PR #452): nach dem Einspielen von 20261122_001 aus der Produktion per Supabase-MCP
+ * (generate_typescript_types) erzeugt: Tabelle gathering_screens, die Spalten gatherings.on_screen_tournament_id/on_screen_since/
+ * screen_location_name und die Funktionen von 20261122_001. Damit wieder deckungsgleich mit der Produktion.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:

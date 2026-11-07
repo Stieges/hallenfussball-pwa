@@ -18,10 +18,15 @@ race_turnier() {
   ( q "BEGIN; $change; SELECT pg_sleep(3) AS $marker; COMMIT;" >/dev/null ) &
   local pid_a=$!
   # Erst weiter, wenn A seine Aenderung gemacht hat und schlaeft (haelt die Zeilensperre am Turnier).
+  local a_ready="timeout"
   for _ in $(seq 1 50); do
-    [[ "$(q "SELECT count(*) FROM pg_stat_activity WHERE state = 'active' AND query LIKE '%AS $marker%' AND pid <> pg_backend_pid();")" == "1" ]] && break
+    if [[ "$(q "SELECT count(*) FROM pg_stat_activity WHERE state = 'active' AND query LIKE '%AS $marker%' AND pid <> pg_backend_pid();")" == "1" ]]; then
+      a_ready="wartet"; break
+    fi
     sleep 0.1
   done
+  # Ohne wartende Sitzung A waere die Pruefung wertlos (B liefe nicht im Wettlauf): dann rot, nicht still weiter.
+  check R "$label: Sitzung A haelt die Zeilensperre (Wettlauf steht)" "wartet" "$a_ready"
   out_b="$(q "BEGIN; $(who "$U_OLLI") $(try "SELECT $(show_r "$T_F1") -> 'on_screen' ->> 'tournament_id'") COMMIT;" \
            | { grep -E '^k:' || true; } | sed 's/^k://')"
   wait "$pid_a" || true

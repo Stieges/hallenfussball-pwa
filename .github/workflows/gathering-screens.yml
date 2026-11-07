@@ -49,5 +49,5 @@ jobs:
       - name: Gegenprobe A (ohne 20261122_001 muessen B, U, D und O ROT sein)
         run: bash scripts/gathering-screens-check.sh --without-migration
 
-      - name: Gegenprobe B (jede der Mutationen S1-S28 muss mindestens eine Pruefung ROT machen)
+      - name: Gegenprobe B (jede der Mutationen S1-S30 muss mindestens eine Pruefung ROT machen)
         run: bash scripts/gathering-screens-check.sh --gegenprobe
