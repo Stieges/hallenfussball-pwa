@@ -31,17 +31,18 @@ function tournamentWith(extra: Partial<Tournament>): Tournament {
 beforeEach(() => vi.clearAllMocks());
 
 describe('TournamentCard — Darstellung (Dashboard)', () => {
-  it('zeigt Ablage-Infos (Ort, Altersklasse)', () => {
+  it('zeigt Ort und Altersklasse (@OB-079)', () => {
     render(<TournamentCard tournament={tournamentWith({})} />);
 
     expect(screen.getByText('Halle Süd')).toBeInTheDocument();
     expect(screen.getByText('U11')).toBeInTheDocument();
   });
 
-  it('zeigt das Entwurfs-Badge für ein Draft-Turnier', () => {
-    render(<TournamentCard tournament={tournamentWith({ status: 'draft' })} />);
+  it('ein Entwurf trägt kein Zustandswort (er steht im eigenen Abschnitt „Gespeicherte Entwürfe“), der Screenreader hört ihn', () => {
+    render(<TournamentCard tournament={tournamentWith({ status: 'draft' })} onClick={vi.fn()} />);
 
-    expect(screen.getByText('dashboard:status.draft')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-state')).toBeNull();
+    expect(screen.getByRole('button', { name: /ariaLabelTitle/ })).toHaveAccessibleName(/status\.draft/);
   });
 
   it('zeigt ein externes Badge mit Quelle', () => {
@@ -54,20 +55,26 @@ describe('TournamentCard — Darstellung (Dashboard)', () => {
     expect(screen.getByLabelText('Partner-Cup')).toBeInTheDocument();
   });
 
-  it.each(['running', 'upcoming', 'finished', 'draft'] as const)(
-    'zeigt das Status-Badge der Kategorie %s',
-    (categoryLabel) => {
+  it.each([['running', 'status.running'], ['finished', 'status.finished']] as const)(
+    'zeigt die Zustandsmarke der Kategorie %s mit Wort',
+    (categoryLabel, wort) => {
       render(<TournamentCard tournament={tournamentWith({})} categoryLabel={categoryLabel} />);
 
-      expect(screen.getByLabelText(/statusLabel/)).toBeInTheDocument();
+      expect(screen.getByTestId('card-state')).toHaveTextContent(`dashboard:${wort}`);
     }
   );
+
+  it.each(['upcoming', 'draft'] as const)('Gegenbeispiel: die Kategorie %s zeigt keine Zustandsmarke', (categoryLabel) => {
+    render(<TournamentCard tournament={tournamentWith({})} categoryLabel={categoryLabel} />);
+
+    expect(screen.queryByTestId('card-state')).toBeNull();
+  });
 
   it('Enter auf der Karte öffnet das Turnier', () => {
     const onClick = vi.fn();
     render(<TournamentCard tournament={tournamentWith({})} onClick={onClick} />);
 
-    fireEvent.keyDown(screen.getByRole('button', { name: /ariaLabel/ }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('button', { name: /ariaLabelTitle/ }), { key: 'Enter' });
 
     // Hinweis: Card und article führen beide onKeyDown aus (vorhandenes
     // Verhalten, Doppel-Handler) — geprüft wird „wird geöffnet", nicht die Zahl.
@@ -78,7 +85,7 @@ describe('TournamentCard — Darstellung (Dashboard)', () => {
     const onClick = vi.fn();
     render(<TournamentCard tournament={tournamentWith({})} onClick={onClick} />);
 
-    fireEvent.keyDown(screen.getByRole('button', { name: /ariaLabel/ }), { key: 'x' });
+    fireEvent.keyDown(screen.getByRole('button', { name: /ariaLabelTitle/ }), { key: 'x' });
 
     expect(onClick).not.toHaveBeenCalled();
   });

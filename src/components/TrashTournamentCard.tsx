@@ -69,7 +69,7 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     opacity: 0.9,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     position: 'relative',
   };
 
@@ -128,7 +128,7 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
   };
 
   return (
-    <Card style={cardStyle} onClick={onClick}>
+    <Card style={cardStyle} onClick={onClick} data-testid={`trash-card-${tournament.id}`}>
       <div style={contentStyle}>
         <div style={infoStyle}>
           <h3 style={titleStyle}>{tournament.title}</h3>

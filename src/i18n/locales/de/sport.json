@@ -70,6 +70,14 @@
     "paused": "Pausiert",
     "cancelled": "Ausgefallen"
   },
+  "lifecycle": {
+    "ready": "Bereit",
+    "finalize": "Turnier fertigstellen",
+    "backToDraft": "Zurück zum Entwurf",
+    "upcomingTournaments": "Kommende Turniere",
+    "finished": "Abgeschlossen",
+    "cancelled": "Abgebrochen"
+  },
   "terminology": {
     "field_one": "Feld",
     "field_other": "Felder",
