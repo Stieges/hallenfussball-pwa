@@ -29,9 +29,9 @@ export function useReloadGate(
     letzteFolie.current = index;
   }, [index]);
 
-  // Tor setzen, solange der Monitor da ist.
+  // Als Halter des Tors anmelden, solange der Monitor da ist (weitere Halter, z. B. der Hallen-Lautsprecher, bleiben unberührt).
   useEffect(() => {
-    attachReloadGate({
+    const detach = attachReloadGate({
       allowsReload: () => neuladenErlaubt({
         slides: aktuell.current.slides,
         matches: aktuell.current.matches,
@@ -40,7 +40,7 @@ export function useReloadGate(
       }),
       onUpdateWaiting: () => { wechselRef.current = 0; },
     });
-    return () => { attachReloadGate(null); };
+    return detach;
   }, []);
 
   // Bei jeder Änderung, die die Regel ändern kann, neu bewerten (Folie oder Spieldaten).

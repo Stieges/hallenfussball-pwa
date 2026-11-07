@@ -46,7 +46,7 @@ import {
   getSwSetup,
   registerSwSetup,
   replaceSwSetupSlots,
-  setReloadGateSlot,
+  addReloadGateHolder,
   type ReloadGate,
   type SetupOptions,
   type SwAutoReloadHandle,
@@ -311,10 +311,17 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     }
   };
 
-  /** Ein Tor wurde gesetzt oder gelöst: Zustand neu bewerten. */
-  const onGateChanged = (): void => {
-    if (updateWaiting) {
-      notifyGateWaiting();
+  /** Ein Halter kam hinzu oder ging: Zustand neu bewerten. Nur ein neuer Halter erfährt von einer wartenden Version. */
+  const onGateChanged = (added?: ReloadGate): void => {
+    if (updateWaiting && added !== undefined) {
+      try {
+        added.onUpdateWaiting?.();
+      } catch (err) {
+        // Ein Tor darf das Neuladen nicht blockieren (Regel 5).
+        if (err instanceof Error) {
+          captureFeatureError(err, 'sw', 'reloadGate');
+        }
+      }
     }
     void onMaybeIdle();
   };
@@ -372,10 +379,22 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
   return handle;
 }
 
-/** Setzt (oder löst mit `null`) das Neulade-Tor und bewertet den Zustand neu (B-19b, @ZM-124, @ME-012). */
-export function attachReloadGate(gate: ReloadGate | null): void {
-  setReloadGateSlot(gate);
-  getSwSetup()?.handle.onGateChanged();
+/**
+ * Meldet einen Halter des Neulade-Tors an (B-19b, @ZM-124, @ME-012) und bewertet den Zustand neu. Mehrere Halter sind
+ * erlaubt (Monitor, Hallen-Lautsprecher); neu geladen wird nur, wenn alle zustimmen. Die Rückgabe meldet ihn wieder ab.
+ */
+export function attachReloadGate(gate: ReloadGate): () => void {
+  const detach = addReloadGateHolder(gate);
+  getSwSetup()?.handle.onGateChanged(gate);
+  let attached = true;
+  return () => {
+    if (!attached) {
+      return;
+    }
+    attached = false;
+    detach();
+    getSwSetup()?.handle.onGateChanged();
+  };
 }
 
 /** Bewertet das Tor neu, z. B. nach einem Folienwechsel. Ohne wartende Version geschieht nichts. */
