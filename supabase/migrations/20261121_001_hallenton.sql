@@ -41,7 +41,7 @@
 --      auf einem oeffentlichen Kanal koennte jeder senden).
 --   5. Eigener Ton (Storage, nur wenn das Schema storage.buckets/objects existiert – im reinen Postgres-Container der
 --      Pruefskripte fehlt es, dann NOTICE und nichts): Bucket 'hallenton-sounds' (oeffentlich lesbar nur ueber den
---      vollen, nicht erratbaren Namen; ≤ 1 MB; MP3/WAV), Pfad <tid>/<uuid>.mp3|wav, Policy-Hilfe
+--      vollen, nicht erratbaren Namen; ≤ 1 MB; MP3/WAV/M4A), Pfad <tid>/<uuid>.mp3|wav|m4a, Policy-Hilfe
 --      hall_sound_object_allowed. Die drei Policies auf storage.objects (INSERT/SELECT/DELETE nur mit manageScreens,
 --      INSERT hoechstens 10 Dateien je Turnier, Hochladen/Loeschen nicht nach dem Turnierende, KEIN UPDATE) sind ein
 --      HANDSCHRITT nach dieser Migration: supabase/handschritte/20261121_001_hallenton_storage_policies.sql (live gehoert
@@ -165,16 +165,16 @@ CREATE TABLE IF NOT EXISTS public.hall_sound_settings (
   CONSTRAINT hall_sound_settings_halftime_custom CHECK (halftime_sound <> 'custom' OR halftime_custom_path IS NOT NULL),
   CONSTRAINT hall_sound_settings_path_form CHECK (
     (halftime_custom_path IS NULL OR halftime_custom_path ~ ('^' || tournament_id::text
-       || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav)$'))
+       || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav|m4a)$'))
     AND (end_custom_path IS NULL OR end_custom_path ~ ('^' || tournament_id::text
-       || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav)$'))),
+       || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav|m4a)$'))),
   CONSTRAINT hall_sound_settings_goal_fields CHECK (array_position(goal_tone_fields, NULL) IS NULL
                                                     AND 0 < ALL (goal_tone_fields) AND 100 > ALL (goal_tone_fields))
 );
 COMMENT ON TABLE public.hall_sound_settings IS
   'Hallenton (@HT-025/@HT-027/@HT-024): Tonwahl je Turnier. Ohne Zeile gilt die Vorbelegung (Halbzeit horn-1, kein
    eigener Ton, Ton bei Tor aus). Der Abpfiff-Ton bleibt config.matchCockpitSettings.soundId; end_custom_path gilt, wenn
-   soundId = custom. Pfade: <tournament_id>/<uuid>.mp3|wav im Bucket hallenton-sounds.';
+   soundId = custom. Pfade: <tournament_id>/<uuid>.mp3|wav|m4a im Bucket hallenton-sounds.';
 
 ALTER TABLE public.hall_speakers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hall_field_leads ENABLE ROW LEVEL SECURITY;
@@ -675,7 +675,7 @@ GRANT EXECUTE ON FUNCTION public.hall_output_heard(uuid, integer) TO authenticat
 -- ---------------------------------------------------------------------------------------------------------------
 -- 11. Eigener Ton: Bucket und Policies (nur wenn das Storage-Schema existiert)
 -- ---------------------------------------------------------------------------------------------------------------
--- Policy-Hilfe: Pfad <tid>/<uuid>.mp3|wav (klein geschrieben), Recht manageScreens, Turnier nicht im Papierkorb.
+-- Policy-Hilfe: Pfad <tid>/<uuid>.mp3|wav|m4a (klein geschrieben), Recht manageScreens, Turnier nicht im Papierkorb.
 -- p_op 'insert' | 'delete' | 'select': Hochladen und Loeschen nur, solange das Turnier nicht abgeschlossen ist (@HT-046);
 -- im Papierkorb nur noch Auflisten und Loeschen (Aufraeumen: Storage kaskadiert nicht -- die App entfernt die Dateien <tid>/* ueber
 -- die Storage-Schnittstelle beim Loeschen des Turniers, bevor es endgueltig geloescht wird);
@@ -695,7 +695,7 @@ BEGIN
   IF p_op IS NULL OR p_op NOT IN ('insert', 'delete', 'select') THEN
     RETURN false;
   END IF;
-  IF p_name IS NULL OR p_name !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav)$' THEN
+  IF p_name IS NULL OR p_name !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp3|wav|m4a)$' THEN
     RETURN false;
   END IF;
   v_tid := split_part(p_name, '/', 1)::uuid;
@@ -742,7 +742,8 @@ BEGIN
   END IF;
   INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   VALUES ('hallenton-sounds', 'hallenton-sounds', true, 1048576,
-          ARRAY['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/vnd.wave'])
+          ARRAY['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/wave', 'audio/vnd.wave',
+                'audio/mp4', 'audio/x-m4a', 'audio/m4a'])
   ON CONFLICT (id) DO UPDATE SET
     public = EXCLUDED.public, file_size_limit = EXCLUDED.file_size_limit,
     allowed_mime_types = EXCLUDED.allowed_mime_types;

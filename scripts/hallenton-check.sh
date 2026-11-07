@@ -512,6 +512,8 @@ $(ACK "$T_NORD" 1 "$D_R" "$TEST_ID")" "SELECT CASE WHEN test_played_at = now() T
   # --- Tonwahl (@HT-025, @HT-027, @HT-028) ---------------------------------------------------------------------
   check R "@HT-027 eigener Ton fuer Halbzeit und Abpfiff (Pfad im eigenen Turnier) -> saved" "saved|custom:ja" \
     "$(probe "$U_OLLI" "" "$(SETTINGS "$T_NORD" "'custom'" "'$T_NORD/$SOUND1.mp3'" "'$T_NORD/$SOUND1.wav'" "")" "SELECT halftime_sound || ':' || CASE WHEN end_custom_path = '$T_NORD/$SOUND1.wav' THEN 'ja' ELSE 'nein' END FROM public.hall_sound_settings")"
+  check R "@HT-028 iPhone-Aufnahme: eigener Ton .m4a fuer den Abpfiff -> saved" "saved|custom:ja" \
+    "$(probe "$U_OLLI" "" "$(SETTINGS "$T_NORD" "'custom'" "'$T_NORD/$SOUND1.mp3'" "'$T_NORD/$SOUND1.m4a'" "")" "SELECT halftime_sound || ':' || CASE WHEN end_custom_path = '$T_NORD/$SOUND1.m4a' THEN 'ja' ELSE 'nein' END FROM public.hall_sound_settings")"
   check R "gegen-Pfad eines fremden Turniers -> ungueltig" "ungueltig|0" \
     "$(short "$(probe "$U_OLLI" "" "$(SETTINGS "$T_NORD" "'custom'" "'$T_SUED/$SOUND1.mp3'" NULL "")" "SELECT count(*) FROM public.hall_sound_settings")")"
   check R "gegen-Pfad .ogg -> ungueltig" "ungueltig|0" \
@@ -540,6 +542,8 @@ $(ACK "$T_NORD" 1 "$D_R" "$TEST_ID")" "SELECT CASE WHEN test_played_at = now() T
   # --- Eigener Ton im Storage ------------------------------------------------------------------------------------
   check R "@HT-027 Olli laedt <tid>/<uuid>.wav hoch" "1|1" \
     "$(short "$(probe "$U_OLLI" "" "$(UPLOAD "$(OBJ wav wav)")" "SELECT count(*) FROM storage.objects")")"
+  check R "@HT-028 iPhone-Aufnahme: Olli laedt <tid>/<uuid>.m4a hoch" "1|1" \
+    "$(short "$(probe "$U_OLLI" "" "$(UPLOAD "$(OBJ m4a m4a)")" "SELECT count(*) FROM storage.objects")")"
   check R "@HT-028 gegen-.ogg -> abgelehnt (RLS)" "rls|0" \
     "$(short "$(probe "$U_OLLI" "" "$(UPLOAD "$(OBJ ogg ogg)")" "SELECT count(*) FROM storage.objects")")"
   check R "gegen-Name ohne uuid (vereinshupe.mp3) -> abgelehnt (RLS)" "rls|0" \
@@ -564,7 +568,7 @@ $(ACK "$T_NORD" 1 "$D_R" "$TEST_ID")" "SELECT CASE WHEN test_played_at = now() T
     "$(probe "$U_OLLI" "$ONE_FILE" "INSERT INTO storage.objects (bucket_id, name, metadata) VALUES ('hallenton-sounds', '$T_NORD/$SOUND1.mp3', '{\"x\":1}') ON CONFLICT (bucket_id, name) DO UPDATE SET metadata = EXCLUDED.metadata;" "SELECT metadata FROM storage.objects" | sed -E 's/^fehler:42501: new row violates row-level security policy.*\|/abgelehnt-upsert|/')"
   check R "kein Ueberschreiben: derselbe Name ohne upsert -> doppelter Schluessel" "doppelt|1" \
     "$(probe "$U_OLLI" "$ONE_FILE" "$(UPLOAD "$T_NORD/$SOUND1.mp3")" "SELECT count(*) FROM storage.objects" | sed -E 's/^fehler:23505:.*\|/doppelt|/')"
-  check R "Bucket: oeffentlich lesbar ueber den Namen, 1 MB, MP3/WAV" "true|1048576|{audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave}" \
+  check R "Bucket: oeffentlich lesbar ueber den Namen, 1 MB, MP3/WAV/M4A" "true|1048576|{audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/wave,audio/vnd.wave,audio/mp4,audio/x-m4a,audio/m4a}" \
     "$(q "SELECT public || '|' || file_size_limit || '|' || allowed_mime_types::text FROM storage.buckets WHERE id = 'hallenton-sounds';")"
 
   # --- @HT-046 nach dem Turnierende: lesen ja, aendern nein ------------------------------------------------------
