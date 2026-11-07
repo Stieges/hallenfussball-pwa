@@ -139,8 +139,10 @@ async function zuschauerEndstand({ anonPage }: StepContext): Promise<void> {
   const { seiten, datei } = await speichernUndLesen(anonPage, tippe, 'endstand-zuschauer');
   expect(anzahl()).toBe(2);
   await pruefeEndstandPdf(anonPage, seiten, datei);
-  // „die Ergebnisse aller Spiele“: jedes Spiel trägt im PDF ein Ergebnis „n : m“ (ein Doppelpunkt zwischen zwei Zahlen)
-  const ergebnisse = seiten.flat().join(' ').match(/\b\d+ : \d+\b/g) ?? [];
+  // „die Ergebnisse aller Spiele“: jedes Spiel trägt im PDF ein Ergebnis „2:1“ (pdfjs liefert es als ein Stück oder als „2“ „:“ „1“).
+  // Uhrzeiten („09:00“) haben zwei Ziffern auf beiden Seiten und zählen nicht.
+  const ergebnisse = [...seiten.flat().join(' ').matchAll(/(?<![\d:])(\d{1,2})\s?:\s?(\d{1,2})(?![\d:])/g)]
+    .filter(([, a, b]) => !(a.length === 2 && b.length === 2));
   expect(ergebnisse.length, 'Ergebnisse aller 15 Spiele').toBeGreaterThanOrEqual(15);
 }
 
