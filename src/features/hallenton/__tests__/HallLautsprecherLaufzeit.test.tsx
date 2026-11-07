@@ -215,4 +215,19 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     expect(result.current.stumm).toBe(true);
     expect(JSON.parse(localStorage.getItem('hallenton:lautstaerke') ?? '{}')).toEqual({ abpfiff: 100, halbzeit: 50 });
   });
+
+  it('@HT-023 auf dem Lautsprecher-Gerät vor „Ton aktivieren“: „Anhören“ spielt den Ton einmal, ohne den Tab zu aktivieren (W2-neu-1)', async () => {
+    einschalten();
+    render(<HallLautsprecherLaufzeit />);
+    const { result } = renderHook(() => useHallLautsprecher(TID));
+    await act(async () => { await Promise.resolve(); });
+    expect(result.current.laufzeit?.rolle).toBe('wartet');
+    let gespielt = false;
+    await act(async () => { gespielt = await result.current.hierAnhoeren('abpfiff'); });
+    expect(gespielt).toBe(true);
+    expect(kontext.quellen).toHaveLength(1);
+    expect(result.current.laufzeit?.rolle).toBe('wartet');
+    expect(result.current.laufzeit?.zustandJeFeld).toEqual({ 'field-1': 'not_activated' });
+    expect(worker.erzeugt).toBe(0);
+  });
 });

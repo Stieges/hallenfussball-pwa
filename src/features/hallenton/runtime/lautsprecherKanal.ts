@@ -16,6 +16,8 @@ export const FELDER_SCHLUESSEL = 'hallenton:felder';
 export const KANAL_NAME = 'hallenton';
 export const MELDUNG_VERALTET_MS = 2000;
 export const MELDUNG_ERNEUERN_MS = 1000;
+/** Reload-Tor: im Zweifel nicht neu laden – eigene, längere Toleranz (Ruling k3-neu-3). */
+export const TOR_TOLERANZ_MS = 15_000;
 
 /** `localStorage`-Ausschnitt mit Löschen. */
 export interface KanalSpeicher extends Speicher {
@@ -46,8 +48,10 @@ export interface NachrichtenKanal {
 export interface LautsprecherKanal {
   /** Meldung dieses Tabs setzen; `null` nimmt nur die eigene Meldung weg (die eines anderen Tabs bleibt). */
   melden(meldung: { turnierId: string; felder: readonly LautsprecherFeldMeldung[] } | null): void;
-  /** Gültige (nicht veraltete) Meldung des Geräts. */
-  lesen(): LautsprecherMeldung | null;
+  /** Gültige (nicht veraltete) Meldung des Geräts; `toleranzMs` Standard 2 s (Regel 3), das Reload-Tor nimmt 15 s. */
+  lesen(toleranzMs?: number): LautsprecherMeldung | null;
+  /** Alter der eigenen Meldung nach der Uhr des Kanals (k3-neu-1: Erneuern und Bewerten mit derselben Uhr); `null` ohne. */
+  eigenesAlter(): number | null;
   /** Bei jeder Änderung, auch einer eigenen. */
   beobachten(fn: () => void): () => void;
   schliessen(): void;
@@ -91,8 +95,8 @@ export function browserKanalSpeicher(): KanalSpeicher | null {
   }
 }
 
-/** Gültige Meldung aus dem Speicher; `null` ohne Meldung, bei unlesbarem Inhalt oder nach 15 s ohne Erneuerung. */
-export function leseLautsprecherFelder(speicher: Speicher | null, jetzt: number): LautsprecherMeldung | null {
+/** Gültige Meldung aus dem Speicher; `null` ohne Meldung, bei unlesbarem Inhalt oder wenn sie älter als `toleranzMs` ist (Standard 2 s). */
+export function leseLautsprecherFelder(speicher: Speicher | null, jetzt: number, toleranzMs: number = MELDUNG_VERALTET_MS): LautsprecherMeldung | null {
   let roh: unknown;
   try {
     roh = JSON.parse(lies(speicher, FELDER_SCHLUESSEL) ?? 'null');
@@ -100,7 +104,7 @@ export function leseLautsprecherFelder(speicher: Speicher | null, jetzt: number)
     return null;
   }
   const meldung = alsMeldung(roh);
-  return meldung && jetzt - meldung.at <= MELDUNG_VERALTET_MS && meldung.at - jetzt <= MELDUNG_VERALTET_MS ? meldung : null;
+  return meldung && jetzt - meldung.at <= toleranzMs && meldung.at - jetzt <= toleranzMs ? meldung : null;
 }
 
 /** Regel 3 (H3b-3): Felder (`field-N`), deren Lautsprecher auf diesem Gerät bereit ist – optional nur für ein Turnier. */
@@ -147,7 +151,11 @@ export function erzeugeLautsprecherKanal({ speicher, kanal, tabId, jetzt, seite 
   seite?.addEventListener('pagehide', beimVerlassen);
   return {
     melden: meldenFn,
-    lesen: () => leseLautsprecherFelder(speicher, jetzt()),
+    lesen: (toleranzMs) => leseLautsprecherFelder(speicher, jetzt(), toleranzMs),
+    eigenesAlter() {
+      const eigene = leseLautsprecherFelder(speicher, jetzt(), Number.POSITIVE_INFINITY);
+      return eigene?.tabId === tabId ? jetzt() - eigene.at : null;
+    },
     beobachten(fn) {
       zuhoerer.add(fn);
       return () => {

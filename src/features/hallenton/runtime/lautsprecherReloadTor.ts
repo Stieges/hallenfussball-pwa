@@ -10,7 +10,7 @@
  * ob die Meldung veraltet ist (Tab mit dem Lautsprecher abgestürzt).
  */
 import type { ReloadGate } from '../../../lib/swRegistration';
-import { bereiteLautsprecherFeldIds, MELDUNG_ERNEUERN_MS, type LautsprecherKanal } from './lautsprecherKanal';
+import { bereiteLautsprecherFeldIds, MELDUNG_ERNEUERN_MS, TOR_TOLERANZ_MS, type LautsprecherKanal } from './lautsprecherKanal';
 import type { Zeitgeber } from './zeitgeber';
 
 export interface LautsprecherReloadTorDeps {
@@ -22,7 +22,8 @@ export interface LautsprecherReloadTorDeps {
 export function verbindeLautsprecherReloadTor({ kanal, halteTor, zeitgeber }: LautsprecherReloadTorDeps): () => void {
   let abmelden: (() => void) | null = null;
   let pruefTakt: (() => void) | null = null;
-  const bereit = (): boolean => bereiteLautsprecherFeldIds(kanal.lesen()).length > 0;
+  // k3-neu-3: das Tor wertet die Meldung bis 15 s als gültig (im Zweifel nicht neu laden); `pagehide` löscht sie sofort
+  const bereit = (): boolean => bereiteLautsprecherFeldIds(kanal.lesen(TOR_TOLERANZ_MS)).length > 0;
 
   const loesen = (): void => {
     pruefTakt?.();

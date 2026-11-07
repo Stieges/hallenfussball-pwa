@@ -68,6 +68,9 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
   const begonnen = (eintrag: Eintrag, now: number): boolean => eintrag.geplantUm !== null
     && (eintrag.ton.at <= now || (eintrag.audioAt !== null && eintrag.audioAt <= spieler.audioKontext().currentTime));
 
+  /** So viel früher als `at` wird der Ton hörbar gestartet (`outputLatency`, ms). */
+  const hoerbarVorMs = (): number => (spieler.audioKontext().outputLatency ?? 0) * 1000;
+
   const abbrechen = (id: string): void => {
     spieler.abbrechen(id);
     takt.abbrechen(id);
@@ -83,7 +86,7 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
       }
       return;
     }
-    if (ton.at - now <= FREIGABE_VOR_MS && !frei(ton)) {
+    if (ton.at - hoerbarVorMs() - now <= FREIGABE_VOR_MS && !frei(ton)) {
       return;
     }
     const audioAt = spieler.audioZeitFuerServerZeit(ton.at, now);
@@ -123,8 +126,9 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
     },
     pruefen(now, frei) {
       for (const [id, eintrag] of eintraege) {
-        const rest = eintrag.ton.at - now;
-        if (eintrag.geplantUm !== null && rest > 0 && rest <= FREIGABE_VOR_MS && !frei(eintrag.ton)) {
+        // k3-neu-2: maßgeblich ist der hörbare Beginn (`at − outputLatency`); danach läuft der Ton auch im Zweifel durch
+        const rest = eintrag.ton.at - hoerbarVorMs() - now;
+        if (eintrag.geplantUm !== null && !begonnen(eintrag, now) && rest > 0 && rest <= FREIGABE_VOR_MS && !frei(eintrag.ton)) {
           spieler.abbrechen(id); // keine frische Antwort für das Feld: kein Ton nach altem Stand
           eintrag.geplantUm = null;
         }

@@ -78,10 +78,11 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
 
   const hierAnhoeren = useCallback(async (ton: TonArt) => {
     const spieler = geraetSpieler();
-    await spieler.aktivieren(); // in der Geste: `resume()` läuft vor jedem await
-    if (spieler.zustand() === 'not_activated' && geraetStand().laufzeit === null) {
-      // ohne Laufzeit (kein Lautsprecher-Gerät) die Vorbelegung; sonst gilt die Tonwahl der Laufzeit, kein Überschreiben
-      await spieler.laden(VORBELEGUNG);
+    await spieler.aktivieren(); // der Klick ist selbst eine Geste: `resume()` läuft vor jedem await
+    if (spieler.zustand() === 'not_activated') {
+      // fehlt der Ton (W2-neu-1): mit Laufzeit über deren Tonwahl, ohne den Tab zu aktivieren; sonst die Vorbelegung
+      const laufzeit = geraetStand().laufzeit;
+      await (laufzeit ? laufzeit.ladeToeneZumAnhoeren() : spieler.laden(VORBELEGUNG));
     }
     return spieler.jetztSpielen(ton);
   }, []);

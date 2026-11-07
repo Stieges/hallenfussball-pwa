@@ -64,11 +64,12 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
   let ausgesetzt = false;
   let taktFehler = false;
   let warAngehalten = false;
-  let gemeldet: { text: string; um: number } | null = null;
+  let gemeldet: { text: string } | null = null;
   let snapshot: LaufzeitSnapshot = baue();
 
   function baue(): LaufzeitSnapshot {
-    const geraet = geraeteZustandAus({ geschlafen, spieler: spieler.zustand(), ausgesetzt, taktFehler });
+    // ein nur zum „Anhören“ freigegebener Spieler macht den Tab nicht bereit (W2-neu-1)
+    const geraet = geraeteZustandAus({ geschlafen, spieler: aktiviert ? spieler.zustand() : 'not_activated', ausgesetzt, taktFehler });
     return {
       rolle, turnierId: deps.turnierId, felder: deps.felder, geraeteZustand: geraet, taktFehler, warAngehalten,
       zustandJeFeld: feldZustaende(geraet, deps.felder, warnFelder),
@@ -90,9 +91,9 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
     }
     const felder = deps.felder.map((feld) => ({ feld, bereit: BEREIT.has(snapshot.zustandJeFeld[feldKennung(feld)]) }));
     const text = JSON.stringify(felder);
-    const um = uhr.serverNow();
-    if (gemeldet?.text !== text || um - gemeldet.um >= MELDUNG_ERNEUERN_MS) {
-      gemeldet = { text, um };
+    const alter = deps.kanal.eigenesAlter(); // k3-neu-1: Uhr des Kanals, ein Abgleich der Serveruhr verschiebt nichts
+    if (gemeldet?.text !== text || alter === null || alter >= MELDUNG_ERNEUERN_MS) {
+      gemeldet = { text };
       deps.kanal.melden({ turnierId: deps.turnierId, felder });
     }
   }
@@ -198,7 +199,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
 
   /** W3: die Sperre erst, wenn der Spieler dieses Tabs aktiviert ist (sonst landete sie in einem stummen Tab). */
   function pruefeSperre(): void {
-    if (rolle !== 'wartet' || sperreAngefordert || spieler.zustand() === 'not_activated') {
+    if (rolle !== 'wartet' || sperreAngefordert || !aktiviert || spieler.zustand() === 'not_activated') {
       return;
     }
     sperreAngefordert = true;
@@ -274,6 +275,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       melden();
       return ok;
     },
+    ladeToeneZumAnhoeren: () => spieler.laden(tonWahl).then(() => undefined),
     setzeTonWahl(wahl) {
       tonWahl = wahl;
       if (aktiviert) {

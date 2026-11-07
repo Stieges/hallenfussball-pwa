@@ -49,6 +49,11 @@ export interface HallLautsprecherLaufzeit {
   /** Aus der Nutzergeste „Ton aktivieren“ (@HT-012). */
   tonAktivieren(): Promise<boolean>;
   angehaltenBestaetigen(): void;
+  /**
+   * „Anhören“ (@HT-023, W2-neu-1): die Töne mit der aktuellen Tonwahl laden, ohne den Tab zu aktivieren – er bekommt dadurch
+   * weder die Sperre noch das Recht zu tönen.
+   */
+  ladeToeneZumAnhoeren(): Promise<void>;
   /** Tonwahl des Turniers (Abpfiff aus `matchCockpitSettings.soundId`, Halbzeit/eigene Töne aus `hall_sound_status`). */
   setzeTonWahl(wahl: Record<TonArt, TonWahl>): void;
 }
