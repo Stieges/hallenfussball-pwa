@@ -34,7 +34,10 @@ import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
 import { TournamentClosedHint } from '../../components/ui/molecules/TournamentClosedHint';
 import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../core/services/tournamentMetaValidation';
-import { metaFormOf, rebaseMetaForm, type MetaForm } from './utils/metaFormRebase';
+import { metaFormConflicts, metaFormOf, rebaseMetaForm, sameMetaForm } from './utils/metaFormRebase';
+
+type VersionBase = Pick<Tournament, 'version' | 'serverVersion'>;
+const versionOf = (t: Tournament): VersionBase => ({ version: t.version, serverVersion: t.serverVersion });
 
 interface SettingsTabProps {
   tournament: Tournament;
@@ -85,17 +88,26 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
 
   // Neuer Stand (eigenes Speichern oder ein anderes Gerät): nur unangefasste Angaben nachziehen, angefangene Eingaben
-  // bleiben stehen (C-GERAET-FOLGT-WACKELT, @FU-105/@FU-089 – sonst wurde „Speichern“ grau und die Eingabe ging verloren)
-  const formBaseRef = useRef<MetaForm>(metaFormOf(tournament));
+  // bleiben stehen (C-GERAET-FOLGT-WACKELT, @FU-105/@FU-089 – sonst wurde „Speichern“ grau und die Eingabe ging verloren).
+  // Überschneidet sich eine Eingabe mit der fremden Änderung, beruht das Speichern weiter auf dem alten Stand (@FU-108).
+  const formSync = useRef({ id: tournament.id, base: metaFormOf(tournament), version: versionOf(tournament), saveBase: null as VersionBase | null });
+  const formDataRef = useRef(formData);
+  formDataRef.current = formData;
   useEffect(() => {
+    const sync = formSync.current;
     const incoming = metaFormOf(tournament);
-    const base = formBaseRef.current;
-    formBaseRef.current = incoming;
-    setFormData((current) => {
-      const next = rebaseMetaForm(current, base, incoming);
-      if (JSON.stringify(next) === JSON.stringify(incoming)) { setMetaErrors({}); }
-      return next;
-    });
+    const { base, version } = sync;
+    const switched = sync.id !== tournament.id;
+    Object.assign(sync, { id: tournament.id, base: incoming, version: versionOf(tournament) });
+    const current = formDataRef.current;
+    const next = switched ? incoming : rebaseMetaForm(current, base, incoming);
+    if (switched || sameMetaForm(next, incoming)) {
+      sync.saveBase = null;
+      setMetaErrors({});
+    } else if (sync.saveBase === null && metaFormConflicts(current, base, incoming)) {
+      sync.saveBase = version;
+    }
+    setFormData(next);
   }, [tournament]);
 
   // Dirty-State berechnen
@@ -177,6 +189,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       date: formData.startDate ?? tournament.date,
       timeSlot: formData.startTime ?? tournament.timeSlot,
       updatedAt: new Date().toISOString(),
+      ...formSync.current.saveBase, // @FU-108: bei Überschneidung auf dem alten Stand – der Server lehnt ab statt still zu überschreiben
     };
 
     onTournamentUpdate(updatedTournament, false);
@@ -195,6 +208,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       if (!confirmReset) {return;}
     }
 
+    formSync.current.saveBase = null; // der Stand des Formulars ist jetzt der neueste
     setMetaErrors({});
     setFormData({
       title: tournament.title,
