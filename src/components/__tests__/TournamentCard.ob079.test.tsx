@@ -5,7 +5,7 @@
  * („Alle drei Karten ohne Scrollen“ prüft das Playwright-Spec startseite-turniertag.spec.ts.)
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { Tournament } from '../../types/tournament';
 import { formatCardTime } from '../../utils/formatCardTime';
 
@@ -68,6 +68,19 @@ describe('@OB-079 Inhalt der Karte', () => {
     render(<TournamentCard tournament={ohne} categoryLabel="upcoming" />);
     expect(screen.queryByTestId('card-location')).toBeNull();
     expect(screen.getByTestId('card-time')).toHaveTextContent('card.noDate');
+  });
+});
+
+describe('@OB-079 Menü der kompakten Karte', () => {
+  it('die Karte unter der Maus liegt über ihren Nachbarn (das Menü ragt in die nächste Karte); beim Verlassen ist alles zurückgesetzt', () => {
+    render(<TournamentCard tournament={f2} categoryLabel="upcoming" onClick={vi.fn()} />);
+    const karte = screen.getByTestId('tournament-card-f2');
+    fireEvent.mouseEnter(karte);
+    expect(karte.style.zIndex).toBe('1');
+    expect(karte.style.transform).toBe('translateY(-2px)');
+    fireEvent.mouseLeave(karte);
+    expect(karte.style.zIndex).toBe('auto');
+    expect(karte.style.transform).toBe('none');
   });
 });
 

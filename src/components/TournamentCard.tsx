@@ -136,11 +136,15 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
   };
 
+  // Die Karte unter der Maus liegt über ihren Nachbarn: das Aktionsmenü ragt bei den kompakten Karten in die nächste Karte hinein und
+  // bliebe sonst (Stapelkontext durch `transform`) unter ihr, nicht klickbar (@OB-079). Beim Verlassen wird beides wieder zurückgesetzt.
   const cardHoverStyle: CSSProperties = {
     ...cardStyle,
     transform: 'translateY(-2px)',
     boxShadow: cssVars.shadows.md,
+    zIndex: 1,
   };
+  const cardRestStyle: CSSProperties = { ...cardStyle, transform: 'none', zIndex: 'auto' };
 
   const badgeColors = statusBadgeColors(tournament.status, categoryLabel);
 
@@ -161,7 +165,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       }}
       onMouseLeave={(e) => {
         if (onClick) {
-          Object.assign(e.currentTarget.style, cardStyle);
+          Object.assign(e.currentTarget.style, cardRestStyle);
         }
       }}
       data-testid={testId ?? `tournament-card-${tournament.id}`}
