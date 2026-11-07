@@ -70,6 +70,14 @@
     "paused": "Paused",
     "cancelled": "Cancelled"
   },
+  "lifecycle": {
+    "ready": "Ready",
+    "finalize": "Finalise tournament",
+    "backToDraft": "Back to draft",
+    "upcomingTournaments": "Upcoming tournaments",
+    "finished": "Completed",
+    "cancelled": "Cancelled"
+  },
   "terminology": {
     "field_one": "Field",
     "field_other": "Fields",

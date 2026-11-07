@@ -18,6 +18,8 @@ export interface StateMarkProps {
   'data-testid'?: string;
   /** Wiederholte Marken in einer Zeile: kein Abstand nach oben. */
   'data-kind'?: string;
+  /** Dicht: ohne Innenabstand oben und unten, so hoch wie eine Textzeile (Turnierkarte, @OB-079). */
+  dense?: boolean;
 }
 
 const size = iconSizeValues.xs;
@@ -41,14 +43,14 @@ const TONES: Record<StateMarkTone, { border: string; symbol: string; tint?: stri
   warn: { border: cssVars.colors.warningSolid, symbol: cssVars.colors.warningSolid, tint: cssVars.colors.warningLight },
 };
 
-export const StateMark = ({ tone, symbol, children, 'data-testid': testId, 'data-kind': kind }: StateMarkProps) => {
+export const StateMark = ({ tone, symbol, children, 'data-testid': testId, 'data-kind': kind, dense = false }: StateMarkProps) => {
   const look = TONES[tone];
   const mark: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'flex-start',
     gap: cssVars.spacing.xs,
     maxWidth: '100%',
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    padding: dense ? `0 ${cssVars.spacing.sm}` : `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     border: `${cssVars.borderWidth.thin} solid ${look.border}`,
     borderRadius: cssVars.borderRadius.md,
     textAlign: 'left',

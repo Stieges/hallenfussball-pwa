@@ -109,7 +109,7 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
     justifyContent: 'space-around',
     alignItems: 'center',
     background: cssVars.colors.surface,
-    borderTop: `1px solid ${cssVars.colors.border}`,
+    borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     zIndex: 1000,
     height: '64px',
@@ -143,7 +143,7 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
     width: '48px',
     height: '28px',
     borderRadius: cssVars.borderRadius.full,
-    background: isActive ? `${cssVars.colors.primary}15` : 'transparent',
+    background: isActive ? cssVars.colors.primaryLight : 'transparent',
     transition: 'background 0.2s ease',
   });
 

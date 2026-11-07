@@ -1,11 +1,9 @@
 /**
  * Import Steps - Step components for ImportDialog
  *
- * Contains all four step components:
+ * Contains the first two step components (the other two: ImportResultSteps.tsx):
  * - SelectStep: File selection with drag & drop
  * - WarningsStep: Display import warnings
- * - PreviewStep: Tournament preview before import
- * - SuccessStep: Success confirmation
  */
 
 import { CSSProperties, DragEvent } from 'react';
@@ -13,10 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { Icons } from '../ui/Icons';
 import { cssVars } from '../../design-tokens'
-import { Tournament, ImportValidationResult } from '../../types/tournament';
-import { formatTournamentDate } from '../../utils/tournamentCategories';
+import { ImportValidationResult } from '../../types/tournament';
 import { downloadTemplate } from './ImportTemplates';
-import { ageClassText } from '../../core/view';
 
 // =============================================================================
 // SELECT STEP
@@ -70,7 +66,7 @@ export const SelectStep = ({
   const errorStyle: CSSProperties = {
     padding: cssVars.spacing.md,
     background: cssVars.colors.errorLight,
-    border: `1px solid ${cssVars.colors.error}`,
+    border: `${cssVars.borderWidth.thin} solid ${cssVars.colors.error}`,
     borderRadius: cssVars.borderRadius.sm,
     color: cssVars.colors.error,
     fontSize: cssVars.fontSizes.sm,
@@ -131,7 +127,7 @@ export const SelectStep = ({
       <div style={{
         marginTop: cssVars.spacing.lg,
         paddingTop: cssVars.spacing.lg,
-        borderTop: `1px solid ${cssVars.colors.border}`,
+        borderTop: `${cssVars.borderWidth.thin} solid ${cssVars.colors.border}`,
       }}>
         <p style={{
           fontSize: cssVars.fontSizes.sm,
@@ -199,7 +195,7 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
   const warningItemStyle = (severity: 'info' | 'warning'): CSSProperties => ({
     padding: cssVars.spacing.md,
     background: severity === 'warning' ? cssVars.colors.warningLight : cssVars.colors.infoLight,
-    border: `1px solid ${severity === 'warning' ? cssVars.colors.correctionBorder : cssVars.colors.secondaryLight}`,
+    border: `${cssVars.borderWidth.thin} solid ${severity === 'warning' ? cssVars.colors.correctionBorder : cssVars.colors.secondaryLight}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
     color: severity === 'warning' ? cssVars.colors.warning : cssVars.colors.secondary,
@@ -250,152 +246,6 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
   );
 };
 
-// =============================================================================
-// PREVIEW STEP
-// =============================================================================
 
-export interface PreviewStepProps {
-  tournament: Tournament;
-  onBack: () => void;
-  onImport: () => void;
-}
-
-export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) => {
-  const { t } = useTranslation('dashboard');
-  const previewContainerStyle: CSSProperties = {
-    background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.md,
-    padding: cssVars.spacing.lg,
-    border: `1px solid ${cssVars.colors.border}`,
-  };
-
-  const previewGridStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: cssVars.spacing.md,
-  };
-
-  const previewItemStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
-  };
-
-  const labelStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textSecondary,
-    textTransform: 'uppercase',
-  };
-
-  const valueStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const buttonGroupStyle: CSSProperties = {
-    display: 'flex',
-    gap: cssVars.spacing.md,
-    marginTop: cssVars.spacing.md,
-  };
-
-  return (
-    <>
-      <div style={previewContainerStyle}>
-        <h3 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.lg, margin: `0 0 ${cssVars.spacing.lg} 0` }}>
-          {tournament.title}
-        </h3>
-
-        <div style={previewGridStyle}>
-          <div style={previewItemStyle}>
-            <span style={labelStyle}>{t('import.preview.labels.date')}</span>
-            <span style={valueStyle}>{formatTournamentDate(tournament)}</span>
-          </div>
-          <div style={previewItemStyle}>
-            <span style={labelStyle}>{t('import.preview.labels.location')}</span>
-            <span style={valueStyle}>{tournament.location.name || '-'}</span>
-          </div>
-          <div style={previewItemStyle}>
-            <span style={labelStyle}>{t('import.preview.labels.teams')}</span>
-            <span style={valueStyle}>{tournament.teams.length}</span>
-          </div>
-          <div style={previewItemStyle}>
-            <span style={labelStyle}>{t('import.preview.labels.matches')}</span>
-            <span style={valueStyle}>{tournament.matches.length}</span>
-          </div>
-          {ageClassText(tournament.ageClass) !== '' && (
-            <div style={previewItemStyle}>
-              <span style={labelStyle}>{t('import.preview.labels.ageClass')}</span>
-              <span style={valueStyle}>{ageClassText(tournament.ageClass)}</span>
-            </div>
-          )}
-          <div style={previewItemStyle}>
-            <span style={labelStyle}>{t('import.preview.labels.source')}</span>
-            <span style={{ ...valueStyle, color: cssVars.colors.statusExternal }}>
-              {tournament.externalSource}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div style={buttonGroupStyle}>
-        <Button variant="secondary" size="md" onClick={onBack} fullWidth>
-          {t('import.preview.back')}
-        </Button>
-        <Button variant="primary" size="md" onClick={onImport} fullWidth data-testid="import-confirm">
-          {t('import.preview.import')}
-        </Button>
-      </div>
-    </>
-  );
-};
-
-// =============================================================================
-// SUCCESS STEP
-// =============================================================================
-
-export interface SuccessStepProps {
-  tournament: Tournament;
-  onComplete: () => void;
-}
-
-export const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
-  const { t } = useTranslation('dashboard');
-  const successContainerStyle: CSSProperties = {
-    textAlign: 'center',
-    padding: cssVars.spacing.xl,
-  };
-
-  const iconStyle: CSSProperties = {
-    fontSize: '64px',
-    marginBottom: cssVars.spacing.lg,
-  };
-
-  const messageStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    color: cssVars.colors.textPrimary,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const subMessageStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-  };
-
-  return (
-    <>
-      <div style={successContainerStyle}>
-        <div style={iconStyle}>✅</div>
-        <p style={messageStyle}>
-          {t('import.success.message', { title: tournament.title })}
-        </p>
-        <p style={subMessageStyle}>
-          {t('import.success.hint')}
-        </p>
-      </div>
-
-      <Button variant="primary" size="md" onClick={onComplete} fullWidth data-testid="import-success-go">
-        {t('import.success.goToTournament')}
-      </Button>
-    </>
-  );
-};
+export { PreviewStep, SuccessStep } from './ImportResultSteps';
+export type { PreviewStepProps, SuccessStepProps } from './ImportResultSteps';

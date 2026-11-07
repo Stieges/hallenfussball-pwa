@@ -27,7 +27,7 @@ describe('@ZP-095 Schloss an Spielzeit und Pause', () => {
     render(<SettingsCategory tournamentId={turnier.id} tournament={turnier} onTournamentUpdate={vi.fn()} />);
     fireEvent.click(screen.getByText('Spielzeiten'));
     fireEvent.click(screen.getByTestId('settings-lock-game'));
-    expect(screen.getByTestId('settings-lock-why-text')).toHaveTextContent('Spielzeit und Pause sind nach dem Festlegen gesperrt');
+    expect(screen.getByTestId('settings-lock-why-text')).toHaveTextContent('Spielzeit und Pause sind nach dem Fertigstellen gesperrt');
     expect(screen.getByTestId('settings-lock-why-text')).toHaveTextContent('„Zeiten verschieben“');
     fireEvent.click(screen.getByTestId('settings-lock-shift'));
     expect(navigate).toHaveBeenCalledWith(`/tournament/${turnier.id}/schedule?verschieben=1`);

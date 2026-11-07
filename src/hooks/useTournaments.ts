@@ -13,6 +13,12 @@ import {
   getRemainingDays,
 } from '../utils/tournamentCategories';
 
+/** Ergebnis von „Papierkorb leeren“: wie viele gelöscht sind und welche Turniere sich nicht löschen ließen. */
+export interface EmptyTrashResult {
+  deleted: number;
+  failed: Array<{ id: string; title: string }>;
+}
+
 /**
  * Custom hook for managing tournaments
  * Verwendet Repository Pattern - automatisch Offline/Online Sync
@@ -212,16 +218,26 @@ export const useTournaments = () => {
   }, [tournaments, repository, loadTournaments]);
 
   /**
-   * Empty trash: Permanently delete all trashed tournaments
+   * Empty trash: Permanently delete all trashed tournaments (@LZ-094).
+   * Bricht bei einem Fehler nicht ab: jedes Turnier wird einzeln versucht, was sich nicht löschen lässt, steht mit Namen
+   * in `failed` (der Aufrufer meldet es), die übrigen sind gelöscht.
    */
-  const emptyTrash = useCallback(async () => {
+  const emptyTrash = useCallback(async (): Promise<EmptyTrashResult> => {
     const trashed = getTrashedTournaments(tournaments);
+    const failed: EmptyTrashResult['failed'] = [];
 
     for (const tournament of trashed) {
-      await repository.delete(tournament.id);
+      try {
+        await repository.delete(tournament.id);
+      } catch (error) {
+        console.error('Failed to delete trashed tournament:', tournament.id, error);
+        failed.push({ id: tournament.id, title: tournament.title });
+      }
     }
 
     await loadTournaments();
+
+    return { deleted: trashed.length - failed.length, failed };
   }, [tournaments, repository, loadTournaments]);
 
   return {

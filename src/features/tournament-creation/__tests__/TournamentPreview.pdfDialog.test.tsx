@@ -48,7 +48,7 @@ describe('G63 G64 Vorschau: Knopf „Als PDF“ und Hinweistext aus den Sprachda
     renderPreview();
 
     expect(screen.getByTestId('preview-export-pdf')).toHaveTextContent('Als PDF');
-    expect(document.body.textContent).toContain('Solange das Turnier nicht festgelegt ist');
+    expect(document.body.textContent).toContain('Solange das Turnier nicht fertiggestellt ist');
     expect(document.body.textContent).toContain('als PDF speichern');
     expect(document.body.textContent).not.toMatch(/freigegeben|exportieren/);
   });
