@@ -41,7 +41,9 @@
 --   'finished' (Abgeschlossen), die Veranstaltung hat Bildschirme und einen Ort, das Turnier denselben Ort. Nicht geteilte
 --   Turniere sind zulaessig (Halle ist nicht Internet); Zuschauer sehen sie nicht (on_screen fehlt in public_gathering).
 --   "Auf die Bildschirme" ist kein Anpfiff: das Turnier steht auch ohne angepfiffenes Spiel in der Halle (@VA-035).
---   Letzter Tipp gilt (@VA-038): set_gathering_on_screen sperrt die Veranstaltung FOR UPDATE. "Von den Bildschirmen nehmen"
+--   Letzter Tipp gilt (@VA-038): set_gathering_on_screen sperrt erst das Turnier FOR SHARE (wartet auf eine offene
+--   Aenderung am Turnier, sonst kaeme es nach dem Waechter still zurueck), dann die Veranstaltung FOR UPDATE -- dieselbe
+--   Reihenfolge wie der Waechter-Trigger. "Von den Bildschirmen nehmen"
 --   nimmt nur genau dieses Turnier herunter; steht schon ein anderes dort, aendert sich nichts.
 --   gathering_screen_display(key, since): {state:'invalid'} (Format, unbekannt, erneuert, geloescht -- kein Orakel; ein
 --   oeffentlicher Code hat nie das Schluessel-Format, @VA-043) | {state:'unchanged', version, server_now} |
@@ -547,6 +549,12 @@ BEGIN
   IF p_on IS NULL THEN
     RAISE EXCEPTION 'GATHERING_INVALID_INPUT: p_on fehlt.' USING ERRCODE = '22023';
   END IF;
+  -- Wechselt nie still (@VA-036, @VA-037): erst das Turnier sperren, dann die Veranstaltung -- dieselbe Reihenfolge wie
+  -- tournaments_clear_on_screen (Turnier-UPDATE, dann gatherings), also kein Deadlock. FOR SHARE, nicht FOR KEY SHARE:
+  -- ein UPDATE ohne Schluesselspalten nimmt FOR NO KEY UPDATE, das nur mit FOR SHARE kollidiert. Eine gleichzeitige, noch
+  -- offene Aenderung (Entwurf, anderer Ort, Papierkorb, geloest, geloescht) wird so abgewartet; die folgenden Abfragen
+  -- lesen danach ihren Stand, statt ein inzwischen unzulaessiges Turnier auf die Bildschirme zu schreiben.
+  PERFORM 1 FROM public.tournaments t WHERE t.id = p_tournament_id FOR SHARE;
   v_t := public.gathering_screen_tournament_or_fail(p_tournament_id);
   IF v_t.gathering_id IS NULL THEN
     RAISE EXCEPTION 'GATHERING_SCREEN_NOT_ELIGIBLE: not_in_gathering (Turnier %).', p_tournament_id USING ERRCODE = 'HF012';

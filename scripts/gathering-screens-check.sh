@@ -14,6 +14,7 @@
 #   B  Bildschirme einrichten: anlegen, aendern, Schluessel erneuern, loeschen, uebernehmen, Ort (@VA-034, @VA-036 Z. 6,
 #      @VA-041, @VA-042 Herkunft)
 #   U  Umschalten, Rechte, Status, Uebersicht, Waechter (@VA-035 bis @VA-041)
+#   R  Wettlauf: Umschalten gegen eine noch offene Aenderung am Turnier (zwei Sitzungen; @VA-036, @VA-037, @VA-041)
 #   D  Bildschirm-Abfrage ueber die echte Server-Antwort (PostgREST): Zustaende, Positivliste, Delta, Version ueber Wechsel
 #      (@VA-034 bis @VA-036, @VA-043, @VA-044, @ZM-180)
 #   O  Zuschauer: on_screen in public_gathering (@VA-045 bis @VA-047)
@@ -28,7 +29,7 @@
 #   bash scripts/gathering-screens-check.sh --without-migration  Gegenprobe: ohne die Migration muessen B, U, D, O ROT sein
 #   bash scripts/gathering-screens-check.sh --gegenprobe         je Mutation (gathering-screens-check.d/mutationen.py) ein
 #                                                                Lauf; Exit 0 NUR, wenn JEDE Mutation eine Pruefung aus
-#                                                                B, U, D, O, T oder S rot faerbt (ohne W, X und A1-Rueckfall)
+#                                                                B, U, R, D, O, T oder S rot faerbt (ohne W, X und A1-Rueckfall)
 #
 # Aendert NICHTS an der Produktionsdatenbank und nichts am lokalen Supabase-Stack -- eigene Wegwerf-Container und ein
 # eigenes Wegwerf-Netz, am Ende entfernt (trap). Lokal ueber die Sperre (testlauf2.sh) starten.
@@ -128,9 +129,9 @@ as_admin() {
 schema_dump() { docker exec "$C" pg_dump -U postgres --schema-only --schema=public --schema=public_view postgres | grep -vE '^\\(un)?restrict '; }
 
 # Zaehler je Kategorie (bash 3.2: keine assoziativen Arrays).
-CATS=(B U D O T V Z P A S W X)
-DEVS=(0 0 0 0 0 0 0 0 0 0 0 0)
-OKS=(0 0 0 0 0 0 0 0 0 0 0 0)
+CATS=(B U R D O T V Z P A S W X)
+DEVS=(0 0 0 0 0 0 0 0 0 0 0 0 0)
+OKS=(0 0 0 0 0 0 0 0 0 0 0 0 0)
 cat_index() {
   local i
   for i in "${!CATS[@]}"; do [[ "${CATS[$i]}" == "$1" ]] && { echo "$i"; return 0; }; done
@@ -146,7 +147,7 @@ check() { # check <Kategorie> <Name> <erwartet> <erhalten>
   fi
 }
 total_dev() { local s=0 d; for d in "${DEVS[@]}"; do s=$((s + d)); done; echo "$s"; }
-reset_counts() { DEVS=(0 0 0 0 0 0 0 0 0 0 0 0); OKS=(0 0 0 0 0 0 0 0 0 0 0 0); }
+reset_counts() { DEVS=(0 0 0 0 0 0 0 0 0 0 0 0 0); OKS=(0 0 0 0 0 0 0 0 0 0 0 0 0); }
 
 uuid_for() {
   local h

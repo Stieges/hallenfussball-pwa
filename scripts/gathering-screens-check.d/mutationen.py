@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Mutationen der Migration 20261122_001_gathering_screens.sql fuer `gathering-screens-check.sh --gegenprobe`.
 
-Je Kernregel eine Mutation; jede muss mindestens eine Pruefung aus B, U, D, O, T oder S rot faerben. Jede Ersetzung muss
+Je Kernregel eine Mutation; jede muss mindestens eine Pruefung aus B, U, R, D, O, T oder S rot faerben. Jede Ersetzung muss
 genau einmal passen, sonst bricht das Skript ab (eine veraltete Mutation darf nicht still gruen werden).
 
 Aufruf: mutationen.py --list | mutationen.py <ID> <migration.sql> (mutierter Text auf stdout)
@@ -86,6 +86,10 @@ MUTATIONS = {
     "S27-ohne-bildschirme": [("           WHEN NOT EXISTS (SELECT 1 FROM public.gathering_screens s WHERE s.gathering_id = g.id) THEN 'no_screens'\n", "")],
     # Folien-Positivliste: ganze Konfiguration samt interner Notiz
     "S28-folien-positivliste": [("    || jsonb_build_object('slides', v_slides);", "    || v_s.config || jsonb_build_object('slides', v_slides);")],
+    # wechselt nie still (Opus-Review PR #452): Umschalten wartet nicht auf eine offene Aenderung am Turnier
+    "S29-turnier-sperre": [("  PERFORM 1 FROM public.tournaments t WHERE t.id = p_tournament_id FOR SHARE;\n", "")],
+    # dto.: FOR KEY SHARE kollidiert nicht mit dem FOR NO KEY UPDATE eines Turnier-UPDATE ohne Schluesselspalten
+    "S30-turnier-sperre-schwach": [("WHERE t.id = p_tournament_id FOR SHARE;", "WHERE t.id = p_tournament_id FOR KEY SHARE;")],
 }
 
 
