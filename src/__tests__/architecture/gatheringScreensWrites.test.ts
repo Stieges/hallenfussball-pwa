@@ -23,6 +23,8 @@ function literalText(node: ts.Node | undefined): string | undefined {
 }
 
 function scan(rel: string, text: string): Finding[] {
+  // Vorfilter: ein Treffer braucht den Tabellennamen als Text; ohne ihn entfaellt das teure Parsen der ganzen Datei.
+  if (!text.includes('gathering_screens') && !text.includes('gatherings')) { return []; }
   const sf = ts.createSourceFile(rel, text, ts.ScriptTarget.Latest, true, rel.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out: Finding[] = [];
   const visit = (node: ts.Node): void => {
