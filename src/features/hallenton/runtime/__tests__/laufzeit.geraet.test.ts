@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { ABSCHNITT_MS, ENDE_A1, ENDE_A2, T0, anpfiff, ev, zweiterAbschnitt } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { FalschesGeraet, FalscherSpeicher } from '../../../../test/hallenton/falschesGeraet';
 import { ManuelleUhr } from '../../../../test/hallenton/manuelleUhr';
-import { bereiteLautsprecherFeldIds, leseLautsprecherFelder } from '../lautsprecherKanal';
+import { cockpitTonSchweigt } from '../../../../core/hallenton';
+import { bereiteLautsprecherFeldIds, erzeugeLautsprecherKanal, leseLautsprecherFelder } from '../lautsprecherKanal';
 import { verbindeLautsprecherReloadTor } from '../lautsprecherReloadTor';
 import { Tab, feldAus } from './laufzeitTestlage';
 
@@ -171,13 +172,10 @@ describe('Verfügbarkeit und Worker', () => {
 });
 
 describe('Lautsprecher-Felder über die Tabs und Reload-Tor', () => {
-  it('der tönende Tab meldet seine Felder mit „bereit“; nicht aktiviert → keine bereiten Felder; nach dem Ausschalten keine Meldung', async () => {
+  it('der tönende Tab meldet seine Felder mit „bereit“ je Turnier; nach dem Ausschalten keine Meldung', async () => {
     const tab = new Tab({ start: T0, felder: [1, 2] });
     imSpiel(tab, anpfiff());
-    await tab.starte({ aktivieren: false });
-    await tab.vor(300);
-    expect(bereiteLautsprecherFeldIds(leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt()))).toEqual([]);
-    await tab.laufzeit.tonAktivieren();
+    await tab.starte();
     await tab.vor(300);
     const meldung = leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt());
     expect(bereiteLautsprecherFeldIds(meldung, 'hallencup-nord')).toEqual(['field-1', 'field-2']);
@@ -186,14 +184,53 @@ describe('Lautsprecher-Felder über die Tabs und Reload-Tor', () => {
     expect(leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt())).toBeNull();
   });
 
-  it('eine Meldung ohne Erneuerung veraltet nach 15 s (Tab abgestürzt), eine laufende wird alle 5 s erneuert', async () => {
+  // W-neu-1 (Ruling Fixrunde 2): ersetzt den Test „nicht aktiviert → keine bereiten Felder“, der eine alte Meldung nicht fing
+  it('@HT-013 + Regel 3: der Laptop leitet Feld 1, ist Lautsprecher und wird neu geladen (ohne Aufräumen) → nach 2 s gilt Feld 1 nicht mehr als bereit, ein Ende im Fenster tönt am Cockpit', async () => {
+    const geraet = new FalschesGeraet();
+    const uhr = new ManuelleUhr(T0);
+    const vorher = new Tab({ start: 0, geraet, uhr, name: 'A' });
+    imSpiel(vorher, anpfiff());
+    await vorher.starte();
+    await vorher.vor(3000);
+    expect(bereiteLautsprecherFeldIds(leseLautsprecherFelder(geraet.speicher, uhr.jetzt()), 'hallencup-nord')).toEqual(['field-1']);
+    vorher.takt.quelle.stop(); // Neuladen: die alte Seite ist weg, ohne stop() und ohne pagehide
+    const neuGeladen = new Tab({ start: 0, geraet, uhr, name: 'B' });
+    imSpiel(neuGeladen, anpfiff());
+    await neuGeladen.starte({ aktivieren: false });
+    await neuGeladen.vor(2100);
+    const schweigt = (): boolean => cockpitTonSchweigt('field-1', bereiteLautsprecherFeldIds(leseLautsprecherFelder(geraet.speicher, uhr.jetzt()), 'hallencup-nord'));
+    expect(schweigt()).toBe(false);
+    await neuGeladen.vor(10_000); // ein Ende in den ersten 15 s nach dem Neuladen: das Cockpit tönt
+    expect(schweigt()).toBe(false);
+    expect(neuGeladen.laufzeit.getSnapshot().zustandJeFeld['field-1']).toBe('not_activated');
+  });
+
+  it('@HT-033 Zeile 8: Olli schließt den Lautsprecher-Tab (pagehide) → die Meldung ist sofort weg, das Cockpit im anderen Tab tönt', () => {
+    const geraet = new FalschesGeraet();
+    const seite = { fns: new Set<() => void>(), addEventListener(_t: 'pagehide', fn: () => void) { this.fns.add(fn); }, removeEventListener(_t: 'pagehide', fn: () => void) { this.fns.delete(fn); } };
+    const kanal = erzeugeLautsprecherKanal({ speicher: geraet.speicher, kanal: geraet.kanal(), tabId: 'A', jetzt: () => T0, seite });
+    kanal.melden({ turnierId: 'hallencup-nord', felder: [{ feld: 1, bereit: true }] });
+    expect(bereiteLautsprecherFeldIds(leseLautsprecherFelder(geraet.speicher, T0))).toEqual(['field-1']);
+    for (const fn of seite.fns) {
+      fn();
+    }
+    expect(leseLautsprecherFelder(geraet.speicher, T0)).toBeNull();
+  });
+
+  it('der Halter erneuert seine Meldung im Takt höchstens einmal je Sekunde, sie ist nie älter als etwa 1 s', async () => {
     const tab = new Tab({ start: T0 });
     imSpiel(tab, anpfiff());
     await tab.starte();
-    await tab.vor(40_000);
-    expect(leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt())).not.toBeNull();
-    tab.takt.workerAussetzen(); // auch der Hauptthread meldet nichts mehr
-    expect(leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt() + 16_000)).toBeNull();
+    const schreibvorgaenge = (): number => [...tab.geraet.speicher.werte.keys()].length;
+    let aelteste = 0;
+    for (let i = 0; i < 40; i += 1) {
+      await tab.vor(250);
+      const m = leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt());
+      aelteste = Math.max(aelteste, tab.uhr.jetzt() - (m?.at ?? 0));
+    }
+    expect(aelteste).toBeLessThanOrEqual(1250);
+    expect(tab.geraet.nachrichten).toBeLessThanOrEqual(13); // 10 s Takt: höchstens etwa 1 Meldung je Sekunde
+    expect(schreibvorgaenge()).toBeGreaterThan(0);
   });
 
   it('Reload-Tor: solange der Lautsprecher bereit ist, hält auch ein anderer Tab desselben Geräts das Tor zu', async () => {

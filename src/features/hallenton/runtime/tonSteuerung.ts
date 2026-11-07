@@ -64,7 +64,9 @@ export function tonKennung(ton: GeplanterTon): string {
 export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSteuerung {
   const eintraege = new Map<string, Eintrag>();
 
-  const begonnen = (eintrag: Eintrag, now: number): boolean => eintrag.geplantUm !== null && eintrag.ton.at <= now;
+  /** Begonnen nach Serverzeit – oder schon hörbar, weil die Audiozeit `outputLatency` vor `at` liegt (k-neu-1). */
+  const begonnen = (eintrag: Eintrag, now: number): boolean => eintrag.geplantUm !== null
+    && (eintrag.ton.at <= now || (eintrag.audioAt !== null && eintrag.audioAt <= spieler.audioKontext().currentTime));
 
   const abbrechen = (id: string): void => {
     spieler.abbrechen(id);

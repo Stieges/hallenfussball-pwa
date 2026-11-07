@@ -43,6 +43,7 @@ export function erzeugeBrowserKanal(): LautsprecherKanal {
     kanal: browserNachrichtenKanal(),
     tabId: Math.random().toString(36).slice(2),
     jetzt: () => Date.now(),
+    seite: typeof window === 'undefined' ? null : window,
   });
 }
 
@@ -55,10 +56,7 @@ export interface BrowserLaufzeitDeps {
 export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: BrowserLaufzeitDeps): { laufzeit: HallLautsprecherLaufzeit; beenden: () => void } {
   const { turnierId, felder } = einschaltung;
   let lokal: PlanSpiel[] | null = null;
-  const turnier = ladeTurnier(turnierId).catch(() => null);
-  void turnier.then((t) => {
-    lokal = t ? planAusTurnier(t) : null;
-  });
+  let beendet = false;
   const kanal = erzeugeBrowserKanal();
   const laufzeit = erzeugeHallLautsprecherLaufzeit({
     turnierId,
@@ -80,13 +78,19 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
     kanal,
     wurdeVerworfen: istGeschlafen(),
     gedaechtnisSpeicher: browserKanalSpeicher(),
-  });
-  let beendet = false;
-  void Promise.all([turnier, hallSoundStatus(supabase, { p_tournament_id: turnierId, p_device_id: getDeviceId() })]).then(([t, status]) => {
-    const settings = status.ok && status.sicht === 'voll' ? status.settings : null;
-    if (!beendet) {
-      laufzeit.setzeTonWahl(tonWahlAus(t?.matchCockpitSettings?.soundId, settings, oeffentlicheUrl));
-    }
+    // k-neu-3: erst ein aktivierter Tab liest Turnier (lokal) und Tonwahl (Server); wartende Tabs haben keine Last
+    beimAktivieren: () => {
+      const turnier = ladeTurnier(turnierId).catch(() => null);
+      void turnier.then((t) => {
+        lokal = t ? planAusTurnier(t) : null;
+      });
+      void Promise.all([turnier, hallSoundStatus(supabase, { p_tournament_id: turnierId, p_device_id: getDeviceId() })]).then(([t, status]) => {
+        const settings = status.ok && status.sicht === 'voll' ? status.settings : null;
+        if (!beendet) {
+          laufzeit.setzeTonWahl(tonWahlAus(t?.matchCockpitSettings?.soundId, settings, oeffentlicheUrl));
+        }
+      });
+    },
   });
   return {
     laufzeit,

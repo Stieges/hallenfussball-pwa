@@ -8,7 +8,12 @@ import type { HallSpeakerState } from '../../../core/repositories/hallentonRpc';
 import { feldKennung } from './aktuellesSpielJeFeld';
 import type { FeldStandVerfuegbarkeit } from './feldStand';
 import { istAngepfiffen } from './feldStandSpiele';
-import type { SpielerZustand } from './hallTonSpieler';
+import type { HallTonSpieler, SpielerZustand, TonArt, TonWahl } from './hallTonSpieler';
+import type { FeldStandQuelle } from './feldStand';
+import type { GeraeteSperre } from './geraeteSperre';
+import type { KanalSpeicher, LautsprecherKanal } from './lautsprecherKanal';
+import type { TaktQuelle } from './taktQuelle';
+import type { UhrProbe } from '../../../core/hallenton';
 
 export type FeldZustand = HallSpeakerState | 'keineVerbindung';
 /** `aus` vor `start`/nach `stop`, `wartet` auf die Sperre, `andererTab` tönt, `toent` hier, `still` abgeschaltet (Gast, Turnierende). */
@@ -34,6 +39,37 @@ export interface LaufzeitSnapshot {
   /** Der Takt hatte ausgesetzt (@HT-014: „App war angehalten – Töne können gefehlt haben“), bis bestätigt. */
   warAngehalten: boolean;
   verfuegbarkeit: FeldStandVerfuegbarkeit | null;
+}
+
+export interface HallLautsprecherLaufzeit {
+  start(): void;
+  stop(): void;
+  subscribe(fn: () => void): () => void;
+  getSnapshot(): LaufzeitSnapshot;
+  /** Aus der Nutzergeste „Ton aktivieren“ (@HT-012). */
+  tonAktivieren(): Promise<boolean>;
+  angehaltenBestaetigen(): void;
+  /** Tonwahl des Turniers (Abpfiff aus `matchCockpitSettings.soundId`, Halbzeit/eigene Töne aus `hall_sound_status`). */
+  setzeTonWahl(wahl: Record<TonArt, TonWahl>): void;
+}
+
+export interface LaufzeitDeps {
+  turnierId: string;
+  felder: readonly number[];
+  erzeugeTakt: () => TaktQuelle;
+  spieler: HallTonSpieler;
+  erzeugeFeldStand: () => FeldStandQuelle;
+  uhr: { serverNow(): number; sync(): Promise<unknown> };
+  uhrProbe: () => UhrProbe;
+  sperre: GeraeteSperre;
+  kanal: LautsprecherKanal;
+  /** `document.wasDiscarded` beim Laden (@HT-037). */
+  wurdeVerworfen: boolean;
+  tonWahl?: Record<TonArt, TonWahl>;
+  /** `localStorage` für das geteilte Gedächtnis (W2); `null` = nur in dieser Laufzeit. */
+  gedaechtnisSpeicher?: KanalSpeicher | null;
+  /** Einmal, sobald dieser Tab aktiviert ist (Tonwahl lesen, k-neu-3). */
+  beimAktivieren?: () => void;
 }
 
 /** „Bereit“ für die anderen Tabs (Regel 3) und das Reload-Tor: die Halle hört den Ton (auch „Hupe 1“ als Rückfall, @HT-028). */

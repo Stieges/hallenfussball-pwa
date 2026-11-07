@@ -4,17 +4,18 @@
  * `BroadcastChannel('hallenton')` an. H3b-3 liest das für Regel 3 im Cockpit (`bereiteLautsprecherFeldIds`), das Reload-Tor
  * für alle Tabs (`lautsprecherReloadTor.ts`).
  *
- * Eine Meldung ohne Erneuerung gilt nach 15 s als veraltet (z. B. Tab abgestürzt): Sonst schwiege der Cockpit-Ton in den
- * anderen Tabs, obwohl hier nichts mehr tönt. Der tönende Tab erneuert sie alle 5 s. Zeit ist die Uhr des Geräts, die alle
- * Tabs gleich sehen; ein Sprung lässt eine Meldung höchstens früher veralten. Nichts wirft.
+ * Fail-safe (Ruling W-neu-1): Eine Meldung ohne Erneuerung gilt nach 2 s als nicht bereit (Neuladen, Schließen, Absturz),
+ * dann tönt das Cockpit wieder. Der Halter der Sperre erneuert sie im Takt höchstens einmal je Sekunde; `pagehide` nimmt die
+ * eigene Meldung sofort weg. Zeit ist die Uhr des Geräts, die alle Tabs gleich sehen; ein Sprung lässt eine Meldung höchstens
+ * früher veralten. Nichts wirft.
  */
 import { feldKennung, type FeldKennung } from './aktuellesSpielJeFeld';
 import { lies, schreib, type Speicher } from './tonEinstellungen';
 
 export const FELDER_SCHLUESSEL = 'hallenton:felder';
 export const KANAL_NAME = 'hallenton';
-export const MELDUNG_VERALTET_MS = 15_000;
-export const MELDUNG_ERNEUERN_MS = 5000;
+export const MELDUNG_VERALTET_MS = 2000;
+export const MELDUNG_ERNEUERN_MS = 1000;
 
 /** `localStorage`-Ausschnitt mit Löschen. */
 export interface KanalSpeicher extends Speicher {
@@ -52,11 +53,19 @@ export interface LautsprecherKanal {
   schliessen(): void;
 }
 
+/** Ausschnitt von `window` für `pagehide`. */
+export interface SeitenEreignisse {
+  addEventListener(type: 'pagehide', fn: () => void): void;
+  removeEventListener(type: 'pagehide', fn: () => void): void;
+}
+
 export interface LautsprecherKanalDeps {
   speicher: KanalSpeicher | null;
   kanal: NachrichtenKanal | null;
   tabId: string;
   jetzt: () => number;
+  /** `window`: beim Verlassen der Seite (`pagehide`) die eigene Meldung wegnehmen. */
+  seite?: SeitenEreignisse | null;
 }
 
 function alsMeldung(roh: unknown): LautsprecherMeldung | null {
@@ -102,7 +111,7 @@ export function bereiteLautsprecherFeldIds(meldung: LautsprecherMeldung | null, 
   return meldung.felder.filter((f) => f.bereit).map((f) => feldKennung(f.feld));
 }
 
-export function erzeugeLautsprecherKanal({ speicher, kanal, tabId, jetzt }: LautsprecherKanalDeps): LautsprecherKanal {
+export function erzeugeLautsprecherKanal({ speicher, kanal, tabId, jetzt, seite = null }: LautsprecherKanalDeps): LautsprecherKanal {
   const zuhoerer = new Set<() => void>();
   const melde = (): void => {
     for (const fn of [...zuhoerer]) {
@@ -118,8 +127,7 @@ export function erzeugeLautsprecherKanal({ speicher, kanal, tabId, jetzt }: Laut
     }
     melde();
   };
-  return {
-    melden(meldung) {
+  const meldenFn: LautsprecherKanal['melden'] = (meldung) => {
       if (meldung === null) {
         const alt = leseLautsprecherFelder(speicher, jetzt());
         if (alt?.tabId !== tabId) {
@@ -134,7 +142,11 @@ export function erzeugeLautsprecherKanal({ speicher, kanal, tabId, jetzt }: Laut
         schreib(speicher, FELDER_SCHLUESSEL, JSON.stringify({ ...meldung, tabId, at: jetzt() }));
       }
       anstossen();
-    },
+  };
+  const beimVerlassen = (): void => meldenFn(null);
+  seite?.addEventListener('pagehide', beimVerlassen);
+  return {
+    melden: meldenFn,
     lesen: () => leseLautsprecherFelder(speicher, jetzt()),
     beobachten(fn) {
       zuhoerer.add(fn);
@@ -143,6 +155,7 @@ export function erzeugeLautsprecherKanal({ speicher, kanal, tabId, jetzt }: Laut
       };
     },
     schliessen() {
+      seite?.removeEventListener('pagehide', beimVerlassen);
       kanal?.removeEventListener('message', melde);
       kanal?.close();
       zuhoerer.clear();

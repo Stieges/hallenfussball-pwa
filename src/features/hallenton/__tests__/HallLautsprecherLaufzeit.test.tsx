@@ -151,9 +151,17 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     turnier.wert = { matches: [], matchCockpitSettings: { soundId: 'horn-2' } };
     einschalten();
     render(<HallLautsprecherLaufzeit />);
-    for (let i = 0; i < 5; i += 1) {
-      await act(async () => { await new Promise((r) => { setTimeout(r, 0); }); });
-    }
+    const warten = async () => {
+      for (let i = 0; i < 5; i += 1) {
+        await act(async () => { await new Promise((r) => { setTimeout(r, 0); }); });
+      }
+    };
+    await warten();
+    // k-neu-3: ein nicht aktivierter Tab lädt keine Töne und fragt die Tonwahl nicht ab
+    expect(geladen).toEqual([]);
+    expect(falsch.rpcLog.some((r) => r.fn === 'hall_sound_status')).toBe(false);
+    await act(async () => { await geraetStand().laufzeit?.tonAktivieren(); });
+    await warten();
     expect(geladen).toContain('/sounds/horn-2.mp3');
     expect(geladen).toContain('/sounds/horn-3.mp3');
   });
