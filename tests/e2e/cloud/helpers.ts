@@ -28,12 +28,19 @@ export async function gotoLogin(page: Page): Promise<void> {
   await page.waitForLoadState('networkidle');
 
   const loginEmail = page.locator('[data-testid="login-email-input"]');
-  if (await loginEmail.isVisible({ timeout: 1000 }).catch(() => false)) {
+  const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
+  const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
+
+  // Erst warten, bis die Startseite einen Anmelde-Einstieg zeigt: solange die Seite noch nachlädt
+  // („Lade…“), ist keiner da. `isVisible()` wartet nicht (die Option `timeout` ignoriert Playwright); am Handy fiel der
+  // Helfer sonst auf den Desktop-Knopf durch, den es dort nie gibt.
+  await expect(loginEmail.or(mobileAuthButton).or(desktopLoginButton).first()).toBeVisible({ timeout: 15000 });
+
+  if (await loginEmail.isVisible()) {
     return;
   }
 
-  const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
-  if (await mobileAuthButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await mobileAuthButton.isVisible()) {
     await mobileAuthButton.click({ force: true });
     const bottomSheetLogin = page.locator('[data-testid="bottomsheet-login"]');
     await expect(bottomSheetLogin).toBeVisible({ timeout: 3000 });
@@ -42,7 +49,6 @@ export async function gotoLogin(page: Page): Promise<void> {
     return;
   }
 
-  const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
   await desktopLoginButton.click({ force: true });
   await expect(loginEmail).toBeVisible({ timeout: 5000 });
 }
