@@ -263,6 +263,50 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden und Unters
     });
   }
 
+  // @OB-080 / @W5-029: das Menü der oberen Karte ragt in die Karte darunter; es bleibt bedienbar, auch wenn der Zeiger zwischendurch auf der
+  // Nachbarkarte steht (Befund main 07.11., Cloud-E2E D0b: nach dem Scrollen lag die Nachbarkarte über „Kopieren“)
+  // 768: unter „Heute“ stehen die Karten untereinander (F2 über F1); 1440: drei Spalten, „Heute“ hat nur eine Reihe, die Karte G unter
+  // „Kommende Turniere“ hat eine Reihe unter sich
+  const faelle = [
+    { groesse: { width: 1440, height: 900 }, karte: 'tw-g' },
+    { groesse: { width: 768, height: 1024 }, karte: 'tw-f2' },
+  ];
+  for (const { groesse, karte } of faelle) {
+    test(`@OB-080 ${groesse.width}×${groesse.height}: Menü von ${karte} ragt in die Nachbarkarte – Zeiger kurz auf ihr, dann „Kopieren“`, async ({ page }) => {
+      await page.setViewportSize(groesse);
+      await oeffne(page, { lage: 'bereit' });
+      await page.setViewportSize(groesse);
+      await page.getByTestId(`tournament-card-${karte}`).scrollIntoViewIfNeeded();
+      await page.getByTestId(`tournament-${karte}-actions-trigger`).click();
+      const kopieren = page.getByTestId('action-menu-item-copy');
+      await expect(kopieren).toBeVisible();
+      // die Karte, in die das Menü hineinragt (sonst prüft der Test nichts)
+      const menue = (await page.getByTestId(`tournament-${karte}-actions-menu`).boundingBox())!;
+      const boxen = await page.locator(KARTE).evaluateAll((els) => els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return { id: e.getAttribute('data-testid'), x: r.x, y: r.y, width: r.width, height: r.height };
+      }));
+      const nachbar = boxen.find((b) => b.id !== `tournament-card-${karte}`
+        && b.x < menue.x + menue.width && menue.x < b.x + b.width && b.y < menue.y + menue.height && menue.y < b.y + b.height);
+      expect(nachbar, `eine Nachbarkarte liegt unter dem Menü (${JSON.stringify(boxen)})`).toBeDefined();
+      // Zeiger wandert auf die Nachbarkarte (links neben dem Menü) und kommt zurück
+      await page.mouse.move(nachbar!.x + 20, Math.min(nachbar!.y + nachbar!.height - 5, menue.y + menue.height - 5));
+      const eintraege = page.locator('[data-testid^="action-menu-item-"]');
+      const anzahl = await eintraege.count();
+      expect(anzahl).toBeGreaterThanOrEqual(3);
+      for (let i = 0; i < anzahl; i += 1) {
+        const eintrag = eintraege.nth(i);
+        const id = await eintrag.getAttribute('data-testid');
+        const box = (await eintrag.boundingBox())!;
+        const punkt: [number, number] = [box.x + box.width / 2, box.y + box.height / 2];
+        const oben = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[data-testid^="action-menu-item-"]')?.getAttribute('data-testid') ?? null, punkt);
+        expect(oben, `oberstes Element an der Stelle von ${id}`).toBe(id);
+      }
+      await kopieren.click();
+      await expect(page.getByTestId('copy-dialog-name')).toBeVisible();
+    });
+  }
+
   test('außerhalb von „Heute“ steht Tag und Uhrzeit', async ({ page }) => {
     await oeffne(page, { lage: 'bereit' });
     await expect(page.getByTestId('section-upcoming').getByTestId('tournament-card-tw-g').getByTestId('card-time')).toHaveText('So 29.11. · 08:30');
