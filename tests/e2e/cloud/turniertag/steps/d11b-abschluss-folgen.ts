@@ -39,6 +39,8 @@ function plusMinuten(uhrzeit: string, minuten: number): string {
 async function zeitenEhrlich({ anonPage }: StepContext): Promise<void> {
   await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
   await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
+  const verschoben = await getRows<{ id: string; original_start: string }>(`matches?tournament_id=eq.${TURNIERTAG_ID}&original_start=not.is.null&select=id,original_start`, 'verschobene Spiele');
+  expect(verschoben.length, 'Vorbedingung aus D13: Spiele tragen in der Cloud ihre ursprüngliche Uhrzeit (original_start)').toBeGreaterThan(0);
   // Die Liste rendert nur Karten im Umfeld des sichtbaren Bereichs: beim Sammeln über die Seite blättern.
   const paare = new Map<string, { war: string; gross: string }>();
   await expect(async () => {
@@ -55,7 +57,7 @@ async function zeitenEhrlich({ anonPage }: StepContext): Promise<void> {
         paare.set(g.id, { war: /\d{2}:\d{2}/.exec(g.text)?.[0] ?? '', gross: g.gross });
       }
     }
-    expect([...paare.values()].filter((p) => p.gross !== '').length, 'mindestens ein verschobenes Spiel mit großer Uhrzeit und „(war …)“').toBeGreaterThan(0);
+    expect([...paare.values()].filter((p) => p.gross !== '').length, `mindestens ein verschobenes Spiel mit großer Uhrzeit und „(war …)“ (in der Cloud verschoben: ${verschoben.length})`).toBeGreaterThan(0);
   }).toPass({ timeout: 20_000 });
   for (const { war, gross } of [...paare.values()].filter((p) => p.gross !== '')) {
     expect(gross, `groß die neue Uhrzeit (war ${war}, 10 Minuten nach hinten)`).toBe(plusMinuten(war, 10));

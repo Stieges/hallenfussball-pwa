@@ -27,7 +27,7 @@ async function halbfinaleElfmeter({ anonPage }: StepContext): Promise<void> {
     eventOf('SHOOTOUT_KICK', start + 111_000 + round * 2000, start, { teamId: hf1.team_b_id, payload: { scored: round % 2 === 0 } }),
   ]);
   const shootout = await appendOwner(hf1.id, [choice, ...kicks, eventOf('SHOOTOUT_END', start + 130_000, start)]);
-  expect(shootout.results.every((r) => r.status === 'accepted')).toBe(true);
+  expect(shootout.results.map((r) => `${r.status}${r.code ? `:${r.code}` : ''}`), 'Wahl und Strafstöße werden angenommen').toEqual(shootout.results.map(() => 'accepted'));
   await expect.poll(async () => findFinalByLabel((await fetchTurniertagBracket()).finals, '1. Halbfinale').decided_by, { timeout: SOLL_TIMEOUT_MS }).toBe('penalty');
   // Soll-Wirkung sichtbar (B-15/B-21): die Zuschauer-Seite zeigt das Halbfinale 1 als im
   // Strafstoßschießen entschieden (Ergebnis 1:1 plus Strafstoß-Vermerk in derselben Zeile).

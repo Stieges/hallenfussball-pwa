@@ -115,7 +115,7 @@ async function gruppenabschluss({ asRole }: StepContext): Promise<void> {
     expect(tabelleB, 'der Dialog zeigt Platz 1 und 2 nach Punkten').toEqual(plan.oben.B);
   }
   await expect.poll(async () => Object.fromEntries(await gruppenSeiten()), { message: 'nach Gruppe B: alle Halbfinal-Plätze besetzt (über Kreuz)', timeout: SOLL_TIMEOUT_MS * 3 })
-    .toEqual({ A1: a[0], A2: a[1], B1: b[0], B2: b[1] });
+    .toEqual({ A1: a[1], A2: a[0], B1: b[0], B2: b[1] }); // MUTATIONSPROBE
   await expect(ownerPage.getByTestId('group-close-suggestion'), 'beide Gruppen abgeschlossen: kein Vorschlag mehr').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
 }
 

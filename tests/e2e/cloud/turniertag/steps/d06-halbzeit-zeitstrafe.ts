@@ -75,7 +75,7 @@ async function zeitstrafeLaeuftAb({ asRole }: StepContext): Promise<void> {
   await expect(karte, 'abgelaufene Strafe: Karte weg').toHaveCount(0, { timeout: 30000 });
   // ... und das Cockpit meldet, dass sich das Team ergänzen darf
   const meldung = ownerPage.getByTestId('notice-line');
-  await expect(meldung, 'Meldezeile nennt die abgelaufene Zeitstrafe').toContainText(new RegExp(`Zeitstrafe ${team}.*abgelaufen`), { timeout: 5000 });
+  await expect(meldung, 'Meldezeile nennt die abgelaufene Zeitstrafe').toContainText(new RegExp(`Zeitstrafe ${team}.*läuft noch`) /* MUTATIONSPROBE */, { timeout: 5000 });
   const [hinweis, uhr, stand] = await Promise.all([meldung.boundingBox(), ownerPage.getByTestId('scoreboard-clock').boundingBox(), ownerPage.getByTestId('scoreboard-score').boundingBox()]);
   expect(hinweis && uhr && stand, 'Meldezeile, Uhr und Stand sind sichtbar').toBeTruthy();
   if (hinweis && uhr && stand) {

@@ -53,7 +53,7 @@ async function qrEinstiegOhneDialog({ browser }: StepContext): Promise<void> {
     await page.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
     await expectPageAnchor(page.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('[role="dialog"], [role="alertdialog"], [aria-modal="true"]'), 'kein Dialog über der Seite').toHaveCount(0);
+    await expect(page.locator('[role="dialog"], [role="alertdialog"], [aria-modal="true"]'), 'kein Dialog über der Seite').toHaveCount(1); // MUTATIONSPROBE
     const heim = namen.get(laufend?.team_a_id ?? '') ?? '?';
     const gast = namen.get(laufend?.team_b_id ?? '') ?? '?';
     const karte = page.getByRole('article', { name: new RegExp(`^Spiel \\d+: ${heim} gegen ${gast}$`) });
