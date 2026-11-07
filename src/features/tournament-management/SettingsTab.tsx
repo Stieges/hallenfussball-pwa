@@ -13,7 +13,7 @@
  * - Kommuniziert Dirty-State an Parent für Tab-Wechsel-Warnung
  */
 
-import { useState, useEffect, useMemo, useCallback, CSSProperties } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Input } from '../../components/ui';
 import { AgeClassPicker } from '../../components/AgeClassPicker';
@@ -34,6 +34,7 @@ import { LeadOnlyHint } from '../../components/ui/molecules/LeadOnlyHint';
 import { TournamentClosedHint } from '../../components/ui/molecules/TournamentClosedHint';
 import { useTournamentClosed } from '../../hooks/useTournamentClosed';
 import { validateTournamentMeta, hasMetaErrors, type TournamentMetaErrors } from '../../core/services/tournamentMetaValidation';
+import { metaFormOf, rebaseMetaForm, type MetaForm } from './utils/metaFormRebase';
 
 interface SettingsTabProps {
   tournament: Tournament;
@@ -83,17 +84,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const [metaErrors, setMetaErrors] = useState<TournamentMetaErrors>({});
 
-  // Sync formData wenn sich tournament ändert (nach Speichern)
+  // Neuer Stand (eigenes Speichern oder ein anderes Gerät): nur unangefasste Angaben nachziehen, angefangene Eingaben
+  // bleiben stehen (C-GERAET-FOLGT-WACKELT, @FU-105/@FU-089 – sonst wurde „Speichern“ grau und die Eingabe ging verloren)
+  const formBaseRef = useRef<MetaForm>(metaFormOf(tournament));
   useEffect(() => {
-    setMetaErrors({});
-    setFormData({
-      title: tournament.title,
-      organizer: tournament.organizer,
-      ageClass: tournament.ageClass,
-      location: tournament.location,
-      contactInfo: tournament.contactInfo,
-      startDate: tournament.startDate ?? tournament.date,
-      startTime: tournament.startTime ?? tournament.timeSlot,
+    const incoming = metaFormOf(tournament);
+    const base = formBaseRef.current;
+    formBaseRef.current = incoming;
+    setFormData((current) => {
+      const next = rebaseMetaForm(current, base, incoming);
+      if (JSON.stringify(next) === JSON.stringify(incoming)) { setMetaErrors({}); }
+      return next;
     });
   }, [tournament]);
 
