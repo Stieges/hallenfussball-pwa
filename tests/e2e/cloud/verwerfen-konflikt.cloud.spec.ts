@@ -86,10 +86,16 @@ async function editLocationOffline(page: Page, cup: ClonedCup, name: string, use
   await expect.poll(async () => (await localCopy(page, cup.id))?.locationName, { timeout: 10000 }).toBe(name);
 }
 
-/** Den wartenden SAVE_TOURNAMENT des Turniers in den Dead-Letter legen (wie nach MAX_RETRIES), mit dem Grund. */
+/**
+ * Den wartenden SAVE_TOURNAMENT des Turniers in den Dead-Letter legen (wie nach MAX_RETRIES), mit dem Grund – und die App
+ * danach beenden (ohne Netz, `about:blank` lädt nichts nach). Der nächste Seitenaufruf startet sie mit diesem Stand.
+ * Sonst hielte die laufende App den Eintrag weiter in ihrer Warteschlange im Speicher und sendete ihn, sobald die Verbindung
+ * zurück ist: der verworfene Ort stand dann am Server (Wackler verwerfen-konflikt:177, Traces Lauf 42420718980:
+ * PATCH tournaments … version=eq.1 direkt nach setOffline(false)). Die echte App kennt diesen Doppelzustand nicht.
+ */
 async function intoDeadLetter(page: Page, userId: string, tournamentId: string, reason: { conflict: boolean; lastError: string }): Promise<string> {
   const keys = queueKeys(userId);
-  return page.evaluate(({ queueKey, failedKey, id, conflict, lastError }) => {
+  const entryId = await page.evaluate(({ queueKey, failedKey, id, conflict, lastError }) => {
     const queued = JSON.parse(window.localStorage.getItem(queueKey) ?? '[]') as Array<{ id: string; type: string; payload: { id?: string } }>;
     const item = queued.find((entry) => entry.type === 'SAVE_TOURNAMENT' && entry.payload.id === id);
     if (!item) { throw new Error('kein wartender SAVE_TOURNAMENT'); }
@@ -98,6 +104,8 @@ async function intoDeadLetter(page: Page, userId: string, tournamentId: string, 
     window.localStorage.setItem(failedKey, JSON.stringify([failed]));
     return item.id;
   }, { queueKey: keys.queue, failedKey: keys.failed, id: tournamentId, ...reason });
+  await page.goto('about:blank');
+  return entryId;
 }
 
 async function openSchedule(page: Page, cup: ClonedCup): Promise<void> {
