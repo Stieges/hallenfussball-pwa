@@ -503,7 +503,9 @@ export async function seedGuestTournament(page: Page, title: string): Promise<st
     const stored = { ...(JSON.parse(JSON.stringify(draft)) as object), ownerId: 'guest' };
     await new Promise<void>((resolve, reject) => {
       const request = indexedDB.open('hallenfussball', 1);
-      request.onerror = () => reject(new Error('IndexedDB nicht zu öffnen'));
+      // Nie selbst anlegen (C-GERAET-FOLGT-WACKELT): ohne den Speicher der App bliebe eine leere Version 1 zurück
+      request.onupgradeneeded = () => { request.transaction?.abort(); };
+      request.onerror = () => reject(new Error('IndexedDB nicht zu öffnen (Gerätespeicher der App fehlt noch)'));
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction('cache', 'readwrite');

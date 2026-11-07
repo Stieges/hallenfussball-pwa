@@ -5,7 +5,7 @@
  *
  * Szenarien: @BM-070 (Wer online teilen darf, Code bleibt), @ME-070 (Verbindungsstatus), @HE-085/-086/-087/-088 (Betreiber
  * trägt Co-Admin ein, Startseite, Austragen), @HE-062 (nie ohne Anfrage Mitglied), @AN-050 (Maria leitet weiter),
- * @FU-089 (Gegenrichtung: Marias Gerät folgt dem Stand der Cloud; Szenario-Vorschlag "Marias Tablet bleibt …", Kennung offen).
+ * @FU-105 (Marias Tablet bleibt über viele Änderungen von Olli auf dem Stand des Servers; Gegenrichtung zu @FU-089).
  *
  * Aufbau: jeder Fall legt über `coadminEinsatz.ts` eine EIGENE Kopie des Freigabe-Cup an (neue Ids, privat, Datum heute) und
  * räumt sie im `finally` ab -- unabhängig von anderen Dateien (publish-coadmin ändert den Freigabe-Cup selbst) und von der
@@ -239,7 +239,7 @@ test.describe('CA-7 Co-Admin einsatzfähig (zwei Geräte, lokaler Stack)', () =>
     expect(bump.json, 'Versionsprüfung trifft genau eine Zeile').toHaveLength(1);
   }
 
-  test('@FU-089 Z4 Marias Gerät folgt fünf Änderungen von Olli mit der Cloud-Version, Maria speichert danach selbst und Olli sieht es, ohne Störung', async ({ browser }) => {
+  test('@FU-105 Z4 Marias Gerät folgt fünf Änderungen von Olli mit der Cloud-Version, Maria speichert danach selbst und Olli sieht es, ohne Störung', async ({ browser }) => {
     test.setTimeout(240_000);
     const cup = await cloneReleaseCup('z4');
     const olli = await newRoleContext(browser, 'owner');
