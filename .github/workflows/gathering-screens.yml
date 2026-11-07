@@ -1,0 +1,53 @@
+name: Bildschirme der Veranstaltung
+
+# A1b Monitore der Veranstaltung am Server (supabase/migrations/20261122_001_gathering_screens.sql, Record Veranstaltung,
+# Funktionalitaet G). scripts/gathering-screens-check.sh spielt Baseline + alle neueren Migrationen in einen eigenen
+# Wegwerf-Container supabase/postgres (dazu ein Wegwerf-PostgREST fuer die echte Server-Antwort, @ZM-180) und prueft
+# Einrichten, Umschalten mit Rechten, Bildschirm-Abfrage per Schluessel, „Jetzt in der Halle“, unveraenderte Turnier- und
+# Monitor-Antwort, die A1-Pruefungen als Rueckfall, Schema/Rechte, zweites Einspielen und Rueckweg (@VA-034 bis @VA-047).
+# Die beiden Gegenproben beweisen, dass der Check Fehler auch erkennt. Pfadfilter wie gatherings.yml.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261122_001_gathering_screens_rollback.sql'
+      - 'scripts/gathering-screens-check.sh'
+      - 'scripts/gathering-screens-check.d/**'
+      - 'scripts/gatherings-check.d/**'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/gathering-screens.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/rollbacks/20261122_001_gathering_screens_rollback.sql'
+      - 'scripts/gathering-screens-check.sh'
+      - 'scripts/gathering-screens-check.d/**'
+      - 'scripts/gatherings-check.d/**'
+      - 'scripts/db_privilege_assertions.sql'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/gathering-screens.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  gathering-screens:
+    name: Bildschirme der Veranstaltung (Postgres-Wegwerfcontainer + PostgREST)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Bildschirme der Veranstaltung pruefen
+        # Exit 1 bei jeder Abweichung. Container und Netz werden per trap entfernt.
+        run: bash scripts/gathering-screens-check.sh
+
+      - name: Gegenprobe A (ohne 20261122_001 muessen B, U, D und O ROT sein)
+        run: bash scripts/gathering-screens-check.sh --without-migration
+
+      - name: Gegenprobe B (jede der Mutationen S1-S28 muss mindestens eine Pruefung ROT machen)
+        run: bash scripts/gathering-screens-check.sh --gegenprobe

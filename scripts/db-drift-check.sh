@@ -235,6 +235,10 @@ pending_assertions_for() {
     20261121_001_hallenton.sql)
       echo "hallenton-tables-rls-no-client-access hallenton-rpcs-definer-authenticated-only hallenton-rpcs-check-permission hallenton-internal-no-client-execute hallenton-heartbeat-fixed-reasons-no-user-agent hallenton-closed-tournament-blocks-changes hallenton-storage-helper-authenticated-only hallenton-storage-policies-present hallenton-storage-no-open-policy"
       ;;
+    # A1b Monitore der Veranstaltung (@VA-034 bis @VA-043): gathering_screens, Umschalten, Bildschirm-Abfrage per Schluessel
+    20261122_001_gathering_screens.sql)
+      echo "gathering-screens-table-no-client-rights gathering-screens-rpcs gathering-screens-guards"
+      ;;
     *)
       return 1
       ;;
@@ -751,6 +755,10 @@ PRIVILEGE_ASSERTION_NAMES=(
   "hallenton-storage-helper-authenticated-only"
   "hallenton-storage-policies-present"
   "hallenton-storage-no-open-policy"
+  # A1b Monitore der Veranstaltung (20261122_001_gathering_screens.sql, @VA-034 bis @VA-043): Bildschirme nur ueber Server-Funktionen.
+  "gathering-screens-table-no-client-rights"
+  "gathering-screens-rpcs"
+  "gathering-screens-guards"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

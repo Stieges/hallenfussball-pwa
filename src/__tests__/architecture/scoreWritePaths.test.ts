@@ -31,6 +31,11 @@ const SCORE_ALLOWLIST: Record<string, { reason: string; count: number }> = {
     reason:
       'B-14 Zod-Schema der öffentlichen Antwort (public_tournament/display_tournament, Positivliste): prüft die Spalten score_a/score_b, setzt keinen Stand',
   },
+  'core/repositories/gatheringScreensRead.ts': {
+    count: 2,
+    reason:
+      'A1b Zod-Schema der öffentlichen Antwort (public_gathering.on_screen, „Jetzt in der Halle“, Positivliste): prüft die Felder score_a/score_b, setzt keinen Stand',
+  },
   'core/generators/scheduleGenerator.ts': {
     count: 2,
     reason:
