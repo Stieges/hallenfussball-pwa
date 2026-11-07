@@ -74,6 +74,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     padding: compact ? cssVars.spacing.sm : cssVars.spacing.md,
+    minHeight: cssVars.touchTargets.minimum, // @OB-022: Kopfzeile ist die Bedienfläche (auch im knappen Abstand)
     background: variantStyles.headerBg,
     cursor: 'pointer',
     userSelect: 'none',
