@@ -11,7 +11,9 @@ import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { extractPdfText } from '../../../../../src/lib/pdf/__tests__/pdfjsText';
 import { getRows, vorbedingung } from './shared';
-import { restAsRole } from '../../restAsRole';
+import { restAsRole, serviceRest } from '../../restAsRole';
+import { fetchUserIdByEmail } from '../../engineHelpers';
+import { E2E_USERS } from '../../testData';
 import { handyKontext, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
 import type { StepContext, TurniertagStep } from './types';
 
@@ -202,27 +204,34 @@ async function zuschauerTabellenAus({ anonPage }: StepContext): Promise<void> {
 }
 
 /**
- * N8f (@DR-048 Z. 5 seit Daniel 07.11.: „Turnierleitung, Co-Admin und Helfer“): Tom (Helfer-Konto, Mitglied „collaborator“) öffnet nach dem
- * Abschluss den Reiter „Tabellen“, tippt „Als PDF“ – „Endstand“ ist vorgewählt – und speichert: dasselbe Endstand-PDF wie N8a.
- * Vorher belegt ein Abruf als Tom, dass der Server ihm das Turnier liefert (sonst liegt die Ursache nicht in der App).
+ * N8f (@DR-048 Z. 5 seit Daniel 07.11.: „Turnierleitung, Co-Admin und Helfer“): Tom (Helfer-Konto) öffnet nach dem Abschluss den Reiter
+ * „Tabellen“, tippt „Als PDF“ – „Endstand“ ist vorgewählt – und speichert: dasselbe Endstand-PDF wie N8a.
+ * Das Nikolaus-Hauptturnier hat laut Seed kein Helfer-Konto (`mitHelfer: false`); Tom wird für diesen Schritt als Helfer eingetragen
+ * (angenommene Mitgliedschaft „collaborator“, Datenbank-Eigentümer) und danach wieder entfernt.
  */
 async function helferEndstandPdf({ asRole }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
-  const server = await restAsRole('helper', 'GET', `tournaments?id=eq.${NIKOLAUS.tournamentId}&select=id,lifecycle_status`);
-  const mitglied = await getRows<Record<string, unknown>>(`tournament_collaborators?tournament_id=eq.${NIKOLAUS.tournamentId}&select=role,accepted_at,declined_at,user_id`, 'Mitgliedschaften');
-  // Befund-Spur (erwartet rot): welche Seite verweigert – erscheint im Protokoll des Laufs
-  console.log(`N8f-Spur: Server an Tom ${String(server.status)} ${JSON.stringify(server.json)} · Mitgliedschaften ${JSON.stringify(mitglied)}`);
-  expect(server.json, 'Server liefert Tom das abgeschlossene Turnier (is_reading_member)').toEqual([{ id: NIKOLAUS.tournamentId, lifecycle_status: 'finished' }]);
-  const tom = await asRole('helper');
-  await openNikolausPath(tom, '/standings');
-  await expect(tom.getByText('Turnier nicht gefunden'), 'die App öffnet Tom das abgeschlossene Turnier').toHaveCount(0, { timeout: 1_000 });
-  const { tippe, anzahl } = tippZaehler();
-  await expect(tom.getByTestId('final-standings-list'), 'Tom liest den gespeicherten Endstand').toBeVisible({ timeout: 15_000 });
-  await tippe(tom.getByTestId('final-standings-pdf'));
-  await expect(tom.getByTestId('pdf-choice-final'), '„Endstand“ ist vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
-  const { seiten, datei } = await speichernUndLesen(tom, tippe, 'endstand-helfer');
-  expect(anzahl()).toBe(2);
-  await pruefeEndstandPdf(tom, seiten, datei);
+  const tomId = await fetchUserIdByEmail(E2E_USERS.helper.email);
+  const eintrag = await serviceRest('POST', 'tournament_collaborators', {
+    tournament_id: NIKOLAUS.tournamentId, user_id: tomId, role: 'collaborator', team_ids: [], accepted_at: new Date().toISOString(),
+  });
+  expect(eintrag.status, `Tom als Helfer eintragen: ${eintrag.text}`).toBeLessThan(300);
+  try {
+    const server = await restAsRole('helper', 'GET', `tournaments?id=eq.${NIKOLAUS.tournamentId}&select=id,lifecycle_status`);
+    expect(server.json, 'Server liefert Tom das abgeschlossene Turnier').toEqual([{ id: NIKOLAUS.tournamentId, lifecycle_status: 'finished' }]);
+    const tom = await asRole('helper');
+    await openNikolausPath(tom, '/standings');
+    const { tippe, anzahl } = tippZaehler();
+    await expect(tom.getByTestId('final-standings-list'), 'Tom liest den gespeicherten Endstand').toBeVisible({ timeout: 15_000 });
+    await tippe(tom.getByTestId('final-standings-pdf'));
+    await expect(tom.getByTestId('pdf-choice-final'), '„Endstand“ ist vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+    const { seiten, datei } = await speichernUndLesen(tom, tippe, 'endstand-helfer');
+    expect(anzahl()).toBe(2);
+    await pruefeEndstandPdf(tom, seiten, datei);
+  } finally {
+    const weg = await serviceRest('DELETE', `tournament_collaborators?tournament_id=eq.${NIKOLAUS.tournamentId}&user_id=eq.${tomId}`);
+    expect(weg.status, `Tom wieder austragen: ${weg.text}`).toBeLessThan(300);
+  }
 }
 
 /** N8g (Gegenbeispiel @DR-048): ein Konto ohne Rolle im Turnier bekommt es weder vom Server noch in der App – kein Endstand, kein „Als PDF“. */
@@ -262,9 +271,7 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N8c', title: 'Zuschauer-Seite: Endstand-PDF nach dem Abschluss mit Plätzen und Ergebnissen', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerEndstand },
   { id: 'N8d', title: 'Zuschauer-Seite im Kindermodus: kein Endstand-PDF', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerKindermodus },
   { id: 'N8d2', title: 'Zuschauer-Seite mit ausgeblendeten Tabellen: kein Endstand-PDF', scenarios: ['@DR-050'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerTabellenAus },
-  // Erwartet rot (CI 07.11., zweimal gleich): Tom bekommt das abgeschlossene Nikolaus-Turnier in der App als „Turnier nicht gefunden“ – Ursache
-  // außerhalb dieses Pakets (@HE-098 Z. 2: Helfer lesen nach dem Abschluss den Endstand); der Schritt nennt, ob der Server liefert.
-  { id: 'N8f', title: 'Helfer: Endstand-PDF aus der Endstand-Ansicht, „Endstand“ vorgewählt, Plätze wie gespeichert', scenarios: ['@DR-048', '@HE-098'], owner: 'Klärung Helfer-Zugang zum abgeschlossenen Turnier (@HE-098 Z. 2)', expectedFail: true, run: helferEndstandPdf },
+  { id: 'N8f', title: 'Helfer: Endstand-PDF aus der Endstand-Ansicht, „Endstand“ vorgewählt, Plätze wie gespeichert', scenarios: ['@DR-048'], owner: 'Paket Endstand-PDF', expectedFail: false, run: helferEndstandPdf },
   { id: 'N8g', title: 'Fremdes Konto: kein Endstand, kein „Als PDF“', scenarios: ['@DR-048'], owner: 'Paket Endstand-PDF', expectedFail: false, run: fremdOhneEndstandPdf },
   { id: 'N8e', title: 'Handy 360×640: Zahnrad mit dem Wort „Verwaltung“ öffnet die Verwaltung', scenarios: ['@OB-082'], owner: 'Paket Endstand-PDF', expectedFail: false, run: verwaltungAmHandy },
 ];
