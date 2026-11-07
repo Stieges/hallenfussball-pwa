@@ -77,7 +77,7 @@ async function korrekturImCockpit({ asRole }: StepContext): Promise<void> {
   await expect(dialog, 'die Korrektur öffnet sich').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
   await expect(dialog, `Korrektur von Spiel ${spiel.match_number ?? '?'}`).toContainText(`Spiel ${spiel.match_number ?? '?'}`);
   // bisher: das geltende Ergebnis; neu: zwei Zahlenfelder, vorbelegt mit dem bisherigen Stand
-  await expect(dialog, 'bisher').toContainText(`${(spiel.score_a ?? 0) + 5}:${spiel.score_b ?? ''}`); // MUTATIONSPROBE
+  await expect(dialog, 'bisher').toContainText(`${spiel.score_a ?? ''}:${spiel.score_b ?? ''}`);
   await expect(ownerPage.getByTestId('cockpit-korrektur-home')).toHaveValue(String(spiel.score_a));
   await expect(ownerPage.getByTestId('cockpit-korrektur-away')).toHaveValue(String(spiel.score_b));
   await ownerPage.getByTestId('cockpit-korrektur-home').fill(String((spiel.score_a ?? 0) + 1));

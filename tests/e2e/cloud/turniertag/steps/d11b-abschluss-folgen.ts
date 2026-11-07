@@ -39,8 +39,11 @@ function plusMinuten(uhrzeit: string, minuten: number): string {
 async function zeitenEhrlich({ anonPage }: StepContext): Promise<void> {
   await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
   await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
-  const verschoben = await getRows<{ id: string; original_start: string }>(`matches?tournament_id=eq.${TURNIERTAG_ID}&original_start=not.is.null&select=id,original_start`, 'verschobene Spiele');
-  expect(verschoben.length, 'Vorbedingung aus D13: Spiele tragen in der Cloud ihre ursprüngliche Uhrzeit (original_start)').toBeGreaterThan(0);
+  // Die Verschiebung aus D13 geht über die Warteschlange in die Cloud: höchstens 30 s warten, bis die Spiele ihre ursprüngliche Uhrzeit tragen.
+  const verschobeneSpiele = (): Promise<{ id: string }[]> =>
+    getRows<{ id: string }>(`matches?tournament_id=eq.${TURNIERTAG_ID}&original_start=not.is.null&select=id`, 'verschobene Spiele');
+  await expect.poll(async () => (await verschobeneSpiele()).length, { message: 'die Verschiebung aus D13 steht in der Cloud (matches.original_start)', timeout: 30_000 }).toBeGreaterThan(0);
+  const verschoben = await verschobeneSpiele();
   // Die Liste rendert nur Karten im Umfeld des sichtbaren Bereichs: beim Sammeln über die Seite blättern.
   const paare = new Map<string, { war: string; gross: string }>();
   await expect(async () => {

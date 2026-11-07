@@ -1,8 +1,8 @@
 /**
  * D9 Halbfinale unentschieden -> Strafstoßschießen. Besitzer: B-09 (Bedienung) / A-14 (Regeln,
  * Pflichttest Elfmeter, 6 Teams in 2 Gruppen à 3 als Durchstich-Variante in A-24).
- * Besitzer: B-09/A-14 -- Soll: Halbfinale 1 (besetzt durch D8) endet 1:1, die Turnierleitung wählt
- * Strafstoßschießen, nach den Schüssen steht `decided_by = 'penalty'` mit Strafstoß-Tabelle.
+ * Besitzer: B-09/A-14 -- Soll: Halbfinale 1 (besetzt durch D8) endet 1:1, es geht in die eingestellte Entscheidung
+ * (Strafstoßschießen), nach den Schüssen steht `decided_by = 'penalty'` mit Strafstoß-Tabelle.
  * Sichtbares Soll (B-15/B-21): die Zuschauer-Seite zeigt Halbfinale 1 mit 1:1 und Strafstoß-Vermerk.
  */
 import { expect } from '@playwright/test';
@@ -21,13 +21,12 @@ async function halbfinaleElfmeter({ anonPage }: StepContext): Promise<void> {
     const regular = await appendOwner(hf1.id, base);
     expect(regular.results.map((r) => r.status)).toEqual(base.map(() => 'accepted'));
   });
-  const choice = eventOf('TIEBREAK_CHOICE', start + 100_000, start, { payload: { choice: 'shootout' } });
-  const kicks = [0, 1, 2, 3, 4].flatMap((round) => [
-    eventOf('SHOOTOUT_KICK', start + 110_000 + round * 2000, start, { teamId: hf1.team_a_id, payload: { scored: true } }),
-    eventOf('SHOOTOUT_KICK', start + 111_000 + round * 2000, start, { teamId: hf1.team_b_id, payload: { scored: round % 2 === 0 } }),
-  ]);
-  const shootout = await appendOwner(hf1.id, [choice, ...kicks, eventOf('SHOOTOUT_END', start + 130_000, start)]);
-  expect(shootout.results.map((r) => `${r.status}${r.code ? `:${r.code}` : ''}`), 'Wahl und Strafstöße werden angenommen').toEqual(shootout.results.map(() => 'accepted'));
+  // @SL-053: das Halbfinale geht in die eingestellte Entscheidung (Strafstoßschießen direkt, ohne Wahl der Turnierleitung; eine
+  // TIEBREAK_CHOICE lehnt der Server dort ab). Drei Schützen je Team: nach A✓ B✓ A✓ B✗ A✓ steht 3:1 fest, ein weiterer Schuss wäre abgelehnt.
+  const kicks = [[hf1.team_a_id, true], [hf1.team_b_id, true], [hf1.team_a_id, true], [hf1.team_b_id, false], [hf1.team_a_id, true]] as const;
+  const schuesse = kicks.map(([teamId, scored], i) => eventOf('SHOOTOUT_KICK', start + 110_000 + i * 1000, start, { teamId, payload: { scored } }));
+  const shootout = await appendOwner(hf1.id, [...schuesse, eventOf('SHOOTOUT_END', start + 130_000, start)]);
+  expect(shootout.results.map((r) => `${r.status}${r.code ? `:${r.code}` : ''}`), 'Strafstöße und Ende werden angenommen').toEqual(shootout.results.map(() => 'accepted'));
   await expect.poll(async () => findFinalByLabel((await fetchTurniertagBracket()).finals, '1. Halbfinale').decided_by, { timeout: SOLL_TIMEOUT_MS }).toBe('penalty');
   // Soll-Wirkung sichtbar (B-15/B-21): die Zuschauer-Seite zeigt das Halbfinale 1 als im
   // Strafstoßschießen entschieden (Ergebnis 1:1 plus Strafstoß-Vermerk in derselben Zeile).
