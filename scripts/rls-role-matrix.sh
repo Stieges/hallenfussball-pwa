@@ -186,6 +186,9 @@
 #                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-gatherings # Alles ("nachher"), aber OHNE 20261119_001 (A1 Veranstaltung) -- die
 #                                                   # Zeilen (rls-matrix.d/spur-zzz-veranstaltung.sh) muessen hier ROT sein.
+#   scripts/rls-role-matrix.sh --without-gathering-screens # Alles ("nachher"), aber OHNE 20261122_001 (A1b Monitore der
+#                                                   # Veranstaltung) -- die Zeilen (rls-matrix.d/spur-zzz-veranstaltung-
+#                                                   # bildschirme.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #
 # A-27 (brief-A-27.md, R-A27-3): Identitaeten einer anonymen Sitzung (owner-anonymous, anon-device, helper-device,
 # screen-device, anon-coadmin) tragen zusaetzlich den Claim is_anonymous=true (request.jwt.claims, siehe
@@ -309,6 +312,9 @@ WITH_FS_REQ=1
 # A1 Veranstaltung: 20261119_001 im Modus "nachher" einspielen (Gegenprobe --without-gatherings laesst sie weg; braucht B-14
 # und A-21a-S).
 WITH_GA_REQ=1
+# A1b Monitore der Veranstaltung: 20261122_001 im Modus "nachher" einspielen (Gegenprobe --without-gathering-screens laesst sie
+# weg; braucht A1).
+WITH_GS_REQ=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -404,6 +410,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-gatherings)
       WITH_GA_REQ=0
+      shift
+      ;;
+    --without-gathering-screens)
+      WITH_GS_REQ=0
       shift
       ;;
     -h|--help)
@@ -854,6 +864,18 @@ if [[ "$WITH_B14" -eq 1 && "$WITH_A21AS" -eq 1 && "$WITH_GA_REQ" -eq 1 ]]; then
 elif [[ "$WITH_B14" -eq 1 && "$WITH_A21AS" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, Veranstaltung-Gegenprobe (ohne 20261119_001)"
 fi
+# A1b Monitore der Veranstaltung (20261122_001, @VA-034, @VA-037, @VA-043): gathering_screens ohne Client-Rechte, Umschalten
+# nur mit manageScreens. Prueft die Fassung von public_gathering (A1, Fail-fast); --without-gathering-screens ist die Gegenprobe.
+GS_FILE="$(find_migration 20261122_001)"
+WITH_GS=0
+if [[ "$WITH_GA" -eq 1 && "$WITH_GS_REQ" -eq 1 ]]; then
+  WITH_GS=1
+  echo "Migration einspielen: $(basename "$GS_FILE")" >&2
+  psql_stdin < "$GS_FILE"
+  MODE_LABEL="$MODE_LABEL + Bildschirme der Veranstaltung (20261122_001)"
+elif [[ "$WITH_GA" -eq 1 ]]; then
+  MODE_LABEL="$MODE_LABEL, Bildschirme-Gegenprobe (ohne 20261122_001)"
+fi
 
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
 #        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
@@ -906,6 +928,10 @@ fi
 if [[ "$WITH_GA" -eq 1 ]]; then
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 1))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 2))
+fi
+# A1b: gathering_screens (ohne Policy) ist RLS-aktiv.
+if [[ "$WITH_GS" -eq 1 ]]; then
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -2464,7 +2490,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_MEND_REQ" -eq 1 && "$WITH_FS_REQ" -eq 1 && "$WITH_GA_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$WITH_A11_REQ" -eq 1 && "$WITH_A27_REQ" -eq 1 && "$WITH_A34_REQ" -eq 1 && "$WITH_A25B_REQ" -eq 1 && "$WITH_A16_REQ" -eq 1 && "$WITH_A13BS_REQ" -eq 1 && "$WITH_A21AS_REQ" -eq 1 && "$WITH_SB_REQ" -eq 1 && "$WITH_B48B_REQ" -eq 1 && "$WITH_B14_REQ" -eq 1 && "$WITH_A35_REQ" -eq 1 && "$WITH_WM_REQ" -eq 1 && "$WITH_MEND_REQ" -eq 1 && "$WITH_FS_REQ" -eq 1 && "$WITH_GA_REQ" -eq 1 && "$WITH_GS_REQ" -eq 1 && "$WITH_CA2_REQ" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi
