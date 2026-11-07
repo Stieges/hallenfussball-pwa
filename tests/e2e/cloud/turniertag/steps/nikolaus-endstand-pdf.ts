@@ -128,8 +128,18 @@ async function abStartseite({ asRole }: StepContext): Promise<void> {
   await pruefeEndstandPdf(seite, seiten, datei);
 }
 
-/** N8c (@BM-041): Mama Petra auf der Zuschauer-Seite: „Als PDF“, „Endstand“ ist vorgewählt, Speichern – Plätze 1 bis 6 und die Ergebnisse. */
-async function zuschauerEndstand({ anonPage }: StepContext): Promise<void> {
+/** Ergebnis-Stücke eines Spielplan-PDFs („2:1“, auch „2“ „:“ „1“); Uhrzeiten („09:00“) haben zwei Ziffern auf beiden Seiten und zählen nicht. */
+function ergebnisseIm(seiten: string[][]): string[] {
+  return [...seiten.flat().join(' ').matchAll(/(?<![\d:])(\d{1,2})\s?:\s?(\d{1,2})(?![\d:])/g)]
+    .filter(([, a, b]) => !(a.length === 2 && b.length === 2))
+    .map(([, a, b]) => `${a}:${b}`);
+}
+
+/**
+ * N8c (@BM-041): Mama Petra auf der Zuschauer-Seite: „Als PDF“, „Endstand“ ist vorgewählt, Speichern – Plätze 1 bis 6 und die Ergebnisse
+ * aller Spiele: dieselben Ergebnisse wie im Endstand-PDF der Turnierleitung (gleiches Turnier, gleiche Schalter).
+ */
+async function zuschauerEndstand({ anonPage, asRole }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
   await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
   await expect(anonPage.getByTestId('final-standings-list'), 'Endstand der Zuschauer-Seite').toBeVisible({ timeout: 20_000 });
@@ -139,11 +149,16 @@ async function zuschauerEndstand({ anonPage }: StepContext): Promise<void> {
   const { seiten, datei } = await speichernUndLesen(anonPage, tippe, 'endstand-zuschauer');
   expect(anzahl()).toBe(2);
   await pruefeEndstandPdf(anonPage, seiten, datei);
-  // „die Ergebnisse aller Spiele“: jedes Spiel trägt im PDF ein Ergebnis „2:1“ (pdfjs liefert es als ein Stück oder als „2“ „:“ „1“).
-  // Uhrzeiten („09:00“) haben zwei Ziffern auf beiden Seiten und zählen nicht.
-  const ergebnisse = [...seiten.flat().join(' ').matchAll(/(?<![\d:])(\d{1,2})\s?:\s?(\d{1,2})(?![\d:])/g)]
-    .filter(([, a, b]) => !(a.length === 2 && b.length === 2));
-  expect(ergebnisse.length, 'Ergebnisse aller 15 Spiele').toBeGreaterThanOrEqual(15);
+
+  const olli = await asRole('owner');
+  await openNikolausPath(olli, '/schedule');
+  const leitung = tippZaehler();
+  await leitung.tippe(olli.getByTestId('schedule-action-pdf'));
+  await expect(olli.getByTestId('pdf-choice-final')).toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+  const vergleich = await speichernUndLesen(olli, leitung.tippe, 'endstand-leitung-vergleich');
+  const erwartet = ergebnisseIm(vergleich.seiten);
+  expect(erwartet.length, 'das Endstand-PDF der Turnierleitung trägt Ergebnisse').toBeGreaterThan(0);
+  expect(ergebnisseIm(seiten), 'Zuschauer-PDF: dieselben Ergebnisse wie bei der Turnierleitung').toEqual(erwartet);
 }
 
 /** Kindermodus am (abgeschlossenen) Turnier umschalten: nur als Datenbank-Eigentümer mit dem Server-Schalter (wie N7d). */
