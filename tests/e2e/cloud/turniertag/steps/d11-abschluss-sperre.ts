@@ -39,5 +39,5 @@ async function abschluss({ asRole }: StepContext): Promise<void> {
 }
 
 export const steps: readonly TurniertagStep[] = [
-  { id: 'D11', title: 'Turnier abschließen: Sperre, Bildschirm frei', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'Teil F (Endstand mit Finalrunde) und B-20 (Bildschirm frei); Abschluss-Dialog gebaut (R3-4)', expectedFail: false, run: abschluss },
+  { id: 'D11', title: 'Turnier abschließen: Sperre, Bildschirm frei', scenarios: ['@LZ-030'], befunde: ['C-ZUSTAND-ABGELEITET', 'C-E2E-N7B-SPALTE'], owner: 'Teil F (Endstand mit Finalrunde) und B-20 (Bildschirm frei); Abschluss-Dialog gebaut (R3-4)', expectedFail: true, run: abschluss },
 ];

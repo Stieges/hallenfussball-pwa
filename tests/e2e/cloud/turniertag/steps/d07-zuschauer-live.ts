@@ -58,7 +58,7 @@ async function qrEinstiegOhneDialog({ browser }: StepContext): Promise<void> {
     const gast = namen.get(laufend?.team_b_id ?? '') ?? '?';
     const karte = page.getByRole('article', { name: new RegExp(`^Spiel \\d+: ${heim} gegen ${gast}$`) });
     await expect(karte, `das laufende Spiel ${heim} gegen ${gast} steht da`).toBeVisible({ timeout: 10_000 });
-    await expect(karte, 'mit seinem Stand').toHaveText(new RegExp(`${laufend?.score_a ?? ''}\\s*:\\s*${laufend?.score_b ?? ''}`));
+    await expect(karte, 'mit seinem Stand').toHaveText(new RegExp(`${heim}\\s*${laufend?.score_a ?? ''}[\\s\\S]*${gast}\\s*${laufend?.score_b ?? ''}`));
     // sofort filtern ...
     const filter = page.getByTestId('public-filter-bar').getByRole('button', { name: 'Gruppe B', exact: true });
     await filter.click();

@@ -39,16 +39,25 @@ function plusMinuten(uhrzeit: string, minuten: number): string {
 async function zeitenEhrlich({ anonPage }: StepContext): Promise<void> {
   await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
   await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
-  const hinweise = anonPage.locator('[data-testid^="match-original-"]:visible');
-  await expect(hinweise.first(), 'ein verschobenes Spiel trägt „(war hh:mm)“').toHaveText(/^\(war \d{2}:\d{2}\)$/, { timeout: SOLL_TIMEOUT_MS });
-  // Groß steht die neue Uhrzeit in derselben Zeile (Zeitzelle), klein dahinter „(war …)“; laufende Spiele zeigen statt der Uhrzeit „live“.
-  const paare = await hinweise.evaluateAll((els) => els.map((el) => {
-    const zelle = (el.parentElement?.innerText ?? '').replace(el.textContent ?? '', '');
-    return { war: /\d{2}:\d{2}/.exec(el.textContent ?? '')?.[0] ?? '', gross: /\d{2}:\d{2}/.exec(zelle)?.[0] ?? '' };
-  }));
-  const mitUhrzeit = paare.filter((p) => p.gross !== '');
-  expect(mitUhrzeit.length, `verschobene Spiele mit großer Uhrzeit (gefunden: ${JSON.stringify(paare)})`).toBeGreaterThan(0);
-  for (const { war, gross } of mitUhrzeit) {
+  // Die Liste rendert nur Karten im Umfeld des sichtbaren Bereichs: beim Sammeln über die Seite blättern.
+  const paare = new Map<string, { war: string; gross: string }>();
+  await expect(async () => {
+    for (const anteil of [0, 0.25, 0.5, 0.75, 1]) {
+      await anonPage.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), anteil);
+      await anonPage.waitForTimeout(250);
+      const gefunden = await anonPage.locator('[data-testid^="match-original-"]').evaluateAll((els) => els.map((el) => {
+        // Groß steht die neue Uhrzeit in derselben Zeitzelle, klein dahinter „(war …)“; laufende Spiele zeigen statt der Uhrzeit „live“.
+        const zelle = (el.parentElement?.innerText ?? '').replace(el.textContent ?? '', '');
+        return { id: el.getAttribute('data-testid') ?? '', text: (el.textContent ?? '').trim(), gross: /\d{2}:\d{2}/.exec(zelle)?.[0] ?? '' };
+      }));
+      for (const g of gefunden) {
+        expect(g.text, 'klein „(war hh:mm)“').toMatch(/^\(war \d{2}:\d{2}\)$/);
+        paare.set(g.id, { war: /\d{2}:\d{2}/.exec(g.text)?.[0] ?? '', gross: g.gross });
+      }
+    }
+    expect([...paare.values()].filter((p) => p.gross !== '').length, 'mindestens ein verschobenes Spiel mit großer Uhrzeit und „(war …)“').toBeGreaterThan(0);
+  }).toPass({ timeout: 20_000 });
+  for (const { war, gross } of [...paare.values()].filter((p) => p.gross !== '')) {
     expect(gross, `groß die neue Uhrzeit (war ${war}, 10 Minuten nach hinten)`).toBe(plusMinuten(war, 10));
   }
 }

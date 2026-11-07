@@ -103,7 +103,9 @@ async function endstandMitTorschuetzen({ asRole, anonPage }: StepContext): Promi
   await pruefeTorschuetzen(anonPage, erwartet, 'Zuschauer-Seite (Schalter an)');
 }
 
-/** D10b2 (Schalter aus, @ZM-012): nach dem Abschluss stehen auf der Zuschauer-Seite die Plätze des Endstands, aber keine Torschützenliste. */
+/**
+ * D10b2 (Schalter aus; Soll aus @ZM-012, Kennung erst mit Teil F am Schritt – @ZM-012 ist für Jeder gegen jeden anderswo grün und soll durch
+ * den heute blockierten Abschluss mit Finalrunde nicht als rot zählen): nach dem Abschluss stehen auf der Zuschauer-Seite die Plätze des Endstands, aber keine Torschützenliste. */
 async function endstandOhneTorschuetzen({ asRole, anonPage }: StepContext): Promise<void> {
   await turnierAbgeschlossen();
   setzeTorschuetzenSchalter(false);
@@ -132,8 +134,8 @@ export const steps: readonly TurniertagStep[] = [
 
 /** Nach dem Abschluss (D11): der Endstand des abgeschlossenen Turniers. */
 export const stepsEndstand: readonly TurniertagStep[] = [
-  { id: 'D10b', title: 'Endstand: Torschützen mit Rückennummer in der App, Zuschauer-Seite gleich (Torschützen-Schalter an)', scenarios: ['@ET-044', '@ET-032'], owner: 'Teil F (Endstand mit Finalrunde: Abschluss D11); Anzeige gebaut (R3-5/R3-6)', expectedFail: false, run: endstandMitTorschuetzen },
-  { id: 'D10b2', title: 'Endstand ohne Torschützen auf der Zuschauer-Seite (Torschützen-Schalter aus)', scenarios: ['@ZM-012'], owner: 'Teil F (Endstand mit Finalrunde: Abschluss D11); Anzeige gebaut (R3-6)', expectedFail: true, run: endstandOhneTorschuetzen },
+  { id: 'D10b', title: 'Endstand: Torschützen mit Rückennummer in der App, Zuschauer-Seite gleich (Torschützen-Schalter an)', scenarios: ['@ET-044', '@ET-032'], owner: 'Teil F (Endstand mit Finalrunde: Abschluss D11); Anzeige gebaut (R3-5/R3-6)', expectedFail: true, run: endstandMitTorschuetzen },
+  { id: 'D10b2', title: 'Endstand ohne Torschützen auf der Zuschauer-Seite (Torschützen-Schalter aus)', scenarios: [], owner: 'Teil F (Endstand mit Finalrunde: Abschluss D11); Anzeige gebaut (R3-6)', expectedFail: true, run: endstandOhneTorschuetzen },
 ];
 
 /** Vor dem Gruppenabschluss (Block D5-D7): ein abgesetztes Gruppenspiel wieder einplanen. */

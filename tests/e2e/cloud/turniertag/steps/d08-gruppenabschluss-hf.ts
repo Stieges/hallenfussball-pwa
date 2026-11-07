@@ -14,7 +14,7 @@
  */
 import { expect, type Page } from '@playwright/test';
 import { fetchEngineRows } from '../../engineHelpers';
-import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagMatches, openTurniertagPath, SOLL_TIMEOUT_MS, vorbedingung, type TurniertagMatch } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagMatches, fetchTurniertagTeams, openTurniertagPath, SOLL_TIMEOUT_MS, vorbedingung, type TurniertagMatch } from './shared';
 import { appendOwner, finishingEvents, regularResultEvents } from './playViaRpc';
 import { planeGruppenErgebnisse, type FesterStand, type GruppenPlan, type PlanSpiel } from './gruppenabschlussPlan';
 import type { StepContext, TurniertagStep } from './types';
@@ -70,15 +70,23 @@ async function gruppenSeiten(): Promise<Map<string, string | null>> {
   return seiten;
 }
 
-/** Olli schließt eine Gruppe über den Vorschlag im Spielplan ab: Taste, Dialog mit Rangfolge (kein Gleichstand-Dialog), Bestätigen. */
-async function gruppeAbschliessen(seite: Page, gruppe: string): Promise<void> {
+/**
+ * Olli schließt eine Gruppe über den Vorschlag im Spielplan ab: Taste, Dialog mit Rangfolge (kein Gleichstand-Dialog), Bestätigen.
+ * Gibt Platz 1 und 2 der Tabelle zurück, die der Dialog zeigt (die „gegebene Tabelle“ von @TM-016), als Team-IDs.
+ */
+async function gruppeAbschliessen(seite: Page, gruppe: string): Promise<[string, string]> {
   await seite.locator(`[data-testid="group-close-button-${gruppe}"]`).click({ timeout: SOLL_TIMEOUT_MS });
   const dialog = seite.getByTestId('group-close-dialog');
   await expect(dialog, `Dialog „Gruppe ${gruppe} abschließen“ (kein Gleichstand)`).toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  const namen = await dialog.getByTestId('group-close-ranking').locator('li').evaluateAll((els) =>
+    els.map((li) => (li.children[1]?.firstChild?.textContent ?? '').trim()));
+  const ids = new Map((await fetchTurniertagTeams()).map((t) => [t.name, t.id]));
+  const oben: [string, string] = [ids.get(namen[0]) ?? `? ${namen[0]}`, ids.get(namen[1]) ?? `? ${namen[1]}`];
   await dialog.getByTestId('group-close-confirm').click();
   const fehler = seite.getByTestId('group-close-error');
   await expect.poll(async () => ((await fehler.count()) > 0 ? `Ablehnung: ${await fehler.innerText()}` : (await dialog.count()) === 0 ? 'abgeschlossen' : 'speichert'),
     { message: `Gruppe ${gruppe} abgeschlossen, Dialog geschlossen`, timeout: SOLL_TIMEOUT_MS * 3 }).toBe('abgeschlossen');
+  return oben;
 }
 
 async function gruppenabschluss({ asRole }: StepContext): Promise<void> {
@@ -91,14 +99,23 @@ async function gruppenabschluss({ asRole }: StepContext): Promise<void> {
   // ... und besetzt die Plätze noch nicht.
   const vorher = await gruppenSeiten();
   expect([...vorher.values()].filter((team) => team !== null), 'vor "Gruppe abschließen" sind die Plätze mit Herkunft aus den Gruppen noch nicht besetzt').toEqual([]);
-  // @TM-046/@TM-047/@TM-016: Olli schließt Gruppe A ab -> nur die Plätze aus Gruppe A sind besetzt, nach der Tabelle.
-  await gruppeAbschliessen(ownerPage, 'A');
+  // @TM-046/@TM-047/@TM-016: Olli schließt Gruppe A ab -> nur die Plätze aus Gruppe A sind besetzt, nach der Tabelle. Stehen Platz 1 und 2
+  // allein nach Punkten fest (Plan), ist das die Erwartung; sonst die Tabelle, die der Dialog zeigt (dieselbe Tabelle, nach der Olli abschließt).
+  const tabelleA = await gruppeAbschliessen(ownerPage, 'A');
+  const a = plan.oben?.A ?? tabelleA;
+  if (plan.oben) {
+    expect(tabelleA, 'der Dialog zeigt Platz 1 und 2 nach Punkten').toEqual(plan.oben.A);
+  }
   await expect.poll(async () => Object.fromEntries(await gruppenSeiten()), { message: 'nach Gruppe A: A1/A2 besetzt, B1/B2 offen', timeout: SOLL_TIMEOUT_MS * 3 })
-    .toEqual({ A1: plan.oben.A[0], A2: plan.oben.A[1], B1: null, B2: null });
+    .toEqual({ A1: a[0], A2: a[1], B1: null, B2: null });
   // Gruppe B rückt erst mit ihrem eigenen Abschluss ein.
-  await gruppeAbschliessen(ownerPage, 'B');
+  const tabelleB = await gruppeAbschliessen(ownerPage, 'B');
+  const b = plan.oben?.B ?? tabelleB;
+  if (plan.oben) {
+    expect(tabelleB, 'der Dialog zeigt Platz 1 und 2 nach Punkten').toEqual(plan.oben.B);
+  }
   await expect.poll(async () => Object.fromEntries(await gruppenSeiten()), { message: 'nach Gruppe B: alle Halbfinal-Plätze besetzt (über Kreuz)', timeout: SOLL_TIMEOUT_MS * 3 })
-    .toEqual({ A1: plan.oben.A[0], A2: plan.oben.A[1], B1: plan.oben.B[0], B2: plan.oben.B[1] });
+    .toEqual({ A1: a[0], A2: a[1], B1: b[0], B2: b[1] });
   await expect(ownerPage.getByTestId('group-close-suggestion'), 'beide Gruppen abgeschlossen: kein Vorschlag mehr').toHaveCount(0, { timeout: SOLL_TIMEOUT_MS });
 }
 
