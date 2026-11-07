@@ -110,6 +110,16 @@ describe('@ZM-192 Der Zeitstrafen-Kreis folgt dem Spielverlauf', () => {
     expect(nummern(rechne([nr5, nr8, nr3], uhr(START_5 + 120_000)).away)).toEqual([8, 3]);
   });
 
+  it('@ZM-192 Gegenbeispiel: die Reihenfolge folgt dem Eintrag, nicht der Restzeit („5“ bleibt in der Ecke, auch wenn „8“ früher endet)', () => {
+    const kurz8 = strafe(SUED, 8, START_5 + 10_000, 60);
+    expect(nummern(rechne([nr5, kurz8], uhr(START_5 + 30_000)).away)).toEqual([5, 8]);
+  });
+
+  it('@ZM-182 Gegenbeispiel: bleibt in der Halbzeitpause ein Anker im Feinstatus stehen, läuft der Ring trotzdem nicht weiter', () => {
+    const pauseMitAnker = { ...uhr(START_5 + 30_000, 'section_break'), anchorAt: T0 };
+    expect(rechne([nr5], pauseMitAnker, T0 + 45_000).away[0].restMs).toBe(90_000);
+  });
+
   it('@ZM-192 die Strafe läuft ab: der Kreis ist sofort weg', () => {
     expect(rechne([nr5], uhr(START_5 + 119_999)).away).toHaveLength(1);
     expect(rechne([nr5], uhr(START_5 + 120_000)).away).toEqual([]);
