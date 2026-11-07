@@ -101,17 +101,28 @@ export function ladeSpielplan(client: FeldStandClient, turnierId: string, zeitge
   });
 }
 
+export interface NeueEreignisse {
+  /** Je Spiel die neuen Ereignisse in `seq`-Folge; Spiele ohne neue Ereignisse fehlen. */
+  neu: Map<string, EngineEventWithSeq[]>;
+  /**
+   * Spiele mit einer Zeile, die diese App nicht lesen kann (z. B. ein neuer Ereignistyp eines neueren Cockpits). Für sie
+   * kommt nichts in `neu`, auch nicht die lesbaren Zeilen davor oder danach; nur sie gelten als nicht beantwortet.
+   */
+  unlesbar: Set<string>;
+}
+
 /**
  * Neue bestätigte Ereignisse je Spiel über seinem Wasserstand (`wasserstaende`: Spiel-ID klein → höchste bekannte `seq`).
- * Ergebnis je Spiel in `seq`-Folge; Spiele ohne neue Ereignisse fehlen.
+ * Eine unlesbare Zeile betrifft nur ihr Spiel, nie die ganze Sammelabfrage.
  */
 export function ladeEreignisse(
   client: FeldStandClient,
   wasserstaende: ReadonlyMap<string, number>,
   zeitgeber: Zeitgeber,
-): Promise<AbfrageErgebnis<Map<string, EngineEventWithSeq[]>>> {
+): Promise<AbfrageErgebnis<NeueEreignisse>> {
   return mitAbbruch(zeitgeber, async (signal) => {
     const neu = new Map<string, EngineEventWithSeq[]>();
+    const unlesbar = new Set<string>();
     const ids = [...wasserstaende.keys()];
     let ab = Math.min(...wasserstaende.values());
     for (;;) {
@@ -132,16 +143,25 @@ export function ladeEreignisse(
       for (const zeile of zeilen) {
         ab = Math.max(ab, zeile.seq);
         const matchId = zeile.match_id.toLowerCase();
-        if (zeile.seq <= (wasserstaende.get(matchId) ?? Number.POSITIVE_INFINITY)) {
+        if (unlesbar.has(matchId) || zeile.seq <= (wasserstaende.get(matchId) ?? Number.POSITIVE_INFINITY)) {
           continue;
         }
         const payload = zeile.payload !== null && typeof zeile.payload === 'object' && !Array.isArray(zeile.payload) ? zeile.payload : {};
+        let event: EngineEventWithSeq;
+        try {
+          event = rowToEngineEvent({ ...zeile, payload });
+        } catch {
+          // ohne diese Zeile wäre der Stand des Spiels falsch (z. B. eine Pause fehlt): das Spiel bleibt beim alten Stand
+          unlesbar.add(matchId);
+          neu.delete(matchId);
+          continue;
+        }
         const liste = neu.get(matchId) ?? [];
-        liste.push(rowToEngineEvent({ ...zeile, payload }));
+        liste.push(event);
         neu.set(matchId, liste);
       }
       if (zeilen.length < SEITE) {
-        return neu;
+        return { neu, unlesbar };
       }
     }
   });

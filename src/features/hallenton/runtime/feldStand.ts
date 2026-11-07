@@ -9,6 +9,8 @@
  *   mit `reduceMatch` nur im Speicher: ein voller `MatchState` ohne lokale Ausstehende.
  * - Regel 2 (@HT-033 Zeilen 1, 3, 10, 11): Leitet das Gerät das Feld, gilt der Stand der eigenen Engine
  *   (`quelle = eigenesCockpit`), sonst der Stand am Server mit dem Alter der letzten Antwort.
+ * - Eine unlesbare Ereigniszeile betrifft nur ihr Spiel: Sein Stand bleibt beim alten, seine Antwort altert (kein Ton nach
+ *   falschem Stand, Warnung des Planers), die übrigen Felder bleiben frisch (`unlesbareSpiele`).
  * - Zwei Zeitwerte: `letzteAntwortAt` (Serverzeit der letzten erfolgreichen Sammelabfrage; bleibt bei Fehler oder Abbruch
  *   stehen, @HT-011) und `bekanntSeit` je Feld (Serverzeit der letzten Änderung des Stands, @HT-051).
  * - Takt: 1 s, solange auf einem Lautsprecher-Feld ein Spiel angepfiffen ist (@HT-007), sonst 5 s; der Takt des Planers
@@ -58,6 +60,8 @@ export interface FeldStandQuelle {
   naechsterAbfrageTaktMs(planerTaktMs?: number | null): number;
   letzteAntwortAt(): number | null;
   verfuegbarkeit(): FeldStandVerfuegbarkeit;
+  /** Spiel-IDs, deren Ereignisse diese App nicht lesen kann (Diagnose, z. B. „App aktualisieren“). */
+  unlesbareSpiele(): string[];
 }
 
 interface ServerSpiel {
@@ -67,6 +71,9 @@ interface ServerSpiel {
   state: MatchState;
   /** Serverzeit, zu der der Stand dieses Spiels zuletzt neu ankam (bzw. das Spiel aktuell wurde). */
   geaendertAt: number;
+  /** Serverzeit der letzten Sammelabfrage, die dieses Spiel lesbar beantwortet hat; `null` = noch keine. */
+  antwortAt: number | null;
+  unlesbar: boolean;
 }
 
 interface FeldMerker {
@@ -85,6 +92,7 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
   let letzteAntwortAt: number | null = null;
   let ereignisVersuchAt: number | null = null;
   let laeuft: Promise<void> | null = null;
+  let kontoVersuchAt: number | null = null;
   const serverSpiele = new Map<string, ServerSpiel>();
   const merker = new Map<FeldKennung, FeldMerker>();
   const feldWahl = erzeugeFeldWahl();
@@ -136,8 +144,8 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     return bekanntSeit;
   }
 
-  function antwortAlterMs(now: number): number {
-    return letzteAntwortAt === null ? Number.POSITIVE_INFINITY : now - letzteAntwortAt;
+  function antwortAlterMs(now: number, seit: number | null = letzteAntwortAt): number {
+    return seit === null ? Number.POSITIVE_INFINITY : now - seit;
   }
 
   function staende(): FeldStand[] {
@@ -159,7 +167,7 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
       const server = serverSpiele.get(spiel.id);
       const state = server?.state ?? reduceMatch([], spiel.ctx).state;
       const bekanntSeit = merke(kennung, spiel.id, 'server', state, server?.geaendertAt ?? now, now);
-      ergebnis.push({ feldId: kennung, ctx: spiel.ctx, state, quelle: { art: 'server', antwortAlterMs: antwortAlterMs(now) }, bekanntSeit });
+      ergebnis.push({ feldId: kennung, ctx: spiel.ctx, state, quelle: { art: 'server', antwortAlterMs: antwortAlterMs(now, server ? server.antwortAt : letzteAntwortAt) }, bekanntSeit });
     }
     return ergebnis;
   }
@@ -215,7 +223,7 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     for (const ctx of aktuelle) {
       if (!serverSpiele.has(ctx.matchId)) {
         // neues aktuelles Spiel: Wasserstand 0, Stand ab dem leeren Log
-        serverSpiele.set(ctx.matchId, { ctx, log: [], wasserstand: 0, state: reduceMatch([], ctx).state, geaendertAt: now });
+        serverSpiele.set(ctx.matchId, { ctx, log: [], wasserstand: 0, state: reduceMatch([], ctx).state, geaendertAt: now, antwortAt: null, unlesbar: false });
       }
     }
     ereignisVersuchAt = now;
@@ -227,7 +235,14 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     }
     const antwortAt = deps.serverNow();
     letzteAntwortAt = antwortAt;
-    for (const [matchId, neu] of ergebnis.wert) {
+    for (const ctx of aktuelle) {
+      const spiel = serverSpiele.get(ctx.matchId);
+      if (spiel) {
+        const unlesbar = ergebnis.wert.unlesbar.has(ctx.matchId);
+        serverSpiele.set(ctx.matchId, { ...spiel, unlesbar, antwortAt: unlesbar ? spiel.antwortAt : antwortAt });
+      }
+    }
+    for (const [matchId, neu] of ergebnis.wert.neu) {
       const spiel = serverSpiele.get(matchId);
       if (!spiel || neu.length === 0) {
         continue;
@@ -247,6 +262,11 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
       return;
     }
     if (verfuegbar === 'pruefe') {
+      // gescheiterte Prüfung (z. B. Start ohne Netz) frühestens im Abstand des Spielplans wiederholen, nicht je Takt
+      if (kontoVersuchAt !== null && now - kontoVersuchAt < SPIELPLAN_TAKT_MS) {
+        return;
+      }
+      kontoVersuchAt = now;
       const konto = await pruefeEchtesKonto(client, zeitgeber);
       if (!konto.ok) {
         fehlschlag(konto);
@@ -274,5 +294,6 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     naechsterAbfrageTaktMs: (planerTaktMs = null) => naechsterAbfrageTaktMs(planerTaktMs),
     letzteAntwortAt: () => letzteAntwortAt,
     verfuegbarkeit: () => verfuegbar,
+    unlesbareSpiele: () => [...serverSpiele.values()].filter((spiel) => spiel.unlesbar).map((spiel) => spiel.ctx.matchId),
   };
 }
