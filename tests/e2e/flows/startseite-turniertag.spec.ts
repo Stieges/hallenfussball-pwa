@@ -1,6 +1,8 @@
 /**
  * Startseite am Turniertag (lokal, ohne Server, Gast). Szenarien (docs/anforderungen/):
  * @OB-078 Am Turniertag stehen die Turniere des Tages oben und offen (Handy 360×640, Sa 28.11. 08:00 / 09:10 / 12:40, mit und ohne Altlasten)
+ * @OB-079 Die Turnierkarte zeigt nur, was man zum Finden braucht (Zustand nur bei Abweichung von „Bereit“, Schild in der Zeile des Orts)
+ * @OB-081 Ein heute abgeschlossenes Turnier bleibt bis zum Ende des Tages unter „Heute“ (ab dem Folgetag nur im Archiv)
  * @OB-077 / @OB-030 / @OB-002 Filter ohne Farbe erkennbar, Suche und Filter in der Adresse, kein Filter „Beendet“
  * @LZ-094 Papierkorb leeren: eine Rückfrage, alle Turniere weg
  * @W1-041 Import speichert vor „Import erfolgreich“, Esc nach der Meldung verliert nichts
@@ -18,7 +20,7 @@ const BILDER = process.env.SEITE_BILDER;
 const HANDY = { width: 360, height: 640 };
 const KARTE = '[data-testid^="tournament-card-"]';
 
-type Variante = { lage: Lage; altlasten?: boolean; anpassen?: (liste: Array<Record<string, unknown>>) => void };
+type Variante = { lage: Lage; altlasten?: boolean; uhrzeit?: string; anpassen?: (liste: Array<Record<string, unknown>>) => void };
 
 function seed({ tournaments }: { tournaments: unknown[] }) {
   localStorage.setItem('hallenfussball-settings', JSON.stringify({ language: 'de' }));
@@ -32,11 +34,11 @@ function seed({ tournaments }: { tournaments: unknown[] }) {
   };
 }
 
-async function oeffne(page: Page, { lage, altlasten = false, anpassen }: Variante, pfad = '/#/') {
+async function oeffne(page: Page, { lage, altlasten = false, uhrzeit, anpassen }: Variante, pfad = '/#/') {
   const liste = baueTurniertagSaat(lage, altlasten);
   anpassen?.(liste);
   await page.context().addInitScript(seed, { tournaments: liste });
-  await page.clock.setFixedTime(new Date(UHRZEIT[lage]));
+  await page.clock.setFixedTime(new Date(uhrzeit ?? UHRZEIT[lage]));
   await page.goto(pfad);
   await page.waitForSelector('[data-testid="dashboard-import-trigger"]', { timeout: 20000 });
 }
@@ -54,10 +56,11 @@ test.beforeEach(async ({ page }, testInfo) => {
 });
 
 test.describe('@OB-078 Am Turniertag stehen die Turniere des Tages oben und offen', () => {
-  const faelle: Array<[string, Variante, string, string]> = [
-    ['08:00 nichts angepfiffen', { lage: 'bereit' }, 'tw-f2', 'status.upcoming'],
-    ['09:10 F2 läuft', { lage: 'f2laeuft' }, 'tw-f2', 'status.running'],
-    ['12:40 F2 abgeschlossen', { lage: 'f2fertig' }, 'tw-f1', 'status.upcoming'],
+  // Die erste Karte steht ohne Zustandswort („Bereit“ steht nicht auf der Karte); nur 09:10 trägt F2 „Läuft“ (@OB-079)
+  const faelle: Array<[string, Variante, string]> = [
+    ['08:00 nichts angepfiffen', { lage: 'bereit' }, 'tw-f2'],
+    ['09:10 F2 läuft', { lage: 'f2laeuft' }, 'tw-f2'],
+    ['12:40 F2 abgeschlossen', { lage: 'f2fertig' }, 'tw-f1'],
   ];
   for (const altlasten of [false, true]) {
     for (const [name, variante, erste] of faelle) {
@@ -132,10 +135,7 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden und Unters
     }
   });
 
-  // Mit Altersklasse in Zeile 2 bricht das Schild „Co-Admin“ bei 360 in eine eigene Reihe der Zeile 2 um (Umbruch erlaubt, Kürzen nie).
-  // Jede umgebrochene Karte ist rund 32 px höher; ob die drei Karten dann noch vor die untere Leiste passen, hängt von der Zahl der Schilder ab
-  // (Ergebnis im Bericht, @OB-079 Gegeben nennt keine Rolle) – hier gilt: Schild vollständig, in der Karte, über dem Ort.
-  test('Gegenprobe: Co-Admin auf allen drei Karten – das Schild steht in Zeile 2, ist bei 360 nicht abgeschnitten', async ({ page }, testInfo) => {
+  test('Co-Admin auf allen drei Karten: das Schild steht in der Zeile des Orts, alle drei Karten bleiben ohne Scrollen sichtbar', async ({ page }) => {
     await oeffne(page, {
       lage: 'bereit',
       anpassen: (liste) => { for (const t of liste) { if (['tw-f2', 'tw-f1', 'tw-d'].includes(String(t.id))) { t.myRole = 'co-admin'; } } },
@@ -148,15 +148,83 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden und Unters
       await expect(schild).toHaveText('Co-Admin');
       const s = await schild.boundingBox();
       const k = await karte.boundingBox();
+      const ort = await karte.getByTestId('card-location').boundingBox();
+      const zeile2 = await karte.getByTestId('card-age-class').boundingBox();
       expect(s!.x, `Schild der Karte ${i + 1} links in der Karte`).toBeGreaterThanOrEqual(k!.x);
       expect(s!.x + s!.width, `Schild der Karte ${i + 1} rechts in der Karte`).toBeLessThanOrEqual(k!.x + k!.width);
-      // Schild und Altersklasse liegen in derselben Zeile-2-Gruppe oberhalb des Orts
-      const ort = await karte.getByTestId('card-location').boundingBox();
-      expect(s!.y + s!.height).toBeLessThanOrEqual(ort!.y + 1);
+      // das Schild steht in der Zeile des Orts (gleiche Höhenlage, rechts vom Ort), unterhalb der Zeile mit Altersklasse und Uhrzeit
+      const mitte = s!.y + s!.height / 2; // die Mitte des Schilds liegt in der Zeile des Orts (das Schild ragt etwas über die Textzeile)
+      expect(mitte, `Mitte des Schilds der Karte ${i + 1} in der Zeile des Orts`).toBeGreaterThanOrEqual(ort!.y);
+      expect(mitte, `Mitte des Schilds der Karte ${i + 1} in der Zeile des Orts`).toBeLessThanOrEqual(ort!.y + ort!.height);
+      expect(mitte, `Schild der Karte ${i + 1} nicht in der Zeile der Altersklasse`).toBeGreaterThanOrEqual(zeile2!.y + zeile2!.height);
+      expect(s!.x, `Schild der Karte ${i + 1} rechts vom Ort`).toBeGreaterThanOrEqual(ort!.x);
       expect(await schild.evaluate((el) => el.scrollWidth <= el.clientWidth), `Schild der Karte ${i + 1} vollständig`).toBe(true);
-      testInfo.annotations.push({ type: 'karte-unterkante', description: `Karte ${i + 1}: ${k!.y + k!.height} px (untere Leiste ab ${HANDY.height - 64})` });
+      // ganz im Bildschirmausschnitt und über der festen unteren Leiste (64 px): auch mit Schild auf allen drei Karten ohne Scrollen
+      expect(k!.y + k!.height, `Karte ${i + 1} mit Schild vor dem Falz`).toBeLessThanOrEqual(HANDY.height - 64);
     }
     await bild(page, 'ob079-coadmin');
+  });
+
+  test('das Schild macht die Karte nicht höher: Karte mit Co-Admin und Karte ohne Schild sind gleich hoch, der Ort bleibt ungekürzt', async ({ page }) => {
+    await oeffne(page, {
+      lage: 'bereit',
+      anpassen: (liste) => { for (const t of liste) { if (t.id === 'tw-f1') { t.myRole = 'co-admin'; } } },
+    });
+    const karten = page.getByTestId('section-heute').locator(KARTE);
+    const ohne = await karten.nth(0).boundingBox(); // F2 ohne Schild
+    const mit = await karten.nth(1).boundingBox(); // F1 mit Schild
+    expect(await karten.nth(1).locator('[data-testid^="tournament-role-"]').count()).toBe(1);
+    expect(await karten.nth(0).locator('[data-testid^="tournament-role-"]').count()).toBe(0);
+    expect(mit!.height, `Karte mit Schild ${mit!.height} px, ohne ${ohne!.height} px`).toBeLessThanOrEqual(ohne!.height);
+    const m = await karten.nth(1).getByTestId('card-location').evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return { text: range.getBoundingClientRect().width, box: el.clientWidth };
+    });
+    expect(m.text, 'Ort neben dem Schild ungekürzt').toBeLessThanOrEqual(m.box);
+  });
+
+  test('ein langer Ort auf einer Karte (zweizeilig, ungekürzt): alle drei Karten stehen trotzdem über der unteren Leiste', async ({ page }) => {
+    await oeffne(page, {
+      lage: 'bereit',
+      anpassen: (liste) => { for (const t of liste) { if (t.id === 'tw-f1') { t.location = { name: 'Sporthalle des Turn- und Sportvereins Waging am See', city: 'Waging am See' }; } } },
+    });
+    const karten = page.getByTestId('section-heute').locator(KARTE);
+    await expect(karten).toHaveCount(3);
+    const ort = karten.nth(1).getByTestId('card-location');
+    await expect(ort).toHaveText('Sporthalle des Turn- und Sportvereins Waging am See');
+    const m = await ort.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const zeilen = new Set(Array.from(range.getClientRects()).map((r) => Math.round(r.y)));
+      return { text: range.getBoundingClientRect().width, box: el.clientWidth, zeilen: zeilen.size, gekuerzt: getComputedStyle(el).textOverflow === 'ellipsis' };
+    });
+    expect(m.text).toBeLessThanOrEqual(m.box);
+    expect(m.gekuerzt).toBe(false);
+    for (let i = 0; i < 3; i += 1) {
+      const k = await karten.nth(i).boundingBox();
+      expect(k!.y + k!.height, `Karte ${i + 1} mit langem Ort vor dem Falz (untere Leiste ab ${HANDY.height - 64})`).toBeLessThanOrEqual(HANDY.height - 64);
+    }
+    await bild(page, 'ob079-langer-ort');
+  });
+
+  test('„Bereit“ steht auf keiner Karte; „Läuft“ trägt Symbol und Wort und ist nicht rot', async ({ page }) => {
+    await oeffne(page, { lage: 'f2laeuft' });
+    const karten = page.getByTestId('section-heute').locator(KARTE);
+    await expect(karten).toHaveCount(3);
+    await expect(page.locator(KARTE).filter({ hasText: 'Bereit' })).toHaveCount(0);
+    const marken = page.getByTestId('card-state');
+    await expect(marken).toHaveCount(1);
+    const laeuft = karten.first().getByTestId('card-state');
+    await expect(laeuft).toHaveText('Läuft');
+    expect(await laeuft.locator('svg').count()).toBeGreaterThan(0);
+    // kein Fehler-Rot: weder Rand noch Symbolfarbe sind rot (R deutlich über G und B)
+    const farben = await laeuft.evaluate((el) => [getComputedStyle(el).borderTopColor, getComputedStyle(el.querySelector('span') as Element).color]);
+    for (const farbe of farben) {
+      const [r, g, b] = (farbe.match(/\d+/g) ?? []).map(Number);
+      expect(r > g + 60 && r > b + 60, `Farbe ${farbe} ist rot`).toBe(false);
+    }
+    await bild(page, 'ob079-laeuft');
   });
 
   for (const groesse of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }]) {
@@ -199,6 +267,45 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden und Unters
     await oeffne(page, { lage: 'bereit' });
     await expect(page.getByTestId('section-upcoming').getByTestId('tournament-card-tw-g').getByTestId('card-time')).toHaveText('So 29.11. · 08:30');
     await expect(page.getByTestId('tournament-card-tw-g').getByTestId('card-age-class').locator('..')).toHaveText('G-Junioren · So 29.11. · 08:30');
+  });
+});
+
+test.describe('@OB-081 Ein heute abgeschlossenes Turnier bleibt bis zum Ende des Tages unter „Heute“', () => {
+  test('Sa 12:40, F2 um 12:30 abgeschlossen: F1 erste Karte, darunter D, F2 letzte mit „Abgeschlossen“ (Symbol und Wort), alle ohne Scrollen', async ({ page }) => {
+    await oeffne(page, { lage: 'f2fertig' });
+    const karten = page.getByTestId('section-heute').locator(KARTE);
+    await expect(karten).toHaveCount(3);
+    await expect(karten.nth(0)).toHaveAttribute('data-testid', 'tournament-card-tw-f1');
+    await expect(karten.nth(1)).toHaveAttribute('data-testid', 'tournament-card-tw-d');
+    await expect(karten.nth(2)).toHaveAttribute('data-testid', 'tournament-card-tw-f2');
+    const marke = karten.nth(2).getByTestId('card-state');
+    await expect(marke).toHaveText('Abgeschlossen');
+    expect(await marke.locator('svg').count()).toBeGreaterThan(0);
+    // die beiden anderen tragen kein Wort („Bereit“ steht nicht auf der Karte)
+    await expect(page.getByTestId('card-state')).toHaveCount(1);
+    await expect(page.locator(KARTE).filter({ hasText: 'Bereit' })).toHaveCount(0);
+    for (let i = 0; i < 3; i += 1) {
+      const k = await karten.nth(i).boundingBox();
+      expect(k!.y + k!.height, `Karte ${i + 1} vor dem Falz`).toBeLessThanOrEqual(HANDY.height - 64);
+    }
+    // F2 steht heute noch nicht im Archiv
+    await page.goto('/#/archiv');
+    await page.waitForSelector('[data-testid^="archive-year-"]');
+    await expect(page.getByTestId('tournament-card-tw-f2')).toHaveCount(0);
+    await expect(page.getByTestId('tournament-card-tw-archiv')).toBeVisible();
+    await bild(page, 'ob081-heute-abgeschlossen');
+  });
+
+  test('Folgetag (So 08:00): F2 steht nicht mehr unter „Heute“, nur noch im Archiv', async ({ page }) => {
+    await oeffne(page, { lage: 'f2fertig', uhrzeit: '2026-11-29T08:00:00+01:00' });
+    await expect(page.getByTestId('section-heute').getByTestId('tournament-card-tw-f2')).toHaveCount(0);
+    await expect(page.getByTestId('tournament-card-tw-f2')).toHaveCount(0);
+    await page.goto('/#/archiv');
+    await page.waitForSelector('[data-testid^="archive-year-"]');
+    const f2 = page.getByTestId('tournament-card-tw-f2');
+    await expect(f2).toBeVisible();
+    await expect(f2.getByTestId('card-state')).toHaveText('Abgeschlossen');
+    await bild(page, 'ob081-folgetag-archiv');
   });
 });
 

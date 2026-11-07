@@ -1,7 +1,7 @@
 /**
  * @LZ-001 Die Karte auf der Startseite trägt dasselbe Wort wie der Zustand, auch im Archiv: Bereit statt „Bevorstehend“,
- * Abgeschlossen bzw. Abgebrochen statt „Archiviert“. @OB-078 Am Handy trägt der Titel die volle Breite (kein Platzhalter für
- * das Schild, Innenabstand `spacing.md`). Zustandsschild: Schrift `textPrimary`, `fontSizes.sm`, ohne Großbuchstaben.
+ * Abgeschlossen bzw. Abgebrochen statt „Archiviert“; „Bereit“ steht nicht auf der Karte (@OB-079). @OB-078 Am Handy trägt der Titel die
+ * volle Breite (kein Platzhalter für das Schild, Innenabstand `spacing.md`).
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -21,29 +21,22 @@ function turnier(extra: Partial<Tournament>): Tournament {
   } as unknown as Tournament;
 }
 
-describe('@LZ-001 Wort auf der Karte', () => {
-  it('Bereit: kommendes Turnier trägt „status.upcoming“ (de: Bereit)', () => {
+describe('@LZ-001 Wort auf der Karte (nur wenn es von „Bereit“ abweicht, @OB-079)', () => {
+  it('Bereit: kommendes Turnier trägt kein Zustandswort (weder „status.upcoming“ noch eine Marke)', () => {
     render(<TournamentCard tournament={turnier({})} categoryLabel="upcoming" />);
-    expect(screen.getByText('dashboard:status.upcoming')).toBeInTheDocument();
+    expect(screen.queryByText('dashboard:status.upcoming')).toBeNull();
+    expect(screen.queryByTestId('card-state')).toBeNull();
   });
 
   it('Archiv: abgeschlossen trägt „Abgeschlossen“ (status.finished), nie „Archiviert“', () => {
     render(<TournamentCard tournament={turnier({ lifecycleStatus: 'finished' })} categoryLabel="archived" />);
-    expect(screen.getByText('dashboard:status.finished')).toBeInTheDocument();
+    expect(screen.getByTestId('card-state')).toHaveTextContent('dashboard:status.finished');
     expect(screen.queryByText('dashboard:status.archived')).toBeNull();
   });
 
   it('Archiv: abgebrochen trägt „Abgebrochen“ (status.cancelled)', () => {
     render(<TournamentCard tournament={turnier({ lifecycleStatus: 'cancelled' })} categoryLabel="archived" />);
-    expect(screen.getByText('dashboard:status.cancelled')).toBeInTheDocument();
-  });
-
-  it('Schild: Schrift textPrimary, Größe sm, ohne Großbuchstaben, Zustand am Rand in seiner Farbe', () => {
-    render(<TournamentCard tournament={turnier({})} categoryLabel="upcoming" />);
-    const schild = screen.getByText('dashboard:status.upcoming');
-    expect(schild.style.color).toBe(cssVars.colors.textPrimary);
-    expect(schild.style.fontSize).toBe(cssVars.fontSizes.sm);
-    expect(schild.style.textTransform).toBe('');
+    expect(screen.getByTestId('card-state')).toHaveTextContent('dashboard:status.cancelled');
   });
 });
 

@@ -71,6 +71,12 @@ describe('Turnierkarte zeigt die Altersklasse (@OB-079)', () => {
     expect(screen.getByTestId('card-age-class').parentElement).toHaveTextContent(/^D-Junioren$/);
   });
 
+  it('Gegenbeispiel: ohne Altersklasse steht in Zeile 2 nur die Uhrzeit, kein Platzhalter und kein Trenner', () => {
+    render(<TournamentCard tournament={turnier('x', undefined, '16:30')} categoryLabel="upcoming" inToday />);
+    expect(screen.queryByTestId('card-age-class')).toBeNull();
+    expect(screen.getByTestId('card-time').parentElement).toHaveTextContent(/^16:30$/);
+  });
+
   it('Gegenbeispiel: Modus, Veranstalter und Platzierung bleiben weg', () => {
     const t = { ...turnier('x', 'D-Junioren', '10:00'), organizer: 'TSV Waging' } as Tournament;
     render(<TournamentCard tournament={t} categoryLabel="upcoming" inToday />);

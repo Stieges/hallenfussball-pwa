@@ -14,10 +14,11 @@ vi.mock('../../../hooks/useTournamentStartState', () => ({ useTournamentStartSta
 
 import { DashboardTurniereTab } from '../DashboardTurniereTab';
 
-function turnier(id: string, startDate: string, startTime: string, lage: 'bereit' | 'laeuft' | 'entwurf' = 'bereit'): Tournament {
+function turnier(id: string, startDate: string, startTime: string, lage: 'bereit' | 'laeuft' | 'entwurf' | 'abgeschlossen' = 'bereit'): Tournament {
   return {
     id, title: id, startDate, startTime, teams: [], placementLogic: [], location: { name: 'Halle' },
     status: lage === 'entwurf' ? 'draft' : 'published',
+    lifecycleStatus: lage === 'abgeschlossen' ? 'finished' : undefined,
     matches: [{ id: 'm1', matchStatus: lage === 'laeuft' ? 'running' : 'scheduled' }],
   } as unknown as Tournament;
 }
@@ -66,5 +67,36 @@ describe('@OB-078 Am Turniertag stehen die Turniere des Tages oben und offen', (
     const entwuerfe = within(screen.getByTestId('section-draft')).getByRole('button', { expanded: false });
     expect(entwuerfe).toBeTruthy();
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(entwuerfe);
+  });
+});
+
+describe('@OB-081 Ein heute abgeschlossenes Turnier bleibt bis zum Ende des Tages unter „Heute“', () => {
+  // Gegeben heute ist Samstag, 28.11., 12:40, und Olli hat F2 um 12:30 abgeschlossen
+  const mittag = [
+    turnier('F2', '2026-11-28', '08:30', 'abgeschlossen'),
+    turnier('F1', '2026-11-28', '13:00'),
+    turnier('D', '2026-11-28', '16:30'),
+    turnier('G', '2026-11-29', '08:30'),
+  ];
+
+  it('F1 ist die erste Karte unter „Heute“, darunter D, F2 steht als letzte mit „Abgeschlossen“ (Symbol und Wort)', () => {
+    vi.setSystemTime(new Date(2026, 10, 28, 12, 40));
+    render(tab(mittag));
+    const heute = screen.getByTestId('section-heute');
+    expect(kartenIds(heute)).toEqual(['F1', 'D', 'F2']);
+    const marke = within(within(heute).getByTestId('tournament-card-F2')).getByTestId('card-state');
+    expect(marke).toHaveTextContent('dashboard:status.finished');
+    expect(marke.querySelector('svg')).not.toBeNull();
+    // Bereit steht auf den anderen Karten nicht
+    expect(within(heute).getAllByTestId('card-state')).toHaveLength(1);
+    // nicht doppelt: F2 steht in keinem anderen Abschnitt
+    expect(screen.getAllByTestId('tournament-card-F2')).toHaveLength(1);
+  });
+
+  it('Gegenbeispiel: ab Sonntag steht F2 nicht mehr unter „Heute“ (und gar nicht mehr in diesem Reiter)', () => {
+    vi.setSystemTime(new Date(2026, 10, 29, 8, 0));
+    render(tab(mittag));
+    expect(screen.queryByTestId('tournament-card-F2')).toBeNull();
+    expect(kartenIds(screen.getByTestId('section-heute'))).toEqual(['G']);
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Reiter „Turniere“ der Startseite (aus `DashboardScreen.tsx` herausgelöst).
  *
- * Abschnitte von oben (@OB-078, @LZ-001): „Heute“ (offen, klappt nie von selbst zu) · Läuft · Kommende Turniere · Entwürfe.
+ * Abschnitte von oben (@OB-078, @OB-081, @LZ-001): „Heute“ (offen, klappt nie von selbst zu; ein heute abgeschlossenes Turnier steht als letzte Karte darin) · Läuft · Kommende Turniere · Entwürfe.
  * Die Aufteilung steht rein in `utils/startseiteAbschnitte.ts`. Suche und Filter kommen aus der Adresse (@OB-030).
  */
 import type { ReactNode } from 'react';
@@ -58,7 +58,7 @@ export const DashboardTurniereTab: React.FC<DashboardTurniereTabProps> = ({
     list.map((tournament) => {
       // Das Wort auf der Karte folgt dem Zustand des Turniers, nicht dem Abschnitt (@LZ-001)
       const kategorie = categorizeTournament(tournament);
-      const categoryLabel = kategorie === 'running' ? 'running' : kategorie === 'draft' ? 'draft' : 'upcoming';
+      const categoryLabel = kategorie === 'running' ? 'running' : kategorie === 'draft' ? 'draft' : kategorie === 'finished' ? 'archived' : 'upcoming';
       return (
         <TournamentCard
           key={tournament.id}

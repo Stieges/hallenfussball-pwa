@@ -1,6 +1,6 @@
 /**
- * Reiter „Archiv“ der Startseite (aus `DashboardScreen.tsx` herausgelöst, unverändert): Abgeschlossene und Abgebrochene
- * nach Jahr, das jüngste Jahr offen.
+ * Reiter „Archiv“ der Startseite (aus `DashboardScreen.tsx` herausgelöst): Abgeschlossene und Abgebrochene
+ * nach Jahr, das jüngste Jahr offen; heute abgeschlossene erst ab dem Folgetag (@OB-081, bis dahin unter „Heute“).
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { CollapsibleSection } from '../ui';
 import { Icons } from '../ui/Icons';
 import { cssVars, iconSizeValues } from '../../design-tokens';
 import { getExtendedCategories } from '../../utils/tournamentCategories';
+import { istHeuteAbgeschlossen } from '../../utils/startseiteAbschnitte';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { emptyStateStyle, gridStyle } from './dashboardStyles';
 
@@ -25,7 +26,11 @@ export const DashboardArchivTab: React.FC<DashboardArchivTabProps> = ({
 }) => {
   const { t } = useTranslation('dashboard');
   const isMobile = useIsMobile();
-  const extended = useMemo(() => getExtendedCategories(activeTournaments), [activeTournaments]);
+  // @OB-081: ein heute abgeschlossenes Turnier steht bis Tagesende nur unter „Heute“, ab dem Folgetag nur hier
+  const extended = useMemo(() => {
+    const jetzt = new Date();
+    return getExtendedCategories(activeTournaments.filter((t) => !istHeuteAbgeschlossen(t, jetzt)));
+  }, [activeTournaments]);
   const sortedYears = useMemo(
     () => Object.keys(extended.archivedByYear).map(Number).sort((a, b) => b - a),
     [extended.archivedByYear],

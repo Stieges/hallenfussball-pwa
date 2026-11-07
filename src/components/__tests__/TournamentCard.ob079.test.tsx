@@ -1,8 +1,8 @@
 /**
  * @OB-079 Die Turnierkarte auf der Startseite zeigt nur, was man zum Finden braucht (docs/anforderungen/2026-10-02_oberflaeche.md).
- * Gegeben Olli hat am Samstag F2 (08:30), F1 (13:00) und D (16:30) in der Bergader SportARENA. Dann zeigt jede Karte Name, Zustandswort,
+ * Gegeben Olli hat am Samstag F2 (08:30), F1 (13:00) und D (16:30) in der Bergader SportARENA. Dann zeigt jede Karte Name,
  * Altersklasse, unter „Heute“ die Uhrzeit, sonst Tag und Uhrzeit, und den Ort; Modus, Veranstalter und Platzierung stehen nicht auf der Karte.
- * (Die Altersklasse prüft TournamentCard.altersklasse.test.tsx.)
+ * (Die Altersklasse prüft TournamentCard.altersklasse.test.tsx, Zustandswort und Rollen-Schild TournamentCard.zustand.ob079.test.tsx.)
  * („Alle drei Karten ohne Scrollen“ prüft das Playwright-Spec startseite-turniertag.spec.ts.)
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -22,10 +22,10 @@ const f2 = {
 } as unknown as Tournament;
 
 describe('@OB-079 Inhalt der Karte', () => {
-  it('unter „Heute“: Name, Zustandswort, nur die Uhrzeit und der Ort', () => {
+  it('unter „Heute“: Name, nur die Uhrzeit und der Ort (Bereit steht nicht auf der Karte)', () => {
     render(<TournamentCard tournament={f2} categoryLabel="upcoming" inToday />);
     expect(screen.getByRole('heading', { name: 'F2-Junioren Hallenturnier' })).toBeInTheDocument();
-    expect(screen.getByText('dashboard:status.upcoming')).toBeInTheDocument();
+    expect(screen.queryByText('dashboard:status.upcoming')).toBeNull();
     expect(screen.getByTestId('card-time')).toHaveTextContent(/^08:30$/);
     expect(screen.getByTestId('card-age-class')).toHaveTextContent('F-Junioren');
     expect(screen.getByTestId('card-location')).toHaveTextContent('Bergader SportARENA');

@@ -2,12 +2,14 @@
  * Abschnitte der Startseite (Reiter „Turniere“), rein ohne React (@OB-078, @OB-077, @OB-002, @LZ-001).
  *
  * Reihenfolge von oben: „Heute“ (alle Turniere des heutigen Tages im Zustand Läuft oder Bereit, laufende zuerst, dann nach
- * Beginn) · Läuft (nicht von heute, etwa über Mitternacht oder nie abgeschlossen) · Kommende Turniere (Bereit, nicht von heute)
+ * Beginn; ein heute abgeschlossenes Turnier bleibt bis Tagesende als letzte Karte darunter, @OB-081) · Läuft (nicht von heute, etwa über Mitternacht oder nie abgeschlossen) · Kommende Turniere (Bereit, nicht von heute)
  * · Entwürfe. Ein vergessener Lauf oder eine Probe-Kopie steht nie über „Heute“. Ein Turnier steht in genau einem Abschnitt.
- * Suche und Filter wirken vor dem Aufteilen; Abgeschlossene und Abgebrochene gehören ins Archiv, nicht in diesen Reiter.
+ * Suche und Filter wirken vor dem Aufteilen; Abgeschlossene und Abgebrochene gehören ins Archiv, nicht in diesen Reiter –
+ * außer sie sind heute abgeschlossen (nur unter „Heute“, ab dem Folgetag nur im Archiv; ein gesetzter Filter blendet sie aus, sie sind
+ * keiner der drei Zustände Läuft, Bereit, Entwurf).
  */
 import type { Tournament } from '../types/tournament';
-import { categorizeTournaments, getTournamentDateTime } from './tournamentCategories';
+import { categorizeTournament, categorizeTournaments, getTournamentDateTime } from './tournamentCategories';
 import { matchesTournamentSearch } from './tournamentSearch';
 
 /** Filter im Reiter „Turniere“; „Beendet“ gibt es hier nicht (@OB-002), das Archiv ist ein eigener Reiter. */
@@ -34,6 +36,20 @@ export function istAmSelbenTag(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+/** Turniertag = Beginn-Tag (lokaler Tag des Geräts, wie bei „Heute“). */
+function istVonTag(tournament: Tournament, tag: Date): boolean {
+  const beginn = getTournamentDateTime(tournament);
+  return beginn !== null && istAmSelbenTag(beginn, tag);
+}
+
+/**
+ * Heute abgeschlossen oder abgebrochen mit Turniertag heute (@OB-081): steht bis Tagesende unter „Heute“ und noch nicht im Archiv.
+ * Papierkorb-Turniere zählen nicht.
+ */
+export function istHeuteAbgeschlossen(tournament: Tournament, now: Date): boolean {
+  return categorizeTournament(tournament) === 'finished' && istVonTag(tournament, now);
+}
+
 function beginnVon(tournament: Tournament): number {
   return getTournamentDateTime(tournament)?.getTime() ?? Number.MAX_SAFE_INTEGER;
 }
@@ -51,13 +67,15 @@ export function baueStartseiteAbschnitte(
   const upcoming = mitFilter('upcoming', categorized.upcoming);
   const draft = mitFilter('draft', categorized.draft);
 
-  const vonHeute = (t: Tournament): boolean => {
-    const beginn = getTournamentDateTime(t);
-    return beginn !== null && istAmSelbenTag(beginn, now);
-  };
+  const vonHeute = (t: Tournament): boolean => istVonTag(t, now);
+  const nachBeginn = (a: Tournament, b: Tournament): number => beginnVon(a) - beginnVon(b);
+  // @OB-081: heute abgeschlossen = letzte Karten unter „Heute“; ein gesetzter Filter (Läuft, Bereit, Entwurf) zeigt sie nicht
+  const abgeschlossen = filters.length === 0
+    ? categorized.finished.filter((t) => istHeuteAbgeschlossen(t, now) && matchesTournamentSearch(t, search)).sort(nachBeginn)
+    : [];
 
   // Läuft zuerst, dann nach Beginn; ein fehlendes Datum steht ganz hinten (stabil, nicht 0)
-  const heute = [...running.filter(vonHeute).sort((a, b) => beginnVon(a) - beginnVon(b)), ...upcoming.filter(vonHeute).sort((a, b) => beginnVon(a) - beginnVon(b))];
+  const heute = [...running.filter(vonHeute).sort(nachBeginn), ...upcoming.filter(vonHeute).sort(nachBeginn), ...abgeschlossen];
 
   return {
     heute,
