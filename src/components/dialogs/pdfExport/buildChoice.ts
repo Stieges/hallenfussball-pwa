@@ -70,6 +70,10 @@ export async function buildChoice(choice: PdfChoice, ctx: BuildContext): Promise
     // Ohne gespeicherten Endstand kein Endstand-PDF (@DR-011): die Karte ist dann ausgegraut, hier nur die Sicherung
     throw new Error('Endstand-PDF ohne gespeicherten Endstand');
   }
+  if (choice === 'final' && (tournament.hideScoresForPublic || tournament.hideRankingsForPublic)) {
+    // @DR-050: ein PDF für alle zeigt ohne Ergebnisse oder Tabellen keine Plätze – dann gibt es kein Endstand-PDF (Karte ausgegraut)
+    throw new Error('Endstand-PDF ohne Plätze');
+  }
   const schedule = withTournamentState(ctx.schedule, tournament);
   const options: PDFExportOptions = {
     tournament,

@@ -34,6 +34,7 @@ const { initReactI18next } = await import('react-i18next');
 const { PDFExportDialog } = await import('../PDFExportDialog');
 const { PublicPdfButton } = await import('../../PublicPdfButton');
 const { publicFinalSource } = await import('../pdfExport/finalPdfSource');
+const { buildChoice } = await import('../pdfExport/buildChoice');
 
 const NOW = new Date(2026, 10, 14, 18, 5);
 const CLOSED_AT = new Date(2026, 10, 14, 17, 40);
@@ -72,7 +73,7 @@ afterEach(() => {
 const closed = (overrides: Partial<Tournament> = {}): Tournament =>
   hallencupTournament({ lifecycleStatus: 'finished', finishedAt: CLOSED_AT.toISOString(), ...overrides });
 
-function renderDialog(tournament: Tournament, props: { canCreateFinal?: boolean } = {}) {
+function renderDialog(tournament: Tournament, props: { canCreateFinal?: boolean; canCreateNotice?: boolean } = { canCreateFinal: true, canCreateNotice: true }) {
   return render(
     <MemoryRouter>
       <PDFExportDialog isOpen onClose={vi.fn()} tournament={tournament} schedule={hallencupSchedule(tournament)} standings={[]} {...props} />
@@ -149,6 +150,29 @@ describe('@DR-011 Das Endstand-PDF gibt es erst nach dem Abschluss', () => {
   });
 });
 
+describe('@DR-048 Z. 2 Gegenbeispiel: ein schneller Tipp, solange der gespeicherte Endstand lädt', () => {
+  it('solange gelesen wird, ist „Als PDF speichern“ gesperrt und weder „Spielplan ohne Ergebnisse“ noch „Spielplan“ vorgewählt', async () => {
+    readStored.mockReturnValue(new Promise<StoredFinalStandingsResult>(() => undefined));
+    renderDialog(closed(), { canCreateFinal: true });
+
+    await waitFor(() => expect(screen.getByTestId('pdf-choice-final-reason')).toHaveTextContent('Der gespeicherte Endstand wird geladen'));
+    expect(screen.getByTestId('pdf-save')).toBeDisabled();
+    expect(screen.getByTestId('pdf-choice-blank')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByTestId('pdf-choice-schedule')).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(screen.getByTestId('pdf-save'));
+    expect(lastCapture()).toBeUndefined();
+  });
+
+  it('Helfer (ohne Endstand-Karte): solange gelesen wird, ist Speichern gesperrt, „Spielplan ohne Ergebnisse“ ist nicht vorgewählt', async () => {
+    readStored.mockReturnValue(new Promise<StoredFinalStandingsResult>(() => undefined));
+    renderDialog(closed(), { canCreateFinal: false });
+
+    await waitFor(() => expect(screen.getByTestId('pdf-choice-schedule')).toHaveAttribute('aria-disabled', 'true'));
+    expect(screen.getByTestId('pdf-save')).toBeDisabled();
+    expect(screen.getByTestId('pdf-choice-blank')).toHaveAttribute('aria-checked', 'false');
+  });
+});
+
 describe('@DR-009 Nach dem Abschluss nennt der Spielplan den ganzen Endstand', () => {
   it('abgeschlossen: „Spielplan“ nennt alle 8 Plätze so, wie sie der gespeicherte Endstand führt; Fußzeile bleibt „Stand …“', async () => {
     renderDialog(closed());
@@ -190,14 +214,29 @@ describe('@DR-048 Z. 2 „Als PDF“ im Turnier – „Endstand“ ist schon vor
     expect(all().join(' ')).not.toContain(ABSCHLUSS);
     expect(placementNames()).toEqual(ENDSTAND_NAMEN);
   });
+});
 
-  it('Gegenbeispiel Kindermodus (Ergebnisse aus) und Tabellen aus: „Endstand“ ausgegraut, denn ein PDF für alle zeigt dann keine Plätze', async () => {
-    for (const hidden of [{ hideScoresForPublic: true }, { hideRankingsForPublic: true }]) {
-      const view = renderDialog(closed(hidden));
-      await waitFor(() => expect(screen.getByTestId('pdf-choice-final-reason')).toHaveTextContent('Ergebnisse oder Tabellen sind für Zuschauer ausgeblendet'));
+describe('@DR-050 Sind Ergebnisse oder Tabellen für Zuschauer ausgeblendet, gibt es kein Endstand-PDF', () => {
+  for (const [name, hidden] of [['Tabellen ausgeblendet', { hideRankingsForPublic: true }], ['Ergebnisse ausgeblendet (Kindermodus)', { hideScoresForPublic: true }]] as const) {
+    it(`${name}: die Karte „Endstand“ ist ausgegraut und nennt den Grund; die App erzeugt kein Endstand-PDF ohne Plätze`, async () => {
+      renderDialog(closed(hidden), { canCreateFinal: true, canCreateNotice: true });
+      await waitFor(() => expect(screen.getByTestId('pdf-choice-schedule')).toHaveAttribute('aria-checked', 'true'));
+
       expect(screen.getByTestId('pdf-choice-final')).toHaveAttribute('aria-disabled', 'true');
-      view.unmount();
-    }
+      expect(screen.getByTestId('pdf-choice-final-reason')).toHaveTextContent('Ergebnisse oder Tabellen sind für Zuschauer ausgeblendet – ohne sie zeigt das PDF keine Plätze.');
+      fireEvent.click(screen.getByTestId('pdf-choice-final'));
+      expect(screen.getByTestId('pdf-choice-final')).toHaveAttribute('aria-checked', 'false');
+      await save();
+      expect(all().join(' '), 'gespeichert wird der Spielplan, kein Endstand-PDF').not.toContain(ABSCHLUSS);
+    });
+  }
+
+  it('Sicherung im Bau: auch direkt aufgerufen entsteht kein Endstand-PDF ohne Plätze', async () => {
+    const tournament = closed({ hideRankingsForPublic: true });
+    const ranking = snapshot.ranking.map((row) => ({ place: row.place, team: { id: row.teamId, name: row.teamName } }));
+    await expect(buildChoice('final', {
+      tournament, schedule: hallencupSchedule(tournament), standings: [], audience: 'organizer', online: true, now: NOW, final: { ranking, closedAt: CLOSED_AT },
+    })).rejects.toThrow();
   });
 });
 

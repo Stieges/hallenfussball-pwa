@@ -33,7 +33,7 @@ interface ScheduleTimeShiftProps {
   enabled: boolean;
   canCreateNotice: boolean;
   /** @DR-048: „Endstand“ nur für Turnierleitung und Co-Admin. */
-  canCreateFinal?: boolean;
+  canCreateFinal: boolean;
   children: ReactNode;
 }
 

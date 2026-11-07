@@ -590,6 +590,8 @@
   },
   "management": {
     "adminEntry": "Manage",
+    "adminCenter": "Admin Center",
+    "adminCenterTitle": "Open Admin Center",
     "existingResults": "Existing results",
     "startAnyway": "Start anyway",
     "runningMatch": "Running match",

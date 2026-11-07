@@ -590,6 +590,8 @@
   },
   "management": {
     "adminEntry": "Verwaltung",
+    "adminCenter": "Admin Center",
+    "adminCenterTitle": "Admin Center öffnen",
     "existingResults": "Vorhandene Ergebnisse",
     "startAnyway": "Trotzdem starten",
     "runningMatch": "Laufendes Spiel",

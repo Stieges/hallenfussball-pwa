@@ -132,11 +132,11 @@ export function ManagementHeader(p: ManagementHeaderProps): ReactElement {
         <button
           onClick={() => { void navigate(`/tournament/${tournament.id}/admin`); }}
           style={adminButtonStyle}
-          title="Admin Center öffnen"
+          title={t('management.adminCenterTitle')}
           data-testid="management-admin-entry"
         >
           <span aria-hidden="true">⚙️</span>
-          <span>{isMobile ? t('management.adminEntry') : 'Admin Center'}</span>
+          <span>{isMobile ? t('management.adminEntry') : t('management.adminCenter')}</span>
         </button>
         {/* A-08f3e3 (M-1): wartende/nicht übernommene Einträge; im Live-Tab zeigt sie das Cockpit selbst */}
         {activeTab !== 'management' && <EngineOutboxHeaderStatus tournament={tournament} />}

@@ -16,6 +16,8 @@ export function useStoredFinalPdfSource(tournament: Pick<Tournament, 'id' | 'lif
   const enabled = open && isFinished(tournament);
   useEffect(() => {
     if (!enabled) {
+      // Beim nächsten Öffnen nie kurz den alten Stand zeigen: zurück auf „wird geladen“
+      setStored({ status: 'loading' });
       return undefined;
     }
     let alive = true;

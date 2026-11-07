@@ -35,18 +35,18 @@ export interface PDFExportDialogProps {
   audience?: PdfAudience;
   /** Weg zu den Sichtbarkeits-Schaltern („Online teilen“, „Sichtbarkeit ändern“); ohne Angabe nur der Hinweistext. */
   onOpenVisibility?: () => void;
-  /** A-11 @ZM-019: „Aushang mit QR-Code“ anbieten (Recht tournamentSettings, vom Aufrufer über useCan). Vorgabe: ja. */
+  /** A-11 @ZM-019: „Aushang mit QR-Code“ anbieten (Recht tournamentSettings, vom Aufrufer über useCan). Vorgabe: nein. */
   canCreateNotice?: boolean;
   /**
    * @DR-048 „Endstand“ anbieten: nur Turnierleitung und Co-Admin (Recht tournamentSettings, nach dem Abschluss offen; der Aufrufer
-   * fragt useCan mit `openAfterClose`). Helfer sehen die Karte nicht. Vorgabe: ja.
+   * fragt useCan mit `openAfterClose`). Helfer sehen die Karte nicht. Vorgabe: nein (jeder Aufrufer gibt es ausdrücklich an).
    */
   canCreateFinal?: boolean;
   /** Zuschauer (@BM-041): der Endstand der Zuschauer-Seite (`publicFinalSource`); ohne Angabe gibt es keinen. */
   viewerFinal?: FinalPdfSource;
 }
 
-export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standings, audience = 'organizer', onOpenVisibility, canCreateNotice = true, canCreateFinal = true, viewerFinal }: PDFExportDialogProps) => {
+export const PDFExportDialog = ({ isOpen, onClose, tournament, schedule, standings, audience = 'organizer', onOpenVisibility, canCreateNotice = false, canCreateFinal = false, viewerFinal }: PDFExportDialogProps) => {
   const { t } = useTranslation('tournament');
   const { isOnline } = useOnlineStatus();
   const viewer = audience === 'viewer';

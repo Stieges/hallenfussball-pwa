@@ -58,8 +58,18 @@ export function pdfOffers(input: OfferInput): PdfOffers {
   };
 }
 
-/** Vorwahl: nach dem Abschluss der Endstand (@DR-048 Z. 2), sonst der Spielplan, sonst die erste wählbare Karte. */
+/**
+ * Vorwahl: nach dem Abschluss der Endstand (@DR-048 Z. 2), sonst der Spielplan, sonst die erste wählbare Karte. Solange der
+ * gespeicherte Endstand lädt, bleibt die Vorwahl beim Endstand (ohne Endstand-Karte beim Spielplan): die Karte ist dann gesperrt
+ * und „Als PDF speichern“ auch – ein schneller Tipp erzeugt nie die Fassung ohne Ergebnisse (Review #460).
+ */
 export function preferredChoice(offers: PdfOffers): PdfChoice {
+  if (offers.final?.reason === 'loading') {
+    return 'final';
+  }
+  if (offers.schedule?.reason === 'loading') {
+    return 'schedule';
+  }
   const order: PdfChoice[] = ['final', 'schedule', 'blank', 'notice'];
   return order.find((choice) => offers[choice]?.available === true) ?? 'schedule';
 }

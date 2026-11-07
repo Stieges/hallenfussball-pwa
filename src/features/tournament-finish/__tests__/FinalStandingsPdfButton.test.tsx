@@ -53,11 +53,12 @@ describe('@DR-048 Z. 3 „Als PDF“ in der Endstand-Ansicht', () => {
     });
   }
 
-  it('Gegenbeispiel Helfer: kein „Als PDF“ in der Endstand-Ansicht, der Endstand selbst steht da', async () => {
-    role = 'collaborator';
-    panel();
-    await screen.findByTestId('final-standings-list');
-    expect(screen.queryByTestId('final-standings-pdf')).toBeNull();
-    role = 'helper';
-  });
+  for (const who of ['helper', 'collaborator'] as const) {
+    it(`Gegenbeispiel Helfer (${who}): kein „Als PDF“ in der Endstand-Ansicht, der Endstand selbst steht da`, async () => {
+      role = who;
+      panel();
+      await screen.findByTestId('final-standings-list');
+      expect(screen.queryByTestId('final-standings-pdf')).toBeNull();
+    });
+  }
 });

@@ -14,9 +14,9 @@ export interface ScheduleActionButtonsProps {
   schedule: GeneratedSchedule;
   standings: Standing[];
   variant?: 'organizer' | 'public';
-  /** A-11 @ZM-019: „Aushang mit QR-Code“ im PDF-Dialog anbieten (Recht tournamentSettings). Vorgabe: ja. */
+  /** A-11 @ZM-019: „Aushang mit QR-Code“ im PDF-Dialog anbieten (Recht tournamentSettings). Vorgabe: nein. */
   canCreateNotice?: boolean;
-  /** @DR-048: „Endstand“ im PDF-Dialog nur für Turnierleitung und Co-Admin. Vorgabe: ja. */
+  /** @DR-048: „Endstand“ im PDF-Dialog nur für Turnierleitung und Co-Admin. Vorgabe: nein. */
   canCreateFinal?: boolean;
 }
 

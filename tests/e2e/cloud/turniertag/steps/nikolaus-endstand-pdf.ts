@@ -161,16 +161,16 @@ async function zuschauerEndstand({ anonPage, asRole }: StepContext): Promise<voi
   expect(ergebnisseIm(seiten), 'Zuschauer-PDF: dieselben Ergebnisse wie bei der Turnierleitung').toEqual(erwartet);
 }
 
-/** Kindermodus am (abgeschlossenen) Turnier umschalten: nur als Datenbank-Eigentümer mit dem Server-Schalter (wie N7d). */
-function setzeKindermodus(an: boolean): void {
-  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET config = jsonb_set(coalesce(config,'{}'::jsonb), '{hideScoresForPublic}', '${an ? 'true' : 'false'}'::jsonb) WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
+/** Schalter am (abgeschlossenen) Turnier umschalten: nur als Datenbank-Eigentümer mit dem Server-Schalter (wie N7d). */
+function setzeSchalter(schalter: 'hideScoresForPublic' | 'hideRankingsForPublic', an: boolean): void {
+  const sql = `BEGIN; SELECT set_config('app.lifecycle_write','on',true); UPDATE public.tournaments SET config = jsonb_set(coalesce(config,'{}'::jsonb), '{${schalter}}', '${an ? 'true' : 'false'}'::jsonb) WHERE id = '${NIKOLAUS.tournamentId}'; COMMIT;`;
   execFileSync('docker', ['exec', '-i', 'supabase_db_hallenfussball-pwa', 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'pipe' });
 }
 
 /** N8d (Record Endstand, Gegenbeispiel „Kindermodus-Lecks“): im Kindermodus bietet die Zuschauer-Seite kein Endstand-PDF an. */
 async function zuschauerKindermodus({ anonPage }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
-  setzeKindermodus(true);
+  setzeSchalter('hideScoresForPublic', true);
   try {
     await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
     await expect(anonPage.getByTestId('final-standings-kids')).toBeVisible({ timeout: 20_000 });
@@ -178,8 +178,43 @@ async function zuschauerKindermodus({ anonPage }: StepContext): Promise<void> {
     await expect(anonPage.getByTestId('pdf-viewer-plan'), 'nur „Spielplan“').toBeVisible();
     await expect(anonPage.getByTestId('pdf-choice-final'), 'kein Endstand-PDF im Kindermodus').toHaveCount(0);
   } finally {
-    setzeKindermodus(false);
+    setzeSchalter('hideScoresForPublic', false);
   }
+}
+
+/**
+ * N8d2 (@DR-050, Zuschauer-Seite): Tabellen für Zuschauer ausgeblendet – über die echte Server-Antwort zeigt die Zuschauer-Seite den
+ * Endstand ohne Details, das PDF der Zuschauer-Seite bietet aber keinen Endstand an (ein PDF ohne Tabellen zeigt keine Plätze).
+ */
+async function zuschauerTabellenAus({ anonPage }: StepContext): Promise<void> {
+  await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
+  setzeSchalter('hideRankingsForPublic', true);
+  try {
+    await anonPage.goto(`/#/live/${NIKOLAUS.shareCode}`);
+    await expect(anonPage.getByTestId('tournament-ended')).toBeVisible({ timeout: 20_000 });
+    await anonPage.getByTestId('public-pdf-button').first().click();
+    await expect(anonPage.getByTestId('pdf-viewer-plan'), 'nur „Spielplan“').toBeVisible();
+    await expect(anonPage.getByTestId('pdf-choice-final'), 'kein Endstand-PDF bei ausgeblendeten Tabellen').toHaveCount(0);
+  } finally {
+    setzeSchalter('hideRankingsForPublic', false);
+  }
+}
+
+/**
+ * N8f (@DR-048 „Helfer bekommen es nicht“): Tom (Helfer, Mitglied des Turniers) öffnet im Spielplan „Als PDF“ – keine Karte „Endstand“, sein
+ * Spielplan wartet auf den gespeicherten Endstand (@DR-009); im Reiter „Tabellen“ steht der Endstand ohne Knopf „Als PDF“.
+ */
+async function helferOhneEndstandPdf({ asRole }: StepContext): Promise<void> {
+  await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
+  const tom = await asRole('helper');
+  await openNikolausPath(tom, '/schedule');
+  await tom.getByTestId('schedule-action-pdf').click();
+  await expect(tom.getByTestId('pdf-choice-schedule'), 'Dialog geladen, „Spielplan“ vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+  await expect(tom.getByTestId('pdf-choice-final'), 'Helfer: keine Karte „Endstand“').toHaveCount(0);
+  await tom.keyboard.press('Escape');
+  await openNikolausPath(tom, '/standings');
+  await expect(tom.getByTestId('final-standings-list'), 'Helfer liest den Endstand').toBeVisible({ timeout: 15_000 });
+  await expect(tom.getByTestId('final-standings-pdf'), 'Helfer: kein „Als PDF“ in der Endstand-Ansicht').toHaveCount(0);
 }
 
 /** N8e (@OB-082): am Handy steht am Zahnrad „Verwaltung“; ein Tipp öffnet die Verwaltung. */
@@ -205,5 +240,7 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N8b2', title: 'Endstand-PDF ab der Startseite in ≤ 3 Tipps (abgeschlossen bleibt bis Tagesende unter „Heute“)', scenarios: ['@DR-048', '@OB-081'], owner: '#451 (@OB-081 Startseite)', expectedFail: true, run: abStartseite },
   { id: 'N8c', title: 'Zuschauer-Seite: Endstand-PDF nach dem Abschluss mit Plätzen und Ergebnissen', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerEndstand },
   { id: 'N8d', title: 'Zuschauer-Seite im Kindermodus: kein Endstand-PDF', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerKindermodus },
+  { id: 'N8d2', title: 'Zuschauer-Seite mit ausgeblendeten Tabellen: kein Endstand-PDF', scenarios: ['@DR-050'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerTabellenAus },
+  { id: 'N8f', title: 'Helfer: im Dialog keine Karte „Endstand“, in der Endstand-Ansicht kein „Als PDF“', scenarios: ['@DR-048'], owner: 'Paket Endstand-PDF', expectedFail: false, run: helferOhneEndstandPdf },
   { id: 'N8e', title: 'Handy 360×640: Zahnrad mit dem Wort „Verwaltung“ öffnet die Verwaltung', scenarios: ['@OB-082'], owner: 'Paket Endstand-PDF', expectedFail: false, run: verwaltungAmHandy },
 ];

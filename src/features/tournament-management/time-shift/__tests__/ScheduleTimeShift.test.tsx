@@ -61,7 +61,7 @@ function renderShift(tournament: Tournament) {
   const Harness = ({ t }: { t: Tournament }) => {
     const view = buildTournamentView({ ...t }, { audience: 'organizer', medium: 'app', locale: 'de' });
     return (
-      <ScheduleTimeShift tournament={t} schedule={{} as never} standings={[]} view={view} onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} enabled canCreateNotice>
+      <ScheduleTimeShift tournament={t} schedule={{} as never} standings={[]} view={view} onTournamentUpdate={onTournamentUpdate} showSuccess={showSuccess} enabled canCreateNotice canCreateFinal>
         <ul>
           {t.matches.map((m) => (
             <li key={m.id} data-testid={`row-${m.id}`}>{hhmm(m.scheduledTime)}<OriginalTimeNote matchId={m.id} /><MatchMenuSlot matchId={m.id} /></li>
