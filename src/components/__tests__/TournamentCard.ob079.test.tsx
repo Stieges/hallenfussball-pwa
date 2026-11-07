@@ -74,12 +74,14 @@ describe('@OB-079 Inhalt der Karte', () => {
 });
 
 describe('@OB-079 Menü der kompakten Karte', () => {
-  it('die Karte unter der Maus liegt über ihren Nachbarn (das Menü ragt in die nächste Karte); beim Verlassen ist alles zurückgesetzt', () => {
+  // Über den Nachbarn liegt die Karte mit offenem Menü, nicht die Karte unter der Maus (TournamentCard.menueOben.ob080.test.tsx, @OB-080):
+  // sonst läge eine Nachbarkarte, über die der Zeiger fährt, über dem offenen Menü.
+  it('die Karte unter der Maus hebt sich sichtbar, nicht im Stapel; beim Verlassen ist alles zurückgesetzt', () => {
     render(<TournamentCard tournament={f2} categoryLabel="upcoming" onClick={vi.fn()} />);
     const karte = screen.getByTestId('tournament-card-f2');
     fireEvent.mouseEnter(karte);
-    expect(karte.style.zIndex).toBe('1');
     expect(karte.style.transform).toBe('translateY(-2px)');
+    expect(karte.style.zIndex).toBe('auto');
     fireEvent.mouseLeave(karte);
     expect(karte.style.zIndex).toBe('auto');
     expect(karte.style.transform).toBe('none');

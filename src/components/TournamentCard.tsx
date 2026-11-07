@@ -8,7 +8,7 @@
  */
 
 import { isTournamentClosed } from '../core/services/lifecycle';
-import { CSSProperties } from 'react';
+import { CSSProperties, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament } from '../types/tournament';
 import { Card } from './ui';
@@ -124,6 +124,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 }) => {
   const { t, i18n } = useTranslation('dashboard');
   const isMobile = useIsMobile();
+  // Offenes Aktionsmenü: die Karte liegt über ihren Nachbarn, egal wo der Zeiger steht oder ob mit der Tastatur geöffnet (@OB-080)
+  const [menuOpen, setMenuOpen] = useState(false);
   // @LZ-003 / W4: Papierkorb nur vor dem ersten Anpfiff — gleiche gemeinsame
   // Anpfiff-Funktion wie „Turnier löschen" (DangerZone) und „Im Wizard bearbeiten".
   // P1: Live-Abfrage nur, wenn ein Papierkorb angeboten werden könnte.
@@ -160,17 +162,19 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     // Am Handy knapper Innenabstand, rechts am knappsten (das Menü-Feld bringt eigenen Rand mit): alle Turniere des Tages sollen ohne Scrollen
     // sichtbar sein, und Ort und Rollen-Schild bei 360 Bildpunkten in einer Zeile stehen (@OB-079)
     padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.sm} ${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    zIndex: menuOpen ? cssVars.zIndex.raised : 'auto',
   };
 
-  // Die Karte unter der Maus liegt über ihren Nachbarn: das Aktionsmenü ragt bei den kompakten Karten in die nächste Karte hinein und
-  // bliebe sonst (Stapelkontext durch `transform`) unter ihr, nicht klickbar (@OB-079). Beim Verlassen wird beides wieder zurückgesetzt.
+  // Jede Karte ist ein eigener Stapelkontext (`backdrop-filter` der Card, beim Darüberfahren zusätzlich `transform`): das Aktionsmenü ragt bei
+  // den kompakten Karten in die nächste Karte hinein und läge sonst unter ihr, nicht klickbar (@OB-079, @OB-080). Darum liegt die Karte mit
+  // offenem Menü über allen anderen (`zIndex` in cardStyle), unabhängig von der Maus; die Karte unter der Maus hebt sich nur sichtbar, nicht im
+  // Stapel (sonst läge eine Nachbarkarte, über die der Zeiger fährt, wieder über dem offenen Menü).
   const cardHoverStyle: CSSProperties = {
     ...cardStyle,
     transform: 'translateY(-2px)',
     boxShadow: cssVars.shadows.md,
-    zIndex: 1,
   };
-  const cardRestStyle: CSSProperties = { ...cardStyle, transform: 'none', zIndex: 'auto' };
+  const cardRestStyle: CSSProperties = { ...cardStyle, transform: 'none' };
 
   const cardState = cardStateOf(tournament, categoryLabel);
   // Check if we need to show action menu (has any action handlers)
@@ -268,6 +272,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 onShare={onShare}
                 onDelete={deleteHandler}
                 testId={`tournament-${tournament.id}-actions`}
+                onMenuOpenChange={setMenuOpen}
               />
             </div>
           )}

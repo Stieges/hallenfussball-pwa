@@ -30,16 +30,31 @@ interface ActionMenuProps {
   testId?: string;
   /** Whether the menu trigger is visible (default: true) */
   visible?: boolean;
+  /**
+   * Meldet Öffnen und Schließen. Liegt das Menü in einem eigenen Stapelkontext (z. B. Karte mit `backdrop-filter`), muss der Behälter
+   * sich solange über seine Nachbarn heben, sonst verdecken sie das Menü (@OB-080).
+   */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const ActionMenu: React.FC<ActionMenuProps> = ({
   items,
   testId,
   visible = true,
+  onOpenChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const wasOpenRef = useRef(false);
+
+  // nur echte Wechsel melden (nicht bei jeder neuen Funktion des Aufrufers)
+  useEffect(() => {
+    if (wasOpenRef.current !== isOpen) {
+      wasOpenRef.current = isOpen;
+      onOpenChange?.(isOpen);
+    }
+  }, [isOpen, onOpenChange]);
 
   // Close on click outside
   useEffect(() => {
