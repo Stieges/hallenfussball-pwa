@@ -117,6 +117,11 @@ async function openSchedule(page: Page, cup: ClonedCup): Promise<void> {
 async function openAdmin(page: Page, cup: ClonedCup): Promise<void> {
   await page.goto(`/#/tournament/${cup.id}/admin/visibility`);
   await page.waitForLoadState('networkidle');
+  // Admin Center und Kategorie „Sichtbarkeit“ stehen (ihre Code-Teile sind geladen). Ein Hash-Wechsel im selben Dokument
+  // wartet bei networkidle nicht – ging der Test danach sofort offline, fehlte der Code-Teil („Lazy import failed:
+  // TournamentAdminCenter“, Traces Diagnose-Lauf 42423568245, 4 von 25).
+  await expect(page.locator('[data-testid="sync-status"]')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('spectator-display-section')).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2-UI)', () => {
