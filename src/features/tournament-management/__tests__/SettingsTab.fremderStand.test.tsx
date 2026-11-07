@@ -62,7 +62,21 @@ describe('Stammdaten-Formular und der Stand eines anderen Geräts (C-GERAET-FOLG
     expect(checkedVersion(gespeichert())).toBe(8); // keine Überschneidung: Basis ist der neueste Stand
   });
 
-  it('@FU-108 dieselbe Angabe auf beiden Geräten: Ollis Eingabe bleibt, sein Speichern beruht auf dem alten Stand (der Server lehnt ab)', () => {
+  it('@FU-134 Beispiel „Telefonnummer“: Ollis Ort bleibt, sein Gerät zeigt Marias Nummer, sein Speichern sendet beides', () => {
+    const neuerStand = zeige(turnier({ contactInfo: { name: 'Olli', phone: '0170 111' } }));
+    fireEvent.change(ort(), { target: { value: 'Ollis Halle' } });
+
+    neuerStand(turnier({ version: 4, contactInfo: { name: 'Olli', phone: '0170 222' } }));
+
+    expect(ort().value).toBe('Ollis Halle');
+    expect(screen.getByDisplayValue('0170 222')).toBeTruthy(); // Marias Nummer im Kontaktfeld
+    fireEvent.click(speichernKnopf());
+    expect(gespeichert().location.name).toBe('Ollis Halle');
+    expect(gespeichert().contactInfo?.phone).toBe('0170 222');
+    expect(checkedVersion(gespeichert())).toBe(4);
+  });
+
+  it('@FU-134 @FU-108 dieselbe Angabe auf beiden Geräten: Ollis Eingabe bleibt, sein Speichern beruht auf dem alten Stand (der Server lehnt ab)', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(ort(), { target: { value: 'Ollis Halle' } });
 
@@ -74,7 +88,7 @@ describe('Stammdaten-Formular und der Stand eines anderen Geräts (C-GERAET-FOLG
     expect(checkedVersion(gespeichert()), 'kein stilles Überschreiben von Marias Ort').toBe(3);
   });
 
-  it('@FU-108 auch ein späterer fremder Stand lässt die Basis beim alten Stand, solange die Überschneidung bleibt', () => {
+  it('@FU-134 @FU-108 auch ein späterer fremder Stand lässt die Basis beim alten Stand, solange die Überschneidung bleibt', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(ort(), { target: { value: 'Ollis Halle' } });
     neuerStand(turnier({ version: 4, location: { name: 'Marias Halle', city: 'Musterstadt' } }));
@@ -84,7 +98,7 @@ describe('Stammdaten-Formular und der Stand eines anderen Geräts (C-GERAET-FOLG
     expect(checkedVersion(gespeichert())).toBe(3);
   });
 
-  it('@FU-089 Gegenbeispiel: verschiedene Angaben – beide Änderungen kommen an, Basis ist der neue Stand', () => {
+  it('@FU-134 verschiedene Angaben – beide Änderungen kommen an, Basis ist der neue Stand', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(ort(), { target: { value: 'Ollis Halle' } });
 
@@ -96,7 +110,7 @@ describe('Stammdaten-Formular und der Stand eines anderen Geräts (C-GERAET-FOLG
     expect(checkedVersion(gespeichert())).toBe(4);
   });
 
-  it('Gegenbeispiel: Olli tippt denselben Wert wie Maria – keine Überschneidung, Basis ist der neue Stand', () => {
+  it('@FU-134 Gegenbeispiel: Olli tippt denselben Wert wie Maria – keine Überschneidung, Basis ist der neue Stand', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(ort(), { target: { value: 'Marias Halle' } });
 
@@ -127,7 +141,7 @@ describe('Stammdaten-Formular und der Stand eines anderen Geräts (C-GERAET-FOLG
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('Veranstalter angefasst und wieder geleert, fremder Veranstalter kommt an: das Formular folgt, Speichern bleibt grau', () => {
+  it('@FU-134 Veranstalter angefasst und wieder geleert, fremder Veranstalter kommt an: das Formular folgt, Speichern bleibt grau', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(veranstalter(), { target: { value: 'x' } });
     fireEvent.change(veranstalter(), { target: { value: '' } });
@@ -139,12 +153,12 @@ describe('Stammdaten-Formular und der Stand eines anderen Geräts (C-GERAET-FOLG
     expect(speichernKnopf().disabled).toBe(true);
   });
 
-  it('Kontakt ohne bisherigen Stand: Ollis Name bleibt, die fremde Telefonnummer geht nicht verloren', () => {
+  it('@FU-134 Kontakt ohne bisherigen Stand: Ollis Name bleibt, die fremde Telefonnummer geht nicht verloren', () => {
     const r = rebaseMetaForm({ contactInfo: { name: 'Olli' } }, { contactInfo: undefined }, { contactInfo: { phone: '0170' } });
     expect(r.contactInfo).toEqual({ name: 'Olli', phone: '0170' });
   });
 
-  it('Ortsname angefasst, fremde Stadt kommt an: die Stadt folgt (je Angabe)', () => {
+  it('@FU-134 Ortsname angefasst, fremde Stadt kommt an: die Stadt folgt (je Angabe)', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(ort(), { target: { value: 'Halle Z4-4' } });
 

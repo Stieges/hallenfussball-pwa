@@ -4,7 +4,8 @@
  * einem Realtime-Anstoß oder dem 5-s-Abruf – das Formular auf den Stand der Cloud zurück: „Speichern“ wurde grau, und
  * Ollis Änderung kam nie beim Server an. Damit scheitert @FU-105 („Olli speichert nacheinander fünf Änderungen … Marias
  * Tablet zeigt jede“) und @FU-089 (Rückweg: Marias Änderung erscheint auf Ollis Gerät), sobald ein anderes Gerät
- * gerade etwas ändert. Szenarien: docs/anforderungen/plattform/2026-09-24_fundament-gemeinsamer-stand.md.
+ * gerade etwas ändert. Szenarien: @FU-134 (angefangene Eingabe übersteht die Änderung eines anderen Geräts),
+ * docs/anforderungen/plattform/2026-09-24_fundament-gemeinsamer-stand.md.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -44,7 +45,7 @@ const speichernKnopf = () => screen.getByRole<HTMLButtonElement>('button', { nam
 beforeEach(() => vi.clearAllMocks());
 
 describe('Angefangene Eingabe übersteht den Stand eines anderen Geräts (C-GERAET-FOLGT-WACKELT)', () => {
-  it('@FU-105 Olli tippt den Ort, Marias Teamänderung kommt an: die Eingabe bleibt, Speichern sendet sie', () => {
+  it('@FU-134 @FU-105 Olli tippt den Ort, Marias Teamänderung kommt an: die Eingabe bleibt, Speichern sendet sie', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(ort(), { target: { value: 'Halle Z4-4' } });
 
@@ -61,7 +62,7 @@ describe('Angefangene Eingabe übersteht den Stand eines anderen Geräts (C-GERA
     expect(gespeichert.teams[0].name).toBe('A neu');
   });
 
-  it('@FU-089 ein Feld, das Olli nicht angefasst hat, übernimmt den Stand des anderen Geräts', () => {
+  it('@FU-134 ein Feld, das Olli nicht angefasst hat, übernimmt den Stand des anderen Geräts', () => {
     const neuerStand = zeige(turnier());
     fireEvent.change(ort(), { target: { value: 'Halle Z4-4' } });
 
