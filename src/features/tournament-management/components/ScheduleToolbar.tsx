@@ -58,7 +58,7 @@ export interface ScheduleToolbarProps {
   canEditSchedule?: boolean;
   /** A-11 @ZM-019: Aushang im PDF-Dialog nur mit tournamentSettings. Vorgabe: nein. */
   canCreateNotice?: boolean;
-  /** @DR-048: „Endstand“ im PDF-Dialog nur für Turnierleitung und Co-Admin (tournamentSettings, nach dem Abschluss offen). Vorgabe: nein. */
+  /** @DR-048: „Endstand“ im PDF-Dialog für Turnierleitung, Co-Admin und Helfer (writeMatchData, nach dem Abschluss offen). Vorgabe: nein. */
   canCreateFinal?: boolean;
   /** R3-4 (Review #394 m-2): abgeschlossen zeigt der Spielplan nur die Tabelle – die Umschaltung Tabelle/Grid entfällt. */
   hideViewToggle?: boolean;

@@ -11,6 +11,7 @@ import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { extractPdfText } from '../../../../../src/lib/pdf/__tests__/pdfjsText';
 import { getRows, vorbedingung } from './shared';
+import { restAsRole } from '../../restAsRole';
 import { handyKontext, NIKOLAUS, openNikolausPath } from './nikolaus-shared';
 import type { StepContext, TurniertagStep } from './types';
 
@@ -201,30 +202,37 @@ async function zuschauerTabellenAus({ anonPage }: StepContext): Promise<void> {
 }
 
 /**
- * N8f (@DR-048 „Helfer bekommen es nicht“): Tom (Helfer, Mitglied des Turniers) öffnet im Spielplan „Als PDF“ – keine Karte „Endstand“, sein
- * Spielplan wartet auf den gespeicherten Endstand (@DR-009); im Reiter „Tabellen“ steht der Endstand ohne Knopf „Als PDF“.
+ * N8f (@DR-048 Z. 5 seit Daniel 07.11.: „Turnierleitung, Co-Admin und Helfer“): Tom (Helfer-Konto, Mitglied „collaborator“) öffnet nach dem
+ * Abschluss den Reiter „Tabellen“, tippt „Als PDF“ – „Endstand“ ist vorgewählt – und speichert: dasselbe Endstand-PDF wie N8a.
+ * Vorher belegt ein Abruf als Tom, dass der Server ihm das Turnier liefert (sonst liegt die Ursache nicht in der App).
  */
-async function helferOhneEndstandPdf({ asRole }: StepContext): Promise<void> {
+async function helferEndstandPdf({ asRole }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
+  const server = await restAsRole('helper', 'GET', `tournaments?id=eq.${NIKOLAUS.tournamentId}&select=id,lifecycle_status`);
+  expect(server.json, 'Server liefert Tom das abgeschlossene Turnier (is_reading_member)').toEqual([{ id: NIKOLAUS.tournamentId, lifecycle_status: 'finished' }]);
   const tom = await asRole('helper');
-  await openNikolausPath(tom, '/schedule');
-  const nichtGefunden = tom.getByText('Turnier nicht gefunden');
-  await expect(tom.getByTestId('final-standings-list').or(tom.getByTestId('schedule-action-pdf')).or(nichtGefunden).first(), 'Seite geladen').toBeVisible({ timeout: 15_000 });
-  await expect(nichtGefunden, 'Vorbedingung: der Helfer öffnet das abgeschlossene Turnier').toHaveCount(0);
-  // Nach dem Abschluss führt der Weg des Helfers zum Endstand (@HE-098 Z. 2); bietet die Seite trotzdem „Als PDF“, fehlt darin der Endstand
-  await expect(tom.getByTestId('final-standings-list').or(tom.getByTestId('schedule-action-pdf')).first(), 'Seite geladen').toBeVisible({ timeout: 15_000 });
-  const pdfKnopf = tom.getByTestId('schedule-action-pdf');
-  if ((await pdfKnopf.count()) > 0) {
-    await pdfKnopf.click();
-    await expect(tom.getByTestId('pdf-choice-schedule'), 'Dialog geladen, „Spielplan“ vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
-    await expect(tom.getByTestId('pdf-choice-final'), 'Helfer: keine Karte „Endstand“').toHaveCount(0);
-    await tom.keyboard.press('Escape');
-  } else {
-    test.info().annotations.push({ type: 'N8f', description: 'Helfer sieht nach dem Abschluss keinen Spielplan mit „Als PDF“ (Weg zum Endstand)' });
-  }
   await openNikolausPath(tom, '/standings');
-  await expect(tom.getByTestId('final-standings-list'), 'Helfer liest den Endstand').toBeVisible({ timeout: 15_000 });
-  await expect(tom.getByTestId('final-standings-pdf'), 'Helfer: kein „Als PDF“ in der Endstand-Ansicht').toHaveCount(0);
+  await expect(tom.getByText('Turnier nicht gefunden'), 'die App öffnet Tom das abgeschlossene Turnier').toHaveCount(0, { timeout: 1_000 });
+  const { tippe, anzahl } = tippZaehler();
+  await expect(tom.getByTestId('final-standings-list'), 'Tom liest den gespeicherten Endstand').toBeVisible({ timeout: 15_000 });
+  await tippe(tom.getByTestId('final-standings-pdf'));
+  await expect(tom.getByTestId('pdf-choice-final'), '„Endstand“ ist vorgewählt').toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+  const { seiten, datei } = await speichernUndLesen(tom, tippe, 'endstand-helfer');
+  expect(anzahl()).toBe(2);
+  await pruefeEndstandPdf(tom, seiten, datei);
+}
+
+/** N8g (Gegenbeispiel @DR-048): ein Konto ohne Rolle im Turnier bekommt es weder vom Server noch in der App – kein Endstand, kein „Als PDF“. */
+async function fremdOhneEndstandPdf({ asRole }: StepContext): Promise<void> {
+  await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
+  const server = await restAsRole('stranger', 'GET', `tournaments?id=eq.${NIKOLAUS.tournamentId}&select=id`);
+  expect(server.json, 'Server liefert dem fremden Konto nichts').toEqual([]);
+  const fremd = await asRole('stranger');
+  await openNikolausPath(fremd, '/standings');
+  await expect(fremd.getByText('Turnier nicht gefunden').or(fremd.getByText('Nicht gefunden')).first(), 'kein Zugang').toBeVisible({ timeout: 15_000 });
+  await expect(fremd.getByTestId('final-standings-list')).toHaveCount(0);
+  await expect(fremd.getByTestId('final-standings-pdf')).toHaveCount(0);
+  await expect(fremd.getByTestId('schedule-action-pdf')).toHaveCount(0);
 }
 
 /** N8e (@OB-082): am Handy steht am Zahnrad „Verwaltung“; ein Tipp öffnet die Verwaltung. */
@@ -251,9 +259,9 @@ export const steps: readonly TurniertagStep[] = [
   { id: 'N8c', title: 'Zuschauer-Seite: Endstand-PDF nach dem Abschluss mit Plätzen und Ergebnissen', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerEndstand },
   { id: 'N8d', title: 'Zuschauer-Seite im Kindermodus: kein Endstand-PDF', scenarios: ['@BM-041'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerKindermodus },
   { id: 'N8d2', title: 'Zuschauer-Seite mit ausgeblendeten Tabellen: kein Endstand-PDF', scenarios: ['@DR-050'], owner: 'Paket Endstand-PDF', expectedFail: false, run: zuschauerTabellenAus },
-  // Erwartet rot: das Helfer-Konto (Mitglied „collaborator“ laut Seed) bekommt das abgeschlossene Nikolaus-Turnier in der CI als „Turnier nicht
-  // gefunden“ – Vorbedingung von @HE-098 Z. 2 (Helfer lesen nach dem Abschluss den Endstand) nicht erfüllt, Ursache außerhalb dieses Pakets.
-  // Die Rechte-Seite (Helfer: keine Karte, kein Knopf) belegen die Vitest-Tests mit der echten rolePermissions.json.
-  { id: 'N8f', title: 'Helfer: im Dialog keine Karte „Endstand“, in der Endstand-Ansicht kein „Als PDF“', scenarios: ['@DR-048', '@HE-098'], owner: 'Klärung Helfer-Zugang zum abgeschlossenen Turnier (Nikolaus-Seed, @HE-098 Z. 2)', expectedFail: true, run: helferOhneEndstandPdf },
+  // Erwartet rot (CI 07.11., zweimal gleich): Tom bekommt das abgeschlossene Nikolaus-Turnier in der App als „Turnier nicht gefunden“ – Ursache
+  // außerhalb dieses Pakets (@HE-098 Z. 2: Helfer lesen nach dem Abschluss den Endstand); der Schritt nennt, ob der Server liefert.
+  { id: 'N8f', title: 'Helfer: Endstand-PDF aus der Endstand-Ansicht, „Endstand“ vorgewählt, Plätze wie gespeichert', scenarios: ['@DR-048', '@HE-098'], owner: 'Klärung Helfer-Zugang zum abgeschlossenen Turnier (@HE-098 Z. 2)', expectedFail: true, run: helferEndstandPdf },
+  { id: 'N8g', title: 'Fremdes Konto: kein Endstand, kein „Als PDF“', scenarios: ['@DR-048'], owner: 'Paket Endstand-PDF', expectedFail: false, run: fremdOhneEndstandPdf },
   { id: 'N8e', title: 'Handy 360×640: Zahnrad mit dem Wort „Verwaltung“ öffnet die Verwaltung', scenarios: ['@OB-082'], owner: 'Paket Endstand-PDF', expectedFail: false, run: verwaltungAmHandy },
 ];

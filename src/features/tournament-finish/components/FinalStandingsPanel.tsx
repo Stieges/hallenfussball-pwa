@@ -6,7 +6,7 @@
  * - sonst: der Endstand, wie er gerade steht (`computeFinalStandings`, `computeScorers`), gekennzeichnet „vorläufig“ (@ET-042).
  * Turnierleitung und Helfer lesen dieselbe Zeile (`writeMatchData`); Helfer landen nach dem Abschluss über `/standings` hier.
  * Über dem gespeicherten Endstand steht „Als PDF“ (@DR-048 Z. 3): öffnet den PDF-Dialog mit vorgewähltem „Endstand“, nur für
- * Turnierleitung und Co-Admin (Recht tournamentSettings, nach dem Abschluss offen); Helfer sehen den Knopf nicht.
+ * Turnierleitung, Co-Admin und Helfer (Recht writeMatchData, nach dem Abschluss offen; Daniel 07.11.).
  */
 import type { GeneratedSchedule } from '../../../core/generators';
 import type { Standing, Tournament } from '../../../types/tournament';

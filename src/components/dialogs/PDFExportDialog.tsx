@@ -38,8 +38,8 @@ export interface PDFExportDialogProps {
   /** A-11 @ZM-019: „Aushang mit QR-Code“ anbieten (Recht tournamentSettings, vom Aufrufer über useCan). Vorgabe: nein. */
   canCreateNotice?: boolean;
   /**
-   * @DR-048 „Endstand“ anbieten: nur Turnierleitung und Co-Admin (Recht tournamentSettings, nach dem Abschluss offen; der Aufrufer
-   * fragt useCan mit `openAfterClose`). Helfer sehen die Karte nicht. Vorgabe: nein (jeder Aufrufer gibt es ausdrücklich an).
+   * @DR-048 „Endstand“ anbieten: Turnierleitung, Co-Admin und Helfer (Recht writeMatchData, nach dem Abschluss offen; der Aufrufer
+   * fragt useCan mit `openAfterClose`). Vorgabe: nein (jeder Aufrufer gibt es ausdrücklich an).
    */
   canCreateFinal?: boolean;
   /** Zuschauer (@BM-041): der Endstand der Zuschauer-Seite (`publicFinalSource`); ohne Angabe gibt es keinen. */

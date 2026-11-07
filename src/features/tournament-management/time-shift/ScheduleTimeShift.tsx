@@ -32,7 +32,7 @@ interface ScheduleTimeShiftProps {
   /** Verschieben anbieten (Recht, nicht im Bearbeitungsmodus, nicht abgeschlossen) */
   enabled: boolean;
   canCreateNotice: boolean;
-  /** @DR-048: „Endstand“ nur für Turnierleitung und Co-Admin. */
+  /** @DR-048: „Endstand“ für Turnierleitung, Co-Admin und Helfer (writeMatchData). */
   canCreateFinal: boolean;
   children: ReactNode;
 }

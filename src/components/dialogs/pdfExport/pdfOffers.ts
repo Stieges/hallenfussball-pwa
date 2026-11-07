@@ -1,7 +1,7 @@
 /**
  * Was der PDF-Dialog anbietet und was vorgewählt ist (B-28 C8; @DR-011, @DR-009, @DR-048 Z. 2 und 3, @DR-049, @ZM-019, @BM-041).
  * Rein, ohne React.
- * - Endstand: nur für Turnierleitung und Co-Admin (`canFinal`, Recht aus rolePermissions.json über useCan), Helfer sehen die Karte nicht.
+ * - Endstand: für Turnierleitung, Co-Admin und Helfer (`canFinal`, Recht writeMatchData aus rolePermissions.json über useCan).
  *   Ausgegraut vor dem Abschluss und nach einem Abbruch („Erst nach Abschluss des Turniers“), solange der gespeicherte Endstand lädt
  *   oder nicht lesbar ist, und wenn Ergebnisse oder Tabellen für Zuschauer ausgeblendet sind: ein PDF für alle zeigt dann keine Plätze
  *   (Record Drucken A5.3, Kindermodus-Lecks im Record Endstand).

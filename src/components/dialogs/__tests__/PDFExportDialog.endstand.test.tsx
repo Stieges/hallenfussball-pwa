@@ -163,7 +163,7 @@ describe('@DR-048 Z. 2 Gegenbeispiel: ein schneller Tipp, solange der gespeicher
     expect(lastCapture()).toBeUndefined();
   });
 
-  it('Helfer (ohne Endstand-Karte): solange gelesen wird, ist Speichern gesperrt, „Spielplan ohne Ergebnisse“ ist nicht vorgewählt', async () => {
+  it('ohne Endstand-Karte: solange gelesen wird, ist Speichern gesperrt, „Spielplan ohne Ergebnisse“ ist nicht vorgewählt', async () => {
     readStored.mockReturnValue(new Promise<StoredFinalStandingsResult>(() => undefined));
     renderDialog(closed(), { canCreateFinal: false });
 
@@ -195,8 +195,8 @@ describe('@DR-009 Nach dem Abschluss nennt der Spielplan den ganzen Endstand', (
   });
 });
 
-describe('@DR-048 Z. 2 „Als PDF“ im Turnier – „Endstand“ ist schon vorgewählt; nur Turnierleitung und Co-Admin', () => {
-  it('Olli/Maria (Recht tournamentSettings): nach dem Abschluss ist „Endstand“ vorgewählt, ein Tipp auf „Als PDF speichern“ erzeugt es', async () => {
+describe('@DR-048 Z. 2 „Als PDF“ im Turnier – „Endstand“ ist schon vorgewählt; Turnierleitung, Co-Admin und Helfer', () => {
+  it('Olli/Maria/Tom (Recht writeMatchData): nach dem Abschluss ist „Endstand“ vorgewählt, ein Tipp auf „Als PDF speichern“ erzeugt es', async () => {
     renderDialog(closed(), { canCreateFinal: true });
     await waitFor(() => expect(screen.getByTestId('pdf-choice-final')).toHaveAttribute('aria-checked', 'true'));
     await save();
@@ -204,7 +204,7 @@ describe('@DR-048 Z. 2 „Als PDF“ im Turnier – „Endstand“ ist schon vor
     expect(all().join(' ')).toContain(ABSCHLUSS);
   });
 
-  it('Helfer: die Karte „Endstand“ fehlt, sein Spielplan nennt trotzdem den gespeicherten Endstand (@DR-009)', async () => {
+  it('ohne Recht auf das Endstand-PDF (z. B. Trainer): die Karte „Endstand“ fehlt, der Spielplan nennt trotzdem den gespeicherten Endstand (@DR-009)', async () => {
     renderDialog(closed(), { canCreateFinal: false });
     await waitFor(() => expect(screen.getByTestId('pdf-choice-schedule')).toHaveAttribute('aria-disabled', 'false'));
 

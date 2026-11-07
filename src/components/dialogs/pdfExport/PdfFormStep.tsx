@@ -1,6 +1,6 @@
 /**
  * Wahlschritt des PDF-Dialogs (B-28 C8, Mockup „PDF-Dialog“): Karten „Spielplan“, „Spielplan ohne Ergebnisse“, „Endstand“
- * (bis zum Abschluss ausgegraut, G44, @DR-011; nur Turnierleitung und Co-Admin, @DR-048) und „Aushang mit QR-Code“ (ohne
+ * (bis zum Abschluss ausgegraut, G44, @DR-011; Turnierleitung, Co-Admin und Helfer, @DR-048) und „Aushang mit QR-Code“ (ohne
  * Online-Teilen ausgegraut, @ZM-064), darunter die Hinweise zu Sichtbarkeit, Netz und Fehler und die Zeile „Format: A4 hoch“
  * (@DR-026, keine Wahl „quer“). Was angeboten wird, entscheidet `pdfOffers`. Zuschauer (`audience viewer`) sehen nur „Spielplan“
  * ohne Wahl (@BM-057, G47), nach dem Abschluss die Wahl „Spielplan“ oder „Endstand“ (@BM-041).

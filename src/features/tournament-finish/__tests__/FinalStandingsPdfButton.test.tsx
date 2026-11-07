@@ -1,7 +1,7 @@
 /**
  * @DR-048 Z. 3 „Als PDF“ in der Endstand-Ansicht (Reiter „Tabellen“): über dem gespeicherten Endstand steht der Knopf für
- * Turnierleitung und Co-Admin (Recht tournamentSettings aus rolePermissions.json, nach dem Abschluss offen); Helfer bekommen ihn
- * nicht. Ein Tipp öffnet den PDF-Dialog mit vorgewähltem „Endstand“. Das Recht kommt aus der echten Rechte-Datei
+ * Turnierleitung, Co-Admin und Helfer (@DR-048 Z. 5 seit Daniel 07.11.; Recht writeMatchData aus rolePermissions.json, nach dem Abschluss
+ * offen); wer im Turnier keine solche Rolle hat (Trainer, Zuschauer-Konto), bekommt ihn nicht. Ein Tipp öffnet den PDF-Dialog mit vorgewähltem „Endstand“. Das Recht kommt aus der echten Rechte-Datei
  * (`hasPermission`), nur die Rolle ist vorgegeben.
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,8 +43,8 @@ const tournament = hallencupTournament({ lifecycleStatus: 'finished', finishedAt
 const panel = () => render(<MemoryRouter><FinalStandingsPanel tournament={tournament} schedule={hallencupSchedule(tournament)} standings={[]} /></MemoryRouter>);
 
 describe('@DR-048 Z. 3 „Als PDF“ in der Endstand-Ansicht', () => {
-  for (const who of ['owner', 'co-admin'] as const) {
-    it(`${who === 'owner' ? 'Olli (Turnierleitung)' : 'Maria (Co-Admin)'}: „Als PDF“ steht über dem gespeicherten Endstand; ein Tipp öffnet den Dialog mit „Endstand“ vorgewählt`, async () => {
+  for (const [who, name] of [['owner', 'Olli (Turnierleitung)'], ['co-admin', 'Maria (Co-Admin)'], ['helper', 'Tom (Helfer-Zugang)'], ['collaborator', 'Tom (Helfer mit Konto)']] as const) {
+    it(`${name}: „Als PDF“ steht über dem gespeicherten Endstand; ein Tipp öffnet den Dialog mit „Endstand“ vorgewählt`, async () => {
       role = who;
       panel();
       fireEvent.click(await screen.findByTestId('final-standings-pdf'));
@@ -53,8 +53,8 @@ describe('@DR-048 Z. 3 „Als PDF“ in der Endstand-Ansicht', () => {
     });
   }
 
-  for (const who of ['helper', 'collaborator'] as const) {
-    it(`Gegenbeispiel Helfer (${who}): kein „Als PDF“ in der Endstand-Ansicht, der Endstand selbst steht da`, async () => {
+  for (const who of ['trainer', 'viewer'] as const) {
+    it(`Gegenbeispiel ohne Rolle im Spielbetrieb (${who}): kein „Als PDF“ in der Endstand-Ansicht`, async () => {
       role = who;
       panel();
       await screen.findByTestId('final-standings-list');
