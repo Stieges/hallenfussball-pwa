@@ -1,6 +1,7 @@
 /**
  * Saat „Turniertag“ für die Startseite (@OB-078, Grundriss „Am Turniertag stehen die Turniere des Tages oben und offen“):
- * F2 (Sa 28.11. 08:30), F1 (13:00), D (16:30), G/E2/E1 am Sonntag, Wintercup, ein Turnier mit 50 Zeichen Titel, ein Entwurf,
+ * dreimal „Nikolausturnier“ am Samstag – F2 (Sa 28.11. 08:30), F1 (13:00), D (16:30) – und am Sonntag G/E2/E1, ebenfalls „Nikolausturnier“
+ * (reale Turniere heißen gleich, unterschieden nur durch die Altersklasse, Daniel 07.11.), dazu der Wintercup, ein Turnier mit 50 Zeichen Titel, ein Entwurf,
  * ein abgeschlossenes Turnier, ein Turnier im Papierkorb; auf Wunsch zusätzlich der Herbstcup (läuft, nie abgeschlossen)
  * und eine nie angepfiffene Probe-Kopie vom 26.11. Aus der eingefrorenen Messlauf-Saat abgeleitet (Testumgebung, kein Produktivcode).
  */
@@ -56,18 +57,18 @@ export function baueTurniertagSaat(lage: Lage, mitAltlasten = false): Turnier[] 
     return t;
   };
 
-  const f2 = turnier('tw-f2', 'F2-Junioren Hallenturnier', '2026-11-28', '08:30', { ageClass: 'F-Junioren' });
+  const f2 = turnier('tw-f2', 'Nikolausturnier', '2026-11-28', '08:30', { ageClass: 'F2-Junioren' });
   if (lage === 'f2laeuft') { laeuft(f2); }
   if (lage === 'f2fertig') { fertig(f2); }
   const entwurf = structuredClone(entwurfBasis);
   Object.assign(entwurf, { id: 'tw-entwurf', title: 'Frühjahrscup', date: '2027-03-06', startDate: '2027-03-06', updatedAt: '2026-11-04T10:00:00.000Z' });
   const liste: Turnier[] = [
     f2,
-    turnier('tw-f1', 'F1-Junioren Hallenturnier', '2026-11-28', '13:00', { ageClass: 'F-Junioren' }),
-    turnier('tw-d', 'D-Junioren Hallenturnier', '2026-11-28', '16:30', { ageClass: 'D-Junioren' }),
-    turnier('tw-g', 'G-Junioren Hallenturnier', '2026-11-29', '08:30', { ageClass: 'G-Junioren' }),
-    turnier('tw-e2', 'E2-Junioren Hallenturnier', '2026-11-29', '12:30', { ageClass: 'E-Junioren' }),
-    turnier('tw-e1', 'E1-Junioren Hallenturnier', '2026-11-29', '16:00', { ageClass: 'E-Junioren' }),
+    turnier('tw-f1', 'Nikolausturnier', '2026-11-28', '13:00', { ageClass: 'F1-Junioren' }),
+    turnier('tw-d', 'Nikolausturnier', '2026-11-28', '16:30', { ageClass: 'D-Junioren' }),
+    turnier('tw-g', 'Nikolausturnier', '2026-11-29', '08:30', { ageClass: 'G-Junioren' }),
+    turnier('tw-e2', 'Nikolausturnier', '2026-11-29', '12:30', { ageClass: 'E2-Junioren' }),
+    turnier('tw-e1', 'Nikolausturnier', '2026-11-29', '16:00', { ageClass: 'E1-Junioren' }),
     turnier('tw-winter', 'Wintercup', '2026-12-12', '10:00', { location: { name: 'Sporthalle Traunstein' } }),
     turnier('tw-lang', 'Hallenmasters Waging am See um den Raiffeisenpokal', '2027-01-16', '09:00'),
     entwurf,
@@ -77,7 +78,7 @@ export function baueTurniertagSaat(lage: Lage, mitAltlasten = false): Turnier[] 
   ];
   if (mitAltlasten) {
     liste.push(laeuft(turnier('tw-herbst', 'Herbstcup (nie abgeschlossen)', '2026-10-24', '09:00')));
-    liste.push(turnier('tw-probe', 'F2-Junioren Hallenturnier (Probe)', '2026-11-26', '18:00', { ageClass: 'F-Junioren' }));
+    liste.push(turnier('tw-probe', 'Nikolausturnier (Probe)', '2026-11-26', '18:00', { ageClass: 'F2-Junioren' }));
   }
   return liste;
 }

@@ -56,10 +56,14 @@
     "permanentDelete": "Delete Permanently"
   },
   "card": {
-    "ariaLabel": "Tournament: {{title}}, {{status}}, {{time}}, {{location}}",
-    "ariaLabelNoLocation": "Tournament: {{title}}, {{status}}, {{time}}",
-    "ariaLabelExternal": "Tournament: {{title}}, {{status}}, {{time}}, {{location}}, {{source}}",
-    "ariaLabelExternalNoLocation": "Tournament: {{title}}, {{status}}, {{time}}, {{source}}",
+    "ariaLabel": "Tournament: {{title}}, {{status}}, {{ageClass}}, {{time}}, {{location}}",
+    "ariaLabelNoAgeClass": "Tournament: {{title}}, {{status}}, {{time}}, {{location}}",
+    "ariaLabelNoLocation": "Tournament: {{title}}, {{status}}, {{ageClass}}, {{time}}",
+    "ariaLabelNoLocationNoAgeClass": "Tournament: {{title}}, {{status}}, {{time}}",
+    "ariaLabelExternal": "Tournament: {{title}}, {{status}}, {{ageClass}}, {{time}}, {{location}}, {{source}}",
+    "ariaLabelExternalNoAgeClass": "Tournament: {{title}}, {{status}}, {{time}}, {{location}}, {{source}}",
+    "ariaLabelExternalNoLocation": "Tournament: {{title}}, {{status}}, {{ageClass}}, {{time}}, {{source}}",
+    "ariaLabelExternalNoLocationNoAgeClass": "Tournament: {{title}}, {{status}}, {{time}}, {{source}}",
     "lateFinishNotice": "The last game was on {{date}}. The tournament is still running – close it in the administration.",
     "statusLabel": "Status: {{status}}",
     "noDate": "No date",

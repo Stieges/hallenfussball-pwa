@@ -1,5 +1,5 @@
 /**
- * @OB-079 Der aria-label der Karte überdeckt ihren Inhalt und nennt darum auch Zeit und Ort (sonst liest der Screenreader nur Name und Zustand).
+ * @OB-079 Der aria-label der Karte überdeckt ihren Inhalt und nennt darum auch Altersklasse, Zeit und Ort (sonst liest der Screenreader nur Name und Zustand).
  * Die Test-Übersetzung gibt Schlüssel und Werte zurück, damit die genannten Werte sichtbar sind.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -18,7 +18,7 @@ import { TournamentCard } from '../TournamentCard';
 
 const turnier = (extra: Partial<Tournament> = {}): Tournament => ({
   id: 'f2', title: 'F2-Junioren Hallenturnier', status: 'published', teams: [], matches: [{ id: 'm', matchStatus: 'scheduled' }],
-  startDate: '2026-11-28', startTime: '08:30', location: { name: 'Bergader SportARENA' }, placementLogic: [],
+  startDate: '2026-11-28', startTime: '08:30', ageClass: 'F-Junioren', location: { name: 'Bergader SportARENA' }, placementLogic: [],
   ...extra,
 } as unknown as Tournament);
 
@@ -26,10 +26,10 @@ const labelOf = () => screen.getByTestId('tournament-card-f2').querySelector('ar
 const optionen = (label: string): Record<string, string> => JSON.parse(label.slice(label.indexOf('|') + 1));
 
 describe('@OB-079 aria-label der Karte', () => {
-  it('nennt Name, Zustand, Zeit und Ort', () => {
+  it('nennt Name, Zustand, Altersklasse, Zeit und Ort', () => {
     render(<TournamentCard tournament={turnier()} categoryLabel="upcoming" onClick={vi.fn()} />);
     expect(labelOf()).toMatch(/^card\.ariaLabel\|/);
-    expect(optionen(labelOf())).toMatchObject({ title: 'F2-Junioren Hallenturnier', time: 'Sa 28.11. · 08:30', location: 'Bergader SportARENA' });
+    expect(optionen(labelOf())).toMatchObject({ title: 'F2-Junioren Hallenturnier', ageClass: 'F-Junioren', time: 'Sa 28.11. · 08:30', location: 'Bergader SportARENA' });
   });
 
   it('unter „Heute“ steht nur die Uhrzeit', () => {
@@ -41,6 +41,16 @@ describe('@OB-079 aria-label der Karte', () => {
     render(<TournamentCard tournament={turnier({ externalSource: 'Datei' })} categoryLabel="upcoming" onClick={vi.fn()} />);
     expect(labelOf()).toMatch(/^card\.ariaLabelExternal\|/);
     expect(optionen(labelOf())).toMatchObject({ source: 'Datei', location: 'Bergader SportARENA' });
+  });
+
+  it('Gegenbeispiel: ohne Altersklasse gilt der Schlüssel ohne Altersklasse (kein loses Komma in der Übersetzung)', () => {
+    render(<TournamentCard tournament={turnier({ ageClass: '  ' })} categoryLabel="upcoming" onClick={vi.fn()} />);
+    expect(labelOf()).toMatch(/^card\.ariaLabelNoAgeClass\|/);
+  });
+
+  it('Gegenbeispiel: ohne Altersklasse und ohne Ort, extern: der Schlüssel mit beiden Endungen', () => {
+    render(<TournamentCard tournament={turnier({ ageClass: undefined, location: { name: '' }, externalSource: 'Datei' })} categoryLabel="upcoming" onClick={vi.fn()} />);
+    expect(labelOf()).toMatch(/^card\.ariaLabelExternalNoLocationNoAgeClass\|/);
   });
 
   it('Gegenbeispiel: ohne Ort gilt der Schlüssel ohne Ort (kein loses Komma in der Übersetzung)', () => {

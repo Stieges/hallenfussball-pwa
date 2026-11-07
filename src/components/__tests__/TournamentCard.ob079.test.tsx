@@ -1,7 +1,8 @@
 /**
  * @OB-079 Die Turnierkarte auf der Startseite zeigt nur, was man zum Finden braucht (docs/anforderungen/2026-10-02_oberflaeche.md).
  * Gegeben Olli hat am Samstag F2 (08:30), F1 (13:00) und D (16:30) in der Bergader SportARENA. Dann zeigt jede Karte Name, Zustandswort,
- * unter „Heute“ die Uhrzeit, sonst Tag und Uhrzeit, und den Ort; Altersklasse, Modus, Veranstalter und Platzierung stehen nicht auf der Karte.
+ * Altersklasse, unter „Heute“ die Uhrzeit, sonst Tag und Uhrzeit, und den Ort; Modus, Veranstalter und Platzierung stehen nicht auf der Karte.
+ * (Die Altersklasse prüft TournamentCard.altersklasse.test.tsx.)
  * („Alle drei Karten ohne Scrollen“ prüft das Playwright-Spec startseite-turniertag.spec.ts.)
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -26,18 +27,19 @@ describe('@OB-079 Inhalt der Karte', () => {
     expect(screen.getByRole('heading', { name: 'F2-Junioren Hallenturnier' })).toBeInTheDocument();
     expect(screen.getByText('dashboard:status.upcoming')).toBeInTheDocument();
     expect(screen.getByTestId('card-time')).toHaveTextContent(/^08:30$/);
+    expect(screen.getByTestId('card-age-class')).toHaveTextContent('F-Junioren');
     expect(screen.getByTestId('card-location')).toHaveTextContent('Bergader SportARENA');
   });
 
   it('außerhalb von „Heute“: Tag und Uhrzeit („Sa 28.11. · 08:30“)', () => {
     render(<TournamentCard tournament={f2} categoryLabel="upcoming" />);
     expect(screen.getByTestId('card-time')).toHaveTextContent('Sa 28.11. · 08:30');
+    expect(screen.getByTestId('card-age-class').parentElement).toHaveTextContent('F-Junioren · Sa 28.11. · 08:30');
   });
 
-  it('Gegenbeispiel: Altersklasse, Modus, Veranstalter und Platzierung stehen nicht auf der Karte', () => {
+  it('Gegenbeispiel: Modus, Veranstalter und Platzierung stehen nicht auf der Karte', () => {
     render(<TournamentCard tournament={f2} categoryLabel="upcoming" inToday />);
     const karte = screen.getByTestId('tournament-card-f2');
-    expect(karte).not.toHaveTextContent('F-Junioren');
     expect(karte).not.toHaveTextContent('TSV Waging');
     expect(karte).not.toHaveTextContent('card.groupSystem');
     expect(karte).not.toHaveTextContent('card.labels');

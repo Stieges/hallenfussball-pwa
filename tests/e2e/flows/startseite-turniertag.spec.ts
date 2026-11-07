@@ -18,7 +18,7 @@ const BILDER = process.env.SEITE_BILDER;
 const HANDY = { width: 360, height: 640 };
 const KARTE = '[data-testid^="tournament-card-"]';
 
-type Variante = { lage: Lage; altlasten?: boolean };
+type Variante = { lage: Lage; altlasten?: boolean; anpassen?: (liste: Array<Record<string, unknown>>) => void };
 
 function seed({ tournaments }: { tournaments: unknown[] }) {
   localStorage.setItem('hallenfussball-settings', JSON.stringify({ language: 'de' }));
@@ -32,8 +32,10 @@ function seed({ tournaments }: { tournaments: unknown[] }) {
   };
 }
 
-async function oeffne(page: Page, { lage, altlasten = false }: Variante, pfad = '/#/') {
-  await page.context().addInitScript(seed, { tournaments: baueTurniertagSaat(lage, altlasten) });
+async function oeffne(page: Page, { lage, altlasten = false, anpassen }: Variante, pfad = '/#/') {
+  const liste = baueTurniertagSaat(lage, altlasten);
+  anpassen?.(liste);
+  await page.context().addInitScript(seed, { tournaments: liste });
   await page.clock.setFixedTime(new Date(UHRZEIT[lage]));
   await page.goto(pfad);
   await page.waitForSelector('[data-testid="dashboard-import-trigger"]', { timeout: 20000 });
@@ -90,22 +92,25 @@ test.describe('@OB-078 Am Turniertag stehen die Turniere des Tages oben und offe
   });
 });
 
-test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden braucht', () => {
-  test('F2, F1 und D am Samstag: alle drei Karten unter „Heute“ ohne Scrollen, mit Uhrzeit und Ort, ohne Altersklasse und Veranstalter', async ({ page }) => {
+test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden und Unterscheiden braucht', () => {
+  test('dreimal „Nikolausturnier“ am Samstag: alle drei Karten unter „Heute“ ohne Scrollen, unterschieden an der Altersklasse, mit Uhrzeit und Ort, ohne Veranstalter', async ({ page }) => {
     await oeffne(page, { lage: 'bereit' });
     const heute = page.getByTestId('section-heute');
     const karten = heute.locator(KARTE);
     await expect(karten).toHaveCount(3);
-    for (const [i, zeit] of [[0, '08:30'], [1, '13:00'], [2, '16:30']] as const) {
+    for (const [i, altersklasse, zeit] of [[0, 'F2-Junioren', '08:30'], [1, 'F1-Junioren', '13:00'], [2, 'D-Junioren', '16:30']] as const) {
       const karte = karten.nth(i);
       // ganz im Bildschirmausschnitt und über der festen unteren Leiste (64 px)
       const box = await karte.boundingBox();
       expect(box).not.toBeNull();
       expect(box!.y).toBeGreaterThanOrEqual(0);
       expect(box!.y + box!.height, `Karte ${i + 1} vor dem Falz`).toBeLessThanOrEqual(HANDY.height - 64);
+      await expect(karte.getByRole('heading')).toHaveText('Nikolausturnier');
+      await expect(karte.getByTestId('card-age-class')).toHaveText(altersklasse);
       await expect(karte.getByTestId('card-time')).toHaveText(zeit);
+      // Altersklasse und Uhrzeit stehen in einer Zeile: „D-Junioren · 16:30“
+      await expect(karte.getByTestId('card-age-class').locator('..')).toHaveText(`${altersklasse} · ${zeit}`);
       await expect(karte.getByTestId('card-location')).toHaveText('Bergader SportARENA');
-      await expect(karte).not.toContainText('F-Junioren');
       await expect(karte).not.toContainText('TSV Waging');
       await expect(karte).not.toContainText('Punkte');
     }
@@ -125,6 +130,33 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden braucht', 
       expect(m.text, `Ort der Karte ${i + 1}: Text ${m.text} px, Feld ${m.box} px`).toBeLessThanOrEqual(m.box);
       expect(m.gekuerzt, `Ort der Karte ${i + 1} wird mit Auslassung gekürzt`).toBe(false);
     }
+  });
+
+  // Mit Altersklasse in Zeile 2 bricht das Schild „Co-Admin“ bei 360 in eine eigene Reihe der Zeile 2 um (Umbruch erlaubt, Kürzen nie).
+  // Jede umgebrochene Karte ist rund 32 px höher; ob die drei Karten dann noch vor die untere Leiste passen, hängt von der Zahl der Schilder ab
+  // (Ergebnis im Bericht, @OB-079 Gegeben nennt keine Rolle) – hier gilt: Schild vollständig, in der Karte, über dem Ort.
+  test('Gegenprobe: Co-Admin auf allen drei Karten – das Schild steht in Zeile 2, ist bei 360 nicht abgeschnitten', async ({ page }, testInfo) => {
+    await oeffne(page, {
+      lage: 'bereit',
+      anpassen: (liste) => { for (const t of liste) { if (['tw-f2', 'tw-f1', 'tw-d'].includes(String(t.id))) { t.myRole = 'co-admin'; } } },
+    });
+    const karten = page.getByTestId('section-heute').locator(KARTE);
+    await expect(karten).toHaveCount(3);
+    for (let i = 0; i < 3; i += 1) {
+      const karte = karten.nth(i);
+      const schild = karte.locator('[data-testid^="tournament-role-"]');
+      await expect(schild).toHaveText('Co-Admin');
+      const s = await schild.boundingBox();
+      const k = await karte.boundingBox();
+      expect(s!.x, `Schild der Karte ${i + 1} links in der Karte`).toBeGreaterThanOrEqual(k!.x);
+      expect(s!.x + s!.width, `Schild der Karte ${i + 1} rechts in der Karte`).toBeLessThanOrEqual(k!.x + k!.width);
+      // Schild und Altersklasse liegen in derselben Zeile-2-Gruppe oberhalb des Orts
+      const ort = await karte.getByTestId('card-location').boundingBox();
+      expect(s!.y + s!.height).toBeLessThanOrEqual(ort!.y + 1);
+      expect(await schild.evaluate((el) => el.scrollWidth <= el.clientWidth), `Schild der Karte ${i + 1} vollständig`).toBe(true);
+      testInfo.annotations.push({ type: 'karte-unterkante', description: `Karte ${i + 1}: ${k!.y + k!.height} px (untere Leiste ab ${HANDY.height - 64})` });
+    }
+    await bild(page, 'ob079-coadmin');
   });
 
   for (const groesse of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }]) {
@@ -166,6 +198,7 @@ test.describe('@OB-079 Die Turnierkarte zeigt nur, was man zum Finden braucht', 
   test('außerhalb von „Heute“ steht Tag und Uhrzeit', async ({ page }) => {
     await oeffne(page, { lage: 'bereit' });
     await expect(page.getByTestId('section-upcoming').getByTestId('tournament-card-tw-g').getByTestId('card-time')).toHaveText('So 29.11. · 08:30');
+    await expect(page.getByTestId('tournament-card-tw-g').getByTestId('card-age-class').locator('..')).toHaveText('G-Junioren · So 29.11. · 08:30');
   });
 });
 

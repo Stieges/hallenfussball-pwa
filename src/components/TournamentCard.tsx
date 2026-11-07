@@ -1,8 +1,8 @@
 /**
  * TournamentCard Component (@OB-079): zeigt nur, was man zum Finden braucht.
- * Zeile 1: Name in voller Breite (höchstens zwei Zeilen, kein Wortbruch, nie abgeschnitten). Zeile 2: Zeit (unter „Heute“ nur die
- * Uhrzeit, sonst Tag und Uhrzeit) und Zustandswort. Zeile 3: Ort, nie gekürzt. Das Menü steht rechts neben Zeile 2 und 3.
- * Altersklasse, Modus, Veranstalter und Platzierung stehen in der Übersicht des Turniers.
+ * Zeile 1: Name in voller Breite (höchstens zwei Zeilen, kein Wortbruch, nie abgeschnitten). Zeile 2: Altersklasse · Zeit (unter „Heute“
+ * nur die Uhrzeit, sonst Tag und Uhrzeit) und Zustandswort; die Altersklasse unterscheidet gleichnamige Turniere. Zeile 3: Ort, nie
+ * gekürzt. Das Menü steht rechts neben Zeile 2 und 3. Modus, Veranstalter und Platzierung stehen in der Übersicht des Turniers.
  */
 
 import { isTournamentClosed, lifecycleOf } from '../core/services/lifecycle';
@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Tournament } from '../types/tournament';
 import { Card } from './ui';
 import { cssVars } from '../design-tokens';
+import { ageClassText } from '../core/view';
 import { getLocationName } from '../utils/locationHelpers';
 import { formatCardTime } from '../utils/formatCardTime';
 import { TournamentActionMenu } from './TournamentActionMenu';
@@ -65,6 +66,22 @@ const lineStyle: CSSProperties = {
   flexWrap: 'wrap',
   gap: cssVars.spacing.sm,
   minWidth: 0,
+};
+
+/** Schlüssel des aria-label mit/ohne Quelle, Ort und Altersklasse (ausgeschrieben, damit die Übersetzungsschlüssel typgeprüft bleiben). */
+function ariaLabelKeyFor(external: boolean, hasLocation: boolean, hasAgeClass: boolean) {
+  if (external) {
+    if (hasLocation) { return hasAgeClass ? 'card.ariaLabelExternal' : 'card.ariaLabelExternalNoAgeClass'; }
+    return hasAgeClass ? 'card.ariaLabelExternalNoLocation' : 'card.ariaLabelExternalNoLocationNoAgeClass';
+  }
+  if (hasLocation) { return hasAgeClass ? 'card.ariaLabel' : 'card.ariaLabelNoAgeClass'; }
+  return hasAgeClass ? 'card.ariaLabelNoLocation' : 'card.ariaLabelNoLocationNoAgeClass';
+}
+
+const whenStyle: CSSProperties = {
+  fontWeight: cssVars.fontWeights.semibold,
+  color: cssVars.colors.textPrimary,
+  fontSize: cssVars.fontSizes.md,
 };
 
 const externalBadgeStyle: CSSProperties = {
@@ -152,13 +169,17 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
   const location = getLocationName(tournament);
   const timeText = formatCardTime(tournament, i18n.language, !inToday, t('card.noDate'));
-  // Der aria-label der Karte überdeckt ihren Inhalt: Zeit und Ort gehören hinein (sonst liest der Screenreader nur Name und Zustand vor)
+  const ageClass = ageClassText(tournament.ageClass);
+  // Der aria-label der Karte überdeckt ihren Inhalt: Altersklasse, Zeit und Ort gehören hinein (sonst liest der Screenreader nur Name und Zustand vor).
+  // Schlüssel mit/ohne Ort und mit/ohne Altersklasse, damit kein loses Komma in der Übersetzung bleibt.
   const labelParams = {
     title: tournament.title,
     status: getCategoryDisplayLabel(),
+    ageClass,
     time: timeText !== '' ? timeText : t('sections.today'),
     location,
   };
+  const ariaLabelKey = ariaLabelKeyFor(Boolean(tournament.externalSource), location !== '', ageClass !== '');
 
   return (
     <Card
@@ -179,9 +200,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       <article
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
-        aria-label={tournament.externalSource
-          ? t(location !== '' ? 'card.ariaLabelExternal' : 'card.ariaLabelExternalNoLocation', { ...labelParams, source: tournament.externalSource })
-          : t(location !== '' ? 'card.ariaLabel' : 'card.ariaLabelNoLocation', labelParams)}
+        aria-label={t(ariaLabelKey, tournament.externalSource ? { ...labelParams, source: tournament.externalSource } : labelParams)}
         onKeyDown={(e) => {
           if (onClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
@@ -192,11 +211,15 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         {/* Zeile 1: Name in voller Breite */}
         <h3 style={titleStyle} title={tournament.title}>{tournament.title}</h3>
 
-        {/* Zeile 2: Zeit und Zustandswort; Zeile 3: Ort in der Breite neben dem Menü, das beide Zeilen rechts begleitet (der Ort wird nie gekürzt) */}
+        {/* Zeile 2: Altersklasse · Zeit und Zustandswort; Zeile 3: Ort in der Breite neben dem Menü, das beide Zeilen rechts begleitet (der Ort wird nie gekürzt) */}
         <div style={gridStyle}>
           <div style={{ ...lineStyle, gridColumn: 1, gridRow: 1 }}>
-            {timeText !== '' && (
-              <span style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md }} data-testid="card-time">{timeText}</span>
+            {(ageClass !== '' || timeText !== '') && (
+              <span style={whenStyle}>
+                {ageClass !== '' && <span data-testid="card-age-class">{ageClass}</span>}
+                {ageClass !== '' && timeText !== '' && ' · '}
+                {timeText !== '' && <span data-testid="card-time">{timeText}</span>}
+              </span>
             )}
             {tournament.isExternal && tournament.externalSource && (
               <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
