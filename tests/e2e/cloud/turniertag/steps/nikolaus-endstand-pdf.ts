@@ -71,9 +71,27 @@ function plaetzeImPdf(seiten: string[][], namen: readonly string[]): string[] {
   return start < 0 ? [] : text.slice(start + 1).filter((s) => namen.includes(s.trim())).map((s) => s.trim());
 }
 
+/**
+ * Die „Abschlusstabelle“ ist gefüllt (Daniel 07.11.: nie leer): je Team die Zeile Team, Sp. 5, S, U, N, Tore „n:m“, Diff., Pkt. –
+ * Nikolaus: eine Gruppe, 6 Teams, jeder gegen jeden, keine Finalrunde.
+ */
+function pruefeTabelleGefuellt(seiten: string[][], namen: readonly string[]): void {
+  const texte = seiten.flat().map((s) => s.trim()).filter((s) => s !== '');
+  const start = texte.lastIndexOf('Abschlusstabelle');
+  expect(start, 'Überschrift „Abschlusstabelle“').toBeGreaterThan(-1);
+  for (const team of namen) {
+    const i = texte.indexOf(team, start);
+    const zeile = i < 0 ? [] : texte.slice(i, i + 8);
+    expect(zeile[1], `${team}: Spiele`).toBe('5');
+    expect(zeile[5], `${team}: Tore`).toMatch(/^\d+:\d+$/);
+    expect(zeile[7], `${team}: Punkte`).toMatch(/^\d+$/);
+  }
+}
+
 async function pruefeEndstandPdf(page: Page, seiten: string[][], datei: string): Promise<void> {
   const { snapshot, finished_at } = await gespeichert();
   const erwartet = [...snapshot.ranking].sort((a, b) => a.place - b.place).map((zeile) => zeile.teamName);
+  pruefeTabelleGefuellt(seiten, erwartet);
   const zeile = await abschlussZeile(page, finished_at);
   expect(seiten.length, 'PDF hat Seiten').toBeGreaterThan(0);
   for (const [i, seite] of seiten.entries()) {
@@ -111,6 +129,18 @@ async function imTurnierVorgewaehlt({ asRole }: StepContext): Promise<void> {
   const { seiten, datei } = await speichernUndLesen(seite, tippe, 'endstand-dialog');
   expect(anzahl(), 'Tipps ab dem Spielplan').toBe(2);
   await pruefeEndstandPdf(seite, seiten, datei);
+
+  // @DR-009: auch der Spielplan nach dem Abschluss trägt die gefüllte Abschlusstabelle in Endstand-Reihenfolge (Fußzeile „Stand …“)
+  await seite.getByTestId('pdf-close').click();
+  await seite.getByTestId('schedule-action-pdf').click();
+  await expect(seite.getByTestId('pdf-choice-final')).toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+  await seite.getByTestId('pdf-choice-schedule').click();
+  const plan = await speichernUndLesen(seite, async (ziel) => { await ziel.click(); }, 'spielplan-nach-abschluss');
+  const { snapshot } = await gespeichert();
+  const reihenfolge = [...snapshot.ranking].sort((a, b) => a.place - b.place).map((zeile) => zeile.teamName);
+  pruefeTabelleGefuellt(plan.seiten, reihenfolge);
+  expect(plaetzeImPdf(plan.seiten, reihenfolge), 'Spielplan: Reihenfolge wie im gespeicherten Endstand').toEqual(reihenfolge);
+  expect(plan.seiten.flat().join(' '), 'Spielplan: Fußzeile „Stand …“').toMatch(/Stand \d{2}\.\d{2}\. \d{2}:\d{2}/);
 }
 
 /**
@@ -248,8 +278,11 @@ async function helferEndstandPdf({ asRole }: StepContext): Promise<void> {
     expect(anzahl()).toBe(2);
     await pruefeEndstandPdf(tom, seiten, datei);
   } finally {
+    // Aufräumen darf den eigentlichen Fehler nicht verdecken: ein Fehlschlag steht nur im Bericht
     const weg = await serviceRest('DELETE', `tournament_collaborators?tournament_id=eq.${NIKOLAUS.tournamentId}&user_id=eq.${tomId}`);
-    expect(weg.status, `Tom wieder austragen: ${weg.text}`).toBeLessThan(300);
+    if (weg.status >= 300) {
+      test.info().annotations.push({ type: 'N8f Aufräumen', description: `Tom wieder austragen fehlgeschlagen: ${String(weg.status)} ${weg.text}` });
+    }
   }
 }
 

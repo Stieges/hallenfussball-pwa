@@ -169,8 +169,8 @@ export function ExportsCategory({
   onTournamentUpdate,
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
-  const canNotice = useCan('tournamentSettings', tournament.id, { openAfterClose: true });
-  const canFinal = useCan('writeMatchData', tournament.id, { openAfterClose: true }); // @DR-048: Leitung, Co-Admin und Helfer; druckt nur // A-11 @ZM-019: Aushang nur mit Turniereinstellungen; bleibt nach dem Abschluss (druckt den Link der öffentlichen Ansicht, schreibt nichts, @LZ-037 Z. 5)
+  const canNotice = useCan('tournamentSettings', tournament.id, { openAfterClose: true }); // A-11 @ZM-019: Aushang nur mit Turniereinstellungen; bleibt nach dem Abschluss (druckt den Link der öffentlichen Ansicht, schreibt nichts, @LZ-037 Z. 5)
+  const canFinal = useCan('writeMatchData', tournament.id, { openAfterClose: true }); // @DR-048: Leitung, Co-Admin und Helfer; druckt nur
   const closed = useTournamentClosed(tournament.id); // R3-3 (@LZ-036): Wiederherstellen überschriebe ein abgeschlossenes Turnier
   const { t: tSport } = useTranslation('sport');
   const { t: tTournament } = useTranslation('tournament');

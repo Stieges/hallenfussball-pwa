@@ -6,7 +6,7 @@
  * (Turnierleitung) bekommen beides angeboten. Echte Kette useCan -> hasPermission, nur die Rolle ist gemockt.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { Team, Tournament } from '../../../types/tournament';
@@ -26,6 +26,9 @@ const mockContext = {
   publicLiveMatchRepo: null as unknown,
 };
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => mockContext }));
+// @DR-048: gespeicherter Endstand des abgeschlossenen Turniers (Server), für die Endstand-Karte im PDF-Dialog
+const stored = vi.hoisted((): { result: Record<string, unknown> } => ({ result: { status: 'none' } }));
+vi.mock('../../../core/repositories/storedFinalStandingsRead', () => ({ readStoredFinalStandings: () => Promise.resolve(stored.result) }));
 
 import { generateFullSchedule } from '../../../core/generators';
 import { createMockTournament } from '../../../test/factories';
@@ -115,5 +118,46 @@ describe('@ZM-019 Aushang zum Drucken – über den Spielplan der Verwaltung', (
     role.current = r;
     await openPdfDialog();
     expect(screen.getByTestId('pdf-choice-notice')).toBeInTheDocument();
+  });
+});
+
+describe('@DR-048 Endstand-PDF im Spielplan: Turnierleitung, Co-Admin und Helfer (writeMatchData)', () => {
+  const finishedAt = new Date(2026, 10, 28, 12, 30).toISOString();
+  const closed: Tournament = { ...tournament, lifecycleStatus: 'finished', finishedAt };
+
+  beforeEach(() => {
+    stored.result = {
+      status: 'ok', finishedAt,
+      snapshot: {
+        format: 1, scorers: [], appVersion: 'test', computedAt: finishedAt,
+        ranking: teams.map((team, i) => ({ place: i + 1, teamId: team.id, teamName: team.name, origin: { kind: 'groupPlace', group: '', place: i + 1 } })),
+      },
+    };
+  });
+
+  async function openClosedPdfDialog() {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter><ToastProvider>
+        <ScheduleTab
+          tournament={closed} schedule={schedule} currentStandings={[]}
+          onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} onMatchesUpdate={vi.fn()}
+        />
+      </ToastProvider></MemoryRouter>,
+    );
+    await user.click(screen.getByTestId('schedule-action-pdf'));
+    expect(await screen.findByTestId('pdf-choice-schedule')).toBeInTheDocument();
+  }
+
+  it('@DR-048 Tom (Helfer mit Konto): nach dem Abschluss steht die Karte „Endstand“ und ist vorgewählt', async () => {
+    role.current = 'collaborator';
+    await openClosedPdfDialog();
+    await waitFor(() => expect(screen.getByTestId('pdf-choice-final')).toHaveAttribute('aria-checked', 'true'));
+  });
+
+  it('Gegenbeispiel @DR-048 Trainer: die Karte „Endstand“ fehlt', async () => {
+    role.current = 'trainer';
+    await openClosedPdfDialog();
+    expect(screen.queryByTestId('pdf-choice-final')).not.toBeInTheDocument();
   });
 });

@@ -53,7 +53,7 @@ describe('@DR-048 Z. 3 „Als PDF“ in der Endstand-Ansicht', () => {
     });
   }
 
-  for (const who of ['trainer', 'viewer'] as const) {
+  for (const who of ['trainer', 'viewer', 'screen'] as const) {
     it(`Gegenbeispiel ohne Rolle im Spielbetrieb (${who}): kein „Als PDF“ in der Endstand-Ansicht`, async () => {
       role = who;
       panel();
