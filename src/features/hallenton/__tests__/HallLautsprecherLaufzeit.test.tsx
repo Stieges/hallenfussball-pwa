@@ -35,7 +35,8 @@ vi.mock('../../../lib/supabase', () => ({
 vi.mock('../../../hooks/useWakeLock', () => ({
   useWakeLock: (an: boolean) => { wach.aufrufe.push(an); return { status: 'idle', request: vi.fn(), release: vi.fn() }; },
 }));
-const repos = vi.hoisted(() => ({ tournamentRepository: { get: () => Promise.resolve(null) } }));
+const turnier = vi.hoisted((): { wert: unknown } => ({ wert: null }));
+const repos = vi.hoisted(() => ({ tournamentRepository: { get: () => Promise.resolve(turnier.wert) } }));
 vi.mock('../../../core/contexts/RepositoryContext', () => ({ useRepositories: () => repos }));
 vi.mock('../../match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => engineKontext(konto.accountId),
@@ -47,6 +48,7 @@ import { useHallLautsprecher } from '../useHallLautsprecher';
 const TID = '22222222-2222-4222-8222-222222222222';
 let worker: { erzeugt: number; beendet: number };
 let kontext: FalscherAudioKontext;
+let geladen: string[];
 
 class FalscherWorker {
   onmessage: ((e: MessageEvent) => void) | null = null;
@@ -63,6 +65,8 @@ function einschalten(): void {
 
 beforeEach(() => {
   worker = { erzeugt: 0, beendet: 0 };
+  geladen = [];
+  turnier.wert = null;
   wach.aufrufe = [];
   konto.accountId = 'konto-olli';
   // die Testumgebung ersetzt localStorage durch leere Attrappen: hier ein echter Speicher dahinter
@@ -74,7 +78,11 @@ beforeEach(() => {
   sb.client = falsch.client;
   kontext = new FalscherAudioKontext();
   __setzeGeraetFuerTests({
-    spieler: erzeugeHallTonSpieler({ erzeugeKontext: () => kontext, ladeDaten: () => Promise.resolve(tonDaten(2)), speicher: localStorage }),
+    spieler: erzeugeHallTonSpieler({
+      erzeugeKontext: () => kontext,
+      ladeDaten: (url) => { geladen.push(url); return Promise.resolve(tonDaten(2)); },
+      speicher: localStorage,
+    }),
   });
   vi.stubGlobal('Worker', FalscherWorker);
 });
@@ -100,10 +108,13 @@ describe('<HallLautsprecherLaufzeit/> – nur auf einem Lautsprecher-Gerät ents
     expect(geraetStand().laufzeit).toBeNull();
   });
 
-  it('eingeschaltetes Lautsprecher-Gerät: die Laufzeit startet, der Worker entsteht einmal, der Bildschirm bleibt wach', async () => {
+  it('eingeschaltetes Lautsprecher-Gerät: die Laufzeit startet, nach „Ton aktivieren“ entsteht der Worker einmal, der Bildschirm bleibt wach', async () => {
     einschalten();
     const { rerender, unmount } = render(<HallLautsprecherLaufzeit />);
     await act(async () => { await Promise.resolve(); });
+    expect(geraetStand().laufzeit?.getSnapshot().rolle).toBe('wartet'); // W3: Sperre erst nach der Aktivierung
+    expect(worker.erzeugt).toBe(0);
+    await act(async () => { await geraetStand().laufzeit?.tonAktivieren(); });
     rerender(<HallLautsprecherLaufzeit />);
     expect(worker.erzeugt).toBe(1);
     expect(geraetStand().laufzeit?.getSnapshot().rolle).toBe('toent');
@@ -127,8 +138,24 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     expect(aufruf?.args).toMatchObject({ p_tournament_id: TID, p_fields: [1], p_device_name: 'Rechner der Turnierleitung', p_replace: false });
     expect(result.current.rolle).toBe('diesesTurnier');
     expect(result.current.felder).toEqual([1]);
-    expect(worker.erzeugt).toBe(1);
+    expect(result.current.laufzeit?.rolle).toBe('wartet');
     expect(result.current.laufzeit?.zustandJeFeld).toEqual({ 'field-1': 'not_activated' });
+  });
+
+  it('@HT-025 Tonwahl: Turnier mit Abpfiff „Hupe 2“ (matchCockpitSettings.soundId) → der Lautsprecher lädt horn-2 für den Abpfiff', async () => {
+    const falsch = sb.client as FalscherSupabase;
+    falsch.rpcDaten.hall_sound_status = {
+      serverNow: 0, closed: false, speakers: [], leads: [],
+      settings: { halftimeSound: 'horn-3', halftimeCustomPath: null, endCustomPath: null, goalToneFields: [] },
+    };
+    turnier.wert = { matches: [], matchCockpitSettings: { soundId: 'horn-2' } };
+    einschalten();
+    render(<HallLautsprecherLaufzeit />);
+    for (let i = 0; i < 5; i += 1) {
+      await act(async () => { await new Promise((r) => { setTimeout(r, 0); }); });
+    }
+    expect(geladen).toContain('/sounds/horn-2.mp3');
+    expect(geladen).toContain('/sounds/horn-3.mp3');
   });
 
   it('@HT-015 Feld schon belegt → occupied geht an H4 (Rückfrage „Ablösen?“), das Gerät bleibt ohne Lautsprecher; mit abloesen wird p_replace gesetzt', async () => {

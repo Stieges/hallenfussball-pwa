@@ -191,6 +191,10 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     if (hasFiredReload) {
       return;
     }
+    if (getReloadGate()?.urgentBlocked?.() === true) {
+      void onMaybeIdle(); // ein Halter mit `blocksUrgent` sagt nein: wie der normale Weg über das Tor
+      return;
+    }
     hasFiredReload = true;
     idleCleanup?.();
     updateSWAndReload();

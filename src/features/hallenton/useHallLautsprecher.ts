@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { abonniereGeraet, geraetSpieler, geraetStand, schlafenQuittiert, setzeEinschaltung } from './lautsprecherGeraet';
 import type { LaufzeitSnapshot } from './runtime/HallLautsprecherLaufzeit';
 import type { TonArt } from './runtime/hallTonSpieler';
+import { VORBELEGUNG } from './runtime/tonWahl';
 
 export type HallLautsprecherRolle = 'keiner' | 'diesesTurnier' | 'anderesTurnier';
 
@@ -78,8 +79,9 @@ export function useHallLautsprecher(tid: string): HallLautsprecher {
   const hierAnhoeren = useCallback(async (ton: TonArt) => {
     const spieler = geraetSpieler();
     await spieler.aktivieren(); // in der Geste: `resume()` läuft vor jedem await
-    if (spieler.zustand() === 'not_activated') {
-      await spieler.laden({ abpfiff: 'horn-1', halbzeit: 'horn-1' });
+    if (spieler.zustand() === 'not_activated' && geraetStand().laufzeit === null) {
+      // ohne Laufzeit (kein Lautsprecher-Gerät) die Vorbelegung; sonst gilt die Tonwahl der Laufzeit, kein Überschreiben
+      await spieler.laden(VORBELEGUNG);
     }
     return spieler.jetztSpielen(ton);
   }, []);

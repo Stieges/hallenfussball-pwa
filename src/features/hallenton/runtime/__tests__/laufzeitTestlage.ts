@@ -138,6 +138,7 @@ export class Tab {
       kanal: this.kanal,
       wurdeVerworfen: o.wurdeVerworfen ?? false,
       tonWahl: { abpfiff: 'horn-2', halbzeit: 'horn-3' },
+      gedaechtnisSpeicher: this.geraet.speicher,
     });
   }
 

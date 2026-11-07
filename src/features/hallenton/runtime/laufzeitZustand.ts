@@ -7,6 +7,7 @@ import { ANTWORT_MAX_ALTER_MS, type FeldStand, type GeplanterTon, type HallTonAr
 import type { HallSpeakerState } from '../../../core/repositories/hallentonRpc';
 import { feldKennung } from './aktuellesSpielJeFeld';
 import type { FeldStandVerfuegbarkeit } from './feldStand';
+import { istAngepfiffen } from './feldStandSpiele';
 import type { SpielerZustand } from './hallTonSpieler';
 
 export type FeldZustand = HallSpeakerState | 'keineVerbindung';
@@ -66,17 +67,34 @@ export function naechsterTonAus(ton: GeplanterTon | null, staende: readonly Feld
   return { at: ton.at, art: ton.art, felder: ton.felder, spiele: ton.felder.flatMap((f) => spielJeFeld.get(f) ?? []) };
 }
 
+/** Freigabe eines Felds für einen Ton zu `at`: eigenes Cockpit immer, sonst die Antwort dieses Felds nicht vor `at − 3 s`. */
+export function feldFrei(feldId: string, at: number, staende: readonly FeldStand[], staendeUm: number): boolean {
+  const stand = staende.find((s) => s.feldId === feldId);
+  if (!stand) {
+    return false;
+  }
+  return stand.quelle.art === 'eigenesCockpit' || staendeUm - stand.quelle.antwortAlterMs >= at - ANTWORT_MAX_ALTER_MS;
+}
+
 /**
- * Freigabe vor dem Ton (@HT-011 ↔ @HT-029) je Feld: frisch ist die Antwort dieses Felds (`quelle.antwortAlterMs` zum Zeitpunkt
- * `staendeUm`), wenn sie nicht vor `at − 3 s` liegt; ein Feld nach eigenem Cockpit ist immer frei. Ein Ton für mehrere Felder
- * ist frei, wenn eines seiner Felder frei ist (die übrigen Felder tönen, @HT-032).
+ * Freigabe vor dem Ton (@HT-011 ↔ @HT-029) je Feld (`quelle.antwortAlterMs` zum Zeitpunkt `staendeUm`). Ein Ton für mehrere
+ * Felder ist frei, wenn eines seiner Felder frei ist (die übrigen Felder tönen, @HT-032).
  */
 export function tonFrei(ton: GeplanterTon, staende: readonly FeldStand[], staendeUm: number): boolean {
-  return ton.felder.some((feldId) => {
-    const stand = staende.find((s) => s.feldId === feldId);
-    if (!stand) {
-      return false;
-    }
-    return stand.quelle.art === 'eigenesCockpit' || staendeUm - stand.quelle.antwortAlterMs >= ton.at - ANTWORT_MAX_ALTER_MS;
-  });
+  return ton.felder.some((feldId) => feldFrei(feldId, ton.at, staende, staendeUm));
+}
+
+/**
+ * k3: Nach dem Abspielen gelten nur die Enden der freien Felder als erledigt; ein Feld ohne frische Antwort könnte in Wahrheit
+ * angehalten sein, sein echtes Ende tönt dann später. Ohne freies Feld (Ton trotz Aussetzer, Restrisiko) alle.
+ */
+export function nurFreieEnden(ton: GeplanterTon, staende: readonly FeldStand[], staendeUm: number): GeplanterTon {
+  const freie = ton.felder.filter((feldId) => feldFrei(feldId, ton.at, staende, staendeUm));
+  return freie.length === 0 ? ton : { ...ton, enden: ton.enden.filter((e) => freie.includes(e.feldId)) };
+}
+
+/** Warnung „keine Verbindung“ nur für ein angepfiffenes Feld oder nach einem gescheiterten Versuch (Ruling N-2, 2b). */
+export function warnFelderAus(warnungen: readonly { feldId: string }[], staende: readonly FeldStand[], gescheitert: boolean): Set<string> {
+  const angepfiffen = (feldId: string): boolean => istAngepfiffen(staende.find((s) => s.feldId === feldId)?.state.status);
+  return new Set(warnungen.filter((w) => gescheitert || angepfiffen(w.feldId)).map((w) => w.feldId));
 }

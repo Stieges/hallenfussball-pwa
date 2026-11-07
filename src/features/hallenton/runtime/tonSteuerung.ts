@@ -40,8 +40,8 @@ export interface TonSteuerung {
   weckruf(id: string, now: number, frei: (ton: GeplanterTon) => boolean): void;
   /** Töne, die seit dem letzten Aufruf begonnen haben (für `hallTonGespielt`). */
   bestaetigen(now: number): GespielterTon[];
-  /** Alles noch nicht Begonnene abbrechen (Uhrsprung); `auchLaufende` beim Abschalten. */
-  allesAbbrechen(auchLaufende?: boolean): void;
+  /** Alles noch nicht Begonnene abbrechen (Uhrsprung, W1: ein begonnener Ton bleibt); `auchLaufende` beim Abschalten. */
+  allesAbbrechen(now: number, auchLaufende?: boolean): void;
   naechster(): GeplanterTon | null;
 }
 
@@ -49,8 +49,13 @@ interface Eintrag {
   ton: GeplanterTon;
   /** Serverzeit, zu der der Spieler den Ton angenommen hat; `null` = (noch) nicht beim Spieler. */
   geplantUm: number | null;
+  /** Audiozeit, für die der Spieler den Ton angenommen hat (k4: neu planen, wenn sich die Abbildung ändert). */
+  audioAt: number | null;
   weckAt: number | null;
 }
+
+/** Ab dieser Abweichung der Audiozeit (s) wird ein angenommener Ton neu geplant (Abgleich der Uhr, k4). */
+const AUDIO_ABWEICHUNG_SEK = 0.02;
 
 export function tonKennung(ton: GeplanterTon): string {
   return `ton:${[...ton.schluessel].sort().join('+')}`;
@@ -79,8 +84,10 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
     if (ton.at - now <= FREIGABE_VOR_MS && !frei(ton)) {
       return;
     }
-    if (spieler.planen(id, ton.art, spieler.audioZeitFuerServerZeit(ton.at, now))) {
+    const audioAt = spieler.audioZeitFuerServerZeit(ton.at, now);
+    if (spieler.planen(id, ton.art, audioAt)) {
       eintrag.geplantUm = now;
+      eintrag.audioAt = audioAt;
     }
   };
 
@@ -98,14 +105,16 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
         if (alt && begonnen(alt, now)) {
           continue; // ein begonnener Ton bleibt, wie er ist
         }
-        if (alt?.ton.at === ton.at && alt.geplantUm !== null) {
+        const altAudio = alt?.audioAt ?? null;
+        const audioGleich = altAudio !== null && Math.abs(spieler.audioZeitFuerServerZeit(ton.at, now) - altAudio) <= AUDIO_ABWEICHUNG_SEK;
+        if (alt?.ton.at === ton.at && alt.geplantUm !== null && audioGleich) {
           alt.ton = ton;
           continue;
         }
         if (alt !== undefined && alt.geplantUm !== null) {
           spieler.abbrechen(id); // `at` verschoben: neu planen
         }
-        const eintrag: Eintrag = { ton, geplantUm: null, weckAt: alt?.ton.at === ton.at ? alt.weckAt : null };
+        const eintrag: Eintrag = { ton, geplantUm: null, audioAt: null, weckAt: alt?.ton.at === ton.at ? alt.weckAt : null };
         eintraege.set(id, eintrag);
         vorbereiten(id, eintrag, now, frei);
       }
@@ -136,14 +145,19 @@ export function erzeugeTonSteuerung({ takt, spieler }: TonSteuerungDeps): TonSte
         if (eintrag.geplantUm !== null && eintrag.ton.at <= now) {
           if (ausgabeLaeuft) {
             gespielt.push({ ton: eintrag.ton, at: Math.max(eintrag.ton.at, eintrag.geplantUm) });
+          } else {
+            spieler.abbrechen(id); // k1: die Ausgabe steht – sonst erklänge der Ton später nach altem Stand
           }
           eintraege.delete(id);
         }
       }
       return gespielt;
     },
-    allesAbbrechen(auchLaufende = false) {
-      for (const id of [...eintraege.keys()]) {
+    allesAbbrechen(now, auchLaufende = false) {
+      for (const [id, eintrag] of [...eintraege]) {
+        if (!auchLaufende && begonnen(eintrag, now)) {
+          continue; // W1: ein begonnener Ton wird nie abgebrochen
+        }
         abbrechen(id);
         eintraege.delete(id);
       }

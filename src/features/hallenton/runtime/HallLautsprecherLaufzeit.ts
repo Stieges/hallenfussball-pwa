@@ -2,14 +2,16 @@
  * Tonlaufzeit des Hallen-Lautsprechers (H3b-2b, Plan „H3b – Einbau“, Einbau-Vertrag des Planers): Zustandsspeicher ohne
  * React (`subscribe`/`getSnapshot`), alle Abhängigkeiten injiziert.
  *
- * - Sperre je Gerät (@HT-033 Zeile 8): Erst mit der Sperre entstehen Worker-Takt und Feldstand; ein Tab ohne Sperre zeigt
- *   `andererTab` und hat keine Last.
- * - Takt (250 ms aus dem Worker): `await feldStand.aktualisieren(serverNow, letzterPlan.abfrageTaktMs)`, dann `staende()` und
- *   `planeHallToene` mit dem Gedächtnis über die Takte hinweg. Läuft noch eine Runde, startet keine zweite; Freigabe und
- *   „gespielt“ prüft trotzdem jeder Takt (`tonSteuerung.ts`). `hallTonGespielt` erst nach dem tatsächlichen Beginn.
+ * - Sperre je Gerät (@HT-033 Zeile 8): Ein Tab fordert sie erst an, wenn sein Spieler aktiviert ist (Ruling W3); bis dahin
+ *   `wartet` er ohne Last. Erst mit der Sperre entstehen Worker-Takt und Feldstand; ein Tab ohne Sperre zeigt `andererTab`.
+ * - Takt (250 ms aus dem Worker): `bestaetigen` → Uhrsprung → synchron `staende()` und `planeHallToene` mit dem Gedächtnis →
+ *   Freigabe. Die Netzrunde `feldStand.aktualisieren(serverNow, letzterPlan.abfrageTaktMs)` wird nur angestoßen, nie
+ *   abgewartet; läuft sie noch, startet keine zweite (K1: der Stand der eigenen Engine gilt in jedem Takt).
+ *   `hallTonGespielt` erst nach dem tatsächlichen Beginn; das Gedächtnis teilen die Tabs je Turnier (W2).
  * - Freigabe je Feld (@HT-011 ↔ @HT-029): frisch heißt, die Antwort **dieses Felds** (`quelle.antwortAlterMs`) liegt nicht
  *   vor `at − 3 s`; ein Feld nach eigenem Cockpit ist immer frei; ein Ton für mehrere Felder ist frei, wenn eines frei ist.
- * - Uhrsprung (`uhrsprungMs`): alles noch nicht Begonnene abbrechen, `sync()`, danach neu planen (@HT-010).
+ * - Uhrsprung (`uhrsprungMs`): erst bestätigen (mit der Zeit vor dem Sprung), dann alles noch nicht Begonnene abbrechen,
+ *   `sync()`, danach neu planen (@HT-010, W1).
  * - Zustand je Feld: `slept` (bis „Ton aktivieren“, @HT-037), `not_activated` (@HT-012/013), `background` (Takt setzt länger
  *   als 3 s aus oder Worker gescheitert, nie bloßes Verdecken, @HT-014), `volume_zero`, `keineVerbindung` (Warnung des
  *   Planers; im Ruhezustand nur nach einem gescheiterten Versuch, Ruling N-2), `custom_sound_failed`, sonst `ready`.
@@ -23,14 +25,16 @@ import {
 } from '../../../core/hallenton';
 import { feldKennung } from './aktuellesSpielJeFeld';
 import type { FeldStandQuelle } from './feldStand';
-import { istAngepfiffen } from './feldStandSpiele';
 import type { GeraeteSperre } from './geraeteSperre';
+import { teileGedaechtnis, vereineGedaechtnis } from './geteiltesGedaechtnis';
 import type { HallTonSpieler, TonArt, TonWahl } from './hallTonSpieler';
-import { MELDUNG_ERNEUERN_MS, type LautsprecherKanal } from './lautsprecherKanal';
+import { MELDUNG_ERNEUERN_MS, type KanalSpeicher, type LautsprecherKanal } from './lautsprecherKanal';
 import type { TaktQuelle } from './taktQuelle';
 import {
-  BEREIT, feldZustaende, geraeteZustandAus, naechsterTonAus, tonFrei, type LaufzeitRolle, type LaufzeitSnapshot,
+  BEREIT, feldZustaende, geraeteZustandAus, naechsterTonAus, nurFreieEnden, tonFrei, warnFelderAus,
+  type LaufzeitRolle, type LaufzeitSnapshot,
 } from './laufzeitZustand';
+import { VORBELEGUNG } from './tonWahl';
 import { erzeugeTonSteuerung, type TonSteuerung } from './tonSteuerung';
 
 export type { FeldZustand, LaufzeitRolle, LaufzeitSnapshot, NaechsterTon } from './laufzeitZustand';
@@ -43,6 +47,8 @@ export interface HallLautsprecherLaufzeit {
   /** Aus der Nutzergeste „Ton aktivieren“ (@HT-012). */
   tonAktivieren(): Promise<boolean>;
   angehaltenBestaetigen(): void;
+  /** Tonwahl des Turniers (Abpfiff aus `matchCockpitSettings.soundId`, Halbzeit/eigene Töne aus `hall_sound_status`). */
+  setzeTonWahl(wahl: Record<TonArt, TonWahl>): void;
 }
 
 export interface LaufzeitDeps {
@@ -58,10 +64,9 @@ export interface LaufzeitDeps {
   /** `document.wasDiscarded` beim Laden (@HT-037). */
   wurdeVerworfen: boolean;
   tonWahl?: Record<TonArt, TonWahl>;
+  /** `localStorage` für das geteilte Gedächtnis (W2); `null` = nur in dieser Laufzeit. */
+  gedaechtnisSpeicher?: KanalSpeicher | null;
 }
-
-/** Vorbelegung „Hupe 1“ für beide Töne (@HT-025). */
-const VORBELEGUNG: Record<TonArt, TonWahl> = { abpfiff: 'horn-1', halbzeit: 'horn-1' };
 
 export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautsprecherLaufzeit {
   const { spieler, uhr } = deps;
@@ -78,6 +83,9 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
   let staendeUm = 0;
   let warnFelder = new Set<string>();
   let runde: Promise<void> | null = null;
+  let sperreAngefordert = false;
+  let tonWahl = deps.tonWahl ?? VORBELEGUNG;
+  const speicher = deps.gedaechtnisSpeicher ?? null;
   let syncLaeuft = false;
   let probe: UhrProbe | null = null;
   let geschlafen = deps.wurdeVerworfen;
@@ -121,18 +129,21 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
 
   function bestaetigen(now: number): void {
     for (const { ton, at } of toene?.bestaetigen(now) ?? []) {
-      gedaechtnis = hallTonGespielt(gedaechtnis, ton, at);
+      gedaechtnis = hallTonGespielt(gedaechtnis, nurFreieEnden(ton, staende, staendeUm), at);
+      teileGedaechtnis(speicher, deps.turnierId, gedaechtnis, at);
     }
   }
 
-  function pruefeUhrsprung(): void {
+  /** Sprung der Geräteuhr seit dem letzten Takt (ms) oder `null`; ändert nur die Probe. */
+  function messeUhrsprung(): number | null {
     const jetzt = deps.uhrProbe();
-    const sprung = probe === null ? null : uhrsprungMs(probe, jetzt);
+    const sprung = probe === null || syncLaeuft ? null : uhrsprungMs(probe, jetzt);
     probe = jetzt;
-    if (sprung === null || syncLaeuft) {
-      return;
-    }
-    toene?.allesAbbrechen();
+    return sprung;
+  }
+
+  function nachUhrsprung(now: number): void {
+    toene?.allesAbbrechen(now);
     syncLaeuft = true;
     void uhr.sync().catch(() => undefined).finally(() => {
       syncLaeuft = false;
@@ -141,7 +152,8 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
   }
 
   function abschalten(neueRolle: LaufzeitRolle): void {
-    toene?.allesAbbrechen(true);
+    toene?.allesAbbrechen(uhr.serverNow(), true);
+    sperreAngefordert = false;
     for (const fn of aufraeumen.splice(0)) {
       fn();
     }
@@ -156,47 +168,43 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
     melden();
   }
 
-  async function planeRunde(now: number): Promise<void> {
-    const quelle = fs;
-    if (!quelle) {
-      return;
-    }
-    await quelle.aktualisieren(now, letzterPlan?.abfrageTaktMs ?? null);
+  /** Synchron in jedem Takt: aktueller Stand (eigene Engine sofort, Server mit Antwort-Alter) → Plan → Ton-Steuerung. */
+  function planeJetzt(quelle: FeldStandQuelle, jetzt: number): void {
     const verfuegbar = quelle.verfuegbarkeit();
-    if (rolle !== 'toent' || syncLaeuft) {
-      return;
-    }
     if (verfuegbar === 'nichtVerfuegbar' || verfuegbar === 'turnierBeendet') {
       abschalten('still');
       return;
     }
-    const jetzt = uhr.serverNow();
-    bestaetigen(jetzt);
     staende = quelle.staende();
     staendeUm = jetzt;
     const plan = planeHallToene({ felder: staende, serverNow: jetzt }, gedaechtnis);
     gedaechtnis = plan.gedaechtnis;
     letzterPlan = plan;
     toene?.uebernehmen(plan.toene, jetzt, frei);
-    const gescheitert = quelle.letzterVersuchGescheitert();
-    const angepfiffen = (feldId: string): boolean => istAngepfiffen(staende.find((s) => s.feldId === feldId)?.state.status);
-    warnFelder = new Set(plan.warnungen.filter((w) => gescheitert || angepfiffen(w.feldId)).map((w) => w.feldId));
+    warnFelder = warnFelderAus(plan.warnungen, staende, quelle.letzterVersuchGescheitert());
   }
 
   function imTakt(): void {
-    if (rolle !== 'toent') {
+    const quelle = fs;
+    if (rolle !== 'toent' || !quelle) {
       return;
     }
-    pruefeUhrsprung();
-    const now = uhr.serverNow();
+    const sprung = messeUhrsprung();
+    // W1: mit der Zeit vor dem Sprung bestätigen, damit ein begonnener Ton gespielt bleibt und kein künftiger als gespielt gilt
+    const now = uhr.serverNow() - (sprung ?? 0);
     bestaetigen(now);
-    toene?.pruefen(now, frei);
+    if (sprung !== null) {
+      nachUhrsprung(now);
+    }
     if (runde === null && !syncLaeuft) {
-      runde = planeRunde(now).catch(() => undefined).finally(() => {
+      runde = quelle.aktualisieren(now, letzterPlan?.abfrageTaktMs ?? null).catch(() => undefined).finally(() => {
         runde = null;
-        melden();
       });
     }
+    if (!syncLaeuft) {
+      planeJetzt(quelle, now);
+    }
+    toene?.pruefen(now, frei);
     melden();
   }
 
@@ -221,8 +229,28 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
     );
     neuerTakt.start();
     taktFehler = neuerTakt.zustand() === 'fehler';
-    void spieler.laden(deps.tonWahl ?? VORBELEGUNG).then(melden, melden);
+    gedaechtnis = vereineGedaechtnis(speicher, deps.turnierId, gedaechtnis, uhr.serverNow());
     melden();
+  }
+
+  /** W3: die Sperre erst, wenn der Spieler dieses Tabs aktiviert ist (sonst landete sie in einem stummen Tab). */
+  function pruefeSperre(): void {
+    if (rolle !== 'wartet' || sperreAngefordert || spieler.zustand() === 'not_activated') {
+      return;
+    }
+    sperreAngefordert = true;
+    const loesen = deps.sperre.anfordern((meldung) => {
+      if (rolle === 'aus' || rolle === 'still') {
+        return;
+      }
+      if (meldung === 'erhalten') {
+        beginne();
+      } else {
+        rolle = 'andererTab';
+        melden();
+      }
+    });
+    freigeben ??= loesen;
   }
 
   return {
@@ -231,19 +259,12 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
         return;
       }
       rolle = 'wartet';
-      aufraeumen.push(spieler.onZustand(melden));
-      const loesen = deps.sperre.anfordern((meldung) => {
-        if (rolle === 'aus' || rolle === 'still') {
-          return;
-        }
-        if (meldung === 'erhalten') {
-          beginne();
-        } else {
-          rolle = 'andererTab';
-          melden();
-        }
-      });
-      freigeben ??= loesen;
+      aufraeumen.push(spieler.onZustand(() => {
+        pruefeSperre();
+        melden();
+      }));
+      void spieler.laden(tonWahl).then(melden, melden);
+      pruefeSperre();
       melden();
     },
     stop() {
@@ -263,8 +284,13 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       if (ok) {
         geschlafen = false;
       }
+      pruefeSperre();
       melden();
       return ok;
+    },
+    setzeTonWahl(wahl) {
+      tonWahl = wahl;
+      void spieler.laden(wahl).then(melden, melden);
     },
     angehaltenBestaetigen() {
       warAngehalten = false;

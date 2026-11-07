@@ -35,9 +35,12 @@ describe('Freigabe vor dem Ton (@HT-011 ↔ @HT-029)', () => {
   });
 
   it('@HT-029 Restrisiko: setzt der Worker genau in den letzten 250 ms aus, spielt der schon geplante Ton', async () => {
-    const tab = await tabImSpiel(ENDE_A2 - 10_000, antwortenBis(ENDE_A2 - 3600));
+    // letzte Antwort 3,1 s vor dem Ton: beim letzten Takt vor dem Aussetzer (≤ 2,7 s alt) plant der Planer ihn noch, zu `at`
+    // wäre sie 3,1 s alt – nur die Freigabe im 250-ms-Fenster hätte ihn verhindert
+    const letzteAntwort = ENDE_A2 - 3100;
+    const tab = await tabImSpiel(ENDE_A2 - 10_000, (jetzt) => server(jetzt - Math.min(jetzt, letzteAntwort)));
     await tab.vor(12_000, [
-      { um: ENDE_A2 - 3600, tu: () => { tab.ffs.haengt = true; } },
+      { um: letzteAntwort, tu: () => { tab.ffs.haengt = true; } },
       { um: ENDE_A2 - 400, tu: () => tab.takt.workerAussetzen() },
     ]);
     expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
@@ -59,13 +62,18 @@ describe('Freigabe vor dem Ton (@HT-011 ↔ @HT-029)', () => {
     expect(tab.abgebrochen()).toBe(1);
   });
 
-  it('Gegenprobe: ein Feld nach eigenem Cockpit ist immer frei, auch wenn keine Abfrage mehr antwortet', async () => {
+  // Fixrunde 1 (K1): Die alte Fassung bestätigte den Fehler mit – sie prüfte nur einen eingefrorenen Stand. Nach Regel 2
+  // („Leitet es das Feld selbst, gilt das eigene Cockpit“) zählt der jeweils aktuelle eigene Stand, auch während die Abfrage hängt.
+  it('@HT-033 Zeile 11: ein Feld nach eigenem Cockpit ist frei und wird in jedem Takt neu gelesen, auch wenn keine Abfrage mehr antwortet', async () => {
     const tab = new Tab({ start: ENDE_A2 - 10_000 });
     const feld = feldAus([{ ab: T0, log: zweiterAbschnitt() }], CTX_11, 'field-1', { art: 'eigenesCockpit' });
     tab.ffs.staendeZu = (jetzt) => [feld(jetzt)];
     await tab.starte();
-    await tab.vor(6000, [{ um: ENDE_A2 - 5000, tu: () => { tab.ffs.haengt = true; } }]);
-    await tab.vor(8000);
+    await tab.vor(5000);
+    tab.ffs.haengt = true;
+    const gelesen = tab.ffs.staendeAufrufe;
+    await tab.vor(9000);
+    expect(tab.ffs.staendeAufrufe - gelesen).toBeGreaterThanOrEqual(35);
     expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
   });
 });

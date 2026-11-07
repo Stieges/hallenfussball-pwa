@@ -108,8 +108,9 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     merker.leeren();
   }
 
-  function fehlschlag(ergebnis: AbfrageErgebnis<unknown>): void {
-    gescheitert = true;
+  /** k6: nur Konto und Sammelabfrage zählen für N-2; ein gescheiterter Spielplan lässt die Antwort nicht altern. */
+  function fehlschlag(ergebnis: AbfrageErgebnis<unknown>, zaehlt = true): void {
+    gescheitert ||= zaehlt;
     if (!ergebnis.ok && ergebnis.grund === 'turnierBeendet') {
       beenden();
     }
@@ -188,7 +189,7 @@ export function erzeugeFeldStand(deps: FeldStandDeps): FeldStandQuelle {
     spielplanVersuchAt = now;
     const ergebnis = await ladeSpielplan(client, deps.turnierId, zeitgeber);
     if (!ergebnis.ok) {
-      fehlschlag(ergebnis);
+      fehlschlag(ergebnis, false);
       return;
     }
     if (ergebnis.wert.abgeschlossen) {

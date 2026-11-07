@@ -171,12 +171,12 @@ describe('Verfügbarkeit und Worker', () => {
 });
 
 describe('Lautsprecher-Felder über die Tabs und Reload-Tor', () => {
-  it('der tönende Tab meldet seine Felder mit „bereit“; nicht aktiviert → nicht bereit; nach dem Ausschalten keine Meldung', async () => {
+  it('der tönende Tab meldet seine Felder mit „bereit“; nicht aktiviert → keine bereiten Felder; nach dem Ausschalten keine Meldung', async () => {
     const tab = new Tab({ start: T0, felder: [1, 2] });
     imSpiel(tab, anpfiff());
     await tab.starte({ aktivieren: false });
     await tab.vor(300);
-    expect(leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt())?.felder).toEqual([{ feld: 1, bereit: false }, { feld: 2, bereit: false }]);
+    expect(bereiteLautsprecherFeldIds(leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt()))).toEqual([]);
     await tab.laufzeit.tonAktivieren();
     await tab.vor(300);
     const meldung = leseLautsprecherFelder(tab.geraet.speicher, tab.uhr.jetzt());

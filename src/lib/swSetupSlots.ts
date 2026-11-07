@@ -75,6 +75,13 @@ export interface ReloadGate {
   allowsReload: () => boolean;
   /** Eine neue Version wartet (einmal je Version; auch wenn das Tor erst danach gesetzt wird). */
   onUpdateWaiting?: () => void;
+  /**
+   * Auch der Eilpfad (@ME-032, unlesbare Antwort) wartet auf diesen Halter, solange er nein sagt (Hallen-Lautsprecher: ein
+   * Neuladen nimmt die Freigabe „Ton aktivieren“, @HT-013). Ohne Angabe überstimmt der Eilpfad den Halter wie bisher.
+   */
+  blocksUrgent?: boolean;
+  /** Zusammengesetztes Tor: sagt ein Halter mit `blocksUrgent` nein? */
+  urgentBlocked?: () => boolean;
 }
 
 const reloadGateHolders = new Set<ReloadGate>();
@@ -95,6 +102,7 @@ export function getReloadGate(): ReloadGate | null {
   const holders = [...reloadGateHolders];
   return {
     allowsReload: () => holders.every(holderAllows),
+    urgentBlocked: () => holders.some((gate) => gate.blocksUrgent === true && !holderAllows(gate)),
     onUpdateWaiting: () => {
       let firstError: unknown = null;
       for (const gate of holders) {

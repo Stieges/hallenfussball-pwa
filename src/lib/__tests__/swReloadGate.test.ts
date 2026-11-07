@@ -198,4 +198,18 @@ describe('Neulade-Tor mit mehreren Haltern (Hallenton H3b-2b, @HT-013, Schutz vo
     ab();
     expect(monitorWartet).toHaveBeenCalledTimes(1);
   });
+
+  it('k5: ein Halter mit blocksUrgent (Hallen-Lautsprecher bereit) hält auch den Eilpfad an; meldet er sich ab, lädt der Eilpfad', async () => {
+    const update = vi.fn(async () => { h.needRefresh(); });
+    const h = harness(async () => false, { update } as unknown as ServiceWorkerRegistration);
+    attachReloadGate({ allowsReload: () => true });
+    const lautsprecherAb = attachReloadGate({ allowsReload: () => false, blocksUrgent: true });
+    requestUrgentReload();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(h.updateSW).not.toHaveBeenCalled();
+    lautsprecherAb();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(h.updateSW).toHaveBeenCalledWith(true);
+  });
 });

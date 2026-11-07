@@ -5,6 +5,7 @@
  * alle Tabs neu, und die Nutzergeste „Ton aktivieren“ wäre weg (@HT-013). Ist er nicht (mehr) bereit oder veraltet die
  * Meldung, meldet sich der Halter ab; dann gilt wieder der Leerlauf-Pfad wie ohne Lautsprecher.
  *
+ * Auch der Eilpfad des Monitors (@ME-032) wartet, solange der Lautsprecher bereit ist (`blocksUrgent`, Review k5).
  * Ohne Meldung kostet das nichts: Der Tab hört nur auf den Kanal. Nur solange der Halter angemeldet ist, prüft er alle 5 s,
  * ob die Meldung veraltet ist (Tab mit dem Lautsprecher abgestürzt).
  */
@@ -32,7 +33,7 @@ export function verbindeLautsprecherReloadTor({ kanal, halteTor, zeitgeber }: La
 
   const pruefen = (): void => {
     if (bereit() && abmelden === null) {
-      abmelden = halteTor({ allowsReload: () => !bereit() });
+      abmelden = halteTor({ allowsReload: () => !bereit(), blocksUrgent: true });
       pruefTakt = zeitgeber.wiederholen(pruefen, MELDUNG_ERNEUERN_MS);
     } else if (!bereit() && abmelden !== null) {
       loesen();

@@ -103,3 +103,23 @@ describe('Befund 5 – Lesen ändert nichts', () => {
     expect(lage.sb.abfragen.length).toBe(vorher);
   });
 });
+
+describe('k6 (Fixrunde 1) – ein gescheiterter Spielplan zählt nicht als gescheiterter Versuch (Ruling N-2)', () => {
+  it('Spiel 11 endet, der sofortige Spielplan scheitert, die Sammelabfrage ist nicht fällig → kein „gescheitert“, Takt bleibt 5 s', async () => {
+    const lage = new Lage({ start: ENDE_A2 - 3000 });
+    lage.setzeSpiel(CTX_11.matchId, { match_status: 'running' });
+    lage.sende(CTX_11, zweiterAbschnitt());
+    await lage.runde();
+    lage.vor(1000);
+    lage.sende(CTX_11, [ev('MATCH_END', ENDE_A2 - 2000, 2, 2 * ABSCHNITT_MS - 2000)]);
+    await lage.runde();
+    const ereignisse = lage.sb.abfragenAuf('match_events').length;
+    lage.sb.tabellenFehler.add('tournaments');
+    lage.sb.tabellenFehler.add('matches');
+    lage.vor(1000);
+    await lage.runde();
+    expect(lage.sb.abfragenAuf('matches').length + lage.sb.abfragenAuf('tournaments').length).toBeGreaterThanOrEqual(3);
+    expect(lage.sb.abfragenAuf('match_events')).toHaveLength(ereignisse);
+    expect(lage.fs.letzterVersuchGescheitert()).toBe(false);
+  });
+});
