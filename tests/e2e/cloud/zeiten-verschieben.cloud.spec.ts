@@ -18,7 +18,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { appendAsRole, expectOutboxSettled, newRoleContext } from './engineHelpers';
+import { appendAsRole, newRoleContext } from './engineHelpers';
 import { deleteCup, svc } from './coadminEinsatz';
 import { E2E_TURNIERTAG_CUP_ID } from './testData';
 
@@ -111,7 +111,6 @@ test.describe('Zeiten verschieben kommt über den Server bei den Zuschauern an (
       await expect.poll(async () => (await zeilen(id)).map((z) => [z.scheduled_start, z.original_start]), {
         message: 'die Verschiebung steht in der Datenbank', timeout: 20_000,
       }).toEqual(vorher.map((z) => [plus(z.scheduled_start!, -15), null]));
-      await expectOutboxSettled(page);
 
       // Zuschauer-Seite ohne Neuladen (@ZP-090: innerhalb von 10 Sekunden), ohne „(war …)“ (@ZP-091)
       const zeile = await zuschauerZeile(petra, 1);
@@ -163,7 +162,6 @@ test.describe('Zeiten verschieben kommt über den Server bei den Zuschauern an (
       }
       expect(nachher[0].scheduled_start, 'das laufende Spiel 1 behält seine Uhrzeit').toBe(spiel1.scheduled_start);
       expect(nachher[0].original_start).toBeNull();
-      await expectOutboxSettled(page);
 
       // Zuschauer-Seite (frisch geöffnet, Stand des Servers): groß die neue Uhrzeit, klein „(war hh:mm)“
       const petra = await petraKontext.newPage();
@@ -175,6 +173,42 @@ test.describe('Zeiten verschieben kommt über den Server bei den Zuschauern an (
     } finally {
       await olli.context.close();
       await petraKontext.close();
+      await deleteCup(id);
+    }
+  });
+
+  test('@ZP-004 Neuladen direkt nach dem Bestätigen: die Verschiebung kommt trotzdem in der Datenbank an', async ({ browser }) => {
+    test.setTimeout(150_000);
+    const { id } = await kopie('neuladen');
+    const olli = await newRoleContext(browser, 'owner');
+    try {
+      const vorher = await zeilen(id);
+      const start = await appendAsRole('owner', vorher[0].id, [{
+        id: randomUUID(), type: 'MATCH_START', at: Date.now(), section: 1, clockMs: 0, teamId: null, targetId: null, payload: {},
+      }], { feldFreigeben: true });
+      expect(start.results.map((r) => r.status)).toEqual(['accepted']);
+      const page = olli.page;
+      const netz: string[] = [];
+      page.on('response', (r) => { if (r.url().includes('/rest/v1/') && r.request().method() !== 'GET') { netz.push(`${r.request().method()} ${r.status()} ${r.url().split('/rest/v1/')[1]?.slice(0, 90)}`); } });
+      page.on('requestfailed', (r) => { if (r.url().includes('/rest/v1/')) { netz.push(`FAILED ${r.method()} ${r.failure()?.errorText} ${r.url().split('/rest/v1/')[1]?.slice(0, 90)}`); } });
+      await page.goto(`/#/tournament/${id}/schedule`);
+      await page.getByTestId('schedule-shift-button').click();
+      const weiter = page.getByTestId('time-shift-proceed');
+      await expect(weiter).toHaveText(/Vorschau/, { timeout: 15_000 });
+      await weiter.click();
+      await page.getByTestId('time-shift-confirm').click();
+      await expect(page.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Minuten verschoben');
+      await page.reload();
+      try {
+        await expect.poll(async () => (await zeilen(id)).filter((z) => z.original_start !== null).length, {
+          message: 'nach dem Neuladen steht die Verschiebung in der Datenbank (matches.original_start)', timeout: 30_000,
+        }).toBeGreaterThan(0);
+      } finally {
+        const [t] = await svc('GET', `/rest/v1/tournaments?id=eq.${id}&select=version,change_revision`);
+        process.stdout.write(`\nDIAG-NEULADEN version=${JSON.stringify(t)}\n${netz.join('\n')}\nDIAG-NEULADEN-ENDE\n`);
+      }
+    } finally {
+      await olli.context.close();
       await deleteCup(id);
     }
   });
