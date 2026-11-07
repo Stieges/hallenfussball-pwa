@@ -1,6 +1,6 @@
 /**
  * A1b Monitore der Veranstaltung (Record `docs/anforderungen/2026-11-06_veranstaltung-mehrere-turniere.md`, Funktionalität G):
- * Lese-Seite der Server-Funktionen aus `supabase/migrations/20261120_002_gathering_screens.sql` – nur Prüfen und Übersetzen
+ * Lese-Seite der Server-Funktionen aus `supabase/migrations/20261122_001_gathering_screens.sql` – nur Prüfen und Übersetzen
  * der Antworten, kein Aufruf und nie ein Schreibweg (Bildschirme, Ort und das Turnier in der Halle schreibt nur der Server
  * über seine Funktionen; die App ruft sie in A7 über `.rpc`).
  *

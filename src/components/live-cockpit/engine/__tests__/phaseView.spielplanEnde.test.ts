@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyBatch, initialState, type EngineEvent } from '../../../../core/match';
 import { RULES } from '../../../../core/match/client/__tests__/fixtures';
-import { phaseViewOf } from '../phaseView';
+import { phaseViewOf } from '../../../../core/match/client/phaseView';
 
 const ctx = { matchId: 'spiel-9', teamAId: 'a', teamBId: 'b' };
 const ev = (id: string, type: EngineEvent['type'], at: number, extra: Partial<EngineEvent> = {}): EngineEvent =>

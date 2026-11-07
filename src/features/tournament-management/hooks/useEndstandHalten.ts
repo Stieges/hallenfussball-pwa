@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ScheduledMatch } from '../../../core/generators';
 import type { MatchEngine } from '../../../core/match/client';
 import type { LiveMatch } from '../../../components/live-cockpit/types';
-import { eingetragenImSpielplanOf, quittungRestOf } from '../../../components/live-cockpit/engine/phaseView';
+import { eingetragenImSpielplanOf, quittungRestOf } from '../../../core/match/client/phaseView';
 import { useMatchEngineContextOptional } from '../../match-engine/useMatchEngineContext';
 
 /** Reserve, damit der Wechsel nach dem Ablauf der Frist sicher hinter ihr liegt. */

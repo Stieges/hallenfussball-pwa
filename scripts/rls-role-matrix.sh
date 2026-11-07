@@ -186,7 +186,7 @@
 #                                                   # muessen hier ROT sein (Gegenprobe, Exit 0).
 #   scripts/rls-role-matrix.sh --without-gatherings # Alles ("nachher"), aber OHNE 20261119_001 (A1 Veranstaltung) -- die
 #                                                   # Zeilen (rls-matrix.d/spur-zzz-veranstaltung.sh) muessen hier ROT sein.
-#   scripts/rls-role-matrix.sh --without-gathering-screens # Alles ("nachher"), aber OHNE 20261120_002 (A1b Monitore der
+#   scripts/rls-role-matrix.sh --without-gathering-screens # Alles ("nachher"), aber OHNE 20261122_001 (A1b Monitore der
 #                                                   # Veranstaltung) -- die Zeilen (rls-matrix.d/spur-zzz-veranstaltung-
 #                                                   # bildschirme.sh) muessen hier ROT sein (Gegenprobe, Exit 0).
 #
@@ -312,7 +312,7 @@ WITH_FS_REQ=1
 # A1 Veranstaltung: 20261119_001 im Modus "nachher" einspielen (Gegenprobe --without-gatherings laesst sie weg; braucht B-14
 # und A-21a-S).
 WITH_GA_REQ=1
-# A1b Monitore der Veranstaltung: 20261120_002 im Modus "nachher" einspielen (Gegenprobe --without-gathering-screens laesst sie
+# A1b Monitore der Veranstaltung: 20261122_001 im Modus "nachher" einspielen (Gegenprobe --without-gathering-screens laesst sie
 # weg; braucht A1).
 WITH_GS_REQ=1
 
@@ -864,17 +864,17 @@ if [[ "$WITH_B14" -eq 1 && "$WITH_A21AS" -eq 1 && "$WITH_GA_REQ" -eq 1 ]]; then
 elif [[ "$WITH_B14" -eq 1 && "$WITH_A21AS" -eq 1 ]]; then
   MODE_LABEL="$MODE_LABEL, Veranstaltung-Gegenprobe (ohne 20261119_001)"
 fi
-# A1b Monitore der Veranstaltung (20261120_002, @VA-034, @VA-037, @VA-043): gathering_screens ohne Client-Rechte, Umschalten
+# A1b Monitore der Veranstaltung (20261122_001, @VA-034, @VA-037, @VA-043): gathering_screens ohne Client-Rechte, Umschalten
 # nur mit manageScreens. Prueft die Fassung von public_gathering (A1, Fail-fast); --without-gathering-screens ist die Gegenprobe.
-GS_FILE="$(find_migration 20261120_002)"
+GS_FILE="$(find_migration 20261122_001)"
 WITH_GS=0
 if [[ "$WITH_GA" -eq 1 && "$WITH_GS_REQ" -eq 1 ]]; then
   WITH_GS=1
   echo "Migration einspielen: $(basename "$GS_FILE")" >&2
   psql_stdin < "$GS_FILE"
-  MODE_LABEL="$MODE_LABEL + Bildschirme der Veranstaltung (20261120_002)"
+  MODE_LABEL="$MODE_LABEL + Bildschirme der Veranstaltung (20261122_001)"
 elif [[ "$WITH_GA" -eq 1 ]]; then
-  MODE_LABEL="$MODE_LABEL, Bildschirme-Gegenprobe (ohne 20261120_002)"
+  MODE_LABEL="$MODE_LABEL, Bildschirme-Gegenprobe (ohne 20261122_001)"
 fi
 
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,

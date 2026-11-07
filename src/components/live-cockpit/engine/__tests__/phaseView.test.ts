@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { effectiveScoreFor } from '../../../../core/match';
 import { viewDurationSeconds } from '../../../../core/match/client/viewDuration';
-import { phaseViewOf, type PhaseView } from '../phaseView';
+import { phaseViewOf, type PhaseView } from '../../../../core/match/client/phaseView';
 import {
   REGEL_2X6,
   REGEL_2X10,

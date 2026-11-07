@@ -1,4 +1,6 @@
--- supabase/migrations/20261120_002_gathering_screens.sql
+-- supabase/migrations/20261122_001_gathering_screens.sql
+-- Hinweis: Der Stempel "20261120_002" im Rumpf von public_gathering (Kommentar zu @VA-045) bleibt bewusst alt -- die Fassung
+-- ist ueber md5 6a9e35279f99c527341c85fce26af03a festgelegt (Fail-fast hier, Rueckweg, Harness); Umnummerierung 20261120_002 -> 20261122_001.
 -- A1b Monitore der Veranstaltung - Daten und Server (Record docs/anforderungen/2026-11-06_veranstaltung-mehrere-turniere.md,
 -- Funktionalitaet G; Umsetzungsvorgabe A1b vom 06.11. mit den Entscheidungen des Controllers, gilt nach Vorschlag).
 -- Die Turnierleitung macht mit "Auf die Bildschirme" ein Turnier zum Turnier in der Halle; die Bildschirme der Veranstaltung
@@ -77,7 +79,7 @@
 -- Idempotent: CREATE TABLE/INDEX IF NOT EXISTS, ADD COLUMN IF NOT EXISTS, CREATE OR REPLACE, DROP TRIGGER IF EXISTS vor
 --   CREATE, REVOKE/GRANT.
 --
--- RUECKWEG: supabase/rollbacks/20261120_002_gathering_screens_rollback.sql, EIN Block (public_gathering woertlich aus
+-- RUECKWEG: supabase/rollbacks/20261122_001_gathering_screens_rollback.sql, EIN Block (public_gathering woertlich aus
 --   20261119_001 zurueck, Funktionen, Trigger, Tabelle und Spalten weg). Vorher die App ohne A7-Client deployen.
 --   Bildschirme und das Turnier in der Halle gehen verloren (vorher per COPY sichern). Belegt in
 --   scripts/gathering-screens-check.sh (Kategorie X: Schema danach = vorher).
@@ -112,12 +114,12 @@ BEGIN
      OR to_regprocedure('extensions.gen_random_bytes(integer)') IS NULL
      OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader')
      OR NOT EXISTS (SELECT 1 FROM public.role_permissions WHERE role = 'co-admin' AND permission = 'manageScreens') THEN
-    RAISE EXCEPTION '20261120_002_gathering_screens: Voraussetzungen fehlen -- zuerst 20261110_001, 20261117_104, 20261118_004 und 20261119_001 einspielen (pgcrypto, ci_schema_reader)';
+    RAISE EXCEPTION '20261122_001_gathering_screens: Voraussetzungen fehlen -- zuerst 20261110_001, 20261117_104, 20261118_004 und 20261119_001 einspielen (pgcrypto, ci_schema_reader)';
   END IF;
   -- Nie still eine andere Fassung ueberschreiben: public_gathering aus 20261119_001 oder genau die Fassung dieser Datei.
   SELECT prosrc INTO v_pg FROM pg_proc WHERE oid = 'public.public_gathering(text)'::regprocedure;
   IF md5(v_pg) NOT IN ('b1e18d7eaf2714409eba33103ac47915', '6a9e35279f99c527341c85fce26af03a') THEN
-    RAISE EXCEPTION '20261120_002_gathering_screens: public_gathering hat eine unbekannte Fassung (md5 %) -- erst klaeren', md5(v_pg);
+    RAISE EXCEPTION '20261122_001_gathering_screens: public_gathering hat eine unbekannte Fassung (md5 %) -- erst klaeren', md5(v_pg);
   END IF;
 END $$;
 
@@ -129,11 +131,11 @@ ALTER TABLE public.gatherings
   ADD COLUMN IF NOT EXISTS on_screen_since timestamptz,
   ADD COLUMN IF NOT EXISTS screen_location_name text;
 COMMENT ON COLUMN public.gatherings.on_screen_tournament_id IS
-  '20261120_002 (A1b, @VA-035): Turnier in der Halle. Schreiben nur set_gathering_on_screen und die Trigger/Funktionen dieser Migration; zaehlt nur, solange gathering_screen_reason NULL ist.';
+  '20261122_001 (A1b, @VA-035): Turnier in der Halle. Schreiben nur set_gathering_on_screen und die Trigger/Funktionen dieser Migration; zaehlt nur, solange gathering_screen_reason NULL ist.';
 COMMENT ON COLUMN public.gatherings.on_screen_since IS
-  '20261120_002 (A1b): Zeitpunkt des letzten Wechsels auf bzw. von den Bildschirmen.';
+  '20261122_001 (A1b): Zeitpunkt des letzten Wechsels auf bzw. von den Bildschirmen.';
 COMMENT ON COLUMN public.gatherings.screen_location_name IS
-  '20261120_002 (A1b, @VA-041): Ort der Bildschirme; verglichen ueber gathering_location_key. NULL = noch kein Ort, keine Umschaltung.';
+  '20261122_001 (A1b, @VA-041): Ort der Bildschirme; verglichen ueber gathering_location_key. NULL = noch kein Ort, keine Umschaltung.';
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 2. Tabelle gathering_screens
@@ -156,7 +158,7 @@ CREATE INDEX IF NOT EXISTS gathering_screens_gathering_id_idx ON public.gatherin
 CREATE UNIQUE INDEX IF NOT EXISTS gathering_screens_one_adoption
   ON public.gathering_screens (adopted_tournament_id, adopted_monitor_id) WHERE adopted_tournament_id IS NOT NULL;
 COMMENT ON TABLE public.gathering_screens IS
-  '20261120_002 (A1b): Bildschirme der Veranstaltung (Hallen-Link /halle/<screen_key>). Keine Tabellenrechte fuer Clients; Schreiben nur ueber die Funktionen, Lesen nur gathering_screens_overview (Eigentuemer) bzw. gathering_screen_display (per Schluessel, Positivliste).';
+  '20261122_001 (A1b): Bildschirme der Veranstaltung (Hallen-Link /halle/<screen_key>). Keine Tabellenrechte fuer Clients; Schreiben nur ueber die Funktionen, Lesen nur gathering_screens_overview (Eigentuemer) bzw. gathering_screen_display (per Schluessel, Positivliste).';
 
 DROP TRIGGER IF EXISTS gathering_screens_updated_at ON public.gathering_screens;
 CREATE TRIGGER gathering_screens_updated_at BEFORE UPDATE ON public.gathering_screens
@@ -193,7 +195,7 @@ AS $$
     LEFT JOIN public.gatherings g ON g.id = p_gathering_id;
 $$;
 COMMENT ON FUNCTION public.gathering_screen_reason(uuid, uuid) IS
-  '20261120_002 (A1b, @VA-036, @VA-041): NULL = Turnier darf auf die Bildschirme der Veranstaltung, sonst der Grund (not_found, not_in_gathering, trashed, cancelled, draft, no_screens, no_location, other_location).';
+  '20261122_001 (A1b, @VA-036, @VA-041): NULL = Turnier darf auf die Bildschirme der Veranstaltung, sonst der Grund (not_found, not_in_gathering, trashed, cancelled, draft, no_screens, no_location, other_location).';
 REVOKE ALL ON FUNCTION public.gathering_screen_reason(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
 
 -- Turniere einer Veranstaltung mit Zustand (Lesart wie public_gathering, Fassung 20261119_001), auch nicht geteilte.
@@ -344,7 +346,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.create_gathering_screen(uuid, text, jsonb, jsonb) IS
-  '20261120_002 (@VA-034): legt einen Bildschirm der Veranstaltung an (Folien, Sponsoren) und erzeugt seinen Schluessel; Antwort {id, key}. Recht editGathering. Fehler HF006, HF008, HF010, HF013, HF014.';
+  '20261122_001 (@VA-034): legt einen Bildschirm der Veranstaltung an (Folien, Sponsoren) und erzeugt seinen Schluessel; Antwort {id, key}. Recht editGathering. Fehler HF006, HF008, HF010, HF013, HF014.';
 
 CREATE OR REPLACE FUNCTION public.update_gathering_screen(p_screen_id uuid, p_name text, p_config jsonb, p_sponsors jsonb)
 RETURNS void
@@ -366,7 +368,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.update_gathering_screen(uuid, text, jsonb, jsonb) IS
-  '20261120_002 (@VA-034): Name, Folien und Sponsoren eines Bildschirms; der Bildschirm bekommt danach eine volle Antwort. Recht editGathering. Fehler HF006, HF008, HF010, HF014.';
+  '20261122_001 (@VA-034): Name, Folien und Sponsoren eines Bildschirms; der Bildschirm bekommt danach eine volle Antwort. Recht editGathering. Fehler HF006, HF008, HF010, HF014.';
 
 CREATE OR REPLACE FUNCTION public.rotate_gathering_screen_key(p_screen_id uuid) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
@@ -387,7 +389,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.rotate_gathering_screen_key(uuid) IS
-  '20261120_002 (@VA-036 Z. 6): neuer Schluessel, der alte ist sofort ungueltig (Bildschirm-Abfrage {state:invalid}). Recht editGathering. Fehler HF006, HF008.';
+  '20261122_001 (@VA-036 Z. 6): neuer Schluessel, der alte ist sofort ungueltig (Bildschirm-Abfrage {state:invalid}). Recht editGathering. Fehler HF006, HF008.';
 
 CREATE OR REPLACE FUNCTION public.delete_gathering_screen(p_screen_id uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
@@ -408,7 +410,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.delete_gathering_screen(uuid) IS
-  '20261120_002 (@VA-034, @VA-042): loescht einen Bildschirm; ohne Bildschirme steht kein Turnier mehr in der Halle. Recht editGathering. Fehler HF006, HF008.';
+  '20261122_001 (@VA-034, @VA-042): loescht einen Bildschirm; ohne Bildschirme steht kein Turnier mehr in der Halle. Recht editGathering. Fehler HF006, HF008.';
 
 CREATE OR REPLACE FUNCTION public.adopt_tournament_monitor(p_gathering_id uuid, p_tournament_id uuid, p_monitor_id text)
 RETURNS jsonb
@@ -474,7 +476,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.adopt_tournament_monitor(uuid, uuid, text) IS
-  '20261120_002 (@VA-042, Herkunft): legt einen Bildschirm mit Name, Einstellungen und den Sponsoren seiner Folien aus einem Monitor eines eigenen Turniers an (auch abgeschlossen) und merkt sich die Herkunft. Der Turnier-Link bleibt technisch unveraendert (Exklusivitaet in der App, A7). Antwort {id, key}. Recht editGathering. Fehler HF006, HF008, HF010, HF013, HF014, HF015.';
+  '20261122_001 (@VA-042, Herkunft): legt einen Bildschirm mit Name, Einstellungen und den Sponsoren seiner Folien aus einem Monitor eines eigenen Turniers an (auch abgeschlossen) und merkt sich die Herkunft. Der Turnier-Link bleibt technisch unveraendert (Exklusivitaet in der App, A7). Antwort {id, key}. Recht editGathering. Fehler HF006, HF008, HF010, HF013, HF014, HF015.';
 
 CREATE OR REPLACE FUNCTION public.set_gathering_screen_location(p_gathering_id uuid, p_location text) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
@@ -490,7 +492,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.set_gathering_screen_location(uuid, text) IS
-  '20261120_002 (@VA-041): Ort der Bildschirme (NULL = keiner); ein Turnier in der Halle an einem anderen Ort steht danach nicht mehr dort. Recht editGathering. Fehler HF006, HF008, HF010.';
+  '20261122_001 (@VA-041): Ort der Bildschirme (NULL = keiner); ein Turnier in der Halle an einem anderen Ort steht danach nicht mehr dort. Recht editGathering. Fehler HF006, HF008, HF010.';
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 5b. Umschalten und Status (@VA-035 bis @VA-041) -- manageScreens am Turnier
@@ -567,7 +569,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.set_gathering_on_screen(uuid, boolean) IS
-  '20261120_002 (@VA-035 bis @VA-038, @VA-041): "Auf die Bildschirme" (p_on true) bzw. "Von den Bildschirmen nehmen" (false, nur fuer genau dieses Turnier). Letzter Tipp gilt. Recht manageScreens am Turnier (Eigentuemer mit Konto, Co-Admin). Antwort {on_screen}. Fehler HF006, HF008, HF012, 22023.';
+  '20261122_001 (@VA-035 bis @VA-038, @VA-041): "Auf die Bildschirme" (p_on true) bzw. "Von den Bildschirmen nehmen" (false, nur fuer genau dieses Turnier). Letzter Tipp gilt. Recht manageScreens am Turnier (Eigentuemer mit Konto, Co-Admin). Antwort {on_screen}. Fehler HF006, HF008, HF012, 22023.';
 
 CREATE OR REPLACE FUNCTION public.gathering_screen_status(p_tournament_id uuid) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -594,7 +596,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.gathering_screen_status(uuid) IS
-  '20261120_002 (@VA-037, @VA-039, @VA-041, @VA-042): fuer Cockpit und Turnierverwaltung -- {in_gathering, has_screens, eligible, reason, on_screen_self, on_screen, handed_over_monitor_ids}. Recht manageScreens am Turnier. Fehler HF006, HF008.';
+  '20261122_001 (@VA-037, @VA-039, @VA-041, @VA-042): fuer Cockpit und Turnierverwaltung -- {in_gathering, has_screens, eligible, reason, on_screen_self, on_screen, handed_over_monitor_ids}. Recht manageScreens am Turnier. Fehler HF006, HF008.';
 
 CREATE OR REPLACE FUNCTION public.gathering_screens_overview(p_gathering_id uuid) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -629,7 +631,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.gathering_screens_overview(uuid) IS
-  '20261120_002 (@VA-034, @VA-040): Bildschirme mit Schluessel, Ort, Turnier in der Halle und alle Turniere mit Zustand und Zulaessigkeit -- nur fuer den Eigentuemer (readGathering). Fehler HF006, HF008.';
+  '20261122_001 (@VA-034, @VA-040): Bildschirme mit Schluessel, Ort, Turnier in der Halle und alle Turniere mit Zustand und Zulaessigkeit -- nur fuer den Eigentuemer (readGathering). Fehler HF006, HF008.';
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 5c. Bildschirm-Abfrage per Schluessel (@VA-034 bis @VA-036, @VA-043, @VA-044, @ZM-180)
@@ -732,7 +734,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.gathering_screen_display(text, bigint) IS
-  '20261120_002 (A1b): Abfrage des Bildschirms der Veranstaltung per Schluessel. {state:invalid} | {state:unchanged} | {state:gathering, screen, sponsors, gathering, tournaments} | {state:tournament, on_screen, [gathering, screen, sponsors,] payload (Monitor-Fassung des Turniers in der Halle)}; version monoton ueber Wechsel (@ZM-180). Nie: Schluessel, andere Bildschirme, Herkunft, Ort.';
+  '20261122_001 (A1b): Abfrage des Bildschirms der Veranstaltung per Schluessel. {state:invalid} | {state:unchanged} | {state:gathering, screen, sponsors, gathering, tournaments} | {state:tournament, on_screen, [gathering, screen, sponsors,] payload (Monitor-Fassung des Turniers in der Halle)}; version monoton ueber Wechsel (@ZM-180). Nie: Schluessel, andere Bildschirme, Herkunft, Ort.';
 
 CREATE OR REPLACE FUNCTION public.gathering_screen_final_standings(p_key text) RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -767,7 +769,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.gathering_screen_final_standings(text) IS
-  '20261120_002 (@VA-036 Z. 4): Endstand des Turniers in der Halle fuer den Bildschirm der Veranstaltung (Zweige wie display_final_standings, Kindermodus/Torschuetzen wie final_standings_payload); sonst {status:none}.';
+  '20261122_001 (@VA-036 Z. 4): Endstand des Turniers in der Halle fuer den Bildschirm der Veranstaltung (Zweige wie display_final_standings, Kindermodus/Torschuetzen wie final_standings_payload); sonst {status:none}.';
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 5d. Zuschauer: "Jetzt in der Halle" (@VA-045 bis @VA-047)
@@ -796,7 +798,7 @@ AS $$
      AND public.gathering_screen_reason(g.id, t.id) IS NULL;
 $$;
 COMMENT ON FUNCTION public.gathering_public_on_screen(uuid) IS
-  '20261120_002 (@VA-045 bis @VA-047): Turnier in der Halle fuer Zuschauer -- nur mit Bildschirmen, zulaessig und oeffentlich; laufende Spiele, Stand nur ohne Kindermodus und mit Live-Stand. Sonst NULL.';
+  '20261122_001 (@VA-045 bis @VA-047): Turnier in der Halle fuer Zuschauer -- nur mit Bildschirmen, zulaessig und oeffentlich; laufende Spiele, Stand nur ohne Kindermodus und mit Live-Stand. Sonst NULL.';
 REVOKE ALL ON FUNCTION public.gathering_public_on_screen(uuid) FROM PUBLIC, anon, authenticated, service_role;
 
 -- public_gathering: Fassung 20261119_001 woertlich, nur on_screen in der vollen Antwort ergaenzt.
@@ -878,7 +880,7 @@ BEGIN
 END;
 $$;
 COMMENT ON FUNCTION public.public_gathering(text) IS
-  '20261119_001 (A1), 20261120_002 (A1b): oeffentliche Seite der Veranstaltung. {state:not_found} | {state:pending, version, server_now, name} | {state:full, version, server_now, name, tournaments:[title, date, begin, location_name, state, last_match_started, share_code][, on_screen:{share_code, title, live_matches}]}; nur oeffentliche, nicht geloeschte Turniere, keine Teams, Kontakte oder Anzahlen; on_screen nur fuer ein oeffentliches, zulaessiges Turnier in der Halle, Stand nur ohne Kindermodus und mit Live-Stand. Immer Voll-Antwort; version monoton.';
+  '20261119_001 (A1), 20261122_001 (A1b): oeffentliche Seite der Veranstaltung. {state:not_found} | {state:pending, version, server_now, name} | {state:full, version, server_now, name, tournaments:[title, date, begin, location_name, state, last_match_started, share_code][, on_screen:{share_code, title, live_matches}]}; nur oeffentliche, nicht geloeschte Turniere, keine Teams, Kontakte oder Anzahlen; on_screen nur fuer ein oeffentliches, zulaessiges Turnier in der Halle, Stand nur ohne Kindermodus und mit Live-Stand. Immer Voll-Antwort; version monoton.';
 
 -- ---------------------------------------------------------------------------------------------------------------
 -- 6. Rechte

@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { initRealDeI18n } from '../../../test/realDeI18n';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import { LiveCockpit } from '../LiveCockpit';
 import { makeLiveMatch, makePhaseView, makeProps } from './cockpitFixtures';
 

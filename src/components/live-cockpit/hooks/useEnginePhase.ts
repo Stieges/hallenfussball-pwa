@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import type { MatchEngine } from '../../../core/match/client';
 import type { MatchContext, MatchState } from '../../../core/match';
 import { useMatchEngineContextOptional } from '../../../features/match-engine/useMatchEngineContext';
-import { phaseViewOf, quittungRestOf, type PhaseView } from '../engine/phaseView';
+import { phaseViewOf, quittungRestOf, type PhaseView } from '../../../core/match/client/phaseView';
 
 const TICK_MS = 250;
 

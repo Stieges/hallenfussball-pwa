@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 #
-# rls-matrix.d/spur-zzz-veranstaltung-bildschirme.sh — Zeilen von 20261120_002_gathering_screens.sql (A1b Monitore der
+# rls-matrix.d/spur-zzz-veranstaltung-bildschirme.sh — Zeilen von 20261122_001_gathering_screens.sql (A1b Monitore der
 # Veranstaltung, @VA-034, @VA-037, @VA-040, @VA-043) fuer scripts/rls-role-matrix.sh. Per `source` eingebunden, nutzt a27_sql
 # (spur-geraete-a27.sh), user_id_for_id(), MATRIX_IDS und die Fixtures des Hauptskripts (T_MAIN gehoert U_OWNER, Co-Admin
 # U_COADMIN).
@@ -13,7 +13,7 @@
 # jeder (der Schluessel ist die Berechtigung), nie per Code (@VA-043). Gegenprobe: --without-gathering-screens.
 
 if [[ "${WITH_GS:-0}" -ne 1 && "${WITH_GS_REQ:-1}" -eq 1 ]]; then
-  echo "gs: uebersprungen (Voraussetzungen von 20261120_002 fehlen in diesem Modus)"
+  echo "gs: uebersprungen (Voraussetzungen von 20261122_001 fehlen in diesem Modus)"
   return 0
 fi
 GS_MISMATCHES=0

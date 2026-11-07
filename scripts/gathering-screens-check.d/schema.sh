@@ -62,7 +62,7 @@ check S "FK: nur gathering_screens.gathering_id -> gatherings (CASCADE); keiner 
             OR (conrelid = to_regclass('public.gatherings') AND confrelid = to_regclass('public.tournaments')));")"
 # public_gathering woertlich aus 20261119_001: ohne die zwei markierten Zeilen md5-gleich mit der A1-Fassung.
 q "SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.public_gathering(text)');" > "$WORK/pg_src.txt"
-check S "public_gathering = Fassung 20261119_001 + nur der Block on_screen (Kennzeichen 20261120_002)" "b1e18d7eaf2714409eba33103ac47915" \
+check S "public_gathering = Fassung 20261119_001 + nur der Block on_screen (Kennzeichen 20261122_001)" "b1e18d7eaf2714409eba33103ac47915" \
   "$(python3 -c '
 import sys, re, hashlib
 s = open(sys.argv[1], encoding="utf-8").read()
@@ -95,8 +95,8 @@ fi
 if [[ "${SKIP_X:-0}" -ne 1 && "${WITH_MIGRATION:-1}" -eq 1 ]]; then
   stop_rest
   q "SELECT pg_get_functiondef('public.public_gathering(text)'::regprocedure);" > "$WORK/pg_eigen.sql"
-  psql_stdin <<<"$(sed 's/^BEGIN$/BEGIN -- 20261120_002 spaetere Fassung/' "$WORK/pg_eigen.sql");" >/dev/null
-  check X "Fail-fast: public_gathering in fremder Fassung (auch mit Stempel 20261120_002) -> erneutes Einspielen bricht ab" \
+  psql_stdin <<<"$(sed 's/^BEGIN$/BEGIN -- 20261122_001 spaetere Fassung/' "$WORK/pg_eigen.sql");" >/dev/null
+  check X "Fail-fast: public_gathering in fremder Fassung (auch mit Stempel 20261122_001) -> erneutes Einspielen bricht ab" \
     "abgebrochen|unbekannte Fassung" \
     "$(psql_stdin < "$TARGET_FILE" >/dev/null 2>"$WORK/f0.err" && echo gelaufen || echo abgebrochen)|$(grep -o 'unbekannte Fassung' "$WORK/f0.err" | head -1)"
   check X "Rueckweg mit fremder Fassung von public_gathering: bricht ohne Aenderung ab" "abgebrochen|t" \

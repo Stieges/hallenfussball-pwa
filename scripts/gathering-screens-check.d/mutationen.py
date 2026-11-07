@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mutationen der Migration 20261120_002_gathering_screens.sql fuer `gathering-screens-check.sh --gegenprobe`.
+"""Mutationen der Migration 20261122_001_gathering_screens.sql fuer `gathering-screens-check.sh --gegenprobe`.
 
 Je Kernregel eine Mutation; jede muss mindestens eine Pruefung aus B, U, D, O, T oder S rot faerben. Jede Ersetzung muss
 genau einmal passen, sonst bricht das Skript ab (eine veraltete Mutation darf nicht still gruen werden).

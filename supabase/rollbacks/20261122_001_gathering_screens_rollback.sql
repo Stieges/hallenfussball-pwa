@@ -1,5 +1,5 @@
--- supabase/rollbacks/20261120_002_gathering_screens_rollback.sql
--- RUECKWEG zu supabase/migrations/20261120_002_gathering_screens.sql (A1b Monitore der Veranstaltung). Liegt bewusst NICHT
+-- supabase/rollbacks/20261122_001_gathering_screens_rollback.sql
+-- RUECKWEG zu supabase/migrations/20261122_001_gathering_screens.sql (A1b Monitore der Veranstaltung). Liegt bewusst NICHT
 -- in supabase/migrations (wird nie nachgespielt); belegt in scripts/gathering-screens-check.sh (Kategorie X: Schema danach =
 -- Stand vor der Migration). EIN Block.
 -- Reihenfolge: ZUERST die App auf den Stand ohne A7-Client (Bildschirme der Veranstaltung, "Auf die Bildschirme"), DANN dieser
@@ -14,7 +14,7 @@ BEGIN
   IF to_regclass('public.gathering_screens') IS NULL
      OR md5(coalesce((SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.public_gathering(text)')), ''))
         <> '6a9e35279f99c527341c85fce26af03a' THEN
-    RAISE EXCEPTION 'Rueckweg 20261120_002: Bildschirme der Veranstaltung nicht in der Fassung 20261120_002 -- nichts geaendert';
+    RAISE EXCEPTION 'Rueckweg 20261122_001: Bildschirme der Veranstaltung nicht in der Fassung 20261122_001 -- nichts geaendert';
   END IF;
 END
 $rw$;

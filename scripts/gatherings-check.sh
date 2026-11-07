@@ -74,8 +74,8 @@ done <<< "$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")"
 # Spaetere Migrationen, die auf A1 aufbauen und public_gathering ersetzen, laufen in ihrem eigenen Harness (dort samt den
 # A1-Pruefungen V, Z, P, A, T als Rueckfall-Pruefung gegen den Stand MIT ihnen). Hier blieben sie sonst nach dem Rueckweg von
 # A1 stehen (Fremdschluessel auf gatherings) bzw. braeche ihr Fail-fast an jeder Mutation von public_gathering ab.
-#   20261120_002_gathering_screens.sql -> scripts/gathering-screens-check.sh
-OWN_HARNESS_LATER=" 20261120_002_gathering_screens.sql "
+#   20261122_001_gathering_screens.sql -> scripts/gathering-screens-check.sh
+OWN_HARNESS_LATER=" 20261122_001_gathering_screens.sql "
 KEPT=()
 for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$OWN_HARNESS_LATER" == *" $(basename "$f") "* ]] || KEPT+=("$f"); done
 AFTER=(${KEPT[@]+"${KEPT[@]}"})

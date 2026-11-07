@@ -9,9 +9,9 @@
  * 2026-11-06 (A1 Veranstaltung, PR feat/veranstaltung-a1): Tabellen gatherings/gathering_members, tournaments.gathering_id und
  * die Funktionen von 20261119_001 aus einem Wegwerf-Container (Baseline + alle Migrationen) erzeugt -- bis zum Einspielen
  * von 20261119_001 in der Produktion meldet der Typ-Drift-Check genau diese Zeilen.
- * 2026-11-06 (A1b Monitore der Veranstaltung, PR feat/veranstaltung-a1b): Tabelle gathering_screens, die Spalten
- * gatherings.on_screen_tournament_id/on_screen_since/screen_location_name und die Funktionen von 20261120_002 ebenso aus
- * einem Wegwerf-Container -- bis zum Einspielen von 20261120_002 meldet der Typ-Drift-Check genau diese Zeilen.
+ * 2026-11-07 (Hallenton, PR #455): nach dem Einspielen von 20261121_001 aus der Produktion per Supabase-CLI
+ * (gen types typescript --schema public, wie der Typ-Drift-Check) erzeugt: hall_speakers, hall_field_leads,
+ * hall_sound_settings und die hall_*-Funktionen. Damit wieder deckungsgleich mit der Produktion.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -372,65 +372,12 @@ export type Database = {
           },
         ]
       }
-      gathering_screens: {
-        Row: {
-          adopted_monitor_id: string | null
-          adopted_tournament_id: string | null
-          config: Json
-          created_at: string
-          gathering_id: string
-          id: string
-          key_created_at: string
-          name: string
-          screen_key: string
-          sponsors: Json
-          updated_at: string
-        }
-        Insert: {
-          adopted_monitor_id?: string | null
-          adopted_tournament_id?: string | null
-          config?: Json
-          created_at?: string
-          gathering_id: string
-          id?: string
-          key_created_at?: string
-          name: string
-          screen_key: string
-          sponsors?: Json
-          updated_at?: string
-        }
-        Update: {
-          adopted_monitor_id?: string | null
-          adopted_tournament_id?: string | null
-          config?: Json
-          created_at?: string
-          gathering_id?: string
-          id?: string
-          key_created_at?: string
-          name?: string
-          screen_key?: string
-          sponsors?: Json
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "gathering_screens_gathering_id_fkey"
-            columns: ["gathering_id"]
-            isOneToOne: false
-            referencedRelation: "gatherings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       gatherings: {
         Row: {
           created_at: string
           id: string
           name: string
-          on_screen_since: string | null
-          on_screen_tournament_id: string | null
           owner_id: string
-          screen_location_name: string | null
           share_code: string
           share_code_created_at: string
           updated_at: string
@@ -439,10 +386,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
-          on_screen_since?: string | null
-          on_screen_tournament_id?: string | null
           owner_id: string
-          screen_location_name?: string | null
           share_code: string
           share_code_created_at?: string
           updated_at?: string
@@ -451,10 +395,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
-          on_screen_since?: string | null
-          on_screen_tournament_id?: string | null
           owner_id?: string
-          screen_location_name?: string | null
           share_code?: string
           share_code_created_at?: string
           updated_at?: string
@@ -504,6 +445,120 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "group_completions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hall_field_leads: {
+        Row: {
+          device_id: string
+          field_id: number
+          last_seen: string
+          tournament_id: string
+        }
+        Insert: {
+          device_id: string
+          field_id: number
+          last_seen?: string
+          tournament_id: string
+        }
+        Update: {
+          device_id?: string
+          field_id?: number
+          last_seen?: string
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_field_leads_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hall_sound_settings: {
+        Row: {
+          end_custom_path: string | null
+          goal_tone_fields: number[]
+          halftime_custom_path: string | null
+          halftime_sound: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          end_custom_path?: string | null
+          goal_tone_fields?: number[]
+          halftime_custom_path?: string | null
+          halftime_sound?: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          end_custom_path?: string | null
+          goal_tone_fields?: number[]
+          halftime_custom_path?: string | null
+          halftime_sound?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_sound_settings_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: true
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hall_speakers: {
+        Row: {
+          assigned_at: string
+          device_id: string
+          device_name: string
+          field_id: number
+          last_seen: string | null
+          output_hint_at: string | null
+          state: string | null
+          test_id: string | null
+          test_played_at: string | null
+          test_requested_at: string | null
+          tournament_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          device_id: string
+          device_name: string
+          field_id: number
+          last_seen?: string | null
+          output_hint_at?: string | null
+          state?: string | null
+          test_id?: string | null
+          test_played_at?: string | null
+          test_requested_at?: string | null
+          tournament_id: string
+        }
+        Update: {
+          assigned_at?: string
+          device_id?: string
+          device_name?: string
+          field_id?: number
+          last_seen?: string | null
+          output_hint_at?: string | null
+          state?: string | null
+          test_id?: string | null
+          test_played_at?: string | null
+          test_requested_at?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hall_speakers_tournament_id_fkey"
             columns: ["tournament_id"]
             isOneToOne: false
             referencedRelation: "tournaments"
@@ -1935,14 +1990,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      adopt_tournament_monitor: {
-        Args: {
-          p_gathering_id: string
-          p_monitor_id: string
-          p_tournament_id: string
-        }
-        Returns: Json
-      }
       append_match_events: {
         Args: {
           p_client_format: number
@@ -1986,15 +2033,6 @@ export type Database = {
       }
       compute_match_state: { Args: { p_match_id: string }; Returns: Json }
       create_gathering: { Args: { p_name: string }; Returns: Json }
-      create_gathering_screen: {
-        Args: {
-          p_config: Json
-          p_gathering_id: string
-          p_name: string
-          p_sponsors?: Json
-        }
-        Returns: Json
-      }
       decide_join_request: {
         Args: {
           p_accept: boolean
@@ -2005,10 +2043,6 @@ export type Database = {
         Returns: Json
       }
       delete_gathering: { Args: { p_gathering_id: string }; Returns: undefined }
-      delete_gathering_screen: {
-        Args: { p_screen_id: string }
-        Returns: undefined
-      }
       display_final_standings:
         | { Args: { p_tournament_id: string }; Returns: Json }
         | {
@@ -2042,131 +2076,90 @@ export type Database = {
         }
         Returns: Json
       }
-      gathering_clear_ineligible_on_screen: {
-        Args: { p_gathering_id: string }
-        Returns: undefined
-      }
-      gathering_location_key: { Args: { p_location: string }; Returns: string }
-      gathering_lock_for_screens: {
-        Args: { p_gathering_id: string }
-        Returns: {
-          created_at: string
-          id: string
-          name: string
-          on_screen_since: string | null
-          on_screen_tournament_id: string | null
-          owner_id: string
-          screen_location_name: string | null
-          share_code: string
-          share_code_created_at: string
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "gatherings"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       gathering_name_or_fail: { Args: { p_name: string }; Returns: string }
-      gathering_on_screen_for_caller: {
-        Args: { p_gathering_id: string }
-        Returns: Json
-      }
-      gathering_public_on_screen: {
-        Args: { p_gathering_id: string }
-        Returns: Json
-      }
-      gathering_screen_config_check: {
-        Args: { p_config: Json; p_sponsors: Json }
-        Returns: undefined
-      }
-      gathering_screen_display: {
-        Args: { p_key: string; p_since_version?: number }
-        Returns: Json
-      }
-      gathering_screen_final_standings: {
-        Args: { p_key: string }
-        Returns: Json
-      }
-      gathering_screen_new_key: { Args: never; Returns: string }
-      gathering_screen_reason: {
-        Args: { p_gathering_id: string; p_tournament_id: string }
-        Returns: string
-      }
-      gathering_screen_status: {
-        Args: { p_tournament_id: string }
-        Returns: Json
-      }
-      gathering_screen_tournament_or_fail: {
-        Args: { p_tournament_id: string }
-        Returns: {
-          change_revision: number
-          completed_at: string | null
-          config: Json
-          created_at: string | null
-          date: string
-          deleted_at: string | null
-          final_round_break: number | null
-          final_round_duration: number | null
-          finals_config: Json | null
-          finished_at: string | null
-          gathering_id: string | null
-          group_phase_break: number | null
-          group_phase_duration: number
-          id: string
-          is_public: boolean | null
-          last_modified_by: string | null
-          lifecycle_status: string
-          location_city: string | null
-          location_country: string | null
-          location_name: string | null
-          location_postal_code: string | null
-          location_street: string | null
-          number_of_fields: number
-          number_of_groups: number | null
-          number_of_teams: number
-          owner_id: string
-          point_system: Json
-          referee_config: Json | null
-          share_code: string | null
-          share_code_created_at: string | null
-          sport: string
-          start_time: string | null
-          status: string
-          title: string
-          tournament_type: string
-          updated_at: string | null
-          version: number | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "tournaments"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      gathering_screens_overview: {
-        Args: { p_gathering_id: string }
-        Returns: Json
-      }
-      gathering_tournament_list: {
-        Args: { p_gathering_id: string }
-        Returns: {
-          begin_time: string
-          date: string
-          id: string
-          is_public: boolean
-          last_match_started: boolean
-          location_name: string
-          reason: string
-          share_code: string
-          state: string
-          title: string
-        }[]
-      }
       generate_helper_code: { Args: never; Returns: string }
       generate_share_code: { Args: never; Returns: string }
+      hall_checked_fields: {
+        Args: { p_fields: number[]; p_tournament_id: string }
+        Returns: number[]
+      }
+      hall_field_lead_heartbeat: {
+        Args: { p_device_id: string; p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
+      hall_ms: { Args: { p_ts: string }; Returns: number }
+      hall_output_heard: {
+        Args: { p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
+      hall_require: {
+        Args: { p_permission: string; p_tournament_id: string }
+        Returns: undefined
+      }
+      hall_require_open: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
+      hall_sound_object_allowed: {
+        Args: { p_name: string; p_op: string }
+        Returns: boolean
+      }
+      hall_sound_purge_ended: { Args: never; Returns: number }
+      hall_sound_settings_set: {
+        Args: {
+          p_end_custom_path: string
+          p_goal_tone_fields: number[]
+          p_halftime_custom_path: string
+          p_halftime_sound: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_sound_status: {
+        Args: { p_device_id?: string; p_tournament_id: string }
+        Returns: Json
+      }
+      hall_speaker_assign: {
+        Args: {
+          p_device_id: string
+          p_device_name: string
+          p_fields: number[]
+          p_replace?: boolean
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_speaker_heartbeat: {
+        Args: {
+          p_device_id: string
+          p_fields: number[]
+          p_output_changed?: boolean
+          p_state: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_speaker_release: {
+        Args: {
+          p_device_id: string
+          p_fields: number[]
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_test_tone_ack: {
+        Args: {
+          p_device_id: string
+          p_field: number
+          p_test_id: string
+          p_tournament_id: string
+        }
+        Returns: Json
+      }
+      hall_test_tone_request: {
+        Args: { p_field: number; p_tournament_id: string }
+        Returns: Json
+      }
       has_gathering_permission: {
         Args: { p_gathering_id: string; p_permission: string }
         Returns: boolean
@@ -2344,23 +2337,11 @@ export type Database = {
       }
       resolve_bracket_notice: { Args: { p_notice_id: number }; Returns: Json }
       resolve_clarification: { Args: { p_id: number }; Returns: Json }
-      rotate_gathering_screen_key: {
-        Args: { p_screen_id: string }
-        Returns: Json
-      }
       rotate_helper_code: {
         Args: { p_open_requests?: string; p_tournament_id: string }
         Returns: Json
       }
       server_time: { Args: never; Returns: Json }
-      set_gathering_on_screen: {
-        Args: { p_on: boolean; p_tournament_id: string }
-        Returns: Json
-      }
-      set_gathering_screen_location: {
-        Args: { p_gathering_id: string; p_location: string }
-        Returns: undefined
-      }
       set_gathering_tournaments: {
         Args: { p_add: string[]; p_gathering_id: string; p_remove: string[] }
         Returns: Json
@@ -2390,15 +2371,6 @@ export type Database = {
       tournament_lifecycle: {
         Args: { p_tournament_id: string }
         Returns: string
-      }
-      update_gathering_screen: {
-        Args: {
-          p_config: Json
-          p_name: string
-          p_screen_id: string
-          p_sponsors: Json
-        }
-        Returns: undefined
       }
       user_owns_tournament: {
         Args: { p_tournament_id: string }
@@ -2536,4 +2508,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

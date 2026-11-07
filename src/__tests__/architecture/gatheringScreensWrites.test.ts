@@ -1,5 +1,5 @@
 /**
- * Architektur-Wächter A1b (@VA-034, @VA-037, @VA-043; Migration `20261120_002_gathering_screens.sql`): Bildschirme der
+ * Architektur-Wächter A1b (@VA-034, @VA-037, @VA-043; Migration `20261122_001_gathering_screens.sql`): Bildschirme der
  * Veranstaltung, ihr Schlüssel, der Ort und das Turnier in der Halle entstehen und ändern sich nur über Server-Funktionen.
  *
  * 1. Kein Produktivcode greift per `.from('gathering_screens')` auf die Tabelle zu (Clients haben dort keine Rechte; der

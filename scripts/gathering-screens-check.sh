@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# gathering-screens-check.sh — Container-Beweis fuer supabase/migrations/20261120_002_gathering_screens.sql (A1b Monitore der
+# gathering-screens-check.sh — Container-Beweis fuer supabase/migrations/20261122_001_gathering_screens.sql (A1b Monitore der
 # Veranstaltung, Record docs/anforderungen/2026-11-06_veranstaltung-mehrere-turniere.md, Funktionalitaet G). Muster und
 # Hilfen wie scripts/gatherings-check.sh (Wegwerf-Container supabase/postgres, Baseline + Migrationen seit Baseline,
 # Wegwerf-PostgREST im eigenen Netz, trap); Identitaeten und Grunddaten aus scripts/gatherings-check.d/fixtures.sh, dazu
@@ -50,9 +50,9 @@ PARTS="$REPO_ROOT/scripts/gathering-screens-check.d"
 A1_PARTS="$REPO_ROOT/scripts/gatherings-check.d"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
-TARGET_NAME="20261120_002_gathering_screens.sql"
+TARGET_NAME="20261122_001_gathering_screens.sql"
 TARGET_FILE="$MIGRATIONS_DIR/$TARGET_NAME"
-ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261120_002_gathering_screens_rollback.sql"
+ROLLBACK_FILE="$REPO_ROOT/supabase/rollbacks/20261122_001_gathering_screens_rollback.sql"
 PREFIX="gathering-screens-check-$$"
 NET="$PREFIX-net"
 C="$PREFIX-db"

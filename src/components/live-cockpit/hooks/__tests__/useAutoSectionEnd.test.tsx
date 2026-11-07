@@ -11,7 +11,7 @@ import { LocalMatchStore } from '../../../../core/match/client';
 import type { MatchEngineContextValue } from '../../../../features/match-engine/matchEngineContextInstance';
 import { MatchEngineContext } from '../../../../features/match-engine/matchEngineContextInstance';
 import { useEngineClockCommands } from '../../../../hooks/useEngineClockCommands';
-import { phaseViewOf } from '../../engine/phaseView';
+import { phaseViewOf } from '../../../../core/match/client/phaseView';
 import {
   REGEL_2X6,
   T0,

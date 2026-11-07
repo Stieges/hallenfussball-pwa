@@ -1,7 +1,7 @@
 /**
  * A1b Lese-Seite der Bildschirme der Veranstaltung (gatheringScreensRead.ts). Testwerte aus dem Gherkin der Funktionalität G
  * (Record Veranstaltung): Nikolausturnier, Bildschirm „Halle“, F1-/F2-/D-Junioren; Antworten in der Form des Vertrags der
- * Migration 20261120_002 (die echte Server-Antwort prüft scripts/gathering-screens-check.sh).
+ * Migration 20261122_001 (die echte Server-Antwort prüft scripts/gathering-screens-check.sh).
  */
 import { describe, it, expect } from 'vitest';
 import {

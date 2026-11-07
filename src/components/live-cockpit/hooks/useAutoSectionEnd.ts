@@ -13,7 +13,7 @@
 import { useEffect, useRef } from 'react';
 import { autoEndEventId } from '../../../core/match/client';
 import type { EngineClockCommands } from '../../../hooks/useEngineClockCommands';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 
 export interface SectionEnded {
   /** ID des gesendeten Ende-Ereignisses (`null`: nichts gespeichert). */
