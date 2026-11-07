@@ -91,3 +91,13 @@ export {
   type TargetKind,
   type TargetSelection,
 } from './retractTargets';
+export {
+  eingetragenImSpielplanOf,
+  phaseViewOf,
+  QUITTUNG_MS,
+  quittungRestOf,
+  type PhaseClockAdjustment,
+  type PhasePenalty,
+  type PhaseShootout,
+  type PhaseView,
+} from './phaseView';

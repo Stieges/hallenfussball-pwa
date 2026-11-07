@@ -15,6 +15,7 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect } from './fixtures';
 import { getLocalServiceRoleClient, gotoLogin, newFreshContext, safeCleanup } from './helpers';
+import { readCachedTournamentsInPage } from './deviceStore';
 import { E2E_DRAFT_CUP_ID, E2E_PUBLIC_CUP_ID, E2E_RELEASE_CUP_ID, E2E_RELEASE_CUP_TITLE, E2E_TEST_PASSWORD } from './testData';
 
 const CUP = E2E_RELEASE_CUP_ID;
@@ -85,15 +86,7 @@ async function openSectionOfCard(page: import('@playwright/test').Page, cardSele
 
 /** Ids der lokalen Turnierkopien des Geräts (IndexedDB `hallenfussball`/`cache`, Schlüssel `tournaments`). */
 async function localCopyIds(page: import('@playwright/test').Page): Promise<string[]> {
-  return page.evaluate(async () => new Promise<string[]>((resolve) => {
-    const request = indexedDB.open('hallenfussball');
-    request.onsuccess = () => {
-      const read = request.result.transaction('cache', 'readonly').objectStore('cache').get('tournaments');
-      read.onsuccess = () => resolve(((read.result as { value?: Array<{ id: string }> } | undefined)?.value ?? []).map((t) => t.id));
-      read.onerror = () => resolve([]);
-    };
-    request.onerror = () => resolve([]);
-  }));
+  return ((await page.evaluate(readCachedTournamentsInPage)) ?? []).map((t) => String(t.id));
 }
 
 test.describe('CA-5 Startseite der Co-Admin', () => {

@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useEngineClockCommands } from '../../../hooks/useEngineClockCommands';
 import { useMatchEngineContextOptional } from '../../../features/match-engine/useMatchEngineContext';
 import type { MatchCockpitSettings } from '../../../types/tournament';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { LiveMatch } from '../types';
 import { useAutoSectionEnd, type SectionEnded } from './useAutoSectionEnd';
 import { useWhistle } from './useWhistle';

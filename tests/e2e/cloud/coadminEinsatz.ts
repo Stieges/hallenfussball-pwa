@@ -21,6 +21,7 @@ import { fetchUserIdByEmail } from './engineHelpers';
 import { localDateIso } from '../../../src/core/view/time';
 import { getLocalServiceRoleClient, gotoLogin } from './helpers';
 import { E2E_RELEASE_CUP_ID, E2E_TEST_PASSWORD, E2E_USERS } from './testData';
+import { readCachedTournamentsInPage } from './deviceStore';
 
 const REPO_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
@@ -180,19 +181,9 @@ export async function cupRow(id: string): Promise<{ is_public: boolean; share_co
 export interface LocalCopy { version: number | null; title: string; locationName: string | null; teamNames: string[] }
 
 export async function localCopy(page: Page, tournamentId: string): Promise<LocalCopy | null> {
-  return page.evaluate(async (id) => new Promise<LocalCopy | null>((resolve) => {
-    const request = indexedDB.open('hallenfussball');
-    request.onsuccess = () => {
-      const read = request.result.transaction('cache', 'readonly').objectStore('cache').get('tournaments');
-      read.onsuccess = () => {
-        const list = ((read.result as { value?: Array<{ id: string; version?: number; title: string; location?: { name?: string }; teams?: Array<{ name: string }> }> } | undefined)?.value ?? []);
-        const found = list.find((t) => t.id === id);
-        resolve(found ? { version: found.version ?? null, title: found.title, locationName: found.location?.name ?? null, teamNames: (found.teams ?? []).map((team) => team.name) } : null);
-      };
-      read.onerror = () => resolve(null);
-    };
-    request.onerror = () => resolve(null);
-  }), tournamentId);
+  const list = (await page.evaluate(readCachedTournamentsInPage)) as Array<{ id: string; version?: number; title: string; location?: { name?: string }; teams?: Array<{ name: string }> }> | null;
+  const found = list?.find((t) => t.id === tournamentId);
+  return found ? { version: found.version ?? null, title: found.title, locationName: found.location?.name ?? null, teamNames: (found.teams ?? []).map((team) => team.name) } : null;
 }
 
 // =============================================================================

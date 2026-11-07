@@ -8,7 +8,7 @@ import { initRealDeI18n } from '../../../../test/realDeI18n';
 import i18n from 'i18next';
 import { alsUebersetzer } from '../../model/alsUebersetzer';
 import { makePhaseView } from '../../__tests__/cockpitFixtures';
-import type { PhaseView } from '../../engine/phaseView';
+import type { PhaseView } from '../../../../core/match/client/phaseView';
 import { usePenaltyExpiryNotice } from '../usePenaltyExpiryNotice';
 
 vi.unmock('i18next');

@@ -7,7 +7,7 @@
  */
 import { getClockDisplay, type ClockMode } from '../../../core/match/clockDisplay';
 import type { LiveMatch } from '../types';
-import type { PhaseView } from '../engine/phaseView';
+import type { PhaseView } from '../../../core/match/client/phaseView';
 import type { CockpitPhase, CockpitZustand } from './cockpitPhase';
 import type { ScoreboardModel, ScoreboardSeite, ScoreboardStrafe, ScoreboardUhr } from '../../ui/molecules/Scoreboard';
 import { zeitBalkenLaufend, zeitBalkenPause } from '../../../core/view/zeitBalken';

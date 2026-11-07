@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { toScoreboardModel, type ScoreboardInput } from '../toScoreboardModel';
 import { cockpitPhaseOf } from '../cockpitPhase';
 import { makeLiveMatch, makePhaseView } from '../../__tests__/cockpitFixtures';
-import type { PhaseView } from '../../engine/phaseView';
+import type { PhaseView } from '../../../../core/match/client/phaseView';
 
 const t = (key: string, o?: Record<string, unknown>) => (o ? `${key}:${JSON.stringify(o)}` : key);
 

@@ -15,7 +15,7 @@ import {
   type MatchStatus,
   type Phase,
   type TiebreakMode,
-} from '../../../core/match';
+} from '..';
 
 export interface PhasePenalty {
   id: string;

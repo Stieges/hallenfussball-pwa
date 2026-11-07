@@ -3,7 +3,7 @@
  * Die gespielte Zeit zählt alle Abschnitte (Pausen nicht), die geplante Zeit alle regulären Abschnitte.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { phaseViewOf, type PhaseView } from '../phaseView';
+import { phaseViewOf, type PhaseView } from '../../../../core/match/client/phaseView';
 import { REGEL_2X6, T0, spielAnlegen, zu, type EngineSpiel } from '../../__tests__/enginePhaseFixture';
 
 beforeEach(() => {
