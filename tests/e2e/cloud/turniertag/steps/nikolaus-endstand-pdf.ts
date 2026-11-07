@@ -209,6 +209,9 @@ async function zuschauerTabellenAus({ anonPage }: StepContext): Promise<void> {
 async function helferEndstandPdf({ asRole }: StepContext): Promise<void> {
   await vorbedingung('Turnier abgeschlossen', turnierIstAbgeschlossen);
   const server = await restAsRole('helper', 'GET', `tournaments?id=eq.${NIKOLAUS.tournamentId}&select=id,lifecycle_status`);
+  const mitglied = await getRows<Record<string, unknown>>(`tournament_collaborators?tournament_id=eq.${NIKOLAUS.tournamentId}&select=role,accepted_at,declined_at,user_id`, 'Mitgliedschaften');
+  // Befund-Spur (erwartet rot): welche Seite verweigert – erscheint im Protokoll des Laufs
+  console.log(`N8f-Spur: Server an Tom ${String(server.status)} ${JSON.stringify(server.json)} · Mitgliedschaften ${JSON.stringify(mitglied)}`);
   expect(server.json, 'Server liefert Tom das abgeschlossene Turnier (is_reading_member)').toEqual([{ id: NIKOLAUS.tournamentId, lifecycle_status: 'finished' }]);
   const tom = await asRole('helper');
   await openNikolausPath(tom, '/standings');
