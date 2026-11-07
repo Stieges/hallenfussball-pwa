@@ -781,7 +781,7 @@
     "count_one": "{{count}} Feld",
     "count_other": "{{count}} Felder",
     "noFields": "Keine Felder vorhanden",
-    "noFieldsInfo": "Die Felder stehen mit dem Festlegen des Turniers fest.",
+    "noFieldsInfo": "Die Felder stehen mit dem Fertigstellen des Turniers fest.",
     "inSlides": "In Slides",
     "default": "Standard",
     "editLabel": "Bezeichnung bearbeiten",
@@ -1560,7 +1560,7 @@
     "statusFinished": "beendet",
     "statusPlanned": "geplant",
     "lockWhyTitle": "Warum gesperrt?",
-    "lockWhy": "Spielzeit und Pause sind nach dem Festlegen gesperrt, weil der Spielplan darauf aufbaut – Uhrzeiten änderst du über „Zeiten verschieben“.",
+    "lockWhy": "Spielzeit und Pause sind nach dem Fertigstellen gesperrt, weil der Spielplan darauf aufbaut – Uhrzeiten änderst du über „Zeiten verschieben“.",
     "lockButton": "Warum ist {{name}} gesperrt?",
     "timesSection": "Uhrzeiten",
     "timesSectionDesc": "Spiele später ansetzen oder vorziehen."

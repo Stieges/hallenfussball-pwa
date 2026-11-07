@@ -10,6 +10,9 @@
  * (A-17b); die Anzeige am Helfer-Handy (Warteschirm → „Anfrage abgelehnt“, „Du hast keinen Zugriff mehr“) kommt mit A-17c.
  * Der lokale Stack hat _008 noch nicht (Einspielen = Sache des Fensters/Controllers; hier wird nie gestartet, gestoppt,
  * zurückgesetzt oder gesät). Darum `fixme` mit Grund, solange `E2E_STACK_HAS_008=1` fehlt.
+ *
+ * Der Turniertag des Team-Helfer-Cups ist der Folgetag des Säens (`helperCupDate.ts`): mit „heute“ lief der Helfer-Code ab,
+ * sobald der Lauf über Mitternacht ging (@HE-010, Lauf 42308242655). Jeder Test schließt seine Geräte (Kontexte) am Ende.
  */
 import { test, expect } from './fixtures';
 import { restAsRole } from './restAsRole';
@@ -42,9 +45,14 @@ test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
   });
 
   const consent = { errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 };
+  const devices: import('@playwright/test').BrowserContext[] = [];
+  test.afterEach(async () => {
+    await Promise.all(devices.splice(0).map((context) => context.close()));
+  });
 
   async function leaderPage(browser: import('@playwright/test').Browser, role: 'owner' | 'coadmin') {
     const context = await browser.newContext();
+    devices.push(context);
     await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
     const page = await context.newPage();
     await loginAsRole(page, role);
@@ -55,6 +63,7 @@ test.describe('Team & Helfer, zwei Rollen (A-18a)', () => {
 
   async function joinAs(browser: import('@playwright/test').Browser, code: string, name: string) {
     const context = await browser.newContext();
+    devices.push(context);
     // Datenschutz-Abfrage vorab beantwortet (wie `newDevice` in helfer-beitritt): sonst deckt ihr Dialog „Anfrage senden“ zu.
     await context.addInitScript((c) => localStorage.setItem('app:consent', JSON.stringify(c)), consent);
     const page = await context.newPage();

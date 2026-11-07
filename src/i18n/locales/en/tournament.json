@@ -781,7 +781,7 @@
     "count_one": "{{count}} field",
     "count_other": "{{count}} fields",
     "noFields": "No fields available",
-    "noFieldsInfo": "The fields are fixed when the tournament is set.",
+    "noFieldsInfo": "The fields are fixed when the tournament is finalised.",
     "inSlides": "In slides",
     "default": "Default",
     "editLabel": "Edit label",
@@ -1560,7 +1560,7 @@
     "statusFinished": "finished",
     "statusPlanned": "planned",
     "lockWhyTitle": "Why locked?",
-    "lockWhy": "Match time and break are locked after the schedule is set because the schedule is built on them – you change times via “Shift times”.",
+    "lockWhy": "Match time and break are locked after the tournament is finalised because the schedule is built on them – you change times via “Shift times”.",
     "lockButton": "Why is {{name}} locked?",
     "timesSection": "Times",
     "timesSectionDesc": "Move matches later or earlier."

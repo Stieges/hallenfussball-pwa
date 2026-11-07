@@ -1,10 +1,11 @@
 {
   "status": {
     "running": "Running",
-    "upcoming": "Upcoming",
-    "finished": "Finished",
+    "upcoming": "Ready",
+    "finished": "Completed",
+    "cancelled": "Cancelled",
     "draft": "Draft",
-    "archived": "Archived"
+    "archived": "Completed"
   },
   "nav": {
     "tournaments": "Tournaments",
@@ -32,6 +33,7 @@
     "trashHint": "Deleted tournaments can be restored here."
   },
   "sections": {
+    "today": "Today",
     "runningTournaments": "Currently running tournaments",
     "upcomingTournaments": "Upcoming tournaments",
     "savedDrafts": "Saved drafts",
@@ -54,11 +56,10 @@
     "permanentDelete": "Delete Permanently"
   },
   "card": {
-    "ariaLabel": "Tournament: {{title}}, {{status}}",
-    "ariaLabelExternal": "Tournament: {{title}}, {{status}}, {{source}}",
+    "ariaLabelTitle": "Tournament: {{title}}",
     "lateFinishNotice": "The last game was on {{date}}. The tournament is still running – close it in the administration.",
-    "statusLabel": "Status: {{status}}",
-    "draftNotice": "Draft - Not yet published",
+    "noDate": "No date",
+    "draftNotice": "Draft – not finished yet",
     "labels": {
       "dateTime": "Date & Time",
       "location": "Location",
@@ -98,8 +99,7 @@
     "placeholder": "Search tournaments...",
     "clearLabel": "Clear search",
     "filterLabel": "Filter:",
-    "filterAriaLabel": "Filter: {{label}} {{activeState}}",
-    "filterActive": "(active)"
+    "filterAriaLabelActive": "{{label}}, selected"
   },
   "import": {
     "stepTitles": {
@@ -111,7 +111,8 @@
     },
     "errors": {
       "unknownFormat": "Unknown file format. Please select a JSON or CSV file.",
-      "readError": "Error reading file"
+      "readError": "Error reading file",
+      "saveFailed": "The tournament could not be saved. Nothing was imported. Please try again."
     },
     "select": {
       "dropHere": "Drop file here",
@@ -143,9 +144,11 @@
       "import": "Import"
     },
     "success": {
-      "message": "\"{{title}}\" was successfully imported!",
-      "hint": "The tournament was saved as a draft and can now be edited.",
-      "goToTournament": "Go to Tournament"
+      "message": "\"{{title}}\" is imported.",
+      "hintReady": "The tournament is on the start page in the state “Ready”.",
+      "hintNoSchedule": "The tournament is on the start page as a draft. The schedule still needs to be created.",
+      "done": "Done",
+      "createSchedule": "Create schedule"
     }
   },
   "share": {

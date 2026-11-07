@@ -41,6 +41,7 @@
   },
   "errors": {
     "deleteTournament": "Fehler beim Löschen des Turniers. Bitte versuche es erneut.",
+    "emptyTrashFailed": "Nicht gelöscht: {{names}}. Die übrigen Turniere im Papierkorb sind gelöscht. Bitte versuche es erneut.",
     "restoreTournament": "Fehler beim Wiederherstellen von \"{{title}}\". Bitte versuche es erneut.",
     "importTournament": "Fehler beim Importieren des Turniers. Bitte versuche es erneut.",
     "copyTournament": "Fehler beim Kopieren des Turniers. Bitte versuche es erneut.",

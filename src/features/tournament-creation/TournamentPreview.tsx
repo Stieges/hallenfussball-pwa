@@ -438,7 +438,9 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             disabled={isPublishing}
             style={{
               fontSize: cssVars.fontSizes.lg,
-              padding: '14px 32px',
+              padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+              minHeight: cssVars.touchTargets.primary,
+              maxWidth: '100%',
               fontWeight: cssVars.fontWeights.bold,
             }}
             data-testid="preview-publish"
