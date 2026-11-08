@@ -61,20 +61,3 @@ describe('@ZM-141 Kopfblock: läuft gerade / als Nächstes / zuletzt beendet', (
     expect(publicCurrentOf(view({ ...tournament, matches: [] }))).toBeNull();
   });
 });
-
-describe('@ZM-141 Kopfblock mit gewähltem Filter', () => {
-  it('@ZM-141 Voreinstellung „Alle“ (ohne Filter): das ganze Turnier; mit Filter nur die gezeigten Spiele', async () => {
-    const { tournament } = await fPAUSE();
-    const v = view(tournament);
-    const nurSpiel8 = new Set([idOf(tournament, GAME[8])]);
-    const kopf = publicCurrentOf(v, nurSpiel8);
-    expect(kopf?.kind === 'live' ? kopf.matches.map((m) => m.id) : []).toEqual([idOf(tournament, GAME[8])]);
-    const alle = publicCurrentOf(v);
-    expect(alle?.kind === 'live' ? alle.matches : []).toHaveLength(2);
-  });
-
-  it('@ZM-141 Gegenbeispiel: zeigt der Filter nichts, steht kein Kopfblock da', async () => {
-    const { tournament } = await fPAUSE();
-    expect(publicCurrentOf(view(tournament), new Set())).toBeNull();
-  });
-});

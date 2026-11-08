@@ -38,6 +38,11 @@ export interface TeamScoreRowsProps {
   zeitstrafen?: OeffentlicheZeitstrafen;
   /** Kästen der Ansicht (`MatchView.boxes`) für das laufende und das nächste Spiel; ohne Angabe steht die Zahl wie bisher */
   kasten?: MatchView['boxes'];
+  /**
+   * Beendetes Spiel im Kasten (@ZM-158, @OB-064): der Sieger trägt den Ring, der Verlierer ist zurückgenommen, ein Unentschieden hat keins von beiden;
+   * `cup`: Pokal beim Sieger (nur Finalrunde); „nach Verlängerung“ klein unter dem Namen des Siegers. Nur zusammen mit `kasten`.
+   */
+  ende?: { cup: boolean };
 }
 
 type Side = 'a' | 'b';
@@ -67,13 +72,14 @@ const goalsStyle: CSSProperties = {
   fontFamily: 'inherit',
 };
 
-export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten }) => {
+export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam, awayTeam, result, status, onScoreClick, disabled = false, zeitstrafen, kasten, ende }) => {
   const { t } = useTranslation('tournament');
   const { colors } = useTheme();
   const decided = result?.winner !== undefined && result.winner !== null;
 
   const spokenResult = (() => {
-    if (result === null) { return t('matchCard.startMatch'); }
+    // Ohne Stand (Live-Stand aus, noch nicht angepfiffen) sagt die Karte den Zustand, nie „Spiel starten“ einem, der nur zusieht (@ZM-116)
+    if (result === null) { return status === 'running' ? t('matchCard.liveNoScore') : disabled ? t('matchCard.notStarted') : t('matchCard.startMatch'); }
     const values = { homeScore: result.goalsA, awayScore: result.goalsB, homePenalty: result.penaltyA, awayPenalty: result.penaltyB };
     if (status === 'running') { return t('matchCard.scoreAriaLive', { ...values, elapsed: t('matchCard.live') }); }
     if (result.decision === 'penalty') { return t('matchResult.scoreAriaPenalty', values); }
@@ -96,6 +102,8 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     const isLoser = decided && result?.winner !== side;
     const goals = result === null ? undefined : side === 'a' ? result.goalsA : result.goalsB;
     const penalty = side === 'a' ? result?.penaltyA : result?.penaltyB;
+    const finished = kasten !== undefined && ende !== undefined && status === 'finished';
+    const overtimeNote = finished && isWinner && result?.decision === 'overtime';
     const nameStyle: CSSProperties = {
       fontSize: cssVars.fontSizes.md,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
@@ -108,13 +116,21 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     const seite = first ? 'home' : 'away';
     // Feste Zelle je Element: ohne Strafstoß-Spalte würde die automatische Platzierung die nächste Zeile in die freie Zelle ziehen
     const row = first ? 1 : 2;
+    const nameBlock = (
+      <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
+        <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
+      </ZeitstrafeHinweis>
+    );
     return (
       <Fragment key={side}>
         <div style={{ ...teamStyle, gridColumn: 1, gridRow: row }}>
           <TeamAvatar team={team} size="sm" />
-          <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
-            <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
-          </ZeitstrafeHinweis>
+          {overtimeNote ? (
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              {nameBlock}
+              <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`match-overtime-${matchId}-${seite}`}>{t('matchResult.afterOvertime')}</span>
+            </div>
+          ) : nameBlock}
         </div>
         <button
           type="button"
@@ -141,8 +157,10 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
               background={hintergrund}
               textColor={colors.textPrimary}
               bib={(first ? kasten.home : kasten.away).bib}
+              outcome={finished && decided ? (isWinner ? 'winner' : 'loser') : undefined}
+              cup={finished && isWinner && ende.cup}
               frameStrength={rahmen}
-              ariaLabel={`${team.name}: ${String(goals ?? 0)}${(first ? kasten.home : kasten.away).bib ? `, ${t('matchCard.bibAria')}` : ''}`}
+              ariaLabel={[`${team.name}: ${String(goals ?? 0)}`, finished && isWinner ? t('matchCard.winnerAria') : null, (first ? kasten.home : kasten.away).bib ? t('matchCard.bibAria') : null].filter((x) => x !== null).join(', ')}
               testId={`match-box-${matchId}-${seite}`}
               position={seite}
             />

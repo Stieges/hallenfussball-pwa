@@ -29,8 +29,6 @@ export interface PublicCurrentBlockProps {
   tournament: Pick<Tournament, 'teams' | 'groups'>;
   /** Spiele mit den Ständen, die die Zielgruppe sehen darf (Uhr und Zeitstrafen) */
   currentMatches: readonly Match[];
-  /** Spiele, die der gewählte Filter zeigt; ohne Angabe das ganze Turnier */
-  visibleIds?: ReadonlySet<string>;
   locale: ViewLocale;
 }
 
@@ -65,18 +63,23 @@ const headStyle: CSSProperties = {
 const bodyStyle: CSSProperties = { display: 'flex', padding: cssVars.spacing.sm };
 const clockStyle: CSSProperties = { padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}` };
 
-/** Kästen in Teamfarbe (Weste bei Leibchen, @ZM-158, @ZM-161) wie im Spielplan: nur beim laufenden und beim nächsten Spiel, nie ohne Stand (Kindermodus). */
-function kastenOf(mv: MatchView, kind: PublicCurrent['kind'], view: TournamentView): MatchView['boxes'] | undefined {
-  return view.rules.results && kind !== 'last' ? mv.boxes : undefined;
+/**
+ * Kästen in Teamfarbe (Weste bei Leibchen, @ZM-158, @ZM-161) – nur mit sichtbaren Ergebnissen (Kindermodus: keine). Ein laufendes Spiel
+ * zeigt sie nur bei eingeschaltetem Live-Stand (sonst „laufendes Spiel ohne Stand“, Zone 1 „Beim Öffnen“, @ZM-116), das nächste Spiel
+ * mit 0 : 0 (@ZM-195), das zuletzt beendete mit Ring beim Sieger und Pokal in der Finalrunde (@ZM-158, @OB-064).
+ */
+function kastenOf(mv: MatchView, view: TournamentView): MatchView['boxes'] | undefined {
+  const { results, liveScore } = view.rules;
+  return results && (!mv.isLive || liveScore) ? mv.boxes : undefined;
 }
 
 const HEADING_KEY = { live: 'current.live', next: 'current.next', last: 'current.last' } as const;
 
-export function PublicCurrentBlock({ view, schedule, tournament, currentMatches, visibleIds, locale }: PublicCurrentBlockProps): ReactElement | null {
+export function PublicCurrentBlock({ view, schedule, tournament, currentMatches, locale }: PublicCurrentBlockProps): ReactElement | null {
   const { t } = useTranslation('publicView');
   const { t: tTournament } = useTranslation('tournament');
   const clockOf = useSpectatorClocks(view, useElapsedSeconds(view, currentMatches, undefined), currentMatches);
-  const current: PublicCurrent | null = publicCurrentOf(view, visibleIds);
+  const current: PublicCurrent | null = publicCurrentOf(view);
   if (current === null) {
     return null;
   }
@@ -114,7 +117,8 @@ export function PublicCurrentBlock({ view, schedule, tournament, currentMatches,
             onScoreClick={noop}
             disabled
             zeitstrafen={clock?.zeitstrafen}
-            kasten={kastenOf(mv, current.kind, view)}
+            kasten={kastenOf(mv, view)}
+            ende={current.kind === 'last' ? { cup: mv.phase === 'final' } : undefined}
           />
         </div>
         {clock !== null && <div style={clockStyle}><MatchClock clock={clock} size="card" testId={`public-current-clock-${mv.id}`} /></div>}

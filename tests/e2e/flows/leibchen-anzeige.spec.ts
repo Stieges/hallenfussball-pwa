@@ -247,7 +247,7 @@ test.describe('Leibchen-Anzeige Zuschauer-Seite 390', () => {
     await expect(plan.getByTestId(/^match-box-.*-away-bib$/)).toBeVisible();
     await expect(plan.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-fill', 'solid');
     await expect(plan.getByTestId(/^match-box-.*-home-bib$/)).toHaveCount(0);
-    await expect(page.getByTestId(/^match-time-penalty-.*-away$/).first()).toContainText('5');
+    await expect(plan.getByTestId(/^match-time-penalty-.*-away$/).first()).toContainText('5');
     await bild(page, 'z-laeuft');
   });
 

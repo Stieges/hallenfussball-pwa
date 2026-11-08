@@ -1,7 +1,7 @@
 /**
  * Paket Z2 (Zuschauer-Seite, Kopfblock): oben steht, was gerade läuft / als Nächstes kommt / zuletzt beendet war.
  * Szenarien: @ZM-141 (Grundriss, 4 Lagen, „darunter folgt der Spielplan“), @ZM-039/@ZM-040/@ZM-041 (unterbrochen = laufend),
- * @OB-066 (Wort im Abzeichen), @OB-067 (Stand und Restzeit am größten), @ZM-104 (ausgefallen nie „als Nächstes“).
+ * @OB-066 (Wort im Abzeichen), @ZM-104 (ausgefallen nie „als Nächstes“).
  * Werte und Wortlaut stammen aus dem Gherkin, nicht aus dem Code. Gemockt sind nur die Datenquellen (Harness wie A-36c).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -24,19 +24,19 @@ vi.mock('../../features/public-view/defaultPublicSource', async () => {
 
 import { LiveViewScreen } from '../LiveViewScreen';
 import { RepositoryProvider } from '../../core/contexts/RepositoryContext';
-import { fAUS, fES, fPAUSE, fZEIT, GAME, withCloudColumns } from '../../core/view/__fixtures__/hallencupNord';
+import { fAUS, fES, fNV, fPAUSE, fZEIT, GAME, hf1Besetzt, withCloudColumns } from '../../core/view/__fixtures__/hallencupNord';
 
 vi.unmock('i18next'); vi.unmock('react-i18next');
 await (await import('../../test/realDeI18n')).initRealDeI18n();
 
 const SHARE = 'NORD28';
 
-async function zeige(tournament: Tournament): Promise<HTMLElement> {
+async function zeige(tournament: Tournament, query = ''): Promise<HTMLElement> {
   supabaseGet.mockResolvedValue(tournament);
   localGet.mockResolvedValue(null);
   const { container } = render(
     <RepositoryProvider user={null}>
-      <MemoryRouter initialEntries={[`/live/${SHARE}`]}>
+      <MemoryRouter initialEntries={[`/live/${SHARE}${query}`]}>
         <LiveViewScreen shareCode={SHARE} />
       </MemoryRouter>
     </RepositoryProvider>,
@@ -159,12 +159,18 @@ describe('@ZM-141 Aufbau der Seite: ein Turnier-Kopf, danach das Geschehen, daru
     expect(folge(kopf(), c.querySelector('.group-stage-schedule')!)).toBe(true);
   });
 
-  it('@OB-067 Gegenbeispiel: Gruppenfilter „Alle“ bleibt Vorbelegung, der Kopf zeigt unabhängig vom Filter das ganze Turnier', async () => {
+  it.each(['?s=finished', '?s=scheduled', '?g=B', '?g=A&s=finished', '?p=final'])('@ZM-141 der Kopf folgt keinem Filter: mit %s steht oben unverändert, was im ganzen Turnier läuft', async (query) => {
+    const cup = await fPAUSE();
+    await zeige(cup.tournament, query);
+    expect(within(kopf()).getByRole('heading', { name: 'Läuft gerade' })).toBeInTheDocument();
+    expect(within(kopf()).getAllByTestId(/^public-current-badge-/)).toHaveLength(2);
+  });
+
+  it('@ZM-141 Voreinstellung: alle Filter stehen auf „Alle“', async () => {
     const cup = await fPAUSE();
     await zeige(cup.tournament);
     expect(screen.getAllByRole('button', { name: 'Alle', pressed: true }).length).toBeGreaterThan(0);
     expect(screen.queryAllByRole('button', { name: 'Alle', pressed: false })).toHaveLength(0);
-    expect(within(kopf()).getAllByTestId(/^public-current-badge-/)).toHaveLength(2);
   });
 });
 
@@ -183,9 +189,84 @@ describe('@ZM-158 @ZM-161 Ergebniskästen im Kopf', () => {
     expect(within(kopf()).getByTestId(`match-box-kopf-${idOf(cup.tournament, GAME[9])}-home`)).toBeInTheDocument();
   });
 
-  it('@ZM-158 Gegenbeispiel: zuletzt beendetes Spiel und Kindermodus zeigen die Zahl ohne Kasten', async () => {
+  it('@ZM-158 @OB-064 Gegenbeispiel: im Kindermodus (Ergebnisse aus) kein Kasten, auch nicht bei laufendem und nächstem Spiel', async () => {
+    const cup = await fPAUSE();
+    await zeige({ ...cup.tournament, hideScoresForPublic: true });
+    expect(kopf().querySelector('[data-testid^="match-box-kopf-"]')).toBeNull();
+  });
+});
+
+describe('@ZM-141 @ZM-158 @OB-064 Zuletzt beendet: Kasten mit Ring beim Sieger, Pokal in der Finalrunde', () => {
+  const box = (id: string, seite: 'home' | 'away') => within(kopf()).getByTestId(`match-box-kopf-${id}-${seite}`);
+  const nurBeendet = (t: Tournament, beendet: (index: number) => boolean, ergebnis: (index: number) => [number, number]): Tournament => ({
+    ...t,
+    matches: t.matches.map((m, i) => (beendet(i)
+      ? { ...m, matchStatus: 'finished' as const, scoreA: ergebnis(i)[0], scoreB: ergebnis(i)[1] }
+      : { ...m, matchStatus: 'skipped' as const })),
+  });
+
+  it('@ZM-141 @OB-064 Finale 2:1 zuletzt beendet: Sieger mit Ring und Pokal, Verlierer zurückgenommen ohne Pokal', async () => {
     const cup = await fZEIT();
     await zeige(alleBeendet(cup.tournament));
+    const id = idOf(cup.tournament, GAME.FINAL);
+    expect(within(kopf()).getByTestId(`public-current-badge-${id}`).textContent).toBe('Ende');
+    expect(box(id, 'home')).toHaveAttribute('data-outcome', 'winner');
+    expect(within(kopf()).getByTestId(`match-box-kopf-${id}-home-cup`)).toBeInTheDocument();
+    expect(box(id, 'away')).toHaveAttribute('data-outcome', 'loser');
+    expect(within(kopf()).queryByTestId(`match-box-kopf-${id}-away-cup`)).toBeNull();
+  });
+
+  it('@OB-064 Gruppenspiel 2:1 zuletzt beendet: Sieger mit Ring, aber ohne Pokal (kein Spiel der Finalrunde)', async () => {
+    const cup = await fZEIT();
+    await zeige(nurBeendet(cup.tournament, (i) => i < 12, () => [2, 1]));
+    const id = idOf(cup.tournament, 11);
+    expect(box(id, 'home')).toHaveAttribute('data-outcome', 'winner');
+    expect(within(kopf()).queryByTestId(`match-box-kopf-${id}-home-cup`)).toBeNull();
+  });
+
+  it('@OB-064 Gegenbeispiel: Unentschieden in der Gruppe hat weder Ring noch Pokal', async () => {
+    const cup = await fZEIT();
+    await zeige(nurBeendet(cup.tournament, (i) => i < 12, () => [1, 1]));
+    const id = idOf(cup.tournament, 11);
+    expect(box(id, 'home')).not.toHaveAttribute('data-outcome');
+    expect(box(id, 'away')).not.toHaveAttribute('data-outcome');
+    expect(kopf().querySelector('[data-testid$="-cup"]')).toBeNull();
+  });
+
+  it('@OB-064 Halbfinale 4:1 nach Verlängerung: klein „nach Verlängerung“ beim Stand des Siegers', async () => {
+    const cup = await fNV();
+    const id = idOf(cup.tournament, GAME.HF2);
+    await zeige({ ...cup.tournament, matches: cup.tournament.matches.map((m) => (m.id === id ? m : { ...m, matchStatus: 'skipped' as const })) });
+    expect(within(kopf()).getByTestId(`match-overtime-kopf-${id}-home`).textContent).toBe('nach Verlängerung');
+    expect(within(kopf()).queryByTestId(`match-overtime-kopf-${id}-away`)).toBeNull();
+  });
+});
+
+describe('@ZM-116 Live-Stand ausgeschaltet: das laufende Spiel steht da, ohne Stand', () => {
+  it('@ZM-116 Kopf: laufende Spiele ohne Kasten und ohne Zahl, Vorlesetext nennt „Läuft“, nie „Spiel starten“', async () => {
+    const cup = await fPAUSE();
+    await zeige({ ...cup.tournament, publicLiveScore: false });
+    const id7 = idOf(cup.tournament, GAME[7]);
+    expect(within(kopf()).getByRole('heading', { name: 'Läuft gerade' })).toBeInTheDocument();
+    expect(within(kopf()).getByTestId(`public-current-badge-${id7}`).textContent).toBe('Pause');
     expect(kopf().querySelector('[data-testid^="match-box-kopf-"]')).toBeNull();
+    expect(imKopf(id7, 'home').textContent).toBe('–');
+    expect(imKopf(id7, 'home').getAttribute('aria-label')).toBe('Läuft, Stand nicht öffentlich');
+  });
+
+  it('@ZM-116 auch die Karte im Spielplan zeigt das laufende Spiel ohne Kasten (Gruppe und Finalrunde)', async () => {
+    const cup = await fPAUSE();
+    const c = await zeige({ ...cup.tournament, publicLiveScore: false });
+    for (const n of [7, 8] as const) {
+      expect(c.querySelector(`[data-testid="match-box-${idOf(cup.tournament, GAME[n])}-home"]`)).toBeNull();
+    }
+    document.body.innerHTML = '';
+    const hf = withCloudColumns(await hf1Besetzt(), GAME.HF1, { match_status: 'running', score_a: 1, score_b: 0 });
+    const id = idOf(hf.tournament, GAME.HF1);
+    const mit = await zeige(hf.tournament);
+    expect(mit.querySelector(`[data-testid="final-box-${id}-home"]`)).not.toBeNull();
+    document.body.innerHTML = '';
+    const ohne = await zeige({ ...hf.tournament, publicLiveScore: false });
+    expect(ohne.querySelector(`[data-testid="final-box-${id}-home"]`)).toBeNull();
   });
 });

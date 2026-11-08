@@ -6,18 +6,17 @@
  * „als Nächstes“ (@ZM-041); „als Nächstes“ ist das früheste Spiel ohne Ergebnis, auch wenn seine Anstoßzeit schon vorbei ist
  * (Daniel 21.10.). Ohne Ergebnisse für die Zielgruppe (Kindermodus, „Ergebnisse aus“) gibt es keinen Block „zuletzt beendet“.
  *
- * Der Block steht an der Spitze der Spielliste darunter: Mit gewähltem Filter (Gruppe, „Nur meine“ …) gilt er für die gefilterten
- * Spiele (`visibleIds`), die Voreinstellung „Alle“ zeigt das ganze Turnier (Daniel 21.10.: Filter-Voreinstellung bleibt „Alle“).
+ * Der Block folgt keinem Filter (Gruppe, Status, „Nur meine“): oben steht immer, was im ganzen Turnier läuft (@ZM-141).
  */
-import { currentOf, type MatchView, type TournamentView } from '../../core/view';
+import type { MatchView, TournamentView } from '../../core/view';
 
 export type PublicCurrent =
   | { kind: 'live'; matches: readonly MatchView[] }
   | { kind: 'next'; match: MatchView }
   | { kind: 'last'; match: MatchView };
 
-export function publicCurrentOf(view: TournamentView, visibleIds?: ReadonlySet<string>): PublicCurrent | null {
-  const { live, next, lastFinished } = visibleIds === undefined ? view.current : currentOf(view.matches.filter((m) => visibleIds.has(m.id)));
+export function publicCurrentOf(view: TournamentView): PublicCurrent | null {
+  const { live, next, lastFinished } = view.current;
   if (live.length > 0) {
     return { kind: 'live', matches: live };
   }

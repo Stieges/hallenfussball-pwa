@@ -72,6 +72,31 @@ test.describe('@ZM-141 Kopfblock oben, ohne zu scrollen (360×640)', () => {
     expect(unten).toBeLessThanOrEqual(leiste);
   });
 
+  test('@OB-067 Kopf 360×640: Stand und Restzeit sind die größten Texte der Spielanzeige, Schriftstärke 800, gleich breite Ziffern', async ({ page }) => {
+    await oeffne(page, 'MESS26');
+    const stil = await page.evaluate((id) => {
+      const karte = document.querySelector(`[data-testid="public-current-card-${id}"]`)!;
+      const messe = (selektor: string) => {
+        const el = document.querySelector<HTMLElement>(selektor)!;
+        const s = getComputedStyle(el);
+        return { gewicht: s.fontWeight, ziffern: s.fontVariantNumeric, groesse: parseFloat(s.fontSize) };
+      };
+      const andere = Array.from(karte.querySelectorAll<HTMLElement>('*'))
+        .filter((e) => e.children.length === 0 && (e.textContent ?? '').trim() !== '' && !e.matches('[data-testid$="-digits"], [data-testid^="public-current-clock-"]'))
+        .map((e) => parseFloat(getComputedStyle(e).fontSize));
+      return {
+        stand: [messe(`[data-testid="match-box-kopf-${id}-home-digits"]`), messe(`[data-testid="match-box-kopf-${id}-away-digits"]`)],
+        zeit: messe(`[data-testid="public-current-clock-${id}"]`),
+        andere: Math.max(...andere),
+      };
+    }, FINALE);
+    for (const m of [...stil.stand, stil.zeit]) {
+      expect(m.gewicht).toBe('800');
+      expect(m.ziffern).toContain('tabular-nums');
+      expect(m.groesse).toBeGreaterThan(stil.andere);
+    }
+  });
+
   test('@ZM-087 @ZM-148 langer Name im Kopf: bricht um, kein „…“, nichts läuft über den Rand der Karte', async ({ page }) => {
     await oeffne(page, 'MESS26');
     const mass = await page.evaluate((id) => {
@@ -119,6 +144,10 @@ test.describe('@ZM-141 Kopfblock oben, ohne zu scrollen (360×640)', () => {
     await expect(kopf(page).locator(`[data-testid="public-current-badge-${FINALE}"]`)).toHaveText('Ende');
     await expect(kopf(page).locator(`[data-testid="match-goals-kopf-${FINALE}-home"]`)).toHaveText('3');
     await expect(kopf(page).locator(`[data-testid="match-goals-kopf-${FINALE}-away"]`)).toHaveText('1');
+    // Kasten wie auf der Karte: Ring beim Sieger, Pokal in der Finalrunde (@ZM-158, @OB-064)
+    await expect(kopf(page).locator(`[data-testid="match-box-kopf-${FINALE}-home"]`)).toHaveAttribute('data-outcome', 'winner');
+    await expect(kopf(page).locator(`[data-testid="match-box-kopf-${FINALE}-home-cup"]`)).toBeVisible();
+    await expect(kopf(page).locator(`[data-testid="match-box-kopf-${FINALE}-away"]`)).toHaveAttribute('data-outcome', 'loser');
     const { unten, leiste } = await ohneScrollenSichtbar(page);
     expect(unten).toBeLessThanOrEqual(leiste);
   });
