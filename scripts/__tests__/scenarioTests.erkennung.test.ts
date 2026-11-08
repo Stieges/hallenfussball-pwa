@@ -1,5 +1,5 @@
 // Werkzeugkette: Erkennung der Szenario-Kennungen in Testdateien (scripts/lib/testtexte.mjs)
-// Plattform-Record "Testabdeckung": Stand je MVP-Szenario (@TA-026, @TA-027, @TA-028, @TA-029, @TA-030, @TA-031, @TA-032, @TA-033)
+// Plattform-Record "Testabdeckung": Kennung in Kommentar, String oder Prüfskript zaehlt nie, nur im Testtitel (@TA-029; Bezug @TA-007, @TA-010)
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -31,7 +31,7 @@ beforeEach(() => {
 afterEach(() => rmSync(ordner, { recursive: true, force: true }))
 
 describe('Kennungs-Erkennung: Tests mit Typ-Parameter', () => {
-  it('@TA-026 it.each<T>, test.each<T> und describe.each<T> zaehlen mit der Kennung im Titel', () => {
+  it('@TA-029 it.each<T>, test.each<T> und describe.each<T> zaehlen mit der Kennung im Titel', () => {
     liste(['ZM-001', 'ZM-002', 'ZM-003', 'ZM-004', 'ZM-005'])
     schreibe(
       'src/a.test.ts',
@@ -46,7 +46,7 @@ describe('Kennungs-Erkennung: Tests mit Typ-Parameter', () => {
     expect(mitTest()).toBe(5)
   })
 
-  it('@TA-026 Gegenbeispiel: Kennung nur im Kommentar vor oder in einem it.each<T> zaehlt nicht', () => {
+  it('@TA-029 Gegenbeispiel: Kennung nur im Kommentar vor oder in einem it.each<T> zaehlt nicht', () => {
     liste(['ZM-001', 'ZM-002'])
     schreibe(
       'src/b.test.ts',
@@ -60,7 +60,7 @@ describe('Kennungs-Erkennung: Tests mit Typ-Parameter', () => {
     expect(mitTest()).toBe(0)
   })
 
-  it('@TA-026 Gegenbeispiel: ein Vergleich `it < 3` ist kein Test', () => {
+  it('@TA-029 Gegenbeispiel: ein Vergleich `it < 3` ist kein Test', () => {
     liste(['ZM-001'])
     schreibe('src/c.test.ts', "const it = 1\nconst klein = it < 3 && it > 0\nconst s = ('@ZM-001')\n")
     expect(mitTest()).toBe(0)
@@ -68,7 +68,7 @@ describe('Kennungs-Erkennung: Tests mit Typ-Parameter', () => {
 })
 
 describe('Kennungs-Erkennung: Regex-Literale mit Anfuehrungszeichen (Rauchtest-Form)', () => {
-  it('@TA-027 ein Regex-Literal mit " vor dem Test verschluckt die Titel nicht', () => {
+  it('@TA-029 ein Regex-Literal mit " vor dem Test verschluckt die Titel nicht', () => {
     liste(['RT-001', 'RT-002', 'RT-005'])
     schreibe(
       'tests/e2e/prod-smoke/x.spec.ts',
@@ -84,7 +84,7 @@ describe('Kennungs-Erkennung: Regex-Literale mit Anfuehrungszeichen (Rauchtest-F
     expect(mitTest()).toBe(3)
   })
 
-  it("@TA-027 auch ein Regex-Literal mit ' oder ` vor dem Test stoert nicht", () => {
+  it("@TA-029 auch ein Regex-Literal mit ' oder ` vor dem Test stoert nicht", () => {
     liste(['RT-001', 'RT-002'])
     schreibe(
       'src/d.test.ts',
@@ -98,7 +98,7 @@ describe('Kennungs-Erkennung: Regex-Literale mit Anfuehrungszeichen (Rauchtest-F
     expect(mitTest()).toBe(2)
   })
 
-  it('@TA-027 gleichzeitig: Division und JSX-Schliess-Tag werden nicht als Regex gelesen', () => {
+  it('@TA-029 gleichzeitig: Division und JSX-Schliess-Tag werden nicht als Regex gelesen', () => {
     liste(['RT-001', 'RT-002'])
     schreibe(
       'src/e.test.tsx',
@@ -111,7 +111,53 @@ describe('Kennungs-Erkennung: Regex-Literale mit Anfuehrungszeichen (Rauchtest-F
     expect(mitTest()).toBe(2)
   })
 
-  it('@TA-027 Gegenbeispiel: ein Regex-Literal mit Anfuehrungszeichen macht aus dem Kommentar danach keinen Test', () => {
+  it('@TA-029 Gegenbeispiel Division-Sperre: `a / 2 // it(..)` ist keine Regex und der Kommentar danach kein Test', () => {
+    liste(['ZM-002'])
+    schreibe('src/h.test.ts', "const x = a / 2 // it('@ZM-002 k', () => {})\n")
+    expect(mitTest()).toBe(0)
+  })
+
+  it('@TA-029 Division nach sehr viel Leerraum (mehr als der Rueckblick) bleibt eine Division', () => {
+    liste(['ZM-002'])
+    schreibe('src/m.test.ts', `const x = a${' '.repeat(100)}/ 2 // it('@ZM-002 k', () => {})\n`)
+    expect(mitTest()).toBe(0)
+  })
+
+  it('@TA-029 Escape `\\/` im Regex beendet das Literal nicht: das `"` dahinter eroeffnet keinen String', () => {
+    liste(['ZM-001'])
+    schreibe('src/i.test.ts', 'const r = /a\\/"b/\nit(\'@ZM-001 nach Escape\', () => {})\n')
+    expect(mitTest()).toBe(1)
+  })
+
+  it('@TA-029 Zeichenklasse `[/]` im Regex beendet das Literal nicht', () => {
+    liste(['ZM-001'])
+    schreibe('src/j.test.ts', 'const r = /[/]"/\nit(\'@ZM-001 nach Klasse\', () => {})\n')
+    expect(mitTest()).toBe(1)
+  })
+
+  it('@TA-029 Division in einem Template-Ausdruck `${a/b}` stoert den Test danach nicht', () => {
+    liste(['ZM-001'])
+    schreibe('src/k.test.ts', 'const t = `${a/b} und ${c}/${d}"`\nit(\'@ZM-001 nach Template\', () => {})\n')
+    expect(mitTest()).toBe(1)
+  })
+
+  it('@TA-029 Regex nach Pfeilfunktion, await und yield (`=> /"x/.test(l)`) verschluckt den folgenden Test nicht', () => {
+    liste(['ZM-001', 'ZM-002', 'ZM-003'])
+    schreibe(
+      'src/l.test.ts',
+      [
+        'const t = xs.filter((l) => /"x/.test(l))',
+        "it('@ZM-001 nach Pfeil-Regex', () => {})",
+        'async function f() { return await /"y/.test(s) }',
+        "it('@ZM-002 nach await', () => {})",
+        'function* g() { yield /"z/.test(s) }',
+        "it('@ZM-003 nach yield', () => {})",
+      ].join('\n'),
+    )
+    expect(mitTest()).toBe(3)
+  })
+
+  it('@TA-029 Gegenbeispiel: ein Regex-Literal mit Anfuehrungszeichen macht aus dem Kommentar danach keinen Test', () => {
     liste(['RT-001'])
     schreibe(
       'src/f.test.ts',
@@ -122,7 +168,7 @@ describe('Kennungs-Erkennung: Regex-Literale mit Anfuehrungszeichen (Rauchtest-F
 })
 
 describe('Kennungs-Erkennung: Kommentare zaehlen nie', () => {
-  it('@TA-028 Kennungen in Zeilen-, Block- und Doc-Kommentaren, auch neben echten Tests, zaehlen nicht', () => {
+  it('@TA-029 Kennungen in Zeilen-, Block- und Doc-Kommentaren, auch neben echten Tests, zaehlen nicht', () => {
     liste(['ZM-001', 'ZM-002', 'ZM-003'])
     schreibe(
       'src/g.test.ts',

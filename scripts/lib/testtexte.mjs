@@ -22,12 +22,24 @@ function typArgumentEnde(src, start) {
   return -1
 }
 
-/** Zeichen vor einem `/`, nach denen ein Regex-Literal beginnt (nach `)`, `}`, Namen, Zahlen ist es eine Division). */
-const VOR_REGEX = /(?:[(,=:[!&|?{;+\-*%~^]|(?:^|[^\w$.])(?:return|typeof|case|in|of|void|delete|throw|else|do))$/
+/**
+ * Zeichen vor einem `/`, nach denen ein Regex-Literal beginnt (nach `)`, `}`, Namen, Zahlen ist es eine Division).
+ * `=>` (Pfeilfunktion) zaehlt, ein einzelnes `>` nicht (JSX-Text `<b>/pfad</b>`).
+ * Bekannte Restluecken (bewusst nicht geloest, Heuristik ohne Parser): Postfix `!`/`++`/`--` direkt vor einer Division
+ * (`a! / 2 // it(..)`) gilt als Regex-Beginn; ein Regex nach `)` (`if (x) /re/.test(y)`) gilt als Division und kann
+ * Anfuehrungszeichen darin als String lesen.
+ */
+const VOR_REGEX = /(?:[(,=:[!&|?{;+\-*%~^]|=>|(?:^|[^\w$.])(?:return|typeof|case|in|of|void|delete|throw|else|do|await|yield))$/
+
+/** Die letzten Zeichen vor der Stelle (ohne Leerraum am Ende), hoechstens 24: linear statt den ganzen Text zu kopieren. */
+function davorEnde(out) {
+  const kurz = out.slice(-64).trimEnd()
+  if (kurz === '' && out.length > 64) return out.trimEnd().slice(-24)
+  return kurz.slice(-24)
+}
 
 /** Index hinter einem Regex-Literal, das bei start (dem `/`) beginnt; -1 wenn dort keins steht (kein schliessendes `/` in der Zeile). */
-function regexEnde(src, start, davor) {
-  const d = davor.trimEnd()
+function regexEnde(src, start, d) {
   if (d !== '' && !VOR_REGEX.test(d)) return -1
   let i = start + 1
   let klasse = false
@@ -53,6 +65,7 @@ function regexEnde(src, start, davor) {
 export function ohneKommentare(src) {
   let out = ''
   let i = 0
+  let reEnde
   while (i < src.length) {
     const c = src[i]
     const n = src[i + 1]
@@ -68,10 +81,9 @@ export function ohneKommentare(src) {
       const ende = stringEnde(src, i)
       out += src.slice(i, ende)
       i = ende
-    } else if (c === '/' && regexEnde(src, i, out) > 0) {
-      const ende = regexEnde(src, i, out)
-      out += '/' + 'r'.repeat(ende - i - 2) + '/'
-      i = ende
+    } else if (c === '/' && (reEnde = regexEnde(src, i, davorEnde(out))) > 0) {
+      out += '/' + 'r'.repeat(reEnde - i - 2) + '/'
+      i = reEnde
     } else {
       out += c
       i++
