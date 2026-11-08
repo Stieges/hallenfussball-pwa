@@ -31,14 +31,21 @@ async function navigateToLogin(page: Page): Promise<void> {
 
   const loginEmail = page.locator('[data-testid="login-email-input"]');
 
+  const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
+  const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
+
+  // Erst warten, bis die Startseite einen der drei Einstiege zeigt. `isVisible()` wartet nie (ein `timeout` wird ignoriert,
+  // es antwortet sofort): ohne dieses Warten sah ein noch nicht gezeichneter Knopf aus wie „nicht vorhanden“ und der
+  // Weg zum Anmelden wurde still übersprungen.
+  await expect(loginEmail.or(mobileAuthButton).or(desktopLoginButton).first()).toBeVisible({ timeout: 10000 });
+
   // Check if already on login screen
-  if (await loginEmail.isVisible({ timeout: 1000 }).catch(() => false)) {
+  if (await loginEmail.isVisible()) {
     return;
   }
 
   // Mobile flow: Click user icon to open bottom sheet
-  const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
-  if (await mobileAuthButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await mobileAuthButton.isVisible()) {
     // Use force:true because offline badge may overlap in CI (no Supabase configured)
     await mobileAuthButton.click({ force: true });
 
@@ -52,8 +59,7 @@ async function navigateToLogin(page: Page): Promise<void> {
   }
 
   // Desktop flow: Click "Anmelden" button directly
-  const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
-  if (await desktopLoginButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+  if (await desktopLoginButton.isVisible()) {
     // Use force:true because offline badge may overlap in CI (no Supabase configured)
     await desktopLoginButton.click({ force: true });
     await expect(loginEmail).toBeVisible({ timeout: 5000 });
@@ -766,25 +772,25 @@ test.describe('Authentication Flows', () => {
 
         const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
 
-        if (await mobileAuthButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-          // Touch target should be ≥44px
-          const box = await mobileAuthButton.boundingBox();
-          if (box) {
-            expect(box.width).toBeGreaterThanOrEqual(44);
-            expect(box.height).toBeGreaterThanOrEqual(44);
-          }
+        // Am Handy gehört der Knopf zur Startseite: warten statt sofort zu fragen (`isVisible()` ignoriert ein `timeout`)
+        await expect(mobileAuthButton).toBeVisible({ timeout: 5000 });
+        // Touch target should be ≥44px
+        const box = await mobileAuthButton.boundingBox();
+        if (box) {
+          expect(box.width).toBeGreaterThanOrEqual(44);
+          expect(box.height).toBeGreaterThanOrEqual(44);
+        }
 
-          // Use force:true because offline badge may overlap in CI (no Supabase configured)
-          await mobileAuthButton.click({ force: true });
+        // Use force:true because offline badge may overlap in CI (no Supabase configured)
+        await mobileAuthButton.click({ force: true });
 
-          // Bottom sheet should appear
-          const bottomSheet = page.locator('[data-testid="auth-bottom-sheet"]').or(
-            page.locator('[role="dialog"]')
-          );
+        // Bottom sheet should appear
+        const bottomSheet = page.locator('[data-testid="auth-bottom-sheet"]').or(
+          page.locator('[role="dialog"]')
+        );
 
-          if (await bottomSheet.count() > 0) {
-            await expect(bottomSheet.first()).toBeVisible({ timeout: 3000 });
-          }
+        if (await bottomSheet.count() > 0) {
+          await expect(bottomSheet.first()).toBeVisible({ timeout: 3000 });
         }
       }
     });

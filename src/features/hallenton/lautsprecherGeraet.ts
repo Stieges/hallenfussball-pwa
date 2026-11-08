@@ -9,6 +9,7 @@
 import { lies, schreib } from './runtime/tonEinstellungen';
 import { browserKanalSpeicher } from './runtime/lautsprecherKanal';
 import { erzeugeBrowserHallTonSpieler, type HallTonSpieler } from './runtime/hallTonSpieler';
+import type { HallFehlerGrund } from '../../core/repositories/hallentonRpc';
 import type { HallLautsprecherLaufzeit } from './runtime/HallLautsprecherLaufzeit';
 
 export const GERAET_SCHLUESSEL = 'hallenton:geraet';
@@ -22,6 +23,8 @@ export interface Einschaltung {
 export interface GeraetStand {
   einschaltung: Einschaltung | null;
   laufzeit: HallLautsprecherLaufzeit | null;
+  /** Fehlergrund des letzten Lebenszeichens (z. B. `ungueltig`, `kein_recht`, `netz`); `null` nach Erfolg (H3b-3 K2). */
+  lebenszeichenFehler: HallFehlerGrund | null;
 }
 
 const zuhoerer = new Set<() => void>();
@@ -62,7 +65,7 @@ function beiSpeicher(ereignis: StorageEvent): void {
 }
 
 export function geraetStand(): GeraetStand {
-  stand ??= { einschaltung: gespeichert(), laufzeit: null };
+  stand ??= { einschaltung: gespeichert(), laufzeit: null, lebenszeichenFehler: null };
   return stand;
 }
 
@@ -94,7 +97,13 @@ export function setzeEinschaltung(einschaltung: Einschaltung | null): void {
 }
 
 export function setzeLaufzeit(laufzeit: HallLautsprecherLaufzeit | null): void {
-  melden({ ...geraetStand(), laufzeit });
+  melden({ ...geraetStand(), laufzeit, lebenszeichenFehler: null });
+}
+
+export function setzeLebenszeichenFehler(grund: HallFehlerGrund | null): void {
+  if (geraetStand().lebenszeichenFehler !== grund) {
+    melden({ ...geraetStand(), lebenszeichenFehler: grund });
+  }
 }
 
 /** Der Spieler dieses Tabs (ein `AudioContext`). */

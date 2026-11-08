@@ -42,13 +42,16 @@ test.describe('Produktions-Sperre (offline-Projekt)', () => {
 
     // Zum Login-Screen (gleiche Logik wie tests/e2e/flows/auth.spec.ts#navigateToLogin).
     const loginEmail = page.locator('[data-testid="login-email-input"]');
-    if (!(await loginEmail.isVisible({ timeout: 1000 }).catch(() => false))) {
-      const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
-      if (await mobileAuthButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
+    const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
+    // Erst warten, bis die Startseite einen der Einstiege zeigt: `isVisible()` antwortet sofort (ein `timeout` wird ignoriert)
+    await expect(loginEmail.or(mobileAuthButton).or(desktopLoginButton).first()).toBeVisible({ timeout: 10000 });
+    if (!(await loginEmail.isVisible())) {
+      if (await mobileAuthButton.isVisible()) {
         await mobileAuthButton.click({ force: true });
         await page.locator('[data-testid="bottomsheet-login"]').click();
       } else {
-        await page.locator('[data-testid="auth-login-button"]').click({ force: true });
+        await desktopLoginButton.click({ force: true });
       }
       await expect(loginEmail).toBeVisible({ timeout: 5000 });
     }

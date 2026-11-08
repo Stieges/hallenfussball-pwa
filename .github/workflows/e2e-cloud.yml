@@ -86,12 +86,9 @@ jobs:
           if [ "$CACHE_HIT" = "true" ]; then npx playwright install-deps chromium; else npx playwright install --with-deps chromium; fi
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          # Dieselbe Version wie lokal genutzt (siehe docs/TESTUMGEBUNG.md, Abschnitt
-          # "Voraussetzungen") und wie in supabase-drift-check.yml -- fest gepinnt, nicht
-          # "latest" (dort bereits einmal an einem GitHub-Rate-Limit gescheitert).
-          version: 2.117.0
+        # Version fest gepinnt in der Action (nicht "latest": dort einmal am GitHub-Rate-Limit
+        # gescheitert). Cache, dann GitHub-Release, sonst npm (Release-Download 504 am 08.11.).
+        uses: ./.github/actions/setup-supabase-cli
 
       - name: Lokalen Supabase-Stack starten
         # Registrierungscode wie lokal aus scripts/lib/e2e-registration-code.sh (fester
