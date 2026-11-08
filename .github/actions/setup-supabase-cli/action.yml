@@ -22,7 +22,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: ${{ runner.temp }}/supabase-cli-bin
-        key: supabase-cli-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}
+        key: supabase-cli-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}-npmtest
 
     - name: Cache-Treffer in den PATH aufnehmen
       if: steps.cache.outputs.cache-hit == 'true'
@@ -35,7 +35,7 @@ runs:
       uses: supabase/setup-cli@v1
       continue-on-error: true
       with:
-        version: ${{ inputs.version }}
+        version: ${{ inputs.version }}-npmtest
 
     # Nur bei Fehlschlag des Release-Downloads. Die Pakete enthalten wie der Release-
     # Tarball beide Dateien (supabase und supabase-go); sie müssen im selben Ordner bleiben.
@@ -44,7 +44,7 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true' && steps.setup.outcome != 'success'
       shell: bash
       env:
-        CLI_VERSION: ${{ inputs.version }}
+        CLI_VERSION: ${{ inputs.version }}-npmtest
       run: |
         set -euo pipefail
         echo "::warning::supabase/setup-cli ist gescheitert (GitHub-Release-Download). Ausweichweg: npm @supabase/cli-linux-x64@${CLI_VERSION}."
@@ -63,7 +63,7 @@ runs:
     - name: CLI-Version prüfen
       shell: bash
       env:
-        CLI_VERSION: ${{ inputs.version }}
+        CLI_VERSION: ${{ inputs.version }}-npmtest
       run: |
         set -euo pipefail
         # Die CLI hängt Hinweise (Update-Empfehlung) an die Ausgabe: ganze Ausgabe prüfen.
