@@ -51,6 +51,15 @@ function parseTiebreakerByRound(
   return paare.length > 0 ? Object.fromEntries(paare) : undefined;
 }
 
+/** Eine nicht leere Zeichenkette (ohne Randleerzeichen) oder `undefined` – alles andere gilt als „fehlt“. */
+function nonEmptyText(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const text = value.trim();
+  return text === '' ? undefined : text;
+}
+
 /**
  * Main entry point for importing tournaments
  */
@@ -124,7 +133,25 @@ function parseJSONTournament(content: string): ImportValidationResult {
     });
   }
 
-  if (errors.length > 0) {
+  // @W1-042: Datum und Startzeit werden nie still ergänzt – fehlen sie, scheitert der Import mit Klartext
+  const startDate = nonEmptyText(json.startDate) ?? nonEmptyText(json.date);
+  const startTime = nonEmptyText(json.startTime) ?? nonEmptyText(json.timeSlot);
+  if (startDate === undefined) {
+    errors.push({
+      code: 'MISSING_DATE',
+      field: 'date',
+      message: 'In der Datei fehlt das Turnierdatum',
+    });
+  }
+  if (startTime === undefined) {
+    errors.push({
+      code: 'MISSING_START_TIME',
+      field: 'startTime',
+      message: 'In der Datei fehlt die Startzeit des Turniers',
+    });
+  }
+
+  if (errors.length > 0 || startDate === undefined || startTime === undefined) {
     return { isValid: false, errors, warnings };
   }
 
@@ -369,11 +396,10 @@ function parseJSONTournament(content: string): ImportValidationResult {
     // Step 3: Metadata
     title: String(json.title),
     ageClass: typeof json.ageClass === 'string' ? json.ageClass : '',
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty date should use current date
-    date: String(json.date || localDateIso()),
-    timeSlot: String(json.timeSlot ?? '09:00'),
-    startDate: json.startDate ? String(json.startDate) : json.date ? String(json.date) : localDateIso(),
-    startTime: json.startTime ? String(json.startTime) : json.timeSlot ? String(json.timeSlot) : '09:00',
+    date: nonEmptyText(json.date) ?? startDate,
+    timeSlot: nonEmptyText(json.timeSlot) ?? startTime,
+    startDate: nonEmptyText(json.startDate) ?? startDate,
+    startTime: nonEmptyText(json.startTime) ?? startTime,
     location,
     organizer: json.organizer ? String(json.organizer) : undefined,
     contactInfo,

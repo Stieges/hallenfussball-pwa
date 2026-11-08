@@ -9,7 +9,7 @@ import { useState, useRef, CSSProperties, DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
 import { cssVars } from '../../design-tokens'
-import { Tournament, ImportValidationResult } from '../../types/tournament';
+import { Tournament, ImportValidationResult, ImportValidationError } from '../../types/tournament';
 import { validateAndParseTournamentImport, detectImportFormat } from '../../utils/tournamentImporter';
 import { SelectStep, WarningsStep, PreviewStep, SuccessStep } from './ImportSteps';
 
@@ -62,6 +62,13 @@ export const ImportDialog = ({
     }
   };
 
+  /** @W1-042: Pflichtfeld-Meldungen kommen aus der Übersetzung (DE/EN); alle anderen Fehler tragen ihren Text selbst. */
+  const importErrorText = (e: ImportValidationError): string => {
+    if (e.code === 'MISSING_DATE') { return t('import.errors.missingDate'); }
+    if (e.code === 'MISSING_START_TIME') { return t('import.errors.missingStartTime'); }
+    return e.message;
+  };
+
   const processFile = async (file: File) => {
     setSelectedFile(file);
     setError('');
@@ -79,7 +86,7 @@ export const ImportDialog = ({
       setValidationResult(result);
 
       if (!result.isValid) {
-        const errorMessages = result.errors.map(e => e.message).join(', ');
+        const errorMessages = result.errors.map(e => importErrorText(e)).join(', ');
         setError(errorMessages);
         return;
       }
