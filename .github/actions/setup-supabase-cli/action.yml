@@ -1,0 +1,86 @@
+name: Supabase CLI bereitstellen
+description: >-
+  Stellt die Supabase CLI in fester Version bereit (Cache, dann supabase/setup-cli,
+  sonst npm) und prüft die Version.
+
+# Warum: Am 08.11.2026 lieferte der GitHub-Release-Download der CLI (supabase/setup-cli@v1,
+# Datei supabase_linux_amd64.tar.gz) ab ca. 08:56 UTC nur noch HTTP 504, andere GitHub-
+# Releases gingen. Damit waren main und jeder PR rot. Die Binärdateien liegen auch als
+# npm-Paket vor (@supabase/cli-linux-x64) -- anderer Bezugsweg, gleiche Version.
+# Die Version steht nur hier; die Workflows rufen die Action ohne Eingabe auf.
+
+inputs:
+  version:
+    description: Genau diese CLI-Version muss am Ende laufen.
+    default: 2.117.0
+
+runs:
+  using: composite
+  steps:
+    - name: CLI-Cache wiederherstellen
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/supabase-cli-bin
+        key: supabase-cli-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}
+
+    - name: Cache-Treffer in den PATH aufnehmen
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: echo "${RUNNER_TEMP}/supabase-cli-bin" >> "$GITHUB_PATH"
+
+    - name: Supabase CLI über setup-cli (GitHub-Release)
+      id: setup
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: supabase/setup-cli@v1
+      continue-on-error: true
+      with:
+        version: ${{ inputs.version }}
+
+    # Nur bei Fehlschlag des Release-Downloads. Die Pakete enthalten wie der Release-
+    # Tarball beide Dateien (supabase und supabase-go); sie müssen im selben Ordner bleiben.
+    - name: Supabase CLI über npm (Ausweichweg bei Release-Download-Fehler)
+      id: npm
+      if: steps.cache.outputs.cache-hit != 'true' && steps.setup.outcome != 'success'
+      shell: bash
+      env:
+        CLI_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        echo "::warning::supabase/setup-cli ist gescheitert (GitHub-Release-Download). Ausweichweg: npm @supabase/cli-linux-x64@${CLI_VERSION}."
+        case "${RUNNER_OS}-${RUNNER_ARCH}" in
+          Linux-X64) pkg="cli-linux-x64" ;;
+          Linux-ARM64) pkg="cli-linux-arm64" ;;
+          *) echo "::error::Kein npm-Ausweichweg für ${RUNNER_OS}-${RUNNER_ARCH} vorgesehen."; exit 1 ;;
+        esac
+        prefix="${RUNNER_TEMP}/supabase-cli-npm"
+        mkdir -p "$prefix"
+        npm install --no-save --no-audit --no-fund --ignore-scripts --prefix "$prefix" "@supabase/${pkg}@${CLI_VERSION}"
+        bin_dir="${prefix}/node_modules/@supabase/${pkg}/bin"
+        test -x "${bin_dir}/supabase" || { echo "::error::${bin_dir}/supabase fehlt oder ist nicht ausführbar."; exit 1; }
+        echo "${bin_dir}" >> "$GITHUB_PATH"
+
+    - name: CLI-Version prüfen
+      shell: bash
+      env:
+        CLI_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        actual="$(supabase --version 2>&1 | tail -n 1)" || true
+        echo "supabase --version: ${actual}"
+        if ! printf '%s' "$actual" | grep -Eq "(^|[^0-9.])${CLI_VERSION//./\\.}([^0-9.]|$)"; then
+          echo "::error::Supabase CLI hat Version '${actual}', erwartet ${CLI_VERSION}. Bezugsweg prüfen (Cache, setup-cli, npm)."
+          exit 1
+        fi
+
+    # Nach der Prüfung, damit nur eine Datei der richtigen Version im Cache landet
+    # (gespeichert wird beim Job-Ende, nur bei Cache-Fehltreffer).
+    - name: CLI-Dateien für den Cache ablegen
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        src="$(dirname "$(command -v supabase)")"
+        mkdir -p "${RUNNER_TEMP}/supabase-cli-bin"
+        cp "$src/supabase" "${RUNNER_TEMP}/supabase-cli-bin/"
+        if [ -f "$src/supabase-go" ]; then cp "$src/supabase-go" "${RUNNER_TEMP}/supabase-cli-bin/"; fi
