@@ -99,12 +99,12 @@ export const steps: readonly TurniertagStep[] = [
 
 /** Nach D13 (Zeitplan verschieben). */
 export const stepsNachZeitplan: readonly TurniertagStep[] = [
-  { id: 'D13b', title: 'Zeiten ehrlich: Zuschauer-Seite zeigt die neue Uhrzeit und klein „(war …)“', scenarios: ['@ZP-004'], owner: 'B-26/B-27: die Verschiebung aus D13 erreicht die Cloud nicht (matches.original_start bleibt leer, Zuschauer-Seite ohne „(war …)“) – neuer Befund, PR #465', expectedFail: true, run: zeitenEhrlich },
+  { id: 'D13b', title: 'Zeiten ehrlich: Zuschauer-Seite zeigt die neue Uhrzeit und klein „(war …)“', scenarios: ['@ZP-004'], owner: 'B-26/B-27 (Verschiebung erreicht die Cloud, behoben mit #471)', expectedFail: false, run: zeitenEhrlich },
   { id: 'D13c', title: 'Hallenton an Abschnittsende und Spielende', scenarios: ['@HT-001', '@HT-004'], owner: 'B-46', expectedFail: true, run: hallenton },
 ];
 
 /** Ende des Ablaufs (nach Sicherung und zweitem Turnier). D16 steht in der Vorbereitung (d00-vorbereitung.ts). */
 export const stepsEnde: readonly TurniertagStep[] = [
-  { id: 'D17', title: 'Impressum und Datenschutz mit echtem Text, Fußzeile erreichbar (Handy)', scenarios: [], befunde: ['C-LEGAL', 'C-FUSS-LINKS-UNTER-LEISTE'], owner: 'B-32 / Kleinfix', expectedFail: true, run: rechtstexte },
+  { id: 'D17', title: 'Impressum und Datenschutz mit echtem Text, Fußzeile erreichbar (Handy)', scenarios: ['@RE-001', '@RE-004'], befunde: ['C-LEGAL', 'C-FUSS-LINKS-UNTER-LEISTE'], owner: 'B-32 / Kleinfix', expectedFail: true, run: rechtstexte },
   { id: 'D18', title: 'Lastmessung: ein Turniertag gegen den lokalen Stack', scenarios: ['@FT-002'], owner: '11b (FT-Messlauf)', expectedFail: true, run: lastmessung },
 ];

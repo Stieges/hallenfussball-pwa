@@ -12,7 +12,7 @@
  * @TM-047 und @TM-016: nach dem Abschluss von Gruppe A sind nur die Plätze aus Gruppe A besetzt (Halbfinale 1 Heim = Erster A,
  * Halbfinale 2 Gast = Zweiter A), die Plätze aus Gruppe B bleiben offen, bis Olli auch Gruppe B abschließt.
  */
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { fetchEngineRows } from '../../engineHelpers';
 import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagMatches, fetchTurniertagTeams, openTurniertagPath, SOLL_TIMEOUT_MS, vorbedingung, type TurniertagMatch } from './shared';
 import { appendOwner, finishingEvents, regularResultEvents } from './playViaRpc';
@@ -103,6 +103,9 @@ async function gruppenabschluss({ asRole }: StepContext): Promise<void> {
   // allein nach Punkten fest (Plan), ist das die Erwartung; sonst die Tabelle, die der Dialog zeigt (dieselbe Tabelle, nach der Olli abschließt).
   const tabelleA = await gruppeAbschliessen(ownerPage, 'A');
   const a = plan.oben?.A ?? tabelleA;
+  if (!plan.oben) {
+    test.info().annotations.push({ type: 'warnung', description: 'Rückfall ohne Plan (plan.oben === null): Erwartung aus dem Dialog (zirkulär)' });
+  }
   if (plan.oben) {
     expect(tabelleA, 'der Dialog zeigt Platz 1 und 2 nach Punkten').toEqual(plan.oben.A);
   }
