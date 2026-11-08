@@ -129,7 +129,7 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       await u.click(screen.getByTestId('foul-button-away'));
       zu(20_000);
       await u.click(screen.getByTestId('match-undo-button'));
-      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0'));
+      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 0'));
       const retracts = wirksam(eintraegeImLog(), 'RETRACT');
       expect(retracts).toHaveLength(1);
       expect(eintraegeImLog().find((e) => e.id === (retracts[0] as { targetId?: string }).targetId)?.type).toBe('FOUL');
@@ -143,7 +143,7 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Live'));
       zu(120_000);
       await u.click(screen.getByTestId('foul-button-away'));
-      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1'));
+      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 1'));
     };
 
     // Befund C-COCKPIT-UNDO-ANPFIFF-FEHLT (um CLOCK_ADJUST erweitert) behoben: die Uhr-Korrektur ist Ziel von Rückgängig (Cockpit-Paket K9).
@@ -163,7 +163,7 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       await u.click(screen.getByTestId('match-undo-button'));
       // Zwischen der Korrektur (bei 3:10) und dem Rückgängig laufen 2 s (`zu(212_000)`): „der Stand ohne die Korrektur“ ist daher 3:32
       await waitFor(() => expect(screen.getByTestId('scoreboard-kopf-text')).toHaveTextContent('Gespielt 3:32'), { timeout: 500 });
-      expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1');
+      expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 1');
     });
 
     it('@SL-109 hat Tom die Uhr angehalten → ist das Foul zurückgenommen, und die Uhr bleibt angehalten', async () => {
@@ -174,7 +174,7 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       await waitFor(() => expect(screen.getByTestId('match-resume-button')).toBeInTheDocument());
       zu(132_000);
       await u.click(screen.getByTestId('match-undo-button'));
-      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0'));
+      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 0'));
       expect(screen.getByTestId('match-resume-button')).toBeInTheDocument();
       expect(screen.getByTestId('scoreboard-clock')).toHaveAttribute('data-steht', 'true');
     });
@@ -186,7 +186,7 @@ describe('Rückgängig über die Leiste (@SL-066, @SL-038, @SL-109)', () => {
       await waitFor(() => expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Halbzeit'));
       zu(362_000);
       await u.click(screen.getByTestId('match-undo-button'));
-      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0'));
+      await waitFor(() => expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 0'));
       expect(screen.getByTestId('scoreboard-state')).toHaveTextContent('Halbzeit');
       expect(screen.getByTestId('match-wiederanpfiff-button')).toBeInTheDocument();
     });

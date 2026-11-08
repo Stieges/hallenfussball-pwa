@@ -154,13 +154,13 @@ async function torMitNummer(ctx: StepContext): Promise<void> {
   await expect.poll(async () => JSON.stringify((await fetchEngineRows(spiel.id)).filter((r) => r.type === 'AMEND').map((r) => r.payload)), { timeout: 10000, message: 'der Nachtrag trägt die Rückennummer 7' }).toMatch(/7/);
 }
 
-/** N4b: Foul für das Gastteam zählt gegen die Grenze von 5 (@SL-033). */
+/** N4b: Foul für das Gastteam zählt; das neue Turnier hat die Foul-Grenze aus, das Cockpit zeigt nur die Zahl (@SL-101, @SL-102). */
 async function foul(ctx: StepContext): Promise<void> {
   const { spiel, handy } = await laufendesSpiel(ctx);
-  await expect(handy.getByTestId('team-fouls-away')).toHaveText('Foul 0/5');
+  await expect(handy.getByTestId('team-fouls-away')).toHaveText('Foul · 0');
   await handy.getByTestId('foul-button-away').click();
-  await expect(handy.getByTestId('team-fouls-away')).toHaveText('Foul 1/5');
-  await expect(handy.getByTestId('team-fouls-home')).toHaveText('Foul 0/5');
+  await expect(handy.getByTestId('team-fouls-away')).toHaveText('Foul · 1');
+  await expect(handy.getByTestId('team-fouls-home')).toHaveText('Foul · 0');
   await expect.poll(() => ereignisse(spiel), { timeout: 10000 }).toEqual(['GOAL', 'FOUL']);
 }
 
@@ -168,7 +168,7 @@ async function foul(ctx: StepContext): Promise<void> {
 async function gelbeKarte(ctx: StepContext): Promise<void> {
   const { spiel, handy } = await laufendesSpiel(ctx);
   await tippeKarte(handy, 'away', 'Gelb', 5);
-  await expect(handy.getByTestId('team-fouls-away')).toHaveText('Foul 2/5');
+  await expect(handy.getByTestId('team-fouls-away')).toHaveText('Foul · 2');
   await expect.poll(() => ereignisse(spiel), { timeout: 10000 }).toEqual(['GOAL', 'FOUL', 'YELLOW_CARD']);
 }
 

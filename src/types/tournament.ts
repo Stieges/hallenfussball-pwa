@@ -658,9 +658,9 @@ export interface MatchCockpitSettings {
   timePenaltyDurationSeconds: number;
 
   // Spielregeln „Spiel leiten“ (@SL-002, @SL-024, @SL-101, @W2A-013, @W2A-017, @W2A-035, @W2A-037)
-  /** Uhr-Art. Default: 'durchlaufend-letzte-minute-angehalten' */
+  /** Uhr-Art. Default: 'immer-durchlaufend' (@SL-002, @W2A-035; Nettospielzeit wählbar) */
   clockMode: ClockMode;
-  /** Foul-Grenze je Halbzeit (5. Foul = Grenze). null = ausgeschaltet. Default: 5 */
+  /** Foul-Grenze je Halbzeit. null = ausgeschaltet (Default, @SL-101, @W2A-037: kumulierte Fouls nur BFV Teil 2); das Cockpit zählt Fouls trotzdem (@SL-102). Beim Einschalten wird FOUL_LIMIT_SUGGESTION vorgeschlagen. */
   foulLimit: number | null;
   /** Welche Kartenarten das Cockpit anbietet. Default: alle an */
   enabledCards: EnabledCards;
@@ -688,6 +688,9 @@ export interface MatchCockpitSettings {
   wakeLockEnabled: boolean;
 }
 
+/** Vorschlag beim Einschalten der Foul-Grenze: das 5. Foul je Halbzeit (@SL-101, @W2A-037). */
+export const FOUL_LIMIT_SUGGESTION = 5;
+
 /**
  * Default values for MatchCockpitSettings
  * Used when creating new tournaments or when settings are undefined
@@ -712,7 +715,7 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
 
   // Spielregeln „Spiel leiten“ (Vorgaben aus den Gherkin-Szenarien)
   clockMode: DEFAULT_CLOCK_MODE,
-  foulLimit: 5,
+  foulLimit: null,
   enabledCards: { yellow: true, yellowRed: true, red: true, timePenalty: true },
   penaltyEndsOnGoal: true,
   shortHandedSeconds: 120,

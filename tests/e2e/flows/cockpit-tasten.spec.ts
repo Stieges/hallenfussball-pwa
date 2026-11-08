@@ -3,7 +3,7 @@
  * Szenarien: @SL-153 (Leertaste = Pause/Weiter, 1/2 = Tor, F/J = Foul, Strg/Cmd+Z = Rückgängig, ? = Übersicht;
  * Hinweise nur mit Maus am Laptop), @SL-189 (Schalter „Tastenkürzel“, an der Voreinstellung), @SL-157/@SL-158 (Abpfiff halten:
  * Tastatur nur mit sichtbarem Fokus, kurzer Druck löst nichts aus), @SL-021 (Nummernauswahl: Ziffern ohne Feldfokus).
- * Saat: Spiel 1 FC Nord – SV Süd (Heim links), Foul-Grenze 5. Handy (unter 1024 px): keine Hinweise, keine Tastenkürzel.
+ * Saat: Spiel 1 FC Nord – SV Süd (Heim links), Foul-Grenze 5 (die Foul-Tests setzen sie selbst, Vorgabe ist aus, @SL-101). Handy (unter 1024 px): keine Hinweise, keine Tastenkürzel.
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
@@ -39,7 +39,7 @@ test.describe('Tastenkürzel im Cockpit (Gast, lokal)', () => {
 
   test('@SL-153 Laptop: F = Foul links, J = Foul rechts, Strg/Cmd+Z nimmt das letzte Foul zurück', async ({ page, seedIndexedDB }) => {
     test.skip(!breit(page), 'nur Laptop');
-    await seedIndexedDB({ tournaments: [cup()] });
+    await seedIndexedDB({ tournaments: [cup({ einstellungen: { foulLimit: 5 } })] });
     await anpfeifen(page);
     await page.keyboard.press('f');
     await expect(page.getByTestId('team-fouls-home')).toContainText('1/5');
@@ -97,7 +97,7 @@ test.describe('Tastenkürzel im Cockpit (Gast, lokal)', () => {
 
   test('@SL-153 Handy: die Tasten 1, 2, F, J und die Leertaste lösen nichts aus, der Kopf hat keinen Knopf „Tastenkürzel“', async ({ page, seedIndexedDB }) => {
     test.skip(breit(page), 'nur Handy');
-    await seedIndexedDB({ tournaments: [cup()] });
+    await seedIndexedDB({ tournaments: [cup({ einstellungen: { foulLimit: 5 } })] });
     await anpfeifen(page);
     await expect(page.getByTestId('cockpit-tastenkuerzel')).toHaveCount(0);
     for (const k of ['1', '2', 'f', 'j', 'Space', '?']) { await page.keyboard.press(k); }
@@ -111,7 +111,7 @@ test.describe('Tastenkürzel im Cockpit (Gast, lokal)', () => {
   test('@SL-189 Schalter aus: kein Tastenkürzel wirkt, keine Hinweise; die Wahl bleibt nach dem Neuladen', async ({ page, seedIndexedDB }) => {
     test.skip(!breit(page), 'nur Laptop');
     await page.addInitScript(() => { try { window.localStorage.setItem('hallenfussball:cockpit:tastenkuerzel', 'aus'); } catch { /* ohne Speicher */ } });
-    await seedIndexedDB({ tournaments: [cup()] });
+    await seedIndexedDB({ tournaments: [cup({ einstellungen: { foulLimit: 5 } })] });
     await anpfeifen(page);
     await page.keyboard.press('1');
     await page.keyboard.press('f');

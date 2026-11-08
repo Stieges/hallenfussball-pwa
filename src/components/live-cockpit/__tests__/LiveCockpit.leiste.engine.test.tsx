@@ -126,7 +126,7 @@ describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
     fireEvent.click(undo);
     await new Promise((fertig) => { setTimeout(fertig, 50); }); // dem zweiten Tipp Zeit geben, falls er doch etwas auslöste
     expect(retractCount()).toBe(1);
-    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 1');
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 1');
   });
 
   it('@SL-107 Gegenbeispiel: ein zweiter Tipp 3 Sekunden später nimmt auch das Foul zurück', async () => {
@@ -137,7 +137,7 @@ describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
     zu(208_000);
     fireEvent.click(screen.getByTestId('match-undo-button'));
     await waitFor(() => expect(retractCount()).toBe(2));
-    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 0');
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul · 0');
   });
 
   // Befund C-COCKPIT-LISTE-OHNE-GUELTIGE-EINTRAEGE: `takeRecent` (U5, protocolEntries.ts) blendet zurückgenommene Einträge aus, wenn kein
@@ -165,7 +165,7 @@ describe('Rückgängig mit 1-s-Sperre (@SL-108, @SL-107)', () => {
     expect(zeilen).toHaveLength(2);
     expect(zeilen.map((z) => z.textContent).join(' ')).toMatch(/Tor/i);
     expect(zeilen.map((z) => z.textContent).join(' ')).toMatch(/Foul/i);
-    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 1');
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul · 1');
   });
 
   it('@SL-107 Gegenbeispiel: ohne Rückgängig steht kein Eintrag als zurückgenommen in der Liste', async () => {

@@ -28,27 +28,30 @@ vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'leitung' })
 const fouls = (n: number, teamId: string) => Array.from({ length: n }, (_, i) => ({
   id: `f${i}`, matchId: 'match-11', type: 'FOUL', timestampSeconds: 60 + i, payload: { teamId }, scoreAfter: { home: 0, away: 0 },
 }));
+/** Testdaten: Grenze 5 setzt der Test selbst -- die Vorgabe eines neuen Turniers ist ausgeschaltet (@SL-101). */
+const MIT_GRENZE_5 = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 5 };
+const mitGrenze = { cockpitSettings: MIT_GRENZE_5 };
 const mitFouls = (n: number) => makeLiveMatch({ status: 'PAUSED', events: fouls(n, 'sv-sued') as never });
 
 describe('LiveCockpit – Foul-Zähler gegen die Grenze (@SL-099, @SL-033, @SL-035, @SL-102)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('@SL-033 SV Süd hat 3 Fouls, Grenze 5: der Zähler zeigt „Foul 3/5“, ohne Gesamtzahl', () => {
-    render(<LiveCockpit {...makeProps(mitFouls(3))} />);
+    render(<LiveCockpit {...makeProps(mitFouls(3), mitGrenze)} />);
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 3/5');
     expect(screen.queryByText(/gesamt/)).toBeNull();
   });
 
   it('@SL-035 Gegenbeispiel: bei 3 Fouls und Grenze 5 steht keine Meldung zur Foul-Grenze da; ein 4. Foul bleibt ohne Hinweis', () => {
-    const { rerender } = render(<LiveCockpit {...makeProps(mitFouls(3))} />);
-    rerender(<LiveCockpit {...makeProps(mitFouls(4))} />);
+    const { rerender } = render(<LiveCockpit {...makeProps(mitFouls(3), mitGrenze)} />);
+    rerender(<LiveCockpit {...makeProps(mitFouls(4), mitGrenze)} />);
     expect(screen.getByTestId('team-fouls-away')).toHaveTextContent('Foul 4/5');
     expect(screen.getByTestId('notice-line')).not.toHaveTextContent('Foul in dieser Halbzeit');
   });
 
   it('@SL-034 das 5. Foul zeigt „SV Süd: 5. Foul in dieser Halbzeit“ in der Meldezeile, Uhr und Stand bleiben sichtbar', () => {
-    const { rerender } = render(<LiveCockpit {...makeProps(mitFouls(4))} />);
-    rerender(<LiveCockpit {...makeProps(mitFouls(5))} />);
+    const { rerender } = render(<LiveCockpit {...makeProps(mitFouls(4), mitGrenze)} />);
+    rerender(<LiveCockpit {...makeProps(mitFouls(5), mitGrenze)} />);
     expect(screen.getByTestId('notice-line')).toHaveTextContent('SV Süd: 5. Foul in dieser Halbzeit');
     expect(screen.getByTestId('scoreboard-clock')).toBeVisible();
     expect(screen.getByTestId('scoreboard-score')).toBeVisible();
@@ -63,6 +66,15 @@ describe('LiveCockpit – Foul-Zähler gegen die Grenze (@SL-099, @SL-033, @SL-0
     expect(zaehler).not.toHaveTextContent('/');
   });
 
+  it('@SL-101 @SL-102 ein neues Turnier (Vorgabe): 2 Fouls zählen, das Cockpit zeigt nur die Zahl „Foul 2“ ohne „/5“, 5 Fouls bleiben ohne Hinweis', () => {
+    const { rerender } = render(<LiveCockpit {...makeProps(mitFouls(2), { cockpitSettings: DEFAULT_MATCH_COCKPIT_SETTINGS })} />);
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/^Foul · 2$/);
+    expect(screen.getByTestId('team-fouls-away')).not.toHaveTextContent('/');
+    rerender(<LiveCockpit {...makeProps(mitFouls(5), { cockpitSettings: DEFAULT_MATCH_COCKPIT_SETTINGS })} />);
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/^Foul · 5$/);
+    expect(screen.getByTestId('notice-line')).not.toHaveTextContent('Foul in dieser Halbzeit');
+  });
+
   it('@SL-034 Grenze 3 aus den Turnierregeln: der Zähler zeigt „Foul 2/3“', () => {
     const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 3 };
     render(<LiveCockpit {...makeProps(mitFouls(2), { cockpitSettings: settings })} />);
@@ -70,7 +82,7 @@ describe('LiveCockpit – Foul-Zähler gegen die Grenze (@SL-099, @SL-033, @SL-0
   });
 
   it('@SL-099 Gegenbeispiel: der Zähler von FC Nord bleibt bei „Foul 0/5“, wenn nur SV Süd Fouls hat', () => {
-    render(<LiveCockpit {...makeProps(mitFouls(3))} />);
+    render(<LiveCockpit {...makeProps(mitFouls(3), mitGrenze)} />);
     expect(screen.getByTestId('team-fouls-home')).toHaveTextContent('Foul 0/5');
   });
 });

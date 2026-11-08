@@ -41,6 +41,9 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
 }));
 vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../types/tournament';
+const GRENZE_5 = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 5 };
+
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {
     id: 'match-1', number: 7, phaseLabel: 'Gruppenphase', fieldId: 'field-1',
@@ -58,6 +61,7 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
 
 function baseProps(match: unknown, handlers: Partial<LiveCockpitProps> = {}): LiveCockpitProps {
   return {
+    cockpitSettings: GRENZE_5, // Testdaten: Grenze 5 (Vorgabe eines neuen Turniers ist aus, @SL-101)
     fieldName: 'Feld 1', tournamentName: 'Test-Turnier', tournamentId: 'tour-1',
     currentMatch: match as never, upcomingMatches: [], kannSteuern: true,
     onStart: vi.fn(), onPause: vi.fn(), onResume: vi.fn(), onFinish: vi.fn(), onGoal: vi.fn(),

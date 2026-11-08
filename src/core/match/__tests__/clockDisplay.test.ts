@@ -59,9 +59,9 @@ describe('@ZM-137 Uhr-Art × Zeitpunkte (Tabelle)', () => {
     expect(d.hervorhebung).toBe(fall.phase === 'schlussphaseAngehalten');
   });
 
-  it('Schlussphase ist vorbelegt eine Minute (@SL-003 / Uhr-Art-Vorgabe)', () => {
+  it('Schlussphase ist vorbelegt eine Minute, die Uhr-Art ist vorbelegt „immer durchlaufend“ (@SL-002, @W2A-035, @W2A-040)', () => {
     expect(DEFAULT_FINAL_PHASE_MINUTES).toBe(1);
-    expect(DEFAULT_CLOCK_MODE).toBe('durchlaufend-letzte-minute-angehalten');
+    expect(DEFAULT_CLOCK_MODE).toBe('immer-durchlaufend');
   });
 
   it('Gegenbeispiel: eine feste Minute (Hervorhebung ab 5:00 Rest) wird nicht verwendet', () => {

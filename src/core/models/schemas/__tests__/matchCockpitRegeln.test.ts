@@ -12,6 +12,7 @@ import { ITournamentRepository } from '../../../repositories/ITournamentReposito
 import {
   DEFAULT_MATCH_COCKPIT_SETTINGS,
   completeMatchCockpitSettings,
+  FOUL_LIMIT_SUGGESTION,
 } from '../../../../types/tournament';
 import type { ClockMode } from '../../../match/clockDisplay';
 import { serverRules } from '../../../match/client/serverRules';
@@ -46,12 +47,22 @@ function turnierMit(settings: unknown) {
 }
 
 describe('@SL-002 / @W2A-035 Uhr-Art als Turnierregel', () => {
-  it('@SL-002 ein neues Turnier hat die Uhr-Art „durchlaufend, letzte Minute angehalten“', () => {
-    expect(neuesTurnier().matchCockpitSettings?.clockMode).toBe('durchlaufend-letzte-minute-angehalten');
+  it('@SL-002 ein neues Turnier hat die Uhr-Art „immer durchlaufend“', () => {
+    expect(neuesTurnier().matchCockpitSettings?.clockMode).toBe('immer-durchlaufend');
   });
 
-  it('@W2A-035 wählbar sind außerdem „immer durchlaufend“ und „immer angehalten“', () => {
-    for (const wert of ['immer-durchlaufend', 'immer-angehalten']) {
+  it('@W2A-035 ein Turnier, das an der Uhr nichts ändert, hat „immer durchlaufend“ (auch ohne gespeicherten Wert)', () => {
+    expect(completeMatchCockpitSettings({})?.clockMode).toBe('immer-durchlaufend');
+  });
+
+  it('@W2A-035 Gegenbeispiel: eine gespeicherte Uhr-Art bestehender Turniere bleibt erhalten', () => {
+    for (const wert of ['durchlaufend-letzte-minute-angehalten', 'immer-angehalten'] as const) {
+      expect(completeMatchCockpitSettings({ clockMode: wert })?.clockMode).toBe(wert);
+    }
+  });
+
+  it('@W2A-035 wählbar sind außerdem „durchlaufend, letzte Minute angehalten“ und „immer angehalten“ (Nettospielzeit)', () => {
+    for (const wert of ['durchlaufend-letzte-minute-angehalten', 'immer-angehalten']) {
       const ergebnis = TournamentSchema.safeParse(turnierMit({ clockMode: wert }));
       expect(ergebnis.success, wert).toBe(true);
     }
@@ -64,7 +75,7 @@ describe('@SL-002 / @W2A-035 Uhr-Art als Turnierregel', () => {
 
   it('@SL-002 die Uhr-Art ist derselbe Typ wie im Cockpit-Hinweis (ClockMode)', () => {
     const wert: ClockMode = neuesTurnier().matchCockpitSettings?.clockMode ?? 'immer-angehalten';
-    expect(wert).toBe('durchlaufend-letzte-minute-angehalten');
+    expect(wert).toBe('immer-durchlaufend');
   });
 });
 
@@ -93,8 +104,20 @@ describe('@SL-024 Kartenarten einzeln schaltbar', () => {
 });
 
 describe('@SL-101 / @W2A-037 Foul-Grenze', () => {
-  it('@SL-101 ein neues Turnier hat die Foul-Grenze beim 5. Foul je Halbzeit', () => {
-    expect(neuesTurnier().matchCockpitSettings?.foulLimit).toBe(5);
+  it('@SL-101 ein neues Turnier hat die Foul-Grenze ausgeschaltet (null)', () => {
+    expect(neuesTurnier().matchCockpitSettings?.foulLimit).toBeNull();
+  });
+
+  it('@W2A-037 ein Turnier, das an den Fouls nichts ändert, hat die Grenze aus (auch ohne gespeicherten Wert)', () => {
+    expect(completeMatchCockpitSettings({})?.foulLimit).toBeNull();
+  });
+
+  it('@SL-101 Gegenbeispiel: ein bestehendes Turnier mit gespeicherter Grenze 5 behält die 5', () => {
+    expect(completeMatchCockpitSettings({ foulLimit: 5 })?.foulLimit).toBe(5);
+  });
+
+  it('@SL-101 @W2A-037 eingeschaltet wird die Grenze beim 5. Foul je Halbzeit vorgeschlagen', () => {
+    expect(FOUL_LIMIT_SUGGESTION).toBe(5);
   });
 
   it('@SL-101 die Foul-Grenze lässt sich ausschalten (null = aus)', () => {
@@ -177,7 +200,7 @@ describe('Gegenbeispiel: alte Konfiguration ohne die neuen Felder', () => {
 
     const vervollstaendigt = completeMatchCockpitSettings(alt);
     expect(vervollstaendigt?.clockMode).toBe(DEFAULT_MATCH_COCKPIT_SETTINGS.clockMode);
-    expect(vervollstaendigt?.foulLimit).toBe(5);
+    expect(vervollstaendigt?.foulLimit).toBeNull();
     expect(vervollstaendigt?.enabledCards).toEqual(DEFAULT_MATCH_COCKPIT_SETTINGS.enabledCards);
     expect(vervollstaendigt?.penaltyEndsOnGoal).toBe(true);
     expect(vervollstaendigt?.shortHandedSeconds).toBe(120);

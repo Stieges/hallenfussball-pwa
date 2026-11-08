@@ -126,7 +126,7 @@ test.describe('Laptop 1280×720: Zeitbalken (@ZM-166)', () => {
     await page.clock.install();
     // der Abpfiff von selbst (`useAutoSectionEnd`) läuft über die Web-Sperre: ohne sie bleibt der Zustand „abgelaufen, noch nicht abgepfiffen“ stehen
     await page.addInitScript(() => { Object.defineProperty(navigator, 'locks', { value: { request: () => new Promise<void>(() => undefined) }, configurable: true }); });
-    await vorbereiten(page, seedIndexedDB, { namen: NAMEN, farben: FARBEN, perioden: 1 }); // ein Abschnitt zu 12 Minuten: er ist zugleich der letzte
+    await vorbereiten(page, seedIndexedDB, { namen: NAMEN, farben: FARBEN, perioden: 1, einstellungen: { clockMode: 'durchlaufend-letzte-minute-angehalten' } }); // ein Abschnitt zu 12 Minuten: er ist zugleich der letzte; die Schlussphase gibt es nur bei dieser Uhr-Art (Vorgabe: immer durchlaufend, @SL-002)
     const anpfiff = await page.evaluate(() => Date.now()); // Uhr der Seite direkt nach dem Anpfiff (höchstens um die Wartezeit von `vorbereiten` später)
     await bildDavon(page, 'runde3-normal-720');
     await expect(page.getByTestId('scoreboard-zeitbalken')).toHaveAttribute('data-ton', 'gruen');

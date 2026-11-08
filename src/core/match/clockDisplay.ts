@@ -9,7 +9,11 @@ export const CLOCK_MODES = ['durchlaufend-letzte-minute-angehalten', 'immer-durc
 
 export type ClockMode = (typeof CLOCK_MODES)[number];
 
-export const DEFAULT_CLOCK_MODE: ClockMode = 'durchlaufend-letzte-minute-angehalten';
+/**
+ * Vorgabe eines neuen Turniers (@SL-002, @W2A-035): „immer durchlaufend“ -- BFV-Richtlinie Teil 3 kennt keine angehaltene
+ * letzte Minute (nur Futsal, Teil 2). Nettospielzeit bleibt wählbar. Gespeicherte Werte bestehender Turniere bleiben.
+ */
+export const DEFAULT_CLOCK_MODE: ClockMode = 'immer-durchlaufend';
 
 /** Länge der angehaltenen Schlussphase in Minuten (@W2A-040): wählbar 1 bis 5, vorbelegt 1. */
 export const DEFAULT_FINAL_PHASE_MINUTES = 1;

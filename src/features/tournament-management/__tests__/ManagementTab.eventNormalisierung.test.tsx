@@ -168,8 +168,8 @@ describe('ManagementTab → LiveCockpit: Ereignis-Darstellung über den Engine-W
 
     renderTab(aufbau);
 
-    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent(/Foul 2/);
-    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/Foul 1/);
+    expect(screen.getByTestId('team-fouls-home')).toHaveTextContent(/Foul · 2/);
+    expect(screen.getByTestId('team-fouls-away')).toHaveTextContent(/Foul · 1/);
   });
 
   it('Ereignis-Log nennt beide Mannschaften richtig, nicht zweimal den Gast', async () => {

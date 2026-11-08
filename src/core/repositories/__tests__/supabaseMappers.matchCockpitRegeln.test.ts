@@ -21,7 +21,7 @@ const service = new TournamentCreationService({} as ITournamentRepository);
 const GEAENDERT: MatchCockpitSettings = {
   ...DEFAULT_MATCH_COCKPIT_SETTINGS,
   clockMode: 'immer-angehalten',
-  foulLimit: null,
+  foulLimit: 3,
   enabledCards: { yellow: true, yellowRed: false, red: true, timePenalty: false },
   penaltyEndsOnGoal: false,
   shortHandedSeconds: 60,
@@ -48,8 +48,13 @@ describe('Mapper-Rundlauf der Regel-Felder', () => {
     expect(rundlauf(DEFAULT_MATCH_COCKPIT_SETTINGS).matchCockpitSettings).toEqual(DEFAULT_MATCH_COCKPIT_SETTINGS);
   });
 
-  it('@SL-101 Gegenbeispiel: die ausgeschaltete Foul-Grenze (null) bleibt null, wird nicht zur 5', () => {
-    expect(rundlauf(GEAENDERT).matchCockpitSettings?.foulLimit).toBeNull();
+  it('@SL-101 Gegenbeispiel: eine eingeschaltete Foul-Grenze bleibt erhalten, wird nicht zur Vorgabe (aus)', () => {
+    expect(rundlauf(GEAENDERT).matchCockpitSettings?.foulLimit).toBe(3);
+    expect(rundlauf({ ...GEAENDERT, foulLimit: 5 }).matchCockpitSettings?.foulLimit).toBe(5);
+  });
+
+  it('@SL-101 die ausgeschaltete Foul-Grenze (null) bleibt null', () => {
+    expect(rundlauf({ ...GEAENDERT, foulLimit: null }).matchCockpitSettings?.foulLimit).toBeNull();
   });
 
   it('@SL-024 Gegenbeispiel: eine ausgeschaltete Kartenart bleibt aus', () => {
@@ -64,9 +69,18 @@ describe('Gegenbeispiel: alte Konfiguration ohne die neuen Felder', () => {
     });
     const tournament = mapTournamentFromSupabase(row, [], []);
     expect(tournament.matchCockpitSettings?.penaltyShootersPerTeam).toBe(5);
+    expect(tournament.matchCockpitSettings?.clockMode).toBe('immer-durchlaufend');
+    expect(tournament.matchCockpitSettings?.foulLimit).toBeNull();
+    expect(tournament.matchCockpitSettings?.shortHandedSeconds).toBe(120);
+  });
+
+  it('@SL-002 @SL-101 Gegenbeispiel: ein bestehendes Turnier mit gespeicherter Uhr-Art und Foul-Grenze 5 behält beide Werte', () => {
+    const row = createTournamentRow({
+      config: { matchCockpitSettings: { clockMode: 'durchlaufend-letzte-minute-angehalten', foulLimit: 5 } },
+    });
+    const tournament = mapTournamentFromSupabase(row, [], []);
     expect(tournament.matchCockpitSettings?.clockMode).toBe('durchlaufend-letzte-minute-angehalten');
     expect(tournament.matchCockpitSettings?.foulLimit).toBe(5);
-    expect(tournament.matchCockpitSettings?.shortHandedSeconds).toBe(120);
   });
 
   it('ohne Cockpit-Konfiguration bleibt das Turnier ohne Einstellungen (keine neuen Werte erfunden)', () => {

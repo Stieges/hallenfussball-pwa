@@ -10,6 +10,7 @@ import { LiveCockpit } from '../LiveCockpit';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { engineAusLog } from './engineLogFixture';
 import { makeProps } from './cockpitFixtures';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../types/tournament';
 import type { EngineEvent } from '../../../core/match';
 import {
   HF_CTX, NORD, OT_KICKOFF_AT, T0, hfEvent, overtimeRunningLog, regularTimeDrawLog, viewAt,
@@ -38,11 +39,14 @@ const ersterAbschnitt = [20_000, 40_000, 60_000, 80_000].map((s) => foul(T0 + s,
 const zweiterAbschnitt = [380_000, 420_000, 460_000].map((s) => foul(T0 + s + 60_000, 2, s));
 const mitFouls = (log: EngineEvent[], extra: EngineEvent[] = []): EngineEvent[] => sortiert([...log, ...ersterAbschnitt, ...zweiterAbschnitt, ...extra]);
 
+/** Testdaten: Grenze 5 setzt der Test selbst -- die Vorgabe eines neuen Turniers ist ausgeschaltet (@SL-101). */
+const GRENZE_5 = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, foulLimit: 5 };
+
 async function zeige(log: EngineEvent[], now: number) {
   vi.setSystemTime(now);
   const engine = await engineAusLog(log, HF_CTX);
   const ansicht = viewAt(log, now);
-  const ui = (): ReturnType<typeof engine.mitEngine> => engine.mitEngine(<LiveCockpit {...makeProps(ansicht)} />);
+  const ui = (): ReturnType<typeof engine.mitEngine> => engine.mitEngine(<LiveCockpit {...makeProps(ansicht, { cockpitSettings: GRENZE_5 })} />);
   return { ui, ...render(ui()) };
 }
 const zaehler = (): string => screen.getByTestId('team-fouls-home').textContent ?? '';
