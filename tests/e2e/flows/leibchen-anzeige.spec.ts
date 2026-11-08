@@ -236,22 +236,30 @@ for (const g of MONITORE) {
 test.describe('Leibchen-Anzeige Zuschauer-Seite 390', () => {
   test('@ZM-158 @ZM-161 Läuft gerade: kleiner Kasten mit Weste und Zeichen oben links, Zeitstrafen-Zeile bleibt', async ({ page }) => {
     await oeffneZuschauer(page, 'laeuft');
-    const gast = page.getByTestId(/^match-box-.*-away$/);
+    // Das laufende Spiel steht zweimal da: im Kopfblock (Paket Z2, @ZM-141) und als Karte im Spielplan; hier die Karte, der Kopf darunter
+    const plan = page.locator('.mobile-view');
+    const kopfGast = page.getByTestId('public-current').getByTestId(/^match-box-.*-away$/);
+    await expect(kopfGast).toHaveAttribute('data-fill', 'vest');
+    await expect(page.getByTestId('public-current').getByTestId(/^match-box-.*-away-bib$/)).toBeVisible();
+    const gast = plan.getByTestId(/^match-box-.*-away$/);
     await expect(gast).toHaveAttribute('data-fill', 'vest');
     await expect(gast.locator('[data-teil]')).toHaveCount(3);
-    await expect(page.getByTestId(/^match-box-.*-away-bib$/)).toBeVisible();
-    await expect(page.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-fill', 'solid');
-    await expect(page.getByTestId(/^match-box-.*-home-bib$/)).toHaveCount(0);
+    await expect(plan.getByTestId(/^match-box-.*-away-bib$/)).toBeVisible();
+    await expect(plan.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-fill', 'solid');
+    await expect(plan.getByTestId(/^match-box-.*-home-bib$/)).toHaveCount(0);
     await expect(page.getByTestId(/^match-time-penalty-.*-away$/).first()).toContainText('5');
     await bild(page, 'z-laeuft');
   });
 
   test('@ZM-158 @ZM-195 Als Nächstes: Kästen mit „0“ in Trikot- bzw. Ausweichfarbe statt Strich (Rot gegen Rot: der Gast weicht auf Blau aus)', async ({ page }) => {
     await oeffneZuschauer(page, 'vor-gleiche-farbe');
-    await expect(page.getByTestId(/^match-box-.*-home-digits$/)).toHaveText('0');
-    await expect(page.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-color', ROT);
-    await expect(page.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', BLAU);
-    await expect(page.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-fill', 'solid');
+    // Das nächste Spiel steht im Kopfblock und als Karte im Spielplan; gemessen wird die Karte, der Kopf trägt dieselben Farben
+    const plan = page.locator('.mobile-view');
+    await expect(page.getByTestId('public-current').getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', BLAU);
+    await expect(plan.getByTestId(/^match-box-.*-home-digits$/)).toHaveText('0');
+    await expect(plan.getByTestId(/^match-box-.*-home$/)).toHaveAttribute('data-color', ROT);
+    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-color', BLAU);
+    await expect(plan.getByTestId(/^match-box-.*-away$/)).toHaveAttribute('data-fill', 'solid');
     // Gegenbeispiel: Spiel 5 (später, Weiß gegen Grün) ist nicht das nächste Spiel des Felds → Zahl ohne Kasten wie bisher
     await expect(page.locator('.mobile-view [data-testid^="match-box-"][data-testid$="-home"]')).toHaveCount(1);
     await expect(page.locator('.mobile-view [data-testid^="match-goals-"]').first()).toBeVisible();

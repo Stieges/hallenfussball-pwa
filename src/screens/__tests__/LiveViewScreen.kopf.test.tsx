@@ -90,14 +90,14 @@ describe('@ZM-141 Lage „Spiel 7 läuft“ / „Spiel 7 ist angehalten“: oben
 });
 
 describe('@ZM-141 Lage „kein Spiel läuft, Spiel 9 beginnt um 14:40“: Spiel 9 als nächstes Spiel mit Uhrzeit', () => {
-  it('@ZM-141 Überschrift „Als Nächstes“, Spiel 9 um 14:40, ohne Stand und ohne Uhr', async () => {
+  it('@ZM-141 @ZM-195 Überschrift „Als Nächstes“, Spiel 9 um 14:40, Kästen mit 0 vor dem Anpfiff, ohne Uhr', async () => {
     const cup = await fZEIT();
     await zeige(cup.tournament);
     expect(within(kopf()).getByRole('heading', { name: 'Als Nächstes' })).toBeInTheDocument();
     const id9 = idOf(cup.tournament, GAME[9]);
     expect(within(kopf()).getByTestId(`public-current-badge-${id9}`).textContent).toBe('14:40');
     expect(within(kopf()).getByText(/Spiel 9/)).toBeInTheDocument();
-    expect(imKopf(id9, 'home').textContent).toBe('–');
+    expect(imKopf(id9, 'home').textContent).toContain('0');
     expect(within(kopf()).queryByRole('heading', { name: 'Läuft gerade' })).toBeNull();
     expect(kopf().querySelector('[data-testid^="public-current-clock-"]')).toBeNull();
   });
@@ -168,13 +168,24 @@ describe('@ZM-141 Aufbau der Seite: ein Turnier-Kopf, danach das Geschehen, daru
   });
 });
 
-describe('@ZM-158 @ZM-161 Ergebniskästen im Kopf (wartet auf PR #481, Leibchen-Anzeige Schritt 1)', () => {
-  // Rot ohne Fix: `TeamScoreRows` kennt die Kästen erst mit #481 (`kasten`-Eigenschaft, Kennung `match-box-…`). Nach dem Merge reicht der Kopf
-  // `mv.boxes` für das laufende und das nächste Spiel durch; dann wird aus `it.fails` ein `it` (Befund C-KOPF-OHNE-KAESTEN).
-  it.fails('@ZM-158 C-KOPF-OHNE-KAESTEN: die Torzahl des laufenden Spiels steht im Kopf im Kasten in der Farbe des Teams', async () => {
+describe('@ZM-158 @ZM-161 Ergebniskästen im Kopf', () => {
+  it('@ZM-158 die Torzahl des laufenden Spiels steht im Kopf im Kasten in der Farbe des Teams (laufend und nächstes Spiel, nie bei „zuletzt beendet“)', async () => {
     const cup = await fPAUSE();
     await zeige(cup.tournament);
     const id7 = idOf(cup.tournament, GAME[7]);
     expect(within(kopf()).getByTestId(`match-box-kopf-${id7}-home`)).toBeInTheDocument();
+    expect(within(kopf()).getByTestId(`match-box-kopf-${id7}-away`)).toBeInTheDocument();
+  });
+
+  it('@ZM-158 nächstes Spiel: Kästen auch vor dem Anpfiff (@ZM-195)', async () => {
+    const cup = await fZEIT();
+    await zeige(cup.tournament);
+    expect(within(kopf()).getByTestId(`match-box-kopf-${idOf(cup.tournament, GAME[9])}-home`)).toBeInTheDocument();
+  });
+
+  it('@ZM-158 Gegenbeispiel: zuletzt beendetes Spiel und Kindermodus zeigen die Zahl ohne Kasten', async () => {
+    const cup = await fZEIT();
+    await zeige(alleBeendet(cup.tournament));
+    expect(kopf().querySelector('[data-testid^="match-box-kopf-"]')).toBeNull();
   });
 });

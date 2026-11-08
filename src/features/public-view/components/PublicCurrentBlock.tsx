@@ -65,6 +65,11 @@ const headStyle: CSSProperties = {
 const bodyStyle: CSSProperties = { display: 'flex', padding: cssVars.spacing.sm };
 const clockStyle: CSSProperties = { padding: `0 ${cssVars.spacing.sm} ${cssVars.spacing.sm}` };
 
+/** Kästen in Teamfarbe (Weste bei Leibchen, @ZM-158, @ZM-161) wie im Spielplan: nur beim laufenden und beim nächsten Spiel, nie ohne Stand (Kindermodus). */
+function kastenOf(mv: MatchView, kind: PublicCurrent['kind'], view: TournamentView): MatchView['boxes'] | undefined {
+  return view.rules.results && kind !== 'last' ? mv.boxes : undefined;
+}
+
 const HEADING_KEY = { live: 'current.live', next: 'current.next', last: 'current.last' } as const;
 
 export function PublicCurrentBlock({ view, schedule, tournament, currentMatches, visibleIds, locale }: PublicCurrentBlockProps): ReactElement | null {
@@ -109,6 +114,7 @@ export function PublicCurrentBlock({ view, schedule, tournament, currentMatches,
             onScoreClick={noop}
             disabled
             zeitstrafen={clock?.zeitstrafen}
+            kasten={kastenOf(mv, current.kind, view)}
           />
         </div>
         {clock !== null && <div style={clockStyle}><MatchClock clock={clock} size="card" testId={`public-current-clock-${mv.id}`} /></div>}

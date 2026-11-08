@@ -101,12 +101,13 @@ test.describe('@ZM-141 Kopfblock oben, ohne zu scrollen (360×640)', () => {
     expect(unten).toBeLessThanOrEqual(leiste);
   });
 
-  test('@ZM-141 kein Spiel läuft: Spiel 15 als nächstes Spiel mit Uhrzeit, ohne Stand und ohne Uhr', async ({ page }) => {
+  test('@ZM-141 @ZM-195 kein Spiel läuft: Spiel 15 als nächstes Spiel mit Uhrzeit, Kästen mit 0 vor dem Anpfiff, ohne Uhr', async ({ page }) => {
     await oeffne(page, 'MESS26', saatMit(finaleGeplant));
     await expect(kopf(page).getByRole('heading', { name: 'Als Nächstes' })).toBeVisible();
     await expect(kopf(page).locator(`[data-testid="public-current-badge-${PLATZ_3}"]`)).toHaveText(/^\d\d:\d\d$/);
     await expect(kopf(page).locator(`[data-testid="public-current-meta-${PLATZ_3}"]`)).toContainText('Spiel 15');
-    await expect(kopf(page).locator(`[data-testid="match-goals-kopf-${PLATZ_3}-home"]`)).toHaveText('–');
+    await expect(kopf(page).locator(`[data-testid="match-box-kopf-${PLATZ_3}-home"]`)).toBeVisible();
+    await expect(kopf(page).locator(`[data-testid="match-goals-kopf-${PLATZ_3}-home"]`)).toContainText('0');
     await expect(kopf(page).locator('[data-testid^="public-current-clock-"]')).toHaveCount(0);
     const { unten, leiste } = await ohneScrollenSichtbar(page);
     expect(unten).toBeLessThanOrEqual(leiste);
