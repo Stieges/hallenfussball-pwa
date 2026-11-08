@@ -207,7 +207,7 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
   it('@HT-023 hierAnhoeren spielt den Ton nur auf diesem Gerät; Lautstärke und Stumm bleiben auf dem Gerät', async () => {
     const { result } = renderHook(() => useHallLautsprecher(TID));
     act(() => { result.current.setzeLautstaerke('halbzeit', 50); });
-    expect(result.current.lautstaerke).toEqual({ abpfiff: 100, halbzeit: 50 });
+    expect(result.current.lautstaerke).toEqual({ abpfiff: 100, halbzeit: 50, tor: 100 }); // @HT-023: Regler Torhymne seit 07.11.
     let gespielt = false;
     await act(async () => { gespielt = await result.current.hierAnhoeren('halbzeit'); });
     expect(gespielt).toBe(true);
@@ -216,7 +216,31 @@ describe('useHallLautsprecher(tid) – Schnittstelle für H4', () => {
     expect(worker.erzeugt).toBe(0);
     act(() => { result.current.setzeStumm(true); });
     expect(result.current.stumm).toBe(true);
-    expect(JSON.parse(localStorage.getItem('hallenton:lautstaerke') ?? '{}')).toEqual({ abpfiff: 100, halbzeit: 50 });
+    expect(JSON.parse(localStorage.getItem('hallenton:lautstaerke') ?? '{}')).toEqual({ abpfiff: 100, halbzeit: 50, tor: 100 });
+  });
+
+  it('@HT-023/@HT-024 Regler der Torhymne auf 40 %; hierAnhoeren(„tor“, 1) spielt „Hymne B“ des Turniers einmal mit 40 %, höchstens 10 s', async () => {
+    const falsch = sb.client as FalscherSupabase;
+    // eigenes Turnier („Hallencup Süd“): die zuletzt gelesene Tonwahl merkt sich das Modul je Turnier
+    const sued = '33333333-3333-4333-8333-333333333333';
+    const hymnen = [`${sued}/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.mp3`, `${sued}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.wav`];
+    falsch.rpcDaten.hall_sound_status = {
+      serverNow: 0, closed: false, speakers: [], leads: [],
+      settings: { halftimeSound: 'horn-1', halftimeCustomPath: null, endCustomPath: null, goalToneFields: [1], goalAnthemPaths: hymnen },
+    };
+    const { result } = renderHook(() => useHallLautsprecher(sued));
+    act(() => { result.current.setzeLautstaerke('tor', 40); });
+    expect(result.current.lautstaerke).toEqual({ abpfiff: 100, halbzeit: 100, tor: 40 });
+    let gespielt = false;
+    await act(async () => { gespielt = await result.current.hierAnhoeren('tor', 1); });
+    expect(gespielt).toBe(true);
+    expect(geladen).toContain(`https://halle.test/hallenton-sounds/${hymnen[1]}`);
+    const quelle = kontext.quellen.at(-1);
+    expect(quelle?.starts).toHaveLength(1);
+    expect(quelle?.stops.at(-1)).toBe((quelle?.starts[0] ?? 0) + 10);
+    expect(kontext.gains.at(-1)?.gain.value).toBe(0.4);
+    expect(worker.erzeugt).toBe(0);
+    expect(JSON.parse(localStorage.getItem('hallenton:lautstaerke') ?? '{}')).toEqual({ abpfiff: 100, halbzeit: 100, tor: 40 });
   });
 
   it('@HT-023 auf dem Lautsprecher-Gerät vor „Ton aktivieren“: „Anhören“ spielt den Ton einmal, ohne den Tab zu aktivieren (W2-neu-1)', async () => {

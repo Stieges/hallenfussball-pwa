@@ -22,6 +22,7 @@
  *   hört dann „Hupe 1“, @HT-028) und der Serverzeit der letzten Antwort je Feld (K3); der Halter erneuert die Meldung
  *   höchstens einmal je Sekunde (W-neu-1), auch wenn die Uhr zurücksprang (k4-neu-1: negatives Alter).
  * - H3b-3: `beimTakt` für das Lebenszeichen, `stillAbschalten` (Turnierende), Tonwahl-Wechsel erst in Ruhe (`tonWahlWechsel.ts`).
+ * - H3c: Torhymne (`torhymnenSteuerung.ts`) im Takt nach dem Plan, aus mit der Sperre, geladen ab der Aktivierung.
  */
 import {
   LEERES_GEDAECHTNIS, hallTonGespielt, planeHallToene,
@@ -39,6 +40,7 @@ import {
 import { VORBELEGUNG } from './tonWahl';
 import { erzeugeTonWahlHalter } from './tonWahlWechsel';
 import { erzeugeTonSteuerung, type TonSteuerung } from './tonSteuerung';
+import { erzeugeTorhymnenSteuerung } from './torhymnenSteuerung';
 
 export type { FeldZustand, HallLautsprecherLaufzeit, LaufzeitDeps, LaufzeitRolle, LaufzeitSnapshot, NaechsterTon } from './laufzeitZustand';
 
@@ -61,6 +63,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
   let sperreAngefordert = false;
   let aktiviert = false;
   const wahl = erzeugeTonWahlHalter({ spieler, start: deps.tonWahl ?? VORBELEGUNG, lesen: deps.leseTonWahl, geladen: () => melden() });
+  const tor = erzeugeTorhymnenSteuerung({ spieler, start: deps.torWahl });
   const taktZuhoerer = new Set<() => void>();
   const speicher = deps.gedaechtnisSpeicher ?? null;
   const wache = erzeugeUhrsprungWache(deps.uhrProbe, uhr);
@@ -108,6 +111,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
   /** Sperre und Takt abgeben (Ausschalten, Turnierende, Ausgabe steht); der Spieler bleibt abonniert. */
   function loslassen(neueRolle: LaufzeitRolle): void {
     toene?.allesAbbrechen(uhr.serverNow(), true);
+    tor.abschalten();
     for (const fn of taktAufraeumen.splice(0)) {
       fn();
     }
@@ -142,6 +146,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
     gedaechtnis = plan.gedaechtnis;
     letzterPlan = plan;
     toene?.uebernehmen(plan.toene, jetzt, frei);
+    tor.imTakt(staende, jetzt); // nach den End-Tönen: ein gerade geplanter Ton beendet die Hymne zu seinem Beginn
     warnFelder = warnFelderAus(plan.warnungen, staende, quelle.letzterVersuchGescheitert());
   }
 
@@ -233,6 +238,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       return;
     }
     aktiviert = true;
+    tor.aktiviert();
     deps.beimAktivieren?.();
   }
 
@@ -277,7 +283,8 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       melden();
       return ok;
     },
-    ladeToeneZumAnhoeren: () => wahl.zumAnhoeren(() => aktiviert),
+    ladeToeneZumAnhoeren: () => wahl.zumAnhoeren(() => aktiviert).then(() => tor.zumAnhoeren(deps.leseTorWahl?.())),
+    setzeTorWahl: (neu) => tor.setzen(neu),
     setzeTonWahl(neu) {
       const lage = !aktiviert ? 'nichtAktiviert' : rolle === 'toent' ? 'toent' : 'aktiviert';
       wahl.setzen(neu, lage, toene?.naechster() ?? null, uhr.serverNow());

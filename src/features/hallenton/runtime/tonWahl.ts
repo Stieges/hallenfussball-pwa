@@ -5,10 +5,13 @@
  *   es der eigene Ton des Cockpits (`custom`, liegt nur lokal im Browser, kein `blob:` wegen CSP), gilt „Hupe 1“.
  * - Halbzeit: `halftimeSound` aus `hall_sound_status`, bei `custom` der eigene Ton (`halftimeCustomPath`).
  * Eigene Töne über die öffentliche Storage-Adresse (`oeffentlicheUrl`); lädt er nicht, fällt der Spieler auf „Hupe 1“ zurück.
+ * Torhymne (H3c, @HT-024): „Ton bei Tor“ je Feld (`goalToneFields`) und die Hymnen (`goalAnthemPaths`, öffentliche Adressen);
+ * ohne Antwort keine.
  */
 import type { HallStatusVoll } from '../../../core/repositories/hallentonRpc';
 import type { MatchSoundPreset } from '../../../types/tournament';
 import type { HupenId, TonArt, TonWahl } from './hallTonSpieler';
+import { KEINE_TORWAHL, type TorWahl } from './torhymnenSteuerung';
 
 export const VORBELEGUNG: Record<TonArt, TonWahl> = { abpfiff: 'horn-1', halbzeit: 'horn-1' };
 
@@ -25,4 +28,8 @@ export function tonWahlAus(
     ? { eigeneUrl: oeffentlicheUrl(settings.halftimeCustomPath) }
     : alsHupe(settings?.halftimeSound);
   return { abpfiff, halbzeit };
+}
+
+export function torWahlAus(settings: HallStatusVoll['settings'] | null, oeffentlicheUrl: (pfad: string) => string): TorWahl {
+  return settings ? { felder: [...settings.goalToneFields], hymnen: settings.goalAnthemPaths.map(oeffentlicheUrl) } : KEINE_TORWAHL;
 }

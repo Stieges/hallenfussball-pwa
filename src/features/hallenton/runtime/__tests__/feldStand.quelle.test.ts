@@ -1,5 +1,5 @@
 /**
- * H3b-2a Feldstand: immer der Stand am Server nach Regel 2 (H3b-4, @HT-033 Zeilen 1, 2, 3, 10, 11), Gegenbeispiele (Spiel wechselt, Antwort
+ * H3b-2a Feldstand: immer der Stand am Server nach Regel 2 (H3b-4, @HT-033 Zeilen 1, 2, 3, 10, 11, 12), Gegenbeispiele (Spiel wechselt, Antwort
  * hängt, nicht angepfiffen, Gast, Turnierende) und die Abfrage selbst (Filter wie `makeFetchConfirmed`, Seiten, Wasserstand).
  * Werte aus `docs/anforderungen/2026-10-15_hallenton.md`: Laptop = Rechner der Turnierleitung, Handy = Toms Handy.
  */
@@ -49,16 +49,44 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination – immer der Sta
     expect(lage.stand()?.state.status).toBe('running');
   });
 
-  it('@HT-033 Zeile 10: Wechsel Handy → Laptop im Spiel → weiter genau ein Ton (die Einträge des Laptops kommen über den Server)', async () => {
-    const lage = lageImZweitenAbschnitt(ENDE_A2 - 20_000);
-    const wechsel = ENDE_A2 - 8000;
-    const beobachtet: { vorher?: number; nachher?: number } = {};
+  /**
+   * Zeilen 10 und 12 (Nachschärfung H3c, Restpunkt N-1 aus H3b-4): Der Wechsel des leitenden Geräts ändert den Stand am Server
+   * nicht; die Abfragen setzen bei der Übernahme 1,5 s aus (neue Abfrage), dann kommt derselbe Stand. `bekanntSeit` ist und
+   * bleibt die Serverzeit der Antwort, die den Stand brachte – weder der Zeitpunkt des Lesens noch der des Wechsels.
+   */
+  async function wechselImSpiel(wechselVorEnde: number) {
+    const start = ENDE_A2 - 20_000;
+    const lage = lageImZweitenAbschnitt(start);
+    const wechsel = ENDE_A2 - wechselVorEnde;
+    const beobachtet: { erste?: number; vorher?: number; nachher?: number; alterNachher?: number } = {};
     const { gespielt } = await probe(lage, ENDE_A2 + 6000, [
-      { um: wechsel, tu: () => { beobachtet.vorher = lage.stand()?.bekanntSeit; } },
-      { um: wechsel + 2000, tu: () => { beobachtet.nachher = lage.stand()?.bekanntSeit; } },
+      { um: start + 1000, tu: () => { beobachtet.erste = lage.stand()?.bekanntSeit; } },
+      { um: wechsel - 100, tu: () => { beobachtet.vorher = lage.stand()?.bekanntSeit; } },
+      { um: wechsel, tu: () => { lage.sb.netz = 'fehler'; } },
+      { um: wechsel + 1500, tu: () => { lage.sb.netz = 'ok'; } },
+      { um: wechsel + 2600, tu: () => { beobachtet.nachher = lage.stand()?.bekanntSeit; beobachtet.alterNachher = lage.stand()?.antwortAlterMs; } },
     ], 50);
-    expect(beobachtet.nachher).toBe(beobachtet.vorher);
+    return { start, wechsel, beobachtet, gespielt };
+  }
+
+  it('@HT-033 Zeile 10: Wechsel Handy → Laptop im Spiel → weiter genau ein Ton (die Einträge des Laptops kommen über den Server)', async () => {
+    const { start, wechsel, beobachtet, gespielt } = await wechselImSpiel(8000);
+    expect(beobachtet.erste).toBeGreaterThanOrEqual(start);
+    expect(beobachtet.erste).toBeLessThan(start + 1000); // die erste Antwort mit dem Stand, nicht der Zeitpunkt des Lesens
+    expect(beobachtet.vorher).toBe(beobachtet.erste);
+    expect(beobachtet.nachher).toBe(beobachtet.erste); // über den Wechsel und die Lücke in den Antworten unverändert
+    expect(beobachtet.nachher).toBeLessThan(wechsel);
+    expect(beobachtet.alterNachher).toBeLessThanOrEqual(1000); // nach der Lücke wieder frische Antworten
     expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
+  });
+
+  it('@HT-033 Zeile 12: Wechsel Laptop → Handy 3 s vor dem Ende → weiter genau ein Ton, im Gleichtakt mit dem Monitor', async () => {
+    const { start, wechsel, beobachtet, gespielt } = await wechselImSpiel(3000);
+    expect(beobachtet.erste).toBeLessThan(start + 1000);
+    expect(beobachtet.nachher).toBe(beobachtet.erste);
+    expect(beobachtet.nachher).toBeLessThan(wechsel);
+    expect(gespielt.map((t) => t.art)).toEqual(['abpfiff']);
+    expect(Math.abs(gespielt[0].at - ENDE_A2)).toBeLessThanOrEqual(1000);
   });
 
   it('@HT-033 Zeile 11: Laptop leitet ohne Netz → kein Hallenton nach unsicherem Stand, Warnung „keine Verbindung“', async () => {
