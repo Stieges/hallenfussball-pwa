@@ -1,7 +1,7 @@
 /**
  * Paket M · Monitor-Stabilität – eingefrorene Verbindung (@ME-030 Zeile „Antwort bleibt aus … 30 Sekunden“, @ZM-085, @ME-007).
- * Gherkin: bleibt die Antwort des Servers 30 Sekunden aus, obwohl der Browser Netz meldet, erkennt der Monitor das und zeigt
- * „Stand von hh:mm“ (Serverzeit des letzten Stands); kommt wieder eine Antwort, verschwindet der Hinweis. Fake-Timer, eingespeiste Quelle.
+ * Gherkin: bleibt die Antwort des Servers 30 Sekunden aus, obwohl der Browser Netz meldet, erkennt der Monitor das und hält die
+ * Serverzeit des letzten Stands bereit (Name des Symbols „Keine Verbindung seit hh:mm“); kommt wieder eine Antwort, ist sie weg. Fake-Timer, eingespeiste Quelle.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -50,7 +50,7 @@ describe('Paket M: eingefrorene Verbindung am Monitor (@ME-030, @ZM-085)', () =>
     expect(result.current.verbindung).toBeNull();
   });
 
-  it('@ME-030: die Antwort bleibt aus (Abruf hängt) – nach 29 Sekunden noch kein Hinweis, nach 30 Sekunden „Stand von 14:32“', async () => {
+  it('@ME-030: die Antwort bleibt aus (Abruf hängt) – nach 29 Sekunden noch kein Hinweis, nach 30 Sekunden steht der Zeitpunkt 14:32 bereit (Name des Symbols)', async () => {
     const haengt = new Promise<DisplayDelta>(() => undefined);
     const fetch = vi.fn<MonitorDataSource['fetch']>().mockResolvedValueOnce(stand).mockReturnValue(haengt);
     const { result } = renderHook(() => useMonitorDisplayData(quelle(fetch), target, profilTakt));
@@ -82,7 +82,7 @@ describe('Paket M: eingefrorene Verbindung am Monitor (@ME-030, @ZM-085)', () =>
     expect(result.current.verbindung).toEqual({ standMs: UM_1432 });
   });
 
-  it('@ME-007: nach der Rückkehr der Antwort ist der Hinweis sofort weg; „Stand von“ nennt beim nächsten Ausfall den neuen Zeitpunkt', async () => {
+  it('@ME-007: nach der Rückkehr der Antwort ist der Hinweis sofort weg; beim nächsten Ausfall steht der neue Zeitpunkt bereit', async () => {
     let netz = false;
     const fetch = vi.fn<MonitorDataSource['fetch']>().mockImplementation(async () => {
       if (!netz) { throw new Error('kein Netz'); }

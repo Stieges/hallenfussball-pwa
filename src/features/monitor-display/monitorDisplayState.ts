@@ -47,7 +47,7 @@ export interface DisplayContext {
 
 /**
  * Hat der Server geantwortet? Auch „unverändert“ und eine unlesbare Antwort sind Antworten; eine lokale Kopie als Rückfall nach
- * gescheiterter Cloud-Abfrage (`lookupFailed`) und ein gescheiterter Abruf nicht. Grundlage des Hinweises „Stand von hh:mm“
+ * gescheiterter Cloud-Abfrage (`lookupFailed`) und ein gescheiterter Abruf nicht. Grundlage des Verbindungs-Symbols
  * (@ME-030, @ZM-085).
  */
 export function istAntwort(delta: DisplayDelta): boolean {

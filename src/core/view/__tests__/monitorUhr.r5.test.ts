@@ -151,7 +151,7 @@ describe('@ZM-176 Die Uhr springt nie zurück, außer bei einer Korrektur der Ze
     expect(korrigiert?.text).toBe('angehalten');
   });
 
-  it('Pause und Weiter sind neue Anker: die Restzeit bleibt 06:41 → läuft ab 06:41 weiter (@ZM-084)', () => {
+  it('Pause und Weiter sind neue Anker: die Restzeit bleibt 6:41 → läuft ab 6:41 weiter (@ZM-084)', () => {
     const halt = { ...imAbschnitt(1, 0, false), sectionSeconds: 600, elapsedMs: 199_000 };
     const angehalten = monitorUhrOf({ match: { isLive: true, clockRules: { ...regeln(), sectionSeconds: 600 } }, liveState: halt, nowMs: T0 + 30_000 });
     expect(angehalten?.restSekunden).toBe(401);

@@ -118,4 +118,42 @@ describe('Paket M: Monitor-Seite bei eingefrorener Verbindung', () => {
     expect(['5:20', '5:19']).toContain(screen.getByTestId('monitor-clock').textContent);
     expect(screen.getByTestId('monitor-connection-hint')).toBeInTheDocument();
   });
+
+  it('@ME-030 Ruhezustand: Zeitsprung von 20 Minuten ohne Zwischen-Timer, beim Aufwachen neue Daten (2:0) – bis dahin das Symbol, nach höchstens 10 s 2:0 und kein Symbol', async () => {
+    getForDisplay.mockRejectedValue(new Error('Rechner schläft'));
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
+    await vor(0);
+    expect(screen.getByTestId('live-box-home-digits')).toHaveTextContent('1');
+    // der Rechner schläft von 14:32 bis 14:52: die Systemzeit springt, kein Timer feuert dazwischen
+    vi.setSystemTime(SERVER - 7 * 60_000 + 20 * 60_000);
+    await vor(1_000); // erster Takt nach dem Aufwachen: die Antwort ist 20 Minuten alt
+    expect(screen.getByTestId('monitor-connection-hint')).toHaveAttribute('aria-label', 'Keine Verbindung seit 14:32');
+    expect(screen.getByTestId('live-box-home-digits')).toHaveTextContent('1');
+
+    // Aufwachen: Netz da, der Server hat inzwischen 2:0
+    const neu = attachMonitor(buildTournament({ date: '2026-11-28', matches: [{ ...spiel7, scoreA: 2 }], groupPhaseGameDuration: 20 }), withMonitor({ id: 'mon-1', slides: [slide('live', { fieldId: 'field-1' })] }));
+    getForDisplay.mockResolvedValue({ kind: 'full', version: 2, serverNowMs: SERVER + 20 * 60_000, tournament: neu });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vor(10_000);
+    expect(screen.getByTestId('live-box-home-digits')).toHaveTextContent('2');
+    expect(screen.queryByTestId('monitor-connection-hint')).toBeNull();
+  });
+
+  it('@ME-007 Netz kommt zurück, inzwischen Spiel 7 beendet (2:1) und Spiel 8 angepfiffen: nach höchstens 10 s Spiel 8 läuft, das Symbol ist weg', async () => {
+    getForDisplay.mockRejectedValue(new Error('kein Netz'));
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" />);
+    await vor(8 * 60_000);
+    expect(screen.getByTestId('monitor-connection-hint')).toBeInTheDocument();
+
+    const spiel7Aus: Match = { ...spiel7, scoreA: 2, scoreB: 1, matchStatus: 'finished', decidedBy: 'regular', liveState: undefined };
+    const spiel8: Match = {
+      ...spiel7, id: 'm8', matchNumber: 8, round: 2, scoreA: 0, scoreB: 0, matchStatus: 'running',
+      liveState: { ...(spiel7.liveState as object), anchorAt: SERVER + 8 * 60_000 - 7 * 60_000 },
+    };
+    const neu = attachMonitor(buildTournament({ date: '2026-11-28', matches: [spiel7Aus, spiel8], groupPhaseGameDuration: 20 }), withMonitor({ id: 'mon-1', slides: [slide('live', { fieldId: 'field-1' })] }));
+    getForDisplay.mockResolvedValue({ kind: 'full', version: 2, serverNowMs: SERVER + 8 * 60_000, tournament: neu });
+    await vor(10_000);
+    expect(screen.queryByTestId('monitor-connection-hint')).toBeNull();
+    expect(document.body.textContent).toMatch(/Spiel 8/i);
+  });
 });

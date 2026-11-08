@@ -39,7 +39,7 @@ export interface MonitorDisplayData extends MonitorDisplayState {
   goalEvent: GoalEventInfo | null;
   /** Karten-Einblendung, die gerade dran ist. */
   cardEvent: CardEventInfo | null;
-  /** Eingefrorene Verbindung (30 Sekunden ohne Antwort, @ME-030): „Stand von hh:mm“; sonst `null`. */
+  /** Eingefrorene Verbindung (30 Sekunden ohne Antwort, @ME-030): Zeitpunkt der letzten Antwort für das Symbol; sonst `null`. */
   verbindung: MonitorVerbindung | null;
   clearGoalEvent: () => void;
   clearCardEvent: () => void;

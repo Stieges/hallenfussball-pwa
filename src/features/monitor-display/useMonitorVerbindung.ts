@@ -3,8 +3,11 @@
  *
  * Eine „Antwort“ ist jede Rückmeldung des Servers, auch „unverändert“ (monitorDisplayState.istAntwort). Bleibt sie 30 Sekunden aus –
  * der Abruf hängt oder scheitert, obwohl der Browser Netz meldet –, steht `verbindung` mit der Serverzeit des letzten Stands
- * („Stand von hh:mm“); mit der nächsten Antwort ist sie wieder `null`. Ohne je einen Stand gibt es sie nie (dort steht „Warte auf Verbindung“).
- * Die Frist läuft in Geräteuhr (Monotonie, Ruhezustand), der angezeigte Zeitpunkt ist Serverzeit (@ME-031).
+ * (daraus entsteht der Name des Symbols „Keine Verbindung seit hh:mm“); mit der nächsten Antwort ist sie wieder `null`. Ohne je einen
+ * Stand gibt es sie nie (dort steht „Warte auf Verbindung“).
+ * Die Frist läuft in Geräteuhr (`Date.now`, bewusst die Wanduhr: ein Ruhezustand zählt mit, `performance.now` zählt ihn je nach Browser nicht).
+ * Die Wanduhr ist nicht monoton: stellt jemand sie zurück, kommt das Symbol später; stellt jemand sie vor, blitzt es bis zur nächsten
+ * Antwort kurz auf. Der angezeigte Zeitpunkt ist Serverzeit (@ME-031).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 

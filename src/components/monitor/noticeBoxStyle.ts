@@ -1,5 +1,5 @@
 /**
- * Rahmen der Hinweis-Ecken des Monitors (Energiespar-Hinweis oben rechts, „Stand von …“ unten rechts): eine Zeile mit fester Höhe,
+ * Rahmen der Hinweis-Ecken des Monitors (Energiespar-Hinweis oben rechts, Verbindungs-Symbol unten rechts): eine Zeile mit fester Höhe,
  * nur Tokens, Schrift nie unter 3 % der Bildhöhe.
  */
 import type { CSSProperties } from 'react';
@@ -7,7 +7,7 @@ import { cssVars, displayFontSizes, displayLayout, type MonitorThemeColors } fro
 
 const layout = displayLayout.scoreArea;
 
-/** Rahmen einer Hinweis-Ecke des Monitors (Energiespar-Hinweis oben rechts, „Stand von …“ unten rechts): eine Zeile, feste Höhe. */
+/** Rahmen einer Hinweis-Ecke des Monitors (Energiespar-Hinweis oben rechts, Verbindungs-Symbol unten rechts): eine Zeile, feste Höhe. */
 export function noticeBoxStyle(themeColors: MonitorThemeColors): CSSProperties {
   return {
     // Die Ecke des sicheren Bereichs (innerhalb des Bildrands, @ME-067): kein zweiter Rand

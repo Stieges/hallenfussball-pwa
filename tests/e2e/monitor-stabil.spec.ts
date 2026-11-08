@@ -15,13 +15,13 @@ const imGebautenStand = !!process.env.CI_E2E_USE_PREVIEW;
 /** 14:32 Ortszeit (Europe/Berlin im November: UTC+1) */
 const UM_1432 = new Date('2026-11-28T13:32:00Z');
 const PROFILE = [{ name: '1080', width: 1920, height: 1080 }, { name: '720', width: 1280, height: 720 }] as const;
-type Szene = 'live' | 'lang' | 'tabelle' | 'naechste';
+type Szene = 'live' | 'lang' | 'tabelle' | 'tabellelang' | 'naechste' | 'plan' | 'planlang';
 
 async function oeffne(page: Page, szene: Szene, profil: (typeof PROFILE)[number] = PROFILE[0], rand = 5): Promise<void> {
   await page.setViewportSize({ width: profil.width, height: profil.height });
   await page.clock.install({ time: UM_1432 });
   await page.goto(`/tests/e2e/harness/monitor-stabil.html?szene=${szene}&rand=${String(rand)}`);
-  const bereit = szene === 'tabelle' ? '[data-testid="standings-row"]' : szene === 'naechste' ? '[data-testid="monitor-match-row"]' : '[data-testid="monitor-clock"]';
+  const bereit = szene === 'tabelle' || szene === 'tabellelang' ? '[data-testid="standings-row"]' : szene === 'naechste' || szene === 'plan' || szene === 'planlang' ? '[data-testid="monitor-match-row"]' : '[data-testid="monitor-clock"]';
   await expect(page.locator(bereit).first()).toBeVisible({ timeout: 15_000 });
 }
 
@@ -42,7 +42,7 @@ async function bild(page: Page, name: string): Promise<void> {
 }
 
 declare global {
-  interface Window { __netz: boolean | 'haengt' }
+  interface Window { __netz: boolean | 'haengt'; __neu: 0 | 1 | 2 }
 }
 
 test.describe('Monitor-Stabilität (Paket M)', () => {
@@ -91,6 +91,35 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
     });
   }
 
+  // @ME-030 Zeile 1: Ruhezustand von 14:32 bis 14:52 – der Zeitsprung kommt ohne einen einzigen Zwischen-Timer, danach liegen NEUE Daten vor
+  test('@ME-030 Ruhezustand: Zeitsprung von 20 Minuten, beim Aufwachen kommen neue Daten (2:0): nach höchstens 10 s 2:0, bis dahin das Symbol, danach weg', async ({ page }) => {
+    await oeffne(page, 'live');
+    await expect(page.getByTestId('live-box-home-digits')).toHaveText('1');
+    await netz(page, false);
+    await page.clock.fastForward(20 * 60_000); // der Rechner schläft: kein Timer läuft dazwischen
+    await expect(page.getByTestId('monitor-connection-hint')).toBeVisible();
+    await expect(page.getByTestId('live-box-home-digits')).toHaveText('1'); // das letzte Bild bleibt, nichts wird leer
+    // Aufwachen: Netz wieder da, der Server hat inzwischen 2:0
+    await page.evaluate(() => { window.__netz = true; window.__neu = 1; document.dispatchEvent(new Event('visibilitychange')); });
+    await page.clock.runFor(10_000);
+    await expect(page.getByTestId('live-box-home-digits')).toHaveText('2');
+    await expect(page.getByTestId('monitor-connection-hint')).toHaveCount(0);
+  });
+
+  // @ME-007 / @ME-047: Netz weg, inzwischen Spiel 1 beendet (2:1) und Spiel 2 angepfiffen; Netz zurück: nach höchstens 10 s Spiel 2 läuft, Symbol weg
+  test('@ME-007 Netz kommt zurück, inzwischen Spiel 1 beendet und Spiel 2 angepfiffen: nach höchstens 10 s Spiel 2 läuft, das Symbol ist weg', async ({ page }) => {
+    await oeffne(page, 'live');
+    await expect(page.getByText(/Spiel 1$/i).first()).toBeVisible();
+    await netz(page, false);
+    await page.clock.runFor(8 * 60_000);
+    await expect(page.getByTestId('monitor-connection-hint')).toBeVisible();
+    await page.evaluate(() => { window.__netz = true; window.__neu = 2; });
+    await page.clock.runFor(10_000);
+    await expect(page.getByTestId('monitor-connection-hint')).toHaveCount(0);
+    await expect(page.locator('body')).toContainText(/Spiel 2/i);
+    await expect(page.locator('body')).not.toContainText(/Feld 1\s*—\s*Spiel 1(?!\d)/i);
+  });
+
   test('Gegenbeispiel: ein Aussetzer von 20 Sekunden bleibt still', async ({ page }) => {
     await oeffne(page, 'live');
     await netz(page, false);
@@ -106,6 +135,39 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
     expect(text).toMatch(/^[1-9]\d?:\d{2}$/);
     expect(text).toBe('6:00');
   });
+
+  // @ZM-086: das Symbol überdeckt auf keiner vollen Listen-Folie ein Element, das im sicheren Bereich liegt (Zeilen bis ganz unten, Namen mit 45–50 Zeichen).
+  // Ausnahme (Befund C-MONITOR-TABELLE-HOEHE-UEBERLAUF, schon ohne Symbol): die Tabelle „Alle Tabellen“ blättert nicht nach Höhe; mit sechs
+  // zweizeiligen Namen und 10 % Bildrand ragt sie über den sicheren Bereich hinaus – dort gilt die Prüfung nicht.
+  for (const profil of PROFILE) {
+    for (const szene of ['plan', 'planlang', 'tabellelang'] as const) {
+      test(`@ZM-086 @ZM-085 Verbindungs-Symbol überdeckt auf der Folie „${szene}“ nichts (${profil.name}, Bildrand 0, 5 und 10 %)`, async ({ page }) => {
+        for (const rand of szene === 'tabellelang' ? [0, 5] : [0, 5, 10]) {
+          await oeffne(page, szene, profil, rand);
+          await netz(page, false);
+          await page.clock.runFor(31_000);
+          const symbol = page.getByTestId('monitor-connection-hint');
+          await expect(symbol).toBeVisible();
+          const s = await box(symbol);
+          expect(s.x + s.w).toBeLessThanOrEqual(profil.width * (1 - rand / 100) + 1);
+          expect(s.y + s.h).toBeLessThanOrEqual(profil.height * (1 - rand / 100) + 1);
+          const getroffen = await page.evaluate((r) => {
+            const treffer: string[] = [];
+            const sym = document.querySelector('[data-testid="monitor-connection-hint"]')!;
+            for (const el of Array.from(document.querySelectorAll('body *'))) {
+              if (sym.contains(el) || el.contains(sym) || el.childElementCount > 0) { continue; }
+              if ((el.textContent ?? '').trim() === '' && !(el instanceof SVGElement)) { continue; }
+              const b = el.getBoundingClientRect();
+              if (b.width === 0 || b.height === 0) { continue; }
+              if (r.x < b.right && r.x + r.w > b.left && r.y < b.bottom && r.y + r.h > b.top) { treffer.push(`${el.tagName} „${(el.textContent ?? '').trim().slice(0, 30)}“`); }
+            }
+            return treffer;
+          }, s);
+          expect(getroffen, `überdeckte Elemente bei Bildrand ${String(rand)} %`).toEqual([]);
+        }
+      });
+    }
+  }
 
   test('@ZM-198 Turnierbeginn: die Spalte Platz zeigt bei allen 6 Teams „–“, Teilnehmerliste, alle Zahlen 0', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
