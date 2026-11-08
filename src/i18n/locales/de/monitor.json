@@ -39,7 +39,9 @@
     "penaltyNumbers": "{{home}} : {{away}}",
     "winnerAria": "Pokal",
     "afterOvertime": "nach Verlängerung",
-    "winnerLine": "<name>{{name}}</name> gewinnt"
+    "winnerLine": "<name>{{name}}</name> gewinnt",
+    "penaltyAria": "$t(sport:events.timePenalty) #{{number}}, noch {{rest}}",
+    "penaltyAriaNoNumber": "$t(sport:events.timePenalty) ohne Rückennummer, noch {{rest}}"
   },
   "timer": {
     "pause": "Pause",

@@ -7,6 +7,7 @@
 import { expect } from '@playwright/test';
 import { expectPageAnchor, expectSollMarker, openTurniertagPath } from './shared';
 import type { StepContext, TurniertagStep } from './types';
+import { neuLaden } from '../../../helpers/neuLaden';
 
 /** Speichern geht über die Cloud (Warteschlange): großzügiger als der Soll-Marker. */
 const SPEICHERN_MS = 15_000;
@@ -29,7 +30,7 @@ async function zeitplanVerschieben({ asRole }: StepContext): Promise<void> {
   await expect(ownerPage.getByTestId('time-shift-strip')).toContainText('Zeiten um 10 Minuten verschoben', { timeout: SPEICHERN_MS });
   await expect(ursprunglich.first(), 'verschobene Spiele tragen „(war hh:mm)“').toHaveText(/^\(war \d{2}:\d{2}\)$/, { timeout: SPEICHERN_MS });
   await expect.poll(async () => {
-    await ownerPage.reload();
+    await neuLaden(ownerPage);
     await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
     return ursprunglich.count();
   }, { message: 'nach dem Neuladen (Cloud-Stand) bleibt die Verschiebung', timeout: SPEICHERN_MS * 2 }).toBeGreaterThan(0);

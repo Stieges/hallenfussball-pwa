@@ -207,6 +207,8 @@ export function toPublicRuntimeEvents(
       id: event.id,
       matchId,
       timestampSeconds: Math.floor((event.clock_ms ?? 0) / 1000),
+      // Spieluhr in ms für die Restzeit einer Zeitstrafe (@ZM-182, @ZM-184); Sekunden allein weichen bis 1 s vom Cockpit ab
+      ...(typeof event.clock_ms === 'number' ? { clockMs: event.clock_ms } : {}),
       type,
       payload,
       scoreAfter: { home, away },

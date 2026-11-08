@@ -7,6 +7,7 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { neuLaden } from '../helpers/neuLaden';
 
 const NORD = '00000000-0000-4000-8000-0000000000d1';
 const SUED = '00000000-0000-4000-8000-0000000000d2';
@@ -67,7 +68,7 @@ test.describe('@FU-101 @FU-112 Finalrunde: Speichern nur über „Ergebnis speic
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByTestId('result-entry-end-message')).toHaveCount(0);
     await expect(feld(page, HF2, 'home')).toHaveValue('2');
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     // Das Spiel läuft weiter: die Felder (nur bei einem nicht beendeten Spiel) stehen noch, leer
     await expect(feld(page, HF2, 'home')).toHaveValue('');
@@ -96,7 +97,7 @@ test.describe('@FU-101 @FU-112 Finalrunde: Speichern nur über „Ergebnis speic
     await expect(feld(page, HF1, 'home')).toHaveValue('10');
     await feld(page, HF1, 'away').focus(); // Feld verlassen
     await page.waitForTimeout(1500);
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     await expect(feld(page, HF1, 'home')).toHaveValue('');
     // Nochmal, diesmal mit der Taste
@@ -104,7 +105,7 @@ test.describe('@FU-101 @FU-112 Finalrunde: Speichern nur über „Ergebnis speic
     await feld(page, HF1, 'home').fill('10');
     await speichern(page, HF1).click();
     await expect(feld(page, HF1, 'home')).toHaveCount(0, { timeout: 10_000 });
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     if (istKarte(page)) {
       await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveText('10');
@@ -126,7 +127,7 @@ test.describe('@FU-101 @FU-112 Finalrunde: Speichern nur über „Ergebnis speic
     await page.keyboard.type('1');
     await page.keyboard.press('Enter');
     await expect(feld(page, HF1, 'home')).toHaveCount(0, { timeout: 10_000 });
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     if (istKarte(page)) {
       await expect(page.getByTestId(`final-goals-${HF1}-home`)).toHaveText('3');

@@ -78,6 +78,11 @@ export function istAngepfiffen(status: MatchState['status'] | FeldSpielStatus | 
   return status === 'running' || status === 'paused' || status === 'RUNNING' || status === 'PAUSED';
 }
 
+/** Rollenwechsel (Befund 6b): Die eigene Engine hinkt, solange ihr ein Eintrag fehlt, den der Server schon angenommen hat. */
+export function engineHinkt(eigen: MatchState, server: MatchState | undefined): boolean {
+  return server !== undefined && Object.keys(server.accepted).some((id) => !Object.hasOwn(eigen.accepted, id));
+}
+
 /** Ändert sich, sobald der Stand ein Ereignis mehr kennt, eines zurückgenommen ist oder der Zustand wechselt. */
 export function standKennung(state: MatchState): string {
   return [state.status, state.phase, state.section, Object.keys(state.accepted).sort().join(','), state.retracted.join(',')].join('|');

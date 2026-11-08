@@ -557,32 +557,6 @@ check() {
   fi
 }
 
-# check_known <Kategorie> <Name> <expected-JSON> <serverHeute-merged-JSON> <out-JSON> <befund>
-# Vertragsfall mit Block `bekannteAbweichung` (feste Vertrags-Fixture):
-#   out == expected    -> die Abweichung ist behoben, die Markierung muss aus der Fixture
-#                        entfernt werden (Fehler -- der Schalter bleibt scharf)
-#   out == serverHeute -> BEKANNT (GitHub-Warnung, zaehlt NICHT in TOTAL_DEV)
-#   sonst              -> ABWEICHUNG (eine dritte, unbekannte Abweichung wird nicht verschluckt)
-check_known() {
-  local cat="$1" name="$2" expected="$3" server_heute="$4" out="$5" befund="$6"
-  if [[ -n "$out" ]] && jq -e --argjson e "$expected" '. == $e' <<<"$out" >/dev/null 2>&1; then
-    count_dev "$cat"
-    echo "ABWEICHUNG  [$cat] $name: bekannte Abweichung $befund ist behoben – „bekannteAbweichung“ aus der Fixture entfernen"
-  elif [[ -n "$out" ]] && jq -e --argjson s "$server_heute" '. == $s' <<<"$out" >/dev/null 2>&1; then
-    count_known "$cat"
-    local line="$name (Befund $befund, Übergabe A-27): Client erwartet $(jq -c '.tiebreak' <<<"$expected"), Server liefert $(jq -c '.tiebreak' <<<"$server_heute")"
-    echo "BEKANNT     [$cat] $line"
-    echo "::warning::[$cat] $line"
-    KNOWN_LINES+=("[$cat] $line")
-  else
-    count_dev "$cat"
-    echo "ABWEICHUNG  [$cat] $name"
-    echo "    erwartet: $expected"
-    echo "    serverHeute: $server_heute"
-    echo "    erhalten: $(printf '%s' "$out" | head -c 1500)"
-  fi
-}
-
 # call <Rolle> <Nutzer-ID|leer> <Spiel-ID> <Ereignisse-JSON> [client_format] [device_id]
 call() {
   local role="$1" user="$2" match="$3" events="$4" fmt="${5:-1}" device="${6:-}"
@@ -1155,19 +1129,16 @@ while IFS= read -r schnellstart_case; do
 done < <(jq -c '.cases[]' "$SCHNELLSTART_FIXTURE")
 
 # 5f: @W2A-009 (B-04c Paket c) -- K.o.-Entscheidung je Runde: expected == Client-Regel
-# (resolveTiebreakMode); bekannte Server-Abweichungen nur mit Befund-Kennung (Block
-# `bekannteAbweichung` in der Fixture, Befund C-KO-RUNDENREGEL-SERVER -- der Server liest
-# derzeit nur die globale `tiebreaker`, die Runden-Regel `tiebreakerByRound` nicht,
-# Uebergabe an Spur A, siehe task-B-04-report.md). Markierte Faelle laufen ueber
-# check_known (BEKANNT mit ::warning::, solange der Server abweicht; Fehler, sobald er
-# es nicht mehr tut und die Markierung noch steht). Unmarkierte Faelle sind normale
-# Vertrags-Faelle ueber check (OK bzw. ABWEICHUNG).
+# (resolveTiebreakMode). Der Befund C-KO-RUNDENREGEL-SERVER (Server las nur die globale `tiebreaker`)
+# ist behoben; kein Fall der Fixture traegt mehr einen Block `bekannteAbweichung`. Jeder Fall ist ein
+# normaler Vertragsfall ueber check (OK bzw. ABWEICHUNG); eine neue Markierung in der Fixture ist eine
+# Abweichung (der fruehere Zweig check_known lief nie und ist entfernt).
 KO_FIXTURE="$REPO_ROOT/src/core/match/__contracts__/server-rules-ko-entscheidung.json"
 check Sonstiges "@W2A-009: K.o.-Entscheidungs-Fixture hat ≥ 1 Fall" '. >= 1' "$(jq '.cases | length' "$KO_FIXTURE" 2>/dev/null)"
+check Sonstiges "@W2A-009: kein Fall der K.o.-Fixture traegt eine bekannte Abweichung" '. == 0' "$(jq '[.cases[] | select(has("bekannteAbweichung"))] | length' "$KO_FIXTURE" 2>/dev/null)"
 while IFS= read -r ko_case; do
   ko_name="$(jq -r '.name' <<<"$ko_case")"
   ko_expected="$(jq -c '.expected' <<<"$ko_case")"
-  ko_befund="$(jq -r '.bekannteAbweichung.befund // empty' <<<"$ko_case")"
   ko_phase="$(jq -r '.input.phase' <<<"$ko_case")"
   ko_gdur="$(jq -r '.input.groupDuration' <<<"$ko_case")"
   ko_fdur="$(jq -r '.input.finalDuration' <<<"$ko_case")"
@@ -1179,14 +1150,8 @@ while IFS= read -r ko_case; do
   if [[ -z "$ko_ft" ]]; then ko_ft_sql="NULL"; else ko_ft_sql="'$ko_ft'"; fi
   if [[ "$ko_fin" == "null" ]]; then ko_fin_sql="NULL"; else ko_fin_sql="\$J\$${ko_fin}\$J\$::jsonb"; fi
   out="$(q "SELECT match_engine.server_rules($ko_dmin_sql, '$ko_phase', $ko_gdur, $ko_fdur, \$J\$${ko_cfg}\$J\$::jsonb, $ko_fin_sql, $ko_ft_sql);")"
-  if [[ -n "$ko_befund" ]]; then
-    ko_server_heute="$(jq -c '.expected * .bekannteAbweichung.serverHeute' <<<"$ko_case")"
-    check_known Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
-      "$ko_expected" "$ko_server_heute" "$out" "$ko_befund"
-  else
-    check Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
-      ". == $ko_expected" "$out"
-  fi
+  check Sonstiges "@W2A-009: server_rules K.o.-Fall $ko_name == Fixture (Entscheidung je Runde)" \
+    ". == $ko_expected" "$out"
 done < <(jq -c '.cases[]' "$KO_FIXTURE")
 
 # --- 9b. Fixrunde 1: S14, S13 + R14-Spalten, M4, M1 ------------------------------------------

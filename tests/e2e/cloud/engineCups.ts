@@ -122,6 +122,9 @@ export const E2E_ENGINE_CUPS = [
   runningCup('MONSCHLECHT'),
   // R5 PR 2 (@ZM-176, @ZM-084): Uhr am Monitor folgt der Cockpit-Uhr (monitor-sofort.cloud.spec.ts, Fall „Uhr“).
   runningCup('MONUHR'),
+  // @ZM-182/@ZM-183/@ZM-184/@ZM-192: Zeitstrafe am Monitor und auf der Zuschauer-Seite über die echte Server-Antwort
+  // (monitor-zeitstrafe.cloud.spec.ts); öffentlich mit festem Share-Code, der Test schaltet die Zuschauer-Schalter um.
+  runningCup('MONZEITSTRAFE'),
   runningCup('SPIELPLANKANAL'),
   runningCup('SPIELPLANHELFER'),
   finishedCup('SCHREIBWEG'),

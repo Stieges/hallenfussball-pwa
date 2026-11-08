@@ -4,6 +4,7 @@
 import { writeFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { expect } from './test-fixtures';
+import { neuLaden } from './neuLaden';
 
 export const ID = 'e2e-laptop-cup';
 export const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
@@ -82,7 +83,7 @@ export async function wartendeEintraege(page: Page, anzahl: number, { tonBehalte
       tx.onerror = () => { db.close(); reject(new Error('Schreiben der Spielkopie fehlgeschlagen')); };
     };
   }), { matchId, teams: TEAMS, anzahl }), { timeout: 15000 }).toBe(true);
-  await page.reload();
+  await neuLaden(page);
   await expect(page.getByTestId('match-pause-button')).toBeVisible();
   // Nach dem Neuladen ist der Ton wieder gesperrt (Abzeichen „Ton aus“ in der Tafel). Üblich: wie Tom einmal antippen. Mit `tonBehalten`
   // (C-TAFEL-TON-UND-WARTEND-BRECHEN-ZEILE) bleibt das Abzeichen stehen: der echte Fall „Neuladen ohne Netz“ zeigt beide gleichzeitig

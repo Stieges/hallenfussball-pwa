@@ -6,6 +6,7 @@
 import { type CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { TeamAvatar } from '../../ui/TeamAvatar';
+import { ZeitstrafeHinweis } from '../../ui/molecules/ZeitstrafeHinweis';
 import type { SpectatorClock, ViewMatchStatus } from '../../../core/view';
 import type { ResultFigures } from '../matchResult';
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
@@ -54,7 +55,9 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
     <>
       {/* Home Team (right-aligned) */}
       <div style={teamStyle('right')}>
-        <span style={teamNameStyle('a')} data-winner={decided && result?.winner === 'a' ? 'true' : undefined}>{homeTeam.name}</span>
+        <ZeitstrafeHinweis liste={clock?.zeitstrafen?.home} testId={`match-time-penalty-${matchId}-home`} align="end">
+          <span style={teamNameStyle('a')} data-winner={decided && result?.winner === 'a' ? 'true' : undefined}>{homeTeam.name}</span>
+        </ZeitstrafeHinweis>
         <TeamAvatar team={homeTeam} size="sm" />
       </div>
 
@@ -80,7 +83,9 @@ export const MatchCardSides: React.FC<MatchCardSidesProps> = ({
       {/* Away Team (left-aligned) */}
       <div style={teamStyle('left')}>
         <TeamAvatar team={awayTeam} size="sm" />
-        <span style={teamNameStyle('b')} data-winner={decided && result?.winner === 'b' ? 'true' : undefined}>{awayTeam.name}</span>
+        <ZeitstrafeHinweis liste={clock?.zeitstrafen?.away} testId={`match-time-penalty-${matchId}-away`}>
+          <span style={teamNameStyle('b')} data-winner={decided && result?.winner === 'b' ? 'true' : undefined}>{awayTeam.name}</span>
+        </ZeitstrafeHinweis>
       </div>
     </>
   );

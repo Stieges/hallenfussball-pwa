@@ -21,6 +21,7 @@ import { test, expect } from '../helpers/test-fixtures';
 import { schliesseTorAuswahl } from '../helpers/cockpitNeu';
 
 import { abpfiffHalten } from '../helpers/abpfiff';
+import { neuLaden } from '../helpers/neuLaden';
 // CI skip removed - using reliable seeding fixture
 
 /**
@@ -324,7 +325,7 @@ test.describe('Offline & Persistence', () => {
           // THEN - Should work without error (stored in localStorage)
           // Go back online and verify persistence
           await context.setOffline(false);
-          await page.reload();
+          await neuLaden(page);
           await page.waitForLoadState('networkidle');
 
           // The tournament data should still exist
@@ -353,7 +354,7 @@ test.describe('Offline & Persistence', () => {
     await expect(page.getByTestId('scoreboard-box-links')).toContainText('1');
 
     // WHEN - Refresh the page
-    await page.reload();
+    await neuLaden(page);
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 

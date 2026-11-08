@@ -154,6 +154,16 @@ describe('toPublicRuntimeEvents (B-14)', () => {
     expect(events.map((e) => [e.id, e.type, e.payload.teamId, e.payload.ownGoal ?? false, e.payload.cardType ?? null]))
       .toEqual([['og', 'GOAL', NORD, true, null], ['gr', 'RED_CARD', NORD, false, 'YELLOW_RED']]);
   });
+
+  it('@ZM-182 @ZM-184 die Zeitstrafe trägt Spieluhr (ms), Nummer und Dauer der Antwort – Grundlage der Restzeit', () => {
+    const [ev] = toPublicRuntimeEvents(S7, [{ ...strafe5, type: 'TIME_PENALTY', clock_ms: 200_400 }], { sideA: NORD, sideB: SUED, goalsA: 1, goalsB: 0 });
+    expect([ev.clockMs, ev.timestampSeconds, ev.payload.playerNumber, ev.payload.durationSeconds]).toEqual([200_400, 200, 5, 120]);
+  });
+
+  it('Gegenbeispiel: ohne Spieluhr (null) gibt es keine erfundene Spieluhr in ms', () => {
+    const [ev] = toPublicRuntimeEvents(S7, [{ ...strafe5, type: 'TIME_PENALTY', clock_ms: null }], { sideA: NORD, sideB: SUED });
+    expect(ev.clockMs).toBeUndefined();
+  });
 });
 
 describe('applyPublicMatches (B-14)', () => {

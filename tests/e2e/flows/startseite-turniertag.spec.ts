@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 import { baueTurniertagSaat, UHRZEIT, type Lage } from '../helpers/turniertagSaat';
+import { neuLaden } from '../helpers/neuLaden';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const BILDER = process.env.SEITE_BILDER;
@@ -375,7 +376,7 @@ test.describe('@OB-077 @OB-030 @OB-002 Suche und Filter der Startseite', () => {
     await page.getByTestId('filter-chip-running').click();
     await expect.poll(() => page.url()).toMatch(/[?&]q=F\b/);
     await expect.poll(() => page.url()).toContain('s=running');
-    await page.reload();
+    await neuLaden(page);
     await page.waitForSelector('[data-testid="search-input"]');
     await expect(page.getByTestId('search-input')).toHaveValue('F');
     await expect(page.getByTestId('filter-chip-running')).toHaveAttribute('aria-pressed', 'true');

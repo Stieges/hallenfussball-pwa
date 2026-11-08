@@ -6,12 +6,12 @@
  *  - D12: Spielplan-Weg (G2 Spur A, @SL-193): Tipp aufs beendete Spiel → Aktionsauswahl → „Ergebnis korrigieren“ → derselbe Dialog
  *    wie im Cockpit (`cockpit-korrektur-*`: bisher und neu) → „Weiter“ → Auswahl des Grunds (`result-entry-reason`, Pflicht).
  *    Der frühere Weg über `correction-button-<id>` / `correction-score-a` ist entfernt.
- *  - D12b: Cockpit-Einstieg (`match-correction-button`), Besitzer B-25 (W5), auf einem BEENDETEN Spiel (Gruppenspiel 4,
+ *  - D12b: Cockpit-Einstieg (`match-correct-button`, B-10a2), auf einem BEENDETEN Spiel (Gruppenspiel 4,
  *    nach D8 beendet; @EK-063: "nachdem er das Spiel selbst geleitet hat und es abgepfiffen ist").
  */
 import { expect } from '@playwright/test';
 import { fetchEngineRows, openCockpit } from '../../engineHelpers';
-import { expectPageAnchor, expectSollMarker, fetchTurniertagBracket, fetchTurniertagMatches, openTurniertagPath, TURNIERTAG_ID } from './shared';
+import { expectPageAnchor, fetchTurniertagBracket, fetchTurniertagMatches, openTurniertagPath, SOLL_TIMEOUT_MS, TURNIERTAG_ID, vorbedingung } from './shared';
 import type { StepContext, TurniertagStep } from './types';
 
 async function korrekturImSpielplan({ asRole }: StepContext): Promise<void> {
@@ -55,15 +55,40 @@ async function korrekturImSpielplan({ asRole }: StepContext): Promise<void> {
   }, { message: 'Ergebnis des Spiels nach der Korrektur (das Spiel bleibt beendet)', timeout: 10000 }).toEqual([4, 0, 'finished']);
 }
 
+/**
+ * D12b (@EK-063, Einstieg „in seinem Cockpit, nachdem er das Spiel selbst geleitet hat und es abgepfiffen ist“): im Cockpit des beendeten
+ * Gruppenspiels 4 wählt Olli „Korrigieren“ (`match-correct-button`). Es öffnet sich die Korrektur dieses Spiels mit bisher und neu und danach
+ * der Auswahl des Grunds – derselbe Dialog wie beim Einstieg im Spielplan (D12: `cockpit-korrektur-*`, `result-entry-reason`). Gespeichert
+ * wird nicht (Abbrechen), das Ergebnis bleibt.
+ */
 async function korrekturImCockpit({ asRole }: StepContext): Promise<void> {
   const { groupMatches } = await fetchTurniertagBracket();
+  const spiel = await vorbedingung('Gruppenspiel 4 ist beendet', async () => {
+    const zeile = (await fetchTurniertagMatches()).find((m) => m.id === groupMatches[3].id);
+    expect(zeile?.match_status, 'Gruppenspiel 4 ist beendet (D8)').toBe('finished');
+    return zeile!;
+  });
+  const vorher = (await fetchEngineRows(spiel.id)).filter((row) => row.type === 'CORRECTION').length;
   const ownerPage = await asRole('owner');
-  await openCockpit(ownerPage, TURNIERTAG_ID, groupMatches[3].id);
+  await openCockpit(ownerPage, TURNIERTAG_ID, spiel.id);
   await expectPageAnchor(ownerPage.locator('[data-testid="team-name-home"]'), 'Cockpit des Spiels');
-  await expectSollMarker(ownerPage, 'match-correction-button');
+  await ownerPage.getByTestId('match-correct-button').click({ timeout: SOLL_TIMEOUT_MS });
+  const dialog = ownerPage.getByTestId('cockpit-korrektur-dialog');
+  await expect(dialog, 'die Korrektur öffnet sich').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  await expect(dialog, `Korrektur von Spiel ${spiel.match_number ?? '?'}`).toContainText(`Spiel ${spiel.match_number ?? '?'}`);
+  // bisher: das geltende Ergebnis; neu: zwei Zahlenfelder, vorbelegt mit dem bisherigen Stand
+  await expect(dialog, 'bisher').toContainText(`${spiel.score_a ?? ''}:${spiel.score_b ?? ''}`);
+  await expect(ownerPage.getByTestId('cockpit-korrektur-home')).toHaveValue(String(spiel.score_a));
+  await expect(ownerPage.getByTestId('cockpit-korrektur-away')).toHaveValue(String(spiel.score_b));
+  await ownerPage.getByTestId('cockpit-korrektur-home').fill(String((spiel.score_a ?? 0) + 1));
+  await ownerPage.getByTestId('cockpit-korrektur-weiter').click();
+  // ... und die Auswahl des Grunds (derselbe Schritt wie im Spielplan)
+  await expect(ownerPage.getByTestId('result-entry-reason'), 'Auswahl des Grunds').toBeVisible({ timeout: SOLL_TIMEOUT_MS });
+  await ownerPage.getByTestId('result-entry-cancel').click();
+  expect((await fetchEngineRows(spiel.id)).filter((row) => row.type === 'CORRECTION').length, 'abgebrochen: keine Korrektur gespeichert').toBe(vorher);
 }
 
 export const steps: readonly TurniertagStep[] = [
   { id: 'D12', title: 'Ergebnis eines beendeten Spiels im Spielplan korrigieren (CORRECTION in match_events)', scenarios: ['@EK-063'], owner: 'B-24', expectedFail: false, run: korrekturImSpielplan },
-  { id: 'D12b', title: 'Korrektur aus dem Cockpit der Turnierleitung (gleicher Dialog)', scenarios: ['@EK-063'], owner: 'B-25', expectedFail: true, run: korrekturImCockpit },
+  { id: 'D12b', title: 'Korrektur aus dem Cockpit der Turnierleitung (gleicher Dialog)', scenarios: ['@EK-063'], owner: 'B-10a2 (gebaut, @SL-159)', expectedFail: false, run: korrekturImCockpit },
 ];

@@ -24,8 +24,18 @@ export interface FalscheTaktQuelle {
   workerFehler: () => void;
 }
 
-export function erzeugeFalscheTaktQuelle(optionen: { startMs?: number; erzeugenScheitert?: boolean } = {}): FalscheTaktQuelle {
-  const uhr = new ManuelleUhr(optionen.startMs ?? 0);
+export interface FalscheTaktOptionen {
+  startMs?: number;
+  erzeugenScheitert?: boolean;
+  /** Gemeinsame Uhr mehrerer Tabs (H3b-2b); sonst eine eigene ab `startMs`. */
+  uhr?: ManuelleUhr;
+  /** Unterscheidet die Zeitgruppen mehrerer Tabs (`worker<name>`, `haupt<name>`). */
+  name?: string;
+}
+
+export function erzeugeFalscheTaktQuelle(optionen: FalscheTaktOptionen = {}): FalscheTaktQuelle {
+  const uhr = optionen.uhr ?? new ManuelleUhr(optionen.startMs ?? 0);
+  const name = optionen.name ?? '';
   let anzahl = 0;
   let fehlerMelden: (() => void) | null = null;
 
@@ -46,7 +56,7 @@ export function erzeugeFalscheTaktQuelle(optionen: { startMs?: number; erzeugenS
       beiNachricht: (fn) => {
         anWorker = fn;
       },
-    }, uhr.gruppe('worker'));
+    }, uhr.gruppe(`worker${name}`));
     return {
       senden: (nachricht) => {
         if (!beendet) {
@@ -66,13 +76,13 @@ export function erzeugeFalscheTaktQuelle(optionen: { startMs?: number; erzeugenS
     };
   };
 
-  const quelle = erzeugeTaktQuelle({ erzeugeWorker, zeitgeber: uhr.gruppe('haupt') });
+  const quelle = erzeugeTaktQuelle({ erzeugeWorker, zeitgeber: uhr.gruppe(`haupt${name}`) });
   return {
     quelle,
     uhr,
     erzeugt: () => anzahl,
-    workerAussetzen: () => uhr.stummschalten('worker'),
-    workerWeiter: () => uhr.lautschalten('worker'),
+    workerAussetzen: () => uhr.stummschalten(`worker${name}`),
+    workerWeiter: () => uhr.lautschalten(`worker${name}`),
     workerFehler: () => fehlerMelden?.(),
   };
 }

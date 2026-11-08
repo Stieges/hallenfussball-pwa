@@ -10,6 +10,7 @@
 import { getClockDisplay, type ClockMode } from '../match/clockDisplay';
 import type { MatchBadgeEngineDetail } from './badge';
 import type { MatchView } from './types';
+import type { OeffentlicheZeitstrafen } from './zeitstrafen';
 
 export interface SpectatorClockInput {
   /** Gespielte Zeit seit Anpfiff ohne Pausen (Zwischenspeicher-Felder bzw. Engine); ohne Feinstatus die einzige Quelle */
@@ -40,6 +41,8 @@ export interface SpectatorClock {
   stopped: boolean;
   /** „Zeit abgelaufen“: nur der Übergang bis zum Abpfiff (Autofinish) */
   expired: boolean;
+  /** Laufende Zeitstrafen, die mit derselben Spieluhr ablaufen (@ZM-184); fehlt, wenn keine läuft */
+  zeitstrafen?: OeffentlicheZeitstrafen;
 }
 
 const SECONDS_PER_MINUTE = 60;

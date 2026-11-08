@@ -714,6 +714,7 @@ function AppContent() {
 import { RepositoryProvider, useRepositories } from './core/contexts/RepositoryContext';
 import { MatchEngineProvider } from './features/match-engine/MatchEngineProvider';
 import { OfflineRepository } from './core/repositories/OfflineRepository';
+import { HallLautsprecherLaufzeit } from './features/hallenton/HallLautsprecherLaufzeit';
 
 /**
  * SyncManager - Background component that syncs local data to cloud
@@ -787,6 +788,8 @@ function App() {
       <AuthProvider>
         <AuthRepositoryBridge>
           <SyncManager />
+          {/* H3b-2b: Hallen-Lautsprecher – unsichtbar, startet nur auf einem eingeschalteten Lautsprecher-Gerät */}
+          <HallLautsprecherLaufzeit />
           <PendingChangesWarning />
           <AppChrome>
             <AppContent />

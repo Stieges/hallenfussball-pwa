@@ -23,6 +23,8 @@ export class FalscherSupabase {
   netz: 'ok' | 'fehler' | 'haengt' = 'ok';
   /** Fehlercode für die nächsten Abfragen (z. B. '55000'), solange gesetzt. */
   fehlerCode: string | null = null;
+  /** Tabellen, deren Abfragen scheitern, während das Netz sonst geht (z. B. nur `match_events`). */
+  readonly tabellenFehler = new Set<string>();
   readonly abfragen: Abfrage[] = [];
   rpcAufrufe = 0;
 
@@ -34,10 +36,19 @@ export class FalscherSupabase {
     return this.abfragen.filter((a) => a.tabelle === tabelle);
   }
 
-  rpc(fn: string) {
+  /** Antworten weiterer Funktionen (H3b-2b, z. B. `hall_speaker_assign`) und alle Aufrufe mit Argumenten. */
+  readonly rpcDaten: Record<string, unknown> = {};
+  readonly rpcLog: Array<{ fn: string; args: unknown }> = [];
+
+  rpc(fn: string, args?: unknown) {
     this.rpcAufrufe += 1;
-    const ergebnis = (): { data: unknown; error: unknown } =>
-      fn === 'is_real_account' ? { data: this.echtesKonto, error: null } : { data: null, error: { code: 'PGRST202', message: fn } };
+    this.rpcLog.push({ fn, args });
+    const ergebnis = (): { data: unknown; error: unknown } => {
+      if (fn === 'is_real_account') {
+        return { data: this.echtesKonto, error: null };
+      }
+      return Object.hasOwn(this.rpcDaten, fn) ? { data: this.rpcDaten[fn], error: null } : { data: null, error: { code: 'PGRST202', message: fn } };
+    };
     return this.kette({ tabelle: `rpc:${fn}`, spalten: '', filter: [], mitSignal: false }, () => ergebnis());
   }
 
@@ -119,7 +130,7 @@ export class FalscherSupabase {
         const lauf = new Promise<{ data: unknown; error: unknown }>((resolve, reject) => {
           if (this.fehlerCode !== null) {
             resolve({ data: null, error: { code: this.fehlerCode, message: 'TOURNAMENT_FINISHED' } });
-          } else if (this.netz === 'fehler') {
+          } else if (this.netz === 'fehler' || this.tabellenFehler.has(abfrage.tabelle)) {
             reject(new TypeError('Failed to fetch'));
           } else if (this.netz === 'haengt') {
             signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));

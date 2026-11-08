@@ -22,6 +22,7 @@ import { fetchQueuedMutationTypes, queueKeys, safeCleanup } from './helpers';
 import { restAsRole } from './restAsRole';
 import { E2E_USERS } from './testData';
 import { cloneReleaseCup, cupRow, deleteCup, localCopy, type ClonedCup } from './coadminEinsatz';
+import { neuLaden } from '../helpers/neuLaden';
 
 const KONFLIKT_TEXT = 'Turnier wurde inzwischen auf einem anderen Gerät geändert';
 const VERWERFEN_UND_LADEN = 'Verwerfen und aktuellen Stand laden';
@@ -86,10 +87,16 @@ async function editLocationOffline(page: Page, cup: ClonedCup, name: string, use
   await expect.poll(async () => (await localCopy(page, cup.id))?.locationName, { timeout: 10000 }).toBe(name);
 }
 
-/** Den wartenden SAVE_TOURNAMENT des Turniers in den Dead-Letter legen (wie nach MAX_RETRIES), mit dem Grund. */
+/**
+ * Den wartenden SAVE_TOURNAMENT des Turniers in den Dead-Letter legen (wie nach MAX_RETRIES), mit dem Grund – und die App
+ * danach beenden (ohne Netz, `about:blank` lädt nichts nach). Der nächste Seitenaufruf startet sie mit diesem Stand.
+ * Sonst hielte die laufende App den Eintrag weiter in ihrer Warteschlange im Speicher und sendete ihn, sobald die Verbindung
+ * zurück ist: der verworfene Ort stand dann am Server (Wackler verwerfen-konflikt:177, Traces Lauf 42420718980:
+ * PATCH tournaments … version=eq.1 direkt nach setOffline(false)). Die echte App kennt diesen Doppelzustand nicht.
+ */
 async function intoDeadLetter(page: Page, userId: string, tournamentId: string, reason: { conflict: boolean; lastError: string }): Promise<string> {
   const keys = queueKeys(userId);
-  return page.evaluate(({ queueKey, failedKey, id, conflict, lastError }) => {
+  const entryId = await page.evaluate(({ queueKey, failedKey, id, conflict, lastError }) => {
     const queued = JSON.parse(window.localStorage.getItem(queueKey) ?? '[]') as Array<{ id: string; type: string; payload: { id?: string } }>;
     const item = queued.find((entry) => entry.type === 'SAVE_TOURNAMENT' && entry.payload.id === id);
     if (!item) { throw new Error('kein wartender SAVE_TOURNAMENT'); }
@@ -98,6 +105,8 @@ async function intoDeadLetter(page: Page, userId: string, tournamentId: string, 
     window.localStorage.setItem(failedKey, JSON.stringify([failed]));
     return item.id;
   }, { queueKey: keys.queue, failedKey: keys.failed, id: tournamentId, ...reason });
+  await page.goto('about:blank');
+  return entryId;
 }
 
 async function openSchedule(page: Page, cup: ClonedCup): Promise<void> {
@@ -109,6 +118,11 @@ async function openSchedule(page: Page, cup: ClonedCup): Promise<void> {
 async function openAdmin(page: Page, cup: ClonedCup): Promise<void> {
   await page.goto(`/#/tournament/${cup.id}/admin/visibility`);
   await page.waitForLoadState('networkidle');
+  // Admin Center und Kategorie „Sichtbarkeit“ stehen (ihre Code-Teile sind geladen). Ein Hash-Wechsel im selben Dokument
+  // wartet bei networkidle nicht – ging der Test danach sofort offline, fehlte der Code-Teil („Lazy import failed:
+  // TournamentAdminCenter“, Traces Diagnose-Lauf 42423568245, 4 von 25).
+  await expect(page.locator('[data-testid="sync-status"]')).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('spectator-display-section')).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2-UI)', () => {
@@ -135,7 +149,7 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       const entryId = await intoDeadLetter(maria.page, mariaId, cup.id, { conflict: true, lastError: 'Turnier wurde zwischenzeitlich verändert. Bitte neu laden.' });
       await maria.context.setOffline(false);
       await openAdmin(maria.page, cup);
-      await maria.page.reload();
+      await neuLaden(maria.page);
       await maria.page.waitForLoadState('networkidle');
       expect((await localCopy(maria.page, cup.id))?.locationName, 'Regel Q: der Eintrag schützt die Kopie').toBe('Marias Halle');
 
@@ -189,7 +203,7 @@ test.describe('Verwerfen und Konflikt in der Liste gestörter Übertragungen (T2
       const entryId = await intoDeadLetter(olli.page, olliId, cup.id, { conflict: false, lastError: 'Spiel zeigt noch auf ein Team, das gelöscht würde' });
       await olli.context.setOffline(false);
       await openAdmin(olli.page, cup);
-      await olli.page.reload();
+      await neuLaden(olli.page);
       await olli.page.waitForLoadState('networkidle');
       // Cockpit einmal mit Verbindung öffnen (ohne Neuladen danach): sein Code-Teil wird verzögert geladen und fehlte
       // später ohne Netz („Lade…“)

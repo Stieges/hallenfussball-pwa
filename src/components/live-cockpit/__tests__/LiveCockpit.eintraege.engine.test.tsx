@@ -199,7 +199,9 @@ describe('LiveCockpit – Karten: Spielzeit des ersten Tipps, Nummer, zweite Gel
     await waitFor(() => expect(typen('TIME_PENALTY')).toHaveLength(1));
     // Am Laptop steht die Strafe als Karte in der rechten Spalte (@SL-186): Team und Nummer, die Restzeit zählt mit der Spieluhr
     expect(await screen.findByText(/, #5$/)).toBeInTheDocument();
-    expect(typen('TIME_PENALTY')[0].payload).not.toHaveProperty('durationSeconds');
+    // Die Dauer kommt aus der Regel beim Anpfiff (2 Minuten), nicht aus einer Auswahl; sie steht im Eintrag, damit Monitor und
+    // Zuschauer-Seite die Restzeit rechnen können (@ZM-182, @ZM-184 – sie kennen die Regel nicht)
+    expect(typen('TIME_PENALTY')[0].payload).toMatchObject({ durationSeconds: 120 });
   });
 
   it('RF5 Abpfiff bei offener Karten-Auswahl: die Auswahl schließt, nichts wird erfasst, die Meldezeile sagt es', async () => {

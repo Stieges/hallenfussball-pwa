@@ -48,6 +48,7 @@ import {
   verlasseLiveRahmen,
 } from './helpers';
 import { E2E_STRANGER_CUP_ID, engineCupIds } from './testData';
+import { neuLaden } from '../helpers/neuLaden';
 
 const SIGNED_OUT_ELSEWHERE_TEXT = 'Du wurdest von einem anderen Gerät aus abgemeldet';
 const GUEST_TOURNAMENT_TITLE = 'Probelauf';
@@ -108,7 +109,7 @@ test.describe('Abmelden und andere Geräte', () => {
       // Handy wirklich abgemeldet: lokal kein Zugang mehr, auch nach Neuladen; serverseitig Sitzung beendet.
       expect(await readSessionAccessToken(handy.page)).toBeNull();
       await handy.page.unroute('**/rest/v1/rpc/append_match_events');
-      await handy.page.reload();
+      await neuLaden(handy.page);
       await handy.page.waitForLoadState('networkidle');
       await expect(handy.page.locator('[data-testid="auth-avatar-button"]')).toHaveCount(0);
       expect(await fetchAuthUserStatus(handyToken)).toBe(403);

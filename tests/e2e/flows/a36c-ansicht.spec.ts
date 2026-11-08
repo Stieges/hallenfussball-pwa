@@ -15,6 +15,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
 // @ts-expect-error – .mjs ohne Typen; derselbe Lader wie bei `npm run visual:metrics --saat`
 import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/lader.mjs';
+import { neuLaden } from '../helpers/neuLaden';
 
 const BILDER = process.env.A36C_BILDER;
 const PHASE = process.env.A36C_PHASE ?? 'nachher';
@@ -74,12 +75,12 @@ test.describe('A-36c Zuschauer-Seite 360×640 (/live/MESS26)', () => {
 
   test('@ZM-039 Filter „Live“: nur das Finale; „Beendet“ enthält das Finale nicht', async ({ page }) => {
     await page.goto('/#/live/MESS26?s=live');
-    await page.reload();
+    await neuLaden(page);
     await expect(karte(page, FINALE)).toBeAttached();
     await expect(page.locator('[data-testid^="final-card-"]')).toHaveCount(1);
     await expect(page.locator('[data-match-card]')).toHaveCount(0);
     await page.goto('/#/live/MESS26?s=finished');
-    await page.reload();
+    await neuLaden(page);
     await expect(karte(page, HALBFINALE_1)).toBeAttached();
     await expect(karte(page, FINALE)).toHaveCount(0);
   });

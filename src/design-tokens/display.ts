@@ -290,6 +290,15 @@ export const displayLayout = {
     loserDimShare: '30%',
     // Spielanzeige 2.2 (Spec § 8, Mockup --vest: 14 %): Breite je Streifen der Weste als Anteil der Kastenbreite
     vestStripeShare: 0.14,
+    // Zeitstrafe am Monitor (@ZM-182, @ZM-192; Mockup zeitstrafe-monitor Variante A, Daniel 05.11.): Kreis so groß wie der
+    // Pokal-Kreis (`monitorCup`), innen in der Ecke unten links des Kastens; weitere Kreise rechts daneben
+    penaltyInset: '1.6cqh',
+    penaltyGap: '1cqh',
+    // Ring = 13 % des Durchmessers, Rückennummer = 50 % des Durchmessers
+    penaltyRingShare: 0.13,
+    penaltyNumberShare: 0.5,
+    // Abgelaufener Teil des Rings: Textfarbe zu 22 % in die Folienfarbe gemischt (deckend, unabhängig von der Kastenfarbe)
+    penaltyTrackMix: '22%',
   },
 } as const;
 

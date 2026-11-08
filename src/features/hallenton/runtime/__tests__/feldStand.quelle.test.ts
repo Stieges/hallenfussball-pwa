@@ -199,13 +199,36 @@ describe('Gegenbeispiel: nicht angepfiffen', () => {
     expect(lage.sb.abfragenAuf('match_events')).toHaveLength(1); // 2,5 s: Antwort frisch, keine neue Abfrage
   });
 
-  it('N-2: wird die Antwort älter als 3 s, fragt der Lautsprecher sofort und eng nach – auch ohne angepfiffenes Spiel', async () => {
+  // Ruling H3b-2b (Ledger 07.11., ersetzt die Auslegung aus H3b-2a): im Ruhezustand gilt N-2 erst nach einem gescheiterten
+  // Versuch, sonst bleibt es beim 5-s-Takt
+  it('N-2 im Ruhezustand: eine Antwort älter als 3 s allein macht den Takt nicht enger (5 s)', async () => {
     const lage = new Lage({ start: T0 - 60_000 });
     await lage.runde();
     lage.vor(3250);
-    expect(lage.fs.naechsterAbfrageTaktMs()).toBe(1000);
+    expect(lage.fs.naechsterAbfrageTaktMs()).toBe(5000);
+    await lage.runde();
+    expect(lage.sb.abfragenAuf('match_events')).toHaveLength(1);
+    lage.vor(1750);
     await lage.runde();
     expect(lage.sb.abfragenAuf('match_events')).toHaveLength(2);
+  });
+
+  it('N-2 im Ruhezustand: nach einem gescheiterten Versuch fragt der Lautsprecher jede Sekunde nach', async () => {
+    const lage = new Lage({ start: T0 - 60_000 });
+    await lage.runde();
+    lage.sb.netz = 'fehler';
+    lage.vor(5000);
+    await lage.runde();
+    expect(lage.fs.letzterVersuchGescheitert()).toBe(true);
+    expect(lage.fs.naechsterAbfrageTaktMs()).toBe(1000);
+    lage.vor(1000);
+    await lage.runde();
+    expect(lage.sb.abfragenAuf('match_events')).toHaveLength(3);
+    lage.sb.netz = 'ok';
+    lage.vor(1000);
+    await lage.runde();
+    expect(lage.fs.letzterVersuchGescheitert()).toBe(false);
+    expect(lage.fs.naechsterAbfrageTaktMs()).toBe(5000);
   });
 
   it('Gegenprobe: angepfiffen → 1-s-Takt; meldet der Planer 1000, gilt das Minimum', async () => {

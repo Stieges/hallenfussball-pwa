@@ -1024,6 +1024,8 @@ export interface RuntimeMatchEvent {
   };
   /** Abschnitt des Eintrags (1-basiert, Verlängerung = Abschnitte + 1; nur Engine-Spiele): Fouls zählen je Halbzeit (@SL-099, @SL-100). */
   section?: number;
+  /** Spieluhr beim Eintrag in ms (kumulativ, nur Engine-Spiele aus der öffentlichen Antwort): Restzeit einer Zeitstrafe (@ZM-182, @ZM-184). */
+  clockMs?: number;
   /** Event was recorded without details - needs completion */
   incomplete?: boolean;
 }

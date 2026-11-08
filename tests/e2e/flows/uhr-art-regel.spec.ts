@@ -8,6 +8,7 @@
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { neuLaden } from '../helpers/neuLaden';
 
 const ID = 'e2e-uhr-art-cup';
 const TEAMS = ['e1', 'e2', 'e3', 'e4'].map((n) => `00000000-0000-4000-8000-0000000000${n}`);
@@ -55,7 +56,7 @@ test.describe('B-08e Regel Uhr-Art und Schlussphase (Admin Center)', () => {
     await expect(hinweis(page)).toHaveCount(0);
     await feld(page).blur();
 
-    await page.reload();
+    await neuLaden(page);
     await expect(feld(page)).toHaveValue('3');
   });
 
@@ -69,7 +70,7 @@ test.describe('B-08e Regel Uhr-Art und Schlussphase (Admin Center)', () => {
 
     await feld(page).blur();
     await expect(feld(page)).toHaveValue('3');
-    await page.reload();
+    await neuLaden(page);
     await expect(feld(page)).toHaveValue('3');
   });
 
@@ -78,7 +79,7 @@ test.describe('B-08e Regel Uhr-Art und Schlussphase (Admin Center)', () => {
     await page.getByTestId('settings-clock-mode').selectOption('immer-angehalten');
     await expect(feld(page)).toHaveCount(0);
 
-    await page.reload();
+    await neuLaden(page);
     await expect(page.getByTestId('settings-clock-mode')).toHaveValue('immer-angehalten');
     await expect(feld(page)).toHaveCount(0);
   });

@@ -135,3 +135,81 @@ describe('Neulade-Tor der SW-Schicht (B-19b, @ZM-124, @ME-012, @ME-032)', () => 
     expect(h.updateSW).not.toHaveBeenCalled();
   });
 });
+
+describe('Neulade-Tor mit mehreren Haltern (Hallenton H3b-2b, @HT-013, Schutz vor dem Neuladen)', () => {
+  beforeEach(() => {
+    __resetSwForTests();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    __resetSwForTests();
+    vi.useRealTimers();
+  });
+
+  it('zwei Halter: einer sagt nein → kein Neuladen; meldet er sich ab, lädt der andere (ja) neu', async () => {
+    const h = harness(async () => false);
+    attachReloadGate({ allowsReload: () => true });
+    const lautsprecherAb = attachReloadGate({ allowsReload: () => false });
+    h.needRefresh();
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(h.updateSW).not.toHaveBeenCalled();
+    lautsprecherAb();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(h.updateSW).toHaveBeenCalledWith(true);
+    expect(h.updateSW).toHaveBeenCalledTimes(1);
+    expect(h.showToast).not.toHaveBeenCalled();
+  });
+
+  it('zwei Halter sagen ja → Neuladen; alle Halter abgemeldet → wieder der Leerlauf-Pfad mit Toast', async () => {
+    const h = harness(async () => true);
+    const a = attachReloadGate({ allowsReload: () => false });
+    const b = attachReloadGate({ allowsReload: () => false });
+    h.needRefresh();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(h.updateSW).not.toHaveBeenCalled();
+    a();
+    b();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(h.showToast).toHaveBeenCalledWith('Updating…');
+    expect(h.updateSW).toHaveBeenCalledWith(true);
+  });
+
+  it('ein Halter wirft → zählt als nein, auch wenn der andere ja sagt', async () => {
+    const h = harness(async () => true);
+    attachReloadGate({ allowsReload: () => true });
+    attachReloadGate({ allowsReload: () => { throw new Error('kaputt'); } });
+    h.needRefresh();
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(h.updateSW).not.toHaveBeenCalled();
+  });
+
+  it('Monitor unverändert: ein später angemeldeter zweiter Halter meldet dem Monitor die wartende Version nicht erneut', async () => {
+    const h = harness(async () => false);
+    const monitorWartet = vi.fn();
+    const lautsprecherWartet = vi.fn();
+    attachReloadGate({ allowsReload: () => false, onUpdateWaiting: monitorWartet });
+    h.needRefresh();
+    expect(monitorWartet).toHaveBeenCalledTimes(1);
+    const ab = attachReloadGate({ allowsReload: () => false, onUpdateWaiting: lautsprecherWartet });
+    expect(lautsprecherWartet).toHaveBeenCalledTimes(1);
+    expect(monitorWartet).toHaveBeenCalledTimes(1);
+    ab();
+    ab();
+    expect(monitorWartet).toHaveBeenCalledTimes(1);
+  });
+
+  it('k5: ein Halter mit blocksUrgent (Hallen-Lautsprecher bereit) hält auch den Eilpfad an; meldet er sich ab, lädt der Eilpfad', async () => {
+    const update = vi.fn(async () => { h.needRefresh(); });
+    const h = harness(async () => false, { update } as unknown as ServiceWorkerRegistration);
+    attachReloadGate({ allowsReload: () => true });
+    const lautsprecherAb = attachReloadGate({ allowsReload: () => false, blocksUrgent: true });
+    requestUrgentReload();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(h.updateSW).not.toHaveBeenCalled();
+    lautsprecherAb();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(h.updateSW).toHaveBeenCalledWith(true);
+  });
+});

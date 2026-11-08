@@ -7,12 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { cssVars, displayFontSizes, displayLayout, displaySizes } from '../../design-tokens';
 import type { monitorThemes } from '../../design-tokens';
 import type { MonitorTheme } from '../../types/monitor';
-import type { FinalScore } from '../../core/view';
+import type { FinalScore, OeffentlicheZeitstrafen } from '../../core/view';
 import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { Icons } from '../ui/Icons';
 import { ScoreBlock } from './ScoreBlock';
 import { TeamNameDisplay } from './TeamNameDisplay';
 import { LivePenaltyResult } from './LiveFinalScore';
+import { LivePenaltyCircles } from './LivePenaltyCircles';
 import { TEAM_NAME_ZEILENHOEHE, gemeinsameNamenGroesse } from './teamNameFit';
 import type { BlockFrame } from '../../design-tokens';
 
@@ -29,6 +30,8 @@ export interface LiveScoreGridProps {
   finalScore?: FinalScore;
   /** Finalrunde: nur dort bekommt der Sieger den Pokal (Ring hat jeder Sieger, Spec 4.5) */
   finalRound?: boolean;
+  /** Laufende Zeitstrafen (@ZM-182, @ZM-192): Kreise innen in der Ecke unten links des Kastens; nie nach dem Abpfiff */
+  zeitstrafen?: OeffentlicheZeitstrafen;
 }
 
 const layout = displayLayout.scoreArea;
@@ -40,7 +43,7 @@ const CUP_OFFSET_RIGHT_DIVISOR = 5;
 const CUP_ICON_SHARE = 0.6;
 const CUP_ICON_STROKE = 2.4;
 
-export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, homeColor, awayColor, frames, finalScore, finalRound = false }: LiveScoreGridProps) {
+export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, homeColor, awayColor, frames, finalScore, finalRound = false, zeitstrafen }: LiveScoreGridProps) {
   const { t } = useTranslation('monitor');
   // B3: beide Teamnamen in derselben Größe (die kleinere der beiden passenden)
   const [namePx, setNamePx] = useState<{ home?: number; away?: number }>({});
@@ -145,6 +148,9 @@ export function LiveScoreGrid({ match, size, theme, themeColors, hideScore, home
           <span style={cupStyle} role="img" aria-label={t('liveMatch.winnerAria')} data-testid={`live-cup-${home ? 'home' : 'away'}`}>
             <Icons.Trophy size="1em" strokeWidth={CUP_ICON_STROKE} />
           </span>
+        )}
+        {zeitstrafen && match.status !== 'FINISHED' && (
+          <LivePenaltyCircles side={home ? 'home' : 'away'} zeitstrafen={zeitstrafen} themeColors={themeColors} />
         )}
       </div>
     );

@@ -365,6 +365,70 @@ describe('Verwerfen einer abgelehnten Änderung nach einem Konflikt', () => {
       expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false);
     });
 
+    it('@FU-109 der Abruf nach dem Verwerfen hängt über die Rückkehr der Verbindung hinaus und endet mit Zeitüberschreitung: spätestens 10 s nach der Rückkehr zeigt das Gerät den Stand des Servers (Wackler verwerfen-konflikt:177)', async () => {
+      // CI-Diagnose (Lauf 42416872908, DIAG-Protokoll): beim Wechsel ohne Netz beginnt ein Abruf, der bis nach der Rückkehr
+      // der Verbindung offen bleibt; das Signal „online“ trifft auf „läuft schon“ und wird übergangen. Endet dieser Abruf
+      // nicht mit Erfolg, sondern nach CLOUD_READ_TIMEOUT_MS, stieß bisher nichts die Übernahme erneut an.
+      vi.stubGlobal('window', new EventTarget()); // Zuhörer „online“ der Warteschlange (GenericMutationQueue)
+      const { cloud, olli, savesVorher } = await ohneKonfliktImDeadLetter();
+      net.online = false; // Hallen-WLAN weg
+      cloud.fake.getWithMatchRevisions.mockImplementationOnce(() => new Promise(() => undefined)); // hängt
+
+      verwerfen(olli);
+      await flush();
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(true);
+      await vi.advanceTimersByTimeAsync(3000);
+
+      net.online = true; // Server wieder erreichbar
+      window.dispatchEvent(new Event('online'));
+      await flush();
+      await vi.advanceTimersByTimeAsync(10_000);
+      await flush();
+
+      expect(stored(), '@FU-109: Stand des Servers spätestens 10 s nach der Rückkehr').toMatchObject({ title: 'Live-Cup', version: 7 });
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false); // Hinweis „Verworfen – …“ weg
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
+    });
+
+    it('@FU-109 @FU-106 Wiederverbinden (syncUp) liest die verworfene Kopie, während des Server-Abrufs übernimmt das Gerät den Stand des Servers: der verworfene Titel kommt trotzdem nicht beim Server an (Wackler verwerfen-konflikt:177 „nichts ging zum Server“)', async () => {
+      // CI-Diagnose (Lauf 42418884653, Z. 244): Übernahme um 117555, 32 ms später PATCH tournaments … version=eq.1 mit dem
+      // verworfenen Inhalt – syncUp hatte die Kopie vor der Übernahme gelesen und prüfte die Merkung erst danach.
+      const { cloud, olli, savesVorher } = await ohneKonfliktImDeadLetter();
+      cloud.fake.getWithMatchRevisions.mockRejectedValueOnce(new Error('Failed to fetch')); // ohne Netz verworfen
+      verwerfen(olli);
+      await flush();
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(true);
+
+      const echt = cloud.fake.get.getMockImplementation()!;
+      let freigeben!: () => void;
+      const wartet = new Promise<void>((resolve) => { freigeben = resolve; });
+      cloud.fake.get.mockImplementationOnce(async (id: string) => { await wartet; return echt(id); }); // Server-Abruf in syncUp dauert
+      const abgleich = olli.syncUp(); // Wiederverbinden (useSyncOnReconnect)
+      await flush();
+      await olli.get('T', { fresh: true }); // währenddessen: Übernahme des Server-Stands, die Merkung endet
+      expect(olli.mutationQueue.needsCloudCopy('T')).toBe(false);
+      freigeben();
+      await abgleich;
+      await flush();
+
+      expect(await cloud.fake.get('T'), 'der verworfene Titel kommt nie beim Server an').toMatchObject({ title: 'Live-Cup', version: 7 });
+      expect(cloud.fake.updateTournamentMetadata).not.toHaveBeenCalled();
+      expect(cloud.fake.save.mock.calls.length).toBe(savesVorher);
+      expect(stored()).toMatchObject({ title: 'Live-Cup' });
+    });
+
+    it('Gegenbeispiel: ohne Merkung lädt Wiederverbinden (syncUp) eine neuere lokale Kopie weiter hoch', async () => {
+      session.userId = OLLI;
+      stores.raw.set('tournaments', [{ ...liveCup(7), ownerId: OLLI }]);
+      const cloud = createFakeCloud({ tournament: liveCup(7), revisions: revisions() });
+      const olli = device(OLLI, cloud);
+      await olli.get('T', { fresh: true });
+      stores.raw.set('tournaments', [{ ...stored(), title: 'Ohne Netz geändert', version: 8 }]); // lokale Kopie neuer, nichts wartet
+      await olli.syncUp();
+      await flush();
+      expect(cloud.fake.updateTournamentMetadata.mock.calls.length + cloud.fake.save.mock.calls.length).toBeGreaterThan(0);
+    });
+
     it('@FU-107 Verwerfen löscht kein Turnier, das noch nie beim Server war', async () => {
       session.userId = OLLI;
       const neu = { ...liveCup(0, { title: 'Hallen-Cup Ost' }), ownerId: OLLI };
