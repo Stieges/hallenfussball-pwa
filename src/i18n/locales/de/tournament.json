@@ -636,7 +636,7 @@
     "scoreAriaLive": "Spielstand {{homeScore}}:{{awayScore}}, {{elapsed}}",
     "live": "Live",
     "startMatch": "Spiel starten",
-    "liveNoScore": "Läuft, Stand nicht öffentlich",
+    "liveNoScore": "Läuft, ohne Stand",
     "notStarted": "Noch nicht angepfiffen",
     "scoreAriaFinal": "Endstand {{homeScore}}:{{awayScore}}",
     "finished": "Ende",

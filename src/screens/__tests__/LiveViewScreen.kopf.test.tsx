@@ -233,12 +233,43 @@ describe('@ZM-141 @ZM-158 @OB-064 Zuletzt beendet: Kasten mit Ring beim Sieger, 
     expect(kopf().querySelector('[data-testid$="-cup"]')).toBeNull();
   });
 
-  it('@OB-064 Halbfinale 4:1 nach Verlängerung: klein „nach Verlängerung“ beim Stand des Siegers', async () => {
+  it('@OB-064 @ZM-158 Halbfinale 4:1 nach Verlängerung: klein „nach Verlängerung“ beim Stand des Siegers, rechtsbündig unter seiner Zeile – nicht beim Namen', async () => {
     const cup = await fNV();
     const id = idOf(cup.tournament, GAME.HF2);
     await zeige({ ...cup.tournament, matches: cup.tournament.matches.map((m) => (m.id === id ? m : { ...m, matchStatus: 'skipped' as const })) });
-    expect(within(kopf()).getByTestId(`match-overtime-kopf-${id}-home`).textContent).toBe('nach Verlängerung');
+    const note = within(kopf()).getByTestId(`match-overtime-kopf-${id}-home`);
+    expect(note.textContent).toBe('nach Verlängerung');
     expect(within(kopf()).queryByTestId(`match-overtime-kopf-${id}-away`)).toBeNull();
+    // Lage: eigene Rasterzeile direkt unter der Zeile des Siegers (Heim = Zeile 1), über die ganze Breite rechtsbündig – der Name steht allein in seiner Zelle
+    expect(note.style.gridRow).toMatch(/^2( \/ auto)?$/);
+    expect(note.style.textAlign).toBe('right');
+    const name = within(kopf()).getByTestId(`match-name-kopf-${id}-home`);
+    expect(note.contains(name) || name.closest('[style*="grid-column: 1"]')?.contains(note)).toBe(false);
+    // die Zeile des Gastes rutscht eine Zeile nach unten
+    expect(within(kopf()).getByTestId(`match-box-kopf-${id}-away`).closest('button')!.style.gridRow).toMatch(/^3( \/ auto)?$/);
+    expect(note.compareDocumentPosition(within(kopf()).getByTestId(`match-box-kopf-${id}-home`)) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  });
+});
+
+describe('@ZM-104 @OB-066 Vorlesetext des Stands ohne Ergebnis nennt den Zustand, nie „Spiel starten“', () => {
+  const vorlesen = (id: string) => screen.getAllByTestId(`match-goals-${id}-home`)[0].getAttribute('aria-label');
+
+  it('@ZM-104 ausgefallenes Spiel 9 (Karte im Spielplan): „ausgefallen“, nicht „Noch nicht angepfiffen“', async () => {
+    const cup = await fAUS();
+    await zeige(cup.tournament);
+    expect(vorlesen(idOf(cup.tournament, GAME[9]))).toBe('ausgefallen');
+  });
+
+  it('@OB-066 Kindermodus, beendetes Spiel ohne Ergebnis: „Ende“', async () => {
+    const cup = await fZEIT();
+    await zeige({ ...cup.tournament, hideScoresForPublic: true });
+    expect(vorlesen(idOf(cup.tournament, GAME[3]))).toBe('Ende');
+  });
+
+  it('@ZM-141 Gegenbeispiel: ein noch nicht angepfiffenes Spiel heißt „Noch nicht angepfiffen“', async () => {
+    const cup = await fZEIT();
+    await zeige(cup.tournament);
+    expect(within(kopf()).getByTestId(`match-goals-kopf-${idOf(cup.tournament, GAME[9])}-home`).getAttribute('aria-label')).toContain('Noch nicht angepfiffen');
   });
 });
 
@@ -251,7 +282,7 @@ describe('@ZM-116 Live-Stand ausgeschaltet: das laufende Spiel steht da, ohne St
     expect(within(kopf()).getByTestId(`public-current-badge-${id7}`).textContent).toBe('Pause');
     expect(kopf().querySelector('[data-testid^="match-box-kopf-"]')).toBeNull();
     expect(imKopf(id7, 'home').textContent).toBe('–');
-    expect(imKopf(id7, 'home').getAttribute('aria-label')).toBe('Läuft, Stand nicht öffentlich');
+    expect(imKopf(id7, 'home').getAttribute('aria-label')).toBe('Läuft, ohne Stand');
   });
 
   it('@ZM-116 auch die Karte im Spielplan zeigt das laufende Spiel ohne Kasten (Gruppe und Finalrunde)', async () => {

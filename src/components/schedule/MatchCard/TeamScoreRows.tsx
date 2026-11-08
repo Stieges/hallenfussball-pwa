@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { overHex } from '../../../design-tokens/displayColor';
 import { useTheme } from '../../../hooks/useTheme';
+import { MATCH_BADGE_WORD_KEY } from '../../../core/view/badge';
 import { TeamAvatar } from '../../ui/TeamAvatar';
 import { ScoreBox } from '../../ui/molecules/ScoreBox';
 import { pairFrameStrength } from '../../ui/molecules/scoreBoxStyle';
@@ -79,7 +80,11 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
 
   const spokenResult = (() => {
     // Ohne Stand (Live-Stand aus, noch nicht angepfiffen) sagt die Karte den Zustand, nie „Spiel starten“ einem, der nur zusieht (@ZM-116)
-    if (result === null) { return status === 'running' ? t('matchCard.liveNoScore') : disabled ? t('matchCard.notStarted') : t('matchCard.startMatch'); }
+    if (result === null) {
+      if (status === 'scheduled' || status === 'waiting') { return disabled ? t('matchCard.notStarted') : t('matchCard.startMatch'); }
+      // Zustandswort statt „Spiel starten“: läuft (ohne Stand), ausgefallen, Ende (Kindermodus) – @ZM-104, @OB-066
+      return t(status === 'running' ? 'matchCard.liveNoScore' : status === 'skipped' ? MATCH_BADGE_WORD_KEY.cancelled : MATCH_BADGE_WORD_KEY.ended);
+    }
     const values = { homeScore: result.goalsA, awayScore: result.goalsB, homePenalty: result.penaltyA, awayPenalty: result.penaltyB };
     if (status === 'running') { return t('matchCard.scoreAriaLive', { ...values, elapsed: t('matchCard.live') }); }
     if (result.decision === 'penalty') { return t('matchResult.scoreAriaPenalty', values); }
@@ -97,13 +102,16 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
   const bibTeams = kasten === undefined ? [] : [kasten.home.bib ? homeTeam.name : null, kasten.away.bib ? awayTeam.name : null].filter((name) => name !== null);
   const spokenWithBib = bibTeams.length === 0 ? spokenResult : `${spokenResult}. ${bibTeams.map((name) => t('matchCard.bibSpoken', { team: name })).join(', ')}`;
 
+  // „nach Verlängerung“ klein beim Stand des Siegers, rechtsbündig in einer eigenen Rasterzeile unter seinem Kasten (wie die Finalkarte, @ZM-158, @OB-064)
+  const noteSide: Side | null = kasten !== undefined && ende !== undefined && status === 'finished' && result?.decision === 'overtime' && decided ? result.winner : null;
+  const rowOf = (side: Side): number => (side === 'a' ? 1 : noteSide === 'a' ? 3 : 2);
+
   const renderRow = (side: Side, team: Team) => {
     const isWinner = decided && result?.winner === side;
     const isLoser = decided && result?.winner !== side;
     const goals = result === null ? undefined : side === 'a' ? result.goalsA : result.goalsB;
     const penalty = side === 'a' ? result?.penaltyA : result?.penaltyB;
     const finished = kasten !== undefined && ende !== undefined && status === 'finished';
-    const overtimeNote = finished && isWinner && result?.decision === 'overtime';
     const nameStyle: CSSProperties = {
       fontSize: cssVars.fontSizes.md,
       fontWeight: isWinner ? cssVars.fontWeights.bold : isLoser || status === 'finished' ? cssVars.fontWeights.medium : cssVars.fontWeights.semibold,
@@ -115,7 +123,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
     const first = side === 'a';
     const seite = first ? 'home' : 'away';
     // Feste Zelle je Element: ohne Strafstoß-Spalte würde die automatische Platzierung die nächste Zeile in die freie Zelle ziehen
-    const row = first ? 1 : 2;
+    const row = rowOf(side);
     const nameBlock = (
       <ZeitstrafeHinweis liste={zeitstrafen?.[seite]} testId={`match-time-penalty-${matchId}-${seite}`}>
         <span style={nameStyle} data-winner={isWinner ? 'true' : undefined} data-testid={`match-name-${matchId}-${seite}`}>{team.name}</span>
@@ -125,12 +133,7 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
       <Fragment key={side}>
         <div style={{ ...teamStyle, gridColumn: 1, gridRow: row }}>
           <TeamAvatar team={team} size="sm" />
-          {overtimeNote ? (
-            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-              {nameBlock}
-              <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`match-overtime-${matchId}-${seite}`}>{t('matchResult.afterOvertime')}</span>
-            </div>
-          ) : nameBlock}
+          {nameBlock}
         </div>
         <button
           type="button"
@@ -180,6 +183,11 @@ export const TeamScoreRows: React.FC<TeamScoreRowsProps> = ({ matchId, homeTeam,
             data-testid={`match-penalty-${matchId}-${side === 'a' ? 'home' : 'away'}`}
           >
             ({penalty})
+          </span>
+        )}
+        {noteSide === side && (
+          <span style={{ gridColumn: '1 / -1', gridRow: row + 1, textAlign: 'right', fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }} data-testid={`match-overtime-${matchId}-${seite}`}>
+            {t('matchResult.afterOvertime')}
           </span>
         )}
       </Fragment>

@@ -14,6 +14,7 @@ import { installiereSaat, leseSaat } from '../../../scripts/visual-metrics/saat/
 const HANDY = { width: 360, height: 640 };
 const FINALE = '00000003-0000-4000-8000-000000000016';
 const PLATZ_3 = '00000003-0000-4000-8000-000000000015';
+const HALBFINALE_1 = '00000003-0000-4000-8000-000000000013'; // 1:1, Verlängerung 1:0, Heim gewinnt
 const LANGER_NAME = 'Sportgemeinschaft Fußballfreunde Nordheim-Süd 1921';
 
 interface SaatMatch { id: string; matchStatus?: string; scoreA?: number; scoreB?: number; liveState?: unknown; timerStartTime?: unknown; timerElapsedSeconds?: number }
@@ -31,6 +32,13 @@ const finaleGeplant = (matches: SaatMatch[]): void => {
   for (const m of matches.filter((x) => x.id === FINALE)) {
     Object.assign(m, { matchStatus: 'scheduled', timerElapsedSeconds: 0 });
     delete m.scoreA; delete m.scoreB; delete m.liveState; delete m.timerStartTime;
+  }
+};
+/** Nur das Halbfinale 1 (nach Verlängerung) bleibt beendet, alle anderen Spiele fallen aus: es ist das zuletzt beendete Spiel. */
+const nurHalbfinaleBeendet = (matches: SaatMatch[]): void => {
+  for (const m of matches.filter((x) => x.id !== HALBFINALE_1)) {
+    Object.assign(m, { matchStatus: 'skipped' });
+    delete m.liveState; delete m.timerStartTime;
   }
 };
 const letzteBeendet = (matches: SaatMatch[]): void => {
@@ -136,6 +144,30 @@ test.describe('@ZM-141 Kopfblock oben, ohne zu scrollen (360×640)', () => {
     await expect(kopf(page).locator('[data-testid^="public-current-clock-"]')).toHaveCount(0);
     const { unten, leiste } = await ohneScrollenSichtbar(page);
     expect(unten).toBeLessThanOrEqual(leiste);
+  });
+
+  test('@OB-064 @ZM-158 nach Verlängerung: „nach Verlängerung“ klein beim Stand des Siegers, rechtsbündig unter seinem Kasten, nicht beim Namen', async ({ page }) => {
+    await oeffne(page, 'MESS26', saatMit(nurHalbfinaleBeendet));
+    await expect(kopf(page).locator(`[data-testid="match-overtime-kopf-${HALBFINALE_1}-home"]`)).toHaveText('nach Verlängerung');
+    await expect(kopf(page).locator(`[data-testid="match-overtime-kopf-${HALBFINALE_1}-away"]`)).toHaveCount(0);
+    const m = await page.evaluate((id) => {
+      const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+      // Die Zeile reicht über die ganze Breite; gemessen wird der Text selbst (rechtsbündig)
+      const zeile = document.querySelector(`[data-testid="match-overtime-kopf-${id}-home"]`)!;
+      const text = document.createRange();
+      text.selectNodeContents(zeile);
+      const note = text.getBoundingClientRect();
+      const heim = r(`[data-testid="match-box-kopf-${id}-home"]`);
+      const gast = r(`[data-testid="match-box-kopf-${id}-away"]`);
+      const name = r(`[data-testid="match-name-kopf-${id}-home"]`);
+      return { noteTop: note.top, noteBottom: note.bottom, noteRight: note.right, heimBottom: heim.bottom, heimRight: heim.right, gastTop: gast.top, nameBottom: name.bottom, seite: document.documentElement.scrollWidth };
+    }, HALBFINALE_1);
+    // unter dem Kasten des Siegers und über dem des Gastes, rechtsbündig mit dem Kasten (Ring und Rahmen bis 6 px); steht nicht beim Namen
+    expect(m.noteTop).toBeGreaterThanOrEqual(m.heimBottom - 1);
+    expect(m.noteBottom).toBeLessThanOrEqual(m.gastTop + 1);
+    expect(Math.abs(m.noteRight - m.heimRight)).toBeLessThanOrEqual(6);
+    expect(m.noteTop).toBeGreaterThanOrEqual(m.nameBottom - 1);
+    expect(m.seite).toBeLessThanOrEqual(HANDY.width);
   });
 
   test('@ZM-141 alles beendet, Turnier nicht abgeschlossen: das zuletzt beendete Spiel mit Ergebnis 3:1', async ({ page }) => {
