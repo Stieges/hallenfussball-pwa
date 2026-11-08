@@ -91,7 +91,7 @@ export function erzeugeHallLautsprecherLaufzeit(deps: LaufzeitDeps): HallLautspr
       }
     }
     if (rolle === 'toent') {
-      gemeldet = meldeFelderAnTabs(deps.kanal, deps.turnierId, deps.felder, snapshot.zustandJeFeld, (id) => antwortAtVon(id, staende, staendeUm), gemeldet);
+      gemeldet = meldeFelderAnTabs(deps.kanal, deps.turnierId, deps.felder, snapshot.zustandJeFeld, (id) => antwortAtVon(id, staende, staendeUm), staendeUm, gemeldet);
     }
   }
 

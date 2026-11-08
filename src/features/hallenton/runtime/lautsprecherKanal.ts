@@ -1,8 +1,9 @@
 /**
  * Lautsprecher-Felder dieses Geräts über die Tabs teilen (H3b-2b, @HT-033 Zeile 8, Regel 3): Der Tab, der tönt, meldet seine
- * Felder je mit dem Kennzeichen „bereit“ in `localStorage` (`hallenton:felder`) und stößt die anderen Tabs über
- * `BroadcastChannel('hallenton')` an. H3b-3 liest das für Regel 3 im Cockpit (`bereiteLautsprecherFeldIds`), das Reload-Tor
- * für alle Tabs (`lautsprecherReloadTor.ts`).
+ * Felder je mit dem Kennzeichen „bereit“ und der Serverzeit der letzten Antwort (`antwortAt`, H3b-4) in `localStorage`
+ * (`hallenton:felder`) und stößt die anderen Tabs über `BroadcastChannel('hallenton')` an. Das Cockpit liest das für Regel 3
+ * (`hallTontFeldIds` in `cockpitTon.ts`: bereit und Antwort ≤ 5 s alt), das Reload-Tor für alle Tabs nur „bereit“
+ * (`bereiteLautsprecherFeldIds`, `lautsprecherReloadTor.ts`).
  *
  * Fail-safe (Ruling W-neu-1): Eine Meldung ohne Erneuerung gilt nach 2 s als nicht bereit (Neuladen, Schließen, Absturz),
  * dann tönt das Cockpit wieder. Der Halter der Sperre erneuert sie im Takt höchstens einmal je Sekunde; `pagehide` nimmt die

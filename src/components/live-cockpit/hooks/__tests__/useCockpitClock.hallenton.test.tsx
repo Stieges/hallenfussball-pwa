@@ -102,6 +102,23 @@ describe('@HT-033 Regel 3 – Cockpit-Ton am Lautsprecher-Gerät', () => {
     expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
   });
 
+  it('@HT-033 Zeile 12: Wechsel Laptop → Handy im Spiel → Handy piept ab dem Wechsel, der Laptop tönt einmal im Gleichtakt mit dem Monitor', async () => {
+    const tab = await laptop(server(200)); // vor und nach dem Wechsel der Stand am Server
+    await tab.vor(ENDE_A2 - uhr.jetzt());
+    // ab dem Wechsel leitet Toms Handy: ein anderes Gerät ohne Lautsprecher-Meldung, sein Cockpit pfeift ab
+    const laptopMeldung = speicher.getItem('hallenton:felder');
+    speicher.removeItem('hallenton:felder');
+    const handy = cockpit();
+    handy.abpfiff();
+    if (laptopMeldung !== null) {
+      speicher.setItem('hallenton:felder', laptopMeldung);
+    }
+    await tab.vor(3000);
+    expect(handy.playSound).toHaveBeenCalledTimes(1);
+    expect(tab.toene().map((t) => t.art)).toEqual(['abpfiff']);
+    expect(Math.abs(tab.toene()[0].at - ENDE_A2)).toBeLessThanOrEqual(20);
+  });
+
   it('@HT-009 Tom hat den Abpfiff-Ton auf seinem Handy aus → kein Ton am Handy; am Hallen-Lautsprecher einmal der Abpfiff-Ton', async () => {
     const tab = await laptop(server(200)); // Laptop tönt nach dem Server (Toms Handy leitet)
     await tab.vor(ENDE_A2 + 3000 - uhr.jetzt());

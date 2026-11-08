@@ -41,6 +41,15 @@ function zeile7Felder(): (jetzt: number) => FeldStand[] {
   ];
 }
 
+/** Antworten je volle Sekunde; ab dem Wechsel 1,5 s keine (neue Abfrage nach der Übernahme), danach wieder je Sekunde. */
+function wechselAlter(jetzt: number, wechsel: number): number {
+  const takt = (t: number): number => t - Math.floor(t / 1000) * 1000;
+  if (jetzt >= wechsel && jetzt < wechsel + 1500) {
+    return jetzt - Math.floor(wechsel / 1000) * 1000;
+  }
+  return takt(jetzt);
+}
+
 const cockpitGrenze = phaseViewOf(laeuft11, CTX_11, ENDE_A2 - 10_000).limitAt ?? 0;
 
 describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Gerät und Hallen-Lautsprecher', () => {
@@ -103,10 +112,15 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
   });
 
   it('@HT-033 Zeile 10: Wechsel Handy → Laptop im Spiel → weiter genau ein Ton; Cockpit-Ton schweigt ab dem Wechsel', () => {
-    // der Laptop übernimmt 2 s vor dem Ende; der Stand am Server läuft ohne Bruch weiter (kein Sonderfall „Rollenwechsel“)
-    const { gespielt } = lauf((jetzt) => [vomServer(jetzt)], ENDE_A2 - 5000, ENDE_A2 + 6000);
+    // bis zum Wechsel (2 s vor dem Ende) Antworten je Sekunde mit Toms Stand; beim Wechsel setzen die Antworten 1,5 s aus
+    // (neue Abfrage nach der Übernahme), danach liefert der Server denselben Stand mit den Einträgen des Laptops
+    const wechsel = ENDE_A2 - 2000;
+    const felder = (jetzt: number): FeldStand[] => [vomServer(jetzt, wechselAlter(jetzt, wechsel))];
+    const { gespielt } = lauf(felder, ENDE_A2 - 5000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
-    expect(cockpitTonSchweigt('feld-1', ['feld-1'])).toBe(true);
+    expect(Math.abs(gespielt[0].at - cockpitGrenze)).toBeLessThanOrEqual(1000);
+    expect(felder(wechsel - 100)[0].bekanntSeit).toBe(felder(wechsel + 100)[0].bekanntSeit); // derselbe Stand, kein neues Ende
+    expect(cockpitTonSchweigt('feld-1', ['feld-1'])).toBe(true); // der Laptop ist Lautsprecher
   });
 
   it('Gegenbeispiel (früher Zeile 10): Wechsel genau während des Endes → kein Doppelton', () => {
@@ -128,11 +142,21 @@ describe('@HT-033 Die vier Regeln entscheiden jede Kombination aus leitendem Ger
   });
 
   it('@HT-033 Zeile 12: Wechsel Laptop → Handy im Spiel → weiter genau ein Ton, im Gleichtakt mit dem Monitor', () => {
-    const { gespielt } = lauf((jetzt) => [vomServer(jetzt)], ENDE_A2 - 5000, ENDE_A2 + 6000);
+    // Toms Handy übernimmt 3 s vor dem Ende; die Antworten setzen 1,5 s aus, der Stand am Server bleibt derselbe
+    const wechsel = ENDE_A2 - 3000;
+    const felder = (jetzt: number): FeldStand[] => [vomServer(jetzt, wechselAlter(jetzt, wechsel))];
+    const { gespielt } = lauf(felder, ENDE_A2 - 5000, ENDE_A2 + 6000);
     expect(gespielt).toHaveLength(1);
     expect(Math.abs(gespielt[0].at - cockpitGrenze)).toBeLessThanOrEqual(1000);
-    expect(cockpitTonSchweigt('feld-1', [])).toBe(false);
+    expect(felder(wechsel - 100)[0].bekanntSeit).toBe(felder(wechsel + 100)[0].bekanntSeit);
   });
+
+  for (const versatzMs of TAKT_VERSAETZE) {
+    it(`@HT-033 Zeilen 10 und 12, Versatz ${versatzMs} ms: Wechsel 2 s vor dem Ende mit Lücke in den Antworten → genau ein Ton`, () => {
+      const wechsel = ENDE_A2 - 2000;
+      expect(laufImTakt((jetzt) => [vomServer(jetzt, wechselAlter(jetzt, wechsel))], ENDE_A2 - 5000, ENDE_A2 + 6000, { versatzMs })).toHaveLength(1);
+    });
+  }
 });
 
 describe('@HT-033 Zeile 7 im 1-s-Takt des Einbaus', () => {
