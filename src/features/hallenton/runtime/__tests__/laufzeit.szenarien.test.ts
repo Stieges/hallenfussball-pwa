@@ -1,14 +1,13 @@
 /**
  * H3b-2b Tonlaufzeit: Szenarien aus `docs/anforderungen/2026-10-15_hallenton.md` (Gherkin-Wortlaut) mit echtem Takt-Adapter,
  * echtem Spieler und gefälschtem Feldstand – @HT-003, @HT-008, @HT-012, @HT-013, @HT-031, @HT-032 und @HT-033 Zeilen 2, 7.
- * Rechner der Turnierleitung = Hallen-Lautsprecher; „Tom leitet am Handy“ = Stand am Server (Antwort 200 ms alt), „Laptop
- * leitet“ = eigenes Cockpit. Ein Ereignis um `ab` ist 300 ms später am Rechner bekannt.
+ * Rechner der Turnierleitung = Hallen-Lautsprecher. Regel 2 (07.11.): gleich wer leitet, gilt der Stand am Server (Antwort
+ * 200 ms alt). Ein Ereignis um `ab` ist 300 ms später am Rechner bekannt.
  */
 import { describe, expect, it } from 'vitest';
 import type { EngineEvent, MatchContext } from '../../../../core/match';
-import type { StandQuelle } from '../../../../core/hallenton';
 import {
-  ABSCHNITT_MS, COCKPIT, CTX_11, CTX_12, CTX_HF, ENDE_A1, ENDE_A2, PAUSE_MS, T0, anpfiff, ev, gruppenRegeln, koRegeln, server,
+  ABSCHNITT_MS, CTX_11, CTX_12, CTX_HF, ENDE_A1, ENDE_A2, PAUSE_MS, T0, anpfiff, ev, gruppenRegeln, koRegeln, server,
   zweiterAbschnitt,
 } from '../../../../core/hallenton/__tests__/hallentonFixtures';
 import { Tab, feldAus, type Stufe } from './laufzeitTestlage';
@@ -130,11 +129,11 @@ describe('@HT-031 Verlängerung, Golden Goal und Strafstoßschießen haben feste
   });
 });
 
-async function zweiFelder(abstandMs: number, quelleF2: StandQuelle = server(200)) {
+async function zweiFelder(abstandMs: number, alterF2: number = server(200)) {
   const tab = new Tab({ start: ENDE_A2 - 8000, felder: [1, 2] });
   const f1 = feldAus([{ ab: T0, log: zweiterAbschnitt() }], CTX_11, 'field-1');
   const f2Start = T0 + abstandMs;
-  const f2 = feldAus([{ ab: f2Start, log: zweiterAbschnitt(f2Start) }], CTX_12, 'field-2', quelleF2);
+  const f2 = feldAus([{ ab: f2Start, log: zweiterAbschnitt(f2Start) }], CTX_12, 'field-2', alterF2);
   tab.ffs.staendeZu = (jetzt) => [f1(jetzt), f2(jetzt)];
   await tab.starte();
   await tab.vor(16_000);
@@ -154,9 +153,9 @@ describe('@HT-032 Zwei Enden innerhalb von 1 Sekunde ergeben an einem Gerät ein
 });
 
 describe('@HT-033 Die vier Regeln – Zeilen 2 und 7 an der Laufzeit', () => {
-  it('@HT-033 Zeile 2: Laptop leitet und ist Lautsprecher → ein Ton am Laptop nach eigenem Stand', async () => {
+  it('@HT-033 Zeile 2: Laptop leitet und ist Lautsprecher → Laptop, einmal, nach dem Stand am Server wie der Monitor', async () => {
     const tab = new Tab({ start: ENDE_A2 - 8000 });
-    const eigen = feldAus([{ ab: T0, log: zweiterAbschnitt() }], CTX_11, 'field-1', COCKPIT);
+    const eigen = feldAus([{ ab: T0, log: zweiterAbschnitt() }], CTX_11, 'field-1', server(200));
     tab.ffs.staendeZu = (jetzt) => [eigen(jetzt)];
     await tab.starte();
     await tab.vor(14_000);
@@ -164,8 +163,8 @@ describe('@HT-033 Die vier Regeln – Zeilen 2 und 7 an der Laufzeit', () => {
     expect(Math.abs(tab.toene()[0].at - ENDE_A2)).toBeLessThanOrEqual(1000);
   });
 
-  it('@HT-033 Zeile 7: F1 Handy (Server), F2 Laptop (eigener Stand), gleichzeitig → ein Ton', async () => {
-    expect((await zweiFelder(300, COCKPIT)).map((t) => t.art)).toEqual(['abpfiff']);
+  it('@HT-033 Zeile 7: F1 Handy, F2 Laptop, Laptop für beide → beide nach dem Stand am Server; gleichzeitig = ein Ton', async () => {
+    expect((await zweiFelder(300, server(400))).map((t) => t.art)).toEqual(['abpfiff']);
   });
 });
 

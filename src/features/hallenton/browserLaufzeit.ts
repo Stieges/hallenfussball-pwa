@@ -3,30 +3,28 @@
  * Supabase, Uhr der Engine (`ClockSync`), Web Lock, `BroadcastChannel` und `localStorage`. Ohne React, damit der Baustein in
  * `App.tsx` nur noch ein- und ausschaltet.
  *
- * - Regel 2: „Leite ich das Feld?“ aus dem zuletzt gelesenen Steuer-Stand (`ownFieldsByTournament`, gefüllt von
- *   `useFieldControl`), der Stand der eigenen Engine aus `view(id).result.state` (mit lokalen Ausstehenden).
- * - Start ohne Netz: der Spielplan aus der lokalen Turnierkopie gilt, bis der Server einen liefert (Befund 6a).
+ * - Regel 2 („Hupe und Anzeige sagen dasselbe“, 07.11.): nur der Stand am Server, auch wenn dieses Gerät das Feld leitet;
+ *   die Uhr ist die der Engine (`ClockSync`, gleicht sich mit dem Server ab, solange ein Konto angemeldet ist).
+ * - Start ohne Netz: der Spielplan aus der lokalen Turnierkopie gilt, bis der Server einen liefert – die Felder warnen dann
+ *   „keine Verbindung“ (Befund 6a).
  * - Tonwahl (Fixrunde 1): die Abpfiff-Hupe aus derselben lokalen Turnierkopie (`matchCockpitSettings.soundId`, ohne Engine
  *   und Router), Halbzeit-Ton und eigene Töne aus `hall_sound_status` (`tonWahl.ts`); bis dahin „Hupe 1“. H3b-3: nach jedem
  *   Lebenszeichen des tönenden Tabs neu gelesen (k-neu-2), vor „Anhören“ in einem nicht aktivierten Tab ebenso (k4-neu-2).
- * - H3b-3: Lebenszeichen des Lautsprechers (`lautsprecherLebenszeichen.ts`, Melde-Sperre `hallenton-melden`); „leite ich
- *   Feld X?“ über ein Neuladen ohne Netz hinweg (`steuerStandMerker.ts`, Befund 6a).
+ * - H3b-3: Lebenszeichen des Lautsprechers (`lautsprecherLebenszeichen.ts`, Melde-Sperre `hallenton-melden`).
  */
 import { getDeviceId } from '../../core/device/deviceId';
-import { onOwnFieldsNoted, ownFieldsByTournament } from '../../core/fieldControl/ownFields';
 import { hallSoundStatus, hallSpeakerHeartbeat, hallTestToneAck, type HallStatusVoll } from '../../core/repositories/hallentonRpc';
 import { isTournamentClosed } from '../../core/services/lifecycle';
 import { supabase } from '../../lib/supabase';
 import type { Tournament } from '../../types/tournament';
 import type { MatchEngineContextValue } from '../match-engine/matchEngineContextInstance';
-import { geraetSpieler, geraetStand, istGeschlafen, setzeEinschaltung, setzeLebenszeichenFehler, type Einschaltung } from './lautsprecherGeraet';
+import { geraetSpieler, istGeschlafen, setzeEinschaltung, setzeLebenszeichenFehler, type Einschaltung } from './lautsprecherGeraet';
 import { erzeugeBrowserAusgangsSignale } from './runtime/ausgangsSignale';
 import { erzeugeFeldStand } from './runtime/feldStand';
 import type { PlanSpiel } from './runtime/feldStandSpiele';
 import { erzeugeBrowserSperre } from './runtime/geraeteSperre';
 import type { TonArt, TonWahl } from './runtime/hallTonSpieler';
 import { erzeugeLebenszeichen, MELDE_SPERRE_NAME } from './runtime/lautsprecherLebenszeichen';
-import { erzeugeSteuerStandMerker, type SteuerStandMerker } from './runtime/steuerStandMerker';
 import { erzeugeHallLautsprecherLaufzeit, type HallLautsprecherLaufzeit } from './runtime/HallLautsprecherLaufzeit';
 import { browserKanalSpeicher, erzeugeLautsprecherKanal, KANAL_NAME, type LautsprecherKanal, type NachrichtenKanal } from './runtime/lautsprecherKanal';
 import { planAusTurnier } from './runtime/lokalerSpielplan';
@@ -83,19 +81,6 @@ export function leseTonWahlSofort(turnierId: string, ladeTurnier: LadeTurnier): 
   return leseTonWahl(turnierId, ladeTurnier, { server: false });
 }
 
-let steuerStand: SteuerStandMerker | null = null;
-
-/** Merkt den Steuer-Stand des Lautsprecher-Turniers ab dem ersten Aufruf (der Baustein ruft ihn beim Einhängen). */
-export function browserSteuerStand(): SteuerStandMerker {
-  steuerStand ??= erzeugeSteuerStandMerker({
-    speicher: browserKanalSpeicher(),
-    eigeneFelder: ownFieldsByTournament,
-    abonniere: onOwnFieldsNoted,
-    merkenFuer: (turnierId) => geraetStand().einschaltung?.turnierId === turnierId,
-  });
-  return steuerStand;
-}
-
 export interface BrowserLaufzeitDeps {
   einschaltung: Einschaltung;
   engine: MatchEngineContextValue;
@@ -123,8 +108,6 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
       serverNow: () => engine.clock.serverNow(),
       turnierId,
       lautsprecherFelder: () => felder,
-      leiteIchFeld: (feld) => browserSteuerStand().leiteIchFeld(turnierId, feld),
-      eigeneSicht: (matchId) => engine.engine.view(matchId)?.result.state ?? null,
       lokalerSpielplan: () => lokal,
     }),
     uhr: engine.clock,

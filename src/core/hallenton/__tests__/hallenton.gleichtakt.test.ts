@@ -197,7 +197,7 @@ describe('@HT-010 Eine falsch gehende Uhr am Lautsprecher-Gerät verschiebt den 
     expect(sync.serverNow() - server).toBe(20_000);
     await sync.sync();
     const jetzt = sync.serverNow();
-    const plan = planeHallToene({ felder: [stand(state, CTX_11, { art: 'server', antwortAlterMs: 0 }, jetzt)], serverNow: jetzt }, LEERES_GEDAECHTNIS);
+    const plan = planeHallToene({ felder: [stand(state, CTX_11, 0, jetzt)], serverNow: jetzt }, LEERES_GEDAECHTNIS);
     expect(plan.toene[0].at).toBe(cockpitEnde);
     expect(jetzt).toBe(server);
   });

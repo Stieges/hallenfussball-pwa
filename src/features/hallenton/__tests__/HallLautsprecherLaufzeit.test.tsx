@@ -22,7 +22,7 @@ const engineKontext = vi.hoisted(() => {
     je[accountId] ??= {
       accountId,
       clock: { serverNow: () => Date.now(), sync: () => Promise.resolve(true) },
-      engine: { view: () => null },
+      engine: { view: () => null, subscribe: () => () => undefined },
     };
     return je[accountId];
   };

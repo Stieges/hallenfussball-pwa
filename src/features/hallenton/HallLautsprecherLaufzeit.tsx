@@ -5,7 +5,7 @@
  * - Bildschirm wach (`useWakeLock`), solange die Laufzeit hier tönt.
  * - Jeder Tab hört auf die Lautsprecher-Meldung des Geräts und hält dann das Reload-Tor zu (`lautsprecherReloadTor.ts`).
  * - H3b-3, auf jedem angemeldeten Gerät (kein Gast): Lebenszeichen der Leitung (`leitungGeraet.ts`), eine offene Abmeldung
- *   nachholen (`ausstehendeAbmeldung.ts`), den Steuer-Stand für ein Neuladen ohne Netz merken (`browserSteuerStand`).
+ *   nachholen (`ausstehendeAbmeldung.ts`).
  * Keine Oberfläche: gibt `null` zurück.
  */
 import { useEffect, useSyncExternalStore } from 'react';
@@ -14,7 +14,7 @@ import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { attachReloadGate } from '../../lib/swRegistration';
 import { useMatchEngineContextOptional } from '../match-engine/useMatchEngineContext';
 import { abmeldungNachholen, ABMELDEN_NEU_MS } from './ausstehendeAbmeldung';
-import { browserSteuerStand, erzeugeBrowserKanal, erzeugeBrowserLaufzeit } from './browserLaufzeit';
+import { erzeugeBrowserKanal, erzeugeBrowserLaufzeit } from './browserLaufzeit';
 import { erzeugeBrowserLeitung, setzeLeitung } from './leitungGeraet';
 import { ladeTurnierLokal } from './lokalesTurnier';
 import { abonniereGeraet, geraetStand, setzeLaufzeit } from './lautsprecherGeraet';
@@ -39,10 +39,6 @@ export function HallLautsprecherLaufzeit(): null {
       loesen();
       kanal.schliessen();
     };
-  }, []);
-
-  useEffect(() => {
-    browserSteuerStand(); // Befund 6a: ab jetzt jeden gelesenen Steuer-Stand merken
   }, []);
 
   useEffect(() => {

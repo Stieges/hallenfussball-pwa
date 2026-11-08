@@ -23,7 +23,7 @@ const engineKontext = vi.hoisted(() => {
     je[accountId] ??= {
       accountId,
       clock: { serverNow: () => Date.now(), sync: () => Promise.resolve(true) },
-      engine: { view: () => null },
+      engine: { view: () => null, subscribe: () => () => undefined },
     };
     return je[accountId];
   };
@@ -239,7 +239,7 @@ describe('Fixrunde 1 – W2: Hallenton liest die Turnierkopie nur lokal, die Lei
     const uhr = new ManuelleUhr(0);
     const rpc = vi.fn(() => Promise.resolve({ ok: true as const, status: 'ok' as const, serverNow: 0, speaker: null }));
     const leitung = erzeugeBrowserLeitung({
-      engine: { engine: { view: () => (status ? { result: { state: { status } } } : null) } } as never,
+      engine: { engine: { view: () => (status ? { result: { state: { status } } } : null), subscribe: () => () => undefined } } as never,
       ladeTurnier: () => { lokal.aufrufe += 1; return Promise.resolve(turnier.wert as never); },
       rpc,
       zeitgeber: uhr.gruppe('leitung'),
@@ -285,6 +285,37 @@ describe('Fixrunde 1 – W2: Hallenton liest die Turnierkopie nur lokal, die Lei
     leitung.stop();
     expect(rpc.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(repos.tournamentRepository.get).not.toHaveBeenCalled();
+  });
+
+  it('N3 (H3b-3): ein Spiel, das nicht im gemerkten Plan steht, ist am Laptop angepfiffen → das Lebenszeichen kommt im nächsten 5-s-Takt', async () => {
+    turnier.wert = plan; // gemerkt: nur Spiel 11, nicht angepfiffen
+    noteFieldControlList(TID, [{ field: 1, epoch: 1, holderName: null, holderRole: null, holderDeviceLabel: null, isMine: true, claimedAt: null }]);
+    const uhr = new ManuelleUhr(0);
+    const rpc = vi.fn(() => Promise.resolve({ ok: true as const, status: 'ok' as const, serverNow: 0, speaker: null }));
+    let laeuft = new Set<string>();
+    let melde: (() => void) | null = null;
+    const engine = {
+      view: (id: string) => (laeuft.has(id) ? { result: { state: { status: 'running' } } } : null),
+      subscribe: (fn: () => void) => { melde = fn; return () => { melde = null; }; },
+    };
+    const leitung = erzeugeBrowserLeitung({
+      engine: { engine } as never,
+      ladeTurnier: () => Promise.resolve(turnier.wert as never),
+      rpc,
+      zeitgeber: uhr.gruppe('leitung'),
+    });
+    leitung.start();
+    await vor(uhr, 7000);
+    expect(rpc).not.toHaveBeenCalled();
+    // Endrunde erzeugt: Spiel 12 neu auf Feld 1 in der lokalen Kopie, am Laptop angepfiffen (die Engine meldet die Änderung)
+    const spiel12 = { ...plan.matches[0], id: 'spiel-12', round: 2, matchNumber: 12 };
+    turnier.wert = { ...plan, matches: [...plan.matches, spiel12] };
+    laeuft = new Set(['spiel-12']);
+    (melde as (() => void) | null)?.();
+    await vor(uhr, 3000); // bis zum nächsten Takt bei 10 s
+    expect(rpc).toHaveBeenCalledTimes(1);
+    leitung.stop();
+    expect(melde).toBeNull();
   });
 
   it('der Baustein liest für Lebenszeichen, Tonwahl und Turnierende nie über das Cloud-Repository', async () => {

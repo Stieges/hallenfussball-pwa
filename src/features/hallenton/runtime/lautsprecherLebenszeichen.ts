@@ -10,7 +10,8 @@
  * - `superseded`/`unassigned` (Regel 1): lokal abschalten (`abgeloest`, kein Ton danach); die übrigen Felder bleiben.
  * - Turnierende (Fixrunde 1, W1): Der Server antwortet auch danach `ok` (kein `hall_require_open` – die Brief-Annahme „55000“
  *   traf nicht zu). Jeder Tab prüft höchstens alle 30 s die lokale Turnierkopie (`turnierBeendet`) und schaltet still ab,
- *   auch der wartende; das erste Lebenszeichen wartet auf die erste Prüfung. 55000 bleibt als Schutz.
+ *   auch der wartende; das erste Lebenszeichen wartet auf die erste Prüfung, höchstens 2 s (N1 aus H3b-3: kehrt das Lesen
+ *   nicht zurück, gilt „nicht beendet“). 55000 bleibt als Schutz.
  * - `kein_recht` dreimal in Folge: still wie ein Gast; jeder Fehlergrund geht an `beiFehler`, ein Erfolg setzt ihn zurück (K2).
  * - Offener Testton (Serverzeit + Laufzeit ≤ 10 s, nicht schon gespielt – Speicher und Instanz, K1): nur der tönende Tab spielt
  *   ihn einmal, dann `hall_test_tone_ack`; eine verlorene Quittung wird ohne zweiten Ton nachgeholt. Nie aus Kanal-Inhalten
@@ -37,6 +38,8 @@ export const MELDE_SPERRE_NAME = 'hallenton-melden';
 export const TESTTOENE_SCHLUESSEL = 'hallenton:testtoene';
 /** Turnierende aus der lokalen Kopie höchstens so oft prüfen (ms). */
 export const TURNIERENDE_PRUEF_MS = 30_000;
+/** Frist der Prüfung auf Turnierende (N1): danach gilt „nicht beendet“, das Lebenszeichen geht raus. */
+export const TURNIERENDE_FRIST_MS = 2000;
 /** So viele `kein_recht` in Folge schalten still ab. */
 export const KEIN_RECHT_GRENZE = 3;
 const TESTTOENE_MAX = 20;
@@ -135,6 +138,17 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
     }
   }
 
+  /** N1: Ein Fehler oder eine Prüfung ohne Rückkehr binnen 2 s gilt als „nicht beendet“. */
+  function mitFrist(pruefung: Promise<boolean>): Promise<boolean> {
+    return new Promise((fertig) => {
+      const abbrechen = d.zeitgeber.spaeter(() => fertig(false), TURNIERENDE_FRIST_MS);
+      void pruefung.catch(() => false).then((beendet) => {
+        abbrechen();
+        fertig(beendet);
+      });
+    });
+  }
+
   /** W1: höchstens alle 30 s; `true` = noch keine Prüfung abgeschlossen (dann wird nicht gemeldet). */
   function turnierendeOffen(): boolean {
     const pruef = d.turnierBeendet;
@@ -144,7 +158,7 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
     const jetzt = d.zeitgeber.jetzt();
     if (!endePruefungLaeuft && (endeGeprueftUm === null || jetzt - endeGeprueftUm >= TURNIERENDE_PRUEF_MS)) {
       endePruefungLaeuft = true;
-      void pruef().catch(() => false).then((beendet) => {
+      void mitFrist(pruef()).then((beendet) => {
         endePruefungLaeuft = false;
         endeGeprueftUm = d.zeitgeber.jetzt();
         if (beendet && gestartet) {
