@@ -15,9 +15,9 @@
  * 2026-11-07 (A1b Monitore der Veranstaltung, PR #452): nach dem Einspielen von 20261122_001 aus der Produktion per Supabase-MCP
  * (generate_typescript_types) erzeugt: Tabelle gathering_screens, die Spalten gatherings.on_screen_tournament_id/on_screen_since/
  * screen_location_name und die Funktionen von 20261122_001. Damit wieder deckungsgleich mit der Produktion.
- * 2026-11-08 (Hallenton Torhymne, Branch feat/hallenton-torhymne): Spalte hall_sound_settings.goal_anthem_paths und die
- * Funktion hall_goal_anthems_set von 20261123_001 im Format des Generators nachgetragen (Muster A1) -- bis zum Einspielen von
- * 20261123_001 in der Produktion meldet der Typ-Drift-Check genau diese Zeilen.
+ * 2026-11-08 (Hallenton Torhymne, Branch feat/hallenton-torhymne): nach dem Einspielen von 20261123_001 aus der Produktion
+ * per Supabase-MCP (generate_typescript_types) erzeugt: Spalte hall_sound_settings.goal_anthem_paths und die Funktion
+ * hall_goal_anthems_set. Damit wieder deckungsgleich mit der Produktion.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
