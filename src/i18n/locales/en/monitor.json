@@ -29,7 +29,6 @@
       "ended": "Time up",
       "stopped": "stopped",
       "remaining": "Time left",
-      "remainingUncertain": "Time left (uncertain)",
       "pause": "Break",
       "pauseHalftime": "Break · $t(sport:phases.halftime)",
       "overtime": "$t(sport:phases.overtime)"
@@ -99,7 +98,7 @@
     }
   },
   "verbindung": {
-    "stand": "As of {{time}} – no connection"
+    "seit": "No connection since {{time}}"
   },
   "dauerbetrieb": {
     "wakeLockHint": "Screen may turn off – check power saving"

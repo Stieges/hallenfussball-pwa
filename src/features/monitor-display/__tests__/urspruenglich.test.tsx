@@ -12,7 +12,7 @@ import { scheduleFieldLayout } from '../slideContent';
 import { NextMatchesSlide } from '../slides/NextMatchesSlide';
 import { ScheduleFieldSlide } from '../slides/ScheduleFieldSlide';
 import { LiveSlide } from '../slides/LiveSlide';
-import { displayList } from '../../../design-tokens';
+import { cssVars, displayList } from '../../../design-tokens';
 import { initRealDeI18n } from '../../../test/realDeI18n';
 import { anzeigeT } from '../../../i18n/anzeigeSprache';
 import enTournament from '../../../i18n/locales/en/tournament.json';
@@ -72,14 +72,23 @@ describe('B-27 Monitor „Nächste Spiele“: ursprüngliche Uhrzeit', () => {
     expect(note.style.color).toBe(within(zeile('match-8')).getByTestId('monitor-match-time').style.color);
   });
 
-  // Befund C-MONITOR-URSPRUENGLICH-ZU-KLEIN: @ZP-046 verlangt 9,4 % der Bildhöhe (Sehwinkel 16′), die Listen-Folien setzen
-  // Zeilen mit 3,6 % – erst das Paket „Monitor-Schriftstufen“ (Fern-Fassung) löst das. Bis dahin erwartet rot.
-  it.fails('@ZP-046 C-MONITOR-URSPRUENGLICH-ZU-KLEIN „ursprünglich“ ist mindestens 9,4 % der Bildhöhe hoch, die Uhrzeit deutlich größer', () => {
+  // @ZP-046 (geändert 2026-11-08, Daniel „das war 10:12 brauch ich nicht dick“): die neue Uhrzeit führt, „(war …)“ ist Zusatz
+  it('@ZP-046 „15:25“ groß und fett, dahinter in derselben Zeile „(war 15:15)“ kleiner und nicht fett, nicht unter der kleinsten Monitor-Schrift', () => {
     naechste(mitZeiten({ shown: '14:30', original: '14:20' }, { shown: '14:40' }));
-    const note = parseFloat(screen.getByTestId('monitor-match-original').style.fontSize);
-    const time = parseFloat(within(zeile('match-8')).getByTestId('monitor-match-time').style.fontSize);
-    expect(note).toBeGreaterThanOrEqual(9.4);
-    expect(time).toBeGreaterThan(note);
+    const row = within(zeile('match-8'));
+    const uhr = row.getByTestId('monitor-match-clock');
+    const war = row.getByTestId('monitor-match-original');
+    expect(war).toHaveTextContent('(war 14:20)');
+    // in derselben Zeile, die neue Uhrzeit zuerst
+    expect(war.parentElement).toBe(uhr.parentElement);
+    expect(uhr.compareDocumentPosition(war) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // „(war …)“ kleiner als die Uhrzeit und nicht fett; die Uhrzeit (Zelle) fett
+    expect(parseFloat(uhr.style.fontSize)).toBeGreaterThan(parseFloat(war.style.fontSize));
+    expect(war.style.fontWeight).toBe(cssVars.fontWeights.normal);
+    expect(row.getByTestId('monitor-match-time').style.fontWeight).toBe(cssVars.fontWeights.semibold);
+    // mindestens so groß wie die kleinste erlaubte Monitor-Schrift (@ZM-125: 3,6 % der Bildhöhe) und nicht gekürzt
+    expect(parseFloat(war.style.fontSize)).toBeGreaterThanOrEqual(3.6);
+    expect(war.style.textOverflow).toBe('');
   });
 
   it('@ZM-087 die Uhrzeit-Spalte hat in jeder Zeile dieselbe feste Breite, mit und ohne Hinweis (Namensspalten bleiben)', () => {

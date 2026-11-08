@@ -28,7 +28,6 @@ import { ANZEIGE_SPRACHE, anzeigeI18n } from '../../i18n/anzeigeSprache';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { WakeLockNotice } from '../../components/monitor/WakeLockNotice';
 import { ConnectionNotice } from '../../components/monitor/ConnectionNotice';
-import { UhrSicherheitContext } from '../../components/monitor/UhrSicherheitContext';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useBildrand } from './useBildrand';
 import { istHinweisFolie } from './monitorDauerbetrieb';
@@ -221,7 +220,7 @@ function MonitorDisplayPageContent({
         ...pixelShift,
       }}>
         {currentSlide && (
-          <NowSourceContext.Provider value={serverJetzt}><UhrSicherheitContext.Provider value={verbindung === null}><TransitionWrapper
+          <NowSourceContext.Provider value={serverJetzt}><TransitionWrapper
             slideState={slideState}
             transitionType={monitor.transition}
             transitionDuration={monitor.transitionDuration}
@@ -240,7 +239,7 @@ function MonitorDisplayPageContent({
               pageStart={listenStart}
               end={end}
             />
-          </TransitionWrapper></UhrSicherheitContext.Provider></NowSourceContext.Provider>
+          </TransitionWrapper></NowSourceContext.Provider>
         )}
       </div>
 
@@ -252,7 +251,7 @@ function MonitorDisplayPageContent({
         {hinweisZeigt && (
           <WakeLockNotice text={t('dauerbetrieb.wakeLockHint')} themeColors={monitorThemes[resolveTheme(monitor.theme)]} />
         )}
-        {/* Eingefrorene Verbindung (@ZM-085, @ME-030): „Stand von hh:mm – keine Verbindung“ in der Ecke unten rechts, bis wieder eine Antwort kommt */}
+        {/* Eingefrorene Verbindung (@ZM-085, @ME-030): nur ein Symbol mit Ausrufezeichen in der Ecke unten rechts, ohne Text, bis wieder eine Antwort kommt */}
         {verbindung !== null && (
           <ConnectionNotice standMs={verbindung.standMs} themeColors={monitorThemes[resolveTheme(monitor.theme)]} />
         )}

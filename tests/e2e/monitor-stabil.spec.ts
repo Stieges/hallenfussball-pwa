@@ -1,8 +1,9 @@
 /**
  * Paket M · Monitor-Stabilität im Browser (Regel T2-UI) – über den Prüfstand tests/e2e/harness/monitor-stabil.html (ganze Monitor-Seite, eingespeiste
  * Datenquelle, Playwright-Uhr: die 30 Sekunden werden vorgespult, nicht abgewartet).
- * @ME-030 / @ZM-085: bleibt die Antwort 30 Sekunden aus (Netz weg oder Abruf hängt), steht unten rechts „Stand von 14:32 – keine Verbindung“, die Restzeit ist
- * „unsicher“; mit der nächsten Antwort ist der Hinweis weg (@ME-007). @ZM-139: Uhrformat wie im Cockpit. @ZM-087: echte lange Namen vollständig lesbar.
+ * @ME-030 / @ZM-085: bleibt die Antwort 30 Sekunden aus (Netz weg oder Abruf hängt), steht unten rechts nur ein Symbol mit Ausrufezeichen, ohne Text,
+ * die Restzeit läuft unverändert weiter; mit der nächsten Antwort ist das Symbol weg (@ME-007). @ZM-199: Uhrformat wie im Cockpit. @ZM-198: Tabelle ohne
+ * Platz vor dem ersten beendeten Spiel. @ZM-087: echte lange Namen vollständig lesbar.
  * Bilder (Tag @bilder, nur Aufnahme ohne Prüfung): Ordner aus MONITOR_STABIL_BILDER. Nur am Dev-Server (gehört nicht in den Build).
  */
 import { join } from 'node:path';
@@ -37,7 +38,7 @@ async function box(l: Locator): Promise<{ x: number; y: number; w: number; h: nu
 async function bild(page: Page, name: string): Promise<void> {
   if (BILDER === '') { return; }
   mkdirSync(BILDER, { recursive: true });
-  await page.screenshot({ path: join(BILDER, `${name}.png`) });
+  await page.screenshot({ path: join(BILDER, `${name}${process.env.MONITOR_STABIL_SUFFIX ?? ''}.png`) });
 }
 
 declare global {
@@ -51,9 +52,8 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
   });
 
   for (const art of [false, 'haengt'] as const) {
-    test(`@ME-030 @ZM-085 @ME-007 ${art === false ? 'Netz weg' : 'Abruf hängt'}: nach 30 s „Stand von 14:32“, Restzeit unsicher; Netz zurück: alles weg`, async ({ page }) => {
+    test(`@ME-030 @ZM-085 @ME-007 ${art === false ? 'Netz weg' : 'Abruf hängt'}: nach 30 s nur ein Symbol ohne Text, Uhr unverändert; Netz zurück: Symbol weg`, async ({ page }) => {
       await oeffne(page, 'live');
-      await expect(page.getByTestId('monitor-clock')).toHaveAttribute('data-sicherheit', 'sicher');
       await expect(page.getByTestId('monitor-connection-hint')).toHaveCount(0);
 
       await netz(page, art);
@@ -61,9 +61,13 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
       await expect(page.getByTestId('monitor-connection-hint')).toHaveCount(0);
       await page.clock.runFor(2_000);
       const hinweis = page.getByTestId('monitor-connection-hint');
-      await expect(hinweis).toHaveText('Stand von 14:32 – keine Verbindung');
-      await expect(page.getByTestId('clock-label')).toHaveText('Restzeit (unsicher)');
-      await expect(page.getByTestId('monitor-clock')).toHaveAttribute('data-sicherheit', 'unsicher');
+      // nur ein Symbol, kein Text; der Name nur für Vorlese-Programme
+      await expect(hinweis).toHaveText('');
+      await expect(hinweis).toHaveAttribute('aria-label', 'Keine Verbindung seit 14:32');
+      await expect(hinweis.locator('svg')).toBeVisible();
+      // die Restzeit läuft unverändert weiter (ohne Kennzeichnung): 6:00 minus 31 Sekunden
+      await expect(page.getByTestId('clock-label')).toHaveText('Restzeit');
+      await expect(page.getByTestId('monitor-clock')).toHaveText('5:29');
       // das Bild bleibt: Spiel, Namen und Uhr stehen weiter da
       await expect(page.getByTestId('live-block-home')).toBeVisible();
 
@@ -84,7 +88,6 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
       await page.clock.runFor(3_000);
       await expect(page.getByTestId('monitor-connection-hint')).toHaveCount(0);
       await expect(page.getByTestId('clock-label')).toHaveText('Restzeit');
-      await expect(page.getByTestId('monitor-clock')).toHaveAttribute('data-sicherheit', 'sicher');
     });
   }
 
@@ -97,11 +100,24 @@ test.describe('Monitor-Stabilität (Paket M)', () => {
     await expect(page.getByTestId('monitor-connection-hint')).toHaveCount(0);
   });
 
-  test('@ZM-139 Uhrformat wie im Cockpit: Minuten ohne führende Null, Sekunden zweistellig', async ({ page }) => {
+  test('@ZM-199 Uhrformat wie im Cockpit: Minuten ohne führende Null, Sekunden zweistellig', async ({ page }) => {
     await oeffne(page, 'live');
     const text = (await page.getByTestId('monitor-clock').textContent()) ?? '';
     expect(text).toMatch(/^[1-9]\d?:\d{2}$/);
     expect(text).toBe('6:00');
+  });
+
+  test('@ZM-198 Turnierbeginn: die Spalte Platz zeigt bei allen 6 Teams „–“, Teilnehmerliste, alle Zahlen 0', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.clock.install({ time: new Date('2026-11-28T07:30:00Z') });
+    await page.goto('/tests/e2e/harness/monitor-stabil.html?szene=tabelle&rand=5');
+    const zeilen = page.locator('[data-testid="standings-row"]');
+    await expect(zeilen).toHaveCount(6);
+    for (let i = 0; i < 6; i += 1) {
+      await expect(zeilen.nth(i).locator('> div').first()).toHaveText('–');
+      await expect(zeilen.nth(i).getByTestId('standings-won')).toHaveText('0');
+    }
+    await expect(zeilen.nth(0).locator('[data-teamname]')).toHaveText('SV Kirchanschöring');
   });
 
   for (const profil of PROFILE) {

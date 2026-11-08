@@ -17,7 +17,7 @@ import de from '../../../i18n/locales/de/monitor.json';
 const nowIso = () => new Date().toISOString();
 
 describe('@ZM-139 MatchTimer zeigt Restzeit', () => {
-  it('Spiel 11: 6-Minuten-Abschnitt bei gespielten 4:10 zeigt 1:50 und nicht 4:10', () => {
+  it('@ZM-199 Spiel 11: 6-Minuten-Abschnitt bei gespielten 4:10 zeigt 1:50 und nicht 4:10', () => {
     render(<MatchTimer elapsedSeconds={250} durationSeconds={360} status="PAUSED" timerElapsedSeconds={250} />);
     expect(screen.getByTestId('monitor-clock')).toHaveTextContent('1:50');
     expect(screen.queryByText('4:10')).toBeNull();

@@ -29,7 +29,6 @@
       "ended": "Zeit abgelaufen",
       "stopped": "angehalten",
       "remaining": "Restzeit",
-      "remainingUncertain": "Restzeit (unsicher)",
       "pause": "Pause",
       "pauseHalftime": "Pause · $t(sport:phases.halftime)",
       "overtime": "$t(sport:phases.overtime)"
@@ -99,7 +98,7 @@
     }
   },
   "verbindung": {
-    "stand": "Stand von {{time}} – keine Verbindung"
+    "seit": "Keine Verbindung seit {{time}}"
   },
   "dauerbetrieb": {
     "wakeLockHint": "Bildschirm kann ausgehen – Energiesparen prüfen"

@@ -100,7 +100,7 @@ describe('@ZM-176 @ME-031 Die Uhr folgt der Serverzeit, nicht der Uhr des Hallen
 });
 
 describe('@ZM-084 Pause und Weiter (Test 3)', () => {
-  it('Tom drückt bei 6:41 „Pause“: die Uhr steht bei 6:41, über der Uhr „angehalten“, das Abzeichen sagt „Pause“; „Weiter“ → läuft ab 6:41', () => {
+  it('@ZM-199 Tom drückt bei 6:41 „Pause“: die Uhr steht bei 6:41, über der Uhr „angehalten“, das Abzeichen sagt „Pause“; „Weiter“ → läuft ab 6:41', () => {
     vi.setSystemTime(SERVER);
     const lange = { sectionSeconds: 600 };
     const angehalten = spiel7({ status: 'paused', section: 1, gespieltMs: 199_000, anchorAt: null, ...lange });
