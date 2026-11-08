@@ -25,12 +25,46 @@ async function nachAbschluss({ asRole }: StepContext): Promise<void> {
   expect((info.json as { state: string }).state, 'der QR ist nach dem Abschluss ungültig (@HE-038)').toBe('closed');
 }
 
-/** D13b: Zeiten ehrlich: bei Verzug steht die ursprüngliche Uhrzeit dabei (@ZP-004, @ZP-007). */
-async function zeitenEhrlich({ asRole }: StepContext): Promise<void> {
-  const ownerPage = await asRole('owner');
-  await openTurniertagPath(ownerPage, '/schedule');
-  await expectPageAnchor(ownerPage.locator('[data-testid="filter-phase"]'), 'Spielplan der Turnierleitung');
-  await expectSollMarker(ownerPage, 'match-original-time');
+/** Uhrzeit `hh:mm` plus `minuten` (Tageszeit, ohne Datum). */
+function plusMinuten(uhrzeit: string, minuten: number): string {
+  const [h, m] = uhrzeit.split(':').map(Number);
+  const gesamt = (h * 60 + m + minuten + 24 * 60) % (24 * 60);
+  return `${String(Math.floor(gesamt / 60)).padStart(2, '0')}:${String(gesamt % 60).padStart(2, '0')}`;
+}
+
+/**
+ * D13b: Zeiten ehrlich (@ZP-004): nachdem Olli in D13 alle Felder um 10 Minuten nach hinten verschoben und bestätigt hat, zeigt die
+ * Zuschauer-Seite bei einem verschobenen Spiel groß die neue Uhrzeit und klein „(war hh:mm)“ – die neue Uhrzeit ist die alte plus 10 Minuten.
+ */
+async function zeitenEhrlich({ anonPage }: StepContext): Promise<void> {
+  await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
+  await expectPageAnchor(anonPage.getByRole('heading', { level: 1 }).first(), 'Zuschauer-Seite');
+  // Die Verschiebung aus D13 geht über die Warteschlange in die Cloud: höchstens 30 s warten, bis die Spiele ihre ursprüngliche Uhrzeit tragen.
+  const verschobeneSpiele = (): Promise<{ id: string }[]> =>
+    getRows<{ id: string }>(`matches?tournament_id=eq.${TURNIERTAG_ID}&original_start=not.is.null&select=id`, 'verschobene Spiele');
+  await expect.poll(async () => (await verschobeneSpiele()).length, { message: 'die Verschiebung aus D13 steht in der Cloud (matches.original_start)', timeout: 30_000 }).toBeGreaterThan(0);
+  const verschoben = await verschobeneSpiele();
+  // Die Liste rendert nur Karten im Umfeld des sichtbaren Bereichs: beim Sammeln über die Seite blättern.
+  const paare = new Map<string, { war: string; gross: string }>();
+  await expect(async () => {
+    for (const anteil of [0, 0.25, 0.5, 0.75, 1]) {
+      await anonPage.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), anteil);
+      await anonPage.waitForTimeout(250);
+      const gefunden = await anonPage.locator('[data-testid^="match-original-"]').evaluateAll((els) => els.map((el) => {
+        // Groß steht die neue Uhrzeit in derselben Zeitzelle, klein dahinter „(war …)“; laufende Spiele zeigen statt der Uhrzeit „live“.
+        const zelle = (el.parentElement?.innerText ?? '').replace(el.textContent ?? '', '');
+        return { id: el.getAttribute('data-testid') ?? '', text: (el.textContent ?? '').trim(), gross: /\d{2}:\d{2}/.exec(zelle)?.[0] ?? '' };
+      }));
+      for (const g of gefunden) {
+        expect(g.text, 'klein „(war hh:mm)“').toMatch(/^\(war \d{2}:\d{2}\)$/);
+        paare.set(g.id, { war: /\d{2}:\d{2}/.exec(g.text)?.[0] ?? '', gross: g.gross });
+      }
+    }
+    expect([...paare.values()].filter((p) => p.gross !== '').length, `mindestens ein verschobenes Spiel mit großer Uhrzeit und „(war …)“ (in der Cloud verschoben: ${verschoben.length})`).toBeGreaterThan(0);
+  }).toPass({ timeout: 20_000 });
+  for (const { war, gross } of [...paare.values()].filter((p) => p.gross !== '')) {
+    expect(gross, `groß die neue Uhrzeit (war ${war}, 10 Minuten nach hinten)`).toBe(plusMinuten(war, 10));
+  }
 }
 
 /** D13c: Hallenton an Abschnittsende und Spielende, Lautsprecher-Seite (@HT-001, @HT-004). */
@@ -41,7 +75,7 @@ async function hallenton({ asRole }: StepContext): Promise<void> {
   await expectSollMarker(ownerPage, 'hall-speaker-start');
 }
 
-/** D17: Impressum und Datenschutz mit echtem Text, von der Zuschauer-Seite erreichbar, Fußzeile nicht verdeckt (@ZM-020, C-LEGAL). */
+/** D17: Impressum und Datenschutz mit echtem Text, von der Zuschauer-Seite erreichbar, Fußzeile nicht verdeckt (C-LEGAL). */
 async function rechtstexte({ anonPage }: StepContext): Promise<void> {
   await anonPage.setViewportSize({ width: 390, height: 844 });
   await anonPage.goto(`/#/live/${E2E_TURNIERTAG_SHARE_CODE}`);
@@ -65,12 +99,12 @@ export const steps: readonly TurniertagStep[] = [
 
 /** Nach D13 (Zeitplan verschieben). */
 export const stepsNachZeitplan: readonly TurniertagStep[] = [
-  { id: 'D13b', title: 'Zeiten ehrlich: ursprüngliche Uhrzeit bei Verzug', scenarios: ['@ZP-004', '@ZP-007'], owner: 'B-26, B-27', expectedFail: true, run: zeitenEhrlich },
+  { id: 'D13b', title: 'Zeiten ehrlich: Zuschauer-Seite zeigt die neue Uhrzeit und klein „(war …)“', scenarios: ['@ZP-004'], owner: 'B-26/B-27 (Verschiebung erreicht die Cloud, behoben mit #471)', expectedFail: false, run: zeitenEhrlich },
   { id: 'D13c', title: 'Hallenton an Abschnittsende und Spielende', scenarios: ['@HT-001', '@HT-004'], owner: 'B-46', expectedFail: true, run: hallenton },
 ];
 
 /** Ende des Ablaufs (nach Sicherung und zweitem Turnier). D16 steht in der Vorbereitung (d00-vorbereitung.ts). */
 export const stepsEnde: readonly TurniertagStep[] = [
-  { id: 'D17', title: 'Impressum und Datenschutz mit echtem Text, Fußzeile erreichbar (Handy)', scenarios: ['@ZM-020'], befunde: ['C-LEGAL', 'C-FUSS-LINKS-UNTER-LEISTE'], owner: 'B-32 / Kleinfix', expectedFail: true, run: rechtstexte },
+  { id: 'D17', title: 'Impressum und Datenschutz mit echtem Text, Fußzeile erreichbar (Handy)', scenarios: ['@RE-001', '@RE-004'], befunde: ['C-LEGAL', 'C-FUSS-LINKS-UNTER-LEISTE'], owner: 'B-32 / Kleinfix', expectedFail: true, run: rechtstexte },
   { id: 'D18', title: 'Lastmessung: ein Turniertag gegen den lokalen Stack', scenarios: ['@FT-002'], owner: '11b (FT-Messlauf)', expectedFail: true, run: lastmessung },
 ];
