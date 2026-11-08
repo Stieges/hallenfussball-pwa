@@ -202,9 +202,8 @@ export function useTournamentManager(tournamentId: string) {
             window.dispatchEvent(new Event('tournament-updated'));
         } catch (err) {
             console.error('Failed to update tournament:', err);
-            setError('Speichern fehlgeschlagen');
-            // Reload to get consistent state
-            await loadTournament();
+            if (activeIdRef.current === sanitized.id) { setError('Speichern fehlgeschlagen'); } // @HE-086: nie unter fremder Adresse
+            await loadTournament(); // Reload to get consistent state
             if (rethrow) {
                 throw err;
             }

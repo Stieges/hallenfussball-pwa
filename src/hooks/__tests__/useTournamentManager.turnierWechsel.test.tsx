@@ -114,10 +114,14 @@ describe('@HE-086 @HE-085 useTournamentManager: Wechsel auf die Adresse eines an
     mockLoadTournament.mockResolvedValueOnce(makeTournament(KOPIE, 'Kopie'));
     rendered.rerender({ id: KOPIE });
     await waitFor(() => expect(rendered.result.current.tournament?.title).toBe('Kopie'));
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    await act(async () => { spaet.resolve(null); await spaet.promise.catch(() => undefined); await Promise.resolve(); });
-    expect(rendered.result.current.loadingError).toBeNull();
-    expect(rendered.result.current.tournament?.title).toBe('Kopie');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await act(async () => { spaet.resolve(null); await spaet.promise.catch(() => undefined); await Promise.resolve(); });
+      expect(rendered.result.current.loadingError).toBeNull();
+      expect(rendered.result.current.tournament?.title).toBe('Kopie');
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('endet das Laden des Originals, während die Kopie noch lädt, bleibt die Laden-Anzeige (kein vorzeitiges „Nicht gefunden“)', async () => {
@@ -145,6 +149,25 @@ describe('@HE-086 @HE-085 useTournamentManager: Wechsel auf die Adresse eines an
     await waitFor(() => expect(rendered.result.current.isLoading).toBe(false));
     await act(async () => { gespeichert.resolve(undefined); await speichern; });
     expect(rendered.result.current.tournament, 'unter der Adresse der Kopie nie das Original').toBeNull();
+  });
+
+  it('ein spät gescheitertes Speichern des Originals meldet keinen Fehler unter der Adresse der Kopie', async () => {
+    const rendered = await originalOffen();
+    let ablehnen!: (grund: Error) => void;
+    mockUpdateTournament.mockReturnValueOnce(new Promise<void>((_resolve, reject) => { ablehnen = reject; }));
+    let speichern: Promise<void> = Promise.resolve();
+    act(() => { speichern = rendered.result.current.handleTournamentUpdate({ ...rendered.result.current.tournament!, title: 'Original geändert' }); });
+    mockLoadTournament.mockResolvedValueOnce(makeTournament(KOPIE, 'Kopie'));
+    rendered.rerender({ id: KOPIE });
+    await waitFor(() => expect(rendered.result.current.tournament?.title).toBe('Kopie'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await act(async () => { ablehnen(new Error('Netz weg')); await speichern; });
+      expect(rendered.result.current.loadingError, 'kein Fehler des Originals unter der Adresse der Kopie').toBeNull();
+      expect(rendered.result.current.tournament?.title).toBe('Kopie');
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('Gegenbeispiel: dieselbe Adresse – ein frisches Laden kommt an', async () => {
