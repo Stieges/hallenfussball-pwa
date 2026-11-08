@@ -47,31 +47,39 @@ runs:
         CLI_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
-        echo "::warning::supabase/setup-cli ist gescheitert (GitHub-Release-Download). Ausweichweg: npm @supabase/cli-linux-x64@${CLI_VERSION}."
+        # Paketname aus der Runner-Architektur (runner.arch): X64 -> linux-x64, ARM64 -> linux-arm64.
         case "${RUNNER_OS}-${RUNNER_ARCH}" in
           Linux-X64) pkg="cli-linux-x64" ;;
           Linux-ARM64) pkg="cli-linux-arm64" ;;
-          *) echo "::error::Kein npm-Ausweichweg für ${RUNNER_OS}-${RUNNER_ARCH} vorgesehen."; exit 1 ;;
+          *) echo "::error::Weder GitHub-Release noch npm liefern die Supabase CLI ${CLI_VERSION}: kein npm-Ausweichweg für ${RUNNER_OS}-${RUNNER_ARCH} vorgesehen."; exit 1 ;;
         esac
+        echo "::warning::supabase/setup-cli ist gescheitert (GitHub-Release-Download). Ausweichweg: npm @supabase/${pkg}@${CLI_VERSION}."
         prefix="${RUNNER_TEMP}/supabase-cli-npm"
         mkdir -p "$prefix"
-        npm install --no-save --no-audit --no-fund --ignore-scripts --prefix "$prefix" "@supabase/${pkg}@${CLI_VERSION}"
         bin_dir="${prefix}/node_modules/@supabase/${pkg}/bin"
-        test -x "${bin_dir}/supabase" || { echo "::error::${bin_dir}/supabase fehlt oder ist nicht ausführbar."; exit 1; }
+        if ! npm install --no-save --no-audit --no-fund --ignore-scripts --prefix "$prefix" "@supabase/${pkg}@${CLI_VERSION}" \
+          || [ ! -x "${bin_dir}/supabase" ]; then
+          echo "::error::Weder GitHub-Release noch npm liefern die Supabase CLI ${CLI_VERSION} (npm-Paket @supabase/${pkg} nicht installierbar oder ${bin_dir}/supabase fehlt)."
+          exit 1
+        fi
         echo "${bin_dir}" >> "$GITHUB_PATH"
 
     - name: CLI-Version prüfen
       shell: bash
       env:
         CLI_VERSION: ${{ inputs.version }}
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        CACHE_KEY: supabase-cli-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}
       run: |
         set -euo pipefail
-        # Die CLI hängt Hinweise (Update-Empfehlung) an die Ausgabe: ganze Ausgabe prüfen.
-        actual="$(supabase --version 2>&1)" || true
-        echo "supabase --version:"
-        echo "${actual}"
-        if ! printf '%s' "$actual" | grep -Eq "(^|[^0-9.])${CLI_VERSION//./\\.}([^0-9.]|$)"; then
-          echo "::error::Supabase CLI meldet nicht die Version ${CLI_VERSION} (Ausgabe siehe oben). Bezugsweg prüfen (Cache, setup-cli, npm)."
+        # Erste Zeile der Standardausgabe vergleichen; Hinweise der CLI (Update-Empfehlung) stehen danach.
+        actual="$(supabase --version 2>/dev/null | head -n 1 || true)"
+        echo "supabase --version: ${actual}"
+        if [ "$actual" != "$CLI_VERSION" ]; then
+          echo "::error::Supabase CLI meldet Version '${actual}', erwartet '${CLI_VERSION}'. Bezugsweg prüfen (Cache, setup-cli, npm)."
+          if [ "$CACHE_HIT" = "true" ]; then
+            echo "::error::Die Datei kam aus dem Cache. Cache entfernen: gh cache delete ${CACHE_KEY}"
+          fi
           exit 1
         fi
 
