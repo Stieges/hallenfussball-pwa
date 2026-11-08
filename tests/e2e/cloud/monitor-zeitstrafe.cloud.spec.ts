@@ -164,9 +164,12 @@ test.describe('Zeitstrafe am Monitor und auf der Zuschauer-Seite (echte Server-A
       await expect(olli.page.getByTestId('team-ergaenzen-away')).toHaveText('darf sich ergänzen');
       // @ZM-180: die ECHTE Server-Antwort trägt Strafe (mit Regel) und Tor – nicht Testdaten im Client
       const ereignisse = await oeffentlicheEreignisse(ids.matchId);
-      expect(ereignisse.map((e) => [e.type, e.team_id === ids.homeTeamId ? 'home' : 'away'])).toEqual([['TIME_PENALTY', 'away'], ['GOAL', 'home']]);
-      expect(ereignisse[0]).toMatchObject({ duration_seconds: 120, ends_on_goal: true, number: 5 });
-      expect(ereignisse[1].clock_ms).toBeGreaterThan(ereignisse[0].clock_ms ?? 0);
+      // Der Seed bringt ein Tor des Heimteams VOR der Strafe mit (es beendet sie nicht); danach Strafe und das neue Tor
+      expect(ereignisse.map((e) => [e.type, e.team_id === ids.homeTeamId ? 'home' : 'away'])).toEqual([['GOAL', 'home'], ['TIME_PENALTY', 'away'], ['GOAL', 'home']]);
+      const [seedTor, strafeNr5, torNachher] = ereignisse;
+      expect(strafeNr5).toMatchObject({ duration_seconds: 120, ends_on_goal: true, number: 5 });
+      expect(seedTor.clock_ms ?? 0).toBeLessThanOrEqual(strafeNr5.clock_ms ?? 0);
+      expect(torNachher.clock_ms).toBeGreaterThan(strafeNr5.clock_ms ?? 0);
 
       // @SL-044: Tor zurückgenommen → die Strafe läuft mit ihrer Restzeit weiter: Kreis zurück, Hinweis im Cockpit weg
       await olli.page.getByTestId('match-undo-button').click();
