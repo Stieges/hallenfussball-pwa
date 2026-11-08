@@ -18,13 +18,18 @@ export function fileSafeTitle(title: string): string {
   return name === '' ? FALLBACK_NAME : name;
 }
 
-/** Art im Dateinamen, übersetzt: „Spielplan“ und der Zusatz der Fassung ohne Ergebnisse („ohne-Ergebnisse“). */
-export interface ScheduleFileKind { plan: string; withoutResults: string }
+/** Art im Dateinamen, übersetzt: „Spielplan“, der Zusatz der Fassung ohne Ergebnisse („ohne-Ergebnisse“) und „Endstand“. */
+export interface ScheduleFileKind { plan: string; withoutResults: string; final?: string }
 
-/** `Hallencup_Nord_Spielplan_2026-11-14_1507.pdf`; Fassung `blank`: `Hallencup_Nord_Spielplan_ohne-Ergebnisse_2026-11-14_1507.pdf`. */
+/**
+ * `Hallencup_Nord_Spielplan_2026-11-14_1507.pdf`; Fassung `blank`: `Hallencup_Nord_Spielplan_ohne-Ergebnisse_2026-11-14_1507.pdf`;
+ * Fassung `final`: `Hallencup_Nord_Endstand_2026-11-14_1740.pdf` (Zeitpunkt = Abschluss, den der Aufrufer übergibt).
+ */
 export function schedulePdfFilename(title: string, now: Date, kinds: ScheduleFileKind, edition?: 'plan' | 'blank' | 'final'): string {
   const day = `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
-  const kind = edition === 'blank' ? `${fileSafeTitle(kinds.plan)}_${fileSafeTitle(kinds.withoutResults)}` : fileSafeTitle(kinds.plan);
+  const kind = edition === 'blank'
+    ? `${fileSafeTitle(kinds.plan)}_${fileSafeTitle(kinds.withoutResults)}`
+    : edition === 'final' && kinds.final !== undefined ? fileSafeTitle(kinds.final) : fileSafeTitle(kinds.plan);
   return `${fileSafeTitle(title)}_${kind}_${day}_${two(now.getHours())}${two(now.getMinutes())}.pdf`;
 }
 

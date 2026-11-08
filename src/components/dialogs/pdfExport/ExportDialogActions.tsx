@@ -14,13 +14,15 @@ export interface ExportDialogActionsProps {
   /** Wahl abbrechen: schließt den Dialog. */
   onCancel: () => void;
   onSave: () => void;
+  /** Die gewählte Karte ist nicht wählbar (etwa der Endstand lädt noch): kein Speichern. */
+  saveDisabled?: boolean;
   /** Hinweis abbrechen: zurück zur Wahl. */
   onBack: () => void;
   onSaveAnyway: () => void;
   onClose: () => void;
 }
 
-export const ExportDialogActions = ({ step, busy, failed, onCancel, onSave, onBack, onSaveAnyway, onClose }: ExportDialogActionsProps) => {
+export const ExportDialogActions = ({ step, busy, failed, onCancel, onSave, saveDisabled = false, onBack, onSaveAnyway, onClose }: ExportDialogActionsProps) => {
   const { t } = useTranslation('tournament');
   const closeRef = useRef<HTMLButtonElement>(null);
   // Nach dem Speichern liegt der Fokus auf „Schließen“, nicht auf dem Knopf, der gerade gespeichert hat
@@ -43,7 +45,7 @@ export const ExportDialogActions = ({ step, busy, failed, onCancel, onSave, onBa
   return (
     <DialogActions
       secondary={[{ label: t('pdfExport.cancel'), onClick: onCancel, disabled: busy, 'data-testid': 'pdf-cancel' }]}
-      primary={{ label: busy ? t('pdfExport.creating') : failed ? t('pdfExport.retry') : t('pdfExport.save'), onClick: onSave, disabled: busy, 'data-testid': 'pdf-save' }}
+      primary={{ label: busy ? t('pdfExport.creating') : failed ? t('pdfExport.retry') : t('pdfExport.save'), onClick: onSave, disabled: busy || saveDisabled, 'data-testid': 'pdf-save' }}
     />
   );
 };

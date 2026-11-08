@@ -13,6 +13,7 @@ import { buildNoticePdf } from '../../../lib/pdf/notice';
 import type { PdfHints } from '../../../lib/pdf/notes';
 import { toPdfInput } from '../../../lib/pdf/pdfInput';
 import type { PDFExportOptions } from '../../../lib/pdf/pdfOptions';
+import type { RankEntry } from '../../../lib/pdf/placement';
 import { buildSchedulePdf } from '../../../lib/pdf/schedulePdf';
 import { withTournamentState } from '../../../lib/pdf/tournamentState';
 import type { PdfAudience } from '../../../lib/pdf/visibility';
@@ -47,6 +48,11 @@ export interface BuildContext {
   graphics?: TournamentGraphics;
   /** Der Gerätespeicher ließ sich nicht lesen: das PDF entsteht ohne Grafiken, der Hinweis nennt es (@DR-024). */
   graphicsUnreadable?: boolean;
+  /**
+   * Gespeicherter Endstand des abgeschlossenen Turniers (@ET-045, nie neu gerechnet): Plätze und Abschlusszeitpunkt. Der Spielplan
+   * nennt damit den ganzen Endstand (@DR-009), der Endstand braucht ihn (@DR-011). Fehlt er, gibt es kein Endstand-PDF.
+   */
+  final?: { ranking: RankEntry[]; closedAt: Date };
 }
 
 export interface BuiltPdf {
@@ -59,16 +65,27 @@ export interface BuiltPdf {
 export type BuildResult = { ok: true; pdf: BuiltPdf } | { ok: false; reason: 'notShared' };
 
 export async function buildChoice(choice: PdfChoice, ctx: BuildContext): Promise<BuildResult> {
-  const { tournament, standings, audience, online, now } = ctx;
+  const { tournament, standings, audience, online, now, final } = ctx;
+  if (choice === 'final' && final === undefined) {
+    // Ohne gespeicherten Endstand kein Endstand-PDF (@DR-011): die Karte ist dann ausgegraut, hier nur die Sicherung
+    throw new Error('Endstand-PDF ohne gespeicherten Endstand');
+  }
+  if (choice === 'final' && (tournament.hideScoresForPublic || tournament.hideRankingsForPublic)) {
+    // @DR-050: ein PDF für alle zeigt ohne Ergebnisse oder Tabellen keine Plätze – dann gibt es kein Endstand-PDF (Karte ausgegraut)
+    throw new Error('Endstand-PDF ohne Plätze');
+  }
   const schedule = withTournamentState(ctx.schedule, tournament);
   const options: PDFExportOptions = {
     tournament,
-    audience,
+    // Das Endstand-PDF der Zuschauer-Seite ist „Mit Ergebnissen“ (@BM-041): es folgt nur den Schaltern, wie das der Turnierleitung
+    audience: choice === 'final' ? 'organizer' : audience,
     online,
     now,
     includeStandings: true,
     includeScores: choice !== 'blank',
-    edition: choice === 'blank' ? 'blank' : 'plan',
+    edition: choice === 'blank' ? 'blank' : choice === 'final' ? 'final' : 'plan',
+    // Nach dem Abschluss: Platzierung laut gespeichertem Endstand (@DR-009), im Endstand dazu die Abschlusszeile (@DR-011)
+    ...(final !== undefined && choice !== 'blank' ? { ranking: final.ranking, closed: true, closedAt: final.closedAt } : {}),
     viewerResultsHidden: tournament.hideScoresForPublic,
     ...(tournament.organizer?.trim() ? { organizerName: tournament.organizer } : {}),
     ...publicContactOption(tournament),
@@ -80,10 +97,6 @@ export async function buildChoice(choice: PdfChoice, ctx: BuildContext): Promise
   if (choice === 'notice') {
     const built = await buildNoticePdf(toPdfInput({ schedule, standings, options }));
     return built.ok ? { ok: true, pdf: { doc: built.doc, filename: built.filename, hints: withStoreHint(built.hints) } } : { ok: false, reason: built.reason };
-  }
-  if (choice === 'final') {
-    // Der Endstand wird erst mit C10 (A-19/A-21a) angeboten; die Karte ist bis dahin ausgegraut und nie wählbar.
-    throw new Error('Endstand-PDF ist noch nicht verfügbar');
   }
   const built = await buildSchedulePdf({ schedule, standings, options });
   return { ok: true, pdf: { doc: built.doc, filename: built.filename, hints: withStoreHint(built.hints) } };

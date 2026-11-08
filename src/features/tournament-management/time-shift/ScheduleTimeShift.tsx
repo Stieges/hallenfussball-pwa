@@ -32,6 +32,8 @@ interface ScheduleTimeShiftProps {
   /** Verschieben anbieten (Recht, nicht im Bearbeitungsmodus, nicht abgeschlossen) */
   enabled: boolean;
   canCreateNotice: boolean;
+  /** @DR-048: „Endstand“ für Turnierleitung, Co-Admin und Helfer (writeMatchData). */
+  canCreateFinal: boolean;
   children: ReactNode;
 }
 
@@ -57,7 +59,7 @@ const shiftButton: CSSProperties = {
   cursor: 'pointer',
 };
 
-export function ScheduleTimeShift({ tournament, schedule, standings, view, onTournamentUpdate, showSuccess, enabled, canCreateNotice, children }: ScheduleTimeShiftProps) {
+export function ScheduleTimeShift({ tournament, schedule, standings, view, onTournamentUpdate, showSuccess, enabled, canCreateNotice, canCreateFinal, children }: ScheduleTimeShiftProps) {
   const { t } = useTranslation('tournament');
   const shift = useTimeShift({ tournament, view, onTournamentUpdate, showSuccess });
   const [printing, setPrinting] = useState(false);
@@ -150,7 +152,7 @@ export function ScheduleTimeShift({ tournament, schedule, standings, view, onTou
           />
           <TimeShiftPreview isOpen={shift.step === 'preview'} kind="shift" plan={shift.plan} pairingOf={pairingOf} onConfirm={shift.confirm} onCancel={shift.close} />
           <TimeShiftPreview isOpen={shift.step === 'restore'} kind="restore" plan={shift.restorePlan} pairingOf={pairingOf} onConfirm={shift.confirmRestore} onCancel={shift.close} />
-          <PDFExportDialog isOpen={printing} onClose={() => setPrinting(false)} tournament={tournament} schedule={schedule} standings={standings} canCreateNotice={canCreateNotice} />
+          <PDFExportDialog isOpen={printing} onClose={() => setPrinting(false)} tournament={tournament} schedule={schedule} standings={standings} canCreateNotice={canCreateNotice} canCreateFinal={canCreateFinal} />
         </>
       )}
     </>

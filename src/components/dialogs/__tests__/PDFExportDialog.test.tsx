@@ -75,6 +75,7 @@ function renderToolbar(tournament: Tournament = hallencupTournament(SHARED)) {
         onRedistributeSR={noop} onRedistributeFields={noop} showSRButton={false} showFieldsButton={false}
         viewMode="table" onViewModeChange={noop}
         tournament={tournament} schedule={hallencupSchedule(tournament)} standings={[]}
+        canCreateNotice canCreateFinal
       />
     </MemoryRouter>,
   );
@@ -328,7 +329,7 @@ describe('G46 Der Dialog bleibt nach dem Speichern stehen', () => {
   it('„PDF gespeichert“ mit Dateiname, bis „Schließen“ getippt wird', async () => {
     const onClose = vi.fn();
     const tournament = hallencupTournament(SHARED);
-    render(<MemoryRouter><PDFExportDialog isOpen onClose={onClose} tournament={tournament} schedule={hallencupSchedule(tournament)} standings={[]} /></MemoryRouter>);
+    render(<MemoryRouter><PDFExportDialog isOpen onClose={onClose} tournament={tournament} schedule={hallencupSchedule(tournament)} standings={[]} canCreateNotice canCreateFinal /></MemoryRouter>);
     await save();
 
     expect(onClose).not.toHaveBeenCalled();
@@ -418,6 +419,7 @@ function renderToolbarWithRoutes(tournament: Tournament) {
                 onRedistributeSR={noop} onRedistributeFields={noop} showSRButton={false} showFieldsButton={false}
                 viewMode="table" onViewModeChange={noop}
                 tournament={tournament} schedule={hallencupSchedule(tournament)} standings={[]}
+                canCreateNotice canCreateFinal
               />
             </>
           }

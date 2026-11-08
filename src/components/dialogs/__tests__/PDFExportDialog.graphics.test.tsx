@@ -68,7 +68,7 @@ beforeEach(() => {
   vi.mocked(notice.buildNoticePdf).mockClear();
 });
 
-const renderDialog = () => render(<MemoryRouter><PDFExportDialog isOpen onClose={vi.fn()} tournament={tournament} schedule={schedule} standings={[]} /></MemoryRouter>);
+const renderDialog = () => render(<MemoryRouter><PDFExportDialog isOpen onClose={vi.fn()} tournament={tournament} schedule={schedule} standings={[]} canCreateNotice canCreateFinal /></MemoryRouter>);
 const speichern = async (): Promise<void> => {
   fireEvent.click(screen.getByTestId('pdf-save'));
   await waitFor(() => expect(screen.queryByTestId('pdf-save')).not.toBeInTheDocument(), { timeout: 20000 });

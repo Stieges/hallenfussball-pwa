@@ -68,7 +68,7 @@ describe('F-01 Kopf der Turnierseite', () => {
 
   it('@OB-022 das Zahnrad ist mindestens 44 × 44 groß', () => {
     kopf();
-    const zahnrad = screen.getByTitle('Admin Center öffnen');
+    const zahnrad = screen.getByTestId('management-admin-entry');
     expect(zahnrad.style.minHeight).toBe(cssVars.touchTargets.minimum);
     expect(zahnrad.style.minWidth).toBe(cssVars.touchTargets.minimum);
   });

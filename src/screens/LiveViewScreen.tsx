@@ -45,6 +45,7 @@ import { PublicConnectionHint } from '../features/public-view/components/PublicC
 import { showsFinalStandings, showsKidsEnded } from '../features/public-view/showsFinalStandings';
 import { PublicEndedBadge, PublicFinalStandingsBlock } from '../features/public-view/components/PublicFinalStandings';
 import { MyTeamBar } from '../features/public-view/components/MyTeamBar';
+import { PublicPdfRow } from '../features/public-view/components/PublicPdfRow';
 import { PublicFilterBar } from '../features/public-view/components/PublicFilterBar';
 import { TeamSelectorDialog } from '../features/public-view/components/TeamSelectorDialog';
 import { joinMeta } from '../core/view';
@@ -137,7 +138,9 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   const filteredStandings = visibleStandings(view.rules, currentStandings);
   const myTeamLabel = myTeamName(tournament, myTeamId);
   const groups = uniqueGroups(tournament);
-  const ended = showsFinalStandings(view, finalStandings) || showsKidsEnded(tournament, view);
+  const finalShown = showsFinalStandings(view, finalStandings);
+  const ended = finalShown || showsKidsEnded(tournament, view);
+  const pdfRow = <PublicPdfRow tournament={tournament} schedule={schedule} standings={currentStandings} view={view} finalStandings={finalStandings} />;
 
   return (
     <NowSourceContext.Provider value={nowMs}>
@@ -186,6 +189,8 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
         {tab === 'schedule' && (
           <PublicFinalStandingsBlock tournament={tournament} view={view} finalStandings={finalStandings} />
         )}
+        {/* „Als PDF“ (@BM-057, @BM-041): mit Endstand direkt darunter, sonst unter dem Spielplan */}
+        {tab !== 'settings' && finalShown && pdfRow}
 
         {/* "Mein Team" Bar - only on schedule tab */}
         {tab === 'schedule' && (
@@ -238,6 +243,7 @@ const LiveViewScreenContent: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
                 editable={false}
               />
             </Card>
+            {!finalShown && pdfRow}
           </>
         )}
 
