@@ -246,6 +246,20 @@ describe('@HT-024 Gegenbeispiele: keine Hymne ohne sicheres, neues Tor', () => {
     expect(torLauf((j) => [felder(j)], endeReg + 10_000, endeReg + 60_000)).toEqual([]);
   });
 
+  it('Absicherung Phase (Fixrunde 1): ein Tor in einem Stand mit Phase „Strafstoßschießen“ → keine Hymne', () => {
+    // Die Engine lehnt GOAL im Strafstoßschießen ab (INVALID_TRANSITION, geprüft 08.11.); der Stand wird deshalb von Hand
+    // gebaut: laufende Uhr, aber Phase shootout. So sichert der Test die Phasen-Prüfung in `imSpiel` allein ab.
+    const ohne = stateAus(zweiteHalbzeit);
+    const mit = stateAus(mitTor);
+    const vor = stand({ ...ohne, phase: 'shootout' }, CTX_11, 200, ENDE_A2 - 120_000);
+    const nach = stand({ ...mit, phase: 'shootout' }, CTX_11, 200, t1.at + LAUFZEIT_MS);
+    expect(mit.status).toBe('running');
+    expect(torLauf((j) => [j < t1.at + LAUFZEIT_MS ? vor : nach], t1.at - 5000, t1.at + 10_000)).toEqual([]);
+    // Gegenprobe: derselbe Stand in der regulären Phase tönt
+    const regulaer = (j: number) => (j < t1.at + LAUFZEIT_MS ? { ...vor, state: ohne } : { ...nach, state: mit });
+    expect(starts(torLauf((j) => [regulaer(j)], t1.at - 5000, t1.at + 10_000))).toHaveLength(1);
+  });
+
   it('ein Tor nach Ablauf der Spielzeit (00:00, der Abpfiff ist noch nicht im Stand) → keine Hymne nach dem Ende', () => {
     const spaet = tor(ENDE_A2 + 200);
     const felder = ausServer([{ ab: ENDE_A2 - 10_000, log: zweiteHalbzeit }, { ab: spaet.at, log: [...zweiteHalbzeit, spaet] }]);

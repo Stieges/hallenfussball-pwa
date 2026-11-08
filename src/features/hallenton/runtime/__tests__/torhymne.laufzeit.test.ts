@@ -287,6 +287,35 @@ describe('@HT-024 Gegenbeispiele in der Laufzeit', () => {
     expect(tab.spieler.zustand()).toBe('ready');
   });
 
+  it('Fixrunde 1: die erste Ladung von „Hymne A“ scheitert (WLAN-Aussetzer), eine spätere gelingt → das nächste Tor spielt „Hymne A“; höchstens ein Versuch je 30 s', async () => {
+    const t2 = tor(t1.at + 45_000); // noch vor dem Ende (t1 liegt 60 s vor Schluss)
+    const stufen: Stufe[] = [{ ab: T0, log: zweiteHalbzeit }, { ab: t1.at, log: mitTor }, { ab: t2.at, log: [...mitTor, t2] }];
+    const tab = new Tab({ start: t1.at - 2000, torWahl: { felder: [1], hymnen: [HYMNE.a] } });
+    tab.nichtLadbar.add(HYMNE.a);
+    tab.ffs.staendeZu = (j) => [feldAus(stufen)(j)];
+    await tab.starte();
+    await tab.vor(10_000);
+    expect(tab.hymnen()).toEqual([]); // Tor 1: keine spielbare Hymne
+    tab.nichtLadbar.delete(HYMNE.a); // das WLAN ist zurück
+    await tab.vor(t2.at - tab.uhr.jetzt() + 10_000);
+    expect(tab.hymnen().map((x) => x.hymne)).toEqual(['a']);
+    erwarteBeginnNach(tab.hymnen()[0].at, t2.at);
+    const versuche = tab.geholt.filter((u) => u === HYMNE.a).length;
+    expect(versuche).toBeGreaterThanOrEqual(2);
+    expect(versuche).toBeLessThanOrEqual(1 + Math.ceil((t2.at - t1.at + 12_000) / 30_000)); // kein Dauerfeuer
+  });
+
+  it('Fixrunde 1: eine dauerhaft nicht ladbare Hymne wird höchstens alle 30 s erneut geholt; spielbare werden nicht neu geholt', async () => {
+    const tab = new Tab({ start: t1.at - 2000, torWahl: { felder: [1], hymnen: [HYMNE.kaputt, HYMNE.b] } });
+    tab.ffs.staendeZu = (j) => [feldAus([{ ab: T0, log: zweiteHalbzeit }])(j)];
+    await tab.starte();
+    await tab.vor(95_000);
+    const kaputt = tab.geholt.filter((u) => u === HYMNE.kaputt).length;
+    expect(kaputt).toBeGreaterThanOrEqual(3); // erster Versuch + Nachladen nach 30 s und 60 s
+    expect(kaputt).toBeLessThanOrEqual(4);
+    expect(tab.geholt.filter((u) => u === HYMNE.b)).toHaveLength(1);
+  });
+
   it('Ausschalten während einer Hymne → die Hymne verstummt sofort', async () => {
     const tab = await lautsprecher(t1.at - 2000, (j) => [feldAus([{ ab: T0, log: zweiteHalbzeit }, { ab: t1.at, log: mitTor }])(j)]);
     await tab.vor(4000);

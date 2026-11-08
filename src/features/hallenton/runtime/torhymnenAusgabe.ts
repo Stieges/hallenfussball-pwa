@@ -9,6 +9,8 @@
  * - Jeder andere Ton des Geräts (End-Ton, Testton, „Anhören“) beendet die Hymne genau zu seinem Beginn – auch einer, der
  *   schon vor der Hymne geplant war; wird er abgebrochen, gilt wieder die harte Grenze (`toeneGeaendert`).
  * - `stoppen()`: von außen sofort (Rücknahme, Ende, Abschalten).
+ * - `nachladen()` (Fixrunde 1): nur die nicht spielbaren Hymnen der aktuellen Liste erneut holen (z. B. nach kurzem
+ *   WLAN-Aussetzer beim Aktivieren); den Abstand der Versuche hält die Steuerung.
  * Alle Zeiten Audiozeit (s).
  */
 import { TORHYMNE_MAX_MS } from '../../../core/hallenton';
@@ -25,6 +27,8 @@ export interface AndererTon {
 export interface TorhymnenAusgabe {
   /** Lädt die Liste; Ergebnis je Hymne: spielbar? Ein späterer Aufruf ersetzt einen früheren. */
   laden(urls: readonly string[]): Promise<readonly boolean[]>;
+  /** Nur die nicht spielbaren Hymnen der zuletzt geladenen Liste erneut holen; Ergebnis wie `laden`. */
+  nachladen(): Promise<readonly boolean[]>;
   /** Die zuletzt geladene Liste (Adressen) und je Hymne, ob sie spielbar ist. */
   liste(): readonly string[];
   spielbar(): readonly boolean[];
@@ -53,6 +57,15 @@ export function istHttps(url: string): boolean {
     return new URL(url).protocol === 'https:';
   } catch {
     return false;
+  }
+}
+
+/** `stop()` wie in `hallTonSpieler.abbrechen` abgesichert: ein Wurf darf nie den Weg eines End-Tons stören (Regel 4). */
+function stopUm(quelle: QuellKnoten, wann: number): void {
+  try {
+    quelle.stop(wann);
+  } catch {
+    // schon beendet
   }
 }
 
@@ -89,7 +102,7 @@ export function erzeugeTorhymnenAusgabe(deps: TorhymnenAusgabeDeps): TorhymnenAu
     }
     if (ziel !== laufend.stopAt) {
       laufend.stopAt = ziel;
-      laufend.quelle.stop(ziel); // der letzte Aufruf gilt (Web Audio), solange die Quelle noch klingt
+      stopUm(laufend.quelle, ziel); // der letzte Aufruf gilt (Web Audio), solange die Quelle noch klingt
     }
   };
 
@@ -100,7 +113,7 @@ export function erzeugeTorhymnenAusgabe(deps: TorhymnenAusgabeDeps): TorhymnenAu
     const jetzt = deps.kontext().currentTime;
     laufend.gestoppt = true;
     laufend.stopAt = jetzt;
-    laufend.quelle.stop(jetzt);
+    stopUm(laufend.quelle, jetzt);
   };
 
   return {
@@ -109,6 +122,15 @@ export function erzeugeTorhymnenAusgabe(deps: TorhymnenAusgabeDeps): TorhymnenAu
       const neu = await Promise.all(urls.map((url) => (istHttps(url) ? deps.dekodiere(url) : Promise.resolve(null))));
       if (meine === runde) {
         liste = [...urls];
+        puffer = neu;
+      }
+      return neu.map((p) => p !== null);
+    },
+    async nachladen() {
+      const meine = runde;
+      const urls = liste;
+      const neu = await Promise.all(puffer.map((p, i): Promise<AudioPuffer | null> => (p ? Promise.resolve(p) : istHttps(urls[i]) ? deps.dekodiere(urls[i]) : Promise.resolve(null))));
+      if (meine === runde && urls === liste) {
         puffer = neu;
       }
       return neu.map((p) => p !== null);

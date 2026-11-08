@@ -134,6 +134,31 @@ describe('Torhymnen im Spieler', () => {
     expect(letzterStop(hymne ?? { stops: [] })).toBe(12.25);
   });
 
+  it('Fixrunde 1: wirft stop() der Hymne (Browser), bleibt der Weg des End-Tons heil: der Abpfiff wird trotzdem geplant', async () => {
+    const { spieler, kontext } = await bereit();
+    await spieler.hymnen.laden([A]);
+    const original = kontext.createBufferSource.bind(kontext);
+    let werfen = false;
+    kontext.createBufferSource = () => {
+      const quelle = original();
+      const stop = quelle.stop;
+      quelle.stop = (wann?: number) => {
+        if (werfen && quelle.buffer?.duration === 8) { // nur die Quelle der Hymne
+          throw new Error('InvalidStateError');
+        }
+        stop(wann);
+      };
+      return quelle;
+    };
+    kontext.currentTime = 10;
+    expect(spieler.hymnen.spielen(0)).toBe(true);
+    werfen = true;
+    expect(() => spieler.planen('ende', 'abpfiff', 12)).not.toThrow();
+    expect(spieler.geplant()).toContain('ende');
+    werfen = true;
+    expect(() => spieler.hymnen.stoppen()).not.toThrow();
+  });
+
   it('eine neue Hymne („Anhören“) ersetzt die laufende', async () => {
     const { spieler, kontext } = await bereit();
     await spieler.hymnen.laden([A, B]);

@@ -123,6 +123,9 @@ export class Tab {
   readonly lage: Lage | null;
   /** Probe der Geräteuhr (`Date.now`, `performance.now`) für den Uhrsprung. */
   wandVersatz = 0;
+  /** Adressen, deren Abruf gerade scheitert (z. B. WLAN-Aussetzer), und alle Abrufe (H3c Fixrunde 1). */
+  readonly nichtLadbar = new Set<string>();
+  readonly geholt: string[] = [];
   syncAufrufe = 0;
   feldStandErzeugt = 0;
   private readonly t0: number;
@@ -136,7 +139,10 @@ export class Tab {
     Object.defineProperty(this.kontext, 'currentTime', { get: () => (this.uhr.jetzt() - this.t0) / 1000 });
     this.spieler = erzeugeHallTonSpieler({
       erzeugeKontext: () => this.kontext,
-      ladeDaten: (url) => Promise.resolve(tonDaten(DAUER[url] ?? 255)),
+      ladeDaten: (url) => {
+        this.geholt.push(url);
+        return this.nichtLadbar.has(url) ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(tonDaten(DAUER[url] ?? 255));
+      },
       speicher: o.speicher ?? null,
     });
     const kanalVersatz = o.kanalVersatz ?? (() => 0);
