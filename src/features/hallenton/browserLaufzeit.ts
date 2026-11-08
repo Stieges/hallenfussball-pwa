@@ -10,6 +10,7 @@
  * - Tonwahl (Fixrunde 1): die Abpfiff-Hupe aus derselben lokalen Turnierkopie (`matchCockpitSettings.soundId`, ohne Engine
  *   und Router), Halbzeit-Ton und eigene Töne aus `hall_sound_status` (`tonWahl.ts`); bis dahin „Hupe 1“. H3b-3: nach jedem
  *   Lebenszeichen des tönenden Tabs neu gelesen (k-neu-2), vor „Anhören“ in einem nicht aktivierten Tab ebenso (k4-neu-2).
+ *   H3c: „Ton bei Tor“ und Torhymnen aus derselben Antwort (`bekannteTorWahl`).
  * - H3b-3: Lebenszeichen des Lautsprechers (`lautsprecherLebenszeichen.ts`, Melde-Sperre `hallenton-melden`).
  */
 import { getDeviceId } from '../../core/device/deviceId';
@@ -29,7 +30,8 @@ import { erzeugeHallLautsprecherLaufzeit, type HallLautsprecherLaufzeit } from '
 import { browserKanalSpeicher, erzeugeLautsprecherKanal, KANAL_NAME, type LautsprecherKanal, type NachrichtenKanal } from './runtime/lautsprecherKanal';
 import { planAusTurnier } from './runtime/lokalerSpielplan';
 import { erzeugeBrowserTaktQuelle } from './runtime/taktQuelle';
-import { tonWahlAus } from './runtime/tonWahl';
+import { tonWahlAus, torWahlAus } from './runtime/tonWahl';
+import type { TorWahl } from './runtime/torhymnenSteuerung';
 import { einzelnZugleich } from './runtime/tonWahlWechsel';
 import { echterZeitgeber } from './runtime/zeitgeber';
 
@@ -73,6 +75,24 @@ export async function leseTonWahl(turnierId: string, ladeTurnier: LadeTurnier, {
     zuletztGelesen.set(turnierId, status.settings);
   }
   return tonWahlAus(turnier?.matchCockpitSettings?.soundId, zuletztGelesen.get(turnierId) ?? null, oeffentlicheUrl);
+}
+
+/** „Ton bei Tor“ und Torhymnen nach der zuletzt vom Server gelesenen Tonwahl (H3c, @HT-024); vorher keine. */
+export function bekannteTorWahl(turnierId: string): TorWahl {
+  return torWahlAus(zuletztGelesen.get(turnierId) ?? null, oeffentlicheUrl);
+}
+
+/**
+ * „Anhören“ der Torhymne ohne Laufzeit: kennt das Gerät schon Hymnen, sofort mit diesen (neu lesen im Hintergrund, K5);
+ * sonst einmal vom Server lesen – gerade hochgeladene Hymnen sollen ohne Neuladen hörbar sein.
+ */
+export async function leseTorWahlZumAnhoeren(turnierId: string, ladeTurnier: LadeTurnier): Promise<TorWahl> {
+  const bekannt = bekannteTorWahl(turnierId);
+  const lesen = leseTonWahl(turnierId, ladeTurnier).catch(() => undefined);
+  if (bekannt.hymnen.length === 0) {
+    await lesen;
+  }
+  return bekannt.hymnen.length > 0 ? bekannt : bekannteTorWahl(turnierId);
 }
 
 /** K5: sofort mit der lokal bekannten Wahl, die Wahl vom Server im Hintergrund neu lesen. */
@@ -124,11 +144,13 @@ export function erzeugeBrowserLaufzeit({ einschaltung, engine, ladeTurnier }: Br
       neuLesen();
     },
     leseTonWahl: () => leseTonWahlSofort(turnierId, ladeTurnier),
+    leseTorWahl: () => bekannteTorWahl(turnierId),
   });
   /** Nach jedem Lebenszeichen des tönenden Tabs; eine laufende Abfrage wird nicht verdoppelt (W2). */
   const neuLesen = einzelnZugleich(() => leseTonWahl(turnierId, ladeTurnier).then((wahl) => {
     if (!beendet) {
       laufzeit.setzeTonWahl(wahl);
+      laufzeit.setzeTorWahl(bekannteTorWahl(turnierId));
     }
   }));
   const lebenszeichen = erzeugeLebenszeichen({

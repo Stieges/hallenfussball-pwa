@@ -207,6 +207,23 @@ describe('Regel 1 – abgelöst oder abgemeldet: lokal abschalten, kein Ton dana
     expect(a.tab.laufzeit.getSnapshot().rolle).toBe('still');
   });
 
+  it('@HT-046 Turnierende am Server (20261123_001: Lebenszeichen 55000) → still abschalten, kein Ton und keine weiteren Lebenszeichen', async () => {
+    const { server, tab } = lage();
+    const a = tab('A');
+    await a.starte();
+    await a.vor(1000);
+    const vorher = lebenszeichenVon(server, 'tabA');
+    expect(vorher).toBeGreaterThanOrEqual(1);
+    server.turnierBeendet = true; // die lokale Turnierkopie weiß davon noch nichts
+    await a.vor(6000);
+    expect(a.tab.laufzeit.getSnapshot().rolle).toBe('still');
+    expect(a.fehler).toContain('turnier_beendet');
+    const aufrufe = server.aufrufe.filter((f) => f === 'hall_speaker_heartbeat').length;
+    await a.vor(30_000);
+    expect(server.aufrufe.filter((f) => f === 'hall_speaker_heartbeat').length).toBe(aufrufe);
+    expect(a.tab.toene()).toEqual([]);
+  });
+
   it('K2 kein Recht mehr (Co-Admin entfernt): dreimal in Folge → still wie ein Gast, keine weiteren Lebenszeichen', async () => {
     const { server, tab } = lage();
     const a = tab('A');

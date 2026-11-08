@@ -8,10 +8,10 @@
  * - Ein geänderter Zustand meldet sofort (höchstens 1/s), etwa `background` aus der Wache im Hauptthread (@HT-014).
  * Antwort:
  * - `superseded`/`unassigned` (Regel 1): lokal abschalten (`abgeloest`, kein Ton danach); die übrigen Felder bleiben.
- * - Turnierende (Fixrunde 1, W1): Der Server antwortet auch danach `ok` (kein `hall_require_open` – die Brief-Annahme „55000“
- *   traf nicht zu). Jeder Tab prüft höchstens alle 30 s die lokale Turnierkopie (`turnierBeendet`) und schaltet still ab,
- *   auch der wartende; das erste Lebenszeichen wartet auf die erste Prüfung, höchstens 2 s (N1 aus H3b-3: kehrt das Lesen
- *   nicht zurück, gilt „nicht beendet“). 55000 bleibt als Schutz.
+ * - Turnierende (Fixrunde 1, W1): Seit `20261123_001_hallenton_torhymne.sql` antwortet der Server nach dem Ende 55000
+ *   (`hall_require_open`) → `turnier_beendet` → still abschalten. Zusätzlich prüft jeder Tab höchstens alle 30 s die lokale
+ *   Turnierkopie (`turnierBeendet`) und schaltet still ab, auch der wartende; das erste Lebenszeichen wartet auf die erste
+ *   Prüfung, höchstens 2 s (N1 aus H3b-3: kehrt das Lesen nicht zurück, gilt „nicht beendet“).
  * - `kein_recht` dreimal in Folge: still wie ein Gast; jeder Fehlergrund geht an `beiFehler`, ein Erfolg setzt ihn zurück (K2).
  * - Offener Testton (Serverzeit + Laufzeit ≤ 10 s, nicht schon gespielt – Speicher und Instanz, K1): nur der tönende Tab spielt
  *   ihn einmal, dann `hall_test_tone_ack`; eine verlorene Quittung wird ohne zweiten Ton nachgeholt. Nie aus Kanal-Inhalten
@@ -236,7 +236,7 @@ export function erzeugeLebenszeichen(d: LebenszeichenDeps): Lebenszeichen {
     keinRechtInFolge = !antwort.ok && antwort.grund === 'kein_recht' ? keinRechtInFolge + 1 : 0;
     if (!antwort.ok) {
       if (antwort.grund === 'turnier_beendet' || keinRechtInFolge >= KEIN_RECHT_GRENZE) {
-        d.laufzeit.stillAbschalten(); // 55000 als Schutz; kein Recht mehr wie ein Gast
+        d.laufzeit.stillAbschalten(); // 55000 nach dem Turnierende; kein Recht mehr wie ein Gast
       }
       return;
     }
