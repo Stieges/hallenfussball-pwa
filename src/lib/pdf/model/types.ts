@@ -50,8 +50,8 @@ export interface WriteLine extends HLine { kind: WriteLineKind }
 export type RuleKind = 'hour' | 'round' | 'head' | 'tableHead' | 'foot';
 export interface RuleLine extends HLine { kind: RuleKind }
 
-/** Helle Fläche im Zebra-Ton (@DR-001: ≥ 12 % Schwarz). `facts` hat die Ecken `printZebra.factsRadius`. */
-export interface Fill extends Rect { kind: 'zebra' | 'facts' | 'tableHead' }
+/** Helle Fläche im Zebra-Ton (@DR-001: ≥ 12 % Schwarz). `facts` hat die Ecken `printZebra.factsRadius`; `column` hinterlegt eine Spalte (Punkte, Ergebnis im Endstand). */
+export interface Fill extends Rect { kind: 'zebra' | 'facts' | 'tableHead' | 'column' }
 
 /** Antippbare Fläche mit Ziel (@DR-038). Ohne Online-Teilen gibt es keine. */
 export interface LinkArea extends Rect { url: string }
@@ -175,13 +175,17 @@ export interface FinalsBlock extends BlockBase {
 export interface Segment { x1: number; y1: number; x2: number; y2: number }
 
 /**
- * Gruppentabelle (@DR-035), fertig vermessen: Kopf- und Zebra-Flächen, Raster (nur in der Fassung ohne Ergebnisse,
+ * Tabelle mit Raster, fertig vermessen: Gruppentabelle (@DR-035), im Endstand auch Finalrunde (@DR-054) und Seite „Siegerehrung“ (@DR-052). Kopf-, Spalten- und Zebra-Flächen, Raster (in beiden Fassungen,
  * `grid`, grau) und alle Texte in Lesereihenfolge (Kopf, dann Zeile für Zeile). `group` trägt das Gruppenzeichen im Kopf.
  */
 export interface StandingsTableBlock extends BlockBase {
   kind: 'standingsTable';
   fills: Fill[];
   grid: Segment[];
+  /** Linien in Akzentfarbe (1,5 pt, `printRule.round`) auf der Grenze zwischen Runden der Finalrunde im Endstand (@DR-054). */
+  accent?: Segment[];
+  /** Kräftige schwarze Linien (1,5 pt) unter dem Kopf der Torschützenliste (@DR-052). */
+  heavy?: Segment[];
   group?: GroupMark;
   runs: TextRun[];
 }
@@ -220,7 +224,7 @@ export type Block =
 export interface FooterModel { rule: RuleLine; runs: TextRun[] }
 
 /** Abschnitt, der oben auf einer Seite beginnt: bestimmt die Zeile „… · Tabellen“ im Kurzkopf der Folgeseiten. */
-export type PageSection = 'matches' | 'tables' | 'finals' | 'ranking';
+export type PageSection = 'matches' | 'tables' | 'finals' | 'ranking' | 'ceremony';
 
 export interface PageModel {
   /** Seitennummer ab 1. */

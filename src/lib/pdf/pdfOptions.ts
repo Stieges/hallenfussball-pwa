@@ -1,6 +1,7 @@
 /**
  * Optionen des Spielplan-PDFs (`schedulePdf.ts`). Nur Typen.
  */
+import type { ScorerRow } from '../../core/standings/finalStandings/types';
 import type { Tournament } from '../../types/tournament';
 import type { LogoImage } from '../images/logoBytes';
 import type { PdfOrientation } from './layout';
@@ -46,6 +47,11 @@ export interface PDFExportOptions {
    * Bis A-19/A-21a fehlen beide: die Platzierung bleibt offen. Die Fassung zum Ausfüllen zeigt nie einen Endstand.
    */
   ranking?: RankEntry[];
+  /**
+   * Torschützenliste des gespeicherten Endstands (@ET-045, nie neu gerechnet) für die Seite „Siegerehrung“ des Endstand-PDFs
+   * (@DR-052). Ohne Spieler mit Rückennummer gibt es keine Liste und keine Überschrift. Nur die Fassung `final` zeigt sie.
+   */
+  scorers?: ScorerRow[];
   closed?: boolean;
   /** Zeitpunkt des Stands in der Fußzeile und im Dateinamen. Vorgabe: jetzt. Tests reichen einen festen Zeitpunkt durch. */
   now?: Date;

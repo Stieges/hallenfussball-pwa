@@ -11,7 +11,9 @@ import type { Standing, Team } from '../../../types/tournament';
 import { printColumns, printFont, printType, printUnit } from '../../../design-tokens/print';
 import { printFinals, printGroupMark, printMatchRow, printMatchTable, printStandings, printTail, printWriteLine } from '../../../design-tokens/print-sheet';
 import type { RankEntry } from '../placement';
+import { printEndTable } from '../../../design-tokens/print-endstand';
 import type { ModelEnv } from './env';
+import { endstandColumnStyles, tiebreakCriteria } from './endstandTable';
 import { wrapName } from './nameLines';
 import type { Placeable } from './sectionFlow';
 import { advanceMm, ascent, centeredBaseline, descent, run } from './text';
@@ -57,7 +59,7 @@ function groupsOf(teams: readonly Team[], single: boolean): string[] {
 }
 
 /** Eine Tabelle als Baustein: Höhe vorab, Block ab `top`. */
-function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 'shape'> & { code: string } | undefined, rows: TableRow[], blank: boolean): Placeable {
+function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 'shape'> & { code: string } | undefined, rows: TableRow[], blank: boolean, emphasis = false): Placeable {
   const { geo, t } = env.source;
   const cols = columnsOf(geo.left, geo.contentWidth);
   const col = (key: Key): { x: number; w: number } => cols.find(c => c.key === key) ?? { x: 0, w: 0 };
@@ -68,6 +70,8 @@ function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 's
   const names = rows.map(row => wrapName(row.name, nameWidth, printType.body, env.measure));
   const rowH = Math.max(printStandings.rowMin, Math.max(1, ...names.map(lines => lines.length)) * adv + 2 * printStandings.rowPad);
   const height = printStandings.headHeight + rows.length * rowH;
+  // Endstand (@DR-051): Platz und Punkte am größten, übrige Zahlen nach der Wertung abgestuft, Spalte „Punkte“ hinterlegt
+  const styles = emphasis ? endstandColumnStyles(env.rules.placementLogic) : undefined;
   const labels: Record<Key, string> = { pos: t.pos, team: caption, played: t.played, won: t.won, drawn: t.drawn, lost: t.lost, goals: t.goals, diff: t.diff, points: t.points };
   return {
     height,
@@ -87,9 +91,14 @@ function tablePlaceable(env: ModelEnv, caption: string, mark: Pick<GroupMark, 's
           } else if (c.key === 'goals' && blank) {
             runs.push(run(':', c.x + c.w / 2, mid + printFont.colonMidEm * printStandings.colonPt * printUnit.mmPerPt, printStandings.colonPt, 'bold', 'center'));
           } else if (row.cells[k] !== '') {
-            runs.push(run(row.cells[k], c.x + c.w / 2, centeredBaseline(mid, printType.body), printType.body, c.key === 'goals' ? 'bold' : 'normal', 'center'));
+            const style = styles?.[c.key];
+            const size = style?.pt ?? printType.body;
+            runs.push(run(row.cells[k], c.x + c.w / 2, centeredBaseline(mid, size), size, style?.weight ?? (c.key === 'goals' ? 'bold' : 'normal'), 'center'));
           }
         });
+        if (styles) {
+          fills.push({ kind: 'column', x: col('points').x, y, w: col('points').w, h: rowH });
+        }
         y += rowH;
       });
       // Graues Raster in beiden Fassungen, vor dem ersten Ergebnis wie danach (@DR-035); die Zeilen trennt das Raster, ohne Zebra
@@ -140,8 +149,24 @@ export function tableParts(env: ModelEnv, finalOrder: RankEntry[] | undefined): 
       name: standing.team.name,
       cells: valuesOf(standing, String(finalOrder ? placeOf(standing.team.id) : standing.place ?? i + 1), filled),
     }));
-    return tablePlaceable(env, caption, mark, rows, false);
+    return tablePlaceable(env, caption, mark, rows, false, edition === 'final');
   });
+}
+
+/**
+ * Zeile „Wertung: Punkte · Tordifferenz · Tore“ unter den Tabellen des Endstands (@DR-051), in der Reihenfolge der Regel des Turniers.
+ * Jede Zeile des Umbruchs ist ein Textstück; die Höhe zählt nur die Schrift, den Abstand zur Tabelle setzt die Seitenplanung.
+ */
+export function wertungHintPlaceable(env: ModelEnv): Placeable {
+  const { geo, t } = env.source;
+  const text = t.tiebreakHint(tiebreakCriteria(env.rules.placementLogic, t.rules.criterion).join(t.rules.join));
+  const lines = wrapName(text, geo.contentWidth, printEndTable.hintPt, env.measure);
+  const adv = advanceMm(printEndTable.hintPt, printEndTable.hintLineHeight);
+  const height = lines.length * adv;
+  return {
+    height,
+    build: top => [{ kind: 'text', top, height, runs: lines.map((line, i) => run(line, geo.left, centeredBaseline(top + (i + 1 / 2) * adv, printEndTable.hintPt), printEndTable.hintPt, 'normal')) }],
+  };
 }
 
 function groupDisplayName(env: ModelEnv, group: string): string {

@@ -4,52 +4,16 @@
  * Die Zebra-Zeilen zählen über alle Runden durch. Passt die Finalrunde nicht auf eine Seite, bricht sie zwischen zwei Runden um und
  * der Spaltenkopf wiederholt sich.
  */
-import { printMetrics, printType } from '../../../design-tokens/print';
 import { printFinals, printMatchTable, printRule, printZebra } from '../../../design-tokens/print-sheet';
-import { koLines } from '../rules';
-import { printState, resultMarkText } from '../matchResult';
-import { sideInfo } from '../matchSides';
 import type { StatefulMatch } from '../tournamentState';
 import { finalRounds, roundTitle, smallKindsFor } from './finalRounds';
 import { refereeWidthOf, type ModelEnv } from './env';
 import { buildFinalsRow, finalsRowMetrics } from './finalsRows';
-import { buildHead, layoutColumns, smallBeside, type RowSource } from './matchRows';
-import { wrapName } from './nameLines';
+import { buildHead, layoutColumns, smallBeside } from './matchRows';
+import { koBlock, sourceOf } from './finalsSource';
 import type { Placeable, Splittable } from './sectionFlow';
-import { ascent, centeredBaseline, run } from './text';
-import type { Block, ColumnKey, FinalsBlock, FinalsRoundModel, TextBlock } from './types';
-
-function sourceOf(env: ModelEnv, match: StatefulMatch, small: RowSource['small']): RowSource {
-  const { t, input } = env.source;
-  const state = printState(match, { edition: input.edition, results: env.includeScores });
-  const markText = resultMarkText(state, t);
-  const home = sideInfo(match, 'A', env.sideCtx);
-  const away = sideInfo(match, 'B', env.sideCtx);
-  return {
-    matchId: match.id,
-    number: match.matchNumber,
-    time: match.time,
-    hour: 0,
-    ...(input.schedule.numberOfFields > 1 ? { field: String(match.field) } : {}),
-    home: 'team' in home ? home.team : '',
-    away: 'team' in away ? away.team : '',
-    ...('origin' in home ? { homeOrigin: home.origin } : {}),
-    ...('origin' in away ? { awayOrigin: away.origin } : {}),
-    state,
-    ...(markText === undefined ? {} : { markText }),
-    referee: env.refLabel(match),
-    small,
-  };
-}
-
-/** K.-o.-Zeilen über der Finalrunde, je Zeile umbrochen (@DR-015). */
-function koBlock(env: ModelEnv, top: number): { block: TextBlock; height: number } {
-  const { geo, t } = env.source;
-  const lines = koLines(env.rules, t).flatMap(line => wrapName(line, geo.contentWidth, printType.note, env.measure));
-  const runs = lines.map((text, i) => run(text, geo.left, top + ascent(printType.note) + i * printMetrics.koLineAdvance, printType.note, 'normal'));
-  const height = lines.length * printMetrics.koLineAdvance;
-  return { block: { kind: 'text', top, height, runs }, height };
-}
+import { centeredBaseline, run } from './text';
+import type { Block, ColumnKey, FinalsBlock, FinalsRoundModel } from './types';
 
 /** Finalrunde als Teile; `undefined`, wenn es keine Finalspiele gibt. */
 export function finalsParts(env: ModelEnv): Splittable | undefined {
