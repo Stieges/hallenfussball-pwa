@@ -31,7 +31,7 @@ runs:
 
     - name: Supabase CLI über setup-cli (GitHub-Release)
       id: setup
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: false # TEST-ONLY: npm-Ausweichweg erzwingen
       uses: supabase/setup-cli@v1
       continue-on-error: true
       with:
