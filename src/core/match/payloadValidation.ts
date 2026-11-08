@@ -24,6 +24,8 @@ const OptionalPlayerPayloadSchema = z.object(PlayerDetailFields);
 const TimePenaltyPayloadSchema = z.object({
   ...PlayerDetailFields,
   durationSeconds: z.number().int().positive().optional(),
+  /** Regel „endet bei Gegentor“ beim Eintrag (@W2A-013); fehlt sie, gilt „an“. */
+  endsOnGoal: z.boolean().optional(),
 });
 const RetractPayloadSchema = z.object({});
 const TeamScoresSchema = z.record(z.string(), z.number().int().nonnegative());

@@ -77,6 +77,14 @@ while IFS= read -r line; do
   else AFTER+=("$line"); fi
 done <<< "$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")"
 [[ "$SEEN" -eq 1 ]] || { echo "::error::$TARGET_NAME nicht in der Liste 'neuer als Baseline'." >&2; exit 1; }
+# Spaetere Migrationen, die public_view.* aendern (der Sicherheitskern bleibt in DIESEM Harness "unveraendert", Schema "vorher" =
+# nach dem Rueckweg), laufen in ihrem eigenen Harness und bleiben hier ausser Betracht; ihre Rechte-Assertion zaehlt nicht mit
+# (Namen aus der festen Zuordnung in db-drift-check.sh, wie gatherings-check.sh).
+#   20261124_001_zeitstrafe_endet_bei_gegentor.sql (public_view.match_events) -> scripts/public-payload-check.sh
+OWN_HARNESS_LATER=" 20261124_001_zeitstrafe_endet_bei_gegentor.sql "
+KEPT=()
+for f in ${AFTER[@]+"${AFTER[@]}"}; do [[ "$OWN_HARNESS_LATER" == *" $(basename "$f") "* ]] || KEPT+=("$f"); done
+AFTER=(${KEPT[@]+"${KEPT[@]}"})
 
 stop_rest() { [[ -n "$REST" ]] && docker rm -f "$REST" >/dev/null 2>&1 || true; REST=""; REST_PORT=""; }
 cleanup() {

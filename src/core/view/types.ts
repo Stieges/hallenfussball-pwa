@@ -172,7 +172,7 @@ export interface TournamentView {
 export type TournamentViewInput = Pick<
   Tournament,
   'teams' | 'groups' | 'matches' | 'date' | 'hideScoresForPublic' | 'hideRankingsForPublic' | 'isPublic' | 'shareCode' | 'spectatorDisplay'
-> & Partial<Pick<Tournament, 'groupPhaseGameDuration' | 'finalRoundGameDuration' | 'gamePeriods' | 'halftimeBreak' | 'matchCockpitSettings' | 'finalsConfig'>> & {
+> & Partial<Pick<Tournament, 'publicLiveScore' | 'groupPhaseGameDuration' | 'finalRoundGameDuration' | 'gamePeriods' | 'halftimeBreak' | 'matchCockpitSettings' | 'finalsConfig'>> & {
   /** Feinstatus der Engine. Vorrang vor dem Cache (M4): Engine `finished`, Cache noch `running` → `finished`. */
   engineStatus?: (matchId: string) => EngineStatus | undefined;
   /** Nur öffentliche Leser: Korrekturzeit aus der Server-Funktion (B-14). Ohne sie hat viewer/screen kein correctedAt. */

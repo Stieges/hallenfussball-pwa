@@ -333,6 +333,8 @@
     "timePenalty": "Zeitstrafe",
     "timePenaltyDuration": "Dauer der Zeitstrafe",
     "timePenaltyDurationDesc": "Spielregel – gilt ab dem nächsten Anpfiff",
+    "penaltyEndsOnGoal": "Zeitstrafe endet bei Gegentor",
+    "penaltyEndsOnGoalDesc": "Spielregel – gilt für Zeitstrafen ab ihrem Eintrag; das Team darf sich dann ergänzen",
     "penaltyShootout": "$t(sport:events.penaltyShootout)",
     "penaltyShooters": "Anzahl Schützen",
     "penaltyShootersDesc": "Schützen je Team beim Strafstoßschießen",

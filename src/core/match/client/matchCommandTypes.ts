@@ -27,6 +27,8 @@ export interface CardOptions extends FirstTapClock {
 export interface TimePenaltyOptions extends FirstTapClock {
   playerNumber?: number;
   durationSeconds?: number;
+  /** Regel „endet bei Gegentor“ zum Zeitpunkt des Eintrags (@W2A-013); Monitor und Zuschauer lesen sie aus dem Eintrag. */
+  endsOnGoal?: boolean;
 }
 
 /** C3b-1 (G10): geaenderte Angaben eines Ereignisses (AMEND) -- nur `playerNumber`. */

@@ -8,7 +8,10 @@ import type { TournamentViewInput, ViewAudience, ViewMedium, ViewRules, ViewerPd
 type RuleSource = Pick<TournamentViewInput, 'hideScoresForPublic' | 'hideRankingsForPublic' | 'isPublic' | 'shareCode'>;
 
 export function viewRules(
-  t: Pick<RuleSource, 'hideScoresForPublic' | 'hideRankingsForPublic'> & Partial<Pick<RuleSource, 'isPublic' | 'shareCode'>>,
+  t: Pick<RuleSource, 'hideScoresForPublic' | 'hideRankingsForPublic'> & Partial<Pick<RuleSource, 'isPublic' | 'shareCode'>> & {
+    /** Schalter „Live-Stand“ (`config.publicLiveScore`); ohne Angabe an (@ZM-194). */
+    publicLiveScore?: boolean;
+  },
   audience: ViewAudience,
   medium: ViewMedium,
   viewerPdf: ViewerPdfChoice = 'planOnly',
@@ -27,7 +30,7 @@ export function viewRules(
   const pdfAllowsResults = audience === 'viewer' && medium === 'print' ? viewerPdf === 'withResults' : true;
   return {
     results: !kids && pdfAllowsResults,
-    liveScore: !kids && pdfAllowsResults,
+    liveScore: !kids && pdfAllowsResults && t.publicLiveScore !== false,
     tables: !kids && !noTables && pdfAllowsResults,
     // W4: die Herkunft mit Platz hängt nur an den Schaltern, nie an der PDF-Wahl.
     groupOrigin: !kids && !noTables,

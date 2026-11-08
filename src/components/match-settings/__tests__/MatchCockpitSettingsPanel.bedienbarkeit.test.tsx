@@ -92,7 +92,8 @@ describe('Match-Cockpit-Einstellungen: Namen und Mindestgrößen (C-MATCHCOCKPIT
 
   it('@OB-022 Eingabefelder (Schieberegler, Schützenzahl) haben mindestens 16 Schriftgröße', () => {
     const { container } = zeige();
-    for (const feld of Array.from(container.querySelectorAll<HTMLElement>('input:not([type="file"])'))) {
+    // Ankreuzfelder (@W2A-080) nehmen keine Eingabe an, iOS zoomt dort nicht
+    for (const feld of Array.from(container.querySelectorAll<HTMLElement>('input:not([type="file"]):not([type="checkbox"])'))) {
       expect(istMindestens16(feld), `${feld.getAttribute('type')} Schrift ${feld.style.fontSize}`).toBe(true);
     }
   });

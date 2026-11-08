@@ -43,7 +43,9 @@ export function useTeamColumns({ match, view, phase, settings, kannSteuern, foul
     const spalte = (seite: Side): Omit<TeamColumnProps, 'kompakt' | 'breit'> => ({
       model: toTeamColumnModel({
         match, seite, view, zustand: phase.zustand, fouls: fouls[seite], foulGrenze: settings.foulLimit, sperrHinweise,
-        zeitstrafeSekunden, unterzahl: null, darfErgaenzen: false, kartenArten: settings.enabledCards, kasten: kasten[seite],
+        zeitstrafeSekunden, unterzahl: null,
+        // @SL-030, @SL-092: nach einem Gegentor aus den Ereignissen abgeleitet
+        darfErgaenzen: view?.ergaenzenTeamIds.includes((seite === 'home' ? match.homeTeam : match.awayTeam).id) ?? false, kartenArten: settings.enabledCards, kasten: kasten[seite],
       }),
       knoepfe,
       onTor: handlers[seite].onTor, onFoul: handlers[seite].onFoul, onZeitstrafe: handlers[seite].onZeitstrafe, onKarte: handlers[seite].onKarte,

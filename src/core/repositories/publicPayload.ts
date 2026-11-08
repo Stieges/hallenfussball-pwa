@@ -9,7 +9,7 @@
  *   {state:'delta', version, base_version, server_now, tournament_date, matches[, scorers]} (gelöschte Spiele: voll)
  * `version`: ganze Zahl (Mikrosekunden der letzten öffentlich sichtbaren Änderung, steigt monoton); `server_now`: Serverzeit
  * in Millisekunden (@ZM-026). Zeilen tragen nur die Felder der Positivliste; Ereignisse haben die öffentliche Form
- * `{id, type, team_id, section, clock_ms, number?, duration_seconds?, scored?}` und werden hier in `RuntimeMatchEvent`
+ * `{id, type, team_id, section, clock_ms, number?, duration_seconds?, ends_on_goal?, scored?}` und werden hier in `RuntimeMatchEvent`
  * übersetzt. Unbekannte Felder fallen beim Prüfen weg (Schemas ohne `passthrough`, Review #342 A5 Punkt 5).
  * Rein, ohne React.
  */
@@ -29,6 +29,7 @@ export const PublicEventSchema = z.object({
   clock_ms: optionalNullable(z.number()),
   number: z.number().optional(),
   duration_seconds: z.number().optional(),
+  ends_on_goal: z.boolean().optional(),
   scored: z.boolean().optional(),
 });
 export type PublicEvent = z.infer<typeof PublicEventSchema>;
@@ -200,6 +201,9 @@ export function toPublicRuntimeEvents(
     if (event.type === 'TIME_PENALTY' && event.duration_seconds !== undefined) {
       payload.penaltyDuration = event.duration_seconds;
       payload.durationSeconds = event.duration_seconds;
+    }
+    if (event.type === 'TIME_PENALTY' && event.ends_on_goal !== undefined) {
+      payload.endsOnGoal = event.ends_on_goal; // @W2A-013: Regel beim Eintrag der Strafe
     }
     const type: RuntimeMatchEvent['type'] = event.type === 'OWN_GOAL' ? 'GOAL'
       : event.type === 'YELLOW_RED_CARD' ? 'RED_CARD' : (event.type as RuntimeMatchEvent['type']);

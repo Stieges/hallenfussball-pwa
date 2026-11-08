@@ -136,7 +136,7 @@ export function TeamColumn({ model, knoepfe, onTor, onFoul, onZeitstrafe, onKart
         </div>
       )}
       {model.unterzahl && <Hinweis>{t('spalte.unterzahl', { rest: model.unterzahl.rest })}</Hinweis>}
-      {model.darfErgaenzen && <Hinweis>{t('spalte.ergaenzen')}</Hinweis>}
+      {model.darfErgaenzen && <Hinweis testId={`team-ergaenzen-${seite}`}>{t('spalte.ergaenzen')}</Hinweis>}
       {model.gesperrt.map((nummer) => <Hinweis key={nummer}>{t('spalte.gesperrt', { nummer })}</Hinweis>)}
       </div>
     </section>

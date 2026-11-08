@@ -38,6 +38,7 @@ export function legacyPhaseViewOf(match: LegacyPhaseMatch, elapsedSeconds: numbe
     earliestAdjustMs: 0,
     earliestAdjustIsGoal: false,
     penalties: [],
+    ergaenzenTeamIds: [], // ohne Engine-Kopie keine abgeleiteten Strafen
     shootout: null,
     clockAdjustments: [],
     tiebreakMode: match.playPhase === 'goldenGoal' ? 'goldenGoal' : match.tiebreakerMode ?? null,

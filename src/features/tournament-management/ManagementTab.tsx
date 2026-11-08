@@ -179,6 +179,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           ...settings,
           timePenaltyDurationSeconds: gespeichert.timePenaltyDurationSeconds,
           penaltyShootersPerTeam: gespeichert.penaltyShootersPerTeam,
+          penaltyEndsOnGoal: gespeichert.penaltyEndsOnGoal,
         };
     // Merge with existing tournament settings
     const updatedTournament = {
